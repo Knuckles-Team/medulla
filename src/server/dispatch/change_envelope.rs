@@ -1,4 +1,3 @@
-use super::consensus::authoritative_now_ms;
 #[cfg(feature = "redb")]
 use super::graph_pipeline::dispatch_graph_op;
 use super::graph_pipeline::GraphOpRouting;
@@ -657,7 +656,8 @@ async fn apply_one_change_envelope_inner(
     };
     #[cfg(not(feature = "raft"))]
     let _ = known_replay;
-    let committed_at_ms = authoritative_now_ms().max(envelope.mutation.created_at_ms);
+    let committed_at_ms = crate::kernel::dispatch_support::authoritative_now_ms()
+        .max(envelope.mutation.created_at_ms);
 
     #[cfg(feature = "raft")]
     if let Some(resp) = try_replicate_new_change_envelope(
@@ -839,9 +839,10 @@ async fn apply_change_envelope_batch(
             );
         }
     }
-    let committed_at_ms = envelopes.iter().fold(authoritative_now_ms(), |acc, e| {
-        acc.max(e.mutation.created_at_ms)
-    });
+    let committed_at_ms = envelopes.iter().fold(
+        crate::kernel::dispatch_support::authoritative_now_ms(),
+        |acc, e| acc.max(e.mutation.created_at_ms),
+    );
     let Some(backend) = persistence.as_ref() else {
         return Response::err(
             req_id,
@@ -891,9 +892,9 @@ async fn read_change_envelope(
         {
             Response::ok(
                 req_id,
-                ResultPayload::of::<medulla_types::result_contract::query::GetChangeEnvelope>(Some(
-                    record,
-                )),
+                ResultPayload::of::<medulla_types::result_contract::query::GetChangeEnvelope>(
+                    Some(record),
+                ),
             )
         }
         Ok(Some(_)) => Response::err(req_id, "ACCESS_DENIED: envelope tenant mismatch"),
@@ -922,7 +923,9 @@ async fn read_content_version(
     {
         Ok(version) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::query::GetContentVersion>(&version),
+            ResultPayload::of_ref::<medulla_types::result_contract::query::GetContentVersion>(
+                &version,
+            ),
         ),
         Err(_) => change_read_failure(req_id, "content-version read failed"),
     }
@@ -946,7 +949,9 @@ async fn read_change_cursor(
     {
         Ok(cursor) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::query::GetChangeCursor>(&cursor),
+            ResultPayload::of_ref::<medulla_types::result_contract::query::GetChangeCursor>(
+                &cursor,
+            ),
         ),
         Err(_) => change_read_failure(req_id, "change-cursor read failed"),
     }

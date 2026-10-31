@@ -120,7 +120,8 @@ impl Policy {
         }
         // This ceiling is committed with the source policy revision. Changing
         // an environment variable later cannot authorize a larger top-up.
-        let max_total_units = match std::env::var("MEDULLA_REPOSITORY_ENRICHMENT_MAX_BUDGET_UNITS") {
+        let max_total_units = match std::env::var("MEDULLA_REPOSITORY_ENRICHMENT_MAX_BUDGET_UNITS")
+        {
             Ok(value) => value
                 .parse::<u64>()
                 .map_err(|_| "CONFLICT: repository enrichment maximum budget is invalid")?,
@@ -508,8 +509,10 @@ mod tests {
         let store = crate::server::blob::store::RedbChunkStore::open_temp().unwrap();
         let body = b"source bytes";
         let other = b"different source bytes";
-        let source_digest = medulla_types::contract::Digest256::from_bytes(Sha256::digest(body).into());
-        let other_digest = medulla_types::contract::Digest256::from_bytes(Sha256::digest(other).into());
+        let source_digest =
+            medulla_types::contract::Digest256::from_bytes(Sha256::digest(body).into());
+        let other_digest =
+            medulla_types::contract::Digest256::from_bytes(Sha256::digest(other).into());
         let stored = store
             .put_repository_bodies(
                 "tenant",

@@ -132,7 +132,7 @@ macro_rules! persistence_outbox {
             view: crate::server::outbox_operator::OutboxView,
         ) -> Result<crate::server::outbox_operator::OutboxViewAnswer, String> {
             let graph = graph_fname.to_owned();
-            let now_ms = crate::server::dispatch::authoritative_now_ms();
+            let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
             self.read_snapshot(graph_fname, move |shard, _crypto| {
                 let handle = shard.graph(&graph)?;
                 let read = shard.read(&handle)?;

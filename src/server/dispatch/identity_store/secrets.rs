@@ -89,7 +89,10 @@ type KeySource = (medulla_kernel::crypto::ValueCipher, &'static str);
 /// The configured data key, else a key derived from the service secret
 /// (MFA is optional for everyone, so it must not depend on at-rest
 /// encryption being configured).
-fn key_source(at_rest: Option<medulla_kernel::crypto::ValueCipher>, service_secret: &str) -> KeySource {
+fn key_source(
+    at_rest: Option<medulla_kernel::crypto::ValueCipher>,
+    service_secret: &str,
+) -> KeySource {
     if let Some(cipher) = at_rest {
         return (cipher, SEALED_AT_REST);
     }

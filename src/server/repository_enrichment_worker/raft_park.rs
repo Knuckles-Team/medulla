@@ -84,7 +84,7 @@ async fn propose_park(
         return Err("STALE_ROUTE: repository enrichment park requires local group leader".into());
     }
     let now_ms = expected_park.parked_at_ms;
-    if now_ms == 0 || now_ms > crate::server::dispatch::authoritative_now_ms() {
+    if now_ms == 0 || now_ms > crate::kernel::dispatch_support::authoritative_now_ms() {
         return Err("CONFLICT: repository enrichment park timestamp is invalid".into());
     }
     let (snapshot, park) =

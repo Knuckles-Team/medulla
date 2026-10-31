@@ -289,7 +289,7 @@ impl RedbBackend {
         let (txn, batch, begun) = self.mutations.admit_current(bootstrap, |version| {
             write.for_scope_version(bootstrap, version)
         })?;
-        let now = crate::server::dispatch::authoritative_now_ms();
+        let now = crate::kernel::dispatch_support::authoritative_now_ms();
         self.complete_write(bootstrap, txn, &batch, begun, now, apply)
     }
 
@@ -636,7 +636,7 @@ fn compile_kv_batch(
         authority.idempotency_key(),
     );
     let expected = store.mutation_version(authority.tenant_scope(), &scope)?;
-    let now = crate::server::dispatch::authoritative_now_ms();
+    let now = crate::kernel::dispatch_support::authoritative_now_ms();
     // CarrierAuthority is the verified request context's handoff into this
     // self-routed surface. Preserve the transport nonce and stable caller key
     // here so KV retries use the kernel's one operation replay authority. The

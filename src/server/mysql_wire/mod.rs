@@ -73,7 +73,7 @@ pub fn validate_startup_policy(
     auth_secret: &str,
     mode: MysqlAuthMode,
 ) -> std::io::Result<()> {
-    crate::server::validate_direct_wire_security(
+    crate::server::api::dispatch_support::validate_direct_wire_security(
         addr,
         "mysql-wire",
         mode.verified_identity_binding(auth_secret),

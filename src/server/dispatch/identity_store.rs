@@ -60,7 +60,7 @@ pub(crate) async fn stamp_identity(
         .authorize(op, &derived, &medulla_capabilities::scopes::ScopeRegistry)
         .map_err(|refusal| refusal.to_string())?;
     let mut owned = op.clone();
-    let now_ms = super::authoritative_now_ms();
+    let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     #[cfg(test)]
     let pause = pause::take(state);
     let derived = tokio::task::spawn_blocking(move || {
@@ -101,7 +101,7 @@ pub(crate) async fn dispatch_identity(
     }
     let mut guard = super::timed_write(state).await;
     // Credential expiry and session touches use time at apply, not before contention.
-    let now_ms = super::authoritative_now_ms();
+    let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     let outcome =
         resolution_context::apply_and_compose(&mut guard, &op, &stamp, context, authority, now_ms);
     guard.publish_identity_view();
@@ -113,7 +113,10 @@ fn respond(
     req_id: u64,
     op: &IdentityOp,
     stamp: &IdentityStamp,
-    outcome: Result<medulla_types::identity::IdentityReply<medulla_types::acl::RequestContextClaims>, String>,
+    outcome: Result<
+        medulla_types::identity::IdentityReply<medulla_types::acl::RequestContextClaims>,
+        String,
+    >,
 ) -> Response {
     match outcome {
         Ok(reply) => {

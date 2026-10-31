@@ -220,7 +220,7 @@ async fn replay_internal_graph(
     descriptor.target_graph_version = version
         .checked_add(1)
         .ok_or_else(|| "authoritative graph version overflow".to_string())?;
-    let created_at_ms = crate::server::dispatch::authoritative_now_ms();
+    let created_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     let probe = compile_methods(
         CompileBatch {
             batch_id,
@@ -296,8 +296,10 @@ fn stage_internal_graph(
         }
     }
     let staged_snapshot = staged.snapshot();
-    let row_delta =
-        medulla_kernel::graph_delta::GraphRowDelta::between(&base_snapshot_for_delta, &staged_snapshot)?;
+    let row_delta = medulla_kernel::graph_delta::GraphRowDelta::between(
+        &base_snapshot_for_delta,
+        &staged_snapshot,
+    )?;
     let state_msgpack = row_delta.to_msgpack()?;
     let target_graph_version = source_version
         .checked_add(1)
@@ -398,7 +400,7 @@ async fn commit_prepared_internal_graph(
         descriptor,
         ..
     } = input;
-    let created_at_ms = crate::server::dispatch::authoritative_now_ms();
+    let created_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     let batch = compile_methods(
         CompileBatch {
             batch_id,

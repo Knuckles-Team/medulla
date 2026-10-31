@@ -714,7 +714,7 @@ pub(crate) fn is_sparql_http_update(method: &Method) -> bool {
 pub(super) fn consensus_apply_is_authorized() -> bool {
     #[cfg(feature = "raft")]
     {
-        crate::server::dispatch::is_replicated_apply()
+        crate::kernel::dispatch_support::is_replicated_apply()
     }
     #[cfg(not(feature = "raft"))]
     {

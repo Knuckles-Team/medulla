@@ -12,7 +12,7 @@ pub(super) fn put_manifest(
     // them), then write the manifest as its own admitted maintenance mutation.
     store.flush_chunks()?;
     manifest::encode_manifest(blob_digest, manifest)?;
-    let at = crate::server::dispatch::authoritative_now_ms();
+    let at = crate::kernel::dispatch_support::authoritative_now_ms();
     store.maintain("blob_put_manifest_v1", blob_digest, at, |wtx| {
         let shared = shared_write(wtx, &store.shared)?;
         let stored = |chunk: &str| chunk_is_stored(store.chunks, &shared, chunk);
@@ -49,7 +49,7 @@ pub(super) fn refcount(store: &RedbChunkStore, blob_digest: &str) -> Result<u64,
 
 pub(super) fn sweep(store: &RedbChunkStore) -> Result<SweepStats, String> {
     store.flush_chunks()?;
-    let at = crate::server::dispatch::authoritative_now_ms();
+    let at = crate::kernel::dispatch_support::authoritative_now_ms();
     store.maintain("blob_sweep_v1", "all", at, |wtx| {
         sweep_in_for_batch(store, wtx, &SweepRequest::default(), at)
     })

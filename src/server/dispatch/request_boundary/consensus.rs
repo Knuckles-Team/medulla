@@ -5,7 +5,7 @@ pub(crate) async fn check_cluster_placement_before_consensus(
     state: &Arc<RwLock<ServerState>>,
     req: &Request,
 ) -> Result<(), Response> {
-    if is_replicated_apply() {
+    if crate::kernel::dispatch_support::is_replicated_apply() {
         // The command is already committed in the owning group's log. Its
         // domain kernel must apply locally on every replica without proposing
         // the same command again.
@@ -73,7 +73,7 @@ pub(crate) async fn route_consensus_before_gateway(
     verified_context: &VerifiedRequestContext,
     identity_bootstrap: bool,
 ) -> Result<Request, Response> {
-    if !is_replicated_apply()
+    if !crate::kernel::dispatch_support::is_replicated_apply()
         && matches!(
             timed_read(state).await.placement_authority(),
             crate::server::state::PlacementAuthorityKind::MultiRaft
@@ -94,7 +94,7 @@ pub(crate) async fn route_consensus_before_gateway(
         .await);
     }
 
-    if !is_replicated_apply()
+    if !crate::kernel::dispatch_support::is_replicated_apply()
         && matches!(
             crate::server::mutation::cluster_mutation_route(&req.method),
             crate::server::mutation::ClusterMutationRoute::ConsensusFanout

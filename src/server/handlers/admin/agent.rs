@@ -52,7 +52,7 @@ pub(crate) fn bind_agent_library_context(
     context.policy_decision_id = format!("agent-library:policy:{}", context.policy_revision);
     context.idempotency_key = verified.idempotency_key().to_string();
     context.trace_id = None;
-    context.created_at_ms = crate::server::dispatch::authoritative_now_ms();
+    context.created_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     Ok(context)
 }
 
@@ -294,8 +294,12 @@ fn component_status_purpose(
     kind: medulla_types::agent_component::AgentComponentMutationKind,
 ) -> &'static str {
     match kind {
-        medulla_types::agent_component::AgentComponentMutationKind::Publish => "agent-component:publish",
-        medulla_types::agent_component::AgentComponentMutationKind::Retire => "agent-component:retire",
+        medulla_types::agent_component::AgentComponentMutationKind::Publish => {
+            "agent-component:publish"
+        }
+        medulla_types::agent_component::AgentComponentMutationKind::Retire => {
+            "agent-component:retire"
+        }
         medulla_types::agent_component::AgentComponentMutationKind::Withdraw => {
             "agent-component:withdraw"
         }
@@ -498,7 +502,9 @@ fn template_status(
     mut request: medulla_types::agent_template::AgentTemplateStatusRequest,
 ) -> Response {
     let purpose = match request.kind {
-        medulla_types::agent_template::AgentTemplateMutationKind::Publish => "agent-template:publish",
+        medulla_types::agent_template::AgentTemplateMutationKind::Publish => {
+            "agent-template:publish"
+        }
         medulla_types::agent_template::AgentTemplateMutationKind::Retire => "agent-template:retire",
     };
     request.context = match bind_status_context(store, req_id, verified, request.context, purpose) {
@@ -525,9 +531,9 @@ fn template_instantiate(
     match store.instantiate_template(&request) {
         Ok(draft) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentTemplateInstantiate>(
-                &draft,
-            ),
+            ResultPayload::of_ref::<
+                medulla_types::result_contract::storage::AgentTemplateInstantiate,
+            >(&draft),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -656,7 +662,9 @@ fn graph_current(
     match store.current_graph(&tenant_id, &graph_id) {
         Ok(entry) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentGraphCurrent>(&entry),
+            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentGraphCurrent>(
+                &entry,
+            ),
         ),
         Err(error) => Response::err(req_id, error),
     }

@@ -222,7 +222,7 @@ pub fn maybe_push_http(event: &Value) {
     }
     let url = format!("{}/api/v1/lineage", endpoint.trim_end_matches('/'));
     let body = event.to_string();
-    let _ = crate::server::outbound_http_config()
+    let _ = crate::server::api::dispatch_support::outbound_http_config()
         .build()
         .new_agent()
         .post(&url)

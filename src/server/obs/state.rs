@@ -67,7 +67,7 @@ fn open_obs_state_blocking(
         }
         None => {
             // A repeated clock tick must not alias another live store.
-            let base = crate::server::unique_temp_dir("medulla-obs");
+            let base = crate::server::api::dispatch_support::unique_temp_dir("medulla-obs");
             let series = SeriesStore::open_in_dir(
                 &base,
                 crate::store_authority::process_verifier(),

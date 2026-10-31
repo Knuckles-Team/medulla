@@ -61,8 +61,9 @@ pub(crate) async fn test_state_with_broker_agents(
         }
     }
     for principal in principals {
-        let actor_ref = crate::server::pseudonymous_broker_actor("test", principal)
-            .expect("test principal pseudonymizes");
+        let actor_ref =
+            crate::server::api::dispatch_support::pseudonymous_broker_actor("test", principal)
+                .expect("test principal pseudonymizes");
         register_broker_test_agent(&mut isolation, actor_ref);
     }
 
@@ -70,7 +71,7 @@ pub(crate) async fn test_state_with_broker_agents(
     let (persist_dir, persistence) = {
         use crate::server::persistence::redb_backend::RedbBackend;
 
-        let dir = crate::server::unique_temp_dir(prefix);
+        let dir = crate::server::api::dispatch_support::unique_temp_dir(prefix);
         let dir_s = dir.to_string_lossy().into_owned();
         let backend = RedbBackend::open(dir_s.clone(), 64).expect("open broker-wire test backend");
         let persistence: Arc<dyn crate::server::persistence::PersistenceBackend> =

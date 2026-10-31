@@ -1,7 +1,7 @@
 #[cfg(feature = "raft")]
 use super::change_envelope::multi_graph_batch_update;
 #[cfg(feature = "raft")]
-use super::consensus::{is_replicated_apply, propose_native_mutation};
+use super::consensus::propose_native_mutation;
 use super::router::dispatch_request_method;
 #[cfg(all(feature = "sparql-http", feature = "raft"))]
 use super::sparql_update::coordinated_sparql_http_update;
@@ -464,7 +464,7 @@ async fn dispatch_inner(
     req.agent_id = Some(verified_context.agent_id().to_string());
 
     #[cfg(feature = "raft")]
-    let state_machine_authorized = is_replicated_apply();
+    let state_machine_authorized = crate::kernel::dispatch_support::is_replicated_apply();
     #[cfg(not(feature = "raft"))]
     let state_machine_authorized = false;
 

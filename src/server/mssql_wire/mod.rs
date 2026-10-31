@@ -89,7 +89,11 @@ pub fn verify_mssql_login(secret: &str, user: &str, password: &str) -> bool {
 /// Fail closed before binding the direct TDS listener. TDS encryption
 /// is not implemented here, so the only safe direct bind is authenticated loopback.
 pub fn validate_startup_policy(addr: &str, secret: &str) -> std::io::Result<()> {
-    crate::server::validate_direct_wire_security(addr, "mssql-wire", !secret.is_empty())
+    crate::server::api::dispatch_support::validate_direct_wire_security(
+        addr,
+        "mssql-wire",
+        !secret.is_empty(),
+    )
 }
 
 /// Map an engine result-column type to the TDS column type emitted in COLMETADATA.

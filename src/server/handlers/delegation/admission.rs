@@ -231,7 +231,7 @@ pub(crate) async fn submit_native(
     method: Method,
 ) -> Result<ResultPayload, AdmissionError> {
     #[cfg(feature = "raft")]
-    if clustered && !crate::server::dispatch::is_replicated_apply() {
+    if clustered && !crate::kernel::dispatch_support::is_replicated_apply() {
         let response = crate::server::dispatch::propose_native_mutation(
             ctx.state,
             ctx.graph_name,

@@ -197,12 +197,14 @@ mod consensus_admin_route_tests {
     #[test]
     fn identity_mutations_share_the_commons_order_across_caller_graphs_and_tenants() {
         let method = Method::Identity {
-            op: medulla_types::identity::IdentityOp::User(medulla_types::identity::UserOp::SetStatus {
-                request: medulla_types::identity::UserStatusChange {
-                    principal_id: "usr:route-test".to_string(),
-                    status: medulla_types::identity::UserStatus::Disabled,
+            op: medulla_types::identity::IdentityOp::User(
+                medulla_types::identity::UserOp::SetStatus {
+                    request: medulla_types::identity::UserStatusChange {
+                        principal_id: "usr:route-test".to_string(),
+                        status: medulla_types::identity::UserStatus::Disabled,
+                    },
                 },
-            }),
+            ),
             stamp: None,
         };
         let command = crate::raft::NativeMutationCommand::from_public_method(
@@ -372,7 +374,7 @@ fn build_native_raft_request(
     command: crate::raft::NativeMutationCommand,
     identity_bootstrap: bool,
 ) -> Result<crate::raft::RaftRequest, Response> {
-    let committed_at_ms = authoritative_now_ms();
+    let committed_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     let graph_fname = crate::persist::sanitize(proposal.graph_name);
     let graph_scope = crate::server::mutation_batch::opaque_idempotency_key_for_context(
         "raft-graph-scope",

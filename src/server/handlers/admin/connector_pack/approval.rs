@@ -49,8 +49,9 @@ pub(crate) async fn serve(
         let resource_uri = request.resource_uri;
         let expected_head = request.expected_head;
         let contract_digest = request.contract_digest;
-        let result =
-            crate::server::dispatch::blocking_task("connector pack source approval", move || {
+        let result = crate::server::api::dispatch_support::blocking_task(
+            "connector pack source approval",
+            move || {
                 let _held = tenant_pack_guard;
                 store.approve_connector_pack_source(
                     context,
@@ -60,8 +61,9 @@ pub(crate) async fn serve(
                     &expected_head,
                     contract_digest,
                 )
-            })
-            .await;
+            },
+        )
+        .await;
         match result {
             Ok(result) => match crate::protocol::ResultPayload::of_ref::<
                 medulla_types::result_contract::storage::ConnectorPackApproveSource,

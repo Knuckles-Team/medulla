@@ -128,7 +128,7 @@ fn provision_created_tenant_access(
     creator: Option<&str>,
 ) -> Result<(), String> {
     #[cfg(feature = "raft")]
-    if is_replicated_apply()
+    if crate::kernel::dispatch_support::is_replicated_apply()
         && creator.is_some_and(|id| state.isolation.rbac().identity_store().manages(id))
     {
         return Ok(());
@@ -435,7 +435,11 @@ async fn delete_declared_graph(
     {
         return Response::err(
             req_id,
-            medulla_types::contract::classify_refusal("INTERNAL", "durable graph purge failed: ", &e),
+            medulla_types::contract::classify_refusal(
+                "INTERNAL",
+                "durable graph purge failed: ",
+                &e,
+            ),
         );
     }
 
@@ -561,7 +565,9 @@ pub(super) async fn dispatch_get_identity(
             drop(s);
             Response::ok(
                 req_id,
-                ResultPayload::of::<medulla_types::result_contract::security::GetIdentity>(identity),
+                ResultPayload::of::<medulla_types::result_contract::security::GetIdentity>(
+                    identity,
+                ),
             )
         }
         Err(error) => Response::err(req_id, error),
@@ -598,7 +604,7 @@ pub(super) async fn apply_rbac_admin(
     let mut s = timed_write(state).await;
     let audit = crate::isolation::AuditActor {
         principal: actor,
-        now_ms: authoritative_now_ms(),
+        now_ms: crate::kernel::dispatch_support::authoritative_now_ms(),
     };
     let response = rbac_admin_response(&mut s, req_id, op, audit);
     s.publish_identity_view();

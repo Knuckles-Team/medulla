@@ -171,7 +171,9 @@ pub(super) async fn dispatch_op_audit_read_event(
         Some(redb) => match redb.audit_read_event(&fname, verified_tenant, seq).await {
             Ok(proof) => Response::ok(
                 req_id,
-                ResultPayload::of::<medulla_types::result_contract::security::AuditReadEvent>(proof),
+                ResultPayload::of::<medulla_types::result_contract::security::AuditReadEvent>(
+                    proof,
+                ),
             ),
             Err(error) => Response::err(req_id, format!("AuditReadEvent error: {error}")),
         },
@@ -207,7 +209,9 @@ pub(super) async fn dispatch_op_audit_append(
                 core.mark_dirty();
                 Response::ok(
                     req_id,
-                    ResultPayload::of::<medulla_types::result_contract::security::AuditAppend>(receipt),
+                    ResultPayload::of::<medulla_types::result_contract::security::AuditAppend>(
+                        receipt,
+                    ),
                 )
             }
             // No method-name prefix: the error is already either a bare
@@ -490,7 +494,7 @@ pub(super) async fn dispatch_op_raft_write_routing_barrier(
         tenant_scope,
         graph_type,
     } = ctx;
-    let created_at_ms = authoritative_now_ms();
+    let created_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     let graph_fname = crate::persist::sanitize(graph_name);
     let principal_fingerprint = verified_context.principal_persistence_id();
     let batch_id = replicated_graph_batch_id(
@@ -637,7 +641,8 @@ mod tests {
             medulla_types::mutation_batch::IncarnationId::new("incarnation:test:audit-skew")
                 .expect("incarnation"),
         );
-        mutation.version_expectation = medulla_types::mutation_batch::VersionExpectation::Graph(stamped);
+        mutation.version_expectation =
+            medulla_types::mutation_batch::VersionExpectation::Graph(stamped);
         mutation.operations = vec![medulla_types::mutation_batch::MutationOperation {
             ordinal: 0,
             surface: medulla_types::mutation_batch::MutationSurface::Graph,

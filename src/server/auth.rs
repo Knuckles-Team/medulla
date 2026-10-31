@@ -35,14 +35,14 @@
 //! defaults into that downgrade; an operator must type it.
 
 use crate::acl::{AgentRole, RequestContextClaims};
-use medulla_kernel::lock_recovery::{LockRecovery, WriteRecovery};
 use crate::protocol::{
     build_context_operation_signature_bytes, build_envelope_v2_bytes, Method, Request,
 };
 pub(crate) use crate::server::authority_context::VerifiedRequestContext;
 use crate::server::request_replay::{durable_replay_ledger, PresentedNonce, ReplayLedger};
-use medulla_types::contract::Nonce;
 use hmac::{Hmac, Mac};
+use medulla_kernel::lock_recovery::{LockRecovery, WriteRecovery};
+use medulla_types::contract::Nonce;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, HashSet};
@@ -629,7 +629,7 @@ pub(crate) fn scoped_test_request_on(
         &request,
         &VerifiedEnvelopeParams {
             context: &context,
-            timestamp: crate::server::dispatch::authoritative_now_ms() / 1000,
+            timestamp: crate::kernel::dispatch_support::authoritative_now_ms() / 1000,
             nonce: caller.nonce,
             idempotency_key: caller.idempotency_key,
         },
@@ -964,11 +964,9 @@ fn bind_verified_identity(
         // deployment that demanded OIDC must never fall back to shared-secret
         // HMAC just because a verifier was not (or could not be) configured.
         if require_oidc() {
-            return Err(
-                "MEDULLA_REQUIRE_OIDC is set but no OIDC issuer/JWKS is \
+            return Err("MEDULLA_REQUIRE_OIDC is set but no OIDC issuer/JWKS is \
                  configured; refusing HMAC-only identity (fail-closed)"
-                    .to_string(),
-            );
+                .to_string());
         }
         return Ok(());
     };
@@ -1070,15 +1068,13 @@ fn bind_verified_identity(
     // altogether must fail closed rather than silently accept HMAC-only
     // identity, unless an operator has explicitly opted out.
     if require_oidc() {
-        return Err(
-            "MEDULLA_REQUIRE_OIDC requires OIDC identity binding (the \
+        return Err("MEDULLA_REQUIRE_OIDC requires OIDC identity binding (the \
              secure-by-default posture) but this build lacks the `oidc` \
              feature; refusing HMAC-only identity (fail-closed). Either \
              deploy a build with the `oidc` feature (part of the default \
              `full` build) and configure MEDULLA_OIDC_JWT_ISSUER, or \
              set MEDULLA_REQUIRE_OIDC=false to explicitly opt out."
-                .to_string(),
-        );
+            .to_string());
     }
     Ok(())
 }
@@ -1259,16 +1255,14 @@ pub(super) fn validate_verified_context_startup(
     // into an immediate, loud boot failure — the same operator experience as
     // the missing-auth-secret / missing-persist-dir gates above it.
     if require_oidc() && validator.is_none() {
-        return Err(
-            "MEDULLA_REQUIRE_OIDC requires OIDC identity binding (the \
+        return Err("MEDULLA_REQUIRE_OIDC requires OIDC identity binding (the \
              secure-by-default posture) but no usable OIDC verifier is \
              configured — set MEDULLA_OIDC_JWT_ISSUER (plus its \
              audience and JWKS URL, or the shared OIDC_ISSUER/OIDC_AUDIENCE) \
              pointing at your Keycloak realm, or set \
              MEDULLA_REQUIRE_OIDC=false to explicitly opt out for \
              local/dev use"
-                .to_string(),
-        );
+            .to_string());
     }
     Ok(())
 }
@@ -1458,20 +1452,15 @@ struct SignerKeyRegistry {
 
 impl SignerKeyRegistry {
     fn from_json(raw: &str) -> Result<Self, String> {
-        let specs: BTreeMap<String, SignerKeySpec> = serde_json::from_str(raw).map_err(|_| {
-            "MEDULLA_SIGNER_KEYS_JSON is not a valid signer registry".to_string()
-        })?;
+        let specs: BTreeMap<String, SignerKeySpec> = serde_json::from_str(raw)
+            .map_err(|_| "MEDULLA_SIGNER_KEYS_JSON is not a valid signer registry".to_string())?;
         if specs.is_empty() {
-            return Err(
-                "MEDULLA_SIGNER_KEYS_JSON must contain at least one signer".to_string(),
-            );
+            return Err("MEDULLA_SIGNER_KEYS_JSON must contain at least one signer".to_string());
         }
         let mut signers = BTreeMap::new();
         for (signer_id, spec) in specs {
             if signer_id.trim().is_empty() {
-                return Err(
-                    "MEDULLA_SIGNER_KEYS_JSON signer id must not be empty".to_string(),
-                );
+                return Err("MEDULLA_SIGNER_KEYS_JSON signer id must not be empty".to_string());
             }
             let entry = match spec {
                 SignerKeySpec::Legacy(key) => {
@@ -1705,9 +1694,8 @@ pub(crate) fn reload_signer_registry_from_json(raw: &str) -> Result<(), String> 
 #[cfg(not(test))]
 #[allow(dead_code)] // unwired pending a dispatch-side rotation trigger (see doc comment)
 pub(crate) fn reload_signer_registry_from_env() -> Result<(), String> {
-    let raw = std::env::var("MEDULLA_SIGNER_KEYS_JSON").map_err(|_| {
-        "verified identity operations require MEDULLA_SIGNER_KEYS_JSON".to_string()
-    })?;
+    let raw = std::env::var("MEDULLA_SIGNER_KEYS_JSON")
+        .map_err(|_| "verified identity operations require MEDULLA_SIGNER_KEYS_JSON".to_string())?;
     reload_signer_registry_from_json(&raw)
 }
 

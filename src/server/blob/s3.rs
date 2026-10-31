@@ -164,7 +164,7 @@ impl ChunkStore for S3ChunkStore {
         // its own (later) instant, so it can only reclaim more rows, which leaves
         // an unreferenced object behind rather than a manifest without its bytes.
         let request = SweepRequest::default();
-        let now = crate::server::dispatch::authoritative_now_ms();
+        let now = crate::kernel::dispatch_support::authoritative_now_ms();
         let deleted =
             self.delete_chunk_objects(&self.sidecar.sweep_preview_chunks(&request, now)?)?;
         let mut stats = self.sidecar.sweep()?;

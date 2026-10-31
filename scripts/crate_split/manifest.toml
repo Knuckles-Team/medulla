@@ -81,6 +81,7 @@ paths = [
     "src/server/identity_view",  # unplanned
     "src/server/service_grant",  # unplanned
     "src/server/compute",  # unplanned
+    "src/server/udf_catalog",  # seam (R056.8): depends only on access + medulla-wasm
     "src/test_support",  # unplanned
 ]
 
@@ -295,7 +296,6 @@ paths = [
     "src/server/tests",  # unplanned
     "src/server/traces",  # unplanned
     "src/server/transport",  # unplanned
-    "src/server/udf_catalog",  # unplanned
     "src/server/graphql_sub",  # unplanned
     "src/cost",  # unplanned
 ]

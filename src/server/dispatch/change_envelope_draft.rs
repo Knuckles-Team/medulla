@@ -129,7 +129,7 @@ pub(super) async fn compile_change_envelope_drafts(
         graph: &req.graph,
         principal: verified.principal_persistence_id(),
         verified,
-        created_at_ms: super::consensus::authoritative_now_ms(),
+        created_at_ms: crate::kernel::dispatch_support::authoritative_now_ms(),
     };
     let key = verified.idempotency_key();
     let compiled = match std::mem::replace(&mut req.method, Method::Ping) {

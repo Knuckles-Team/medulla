@@ -344,17 +344,6 @@ mod resource_status_privacy_tests {
     }
 }
 
-/// Run blocking store work off the async runtime; a task that panics or is
-/// cancelled answers `"<task> task failed: …"`, the work's own error otherwise.
-pub(crate) async fn blocking_task<T: Send + 'static>(
-    task: &str,
-    work: impl FnOnce() -> Result<T, String> + Send + 'static,
-) -> Result<T, String> {
-    tokio::task::spawn_blocking(work)
-        .await
-        .map_err(|error| format!("{task} task failed: {error}"))?
-}
-
 /// Acquire the process-wide `ServerState` write lock, recording the wait (D-EIMG-2).
 pub(crate) async fn timed_write(
     state: &Arc<RwLock<ServerState>>,
@@ -420,7 +409,9 @@ fn redact_resource_status_result(
             result.host_snapshot = None;
         }
     }
-    ResultPayload::of::<medulla_types::result_contract::coordination::ResourceReservationStatus>(result)
+    ResultPayload::of::<medulla_types::result_contract::coordination::ResourceReservationStatus>(
+        result,
+    )
 }
 
 // ── Fleet server registry (CONCEPT:MEDULLA-KG.sharding.server-registry, W2.5) ──────────
@@ -601,9 +592,6 @@ pub(crate) use consensus::{
     apply_replicated_transaction_finalize, apply_replicated_transaction_participant,
     apply_replicated_transaction_prepare, ReplicatedParticipantRef,
 };
-pub(crate) use consensus::{authoritative_now_ms, authoritative_now_secs};
-#[cfg(feature = "raft")]
-pub(crate) use consensus::{is_replicated_apply, replicated_placement_authority};
 pub use request_boundary::dispatch;
 #[cfg(any(
     feature = "amqp-wire",

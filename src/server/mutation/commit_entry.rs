@@ -369,7 +369,7 @@ where
         ctx.idempotency_key,
     );
 
-    let created_at_ms = crate::server::dispatch::authoritative_now_ms();
+    let created_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
 
     // Row-local operations have a deterministic success result and can commit
     // their compact Method directly before applying the serving projection.

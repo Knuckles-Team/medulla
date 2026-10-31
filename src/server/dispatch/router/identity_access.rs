@@ -252,7 +252,7 @@ fn register_identity(
     {
         let actor = crate::isolation::AuditActor {
             principal: mode.actor,
-            now_ms: authoritative_now_ms(),
+            now_ms: crate::kernel::dispatch_support::authoritative_now_ms(),
         };
         let outcome = state.isolation.try_register_agent_audited(identity, actor);
         state.publish_identity_view();

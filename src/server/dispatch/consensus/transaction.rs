@@ -38,7 +38,7 @@ pub(super) struct CarrierNativeCommand<'a> {
 pub(super) async fn commit_carrier_native_command(
     proposal: CarrierNativeCommand<'_>,
 ) -> Result<crate::raft::RaftResponse, String> {
-    let committed_at_ms = authoritative_now_ms();
+    let committed_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     let mutation = crate::raft::RaftMutationContext::from_verified_request(
         proposal.batch_id,
         proposal.request_id,

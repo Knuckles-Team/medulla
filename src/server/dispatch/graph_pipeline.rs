@@ -3,9 +3,6 @@ use super::change_envelope::decode_multi_graph_batches;
 use super::change_envelope::route_change_envelope_ops;
 #[cfg(feature = "redb")]
 use super::change_envelope::work_item_capability_authority_epoch;
-use super::consensus::authoritative_now_ms;
-#[cfg(feature = "raft")]
-use super::consensus::is_replicated_apply;
 #[cfg(all(test, feature = "ast"))]
 use super::request_boundary::{decode_ast_files, decode_ast_sources, AstInputLimits};
 #[cfg(test)]
@@ -1651,9 +1648,11 @@ mod blob_dispatch_tests {
         {
             state.persistence = Some(std::sync::Arc::new(
                 crate::server::persistence::redb_backend::RedbBackend::open(
-                    crate::server::unique_temp_dir("medulla-blob-dispatch-graph")
-                        .to_string_lossy()
-                        .into_owned(),
+                    crate::server::api::dispatch_support::unique_temp_dir(
+                        "medulla-blob-dispatch-graph",
+                    )
+                    .to_string_lossy()
+                    .into_owned(),
                     256,
                 )
                 .expect("open blob-dispatch test redb backend"),
@@ -1661,7 +1660,7 @@ mod blob_dispatch_tests {
         }
         // Zero GC grace (X2, commit 62a2471e1): this test drives `BlobGc`
         // through the real dispatch path with the real wall clock
-        // (`authoritative_now_ms()`), never a synthetic/injected `now`. The
+        // (`crate::kernel::dispatch_support::authoritative_now_ms()`), never a synthetic/injected `now`. The
         // DEFAULT retention (`BlobRetentionPolicy::default()`, 24h grace --
         // "long enough for any client to take its first holder" after a
         // commit) is exactly right for production, but it means a manifest's
@@ -1821,7 +1820,8 @@ mod blob_dispatch_tests {
         // `medulla_kernel::crypto::acquire_test_env_lock`'s doc for the full mechanism.
         #[cfg(feature = "security")]
         let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
-        let dir = std::env::temp_dir().join(format!("medulla-blob-dispatch-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("medulla-blob-dispatch-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         // Baseline BEFORE any of this test's own allocation, so the bounded-memory
         // assertion below measures the DELTA this test's own streamed upload adds to

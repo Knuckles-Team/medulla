@@ -111,7 +111,7 @@ impl EmbedderConfig {
         if let Some(model) = &self.model {
             body["model"] = serde_json::Value::String(model.clone());
         }
-        let mut request = crate::server::outbound_http_config()
+        let mut request = crate::server::api::dispatch_support::outbound_http_config()
             .build()
             .new_agent()
             .post(url)

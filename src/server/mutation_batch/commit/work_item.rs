@@ -263,7 +263,7 @@ async fn commit_work_item_plan(plan: WorkItemCommitPlan<'_>) -> Result<ResultPay
     // shared per-graph lane so a ChangeEnvelope cannot pass its version fence.
     let _mutation_guard = lock_graph(graph).await;
     let flags = work_item_output_flags(&method);
-    let created_at_ms = crate::server::dispatch::authoritative_now_ms();
+    let created_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     let fname = crate::persist::sanitize(graph);
     let expected_graph_version = authoritative_graph_version(persistence, &fname, core).await?;
     let batch = compile_methods(
@@ -350,9 +350,9 @@ fn mark_work_item_replayed(
         let mut body: medulla_types::run_checkpoint::RunCheckpointPublished =
             decode_submit_receipt(result)?;
         body.replayed = true;
-        return ResultPayload::of::<medulla_types::result_contract::coordination::PublishRunCheckpoint>(
-            body,
-        );
+        return ResultPayload::of::<
+            medulla_types::result_contract::coordination::PublishRunCheckpoint,
+        >(body);
     }
     Ok(result)
 }
@@ -389,7 +389,8 @@ fn mark_submit_replayed(result: ResultPayload, batch: bool) -> Result<ResultPayl
 }
 
 fn replayed_submit_batch(result: ResultPayload) -> Result<ResultPayload, String> {
-    let mut body: medulla_types::native_control::SubmitWorkItemsResult = decode_submit_receipt(result)?;
+    let mut body: medulla_types::native_control::SubmitWorkItemsResult =
+        decode_submit_receipt(result)?;
     body.replayed = true;
     for child in &mut body.results {
         child.created = false;
@@ -399,7 +400,8 @@ fn replayed_submit_batch(result: ResultPayload) -> Result<ResultPayload, String>
 }
 
 fn replayed_submit(result: ResultPayload) -> Result<ResultPayload, String> {
-    let mut body: medulla_types::native_control::SubmitWorkItemResult = decode_submit_receipt(result)?;
+    let mut body: medulla_types::native_control::SubmitWorkItemResult =
+        decode_submit_receipt(result)?;
     body.created = false;
     body.replayed = true;
     ResultPayload::of::<medulla_types::result_contract::coordination::SubmitWorkItem>(body)

@@ -226,7 +226,7 @@ fn maintain_one(
     mut state: DerivedState,
     min_ts: Option<Ts>,
 ) -> Result<Committed, String> {
-    let now = crate::server::dispatch::authoritative_now_ms();
+    let now = crate::kernel::dispatch_support::authoritative_now_ms();
     let source_key = scope.key(&state.source)?;
     let revised_from = min_ts.filter(|&m| state.last_ts.is_some_and(|last| m <= last));
     let step = match revised_from {

@@ -146,7 +146,7 @@ async fn commit(
         write.expected_revision,
         &write.content_digest,
     )?;
-    let observed_at_ms = authoritative_now_ms();
+    let observed_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     let writer = RecordWriter {
         agent_id: verified.agent_id(),
         written_at_ms: observed_at_ms,
@@ -330,7 +330,8 @@ mod tests {
         else {
             panic!("a later write is a compare-and-set");
         };
-        let conditions = medulla_types::msgpack::decode_property_value(&conditions_msgpack).unwrap();
+        let conditions =
+            medulla_types::msgpack::decode_property_value(&conditions_msgpack).unwrap();
         assert_eq!(
             conditions,
             serde_json::json!({"tenant_id": "tenant-a", "revision": 4})

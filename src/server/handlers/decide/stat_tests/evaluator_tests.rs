@@ -12,7 +12,7 @@ use serde_json::json;
 const ROLE: &str = "decide-evaluator";
 
 fn named(principal: Option<String>, role: Option<&str>) -> NamedEvaluator {
-    let now = crate::server::dispatch::authoritative_now_ms();
+    let now = crate::kernel::dispatch_support::authoritative_now_ms();
     NamedEvaluator {
         principal,
         role: role.map(str::to_string),
@@ -108,7 +108,7 @@ async fn a_commit_names_its_evaluator_and_never_itself() {
 async fn only_the_named_evaluator_evaluates_and_nothing_else_widens() {
     let h = Harness::new().await;
     let template = executed_template(&h).await;
-    let now = crate::server::dispatch::authoritative_now_ms();
+    let now = crate::kernel::dispatch_support::authoritative_now_ms();
     clone_record(&h, &template, "rec-g");
     grant(&h, "rec-g", "evaluator", (now, now + 3_600_000));
 
@@ -138,7 +138,7 @@ async fn only_the_named_evaluator_evaluates_and_nothing_else_widens() {
 async fn an_expired_grant_is_refused() {
     let h = Harness::new().await;
     let template = executed_template(&h).await;
-    let now = crate::server::dispatch::authoritative_now_ms();
+    let now = crate::kernel::dispatch_support::authoritative_now_ms();
     clone_record(&h, &template, "rec-x");
     grant(&h, "rec-x", "evaluator", (now - 7_200_000, now - 3_600_000));
     let expired = evaluate_as(&h, "evaluator", "rec-x").await;
@@ -173,7 +173,7 @@ async fn a_role_grant_admits_its_holders_but_never_the_committer() {
     let ctx = super::super::stat_executor::ExecutionContext {
         store: &h.store,
         tenant_id: TENANT,
-        now_ms: crate::server::dispatch::authoritative_now_ms(),
+        now_ms: crate::kernel::dispatch_support::authoritative_now_ms(),
         server_secret: b"",
     };
     let committer = principal_of("decider");

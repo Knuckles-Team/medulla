@@ -106,7 +106,7 @@ async fn spawn_time_series_reconcile(state: Arc<RwLock<ServerState>>) {
         // The redb lookup is repeated INSIDE the blocking closure (it borrows
         // from the owned backend, which must be moved into the 'static
         // closure); the `None` arm is unreachable after the check above.
-        let report = match crate::server::dispatch::blocking_task(
+        let report = match crate::server::api::dispatch_support::blocking_task(
             "time-series startup reconciliation",
             move || {
                 let Some(redb) = backend.as_redb() else {

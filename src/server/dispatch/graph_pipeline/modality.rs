@@ -407,7 +407,7 @@ pub(super) async fn submit_modality_replication(
     command: crate::raft::SanitizedModalityRaftCommand,
     payload: ResultPayload,
 ) -> Response {
-    let created_at_ms = authoritative_now_ms();
+    let created_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     let mutation = match crate::raft::RaftMutationContext::from_verified_request(
         batch_id,
         ctx.req_id,

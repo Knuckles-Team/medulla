@@ -107,7 +107,7 @@ fn resolve_bearer_credential() -> Result<Option<crate::server::auth::BearerCrede
 
 /// Serve the SPARQL 1.1 HTTP protocol on `listener`, backed by the engine `state`.
 pub async fn serve(listener: TcpListener, state: Arc<RwLock<ServerState>>) {
-    if let Err(error) = crate::server::require_loopback_listener(&listener) {
+    if let Err(error) = crate::server::api::dispatch_support::require_loopback_listener(&listener) {
         tracing::error!("SPARQL listener refused: {error}");
         return;
     }
@@ -1014,9 +1014,10 @@ mod tests {
         // Default is still N-Triples (forms[0]) — matrix additions do not shift it.
         assert_eq!(negotiate("", GRAPH_FORMS), "application/n-triples");
 
-        let triples =
-            medulla_rdf::mapping::parse_turtle("@prefix ex: <http://example.org/> . ex:a ex:p ex:b .")
-                .unwrap();
+        let triples = medulla_rdf::mapping::parse_turtle(
+            "@prefix ex: <http://example.org/> . ex:a ex:p ex:b .",
+        )
+        .unwrap();
         assert!(
             serialize_graph("application/n-quads", &triples)
                 .unwrap()

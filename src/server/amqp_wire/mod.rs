@@ -85,7 +85,11 @@ fn verify_amqp_password(secret: &str, principal: &str, password: &str) -> bool {
 
 /// Fail closed before binding the plaintext AMQP listener.
 pub fn validate_startup_policy(addr: &str, secret: &str) -> std::io::Result<()> {
-    crate::server::validate_direct_wire_security(addr, "amqp-wire", !secret.is_empty())
+    crate::server::api::dispatch_support::validate_direct_wire_security(
+        addr,
+        "amqp-wire",
+        !secret.is_empty(),
+    )
 }
 
 /// Serve the AMQP 0.9.1 wire protocol on `addr` until the listener errors.
@@ -796,7 +800,7 @@ fn authenticate_start_ok(args: &[u8], secret: &str) -> Option<String> {
     {
         return None;
     }
-    crate::server::pseudonymous_broker_actor(secret, principal).ok()
+    crate::server::api::dispatch_support::pseudonymous_broker_actor(secret, principal).ok()
 }
 
 #[cfg(test)]
@@ -862,7 +866,8 @@ mod tests {
         let actor = authenticate_start_ok(&args, "test").unwrap();
         assert_eq!(
             actor,
-            crate::server::pseudonymous_broker_actor("test", principal).unwrap()
+            crate::server::api::dispatch_support::pseudonymous_broker_actor("test", principal)
+                .unwrap()
         );
         assert!(!actor.contains(principal));
         assert!(authenticate_start_ok(&args, "other").is_none());
@@ -976,15 +981,14 @@ mod tests {
         })
         .unwrap();
         assert!(decode_confirmed(&confirmed));
-        let nacked =
-            ResultPayload::of_ref::<medulla_types::result_contract::messaging::PublishIdempotent>(
-                &crate::broker::IdempotentPublish {
-                    confirmed: false,
-                    duplicate: false,
-                    delivered: 0,
-                },
-            )
-            .unwrap();
+        let nacked = ResultPayload::of_ref::<
+            medulla_types::result_contract::messaging::PublishIdempotent,
+        >(&crate::broker::IdempotentPublish {
+            confirmed: false,
+            duplicate: false,
+            delivered: 0,
+        })
+        .unwrap();
         assert!(!decode_confirmed(&nacked));
     }
 }

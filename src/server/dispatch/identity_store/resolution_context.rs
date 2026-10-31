@@ -49,7 +49,12 @@ pub(super) fn apply_and_compose(
     };
     let reply = state
         .isolation
-        .try_apply_identity(op, stamp, now_ms, &medulla_capabilities::scopes::ScopeRegistry)
+        .try_apply_identity(
+            op,
+            stamp,
+            now_ms,
+            &medulla_capabilities::scopes::ScopeRegistry,
+        )
         .map_err(|error| error.to_string())?;
     reply.try_with_request_context(|resolution| {
         // Only a SUCCESSFUL Session::Resolve / Token::VerifyApiKey above can

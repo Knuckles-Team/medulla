@@ -60,7 +60,11 @@ pub const BOLT_ADDR_ENV: &str = "MEDULLA_BOLT_ADDR";
 /// terminate TLS, so it is a loopback backend only. The non-empty engine key is
 /// used solely by the shared current-envelope verifier.
 pub fn validate_startup_policy(addr: &str, auth_secret: &str) -> std::io::Result<()> {
-    crate::server::validate_direct_wire_security(addr, "bolt-wire", !auth_secret.is_empty())
+    crate::server::api::dispatch_support::validate_direct_wire_security(
+        addr,
+        "bolt-wire",
+        !auth_secret.is_empty(),
+    )
 }
 
 /// The 4-byte Bolt handshake magic preamble (`0x6060B017`).
@@ -977,9 +981,11 @@ mod tests {
         {
             state.persistence = Some(std::sync::Arc::new(
                 crate::server::persistence::redb_backend::RedbBackend::open(
-                    crate::server::unique_temp_dir("medulla-bolt-server-test")
-                        .to_string_lossy()
-                        .into_owned(),
+                    crate::server::api::dispatch_support::unique_temp_dir(
+                        "medulla-bolt-server-test",
+                    )
+                    .to_string_lossy()
+                    .into_owned(),
                     256,
                 )
                 .expect("open bolt test redb backend"),

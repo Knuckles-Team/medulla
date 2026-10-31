@@ -34,7 +34,7 @@ impl Channel {
         creator: String,
         initial_members: Vec<String>,
     ) -> Self {
-        let now = crate::server::authoritative_now_secs();
+        let now = crate::kernel::dispatch_support::authoritative_now_secs();
         let mut members: HashSet<String> = initial_members.into_iter().collect();
         members.insert(creator.clone());
         Channel {
@@ -193,7 +193,7 @@ impl ChannelManager {
             .channels
             .remove(channel_id)
             .ok_or_else(|| format!("Channel '{}' not found", channel_id))?;
-        let now = crate::server::authoritative_now_secs();
+        let now = crate::kernel::dispatch_support::authoritative_now_secs();
         let imprint = ChannelImprint {
             channel_id: channel.id,
             channel_type: channel.channel_type,
@@ -226,7 +226,7 @@ impl ChannelManager {
                 sender, channel_id
             ));
         }
-        let now = crate::server::authoritative_now_secs();
+        let now = crate::kernel::dispatch_support::authoritative_now_secs();
         channel.messages.push(ChannelMessage {
             sender: sender.to_string(),
             payload: payload.to_string(),

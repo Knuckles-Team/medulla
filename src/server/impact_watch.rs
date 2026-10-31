@@ -180,7 +180,7 @@ impl ImpactWatchHub {
             .flat_map(|w| w.seed_labels.iter().cloned())
             .collect();
         self.seed_labels.insert(graph.to_string(), labels);
-        let as_of_ms = crate::server::dispatch::authoritative_now_ms();
+        let as_of_ms = crate::kernel::dispatch_support::authoritative_now_ms();
         for watch in &watches {
             let changed = watch_changes(&view, watch, pending);
             let outcome = match plan_watch(&view, watch, &changed, as_of_ms) {

@@ -1562,7 +1562,7 @@ fn authenticate_redis_principal(
     if !verify_redis_password(auth_secret, principal, credential) {
         return None;
     }
-    crate::server::pseudonymous_broker_actor(auth_secret, principal).ok()
+    crate::server::api::dispatch_support::pseudonymous_broker_actor(auth_secret, principal).ok()
 }
 
 /// If `args[1]` parses as a protocol version number, validate and apply it
@@ -2538,7 +2538,11 @@ pub async fn serve(addr: &str, state: Arc<RwLock<ServerState>>) -> std::io::Resu
         let state = state.read().await;
         (state.persist_dir.clone(), state.auth_secret.clone())
     };
-    crate::server::validate_direct_wire_security(addr, "redis-wire", !auth_secret.is_empty())?;
+    crate::server::api::dispatch_support::validate_direct_wire_security(
+        addr,
+        "redis-wire",
+        !auth_secret.is_empty(),
+    )?;
     let store = Arc::new(RedisStore::open(persist_dir.as_deref()).map_err(std::io::Error::other)?);
     serve_listener(addr, store, auth_secret).await
 }
@@ -2596,8 +2600,10 @@ mod tests {
 
     fn authenticated_connection(proto: u8, principal: &str) -> ConnState {
         let mut connection = ConnState::new(3);
-        connection.actor_scope =
-            Some(crate::server::pseudonymous_broker_actor(TEST_SECRET, principal).unwrap());
+        connection.actor_scope = Some(
+            crate::server::api::dispatch_support::pseudonymous_broker_actor(TEST_SECRET, principal)
+                .unwrap(),
+        );
         connection.proto = proto;
         connection
     }

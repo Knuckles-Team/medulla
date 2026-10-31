@@ -55,7 +55,7 @@ impl ForeignWatermarks {
         if !ops.iter().all(|op| collect_foreign(op, &mut sources)) || sources.is_empty() {
             return None;
         }
-        let now_ms = crate::server::dispatch::authoritative_now_ms();
+        let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
         sources
             .into_iter()
             .map(|name| {
@@ -118,7 +118,7 @@ fn collect_foreign(op: &medulla_plan::Op, sources: &mut BTreeSet<String>) -> boo
 /// `name\0watermark\0` for every source when all are fresh; `None` when any is stale or has never
 /// reported a watermark.
 fn watermark_salt(core: &GraphCore, sources: &BTreeSet<String>) -> Option<Vec<u8>> {
-    let now_ms = crate::server::dispatch::authoritative_now_ms();
+    let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     let mut salt = Vec::new();
     for source in sources {
         let status = medulla_core::freshness::foreign_source_freshness(core, source, now_ms);
@@ -171,7 +171,7 @@ mod tests {
     #[test]
     fn a_fresh_watermark_keys_the_entry_and_an_advance_changes_the_key() {
         let core = GraphCore::new();
-        let now = crate::server::dispatch::authoritative_now_ms();
+        let now = crate::kernel::dispatch_support::authoritative_now_ms();
         watermark(&core, "crm", "lsn-1", now);
         let first = ForeignWatermarks::for_ops(&core, &[foreign("crm")]);
         assert!(first.cacheable());

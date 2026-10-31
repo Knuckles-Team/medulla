@@ -124,7 +124,7 @@ fn cross_actor_and_cross_tenant_reads_see_no_points_through_the_real_store() {
     };
     let batch_id =
         crate::server::mutation_batch::opaque_request_key("timeseries", &scope, 1, &method);
-    let now = crate::server::dispatch::authoritative_now_ms();
+    let now = crate::kernel::dispatch_support::authoritative_now_ms();
     let batch = crate::server::mutation_batch::compile_opaque_method(
         crate::server::mutation_batch::CompileBatch {
             batch_id: &batch_id,

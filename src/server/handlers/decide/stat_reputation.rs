@@ -370,7 +370,7 @@ pub(super) fn reputation_relation(
     store: &AgentLibraryStore,
     reader: &LogReader,
 ) -> Result<Relation, String> {
-    let now_ms = crate::server::dispatch::authoritative_now_ms();
+    let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     Ok(relation(
         "reputation",
         COLUMNS,
@@ -387,7 +387,7 @@ pub(super) fn learned_reliability(
     prior: (f64, f64),
 ) -> Result<Option<LearnedReliability>, String> {
     let evidence = gather(store, reader)?;
-    let rules = rules(crate::server::dispatch::authoritative_now_ms())?;
+    let rules = rules(crate::kernel::dispatch_support::authoritative_now_ms())?;
     for outcomes in [&evidence.options, &evidence.agents] {
         let found = learned(outcomes, &rules)?.into_iter().find(|row| {
             row.subject == subject && matches!(row.reputation, Reputation::Estimated(_))

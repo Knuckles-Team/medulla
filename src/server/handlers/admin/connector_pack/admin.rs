@@ -203,7 +203,7 @@ where
     )?;
     // The blocking write owns the lock: a dropped dispatch future cannot free
     // the tenant while the write still runs (EH-536).
-    crate::server::dispatch::blocking_task("connector pack admin", move || {
+    crate::server::api::dispatch_support::blocking_task("connector pack admin", move || {
         let _held = tenant_pack_guard;
         write(&store, context)
     })

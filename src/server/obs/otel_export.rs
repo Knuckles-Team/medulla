@@ -331,7 +331,7 @@ pub async fn export_once(state: Arc<ObsState>, endpoint: String) -> Result<(bool
 
     tokio::task::spawn_blocking(move || {
         let post = |url: String, body: String| -> bool {
-            crate::server::outbound_http_config()
+            crate::server::api::dispatch_support::outbound_http_config()
                 .build()
                 .new_agent()
                 .post(&url)

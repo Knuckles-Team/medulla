@@ -1169,7 +1169,7 @@ async fn serve_with_store_inner(
     auth: S3Auth,
 ) -> std::io::Result<()> {
     let listener = TcpListener::bind(addr).await?;
-    crate::server::require_loopback_listener(&listener)?;
+    crate::server::api::dispatch_support::require_loopback_listener(&listener)?;
     tracing::info!(
         "s3-api: serving authenticated S3-compatible REST surface on {} (durable={})",
         addr,
