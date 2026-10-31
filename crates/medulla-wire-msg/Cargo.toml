@@ -1,0 +1,14 @@
+[package]
+name = "medulla-wire-msg"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Messaging and object listeners: AMQP, MQTT, STOMP, Redis, DDS, S3 and the KV cache endpoint"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_wire_msg"
+path = "src/lib.rs"
+
+[dependencies]

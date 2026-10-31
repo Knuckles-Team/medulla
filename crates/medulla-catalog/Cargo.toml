@@ -1,0 +1,14 @@
+[package]
+name = "medulla-catalog"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: The catalog over packs, sources and schemas: lookup, lineage and discovery"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_catalog"
+path = "src/lib.rs"
+
+[dependencies]

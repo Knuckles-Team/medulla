@@ -1,0 +1,14 @@
+[package]
+name = "medulla-server-router"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Method router dispatch table"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_server_router"
+path = "src/lib.rs"
+
+[dependencies]

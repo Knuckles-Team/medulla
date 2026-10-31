@@ -1,0 +1,14 @@
+[package]
+name = "medulla-uql"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: UQL language: parser, binder and lowering to the executor"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_uql"
+path = "src/lib.rs"
+
+[dependencies]

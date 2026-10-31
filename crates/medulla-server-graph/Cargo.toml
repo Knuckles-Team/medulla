@@ -1,0 +1,14 @@
+[package]
+name = "medulla-server-graph"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Graph pipeline dispatch, SPARQL update dispatch and change envelopes"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_server_graph"
+path = "src/lib.rs"
+
+[dependencies]

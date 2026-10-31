@@ -1,0 +1,14 @@
+[package]
+name = "medulla-tables"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Table model: schema, property graph tables and ANN authority (everything but the table store)"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_tables"
+path = "src/lib.rs"
+
+[dependencies]

@@ -1,0 +1,14 @@
+[package]
+name = "medulla-decision-types"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Decision ladder vocabulary: ResolutionKind, evidence classes, decision requests, answers and revision records"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_decision_types"
+path = "src/lib.rs"
+
+[dependencies]

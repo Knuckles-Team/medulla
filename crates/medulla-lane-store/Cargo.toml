@@ -1,0 +1,14 @@
+[package]
+name = "medulla-lane-store"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Development lane records in the store"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_lane_store"
+path = "src/lib.rs"
+
+[dependencies]

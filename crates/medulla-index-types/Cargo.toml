@@ -1,0 +1,14 @@
+[package]
+name = "medulla-index-types"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Semantic index, embedding, managed index and entity resolution types"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_index_types"
+path = "src/lib.rs"
+
+[dependencies]

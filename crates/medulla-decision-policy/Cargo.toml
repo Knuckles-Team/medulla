@@ -1,0 +1,14 @@
+[package]
+name = "medulla-decision-policy"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Ladder stages 3-5: policy, hard constraints, knobs, admission, refusals, budgets and the bounded exact solve"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_decision_policy"
+path = "src/lib.rs"
+
+[dependencies]

@@ -1,0 +1,14 @@
+[package]
+name = "medulla-server-consensus"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Consensus dispatch"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_server_consensus"
+path = "src/lib.rs"
+
+[dependencies]

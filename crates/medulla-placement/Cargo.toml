@@ -1,0 +1,14 @@
+[package]
+name = "medulla-placement"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Worker admission and placement policy"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_placement"
+path = "src/lib.rs"
+
+[dependencies]

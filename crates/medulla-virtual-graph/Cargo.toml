@@ -1,0 +1,14 @@
+[package]
+name = "medulla-virtual-graph"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Attached sources read as virtual graphs: OBDA mappings, source selection and source authority checks"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_virtual_graph"
+path = "src/lib.rs"
+
+[dependencies]

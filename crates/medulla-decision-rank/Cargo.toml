@@ -1,0 +1,14 @@
+[package]
+name = "medulla-decision-rank"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Ladder stage 6: ranking the remaining legal options with fitted statistics (scores, champions, bandits, credit)"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_decision_rank"
+path = "src/lib.rs"
+
+[dependencies]

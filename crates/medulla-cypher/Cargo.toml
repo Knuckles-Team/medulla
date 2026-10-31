@@ -1,0 +1,14 @@
+[package]
+name = "medulla-cypher"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Cypher language, its executor, graph data science calls and the edge index"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_cypher"
+path = "src/lib.rs"
+
+[dependencies]

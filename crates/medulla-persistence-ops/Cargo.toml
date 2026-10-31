@@ -1,0 +1,14 @@
+[package]
+name = "medulla-persistence-ops"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Backup, cold offload, online reshard, shard migration and store upgrade"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_persistence_ops"
+path = "src/lib.rs"
+
+[dependencies]

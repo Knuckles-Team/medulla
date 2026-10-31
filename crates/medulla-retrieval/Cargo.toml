@@ -1,0 +1,14 @@
+[package]
+name = "medulla-retrieval"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Retrieval and expansion: knowledge assembly, LeanRAG, verdicts and stop rules"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_retrieval"
+path = "src/lib.rs"
+
+[dependencies]

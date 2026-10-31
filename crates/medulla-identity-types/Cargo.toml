@@ -1,0 +1,14 @@
+[package]
+name = "medulla-identity-types"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Issuer, principal, scope, tenancy, ACL and authority types"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_identity_types"
+path = "src/lib.rs"
+
+[dependencies]

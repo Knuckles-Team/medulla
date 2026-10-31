@@ -1,0 +1,14 @@
+[package]
+name = "medulla-catalog-types"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Connector pack, schema, catalog, source ingestion, lineage and release record types"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_catalog_types"
+path = "src/lib.rs"
+
+[dependencies]

@@ -1,0 +1,8 @@
+//! medulla-vocab: Ontology modules and shapes for the data-platform, media, supply-chain and orchestration vocabularies.
+//!
+//! Level L5 in `scripts/crate_split/boundaries.toml` (MEDULLA-CONTRACT-R056.11); it may depend only
+//! on crates of a lower level. Budget: 25,000 lines of Rust. Specs that land here: data-platform-vocabulary, media-and-personal-vocabulary, supply-chain-vocabulary, orchestration-vocabulary.
+//! Route new rows with `scripts/crate_split/route_rows.py`.
+
+#![forbid(unsafe_code)]
+#![deny(missing_docs)]

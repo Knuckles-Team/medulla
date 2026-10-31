@@ -1,0 +1,14 @@
+[package]
+name = "medulla-isolation"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Tenant isolation, RBAC persistence and dependency scopes"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_isolation"
+path = "src/lib.rs"
+
+[dependencies]

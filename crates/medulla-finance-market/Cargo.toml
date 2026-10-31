@@ -1,0 +1,14 @@
+[package]
+name = "medulla-finance-market"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Market data primitives: quotes, bars, books and their kernels"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_finance_market"
+path = "src/lib.rs"
+
+[dependencies]

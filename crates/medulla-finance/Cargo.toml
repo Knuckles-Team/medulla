@@ -1,0 +1,14 @@
+[package]
+name = "medulla-finance"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Finance kernels, backtests, risk, attribution, banking and execution signals"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_finance"
+path = "src/lib.rs"
+
+[dependencies]

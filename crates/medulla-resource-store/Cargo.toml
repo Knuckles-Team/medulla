@@ -1,0 +1,14 @@
+[package]
+name = "medulla-resource-store"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Resource reservations, capacity leases and enrichment budgets"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_resource_store"
+path = "src/lib.rs"
+
+[dependencies]

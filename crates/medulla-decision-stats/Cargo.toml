@@ -1,0 +1,14 @@
+[package]
+name = "medulla-decision-stats"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Statistical ranking for the decision ladder: fitted heads, calibration, conformal bounds, off-policy evaluation and scores"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_decision_stats"
+path = "src/lib.rs"
+
+[dependencies]

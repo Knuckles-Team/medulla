@@ -1,0 +1,14 @@
+[package]
+name = "medulla-semantic-index"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Semantic ANN codes and the semantic index service"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_semantic_index"
+path = "src/lib.rs"
+
+[dependencies]

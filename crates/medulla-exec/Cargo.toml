@@ -1,0 +1,14 @@
+[package]
+name = "medulla-exec"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Physical plan execution: optimizer, cost models, runtime, DAG, incremental and streamed results"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_exec"
+path = "src/lib.rs"
+
+[dependencies]

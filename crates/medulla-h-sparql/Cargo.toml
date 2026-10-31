@@ -1,0 +1,14 @@
+[package]
+name = "medulla-h-sparql"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: SPARQL/RDF and federation handlers"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_h_sparql"
+path = "src/lib.rs"
+
+[dependencies]

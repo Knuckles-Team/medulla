@@ -1,0 +1,14 @@
+[package]
+name = "medulla-h-mining"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Mining handlers"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_h_mining"
+path = "src/lib.rs"
+
+[dependencies]

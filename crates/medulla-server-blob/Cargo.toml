@@ -1,0 +1,14 @@
+[package]
+name = "medulla-server-blob"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Served blob and key-value storage"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_server_blob"
+path = "src/lib.rs"
+
+[dependencies]

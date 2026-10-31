@@ -1,0 +1,14 @@
+[package]
+name = "medulla-protocol-types"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Method registry and wire-query envelope types shared by every listener and client"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_protocol_types"
+path = "src/lib.rs"
+
+[dependencies]

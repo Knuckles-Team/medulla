@@ -1,0 +1,14 @@
+[package]
+name = "medulla-server-lake"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Lake serving, GraphQL subscriptions and policy export"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_server_lake"
+path = "src/lib.rs"
+
+[dependencies]
