@@ -618,16 +618,6 @@ pub mod txn;
 // `server::{handle_connection,serve_uds,serve_tcp}` — used by main.rs/persist.rs/tests.
 pub use auth::{compute_verified_envelope_token, VerifiedEnvelopeParams};
 pub use dispatch::dispatch;
-#[cfg(all(feature = "raft", feature = "jobs"))]
-pub(crate) use dispatch::{
-    apply_replicated_job_publication_commit, apply_replicated_job_publication_finalize,
-};
-#[cfg(feature = "raft")]
-pub(crate) use dispatch::{
-    apply_replicated_native, apply_replicated_transaction_decision,
-    apply_replicated_transaction_finalize, apply_replicated_transaction_participant,
-    apply_replicated_transaction_prepare, ReplicatedParticipantRef,
-};
 // NL planner injection (CONCEPT:MEDULLA-KG.query.fence-stripper): an embedder opts into engine-driven NL→query.
 #[cfg(feature = "nl-query")]
 pub use nl::{resolve_planner as resolve_nl_planner, set_nl_planner};

@@ -9,10 +9,7 @@ mod enrichment_top_up;
 mod native;
 pub(crate) use enrichment_top_up::EnrichmentTopUpTransition;
 
-pub use native::{
-    NativeMutationCommand, SealedNativeMethod, TransactionParticipantPhase,
-    NATIVE_CONSENSUS_METHODS,
-};
+pub use native::{NativeMutationCommand, SealedNativeMethod, NATIVE_CONSENSUS_METHODS};
 
 #[cfg(test)]
 mod tests;

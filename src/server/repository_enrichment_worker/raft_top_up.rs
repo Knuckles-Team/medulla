@@ -252,7 +252,9 @@ async fn prepare_fresh(
         &proposal.source_envelope,
     )
     .await?;
-    let snapshot = crate::server::dispatch::decode_pending_enrichment_intent(&old_delivery.intent)?;
+    let snapshot =
+        crate::server::api::reentry::decode_pending_enrichment_intent(state, &old_delivery.intent)
+            .await?;
     let plan = plan_reactivation(
         &snapshot,
         &budget,
@@ -269,7 +271,7 @@ async fn prepare_fresh(
         .ok_or("CONFLICT: repository enrichment graph version is absent")?;
     let committed_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     let replacement_intent =
-        crate::server::dispatch::enrichment_intent_for_snapshot(plan.snapshot)?;
+        crate::server::api::reentry::enrichment_intent_for_snapshot(state, plan.snapshot).await?;
     let replacement_batch =
         medulla_types::MutationBatch::repository_enrichment_top_up(RepositoryEnrichmentTopUp {
             old_delivery: &old_delivery,

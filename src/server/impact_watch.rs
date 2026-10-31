@@ -259,7 +259,7 @@ async fn submit(
         method,
     };
     let response =
-        crate::server::dispatch::dispatch_verified_request(state, request, context).await;
+        crate::server::api::reentry::dispatch_verified_request(state, request, context).await;
     match response.refusal_text() {
         None => Ok(()),
         Some(refusal) => Err(format!("writeback refused: {refusal}")),

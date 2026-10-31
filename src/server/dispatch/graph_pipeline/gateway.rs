@@ -85,7 +85,7 @@ async fn commit_query_gateway(ctx: GatewayRouteCtx<'_>, method: Method) -> Respo
             move |staged_core| async move {
                 handlers::query::try_handle(
                     state,
-                    handlers::TryHandleContext {
+                    crate::server::api::reentry::TryHandleContext {
                         req_id,
                         graph_name,
                         read_authority: query_read_authority.as_ref(),
@@ -121,7 +121,7 @@ pub(super) async fn route_query_gateway(
     }
     match handlers::query::try_handle(
         ctx.state,
-        handlers::TryHandleContext {
+        crate::server::api::reentry::TryHandleContext {
             req_id: ctx.req_id,
             graph_name: ctx.graph_name,
             read_authority: ctx.read_authority.as_ref(),
@@ -163,7 +163,7 @@ async fn commit_rdf_gateway(ctx: GatewayRouteCtx<'_>, method: Method) -> Respons
             move |staged_core| async move {
                 handlers::rdf::try_handle(
                     state,
-                    handlers::TryHandleContext {
+                    crate::server::api::reentry::TryHandleContext {
                         req_id,
                         graph_name,
                         read_authority: rdf_read_authority.as_ref(),
@@ -197,7 +197,7 @@ pub(super) async fn route_rdf_gateway(
     }
     match handlers::rdf::try_handle(
         ctx.state,
-        handlers::TryHandleContext {
+        crate::server::api::reentry::TryHandleContext {
             req_id: ctx.req_id,
             graph_name: ctx.graph_name,
             read_authority: ctx.read_authority.as_ref(),

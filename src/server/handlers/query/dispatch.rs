@@ -1,7 +1,7 @@
 #[cfg(feature = "query")]
 use super::uql_statement::handle_uql;
 use super::*;
-use crate::server::handlers::TryHandleContext;
+use crate::server::api::reentry::TryHandleContext;
 
 #[cfg(feature = "query")]
 mod edge_index;

@@ -221,7 +221,7 @@ async fn abort_consensus_transaction(
     // idempotent when no durable intent exists.
     for participant in participants {
         let command = crate::raft::NativeMutationCommand::transaction_participant(
-            crate::raft::TransactionParticipantPhase::Abort,
+            crate::server::api::reentry::TransactionParticipantPhase::Abort,
             coordinator_id.to_string(),
             participant.participant_id,
             None,
@@ -322,7 +322,7 @@ async fn prepare_consensus_participants(
     let request_id = coordination.request_id;
     for participant in &fanout.participants {
         let command = match crate::raft::NativeMutationCommand::transaction_participant(
-            crate::raft::TransactionParticipantPhase::Prepare,
+            crate::server::api::reentry::TransactionParticipantPhase::Prepare,
             fanout.coordinator_id.clone(),
             participant.participant_id,
             Some(&participant.sealed_plan_source),
@@ -419,7 +419,7 @@ async fn commit_consensus_participants(
     let request_id = coordination.request_id;
     for participant in &fanout.participants {
         let command = match crate::raft::NativeMutationCommand::transaction_participant(
-            crate::raft::TransactionParticipantPhase::Commit,
+            crate::server::api::reentry::TransactionParticipantPhase::Commit,
             fanout.coordinator_id.clone(),
             participant.participant_id,
             Some(&participant.sealed_plan_source),

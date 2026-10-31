@@ -1,4 +1,6 @@
 use super::*;
+#[cfg(feature = "raft")]
+use crate::server::api::reentry::ReplicatedParticipantRef;
 
 #[cfg(feature = "raft")]
 pub(in crate::server::dispatch) fn replicated_identity_bootstrap_authorized() -> bool {
@@ -89,16 +91,6 @@ fn replicated_apply_scope(
     }
 }
 
-/// The identifying fields of a replicated transaction participant, bundled so
-/// [`apply_replicated_transaction_participant`] stays under the clippy
-/// argument-count ceiling.
-#[cfg(feature = "raft")]
-pub(crate) struct ReplicatedParticipantRef<'a> {
-    pub(crate) coordinator_id: &'a str,
-    pub(crate) participant_id: u64,
-    pub(crate) plan: Option<&'a [u8]>,
-}
-
 #[cfg(feature = "raft")]
 pub(crate) async fn apply_replicated_transaction_participant(
     state: &Arc<RwLock<ServerState>>,
@@ -106,7 +98,7 @@ pub(crate) async fn apply_replicated_transaction_participant(
     committed_at_ms: u64,
     authority: &crate::raft::RaftMutationContext,
     applying_group: crate::raft::GroupId,
-    phase: crate::raft::TransactionParticipantPhase,
+    phase: crate::server::api::reentry::TransactionParticipantPhase,
     participant: ReplicatedParticipantRef<'_>,
 ) -> Result<bool, String> {
     let ReplicatedParticipantRef {
@@ -117,7 +109,7 @@ pub(crate) async fn apply_replicated_transaction_participant(
     REPLICATED_APPLY
         .scope(replicated_apply_scope(committed_at_ms, authority), async {
             match phase {
-                crate::raft::TransactionParticipantPhase::Prepare => {
+                crate::server::api::reentry::TransactionParticipantPhase::Prepare => {
                     handlers::txn::apply_consensus_participant_prepare(
                         state,
                         applying_group,
@@ -134,7 +126,7 @@ pub(crate) async fn apply_replicated_transaction_participant(
                     )
                     .await
                 }
-                crate::raft::TransactionParticipantPhase::Commit => {
+                crate::server::api::reentry::TransactionParticipantPhase::Commit => {
                     handlers::txn::apply_consensus_participant_commit(
                         state,
                         request_id,
@@ -150,7 +142,7 @@ pub(crate) async fn apply_replicated_transaction_participant(
                     )
                     .await
                 }
-                crate::raft::TransactionParticipantPhase::Abort => {
+                crate::server::api::reentry::TransactionParticipantPhase::Abort => {
                     handlers::txn::apply_consensus_participant_abort(
                         state,
                         authority,

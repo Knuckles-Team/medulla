@@ -352,7 +352,8 @@ async fn local_execute(
         agent_id: Some("service:local-query".to_string()),
         method,
     };
-    let resp = crate::server::dispatch::dispatch_authenticated_local_query(state, request).await;
+    let resp =
+        crate::server::api::reentry::dispatch_authenticated_local_query(state, request).await;
     if let Some(refusal) = resp.refusal_text() {
         return Err(refusal);
     }

@@ -87,9 +87,14 @@ async fn propose_park(
     if now_ms == 0 || now_ms > crate::kernel::dispatch_support::authoritative_now_ms() {
         return Err("CONFLICT: repository enrichment park timestamp is invalid".into());
     }
-    let (snapshot, park) =
-        crate::server::dispatch::plan_held_underfunded_park(persistence, graph, lease, now_ms)
-            .await?;
+    let (snapshot, park) = crate::server::api::reentry::plan_held_underfunded_park(
+        state,
+        persistence,
+        graph,
+        lease,
+        now_ms,
+    )
+    .await?;
     if &park != expected_park {
         return Err("CONFLICT: repository enrichment park changed before proposal".into());
     }

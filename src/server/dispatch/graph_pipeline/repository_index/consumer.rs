@@ -27,6 +27,8 @@ use crate::parser::enrichment_admission::{
 use crate::parser::enrichment_snapshot::{
     EligibleSnapshot, EligibleUnit, EnrichmentBudgetCheckpoint, EnrichmentWorkStage,
 };
+#[cfg(feature = "blob")]
+use crate::server::api::reentry::DrainOutcome;
 use crate::server::persistence::PersistenceBackend;
 
 pub(super) const PENDING_TOPIC: &str = "repository.enrichment.pending";
@@ -496,14 +498,6 @@ where
         park_source,
     };
     process_held_lease(persistence, graph_fname, store, &lease, &mut callbacks).await
-}
-
-#[cfg(feature = "blob")]
-#[derive(Debug, Eq, PartialEq)]
-pub(crate) enum DrainOutcome {
-    Idle,
-    Parked,
-    Acknowledged { pages: u32 },
 }
 
 /// Classify only the first ordered dead letter using its immutable outbox row

@@ -201,8 +201,7 @@ pub(crate) use modality::{decode_sanitized_modality_result, SanitizedModalityMut
 mod command;
 pub(crate) use command::EnrichmentTopUpTransition;
 pub use command::{
-    NativeMutationCommand, ReplicatedMutation, SealedNativeMethod, TransactionParticipantPhase,
-    NATIVE_CONSENSUS_METHODS,
+    NativeMutationCommand, ReplicatedMutation, SealedNativeMethod, NATIVE_CONSENSUS_METHODS,
 };
 
 /// The application request replicated through Raft: one typed command targeted at
