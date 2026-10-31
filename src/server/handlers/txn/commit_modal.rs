@@ -197,7 +197,7 @@ async fn resolve_cross_modal_target(
 ) -> Result<
     (
         Arc<crate::graph::GraphCore>,
-        Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+        Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     ),
     String,
 > {
@@ -296,7 +296,7 @@ pub(crate) async fn commit_cross_modal_txn_with_nonce(
 struct CrossModalDurableArgs<'a> {
     state: &'a Arc<RwLock<ServerState>>,
     core: &'a Arc<crate::graph::GraphCore>,
-    authority: &'a dyn crate::server::persistence::PersistenceBackend,
+    authority: &'a dyn crate::server::api::persistence::PersistenceBackend,
     fname: &'a str,
     coordinator_id: &'a str,
     request_id: u64,
@@ -361,7 +361,7 @@ async fn commit_cross_modal_durable(
     let (batch, result) = compile_cross_modal_batch(&args).await?;
     let committed = args
         .authority
-        .commit_mutation_batch_crossmodal(crate::server::persistence::CrossModalCommitArgs {
+        .commit_mutation_batch_crossmodal(crate::server::api::persistence::CrossModalCommitArgs {
             graph_fname: args.fname,
             batch: &batch,
             methods: args.methods,

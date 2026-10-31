@@ -4,7 +4,9 @@ use medulla_types::contract::BoundedVec;
 use medulla_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, QuestionSafety, StatisticalOutcome, TypedValue,
 };
-use medulla_types::decision::task_plan::{plan_explicit_tasks, task_bindings, TaskPlan, TaskPlanTask};
+use medulla_types::decision::task_plan::{
+    plan_explicit_tasks, task_bindings, TaskPlan, TaskPlanTask,
+};
 use medulla_types::decision::{PremiseClass, PremiseProvenance, PremiseRef};
 
 use super::stat_support::invalid_parameter;
@@ -122,7 +124,10 @@ pub(super) fn premises(plan: &TaskPlan) -> Vec<PremiseRef> {
             fact: format!(
                 "task_plan_claim:dependencies={};prompt_digest={}",
                 task.depends_on.as_slice().join(","),
-                medulla_types::decision::digest::digest_text("eg/task-plan-prompt/v1", &task.prompt)
+                medulla_types::decision::digest::digest_text(
+                    "eg/task-plan-prompt/v1",
+                    &task.prompt
+                )
             ),
             class: PremiseClass::Claim,
             provenance: PremiseProvenance::Request {

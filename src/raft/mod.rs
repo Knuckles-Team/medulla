@@ -60,15 +60,8 @@ use openraft::BasicNode;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
+use crate::server::api::persistence::{deserialize_required_option, RaftMutationContext};
 use crate::server::ServerState;
-
-fn deserialize_required_option<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-    T: serde::Deserialize<'de>,
-{
-    <Option<T> as serde::Deserialize>::deserialize(deserializer)
-}
 
 pub mod config;
 /// Pure, policy-only M3 cross-node elasticity proposals with resumable move identities.
@@ -199,7 +192,6 @@ pub use modality::SanitizedModalityRaftCommand;
 pub(crate) use modality::{decode_sanitized_modality_result, SanitizedModalityMutation};
 
 mod command;
-pub(crate) use command::EnrichmentTopUpTransition;
 pub use command::{
     NativeMutationCommand, ReplicatedMutation, SealedNativeMethod, NATIVE_CONSENSUS_METHODS,
 };
@@ -224,144 +216,6 @@ pub struct RaftRequest {
     /// Universal mutation authority supplied by the verified request boundary or
     /// an explicit engine-internal constructor. It is mandatory in every log entry.
     pub mutation: RaftMutationContext,
-}
-
-/// Privacy-safe request authority replicated with an ordinary Raft graph write.
-/// The principal is already a one-way fingerprint; raw caller identity is never
-/// copied into the consensus log or durable mutation ledger.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct RaftMutationContext {
-    pub batch_id: String,
-    pub request_id: u64,
-    /// Authenticated transport nonce carried into the mutation envelope on the
-    /// state-machine apply path. Internal control-plane entries leave this
-    /// absent; replicated caller mutations must preserve it end to end.
-    pub attempt_nonce: Option<medulla_types::contract::Nonce>,
-    /// Opaque tenant scope derived from the verified carrier. Raw tenant names are
-    /// never copied into consensus or MutationBatch authority.
-    pub tenant_scope: String,
-    pub principal_fingerprint: String,
-    /// True only when the verified leader boundary admitted the exact one-time
-    /// identity bootstrap. Followers use this mandatory bit to apply the same
-    /// atomic bootstrap transition rather than re-authorizing from opaque claims.
-    pub identity_bootstrap: bool,
-    pub placement_epoch: u64,
-    #[serde(deserialize_with = "deserialize_required_option")]
-    pub fencing_token: Option<u64>,
-    pub created_at_ms: u64,
-}
-
-/// The timing and placement fence attached to an already verified mutation.
-/// Grouping these adjacent fields keeps the request-boundary constructor small
-/// without changing the serialized authority shape.
-pub(crate) struct RaftMutationTiming {
-    pub(crate) placement_epoch: u64,
-    pub(crate) fencing_token: Option<u64>,
-    pub(crate) created_at_ms: u64,
-}
-
-impl RaftMutationContext {
-    /// Construct caller authority only from the already-verified, privacy-safe
-    /// carrier facts at the dispatch boundary.
-    pub(crate) fn from_verified_request(
-        batch_id: String,
-        request_id: u64,
-        attempt_nonce: Option<medulla_types::contract::Nonce>,
-        tenant_scope: &str,
-        principal_fingerprint: String,
-        identity_bootstrap: bool,
-        timing: RaftMutationTiming,
-    ) -> Result<Self, String> {
-        let context = Self {
-            batch_id,
-            request_id,
-            attempt_nonce,
-            tenant_scope: tenant_scope.to_string(),
-            principal_fingerprint,
-            identity_bootstrap,
-            placement_epoch: timing.placement_epoch,
-            fencing_token: timing.fencing_token,
-            created_at_ms: timing.created_at_ms,
-        };
-        context.validate()?;
-        if context.tenant_scope == Self::internal_tenant_scope() {
-            return Err(
-                "verified Raft authority cannot claim the internal tenant scope".to_string(),
-            );
-        }
-        Ok(context)
-    }
-
-    /// Construct engine-owned control-plane authority. The tenant and principal
-    /// are fixed opaque digests, while the child batch id deterministically binds
-    /// the operation to its graph and coordinator without persisting either raw id.
-    pub(crate) fn internal(
-        namespace: &str,
-        graph: &str,
-        coordinator_id: &str,
-        request_id: u64,
-        created_at_ms: u64,
-    ) -> Self {
-        Self {
-            batch_id: crate::server::mutation_batch::opaque_coordinator_key(
-                namespace,
-                graph,
-                coordinator_id,
-            ),
-            request_id,
-            attempt_nonce: None,
-            tenant_scope: Self::internal_tenant_scope(),
-            principal_fingerprint: Self::internal_principal_fingerprint(),
-            identity_bootstrap: false,
-            placement_epoch: 0,
-            fencing_token: None,
-            created_at_ms,
-        }
-    }
-
-    fn internal_tenant_scope() -> String {
-        crate::server::mutation_batch::opaque_coordinator_key(
-            "raft-internal-tenant",
-            "control-plane",
-            "authority",
-        )
-    }
-
-    fn internal_principal_fingerprint() -> String {
-        crate::server::mutation_batch::opaque_coordinator_key(
-            "principal:sha256",
-            "medulla-raft-control-plane",
-            "authority",
-        )
-    }
-
-    pub(in crate::raft) fn is_internal(&self) -> bool {
-        self.tenant_scope == Self::internal_tenant_scope()
-            && self.principal_fingerprint == Self::internal_principal_fingerprint()
-            && self.attempt_nonce.is_none()
-            && !self.identity_bootstrap
-    }
-
-    pub(crate) fn validate(&self) -> Result<(), String> {
-        if self.batch_id.trim().is_empty() {
-            return Err("Raft mutation batch authority must not be empty".to_string());
-        }
-        if !opaque_scope_is_valid(&self.tenant_scope) {
-            return Err("Raft mutation tenant authority must be an opaque scope".to_string());
-        }
-        let principal = self
-            .principal_fingerprint
-            .strip_prefix("principal:sha256:")
-            .filter(|digest| lowercase_sha256_is_valid(digest));
-        if principal.is_none() {
-            return Err("Raft mutation principal authority must be an opaque digest".to_string());
-        }
-        if self.placement_epoch > 0 && self.fencing_token.is_none() {
-            return Err("placed Raft mutation authority requires a fencing token".to_string());
-        }
-        Ok(())
-    }
 }
 
 impl RaftRequest {
@@ -456,19 +310,6 @@ impl RaftRequest {
         self.command
             .validate_graph_command(server_secret, self, group_id)
     }
-}
-
-fn opaque_scope_is_valid(value: &str) -> bool {
-    value.rsplit_once(':').is_some_and(|(namespace, digest)| {
-        !namespace.is_empty() && lowercase_sha256_is_valid(digest)
-    })
-}
-
-fn lowercase_sha256_is_valid(value: &str) -> bool {
-    value.len() == 64
-        && value
-            .bytes()
-            .all(|byte| byte.is_ascii_hexdigit() && !byte.is_ascii_uppercase())
 }
 
 #[cfg(test)]

@@ -407,7 +407,7 @@ pub(super) fn decode_finalize_job_publication(
 pub(crate) async fn apply_consensus_job_publication_commit(
     state: &Arc<RwLock<ServerState>>,
     request_id: u64,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     applying_group: crate::raft::GroupId,
     expected_coordinator_id: &str,
     plan_bytes: &[u8],
@@ -506,7 +506,7 @@ pub(crate) async fn apply_consensus_job_publication_finalize(
 /// One analytics publication's durable graph write: where it commits, who it
 /// is attributed to, the claimed methods and the result they record.
 struct PublicationWrite<'a> {
-    persistence: Option<&'a Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    persistence: Option<&'a Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     core: &'a Arc<crate::graph::GraphCore>,
     origin: crate::server::mutation_batch::CommitOrigin<'a>,
     target_graph: &'a str,

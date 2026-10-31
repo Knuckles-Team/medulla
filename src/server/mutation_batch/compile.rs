@@ -11,11 +11,12 @@ use crate::mutation_batch::{
     MutationScopeIdentity, MutationStateDescriptor, MutationSurface, MUTATION_BATCH_VERSION,
 };
 use crate::protocol::Method;
-use crate::server::persistence::PersistenceBackend;
+use crate::server::api::persistence::PersistenceBackend;
 
 use super::canonical::{domain_for, lower_canonical_operation, surface_for};
-use super::digest::{principal_fingerprint, ENGINE_LEDGER_PRINCIPAL};
+use super::digest::principal_fingerprint;
 use super::terminal_outcome::lower_terminal_outcome_extensions;
+use crate::kernel::persistence::ENGINE_LEDGER_PRINCIPAL;
 
 mod finish_helpers;
 use finish_helpers::{compiled_outbox, compiled_scope_identity};

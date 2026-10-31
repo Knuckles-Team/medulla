@@ -8,7 +8,7 @@ fn props(v: serde_json::Value) -> Vec<u8> {
 }
 
 fn tmp_dir(tag: &str) -> PathBuf {
-    crate::test_support::temp_dir("medulla-embedded", tag)
+    crate::kernel::persistence::temp_dir("medulla-embedded", tag)
 }
 
 /// Hold the ambient encryption environment still for a durable test's whole body.

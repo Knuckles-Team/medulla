@@ -147,7 +147,9 @@ impl AgentLibraryStore {
         Ok(handle)
     }
 
-    pub(super) fn read(&self) -> Result<ScopedRead<'_, medulla_storage::AgentLibraryOwner>, String> {
+    pub(super) fn read(
+        &self,
+    ) -> Result<ScopedRead<'_, medulla_storage::AgentLibraryOwner>, String> {
         self.kernel.read_scope(&self.bootstrap)
     }
 
@@ -338,7 +340,9 @@ pub(super) fn resolve_nonce_first(
         catalog_digest: medulla_types::contract::Digest256::parse(
             medulla_capabilities::contract_catalog_digest(),
         )?,
-        audience: medulla_types::contract::AudienceId::new(medulla_types::mutation_batch::ENGINE_AUDIENCE)?,
+        audience: medulla_types::contract::AudienceId::new(
+            medulla_types::mutation_batch::ENGINE_AUDIENCE,
+        )?,
         actor: medulla_types::contract::ActorId::new(context.caller_principal.clone())?,
         tenant: medulla_types::contract::TenantId::new(context.tenant_id.clone())?,
         nonce: context.attempt_nonce,
@@ -393,9 +397,10 @@ pub(super) fn agent_library_operation_identity(
     let scope = medulla_types::mutation_batch::authority_scope_for(owner.identity())?;
     let catalog_digest = Digest256::parse(medulla_capabilities::contract_catalog_digest())?;
     let method = MethodId::new("ApplyMutation")?;
-    let (method_schema_id, method_schema_digest) = medulla_capabilities::method_schema("ApplyMutation")
-        .map(|(schema, digest)| (SchemaId::new(schema), Digest256::from_bytes(digest)))
-        .ok_or_else(|| "ApplyMutation is missing from the contract catalog".to_string())?;
+    let (method_schema_id, method_schema_digest) =
+        medulla_capabilities::method_schema("ApplyMutation")
+            .map(|(schema, digest)| (SchemaId::new(schema), Digest256::from_bytes(digest)))
+            .ok_or_else(|| "ApplyMutation is missing from the contract catalog".to_string())?;
     let method_schema_id = method_schema_id?;
     let definition_digest = definition_digest.unwrap_or("");
     let canonical_payload_digest = Digest256::framed(
@@ -513,7 +518,9 @@ pub(crate) fn current_agent_library_policy_digest() -> Result<String, String> {
     ))
 }
 
-pub(super) fn parse_prefixed_digest(value: &str) -> Result<medulla_types::contract::Digest256, String> {
+pub(super) fn parse_prefixed_digest(
+    value: &str,
+) -> Result<medulla_types::contract::Digest256, String> {
     value
         .strip_prefix("sha256:")
         .ok_or_else(|| "agent library policy digest is not canonical".to_string())
@@ -937,11 +944,13 @@ mod tests {
         );
         assert_eq!(
             first_outbox[0].intent.payload,
-            medulla_storage::encode_bounded(&first_event, "agent library test outbox event").unwrap()
+            medulla_storage::encode_bounded(&first_event, "agent library test outbox event")
+                .unwrap()
         );
         let mut legacy_record = first_record.clone();
         legacy_record.result_msgpack = Some(
-            medulla_storage::encode_bounded(&first_event, "legacy agent library test result").unwrap(),
+            medulla_storage::encode_bounded(&first_event, "legacy agent library test result")
+                .unwrap(),
         );
         assert_eq!(record_result(&legacy_record).unwrap(), first_result);
         let mut misdirected = first_record.clone();
@@ -1246,9 +1255,12 @@ mod tests {
         let outbox_before_old_publish_replay: usize = batches_before_old_publish_replay
             .iter()
             .map(|record| {
-                medulla_transaction::read_outbox(&read_before_old_publish_replay, &record.batch.batch_id)
-                    .unwrap()
-                    .len()
+                medulla_transaction::read_outbox(
+                    &read_before_old_publish_replay,
+                    &record.batch.batch_id,
+                )
+                .unwrap()
+                .len()
             })
             .sum();
         drop(read_before_old_publish_replay);
@@ -1280,9 +1292,12 @@ mod tests {
         let outbox_after_old_publish_replay: usize = batches_after_old_publish_replay
             .iter()
             .map(|record| {
-                medulla_transaction::read_outbox(&read_after_old_publish_replay, &record.batch.batch_id)
-                    .unwrap()
-                    .len()
+                medulla_transaction::read_outbox(
+                    &read_after_old_publish_replay,
+                    &record.batch.batch_id,
+                )
+                .unwrap()
+                .len()
             })
             .sum();
         assert_eq!(
@@ -1373,7 +1388,8 @@ mod tests {
         // local cache or pre-reopen handle may participate in the answer.
         let reopened_owner_a = reopened.scope_handle("tenant-a").unwrap();
         let reopened_read_before = reopened.kernel.read_scope(&reopened_owner_a).unwrap();
-        let reopened_batches_before = medulla_transaction::read_batches(&reopened_read_before).unwrap();
+        let reopened_batches_before =
+            medulla_transaction::read_batches(&reopened_read_before).unwrap();
         let reopened_version_before = medulla_transaction::version(&reopened_read_before).unwrap();
         let reopened_outbox_before: usize = reopened_batches_before
             .iter()
@@ -1431,7 +1447,8 @@ mod tests {
         assert!(reopened_status.replayed);
         assert_eq!(reopened_status.entry, published.entry);
         let reopened_read_after = reopened.kernel.read_scope(&reopened_owner_a).unwrap();
-        let reopened_batches_after = medulla_transaction::read_batches(&reopened_read_after).unwrap();
+        let reopened_batches_after =
+            medulla_transaction::read_batches(&reopened_read_after).unwrap();
         let reopened_outbox_after: usize = reopened_batches_after
             .iter()
             .map(|record| {
@@ -1597,10 +1614,12 @@ mod tests {
             created_at_ms: 20,
         };
         store
-            .retire_component(medulla_types::agent_component::AgentComponentRetireRequest {
-                context: retire_context,
-                component_id: "tool:search".to_string(),
-            })
+            .retire_component(
+                medulla_types::agent_component::AgentComponentRetireRequest {
+                    context: retire_context,
+                    component_id: "tool:search".to_string(),
+                },
+            )
             .expect("retires");
 
         let mut next = entry.clone();
@@ -1635,36 +1654,38 @@ mod tests {
             created_at_ms: 5,
         };
         let error = store
-            .publish_component(medulla_types::agent_component::AgentComponentPublishRequest {
-                context,
-                evaluation_receipt_digest: None,
-                component: medulla_types::agent_component::AgentComponentDraft {
-                    component_id: "skill:depends".to_string(),
-                    kind: medulla_types::agent_component::AgentComponentKind::Skill,
-                    version: "1.0.0".to_string(),
-                    content_digest: digest('1'),
-                    content_ref: None,
-                    facts: medulla_types::agent_component::AgentComponentFacts::Opaque,
-                    provenance: medulla_types::agent_component::ComponentProvenance::Native,
-                    summary: "a skill with a dependency".to_string(),
-                    classification: Vec::new(),
-                    requires: vec![medulla_types::agent_component::ComponentDependency {
-                        component_id: "tool:never-published".to_string(),
-                        kind: medulla_types::agent_component::AgentComponentKind::Tool,
-                        definition_digest: digest('9'),
-                    }],
-                    declared_capabilities: Vec::new(),
-                    required_capabilities: Vec::new(),
-                    declared_required_capabilities: Vec::new(),
-                    attributes: Default::default(),
-                    tenant_id: "tenant-a".to_string(),
-                    actor_scope: "action-scope:seed".to_string(),
-                    purpose_id: "agent-component:publish".to_string(),
-                    policy_digest: current_agent_library_policy_digest().unwrap(),
-                    source_revision: "rev-seed".to_string(),
-                    source_revision_digest: digest('8'),
+            .publish_component(
+                medulla_types::agent_component::AgentComponentPublishRequest {
+                    context,
+                    evaluation_receipt_digest: None,
+                    component: medulla_types::agent_component::AgentComponentDraft {
+                        component_id: "skill:depends".to_string(),
+                        kind: medulla_types::agent_component::AgentComponentKind::Skill,
+                        version: "1.0.0".to_string(),
+                        content_digest: digest('1'),
+                        content_ref: None,
+                        facts: medulla_types::agent_component::AgentComponentFacts::Opaque,
+                        provenance: medulla_types::agent_component::ComponentProvenance::Native,
+                        summary: "a skill with a dependency".to_string(),
+                        classification: Vec::new(),
+                        requires: vec![medulla_types::agent_component::ComponentDependency {
+                            component_id: "tool:never-published".to_string(),
+                            kind: medulla_types::agent_component::AgentComponentKind::Tool,
+                            definition_digest: digest('9'),
+                        }],
+                        declared_capabilities: Vec::new(),
+                        required_capabilities: Vec::new(),
+                        declared_required_capabilities: Vec::new(),
+                        attributes: Default::default(),
+                        tenant_id: "tenant-a".to_string(),
+                        actor_scope: "action-scope:seed".to_string(),
+                        purpose_id: "agent-component:publish".to_string(),
+                        policy_digest: current_agent_library_policy_digest().unwrap(),
+                        source_revision: "rev-seed".to_string(),
+                        source_revision_digest: digest('8'),
+                    },
                 },
-            })
+            )
             .expect_err("an unresolvable `requires` must be refused");
         assert!(
             error.contains("does not exist in this tenant"),
@@ -1730,7 +1751,8 @@ mod tests {
             .to_vec();
         let mut record = medulla_storage::decode_batch_record(&bytes).unwrap();
         record.result_msgpack = Some(vec![0]);
-        let encoded = medulla_storage::encode_bounded(&record, "tampered Agent Library batch").unwrap();
+        let encoded =
+            medulla_storage::encode_bounded(&record, "tampered Agent Library batch").unwrap();
         batches
             .insert(
                 (scope_key.as_str(), persisted_batch_id.as_str()),

@@ -6,7 +6,7 @@ use crate::graph::GraphCore;
 use crate::isolation::AccessLevel;
 use crate::protocol::{Method, Response, ResultPayload};
 use crate::server::access::check_graph_access;
-use crate::server::persistence::PersistenceBackend;
+use crate::server::api::persistence::PersistenceBackend;
 
 use super::{
     advance_authoritative_manifest, commit_finalize, commit_mutation, commit_prepare,

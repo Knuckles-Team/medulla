@@ -1,6 +1,6 @@
 use crate::graph::GraphCore;
 use crate::protocol::{Method, ResultPayload};
-use crate::server::persistence::PersistenceBackend;
+use crate::server::api::persistence::PersistenceBackend;
 use medulla_types::contract::Nonce;
 
 #[cfg(feature = "program-optimization")]
@@ -416,8 +416,9 @@ fn load_program_revision_identity(
         .ok_or_else(|| "durable program revision is missing".to_string())?;
     let revision_value = medulla_types::msgpack::decode_property_value(&revision_properties)
         .map_err(|_| "durable program revision is not decodable".to_string())?;
-    let identity = medulla_program::ProgramRevisionIdentity::from_durable_properties(&revision_value)
-        .map_err(|error| format!("durable program revision is invalid: {error}"))?;
+    let identity =
+        medulla_program::ProgramRevisionIdentity::from_durable_properties(&revision_value)
+            .map_err(|error| format!("durable program revision is invalid: {error}"))?;
     if identity.revision_ref != *revision_ref {
         return Err("durable program revision id does not match its row".to_string());
     }
@@ -478,8 +479,9 @@ fn validate_program_claim_chain(
     let result_claim_properties = core
         .get_node_properties(&result_claim_ref)
         .ok_or_else(|| "durable program result claim is missing".to_string())?;
-    let result_claim_value = medulla_types::msgpack::decode_property_value(&result_claim_properties)
-        .map_err(|_| "durable program result claim is not decodable".to_string())?;
+    let result_claim_value =
+        medulla_types::msgpack::decode_property_value(&result_claim_properties)
+            .map_err(|_| "durable program result claim is not decodable".to_string())?;
     validate_program_result_claim(identity, &result_claim_value)
 }
 /// Apply a promotion write-set to the isolated staging graph with fail-closed

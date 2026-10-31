@@ -221,13 +221,7 @@ pub(super) fn admission_limits(capacity: &medulla_kernel::autosize::Capacity) ->
         .ok()
         .and_then(|v| v.parse::<usize>().ok())
         .filter(|&n| n > 0)
-        .map(|value| {
-            clamp_to_automatic(
-                "MEDULLA_MAX_INFLIGHT",
-                value,
-                automatic_max_in_flight,
-            )
-        })
+        .map(|value| clamp_to_automatic("MEDULLA_MAX_INFLIGHT", value, automatic_max_in_flight))
         .unwrap_or(automatic_max_in_flight);
     // Per-graph fairness cap (Phase C-D): default to a quarter of the global pool
     // so any one hot graph holds at most 25% of capacity and ~4 graphs can saturate
@@ -240,9 +234,8 @@ pub(super) fn admission_limits(capacity: &medulla_kernel::autosize::Capacity) ->
     // firehose that saturates the global pool + per-graph cap can never shed an
     // interactive MCP read to BUSY (an eighth of the admission cap, floored).
     let automatic_read_reserved = capacity.read_reserved().min(max_in_flight).max(1);
-    let read_reserved =
-        bounded_env_override("MEDULLA_READ_RESERVED", automatic_read_reserved)
-            .unwrap_or(automatic_read_reserved);
+    let read_reserved = bounded_env_override("MEDULLA_READ_RESERVED", automatic_read_reserved)
+        .unwrap_or(automatic_read_reserved);
     info!(
         "Backpressure: max in-flight = {} (per-graph cap = {}, reserved read lane = {})",
         max_in_flight, per_graph_inflight_limit, read_reserved
@@ -261,7 +254,7 @@ pub(super) fn admission_limits(capacity: &medulla_kernel::autosize::Capacity) ->
     }
 }
 
-type Persistence = Option<Arc<dyn server::persistence::PersistenceBackend>>;
+type Persistence = Option<Arc<dyn server::api::persistence::PersistenceBackend>>;
 
 /// The served engine has one durability implementation: authoritative redb.
 /// Every acknowledged mutation crosses the commit barrier, and bounded writer

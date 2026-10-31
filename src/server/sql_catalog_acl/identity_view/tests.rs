@@ -97,7 +97,8 @@ fn store_with_ann() -> IdentityStore {
         delegated: false,
         scopes: [IDENTITY_ADMIN_SCOPE.to_string()].into(),
     });
-    let create = medulla_types::test_support::identity::create_administrator_op("ann", "principal:ann");
+    let create =
+        medulla_types::test_support::identity::create_administrator_op("ann", "principal:ann");
     apply(&mut store, &create, &admin);
     store
 }

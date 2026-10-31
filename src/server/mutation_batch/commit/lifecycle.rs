@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use crate::mutation_batch::MutationSurface;
 use crate::protocol::{Method, ResultPayload};
+use crate::server::api::persistence::PersistenceBackend;
 use crate::server::mutation::LifecycleAttempt;
-use crate::server::persistence::PersistenceBackend;
 use medulla_types::contract::Nonce;
 
 use super::super::compile::{compile_methods, CompileBatch};

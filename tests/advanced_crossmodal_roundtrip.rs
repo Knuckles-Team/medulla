@@ -1258,9 +1258,9 @@ static ENC_ENV_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 #[cfg(all(feature = "security", feature = "redb"))]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn encryption_at_rest_wrong_key_fails_eg394() {
-    use medulla_kernel::crypto::ENCRYPTION_KEY_ENV;
+    use medulla::server::api::persistence::PersistenceBackend;
     use medulla::server::persistence::redb_backend::RedbBackend;
-    use medulla::server::persistence::PersistenceBackend;
+    use medulla_kernel::crypto::ENCRYPTION_KEY_ENV;
 
     let _guard = ENC_ENV_LOCK.lock().await;
     let prev = std::env::var(ENCRYPTION_KEY_ENV).ok();
@@ -2478,9 +2478,7 @@ async fn explain_evidence_hides_other_agents_private_evidence_over_rpc() {
 #[cfg(feature = "epistemic-causal")]
 #[tokio::test]
 async fn causal_estimate_do_calculus_matches_hand_derivation_over_rpc() {
-    use medulla::protocol::{
-        CausalEstimateResult, CausalQueryModeWire, StructuralEquationWire,
-    };
+    use medulla::protocol::{CausalEstimateResult, CausalQueryModeWire, StructuralEquationWire};
     use std::collections::BTreeMap;
 
     let state = state().await;
@@ -2565,9 +2563,7 @@ async fn causal_estimate_do_calculus_matches_hand_derivation_over_rpc() {
 #[cfg(feature = "epistemic-causal")]
 #[tokio::test]
 async fn rank_by_provenance_favors_corroborated_evidence_over_raw_similarity_over_rpc() {
-    use medulla::protocol::{
-        CalibrationWire, RankByProvenanceResult, RetrievalCandidateWire,
-    };
+    use medulla::protocol::{CalibrationWire, RankByProvenanceResult, RetrievalCandidateWire};
 
     let state = state().await;
 

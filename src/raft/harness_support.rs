@@ -13,7 +13,7 @@ use super::{AppCtx, GroupId, NodeId};
 use crate::acl::{AgentIdentity, AgentRole, RequestContextClaims};
 use crate::isolation::IsolationLayer;
 use crate::protocol::{Method, Request};
-use crate::server::persistence::PersistenceBackend;
+use crate::server::api::persistence::PersistenceBackend;
 use crate::server::{compute_verified_envelope_token, ServerState, VerifiedEnvelopeParams};
 
 static NONCE_SEQUENCE: AtomicU64 = AtomicU64::new(1);

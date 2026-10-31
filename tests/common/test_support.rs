@@ -7,7 +7,7 @@ use std::sync::Arc;
 use medulla::isolation::IsolationLayer;
 use medulla::protocol::{Method, Request, Response, ResultPayload};
 use medulla::registry::GraphRegistry;
-use medulla::server::persistence::PersistenceBackend;
+use medulla::server::api::persistence::PersistenceBackend;
 use medulla::server::ServerState;
 use tokio::sync::RwLock;
 
@@ -420,10 +420,7 @@ pub fn seed_wire_nodes(registry: &GraphRegistry, user: &str) {
     }
 }
 
-pub async fn dispatch(
-    state: &SharedState,
-    request: Request,
-) -> medulla::protocol::Response {
+pub async fn dispatch(state: &SharedState, request: Request) -> medulla::protocol::Response {
     Box::pin(medulla::server::dispatch(state, request)).await
 }
 

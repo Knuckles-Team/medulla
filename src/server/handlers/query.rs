@@ -196,8 +196,8 @@ pub(crate) mod current_auth_test_support {
     use crate::acl::{AgentIdentity, AgentRole};
     use crate::isolation::IsolationLayer;
     use crate::protocol::{Method, Request};
+    use crate::server::api::persistence::PersistenceBackend;
     use crate::server::auth::build_shared_test_request;
-    use crate::server::persistence::PersistenceBackend;
     use crate::server::state::ServerState;
     use std::sync::Arc;
     use tokio::sync::RwLock;

@@ -7,10 +7,11 @@ use medulla_types::MutationOutboxRecord;
 use tokio::sync::RwLock;
 
 use crate::parser::enrichment_reactivation::{plan_reactivation, BudgetRevisionProposal};
-use crate::raft::{EnrichmentTopUpTransition, RaftMutationContext, RaftMutationTiming};
 use crate::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision;
+use crate::redb_store::enrichment_top_up::EnrichmentTopUpTransition;
+use crate::server::api::persistence::PersistenceBackend;
+use crate::server::api::persistence::{RaftMutationContext, RaftMutationTiming};
 use crate::server::authority_context::VerifiedRequestContext;
-use crate::server::persistence::PersistenceBackend;
 use crate::server::state::ServerState;
 
 struct PreparedTopUp {
@@ -279,7 +280,7 @@ async fn prepare_fresh(
             revision_idempotency_key: revision.idempotency_key.as_deref().unwrap_or_default(),
             replacement_intent,
             replacement_batch_id: &proposal.new_source_envelope,
-            serving_principal: crate::mutation_apply::ENGINE_LEDGER_PRINCIPAL,
+            serving_principal: crate::kernel::persistence::ENGINE_LEDGER_PRINCIPAL,
             graph_version: version,
             placement_epoch: routed.epoch,
             fencing_token: routed.group_id,

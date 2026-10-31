@@ -24,6 +24,7 @@
 //!   * `semantic_store` `graph                  -> semantic store blob (msgpack)`
 //!   * `graph_meta`     `graph                  -> identity + keyed schema authority`
 
+pub(crate) mod enrichment_top_up;
 mod store_prelude;
 use store_prelude::*;
 
@@ -896,7 +897,7 @@ mod security_tests {
 
     /// A throwaway temp dir under the scratch space.
     fn tempdir() -> std::path::PathBuf {
-        let base = crate::test_support::temp_dir("medulla-sec", "test");
+        let base = crate::kernel::persistence::temp_dir("medulla-sec", "test");
         std::fs::create_dir_all(&base).unwrap();
         base
     }
@@ -904,7 +905,7 @@ mod security_tests {
 
 /// Build a unique process-local `.redb` fixture path for a kernel-owned-store
 /// test: `<prefix>-<tag>-<pid>-<nanos>.redb` under the OS temp directory.
-/// Unlike [`test_support::temp_dir`], this hands back a *file* path meant to
+/// Unlike [`crate::kernel::persistence::temp_dir`], this hands back a *file* path meant to
 /// go straight to `redb::Database::create`/`Shard::open`, not a directory the
 /// fixture owns end-to-end — so there is no matching stale-path cleanup here;
 /// each caller is responsible for its own fixture's lifecycle, exactly as it
@@ -1912,7 +1913,7 @@ mod mutation_batch_tests {
                 .expect("durable record retains operation authority");
             assert_eq!(
                 operation.serving_principal,
-                crate::mutation_apply::ENGINE_LEDGER_PRINCIPAL
+                crate::kernel::persistence::ENGINE_LEDGER_PRINCIPAL
             );
             assert_eq!(operation.authority, caller_authority);
             assert_eq!(record.committing_actor().unwrap(), caller_actor);
@@ -2763,7 +2764,8 @@ mod mutation_batch_tests {
             else {
                 panic!("authenticated replay fixture must carry an operation envelope");
             };
-            operation.authority.nonce = medulla_types::contract::Nonce::from_bytes([nonce_byte; 32]);
+            operation.authority.nonce =
+                medulla_types::contract::Nonce::from_bytes([nonce_byte; 32]);
             operation.authority.context_digest = operation
                 .authority
                 .recompute_context_digest()
@@ -4391,9 +4393,7 @@ mod mutation_batch_tests {
     fn work_item_mirror_divergence_raises_the_alarm() {
         fn divergence_count() -> u64 {
             for line in medulla_kernel::metrics::render().lines() {
-                if line.starts_with(
-                    "medulla_statechart_divergence_total{machine=\"work_item\"}",
-                ) {
+                if line.starts_with("medulla_statechart_divergence_total{machine=\"work_item\"}") {
                     return line
                         .rsplit(' ')
                         .next()
@@ -4877,8 +4877,11 @@ mod mutation_batch_tests {
             )
             .unwrap();
         after.install_schema_sources(std::sync::Arc::new(sources));
-        let delta = medulla_kernel::graph_delta::GraphRowDelta::between(&before_snapshot, &after.snapshot())
-            .unwrap();
+        let delta = medulla_kernel::graph_delta::GraphRowDelta::between(
+            &before_snapshot,
+            &after.snapshot(),
+        )
+        .unwrap();
         let state = delta.to_msgpack().unwrap();
 
         let mut mutation = batch("batch-row-delta", "idem-row-delta");
@@ -4976,8 +4979,11 @@ mod mutation_batch_tests {
             )
             .unwrap();
         after.install_schema_sources(std::sync::Arc::new(sources));
-        let delta = medulla_kernel::graph_delta::GraphRowDelta::between(&before_snapshot, &after.snapshot())
-            .unwrap();
+        let delta = medulla_kernel::graph_delta::GraphRowDelta::between(
+            &before_snapshot,
+            &after.snapshot(),
+        )
+        .unwrap();
         let state = delta.to_msgpack().unwrap();
         let mut mutation = batch("batch-policy-fail", "idem-policy-fail");
         mutation.version_expectation = VersionExpectation::Graph(4);
@@ -6421,7 +6427,8 @@ mod mutation_batch_tests {
         .unwrap();
         assert!(durable_receipt.is_some());
         let mut replay = terminal.clone();
-        let medulla_types::mutation_batch::MutationEnvelope::Operation(operation) = &mut replay.envelope
+        let medulla_types::mutation_batch::MutationEnvelope::Operation(operation) =
+            &mut replay.envelope
         else {
             panic!("terminal replay fixture needs an operation envelope");
         };

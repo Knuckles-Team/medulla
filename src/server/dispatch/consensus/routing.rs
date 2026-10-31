@@ -390,14 +390,14 @@ fn build_native_raft_request(
         Some(proposal.authority.actor_scope()),
         proposal.authority.idempotency_key(),
     );
-    let mutation = match crate::raft::RaftMutationContext::from_verified_request(
+    let mutation = match crate::server::api::persistence::RaftMutationContext::from_verified_request(
         batch_id,
         proposal.request_id,
         proposal.attempt_nonce,
         proposal.authority.tenant_scope(),
         proposal.authority.actor_scope().to_string(),
         identity_bootstrap,
-        crate::raft::RaftMutationTiming {
+        crate::server::api::persistence::RaftMutationTiming {
             placement_epoch: routed.epoch,
             fencing_token: routed.placed.then_some(routed.group_id),
             created_at_ms: committed_at_ms,

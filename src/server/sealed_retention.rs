@@ -164,7 +164,7 @@ pub async fn expire_sealed_records(
 
 /// Commit one policy retirement through the native WorkItem kernel.
 async fn retire(
-    persistence: Option<&Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    persistence: Option<&Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     core: &Arc<GraphCore>,
     graph: &str,
     request: RetireSealedRecordRequest,

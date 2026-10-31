@@ -16,12 +16,14 @@
 //!   then fall to the "not available in this server build" arm, and `Health`
 //!   never advertises them.)
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 use std::sync::Arc;
 
 use medulla_types::work_item_read::WorkItemListRequest;
 
 use crate::protocol::{Response, ResultPayload};
-use crate::server::persistence::PersistenceBackend;
+use crate::server::api::persistence::PersistenceBackend;
 
 /// One decoded WorkItem read.
 pub(crate) enum WorkItemRead {

@@ -1,6 +1,6 @@
 //! Plan-backed materialized views (CONCEPT:MEDULLA-KG.storage.plan-backed-matview).
 //!
-//! GENERALIZES the algo-only distributed-compute matview (`raft::pregel::MatView`, a
+//! GENERALIZES the algo-only distributed-compute matview (`server::api::persistence::MatView`, a
 //! `DistAlgo`+result blob) into a NAMED, DURABLE `wire::Plan` over one graph. Defining a
 //! view executes its plan once through the medulla-plan runtime and caches the RESULT in the
 //! version-keyed, RLS-aware result cache on the graph's `GraphCore`; a committed write

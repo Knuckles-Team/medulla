@@ -277,7 +277,7 @@ fn commit_mutation_batch_with_reactivation_effect(
 #[cfg(feature = "raft")]
 #[derive(Clone, Copy)]
 struct TopUpSourceEffect<'a> {
-    transition: &'a crate::raft::EnrichmentTopUpTransition,
+    transition: &'a crate::redb_store::enrichment_top_up::EnrichmentTopUpTransition,
 }
 
 /// One Raft state-machine application of a verified, sealed top-up. The
@@ -287,7 +287,7 @@ struct TopUpSourceEffect<'a> {
 pub(crate) fn commit_repository_enrichment_top_up(
     shard: &Shard,
     graph: &str,
-    transition: &crate::raft::EnrichmentTopUpTransition,
+    transition: &crate::redb_store::enrichment_top_up::EnrichmentTopUpTransition,
     committed_at_ms: u64,
     crypto: DurableCrypto<'_>,
     #[cfg(feature = "security")] audit_tail: &mut AuditTailCache,

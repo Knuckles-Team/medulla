@@ -227,7 +227,7 @@ impl MedullaStore {
 
     fn top_up_authority_changed(
         req: &RaftRequest,
-        transition: &crate::raft::EnrichmentTopUpTransition,
+        transition: &crate::redb_store::enrichment_top_up::EnrichmentTopUpTransition,
         expected_tenant_scope: &str,
     ) -> bool {
         req.mutation.is_internal()

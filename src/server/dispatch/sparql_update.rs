@@ -2,6 +2,8 @@
 use super::request_boundary::dispatch_with_context;
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 use super::*;
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 const MAX_PRIVATE_COORDINATOR_PLAN_BYTES: usize = 256 * 1024 * 1024;

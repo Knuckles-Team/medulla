@@ -1,6 +1,8 @@
 //! Private transaction consensus implementation.
 
 use super::*;
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 
 #[path = "consensus/authority.rs"]
 mod authority;
@@ -430,7 +432,7 @@ pub(crate) async fn apply_consensus_participant_prepare(
     applying_group: crate::raft::GroupId,
     applying_epoch: u64,
     applying_fence: Option<u64>,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     participant: ConsensusParticipantRef<'_>,
 ) -> Result<bool, String> {
     let ConsensusParticipantRef {
@@ -561,7 +563,7 @@ pub(crate) async fn apply_consensus_participant_commit(
     state: &Arc<RwLock<ServerState>>,
     request_id: u64,
     applying_group: crate::raft::GroupId,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     participant: ConsensusParticipantRef<'_>,
 ) -> Result<bool, String> {
     let ConsensusParticipantRef {
@@ -651,7 +653,7 @@ pub(crate) async fn apply_consensus_participant_commit(
 #[cfg(feature = "raft")]
 pub(crate) async fn apply_consensus_participant_abort(
     state: &Arc<RwLock<ServerState>>,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     coordinator_id: &str,
     participant_id: u64,
 ) -> Result<bool, String> {
@@ -693,7 +695,7 @@ fn authorize_participant_abort(
     redb: &crate::server::persistence::redb_backend::RedbBackend,
     coordinator_id: &str,
     participant_id: u64,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     plan: Option<&[u8]>,
 ) -> Result<(), String> {
     if let Some(plan_bytes) = plan {

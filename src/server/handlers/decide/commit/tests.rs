@@ -13,17 +13,19 @@ use medulla_types::delegation::AgentGraphEntryRef;
 use medulla_types::native_control::{
     CapacityCellUpdateRequest, CapacityStatusRequest, NativeControlSchemaVersion,
 };
-use medulla_types::test_support::topology::{facts, requirements, FAN_OUT_JOIN, INDEPENDENT_SUBTASKS};
+use medulla_types::test_support::topology::{
+    facts, requirements, FAN_OUT_JOIN, INDEPENDENT_SUBTASKS,
+};
 use tokio::sync::RwLock;
 
 use crate::protocol::{Method, ResultPayload};
+use crate::server::api::persistence::PersistenceBackend;
 use crate::server::auth::VerifiedRequestContext;
 use crate::server::persistence::agent_library::AgentLibraryStore;
 use crate::server::persistence::decision_record::tests::{
     commit_context, decided, seed_library, TENANT,
 };
 use crate::server::persistence::redb_backend::RedbBackend;
-use crate::server::persistence::PersistenceBackend;
 use crate::server::state::ServerState;
 
 fn topology_record(store: &AgentLibraryStore) -> DecisionRecord {

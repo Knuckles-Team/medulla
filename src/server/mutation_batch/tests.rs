@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::graph::GraphCore;
 use crate::mutation_batch::{MutationBatch, MutationSurface, VersionExpectation};
 use crate::protocol::{Method, ResultPayload};
-use crate::server::persistence::PersistenceBackend;
+use crate::server::api::persistence::PersistenceBackend;
 
 use super::commit::changed_work_item_ids;
 use super::digest::work_item_batch_identity;
@@ -818,7 +818,7 @@ fn a_graph_batch_names_the_serving_principal_and_carries_the_caller_actor() {
     let actor = crate::server::mutation_batch::principal_fingerprint("agent:a").unwrap();
     assert_eq!(
         batch.serving_principal(),
-        crate::server::mutation_batch::ENGINE_LEDGER_PRINCIPAL,
+        crate::kernel::persistence::ENGINE_LEDGER_PRINCIPAL,
         "a graph batch is admitted through the same owner-row path as any other"
     );
     assert_ne!(
@@ -887,7 +887,7 @@ fn no_compiled_batch_on_any_domain_carries_the_caller_as_its_context_principal()
         let batch = compile(tag, methods).unwrap();
         assert_eq!(
             batch.serving_principal(),
-            crate::server::mutation_batch::ENGINE_LEDGER_PRINCIPAL,
+            crate::kernel::persistence::ENGINE_LEDGER_PRINCIPAL,
             "{tag}"
         );
         assert_eq!(batch.outbox[0].headers.get("actor"), Some(&actor), "{tag}");
@@ -1040,10 +1040,9 @@ fn sql_catalog_compile_declares_one_retry_stable_typed_source_dirty_intent() {
         "graph_operation",
     )
     .unwrap();
-    assert!(non_sql
-        .outbox
-        .iter()
-        .all(|intent| { intent.topic != medulla_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC }));
+    assert!(non_sql.outbox.iter().all(|intent| {
+        intent.topic != medulla_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC
+    }));
 }
 
 #[cfg(all(feature = "query", feature = "redb"))]
@@ -1084,7 +1083,9 @@ fn sql_source_rows_receipt_version_and_dirty_intent_commit_and_replay_atomically
     assert_eq!(durable_outbox.len(), first.outbox.len());
     let dirty = durable_outbox
         .iter()
-        .find(|record| record.intent.topic == medulla_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC)
+        .find(|record| {
+            record.intent.topic == medulla_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC
+        })
         .expect("the SQL owner transaction persists its typed source-dirty intent");
     assert_eq!(dirty.committed_version, committed.record.committed_version);
 
@@ -1124,7 +1125,7 @@ fn served_owner_store_batch_commits_and_its_actor_survives_in_the_ledger() {
     use medulla_storage::{KvOwner, PhysicalStoreIdentity, StorageKernel};
     use medulla_transaction::{Begin, MutationKernel};
 
-    let dir = crate::test_support::temp_dir("medulla-mb", "owner-principal");
+    let dir = crate::kernel::persistence::temp_dir("medulla-mb", "owner-principal");
     std::fs::create_dir_all(&dir).unwrap();
     let path = dir.join("kv.redb");
 
@@ -1142,8 +1143,10 @@ fn served_owner_store_batch_commits_and_its_actor_survives_in_the_ledger() {
         medulla_types::ScopeTenantId::new("tenant-a".to_string()).unwrap(),
         crate::mutation_batch::DurabilityDomain::KvStore,
         medulla_types::LogicalName::new("kv-scope-a".to_string()).unwrap(),
-        medulla_types::IncarnationId::new(crate::server::mutation_batch::COMPILED_BATCH_INCARNATION)
-            .unwrap(),
+        medulla_types::IncarnationId::new(
+            crate::server::mutation_batch::COMPILED_BATCH_INCARNATION,
+        )
+        .unwrap(),
     )
     .unwrap();
     let grant = kernel

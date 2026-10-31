@@ -19,9 +19,6 @@ use std::sync::{
 };
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use medulla_types::native_control::{
-    NativeControlSchemaVersion, SubmitWorkItemRequest, SubmitWorkItemResult,
-};
 use medulla::acl::RequestContextClaims;
 use medulla::epistemic_operations::{
     ClaimWorkItemRequest, ClaimWorkItemRequestSchemaVersion, ClaimWorkItemResult, RequestContext,
@@ -29,8 +26,12 @@ use medulla::epistemic_operations::{
 };
 use medulla::protocol::{Method, Request, Response, ResultPayload};
 use medulla::registry::GraphRegistry;
-use medulla::server::persistence::{redb_backend::RedbBackend, PersistenceBackend};
+use medulla::server::api::persistence::PersistenceBackend;
+use medulla::server::persistence::redb_backend::RedbBackend;
 use medulla::server::{compute_verified_envelope_token, VerifiedEnvelopeParams};
+use medulla_types::native_control::{
+    NativeControlSchemaVersion, SubmitWorkItemRequest, SubmitWorkItemResult,
+};
 
 const SECRET: &str = "adopt-workitem-authenticated-replay-secret";
 const GRAPH: &str = "adoptworkitemauthreplay";
@@ -1045,16 +1046,13 @@ async fn checkpoint_native_authenticated_cas_replay_and_owner_isolation() {
                 changed.snapshot.content = "{}".into();
                 changed.snapshot.payload_digest = hex::encode(Sha256::digest(b"{}"));
             }
-            "refs" => {
-                changed
-                    .snapshot
-                    .short_term
-                    .push(medulla_types::run_checkpoint::CheckpointMemoryRef {
-                        document_id: "private-memory".into(),
-                        revision: 1,
-                        digest: "a".repeat(64),
-                    })
-            }
+            "refs" => changed.snapshot.short_term.push(
+                medulla_types::run_checkpoint::CheckpointMemoryRef {
+                    document_id: "private-memory".into(),
+                    revision: 1,
+                    digest: "a".repeat(64),
+                },
+            ),
             _ => changed.fencing_token += 1,
         }
         let collision = test_support::dispatch(

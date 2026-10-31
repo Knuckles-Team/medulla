@@ -387,7 +387,7 @@ mod tests {
             command: ReplicatedMutation::graph(method, "cluster-test-key")
                 .expect("replay fixture command must seal"),
             committed_at_ms: 11,
-            mutation: crate::raft::RaftMutationContext {
+            mutation: crate::server::api::persistence::RaftMutationContext {
                 batch_id: batch_id.to_string(),
                 request_id: 9,
                 attempt_nonce: None,

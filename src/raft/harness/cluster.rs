@@ -18,7 +18,7 @@ use std::time::{Duration, Instant};
 use openraft::async_runtime::watch::WatchReceiver;
 use tokio::sync::RwLock;
 
-use crate::server::persistence::PersistenceBackend;
+use crate::server::api::persistence::PersistenceBackend;
 use crate::server::ServerState;
 
 use super::super::config::RaftClusterConfig;
@@ -515,7 +515,7 @@ impl Cluster {
             graph_name: GRAPH.to_string(),
             graph_type: GraphType::Commons,
             committed_at_ms: 0,
-            mutation: super::super::RaftMutationContext::internal(
+            mutation: crate::server::api::persistence::RaftMutationContext::internal(
                 "raft-cluster-harness",
                 GRAPH,
                 &format!("write-{seq}"),
@@ -568,7 +568,7 @@ impl Cluster {
             graph_name: graph_name.to_string(),
             graph_type,
             committed_at_ms: 0,
-            mutation: super::super::RaftMutationContext::internal(
+            mutation: crate::server::api::persistence::RaftMutationContext::internal(
                 "raft-cluster-harness",
                 graph_name,
                 &format!("create-{seq}"),
@@ -587,7 +587,7 @@ impl Cluster {
             graph_name: graph_name.to_string(),
             graph_type,
             committed_at_ms: 0,
-            mutation: super::super::RaftMutationContext::internal(
+            mutation: crate::server::api::persistence::RaftMutationContext::internal(
                 "raft-cluster-harness",
                 graph_name,
                 &format!("write-{seq}"),

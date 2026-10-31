@@ -1,13 +1,14 @@
 use serde::{Deserialize, Serialize};
 
 use crate::protocol::Method;
+use crate::redb_store::enrichment_top_up::EnrichmentTopUpTransition;
 
 #[cfg(feature = "modality-serving")]
 use super::SanitizedModalityRaftCommand;
 
-mod enrichment_top_up;
+#[cfg(test)]
+mod enrichment_top_up_tests;
 mod native;
-pub(crate) use enrichment_top_up::EnrichmentTopUpTransition;
 
 pub use native::{NativeMutationCommand, SealedNativeMethod, NATIVE_CONSENSUS_METHODS};
 

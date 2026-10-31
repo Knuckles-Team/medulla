@@ -18,6 +18,8 @@
 //! crash AFTER the COMMIT decision but BEFORE phase-2 apply. Each asserts the
 //! invariant on the durable state, not on timing.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -1336,7 +1338,7 @@ async fn write_node(
         graph_name: graph.to_string(),
         graph_type: GraphType::Global,
         committed_at_ms: 0,
-        mutation: super::RaftMutationContext::internal(
+        mutation: crate::server::api::persistence::RaftMutationContext::internal(
             "raft-xshard-harness",
             graph,
             &format!("{node}:{props}"),

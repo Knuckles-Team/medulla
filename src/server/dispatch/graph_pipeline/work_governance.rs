@@ -1,4 +1,6 @@
 use super::*;
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 
 /// A native durable read must run on the CURRENT placement leader and behind a
 /// read barrier, or a follower would answer from its own stale log. `stale_hint`
@@ -43,7 +45,7 @@ pub(super) async fn dispatch_op_resource_reservation_query(
     req_id: u64,
     graph_name: &str,
     verified_context: &VerifiedRequestContext,
-    persistence: Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "raft")] multi_raft: Option<std::sync::Arc<crate::raft::multi::MultiRaft>>,
     #[cfg(feature = "raft")] routed_raft: Option<crate::raft::multi::RoutedRaftHandle>,
     method: Method,
@@ -109,7 +111,7 @@ pub(super) struct NativeOpCtx<'a> {
     pub(super) req_id: u64,
     pub(super) graph_name: &'a str,
     pub(super) verified_context: &'a VerifiedRequestContext,
-    pub(super) persistence: Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    pub(super) persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "raft")]
     pub(super) multi_raft: Option<std::sync::Arc<crate::raft::multi::MultiRaft>>,
     #[cfg(feature = "raft")]
@@ -235,7 +237,7 @@ fn capacity_status_result(
 }
 
 async fn capacity_status_response(
-    backend: &Arc<dyn crate::server::persistence::PersistenceBackend>,
+    backend: &Arc<dyn crate::server::api::persistence::PersistenceBackend>,
     fname: &str,
     request: &medulla_types::native_control::CapacityStatusRequest,
     declared: fn(
@@ -256,7 +258,7 @@ async fn capacity_status_response(
 }
 
 async fn capacity_commit_response(
-    backend: &Arc<dyn crate::server::persistence::PersistenceBackend>,
+    backend: &Arc<dyn crate::server::api::persistence::PersistenceBackend>,
     fname: &str,
     method: Method,
     req_id: u64,

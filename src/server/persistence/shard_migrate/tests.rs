@@ -3,8 +3,8 @@
 use super::*;
 use crate::protocol::{GraphType, Method};
 use crate::redb_store::{CHANGE_CURSORS, CHANGE_ENVELOPES, CONTENT_VERSIONS};
+use crate::server::api::persistence::PersistenceBackend;
 use crate::server::persistence::redb_backend::RedbBackend;
-use crate::server::persistence::PersistenceBackend;
 use medulla_storage::{OwnerRowScope, OwnerRowScopeStart};
 
 pub(crate) fn props(v: serde_json::Value) -> Vec<u8> {

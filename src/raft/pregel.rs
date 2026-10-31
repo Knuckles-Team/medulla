@@ -38,12 +38,12 @@
 //! [`incremental_connected_components`] recomputes ONLY the vertices a delta touched
 //! (the changed vertices + their neighborhood), reusing the prior labeling as the seed;
 //! the result equals a from-scratch run (the test asserts `incremental == from_scratch`).
-//! Named [`MatView`]s (CONCEPT:MEDULLA-KG.storage.feature) persist a distributed-compute result and refresh
+//! Named `MatView`s (CONCEPT:MEDULLA-KG.storage.feature) persist a distributed-compute result and refresh
 //! incrementally; they live in the redb durable tier (see `super::store` / the handler).
 
 #![cfg(feature = "compute-dist")]
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
+use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 
 use petgraph::visit::{EdgeRef, IntoEdgeReferences};
@@ -204,7 +204,8 @@ async fn gather_shards(
     // per-CORE cache, so distinct shards never collide) instead of re-decoding
     // every node of every shard on every job.
     #[cfg(feature = "security")]
-    let mut snaps: Vec<std::sync::Arc<medulla_core::graph::GraphView>> = Vec::with_capacity(cores.len());
+    let mut snaps: Vec<std::sync::Arc<medulla_core::graph::GraphView>> =
+        Vec::with_capacity(cores.len());
     #[cfg(feature = "security")]
     for core in &cores {
         snaps.push(read_authority.cached_filter_view(core));
@@ -556,38 +557,4 @@ pub(crate) async fn incremental_connected_components(
         &adjacency,
         labels,
     )))
-}
-
-// ── Materialized views (CONCEPT:MEDULLA-KG.storage.feature) ──────────────────────────────────────
-
-/// A named, incrementally-maintained materialized view of a distributed-compute result
-/// (CONCEPT:MEDULLA-KG.storage.feature). Persisted in the redb durable tier so it survives restart; the
-/// handler refreshes it incrementally on a delta. The definition (graphs + algo) is
-/// stored alongside the rows so a `RefreshMatView` can recompute without re-specifying.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
-pub struct MatView {
-    pub name: String,
-    pub graphs: Vec<String>,
-    pub algo: DistAlgo,
-    pub result: DistResult,
-}
-
-/// A flat map of named materialized views the engine maintains (CONCEPT:MEDULLA-KG.storage.feature). The
-/// in-RAM index; the durable copy lives in redb (the handler persists + reloads). The
-/// `BTreeMap` keeps a deterministic order for listing.
-#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
-pub struct MatViewStore {
-    pub views: BTreeMap<String, MatView>,
-}
-
-impl MatViewStore {
-    pub fn new() -> Self {
-        Self::default()
-    }
-    pub fn put(&mut self, view: MatView) {
-        self.views.insert(view.name.clone(), view);
-    }
-    pub fn get(&self, name: &str) -> Option<&MatView> {
-        self.views.get(name)
-    }
 }

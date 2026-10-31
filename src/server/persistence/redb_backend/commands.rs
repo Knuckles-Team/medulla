@@ -240,7 +240,7 @@ pub(crate) enum Cmd {
     #[cfg(feature = "raft")]
     RepositoryEnrichmentTopUp {
         graph: String,
-        transition: Box<crate::raft::EnrichmentTopUpTransition>,
+        transition: Box<crate::redb_store::enrichment_top_up::EnrichmentTopUpTransition>,
         committed_at_ms: u64,
         done: oneshot::Sender<Result<MutationBatchCommit, String>>,
     },

@@ -527,7 +527,8 @@ async fn an_assembly_outcome_is_credited_to_its_slate() {
             &digest,
         )
         .unwrap();
-    let medulla_types::decision::DecisionOutcome::Solved { graph_digest, .. } = &record.outcome else {
+    let medulla_types::decision::DecisionOutcome::Solved { graph_digest, .. } = &record.outcome
+    else {
         panic!("solved")
     };
     let evaluator = VerifiedRequestContext::verified_for_test_in_tenant("evaluator", v1::TENANT);

@@ -33,6 +33,8 @@ mod test_support;
 use medulla::acl::RequestContextClaims;
 use medulla::mutation_batch::MutationBatchStatus;
 use medulla::protocol::{GraphType, Method, Request, Response, ResultPayload};
+#[cfg(feature = "redb")]
+use medulla::server::persistence::AsRedb;
 use medulla::server::{compute_verified_envelope_token, dispatch, VerifiedEnvelopeParams};
 use std::process::Command;
 

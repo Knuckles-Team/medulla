@@ -1,6 +1,8 @@
 //! Cluster-admin saga helpers (catalog sagas and rebalance reports) over the shared
 //! admin saga ledger.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;

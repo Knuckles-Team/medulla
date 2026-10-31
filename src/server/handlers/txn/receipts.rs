@@ -1,6 +1,8 @@
 //! Private transaction receipts implementation.
 
 use super::*;
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 
 #[path = "receipts/lifecycle.rs"]
 mod lifecycle;
@@ -281,7 +283,7 @@ pub(super) async fn cleanup_cross_shard_decision(
 
 #[cfg(feature = "redb")]
 pub(super) struct TxnReceipt {
-    pub(super) backend: Arc<dyn crate::server::persistence::PersistenceBackend>,
+    pub(super) backend: Arc<dyn crate::server::api::persistence::PersistenceBackend>,
     pub(super) saga: crate::server::api::admin::saga::AdminSaga,
 }
 
@@ -304,7 +306,7 @@ pub(super) fn receipt_coordinator_id(_receipt: &TxnReceipt) -> String {
 /// (or, when absent, does NOT change) the receipt's identity.
 #[cfg(feature = "redb")]
 pub(super) fn begin_txn_receipt(
-    backend: Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    backend: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     req_id: u64,
     caller: Option<&str>,
     txn_id: &str,
@@ -403,7 +405,7 @@ fn admit_txn_saga(
 
 #[cfg(not(feature = "redb"))]
 pub(super) fn begin_txn_receipt(
-    _backend: Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    _backend: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     _req_id: u64,
     _caller: Option<&str>,
     _txn_id: &str,
@@ -467,8 +469,11 @@ fn txn_receipt_retry_payload(
     prepared: bool,
 ) -> Result<Vec<u8>, String> {
     if prepared {
-        medulla_transaction::read_private_payload(&redb.admin_mutations_read()?, &saga.batch.batch_id)?
-            .ok_or_else(|| "prepared transaction has no encrypted recovery plan".to_string())
+        medulla_transaction::read_private_payload(
+            &redb.admin_mutations_read()?,
+            &saga.batch.batch_id,
+        )?
+        .ok_or_else(|| "prepared transaction has no encrypted recovery plan".to_string())
     } else {
         Ok(Vec::new())
     }
@@ -515,7 +520,7 @@ fn resume_txn_staging(
 /// into ephemeral staging.
 #[cfg(feature = "redb")]
 pub(super) fn resume_txn_receipt(
-    backend: Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    backend: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     req_id: u64,
     caller: Option<&str>,
     txn_id: &str,
@@ -570,7 +575,7 @@ pub(super) type ResumedTxnReceiptStub = ((), Option<ResultPayload>, Option<Graph
 
 #[cfg(not(feature = "redb"))]
 pub(super) fn resume_txn_receipt(
-    _backend: Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    _backend: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     _req_id: u64,
     _caller: Option<&str>,
     _txn_id: &str,
@@ -714,7 +719,7 @@ pub(super) async fn authorize_txn_plan(
 /// coordinator" wording is the only thing that varies between the three sites.
 #[cfg(feature = "redb")]
 pub(crate) fn finish_saga_via_redb(
-    backend: &Arc<dyn crate::server::persistence::PersistenceBackend>,
+    backend: &Arc<dyn crate::server::api::persistence::PersistenceBackend>,
     saga: crate::server::api::admin::saga::AdminSaga,
     result: ResultPayload,
     lost_backend_message: &str,

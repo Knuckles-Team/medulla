@@ -52,7 +52,7 @@ async fn write_via_owner(multi: &Arc<MultiRaft>, node_id: &str) -> Result<(), St
         graph_name: GRAPH.to_string(),
         graph_type: GraphType::Global,
         committed_at_ms: 0,
-        mutation: super::RaftMutationContext::internal(
+        mutation: crate::server::api::persistence::RaftMutationContext::internal(
             "raft-reshard-harness",
             GRAPH,
             node_id,

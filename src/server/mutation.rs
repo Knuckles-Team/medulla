@@ -58,7 +58,7 @@
 //! Audit-chain emission (the tamper-evident hash chain, `audit.rs` +
 //! `redb_store::append_audit_entry`) is stateful PER GRAPH (each entry chains off
 //! the previous one's hash) and already lives inside the durable-commit path
-//! ([`crate::server::persistence::PersistenceBackend::record_durable`] → the redb backend). Reimplementing
+//! ([`crate::server::api::persistence::PersistenceBackend::record_durable`] → the redb backend). Reimplementing
 //! that chaining here would risk a second, diverging chain. Instead,
 //! Compact row commits and staged-state MutationBatch commits both append the audit
 //! entry inside their authoritative redb transaction. `plan.audited`
@@ -91,6 +91,8 @@
 //! publish ALONE (an earlier version of this fix) is unsafe, and why the durable
 //! commit must move into the SAME lock-held sequence rather than staying outside it.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 #[cfg(test)]
 use std::sync::Arc;
 
@@ -104,7 +106,7 @@ use crate::isolation::IsolationLayer;
 #[cfg(test)]
 use crate::protocol::{Method, ResultPayload};
 #[cfg(all(test, feature = "redb"))]
-use crate::server::persistence::PersistenceBackend;
+use crate::server::api::persistence::PersistenceBackend;
 
 mod coalescer;
 mod commit_encode;
@@ -232,7 +234,7 @@ mod tests {
     }
 
     fn temp_dir(tag: &str) -> std::path::PathBuf {
-        crate::test_support::temp_dir("medulla-mutation-gateway-test", tag)
+        crate::kernel::persistence::temp_dir("medulla-mutation-gateway-test", tag)
     }
 
     #[test]
@@ -496,7 +498,10 @@ mod tests {
         };
         let plan = MutationPlan::for_method(&method);
         assert!(plan.mutates);
-        assert!(plan.audited, "Reinforce is now policy-audited (L3/MEDULLA-P0-6)");
+        assert!(
+            plan.audited,
+            "Reinforce is now policy-audited (L3/MEDULLA-P0-6)"
+        );
         assert!(!plan.emits_cdc, "Reinforce policy-does-NOT-emit-CDC");
         assert_eq!(plan.durability_domain, DurabilityDomain::GraphRedb);
 
@@ -2408,7 +2413,8 @@ mod tests {
                     op: Box::new(medulla_types::connector_pack::ConnectorPackOp::Unbind {
                         request: medulla_types::connector_pack::ConnectorPackUnbindRequest {
                             context: ctx(),
-                            connector: medulla_types::test_support::contract_wave::pack::connector(),
+                            connector: medulla_types::test_support::contract_wave::pack::connector(
+                            ),
                         },
                     }),
                 },

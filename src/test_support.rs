@@ -1,27 +1,5 @@
 //! Test-only helpers shared by crate unit-test modules.
 
-use std::path::PathBuf;
-
-/// Return a unique process-local temporary directory path and clear any stale
-/// path from a previous interrupted test run.
-///
-/// The process-local sequence prevents collisions even when concurrent calls
-/// observe the same system-clock tick. Callers retain their prefix and tag.
-pub(crate) fn temp_dir(prefix: &str, tag: &str) -> PathBuf {
-    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-    let dir = std::env::temp_dir().join(format!(
-        "{prefix}-{tag}-{}-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos(),
-        NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-    ));
-    let _ = std::fs::remove_dir_all(&dir);
-    dir
-}
-
 /// Decode a successful raw typed server response in route-level tests.
 #[cfg(feature = "server")]
 pub(crate) fn decode_raw_response<T: serde::de::DeserializeOwned>(
@@ -46,7 +24,7 @@ fn concurrent_temporary_paths_are_unique() {
             .map(|_| {
                 scope.spawn(|| {
                     (0..256)
-                        .map(|_| temp_dir("medulla-path", "parallel"))
+                        .map(|_| crate::kernel::persistence::temp_dir("medulla-path", "parallel"))
                         .collect::<Vec<_>>()
                 })
             })

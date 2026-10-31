@@ -159,7 +159,7 @@ fn graph_request(graph_name: &str, group_id: crate::raft::GroupId) -> crate::raf
         )
         .unwrap(),
         committed_at_ms: 19,
-        mutation: crate::raft::RaftMutationContext {
+        mutation: crate::server::api::persistence::RaftMutationContext {
             batch_id: crate::server::mutation_batch::opaque_coordinator_key(
                 "raft-graph-test",
                 graph_name,
@@ -319,7 +319,7 @@ fn internal_graph_command_requires_the_typed_internal_authority() {
         .validate_graph_command("cluster-test-key", 0)
         .is_err());
 
-    request.mutation = crate::raft::RaftMutationContext::internal(
+    request.mutation = crate::server::api::persistence::RaftMutationContext::internal(
         "raft-placement",
         "__placement_catalog__",
         "internal-node",
@@ -330,14 +330,14 @@ fn internal_graph_command_requires_the_typed_internal_authority() {
         .validate_graph_command("cluster-test-key", 0)
         .expect("typed internal command accepts only engine-owned authority");
 
-    let claimed = crate::raft::RaftMutationContext::from_verified_request(
+    let claimed = crate::server::api::persistence::RaftMutationContext::from_verified_request(
         "caller-batch".to_string(),
         1,
         Some(medulla_types::contract::Nonce::from_bytes([8; 32])),
         &request.mutation.tenant_scope,
         request.mutation.principal_fingerprint.clone(),
         false,
-        crate::raft::RaftMutationTiming {
+        crate::server::api::persistence::RaftMutationTiming {
             placement_epoch: 0,
             fencing_token: None,
             created_at_ms: 1,

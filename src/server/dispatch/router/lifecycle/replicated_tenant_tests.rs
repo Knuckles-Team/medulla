@@ -9,10 +9,9 @@ use tokio::sync::RwLock;
 
 use crate::isolation::{AccessLevel, AgentIdentity, AgentRole, IsolationLayer};
 use crate::protocol::{GraphType, Method};
-use crate::raft::{
-    NativeMutationCommand, RaftMutationContext, RaftMutationTiming, RaftRequest, ReplicatedMutation,
-};
+use crate::raft::{NativeMutationCommand, RaftRequest, ReplicatedMutation};
 use crate::server::access::CarrierAuthority;
+use crate::server::api::persistence::{RaftMutationContext, RaftMutationTiming};
 use crate::server::auth::VerifiedRequestContext;
 use crate::server::dispatch::apply_replicated_native;
 use crate::server::dispatch::test_support::{send, verified};

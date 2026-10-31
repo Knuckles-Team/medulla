@@ -29,7 +29,7 @@ use crate::parser::enrichment_snapshot::{
 };
 #[cfg(feature = "blob")]
 use crate::server::api::reentry::DrainOutcome;
-use crate::server::persistence::PersistenceBackend;
+use crate::server::api::persistence::PersistenceBackend;
 
 pub(super) const PENDING_TOPIC: &str = "repository.enrichment.pending";
 #[cfg(feature = "blob")]

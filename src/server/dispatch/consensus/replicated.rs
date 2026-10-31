@@ -47,7 +47,7 @@ pub(crate) async fn apply_replicated_native(
     graph: String,
     request_id: u64,
     committed_at_ms: u64,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     method: Method,
 ) -> Response {
     if capability_authority_unavailable(&method) {
@@ -81,7 +81,7 @@ pub(crate) async fn apply_replicated_native(
 #[cfg(feature = "raft")]
 fn replicated_apply_scope(
     committed_at_ms: u64,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
 ) -> ReplicatedApplyScope {
     ReplicatedApplyScope {
         committed_at_ms,
@@ -96,7 +96,7 @@ pub(crate) async fn apply_replicated_transaction_participant(
     state: &Arc<RwLock<ServerState>>,
     request_id: u64,
     committed_at_ms: u64,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     applying_group: crate::raft::GroupId,
     phase: crate::server::api::reentry::TransactionParticipantPhase,
     participant: ReplicatedParticipantRef<'_>,
@@ -161,7 +161,7 @@ pub(crate) async fn apply_replicated_transaction_prepare(
     state: &Arc<RwLock<ServerState>>,
     request_id: u64,
     committed_at_ms: u64,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     txn_id: &str,
     idempotency_key: Option<&str>,
     expected_tenant: Option<&str>,
@@ -183,7 +183,7 @@ async fn apply_replicated_transaction_prepare_inner(
     state: &Arc<RwLock<ServerState>>,
     request_id: u64,
     committed_at_ms: u64,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     txn_id: &str,
     idempotency_key: Option<&str>,
     expected_tenant: Option<&str>,
@@ -212,7 +212,7 @@ async fn apply_replicated_transaction_prepare_inner(
 #[cfg(feature = "raft")]
 fn validate_replicated_prepare_tenant(
     request_id: u64,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     expected_tenant: Option<&str>,
 ) -> Result<(), Response> {
     if expected_tenant != Some(authority.tenant_scope.as_str()) {
@@ -228,7 +228,7 @@ fn validate_replicated_prepare_tenant(
 pub(crate) async fn apply_replicated_transaction_decision(
     state: &Arc<RwLock<ServerState>>,
     committed_at_ms: u64,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     coordinator_id: &str,
     commit: bool,
 ) -> Result<bool, String> {
@@ -249,7 +249,7 @@ pub(crate) async fn apply_replicated_transaction_decision(
 pub(crate) async fn apply_replicated_transaction_finalize(
     state: &Arc<RwLock<ServerState>>,
     committed_at_ms: u64,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     coordinator_id: &str,
     commit: bool,
 ) -> Result<bool, String> {
@@ -271,7 +271,7 @@ pub(crate) async fn apply_replicated_job_publication_commit(
     state: &Arc<RwLock<ServerState>>,
     request_id: u64,
     committed_at_ms: u64,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     applying_group: crate::raft::GroupId,
     coordinator_id: &str,
     plan: &[u8],
@@ -295,7 +295,7 @@ pub(crate) async fn apply_replicated_job_publication_commit(
 pub(crate) async fn apply_replicated_job_publication_finalize(
     state: &Arc<RwLock<ServerState>>,
     committed_at_ms: u64,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     coordinator_id: &str,
     receipt: &[u8],
 ) -> Result<ResultPayload, String> {

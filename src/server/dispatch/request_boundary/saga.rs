@@ -1,8 +1,10 @@
 use super::*;
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 
 #[cfg(feature = "redb")]
 pub(crate) struct SessionControlSaga {
-    backend: Arc<dyn crate::server::persistence::PersistenceBackend>,
+    backend: Arc<dyn crate::server::api::persistence::PersistenceBackend>,
     saga: crate::server::api::admin::saga::AdminSaga,
 }
 

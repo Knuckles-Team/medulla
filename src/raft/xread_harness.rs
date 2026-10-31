@@ -72,7 +72,13 @@ async fn put_node(multi: &Arc<MultiRaft>, gid: GroupId, graph: &str, node_id: &s
         graph_name: graph.to_string(),
         graph_type: GraphType::Global,
         committed_at_ms: 0,
-        mutation: super::RaftMutationContext::internal("raft-xread-harness", graph, node_id, 0, 0),
+        mutation: crate::server::api::persistence::RaftMutationContext::internal(
+            "raft-xread-harness",
+            graph,
+            node_id,
+            0,
+            0,
+        ),
         command: super::ReplicatedMutation::graph(
             Method::AddNode {
                 node_id: node_id.to_string(),

@@ -40,15 +40,17 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
+#[cfg(feature = "redb")]
+use medulla::server::persistence::AsRedb;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_kernel::crypto::{ENCRYPTION_KEY_ENV, TXN_RECOVERY_KEY_ENV};
 use medulla::protocol::{GraphType, Method, Request, Response, ResultPayload};
+use medulla::server::api::persistence::PersistenceBackend;
 use medulla::server::persistence::redb_backend::RedbBackend;
-use medulla::server::persistence::PersistenceBackend;
 use medulla::server::ServerState;
+use medulla_kernel::crypto::{ENCRYPTION_KEY_ENV, TXN_RECOVERY_KEY_ENV};
 
 const SECRET: &str = "d-orc-50-decoupled-recovery-key-test";
 const PLAINTEXT_SECRET_PROP: &str = "pre-existing-plaintext-node-payload-marker";

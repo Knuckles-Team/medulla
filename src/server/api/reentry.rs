@@ -175,7 +175,7 @@ pub trait DispatchApi: Send + Sync {
         graph: String,
         request_id: u64,
         committed_at_ms: u64,
-        authority: &'a crate::raft::RaftMutationContext,
+        authority: &'a crate::server::api::persistence::RaftMutationContext,
         method: Method,
     ) -> SeamFuture<'a, Response>;
 
@@ -186,7 +186,7 @@ pub trait DispatchApi: Send + Sync {
         state: &'a Arc<RwLock<ServerState>>,
         request_id: u64,
         committed_at_ms: u64,
-        authority: &'a crate::raft::RaftMutationContext,
+        authority: &'a crate::server::api::persistence::RaftMutationContext,
         applying_group: medulla_storage::direct_state::GroupId,
         phase: TransactionParticipantPhase,
         participant: ReplicatedParticipantRef<'a>,
@@ -199,7 +199,7 @@ pub trait DispatchApi: Send + Sync {
         state: &'a Arc<RwLock<ServerState>>,
         request_id: u64,
         committed_at_ms: u64,
-        authority: &'a crate::raft::RaftMutationContext,
+        authority: &'a crate::server::api::persistence::RaftMutationContext,
         txn_id: &'a str,
         idempotency_key: Option<&'a str>,
         expected_tenant: Option<&'a str>,
@@ -211,7 +211,7 @@ pub trait DispatchApi: Send + Sync {
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         committed_at_ms: u64,
-        authority: &'a crate::raft::RaftMutationContext,
+        authority: &'a crate::server::api::persistence::RaftMutationContext,
         coordinator_id: &'a str,
         commit: bool,
     ) -> SeamFuture<'a, Result<bool, String>>;
@@ -222,7 +222,7 @@ pub trait DispatchApi: Send + Sync {
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         committed_at_ms: u64,
-        authority: &'a crate::raft::RaftMutationContext,
+        authority: &'a crate::server::api::persistence::RaftMutationContext,
         coordinator_id: &'a str,
         commit: bool,
     ) -> SeamFuture<'a, Result<bool, String>>;
@@ -234,7 +234,7 @@ pub trait DispatchApi: Send + Sync {
         state: &'a Arc<RwLock<ServerState>>,
         request_id: u64,
         committed_at_ms: u64,
-        authority: &'a crate::raft::RaftMutationContext,
+        authority: &'a crate::server::api::persistence::RaftMutationContext,
         applying_group: medulla_storage::direct_state::GroupId,
         coordinator_id: &'a str,
         plan: &'a [u8],
@@ -246,7 +246,7 @@ pub trait DispatchApi: Send + Sync {
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         committed_at_ms: u64,
-        authority: &'a crate::raft::RaftMutationContext,
+        authority: &'a crate::server::api::persistence::RaftMutationContext,
         coordinator_id: &'a str,
         receipt: &'a [u8],
     ) -> SeamFuture<'a, Result<ResultPayload, String>>;
@@ -264,7 +264,7 @@ pub trait DispatchApi: Send + Sync {
     #[cfg(all(feature = "ast", feature = "redb", feature = "blob", feature = "raft"))]
     fn plan_held_underfunded_park<'a>(
         &'a self,
-        persistence: &'a dyn crate::server::persistence::PersistenceBackend,
+        persistence: &'a dyn crate::server::api::persistence::PersistenceBackend,
         graph_fname: &'a str,
         lease: &'a medulla_types::mutation_batch::MutationOutboxLease,
         committed_at_ms: u64,
@@ -309,7 +309,7 @@ pub trait DispatchApi: Send + Sync {
     #[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
     fn drain_repository_enrichment_once<'a>(
         &'a self,
-        persistence: &'a dyn crate::server::persistence::PersistenceBackend,
+        persistence: &'a dyn crate::server::api::persistence::PersistenceBackend,
         graph_fname: &'a str,
         store: Arc<dyn crate::server::blob::store::ChunkStore>,
         authority_for_page: PageAuthorityFn,
@@ -425,7 +425,7 @@ pub(crate) async fn apply_replicated_native(
     graph: String,
     request_id: u64,
     committed_at_ms: u64,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     method: Method,
 ) -> Response {
     match dispatch_api(state).await {
@@ -450,7 +450,7 @@ pub(crate) async fn apply_replicated_transaction_participant(
     state: &Arc<RwLock<ServerState>>,
     request_id: u64,
     committed_at_ms: u64,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     applying_group: medulla_storage::direct_state::GroupId,
     phase: TransactionParticipantPhase,
     participant: ReplicatedParticipantRef<'_>,
@@ -475,7 +475,7 @@ pub(crate) async fn apply_replicated_transaction_prepare(
     state: &Arc<RwLock<ServerState>>,
     request_id: u64,
     committed_at_ms: u64,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     txn_id: &str,
     idempotency_key: Option<&str>,
     expected_tenant: Option<&str>,
@@ -502,7 +502,7 @@ pub(crate) async fn apply_replicated_transaction_prepare(
 pub(crate) async fn apply_replicated_transaction_decision(
     state: &Arc<RwLock<ServerState>>,
     committed_at_ms: u64,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     coordinator_id: &str,
     commit: bool,
 ) -> Result<bool, String> {
@@ -523,7 +523,7 @@ pub(crate) async fn apply_replicated_transaction_decision(
 pub(crate) async fn apply_replicated_transaction_finalize(
     state: &Arc<RwLock<ServerState>>,
     committed_at_ms: u64,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     coordinator_id: &str,
     commit: bool,
 ) -> Result<bool, String> {
@@ -545,7 +545,7 @@ pub(crate) async fn apply_replicated_job_publication_commit(
     state: &Arc<RwLock<ServerState>>,
     request_id: u64,
     committed_at_ms: u64,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     applying_group: medulla_storage::direct_state::GroupId,
     coordinator_id: &str,
     plan: &[u8],
@@ -569,7 +569,7 @@ pub(crate) async fn apply_replicated_job_publication_commit(
 pub(crate) async fn apply_replicated_job_publication_finalize(
     state: &Arc<RwLock<ServerState>>,
     committed_at_ms: u64,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     coordinator_id: &str,
     receipt: &[u8],
 ) -> Result<ResultPayload, String> {
@@ -602,7 +602,7 @@ pub(crate) async fn submit_repository_enrichment_page(
 #[cfg(all(feature = "ast", feature = "redb", feature = "blob", feature = "raft"))]
 pub(crate) async fn plan_held_underfunded_park(
     state: &Arc<RwLock<ServerState>>,
-    persistence: &dyn crate::server::persistence::PersistenceBackend,
+    persistence: &dyn crate::server::api::persistence::PersistenceBackend,
     graph_fname: &str,
     lease: &medulla_types::mutation_batch::MutationOutboxLease,
     committed_at_ms: u64,
@@ -657,7 +657,7 @@ pub(crate) async fn enrichment_intent_for_snapshot(
 #[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
 pub(crate) async fn drain_repository_enrichment_once(
     state: &Arc<RwLock<ServerState>>,
-    persistence: &dyn crate::server::persistence::PersistenceBackend,
+    persistence: &dyn crate::server::api::persistence::PersistenceBackend,
     graph_fname: &str,
     store: Arc<dyn crate::server::blob::store::ChunkStore>,
     authority_for_page: PageAuthorityFn,

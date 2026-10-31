@@ -1,6 +1,8 @@
 //! Volatile transaction lifecycle admission and typed replay.
 
 use super::*;
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 
 /// Every mutating transaction-family method bypasses the transport replay
 /// ledger because its effect belongs to the durable kernel.  Begin/stage/
@@ -132,7 +134,7 @@ pub(in crate::server::handlers::txn) fn txn_lifecycle_batch_id(
 #[cfg(feature = "redb")]
 pub(crate) struct TxnLifecycleReceipt {
     pub(in crate::server::handlers::txn) backend:
-        Arc<dyn crate::server::persistence::PersistenceBackend>,
+        Arc<dyn crate::server::api::persistence::PersistenceBackend>,
     pub(in crate::server::handlers::txn) saga: crate::server::api::admin::saga::AdminSaga,
 }
 

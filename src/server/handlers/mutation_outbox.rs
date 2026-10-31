@@ -132,7 +132,7 @@ async fn serve(
 #[cfg(feature = "redb")]
 enum Owner {
     Graph {
-        persistence: Arc<dyn crate::server::persistence::PersistenceBackend>,
+        persistence: Arc<dyn crate::server::api::persistence::PersistenceBackend>,
         graph_fname: String,
     },
     AgentLibrary {

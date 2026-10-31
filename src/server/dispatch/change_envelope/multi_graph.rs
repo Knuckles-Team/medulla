@@ -1,5 +1,7 @@
 use super::*;
 #[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
+#[cfg(feature = "redb")]
 use medulla_types::result_contract::transactions as txn_results;
 
 /// Apply a batched cross-graph write (CONCEPT:MEDULLA-KG.storage.multi-graph-batch-write).

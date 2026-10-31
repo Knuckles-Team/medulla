@@ -33,14 +33,16 @@ fn typed_rls_requires_explicit_matching_stamp_and_never_rewrites_cells() {
     let carrier = authority("bob", "tenant-a", "rls", true);
     let matching = fixture.request("bob");
     let omitted = change(&matching, |batch| {
-        batch.columns = medulla_types::contract::BoundedVec::new(vec![id("id"), id("payload")]).unwrap();
-        batch.rows =
-            medulla_types::contract::BoundedVec::new(vec![medulla_types::contract::BoundedVec::new(vec![
+        batch.columns =
+            medulla_types::contract::BoundedVec::new(vec![id("id"), id("payload")]).unwrap();
+        batch.rows = medulla_types::contract::BoundedVec::new(vec![
+            medulla_types::contract::BoundedVec::new(vec![
                 batch.rows.as_slice()[0].as_slice()[0].clone(),
                 batch.rows.as_slice()[0].as_slice()[2].clone(),
             ])
-            .unwrap()])
-            .unwrap();
+            .unwrap(),
+        ])
+        .unwrap();
     });
     assert!(submit(&fixture, &carrier, omitted, 1)
         .unwrap_err()
@@ -235,9 +237,10 @@ fn audit_line_carries_only_the_canonical_batch_digest() {
     let fixture = Fixture::new();
     let request = fixture.request("bob");
     let expected = request.canonical_digests().unwrap().batch_digest.to_hex();
-    let line =
-        medulla_kernel::audit::audit_line(&crate::protocol::Method::SqlSourceBatch { batch: request })
-            .unwrap();
+    let line = medulla_kernel::audit::audit_line(&crate::protocol::Method::SqlSourceBatch {
+        batch: request,
+    })
+    .unwrap();
     assert_eq!(line, format!("SQL_SOURCE_BATCH_MUTATION|sha256:{expected}"));
     for leaked in ["jira", "issues", "project-a", "issue_id", "deployment"] {
         assert!(!line.contains(leaked), "audit line leaked {leaked}");

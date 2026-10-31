@@ -65,7 +65,7 @@ pub(crate) async fn status(
     graph_name: &str,
     tenant_scope: &str,
     verified: &VerifiedRequestContext,
-    persistence: &Arc<dyn crate::server::persistence::PersistenceBackend>,
+    persistence: &Arc<dyn crate::server::api::persistence::PersistenceBackend>,
     request: medulla_types::source_ingestion::SourceIngestStatusRequest,
 ) -> Response {
     if !verified.allows_method("source:ingest", false) {
@@ -131,7 +131,7 @@ pub(crate) async fn status(
     _graph_name: &str,
     _tenant_scope: &str,
     _verified: &VerifiedRequestContext,
-    _persistence: &Arc<dyn crate::server::persistence::PersistenceBackend>,
+    _persistence: &Arc<dyn crate::server::api::persistence::PersistenceBackend>,
     _request: medulla_types::source_ingestion::SourceIngestStatusRequest,
 ) -> Response {
     Response::err(
@@ -367,7 +367,7 @@ struct ReconciliationPlan {
 #[cfg(all(feature = "redb", feature = "blob"))]
 async fn load_persistence(
     ctx: &PrepareContext<'_>,
-) -> Result<Arc<dyn crate::server::persistence::PersistenceBackend>, String> {
+) -> Result<Arc<dyn crate::server::api::persistence::PersistenceBackend>, String> {
     let state = ctx.state.read().await;
     state.persistence.clone().ok_or_else(|| {
         "SOURCE_INGESTION_UNAVAILABLE: graph persistence is not configured".to_string()
@@ -535,7 +535,7 @@ async fn reconcile_batch(
     batch: &medulla_types::source_ingestion::SourceIngestionBatch,
     batch_digest: Digest256,
     receipt_id: &str,
-    persistence: &dyn crate::server::persistence::PersistenceBackend,
+    persistence: &dyn crate::server::api::persistence::PersistenceBackend,
     graph_fname: &str,
     resolved_revision: Option<u64>,
 ) -> Result<ReconciliationPlan, String> {
@@ -617,7 +617,7 @@ async fn reconcile_batch(
 /// (its first batch, or batches committed before this keying) chains from none.
 #[cfg(all(feature = "redb", feature = "blob"))]
 async fn stream_content_digest(
-    persistence: &dyn crate::server::persistence::PersistenceBackend,
+    persistence: &dyn crate::server::api::persistence::PersistenceBackend,
     graph_fname: &str,
     mutation: &medulla_types::mutation_batch::MutationBatch,
     stream_object_id: &str,
@@ -822,7 +822,9 @@ fn planned_relationship_tombstones(
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]
-fn is_authoritative_empty_full(batch: &medulla_types::source_ingestion::SourceIngestionBatch) -> bool {
+fn is_authoritative_empty_full(
+    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
+) -> bool {
     batch.mode == SourceIngestionMode::Full
         && batch.records.is_empty()
         && batch.relationships.is_empty()
@@ -834,7 +836,7 @@ fn validate_tombstone_targets(
     ctx: &PrepareContext<'_>,
     batch: &medulla_types::source_ingestion::SourceIngestionBatch,
     withdrawals: &[SourceWithdrawal],
-    persistence: &dyn crate::server::persistence::PersistenceBackend,
+    persistence: &dyn crate::server::api::persistence::PersistenceBackend,
     graph_fname: &str,
 ) -> Result<(), String> {
     for withdrawal in withdrawals {
@@ -861,7 +863,7 @@ fn validate_tombstone_targets(
 fn validate_authoritative_live_targets(
     ctx: &PrepareContext<'_>,
     batch: &medulla_types::source_ingestion::SourceIngestionBatch,
-    persistence: &dyn crate::server::persistence::PersistenceBackend,
+    persistence: &dyn crate::server::api::persistence::PersistenceBackend,
     graph_fname: &str,
 ) -> Result<(), String> {
     let observed: BTreeSet<_> = batch
@@ -1018,7 +1020,7 @@ struct RelationshipAdmissionContext<'a, 'ctx> {
     blob: &'a Arc<crate::server::blob::BlobCursors>,
     resolved: &'a ResolvedIngestionMappings,
     policy_subject: &'a str,
-    persistence: &'a dyn crate::server::persistence::PersistenceBackend,
+    persistence: &'a dyn crate::server::api::persistence::PersistenceBackend,
     graph_fname: &'a str,
 }
 
@@ -1225,7 +1227,7 @@ fn validate_relationship_endpoint(
     submitted: &BTreeMap<SourceEntityRef, String>,
     entity: &SourceEntityRef,
     expected_type: &str,
-    persistence: &dyn crate::server::persistence::PersistenceBackend,
+    persistence: &dyn crate::server::api::persistence::PersistenceBackend,
     graph_fname: &str,
 ) -> Result<(), String> {
     if let Some(actual_type) = submitted.get(entity) {
@@ -2586,7 +2588,7 @@ mod tests {
         };
 
         struct NoReadPersistence;
-        impl crate::server::persistence::PersistenceBackend for NoReadPersistence {
+        impl crate::server::api::persistence::PersistenceBackend for NoReadPersistence {
             fn shutdown(&self) {}
         }
 

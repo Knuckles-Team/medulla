@@ -12,11 +12,11 @@ use tokio::sync::RwLock;
 use super::super::access::{check_graph_access, requires_write, GraphReadAuthority};
 use super::super::compute::{compute_off_lock, weight_semantic_results};
 use super::super::mutation::{self, GatewayAuthzCtx, MutationCtx, MutationPlan};
-use super::super::persistence::PersistenceBackend;
 use super::super::state::{max_response_edges, max_response_nodes, ServerState, MAX_BATCH_IDS};
 use crate::graph::GraphCore;
 use crate::isolation::AccessLevel;
 use crate::protocol::{LedgerReadResult, Method, Response, ResultPayload};
+use crate::server::api::persistence::PersistenceBackend;
 
 mod algorithms;
 mod broker;

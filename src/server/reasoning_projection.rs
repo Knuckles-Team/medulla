@@ -195,7 +195,7 @@ pub fn spawn(state: Arc<RwLock<ServerState>>) {
 
 #[cfg(feature = "redb")]
 struct ProjectionContext {
-    persistence: Arc<dyn crate::server::persistence::PersistenceBackend>,
+    persistence: Arc<dyn crate::server::api::persistence::PersistenceBackend>,
     persist_dir: Option<String>,
     graphs: Vec<(String, Arc<medulla_core::graph::GraphCore>)>,
     /// The worker's wall clock, injected so a sweep's lease arithmetic is
@@ -289,7 +289,7 @@ fn subscribed_graphs() -> &'static RwLock<HashSet<String>> {
 /// without anyone having decided to.
 #[cfg(feature = "redb")]
 async fn ensure_subscription(
-    persistence: &Arc<dyn crate::server::persistence::PersistenceBackend>,
+    persistence: &Arc<dyn crate::server::api::persistence::PersistenceBackend>,
     graph_fname: &str,
 ) -> bool {
     if subscribed_graphs().read().await.contains(graph_fname) {
@@ -499,7 +499,7 @@ async fn process_lease(
 
 #[cfg(feature = "redb")]
 async fn resolve_projection_wakeup(
-    persistence: &Arc<dyn crate::server::persistence::PersistenceBackend>,
+    persistence: &Arc<dyn crate::server::api::persistence::PersistenceBackend>,
     graph_fname: &str,
     lease: &MutationOutboxLease,
 ) -> Result<ReasoningProjectionWakeup, ()> {
@@ -766,8 +766,9 @@ fn decode_snapshot_file(
     if bytes.len() > limits.max_bytes {
         return Err("reasoning projection snapshot exceeds its size limit".to_string());
     }
-    let index: IncrementalReasoningIndex = medulla_types::msgpack::decode_bounded(&bytes, limits)
-        .map_err(|_| "reasoning projection snapshot is invalid".to_string())?;
+    let index: IncrementalReasoningIndex =
+        medulla_types::msgpack::decode_bounded(&bytes, limits)
+            .map_err(|_| "reasoning projection snapshot is invalid".to_string())?;
     index.validate()?;
     Ok(index)
 }
@@ -791,7 +792,13 @@ pub async fn materialization_status(
     persist_dir: Option<&str>,
     graph_name: &str,
     node_id: &str,
-) -> Result<(Option<medulla_epistemic::ProjectedMaterializationStatus>, u64), String> {
+) -> Result<
+    (
+        Option<medulla_epistemic::ProjectedMaterializationStatus>,
+        u64,
+    ),
+    String,
+> {
     let index = read_index(persist_dir, graph_name).await?;
     let source_graph_version = index
         .position
@@ -1163,7 +1170,7 @@ mod tests {
     use medulla_types::protocol::Method;
 
     #[cfg(feature = "redb")]
-    use crate::server::persistence::PersistenceBackend;
+    use crate::server::api::persistence::PersistenceBackend;
 
     use super::*;
 
@@ -1630,7 +1637,7 @@ mod tests {
 
     #[cfg(feature = "redb")]
     #[async_trait::async_trait]
-    impl crate::server::persistence::PersistenceBackend for DeferredProjectionBackend {
+    impl crate::server::api::persistence::PersistenceBackend for DeferredProjectionBackend {
         async fn load_all(
             &self,
             _state: &Arc<RwLock<crate::server::state::ServerState>>,
@@ -1688,7 +1695,8 @@ mod tests {
         let root_str = root.to_string_lossy().to_string();
         let graph = format!("deferred-budget-{}", std::process::id());
         let backend = Arc::new(DeferredProjectionBackend::new());
-        let persistence: Arc<dyn crate::server::persistence::PersistenceBackend> = backend.clone();
+        let persistence: Arc<dyn crate::server::api::persistence::PersistenceBackend> =
+            backend.clone();
         let core = Arc::new(medulla_core::graph::GraphCore::new());
         let context = ProjectionContext {
             persistence,
@@ -1697,7 +1705,8 @@ mod tests {
             clock: current_time_ms,
         };
         let mut budget =
-            medulla_transaction::OutboxClaimBudget::new(CLAIM_SWEEP_LIMIT, CLAIM_LEASE_MS, 1).unwrap();
+            medulla_transaction::OutboxClaimBudget::new(CLAIM_SWEEP_LIMIT, CLAIM_LEASE_MS, 1)
+                .unwrap();
 
         assert!(!process_graph(&context, &graph, &core, &mut budget).await);
         assert_eq!(backend.claim_calls.load(Ordering::Relaxed), 1);
@@ -1726,7 +1735,7 @@ mod tests {
 
     #[cfg(feature = "redb")]
     #[async_trait::async_trait]
-    impl crate::server::persistence::PersistenceBackend for DeadLetteredProjectionBackend {
+    impl crate::server::api::persistence::PersistenceBackend for DeadLetteredProjectionBackend {
         async fn load_all(
             &self,
             _state: &Arc<RwLock<crate::server::state::ServerState>>,
@@ -1811,7 +1820,8 @@ mod tests {
             .is_some());
 
         let backend = Arc::new(DeadLetteredProjectionBackend::new());
-        let persistence: Arc<dyn crate::server::persistence::PersistenceBackend> = backend.clone();
+        let persistence: Arc<dyn crate::server::api::persistence::PersistenceBackend> =
+            backend.clone();
         let core = Arc::new(medulla_core::graph::GraphCore::new());
         let context = ProjectionContext {
             persistence,
@@ -1820,7 +1830,8 @@ mod tests {
             clock: current_time_ms,
         };
         let mut budget =
-            medulla_transaction::OutboxClaimBudget::new(CLAIM_SWEEP_LIMIT, CLAIM_LEASE_MS, 1).unwrap();
+            medulla_transaction::OutboxClaimBudget::new(CLAIM_SWEEP_LIMIT, CLAIM_LEASE_MS, 1)
+                .unwrap();
 
         // process_graph reports no progress for this sweep -- the claim
         // yielded no leases to apply -- but it must still have triggered the
@@ -1842,7 +1853,10 @@ mod tests {
     }
 
     #[cfg(feature = "redb")]
-    fn projection_budget_batch(graph: &str, row: u64) -> medulla_types::mutation_batch::MutationBatch {
+    fn projection_budget_batch(
+        graph: &str,
+        row: u64,
+    ) -> medulla_types::mutation_batch::MutationBatch {
         projection_batch(graph, row, format!("projection-budget-{graph}-{row}"))
     }
 
@@ -1854,7 +1868,7 @@ mod tests {
     ) -> medulla_types::mutation_batch::MutationBatch {
         use std::collections::BTreeMap;
 
-        use crate::server::mutation_batch::ENGINE_LEDGER_PRINCIPAL;
+        use crate::kernel::persistence::ENGINE_LEDGER_PRINCIPAL;
         use medulla_types::contract::{Digest256, MethodId, Nonce};
         use medulla_types::mutation_batch::{
             CompiledOperation, CompiledScope, DurabilityDomain, MutationBatch, MutationEnvelope,
@@ -1871,10 +1885,13 @@ mod tests {
         // `resource_reservation_tests::resource_batch` and
         // `work_item_capability`.
         let identity = medulla_types::mutation_batch::MutationScopeIdentity::graph(
-            medulla_types::mutation_batch::ScopeTenantId::new("tenant-a").expect("valid caller tenant"),
+            medulla_types::mutation_batch::ScopeTenantId::new("tenant-a")
+                .expect("valid caller tenant"),
             medulla_types::mutation_batch::LogicalName::new(graph).expect("valid graph name"),
-            medulla_types::mutation_batch::IncarnationId::new("incarnation:test:reasoning-projection")
-                .expect("valid incarnation"),
+            medulla_types::mutation_batch::IncarnationId::new(
+                "incarnation:test:reasoning-projection",
+            )
+            .expect("valid incarnation"),
         );
         let actor = crate::server::mutation_batch::principal_fingerprint(
             "reasoning-projection-budget-test",
@@ -1954,7 +1971,8 @@ mod tests {
         let graph_fname = crate::persist::sanitize(&graph);
         subscribed_graphs().write().await.remove(&graph_fname);
 
-        let persistence: Arc<dyn crate::server::persistence::PersistenceBackend> = backend.clone();
+        let persistence: Arc<dyn crate::server::api::persistence::PersistenceBackend> =
+            backend.clone();
         let retired_batch =
             projection_batch(&graph_fname, 0, format!("projection-retired-{graph_fname}"));
         persistence
@@ -2092,7 +2110,8 @@ mod tests {
         let graph_names: Vec<String> = (0..5)
             .map(|index| format!("shared-budget-{}-{index}", std::process::id()))
             .collect();
-        let persistence: Arc<dyn crate::server::persistence::PersistenceBackend> = backend.clone();
+        let persistence: Arc<dyn crate::server::api::persistence::PersistenceBackend> =
+            backend.clone();
 
         for graph in &graph_names {
             for row in 0..64 {
@@ -2108,7 +2127,12 @@ mod tests {
 
         let graphs = graph_names
             .iter()
-            .map(|graph| (graph.clone(), Arc::new(medulla_core::graph::GraphCore::new())))
+            .map(|graph| {
+                (
+                    graph.clone(),
+                    Arc::new(medulla_core::graph::GraphCore::new()),
+                )
+            })
             .collect();
         let context = ProjectionContext {
             persistence: persistence.clone(),

@@ -5,7 +5,7 @@ use sha2::{Digest, Sha256};
 use crate::graph::GraphCore;
 use crate::mutation_batch::MutationSurface;
 use crate::protocol::{Method, ResultPayload};
-use crate::server::persistence::PersistenceBackend;
+use crate::server::api::persistence::PersistenceBackend;
 use medulla_types::contract::Nonce;
 
 use super::super::compile::{authoritative_graph_version, compile_methods, CompileBatch};

@@ -1,4 +1,6 @@
 use super::*;
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 
 /// The durable vote, applied state, and purged log id a group store reopens from.
 type OpenMetadata = (

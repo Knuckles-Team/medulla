@@ -255,8 +255,9 @@ mod tests {
     use super::*;
 
     use crate::isolation::{AgentIdentity, AgentRole, IsolationLayer};
+    use crate::server::api::persistence::PersistenceBackend;
     #[cfg(feature = "redb")]
-    use crate::server::persistence::{redb_backend::RedbBackend, PersistenceBackend};
+    use crate::server::persistence::redb_backend::RedbBackend;
 
     /// A minimal `ServerState` with a pre-created `__commons__` graph (the registry
     /// creates it), mirroring `tests/pgwire_roundtrip.rs::state_with`. Feature-gated

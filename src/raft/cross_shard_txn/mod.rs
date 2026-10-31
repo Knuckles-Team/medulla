@@ -181,6 +181,8 @@
 //! wired into the server bootstrap (the group id is a per-call parameter here), and full
 //! Calvin deterministic ordering.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 use std::collections::BTreeMap;
 #[cfg(any(feature = "calvin", test, feature = "harness"))]
 use std::collections::{BTreeSet, HashMap};
@@ -204,8 +206,8 @@ use super::multi::MultiRaft;
 use super::NodeId;
 use super::{GroupId, RaftRequest};
 use crate::protocol::{GraphType, Method};
+use crate::server::api::persistence::PersistenceBackend;
 use crate::server::persistence::redb_backend::RedbBackend;
-use crate::server::persistence::PersistenceBackend;
 
 const MAX_PREPARED_TXN_BYTES: usize = 256 * 1024 * 1024;
 const MAX_PREPARED_TXN_ITEMS: usize = 4_000_000;
@@ -314,7 +316,7 @@ impl GraphSlice {
                     // lost.  A deterministic child authority makes every replicated
                     // operation an exact MutationBatch replay rather than applying it
                     // twice after the prepare/decision rows are eventually collected.
-                    mutation: super::RaftMutationContext::internal(
+                    mutation: crate::server::api::persistence::RaftMutationContext::internal(
                         "raft-xshard-child",
                         &self.graph_name,
                         &format!("{txn_id}:{ordinal}"),
@@ -753,18 +755,20 @@ impl CrossShardCoordinator {
             // The read is issued against the admin store's ONE bound serving
             // scope, so the ledger read is scope-addressed by construction: a
             // batch id alone never identifies a record.
-            let parent = medulla_transaction::read_ledger(&redb.admin_mutations_read()?, &parent_id)?;
+            let parent =
+                medulla_transaction::read_ledger(&redb.admin_mutations_read()?, &parent_id)?;
             if let Some(record) = parent.as_ref().filter(|record| {
                 record.status == crate::mutation_batch::MutationBatchStatus::Committed
             }) {
                 let bytes = record.result_msgpack.as_deref().ok_or_else(|| {
                     "committed transaction parent has no terminal result".to_string()
                 })?;
-                let result: crate::protocol::ResultPayload = medulla_types::msgpack::decode_bounded(
-                    bytes,
-                    medulla_types::msgpack::MsgpackLimits::new(64 * 1024 * 1024, 1_000_000, 64),
-                )
-                .map_err(|_| "transaction parent has an invalid result".to_string())?;
+                let result: crate::protocol::ResultPayload =
+                    medulla_types::msgpack::decode_bounded(
+                        bytes,
+                        medulla_types::msgpack::MsgpackLimits::new(64 * 1024 * 1024, 1_000_000, 64),
+                    )
+                    .map_err(|_| "transaction parent has an invalid result".to_string())?;
                 let crate::protocol::ResultPayload::Bool(parent_outcome) = result else {
                     return Err("transaction parent has the wrong result type".to_string());
                 };

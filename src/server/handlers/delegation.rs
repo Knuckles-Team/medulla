@@ -35,7 +35,7 @@ use serde_json::json;
 use crate::server::auth::VerifiedRequestContext;
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::PersistenceBackend;
+use crate::server::api::persistence::PersistenceBackend;
 
 #[cfg(feature = "redb")]
 use crate::graph::GraphCore;
@@ -522,7 +522,9 @@ mod tests {
             run_id: "run:1".into(),
             trace_id: "trace:run:1".into(),
             target: medulla_types::delegation::DelegationTarget::Graph {
-                graph: Box::new(medulla_types::delegation::AgentGraphEntryRef::from_entry(graph)),
+                graph: Box::new(medulla_types::delegation::AgentGraphEntryRef::from_entry(
+                    graph,
+                )),
             },
             input_ref: "cas:input:1".into(),
             command_digest: digest('2'),
