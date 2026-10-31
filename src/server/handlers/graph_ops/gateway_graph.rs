@@ -1,6 +1,6 @@
 use super::*;
 
-use super::gateway::commit_gateway;
+use crate::server::api::ingest::graph::commit_gateway;
 
 #[path = "gateway_graph_routes.rs"]
 mod gateway_graph_routes;

@@ -21,8 +21,6 @@ use sha2::{Digest, Sha256};
 use super::repository_index::{stored_value, EnvelopeLabels, IndexWriteSet};
 use crate::protocol::Method;
 
-pub(crate) mod embedder;
-
 pub(crate) const ENRICHMENT_TYPE: &str = "DocumentEnrichment";
 pub(crate) const CHUNK_TYPE: &str = "DocumentChunk";
 pub(crate) const CHUNK_OF: &str = "chunkOf";

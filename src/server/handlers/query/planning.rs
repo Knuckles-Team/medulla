@@ -18,8 +18,8 @@ pub(crate) fn uql_text_embedder() -> Option<&'static dyn medulla_plan::TextEmbed
             #[cfg(feature = "modality-serving")]
             {
                 let config =
-                    crate::server::handlers::web_ingest::embedder::EmbedderConfig::from_env();
-                if config.name() == crate::server::handlers::web_ingest::embedder::REMOTE {
+                    crate::server::api::ingest::embedder::EmbedderConfig::from_env();
+                if config.name() == crate::server::api::ingest::embedder::REMOTE {
                     return Some(Box::new(config) as Box<dyn medulla_plan::TextEmbedder>);
                 }
             }

@@ -1,22 +1,6 @@
 use super::*;
 
-/// Keep the mutation kernel behind a heap indirection so this module's large
-/// gateway match does not embed one copy of the kernel future in every arm.
-/// Without this boundary the generated `try_handle_gateway` future exceeds
-/// Tokio's default worker-thread stack on ordinary mutation requests.
-pub(crate) async fn commit_gateway<F>(
-    ctx: &MutationCtx<'_>,
-    plan: &MutationPlan,
-    method: &Method,
-    apply: F,
-) -> Response
-where
-    F: FnOnce(&GraphCore) -> Result<ResultPayload, String>,
-{
-    Box::pin(mutation::commit_mutation(ctx, plan, method, apply)).await
-}
-
-/// Same boundary as [`commit_gateway`], for the five coalescable structural
+/// Same boundary as [`commit_gateway`](crate::server::api::ingest::graph::commit_gateway), for the five coalescable structural
 /// writes (`AddNode`/`RemoveNode`/`AddEdge`/`RemoveEdge`/CAS) — routed through
 /// `mutation::commit_coalescable_mutation` instead of `commit_mutation` so
 /// their prepare→durable-commit→RAM-publish sequence can be queued onto the

@@ -82,6 +82,9 @@ paths = [
     "src/server/service_grant",  # unplanned
     "src/server/compute",  # unplanned
     "src/server/udf_catalog",  # seam (R056.8): depends only on access + medulla-wasm
+    "src/server/handlers/graphlearn",  # seam (R056.8): replayed from mutation_apply, depends only downward
+    "src/server/blob",  # seam (R056.8): chunk store layer only depends downward
+    "src/server/viz_engine",  # seam (R056.8): VizEngineState held by ServerState
     "src/test_support",  # unplanned
 ]
 
@@ -118,7 +121,6 @@ paths = [
     "src/server/handlers/quantum",
     "src/server/handlers/viz",
     "src/server/handlers/wasm_udf",  # unplanned
-    "src/server/viz_engine",  # unplanned
     "src/server/viz_interactive",  # unplanned
     "src/server/viz_provenance",  # unplanned
     "src/server/graph_tile_server",  # unplanned
@@ -142,7 +144,6 @@ exists = false
 level = 5
 paths = [
     "src/server/handlers/graph_ops",
-    "src/server/handlers/graphlearn",
     "src/server/handlers/topology",
     "src/server/handlers/placement",
     "src/server/handlers/pipeline",
@@ -164,7 +165,6 @@ paths = [
     "src/server/handlers/modality",
     "src/server/handlers/asr",
     "src/server/handlers/blob",
-    "src/server/blob",  # unplanned
     "src/server/repository_enrichment_worker",  # unplanned
 ]
 

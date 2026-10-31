@@ -64,7 +64,7 @@ impl Served {
         state.persist_dir = Some(dir.path().to_string_lossy().into_owned());
         let blob_dir = dir.path().join("blob");
         std::fs::create_dir_all(&blob_dir).unwrap();
-        state.blob = Some(crate::server::handlers::blob::cursors_for_test(
+        state.blob = Some(crate::server::api::ingest::cursors_for_test(
             blob_dir.to_str().unwrap(),
         ));
         Self {

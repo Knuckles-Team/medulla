@@ -2570,7 +2570,7 @@ async fn kg_delegate_public_dispatch_replicates_and_replays_after_failover_scena
     };
     assert_eq!(
         native.provenance_refs,
-        crate::server::handlers::delegation::provenance_refs(&request),
+        crate::server::api::ingest::jobs::provenance_refs(&request),
         "reopened receipt must retain the exact delegation provenance"
     );
 

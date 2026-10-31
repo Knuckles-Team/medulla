@@ -127,7 +127,7 @@ pub(super) async fn reconcile_locked(
         .clone()
         .ok_or_else(|| "BODY_MISSING: Blob substrate disabled".to_string())?;
     let authority = crate::server::access::CarrierAuthority::from_verified(verified)?;
-    let (batch, now_ms) = crate::server::handlers::blob::compile_blob_batch(
+    let (batch, now_ms) = crate::server::api::ingest::compile_blob_batch(
         blob.store.as_ref(),
         req_id,
         &authority,

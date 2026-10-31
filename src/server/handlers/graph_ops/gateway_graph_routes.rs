@@ -1,6 +1,7 @@
 use super::*;
 
-use super::gateway::{commit_gateway, commit_gateway_coalescable};
+use super::gateway::commit_gateway_coalescable;
+use crate::server::api::ingest::graph::commit_gateway;
 
 #[derive(Clone, Copy)]
 enum Route {

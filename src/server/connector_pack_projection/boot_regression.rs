@@ -406,7 +406,7 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
     state.persist_dir = Some(persist.clone());
     state.persistence = Some(backend.clone());
     state.tsdb_store = Some(series_store.clone());
-    state.blob = Some(crate::server::handlers::blob::cursors_for_test(
+    state.blob = Some(crate::server::api::ingest::cursors_for_test(
         blob_dir.to_str().unwrap(),
     ));
     let _ = state.registry.create_graph(GRAPH, GraphType::Global, None);

@@ -54,8 +54,6 @@ mod validation;
 
 #[cfg(feature = "redb")]
 pub(crate) use admission::*;
-#[cfg(all(test, feature = "redb", feature = "raft"))]
-pub(crate) use validation::provenance_refs;
 #[cfg(all(test, feature = "redb"))]
 use validation::unprefixed_digest;
 #[cfg(feature = "redb")]
