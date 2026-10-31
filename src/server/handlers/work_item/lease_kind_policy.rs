@@ -125,7 +125,11 @@ fn refuse_paired_plan(req_id: u64, method: &Method) -> Option<Response> {
         _ => false,
     };
     paired.then(|| {
-        crate::server::contract_wave::not_yet_served(req_id, "ControlLease.pending_call.plan")
+        Response::err(
+            req_id,
+            "METHOD_NOT_YET_SERVED: ControlLease.pending_call.plan has no served authority \
+             composition",
+        )
     })
 }
 

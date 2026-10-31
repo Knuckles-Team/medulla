@@ -24,7 +24,7 @@ done = false
 [delete]
 # Contract machinery (plan step 0). `enforce = true` once the removal landed makes
 # check_crate_graph.py fail while any listed path still exists.
-enforce = false
+enforce = true
 
 
 [crates.medulla-kernel]
