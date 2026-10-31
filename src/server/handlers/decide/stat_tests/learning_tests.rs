@@ -251,7 +251,7 @@ fn a_plan_rewrite_re_aims_every_vector_rank_only() {
     let rewritten = crate::server::api::admin::served_adapter::adapt_plan(
         plan,
         Some(Arc::new(adapter)),
-        crate::server::handlers::query::uql_text_embedder(),
+        crate::server::api::query_txn::query_support::uql_text_embedder(),
     );
     let expected = medulla_plan::Op::Rank {
         query: vec![1.0, 1.5],

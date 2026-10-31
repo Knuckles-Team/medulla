@@ -385,7 +385,7 @@ fn validate_sparql_recovery_outcome(result: &crate::protocol::ResultPayload) -> 
 #[cfg(feature = "redb")]
 pub struct AdminSagaBatch {
     durable: MutationBatch,
-    result_contract: Option<AdminSagaResultContract>,
+    pub(crate) result_contract: Option<AdminSagaResultContract>,
 }
 
 #[cfg(feature = "redb")]

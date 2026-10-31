@@ -3,7 +3,6 @@
 // Long-running Tokio server that holds the GraphRegistry in memory
 // and serves requests over UDS or TCP with HMAC-SHA256 authentication.
 
-use hmac::Mac as _;
 
 pub(crate) mod access;
 pub(crate) mod denial_sample;

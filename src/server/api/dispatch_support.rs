@@ -72,6 +72,7 @@ pub(crate) fn pseudonymous_broker_actor(secret: &str, principal: &str) -> std::i
             "broker identity cannot be pseudonymized",
         ));
     }
+    use hmac::Mac as _;
     let mut mac = hmac::Hmac::<sha2::Sha256>::new_from_slice(secret.as_bytes())
         .expect("HMAC accepts any key length");
     mac.update(b"broker-actor:");
