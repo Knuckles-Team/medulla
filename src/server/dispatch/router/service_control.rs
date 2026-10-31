@@ -19,7 +19,9 @@ pub(super) async fn dispatch_service_control_methods(
         // ── Service-level ────────────────────────────────────────────
         Method::Ping => Response::ok(
             req.id,
-            ResultPayload::scalar::<medulla_types::result_contract::cluster::Ping>("pong".to_string()),
+            ResultPayload::scalar::<medulla_types::result_contract::cluster::Ping>(
+                "pong".to_string(),
+            ),
         ),
 
         Method::Health => dispatch_boxed(health_response(state, req.id)).await,
@@ -139,15 +141,13 @@ fn backend_gated_ops() -> Vec<&'static str> {
 /// Every method this build's registry (`medulla_capabilities::method_descriptors`,
 /// the one the dispatcher is policy-checked against) serves unconditionally:
 /// the registry minus backend-gated methods (appended by their own condition),
-/// methods whose server feature is absent, and contract-wave methods whose
-/// handler has not landed. Never a hand list, so a served method cannot be
+/// and methods whose server feature is absent. Never a hand list, so a served method cannot be
 /// missing from `client.supports(..)`.
 fn registry_served_ops() -> Vec<&'static str> {
     let backend_gated = backend_gated_ops();
     medulla_capabilities::method_descriptors()
         .map(|descriptor| descriptor.id.as_str())
         .filter(|id| !backend_gated.contains(id) && !build_absent(id))
-        .filter(|id| !crate::server::contract_wave::PENDING_METHODS.contains(id))
         .collect()
 }
 
@@ -160,7 +160,6 @@ fn build_absent(id: &str) -> bool {
 #[cfg(test)]
 mod health_ops_tests {
     use super::*;
-    use crate::server::contract_wave::PENDING_METHODS;
 
     /// R5 (au-core): `AgentComponent` was served but absent from the old hand
     /// list, so `client.supports("AgentComponent")` answered false.
@@ -187,10 +186,7 @@ mod health_ops_tests {
             .collect();
         let served = registry_served_ops();
         let build_gated = BUILD_GATED_OPS.iter().map(|(id, _)| *id);
-        for id in backend_gated_ops()
-            .into_iter()
-            .chain(PENDING_METHODS.iter().copied())
-        {
+        for id in backend_gated_ops() {
             assert!(registry.contains(&id), "{id} is not a registry method");
             assert!(!served.contains(&id), "{id} is withheld but advertised");
         }

@@ -501,8 +501,6 @@ pub mod reasoning_cascade;
 // without it compiles none of it and every write path stays byte-identical.
 #[cfg(feature = "shacl")]
 pub(crate) mod icv_guard;
-// The 2.27.x contract wave's refusal stubs. Deleted by the promotion commit.
-pub(crate) mod contract_wave;
 // A background writer's exact per-graph grant (PB1 projection worker, EH-526 impact watch).
 #[cfg(feature = "security")]
 pub(crate) mod service_grant;
