@@ -4,8 +4,8 @@ use std::collections::BTreeSet;
 
 use medulla_rdf::oxrdf::{NamedOrBlankNode, Term, Triple};
 
-use super::compose::{scope_blank_nodes, validate_and_compose};
 use crate::graph::GraphSchemaSources;
+use crate::server::api::admin::compose::{scope_blank_nodes, validate_and_compose};
 
 pub(super) const KG: &str = "http://knuckles.team/kg#";
 pub(super) const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";

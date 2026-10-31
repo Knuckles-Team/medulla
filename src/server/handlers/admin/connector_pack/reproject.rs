@@ -110,7 +110,7 @@ async fn prepare_projection_request(
     let store = super::agent_library_store(state).await?;
     let plan =
         store.prepare_connector_pack_projection(&request.context.tenant_id, &request.connector)?;
-    let context = crate::server::handlers::admin::agent::bind_agent_library_context(
+    let context = crate::server::persistence::agent_library::context::bind_agent_library_context(
         &store,
         req_id,
         verified,

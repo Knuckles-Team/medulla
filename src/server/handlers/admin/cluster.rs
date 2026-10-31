@@ -17,9 +17,10 @@ use super::backup::{
     opaque_ref, resolve_backup_destination, resolve_backup_source,
 };
 use super::saga::{
-    begin_admin_saga_with_nonce, catalog_saga, finish_admin_saga, live_graph_loads, no_catalog,
-    rebalance_opts, rebalance_plan_report, reshard_report,
+    catalog_saga, live_graph_loads, no_catalog, rebalance_opts, rebalance_plan_report,
+    reshard_report,
 };
+use crate::server::api::admin::saga::{begin_admin_saga_with_nonce, finish_admin_saga};
 
 /// Route an M3 admin method (CONCEPT:MEDULLA-KG.backend.m3-admin-dispatch). `Ok(resp)` = handled; `Err(method)` = not an
 /// admin method (unreachable — the dispatch arm only routes admin variants here).
@@ -198,7 +199,10 @@ impl AdminSagaCall<'_> {
     /// Begin this call's admin saga in `domain`. `Err` is already the finished
     /// response: the begin failure, or the durable answer of an earlier attempt
     /// that this one replays.
-    fn begin_saga(&self, domain: DurabilityDomain) -> Result<super::saga::AdminSaga, Response> {
+    fn begin_saga(
+        &self,
+        domain: DurabilityDomain,
+    ) -> Result<crate::server::api::admin::saga::AdminSaga, Response> {
         let mut saga = begin_admin_saga_with_nonce(
             self.backend,
             self.req_id,

@@ -19,6 +19,14 @@ pub fn install_seams(state: &ServerState) {
     // L3 ingest, graph, jobs, compute.
 
     // L4 admin, decide.
+    let _ = state
+        .seams
+        .admin
+        .set(std::sync::Arc::new(super::handlers::admin::AdminSeam));
+    let _ = state
+        .seams
+        .decide
+        .set(std::sync::Arc::new(super::handlers::decide::DecideSeam));
 
     // L5 query, txn, wire.
     #[cfg(any(feature = "query", feature = "cypher", feature = "graphql"))]

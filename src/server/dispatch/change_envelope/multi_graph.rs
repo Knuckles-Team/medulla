@@ -60,7 +60,7 @@ pub(in crate::server::dispatch) async fn multi_graph_batch_update(
 fn finish_multi_graph_report(
     redb: &crate::server::persistence::redb_backend::RedbBackend,
     req_id: u64,
-    saga: Option<handlers::admin::AdminSaga>,
+    saga: Option<crate::server::api::admin::saga::AdminSaga>,
     report: txn_results::MultiGraphBatchReport,
 ) -> Response {
     match ResultPayload::of::<txn_results::MultiGraphBatchUpdate>(report) {
@@ -99,7 +99,7 @@ fn begin_multi_graph_saga(
     verified_context: &VerifiedRequestContext,
     batches_msgpack: &[u8],
     clustered: bool,
-) -> Result<Option<handlers::admin::AdminSaga>, Response> {
+) -> Result<Option<crate::server::api::admin::saga::AdminSaga>, Response> {
     if clustered {
         return Ok(None);
     }
@@ -116,10 +116,10 @@ fn begin_multi_graph_authorized_saga(
     req_id: u64,
     verified_context: &VerifiedRequestContext,
     method: &Method,
-) -> Result<handlers::admin::AdminSaga, Response> {
+) -> Result<crate::server::api::admin::saga::AdminSaga, Response> {
     let authority = CarrierAuthority::from_verified(verified_context)
         .map_err(|error| Response::err(req_id, error))?;
-    handlers::admin::begin_authenticated_admin_saga(
+    crate::server::api::admin::saga::begin_authenticated_admin_saga(
         redb,
         req_id,
         &authority,
@@ -133,8 +133,8 @@ fn begin_multi_graph_authorized_saga(
 #[cfg(feature = "redb")]
 fn finish_multi_graph_saga_begin(
     req_id: u64,
-    saga: handlers::admin::AdminSaga,
-) -> Result<Option<handlers::admin::AdminSaga>, Response> {
+    saga: crate::server::api::admin::saga::AdminSaga,
+) -> Result<Option<crate::server::api::admin::saga::AdminSaga>, Response> {
     if saga.prepared {
         return Err(Response::err(
             req_id,
@@ -152,13 +152,18 @@ fn finish_multi_graph_saga_begin(
 fn finish_multi_graph_batch(
     redb: &crate::server::persistence::redb_backend::RedbBackend,
     req_id: u64,
-    saga: Option<handlers::admin::AdminSaga>,
+    saga: Option<crate::server::api::admin::saga::AdminSaga>,
     result: ResultPayload,
 ) -> Response {
     let Some(saga) = saga else {
         return Response::ok(req_id, result);
     };
-    match handlers::admin::finish_admin_saga(redb, saga.batch, saga.created_at_ms, result) {
+    match crate::server::api::admin::saga::finish_admin_saga(
+        redb,
+        saga.batch,
+        saga.created_at_ms,
+        result,
+    ) {
         Ok(result) => Response::ok(req_id, result),
         Err(error) => Response::err(req_id, error),
     }

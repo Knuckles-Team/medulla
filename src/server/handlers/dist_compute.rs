@@ -281,7 +281,7 @@ fn admit_plan_matview_under_rls(
 
 struct ControlSaga {
     backend: Arc<dyn crate::server::persistence::PersistenceBackend>,
-    saga: crate::server::handlers::admin::AdminSaga,
+    saga: crate::server::api::admin::saga::AdminSaga,
 }
 
 async fn begin_control_saga(
@@ -299,7 +299,7 @@ async fn begin_control_saga(
     let redb = backend
         .as_redb()
         .ok_or_else(|| "materialized-view mutation requires durable redb".to_string())?;
-    let saga = crate::server::handlers::admin::begin_admin_saga(
+    let saga = crate::server::api::admin::saga::begin_admin_saga(
         redb,
         req_id,
         caller,

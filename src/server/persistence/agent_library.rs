@@ -34,6 +34,7 @@ use medulla_types::{
 use super::durable_stores::BundledStoreSource;
 
 mod batch;
+pub mod context;
 mod history;
 #[cfg(test)]
 mod open_tests;

@@ -105,7 +105,6 @@ mod capacity_premise;
 mod topology_read;
 #[cfg(feature = "decide")]
 mod topology_schema;
-pub(crate) mod topology_shape;
 
 pub(crate) use assemble::handle_agent_assemble;
 pub(crate) use commit::handle_decision_commit;
@@ -118,7 +117,7 @@ pub(crate) use statistical::handle_decide;
 /// The caller's read-only SQL relations — the decision record views (EH-066) — when
 /// `query` can see them; `None` otherwise, or in a build without the Decide layer.
 #[cfg(feature = "query")]
-pub(crate) async fn read_only_relations(
+async fn read_only_relations(
     state: &SharedState,
     authority: &crate::server::access::CarrierAuthority,
     query: &str,
@@ -140,10 +139,46 @@ pub(crate) async fn read_only_relations(
 
 /// The caller's visible decision log as a UQL `DECISIONS` source (EH-066).
 #[cfg(all(feature = "decide", feature = "query"))]
-pub(crate) async fn decision_source(
+async fn decision_source(
     state: &SharedState,
     authority: &crate::server::access::CarrierAuthority,
 ) -> Option<std::sync::Arc<dyn medulla_plan::exec::DecisionSource>> {
     let views = stat_view::DecisionViews::served(state, authority).await?;
     Some(views as std::sync::Arc<dyn medulla_plan::exec::DecisionSource>)
+}
+
+/// The decide handler's implementation of [`DecideApi`](crate::server::api::admin::DecideApi).
+pub struct DecideSeam;
+
+#[async_trait::async_trait]
+impl crate::server::api::admin::DecideApi for DecideSeam {
+    #[cfg(feature = "decide")]
+    async fn served_adapter(
+        &self,
+        state: &SharedState,
+        tenant: Option<&str>,
+        graph: &str,
+        core: &crate::graph::GraphCore,
+    ) -> Option<std::sync::Arc<crate::server::api::admin::served_adapter::ServedAdapter>> {
+        served_adapter::served_for(state, tenant, graph, core).await
+    }
+
+    #[cfg(feature = "query")]
+    async fn read_only_relations(
+        &self,
+        state: &SharedState,
+        authority: &crate::server::access::CarrierAuthority,
+        query: &str,
+    ) -> Option<crate::server::sql_catalog_acl::SharedRelations> {
+        read_only_relations(state, authority, query).await
+    }
+
+    #[cfg(all(feature = "decide", feature = "query"))]
+    async fn decision_source(
+        &self,
+        state: &SharedState,
+        authority: &crate::server::access::CarrierAuthority,
+    ) -> Option<std::sync::Arc<dyn medulla_plan::exec::DecisionSource>> {
+        decision_source(state, authority).await
+    }
 }

@@ -653,10 +653,17 @@ async fn try_handle_policy(
             .await
         }
         #[cfg(feature = "shacl")]
-        Method::GraphSchema { op } => {
-            crate::server::graph_schema::handle_gateway(state, tenant_id, ctx, plan, method, op)
-                .await
-        }
+        Method::GraphSchema { op } => match crate::server::api::admin::admin_seam(state).await {
+            Some(admin) => {
+                admin
+                    .graph_schema_gateway(state, tenant_id, ctx, plan, method, op)
+                    .await
+            }
+            None => crate::protocol::Response::err(
+                ctx.req_id,
+                "GraphSchema handler is not installed".to_string(),
+            ),
+        },
         _ => return try_handle_reasoning_policy(ctx, plan, method).await,
     };
     Some(response)

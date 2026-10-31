@@ -447,32 +447,33 @@ async fn check_delegated_recovery(state: &Arc<RwLock<ServerState>>, backend: &Ar
         node_id: "delegated-node".into(),
         properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({"type":"Record"})).unwrap(),
     });
-    let parent = crate::server::handlers::admin::scope_admin_saga_authority(owner.clone(), async {
-        let (receipt, _) = begin_txn_receipt(
-            Some(backend.clone()),
-            10,
-            Some("same-principal"),
-            "delegated-txn",
-            &txn,
-            Some("delegated-key"),
-            None,
-        )
-        .unwrap();
-        let parent = receipt_coordinator_id(&receipt);
-        assert!(commit_cross_modal_txn_with_nonce(
-            state,
-            11,
-            Some("same-principal"),
-            &parent,
-            txn,
-            None
-        )
-        .await
-        .unwrap());
-        drop(receipt); // lost response: child committed, parent remains Prepared
-        parent
-    })
-    .await;
+    let parent =
+        crate::server::api::admin::saga::scope_admin_saga_authority(owner.clone(), async {
+            let (receipt, _) = begin_txn_receipt(
+                Some(backend.clone()),
+                10,
+                Some("same-principal"),
+                "delegated-txn",
+                &txn,
+                Some("delegated-key"),
+                None,
+            )
+            .unwrap();
+            let parent = receipt_coordinator_id(&receipt);
+            assert!(commit_cross_modal_txn_with_nonce(
+                state,
+                11,
+                Some("same-principal"),
+                &parent,
+                txn,
+                None
+            )
+            .await
+            .unwrap());
+            drop(receipt); // lost response: child committed, parent remains Prepared
+            parent
+        })
+        .await;
     let child = crate::server::mutation_batch::opaque_coordinator_key(
         "crossmodal",
         "delegated-graph",
@@ -488,7 +489,7 @@ async fn check_delegated_recovery(state: &Arc<RwLock<ServerState>>, backend: &Ar
         record.committing_actor().unwrap(),
         crate::server::mutation_batch::principal_fingerprint("same-principal").unwrap()
     );
-    let denied = crate::server::handlers::admin::scope_admin_saga_authority(foreign, async {
+    let denied = crate::server::api::admin::saga::scope_admin_saga_authority(foreign, async {
         reconcile_committed_txn(
             state,
             12,
@@ -504,21 +505,22 @@ async fn check_delegated_recovery(state: &Arc<RwLock<ServerState>>, backend: &Ar
     .unwrap_err();
     assert!(denied.contains("principal"), "{denied}");
     let version = core.version();
-    let replay = crate::server::handlers::admin::scope_admin_saga_authority(owner.clone(), async {
-        reconcile_committed_txn(
-            state,
-            13,
-            Some("same-principal"),
-            "delegated-txn",
-            Some("delegated-key"),
-            Some(owner.tenant_scope()),
-            None,
-        )
+    let replay =
+        crate::server::api::admin::saga::scope_admin_saga_authority(owner.clone(), async {
+            reconcile_committed_txn(
+                state,
+                13,
+                Some("same-principal"),
+                "delegated-txn",
+                Some("delegated-key"),
+                Some(owner.tenant_scope()),
+                None,
+            )
+            .await
+        })
         .await
-    })
-    .await
-    .unwrap()
-    .unwrap();
+        .unwrap()
+        .unwrap();
     assert!(matches!(replay.result, Some(ResultPayload::Bool(true))));
     assert_eq!(core.version(), version);
 }

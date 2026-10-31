@@ -1839,9 +1839,14 @@ impl WireSession {
         // row-level security applied inside the probe.
         let (authority, persist_dir) = self.catalog_authority().await?;
         // EH-066: the caller's decision record views, when the statement can see them.
-        let read_only =
-            crate::server::handlers::decide::read_only_relations(&self.state, &authority, &sql)
-                .await;
+        let read_only = match crate::server::api::admin::decide_seam(&self.state).await {
+            Some(decide) => {
+                decide
+                    .read_only_relations(&self.state, &authority, &sql)
+                    .await
+            }
+            None => None,
+        };
         let statement = sql.clone();
         let request_graph = crate::server::sql_catalog_acl::RequestGraph {
             name: graph.to_string(),

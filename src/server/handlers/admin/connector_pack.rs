@@ -276,14 +276,15 @@ async fn bind_import_context(
     mut request: Box<medulla_types::connector_pack::ConnectorPackImportRequest>,
 ) -> Result<Box<medulla_types::connector_pack::ConnectorPackImportRequest>, String> {
     let store = agent_library_store(state).await?;
-    request.context = crate::server::handlers::admin::agent::bind_agent_library_context(
-        &store,
-        req_id,
-        verified,
-        request.context.clone(),
-        "connector-pack:import",
-        true,
-    )?;
+    request.context =
+        crate::server::persistence::agent_library::context::bind_agent_library_context(
+            &store,
+            req_id,
+            verified,
+            request.context.clone(),
+            "connector-pack:import",
+            true,
+        )?;
     Ok(request)
 }
 

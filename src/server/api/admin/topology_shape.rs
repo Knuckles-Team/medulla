@@ -112,7 +112,7 @@ fn nesting_is_declared(draft: &AgentGraphDraft, facts: &TopologyFacts) -> Option
 
 /// The refusal a draft's topology facts earn, if any. A draft without
 /// topology facts has nothing to check.
-pub(crate) fn refusal(draft: &AgentGraphDraft) -> Option<String> {
+pub fn refusal(draft: &AgentGraphDraft) -> Option<String> {
     let facts = draft.topology.as_ref()?;
     if let Err(error) = facts.validate() {
         return Some(format!("{TOPOLOGY_SHAPE_INVALID}: {error}"));

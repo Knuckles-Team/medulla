@@ -631,23 +631,6 @@ impl RedbCommitStats {
     }
 }
 
-/// Fixed [`medulla_types::MutationScopeIdentity`] for the admin-mutations / "cluster-admin"
-/// coordinator store (`{persist_dir}/admin-mutations.redb`) — see [`AdminMutationStore`].
-///
-/// GRAPH-shaped, not native: every batch here is compiled with an "either"-family domain
-/// (`ControlPlane`/`MultiGraph`), which `mutation_batch::finish_batch` maps to a
-/// graph-shaped identity, so this identity must match that shape exactly or every
-/// admin-saga commit fails closed with "mutation scope binding identity mismatch". Only
-/// [`AdminOwner`]'s `OwnerLayout::LedgerOnly` can serve it: declaring no owner tables, it
-/// is the one layout that places no shape requirement on the scopes it binds.
-pub(crate) fn cluster_admin_scope_identity() -> Result<medulla_types::MutationScopeIdentity, String> {
-    medulla_types::MutationScopeIdentity::fixed_graph(
-        "native",
-        "cluster-admin",
-        crate::server::mutation_batch::COMPILED_BATCH_INCARNATION,
-    )
-}
-
 /// [`medulla_storage::PrivatePayloadIntegrity`] for the admin-mutations store, backed by the
 /// SAME transaction-recovery-plan cipher (D-ORC-50) that sealed the bytes in the first
 /// place (`handlers::txn::seal_txn_recovery_plan`/`open_txn_recovery_plan`). The storage
@@ -733,7 +716,7 @@ fn open_admin_mutations(path: &std::path::Path) -> Result<AdminMutationStore, St
     AdminMutationStore::open_with(
         path,
         ADMIN_MUTATIONS_STORE,
-        cluster_admin_scope_identity()?,
+        crate::server::api::admin::saga::cluster_admin_scope_identity()?,
         admin_mutations_private_integrity(),
         crate::store_authority::process_authority(),
     )
@@ -787,7 +770,7 @@ pub fn rehydrate_core_from_dump(core: &GraphCore, dump: &GraphDump) -> Result<()
     // projection.  Reshard/hibernate rehydration therefore has the same atomic
     // engine-upgrade rule as ordinary startup.
     #[cfg(feature = "shacl")]
-    crate::server::graph_schema::compose::validate_and_compose(&dump.schema_sources)?;
+    crate::server::api::admin::compose::validate_and_compose(&dump.schema_sources)?;
     core.clear();
     core.install_schema_sources(std::sync::Arc::clone(&dump.schema_sources));
     for (id, props) in &dump.nodes {

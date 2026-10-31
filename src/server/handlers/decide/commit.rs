@@ -80,7 +80,7 @@ async fn commit(
         ));
     }
     let store = state.write().await.ensure_agent_library()?;
-    let context = crate::server::handlers::admin::bind_agent_library_context(
+    let context = crate::server::persistence::agent_library::context::bind_agent_library_context(
         &store,
         req_id,
         verified,

@@ -392,7 +392,7 @@ fn validated_schema_digests(views: &[&crate::graph::GraphView]) -> Result<Vec<St
     // caller Turtle remains an explicit extension, never a replacement.
     #[cfg(feature = "shacl")]
     for view in views {
-        crate::server::graph_schema::compose::validate_and_compose(&view.schema_sources)?;
+        crate::server::api::admin::compose::validate_and_compose(&view.schema_sources)?;
     }
     Ok(schema_digests)
 }
@@ -458,7 +458,7 @@ fn owl_explain(
     };
     medulla_rdf::owl::validate_supported_profile(&caller_extra)?;
     #[cfg(feature = "shacl")]
-    crate::server::graph_schema::compose::validate_and_compose(&view.schema_sources)?;
+    crate::server::api::admin::compose::validate_and_compose(&view.schema_sources)?;
     let mut triples = medulla_rdf::owl::tbox_triples_from_view(view);
     triples.extend(caller_extra);
 
