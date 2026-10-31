@@ -195,7 +195,7 @@ pub(crate) fn adapt_plan(
 ) -> medulla_plan::Plan {
     match adapter {
         Some(adapter) => {
-            let embedder = crate::server::handlers::query::uql_text_embedder();
+            let embedder = crate::server::api::query_txn::query_support::uql_text_embedder();
             medulla_plan::Plan::new(rewrite_ops(plan.ops, &adapter, embedder))
         }
         None => plan,

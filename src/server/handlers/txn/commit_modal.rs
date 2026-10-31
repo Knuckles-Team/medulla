@@ -1,6 +1,8 @@
 //! Private transaction commit_modal implementation.
 
 use super::*;
+#[cfg(feature = "graphql")]
+use crate::server::api::query_txn::txn_support::GraphQlCrossModalCommit;
 
 pub(super) async fn commit_cross_modal(
     state: &Arc<RwLock<ServerState>>,
@@ -45,24 +47,6 @@ enum GraphQlCrossModalPreparation {
 struct GraphQlCrossModalExecution {
     receipt: TxnReceipt,
     txn: GraphTxnState,
-}
-
-/// Identity for a GraphQL durable cross-modal commit: the request's target
-/// graph/core, the in-memory staging registry, the transaction id, and the
-/// verified carrier authority. `prepare_graphql_cross_modal` and
-/// `commit_graphql_cross_modal` are two phases of the SAME commit and take
-/// this exact tuple — bundled once so the two phases can't drift on which
-/// fields identify a commit.
-#[cfg(feature = "graphql")]
-#[derive(Clone, Copy)]
-pub(crate) struct GraphQlCrossModalCommit<'a> {
-    pub(crate) state: &'a Arc<RwLock<ServerState>>,
-    pub(crate) request_id: u64,
-    pub(crate) graph_name: &'a str,
-    pub(crate) core: &'a crate::graph::GraphCore,
-    pub(crate) registry: &'a medulla_graphql::CrossModalTxnRegistry,
-    pub(crate) txn_id: &'a str,
-    pub(crate) authority: &'a CarrierAuthority,
 }
 
 #[cfg(feature = "graphql")]

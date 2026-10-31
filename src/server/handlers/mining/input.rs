@@ -222,20 +222,20 @@ pub(super) fn gather_plan_rows(
         ),
         #[cfg(feature = "tsdb")]
         match &tsdb_scope {
-            Some((tenant, graph)) => crate::server::handlers::query::TsdbLegBind {
+            Some((tenant, graph)) => crate::server::api::query_txn::query_support::TsdbLegBind {
                 tsdb: tsdb.tsdb_store.map(|store| store.as_ref()),
                 tsdb_tenant: Some(tenant.as_str()),
                 tsdb_graph: Some(graph.as_str()),
                 staged_series: None,
             },
-            None => crate::server::handlers::query::TsdbLegBind {
+            None => crate::server::api::query_txn::query_support::TsdbLegBind {
                 tsdb: None,
                 tsdb_tenant: None,
                 tsdb_graph: None,
                 staged_series: None,
             },
         },
-        crate::server::handlers::query::execute_rows,
+        crate::server::api::query_txn::query_support::execute_rows,
     ) {
         Ok(rows) => rows,
         Err(_) => return Ok((Vec::new(), Vec::new())),
@@ -260,7 +260,8 @@ pub(super) fn gather_plan_rows(
         // `window_aggregate`'s own fix note describes. A row id that merely LOOKS numeric
         // but isn't a real timestamp is indistinguishable from a genuine one at this layer,
         // exactly as `window_aggregate` accepts the same ambiguity.
-        if let (Some(_), Some(value)) = (medulla_plan::rowset::parse_series_row_id(&row_id), score) {
+        if let (Some(_), Some(value)) = (medulla_plan::rowset::parse_series_row_id(&row_id), score)
+        {
             feats.push(vec![value as f64]);
             ids.push(row_id);
         }
@@ -286,13 +287,13 @@ pub(super) fn gather_plan_rows_snapshot(
         &store,
         crate::server::handlers::query::ServedIndexes::default(),
         #[cfg(feature = "tsdb")]
-        crate::server::handlers::query::TsdbLegBind {
+        crate::server::api::query_txn::query_support::TsdbLegBind {
             tsdb: None,
             tsdb_tenant: None,
             tsdb_graph: None,
             staged_series: None,
         },
-        crate::server::handlers::query::execute_rows,
+        crate::server::api::query_txn::query_support::execute_rows,
     ) {
         Ok(rows) => rows,
         Err(_) => return (Vec::new(), Vec::new()),

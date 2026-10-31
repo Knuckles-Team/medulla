@@ -132,18 +132,6 @@ pub(crate) fn graphql_lifecycle_replay_is_live(
             .all(|txn_id| registry.contains_handle(owner_scope, txn_id))
 }
 
-#[cfg(all(feature = "query", feature = "tsdb"))]
-pub(crate) fn plan_needs_tsdb(ops: &[medulla_plan::Op]) -> bool {
-    ops.iter().any(|op| match op {
-        medulla_plan::Op::TsScan { .. } => true,
-        #[cfg(feature = "text")]
-        medulla_plan::Op::FuseRrf { branches, .. } => {
-            branches.iter().any(|branch| plan_needs_tsdb(branch))
-        }
-        _ => false,
-    })
-}
-
 /// Resolve an actor-owned storage namespace before a served plan can touch the
 /// committed TSDB. Graph ACL/RLS actor identity alone is not a tenant carrier.
 /// `pub(crate)`: also the single source of truth `handlers::mining`'s plan-sourced

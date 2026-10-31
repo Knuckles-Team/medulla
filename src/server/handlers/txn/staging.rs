@@ -294,46 +294,6 @@ pub(super) async fn stage_measurement(
     Response::ok(req_id, ResultPayload::Bool(true))
 }
 
-/// Lower a stream of RDF triples to graph-native `AddNode`/`AddEdge` methods
-/// (CONCEPT:MEDULLA-KG.txn.extended-cross-modal/362), mirroring the canonical `medulla_rdf::mapping::load_triples`
-/// property-graph projection so the durable rows match the in-memory model:
-///   * literal object  → a property `{predicate: literal-cell}` on the subject node;
-///   * resource object → subject + object nodes + an edge `{"relationship": predicate}`,
-///     and (for `rdf:type`) the subject's `type` label.
-///
-/// The SAME lowered `Vec<Method>` is applied both durably (`apply_method_rows`) and
-/// in-memory (`apply_staged`), so the two are identical by construction.
-/// Returns `(methods, schema_refs)` — `schema_refs` (BUG A3, 2026-08-12) is
-/// [`medulla_rdf::mapping::LoweredTripleGraph::schema_refs`] passed through
-/// unchanged: one entry per schema-defining triple occurrence this batch
-/// contributed. This lowering produces GENERIC `AddNode`/`AddEdge` methods
-/// with no room to carry a "this is schema" signal on the wire, so a caller
-/// that auto-commits immediately (the pgwire off-txn `SPARQL UPDATE` seam,
-/// `WireSession::stage_or_commit_owl`) MUST mark these on the live core
-/// itself right after the methods commit — see that function's doc for why
-/// a staged (explicit multi-statement transaction) caller does not yet.
-#[cfg(feature = "sparql")]
-pub(crate) fn triples_to_methods(
-    triples: &[medulla_rdf::oxrdf::Triple],
-) -> Result<(Vec<Method>, Vec<String>), String> {
-    let lowered = medulla_rdf::mapping::lower_triples(triples.iter().cloned())?;
-    let mut methods = Vec::with_capacity(lowered.nodes.len() + lowered.edges.len());
-    for (id, blob) in lowered.nodes {
-        methods.push(Method::AddNode {
-            node_id: id,
-            properties_msgpack: blob,
-        });
-    }
-    for (source, target, blob) in lowered.edges {
-        methods.push(Method::AddEdge {
-            source_id: source,
-            target_id: target,
-            properties_msgpack: blob,
-        });
-    }
-    Ok((methods, lowered.schema_refs))
-}
-
 /// Lower a SPARQL CONSTRUCT/DESCRIBE query's produced triples to graph-native
 /// `AddNode`/`AddEdge` methods (CONCEPT:MEDULLA-KG.query.extended-cross-modal/MEDULLA-372), evaluating the query against
 /// `core`'s committed snapshot. Shared by the RPC [`stage_construct`] and the pgwire
@@ -345,35 +305,7 @@ pub(crate) fn construct_to_methods(
     sparql: &str,
 ) -> Result<(Vec<Method>, Vec<String>), String> {
     let snap = core.analysis_snapshot();
-    construct_view_to_methods(&snap, sparql)
-}
-
-/// Returns `(methods, schema_refs)` — see [`triples_to_methods`]'s doc.
-#[cfg(feature = "sparql")]
-pub(crate) fn construct_view_to_methods(
-    snap: &crate::graph::GraphView,
-    sparql: &str,
-) -> Result<(Vec<Method>, Vec<String>), String> {
-    let proj = medulla_rdf::sparql::Projection::from_wire("", "");
-    let dataset = medulla_rdf::sparql::Dataset::new(snap, Vec::new());
-    let triples = match medulla_rdf::sparql::execute(&dataset, sparql, &proj, None) {
-        Ok(medulla_rdf::sparql::QueryOutcome::Graph(t)) => t,
-        Ok(_) => return Err("SPARQL CONSTRUCT/DESCRIBE query required".to_string()),
-        Err(e) => return Err(e),
-    };
-    triples_to_methods(&triples)
-}
-
-/// Lower a SPARQL UPDATE's `INSERT DATA` triples to graph-native `AddNode`/`AddEdge`
-/// methods (CONCEPT:MEDULLA-KG.txn.isolation-ryow-begin-set), reusing the SAME `triples_to_methods` lowering as the OWL
-/// axiom path. Used by the pgwire cross-modal txn seam's `SPARQL UPDATE` verb.
-/// Returns `(methods, schema_refs)` — see [`triples_to_methods`]'s doc.
-#[cfg(feature = "sparql")]
-pub(crate) fn sparql_update_to_methods(
-    update_str: &str,
-) -> Result<(Vec<Method>, Vec<String>), String> {
-    let triples = medulla_rdf::update::insert_data_triples(update_str)?;
-    triples_to_methods(&triples)
+    crate::server::api::query_txn::txn_support::construct_view_to_methods(&snap, sparql)
 }
 
 /// Resolve the txn's DEFAULT-graph core, enforcing that `target_graph` (if given) is the
@@ -445,10 +377,11 @@ pub(super) async fn stage_axiom(
     // Fail-closed in the meantime: an axiom staged through THIS RPC surface
     // does not get the TBox exemption (ordinary ABox default-deny), never a
     // widened one.
-    let (methods, _schema_refs) = match triples_to_methods(&triples) {
-        Ok(result) => result,
-        Err(error) => return Response::err(req_id, format!("TxnAxiom: {error}")),
-    };
+    let (methods, _schema_refs) =
+        match crate::server::api::query_txn::txn_support::triples_to_methods(&triples) {
+            Ok(result) => result,
+            Err(error) => return Response::err(req_id, format!("TxnAxiom: {error}")),
+        };
     if let Some(e) = s.open_txns.get(txn_id) {
         e.value().lock().stage_axiom(&core, methods, now_ms());
     }
@@ -575,7 +508,10 @@ pub(super) async fn stage_plan_writeback(
         let mut anchor_view = projected.analysis_snapshot();
         if let Some(entry) = s.open_txns.get(txn_id) {
             let write_set = entry.value().lock().write_set.clone();
-            crate::server::handlers::query::overlay_write_set(&mut anchor_view, &write_set);
+            crate::server::api::query_txn::query_support::overlay_write_set(
+                &mut anchor_view,
+                &write_set,
+            );
         }
         if !anchor_view.has_node(&anchor_id) {
             return Response::err(req_id, "TxnPlanWriteback: anchor is not visible");

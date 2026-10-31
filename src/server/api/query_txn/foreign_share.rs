@@ -25,14 +25,14 @@
 use crate::isolation::IsolationLayer;
 
 /// The name a grantee uses for `owner_agent`'s source `name`.
-pub(crate) fn shared_name(owner_agent: &str, name: &str) -> String {
+pub fn shared_name(owner_agent: &str, name: &str) -> String {
     format!("{owner_agent}/{name}")
 }
 
 /// The reserved RBAC resource a share grant names. Its prefix is reserved in graph-name
 /// validation (`registry::validate_graph_name`), so no graph can ever carry this name
 /// and a graph grant can never convey use of a source.
-pub(crate) fn share_resource(owner_agent: &str, name: &str) -> String {
+pub fn share_resource(owner_agent: &str, name: &str) -> String {
     format!(
         "{}{}",
         crate::registry::FOREIGN_SOURCE_RESOURCE_PREFIX,
@@ -41,7 +41,7 @@ pub(crate) fn share_resource(owner_agent: &str, name: &str) -> String {
 }
 
 /// The engine-provisioned role that conveys use of `owner_agent`'s source `name`.
-pub(crate) fn share_role(owner_agent: &str, name: &str) -> String {
+pub fn share_role(owner_agent: &str, name: &str) -> String {
     format!("foreign-source-use:{}", shared_name(owner_agent, name))
 }
 
@@ -59,7 +59,7 @@ fn share_grant(owner_agent: &str, name: &str) -> crate::acl::Grant {
 /// Idempotent. Assigns the role to nobody. Never touches a policy still awaiting its
 /// System bootstrap (registering a role there would consume the bootstrap).
 #[cfg(feature = "security")]
-pub(crate) fn provision_share_role(
+pub fn provision_share_role(
     isolation: &mut IsolationLayer,
     owner_agent: &str,
     name: &str,
@@ -80,7 +80,7 @@ pub(crate) fn provision_share_role(
 }
 
 #[cfg(not(feature = "security"))]
-pub(crate) fn provision_share_role(
+pub fn provision_share_role(
     _isolation: &mut IsolationLayer,
     _owner_agent: &str,
     _name: &str,
@@ -92,11 +92,7 @@ pub(crate) fn provision_share_role(
 /// allow grant on `resource`, held through the caller's (expanded) roles, counts, and
 /// the RBAC evaluator must still allow it (a same-specificity deny wins).
 #[cfg(feature = "security")]
-pub(crate) fn may_use_shared(
-    isolation: &IsolationLayer,
-    caller_agent: &str,
-    resource: &str,
-) -> bool {
+pub fn may_use_shared(isolation: &IsolationLayer, caller_agent: &str, resource: &str) -> bool {
     let Some(identity) = isolation.get_identity(caller_agent) else {
         return false;
     };
@@ -118,11 +114,7 @@ pub(crate) fn may_use_shared(
 }
 
 #[cfg(not(feature = "security"))]
-pub(crate) fn may_use_shared(
-    _isolation: &IsolationLayer,
-    _caller_agent: &str,
-    _resource: &str,
-) -> bool {
+pub fn may_use_shared(_isolation: &IsolationLayer, _caller_agent: &str, _resource: &str) -> bool {
     false
 }
 
@@ -133,7 +125,7 @@ mod tests {
     use super::*;
     use crate::isolation::{AgentIdentity, AgentRole};
     use crate::server::access::CarrierAuthority;
-    use crate::server::foreign_catalog::ForeignSourceCatalog;
+    use crate::server::api::query_txn::foreign_catalog::ForeignSourceCatalog;
     use medulla_types::wire::ForeignSourceSpec;
 
     fn carrier(agent: &str) -> CarrierAuthority {

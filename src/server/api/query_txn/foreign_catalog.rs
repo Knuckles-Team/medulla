@@ -64,13 +64,11 @@ use medulla_types::connector_pack::{
 };
 use medulla_types::contract::Digest256;
 use medulla_types::wire::ForeignSourceSpec;
-use tokio::sync::RwLock;
 
-use super::access::{CarrierAuthority, GraphReadAuthority};
 use super::foreign_share::{may_use_shared, share_resource, shared_name};
-use super::persistence::agent_library::AgentLibraryStore;
-use super::state::ServerState;
 use crate::isolation::IsolationLayer;
+use crate::server::access::CarrierAuthority;
+use crate::server::persistence::agent_library::AgentLibraryStore;
 
 /// `(verified owner scope, source name)` — the catalog key.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -92,11 +90,11 @@ struct OwnedSpec {
 /// owner catalog entry and the durable approval result before it can reach the
 /// trusted Rust callback seam in `medulla-plan`.
 #[derive(Clone, Debug)]
-pub(crate) struct ForeignSourceBindingDescriptor {
-    pub(crate) name: String,
-    pub(crate) spec: ForeignSourceSpec,
-    pub(crate) registration: PackSourceRegistration,
-    pub(crate) contract_digest: Digest256,
+pub struct ForeignSourceBindingDescriptor {
+    pub name: String,
+    pub spec: ForeignSourceSpec,
+    pub registration: PackSourceRegistration,
+    pub contract_digest: Digest256,
 }
 
 /// Every owner's registered foreign sources, partitioned by verified owner
@@ -110,7 +108,7 @@ pub struct ForeignSourceCatalog {
 /// by plain name plus any explicitly shared ones by qualified name. It carries a digest
 /// of exactly what it resolved so result caches never serve rows across owners, grants,
 /// revocations or re-registrations.
-pub(crate) struct OwnedForeignRegistry {
+pub struct OwnedForeignRegistry {
     owner_scope: String,
     cache_salt: String,
     registry: ForeignSourceRegistry,
@@ -119,7 +117,7 @@ pub(crate) struct OwnedForeignRegistry {
 impl OwnedForeignRegistry {
     /// Install the EH-400 freshness proof for this query's named sources.
     #[cfg(feature = "result-cache")]
-    pub(crate) fn install_fragment_cache(
+    pub fn install_fragment_cache(
         &mut self,
         sources: std::collections::HashMap<String, medulla_plan::federation_opt::SourceWatermark>,
     ) {
@@ -128,17 +126,17 @@ impl OwnedForeignRegistry {
         ));
     }
     /// The verified owner (tenant+principal) scope this registry was built for.
-    pub(crate) fn owner_scope(&self) -> &str {
+    pub fn owner_scope(&self) -> &str {
         &self.owner_scope
     }
 
     /// Digest of `(owner scope, every resolved (name, spec))`, for result-cache keys.
-    pub(crate) fn cache_salt(&self) -> &str {
+    pub fn cache_salt(&self) -> &str {
         &self.cache_salt
     }
 
     /// The executor registry holding only this owner's sources.
-    pub(crate) fn registry(&self) -> &ForeignSourceRegistry {
+    pub fn registry(&self) -> &ForeignSourceRegistry {
         &self.registry
     }
 }
@@ -150,7 +148,7 @@ impl ForeignSourceCatalog {
     /// `MEDULLA-UNIFIED-DATA-PLANE-R002.1`: a `Sql` spec's DSN is checked against the
     /// outbound destination gate FIRST; a disallowed destination is refused (`Err`)
     /// and nothing is inserted, so an unverified endpoint never reaches the catalog.
-    pub(crate) fn register(
+    pub fn register(
         &self,
         owner: &CarrierAuthority,
         name: String,
@@ -170,7 +168,7 @@ impl ForeignSourceCatalog {
     /// (tenant+principal) sources by plain name, plus each other owner's source the
     /// caller holds an exact share grant for (EH-378) by `<owner agent>/<name>`.
     /// Shared entries are registered first so a caller's own name always wins.
-    pub(crate) fn registry_for(
+    pub fn registry_for(
         &self,
         caller: &CarrierAuthority,
         isolation: &IsolationLayer,
@@ -213,7 +211,7 @@ impl ForeignSourceCatalog {
     /// verified request. This method still re-checks the durable approval and
     /// the current owner catalog entry immediately before binding so a stale
     /// receipt, another owner's catalog, or a descriptor mismatch fails closed.
-    pub(crate) fn bind_for(
+    pub fn bind_for(
         &self,
         caller: &CarrierAuthority,
         store: &AgentLibraryStore,
@@ -237,7 +235,7 @@ impl ForeignSourceCatalog {
     /// Chunks and terminal transitions must observe the same current catalog
     /// and durable approval as the eventual query bind.
     #[cfg(feature = "federation")]
-    pub(crate) fn verify_registered_for(
+    pub fn verify_registered_for(
         &self,
         caller: &CarrierAuthority,
         store: &AgentLibraryStore,
@@ -315,7 +313,7 @@ impl ForeignSourceCatalog {
     /// source name and approval receipt; it cannot choose a `ForeignSourceSpec`
     /// or smuggle authority through the callback seam.
     #[cfg(feature = "federation")]
-    pub(crate) fn bind_registered_for(
+    pub fn bind_registered_for(
         &self,
         caller: &CarrierAuthority,
         store: &AgentLibraryStore,
@@ -331,7 +329,7 @@ impl ForeignSourceCatalog {
     /// Bind several already-completed page sources into one owner-scoped registry.
     /// Every durable approval is checked before any driver is installed.
     #[cfg(feature = "federation")]
-    pub(crate) fn bind_registered_many(
+    pub fn bind_registered_many(
         &self,
         caller: &CarrierAuthority,
         store: &AgentLibraryStore,
@@ -393,13 +391,13 @@ impl ForeignSourceCatalog {
     /// Resolve the registry a served plan needs: `None` when the plan names no
     /// registered source, the caller's own registry otherwise. A name-resolving plan
     /// without a verified carrier is refused rather than run with no scope.
-    pub(crate) fn resolve_for_plan(
+    pub fn resolve_for_plan(
         &self,
         ops: &[medulla_plan::Op],
         caller: Option<&CarrierAuthority>,
         isolation: &IsolationLayer,
     ) -> Result<Option<OwnedForeignRegistry>, String> {
-        if !crate::server::handlers::query::plan_needs_foreign(ops) {
+        if !crate::server::api::query_txn::query_support::plan_needs_foreign(ops) {
             return Ok(None);
         }
         let Some(caller) = caller else {
@@ -471,11 +469,7 @@ impl ForeignSourceCatalog {
 
     /// The spec `owner` registered under `name`, if any.
     #[cfg(test)]
-    pub(crate) fn spec_for(
-        &self,
-        owner: &CarrierAuthority,
-        name: &str,
-    ) -> Option<ForeignSourceSpec> {
+    pub fn spec_for(&self, owner: &CarrierAuthority, name: &str) -> Option<ForeignSourceSpec> {
         let key = CatalogKey {
             owner_scope: owner.owner_scope().to_string(),
             name: name.to_string(),
@@ -486,78 +480,9 @@ impl ForeignSourceCatalog {
     }
 
     /// Whether no owner has registered any source.
-    pub(crate) fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
-}
-
-/// [`ForeignSourceCatalog::resolve_for_plan`] against the server's catalog for a served
-/// plan, with the caller's verified carrier taken from its read authority. `Err` is the
-/// caller-facing refusal text.
-pub(crate) async fn served_foreign_leg(
-    state: &Arc<RwLock<ServerState>>,
-    plan: &medulla_plan::Plan,
-    read_authority: Option<&GraphReadAuthority>,
-    execution: Option<&medulla_types::foreign_read::ForeignReadExecutionRef>,
-    executions: &[medulla_types::foreign_read::ForeignReadExecutionRef],
-) -> Result<Option<OwnedForeignRegistry>, String> {
-    let s = state.read().await;
-    let caller = read_authority.and_then(GraphReadAuthority::carrier);
-    if execution.is_some() && !executions.is_empty() {
-        return Err("INVALID_ARGUMENT: conflicting foreign execution forms".into());
-    }
-    if (execution.is_some() || !executions.is_empty())
-        && !crate::server::handlers::query::plan_needs_foreign(&plan.ops)
-    {
-        return Err(
-            "FOREIGN_READ_UNUSED: execution is attached to a plan without a foreign source".into(),
-        );
-    }
-    if !executions.is_empty() {
-        let caller = caller.ok_or_else(|| {
-            "ACCESS_DENIED: foreign read executions require a verified tenant carrier".to_string()
-        })?;
-        let store = s.agent_library.as_deref().ok_or_else(|| {
-            "SOURCE_APPROVAL_STORE_UNAVAILABLE: foreign read requires the Agent Library".to_string()
-        })?;
-        let plan_digest = crate::server::foreign_read::canonical_plan_digest(plan)?;
-        return s
-            .foreign_reads
-            .bind_many_for_query(
-                caller,
-                executions,
-                plan,
-                plan_digest,
-                crate::server::foreign_read::ForeignBindingContext {
-                    catalog: &s.foreign_sources,
-                    store,
-                    isolation: &s.isolation,
-                },
-            )
-            .map(Some);
-    }
-    if let Some(execution) = execution {
-        let caller = caller.ok_or_else(|| {
-            "ACCESS_DENIED: a foreign read execution requires a verified tenant carrier".to_string()
-        })?;
-        let store = s.agent_library.as_deref().ok_or_else(|| {
-            "SOURCE_APPROVAL_STORE_UNAVAILABLE: foreign read requires the Agent Library".to_string()
-        })?;
-        let plan_digest = crate::server::foreign_read::canonical_plan_digest(plan)?;
-        return s
-            .foreign_reads
-            .bind_for_query(
-                caller,
-                *execution,
-                plan_digest,
-                &s.foreign_sources,
-                store,
-                &s.isolation,
-            )
-            .map(Some);
-    }
-    s.foreign_sources
-        .resolve_for_plan(&plan.ops, caller, &s.isolation)
 }
 
 /// `MEDULLA-UNIFIED-DATA-PLANE-R002.1` — the registration-time outbound gate. A `Sql` spec's
@@ -629,9 +554,7 @@ fn resolved_digest<'a>(
 
 /// The executor registry a resolved leg binds, if any — the `ServedIndexes::foreign`
 /// value every served plan path passes to `run_unified`.
-pub(crate) fn bound_registry(
-    foreign: &Option<OwnedForeignRegistry>,
-) -> Option<&ForeignSourceRegistry> {
+pub fn bound_registry(foreign: &Option<OwnedForeignRegistry>) -> Option<&ForeignSourceRegistry> {
     foreign.as_ref().map(OwnedForeignRegistry::registry)
 }
 

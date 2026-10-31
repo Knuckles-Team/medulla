@@ -17,6 +17,19 @@ pub fn install_seams(state: &ServerState) {
     // L4 admin, decide.
 
     // L5 query, txn, wire.
+    #[cfg(any(feature = "query", feature = "cypher", feature = "graphql"))]
+    let _ = state.seams.query.set(std::sync::Arc::new(
+        crate::server::handlers::query::QuerySeam,
+    ));
+    let _ = state
+        .seams
+        .txn
+        .set(std::sync::Arc::new(crate::server::handlers::txn::TxnSeam));
+    #[cfg(feature = "query")]
+    let _ = state
+        .seams
+        .wire
+        .set(std::sync::Arc::new(crate::server::wire::WireSeam));
 
     // L6 persistence, raft, server-api.
 }

@@ -768,7 +768,9 @@ fn param_site_pg_col_type(
 ) -> PgColType {
     match site {
         medulla_query::ParamSite::IdColumn => PgColType::Text,
-        medulla_query::ParamSite::Column(name) => cols.get(&name).copied().unwrap_or(PgColType::Text),
+        medulla_query::ParamSite::Column(name) => {
+            cols.get(&name).copied().unwrap_or(PgColType::Text)
+        }
         medulla_query::ParamSite::Literal(lt) => match lt {
             medulla_query::ParamLiteralType::Int => PgColType::Int8,
             medulla_query::ParamLiteralType::Float => PgColType::Float8,
@@ -799,7 +801,7 @@ impl EngineBackend {
     /// through to its typed "no server-side text embedder is bound" error even with
     /// `MEDULLA_UQL_TEXT_EMBEDDER` configured. Idempotent/cheap (`Once`-guarded internally).
     async fn bind_startup_from_client<C: ClientInfo>(&self, client: &C) -> PgWireResult<()> {
-        crate::server::handlers::query::bind_sql_text_embedder();
+        crate::server::api::query_txn::query_support::bind_sql_text_embedder();
         let meta = client.metadata();
         let user = meta.get(pgwire::api::METADATA_USER).cloned();
         let db = meta.get(pgwire::api::METADATA_DATABASE).cloned();

@@ -149,6 +149,7 @@ pub(crate) async fn handle_sql(
         Err(error) => return Ok(Response::err(req_id, error)),
     };
     let persist_path = persist_dir.as_path();
+    let wire = ctx.state.read().await.seams.wire.get().cloned();
     let store = match sql_tenant_store(authority, persist_path, req_id) {
         Ok(store) => store,
         Err(response) => return Ok(response),
@@ -166,6 +167,7 @@ pub(crate) async fn handle_sql(
                 caller: Some(authority.actor_scope()),
                 authority,
                 persist_dir: persist_path,
+                wire: wire.as_ref(),
             },
             read_authority,
             sql_method,

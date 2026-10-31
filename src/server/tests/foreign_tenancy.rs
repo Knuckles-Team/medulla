@@ -438,7 +438,8 @@ async fn nl_query_foreign_leg_is_owner_scoped() {
 async fn shared_source_needs_an_explicit_grant() {
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     let (_remote, local) = registered_by_owner_a(940).await;
-    let qualified = crate::server::foreign_share::shared_name(OWNER_A, "remote_docs");
+    let qualified =
+        crate::server::api::query_txn::foreign_share::shared_name(OWNER_A, "remote_docs");
     let text = || {
         uql(format!(
             "MATCH (:Doc) |> FOREIGN \"{qualified}\" |> LIMIT 10"
@@ -479,7 +480,7 @@ async fn shared_source_needs_an_explicit_grant() {
     assert_refused(&dispatch_as(&local, 941, OTHER_B, text()).await, "no grant");
 
     let mut granted = original.clone();
-    granted.push(crate::server::foreign_share::share_role(
+    granted.push(crate::server::api::query_txn::foreign_share::share_role(
         OWNER_A,
         "remote_docs",
     ));
@@ -513,7 +514,8 @@ async fn shared_source_needs_an_explicit_grant() {
 async fn a_graph_cannot_take_a_reserved_foreign_source_resource_name() {
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     let local = multi_tenant_state().await;
-    let reserved = crate::server::foreign_share::share_resource(OWNER_A, "remote_docs");
+    let reserved =
+        crate::server::api::query_txn::foreign_share::share_resource(OWNER_A, "remote_docs");
     let create = Method::CreateGraph {
         graph_name: reserved.clone(),
         graph_type: GraphType::Global,

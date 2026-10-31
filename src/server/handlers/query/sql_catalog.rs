@@ -205,6 +205,7 @@ struct SqlCatalogWork<'a> {
     store: &'a medulla_query::TableStore,
     txn: &'a mut medulla_query::TableTxn,
     sql_method: &'a Method,
+    wire: Option<&'a Arc<dyn crate::server::api::query_txn::WireApi>>,
 }
 
 #[cfg(feature = "query")]
@@ -219,7 +220,11 @@ fn commit_sql_catalog_work(work: SqlCatalogWork<'_>) -> Result<usize, String> {
         store,
         txn,
         sql_method,
+        wire,
     } = work;
+    let Some(wire) = wire else {
+        return Err("INTERNAL: wire seam is not installed".to_string());
+    };
     let batch_id = crate::server::mutation_batch::opaque_coordinator_key(
         "sql-catalog",
         authority.owner_scope(),
@@ -252,17 +257,15 @@ fn commit_sql_catalog_work(work: SqlCatalogWork<'_>) -> Result<usize, String> {
             crate::mutation_batch::DurabilityDomain::SqlCatalog,
             "sql_catalog_operation",
         )?;
-        let committed_replay =
-            crate::server::wire::committed_sql_replay_receipt(store, authority, &batch)?.is_some();
-        let created_tables =
-            crate::server::wire::authorize_table_txn(source, store, txn, committed_replay)
-                .map_err(|error| error.message)?;
+        let committed_replay = wire
+            .committed_sql_replay_receipt(store, authority, &batch)?
+            .is_some();
+        let created_tables = wire.authorize_table_txn(source, store, txn, committed_replay)?;
         let committed = match store.commit_txn_batch(txn, &batch, created_at_ms) {
             Ok(committed) => committed.record,
-            Err(message) if message.contains("IDEMPOTENCY_CONFLICT") => {
-                crate::server::wire::committed_sql_replay_receipt(store, authority, &batch)?
-                    .ok_or(message)?
-            }
+            Err(message) if message.contains("IDEMPOTENCY_CONFLICT") => wire
+                .committed_sql_replay_receipt(store, authority, &batch)?
+                .ok_or(message)?,
             Err(message) => return Err(message),
         };
         let owner_operation_id =
@@ -306,7 +309,9 @@ pub(crate) async fn commit_sql_catalog_txn(
         caller,
         authority,
         persist_dir,
+        wire,
     } = scope;
+    let wire = wire.cloned();
     let tenant_scope = tenant_scope.to_string();
     let graph_name = graph_name.to_string();
     let caller = caller.map(ToOwned::to_owned);
@@ -325,6 +330,7 @@ pub(crate) async fn commit_sql_catalog_txn(
             store: &store,
             txn: &mut txn,
             sql_method: &sql_method,
+            wire: wire.as_ref(),
         })
     })
     .await;

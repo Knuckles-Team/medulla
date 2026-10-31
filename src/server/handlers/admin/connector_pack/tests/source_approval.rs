@@ -87,16 +87,19 @@ async fn approve_source_requires_current_head_and_contract_digest() {
                 &["*"],
                 wrong_key,
                 crate::protocol::Method::ConnectorPack {
-                    op: Box::new(medulla_types::connector_pack::ConnectorPackOp::ApproveSource {
-                        request: medulla_types::connector_pack::ConnectorPackSourceApprovalRequest {
-                            context: wrong_context,
-                            connector: connector_id.clone(),
-                            contract_iri: contract_iri.clone(),
-                            resource_uri: resource_uri.clone(),
-                            expected_head: first_head.clone(),
-                            contract_digest,
+                    op: Box::new(
+                        medulla_types::connector_pack::ConnectorPackOp::ApproveSource {
+                            request:
+                                medulla_types::connector_pack::ConnectorPackSourceApprovalRequest {
+                                    context: wrong_context,
+                                    connector: connector_id.clone(),
+                                    contract_iri: contract_iri.clone(),
+                                    resource_uri: resource_uri.clone(),
+                                    expected_head: first_head.clone(),
+                                    contract_digest,
+                                },
                         },
-                    }),
+                    ),
                 },
             )
             .await,
@@ -513,16 +516,17 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
         tool: "list_suppliers".to_string(),
         capabilities: Default::default(),
     };
-    let catalog = crate::server::foreign_catalog::ForeignSourceCatalog::default();
+    let catalog = crate::server::api::query_txn::foreign_catalog::ForeignSourceCatalog::default();
     catalog
         .register(&caller, registration.source_id.clone(), spec.clone())
         .unwrap();
-    let descriptor = crate::server::foreign_catalog::ForeignSourceBindingDescriptor {
-        name: registration.source_id.clone(),
-        spec,
-        registration: approved.registration.clone(),
-        contract_digest: approved.contract_digest,
-    };
+    let descriptor =
+        crate::server::api::query_txn::foreign_catalog::ForeignSourceBindingDescriptor {
+            name: registration.source_id.clone(),
+            spec,
+            registration: approved.registration.clone(),
+            contract_digest: approved.contract_digest,
+        };
     let store = served.state.write().await.ensure_agent_library().unwrap();
     let scoped = catalog
         .bind_for(
@@ -554,7 +558,8 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
             capabilities: Default::default(),
         },
     ] {
-        let wrong_catalog = crate::server::foreign_catalog::ForeignSourceCatalog::default();
+        let wrong_catalog =
+            crate::server::api::query_txn::foreign_catalog::ForeignSourceCatalog::default();
         wrong_catalog
             .register(&caller, registration.source_id.clone(), wrong_spec.clone())
             .unwrap();
@@ -774,7 +779,9 @@ async fn two_approved_sources_join_once_and_duplicate_refuses_atomically() {
             .iter()
             .enumerate()
             .map(|(index, name)| medulla_plan::Op::ForeignScan {
-                source: Box::new(medulla_types::wire::ForeignSourceSpec::Named { name: name.clone() }),
+                source: Box::new(medulla_types::wire::ForeignSourceSpec::Named {
+                    name: name.clone(),
+                }),
                 join: index != 0,
             })
             .collect(),

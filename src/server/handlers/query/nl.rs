@@ -217,10 +217,11 @@ pub(crate) async fn handle_nl_query_plan_only(
         Ok(value) => value,
         Err(response) => return Ok(response),
     };
-    let plan_digest = match super::planning::canonical_plan_digest(&plan) {
-        Ok(digest) => digest,
-        Err(error) => return Ok(Response::err(req_id, error)),
-    };
+    let plan_digest =
+        match crate::server::api::query_txn::query_support::canonical_plan_digest(&plan) {
+            Ok(digest) => digest,
+            Err(error) => return Ok(Response::err(req_id, error)),
+        };
     let query_digest = match super::planning::foreign_uql_query_digest(&uql, &UqlParams::default())
     {
         Ok(digest) => digest,
@@ -247,9 +248,13 @@ fn plan_nl_only(
     text: &str,
     req_id: u64,
 ) -> Result<(String, medulla_plan::Plan), Response> {
-    let candidate =
-        medulla_plan::nl::plan_only(planner, text, "", medulla_plan::nl::NlQueryBudget::default())
-            .map_err(|e| Response::err(req_id, nl_refusal(&e)))?;
+    let candidate = medulla_plan::nl::plan_only(
+        planner,
+        text,
+        "",
+        medulla_plan::nl::NlQueryBudget::default(),
+    )
+    .map_err(|e| Response::err(req_id, nl_refusal(&e)))?;
     let params = UqlParams::default();
     let statement = medulla_plan::uql::parse_statement(&candidate.uql, &params)
         .map_err(|e| Response::err(req_id, format!("{}: {}", e.code, e.render(&candidate.uql))))?;

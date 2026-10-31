@@ -66,6 +66,9 @@ pub(crate) use receipts::*;
 use reconcile::*;
 use rollback::*;
 pub(crate) use staging::*;
+#[path = "txn/seam.rs"]
+mod seam;
+pub(crate) use seam::TxnSeam;
 
 fn consensus_apply_is_authorized() -> bool {
     #[cfg(feature = "raft")]
