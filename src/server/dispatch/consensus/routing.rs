@@ -197,12 +197,14 @@ mod consensus_admin_route_tests {
     #[test]
     fn identity_mutations_share_the_commons_order_across_caller_graphs_and_tenants() {
         let method = Method::Identity {
-            op: medulla_types::identity::IdentityOp::User(medulla_types::identity::UserOp::SetStatus {
-                request: medulla_types::identity::UserStatusChange {
-                    principal_id: "usr:route-test".to_string(),
-                    status: medulla_types::identity::UserStatus::Disabled,
+            op: medulla_types::identity::IdentityOp::User(
+                medulla_types::identity::UserOp::SetStatus {
+                    request: medulla_types::identity::UserStatusChange {
+                        principal_id: "usr:route-test".to_string(),
+                        status: medulla_types::identity::UserStatus::Disabled,
+                    },
                 },
-            }),
+            ),
             stamp: None,
         };
         let command = crate::raft::NativeMutationCommand::from_public_method(
@@ -388,14 +390,14 @@ fn build_native_raft_request(
         Some(proposal.authority.actor_scope()),
         proposal.authority.idempotency_key(),
     );
-    let mutation = match crate::raft::RaftMutationContext::from_verified_request(
+    let mutation = match crate::server::api::persistence::RaftMutationContext::from_verified_request(
         batch_id,
         proposal.request_id,
         proposal.attempt_nonce,
         proposal.authority.tenant_scope(),
         proposal.authority.actor_scope().to_string(),
         identity_bootstrap,
-        crate::raft::RaftMutationTiming {
+        crate::server::api::persistence::RaftMutationTiming {
             placement_epoch: routed.epoch,
             fencing_token: routed.placed.then_some(routed.group_id),
             created_at_ms: committed_at_ms,

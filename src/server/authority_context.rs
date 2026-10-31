@@ -10,8 +10,8 @@ use crate::acl::RequestContextClaims;
 #[cfg(feature = "oidc")]
 use crate::server::auth::iceberg_bearer_scopes;
 use crate::server::auth::{coarse_kg_admin_only, request_context_policy};
-use medulla_types::contract::{Digest256, Nonce};
 use hmac::{Hmac, Mac};
+use medulla_types::contract::{Digest256, Nonce};
 use sha2::Sha256;
 use std::collections::HashSet;
 
@@ -105,7 +105,7 @@ impl VerifiedRequestContext {
     /// intentionally unavailable here; followers operate on their one-way scopes.
     #[cfg(feature = "raft")]
     pub(crate) fn replicated_mutation(
-        authority: &crate::raft::RaftMutationContext,
+        authority: &crate::server::api::persistence::RaftMutationContext,
     ) -> Result<Self, String> {
         let policy = request_context_policy()?;
         Ok(Self::from_verified_claims_with_nonce(

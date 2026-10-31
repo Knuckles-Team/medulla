@@ -11,11 +11,12 @@ use crate::mutation_batch::{
     MutationScopeIdentity, MutationStateDescriptor, MutationSurface, MUTATION_BATCH_VERSION,
 };
 use crate::protocol::Method;
-use crate::server::persistence::PersistenceBackend;
+use crate::server::api::persistence::PersistenceBackend;
 
 use super::canonical::{domain_for, lower_canonical_operation, surface_for};
-use super::digest::{principal_fingerprint, ENGINE_LEDGER_PRINCIPAL};
+use super::digest::principal_fingerprint;
 use super::terminal_outcome::lower_terminal_outcome_extensions;
+use crate::kernel::persistence::ENGINE_LEDGER_PRINCIPAL;
 
 mod finish_helpers;
 use finish_helpers::{compiled_outbox, compiled_scope_identity};
@@ -140,7 +141,8 @@ pub(crate) fn compile_methods_with_outbox(
     let (methods, mut terminal_outbox) = lower_terminal_outcome_extensions(ctx.batch_id, methods)?;
     terminal_outbox.extend(additional_outbox);
     #[cfg(feature = "epistemic-tms")]
-    let reasoning_events = medulla_epistemic::ReasoningProjectionWakeup::events_for_methods(&methods);
+    let reasoning_events =
+        medulla_epistemic::ReasoningProjectionWakeup::events_for_methods(&methods);
     let state_backed = ctx.authoritative_state.is_some();
     let operations = methods
         .into_iter()
@@ -541,7 +543,8 @@ fn finish_batch(
     // it is what still refused a legitimate `ReserveWorkItemResources` retry
     // after `digest_operations` alone was normalized. One rule, one helper --
     // `medulla_types::mutation_batch::identity_normalized_operations`.
-    let identity_operations = medulla_types::mutation_batch::identity_normalized_operations(&operations);
+    let identity_operations =
+        medulla_types::mutation_batch::identity_normalized_operations(&operations);
     let summary =
         medulla_kernel::projection_wakeup::projection_payload_for_operations(&identity_operations)?;
     // The typed wake-up is computed HERE, before the envelope is minted, rather
@@ -646,8 +649,10 @@ fn compiled_envelope(
         outbox,
         authoritative_state: ctx.authoritative_state.as_ref(),
     };
-    let method =
-        medulla_types::mutation_batch::batch_method_id(operations, ctx.authoritative_state.is_some())?;
+    let method = medulla_types::mutation_batch::batch_method_id(
+        operations,
+        ctx.authoritative_state.is_some(),
+    )?;
     let operation = medulla_types::mutation_batch::CompiledOperation::for_content(
         identity,
         content,

@@ -7,7 +7,7 @@ use super::*;
 use crate::protocol::Method;
 use crate::redb_store::scrub::{ScrubBudget, ScrubCursor};
 use crate::redb_store::{NodeUnreadable, UnsealFailure};
-use crate::server::persistence::PersistenceBackend;
+use crate::server::api::persistence::PersistenceBackend;
 
 const GRAPH: &str = "scrub_backend_graph";
 const CORRUPT: &str = "n2";

@@ -6,7 +6,7 @@ use tokio::sync::{Mutex, OwnedMutexGuard};
 use crate::graph::GraphCore;
 use crate::mutation_batch::{MutationStateDescriptor, MutationSurface};
 use crate::protocol::{Method, ResultPayload};
-use crate::server::persistence::PersistenceBackend;
+use crate::server::api::persistence::PersistenceBackend;
 use medulla_types::contract::Nonce;
 
 use super::super::compile::{authoritative_graph_version, compile_methods, CompileBatch};
@@ -296,8 +296,10 @@ fn stage_internal_graph(
         }
     }
     let staged_snapshot = staged.snapshot();
-    let row_delta =
-        medulla_kernel::graph_delta::GraphRowDelta::between(&base_snapshot_for_delta, &staged_snapshot)?;
+    let row_delta = medulla_kernel::graph_delta::GraphRowDelta::between(
+        &base_snapshot_for_delta,
+        &staged_snapshot,
+    )?;
     let state_msgpack = row_delta.to_msgpack()?;
     let target_graph_version = source_version
         .checked_add(1)

@@ -2,11 +2,11 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::OnceLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use hmac::{Hmac, Mac};
 use medulla::acl::{AgentIdentity, AgentRole, RequestContextClaims};
 use medulla::isolation::IsolationLayer;
 use medulla::protocol::{build_context_operation_signature_bytes, Method, Request};
 use medulla::server::{compute_verified_envelope_token, VerifiedEnvelopeParams};
-use hmac::{Hmac, Mac};
 use sha2::{Digest, Sha256};
 
 pub const TEST_AGENT: &str = "integration-test-agent";
@@ -263,22 +263,20 @@ pub struct SignedRegisterIdentity<'a> {
 #[allow(dead_code)]
 pub fn tempdir_persistence() -> (
     Option<String>,
-    Option<std::sync::Arc<dyn medulla::server::persistence::PersistenceBackend>>,
+    Option<std::sync::Arc<dyn medulla::server::api::persistence::PersistenceBackend>>,
 ) {
     use std::sync::atomic::{AtomicU64, Ordering};
     static SEQ: AtomicU64 = AtomicU64::new(0);
     let seq = SEQ.fetch_add(1, Ordering::Relaxed);
-    let dir = std::env::temp_dir().join(format!("medulla-test-persist-{}-{seq}", std::process::id()));
+    let dir =
+        std::env::temp_dir().join(format!("medulla-test-persist-{}-{seq}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).expect("create test persist dir");
     let dir_s = dir.to_string_lossy().into_owned();
-    let backend: std::sync::Arc<dyn medulla::server::persistence::PersistenceBackend> =
+    let backend: std::sync::Arc<dyn medulla::server::api::persistence::PersistenceBackend> =
         std::sync::Arc::new(
-            medulla::server::persistence::redb_backend::RedbBackend::open(
-                dir_s.clone(),
-                4096,
-            )
-            .expect("open tempdir redb backend"),
+            medulla::server::persistence::redb_backend::RedbBackend::open(dir_s.clone(), 4096)
+                .expect("open tempdir redb backend"),
         );
     (Some(dir_s), Some(backend))
 }
@@ -290,7 +288,7 @@ pub fn tempdir_persistence() -> (
 #[allow(dead_code)]
 pub fn tempdir_persistence() -> (
     Option<String>,
-    Option<std::sync::Arc<dyn medulla::server::persistence::PersistenceBackend>>,
+    Option<std::sync::Arc<dyn medulla::server::api::persistence::PersistenceBackend>>,
 ) {
     (None, None)
 }

@@ -52,8 +52,6 @@ pub(crate) use compile::{compile_opaque_method, effective_policy_digest};
 pub(crate) use digest::opaque_request_key;
 #[cfg(feature = "redb")]
 pub(crate) use digest::work_item_batch_identity;
-#[cfg(test)]
-pub(crate) use digest::ENGINE_LEDGER_PRINCIPAL;
 pub(crate) use digest::{
     batch_actor, lifecycle_batch_id, opaque_coordinator_key, opaque_idempotency_key_for_context,
     principal_fingerprint,

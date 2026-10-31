@@ -1,9 +1,9 @@
 //! Parent-only phases must authenticate the durable tenant even without a plan.
 
 use super::*;
+use crate::server::api::persistence::PersistenceBackend;
 use crate::server::persistence::backup::EnvVarGuard;
 use crate::server::persistence::redb_backend::RedbBackend;
-use crate::server::persistence::PersistenceBackend;
 
 fn carrier(tenant: &str) -> CarrierAuthority {
     CarrierAuthority::from_verified(&VerifiedRequestContext::verified_for_test_in_tenant(
@@ -13,15 +13,17 @@ fn carrier(tenant: &str) -> CarrierAuthority {
     .unwrap()
 }
 
-fn phase_authority(carrier: &CarrierAuthority) -> crate::raft::RaftMutationContext {
-    crate::raft::RaftMutationContext::from_verified_request(
+fn phase_authority(
+    carrier: &CarrierAuthority,
+) -> crate::server::api::persistence::RaftMutationContext {
+    crate::server::api::persistence::RaftMutationContext::from_verified_request(
         "phase-authority".into(),
         1,
         None,
         carrier.tenant_scope(),
         carrier.actor_scope().to_string(),
         false,
-        crate::raft::RaftMutationTiming {
+        crate::server::api::persistence::RaftMutationTiming {
             placement_epoch: 0,
             fencing_token: None,
             created_at_ms: 1,
@@ -34,8 +36,8 @@ async fn check_parent_only_phases(
     state: &Arc<RwLock<ServerState>>,
     redb: &RedbBackend,
     parent_id: &str,
-    owner: &crate::raft::RaftMutationContext,
-    foreign: &crate::raft::RaftMutationContext,
+    owner: &crate::server::api::persistence::RaftMutationContext,
+    foreign: &crate::server::api::persistence::RaftMutationContext,
 ) {
     assert!(redb.xshard_prepare_get(parent_id, 7).unwrap().is_none());
     let denied = apply_consensus_participant_abort(state, foreign, parent_id, 7)
@@ -67,11 +69,12 @@ async fn check_parent_only_phases(
             .await
             .unwrap()
     );
-    assert!(
-        medulla_transaction::read_private_payload(&redb.admin_mutations_read().unwrap(), parent_id)
-            .unwrap()
-            .is_none()
-    );
+    assert!(medulla_transaction::read_private_payload(
+        &redb.admin_mutations_read().unwrap(),
+        parent_id
+    )
+    .unwrap()
+    .is_none());
     // The tenant check still works after terminalization erases the private plan.
     assert!(
         apply_consensus_participant_abort(state, foreign, parent_id, 7)
@@ -231,7 +234,7 @@ async fn delayed_phases(
     state: &Arc<RwLock<ServerState>>,
     parent: &str,
     txn: &GraphTxnState,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
 ) -> [Result<bool, String>; 2] {
     let (participant_id, bytes) = participant_plan(parent, txn);
     [
@@ -268,7 +271,7 @@ async fn check_delayed_abort_phases(
     backend: &RedbBackend,
     parent: &str,
     txn: &GraphTxnState,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
 ) {
     for result in delayed_phases(state, parent, txn, authority).await {
         assert!(result.unwrap_err().contains("terminal parent outcome"));

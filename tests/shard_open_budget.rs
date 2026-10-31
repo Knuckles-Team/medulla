@@ -20,8 +20,8 @@
 use medulla_kernel::test_rendezvous;
 
 use medulla::protocol::Method;
+use medulla::server::api::persistence::PersistenceBackend;
 use medulla::server::persistence::redb_backend::RedbBackend;
-use medulla::server::persistence::PersistenceBackend;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;

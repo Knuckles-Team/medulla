@@ -54,10 +54,10 @@ use crate::mutation_batch::{MutationStateDescriptor, MutationSurface};
 use crate::protocol::Method;
 #[cfg(all(test, feature = "redb"))]
 use crate::protocol::ResultPayload;
+#[cfg(all(test, feature = "redb"))]
+use crate::server::api::persistence::PersistenceBackend;
 #[cfg(test)]
 use crate::server::mutation_batch::compile::{compile_methods, CompileBatch};
-#[cfg(all(test, feature = "redb"))]
-use crate::server::persistence::PersistenceBackend;
 #[cfg(test)]
 use medulla_types::contract::Nonce;
 #[cfg(test)]
@@ -107,7 +107,7 @@ mod internal_replay_tests {
         // still for this whole body. READ guard: it excludes only a key MUTATOR, never
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        let dir = crate::test_support::temp_dir(
+        let dir = crate::kernel::persistence::temp_dir(
             "medulla-internal-mutation-replay",
             "terminal-result-conflict",
         );
@@ -242,7 +242,8 @@ mod internal_replay_tests {
         .unwrap();
         let snapshot = staged.snapshot();
         let delta =
-            medulla_kernel::graph_delta::GraphRowDelta::between(&serving.snapshot(), &snapshot).unwrap();
+            medulla_kernel::graph_delta::GraphRowDelta::between(&serving.snapshot(), &snapshot)
+                .unwrap();
         let descriptor = MutationStateDescriptor {
             algorithm: medulla_kernel::graph_delta::ROW_DELTA_ALGORITHM.to_string(),
             digest: hex::encode(Sha256::digest(delta.to_msgpack().unwrap())),
@@ -294,28 +295,38 @@ mod internal_replay_tests {
             // the candidate digest binds that version, so read it out before
             // the input itself is moved into the constructor below.
             let result_input_snapshot_version = result_input.snapshot_version;
-            let program_ref = medulla_modality::OpaqueRef::scoped("program", &"1".repeat(64)).unwrap();
+            let program_ref =
+                medulla_modality::OpaqueRef::scoped("program", &"1".repeat(64)).unwrap();
             let policy = medulla_modality::PolicyEnvelope {
                 tenant_ref: medulla_modality::OpaqueRef::scoped("tenant", &"2".repeat(64)).unwrap(),
                 access_policy_ref: medulla_modality::OpaqueRef::scoped("policy", &"3".repeat(64))
                     .unwrap(),
                 classification: medulla_modality::Classification::Internal,
-                retention_policy_ref: medulla_modality::OpaqueRef::scoped("retention", &"4".repeat(64))
-                    .unwrap(),
-                deletion_policy_ref: medulla_modality::OpaqueRef::scoped("deletion", &"5".repeat(64))
-                    .unwrap(),
+                retention_policy_ref: medulla_modality::OpaqueRef::scoped(
+                    "retention",
+                    &"4".repeat(64),
+                )
+                .unwrap(),
+                deletion_policy_ref: medulla_modality::OpaqueRef::scoped(
+                    "deletion",
+                    &"5".repeat(64),
+                )
+                .unwrap(),
                 legal_hold_ref: None,
                 purpose_refs: vec![
-                    medulla_modality::OpaqueRef::scoped("purpose", &"6".repeat(64)).unwrap()
+                    medulla_modality::OpaqueRef::scoped("purpose", &"6".repeat(64)).unwrap(),
                 ],
             };
-            let tool_policy_ref =
-                Some(medulla_modality::OpaqueRef::scoped("tool_policy", tool_policy_token).unwrap());
-            let model_profile_ref =
-                Some(medulla_modality::OpaqueRef::scoped("model_profile", model_profile_token).unwrap());
+            let tool_policy_ref = Some(
+                medulla_modality::OpaqueRef::scoped("tool_policy", tool_policy_token).unwrap(),
+            );
+            let model_profile_ref = Some(
+                medulla_modality::OpaqueRef::scoped("model_profile", model_profile_token).unwrap(),
+            );
             let demonstration_refs =
                 vec![medulla_modality::OpaqueRef::scoped("example", &"9".repeat(64)).unwrap()];
-            let corpus_ref = medulla_modality::OpaqueRef::scoped("corpus", &"a".repeat(64)).unwrap();
+            let corpus_ref =
+                medulla_modality::OpaqueRef::scoped("corpus", &"a".repeat(64)).unwrap();
             let seed: u64 = 17;
             let program = medulla_program::ProgramRevision {
                 schema_version: medulla_program::PROGRAM_SCHEMA_VERSION,
@@ -323,24 +334,36 @@ mod internal_replay_tests {
                 revision: revision - 1,
                 parent_ref: parent_ref.clone(),
                 signature: medulla_program::SignatureSpec {
-                    signature_ref: medulla_modality::OpaqueRef::scoped("signature", &"9".repeat(64))
-                        .unwrap(),
-                    instruction_ref: medulla_modality::OpaqueRef::scoped("instruction", &"a".repeat(64))
-                        .unwrap(),
+                    signature_ref: medulla_modality::OpaqueRef::scoped(
+                        "signature",
+                        &"9".repeat(64),
+                    )
+                    .unwrap(),
+                    instruction_ref: medulla_modality::OpaqueRef::scoped(
+                        "instruction",
+                        &"a".repeat(64),
+                    )
+                    .unwrap(),
                     fields: vec![
                         medulla_program::FieldSpec {
                             name: "input".to_string(),
                             role: medulla_program::FieldRole::Input,
-                            schema_ref: medulla_modality::OpaqueRef::scoped("schema", &"b".repeat(64))
-                                .unwrap(),
+                            schema_ref: medulla_modality::OpaqueRef::scoped(
+                                "schema",
+                                &"b".repeat(64),
+                            )
+                            .unwrap(),
                             description_ref: None,
                             required: true,
                         },
                         medulla_program::FieldSpec {
                             name: "output".to_string(),
                             role: medulla_program::FieldRole::Output,
-                            schema_ref: medulla_modality::OpaqueRef::scoped("schema", &"c".repeat(64))
-                                .unwrap(),
+                            schema_ref: medulla_modality::OpaqueRef::scoped(
+                                "schema",
+                                &"c".repeat(64),
+                            )
+                            .unwrap(),
                             description_ref: None,
                             required: true,
                         },
@@ -414,7 +437,9 @@ mod internal_replay_tests {
                 instruction_ref: None,
                 tool_policy_ref,
                 model_profile_ref,
-                modalities: std::collections::BTreeSet::from([medulla_program::ProgramModality::Text]),
+                modalities: std::collections::BTreeSet::from([
+                    medulla_program::ProgramModality::Text,
+                ]),
                 policy,
                 content_digest,
                 evaluation: None,
@@ -556,11 +581,13 @@ mod internal_replay_tests {
                 ("promotion_identity", "object", true),
             ]
             .into_iter()
-            .map(|(name, logical_type, nullable)| medulla_jobs::ResultColumn {
-                name: name.to_string(),
-                logical_type: logical_type.to_string(),
-                nullable,
-            })
+            .map(
+                |(name, logical_type, nullable)| medulla_jobs::ResultColumn {
+                    name: name.to_string(),
+                    logical_type: logical_type.to_string(),
+                    nullable,
+                },
+            )
             .collect();
             medulla_jobs::TypedJobResult::new(
                 schema,
@@ -619,7 +646,7 @@ mod internal_replay_tests {
             ]
         }
 
-        let dir = crate::test_support::temp_dir("medulla-program-promotion", "cas-replay");
+        let dir = crate::kernel::persistence::temp_dir("medulla-program-promotion", "cas-replay");
         let persistence: Arc<dyn PersistenceBackend> = Arc::new(
             crate::server::persistence::redb_backend::RedbBackend::open(
                 dir.to_string_lossy().into_owned(),
@@ -668,7 +695,8 @@ mod internal_replay_tests {
         ))
         .await
         .expect("seed governed program bindings through an earlier durable commit");
-        let job_dir = crate::test_support::temp_dir("medulla-program-promotion", "job-store");
+        let job_dir =
+            crate::kernel::persistence::temp_dir("medulla-program-promotion", "job-store");
         std::fs::create_dir_all(&job_dir).expect("create separate job-store directory");
         let job_path = job_dir.join("jobs.redb");
         assert_ne!(job_path, dir.join("graph-0.redb"));
@@ -835,10 +863,12 @@ mod internal_replay_tests {
             )
             .expect("claim second actual optimization job")
             .expect("second actual optimization job is ready");
-        let second_result_ref = medulla_modality::OpaqueRef::new(second_worker_claim.job.result_ref())
-            .expect("second job store result reference is opaque");
-        let second_input_dataset_ref = medulla_modality::OpaqueRef::new(second_dataset_ref.to_string())
-            .expect("second job input dataset is opaque");
+        let second_result_ref =
+            medulla_modality::OpaqueRef::new(second_worker_claim.job.result_ref())
+                .expect("second job store result reference is opaque");
+        let second_input_dataset_ref =
+            medulla_modality::OpaqueRef::new(second_dataset_ref.to_string())
+                .expect("second job input dataset is opaque");
         let second_identity_seed = identity(
             3,
             Some(first_identity.revision_ref.clone()),
@@ -1372,15 +1402,17 @@ mod internal_replay_tests {
         let revision_properties = modality_tamper
             .get_node_properties(second_identity.revision_ref.as_str())
             .expect("revision exists in modality tamper fixture");
-        let mut modality_value = medulla_types::msgpack::decode_property_value(&revision_properties)
-            .expect("decode modality tamper fixture");
+        let mut modality_value =
+            medulla_types::msgpack::decode_property_value(&revision_properties)
+                .expect("decode modality tamper fixture");
         modality_value["candidate_record"]["modalities"] = serde_json::json!(["image"]);
         modality_tamper.add_node(
             second_identity.revision_ref.as_str().to_string(),
             rmp_serde::to_vec_named(&modality_value).expect("encode modality tamper fixture"),
         );
         assert!(
-            medulla_program::ProgramRevisionIdentity::from_durable_properties(&modality_value).is_err(),
+            medulla_program::ProgramRevisionIdentity::from_durable_properties(&modality_value)
+                .is_err(),
             "candidate modality tamper must invalidate the canonical candidate digest"
         );
         assert!(
@@ -1420,13 +1452,15 @@ mod internal_replay_tests {
         let revision_properties = authority_digest_tamper
             .get_node_properties(second_identity.revision_ref.as_str())
             .expect("revision exists in authority digest tamper fixture");
-        let mut authority_value = medulla_types::msgpack::decode_property_value(&revision_properties)
-            .expect("decode authority digest tamper fixture");
+        let mut authority_value =
+            medulla_types::msgpack::decode_property_value(&revision_properties)
+                .expect("decode authority digest tamper fixture");
         let coordinated_tamper_identity = identity(
             3,
             Some(first_identity.revision_ref.clone()),
             medulla_program::ProgramResultInput {
-                result_ref: medulla_modality::OpaqueRef::scoped("job_result", &"e".repeat(64)).unwrap(),
+                result_ref: medulla_modality::OpaqueRef::scoped("job_result", &"e".repeat(64))
+                    .unwrap(),
                 dataset_ref: second_identity
                     .candidate_record
                     .as_ref()
@@ -1475,7 +1509,8 @@ mod internal_replay_tests {
         alias_value["candidate_record"]["result_input_dataset_ref"] =
             serde_json::json!(format!("eg:job_input:alias:{}", "c".repeat(64)));
         assert!(
-            medulla_program::ProgramRevisionIdentity::from_durable_properties(&alias_value).is_err(),
+            medulla_program::ProgramRevisionIdentity::from_durable_properties(&alias_value)
+                .is_err(),
             "result-input namespace aliases must not validate as canonical refs"
         );
 
@@ -1490,8 +1525,10 @@ mod internal_replay_tests {
             second_identity.content_digest
         ));
         assert!(
-            medulla_program::ProgramRevisionIdentity::from_durable_properties(&candidate_alias_value)
-                .is_err(),
+            medulla_program::ProgramRevisionIdentity::from_durable_properties(
+                &candidate_alias_value
+            )
+            .is_err(),
             "candidate namespace aliases must not validate as canonical refs"
         );
 

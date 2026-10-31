@@ -87,16 +87,19 @@ async fn approve_source_requires_current_head_and_contract_digest() {
                 &["*"],
                 wrong_key,
                 crate::protocol::Method::ConnectorPack {
-                    op: Box::new(medulla_types::connector_pack::ConnectorPackOp::ApproveSource {
-                        request: medulla_types::connector_pack::ConnectorPackSourceApprovalRequest {
-                            context: wrong_context,
-                            connector: connector_id.clone(),
-                            contract_iri: contract_iri.clone(),
-                            resource_uri: resource_uri.clone(),
-                            expected_head: first_head.clone(),
-                            contract_digest,
+                    op: Box::new(
+                        medulla_types::connector_pack::ConnectorPackOp::ApproveSource {
+                            request:
+                                medulla_types::connector_pack::ConnectorPackSourceApprovalRequest {
+                                    context: wrong_context,
+                                    connector: connector_id.clone(),
+                                    contract_iri: contract_iri.clone(),
+                                    resource_uri: resource_uri.clone(),
+                                    expected_head: first_head.clone(),
+                                    contract_digest,
+                                },
                         },
-                    }),
+                    ),
                 },
             )
             .await,
@@ -774,7 +777,9 @@ async fn two_approved_sources_join_once_and_duplicate_refuses_atomically() {
             .iter()
             .enumerate()
             .map(|(index, name)| medulla_plan::Op::ForeignScan {
-                source: Box::new(medulla_types::wire::ForeignSourceSpec::Named { name: name.clone() }),
+                source: Box::new(medulla_types::wire::ForeignSourceSpec::Named {
+                    name: name.clone(),
+                }),
                 join: index != 0,
             })
             .collect(),

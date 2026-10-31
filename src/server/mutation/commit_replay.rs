@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::protocol::{Method, Response, ResultPayload};
-use crate::server::persistence::PersistenceBackend;
+use crate::server::api::persistence::PersistenceBackend;
 
 use super::{idempotency_store, CommitPrep, MutationCtx, MutationPlan};
 

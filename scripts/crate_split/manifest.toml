@@ -82,6 +82,7 @@ paths = [
     "src/server/service_grant",  # unplanned
     "src/server/compute",  # unplanned
     "src/test_support",  # unplanned
+    "src/server/kv",  # seam (R056.8): KvStore is a ServerState field
 ]
 
 [crates.medulla-persistence]
@@ -268,7 +269,6 @@ paths = [
     "src/server/icv_guard",  # unplanned
     "src/server/impact_watch",  # unplanned
     "src/server/issuer_trust",  # unplanned
-    "src/server/kv",  # unplanned
     "src/server/lake",  # unplanned
     "src/server/matview",  # unplanned
     "src/server/mutation",  # unplanned

@@ -42,10 +42,10 @@ use super::network::{self, RaftFrame, RaftFrameReply};
 use super::placement::{self, PlacementCatalog, PlacementRoute};
 use super::store::MedullaStore;
 use super::{
-    AppCtx, MedullaRaft, GroupId, NodeId, RaftHandle, RaftRequest, RaftResponse, DEFAULT_GROUP,
+    AppCtx, GroupId, MedullaRaft, NodeId, RaftHandle, RaftRequest, RaftResponse, DEFAULT_GROUP,
 };
-use medulla_kernel::lock_recovery::LockRecovery;
 use crate::protocol::Method;
+use medulla_kernel::lock_recovery::LockRecovery;
 
 mod leader_balance;
 mod membership_follow;
@@ -262,7 +262,7 @@ pub struct MultiRaft {
     groups: Arc<RwLock<BTreeMap<GroupId, MedullaRaft>>>,
     router: Arc<GroupRouter>,
     /// The shared M2 backend handle every group's store is opened over.
-    backend: Arc<dyn crate::server::persistence::PersistenceBackend>,
+    backend: Arc<dyn crate::server::api::persistence::PersistenceBackend>,
     ctx: AppCtx,
     /// Shared per-peer outbound connection pool (CONCEPT:AU-KG.ontology.manage-arbitrary) — one per node,
     /// reused by every group's network clients.
@@ -462,7 +462,7 @@ impl MultiRaft {
     pub async fn start(
         node_id: NodeId,
         bind_addr: String,
-        backend: Arc<dyn crate::server::persistence::PersistenceBackend>,
+        backend: Arc<dyn crate::server::api::persistence::PersistenceBackend>,
         ctx: AppCtx,
     ) -> Result<Arc<Self>, String> {
         let state = ctx.state.clone();
@@ -491,7 +491,7 @@ impl MultiRaft {
     pub async fn start(
         _node_id: NodeId,
         _bind_addr: String,
-        _backend: Arc<dyn crate::server::persistence::PersistenceBackend>,
+        _backend: Arc<dyn crate::server::api::persistence::PersistenceBackend>,
         _ctx: AppCtx,
     ) -> Result<Arc<Self>, String> {
         Err(
@@ -509,7 +509,7 @@ impl MultiRaft {
         bind_addr: String,
         peers: &super::PeerMap,
         secret: Option<&super::config::RaftTransportSecret>,
-        backend: Arc<dyn crate::server::persistence::PersistenceBackend>,
+        backend: Arc<dyn crate::server::api::persistence::PersistenceBackend>,
         ctx: AppCtx,
     ) -> Result<Arc<Self>, String> {
         let failure_domains = super::config::resolve_failure_domains(peers)?;
@@ -542,12 +542,13 @@ impl MultiRaft {
     async fn start_inner(
         node_id: NodeId,
         bind_addr: String,
-        backend: Arc<dyn crate::server::persistence::PersistenceBackend>,
+        backend: Arc<dyn crate::server::api::persistence::PersistenceBackend>,
         ctx: AppCtx,
         auth: Option<Arc<network::RaftTransportAuth>>,
         failure_domains: BTreeMap<NodeId, String>,
     ) -> Result<Arc<Self>, String> {
-        let groups: Arc<RwLock<BTreeMap<GroupId, MedullaRaft>>> = Arc::new(RwLock::new(BTreeMap::new()));
+        let groups: Arc<RwLock<BTreeMap<GroupId, MedullaRaft>>> =
+            Arc::new(RwLock::new(BTreeMap::new()));
         let groups_for_listener = groups.clone();
         let auth_for_listener = auth.clone();
         let owner: Arc<membership_follow::MembershipOwner> = Arc::default();
@@ -730,7 +731,7 @@ impl MultiRaft {
     }
 
     /// The shared M2 backend (for the cross-shard coordinator's durable 2PC records).
-    pub fn backend(&self) -> Arc<dyn crate::server::persistence::PersistenceBackend> {
+    pub fn backend(&self) -> Arc<dyn crate::server::api::persistence::PersistenceBackend> {
         self.backend.clone()
     }
 
@@ -1179,7 +1180,7 @@ impl MultiRaft {
             graph_name: placement::PLACEMENT_GRAPH.to_string(),
             graph_type: crate::protocol::GraphType::Commons,
             committed_at_ms: 0,
-            mutation: super::RaftMutationContext::internal(
+            mutation: crate::server::api::persistence::RaftMutationContext::internal(
                 "raft-placement",
                 placement::PLACEMENT_GRAPH,
                 coordinator_id,
@@ -1307,7 +1308,7 @@ impl MultiRaft {
             graph_name: placement::PLACEMENT_GRAPH.to_string(),
             graph_type: crate::protocol::GraphType::Commons,
             committed_at_ms: 0,
-            mutation: super::RaftMutationContext::internal(
+            mutation: crate::server::api::persistence::RaftMutationContext::internal(
                 "raft-node-info",
                 placement::PLACEMENT_GRAPH,
                 &format!("node-{node_id}"),

@@ -160,7 +160,7 @@ pub(super) struct CommitOpenTxnArgs<'a> {
     pub(super) owner_scope: Option<&'a str>,
     pub(super) keyed: bool,
     pub(super) txn_mutex: parking_lot::Mutex<GraphTxnState>,
-    pub(super) persistence: Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    pub(super) persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     pub(super) open_map: Arc<dashmap::DashMap<String, parking_lot::Mutex<GraphTxnState>>>,
     pub(super) attempt_nonce: Option<Nonce>,
 }
@@ -274,7 +274,7 @@ pub(super) struct ResumeTxnRequest<'a> {
     pub(super) req_id: u64,
     pub(super) caller: Option<&'a str>,
     pub(super) receipt_key: CommitReceiptKey<'a>,
-    pub(super) persistence: Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    pub(super) persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     pub(super) attempt_nonce: Option<Nonce>,
 }
 

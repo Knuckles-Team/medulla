@@ -12,6 +12,8 @@
 //! `raft::node::start`; there is no public method that accepts caller-supplied
 //! endpoint authority.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 use std::sync::Arc;
 
 use hmac::{Hmac, Mac};
@@ -324,8 +326,9 @@ async fn collect_group_projection(
             members: projected_members.members,
         },
         canonical: serde_json::json!([group_id, leader_id, projected_members.canonical_members,]),
-        leader: leader_id
-            .map(|node_id| medulla_types::result_contract::cluster::ClusterLeader { group_id, node_id }),
+        leader: leader_id.map(
+            |node_id| medulla_types::result_contract::cluster::ClusterLeader { group_id, node_id },
+        ),
         member_count: voters.len() + learners.len(),
     })
 }
@@ -375,7 +378,9 @@ async fn handle_cluster_members(
         ) {
             Ok(snapshot) => Response::ok(
                 req_id,
-                ResultPayload::of::<medulla_types::result_contract::cluster::ClusterMembers>(snapshot),
+                ResultPayload::of::<medulla_types::result_contract::cluster::ClusterMembers>(
+                    snapshot,
+                ),
             ),
             Err(error) => Response::err(req_id, error),
         };

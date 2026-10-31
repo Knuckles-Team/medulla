@@ -44,6 +44,8 @@
 //! graph's durable dump back and rebuilds the core (the same path `load_all` uses) on
 //! the next access. Proof: a hibernated graph rehydrates with every node intact.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 use std::sync::Arc;
 
 use super::multi::MultiRaft;
@@ -51,8 +53,8 @@ use super::placement::{
     MoveStage, PartitionMoveJournal, PartitionState, PlacementEntry, PlacementFence,
 };
 use super::GroupId;
+use crate::server::api::persistence::PersistenceBackend;
 use crate::server::persistence::redb_backend::rehydrate_core_from_dump;
-use crate::server::persistence::PersistenceBackend;
 
 /// The outcome of a reshard, for observability + the proof.
 #[derive(Debug, Clone, PartialEq, Eq)]

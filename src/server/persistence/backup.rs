@@ -892,6 +892,7 @@ mod tests {
     use super::*;
     use crate::protocol::{GraphType, Method};
     use crate::redb_store::shard::SHARD_PHYSICAL_STORE;
+    use crate::server::api::persistence::PersistenceBackend;
     use crate::server::persistence::redb_backend::seed_raw_row;
     use crate::server::persistence::redb_backend::RedbBackend;
     #[cfg(feature = "security")]
@@ -899,7 +900,6 @@ mod tests {
     use crate::server::persistence::shard_migrate::tests::{
         assert_node_a_carries_graph_tag, props, seed_at_k as seed,
     };
-    use crate::server::persistence::PersistenceBackend;
     use medulla_storage::{
         GraphShardOwner, OwnerLayout, PhysicalStoreIdentity, StorageKernel, StrictRecoveryEvidence,
     };
@@ -1065,7 +1065,8 @@ mod tests {
         // backend that must resolve the same cipher).
         #[cfg(feature = "security")]
         let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
-        let root = std::env::temp_dir().join(format!("medulla-backup-reshard-{}", std::process::id()));
+        let root =
+            std::env::temp_dir().join(format!("medulla-backup-reshard-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         let src = root.join("live");
         let bundle = root.join("bundle");
@@ -1249,7 +1250,8 @@ mod tests {
                 panic!("must never be copied");
             }
         }
-        let root = std::env::temp_dir().join(format!("medulla-backup-bogus-{}", std::process::id()));
+        let root =
+            std::env::temp_dir().join(format!("medulla-backup-bogus-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         let src = root.join("live");
         std::fs::create_dir_all(&src).unwrap();
@@ -1342,7 +1344,8 @@ mod tests {
             PROVENANCE_ANCHOR_MEMBERS, RESOURCE_RESERVATIONS, WORK_ITEM_COMMAND_SEQUENCE,
         };
 
-        let root = std::env::temp_dir().join(format!("medulla-backup-census-{}", std::process::id()));
+        let root =
+            std::env::temp_dir().join(format!("medulla-backup-census-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         let src = root.join("live");
         let bundle = root.join("bundle");

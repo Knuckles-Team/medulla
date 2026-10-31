@@ -177,7 +177,7 @@ pub struct ServerState {
     /// Served startup supplies this backend and every durable mutation awaits its
     /// commit barrier before acknowledgement. `None` is retained only for embedded
     /// read-only/test construction; mutation paths fail closed without a backend.
-    pub persistence: Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    pub persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     /// EG-owned RF-020 Agent Library owner. The handle is opened lazily after
     /// startup has supplied `persist_dir`, then retained so backup/restore and
     /// every typed route use the same kernel authority.
@@ -334,7 +334,7 @@ pub struct ServerState {
     /// the durable copy lives in redb (the handler persists + reloads on boot). Mutex
     /// because a `CreateMatView`/`RefreshMatView` mutates it off the registry lock.
     #[cfg(feature = "compute-dist")]
-    pub matviews: Arc<Mutex<crate::raft::pregel::MatViewStore>>,
+    pub matviews: Arc<Mutex<crate::server::api::persistence::MatViewStore>>,
     /// Registered FOREIGN sources for query federation (CONCEPT:MEDULLA-KG.query.query-federation, feature
     /// `federation`), keyed by `(verified owner, name)` (EH-373), where the owner is the
     /// caller's tenant+principal (`CarrierAuthority::owner_scope`; one engine is bound to
@@ -624,6 +624,23 @@ impl ServerState {
     }
 }
 
+impl crate::kernel::persistence::ResidentProjectionHost for ServerState {
+    fn resident_graphs(&self) -> Vec<(String, Arc<crate::graph::GraphCore>)> {
+        self.registry
+            .all_entries()
+            .iter()
+            .map(|entry| (entry.name.clone(), entry.core.clone()))
+            .collect()
+    }
+
+    fn durable_presence(&self) -> Option<Arc<dyn crate::kernel::persistence::DurableNodePresence>> {
+        self.persistence.clone().map(|backend| {
+            Arc::new(crate::server::api::persistence::BackendPresence(backend))
+                as Arc<dyn crate::kernel::persistence::DurableNodePresence>
+        })
+    }
+}
+
 #[cfg(test)]
 mod construction_tests {
     use super::{IsolationLayer, ServerState};
@@ -646,7 +663,9 @@ mod construction_tests {
             .collect();
         let handles: Vec<_> = threads
             .into_iter()
-            .map(|thread| medulla_kernel::test_rendezvous::join_bounded(thread, "agent library open"))
+            .map(|thread| {
+                medulla_kernel::test_rendezvous::join_bounded(thread, "agent library open")
+            })
             .collect();
         assert!(handles
             .iter()

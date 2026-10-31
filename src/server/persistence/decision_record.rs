@@ -160,14 +160,17 @@ pub(crate) fn verify_policy_component(draft: &AgentComponentDraft) -> Result<(),
     if draft.kind != AgentComponentKind::DecisionPolicy {
         return Ok(());
     }
-    medulla_types::decision::policy::policy_from_attributes(&draft.attributes, &draft.content_digest)
-        .map(|_| ())
-        .map_err(|code| {
-            refuse(
-                code,
-                "the policy body does not verify against its content digest",
-            )
-        })
+    medulla_types::decision::policy::policy_from_attributes(
+        &draft.attributes,
+        &draft.content_digest,
+    )
+    .map(|_| ())
+    .map_err(|code| {
+        refuse(
+            code,
+            "the policy body does not verify against its content digest",
+        )
+    })
 }
 
 impl AgentLibraryStore {
@@ -228,15 +231,17 @@ impl AgentLibraryStore {
                 "COMPONENT_BODY_UNAVAILABLE: the record body does not match its digest".into(),
             );
         }
-        Ok(medulla_types::agent_component::AgentComponentContentResult {
-            schema_version: medulla_types::agent_component::COMPONENT_CONTENT_SCHEMA_VERSION,
-            component_id: entry.component_id,
-            entry_revision: entry.entry_revision,
-            definition_digest: entry.definition_digest,
-            content_digest: entry.content_digest,
-            media_type: DECISION_RECORD_MEDIA_TYPE.to_string(),
-            body,
-        })
+        Ok(
+            medulla_types::agent_component::AgentComponentContentResult {
+                schema_version: medulla_types::agent_component::COMPONENT_CONTENT_SCHEMA_VERSION,
+                component_id: entry.component_id,
+                entry_revision: entry.entry_revision,
+                definition_digest: entry.definition_digest,
+                content_digest: entry.content_digest,
+                media_type: DECISION_RECORD_MEDIA_TYPE.to_string(),
+                body,
+            },
+        )
     }
 
     /// Commit `record` as a durable `DecisionRecord` component, snapshot

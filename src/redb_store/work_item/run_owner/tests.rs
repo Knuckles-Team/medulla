@@ -139,8 +139,9 @@ fn run_admission_recovery_refuses_missing_evidence() {
 #[cfg(feature = "server")]
 #[tokio::test]
 async fn run_admission_unavailable_is_a_declared_wire_refusal() {
+    use crate::server::api::persistence::PersistenceBackend;
     use crate::server::handlers::work_item_read::{answer, WorkItemRead};
-    use crate::server::persistence::{redb_backend::RedbBackend, PersistenceBackend};
+    use crate::server::persistence::redb_backend::RedbBackend;
     use std::sync::Arc;
     for (tag, evidence) in [("legacy", None), ("malformed", Some(serde_json::json!({})))] {
         let dir = crate::redb_store::temp_path("medulla-run-wire-refusal", tag);
@@ -246,7 +247,9 @@ fn ordinary_completion_projection_requires_exact_committed_payload() {
     let id = admit(&temp.shard);
     let handle = temp.shard.graph(GRAPH).unwrap();
     let snapshot = temp.shard.read(&handle).unwrap();
-    let mut receipt = medulla_transaction::read_batches(&snapshot).unwrap().remove(0);
+    let mut receipt = medulla_transaction::read_batches(&snapshot)
+        .unwrap()
+        .remove(0);
     let payload = RunCompletionPayload {
         completion: RunCompletionInput {
             schema_version: 1,
@@ -727,11 +730,13 @@ fn completion_method(
         retryable: false,
         now_ms: 3000,
         outcome_extension: None,
-        run_completion: Some(Box::new(medulla_types::run_completion::RunCompletionInput {
-            schema_version: 1,
-            run_id: "run".into(),
-            usage,
-        })),
+        run_completion: Some(Box::new(
+            medulla_types::run_completion::RunCompletionInput {
+                schema_version: 1,
+                run_id: "run".into(),
+                usage,
+            },
+        )),
     }
 }
 

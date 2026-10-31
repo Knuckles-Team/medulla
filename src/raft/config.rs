@@ -41,10 +41,8 @@ const ADVERTISED_TLS_SERVER_NAME_ENV: &str = "MEDULLA_ADVERTISED_TLS_SERVER_NAME
 const ADVERTISED_CERTIFICATE_ID_ENV: &str = "MEDULLA_ADVERTISED_CERTIFICATE_ID";
 const ADVERTISED_CERTIFICATE_ROTATION_EPOCH_ENV: &str =
     "MEDULLA_ADVERTISED_CERTIFICATE_ROTATION_EPOCH";
-const ADVERTISED_CERTIFICATE_NOT_BEFORE_ENV: &str =
-    "MEDULLA_ADVERTISED_CERTIFICATE_NOT_BEFORE_MS";
-const ADVERTISED_CERTIFICATE_NOT_AFTER_ENV: &str =
-    "MEDULLA_ADVERTISED_CERTIFICATE_NOT_AFTER_MS";
+const ADVERTISED_CERTIFICATE_NOT_BEFORE_ENV: &str = "MEDULLA_ADVERTISED_CERTIFICATE_NOT_BEFORE_MS";
+const ADVERTISED_CERTIFICATE_NOT_AFTER_ENV: &str = "MEDULLA_ADVERTISED_CERTIFICATE_NOT_AFTER_MS";
 const MAX_ADVERTISED_FIELD_BYTES: usize = 1_024;
 
 /// Derived pre-shared key for the authenticated, encrypted Raft transport.
@@ -194,9 +192,10 @@ impl RaftClusterConfig {
                 .to_string()
         })?;
         let peers = parse_peers(&peers_raw)?;
-        let advertise_addr = peers.get(&node_id).map(|n| n.addr.clone()).ok_or_else(|| {
-            "MEDULLA_RAFT_PEERS does not contain this node id".to_string()
-        })?;
+        let advertise_addr = peers
+            .get(&node_id)
+            .map(|n| n.addr.clone())
+            .ok_or_else(|| "MEDULLA_RAFT_PEERS does not contain this node id".to_string())?;
         // The listener bind address defaults to the advertised (PEERS) address, but a
         // containerized member overrides it (e.g. `0.0.0.0:9100`) while peers still dial
         // its routable host IP from PEERS — see `bind_addr` docs (CONCEPT:AU-KG.backend.authority-has-already-acked).
@@ -211,9 +210,9 @@ impl RaftClusterConfig {
         // DIST-P2-2 / ADR-2 W1.2: multi-group production startup. Absent ⇒ the
         // cores-derived default (K == N groups, write-sharded like the non-raft path);
         // set explicitly to size the pool. Clamped to MAX_SHARD_COUNT (K's ceiling).
-        let groups = parse_groups(
+        let groups = crate::server::api::persistence::parse_groups(
             std::env::var("MEDULLA_RAFT_GROUPS").ok(),
-            default_raft_group_count(),
+            crate::server::api::persistence::default_raft_group_count(),
         )?;
         let transport_secret = resolve_transport_secret()?;
         let loopback_only = peers.len() == 1
@@ -621,59 +620,6 @@ fn parse_failure_domains(raw: &str, peers: &PeerMap) -> Result<BTreeMap<NodeId, 
     Ok(domains)
 }
 
-/// Parse `MEDULLA_RAFT_GROUPS` (DIST-P2-2 / ADR-2 W1.2): `None`/empty/`"0"` all
-/// collapse to `default` rather than erroring — an operator who never heard of this knob
-/// gets the cores-derived default ([`default_raft_group_count`]). A non-empty,
-/// non-integer value is a loud misconfig (same posture as `parse_peers`). A configured
-/// value is clamped to `1..=MAX_SHARD_COUNT` because under raft K (redb shards) == N
-/// (groups), so N can never exceed the shard ceiling ([`crate::redb_layout::MAX_SHARD_COUNT`]).
-/// Pure (no env access) so it is unit tested directly without the process-global
-/// env-var races a `from_env` test would need.
-fn parse_groups(raw: Option<String>, default: u64) -> Result<u64, String> {
-    let ceiling = crate::redb_layout::MAX_SHARD_COUNT as u64;
-    // Absent / empty / an explicit `0` all mean "unspecified" ⇒ the cores-derived
-    // `default` (preserving the pre-ADR-2 "None/empty/0 collapse together" semantic,
-    // only the collapse target changed from a hardcoded 1 to `default`). A positive
-    // value is honored, clamped to `1..=MAX_SHARD_COUNT` (K == N ≤ the shard ceiling).
-    let n = match raw {
-        Some(v) if !v.trim().is_empty() => v
-            .trim()
-            .parse::<u64>()
-            .map_err(|_| "MEDULLA_RAFT_GROUPS is not an integer".to_string())?,
-        _ => 0,
-    };
-    let resolved = if n == 0 { default } else { n };
-    Ok(resolved.clamp(1, ceiling))
-}
-
-/// The cores-derived default group/shard count when `MEDULLA_RAFT_GROUPS` is
-/// unset (ADR-2 / W1.2, `reports/wave1/ADR-scale-trio.md` §ADR-2 decision 2): the raft
-/// group count defaults to the non-raft durable-shard auto-size
-/// `clamp(effective-cgroup-cpu/2, 1, …)` but
-/// with the raised [`crate::redb_layout::MAX_SHARD_COUNT`] ceiling — so turning on raft
-/// (for HA) gets the SAME write-sharding a single-node deployment gets by default rather
-/// than collapsing to one group. Under raft K (redb shards) == N (groups), so this is the
-/// ONE default both `resolve_shard_count` and [`raft_group_count`] derive from.
-pub(crate) fn default_raft_group_count() -> u64 {
-    let cpus = medulla_kernel::autosize::detect_capacity().reserved_cpus() as u64;
-    (cpus / 2).clamp(1, crate::redb_layout::MAX_SHARD_COUNT as u64)
-}
-
-/// The number of raft groups (== redb shards K, ADR-2 / W1.2) this node runs, resolved
-/// from `MEDULLA_RAFT_GROUPS` with the [`default_raft_group_count`] fallback. Read
-/// by `resolve_shard_count` so the durable store opens EXACTLY N shards — group `g` owns
-/// shard `g`. A malformed value falls back to the default here; the loud validation error
-/// is raised once by [`RaftClusterConfig::from_env`], which gates startup, so this
-/// accessor (reached only on an already-accepted raft-configured node) never needs to
-/// re-report it.
-pub(crate) fn raft_group_count() -> u64 {
-    parse_groups(
-        std::env::var("MEDULLA_RAFT_GROUPS").ok(),
-        default_raft_group_count(),
-    )
-    .unwrap_or_else(|_| default_raft_group_count())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -690,39 +636,6 @@ mod tests {
         assert!(parse_peers("oops").is_err());
         assert!(parse_peers("1@a:1,1@b:2").is_err());
         assert!(parse_peers("").is_err());
-    }
-
-    #[test]
-    fn parse_groups_uses_default_when_absent_or_empty_or_zero() {
-        // ADR-2 / W1.2: absent/empty/0 fall back to the supplied cores-derived default
-        // (not a hardcoded 1), because under raft K == N and the default is the same
-        // write-sharding the non-raft path uses.
-        assert_eq!(parse_groups(None, 4).unwrap(), 4);
-        assert_eq!(parse_groups(Some("".into()), 4).unwrap(), 4);
-        assert_eq!(parse_groups(Some("  ".into()), 4).unwrap(), 4);
-        assert_eq!(parse_groups(Some("0".into()), 4).unwrap(), 4);
-        // A default of 0 (impossible from the resolver, defensive) still floors to 1.
-        assert_eq!(parse_groups(None, 0).unwrap(), 1);
-    }
-
-    #[test]
-    fn parse_groups_accepts_n_clamps_ceiling_and_rejects_garbage() {
-        assert_eq!(parse_groups(Some("4".into()), 1).unwrap(), 4);
-        assert_eq!(parse_groups(Some(" 7 ".into()), 1).unwrap(), 7);
-        // K == N ≤ MAX_SHARD_COUNT: an over-ceiling group count clamps rather than
-        // opening more shards than the durable layout allows.
-        assert_eq!(
-            parse_groups(Some("9999".into()), 1).unwrap(),
-            crate::redb_layout::MAX_SHARD_COUNT as u64
-        );
-        assert!(parse_groups(Some("nope".into()), 1).is_err());
-    }
-
-    #[test]
-    fn default_raft_group_count_is_bounded() {
-        // Cores-derived, always in 1..=MAX_SHARD_COUNT regardless of the host.
-        let n = default_raft_group_count();
-        assert!((1..=crate::redb_layout::MAX_SHARD_COUNT as u64).contains(&n));
     }
 
     #[test]

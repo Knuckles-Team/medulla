@@ -9,7 +9,7 @@ use std::sync::Arc;
 use sha2::{Digest, Sha256};
 use tokio::sync::RwLock;
 
-use crate::{graph::GraphCore, server::ServerState};
+use crate::{graph::GraphCore, kernel::persistence::ResidentProjectionHost};
 
 /// Convert a logical graph name into a bounded, path-safe durable key.
 ///
@@ -40,8 +40,8 @@ pub(crate) fn sanitize(name: &str) -> String {
 }
 
 /// Apply an Ebbinghaus decay sweep across every registered graph.
-pub async fn decay_all(
-    state: &Arc<RwLock<ServerState>>,
+pub async fn decay_all<S: ResidentProjectionHost + Send + Sync>(
+    state: &Arc<RwLock<S>>,
     half_life_secs: f64,
     floor: f64,
     prune: bool,
@@ -49,10 +49,9 @@ pub async fn decay_all(
     let entries: Vec<Arc<GraphCore>> = {
         let state = state.read().await;
         state
-            .registry
-            .all_entries()
-            .iter()
-            .map(|entry| entry.core.clone())
+            .resident_graphs()
+            .into_iter()
+            .map(|(_, core)| core)
             .collect()
     };
     let now = std::time::SystemTime::now()
@@ -75,16 +74,14 @@ pub async fn decay_all(
 /// Every candidate must first be confirmed in the authoritative store. Missing
 /// persistence or a failed/partial presence query fails closed and leaves the
 /// resident projection intact.
-pub async fn evict_oversized_all(state: &Arc<RwLock<ServerState>>, max_nodes: usize) -> usize {
+pub async fn evict_oversized_all<S: ResidentProjectionHost + Send + Sync>(
+    state: &Arc<RwLock<S>>,
+    max_nodes: usize,
+) -> usize {
     let (backend, entries) = {
         let state = state.read().await;
-        let entries = state
-            .registry
-            .all_entries()
-            .iter()
-            .map(|entry| (entry.name.clone(), entry.core.clone()))
-            .collect::<Vec<_>>();
-        (state.persistence.clone(), entries)
+        let entries = state.resident_graphs();
+        (state.durable_presence(), entries)
     };
     let Some(backend) = backend else {
         return 0;

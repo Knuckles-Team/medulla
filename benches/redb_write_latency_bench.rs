@@ -31,8 +31,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use medulla::protocol::Method;
+use medulla::server::api::persistence::PersistenceBackend;
 use medulla::server::persistence::redb_backend::RedbBackend;
-use medulla::server::persistence::PersistenceBackend;
 use redb::{Database, Durability, TableDefinition};
 use tracing::field::{Field, Visit};
 use tracing::span::{Attributes, Id};

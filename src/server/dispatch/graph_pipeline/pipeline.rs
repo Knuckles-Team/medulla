@@ -19,7 +19,7 @@ pub(super) struct DispatchPipelineCtx<'a> {
     pub(super) core: Arc<crate::graph::GraphCore>,
     pub(super) materialization_manifest:
         Option<Arc<std::sync::RwLock<crate::registry::MaterializationManifest>>>,
-    pub(super) persistence: Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    pub(super) persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
     pub(super) cdc: Option<Arc<crate::server::cdc::CdcHub>>,
     pub(super) routed_write_coalescer:

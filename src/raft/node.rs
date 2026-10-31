@@ -24,6 +24,8 @@
 //! therefore have the same quorum replication, leader failover, authenticated remote
 //! read routing, and membership contract as the default group.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;

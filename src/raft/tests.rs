@@ -11,6 +11,8 @@
 //! 5. EVERY committed write survives on the new leader (no data loss, no
 //!    split-brain — the survivors form a quorum of 2/3).
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 use std::time::Duration;
@@ -30,8 +32,8 @@ use super::multi::MultiRaft;
 use super::node::{self, StartedNode};
 use super::{NodeId, RaftRequest};
 use crate::protocol::{GraphType, Method};
+use crate::server::api::persistence::PersistenceBackend;
 use crate::server::persistence::redb_backend::RedbBackend;
-use crate::server::persistence::PersistenceBackend;
 use crate::server::ServerState;
 
 /// Build a ServerState with a redb-AUTHORITATIVE backend rooted at `dir`.
@@ -258,7 +260,7 @@ async fn three_node_cluster_replicates_and_survives_leader_failover() {
             graph_name: graph.to_string(),
             graph_type: GraphType::Commons,
             committed_at_ms: 0,
-            mutation: super::RaftMutationContext::internal(
+            mutation: crate::server::api::persistence::RaftMutationContext::internal(
                 "raft-test",
                 graph,
                 &format!("cluster-write-{k}"),
@@ -317,7 +319,7 @@ async fn three_node_cluster_replicates_and_survives_leader_failover() {
         graph_name: graph.to_string(),
         graph_type: GraphType::Commons,
         committed_at_ms: 0,
-        mutation: super::RaftMutationContext::internal(
+        mutation: crate::server::api::persistence::RaftMutationContext::internal(
             "raft-test",
             graph,
             "after-failover",
@@ -439,7 +441,10 @@ async fn cluster_members_reports_topology_and_tracks_leader_failover() {
         request
     }
 
-    let root = std::env::temp_dir().join(format!("medulla-wire-cluster-members-{}", std::process::id()));
+    let root = std::env::temp_dir().join(format!(
+        "medulla-wire-cluster-members-{}",
+        std::process::id()
+    ));
     let _ = std::fs::remove_dir_all(&root);
     let dirs: Vec<String> = (1..=3)
         .map(|i| {
@@ -1051,8 +1056,10 @@ mod placement_admin_wire_rpc {
             "placement-wire-auth",
         );
 
-        let tmp =
-            std::env::temp_dir().join(format!("medulla-placement-wire-test-{}", std::process::id()));
+        let tmp = std::env::temp_dir().join(format!(
+            "medulla-placement-wire-test-{}",
+            std::process::id()
+        ));
         let _ = std::fs::remove_dir_all(&tmp);
         let dirs: Vec<String> = (1..=3)
             .map(|i| {
@@ -1249,11 +1256,11 @@ mod placement_admin_wire_rpc {
         // A-W1.2-2: the route response is the ADR-1 wire superset (extra
         // `endpoints` key); the canonical deny_unknown_fields DTO rejects it,
         // so the wire type is the ONLY correct reader for a route response.
-        let route: medulla_types::result_contract::cluster::PlacementRouteWire = match route_resp.result
-        {
-            Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(&bytes).unwrap(),
-            other => panic!("expected a typed PlacementRouteWire, got {other:?}"),
-        };
+        let route: medulla_types::result_contract::cluster::PlacementRouteWire =
+            match route_resp.result {
+                Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(&bytes).unwrap(),
+                other => panic!("expected a typed PlacementRouteWire, got {other:?}"),
+            };
         assert!(route.placed);
         assert_eq!(
             route.group, TARGET_GROUP,
@@ -1358,7 +1365,7 @@ fn make_log_entry(index: u64, term: u64, node_id: &str) -> EntryOf<super::TypeCo
             graph_name: "__commons__".to_string(),
             graph_type: GraphType::Commons,
             committed_at_ms: 0,
-            mutation: super::RaftMutationContext::internal(
+            mutation: crate::server::api::persistence::RaftMutationContext::internal(
                 "raft-log-test",
                 "__commons__",
                 &format!("{term}:{index}:{node_id}"),
@@ -1398,7 +1405,8 @@ async fn durable_log_replays_from_redb_after_restart() {
 
     // ── Append 12 entries through the real RaftStorage::append_to_log path ──
     {
-        let mut store = MedullaStore::open(super::DEFAULT_GROUP, backend.clone(), ctx.clone()).unwrap();
+        let mut store =
+            MedullaStore::open(super::DEFAULT_GROUP, backend.clone(), ctx.clone()).unwrap();
         let entries: Vec<_> = (1..=12)
             .map(|i| make_log_entry(i, 1, &format!("n{i}")))
             .collect();
@@ -1413,7 +1421,8 @@ async fn durable_log_replays_from_redb_after_restart() {
     }
 
     // ── Re-open the store over the SAME redb; no leader, no network ─────────
-    let mut store2 = MedullaStore::open(super::DEFAULT_GROUP, backend.clone(), ctx.clone()).unwrap();
+    let mut store2 =
+        MedullaStore::open(super::DEFAULT_GROUP, backend.clone(), ctx.clone()).unwrap();
     let log_state = store2.get_log_state().await.expect("get_log_state");
     assert_eq!(
         log_state.last_log_id.map(|l| l.index),
@@ -1455,7 +1464,8 @@ async fn fault_injection_no_committed_log_entry_lost_on_restart() {
     };
 
     {
-        let mut store = MedullaStore::open(super::DEFAULT_GROUP, backend.clone(), ctx.clone()).unwrap();
+        let mut store =
+            MedullaStore::open(super::DEFAULT_GROUP, backend.clone(), ctx.clone()).unwrap();
         // Append 8 entries; each append_to_log awaits the durable group-commit fsync
         // (commit-before-ack), so all 8 are provably on disk when this returns Ok.
         for i in 1..=8u64 {
@@ -1628,7 +1638,7 @@ async fn two_groups_one_node_commit_independently() {
             graph_name: graph.to_string(),
             graph_type: GraphType::Global,
             committed_at_ms: 0,
-            mutation: super::RaftMutationContext::internal(
+            mutation: crate::server::api::persistence::RaftMutationContext::internal(
                 "raft-group-test",
                 graph,
                 "first-write",
@@ -2347,7 +2357,7 @@ async fn multi_node_group_join_then_leader_rebalance() {
             graph_name: "graph7".to_string(),
             graph_type: GraphType::Global,
             committed_at_ms: 0,
-            mutation: super::RaftMutationContext::internal(
+            mutation: crate::server::api::persistence::RaftMutationContext::internal(
                 "raft-membership-test",
                 "graph7",
                 "joined-write",
@@ -3200,7 +3210,7 @@ mod dist_compute {
 mod matview {
     use super::*;
     use crate::protocol::DistAlgo;
-    use crate::raft::pregel::MatView;
+    use crate::server::api::persistence::MatView;
     use medulla_types::result_contract::cluster::DistResult;
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -3309,7 +3319,13 @@ fn scale_add_node_req(graph: &str, node_id: &str, seq: u64) -> RaftRequest {
         graph_name: graph.to_string(),
         graph_type: GraphType::Global,
         committed_at_ms: 0,
-        mutation: super::RaftMutationContext::internal("w12-scale", graph, node_id, seq, 0),
+        mutation: crate::server::api::persistence::RaftMutationContext::internal(
+            "w12-scale",
+            graph,
+            node_id,
+            seq,
+            0,
+        ),
         // The native command is AEAD-sealed with the node's server secret and unsealed at
         // apply; this MUST match `make_state_with_backend`'s `auth_secret` ("raft-test")
         // or apply fails "native Raft command authentication failed".

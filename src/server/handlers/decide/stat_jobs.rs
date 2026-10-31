@@ -675,7 +675,9 @@ fn serve_eval_receipts(
     let next_after = if has_more {
         receipts
             .last()
-            .map(|receipt: &medulla_types::decision::DecisionEvalReceipt| receipt.receipt_digest.clone())
+            .map(|receipt: &medulla_types::decision::DecisionEvalReceipt| {
+                receipt.receipt_digest.clone()
+            })
     } else {
         None
     };

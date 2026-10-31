@@ -28,10 +28,10 @@ use super::handlers;
 // unqualified. Gating the import broke every build without `redb`
 // (`--no-default-features --features server`) with E0405 while the default full build,
 // which enables `redb`, stayed green. See plans/complex/lane-reports/WD10-R-DISPATCH.md.
-use super::persistence::PersistenceBackend;
 use super::state::ServerState;
 use crate::isolation::AccessLevel;
 use crate::protocol::{Method, Request, Response, ResultPayload};
+use crate::server::api::persistence::PersistenceBackend;
 
 /// Stable, privacy-safe rejection for a graph lifecycle type that this binary
 /// does not support.  The wire decoder normally rejects unknown enum strings
@@ -420,7 +420,9 @@ fn redact_resource_status_result(
             result.host_snapshot = None;
         }
     }
-    ResultPayload::of::<medulla_types::result_contract::coordination::ResourceReservationStatus>(result)
+    ResultPayload::of::<medulla_types::result_contract::coordination::ResourceReservationStatus>(
+        result,
+    )
 }
 
 // ── Fleet server registry (CONCEPT:MEDULLA-KG.sharding.server-registry, W2.5) ──────────

@@ -1,12 +1,14 @@
 //! Replicated transaction parent authority and final decisions.
 
 use super::*;
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 
 #[cfg(feature = "raft")]
 pub(super) fn validate_consensus_parent_authority(
     redb: &crate::server::persistence::redb_backend::RedbBackend,
     coordinator_id: &str,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
 ) -> Result<crate::server::handlers::admin::AdminSaga, String> {
     let parent = crate::server::handlers::admin::resume_named_admin_saga(
         redb,
@@ -24,7 +26,7 @@ pub(super) fn validate_consensus_participant_authority(
     redb: &crate::server::persistence::redb_backend::RedbBackend,
     coordinator_id: &str,
     txn: &GraphTxnState,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     phase: crate::raft::TransactionParticipantPhase,
 ) -> Result<ParticipantAdmission, String> {
     if txn.tenant_scope != authority.tenant_scope {
@@ -84,10 +86,10 @@ pub(super) fn participant_phase_admission(
 /// before using it as proof of a terminal replay.
 #[cfg(feature = "raft")]
 pub(super) async fn committed_participant_receipt(
-    backend: &dyn crate::server::persistence::PersistenceBackend,
+    backend: &dyn crate::server::api::persistence::PersistenceBackend,
     txn: &GraphTxnState,
     plan: &ConsensusParticipantPlan,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
 ) -> Result<bool, String> {
     let receipt_id = consensus_participant_receipt_id(
         txn,
@@ -108,7 +110,7 @@ fn validate_committed_participant_record(
     record: &crate::mutation_batch::MutationBatchRecord,
     receipt_id: &str,
     fname: &str,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
 ) -> Result<(), String> {
     record.validate()?;
     if record.status != crate::mutation_batch::MutationBatchStatus::Committed
@@ -157,7 +159,7 @@ pub(super) async fn finish_participant_cleanup(
 pub(crate) async fn apply_consensus_transaction_decision(
     state: &Arc<RwLock<ServerState>>,
     coordinator_id: &str,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     commit: bool,
 ) -> Result<bool, String> {
     let backend = state
@@ -196,7 +198,7 @@ pub(crate) async fn apply_consensus_transaction_decision(
 pub(crate) async fn apply_consensus_transaction_finalize(
     state: &Arc<RwLock<ServerState>>,
     coordinator_id: &str,
-    authority: &crate::raft::RaftMutationContext,
+    authority: &crate::server::api::persistence::RaftMutationContext,
     commit: bool,
 ) -> Result<bool, String> {
     let backend = state

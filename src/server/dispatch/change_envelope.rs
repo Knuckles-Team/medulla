@@ -365,7 +365,7 @@ async fn try_replicate_change_envelope(
         .operation()
         .and_then(|operation| operation.nonce_replay_key().ok())
         .map(|key| key.nonce);
-    let mutation = match crate::raft::RaftMutationContext::from_verified_request(
+    let mutation = match crate::server::api::persistence::RaftMutationContext::from_verified_request(
         envelope.mutation.batch_id.clone(),
         // The dispatch request number the batch was compiled for, read back
         // through the one encoder rather than from a second field.
@@ -379,7 +379,7 @@ async fn try_replicate_change_envelope(
             .unwrap_or_default()
             .to_string(),
         false,
-        crate::raft::RaftMutationTiming {
+        crate::server::api::persistence::RaftMutationTiming {
             placement_epoch: envelope.mutation.placement_epoch,
             fencing_token: envelope.mutation.fencing_token,
             created_at_ms: envelope.mutation.created_at_ms,
@@ -466,7 +466,7 @@ async fn try_replicate_new_change_envelope(
 /// entries and the atomic-abort's per-envelope conflict entries are the same
 /// shape either way, so callers never have to branch on which happened.
 async fn commit_change_envelope_batch_results(
-    backend: &Arc<dyn crate::server::persistence::PersistenceBackend>,
+    backend: &Arc<dyn crate::server::api::persistence::PersistenceBackend>,
     core: &Arc<crate::graph::GraphCore>,
     fname: &str,
     envelopes: &[medulla_types::change_envelope::ChangeEnvelope],
@@ -735,13 +735,13 @@ async fn apply_one_change_envelope_inner(
 }
 
 async fn prepare_change_envelope_commit(
-    backend: Option<&Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    backend: Option<&Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     graph_fname: &str,
     envelope: &medulla_types::change_envelope::ChangeEnvelope,
     current_version: u64,
 ) -> Result<
     (
-        Arc<dyn crate::server::persistence::PersistenceBackend>,
+        Arc<dyn crate::server::api::persistence::PersistenceBackend>,
         bool,
     ),
     String,
@@ -759,7 +759,7 @@ async fn prepare_change_envelope_commit(
 /// version fence; byte-identical content is a replay, while the same id with
 /// different content remains a conflict in the backend ledger.
 async fn change_envelope_is_known_replay(
-    backend: &Arc<dyn crate::server::persistence::PersistenceBackend>,
+    backend: &Arc<dyn crate::server::api::persistence::PersistenceBackend>,
     graph_fname: &str,
     envelope: &medulla_types::change_envelope::ChangeEnvelope,
 ) -> Result<bool, String> {
@@ -891,9 +891,9 @@ async fn read_change_envelope(
         {
             Response::ok(
                 req_id,
-                ResultPayload::of::<medulla_types::result_contract::query::GetChangeEnvelope>(Some(
-                    record,
-                )),
+                ResultPayload::of::<medulla_types::result_contract::query::GetChangeEnvelope>(
+                    Some(record),
+                ),
             )
         }
         Ok(Some(_)) => Response::err(req_id, "ACCESS_DENIED: envelope tenant mismatch"),
@@ -922,7 +922,9 @@ async fn read_content_version(
     {
         Ok(version) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::query::GetContentVersion>(&version),
+            ResultPayload::of_ref::<medulla_types::result_contract::query::GetContentVersion>(
+                &version,
+            ),
         ),
         Err(_) => change_read_failure(req_id, "content-version read failed"),
     }
@@ -946,7 +948,9 @@ async fn read_change_cursor(
     {
         Ok(cursor) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::query::GetChangeCursor>(&cursor),
+            ResultPayload::of_ref::<medulla_types::result_contract::query::GetChangeCursor>(
+                &cursor,
+            ),
         ),
         Err(_) => change_read_failure(req_id, "change-cursor read failed"),
     }

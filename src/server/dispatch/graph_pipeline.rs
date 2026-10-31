@@ -448,13 +448,13 @@ mod eg318_dispatch_tests {
     #[cfg(feature = "tsdb")]
     use crate::acl::{AgentIdentity, AgentRole};
     use crate::protocol::{Method, Request};
+    use crate::server::api::persistence::PersistenceBackend;
     #[cfg(feature = "tsdb")]
     use crate::server::auth::sign_current_test_request;
     use crate::server::auth::{
         build_shared_test_request, dispatch_test_on_heap as dispatch_on_heap,
     };
     use crate::server::persistence::redb_backend::RedbBackend;
-    use crate::server::persistence::PersistenceBackend;
     use std::ops::Deref;
     use std::path::PathBuf;
     use std::sync::Arc;
@@ -483,7 +483,7 @@ mod eg318_dispatch_tests {
     }
 
     fn state_min() -> DurableTestState {
-        let dir = crate::test_support::temp_dir("eg318-dispatch", "state");
+        let dir = crate::kernel::persistence::temp_dir("eg318-dispatch", "state");
         let dir_string = dir.to_string_lossy().to_string();
         let persistence: Arc<dyn PersistenceBackend> = Arc::new(
             RedbBackend::open(dir_string.clone(), 64).expect("open authoritative test backend"),
@@ -1821,7 +1821,8 @@ mod blob_dispatch_tests {
         // `medulla_kernel::crypto::acquire_test_env_lock`'s doc for the full mechanism.
         #[cfg(feature = "security")]
         let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
-        let dir = std::env::temp_dir().join(format!("medulla-blob-dispatch-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("medulla-blob-dispatch-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         // Baseline BEFORE any of this test's own allocation, so the bounded-memory
         // assertion below measures the DELTA this test's own streamed upload adds to

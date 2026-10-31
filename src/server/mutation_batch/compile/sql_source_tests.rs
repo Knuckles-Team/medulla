@@ -157,9 +157,10 @@ fn outbox_contains_only_bound_digests_and_generic_invalidation() {
         .iter()
         .find(|intent| intent.topic == medulla_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC)
         .unwrap();
-    let intent =
-        medulla_types::semantic_index::SemanticSourceDirtyIntent::from_canonical_cbor(&dirty.payload)
-            .unwrap();
+    let intent = medulla_types::semantic_index::SemanticSourceDirtyIntent::from_canonical_cbor(
+        &dirty.payload,
+    )
+    .unwrap();
     assert_eq!(
         intent.input_digest,
         medulla_types::semantic_index::SemanticDigest::from_bytes(*digests.batch_digest.as_bytes())

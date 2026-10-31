@@ -52,7 +52,7 @@ pub async fn enforce_memory_budgets(
 }
 
 /// The durable authority a reclaim writes through before dropping RAM.
-type DurableBackend = Option<Arc<dyn crate::server::persistence::PersistenceBackend>>;
+type DurableBackend = Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>;
 
 /// One sweep's view of what is resident: every graph's modeled footprint,
 /// grouped by the tenant whose budget it counts against.
@@ -265,7 +265,7 @@ async fn evict_graph_to(
     fname_graph: &str,
     core: &Arc<GraphCore>,
     max_nodes: usize,
-    backend: &Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    backend: &Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
 ) -> usize {
     let backend = match backend {
         Some(b) => b,
@@ -291,7 +291,7 @@ async fn evict_graph_to(
 fn hibernate_graph_if_durable(
     graph_name: &str,
     core: &GraphCore,
-    backend: &Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    backend: &Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
 ) -> usize {
     let Some(backend) = backend else {
         return 0;

@@ -184,7 +184,7 @@ pub(super) async fn write_decision_graph(
         graph_name: XSHARD_DECISION_GRAPH.to_string(),
         graph_type: GraphType::Global,
         committed_at_ms: 0,
-        mutation: super::super::RaftMutationContext::internal(
+        mutation: crate::server::api::persistence::RaftMutationContext::internal(
             namespace,
             XSHARD_DECISION_GRAPH,
             coordinator_id,

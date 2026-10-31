@@ -9,8 +9,8 @@ use openraft::BasicNode;
 use tokio::sync::RwLock;
 
 use crate::isolation::IsolationLayer;
+use crate::server::api::persistence::PersistenceBackend;
 use crate::server::persistence::redb_backend::RedbBackend;
-use crate::server::persistence::PersistenceBackend;
 use crate::server::ServerState;
 
 /// The concrete backend shape shared by the Raft harness fixtures.

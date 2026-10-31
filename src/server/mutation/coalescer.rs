@@ -396,7 +396,7 @@ struct OwnedMutationCtx {
     owner: Option<String>,
     isolation: IsolationLayer,
     core: Arc<GraphCore>,
-    persistence: Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
     cdc: Option<Arc<crate::server::cdc::CdcHub>>,
     materialization_manifest:

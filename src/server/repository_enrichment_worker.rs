@@ -59,11 +59,11 @@ mod worker {
     use super::*;
     use std::time::Duration;
 
+    use crate::server::api::persistence::PersistenceBackend;
     use crate::server::auth::VerifiedRequestContext;
     use crate::server::blob::store::ChunkStore;
     #[cfg(not(feature = "raft"))]
     use crate::server::mutation_batch::{CommitOrigin, WorkItemCommitRequest};
-    use crate::server::persistence::PersistenceBackend;
     #[cfg(feature = "security")]
     use crate::server::repository_enrichment_worker::grant;
     use medulla_types::epistemic_operations::{

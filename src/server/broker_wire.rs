@@ -73,7 +73,7 @@ pub(crate) async fn test_state_with_broker_agents(
         let dir = crate::server::unique_temp_dir(prefix);
         let dir_s = dir.to_string_lossy().into_owned();
         let backend = RedbBackend::open(dir_s.clone(), 64).expect("open broker-wire test backend");
-        let persistence: Arc<dyn crate::server::persistence::PersistenceBackend> =
+        let persistence: Arc<dyn crate::server::api::persistence::PersistenceBackend> =
             Arc::new(backend);
         persistence
             .register_graph(

@@ -76,7 +76,7 @@ const GRANT_ID_BYTES: usize = 16;
 /// applies to a caller identity, over the engine's own name. The actual stable
 /// value lives in the server-independent durable-application facade so embedded
 /// and redb-only builds do not depend on `crate::server`.
-pub const ENGINE_PRINCIPAL: &str = crate::mutation_apply::ENGINE_LEDGER_PRINCIPAL;
+pub const ENGINE_PRINCIPAL: &str = crate::kernel::persistence::ENGINE_LEDGER_PRINCIPAL;
 
 /// The composition root's scope-grant authority.
 pub struct EngineScopeAuthority {
@@ -286,7 +286,8 @@ fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
 /// The caller owns the returned path: an ephemeral store is a real redb file and
 /// nothing else removes it (see `server::wire::EphemeralStoreGuard`).
 #[cfg(feature = "query")]
-pub fn open_ephemeral_sql_store() -> Result<(medulla_query::TableStore, std::path::PathBuf), String> {
+pub fn open_ephemeral_sql_store() -> Result<(medulla_query::TableStore, std::path::PathBuf), String>
+{
     use std::sync::atomic::{AtomicU64, Ordering};
     static EPHEMERAL_SEQUENCE: AtomicU64 = AtomicU64::new(0);
     let ordinal = EPHEMERAL_SEQUENCE.fetch_add(1, Ordering::Relaxed);

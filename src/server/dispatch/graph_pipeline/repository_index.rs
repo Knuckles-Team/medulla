@@ -127,7 +127,9 @@ async fn admit_repository_sources(
         .iter()
         .map(
             |(_, bytes)| crate::server::blob::engine_bodies::EngineBody {
-                sha256: medulla_types::contract::Digest256::from_bytes(Sha256::digest(bytes).into()),
+                sha256: medulla_types::contract::Digest256::from_bytes(
+                    Sha256::digest(bytes).into(),
+                ),
                 body: bytes.clone(),
             },
         )

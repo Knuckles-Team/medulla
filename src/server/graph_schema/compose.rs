@@ -134,20 +134,22 @@ fn compose_documents<'a>(
     let mut seen_documents = BTreeSet::new();
     for (source_id, document) in documents {
         reject_base_directive(source_id, document, shapes)?;
-        let document_digest = medulla_types::contract::Digest256::sha256(document.as_bytes()).to_hex();
+        let document_digest =
+            medulla_types::contract::Digest256::sha256(document.as_bytes()).to_hex();
         if !seen_documents.insert(document_digest) {
             continue;
         }
-        let parsed = medulla_rdf::mapping::parse_turtle_for_composition(document).map_err(|error| {
-            format!(
-                "{}: source '{source_id}': {error}",
-                if shapes {
-                    "SHAPES_INVALID"
-                } else {
-                    "ONTOLOGY_INVALID"
-                }
-            )
-        })?;
+        let parsed =
+            medulla_rdf::mapping::parse_turtle_for_composition(document).map_err(|error| {
+                format!(
+                    "{}: source '{source_id}': {error}",
+                    if shapes {
+                        "SHAPES_INVALID"
+                    } else {
+                        "ONTOLOGY_INVALID"
+                    }
+                )
+            })?;
         if parsed.len() > crate::graph::MAX_SCHEMA_DOCUMENT_TRIPLES {
             return Err(format!(
                 "SCHEMA_SOURCES_TOO_LARGE: source '{source_id}' has {} triples; maximum is {}",
@@ -159,8 +161,9 @@ fn compose_documents<'a>(
         if shapes {
             reject_remote_sparql_service(source_id, &parsed)?;
         }
-        let scope =
-            hex::encode(medulla_types::contract::Digest256::sha256(source_id.as_bytes()).as_bytes());
+        let scope = hex::encode(
+            medulla_types::contract::Digest256::sha256(source_id.as_bytes()).as_bytes(),
+        );
         for triple in parsed {
             let triple = scope_blank_nodes(triple, &scope[..16])?;
             let key = triple.to_string();
@@ -747,7 +750,8 @@ ex:parent a owl:AsymmetricProperty .
 
     #[test]
     fn core_foundation_contains_the_complete_migrated_root_axiom_body() {
-        let foundation = include_str!("../../../crates/medulla-core/ontology/core-foundation-v1.ttl");
+        let foundation =
+            include_str!("../../../crates/medulla-core/ontology/core-foundation-v1.ttl");
         let triples = medulla_rdf::mapping::parse_turtle(foundation).unwrap();
         // 880 migrated triples less the two list-cell triples of `:Incident`, which
         // was removed from the Person/Organization/Server/Event disjointness because
@@ -1021,7 +1025,8 @@ ex:parent a owl:AsymmetricProperty .
     #[test]
     fn shipped_core_corpus_is_coherent_under_the_el_rl_reasoner() {
         let composed = validate_and_compose(&GraphSchemaSources::default()).unwrap();
-        let classification = medulla_rdf::owl::Reasoner::from_triples(&composed.ontology).classify();
+        let classification =
+            medulla_rdf::owl::Reasoner::from_triples(&composed.ontology).classify();
         assert!(
             classification.unsatisfiable.is_empty(),
             "unsatisfiable named classes: {:?}",

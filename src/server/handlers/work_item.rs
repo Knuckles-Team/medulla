@@ -5,12 +5,14 @@
 //! unchanged: `mutation_batch::commit_work_item` atomically persists the
 //! transition/result/outbox before refreshing the in-memory graph projection.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 use std::sync::Arc;
 
 use crate::graph::GraphCore;
 use crate::protocol::{Method, Response};
+use crate::server::api::persistence::PersistenceBackend;
 use crate::server::auth::VerifiedRequestContext;
-use crate::server::persistence::PersistenceBackend;
 
 #[cfg(feature = "redb")]
 mod lease_kind_policy;

@@ -49,9 +49,9 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
+use hmac::{Hmac, Mac};
 use medulla_query::{Cell, Column, ColumnType, TableSchema, TableStore, TableTxn, TxnOp};
 use medulla_types::{CmpOp, RowPredicate};
-use hmac::{Hmac, Mac};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
@@ -1268,7 +1268,9 @@ fn primary_key_indexes(schema: &TableSchema) -> Result<Vec<usize>, String> {
         .filter_map(|(index, column)| column.primary_key.then_some(index))
         .collect();
     let table_primary_key = schema.constraints().iter().find_map(|constraint| {
-        if let medulla_query::tables::schema::TableConstraint::PrimaryKey { columns, .. } = constraint {
+        if let medulla_query::tables::schema::TableConstraint::PrimaryKey { columns, .. } =
+            constraint
+        {
             Some(columns)
         } else {
             None
@@ -1297,10 +1299,7 @@ fn semantic_record_identity_digest(
     primary_key_indexes: &[usize],
 ) -> Result<[u8; 32], String> {
     let mut digest = Sha256::new();
-    update_len_prefixed(
-        &mut digest,
-        b"medulla/sql-semantic-record-identity-v1",
-    );
+    update_len_prefixed(&mut digest, b"medulla/sql-semantic-record-identity-v1");
     for field in [
         tenant_scope,
         selector.catalog_id.as_str(),
@@ -1574,10 +1573,9 @@ fn project_semantic_text_rows(
                 if record_bytes > medulla_query::tables::store::ROW_SNAPSHOT_MAX_BYTES {
                     return Err("semantic SQL source text exceeds snapshot byte limit".to_string());
                 }
-                if payload_bytes
-                    .checked_add(record_bytes)
-                    .is_none_or(|bytes| bytes > medulla_query::tables::store::ROW_SNAPSHOT_MAX_BYTES)
-                {
+                if payload_bytes.checked_add(record_bytes).is_none_or(|bytes| {
+                    bytes > medulla_query::tables::store::ROW_SNAPSHOT_MAX_BYTES
+                }) {
                     payload_cursor = last_completed_row_id;
                     break;
                 }
@@ -4066,7 +4064,9 @@ mod tests {
                 &["id".to_string(), "body".to_string()],
                 &[vec![
                     Value::from(1),
-                    Value::from("x".repeat(medulla_query::tables::store::ROW_SNAPSHOT_MAX_BYTES + 1)),
+                    Value::from(
+                        "x".repeat(medulla_query::tables::store::ROW_SNAPSHOT_MAX_BYTES + 1),
+                    ),
                 ]],
             )
             .unwrap();

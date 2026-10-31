@@ -1,5 +1,7 @@
 //! M3 cluster-admin routing and catalog/rebalance operations.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -111,8 +113,10 @@ async fn handle_reshard(call: AdminSagaCall<'_>, graph: String, to_shard: u32) -
         Ok(report) => report,
         Err(e) => return Response::err(call.req_id, format!("Reshard failed: {e}")),
     };
-    match ResultPayload::of::<medulla_types::result_contract::cluster::Reshard>(reshard_report(&report))
-        .and_then(|result| finish_admin_saga(call.backend, saga.batch, saga.created_at_ms, result))
+    match ResultPayload::of::<medulla_types::result_contract::cluster::Reshard>(reshard_report(
+        &report,
+    ))
+    .and_then(|result| finish_admin_saga(call.backend, saga.batch, saga.created_at_ms, result))
     {
         Ok(result) => Response::ok(call.req_id, result),
         Err(error) => Response::err(call.req_id, error),
@@ -476,9 +480,10 @@ async fn handle_restore(
                 encrypted_recovery_plans: r.admin_mutations.encrypted_private_payloads,
             };
             let committed =
-                ResultPayload::of::<medulla_types::result_contract::storage::Restore>(receipt).and_then(
-                    |durable| finish_admin_saga(backend, saga.batch, saga.created_at_ms, durable),
-                );
+                ResultPayload::of::<medulla_types::result_contract::storage::Restore>(receipt)
+                    .and_then(|durable| {
+                        finish_admin_saga(backend, saga.batch, saga.created_at_ms, durable)
+                    });
             match committed {
                 // Return the same portable receipt on first execution and
                 // replay. The local staging path is intentionally neither

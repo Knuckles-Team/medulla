@@ -15,8 +15,8 @@ use std::sync::Arc;
 
 use medulla_core::read_through::{ReadThrough, ReadThroughFactory};
 
-use super::PersistenceBackend;
 use crate::persist::sanitize;
+use crate::server::api::persistence::PersistenceBackend;
 
 #[cfg(all(test, feature = "redb"))]
 mod production_wiring_tests {

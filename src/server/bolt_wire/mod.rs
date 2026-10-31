@@ -362,7 +362,7 @@ struct BoltGraphContext {
     graph_type: crate::protocol::GraphType,
     owner: Option<String>,
     isolation: crate::isolation::IsolationLayer,
-    persistence: Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
     cdc: Option<Arc<crate::server::cdc::CdcHub>>,
 }
@@ -1007,14 +1007,14 @@ mod tests {
         dir: &std::path::Path,
     ) -> (
         Arc<RwLock<ServerState>>,
-        Arc<dyn crate::server::persistence::PersistenceBackend>,
+        Arc<dyn crate::server::api::persistence::PersistenceBackend>,
     ) {
         use crate::protocol::GraphType;
         use crate::server::persistence::redb_backend::RedbBackend;
 
         let backend = RedbBackend::open(dir.to_string_lossy().to_string(), 64)
             .expect("open Bolt test backend");
-        let persistence: Arc<dyn crate::server::persistence::PersistenceBackend> =
+        let persistence: Arc<dyn crate::server::api::persistence::PersistenceBackend> =
             Arc::new(backend);
         persistence
             .register_graph("__commons__", "__commons__", GraphType::Commons)
@@ -1482,7 +1482,7 @@ mod tests {
         persistence.shutdown();
         drop(persistence);
 
-        let reopened: Arc<dyn crate::server::persistence::PersistenceBackend> = Arc::new(
+        let reopened: Arc<dyn crate::server::api::persistence::PersistenceBackend> = Arc::new(
             RedbBackend::open(dir.to_string_lossy().to_string(), 64)
                 .expect("reopen Bolt test backend"),
         );

@@ -677,7 +677,10 @@ async fn seed_delegation_library(cluster: &Cluster) -> medulla_types::AgentLibra
 }
 
 #[cfg(feature = "redb")]
-async fn advance_delegation_library(cluster: &Cluster, retained: &medulla_types::AgentLibraryEntry) {
+async fn advance_delegation_library(
+    cluster: &Cluster,
+    retained: &medulla_types::AgentLibraryEntry,
+) {
     let mut draft = retained.as_draft();
     draft.version = "2.0.0".to_string();
     draft.source_revision = "agent-library:rmdd27:2".to_string();
@@ -699,7 +702,9 @@ async fn advance_delegation_library(cluster: &Cluster, retained: &medulla_types:
                     request_id: 11_000 + node_id,
                     principal: store.owner_principal().to_string(),
                     caller_principal: caller_principal.clone(),
-                    attempt_nonce: medulla_types::contract::Nonce::from_bytes([100 + node_id as u8; 32]),
+                    attempt_nonce: medulla_types::contract::Nonce::from_bytes(
+                        [100 + node_id as u8; 32],
+                    ),
                     tenant_id: TENANT.to_string(),
                     actor_scope: "delegate:builder".to_string(),
                     purpose_id: "agent-library:publish".to_string(),
@@ -740,7 +745,9 @@ async fn retire_delegation_library(cluster: &Cluster, retained: &medulla_types::
                     request_id: 12_000 + node_id,
                     principal: store.owner_principal().to_string(),
                     caller_principal: caller_principal.clone(),
-                    attempt_nonce: medulla_types::contract::Nonce::from_bytes([150 + node_id as u8; 32]),
+                    attempt_nonce: medulla_types::contract::Nonce::from_bytes(
+                        [150 + node_id as u8; 32],
+                    ),
                     tenant_id: TENANT.to_string(),
                     actor_scope: "delegate:builder".to_string(),
                     purpose_id: "agent-library:retire".to_string(),
@@ -828,7 +835,9 @@ fn replayable_delegation_method(
 }
 
 #[cfg(feature = "redb")]
-fn decode_delegation_result(response: crate::protocol::Response) -> medulla_types::KgDelegateResult {
+fn decode_delegation_result(
+    response: crate::protocol::Response,
+) -> medulla_types::KgDelegateResult {
     assert!(response.error.is_none(), "delegation failed: {response:?}");
     let payload = response.result.expect("delegation result");
     let bytes = match payload {
@@ -847,7 +856,9 @@ fn decode_delegation_result(response: crate::protocol::Response) -> medulla_type
 /// Extracted so `seed_draft_components_for_test` can rewrite each pin to the real
 /// component digest before the publish, which now resolves them.
 #[cfg(feature = "redb")]
-fn restart_delegate_draft(digest: &dyn Fn(char) -> String) -> medulla_types::AgentLibraryEntryDraft {
+fn restart_delegate_draft(
+    digest: &dyn Fn(char) -> String,
+) -> medulla_types::AgentLibraryEntryDraft {
     medulla_types::AgentLibraryEntryDraft {
         agent_id: "rmdd27-selected-agent".to_string(),
         package_id: "rmdd27-agent-package".to_string(),
@@ -2322,7 +2333,10 @@ async fn kg_delegate_public_dispatch_replicates_and_replays_after_failover_scena
     let accepted = decode_delegation_result(
         dispatch_method(&cluster, leader, 1, accepted_method.clone()).await,
     );
-    assert_eq!(accepted.decision, medulla_types::KgDelegateDecision::Accepted);
+    assert_eq!(
+        accepted.decision,
+        medulla_types::KgDelegateDecision::Accepted
+    );
     assert_eq!(accepted.work_item_id, DELEGATE_WORK_ITEM);
 
     // The native idempotency key is stable across fresh authenticated envelopes,
@@ -2458,7 +2472,10 @@ async fn kg_delegate_public_dispatch_replicates_and_replays_after_failover_scena
         )
         .await,
     );
-    assert_eq!(replayed.decision, medulla_types::KgDelegateDecision::Replayed);
+    assert_eq!(
+        replayed.decision,
+        medulla_types::KgDelegateDecision::Replayed
+    );
     assert_eq!(replayed.work_item_id, accepted.work_item_id);
     assert_eq!(replayed.outbox_id, accepted.outbox_id);
 
@@ -2500,7 +2517,10 @@ async fn kg_delegate_public_dispatch_replicates_and_replays_after_failover_scena
         )
         .await,
     );
-    assert_eq!(reopened.decision, medulla_types::KgDelegateDecision::Replayed);
+    assert_eq!(
+        reopened.decision,
+        medulla_types::KgDelegateDecision::Replayed
+    );
     assert_eq!(reopened.work_item_id, accepted.work_item_id);
     assert_eq!(reopened.outbox_id, accepted.outbox_id);
     assert_eq!(reopened.command_digest, accepted.command_digest);

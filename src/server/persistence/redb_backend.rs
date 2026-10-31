@@ -35,6 +35,8 @@
 //!   * `semantic_store` `graph                  -> semantic store blob (msgpack)`
 //!   * `graph_meta`     `graph                  -> {name, graph_type} blob` (replaces manifest.json)
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -55,7 +57,7 @@ use crate::{mutation_batch::*, protocol::*};
 use tokio::sync::oneshot;
 
 #[cfg(test)]
-use super::PersistenceBackend;
+use crate::server::api::persistence::PersistenceBackend;
 
 // The graph table layout + the PURE durable-row machinery (Method→rows apply,
 // group-commit, checkpoint/load) now live in the server-INDEPENDENT
@@ -323,7 +325,8 @@ fn plan_encryption_canary(
                         .to_string(),
                 );
             }
-            let binding = medulla_kernel::crypto::EncryptionKeyBinding::from_key_ref(configured_ref);
+            let binding =
+                medulla_kernel::crypto::EncryptionKeyBinding::from_key_ref(configured_ref);
             let binding_bytes = binding.encode()?;
             let sealed = cipher.seal(&expected_plaintext);
             Ok(CanaryPlan::Write {
@@ -357,7 +360,8 @@ fn plan_encryption_canary(
                     medulla_kernel::crypto::ENCRYPTION_KEY_ENV,
                 ));
             }
-            let binding = medulla_kernel::crypto::EncryptionKeyBinding::from_key_ref(configured_ref);
+            let binding =
+                medulla_kernel::crypto::EncryptionKeyBinding::from_key_ref(configured_ref);
             let binding_bytes = binding.encode()?;
             let sealed = cipher.seal(&expected_plaintext);
             Ok(CanaryPlan::Write {
@@ -640,7 +644,8 @@ impl RedbCommitStats {
 /// admin-saga commit fails closed with "mutation scope binding identity mismatch". Only
 /// [`AdminOwner`]'s `OwnerLayout::LedgerOnly` can serve it: declaring no owner tables, it
 /// is the one layout that places no shape requirement on the scopes it binds.
-pub(crate) fn cluster_admin_scope_identity() -> Result<medulla_types::MutationScopeIdentity, String> {
+pub(crate) fn cluster_admin_scope_identity() -> Result<medulla_types::MutationScopeIdentity, String>
+{
     medulla_types::MutationScopeIdentity::fixed_graph(
         "native",
         "cluster-admin",
@@ -1454,7 +1459,8 @@ mod tests {
         fn set(key: Option<&str>, required_mode: &str) -> Self {
             let prev_key = std::env::var(medulla_kernel::crypto::ENCRYPTION_KEY_ENV).ok();
             let prev_key_id = std::env::var(medulla_kernel::crypto::ENCRYPTION_KEY_ID_ENV).ok();
-            let prev_key_version = std::env::var(medulla_kernel::crypto::ENCRYPTION_KEY_VERSION_ENV).ok();
+            let prev_key_version =
+                std::env::var(medulla_kernel::crypto::ENCRYPTION_KEY_VERSION_ENV).ok();
             let prev_required = std::env::var(medulla_kernel::crypto::ENCRYPTION_REQUIRED_ENV).ok();
             match key {
                 Some(k) => std::env::set_var(medulla_kernel::crypto::ENCRYPTION_KEY_ENV, k),
@@ -1462,7 +1468,10 @@ mod tests {
             }
             std::env::remove_var(medulla_kernel::crypto::ENCRYPTION_KEY_ID_ENV);
             std::env::remove_var(medulla_kernel::crypto::ENCRYPTION_KEY_VERSION_ENV);
-            std::env::set_var(medulla_kernel::crypto::ENCRYPTION_REQUIRED_ENV, required_mode);
+            std::env::set_var(
+                medulla_kernel::crypto::ENCRYPTION_REQUIRED_ENV,
+                required_mode,
+            );
             Self {
                 prev_key,
                 prev_key_id,
@@ -1474,7 +1483,10 @@ mod tests {
         fn set_with_ref(key: &str, key_id: &str, key_version: &str) -> Self {
             let guard = Self::set(Some(key), "warn");
             std::env::set_var(medulla_kernel::crypto::ENCRYPTION_KEY_ID_ENV, key_id);
-            std::env::set_var(medulla_kernel::crypto::ENCRYPTION_KEY_VERSION_ENV, key_version);
+            std::env::set_var(
+                medulla_kernel::crypto::ENCRYPTION_KEY_VERSION_ENV,
+                key_version,
+            );
             guard
         }
     }
@@ -1511,7 +1523,8 @@ mod tests {
         let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
         let _guard = EncryptionRequiredEnvGuard::set(None, "on");
 
-        let dir = std::env::temp_dir().join(format!("medulla-redb-enc-required-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("medulla-redb-enc-required-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
 
@@ -1541,8 +1554,10 @@ mod tests {
         let _guard =
             EncryptionRequiredEnvGuard::set(Some("redb-encryption-required-test-key"), "on");
 
-        let dir =
-            std::env::temp_dir().join(format!("medulla-redb-enc-required-ok-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!(
+            "medulla-redb-enc-required-ok-{}",
+            std::process::id()
+        ));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
 
@@ -1562,7 +1577,8 @@ mod tests {
     async fn encryption_key_mismatch_refuses_to_reopen() {
         let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
 
-        let dir = std::env::temp_dir().join(format!("medulla-redb-enc-mismatch-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("medulla-redb-enc-mismatch-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
 
@@ -1635,7 +1651,8 @@ mod tests {
         let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
         let _guard = EncryptionRequiredEnvGuard::set(Some("stable-key-material"), "warn");
 
-        let dir = std::env::temp_dir().join(format!("medulla-redb-enc-stable-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("medulla-redb-enc-stable-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
 
@@ -1656,7 +1673,8 @@ mod tests {
         let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
         let _guard = EncryptionRequiredEnvGuard::set(None, "off");
 
-        let dir = std::env::temp_dir().join(format!("medulla-redb-enc-none-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("medulla-redb-enc-none-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
 
@@ -1746,7 +1764,8 @@ mod tests {
     #[tokio::test(flavor = "multi_thread")]
     async fn encrypted_store_refuses_to_open_without_a_key() {
         let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
-        let dir = std::env::temp_dir().join(format!("medulla-redb-enc-nokey-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("medulla-redb-enc-nokey-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
 
@@ -1838,7 +1857,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
 
-        let backend: Arc<dyn crate::server::persistence::PersistenceBackend> =
+        let backend: Arc<dyn crate::server::api::persistence::PersistenceBackend> =
             Arc::new(RedbBackend::open(dir_s.clone(), 64).expect("open redb backend"));
         backend
             .register_graph("__commons__", "__commons__", GraphType::Commons)
@@ -1974,11 +1993,12 @@ mod tests {
         use crate::server::persistence::read_through::BackendReadThroughFactory;
 
         const SECRET: &str = "redb-recreate";
-        let dir = std::env::temp_dir().join(format!("medulla-redb-recreate-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("medulla-redb-recreate-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
 
-        let backend: Arc<dyn crate::server::persistence::PersistenceBackend> =
+        let backend: Arc<dyn crate::server::api::persistence::PersistenceBackend> =
             Arc::new(RedbBackend::open(dir_s.clone(), 256).expect("open"));
         let state = new_state(Some(dir_s.clone()));
         {
@@ -2113,7 +2133,7 @@ mod tests {
         // the file lock on process exit regardless — same rationale as the
         // `s.persistence = None` note on `dispatch_authoritative_durable_without_checkpoint`),
         // so bound it with a short retry rather than a flat sleep.
-        let backend2: Arc<dyn crate::server::persistence::PersistenceBackend> = {
+        let backend2: Arc<dyn crate::server::api::persistence::PersistenceBackend> = {
             let mut attempt = 0;
             loop {
                 match RedbBackend::open(dir_s.clone(), 256) {
@@ -2185,7 +2205,7 @@ mod tests {
             let _ = std::fs::remove_dir_all(&dir);
             let dir_s = dir.to_string_lossy().to_string();
 
-            let backend: Arc<dyn crate::server::persistence::PersistenceBackend> =
+            let backend: Arc<dyn crate::server::api::persistence::PersistenceBackend> =
                 Arc::new(RedbBackend::open(dir_s.clone(), 256).expect("open"));
             let state = new_state(Some(dir_s.clone()));
             {
@@ -2317,7 +2337,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
 
-        let backend: Arc<dyn crate::server::persistence::PersistenceBackend> =
+        let backend: Arc<dyn crate::server::api::persistence::PersistenceBackend> =
             Arc::new(RedbBackend::open(dir_s.clone(), 256).expect("open"));
         let state = new_state(Some(dir_s.clone()));
         {
@@ -2440,7 +2460,8 @@ mod tests {
         // check. A READ guard, so these tests still run concurrently with each
         // other -- only a key MUTATOR is excluded.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        let dir = std::env::temp_dir().join(format!("medulla-redb-coalesce-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("medulla-redb-coalesce-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
         let backend = Arc::new(RedbBackend::open(dir_s.clone(), 256).expect("open"));
@@ -2497,7 +2518,8 @@ mod tests {
         // check. A READ guard, so these tests still run concurrently with each
         // other -- only a key MUTATOR is excluded.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        let dir = std::env::temp_dir().join(format!("medulla-redb-snapread-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("medulla-redb-snapread-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
         // K=3 explicit (cfg(test) defaults to 1; open_with_shards honors the request on
@@ -2564,7 +2586,8 @@ mod tests {
         // check. A READ guard, so these tests still run concurrently with each
         // other -- only a key MUTATOR is excluded.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        let dir = std::env::temp_dir().join(format!("medulla-redb-snapconc-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("medulla-redb-snapconc-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
         let backend = Arc::new(RedbBackend::open(dir_s.clone(), 256).expect("open"));
@@ -2846,7 +2869,8 @@ mod tests {
         // check. A READ guard, so these tests still run concurrently with each
         // other -- only a key MUTATOR is excluded.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        let dir = std::env::temp_dir().join(format!("medulla-redb-nolinger-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("medulla-redb-nolinger-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
         let backend = {
@@ -2953,7 +2977,8 @@ mod tests {
         // check. A READ guard, so these tests still run concurrently with each
         // other -- only a key MUTATOR is excluded.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        let dir = std::env::temp_dir().join(format!("medulla-redb-evict-rt-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("medulla-redb-evict-rt-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
         let backend: Arc<dyn PersistenceBackend> =
@@ -3017,7 +3042,8 @@ mod tests {
         // check. A READ guard, so these tests still run concurrently with each
         // other -- only a key MUTATOR is excluded.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        let dir = std::env::temp_dir().join(format!("medulla-redb-evict-safe-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("medulla-redb-evict-safe-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
         let backend: Arc<dyn PersistenceBackend> =
@@ -3155,7 +3181,8 @@ mod tests {
         // body (see each call site), so the provisioning below always runs under that
         // lock -- do NOT acquire it here, `tokio::sync::RwLock` is not reentrant.
         medulla_kernel::crypto::provision_test_at_rest_key_under_write_guard();
-        let d = std::env::temp_dir().join(format!("medulla-crossmodal-{tag}-{}", std::process::id()));
+        let d =
+            std::env::temp_dir().join(format!("medulla-crossmodal-{tag}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&d);
         std::fs::create_dir_all(&d).unwrap();
         d.to_string_lossy().to_string()
@@ -3392,8 +3419,8 @@ mod tests {
         async fn record_durable(&self, g: &str, m: &Method) -> Result<(), String> {
             self.inner.record_durable(g, m).await
         }
-        fn as_redb(&self) -> Option<&RedbBackend> {
-            self.inner.as_redb()
+        fn as_any(&self) -> Option<&dyn std::any::Any> {
+            self.inner.as_any()
         }
         async fn commit_crossmodal(
             &self,
@@ -3408,7 +3435,7 @@ mod tests {
         }
         async fn commit_mutation_batch_crossmodal(
             &self,
-            _args: crate::server::persistence::CrossModalCommitArgs<'_>,
+            _args: crate::server::api::persistence::CrossModalCommitArgs<'_>,
         ) -> Result<crate::mutation_batch::MutationBatchCommit, String> {
             // The seam the cross-modal Commit handler actually calls.
             Err("injected durable commit failure".to_string())
@@ -3804,7 +3831,9 @@ mod tests {
             let read = shard.control_read().unwrap();
             let key = direct_test_series_key("media", "sensor");
             assert!(
-                medulla_tsdb::store::meta_in_rtx(&read, &key).unwrap().is_none(),
+                medulla_tsdb::store::meta_in_rtx(&read, &key)
+                    .unwrap()
+                    .is_none(),
                 "series never landed durably"
             );
         }
@@ -5457,7 +5486,8 @@ mod tests {
         use crate::redb_store::{RESOURCE_RESERVATIONS, WORK_ITEM_COMMAND_SEQUENCE};
         use crate::server::persistence::tenant_catalog::TenantCatalog;
         const K: usize = 4;
-        let dir = std::env::temp_dir().join(format!("medulla-reshard-cx054-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("medulla-reshard-cx054-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
         let catalog = Arc::new(TenantCatalog::open(&dir_s).expect("catalog"));

@@ -605,7 +605,11 @@ impl EmbeddedEngine {
     /// handled here — use the typed `add_node`/`add_edge`/`remove_*` methods for the
     /// graph. Available with the `query` feature.
     #[cfg(feature = "query")]
-    pub fn sql_exec(&self, graph: &str, sql: &str) -> Result<medulla_query::TypedQueryResult, String> {
+    pub fn sql_exec(
+        &self,
+        graph: &str,
+        sql: &str,
+    ) -> Result<medulla_query::TypedQueryResult, String> {
         use medulla_query::StatementKind;
         let store = &self.inner.tables;
         match medulla_query::classify(sql)? {
@@ -775,7 +779,7 @@ mod lifecycle_failure_tests {
     use std::thread;
 
     fn temp_dir(tag: &str) -> PathBuf {
-        crate::test_support::temp_dir("medulla-embedded-lifecycle", tag)
+        crate::kernel::persistence::temp_dir("medulla-embedded-lifecycle", tag)
     }
 
     /// Hold the ambient encryption environment still for a durable test's body.

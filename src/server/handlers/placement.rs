@@ -18,6 +18,8 @@
 //! `MultiRaft`/`TenantManager` API the harness tests exercise directly, so no new
 //! placement logic is introduced here — only its external RPC surface.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -218,7 +220,7 @@ async fn resolve_admin_authority(
 ) -> Result<
     (
         std::sync::Arc<crate::raft::multi::MultiRaft>,
-        std::sync::Arc<dyn crate::server::persistence::PersistenceBackend>,
+        std::sync::Arc<dyn crate::server::api::persistence::PersistenceBackend>,
     ),
     String,
 > {
@@ -348,7 +350,9 @@ async fn handle_abort_move(
     match tenants.abort_move(&move_id).await {
         Ok(()) => Response::ok(
             req_id,
-            ResultPayload::scalar::<medulla_types::result_contract::cluster::PlacementAbortMove>(true),
+            ResultPayload::scalar::<medulla_types::result_contract::cluster::PlacementAbortMove>(
+                true,
+            ),
         ),
         Err(error) => Response::err(req_id, error),
     }

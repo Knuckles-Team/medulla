@@ -14,7 +14,7 @@ pub(super) struct GatewayRouteCtx<'a> {
     pub(super) idempotency_key: &'a str,
     pub(super) tenant_scope: &'a str,
     pub(super) core: Arc<crate::graph::GraphCore>,
-    pub(super) persistence: Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    pub(super) persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
     pub(super) cdc: Option<Arc<crate::server::cdc::CdcHub>>,
     pub(super) materialization_manifest:

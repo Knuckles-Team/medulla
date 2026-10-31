@@ -5,7 +5,7 @@ use sha2::{Digest, Sha256};
 use crate::graph::GraphCore;
 use crate::mutation_batch::MutationSurface;
 use crate::protocol::{Method, ResultPayload};
-use crate::server::persistence::PersistenceBackend;
+use crate::server::api::persistence::PersistenceBackend;
 use medulla_types::contract::Nonce;
 
 use super::super::compile::{authoritative_graph_version, compile_methods, CompileBatch};
@@ -350,9 +350,9 @@ fn mark_work_item_replayed(
         let mut body: medulla_types::run_checkpoint::RunCheckpointPublished =
             decode_submit_receipt(result)?;
         body.replayed = true;
-        return ResultPayload::of::<medulla_types::result_contract::coordination::PublishRunCheckpoint>(
-            body,
-        );
+        return ResultPayload::of::<
+            medulla_types::result_contract::coordination::PublishRunCheckpoint,
+        >(body);
     }
     Ok(result)
 }
@@ -389,7 +389,8 @@ fn mark_submit_replayed(result: ResultPayload, batch: bool) -> Result<ResultPayl
 }
 
 fn replayed_submit_batch(result: ResultPayload) -> Result<ResultPayload, String> {
-    let mut body: medulla_types::native_control::SubmitWorkItemsResult = decode_submit_receipt(result)?;
+    let mut body: medulla_types::native_control::SubmitWorkItemsResult =
+        decode_submit_receipt(result)?;
     body.replayed = true;
     for child in &mut body.results {
         child.created = false;
@@ -399,7 +400,8 @@ fn replayed_submit_batch(result: ResultPayload) -> Result<ResultPayload, String>
 }
 
 fn replayed_submit(result: ResultPayload) -> Result<ResultPayload, String> {
-    let mut body: medulla_types::native_control::SubmitWorkItemResult = decode_submit_receipt(result)?;
+    let mut body: medulla_types::native_control::SubmitWorkItemResult =
+        decode_submit_receipt(result)?;
     body.created = false;
     body.replayed = true;
     ResultPayload::of::<medulla_types::result_contract::coordination::SubmitWorkItem>(body)

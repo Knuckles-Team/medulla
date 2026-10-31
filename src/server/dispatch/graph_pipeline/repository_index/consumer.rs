@@ -27,7 +27,7 @@ use crate::parser::enrichment_admission::{
 use crate::parser::enrichment_snapshot::{
     EligibleSnapshot, EligibleUnit, EnrichmentBudgetCheckpoint, EnrichmentWorkStage,
 };
-use crate::server::persistence::PersistenceBackend;
+use crate::server::api::persistence::PersistenceBackend;
 
 pub(super) const PENDING_TOPIC: &str = "repository.enrichment.pending";
 #[cfg(feature = "blob")]
@@ -1111,7 +1111,8 @@ mod tests {
 
         let store = crate::server::blob::store::RedbChunkStore::open_temp().unwrap();
         let body = b"verified repository source";
-        let source_digest = medulla_types::contract::Digest256::from_bytes(Sha256::digest(body).into());
+        let source_digest =
+            medulla_types::contract::Digest256::from_bytes(Sha256::digest(body).into());
         let stored = store
             .put_repository_bodies(
                 "tenant",

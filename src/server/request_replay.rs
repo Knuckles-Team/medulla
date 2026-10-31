@@ -377,7 +377,8 @@ pub(crate) fn durable_replay_ledger(
             .filter(|v| !v.is_empty())
             .or_else(|| state_dir.map(str::to_string))
             .ok_or_else(|| {
-                "secure request context requires MEDULLA_SECURITY_STATE_DIR or a persist directory".to_string()
+                "secure request context requires MEDULLA_SECURITY_STATE_DIR or a persist directory"
+                    .to_string()
             })?;
         RedbReplayLedger::open(std::path::Path::new(&dir))
     }) {
@@ -455,7 +456,7 @@ mod durable_tests {
     use std::sync::Arc;
 
     fn ledger(tag: &str) -> (RedbReplayLedger, std::path::PathBuf) {
-        let dir = crate::test_support::temp_dir("medulla-request-replay", tag);
+        let dir = crate::kernel::persistence::temp_dir("medulla-request-replay", tag);
         let ledger = RedbReplayLedger::open(&dir).expect("open the durable replay ledger");
         (ledger, dir)
     }
@@ -486,7 +487,7 @@ mod durable_tests {
     // spec: MEDULLA-REPO-INGEST-R005
     #[test]
     fn an_accepted_nonce_is_refused_after_a_reopen() {
-        let dir = crate::test_support::temp_dir("medulla-request-replay", "reopen");
+        let dir = crate::kernel::persistence::temp_dir("medulla-request-replay", "reopen");
         {
             let ledger = RedbReplayLedger::open(&dir).unwrap();
             assert!(accept(&ledger, "early", 990));
@@ -515,7 +516,7 @@ mod durable_tests {
     /// bench's restart->ready probe was refused before this).
     #[test]
     fn a_sealed_window_carries_over_a_graceful_restart() {
-        let dir = crate::test_support::temp_dir("medulla-request-replay", "handoff");
+        let dir = crate::kernel::persistence::temp_dir("medulla-request-replay", "handoff");
         {
             let ledger = RedbReplayLedger::open(&dir).unwrap();
             assert!(accept(&ledger, "nonce", 1_000));
@@ -532,7 +533,7 @@ mod durable_tests {
     /// graceful restart falls back to the high-water floor.
     #[test]
     fn a_handoff_is_used_once_then_a_crash_falls_back_to_the_floor() {
-        let dir = crate::test_support::temp_dir("medulla-request-replay", "handoff-once");
+        let dir = crate::kernel::persistence::temp_dir("medulla-request-replay", "handoff-once");
         {
             let ledger = RedbReplayLedger::open(&dir).unwrap();
             assert!(accept(&ledger, "nonce", 1_000));

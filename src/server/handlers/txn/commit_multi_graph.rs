@@ -1,6 +1,8 @@
 //! Private transaction commit_multi_graph implementation.
 
 use super::*;
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 
 pub(super) struct CommitSlice {
     graph_name: String,

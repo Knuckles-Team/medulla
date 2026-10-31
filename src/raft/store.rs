@@ -68,8 +68,8 @@ use super::{
     TypeConfig,
 };
 use crate::protocol::{GraphType, Method, ResultPayload};
+use crate::server::api::persistence::PersistenceBackend;
 use crate::server::persistence::redb_backend::RedbBackend;
-use crate::server::persistence::PersistenceBackend;
 
 fn deserialize_required_option<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
 where
@@ -378,7 +378,8 @@ mod current_snapshot_schema_tests {
             }));
         }
 
-        let error = MedullaStore::native_commit_outcome_to_response(Err("apply failed".to_string()));
+        let error =
+            MedullaStore::native_commit_outcome_to_response(Err("apply failed".to_string()));
         assert!(error.native_commit.is_none());
         assert!(error.native_result.is_none());
         assert_eq!(error.native_error.as_deref(), Some("apply failed"));

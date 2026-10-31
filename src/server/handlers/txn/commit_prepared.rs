@@ -4,7 +4,7 @@ use super::*;
 
 pub(super) type CommitPreparedAuthorized = (
     Arc<crate::graph::GraphCore>,
-    Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     String,
 );
 
@@ -222,7 +222,7 @@ pub(super) struct CommitPreparedDurableArgs<'a> {
     caller: Option<&'a str>,
     receipt: TxnReceipt,
     core: Arc<crate::graph::GraphCore>,
-    persistence: Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     graph_name: String,
     coordinator_id: String,
     tenant_scope: String,
@@ -241,7 +241,7 @@ pub(super) struct CommitPreparedDurableArgs<'a> {
 pub(super) struct CompilePreparedBatchArgs<'a> {
     req_id: u64,
     caller: Option<&'a str>,
-    authority: &'a dyn crate::server::persistence::PersistenceBackend,
+    authority: &'a dyn crate::server::api::persistence::PersistenceBackend,
     graph_name: &'a str,
     batch_id: &'a str,
     tenant_scope: &'a str,
@@ -417,7 +417,7 @@ pub(super) async fn commit_prepared_durable(args: CommitPreparedDurableArgs<'_>)
 }
 
 async fn commit_prepared_batch_durable(
-    authority: &dyn crate::server::persistence::PersistenceBackend,
+    authority: &dyn crate::server::api::persistence::PersistenceBackend,
     graph_name: &str,
     batch: &crate::mutation_batch::MutationBatch,
     result_msgpack: &[u8],
@@ -438,7 +438,7 @@ pub(super) async fn commit_prepared_replayed(
     req_id: u64,
     receipt: TxnReceipt,
     core: &Arc<crate::graph::GraphCore>,
-    authority: &dyn crate::server::persistence::PersistenceBackend,
+    authority: &dyn crate::server::api::persistence::PersistenceBackend,
     graph_name: &str,
     committed: &crate::mutation_batch::MutationBatchCommit,
 ) -> Response {

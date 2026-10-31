@@ -29,7 +29,7 @@ use tokio::sync::RwLock;
 
 use crate::graph::GraphCore;
 use crate::registry::GraphHandle;
-use crate::server::persistence::PersistenceBackend;
+use crate::server::api::persistence::PersistenceBackend;
 use crate::server::ServerState;
 
 /// Identity for one access/offload tracker entry.  The name is only a routing
@@ -636,7 +636,7 @@ mod tracker_tests {
 mod unsafe_eviction_tests {
     use super::offload_graph_core;
     use crate::graph::GraphCore;
-    use crate::server::persistence::PersistenceBackend;
+    use crate::server::api::persistence::PersistenceBackend;
     use std::sync::Arc;
 
     #[derive(Clone, Copy)]
@@ -722,11 +722,11 @@ mod admission_tests {
     use crate::acl::{AgentIdentity, AgentRole};
     use crate::isolation::IsolationLayer;
     use crate::protocol::{GraphType, Method, Request};
+    use crate::server::api::persistence::PersistenceBackend;
     use crate::server::persistence::read_through::{
         BackendGraphMaterializer, BackendReadThroughFactory,
     };
     use crate::server::persistence::redb_backend::RedbBackend;
-    use crate::server::persistence::PersistenceBackend;
     use crate::server::{
         auth::{build_current_test_request, dispatch_test_on_heap as dispatch_on_heap},
         ServerState,
@@ -1018,7 +1018,8 @@ mod admission_tests {
         // check. A READ guard, so these tests still run concurrently with each
         // other -- only a key MUTATOR is excluded.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        let dir = std::env::temp_dir().join(format!("medulla-lazy-paged-manual-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("medulla-lazy-paged-manual-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
         let state = redb_state(&dir_s).await;
@@ -1098,7 +1099,8 @@ mod admission_tests {
         // check. A READ guard, so these tests still run concurrently with each
         // other -- only a key MUTATOR is excluded.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        let dir = std::env::temp_dir().join(format!("medulla-lazy-paged-bg-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("medulla-lazy-paged-bg-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
         let state = redb_state(&dir_s).await;

@@ -84,7 +84,7 @@ pub(super) fn resolve_shard_count() -> usize {
                  shard g)"
             );
         }
-        let groups = crate::raft::config::raft_group_count();
+        let groups = crate::server::api::persistence::raft_group_count();
         tracing::info!(
             shards = groups,
             "raft active: opening K == N durable shards (ADR-2 W1.2 — raft group g owns redb \

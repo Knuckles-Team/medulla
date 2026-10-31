@@ -10,7 +10,6 @@ use crate::protocol::Method;
 /// (`medulla-types`'s `validate_principal` accepts only the opaque-digest form).
 /// The server-side compiler re-exports the server-independent definition so
 /// every batch context uses the same identity in every feature shape.
-pub(crate) use crate::mutation_apply::ENGINE_LEDGER_PRINCIPAL;
 
 /// The verified caller recorded on a compiled batch.
 ///

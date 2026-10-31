@@ -1,4 +1,6 @@
 use super::*;
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 /// The caller/isolation-scoping fields shared by every `dispatch_graph_op_inner`
 /// entry point, bundled so the function stays under the clippy argument-count
 /// ceiling once the feature-gated authority parameters are unified in.
@@ -163,7 +165,7 @@ pub(super) async fn dispatch_op_audit_read_event(
     req_id: u64,
     graph_name: &str,
     verified_tenant: &str,
-    persistence: Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     seq: u64,
 ) -> Response {
     let fname = crate::persist::sanitize(graph_name);
@@ -171,7 +173,9 @@ pub(super) async fn dispatch_op_audit_read_event(
         Some(redb) => match redb.audit_read_event(&fname, verified_tenant, seq).await {
             Ok(proof) => Response::ok(
                 req_id,
-                ResultPayload::of::<medulla_types::result_contract::security::AuditReadEvent>(proof),
+                ResultPayload::of::<medulla_types::result_contract::security::AuditReadEvent>(
+                    proof,
+                ),
             ),
             Err(error) => Response::err(req_id, format!("AuditReadEvent error: {error}")),
         },
@@ -184,7 +188,7 @@ pub(super) async fn dispatch_op_audit_append(
     req_id: u64,
     graph_name: &str,
     core: Arc<crate::graph::GraphCore>,
-    persistence: Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     event: crate::redb_store::OperationAuditEvent,
 ) -> Response {
     let fname = crate::persist::sanitize(graph_name);
@@ -207,7 +211,9 @@ pub(super) async fn dispatch_op_audit_append(
                 core.mark_dirty();
                 Response::ok(
                     req_id,
-                    ResultPayload::of::<medulla_types::result_contract::security::AuditAppend>(receipt),
+                    ResultPayload::of::<medulla_types::result_contract::security::AuditAppend>(
+                        receipt,
+                    ),
                 )
             }
             // No method-name prefix: the error is already either a bare
@@ -228,7 +234,7 @@ pub(super) async fn dispatch_op_audit_append(
 pub(super) async fn dispatch_op_audit_verify(
     req_id: u64,
     graph_name: &str,
-    persistence: Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
 ) -> Response {
     let fname = crate::persist::sanitize(graph_name);
     match persistence.as_ref().and_then(|p| p.as_redb()) {
@@ -250,7 +256,7 @@ pub(super) async fn dispatch_op_audit_verify(
 pub(super) async fn prove_audit_inclusion(
     req_id: u64,
     graph_name: &str,
-    persistence: Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     node_id: String,
     anchor_seq: Option<u64>,
 ) -> Response {
@@ -290,7 +296,7 @@ pub(super) struct ServedModalityCtx<'a> {
     pub(super) core: Arc<crate::graph::GraphCore>,
     pub(super) materialization_manifest:
         Option<Arc<std::sync::RwLock<crate::registry::MaterializationManifest>>>,
-    pub(super) persistence: Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    pub(super) persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
     pub(super) cdc: Option<Arc<crate::server::cdc::CdcHub>>,
     #[cfg(feature = "raft")]
@@ -501,14 +507,14 @@ pub(super) async fn dispatch_op_raft_write_routing_barrier(
         &principal_fingerprint,
         verified_context.idempotency_key(),
     );
-    let mutation = match crate::raft::RaftMutationContext::from_verified_request(
+    let mutation = match crate::server::api::persistence::RaftMutationContext::from_verified_request(
         batch_id,
         req_id,
         verified_context.attempt_nonce(),
         tenant_scope,
         principal_fingerprint,
         false,
-        crate::raft::RaftMutationTiming {
+        crate::server::api::persistence::RaftMutationTiming {
             placement_epoch: routed.epoch,
             fencing_token: Some(routed.group_id),
             created_at_ms,
@@ -560,7 +566,7 @@ struct BoundGraphRequest<'a> {
     graph_fname: String,
     graph_type: crate::protocol::GraphType,
     committed_at_ms: u64,
-    mutation: crate::raft::RaftMutationContext,
+    mutation: crate::server::api::persistence::RaftMutationContext,
     method: Method,
     server_secret: &'a str,
     group_id: crate::raft::GroupId,
@@ -614,8 +620,8 @@ mod tests {
     use crate::graph::GraphCore;
     use crate::protocol::Method;
     use crate::redb_store::operation_audit::tests::{event, TENANT};
+    use crate::server::api::persistence::PersistenceBackend;
     use crate::server::persistence::redb_backend::audit_append_tests::seeded;
-    use crate::server::persistence::PersistenceBackend;
 
     const GRAPH: &str = "audit_skew_graph";
 
@@ -637,7 +643,8 @@ mod tests {
             medulla_types::mutation_batch::IncarnationId::new("incarnation:test:audit-skew")
                 .expect("incarnation"),
         );
-        mutation.version_expectation = medulla_types::mutation_batch::VersionExpectation::Graph(stamped);
+        mutation.version_expectation =
+            medulla_types::mutation_batch::VersionExpectation::Graph(stamped);
         mutation.operations = vec![medulla_types::mutation_batch::MutationOperation {
             ordinal: 0,
             surface: medulla_types::mutation_batch::MutationSurface::Graph,

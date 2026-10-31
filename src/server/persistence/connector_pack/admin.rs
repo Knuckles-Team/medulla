@@ -133,11 +133,13 @@ impl AgentLibraryStore {
         let retired = plan
             .components
             .iter()
-            .map(|component| medulla_types::agent_component::ComponentDependency {
-                component_id: component.entry.component_id.clone(),
-                kind: component.entry.kind,
-                definition_digest: component.entry.definition_digest.clone(),
-            })
+            .map(
+                |component| medulla_types::agent_component::ComponentDependency {
+                    component_id: component.entry.component_id.clone(),
+                    kind: component.entry.kind,
+                    definition_digest: component.entry.definition_digest.clone(),
+                },
+            )
             .collect::<Vec<_>>();
         self.commit_pack_write(&context, identity, effects, |write, staged| {
             apply_catalog_rows(

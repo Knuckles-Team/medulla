@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::graph::GraphCore;
 use crate::protocol::{Method, Response, ResultPayload};
-use crate::server::persistence::PersistenceBackend;
+use crate::server::api::persistence::PersistenceBackend;
 
 use super::{
     commit_finalize, commit_mutation_body_commit_staged, commit_mutation_body_replay_response,

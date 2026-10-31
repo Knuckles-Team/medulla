@@ -6,6 +6,8 @@
 //! `RefreshMatView` manage named, durable, incrementally-maintained materialized
 //! views of those results. The heavy superstep loop runs off the reactor.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -16,7 +18,8 @@ use crate::protocol::{Method, Response, ResultPayload};
 // supersteps over multi-Raft groups). The plan-backed matview path below shares this
 // module but touches NONE of it.
 #[cfg(feature = "compute-dist")]
-use crate::raft::pregel::{self, MatView};
+use crate::raft::pregel;
+use crate::server::api::persistence::MatView;
 #[cfg(feature = "matview")]
 use crate::server::matview::{self, PlanMatView};
 
@@ -80,7 +83,9 @@ impl<'a> DistributedRequest<'a> {
         match pregel::run_distributed(self.state, &graphs, &algo, read_authority).await {
             Ok(result) => Response::ok(
                 self.req_id,
-                ResultPayload::of::<medulla_types::result_contract::compute::DistributedCompute>(result),
+                ResultPayload::of::<medulla_types::result_contract::compute::DistributedCompute>(
+                    result,
+                ),
             ),
             Err(error) => Response::err(self.req_id, error),
         }
@@ -280,7 +285,7 @@ fn admit_plan_matview_under_rls(
 }
 
 struct ControlSaga {
-    backend: Arc<dyn crate::server::persistence::PersistenceBackend>,
+    backend: Arc<dyn crate::server::api::persistence::PersistenceBackend>,
     saga: crate::server::handlers::admin::AdminSaga,
 }
 
@@ -515,9 +520,9 @@ async fn get_plan_matview(state: &Arc<RwLock<ServerState>>, req_id: u64, name: &
             if let Some(bytes) = core.result_cache().get_scoped(hash, version, 0) {
                 return Response::ok(
                     req_id,
-                    ResultPayload::of_encoded::<medulla_types::result_contract::cluster::PlanMatViewGet>(
-                        bytes,
-                    ),
+                    ResultPayload::of_encoded::<
+                        medulla_types::result_contract::cluster::PlanMatViewGet,
+                    >(bytes),
                 );
             }
         }

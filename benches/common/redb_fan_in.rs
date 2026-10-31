@@ -8,8 +8,8 @@
 use std::sync::Arc;
 
 use medulla::protocol::Method;
+use medulla::server::api::persistence::PersistenceBackend;
 use medulla::server::persistence::redb_backend::RedbBackend;
-use medulla::server::persistence::PersistenceBackend;
 
 pub const GRAPH: &str = "__commons__";
 

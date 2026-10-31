@@ -816,7 +816,6 @@ pub use handlers::dist_compute::reload_matviews;
 // Post-bind maintenance hook (MEDULLA-DURABLE-KERNEL-R006.4): the binary calls this
 // from `serve_transports` right after the listeners bind.
 pub use boot_maintenance::spawn_post_bind_maintenance;
-pub use persistence::PersistenceBackend;
 pub use state::{txn_limits_from_env, ServerState, MAX_BATCH_IDS};
 
 /// Build the canonical feature-complete state used by dispatch and wire tests.

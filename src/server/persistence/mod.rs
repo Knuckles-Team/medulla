@@ -8,9 +8,6 @@
 use crate::mutation_batch::MutationBatch;
 use crate::protocol::Method;
 
-mod contract;
-pub use contract::PersistenceBackend;
-
 pub mod read_through;
 
 /// Bounded waits on the shard-owner writer thread's command replies.
@@ -56,6 +53,22 @@ pub mod write_back;
 
 #[cfg(feature = "redb")]
 pub mod redb_backend;
+
+/// Recovers the concrete [`redb_backend::RedbBackend`] from a
+/// `dyn PersistenceBackend` (the former `PersistenceBackend::as_redb`).
+#[cfg(feature = "redb")]
+pub trait AsRedb {
+    /// The concrete redb backend, or `None` for any other backend.
+    fn as_redb(&self) -> Option<&redb_backend::RedbBackend>;
+}
+
+#[cfg(feature = "redb")]
+impl AsRedb for dyn crate::server::api::persistence::PersistenceBackend {
+    fn as_redb(&self) -> Option<&redb_backend::RedbBackend> {
+        self.as_any()
+            .and_then(|any| any.downcast_ref::<redb_backend::RedbBackend>())
+    }
+}
 
 // M3 — catalog-driven resharding (CONCEPT:MEDULLA-KG.sharding.atomic-shard-swap / MEDULLA-031). Both are redb-only:
 //   * `shard_migrate` — OFFLINE K-shard migration tool that rewrites an existing
@@ -134,17 +147,3 @@ pub mod storage_scrub;
 //     MEDULLA-030 migration engine; supports re-shard-on-restore). Backing the DR / PITR story.
 #[cfg(feature = "redb")]
 pub mod backup;
-
-/// Borrowed carrier for [`PersistenceBackend::commit_mutation_batch_crossmodal`]'s
-/// arguments, bundled so the trait method (and every implementation of it) stays
-/// under the clippy argument-count ceiling.
-pub struct CrossModalCommitArgs<'a> {
-    pub graph_fname: &'a str,
-    pub batch: &'a MutationBatch,
-    pub methods: &'a [Method],
-    pub vectors: &'a [(String, Vec<f32>)],
-    pub blob_refs: &'a [(String, String)],
-    pub measurements: &'a [crate::MeasurementBatch],
-    pub result_msgpack: Option<&'a [u8]>,
-    pub committed_at_ms: u64,
-}

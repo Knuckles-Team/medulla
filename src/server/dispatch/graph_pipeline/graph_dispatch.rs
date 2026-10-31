@@ -14,7 +14,7 @@ struct GraphDispatchCapture<'a> {
     core: Arc<crate::graph::GraphCore>,
     materialization_manifest:
         Option<Arc<std::sync::RwLock<crate::registry::MaterializationManifest>>>,
-    persistence: Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+    persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
     cdc: Option<Arc<crate::server::cdc::CdcHub>>,
     routed_write_coalescer:
@@ -254,7 +254,7 @@ pub(in crate::server::dispatch) struct GraphOpRouting<'a> {
     pub(super) materialization_manifest:
         &'a Option<Arc<std::sync::RwLock<crate::registry::MaterializationManifest>>>,
     pub(in crate::server::dispatch) persistence:
-        &'a Option<Arc<dyn crate::server::persistence::PersistenceBackend>>,
+        &'a Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
     pub(super) cdc: &'a Option<Arc<crate::server::cdc::CdcHub>>,
     #[cfg(feature = "security")]

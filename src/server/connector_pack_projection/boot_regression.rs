@@ -28,6 +28,8 @@
 //!    replay, no duplicates) — the full replay is a once-per-store cost, not
 //!    a per-boot one.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -46,8 +48,8 @@ use sha2::{Digest, Sha256};
 use tokio::sync::RwLock;
 
 use crate::protocol::{GraphType, Method, Response, ResultPayload};
+use crate::server::api::persistence::PersistenceBackend;
 use crate::server::auth::{dispatch_test_on_heap, scoped_test_request_on, ScopedTestCaller};
-use crate::server::persistence::PersistenceBackend;
 use crate::server::state::ServerState;
 
 const SECRET: &str = "g9-boot-critical-fixture-secret"; // sanitizer:ignore

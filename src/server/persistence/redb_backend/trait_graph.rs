@@ -134,7 +134,7 @@ macro_rules! persistence_graph {
             }
         }
 
-        fn as_redb(&self) -> Option<&RedbBackend> {
+        fn as_any(&self) -> Option<&dyn std::any::Any> {
             Some(self)
         }
     }

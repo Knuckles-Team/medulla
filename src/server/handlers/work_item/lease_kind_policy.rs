@@ -15,6 +15,8 @@
 //! is the leader's. A lease that is not visible refuses before dispatch: a
 //! concurrent issue must not supply an unapproved kind after this lookup.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 use std::sync::OnceLock;
 
 use medulla_types::control_lease::ControlLeaseKindPolicy;
@@ -45,9 +47,9 @@ enum LeaseTarget<'a> {
 
 fn lease_target(method: &Method) -> Option<LeaseTarget<'_>> {
     match method {
-        Method::IssueHostStartGrant { .. } => {
-            Some(LeaseTarget::Kind(medulla_types::host_start::HOST_START_KIND))
-        }
+        Method::IssueHostStartGrant { .. } => Some(LeaseTarget::Kind(
+            medulla_types::host_start::HOST_START_KIND,
+        )),
         Method::IssueControlLease { request } => Some(LeaseTarget::Kind(&request.kind)),
         Method::TransitionControlLease { request } => Some(LeaseTarget::Stored {
             tenant: &request.tenant,

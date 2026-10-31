@@ -15,6 +15,8 @@
 //! start and completion (counts + elapsed) — a multi-minute pass must never
 //! again be invisible in the log.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 use std::sync::Arc;
 #[cfg(any(
     feature = "compute-dist",

@@ -231,7 +231,8 @@ pub(crate) async fn handle_gateway(
                 ctx.req_id,
                 format!(
                     "{}: runtime ontology import is delivered by R103.2",
-                    medulla_types::graph_schema::GraphSchemaErrorCode::OntologyImportNotWired.as_str()
+                    medulla_types::graph_schema::GraphSchemaErrorCode::OntologyImportNotWired
+                        .as_str()
                 ),
             )
         }
@@ -372,13 +373,14 @@ fn compose_pack_documents(
             ));
         }
         let scope = medulla_types::contract::Digest256::sha256(document.uri.as_bytes()).to_hex();
-        let triples =
-            medulla_rdf::mapping::parse_turtle_for_composition(&document.body).map_err(|error| {
+        let triples = medulla_rdf::mapping::parse_turtle_for_composition(&document.body).map_err(
+            |error| {
                 format!(
                     "ATTACH_PACK_SCHEMA_INVALID: {kind} member '{}': {error}",
                     document.uri
                 )
-            })?;
+            },
+        )?;
         for triple in triples {
             let triple = compose::scope_blank_nodes(triple, &scope).map_err(|error| {
                 format!(
@@ -465,13 +467,15 @@ fn apply(
     if changed {
         core.install_schema_sources(Arc::new(sources));
     }
-    ResultPayload::of::<medulla_types::result_contract::reasoning::GraphSchema>(GraphSchemaCommitted {
-        schema_version: medulla_types::graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
-        graph: graph_name.to_string(),
-        composed_digest,
-        graph_version: core.version().saturating_add(u64::from(changed)),
-        changed,
-    })
+    ResultPayload::of::<medulla_types::result_contract::reasoning::GraphSchema>(
+        GraphSchemaCommitted {
+            schema_version: medulla_types::graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
+            graph: graph_name.to_string(),
+            composed_digest,
+            graph_version: core.version().saturating_add(u64::from(changed)),
+            changed,
+        },
+    )
 }
 
 /// The compare-and-set fence: the composed digest the caller last saw.

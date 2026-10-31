@@ -1,5 +1,7 @@
 //! Durable coordinator saga helpers shared by admin and transaction handlers.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -312,11 +314,12 @@ fn validate_sparql_recovery_outcome(result: &crate::protocol::ResultPayload) -> 
     };
     // All five report fields are required, so a successful decode plus exact
     // object length also excludes unknown fields.
-    let success = body.len() == 5
-        && serde_json::from_value::<medulla_types::result_contract::transactions::SparqlUpdateReport>(
-            value.clone(),
-        )
-        .is_ok();
+    let success =
+        body.len() == 5
+            && serde_json::from_value::<
+                medulla_types::result_contract::transactions::SparqlUpdateReport,
+            >(value.clone())
+            .is_ok();
     let compensated = body.len() == 3
         && body.get("outcome").and_then(serde_json::Value::as_str) == Some("compensated")
         && body
@@ -619,7 +622,8 @@ pub(crate) fn resume_named_admin_saga(
         caller.ok_or_else(|| "coordinator recovery requires a verified principal".to_string())?,
     )?;
     let identity = crate::server::persistence::redb_backend::cluster_admin_scope_identity()?;
-    let Some(record) = medulla_transaction::read_ledger(&backend.admin_mutations_read()?, batch_id)?
+    let Some(record) =
+        medulla_transaction::read_ledger(&backend.admin_mutations_read()?, batch_id)?
     else {
         return Ok(None);
     };

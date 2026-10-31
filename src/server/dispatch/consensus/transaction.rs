@@ -39,14 +39,14 @@ pub(super) async fn commit_carrier_native_command(
     proposal: CarrierNativeCommand<'_>,
 ) -> Result<crate::raft::RaftResponse, String> {
     let committed_at_ms = authoritative_now_ms();
-    let mutation = crate::raft::RaftMutationContext::from_verified_request(
+    let mutation = crate::server::api::persistence::RaftMutationContext::from_verified_request(
         proposal.batch_id,
         proposal.request_id,
         proposal.attempt_nonce,
         proposal.authority.tenant_scope(),
         proposal.authority.actor_scope().to_string(),
         false,
-        crate::raft::RaftMutationTiming {
+        crate::server::api::persistence::RaftMutationTiming {
             placement_epoch: proposal.placement_epoch,
             fencing_token: proposal.fencing_token,
             created_at_ms: committed_at_ms,

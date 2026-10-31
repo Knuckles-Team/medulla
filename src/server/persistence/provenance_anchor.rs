@@ -26,6 +26,8 @@
 //! window) costs the writer thread nothing at all: the fast path never opens a
 //! transaction. See `benches/provenance_anchor_bench.rs` for the measured delta.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::AsRedb;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -140,7 +142,8 @@ pub async fn sweep(state: &Arc<RwLock<ServerState>>) -> u64 {
         if members.is_empty() {
             continue;
         }
-        let leaf_hashes: Vec<medulla_kernel::audit::Hash> = members.iter().map(|(_, h)| *h).collect();
+        let leaf_hashes: Vec<medulla_kernel::audit::Hash> =
+            members.iter().map(|(_, h)| *h).collect();
         let root = medulla_kernel::audit::mth_from_hashes(&leaf_hashes);
         match redb.provenance_anchor_commit_blocking(&fname, root, members.clone()) {
             Ok(Some(seq)) => {

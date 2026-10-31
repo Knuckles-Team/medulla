@@ -15,7 +15,7 @@ pub(super) struct ModalityReplication<'a> {
     tenant_scope: &'a str,
     principal_fingerprint: &'a str,
     core: &'a Arc<crate::graph::GraphCore>,
-    persistence: &'a Arc<dyn crate::server::persistence::PersistenceBackend>,
+    persistence: &'a Arc<dyn crate::server::api::persistence::PersistenceBackend>,
 }
 
 /// The sanitized, source-free facts derived from the public method. The
@@ -47,7 +47,7 @@ pub(super) struct ModalityReplicationRequest<'a> {
     pub(super) tenant_scope: &'a str,
     pub(super) principal_fingerprint: &'a str,
     pub(super) core: &'a Arc<crate::graph::GraphCore>,
-    pub(super) persistence: &'a Arc<dyn crate::server::persistence::PersistenceBackend>,
+    pub(super) persistence: &'a Arc<dyn crate::server::api::persistence::PersistenceBackend>,
     pub(super) method: Method,
     pub(super) authority: &'a handlers::modality::ModalityAuthority,
 }
@@ -408,14 +408,14 @@ pub(super) async fn submit_modality_replication(
     payload: ResultPayload,
 ) -> Response {
     let created_at_ms = authoritative_now_ms();
-    let mutation = match crate::raft::RaftMutationContext::from_verified_request(
+    let mutation = match crate::server::api::persistence::RaftMutationContext::from_verified_request(
         batch_id,
         ctx.req_id,
         ctx.attempt_nonce,
         ctx.tenant_scope,
         ctx.principal_fingerprint.to_string(),
         false,
-        crate::raft::RaftMutationTiming {
+        crate::server::api::persistence::RaftMutationTiming {
             placement_epoch: ctx.placement_epoch,
             fencing_token: ctx.fencing_token,
             created_at_ms,

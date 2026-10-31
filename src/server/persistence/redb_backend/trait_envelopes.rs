@@ -69,7 +69,7 @@ macro_rules! persistence_envelopes {
         async fn commit_repository_enrichment_top_up(
             &self,
             graph_fname: &str,
-            transition: crate::raft::EnrichmentTopUpTransition,
+            transition: crate::redb_store::enrichment_top_up::EnrichmentTopUpTransition,
             committed_at_ms: u64,
         ) -> Result<MutationBatchCommit, String> {
             let (done, rx) = oneshot::channel();

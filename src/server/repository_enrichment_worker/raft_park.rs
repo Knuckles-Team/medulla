@@ -10,8 +10,8 @@ use medulla_types::mutation_batch::MutationOutboxLease;
 use medulla_types::native_control::EnrichmentBudgetPark;
 use tokio::sync::RwLock;
 
+use crate::server::api::persistence::PersistenceBackend;
 use crate::server::auth::VerifiedRequestContext;
-use crate::server::persistence::PersistenceBackend;
 use crate::server::state::ServerState;
 
 const SERVICE: &str = "repository-enrichment-v1";
@@ -121,7 +121,7 @@ async fn propose_park(
         "{}:{}:{}",
         park.source_envelope, park.next_index, park.snapshot_digest
     );
-    let mut mutation = crate::raft::RaftMutationContext::internal(
+    let mut mutation = crate::server::api::persistence::RaftMutationContext::internal(
         "raft-enrichment-park",
         graph,
         &coordinator,
