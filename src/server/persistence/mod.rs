@@ -63,7 +63,7 @@ pub trait AsRedb {
 }
 
 #[cfg(feature = "redb")]
-impl AsRedb for dyn crate::server::api::persistence::PersistenceBackend {
+impl<'a> AsRedb for dyn crate::server::api::persistence::PersistenceBackend + 'a {
     fn as_redb(&self) -> Option<&redb_backend::RedbBackend> {
         self.as_any()
             .and_then(|any| any.downcast_ref::<redb_backend::RedbBackend>())

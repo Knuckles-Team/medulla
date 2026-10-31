@@ -255,7 +255,7 @@ impl AdminSagaResultContract {
         }
     }
 
-    fn validate(self, result: &crate::protocol::ResultPayload) -> Result<(), String> {
+    pub(crate) fn validate(self, result: &crate::protocol::ResultPayload) -> Result<(), String> {
         use crate::protocol::ResultPayload;
         match self {
             Self::Bool => matches!(result, ResultPayload::Bool(_))

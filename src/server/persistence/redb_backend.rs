@@ -36,7 +36,6 @@
 //!   * `graph_meta`     `graph                  -> {name, graph_type} blob` (replaces manifest.json)
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
