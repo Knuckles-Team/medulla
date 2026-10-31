@@ -33,9 +33,6 @@ const DEFAULT_MAX_SOURCE_BYTES: usize = 16 * 1024 * 1024;
 const HARD_MAX_SOURCE_BYTES: usize = 256 * 1024 * 1024;
 const DEFAULT_MAX_BUNDLE_BYTES: usize = 4 * 1024 * 1024;
 const HARD_MAX_BUNDLE_BYTES: usize = 32 * 1024 * 1024;
-/// Largest ingest stream whose worst-case canonical `ApplyOutcome` response
-/// (including `u64::MAX` counters) fits the Raft codec's 4096-byte envelope.
-pub(crate) const MAX_INGEST_STREAM_ITEMS: usize = 49;
 const MIN_PRIVACY_PROBE_BYTES: usize = 16;
 
 mod dispatch;

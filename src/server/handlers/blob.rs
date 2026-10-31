@@ -17,7 +17,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use super::super::state::ServerState;
-use crate::mutation_batch::{DurabilityDomain, MutationBatch, MutationSurface};
+use crate::mutation_batch::MutationBatch;
 use crate::protocol::{Method, Response, ResultPayload};
 use crate::server::access::CarrierAuthority;
 use crate::server::blob::{store, BlobCursors};
@@ -165,7 +165,7 @@ fn prepare_begin_upload(
         &authority.namespace("blob-cas", "control"),
     )?;
     let now = crate::server::dispatch::authoritative_now_ms();
-    let (batch, now) = compile_blob_batch_at_with_nonce(
+    let (batch, now) = crate::server::api::ingest::compile_blob_batch_at_with_nonce(
         cursors.store.as_ref(),
         proposed,
         authority,
@@ -227,7 +227,7 @@ async fn handle_blob_chunk_put(
     if let Err(error) = ensure_upload_owner(cursors, cursor, authority.owner_scope()) {
         return Ok(Response::err(req_id, error));
     }
-    let (batch, now) = match compile_blob_batch_with_nonce(
+    let (batch, now) = match crate::server::api::ingest::compile_blob_batch_with_nonce(
         cursors.store.as_ref(),
         req_id,
         authority,
@@ -261,7 +261,7 @@ async fn handle_blob_commit(
     if let Err(error) = ensure_upload_owner(cursors, cursor, authority.owner_scope()) {
         return Ok(Response::err(req_id, error));
     }
-    let (batch, now) = match compile_blob_batch_with_nonce(
+    let (batch, now) = match crate::server::api::ingest::compile_blob_batch_with_nonce(
         cursors.store.as_ref(),
         req_id,
         authority,
@@ -419,7 +419,7 @@ fn prepare_blob_ref_op(
 ) -> Result<(store::HolderChange, MutationBatch, u64), String> {
     ensure_blob_owner(cursors, digest, authority.owner_scope())?;
     let change = change(digest, authority.owner_scope())?;
-    let (batch, now) = compile_blob_batch_with_nonce(
+    let (batch, now) = crate::server::api::ingest::compile_blob_batch_with_nonce(
         cursors.store.as_ref(),
         req_id,
         authority,
@@ -473,7 +473,7 @@ async fn handle_blob_gc(
     if let Err(error) = authority.require_admin("blob garbage collection") {
         return Ok(Response::err(req_id, error));
     }
-    let (batch, now) = match compile_blob_batch_with_nonce(
+    let (batch, now) = match crate::server::api::ingest::compile_blob_batch_with_nonce(
         cursors.store.as_ref(),
         req_id,
         authority,
@@ -550,116 +550,6 @@ fn ensure_blob_owner(cursors: &BlobCursors, digest: &str, owner_scope: &str) -> 
     }
 }
 
-pub(crate) fn compile_blob_batch(
-    store: &dyn store::ChunkStore,
-    req_id: u64,
-    authority: &CarrierAuthority,
-    method: &Method,
-) -> Result<(MutationBatch, u64), String> {
-    compile_blob_batch_with_nonce(store, req_id, authority, method, None)
-}
-
-fn compile_blob_batch_with_nonce(
-    store: &dyn store::ChunkStore,
-    req_id: u64,
-    authority: &CarrierAuthority,
-    method: &Method,
-    attempt_nonce: Option<Nonce>,
-) -> Result<(MutationBatch, u64), String> {
-    let scope = authority.namespace("blob-cas", "control");
-    let expected = store.mutation_version(authority.tenant_scope(), &scope)?;
-    let now = crate::server::dispatch::authoritative_now_ms();
-    compile_blob_batch_at_with_nonce(
-        store,
-        req_id,
-        authority,
-        method,
-        expected,
-        now,
-        attempt_nonce,
-    )
-}
-
-/// Rebuild an exact blob child after a coordinator restart. The expected native
-/// version and timestamp came from the authenticated encrypted parent plan; they
-/// are never re-sampled after an acknowledgement-lost child commit.
-///
-/// `identity_id` is folded into the durable idempotency key
-/// (`mutation_batch::opaque_request_key`) alongside `authority`'s tenant/actor
-/// scope and `method`'s own encoded bytes — it exists to distinguish otherwise
-/// identical-looking attempts, NOT to name the caller's wire request id.
-/// **BUG A2 (2026-08-12):** every other blob method's own `Method` payload
-/// already carries the cursor/digest it operates on (`BlobChunkPut{cursor,
-/// ..}`, `BlobCommit{cursor}`, `BlobRef{digest}`, ...), so passing the wire
-/// `req_id` here is safe FOR THOSE — the method bytes alone already
-/// disambiguate two different uploads. `BlobBegin{chunk_size}` is the one
-/// exception: it carries no upload identity at all (it is the call that
-/// MINTS one), so its caller must pass the freshly allocated cursor id here,
-/// never the wire `req_id`. The wire request id is a small integer that a
-/// brand-new, otherwise-unrelated connection restarts from 1 on every
-/// reconnect (`medulla.client.MedullaClient._next_id`), while
-/// `CarrierAuthority` carries no per-connection/session component at all — so
-/// two independent connections from the same tenant/actor calling
-/// `BlobBegin()` with the same default `chunk_size` as their first RPC
-/// produced the EXACT SAME idempotency key. The engine's
-/// `medulla_transaction::MutationKernel::admit` idempotency ledger never expires (by design —
-/// it survives an acknowledgement-lost retry across a coordinator restart),
-/// so the SECOND connection's `BlobBegin` silently REPLAYED the first
-/// connection's already-committed result: the FIRST connection's cursor id,
-/// whose durable `CAS_UPLOADS` row had already been torn down by ITS
-/// `BlobCommit` (`ChunkStore::commit_upload_batch` removes the row on
-/// commit — correctly, per-upload teardown). The handler then looked up that
-/// stale, already-removed id and failed with "committed blob upload cursor
-/// is missing". See `Method::BlobBegin`'s handler arm for the caller-side
-/// fix (allocate the cursor id BEFORE compiling the batch, then pass it here
-/// as `identity_id`).
-pub(crate) fn compile_blob_batch_at(
-    _store: &dyn store::ChunkStore,
-    identity_id: u64,
-    authority: &CarrierAuthority,
-    method: &Method,
-    expected: u64,
-    now: u64,
-) -> Result<(MutationBatch, u64), String> {
-    compile_blob_batch_at_with_nonce(_store, identity_id, authority, method, expected, now, None)
-}
-
-fn compile_blob_batch_at_with_nonce(
-    _store: &dyn store::ChunkStore,
-    identity_id: u64,
-    authority: &CarrierAuthority,
-    method: &Method,
-    expected: u64,
-    now: u64,
-    attempt_nonce: Option<Nonce>,
-) -> Result<(MutationBatch, u64), String> {
-    let scope = authority.namespace("blob-cas", "control");
-    let batch_id =
-        crate::server::mutation_batch::opaque_request_key("blob", &scope, identity_id, method);
-    let batch = crate::server::mutation_batch::compile_opaque_method(
-        crate::server::mutation_batch::CompileBatch {
-            batch_id: &batch_id,
-            request_id: identity_id,
-            attempt_nonce,
-            principal: Some(authority.actor_scope()),
-            tenant: authority.tenant_scope(),
-            graph: &scope,
-            placement_epoch: 0,
-            idempotency_key: &batch_id,
-            expected_graph_version: Some(expected),
-            fencing_token: None,
-            created_at_ms: now,
-            default_surface: MutationSurface::Other,
-            authoritative_state: None,
-        },
-        method,
-        MutationSurface::Other,
-        DurabilityDomain::BlobStore,
-        "blob_operation",
-    )?;
-    Ok((batch, now))
-}
-
 /// Run a refcount adjustment on the blocking pool, returning the new count as `M`'s
 /// declared result.
 async fn ref_op<M, F>(req_id: u64, f: F) -> Result<Response, Method>
@@ -702,12 +592,4 @@ fn is_blob_method(method: &Method) -> bool {
             | Method::BlobUnref { .. }
             | Method::BlobGc
     )
-}
-
-/// Convenience: build a `BlobCursors` over a fresh native CAS in `dir` (used by
-/// integration tests to drive the handler end to end).
-#[cfg(test)]
-pub(crate) fn cursors_for_test(dir: &str) -> Arc<BlobCursors> {
-    let store = Arc::new(store::RedbChunkStore::open(dir).unwrap());
-    Arc::new(BlobCursors::new(store))
 }

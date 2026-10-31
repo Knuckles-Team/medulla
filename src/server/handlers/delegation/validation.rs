@@ -134,7 +134,7 @@ pub(crate) fn bind_request(
     validate_request_binding(&request, verified_context, graph_name)?;
     validate_retained_target(&request, verified_context, retained)?;
 
-    let provenance_refs = provenance_refs(&request);
+    let provenance_refs = crate::server::api::ingest::jobs::provenance_refs(&request);
     let metadata = delegation_metadata(&request, retained);
     let work_item = lower_work_item(&request, metadata, provenance_refs);
 
@@ -579,15 +579,6 @@ pub(crate) fn validate_submit_identity(
         }
     }
     Ok(())
-}
-
-pub(crate) fn provenance_refs(request: &KgDelegateRequest) -> Vec<String> {
-    vec![
-        format!("delegation:{}", request.delegation_id),
-        format!("run:{}", request.run_id),
-        format!("trace:{}", request.trace_id),
-        request.target.provenance_ref(),
-    ]
 }
 
 pub(crate) fn validate_request_context(

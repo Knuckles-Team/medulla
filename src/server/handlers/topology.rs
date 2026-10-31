@@ -118,47 +118,6 @@ fn signed_snapshot(
 }
 
 #[cfg(feature = "raft")]
-pub(crate) async fn apply_replicated_node_info(
-    state: &Arc<RwLock<ServerState>>,
-    req_id: u64,
-    info: crate::server::persistence::node_info_store::NodeInfo,
-) -> Result<bool, String> {
-    let node_id = info.node_id;
-    let raft_addr = info.raft_addr.clone();
-    let advertised_client_addr = info.advertised_client_addr.clone();
-    let backend = { state.read().await.persistence.clone() };
-    let Some(store) = backend
-        .as_ref()
-        .and_then(|p| p.as_redb())
-        .map(|b| b.node_info())
-    else {
-        tracing::warn!(
-            req_id,
-            node_id,
-            "typed node self-report applied with no durable redb backend attached; self-report dropped"
-        );
-        return Err("cluster topology requires a durable redb backend".to_string());
-    };
-    match store.upsert(info) {
-        Ok(()) => {
-            tracing::debug!(
-                req_id,
-                node_id,
-                raft_addr,
-                advertised_client_addr,
-                generation = store.generation(),
-                "applied typed cluster-topology node self-report (ADR-1 / W1.1)"
-            );
-            Ok(true)
-        }
-        Err(error) => {
-            tracing::warn!(req_id, node_id, %error, "cluster-topology node self-report rejected");
-            Err(format!("node info upsert failed: {error}"))
-        }
-    }
-}
-
-#[cfg(feature = "raft")]
 fn member_role(
     node_id: crate::raft::NodeId,
     leader: Option<crate::raft::NodeId>,

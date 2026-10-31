@@ -7,10 +7,10 @@ use medulla_video::VideoData;
 use super::{
     capabilities, collect_tombstones, delete, events, ingest, ingest_stream, lifecycle,
     native_predicate, native_query, query, response, stats, ModalityAuthority,
-    MAX_INGEST_STREAM_ITEMS,
 };
 use crate::graph::GraphCore;
 use crate::protocol::ResultPayload;
+use crate::server::api::ingest::MAX_INGEST_STREAM_ITEMS;
 
 fn validate_ingest_stream_request_cardinality(items: usize) -> Result<(), String> {
     if !(2..=MAX_INGEST_STREAM_ITEMS).contains(&items) {

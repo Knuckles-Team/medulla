@@ -134,7 +134,7 @@ fn release_inputs(retention: &Retention, pin: &InputsBlob, request_id: u64) -> R
     let method = crate::protocol::Method::BlobUnref {
         digest: pin.manifest_digest.clone(),
     };
-    let (batch, now) = crate::server::handlers::blob::compile_blob_batch(
+    let (batch, now) = crate::server::api::ingest::compile_blob_batch(
         blob.store.as_ref(),
         request_id,
         authority,

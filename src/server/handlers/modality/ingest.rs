@@ -16,9 +16,10 @@ use medulla_video::{VideoData, VideoShot};
 
 use super::{
     capture_befores, load_runtime, shadow_write_deltas, store_runtime_excluding_sources,
-    validate_content_binding, validate_request_sizes, ModalityAuthority, MAX_INGEST_STREAM_ITEMS,
+    validate_content_binding, validate_request_sizes, ModalityAuthority,
 };
 use crate::graph::GraphCore;
+use crate::server::api::ingest::MAX_INGEST_STREAM_ITEMS;
 
 struct ResourceClosure {
     resources: BTreeSet<String>,

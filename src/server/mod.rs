@@ -804,8 +804,6 @@ pub(crate) use dispatch::{
     apply_replicated_transaction_finalize, apply_replicated_transaction_participant,
     apply_replicated_transaction_prepare, ReplicatedParticipantRef,
 };
-#[cfg(feature = "raft")]
-pub(crate) use handlers::topology::apply_replicated_node_info;
 // NL planner injection (CONCEPT:MEDULLA-KG.query.fence-stripper): an embedder opts into engine-driven NL→query.
 #[cfg(feature = "nl-query")]
 pub use nl::{resolve_planner as resolve_nl_planner, set_nl_planner};
