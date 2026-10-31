@@ -47,7 +47,7 @@ pub(crate) async fn handle(
         Err(error) => return Response::err(req_id, error),
     };
     let attempt_nonce = verified.attempt_nonce();
-    let now_ms = crate::server::dispatch::authoritative_now_ms();
+    let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     let result = run_publication_job(move || {
         publish(
             req_id,

@@ -34,7 +34,11 @@ pub(crate) async fn handle_explain_plan(
         Ok(Ok(result)) => result_response::<query_results::ExplainPlan>(req_id, &result),
         Ok(Err(msg)) => Response::err(
             req_id,
-            medulla_types::contract::classify_refusal("INVALID_ARGUMENT", "ExplainPlan error: ", &msg),
+            medulla_types::contract::classify_refusal(
+                "INVALID_ARGUMENT",
+                "ExplainPlan error: ",
+                &msg,
+            ),
         ),
         Err(resp) => resp,
     };
@@ -156,7 +160,11 @@ pub(crate) async fn handle_explain_policy(
         Ok(Ok(result)) => result_response::<query_results::ExplainPolicy>(req_id, &result),
         Ok(Err(msg)) => Response::err(
             req_id,
-            medulla_types::contract::classify_refusal("INVALID_ARGUMENT", "ExplainPolicy error: ", &msg),
+            medulla_types::contract::classify_refusal(
+                "INVALID_ARGUMENT",
+                "ExplainPolicy error: ",
+                &msg,
+            ),
         ),
         Err(resp) => resp,
     };
@@ -295,7 +303,7 @@ pub(crate) async fn handle_recompute_materialization(
     let _ = caller;
     let core = ctx.core.clone();
     #[cfg(feature = "raft")]
-    if crate::server::dispatch::is_replicated_apply() {
+    if crate::kernel::dispatch_support::is_replicated_apply() {
         let method = Method::RecomputeMaterialization {
             derived_id: derived_id.clone(),
             expected_source_graph_version,

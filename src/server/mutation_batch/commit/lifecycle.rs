@@ -81,7 +81,7 @@ pub(crate) async fn commit_lifecycle(
     let tenant_scope = tenant_scope
         .ok_or_else(|| "lifecycle commit requires a verified tenant scope".to_string())?;
     let batch_id = lifecycle_batch_id(action, tenant_scope, graph, principal, idempotency_key);
-    let created_at_ms = crate::server::dispatch::authoritative_now_ms();
+    let created_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     let fname = crate::persist::sanitize(graph);
     // v1's `VersionExpectation` has no "unversioned" arm available to an ordinary
     // tenant, so this can no longer pass `None` for "don't care". A not-yet-created

@@ -95,7 +95,7 @@ async fn load_commons(
             "fleet catalog authority is unavailable",
         )?
     };
-    let observed_at_ms = authoritative_now_ms();
+    let observed_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     let principal = verified.principal_persistence_id();
     let viewer = Viewer {
         tenant_id: verified.tenant(),

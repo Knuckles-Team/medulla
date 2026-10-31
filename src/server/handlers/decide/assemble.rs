@@ -67,7 +67,7 @@ async fn assemble_for(
     let identity = RecordIdentity {
         tenant_id: verified.tenant().to_string(),
         caller_principal: verified.principal_persistence_id(),
-        created_at_ms: crate::server::dispatch::authoritative_now_ms(),
+        created_at_ms: crate::kernel::dispatch_support::authoritative_now_ms(),
     };
     // Bounded by the node budget, but CPU work all the same.
     let assembly = tokio::task::spawn_blocking(move || assemble(inputs, identity))

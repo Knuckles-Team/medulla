@@ -194,7 +194,7 @@ async fn handle_import_sqlite_file(
     // Sample replicated authoritative time on the reactor while its task-local
     // apply scope is available, then move the complete filesystem/catalog
     // lifecycle into one owned blocking job.
-    let now = crate::server::dispatch::authoritative_now_ms();
+    let now = crate::kernel::dispatch_support::authoritative_now_ms();
     let out = run_transfer_job("import", move || {
         import_sqlite_lifecycle_with_nonce(
             req_id,

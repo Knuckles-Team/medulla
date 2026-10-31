@@ -919,7 +919,10 @@ mod coordinator_restart_tests {
         {
             let (_kernel, mutations, owner) = open_coordinator_store(&path, &identity, &cipher);
             let begun = mutations.saga_step(&owner, &batch, 1, Some(&encrypted));
-            assert!(matches!(begun.unwrap(), medulla_transaction::SagaBegin::Execute));
+            assert!(matches!(
+                begun.unwrap(),
+                medulla_transaction::SagaBegin::Execute
+            ));
         }
         let (kernel, _mutations, owner) = open_coordinator_store(&path, &identity, &cipher);
         let read = kernel.read_scope(&owner).unwrap();
@@ -954,7 +957,8 @@ mod coordinator_restart_tests {
     fn durable_compensation_marker_fixes_restart_direction_and_erases_its_plan() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("compensation.redb");
-        let cipher = medulla_kernel::crypto::ValueCipher::from_key_material(b"compensation-test-key");
+        let cipher =
+            medulla_kernel::crypto::ValueCipher::from_key_material(b"compensation-test-key");
         let parent_plan = SparqlRecoveryPlan {
             schema_version: 1,
             graphs: Vec::new(),

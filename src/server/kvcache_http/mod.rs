@@ -807,7 +807,7 @@ async fn serve_with_store_inner(
     auth: KvAuth,
 ) -> std::io::Result<()> {
     let listener = TcpListener::bind(addr).await?;
-    crate::server::require_loopback_listener(&listener)?;
+    crate::server::api::dispatch_support::require_loopback_listener(&listener)?;
     tracing::info!(
         "kvcache-server: serving authenticated shared KV-cache HTTP surface on {}",
         addr
@@ -1080,7 +1080,12 @@ mod tests {
         );
         let put = handle_authorized(
             &s,
-            &req("PUT", "/kv/ctx", b"ctx-v5", &[("x-medulla-data-version", "5")]),
+            &req(
+                "PUT",
+                "/kv/ctx",
+                b"ctx-v5",
+                &[("x-medulla-data-version", "5")],
+            ),
         );
         assert_eq!(put.status, "201 Created");
         let get = handle_authorized(&s, &req("GET", "/kv/ctx", b"", &[]));
@@ -1107,7 +1112,12 @@ mod tests {
         // Re-cache the freshly-derived context at v6 ⇒ served again.
         let put = handle_authorized(
             &s,
-            &req("PUT", "/kv/ctx", b"ctx-v6", &[("x-medulla-data-version", "6")]),
+            &req(
+                "PUT",
+                "/kv/ctx",
+                b"ctx-v6",
+                &[("x-medulla-data-version", "6")],
+            ),
         );
         assert_eq!(put.status, "201 Created");
         let get = handle_authorized(&s, &req("GET", "/kv/ctx", b"", &[]));

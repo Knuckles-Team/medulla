@@ -532,7 +532,10 @@ fn submit_job(
 
 async fn store_and_now(state: &SharedState) -> Result<(Arc<AgentLibraryStore>, u64), String> {
     let store = state.write().await.ensure_agent_library()?;
-    Ok((store, crate::server::dispatch::authoritative_now_ms()))
+    Ok((
+        store,
+        crate::kernel::dispatch_support::authoritative_now_ms(),
+    ))
 }
 
 fn identity<T: serde::Serialize>(
@@ -567,10 +570,11 @@ async fn serve_fit(
                 &request,
                 now_ms,
             );
-            let job = crate::server::dispatch::blocking_task(BLOCKING_TASK, move || {
-                submit_job(&store, &id, || run_fit(&store, &reader, &request))
-            })
-            .await?;
+            let job =
+                crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+                    submit_job(&store, &id, || run_fit(&store, &reader, &request))
+                })
+                .await?;
             ResultPayload::of::<DecisionFitSubmit>(job)
         }
         DecisionFitOp::Status { request } => ResultPayload::of::<DecisionFitStatus>(stored_job(
@@ -597,10 +601,11 @@ async fn serve_eval(
                 &request,
                 now_ms,
             );
-            let job = crate::server::dispatch::blocking_task(BLOCKING_TASK, move || {
-                submit_job(&store, &id, || run_eval_job(&store, &reader, &request))
-            })
-            .await?;
+            let job =
+                crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+                    submit_job(&store, &id, || run_eval_job(&store, &reader, &request))
+                })
+                .await?;
             ResultPayload::of::<DecisionEvalSubmit>(job)
         }
         DecisionEvalOp::Status { request } => ResultPayload::of::<DecisionEvalStatus>(stored_job(
@@ -675,7 +680,9 @@ fn serve_eval_receipts(
     let next_after = if has_more {
         receipts
             .last()
-            .map(|receipt: &medulla_types::decision::DecisionEvalReceipt| receipt.receipt_digest.clone())
+            .map(|receipt: &medulla_types::decision::DecisionEvalReceipt| {
+                receipt.receipt_digest.clone()
+            })
     } else {
         None
     };

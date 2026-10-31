@@ -499,7 +499,7 @@ pub fn pull_replication_tail(
 ) -> Result<Vec<ReplicationOp>, String> {
     use std::io::Read;
     let endpoint = format!("{}/replicate?since={}", cfg.primary_url, cursor);
-    let agent = crate::server::outbound_http_config()
+    let agent = crate::server::api::dispatch_support::outbound_http_config()
         .timeout_connect(Some(Duration::from_secs(cfg.timeout_secs)))
         .timeout_recv_response(Some(Duration::from_secs(cfg.timeout_secs)))
         .timeout_recv_body(Some(Duration::from_secs(cfg.timeout_secs)))

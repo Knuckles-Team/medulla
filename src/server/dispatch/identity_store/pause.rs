@@ -66,7 +66,10 @@ pub(super) fn hold(hold: Option<Hold>) {
     hold.derived
         .send(())
         .expect("the test holding this derivation is alive");
-    medulla_kernel::test_rendezvous::recv_within(&hold.release, "the test releasing a held derivation");
+    medulla_kernel::test_rendezvous::recv_within(
+        &hold.release,
+        "the test releasing a held derivation",
+    );
 }
 
 impl Held {

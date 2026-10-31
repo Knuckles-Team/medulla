@@ -164,7 +164,7 @@ fn prepare_begin_upload(
         authority.tenant_scope(),
         &authority.namespace("blob-cas", "control"),
     )?;
-    let now = crate::server::dispatch::authoritative_now_ms();
+    let now = crate::kernel::dispatch_support::authoritative_now_ms();
     let (batch, now) = compile_blob_batch_at_with_nonce(
         cursors.store.as_ref(),
         proposed,
@@ -568,7 +568,7 @@ fn compile_blob_batch_with_nonce(
 ) -> Result<(MutationBatch, u64), String> {
     let scope = authority.namespace("blob-cas", "control");
     let expected = store.mutation_version(authority.tenant_scope(), &scope)?;
-    let now = crate::server::dispatch::authoritative_now_ms();
+    let now = crate::kernel::dispatch_support::authoritative_now_ms();
     compile_blob_batch_at_with_nonce(
         store,
         req_id,

@@ -19,7 +19,9 @@ pub(super) async fn dispatch_service_control_methods(
         // ── Service-level ────────────────────────────────────────────
         Method::Ping => Response::ok(
             req.id,
-            ResultPayload::scalar::<medulla_types::result_contract::cluster::Ping>("pong".to_string()),
+            ResultPayload::scalar::<medulla_types::result_contract::cluster::Ping>(
+                "pong".to_string(),
+            ),
         ),
 
         Method::Health => dispatch_boxed(health_response(state, req.id)).await,

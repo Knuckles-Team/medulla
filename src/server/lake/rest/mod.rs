@@ -296,7 +296,7 @@ async fn serve_inner(
     store: Arc<dyn ChunkStore>,
     security_state: Option<Arc<RwLock<ServerState>>>,
 ) {
-    if let Err(error) = crate::server::require_loopback_listener(&listener) {
+    if let Err(error) = crate::server::api::dispatch_support::require_loopback_listener(&listener) {
         tracing::error!("Iceberg listener refused: {error}");
         return;
     }
@@ -710,7 +710,7 @@ mod tests {
     fn seed() -> (LakeManager, RedbChunkStore) {
         let store = RedbChunkStore::open_temp().unwrap();
         let tsdb = SeriesStore::open_in_dir(
-            &crate::server::unique_temp_dir("medulla-lake-rest-test"),
+            &crate::server::api::dispatch_support::unique_temp_dir("medulla-lake-rest-test"),
             crate::store_authority::process_verifier(),
             crate::store_authority::process_authority().principal(),
             &crate::store_authority::process_authority().proof(),

@@ -459,7 +459,7 @@ where
     persistence
         .subscribe_mutation_outbox(graph_fname, CONSUMER, PENDING_TOPIC)
         .await?;
-    let now_ms = crate::server::dispatch::authoritative_now_ms();
+    let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     let mut budget = medulla_transaction::OutboxClaimBudget::new(1, 60 * 60 * 1_000, now_ms)?;
     let outcome = persistence
         .claim_mutation_outbox(graph_fname, CONSUMER, &mut budget)
@@ -590,7 +590,7 @@ async fn process_held_lease<C: PageActions>(
             .ack_mutation_outbox(
                 graph_fname,
                 lease,
-                crate::server::dispatch::authoritative_now_ms(),
+                crate::kernel::dispatch_support::authoritative_now_ms(),
             )
             .await?;
         return Ok(DrainOutcome::Acknowledged { pages: 0 });
@@ -598,7 +598,7 @@ async fn process_held_lease<C: PageActions>(
     let mut checkpoint = read_checkpoint(persistence, graph_fname, &snapshot).await?;
     let mut pages = 0_u32;
     loop {
-        let now_ms = crate::server::dispatch::authoritative_now_ms();
+        let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
         if now_ms >= lease.lease_until_ms {
             return Err("STALE_OUTBOX_LEASE: repository enrichment lease expired".into());
         }
@@ -706,7 +706,7 @@ async fn submit_ready_page<C: PageActions>(
         &verified,
         &wire,
         &page.page_key,
-        crate::server::dispatch::authoritative_now_ms(),
+        crate::kernel::dispatch_support::authoritative_now_ms(),
     )?;
     let request = lower_native_page(snapshot, checkpoint, page, wire)?;
     callbacks.submit(verified, request).await?;
@@ -1111,7 +1111,8 @@ mod tests {
 
         let store = crate::server::blob::store::RedbChunkStore::open_temp().unwrap();
         let body = b"verified repository source";
-        let source_digest = medulla_types::contract::Digest256::from_bytes(Sha256::digest(body).into());
+        let source_digest =
+            medulla_types::contract::Digest256::from_bytes(Sha256::digest(body).into());
         let stored = store
             .put_repository_bodies(
                 "tenant",

@@ -3,7 +3,7 @@ pub(super) fn stamp_resource_reservation_timestamp(method: &mut Method) {
     if !crate::server::mutation_batch::is_resource_reservation_method(method) {
         return;
     }
-    let now_ms = authoritative_now_ms();
+    let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     match method {
         Method::ReserveWorkItemResources { request }
         | Method::ReleaseWorkItemResources { request }
@@ -19,7 +19,7 @@ pub(super) fn stamp_capacity_timestamp(method: &mut Method) {
     if !crate::server::mutation_batch::is_capacity_method(method) {
         return;
     }
-    let now_ms = authoritative_now_ms();
+    let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     match method {
         Method::AcquireCapacity { request } => request.now_ms = now_ms,
         Method::RenewCapacity { request } | Method::ReleaseCapacity { request } => {
@@ -232,7 +232,7 @@ pub(super) fn resolve_multi_raft(
     s: &ServerState,
     placement_authority: &crate::server::state::PlacementAuthorityKind,
 ) -> Option<Arc<crate::raft::multi::MultiRaft>> {
-    if is_replicated_apply() {
+    if crate::kernel::dispatch_support::is_replicated_apply() {
         return None;
     }
     if !matches!(

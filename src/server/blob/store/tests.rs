@@ -799,7 +799,8 @@ fn assert_holder_write_is_all_or_nothing_at(phase: crate::mutation_batch::Mutati
         let blob = chunked(&store, b"crash-point payload", 8);
         digest = blob.digest.clone();
         let version_before =
-            medulla_transaction::version(&store.kernel.read_scope(&store.bootstrap).unwrap()).unwrap();
+            medulla_transaction::version(&store.kernel.read_scope(&store.bootstrap).unwrap())
+                .unwrap();
 
         let acquire = HolderChange::owner_acquire(&digest, "carrier-owner:crash").unwrap();
         let operation = Operation::new(&store, "crash-acquire");

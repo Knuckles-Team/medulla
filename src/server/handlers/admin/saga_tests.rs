@@ -132,9 +132,9 @@ fn channel_group_join_leave_rejoin_replays_each_tagged_result() {
         1,
         "channel-group-join",
         &join,
-        crate::protocol::ResultPayload::scalar::<medulla_types::result_contract::messaging::JoinChannel>(
-            "joined".to_string(),
-        ),
+        crate::protocol::ResultPayload::scalar::<
+            medulla_types::result_contract::messaging::JoinChannel,
+        >("joined".to_string()),
     );
     assert!(matches!(
         joined,
@@ -155,18 +155,19 @@ fn channel_group_join_leave_rejoin_replays_each_tagged_result() {
         Some(crate::protocol::ResultPayload::String(ref value)) if value == "joined"
     ));
 
-    let left = finish(
-        3,
-        "channel-group-leave",
-        &leave,
-        crate::protocol::ResultPayload::of::<medulla_types::result_contract::messaging::LeaveChannel>(
-            medulla_types::messaging_wire::ChannelDeparture::new(
+    let left =
+        finish(
+            3,
+            "channel-group-leave",
+            &leave,
+            crate::protocol::ResultPayload::of::<
+                medulla_types::result_contract::messaging::LeaveChannel,
+            >(medulla_types::messaging_wire::ChannelDeparture::new(
                 None,
                 medulla_types::messaging_wire::ChannelDepartureStatus::Left,
-            ),
-        )
-        .unwrap(),
-    );
+            ))
+            .unwrap(),
+        );
     assert!(matches!(
         left,
         crate::protocol::ResultPayload::Json(ref value)
@@ -192,9 +193,9 @@ fn channel_group_join_leave_rejoin_replays_each_tagged_result() {
         5,
         "channel-group-rejoin",
         &join,
-        crate::protocol::ResultPayload::scalar::<medulla_types::result_contract::messaging::JoinChannel>(
-            "joined".to_string(),
-        ),
+        crate::protocol::ResultPayload::scalar::<
+            medulla_types::result_contract::messaging::JoinChannel,
+        >("joined".to_string()),
     );
     assert!(matches!(
         rejoined,
@@ -521,10 +522,12 @@ fn sparql_recovery_rejects_untyped_results_while_prepared_and_replays_exact_outc
             finish_admin_saga(&backend, recovered.batch, recovered.created_at_ms, invalid,)
                 .is_err()
         );
-        let record =
-            medulla_transaction::read_ledger(&backend.admin_mutations_read().unwrap(), "sparql-success")
-                .unwrap()
-                .unwrap();
+        let record = medulla_transaction::read_ledger(
+            &backend.admin_mutations_read().unwrap(),
+            "sparql-success",
+        )
+        .unwrap()
+        .unwrap();
         assert_eq!(
             record.status,
             crate::mutation_batch::MutationBatchStatus::Prepared

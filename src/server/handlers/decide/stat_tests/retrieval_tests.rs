@@ -89,7 +89,7 @@ pub(super) fn principal_of(who: &str) -> String {
 /// committer-only visibility, with a live grant naming `evaluator` (EH-395).
 pub(super) fn clone_executed(h: &Harness, template: &DecisionLogEntry, record_id: &str) {
     clone_record(h, template, record_id);
-    let now = crate::server::dispatch::authoritative_now_ms();
+    let now = crate::kernel::dispatch_support::authoritative_now_ms();
     grant(h, record_id, "evaluator", (now, now + 3_600_000));
 }
 

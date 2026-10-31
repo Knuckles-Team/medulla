@@ -393,21 +393,20 @@ async fn route_source_ingestion_or_resources(
     ctx: GraphOpRouting<'_>,
     method: Method,
 ) -> Result<Response, Method> {
-    let source_method =
-        match method {
-            Method::SourceIngest { request } => SourceIngestionRoute::Ingest(request),
-            Method::SourceIngestStatus { connector, stream } => SourceIngestionRoute::Status(
-                medulla_types::source_ingestion::SourceIngestStatusRequest { connector, stream },
-            ),
-            Method::IndexRepository {
-                files_msgpack,
-                scope: Some(scope),
-            } => SourceIngestionRoute::IndexRepository {
-                files_msgpack,
-                scope,
-            },
-            method => return route_native_typed_ops(ctx, method).await,
-        };
+    let source_method = match method {
+        Method::SourceIngest { request } => SourceIngestionRoute::Ingest(request),
+        Method::SourceIngestStatus { connector, stream } => SourceIngestionRoute::Status(
+            medulla_types::source_ingestion::SourceIngestStatusRequest { connector, stream },
+        ),
+        Method::IndexRepository {
+            files_msgpack,
+            scope: Some(scope),
+        } => SourceIngestionRoute::IndexRepository {
+            files_msgpack,
+            scope,
+        },
+        method => return route_native_typed_ops(ctx, method).await,
+    };
     route_source_ingestion_dispatch(ctx, source_method).await
 }
 

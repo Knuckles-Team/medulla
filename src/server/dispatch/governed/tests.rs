@@ -51,7 +51,10 @@ async fn status(
         .isolation
         .rbac()
         .governed()
-        .get("repair-1", super::super::authoritative_now_ms())
+        .get(
+            "repair-1",
+            crate::kernel::dispatch_support::authoritative_now_ms(),
+        )
         .expect("proposed")
         .status
 }

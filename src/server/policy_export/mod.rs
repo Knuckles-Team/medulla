@@ -676,7 +676,9 @@ mod http {
     /// populate the bundle's `caller` block and to gate admin, which a shared
     /// static secret cannot provide.
     pub async fn serve(listener: TcpListener) {
-        if let Err(error) = crate::server::require_loopback_listener(&listener) {
+        if let Err(error) =
+            crate::server::api::dispatch_support::require_loopback_listener(&listener)
+        {
             tracing::error!("policy-export listener refused: {error}");
             return;
         }

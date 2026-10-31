@@ -113,13 +113,14 @@ pub(super) fn compile_job_batch(
     // (see `owned_job` above), which is where it belongs -- not by the physical
     // scope identity of a store that has exactly one.
     let scope = authority.namespace("analytics-jobs", "control");
-    let identity = medulla_jobs::analytics_job_scope_identity().map_err(|error| error.to_string())?;
+    let identity =
+        medulla_jobs::analytics_job_scope_identity().map_err(|error| error.to_string())?;
     let expected = store
         .mutation_version(authority.tenant_scope(), &scope)
         .map_err(|error| error.to_string())?;
     let batch_id =
         crate::server::mutation_batch::opaque_request_key("analytics-job", &scope, req_id, method);
-    let now = crate::server::dispatch::authoritative_now_ms();
+    let now = crate::kernel::dispatch_support::authoritative_now_ms();
     let batch = crate::server::mutation_batch::compile_opaque_method_in_scope(
         crate::server::mutation_batch::CompileBatch {
             batch_id: &batch_id,
@@ -157,7 +158,9 @@ where
     }
 }
 
-pub(super) fn job_result_payload<M>(job: &medulla_jobs::AnalyticsJob) -> Result<ResultPayload, String>
+pub(super) fn job_result_payload<M>(
+    job: &medulla_jobs::AnalyticsJob,
+) -> Result<ResultPayload, String>
 where
     M: medulla_types::result_contract::MethodResult<
         Body = medulla_types::result_contract::coordination::AnalyticsJobRecord,

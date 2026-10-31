@@ -1,18 +1,6 @@
 use super::*;
 
 #[cfg(feature = "raft")]
-pub(crate) fn is_replicated_apply() -> bool {
-    REPLICATED_APPLY.try_with(|_| ()).is_ok()
-}
-
-#[cfg(feature = "raft")]
-pub(crate) fn replicated_placement_authority() -> Option<(u64, Option<u64>)> {
-    REPLICATED_APPLY
-        .try_with(|scope| (scope.placement_epoch, scope.fencing_token))
-        .ok()
-}
-
-#[cfg(feature = "raft")]
 pub(in crate::server::dispatch) fn replicated_identity_bootstrap_authorized() -> bool {
     REPLICATED_APPLY
         .try_with(|scope| scope.identity_bootstrap)
@@ -30,16 +18,6 @@ pub(super) fn capability_authority_unavailable(method: &Method) -> bool {
         method,
         Method::MintWorkItemClaimCapability { .. } | Method::VerifyWorkItemClaimCapability { .. }
     )
-}
-
-#[cfg(not(feature = "raft"))]
-pub(crate) fn is_replicated_apply() -> bool {
-    false
-}
-
-#[cfg(not(feature = "raft"))]
-pub(crate) fn replicated_placement_authority() -> Option<(u64, Option<u64>)> {
-    None
 }
 
 #[cfg(not(feature = "raft"))]

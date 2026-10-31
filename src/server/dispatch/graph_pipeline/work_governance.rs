@@ -147,10 +147,14 @@ fn capacity_commit_result(method: &Method) -> fn(&[u8]) -> Result<ResultPayload,
             >
         }
         Method::UpdateCapacityCell { .. } => {
-            ResultPayload::of_receipt::<medulla_types::result_contract::coordination::UpdateCapacityCell>
+            ResultPayload::of_receipt::<
+                medulla_types::result_contract::coordination::UpdateCapacityCell,
+            >
         }
         Method::ThrottleCapacityCell { .. } => {
-            ResultPayload::of_receipt::<medulla_types::result_contract::coordination::ThrottleCapacityCell>
+            ResultPayload::of_receipt::<
+                medulla_types::result_contract::coordination::ThrottleCapacityCell,
+            >
         }
         _ => |_| Err("capacity commit receipt for a non-capacity method".to_string()),
     }
@@ -234,7 +238,9 @@ async fn capacity_status_response(
     backend: &Arc<dyn crate::server::persistence::PersistenceBackend>,
     fname: &str,
     request: &medulla_types::native_control::CapacityStatusRequest,
-    declared: fn(medulla_types::native_control::CapacityStatusResult) -> Result<ResultPayload, String>,
+    declared: fn(
+        medulla_types::native_control::CapacityStatusResult,
+    ) -> Result<ResultPayload, String>,
     req_id: u64,
 ) -> Response {
     backend
@@ -279,7 +285,7 @@ pub(super) async fn dispatch_op_workitem_claim_capability(
     #[cfg(feature = "raft")]
     let routed_raft = ctx.routed_raft;
     #[cfg(feature = "raft")]
-    if is_replicated_apply() {
+    if crate::kernel::dispatch_support::is_replicated_apply() {
         // A replicated apply has only the bounded Raft routing context;
         // capability authority requires the original cryptographically
         // verified principal and session envelope.
@@ -332,7 +338,7 @@ pub(super) async fn dispatch_op_workitem_claim_capability(
             session: verified_context.idempotency_key().to_string(),
             authority_epoch: work_item_capability_authority_epoch(&graph_incarnation_id),
             incarnation_id: graph_incarnation_id.clone(),
-            now_ms: authoritative_now_ms(),
+            now_ms: crate::kernel::dispatch_support::authoritative_now_ms(),
         };
         let fname = crate::persist::sanitize(graph_name);
         let _mutation_guard = crate::server::mutation_batch::lock_graph(graph_name).await;

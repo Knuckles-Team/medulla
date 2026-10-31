@@ -129,7 +129,7 @@ async fn commit(
         },
         record_id,
         disposition,
-        observed_at_ms: authoritative_now_ms(),
+        observed_at_ms: crate::kernel::dispatch_support::authoritative_now_ms(),
     })
 }
 
@@ -148,7 +148,7 @@ async fn write_node(
         record_id: record_id.to_string(),
         tenant_id: verified.tenant().to_string(),
         recorded_by: verified.principal_persistence_id(),
-        recorded_at_ms: authoritative_now_ms(),
+        recorded_at_ms: crate::kernel::dispatch_support::authoritative_now_ms(),
         record: record.clone(),
     };
     let method = Method::PolicyEvolutionStore {

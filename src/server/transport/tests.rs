@@ -171,7 +171,7 @@ async fn qos_verification_names_the_audience_mismatch_cause() {
         &request,
         &VerifiedEnvelopeParams {
             context: &context,
-            timestamp: crate::server::dispatch::authoritative_now_ms() / 1000,
+            timestamp: crate::kernel::dispatch_support::authoritative_now_ms() / 1000,
             nonce: "qos-audience-mismatch",
             idempotency_key: "qos-audience-mismatch",
         },
@@ -183,9 +183,7 @@ async fn qos_verification_names_the_audience_mismatch_cause() {
     assert_eq!(response.error.as_deref(), Some("AUTH_AUDIENCE_MISMATCH"));
     assert_eq!(
         response.error_detail.as_deref(),
-        Some(
-            "request context audience does not match deployment (expected 'medulla-test')"
-        )
+        Some("request context audience does not match deployment (expected 'medulla-test')")
     );
     assert_eq!(scheduler.stats().in_flight, 0);
 }

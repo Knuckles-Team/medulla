@@ -72,7 +72,7 @@ async fn prepare(ctx: &HandleContext<'_>) -> Result<PreparedOperation, Response>
     Ok(PreparedOperation {
         backend,
         graph: crate::persist::sanitize(ctx.graph_name),
-        now_ms: crate::server::dispatch::authoritative_now_ms(),
+        now_ms: crate::kernel::dispatch_support::authoritative_now_ms(),
         _mutation_guard: crate::server::mutation_batch::lock_graph(ctx.graph_name).await,
     })
 }

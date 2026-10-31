@@ -240,7 +240,7 @@ fn prepare_publish_entry(
     };
     let mut write_context = replay_context.clone();
     write_context.created_at_ms =
-        crate::server::dispatch::authoritative_now_ms().max(previous_updated_at_ms);
+        crate::kernel::dispatch_support::authoritative_now_ms().max(previous_updated_at_ms);
     let entry = match store.entry_at_revision_in_write(
         txn,
         &request.context.tenant_id,
@@ -286,7 +286,7 @@ fn prepare_retire_entry(
     }
     let mut write_context = replay_context.clone();
     write_context.created_at_ms =
-        crate::server::dispatch::authoritative_now_ms().max(retained.updated_at_ms);
+        crate::kernel::dispatch_support::authoritative_now_ms().max(retained.updated_at_ms);
     let entry = match store.entry_at_revision_in_write(
         txn,
         &request.context.tenant_id,

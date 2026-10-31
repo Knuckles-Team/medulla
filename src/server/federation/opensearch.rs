@@ -163,7 +163,7 @@ pub fn query_opensearch(
     let body = build_search_body(query_dsl)?;
     let endpoint = format!("{base}/{index}/_search");
 
-    let agent = crate::server::outbound_http_config()
+    let agent = crate::server::api::dispatch_support::outbound_http_config()
         .timeout_connect(Some(Duration::from_secs(super::CONNECT_TIMEOUT_SECS)))
         .timeout_recv_response(Some(Duration::from_secs(super::READ_TIMEOUT_SECS)))
         .timeout_recv_body(Some(Duration::from_secs(super::READ_TIMEOUT_SECS)))

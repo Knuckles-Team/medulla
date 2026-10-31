@@ -465,7 +465,7 @@ fn maintain_counted_reference(
 ) -> Result<u64, String> {
     store.flush_chunks()?;
     validate_digest(digest)?;
-    let at = crate::server::dispatch::authoritative_now_ms();
+    let at = crate::kernel::dispatch_support::authoritative_now_ms();
     store.maintain("blob_adjust_ref_v1", digest, at, |wtx| {
         adjust_counted_reference(wtx, &store.shared, digest, delta, at)
     })
@@ -489,7 +489,7 @@ impl RedbChunkStore {
     /// the OS temp reaper; callers that want cleanup pass their own dir to `open`.
     #[cfg(test)]
     pub fn open_temp() -> Result<Self, String> {
-        let dir = crate::server::unique_temp_dir("medulla-blob-cas");
+        let dir = crate::server::api::dispatch_support::unique_temp_dir("medulla-blob-cas");
         Self::open(&dir.to_string_lossy())
     }
 
@@ -569,7 +569,7 @@ impl RedbChunkStore {
             return Ok(());
         }
         let group = std::mem::take(&mut batch.pending);
-        let at = crate::server::dispatch::authoritative_now_ms();
+        let at = crate::kernel::dispatch_support::authoritative_now_ms();
         self.maintain("blob_chunk_group_v1", &group_subject(&group), at, |wtx| {
             let rows: Vec<(&str, &[u8])> = group
                 .iter()

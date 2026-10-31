@@ -63,7 +63,7 @@ async fn capture_graph_dispatch<'a>(
 
     let access = graph_op_access_level(method);
     #[cfg(feature = "raft")]
-    let state_machine_authorized = is_replicated_apply();
+    let state_machine_authorized = crate::kernel::dispatch_support::is_replicated_apply();
     #[cfg(not(feature = "raft"))]
     let state_machine_authorized = false;
     let gate = gate_graph_op_under_lock(

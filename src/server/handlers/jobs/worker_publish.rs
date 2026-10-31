@@ -38,9 +38,9 @@ pub(super) fn handle_worker_stage(
         );
     }
     match store.stage_result_fenced(job_id, &worker_ref, lease_epoch, result, unix_ms()) {
-        Ok(job) => {
-            job_response::<medulla_types::result_contract::coordination::JobWorkerStage>(req_id, &job)
-        }
+        Ok(job) => job_response::<medulla_types::result_contract::coordination::JobWorkerStage>(
+            req_id, &job,
+        ),
         Err(error) => Response::err(req_id, job_refusal(&error)),
     }
 }
@@ -112,12 +112,14 @@ pub(super) async fn finalize_local_publish(
     req_id: u64,
 ) -> Response {
     match publish_staged_result(state, store, job, worker_ref, lease_epoch).await {
-        Ok(()) => match store.get(job_id) {
-            Ok(job) => job_response::<medulla_types::result_contract::coordination::JobWorkerPublish>(
-                req_id, &job,
-            ),
-            Err(error) => Response::err(req_id, job_refusal(&error)),
-        },
+        Ok(()) => {
+            match store.get(job_id) {
+                Ok(job) => job_response::<
+                    medulla_types::result_contract::coordination::JobWorkerPublish,
+                >(req_id, &job),
+                Err(error) => Response::err(req_id, job_refusal(&error)),
+            }
+        }
         Err(error) => Response::err(req_id, error),
     }
 }
@@ -168,7 +170,7 @@ pub(super) async fn publish_via_consensus_if_replicated(
     worker_ref: &str,
     lease_epoch: u64,
 ) -> Option<Response> {
-    if !crate::server::dispatch::is_replicated_apply() {
+    if !crate::kernel::dispatch_support::is_replicated_apply() {
         return None;
     }
     Some(
@@ -203,9 +205,9 @@ pub(super) fn handle_worker_cancel(
         }
     }
     match store.mark_cancelled_fenced(job_id, &worker_ref, lease_epoch, unix_ms()) {
-        Ok(job) => {
-            job_response::<medulla_types::result_contract::coordination::JobWorkerCancel>(req_id, &job)
-        }
+        Ok(job) => job_response::<medulla_types::result_contract::coordination::JobWorkerCancel>(
+            req_id, &job,
+        ),
         Err(error) => Response::err(req_id, job_refusal(&error)),
     }
 }
@@ -246,9 +248,9 @@ pub(super) fn handle_worker_fail(
         }
     }
     match store.fail_attempt_fenced(job_id, &worker_ref, lease_epoch, reason_code, unix_ms()) {
-        Ok(job) => {
-            job_response::<medulla_types::result_contract::coordination::JobWorkerFail>(req_id, &job)
-        }
+        Ok(job) => job_response::<medulla_types::result_contract::coordination::JobWorkerFail>(
+            req_id, &job,
+        ),
         Err(error) => Response::err(req_id, job_refusal(&error)),
     }
 }

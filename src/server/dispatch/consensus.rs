@@ -37,35 +37,7 @@ use sanitization::sanitize_native_proposal;
 use transaction::{execute_consensus_transaction, TransactionExecution};
 
 #[cfg(feature = "raft")]
-#[derive(Clone, Copy)]
-struct ReplicatedApplyScope {
-    committed_at_ms: u64,
-    placement_epoch: u64,
-    fencing_token: Option<u64>,
-    identity_bootstrap: bool,
-}
-
-#[cfg(feature = "raft")]
-tokio::task_local! {
-    static REPLICATED_APPLY: ReplicatedApplyScope;
-}
-
-/// One authoritative clock for a replicated native command. Followers must not
-/// sample their local wall clocks while applying the same committed entry.
-pub(crate) fn authoritative_now_ms() -> u64 {
-    #[cfg(feature = "raft")]
-    if let Ok(value) = REPLICATED_APPLY.try_with(|scope| scope.committed_at_ms) {
-        return value;
-    }
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|duration| duration.as_millis() as u64)
-        .unwrap_or(0)
-}
-
-pub(crate) fn authoritative_now_secs() -> u64 {
-    authoritative_now_ms() / 1_000
-}
+use crate::kernel::dispatch_support::{ReplicatedApplyScope, REPLICATED_APPLY};
 
 #[cfg(all(feature = "raft", feature = "jobs"))]
 pub(crate) use replicated::{
@@ -75,6 +47,5 @@ pub(crate) use replicated::{
 pub(crate) use replicated::{
     apply_replicated_native, apply_replicated_transaction_decision,
     apply_replicated_transaction_finalize, apply_replicated_transaction_participant,
-    apply_replicated_transaction_prepare, is_replicated_apply, replicated_placement_authority,
-    ReplicatedParticipantRef,
+    apply_replicated_transaction_prepare, ReplicatedParticipantRef,
 };

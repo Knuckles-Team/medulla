@@ -34,7 +34,7 @@ pub(crate) async fn handle_write_back(
         }
     };
     let actor = verified.principal_persistence_id();
-    let now_ms = crate::server::dispatch::authoritative_now_ms();
+    let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     let result = dispatch_write_back(
         store.as_ref(),
         verified.idempotency_key(),
@@ -127,7 +127,9 @@ fn record_attempt(
     }
     store
         .record_write_back_attempt(attempt, actor, now_ms)
-        .and_then(ResultPayload::of::<medulla_types::result_contract::storage::WriteBackRecordAttempt>)
+        .and_then(
+            ResultPayload::of::<medulla_types::result_contract::storage::WriteBackRecordAttempt>,
+        )
 }
 
 fn record_reconciliation(
@@ -145,7 +147,9 @@ fn record_reconciliation(
     store
         .record_write_back_reconciliation(observation, actor, now_ms)
         .and_then(
-            ResultPayload::of::<medulla_types::result_contract::storage::WriteBackRecordReconciliation>,
+            ResultPayload::of::<
+                medulla_types::result_contract::storage::WriteBackRecordReconciliation,
+            >,
         )
 }
 

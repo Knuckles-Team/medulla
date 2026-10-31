@@ -267,7 +267,7 @@ async fn prepare_fresh(
         .read_mutation_graph_version(graph_fname)
         .await?
         .ok_or("CONFLICT: repository enrichment graph version is absent")?;
-    let committed_at_ms = crate::server::dispatch::authoritative_now_ms();
+    let committed_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     let replacement_intent =
         crate::server::dispatch::enrichment_intent_for_snapshot(plan.snapshot)?;
     let replacement_batch =

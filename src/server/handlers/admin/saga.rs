@@ -312,11 +312,12 @@ fn validate_sparql_recovery_outcome(result: &crate::protocol::ResultPayload) -> 
     };
     // All five report fields are required, so a successful decode plus exact
     // object length also excludes unknown fields.
-    let success = body.len() == 5
-        && serde_json::from_value::<medulla_types::result_contract::transactions::SparqlUpdateReport>(
-            value.clone(),
-        )
-        .is_ok();
+    let success =
+        body.len() == 5
+            && serde_json::from_value::<
+                medulla_types::result_contract::transactions::SparqlUpdateReport,
+            >(value.clone())
+            .is_ok();
     let compensated = body.len() == 3
         && body.get("outcome").and_then(serde_json::Value::as_str) == Some("compensated")
         && body
@@ -506,7 +507,7 @@ pub(crate) fn begin_named_admin_saga_with_nonce(
 ) -> Result<AdminSaga, String> {
     let result_contract = AdminSagaResultContract::for_method(method)?;
     let identity = crate::server::persistence::redb_backend::cluster_admin_scope_identity()?;
-    let now = crate::server::dispatch::authoritative_now_ms();
+    let now = crate::kernel::dispatch_support::authoritative_now_ms();
     let read = backend.admin_mutations_read()?;
     let expected = medulla_transaction::version(&read)?;
     let existing = medulla_transaction::read_ledger(&read, batch_id)?;
@@ -572,7 +573,7 @@ pub(crate) fn begin_named_admin_saga_with_private_payload_and_nonce(
     } = payload;
     let result_contract = AdminSagaResultContract::for_private_event(event_type)?;
     let identity = crate::server::persistence::redb_backend::cluster_admin_scope_identity()?;
-    let now = crate::server::dispatch::authoritative_now_ms();
+    let now = crate::kernel::dispatch_support::authoritative_now_ms();
     let expected = medulla_transaction::version(&backend.admin_mutations_read()?)?;
     let mut batch = crate::server::mutation_batch::compile_opaque_digest(
         crate::server::mutation_batch::CompileBatch {
@@ -619,7 +620,8 @@ pub(crate) fn resume_named_admin_saga(
         caller.ok_or_else(|| "coordinator recovery requires a verified principal".to_string())?,
     )?;
     let identity = crate::server::persistence::redb_backend::cluster_admin_scope_identity()?;
-    let Some(record) = medulla_transaction::read_ledger(&backend.admin_mutations_read()?, batch_id)?
+    let Some(record) =
+        medulla_transaction::read_ledger(&backend.admin_mutations_read()?, batch_id)?
     else {
         return Ok(None);
     };

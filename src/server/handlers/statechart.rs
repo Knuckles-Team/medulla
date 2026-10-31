@@ -155,7 +155,7 @@ fn op_define(store: &StatechartStore, def_msgpack: &[u8]) -> Result<serde_json::
 /// a pure hash of the request identity (tenant+actor namespace, request id, the
 /// exact `Instantiate` op) — fixed BEFORE Raft proposal and therefore identical on
 /// every state-machine replica — and `committed_at_ms` is the leader-selected
-/// commit time every replica applies via `authoritative_now_ms()`. Together they
+/// commit time every replica applies via `crate::kernel::dispatch_support::authoritative_now_ms()`. Together they
 /// remove `StatechartStore::instantiate`'s local clock/counter reads from the
 /// replicated write path, mirroring `handlers::jobs::compile_job_batch` +
 /// `JobStore::submit_batch`.
@@ -180,7 +180,7 @@ fn op_instantiate(
         req_id,
         &method,
     );
-    let committed_at_ms = crate::server::dispatch::authoritative_now_ms();
+    let committed_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     let context = Context::from_value(context)?;
     let (instance, _replayed) = store
         .instantiate_batch(
@@ -209,11 +209,11 @@ fn op_send_event(
     // instance id never becomes a cross-tenant read/write handle.
     owned_instance(store, tenant, actor, instance_id)?;
     let event_input = EventInput::with_payload(event, payload);
-    // `authoritative_now_ms()` resolves to the SAME leader-selected commit time on
+    // `crate::kernel::dispatch_support::authoritative_now_ms()` resolves to the SAME leader-selected commit time on
     // every Raft state-machine replica (see `StatechartStore::send_event`'s doc),
     // so the resulting instance image and its content-addressed MutationBatch are
     // byte-identical across replicas.
-    let now_ms = crate::server::dispatch::authoritative_now_ms() as i64;
+    let now_ms = crate::kernel::dispatch_support::authoritative_now_ms() as i64;
     let outcome = store
         .send_event(instance_id, &event_input, expected_version, now_ms)
         .map_err(|e| e.to_string())?;

@@ -14,8 +14,8 @@ use crate::raft::{
 };
 use crate::server::access::CarrierAuthority;
 use crate::server::auth::VerifiedRequestContext;
+use crate::server::dispatch::apply_replicated_native;
 use crate::server::dispatch::test_support::{send, verified};
-use crate::server::dispatch::{apply_replicated_native, authoritative_now_ms};
 use crate::server::persistence::redb_backend::RedbBackend;
 use crate::server::ServerState;
 
@@ -43,7 +43,7 @@ fn apply_identity(layer: &mut IsolationLayer, op: IdentityOp, principal: &str, s
         .try_apply_identity(
             &op,
             &stamp,
-            authoritative_now_ms(),
+            crate::kernel::dispatch_support::authoritative_now_ms(),
             &medulla_capabilities::scopes::ScopeRegistry,
         )
         .expect("fixture identity operation");
@@ -111,7 +111,7 @@ fn create_graph() -> Method {
 
 fn native_request(context: &VerifiedRequestContext) -> RaftRequest {
     let carrier = CarrierAuthority::from_verified(context).unwrap();
-    let now = authoritative_now_ms();
+    let now = crate::kernel::dispatch_support::authoritative_now_ms();
     let authority = RaftMutationContext::from_verified_request(
         "synthetic-replicated-tenant-batch".to_string(),
         11,

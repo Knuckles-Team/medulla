@@ -54,7 +54,9 @@ pub(crate) async fn serve(
             Err(cancelled) => return Response::err(req_id, cancelled),
         };
         let method = medulla_types::protocol::Method::ConnectorPack {
-            op: Box::new(medulla_types::connector_pack::ConnectorPackOp::ReconcileBodies { request }),
+            op: Box::new(
+                medulla_types::connector_pack::ConnectorPackOp::ReconcileBodies { request },
+            ),
         };
         match reconcile_locked(state, req_id, verified, &method).await {
             Ok(report) => Response::ok(
@@ -85,16 +87,18 @@ pub(super) async fn reconcile_if_due(
     static LAST_RUN_MS: [AtomicU64; super::PACK_STRIPES] =
         [const { AtomicU64::new(0) }; super::PACK_STRIPES];
     let clock = &LAST_RUN_MS[super::tenant_stripe(verified.tenant())];
-    let now_ms = crate::server::dispatch::authoritative_now_ms();
+    let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     if now_ms.saturating_sub(clock.load(Ordering::Acquire)) < RECONCILE_INTERVAL_MS {
         return;
     }
     let method = medulla_types::protocol::Method::ConnectorPack {
-        op: Box::new(medulla_types::connector_pack::ConnectorPackOp::ReconcileBodies {
-            request: medulla_types::connector_pack::ConnectorPackReconcileRequest {
-                context: context.clone(),
+        op: Box::new(
+            medulla_types::connector_pack::ConnectorPackOp::ReconcileBodies {
+                request: medulla_types::connector_pack::ConnectorPackReconcileRequest {
+                    context: context.clone(),
+                },
             },
-        }),
+        ),
     };
     match reconcile_locked(state, req_id, verified, &method).await {
         Ok(_) => clock.store(now_ms, Ordering::Release),

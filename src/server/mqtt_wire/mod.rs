@@ -98,7 +98,11 @@ fn verify_mqtt_password(secret: &str, principal: &str, password: &[u8]) -> bool 
 
 /// Fail closed before binding the plaintext MQTT listener.
 pub fn validate_startup_policy(addr: &str, secret: &str) -> std::io::Result<()> {
-    crate::server::validate_direct_wire_security(addr, "mqtt-wire", !secret.is_empty())
+    crate::server::api::dispatch_support::validate_direct_wire_security(
+        addr,
+        "mqtt-wire",
+        !secret.is_empty(),
+    )
 }
 
 /// Serve the MQTT wire protocol on `addr` until the listener errors (CONCEPT:MEDULLA-KG.query.mqtt-packet-codec).
@@ -556,7 +560,7 @@ fn authenticate_connect(payload: &[u8], secret: &str) -> Option<String> {
     if !c.valid || c.remaining() != 0 || !verify_mqtt_password(secret, &principal, password) {
         return None;
     }
-    crate::server::pseudonymous_broker_actor(secret, &principal).ok()
+    crate::server::api::dispatch_support::pseudonymous_broker_actor(secret, &principal).ok()
 }
 
 fn parse_connect_header<'a>(payload: &'a [u8]) -> Option<(Cursor<'a>, u8, u8)> {
@@ -793,7 +797,8 @@ mod tests {
         let actor = authenticate_connect(&connect, "test").unwrap();
         assert_eq!(
             actor,
-            crate::server::pseudonymous_broker_actor("test", principal).unwrap()
+            crate::server::api::dispatch_support::pseudonymous_broker_actor("test", principal)
+                .unwrap()
         );
         assert!(!actor.contains(principal));
         assert!(authenticate_connect(&connect, "other").is_none());
@@ -810,16 +815,19 @@ mod tests {
     // ── Served listener round-trip (CONCEPT:MEDULLA-KG.query.mqtt-packet-codec) ───────────────────────
 
     async fn spawn_listener() -> String {
-        broker_wire::spawn_broker_test_listener("medulla-mqtt-wire-test", |listener, state| async move {
-            accept_loop(
-                listener,
-                state,
-                "__commons__".to_string(),
-                DEFAULT_EXCHANGE.to_string(),
-                "test".to_string(),
-            )
-            .await
-        })
+        broker_wire::spawn_broker_test_listener(
+            "medulla-mqtt-wire-test",
+            |listener, state| async move {
+                accept_loop(
+                    listener,
+                    state,
+                    "__commons__".to_string(),
+                    DEFAULT_EXCHANGE.to_string(),
+                    "test".to_string(),
+                )
+                .await
+            },
+        )
         .await
     }
 

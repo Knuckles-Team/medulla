@@ -368,7 +368,7 @@ impl JwtValidator {
 
     /// Fetch the realm JWKS and rebuild the `kid -> DecodingKey` cache.
     fn refresh(&self) -> Result<(), String> {
-        let body = crate::server::outbound_http_config()
+        let body = crate::server::api::dispatch_support::outbound_http_config()
             .build()
             .new_agent()
             .get(&self.jwks_url)

@@ -97,7 +97,7 @@ async fn serve(
     op: MutationOutboxOp,
 ) -> Result<Answer, String> {
     op.validate()?;
-    let now_ms = crate::server::dispatch::authoritative_now_ms();
+    let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
     let owner = resolve(state, verified, op.target()).await?;
     match op {
         MutationOutboxOp::Status { consumer, .. } => owner
@@ -299,16 +299,16 @@ impl Owner {
                     .await
             }
             Owner::AgentLibrary { store, tenant_id } => {
-                let now_ms = crate::server::dispatch::authoritative_now_ms();
-                crate::server::dispatch::blocking_task(BLOCKING_TASK, move || {
+                let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+                crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     store.outbox_view(&tenant_id, &view, now_ms)
                 })
                 .await
             }
             #[cfg(feature = "ann-redb")]
             Owner::SemanticBinding { service } => {
-                let now_ms = crate::server::dispatch::authoritative_now_ms();
-                crate::server::dispatch::blocking_task(BLOCKING_TASK, move || {
+                let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+                crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     service
                         .outbox_operator_view(&view, now_ms)
                         .map_err(|error| error.to_string())
@@ -321,16 +321,16 @@ impl Owner {
                 tenant_scope,
                 resource,
             } => {
-                let now_ms = crate::server::dispatch::authoritative_now_ms();
-                crate::server::dispatch::blocking_task(BLOCKING_TASK, move || {
+                let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+                crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     store.outbox_operator_view(&tenant_scope, &resource, &view, now_ms)
                 })
                 .await
             }
             #[cfg(feature = "jobs")]
             Owner::Jobs { store } => {
-                let now_ms = crate::server::dispatch::authoritative_now_ms();
-                crate::server::dispatch::blocking_task(BLOCKING_TASK, move || {
+                let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+                crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     let (mutations, kernel, owner) = store.outbox_owner();
                     let read = kernel.read_scope(owner)?;
                     crate::server::outbox_operator::read_view(mutations, &read, &view, now_ms)
@@ -347,14 +347,14 @@ impl Owner {
                 graph_fname,
             } => persistence.write_mutation_outbox(&graph_fname, write).await,
             Owner::AgentLibrary { store, tenant_id } => {
-                crate::server::dispatch::blocking_task(BLOCKING_TASK, move || {
+                crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     store.outbox_write(&tenant_id, write)
                 })
                 .await
             }
             #[cfg(feature = "ann-redb")]
             Owner::SemanticBinding { service } => {
-                crate::server::dispatch::blocking_task(BLOCKING_TASK, move || {
+                crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     service
                         .outbox_operator_write(write)
                         .map_err(|error| error.to_string())
@@ -367,14 +367,14 @@ impl Owner {
                 tenant_scope,
                 resource,
             } => {
-                crate::server::dispatch::blocking_task(BLOCKING_TASK, move || {
+                crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     store.outbox_operator_write(&tenant_scope, &resource, write)
                 })
                 .await
             }
             #[cfg(feature = "jobs")]
             Owner::Jobs { store } => {
-                crate::server::dispatch::blocking_task(BLOCKING_TASK, move || {
+                crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     let (mutations, _, owner) = store.outbox_owner();
                     crate::server::outbox_operator::operate(mutations, owner, write)
                 })
