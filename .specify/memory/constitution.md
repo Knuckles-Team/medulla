@@ -1,8 +1,8 @@
 # Medulla constitution
 
-This repository inherits the [organization constitution](https://github.com/Knuckles-Team/pipelines/blob/main/.specify/memory/constitution.md) version 1.0.0. Every article of that constitution applies here. This file adds only the rules and limits of this repository.
+This repository inherits the [organization constitution](https://github.com/Knuckles-Team/pipelines/blob/main/.specify/memory/constitution.md) version 1.2.0. Every article of that constitution applies here. This file adds only the rules and limits of this repository.
 
-**Inherits**: organization constitution v1.0.0 | **Version**: 1.0.0 | **Ratified**: 2026-10-31 | **Last amended**: 2026-10-31
+**Inherits**: organization constitution v1.2.0 | **Version**: 1.1.0 | **Ratified**: 2026-10-31 | **Last amended**: 2026-10-31
 
 ## Organization standards
 
@@ -22,7 +22,7 @@ Facts, records, storage, query, retrieval, ingest, reasoning and decisions are n
 
 ### R-II. Every wait has a deadline
 
-Code never blocks without a deadline. It uses a bounded wait that fails naming the missed rendezvous. Lock poisoning is an explicit decision through the shared recovery helper.
+Code never blocks without a deadline. It uses a bounded wait that fails naming the missed rendezvous. Every await that can hang has a timeout. Every queue and channel is bounded. Lock poisoning is an explicit decision through the shared recovery helper.
 
 **Enforced by:** `clippy.toml` `disallowed-methods`, which the clippy gate runs with warnings denied.
 
@@ -35,6 +35,14 @@ A requirement row states a latency budget and a memory budget and names the benc
 **Enforced by:** [Ecosystem boundaries](https://github.com/Knuckles-Team/pipelines/blob/main/reference/ecosystem-boundaries.md), medulla row; `.config/nextest.toml` for the test profile.
 
 **Plan check:** Does each new row state both budgets and name its benchmark?
+
+### R-IV. Crates are small, layered and cut over hard
+
+Each crate has one responsibility and stays at or below the crate size limit. A crate that grows past the limit is split before new features land in it. Crate dependencies are acyclic and layered downward, as `scripts/crate_split/manifest.toml` states. The facade crate holds only re-exports, bindings and binaries. Handler crates are siblings with no edges between them. A change never adds a re-export to preserve an old path. The change updates every caller instead.
+
+**Enforced by:** `scripts/check_crate_graph.py` for the layers, the sibling rule and the facade rule. The same gate enforces the size limit once the crate split lands.
+
+**Plan check:** Does the change keep each touched crate under the size limit, add no dependency edge against the layers and leave no re-export of an old path?
 
 ## Repository limits
 
@@ -55,5 +63,6 @@ The Rust KISS limits below replace the Python limits of the organization table f
 | Functions per file | 40 | `.config/kiss.toml` |
 | Import cycle size | 0 | `.config/kiss.toml` |
 | Dependency depth | 4 | `.config/kiss.toml` |
+| Lines of Rust per crate, vendored patches excluded | 25000 | `scripts/check_crate_graph.py` once the split lands |
 
 Amend this file in a reviewed change. State the impact in the pull request. When the organization constitution changes its version, update the **Inherits** line in the same change.
