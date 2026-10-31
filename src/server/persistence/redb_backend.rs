@@ -810,6 +810,7 @@ pub(crate) fn seed_raw_row<'k, 'v, K, V>(
 
 #[cfg(test)]
 mod tests {
+    use crate::server::persistence::AsRedb;
     use super::*;
     // A raw `redb::Database` survives HERE and nowhere else: these fixtures plant
     // rows the production paths deliberately refuse to write, so they must reach

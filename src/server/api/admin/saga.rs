@@ -88,7 +88,7 @@ pub struct AdminSaga {
 
 #[cfg(feature = "redb")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum AdminSagaResultContract {
+pub(crate) enum AdminSagaResultContract {
     Bool,
     Count,
     Text,
