@@ -872,6 +872,7 @@
 "src/server/s3/route.rs" = "medulla-wire"
 "src/server/sealed_retention.rs" = "medulla-server"
 "src/server/sealed_retention/tests.rs" = "medulla-server"
+"src/server/seams_install.rs" = "medulla-server"
 "src/server/secondary_indexes.rs" = "medulla-h-query"
 "src/server/semantic_activation.rs" = "medulla-server"
 "src/server/semantic_index.rs" = "medulla-h-query"

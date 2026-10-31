@@ -464,6 +464,7 @@ pub(super) fn compose_server_state(
     limits: &AdmissionLimits,
     (txn_ttl_secs, txn_max_per_graph, txn_max_per_agent): (u64, usize, usize),
 ) -> ServerState {
+    server::install_seams(&state);
     #[cfg(all(feature = "streaming", feature = "cdc-kafka"))]
     if let Some(hub) = &state.cdc {
         // CA-11 (DEC-CA-03): install the optional Kafka sink exactly once,
