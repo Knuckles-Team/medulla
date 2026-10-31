@@ -313,14 +313,15 @@ pub(crate) mod worker {
         } else {
             service_context(&plan.record_id)?
         };
-        let context = crate::server::handlers::admin::bind_agent_library_context(
-            store,
-            0,
-            &verified,
-            unbound_context(tenant),
-            "connector-pack:reproject",
-            true,
-        )?;
+        let context =
+            crate::server::persistence::agent_library::context::bind_agent_library_context(
+                store,
+                0,
+                &verified,
+                unbound_context(tenant),
+                "connector-pack:reproject",
+                true,
+            )?;
         crate::server::handlers::admin::connector_pack::reproject::project_head(
             state, 0, &verified, store, context, &plan,
         )

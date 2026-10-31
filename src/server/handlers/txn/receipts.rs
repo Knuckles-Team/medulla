@@ -165,7 +165,7 @@ pub(crate) async fn preflight_open_txn_authority(
 /// agent ACL attribution. Replicated prepare already carries its fingerprint.
 pub(super) fn txn_receipt_principal(caller: Option<&str>) -> Result<String, String> {
     #[cfg(feature = "redb")]
-    if let Ok(authority) = crate::server::handlers::admin::current_admin_saga_authority() {
+    if let Ok(authority) = crate::server::api::admin::saga::current_admin_saga_authority() {
         return Ok(authority.actor_scope().to_string());
     }
     crate::server::mutation_batch::principal_fingerprint(
@@ -282,7 +282,7 @@ pub(super) async fn cleanup_cross_shard_decision(
 #[cfg(feature = "redb")]
 pub(super) struct TxnReceipt {
     pub(super) backend: Arc<dyn crate::server::persistence::PersistenceBackend>,
-    pub(super) saga: crate::server::handlers::admin::AdminSaga,
+    pub(super) saga: crate::server::api::admin::saga::AdminSaga,
 }
 
 #[cfg(not(feature = "redb"))]
@@ -342,7 +342,7 @@ fn admit_txn_saga(
     txn: &GraphTxnState,
     idempotency_key: Option<&str>,
     attempt_nonce: Option<Nonce>,
-) -> Result<crate::server::handlers::admin::AdminSaga, String> {
+) -> Result<crate::server::api::admin::saga::AdminSaga, String> {
     let intent_digest = txn.replay_intent_digest()?;
     let batch_id = commit_receipt_id(txn_id, idempotency_key, Some(txn.tenant_scope.as_str()));
     // This function is called only after the open transaction has been removed
@@ -352,7 +352,7 @@ fn admit_txn_saga(
     // reused key are a conflict, while a changed OCC snapshot is replay-safe.
     if idempotency_key.is_some() {
         if let Some(existing) =
-            crate::server::handlers::admin::resume_named_admin_saga(redb, &batch_id, caller)?
+            crate::server::api::admin::saga::resume_named_admin_saga(redb, &batch_id, caller)?
         {
             let existing_digest = transaction_plan_digest(&existing.batch)?;
             if existing_digest != intent_digest {
@@ -385,12 +385,12 @@ fn admit_txn_saga(
     }
     let (payload_digest, encrypted_payload) = seal_txn_recovery_plan(redb, txn)?;
     let saga =
-        crate::server::handlers::admin::begin_named_admin_saga_with_private_payload_and_nonce(
+        crate::server::api::admin::saga::begin_named_admin_saga_with_private_payload_and_nonce(
             redb,
             req_id,
             caller,
             attempt_nonce,
-            crate::server::handlers::admin::AdminSagaPayload {
+            crate::server::api::admin::saga::AdminSagaPayload {
                 domain: crate::mutation_batch::DurabilityDomain::ControlPlane,
                 batch_id: &batch_id,
                 event_type: "transaction_recovery_plan",
@@ -424,9 +424,9 @@ fn retry_txn_receipt(
     redb: &crate::server::persistence::redb_backend::RedbBackend,
     req_id: u64,
     caller: &str,
-    saga: crate::server::handlers::admin::AdminSaga,
+    saga: crate::server::api::admin::saga::AdminSaga,
     attempt_nonce: Option<Nonce>,
-) -> Result<crate::server::handlers::admin::AdminSaga, String> {
+) -> Result<crate::server::api::admin::saga::AdminSaga, String> {
     let Some(attempt_nonce) = attempt_nonce else {
         return Ok(saga);
     };
@@ -434,12 +434,12 @@ fn retry_txn_receipt(
     let prepared = saga.prepared;
     let encrypted_payload = txn_receipt_retry_payload(redb, &saga, prepared)?;
     let admitted =
-        crate::server::handlers::admin::begin_named_admin_saga_with_private_payload_and_nonce(
+        crate::server::api::admin::saga::begin_named_admin_saga_with_private_payload_and_nonce(
             redb,
             req_id,
             Some(caller),
             Some(attempt_nonce),
-            crate::server::handlers::admin::AdminSagaPayload {
+            crate::server::api::admin::saga::AdminSagaPayload {
                 domain: crate::mutation_batch::DurabilityDomain::ControlPlane,
                 batch_id: &saga.batch.batch_id,
                 event_type: "transaction_recovery_plan",
@@ -463,7 +463,7 @@ fn retry_txn_receipt(
 #[cfg(feature = "redb")]
 fn txn_receipt_retry_payload(
     redb: &crate::server::persistence::redb_backend::RedbBackend,
-    saga: &crate::server::handlers::admin::AdminSaga,
+    saga: &crate::server::api::admin::saga::AdminSaga,
     prepared: bool,
 ) -> Result<Vec<u8>, String> {
     if prepared {
@@ -477,7 +477,7 @@ fn txn_receipt_retry_payload(
 #[cfg(feature = "redb")]
 fn resume_txn_staging(
     redb: &crate::server::persistence::redb_backend::RedbBackend,
-    saga: &crate::server::handlers::admin::AdminSaga,
+    saga: &crate::server::api::admin::saga::AdminSaga,
     caller: &str,
     expected_tenant: Option<&str>,
 ) -> Result<(Option<ResultPayload>, Option<GraphTxnState>), String> {
@@ -536,7 +536,7 @@ pub(super) fn resume_txn_receipt(
     let redb = backend
         .as_redb()
         .ok_or_else(|| "transaction recovery requires durable redb".to_string())?;
-    let Some(saga) = crate::server::handlers::admin::resume_named_admin_saga(
+    let Some(saga) = crate::server::api::admin::saga::resume_named_admin_saga(
         redb,
         &commit_receipt_id(txn_id, idempotency_key, expected_tenant),
         Some(caller),
@@ -545,7 +545,7 @@ pub(super) fn resume_txn_receipt(
         return Ok(None);
     };
     if saga.batch.identity
-        != crate::server::persistence::redb_backend::cluster_admin_scope_identity()?
+        != crate::server::api::admin::saga::cluster_admin_scope_identity()?
     {
         return Err("transaction parent receipt has the wrong coordinator scope".to_string());
     }
@@ -710,19 +710,24 @@ pub(super) async fn authorize_txn_plan(
 /// receipt (`TxnLifecycleReceipt`), and the materialized-view control-plane
 /// saga (`dist_compute::ControlSaga`) all carry that identical pair. Unwrap the
 /// backend's redb coordinator and hand the batch to the one saga-completion
-/// authority, `admin::finish_admin_saga`; the caller-specific "lost its redb
+/// authority, `admin::saga::finish_admin_saga`; the caller-specific "lost its redb
 /// coordinator" wording is the only thing that varies between the three sites.
 #[cfg(feature = "redb")]
 pub(crate) fn finish_saga_via_redb(
     backend: &Arc<dyn crate::server::persistence::PersistenceBackend>,
-    saga: crate::server::handlers::admin::AdminSaga,
+    saga: crate::server::api::admin::saga::AdminSaga,
     result: ResultPayload,
     lost_backend_message: &str,
 ) -> Result<ResultPayload, String> {
     let redb = backend
         .as_redb()
         .ok_or_else(|| lost_backend_message.to_string())?;
-    crate::server::handlers::admin::finish_admin_saga(redb, saga.batch, saga.created_at_ms, result)
+    crate::server::api::admin::saga::finish_admin_saga(
+        redb,
+        saga.batch,
+        saga.created_at_ms,
+        result,
+    )
 }
 
 #[cfg(feature = "redb")]

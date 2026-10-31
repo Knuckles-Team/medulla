@@ -7,8 +7,8 @@ pub(super) fn validate_consensus_parent_authority(
     redb: &crate::server::persistence::redb_backend::RedbBackend,
     coordinator_id: &str,
     authority: &crate::raft::RaftMutationContext,
-) -> Result<crate::server::handlers::admin::AdminSaga, String> {
-    let parent = crate::server::handlers::admin::resume_named_admin_saga(
+) -> Result<crate::server::api::admin::saga::AdminSaga, String> {
+    let parent = crate::server::api::admin::saga::resume_named_admin_saga(
         redb,
         coordinator_id,
         Some(&authority.principal_fingerprint),
@@ -51,7 +51,7 @@ pub(super) enum ParticipantAdmission {
 #[cfg(feature = "raft")]
 pub(super) fn participant_phase_admission(
     redb: &crate::server::persistence::redb_backend::RedbBackend,
-    parent: &crate::server::handlers::admin::AdminSaga,
+    parent: &crate::server::api::admin::saga::AdminSaga,
     phase: crate::raft::TransactionParticipantPhase,
 ) -> Result<ParticipantAdmission, String> {
     use crate::raft::TransactionParticipantPhase::{Abort, Commit, Prepare};
@@ -218,7 +218,7 @@ pub(crate) async fn apply_consensus_transaction_finalize(
     let result = if let Some(result) = saga.replayed {
         result
     } else {
-        crate::server::handlers::admin::finish_admin_saga(
+        crate::server::api::admin::saga::finish_admin_saga(
             redb,
             saga.batch,
             saga.created_at_ms,

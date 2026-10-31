@@ -194,3 +194,28 @@ impl RedbBackend {
         Ok(reports)
     }
 }
+
+#[cfg(feature = "redb")]
+impl crate::server::api::admin::saga::AdminSagaLedger for RedbBackend {
+    fn admin_mutations_read(&self) -> Result<AdminScopedRead<'_>, String> {
+        RedbBackend::admin_mutations_read(self)
+    }
+
+    fn admin_saga_step(
+        &self,
+        batch: &medulla_types::MutationBatch,
+        prepared_at_ms: u64,
+        private_payload: Option<&[u8]>,
+    ) -> Result<medulla_transaction::SagaBegin, String> {
+        RedbBackend::admin_saga_step(self, batch, prepared_at_ms, private_payload)
+    }
+
+    fn admin_saga_end(
+        &self,
+        batch: &medulla_types::MutationBatch,
+        result_msgpack: Vec<u8>,
+        committed_at_ms: u64,
+    ) -> Result<(medulla_types::MutationBatchRecord, bool), String> {
+        RedbBackend::admin_saga_end(self, batch, result_msgpack, committed_at_ms)
+    }
+}

@@ -8,12 +8,12 @@ use std::collections::BTreeSet;
 
 use medulla_rdf::oxrdf::Triple;
 
-use super::compose::validate_and_compose;
 use super::test_support::{
     assert_core_catalog, assert_shape_targets, declared_classes, kg, object_iri, parse_scoped,
     subject_iri, unmapped_classes, wired_with_fixture, KG, OWL_CLASS, OWL_IMPORTS, RDF_TYPE,
 };
 use crate::graph::GraphSchemaSources;
+use crate::server::api::admin::compose::validate_and_compose;
 
 const FINANCE: &str = include_str!("../../../crates/medulla-core/ontology/finance-v1.ttl");
 const FINANCE_SHAPES: &str = include_str!("../../../crates/medulla-core/ontology/finance-v1.shapes.ttl");

@@ -204,8 +204,14 @@ async fn replay_sparql_update(
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 async fn resume_sparql_update_plan(
     coord: &SparqlUpdateCoordination<'_>,
-    saga: handlers::admin::AdminSaga,
-) -> Result<(handlers::admin::AdminSaga, SparqlRecoveryPlan), Response> {
+    saga: crate::server::api::admin::saga::AdminSaga,
+) -> Result<
+    (
+        crate::server::api::admin::saga::AdminSaga,
+        SparqlRecoveryPlan,
+    ),
+    Response,
+> {
     if let Some(result) = saga.replayed.clone() {
         return Err(replay_sparql_update(coord, result).await);
     }
@@ -304,17 +310,17 @@ fn begin_sealed_sparql_saga(
     plan: &SparqlRecoveryPlan,
     batch_id: &str,
     event_type: &str,
-) -> Result<handlers::admin::AdminSaga, Response> {
+) -> Result<crate::server::api::admin::saga::AdminSaga, Response> {
     let (digest, encrypted) = match seal_private_coordinator_plan(coord.redb, plan) {
         Ok(value) => value,
         Err(error) => return Err(Response::err(coord.req_id, error)),
     };
-    handlers::admin::begin_named_admin_saga_with_private_payload_and_nonce(
+    crate::server::api::admin::saga::begin_named_admin_saga_with_private_payload_and_nonce(
         coord.redb,
         coord.req_id,
         Some(coord.verified_actor),
         coord.verified_context.attempt_nonce(),
-        handlers::admin::AdminSagaPayload {
+        crate::server::api::admin::saga::AdminSagaPayload {
             domain: crate::mutation_batch::DurabilityDomain::MultiGraph,
             batch_id,
             event_type,
@@ -332,7 +338,13 @@ async fn build_sparql_update_plan(
     coord: &SparqlUpdateCoordination<'_>,
     query: &str,
     default_graph: &str,
-) -> Result<(handlers::admin::AdminSaga, SparqlRecoveryPlan), Response> {
+) -> Result<
+    (
+        crate::server::api::admin::saga::AdminSaga,
+        SparqlRecoveryPlan,
+    ),
+    Response,
+> {
     let graphs = resolve_sparql_update_graphs(coord, query, default_graph).await?;
     let missing = check_sparql_update_graph_access(coord, &graphs).await?;
     if !missing.is_empty() && !coord.verified_context.allows_method("graph:admin", true) {
@@ -364,8 +376,14 @@ async fn stage_sparql_update(
     coord: &SparqlUpdateCoordination<'_>,
     query: &str,
     default_graph: &str,
-) -> Result<(handlers::admin::AdminSaga, SparqlRecoveryPlan), Response> {
-    let resumed = match handlers::admin::resume_named_admin_saga(
+) -> Result<
+    (
+        crate::server::api::admin::saga::AdminSaga,
+        SparqlRecoveryPlan,
+    ),
+    Response,
+> {
+    let resumed = match crate::server::api::admin::saga::resume_named_admin_saga(
         coord.redb,
         coord.parent_id,
         Some(coord.verified_actor),
@@ -462,7 +480,7 @@ fn sparql_rollback_methods(
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 async fn finish_sparql_commit(
     coord: &SparqlUpdateCoordination<'_>,
-    saga: handlers::admin::AdminSaga,
+    saga: crate::server::api::admin::saga::AdminSaga,
     plan: &SparqlRecoveryPlan,
 ) -> Response {
     let committed = match finish_sparql_parent_saga(coord.redb, saga, plan) {
@@ -479,7 +497,7 @@ async fn finish_sparql_commit(
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 fn finish_sparql_parent_saga(
     redb: &crate::server::persistence::redb_backend::RedbBackend,
-    saga: handlers::admin::AdminSaga,
+    saga: crate::server::api::admin::saga::AdminSaga,
     plan: &SparqlRecoveryPlan,
 ) -> Result<ResultPayload, String> {
     let report = medulla_types::result_contract::transactions::SparqlUpdateReport {
@@ -494,7 +512,7 @@ fn finish_sparql_parent_saga(
             .count() as u64,
     };
     let result = ResultPayload::of::<medulla_types::result_contract::graph::ApplyMutation>(report)?;
-    handlers::admin::finish_admin_saga(redb, saga.batch, saga.created_at_ms, result)
+    crate::server::api::admin::saga::finish_admin_saga(redb, saga.batch, saga.created_at_ms, result)
 }
 
 /// What the roll-forward attempt decided.
@@ -504,7 +522,12 @@ enum SparqlForwardOutcome {
     Settled(Box<Response>),
     /// The forward commit did not take. Compensate, carrying the parent saga
     /// and the durable compensation marker that pins the direction.
-    Compensate(Box<(handlers::admin::AdminSaga, handlers::admin::AdminSaga)>),
+    Compensate(
+        Box<(
+            crate::server::api::admin::saga::AdminSaga,
+            crate::server::api::admin::saga::AdminSaga,
+        )>,
+    ),
 }
 
 /// Roll forward: create the plan's new graphs, commit every after-image, and on
@@ -513,7 +536,7 @@ enum SparqlForwardOutcome {
 async fn try_sparql_forward_commit(
     coord: &SparqlUpdateCoordination<'_>,
     plan: &SparqlRecoveryPlan,
-    saga: handlers::admin::AdminSaga,
+    saga: crate::server::api::admin::saga::AdminSaga,
 ) -> SparqlForwardOutcome {
     if let Err(response) = create_missing_sparql_graphs(coord, plan).await {
         return SparqlForwardOutcome::Settled(Box::new(response));
@@ -627,11 +650,11 @@ async fn delete_created_sparql_graphs(
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 async fn finish_sparql_compensation(
     coord: &SparqlUpdateCoordination<'_>,
-    saga: handlers::admin::AdminSaga,
-    compensation_saga: Option<handlers::admin::AdminSaga>,
+    saga: crate::server::api::admin::saga::AdminSaga,
+    compensation_saga: Option<crate::server::api::admin::saga::AdminSaga>,
 ) -> Response {
     if let Some(marker) = compensation_saga {
-        if let Err(error) = handlers::admin::finish_admin_saga(
+        if let Err(error) = crate::server::api::admin::saga::finish_admin_saga(
             coord.redb,
             marker.batch,
             marker.created_at_ms,
@@ -645,9 +668,12 @@ async fn finish_sparql_compensation(
         "updated_graphs": 0,
         "created_graphs": 0,
     }));
-    if let Err(error) =
-        handlers::admin::finish_admin_saga(coord.redb, saga.batch, saga.created_at_ms, result)
-    {
+    if let Err(error) = crate::server::api::admin::saga::finish_admin_saga(
+        coord.redb,
+        saga.batch,
+        saga.created_at_ms,
+        result,
+    ) {
         return Response::err(coord.req_id, error);
     }
     if let Err(error) = clear_coordinated_graph_decision(coord.redb, coord.parent_id).await {
@@ -672,7 +698,7 @@ async fn run_coordinated_sparql_http_update(
         Ok(value) => value,
         Err(response) => return response,
     };
-    let existing_marker = match handlers::admin::resume_named_admin_saga(
+    let existing_marker = match crate::server::api::admin::saga::resume_named_admin_saga(
         coord.redb,
         coord.compensation_id,
         Some(coord.verified_actor),

@@ -426,8 +426,10 @@ pub(super) async fn catalog_sql_response(
     query: String,
     graph: crate::server::sql_catalog_acl::RequestGraph,
 ) -> Response {
-    let read_only =
-        crate::server::handlers::decide::read_only_relations(state, &authority, &query).await;
+    let read_only = match crate::server::api::admin::decide_seam(state).await {
+        Some(decide) => decide.read_only_relations(state, &authority, &query).await,
+        None => None,
+    };
     let cancel = medulla_query::CancellationToken::new();
     let _cancel_guard = crate::server::request_cancel::register(req_id, cancel.clone());
     let timeout_task = crate::server::request_cancel::spawn_timeout(cancel.clone());

@@ -84,7 +84,7 @@ fn validate(
     let mut sources = (*core.schema_sources()).clone();
     super::check_expected_digest(&sources, op.expected_composed_digest())?;
     sources.attach_dynamic(op.source_token().to_string(), source(op)?)?;
-    super::compose::validate_entering_schema(&sources)?;
+    crate::server::api::admin::compose::validate_entering_schema(&sources)?;
     let current = core.schema_sources().composed_digest().to_hex();
     crate::protocol::ResultPayload::of::<medulla_types::result_contract::reasoning::GraphSchema>(
         medulla_types::graph_schema::GraphSchemaCommitted {

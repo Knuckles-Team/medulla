@@ -193,7 +193,7 @@ where
 {
     let tenant_pack_guard = super::tenant_pack_lock(request.verified.tenant()).await?;
     let store = super::agent_library_store(request.state).await?;
-    let context = crate::server::handlers::admin::agent::bind_agent_library_context(
+    let context = crate::server::persistence::agent_library::context::bind_agent_library_context(
         &store,
         request.req_id,
         request.verified,

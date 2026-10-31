@@ -21,23 +21,32 @@ use crate::protocol::{Response, ResultPayload};
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
 /// One page request, as the method carries it.
-pub(crate) struct TermPageRequest<'a> {
-    pub(crate) kind: Option<GraphSchemaTermKind>,
-    pub(crate) cursor: Option<&'a str>,
-    pub(crate) limit: u32,
+pub struct TermPageRequest<'a> {
+    /// Restrict the page to one term kind.
+    pub kind: Option<GraphSchemaTermKind>,
+    /// Position after which the page starts.
+    pub cursor: Option<&'a str>,
+    /// Maximum number of terms in the page.
+    pub limit: u32,
 }
 
 /// Answer one `GraphSchemaClasses` page for the request graph.
-pub(crate) async fn handle_classes(
+pub async fn handle_classes(
     req_id: u64,
     graph_name: &str,
     core: &Arc<GraphCore>,
     request: TermPageRequest<'_>,
 ) -> Response {
-    match classes_page(graph_name, &super::disclosed_sources(core), &request) {
+    match classes_page(
+        graph_name,
+        &super::schema_read::disclosed_sources(core),
+        &request,
+    ) {
         Ok(view) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::reasoning::GraphSchemaClasses>(view),
+            ResultPayload::of::<medulla_types::result_contract::reasoning::GraphSchemaClasses>(
+                view,
+            ),
         ),
         Err(error) => Response::err(req_id, error),
     }

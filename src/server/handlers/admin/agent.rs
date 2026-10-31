@@ -5,56 +5,9 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::protocol::{Response, ResultPayload};
-use crate::server::state::ServerState;
-use medulla_types::contract::Nonce;
-
 #[cfg(feature = "redb")]
-pub(crate) fn bind_agent_library_context(
-    store: &crate::server::persistence::agent_library::AgentLibraryStore,
-    req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
-    mut context: medulla_types::AgentLibraryMutationContext,
-    purpose_id: &str,
-    requires_nonce: bool,
-) -> Result<medulla_types::AgentLibraryMutationContext, String> {
-    if context.tenant_id != verified.tenant() {
-        return Err(
-            "ACCESS_DENIED: Agent Library tenant must match verified request tenant".to_string(),
-        );
-    }
-    let policy_revision = verified.claims().policy_version.clone();
-    let caller = verified.principal_persistence_id();
-    let nonce = match verified.attempt_nonce() {
-        Some(nonce) => nonce,
-        None if requires_nonce => {
-            return Err("Agent Library writes require an authenticated attempt nonce".to_string())
-        }
-        // Status is a read-only query and never reaches the mutation kernel;
-        // an internal query producer may still provide an explicit ephemeral
-        // nonce to satisfy the shared context shape without consuming it.
-        None => Nonce::minted(),
-    };
-    context.request_id = req_id;
-    context.principal = store.owner_principal().to_string();
-    context.caller_principal = caller.clone();
-    context.attempt_nonce = nonce;
-    context.tenant_id = verified.tenant().to_string();
-    context.actor_scope = caller;
-    // A string, not a record-typed enum: this owner carries agent entries AND
-    // agent graphs (RF-ADR-008), and the purpose is the only thing that varies.
-    context.purpose_id = purpose_id.to_string();
-    context.policy_revision = policy_revision;
-    context.policy_digest =
-        crate::server::persistence::agent_library::current_agent_library_policy_digest()?;
-    // This identifier is derived from the admitted policy revision, rather
-    // than copied from a request body. It stays stable across transport retries
-    // so it cannot turn a byte-identical operation into a false conflict.
-    context.policy_decision_id = format!("agent-library:policy:{}", context.policy_revision);
-    context.idempotency_key = verified.idempotency_key().to_string();
-    context.trace_id = None;
-    context.created_at_ms = crate::server::dispatch::authoritative_now_ms();
-    Ok(context)
-}
+use crate::server::persistence::agent_library::context::bind_agent_library_context;
+use crate::server::state::ServerState;
 
 /// Bind the context of a read-only Agent Library status query. Status never
 /// reaches the mutation kernel, so no attempt nonce is required; a binding
@@ -594,8 +547,7 @@ fn graph_publish(
     request.graph.purpose_id = context.purpose_id.clone();
     request.graph.policy_digest = context.policy_digest.clone();
     request.context = context;
-    if let Some(refusal) = crate::server::handlers::decide::topology_shape::refusal(&request.graph)
-    {
+    if let Some(refusal) = crate::server::api::admin::topology_shape::refusal(&request.graph) {
         return Response::err(req_id, refusal);
     }
     match store.publish_graph(*request) {

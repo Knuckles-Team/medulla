@@ -280,7 +280,7 @@ pub(super) async fn admit_catalog_write(
     let context = observed.context.clone();
     verify_observed_registration(state, verified, observed).await?;
     let store = state.write().await.ensure_agent_library()?;
-    let context = crate::server::handlers::admin::agent::bind_agent_library_context(
+    let context = crate::server::persistence::agent_library::context::bind_agent_library_context(
         &store,
         req_id,
         verified,

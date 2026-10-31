@@ -31,10 +31,13 @@ const OWL_DECLARATION_OBJECTS: &[&str] = &[
     "http://www.w3.org/2002/07/owl#Ontology",
 ];
 
+/// A validated schema composition: the merged shapes graph and ontology triples.
 #[derive(Debug)]
-pub(crate) struct ComposedSchema {
-    pub(crate) shapes: Graph,
-    pub(crate) ontology: Vec<Triple>,
+pub struct ComposedSchema {
+    /// The composed SHACL shapes graph.
+    pub shapes: Graph,
+    /// The composed ontology triples.
+    pub ontology: Vec<Triple>,
     /// Whether the full-ABox tableau already accepted `ontology`.
     pub(crate) abox_consistent: parking_lot::Mutex<bool>,
 }
@@ -42,9 +45,7 @@ pub(crate) struct ComposedSchema {
 /// The validated composition of `sources`, compiled at most once per content
 /// identity (`composed_digest`, see [`super::compiled`]) and shared by every graph
 /// that composes the same schema.
-pub(crate) fn validate_and_compose(
-    sources: &GraphSchemaSources,
-) -> Result<Arc<ComposedSchema>, String> {
+pub fn validate_and_compose(sources: &GraphSchemaSources) -> Result<Arc<ComposedSchema>, String> {
     sources.validate()?;
     if sources.dynamic.is_empty() {
         static IMMUTABLE_CORE: OnceLock<Result<Arc<ComposedSchema>, String>> = OnceLock::new();
@@ -75,7 +76,7 @@ const SCHEMA_ENTRY_ABOX_BUDGET: medulla_rdf::owl::DerivationBudget =
 /// [`SCHEMA_ENTRY_ABOX_BUDGET`]: an ABox the tableau cannot decide within it is refused
 /// with `VALIDATION_BUDGET_EXCEEDED`, never admitted undecided. An accepted
 /// verdict is remembered on the shared compiled entry.
-pub(crate) fn validate_entering_schema(
+pub fn validate_entering_schema(
     sources: &GraphSchemaSources,
 ) -> Result<Arc<ComposedSchema>, String> {
     let composed = validate_and_compose(sources)?;
@@ -134,20 +135,22 @@ fn compose_documents<'a>(
     let mut seen_documents = BTreeSet::new();
     for (source_id, document) in documents {
         reject_base_directive(source_id, document, shapes)?;
-        let document_digest = medulla_types::contract::Digest256::sha256(document.as_bytes()).to_hex();
+        let document_digest =
+            medulla_types::contract::Digest256::sha256(document.as_bytes()).to_hex();
         if !seen_documents.insert(document_digest) {
             continue;
         }
-        let parsed = medulla_rdf::mapping::parse_turtle_for_composition(document).map_err(|error| {
-            format!(
-                "{}: source '{source_id}': {error}",
-                if shapes {
-                    "SHAPES_INVALID"
-                } else {
-                    "ONTOLOGY_INVALID"
-                }
-            )
-        })?;
+        let parsed =
+            medulla_rdf::mapping::parse_turtle_for_composition(document).map_err(|error| {
+                format!(
+                    "{}: source '{source_id}': {error}",
+                    if shapes {
+                        "SHAPES_INVALID"
+                    } else {
+                        "ONTOLOGY_INVALID"
+                    }
+                )
+            })?;
         if parsed.len() > crate::graph::MAX_SCHEMA_DOCUMENT_TRIPLES {
             return Err(format!(
                 "SCHEMA_SOURCES_TOO_LARGE: source '{source_id}' has {} triples; maximum is {}",
@@ -159,8 +162,9 @@ fn compose_documents<'a>(
         if shapes {
             reject_remote_sparql_service(source_id, &parsed)?;
         }
-        let scope =
-            hex::encode(medulla_types::contract::Digest256::sha256(source_id.as_bytes()).as_bytes());
+        let scope = hex::encode(
+            medulla_types::contract::Digest256::sha256(source_id.as_bytes()).as_bytes(),
+        );
         for triple in parsed {
             let triple = scope_blank_nodes(triple, &scope[..16])?;
             let key = triple.to_string();
@@ -287,7 +291,8 @@ fn has_keyword(text: &str, keyword: &str) -> bool {
         .any(|token| token.eq_ignore_ascii_case(keyword))
 }
 
-pub(crate) fn scope_blank_nodes(triple: Triple, scope: &str) -> Result<Triple, String> {
+/// Prefix every blank node of `triple` with `scope` so documents cannot share blank nodes.
+pub fn scope_blank_nodes(triple: Triple, scope: &str) -> Result<Triple, String> {
     let subject = match triple.subject {
         NamedOrBlankNode::NamedNode(node) => NamedOrBlankNode::NamedNode(node),
         NamedOrBlankNode::BlankNode(node) => NamedOrBlankNode::BlankNode(scoped(node, scope)?),
@@ -747,7 +752,8 @@ ex:parent a owl:AsymmetricProperty .
 
     #[test]
     fn core_foundation_contains_the_complete_migrated_root_axiom_body() {
-        let foundation = include_str!("../../../crates/medulla-core/ontology/core-foundation-v1.ttl");
+        let foundation =
+            include_str!("../../../crates/medulla-core/ontology/core-foundation-v1.ttl");
         let triples = medulla_rdf::mapping::parse_turtle(foundation).unwrap();
         // 880 migrated triples less the two list-cell triples of `:Incident`, which
         // was removed from the Person/Organization/Server/Event disjointness because
@@ -1021,7 +1027,8 @@ ex:parent a owl:AsymmetricProperty .
     #[test]
     fn shipped_core_corpus_is_coherent_under_the_el_rl_reasoner() {
         let composed = validate_and_compose(&GraphSchemaSources::default()).unwrap();
-        let classification = medulla_rdf::owl::Reasoner::from_triples(&composed.ontology).classify();
+        let classification =
+            medulla_rdf::owl::Reasoner::from_triples(&composed.ontology).classify();
         assert!(
             classification.unsatisfiable.is_empty(),
             "unsatisfiable named classes: {:?}",

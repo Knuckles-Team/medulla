@@ -17,9 +17,9 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, OnceLock};
 
 use medulla_core::graph::GraphCore;
-use medulla_numeric::decision::adapter::AdapterKernel;
 use medulla_types::decision::statistical::retrieval_adapter::AdapterFitted;
 
+use crate::server::api::admin::served_adapter::ServedAdapter;
 use crate::server::persistence::agent_library::AgentLibraryStore;
 use crate::server::persistence::decision_jobs::decode_artifact;
 use crate::server::state::ServerState;
@@ -42,37 +42,6 @@ pub(crate) fn read_fitted(
         .decision_artifact(tenant, &adapter_key(adapter_digest))?
         .map(|bytes| decode_artifact(&bytes, "query adapter"))
         .transpose()
-}
-
-/// The active adapter of one graph, decoded for serving.
-pub(crate) struct ServedAdapter {
-    digest: String,
-    space_digest: String,
-    kernel: AdapterKernel,
-}
-
-impl ServedAdapter {
-    /// Decode a checked body for serving under its content `digest`.
-    pub(crate) fn for_body(
-        digest: &str,
-        body: &medulla_types::decision::statistical::retrieval_adapter::QueryAdapterBody,
-    ) -> Result<Self, String> {
-        Ok(Self {
-            digest: digest.to_string(),
-            space_digest: body.space_digest.clone(),
-            kernel: AdapterKernel::of(body)?,
-        })
-    }
-
-    /// The content digest the result cache is salted with.
-    pub(crate) fn digest(&self) -> &str {
-        &self.digest
-    }
-
-    /// The adapted query, or `None` for a query of another width.
-    pub(crate) fn adapt(&self, query: &[f32]) -> Option<Vec<f32>> {
-        self.kernel.apply(query)
-    }
 }
 
 fn body_cache() -> &'static parking_lot::Mutex<BTreeMap<String, Arc<ServedAdapter>>> {
@@ -128,7 +97,7 @@ pub(crate) async fn served_for(
     let store = state.read().await.agent_library.clone()?;
     let loaded = tokio::task::spawn_blocking(move || load(&store, &tenant, &graph)).await;
     let declared = core.semantic_store.read().space().map(|s| s.digest.clone());
-    let in_space = |a: &Arc<ServedAdapter>| declared.as_ref().is_none_or(|d| *d == a.space_digest);
+    let in_space = |a: &Arc<ServedAdapter>| declared.as_ref().is_none_or(|d| d == a.space_digest());
     match loaded {
         Ok(Ok(adapter)) => adapter.filter(in_space),
         Ok(Err(error)) => {
@@ -140,108 +109,4 @@ pub(crate) async fn served_for(
             None
         }
     }
-}
-
-/// `query`, adapted when an adapter is active for `graph` under `tenant`.
-pub(crate) async fn adapted_query(
-    state: &Arc<tokio::sync::RwLock<ServerState>>,
-    tenant: Option<&str>,
-    (graph, core): (&str, &GraphCore),
-    query: Vec<f32>,
-) -> Vec<f32> {
-    match served_for(state, tenant, graph, core).await {
-        Some(adapter) => adapter.adapt(&query).unwrap_or(query),
-        None => query,
-    }
-}
-
-/// Fold the active adapter's digest into a result-cache key payload.
-pub(crate) fn salt(adapter: Option<&ServedAdapter>, payload: &mut Vec<u8>) {
-    let digest = adapter.map_or("", ServedAdapter::digest);
-    payload.extend_from_slice(digest.as_bytes());
-}
-
-/// The verified carrier tenant of a read, the partition adapter state is
-/// served from (the same scope `DecisionLog.retrieval` activates under).
-pub(crate) fn carrier_tenant(
-    authority: Option<&crate::server::access::GraphReadAuthority>,
-) -> Option<&str> {
-    authority
-        .and_then(crate::server::access::GraphReadAuthority::carrier)
-        .map(crate::server::access::CarrierAuthority::tenant_scope)
-}
-
-/// The adapter a unified plan over `graph` runs with: only a plan that ranks
-/// by vector looks one up.
-#[cfg(feature = "query")]
-pub(crate) async fn served_plan_adapter(
-    state: &Arc<tokio::sync::RwLock<ServerState>>,
-    graph: &str,
-    authority: Option<&crate::server::access::GraphReadAuthority>,
-    plan: &medulla_plan::Plan,
-) -> Option<Arc<ServedAdapter>> {
-    if !plan_ranks_by_vector(&plan.ops) {
-        return None;
-    }
-    let core = Arc::clone(&state.read().await.registry.get(graph)?.core);
-    served_for(state, carrier_tenant(authority), graph, &core).await
-}
-
-/// `plan` with every vector rank re-aimed by `adapter` (unchanged without one).
-#[cfg(feature = "query")]
-pub(crate) fn adapt_plan(
-    plan: medulla_plan::Plan,
-    adapter: Option<Arc<ServedAdapter>>,
-) -> medulla_plan::Plan {
-    match adapter {
-        Some(adapter) => {
-            let embedder = crate::server::handlers::query::uql_text_embedder();
-            medulla_plan::Plan::new(rewrite_ops(plan.ops, &adapter, embedder))
-        }
-        None => plan,
-    }
-}
-
-/// Rewrite every vector rank through `adapter`. A `RankEmbed` is resolved to
-/// its vector with the server-side `embedder` first; with none bound (or an
-/// embedding error) it is left as it was, so the executor reports exactly what
-/// it reported before.
-#[cfg(feature = "query")]
-fn rewrite_ops(
-    ops: Vec<medulla_plan::Op>,
-    adapter: &ServedAdapter,
-    embedder: Option<&dyn medulla_plan::TextEmbedder>,
-) -> Vec<medulla_plan::Op> {
-    use medulla_plan::Op;
-    let adapt = |query: Vec<f32>| Op::Rank {
-        query: adapter.adapt(&query).unwrap_or(query),
-    };
-    ops.into_iter()
-        .map(|op| match op {
-            Op::Rank { query } => adapt(query),
-            Op::RankEmbed { text } => match embedder.map(|e| e.embed(&text)) {
-                Some(Ok(query)) => adapt(query),
-                Some(Err(_)) | None => Op::RankEmbed { text },
-            },
-            Op::FuseRrf { branches, k } => Op::FuseRrf {
-                branches: branches
-                    .into_iter()
-                    .map(|branch| rewrite_ops(branch, adapter, embedder))
-                    .collect(),
-                k,
-            },
-            other => other,
-        })
-        .collect()
-}
-
-/// Whether a plan ranks by vector anywhere (only then is an adapter looked up).
-#[cfg(feature = "query")]
-pub(crate) fn plan_ranks_by_vector(ops: &[medulla_plan::Op]) -> bool {
-    use medulla_plan::Op;
-    ops.iter().any(|op| match op {
-        Op::Rank { .. } | Op::RankEmbed { .. } => true,
-        Op::FuseRrf { branches, .. } => branches.iter().any(|b| plan_ranks_by_vector(b)),
-        _ => false,
-    })
 }

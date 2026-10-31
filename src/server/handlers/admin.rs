@@ -35,10 +35,8 @@ mod component_content;
 // `pub(crate)` so the projection worker shares the admin re-projection path.
 pub(crate) mod connector_pack;
 #[cfg(feature = "redb")]
-mod saga;
+pub(crate) mod saga;
 
-#[cfg(feature = "redb")]
-pub(crate) use agent::bind_agent_library_context;
 #[cfg(all(test, feature = "redb"))]
 pub(crate) use agent::bind_agent_library_draft;
 #[cfg(feature = "redb")]
@@ -50,17 +48,6 @@ pub(crate) use backup::backup_bundle_name;
 #[cfg(feature = "redb")]
 pub(crate) use cluster::try_handle;
 pub(crate) use connector_pack::handle_connector_pack;
-#[cfg(any(feature = "compute-dist", feature = "matview"))]
-pub(crate) use saga::begin_admin_saga;
-#[cfg(feature = "redb")]
-pub(crate) use saga::decode_durable_saga_result;
-#[cfg(feature = "redb")]
-pub(crate) use saga::{
-    begin_authenticated_admin_saga, begin_named_admin_saga_with_nonce,
-    begin_named_admin_saga_with_private_payload_and_nonce, current_admin_saga_authority,
-    finish_admin_saga, resume_named_admin_saga, scope_admin_saga_authority, AdminSaga,
-    AdminSagaPayload,
-};
 
 /// Non-redb build: every admin method returns a clean "not available" error.
 #[cfg(not(feature = "redb"))]
@@ -112,10 +99,11 @@ mod security_tests {
 
 #[cfg(all(test, feature = "redb"))]
 mod agent_library_security_tests {
-    use super::{backup_bundle_name, bind_agent_library_context, bind_agent_library_draft};
+    use super::{backup_bundle_name, bind_agent_library_draft};
     use crate::acl::RequestContextClaims;
     use crate::protocol::{Method, Request};
     use crate::server::authority_context::VerifiedRequestContext;
+    use crate::server::persistence::agent_library::context::bind_agent_library_context;
     use crate::server::persistence::durable_stores::BundledStoreSource;
     use medulla_types::contract::Nonce;
     use medulla_types::{
@@ -893,5 +881,24 @@ mod agent_library_security_tests {
                     .is_some_and(|detail| detail.contains("agent:library-read")),
             "{missing_read_response:?}"
         );
+    }
+}
+
+/// The admin handler's implementation of [`AdminApi`](crate::server::api::admin::AdminApi).
+pub struct AdminSeam;
+
+#[async_trait::async_trait]
+impl crate::server::api::admin::AdminApi for AdminSeam {
+    #[cfg(feature = "shacl")]
+    async fn graph_schema_gateway(
+        &self,
+        state: &std::sync::Arc<tokio::sync::RwLock<crate::server::state::ServerState>>,
+        tenant_id: &str,
+        ctx: &crate::server::mutation::MutationCtx<'_>,
+        plan: &crate::server::mutation::MutationPlan,
+        method: &crate::protocol::Method,
+        op: &medulla_types::graph_schema::GraphSchemaOp,
+    ) -> crate::protocol::Response {
+        crate::server::graph_schema::handle_gateway(state, tenant_id, ctx, plan, method, op).await
     }
 }

@@ -322,7 +322,7 @@ async fn try_handle_validation(
         )),
         #[cfg(feature = "shacl")]
         Method::GraphSchemaList => Some(
-            crate::server::graph_schema::handle_list(req_id, graph_name, core).await,
+            crate::server::api::admin::schema_read::handle_list(req_id, graph_name, core).await,
         ),
         #[cfg(feature = "shacl")]
         Method::GraphSchemaClasses {
@@ -330,11 +330,11 @@ async fn try_handle_validation(
             cursor,
             limit,
         } => Some(
-            crate::server::graph_schema::terms::handle_classes(
+            crate::server::api::admin::terms::handle_classes(
                 req_id,
                 graph_name,
                 core,
-                crate::server::graph_schema::terms::TermPageRequest {
+                crate::server::api::admin::terms::TermPageRequest {
                     kind: *kind,
                     cursor: cursor.as_deref(),
                     limit: *limit,
