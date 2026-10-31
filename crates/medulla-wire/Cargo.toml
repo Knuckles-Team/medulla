@@ -1,0 +1,14 @@
+[package]
+name = "medulla-wire"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine wire protocol listeners"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_wire"
+path = "src/lib.rs"
+
+[dependencies]

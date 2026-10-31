@@ -1,0 +1,14 @@
+[package]
+name = "medulla-store"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine redb store, layout and sidecar"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_store"
+path = "src/lib.rs"
+
+[dependencies]

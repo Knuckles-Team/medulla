@@ -19,7 +19,7 @@
 
 [scaffold]
 # Set true once the scaffold change created every crate below (MEDULLA-CONTRACT-R056.11).
-done = false
+done = true
 
 [delete]
 # Contract machinery (plan step 0). `enforce = true` once the removal landed makes
