@@ -241,7 +241,7 @@
   },
   {
    "file": "src/redb_store/shard.rs",
-   "line": 713,
+   "line": 716,
    "item": "crate::server::persistence::online_reshard::export_graph_raw",
    "category": "extract-helper",
    "detail": "crate::server::persistence::online_reshard::export_graph_raw",
@@ -249,7 +249,7 @@
   },
   {
    "file": "src/redb_store/shard.rs",
-   "line": 910,
+   "line": 913,
    "item": "crate::server::persistence::shard_migrate::GraphShardPayloadTransfer::without_report",
    "category": "extract-type",
    "detail": "crate::server::persistence::shard_migrate::GraphShardPayloadTransfer",
@@ -257,7 +257,7 @@
   },
   {
    "file": "src/redb_store/shard.rs",
-   "line": 2044,
+   "line": 2062,
    "item": "crate::server::persistence::online_reshard::export_graph_raw",
    "category": "test-move",
    "detail": "medulla-store -> medulla-persistence",
@@ -265,7 +265,7 @@
   },
   {
    "file": "src/redb_store/shard.rs",
-   "line": 2076,
+   "line": 2094,
    "item": "crate::server::persistence::online_reshard::import_graph_raw",
    "category": "test-move",
    "detail": "medulla-store -> medulla-persistence",
@@ -273,7 +273,7 @@
   },
   {
    "file": "src/redb_store/shard.rs",
-   "line": 2122,
+   "line": 2140,
    "item": "crate::server::persistence::online_reshard::import_graph_raw",
    "category": "test-move",
    "detail": "medulla-store -> medulla-persistence",
@@ -2945,7 +2945,7 @@
   },
   {
    "file": "src/server/state.rs",
-   "line": 398,
+   "line": 400,
    "item": "crate::raft::RaftHandle",
    "category": "seam:state-handle",
    "detail": "crate::raft::RaftHandle",
@@ -2953,7 +2953,7 @@
   },
   {
    "file": "src/server/state.rs",
-   "line": 399,
+   "line": 401,
    "item": "crate::raft::multi::MultiRaft",
    "category": "seam:state-handle",
    "detail": "crate::raft::multi::MultiRaft",
@@ -2961,7 +2961,7 @@
   },
   {
    "file": "src/server/state.rs",
-   "line": 409,
+   "line": 411,
    "item": "crate::raft::RaftHandle",
    "category": "seam:state-handle",
    "detail": "crate::raft::RaftHandle",
@@ -2969,7 +2969,7 @@
   },
   {
    "file": "src/server/state.rs",
-   "line": 562,
+   "line": 565,
    "item": "crate::server::persistence::agent_library::AgentLibraryStore",
    "category": "seam:state-handle",
    "detail": "crate::server::persistence::agent_library::AgentLibraryStore",
@@ -2977,7 +2977,7 @@
   },
   {
    "file": "src/server/state.rs",
-   "line": 594,
+   "line": 597,
    "item": "crate::server::persistence::agent_library::AgentLibraryStore",
    "category": "seam:state-handle",
    "detail": "crate::server::persistence::agent_library::AgentLibraryStore",
@@ -2985,7 +2985,7 @@
   },
   {
    "file": "src/server/state.rs",
-   "line": 596,
+   "line": 599,
    "item": "crate::server::persistence::agent_library::AgentLibraryStore",
    "category": "seam:state-handle",
    "detail": "crate::server::persistence::agent_library::AgentLibraryStore",
@@ -2993,7 +2993,7 @@
   },
   {
    "file": "src/server/state.rs",
-   "line": 602,
+   "line": 605,
    "item": "crate::server::persistence::agent_library::AgentLibraryStore::open",
    "category": "seam:state-handle",
    "detail": "crate::server::persistence::agent_library::AgentLibraryStore::open",

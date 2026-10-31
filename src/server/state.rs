@@ -373,6 +373,8 @@ pub struct ServerState {
     /// `lake-rest` Iceberg-REST listener both share this ONE handle.
     #[cfg(feature = "lake")]
     pub lake: Arc<crate::server::lake::LakeManager>,
+    /// Installed crate-split seam implementations (MEDULLA-CONTRACT-R056.8).
+    pub seams: crate::server::api::registry::SeamRegistry,
 }
 
 #[cfg(feature = "raft")]
@@ -479,6 +481,7 @@ impl ServerState {
 
     pub fn new(auth_secret: impl Into<String>, isolation: IsolationLayer) -> Self {
         Self {
+            seams: Default::default(),
             registry: GraphRegistry::default(),
             isolation,
             channels: ChannelManager::default(),

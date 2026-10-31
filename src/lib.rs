@@ -86,6 +86,8 @@ macro_rules! work_item_resource_writes {
 
 #[cfg(feature = "server")]
 pub mod channels;
+#[cfg(feature = "server")]
+pub mod kernel;
 // CONCEPT:MEDULLA-OS.observability.slow-query-descriptor — slow-query log. Server-only (only the server dispatch/pgwire
 // paths execute queries).
 #[cfg(feature = "server")]

@@ -37,6 +37,7 @@ paths = [
     "src/store_authority",
     "src/mutation_apply",
     "src/channels",  # unplanned
+    "src/kernel",  # seam targets (R056.8)
 ]
 
 [crates.medulla-store]
@@ -69,6 +70,7 @@ kind = "api"
 exists = false
 level = 2
 paths = [
+    "src/server/api",  # seam traits and moved-down items (R056.8)
     "src/server/state",
     "src/server/auth",
     "src/server/access",
