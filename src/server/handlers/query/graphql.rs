@@ -1,6 +1,21 @@
 use super::*;
 #[cfg(feature = "graphql")]
-use crate::server::handlers::txn;
+use crate::server::api::query_txn::txn_support;
+#[cfg(feature = "graphql")]
+use crate::server::api::query_txn::TxnApi;
+
+/// The installed transaction seam, or the internal error text when none is installed.
+#[cfg(feature = "graphql")]
+async fn txn_seam(state: &Arc<RwLock<ServerState>>) -> Result<Arc<dyn TxnApi>, String> {
+    state
+        .read()
+        .await
+        .seams
+        .txn
+        .get()
+        .cloned()
+        .ok_or_else(|| "INTERNAL: transaction seam is not installed".to_string())
+}
 
 /// The GraphQL WRITE surface — a `mutation { … }` document, one of three shapes
 /// (`commitTransaction`, another cross-modal staging verb, or an ordinary
@@ -72,16 +87,21 @@ pub(crate) async fn handle_graphql_commit_txn(
     txn_id: &str,
     carrier: &crate::server::access::CarrierAuthority,
 ) -> Result<Response, Method> {
-    let committed = txn::commit_graphql_cross_modal(txn::GraphQlCrossModalCommit {
-        state,
-        request_id: req_id,
-        graph_name,
-        core,
-        registry: graphql_crossmodal_registry(),
-        txn_id,
-        authority: carrier,
-    })
-    .await;
+    let committed = match txn_seam(state).await {
+        Ok(api) => {
+            api.commit_graphql_cross_modal(txn_support::GraphQlCrossModalCommit {
+                state,
+                request_id: req_id,
+                graph_name,
+                core,
+                registry: graphql_crossmodal_registry(),
+                txn_id,
+                authority: carrier,
+            })
+            .await
+        }
+        Err(error) => Err(error),
+    };
     let resp = match committed {
         Ok(committed) => dynamic_response::<query_results::GraphQl, _>(
             req_id,
@@ -123,7 +143,7 @@ pub(crate) async fn handle_graphql_staging_mutation(
         };
     let receipt = match admission {
         GraphQlStagingAdmission::Replayed(result) => return Ok(Response::ok(req_id, result)),
-        GraphQlStagingAdmission::Execute(receipt) => *receipt,
+        GraphQlStagingAdmission::Execute(receipt) => receipt,
     };
     let core_w = read_authority
         .expect("GraphQL mutation authority checked above")
@@ -138,17 +158,22 @@ pub(crate) async fn handle_graphql_staging_mutation(
         Ok(result) => result,
         Err(response) => return Ok(response),
     };
-    txn::fault_after_txn_lifecycle_effect(req_id);
-    Ok(finish_graphql_staging(req_id, receipt, result))
+    txn_support::fault_after_txn_lifecycle_effect(req_id);
+    Ok(finish_graphql_staging(state, req_id, receipt, result).await)
 }
 
 #[cfg(feature = "graphql")]
-fn finish_graphql_staging(
+async fn finish_graphql_staging(
+    state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-    receipt: txn::TxnLifecycleReceipt,
+    receipt: txn_support::LifecycleToken,
     result: ResultPayload,
 ) -> Response {
-    match txn::finish_graphql_lifecycle(receipt, result) {
+    let api = match txn_seam(state).await {
+        Ok(api) => api,
+        Err(error) => return Response::err(req_id, error),
+    };
+    match api.finish_graphql_lifecycle(receipt, result) {
         Ok(result) => Response::ok(req_id, result),
         Err(error) => Response::err(req_id, error),
     }
@@ -157,7 +182,7 @@ fn finish_graphql_staging(
 #[cfg(feature = "graphql")]
 enum GraphQlStagingAdmission {
     Replayed(ResultPayload),
-    Execute(Box<txn::TxnLifecycleReceipt>),
+    Execute(txn_support::LifecycleToken),
 }
 
 #[cfg(feature = "graphql")]
@@ -168,12 +193,15 @@ async fn begin_graphql_staging_admission(
     method: &Method,
     query: &str,
 ) -> Result<GraphQlStagingAdmission, Response> {
-    let admission =
-        txn::begin_graphql_lifecycle(state, req_id, carrier.agent_id(), carrier, method)
-            .await
-            .map_err(|error| Response::err(req_id, error))?;
+    let api = txn_seam(state)
+        .await
+        .map_err(|error| Response::err(req_id, error))?;
+    let admission = api
+        .begin_graphql_lifecycle(state, req_id, carrier.agent_id(), carrier, method)
+        .await
+        .map_err(|error| Response::err(req_id, error))?;
     match admission {
-        txn::GraphQlLifecycleAdmission::Replayed(result) => {
+        txn_support::GraphQlLifecycleAdmission::Replayed(result) => {
             if !graphql_lifecycle_replay_is_live(
                 carrier.owner_scope(),
                 query,
@@ -187,7 +215,7 @@ async fn begin_graphql_staging_admission(
             }
             Ok(GraphQlStagingAdmission::Replayed(result))
         }
-        txn::GraphQlLifecycleAdmission::Execute(receipt) => {
+        txn_support::GraphQlLifecycleAdmission::Execute(receipt) => {
             Ok(GraphQlStagingAdmission::Execute(receipt))
         }
     }
@@ -351,7 +379,12 @@ pub(crate) async fn handle_graphql(
         Ok(Ok(value)) => match ResultPayload::of_dynamic::<query_results::GraphQl, _>(&value) {
             Ok(payload) => {
                 #[cfg(feature = "result-cache")]
-                medulla_core::result_cache::cache_result(core.result_cache(), hash, version, &payload);
+                medulla_core::result_cache::cache_result(
+                    core.result_cache(),
+                    hash,
+                    version,
+                    &payload,
+                );
                 Response::ok(req_id, payload)
             }
             Err(error) => Response::err(req_id, error),

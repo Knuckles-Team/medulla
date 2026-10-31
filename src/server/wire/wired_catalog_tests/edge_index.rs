@@ -5,7 +5,7 @@
 //! tests) through the one shared projection builder.
 
 use super::*;
-use crate::server::handlers::query::current_auth_test_support::{
+use crate::server::api::query_txn::edge_test_support::{
     edge_status_row, register_detached_edge_index, sql_rows, EDGE_STATUS_SQL,
 };
 

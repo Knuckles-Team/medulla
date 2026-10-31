@@ -341,7 +341,7 @@ pub struct ServerState {
     /// one tenant, so the principal is the working boundary). `RegisterForeignSource`
     /// records the caller's [`medulla_types::wire::ForeignSourceSpec`] under its owner, and every served
     /// plan path builds its executor `medulla_plan::federation::ForeignSourceRegistry` through
-    /// [`crate::server::foreign_catalog::ForeignSourceCatalog::registry_for`], which copies
+    /// [`crate::server::api::query_txn::foreign_catalog::ForeignSourceCatalog::registry_for`], which copies
     /// only the caller's own entries — so a `Named` `Op::ForeignScan` / an
     /// `Op::Foreign` marker resolves only the caller's own sources
     /// (CONCEPT:MEDULLA-KG.query.closure-backed-source). The inline-spec `Op::ForeignScan` path
@@ -349,11 +349,11 @@ pub struct ServerState {
     /// RLS-filtered (they are not in the local snapshot). Not per-graph; in memory only.
     /// Always present (empty) with the feature on.
     #[cfg(feature = "federation")]
-    pub foreign_sources: Arc<crate::server::foreign_catalog::ForeignSourceCatalog>,
+    pub foreign_sources: Arc<crate::server::api::query_txn::foreign_catalog::ForeignSourceCatalog>,
     /// Bounded host-driven foreign-read page buffers.  Durable approval remains
     /// in the Agent Library; this map is only request-scoped execution state.
     #[cfg(feature = "federation")]
-    pub(crate) foreign_reads: Arc<crate::server::foreign_read::ForeignReadSessions>,
+    pub(crate) foreign_reads: Arc<crate::server::api::query_txn::foreign_read::ForeignReadSessions>,
     /// Generic namespaced Key→Value store (CONCEPT:MEDULLA-KG.storage.namespaced-kv-surface, feature `kv`). `Some` on a
     /// `kv` build: a durable `{persist_dir}/kv.redb` when a persist dir is set, else an
     /// in-memory scratch map. The `Kv*` handlers get/put/delete/scan/cas through it; it
@@ -646,7 +646,9 @@ mod construction_tests {
             .collect();
         let handles: Vec<_> = threads
             .into_iter()
-            .map(|thread| medulla_kernel::test_rendezvous::join_bounded(thread, "agent library open"))
+            .map(|thread| {
+                medulla_kernel::test_rendezvous::join_bounded(thread, "agent library open")
+            })
             .collect();
         assert!(handles
             .iter()

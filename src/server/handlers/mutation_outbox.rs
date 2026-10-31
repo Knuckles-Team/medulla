@@ -231,11 +231,17 @@ async fn semantic_owner(
     binding_id: &str,
 ) -> Result<Owner, String> {
     let authority = crate::server::access::CarrierAuthority::from_verified(verified)?;
-    let service = crate::server::semantic_index::existing_semantic_service(
-        &persist_dir(state).await?,
-        authority.tenant_scope(),
-        binding_id,
-    )?;
+    let persist_dir = persist_dir(state).await?;
+    let query = state
+        .read()
+        .await
+        .seams
+        .query
+        .get()
+        .cloned()
+        .ok_or_else(|| "INTERNAL: query seam is not installed".to_string())?;
+    let service =
+        query.existing_semantic_service(&persist_dir, authority.tenant_scope(), binding_id)?;
     Ok(Owner::SemanticBinding { service })
 }
 

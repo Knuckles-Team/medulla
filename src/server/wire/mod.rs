@@ -60,6 +60,9 @@ use crate::protocol::Request;
 use crate::server::access::CarrierAuthority;
 use crate::server::ServerState;
 
+mod seam;
+pub use seam::WireSeam;
+
 // ── wire-neutral currency ────────────────────────────────────────────────────
 
 /// A wire-NEUTRAL execution error (CONCEPT:MEDULLA-KG.compute.subsystems-reference): a SQLSTATE `code` + a `message`.
@@ -1242,7 +1245,7 @@ pub struct WireSession {
     /// with table ops, to durably record how to rebuild the table-side
     /// `TableTxn` on crash recovery (`medulla_query::TxnOp` is not `Serialize`).
     /// Reset by `begin_txn()`.
-    txn_replay_log: parking_lot::Mutex<Vec<crate::server::txn_intent::ReplayStep>>,
+    txn_replay_log: parking_lot::Mutex<Vec<crate::server::api::query_txn::txn_intent::ReplayStep>>,
     /// Set once this connection has swept its owner's leftover commit-intent
     /// files (CONCEPT:MEDULLA-TXN.mixed-commit-intent — NE-004 crash recovery). Checked lazily on first use rather
     /// than at connection setup so it costs nothing on a connection that never
@@ -1589,13 +1592,13 @@ impl WireSession {
             // recorded in the replay log as `ReplayStep::Sql` the way an
             // ordinary buffered statement is — record its decoded shape
             // directly instead (see `ReplayStep::CopyRows`'s doc).
-            self.txn_replay_log
-                .lock()
-                .push(crate::server::txn_intent::ReplayStep::CopyRows {
+            self.txn_replay_log.lock().push(
+                crate::server::api::query_txn::txn_intent::ReplayStep::CopyRows {
                     table: table.clone(),
                     columns: columns.clone(),
                     rows: rows.clone(),
-                });
+                },
+            );
             self.buffer(TxnOp::Insert {
                 table,
                 col_order: columns,
@@ -2067,8 +2070,9 @@ impl WireSession {
             StatementKind::PropertyGraphDdlRequiresCatalogAdmission(_)
         ) {
             let authority = self.carrier_authority()?;
-            let statement = medulla_query::sql::parse_property_graph_ddl(sql, authority.tenant_scope())
-                .map_err(user_err)?;
+            let statement =
+                medulla_query::sql::parse_property_graph_ddl(sql, authority.tenant_scope())
+                    .map_err(user_err)?;
             let (op, tag) = PropertyGraphTxnOp::from_statement(statement, authority.agent_id());
             self.buffer(TxnOp::PropertyGraphDdl(op));
             return Ok(Some(WireOutcome::command(tag)));
@@ -2221,7 +2225,8 @@ impl WireSession {
         let authority = self.carrier_authority()?;
         let tenant = authority.tenant_scope().to_string();
         let actor = authority.agent_id().to_string();
-        let statement = medulla_query::sql::parse_property_graph_ddl(sql, &tenant).map_err(user_err)?;
+        let statement =
+            medulla_query::sql::parse_property_graph_ddl(sql, &tenant).map_err(user_err)?;
         let (op, tag) = PropertyGraphTxnOp::from_statement(statement, &actor);
         let mut txn = TableTxn::new();
         txn.push(TxnOp::PropertyGraphDdl(op));
@@ -2238,7 +2243,8 @@ impl WireSession {
     ) -> WireResult<WireOutcome> {
         let authority = self.carrier_authority()?;
         let tenant = authority.tenant_scope().to_string();
-        let statement = medulla_query::sql::parse_property_graph_privilege(sql).map_err(user_err)?;
+        let statement =
+            medulla_query::sql::parse_property_graph_privilege(sql).map_err(user_err)?;
         let store = self.user_table_store().await?;
         let record = store
             .property_graph(&tenant, &statement.name)
@@ -2562,7 +2568,7 @@ impl WireSession {
     ///   1. Snapshots the CURRENT durable state of every node the graph side
     ///      touches into `compensating_methods` — the exact inverse write.
     ///   2. Writes a durable, fsynced commit-intent record BEFORE either side
-    ///      commits ([`crate::server::txn_intent::write_intent`]).
+    ///      commits ([`crate::server::api::query_txn::txn_intent::write_intent`]).
     ///   3. Commits the graph side, then the table side, both keyed by the
     ///      intent's own `operation_id` so either is idempotently replay-safe
     ///      (the SAME coordinator/idempotency keys `commit_cross_modal_txn` /
@@ -2598,7 +2604,7 @@ impl WireSession {
         let compensating = self.compensating_methods(graph, &methods).await?;
         let table_steps = std::mem::take(&mut *self.txn_replay_log.lock());
         let operation_id = self.request_operation_id()?;
-        let intent = crate::server::txn_intent::CommitIntent::new(
+        let intent = crate::server::api::query_txn::txn_intent::CommitIntent::new(
             graph.to_string(),
             operation_id,
             methods,
@@ -2612,7 +2618,7 @@ impl WireSession {
             user_err("mixed graph+table transactions require the configured persistence directory")
         })?;
         let persist_dir = std::path::Path::new(&persist_dir_buf);
-        crate::server::txn_intent::write_intent(&authority, persist_dir, &intent)
+        crate::server::api::query_txn::txn_intent::write_intent(&authority, persist_dir, &intent)
             .map_err(user_err)?;
         // The live path already HAS the real, already-buffered `TableTxn` —
         // commit it directly rather than re-deriving it from the replay log
@@ -2645,7 +2651,7 @@ impl WireSession {
         &self,
         authority: &CarrierAuthority,
         persist_dir: &Path,
-        intent: crate::server::txn_intent::CommitIntent,
+        intent: crate::server::api::query_txn::txn_intent::CommitIntent,
         isolation: crate::server::txn::IsolationLevel,
         begin_version: TxnBeginVersion,
         live_table_txn: Option<TableTxn>,
@@ -2672,8 +2678,11 @@ impl WireSession {
             // next sweep and retry the exact recipe instead of losing repair
             // state after an uncertain access/transient failure.
             if !recovering {
-                let _ =
-                    crate::server::txn_intent::delete_intent(authority, persist_dir, operation_id);
+                let _ = crate::server::api::query_txn::txn_intent::delete_intent(
+                    authority,
+                    persist_dir,
+                    operation_id,
+                );
             }
             return Err(e);
         }
@@ -2696,8 +2705,11 @@ impl WireSession {
         };
         match table_result {
             Ok(_) => {
-                let _ =
-                    crate::server::txn_intent::delete_intent(authority, persist_dir, operation_id);
+                let _ = crate::server::api::query_txn::txn_intent::delete_intent(
+                    authority,
+                    persist_dir,
+                    operation_id,
+                );
                 Ok(())
             }
             Err(table_err) => {
@@ -2708,7 +2720,7 @@ impl WireSession {
                     // compensating graph write: it would undo the already
                     // successful original mixed commit. This newly-created
                     // conflicting intent has no repair work of its own.
-                    let _ = crate::server::txn_intent::delete_intent(
+                    let _ = crate::server::api::query_txn::txn_intent::delete_intent(
                         authority,
                         persist_dir,
                         operation_id,
@@ -2749,8 +2761,11 @@ impl WireSession {
                          retried"
                     )));
                 }
-                let _ =
-                    crate::server::txn_intent::delete_intent(authority, persist_dir, operation_id);
+                let _ = crate::server::api::query_txn::txn_intent::delete_intent(
+                    authority,
+                    persist_dir,
+                    operation_id,
+                );
                 Err(table_err)
             }
         }
@@ -2765,7 +2780,7 @@ impl WireSession {
     /// `operation_id`.
     async fn replay_table_steps_and_commit(
         &self,
-        intent: &crate::server::txn_intent::CommitIntent,
+        intent: &crate::server::api::query_txn::txn_intent::CommitIntent,
     ) -> WireResult<usize> {
         let saved = self.txn.lock().take();
         *self.txn.lock() = Some(TableTxn::new());
@@ -2796,7 +2811,7 @@ impl WireSession {
     async fn replay_table_steps(
         &self,
         graph: &str,
-        steps: &[crate::server::txn_intent::ReplayStep],
+        steps: &[crate::server::api::query_txn::txn_intent::ReplayStep],
     ) -> WireResult<()> {
         for step in steps {
             self.replay_table_step(graph, step).await?;
@@ -2807,10 +2822,10 @@ impl WireSession {
     async fn replay_table_step(
         &self,
         graph: &str,
-        step: &crate::server::txn_intent::ReplayStep,
+        step: &crate::server::api::query_txn::txn_intent::ReplayStep,
     ) -> WireResult<()> {
         match step {
-            crate::server::txn_intent::ReplayStep::Sql(sql) => {
+            crate::server::api::query_txn::txn_intent::ReplayStep::Sql(sql) => {
                 let kind = medulla_query::classify(sql).map_err(user_err)?;
                 self.try_buffer_transaction_table_statement(graph, sql, &kind)
                     .await?
@@ -2819,7 +2834,7 @@ impl WireSession {
                         user_err("durable SQL replay step is not a table transaction operation")
                     })
             }
-            crate::server::txn_intent::ReplayStep::CopyRows {
+            crate::server::api::query_txn::txn_intent::ReplayStep::CopyRows {
                 table,
                 columns,
                 rows,
@@ -2865,7 +2880,9 @@ impl WireSession {
             return Ok(());
         };
         let persist_dir = std::path::Path::new(&persist_dir_buf);
-        for intent in crate::server::txn_intent::list_intents(&authority, persist_dir) {
+        for intent in
+            crate::server::api::query_txn::txn_intent::list_intents(&authority, persist_dir)
+        {
             // Recovery is completing (or undoing) an ALREADY-decided
             // transaction, not evaluating a fresh one — there is no NEW read
             // to protect, so `Snapshot` (no predicate re-check) is correct
@@ -3551,7 +3568,9 @@ impl WireSession {
     ) -> WireResult<serde_json::Map<String, serde_json::Value>> {
         let core = self.graph_core(graph).await?;
         match core.get_node_properties(id) {
-            Some(blob) => Ok(medulla_types::msgpack::decode_property_object(&blob).unwrap_or_default()),
+            Some(blob) => {
+                Ok(medulla_types::msgpack::decode_property_object(&blob).unwrap_or_default())
+            }
             None => Ok(serde_json::Map::new()),
         }
     }
@@ -4130,15 +4149,18 @@ impl WireSession {
         // made every wire-native graph-node commit fail this recheck whenever
         // `security` is on and no raft consensus is active (`consensus_apply_is_authorized`
         // is false, so the recheck always runs).
-        match crate::server::handlers::txn::commit_cross_modal_txn_with_nonce(
-            &self.state,
-            request_id,
-            Some(authority.agent_id()),
-            &coordinator_id,
-            txn,
-            attempt_nonce,
-        )
-        .await
+        match self
+            .txn_api()
+            .await?
+            .commit_cross_modal_txn_with_nonce(
+                &self.state,
+                request_id,
+                Some(authority.agent_id()),
+                &coordinator_id,
+                txn,
+                attempt_nonce,
+            )
+            .await
         {
             Ok(true) => Ok(()),
             Ok(false) => Err(WireError {
@@ -4190,7 +4212,7 @@ impl WireSession {
         let table_steps = if operation == "transaction" {
             std::mem::take(&mut *self.txn_replay_log.lock())
         } else {
-            vec![crate::server::txn_intent::ReplayStep::Sql(
+            vec![crate::server::api::query_txn::txn_intent::ReplayStep::Sql(
                 operation.to_string(),
             )]
         };
@@ -4198,7 +4220,7 @@ impl WireSession {
             return Err(user_err("CREATE TABLE commit has no durable replay recipe"));
         }
         let operation_id = self.request_operation_id()?;
-        let intent = crate::server::txn_intent::CommitIntent::new(
+        let intent = crate::server::api::query_txn::txn_intent::CommitIntent::new(
             graph.to_string(),
             operation_id,
             Vec::new(),
@@ -4215,7 +4237,7 @@ impl WireSession {
             .clone()
             .ok_or_else(|| user_err("CREATE TABLE recovery requires configured persistence"))?;
         let persist_dir = std::path::Path::new(&persist_dir);
-        crate::server::txn_intent::write_intent(&authority, persist_dir, &intent)
+        crate::server::api::query_txn::txn_intent::write_intent(&authority, persist_dir, &intent)
             .map_err(user_err)?;
         self.resolve_commit_intent(
             &authority,
@@ -4498,7 +4520,7 @@ impl WireSession {
             #[cfg(feature = "sparql")]
             XmodalStmt::SparqlUpdate(update) => {
                 let (methods, schema_refs) =
-                    crate::server::handlers::txn::sparql_update_to_methods(&update)
+                    crate::server::api::query_txn::txn_support::sparql_update_to_methods(&update)
                         .map_err(user_err)?;
                 self.stage_or_commit_owl(graph, methods, schema_refs, in_txn)
                     .await
@@ -4519,8 +4541,10 @@ impl WireSession {
                         .filter_view(&actor, &mut view);
                 }
                 let (methods, schema_refs) =
-                    crate::server::handlers::txn::construct_view_to_methods(&view, &query)
-                        .map_err(user_err)?;
+                    crate::server::api::query_txn::txn_support::construct_view_to_methods(
+                        &view, &query,
+                    )
+                    .map_err(user_err)?;
                 self.stage_or_commit_owl(graph, methods, schema_refs, in_txn)
                     .await
             }
@@ -4575,6 +4599,31 @@ impl WireSession {
         }
     }
 
+    /// The installed transaction seam, or an internal error when none is installed.
+    async fn txn_api(&self) -> WireResult<Arc<dyn crate::server::api::query_txn::TxnApi>> {
+        self.state
+            .read()
+            .await
+            .seams
+            .txn
+            .get()
+            .cloned()
+            .ok_or_else(|| user_err("INTERNAL: transaction seam is not installed"))
+    }
+
+    /// The installed query seam, or an internal error when none is installed.
+    #[cfg(feature = "query")]
+    async fn query_api(&self) -> WireResult<Arc<dyn crate::server::api::query_txn::QueryApi>> {
+        self.state
+            .read()
+            .await
+            .seams
+            .query
+            .get()
+            .cloned()
+            .ok_or_else(|| user_err("INTERNAL: query seam is not installed"))
+    }
+
     /// Run a UQL unified cross-modal read over the current graph (CONCEPT:MEDULLA-KG.txn.isolation-ryow-begin-set). In a
     /// txn the committed snapshot is OVERLAID with the txn's staged graph writes (the
     /// wire node buffer + lowered OWL/CONSTRUCT methods) and staged vectors, giving
@@ -4588,7 +4637,8 @@ impl WireSession {
     async fn exec_uql(&self, graph: &str, text: &str, in_txn: bool) -> WireResult<WireOutcome> {
         let plan = medulla_plan::uql::parse(text).map_err(|e| user_err(e.render(text)))?;
         #[cfg(feature = "tsdb")]
-        let tsdb_scope = if crate::server::handlers::query::plan_needs_tsdb(&plan.ops) {
+        let tsdb_scope = if crate::server::api::query_txn::query_support::plan_needs_tsdb(&plan.ops)
+        {
             let authority = self.carrier_authority()?;
             Some((
                 authority.tenant_scope().to_string(),
@@ -4619,7 +4669,10 @@ impl WireSession {
             }
             staged
         };
-        crate::server::handlers::query::overlay_write_set(&mut view, &overlay_methods);
+        crate::server::api::query_txn::query_support::overlay_write_set(
+            &mut view,
+            &overlay_methods,
+        );
         #[cfg(feature = "security")]
         self.filter_view_for_verified_actor(&mut view).await?;
         #[cfg(feature = "tsdb")]
@@ -4647,22 +4700,22 @@ impl WireSession {
         // (see `handlers::query`'s `UnifiedQuery` arm for the full rationale). The
         // `semantic_overlay` clone is paid ONLY when the txn actually staged embeddings.
         let core_for_ctx = core.clone();
+        let query_api = self.query_api().await?;
         let rows = tokio::task::spawn_blocking(move || {
-            crate::server::handlers::query::run_unified_with_staged_finish(
+            query_api.run_unified_staged_rows(
                 plan,
                 &view,
                 &core_for_ctx,
                 &vectors,
                 #[cfg(feature = "federation")]
-                crate::server::foreign_catalog::bound_registry(&foreign),
+                crate::server::api::query_txn::foreign_catalog::bound_registry(&foreign),
                 #[cfg(feature = "tsdb")]
-                crate::server::handlers::query::TsdbLegBind {
+                crate::server::api::query_txn::query_support::TsdbLegBind {
                     tsdb: tsdb.as_deref(),
                     tsdb_tenant: tsdb_tenant.as_deref(),
                     tsdb_graph: tsdb_graph.as_deref(),
                     staged_series: Some(&staged_series),
                 },
-                crate::server::handlers::query::execute_rows,
             )
         })
         .await
@@ -4752,16 +4805,19 @@ impl WireSession {
         // dereference of `attempt_nonce.lock()` directly into an awaited call
         // retains the non-Send parking_lot guard for the duration of that await.
         let attempt_nonce = { *self.attempt_nonce.lock() };
-        let committed = crate::server::handlers::txn::commit_cross_modal_txn_with_nonce(
-            &self.state,
-            0,
-            Some(authority.agent_id()),
-            &coordinator_id,
-            ts,
-            attempt_nonce,
-        )
-        .await
-        .map_err(user_err)?;
+        let committed = self
+            .txn_api()
+            .await?
+            .commit_cross_modal_txn_with_nonce(
+                &self.state,
+                0,
+                Some(authority.agent_id()),
+                &coordinator_id,
+                ts,
+                attempt_nonce,
+            )
+            .await
+            .map_err(user_err)?;
         if !committed {
             return Err(user_err("cross-modal transaction conflict"));
         }
@@ -4924,9 +4980,9 @@ impl WireSession {
         if in_txn && result.is_ok() {
             let table_ops_after = self.txn.lock().as_ref().map(|t| t.ops.len()).unwrap_or(0);
             if table_ops_after > table_ops_before {
-                self.txn_replay_log
-                    .lock()
-                    .push(crate::server::txn_intent::ReplayStep::Sql(sql.to_string()));
+                self.txn_replay_log.lock().push(
+                    crate::server::api::query_txn::txn_intent::ReplayStep::Sql(sql.to_string()),
+                );
             }
         }
         if in_txn && result.is_err() {
@@ -5549,7 +5605,7 @@ mod ne_004_ne_005_tests {
             .expect("snapshot pre-txn state");
         let table_steps = std::mem::take(&mut *session.txn_replay_log.lock());
         let operation_id = uuid::Uuid::new_v4();
-        let intent = crate::server::txn_intent::CommitIntent::new(
+        let intent = crate::server::api::query_txn::txn_intent::CommitIntent::new(
             graph.to_string(),
             operation_id,
             methods.clone(),
@@ -5565,7 +5621,7 @@ mod ne_004_ne_005_tests {
             .clone()
             .expect("persist dir configured");
         let persist_dir = std::path::Path::new(&persist_dir_buf);
-        crate::server::txn_intent::write_intent(&authority, persist_dir, &intent)
+        crate::server::api::query_txn::txn_intent::write_intent(&authority, persist_dir, &intent)
             .expect("write durable intent");
         let begin_version = session
             .require_txn_begin_version()
@@ -5589,7 +5645,7 @@ mod ne_004_ne_005_tests {
         // The torn state is real: the graph write is durable, the table
         // write is not, and the intent survives on disk.
         assert_eq!(
-            crate::server::txn_intent::list_intents(&authority, persist_dir).len(),
+            crate::server::api::query_txn::txn_intent::list_intents(&authority, persist_dir).len(),
             1,
             "the crashed intent must still be on disk"
         );
@@ -5610,7 +5666,8 @@ mod ne_004_ne_005_tests {
             .expect("a trivial read triggers recovery as a side effect");
 
         assert!(
-            crate::server::txn_intent::list_intents(&authority, persist_dir).is_empty(),
+            crate::server::api::query_txn::txn_intent::list_intents(&authority, persist_dir)
+                .is_empty(),
             "recovery must clear the resolved intent"
         );
         assert_eq!(
@@ -5649,7 +5706,7 @@ mod ne_004_ne_005_tests {
             .expect("persist dir configured");
         let persist_dir = std::path::Path::new(&persist_dir_buf);
         let operation_id = uuid::Uuid::new_v4();
-        let intent = crate::server::txn_intent::CommitIntent::new(
+        let intent = crate::server::api::query_txn::txn_intent::CommitIntent::new(
             graph.to_string(),
             operation_id,
             vec![Method::AddNode {
@@ -5662,12 +5719,12 @@ mod ne_004_ne_005_tests {
             vec![Method::RemoveNode {
                 node_id: "recovery-after-graph-fault".to_string(),
             }],
-            vec![crate::server::txn_intent::ReplayStep::Sql(format!(
-                "CREATE TABLE {table} (id INT)"
-            ))],
+            vec![crate::server::api::query_txn::txn_intent::ReplayStep::Sql(
+                format!("CREATE TABLE {table} (id INT)"),
+            )],
             crate::server::txn::now_ms(),
         );
-        crate::server::txn_intent::write_intent(&authority, persist_dir, &intent)
+        crate::server::api::query_txn::txn_intent::write_intent(&authority, persist_dir, &intent)
             .expect("persist phase-1 recovery intent");
 
         // The first recovery attempt fails at graph lookup because the graph
@@ -5679,7 +5736,7 @@ mod ne_004_ne_005_tests {
             .expect_err("missing graph must fail the first recovery attempt");
         assert!(first.message.contains("graph"), "{first}");
         assert_eq!(
-            crate::server::txn_intent::list_intents(&authority, persist_dir).len(),
+            crate::server::api::query_txn::txn_intent::list_intents(&authority, persist_dir).len(),
             1,
             "an uncertain recovery graph error must retain its intent"
         );
@@ -5692,7 +5749,8 @@ mod ne_004_ne_005_tests {
             .await
             .expect("the same connection retries retained recovery");
         assert!(
-            crate::server::txn_intent::list_intents(&authority, persist_dir).is_empty(),
+            crate::server::api::query_txn::txn_intent::list_intents(&authority, persist_dir)
+                .is_empty(),
             "successful retry must retire the recovered intent"
         );
         assert_eq!(
@@ -6328,7 +6386,7 @@ mod wired_catalog_tests {
             .expect("read physical create")
             .is_some());
         assert_eq!(
-            crate::server::txn_intent::list_intents(&owner, &persist_dir).len(),
+            crate::server::api::query_txn::txn_intent::list_intents(&owner, &persist_dir).len(),
             1,
             "ordinary CREATE keeps its durable recipe while owner repair is pending"
         );
@@ -6339,7 +6397,10 @@ mod wired_catalog_tests {
         read_rows(&recovering, "SELECT id FROM ordinary_repair")
             .await
             .expect("the next authenticated connection repairs before serving");
-        assert!(crate::server::txn_intent::list_intents(&owner, &persist_dir).is_empty());
+        assert!(
+            crate::server::api::query_txn::txn_intent::list_intents(&owner, &persist_dir)
+                .is_empty()
+        );
         sql_catalog_acl::grant(
             &persist_dir,
             &owner,
@@ -6426,14 +6487,14 @@ mod wired_catalog_tests {
         let operation_id = uuid::Uuid::new_v4();
         let table = "owner_replay_target";
         let steps = vec![
-            crate::server::txn_intent::ReplayStep::Sql(format!(
+            crate::server::api::query_txn::txn_intent::ReplayStep::Sql(format!(
                 "CREATE TABLE {table} (id TEXT PRIMARY KEY)"
             )),
-            crate::server::txn_intent::ReplayStep::Sql(format!(
+            crate::server::api::query_txn::txn_intent::ReplayStep::Sql(format!(
                 "INSERT INTO {table} (id) VALUES ('one')"
             )),
         ];
-        let intent = crate::server::txn_intent::CommitIntent::new(
+        let intent = crate::server::api::query_txn::txn_intent::CommitIntent::new(
             graph.to_string(),
             operation_id,
             Vec::new(),
@@ -6539,12 +6600,12 @@ mod wired_catalog_tests {
         )
         .expect("owner repair is durable before recovery closes");
 
-        let altered = crate::server::txn_intent::CommitIntent::new(
+        let altered = crate::server::api::query_txn::txn_intent::CommitIntent::new(
             graph.to_string(),
             operation_id,
             Vec::new(),
             Vec::new(),
-            vec![crate::server::txn_intent::ReplayStep::Sql(
+            vec![crate::server::api::query_txn::txn_intent::ReplayStep::Sql(
                 "CREATE TABLE altered_replay_target (id TEXT PRIMARY KEY)".to_string(),
             )],
             crate::server::txn::now_ms(),
@@ -7162,10 +7223,9 @@ mod wired_catalog_tests {
         assert!(store
             .property_graph(
                 &canonical_tenant,
-                &medulla_query::tables::SqlName::new(vec![medulla_query::tables::SqlIdentifier::unquoted(
-                    "social"
-                )
-                .unwrap(),])
+                &medulla_query::tables::SqlName::new(vec![
+                    medulla_query::tables::SqlIdentifier::unquoted("social").unwrap(),
+                ])
                 .unwrap(),
             )
             .unwrap()

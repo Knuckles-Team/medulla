@@ -49,7 +49,12 @@ fn spawn_matview_reload(state: Arc<RwLock<ServerState>>) {
     tokio::spawn(async move {
         let started = Instant::now();
         tracing::info!("post-bind maintenance: materialized-view reload started");
-        match crate::server::reload_matviews(&state).await {
+        let txn = state.read().await.seams.txn.get().cloned();
+        let reloaded = match txn {
+            Some(txn) => txn.reload_matviews(&state).await,
+            None => Err("INTERNAL: transaction seam is not installed".to_string()),
+        };
+        match reloaded {
             Ok(0) => {
                 tracing::info!(
                     "post-bind maintenance: materialized-view reload finished in {:.3}s \

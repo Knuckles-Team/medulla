@@ -2,7 +2,7 @@
 //!
 //! `RegisterForeignSource` records a named EXTERNAL source (a remote medulla
 //! engine or an HTTP/JSON API — [`medulla_types::wire::ForeignSourceSpec`]) in the
-//! owner-scoped [`crate::server::foreign_catalog::ForeignSourceCatalog`] on
+//! owner-scoped [`crate::server::api::query_txn::foreign_catalog::ForeignSourceCatalog`] on
 //! `ServerState`, under the caller's VERIFIED owner — tenant+principal (EH-373). The actual
 //! cross-engine / HTTP fetch is driven by the unified-query handlers: an inline-spec
 //! `Op::ForeignScan` resolves itself, and a `Named` `Op::ForeignScan` / an `Op::Foreign`
@@ -39,7 +39,7 @@ pub(crate) async fn try_handle(
             // EH-378: provision the source's share role (assigned to nobody) under the
             // same write lock as the registration, so a registered source always has one.
             let mut s = call.state.write().await;
-            if let Err(error) = crate::server::foreign_share::provision_share_role(
+            if let Err(error) = crate::server::api::query_txn::foreign_share::provision_share_role(
                 &mut s.isolation,
                 owner.agent_id(),
                 &name,
@@ -51,9 +51,9 @@ pub(crate) async fn try_handle(
             }
             Ok(Response::ok(
                 req_id,
-                ResultPayload::scalar::<medulla_types::result_contract::cluster::RegisterForeignSource>(
-                    name,
-                ),
+                ResultPayload::scalar::<
+                    medulla_types::result_contract::cluster::RegisterForeignSource,
+                >(name),
             ))
         }
         Method::QueryForeignColumns {

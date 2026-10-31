@@ -55,10 +55,11 @@ pub(crate) async fn handle_uql(
         stmt
     };
     #[cfg(feature = "federation")]
-    let plan_digest = match crate::server::foreign_read::canonical_plan_digest(&binding) {
-        Ok(digest) => digest,
-        Err(error) => return Ok(Response::err(req_id, error)),
-    };
+    let plan_digest =
+        match crate::server::api::query_txn::query_support::canonical_plan_digest(&binding) {
+            Ok(digest) => digest,
+            Err(error) => return Ok(Response::err(req_id, error)),
+        };
     let legs = match ctx
         .served_legs_with_foreign_execution(&binding, foreign_execution.as_ref())
         .await
@@ -269,7 +270,8 @@ mod served_tests {
         );
         assert_eq!(
             plan_digest,
-            crate::server::foreign_read::canonical_plan_digest(&binding).expect("plan digest")
+            crate::server::api::query_txn::query_support::canonical_plan_digest(&binding)
+                .expect("plan digest")
         );
     }
 
@@ -308,7 +310,8 @@ mod served_tests {
         );
         assert_eq!(
             plan_digest,
-            crate::server::foreign_read::canonical_plan_digest(&binding).expect("plan digest")
+            crate::server::api::query_txn::query_support::canonical_plan_digest(&binding)
+                .expect("plan digest")
         );
     }
     // MEDULLA-FEDERATED-QUERY-R067 served acceptance; native qualification remains pending.

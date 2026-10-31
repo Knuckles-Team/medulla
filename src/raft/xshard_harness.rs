@@ -550,14 +550,21 @@ async fn txn_handle(
             XSHARD_HARNESS_TEST_AGENT,
             &format!("xshard-harness:{req_id}"),
         );
-    crate::server::handlers::txn::try_handle(
-        state,
-        req_id,
-        XSHARD_HARNESS_TEST_AGENT,
-        &context,
-        method,
-    )
-    .await
+    // The harness drives the real handler through the transaction seam; install the seams
+    // (idempotent) because this fixture builds its state without the server startup.
+    let txn = {
+        let guard = state.read().await;
+        crate::server::seams_install::install_seams(&guard);
+        guard.seams.txn.get().cloned()
+    };
+    let Some(txn) = txn else {
+        return Ok(Response::err(
+            req_id,
+            "INTERNAL: transaction seam is not installed",
+        ));
+    };
+    txn.try_handle(state, req_id, XSHARD_HARNESS_TEST_AGENT, &context, method)
+        .await
 }
 
 /// Register `shardA`/`shardB` in the registry + wire `state.multi_raft` so the

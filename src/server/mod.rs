@@ -446,16 +446,8 @@ pub(crate) mod graph_tile_source;
 // lease has lapsed. Always declared (mirrors `semantic_activation` above) — the
 // sweep is a no-op when nothing has registered.
 pub(crate) mod handlers;
-// Owner-scoped foreign-source catalog (CONCEPT:MEDULLA-KG.query.query-federation, EH-373): the one
-// place a caller's verified owner (tenant+principal) selects which sources a plan may resolve.
-#[cfg(feature = "federation")]
-pub mod foreign_catalog;
-// MEDULLA-FEDERATED-QUERY-R722.3 — bounded host-driven foreign-read executions.
-#[cfg(feature = "federation")]
-pub(crate) mod foreign_read;
-// Explicit RBAC-grant sharing of an owner-scoped foreign source (EH-378).
-#[cfg(feature = "federation")]
-pub(crate) mod foreign_share;
+// The owner-scoped foreign-source catalog, host-driven foreign reads and source sharing live
+// under `api::query_txn` (R056.8).
 pub mod registry_reaper;
 // EH-558: policy-driven expiry of sealed records through their owning op.
 pub mod sealed_retention;
@@ -784,9 +776,8 @@ mod transport;
 // Server-staged OCC ACID transactions (CONCEPT:MEDULLA-KG.txn.multi-op-occ-acid). `txn` holds the staged
 // transaction state + id source; `handlers::txn` owns the Txn* methods.
 pub mod txn;
-// Durable cross-store commit-intent log for a mixed graph+user-table SQL
-// transaction (CONCEPT:MEDULLA-TXN.mixed-commit-intent, NE-004) — see its module doc.
-pub(crate) mod txn_intent;
+// The durable cross-store commit-intent log (`txn_intent`) lives under
+// `api::query_txn` (R056.8).
 
 // External path surface — `server::ServerState`, `server::MAX_BATCH_IDS`,
 // `server::dispatch`, and

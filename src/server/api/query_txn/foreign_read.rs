@@ -22,19 +22,17 @@ use medulla_types::foreign_read::{
     ForeignReadExecutionRef, ForeignReadLimits, ForeignReadRow, ForeignReadSourceIdentity,
 };
 
-use super::access::CarrierAuthority;
 use super::foreign_catalog::{ForeignSourceCatalog, OwnedForeignRegistry};
-use super::persistence::agent_library::AgentLibraryStore;
 use crate::isolation::IsolationLayer;
+use crate::server::access::CarrierAuthority;
+use crate::server::persistence::agent_library::AgentLibraryStore;
 
 /// Owner-controlled dependencies used to revalidate and bind completed reads.
-pub(crate) struct ForeignBindingContext<'a> {
-    pub(crate) catalog: &'a ForeignSourceCatalog,
-    pub(crate) store: &'a AgentLibraryStore,
-    pub(crate) isolation: &'a IsolationLayer,
+pub struct ForeignBindingContext<'a> {
+    pub catalog: &'a ForeignSourceCatalog,
+    pub store: &'a AgentLibraryStore,
+    pub isolation: &'a IsolationLayer,
 }
-
-pub(crate) use crate::server::handlers::query::canonical_plan_digest;
 
 const MAX_SESSIONS: usize = 1_024;
 // A process-wide cap protects the page cache when many otherwise-valid
@@ -88,7 +86,7 @@ struct BufferedForeignRow {
 
 /// Process-local bounded execution handles. Durable approval and catalog state
 /// remain authoritative; this map is only the in-flight page buffer.
-pub(crate) struct ForeignReadSessions {
+pub struct ForeignReadSessions {
     next_id: AtomicU64,
     sessions: DashMap<u64, Arc<Mutex<SessionRecord>>>,
     admission: Mutex<()>,
@@ -113,7 +111,7 @@ impl Default for ForeignReadSessions {
 }
 
 impl ForeignReadSessions {
-    pub(crate) fn open(
+    pub fn open(
         &self,
         caller: &CarrierAuthority,
         source_name: String,
@@ -172,7 +170,7 @@ impl ForeignReadSessions {
         ))
     }
 
-    pub(crate) fn remove(&self, execution_id: u64) {
+    pub fn remove(&self, execution_id: u64) {
         let Some((_, record)) = self.sessions.remove(&execution_id) else {
             return;
         };
@@ -186,7 +184,7 @@ impl ForeignReadSessions {
         budget.bytes = budget.bytes.saturating_sub(record.total_bytes);
     }
 
-    pub(crate) fn page_source(
+    pub fn page_source(
         &self,
         execution_id: u64,
     ) -> Result<medulla_plan::federation::SharedForeignSource, String> {
@@ -200,7 +198,7 @@ impl ForeignReadSessions {
         }))
     }
 
-    pub(crate) fn append(
+    pub fn append(
         &self,
         caller: &CarrierAuthority,
         store: &AgentLibraryStore,
@@ -321,7 +319,7 @@ impl ForeignReadSessions {
         })
     }
 
-    pub(crate) fn complete(
+    pub fn complete(
         &self,
         caller: &CarrierAuthority,
         store: &AgentLibraryStore,
@@ -342,7 +340,7 @@ impl ForeignReadSessions {
         })
     }
 
-    pub(crate) fn abort(
+    pub fn abort(
         &self,
         caller: &CarrierAuthority,
         store: &AgentLibraryStore,
@@ -367,7 +365,7 @@ impl ForeignReadSessions {
 
     /// Revalidate the one authoritative approval/catalog and return a registry
     /// whose named source is the completed page buffer.
-    pub(crate) fn bind_for_query(
+    pub fn bind_for_query(
         &self,
         caller: &CarrierAuthority,
         execution: ForeignReadExecutionRef,
@@ -406,7 +404,7 @@ impl ForeignReadSessions {
 
     /// Atomically bind bounded, distinct completed executions to one plan.
     /// Every session and durable approval is revalidated before any is consumed.
-    pub(crate) fn bind_many_for_query(
+    pub fn bind_many_for_query(
         &self,
         caller: &CarrierAuthority,
         executions: &[ForeignReadExecutionRef],
@@ -461,9 +459,10 @@ impl ForeignReadSessions {
             if !plan_names.contains(record.source_name.as_str()) {
                 return Err("FOREIGN_READ_UNUSED: execution source is absent from plan".into());
             }
-            let driver: medulla_plan::federation::SharedForeignSource = Arc::new(PageBackedSource {
-                record: Arc::downgrade(handle),
-            });
+            let driver: medulla_plan::federation::SharedForeignSource =
+                Arc::new(PageBackedSource {
+                    record: Arc::downgrade(handle),
+                });
             sources.push((record.approval.clone(), record.source_name.clone(), driver));
         }
         let registry = binding.catalog.bind_registered_many(
@@ -765,6 +764,7 @@ fn now_ms() -> u64 {
 mod tests {
     use super::*;
     use crate::acl::RequestContextClaims;
+    use crate::server::api::query_txn::query_support::canonical_plan_digest;
     use crate::server::auth::VerifiedRequestContext;
     use medulla_types::connector_pack::{
         PackHeadRef, PackSourceApproval, PackSourceKind, PackSourceRegistration,
@@ -1126,7 +1126,9 @@ mod tests {
 
     #[test]
     fn mapped_cells_use_existing_foreign_rows_residual_and_projection() {
-        use medulla_plan::federation_opt::{ColumnPlan, ColumnPredicate, Comparison, PushdownSupport};
+        use medulla_plan::federation_opt::{
+            ColumnPlan, ColumnPredicate, Comparison, PushdownSupport,
+        };
 
         let sessions = ForeignReadSessions::default();
         let owner = CarrierAuthority::verified_for_test("owner");

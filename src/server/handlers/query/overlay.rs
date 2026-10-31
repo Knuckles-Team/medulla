@@ -160,7 +160,9 @@ pub(crate) struct OverlaidTxn<'a> {
 pub(crate) async fn run_unified_overlaid_with<T>(
     txn: OverlaidTxn<'_>,
     plan: medulla_plan::Plan,
-    finish: impl FnOnce(&medulla_plan::Plan, &medulla_plan::PlanCtx) -> Result<T, String> + Send + 'static,
+    finish: impl FnOnce(&medulla_plan::Plan, &medulla_plan::PlanCtx) -> Result<T, String>
+        + Send
+        + 'static,
 ) -> Result<Result<T, String>, Response>
 where
     T: Send + 'static,
@@ -245,54 +247,6 @@ where
     .await
 }
 
-/// Replay a txn's staged durable-mutation `write_set` onto a cloned `GraphView` as an
-/// overlay (CONCEPT:MEDULLA-KG.query.txn-cross-modal-ryow — in-txn cross-modal RYOW). Mirrors `handlers::txn::
-/// apply_staged`, but against a view's overlay ops (no ledger/durability): so the
-/// Filter (node props) and Traverse (BFS over staged edges) legs of an in-txn unified
-/// query observe the txn's own uncommitted graph writes. Only the durable-mutation set
-/// is ever staged (the protocol restricts `Txn*` to it); any other variant is a no-op.
-#[cfg(feature = "query")]
-pub(crate) fn overlay_write_set(view: &mut crate::graph::GraphView, write_set: &[Method]) {
-    for m in write_set {
-        match m {
-            Method::AddNode {
-                node_id,
-                properties_msgpack,
-            } => view.overlay_add_node(node_id.clone(), properties_msgpack.clone()),
-            Method::RemoveNode { node_id } => view.overlay_remove_node(node_id),
-            Method::AddEdge {
-                source_id,
-                target_id,
-                properties_msgpack,
-            } => {
-                view.overlay_add_edge(
-                    source_id.clone(),
-                    target_id.clone(),
-                    properties_msgpack.clone(),
-                );
-            }
-            Method::RemoveEdge {
-                source_id,
-                target_id,
-            } => view.overlay_remove_edge(source_id, target_id),
-            Method::CompareAndSetNodeFields {
-                node_id,
-                conditions_msgpack,
-                updates_msgpack,
-            } => {
-                // A decode failure is a no-op overlay (mirrors `apply_staged`).
-                if let (Ok(conditions), Ok(updates)) = (
-                    medulla_types::msgpack::decode_property_object(conditions_msgpack),
-                    medulla_types::msgpack::decode_property_object(updates_msgpack),
-                ) {
-                    view.overlay_compare_and_set_fields(node_id, &conditions, &updates);
-                }
-            }
-            _ => {}
-        }
-    }
-}
-
 /// Run `plan` over the staged view with core indexes, committed and staged
 /// embeddings, and the caller's governed foreign and time-series legs bound.
 /// With no staged embeddings, the committed store is searched through a guard.
@@ -303,7 +257,9 @@ pub(crate) fn run_unified_with_staged_finish<T>(
     view: &crate::graph::GraphView,
     core: &Arc<GraphCore>,
     staged: &[(String, Vec<f32>)],
-    #[cfg(feature = "federation")] foreign: Option<&medulla_plan::federation::ForeignSourceRegistry>,
+    #[cfg(feature = "federation")] foreign: Option<
+        &medulla_plan::federation::ForeignSourceRegistry,
+    >,
     #[cfg(feature = "tsdb")] tsdb_ctx: TsdbLegBind<'_>,
     finish: impl FnOnce(&medulla_plan::Plan, &medulla_plan::PlanCtx) -> Result<T, String>,
 ) -> Result<T, String> {

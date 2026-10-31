@@ -66,7 +66,7 @@ const MAX_INTENT_ITEMS: usize = 1_000_000;
 /// transaction. Replayed through the ordinary buffering dispatch on
 /// recovery to rebuild an equivalent `TableTxn`.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub(crate) enum ReplayStep {
+pub enum ReplayStep {
     /// A complete literal SQL statement that, when re-classified and
     /// re-dispatched with `in_txn = true`, buffers the SAME table op(s) it
     /// did originally.
@@ -82,23 +82,23 @@ pub(crate) enum ReplayStep {
 
 /// The durable recovery recipe for one mixed graph+table transaction.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub(crate) struct CommitIntent {
+pub struct CommitIntent {
     schema_version: u16,
-    pub(crate) graph: String,
+    pub graph: String,
     /// The hyphenated UUID text of the shared operation id (stored as a
     /// string, not `uuid::Uuid`, because this workspace's `uuid` dependency
     /// does not enable the `serde` feature).
     operation_id: String,
-    pub(crate) forward_methods: Vec<Method>,
-    pub(crate) compensating_methods: Vec<Method>,
-    pub(crate) table_steps: Vec<ReplayStep>,
+    pub forward_methods: Vec<Method>,
+    pub compensating_methods: Vec<Method>,
+    pub table_steps: Vec<ReplayStep>,
     #[allow(dead_code)] // recovery diagnostics / future TTL sweep, not read yet
-    pub(crate) created_at_ms: u64,
+    pub created_at_ms: u64,
 }
 
 impl CommitIntent {
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn new(
+    pub fn new(
         graph: String,
         operation_id: uuid::Uuid,
         forward_methods: Vec<Method>,
@@ -117,7 +117,7 @@ impl CommitIntent {
         }
     }
 
-    pub(crate) fn operation_id(&self) -> uuid::Uuid {
+    pub fn operation_id(&self) -> uuid::Uuid {
         // Constructed only from `Self::new`/`decode`, both of which always
         // write a valid simple-form UUID string; a corrupt value cannot
         // reach here (`list_intents` already discards undecodable records).
@@ -157,7 +157,7 @@ impl CommitIntent {
     /// already-committed batch belongs to this exact owner-scoped intent before
     /// repairing CREATE ownership, rather than trusting a generic idempotency
     /// conflict or the mere existence of a same-named table.
-    pub(crate) fn table_operation_descriptor(&self) -> Result<String, String> {
+    pub fn table_operation_descriptor(&self) -> Result<String, String> {
         let encoded = rmp_serde::to_vec_named(&self.table_steps)
             .map_err(|_| "commit-intent table replay recipe encode failed".to_string())?;
         Ok(format!(
@@ -171,7 +171,7 @@ impl CommitIntent {
     /// attempt keys onto the SAME idempotent coordinator id every time,
     /// distinct from the forward write's id (so the two never collide as
     /// the same MutationBatch identity).
-    pub(crate) fn compensation_operation_id(&self) -> uuid::Uuid {
+    pub fn compensation_operation_id(&self) -> uuid::Uuid {
         let mut hasher = Sha256::new();
         hasher.update(b"medulla/txn-intent-compensation\0");
         hasher.update(self.operation_id.as_bytes());
@@ -247,7 +247,7 @@ fn set_pre_install_hook(hook: Option<PreInstallHook>) {
 /// accepted as a no-op, while a changed recipe returns a conflict. Called
 /// BEFORE either half of a mixed commit is attempted, so a crash at any point
 /// after this call returns is self-healing (see the module doc).
-pub(crate) fn write_intent(
+pub fn write_intent(
     authority: &CarrierAuthority,
     persist_dir: &Path,
     intent: &CommitIntent,
@@ -350,7 +350,7 @@ fn publish_intent(
 /// Delete an intent file once fully resolved (committed OR compensated).
 /// A missing file is not an error — deletion is idempotent, matching every
 /// other step in this recipe.
-pub(crate) fn delete_intent(
+pub fn delete_intent(
     authority: &CarrierAuthority,
     persist_dir: &Path,
     operation_id: uuid::Uuid,
@@ -368,7 +368,7 @@ pub(crate) fn delete_intent(
 /// left these behind mid-2PC; a lazy recovery sweep resolves each. An
 /// unreadable/corrupt/oversized entry is skipped (never panics a recovery
 /// sweep); it stays on disk for the next sweep to retry.
-pub(crate) fn list_intents(authority: &CarrierAuthority, persist_dir: &Path) -> Vec<CommitIntent> {
+pub fn list_intents(authority: &CarrierAuthority, persist_dir: &Path) -> Vec<CommitIntent> {
     let dir = owner_dir(authority, persist_dir);
     let Ok(entries) = std::fs::read_dir(&dir) else {
         return Vec::new();

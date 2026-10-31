@@ -45,7 +45,7 @@ pub(crate) fn explain_plan(
     // Keep this byte contract identical to the foreign-read query binder: a
     // host can obtain the authoritative digest from ExplainPlan without
     // implementing or guessing the Rust planner's serialization.
-    let plan_digest = super::planning::canonical_plan_digest(&plan)?;
+    let plan_digest = crate::server::api::query_txn::query_support::canonical_plan_digest(&plan)?;
 
     /// Annotate every node of `dag` with its plan-time cost/cardinality estimate, walked
     /// in topological order so a node's `estimated_rows_in` is always derived from its
@@ -447,7 +447,9 @@ pub(crate) fn count_tree_rules(node: &medulla_epistemic::ProofNode) -> (usize, u
     let (mut supporting, mut contradicting) = match node.rule {
         medulla_epistemic::JustRule::DerivedSupport => (1, 0),
         medulla_epistemic::JustRule::DerivedContradiction => (0, 1),
-        medulla_epistemic::JustRule::Asserted | medulla_epistemic::JustRule::BayesianUpdate => (0, 0),
+        medulla_epistemic::JustRule::Asserted | medulla_epistemic::JustRule::BayesianUpdate => {
+            (0, 0)
+        }
     };
     for p in &node.premises {
         let (s, c) = count_tree_rules(p);
@@ -516,11 +518,15 @@ pub(crate) fn explain_belief(
 /// `rule`/`confidence`/`premises` per that type's own doc comment, so the walk is
 /// identical; the two types just aren't unified by a shared trait).
 #[cfg(feature = "epistemic-redaction")]
-pub(crate) fn count_redacted_tree_rules(node: &medulla_epistemic::RedactedProofNode) -> (usize, usize) {
+pub(crate) fn count_redacted_tree_rules(
+    node: &medulla_epistemic::RedactedProofNode,
+) -> (usize, usize) {
     let (mut supporting, mut contradicting) = match node.rule {
         medulla_epistemic::JustRule::DerivedSupport => (1, 0),
         medulla_epistemic::JustRule::DerivedContradiction => (0, 1),
-        medulla_epistemic::JustRule::Asserted | medulla_epistemic::JustRule::BayesianUpdate => (0, 0),
+        medulla_epistemic::JustRule::Asserted | medulla_epistemic::JustRule::BayesianUpdate => {
+            (0, 0)
+        }
     };
     for p in &node.premises {
         let (s, c) = count_redacted_tree_rules(p);
@@ -547,7 +553,9 @@ pub(crate) fn explain_belief_redacted_wire(
 ) -> crate::protocol::ExplainBeliefRedactedResult {
     use crate::protocol::{ExplainBeliefRedactedResult, RedactedJustificationNodeWire};
 
-    fn redacted_node_wire(node: &medulla_epistemic::RedactedProofNode) -> RedactedJustificationNodeWire {
+    fn redacted_node_wire(
+        node: &medulla_epistemic::RedactedProofNode,
+    ) -> RedactedJustificationNodeWire {
         RedactedJustificationNodeWire {
             claim: node.claim.clone(),
             redaction_label: node.redaction_label.clone(),
@@ -610,7 +618,9 @@ pub(crate) fn disclosure_level_from_wire(
 ) -> medulla_epistemic::DisclosureLevel {
     match cap {
         crate::protocol::DisclosureLevelWire::Full => medulla_epistemic::DisclosureLevel::Full,
-        crate::protocol::DisclosureLevelWire::Skeleton => medulla_epistemic::DisclosureLevel::Skeleton,
+        crate::protocol::DisclosureLevelWire::Skeleton => {
+            medulla_epistemic::DisclosureLevel::Skeleton
+        }
         crate::protocol::DisclosureLevelWire::ExistenceOnly => {
             medulla_epistemic::DisclosureLevel::ExistenceOnly
         }
@@ -623,7 +633,9 @@ pub(crate) fn disclosure_level_to_wire(
 ) -> crate::protocol::DisclosureLevelWire {
     match level {
         medulla_epistemic::DisclosureLevel::Full => crate::protocol::DisclosureLevelWire::Full,
-        medulla_epistemic::DisclosureLevel::Skeleton => crate::protocol::DisclosureLevelWire::Skeleton,
+        medulla_epistemic::DisclosureLevel::Skeleton => {
+            crate::protocol::DisclosureLevelWire::Skeleton
+        }
         medulla_epistemic::DisclosureLevel::ExistenceOnly => {
             crate::protocol::DisclosureLevelWire::ExistenceOnly
         }
@@ -635,11 +647,15 @@ pub(crate) fn existence_signal_to_wire(
     existence: medulla_epistemic::ExistenceSignal,
 ) -> crate::protocol::ExistenceSignalWire {
     match existence {
-        medulla_epistemic::ExistenceSignal::Supported => crate::protocol::ExistenceSignalWire::Supported,
+        medulla_epistemic::ExistenceSignal::Supported => {
+            crate::protocol::ExistenceSignalWire::Supported
+        }
         medulla_epistemic::ExistenceSignal::Contradicted => {
             crate::protocol::ExistenceSignalWire::Contradicted
         }
-        medulla_epistemic::ExistenceSignal::Uncertain => crate::protocol::ExistenceSignalWire::Uncertain,
+        medulla_epistemic::ExistenceSignal::Uncertain => {
+            crate::protocol::ExistenceSignalWire::Uncertain
+        }
     }
 }
 

@@ -461,7 +461,7 @@ pub(super) fn durable_read_lease(graph: &str, agent: &str) -> DurableReadLease {
 ))]
 #[tokio::test]
 async fn knowledge_stream_sql_lists_the_request_graph_edge_indexes() {
-    use crate::server::handlers::query::current_auth_test_support::{
+    use crate::server::api::query_txn::edge_test_support::{
         edge_status_row, register_detached_edge_index, sql_rows, EDGE_STATUS_SQL,
     };
     use crate::server::handlers::query::{try_handle_with_policy, PolicyAwareQuery};

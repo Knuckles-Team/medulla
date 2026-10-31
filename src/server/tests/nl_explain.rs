@@ -132,11 +132,13 @@ async fn nl_query_plan_returns_pins_without_executing_rows() {
     assert_ne!(body.plan_digest.to_hex(), "0".repeat(64));
     assert_ne!(body.query_digest.to_hex(), "0".repeat(64));
     let params = std::collections::BTreeMap::new();
-    let statement = medulla_plan::uql::parse_statement(&body.uql, &params).expect("parse planned UQL");
+    let statement =
+        medulla_plan::uql::parse_statement(&body.uql, &params).expect("parse planned UQL");
     let binding = medulla_plan::uql::serve::binding_plan(&statement);
     assert_eq!(
         body.plan_digest,
-        crate::server::foreign_read::canonical_plan_digest(&binding).expect("plan digest")
+        crate::server::api::query_txn::query_support::canonical_plan_digest(&binding)
+            .expect("plan digest")
     );
     assert_eq!(
         body.query_digest,

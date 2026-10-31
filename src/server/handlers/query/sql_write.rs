@@ -23,6 +23,8 @@ pub(crate) struct SqlWriteScope<'a> {
     pub(crate) caller: Option<&'a str>,
     pub(crate) authority: &'a crate::server::access::CarrierAuthority,
     pub(crate) persist_dir: &'a std::path::Path,
+    /// The installed wire seam that authorizes and replays the SQL catalog batch.
+    pub(crate) wire: Option<&'a Arc<dyn crate::server::api::query_txn::WireApi>>,
 }
 
 /// Execute `Method::Sql`'s `INSERT INTO nodes …` DML — pure extract-method out of
