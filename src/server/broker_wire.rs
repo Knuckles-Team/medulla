@@ -8,7 +8,7 @@ use sha2::Sha256;
 use tokio::sync::RwLock;
 
 use crate::protocol::{Method, Request, ResultPayload};
-use crate::server::dispatch::dispatch_authenticated_broker_actor;
+use crate::server::api::reentry::dispatch_authenticated_broker_actor;
 use crate::server::ServerState;
 
 /// Common async/socket imports used by every native broker adapter.

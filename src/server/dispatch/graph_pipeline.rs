@@ -28,6 +28,8 @@ mod pipeline;
 // EH-280 — the durable, graph-scoped route of a branch-aware IndexRepository.
 mod repository_index;
 mod web_ingest;
+#[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
+pub(crate) use repository_index::drain_repository_enrichment_once;
 #[cfg(all(feature = "ast", feature = "redb", feature = "blob", feature = "raft"))]
 pub(crate) use repository_index::plan_held_underfunded_park;
 #[cfg(all(
@@ -40,8 +42,6 @@ pub(crate) use repository_index::plan_held_underfunded_park;
 pub(crate) use repository_index::{
     decode_pending_enrichment_intent, enrichment_intent_for_snapshot,
 };
-#[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
-pub(crate) use repository_index::{drain_repository_enrichment_once, DrainOutcome};
 mod work_governance;
 use dispatch_helpers::*;
 #[cfg(any(

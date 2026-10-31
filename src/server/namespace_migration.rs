@@ -323,7 +323,7 @@ async fn submit(state: &Arc<RwLock<ServerState>>, graph: &str, method: Method) -
         agent_id: Some(context.agent_id().to_string()),
         method,
     };
-    let response = crate::server::dispatch::dispatch_verified_request(state, request, context).await;
+    let response = crate::server::api::reentry::dispatch_verified_request(state, request, context).await;
     match response.refusal_text() {
         None => Ok(()),
         Some(refusal) => Err(refusal.to_string()),

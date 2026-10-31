@@ -5,7 +5,7 @@ use tokio::sync::RwLock;
 use crate::graph::GraphCore;
 use crate::protocol::{Method, Response};
 use crate::server::access::GraphReadAuthority;
-use crate::server::handlers::TryHandleContext;
+use crate::server::api::reentry::TryHandleContext;
 use crate::server::state::ServerState;
 
 /// Route the native RDF family while keeping each protocol surface in its own

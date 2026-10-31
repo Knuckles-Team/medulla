@@ -226,7 +226,7 @@ pub async fn apply_inbound(
         medulla_kernel::metrics::auth_failure();
         return false;
     };
-    let response = crate::server::dispatch::dispatch(state, request).await;
+    let response = crate::server::api::reentry::dispatch(state, request).await;
     response.error.is_none()
 }
 

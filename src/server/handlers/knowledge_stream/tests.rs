@@ -461,11 +461,11 @@ pub(super) fn durable_read_lease(graph: &str, agent: &str) -> DurableReadLease {
 ))]
 #[tokio::test]
 async fn knowledge_stream_sql_lists_the_request_graph_edge_indexes() {
+    use crate::server::api::reentry::TryHandleContext;
     use crate::server::handlers::query::current_auth_test_support::{
         edge_status_row, register_detached_edge_index, sql_rows, EDGE_STATUS_SQL,
     };
     use crate::server::handlers::query::{try_handle_with_policy, PolicyAwareQuery};
-    use crate::server::handlers::TryHandleContext;
 
     let _env_read_lock = medulla_kernel::crypto::provisioned_test_env_read_lock().await;
     let fixture = durable_read_lease("tenant-graph", "alice");

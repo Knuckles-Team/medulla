@@ -168,27 +168,32 @@ mod worker {
         #[cfg(not(feature = "raft"))]
         let park_persistence = Arc::clone(&persistence);
         let park_graph = graph_name.clone();
-        let outcome = crate::server::dispatch::drain_repository_enrichment_once(
+        let outcome = crate::server::api::reentry::drain_repository_enrichment_once(
+            state,
             persistence.as_ref(),
             &graph_name,
             store,
-            move |tenant, graph, page_key| {
+            Box::new(move |tenant, graph, page_key| {
                 let grant_state = Arc::clone(&grant_state);
-                async move { service_authority(&grant_state, &tenant, &graph, &page_key).await }
-            },
-            move |verified, request| {
+                Box::pin(async move {
+                    service_authority(&grant_state, &tenant, &graph, &page_key).await
+                })
+            }),
+            Box::new(move |verified, request| {
                 let persistence = Arc::clone(&submit_persistence);
                 let state = Arc::clone(&submit_state);
                 let graph = submit_graph.clone();
-                async move { submit_page(state, persistence, &graph, verified, request).await }
-            },
-            move |lease, park| {
+                Box::pin(
+                    async move { submit_page(state, persistence, &graph, verified, request).await },
+                )
+            }),
+            Box::new(move |lease, park| {
                 let graph = park_graph.clone();
                 #[cfg(feature = "raft")]
                 let state = Arc::clone(&park_state);
                 #[cfg(not(feature = "raft"))]
                 let persistence = Arc::clone(&park_persistence);
-                async move {
+                Box::pin(async move {
                     #[cfg(feature = "raft")]
                     {
                         super::propose_and_release_park(&state, &graph, &lease, &park).await
@@ -198,13 +203,13 @@ mod worker {
                         persistence.park_enrichment_budget(&graph, park).await?;
                         persistence.release_mutation_outbox(&graph, &lease).await
                     }
-                }
-            },
+                })
+            }),
         )
         .await?;
         Ok(matches!(
             outcome,
-            crate::server::dispatch::DrainOutcome::Acknowledged { .. }
+            crate::server::api::reentry::DrainOutcome::Acknowledged { .. }
         ))
     }
 
@@ -311,7 +316,7 @@ mod worker {
         #[cfg(feature = "raft")]
         {
             let _ = (persistence, graph);
-            return crate::server::dispatch::submit_repository_enrichment_page(
+            return crate::server::api::reentry::submit_repository_enrichment_page(
                 &state, verified, request,
             )
             .await;

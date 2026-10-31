@@ -111,7 +111,7 @@ async fn execute_update(
         Ok(request) => request,
         Err(error) => return ("401 Unauthorized", "text/plain", error),
     };
-    let response = crate::server::dispatch::dispatch(state, request).await;
+    let response = crate::server::api::reentry::dispatch(state, request).await;
     match response.error {
         None => ("204 No Content", "text/plain", String::new()),
         Some(error) if error.starts_with("ACCESS_DENIED") => ("403 Forbidden", "text/plain", error),

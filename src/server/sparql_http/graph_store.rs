@@ -118,7 +118,7 @@ async fn graph_write(
         Ok(request) => request,
         Err(error) => return ("401 Unauthorized", "text/plain", error),
     };
-    let response = crate::server::dispatch::dispatch(state, request).await;
+    let response = crate::server::api::reentry::dispatch(state, request).await;
     mutation_response(response.error, created)
 }
 
@@ -151,7 +151,7 @@ async fn graph_delete(
         Ok(request) => request,
         Err(error) => return ("401 Unauthorized", "text/plain", error),
     };
-    let response = crate::server::dispatch::dispatch(state, request).await;
+    let response = crate::server::api::reentry::dispatch(state, request).await;
     mutation_response(response.error, false)
 }
 

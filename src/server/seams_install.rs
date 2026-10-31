@@ -11,6 +11,10 @@ pub fn install_seams(state: &ServerState) {
     // L1 server helpers: none (moved items need no installation).
 
     // L2 dispatch re-entry.
+    let _ = state
+        .seams
+        .dispatch
+        .set(std::sync::Arc::new(super::dispatch::DispatchSeam));
 
     // L3 ingest, graph, jobs, compute.
 

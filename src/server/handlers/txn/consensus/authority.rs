@@ -25,7 +25,7 @@ pub(super) fn validate_consensus_participant_authority(
     coordinator_id: &str,
     txn: &GraphTxnState,
     authority: &crate::raft::RaftMutationContext,
-    phase: crate::raft::TransactionParticipantPhase,
+    phase: crate::server::api::reentry::TransactionParticipantPhase,
 ) -> Result<ParticipantAdmission, String> {
     if txn.tenant_scope != authority.tenant_scope {
         return Err(
@@ -52,9 +52,9 @@ pub(super) enum ParticipantAdmission {
 pub(super) fn participant_phase_admission(
     redb: &crate::server::persistence::redb_backend::RedbBackend,
     parent: &crate::server::handlers::admin::AdminSaga,
-    phase: crate::raft::TransactionParticipantPhase,
+    phase: crate::server::api::reentry::TransactionParticipantPhase,
 ) -> Result<ParticipantAdmission, String> {
-    use crate::raft::TransactionParticipantPhase::{Abort, Commit, Prepare};
+    use crate::server::api::reentry::TransactionParticipantPhase::{Abort, Commit, Prepare};
     match (parent.prepared, parent.replayed.as_ref()) {
         (false, Some(ResultPayload::Bool(false))) if matches!(phase, Abort) => {
             return Ok(ParticipantAdmission::Execute)

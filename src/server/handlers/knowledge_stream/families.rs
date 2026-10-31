@@ -113,7 +113,7 @@ async fn execute_sql(
     }
     let response = super::super::query::try_handle_with_policy(
         state,
-        super::super::TryHandleContext {
+        crate::server::api::reentry::TryHandleContext {
             req_id,
             graph_name,
             read_authority: Some(read_authority),
@@ -175,7 +175,7 @@ async fn execute_rdf(
     {
         let response = super::super::rdf::try_handle(
             state,
-            super::super::TryHandleContext {
+            crate::server::api::reentry::TryHandleContext {
                 req_id,
                 graph_name,
                 read_authority: Some(read_authority),
@@ -425,7 +425,7 @@ async fn execute_cross_modal(
         .ok_or_else(|| "KnowledgeStream requires a durable policy decision lease".to_string())?;
     let response = super::super::query::try_handle_with_policy(
         state,
-        super::super::TryHandleContext {
+        crate::server::api::reentry::TryHandleContext {
             req_id,
             graph_name,
             read_authority: Some(read_authority),

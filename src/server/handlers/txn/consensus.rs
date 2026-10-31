@@ -454,7 +454,7 @@ pub(crate) async fn apply_consensus_participant_prepare(
         coordinator_id,
         &txn,
         authority,
-        crate::raft::TransactionParticipantPhase::Prepare,
+        crate::server::api::reentry::TransactionParticipantPhase::Prepare,
     )?;
     if committed_participant_receipt(backend.as_ref(), &txn, &plan, authority).await? {
         finish_participant_cleanup(redb, &plan).await?;
@@ -586,7 +586,7 @@ pub(crate) async fn apply_consensus_participant_commit(
         coordinator_id,
         &txn,
         authority,
-        crate::raft::TransactionParticipantPhase::Commit,
+        crate::server::api::reentry::TransactionParticipantPhase::Commit,
     )?;
     if committed_participant_receipt(backend.as_ref(), &txn, &plan, authority).await? {
         finish_participant_cleanup(redb, &plan).await?;
@@ -703,14 +703,14 @@ fn authorize_participant_abort(
             coordinator_id,
             &txn,
             authority,
-            crate::raft::TransactionParticipantPhase::Abort,
+            crate::server::api::reentry::TransactionParticipantPhase::Abort,
         )?;
     } else {
         let parent = validate_consensus_parent_authority(redb, coordinator_id, authority)?;
         participant_phase_admission(
             redb,
             &parent,
-            crate::raft::TransactionParticipantPhase::Abort,
+            crate::server::api::reentry::TransactionParticipantPhase::Abort,
         )?;
     }
     Ok(())

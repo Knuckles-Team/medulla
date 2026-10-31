@@ -80,7 +80,7 @@ impl MedullaStore {
                 coordinator_id,
                 commit,
             } => {
-                let outcome = crate::server::apply_replicated_transaction_decision(
+                let outcome = crate::server::api::reentry::apply_replicated_transaction_decision(
                     &self.ctx.state,
                     req.committed_at_ms,
                     &req.mutation,
@@ -94,7 +94,7 @@ impl MedullaStore {
                 coordinator_id,
                 commit,
             } => {
-                let outcome = crate::server::apply_replicated_transaction_finalize(
+                let outcome = crate::server::api::reentry::apply_replicated_transaction_finalize(
                     &self.ctx.state,
                     req.committed_at_ms,
                     &req.mutation,
@@ -107,7 +107,7 @@ impl MedullaStore {
             #[cfg(feature = "jobs")]
             NativeMutationCommand::JobPublicationCommit { coordinator_id, .. } => {
                 let plan = command.open_job_publication_payload(server_secret)?;
-                let outcome = crate::server::apply_replicated_job_publication_commit(
+                let outcome = crate::server::api::reentry::apply_replicated_job_publication_commit(
                     &self.ctx.state,
                     req.mutation.request_id,
                     req.committed_at_ms,
@@ -122,14 +122,15 @@ impl MedullaStore {
             #[cfg(feature = "jobs")]
             NativeMutationCommand::JobPublicationFinalize { coordinator_id, .. } => {
                 let receipt = command.open_job_publication_payload(server_secret)?;
-                let outcome = crate::server::apply_replicated_job_publication_finalize(
-                    &self.ctx.state,
-                    req.committed_at_ms,
-                    &req.mutation,
-                    coordinator_id,
-                    &receipt,
-                )
-                .await;
+                let outcome =
+                    crate::server::api::reentry::apply_replicated_job_publication_finalize(
+                        &self.ctx.state,
+                        req.committed_at_ms,
+                        &req.mutation,
+                        coordinator_id,
+                        &receipt,
+                    )
+                    .await;
                 Ok(Some(Self::native_result_outcome_to_response(outcome)))
             }
             _ => Ok(None),
@@ -140,20 +141,20 @@ impl MedullaStore {
         &self,
         req: &RaftRequest,
         command: &NativeMutationCommand,
-        phase: crate::raft::TransactionParticipantPhase,
+        phase: crate::server::api::reentry::TransactionParticipantPhase,
         coordinator_id: &str,
         participant_id: u64,
         server_secret: &str,
     ) -> Result<RaftResponse, String> {
         let plan = command.open_transaction_plan(server_secret)?;
-        let outcome = crate::server::apply_replicated_transaction_participant(
+        let outcome = crate::server::api::reentry::apply_replicated_transaction_participant(
             &self.ctx.state,
             req.mutation.request_id,
             req.committed_at_ms,
             &req.mutation,
             self.group_id,
             phase,
-            crate::server::ReplicatedParticipantRef {
+            crate::server::api::reentry::ReplicatedParticipantRef {
                 coordinator_id,
                 participant_id,
                 plan: plan.as_deref(),
@@ -363,7 +364,7 @@ impl MedullaStore {
             else {
                 unreachable!();
             };
-            crate::server::apply_replicated_transaction_prepare(
+            crate::server::api::reentry::apply_replicated_transaction_prepare(
                 &self.ctx.state,
                 req.mutation.request_id,
                 req.committed_at_ms,
@@ -374,7 +375,7 @@ impl MedullaStore {
             )
             .await
         } else {
-            crate::server::apply_replicated_native(
+            crate::server::api::reentry::apply_replicated_native(
                 &self.ctx.state,
                 req.graph_name.clone(),
                 req.mutation.request_id,

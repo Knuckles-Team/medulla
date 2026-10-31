@@ -450,18 +450,6 @@ mod graph_pipeline;
 #[cfg(feature = "security")]
 mod identity_store;
 mod policy_evolution;
-#[cfg(all(feature = "ast", feature = "redb", feature = "blob", feature = "raft"))]
-pub(crate) use graph_pipeline::plan_held_underfunded_park;
-#[cfg(all(
-    feature = "ast",
-    feature = "redb",
-    feature = "blob",
-    feature = "raft",
-    feature = "security"
-))]
-pub(crate) use graph_pipeline::{decode_pending_enrichment_intent, enrichment_intent_for_snapshot};
-#[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
-pub(crate) use graph_pipeline::{drain_repository_enrichment_once, DrainOutcome};
 
 /// Submit one funded repository page through the same authenticated boundary
 /// as an external native method. In a cluster this routes through the graph's
@@ -509,6 +497,7 @@ pub(crate) async fn submit_repository_enrichment_page(
 }
 mod request_boundary;
 mod router;
+mod seam;
 #[cfg(test)]
 mod test_support;
 
@@ -599,20 +588,11 @@ pub(crate) use consensus::verified_served_registration;
 pub(crate) use consensus::{
     apply_replicated_native, apply_replicated_transaction_decision,
     apply_replicated_transaction_finalize, apply_replicated_transaction_participant,
-    apply_replicated_transaction_prepare, ReplicatedParticipantRef,
+    apply_replicated_transaction_prepare,
 };
 pub(crate) use consensus::{authoritative_now_ms, authoritative_now_secs};
 #[cfg(feature = "raft")]
 pub(crate) use consensus::{is_replicated_apply, replicated_placement_authority};
 pub use request_boundary::dispatch;
-#[cfg(any(
-    feature = "amqp-wire",
-    feature = "mqtt-wire",
-    feature = "stomp-wire",
-    feature = "mssql-wire",
-    feature = "redis-wire",
-))]
-pub(crate) use request_boundary::dispatch_authenticated_broker_actor;
-#[cfg(any(feature = "federation-search", feature = "nl-query"))]
-pub(crate) use request_boundary::dispatch_authenticated_local_query;
 pub(crate) use request_boundary::dispatch_verified_request;
+pub(crate) use seam::DispatchSeam;

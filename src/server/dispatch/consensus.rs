@@ -76,5 +76,4 @@ pub(crate) use replicated::{
     apply_replicated_native, apply_replicated_transaction_decision,
     apply_replicated_transaction_finalize, apply_replicated_transaction_participant,
     apply_replicated_transaction_prepare, is_replicated_apply, replicated_placement_authority,
-    ReplicatedParticipantRef,
 };

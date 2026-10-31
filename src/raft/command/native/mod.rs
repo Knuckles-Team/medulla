@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::protocol::Method;
+use crate::server::api::reentry::TransactionParticipantPhase;
 
 #[cfg(feature = "modality-serving")]
 use super::super::SanitizedModalityRaftCommand;
@@ -17,14 +18,6 @@ pub use sealed::SealedNativeMethod;
 
 #[cfg(test)]
 mod tests;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum TransactionParticipantPhase {
-    Prepare,
-    Commit,
-    Abort,
-}
 
 /// Engine-native commands whose durable effect is not reducible to a GraphCore
 /// mutation. New native stores must add a typed variant and deterministic replica

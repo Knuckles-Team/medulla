@@ -20,10 +20,10 @@ mod enrichment;
     feature = "security"
 ))]
 pub(crate) use consumer::decode_pending_intent as decode_pending_enrichment_intent;
+#[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
+pub(crate) use consumer::drain_once as drain_repository_enrichment_once;
 #[cfg(all(feature = "ast", feature = "redb", feature = "blob", feature = "raft"))]
 pub(crate) use consumer::plan_held_underfunded_park;
-#[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
-pub(crate) use consumer::{drain_once as drain_repository_enrichment_once, DrainOutcome};
 #[cfg(all(
     feature = "ast",
     feature = "redb",
@@ -127,7 +127,9 @@ async fn admit_repository_sources(
         .iter()
         .map(
             |(_, bytes)| crate::server::blob::engine_bodies::EngineBody {
-                sha256: medulla_types::contract::Digest256::from_bytes(Sha256::digest(bytes).into()),
+                sha256: medulla_types::contract::Digest256::from_bytes(
+                    Sha256::digest(bytes).into(),
+                ),
                 body: bytes.clone(),
             },
         )

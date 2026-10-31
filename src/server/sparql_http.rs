@@ -299,7 +299,8 @@ async fn handle_nl(
         agent_id: Some("service:local-query".to_string()),
         method: crate::protocol::Method::NlQuery { text, graph },
     };
-    let resp = crate::server::dispatch::dispatch_authenticated_local_query(state, request).await;
+    let resp =
+        crate::server::api::reentry::dispatch_authenticated_local_query(state, request).await;
     if let Some(err) = resp.error {
         return (
             "400 Bad Request",

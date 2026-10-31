@@ -794,16 +794,6 @@ pub(crate) mod txn_intent;
 pub use auth::{compute_verified_envelope_token, VerifiedEnvelopeParams};
 pub(crate) use dispatch::authoritative_now_secs;
 pub use dispatch::dispatch;
-#[cfg(all(feature = "raft", feature = "jobs"))]
-pub(crate) use dispatch::{
-    apply_replicated_job_publication_commit, apply_replicated_job_publication_finalize,
-};
-#[cfg(feature = "raft")]
-pub(crate) use dispatch::{
-    apply_replicated_native, apply_replicated_transaction_decision,
-    apply_replicated_transaction_finalize, apply_replicated_transaction_participant,
-    apply_replicated_transaction_prepare, ReplicatedParticipantRef,
-};
 #[cfg(feature = "raft")]
 pub(crate) use handlers::topology::apply_replicated_node_info;
 // NL planner injection (CONCEPT:MEDULLA-KG.query.fence-stripper): an embedder opts into engine-driven NL→query.
