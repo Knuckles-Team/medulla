@@ -30,7 +30,7 @@ rmp-serde = "1.3"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 sha2 = "0.10"
-tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"] }
 tracing = "0.1"
 medulla-direct-state = { path = "../medulla-direct-state" }
 medulla-graph-core = { path = "../medulla-graph-core" }
@@ -44,7 +44,7 @@ cold-tier-s3 = ["cold-tier", "medulla-persistence/cold-tier-s3", "dep:object_sto
 metrics = ["medulla-persistence/metrics", "medulla-kernel/metrics", "medulla-protocol-types/metrics", "medulla-server-api/metrics", "medulla-store-apply/metrics", "medulla-store/metrics", "medulla-types/metrics"]
 query = ["redb", "medulla-persistence/query", "medulla-kernel/query", "medulla-protocol-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-store/query", "medulla-types/query"]
 raft = ["redb", "medulla-persistence/raft", "medulla-kernel/raft", "medulla-server-api/raft", "medulla-server-auth/raft", "medulla-store-apply/raft", "medulla-store/raft", "server"]
-server = ["dep:tokio", "medulla-persistence/server", "medulla-kernel/server", "medulla-server-api/server", "medulla-store/server"]
+server = ["medulla-persistence/server", "medulla-kernel/server", "medulla-server-api/server", "medulla-store/server"]
 redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-persistence/redb", "medulla-persistence-records/redb", "medulla-kernel/redb", "medulla-server-api/redb", "medulla-store/redb"]
 [dev-dependencies]
 medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }

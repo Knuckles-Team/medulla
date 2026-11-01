@@ -17,7 +17,7 @@ medulla-sql = { path = "../medulla-sql" }
 medulla-sql-udfs = { path = "../medulla-sql-udfs" }
 medulla-table-store = { path = "../medulla-table-store" }
 medulla-tables = { path = "../medulla-tables" }
-async-trait = { version = "0.1", optional = true }
+async-trait = { version = "0.1" }
 dashmap = "6.2"
 hex = "0.4"
 medulla-core = { path = "../medulla-core" }
@@ -42,7 +42,7 @@ rustix = { version = "1.1.5", optional = true, features = ["fs"] }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 sha2 = "0.10"
-tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"] }
 tracing = "0.1"
 uuid = { version = "1.28", features = ["v4"] }
 serde_bytes = "0.11.19"
@@ -71,7 +71,7 @@ security = ["redb", "medulla-core/security", "medulla-graph-core/security", "med
 sparql = ["dep:medulla-rdf", "medulla-rdf/sparql", "medulla-kernel/sparql", "medulla-persistence/sparql", "medulla-protocol-types/sparql", "medulla-raft/sparql", "medulla-server-api/sparql", "medulla-server-ops/sparql", "medulla-types/sparql", "rdf", "server"]
 sqlite-file = ["dep:rustix", "dep:medulla-sqlite-format", "query", "medulla-kernel/sqlite-file", "medulla-protocol-types/sqlite-file", "medulla-raft/sqlite-file", "medulla-types/sqlite-file", "server"]
 tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries", "redb", "medulla-persistence/tsdb", "medulla-raft/tsdb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb", "medulla-store/tsdb", "server"]
-server = ["dep:tokio", "dep:async-trait", "medulla-kernel/server", "medulla-persistence/server", "medulla-raft/server", "medulla-server-api/server", "medulla-store/server"]
+server = ["medulla-kernel/server", "medulla-persistence/server", "medulla-raft/server", "medulla-server-api/server", "medulla-store/server"]
 epistemic-redaction = ["dep:medulla-epistemic", "medulla-epistemic/epistemic-redaction", "medulla-server-api/epistemic-redaction", "epistemic", "query", "redb", "security"]
 epistemic-tms = ["dep:medulla-epistemic", "medulla-epistemic/epistemic-tms", "medulla-kernel/epistemic-tms", "medulla-server-api/epistemic-tms", "medulla-server-mutation/epistemic-tms", "epistemic", "query", "redb"]
 evidence-graph = ["dep:medulla-epistemic", "medulla-epistemic/evidence-graph", "medulla-server-api/evidence-graph", "epistemic", "query", "redb"]

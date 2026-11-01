@@ -12,7 +12,7 @@ name = "medulla_h_admin"
 path = "src/lib.rs"
 
 [dependencies]
-async-trait = { version = "0.1", optional = true }
+async-trait = { version = "0.1" }
 dashmap = "6.2"
 hex = "0.4"
 medulla-agent-types = { path = "../medulla-agent-types" }
@@ -38,7 +38,7 @@ rustls = { version = "0.23", default-features = false, features = ["ring", "std"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 sha2 = "0.10"
-tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"] }
 tokio-rustls = { version = "0.26", optional = true }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", optional = true }
@@ -73,7 +73,7 @@ shacl = ["dep:medulla-shacl", "rdf", "medulla-kernel/shacl", "medulla-persistenc
 sparql-star = ["dep:medulla-rdf", "medulla-rdf/sparql-star", "medulla-persistence/sparql-star", "medulla-reasoner/sparql-star", "medulla-server-api/sparql-star", "rdf", "server", "sparql"]
 streaming = ["medulla-protocol-types/streaming", "medulla-raft/streaming", "medulla-server-api/streaming", "medulla-server-cdc/streaming", "medulla-server-mutation/streaming", "medulla-server-ops/streaming", "medulla-types/streaming", "server"]
 tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries", "redb", "medulla-persistence/tsdb", "medulla-raft/tsdb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb", "medulla-store/tsdb", "server"]
-server = ["dep:tracing-subscriber", "dep:tokio", "dep:async-trait", "medulla-federation/server", "medulla-kernel/server", "medulla-persistence/server", "medulla-raft/server", "medulla-server-api/server", "medulla-store/server"]
+server = ["dep:tracing-subscriber", "medulla-federation/server", "medulla-kernel/server", "medulla-persistence/server", "medulla-raft/server", "medulla-server-api/server", "medulla-store/server"]
 epistemic = ["dep:medulla-plan", "medulla-plan/epistemic", "medulla-exec/epistemic", "medulla-kernel/epistemic", "medulla-protocol-types/epistemic", "medulla-raft/epistemic", "medulla-server-api/epistemic", "medulla-server-auth/epistemic", "medulla-server-cdc/epistemic", "medulla-server-mutation/epistemic", "medulla-server-ops/epistemic", "medulla-types/epistemic", "query", "redb"]
 numeric = ["dep:medulla-plan", "medulla-plan?/numeric", "medulla-exec/numeric", "medulla-kernel/numeric", "medulla-persistence/numeric", "medulla-raft/numeric", "medulla-server-api/numeric"]
 query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "dep:medulla-plan", "medulla-plan/query", "medulla-decision-types/query", "medulla-exec/query", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-raft/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-cdc/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-store/query", "medulla-types/query", "redb"]

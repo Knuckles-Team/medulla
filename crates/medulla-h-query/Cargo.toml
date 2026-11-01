@@ -49,7 +49,7 @@ rmp-serde = "1.3"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 sha2 = "0.10"
-tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"] }
 tracing = "0.1"
 
 ureq = { version = "3.4.2", optional = true }
@@ -119,7 +119,7 @@ streaming = ["medulla-protocol-types/streaming", "medulla-server-api/streaming",
 tensor = ["dep:medulla-tensor", "dep:medulla-plan", "medulla-plan/tensor", "query", "medulla-exec/tensor", "medulla-nlq/tensor", "medulla-server-api/tensor", "medulla-types/tensor", "medulla-uql/tensor"]
 text = ["dep:medulla-plan", "medulla-plan/text", "query", "medulla-h-retrieve/text", "medulla-exec/text", "medulla-federation/text", "medulla-nlq/text", "medulla-server-api/text", "medulla-server-ops/text", "medulla-types/text", "medulla-uql/text"]
 tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries", "redb", "medulla-h-retrieve/tsdb", "medulla-persistence/tsdb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb", "server"]
-server = ["dep:tokio", "dep:async-trait", "medulla-federation/server", "medulla-kernel/server", "medulla-persistence/server", "medulla-server-api/server"]
+server = ["dep:async-trait", "medulla-federation/server", "medulla-kernel/server", "medulla-persistence/server", "medulla-server-api/server"]
 statechart = ["medulla-capabilities/statechart", "medulla-persistence/statechart", "medulla-protocol-types/statechart", "medulla-server-api/statechart", "medulla-server-mutation/statechart", "medulla-types/statechart", "server"]
 viz = ["medulla-capabilities/viz", "medulla-persistence/viz", "medulla-protocol-types/viz", "medulla-server-api/viz", "medulla-types/viz"]
 modality-serving = ["dep:medulla-modality", "medulla-capabilities/modality-serving", "medulla-kernel/modality-serving", "medulla-persistence/modality-serving", "medulla-protocol-types/modality-serving", "medulla-server-api/modality-serving", "medulla-server-auth/modality-serving", "medulla-server-cdc/modality-serving", "medulla-server-mutation/modality-serving", "medulla-server-ops/modality-serving", "medulla-types/modality-serving", "redb", "security", "server", "streaming"]

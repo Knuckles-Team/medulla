@@ -27,7 +27,7 @@ medulla-wasm = { path = "../medulla-wasm", optional = true }
 rmp-serde = "1.3"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
-tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"] }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
 medulla-numeric = { path = "../medulla-numeric" }
@@ -50,7 +50,7 @@ viz-static-export = ["dep:medulla-viz-export", "medulla-server-api/viz-static-ex
 wasm-udf = ["dep:medulla-wasm", "medulla-wasm/wasm-udf", "medulla-protocol-types/wasm-udf", "medulla-server-api/wasm-udf", "medulla-server-auth/wasm-udf", "medulla-types/wasm-udf", "server"]
 viz-columnstore = ["dep:medulla-viz-columnstore", "medulla-server-api/viz-columnstore", "viz"]
 viz = ["dep:medulla-viz-core", "medulla-protocol-types/viz", "medulla-server-api/viz", "medulla-types/viz", "medulla-viz-core?/viz", "medulla-viz-graph-tiles?/viz", "medulla-viz-kernels?/viz"]
-server = ["dep:tokio", "medulla-server-api/server"]
+server = ["medulla-server-api/server"]
 
 [dev-dependencies]
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }

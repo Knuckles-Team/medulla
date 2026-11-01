@@ -30,7 +30,7 @@ lazy_static = "1.5"
 parking_lot = "0.12"
 dashmap = "6.2"
 tracing = "0.1"
-tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"] }
 tracing-subscriber = { version = "0.3", optional = true }
 prometheus = { version = "0.14", optional = true, default-features = false }
 chacha20poly1305 = { version = "0.10", optional = true }
@@ -61,9 +61,9 @@ medulla-types = { path = "../medulla-types", features = ["test-support"] }
 # their original `cfg(feature = ...)` gates, and the facade forwards to these.
 [features]
 default = []
-test-support = ["dep:tokio", "medulla-types/test-support", "medulla-compute/test-support", "medulla-protocol-types/test-support", "medulla-catalog-types/test-support"]
+test-support = ["medulla-types/test-support", "medulla-compute/test-support", "medulla-protocol-types/test-support", "medulla-catalog-types/test-support"]
 metrics = ["dep:prometheus", "medulla-types/metrics", "medulla-protocol-types/metrics"]
-server = ["dep:tokio", "dep:tracing-subscriber"]
+server = ["dep:tracing-subscriber"]
 otel = ["server", "dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-otlp", "dep:tracing-opentelemetry"]
 redb = ["dep:medulla-storage", ]
 security = ["redb", "dep:chacha20poly1305", "medulla-types/security", "medulla-protocol-types/security", "medulla-core/security", "medulla-graph-core/security"]

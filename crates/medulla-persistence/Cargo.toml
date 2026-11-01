@@ -20,7 +20,7 @@ medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 tempfile = { version = "3", optional = true }
-async-trait = { version = "0.1", optional = true }
+async-trait = { version = "0.1" }
 hex = "0.4"
 medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-compute = { path = "../medulla-compute" }
@@ -39,7 +39,7 @@ rmp-serde = "1.3"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 sha2 = "0.10"
-tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", optional = true }
 medulla-direct-state = { path = "../medulla-direct-state" }
@@ -71,9 +71,9 @@ metrics = ["medulla-kernel/metrics", "medulla-protocol-types/metrics", "medulla-
 query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "medulla-table-store/sql", "redb", "medulla-decision-types/query", "medulla-kernel/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-ops/query", "medulla-store/query", "medulla-types/query"]
 raft = ["server", "redb", "medulla-kernel/raft", "medulla-server-api/raft", "medulla-server-auth/raft", "medulla-store-apply/raft", "medulla-store/raft"]
 rdf = ["dep:medulla-rdf", "medulla-rdf/rdf", "server", "medulla-kernel/rdf", "medulla-protocol-types/rdf", "medulla-server-api/rdf", "medulla-types/rdf"]
-redb = ["dep:redb", "server", "dep:tokio", "dep:async-trait", "medulla-lane-store/server", "medulla-resource-store/server", "dep:medulla-transaction", "dep:medulla-storage", "medulla-kernel/redb", "medulla-server-api/redb", "medulla-server-blob/redb", "medulla-server-ops/redb", "medulla-store/redb"]
+redb = ["dep:redb", "server", "medulla-lane-store/server", "medulla-resource-store/server", "dep:medulla-transaction", "dep:medulla-storage", "medulla-kernel/redb", "medulla-server-api/redb", "medulla-server-blob/redb", "medulla-server-ops/redb", "medulla-store/redb"]
 security = ["redb", "medulla-core/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-lane-store/security", "medulla-protocol-types/security", "medulla-resource-store/security", "medulla-server-api/security", "medulla-server-auth/security", "medulla-server-blob/security", "medulla-server-ops/security", "medulla-store-apply/security", "medulla-store/security", "medulla-types/security", "medulla-work-store/security"]
-server = ["dep:tracing-subscriber", "dep:tokio", "dep:async-trait", "medulla-kernel/server", "medulla-lane-store/server", "medulla-resource-store/server", "medulla-server-api/server", "medulla-store/server"]
+server = ["dep:tracing-subscriber", "medulla-kernel/server", "medulla-lane-store/server", "medulla-resource-store/server", "medulla-server-api/server", "medulla-store/server"]
 shacl = ["rdf", "medulla-kernel/shacl", "medulla-server-api/shacl", "medulla-server-blob/shacl", "medulla-server-ops/shacl", "owl", "owl-dl", "sparql"]
 sparql = ["dep:medulla-rdf", "medulla-rdf/sparql", "rdf", "medulla-kernel/sparql", "medulla-protocol-types/sparql", "medulla-server-api/sparql", "medulla-server-ops/sparql", "medulla-types/sparql"]
 tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store", "server", "redb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb", "medulla-store-apply/tsdb", "medulla-store/tsdb"]

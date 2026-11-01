@@ -44,9 +44,9 @@ iceberg-storage-opendal = { version = "0.10", optional = true, default-features 
     "opendal-s3",
 ] }
 petgraph = { version = "0.8.3", features = ["serde-1"], optional = true }
-tokio = { version = "1.53", features = ["rt"], optional = true }
+tokio = { version = "1.53", features = ["rt"] }
 tracing = { version = "0.1", optional = true }
-async-trait = { version = "0.1", optional = true }
+async-trait = { version = "0.1" }
 futures-util = { version = "0.3", optional = true, default-features = false, features = [
     "std",
 ] }
@@ -63,7 +63,7 @@ medulla-sql-lang = { path = "../medulla-sql-lang" }
 finance = ["sql", "medulla-sql-udfs/finance", "medulla-compute/finance", "medulla-protocol-types/finance", "medulla-result-types/finance", "medulla-types/finance"]
 iceberg-federation = ["dep:iceberg", "dep:iceberg-catalog-rest", "dep:iceberg-storage-opendal"]
 numeric = ["sql", "dep:medulla-numeric", "dep:ndarray", "dep:medulla-tsdb", "medulla-sql-udfs/numeric"]
-sql = ["medulla-sql-lang/sql", "iceberg-federation", "dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petgraph", "dep:tracing", "dep:async-trait", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-tables/sql", "medulla-table-store/sql", "medulla-sql-udfs/sql"]
+sql = ["medulla-sql-lang/sql", "iceberg-federation", "dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:petgraph", "dep:tracing", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-tables/sql", "medulla-table-store/sql", "medulla-sql-udfs/sql"]
 
 [dev-dependencies]
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }

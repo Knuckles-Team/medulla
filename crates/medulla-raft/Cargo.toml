@@ -44,7 +44,7 @@ serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 sha2 = "0.10"
 thiserror = "2.0"
-tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", optional = true }
 uuid = { version = "1.28", features = ["v4"] }
@@ -95,7 +95,7 @@ ros2-bridge = ["dep:futures", "server", "streaming"]
 ros2-dds = ["dep:futures", "server", "streaming"]
 ros2-rmw = ["dep:futures", "server", "streaming"]
 decide = ["medulla-capabilities/decide", "medulla-compute/decide", "medulla-persistence/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "epistemic", "jobs", "numeric", "owl", "query", "redb", "server", "shacl", "sparql"]
-server = ["dep:tracing-subscriber", "dep:tokio", "medulla-kernel/server", "medulla-persistence-ops/server", "medulla-persistence/server", "medulla-server-api/server", "medulla-store/server"]
+server = ["dep:tracing-subscriber", "medulla-kernel/server", "medulla-persistence-ops/server", "medulla-persistence/server", "medulla-server-api/server", "medulla-store/server"]
 viz = ["medulla-capabilities/viz", "medulla-persistence/viz", "medulla-protocol-types/viz", "medulla-server-api/viz", "medulla-types/viz"]
 asr-whisper = ["medulla-capabilities/asr-native", "medulla-persistence/asr-whisper", "medulla-server-api/asr-whisper", "server"]
 knowledge-batch = ["dep:medulla-plan", "medulla-plan/knowledge-batch", "dep:medulla-modality", "medulla-capabilities/knowledge-batch", "medulla-kernel/knowledge-batch", "medulla-persistence/knowledge-batch", "medulla-protocol-types/knowledge-batch", "medulla-server-api/knowledge-batch", "medulla-server-ops/knowledge-batch", "medulla-types/knowledge-batch", "query", "redb"]

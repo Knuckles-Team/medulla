@@ -17,7 +17,7 @@ medulla-sql = { path = "../medulla-sql" }
 medulla-sql-udfs = { path = "../medulla-sql-udfs" }
 medulla-table-store = { path = "../medulla-table-store" }
 medulla-tables = { path = "../medulla-tables" }
-async-trait = { version = "0.1", optional = true }
+async-trait = { version = "0.1" }
 futures = { version = "0.3", optional = true }
 hex = "0.4"
 hmac = "0.12"
@@ -44,7 +44,7 @@ serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 sha1 = { version = "0.10", optional = true }
 sha2 = "0.10"
-tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"] }
 tracing = "0.1"
 uuid = { version = "1.28", features = ["v4"] }
 medulla-graph-core = { path = "../medulla-graph-core" }
@@ -93,7 +93,7 @@ ros2-dds = ["dep:futures", "server", "streaming"]
 ros2-rmw = ["dep:futures", "server", "streaming"]
 s3-api = ["kv", "server"]
 security = ["dep:sha1", "redb", "medulla-core/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-persistence/security", "medulla-protocol-types/security", "medulla-server-api/security", "medulla-server-auth/security", "medulla-server-blob/security", "medulla-server-cdc/security", "medulla-server-ops/security", "medulla-types/security", "medulla-wire-core/security"]
-server = ["dep:tokio", "dep:async-trait", "medulla-kernel/server", "medulla-persistence/server", "medulla-server-api/server"]
+server = ["medulla-kernel/server", "medulla-persistence/server", "medulla-server-api/server"]
 sparql = ["medulla-kernel/sparql", "medulla-persistence/sparql", "medulla-protocol-types/sparql", "medulla-server-api/sparql", "medulla-server-ops/sparql", "medulla-types/sparql", "medulla-wire-core/sparql", "server"]
 sparql-http = ["sparql", "server", "security", "medulla-server-api/sparql-http", "medulla-server-blob/sparql-http", "medulla-server-mutation/sparql-http", "owl"]
 sqlite-wire = ["query", "server"]

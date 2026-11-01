@@ -40,7 +40,7 @@ serde = { version = "1.0", features = ["derive", "rc"] }
 serde_bytes = "0.11.19"
 serde_json = "1.0"
 sha2 = "0.10"
-tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"] }
 tracing = "0.1"
 uuid = { version = "1.28", features = ["v4"] }
 medulla-graph-core = { path = "../medulla-graph-core" }
@@ -77,7 +77,7 @@ numeric = ["dep:medulla-numeric", "medulla-kernel/numeric", "medulla-persistence
 cypher = ["medulla-kernel/cypher", "medulla-persistence/cypher", "medulla-server-api/cypher", "medulla-server-auth/cypher", "medulla-server-mutation/cypher"]
 cypher-plan = ["medulla-kernel/cypher-plan", "medulla-persistence/cypher-plan", "medulla-server-api/cypher-plan", "cypher"]
 result-cache = ["medulla-core/result-cache", "medulla-graph-core/result-cache", "medulla-kernel/result-cache", "medulla-persistence/result-cache", "medulla-server-api/result-cache", "medulla-server-ops/result-cache"]
-server = ["dep:tokio", "medulla-kernel/server", "medulla-persistence/server", "medulla-raft/server", "medulla-server-api/server", "medulla-store/server"]
+server = ["medulla-kernel/server", "medulla-persistence/server", "medulla-raft/server", "medulla-server-api/server", "medulla-store/server"]
 [dev-dependencies]
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
