@@ -57,7 +57,7 @@ async fn list_graphs(
         Ok(authority) => authority,
         Err(denied) => return Response::err(req_id, denied),
     };
-    let graphs: Vec<medulla_types::result_contract::cluster::GraphListing> = s
+    let graphs: Vec<medulla_protocol_types::result_contract::cluster::GraphListing> = s
         .registry
         .list()
         .iter()
@@ -99,7 +99,7 @@ async fn list_graphs(
         .collect();
     Response::ok(
         req_id,
-        ResultPayload::of::<medulla_types::result_contract::cluster::ListGraphs>(graphs),
+        ResultPayload::of::<medulla_protocol_types::result_contract::cluster::ListGraphs>(graphs),
     )
 }
 
@@ -108,7 +108,7 @@ fn graph_listing(
     registry: &crate::registry::GraphRegistry,
     name: &str,
     graph_type: crate::protocol::GraphType,
-) -> medulla_types::result_contract::cluster::GraphListing {
+) -> medulla_protocol_types::result_contract::cluster::GraphListing {
     let readiness = registry.materialization_manifest(name);
     let index_manifests = registry
         .get(name)
@@ -122,7 +122,7 @@ fn graph_listing(
                 .collect::<Vec<_>>()
         })
         .unwrap_or_default();
-    medulla_types::result_contract::cluster::GraphListing {
+    medulla_protocol_types::result_contract::cluster::GraphListing {
         name: name.to_string(),
         graph_type,
         materialization: readiness
@@ -134,12 +134,12 @@ fn graph_listing(
         completeness_cursor: readiness
             .as_ref()
             .and_then(|value| value.completeness_cursor.as_ref())
-            .map(
-                |cursor| medulla_types::result_contract::cluster::MaterializationCursor {
+            .map(|cursor| {
+                medulla_protocol_types::result_contract::cluster::MaterializationCursor {
                     node_offset: cursor.node_offset as u64,
                     edge_offset: cursor.edge_offset as u64,
-                },
-            ),
+                }
+            }),
         valid: readiness.as_ref().is_some_and(|value| value.valid),
         index_manifests,
     }
@@ -147,19 +147,19 @@ fn graph_listing(
 
 fn materialization_phase(
     phase: &crate::registry::MaterializationPhase,
-) -> medulla_types::result_contract::cluster::MaterializationPhase {
+) -> medulla_protocol_types::result_contract::cluster::MaterializationPhase {
     match phase {
         crate::registry::MaterializationPhase::CatalogOnly => {
-            medulla_types::result_contract::cluster::MaterializationPhase::CatalogOnly
+            medulla_protocol_types::result_contract::cluster::MaterializationPhase::CatalogOnly
         }
         crate::registry::MaterializationPhase::Partial => {
-            medulla_types::result_contract::cluster::MaterializationPhase::Partial
+            medulla_protocol_types::result_contract::cluster::MaterializationPhase::Partial
         }
         crate::registry::MaterializationPhase::Complete => {
-            medulla_types::result_contract::cluster::MaterializationPhase::Complete
+            medulla_protocol_types::result_contract::cluster::MaterializationPhase::Complete
         }
         crate::registry::MaterializationPhase::Failed => {
-            medulla_types::result_contract::cluster::MaterializationPhase::Failed
+            medulla_protocol_types::result_contract::cluster::MaterializationPhase::Failed
         }
     }
 }
@@ -167,12 +167,12 @@ fn materialization_phase(
 fn index_manifest_listing(
     kind: crate::index::IndexKind,
     manifest: crate::index::IndexManifest,
-) -> medulla_types::result_contract::cluster::IndexManifestListing {
-    medulla_types::result_contract::cluster::IndexManifestListing {
+) -> medulla_protocol_types::result_contract::cluster::IndexManifestListing {
+    medulla_protocol_types::result_contract::cluster::IndexManifestListing {
         kind: index_kind_label(kind).to_string(),
         source_snapshot_version: manifest.source_snapshot_version,
         build_version: manifest.build_version,
-        completeness_cursor: medulla_types::result_contract::cluster::IndexCompleteness {
+        completeness_cursor: medulla_protocol_types::result_contract::cluster::IndexCompleteness {
             nodes: manifest.completeness.nodes,
             edges: manifest.completeness.edges,
             complete: manifest.completeness.complete,

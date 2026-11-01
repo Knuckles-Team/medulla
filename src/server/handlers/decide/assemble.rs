@@ -33,7 +33,7 @@ pub(crate) async fn handle_agent_assemble(
             Response::ok(
                 req_id,
                 crate::protocol::ResultPayload::of_ref::<
-                    medulla_types::result_contract::storage::AgentAssemble,
+                    medulla_protocol_types::result_contract::storage::AgentAssemble,
                 >(&result),
             )
         }

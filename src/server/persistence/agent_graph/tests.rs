@@ -5,12 +5,12 @@ pub(super) use super::super::agent_fixtures::{
 };
 use super::super::agent_revision::{decode_status_result, validate_status_record};
 use super::*;
+use medulla_protocol_types::mutation_batch::MutationBatchStatus;
 use medulla_types::agent_component::ComponentDependency;
 use medulla_types::agent_graph::{
     AgentGraphDraft, AgentGraphEdge, AgentGraphNode, AgentGraphNodeKind, AgentGraphShape,
 };
 use medulla_types::agent_library::AgentLibraryLifecycle;
-use medulla_types::mutation_batch::MutationBatchStatus;
 
 pub(super) fn digest(byte: char) -> String {
     format!("sha256:{}", byte.to_string().repeat(64))
@@ -367,7 +367,7 @@ fn graph_status_rejects_redirected_identity_state_version_and_kind() {
         .unwrap();
     let owner_a = store.scope_handle("tenant-a").unwrap();
     let record = ledger_record(&store, "tenant-a", "status-bindings");
-    let refused = |record: &medulla_types::MutationBatchRecord,
+    let refused = |record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
                    graph_id: &str,
                    kind: AgentGraphMutationKind,
                    committed: &AgentGraphCommittedResult| {

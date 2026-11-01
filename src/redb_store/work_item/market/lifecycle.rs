@@ -3,7 +3,10 @@
 //! [`medulla_types::work_market`], and writes the row only when the rule changed it
 //! ([`rewrite_gap`] is the one load/apply/store shape they share).
 
-use medulla_types::result_contract::coordination::{GapSettle, GapTransition, WorkOfferPut};
+use medulla_protocol_types::{
+    result_contract::coordination::GapSettle, result_contract::coordination::GapTransition,
+    result_contract::coordination::WorkOfferPut,
+};
 use medulla_types::work_item_read::{WorkItemView, WORK_ITEM_OUTCOME_REF};
 use medulla_types::work_market::lifecycle::SettledWorkItem;
 use medulla_types::work_market::{

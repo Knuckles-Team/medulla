@@ -32,6 +32,7 @@ tracing = { version = "0.1", optional = true }
 # OFF) — a default build links none of it and `BeliefState` carries no new required
 # trait. See `src/contract.rs`.
 medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
 
 [dev-dependencies]
 tempfile = "3"
@@ -42,7 +43,7 @@ default = []
 # semantics (grounded/preferred/stable extensions) over the bipolar support/attack
 # BeliefGraph, plus dependency-directed retraction. Opt-in and heavier (NP-hard-in-the-
 # worst-case preferred/stable search) than the default confidence-propagation core.
-epistemic-tms = ["dep:tracing", "medulla-types/epistemic"]
+epistemic-tms = ["dep:tracing", "medulla-types/epistemic", "medulla-protocol-types/epistemic"]
 # ModalityContract retrofit (CONCEPT:E4): `impl ModalityContract for BeliefState` +
 # the `modality_conformance_tests!` battery — the reference "does everything"
 # implementation (real provenance/policy_labels/analytics_ops overrides). OFF by

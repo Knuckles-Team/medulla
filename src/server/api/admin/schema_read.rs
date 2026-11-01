@@ -25,7 +25,9 @@ fn list_response(
     match result {
         Ok(body) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::reasoning::GraphSchemaList>(body),
+            ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::GraphSchemaList>(
+                body,
+            ),
         ),
         Err(error) => Response::err(req_id, error),
     }

@@ -13,8 +13,8 @@
 
 use std::sync::Arc;
 
+use medulla_protocol_types::result_contract::security::Identity as IdentityResult;
 use medulla_types::identity::{IdentityOp, IdentityStamp};
-use medulla_types::result_contract::security::Identity as IdentityResult;
 use tokio::sync::RwLock;
 
 use super::elevation::ElevationStampAuthority;

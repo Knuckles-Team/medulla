@@ -127,9 +127,11 @@ async fn nl_foreign_sources(
 pub(crate) fn nl_refusal(error: &medulla_plan::nl::NlQueryError) -> String {
     use medulla_plan::nl::NlQueryError as E;
     match error {
-        E::Planner(message) => {
-            medulla_types::error_registry::classify_refusal("INVALID_ARGUMENT", "", message)
-        }
+        E::Planner(message) => medulla_protocol_types::error_registry::classify_refusal(
+            "INVALID_ARGUMENT",
+            "",
+            message,
+        ),
         E::BudgetExceeded { .. } => format!(
             "{}: {error}",
             medulla_types::contract::EngineErrorCode::UqlBudgetExceeded.as_str()
@@ -307,7 +309,7 @@ async fn run_nl_query(
         Ok(rows) => Ok((uql, rows)),
         Err(msg) => Err(Response::err(
             req_id,
-            medulla_types::error_registry::classify_refusal("INVALID_ARGUMENT", "", &msg),
+            medulla_protocol_types::error_registry::classify_refusal("INVALID_ARGUMENT", "", &msg),
         )),
     }
 }

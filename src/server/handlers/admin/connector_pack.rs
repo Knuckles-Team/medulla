@@ -129,7 +129,7 @@ async fn serve_status(
                 Response::ok(
                     req_id,
                     ResultPayload::of_ref::<
-                        medulla_types::result_contract::storage::ConnectorPackStatus,
+                        medulla_protocol_types::result_contract::storage::ConnectorPackStatus,
                     >(&status),
                 )
             }
@@ -190,9 +190,9 @@ async fn serve_import(
         match outcome.or_else(|error| rejection_for(pack_digest, error)) {
             Ok(result) => Response::ok(
                 req_id,
-                ResultPayload::of_ref::<medulla_types::result_contract::storage::ConnectorPackImport>(
-                    &result,
-                ),
+                ResultPayload::of_ref::<
+                    medulla_protocol_types::result_contract::storage::ConnectorPackImport,
+                >(&result),
             ),
             Err(error) => Response::err(req_id, error),
         }

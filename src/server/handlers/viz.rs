@@ -67,11 +67,14 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_types::result_contract::ingestion as viz_results;
-use medulla_types::result_contract::ingestion::{
-    VizCapabilityEntry, VizCapabilityMatrixResult, VizPayloadRef,
-    VizProvenanceRecord as VizProvenanceResult, VizRenderResponse as VizRenderResult,
-    VizViewResult,
+use medulla_protocol_types::result_contract::ingestion as viz_results;
+use medulla_protocol_types::{
+    result_contract::ingestion::VizCapabilityEntry,
+    result_contract::ingestion::VizCapabilityMatrixResult,
+    result_contract::ingestion::VizPayloadRef,
+    result_contract::ingestion::VizProvenanceRecord as VizProvenanceResult,
+    result_contract::ingestion::VizRenderResponse as VizRenderResult,
+    result_contract::ingestion::VizViewResult,
 };
 use medulla_types::viz::{VizColumnValues, VizDatasetSource, VizFormat, VizOp, VizRenderRequest};
 use medulla_viz_columnstore::{ColumnData, ColumnInput, ColumnStore};

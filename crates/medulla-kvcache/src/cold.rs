@@ -154,15 +154,15 @@ fn cold_batch(
     identity: &medulla_types::MutationScopeIdentity,
     principal: &str,
     expected_version: u64,
-) -> io::Result<medulla_types::MutationBatch> {
+) -> io::Result<medulla_protocol_types::mutation_batch::MutationBatch> {
     let batch_id = format!("kvcache-cold-{kind}:v{expected_version}");
-    let batch = medulla_types::MutationBatch {
+    let batch = medulla_protocol_types::mutation_batch::MutationBatch {
         schema_version: medulla_types::MUTATION_BATCH_VERSION,
         batch_id: batch_id.clone(),
         // See this function's own doc comment: a demoted KV page carries no
         // caller identity, so the envelope is the maintenance one and carries
         // no operation replay identity to consume a nonce with.
-        envelope: medulla_types::mutation_batch::MutationEnvelope::maintenance_for_scope(
+        envelope: medulla_protocol_types::mutation_batch::MutationEnvelope::maintenance_for_scope(
             identity,
             principal,
             &format!("kvcache_cold_{kind}"),
@@ -171,14 +171,16 @@ fn cold_batch(
         .map_err(io::Error::other)?,
         identity: identity.clone(),
         placement_epoch: 0,
-        version_expectation: medulla_types::VersionExpectation::Native(expected_version),
+        version_expectation: medulla_protocol_types::mutation_batch::VersionExpectation::Native(
+            expected_version,
+        ),
         fencing_token: None,
         authoritative_state: None,
-        operations: vec![medulla_types::MutationOperation {
+        operations: vec![medulla_protocol_types::mutation_batch::MutationOperation {
             ordinal: 0,
             surface: medulla_types::MutationSurface::Other,
             domain: medulla_types::mutation_scope::DurabilityDomain::KvStore,
-            method: medulla_types::protocol::Method::ApplyMutation {
+            method: medulla_protocol_types::protocol::Method::ApplyMutation {
                 event_type: format!("kvcache_cold_{kind}"),
                 query: batch_id,
             },

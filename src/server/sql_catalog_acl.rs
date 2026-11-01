@@ -2216,7 +2216,7 @@ mod tests {
         store: &TableStore,
         resource: &str,
         batch_id: &str,
-    ) -> medulla_types::mutation_batch::MutationBatch {
+    ) -> medulla_protocol_types::mutation_batch::MutationBatch {
         let expected_version = store
             .mutation_version(authority.tenant_scope(), resource)
             .unwrap();

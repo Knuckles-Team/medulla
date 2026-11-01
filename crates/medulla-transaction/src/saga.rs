@@ -8,11 +8,15 @@ use crate::ledger::{
 };
 use crate::replay::{record_operation_in, resolve_replay_in, ReplayResolution};
 use crate::{Begin, SagaBegin};
+use medulla_protocol_types::mutation_batch::MutationEnvelope;
+use medulla_protocol_types::{
+    mutation_batch::MutationBatch, mutation_batch::MutationBatchRecord,
+    mutation_batch::MutationBatchStatus,
+};
 use medulla_storage::{
     ledger_scope_key, MutationOwnerAuthority, OwnedStoreHandle, OwnerDomain, RecordedOperation,
 };
-use medulla_types::mutation_batch::MutationEnvelope;
-use medulla_types::{CommittedVersion, MutationBatch, MutationBatchRecord, MutationBatchStatus};
+use medulla_types::CommittedVersion;
 
 pub(crate) fn prepare_saga<D: OwnerDomain>(
     authority: &MutationOwnerAuthority,

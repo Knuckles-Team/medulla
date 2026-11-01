@@ -1111,7 +1111,11 @@ async fn ensure_commons_graph(cluster: &Cluster) {
             .clone()
             .expect("cluster member has persistence");
         backend
-            .register_graph(&medulla_kernel::persist::sanitize(GRAPH), GRAPH, GraphType::Commons)
+            .register_graph(
+                &medulla_kernel::persist::sanitize(GRAPH),
+                GRAPH,
+                GraphType::Commons,
+            )
             .await
             .expect("persist commons graph identity");
         let durable_version = backend

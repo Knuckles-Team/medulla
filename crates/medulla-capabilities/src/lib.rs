@@ -46,7 +46,7 @@ pub use descriptor::{
     MethodId, MethodSpec, ReplayClass, Stability,
 };
 
-use medulla_types::protocol::{CypherMode, Method};
+use medulla_protocol_types::{protocol::CypherMode, protocol::Method};
 
 /// The shape EVERY runtime-conditional native owner has: a snapshot read when
 /// its op reads, and one write in its own durable domain when its op writes.

@@ -88,7 +88,7 @@ pub(crate) fn authorized_graph_read(
 }
 
 /// Encode a typed method result while preserving both operation and codec errors.
-pub(crate) fn typed_response<M: medulla_types::result_contract::MethodResult>(
+pub(crate) fn typed_response<M: medulla_protocol_types::result_contract::MethodResult>(
     req_id: u64,
     result: Result<M::Body, String>,
 ) -> Response {
@@ -409,9 +409,9 @@ fn redact_resource_status_result(
             result.host_snapshot = None;
         }
     }
-    ResultPayload::of::<medulla_types::result_contract::coordination::ResourceReservationStatus>(
-        result,
-    )
+    ResultPayload::of::<
+        medulla_protocol_types::result_contract::coordination::ResourceReservationStatus,
+    >(result)
 }
 
 // ── Fleet server registry (CONCEPT:MEDULLA-KG.sharding.server-registry, W2.5) ──────────

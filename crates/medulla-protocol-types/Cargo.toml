@@ -12,3 +12,47 @@ name = "medulla_protocol_types"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-types = { path = "../medulla-types" }
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+rmp-serde = "1.3"
+sha2 = "0.10"
+hex = "0.4"
+tracing = "0.1"
+strum = { version = "0.28", features = ["derive"], optional = true }
+schemars = { version = "1.2.3", optional = true }
+
+[features]
+asr-native = ["medulla-types/asr-native"]
+blob = ["medulla-types/blob"]
+broker = ["medulla-types/broker"]
+compute-dist = ["medulla-types/compute-dist"]
+contract-schema = ["dep:schemars", "medulla-types/contract-schema"]
+cost = ["medulla-types/cost"]
+datascience = ["medulla-types/datascience"]
+epistemic = ["query", "medulla-types/epistemic"]
+federation = ["query", "medulla-types/federation"]
+finance = ["medulla-types/finance"]
+graphlearn = ["datascience", "medulla-types/graphlearn"]
+graphql = ["security", "medulla-types/graphql"]
+jobs = ["mining", "epistemic", "medulla-types/jobs"]
+knowledge-batch = ["query", "medulla-types/knowledge-batch"]
+kv = ["medulla-types/kv"]
+matview = ["streaming", "query", "medulla-types/matview"]
+metrics = ["dep:strum", "medulla-types/metrics"]
+mining = ["medulla-types/mining"]
+ml-pipeline = ["mining", "datascience", "graphlearn", "medulla-types/ml-pipeline"]
+modality-serving = ["security", "streaming", "medulla-types/modality-serving"]
+obda = ["sparql", "query", "medulla-types/obda"]
+owl = ["sparql", "medulla-types/owl"]
+quantum = ["medulla-types/quantum"]
+query = ["medulla-types/query"]
+rdf = ["medulla-types/rdf"]
+security = ["medulla-types/security"]
+sparql = ["rdf", "medulla-types/sparql"]
+sqlite-file = ["query", "medulla-types/sqlite-file"]
+statechart = ["medulla-types/statechart"]
+streaming = ["medulla-types/streaming"]
+test-support = ["medulla-types/test-support"]
+viz = ["medulla-types/viz"]
+wasm-udf = ["query", "medulla-types/wasm-udf"]

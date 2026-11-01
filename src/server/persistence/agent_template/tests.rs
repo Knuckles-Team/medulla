@@ -5,12 +5,12 @@ use super::super::agent_fixtures::{
 };
 use super::super::agent_revision::{decode_status_result, validate_status_record};
 use super::*;
+use medulla_protocol_types::mutation_batch::MutationBatchStatus;
 use medulla_types::agent_component::{AgentComponentKind, ComponentDependency};
 use medulla_types::agent_library::AgentLibraryEntryDraft;
 use medulla_types::agent_template::{
     AgentTemplateDraft, AgentTemplateInstantiateRequest, TemplateParam,
 };
-use medulla_types::mutation_batch::MutationBatchStatus;
 use std::collections::BTreeMap;
 
 fn digest(byte: char) -> String {
@@ -264,9 +264,11 @@ fn template_status_rejects_an_unwrapped_result() {
         0,
         template("tenant-a", "template:invalid"),
     );
-    let raw_result =
-        medulla_storage::encode_bounded(&published.result, "unwrapped agent template status result")
-            .unwrap();
+    let raw_result = medulla_storage::encode_bounded(
+        &published.result,
+        "unwrapped agent template status result",
+    )
+    .unwrap();
     let error = decode_status_result::<TemplateLayer>(&raw_result).unwrap_err();
     assert!(!error.is_empty(), "an unwrapped result must fail closed");
 }
@@ -291,7 +293,7 @@ fn template_status_rejects_redirected_identity_state_version_and_kind() {
     );
     let owner_a = store.scope_handle("tenant-a").unwrap();
     let record = ledger_record(&store, "tenant-a", "status-bindings");
-    let refused = |record: &medulla_types::MutationBatchRecord,
+    let refused = |record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
                    template_id: &str,
                    kind: AgentTemplateMutationKind,
                    committed: &AgentTemplateCommittedResult| {

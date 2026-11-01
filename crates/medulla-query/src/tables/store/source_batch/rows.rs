@@ -5,7 +5,9 @@ use super::super::{
     fill_omitted_insert_cells, get_schema_in, resolve_targets, schema_version_in,
     validate_column_checks_in, Cell, Column, ColumnType, SqlWrite, TableSchema,
 };
-use medulla_types::storage_wire::{SqlSourceBatchRequest, SqlSourceCell, SqlSourceVector};
+use medulla_protocol_types::{
+    storage_wire::SqlSourceBatchRequest, storage_wire::SqlSourceCell, storage_wire::SqlSourceVector,
+};
 
 pub(super) fn apply(
     write: &SqlWrite<'_>,
@@ -114,7 +116,7 @@ fn lower_null(column: &Column) -> Result<Cell, String> {
 }
 
 fn lower_json(
-    value: &medulla_types::storage_wire::SqlSourceJson,
+    value: &medulla_protocol_types::storage_wire::SqlSourceJson,
     column: &Column,
 ) -> Result<Cell, String> {
     require_type(column, &[ColumnType::Json])?;
@@ -139,7 +141,7 @@ fn lower_vector(vector: &SqlSourceVector, column: &Column) -> Result<Cell, Strin
 // rowid allocation or publication. Encoded bytes and decoded structural nodes
 // are bounded by the reservation and existing kernel codec/collection limits.
 const MATERIALIZED_BYTES: usize =
-    medulla_types::storage_wire::source_batch::MAX_SQL_SOURCE_BATCH_BYTES;
+    medulla_protocol_types::storage_wire::source_batch::MAX_SQL_SOURCE_BATCH_BYTES;
 const MATERIALIZED_ITEMS: usize = medulla_types::msgpack::MAX_PROPERTY_ITEMS;
 
 #[derive(Clone, Copy)]

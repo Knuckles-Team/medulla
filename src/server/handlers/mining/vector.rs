@@ -5,12 +5,12 @@ use medulla_compute::mining::{
     classify::{self, FittedClassifier},
     cluster, reduce,
 };
+use medulla_protocol_types::result_contract::compute as results;
 use medulla_types::compute_result::mining::{
     AnomalyMiningResult, AnomalyRow, ClassificationMiningResult, ClassifiedRow,
     ClassifierFitResult, ClusterMiningResult, ClusterRow, ReducedRow, ReductionMiningResult,
     RowRef,
 };
-use medulla_types::result_contract::compute as results;
 
 // ─────────────────────────── Clustering ───────────────────────────
 

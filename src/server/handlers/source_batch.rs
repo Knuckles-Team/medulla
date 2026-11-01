@@ -11,9 +11,11 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use medulla_protocol_types::{
+    storage_wire::SqlSourceBatchRequest, storage_wire::SqlSourceBatchResult,
+};
 use medulla_query::TableStore;
 use medulla_types::contract::{Digest256, Nonce};
-use medulla_types::storage_wire::{SqlSourceBatchRequest, SqlSourceBatchResult};
 use tokio::sync::RwLock;
 
 use crate::mutation_batch::MutationBatch;
@@ -62,7 +64,9 @@ pub(crate) async fn handle(
     match result {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::storage::SqlSourceBatch>(result),
+            ResultPayload::of::<medulla_protocol_types::result_contract::storage::SqlSourceBatch>(
+                result,
+            ),
         ),
         Err(error) => Response::err(req_id, error),
     }

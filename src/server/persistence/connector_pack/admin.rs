@@ -8,14 +8,14 @@
 
 use std::collections::BTreeSet;
 
+use medulla_protocol_types::mutation_batch::MutationOperation;
+use medulla_protocol_types::protocol::Method;
 use medulla_types::agent_component::{AgentComponentEntry, AgentComponentMutationKind};
 use medulla_types::agent_library::{AgentLibraryLifecycle, AgentLibraryMutationContext};
 use medulla_types::connector_pack::{ConnectorPackBindingResult, PackRetireResult};
 use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
-use medulla_types::mutation_batch::MutationOperation;
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationSurface;
-use medulla_types::protocol::Method;
 
 use super::admitted::{PackOwnerWrite, PackWriteEffects, PackWriteIdentity};
 use super::commit::{

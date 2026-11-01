@@ -123,7 +123,9 @@ fn respond(
 ) -> Response {
     Response::ok(
         req_id,
-        ResultPayload::of::<medulla_types::result_contract::ingestion::EnrichDocument>(receipt),
+        ResultPayload::of::<medulla_protocol_types::result_contract::ingestion::EnrichDocument>(
+            receipt,
+        ),
     )
 }
 
@@ -160,7 +162,9 @@ async fn select(
     ) {
         Ok(answer) => Response::ok(
             ctx.req_id,
-            ResultPayload::of::<medulla_types::result_contract::query::SelectWebPages>(answer),
+            ResultPayload::of::<medulla_protocol_types::result_contract::query::SelectWebPages>(
+                answer,
+            ),
         ),
         Err(error) => Response::err(ctx.req_id, error),
     }

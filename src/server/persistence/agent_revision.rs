@@ -44,16 +44,16 @@ use std::collections::BTreeMap;
 
 use redb::ReadableTable;
 
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::mutation_batch::MutationOperation;
+use medulla_protocol_types::protocol::Method;
 use medulla_storage::{RecordedOperation, ScopedRead};
 use medulla_transaction::{AdmittedOwnerWrite, ReplayResolution};
 use medulla_types::agent_library::{AgentLibraryLifecycle, AgentLibraryMutationContext};
 use medulla_types::mutation::{MutationReceipt, MutationResult};
-use medulla_types::mutation_batch::MutationBatch;
-use medulla_types::mutation_batch::MutationOperation;
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationOutboxIntent;
 use medulla_types::mutation_scope::MutationSurface;
-use medulla_types::protocol::Method;
 
 use super::agent_library::{
     native_lifecycle_batch, next_revision, require_expected_revision, AgentLibraryStore,

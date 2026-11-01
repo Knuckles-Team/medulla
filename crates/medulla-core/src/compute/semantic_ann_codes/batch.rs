@@ -10,19 +10,19 @@ use super::{
     corrupt, refused, OperationAttribution, SemanticCodeError, SemanticCodeStore,
     SemanticMutationReceipt,
 };
+use medulla_protocol_types::mutation_batch::BatchContent;
+use medulla_protocol_types::mutation_batch::CompiledOperation;
+use medulla_protocol_types::mutation_batch::CompiledScope;
+use medulla_protocol_types::mutation_batch::MutationEnvelope;
+use medulla_protocol_types::{mutation_batch::MutationBatch, mutation_batch::MutationOperation};
 use medulla_storage::{OwnedStoreHandle, SemanticIndexOwner};
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite};
 use medulla_types::contract::Digest256;
-use medulla_types::mutation_batch::BatchContent;
-use medulla_types::mutation_batch::CompiledOperation;
-use medulla_types::mutation_batch::CompiledScope;
-use medulla_types::mutation_batch::MutationEnvelope;
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationOutboxIntent;
 use medulla_types::mutation_scope::MutationOutboxLease;
 use medulla_types::mutation_scope::MutationSurface;
 use medulla_types::semantic_index::{SemanticDigest, SemanticIndexMutation};
-use medulla_types::{MutationBatch, MutationOperation};
 use sha2::{Digest, Sha256};
 
 /// What one semantic metadata mutation records.
@@ -120,7 +120,7 @@ impl SemanticCodeStore {
             ordinal: 0,
             surface: MutationSurface::Other,
             domain: DurabilityDomain::SemanticIndex,
-            method: medulla_types::protocol::Method::ApplyMutation {
+            method: medulla_protocol_types::protocol::Method::ApplyMutation {
                 event_type: event_type.to_string(),
                 query: format!("sha256:{}", mutation_digest.to_hex()),
             },
@@ -169,7 +169,7 @@ impl SemanticCodeStore {
             ordinal: 0,
             surface: MutationSurface::Other,
             domain: DurabilityDomain::SemanticIndex,
-            method: medulla_types::protocol::Method::ApplyMutation {
+            method: medulla_protocol_types::protocol::Method::ApplyMutation {
                 event_type: event_type.to_string(),
                 query: metadata_operation_query(subject, mutation_digest),
             },

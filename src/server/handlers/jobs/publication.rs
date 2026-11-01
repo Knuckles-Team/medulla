@@ -501,7 +501,9 @@ pub(crate) async fn apply_consensus_job_publication_finalize(
             committed_at_ms,
         )
         .map_err(|error| error.to_string())?;
-    job_result_payload::<medulla_types::result_contract::coordination::JobWorkerPublish>(&job)
+    job_result_payload::<medulla_protocol_types::result_contract::coordination::JobWorkerPublish>(
+        &job,
+    )
 }
 
 /// One analytics publication's durable graph write: where it commits, who it

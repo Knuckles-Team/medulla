@@ -20,8 +20,8 @@ test-support = []
 # Decide layer's conformal kernels, so finance links medulla-numeric (always-built
 # conformal/risk modules; no `decision` feature needed), and turns trend flips
 # into CEP events for medulla-stream's NFA (its runtime-free batch core; no tokio).
-finance = ["dep:nalgebra", "medulla-types/finance", "dep:medulla-numeric", "medulla-numeric/analytics", "dep:medulla-stream"]
-datascience = ["dep:rand_chacha", "medulla-types/datascience"]
+finance = ["dep:nalgebra", "medulla-types/finance", "medulla-protocol-types/finance", "dep:medulla-numeric", "medulla-numeric/analytics", "dep:medulla-stream"]
+datascience = ["dep:rand_chacha", "medulla-types/datascience", "medulla-protocol-types/datascience"]
 # Data-mining domain (CONCEPT:MEDULLA-KG.mining.frequent-itemset-mining): pure-Rust,
 # dependency-light frequent-itemset + association-rule mining. It turns on the
 # matching medulla-types feature so the `MineAssociate` wire variant exists, and links
@@ -29,14 +29,14 @@ datascience = ["dep:rand_chacha", "medulla-types/datascience"]
 # significance uses and -- with `medulla-numeric/motif` (EH-529, ANALYTICS-HARVEST AH-09)
 # -- for `MineAnomaly`'s `Algorithm::MatrixProfileDiscord` alone, which reuses the
 # medulla-numeric matrix-profile kernel rather than a second implementation.
-mining = ["medulla-types/mining", "dep:medulla-geo", "dep:medulla-numeric", "medulla-numeric/motif"]
+mining = ["medulla-types/mining", "medulla-protocol-types/mining", "dep:medulla-geo", "dep:medulla-numeric", "medulla-numeric/motif"]
 # Graph-learning / neuro-symbolic domain (CONCEPT:MEDULLA-KG.graphlearn.link-predictor):
 # a pure-Rust KAN (Kolmogorov-Arnold) link-predictor over the resident graph whose
 # learned per-feature edge functions ARE queryable KG artifacts. Reuses the
 # analytic-gradient Adam kernels from `datascience::training`, so it implies
 # `datascience`; also turns on the matching medulla-types feature so the `GraphLearn*`
 # wire variants exist. No heavy dep (no torch) — folded into `full` via `compute`.
-graphlearn = ["datascience", "medulla-types/graphlearn"]
+graphlearn = ["datascience", "medulla-types/graphlearn", "medulla-protocol-types/graphlearn"]
 reasoning = []
 # General bounded 0-1 integer programming with verifiable certificates (Decide
 # layer package A3): a deterministic node-budgeted branch-and-bound, Lagrangian
@@ -246,6 +246,8 @@ tree-sitter-dm = { version = "=0.25.4", optional = true }
 
 # Criterion harness for the AST parse-throughput baseline bench (CONCEPT:MEDULLA-012).
 # DEV-only — never linked into the engine binary.
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+
 [dev-dependencies]
 criterion = "0.8"
 # Shared Decide-layer fixtures (`medulla_types::test_support::decision`), also used

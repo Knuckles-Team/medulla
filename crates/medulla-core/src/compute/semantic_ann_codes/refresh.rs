@@ -25,6 +25,7 @@ use super::{
     OperationAttribution, SemanticCodeError, SemanticCodeStore, SemanticMutationReceipt,
     SEMANTIC_BINDING_CREATED_TOPIC,
 };
+use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_storage::{
     SemanticIndexOwner, SEMANTIC_BINDINGS, SEMANTIC_HEADS, SEMANTIC_SOURCE_PROGRESS,
     SEMANTIC_STAGES,
@@ -36,7 +37,6 @@ use medulla_types::semantic_index::{
     SemanticSourceProgress, SemanticSqlSourceManifest, SemanticStage, SemanticStageIntent,
     SemanticStagePredecessor,
 };
-use medulla_types::MutationBatch;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 

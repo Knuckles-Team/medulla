@@ -27,7 +27,7 @@ use petgraph::visit::EdgeRef;
 use serde_json::Value;
 
 // The wire DTO lives at the bottom of the DAG (medulla-types); the algorithm stays here.
-pub use medulla_types::protocol::QueryResult;
+pub use medulla_protocol_types::protocol::QueryResult;
 
 use super::parser;
 use super::plan::{
@@ -3862,10 +3862,7 @@ mod engine {
     pub(crate) fn selected_engine() -> CypherEngine {
         static ENGINE: OnceLock<CypherEngine> = OnceLock::new();
         *ENGINE.get_or_init(|| {
-            let e = match std::env::var("MEDULLA_CYPHER_ENGINE")
-                .ok()
-                .as_deref()
-            {
+            let e = match std::env::var("MEDULLA_CYPHER_ENGINE").ok().as_deref() {
                 Some("plan") => CypherEngine::Plan,
                 Some("shadow") => CypherEngine::Shadow,
                 _ => CypherEngine::Legacy,

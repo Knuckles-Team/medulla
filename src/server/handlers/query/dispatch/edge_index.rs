@@ -67,7 +67,7 @@ async fn handle_edge_index(ctx: &QueryHandlerCtx<'_>, op: EdgeIndexOp) -> Respon
     match outcome {
         Ok(Ok(view)) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::query::EdgeIndex>(view),
+            ResultPayload::of::<medulla_protocol_types::result_contract::query::EdgeIndex>(view),
         ),
         Ok(Err(error)) => Response::err(req_id, error),
         Err(response) => response,
@@ -146,7 +146,7 @@ async fn handle_edge_search(
     match search(ctx, authority, &tenant, request) {
         Ok(view) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::query::EdgeSearch>(view),
+            ResultPayload::of::<medulla_protocol_types::result_contract::query::EdgeSearch>(view),
         ),
         Err(error) => Response::err(req_id, error),
     }

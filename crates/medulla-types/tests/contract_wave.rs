@@ -14,6 +14,8 @@
 //! * the framed digest layout depends on the rules it claims to, which is
 //!   proved by planting a violation of each rule and watching the digest move.
 
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol_fixtures::contract_wave::contract_wave_samples;
 use medulla_types::agent_component::{
     is_reserved_component_id, AgentComponentEntry, AgentComponentKind, AgentComponentOp,
     AGENT_COMPONENT_DIGEST_DOMAIN, AGENT_COMPONENT_DIGEST_DOMAIN_V3,
@@ -30,8 +32,6 @@ use medulla_types::decision::{
 use medulla_types::decision_fixtures::contract_decision as decision;
 use medulla_types::decision_fixtures::contract_solver as solver;
 use medulla_types::decision_fixtures::contract_statistical as statistical;
-use medulla_types::protocol::Method;
-use medulla_types::protocol_fixtures::contract_wave::contract_wave_samples;
 
 /// Every sample survives both codecs and keeps its wire tag.
 ///

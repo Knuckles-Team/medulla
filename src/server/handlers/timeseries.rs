@@ -60,11 +60,11 @@ use crate::server::access::CarrierAuthority;
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationSurface;
 
+use medulla_protocol_types::result_contract::storage as results;
 use medulla_tsdb::point::Point;
 use medulla_tsdb::query::{asof_join_backward, gap_fill_locf, time_bucket, Agg};
 use medulla_tsdb::store::{ScopedAppendBatch, SeriesKey, SeriesStore};
 use medulla_types::contract::Nonce;
-use medulla_types::result_contract::storage as results;
 
 // EH-524 — materialised derived series: `TsDefineSeries` and the maintenance a
 // `TsAppend` runs on the series derived from the appended one.

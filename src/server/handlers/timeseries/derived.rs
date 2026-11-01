@@ -60,7 +60,7 @@ pub(super) async fn handle_define(
         ),
         Ok(Err(error)) => Response::err(
             context.req_id,
-            medulla_types::error_registry::classify_refusal("INTERNAL", "", &error),
+            medulla_protocol_types::error_registry::classify_refusal("INTERNAL", "", &error),
         ),
         Err(response) => response,
     }

@@ -36,6 +36,7 @@ rmp-serde = "1.3"
 redb = { workspace = true }
 sha2 = "0.10"
 hex = "0.4"
+medulla-protocol-types = { path = "../medulla-protocol-types" }
 
 [dev-dependencies]
 tempfile = "3"

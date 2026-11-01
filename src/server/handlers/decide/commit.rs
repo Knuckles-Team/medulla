@@ -28,7 +28,7 @@ pub(crate) async fn handle_decision_commit(
         Ok(result) => Response::ok(
             req_id,
             crate::protocol::ResultPayload::of_ref::<
-                medulla_types::result_contract::storage::DecisionCommit,
+                medulla_protocol_types::result_contract::storage::DecisionCommit,
             >(&result),
         ),
         Err(error) => Response::err(req_id, error),

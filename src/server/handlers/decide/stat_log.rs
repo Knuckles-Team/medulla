@@ -446,9 +446,14 @@ fn dispatch(
     op: DecisionLogOp,
     inputs: Option<&super::stat_learning::LearningInputs>,
 ) -> Result<ResultPayload, String> {
-    use medulla_types::result_contract::coordination::{
-        DecisionLogAggregate, DecisionLogCommit, DecisionLogCompact, DecisionLogEvaluate,
-        DecisionLogGet, DecisionLogResolve, DecisionLogVerify,
+    use medulla_protocol_types::{
+        result_contract::coordination::DecisionLogAggregate,
+        result_contract::coordination::DecisionLogCommit,
+        result_contract::coordination::DecisionLogCompact,
+        result_contract::coordination::DecisionLogEvaluate,
+        result_contract::coordination::DecisionLogGet,
+        result_contract::coordination::DecisionLogResolve,
+        result_contract::coordination::DecisionLogVerify,
     };
     match op {
         DecisionLogOp::Commit { record, evaluator } => ResultPayload::of::<DecisionLogCommit>(
@@ -470,9 +475,9 @@ fn dispatch(
             ResultPayload::of::<DecisionLogResolve>(resolve(ctx, reader, resolution)?)
         }
         DecisionLogOp::Learn { write, .. } => {
-            ResultPayload::of::<medulla_types::result_contract::coordination::DecisionLogLearn>(
-                super::stat_learning::dispatch(ctx, reader, write, inputs)?,
-            )
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::DecisionLogLearn,
+            >(super::stat_learning::dispatch(ctx, reader, write, inputs)?)
         }
         DecisionLogOp::Verify { record_id, .. } => ResultPayload::of::<DecisionLogVerify>(verify(
             ctx,

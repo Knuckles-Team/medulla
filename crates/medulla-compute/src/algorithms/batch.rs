@@ -157,7 +157,11 @@ fn decode_batch_embedding_op(
 pub fn decode_batch_operations(operations_msgpack: &[u8]) -> Result<Vec<BatchOperation>, String> {
     let operations: Vec<serde_json::Value> = medulla_types::msgpack::decode_bounded(
         operations_msgpack,
-        medulla_types::msgpack::MsgpackLimits::new(MAX_BATCH_UPDATE_BYTES, MAX_BATCH_UPDATE_ITEMS, 64),
+        medulla_types::msgpack::MsgpackLimits::new(
+            MAX_BATCH_UPDATE_BYTES,
+            MAX_BATCH_UPDATE_ITEMS,
+            64,
+        ),
     )
     .map_err(|_| "[Medulla::batch_update] invalid or over-complex MsgPack".to_string())?;
     if operations.len() > MAX_BATCH_OPERATIONS {
@@ -544,7 +548,9 @@ pub fn batch_update(core: &GraphCore, operations_msgpack: &[u8]) -> Result<Vec<u
         if capture_content {
             change
                 .added_nodes
-                .push(medulla_core::index::NodeChange::with_properties(id, properties));
+                .push(medulla_core::index::NodeChange::with_properties(
+                    id, properties,
+                ));
         } else {
             change.record_add_node(id);
         }

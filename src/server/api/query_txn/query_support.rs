@@ -20,8 +20,7 @@ pub fn uql_text_embedder() -> Option<&'static dyn medulla_plan::TextEmbedder> {
             // endpoint is set, so query vectors share the stored chunks' space.
             #[cfg(feature = "modality-serving")]
             {
-                let config =
-                    crate::server::api::ingest::embedder::EmbedderConfig::from_env();
+                let config = crate::server::api::ingest::embedder::EmbedderConfig::from_env();
                 if config.name() == crate::server::api::ingest::embedder::REMOTE {
                     return Some(Box::new(config) as Box<dyn medulla_plan::TextEmbedder>);
                 }

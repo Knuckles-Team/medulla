@@ -29,7 +29,7 @@ use tokio::sync::RwLock;
 use crate::epistemic_operations::PlacementRouteSchemaVersion;
 use crate::protocol::{Method, Response, ResultPayload};
 use crate::server::state::ServerState;
-use medulla_types::result_contract::cluster::PlacementRouteWire;
+use medulla_protocol_types::result_contract::cluster::PlacementRouteWire;
 
 // GOC-15/BUG-030: `PlacementRoute`'s `authz_action` was narrowed from
 // `admin:cluster-read` to `cluster:placement-read` (`medulla_capabilities::policy`)
@@ -72,7 +72,7 @@ fn route_response(
     }
     Response::ok(
         req_id,
-        ResultPayload::of::<medulla_types::result_contract::cluster::PlacementRoute>(
+        ResultPayload::of::<medulla_protocol_types::result_contract::cluster::PlacementRoute>(
             PlacementRouteWire {
                 schema_version: PlacementRouteSchemaVersion::V1,
                 route_id: format!("request:{req_id}"),
@@ -253,8 +253,8 @@ async fn handle_assign(
     match multi.placement_assign(&tenant, group).await {
         Ok(epoch) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::cluster::PlacementAssign>(
-                medulla_types::result_contract::cluster::PlacementEpoch { epoch },
+            ResultPayload::of::<medulla_protocol_types::result_contract::cluster::PlacementAssign>(
+                medulla_protocol_types::result_contract::cluster::PlacementEpoch { epoch },
             ),
         ),
         Err(error) => Response::err(req_id, error),
@@ -286,8 +286,8 @@ async fn handle_placement_admin_op(
 #[cfg(feature = "raft")]
 fn placement_move_result(
     report: &crate::raft::reshard::PlacementMoveReport,
-) -> medulla_types::result_contract::cluster::PlacementMoveResult {
-    medulla_types::result_contract::cluster::PlacementMoveResult {
+) -> medulla_protocol_types::result_contract::cluster::PlacementMoveResult {
+    medulla_protocol_types::result_contract::cluster::PlacementMoveResult {
         tenant: report.tenant.clone(),
         range: report.range,
         target: report.target,
@@ -296,7 +296,7 @@ fn placement_move_result(
             .graphs
             .iter()
             .map(
-                |graph| medulla_types::result_contract::cluster::GroupReshardResult {
+                |graph| medulla_protocol_types::result_contract::cluster::GroupReshardResult {
                     graph: graph.graph.clone(),
                     from_group: graph.from_group,
                     to_group: graph.to_group,
@@ -330,7 +330,7 @@ async fn handle_move(
     {
         Ok(report) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::cluster::PlacementMove>(
+            ResultPayload::of::<medulla_protocol_types::result_contract::cluster::PlacementMove>(
                 placement_move_result(&report),
             ),
         ),
@@ -352,9 +352,9 @@ async fn handle_abort_move(
     match tenants.abort_move(&move_id).await {
         Ok(()) => Response::ok(
             req_id,
-            ResultPayload::scalar::<medulla_types::result_contract::cluster::PlacementAbortMove>(
-                true,
-            ),
+            ResultPayload::scalar::<
+                medulla_protocol_types::result_contract::cluster::PlacementAbortMove,
+            >(true),
         ),
         Err(error) => Response::err(req_id, error),
     }

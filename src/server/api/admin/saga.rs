@@ -24,7 +24,7 @@ pub trait AdminSagaLedger {
     /// Prepare one admin saga, with its sealed private recovery payload when it has one.
     fn admin_saga_step(
         &self,
-        batch: &medulla_types::MutationBatch,
+        batch: &medulla_protocol_types::mutation_batch::MutationBatch,
         prepared_at_ms: u64,
         private_payload: Option<&[u8]>,
     ) -> Result<medulla_transaction::SagaBegin, String>;
@@ -32,10 +32,16 @@ pub trait AdminSagaLedger {
     /// Terminalize one prepared admin saga; the flag is `true` when it had already committed.
     fn admin_saga_end(
         &self,
-        batch: &medulla_types::MutationBatch,
+        batch: &medulla_protocol_types::mutation_batch::MutationBatch,
         result_msgpack: Vec<u8>,
         committed_at_ms: u64,
-    ) -> Result<(medulla_types::MutationBatchRecord, bool), String>;
+    ) -> Result<
+        (
+            medulla_protocol_types::mutation_batch::MutationBatchRecord,
+            bool,
+        ),
+        String,
+    >;
 }
 
 /// Fixed [`medulla_types::MutationScopeIdentity`] for the admin-mutations / "cluster-admin"
@@ -274,25 +280,25 @@ impl AdminSagaResultContract {
                 .ok_or_else(|| "admin saga replay has the wrong GraphQL result type".to_string()),
             Self::SparqlRecoveryOutcome => validate_sparql_recovery_outcome(result),
             Self::ShardReshardReport => validate_admin_json::<
-                medulla_types::result_contract::cluster::ShardReshardReport,
+                medulla_protocol_types::result_contract::cluster::ShardReshardReport,
             >(result),
             Self::RebalanceExecution => validate_admin_json::<
-                medulla_types::result_contract::cluster::RebalanceExecution,
+                medulla_protocol_types::result_contract::cluster::RebalanceExecution,
             >(result),
             Self::RestoreReceipt => {
-                validate_admin_json::<medulla_types::storage_wire::RestoreReceipt>(result)
+                validate_admin_json::<medulla_protocol_types::storage_wire::RestoreReceipt>(result)
             }
             Self::MultiGraphBatchReport => validate_admin_json::<
-                medulla_types::result_contract::transactions::MultiGraphBatchReport,
+                medulla_protocol_types::result_contract::transactions::MultiGraphBatchReport,
             >(result),
-            Self::ChannelCreated => {
-                validate_admin_json::<medulla_types::messaging_wire::ChannelCreated>(result)
-            }
-            Self::ChannelDeparture => {
-                validate_admin_json::<medulla_types::messaging_wire::ChannelDeparture>(result)
-            }
+            Self::ChannelCreated => validate_admin_json::<
+                medulla_protocol_types::messaging_wire::ChannelCreated,
+            >(result),
+            Self::ChannelDeparture => validate_admin_json::<
+                medulla_protocol_types::messaging_wire::ChannelDeparture,
+            >(result),
             Self::BeliefMaterialization => validate_admin_json::<
-                medulla_types::result_contract::transactions::BeliefMaterialization,
+                medulla_protocol_types::result_contract::transactions::BeliefMaterialization,
             >(result),
         }
     }
@@ -362,12 +368,11 @@ fn validate_sparql_recovery_outcome(result: &crate::protocol::ResultPayload) -> 
     };
     // All five report fields are required, so a successful decode plus exact
     // object length also excludes unknown fields.
-    let success =
-        body.len() == 5
-            && serde_json::from_value::<
-                medulla_types::result_contract::transactions::SparqlUpdateReport,
-            >(value.clone())
-            .is_ok();
+    let success = body.len() == 5
+        && serde_json::from_value::<
+            medulla_protocol_types::result_contract::transactions::SparqlUpdateReport,
+        >(value.clone())
+        .is_ok();
     let compensated = body.len() == 3
         && body.get("outcome").and_then(serde_json::Value::as_str) == Some("compensated")
         && body

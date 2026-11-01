@@ -46,7 +46,9 @@ pub(super) fn handle_ontology_inspect(
     match inspect(core, documents, source_ids) {
         Ok(view) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::reasoning::OntologyInspect>(view),
+            ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::OntologyInspect>(
+                view,
+            ),
         ),
         Err(error) => Response::err(req_id, format!("OntologyInspect: {error}")),
     }

@@ -161,7 +161,7 @@ fn project_completion(
     status: &str,
     batch: &str,
     digest: &str,
-    receipt: &medulla_types::MutationBatchRecord,
+    receipt: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
     records: &[medulla_types::MutationOutboxRecord],
 ) -> Result<medulla_types::run_completion::CommittedRunCompletion, String> {
     use medulla_types::run_completion::*;
@@ -222,7 +222,7 @@ fn validate_completion_event(
     scope: &medulla_types::MutationScopeIdentity,
     batch: &str,
     digest: &str,
-    receipt: &medulla_types::MutationBatchRecord,
+    receipt: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
     event: &medulla_types::MutationOutboxRecord,
 ) -> Result<(), String> {
     use sha2::{Digest, Sha256};
@@ -240,10 +240,10 @@ fn validate_completion_event(
 fn validate_completion_ledger(
     scope: &medulla_types::MutationScopeIdentity,
     batch: &str,
-    receipt: &medulla_types::MutationBatchRecord,
+    receipt: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
     event: &medulla_types::MutationOutboxRecord,
 ) -> Result<(), String> {
-    if receipt.status != medulla_types::MutationBatchStatus::Committed
+    if receipt.status != medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed
         || &receipt.identity != scope
         || receipt.batch.batch_id != batch
         || receipt.batch.outbox.get(event.ordinal as usize) != Some(&event.intent)

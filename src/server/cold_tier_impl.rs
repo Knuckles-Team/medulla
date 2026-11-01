@@ -114,11 +114,10 @@ mod s3 {
 
     impl S3ColdTier {
         pub fn open() -> Result<Self, String> {
-            let bucket = std::env::var("MEDULLA_BLOB_S3_BUCKET").map_err(|_| {
-                "MEDULLA_BLOB_S3_BUCKET is required for the cold-tier-s3 backend"
-            })?;
-            let prefix = std::env::var("MEDULLA_COLD_S3_PREFIX")
-                .unwrap_or_else(|_| "cold/graphs".into());
+            let bucket = std::env::var("MEDULLA_BLOB_S3_BUCKET")
+                .map_err(|_| "MEDULLA_BLOB_S3_BUCKET is required for the cold-tier-s3 backend")?;
+            let prefix =
+                std::env::var("MEDULLA_COLD_S3_PREFIX").unwrap_or_else(|_| "cold/graphs".into());
             let store = AmazonS3Builder::from_env()
                 .with_bucket_name(bucket)
                 .build()

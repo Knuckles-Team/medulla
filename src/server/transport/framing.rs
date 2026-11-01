@@ -96,7 +96,11 @@ fn max_msgpack_items() -> usize {
 pub(super) fn validate_msgpack_frame(input: &[u8], max_items: usize) -> Result<(), ()> {
     medulla_types::msgpack::validate_single_value(
         input,
-        medulla_types::msgpack::MsgpackLimits::new(input.len(), max_items, MAX_MSGPACK_NESTING_DEPTH),
+        medulla_types::msgpack::MsgpackLimits::new(
+            input.len(),
+            max_items,
+            MAX_MSGPACK_NESTING_DEPTH,
+        ),
     )
     .map_err(|_| ())
 }

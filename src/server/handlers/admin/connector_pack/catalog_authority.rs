@@ -130,26 +130,26 @@ async fn serve_catalog_read(
             Ok((_, binding)) if matches!(access, CatalogRead::RequestBinding) => Response::ok(
                 req_id,
                 crate::protocol::ResultPayload::of_ref::<
-                    medulla_types::result_contract::storage::ConnectorPackCatalogBindingStatus,
+                    medulla_protocol_types::result_contract::storage::ConnectorPackCatalogBindingStatus,
                 >(&binding),
             ),
             Ok((_, binding)) if matches!(access, CatalogRead::AttesterStatus) => Response::ok(
                 req_id,
                 crate::protocol::ResultPayload::of_ref::<
-                    medulla_types::result_contract::storage::ConnectorPackCatalogAuthorityStatus,
+                    medulla_protocol_types::result_contract::storage::ConnectorPackCatalogAuthorityStatus,
                 >(&binding),
             ),
             Ok((store, Some(_))) => match verified_owner_principal(&store) {
                 Ok(owner) if matches!(access, CatalogRead::AttesterOwner) => Response::ok(
                     req_id,
                     crate::protocol::ResultPayload::of_ref::<
-                        medulla_types::result_contract::storage::ConnectorPackCatalogOwnerPrincipal,
+                        medulla_protocol_types::result_contract::storage::ConnectorPackCatalogOwnerPrincipal,
                     >(&owner),
                 ),
                 Ok(owner) => Response::ok(
                     req_id,
                     crate::protocol::ResultPayload::of_ref::<
-                        medulla_types::result_contract::storage::ConnectorPackCatalogRequestOwnerPrincipal,
+                        medulla_protocol_types::result_contract::storage::ConnectorPackCatalogRequestOwnerPrincipal,
                     >(&owner),
                 ),
                 Err(error) => Response::err(req_id, error),
@@ -209,7 +209,7 @@ pub(super) async fn serve(
             Ok(binding) => Response::ok(
                 req_id,
                 crate::protocol::ResultPayload::of_ref::<
-                    medulla_types::result_contract::storage::ConnectorPackReconcileCatalog,
+                    medulla_protocol_types::result_contract::storage::ConnectorPackReconcileCatalog,
                 >(&binding),
             ),
             Err(error) => Response::err(req_id, error),
@@ -297,7 +297,7 @@ pub(super) async fn admit_catalog_write(
 /// canonical resource map, as compact JSON with sorted keys.
 #[cfg(feature = "redb")]
 pub(crate) fn registration_config_digest(
-    registration: &medulla_types::result_contract::cluster::RegisteredServerView,
+    registration: &medulla_protocol_types::result_contract::cluster::RegisteredServerView,
 ) -> Result<medulla_types::contract::Digest256, String> {
     Ok(medulla_types::contract::Digest256::sha256(
         &serde_json::to_vec(&serde_json::json!({
@@ -317,7 +317,7 @@ async fn verify_observed_registration(
     verified: &VerifiedRequestContext,
     observed: ObservedRegistration<'_>,
 ) -> Result<(), String> {
-    use medulla_types::result_contract::cluster::ServerDesiredState;
+    use medulla_protocol_types::result_contract::cluster::ServerDesiredState;
 
     let (registry_revision, registry_digest, registration) =
         crate::server::api::reentry::verified_served_registration(

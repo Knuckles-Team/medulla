@@ -69,7 +69,7 @@ fn matches_lifecycle_result(expected: &str, result: &ResultPayload) -> bool {
             result,
             ResultPayload::Json(value)
                 if serde_json::from_value::<
-                    medulla_types::result_contract::transactions::BeliefMaterialization,
+                    medulla_protocol_types::result_contract::transactions::BeliefMaterialization,
                 >(value.clone())
                 .is_ok()
         ),

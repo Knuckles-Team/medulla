@@ -57,9 +57,9 @@ async fn handle_union_get_node_properties(
     let props = cores.iter().find_map(|c| c.get_node_properties(&node_id));
     Response::ok(
         req_id,
-        ResultPayload::of_encoded_or_null::<medulla_types::result_contract::graph::UnionGetNodeProperties>(
-            props,
-        ),
+        ResultPayload::of_encoded_or_null::<
+            medulla_protocol_types::result_contract::graph::UnionGetNodeProperties,
+        >(props),
     )
 }
 
@@ -103,7 +103,7 @@ async fn handle_diff_against(
     match serde_json::from_str::<medulla_types::types::GraphDiff>(&diff_str) {
         Ok(diff) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::graph::DiffAgainst>(diff),
+            ResultPayload::of::<medulla_protocol_types::result_contract::graph::DiffAgainst>(diff),
         ),
         Err(e) => Response::err(req_id, e.to_string()),
     }
@@ -126,7 +126,9 @@ async fn handle_union_get_nodes_by_label(
     let nodes = union_dedup_nodes_by_label(&cores, &label, limit);
     Response::ok(
         req_id,
-        ResultPayload::scalar::<medulla_types::result_contract::graph::UnionGetNodesByLabel>(nodes),
+        ResultPayload::scalar::<medulla_protocol_types::result_contract::graph::UnionGetNodesByLabel>(
+            nodes,
+        ),
     )
 }
 
@@ -148,7 +150,8 @@ fn union_dedup_nodes_by_label(
             if !seen.insert(k.clone()) {
                 continue;
             }
-            let val = medulla_types::msgpack::decode_property_value(&p).unwrap_or(serde_json::json!({}));
+            let val =
+                medulla_types::msgpack::decode_property_value(&p).unwrap_or(serde_json::json!({}));
             nodes.push((k, val));
             if limit != 0 && nodes.len() >= limit {
                 return nodes;

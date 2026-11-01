@@ -51,8 +51,6 @@ use crate::graph::GraphCore;
 #[cfg(test)]
 use crate::mutation_batch::MutationStateDescriptor;
 #[cfg(test)]
-use medulla_types::mutation_scope::MutationSurface;
-#[cfg(test)]
 use crate::protocol::Method;
 #[cfg(all(test, feature = "redb"))]
 use crate::protocol::ResultPayload;
@@ -62,6 +60,8 @@ use crate::server::api::persistence::PersistenceBackend;
 use crate::server::mutation_batch::compile::{compile_methods, CompileBatch};
 #[cfg(test)]
 use medulla_types::contract::Nonce;
+#[cfg(test)]
+use medulla_types::mutation_scope::MutationSurface;
 #[cfg(test)]
 use sha2::{Digest, Sha256};
 

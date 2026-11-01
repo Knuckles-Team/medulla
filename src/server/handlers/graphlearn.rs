@@ -19,10 +19,10 @@ use std::sync::Arc;
 use medulla_compute::graph_algos::AdjacencyGraph;
 use medulla_compute::graphlearn::edge_fn::Basis;
 use medulla_compute::graphlearn::link_predict::{self, FeatureCtx, KanLinkConfig, KanLinkModel};
+use medulla_protocol_types::result_contract::compute as results;
 use medulla_types::compute_result::graphlearn::{
     EdgeFunctionRow, LinkPrediction, LinkPredictorFit, PredictedLink,
 };
-use medulla_types::result_contract::compute as results;
 
 use crate::graph::GraphCore;
 use crate::protocol::{GraphLearnParams, GraphSource, Method, Response, ResultPayload};

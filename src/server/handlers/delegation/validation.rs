@@ -586,7 +586,9 @@ pub(crate) fn validate_request_context(
     verified_context: &VerifiedRequestContext,
     graph_name: &str,
 ) -> Result<(), String> {
-    if context.schema_version != medulla_types::epistemic_operations::RequestContextSchemaVersion::V2 {
+    if context.schema_version
+        != medulla_types::epistemic_operations::RequestContextSchemaVersion::V2
+    {
         return Err("kg-delegate context schema_version is unsupported".to_string());
     }
     if context.graph != graph_name {

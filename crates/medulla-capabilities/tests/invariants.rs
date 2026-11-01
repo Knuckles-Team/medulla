@@ -4,7 +4,7 @@ use medulla_capabilities::{
     gen_ledger, method_policy_entries, policy, protocol_policy_inventory, DurabilityDomain,
     MethodPolicy, PolicyAccess, TxnParticipation,
 };
-use medulla_types::protocol::{CypherMode, Method};
+use medulla_protocol_types::{protocol::CypherMode, protocol::Method};
 
 #[test]
 fn method_policy_registry_is_unique_and_covers_every_method_variant() {
@@ -418,7 +418,7 @@ fn contract_wave_rows_are_internal_with_no_consumer() {
 /// `server::access::requires_write` cannot disagree about an operation.
 #[test]
 fn contract_wave_op_policies_follow_their_ops() {
-    use medulla_types::protocol_fixtures::contract_wave::contract_wave_samples;
+    use medulla_protocol_types::protocol_fixtures::contract_wave::contract_wave_samples;
 
     let reads = [
         "ConnectorPack.status",

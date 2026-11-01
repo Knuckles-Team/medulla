@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use medulla_core::compute::semantic_ann_codes::OperationAttribution;
 use medulla_core::compute::semantic_index_service::SemanticIndexService;
+use medulla_protocol_types::result_contract::ingestion as ingestion_results;
 use medulla_types::contract::Nonce;
-use medulla_types::result_contract::ingestion as ingestion_results;
 use medulla_types::semantic_index::{SemanticBinding, SemanticIndexOp, SemanticSqlSourceManifest};
 
 use crate::protocol::Response;

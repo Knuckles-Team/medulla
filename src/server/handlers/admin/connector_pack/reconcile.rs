@@ -53,7 +53,7 @@ pub(crate) async fn serve(
             Ok(guard) => guard,
             Err(cancelled) => return Response::err(req_id, cancelled),
         };
-        let method = medulla_types::protocol::Method::ConnectorPack {
+        let method = medulla_protocol_types::protocol::Method::ConnectorPack {
             op: Box::new(
                 medulla_types::connector_pack::ConnectorPackOp::ReconcileBodies { request },
             ),
@@ -62,7 +62,7 @@ pub(crate) async fn serve(
             Ok(report) => Response::ok(
                 req_id,
                 crate::protocol::ResultPayload::of_ref::<
-                    medulla_types::result_contract::storage::ConnectorPackReconcileBodies,
+                    medulla_protocol_types::result_contract::storage::ConnectorPackReconcileBodies,
                 >(&report),
             ),
             Err(error) => Response::err(req_id, error),
@@ -91,7 +91,7 @@ pub(super) async fn reconcile_if_due(
     if now_ms.saturating_sub(clock.load(Ordering::Acquire)) < RECONCILE_INTERVAL_MS {
         return;
     }
-    let method = medulla_types::protocol::Method::ConnectorPack {
+    let method = medulla_protocol_types::protocol::Method::ConnectorPack {
         op: Box::new(
             medulla_types::connector_pack::ConnectorPackOp::ReconcileBodies {
                 request: medulla_types::connector_pack::ConnectorPackReconcileRequest {
@@ -117,7 +117,7 @@ pub(super) async fn reconcile_locked(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    method: &medulla_types::protocol::Method,
+    method: &medulla_protocol_types::protocol::Method,
 ) -> Result<medulla_types::connector_pack::PackBodyReconcileReport, String> {
     let store = super::agent_library_store(state).await?;
     let blob = state

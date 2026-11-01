@@ -9,13 +9,13 @@
 
 use std::sync::Arc;
 
+use hmac::{Hmac, Mac};
 use medulla_modality::{OpaqueRef, ProtocolError};
 use medulla_plan::{
     cross_modal_result_stream, graph_result_stream, job_result_stream, rdf_result_stream,
     sql_result_stream, time_series_result_stream, vector_result_stream, KnowledgeBatch,
     KnowledgeBatchRow, KnowledgeStreamContext, ResultStreamCursor, ServedResultFamily,
 };
-use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use tokio::sync::RwLock;
 
@@ -539,7 +539,9 @@ pub(crate) async fn try_handle(
         Ok(batch) => match authority.validate_after() {
             Ok(()) => Response::ok(
                 req_id,
-                ResultPayload::of_ref::<medulla_types::result_contract::query::KnowledgeStream>(&batch),
+                ResultPayload::of_ref::<
+                    medulla_protocol_types::result_contract::query::KnowledgeStream,
+                >(&batch),
             ),
             Err(error) => {
                 medulla_kernel::metrics::access_denied();

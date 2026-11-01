@@ -7,7 +7,9 @@
 //! `Coefficient::Unknown` -- ranked in its own tier below every known value,
 //! never read as zero (§7.3).
 
-use medulla_types::decision::{DecisionErrorCode, DecisionInputs, ObjectiveLevelKind, ObjectiveOrder};
+use medulla_types::decision::{
+    DecisionErrorCode, DecisionInputs, ObjectiveLevelKind, ObjectiveOrder,
+};
 use medulla_types::solve::{Coefficient, ObjectiveLevelSpec, ObjectiveTerm, VarId};
 
 use super::facts::{self, Declared};

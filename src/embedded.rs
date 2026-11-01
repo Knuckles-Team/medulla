@@ -231,7 +231,8 @@ impl EmbeddedEngine {
             // The `:memory:` analogue is still opened by the composition root,
             // not by `medulla-query`'s `dev-scope-grant` stand-in: ephemeral is a
             // lifetime, not a weaker authority.
-            _ => medulla_kernel::store_authority::open_ephemeral_sql_store().map(|(store, _path)| store),
+            _ => medulla_kernel::store_authority::open_ephemeral_sql_store()
+                .map(|(store, _path)| store),
         }
     }
 

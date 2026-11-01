@@ -9,13 +9,13 @@ use medulla_compute::graph_algos::AdjacencyGraph;
 use medulla_compute::mining::{
     community, ontology_gap, retrieval_quality, risk_propagation, root_cause,
 };
+use medulla_protocol_types::result_contract::compute as results;
 use medulla_types::compute_result::mining::ImpactOptions;
 use medulla_types::compute_result::mining::{
     CommunityMiningResult, CommunityRow, OntologyGapMiningResult, OntologyGapRow,
     RetrievalQualityMiningResult, RiskModel, RiskPropagationMiningResult, RiskScoreRow,
     RootCauseCandidateRow, RootCauseMiningResult,
 };
-use medulla_types::result_contract::compute as results;
 
 use super::impact::{handle_impact, ImpactInputs, ImpactKind};
 

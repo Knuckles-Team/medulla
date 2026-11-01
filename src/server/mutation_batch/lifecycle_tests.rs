@@ -521,7 +521,7 @@ async fn lifecycle_replay_compares_identity_not_recompiled_bytes() {
 
     // Same identity, different bytes: an older build's catalog digest, result
     // encoding and timestamps.
-    if let medulla_types::mutation_batch::MutationEnvelope::Operation(operation) =
+    if let medulla_protocol_types::mutation_batch::MutationEnvelope::Operation(operation) =
         &mut stored.batch.envelope
     {
         operation.authority.catalog_digest =

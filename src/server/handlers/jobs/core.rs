@@ -148,8 +148,8 @@ pub(super) fn compile_job_batch(
 
 pub(super) fn job_response<M>(req_id: u64, job: &medulla_jobs::AnalyticsJob) -> Response
 where
-    M: medulla_types::result_contract::MethodResult<
-        Body = medulla_types::result_contract::coordination::AnalyticsJobRecord,
+    M: medulla_protocol_types::result_contract::MethodResult<
+        Body = medulla_protocol_types::result_contract::coordination::AnalyticsJobRecord,
     >,
 {
     match job_result_payload::<M>(job) {
@@ -162,8 +162,8 @@ pub(super) fn job_result_payload<M>(
     job: &medulla_jobs::AnalyticsJob,
 ) -> Result<ResultPayload, String>
 where
-    M: medulla_types::result_contract::MethodResult<
-        Body = medulla_types::result_contract::coordination::AnalyticsJobRecord,
+    M: medulla_protocol_types::result_contract::MethodResult<
+        Body = medulla_protocol_types::result_contract::coordination::AnalyticsJobRecord,
     >,
 {
     let (record, _input_payload) = job_record(job)?;
@@ -177,7 +177,7 @@ pub(super) fn job_record(
     job: &medulla_jobs::AnalyticsJob,
 ) -> Result<
     (
-        medulla_types::result_contract::coordination::AnalyticsJobRecord,
+        medulla_protocol_types::result_contract::coordination::AnalyticsJobRecord,
         Option<Vec<u8>>,
     ),
     String,

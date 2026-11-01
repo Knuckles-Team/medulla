@@ -86,7 +86,9 @@ fn native_evidence_locus(
     job: &medulla_jobs::AnalyticsJob,
     id: &str,
 ) -> Result<medulla_modality::EvidenceLocus, String> {
-    use medulla_modality::{ArtifactId, DerivationId, EvidenceAddress, EvidenceLocusId, ResourceId};
+    use medulla_modality::{
+        ArtifactId, DerivationId, EvidenceAddress, EvidenceLocusId, ResourceId,
+    };
 
     Ok(medulla_modality::EvidenceLocus {
         id: EvidenceLocusId::from_opaque(native_opaque("locus", &format!("{}:{id}", job.job_id))?)

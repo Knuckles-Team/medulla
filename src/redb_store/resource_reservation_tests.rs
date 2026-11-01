@@ -414,7 +414,10 @@ fn read_reservation(shard: &Shard, reservation_id: &str) -> Option<DurableResour
 
 /// One persisted batch receipt of `graph-a`'s scope, from the kernel ledger
 /// that replaced the shard's private `mutation_batches` table.
-fn ledger_receipt(shard: &Shard, batch_id: &str) -> Option<medulla_types::MutationBatchRecord> {
+fn ledger_receipt(
+    shard: &Shard,
+    batch_id: &str,
+) -> Option<medulla_protocol_types::mutation_batch::MutationBatchRecord> {
     let read = resource_read(shard, "graph-a");
     medulla_transaction::read_ledger(&read, batch_id).expect("read kernel ledger receipt")
 }

@@ -137,10 +137,10 @@ fn finish_session_control_saga(
 fn validate_session_control_result(method: &Method, result: &ResultPayload) -> Result<(), String> {
     match method {
         Method::CreateChannel { .. } => validate_session_control_json::<
-            medulla_types::messaging_wire::ChannelCreated,
+            medulla_protocol_types::messaging_wire::ChannelCreated,
         >(method, result),
         Method::LeaveChannel { .. } | Method::CloseChannel { .. } => {
-            validate_session_control_json::<medulla_types::messaging_wire::ChannelDeparture>(
+            validate_session_control_json::<medulla_protocol_types::messaging_wire::ChannelDeparture>(
                 method, result,
             )
         }

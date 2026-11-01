@@ -13,13 +13,15 @@
 //! * `store` -- node encoding, and decoding that re-verifies each record's id.
 //! * `blobs` -- held Blob-CAS references.
 
+use medulla_protocol_types::{
+    result_contract::graph::ModelPolicyVersionRegister,
+    result_contract::graph::PolicyCapabilityPut, result_contract::graph::PolicyCaptureCommit,
+    result_contract::graph::PolicyEvaluationCommit, result_contract::graph::PolicyRecordGet,
+    result_contract::graph::TrainingRunCommit,
+};
 use medulla_types::policy_evolution::{
     PolicyEvolutionRecord, PolicyRecordGetRequest, PolicyRecordKind, PolicyRecordReceipt,
     PolicyRecordStored, PolicyWriteDisposition, StoredPolicyRecord,
-};
-use medulla_types::result_contract::graph::{
-    ModelPolicyVersionRegister, PolicyCapabilityPut, PolicyCaptureCommit, PolicyEvaluationCommit,
-    PolicyRecordGet, TrainingRunCommit,
 };
 
 use super::graph_pipeline::dispatch_graph_op;

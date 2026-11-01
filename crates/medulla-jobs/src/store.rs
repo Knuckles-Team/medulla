@@ -34,23 +34,23 @@ use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::mutation_batch::MutationBatchRecord;
+use medulla_protocol_types::mutation_batch::MutationEnvelope;
+use medulla_protocol_types::mutation_batch::MutationOperation;
+use medulla_protocol_types::mutation_batch::VersionExpectation;
+use medulla_protocol_types::protocol::Method;
 use medulla_storage::{
     JobsOwner, OwnedStoreHandle, PhysicalStoreIdentity, ScopeGrantVerifier, ScopedRead,
     StorageKernel,
 };
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite, Begin, MutationKernel};
-use medulla_types::mutation_batch::MutationBatch;
-use medulla_types::mutation_batch::MutationBatchRecord;
-use medulla_types::mutation_batch::MutationEnvelope;
-use medulla_types::mutation_batch::MutationOperation;
-use medulla_types::mutation_batch::VersionExpectation;
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationOutboxIntent;
 use medulla_types::mutation_scope::MutationScope;
 use medulla_types::mutation_scope::MutationScopeIdentity;
 use medulla_types::mutation_scope::MutationSurface;
 use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
-use medulla_types::protocol::Method;
 use redb::{ReadableTable, TableDefinition};
 
 mod index_keys;
@@ -2521,7 +2521,7 @@ fn job_operation_envelope(
     let method =
         medulla_types::contract::MethodId::new("analytics_job_transition").map_err(codec_err)?;
     MutationEnvelope::for_scope(
-        medulla_types::mutation_batch::CompiledScope {
+        medulla_protocol_types::mutation_batch::CompiledScope {
             identity,
             actor,
             serving_principal,
@@ -2530,8 +2530,8 @@ fn job_operation_envelope(
             nonce: medulla_types::contract::Nonce::minted(),
             now_ms: 0,
         },
-        medulla_types::mutation_batch::CompiledOperation {
-            method_schema_id: medulla_types::mutation_batch::method_schema_id(&method)
+        medulla_protocol_types::mutation_batch::CompiledOperation {
+            method_schema_id: medulla_protocol_types::mutation_batch::method_schema_id(&method)
                 .map_err(codec_err)?,
             method,
             method_schema_digest: medulla_types::contract::Digest256::from_bytes([0_u8; 32]),

@@ -64,9 +64,9 @@
 use std::collections::BTreeMap;
 
 use medulla_core::graph::GraphCore;
+use medulla_protocol_types::protocol::Method;
 use medulla_quantum_core::result::{Formalism, Proposal, QuantumResult};
 use medulla_types::epistemic_node::{Claim, Evidence};
-use medulla_types::protocol::Method;
 
 use crate::run::MaxCutRun;
 use crate::subgraph::CandidateSubgraph;

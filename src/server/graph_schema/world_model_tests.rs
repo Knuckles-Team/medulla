@@ -207,7 +207,11 @@ fn a_nutritional_requirement_is_borne_by_an_organism_that_requires_its_nutrient(
 #[test]
 fn a_weather_event_occurs_in_a_weather_system_and_its_region() {
     let dl = medulla_rdf::tableau::parse_dl_ontology(&fixture_triples());
-    assert!(medulla_rdf::tableau::is_instance(&dl, STORM, IN_WEATHER_SYSTEM));
+    assert!(medulla_rdf::tableau::is_instance(
+        &dl,
+        STORM,
+        IN_WEATHER_SYSTEM
+    ));
     assert!(medulla_rdf::tableau::is_instance(&dl, STORM, BFO_PROCESS));
     assert!(materialized().holds(&kg("occursIn"), &[STORM, BAVARIA]));
 }

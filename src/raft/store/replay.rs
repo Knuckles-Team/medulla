@@ -24,7 +24,7 @@ impl MedullaStore {
         expected_tenant_scope: &str,
     ) -> bool {
         req.mutation.batch_id != envelope.mutation.batch_id
-            || medulla_types::mutation_batch::batch_request_number(&envelope.mutation)
+            || medulla_protocol_types::mutation_batch::batch_request_number(&envelope.mutation)
                 != Some(req.mutation.request_id)
             || req.mutation.tenant_scope != expected_tenant_scope
             || Some(req.mutation.principal_fingerprint.as_str())

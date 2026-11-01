@@ -33,9 +33,9 @@ use medulla_epistemic::ProjectionPosition;
 #[cfg(feature = "redb")]
 use medulla_epistemic::{IncrementalDelta, ReasoningProjectionWakeup};
 #[cfg(feature = "redb")]
-use medulla_transaction::OutboxClaimBudget;
+use medulla_protocol_types::mutation_batch::MutationBatchStatus;
 #[cfg(feature = "redb")]
-use medulla_types::mutation_batch::MutationBatchStatus;
+use medulla_transaction::OutboxClaimBudget;
 #[cfg(feature = "redb")]
 use medulla_types::mutation_scope::CommittedVersion;
 #[cfg(feature = "redb")]
@@ -536,7 +536,7 @@ async fn resolve_projection_wakeup(
 #[cfg(feature = "redb")]
 fn committed_events(
     wakeup: ReasoningProjectionWakeup,
-    operations: &[medulla_types::mutation_batch::MutationOperation],
+    operations: &[medulla_protocol_types::mutation_batch::MutationOperation],
 ) -> Result<ReasoningProjectionWakeup, ()> {
     if wakeup.event_source == medulla_epistemic::WakeupEventSource::Inline {
         return Ok(wakeup);
@@ -551,7 +551,7 @@ fn committed_events(
 #[cfg(feature = "redb")]
 fn validate_projection_wakeup(
     wakeup: &ReasoningProjectionWakeup,
-    batch: &medulla_types::mutation_batch::MutationBatch,
+    batch: &medulla_protocol_types::mutation_batch::MutationBatch,
 ) -> Result<(), ()> {
     if wakeup.validate().is_err() || wakeup.operation_count as usize != batch.operations.len() {
         return Err(());
@@ -1171,7 +1171,7 @@ mod tests {
     use std::sync::{Condvar, Mutex as StdMutex};
 
     use medulla_epistemic::ProjectedMaterializationStatus;
-    use medulla_types::protocol::Method;
+    use medulla_protocol_types::protocol::Method;
 
     #[cfg(feature = "redb")]
     use crate::server::api::persistence::PersistenceBackend;
@@ -1860,7 +1860,7 @@ mod tests {
     fn projection_budget_batch(
         graph: &str,
         row: u64,
-    ) -> medulla_types::mutation_batch::MutationBatch {
+    ) -> medulla_protocol_types::mutation_batch::MutationBatch {
         projection_batch(graph, row, format!("projection-budget-{graph}-{row}"))
     }
 
@@ -1869,18 +1869,18 @@ mod tests {
         graph: &str,
         row: u64,
         batch_id: String,
-    ) -> medulla_types::mutation_batch::MutationBatch {
+    ) -> medulla_protocol_types::mutation_batch::MutationBatch {
         use std::collections::BTreeMap;
 
         use medulla_kernel::kernel::persistence::ENGINE_LEDGER_PRINCIPAL;
+        use medulla_protocol_types::mutation_batch::CompiledOperation;
+        use medulla_protocol_types::mutation_batch::CompiledScope;
+        use medulla_protocol_types::mutation_batch::MutationBatch;
+        use medulla_protocol_types::mutation_batch::MutationEnvelope;
+        use medulla_protocol_types::mutation_batch::MutationOperation;
+        use medulla_protocol_types::mutation_batch::VersionExpectation;
+        use medulla_protocol_types::mutation_batch::BATCH_COMPILED_METHODS;
         use medulla_types::contract::{Digest256, MethodId, Nonce};
-        use medulla_types::mutation_batch::CompiledOperation;
-        use medulla_types::mutation_batch::CompiledScope;
-        use medulla_types::mutation_batch::MutationBatch;
-        use medulla_types::mutation_batch::MutationEnvelope;
-        use medulla_types::mutation_batch::MutationOperation;
-        use medulla_types::mutation_batch::VersionExpectation;
-        use medulla_types::mutation_batch::BATCH_COMPILED_METHODS;
         use medulla_types::mutation_scope::DurabilityDomain;
         use medulla_types::mutation_scope::MutationOutboxIntent;
         use medulla_types::mutation_scope::MutationSurface;
@@ -1937,8 +1937,10 @@ mod tests {
                 },
                 CompiledOperation {
                     method: method.clone(),
-                    method_schema_id: medulla_types::mutation_batch::method_schema_id(&method)
-                        .expect("compiled batch schema id"),
+                    method_schema_id: medulla_protocol_types::mutation_batch::method_schema_id(
+                        &method,
+                    )
+                    .expect("compiled batch schema id"),
                     method_schema_digest: schema_digest,
                     canonical_payload_digest: Digest256::from_bytes([2_u8; 32]),
                 },
@@ -2192,7 +2194,7 @@ mod tests {
 /// still applies one event per committed operation (EH-280).
 #[cfg(all(test, feature = "redb", feature = "epistemic-tms"))]
 mod bounded_wakeup_tests {
-    use medulla_types::mutation_batch::MutationOperation;
+    use medulla_protocol_types::mutation_batch::MutationOperation;
     use medulla_types::mutation_scope::DurabilityDomain;
     use medulla_types::mutation_scope::MutationSurface;
 

@@ -24,7 +24,12 @@ fn concurrent_temporary_paths_are_unique() {
             .map(|_| {
                 scope.spawn(|| {
                     (0..256)
-                        .map(|_| medulla_kernel::kernel::persistence::temp_dir("medulla-path", "parallel"))
+                        .map(|_| {
+                            medulla_kernel::kernel::persistence::temp_dir(
+                                "medulla-path",
+                                "parallel",
+                            )
+                        })
                         .collect::<Vec<_>>()
                 })
             })

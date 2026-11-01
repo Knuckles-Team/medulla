@@ -168,7 +168,7 @@ pub(crate) async fn commit_pack_projection(
                 ontologies,
                 None,
             )
-            .and_then(ResultPayload::of::<medulla_types::result_contract::reasoning::GraphSchema>)
+            .and_then(ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::GraphSchema>)
         })
         .await;
     if let Some(refusal) = response.refusal_text() {
@@ -269,7 +269,9 @@ async fn handle_attach_pack_gateway(
             resolved.ontologies,
             expected_digest.as_deref(),
         )
-        .and_then(ResultPayload::of::<medulla_types::result_contract::reasoning::GraphSchema>)
+        .and_then(
+            ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::GraphSchema>,
+        )
     })
     .await
 }
@@ -439,7 +441,7 @@ fn apply(
     if changed {
         core.install_schema_sources(Arc::new(sources));
     }
-    ResultPayload::of::<medulla_types::result_contract::reasoning::GraphSchema>(
+    ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::GraphSchema>(
         GraphSchemaCommitted {
             schema_version: medulla_types::graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
             graph: graph_name.to_string(),

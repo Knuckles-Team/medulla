@@ -5,7 +5,9 @@ use crate::server::auth::{dispatch_test_on_heap, scoped_test_request_on, ScopedT
 use crate::server::persistence::redb_backend::RedbBackend;
 use crate::server::state::ServerState;
 use medulla_types::control_lease::ControlLeaseIssued;
-use medulla_types::host_start::{HostStartBinding, HostStartInterfaces, IssueHostStartGrantRequest};
+use medulla_types::host_start::{
+    HostStartBinding, HostStartInterfaces, IssueHostStartGrantRequest,
+};
 use tokio::sync::RwLock;
 
 // spec: MEDULLA-DURABLE-KERNEL-R030.1.3

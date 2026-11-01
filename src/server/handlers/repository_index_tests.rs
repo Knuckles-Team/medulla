@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use medulla_types::change_envelope::{ChangeEnvelope, MaterialClass};
+use medulla_protocol_types::{change_envelope::ChangeEnvelope, change_envelope::MaterialClass};
 use medulla_types::ingestion_wire::{ExtractedEdge, ExtractedNode, IndexResult};
 
 use super::{
@@ -242,7 +242,7 @@ fn a_repository_sized_batch_is_one_envelope_with_a_bounded_notice() {
 // spec: MEDULLA-REPO-INGEST-R007
 #[test]
 fn a_batch_over_the_commit_budget_is_refused_whole() {
-    let limit = medulla_types::mutation_batch::MAX_MUTATION_OPERATIONS;
+    let limit = medulla_protocol_types::mutation_batch::MAX_MUTATION_OPERATIONS;
     let error = lower(&large_result(limit / 2 + 1))
         .err()
         .expect("over-budget batch is refused");

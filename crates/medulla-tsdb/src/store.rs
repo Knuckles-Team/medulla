@@ -46,13 +46,13 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::{Arc, RwLock};
 
+use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_storage::{
     GraphShardOwner, OwnedStoreHandle, PhysicalStoreIdentity, ScopeGrantVerifier, ScopedRead,
     StorageKernel, TimeSeriesOwner,
 };
 use medulla_transaction::{AdmittedOwnerWrite, Begin, MutationKernel};
 use medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION;
-use medulla_types::MutationBatch;
 use redb::{
     ReadOnlyTable, ReadTransaction, ReadableTable, Table, TableDefinition, TableError,
     WriteTransaction,
@@ -370,11 +370,11 @@ fn maintenance_batch(
     expected_version: u64,
 ) -> Result<MutationBatch> {
     let batch_id = format!("tsdb-{kind}:v{expected_version}");
-    let operation = medulla_types::MutationOperation {
+    let operation = medulla_protocol_types::mutation_batch::MutationOperation {
         ordinal: 0,
         surface: medulla_types::MutationSurface::Other,
         domain: medulla_types::mutation_scope::DurabilityDomain::TimeSeries,
-        method: medulla_types::protocol::Method::ApplyMutation {
+        method: medulla_protocol_types::protocol::Method::ApplyMutation {
             event_type: format!("timeseries_{kind}"),
             query: storage_key.to_string(),
         },
@@ -387,7 +387,7 @@ fn maintenance_batch(
         // no operation replay identity and no attempt nonce. The storage key
         // this write acted on stays in the operation, where a 4 KiB value can
         // live; the envelope names the store it maintained.
-        envelope: medulla_types::mutation_batch::MutationEnvelope::maintenance_for_scope(
+        envelope: medulla_protocol_types::mutation_batch::MutationEnvelope::maintenance_for_scope(
             identity,
             principal,
             &format!("timeseries_{kind}"),
@@ -396,7 +396,9 @@ fn maintenance_batch(
         .map_err(codec_err)?,
         identity: identity.clone(),
         placement_epoch: 0,
-        version_expectation: medulla_types::VersionExpectation::Native(expected_version),
+        version_expectation: medulla_protocol_types::mutation_batch::VersionExpectation::Native(
+            expected_version,
+        ),
         fencing_token: None,
         authoritative_state: None,
         operations: vec![operation],

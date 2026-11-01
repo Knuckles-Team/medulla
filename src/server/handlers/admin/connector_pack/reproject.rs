@@ -56,9 +56,9 @@ async fn serve_with_substrates(
     match project_head(state, req_id, verified, &store, context, &plan).await {
         Ok(receipt) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::ConnectorPackReproject>(
-                &receipt,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::ConnectorPackReproject,
+            >(&receipt),
         ),
         Err(error) => Response::err(req_id, error),
     }

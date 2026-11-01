@@ -130,7 +130,7 @@ async fn commit_prepublish_durable_batch(
         .map_err(|error| {
             Response::err(
                 ctx.req_id,
-                medulla_types::error_registry::classify_refusal(
+                medulla_protocol_types::error_registry::classify_refusal(
                     "INTERNAL",
                     "MutationBatch durable commit failed: ",
                     &error,

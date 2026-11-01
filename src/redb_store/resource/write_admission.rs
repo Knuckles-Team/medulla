@@ -89,7 +89,7 @@ fn apply_resource_reservation_operation(
         )?
         .map(
             crate::protocol::ResultPayload::of::<
-                medulla_types::result_contract::coordination::UpdateResourceHost,
+                medulla_protocol_types::result_contract::coordination::UpdateResourceHost,
             >,
         )
         .transpose(),
@@ -112,13 +112,13 @@ fn resource_reservation_payload(
 ) -> Result<crate::protocol::ResultPayload, String> {
     match method {
         Method::ReserveWorkItemResources { .. } => crate::protocol::ResultPayload::of::<
-            medulla_types::result_contract::coordination::ReserveWorkItemResources,
+            medulla_protocol_types::result_contract::coordination::ReserveWorkItemResources,
         >(result),
         Method::ReleaseWorkItemResources { .. } => crate::protocol::ResultPayload::of::<
-            medulla_types::result_contract::coordination::ReleaseWorkItemResources,
+            medulla_protocol_types::result_contract::coordination::ReleaseWorkItemResources,
         >(result),
         Method::ReclaimWorkItemResources { .. } => crate::protocol::ResultPayload::of::<
-            medulla_types::result_contract::coordination::ReclaimWorkItemResources,
+            medulla_protocol_types::result_contract::coordination::ReclaimWorkItemResources,
         >(result),
         _ => Err("resource reservation result for a non-reservation method".to_string()),
     }

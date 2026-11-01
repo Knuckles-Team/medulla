@@ -30,13 +30,13 @@ pub(crate) fn commit_work_item_result_precheck(
     fencing_token: u64,
     now_ms: u64,
 ) -> Option<
-    medulla_types::result_contract::coordination::WorkItemTransition<
-        medulla_types::result_contract::coordination::WorkItemCommitStatus,
+    medulla_protocol_types::result_contract::coordination::WorkItemTransition<
+        medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus,
     >,
 > {
     if property_string(props, "tenant") != tenant {
         return Some(unchanged_transition(
-            medulla_types::result_contract::coordination::WorkItemCommitStatus::Missing,
+            medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus::Missing,
             None,
         ));
     }
@@ -45,13 +45,13 @@ pub(crate) fn commit_work_item_result_precheck(
         "succeeded" | "failed" | "cancelled" | "dead_letter"
     ) {
         return Some(unchanged_transition(
-            medulla_types::result_contract::coordination::WorkItemCommitStatus::Noop,
+            medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus::Noop,
             Some(work_item_id),
         ));
     }
     if !commit_work_item_lease_is_valid(props, worker_id, lease_epoch, fencing_token, now_ms) {
         return Some(unchanged_transition(
-            medulla_types::result_contract::coordination::WorkItemCommitStatus::Fenced,
+            medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus::Fenced,
             Some(work_item_id),
         ));
     }
@@ -220,7 +220,7 @@ pub(crate) fn apply_commit_work_item_result_row(
         .transpose()?;
     let Some(bytes) = current else {
         return commit_transition_result(unchanged_transition(
-            medulla_types::result_contract::coordination::WorkItemCommitStatus::Missing,
+            medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus::Missing,
             None,
         ))
         .map(Some);
@@ -375,7 +375,7 @@ pub(crate) fn apply_commit_work_item_result_row(
         }
     }
     commit_transition_result(
-        medulla_types::result_contract::coordination::WorkItemTransition {
+        medulla_protocol_types::result_contract::coordination::WorkItemTransition {
             status: declared_commit_status(committed_status)?,
             work_item_id: Some(input.work_item_id.to_string()),
             lease_epoch: Some(input.lease_epoch),

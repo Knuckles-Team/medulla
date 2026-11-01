@@ -7,12 +7,13 @@
 //! the underlying capability.
 
 use crate::admission::AdmissionState;
+use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_storage::{
     decode_ledger_record, BlobOwner, BlobSharedServiceHandle, BlobSharedWrite, LedgerRowScope,
     MutationOwnerAuthority, OwnedStoreHandle, OwnerDomain, OwnerLayout, OwnerReadTable,
     OwnerRowScope, PhysicalWriteCapability, ScopedOwnerTableMut, ScopedTableMut,
 };
-use medulla_types::{MutationBatch, MutationScopeIdentity};
+use medulla_types::MutationScopeIdentity;
 use redb::{Table, TableDefinition};
 use std::cell::RefCell;
 use std::marker::PhantomData;

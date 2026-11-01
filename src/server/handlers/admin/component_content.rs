@@ -44,9 +44,9 @@ fn serve_decision_record(
     match store.decision_record_content(&request.tenant_id, &request.component_id) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentComponentContent>(
-                &result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentContent,
+            >(&result),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -114,9 +114,9 @@ async fn serve_component_content(
         };
         Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentComponentContent>(
-                &result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentContent,
+            >(&result),
         )
     }
 }

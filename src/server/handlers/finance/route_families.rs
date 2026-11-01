@@ -1,7 +1,7 @@
 //! Finance operation-family handlers.
 
+use medulla_protocol_types::result_contract::compute as results;
 use medulla_types::compute_result::finance::PosteriorCredibleInterval;
-use medulla_types::result_contract::compute as results;
 
 use crate::protocol::{Method, Response, ResultPayload};
 

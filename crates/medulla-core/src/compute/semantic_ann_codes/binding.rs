@@ -12,6 +12,7 @@ use super::{
     SemanticCodeError, SemanticCodeStore, SemanticMutationReceipt, SEMANTIC_BINDING_CREATED_TOPIC,
     SEMANTIC_BINDING_DROPPED_TOPIC, SEMANTIC_BINDING_STATE_TOPIC,
 };
+use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_storage::{
     SemanticIndexOwner, SEMANTIC_BINDINGS, SEMANTIC_HEADS, SEMANTIC_POINTERS, SEMANTIC_STATES,
     SEMANTIC_TOMBSTONES,
@@ -23,7 +24,6 @@ use medulla_types::semantic_index::{
     SemanticBinding, SemanticBindingState, SemanticBindingStateTransition, SemanticDigest,
     SemanticIndexMutation, SemanticTombstone, SemanticTombstoneDraft,
 };
-use medulla_types::MutationBatch;
 use redb::ReadableTable;
 use std::collections::BTreeMap;
 

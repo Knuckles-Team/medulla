@@ -2985,8 +2985,14 @@ mod tests {
             2,
             "6 nodes capped at 4 -> evict 2"
         );
-        assert_eq!(medulla_kernel::persist::evict_oversized_all(&state, 4).await, 0);
-        assert_eq!(medulla_kernel::persist::evict_oversized_all(&state, 100).await, 0);
+        assert_eq!(
+            medulla_kernel::persist::evict_oversized_all(&state, 4).await,
+            0
+        );
+        assert_eq!(
+            medulla_kernel::persist::evict_oversized_all(&state, 100).await,
+            0
+        );
         assert_eq!(
             medulla_kernel::persist::evict_oversized_all(&state, 0).await,
             4,

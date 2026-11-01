@@ -129,7 +129,10 @@ fn probe_run(view: &medulla_core::graph::GraphView, trace_id: &str) -> Option<Ha
 
 /// The stored contrast behind one node id, when the view holds a
 /// well-formed record there.
-fn stored_contrast(view: &medulla_core::graph::GraphView, node_id: &str) -> Option<HarnessContrast> {
+fn stored_contrast(
+    view: &medulla_core::graph::GraphView,
+    node_id: &str,
+) -> Option<HarnessContrast> {
     view.node_row_object(node_id)
         .and_then(|props| decode_harness_contrast_write(&props).ok())
 }

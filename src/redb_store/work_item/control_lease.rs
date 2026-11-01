@@ -7,13 +7,16 @@
 //! The lifecycle rules and the row shape are owned by
 //! [`medulla_types::control_lease`]; this module only reads and writes rows.
 
+use medulla_protocol_types::{
+    result_contract::coordination::IssueControlLease,
+    result_contract::coordination::TransitionControlLease,
+};
 use medulla_types::control_lease::{
     is_tenant_control_lease, validate_control_lease_get, ControlLeaseIssueOutcome,
     ControlLeaseIssued, ControlLeasePage, ControlLeaseTarget, ControlLeaseTransition,
     ControlLeaseTransitionOutcome, ControlLeaseView, IssueControlLeaseRequest,
     ListControlLeasesRequest, TransitionControlLeaseRequest,
 };
-use medulla_types::result_contract::coordination::{IssueControlLease, TransitionControlLease};
 
 use super::*;
 

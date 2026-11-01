@@ -1,9 +1,10 @@
 use super::*;
 
-use medulla_types::messaging_wire::{
-    ChannelCreated, ChannelDeparture, ChannelDepartureStatus, ChannelSummary,
+use medulla_protocol_types::result_contract::messaging as results;
+use medulla_protocol_types::{
+    messaging_wire::ChannelCreated, messaging_wire::ChannelDeparture,
+    messaging_wire::ChannelDepartureStatus, messaging_wire::ChannelSummary,
 };
-use medulla_types::result_contract::messaging as results;
 
 /// Channel and messaging operations: channel lifecycle, membership and message
 /// send/read.

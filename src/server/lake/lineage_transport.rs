@@ -120,8 +120,7 @@ impl KafkaTransport {
     /// configured producers to (possibly) the same broker but different
     /// topics, so one can be armed without the other.
     pub const ENV_BROKERS: &'static str = "MEDULLA_LINEAGE_KAFKA_BROKERS";
-    pub const ENV_SECURITY_PROTOCOL: &'static str =
-        "MEDULLA_LINEAGE_KAFKA_SECURITY_PROTOCOL";
+    pub const ENV_SECURITY_PROTOCOL: &'static str = "MEDULLA_LINEAGE_KAFKA_SECURITY_PROTOCOL";
     pub const ENV_SASL_MECHANISM: &'static str = "MEDULLA_LINEAGE_KAFKA_SASL_MECHANISM";
     pub const ENV_SASL_USERNAME: &'static str = "MEDULLA_LINEAGE_KAFKA_SASL_USERNAME";
     pub const ENV_SASL_PASSWORD: &'static str = "MEDULLA_LINEAGE_KAFKA_SASL_PASSWORD";

@@ -1,6 +1,6 @@
 use super::*;
+use medulla_protocol_types::storage_wire::SqlSourceCell;
 use medulla_query::Cell;
-use medulla_types::storage_wire::SqlSourceCell;
 
 mod served;
 mod support;
@@ -54,7 +54,8 @@ fn typed_rls_requires_explicit_matching_stamp_and_never_rewrites_cells() {
         let mut rows = batch.rows.as_slice().to_vec();
         let mut row = rows.remove(0).as_slice().to_vec();
         row[1] = SqlSourceCell::Json(
-            medulla_types::storage_wire::SqlSourceJson::new(serde_json::json!("bob")).unwrap(),
+            medulla_protocol_types::storage_wire::SqlSourceJson::new(serde_json::json!("bob"))
+                .unwrap(),
         );
         batch.rows = medulla_types::contract::BoundedVec::new(vec![
             medulla_types::contract::BoundedVec::new(row).unwrap(),
@@ -91,10 +92,11 @@ fn tenant_and_grant_isolation_ignore_descriptor_claims() {
     fixture.evict_tenant(other_tenant.tenant_scope());
     let ungranted = authority("carol", "tenant-a", "descriptor-isolation", true);
     let claims = change(&request, |batch| {
-        batch.source_descriptor.metadata = medulla_types::storage_wire::SqlSourceJson::new(
-            serde_json::json!({"owner":"carol","permission":"insert","tenant":"tenant-a"}),
-        )
-        .unwrap();
+        batch.source_descriptor.metadata =
+            medulla_protocol_types::storage_wire::SqlSourceJson::new(
+                serde_json::json!({"owner":"carol","permission":"insert","tenant":"tenant-a"}),
+            )
+            .unwrap();
     });
     assert!(submit(&fixture, &ungranted, claims, 2)
         .unwrap_err()

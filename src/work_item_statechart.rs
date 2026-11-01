@@ -54,7 +54,9 @@
 
 use std::sync::LazyLock;
 
-use medulla_statechart::{transition, Context, EventInput, Guard, State, StatechartDef, Transition};
+use medulla_statechart::{
+    transition, Context, EventInput, Guard, State, StatechartDef, Transition,
+};
 
 /// The four non-final states.
 const NON_FINAL_STATES: &[&str] = &["submitted", "ready", "leased", "running"];

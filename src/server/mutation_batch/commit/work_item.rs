@@ -105,7 +105,7 @@ fn control_lease_tenant(method: &Method) -> Result<String, String> {
         Method::RetireSealedRecord { request } => Ok(request.tenant.clone()),
         Method::PolicyEvolutionStore { request } => Ok(request.tenant_id.clone()),
         // EH-348 work-market writes ride the same kernel.
-        other => medulla_types::protocol::market_write_scope(other)
+        other => medulla_protocol_types::protocol::market_write_scope(other)
             .map(|(tenant, _)| tenant.to_string())
             .ok_or_else(|| "commit_work_item received a non-WorkItem operation".to_string()),
     }
@@ -351,7 +351,7 @@ fn mark_work_item_replayed(
             decode_submit_receipt(result)?;
         body.replayed = true;
         return ResultPayload::of::<
-            medulla_types::result_contract::coordination::PublishRunCheckpoint,
+            medulla_protocol_types::result_contract::coordination::PublishRunCheckpoint,
         >(body);
     }
     Ok(result)
@@ -396,7 +396,9 @@ fn replayed_submit_batch(result: ResultPayload) -> Result<ResultPayload, String>
         child.created = false;
         child.replayed = true;
     }
-    ResultPayload::of::<medulla_types::result_contract::coordination::SubmitWorkItems>(body)
+    ResultPayload::of::<medulla_protocol_types::result_contract::coordination::SubmitWorkItems>(
+        body,
+    )
 }
 
 fn replayed_submit(result: ResultPayload) -> Result<ResultPayload, String> {
@@ -404,7 +406,7 @@ fn replayed_submit(result: ResultPayload) -> Result<ResultPayload, String> {
         decode_submit_receipt(result)?;
     body.created = false;
     body.replayed = true;
-    ResultPayload::of::<medulla_types::result_contract::coordination::SubmitWorkItem>(body)
+    ResultPayload::of::<medulla_protocol_types::result_contract::coordination::SubmitWorkItem>(body)
 }
 
 /// Decode a durably committed WorkItem batch's terminal result and publish its

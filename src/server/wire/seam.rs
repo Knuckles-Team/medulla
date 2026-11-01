@@ -22,8 +22,8 @@ impl crate::server::api::query_txn::WireApi for WireSeam {
         &self,
         store: &TableStore,
         authority: &crate::server::access::CarrierAuthority,
-        batch: &medulla_types::MutationBatch,
-    ) -> Result<Option<medulla_types::mutation_batch::MutationBatchRecord>, String> {
+        batch: &medulla_protocol_types::mutation_batch::MutationBatch,
+    ) -> Result<Option<medulla_protocol_types::mutation_batch::MutationBatchRecord>, String> {
         super::committed_sql_replay_receipt(store, authority, batch)
     }
 }

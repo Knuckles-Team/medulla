@@ -80,7 +80,9 @@ impl RemoteFetch for EngineRemote<'_> {
     fn capabilities(&self) -> SourceCapabilities {
         let key_pushable = self.node_backed()
             && self
-                .render(&RemoteRequest::keys(vec!["medulla-capability-probe".into()]))
+                .render(&RemoteRequest::keys(
+                    vec!["medulla-capability-probe".into()],
+                ))
                 .is_some();
         let limit_pushable = self
             .render(&RemoteRequest {
@@ -233,7 +235,9 @@ mod tests {
 
     #[test]
     fn framed_peer_serves_equivalent_rows_with_less_transfer() {
-        use medulla_types::protocol::{Method, Request, Response, ResultPayload};
+        use medulla_protocol_types::{
+            protocol::Method, protocol::Request, protocol::Response, protocol::ResultPayload,
+        };
 
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let endpoint = listener.local_addr().unwrap().to_string();

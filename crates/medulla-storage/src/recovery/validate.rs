@@ -16,10 +16,13 @@ use crate::tables::{
     REPLAY_NONCES, REPLAY_OPERATIONS, SCOPE_BINDINGS, STORE_ROOT, VERSIONS,
 };
 use crate::StorageKernel;
-use medulla_types::{MutationBatchRecord, MutationBatchStatus, MutationOutboxRecord};
+use medulla_protocol_types::{
+    mutation_batch::MutationBatchRecord, mutation_batch::MutationBatchStatus,
+};
+use medulla_types::MutationOutboxRecord;
 use redb::{ReadTransaction, ReadableDatabase, ReadableTable, TableHandle};
 
-pub use medulla_types::storage_wire::RecoveryStoreCounts;
+pub use medulla_protocol_types::storage_wire::RecoveryStoreCounts;
 
 type PrivateAuthenticator<'a> = dyn Fn(&[u8], &str) -> Result<(), String> + 'a;
 
@@ -744,12 +747,14 @@ fn increment(value: &mut u64, label: &str) -> Result<(), String> {
 #[cfg(test)]
 mod replacement_parent_tests {
     use super::*;
-    use medulla_types::mutation_batch::{
-        RepositoryEnrichmentTopUp, REPOSITORY_ENRICHMENT_PENDING_TOPIC,
+    use medulla_protocol_types::mutation_batch::MutationBatch;
+    use medulla_protocol_types::{
+        mutation_batch::RepositoryEnrichmentTopUp,
+        mutation_batch::REPOSITORY_ENRICHMENT_PENDING_TOPIC,
     };
     use medulla_types::{
-        CommittedVersion, IncarnationId, LogicalName, MutationBatch, MutationOutboxIntent,
-        MutationScopeIdentity, ScopeTenantId,
+        CommittedVersion, IncarnationId, LogicalName, MutationOutboxIntent, MutationScopeIdentity,
+        ScopeTenantId,
     };
 
     #[test]

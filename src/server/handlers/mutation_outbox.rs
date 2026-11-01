@@ -69,7 +69,7 @@ enum Answer {
 impl Answer {
     fn into_response(self, req_id: u64) -> Response {
         use crate::protocol::ResultPayload;
-        use medulla_types::result_contract::transactions as results;
+        use medulla_protocol_types::result_contract::transactions as results;
 
         match self {
             Answer::View(OutboxViewAnswer::Status(view)) => Response::ok(

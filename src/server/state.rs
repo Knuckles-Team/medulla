@@ -4,10 +4,10 @@ use dashmap::DashMap;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 
-use medulla_kernel::channels::ChannelManager;
 use crate::isolation::IsolationLayer;
 use crate::registry::GraphRegistry;
 use crate::server::txn::{GraphTxnState, TxnIdGen};
+use medulla_kernel::channels::ChannelManager;
 use parking_lot::Mutex;
 
 /// A type-erased handle to a state-held service owned by an upper crate
@@ -583,7 +583,9 @@ impl medulla_kernel::kernel::persistence::ResidentProjectionHost for ServerState
             .collect()
     }
 
-    fn durable_presence(&self) -> Option<Arc<dyn medulla_kernel::kernel::persistence::DurableNodePresence>> {
+    fn durable_presence(
+        &self,
+    ) -> Option<Arc<dyn medulla_kernel::kernel::persistence::DurableNodePresence>> {
         self.persistence.clone().map(|backend| {
             Arc::new(crate::server::api::persistence::BackendPresence(backend))
                 as Arc<dyn medulla_kernel::kernel::persistence::DurableNodePresence>

@@ -2,8 +2,8 @@ use super::*;
 
 use super::terminal::GraphOpsContext;
 use medulla_compute::graph_algos::QualityFunction;
-use medulla_types::protocol::CommunityQualityFunction;
-use medulla_types::result_contract::compute as results;
+use medulla_protocol_types::protocol::CommunityQualityFunction;
+use medulla_protocol_types::result_contract::compute as results;
 
 /// EH-314: wire (`medulla_types::protocol::CommunityQualityFunction`) → kernel
 /// (`medulla_compute::graph_algos::QualityFunction`) — the same split
@@ -21,7 +21,7 @@ fn to_quality_function(quality: CommunityQualityFunction) -> QualityFunction {
 /// A graph-algorithm refusal names the caller's input (an unknown node id, a
 /// cyclic graph); keep any code the inner error already carries.
 fn invalid_argument(error: &str) -> String {
-    medulla_types::error_registry::classify_refusal("INVALID_ARGUMENT", "", error)
+    medulla_protocol_types::error_registry::classify_refusal("INVALID_ARGUMENT", "", error)
 }
 
 /// `InDegree`: pure extract-method from `try_handle`'s match arm, byte-identical
@@ -110,7 +110,9 @@ fn handle_get_neighbors_batch(
     let out = g.get_neighbors_batch(node_ids);
     Response::ok(
         req_id,
-        ResultPayload::of_ref::<medulla_types::result_contract::graph::GetNeighborsBatch>(&out),
+        ResultPayload::of_ref::<medulla_protocol_types::result_contract::graph::GetNeighborsBatch>(
+            &out,
+        ),
     )
 }
 
@@ -320,7 +322,7 @@ async fn handle_metrics(req_id: u64, core: &Arc<GraphCore>, raw_ledger_len: u64)
     };
     Response::ok(
         req_id,
-        ResultPayload::of::<medulla_types::result_contract::graph::Metrics>(m),
+        ResultPayload::of::<medulla_protocol_types::result_contract::graph::Metrics>(m),
     )
 }
 

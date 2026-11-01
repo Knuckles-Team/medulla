@@ -253,7 +253,7 @@ fn second_ingest(first: &SourceIngestionRequest) -> SourceIngestionRequest {
 async fn committed_envelope(
     served: &Served,
     request: &SourceIngestionRequest,
-) -> medulla_types::change_envelope::ChangeEnvelope {
+) -> medulla_protocol_types::change_envelope::ChangeEnvelope {
     let persistence = served
         .state
         .read()

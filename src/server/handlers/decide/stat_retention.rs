@@ -114,7 +114,8 @@ fn load_inputs(
     pin: &InputsBlob,
 ) -> Result<Vec<u8>, String> {
     let blob = retention.blob.as_ref().ok_or_else(unavailable)?;
-    let sha256 = medulla_types::contract::Digest256::parse(pin.sha256.trim_start_matches("sha256:"))?;
+    let sha256 =
+        medulla_types::contract::Digest256::parse(pin.sha256.trim_start_matches("sha256:"))?;
     crate::server::blob::engine_bodies::read_engine_body(
         blob.store.as_ref(),
         tenant_id,

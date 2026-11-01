@@ -161,9 +161,9 @@ fn component_publish(
     match store.publish_component(*request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentComponentPublish>(
-                &result.result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentPublish,
+            >(&result.result),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -191,9 +191,9 @@ fn component_retire(
     match store.retire_component(request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentComponentRetire>(
-                &result.result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentRetire,
+            >(&result.result),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -209,9 +209,9 @@ fn component_current(
     match store.current_component(&tenant_id, &component_id) {
         Ok(entry) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentComponentCurrent>(
-                &entry,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentCurrent,
+            >(&entry),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -227,9 +227,9 @@ fn component_history(
     match store.component_revisions(&tenant_id, &component_id) {
         Ok(entries) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentComponentHistory>(
-                &entries,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentHistory,
+            >(&entries),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -279,9 +279,9 @@ fn component_status(
     match store.component_status(request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentComponentStatus>(
-                &result.map(|result| result.result),
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentStatus,
+            >(&result.map(|result| result.result)),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -296,9 +296,9 @@ fn component_search(
     match store.search_components(&request) {
         Ok(page) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentComponentSearch>(
-                &page,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentSearch,
+            >(&page),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -375,9 +375,9 @@ fn template_publish(
     match store.publish_template(*request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentTemplatePublish>(
-                &result.result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentTemplatePublish,
+            >(&result.result),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -405,9 +405,9 @@ fn template_retire(
     match store.retire_template(request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentTemplateRetire>(
-                &result.result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentTemplateRetire,
+            >(&result.result),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -423,9 +423,9 @@ fn template_current(
     match store.current_template(&tenant_id, &template_id) {
         Ok(entry) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentTemplateCurrent>(
-                &entry,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentTemplateCurrent,
+            >(&entry),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -441,9 +441,9 @@ fn template_history(
     match store.template_revisions(&tenant_id, &template_id) {
         Ok(entries) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentTemplateHistory>(
-                &entries,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentTemplateHistory,
+            >(&entries),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -469,9 +469,9 @@ fn template_status(
     match store.template_status(request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentTemplateStatus>(
-                &result.map(|result| result.result),
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentTemplateStatus,
+            >(&result.map(|result| result.result)),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -487,7 +487,7 @@ fn template_instantiate(
         Ok(draft) => Response::ok(
             req_id,
             ResultPayload::of_ref::<
-                medulla_types::result_contract::storage::AgentTemplateInstantiate,
+                medulla_protocol_types::result_contract::storage::AgentTemplateInstantiate,
             >(&draft),
         ),
         Err(error) => Response::err(req_id, error),
@@ -561,9 +561,9 @@ fn graph_publish(
     match store.publish_graph(*request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentGraphPublish>(
-                &result.result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentGraphPublish,
+            >(&result.result),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -591,9 +591,9 @@ fn graph_retire(
     match store.retire_graph(request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentGraphRetire>(
-                &result.result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentGraphRetire,
+            >(&result.result),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -616,9 +616,9 @@ fn graph_current(
     match store.current_graph(&tenant_id, &graph_id) {
         Ok(entry) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentGraphCurrent>(
-                &entry,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentGraphCurrent,
+            >(&entry),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -641,9 +641,9 @@ fn graph_history(
     match store.graph_revisions(&tenant_id, &graph_id) {
         Ok(entries) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentGraphHistory>(
-                &entries,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentGraphHistory,
+            >(&entries),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -667,9 +667,9 @@ fn graph_status(
     match store.graph_status(request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentGraphStatus>(
-                &result.map(|result| result.result),
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentGraphStatus,
+            >(&result.map(|result| result.result)),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -732,9 +732,9 @@ fn library_publish(
     match store.publish(*request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentLibraryPublish>(
-                &result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentLibraryPublish,
+            >(&result),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -762,9 +762,9 @@ fn library_retire(
     match store.retire(request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentLibraryRetire>(
-                &result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentLibraryRetire,
+            >(&result),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -787,9 +787,9 @@ fn library_current(
     match store.current(&tenant_id, &agent_id) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentLibraryCurrent>(
-                &result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentLibraryCurrent,
+            >(&result),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -812,9 +812,9 @@ fn library_history(
     match store.revisions(&tenant_id, &agent_id) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentLibraryHistory>(
-                &result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentLibraryHistory,
+            >(&result),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -839,9 +839,9 @@ fn library_status(
     match store.status(request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentLibraryStatus>(
-                &result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentLibraryStatus,
+            >(&result),
         ),
         Err(error) => Response::err(req_id, error),
     }

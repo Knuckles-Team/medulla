@@ -21,8 +21,8 @@ use crate::mutation_batch::MutationBatch;
 use crate::protocol::{Method, Response, ResultPayload};
 use crate::server::access::CarrierAuthority;
 use crate::server::blob::{store, BlobCursors};
+use medulla_protocol_types::result_contract::storage as results;
 use medulla_types::contract::Nonce;
-use medulla_types::result_contract::storage as results;
 
 /// Handle the blob methods. Returns `Err(method)` for any non-blob method so the
 /// dispatch chain falls through (routing convention). When the engine is built
@@ -439,8 +439,8 @@ async fn handle_blob_ref_op<M>(
     change: fn(&str, &str) -> Result<store::HolderChange, String>,
 ) -> Result<Response, Method>
 where
-    M: medulla_types::result_contract::MethodResult<Body = u64>,
-    M::Encoding: medulla_types::result_contract::EncodeScalar<u64>,
+    M: medulla_protocol_types::result_contract::MethodResult<Body = u64>,
+    M::Encoding: medulla_protocol_types::result_contract::EncodeScalar<u64>,
 {
     let (change, batch, now) = match prepare_blob_ref_op(
         cursors,
@@ -554,8 +554,8 @@ fn ensure_blob_owner(cursors: &BlobCursors, digest: &str, owner_scope: &str) -> 
 /// declared result.
 async fn ref_op<M, F>(req_id: u64, f: F) -> Result<Response, Method>
 where
-    M: medulla_types::result_contract::MethodResult<Body = u64>,
-    M::Encoding: medulla_types::result_contract::EncodeScalar<u64>,
+    M: medulla_protocol_types::result_contract::MethodResult<Body = u64>,
+    M::Encoding: medulla_protocol_types::result_contract::EncodeScalar<u64>,
     F: FnOnce() -> Result<u64, String> + Send + 'static,
 {
     match run_blocking(req_id, f).await {

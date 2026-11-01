@@ -48,7 +48,9 @@ pub(crate) async fn handle_solve(req_id: u64, request: SolveRequest) -> Response
             };
             Response::ok(
                 req_id,
-                ResultPayload::of_ref::<medulla_types::result_contract::compute::Solve>(&result),
+                ResultPayload::of_ref::<medulla_protocol_types::result_contract::compute::Solve>(
+                    &result,
+                ),
             )
         }
         Ok(Err(error)) => refuse(req_id, SolveErrorCode::CertificateRejected, error),

@@ -10,11 +10,11 @@
 
 use std::collections::BTreeMap;
 
+use medulla_protocol_types::result_contract::coordination::GapUpsert;
 use medulla_types::epistemic_operations::{
     RequestContext, RequestContextAuthenticationMethod, RequestContextSchemaVersion,
 };
 use medulla_types::native_control::{NativeControlSchemaVersion, SubmitWorkItemRequest};
-use medulla_types::result_contract::coordination::GapUpsert;
 use medulla_types::work_market::gap::GapMerge;
 use medulla_types::work_market::{
     gap_row_key, gap_work_item_id, scoped_digest, GapUpsertOutcome, GapUpsertRequest, GapUpserted,

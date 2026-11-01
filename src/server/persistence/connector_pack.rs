@@ -309,7 +309,9 @@ impl AgentLibraryStore {
             .get(medulla_types::agent_component::COMPONENT_MEDIA_TYPE_ATTRIBUTE)
             .or_else(|| entry.attributes.get("media_type"))
             .cloned()
-            .unwrap_or_else(|| medulla_types::agent_component::DEFAULT_COMPONENT_MEDIA_TYPE.to_string());
+            .unwrap_or_else(|| {
+                medulla_types::agent_component::DEFAULT_COMPONENT_MEDIA_TYPE.to_string()
+            });
         Ok(ConnectorPackContentPointer {
             component_id: entry.component_id,
             entry_revision: entry.entry_revision,
@@ -657,7 +659,9 @@ impl AgentLibraryStore {
         assert!(batches.len() <= 64, "bounded isolated fixture");
         let outbox: Vec<_> = batches
             .iter()
-            .flat_map(|record| medulla_transaction::read_outbox(&read, &record.batch.batch_id).unwrap())
+            .flat_map(|record| {
+                medulla_transaction::read_outbox(&read, &record.batch.batch_id).unwrap()
+            })
             .collect();
         tables.insert("outbox".into(), serde_json::json!(outbox));
         serde_json::Value::Object(tables)

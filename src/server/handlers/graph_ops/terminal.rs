@@ -121,7 +121,9 @@ pub(crate) async fn try_handle(
                 .collect();
             return Response::ok(
                 req_id,
-                ResultPayload::of_ref::<medulla_types::result_contract::graph::HasNodesBatch>(&out),
+                ResultPayload::of_ref::<
+                    medulla_protocol_types::result_contract::graph::HasNodesBatch,
+                >(&out),
             );
         }
         _ => {}

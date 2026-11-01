@@ -502,7 +502,7 @@ fn finish_sparql_parent_saga(
     saga: crate::server::api::admin::saga::AdminSaga,
     plan: &SparqlRecoveryPlan,
 ) -> Result<ResultPayload, String> {
-    let report = medulla_types::result_contract::transactions::SparqlUpdateReport {
+    let report = medulla_protocol_types::result_contract::transactions::SparqlUpdateReport {
         operations: plan.counts.operations as u64,
         inserted: plan.counts.inserted as u64,
         deleted: plan.counts.deleted as u64,
@@ -513,7 +513,8 @@ fn finish_sparql_parent_saga(
             .filter(|graph| !graph.existed_before)
             .count() as u64,
     };
-    let result = ResultPayload::of::<medulla_types::result_contract::graph::ApplyMutation>(report)?;
+    let result =
+        ResultPayload::of::<medulla_protocol_types::result_contract::graph::ApplyMutation>(report)?;
     crate::server::api::admin::saga::finish_admin_saga(redb, saga.batch, saga.created_at_ms, result)
 }
 
@@ -901,7 +902,11 @@ mod coordinator_restart_tests {
         (kernel, mutations, owner)
     }
 
-    fn parent_batch(id: &str, digest: &str, event_type: &str) -> medulla_types::MutationBatch {
+    fn parent_batch(
+        id: &str,
+        digest: &str,
+        event_type: &str,
+    ) -> medulla_protocol_types::mutation_batch::MutationBatch {
         crate::server::mutation_batch::compile_opaque_digest(
             crate::server::mutation_batch::CompileBatch {
                 batch_id: id,

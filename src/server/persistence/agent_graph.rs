@@ -217,9 +217,11 @@ impl AgentLibraryStore {
             "agent graph",
             &templates,
         )?;
-        medulla_types::agent_graph::validate_composition(tenant_id, &graph.shape, |graph_id, shape| {
-            self.resolve_composed_graph(write, tenant_id, graph_id, shape)
-        })
+        medulla_types::agent_graph::validate_composition(
+            tenant_id,
+            &graph.shape,
+            |graph_id, shape| self.resolve_composed_graph(write, tenant_id, graph_id, shape),
+        )
     }
 
     /// The head revision of one graph, or `None` if it was never published.

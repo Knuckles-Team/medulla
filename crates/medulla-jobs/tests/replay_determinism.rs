@@ -24,16 +24,16 @@ use medulla_jobs::{
     AlgoVersion, AnalyticsJob, Checkpoint, InputSnapshotHandle, JobId, JobPolicy,
     ReproducibilityManifest, ResultColumn, SubmitSpec, TenantJobQuota, TypedJobResult,
 };
-use medulla_types::mutation_batch::MutationBatch;
-use medulla_types::mutation_batch::MutationEnvelope;
-use medulla_types::mutation_batch::MutationOperation;
-use medulla_types::mutation_batch::VersionExpectation;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::mutation_batch::MutationEnvelope;
+use medulla_protocol_types::mutation_batch::MutationOperation;
+use medulla_protocol_types::mutation_batch::VersionExpectation;
+use medulla_protocol_types::protocol::Method;
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationOutboxIntent;
 use medulla_types::mutation_scope::MutationScopeIdentity;
 use medulla_types::mutation_scope::MutationSurface;
 use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
-use medulla_types::protocol::Method;
 use proptest::prelude::*;
 use std::collections::BTreeMap;
 
@@ -111,7 +111,7 @@ fn analytics_job_scope_identity() -> MutationScopeIdentity {
 fn submit_envelope(batch_id: &str) -> MutationEnvelope {
     let method = medulla_types::contract::MethodId::new("analytics_job_submit").unwrap();
     MutationEnvelope::for_scope(
-        medulla_types::mutation_batch::CompiledScope {
+        medulla_protocol_types::mutation_batch::CompiledScope {
             identity: &analytics_job_scope_identity(),
             actor: TEST_PRINCIPAL,
             serving_principal: TEST_PRINCIPAL,
@@ -120,8 +120,9 @@ fn submit_envelope(batch_id: &str) -> MutationEnvelope {
             nonce: medulla_types::contract::Nonce::minted(),
             now_ms: 0,
         },
-        medulla_types::mutation_batch::CompiledOperation {
-            method_schema_id: medulla_types::mutation_batch::method_schema_id(&method).unwrap(),
+        medulla_protocol_types::mutation_batch::CompiledOperation {
+            method_schema_id: medulla_protocol_types::mutation_batch::method_schema_id(&method)
+                .unwrap(),
             method,
             method_schema_digest: medulla_types::contract::Digest256::from_bytes([0_u8; 32]),
             canonical_payload_digest: medulla_types::contract::Digest256::from_bytes([0_u8; 32]),

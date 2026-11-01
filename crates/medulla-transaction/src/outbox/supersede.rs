@@ -22,10 +22,9 @@ use crate::outbox::rows::{
 use crate::outbox::stream::{read_outbox_row_in_write, subscribe_in, subscribed_topic};
 use crate::tables::{OUTBOX_CURSORS, OUTBOX_DELIVERIES};
 use crate::{commit, Begin};
+use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_storage::{ledger_scope_key, OwnedStoreHandle, OwnerDomain};
-use medulla_types::{
-    MutationBatch, MutationOutboxRecord, MutationProjectionCursor, MUTATION_BATCH_VERSION,
-};
+use medulla_types::{MutationOutboxRecord, MutationProjectionCursor, MUTATION_BATCH_VERSION};
 
 const ENRICHMENT_CONSUMER: &str = "repository-enrichment-v1";
 const ENRICHMENT_TOPIC: &str = "repository.enrichment.pending";

@@ -963,12 +963,13 @@ mod tests {
             }
         });
         assert!(
-            serde_json::from_value::<medulla_types::protocol::Method>(removed.clone()).is_err(),
+            serde_json::from_value::<medulla_protocol_types::protocol::Method>(removed.clone())
+                .is_err(),
             "the duplicate PolicyExport MessagePack method must stay deleted"
         );
         let packed = rmp_serde::to_vec_named(&removed).expect("encode removed body");
         assert!(
-            rmp_serde::from_slice::<medulla_types::protocol::Method>(&packed).is_err(),
+            rmp_serde::from_slice::<medulla_protocol_types::protocol::Method>(&packed).is_err(),
             "the msgpack path must reject the deleted field as well as the JSON path"
         );
     }

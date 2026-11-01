@@ -796,12 +796,12 @@ fn authorize_delete_op(
 pub(crate) fn committed_sql_replay_receipt(
     store: &TableStore,
     authority: &CarrierAuthority,
-    batch: &medulla_types::MutationBatch,
-) -> Result<Option<medulla_types::mutation_batch::MutationBatchRecord>, String> {
+    batch: &medulla_protocol_types::mutation_batch::MutationBatch,
+) -> Result<Option<medulla_protocol_types::mutation_batch::MutationBatchRecord>, String> {
     let Some(record) = store.mutation_batch(&batch.identity, &batch.batch_id)? else {
         return Ok(None);
     };
-    if record.status != medulla_types::mutation_batch::MutationBatchStatus::Committed {
+    if record.status != medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed {
         return Ok(None);
     }
     if sql_operation_digest(&record.batch)? != sql_operation_digest(batch)? {
@@ -819,7 +819,7 @@ pub(crate) fn committed_sql_replay_receipt(
 
 /// The stable operation identity digest of one compiled SQL batch.
 fn sql_operation_digest(
-    batch: &medulla_types::MutationBatch,
+    batch: &medulla_protocol_types::mutation_batch::MutationBatch,
 ) -> Result<medulla_types::contract::Digest256, String> {
     batch
         .envelope

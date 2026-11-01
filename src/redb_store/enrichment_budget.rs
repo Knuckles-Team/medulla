@@ -57,7 +57,7 @@ pub struct SourceBudgetAuthority {
 /// own ChangeEnvelope. The same check runs before proposal and on every Raft
 /// apply, so a sealed authority cannot be attached to a different source.
 pub(crate) fn validate_source_envelope(
-    envelope: &medulla_types::change_envelope::ChangeEnvelope,
+    envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
     authority: Option<&SourceBudgetAuthority>,
 ) -> Result<(), String> {
     const TOPIC: &str = "repository.enrichment.pending";
@@ -77,7 +77,7 @@ pub(crate) fn validate_source_envelope(
 }
 
 fn source_envelope_matches(
-    envelope: &medulla_types::change_envelope::ChangeEnvelope,
+    envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
     authority: &SourceBudgetAuthority,
     intent: &medulla_types::mutation_scope::MutationOutboxIntent,
 ) -> bool {
@@ -94,7 +94,7 @@ fn source_envelope_matches(
 
 #[cfg(feature = "ast")]
 fn validate_source_intent(
-    envelope: &medulla_types::change_envelope::ChangeEnvelope,
+    envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
     authority: &SourceBudgetAuthority,
     intent: &medulla_types::mutation_scope::MutationOutboxIntent,
 ) -> Result<(), String> {
@@ -144,7 +144,7 @@ fn validate_source_intent(
 
 #[cfg(not(feature = "ast"))]
 fn validate_source_intent(
-    _envelope: &medulla_types::change_envelope::ChangeEnvelope,
+    _envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
     _authority: &SourceBudgetAuthority,
     _intent: &medulla_types::mutation_scope::MutationOutboxIntent,
 ) -> Result<(), String> {

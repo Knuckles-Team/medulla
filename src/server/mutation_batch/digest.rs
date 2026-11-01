@@ -23,7 +23,9 @@ use crate::protocol::Method;
 /// `None` for a batch that carries no outbox row or no header -- which no batch
 /// this module compiles ever is, so a caller-scope check must treat `None` as a
 /// refusal rather than a match.
-pub(crate) fn batch_actor(batch: &medulla_types::MutationBatch) -> Option<&str> {
+pub(crate) fn batch_actor(
+    batch: &medulla_protocol_types::mutation_batch::MutationBatch,
+) -> Option<&str> {
     batch
         .outbox
         .first()?
@@ -263,7 +265,7 @@ fn control_lease_idempotency_key(method: &Method) -> Result<String, String> {
             Ok(format!("policy-record:{}", request.record_id))
         }
         // EH-348 work-market writes share the terminal identity rule too.
-        other => medulla_types::protocol::market_write_scope(other)
+        other => medulla_protocol_types::protocol::market_write_scope(other)
             .map(|(_, key)| key.to_string())
             .ok_or_else(|| "WorkItem identity requires a WorkItem operation".to_string()),
     }

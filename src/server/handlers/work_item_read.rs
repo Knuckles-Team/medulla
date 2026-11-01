@@ -128,9 +128,12 @@ async fn serve_native(
     persistence: &Option<Arc<dyn PersistenceBackend>>,
     read: WorkItemRead,
 ) -> Result<ResultPayload, String> {
-    use medulla_types::result_contract::coordination::{
-        GapGet, GapList, GetControlLease, GetWorkItem, GetWorkItemOutcome, ListControlLeases,
-        ListWorkItems,
+    use medulla_protocol_types::{
+        result_contract::coordination::GapGet, result_contract::coordination::GapList,
+        result_contract::coordination::GetControlLease, result_contract::coordination::GetWorkItem,
+        result_contract::coordination::GetWorkItemOutcome,
+        result_contract::coordination::ListControlLeases,
+        result_contract::coordination::ListWorkItems,
     };
     let backend = persistence
         .as_ref()
@@ -143,7 +146,7 @@ async fn serve_native(
             actor,
         } => {
             let actor = crate::server::mutation_batch::principal_fingerprint(&actor)?;
-            ResultPayload::of::<medulla_types::result_contract::coordination::GetRunWorkItem>(
+            ResultPayload::of::<medulla_protocol_types::result_contract::coordination::GetRunWorkItem>(
                 backend
                     .read_run_work_item(graph, &tenant, &run_id, &actor)
                     .await?,
@@ -155,7 +158,9 @@ async fn serve_native(
             actor,
         } => {
             let actor = crate::server::mutation_batch::principal_fingerprint(&actor)?;
-            ResultPayload::of::<medulla_types::result_contract::coordination::GetSessionUsage>(
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::GetSessionUsage,
+            >(
                 backend
                     .read_session_usage(graph, &tenant, &context_id, &actor)
                     .await?,
@@ -163,9 +168,9 @@ async fn serve_native(
         }
         WorkItemRead::Checkpoint { request, actor } => {
             let actor = crate::server::mutation_batch::principal_fingerprint(&actor)?;
-            ResultPayload::of::<medulla_types::result_contract::coordination::GetRunCheckpoint>(
-                backend.read_run_checkpoint(graph, request, &actor).await?,
-            )
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::GetRunCheckpoint,
+            >(backend.read_run_checkpoint(graph, request, &actor).await?)
         }
         WorkItemRead::CurrentPlan {
             tenant,
@@ -173,7 +178,7 @@ async fn serve_native(
             actor,
         } => {
             let actor = crate::server::mutation_batch::principal_fingerprint(&actor)?;
-            ResultPayload::of::<medulla_types::result_contract::coordination::GetCurrentPlan>(
+            ResultPayload::of::<medulla_protocol_types::result_contract::coordination::GetCurrentPlan>(
                 backend
                     .read_current_plan(graph, &tenant, &run_id, &actor)
                     .await?,

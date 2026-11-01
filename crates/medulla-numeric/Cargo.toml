@@ -122,6 +122,7 @@ num-complex = { version = "0.4", default-features = false, optional = true }
 # FFT for `motif` only (see the feature). Adds rustfft + primal-check + transpose to the
 # lockfile (num-complex / num-integer / strength_reduce are already there).
 rustfft = { version = "6.4", optional = true }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
 
 [dev-dependencies]
 libc = "0.2"

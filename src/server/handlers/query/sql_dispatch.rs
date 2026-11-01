@@ -286,7 +286,10 @@ async fn exec_sql_catalog_insert(
 }
 
 #[cfg(feature = "query")]
-async fn exec_sql_catalog_row(ctx: SqlDispatchCtx<'_>, kind: medulla_query::StatementKind) -> Response {
+async fn exec_sql_catalog_row(
+    ctx: SqlDispatchCtx<'_>,
+    kind: medulla_query::StatementKind,
+) -> Response {
     use medulla_query::StatementKind as K;
     let SqlDispatchCtx {
         req_id,
@@ -330,7 +333,10 @@ async fn exec_sql_catalog_row(ctx: SqlDispatchCtx<'_>, kind: medulla_query::Stat
 }
 
 #[cfg(feature = "query")]
-async fn exec_sql_catalog_drop(ctx: SqlDispatchCtx<'_>, kind: medulla_query::StatementKind) -> Response {
+async fn exec_sql_catalog_drop(
+    ctx: SqlDispatchCtx<'_>,
+    kind: medulla_query::StatementKind,
+) -> Response {
     use medulla_query::StatementKind as K;
     let SqlDispatchCtx {
         req_id,
@@ -483,7 +489,9 @@ async fn exec_sql_catalog_create(
                 scope,
                 sql_method,
                 store,
-                medulla_query::TxnOp::IndexCatalog(medulla_query::IndexCatalogTxnOp::PutAnnIndex { plan }),
+                medulla_query::TxnOp::IndexCatalog(medulla_query::IndexCatalogTxnOp::PutAnnIndex {
+                    plan,
+                }),
                 "CREATE INDEX",
             )
             .await
@@ -494,7 +502,9 @@ async fn exec_sql_catalog_create(
                 scope,
                 sql_method,
                 store,
-                medulla_query::TxnOp::IndexCatalog(medulla_query::IndexCatalogTxnOp::PutHypertable { plan }),
+                medulla_query::TxnOp::IndexCatalog(
+                    medulla_query::IndexCatalogTxnOp::PutHypertable { plan },
+                ),
                 "CREATE TABLE",
             )
             .await

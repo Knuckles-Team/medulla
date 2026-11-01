@@ -22,7 +22,7 @@ use crate::isolation::AccessLevel;
 use crate::protocol::{Method, Response, ResultPayload};
 use crate::server::access::{check_graph_access, CarrierAuthority, GraphReadAuthority};
 use crate::wire::{CdcEvent, ContinuousAgg, ContinuousQuerySpec, WatchBatch};
-use medulla_types::result_contract::messaging as results;
+use medulla_protocol_types::result_contract::messaging as results;
 
 /// Pull the CDC hub, or an ERROR response if the engine booted without one (only if a
 /// future build path leaves it `None` — `streaming` builds always construct it).

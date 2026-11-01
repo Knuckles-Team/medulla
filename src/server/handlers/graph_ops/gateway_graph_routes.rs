@@ -370,7 +370,7 @@ async fn try_handle_memory(
             );
             commit_gateway(ctx, plan, method, move |core| {
                 let out = core.maintain(&ids, now_ms, half_life_ms, evict_threshold, delete);
-                ResultPayload::of::<medulla_types::result_contract::graph::Maintain>(out)
+                ResultPayload::of::<medulla_protocol_types::result_contract::graph::Maintain>(out)
             })
             .await
         }
@@ -463,7 +463,9 @@ async fn try_handle_trajectory(
                     next_state_ref.as_deref(),
                     t,
                 );
-                ResultPayload::of::<medulla_types::result_contract::graph::AppendStep>(step_id)
+                ResultPayload::of::<medulla_protocol_types::result_contract::graph::AppendStep>(
+                    step_id,
+                )
             })
             .await
         }
@@ -562,7 +564,9 @@ async fn try_handle_lifecycle(
                     .unwrap_or_default()
                     .as_secs();
                 let stats = core.decay_sweep(now, half_life_secs, floor, prune);
-                ResultPayload::of::<medulla_types::result_contract::graph::DecaySweep>(stats)
+                ResultPayload::of::<medulla_protocol_types::result_contract::graph::DecaySweep>(
+                    stats,
+                )
             })
             .await
         }
@@ -594,9 +598,9 @@ async fn try_handle_import(
             commit_gateway(ctx, plan, method, move |core| {
                 core.from_msgpack(&msgpack)
                     .map(|()| {
-                        ResultPayload::scalar::<medulla_types::result_contract::storage::FromMsgpack>(
-                            "ok".to_string(),
-                        )
+                        ResultPayload::scalar::<
+                            medulla_protocol_types::result_contract::storage::FromMsgpack,
+                        >("ok".to_string())
                     })
                     .map_err(|e| e.to_string())
             })
@@ -727,7 +731,7 @@ async fn try_handle_analytics(
             let (max_age_secs, min_score) = (*max_age_secs, *min_score);
             commit_gateway(ctx, plan, method, move |core| {
                 let stats = crate::algorithms::prune_by_lifecycle(core, max_age_secs, min_score);
-                ResultPayload::of::<medulla_types::result_contract::graph::PruneByLifecycle>(stats)
+                ResultPayload::of::<medulla_protocol_types::result_contract::graph::PruneByLifecycle>(stats)
             })
             .await
         }
@@ -742,7 +746,7 @@ async fn try_handle_analytics(
             commit_gateway(ctx, plan, method, move |core| {
                 core.clear_ledger();
                 Ok(ResultPayload::scalar::<
-                    medulla_types::result_contract::storage::ClearLedger,
+                    medulla_protocol_types::result_contract::storage::ClearLedger,
                 >("ok".to_string()))
             })
             .await
@@ -751,9 +755,9 @@ async fn try_handle_analytics(
             let transactions = transactions.clone();
             commit_gateway(ctx, plan, method, move |core| {
                 core.apply_ledger(transactions).map(|()| {
-                    ResultPayload::scalar::<medulla_types::result_contract::storage::ApplyLedger>(
-                        "ok".to_string(),
-                    )
+                    ResultPayload::scalar::<
+                        medulla_protocol_types::result_contract::storage::ApplyLedger,
+                    >("ok".to_string())
                 })
             })
             .await
@@ -765,11 +769,11 @@ async fn try_handle_analytics(
             let (node_type, threshold) = (node_type.clone(), *threshold);
             commit_gateway(ctx, plan, method, move |core| {
                 let removed = core.compact_nodes_by_type(&node_type, threshold);
-                ResultPayload::of::<medulla_types::result_contract::graph::CompactNodesByType>(
-                    medulla_types::types::CompactNodesResult {
-                        removed_nodes: removed,
-                    },
-                )
+                ResultPayload::of::<
+                    medulla_protocol_types::result_contract::graph::CompactNodesByType,
+                >(medulla_types::types::CompactNodesResult {
+                    removed_nodes: removed,
+                })
             })
             .await
         }

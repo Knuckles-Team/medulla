@@ -12,8 +12,8 @@ use super::*;
 use crate::read::{read_batches, read_fences, read_outbox};
 use crate::tables::BATCHES;
 use crate::{AdmittedGroup, CurrentIntent, MaintenanceBatch, ScopedIntent};
+use medulla_protocol_types::mutation_batch::VersionExpectation;
 use medulla_storage::{ledger_scope_key, GraphShardOwner};
-use medulla_types::mutation_batch::VersionExpectation;
 use redb::TableDefinition;
 
 /// A graph-scoped row of the shard: the key leads with the graph name.

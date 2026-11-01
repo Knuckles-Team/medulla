@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
+use medulla_protocol_types::result_contract::ingestion as ingestion_results;
 use medulla_transaction::OutboxClaimBudget;
-use medulla_types::result_contract::ingestion as ingestion_results;
 use medulla_types::semantic_index::{
     SemanticIndexOp, SemanticStageLeaseEntry, SemanticStageLeasePage,
 };

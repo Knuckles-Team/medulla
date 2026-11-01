@@ -197,8 +197,8 @@ fn apply_apply_mutation(
             )
             .map_err(|error| format!("ApplyMutation: {error}"))?;
             core.replace_snapshot(update_core.snapshot())?;
-            ResultPayload::of::<medulla_types::result_contract::graph::ApplyMutation>(
-                medulla_types::result_contract::transactions::SparqlUpdateReport {
+            ResultPayload::of::<medulla_protocol_types::result_contract::graph::ApplyMutation>(
+                medulla_protocol_types::result_contract::transactions::SparqlUpdateReport {
                     operations: report.operations as u64,
                     inserted: report.inserted as u64,
                     deleted: report.deleted as u64,
@@ -268,7 +268,7 @@ fn apply_run_datalog_reasoning(
 ) -> Result<ResultPayload, String> {
     let input = resolve_datalog_input(core, input)?;
     let (schema_digests, all_inferred) = collect_datalog_inferences(core, input)?;
-    ResultPayload::of::<medulla_types::result_contract::reasoning::RunDatalogReasoning>(
+    ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::RunDatalogReasoning>(
         medulla_types::types::DatalogReasoningResult {
             schema_digests,
             inferred_count: all_inferred.len(),
@@ -509,11 +509,13 @@ fn apply_claim_next(
     let updates = match medulla_types::msgpack::decode_property_object(updates_msgpack) {
         Ok(m) => m,
         Err(_) => {
-            return ResultPayload::of::<medulla_types::result_contract::coordination::ClaimNext>(None)
+            return ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::ClaimNext,
+            >(None)
         }
     };
     let claimed = core.claim_next_fields(label, &updates);
-    ResultPayload::of::<medulla_types::result_contract::coordination::ClaimNext>(claimed)
+    ResultPayload::of::<medulla_protocol_types::result_contract::coordination::ClaimNext>(claimed)
 }
 
 /// `AddSceneObject`: pure extract-method from `try_handle_gateway`'s closure,
@@ -528,7 +530,7 @@ fn apply_add_scene_object(
     };
     let id = core.add_scene_object(&pose, parent);
     Ok(ResultPayload::scalar::<
-        medulla_types::result_contract::graph::AddSceneObject,
+        medulla_protocol_types::result_contract::graph::AddSceneObject,
     >(id))
 }
 
@@ -544,7 +546,7 @@ fn apply_set_pose(
     };
     let ok = core.set_pose(node_id, &pose);
     Ok(ResultPayload::scalar::<
-        medulla_types::result_contract::graph::SetPose,
+        medulla_protocol_types::result_contract::graph::SetPose,
     >(ok))
 }
 
@@ -600,7 +602,7 @@ fn apply_supersede_edge(
         input.tx_now,
     ) {
         Ok(()) => Ok(ResultPayload::scalar::<
-            medulla_types::result_contract::graph::SupersedeEdge,
+            medulla_protocol_types::result_contract::graph::SupersedeEdge,
         >("ok".to_string())),
         Err(e) => Err(e),
     }
@@ -613,8 +615,10 @@ fn apply_batch_update(
     operations_msgpack: &[u8],
 ) -> Result<ResultPayload, String> {
     let summary = crate::algorithms::batch_update(core, operations_msgpack)?;
-    medulla_types::result_contract::transactions::BatchUpdateReport::decode(&summary)
-        .and_then(ResultPayload::of::<medulla_types::result_contract::transactions::BatchUpdate>)
+    medulla_protocol_types::result_contract::transactions::BatchUpdateReport::decode(&summary)
+        .and_then(
+            ResultPayload::of::<medulla_protocol_types::result_contract::transactions::BatchUpdate>,
+        )
 }
 
 /// Decode a MessagePack-encoded `{translation,rotation,scale}` JSON blob into an

@@ -973,7 +973,7 @@ mod tests {
     #[test]
     fn eg314_decode_confirmed_reads_idempotent_publish_flag() {
         let confirmed = ResultPayload::of_ref::<
-            medulla_types::result_contract::messaging::PublishIdempotent,
+            medulla_protocol_types::result_contract::messaging::PublishIdempotent,
         >(&crate::broker::IdempotentPublish {
             confirmed: true,
             duplicate: false,
@@ -982,7 +982,7 @@ mod tests {
         .unwrap();
         assert!(decode_confirmed(&confirmed));
         let nacked = ResultPayload::of_ref::<
-            medulla_types::result_contract::messaging::PublishIdempotent,
+            medulla_protocol_types::result_contract::messaging::PublishIdempotent,
         >(&crate::broker::IdempotentPublish {
             confirmed: false,
             duplicate: false,

@@ -67,7 +67,7 @@ pub(crate) async fn serve(
         .await;
         match result {
             Ok(result) => match crate::protocol::ResultPayload::of_ref::<
-                medulla_types::result_contract::storage::ConnectorPackApproveSource,
+                medulla_protocol_types::result_contract::storage::ConnectorPackApproveSource,
             >(&result)
             {
                 Ok(payload) => Response::ok(req_id, payload),

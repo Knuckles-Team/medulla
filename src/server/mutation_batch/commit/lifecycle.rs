@@ -161,7 +161,7 @@ pub(crate) async fn lifecycle_was_committed(
     let Some(record) = persistence.read_mutation_batch(&fname, &batch_id).await? else {
         return Ok(false);
     };
-    if record.status != medulla_types::mutation_batch::MutationBatchStatus::Committed {
+    if record.status != medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed {
         return Ok(false);
     }
     // A reused attempt nonce is refused before any identity question is asked:

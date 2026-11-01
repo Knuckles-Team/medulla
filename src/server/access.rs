@@ -1757,7 +1757,9 @@ mod universal_row_read_tests {
     #[cfg(feature = "security")]
     #[test]
     fn principal_may_access_follows_registration_and_revocation() {
-        use medulla_types::acl::{AccessCheck, Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+        use medulla_types::acl::{
+            AccessCheck, Grant, GrantEffect, RbacAction, ResourceSelector, Role,
+        };
         let reader = |roles: Vec<String>| AgentIdentity {
             agent_id: "alice".to_string(),
             role: AgentRole::Agent,

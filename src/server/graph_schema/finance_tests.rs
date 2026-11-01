@@ -16,7 +16,8 @@ use crate::graph::GraphSchemaSources;
 use crate::server::api::admin::compose::validate_and_compose;
 
 const FINANCE: &str = include_str!("../../../crates/medulla-core/ontology/finance-v1.ttl");
-const FINANCE_SHAPES: &str = include_str!("../../../crates/medulla-core/ontology/finance-v1.shapes.ttl");
+const FINANCE_SHAPES: &str =
+    include_str!("../../../crates/medulla-core/ontology/finance-v1.shapes.ttl");
 const WIRED_MODULES: &[&str] = &[
     "core:foundation@1",
     "core:energy_geopolitics@1",

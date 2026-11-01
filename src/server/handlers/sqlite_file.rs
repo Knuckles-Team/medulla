@@ -34,14 +34,15 @@ use std::path::{Path, PathBuf};
 use crate::mutation_batch::MutationBatch;
 use crate::protocol::{Method, Response, ResultPayload};
 use crate::server::access::CarrierAuthority;
+use medulla_protocol_types::result_contract::storage as results;
+use medulla_protocol_types::{
+    storage_wire::SqliteExportDestination, storage_wire::SqliteExportReport,
+    storage_wire::SqliteImportReport, storage_wire::SqliteImportSource,
+    storage_wire::SqliteTableRows,
+};
 use medulla_types::contract::Nonce;
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationSurface;
-use medulla_types::result_contract::storage as results;
-use medulla_types::storage_wire::{
-    SqliteExportDestination, SqliteExportReport, SqliteImportReport, SqliteImportSource,
-    SqliteTableRows,
-};
 
 mod transfer_fs;
 
@@ -303,7 +304,7 @@ fn export_sqlite_lifecycle(
 }
 
 fn decode_committed_import_report(
-    committed: &medulla_types::mutation_batch::MutationBatchCommit,
+    committed: &medulla_protocol_types::mutation_batch::MutationBatchCommit,
 ) -> Result<SqliteImportReport, String> {
     let bytes = committed
         .record

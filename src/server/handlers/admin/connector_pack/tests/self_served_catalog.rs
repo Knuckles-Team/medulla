@@ -2,15 +2,17 @@
 //! a producer serving its own catalog obtains EG's binding on a fresh store,
 //! imports under it, and is refused on every path the mounted attester is.
 
+use medulla_protocol_types::{
+    result_contract::cluster::RegisteredServerListPage,
+    result_contract::cluster::RegisteredServerListRequest,
+    result_contract::cluster::ServerDesiredState,
+};
 use medulla_types::connector_pack::{
     ConnectorPackIndex, ConnectorPackOp, McpCatalogAuthorityStatusRequest,
     McpCatalogSnapshotBinding, McpSelfServedCatalogAttestRequest, PackImportResult,
     PackViolationCode,
 };
 use medulla_types::contract::{Digest256, ResourceId};
-use medulla_types::result_contract::cluster::{
-    RegisteredServerListPage, RegisteredServerListRequest, ServerDesiredState,
-};
 
 use crate::protocol::{Method, Response};
 

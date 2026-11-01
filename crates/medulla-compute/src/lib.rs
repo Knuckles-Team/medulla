@@ -10,7 +10,8 @@
 //! Re-export the lower crates under the historical `crate::` paths so the moved
 //! bodies (`crate::graph::`, `crate::types::`, `crate::wire::`) resolve unchanged.
 pub use medulla_core::{compute, graph, isolation, registry};
-pub use medulla_types::{acl, protocol, types, wire};
+pub use medulla_protocol_types::protocol;
+pub use medulla_types::{acl, types, wire};
 
 /// Find a disjoint-set root while halving each traversed path. Both entity
 /// resolution clusters and impact polytree detection use this exact rule.

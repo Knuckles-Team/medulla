@@ -68,9 +68,9 @@ fn authority_batch(
     expected: u64,
     target: u64,
     digest: &str,
-) -> medulla_types::MutationBatch {
+) -> medulla_protocol_types::mutation_batch::MutationBatch {
     let batch_id = format!("rbac:{target}:{digest}");
-    medulla_types::MutationBatch {
+    medulla_protocol_types::mutation_batch::MutationBatch {
         schema_version: medulla_types::MUTATION_BATCH_VERSION,
         batch_id: batch_id.clone(),
         // An RBAC authority write has no caller: it publishes the whole
@@ -79,7 +79,7 @@ fn authority_batch(
         // identity and no attempt nonce. Its serving principal is the one the
         // storage kernel authenticated this store's scope for; the mutation
         // kernel rejects any batch naming a different one.
-        envelope: medulla_types::mutation_batch::MutationEnvelope::maintenance(
+        envelope: medulla_protocol_types::mutation_batch::MutationEnvelope::maintenance(
             store.owner.principal(),
             "rbac_authority",
             digest,
@@ -88,14 +88,16 @@ fn authority_batch(
         .expect("an RBAC authority digest is a canonical resource id"),
         identity: store.owner.identity().clone(),
         placement_epoch: 0,
-        version_expectation: medulla_types::VersionExpectation::Native(expected),
+        version_expectation: medulla_protocol_types::mutation_batch::VersionExpectation::Native(
+            expected,
+        ),
         fencing_token: None,
         authoritative_state: None,
-        operations: vec![medulla_types::MutationOperation {
+        operations: vec![medulla_protocol_types::mutation_batch::MutationOperation {
             ordinal: 0,
             surface: medulla_types::MutationSurface::Other,
             domain: medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
-            method: medulla_types::protocol::Method::ApplyMutation {
+            method: medulla_protocol_types::protocol::Method::ApplyMutation {
                 event_type: "security_state_snapshot".to_string(),
                 query: format!("sha256:{digest}"),
             },

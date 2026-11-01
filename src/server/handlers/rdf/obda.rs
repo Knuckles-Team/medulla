@@ -33,7 +33,9 @@ pub(super) async fn handle_sparql_virtual(
     match out {
         Ok(Ok(result)) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::reasoning::SparqlVirtual>(&result),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::reasoning::SparqlVirtual,
+            >(&result),
         ),
         Ok(Err(msg)) => Response::err(req_id, format!("SparqlVirtual error: {msg}")),
         Err(e) => Response::err(req_id, format!("SparqlVirtual task join error: {e}")),
@@ -335,7 +337,9 @@ impl medulla_rdf::obda::ObdaSource for SqlObdaSource {
             Ok(rows) => rows,
             Err(error) => return Some(Err(error)),
         };
-        if rows.len() == 1 && rows[0].get("medulla_obda_status").map(String::as_str) == Some("invalid") {
+        if rows.len() == 1
+            && rows[0].get("medulla_obda_status").map(String::as_str) == Some("invalid")
+        {
             return None;
         }
         let mut out = Vec::with_capacity(rows.len());
@@ -618,7 +622,8 @@ fn quote(ident: &str, dialect: ObdaSqlDialect) -> Result<String, String> {
 /// Render a literal through the shared renderer, with the OBDA error prefix.
 #[cfg(feature = "obda")]
 fn literal(value: &str, numeric: bool, dialect: ObdaSqlDialect) -> Result<String, String> {
-    medulla_plan::sql_text::render_literal(value, numeric, dialect).map_err(|e| format!("obda: {e}"))
+    medulla_plan::sql_text::render_literal(value, numeric, dialect)
+        .map_err(|e| format!("obda: {e}"))
 }
 
 /// Build the LIVE `federation-sql` executor for `dsn`, or a clean "rebuild with federation-sql"

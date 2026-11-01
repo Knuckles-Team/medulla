@@ -100,9 +100,9 @@ fn create_change_set(
     if now_ms >= change_set.expires_at_ms {
         return Err("write-back change set has expired".to_string());
     }
-    store
-        .create_change_set(change_set)
-        .and_then(ResultPayload::of::<medulla_types::result_contract::storage::WriteBackCreate>)
+    store.create_change_set(change_set).and_then(
+        ResultPayload::of::<medulla_protocol_types::result_contract::storage::WriteBackCreate>,
+    )
 }
 
 fn get_change_set(
@@ -112,7 +112,9 @@ fn get_change_set(
 ) -> Result<ResultPayload, String> {
     store
         .write_back_change_set(tenant_id, change_set_id)
-        .and_then(ResultPayload::of::<medulla_types::result_contract::storage::WriteBackGet>)
+        .and_then(
+            ResultPayload::of::<medulla_protocol_types::result_contract::storage::WriteBackGet>,
+        )
 }
 
 fn record_attempt(
@@ -130,7 +132,9 @@ fn record_attempt(
     store
         .record_write_back_attempt(attempt, actor, now_ms)
         .and_then(
-            ResultPayload::of::<medulla_types::result_contract::storage::WriteBackRecordAttempt>,
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::storage::WriteBackRecordAttempt,
+            >,
         )
 }
 
@@ -150,7 +154,7 @@ fn record_reconciliation(
         .record_write_back_reconciliation(observation, actor, now_ms)
         .and_then(
             ResultPayload::of::<
-                medulla_types::result_contract::storage::WriteBackRecordReconciliation,
+                medulla_protocol_types::result_contract::storage::WriteBackRecordReconciliation,
             >,
         )
 }
@@ -164,5 +168,5 @@ fn get_receipts(
 ) -> Result<ResultPayload, String> {
     store
         .write_back_receipts(tenant_id, change_set_id, after_sequence, limit)
-        .and_then(ResultPayload::of::<medulla_types::result_contract::storage::WriteBackReceipts>)
+        .and_then(ResultPayload::of::<medulla_protocol_types::result_contract::storage::WriteBackReceipts>)
 }

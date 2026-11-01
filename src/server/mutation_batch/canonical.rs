@@ -723,7 +723,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::KgDelegate { .. }
         | Method::SubmitWorkItem { .. }
         | Method::SubmitWorkItems { .. }
-        | medulla_types::capacity_lease_writes!()
+        | medulla_protocol_types::capacity_lease_writes!()
         | work_item_kernel_writes!()
         | Method::CommitWorkItemResult { .. }
         | work_item_resource_writes!()
@@ -880,7 +880,7 @@ pub(crate) fn is_work_item_method(method: &Method) -> bool {
 pub(crate) fn is_capacity_method(method: &Method) -> bool {
     matches!(
         method,
-        medulla_types::capacity_lease_writes!()
+        medulla_protocol_types::capacity_lease_writes!()
             | Method::ReconcileCapacity { .. }
             | Method::CapacityStatus { .. }
     )

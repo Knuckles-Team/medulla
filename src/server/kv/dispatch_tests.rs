@@ -9,7 +9,10 @@ use crate::server::{
     },
     ServerState,
 };
-use medulla_types::storage_wire::{KvCasOutcome, KvEntry, KvScanPage, KvWriteReceipt};
+use medulla_protocol_types::{
+    storage_wire::KvCasOutcome, storage_wire::KvEntry, storage_wire::KvScanPage,
+    storage_wire::KvWriteReceipt,
+};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 

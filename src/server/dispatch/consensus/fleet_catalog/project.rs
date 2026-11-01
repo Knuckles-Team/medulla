@@ -7,6 +7,7 @@
 
 use std::collections::BTreeMap;
 
+use medulla_protocol_types::result_contract::cluster::ServerDesiredState;
 use medulla_types::agent_component::{
     AgentComponentEntry, AgentComponentFacts, AgentComponentKind, ComponentProvenance,
 };
@@ -21,7 +22,6 @@ use medulla_types::fleet_catalog::{
     FleetRowAcl, FleetRowSubject, FleetSkillRow, FleetToolRow, FleetVisibility, ResourceKind,
     SkillType, SkillTypeSource, ToolMode, FLEET_CATALOG_SCHEMA_VERSION, MAX_FLEET_SNAPSHOT_ROWS,
 };
-use medulla_types::result_contract::cluster::ServerDesiredState;
 
 use super::records::{discovery_record_id, DiscoveryBody, StoredRecord};
 

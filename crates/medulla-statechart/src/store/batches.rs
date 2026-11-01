@@ -145,7 +145,7 @@ fn operation_envelope(
 ) -> Result<MutationEnvelope> {
     let method = medulla_types::contract::MethodId::new(method).map_err(codec_err)?;
     MutationEnvelope::for_scope(
-        medulla_types::mutation_batch::CompiledScope {
+        medulla_protocol_types::mutation_batch::CompiledScope {
             identity: owner.identity(),
             actor,
             serving_principal: owner.principal(),
@@ -154,8 +154,8 @@ fn operation_envelope(
             nonce: medulla_types::contract::Nonce::minted(),
             now_ms: 0,
         },
-        medulla_types::mutation_batch::CompiledOperation {
-            method_schema_id: medulla_types::mutation_batch::method_schema_id(&method)
+        medulla_protocol_types::mutation_batch::CompiledOperation {
+            method_schema_id: medulla_protocol_types::mutation_batch::method_schema_id(&method)
                 .map_err(codec_err)?,
             method,
             method_schema_digest: medulla_types::contract::Digest256::from_bytes([0_u8; 32]),

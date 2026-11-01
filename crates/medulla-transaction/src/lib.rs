@@ -8,7 +8,7 @@
 //! write only through an [`medulla_storage::PhysicalWriteCapability`] minted by the
 //! single [`medulla_storage::MutationOwnerAuthority`].
 
-use medulla_types::MutationBatchRecord;
+use medulla_protocol_types::mutation_batch::MutationBatchRecord;
 
 /// Result of validating a proposed batch within its owner transaction.
 #[derive(Debug, Clone)]

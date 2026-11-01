@@ -296,7 +296,7 @@ pub(crate) fn compile_opaque_method_in_scope(
 #[cfg(feature = "query")]
 pub(crate) fn compile_sql_source_batch(
     ctx: CompileBatch<'_>,
-    request: medulla_types::storage_wire::SqlSourceBatchRequest,
+    request: medulla_protocol_types::storage_wire::SqlSourceBatchRequest,
 ) -> Result<MutationBatch, String> {
     if ctx.authoritative_state.is_some() {
         return Err("SQL source append cannot use authoritative graph state".into());
@@ -548,7 +548,7 @@ fn finish_batch(
     // after `digest_operations` alone was normalized. One rule, one helper --
     // `medulla_types::mutation_batch::identity_normalized_operations`.
     let identity_operations =
-        medulla_types::mutation_batch::identity_normalized_operations(&operations);
+        medulla_protocol_types::mutation_batch::identity_normalized_operations(&operations);
     let summary =
         medulla_kernel::projection_wakeup::projection_payload_for_operations(&identity_operations)?;
     // The typed wake-up is computed HERE, before the envelope is minted, rather
@@ -647,23 +647,23 @@ fn compiled_envelope(
     serving_principal: &str,
     operations: &[MutationOperation],
     outbox: &[MutationOutboxIntent],
-) -> Result<medulla_types::mutation_batch::MutationEnvelope, String> {
-    let content = medulla_types::mutation_batch::BatchContent {
+) -> Result<medulla_protocol_types::mutation_batch::MutationEnvelope, String> {
+    let content = medulla_protocol_types::mutation_batch::BatchContent {
         operations,
         outbox,
         authoritative_state: ctx.authoritative_state.as_ref(),
     };
-    let method = medulla_types::mutation_batch::batch_method_id(
+    let method = medulla_protocol_types::mutation_batch::batch_method_id(
         operations,
         ctx.authoritative_state.is_some(),
     )?;
-    let operation = medulla_types::mutation_batch::CompiledOperation::for_content(
+    let operation = medulla_protocol_types::mutation_batch::CompiledOperation::for_content(
         identity,
         content,
         method_schema_digest(&method)?,
     )?;
-    let mut parts = medulla_types::mutation_batch::CompiledEnvelope::new(
-        medulla_types::mutation_batch::CompiledScope {
+    let mut parts = medulla_protocol_types::mutation_batch::CompiledEnvelope::new(
+        medulla_protocol_types::mutation_batch::CompiledScope {
             identity,
             actor,
             serving_principal,
@@ -678,7 +678,7 @@ fn compiled_envelope(
     )?;
     parts.catalog_digest = contract_catalog_digest()?;
     parts.policy_digest = effective_policy_digest(&method, operations)?;
-    medulla_types::mutation_batch::MutationEnvelope::for_compiled_batch(parts)
+    medulla_protocol_types::mutation_batch::MutationEnvelope::for_compiled_batch(parts)
 }
 
 /// The request-schema digest one method's identity binds.
@@ -695,7 +695,7 @@ fn method_schema_digest(
 ) -> Result<medulla_types::contract::Digest256, String> {
     match medulla_capabilities::method_schema(method.as_str()) {
         Some((_, digest)) => Ok(medulla_types::contract::Digest256::from_bytes(digest)),
-        None => medulla_types::mutation_batch::reserved_method_schema_digest(method),
+        None => medulla_protocol_types::mutation_batch::reserved_method_schema_digest(method),
     }
 }
 
@@ -735,7 +735,7 @@ pub(crate) fn effective_policy_digest(
         &[
             policy_revision().as_bytes(),
             folded.as_bytes(),
-            &medulla_types::mutation_batch::POLICY_EPOCH.to_be_bytes(),
+            &medulla_protocol_types::mutation_batch::POLICY_EPOCH.to_be_bytes(),
         ],
     )
 }
@@ -750,7 +750,9 @@ fn policy_revision() -> String {
     std::env::var("MEDULLA_POLICY_VERSION")
         .ok()
         .filter(|value| !value.trim().is_empty())
-        .unwrap_or_else(|| medulla_types::mutation_batch::UNSET_POLICY_REVISION.to_string())
+        .unwrap_or_else(|| {
+            medulla_protocol_types::mutation_batch::UNSET_POLICY_REVISION.to_string()
+        })
 }
 
 /// Refuse the two reserved shard identifiers to a request-boundary caller.

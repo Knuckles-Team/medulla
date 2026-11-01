@@ -10,11 +10,11 @@ use medulla_compute::graph_algos::impact::{
     independent_cascade, noisy_or, noisy_or_attribution, strongest_paths, CascadeSpec, ImpactGraph,
     ImpactPath, Seed, Semantics,
 };
+use medulla_protocol_types::result_contract::compute as results;
 use medulla_types::compute_result::mining::{
     ImpactOptions, ImpactPathRow, ImpactReport, ImpactSemantics, RiskPropagationMiningResult,
     RiskScoreRow, SeedAttributionRow,
 };
-use medulla_types::result_contract::compute as results;
 use medulla_types::solve_scalar::digest_text;
 
 /// Domain of an impact run's provenance digest.

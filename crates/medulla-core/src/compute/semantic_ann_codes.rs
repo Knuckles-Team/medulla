@@ -175,7 +175,8 @@ pub const SEMANTIC_BINDING_DROPPED_TOPIC: &str = "engine.semantic-index.binding-
 
 /// SQL commits emit a source fact first. EG resolves the matching binding and
 /// expands it into the stage-intent topic of the S1 queue class.
-pub const SEMANTIC_SOURCE_DIRTY_TOPIC: &str = medulla_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC;
+pub const SEMANTIC_SOURCE_DIRTY_TOPIC: &str =
+    medulla_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC;
 
 pub const SEMANTIC_BINDING_CREATED_TOPIC: &str = "engine.semantic-index.binding-created.v1";
 

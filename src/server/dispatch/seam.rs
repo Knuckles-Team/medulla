@@ -69,7 +69,7 @@ impl DispatchApi for DispatchSeam {
             (
                 u64,
                 medulla_types::contract::Digest256,
-                medulla_types::result_contract::cluster::RegisteredServerView,
+                medulla_protocol_types::result_contract::cluster::RegisteredServerView,
             ),
             String,
         >,

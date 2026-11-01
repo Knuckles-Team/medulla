@@ -41,7 +41,10 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
 use crate::server::ServerState;
-use medulla_types::result_contract::coordination::{GraphResourceStats, ResourceSnapshot};
+use medulla_protocol_types::{
+    result_contract::coordination::GraphResourceStats,
+    result_contract::coordination::ResourceSnapshot,
+};
 
 mod resource_stats;
 
@@ -184,8 +187,7 @@ impl CostConfig {
         // A shared engine leaves most memory available to its host process,
         // filesystem cache, and peer services. Operators of a dedicated node
         // can explicitly raise these values, up to the cgroup-aware ceiling.
-        let global_ceiling_bytes =
-            bounded_bytes_env("MEDULLA_MEMORY_BUDGET", automatic_ceiling)?;
+        let global_ceiling_bytes = bounded_bytes_env("MEDULLA_MEMORY_BUDGET", automatic_ceiling)?;
         let per_tenant_budget_bytes =
             bounded_bytes_env("MEDULLA_TENANT_BUDGET", global_ceiling_bytes)?;
         let interval_secs = match std::env::var("MEDULLA_BUDGET_INTERVAL") {
@@ -194,9 +196,7 @@ impl CostConfig {
                 .parse::<u64>()
                 .ok()
                 .filter(|interval| (1..=3_600).contains(interval))
-                .ok_or_else(|| {
-                    "MEDULLA_BUDGET_INTERVAL must be between 1 and 3600".to_string()
-                })?,
+                .ok_or_else(|| "MEDULLA_BUDGET_INTERVAL must be between 1 and 3600".to_string())?,
             Err(std::env::VarError::NotPresent) => 15,
             Err(std::env::VarError::NotUnicode(_)) => {
                 return Err("MEDULLA_BUDGET_INTERVAL is not valid Unicode".to_string())
@@ -883,7 +883,8 @@ mod tests {
             // still for this whole body. READ guard: it excludes only a key MUTATOR, never
             // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
             let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-            let dir = std::env::temp_dir().join(format!("medulla-cost-budget-{}", std::process::id()));
+            let dir =
+                std::env::temp_dir().join(format!("medulla-cost-budget-{}", std::process::id()));
             let _ = std::fs::remove_dir_all(&dir);
             let dir_s = dir.to_string_lossy().to_string();
             let state = redb_state(&dir_s).await;
@@ -1020,8 +1021,8 @@ mod tests {
             // still for this whole body. READ guard: it excludes only a key MUTATOR, never
             // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
             let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-            let dir =
-                std::env::temp_dir().join(format!("medulla-cost-cypher-evict-{}", std::process::id()));
+            let dir = std::env::temp_dir()
+                .join(format!("medulla-cost-cypher-evict-{}", std::process::id()));
             let _ = std::fs::remove_dir_all(&dir);
             let dir_s = dir.to_string_lossy().to_string();
             let state = redb_state(&dir_s).await;
@@ -1126,7 +1127,8 @@ mod tests {
             // still for this whole body. READ guard: it excludes only a key MUTATOR, never
             // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
             let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-            let dir = std::env::temp_dir().join(format!("medulla-cost-fair-{}", std::process::id()));
+            let dir =
+                std::env::temp_dir().join(format!("medulla-cost-fair-{}", std::process::id()));
             let _ = std::fs::remove_dir_all(&dir);
             let dir_s = dir.to_string_lossy().to_string();
             let state = redb_state(&dir_s).await;
@@ -1181,7 +1183,8 @@ mod tests {
             // still for this whole body. READ guard: it excludes only a key MUTATOR, never
             // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
             let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-            let dir = std::env::temp_dir().join(format!("medulla-cost-stats-{}", std::process::id()));
+            let dir =
+                std::env::temp_dir().join(format!("medulla-cost-stats-{}", std::process::id()));
             let _ = std::fs::remove_dir_all(&dir);
             let dir_s = dir.to_string_lossy().to_string();
             let state = redb_state(&dir_s).await;

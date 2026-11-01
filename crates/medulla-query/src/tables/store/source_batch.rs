@@ -10,12 +10,13 @@ use super::{
     verify_batch_is_sql_catalog_only, MutationBatch, MutationBatchCommit, SqlMutation,
     SqlMutationCrashpoint, SqlWrite, TableStore,
 };
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::{
+    storage_wire::SqlSourceBatchDigests, storage_wire::SqlSourceBatchRequest,
+    storage_wire::SqlSourceBatchResult,
+};
 use medulla_transaction::Begin;
 use medulla_types::contract::Digest256;
-use medulla_types::protocol::Method;
-use medulla_types::storage_wire::{
-    SqlSourceBatchDigests, SqlSourceBatchRequest, SqlSourceBatchResult,
-};
 
 mod checkpoint;
 mod rows;
@@ -76,7 +77,7 @@ impl<'a> Invocation<'a> {
         }
         if !matches!(
             batch.version_expectation,
-            medulla_types::mutation_batch::VersionExpectation::Native(_)
+            medulla_protocol_types::mutation_batch::VersionExpectation::Native(_)
         ) {
             return Err("SQL source publication requires native OCC fencing".into());
         }
@@ -107,7 +108,7 @@ impl<'a> Invocation<'a> {
 
 fn replay(
     mutation: SqlMutation<'_>,
-    record: medulla_types::mutation_batch::MutationBatchRecord,
+    record: medulla_protocol_types::mutation_batch::MutationBatchRecord,
     invocation: &Invocation<'_>,
 ) -> Result<MutationBatchCommit, String> {
     let commit = match sql_batch_commit(record, true)
@@ -178,9 +179,9 @@ fn apply_rows(
     if crashpoint == Some(SqlMutationCrashpoint::BeforeRows) {
         return Err("injected crash before SQL mutation rows".into());
     }
-    medulla_types::mutation_batch::apply_certification_fault(
+    medulla_protocol_types::mutation_batch::apply_certification_fault(
         batch,
-        medulla_types::mutation_batch::MutationCommitPhase::BeforeRows,
+        medulla_protocol_types::mutation_batch::MutationCommitPhase::BeforeRows,
     )?;
     // Schema, provider CAS and old mapping binding are checked through exactly
     // the same admitted writer that applies rows. DDL cannot interleave here.
@@ -189,9 +190,9 @@ fn apply_rows(
     if crashpoint == Some(SqlMutationCrashpoint::AfterRowsBeforeMetadata) {
         return Err("injected crash after SQL mutation rows".into());
     }
-    medulla_types::mutation_batch::apply_certification_fault(
+    medulla_protocol_types::mutation_batch::apply_certification_fault(
         batch,
-        medulla_types::mutation_batch::MutationCommitPhase::AfterRowsBeforeMetadata,
+        medulla_protocol_types::mutation_batch::MutationCommitPhase::AfterRowsBeforeMetadata,
     )?;
     Ok(affected)
 }

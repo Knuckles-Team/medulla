@@ -11,7 +11,11 @@ impl GraphCore {
     /// Read a distribution-valued property `key` off `node_id` (CONCEPT:MEDULLA-KG.compute.uncertainty-values).
     /// Returns `None` if the node is absent, its blob is undecodable, the key is
     /// missing, or the stored JSON is not a valid `Distribution`.
-    pub fn get_distribution(&self, node_id: &str, key: &str) -> Option<medulla_types::Distribution> {
+    pub fn get_distribution(
+        &self,
+        node_id: &str,
+        key: &str,
+    ) -> Option<medulla_types::Distribution> {
         let bytes = self.get_node_properties(node_id)?;
         let val = decode_property_value(&bytes).ok()?;
         let field = val.as_object()?.get(key)?.clone();

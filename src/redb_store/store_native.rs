@@ -348,7 +348,7 @@ fn apply_native_submit_operation<'batch, 'crypto, M, ApplyRows>(
     apply_rows: ApplyRows,
 ) -> Result<(), String>
 where
-    M: medulla_types::result_contract::MethodResult,
+    M: medulla_protocol_types::result_contract::MethodResult,
     ApplyRows: FnOnce(WorkItemCommitScope<'crypto, 'batch>) -> Result<M::Body, String>,
 {
     let NativeSubmitScope {
@@ -403,7 +403,7 @@ fn apply_native_publication(
             committed_at_ms,
         )?;
         let payload = crate::protocol::ResultPayload::of::<
-            medulla_types::result_contract::coordination::IssueHostStartGrant,
+            medulla_protocol_types::result_contract::coordination::IssueHostStartGrant,
         >(result)?;
         *generated_result = Some(rmp_serde::to_vec_named(&payload).map_err(|e| e.to_string())?);
         return Ok(true);
@@ -425,7 +425,7 @@ fn apply_native_publication(
             return Err("checkpoint publication requires one operation".into());
         }
         let payload = crate::protocol::ResultPayload::of::<
-            medulla_types::result_contract::coordination::PublishRunCheckpoint,
+            medulla_protocol_types::result_contract::coordination::PublishRunCheckpoint,
         >(result)?;
         *generated_result = Some(rmp_serde::to_vec_named(&payload).map_err(|e| e.to_string())?);
         return Ok(true);
@@ -447,7 +447,7 @@ fn apply_native_publication(
             return Err("current-plan publication requires one operation".into());
         }
         let payload = crate::protocol::ResultPayload::of::<
-            medulla_types::result_contract::coordination::PublishCurrentPlan,
+            medulla_protocol_types::result_contract::coordination::PublishCurrentPlan,
         >(result)?;
         *generated_result = Some(rmp_serde::to_vec_named(&payload).map_err(|e| e.to_string())?);
         return Ok(true);
@@ -585,7 +585,7 @@ fn apply_one_native_operation_row(
         }
         Method::ClearLedger => clear_ledger_rows(graph_fname, &mut tables.graph.ledger),
         Method::SubmitWorkItem { request } => apply_native_submit_operation::<
-            medulla_types::result_contract::coordination::SubmitWorkItem,
+            medulla_protocol_types::result_contract::coordination::SubmitWorkItem,
             _,
         >(
             NativeSubmitScope {
@@ -606,7 +606,7 @@ fn apply_one_native_operation_row(
             },
         ),
         Method::SubmitWorkItems { request } => apply_native_submit_operation::<
-            medulla_types::result_contract::coordination::SubmitWorkItems,
+            medulla_protocol_types::result_contract::coordination::SubmitWorkItems,
             _,
         >(
             NativeSubmitScope {
@@ -759,7 +759,9 @@ fn validate_ordinary_completion_shape(batch: &MutationBatch) -> Result<(), Strin
     let ordinary = batch
         .operations
         .iter()
-        .map(|op| medulla_types::protocol::run_completion_payload(&op.method, &batch.batch_id))
+        .map(|op| {
+            medulla_protocol_types::protocol::run_completion_payload(&op.method, &batch.batch_id)
+        })
         .collect::<Result<Vec<_>, _>>()?;
     let intents: Vec<_> = batch
         .outbox

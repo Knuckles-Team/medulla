@@ -10,7 +10,10 @@
 //! re-creates, and `KvCas` compares it rather than the value (no A-B-A).
 
 use super::*;
-use medulla_types::storage_wire::{KvCasOutcome, KvEntry, KvScanPage, KvScanRow};
+use medulla_protocol_types::{
+    storage_wire::KvCasOutcome, storage_wire::KvEntry, storage_wire::KvScanPage,
+    storage_wire::KvScanRow,
+};
 
 const VERSION_BYTES: usize = 8;
 /// Page bounds of a served `KvScan`.

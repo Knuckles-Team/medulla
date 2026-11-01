@@ -175,7 +175,7 @@ async fn dispatch_identity_and_access_methods_arm_0(
                     Response::ok(
                         req_id,
                         ResultPayload::scalar::<
-                            medulla_types::result_contract::security::RegisterIdentity,
+                            medulla_protocol_types::result_contract::security::RegisterIdentity,
                         >("registered".to_string()),
                     )
                 }
@@ -227,7 +227,9 @@ async fn dispatch_check_access(
     };
     Response::ok(
         req_id,
-        ResultPayload::of::<medulla_types::result_contract::security::CheckAccess>(decision),
+        ResultPayload::of::<medulla_protocol_types::result_contract::security::CheckAccess>(
+            decision,
+        ),
     )
 }
 
@@ -373,7 +375,7 @@ fn multisig_mutation_response(response: Response) -> Response {
     let Response { id, result, .. } = response;
     let report = match result {
         Some(ResultPayload::Json(value)) => serde_json::from_value::<
-            medulla_types::result_contract::transactions::SparqlUpdateReport,
+            medulla_protocol_types::result_contract::transactions::SparqlUpdateReport,
         >(value)
         .map_err(|error| {
             format!(
@@ -387,7 +389,9 @@ fn multisig_mutation_response(response: Response) -> Response {
     Response::ok(
         id,
         report.and_then(
-            ResultPayload::of::<medulla_types::result_contract::transactions::ApplyMultisigMutation>,
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::transactions::ApplyMultisigMutation,
+            >,
         ),
     )
 }

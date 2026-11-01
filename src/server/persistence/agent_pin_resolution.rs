@@ -52,9 +52,11 @@ use medulla_types::agent_library::AgentLibraryLifecycle;
 pub(super) type RevisionTable<'a> =
     medulla_storage::OwnerReadTable<'a, (&'static str, &'static str, u64), &'static [u8]>;
 /// A head table of one agent layer.
-pub(super) type HeadTable<'a> = medulla_storage::OwnerReadTable<'a, (&'static str, &'static str), u64>;
+pub(super) type HeadTable<'a> =
+    medulla_storage::OwnerReadTable<'a, (&'static str, &'static str), u64>;
 /// The admitted write a resolution runs inside.
-pub(super) type Write<'a> = medulla_transaction::AdmittedMutation<'a, medulla_storage::AgentLibraryOwner>;
+pub(super) type Write<'a> =
+    medulla_transaction::AdmittedMutation<'a, medulla_storage::AgentLibraryOwner>;
 
 /// Most revision rows one publish may read while resolving its pins.
 ///

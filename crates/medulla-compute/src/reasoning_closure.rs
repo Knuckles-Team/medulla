@@ -811,8 +811,9 @@ mod tests {
     #[cfg(all(feature = "gpu-cuda", medulla_gpu_device_tests))]
     #[test]
     fn cuda_join_matches_cpu_ground_truth() {
-        let gpu = cuda::backend()
-            .expect("--cfg medulla_gpu_device_tests is set but no CUDA device initialised on this host");
+        let gpu = cuda::backend().expect(
+            "--cfg medulla_gpu_device_tests is set but no CUDA device initialised on this host",
+        );
         assert_eq!(gpu.name(), "cuda", "backend() returned a non-CUDA backend");
 
         let mut rng = ChaCha8Rng::seed_from_u64(9);

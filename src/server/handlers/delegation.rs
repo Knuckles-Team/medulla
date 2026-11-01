@@ -13,6 +13,12 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 #[cfg(feature = "redb")]
+use medulla_protocol_types::mutation_batch::MutationBatchStatus;
+#[cfg(feature = "redb")]
+use medulla_protocol_types::protocol::Method;
+#[cfg(feature = "redb")]
+use medulla_protocol_types::{protocol::Response, protocol::ResultPayload};
+#[cfg(feature = "redb")]
 use medulla_types::agent_library::AgentLibraryEntry;
 #[cfg(feature = "redb")]
 use medulla_types::delegation::AgentLibraryEntryRef;
@@ -20,15 +26,9 @@ use medulla_types::delegation::AgentLibraryEntryRef;
 use medulla_types::delegation::{KgDelegateDecision, KgDelegateRequest, KgDelegateResult};
 use medulla_types::epistemic_operations::RequestContext;
 #[cfg(feature = "redb")]
-use medulla_types::mutation_batch::MutationBatchStatus;
-#[cfg(feature = "redb")]
 use medulla_types::native_control::{
     NativeControlSchemaVersion, SubmitWorkItemRequest, SubmitWorkItemResult,
 };
-#[cfg(feature = "redb")]
-use medulla_types::protocol::Method;
-#[cfg(feature = "redb")]
-use medulla_types::protocol::{Response, ResultPayload};
 #[cfg(feature = "redb")]
 use serde_json::json;
 

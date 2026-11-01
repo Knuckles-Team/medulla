@@ -173,9 +173,9 @@ pub(super) async fn dispatch_op_audit_read_event(
         Some(redb) => match redb.audit_read_event(&fname, verified_tenant, seq).await {
             Ok(proof) => Response::ok(
                 req_id,
-                ResultPayload::of::<medulla_types::result_contract::security::AuditReadEvent>(
-                    proof,
-                ),
+                ResultPayload::of::<
+                    medulla_protocol_types::result_contract::security::AuditReadEvent,
+                >(proof),
             ),
             Err(error) => Response::err(req_id, format!("AuditReadEvent error: {error}")),
         },
@@ -211,9 +211,9 @@ pub(super) async fn dispatch_op_audit_append(
                 core.mark_dirty();
                 Response::ok(
                     req_id,
-                    ResultPayload::of::<medulla_types::result_contract::security::AuditAppend>(
-                        receipt,
-                    ),
+                    ResultPayload::of::<
+                        medulla_protocol_types::result_contract::security::AuditAppend,
+                    >(receipt),
                 )
             }
             // No method-name prefix: the error is already either a bare
@@ -241,7 +241,9 @@ pub(super) async fn dispatch_op_audit_verify(
         Some(redb) => match redb.audit_verify_blocking(&fname) {
             Ok(report) => Response::ok(
                 req_id,
-                ResultPayload::of::<medulla_types::result_contract::security::AuditVerify>(report),
+                ResultPayload::of::<medulla_protocol_types::result_contract::security::AuditVerify>(
+                    report,
+                ),
             ),
             Err(e) => Response::err(req_id, format!("AuditVerify error: {e}")),
         },
@@ -265,9 +267,9 @@ pub(super) async fn prove_audit_inclusion(
         Some(redb) => match redb.audit_prove_inclusion_blocking(&fname, &node_id, anchor_seq) {
             Ok(report) => Response::ok(
                 req_id,
-                ResultPayload::of::<medulla_types::result_contract::security::AuditProveInclusion>(
-                    report,
-                ),
+                ResultPayload::of::<
+                    medulla_protocol_types::result_contract::security::AuditProveInclusion,
+                >(report),
             ),
             Err(e) => Response::err(req_id, format!("AuditProveInclusion error: {e}")),
         },
@@ -633,7 +635,8 @@ mod tests {
         graph: &str,
         node: &str,
     ) -> crate::change_envelope::ChangeEnvelope {
-        let mut envelope = medulla_types::protocol_fixtures::change_envelope::minimal_envelope();
+        let mut envelope =
+            medulla_protocol_types::protocol_fixtures::change_envelope::minimal_envelope();
         envelope.envelope_id = format!("envelope-audit-skew-{node}");
         let mutation = &mut envelope.mutation;
         mutation.batch_id = format!("batch-audit-skew-{node}");
@@ -644,8 +647,8 @@ mod tests {
                 .expect("incarnation"),
         );
         mutation.version_expectation =
-            medulla_types::mutation_batch::VersionExpectation::Graph(stamped);
-        mutation.operations = vec![medulla_types::mutation_batch::MutationOperation {
+            medulla_protocol_types::mutation_batch::VersionExpectation::Graph(stamped);
+        mutation.operations = vec![medulla_protocol_types::mutation_batch::MutationOperation {
             ordinal: 0,
             surface: medulla_types::mutation_scope::MutationSurface::Graph,
             domain: medulla_types::mutation_scope::DurabilityDomain::GraphRows,
@@ -655,7 +658,7 @@ mod tests {
                     .expect("encode"),
             },
         }];
-        if let medulla_types::mutation_batch::MutationEnvelope::Operation(operation) =
+        if let medulla_protocol_types::mutation_batch::MutationEnvelope::Operation(operation) =
             &mut mutation.envelope
         {
             // The fixture's authority context was minted for the fixture's own
@@ -663,8 +666,9 @@ mod tests {
             // context must describe THIS batch: the authority scope is derived
             // from the scope identity, the purpose names the same target
             // resource, and the context digest covers both.
-            let scope = medulla_types::mutation_batch::authority_scope_for(&mutation.identity)
-                .expect("authority scope for the batch identity");
+            let scope =
+                medulla_protocol_types::mutation_batch::authority_scope_for(&mutation.identity)
+                    .expect("authority scope for the batch identity");
             operation.authority.purpose_resource = Some(scope.scope_id.clone());
             operation.authority.authority_scope = scope;
             operation.authority.context_digest = operation
@@ -705,7 +709,7 @@ mod tests {
             .expect("adopt the watermark");
 
         let receipt_of =
-            |response: &Response| -> medulla_types::result_contract::security::AuditAppendReceipt {
+            |response: &Response| -> medulla_protocol_types::result_contract::security::AuditAppendReceipt {
                 match &response.result {
                     Some(ResultPayload::Raw(bytes)) => {
                         rmp_serde::from_slice(bytes).expect("receipt")

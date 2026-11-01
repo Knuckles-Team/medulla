@@ -17,7 +17,9 @@
 
 use std::sync::{Arc, OnceLock};
 
-use medulla_plan::{NlConfigError, NlPlanner, OAuth2ClientCredentials, TokenAuthStyle, UreqNlPlanner};
+use medulla_plan::{
+    NlConfigError, NlPlanner, OAuth2ClientCredentials, TokenAuthStyle, UreqNlPlanner,
+};
 
 /// An operator-injected planner (CONCEPT:MEDULLA-KG.query.fence-stripper). Set ONCE, before first use, by an
 /// embedder that wants the engine to drive its own NL→query. Wins over the config default.

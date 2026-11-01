@@ -54,7 +54,7 @@ pub(crate) fn ledger_record(
     store: &AgentLibraryStore,
     tenant_id: &str,
     idempotency_key: &str,
-) -> medulla_types::MutationBatchRecord {
+) -> medulla_protocol_types::mutation_batch::MutationBatchRecord {
     let owner = store.scope_handle(tenant_id).unwrap();
     let read = store.kernel.read_scope(&owner).unwrap();
     let batch_id = batch_id(idempotency_key).unwrap();

@@ -293,7 +293,7 @@ where
         },
         Ok(Err(message)) => Response::err(
             req_id,
-            medulla_types::error_registry::classify_refusal(
+            medulla_protocol_types::error_registry::classify_refusal(
                 "INVALID_ARGUMENT",
                 &format!("{label} error: "),
                 &message,

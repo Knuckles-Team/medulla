@@ -13,7 +13,7 @@ fn cypher_query_response(
         Ok(Ok(result)) => dynamic_response::<query_results::CypherQuery, _>(req_id, &result),
         Ok(Err(msg)) => Response::err(
             req_id,
-            medulla_types::error_registry::classify_refusal(
+            medulla_protocol_types::error_registry::classify_refusal(
                 "INVALID_ARGUMENT",
                 "Cypher error: ",
                 &msg,
@@ -194,7 +194,7 @@ async fn handle_cypher_read(ctx: &QueryHandlerCtx<'_>, query: String) -> Respons
         },
         Ok(Err(msg)) => Response::err(
             req_id,
-            medulla_types::error_registry::classify_refusal(
+            medulla_protocol_types::error_registry::classify_refusal(
                 "INVALID_ARGUMENT",
                 "Cypher error: ",
                 &msg,

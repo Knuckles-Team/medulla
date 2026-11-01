@@ -74,9 +74,9 @@ pub(crate) async fn handle(req_id: u64, op: AsrOp) -> Response {
             match outcome {
                 Ok(Ok(transcription)) => Response::ok(
                     req_id,
-                    ResultPayload::of::<medulla_types::result_contract::ingestion::AsrTranscribeFile>(
-                        transcription,
-                    ),
+                    ResultPayload::of::<
+                        medulla_protocol_types::result_contract::ingestion::AsrTranscribeFile,
+                    >(transcription),
                 ),
                 Ok(Err(err)) => Response::err(req_id, asr_error_message(&err)),
                 Err(_) => Response::err(req_id, "asr worker task panicked".to_string()),

@@ -391,12 +391,12 @@ fn seed_batch(
     generation: u64,
     digest: &str,
     expected: u64,
-) -> medulla_types::MutationBatch {
+) -> medulla_protocol_types::mutation_batch::MutationBatch {
     let batch_id = format!("semantic-ann:{BINDING}:{generation}:{digest}");
-    medulla_types::MutationBatch {
+    medulla_protocol_types::mutation_batch::MutationBatch {
         schema_version: medulla_types::MUTATION_BATCH_VERSION,
         batch_id: batch_id.clone(),
-        envelope: medulla_types::mutation_batch::MutationEnvelope::maintenance(
+        envelope: medulla_protocol_types::mutation_batch::MutationEnvelope::maintenance(
             owner.principal(),
             "semantic_index_generation_activated",
             &format!("{BINDING}:{generation}"),
@@ -405,14 +405,16 @@ fn seed_batch(
         .expect("a semantic binding and generation are canonical resource ids"),
         identity: owner.identity().clone(),
         placement_epoch: 0,
-        version_expectation: medulla_types::VersionExpectation::Native(expected),
+        version_expectation: medulla_protocol_types::mutation_batch::VersionExpectation::Native(
+            expected,
+        ),
         fencing_token: None,
         authoritative_state: None,
-        operations: vec![medulla_types::MutationOperation {
+        operations: vec![medulla_protocol_types::mutation_batch::MutationOperation {
             ordinal: 0,
             surface: medulla_types::MutationSurface::Other,
             domain: medulla_types::mutation_scope::DurabilityDomain::SemanticIndex,
-            method: medulla_types::protocol::Method::ApplyMutation {
+            method: medulla_protocol_types::protocol::Method::ApplyMutation {
                 event_type: "semantic_index_generation_activated".to_string(),
                 query: format!("sha256:{digest}"),
             },
@@ -642,7 +644,7 @@ fn binding_for_image(
 fn seed_via_kernel<'a>(
     codes: &'a SemanticCodeStore,
     owner: &'a medulla_storage::OwnedStoreHandle<medulla_storage::SemanticIndexOwner>,
-    batch: &medulla_types::MutationBatch,
+    batch: &medulla_protocol_types::mutation_batch::MutationBatch,
     write_rows: impl FnOnce(
         &medulla_transaction::AdmittedOwnerWrite<'_, medulla_storage::SemanticIndexOwner>,
     ),
@@ -3508,7 +3510,7 @@ fn an_operation_ledger_row_names_the_binding_it_wrote() {
         .expect("an operation-surface write must leave one durable ledger receipt");
     drop(ledger);
 
-    let medulla_types::protocol::Method::ApplyMutation { event_type, query } =
+    let medulla_protocol_types::protocol::Method::ApplyMutation { event_type, query } =
         &record.batch.operations[0].method
     else {
         panic!("a semantic metadata batch records exactly one ApplyMutation");
@@ -3528,7 +3530,7 @@ fn an_operation_ledger_row_names_the_binding_it_wrote() {
     );
 
     let mut legacy = record.batch.clone();
-    let medulla_types::protocol::Method::ApplyMutation { query, .. } =
+    let medulla_protocol_types::protocol::Method::ApplyMutation { query, .. } =
         &mut legacy.operations[0].method
     else {
         panic!("a semantic metadata batch records exactly one ApplyMutation");

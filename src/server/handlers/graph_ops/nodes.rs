@@ -55,7 +55,9 @@ fn handle_get_node_properties_batch(
         .collect();
     Response::ok(
         req_id,
-        ResultPayload::of_ref::<medulla_types::result_contract::graph::GetNodePropertiesBatch>(&out),
+        ResultPayload::of_ref::<
+            medulla_protocol_types::result_contract::graph::GetNodePropertiesBatch,
+        >(&out),
     )
 }
 
@@ -76,7 +78,9 @@ fn handle_has_nodes_batch(req_id: u64, core: &Arc<GraphCore>, node_ids: &[String
     let out: Vec<bool> = node_ids.iter().map(|id| g.has_node(id)).collect();
     Response::ok(
         req_id,
-        ResultPayload::of_ref::<medulla_types::result_contract::graph::HasNodesBatch>(&out),
+        ResultPayload::of_ref::<medulla_protocol_types::result_contract::graph::HasNodesBatch>(
+            &out,
+        ),
     )
 }
 
@@ -108,9 +112,9 @@ fn handle_get_node_properties(
     });
     Response::ok(
         req_id,
-        ResultPayload::of_encoded_or_null::<medulla_types::result_contract::graph::GetNodeProperties>(
-            props,
-        ),
+        ResultPayload::of_encoded_or_null::<
+            medulla_protocol_types::result_contract::graph::GetNodeProperties,
+        >(props),
     )
 }
 
@@ -256,9 +260,9 @@ pub(super) async fn try_handle_node_batch(
             let g = core;
             Response::ok(
                 req_id,
-                ResultPayload::of::<medulla_types::result_contract::compute::MatchOntologyTerms>(
-                    g.match_ontology_terms(&query),
-                ),
+                ResultPayload::of::<
+                    medulla_protocol_types::result_contract::compute::MatchOntologyTerms,
+                >(g.match_ontology_terms(&query)),
             )
         }
         // AddEmbedding (CONCEPT:MEDULLA-P0-2 bypass guard, L11): GATEWAY_ROUTED — see

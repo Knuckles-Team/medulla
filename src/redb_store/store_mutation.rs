@@ -720,11 +720,14 @@ fn finish_replayed_batch(
 #[cfg(test)]
 mod outbox_reactivation_tests {
     use super::*;
+    use medulla_protocol_types::{
+        mutation_batch::MutationOperation, mutation_batch::VersionExpectation,
+    };
     use medulla_transaction::OutboxClaimBudget;
     use medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION;
     use medulla_types::{
-        contract::Digest256, MutationOperation, MutationOutboxIntent, MutationScopeIdentity,
-        MutationSurface, VersionExpectation, MUTATION_BATCH_VERSION,
+        contract::Digest256, MutationOutboxIntent, MutationScopeIdentity, MutationSurface,
+        MUTATION_BATCH_VERSION,
     };
     const GRAPH: &str = "graph-a";
     const CONSUMER: &str = "reactivation-worker";

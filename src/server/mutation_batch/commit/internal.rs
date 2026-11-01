@@ -191,7 +191,7 @@ pub(super) async fn commit_internal_graph_methods_with_nonce_mode(
 
 async fn replay_internal_graph(
     input: InternalGraphCommit<'_>,
-    record: medulla_types::MutationBatchRecord,
+    record: medulla_protocol_types::mutation_batch::MutationBatchRecord,
 ) -> Result<crate::mutation_batch::MutationBatchCommit, String> {
     let InternalGraphCommit {
         persistence,
@@ -261,7 +261,7 @@ async fn replay_internal_graph(
 }
 
 fn validate_internal_replay_tenant(
-    record: &medulla_types::MutationBatchRecord,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
     tenant: &str,
 ) -> Result<(), String> {
     if record.committing_tenant()? != tenant {

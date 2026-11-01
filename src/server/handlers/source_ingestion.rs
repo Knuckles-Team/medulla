@@ -43,7 +43,7 @@ pub(crate) struct PrepareContext<'a> {
 }
 
 pub(crate) struct PreparedSourceIngestion {
-    pub envelope: medulla_types::change_envelope::ChangeEnvelope,
+    pub envelope: medulla_protocol_types::change_envelope::ChangeEnvelope,
     batch_digest: Digest256,
     mode: SourceIngestionMode,
     mappings: Vec<SourceMappingReceipt>,
@@ -123,7 +123,9 @@ pub(crate) async fn status(
     };
     Response::ok(
         request_id,
-        ResultPayload::of::<medulla_types::result_contract::ingestion::SourceIngestStatus>(body),
+        ResultPayload::of::<medulla_protocol_types::result_contract::ingestion::SourceIngestStatus>(
+            body,
+        ),
     )
 }
 
@@ -334,10 +336,10 @@ struct IngestionResources {
 struct AdmittedRecords {
     raw_admissions: Vec<RawAdmissionReceipt>,
     relationship_raw_admissions: Vec<RawRelationshipAdmissionReceipt>,
-    blobs: BTreeMap<String, medulla_types::change_envelope::BlobReference>,
+    blobs: BTreeMap<String, medulla_protocol_types::change_envelope::BlobReference>,
     methods: Vec<Method>,
-    lineage: Vec<medulla_types::change_envelope::LineageRecord>,
-    policies: Vec<medulla_types::change_envelope::PolicyRecord>,
+    lineage: Vec<medulla_protocol_types::change_envelope::LineageRecord>,
+    policies: Vec<medulla_protocol_types::change_envelope::PolicyRecord>,
     tombstone_count: usize,
 }
 
@@ -621,7 +623,7 @@ async fn reconcile_batch(
 async fn stream_content_digest(
     persistence: &dyn crate::server::api::persistence::PersistenceBackend,
     graph_fname: &str,
-    mutation: &medulla_types::mutation_batch::MutationBatch,
+    mutation: &medulla_protocol_types::mutation_batch::MutationBatch,
     stream_object_id: &str,
 ) -> Result<Option<String>, String> {
     Ok(persistence
@@ -1181,9 +1183,9 @@ fn admit_relationships(
         ));
         admitted
             .lineage
-            .push(medulla_types::change_envelope::LineageRecord {
+            .push(medulla_protocol_types::change_envelope::LineageRecord {
                 lineage_id: format!("lineage:{}", relationship_lineage_digest(&relationship_id)?),
-                operation: medulla_types::change_envelope::MaterialOperation::Upsert,
+                operation: medulla_protocol_types::change_envelope::MaterialOperation::Upsert,
                 object_id: format!("{source_id}->{target_id}"),
                 source_artifact_digest: raw_digest_hex,
                 transform_name: "connector-manifest-resource-relation".into(),
@@ -1403,14 +1405,14 @@ fn admit_relationship_tombstones(
             ctx.tenant_scope,
             policy_subject,
             mapping_revision,
-            medulla_types::change_envelope::MaterialOperation::Delete,
+            medulla_protocol_types::change_envelope::MaterialOperation::Delete,
         ));
         admitted.policies.push(policy_with_operation(
             &marker_id,
             ctx.tenant_scope,
             policy_subject,
             mapping_revision,
-            medulla_types::change_envelope::MaterialOperation::Delete,
+            medulla_protocol_types::change_envelope::MaterialOperation::Delete,
         ));
     }
     Ok(())
@@ -1458,10 +1460,10 @@ fn relationship_tombstone_receipts(
 struct AdmittedRecord {
     raw_digest_hex: String,
     raw_digest: Digest256,
-    blob: medulla_types::change_envelope::BlobReference,
+    blob: medulla_protocol_types::change_envelope::BlobReference,
     method: Method,
-    lineage: medulla_types::change_envelope::LineageRecord,
-    policy: medulla_types::change_envelope::PolicyRecord,
+    lineage: medulla_protocol_types::change_envelope::LineageRecord,
+    policy: medulla_protocol_types::change_envelope::PolicyRecord,
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -1502,9 +1504,9 @@ fn admit_record(
         properties_msgpack: rmp_serde::to_vec_named(&properties)
             .map_err(|error| format!("mapped source properties encoding failed: {error}"))?,
     };
-    let lineage = medulla_types::change_envelope::LineageRecord {
+    let lineage = medulla_protocol_types::change_envelope::LineageRecord {
         lineage_id: format!("lineage:{}", short_digest(&node_id)?),
-        operation: medulla_types::change_envelope::MaterialOperation::Upsert,
+        operation: medulla_protocol_types::change_envelope::MaterialOperation::Upsert,
         object_id: node_id.clone(),
         source_artifact_digest: raw_digest_hex.clone(),
         transform_name: "connector-manifest-schema-mapping".into(),
@@ -1565,10 +1567,10 @@ fn raw_blob_reference(
     raw_digest: &str,
     length: usize,
     media_type: &str,
-) -> medulla_types::change_envelope::BlobReference {
-    medulla_types::change_envelope::BlobReference {
+) -> medulla_protocol_types::change_envelope::BlobReference {
+    medulla_protocol_types::change_envelope::BlobReference {
         blob_id: format!("raw:{raw_digest}"),
-        operation: medulla_types::change_envelope::MaterialOperation::Upsert,
+        operation: medulla_protocol_types::change_envelope::MaterialOperation::Upsert,
         digest_algorithm: "sha256".into(),
         digest: raw_digest.into(),
         media_type: media_type.into(),
@@ -1617,7 +1619,7 @@ fn compile_mutation(
     ctx: &PrepareContext<'_>,
     batch_id: &str,
     methods: Vec<Method>,
-) -> Result<medulla_types::mutation_batch::MutationBatch, String> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationBatch, String> {
     crate::server::mutation_batch::GraphWriteScope {
         request_id: ctx.request_id,
         graph_name: ctx.graph_name,
@@ -1633,10 +1635,10 @@ fn compile_mutation(
 #[cfg(all(feature = "redb", feature = "blob"))]
 struct EnvelopeContents {
     batch_digest: Digest256,
-    mutation: medulla_types::mutation_batch::MutationBatch,
-    blobs: BTreeMap<String, medulla_types::change_envelope::BlobReference>,
-    policies: Vec<medulla_types::change_envelope::PolicyRecord>,
-    lineage: Vec<medulla_types::change_envelope::LineageRecord>,
+    mutation: medulla_protocol_types::mutation_batch::MutationBatch,
+    blobs: BTreeMap<String, medulla_protocol_types::change_envelope::BlobReference>,
+    policies: Vec<medulla_protocol_types::change_envelope::PolicyRecord>,
+    lineage: Vec<medulla_protocol_types::change_envelope::LineageRecord>,
     mapping_revision: u64,
     /// The stream's live-set marker id: the content-version object every batch
     /// to this stream advances.
@@ -1649,7 +1651,7 @@ fn build_envelope(
     batch: &medulla_types::source_ingestion::SourceIngestionBatch,
     batch_id: &str,
     contents: EnvelopeContents,
-) -> Result<medulla_types::change_envelope::ChangeEnvelope, String> {
+) -> Result<medulla_protocol_types::change_envelope::ChangeEnvelope, String> {
     let EnvelopeContents {
         batch_digest,
         mutation,
@@ -1666,33 +1668,34 @@ fn build_envelope(
         .as_ref()
         .map(|checkpoint| checkpoint.digest())
         .transpose()?;
-    let envelope = medulla_types::change_envelope::ChangeEnvelope {
-        schema_version: medulla_types::change_envelope::CHANGE_ENVELOPE_VERSION,
+    let envelope = medulla_protocol_types::change_envelope::ChangeEnvelope {
+        schema_version: medulla_protocol_types::change_envelope::CHANGE_ENVELOPE_VERSION,
         envelope_id: batch_id.into(),
         mutation,
-        content_version: medulla_types::change_envelope::ContentVersion {
+        content_version: medulla_protocol_types::change_envelope::ContentVersion {
             object_id: stream_object_id,
             digest_algorithm: "sha256".into(),
             digest: batch_digest.to_hex(),
             previous_digest: previous_stream_digest,
-            source_version: medulla_types::change_envelope::ContentVersionPosition::Opaque {
-                version_type: "source-cursor-sha256".into(),
-                value: checkpoint_digest.to_hex(),
-            },
+            source_version:
+                medulla_protocol_types::change_envelope::ContentVersionPosition::Opaque {
+                    version_type: "source-cursor-sha256".into(),
+                    value: checkpoint_digest.to_hex(),
+                },
         },
-        cursor: Some(medulla_types::change_envelope::ChangeCursor {
+        cursor: Some(medulla_protocol_types::change_envelope::ChangeCursor {
             source: format!(
                 "{}:{}",
                 batch.connector.as_str(),
                 batch.provider_checkpoint.stream.as_str()
             ),
             partition: String::new(),
-            position: medulla_types::change_envelope::CursorPosition::Opaque {
+            position: medulla_protocol_types::change_envelope::CursorPosition::Opaque {
                 cursor_type: "source-cursor-sha256".into(),
                 value: checkpoint_digest.to_hex(),
             },
             expected_previous: expected_previous.map(|digest| {
-                medulla_types::change_envelope::CursorPosition::Opaque {
+                medulla_protocol_types::change_envelope::CursorPosition::Opaque {
                     cursor_type: "source-cursor-sha256".into(),
                     value: digest.to_hex(),
                 }
@@ -1703,12 +1706,12 @@ fn build_envelope(
         evidence: Vec::new(),
         policies,
         lineage,
-        privacy: medulla_types::change_envelope::PrivacyAttestation {
+        privacy: medulla_protocol_types::change_envelope::PrivacyAttestation {
             policy_version: format!("connector-pack-revision-{mapping_revision}"),
             sanitizer_version: "source-ingestion-v1".into(),
             sanitized_payload_digest: batch_digest.to_hex(),
         },
-        material_class: medulla_types::change_envelope::MaterialClass::Attested,
+        material_class: medulla_protocol_types::change_envelope::MaterialClass::Attested,
         commit_seq: None,
         commit_descriptor_ref: None,
     };
@@ -1736,13 +1739,13 @@ pub(crate) fn finish(prepared: PreparedSourceIngestion, response: Response) -> R
     }
     let applied = match response.result {
         Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice::<
-            medulla_types::result_contract::transactions::ChangeEnvelopeApplied,
+            medulla_protocol_types::result_contract::transactions::ChangeEnvelopeApplied,
         >(&bytes)
         .map_err(|error| format!("invalid native ingestion commit result: {error}")),
         // `ApplyChangeEnvelope` declares a JSON result (F3d); a served commit
         // answers in that form (MEDULLA-TYPED-PACKS-R101.9 regression test).
         Some(ResultPayload::Json(value)) => serde_json::from_value::<
-            medulla_types::result_contract::transactions::ChangeEnvelopeApplied,
+            medulla_protocol_types::result_contract::transactions::ChangeEnvelopeApplied,
         >(value)
         .map_err(|error| format!("invalid native ingestion commit result: {error}")),
         _ => Err("native ingestion commit returned no typed result".into()),
@@ -1759,7 +1762,9 @@ pub(crate) fn finish(prepared: PreparedSourceIngestion, response: Response) -> R
     match build_terminal_receipt(prepared, disposition) {
         Ok(receipt) => Response::ok(
             response_id,
-            ResultPayload::of::<medulla_types::result_contract::ingestion::SourceIngest>(receipt),
+            ResultPayload::of::<medulla_protocol_types::result_contract::ingestion::SourceIngest>(
+                receipt,
+            ),
         ),
         Err(error) => Response::err(response_id, error),
     }
@@ -1847,7 +1852,7 @@ fn prepared_replay(
     ctx: PrepareContext<'_>,
     batch: &medulla_types::source_ingestion::SourceIngestionBatch,
     batch_digest: Digest256,
-    envelope: medulla_types::change_envelope::ChangeEnvelope,
+    envelope: medulla_protocol_types::change_envelope::ChangeEnvelope,
 ) -> Result<PreparedSourceIngestion, String> {
     validate_replay_authority(&ctx, batch_digest, &envelope)?;
     let batch_id = format!("source-ingest:{}", batch_digest.to_hex());
@@ -1910,7 +1915,7 @@ fn prepared_replay(
 fn validate_replay_authority(
     ctx: &PrepareContext<'_>,
     batch_digest: Digest256,
-    envelope: &medulla_types::change_envelope::ChangeEnvelope,
+    envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
 ) -> Result<(), String> {
     let graph_name = envelope
         .mutation
@@ -1931,7 +1936,7 @@ fn validate_replay_authority(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn replay_receipt(
-    envelope: &medulla_types::change_envelope::ChangeEnvelope,
+    envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
     batch_id: &str,
 ) -> Result<serde_json::Value, String> {
     let properties = envelope
@@ -1982,7 +1987,7 @@ fn replay_receipt_value<T: serde::de::DeserializeOwned>(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn replay_graph_version(
-    envelope: &medulla_types::change_envelope::ChangeEnvelope,
+    envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
 ) -> Result<u64, String> {
     match envelope.mutation.version_expectation {
         crate::mutation_batch::VersionExpectation::Graph(version) => version
@@ -2369,13 +2374,13 @@ fn policy(
     tenant: &str,
     subject_set_digest: &str,
     revision: u64,
-) -> medulla_types::change_envelope::PolicyRecord {
+) -> medulla_protocol_types::change_envelope::PolicyRecord {
     policy_with_operation(
         object_id,
         tenant,
         subject_set_digest,
         revision,
-        medulla_types::change_envelope::MaterialOperation::Upsert,
+        medulla_protocol_types::change_envelope::MaterialOperation::Upsert,
     )
 }
 
@@ -2385,9 +2390,9 @@ fn policy_with_operation(
     tenant: &str,
     subject_set_digest: &str,
     revision: u64,
-    operation: medulla_types::change_envelope::MaterialOperation,
-) -> medulla_types::change_envelope::PolicyRecord {
-    medulla_types::change_envelope::PolicyRecord {
+    operation: medulla_protocol_types::change_envelope::MaterialOperation,
+) -> medulla_protocol_types::change_envelope::PolicyRecord {
+    medulla_protocol_types::change_envelope::PolicyRecord {
         policy_id: format!("policy:{}", object_id),
         operation,
         object_id: object_id.into(),

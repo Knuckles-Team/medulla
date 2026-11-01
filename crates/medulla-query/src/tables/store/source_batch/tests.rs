@@ -2,11 +2,12 @@
 
 use super::*;
 use crate::tables::schema::{Cell, Column, ColumnType, TableSchema};
-use medulla_types::change_envelope::CursorPosition;
-use medulla_types::contract::{BoundedVec, Digest256, RecordBytes};
-use medulla_types::storage_wire::{
-    SqlSourceCell, SqlSourceFloat, SqlSourceJson, SqlSourceText, SqlSourceVector,
+use medulla_protocol_types::change_envelope::CursorPosition;
+use medulla_protocol_types::{
+    storage_wire::SqlSourceCell, storage_wire::SqlSourceFloat, storage_wire::SqlSourceJson,
+    storage_wire::SqlSourceText, storage_wire::SqlSourceVector,
 };
+use medulla_types::contract::{BoundedVec, Digest256, RecordBytes};
 use serde_json::json;
 
 mod support;
@@ -682,7 +683,7 @@ fn aggregate_materialization_reservation_accepts_its_boundary_and_rejects_one_by
     // enum/length allowance. The default content occupies the remaining bound.
     let rows = 1024;
     let maximum_default =
-        medulla_types::storage_wire::source_batch::MAX_SQL_SOURCE_BATCH_BYTES / rows - 69;
+        medulla_protocol_types::storage_wire::source_batch::MAX_SQL_SOURCE_BATCH_BYTES / rows - 69;
     for (extra, succeeds) in [(0, true), (1, false)] {
         let schema = omitted_default_schema(maximum_default + extra);
         let fixture = Fixture::new(&schema);
@@ -718,7 +719,7 @@ fn aggregate_materialization_reservation_accepts_its_boundary_and_rejects_one_by
 /// estimate over the byte cap and silently invalidate this test's premise.
 const _: () = assert!(
     1024 * (5 + 32 + 1023 * 8)
-        < medulla_types::storage_wire::source_batch::MAX_SQL_SOURCE_BATCH_BYTES
+        < medulla_protocol_types::storage_wire::source_batch::MAX_SQL_SOURCE_BATCH_BYTES
 );
 
 #[test]

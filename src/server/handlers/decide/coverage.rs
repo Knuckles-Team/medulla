@@ -27,7 +27,7 @@ pub(crate) async fn handle_capability_coverage(
         Ok(result) => Response::ok(
             req_id,
             crate::protocol::ResultPayload::of_ref::<
-                medulla_types::result_contract::storage::CapabilityCoverage,
+                medulla_protocol_types::result_contract::storage::CapabilityCoverage,
             >(&result),
         ),
         Err(error) => Response::err(req_id, error),

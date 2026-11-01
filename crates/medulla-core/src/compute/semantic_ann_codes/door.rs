@@ -11,6 +11,11 @@
 //! the parent module's per-generation-scope non-goal.
 
 use super::{corrupt, kernel_error, SemanticCodeError, SemanticMutationReceipt};
+use medulla_protocol_types::mutation_batch::CompiledOperation;
+use medulla_protocol_types::mutation_batch::CompiledScope;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::mutation_batch::MutationEnvelope;
+use medulla_protocol_types::mutation_batch::VersionExpectation;
 use medulla_storage::{
     OwnedStoreHandle, PhysicalStoreIdentity, RecordedOperation, ScopeGrantVerifier, ScopedRead,
     SemanticIndexOwner, StorageKernel,
@@ -20,15 +25,10 @@ use medulla_transaction::{
     OutboxClaimOutcome,
 };
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_batch::CompiledOperation;
-use medulla_types::mutation_batch::CompiledScope;
-use medulla_types::mutation_batch::MutationEnvelope;
-use medulla_types::mutation_batch::VersionExpectation;
 use medulla_types::mutation_scope::CommittedVersion;
 use medulla_types::mutation_scope::MutationOutboxLease;
 use medulla_types::mutation_scope::MutationProjectionCursor;
 use medulla_types::semantic_index::SemanticDigest;
-use medulla_types::MutationBatch;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -532,7 +532,7 @@ pub(super) fn mutation_digest_from_batch(batch: &MutationBatch) -> Result<Semant
             // The digest is the trailing `/` segment on both surfaces: alone on
             // the maintenance surface, behind the recorded subject on the
             // operation surface (see [`metadata_operation_query`]).
-            medulla_types::protocol::Method::ApplyMutation { query, .. } => query
+            medulla_protocol_types::protocol::Method::ApplyMutation { query, .. } => query
                 .rsplit('/')
                 .next()
                 .and_then(|segment| segment.strip_prefix("sha256:")),

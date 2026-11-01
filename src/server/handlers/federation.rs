@@ -54,7 +54,7 @@ pub(crate) async fn try_handle(
             Ok(Response::ok(
                 req_id,
                 ResultPayload::scalar::<
-                    medulla_types::result_contract::cluster::RegisterForeignSource,
+                    medulla_protocol_types::result_contract::cluster::RegisterForeignSource,
                 >(name),
             ))
         }
@@ -154,7 +154,9 @@ async fn open_foreign_read(call: OwnerScopedCall<'_>, request: ForeignReadOpenRe
     };
     Response::ok(
         req_id,
-        ResultPayload::of::<medulla_types::result_contract::query::ForeignReadOpen>(result),
+        ResultPayload::of::<medulla_protocol_types::result_contract::query::ForeignReadOpen>(
+            result,
+        ),
     )
 }
 
@@ -187,7 +189,9 @@ async fn chunk_foreign_read(
     match result {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::query::ForeignReadChunk>(result),
+            ResultPayload::of::<medulla_protocol_types::result_contract::query::ForeignReadChunk>(
+                result,
+            ),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -225,7 +229,9 @@ async fn complete_foreign_read(
     match result {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::query::ForeignReadComplete>(result),
+            ResultPayload::of::<medulla_protocol_types::result_contract::query::ForeignReadComplete>(
+                result,
+            ),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -260,7 +266,9 @@ async fn abort_foreign_read(
     match result {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::query::ForeignReadAbort>(result),
+            ResultPayload::of::<medulla_protocol_types::result_contract::query::ForeignReadAbort>(
+                result,
+            ),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -334,7 +342,9 @@ async fn query_columns(
     match result {
         Ok(Ok(rows)) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::query::QueryForeignColumns>(rows),
+            ResultPayload::of::<medulla_protocol_types::result_contract::query::QueryForeignColumns>(
+                rows,
+            ),
         ),
         Ok(Err(error)) => Response::err(req_id, column_query_error(&error)),
         Err(_) => Response::err(req_id, "INTERNAL: foreign column worker failed"),

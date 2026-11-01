@@ -11,7 +11,7 @@ use crate::outbox::{
     outbox_cursor, outbox_status, OutboxClaimBudget, OutboxClaimCursor, OutboxConsumerState,
     OutboxDeferral, OutboxDelivery, OutboxPosition, OutboxRejectReason, OutboxRewindTarget,
 };
-use medulla_types::mutation_batch::MutationCapability;
+use medulla_protocol_types::mutation_batch::MutationCapability;
 use medulla_types::mutation_scope::RESERVED_SYSTEM_TENANT;
 use medulla_types::{
     MutationOutboxIntent, MutationOutboxLease, MutationProjectionCursor, MUTATION_BATCH_VERSION,
@@ -726,7 +726,7 @@ fn an_unversioned_control_plane_outbox_row_reopens_with_its_commit_sequence() {
         let mut batch = batch(identity.clone(), "control-plane-event");
         batch.operations[0].domain = DurabilityDomain::ControlPlane;
         batch.version_expectation = VersionExpectation::Unversioned;
-        let medulla_types::mutation_batch::MutationEnvelope::Operation(envelope) =
+        let medulla_protocol_types::mutation_batch::MutationEnvelope::Operation(envelope) =
             &mut batch.envelope
         else {
             panic!("a control-plane fixture requires an operation envelope");

@@ -1434,12 +1434,7 @@ mod tests {
             );
         }
         assert_eq!(
-            dep_target(
-                &r,
-                "medulla/kvcache/connector.py",
-                "medulla.kvcache.store"
-            )
-            .as_deref(),
+            dep_target(&r, "medulla/kvcache/connector.py", "medulla.kvcache.store").as_deref(),
             Some("file:medulla/kvcache/store.py"),
             "the positive control must still resolve; edges={:?}",
             r.edges

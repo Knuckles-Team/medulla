@@ -13,8 +13,8 @@ pub(super) fn decoded_edge_properties(
     let mut decoded = Vec::new();
     for ((src, tgt), blobs) in &sub.edge_properties {
         for blob in blobs {
-            let props =
-                medulla_types::msgpack::decode_property_value(blob).unwrap_or(serde_json::Value::Null);
+            let props = medulla_types::msgpack::decode_property_value(blob)
+                .unwrap_or(serde_json::Value::Null);
             decoded.push((src.clone(), tgt.clone(), props));
         }
     }
@@ -51,7 +51,7 @@ fn handle_get_subgraph(req_id: u64, core: &Arc<GraphCore>, node_ids: &[String]) 
         .collect();
     Response::ok(
         req_id,
-        ResultPayload::of::<medulla_types::result_contract::graph::GetSubgraph>(
+        ResultPayload::of::<medulla_protocol_types::result_contract::graph::GetSubgraph>(
             medulla_types::types::SubgraphResult { nodes, edges },
         ),
     )
@@ -86,7 +86,9 @@ fn handle_fork(req_id: u64, core: &Arc<GraphCore>) -> Response {
 
     Response::ok(
         req_id,
-        ResultPayload::of_dynamic::<medulla_types::result_contract::graph::Fork, _>(&value),
+        ResultPayload::of_dynamic::<medulla_protocol_types::result_contract::graph::Fork, _>(
+            &value,
+        ),
     )
 }
 
@@ -172,9 +174,12 @@ pub(super) async fn handle_vf2_subgraph_match(
         {
             Ok((matches, truncated)) => Response::ok(
                 req_id,
-                ResultPayload::of::<medulla_types::result_contract::compute::Vf2SubgraphMatch>(
-                    medulla_types::compute_result::algorithms::Vf2MatchResult { matches, truncated },
-                ),
+                ResultPayload::of::<
+                    medulla_protocol_types::result_contract::compute::Vf2SubgraphMatch,
+                >(medulla_types::compute_result::algorithms::Vf2MatchResult {
+                    matches,
+                    truncated,
+                }),
             ),
             Err(resp) => resp,
         }

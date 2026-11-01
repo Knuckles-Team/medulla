@@ -2,19 +2,19 @@
 
 use super::*;
 use crate::tables::store::dev_scope_grant;
+use medulla_protocol_types::mutation_batch::method_schema_id;
+use medulla_protocol_types::mutation_batch::CompiledOperation;
+use medulla_protocol_types::mutation_batch::CompiledScope;
+use medulla_protocol_types::mutation_batch::MutationEnvelope;
+use medulla_protocol_types::mutation_batch::MutationOperation;
+use medulla_protocol_types::mutation_batch::VersionExpectation;
+use medulla_protocol_types::mutation_batch::BATCH_COMPILED_METHODS;
+use medulla_protocol_types::protocol_fixtures::sql_source;
 use medulla_types::contract::{BoundedVec, Digest256, MethodId, Nonce};
-use medulla_types::mutation_batch::method_schema_id;
-use medulla_types::mutation_batch::CompiledOperation;
-use medulla_types::mutation_batch::CompiledScope;
-use medulla_types::mutation_batch::MutationEnvelope;
-use medulla_types::mutation_batch::MutationOperation;
-use medulla_types::mutation_batch::VersionExpectation;
-use medulla_types::mutation_batch::BATCH_COMPILED_METHODS;
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationOutboxIntent;
 use medulla_types::mutation_scope::MutationSurface;
 use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
-use medulla_types::protocol_fixtures::sql_source;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -95,8 +95,8 @@ fn schema() -> TableSchema {
     )
 }
 
-pub(super) use medulla_types::protocol_fixtures::sql_source::change;
-pub(super) use medulla_types::protocol_fixtures::sql_source::id;
+pub(super) use medulla_protocol_types::protocol_fixtures::sql_source::change;
+pub(super) use medulla_protocol_types::protocol_fixtures::sql_source::id;
 
 pub(super) fn request(schema: &TableSchema, cells: Vec<SqlSourceCell>) -> SqlSourceBatchRequest {
     let columns: Vec<&str> = schema
@@ -144,7 +144,9 @@ pub(super) fn commit_first(
 }
 
 /// A single-row row set.
-pub(super) fn one_row(cells: Vec<SqlSourceCell>) -> medulla_types::storage_wire::SqlSourceRows {
+pub(super) fn one_row(
+    cells: Vec<SqlSourceCell>,
+) -> medulla_protocol_types::storage_wire::SqlSourceRows {
     BoundedVec::new(vec![BoundedVec::new(cells).unwrap()]).unwrap()
 }
 

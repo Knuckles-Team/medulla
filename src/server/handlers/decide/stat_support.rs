@@ -11,7 +11,9 @@ use medulla_numeric::decision::features::FeatureMatrix;
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
 
-use medulla_types::agent_component::{AgentComponentEntry, AgentComponentKind, ComponentDependency};
+use medulla_types::agent_component::{
+    AgentComponentEntry, AgentComponentKind, ComponentDependency,
+};
 use medulla_types::decision::digest::policy_digest;
 use medulla_types::decision::policy::policy_from_attributes;
 use medulla_types::decision::statistical::body::decode_body;

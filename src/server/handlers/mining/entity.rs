@@ -1,8 +1,8 @@
 use super::*;
 use super::{input::*, writeback::*};
 use medulla_compute::mining::entity_resolution;
+use medulla_protocol_types::result_contract::compute as results;
 use medulla_types::compute_result::mining::{EntityMatchRow, EntityResolutionMiningResult};
-use medulla_types::result_contract::compute as results;
 
 // Entity resolution + record linkage follows the shared explicit-or-derived
 // input → compute → optional typed-node/claim write-back contract.

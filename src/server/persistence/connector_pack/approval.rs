@@ -4,16 +4,16 @@
 //! module only flips its admission state under the existing Agent Library
 //! mutation kernel after an exact current-head and body-digest CAS.
 
+use medulla_protocol_types::mutation_batch::MutationOperation;
+use medulla_protocol_types::protocol::Method;
 use medulla_types::agent_library::AgentLibraryMutationContext;
 use medulla_types::connector_pack::{
     ConnectorPackSourceApprovalResult, PackHeadRef, PackSourceApproval,
     CONNECTOR_PACK_SCHEMA_VERSION,
 };
 use medulla_types::contract::{Digest256, ResourceId};
-use medulla_types::mutation_batch::MutationOperation;
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationSurface;
-use medulla_types::protocol::Method;
 use redb::ReadableTable;
 
 use super::admitted::{PackOwnerWrite, PackWriteEffects, PackWriteIdentity, PackWriteStaged};

@@ -7,7 +7,9 @@ use medulla_types::ontology_inspection::{RdfObject, RdfTriple, MAX_TYPED_TRIPLES
 
 /// Build the data graph from typed triples, refusing the whole request on the first
 /// malformed triple (named by its index) rather than validating a partial graph.
-pub(super) fn graph_from_typed_triples(triples: &[RdfTriple]) -> Result<medulla_shacl::Graph, String> {
+pub(super) fn graph_from_typed_triples(
+    triples: &[RdfTriple],
+) -> Result<medulla_shacl::Graph, String> {
     if triples.len() > MAX_TYPED_TRIPLES {
         return Err(format!(
             "{} triples exceed the maximum of {MAX_TYPED_TRIPLES}",
@@ -176,7 +178,7 @@ mod tests {
     }
     #[test]
     fn wire_preserves_absent_versus_explicit_empty_typed_data() {
-        use medulla_types::protocol::Method;
+        use medulla_protocol_types::protocol::Method;
         use serde_json::json;
 
         for (params, expected) in [

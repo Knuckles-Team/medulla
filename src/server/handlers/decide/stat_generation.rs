@@ -114,8 +114,11 @@ impl Tally {
 
 #[cfg(feature = "ann")]
 fn score_psi(tally: &Tally) -> Option<i64> {
-    let report =
-        medulla_ann::drift::population_stability_index(&tally.active_top1, &tally.shadow_top1, PSI_BINS);
+    let report = medulla_ann::drift::population_stability_index(
+        &tally.active_top1,
+        &tally.shadow_top1,
+        PSI_BINS,
+    );
     Some(to_q16(report.psi))
 }
 

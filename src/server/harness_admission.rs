@@ -41,7 +41,7 @@ use std::collections::BTreeMap;
 
 use crate::graph::GraphCore;
 use crate::protocol::Method;
-use medulla_types::change_envelope::ChangeEnvelope;
+use medulla_protocol_types::change_envelope::ChangeEnvelope;
 use medulla_types::orchestration::improvement::{
     decode_adopted_harness_write, decode_harness_contrast_write, decode_harness_probe_run_write,
     decode_lesson_write, is_adopted_harness_write, is_harness_contrast_write,

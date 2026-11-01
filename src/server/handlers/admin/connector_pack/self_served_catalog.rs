@@ -30,7 +30,7 @@ pub(super) async fn serve(
             Ok(binding) => Response::ok(
                 req_id,
                 crate::protocol::ResultPayload::of_ref::<
-                    medulla_types::result_contract::storage::ConnectorPackAttestSelfServedCatalog,
+                    medulla_protocol_types::result_contract::storage::ConnectorPackAttestSelfServedCatalog,
                 >(&binding),
             ),
             Err(error) => Response::err(req_id, error),

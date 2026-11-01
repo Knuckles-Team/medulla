@@ -58,7 +58,9 @@ pub(super) async fn handle_decide(
 ) -> Response {
     let span = telemetry::span("Decide", verified.tenant());
     let result = serve(state, verified, request).instrument(span).await;
-    match result.and_then(ResultPayload::of::<medulla_types::result_contract::query::Decide>) {
+    match result
+        .and_then(ResultPayload::of::<medulla_protocol_types::result_contract::query::Decide>)
+    {
         Ok(payload) => Response::ok(req_id, payload),
         Err(error) => {
             telemetry::refused("Decide", &error);

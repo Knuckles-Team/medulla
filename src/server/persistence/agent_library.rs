@@ -14,25 +14,25 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 use redb::{ReadableTable, ReadableTableMetadata};
 
+use medulla_protocol_types::mutation_batch::BatchContent;
+use medulla_protocol_types::mutation_batch::CompiledEnvelope;
+use medulla_protocol_types::mutation_batch::CompiledOperation;
+use medulla_protocol_types::mutation_batch::CompiledScope;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::mutation_batch::MutationEnvelope;
+use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_storage::{
     OwnedStoreHandle, PhysicalStoreIdentity, RecordedOperation, ScopedRead, StorageKernel,
 };
 use medulla_transaction::{AdmittedOwnerWrite, MutationKernel};
 use medulla_types::mutation::{MutationReceipt, MutationResult};
-use medulla_types::mutation_batch::BatchContent;
-use medulla_types::mutation_batch::CompiledEnvelope;
-use medulla_types::mutation_batch::CompiledOperation;
-use medulla_types::mutation_batch::CompiledScope;
-use medulla_types::mutation_batch::MutationEnvelope;
-use medulla_types::mutation_batch::MutationOperation;
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationOutboxIntent;
 use medulla_types::{
     AgentLibraryCommittedResult, AgentLibraryEntry, AgentLibraryEntryDraft,
     AgentLibraryMutationContext, AgentLibraryMutationKind, AgentLibraryOutboxEvent,
     AgentLibraryPublishRequest, AgentLibraryRetireRequest, AgentLibraryStatusRequest,
-    AgentLibraryWriteResult, MutationBatch, AGENT_LIBRARY_OUTBOX_SCHEMA_VERSION,
-    AGENT_LIBRARY_RESULT_SCHEMA_ID,
+    AgentLibraryWriteResult, AGENT_LIBRARY_OUTBOX_SCHEMA_VERSION, AGENT_LIBRARY_RESULT_SCHEMA_ID,
 };
 
 use crate::server::api::persistence::BundledStoreSource;
@@ -237,7 +237,7 @@ impl AgentLibraryStore {
 }
 
 struct AgentLibraryStatusEvidence {
-    record: medulla_types::MutationBatchRecord,
+    record: medulla_protocol_types::mutation_batch::MutationBatchRecord,
     receipt: MutationReceipt,
 }
 
@@ -293,11 +293,12 @@ fn validate_status_identity(
     owner: &OwnedStoreHandle<medulla_storage::AgentLibraryOwner>,
     context: &AgentLibraryMutationContext,
     batch_id: &str,
-    record: &medulla_types::MutationBatchRecord,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
     replay_row: &medulla_storage::OperationReplayRow,
     receipt: &MutationReceipt,
 ) -> Result<(), String> {
-    let expected_scope = medulla_types::mutation_batch::authority_scope_for(owner.identity())?;
+    let expected_scope =
+        medulla_protocol_types::mutation_batch::authority_scope_for(owner.identity())?;
     if replay_row.identity != *owner.identity()
         || replay_row.idempotency_key != context.idempotency_key
         || replay_row.batch_id != batch_id
@@ -345,7 +346,7 @@ pub(super) fn resolve_nonce_first(
             medulla_capabilities::contract_catalog_digest(),
         )?,
         audience: medulla_types::contract::AudienceId::new(
-            medulla_types::mutation_batch::ENGINE_AUDIENCE,
+            medulla_protocol_types::mutation_batch::ENGINE_AUDIENCE,
         )?,
         actor: medulla_types::contract::ActorId::new(context.caller_principal.clone())?,
         tenant: medulla_types::contract::TenantId::new(context.tenant_id.clone())?,
@@ -398,7 +399,7 @@ pub(super) fn agent_library_operation_identity(
         ProtocolId, PurposeKind, ResourceId, SchemaId, TenantId,
     };
 
-    let scope = medulla_types::mutation_batch::authority_scope_for(owner.identity())?;
+    let scope = medulla_protocol_types::mutation_batch::authority_scope_for(owner.identity())?;
     let catalog_digest = Digest256::parse(medulla_capabilities::contract_catalog_digest())?;
     let method = MethodId::new("ApplyMutation")?;
     let (method_schema_id, method_schema_digest) =
@@ -428,7 +429,7 @@ pub(super) fn agent_library_operation_identity(
         catalog_digest,
         tenant: TenantId::new(context.tenant_id.clone())?,
         actor: ActorId::new(context.caller_principal.clone())?,
-        audience: AudienceId::new(medulla_types::mutation_batch::ENGINE_AUDIENCE)?,
+        audience: AudienceId::new(medulla_protocol_types::mutation_batch::ENGINE_AUDIENCE)?,
         authority_scope: scope.clone(),
         operation: Operation::new("mutation")?,
         purpose_kind: PurposeKind::new("graph_write")?,
@@ -438,7 +439,7 @@ pub(super) fn agent_library_operation_identity(
         method_schema_digest,
         canonical_payload_digest,
         policy_revision: PolicyRevision::new(context.policy_revision.clone())?,
-        policy_epoch: medulla_types::mutation_batch::POLICY_EPOCH,
+        policy_epoch: medulla_protocol_types::mutation_batch::POLICY_EPOCH,
         policy_digest: parse_prefixed_digest(&context.policy_digest)?,
         idempotency_key: IdempotencyKey::new(context.idempotency_key.clone())?,
     };
@@ -874,8 +875,8 @@ mod tests {
     use super::replay::record_event;
     use super::*;
     use crate::server::api::persistence::BundledStoreSource;
+    use medulla_protocol_types::mutation_batch::MutationBatchStatus;
     use medulla_types::contract::Nonce;
-    use medulla_types::mutation_batch::MutationBatchStatus;
 
     const LEDGER_BATCHES: redb::TableDefinition<'static, (&str, &str), &[u8]> =
         redb::TableDefinition::new("ledger_batches");

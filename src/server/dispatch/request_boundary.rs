@@ -218,9 +218,9 @@ pub(super) async fn dispatch_resource_stats(
     {
         Ok(snapshot) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::coordination::ResourceStatsPage>(
-                snapshot,
-            ),
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::ResourceStatsPage,
+            >(snapshot),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -530,7 +530,8 @@ async fn dispatch_admitted_request(
         finalize_dispatch_response(req_id, response, &method_for_finalize, session_control)
     };
     #[cfg(feature = "redb")]
-    return crate::server::api::admin::saga::scope_admin_saga_authority(saga_authority, operation).await;
+    return crate::server::api::admin::saga::scope_admin_saga_authority(saga_authority, operation)
+        .await;
     #[cfg(not(feature = "redb"))]
     operation.await
 }

@@ -2,7 +2,7 @@ use super::*;
 
 use crate::server::api::ingest::graph::commit_gateway;
 #[cfg(feature = "broker")]
-use medulla_types::result_contract::messaging as results;
+use medulla_protocol_types::result_contract::messaging as results;
 
 /// `DeclareExchange`: pure extract-method from `try_handle_gateway`'s closure,
 /// byte-identical behaviour, no signature change.

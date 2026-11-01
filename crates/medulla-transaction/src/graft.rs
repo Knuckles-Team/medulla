@@ -54,20 +54,21 @@ use crate::tables::{
     REPLAY_NONCES, REPLAY_OPERATIONS, VERSIONS,
 };
 use crate::{Begin, MutationKernel};
+use medulla_protocol_types::mutation_batch::MutationEnvelope;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::{
+    mutation_batch::MutationBatch, mutation_batch::MutationBatchStatus,
+    mutation_batch::MutationOperation, mutation_batch::VersionExpectation,
+};
 use medulla_storage::{
     decode_batch_record, decode_ledger_record, encode_bounded, ledger_scope_key, owner_table_names,
     LedgerRowScope, MutationClass, MutationClassRow, MutationOwnerAuthority, OwnedStoreHandle,
     OwnerDomain, OwnerPayloadRetirement, PhysicalWriteCapability, ScopeFence, ScopedOwnerTableMut,
     ScopedRead, StorageKernel,
 };
-use medulla_types::mutation_batch::MutationEnvelope;
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationScope;
-use medulla_types::protocol::Method;
-use medulla_types::{
-    MutationBatch, MutationBatchStatus, MutationOperation, MutationScopeIdentity, MutationSurface,
-    VersionExpectation, MUTATION_BATCH_VERSION,
-};
+use medulla_types::{MutationScopeIdentity, MutationSurface, MUTATION_BATCH_VERSION};
 use redb::TableDefinition;
 
 /// The owner-row write granted while a destination reservation is in force.
@@ -675,7 +676,13 @@ fn reservation_for_target_in<D: OwnerDomain>(
     write: &AdmittedMutation<'_, D>,
     identity: &MutationScopeIdentity,
     target: &str,
-) -> Result<Option<(String, medulla_types::MutationBatchRecord)>, String> {
+) -> Result<
+    Option<(
+        String,
+        medulla_protocol_types::mutation_batch::MutationBatchRecord,
+    )>,
+    String,
+> {
     let scope = ledger_scope_key(identity);
     let ids = {
         let table = write.scoped_table(BATCHES)?;
@@ -760,7 +767,7 @@ struct Marker;
 impl Marker {
     fn from_record(
         identity: &MutationScopeIdentity,
-        record: &medulla_types::MutationBatchRecord,
+        record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
     ) -> Result<GraftIntent, String> {
         let intent = intent_of(identity, &record.batch)?;
         let committed = record
@@ -1027,7 +1034,7 @@ fn marker_in<D: OwnerDomain>(
 pub(super) fn require_maintenance_mapping<D: OwnerDomain>(
     write: &AdmittedMutation<'_, D>,
     identity: &MutationScopeIdentity,
-    record: &medulla_types::MutationBatchRecord,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
     proof: &str,
 ) -> Result<(), String> {
     let scope = ledger_scope_key(identity);
@@ -1262,7 +1269,7 @@ fn transplant<S: OwnerDomain, D: OwnerDomain>(
     read: &ScopedRead<'_, S>,
     identity: &MutationScopeIdentity,
     intent: &GraftIntent,
-    reservation: &medulla_types::MutationBatchRecord,
+    reservation: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
 ) -> Result<GraftedScope, String> {
     write.verify_scope(identity)?;
     let scope = ledger_scope_key(identity);
@@ -1287,7 +1294,7 @@ fn transplant<S: OwnerDomain, D: OwnerDomain>(
 fn clear_reservation<D: OwnerDomain>(
     write: &AdmittedMutation<'_, D>,
     identity: &MutationScopeIdentity,
-    reservation: &medulla_types::MutationBatchRecord,
+    reservation: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
 ) -> Result<(), String> {
     validate_reservation_state(write, identity, reservation)?;
     let scope = ledger_scope_key(identity);

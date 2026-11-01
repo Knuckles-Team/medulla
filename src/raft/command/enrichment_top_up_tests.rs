@@ -1,14 +1,16 @@
 use crate::parser::enrichment_snapshot::{EligibleUnit, EnrichmentWorkStage};
 use crate::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision;
 use crate::redb_store::enrichment_top_up::{EnrichmentTopUpTransition, CONSUMER, TOPIC};
-use medulla_types::mutation_batch::RepositoryEnrichmentTopUp;
+use medulla_protocol_types::mutation_batch::RepositoryEnrichmentTopUp;
+use medulla_protocol_types::{
+    mutation_batch::MutationBatch, mutation_batch::MutationBatchRecord,
+    mutation_batch::MutationBatchStatus,
+};
 use medulla_types::mutation_scope::CommittedVersion;
 use medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION;
 use medulla_types::native_control::{EnrichmentBudgetCheckpoint, EnrichmentBudgetPark};
+use medulla_types::MutationOutboxRecord;
 use medulla_types::MutationScopeIdentity;
-use medulla_types::{
-    MutationBatch, MutationBatchRecord, MutationBatchStatus, MutationOutboxRecord,
-};
 
 fn transition() -> EnrichmentTopUpTransition {
     let old = medulla_compute::test_support::repository_enrichment_snapshot(
@@ -177,7 +179,7 @@ fn only_exact_committed_retry_may_cross_a_new_route_fence() {
     let plan = transition();
     assert!(plan.validate_parent_fence(1, Some(1), None, 12).is_ok());
     assert!(plan.validate_parent_fence(2, Some(2), None, 12).is_err());
-    let mut record = medulla_types::MutationBatchRecord {
+    let mut record = medulla_protocol_types::mutation_batch::MutationBatchRecord {
         batch: plan.replacement_batch.clone(),
         identity: plan.replacement_batch.identity.clone(),
         status: MutationBatchStatus::Committed,

@@ -1,0 +1,43 @@
+//! Declared results of the `reasoning` contract domain.
+
+#[cfg(feature = "sparql")]
+use crate::protocol::SparqlResult;
+#[cfg(feature = "owl")]
+use crate::protocol::{OwlExplainResult, OwlReasonResult};
+use medulla_types::ontology_inspection::OntologyInspection;
+use medulla_types::types::DatalogReasoningResult;
+use medulla_types::{
+    graph_schema::GraphSchemaClassesView, graph_schema::GraphSchemaCommitted,
+    graph_schema::GraphSchemaSourcesView,
+};
+use medulla_types::{
+    rdf_report::RuleReasonResponse, rdf_report::ShaclValidationReport,
+    rdf_report::ShexValidationReport,
+};
+
+method_results! {
+    visit_reasoning;
+    IcvConfigure(IcvConfigure) => Bool<bool>;
+    // One body for every op: `GraphSchema` declares no per-op markers, so the
+    // attach, attach-pack and detach paths all answer the committed view.
+    GraphSchema(GraphSchema) => Raw<GraphSchemaCommitted>;
+    GraphSchemaList(GraphSchemaList) => Raw<GraphSchemaSourcesView>;
+    GraphSchemaClasses(GraphSchemaClasses) => Raw<GraphSchemaClassesView>;
+    RunDatalogReasoning(RunDatalogReasoning) => Json<DatalogReasoningResult>;
+    // The graph serialized as an N-Triples document.
+    GetRdf(GetRdf) => Raw<String>;
+    #[cfg(feature = "sparql")]
+    Sparql(Sparql) => Raw<SparqlResult>;
+    #[cfg(feature = "sparql")]
+    SparqlVirtual(SparqlVirtual) => Raw<SparqlResult>;
+    #[cfg(feature = "owl")]
+    OwlReason(OwlReason) => Raw<OwlReasonResult>;
+    #[cfg(feature = "owl")]
+    OwlReasonDistributed(OwlReasonDistributed) => Raw<OwlReasonResult>;
+    #[cfg(feature = "owl")]
+    OwlExplain(OwlExplain) => Raw<OwlExplainResult>;
+    RunRules(RunRules) => Raw<RuleReasonResponse>;
+    ShaclValidate(ShaclValidate) => Json<ShaclValidationReport>;
+    OntologyInspect(OntologyInspect) => Json<OntologyInspection>;
+    ShexValidate(ShexValidate) => Json<ShexValidationReport>;
+}

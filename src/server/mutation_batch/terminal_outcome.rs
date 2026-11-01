@@ -25,7 +25,7 @@ pub(super) fn lower_terminal_outcome_extensions(
 ) -> Result<(Vec<Method>, Vec<MutationOutboxIntent>), String> {
     let ordinary = methods
         .iter()
-        .map(|method| medulla_types::protocol::run_completion_payload(method, batch_id))
+        .map(|method| medulla_protocol_types::protocol::run_completion_payload(method, batch_id))
         .collect::<Result<Vec<_>, _>>()?;
     if let Some(payload) = ordinary.into_iter().flatten().next() {
         if methods.len() != 1 {

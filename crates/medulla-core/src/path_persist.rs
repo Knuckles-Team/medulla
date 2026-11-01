@@ -122,18 +122,18 @@ fn path_index_batch(
     identity: &medulla_types::MutationScopeIdentity,
     principal: &str,
     expected_version: u64,
-) -> Result<medulla_types::MutationBatch, redb_store::PathPersistError> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationBatch, redb_store::PathPersistError> {
     let batch_id = format!("path-index-snapshot:v{expected_version}");
-    let operation = medulla_types::MutationOperation {
+    let operation = medulla_protocol_types::mutation_batch::MutationOperation {
         ordinal: 0,
         surface: medulla_types::MutationSurface::Other,
         domain: medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
-        method: medulla_types::protocol::Method::ApplyMutation {
+        method: medulla_protocol_types::protocol::Method::ApplyMutation {
             event_type: "path_index_snapshot".to_string(),
             query: batch_id.clone(),
         },
     };
-    let batch = medulla_types::MutationBatch {
+    let batch = medulla_protocol_types::mutation_batch::MutationBatch {
         schema_version: medulla_types::MUTATION_BATCH_VERSION,
         batch_id: batch_id.clone(),
         // A path-index snapshot has no caller, so it is a MAINTENANCE mutation
@@ -141,7 +141,7 @@ fn path_index_batch(
         // no operation replay identity and no attempt nonce. The envelope makes
         // that structural -- it carries no authority to derive one from -- and
         // names what was written and against which store.
-        envelope: medulla_types::mutation_batch::MutationEnvelope::maintenance_for_scope(
+        envelope: medulla_protocol_types::mutation_batch::MutationEnvelope::maintenance_for_scope(
             identity,
             principal,
             "path_index_snapshot",
@@ -150,7 +150,9 @@ fn path_index_batch(
         .map_err(redb_store::PathPersistError::Redb)?,
         identity: identity.clone(),
         placement_epoch: 0,
-        version_expectation: medulla_types::VersionExpectation::Native(expected_version),
+        version_expectation: medulla_protocol_types::mutation_batch::VersionExpectation::Native(
+            expected_version,
+        ),
         fencing_token: None,
         authoritative_state: None,
         operations: vec![operation],

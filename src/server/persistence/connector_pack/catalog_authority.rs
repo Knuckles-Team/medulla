@@ -4,6 +4,8 @@
 //! verify every source before calling this method. An owner row alone is not
 //! authorization.
 
+use medulla_protocol_types::mutation_batch::MutationOperation;
+use medulla_protocol_types::protocol::Method;
 use medulla_types::agent_component::{AgentComponentEntry, AgentComponentKind};
 use medulla_types::agent_library::AgentLibraryLifecycle;
 use medulla_types::agent_library::AgentLibraryMutationContext;
@@ -13,10 +15,8 @@ use medulla_types::connector_pack::{
     McpCatalogAuthorityRow, McpCatalogSnapshotBinding, McpJoinedConfigurationRow,
 };
 use medulla_types::contract::Digest256;
-use medulla_types::mutation_batch::MutationOperation;
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationSurface;
-use medulla_types::protocol::Method;
 use redb::ReadableTable;
 
 use super::admitted::{PackOwnerWrite, PackWriteEffects, PackWriteIdentity};

@@ -9,14 +9,16 @@
 //! protection is keyed by the request, so a second write inside the same
 //! request would be answered as a replay of the first.
 
+use medulla_protocol_types::result_contract::MethodResult;
+use medulla_protocol_types::{
+    result_contract::cluster::FleetCatalogClearOverride,
+    result_contract::cluster::FleetCatalogRecordDiscovery,
+    result_contract::cluster::FleetCatalogSetOverride,
+};
 use medulla_types::fleet_catalog::{
     FleetDiscoveryRecordRequest, FleetOverrideClearRequest, FleetOverrideSetRequest,
     FleetWriteDisposition, FleetWriteReceipt,
 };
-use medulla_types::result_contract::cluster::{
-    FleetCatalogClearOverride, FleetCatalogRecordDiscovery, FleetCatalogSetOverride,
-};
-use medulla_types::result_contract::MethodResult;
 use serde::Serialize;
 
 use super::super::registry::REGISTRY_GRAPH;

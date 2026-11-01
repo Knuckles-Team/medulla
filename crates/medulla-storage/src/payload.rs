@@ -1,6 +1,6 @@
 //! Digest binding between a sealed private payload and its parent receipt.
 
-use medulla_types::MutationBatchRecord;
+use medulla_protocol_types::mutation_batch::MutationBatchRecord;
 
 /// The digest that BINDS a sealed private payload to its parent record.
 ///
@@ -17,7 +17,7 @@ pub fn private_payload_digest(record: &MutationBatchRecord) -> Option<&str> {
         return None;
     }
     match &operation.method {
-        medulla_types::protocol::Method::ApplyMutation { query, .. }
+        medulla_protocol_types::protocol::Method::ApplyMutation { query, .. }
             if query.len() == 71
                 && query.starts_with("sha256:")
                 && query[7..]
@@ -38,7 +38,8 @@ pub fn private_payload_digest(record: &MutationBatchRecord) -> Option<&str> {
 /// [`private_payload_digest`] instead.
 pub(crate) fn recovery_plan_digest(record: &MutationBatchRecord) -> Option<&str> {
     let operation = record.batch.operations.first()?;
-    let medulla_types::protocol::Method::ApplyMutation { event_type, .. } = &operation.method
+    let medulla_protocol_types::protocol::Method::ApplyMutation { event_type, .. } =
+        &operation.method
     else {
         return None;
     };

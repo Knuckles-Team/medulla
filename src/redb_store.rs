@@ -2764,7 +2764,7 @@ mod mutation_batch_tests {
             "work-idem:terminal-stable-key",
         );
         let remint_attempt = |batch: &mut MutationBatch, nonce_byte: u8, created_at_ms: u64| {
-            let medulla_types::mutation_batch::MutationEnvelope::Operation(operation) =
+            let medulla_protocol_types::mutation_batch::MutationEnvelope::Operation(operation) =
                 &mut batch.envelope
             else {
                 panic!("authenticated replay fixture must carry an operation envelope");
@@ -5410,7 +5410,7 @@ mod mutation_batch_tests {
                 sanitizer_version: "sanitizer-v1".to_string(),
                 sanitized_payload_digest: "d".repeat(64),
             },
-            material_class: medulla_types::change_envelope::MaterialClass::Attested,
+            material_class: medulla_protocol_types::change_envelope::MaterialClass::Attested,
             commit_seq: None,
             commit_descriptor_ref: None,
         }
@@ -5978,7 +5978,7 @@ mod mutation_batch_tests {
             .expect("fixture operation envelope")
             .authority
             .nonce;
-        let medulla_types::mutation_batch::MutationEnvelope::Operation(operation) =
+        let medulla_protocol_types::mutation_batch::MutationEnvelope::Operation(operation) =
             &mut duplicate_nonce.mutation.envelope
         else {
             panic!("fixture operation envelope");
@@ -6432,7 +6432,7 @@ mod mutation_batch_tests {
         .unwrap();
         assert!(durable_receipt.is_some());
         let mut replay = terminal.clone();
-        let medulla_types::mutation_batch::MutationEnvelope::Operation(operation) =
+        let medulla_protocol_types::mutation_batch::MutationEnvelope::Operation(operation) =
             &mut replay.envelope
         else {
             panic!("terminal replay fixture needs an operation envelope");

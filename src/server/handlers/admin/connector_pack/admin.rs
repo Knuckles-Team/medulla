@@ -73,7 +73,7 @@ async fn bind(
         connector,
         importer,
     } = request;
-    admin_write::<medulla_types::result_contract::storage::ConnectorPackBind, _>(
+    admin_write::<medulla_protocol_types::result_contract::storage::ConnectorPackBind, _>(
         AdminWrite {
             state,
             req_id,
@@ -102,7 +102,7 @@ async fn unbind(
     request: medulla_types::connector_pack::ConnectorPackUnbindRequest,
 ) -> Response {
     let medulla_types::connector_pack::ConnectorPackUnbindRequest { context, connector } = request;
-    admin_write::<medulla_types::result_contract::storage::ConnectorPackUnbind, _>(
+    admin_write::<medulla_protocol_types::result_contract::storage::ConnectorPackUnbind, _>(
         AdminWrite {
             state,
             req_id,
@@ -129,7 +129,7 @@ async fn retire(
         connector,
         uris,
     } = request;
-    admin_write::<medulla_types::result_contract::storage::ConnectorPackRetire, _>(
+    admin_write::<medulla_protocol_types::result_contract::storage::ConnectorPackRetire, _>(
         AdminWrite {
             state,
             req_id,
@@ -162,8 +162,8 @@ struct AdminWrite<'a> {
 #[cfg(feature = "redb")]
 async fn admin_write<M, F>(request: AdminWrite<'_>, write: F) -> Response
 where
-    M: medulla_types::result_contract::MethodResult,
-    M::Encoding: medulla_types::result_contract::EncodeRef<M::Body>,
+    M: medulla_protocol_types::result_contract::MethodResult,
+    M::Encoding: medulla_protocol_types::result_contract::EncodeRef<M::Body>,
     M::Body: Send + 'static,
     F: FnOnce(
             &AgentLibraryStore,
@@ -182,7 +182,7 @@ where
 #[cfg(feature = "redb")]
 async fn run_admin_write<M, F>(request: AdminWrite<'_>, write: F) -> Result<M::Body, String>
 where
-    M: medulla_types::result_contract::MethodResult,
+    M: medulla_protocol_types::result_contract::MethodResult,
     M::Body: Send + 'static,
     F: FnOnce(
             &AgentLibraryStore,

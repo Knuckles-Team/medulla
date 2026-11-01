@@ -280,7 +280,7 @@ pub trait DispatchApi: Send + Sync {
             (
                 u64,
                 medulla_types::contract::Digest256,
-                medulla_types::result_contract::cluster::RegisteredServerView,
+                medulla_protocol_types::result_contract::cluster::RegisteredServerView,
             ),
             String,
         >,
@@ -408,7 +408,7 @@ pub(crate) async fn verified_served_registration(
     (
         u64,
         medulla_types::contract::Digest256,
-        medulla_types::result_contract::cluster::RegisteredServerView,
+        medulla_protocol_types::result_contract::cluster::RegisteredServerView,
     ),
     String,
 > {

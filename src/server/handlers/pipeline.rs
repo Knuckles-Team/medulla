@@ -20,13 +20,15 @@ use medulla_compute::datascience::estimators;
 use medulla_compute::graphlearn::edge_fn::Basis;
 use medulla_compute::graphlearn::link_predict::{self, FeatureCtx, KanLinkConfig, KanLinkModel};
 use medulla_compute::mining::classify;
+use medulla_protocol_types::{
+    result_contract::compute as results, result_contract::compute::MiningPipelinePredict,
+};
 use medulla_types::compute_result::graphlearn::PredictedLink;
 use medulla_types::compute_result::pipeline::{
     ClassifyPrediction, EstimatorPrediction, GraphlearnPrediction, PipelineClassifiedRow,
     PipelineComparison, PipelineEvaluation, PipelinePrediction, PipelineServeResult,
     PipelineTrainResult, PipelineValueRow,
 };
-use medulla_types::result_contract::compute::{self as results, MiningPipelinePredict};
 use medulla_types::wire::{FeatureStep, ModelSpec, PipelineSpec};
 use serde_json::{json, Value};
 
@@ -1225,9 +1227,10 @@ mod tests {
         visibility: &str,
         owner: Option<&str>,
     ) {
-        let mut props =
-            medulla_types::msgpack::decode_property_value(&core.get_node_properties(model_id).unwrap())
-                .unwrap();
+        let mut props = medulla_types::msgpack::decode_property_value(
+            &core.get_node_properties(model_id).unwrap(),
+        )
+        .unwrap();
         match owner {
             Some(owner) => {
                 props["_owner"] = json!(owner);

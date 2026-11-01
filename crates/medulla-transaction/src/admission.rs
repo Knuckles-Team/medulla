@@ -2,8 +2,8 @@
 //! owner-row window inside it, and a poisoned write on any unfinished drop.
 
 use crate::admitted::{is_ledger_only, AdmittedMutation};
+use medulla_protocol_types::{mutation_batch::MutationBatch, mutation_batch::MutationBatchRecord};
 use medulla_storage::{encode_bounded, OwnerDomain, OwnerLayout};
-use medulla_types::{MutationBatch, MutationBatchRecord};
 
 pub(crate) enum AdmissionState {
     Idle,

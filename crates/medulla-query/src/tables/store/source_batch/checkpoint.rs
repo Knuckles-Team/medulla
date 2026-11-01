@@ -1,10 +1,10 @@
 //! Provider stream continuity and terminal publication inside one SQL owner gate.
 
 use super::{Invocation, MutationBatch, SqlWrite};
+use medulla_protocol_types::change_envelope::CursorPosition;
+use medulla_protocol_types::{storage_wire::SqlSourceBatchResult, storage_wire::SqlSourceText};
 use medulla_storage::SQL_SOURCE_CHECKPOINTS;
-use medulla_types::change_envelope::CursorPosition;
 use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
-use medulla_types::storage_wire::{SqlSourceBatchResult, SqlSourceText};
 use redb::ReadableTable;
 use serde::{Deserialize, Serialize};
 use std::num::NonZeroU64;

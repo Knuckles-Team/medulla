@@ -428,7 +428,9 @@ fn pack_members_keep_file_local_blank_nodes_and_uri_order_is_stable() {
     let blank_subjects: std::collections::BTreeSet<_> = triples
         .iter()
         .filter_map(|triple| match &triple.subject {
-            medulla_rdf::oxrdf::NamedOrBlankNode::BlankNode(node) => Some(node.as_str().to_string()),
+            medulla_rdf::oxrdf::NamedOrBlankNode::BlankNode(node) => {
+                Some(node.as_str().to_string())
+            }
             _ => None,
         })
         .collect();

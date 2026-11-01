@@ -45,7 +45,7 @@ pub(super) async fn handle_add_triples(
     match report {
         Ok(r) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::graph::AddTriples>(&r),
+            ResultPayload::of_ref::<medulla_protocol_types::result_contract::graph::AddTriples>(&r),
         ),
         Err(e) => Response::err(req_id, format!("AddTriples error: {e}")),
     }
@@ -62,7 +62,7 @@ pub(super) async fn handle_get_rdf(
     match exported.and_then(|t| medulla_rdf::mapping::to_ntriples(&t)) {
         Ok(nt) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::reasoning::GetRdf>(nt),
+            ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::GetRdf>(nt),
         ),
         Err(e) => Response::err(req_id, format!("GetRdf error: {e}")),
     }
@@ -105,7 +105,9 @@ pub(super) async fn handle_remove_triples(
     let removed = medulla_rdf::update::remove_triples(core, &triples);
     Response::ok(
         req_id,
-        ResultPayload::scalar::<medulla_types::result_contract::graph::RemoveTriples>(removed as u64),
+        ResultPayload::scalar::<medulla_protocol_types::result_contract::graph::RemoveTriples>(
+            removed as u64,
+        ),
     )
 }
 

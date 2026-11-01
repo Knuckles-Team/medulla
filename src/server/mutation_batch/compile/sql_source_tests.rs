@@ -2,12 +2,13 @@
 
 use super::*;
 use crate::mutation_batch::VersionExpectation;
-use medulla_types::change_envelope::CursorPosition;
-use medulla_types::contract::{BoundedVec, Digest256, Nonce, RecordBytes, ResourceId};
-use medulla_types::storage_wire::{
-    SqlSourceBatch, SqlSourceBatchRequest, SqlSourceCell, SqlSourceDescriptor, SqlSourceJson,
-    SqlSourceMappingDescriptor, SqlSourceText,
+use medulla_protocol_types::change_envelope::CursorPosition;
+use medulla_protocol_types::{
+    storage_wire::SqlSourceBatch, storage_wire::SqlSourceBatchRequest, storage_wire::SqlSourceCell,
+    storage_wire::SqlSourceDescriptor, storage_wire::SqlSourceJson,
+    storage_wire::SqlSourceMappingDescriptor, storage_wire::SqlSourceText,
 };
+use medulla_types::contract::{BoundedVec, Digest256, Nonce, RecordBytes, ResourceId};
 
 const ROW_MARKER: &str = "row-content-private-marker";
 const MAPPING_MARKER: &[u8] = b"mapping-content-private-marker";

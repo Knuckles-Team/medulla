@@ -102,7 +102,10 @@ pub(crate) fn stamp_logs(records: &mut [LogRecord], tenant: &str) {
 
 /// Stamp `medulla_tenant` on every span; a span naming another tenant refuses all.
 #[cfg(feature = "traces")]
-pub(crate) fn stamp_spans(spans: &mut [medulla_tsdb::traces::Span], tenant: &str) -> Result<(), String> {
+pub(crate) fn stamp_spans(
+    spans: &mut [medulla_tsdb::traces::Span],
+    tenant: &str,
+) -> Result<(), String> {
     if let Some(claimed) = spans
         .iter()
         .filter_map(|span| span.attributes.get(TENANT_ATTRIBUTE))

@@ -1,15 +1,15 @@
 use super::*;
 
+use medulla_protocol_types::result_contract::cluster::RegisteredServerCursor;
+use medulla_protocol_types::result_contract::cluster::RegisteredServerListPage;
+use medulla_protocol_types::result_contract::cluster::RegisteredServerListRequest;
+use medulla_protocol_types::result_contract::cluster::RegisteredServerView;
+use medulla_protocol_types::result_contract::cluster::ServerDesiredState;
+use medulla_protocol_types::result_contract::cluster::ServerTransport;
+use medulla_protocol_types::result_contract::cluster::MAX_REGISTERED_SERVER_PAGE_ENTRIES;
+use medulla_protocol_types::result_contract::cluster::REGISTERED_SERVER_LIST_SCHEMA_VERSION;
 use medulla_types::contract::{BoundedVec, Digest256};
 use medulla_types::fleet_catalog::is_valid_server_name;
-use medulla_types::result_contract::cluster::RegisteredServerCursor;
-use medulla_types::result_contract::cluster::RegisteredServerListPage;
-use medulla_types::result_contract::cluster::RegisteredServerListRequest;
-use medulla_types::result_contract::cluster::RegisteredServerView;
-use medulla_types::result_contract::cluster::ServerDesiredState;
-use medulla_types::result_contract::cluster::ServerTransport;
-use medulla_types::result_contract::cluster::MAX_REGISTERED_SERVER_PAGE_ENTRIES;
-use medulla_types::result_contract::cluster::REGISTERED_SERVER_LIST_SCHEMA_VERSION;
 
 pub(super) const REGISTRY_GRAPH: &str = "__commons__";
 const REGISTERED_SERVER_SNAPSHOT_DOMAIN: &[u8] = b"eg/registered-server-snapshot/v2";
@@ -280,7 +280,7 @@ pub(in crate::server::dispatch) async fn handle_list_registered_servers(
         read_authority.can_see_node(properties, raw_core.is_schema_node(node_id))
     });
     crate::server::dispatch::typed_response::<
-        medulla_types::result_contract::cluster::ListRegisteredServers,
+        medulla_protocol_types::result_contract::cluster::ListRegisteredServers,
     >(
         req_id,
         registered_server_page(&live, &request, observed_at_ms, registry_revision),
@@ -453,7 +453,7 @@ fn register_server_response(response: Response) -> Response {
             ..
         } => Response::ok(
             id,
-            ResultPayload::scalar::<medulla_types::result_contract::cluster::RegisterServer>(
+            ResultPayload::scalar::<medulla_protocol_types::result_contract::cluster::RegisterServer>(
                 acknowledgement,
             ),
         ),

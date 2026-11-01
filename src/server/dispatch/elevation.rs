@@ -10,13 +10,15 @@
 //! stamp still cannot act as someone else.
 
 #[cfg(feature = "security")]
+use medulla_protocol_types::{
+    result_contract::security::RbacElevationApprove, result_contract::security::RbacElevationList,
+    result_contract::security::RbacElevationRequest,
+    result_contract::security::RbacElevationRevoke,
+};
+#[cfg(feature = "security")]
 use medulla_types::rbac_elevation::RbacElevationOp;
 use medulla_types::rbac_elevation::{
     ElevationActor, ElevationDelegation, ElevationStanding, APPROVE_ELEVATION_SCOPE,
-};
-#[cfg(feature = "security")]
-use medulla_types::result_contract::security::{
-    RbacElevationApprove, RbacElevationList, RbacElevationRequest, RbacElevationRevoke,
 };
 
 use super::VerifiedRequestContext;

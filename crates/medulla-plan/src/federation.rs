@@ -352,7 +352,9 @@ fn check_context_fields_nonempty(
 
 /// None of `roles`/`scopes`/`delegation` may contain an empty or duplicated
 /// entry.
-fn check_context_lists_valid(context: &medulla_types::acl::RequestContextClaims) -> Result<(), String> {
+fn check_context_lists_valid(
+    context: &medulla_types::acl::RequestContextClaims,
+) -> Result<(), String> {
     for (name, values) in [
         ("role", context.roles.as_slice()),
         ("scope", context.scopes.as_slice()),
@@ -374,7 +376,9 @@ fn check_context_lists_valid(context: &medulla_types::acl::RequestContextClaims)
 /// A non-delegated context (`principal == agent_id`) must carry an empty
 /// delegation path; a delegated one must bind `principal` → … → `agent_id`
 /// through at least two hops.
-fn check_delegation_chain(context: &medulla_types::acl::RequestContextClaims) -> Result<(), String> {
+fn check_delegation_chain(
+    context: &medulla_types::acl::RequestContextClaims,
+) -> Result<(), String> {
     if context.principal == context.agent_id {
         if !context.delegation.is_empty() {
             return Err(
@@ -432,7 +436,7 @@ fn connect_remote_engine(endpoint: &str) -> Result<std::net::TcpStream, String> 
 /// Encode and write one length-prefixed request frame.
 fn write_remote_request(
     stream: &mut std::net::TcpStream,
-    request: &medulla_types::protocol::Request,
+    request: &medulla_protocol_types::protocol::Request,
 ) -> Result<(), String> {
     use std::io::Write;
     let body = rmp_serde::to_vec_named(request)
@@ -465,7 +469,7 @@ fn read_remote_response(stream: &mut std::net::TcpStream) -> Result<Vec<u8>, Str
     stream
         .read_exact(&mut resp_buf)
         .map_err(|_| "federation: remote engine response body failed".to_string())?;
-    let resp: medulla_types::protocol::Response = medulla_types::msgpack::decode_bounded(
+    let resp: medulla_protocol_types::protocol::Response = medulla_types::msgpack::decode_bounded(
         &resp_buf,
         medulla_types::msgpack::MsgpackLimits::new(
             MAX_REMOTE_ENGINE_FRAME_BYTES,
@@ -479,7 +483,7 @@ fn read_remote_response(stream: &mut std::net::TcpStream) -> Result<Vec<u8>, Str
     }
     // `ResultPayload::raw()` is the one MessagePack-bin result representation.
     match resp.result {
-        Some(medulla_types::protocol::ResultPayload::Raw(bytes)) => Ok(bytes),
+        Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) => Ok(bytes),
         _ => Err("federation: remote engine returned an unexpected result".to_string()),
     }
 }
@@ -526,7 +530,7 @@ impl RemoteEngineSource<'_> {
     /// empty-secret fallback are deliberately absent from native federation.
     fn auth_token(
         &self,
-        request: &medulla_types::protocol::Request,
+        request: &medulla_protocol_types::protocol::Request,
         timestamp: u64,
         nonce: &str,
         idempotency_key: &str,
@@ -536,7 +540,7 @@ impl RemoteEngineSource<'_> {
         self.validate_request_context()?;
         let method_name = request.method.tag_name();
         let body_hash = hex::encode(Sha256::digest(request.method.canonical_body_bytes()));
-        let bytes = medulla_types::protocol::build_envelope_v2_bytes(
+        let bytes = medulla_protocol_types::protocol::build_envelope_v2_bytes(
             request.id,
             &request.graph,
             &method_name,
@@ -563,8 +567,8 @@ impl RemoteEngineSource<'_> {
 
     fn signed_request(
         &self,
-        method: medulla_types::protocol::Method,
-    ) -> Result<medulla_types::protocol::Request, String> {
+        method: medulla_protocol_types::protocol::Method,
+    ) -> Result<medulla_protocol_types::protocol::Request, String> {
         use std::sync::atomic::{AtomicU64, Ordering};
         use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -577,7 +581,7 @@ impl RemoteEngineSource<'_> {
         let request_id = (elapsed.as_nanos() as u64).wrapping_add(counter).max(1);
         let nonce = format!("federation:{:032x}:{counter:016x}", elapsed.as_nanos());
         let idempotency_key = format!("federation:{request_id:016x}:{counter:016x}");
-        let mut request = medulla_types::protocol::Request {
+        let mut request = medulla_protocol_types::protocol::Request {
             id: request_id,
             graph: self.graph.to_string(),
             auth_token: String::new(),
@@ -593,7 +597,10 @@ impl RemoteEngineSource<'_> {
     /// Request]`, read `[u32 len][msgpack Response]`, return the response's `Raw`
     /// payload bytes (or the remote's error). Blocking — the executor runs it on the
     /// blocking pool, exactly like the local SQL leg.
-    fn round_trip(&self, request: &medulla_types::protocol::Request) -> Result<Vec<u8>, String> {
+    fn round_trip(
+        &self,
+        request: &medulla_protocol_types::protocol::Request,
+    ) -> Result<Vec<u8>, String> {
         let mut stream = connect_remote_engine(self.endpoint)?;
         write_remote_request(&mut stream, request)?;
         read_remote_response(&mut stream)
@@ -604,7 +611,7 @@ impl RemoteEngineSource<'_> {
     /// SAME currency this engine's plans speak, so the projection is the identity. A
     /// statement that answers no rows (`EXPLAIN`) is refused — a foreign source is rows.
     pub(crate) fn fetch_uql_text(&self, text: &str) -> Result<RowSet, String> {
-        let request = self.signed_request(medulla_types::protocol::Method::Uql {
+        let request = self.signed_request(medulla_protocol_types::protocol::Method::Uql {
             text: text.to_string(),
             params: std::collections::BTreeMap::new(),
             prepare: false,
@@ -638,20 +645,22 @@ impl RemoteEngineSource<'_> {
     /// `id_field` column out of each row (each row is msgpack `Vec<Value>` aligned to
     /// `columns`) and build an unscored RowSet.
     fn fetch_cypher(&self) -> Result<RowSet, String> {
-        let request = self.signed_request(medulla_types::protocol::Method::CypherQuery {
-            query: self.cypher.to_string(),
-            mode: medulla_types::protocol::CypherMode::Read,
-        })?;
+        let request =
+            self.signed_request(medulla_protocol_types::protocol::Method::CypherQuery {
+                query: self.cypher.to_string(),
+                mode: medulla_protocol_types::protocol::CypherMode::Read,
+            })?;
         let raw = self.round_trip(&request)?;
-        let result: medulla_types::protocol::QueryResult = medulla_types::msgpack::decode_bounded(
-            &raw,
-            medulla_types::msgpack::MsgpackLimits::new(
-                MAX_REMOTE_ENGINE_FRAME_BYTES,
-                MAX_REMOTE_ENGINE_ITEMS,
-                medulla_types::msgpack::DEFAULT_MAX_DEPTH,
-            ),
-        )
-        .map_err(|_| "federation: invalid cypher result".to_string())?;
+        let result: medulla_protocol_types::protocol::QueryResult =
+            medulla_types::msgpack::decode_bounded(
+                &raw,
+                medulla_types::msgpack::MsgpackLimits::new(
+                    MAX_REMOTE_ENGINE_FRAME_BYTES,
+                    MAX_REMOTE_ENGINE_ITEMS,
+                    medulla_types::msgpack::DEFAULT_MAX_DEPTH,
+                ),
+            )
+            .map_err(|_| "federation: invalid cypher result".to_string())?;
         let id_field = if self.id_field.is_empty() {
             "id"
         } else {
@@ -2011,8 +2020,8 @@ mod envelope_signer_tests {
     //! as every other served client. These tests pin its canonical bindings and
     //! prove the former v0/empty-secret downgrade no longer exists.
     use super::RemoteEngineSource;
+    use medulla_protocol_types::{protocol::Method, protocol::Request};
     use medulla_types::acl::RequestContextClaims;
-    use medulla_types::protocol::{Method, Request};
 
     fn context() -> RequestContextClaims {
         RequestContextClaims {

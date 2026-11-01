@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use medulla_types::result_contract::ingestion as ingestion_results;
+use medulla_protocol_types::result_contract::ingestion as ingestion_results;
 use medulla_types::semantic_index::{
     SemanticBindingPage, SemanticIndexCommand, SemanticIndexOp, SemanticIndexOperation,
     SemanticIndexOutcome, SemanticIndexRequest, SemanticIndexResponse, SemanticIndexResult,

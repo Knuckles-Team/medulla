@@ -27,12 +27,10 @@ pub use medulla_core::{compute, decay, graph, index, isolation, registry};
 // CONCEPT:MEDULLA-KG.compute.message-broker-exchanges — message-broker primitives, re-exported under `crate::broker`.
 #[cfg(feature = "broker")]
 pub use medulla_core::broker;
+pub use medulla_protocol_types::{change_envelope, mutation_batch, protocol};
 #[cfg(feature = "knowledge-batch")]
 pub use medulla_types::knowledge_stream;
-pub use medulla_types::{
-    acl, change_envelope, epistemic_operations, epistemic_operations_ext, mutation_batch, protocol,
-    types, wire,
-};
+pub use medulla_types::{acl, epistemic_operations, epistemic_operations_ext, types, wire};
 // Compute domains live in `medulla-compute`; re-export under the historical `crate::`
 // paths. algorithms/ast/parser are always present; the feature-gated domains are
 // re-exported only when their facade feature (→ medulla-compute feature) is on.

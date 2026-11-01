@@ -23,7 +23,9 @@ pub(crate) async fn handle_freshness_feed(
     let core = Arc::clone(ctx.core);
     let visible = row_filter(ctx);
     let built = compute_off_lock(ctx.req_id, move || build_feed(&core, request, visible)).await;
-    match built.map(ResultPayload::of::<medulla_types::result_contract::messaging::FreshnessFeed>) {
+    match built
+        .map(ResultPayload::of::<medulla_protocol_types::result_contract::messaging::FreshnessFeed>)
+    {
         Ok(Ok(payload)) => Response::ok(ctx.req_id, payload),
         Ok(Err(error)) => Response::err(ctx.req_id, error),
         Err(response) => response,

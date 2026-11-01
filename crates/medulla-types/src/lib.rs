@@ -71,8 +71,6 @@ pub mod ontology_diff;
 pub mod authority;
 // MEDULLA-SRC-AUTH-R007.1 — typed audit entries for source selection evidence.
 pub mod authority_audit;
-// MEDULLA-REPO-INGEST-R700 — code-health findings from a bounded reachability sweep.
-pub mod change_envelope;
 pub mod code_health;
 // MEDULLA-DURABLE-KERNEL-R087.1 — typed semantic changeset-review model. The
 // authenticated producer/consumer route is a later R087.2 concern.
@@ -95,10 +93,6 @@ pub mod warehouse_federation;
 // R022.1 report entry. Pure data; actually running the comparison is a later
 // child.
 pub mod warehouse_conformance;
-// MEDULLA-UNIFIED-DATA-PLANE-R021.1 — typed Debezium Kafka change-event envelope
-// shape and its op-code/before-after refusal rules. Pure data; the Kafka
-// consumer and the real ChangeEnvelope conversion are later children.
-pub mod debezium_bridge;
 // MEDULLA-UNIFIED-DATA-PLANE-R022.1 — typed per-dialect conformance report entry
 // and deviation shape, refusing an auto-suppressed (unreviewed) deviation.
 // Pure data; running the containerized matrix is a later child.
@@ -372,7 +366,6 @@ pub mod knowledge_stream;
 // store + REST projection that would carry these records over the wire is
 // GOC-10-W03/W05, not yet implemented).
 pub mod lake_catalog;
-pub mod messaging_wire;
 #[cfg(feature = "modality-serving")]
 pub mod modality;
 pub mod msgpack;
@@ -383,13 +376,9 @@ pub mod graph_schema;
 pub mod managed_index;
 // X10 — the operator view of one owner's mutation outbox: standing, dead
 // letters and bounded re-delivery.
-pub mod mutation_outbox;
-// RF-RULING-004 — untrusted serialized mutation request/evidence DTOs only.
-// Executable admitted plans/tokens are private to the future medulla-transaction kernel.
-pub mod error_registry;
 pub mod lease_vocab;
 pub mod mutation;
-pub mod mutation_batch;
+pub mod mutation_outbox;
 pub mod mutation_scope;
 // MEDULLA-ORCH-VOCAB-R801/R802 — the versioned harness-component vocabulary and the
 // improvement library beside it: typed model + pure rules. The durable write
@@ -414,7 +403,6 @@ pub mod outbox;
 // refusal tests only, no outbox-append wiring yet).
 #[cfg(feature = "finance")]
 pub mod finance_event_envelope;
-pub mod protocol;
 // The general bounded 0-1 integer programme (`Method::Solve`): model, config,
 // certificate and exact scalars. The search and the verifier live in
 // `medulla-compute`, which re-exports these so there is one definition of each.
@@ -441,9 +429,6 @@ pub mod runtime_limit;
 pub mod sealed_record;
 // EH-522 — the series-expression algebra (`DERIVE` columns, derived series). Pure serde.
 pub mod series_expr;
-// F3: the typed result contract -- one marker per method result, compile-checked at every
-// handler site and walked by `medulla-capabilities` to publish the result schemas.
-pub mod result_contract;
 // RF-019 — the sole transport-neutral semantic-index contract.  Runtime
 // storage, queues, handlers, and surface projections live in crates above this
 // bottom-of-DAG owner and must consume these exact operation and identity DTOs.
@@ -469,9 +454,6 @@ pub mod catalog_fixtures;
 pub mod decision_fixtures;
 #[cfg(any(test, feature = "test-support"))]
 pub mod identity_fixtures;
-#[cfg(any(test, feature = "test-support"))]
-pub mod protocol_fixtures;
-pub mod storage_wire;
 pub mod telemetry_derive;
 #[cfg(any(test, feature = "test-support"))]
 pub mod test_support;
@@ -614,11 +596,6 @@ pub use agent_library::{
     AGENT_LIBRARY_ENTRY_SCHEMA_VERSION, AGENT_LIBRARY_OUTBOX_SCHEMA_VERSION,
     AGENT_LIBRARY_RESULT_SCHEMA_ID, AGENT_LIBRARY_RESULT_SCHEMA_VERSION,
 };
-pub use change_envelope::{
-    BlobReference, ChangeCursor, ChangeEnvelope, ChangeEnvelopeCommit, ChangeEnvelopeRecord,
-    ContentVersion, ContentVersionPosition, CursorPosition, EvidenceRecord, FeatureRecord,
-    LineageRecord, MaterialOperation, PolicyRecord, PrivacyAttestation, CHANGE_ENVELOPE_VERSION,
-};
 pub use delegation::{
     AgentLibraryEntryRef, KgDelegateDecision, KgDelegateRequest, KgDelegateResult,
     KgDelegateSchemaVersion,
@@ -642,31 +619,9 @@ pub use modality::{
 // representable. `MutationVersionScope` and `NON_GRAPH_SOURCE_VERSION` are therefore
 // not re-exported: they have no v1 meaning, and keeping an alias would be exactly the
 // compatibility seam RF-ADR-001 forbids.
-pub use mutation_batch::MutationBatch;
-pub use mutation_batch::MutationBatchCommit;
-pub use mutation_batch::MutationBatchRecord;
-pub use mutation_batch::MutationBatchStatus;
-pub use mutation_batch::MutationEnvelope;
-pub use mutation_batch::MutationOperation;
-pub use mutation_batch::MutationStateDescriptor;
-pub use mutation_batch::VersionExpectation;
 pub use mutation_scope::MUTATION_BATCH_VERSION;
 pub use mutation_scope::{
     CommittedVersion, IncarnationId, LogicalName, MutationOutboxIntent, MutationOutboxLease,
     MutationOutboxRecord, MutationProjectionCursor, MutationScope, MutationScopeIdentity,
     MutationSurface, ScopeTenantId,
 };
-
-/// The six native capacity writes. Keep admission, identity normalization and
-/// served dispatch on the same variant set.
-#[macro_export]
-macro_rules! capacity_lease_writes {
-    () => {
-        $crate::protocol::Method::AcquireCapacity { .. }
-            | $crate::protocol::Method::RenewCapacity { .. }
-            | $crate::protocol::Method::ReleaseCapacity { .. }
-            | $crate::protocol::Method::ReclaimExpiredCapacity { .. }
-            | $crate::protocol::Method::UpdateCapacityCell { .. }
-            | $crate::protocol::Method::ThrottleCapacityCell { .. }
-    };
-}

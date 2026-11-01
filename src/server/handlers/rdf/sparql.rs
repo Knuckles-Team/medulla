@@ -97,7 +97,7 @@ fn sparql_cache_hit(core: &GraphCore, req_id: u64, hash: u128) -> Option<Respons
     core.result_cache().get(hash, core.version()).map(|bytes| {
         Response::ok(
             req_id,
-            ResultPayload::of_cache_hit::<medulla_types::result_contract::reasoning::Sparql>(bytes),
+            ResultPayload::of_cache_hit::<medulla_protocol_types::result_contract::reasoning::Sparql>(bytes),
         )
     })
 }
@@ -184,7 +184,9 @@ async fn evaluate_sparql(
     .await
     {
         Ok(Ok(wire)) => {
-            match ResultPayload::of_ref::<medulla_types::result_contract::reasoning::Sparql>(&wire) {
+            match ResultPayload::of_ref::<medulla_protocol_types::result_contract::reasoning::Sparql>(
+                &wire,
+            ) {
                 Ok(payload) => {
                     #[cfg(feature = "result-cache")]
                     medulla_core::result_cache::cache_result(

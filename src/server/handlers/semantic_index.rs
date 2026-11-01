@@ -278,8 +278,8 @@ pub(crate) fn semantic_failure_message(error: &SemanticCodeError) -> &'static st
 
 pub(super) fn reply<M, T>(req_id: u64, result: Result<T, Response>) -> Response
 where
-    M: medulla_types::result_contract::MethodResult<Body = T>,
-    M::Encoding: medulla_types::result_contract::EncodeRef<T>,
+    M: medulla_protocol_types::result_contract::MethodResult<Body = T>,
+    M::Encoding: medulla_protocol_types::result_contract::EncodeRef<T>,
 {
     match result {
         Ok(value) => typed_payload::<M, _>(req_id, &value),
@@ -289,8 +289,8 @@ where
 
 pub(super) fn typed_payload<M, T>(req_id: u64, value: &T) -> Response
 where
-    M: medulla_types::result_contract::MethodResult<Body = T>,
-    M::Encoding: medulla_types::result_contract::EncodeRef<T>,
+    M: medulla_protocol_types::result_contract::MethodResult<Body = T>,
+    M::Encoding: medulla_protocol_types::result_contract::EncodeRef<T>,
 {
     match ResultPayload::of_ref::<M>(value) {
         Ok(payload) => Response::ok(req_id, payload),

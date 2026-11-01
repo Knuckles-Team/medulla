@@ -44,9 +44,9 @@ pub async fn handle_classes(
     ) {
         Ok(view) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::reasoning::GraphSchemaClasses>(
-                view,
-            ),
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::reasoning::GraphSchemaClasses,
+            >(view),
         ),
         Err(error) => Response::err(req_id, error),
     }

@@ -263,24 +263,24 @@ pub(crate) fn claim_not_claimed_payload(
     inflight: u32,
     changed_work_item_ids: Vec<String>,
 ) -> Result<crate::protocol::ResultPayload, String> {
-    crate::protocol::ResultPayload::of::<medulla_types::result_contract::coordination::ClaimWorkItem>(
-        ClaimWorkItemResult {
-            schema_version: ClaimWorkItemResultSchemaVersion::V1,
-            claimed: false,
-            reason,
-            work_item_id: None,
-            kind: None,
-            payload_ref: None,
-            lease_holder_ref: None,
-            lease_epoch: None,
-            fencing_token: None,
-            lease_expires_at_ms: None,
-            attempt: None,
-            max_attempts: None,
-            tenant_in_flight: Some(u64::from(inflight)),
-            changed_work_item_ids,
-        },
-    )
+    crate::protocol::ResultPayload::of::<
+        medulla_protocol_types::result_contract::coordination::ClaimWorkItem,
+    >(ClaimWorkItemResult {
+        schema_version: ClaimWorkItemResultSchemaVersion::V1,
+        claimed: false,
+        reason,
+        work_item_id: None,
+        kind: None,
+        payload_ref: None,
+        lease_holder_ref: None,
+        lease_epoch: None,
+        fencing_token: None,
+        lease_expires_at_ms: None,
+        attempt: None,
+        max_attempts: None,
+        tenant_in_flight: Some(u64::from(inflight)),
+        changed_work_item_ids,
+    })
 }
 
 /// Stamp the granted lease onto the selected candidate and report its
@@ -405,24 +405,24 @@ fn apply_claimed_work_item(
         crypto,
     )?;
     changed_work_item_ids.push(node_id.clone());
-    crate::protocol::ResultPayload::of::<medulla_types::result_contract::coordination::ClaimWorkItem>(
-        ClaimWorkItemResult {
-            schema_version: ClaimWorkItemResultSchemaVersion::V1,
-            claimed: true,
-            reason: ClaimWorkItemResultReason::Claimed,
-            work_item_id: Some(node_id),
-            kind: (!kind.is_empty()).then_some(kind),
-            payload_ref: (!payload_ref.is_empty()).then_some(payload_ref),
-            lease_holder_ref: Some(worker_id.clone()),
-            lease_epoch: Some(epoch),
-            fencing_token: Some(epoch),
-            lease_expires_at_ms: Some(now_ms.saturating_add(lease_ms)),
-            attempt: Some(attempt),
-            max_attempts: Some(max_attempts),
-            tenant_in_flight: Some(u64::from(inflight.saturating_add(1))),
-            changed_work_item_ids,
-        },
-    )
+    crate::protocol::ResultPayload::of::<
+        medulla_protocol_types::result_contract::coordination::ClaimWorkItem,
+    >(ClaimWorkItemResult {
+        schema_version: ClaimWorkItemResultSchemaVersion::V1,
+        claimed: true,
+        reason: ClaimWorkItemResultReason::Claimed,
+        work_item_id: Some(node_id),
+        kind: (!kind.is_empty()).then_some(kind),
+        payload_ref: (!payload_ref.is_empty()).then_some(payload_ref),
+        lease_holder_ref: Some(worker_id.clone()),
+        lease_epoch: Some(epoch),
+        fencing_token: Some(epoch),
+        lease_expires_at_ms: Some(now_ms.saturating_add(lease_ms)),
+        attempt: Some(attempt),
+        max_attempts: Some(max_attempts),
+        tenant_in_flight: Some(u64::from(inflight.saturating_add(1))),
+        changed_work_item_ids,
+    })
 }
 
 pub(crate) fn apply_claim_work_item_row<'txn, 'crypto>(

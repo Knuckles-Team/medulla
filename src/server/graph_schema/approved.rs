@@ -88,15 +88,15 @@ fn validate(
     sources.attach_dynamic(op.source_token().to_string(), source(op)?)?;
     crate::server::api::admin::compose::validate_entering_schema(&sources)?;
     let current = core.schema_sources().composed_digest().to_hex();
-    crate::protocol::ResultPayload::of::<medulla_types::result_contract::reasoning::GraphSchema>(
-        medulla_types::graph_schema::GraphSchemaCommitted {
-            schema_version: medulla_types::graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
-            graph: graph_name.to_string(),
-            composed_digest: current,
-            graph_version: core.version(),
-            changed: false,
-        },
-    )
+    crate::protocol::ResultPayload::of::<
+        medulla_protocol_types::result_contract::reasoning::GraphSchema,
+    >(medulla_types::graph_schema::GraphSchemaCommitted {
+        schema_version: medulla_types::graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
+        graph: graph_name.to_string(),
+        composed_digest: current,
+        graph_version: core.version(),
+        changed: false,
+    })
 }
 
 #[cfg(feature = "redb")]

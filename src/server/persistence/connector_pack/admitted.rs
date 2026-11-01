@@ -9,9 +9,9 @@
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
+use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_types::agent_library::AgentLibraryMutationContext;
 use medulla_types::mutation::{MutationReceipt, MutationResult};
-use medulla_types::mutation_batch::MutationOperation;
 use medulla_types::mutation_scope::MutationOutboxIntent;
 
 use crate::server::persistence::agent_library::{
@@ -125,7 +125,7 @@ impl AgentLibraryStore {
         identity: &PackWriteIdentity<'_>,
         effects: PackWriteEffects,
         apply: impl FnOnce(&PackOwnerWrite<'_>, &PackWriteStaged) -> Result<R, String>,
-    ) -> Result<(medulla_types::mutation_batch::MutationBatch, R), String> {
+    ) -> Result<(medulla_protocol_types::mutation_batch::MutationBatch, R), String> {
         let batch_context = policy_admitted_context(admission.context, &effects.operations)?;
         let (batch_id, staged) = stage_batch(
             self,
@@ -227,8 +227,8 @@ fn bind_batch_method(
     mut operation: medulla_types::authority::OperationReplayIdentity,
     operations: &[MutationOperation],
 ) -> Result<medulla_types::authority::OperationReplayIdentity, String> {
-    let method = medulla_types::mutation_batch::batch_method_id(operations, false)?;
-    operation.method_schema_id = medulla_types::mutation_batch::method_schema_id(&method)?;
+    let method = medulla_protocol_types::mutation_batch::batch_method_id(operations, false)?;
+    operation.method_schema_id = medulla_protocol_types::mutation_batch::method_schema_id(&method)?;
     operation.method = method;
     operation.validate()?;
     Ok(operation)

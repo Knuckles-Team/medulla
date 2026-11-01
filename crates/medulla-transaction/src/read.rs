@@ -5,12 +5,13 @@ use crate::commit::MAX_BATCH_ID_SENTINEL;
 use crate::tables::{
     BATCHES, CLASSES, FENCES, OUTBOX, PRIVATE_PAYLOADS, REPLAY_OPERATIONS, VERSIONS,
 };
+use medulla_protocol_types::mutation_batch::MutationBatchRecord;
 use medulla_storage::{
     decode_batch_record, decode_ledger_record, decode_outbox_record, ledger_scope_key,
     private_payload_digest, CollectionBudget, MutationClass, MutationClassRow, OperationReplayRow,
     OwnerDomain, ScopeFence, ScopedRead,
 };
-use medulla_types::{MutationBatchRecord, MutationOutboxRecord};
+use medulla_types::MutationOutboxRecord;
 
 /// Authoritative version of the read's bound scope.
 pub fn version<D: OwnerDomain>(read: &ScopedRead<'_, D>) -> Result<u64, String> {

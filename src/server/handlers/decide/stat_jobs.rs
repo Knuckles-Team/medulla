@@ -561,7 +561,10 @@ async fn serve_fit(
     reader: LogReader,
     op: DecisionFitOp,
 ) -> Result<ResultPayload, String> {
-    use medulla_types::result_contract::coordination::{DecisionFitStatus, DecisionFitSubmit};
+    use medulla_protocol_types::{
+        result_contract::coordination::DecisionFitStatus,
+        result_contract::coordination::DecisionFitSubmit,
+    };
     let (store, now_ms) = store_and_now(state).await?;
     match op {
         DecisionFitOp::Submit { request } => {
@@ -592,7 +595,10 @@ async fn serve_eval(
     reader: LogReader,
     op: DecisionEvalOp,
 ) -> Result<ResultPayload, String> {
-    use medulla_types::result_contract::coordination::{DecisionEvalStatus, DecisionEvalSubmit};
+    use medulla_protocol_types::{
+        result_contract::coordination::DecisionEvalStatus,
+        result_contract::coordination::DecisionEvalSubmit,
+    };
     let (store, now_ms) = store_and_now(state).await?;
     match op {
         DecisionEvalOp::Submit { request } => {
@@ -625,7 +631,7 @@ fn serve_eval_receipt(
     store: &AgentLibraryStore,
     request: &medulla_types::decision::DecisionReceiptGetRequest,
 ) -> Result<ResultPayload, String> {
-    use medulla_types::result_contract::coordination::DecisionEvalReceiptGet;
+    use medulla_protocol_types::result_contract::coordination::DecisionEvalReceiptGet;
 
     if !valid_receipt_digest(&request.receipt_digest) {
         return Err("INVALID_ARGUMENT: receipt_digest must be a sha256 digest".into());
@@ -649,7 +655,7 @@ fn serve_eval_receipts(
     store: &AgentLibraryStore,
     request: &medulla_types::decision::DecisionReceiptListRequest,
 ) -> Result<ResultPayload, String> {
-    use medulla_types::result_contract::coordination::DecisionEvalReceipts;
+    use medulla_protocol_types::result_contract::coordination::DecisionEvalReceipts;
 
     if !(1..=50).contains(&request.limit) {
         return Err("INVALID_ARGUMENT: receipt page limit must be 1..50".into());
@@ -698,7 +704,7 @@ fn serve_eval_timeline(
     store: &AgentLibraryStore,
     request: &medulla_types::decision::DecisionReceiptTimelineRequest,
 ) -> Result<ResultPayload, String> {
-    use medulla_types::result_contract::coordination::DecisionEvalTimeline;
+    use medulla_protocol_types::result_contract::coordination::DecisionEvalTimeline;
 
     if !(1..=50).contains(&request.limit) {
         return Err("INVALID_ARGUMENT: timeline page limit must be 1..50".into());

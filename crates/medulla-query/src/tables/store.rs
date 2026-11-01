@@ -44,11 +44,11 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::{Arc, RwLock};
 
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::mutation_batch::MutationBatchCommit;
+use medulla_protocol_types::mutation_batch::MutationBatchRecord;
 use medulla_storage::ScopeGrantVerifier;
 use medulla_transaction::Begin;
-use medulla_types::mutation_batch::MutationBatch;
-use medulla_types::mutation_batch::MutationBatchCommit;
-use medulla_types::mutation_batch::MutationBatchRecord;
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationOutboxRecord;
 use medulla_types::mutation_scope::MutationScope;
@@ -2284,9 +2284,9 @@ fn apply_mutation_txn_ops_with_crashpoints(
     if crashpoint == Some(SqlMutationCrashpoint::BeforeRows) {
         return Err("injected crash before SQL mutation rows".to_string());
     }
-    medulla_types::mutation_batch::apply_certification_fault(
+    medulla_protocol_types::mutation_batch::apply_certification_fault(
         batch,
-        medulla_types::mutation_batch::MutationCommitPhase::BeforeRows,
+        medulla_protocol_types::mutation_batch::MutationCommitPhase::BeforeRows,
     )?;
 
     let mut affected = 0usize;
@@ -2297,9 +2297,9 @@ fn apply_mutation_txn_ops_with_crashpoints(
     if crashpoint == Some(SqlMutationCrashpoint::AfterRowsBeforeMetadata) {
         return Err("injected crash after SQL mutation rows".to_string());
     }
-    medulla_types::mutation_batch::apply_certification_fault(
+    medulla_protocol_types::mutation_batch::apply_certification_fault(
         batch,
-        medulla_types::mutation_batch::MutationCommitPhase::AfterRowsBeforeMetadata,
+        medulla_protocol_types::mutation_batch::MutationCommitPhase::AfterRowsBeforeMetadata,
     )?;
     Ok(affected)
 }
@@ -2330,17 +2330,17 @@ fn finish_and_commit_sql_mutation(
     if crashpoint == Some(SqlMutationCrashpoint::BeforeCommit) {
         return Err("injected crash before SQL mutation commit".to_string());
     }
-    medulla_types::mutation_batch::apply_certification_fault(
+    medulla_protocol_types::mutation_batch::apply_certification_fault(
         batch,
-        medulla_types::mutation_batch::MutationCommitPhase::BeforeCommit,
+        medulla_protocol_types::mutation_batch::MutationCommitPhase::BeforeCommit,
     )?;
     mutation.commit_finished()?;
     if crashpoint == Some(SqlMutationCrashpoint::AfterCommitBeforeAck) {
         return Err("injected crash after SQL mutation commit before ack".to_string());
     }
-    medulla_types::mutation_batch::apply_certification_fault(
+    medulla_protocol_types::mutation_batch::apply_certification_fault(
         batch,
-        medulla_types::mutation_batch::MutationCommitPhase::AfterCommitBeforeAck,
+        medulla_protocol_types::mutation_batch::MutationCommitPhase::AfterCommitBeforeAck,
     )?;
     Ok(commit)
 }
@@ -6874,10 +6874,10 @@ mod tests {
     use crate::tables::schema::{CmpOp, ColCheck, ColumnType};
     // The mutation ledger is the kernel's now, so the store itself no longer
     // imports these; the fixtures that build a `MutationBatch` still need them.
-    use medulla_types::mutation_batch::MutationBatchStatus;
-    use medulla_types::mutation_batch::MutationEnvelope;
-    use medulla_types::mutation_batch::MutationOperation;
-    use medulla_types::mutation_batch::VersionExpectation;
+    use medulla_protocol_types::mutation_batch::MutationBatchStatus;
+    use medulla_protocol_types::mutation_batch::MutationEnvelope;
+    use medulla_protocol_types::mutation_batch::MutationOperation;
+    use medulla_protocol_types::mutation_batch::VersionExpectation;
     use medulla_types::mutation_scope::IncarnationId;
     use medulla_types::mutation_scope::LogicalName;
     use medulla_types::mutation_scope::MutationOutboxIntent;
@@ -7589,7 +7589,7 @@ mod tests {
         let key = batch.idempotency_key().to_string();
         let method = medulla_types::contract::MethodId::new("sql_catalog_operation").unwrap();
         batch.envelope = MutationEnvelope::for_scope(
-            medulla_types::mutation_batch::CompiledScope {
+            medulla_protocol_types::mutation_batch::CompiledScope {
                 identity: &batch.identity,
                 actor,
                 serving_principal: &format!("principal:sha256:{}", "a".repeat(64)),
@@ -7598,8 +7598,9 @@ mod tests {
                 nonce: medulla_types::contract::Nonce::minted(),
                 now_ms: 0,
             },
-            medulla_types::mutation_batch::CompiledOperation {
-                method_schema_id: medulla_types::mutation_batch::method_schema_id(&method).unwrap(),
+            medulla_protocol_types::mutation_batch::CompiledOperation {
+                method_schema_id: medulla_protocol_types::mutation_batch::method_schema_id(&method)
+                    .unwrap(),
                 method,
                 method_schema_digest: medulla_types::contract::Digest256::from_bytes([0_u8; 32]),
                 canonical_payload_digest: medulla_types::contract::Digest256::from_bytes(
@@ -7619,7 +7620,7 @@ mod tests {
         let actor = format!("principal:sha256:{}", "a".repeat(64));
         let method = medulla_types::contract::MethodId::new("sql_catalog_operation").unwrap();
         MutationEnvelope::for_scope(
-            medulla_types::mutation_batch::CompiledScope {
+            medulla_protocol_types::mutation_batch::CompiledScope {
                 identity,
                 actor: &actor,
                 serving_principal: &actor,
@@ -7628,8 +7629,9 @@ mod tests {
                 nonce: medulla_types::contract::Nonce::minted(),
                 now_ms: 0,
             },
-            medulla_types::mutation_batch::CompiledOperation {
-                method_schema_id: medulla_types::mutation_batch::method_schema_id(&method).unwrap(),
+            medulla_protocol_types::mutation_batch::CompiledOperation {
+                method_schema_id: medulla_protocol_types::mutation_batch::method_schema_id(&method)
+                    .unwrap(),
                 method,
                 method_schema_digest: medulla_types::contract::Digest256::from_bytes([0_u8; 32]),
                 canonical_payload_digest: medulla_types::contract::Digest256::from_bytes(
@@ -7661,7 +7663,7 @@ mod tests {
                 ordinal: 0,
                 surface: MutationSurface::Query,
                 domain: DurabilityDomain::SqlCatalog,
-                method: medulla_types::protocol::Method::ApplyMutation {
+                method: medulla_protocol_types::protocol::Method::ApplyMutation {
                     event_type: "sql_catalog_operation".to_string(),
                     query:
                         "sha256:0000000000000000000000000000000000000000000000000000000000000000"
@@ -7703,7 +7705,7 @@ mod tests {
             IncarnationId::new(COMPILED_BATCH_INCARNATION).unwrap(),
         );
         graph_scoped.version_expectation =
-            medulla_types::mutation_batch::VersionExpectation::Graph(0);
+            medulla_protocol_types::mutation_batch::VersionExpectation::Graph(0);
         // The identity is part of the canonical payload, so re-mint the
         // envelope against it -- otherwise the envelope-coverage rule refuses
         // the batch before it can reach the native-scope check under test.
@@ -7829,10 +7831,11 @@ mod tests {
             (
                 "operations",
                 Box::new(|b: &mut MutationBatch| {
-                    b.operations[0].method = medulla_types::protocol::Method::ApplyMutation {
-                        event_type: "sql_catalog_operation".to_string(),
-                        query: format!("sha256:{}", "1".repeat(64)),
-                    }
+                    b.operations[0].method =
+                        medulla_protocol_types::protocol::Method::ApplyMutation {
+                            event_type: "sql_catalog_operation".to_string(),
+                            query: format!("sha256:{}", "1".repeat(64)),
+                        }
                 }),
             ),
         ] {
@@ -7870,13 +7873,14 @@ mod tests {
         // A SQL batch may not carry a graph state descriptor at all: it is
         // rejected by the batch's own validation, before admission.
         let mut changed = stored.clone();
-        changed.authoritative_state =
-            Some(medulla_types::mutation_batch::MutationStateDescriptor {
+        changed.authoritative_state = Some(
+            medulla_protocol_types::mutation_batch::MutationStateDescriptor {
                 algorithm: "sha256".to_string(),
                 digest: "0".repeat(64),
                 source_graph_version: 0,
                 target_graph_version: 1,
-            });
+            },
+        );
         assert!(store
             .commit_txn_batch(&create_metrics_txn(), &changed, 103)
             .is_err());
@@ -8149,7 +8153,7 @@ mod tests {
         // Same key plus a changed operation is not a retry either.
         let mut conflict = sql_batch("after-commit");
         conflict.version_expectation = VersionExpectation::Native(1);
-        conflict.operations[0].method = medulla_types::protocol::Method::ApplyMutation {
+        conflict.operations[0].method = medulla_protocol_types::protocol::Method::ApplyMutation {
             event_type: "sql_catalog_operation".to_string(),
             query: "sha256:1111111111111111111111111111111111111111111111111111111111111111"
                 .to_string(),

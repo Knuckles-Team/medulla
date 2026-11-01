@@ -3,14 +3,17 @@
 //! The shard's own drain/maintenance batches and the one boundary where a
 //! caller-compiled batch is rebound onto the shard scope that commits it.
 
+use medulla_protocol_types::mutation_batch::authority_scope_for;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::{
+    mutation_batch::MutationBatch, mutation_batch::MutationEnvelope,
+    mutation_batch::MutationOperation, mutation_batch::VersionExpectation,
+};
 use medulla_storage::{GraphShardOwner, OwnedStoreHandle, GRAPH_SHARD_TENANT};
-use medulla_types::mutation_batch::authority_scope_for;
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationScope;
-use medulla_types::protocol::Method;
 use medulla_types::{
-    MutationBatch, MutationEnvelope, MutationOperation, MutationOutboxIntent,
-    MutationScopeIdentity, MutationSurface, VersionExpectation, MUTATION_BATCH_VERSION,
+    MutationOutboxIntent, MutationScopeIdentity, MutationSurface, MUTATION_BATCH_VERSION,
 };
 
 use super::graph_scope_identity;

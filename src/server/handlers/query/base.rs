@@ -4,7 +4,7 @@ use super::*;
 /// and report free text as `INVALID_ARGUMENT` under the `SQL error: ` prefix.
 #[cfg(feature = "query")]
 pub(crate) fn sql_refusal(error: impl std::fmt::Display) -> String {
-    medulla_types::error_registry::classify_refusal(
+    medulla_protocol_types::error_registry::classify_refusal(
         "INVALID_ARGUMENT",
         "SQL error: ",
         &error.to_string(),
@@ -24,7 +24,7 @@ pub(crate) fn validate_cypher_mode(method: &Method) -> Result<(), String> {
         Ok(medulla_query::CypherStatementKind::Read) => crate::protocol::CypherMode::Read,
         Ok(medulla_query::CypherStatementKind::Write) => crate::protocol::CypherMode::Write,
         Err(message) => {
-            return Err(medulla_types::error_registry::classify_refusal(
+            return Err(medulla_protocol_types::error_registry::classify_refusal(
                 "INVALID_ARGUMENT",
                 "Cypher error: ",
                 &message,

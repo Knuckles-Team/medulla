@@ -10,16 +10,19 @@ use crate::replay::{
 };
 use crate::tables::{visit_ledger_tables, BATCHES, CLASSES, FENCES, OUTBOX, VERSIONS};
 use crate::Begin;
+use medulla_protocol_types::mutation_batch::MutationCommitPhase;
+use medulla_protocol_types::{
+    mutation_batch::MutationBatch, mutation_batch::MutationBatchRecord,
+    mutation_batch::MutationBatchStatus, mutation_batch::VersionExpectation,
+};
+use medulla_protocol_types::{mutation_batch::MutationEnvelope, mutation_batch::OperationEnvelope};
 use medulla_storage::{
     decode_batch_record, decode_ledger_record, decode_outbox_record, encode_bounded,
     ledger_scope_key, owner_table_names, CollectionBudget, MutationClass, MutationClassRow,
     OwnerDomain, OwnerPayloadRetirement, RecordedOperation, ScopeFence,
 };
-use medulla_types::mutation_batch::MutationCommitPhase;
-use medulla_types::mutation_batch::{MutationEnvelope, OperationEnvelope};
 use medulla_types::{
-    CommittedVersion, MutationBatch, MutationBatchRecord, MutationBatchStatus,
-    MutationOutboxRecord, MutationScopeIdentity, VersionExpectation, MUTATION_BATCH_VERSION,
+    CommittedVersion, MutationOutboxRecord, MutationScopeIdentity, MUTATION_BATCH_VERSION,
 };
 
 /// The certification fault points, compiled only under `fault-injection`.
@@ -30,7 +33,7 @@ use medulla_types::{
 /// than shipped on the commit path.
 #[cfg(feature = "fault-injection")]
 fn certification_fault(batch: &MutationBatch, phase: MutationCommitPhase) -> Result<(), String> {
-    medulla_types::mutation_batch::apply_certification_fault(batch, phase)
+    medulla_protocol_types::mutation_batch::apply_certification_fault(batch, phase)
 }
 
 #[cfg(not(feature = "fault-injection"))]
@@ -90,7 +93,7 @@ fn begin_inner<D: OwnerDomain>(
         &batch.envelope,
         MutationEnvelope::Maintenance(envelope)
             if envelope.kind.as_str()
-                == medulla_types::mutation_batch::REPOSITORY_ENRICHMENT_TOP_UP_KIND
+                == medulla_protocol_types::mutation_batch::REPOSITORY_ENRICHMENT_TOP_UP_KIND
     );
     if reserved_top_up_kind != allow_repository_enrichment_top_up
         || (allow_repository_enrichment_top_up && !batch.is_repository_enrichment_top_up())
@@ -692,9 +695,10 @@ fn terminal_outbox_intent_applies(
     let Some(result_msgpack) = result_msgpack else {
         return Err("terminal run-event outbox requires a native WorkItem result".to_string());
     };
-    let payload = rmp_serde::from_slice::<medulla_types::protocol::ResultPayload>(result_msgpack)
-        .map_err(|_| "terminal WorkItem result is not a decodable payload".to_string())?;
-    let medulla_types::protocol::ResultPayload::Json(value) = payload else {
+    let payload =
+        rmp_serde::from_slice::<medulla_protocol_types::protocol::ResultPayload>(result_msgpack)
+            .map_err(|_| "terminal WorkItem result is not a decodable payload".to_string())?;
+    let medulla_protocol_types::protocol::ResultPayload::Json(value) = payload else {
         return Err("terminal WorkItem result does not carry a status object".to_string());
     };
     match value.get("status").and_then(|status| status.as_str()) {

@@ -6,12 +6,12 @@ use medulla_compute::mining::{
     subgraph::{self, HostGraph},
     text,
 };
+use medulla_protocol_types::result_contract::compute as results;
 use medulla_types::compute_result::mining::{
     DocTerms, ForecastMiningResult, GspanMiningResult, MotifCountsRow, MotifMiningResult,
     PatternEdge, SequenceMiningResult, SequentialPatternRow, SubgraphMiningResult,
     SubgraphPatternRow, TermWeight, TextMiningResult, TopicTerms,
 };
-use medulla_types::result_contract::compute as results;
 
 // ─────────────────────────── Sequential-pattern mining ───────────────────────────
 

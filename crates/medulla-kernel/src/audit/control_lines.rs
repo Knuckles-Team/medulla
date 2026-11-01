@@ -248,7 +248,7 @@ fn modality_kind_name(modality: medulla_types::ServedModalityKind) -> &'static s
 
 #[cfg(feature = "modality-serving")]
 pub(super) fn modality_audit_line(method: &Method) -> Option<String> {
-    let medulla_types::protocol::Method::ServedModality { op } = method else {
+    let medulla_protocol_types::protocol::Method::ServedModality { op } = method else {
         return None;
     };
     let (operation, modality) = modality_operation_name(op)?;
@@ -488,7 +488,7 @@ fn work_market_audit_line(method: &Method) -> Option<String> {
         Method::WorkOfferPut { .. } => "WORK_OFFER_PUT",
         _ => return None,
     };
-    let (tenant, key) = medulla_types::protocol::market_write_scope(method)?;
+    let (tenant, key) = medulla_protocol_types::protocol::market_write_scope(method)?;
     Some(format!("{operation}|{tenant}|{key}"))
 }
 

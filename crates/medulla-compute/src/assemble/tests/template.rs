@@ -2,7 +2,9 @@
 //! templates are filled slot by slot, the best topology wins, and each losing
 //! template is explained with its own optimum.
 
-use medulla_types::agent_graph::{AgentGraphEdge, AgentGraphNode, AgentGraphNodeKind, AgentGraphShape};
+use medulla_types::agent_graph::{
+    AgentGraphEdge, AgentGraphNode, AgentGraphNodeKind, AgentGraphShape,
+};
 use medulla_types::decision::{DecisionOutcome, TemplateFacts};
 use medulla_types::delegation::AgentGraphEntryRef;
 

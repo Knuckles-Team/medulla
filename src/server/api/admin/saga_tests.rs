@@ -133,7 +133,7 @@ fn channel_group_join_leave_rejoin_replays_each_tagged_result() {
         "channel-group-join",
         &join,
         crate::protocol::ResultPayload::scalar::<
-            medulla_types::result_contract::messaging::JoinChannel,
+            medulla_protocol_types::result_contract::messaging::JoinChannel,
         >("joined".to_string()),
     );
     assert!(matches!(
@@ -155,19 +155,20 @@ fn channel_group_join_leave_rejoin_replays_each_tagged_result() {
         Some(crate::protocol::ResultPayload::String(ref value)) if value == "joined"
     ));
 
-    let left =
-        finish(
-            3,
-            "channel-group-leave",
-            &leave,
-            crate::protocol::ResultPayload::of::<
-                medulla_types::result_contract::messaging::LeaveChannel,
-            >(medulla_types::messaging_wire::ChannelDeparture::new(
+    let left = finish(
+        3,
+        "channel-group-leave",
+        &leave,
+        crate::protocol::ResultPayload::of::<
+            medulla_protocol_types::result_contract::messaging::LeaveChannel,
+        >(
+            medulla_protocol_types::messaging_wire::ChannelDeparture::new(
                 None,
-                medulla_types::messaging_wire::ChannelDepartureStatus::Left,
-            ))
-            .unwrap(),
-        );
+                medulla_protocol_types::messaging_wire::ChannelDepartureStatus::Left,
+            ),
+        )
+        .unwrap(),
+    );
     assert!(matches!(
         left,
         crate::protocol::ResultPayload::Json(ref value)
@@ -194,7 +195,7 @@ fn channel_group_join_leave_rejoin_replays_each_tagged_result() {
         "channel-group-rejoin",
         &join,
         crate::protocol::ResultPayload::scalar::<
-            medulla_types::result_contract::messaging::JoinChannel,
+            medulla_protocol_types::result_contract::messaging::JoinChannel,
         >("joined".to_string()),
     );
     assert!(matches!(
@@ -288,8 +289,10 @@ fn sparql_result(operations: u64) -> crate::protocol::ResultPayload {
     }))
 }
 
-fn reshard_report(graph: &str) -> medulla_types::result_contract::cluster::ShardReshardReport {
-    medulla_types::result_contract::cluster::ShardReshardReport {
+fn reshard_report(
+    graph: &str,
+) -> medulla_protocol_types::result_contract::cluster::ShardReshardReport {
+    medulla_protocol_types::result_contract::cluster::ShardReshardReport {
         graph: graph.into(),
         from_shard: 0,
         to_shard: 1,
@@ -681,8 +684,10 @@ fn method_bearing_retry_recovers_legacy_public_sagas_but_direct_resume_refuses()
         panic!("method-bearing legacy public recovery lost its typed result");
     };
     assert_eq!(
-        serde_json::from_value::<medulla_types::result_contract::cluster::ShardReshardReport>(body)
-            .unwrap(),
+        serde_json::from_value::<
+            medulla_protocol_types::result_contract::cluster::ShardReshardReport,
+        >(body)
+        .unwrap(),
         reshard_report("legacy-public")
     );
 
@@ -810,8 +815,10 @@ fn durable_reshard_saga_rejects_wrong_result_then_replays_typed_result() {
         panic!("reshard replay lost its typed JSON result");
     };
     assert_eq!(
-        serde_json::from_value::<medulla_types::result_contract::cluster::ShardReshardReport>(body)
-            .unwrap(),
+        serde_json::from_value::<
+            medulla_protocol_types::result_contract::cluster::ShardReshardReport,
+        >(body)
+        .unwrap(),
         report
     );
 }

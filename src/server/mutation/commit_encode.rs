@@ -14,7 +14,7 @@ use super::{
 pub(super) fn staged_commit_error(req_id: u64, error: &str) -> Response {
     Response::err(
         req_id,
-        medulla_types::error_registry::classify_refusal(
+        medulla_protocol_types::error_registry::classify_refusal(
             "INTERNAL",
             "staged MutationBatch durable commit failed: ",
             error,
@@ -331,9 +331,9 @@ pub(super) fn prepublish_success(core: &GraphCore, method: &Method) -> Option<Re
                     return None;
                 }
             };
-            match medulla_types::result_contract::transactions::BatchUpdateReport::decode(&result)
+            match medulla_protocol_types::result_contract::transactions::BatchUpdateReport::decode(&result)
                 .and_then(
-                    ResultPayload::of::<medulla_types::result_contract::transactions::BatchUpdate>,
+                    ResultPayload::of::<medulla_protocol_types::result_contract::transactions::BatchUpdate>,
                 ) {
                 Ok(payload) => Some(payload),
                 Err(error) => {

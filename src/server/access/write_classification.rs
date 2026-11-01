@@ -51,7 +51,8 @@ fn requires_write_agent_surface(method: &Method) -> Option<bool> {
     if let Method::AgentLibrary { op } = method {
         return Some(matches!(
             op,
-            medulla_types::AgentLibraryOp::Publish { .. } | medulla_types::AgentLibraryOp::Retire { .. }
+            medulla_types::AgentLibraryOp::Publish { .. }
+                | medulla_types::AgentLibraryOp::Retire { .. }
         ));
     }
     // Agent graphs are the same runtime-conditional shape. `is_mutation` lives
@@ -457,10 +458,11 @@ mod eh316_eh319_slim_profile_tests {
     #[test]
     fn list_registered_servers_is_a_read() {
         let method = Method::ListRegisteredServers {
-            request: medulla_types::result_contract::cluster::RegisteredServerListRequest {
-                limit: None,
-                cursor: None,
-            },
+            request:
+                medulla_protocol_types::result_contract::cluster::RegisteredServerListRequest {
+                    limit: None,
+                    cursor: None,
+                },
         };
         assert!(!requires_write(&method));
     }

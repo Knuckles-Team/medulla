@@ -73,7 +73,7 @@ pub(super) async fn dispatch_op_resource_reservation_query(
                 Ok(result) => Response::ok(
                     req_id,
                     ResultPayload::of::<
-                        medulla_types::result_contract::coordination::QueryWorkItemReservation,
+                        medulla_protocol_types::result_contract::coordination::QueryWorkItemReservation,
                     >(result),
                 ),
                 Err(error) => {
@@ -135,27 +135,33 @@ fn capacity_owner_matches(method: &Method, verified_context: &VerifiedRequestCon
 fn capacity_commit_result(method: &Method) -> fn(&[u8]) -> Result<ResultPayload, String> {
     match method {
         Method::AcquireCapacity { .. } => {
-            ResultPayload::of_receipt::<medulla_types::result_contract::coordination::AcquireCapacity>
+            ResultPayload::of_receipt::<
+                medulla_protocol_types::result_contract::coordination::AcquireCapacity,
+            >
         }
         Method::RenewCapacity { .. } => {
-            ResultPayload::of_receipt::<medulla_types::result_contract::coordination::RenewCapacity>
+            ResultPayload::of_receipt::<
+                medulla_protocol_types::result_contract::coordination::RenewCapacity,
+            >
         }
         Method::ReleaseCapacity { .. } => {
-            ResultPayload::of_receipt::<medulla_types::result_contract::coordination::ReleaseCapacity>
+            ResultPayload::of_receipt::<
+                medulla_protocol_types::result_contract::coordination::ReleaseCapacity,
+            >
         }
         Method::ReclaimExpiredCapacity { .. } => {
             ResultPayload::of_receipt::<
-                medulla_types::result_contract::coordination::ReclaimExpiredCapacity,
+                medulla_protocol_types::result_contract::coordination::ReclaimExpiredCapacity,
             >
         }
         Method::UpdateCapacityCell { .. } => {
             ResultPayload::of_receipt::<
-                medulla_types::result_contract::coordination::UpdateCapacityCell,
+                medulla_protocol_types::result_contract::coordination::UpdateCapacityCell,
             >
         }
         Method::ThrottleCapacityCell { .. } => {
             ResultPayload::of_receipt::<
-                medulla_types::result_contract::coordination::ThrottleCapacityCell,
+                medulla_protocol_types::result_contract::coordination::ThrottleCapacityCell,
             >
         }
         _ => |_| Err("capacity commit receipt for a non-capacity method".to_string()),
@@ -230,9 +236,13 @@ fn capacity_status_result(
 ) -> fn(medulla_types::native_control::CapacityStatusResult) -> Result<ResultPayload, String> {
     match method {
         Method::ReconcileCapacity { .. } => {
-            ResultPayload::of::<medulla_types::result_contract::coordination::ReconcileCapacity>
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::ReconcileCapacity,
+            >
         }
-        _ => ResultPayload::of::<medulla_types::result_contract::coordination::CapacityStatus>,
+        _ => {
+            ResultPayload::of::<medulla_protocol_types::result_contract::coordination::CapacityStatus>
+        }
     }
 }
 
@@ -352,7 +362,7 @@ pub(super) async fn dispatch_op_workitem_claim_capability(
                     Response::ok(
                         req_id,
                         ResultPayload::of::<
-                            medulla_types::result_contract::coordination::MintWorkItemClaimCapability,
+                            medulla_protocol_types::result_contract::coordination::MintWorkItemClaimCapability,
                         >(result),
                     )
                 })
@@ -369,7 +379,7 @@ pub(super) async fn dispatch_op_workitem_claim_capability(
                     Response::ok(
                         req_id,
                         ResultPayload::of::<
-                            medulla_types::result_contract::coordination::VerifyWorkItemClaimCapability,
+                            medulla_protocol_types::result_contract::coordination::VerifyWorkItemClaimCapability,
                         >(result),
                     )
                 })

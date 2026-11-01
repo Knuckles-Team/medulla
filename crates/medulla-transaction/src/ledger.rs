@@ -2,10 +2,14 @@
 
 use crate::admitted::AdmittedMutation;
 use crate::tables::{BATCHES, MAINTENANCE, PRIVATE_PAYLOADS, VERSIONS};
+use medulla_protocol_types::{
+    mutation_batch::MutationBatch, mutation_batch::MutationBatchRecord,
+    mutation_batch::VersionExpectation,
+};
 use medulla_storage::{
     decode_batch_record, encode_bounded, ledger_scope_key, private_payload_digest, OwnerDomain,
 };
-use medulla_types::{MutationBatch, MutationBatchRecord, MutationScopeIdentity, VersionExpectation};
+use medulla_types::MutationScopeIdentity;
 
 const MAX_PRIVATE_PAYLOAD_BYTES: usize = 64 * 1024 * 1024;
 

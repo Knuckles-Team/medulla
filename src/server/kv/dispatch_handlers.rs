@@ -229,9 +229,11 @@ fn kv_put(
     match put {
         Ok(outcome) => Response::ok(
             call.req_id,
-            ResultPayload::of_ref::<results::KvPut>(&medulla_types::storage_wire::KvWriteReceipt {
-                version: outcome.version,
-            }),
+            ResultPayload::of_ref::<results::KvPut>(
+                &medulla_protocol_types::storage_wire::KvWriteReceipt {
+                    version: outcome.version,
+                },
+            ),
         ),
         Err(e) => Response::err(call.req_id, format!("KvPut error: {e}")),
     }

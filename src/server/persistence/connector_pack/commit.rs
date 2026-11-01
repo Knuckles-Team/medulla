@@ -2,17 +2,17 @@
 
 use std::collections::BTreeMap;
 
+use medulla_protocol_types::mutation_batch::MutationOperation;
+use medulla_protocol_types::protocol::Method;
 use medulla_types::agent_component::{AgentComponentEntry, AgentComponentMutationKind};
 use medulla_types::connector_pack::{
     PackDisposition, PackDispositionCounts, PackHeadRef, PackHeadView, PackImportReceipt,
     PackImportRecord, PackImportResult, PackProjectionState, CONNECTOR_PACK_IMPORT_TOPIC,
     CONNECTOR_PACK_RESULT_SCHEMA_ID,
 };
-use medulla_types::mutation_batch::MutationOperation;
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationOutboxIntent;
 use medulla_types::mutation_scope::MutationSurface;
-use medulla_types::protocol::Method;
 use redb::ReadableTable;
 
 use super::admitted::{PackOwnerWrite, PackWriteEffects, PackWriteIdentity, PackWriteStaged};

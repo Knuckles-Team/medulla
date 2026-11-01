@@ -154,7 +154,7 @@ fn authenticated_binding_rejects_cross_tenant_and_different_actor() {
     // The principal the committing ledger requires is the envelope's, so a
     // batch naming another owner is refused by `owner_rows` -- exactly as it
     // was when the value lived in the deleted `context.principal`.
-    let medulla_types::mutation_batch::MutationEnvelope::Operation(envelope) =
+    let medulla_protocol_types::mutation_batch::MutationEnvelope::Operation(envelope) =
         &mut wrong_actor.envelope
     else {
         panic!("a fixture operation batch has an operation envelope");

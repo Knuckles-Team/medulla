@@ -31,7 +31,7 @@ async fn reconcile_existing_graph_create(
         ),
         Err(e) => Response::err(
             req_id,
-            medulla_types::error_registry::classify_refusal(
+            medulla_protocol_types::error_registry::classify_refusal(
                 "INTERNAL",
                 "durable graph-create reconciliation failed: ",
                 &e,
@@ -108,8 +108,8 @@ pub(in crate::server::dispatch) async fn create_graph(
     if let Err(reserved) = crate::registry::validate_graph_name(&graph_name) {
         return Response::err(req_id, reserved);
     }
-    match ResultPayload::of::<medulla_types::result_contract::cluster::CreateGraph>(
-        medulla_types::result_contract::cluster::GraphCreated {
+    match ResultPayload::of::<medulla_protocol_types::result_contract::cluster::CreateGraph>(
+        medulla_protocol_types::result_contract::cluster::GraphCreated {
             created: graph_name.clone(),
         },
     ) {
@@ -217,7 +217,7 @@ async fn create_declared_graph(
     {
         return Response::err(
             req_id,
-            medulla_types::error_registry::classify_refusal(
+            medulla_protocol_types::error_registry::classify_refusal(
                 "INTERNAL",
                 "durable graph registration failed: ",
                 &e,
@@ -313,7 +313,7 @@ async fn reconcile_missing_graph_delete(
         ),
         Err(e) => Response::err(
             req_id,
-            medulla_types::error_registry::classify_refusal(
+            medulla_protocol_types::error_registry::classify_refusal(
                 "INTERNAL",
                 "durable graph-delete reconciliation failed: ",
                 &e,
@@ -329,8 +329,8 @@ pub(super) async fn delete_graph(
     graph_name: &str,
 ) -> Response {
     let req_id = request.req_id;
-    match ResultPayload::of::<medulla_types::result_contract::cluster::DeleteGraph>(
-        medulla_types::result_contract::cluster::GraphDeleted {
+    match ResultPayload::of::<medulla_protocol_types::result_contract::cluster::DeleteGraph>(
+        medulla_protocol_types::result_contract::cluster::GraphDeleted {
             deleted: graph_name.to_string(),
         },
     ) {
@@ -437,7 +437,7 @@ async fn delete_declared_graph(
     {
         return Response::err(
             req_id,
-            medulla_types::error_registry::classify_refusal(
+            medulla_protocol_types::error_registry::classify_refusal(
                 "INTERNAL",
                 "durable graph purge failed: ",
                 &e,
@@ -569,7 +569,7 @@ pub(super) async fn dispatch_get_identity(
             drop(s);
             Response::ok(
                 req_id,
-                ResultPayload::of::<medulla_types::result_contract::security::GetIdentity>(
+                ResultPayload::of::<medulla_protocol_types::result_contract::security::GetIdentity>(
                     identity,
                 ),
             )
@@ -584,9 +584,9 @@ pub(super) async fn dispatch_get_identity(
 #[cfg(feature = "security")]
 fn rbac_admin_ack<M>(req_id: u64, outcome: Result<(), String>, acknowledgement: &str) -> Response
 where
-    M: medulla_types::result_contract::MethodResult<
+    M: medulla_protocol_types::result_contract::MethodResult<
         Body = String,
-        Encoding = medulla_types::result_contract::encoding::Text,
+        Encoding = medulla_protocol_types::result_contract::encoding::Text,
     >,
 {
     match outcome {
@@ -623,7 +623,7 @@ fn rbac_admin_response(
     audit: crate::isolation::AuditActor<'_>,
 ) -> Response {
     use crate::acl::RbacAdminOp;
-    use medulla_types::result_contract::security as results;
+    use medulla_protocol_types::result_contract::security as results;
     match op {
         RbacAdminOp::List => {
             let policy = s.isolation.rbac();
