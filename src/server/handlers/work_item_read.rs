@@ -106,7 +106,7 @@ pub(crate) async fn answer(
         medulla_kernel::metrics::access_denied();
         return Response::err(req_id, denied);
     }
-    let graph = crate::persist::sanitize(graph_name);
+    let graph = medulla_kernel::persist::sanitize(graph_name);
     let checkpoint = matches!(&read, WorkItemRead::Checkpoint { .. });
     match serve_native(&graph, persistence, read).await {
         Ok(payload) => Response::ok(req_id, payload),

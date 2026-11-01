@@ -263,8 +263,8 @@ async fn commit_work_item_plan(plan: WorkItemCommitPlan<'_>) -> Result<ResultPay
     // shared per-graph lane so a ChangeEnvelope cannot pass its version fence.
     let _mutation_guard = lock_graph(graph).await;
     let flags = work_item_output_flags(&method);
-    let created_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
-    let fname = crate::persist::sanitize(graph);
+    let created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    let fname = medulla_kernel::persist::sanitize(graph);
     let expected_graph_version = authoritative_graph_version(persistence, &fname, core).await?;
     let batch = compile_methods(
         CompileBatch {

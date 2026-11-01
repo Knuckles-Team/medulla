@@ -130,7 +130,7 @@ fn provision_created_tenant_access(
     creator: Option<&str>,
 ) -> Result<(), String> {
     #[cfg(feature = "raft")]
-    if crate::kernel::dispatch_support::is_replicated_apply()
+    if medulla_kernel::kernel::dispatch_support::is_replicated_apply()
         && creator.is_some_and(|id| state.isolation.rbac().identity_store().manages(id))
     {
         return Ok(());
@@ -224,7 +224,7 @@ async fn create_declared_graph(
             ),
         );
     }
-    let graph_fname = crate::persist::sanitize(&graph_name);
+    let graph_fname = medulla_kernel::persist::sanitize(&graph_name);
     let committed_version = match read_committed_graph_version(&backend, &graph_fname, req_id).await
     {
         Ok(version) => version,
@@ -608,7 +608,7 @@ pub(super) async fn apply_rbac_admin(
     let mut s = timed_write(state).await;
     let audit = crate::isolation::AuditActor {
         principal: actor,
-        now_ms: crate::kernel::dispatch_support::authoritative_now_ms(),
+        now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
     };
     let response = rbac_admin_response(&mut s, req_id, op, audit);
     s.publish_identity_view();

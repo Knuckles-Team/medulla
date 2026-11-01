@@ -53,7 +53,7 @@ async fn status(
         .governed()
         .get(
             "repair-1",
-            crate::kernel::dispatch_support::authoritative_now_ms(),
+            medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
         )
         .expect("proposed")
         .status

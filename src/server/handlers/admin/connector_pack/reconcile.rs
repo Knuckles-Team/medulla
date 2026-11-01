@@ -87,7 +87,7 @@ pub(super) async fn reconcile_if_due(
     static LAST_RUN_MS: [AtomicU64; super::PACK_STRIPES] =
         [const { AtomicU64::new(0) }; super::PACK_STRIPES];
     let clock = &LAST_RUN_MS[super::tenant_stripe(verified.tenant())];
-    let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     if now_ms.saturating_sub(clock.load(Ordering::Acquire)) < RECONCILE_INTERVAL_MS {
         return;
     }

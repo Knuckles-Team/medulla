@@ -24,7 +24,7 @@ fn job_persistence_path(persist_dir: Option<&str>) -> Result<&Path, String> {
 }
 
 fn open_job_store(persist_path: &Path) -> Result<Arc<JobStore>, String> {
-    let authority = crate::store_authority::process_authority();
+    let authority = medulla_kernel::store_authority::process_authority();
     let proof = authority.proof();
     JobStore::open_in_dir(
         persist_path,
@@ -120,7 +120,7 @@ pub(super) fn compile_job_batch(
         .map_err(|error| error.to_string())?;
     let batch_id =
         crate::server::mutation_batch::opaque_request_key("analytics-job", &scope, req_id, method);
-    let now = crate::kernel::dispatch_support::authoritative_now_ms();
+    let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let batch = crate::server::mutation_batch::compile_opaque_method_in_scope(
         crate::server::mutation_batch::CompileBatch {
             batch_id: &batch_id,

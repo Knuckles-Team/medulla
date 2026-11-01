@@ -511,7 +511,7 @@ impl Cluster {
     /// The `RaftRequest` for an AddNode write of `n{seq}`.
     pub fn add_node_req(seq: u64) -> RaftRequest {
         RaftRequest {
-            graph_fname: crate::persist::sanitize(GRAPH),
+            graph_fname: medulla_kernel::persist::sanitize(GRAPH),
             graph_name: GRAPH.to_string(),
             graph_type: GraphType::Commons,
             committed_at_ms: 0,
@@ -564,7 +564,7 @@ impl Cluster {
         .map_err(|_| "CreateGraph must be an inventoried native domain")
         .unwrap();
         RaftRequest {
-            graph_fname: crate::persist::sanitize(graph_name),
+            graph_fname: medulla_kernel::persist::sanitize(graph_name),
             graph_name: graph_name.to_string(),
             graph_type,
             committed_at_ms: 0,
@@ -583,7 +583,7 @@ impl Cluster {
     /// graph (generalizes [`Self::add_node_req`] off the fixed [`GRAPH`] constant).
     pub fn add_node_req_for(graph_name: &str, graph_type: GraphType, seq: u64) -> RaftRequest {
         RaftRequest {
-            graph_fname: crate::persist::sanitize(graph_name),
+            graph_fname: medulla_kernel::persist::sanitize(graph_name),
             graph_name: graph_name.to_string(),
             graph_type,
             committed_at_ms: 0,

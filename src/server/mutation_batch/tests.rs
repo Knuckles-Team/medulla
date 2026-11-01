@@ -818,7 +818,7 @@ fn a_graph_batch_names_the_serving_principal_and_carries_the_caller_actor() {
     let actor = crate::server::mutation_batch::principal_fingerprint("agent:a").unwrap();
     assert_eq!(
         batch.serving_principal(),
-        crate::kernel::persistence::ENGINE_LEDGER_PRINCIPAL,
+        medulla_kernel::kernel::persistence::ENGINE_LEDGER_PRINCIPAL,
         "a graph batch is admitted through the same owner-row path as any other"
     );
     assert_ne!(
@@ -887,7 +887,7 @@ fn no_compiled_batch_on_any_domain_carries_the_caller_as_its_context_principal()
         let batch = compile(tag, methods).unwrap();
         assert_eq!(
             batch.serving_principal(),
-            crate::kernel::persistence::ENGINE_LEDGER_PRINCIPAL,
+            medulla_kernel::kernel::persistence::ENGINE_LEDGER_PRINCIPAL,
             "{tag}"
         );
         assert_eq!(batch.outbox[0].headers.get("actor"), Some(&actor), "{tag}");
@@ -925,7 +925,7 @@ fn owner_store_batch_names_the_serving_principal_and_carries_the_caller_actor() 
     .unwrap();
     assert_eq!(
         batch.serving_principal(),
-        crate::store_authority::ENGINE_PRINCIPAL,
+        medulla_kernel::store_authority::ENGINE_PRINCIPAL,
         "an owner-store batch must name the principal the store's serving scope is \
          bound under, or `AdmittedMutation::owner_rows` refuses it"
     );
@@ -1125,11 +1125,11 @@ fn served_owner_store_batch_commits_and_its_actor_survives_in_the_ledger() {
     use medulla_storage::{KvOwner, PhysicalStoreIdentity, StorageKernel};
     use medulla_transaction::{Begin, MutationKernel};
 
-    let dir = crate::kernel::persistence::temp_dir("medulla-mb", "owner-principal");
+    let dir = medulla_kernel::kernel::persistence::temp_dir("medulla-mb", "owner-principal");
     std::fs::create_dir_all(&dir).unwrap();
     let path = dir.join("kv.redb");
 
-    let authority = crate::store_authority::process_authority();
+    let authority = medulla_kernel::store_authority::process_authority();
     let kernel = StorageKernel::create_owner::<KvOwner>(
         &path,
         PhysicalStoreIdentity::new("epistemic-graph:mutation-batch-owner-principal-test").unwrap(),
@@ -1212,7 +1212,7 @@ fn served_owner_store_batch_commits_and_its_actor_survives_in_the_ledger() {
     );
     assert_eq!(
         record.batch.serving_principal(),
-        crate::store_authority::ENGINE_PRINCIPAL
+        medulla_kernel::store_authority::ENGINE_PRINCIPAL
     );
     assert_eq!(
         record.batch.outbox[0].headers.get("actor"),

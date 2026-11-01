@@ -75,5 +75,5 @@ pub(super) fn result_quality(
 }
 
 pub(super) fn unix_ms() -> i64 {
-    crate::kernel::dispatch_support::authoritative_now_ms() as i64
+    medulla_kernel::kernel::dispatch_support::authoritative_now_ms() as i64
 }

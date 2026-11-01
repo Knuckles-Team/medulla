@@ -123,7 +123,7 @@ async fn commit_staged_replay_found(
             Ok(values) => values,
             Err(response) => return Some(response),
         };
-    let created_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    let created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let batch = match compile_replay_batch(
         ctx,
         batch_id,
@@ -318,7 +318,7 @@ async fn commit_row_replay_found(
         Ok(version) => version,
         Err(response) => return Some(response),
     };
-    let created_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    let created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let batch = match compile_replay_batch(
         ctx,
         batch_id,

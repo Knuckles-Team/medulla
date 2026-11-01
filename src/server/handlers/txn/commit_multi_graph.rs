@@ -65,7 +65,7 @@ pub(super) async fn commit_multi_graph(
                 }
             }
             slices.push(CommitSlice {
-                graph_fname: crate::persist::sanitize(&graph_name),
+                graph_fname: medulla_kernel::persist::sanitize(&graph_name),
                 graph_type: entry.graph_type,
                 graph_name,
                 methods,
@@ -133,7 +133,7 @@ pub(crate) async fn commit_coordinated_graph_methods_with_nonce(
                 }
             }
             slices.push(CommitSlice {
-                graph_fname: crate::persist::sanitize(&graph_name),
+                graph_fname: medulla_kernel::persist::sanitize(&graph_name),
                 graph_type,
                 graph_name,
                 methods,

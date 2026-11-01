@@ -62,7 +62,7 @@ pub(crate) fn build_feed(
             (Some(resolved.classes), resolved.diagnostics)
         }
     };
-    let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     FreshnessFeed {
         events: page.records.into_iter().map(wire_event).collect(),
         gap: page.gap,

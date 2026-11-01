@@ -552,7 +552,7 @@ async fn credential_expiring_while_waiting_for_write_lock_refuses_without_touch(
     };
     let mut guard = state.write().await;
     let hash = super::super::secrets::token_hash(SESSION);
-    let before_poll = crate::kernel::dispatch_support::authoritative_now_ms();
+    let before_poll = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let expires = before_poll + 200;
     let old_touch = before_poll - 120_000;
     edit_fixture_identity(&mut guard, |identity| {
@@ -575,11 +575,11 @@ async fn credential_expiring_while_waiting_for_write_lock_refuses_without_touch(
     })
     .await;
     assert!(
-        crate::kernel::dispatch_support::authoritative_now_ms() < expires,
+        medulla_kernel::kernel::dispatch_support::authoritative_now_ms() < expires,
         "fixture must start live"
     );
     tokio::time::timeout(std::time::Duration::from_secs(2), async {
-        while crate::kernel::dispatch_support::authoritative_now_ms() < expires {
+        while medulla_kernel::kernel::dispatch_support::authoritative_now_ms() < expires {
             tokio::time::sleep(std::time::Duration::from_millis(5)).await;
         }
     })
@@ -600,7 +600,7 @@ async fn pending_mfa_refusal_preserves_a_completable_ceremony_after_touch() {
     let hash = super::super::secrets::token_hash(SESSION);
     let code = "recovery-0123456789abcdefghijklmnop";
     let code_hash = super::super::secrets::token_hash(code);
-    let now = crate::kernel::dispatch_support::authoritative_now_ms();
+    let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     {
         let mut guard = state.write().await;
         edit_fixture_identity(&mut guard, |identity| {

@@ -68,7 +68,7 @@ async fn start_read_scenario(
 async fn put_node(multi: &Arc<MultiRaft>, gid: GroupId, graph: &str, node_id: &str) {
     let group = multi.group(gid).await.expect("group running");
     let req = RaftRequest {
-        graph_fname: crate::persist::sanitize(graph),
+        graph_fname: medulla_kernel::persist::sanitize(graph),
         graph_name: graph.to_string(),
         graph_type: GraphType::Global,
         committed_at_ms: 0,

@@ -22,7 +22,7 @@ use medulla_storage::{OwnedStoreHandle, OwnerDomain, PhysicalStoreIdentity, Scop
 use medulla_transaction::{AdmittedOwnerWrite, Begin, MaintenanceBatch, MutationKernel};
 use medulla_types::MutationScopeIdentity;
 
-use crate::store_authority::EngineScopeAuthority;
+use medulla_kernel::store_authority::EngineScopeAuthority;
 
 /// The tenant every store-private sidecar scope belongs to. These files hold no
 /// tenant data; they are the node's own state.

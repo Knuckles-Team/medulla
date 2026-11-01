@@ -191,7 +191,7 @@ pub(crate) mod worker {
         store: &Arc<AgentLibraryStore>,
         tenant: &str,
     ) -> Result<OutboxClaimOutcome, String> {
-        let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+        let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
         let mut budget = OutboxClaimBudget::new(CLAIM_LIMIT, LEASE_MS, now_ms)?;
         let (store, tenant) = (Arc::clone(store), tenant.to_string());
         crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
@@ -209,7 +209,7 @@ pub(crate) mod worker {
                 outcome.dead_lettered.len() as u64,
             );
         }
-        let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+        let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
         let head = outcome.claims.first();
         medulla_kernel::metrics::set_outbox_head(
             CONSUMER,
@@ -256,7 +256,7 @@ pub(crate) mod worker {
         lease: MutationOutboxLease,
         reason: Option<OutboxRejectReason>,
     ) -> Result<(), String> {
-        let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+        let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
         let (store, tenant) = (Arc::clone(store), tenant.to_string());
         let Some(reason) = reason else {
             return crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {

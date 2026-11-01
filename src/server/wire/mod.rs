@@ -6723,7 +6723,7 @@ pub(crate) mod wired_catalog_tests {
         // The ledger principal is the SQL owner file's, not the caller's.
         assert_eq!(
             batch.serving_principal(),
-            crate::store_authority::ENGINE_PRINCIPAL,
+            medulla_kernel::store_authority::ENGINE_PRINCIPAL,
             "a SqlCatalog batch must name the owner file's serving principal"
         );
         assert_ne!(batch.serving_principal(), owner_fingerprint);

@@ -4,7 +4,7 @@ use dashmap::DashMap;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 
-use crate::channels::ChannelManager;
+use medulla_kernel::channels::ChannelManager;
 use crate::isolation::IsolationLayer;
 use crate::registry::GraphRegistry;
 use crate::server::txn::{GraphTxnState, TxnIdGen};
@@ -574,7 +574,7 @@ impl ServerState {
     }
 }
 
-impl crate::kernel::persistence::ResidentProjectionHost for ServerState {
+impl medulla_kernel::kernel::persistence::ResidentProjectionHost for ServerState {
     fn resident_graphs(&self) -> Vec<(String, Arc<crate::graph::GraphCore>)> {
         self.registry
             .all_entries()
@@ -583,10 +583,10 @@ impl crate::kernel::persistence::ResidentProjectionHost for ServerState {
             .collect()
     }
 
-    fn durable_presence(&self) -> Option<Arc<dyn crate::kernel::persistence::DurableNodePresence>> {
+    fn durable_presence(&self) -> Option<Arc<dyn medulla_kernel::kernel::persistence::DurableNodePresence>> {
         self.persistence.clone().map(|backend| {
             Arc::new(crate::server::api::persistence::BackendPresence(backend))
-                as Arc<dyn crate::kernel::persistence::DurableNodePresence>
+                as Arc<dyn medulla_kernel::kernel::persistence::DurableNodePresence>
         })
     }
 }

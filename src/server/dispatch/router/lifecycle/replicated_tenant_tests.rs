@@ -22,7 +22,7 @@ const GRAPH: &str = "tenant__subjectbinding__default";
 const SECRET: &str = "synthetic-replicated-tenant-test-secret";
 
 fn open_layer(dir: &Path) -> IsolationLayer {
-    let authority = crate::store_authority::process_authority();
+    let authority = medulla_kernel::store_authority::process_authority();
     IsolationLayer::with_persist_dir(
         dir,
         authority.as_ref(),
@@ -42,7 +42,7 @@ fn apply_identity(layer: &mut IsolationLayer, op: IdentityOp, principal: &str, s
         .try_apply_identity(
             &op,
             &stamp,
-            crate::kernel::dispatch_support::authoritative_now_ms(),
+            medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
             &medulla_capabilities::scopes::ScopeRegistry,
         )
         .expect("fixture identity operation");
@@ -110,7 +110,7 @@ fn create_graph() -> Method {
 
 fn native_request(context: &VerifiedRequestContext) -> RaftRequest {
     let carrier = CarrierAuthority::from_verified(context).unwrap();
-    let now = crate::kernel::dispatch_support::authoritative_now_ms();
+    let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let authority = RaftMutationContext::from_verified_request(
         "synthetic-replicated-tenant-batch".to_string(),
         11,
@@ -126,7 +126,7 @@ fn native_request(context: &VerifiedRequestContext) -> RaftRequest {
     )
     .unwrap();
     RaftRequest {
-        graph_fname: crate::persist::sanitize(GRAPH),
+        graph_fname: medulla_kernel::persist::sanitize(GRAPH),
         graph_name: GRAPH.to_string(),
         graph_type: GraphType::Agent,
         command: ReplicatedMutation::Native {

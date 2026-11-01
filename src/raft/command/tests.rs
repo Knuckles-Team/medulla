@@ -148,7 +148,7 @@ fn native_command_excludes_plaintext_environment_values() {
 
 fn graph_request(graph_name: &str, group_id: crate::raft::GroupId) -> crate::raft::RaftRequest {
     crate::raft::RaftRequest {
-        graph_fname: crate::persist::sanitize(graph_name),
+        graph_fname: medulla_kernel::persist::sanitize(graph_name),
         graph_name: graph_name.to_string(),
         graph_type: crate::protocol::GraphType::Global,
         command: ReplicatedMutation::caller_graph(
@@ -205,7 +205,7 @@ fn ordinary_graph_command_is_bound_to_request_group_and_authenticated_authority(
         .is_err());
 
     let mut cross_physical_graph = request.clone();
-    cross_physical_graph.graph_fname = crate::persist::sanitize("tenant-a:graph-b");
+    cross_physical_graph.graph_fname = medulla_kernel::persist::sanitize("tenant-a:graph-b");
     assert!(cross_physical_graph
         .validate_graph_command("cluster-test-key", 2)
         .is_err());

@@ -25,7 +25,7 @@ fn admitted_context(row: &Row, graph: &str, tenant: &str, run_id: &str, context_
     };
     admission.run_id.as_deref() == Some(run_id)
         && admission.context.tenant_id == tenant
-        && crate::persist::sanitize(&admission.context.graph) == graph
+        && medulla_kernel::persist::sanitize(&admission.context.graph) == graph
         && admission.work_item_id.is_none()
         && admission_context_matches(&admission, context_id)
 }

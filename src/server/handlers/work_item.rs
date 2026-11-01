@@ -192,7 +192,7 @@ fn publication_authority<'a>(
         .ok_or_else(|| format!("{kind} publication requires native persistence"))?;
     let actor =
         crate::server::mutation_batch::principal_fingerprint(ctx.verified_context.principal())?;
-    Ok((backend, crate::persist::sanitize(ctx.graph_name), actor))
+    Ok((backend, medulla_kernel::persist::sanitize(ctx.graph_name), actor))
 }
 
 /// Authorization precedes the ledger lookup even for an expired historical retry.

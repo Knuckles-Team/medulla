@@ -66,7 +66,7 @@ pub struct FetchCursor {
 /// Wall-clock milliseconds since the epoch (monotonic enough for TTL; tolerates
 /// clock skew the same way the OCC-txn sweep does).
 pub fn now_ms() -> u64 {
-    crate::kernel::dispatch_support::authoritative_now_ms()
+    medulla_kernel::kernel::dispatch_support::authoritative_now_ms()
 }
 
 /// Server-side blob cursor state, held on [`ServerState`](crate::server::ServerState).

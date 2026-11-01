@@ -32,7 +32,7 @@ async fn assert_stable_lifecycle_replay(
     result: ResultPayload,
 ) {
     let principal = Some("principal:lifecycle-test");
-    let graph_fname = crate::persist::sanitize(graph);
+    let graph_fname = medulla_kernel::persist::sanitize(graph);
     let first = {
         let persistence = open_backend(dir);
         let committed = commit_lifecycle(
@@ -162,7 +162,7 @@ async fn create_lifecycle_replay_keeps_one_stable_receipt() {
     // still for this whole body. READ guard: it excludes only a key MUTATOR, never
     // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    let dir = crate::kernel::persistence::temp_dir("medulla-lifecycle-replay", "create");
+    let dir = medulla_kernel::kernel::persistence::temp_dir("medulla-lifecycle-replay", "create");
     assert_stable_lifecycle_replay(
         &dir,
         "create",
@@ -189,7 +189,7 @@ async fn delete_lifecycle_replay_keeps_one_stable_receipt() {
     // still for this whole body. READ guard: it excludes only a key MUTATOR, never
     // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    let dir = crate::kernel::persistence::temp_dir("medulla-lifecycle-replay", "delete");
+    let dir = medulla_kernel::kernel::persistence::temp_dir("medulla-lifecycle-replay", "delete");
     let graph = "lifecycle-delete";
     {
         let persistence = open_backend(&dir);
@@ -245,7 +245,7 @@ async fn delete_lifecycle_replay_keeps_one_stable_receipt() {
 #[tokio::test(flavor = "multi_thread")]
 async fn delete_purges_receipts_of_a_prior_incarnation() {
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    let dir = crate::kernel::persistence::temp_dir("medulla-lifecycle-replay", "purge-incarnation");
+    let dir = medulla_kernel::kernel::persistence::temp_dir("medulla-lifecycle-replay", "purge-incarnation");
     let graph = "lifecycle-reincarnated";
     let principal = Some("principal:lifecycle-test");
     let create_method = || Method::CreateGraph {
@@ -300,7 +300,7 @@ async fn delete_purges_receipts_of_a_prior_incarnation() {
     assert!(
         persistence
             .read_mutation_batch(
-                &crate::persist::sanitize(graph),
+                &medulla_kernel::persist::sanitize(graph),
                 &first_create.record.batch.batch_id
             )
             .await
@@ -412,7 +412,7 @@ async fn delete_purges_receipts_of_a_prior_incarnation() {
 #[tokio::test(flavor = "multi_thread")]
 async fn lifecycle_receipt_is_not_replayed_across_tenants() {
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    let dir = crate::kernel::persistence::temp_dir("medulla-lifecycle-replay", "cross-tenant");
+    let dir = medulla_kernel::kernel::persistence::temp_dir("medulla-lifecycle-replay", "cross-tenant");
     let persistence = open_backend(&dir);
     let graph = "lifecycle-shared-name";
     let method = || Method::CreateGraph {
@@ -481,7 +481,7 @@ async fn lifecycle_receipt_is_not_replayed_across_tenants() {
 #[tokio::test(flavor = "multi_thread")]
 async fn lifecycle_replay_compares_identity_not_recompiled_bytes() {
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    let dir = crate::kernel::persistence::temp_dir("medulla-lifecycle-replay", "identity");
+    let dir = medulla_kernel::kernel::persistence::temp_dir("medulla-lifecycle-replay", "identity");
     let persistence = open_backend(&dir);
     let graph = "lifecycle-identity-graph";
     let principal = Some("principal:identity-agent");
@@ -510,7 +510,7 @@ async fn lifecycle_replay_compares_identity_not_recompiled_bytes() {
     .expect("first create commits");
     let batch_id = lifecycle_batch_id("create", TENANT, graph, principal, "identity-key");
     let mut stored = persistence
-        .read_mutation_batch(&crate::persist::sanitize(graph), &batch_id)
+        .read_mutation_batch(&medulla_kernel::persist::sanitize(graph), &batch_id)
         .await
         .expect("read receipt")
         .expect("receipt stored");

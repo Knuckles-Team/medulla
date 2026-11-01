@@ -480,7 +480,7 @@ mod eg318_dispatch_tests {
     }
 
     fn state_min() -> DurableTestState {
-        let dir = crate::kernel::persistence::temp_dir("eg318-dispatch", "state");
+        let dir = medulla_kernel::kernel::persistence::temp_dir("eg318-dispatch", "state");
         let dir_string = dir.to_string_lossy().to_string();
         let persistence: Arc<dyn PersistenceBackend> = Arc::new(
             RedbBackend::open(dir_string.clone(), 64).expect("open authoritative test backend"),

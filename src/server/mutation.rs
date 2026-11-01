@@ -232,7 +232,7 @@ mod tests {
     }
 
     fn temp_dir(tag: &str) -> std::path::PathBuf {
-        crate::kernel::persistence::temp_dir("medulla-mutation-gateway-test", tag)
+        medulla_kernel::kernel::persistence::temp_dir("medulla-mutation-gateway-test", tag)
     }
 
     #[test]
@@ -327,7 +327,7 @@ mod tests {
         );
 
         // The write actually landed durably.
-        let fname = crate::persist::sanitize(graph_name);
+        let fname = medulla_kernel::persist::sanitize(graph_name);
         let read_back = persistence
             .read_node(&fname, "n1")
             .await
@@ -523,7 +523,7 @@ mod tests {
         .await;
         assert!(resp.error.is_none());
 
-        let fname = crate::persist::sanitize(graph_name);
+        let fname = medulla_kernel::persist::sanitize(graph_name);
         let report = persistence
             .audit_verify_blocking(&fname)
             .expect("audit_verify_blocking");
@@ -592,7 +592,7 @@ mod tests {
             resp.error
         );
 
-        let fname = crate::persist::sanitize(&graph_name);
+        let fname = medulla_kernel::persist::sanitize(&graph_name);
         let report = persistence
             .audit_verify_blocking(&fname)
             .expect("audit_verify_blocking");
@@ -815,7 +815,7 @@ mod tests {
                 resp.error
             );
 
-            let fname = crate::persist::sanitize(&graph_name);
+            let fname = medulla_kernel::persist::sanitize(&graph_name);
             let report = persistence
                 .audit_verify_blocking(&fname)
                 .expect("audit_verify_blocking");
@@ -904,7 +904,7 @@ mod tests {
             resp.error
         );
 
-        let fname = crate::persist::sanitize(graph_name);
+        let fname = medulla_kernel::persist::sanitize(graph_name);
         let report = persistence
             .audit_verify_blocking(&fname)
             .expect("audit_verify_blocking");
@@ -984,7 +984,7 @@ mod tests {
             resp.error
         );
 
-        let fname = crate::persist::sanitize(graph_name);
+        let fname = medulla_kernel::persist::sanitize(graph_name);
         let batch_id = crate::server::mutation_batch::opaque_idempotency_key_for_context(
             "rpc",
             "opaque-test-tenant",
@@ -1126,7 +1126,7 @@ mod tests {
             resp.error
         );
 
-        let fname = crate::persist::sanitize(graph_name);
+        let fname = medulla_kernel::persist::sanitize(graph_name);
         let report = persistence
             .audit_verify_blocking(&fname)
             .expect("audit_verify_blocking");

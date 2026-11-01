@@ -155,7 +155,7 @@ where
         );
     };
 
-    let fname = crate::persist::sanitize(ctx.graph_name);
+    let fname = medulla_kernel::persist::sanitize(ctx.graph_name);
     let batch_id = crate::server::mutation_batch::opaque_idempotency_key_for_context(
         "rpc-async",
         ctx.tenant_scope,
@@ -170,7 +170,7 @@ where
         return response;
     }
 
-    let created_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    let created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     match commit_conditional_stage_and_diff(ctx, persistence, &fname, apply).await {
         Ok(staged) => {
             commit_conditional_commit_staged(

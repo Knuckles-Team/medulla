@@ -316,7 +316,7 @@ async fn process_graph(
     core: &Arc<medulla_core::graph::GraphCore>,
     budget: &mut OutboxClaimBudget,
 ) -> bool {
-    let graph_fname = crate::persist::sanitize(graph);
+    let graph_fname = medulla_kernel::persist::sanitize(graph);
     if !initialize_index(
         context.persist_dir.clone(),
         graph_fname.clone(),
@@ -779,7 +779,7 @@ pub async fn read_index(
     persist_dir: Option<&str>,
     graph_name: &str,
 ) -> Result<IncrementalReasoningIndex, String> {
-    let graph_fname = crate::persist::sanitize(graph_name);
+    let graph_fname = medulla_kernel::persist::sanitize(graph_name);
     let persist_dir = persist_dir.map(str::to_owned);
     run_projection_job(move || {
         load_index(persist_dir.as_deref(), &graph_fname)?
@@ -836,7 +836,7 @@ pub async fn recompute_materialization(
     if authoritative_graph_version != expected_source_graph_version {
         return Err("STALE_RECOMPUTE_FENCE: authoritative graph version changed".to_string());
     }
-    let graph_fname = crate::persist::sanitize(graph_name);
+    let graph_fname = medulla_kernel::persist::sanitize(graph_name);
     let persist_dir = persist_dir.map(str::to_owned);
     let node_id = node_id.to_string();
     let (materialization, fence_epoch, stale_count) = run_projection_job(move || {
@@ -1868,7 +1868,7 @@ mod tests {
     ) -> medulla_types::mutation_batch::MutationBatch {
         use std::collections::BTreeMap;
 
-        use crate::kernel::persistence::ENGINE_LEDGER_PRINCIPAL;
+        use medulla_kernel::kernel::persistence::ENGINE_LEDGER_PRINCIPAL;
         use medulla_types::contract::{Digest256, MethodId, Nonce};
         use medulla_types::mutation_batch::{
             CompiledOperation, CompiledScope, DurabilityDomain, MutationBatch, MutationEnvelope,
@@ -1968,7 +1968,7 @@ mod tests {
 
         let (root, root_str, backend) = shard_backend("open projection recreate backend");
         let graph = format!("projection-recreate-{}", std::process::id());
-        let graph_fname = crate::persist::sanitize(&graph);
+        let graph_fname = medulla_kernel::persist::sanitize(&graph);
         subscribed_graphs().write().await.remove(&graph_fname);
 
         let persistence: Arc<dyn crate::server::api::persistence::PersistenceBackend> =

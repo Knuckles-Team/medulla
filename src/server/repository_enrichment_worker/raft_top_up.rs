@@ -98,7 +98,7 @@ async fn prepare(
         return Err("ACCESS_DENIED: repository enrichment top-up scope is absent".into());
     }
     let graph = proposal.graph.as_str();
-    let graph_fname = crate::persist::sanitize(graph);
+    let graph_fname = medulla_kernel::persist::sanitize(graph);
     if graph_fname != graph {
         return Err("CONFLICT: repository enrichment top-up requires canonical graph name".into());
     }
@@ -270,7 +270,7 @@ async fn prepare_fresh(
         .read_mutation_graph_version(graph_fname)
         .await?
         .ok_or("CONFLICT: repository enrichment graph version is absent")?;
-    let committed_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    let committed_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let replacement_intent =
         crate::server::api::reentry::enrichment_intent_for_snapshot(state, plan.snapshot).await?;
     let replacement_batch =
@@ -280,7 +280,7 @@ async fn prepare_fresh(
             revision_idempotency_key: revision.idempotency_key.as_deref().unwrap_or_default(),
             replacement_intent,
             replacement_batch_id: &proposal.new_source_envelope,
-            serving_principal: crate::kernel::persistence::ENGINE_LEDGER_PRINCIPAL,
+            serving_principal: medulla_kernel::kernel::persistence::ENGINE_LEDGER_PRINCIPAL,
             graph_version: version,
             placement_epoch: routed.epoch,
             fencing_token: routed.group_id,
@@ -366,7 +366,7 @@ pub(crate) async fn propose_top_up(
         .routed
         .handle
         .client_write(crate::raft::RaftRequest {
-            graph_fname: crate::persist::sanitize(graph),
+            graph_fname: medulla_kernel::persist::sanitize(graph),
             graph_name: graph.to_string(),
             graph_type: prepared.graph_type,
             command,

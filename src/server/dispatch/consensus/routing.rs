@@ -376,8 +376,8 @@ fn build_native_raft_request(
     command: crate::raft::NativeMutationCommand,
     identity_bootstrap: bool,
 ) -> Result<crate::raft::RaftRequest, Response> {
-    let committed_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
-    let graph_fname = crate::persist::sanitize(proposal.graph_name);
+    let committed_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    let graph_fname = medulla_kernel::persist::sanitize(proposal.graph_name);
     let graph_scope = crate::server::mutation_batch::opaque_idempotency_key_for_context(
         "raft-graph-scope",
         proposal.authority.tenant_scope(),

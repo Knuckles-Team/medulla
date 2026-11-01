@@ -153,7 +153,7 @@ async fn select(
     let (held, digests) = web::held_pages(documents);
     let now_ms = request
         .now_ms
-        .unwrap_or_else(crate::kernel::dispatch_support::authoritative_now_ms);
+        .unwrap_or_else(medulla_kernel::kernel::dispatch_support::authoritative_now_ms);
     let digest = web::query_digest(&request.query);
     match medulla_numeric::decision::web_fetch_selection::select_web_pages(
         &request, &held, &digests, now_ms, digest,

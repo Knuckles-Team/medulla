@@ -156,7 +156,7 @@ pub(crate) async fn replay_before_library(
         &Method::SubmitWorkItem { request: probe },
     )
     .map_err(AdmissionError::Message)?;
-    let graph_fname = crate::persist::sanitize(ctx.graph_name);
+    let graph_fname = medulla_kernel::persist::sanitize(ctx.graph_name);
     let Some(record) = persistence
         .read_mutation_batch(&graph_fname, &identity.batch_id)
         .await
@@ -233,7 +233,7 @@ pub(crate) async fn submit_native(
     method: Method,
 ) -> Result<ResultPayload, AdmissionError> {
     #[cfg(feature = "raft")]
-    if clustered && !crate::kernel::dispatch_support::is_replicated_apply() {
+    if clustered && !medulla_kernel::kernel::dispatch_support::is_replicated_apply() {
         let response = crate::server::api::reentry::propose_native_mutation(
             ctx.state,
             ctx.graph_name,

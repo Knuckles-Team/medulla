@@ -329,7 +329,7 @@ mod tests {
         RaftRequest,
         String,
     ) {
-        let graph_fname = crate::persist::sanitize(logical_graph);
+        let graph_fname = medulla_kernel::persist::sanitize(logical_graph);
         let method = Method::AddNode {
             node_id: "replay-scope-proof".to_string(),
             properties_msgpack: Vec::new(),

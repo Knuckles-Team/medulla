@@ -168,7 +168,7 @@ pub(super) async fn dispatch_op_audit_read_event(
     persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     seq: u64,
 ) -> Response {
-    let fname = crate::persist::sanitize(graph_name);
+    let fname = medulla_kernel::persist::sanitize(graph_name);
     match persistence.as_ref().and_then(|p| p.as_redb()) {
         Some(redb) => match redb.audit_read_event(&fname, verified_tenant, seq).await {
             Ok(proof) => Response::ok(
@@ -191,7 +191,7 @@ pub(super) async fn dispatch_op_audit_append(
     persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
     event: crate::redb_store::OperationAuditEvent,
 ) -> Response {
-    let fname = crate::persist::sanitize(graph_name);
+    let fname = medulla_kernel::persist::sanitize(graph_name);
     match persistence.as_ref().and_then(|p| p.as_redb()) {
         Some(redb) => match redb.audit_append(&fname, event).await {
             Ok(receipt) => {
@@ -236,7 +236,7 @@ pub(super) async fn dispatch_op_audit_verify(
     graph_name: &str,
     persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
 ) -> Response {
-    let fname = crate::persist::sanitize(graph_name);
+    let fname = medulla_kernel::persist::sanitize(graph_name);
     match persistence.as_ref().and_then(|p| p.as_redb()) {
         Some(redb) => match redb.audit_verify_blocking(&fname) {
             Ok(report) => Response::ok(
@@ -260,7 +260,7 @@ pub(super) async fn prove_audit_inclusion(
     node_id: String,
     anchor_seq: Option<u64>,
 ) -> Response {
-    let fname = crate::persist::sanitize(graph_name);
+    let fname = medulla_kernel::persist::sanitize(graph_name);
     match persistence.as_ref().and_then(|p| p.as_redb()) {
         Some(redb) => match redb.audit_prove_inclusion_blocking(&fname, &node_id, anchor_seq) {
             Ok(report) => Response::ok(
@@ -496,8 +496,8 @@ pub(super) async fn dispatch_op_raft_write_routing_barrier(
         tenant_scope,
         graph_type,
     } = ctx;
-    let created_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
-    let graph_fname = crate::persist::sanitize(graph_name);
+    let created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    let graph_fname = medulla_kernel::persist::sanitize(graph_name);
     let principal_fingerprint = verified_context.principal_persistence_id();
     let batch_id = replicated_graph_batch_id(
         "raft-rpc",

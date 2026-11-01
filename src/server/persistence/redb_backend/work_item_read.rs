@@ -243,7 +243,7 @@ impl RedbBackend {
                     run_id,
                     actor,
                     crypto,
-                    crate::kernel::dispatch_support::authoritative_now_ms(),
+                    medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
                 )
             },
         )
@@ -280,7 +280,7 @@ impl RedbBackend {
                 &request,
                 &actor,
                 crypto,
-                crate::kernel::dispatch_support::authoritative_now_ms(),
+                medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
             )
         })
         .await

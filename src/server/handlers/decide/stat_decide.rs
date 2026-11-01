@@ -104,7 +104,7 @@ async fn serve(
             .await?
     };
     let principal = verified.principal_persistence_id();
-    let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let started = Instant::now();
     tokio::task::spawn_blocking(move || {
         let ctx = ExecutionContext {

@@ -248,7 +248,7 @@ pub(crate) async fn commit_cross_modal_txn_with_nonce(
         }
     }
 
-    let fname = crate::persist::sanitize(&txn.graph);
+    let fname = medulla_kernel::persist::sanitize(&txn.graph);
     let (methods, measurements) = build_cross_modal_plan(&txn)?;
 
     let Some(authority) = persistence.as_ref() else {

@@ -220,10 +220,10 @@ impl EmbeddedEngine {
                 // bytes -- the composition root decides which principal may
                 // serve this file's scopes, and for the embedded API this
                 // library IS that root.
-                let authority = crate::store_authority::process_authority();
+                let authority = medulla_kernel::store_authority::process_authority();
                 medulla_query::TableStore::open(
                     dir.join("sql_tables.redb"),
-                    crate::store_authority::process_verifier(),
+                    medulla_kernel::store_authority::process_verifier(),
                     authority.principal(),
                     &authority.proof(),
                 )
@@ -231,7 +231,7 @@ impl EmbeddedEngine {
             // The `:memory:` analogue is still opened by the composition root,
             // not by `medulla-query`'s `dev-scope-grant` stand-in: ephemeral is a
             // lifetime, not a weaker authority.
-            _ => crate::store_authority::open_ephemeral_sql_store().map(|(store, _path)| store),
+            _ => medulla_kernel::store_authority::open_ephemeral_sql_store().map(|(store, _path)| store),
         }
     }
 
@@ -779,7 +779,7 @@ mod lifecycle_failure_tests {
     use std::thread;
 
     fn temp_dir(tag: &str) -> PathBuf {
-        crate::kernel::persistence::temp_dir("medulla-embedded-lifecycle", tag)
+        medulla_kernel::kernel::persistence::temp_dir("medulla-embedded-lifecycle", tag)
     }
 
     /// Hold the ambient encryption environment still for a durable test's body.

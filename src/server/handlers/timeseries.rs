@@ -230,7 +230,7 @@ async fn prepare_append(
         Ok(points) => points,
         Err(error) => return Err(Response::err(context.req_id, error)),
     };
-    let committed_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    let committed_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let batch = context
         .series_batch(&store, context.original_method, committed_at_ms)
         .map_err(|error| Response::err(context.req_id, error))?;
@@ -749,9 +749,9 @@ pub(crate) fn open_test_series_store(path: &std::path::Path) -> Arc<SeriesStore>
     Arc::new(
         SeriesStore::open(
             path,
-            crate::store_authority::process_verifier(),
-            crate::store_authority::process_authority().principal(),
-            &crate::store_authority::process_authority().proof(),
+            medulla_kernel::store_authority::process_verifier(),
+            medulla_kernel::store_authority::process_authority().principal(),
+            &medulla_kernel::store_authority::process_authority().proof(),
         )
         .unwrap(),
     )

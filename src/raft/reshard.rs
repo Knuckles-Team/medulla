@@ -417,7 +417,7 @@ impl TenantManager {
     }
 
     async fn verify_graph_durable(&self, graph_name: &str) -> Result<usize, String> {
-        let graph_fname = crate::persist::sanitize(graph_name);
+        let graph_fname = medulla_kernel::persist::sanitize(graph_name);
         let backend = self.backend.clone();
         tokio::task::spawn_blocking(move || {
             let mut cursor = None;
@@ -490,7 +490,7 @@ impl TenantManager {
     pub async fn rehydrate_graph(&self, graph_name: &str) -> Result<usize, String> {
         let _guard = self.multi.tenant_lock(graph_name).await;
 
-        let fname = crate::persist::sanitize(graph_name);
+        let fname = medulla_kernel::persist::sanitize(graph_name);
         let dump = match self.read_dump(&fname)? {
             Some(d) => d,
             None => return Ok(0),

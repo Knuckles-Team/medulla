@@ -383,7 +383,7 @@ async fn projected_schema(
     .unwrap();
     let backend = served.state.read().await.persistence.clone().unwrap();
     backend
-        .read_authoritative_graph_snapshot(&crate::persist::sanitize(&graph))
+        .read_authoritative_graph_snapshot(&medulla_kernel::persist::sanitize(&graph))
         .await
         .unwrap()
         .unwrap()

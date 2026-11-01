@@ -642,7 +642,7 @@ async fn apply_one_change_envelope_inner(
     if let Err(error) = harness_boundary_envelope(&envelope, core) {
         return Response::err(req_id, error);
     }
-    let fname = crate::persist::sanitize(graph_name);
+    let fname = medulla_kernel::persist::sanitize(graph_name);
     let (backend, known_replay) = match prepare_change_envelope_commit(
         persistence.as_ref(),
         &fname,
@@ -656,7 +656,7 @@ async fn apply_one_change_envelope_inner(
     };
     #[cfg(not(feature = "raft"))]
     let _ = known_replay;
-    let committed_at_ms = crate::kernel::dispatch_support::authoritative_now_ms()
+    let committed_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms()
         .max(envelope.mutation.created_at_ms);
 
     #[cfg(feature = "raft")]
@@ -840,7 +840,7 @@ async fn apply_change_envelope_batch(
         }
     }
     let committed_at_ms = envelopes.iter().fold(
-        crate::kernel::dispatch_support::authoritative_now_ms(),
+        medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
         |acc, e| acc.max(e.mutation.created_at_ms),
     );
     let Some(backend) = persistence.as_ref() else {
@@ -849,7 +849,7 @@ async fn apply_change_envelope_batch(
             "ApplyChangeEnvelopes requires a configured persistence backend",
         );
     };
-    let fname = crate::persist::sanitize(graph_name);
+    let fname = medulla_kernel::persist::sanitize(graph_name);
     let results =
         commit_change_envelope_batch_results(backend, &core, &fname, &envelopes, committed_at_ms)
             .await;
@@ -877,7 +877,7 @@ async fn read_change_envelope(
     let Some(backend) = ctx.persistence.as_ref() else {
         return change_read_failure(req_id, "change-envelope persistence is unavailable");
     };
-    let fname = crate::persist::sanitize(graph_name);
+    let fname = medulla_kernel::persist::sanitize(graph_name);
     match backend.read_change_envelope(&fname, &envelope_id).await {
         Ok(Some(record))
             if record.envelope.mutation.identity.tenant().as_str() == tenant
@@ -916,7 +916,7 @@ async fn read_content_version(
     let Some(backend) = ctx.persistence.as_ref() else {
         return change_read_failure(req_id, "content-version persistence is unavailable");
     };
-    let fname = crate::persist::sanitize(graph_name);
+    let fname = medulla_kernel::persist::sanitize(graph_name);
     match backend
         .read_content_version(&fname, &tenant, &object_id)
         .await
@@ -942,7 +942,7 @@ async fn read_change_cursor(
     let Some(backend) = ctx.persistence.as_ref() else {
         return change_read_failure(req_id, "change-cursor persistence is unavailable");
     };
-    let fname = crate::persist::sanitize(graph_name);
+    let fname = medulla_kernel::persist::sanitize(graph_name);
     match backend
         .read_change_cursor(&fname, &tenant, &source, &partition)
         .await

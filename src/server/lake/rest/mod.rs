@@ -711,9 +711,9 @@ mod tests {
         let store = RedbChunkStore::open_temp().unwrap();
         let tsdb = SeriesStore::open_in_dir(
             &crate::server::api::dispatch_support::unique_temp_dir("medulla-lake-rest-test"),
-            crate::store_authority::process_verifier(),
-            crate::store_authority::process_authority().principal(),
-            &crate::store_authority::process_authority().proof(),
+            medulla_kernel::store_authority::process_verifier(),
+            medulla_kernel::store_authority::process_authority().principal(),
+            &medulla_kernel::store_authority::process_authority().proof(),
         )
         .unwrap();
         tsdb.append_batch(

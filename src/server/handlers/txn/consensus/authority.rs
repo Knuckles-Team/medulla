@@ -97,7 +97,7 @@ pub(super) async fn committed_participant_receipt(
         plan.participant_id,
         &plan.graph_name,
     );
-    let fname = crate::persist::sanitize(&plan.graph_name);
+    let fname = medulla_kernel::persist::sanitize(&plan.graph_name);
     let Some(record) = backend.read_mutation_batch(&fname, &receipt_id).await? else {
         return Ok(false);
     };

@@ -99,7 +99,7 @@ async fn serve(
     op: MutationOutboxOp,
 ) -> Result<Answer, String> {
     op.validate()?;
-    let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let owner = resolve(state, verified, op.target()).await?;
     match op {
         MutationOutboxOp::Status { consumer, .. } => owner
@@ -170,7 +170,7 @@ async fn resolve(
             })?;
             Ok(Owner::Graph {
                 persistence,
-                graph_fname: crate::persist::sanitize(graph),
+                graph_fname: medulla_kernel::persist::sanitize(graph),
             })
         }
         OutboxTarget::NativeStore {
@@ -307,7 +307,7 @@ impl Owner {
                     .await
             }
             Owner::AgentLibrary { store, tenant_id } => {
-                let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+                let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
                 crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     store.outbox_view(&tenant_id, &view, now_ms)
                 })
@@ -315,7 +315,7 @@ impl Owner {
             }
             #[cfg(feature = "ann-redb")]
             Owner::SemanticBinding { service } => {
-                let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+                let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
                 crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     service
                         .outbox_operator_view(&view, now_ms)
@@ -329,7 +329,7 @@ impl Owner {
                 tenant_scope,
                 resource,
             } => {
-                let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+                let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
                 crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     store.outbox_operator_view(&tenant_scope, &resource, &view, now_ms)
                 })
@@ -337,7 +337,7 @@ impl Owner {
             }
             #[cfg(feature = "jobs")]
             Owner::Jobs { store } => {
-                let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+                let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
                 crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     let (mutations, kernel, owner) = store.outbox_owner();
                     let read = kernel.read_scope(owner)?;

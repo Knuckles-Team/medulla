@@ -77,7 +77,7 @@ async fn write_via_owner(multi: &Arc<MultiRaft>, graph: &str, node_id: &str) -> 
         .await
         .ok_or_else(|| "owner group not running".to_string())?;
     let req = RaftRequest {
-        graph_fname: crate::persist::sanitize(graph),
+        graph_fname: medulla_kernel::persist::sanitize(graph),
         graph_name: graph.to_string(),
         graph_type: GraphType::Global,
         committed_at_ms: 0,
@@ -114,7 +114,7 @@ fn epoch_cas_request(
     );
     mutation.attempt_nonce = Some(medulla_types::contract::Nonce::from_bytes([nonce; 32]));
     let mut request = RaftRequest {
-        graph_fname: crate::persist::sanitize(crate::raft::placement::PLACEMENT_GRAPH),
+        graph_fname: medulla_kernel::persist::sanitize(crate::raft::placement::PLACEMENT_GRAPH),
         graph_name: crate::raft::placement::PLACEMENT_GRAPH.to_string(),
         graph_type: GraphType::Commons,
         committed_at_ms: 0,

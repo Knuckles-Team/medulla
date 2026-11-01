@@ -382,7 +382,7 @@ pub(super) fn durable_read_lease(graph: &str, agent: &str) -> DurableReadLease {
     // `IsolationLayer::with_persist_dir` below — `redb::Database` does not
     // support two concurrently-open handles onto the same file.
     {
-        let authority = crate::store_authority::process_authority();
+        let authority = medulla_kernel::store_authority::process_authority();
         let store = RbacStore::open(
             &directory,
             authority.as_ref(),
@@ -407,7 +407,7 @@ pub(super) fn durable_read_lease(graph: &str, agent: &str) -> DurableReadLease {
     // duplicating the authorization decision. Mint through
     // `IsolationLayer::mint_policy_decision_lease` instead, over an
     // `IsolationLayer` reopened from the SAME durable directory.
-    let authority = crate::store_authority::process_authority();
+    let authority = medulla_kernel::store_authority::process_authority();
     let isolation = IsolationLayer::with_persist_dir(
         &directory,
         authority.as_ref(),

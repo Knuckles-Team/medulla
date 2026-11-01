@@ -271,7 +271,7 @@ pub(super) async fn compile_prepared_batch(
     } = args;
     let idempotency_key = batch_id.to_string();
     let authoritative_version = match authority
-        .read_mutation_graph_version(&crate::persist::sanitize(graph_name))
+        .read_mutation_graph_version(&medulla_kernel::persist::sanitize(graph_name))
         .await
     {
         Ok(version) => version.unwrap_or(begin_version),
@@ -423,7 +423,7 @@ async fn commit_prepared_batch_durable(
     result_msgpack: &[u8],
     committed_at_ms: u64,
 ) -> Result<crate::mutation_batch::MutationBatchCommit, String> {
-    let fname = crate::persist::sanitize(graph_name);
+    let fname = medulla_kernel::persist::sanitize(graph_name);
     authority
         .commit_mutation_batch(&fname, batch, Some(result_msgpack), committed_at_ms)
         .await
@@ -442,7 +442,7 @@ pub(super) async fn commit_prepared_replayed(
     graph_name: &str,
     committed: &crate::mutation_batch::MutationBatchCommit,
 ) -> Response {
-    let fname = crate::persist::sanitize(graph_name);
+    let fname = medulla_kernel::persist::sanitize(graph_name);
     let Some(bytes) = committed.record.result_msgpack.as_deref() else {
         return Response::err(req_id, "committed MutationBatch has no durable result");
     };

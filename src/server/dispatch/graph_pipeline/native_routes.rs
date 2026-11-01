@@ -477,7 +477,7 @@ async fn route_source_ingestion_request(
     let graph_version = match ctx.persistence.as_ref() {
         Some(persistence) => match crate::server::mutation_batch::authoritative_graph_version(
             persistence,
-            &crate::persist::sanitize(ctx.graph_name),
+            &medulla_kernel::persist::sanitize(ctx.graph_name),
             ctx.core,
         )
         .await

@@ -63,7 +63,7 @@ pub(crate) async fn try_handle(
             backend,
             &original_method,
             attempt_nonce,
-            |catalog| catalog.assign(&crate::persist::sanitize(&graph), shard, node),
+            |catalog| catalog.assign(&medulla_kernel::persist::sanitize(&graph), shard, node),
         )),
         Method::CatalogReassign { graph, shard } => Ok(catalog_saga::<
             medulla_types::result_contract::cluster::CatalogReassign,
@@ -73,7 +73,7 @@ pub(crate) async fn try_handle(
             backend,
             &original_method,
             attempt_nonce,
-            |catalog| catalog.reassign(&crate::persist::sanitize(&graph), shard),
+            |catalog| catalog.reassign(&medulla_kernel::persist::sanitize(&graph), shard),
         )),
         Method::CatalogRemove { graph } => Ok(catalog_saga::<
             medulla_types::result_contract::cluster::CatalogRemove,
@@ -83,7 +83,7 @@ pub(crate) async fn try_handle(
             backend,
             &original_method,
             attempt_nonce,
-            |catalog| catalog.remove(&crate::persist::sanitize(&graph)),
+            |catalog| catalog.remove(&medulla_kernel::persist::sanitize(&graph)),
         )),
         Method::CatalogList => Ok(handle_catalog_list(req_id, backend)),
         Method::RebalancePlan {
@@ -111,7 +111,7 @@ async fn handle_reshard(call: AdminSagaCall<'_>, graph: String, to_shard: u32) -
         Ok(saga) => saga,
         Err(response) => return response,
     };
-    let fname = crate::persist::sanitize(&graph);
+    let fname = medulla_kernel::persist::sanitize(&graph);
     let report = match call.backend.reshard_graph(&fname, to_shard).await {
         Ok(report) => report,
         Err(e) => return Response::err(call.req_id, format!("Reshard failed: {e}")),

@@ -331,12 +331,12 @@ fn apply_upgrades_a_sql_catalog_and_keeps_its_rows() {
     assert_eq!(apply(dir.path(), &confirmed()).outcome, "nothing_to_do");
     // The table store accepts the upgraded file, so the physical identity
     // this command expects of a SQL catalog is the one that store declares.
-    let authority = crate::store_authority::process_authority();
+    let authority = medulla_kernel::store_authority::process_authority();
     drop(
         medulla_query::TableStore::open_scoped(
             &catalog,
             "tenant-a",
-            crate::store_authority::process_verifier(),
+            medulla_kernel::store_authority::process_verifier(),
             authority.principal(),
             &authority.proof(),
         )

@@ -673,9 +673,9 @@ pub(crate) fn test_state_with_services(
         state.tsdb_store = Some(std::sync::Arc::new(
             medulla_tsdb::store::SeriesStore::open_in_dir(
                 &crate::server::api::dispatch_support::unique_temp_dir(tsdb_label),
-                crate::store_authority::process_verifier(),
-                crate::store_authority::process_authority().principal(),
-                &crate::store_authority::process_authority().proof(),
+                medulla_kernel::store_authority::process_verifier(),
+                medulla_kernel::store_authority::process_authority().principal(),
+                &medulla_kernel::store_authority::process_authority().proof(),
             )
             .expect("open test series store"),
         ));
@@ -2981,14 +2981,14 @@ mod tests {
             );
         }
         assert_eq!(
-            crate::persist::evict_oversized_all(&state, 4).await,
+            medulla_kernel::persist::evict_oversized_all(&state, 4).await,
             2,
             "6 nodes capped at 4 -> evict 2"
         );
-        assert_eq!(crate::persist::evict_oversized_all(&state, 4).await, 0);
-        assert_eq!(crate::persist::evict_oversized_all(&state, 100).await, 0);
+        assert_eq!(medulla_kernel::persist::evict_oversized_all(&state, 4).await, 0);
+        assert_eq!(medulla_kernel::persist::evict_oversized_all(&state, 100).await, 0);
         assert_eq!(
-            crate::persist::evict_oversized_all(&state, 0).await,
+            medulla_kernel::persist::evict_oversized_all(&state, 0).await,
             4,
             "cap 0 evicts every durably-confirmed resident node, not a no-op"
         );

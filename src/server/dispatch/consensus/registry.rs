@@ -271,7 +271,7 @@ pub(in crate::server::dispatch) async fn handle_list_registered_servers(
     };
 
     let registry_revision = raw_core.version();
-    let observed_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    let observed_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let live = live_registered_servers(&raw_core, observed_at_ms, |node_id, properties| {
         read_authority.can_see_node(properties, raw_core.is_schema_node(node_id))
     });
@@ -301,7 +301,7 @@ pub(crate) async fn verified_served_registration(
             "registered-server authority is unavailable",
         )?
     };
-    let observed_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    let observed_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     if !is_valid_server_name(server_name) {
         return Err("invalid registered server name".into());
     }
@@ -378,7 +378,7 @@ pub(in crate::server::dispatch) async fn handle_register_server(
         Err(error) => return Response::err(req_id, error),
     };
     let node_id = format!("srv:{}", registration.name);
-    let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let lease_expires_at_ms = now_ms.saturating_add(registration.ttl_secs.saturating_mul(1_000));
 
     // Preserve `registered_at_ms` across a renewal by peeking at any existing row

@@ -208,10 +208,10 @@ fn try_activate_generation(name: &str, store: &SemanticStore, dir: &str) -> Resu
 /// root's ONE scope-grant authority (RF-RULING-004).
 #[cfg(feature = "ann-redb")]
 fn open_code_store(persist_dir: &str, binding: &str) -> Result<SemanticCodeStore, String> {
-    let authority = crate::store_authority::process_authority();
+    let authority = medulla_kernel::store_authority::process_authority();
     SemanticCodeStore::open(
         &std::path::Path::new(persist_dir).join(SEMANTIC_INDEX_DIR),
-        crate::store_authority::process_verifier(),
+        medulla_kernel::store_authority::process_verifier(),
         authority.principal(),
         &authority.proof(),
         SEMANTIC_INDEX_TENANT,

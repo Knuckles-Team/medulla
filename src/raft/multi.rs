@@ -113,7 +113,7 @@ impl GroupRouter {
         if ring.is_empty() {
             return DEFAULT_GROUP;
         }
-        ring[(fnv1a(&crate::persist::sanitize(graph_name)) % ring.len() as u64) as usize]
+        ring[(fnv1a(&medulla_kernel::persist::sanitize(graph_name)) % ring.len() as u64) as usize]
     }
 
     /// Configure the tenant-range ring (CONCEPT:AU-KG.ingest.mirror-inbound): un-pinned graphs
@@ -1178,7 +1178,7 @@ impl MultiRaft {
         self.ensure_group(DEFAULT_GROUP).await?;
         let server_secret = self.ctx.state.read().await.auth_secret.clone();
         Ok(RaftRequest {
-            graph_fname: crate::persist::sanitize(placement::PLACEMENT_GRAPH),
+            graph_fname: medulla_kernel::persist::sanitize(placement::PLACEMENT_GRAPH),
             graph_name: placement::PLACEMENT_GRAPH.to_string(),
             graph_type: crate::protocol::GraphType::Commons,
             committed_at_ms: 0,
@@ -1306,7 +1306,7 @@ impl MultiRaft {
         };
         let command = crate::raft::NativeMutationCommand::node_info(&info, &server_secret)?;
         let req = RaftRequest {
-            graph_fname: crate::persist::sanitize(placement::PLACEMENT_GRAPH),
+            graph_fname: medulla_kernel::persist::sanitize(placement::PLACEMENT_GRAPH),
             graph_name: placement::PLACEMENT_GRAPH.to_string(),
             graph_type: crate::protocol::GraphType::Commons,
             committed_at_ms: 0,

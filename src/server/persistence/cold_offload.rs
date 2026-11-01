@@ -265,7 +265,7 @@ pub fn offload_graph_core(
     {
         return None;
     }
-    let fname = crate::persist::sanitize(graph_name);
+    let fname = medulla_kernel::persist::sanitize(graph_name);
     let presence = backend.durable_node_presence(&fname, &node_ids).ok()?;
     if presence.len() != node_ids.len() || presence.iter().any(|present| !present) {
         return None;

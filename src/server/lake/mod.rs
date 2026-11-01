@@ -1221,9 +1221,9 @@ mod tests {
                 "medulla-lake-test-atomic-failure-{}",
                 std::process::id()
             )),
-            crate::store_authority::process_verifier(),
-            crate::store_authority::process_authority().principal(),
-            &crate::store_authority::process_authority().proof(),
+            medulla_kernel::store_authority::process_verifier(),
+            medulla_kernel::store_authority::process_authority().principal(),
+            &medulla_kernel::store_authority::process_authority().proof(),
         )
         .unwrap();
         let manager = LakeManager::new();
@@ -1312,9 +1312,9 @@ mod tests {
                 "medulla-lake-test-delete-interleave-{}",
                 std::process::id()
             )),
-            crate::store_authority::process_verifier(),
-            crate::store_authority::process_authority().principal(),
-            &crate::store_authority::process_authority().proof(),
+            medulla_kernel::store_authority::process_verifier(),
+            medulla_kernel::store_authority::process_authority().principal(),
+            &medulla_kernel::store_authority::process_authority().proof(),
         )
         .unwrap();
         let manager = std::sync::Arc::new(LakeManager::new());
@@ -1404,9 +1404,9 @@ mod tests {
                 "medulla-lake-test-evolve-interleave-{}",
                 std::process::id()
             )),
-            crate::store_authority::process_verifier(),
-            crate::store_authority::process_authority().principal(),
-            &crate::store_authority::process_authority().proof(),
+            medulla_kernel::store_authority::process_verifier(),
+            medulla_kernel::store_authority::process_authority().principal(),
+            &medulla_kernel::store_authority::process_authority().proof(),
         )
         .unwrap();
         let manager = std::sync::Arc::new(LakeManager::new());
@@ -1472,9 +1472,9 @@ mod tests {
         let s = store();
         let tsdb = SeriesStore::open_in_dir(
             &std::env::temp_dir().join(format!("medulla-lake-test-{}", std::process::id())),
-            crate::store_authority::process_verifier(),
-            crate::store_authority::process_authority().principal(),
-            &crate::store_authority::process_authority().proof(),
+            medulla_kernel::store_authority::process_verifier(),
+            medulla_kernel::store_authority::process_authority().principal(),
+            &medulla_kernel::store_authority::process_authority().proof(),
         )
         .unwrap();
         append(&tsdb, "temp.sensor1", &points(0, 3));
@@ -1520,9 +1520,9 @@ mod tests {
         let s = store();
         let tsdb = SeriesStore::open_in_dir(
             &std::env::temp_dir().join(format!("medulla-lake-test-compact-{}", std::process::id())),
-            crate::store_authority::process_verifier(),
-            crate::store_authority::process_authority().principal(),
-            &crate::store_authority::process_authority().proof(),
+            medulla_kernel::store_authority::process_verifier(),
+            medulla_kernel::store_authority::process_authority().principal(),
+            &medulla_kernel::store_authority::process_authority().proof(),
         )
         .unwrap();
         append(&tsdb, "s1", &points(0, 3));
@@ -1565,9 +1565,9 @@ mod tests {
         let s = store();
         let tsdb = SeriesStore::open_in_dir(
             &std::env::temp_dir().join(format!("medulla-lake-test-asof-{}", std::process::id())),
-            crate::store_authority::process_verifier(),
-            crate::store_authority::process_authority().principal(),
-            &crate::store_authority::process_authority().proof(),
+            medulla_kernel::store_authority::process_verifier(),
+            medulla_kernel::store_authority::process_authority().principal(),
+            &medulla_kernel::store_authority::process_authority().proof(),
         )
         .unwrap();
         append(&tsdb, "s5", &points(0, 3));
@@ -1635,9 +1635,9 @@ mod tests {
         let s = store();
         let tsdb = SeriesStore::open_in_dir(
             &std::env::temp_dir().join(format!("medulla-lake-test-delete-{}", std::process::id())),
-            crate::store_authority::process_verifier(),
-            crate::store_authority::process_authority().principal(),
-            &crate::store_authority::process_authority().proof(),
+            medulla_kernel::store_authority::process_verifier(),
+            medulla_kernel::store_authority::process_authority().principal(),
+            &medulla_kernel::store_authority::process_authority().proof(),
         )
         .unwrap();
         append(&tsdb, "s2", &points(0, 4));
@@ -1672,9 +1672,9 @@ mod tests {
         let s = store();
         let tsdb = SeriesStore::open_in_dir(
             &std::env::temp_dir().join(format!("medulla-lake-test-evolve-{}", std::process::id())),
-            crate::store_authority::process_verifier(),
-            crate::store_authority::process_authority().principal(),
-            &crate::store_authority::process_authority().proof(),
+            medulla_kernel::store_authority::process_verifier(),
+            medulla_kernel::store_authority::process_authority().principal(),
+            &medulla_kernel::store_authority::process_authority().proof(),
         )
         .unwrap();
         append(&tsdb, "s3", &points(0, 2));
@@ -1771,9 +1771,9 @@ mod tests {
         let s = store();
         let tsdb = SeriesStore::open_in_dir(
             &std::env::temp_dir().join(format!("medulla-lake-test-lineage-{}", std::process::id())),
-            crate::store_authority::process_verifier(),
-            crate::store_authority::process_authority().principal(),
-            &crate::store_authority::process_authority().proof(),
+            medulla_kernel::store_authority::process_verifier(),
+            medulla_kernel::store_authority::process_authority().principal(),
+            &medulla_kernel::store_authority::process_authority().proof(),
         )
         .unwrap();
         append(&tsdb, "s4", &points(0, 2));
@@ -1827,9 +1827,9 @@ mod tests {
                 "medulla-lake-test-lineage-unconfigured-{}",
                 std::process::id()
             )),
-            crate::store_authority::process_verifier(),
-            crate::store_authority::process_authority().principal(),
-            &crate::store_authority::process_authority().proof(),
+            medulla_kernel::store_authority::process_verifier(),
+            medulla_kernel::store_authority::process_authority().principal(),
+            &medulla_kernel::store_authority::process_authority().proof(),
         )
         .unwrap();
         append(&tsdb, "s5", &points(0, 2));

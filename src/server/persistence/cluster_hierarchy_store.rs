@@ -85,7 +85,7 @@ impl ClusterHierarchyStore {
             CLUSTER_HIERARCHY_PHYSICAL_STORE,
             CLUSTER_HIERARCHY_SCOPE_RESOURCE,
             CLUSTER_HIERARCHY_SCOPE_INCARNATION,
-            crate::store_authority::process_authority(),
+            medulla_kernel::store_authority::process_authority(),
         )?;
         let mut entries = HashMap::new();
         {

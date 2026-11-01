@@ -66,7 +66,7 @@ pub(super) async fn dispatch_op_resource_reservation_query(
     let Some(backend) = persistence.as_ref() else {
         return Response::err(req_id, "native reservation persistence is unavailable");
     };
-    let fname = crate::persist::sanitize(graph_name);
+    let fname = medulla_kernel::persist::sanitize(graph_name);
     match &method {
         crate::protocol::Method::QueryWorkItemReservation { request } => {
             match backend.read_resource_reservation(&fname, request).await {
@@ -197,7 +197,7 @@ pub(super) async fn dispatch_op_capacity_ops(
     if !state_machine_authorized && !capacity_owner_matches(&method, verified_context) {
         return Response::err(req_id, "ACCESS_DENIED: capacity owner digest mismatch");
     }
-    let fname = crate::persist::sanitize(graph_name);
+    let fname = medulla_kernel::persist::sanitize(graph_name);
     let _mutation_guard = crate::server::mutation_batch::lock_graph(graph_name).await;
     match method {
         Method::CapacityStatus { ref request } | Method::ReconcileCapacity { ref request } => {
@@ -287,7 +287,7 @@ pub(super) async fn dispatch_op_workitem_claim_capability(
     #[cfg(feature = "raft")]
     let routed_raft = ctx.routed_raft;
     #[cfg(feature = "raft")]
-    if crate::kernel::dispatch_support::is_replicated_apply() {
+    if medulla_kernel::kernel::dispatch_support::is_replicated_apply() {
         // A replicated apply has only the bounded Raft routing context;
         // capability authority requires the original cryptographically
         // verified principal and session envelope.
@@ -340,9 +340,9 @@ pub(super) async fn dispatch_op_workitem_claim_capability(
             session: verified_context.idempotency_key().to_string(),
             authority_epoch: work_item_capability_authority_epoch(&graph_incarnation_id),
             incarnation_id: graph_incarnation_id.clone(),
-            now_ms: crate::kernel::dispatch_support::authoritative_now_ms(),
+            now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
         };
-        let fname = crate::persist::sanitize(graph_name);
+        let fname = medulla_kernel::persist::sanitize(graph_name);
         let _mutation_guard = crate::server::mutation_batch::lock_graph(graph_name).await;
         match method {
             Method::MintWorkItemClaimCapability { request } => redb

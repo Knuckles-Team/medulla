@@ -258,7 +258,7 @@ async fn three_node_cluster_replicates_and_survives_leader_failover() {
     let leader = nodes.get(&leader_id).unwrap().handle.clone();
     for k in 0..n_writes {
         let req = RaftRequest {
-            graph_fname: crate::persist::sanitize(graph),
+            graph_fname: medulla_kernel::persist::sanitize(graph),
             graph_name: graph.to_string(),
             graph_type: GraphType::Commons,
             committed_at_ms: 0,
@@ -317,7 +317,7 @@ async fn three_node_cluster_replicates_and_survives_leader_failover() {
 
     // And a write through the NEW leader still commits (cluster is live, not split).
     let post = RaftRequest {
-        graph_fname: crate::persist::sanitize(graph),
+        graph_fname: medulla_kernel::persist::sanitize(graph),
         graph_name: graph.to_string(),
         graph_type: GraphType::Commons,
         committed_at_ms: 0,
@@ -1363,7 +1363,7 @@ fn make_log_entry(index: u64, term: u64, node_id: &str) -> EntryOf<super::TypeCo
     EntryOf::<super::TypeConfig>::new_normal(
         log_id,
         RaftRequest {
-            graph_fname: crate::persist::sanitize("__commons__"),
+            graph_fname: medulla_kernel::persist::sanitize("__commons__"),
             graph_name: "__commons__".to_string(),
             graph_type: GraphType::Commons,
             committed_at_ms: 0,
@@ -1636,7 +1636,7 @@ async fn two_groups_one_node_commit_independently() {
         let g = multi.group_for_graph(graph).await.expect("group for graph");
         assert_eq!(multi.router().group_of(graph), gid);
         let req = RaftRequest {
-            graph_fname: crate::persist::sanitize(graph),
+            graph_fname: medulla_kernel::persist::sanitize(graph),
             graph_name: graph.to_string(),
             graph_type: GraphType::Global,
             committed_at_ms: 0,
@@ -2355,7 +2355,7 @@ async fn multi_node_group_join_then_leader_rebalance() {
     // ── A write routed to whichever node leads replicates to every voter.
     {
         let req = RaftRequest {
-            graph_fname: crate::persist::sanitize("graph7"),
+            graph_fname: medulla_kernel::persist::sanitize("graph7"),
             graph_name: "graph7".to_string(),
             graph_type: GraphType::Global,
             committed_at_ms: 0,
@@ -3301,7 +3301,7 @@ fn group_of_equals_durable_shard_index_under_production_ring() {
         router.set_group_ring(&ring);
         for name in &names {
             let g = router.group_of(name) as usize;
-            let s = shard_index(&crate::persist::sanitize(name), n);
+            let s = shard_index(&medulla_kernel::persist::sanitize(name), n);
             assert_eq!(
                 g, s,
                 "group_of must equal the durable shard for {name:?} at N={n} \
@@ -3317,7 +3317,7 @@ fn group_of_equals_durable_shard_index_under_production_ring() {
 fn scale_add_node_req(graph: &str, node_id: &str, seq: u64) -> RaftRequest {
     let filler = "x".repeat(2048);
     RaftRequest {
-        graph_fname: crate::persist::sanitize(graph),
+        graph_fname: medulla_kernel::persist::sanitize(graph),
         graph_name: graph.to_string(),
         graph_type: GraphType::Global,
         committed_at_ms: 0,

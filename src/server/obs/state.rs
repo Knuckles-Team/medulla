@@ -32,9 +32,9 @@ fn open_persistent_obs_stores(
     let authority = SnapshotDirectory::open(base, true, OBS_PERSISTENCE_DIRECTORY_ERROR)?;
     let series = SeriesStore::open_in_dir(
         &authority.io_path,
-        crate::store_authority::process_verifier(),
-        crate::store_authority::process_authority().principal(),
-        &crate::store_authority::process_authority().proof(),
+        medulla_kernel::store_authority::process_verifier(),
+        medulla_kernel::store_authority::process_authority().principal(),
+        &medulla_kernel::store_authority::process_authority().proof(),
     )
     .map_err(|_| "observability series store is unavailable".to_string())?;
     let blob: Arc<dyn ChunkStore> = match blob_store {
@@ -70,9 +70,9 @@ fn open_obs_state_blocking(
             let base = crate::server::api::dispatch_support::unique_temp_dir("medulla-obs");
             let series = SeriesStore::open_in_dir(
                 &base,
-                crate::store_authority::process_verifier(),
-                crate::store_authority::process_authority().principal(),
-                &crate::store_authority::process_authority().proof(),
+                medulla_kernel::store_authority::process_verifier(),
+                medulla_kernel::store_authority::process_authority().principal(),
+                &medulla_kernel::store_authority::process_authority().proof(),
             )
             .map_err(|_| "observability series store is unavailable".to_string())?;
             let blob: Arc<dyn ChunkStore> = match blob_store {

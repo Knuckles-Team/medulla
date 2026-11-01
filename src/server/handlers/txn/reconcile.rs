@@ -38,7 +38,7 @@ async fn collect_reconcile_context(
     let parent_id = commit_receipt_id(txn_id, idempotency_key, expected_tenant);
     let mut lookups = Vec::with_capacity(graphs.len() * 2);
     for (graph, core) in graphs {
-        let fname = crate::persist::sanitize(&graph);
+        let fname = medulla_kernel::persist::sanitize(&graph);
         for namespace in ["txn", "crossmodal"] {
             let batch_id = crate::server::mutation_batch::opaque_coordinator_key(
                 namespace, &graph, &parent_id,

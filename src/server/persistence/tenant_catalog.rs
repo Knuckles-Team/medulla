@@ -127,7 +127,7 @@ impl TenantCatalog {
             CATALOG_PHYSICAL_STORE,
             CATALOG_SCOPE_RESOURCE,
             CATALOG_SCOPE_INCARNATION,
-            crate::store_authority::process_authority(),
+            medulla_kernel::store_authority::process_authority(),
         )?;
         let mut entries = HashMap::new();
         {

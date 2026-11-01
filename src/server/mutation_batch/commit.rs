@@ -107,7 +107,7 @@ mod internal_replay_tests {
         // still for this whole body. READ guard: it excludes only a key MUTATOR, never
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        let dir = crate::kernel::persistence::temp_dir(
+        let dir = medulla_kernel::kernel::persistence::temp_dir(
             "medulla-internal-mutation-replay",
             "terminal-result-conflict",
         );
@@ -646,7 +646,7 @@ mod internal_replay_tests {
             ]
         }
 
-        let dir = crate::kernel::persistence::temp_dir("medulla-program-promotion", "cas-replay");
+        let dir = medulla_kernel::kernel::persistence::temp_dir("medulla-program-promotion", "cas-replay");
         let persistence: Arc<dyn PersistenceBackend> = Arc::new(
             crate::server::persistence::redb_backend::RedbBackend::open(
                 dir.to_string_lossy().into_owned(),
@@ -696,7 +696,7 @@ mod internal_replay_tests {
         .await
         .expect("seed governed program bindings through an earlier durable commit");
         let job_dir =
-            crate::kernel::persistence::temp_dir("medulla-program-promotion", "job-store");
+            medulla_kernel::kernel::persistence::temp_dir("medulla-program-promotion", "job-store");
         std::fs::create_dir_all(&job_dir).expect("create separate job-store directory");
         let job_path = job_dir.join("jobs.redb");
         assert_ne!(job_path, dir.join("graph-0.redb"));
@@ -959,7 +959,7 @@ mod internal_replay_tests {
             &"8".repeat(64),
         );
         let before_missing_binding = persistence
-            .read_authoritative_graph_snapshot(&crate::persist::sanitize("program-graph"))
+            .read_authoritative_graph_snapshot(&medulla_kernel::persist::sanitize("program-graph"))
             .await
             .expect("read pre-missing-binding snapshot")
             .expect("promotion snapshot")
@@ -988,7 +988,7 @@ mod internal_replay_tests {
             "missing binding must abort staging"
         );
         let after_missing_binding = persistence
-            .read_authoritative_graph_snapshot(&crate::persist::sanitize("program-graph"))
+            .read_authoritative_graph_snapshot(&medulla_kernel::persist::sanitize("program-graph"))
             .await
             .expect("read post-missing-binding snapshot")
             .expect("promotion snapshot")
@@ -998,7 +998,7 @@ mod internal_replay_tests {
         assert_eq!(before_missing_binding, after_missing_binding);
         assert!(persistence
             .read_mutation_batch(
-                &crate::persist::sanitize("program-graph"),
+                &medulla_kernel::persist::sanitize("program-graph"),
                 "program-promotion-missing-binding"
             )
             .await
@@ -1054,7 +1054,7 @@ mod internal_replay_tests {
             &"8".repeat(64),
         );
         let before_wrong_binding = persistence
-            .read_authoritative_graph_snapshot(&crate::persist::sanitize("program-graph"))
+            .read_authoritative_graph_snapshot(&medulla_kernel::persist::sanitize("program-graph"))
             .await
             .expect("read pre-wrong-binding snapshot")
             .expect("promotion snapshot")
@@ -1083,7 +1083,7 @@ mod internal_replay_tests {
             "wrong binding type must abort staging"
         );
         let after_wrong_binding = persistence
-            .read_authoritative_graph_snapshot(&crate::persist::sanitize("program-graph"))
+            .read_authoritative_graph_snapshot(&medulla_kernel::persist::sanitize("program-graph"))
             .await
             .expect("read post-wrong-binding snapshot")
             .expect("promotion snapshot")
@@ -1093,7 +1093,7 @@ mod internal_replay_tests {
         assert_eq!(before_wrong_binding, after_wrong_binding);
         assert!(persistence
             .read_mutation_batch(
-                &crate::persist::sanitize("program-graph"),
+                &medulla_kernel::persist::sanitize("program-graph"),
                 "program-promotion-wrong-binding"
             )
             .await
@@ -1126,7 +1126,7 @@ mod internal_replay_tests {
         .expect("same-key retry returns the first receipt after pointer movement");
         assert!(replay_after_pointer_move.replayed);
 
-        let fname = crate::persist::sanitize("program-graph");
+        let fname = medulla_kernel::persist::sanitize("program-graph");
         let before_failed = persistence
             .read_authoritative_graph_snapshot(&fname)
             .await

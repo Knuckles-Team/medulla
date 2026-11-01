@@ -38,7 +38,7 @@ pub(super) struct CarrierNativeCommand<'a> {
 pub(super) async fn commit_carrier_native_command(
     proposal: CarrierNativeCommand<'_>,
 ) -> Result<crate::raft::RaftResponse, String> {
-    let committed_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    let committed_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let mutation = crate::server::api::persistence::RaftMutationContext::from_verified_request(
         proposal.batch_id,
         proposal.request_id,
@@ -53,7 +53,7 @@ pub(super) async fn commit_carrier_native_command(
         },
     )?;
     let request = crate::raft::RaftRequest {
-        graph_fname: crate::persist::sanitize(&proposal.graph_name),
+        graph_fname: medulla_kernel::persist::sanitize(&proposal.graph_name),
         graph_name: proposal.graph_name,
         graph_type: proposal.graph_type,
         command: crate::raft::ReplicatedMutation::Native {

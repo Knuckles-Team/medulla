@@ -101,7 +101,7 @@ impl GraphWriteScope<'_> {
                 idempotency_key: self.verified.idempotency_key(),
                 expected_graph_version: Some(self.graph_version),
                 fencing_token: self.fencing_token,
-                created_at_ms: crate::kernel::dispatch_support::authoritative_now_ms(),
+                created_at_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
                 default_surface: crate::mutation_batch::MutationSurface::Graph,
                 authoritative_state: None,
             },

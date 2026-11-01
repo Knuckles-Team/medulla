@@ -48,7 +48,7 @@ async fn write_via_owner(multi: &Arc<MultiRaft>, node_id: &str) -> Result<(), St
         .await
         .ok_or_else(|| "owner group not running".to_string())?;
     let req = RaftRequest {
-        graph_fname: crate::persist::sanitize(GRAPH),
+        graph_fname: medulla_kernel::persist::sanitize(GRAPH),
         graph_name: GRAPH.to_string(),
         graph_type: GraphType::Global,
         committed_at_ms: 0,

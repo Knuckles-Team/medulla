@@ -170,8 +170,8 @@ pub(crate) fn consensus_has_prepared_graphs() -> bool {
 /// idle *past* the TTL; a skewed clock at worst delays/advances a reclaim).
 pub fn now_ms() -> u64 {
     #[cfg(feature = "raft")]
-    if crate::kernel::dispatch_support::is_replicated_apply() {
-        return crate::kernel::dispatch_support::authoritative_now_ms();
+    if medulla_kernel::kernel::dispatch_support::is_replicated_apply() {
+        return medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     }
     SystemTime::now()
         .duration_since(UNIX_EPOCH)

@@ -897,7 +897,7 @@ mod security_tests {
 
     /// A throwaway temp dir under the scratch space.
     fn tempdir() -> std::path::PathBuf {
-        let base = crate::kernel::persistence::temp_dir("medulla-sec", "test");
+        let base = medulla_kernel::kernel::persistence::temp_dir("medulla-sec", "test");
         std::fs::create_dir_all(&base).unwrap();
         base
     }
@@ -1913,7 +1913,7 @@ mod mutation_batch_tests {
                 .expect("durable record retains operation authority");
             assert_eq!(
                 operation.serving_principal,
-                crate::kernel::persistence::ENGINE_LEDGER_PRINCIPAL
+                medulla_kernel::kernel::persistence::ENGINE_LEDGER_PRINCIPAL
             );
             assert_eq!(operation.authority, caller_authority);
             assert_eq!(record.committing_actor().unwrap(), caller_actor);

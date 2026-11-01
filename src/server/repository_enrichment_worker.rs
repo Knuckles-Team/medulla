@@ -265,7 +265,7 @@ mod worker {
         if verified.tenant() != tenant {
             return Err("ACCESS_DENIED: repository enrichment tenant mismatch".into());
         }
-        let now = crate::kernel::dispatch_support::authoritative_now_ms();
+        let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
         #[cfg(feature = "raft")]
         let placement_epoch = if anonymous {
             0

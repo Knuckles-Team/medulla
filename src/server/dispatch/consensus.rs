@@ -37,7 +37,8 @@ use sanitization::sanitize_native_proposal;
 use transaction::{execute_consensus_transaction, TransactionExecution};
 
 #[cfg(feature = "raft")]
-use crate::kernel::dispatch_support::{ReplicatedApplyScope, REPLICATED_APPLY};
+use medulla_kernel::kernel::dispatch_support::ReplicatedApplyScope;
+use medulla_kernel::kernel::dispatch_support::REPLICATED_APPLY;
 
 #[cfg(all(feature = "raft", feature = "jobs"))]
 pub(crate) use replicated::{

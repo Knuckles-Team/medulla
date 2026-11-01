@@ -67,7 +67,7 @@ pub(crate) async fn handle_semantic_index(
         Ok(opened) => opened,
         Err(response) => return response,
     };
-    let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let context = SemanticIndexContext {
         req_id,
         authority: &authority,
@@ -132,7 +132,7 @@ fn authorize(
         SemanticIndexServerAdapter::authorize_request(
             request,
             &authority,
-            crate::kernel::dispatch_support::authoritative_now_ms(),
+            medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
         )
         .map_err(|error| Response::err(req_id, error))?;
     }

@@ -102,7 +102,7 @@ pub async fn reap_expired_servers(state: &Arc<RwLock<ServerState>>, now_ms: u64)
 
     #[cfg(feature = "streaming")]
     let hub = { state.read().await.cdc.clone() };
-    let fname = crate::persist::sanitize("__commons__");
+    let fname = medulla_kernel::persist::sanitize("__commons__");
     let mut reaped = 0u64;
     for node_id in candidates {
         // Serialize against a concurrent RegisterServer renewal of the SAME node
@@ -309,7 +309,7 @@ mod tests {
         let backend = { state.read().await.persistence.clone().unwrap() };
         let presence = backend
             .durable_node_presence(
-                &crate::persist::sanitize("__commons__"),
+                &medulla_kernel::persist::sanitize("__commons__"),
                 &["srv:dead-server".to_string()],
             )
             .expect("presence check");

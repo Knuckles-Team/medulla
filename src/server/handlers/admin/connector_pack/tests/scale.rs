@@ -264,7 +264,7 @@ async fn committed_envelope(
     let digest = request.batch_digest().expect("batch digest").to_hex();
     persistence
         .read_change_envelope(
-            &crate::persist::sanitize(GRAPH),
+            &medulla_kernel::persist::sanitize(GRAPH),
             &format!("source-ingest:{digest}"),
         )
         .await

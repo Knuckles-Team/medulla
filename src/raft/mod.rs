@@ -285,7 +285,7 @@ impl RaftRequest {
         if self.graph_fname.trim().is_empty() || self.graph_name.trim().is_empty() {
             return Err("Raft request graph authority must not be empty".to_string());
         }
-        if self.graph_fname != crate::persist::sanitize(&self.graph_name) {
+        if self.graph_fname != medulla_kernel::persist::sanitize(&self.graph_name) {
             return Err(
                 "Raft request graph file name does not match the sanitized graph name".to_string(),
             );
@@ -298,7 +298,7 @@ impl RaftRequest {
     fn validate_identity_bootstrap(&self) -> Result<(), String> {
         if self.mutation.identity_bootstrap
             && (self.graph_name != "__commons__"
-                || self.graph_fname != crate::persist::sanitize("__commons__")
+                || self.graph_fname != medulla_kernel::persist::sanitize("__commons__")
                 || self.mutation.tenant_scope == RaftMutationContext::internal_tenant_scope()
                 || !matches!(
                     &self.command,
@@ -504,7 +504,7 @@ mod raft_authority_contract_tests {
     fn request_rejects_logical_graph_names_in_the_physical_file_name_slot() {
         let hashed_graph = "x".repeat(2_048);
         for graph_name in ["a:b".to_string(), hashed_graph] {
-            let graph_fname = crate::persist::sanitize(&graph_name);
+            let graph_fname = medulla_kernel::persist::sanitize(&graph_name);
             assert_ne!(graph_name, graph_fname);
             assert!(request_for_graph(&graph_name, graph_fname.clone())
                 .validate()
@@ -519,7 +519,7 @@ mod raft_authority_contract_tests {
             );
 
             let mismatched_name =
-                request_for_graph(&graph_name, crate::persist::sanitize("different-graph"))
+                request_for_graph(&graph_name, medulla_kernel::persist::sanitize("different-graph"))
                     .validate()
                     .expect_err("a different sanitized graph must not be accepted");
             assert!(

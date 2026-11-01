@@ -126,7 +126,7 @@ pub(crate) async fn try_handle_gateway(
     let method = match crate::server::harness_admission::direct_add_node(
         &method,
         core,
-        crate::kernel::dispatch_support::authoritative_now_ms(),
+        medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
     ) {
         Ok(admitted) => admitted,
         Err(error) => return Ok(Response::err(req_id, error)),

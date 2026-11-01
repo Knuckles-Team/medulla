@@ -72,7 +72,7 @@ async fn raced_past_a_replacement(
 
 async fn session_is_live(state: &Arc<RwLock<ServerState>>, session: &str) -> bool {
     let hash = secrets::token_hash(session);
-    let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let guard = state.read().await;
     let store = guard.isolation.rbac().identity_store();
     store.session_principal(&hash, now_ms).is_some()
@@ -126,7 +126,7 @@ fn current_totp(secret: &str) -> String {
     let key = secrets::base32_decode(secret).unwrap();
     secrets::totp_code_for_test(
         &key,
-        crate::kernel::dispatch_support::authoritative_now_ms() / 1_000,
+        medulla_kernel::kernel::dispatch_support::authoritative_now_ms() / 1_000,
     )
 }
 

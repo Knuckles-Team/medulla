@@ -275,7 +275,7 @@ async fn evict_graph_to(
     if candidates.is_empty() {
         return 0;
     }
-    let fname = crate::persist::sanitize(fname_graph);
+    let fname = medulla_kernel::persist::sanitize(fname_graph);
     let presence = match backend.durable_node_presence(&fname, &candidates) {
         Ok(value) if value.len() == candidates.len() => value,
         Ok(_) | Err(_) => return 0,
@@ -304,7 +304,7 @@ fn hibernate_graph_if_durable(
     if node_ids.is_empty() {
         return 0;
     }
-    let fname = crate::persist::sanitize(graph_name);
+    let fname = medulla_kernel::persist::sanitize(graph_name);
     match backend.durable_node_presence(&fname, &node_ids) {
         Ok(presence)
             if presence.len() == node_ids.len() && presence.iter().all(|present| *present) =>

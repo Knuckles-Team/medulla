@@ -81,8 +81,8 @@ pub(crate) async fn commit_lifecycle(
     let tenant_scope = tenant_scope
         .ok_or_else(|| "lifecycle commit requires a verified tenant scope".to_string())?;
     let batch_id = lifecycle_batch_id(action, tenant_scope, graph, principal, idempotency_key);
-    let created_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
-    let fname = crate::persist::sanitize(graph);
+    let created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    let fname = medulla_kernel::persist::sanitize(graph);
     // v1's `VersionExpectation` has no "unversioned" arm available to an ordinary
     // tenant, so this can no longer pass `None` for "don't care". A not-yet-created
     // graph has no MUTATION_GRAPH_VERSION row -- `read_current_mutation_graph_version`
@@ -156,7 +156,7 @@ pub(crate) async fn lifecycle_was_committed(
         attempt_nonce,
         request_id: _,
     } = attempt;
-    let fname = crate::persist::sanitize(graph);
+    let fname = medulla_kernel::persist::sanitize(graph);
     let batch_id = lifecycle_batch_id(action, tenant_scope, graph, principal, idempotency_key);
     let Some(record) = persistence.read_mutation_batch(&fname, &batch_id).await? else {
         return Ok(false);

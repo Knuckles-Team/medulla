@@ -58,9 +58,9 @@ fn statechart_store(persist_dir: Option<&str>) -> Result<Arc<StatechartStore>, S
         .get_or_init(|| {
             StatechartStore::open_in_dir(
                 Path::new(persist_dir),
-                crate::store_authority::process_authority().as_ref(),
-                crate::store_authority::process_authority().principal(),
-                &crate::store_authority::process_authority().proof(),
+                medulla_kernel::store_authority::process_authority().as_ref(),
+                medulla_kernel::store_authority::process_authority().principal(),
+                &medulla_kernel::store_authority::process_authority().proof(),
             )
             .map(Arc::new)
             .map_err(|_| "statechart instance store is unavailable".to_string())
@@ -180,7 +180,7 @@ fn op_instantiate(
         req_id,
         &method,
     );
-    let committed_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    let committed_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let context = Context::from_value(context)?;
     let (instance, _replayed) = store
         .instantiate_batch(
@@ -213,7 +213,7 @@ fn op_send_event(
     // every Raft state-machine replica (see `StatechartStore::send_event`'s doc),
     // so the resulting instance image and its content-addressed MutationBatch are
     // byte-identical across replicas.
-    let now_ms = crate::kernel::dispatch_support::authoritative_now_ms() as i64;
+    let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms() as i64;
     let outcome = store
         .send_event(instance_id, &event_input, expected_version, now_ms)
         .map_err(|e| e.to_string())?;
@@ -287,9 +287,9 @@ mod tests {
         (
             StatechartStore::open_in_dir(
                 dir.path(),
-                crate::store_authority::process_authority().as_ref(),
-                crate::store_authority::process_authority().principal(),
-                &crate::store_authority::process_authority().proof(),
+                medulla_kernel::store_authority::process_authority().as_ref(),
+                medulla_kernel::store_authority::process_authority().principal(),
+                &medulla_kernel::store_authority::process_authority().proof(),
             )
             .unwrap(),
             dir,

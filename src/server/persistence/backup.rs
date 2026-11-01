@@ -1135,7 +1135,7 @@ mod tests {
             teams: Vec::new(),
             roles: vec!["reader".to_string()],
         };
-        let authority = crate::store_authority::process_authority();
+        let authority = medulla_kernel::store_authority::process_authority();
         let rbac = medulla_core::rbac_persist::RbacStore::open(
             &src,
             authority.as_ref(),

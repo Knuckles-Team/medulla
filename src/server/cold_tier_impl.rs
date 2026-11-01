@@ -41,7 +41,7 @@ impl RedbColdTier {
             COLD_TIER_PHYSICAL_STORE,
             COLD_TIER_SCOPE_RESOURCE,
             COLD_TIER_SCOPE_INCARNATION,
-            crate::store_authority::process_authority(),
+            medulla_kernel::store_authority::process_authority(),
         )?;
         Ok(Self { durable })
     }

@@ -48,6 +48,6 @@ pub fn bind_agent_library_context(
     context.policy_decision_id = format!("agent-library:policy:{}", context.policy_revision);
     context.idempotency_key = verified.idempotency_key().to_string();
     context.trace_id = None;
-    context.created_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    context.created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     Ok(context)
 }

@@ -185,7 +185,7 @@ pub(super) async fn commit_finalize_durable(
             "durable mutation requires a persistence backend",
         ));
     };
-    let fname = crate::persist::sanitize(ctx.graph_name);
+    let fname = medulla_kernel::persist::sanitize(ctx.graph_name);
     if let Err(e) = persistence.record_durable(&fname, method).await {
         return Some(Response::err(
             ctx.req_id,
@@ -360,7 +360,7 @@ where
         );
     };
 
-    let fname = crate::persist::sanitize(ctx.graph_name);
+    let fname = medulla_kernel::persist::sanitize(ctx.graph_name);
     let batch_id = crate::server::mutation_batch::opaque_idempotency_key_for_context(
         "rpc",
         ctx.tenant_scope,
@@ -369,7 +369,7 @@ where
         ctx.idempotency_key,
     );
 
-    let created_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    let created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
 
     // Row-local operations have a deterministic success result and can commit
     // their compact Method directly before applying the serving projection.

@@ -81,7 +81,7 @@ pub(crate) async fn status(
         Err(error) => return Response::err(request_id, error),
     };
     let marker = match persistence
-        .read_node(&crate::persist::sanitize(graph_name), &marker_id)
+        .read_node(&medulla_kernel::persist::sanitize(graph_name), &marker_id)
         .await
         .and_then(|bytes| {
             bytes
@@ -164,7 +164,7 @@ pub(crate) async fn prepare(
     let batch_id = format!("source-ingest:{}", batch_digest.to_hex());
     let authority = CarrierAuthority::from_verified(ctx.verified)?;
     let persistence = load_persistence(&ctx).await?;
-    let graph_fname = crate::persist::sanitize(ctx.graph_name);
+    let graph_fname = medulla_kernel::persist::sanitize(ctx.graph_name);
     if let Some(record) = persistence
         .read_change_envelope(&graph_fname, &batch_id)
         .await?

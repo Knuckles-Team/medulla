@@ -9,7 +9,8 @@ use std::sync::Arc;
 use sha2::{Digest, Sha256};
 use tokio::sync::RwLock;
 
-use crate::{graph::GraphCore, kernel::persistence::ResidentProjectionHost};
+use medulla_core::graph::GraphCore;
+use crate::kernel::persistence::ResidentProjectionHost;
 
 /// Convert a logical graph name into a bounded, path-safe durable key.
 ///
@@ -45,7 +46,7 @@ pub async fn decay_all<S: ResidentProjectionHost + Send + Sync>(
     half_life_secs: f64,
     floor: f64,
     prune: bool,
-) -> crate::types::DecayStats {
+) -> medulla_types::types::DecayStats {
     let entries: Vec<Arc<GraphCore>> = {
         let state = state.read().await;
         state
@@ -58,7 +59,7 @@ pub async fn decay_all<S: ResidentProjectionHost + Send + Sync>(
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs();
-    let mut total = crate::types::DecayStats::default();
+    let mut total = medulla_types::types::DecayStats::default();
     for core in entries {
         let stats = core.decay_sweep(now, half_life_secs, floor, prune);
         total.nodes_decayed += stats.nodes_decayed;

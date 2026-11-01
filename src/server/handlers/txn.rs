@@ -73,7 +73,7 @@ pub(crate) use seam::TxnSeam;
 fn consensus_apply_is_authorized() -> bool {
     #[cfg(feature = "raft")]
     {
-        crate::kernel::dispatch_support::is_replicated_apply()
+        medulla_kernel::kernel::dispatch_support::is_replicated_apply()
     }
     #[cfg(not(feature = "raft"))]
     {

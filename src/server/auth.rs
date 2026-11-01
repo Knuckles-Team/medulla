@@ -629,7 +629,7 @@ pub(crate) fn scoped_test_request_on(
         &request,
         &VerifiedEnvelopeParams {
             context: &context,
-            timestamp: crate::kernel::dispatch_support::authoritative_now_ms() / 1000,
+            timestamp: medulla_kernel::kernel::dispatch_support::authoritative_now_ms() / 1000,
             nonce: caller.nonce,
             idempotency_key: caller.idempotency_key,
         },

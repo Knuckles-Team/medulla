@@ -69,7 +69,7 @@ async fn stored_kind(
         .as_ref()
         .and_then(|backend| backend.as_redb())
         .ok_or_else(|| "control lease writes require the redb persistence backend".to_string())?;
-    let graph = crate::persist::sanitize(ctx.graph_name);
+    let graph = medulla_kernel::persist::sanitize(ctx.graph_name);
     Ok(backend
         .read_control_lease(&graph, tenant, lease_id)
         .await?

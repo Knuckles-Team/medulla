@@ -276,7 +276,7 @@ fn writer_plus_readonly_txn(txn_id: &str, a_node: &str) -> CrossShardTxn {
     let writer = fixture::add_node_slice(GRAPH_A, a_node, 0, None);
     let read_only = GraphSlice {
         graph_name: GRAPH_B.to_string(),
-        graph_fname: crate::persist::sanitize(GRAPH_B),
+        graph_fname: medulla_kernel::persist::sanitize(GRAPH_B),
         graph_type: GraphType::Global,
         methods: vec![], // EMPTY write-set → read-only participant.
         placement_epoch: 0,
@@ -1335,7 +1335,7 @@ async fn write_node(
 ) {
     let g = multi.group(gid).await.expect("group exists");
     let req = crate::raft::RaftRequest {
-        graph_fname: crate::persist::sanitize(graph),
+        graph_fname: medulla_kernel::persist::sanitize(graph),
         graph_name: graph.to_string(),
         graph_type: GraphType::Global,
         committed_at_ms: 0,

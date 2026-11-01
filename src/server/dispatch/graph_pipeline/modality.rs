@@ -269,7 +269,7 @@ mod replicated_identity_tests {
     #[test]
     fn retry_reuses_identity_and_changed_operation_keeps_the_conflict_row() {
         let graph_name = "tenant-a:docs/a#b";
-        let graph_fname = crate::persist::sanitize(graph_name);
+        let graph_fname = medulla_kernel::persist::sanitize(graph_name);
         let first = super::super::dispatch_helpers::replicated_graph_batch_id(
             "raft-modality",
             "tenant-scope-a",
@@ -407,7 +407,7 @@ pub(super) async fn submit_modality_replication(
     command: crate::raft::SanitizedModalityRaftCommand,
     payload: ResultPayload,
 ) -> Response {
-    let created_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    let created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let mutation = match crate::server::api::persistence::RaftMutationContext::from_verified_request(
         batch_id,
         ctx.req_id,
@@ -480,7 +480,7 @@ pub(super) async fn replicate_served_modality(request: ModalityReplicationReques
         Ok(decoded) => decoded,
         Err(response) => return response,
     };
-    let graph_fname = crate::persist::sanitize(request.graph_name);
+    let graph_fname = medulla_kernel::persist::sanitize(request.graph_name);
     let batch_id = super::dispatch_helpers::replicated_graph_batch_id(
         "raft-modality",
         request.tenant_scope,

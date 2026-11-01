@@ -154,7 +154,7 @@ fn fenced_modality_txn(
     let graph_slice = fixture::add_node_slice(GRAPH_A, node, placement_epoch, fencing_token);
     let rdf_slice = GraphSlice {
         graph_name: GRAPH_B.to_string(),
-        graph_fname: crate::persist::sanitize(GRAPH_B),
+        graph_fname: medulla_kernel::persist::sanitize(GRAPH_B),
         graph_type: GraphType::Global,
         methods: vec![Method::AddTriples {
             turtle: MODAL_B_TURTLE.to_string(),

@@ -128,7 +128,7 @@ impl VizProvenanceStore {
             PROVENANCE_PHYSICAL_STORE,
             PROVENANCE_SCOPE_RESOURCE,
             PROVENANCE_SCOPE_INCARNATION,
-            crate::store_authority::process_authority(),
+            medulla_kernel::store_authority::process_authority(),
         )?;
         let mut entries = HashMap::new();
         {

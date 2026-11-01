@@ -314,7 +314,7 @@ fn bind_scope(
     kernel: &StorageKernel,
     identity: &medulla_types::MutationScopeIdentity,
 ) -> Result<Arc<OwnedStoreHandle<medulla_storage::AgentLibraryOwner>>, String> {
-    let authority = crate::store_authority::process_authority();
+    let authority = medulla_kernel::store_authority::process_authority();
     let grant = kernel.authenticate_scope::<medulla_storage::AgentLibraryOwner>(
         authority.as_ref(),
         identity.clone(),

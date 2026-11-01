@@ -196,11 +196,11 @@ fn open_or_get(path: &Path, tenant_scope: &str) -> Result<TableStore, String> {
     // This binary is that root, so the SQL catalog authenticates against the
     // SAME `EngineScopeAuthority` every other kernel-owned store here uses --
     // there is exactly one grant authority per process, not one per store.
-    let authority = crate::store_authority::process_authority();
+    let authority = medulla_kernel::store_authority::process_authority();
     let store = TableStore::open_scoped(
         path,
         tenant_scope,
-        crate::store_authority::process_verifier(),
+        medulla_kernel::store_authority::process_verifier(),
         authority.principal(),
         &authority.proof(),
     )

@@ -180,7 +180,7 @@ pub(super) async fn write_decision_graph(
 ) -> Result<(), String> {
     let server_secret = multi.app_state().read().await.auth_secret.clone();
     let req = RaftRequest {
-        graph_fname: crate::persist::sanitize(XSHARD_DECISION_GRAPH),
+        graph_fname: medulla_kernel::persist::sanitize(XSHARD_DECISION_GRAPH),
         graph_name: XSHARD_DECISION_GRAPH.to_string(),
         graph_type: GraphType::Global,
         committed_at_ms: 0,

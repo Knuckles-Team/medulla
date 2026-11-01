@@ -464,7 +464,7 @@ async fn dispatch_inner(
     req.agent_id = Some(verified_context.agent_id().to_string());
 
     #[cfg(feature = "raft")]
-    let state_machine_authorized = crate::kernel::dispatch_support::is_replicated_apply();
+    let state_machine_authorized = medulla_kernel::kernel::dispatch_support::is_replicated_apply();
     #[cfg(not(feature = "raft"))]
     let state_machine_authorized = false;
 

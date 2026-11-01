@@ -120,7 +120,7 @@ pub async fn sweep(state: &Arc<RwLock<ServerState>>) -> u64 {
         if ids.is_empty() {
             continue;
         }
-        let fname = crate::persist::sanitize(&name);
+        let fname = medulla_kernel::persist::sanitize(&name);
         if let Err(error) =
             crate::server::mutation_batch::authoritative_graph_version(&persistence, &fname, &core)
                 .await

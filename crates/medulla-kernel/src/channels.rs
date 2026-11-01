@@ -7,7 +7,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::protocol::ChannelType;
+use medulla_types::protocol::ChannelType;
 
 pub use medulla_types::messaging_wire::{ChannelImprint, ChannelMessage};
 

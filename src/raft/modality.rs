@@ -312,7 +312,7 @@ impl SanitizedModalityAuthorityBinding {
         if self.tenant_scope.trim().is_empty()
             || self.graph_name.trim().is_empty()
             || self.graph_fname.trim().is_empty()
-            || self.graph_fname != crate::persist::sanitize(&self.graph_name)
+            || self.graph_fname != medulla_kernel::persist::sanitize(&self.graph_name)
         {
             return Err("sanitized modality Raft authority binding is invalid".to_string());
         }

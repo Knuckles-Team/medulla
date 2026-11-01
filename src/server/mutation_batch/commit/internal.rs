@@ -164,7 +164,7 @@ pub(super) async fn commit_internal_graph_methods_with_nonce_mode(
     let principal = request
         .principal
         .ok_or_else(|| "internal graph write requires a verified principal".to_string())?;
-    let graph_fname = crate::persist::sanitize(request.graph);
+    let graph_fname = medulla_kernel::persist::sanitize(request.graph);
     let record = persistence
         .read_mutation_batch(&graph_fname, request.batch_id)
         .await?;
@@ -220,7 +220,7 @@ async fn replay_internal_graph(
     descriptor.target_graph_version = version
         .checked_add(1)
         .ok_or_else(|| "authoritative graph version overflow".to_string())?;
-    let created_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    let created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let probe = compile_methods(
         CompileBatch {
             batch_id,
@@ -400,7 +400,7 @@ async fn commit_prepared_internal_graph(
         descriptor,
         ..
     } = input;
-    let created_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    let created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let batch = compile_methods(
         CompileBatch {
             batch_id,

@@ -721,7 +721,7 @@ fn open_admin_mutations(path: &std::path::Path) -> Result<AdminMutationStore, St
         ADMIN_MUTATIONS_STORE,
         crate::server::api::admin::saga::cluster_admin_scope_identity()?,
         admin_mutations_private_integrity(),
-        crate::store_authority::process_authority(),
+        medulla_kernel::store_authority::process_authority(),
     )
 }
 
@@ -2977,7 +2977,7 @@ mod tests {
         );
 
         // Evict down to the cap (the per-graph max-nodes backstop).
-        let evicted = crate::persist::evict_oversized_all(&state, cap).await;
+        let evicted = medulla_kernel::persist::evict_oversized_all(&state, cap).await;
         assert_eq!(evicted, n - cap, "evicted everything above the cap");
 
         // (a) memory bounded: RAM resident count is at the cap, NOT n.
@@ -3069,7 +3069,7 @@ mod tests {
 
         // Cap = 5 ⇒ 6 candidates: ghost (lowest index) + n0..n4. Only the 5 durable
         // ones may be dropped; ghost is kept (its durability cannot be confirmed).
-        let evicted = crate::persist::evict_oversized_all(&state, 5).await;
+        let evicted = medulla_kernel::persist::evict_oversized_all(&state, 5).await;
         assert_eq!(
             evicted, 5,
             "only the 5 confirmed-durable candidates evicted"
@@ -3628,9 +3628,9 @@ mod tests {
         let series_store = Arc::new(
             SeriesStore::open_in_dir(
                 std::path::Path::new(&dir),
-                crate::store_authority::process_verifier(),
-                crate::store_authority::process_authority().principal(),
-                &crate::store_authority::process_authority().proof(),
+                medulla_kernel::store_authority::process_verifier(),
+                medulla_kernel::store_authority::process_authority().principal(),
+                &medulla_kernel::store_authority::process_authority().proof(),
             )
             .unwrap(),
         );
@@ -3861,9 +3861,9 @@ mod tests {
         let series_store = Arc::new(
             SeriesStore::open_in_dir(
                 std::path::Path::new(&dir),
-                crate::store_authority::process_verifier(),
-                crate::store_authority::process_authority().principal(),
-                &crate::store_authority::process_authority().proof(),
+                medulla_kernel::store_authority::process_verifier(),
+                medulla_kernel::store_authority::process_authority().principal(),
+                &medulla_kernel::store_authority::process_authority().proof(),
             )
             .unwrap(),
         );
@@ -4000,9 +4000,9 @@ mod tests {
         let series_store2 = Arc::new(
             SeriesStore::open_in_dir(
                 std::path::Path::new(&dir),
-                crate::store_authority::process_verifier(),
-                crate::store_authority::process_authority().principal(),
-                &crate::store_authority::process_authority().proof(),
+                medulla_kernel::store_authority::process_verifier(),
+                medulla_kernel::store_authority::process_authority().principal(),
+                &medulla_kernel::store_authority::process_authority().proof(),
             )
             .unwrap(),
         );
@@ -4059,9 +4059,9 @@ mod tests {
         let series_store = Arc::new(
             SeriesStore::open_in_dir(
                 std::path::Path::new(&dir),
-                crate::store_authority::process_verifier(),
-                crate::store_authority::process_authority().principal(),
-                &crate::store_authority::process_authority().proof(),
+                medulla_kernel::store_authority::process_verifier(),
+                medulla_kernel::store_authority::process_authority().principal(),
+                &medulla_kernel::store_authority::process_authority().proof(),
             )
             .unwrap(),
         );
@@ -4219,7 +4219,7 @@ mod tests {
 
         // Tamper the audit table directly under the writer-thread DB, then re-verify.
         backend
-            .test_tamper_audit_entry(&crate::persist::sanitize("__commons__"), 0)
+            .test_tamper_audit_entry(&medulla_kernel::persist::sanitize("__commons__"), 0)
             .expect("tamper");
         let broken = decode(dispatch_on_heap(&state, req(4, Method::AuditVerify)).await);
         assert!(!broken.ok, "tamper should be detected");
@@ -4729,7 +4729,7 @@ mod tests {
         // of the test (a punctuated, namespaced graph name routes deterministically
         // and survives a restart) rather than trading it for an unpunctuated name.
         let graph = "agent:router-test";
-        let graph_fname = crate::persist::sanitize(graph);
+        let graph_fname = medulla_kernel::persist::sanitize(graph);
         let owner = shard_index(&graph_fname, K);
 
         {
@@ -5251,7 +5251,7 @@ mod tests {
         // The seed graphs must span >1 shard, else the parallel union proves nothing.
         let used: std::collections::HashSet<usize> = names
             .iter()
-            .map(|n| shard_index(&crate::persist::sanitize(n), K))
+            .map(|n| shard_index(&medulla_kernel::persist::sanitize(n), K))
             .collect();
         assert!(used.len() >= 2, "seed graphs span multiple shards");
         backend.shutdown();

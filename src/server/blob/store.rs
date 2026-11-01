@@ -404,7 +404,7 @@ fn open_store(persist_dir: &str, chunks: ChunkAuthority) -> Result<RedbChunkStor
     } else {
         StorageKernel::create_owner_with::<BlobOwner>(&path, physical, None, options)
     }?;
-    let authority = crate::store_authority::process_authority();
+    let authority = medulla_kernel::store_authority::process_authority();
     let shared_proof = authority.proof();
     let shared = kernel.authenticate_blob_shared_service(
         authority.as_ref(),
@@ -439,7 +439,7 @@ fn shared_write<'a>(
     wtx: &AdmittedOwnerWrite<'a, BlobOwner>,
     service: &BlobSharedServiceHandle,
 ) -> Result<BlobSharedWrite<'a>, String> {
-    wtx.blob_shared_write(service, crate::store_authority::ENGINE_PRINCIPAL)
+    wtx.blob_shared_write(service, medulla_kernel::store_authority::ENGINE_PRINCIPAL)
 }
 
 /// Whether a chunk is stored, as far as this file can prove: a local store asks
@@ -465,7 +465,7 @@ fn maintain_counted_reference(
 ) -> Result<u64, String> {
     store.flush_chunks()?;
     validate_digest(digest)?;
-    let at = crate::kernel::dispatch_support::authoritative_now_ms();
+    let at = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     store.maintain("blob_adjust_ref_v1", digest, at, |wtx| {
         adjust_counted_reference(wtx, &store.shared, digest, delta, at)
     })
@@ -507,7 +507,7 @@ impl RedbChunkStore {
         let digest = manifest::chunk_digest(bytes)?;
         self.commit_native_batch(batch, committed_at_ms, |wtx| {
             let shared =
-                wtx.blob_shared_write(&self.shared, crate::store_authority::ENGINE_PRINCIPAL)?;
+                wtx.blob_shared_write(&self.shared, medulla_kernel::store_authority::ENGINE_PRINCIPAL)?;
             let was_new = shared.insert_chunk_if_absent(&digest, bytes)?;
             let refcount =
                 adjust_counted_reference(wtx, &self.shared, &digest, 1, committed_at_ms)?;
@@ -540,7 +540,7 @@ impl RedbChunkStore {
     /// chunk and refcount tables.
     fn shared_read(&self) -> Result<BlobSharedRead, String> {
         self.kernel
-            .read_blob_shared(&self.shared, crate::store_authority::ENGINE_PRINCIPAL)
+            .read_blob_shared(&self.shared, medulla_kernel::store_authority::ENGINE_PRINCIPAL)
     }
 
     /// One (tenant, graph) serving scope: bound on FIRST use, cached for every later
@@ -569,7 +569,7 @@ impl RedbChunkStore {
             return Ok(());
         }
         let group = std::mem::take(&mut batch.pending);
-        let at = crate::kernel::dispatch_support::authoritative_now_ms();
+        let at = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
         self.maintain("blob_chunk_group_v1", &group_subject(&group), at, |wtx| {
             let rows: Vec<(&str, &[u8])> = group
                 .iter()

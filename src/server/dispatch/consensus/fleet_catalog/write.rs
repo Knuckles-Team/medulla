@@ -146,7 +146,7 @@ async fn commit(
         write.expected_revision,
         &write.content_digest,
     )?;
-    let observed_at_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    let observed_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let writer = RecordWriter {
         agent_id: verified.agent_id(),
         written_at_ms: observed_at_ms,

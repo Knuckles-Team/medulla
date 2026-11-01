@@ -80,3 +80,15 @@ pub mod write_coalescer;
 // host. The dependency-free implementation is shared with lower provider crates
 // through `medulla-resource`; this facade module preserves the existing API path.
 pub mod autosize;
+
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+pub mod channels;
+
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+pub mod kernel;
+
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+pub mod persist;
+
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+pub mod store_authority;

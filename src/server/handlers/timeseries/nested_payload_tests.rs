@@ -70,9 +70,9 @@ fn cross_actor_and_cross_tenant_reads_see_no_points_through_the_real_store() {
     let dir = tempfile::tempdir().expect("temp dir");
     let store = SeriesStore::open(
         &dir.path().join("series.redb"),
-        crate::store_authority::process_verifier(),
-        crate::store_authority::process_authority().principal(),
-        &crate::store_authority::process_authority().proof(),
+        medulla_kernel::store_authority::process_verifier(),
+        medulla_kernel::store_authority::process_authority().principal(),
+        &medulla_kernel::store_authority::process_authority().proof(),
     )
     .expect("open test store");
 
@@ -124,7 +124,7 @@ fn cross_actor_and_cross_tenant_reads_see_no_points_through_the_real_store() {
     };
     let batch_id =
         crate::server::mutation_batch::opaque_request_key("timeseries", &scope, 1, &method);
-    let now = crate::kernel::dispatch_support::authoritative_now_ms();
+    let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let batch = crate::server::mutation_batch::compile_opaque_method(
         crate::server::mutation_batch::CompileBatch {
             batch_id: &batch_id,

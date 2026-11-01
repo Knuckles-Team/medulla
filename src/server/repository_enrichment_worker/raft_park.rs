@@ -85,7 +85,7 @@ async fn propose_park(
         return Err("STALE_ROUTE: repository enrichment park requires local group leader".into());
     }
     let now_ms = expected_park.parked_at_ms;
-    if now_ms == 0 || now_ms > crate::kernel::dispatch_support::authoritative_now_ms() {
+    if now_ms == 0 || now_ms > medulla_kernel::kernel::dispatch_support::authoritative_now_ms() {
         return Err("CONFLICT: repository enrichment park timestamp is invalid".into());
     }
     let (snapshot, park) = crate::server::api::reentry::plan_held_underfunded_park(
@@ -141,7 +141,7 @@ async fn propose_park(
     let response = routed
         .handle
         .client_write(crate::raft::RaftRequest {
-            graph_fname: crate::persist::sanitize(graph),
+            graph_fname: medulla_kernel::persist::sanitize(graph),
             graph_name: graph.to_string(),
             graph_type,
             command,

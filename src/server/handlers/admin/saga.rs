@@ -181,7 +181,7 @@ pub(crate) async fn live_graph_loads(
         .iter()
         .map(|e| {
             (
-                crate::persist::sanitize(&e.name),
+                medulla_kernel::persist::sanitize(&e.name),
                 e.core.node_count() as u64,
             )
         })

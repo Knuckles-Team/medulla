@@ -1111,11 +1111,11 @@ async fn ensure_commons_graph(cluster: &Cluster) {
             .clone()
             .expect("cluster member has persistence");
         backend
-            .register_graph(&crate::persist::sanitize(GRAPH), GRAPH, GraphType::Commons)
+            .register_graph(&medulla_kernel::persist::sanitize(GRAPH), GRAPH, GraphType::Commons)
             .await
             .expect("persist commons graph identity");
         let durable_version = backend
-            .read_mutation_graph_version(&crate::persist::sanitize(GRAPH))
+            .read_mutation_graph_version(&medulla_kernel::persist::sanitize(GRAPH))
             .await
             .expect("read the authoritative commons graph version")
             .unwrap_or(0);
@@ -1535,7 +1535,7 @@ async fn wait_for_backend_revision(cluster: &Cluster, node_id: NodeId, expected_
             .expect("cluster member has persistence");
         match backend
             .read_resource_reservation_status(
-                &crate::persist::sanitize(GRAPH),
+                &medulla_kernel::persist::sanitize(GRAPH),
                 &match status_method(unix_ms()) {
                     Method::ResourceReservationStatus { request } => request,
                     _ => unreachable!(),
@@ -1950,7 +1950,7 @@ async fn poll_reservation_status(
         unreachable!()
     };
     backend
-        .read_resource_reservation_status(&crate::persist::sanitize(GRAPH), &request)
+        .read_resource_reservation_status(&medulla_kernel::persist::sanitize(GRAPH), &request)
         .await
 }
 
@@ -2434,7 +2434,7 @@ async fn kg_delegate_public_dispatch_replicates_and_replays_after_failover_scena
     assert!(
         leader_backend
             .read_mutation_batch(
-                &crate::persist::sanitize(GRAPH),
+                &medulla_kernel::persist::sanitize(GRAPH),
                 &native_work_item_batch_id("rmdd27-retired-old-revision-idempotency"),
             )
             .await
@@ -2445,7 +2445,7 @@ async fn kg_delegate_public_dispatch_replicates_and_replays_after_failover_scena
     assert!(
         leader_backend
             .read_mutation_outbox(
-                &crate::persist::sanitize(GRAPH),
+                &medulla_kernel::persist::sanitize(GRAPH),
                 &native_work_item_batch_id("rmdd27-retired-old-revision-idempotency"),
             )
             .await
@@ -2534,7 +2534,7 @@ async fn kg_delegate_public_dispatch_replicates_and_replays_after_failover_scena
         .persistence
         .clone()
         .expect("reopened member has persistence");
-    let graph_fname = crate::persist::sanitize(GRAPH);
+    let graph_fname = medulla_kernel::persist::sanitize(GRAPH);
     let record = backend
         .read_mutation_batch(
             &graph_fname,
@@ -2723,7 +2723,7 @@ async fn kg_delegate_public_dispatch_rejects_missing_cluster_authority_scenario(
         .persistence
         .clone()
         .expect("cluster member has persistence");
-    let graph_fname = crate::persist::sanitize(GRAPH);
+    let graph_fname = medulla_kernel::persist::sanitize(GRAPH);
     let before_version = backend
         .read_mutation_graph_version(&graph_fname)
         .await

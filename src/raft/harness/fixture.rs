@@ -111,7 +111,7 @@ pub(crate) fn add_node_slice(
 ) -> crate::raft::cross_shard_txn::GraphSlice {
     crate::raft::cross_shard_txn::GraphSlice {
         graph_name: graph.to_string(),
-        graph_fname: crate::persist::sanitize(graph),
+        graph_fname: medulla_kernel::persist::sanitize(graph),
         graph_type: crate::protocol::GraphType::Global,
         methods: vec![crate::protocol::Method::AddNode {
             node_id: node.to_string(),

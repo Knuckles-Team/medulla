@@ -328,7 +328,7 @@ async fn store_committed_child(
     .unwrap_err();
     assert!(foreign.contains("tenant scope"));
     let authority = phase_authority(&carrier("tenant-a"));
-    let fname = crate::persist::sanitize(&txn.graph);
+    let fname = medulla_kernel::persist::sanitize(&txn.graph);
     validate_committed_participant_record(&result.record, &child_id, &fname, &authority).unwrap();
     let mut foreign_authority = authority.clone();
     foreign_authority.tenant_scope = carrier("tenant-b").tenant_scope().into();

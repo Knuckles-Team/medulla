@@ -227,7 +227,7 @@ fn command_transplant_across_tenant_or_graph_fails_closed() {
             "cluster-auth-secret",
             tenant_scope,
             other_graph,
-            &crate::persist::sanitize(other_graph),
+            &medulla_kernel::persist::sanitize(other_graph),
         )
         .is_err());
     assert!(command
@@ -253,7 +253,7 @@ fn authority_fields_are_inside_the_command_hmac() {
     let mut changed_graph = command.clone();
     changed_graph.authority.graph_name = "tenant-a:docs/other".to_string();
     changed_graph.authority.graph_fname =
-        crate::persist::sanitize(&changed_graph.authority.graph_name);
+        medulla_kernel::persist::sanitize(&changed_graph.authority.graph_name);
     assert!(changed_graph.validate("cluster-auth-secret").is_err());
 
     let mut changed_physical = command;

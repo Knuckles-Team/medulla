@@ -536,7 +536,7 @@ async fn store_and_now(state: &SharedState) -> Result<(Arc<AgentLibraryStore>, u
     let store = state.write().await.ensure_agent_library()?;
     Ok((
         store,
-        crate::kernel::dispatch_support::authoritative_now_ms(),
+        medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
     ))
 }
 

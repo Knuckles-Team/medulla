@@ -398,9 +398,9 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
     let series_store = Arc::new(
         medulla_tsdb::store::SeriesStore::open_in_dir(
             std::path::Path::new(&persist),
-            crate::store_authority::process_verifier(),
-            crate::store_authority::process_authority().principal(),
-            &crate::store_authority::process_authority().proof(),
+            medulla_kernel::store_authority::process_verifier(),
+            medulla_kernel::store_authority::process_authority().principal(),
+            &medulla_kernel::store_authority::process_authority().proof(),
         )
         .unwrap(),
     );
@@ -528,7 +528,7 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
         )
         .unwrap();
         let snapshot = backend
-            .read_authoritative_graph_snapshot(&crate::persist::sanitize(&graph))
+            .read_authoritative_graph_snapshot(&medulla_kernel::persist::sanitize(&graph))
             .await
             .expect("the projection graph snapshot must read")
             .expect("the projection graph must exist after the drain");

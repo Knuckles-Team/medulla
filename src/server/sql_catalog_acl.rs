@@ -2100,7 +2100,7 @@ fn project_read_store(
 ) -> Result<AuthorizedReadStore, String> {
     let names = selectable_tables(authority, persist_dir)?;
     let property_graphs = authorized_property_graph_records(authority, persist_dir)?;
-    let (store, path) = crate::store_authority::open_ephemeral_sql_store()?;
+    let (store, path) = medulla_kernel::store_authority::open_ephemeral_sql_store()?;
     let projection = AuthorizedReadStore {
         store: Some(store),
         path,

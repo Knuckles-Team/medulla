@@ -303,7 +303,7 @@ pub(crate) async fn handle_recompute_materialization(
     let _ = caller;
     let core = ctx.core.clone();
     #[cfg(feature = "raft")]
-    if crate::kernel::dispatch_support::is_replicated_apply() {
+    if medulla_kernel::kernel::dispatch_support::is_replicated_apply() {
         let method = Method::RecomputeMaterialization {
             derived_id: derived_id.clone(),
             expected_source_graph_version,
@@ -315,7 +315,7 @@ pub(crate) async fn handle_recompute_materialization(
                 "reasoning recompute requires an authoritative MutationBatch backend",
             ));
         };
-        let graph_fname = crate::persist::sanitize(graph_name);
+        let graph_fname = medulla_kernel::persist::sanitize(graph_name);
         let authoritative_graph_version =
             match crate::server::mutation_batch::authoritative_graph_version(
                 &persistence,

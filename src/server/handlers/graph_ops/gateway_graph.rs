@@ -134,7 +134,7 @@ async fn apply_evict_lru(
     let evicted = if candidates.is_empty() {
         0
     } else if let Some(backend) = ctx.persistence {
-        let fname = crate::persist::sanitize(ctx.graph_name);
+        let fname = medulla_kernel::persist::sanitize(ctx.graph_name);
         match backend.durable_node_presence(&fname, &candidates) {
             Ok(presence) if presence.len() == candidates.len() => {
                 let durable = candidates

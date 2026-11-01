@@ -194,7 +194,7 @@ async fn handle_import_sqlite_file(
     // Sample replicated authoritative time on the reactor while its task-local
     // apply scope is available, then move the complete filesystem/catalog
     // lifecycle into one owned blocking job.
-    let now = crate::kernel::dispatch_support::authoritative_now_ms();
+    let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let out = run_transfer_job("import", move || {
         import_sqlite_lifecycle_with_nonce(
             req_id,
@@ -885,7 +885,7 @@ mod tests {
         );
 
         // 2. Import into an ISOLATED user-table store (pure-Rust Reader).
-        let (store, store_path) = crate::store_authority::open_ephemeral_sql_store().unwrap();
+        let (store, store_path) = medulla_kernel::store_authority::open_ephemeral_sql_store().unwrap();
         let reader = Reader::open(&src).unwrap();
         let (txn, report) = prepare_sqlite_import(&reader).unwrap();
         store.commit_txn(&txn).unwrap();

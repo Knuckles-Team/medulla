@@ -170,7 +170,7 @@ pub(super) async fn publish_via_consensus_if_replicated(
     worker_ref: &str,
     lease_epoch: u64,
 ) -> Option<Response> {
-    if !crate::kernel::dispatch_support::is_replicated_apply() {
+    if !medulla_kernel::kernel::dispatch_support::is_replicated_apply() {
         return None;
     }
     Some(

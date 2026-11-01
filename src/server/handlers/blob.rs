@@ -164,7 +164,7 @@ fn prepare_begin_upload(
         authority.tenant_scope(),
         &authority.namespace("blob-cas", "control"),
     )?;
-    let now = crate::kernel::dispatch_support::authoritative_now_ms();
+    let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let (batch, now) = crate::server::api::ingest::compile_blob_batch_at_with_nonce(
         cursors.store.as_ref(),
         proposed,

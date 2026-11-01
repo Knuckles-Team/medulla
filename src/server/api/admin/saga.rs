@@ -560,7 +560,7 @@ pub fn begin_named_admin_saga_with_nonce(
 ) -> Result<AdminSaga, String> {
     let result_contract = AdminSagaResultContract::for_method(method)?;
     let identity = cluster_admin_scope_identity()?;
-    let now = crate::kernel::dispatch_support::authoritative_now_ms();
+    let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let read = backend.admin_mutations_read()?;
     let expected = medulla_transaction::version(&read)?;
     let existing = medulla_transaction::read_ledger(&read, batch_id)?;
@@ -633,7 +633,7 @@ pub fn begin_named_admin_saga_with_private_payload_and_nonce(
     } = payload;
     let result_contract = AdminSagaResultContract::for_private_event(event_type)?;
     let identity = cluster_admin_scope_identity()?;
-    let now = crate::kernel::dispatch_support::authoritative_now_ms();
+    let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let expected = medulla_transaction::version(&backend.admin_mutations_read()?)?;
     let mut batch = crate::server::mutation_batch::compile_opaque_digest(
         crate::server::mutation_batch::CompileBatch {

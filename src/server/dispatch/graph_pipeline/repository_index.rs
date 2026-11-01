@@ -139,7 +139,7 @@ async fn admit_repository_sources(
             &tenant,
             &repository,
             &bodies,
-            crate::kernel::dispatch_support::authoritative_now_ms(),
+            medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
         )
     })
     .await
@@ -174,7 +174,7 @@ async fn already_committed(ctx: &GraphOpRouting<'_>, envelope_id: &str) -> Resul
         ));
     };
     persistence
-        .read_change_envelope(&crate::persist::sanitize(ctx.graph_name), envelope_id)
+        .read_change_envelope(&medulla_kernel::persist::sanitize(ctx.graph_name), envelope_id)
         .await
         .map(|record| record.is_some())
         .map_err(|error| Response::err(ctx.req_id, error))

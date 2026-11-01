@@ -938,7 +938,7 @@ mod raft_group_tests {
 /// Adapts a persistence backend to the kernel's durable-presence probe.
 pub struct BackendPresence(pub Arc<dyn PersistenceBackend>);
 
-impl crate::kernel::persistence::DurableNodePresence for BackendPresence {
+impl medulla_kernel::kernel::persistence::DurableNodePresence for BackendPresence {
     fn durable_node_presence(
         &self,
         graph_fname: &str,

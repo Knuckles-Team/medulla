@@ -350,7 +350,7 @@ impl ReadPageService {
         }
 
         let backend = self.backend.clone();
-        let graph_fname = crate::persist::sanitize(&request.graph_name);
+        let graph_fname = medulla_kernel::persist::sanitize(&request.graph_name);
         let after = request.after_node_id.clone();
         let limit = request.limit as usize;
         let max_bytes = request.max_bytes as usize;

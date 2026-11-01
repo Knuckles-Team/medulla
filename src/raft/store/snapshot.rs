@@ -21,7 +21,7 @@ impl MedullaStore {
                     None => true,
                 })
                 .map(|(name, graph_type)| {
-                    let fname = crate::persist::sanitize(&name);
+                    let fname = medulla_kernel::persist::sanitize(&name);
                     (name, graph_type, fname)
                 })
                 .collect()
@@ -176,7 +176,7 @@ impl MedullaStore {
     }
 
     async fn remove_stale_snapshot_graph(&self, name: &str) -> Result<(), String> {
-        let fname = crate::persist::sanitize(name);
+        let fname = medulla_kernel::persist::sanitize(name);
         self.redb()
             .import_graph_raw_from_snapshot(
                 &fname,

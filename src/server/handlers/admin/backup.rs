@@ -164,7 +164,7 @@ pub(crate) fn create_private_directory(path: &std::path::Path) -> Result<(), Str
 /// Wall-clock Unix seconds for the backup/restore RPC. Lives in the handler
 /// (application code), never in the library backup/restore_bundle functions.
 pub(crate) fn now_secs() -> u64 {
-    crate::kernel::dispatch_support::authoritative_now_secs()
+    medulla_kernel::kernel::dispatch_support::authoritative_now_secs()
 }
 
 pub(crate) fn opaque_ref(value: &str) -> String {

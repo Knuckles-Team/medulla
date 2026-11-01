@@ -1045,7 +1045,7 @@ pub(crate) fn bind_scope<D: OwnerDomain>(
     kernel: &StorageKernel,
     scope: &MutationScopeIdentity,
 ) -> Result<Arc<OwnedStoreHandle<D>>, String> {
-    let authority = crate::store_authority::process_authority();
+    let authority = medulla_kernel::store_authority::process_authority();
     let grant = kernel.authenticate_scope::<D>(
         authority.as_ref(),
         scope.clone(),

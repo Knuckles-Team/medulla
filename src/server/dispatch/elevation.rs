@@ -102,7 +102,7 @@ pub(crate) async fn dispatch_rbac_elevation(
     } else {
         elevation_actor(context)
     };
-    let now_ms = crate::kernel::dispatch_support::authoritative_now_ms();
+    let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let mut guard = super::timed_write(state).await;
     let isolation = &mut guard.isolation;
     let outcome = match &op {

@@ -344,7 +344,7 @@ impl NodeInfoStore {
             NODE_INFO_PHYSICAL_STORE,
             NODE_INFO_SCOPE_RESOURCE,
             NODE_INFO_SCOPE_INCARNATION,
-            crate::store_authority::process_authority(),
+            medulla_kernel::store_authority::process_authority(),
         )?;
         let entries = load_node_info_entries(&durable)?;
         let (metadata_cluster_id, metadata_generation) =

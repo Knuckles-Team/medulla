@@ -111,7 +111,7 @@ async fn read_lease(
         .ok_or_else(approval_store_unavailable)?;
     backend
         .read_control_lease(
-            &crate::persist::sanitize(ctx.graph_name),
+            &medulla_kernel::persist::sanitize(ctx.graph_name),
             tenant_id,
             lease_id,
         )

@@ -25,7 +25,7 @@ pub(super) async fn headroom(
     })?;
     let cells: Vec<String> = scope.cells.iter().cloned().collect();
     persistence
-        .read_capacity_headroom(&crate::persist::sanitize(graph), &cells, scope.priority)
+        .read_capacity_headroom(&medulla_kernel::persist::sanitize(graph), &cells, scope.priority)
         .await
         .map_err(|error| format!("CAPACITY_UNAVAILABLE: {error}"))
 }

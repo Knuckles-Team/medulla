@@ -171,7 +171,7 @@ async fn qos_verification_names_the_audience_mismatch_cause() {
         &request,
         &VerifiedEnvelopeParams {
             context: &context,
-            timestamp: crate::kernel::dispatch_support::authoritative_now_ms() / 1000,
+            timestamp: medulla_kernel::kernel::dispatch_support::authoritative_now_ms() / 1000,
             nonce: "qos-audience-mismatch",
             idempotency_key: "qos-audience-mismatch",
         },

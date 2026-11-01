@@ -16,7 +16,7 @@ use crate::server::api::persistence::PersistenceBackend;
 use super::canonical::{domain_for, lower_canonical_operation, surface_for};
 use super::digest::principal_fingerprint;
 use super::terminal_outcome::lower_terminal_outcome_extensions;
-use crate::kernel::persistence::ENGINE_LEDGER_PRINCIPAL;
+use medulla_kernel::kernel::persistence::ENGINE_LEDGER_PRINCIPAL;
 
 mod finish_helpers;
 use finish_helpers::{compiled_outbox, compiled_scope_identity};
@@ -519,7 +519,7 @@ fn finish_batch(
 ) -> Result<MutationBatch, String> {
     #[cfg(feature = "raft")]
     let (placement_epoch, fencing_token) =
-        crate::kernel::dispatch_support::replicated_placement_authority()
+        medulla_kernel::kernel::dispatch_support::replicated_placement_authority()
             .unwrap_or((ctx.placement_epoch, ctx.fencing_token));
     #[cfg(not(feature = "raft"))]
     let (placement_epoch, fencing_token) = (ctx.placement_epoch, ctx.fencing_token);

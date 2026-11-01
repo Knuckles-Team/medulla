@@ -821,7 +821,7 @@ mod tests {
                     .expect("resident graph has a materialization manifest");
                 (core, backend, manifest)
             };
-            let fname = crate::persist::sanitize(graph);
+            let fname = medulla_kernel::persist::sanitize(graph);
             let durable_version = backend
                 .read_mutation_graph_version(&fname)
                 .await
