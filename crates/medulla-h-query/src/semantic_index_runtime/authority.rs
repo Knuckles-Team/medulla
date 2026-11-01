@@ -4,7 +4,7 @@ use medulla_index_types::semantic_index::SemanticIndexRequest;
 use super::*;
 
 impl SemanticIndexServerAdapter {
-    pub(crate) fn new(service: Arc<SemanticIndexService>) -> Self {
+    pub fn new(service: Arc<SemanticIndexService>) -> Self {
         Self { service }
     }
 
@@ -114,7 +114,7 @@ impl SemanticIndexServerAdapter {
     /// decision is embedded in the binding; its verified agent id is always
     /// the durable consumer identity. The core service owns the queue and
     /// subscription record.
-    pub(crate) fn subscribe_stage_consumer(
+    pub fn subscribe_stage_consumer(
         &self,
         binding: &SemanticBinding,
         authority: &CarrierAuthority,
@@ -131,7 +131,7 @@ impl SemanticIndexServerAdapter {
     /// Claim a bounded page from the existing durable semantic outbox. The
     /// caller retains the core budget and lease types, so the server does not
     /// create another queue or replay authority.
-    pub(crate) fn claim_stage_leases(
+    pub fn claim_stage_leases(
         &self,
         binding: &SemanticBinding,
         authority: &CarrierAuthority,

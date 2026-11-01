@@ -94,7 +94,7 @@ struct BoundedSnapshotWriter<'a, W: Write + ?Sized> {
 }
 
 impl<'a, W: Write + ?Sized> BoundedSnapshotWriter<'a, W> {
-    fn new(inner: &'a mut W, max_bytes: u64) -> Self {
+    pub fn new(inner: &'a mut W, max_bytes: u64) -> Self {
         Self {
             inner,
             written: 0,
@@ -1631,7 +1631,7 @@ mod tests {
 
     #[cfg(feature = "redb")]
     impl DeferredProjectionBackend {
-        fn new() -> Self {
+        pub fn new() -> Self {
             Self {
                 claim_calls: AtomicU64::new(0),
                 ack_calls: AtomicU64::new(0),
@@ -1732,7 +1732,7 @@ mod tests {
 
     #[cfg(feature = "redb")]
     impl DeadLetteredProjectionBackend {
-        fn new() -> Self {
+        pub fn new() -> Self {
             Self {
                 claim_calls: AtomicU64::new(0),
             }

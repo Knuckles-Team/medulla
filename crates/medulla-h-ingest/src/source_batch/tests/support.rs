@@ -15,7 +15,7 @@ pub(super) struct Fixture {
 }
 
 impl Fixture {
-    pub(super) fn new() -> Self {
+    pub fn new() -> Self {
         Self::for_tenant("tenant-a")
     }
 

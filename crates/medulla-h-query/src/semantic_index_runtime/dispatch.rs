@@ -9,7 +9,7 @@ impl SemanticIndexServerAdapter {
     /// core store reads the server-generated transition and receipt; this path
     /// therefore needs no pre-crash raw claim, cursor or completion timestamp
     /// and performs no SQL source or ACL read.
-    pub(crate) async fn replay_sql_source_stage(
+    pub async fn replay_sql_source_stage(
         &self,
         req_id: u64,
         authority: CarrierAuthority,
@@ -43,7 +43,7 @@ impl SemanticIndexServerAdapter {
     /// Capture one raw row from a bounded authorized page. The opaque input
     /// cursor is retained so fresh completion can re-read the same page; an
     /// already committed retry resolves from the durable stage record first.
-    pub(crate) async fn claim_sql_source(
+    pub async fn claim_sql_source(
         &self,
         req_id: u64,
         port: AuthorizedSqlSourceReadPort,
@@ -80,7 +80,7 @@ impl SemanticIndexServerAdapter {
     /// and an authenticated current complete snapshot. The entity id is a
     /// one-way digest, so the prior identity is read from the semantic owner;
     /// it is never reconstructed from caller text.
-    pub(crate) async fn claim_sql_tombstone(
+    pub async fn claim_sql_tombstone(
         &self,
         req_id: u64,
         port: AuthorizedSqlSourceReadPort,
@@ -122,7 +122,7 @@ impl SemanticIndexServerAdapter {
     /// is consulted, so ACL changes or a later clock sample cannot invalidate a
     /// transition that already committed. A fresh transition re-reads the exact
     /// bounded page and preserves the original decision instant in its receipt.
-    pub(crate) async fn complete_sql_source_stage(
+    pub async fn complete_sql_source_stage(
         &self,
         req_id: u64,
         port: AuthorizedSqlSourceReadPort,

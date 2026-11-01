@@ -42,7 +42,7 @@ pub(super) fn writeback_relationship(
 }
 
 impl WritebackNodeId {
-    pub(super) fn new(prefix: &str, parts: &[&str]) -> Self {
+    pub fn new(prefix: &str, parts: &[&str]) -> Self {
         use sha2::{Digest, Sha256};
 
         let mut hasher = Sha256::new();
