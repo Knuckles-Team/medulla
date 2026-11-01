@@ -55,5 +55,6 @@ redb = ["dep:medulla-storage", "dep:medulla-transaction", "medulla-kernel/redb",
 text = ["query", "dep:medulla-plan", "dep:medulla-text", "medulla-exec/text", "medulla-plan?/text", "medulla-server-api/text", "medulla-types/text"]
 tsdb = ["redb", "dep:medulla-tsdb", "dep:medulla-plan", "medulla-persistence/tsdb", "medulla-server-api/tsdb"]
 [dev-dependencies]
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support", "security"] }
 tempfile = "3"
 medulla-capabilities = { path = "../medulla-capabilities" }
