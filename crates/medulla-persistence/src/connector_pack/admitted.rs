@@ -36,31 +36,31 @@ pub(crate) type PackOwnerWrite<'w> =
 /// result, a different body under the same key is `IDEMPOTENCY_CONFLICT`.
 pub struct PackWriteIdentity<'a> {
     /// The purpose the admitted context is stamped with.
-    pub(crate) purpose: &'static str,
+    pub purpose: &'static str,
     /// The operation kind folded into the replay identity.
-    pub(crate) kind: &'static str,
+    pub kind: &'static str,
     /// The receipt slug.
-    pub(crate) slug: &'static str,
+    pub slug: &'static str,
     /// The subject (connector) the operation names.
-    pub(crate) subject: &'a str,
+    pub subject: &'a str,
     /// The revision the operation is admitted against.
-    pub(crate) revision: u64,
+    pub revision: u64,
     /// The operation's content discriminator, when it has one.
-    pub(crate) discriminator: Option<&'a str>,
+    pub discriminator: Option<&'a str>,
     /// The typed mutation-result schema of the recorded result.
-    pub(crate) result_schema: &'static str,
+    pub result_schema: &'static str,
     /// The noun refusals name.
-    pub(crate) noun: &'static str,
+    pub noun: &'static str,
 }
 
 /// The kernel-visible effects of one pack write.
 pub struct PackWriteEffects {
-    pub(crate) operations: Vec<MutationOperation>,
-    pub(crate) outbox: Vec<MutationOutboxIntent>,
+    pub operations: Vec<MutationOperation>,
+    pub outbox: Vec<MutationOutboxIntent>,
 }
 
 /// What the staged batch commits as, for rows and receipts that name it.
-pub(crate) struct PackWriteStaged {
+pub struct PackWriteStaged {
     pub(crate) batch_id: String,
     pub(crate) committed_version: u64,
 }
