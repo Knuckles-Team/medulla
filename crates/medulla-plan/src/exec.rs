@@ -3,7 +3,7 @@
 //! [`RowSet`] and returns the next:
 //!
 //! * `Scan` — label scan over the `GraphView` property blobs (dep-free).
-//! * `Filter` — **real DataFusion** via `medulla_query::exec_sql` over the schema-on-read
+//! * `Filter` — **real DataFusion** via `medulla_sql::sql::exec_sql` over the schema-on-read
 //!   `nodes` provider. DataFusion stays the relational sub-engine; this op SEQUENCES
 //!   it, it does not reimplement SQL.
 //! * `Traverse` — petgraph BFS over the `GraphView` topology (variable-length hops,
@@ -2518,7 +2518,7 @@ fn point_lookup_ids(view: &GraphView, id: &str, restrict_to: Option<&[String]>) 
     }
 }
 
-/// Run the FILTER leg through real DataFusion (`medulla_query::exec_sql`) over the
+/// Run the FILTER leg through real DataFusion (`medulla_sql::sql::exec_sql`) over the
 /// schema-on-read `nodes` provider, returning the matching node ids in scan order.
 ///
 /// `restrict_to`: when `Some`, an `id IN (...)` is appended — the
@@ -2545,7 +2545,7 @@ fn sql_filter_ids(
 
     // `exec_sql` builds its own current-thread runtime to drive DataFusion's async
     // collect (safe to call inside spawn_blocking, exactly as the Sql handler does).
-    let result = medulla_query::exec_sql(view, &sql, &medulla_query::CancellationToken::new())?;
+    let result = medulla_sql::sql::exec_sql(view, &sql, &medulla_sql::sql::CancellationToken::new())?;
     // `result.rows[i]` is a MessagePack-encoded `Vec<serde_json::Value>` aligned to
     // `result.columns` (here a single `id` column). Decode the id cell of each row.
     let mut out = Vec::with_capacity(result.rows.len());

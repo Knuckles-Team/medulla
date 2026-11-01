@@ -25,7 +25,7 @@
 //! [`ObsState::search_sql`] registers the scanned segments + hot buffers as a single
 //! DataFusion `logs` table (Arrow batches via [`super::segment::records_to_batch`])
 //! and runs arbitrary read-only SQL over it through the SAME DataFusion stack the
-//! graph SQL surface uses ([`medulla_query::exec_sql_over_tables`]) — so
+//! graph SQL surface uses ([`medulla_sql::sql::exec_sql_over_tables`]) — so
 //! `SELECT severity, count(*) FROM logs GROUP BY severity` aggregates over the
 //! columnar log segments.
 
@@ -177,7 +177,7 @@ impl ObsState {
     /// `severity`, `body`, `attrs`), so `SELECT severity, count(*) FROM logs GROUP BY
     /// severity` aggregates over the columnar segments; `json_get('<attrs>', 'key')`
     /// reaches a schema-on-read attribute. Synchronous — safe under `spawn_blocking`.
-    pub fn search_sql(&self, sql: &str) -> Result<medulla_query::TypedQueryResult, String> {
+    pub fn search_sql(&self, sql: &str) -> Result<medulla_sql::sql::TypedQueryResult, String> {
         let mut batches = Vec::new();
 
         // (cold) every Parquet segment → Arrow batch (read bytes from the CAS, decode).
@@ -199,7 +199,7 @@ impl ObsState {
         }
 
         let schema = segment::log_arrow_schema();
-        medulla_query::exec_sql_over_tables(vec![("logs".to_string(), schema, batches)], sql)
+        medulla_sql::sql::exec_sql_over_tables(vec![("logs".to_string(), schema, batches)], sql)
     }
 }
 

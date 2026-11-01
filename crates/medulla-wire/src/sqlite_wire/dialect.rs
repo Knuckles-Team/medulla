@@ -3,7 +3,7 @@
 //! SQLite has NO client/server wire protocol (it is an embedded library + a file
 //! format), so "SQLite-compatible" here means: accept a statement written in the
 //! **SQLite dialect** and rewrite the handful of SQLite-isms that differ from the
-//! engine's Postgres-ish dialect (`medulla_query::classify` parses with the
+//! engine's Postgres-ish dialect (`medulla_sql::sql::classify` parses with the
 //! `PostgreSqlDialect`) BEFORE it reaches the shared [`medulla_server::wire::WireSession`].
 //! Nothing about classify/exec is reimplemented — this is a pure string rewrite in
 //! front of the one shared execution core.

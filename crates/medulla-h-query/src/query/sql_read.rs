@@ -63,7 +63,7 @@ fn sql_tenant_store(
     authority: &medulla_server_api::access::CarrierAuthority,
     persist_dir: &std::path::Path,
     req_id: u64,
-) -> Result<medulla_query::TableStore, Response> {
+) -> Result<medulla_table_store::tables::TableStore, Response> {
     medulla_server_api::sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)
         .map_err(|error| Response::err(req_id, sql_refusal(error)))
 }
@@ -158,8 +158,8 @@ pub(crate) async fn handle_sql(
         query: query.clone(),
         params_msgpack,
     };
-    match medulla_query::classify(&query) {
-        Ok(kind) if !matches!(kind, medulla_query::StatementKind::Read) => Ok(exec_sql_write(
+    match medulla_sql::sql::classify(&query) {
+        Ok(kind) if !matches!(kind, medulla_sql::sql::StatementKind::Read) => Ok(exec_sql_write(
             req_id,
             SqlWriteScope {
                 graph_name: ctx.graph_name,
@@ -432,7 +432,7 @@ pub(super) async fn catalog_sql_response(
         Some(decide) => decide.read_only_relations(state, &authority, &query).await,
         None => None,
     };
-    let cancel = medulla_query::CancellationToken::new();
+    let cancel = medulla_sql::sql::CancellationToken::new();
     let _cancel_guard = crate::request_cancel::register(req_id, cancel.clone());
     let timeout_task = crate::request_cancel::spawn_timeout(cancel.clone());
     let cancel_for_task = cancel.clone();
@@ -444,7 +444,7 @@ pub(super) async fn catalog_sql_response(
             read_only.as_deref(),
             &graph,
         )?;
-        medulla_query::exec_sql_typed_with_tables_cancellable(
+        medulla_sql::sql::exec_sql_typed_with_tables_cancellable(
             &snap,
             authorized.store(),
             &query,

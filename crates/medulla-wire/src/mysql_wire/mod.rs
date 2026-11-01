@@ -39,7 +39,7 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 
-use medulla_query::PgColType;
+use medulla_sql::sql::PgColType;
 
 use crate::wire::WireError;
 use crate::wire::WireOutcome;
@@ -483,7 +483,7 @@ mod tests {
     use medulla_server_api::test_support::grant_commons_user;
     use medulla_server_api::test_support::register_commons_agent;
     use medulla_server_api::state::ServerState;
-    use medulla_query::{TypedColumn, TypedQueryResult};
+    use medulla_sql::{sql::TypedColumn, sql::TypedQueryResult};
     use tokio::net::TcpStream;
 
     #[test]

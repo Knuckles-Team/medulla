@@ -229,7 +229,7 @@ mod tests {
     }
 
     /// R021 differential proof: the SAME relational predicate set, run through the real SQL
-    /// leg (`where_clause`'s WHERE fragment on DataFusion via `medulla_query::exec_sql`) and through
+    /// leg (`where_clause`'s WHERE fragment on DataFusion via `medulla_sql::sql::exec_sql`) and through
     /// the per-row evaluator above, must keep the IDENTICAL rows on null and non-null
     /// fixtures — including every UNKNOWN (missing / explicit-null / cross-type) outcome.
     #[cfg(feature = "query")]
@@ -273,7 +273,7 @@ mod tests {
                 where_clause(std::slice::from_ref(pred)).unwrap()
             );
             let result =
-                medulla_query::exec_sql(view, &sql, &medulla_query::CancellationToken::new())
+                medulla_sql::sql::exec_sql(view, &sql, &medulla_sql::sql::CancellationToken::new())
                     .unwrap();
             result
                 .rows

@@ -14,7 +14,7 @@ use std::sync::Arc;
 use medulla_protocol_types::{
     storage_wire::SqlSourceBatchRequest, storage_wire::SqlSourceBatchResult,
 };
-use medulla_query::TableStore;
+use medulla_table_store::tables::TableStore;
 use medulla_types::contract::{Digest256, Nonce};
 use tokio::sync::RwLock;
 

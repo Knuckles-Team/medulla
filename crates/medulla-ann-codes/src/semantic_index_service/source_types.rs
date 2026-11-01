@@ -79,7 +79,7 @@ impl SemanticSqlSourceRecord {
 impl SemanticSqlSourceReadPage {
     pub(super) const MAX_SOURCES: usize = 256;
     pub(super) const MAX_CURSOR_BYTES: usize = 4096;
-    /// Keep this aligned with `medulla_query::tables::ROW_SNAPSHOT_MAX_BYTES`.
+    /// Keep this aligned with `medulla_table_store::tables::ROW_SNAPSHOT_MAX_BYTES`.
     pub(super) const MAX_SOURCE_BYTES: usize = 8 * 1024 * 1024;
 
     pub fn validate(&self) -> Result<(), SemanticIndexError> {

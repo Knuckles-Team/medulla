@@ -45,15 +45,81 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use tokio::sync::RwLock;
 
-use medulla_query::{
-    AlterTableAction, AlterTablePlan, AnnIndexPlan, Column, ColumnType, ContinuousAggPlan,
-    CopyFormat, CopyPlan, CreateFunctionPlan, CreateTablePlan, CreateViewPlan, DeleteNodes,
-    DeleteNodesJoin, DeleteTable, DropFunctionPlan, DropTablePlan, DropViewPlan, HypertablePlan,
-    IndexCatalogTxnOp, InsertNodes, InsertNodesSelect, InsertSelect, InsertTable, OnConflict,
-    OnConflictAction, PgColType, PropertyGraphTxnOp, StatementKind, TableSchema, TableStore,
-    TableTxn, TxnOp, TypedColumn, TypedQueryResult, UpdateNodes, UpdateNodesJoin, UpdateTable,
-    WhereEq,
-};
+use medulla_sql::sql::AlterTableAction;
+
+use medulla_sql::sql::AlterTablePlan;
+
+use medulla_table_store::tables::ann_plan::AnnIndexPlan;
+
+use medulla_tables::schema::Column;
+
+use medulla_tables::schema::ColumnType;
+
+use medulla_sql::sql::ContinuousAggPlan;
+
+use medulla_sql::sql::CopyFormat;
+
+use medulla_sql::sql::CopyPlan;
+
+use medulla_sql::sql::CreateFunctionPlan;
+
+use medulla_sql::sql::CreateTablePlan;
+
+use medulla_sql::sql::CreateViewPlan;
+
+use medulla_sql::sql::DeleteNodes;
+
+use medulla_sql::sql::DeleteNodesJoin;
+
+use medulla_sql::sql::DeleteTable;
+
+use medulla_sql::sql::DropFunctionPlan;
+
+use medulla_sql::sql::DropTablePlan;
+
+use medulla_sql::sql::DropViewPlan;
+
+use medulla_table_store::tables::ann_plan::HypertablePlan;
+
+use medulla_table_store::tables::IndexCatalogTxnOp;
+
+use medulla_sql::sql::InsertNodes;
+
+use medulla_sql::sql::InsertNodesSelect;
+
+use medulla_sql::sql::InsertSelect;
+
+use medulla_sql::sql::InsertTable;
+
+use medulla_sql::sql::OnConflict;
+
+use medulla_sql::sql::OnConflictAction;
+
+use medulla_sql::sql::PgColType;
+
+use medulla_table_store::tables::PropertyGraphTxnOp;
+
+use medulla_sql::sql::StatementKind;
+
+use medulla_tables::schema::TableSchema;
+
+use medulla_table_store::tables::TableStore;
+
+use medulla_table_store::tables::TableTxn;
+
+use medulla_table_store::tables::TxnOp;
+
+use medulla_sql::sql::TypedColumn;
+
+use medulla_sql::sql::TypedQueryResult;
+
+use medulla_sql::sql::UpdateNodes;
+
+use medulla_sql::sql::UpdateNodesJoin;
+
+use medulla_sql::sql::UpdateTable;
+
+use medulla_sql::sql::WhereEq;
 
 use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::protocol::Request;
@@ -228,7 +294,7 @@ fn parse_sql_isolation_level(text: &str) -> WireResult<medulla_server_api::txn::
 }
 
 /// Extract an inline `ISOLATION LEVEL <level>` clause from a `BEGIN`/`START
-/// TRANSACTION` statement's raw text (CONCEPT:MEDULLA-KG.txn.serializable-zero-cost — NE-005). `medulla_query::classify`
+/// TRANSACTION` statement's raw text (CONCEPT:MEDULLA-KG.txn.serializable-zero-cost — NE-005). `medulla_sql::sql::classify`
 /// already accepts `Statement::StartTransaction { .. }` regardless of its
 /// `modes` (a `sqlparser` field it discards — see `classify.rs`, owned by a
 /// different track), so the clause parses fine there but is never surfaced;
@@ -337,8 +403,8 @@ fn extract_quoted_value(
 }
 
 /// Resolve a classify `ColumnDef` (raw SQL type spelling) into a store [`Column`].
-pub(crate) fn to_store_columns(cols: &[medulla_query::ColumnDef]) -> WireResult<Vec<Column>> {
-    medulla_query::columns_from_defs(cols).map_err(user_err)
+pub(crate) fn to_store_columns(cols: &[medulla_sql::sql::ColumnDef]) -> WireResult<Vec<Column>> {
+    medulla_sql::columns_from_defs(cols).map_err(user_err)
 }
 
 /// Lower a decoded `ALTER TABLE` plan into the matching buffered [`TxnOp`] (CONCEPT:MEDULLA-KG.query.register-user-tables-alongside
@@ -975,7 +1041,7 @@ pub(crate) fn col_type_of(v: &serde_json::Value) -> PgColType {
 /// nameable list) yields `id` followed by the property columns in `prop_cols`
 /// order. Both paths compute this from the SAME inputs so they agree.
 pub(crate) fn returning_projection(sql: &str, prop_cols: &[String]) -> Vec<String> {
-    if let Some(named) = medulla_query::returning_columns(sql) {
+    if let Some(named) = medulla_sql::sql::returning_columns(sql) {
         return named;
     }
     // `RETURNING *` (or unnameable): `id` + every known property column.
@@ -1247,7 +1313,7 @@ pub struct WireSession {
     /// one entry per buffered table DML/DDL statement (or decoded `COPY`
     /// batch), in order. Used ONLY when a transaction mixes graph-node ops
     /// with table ops, to durably record how to rebuild the table-side
-    /// `TableTxn` on crash recovery (`medulla_query::TxnOp` is not `Serialize`).
+    /// `TableTxn` on crash recovery (`medulla_table_store::tables::TxnOp` is not `Serialize`).
     /// Reset by `begin_txn()`.
     pub txn_replay_log: parking_lot::Mutex<Vec<medulla_server_api::api::query_txn::txn_intent::ReplayStep>>,
     /// Set once this connection has swept its owner's leftover commit-intent
@@ -1732,7 +1798,7 @@ impl WireSession {
     /// (the session default for every future `BEGIN`) or `SET TRANSACTION
     /// ISOLATION LEVEL …` (CONCEPT:MEDULLA-KG.txn.serializable-zero-cost — NE-005: applies to the CURRENTLY open
     /// transaction if one exists, else to the NEXT `BEGIN` — matching
-    /// Postgres). Neither has a `sqlparser` AST arm `medulla_query::classify`
+    /// Postgres). Neither has a `sqlparser` AST arm `medulla_sql::sql::classify`
     /// recognizes (no `Statement::SetTransaction`/`Statement::SetSessionParam`
     /// case — everything unmatched falls to its `other => Err(...)`
     /// catch-all), so — exactly like `try_set_graph` above — these are
@@ -1882,7 +1948,7 @@ impl WireSession {
         // served-context cache anyway (its buffered writes aren't reflected in
         // `version()`).
         tokio::task::spawn_blocking(move || {
-            medulla_query::exec_sql_typed_with_tables(&snap, projection.store(), &sql)
+            medulla_sql::sql::exec_sql_typed_with_tables(&snap, projection.store(), &sql)
         })
         .await
         .map_err(|e| user_err(format!("query task failed: {e}")))?
@@ -2080,7 +2146,7 @@ impl WireSession {
         ) {
             let authority = self.carrier_authority()?;
             let statement =
-                medulla_query::sql::parse_property_graph_ddl(sql, authority.tenant_scope())
+                medulla_sql::sql::parse_property_graph_ddl(sql, authority.tenant_scope())
                     .map_err(user_err)?;
             let (op, tag) = PropertyGraphTxnOp::from_statement(statement, authority.agent_id());
             self.buffer(TxnOp::PropertyGraphDdl(op));
@@ -2235,7 +2301,7 @@ impl WireSession {
         let tenant = authority.tenant_scope().to_string();
         let actor = authority.agent_id().to_string();
         let statement =
-            medulla_query::sql::parse_property_graph_ddl(sql, &tenant).map_err(user_err)?;
+            medulla_sql::sql::parse_property_graph_ddl(sql, &tenant).map_err(user_err)?;
         let (op, tag) = PropertyGraphTxnOp::from_statement(statement, &actor);
         let mut txn = TableTxn::new();
         txn.push(TxnOp::PropertyGraphDdl(op));
@@ -2253,7 +2319,7 @@ impl WireSession {
         let authority = self.carrier_authority()?;
         let tenant = authority.tenant_scope().to_string();
         let statement =
-            medulla_query::sql::parse_property_graph_privilege(sql).map_err(user_err)?;
+            medulla_sql::sql::parse_property_graph_privilege(sql).map_err(user_err)?;
         let store = self.user_table_store().await?;
         let record = store
             .property_graph(&tenant, &statement.name)
@@ -2277,7 +2343,7 @@ impl WireSession {
     /// over `Method::Sql` (whose catalog is per-principal) is not visible here.
     async fn lower_graph_table_read(
         &self,
-        query: &medulla_query::sql::GraphTableQuery,
+        query: &medulla_sql::sql::GraphTableQuery,
     ) -> WireResult<String> {
         let (authority, persist_dir) = self.catalog_authority().await?;
         let query = query.clone();
@@ -2835,7 +2901,7 @@ impl WireSession {
     ) -> WireResult<()> {
         match step {
             medulla_server_api::api::query_txn::txn_intent::ReplayStep::Sql(sql) => {
-                let kind = medulla_query::classify(sql).map_err(user_err)?;
+                let kind = medulla_sql::sql::classify(sql).map_err(user_err)?;
                 self.try_buffer_transaction_table_statement(graph, sql, &kind)
                     .await?
                     .map(|_| ())
@@ -3596,7 +3662,7 @@ impl WireSession {
         sql: &str,
     ) -> WireResult<(Vec<String>, std::collections::HashMap<String, PgColType>)> {
         let type_map = self.column_types(graph).await?;
-        let cols = if medulla_query::returning_columns(sql).is_some() {
+        let cols = if medulla_sql::sql::returning_columns(sql).is_some() {
             returning_projection(sql, &[])
         } else {
             let mut prop_cols: Vec<String> = type_map.keys().cloned().collect();
@@ -5256,7 +5322,7 @@ impl WireProtocol for WireSession {
             return res;
         }
 
-        let kind = medulla_query::classify(sql).map_err(user_err)?;
+        let kind = medulla_sql::sql::classify(sql).map_err(user_err)?;
 
         // ── transaction control (CONCEPT:MEDULLA-KG.query.register-each-user-table / MEDULLA-049) — no graph access needed ──
         // BEGIN/COMMIT/ROLLBACK report a txn-status change so the wire reports the
@@ -5315,7 +5381,7 @@ mod property_graph_dispatch_tests {
     use super::*;
 
     fn classify_kind(sql: &str) -> StatementKind {
-        medulla_query::classify(sql).expect("statement classifies")
+        medulla_sql::sql::classify(sql).expect("statement classifies")
     }
 
     /// Property-graph DDL now buffers inside `BEGIN`; privilege DCL stays

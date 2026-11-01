@@ -152,7 +152,7 @@ mod tests {
     /// shape medulla-query/cypher's fixture uses, so the equivalence comparison is honest.
     ///
     /// Regression note: this MUST key the label on `node_type`, not the legacy
-    /// `type` field. `medulla_query::cypher`'s label matcher (`build_cypher_label_index`/
+    /// `type` field. `medulla_cypher::cypher`'s label matcher (`build_cypher_label_index`/
     /// `node_has_label`, see `exec.rs`) deliberately treats Cypher's `(n:Label)`
     /// contract as narrower than `GraphCore`'s general label index -- "a legacy
     /// payload `type`/`label` must never satisfy a Cypher node label" (see
@@ -266,7 +266,7 @@ mod tests {
             .collect();
         gql_names.sort();
 
-        let cy = medulla_query::exec_cypher(&view, "MATCH (p:Person) RETURN p.name").unwrap();
+        let cy = medulla_cypher::cypher::exec_cypher(&view, "MATCH (p:Person) RETURN p.name").unwrap();
         let mut cy_names: Vec<String> = cy
             .rows
             .iter()
@@ -293,7 +293,7 @@ mod tests {
             .map(|n| n["name"].as_str().unwrap().to_string())
             .collect();
 
-        let cy2 = medulla_query::exec_cypher(
+        let cy2 = medulla_cypher::cypher::exec_cypher(
             &view,
             "MATCH (a:Person)-[:KNOWS]->(b:Person) WHERE a.name = 'Alice' RETURN b.name",
         )

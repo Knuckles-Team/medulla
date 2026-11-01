@@ -11,7 +11,7 @@
 //! The async read/write of a framed packet lives in `mod.rs` (over `tokio::io`); this
 //! module builds/parses the PAYLOADS.
 
-use medulla_query::PgColType;
+use medulla_sql::sql::PgColType;
 
 // ── capability flags (the subset this server negotiates) ──────────────────────
 pub const CLIENT_LONG_PASSWORD: u32 = 0x0000_0001;

@@ -26,7 +26,6 @@ medulla-capabilities = { path = "../medulla-capabilities", optional = true }
 medulla-compute = { path = "../medulla-compute" }
 medulla-core = { path = "../medulla-core" }
 medulla-kernel = { path = "../medulla-kernel" }
-medulla-query = { path = "../medulla-query", optional = true }
 medulla-rdf = { path = "../medulla-rdf", optional = true }
 medulla-server-api = { path = "../medulla-server-api" }
 medulla-storage = { path = "../medulla-storage", optional = true }
@@ -47,6 +46,7 @@ medulla-direct-state = { path = "../medulla-direct-state" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
+medulla-table-store = { path = "../medulla-table-store" }
 
 [features]
 test-support = ["dep:tempfile"]
@@ -54,12 +54,12 @@ cold-tier = []
 cold-tier-s3 = ["cold-tier"]
 compute-dist = ["raft"]
 cost = ["server"]
-cypher = ["dep:medulla-query", "medulla-query/cypher", ]
+cypher = []
 decide = ["dep:medulla-capabilities", "medulla-capabilities?/decide", "redb", "shacl"]
 kv = ["server", "redb"]
 matview = ["query"]
 metrics = []
-query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "dep:medulla-query", "medulla-query/sql", "redb"]
+query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "medulla-table-store/sql", "redb"]
 raft = ["server", "redb"]
 rdf = ["dep:medulla-rdf", "medulla-rdf/rdf", "server"]
 redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", ]
@@ -75,9 +75,9 @@ modality-serving = ["dep:medulla-capabilities", "medulla-capabilities/modality-s
 asr-whisper = ["dep:medulla-capabilities", "medulla-capabilities/asr-native"]
 knowledge-batch = ["dep:medulla-capabilities", "medulla-capabilities/knowledge-batch"]
 quantum-agent-api = ["dep:medulla-capabilities", "medulla-capabilities/quantum"]
-numeric = ["dep:medulla-query", "medulla-query?/numeric"]
-cypher-plan = ["dep:medulla-query", "medulla-query/cypher-plan"]
-result-cache = ["dep:medulla-query", "medulla-query?/result-cache"]
+numeric = []
+cypher-plan = []
+result-cache = []
 sparql-hash = ["dep:medulla-rdf", "medulla-rdf/sparql-hash"]
 rdf-xml = ["dep:medulla-rdf", "medulla-rdf/rdf-xml"]
 json-ld = ["dep:medulla-rdf", "medulla-rdf/json-ld"]

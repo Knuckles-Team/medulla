@@ -29,7 +29,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock, RwLock};
 
-use medulla_query::TableStore;
+use medulla_table_store::tables::TableStore;
 use sha2::{Digest, Sha256};
 
 use crate::access::CarrierAuthority;
@@ -292,9 +292,9 @@ pub fn tenant_acl_path_for_test(tenant_scope: &str, persist_dir: &Path) -> PathB
 }
 
 fn context_cache_registry(
-) -> &'static Mutex<HashMap<String, std::sync::Arc<medulla_query::SqlContextCache>>> {
+) -> &'static Mutex<HashMap<String, std::sync::Arc<medulla_sql::sql::SqlContextCache>>> {
     static CACHES: OnceLock<
-        Mutex<HashMap<String, std::sync::Arc<medulla_query::SqlContextCache>>>,
+        Mutex<HashMap<String, std::sync::Arc<medulla_sql::sql::SqlContextCache>>>,
     > = OnceLock::new();
     CACHES.get_or_init(|| Mutex::new(HashMap::new()))
 }
@@ -308,7 +308,7 @@ fn context_cache_registry(
 pub(crate) fn sql_context_cache(
     authority: &CarrierAuthority,
     persist_dir: Option<&Path>,
-) -> Result<std::sync::Arc<medulla_query::SqlContextCache>, String> {
+) -> Result<std::sync::Arc<medulla_sql::sql::SqlContextCache>, String> {
     let persist_dir = persist_dir.ok_or_else(|| {
         "owner-scoped SQL catalog requires the configured persistence directory".to_string()
     })?;
@@ -319,7 +319,7 @@ pub(crate) fn sql_context_cache(
     if let Some(cache) = caches.get(&key) {
         return Ok(cache.clone());
     }
-    let cache = std::sync::Arc::new(medulla_query::SqlContextCache::new());
+    let cache = std::sync::Arc::new(medulla_sql::sql::SqlContextCache::new());
     caches.insert(key, cache.clone());
     Ok(cache)
 }
@@ -356,11 +356,11 @@ mod tests {
         let first_store = user_table_store(&first, Some(&base)).unwrap();
         let peer_store = user_table_store(&peer, Some(&base)).unwrap();
         let other_store = user_table_store(&other_tenant, Some(&base)).unwrap();
-        let schema = medulla_query::TableSchema::new(
+        let schema = medulla_tables::schema::TableSchema::new(
             "private_rows",
-            vec![medulla_query::Column::new(
+            vec![medulla_tables::schema::Column::new(
                 "value",
-                medulla_query::ColumnType::Text,
+                medulla_tables::schema::ColumnType::Text,
                 false,
                 false,
             )],

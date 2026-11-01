@@ -17,7 +17,7 @@
 //! wire-neutral [`WireOutcome`] / [`WireError`] into Postgres bytes.
 //!
 //! A SELECT arriving over the wire is parsed/planned/executed by the SAME DataFusion
-//! path `Method::Sql` uses; a write is classified (`medulla_query::classify`) and routed
+//! path `Method::Sql` uses; a write is classified (`medulla_sql::sql::classify`) and routed
 //! through the engine's `GraphTxn` write path so it gets `mark_dirty` + durability for
 //! free. No SQL grammar, planner, or executor is reimplemented here.
 //!
@@ -41,7 +41,7 @@
 //!
 //! ## Arrow → pg type-OID mapping
 //! Result columns are described from the Arrow result schema via
-//! `medulla_query::PgColType`: `Int8 → INT8`, `Float8 → FLOAT8`, `Bool → BOOL`,
+//! `medulla_sql::sql::PgColType`: `Int8 → INT8`, `Float8 → FLOAT8`, `Bool → BOOL`,
 //! everything else `TEXT` (JSON-stringified) — so a column is never lossy-dropped.
 
 use std::fs::File;
@@ -69,10 +69,8 @@ use pgwire::error::{ErrorInfo, PgWireError, PgWireResult};
 use pgwire::messages::data::DataRow;
 use pgwire::tokio::process_socket;
 
-use medulla_query::{
-    ColumnType, CopyFormat, DeleteNodes, InsertNodes, PgColType, StatementKind, TableSchema,
-    TypedQueryResult, UpdateNodes,
-};
+use medulla_tables::{schema::ColumnType, schema::TableSchema};
+use medulla_sql::{sql::CopyFormat, sql::DeleteNodes, sql::InsertNodes, sql::PgColType, sql::StatementKind, sql::TypedQueryResult, sql::UpdateNodes};
 
 use crate::wire::CopyState;
 use crate::wire::WireError;
@@ -600,7 +598,7 @@ fn outcome_to_response(outcome: WireOutcome, format: Option<&Format>) -> Respons
 
 // ── Arrow → Postgres result encoding ──────────────────────────────────────────
 
-/// `medulla_query::PgColType` → a Postgres wire `Type` (the OID the client sees).
+/// `medulla_sql::sql::PgColType` → a Postgres wire `Type` (the OID the client sees).
 fn pg_type(t: PgColType) -> Type {
     match t {
         PgColType::Int8 => Type::INT8,
@@ -767,19 +765,19 @@ struct EngineBackend {
 /// out of `param_type_oids` (extract-method, cx/wD8) — same terms, same
 /// order as before.
 fn param_site_pg_col_type(
-    site: medulla_query::ParamSite,
+    site: medulla_sql::sql::ParamSite,
     cols: &std::collections::HashMap<String, PgColType>,
 ) -> PgColType {
     match site {
-        medulla_query::ParamSite::IdColumn => PgColType::Text,
-        medulla_query::ParamSite::Column(name) => {
+        medulla_sql::sql::ParamSite::IdColumn => PgColType::Text,
+        medulla_sql::sql::ParamSite::Column(name) => {
             cols.get(&name).copied().unwrap_or(PgColType::Text)
         }
-        medulla_query::ParamSite::Literal(lt) => match lt {
-            medulla_query::ParamLiteralType::Int => PgColType::Int8,
-            medulla_query::ParamLiteralType::Float => PgColType::Float8,
-            medulla_query::ParamLiteralType::Bool => PgColType::Bool,
-            medulla_query::ParamLiteralType::Text => PgColType::Text,
+        medulla_sql::sql::ParamSite::Literal(lt) => match lt {
+            medulla_sql::sql::ParamLiteralType::Int => PgColType::Int8,
+            medulla_sql::sql::ParamLiteralType::Float => PgColType::Float8,
+            medulla_sql::sql::ParamLiteralType::Bool => PgColType::Bool,
+            medulla_sql::sql::ParamLiteralType::Text => PgColType::Text,
         },
     }
 }
@@ -820,7 +818,7 @@ impl EngineBackend {
     }
 
     /// Resolve the wire `Type` OIDs for a statement's `$N` parameters
-    /// (CONCEPT:MEDULLA-KG.query.describe). Locates each param via `medulla_query::infer_param_sites` (a
+    /// (CONCEPT:MEDULLA-KG.query.describe). Locates each param via `medulla_sql::sql::infer_param_sites` (a
     /// column / `id` / literal site), then types it: an `id` site → TEXT; a column
     /// site → that column's type from the shared node column-type map; a literal site
     /// → its directly-derived type. A column with no observed type defaults to TEXT.
@@ -828,7 +826,7 @@ impl EngineBackend {
     /// (tokio-postgres/psycopg/asyncpg) encode a typed parameter — UNKNOWN is
     /// rejected client-side as `WrongType`.
     async fn param_type_oids(&self, graph: &str, sql: &str) -> PgWireResult<Vec<Type>> {
-        let sites = match medulla_query::infer_param_sites(sql) {
+        let sites = match medulla_sql::sql::infer_param_sites(sql) {
             Ok(s) => s,
             Err(_) => return Ok(Vec::new()),
         };
@@ -862,7 +860,7 @@ impl EngineBackend {
         graph: &str,
         sql: &str,
     ) -> PgWireResult<Vec<FieldInfo>> {
-        match medulla_query::classify(sql) {
+        match medulla_sql::sql::classify(sql) {
             Ok(StatementKind::Read) => {
                 // Derive the schema from a PROBE form (WHERE/LIMIT dropped) so the
                 // engine's schema-on-read path always sees rows — a filtered query
@@ -870,7 +868,7 @@ impl EngineBackend {
                 // make the described `RowDescription` disagree with the executed
                 // DataRows. The probe keeps the projection/FROM/GROUP BY, so the
                 // columns are identical to the real query.
-                let probe = medulla_query::schema_probe_sql(sql).unwrap_or_else(|| sql.to_string());
+                let probe = medulla_sql::sql::schema_probe_sql(sql).unwrap_or_else(|| sql.to_string());
                 let result = self
                     .session
                     .run_read(graph, probe)
@@ -2255,7 +2253,7 @@ mod copy_tests {
     //! Unit tests for the `COPY … FROM STDIN` decoders + a full decode→ingest proving
     //! "COPY ingests N rows" deterministically (CONCEPT:MEDULLA-KG.query.register-each-user-table), without a socket.
     use super::*;
-    use medulla_query::{Column, ColumnType, TableSchema};
+    use medulla_tables::{schema::Column, schema::ColumnType, schema::TableSchema};
 
     fn items_schema() -> TableSchema {
         TableSchema::new(

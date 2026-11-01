@@ -223,9 +223,9 @@ fn classify_sql_write(_query: &str) -> bool {
 
 #[cfg(feature = "cypher")]
 fn classify_cypher_write(query: &str, mode: CypherMode) -> bool {
-    match medulla_query::classify_cypher(query) {
-        Ok(medulla_query::CypherStatementKind::Read) => false,
-        Ok(medulla_query::CypherStatementKind::Write) => true,
+    match medulla_cypher::cypher::classify_cypher(query) {
+        Ok(medulla_cypher::cypher::CypherStatementKind::Read) => false,
+        Ok(medulla_cypher::cypher::CypherStatementKind::Write) => true,
         // The dispatcher rejects parser errors and mode mismatches before
         // authorization. Until then, preserve the caller's more restrictive
         // declaration rather than accidentally admitting a declared write to

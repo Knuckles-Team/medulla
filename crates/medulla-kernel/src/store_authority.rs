@@ -276,7 +276,7 @@ fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
 /// Open an EPHEMERAL SQL catalog at a fresh temp path under THIS process's own
 /// grant authority, returning the store and the file it owns.
 ///
-/// `medulla_query::TableStore::open_temp` is compiled only under that crate's
+/// `medulla_table_store::tables::TableStore::open_temp` is compiled only under that crate's
 /// `cfg(test)` or its off-by-default `dev-scope-grant` feature, because
 /// RF-RULING-004 forbids a domain crate from carrying a scope-grant verifier of
 /// its own. This binary IS a composition root, so its ephemeral SQL stores are
@@ -286,7 +286,7 @@ fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
 /// The caller owns the returned path: an ephemeral store is a real redb file and
 /// nothing else removes it (see `medulla_wire::wire::EphemeralStoreGuard`).
 #[cfg(feature = "query")]
-pub fn open_ephemeral_sql_store() -> Result<(medulla_query::TableStore, std::path::PathBuf), String>
+pub fn open_ephemeral_sql_store() -> Result<(medulla_table_store::tables::TableStore, std::path::PathBuf), String>
 {
     use std::sync::atomic::{AtomicU64, Ordering};
     static EPHEMERAL_SEQUENCE: AtomicU64 = AtomicU64::new(0);
@@ -300,7 +300,7 @@ pub fn open_ephemeral_sql_store() -> Result<(medulla_query::TableStore, std::pat
             .unwrap_or(0),
     ));
     let authority = process_authority();
-    let store = medulla_query::TableStore::open(
+    let store = medulla_table_store::tables::TableStore::open(
         &path,
         process_verifier(),
         authority.principal(),

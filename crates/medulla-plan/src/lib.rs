@@ -21,7 +21,7 @@
 //!
 //! This is a thin BESPOKE planner SEQUENCING the legs the engine already has — it
 //! does NOT reimplement SQL or the graph/vector engines:
-//!  * `Filter`   runs **real DataFusion** (`medulla_query::exec_sql` over the
+//!  * `Filter`   runs **real DataFusion** (`medulla_sql::sql::exec_sql` over the
 //!    schema-on-read `nodes` provider) — DataFusion stays the relational sub-engine.
 //!  * `Traverse` is petgraph BFS over the `GraphView` topology (the relationship is
 //!    read from the edge property blob, matching medulla-query/cypher).

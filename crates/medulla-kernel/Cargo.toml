@@ -11,6 +11,9 @@ name = "medulla_kernel"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-cypher = { path = "../medulla-cypher" }
+medulla-sql = { path = "../medulla-sql" }
+medulla-tables = { path = "../medulla-tables" }
 medulla-types = { path = "../medulla-types" }
 medulla-core = { path = "../medulla-core" }
 medulla-compute = { path = "../medulla-compute" }
@@ -35,7 +38,6 @@ opentelemetry = { version = "0.33", optional = true }
 opentelemetry_sdk = { version = "0.33.1", optional = true, features = ["rt-tokio"] }
 opentelemetry-otlp = { version = "0.33", optional = true, features = ["grpc-tonic"] }
 tracing-opentelemetry = { version = "0.34", optional = true }
-medulla-query = { path = "../medulla-query", optional = true }
 medulla-storage = { path = "../medulla-storage", optional = true }
 uuid = { version = "1.28", features = ["v4"] }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
@@ -44,6 +46,7 @@ medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-graph-algos = { path = "../medulla-graph-algos" }
+medulla-table-store = { path = "../medulla-table-store" }
 
 [dev-dependencies]
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
@@ -64,7 +67,7 @@ redb = ["dep:medulla-storage", ]
 security = ["redb", "dep:chacha20poly1305", "medulla-types/security", "medulla-protocol-types/security", "medulla-core/security", "medulla-graph-core/security"]
 raft = ["server", "redb", "dep:chacha20poly1305"]
 broker = ["medulla-core/broker", "medulla-graph-core/broker", "medulla-types/broker", "medulla-protocol-types/broker"]
-query = ["dep:medulla-query", "medulla-query/sql", "redb", "medulla-types/query", "medulla-protocol-types/query"]
+query = ["medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "medulla-cypher/sql", "redb", "medulla-types/query", "medulla-protocol-types/query"]
 epistemic = ["query", "dep:medulla-epistemic", "medulla-types/epistemic", "medulla-protocol-types/epistemic"]
 epistemic-tms = ["epistemic", "medulla-epistemic/epistemic-tms"]
 datascience = ["medulla-compute/datascience", "medulla-types/datascience", "medulla-protocol-types/datascience"]
@@ -80,7 +83,7 @@ rdf = ["server", "medulla-types/rdf", "medulla-protocol-types/rdf"]
 sparql = ["rdf", "medulla-types/sparql", "medulla-protocol-types/sparql"]
 shacl = ["rdf"]
 sqlite-file = ["query", "server", "medulla-types/sqlite-file", "medulla-protocol-types/sqlite-file"]
-numeric = ["dep:medulla-query", "medulla-query?/numeric"]
-cypher = ["dep:medulla-query", "medulla-query/cypher"]
-cypher-plan = ["dep:medulla-query", "medulla-query/cypher-plan"]
-result-cache = ["dep:medulla-query", "medulla-query?/result-cache"]
+numeric = []
+cypher = []
+cypher-plan = []
+result-cache = []

@@ -865,7 +865,7 @@ async fn scram_login_succeeds_with_correct_password() {
     // `wire_select_returns_seeded_rows`/`extended_prepared_parameterized_select`
     // rely on elsewhere in this file) — no JSON deep-index accessor is needed. The
     // `props->>'k'` operator form is only wired for the narrow graph-node
-    // UPDATE/DELETE selector decoder (`medulla_query::sql::classify`), not the general
+    // UPDATE/DELETE selector decoder (`medulla_sql::sql::classify`), not the general
     // DataFusion-planned SELECT path this query runs on, so using it here panicked
     // with "Operator ->> is not yet supported".
     let rows = client

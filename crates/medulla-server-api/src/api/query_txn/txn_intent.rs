@@ -42,7 +42,7 @@
 //! ONLY ever driven by a live, already-authenticated session for the
 //! matching owner, so there is nothing identity-bearing to persist.
 //!
-//! `medulla_query::TxnOp` is not `Serialize` (durable persistence has never lived
+//! `medulla_table_store::tables::TxnOp` is not `Serialize` (durable persistence has never lived
 //! in that crate), so the table-side replay recipe is recorded as the
 //! ORIGINAL literal input (SQL text, or a decoded `COPY` batch) rather than
 //! the parsed op — replayed through the ordinary buffering dispatch on

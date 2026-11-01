@@ -39,7 +39,7 @@ pub fn uql_text_embedder() -> Option<&'static dyn medulla_plan::TextEmbedder> {
 /// leg (design `plans/semantic-indexing/DESIGN-embedding-bindings.md` §9 phase 2). ONE
 /// trait, TWO callers: `medulla-query` cannot name `medulla_plan::TextEmbedder` (`medulla-plan` depends
 /// on `medulla-query`, so the reverse edge is a Cargo package cycle — see
-/// `medulla_query::sql::embed_udf`'s module doc), so this facade — which depends on BOTH
+/// `medulla_sql::sql::embed_udf`'s module doc), so this facade — which depends on BOTH
 /// crates — is where the concrete embedder crosses that seam, as a closure.
 ///
 /// Idempotent and cheap; called at the top of the SQL entry point rather than from a
@@ -59,7 +59,7 @@ pub fn bind_sql_text_embedder() {
         let Some(embedder) = uql_text_embedder() else {
             return;
         };
-        let _ = medulla_query::sql::bind_text_embedder(std::sync::Arc::new(move |text: &str| {
+        let _ = medulla_sql::sql::bind_text_embedder(std::sync::Arc::new(move |text: &str| {
             embedder.embed(text)
         }));
     });

@@ -155,7 +155,7 @@ $($variants)*
     /// CONCEPT:MEDULLA-KG.query.obda-query-rewrite) — Ontology-Based Data Access: run a SPARQL query
     /// against a set of foreign tabular sources exposed as RDF via an R2RML-style
     /// mapping, WITHOUT ever materializing the whole dataset. `tables` names the
-    /// engine's OWN SQL user tables (the `medulla_query::TableStore` behind `query`, the same
+    /// engine's OWN SQL user tables (the `medulla_table_store::tables::TableStore` behind `query`, the same
     /// store `Method::Sql` DDL/DML and `ImportSqliteFile` write) to register as foreign
     /// sources under their own table name (a [`TriplesMap::logical_source`] target);
     /// `mapping` is either a standard R2RML Turtle document (`@prefix rr: …`) or the

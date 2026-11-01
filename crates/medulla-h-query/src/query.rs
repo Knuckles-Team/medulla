@@ -96,14 +96,14 @@ where
         .map(|bytes| Response::ok(req_id, ResultPayload::of_cache_hit::<M>(bytes)))
 }
 
-/// Encode a [`medulla_query::TypedQueryResult`] as the wire `Sql` response:
+/// Encode a [`medulla_sql::sql::TypedQueryResult`] as the wire `Sql` response:
 /// msgpack every cell, or fail the whole response if one cell can't encode.
 /// The plain, cancellable, and graph-table-backed typed-SQL execution paths
 /// all reach exactly this row-to-wire step once DataFusion has produced
 /// typed rows — one owner so a change to how a cell fails to encode can't
 /// land on one path and not the others.
 #[cfg(feature = "query")]
-fn typed_sql_response(req_id: u64, typed: medulla_query::TypedQueryResult) -> Response {
+fn typed_sql_response(req_id: u64, typed: medulla_sql::sql::TypedQueryResult) -> Response {
     match typed.rows.iter().map(msgpack_bytes).collect() {
         Ok(rows) => dynamic_response::<query_results::Sql, _>(
             req_id,
@@ -365,10 +365,10 @@ mod rls_no_exfiltrate_tests {
     }
 
     fn sql_ids(view: &GraphView) -> Vec<String> {
-        let r = medulla_query::exec_sql(
+        let r = medulla_sql::sql::exec_sql(
             view,
             "SELECT id FROM nodes",
-            &medulla_query::CancellationToken::new(),
+            &medulla_sql::sql::CancellationToken::new(),
         )
         .expect("sql");
         r.rows
@@ -415,7 +415,7 @@ mod rls_no_exfiltrate_tests {
         let layer = isolation();
         let mut va = seeded_view();
         layer.filter_view("alice", &mut va);
-        let r = medulla_query::exec_cypher(&va, "MATCH (n) RETURN n").expect("cypher");
+        let r = medulla_cypher::cypher::exec_cypher(&va, "MATCH (n) RETURN n").expect("cypher");
         // The cypher result must not reference the hidden node id anywhere.
         let any_secret = r
             .rows
@@ -1459,11 +1459,11 @@ mod dispatch_write_tests {
         )
         .expect("open tenant ACL store");
         acl.create_table(
-            &medulla_query::TableSchema::new(
+            &medulla_tables::schema::TableSchema::new(
                 "__eg_sql_owners__",
-                vec![medulla_query::Column::new(
+                vec![medulla_tables::schema::Column::new(
                     "table_name",
-                    medulla_query::ColumnType::Text,
+                    medulla_tables::schema::ColumnType::Text,
                     false,
                     true,
                 )],
@@ -1589,7 +1589,7 @@ mod dispatch_write_tests {
             params_msgpack: Vec::new(),
         };
 
-        // `node_type` alongside `type`: `medulla_query::cypher::exec::node_has_label`
+        // `node_type` alongside `type`: `medulla_cypher::cypher::exec::node_has_label`
         // deliberately treats a bare `type`/`label` property as a legacy payload
         // that "must never satisfy a Cypher node label" (its own doc comment,
         // matching Cypher's `CREATE`/`MERGE` canonicalization onto `node_type`

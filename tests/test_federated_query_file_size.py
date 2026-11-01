@@ -18,7 +18,7 @@ def _lines(relative: str) -> int:
 
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R057")
 def test_sql_provider_module_is_within_file_size_limit() -> None:
-    assert _lines("crates/medulla-query/src/sql/providers.rs") <= LIMIT
+    assert _lines("crates/medulla-sql/src/sql/providers.rs") <= LIMIT
 
 
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R066")

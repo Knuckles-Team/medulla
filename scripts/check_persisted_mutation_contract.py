@@ -1691,9 +1691,9 @@ def _semantic_authority_sources() -> dict[str, str]:
     query = "\n".join(
         read(path)
         for path in (
-            "crates/medulla-query/src/tables/embedding_binding.rs",
-            "crates/medulla-query/src/tables/index.rs",
-            "crates/medulla-query/src/tables/migration.rs",
+            "crates/medulla-table-store/src/tables/embedding_binding.rs",
+            "crates/medulla-tables/src/index.rs",
+            "crates/medulla-tables/src/migration.rs",
         )
     )
     server = read("src/server/semantic_activation.rs")
@@ -1887,7 +1887,7 @@ def main() -> None:
     graph_store = read_module_tree("src/redb_store.rs")
     native_store = mutation_kernel_source()
     native_store_with_tests = mutation_kernel_source(include_tests=True)
-    sql_store = read_module_tree("crates/medulla-query/src/tables/store.rs")
+    sql_store = read_module_tree("crates/medulla-table-store/src/tables/store.rs")
     reasoning = read("src/server/reasoning_projection.rs")
     reasoning_index = read_module_tree("crates/medulla-epistemic/src/incremental.rs")
     row_delta_producer = read_module_tree("crates/medulla-kernel/src/graph_delta.rs")

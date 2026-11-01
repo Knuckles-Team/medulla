@@ -7,7 +7,7 @@ use super::*;
 #[cfg(feature = "cypher")]
 fn cypher_query_response(
     req_id: u64,
-    outcome: Result<Result<medulla_query::QueryResult, String>, Response>,
+    outcome: Result<Result<medulla_sql::sql::QueryResult, String>, Response>,
 ) -> Response {
     match outcome {
         Ok(Ok(result)) => dynamic_response::<query_results::CypherQuery, _>(req_id, &result),
@@ -37,7 +37,7 @@ pub(crate) async fn handle_cypher_write(
 ) -> Response {
     let core_w = core.clone();
     let outcome = compute_off_lock(req_id, move || {
-        medulla_query::exec_cypher_write(&core_w, &query)
+        medulla_cypher::cypher::exec_cypher_write(&core_w, &query)
     })
     .await;
     cypher_query_response(req_id, outcome)
@@ -178,11 +178,11 @@ async fn handle_cypher_read(ctx: &QueryHandlerCtx<'_>, query: String) -> Respons
     let core_for_index = core.clone();
     #[cfg(feature = "result-cache")]
     let resp = match compute_off_lock(req_id, move || {
-        medulla_query::exec_cypher_params_indexed(
+        medulla_cypher::cypher::exec_cypher_params_indexed(
             &snap,
             &query,
-            &medulla_query::Params::new(),
-            medulla_query::IndexSource::new(&core_for_index, version),
+            &medulla_cypher::cypher::Params::new(),
+            medulla_cypher::cypher::IndexSource::new(&core_for_index, version),
         )
     })
     .await
@@ -205,7 +205,7 @@ async fn handle_cypher_read(ctx: &QueryHandlerCtx<'_>, query: String) -> Respons
     #[cfg(not(feature = "result-cache"))]
     let resp = cypher_query_response(
         req_id,
-        compute_off_lock(req_id, move || medulla_query::exec_cypher(&snap, &query)).await,
+        compute_off_lock(req_id, move || medulla_cypher::cypher::exec_cypher(&snap, &query)).await,
     );
     resp
 }

@@ -12,6 +12,11 @@ name = "medulla_server"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-cypher = { path = "../medulla-cypher" }
+medulla-sql = { path = "../medulla-sql" }
+medulla-sql-udfs = { path = "../medulla-sql-udfs" }
+medulla-table-store = { path = "../medulla-table-store" }
+medulla-tables = { path = "../medulla-tables" }
 clap = { version = "4.6", features = ["derive", "env"] }
 argon2 = { version = "0.5", optional = true, default-features = false, features = ["alloc", "password-hash"] }
 arrow = { version = "58.4", optional = true }
@@ -44,7 +49,6 @@ medulla-numeric = { path = "../medulla-numeric", optional = true }
 medulla-persistence = { path = "../medulla-persistence" }
 medulla-plan = { path = "../medulla-plan", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
-medulla-query = { path = "../medulla-query", optional = true }
 medulla-raft = { path = "../medulla-raft" }
 medulla-rdf = { path = "../medulla-rdf", optional = true }
 medulla-result-types = { path = "../medulla-result-types" }
@@ -98,7 +102,7 @@ blob-s3 = ["blob"]
 cdc-kafka = ["dep:medulla-stream", "medulla-stream/cdc-kafka", "streaming"]
 compute-dist = ["raft"]
 cost = ["server"]
-cypher = ["dep:medulla-query", "medulla-query/cypher", ]
+cypher = ["medulla-cypher/cypher"]
 datascience = []
 decide = ["dep:medulla-numeric", "medulla-numeric/decision", "dep:medulla-capabilities", "medulla-capabilities?/decide", "jobs", "redb", "shacl"]
 epistemic = ["dep:medulla-plan", "medulla-plan/epistemic", "dep:medulla-modality", "query"]
@@ -138,7 +142,7 @@ owl = ["dep:medulla-rdf", "medulla-rdf/owl", "sparql"]
 policy_export = ["security"]
 promql = ["dep:medulla-tsdb", "medulla-tsdb/promql", "obs"]
 quantum-agent-api = ["dep:medulla-capabilities", "medulla-capabilities/quantum", "server"]
-query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "dep:medulla-query", "medulla-query/sql", "dep:medulla-plan", "medulla-plan/query", "redb"]
+query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "medulla-cypher/sql", "dep:medulla-plan", "medulla-plan/query", "redb"]
 raft = ["dep:openraft", "server", "redb"]
 rdf = ["dep:medulla-rdf", "medulla-rdf/rdf", "server"]
 reasoning = []
@@ -165,7 +169,7 @@ viz-static-export = ["server"]
 wasm-udf = ["dep:medulla-plan", "medulla-plan?/wasm-udf", "server"]
 viz = ["dep:medulla-capabilities", "medulla-capabilities?/viz"]
 alignment = ["dep:medulla-modality"]
-numeric = ["dep:medulla-query", "medulla-query?/numeric", "dep:medulla-plan", "medulla-plan?/numeric", "dep:medulla-numeric"]
+numeric = ["medulla-sql-udfs/numeric", "medulla-sql/numeric", "dep:medulla-plan", "medulla-plan?/numeric", "dep:medulla-numeric"]
 cost-opt = ["dep:medulla-plan", "medulla-plan/cost-opt"]
 par-runtime = ["dep:medulla-plan", "medulla-plan/par-runtime"]
 text = ["dep:medulla-plan", "medulla-plan/text"]
@@ -174,8 +178,8 @@ tensor = ["dep:medulla-plan", "medulla-plan/tensor"]
 gpu = ["dep:medulla-plan", "medulla-plan/tensor-gpu"]
 gpu-cuda = ["dep:medulla-plan", "medulla-plan/tensor-gpu-cuda"]
 owl-plan = ["dep:medulla-plan", "medulla-plan/owl"]
-cypher-plan = ["dep:medulla-query", "medulla-query/cypher-plan"]
-result-cache = ["dep:medulla-query", "medulla-query?/result-cache"]
+cypher-plan = ["medulla-cypher/cypher-plan"]
+result-cache = ["medulla-cypher/result-cache"]
 sparql-hash = ["dep:medulla-rdf", "medulla-rdf/sparql-hash"]
 rdf-xml = ["dep:medulla-rdf", "medulla-rdf/rdf-xml"]
 json-ld = ["dep:medulla-rdf", "medulla-rdf/json-ld"]

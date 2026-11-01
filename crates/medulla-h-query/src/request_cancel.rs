@@ -1,7 +1,7 @@
 //! Request-scoped cancellation registry (CONCEPT:MEDULLA-KG.query.streaming-spillable-collect, L36).
 //!
-//! `medulla_query::sql::exec::collect_streaming` (the batch-at-a-time SQL collect path,
-//! MEDULLA-P1-4) already checks a [`medulla_query::CancellationToken`] between batches — but
+//! `medulla_sql::sql::exec::collect_streaming` (the batch-at-a-time SQL collect path,
+//! MEDULLA-P1-4) already checks a [`medulla_sql::sql::CancellationToken`] between batches — but
 //! before this module every served `Method::Sql` call built a FRESH, never-cancelled
 //! token internally (`exec_sql_typed_with_tables`), so a client cancel or a server-side
 //! timeout had no live token to trip: cancellation was wired end-to-end EXCEPT for the
@@ -21,7 +21,7 @@ use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
 
 use medulla_kernel::lock_recovery::LockRecovery;
-use medulla_query::CancellationToken;
+use medulla_sql::sql::CancellationToken;
 
 fn registry() -> &'static Mutex<HashMap<u64, CancellationToken>> {
     static REG: OnceLock<Mutex<HashMap<u64, CancellationToken>>> = OnceLock::new();

@@ -18,7 +18,10 @@ leaves a compiling workspace; a dependency that runs up the chain is reported as
 VIOLATION and stops the move (`--plan` prints them). Cargo manifests get
 the new dependency, forwarded features and the used third-party dependencies.
 
-    move_leaf_modules.py --from medulla-types --to medulla-decision-types [--root R] [--plan]
+    move_leaf_modules.py --from medulla-types --to medulla-decision-types [--root R] [--plan] [--chain a,b,c]
+
+--chain overrides the order (lowest first); a staying module is flagged only when its own target
+crate ranks below the crate being moved to.
 """
 from __future__ import annotations
 
@@ -190,6 +193,7 @@ def plan(root: Path, frm: str, to: str, chain: list[str] | None = None):
     # module lives once <to> has moved; it, not the target map, drives the rewrite.
     chain = chain or load_chain(root)
     rank = {c: i for i, c in enumerate(chain)}
+    target = dict(assign)
     rank_to = rank[to]
     moving = {m for m in mods if assign[m] == to}
     phys = {m: (to if m in moving else (frm if m in mods else assign[m])) for m in allmods}
@@ -198,7 +202,7 @@ def plan(root: Path, frm: str, to: str, chain: list[str] | None = None):
         for d in ds:
             if m in moving and phys[d] not in (frm, to) and rank.get(phys[d], 99) > rank_to:
                 pinned[d] = f"VIOLATION: moving {m} needs {d} in higher {phys[d]}"
-            if m in mods and m not in moving and d in moving:
+            if m in mods and m not in moving and d in moving and rank.get(target[m], 10**6) < rank_to:
                 pinned[m] = f"VIOLATION: {m} stays in {frm} (target {assign[m]}) but needs moving {d}"
             if m in moving and phys[d] == frm and rank.get(assign[d], 0) > rank_to:
                 pinned[d] = f"VIOLATION: moving {m} needs {d} whose target {assign[d]} is above {to}"
@@ -384,7 +388,16 @@ def sync_target_manifest(root: Path, frm: str, to: str):
         ident = snake(dep)
         if re.search(r"\b" + ident + r"\b", srcs) or (dep == "schemars" and "JsonSchema" in raw) or (dep == "strum" and "strum" in raw):
             m = re.search(r"(?m)^" + re.escape(dep) + r"\s*=.*$", ct_text)
-            ct = add_line(ct, "dependencies", m.group(0))
+            spec = m.group(0)
+            end = m.end()
+            while spec.count("[") + spec.count("{") > spec.count("]") + spec.count("}"):
+                nl = ct_text.index("\n", end) if "\n" in ct_text[end:] else len(ct_text)
+                nxt = ct_text[end:nl + 1] if end < len(ct_text) else ""
+                end = nl + 1
+                spec += nxt.rstrip("\n") and "\n" + nxt.rstrip("\n")
+                if end >= len(ct_text):
+                    break
+            ct = add_line(ct, "dependencies", spec)
     names = set(FEAT.findall(raw))
     cfeat = tomllib.loads(ct).get("features", {})
     ffeat = fman.get("features", {})
@@ -436,10 +449,10 @@ def main() -> int:
     ap.add_argument("--to", required=True)
     ap.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
     ap.add_argument("--plan", action="store_true")
-    ap.add_argument("--chain", default="", help="comma list of crates, lowest first (default: [types_split].chain)")
+    ap.add_argument("--chain", help="comma-separated crate order, lowest first (default: [types_split].chain)")
     a = ap.parse_args()
     root, frm, to = a.root, a.frm, a.to
-    assign, pinned, deps, rn, mods, lib_text = plan(root, frm, to, [c for c in a.chain.split(',') if c])
+    assign, pinned, deps, rn, mods, lib_text = plan(root, frm, to, a.chain.split(",") if a.chain else None)
     per: dict[str, int] = {}
     for m, c in assign.items():
         paths = mods.get(m) or list_mods(root / "crates" / c / "src").get(m, [])

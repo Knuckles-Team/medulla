@@ -1060,14 +1060,14 @@ fn sql_catalog_compile_declares_one_retry_stable_typed_source_dirty_intent() {
 #[cfg(all(feature = "query", feature = "redb"))]
 #[test]
 fn sql_source_rows_receipt_version_and_dirty_intent_commit_and_replay_atomically() {
-    let (store, _path) = medulla_query::TableStore::open_temp().unwrap();
-    let mut txn = medulla_query::TableTxn::new();
-    txn.push(medulla_query::TxnOp::CreateTable {
-        schema: medulla_query::TableSchema::new(
+    let (store, _path) = medulla_table_store::tables::TableStore::open_temp().unwrap();
+    let mut txn = medulla_table_store::tables::TableTxn::new();
+    txn.push(medulla_table_store::tables::TxnOp::CreateTable {
+        schema: medulla_tables::schema::TableSchema::new(
             "semantic_dirty_rows",
-            vec![medulla_query::Column::new(
+            vec![medulla_tables::schema::Column::new(
                 "id",
-                medulla_query::ColumnType::BigInt,
+                medulla_tables::schema::ColumnType::BigInt,
                 false,
                 true,
             )],

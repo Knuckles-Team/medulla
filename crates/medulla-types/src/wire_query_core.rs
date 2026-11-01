@@ -69,7 +69,7 @@ pub enum Pred {
     /// `$.a[*]`, wildcard) evaluated against the row's decoded JSON; `op` is the
     /// existence / equality / `@>`-containment test. This is the lowered form of the
     /// Postgres JSON operators (`->`, `->>`, `@>`, `jsonb_path_query`) and a Mongo-style
-    /// `$match` — see `medulla_query::sql::classify`. Like the spatial preds it is NOT lowered
+    /// `$match` — see `medulla_sql::sql::classify`. Like the spatial preds it is NOT lowered
     /// to SQL (DataFusion has no JSONPath): `medulla-plan`'s FILTER leg splits it out and
     /// applies it per-row against the stored JSON, and the planner can consult medulla-core's
     /// inverted path-index for candidate selectivity. PURE serde here (a string, a small

@@ -43,7 +43,8 @@ use medulla_server_api::sql_catalog_acl::revoke;
 use medulla_server_api::sql_catalog_acl::with_source_authority_write;
 use medulla_server_api::sql_tables::tenant_table_store;
 use medulla_server_api::sql_tables::test_persist_dir;
-use medulla_query::{Column, ColumnType, TableSchema, TableStore, TableTxn, TxnOp};
+use medulla_tables::{schema::Column, schema::ColumnType, schema::TableSchema};
+use medulla_table_store::{tables::TableStore, tables::TableTxn, tables::TxnOp};
 // `CmpOp` exists in BOTH medulla_query and medulla_types and they are distinct types.
 // `TxnOp::Update`'s selector is an `medulla_types::RowPredicate`, so this is the
 // one that belongs here; importing medulla_query's next to it is the mistake that

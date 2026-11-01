@@ -12,7 +12,7 @@
 //!
 //! ## What moves
 //! Rows flow between the `.db` file and the caller's owner-scoped user-table store
-//! (`medulla_query::TableStore`, behind `query`) — the SAME durable store the `Method::Sql`
+//! (`medulla_table_store::tables::TableStore`, behind `query`) — the SAME durable store the `Method::Sql`
 //! DDL/DML path and the pgwire shim write, so a table imported here is immediately
 //! visible to `SELECT … FROM <table>` over every SQL surface. Both ops are BATCH — ONE
 //! engine round-trip reads/writes the whole file (import: one `insert_rows` per table;
@@ -20,7 +20,7 @@
 //!
 //! ## Type mapping (dynamic ↔ typed)
 //! SQLite is dynamically typed; the engine store is statically typed. On IMPORT each
-//! column's declared type is mapped by SQLite affinity to an `medulla_query::ColumnType`
+//! column's declared type is mapped by SQLite affinity to an `medulla_tables::schema::ColumnType`
 //! (INTEGER→BigInt, REAL→Double, TEXT→Text, BLOB/none→Bytes, numeric→Double) and every
 //! column is imported NULLABLE + non-PK so exact stored values pass through the store's
 //! coercion unchanged (constraints are not mirrored — VALUES are). On EXPORT the inverse
@@ -28,7 +28,8 @@
 
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_mutation_types::mutation_scope::MutationSurface;
-use medulla_query::{Cell, Column, ColumnType, TableSchema, TableStore, TableTxn, TxnOp};
+use medulla_tables::{schema::Cell, schema::Column, schema::ColumnType, schema::TableSchema};
+use medulla_table_store::{tables::TableStore, tables::TableTxn, tables::TxnOp};
 use medulla_sqlite_format::{ColumnDef as SqliteColumnDef, Reader, Value as SqliteValue, Writer};
 use serde_json::Value as JsonValue;
 use std::path::{Path, PathBuf};
@@ -774,7 +775,7 @@ mod tests {
     use std::sync::atomic::AtomicUsize;
     use std::sync::{Arc, Barrier};
 
-    use medulla_query::tables::schema::ArrayElemType;
+    use medulla_tables::schema::ArrayElemType;
 
     use super::*;
     use medulla_kernel::test_rendezvous::meet;

@@ -12,6 +12,11 @@ name = "medulla_h_query"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-cypher = { path = "../medulla-cypher" }
+medulla-sql = { path = "../medulla-sql" }
+medulla-sql-udfs = { path = "../medulla-sql-udfs" }
+medulla-table-store = { path = "../medulla-table-store" }
+medulla-tables = { path = "../medulla-tables" }
 async-trait = { version = "0.1", optional = true }
 hex = "0.4"
 hmac = "0.12"
@@ -30,7 +35,6 @@ medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-persistence = { path = "../medulla-persistence" }
 medulla-plan = { path = "../medulla-plan", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
-medulla-query = { path = "../medulla-query", optional = true }
 medulla-rdf = { path = "../medulla-rdf", optional = true }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-server-api = { path = "../medulla-server-api" }
@@ -66,7 +70,7 @@ medulla-mining = { path = "../medulla-mining" }
 test-support = []
 alignment = ["dep:medulla-modality", "dep:medulla-alignment", ]
 ann-redb = ["redb"]
-cypher = ["dep:medulla-query", "medulla-query/cypher", ]
+cypher = ["medulla-cypher/cypher"]
 decide = ["dep:medulla-capabilities", "medulla-capabilities?/decide", "jobs", "redb", "shacl"]
 epistemic = ["dep:medulla-plan", "medulla-plan/epistemic", "dep:medulla-modality", "dep:medulla-epistemic", "query"]
 epistemic-causal = ["dep:medulla-epistemic", "medulla-epistemic/epistemic-causal", "epistemic"]
@@ -86,11 +90,11 @@ nl-query = ["dep:medulla-plan", "medulla-plan/nl-query", "query"]
 obda = ["sparql", "query"]
 owl = ["dep:medulla-rdf", "medulla-rdf/owl", "sparql"]
 owl-plan = ["dep:medulla-plan", "medulla-plan/owl", "owl", "query"]
-query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "dep:medulla-query", "medulla-query/sql", "dep:medulla-plan", "medulla-plan/query", "redb"]
+query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "medulla-cypher/sql", "dep:medulla-plan", "medulla-plan/query", "redb"]
 raft = ["redb"]
 rdf = ["dep:medulla-rdf", "medulla-rdf/rdf", ]
 redb = ["dep:medulla-storage", "dep:medulla-transaction", ]
-result-cache = ["dep:medulla-query", "medulla-query?/result-cache", ]
+result-cache = ["medulla-cypher/result-cache"]
 security = ["redb"]
 shacl = ["dep:medulla-shacl", "rdf"]
 shex = ["dep:medulla-shex", "rdf"]
@@ -108,14 +112,14 @@ modality-serving = ["dep:medulla-modality", "dep:medulla-capabilities", "medulla
 asr-whisper = ["dep:medulla-capabilities", "medulla-capabilities/asr-native"]
 quantum-agent-api = ["dep:medulla-capabilities", "medulla-capabilities/quantum"]
 full = ["dep:medulla-graphql", "medulla-graphql/crossmodal-tsdb"]
-numeric = ["dep:medulla-query", "medulla-query?/numeric", "dep:medulla-plan", "medulla-plan?/numeric"]
+numeric = ["medulla-sql-udfs/numeric", "medulla-sql/numeric", "dep:medulla-plan", "medulla-plan?/numeric"]
 cost-opt = ["dep:medulla-plan", "medulla-plan/cost-opt"]
 par-runtime = ["dep:medulla-plan", "medulla-plan/par-runtime"]
 stream = ["dep:medulla-plan", "medulla-plan/stream"]
 wasm-udf = ["dep:medulla-plan", "medulla-plan?/wasm-udf"]
 gpu = ["dep:medulla-plan", "medulla-plan/tensor-gpu"]
 gpu-cuda = ["dep:medulla-plan", "medulla-plan/tensor-gpu-cuda"]
-cypher-plan = ["dep:medulla-query", "medulla-query/cypher-plan"]
+cypher-plan = ["medulla-cypher/cypher-plan"]
 sparql-hash = ["dep:medulla-rdf", "medulla-rdf/sparql-hash"]
 rdf-xml = ["dep:medulla-rdf", "medulla-rdf/rdf-xml"]
 json-ld = ["dep:medulla-rdf", "medulla-rdf/json-ld"]

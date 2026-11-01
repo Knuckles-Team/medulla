@@ -50,7 +50,8 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 use hmac::{Hmac, Mac};
-use medulla_query::{Cell, Column, ColumnType, TableSchema, TableStore, TableTxn, TxnOp};
+use medulla_tables::{schema::Cell, schema::Column, schema::ColumnType, schema::TableSchema};
+use medulla_table_store::{tables::TableStore, tables::TableTxn, tables::TxnOp};
 use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -159,7 +160,7 @@ pub enum SqlPrivilege {
 }
 
 /// Batch-local proof that `authority` may operate on exactly one table that an
-/// earlier `CREATE TABLE` in the same atomic [`medulla_query::TableTxn`] will create.
+/// earlier `CREATE TABLE` in the same atomic [`medulla_table_store::tables::TableTxn`] will create.
 ///
 /// The fields stay private so callers cannot manufacture or retarget this
 /// capability. It is issued only when the physical table and ACL owner are both
@@ -662,7 +663,7 @@ pub fn begin_provisional_create(
 }
 
 /// `true` only for the exact, deterministic message
-/// [`medulla_server::sql_tables`]'s underlying `medulla_query::TableStore` raises when
+/// [`medulla_server::sql_tables`]'s underlying `medulla_table_store::tables::TableStore` raises when
 /// an `INSERT` loses a UNIQUE-constraint race (`validate_uniqueness_in` in
 /// `medulla-query/src/tables/store.rs`) — never for any other failure. Used to
 /// narrowly distinguish "someone else's concurrent insert already won" (a
@@ -1186,7 +1187,7 @@ fn row_to_map(schema: &TableSchema, row: &[Cell]) -> serde_json::Map<String, Val
 /// AND `extra` (if any) with a `rls_column = principal` predicate (if `rls_column`
 /// is declared) — the ONE place this fold happens, shared by [`AuthorizedTable`]'s
 /// own methods (single-table open/select/update/delete) AND the wire-level
-/// pre-commit rewrite of a buffered multi-op [`medulla_query::TxnOp::Update`]/`Delete`
+/// pre-commit rewrite of a buffered multi-op [`medulla_table_store::tables::TxnOp::Update`]/`Delete`
 /// (CONCEPT:NE-046 — MEDULLA-WIRE-CATALOG), which cannot construct an [`AuthorizedTable`]
 /// at all (a batched `TableTxn` commits as ONE atomic redb write via
 /// `TableStore::commit_txn_batch`, never through this type's own one-shot
@@ -1218,7 +1219,7 @@ fn scoped_predicate(
 /// whatever value the caller DID supply otherwise (item 3: a caller can never
 /// insert a row visible to a different principal than themselves). Shared by
 /// the test-only authorized-table insert helper and the wire-level pre-commit rewrite of a
-/// buffered [`medulla_query::TxnOp::Insert`] for the same reason [`scoped_predicate`]
+/// buffered [`medulla_table_store::tables::TxnOp::Insert`] for the same reason [`scoped_predicate`]
 /// is shared.
 fn stamp_insert_rls(
     rls_column: Option<&str>,
@@ -1267,7 +1268,7 @@ fn primary_key_indexes(schema: &TableSchema) -> Result<Vec<usize>, String> {
         .filter_map(|(index, column)| column.primary_key.then_some(index))
         .collect();
     let table_primary_key = schema.constraints().iter().find_map(|constraint| {
-        if let medulla_query::tables::schema::TableConstraint::PrimaryKey { columns, .. } =
+        if let medulla_tables::schema::TableConstraint::PrimaryKey { columns, .. } =
             constraint
         {
             Some(columns)
@@ -1422,7 +1423,7 @@ fn semantic_cursor_tag(
     authority: &CarrierAuthority,
     selector: &medulla_index_types::semantic_index::SqlColumnRef,
     acl: &SqlSourceAclSnapshot,
-    page: &medulla_query::tables::store::TableRowSnapshot,
+    page: &medulla_table_store::tables::store::TableRowSnapshot,
     physical_position: &[u8; 8],
 ) -> Result<SemanticCursorMac, String> {
     let mut mac = semantic_cursor_base_mac(
@@ -1443,7 +1444,7 @@ fn semantic_cursor_tag(
 
 fn semantic_complete_snapshot_receipt_digest(
     binding: SemanticCursorBinding<'_>,
-    page: &medulla_query::tables::store::TableRowSnapshot,
+    page: &medulla_table_store::tables::store::TableRowSnapshot,
     input_cursor: Option<&SemanticTextCursor>,
     records: &[SemanticTextRecord],
     visible_null_count: usize,
@@ -1511,7 +1512,7 @@ fn semantic_cursor(
     authority: &CarrierAuthority,
     selector: &medulla_index_types::semantic_index::SqlColumnRef,
     acl: &SqlSourceAclSnapshot,
-    page: &medulla_query::tables::store::TableRowSnapshot,
+    page: &medulla_table_store::tables::store::TableRowSnapshot,
     physical_after_row_id: u64,
 ) -> Result<SemanticTextCursor, String> {
     let physical_position = physical_after_row_id.to_be_bytes();
@@ -1551,7 +1552,7 @@ fn project_semantic_text_rows(
     tenant_scope: &str,
     selector: &medulla_index_types::semantic_index::SqlColumnRef,
     schema: &TableSchema,
-    rows: &[medulla_query::tables::store::TableSnapshotRow],
+    rows: &[medulla_table_store::tables::store::TableSnapshotRow],
     column_index: usize,
     primary_key_indexes: &[usize],
 ) -> Result<SemanticRowProjection, String> {
@@ -1569,11 +1570,11 @@ fn project_semantic_text_rows(
                     .len()
                     .checked_add(32)
                     .ok_or_else(|| "semantic SQL source payload is too large".to_string())?;
-                if record_bytes > medulla_query::tables::store::ROW_SNAPSHOT_MAX_BYTES {
+                if record_bytes > medulla_table_store::tables::store::ROW_SNAPSHOT_MAX_BYTES {
                     return Err("semantic SQL source text exceeds snapshot byte limit".to_string());
                 }
                 if payload_bytes.checked_add(record_bytes).is_none_or(|bytes| {
-                    bytes > medulla_query::tables::store::ROW_SNAPSHOT_MAX_BYTES
+                    bytes > medulla_table_store::tables::store::ROW_SNAPSHOT_MAX_BYTES
                 }) {
                     payload_cursor = last_completed_row_id;
                     break;
@@ -1995,7 +1996,7 @@ pub fn register_owner_after_create_in(
 pub fn authorized_graph_table_sql(
     authority: &CarrierAuthority,
     persist_dir: &Path,
-    query: &medulla_query::GraphTableQuery,
+    query: &medulla_sql::sql::GraphTableQuery,
 ) -> Result<String, String> {
     require_source_authority()?;
     let tenant_scope = authority.tenant_scope();
@@ -2020,7 +2021,7 @@ pub fn authorized_graph_table_sql(
     // admitted graph; this re-checks the pinned schema digests at READ time so a
     // bypass fails closed instead of lowering against a schema that moved.
     store.verify_property_graph_dependencies(&record)?;
-    medulla_query::sql::lower_graph_table(query, &record.accepted_definition, tenant_scope)
+    medulla_sql::sql::lower_graph_table(query, &record.accepted_definition, tenant_scope)
         .map(|plan| plan.to_sql())
 }
 
@@ -2030,7 +2031,7 @@ pub fn authorized_graph_table_sql(
 pub(crate) fn authorized_property_graph_records(
     authority: &CarrierAuthority,
     persist_dir: &Path,
-) -> Result<Vec<medulla_query::tables::PropertyGraphCatalogRecord>, String> {
+) -> Result<Vec<medulla_table_store::tables::PropertyGraphCatalogRecord>, String> {
     require_source_authority()?;
     let tenant_scope = authority.tenant_scope();
     let store = sql_tables::tenant_table_store(tenant_scope, persist_dir)?;
@@ -2094,7 +2095,7 @@ pub fn authorized_read_store(
 fn project_read_store(
     authority: &CarrierAuthority,
     persist_dir: &Path,
-    narrowing: Option<&medulla_query::UserAnnPushdown>,
+    narrowing: Option<&medulla_sql::sql::UserAnnPushdown>,
     read_only: Option<&dyn ReadOnlyRelations>,
 ) -> Result<AuthorizedReadStore, String> {
     let names = selectable_tables(authority, persist_dir)?;
@@ -2125,7 +2126,7 @@ fn project_read_store(
     }
     let projection_scope = projection.store().index_scope().to_string();
     for record in property_graphs {
-        let definition = medulla_query::tables::PropertyGraphDefinition::new(
+        let definition = medulla_table_store::tables::PropertyGraphDefinition::new(
             projection_scope.clone(),
             record.accepted_definition.name.clone(),
             false,
@@ -3695,7 +3696,7 @@ mod tests {
 
     #[test]
     fn semantic_record_identity_respects_composite_primary_key_order() {
-        use medulla_query::tables::schema::TableConstraint;
+        use medulla_tables::schema::TableConstraint;
 
         let columns = vec![
             Column::new("left", ColumnType::Text, false, false),
@@ -3809,7 +3810,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             first.records.len(),
-            medulla_query::tables::store::ROW_SNAPSHOT_MAX_RECORDS
+            medulla_table_store::tables::store::ROW_SNAPSHOT_MAX_RECORDS
         );
         assert!(first.complete_snapshot_receipt_digest.is_none());
         let cursor = first.next_cursor.unwrap();
@@ -3907,13 +3908,13 @@ mod tests {
         );
 
         let current_schema = reopened.store.get_schema("documents").unwrap().unwrap();
-        let migration = medulla_query::tables::migration::SchemaMigration::for_schema(
+        let migration = medulla_tables::migration::SchemaMigration::for_schema(
             "semantic-cursor-schema-change",
             alice.tenant_scope(),
             0,
             &current_schema,
             vec![
-                medulla_query::tables::migration::SchemaMigrationOperation::AddColumn {
+                medulla_tables::migration::SchemaMigrationOperation::AddColumn {
                     column: Column::new("label", ColumnType::Text, true, false),
                 },
             ],
@@ -3966,7 +3967,7 @@ mod tests {
         .unwrap();
         let bob_insert =
             open_authorized_table(&bob, &dir, "documents", SqlPrivilege::Insert).unwrap();
-        let hidden = (0..medulla_query::tables::store::ROW_SNAPSHOT_MAX_RECORDS)
+        let hidden = (0..medulla_table_store::tables::store::ROW_SNAPSHOT_MAX_RECORDS)
             .map(|id| vec![Value::from(id as i64), Value::from("hidden")])
             .collect::<Vec<_>>();
         bob_insert
@@ -4065,7 +4066,7 @@ mod tests {
                 &[vec![
                     Value::from(1),
                     Value::from(
-                        "x".repeat(medulla_query::tables::store::ROW_SNAPSHOT_MAX_BYTES + 1),
+                        "x".repeat(medulla_table_store::tables::store::ROW_SNAPSHOT_MAX_BYTES + 1),
                     ),
                 ]],
             )
@@ -4138,8 +4139,8 @@ mod tests {
         let ddl = "CREATE PROPERTY GRAPH shop VERTEX TABLES (\
                    customers KEY (customer_id) LABEL customer PROPERTIES (name), \
                    orders KEY (order_id) LABEL \"order\" PROPERTIES (ordered_when))";
-        let medulla_query::tables::PropertyGraphStatement::Create(definition) =
-            medulla_query::sql::parse_property_graph_ddl(ddl, owner.tenant_scope()).unwrap()
+        let medulla_table_store::tables::PropertyGraphStatement::Create(definition) =
+            medulla_sql::sql::parse_property_graph_ddl(ddl, owner.tenant_scope()).unwrap()
         else {
             panic!("expected CREATE PROPERTY GRAPH");
         };
@@ -4150,12 +4151,12 @@ mod tests {
     }
 
     #[cfg(feature = "query")]
-    fn graph_table_query(graph: &str) -> medulla_query::GraphTableQuery {
+    fn graph_table_query(graph: &str) -> medulla_sql::sql::GraphTableQuery {
         let sql = format!(
             "SELECT * FROM GRAPH_TABLE ({graph} MATCH (c:customer) COLUMNS (c.name AS customer_name))"
         );
-        match medulla_query::classify(&sql).unwrap() {
-            medulla_query::StatementKind::GraphTableReadRequiresCatalogAdmission(query) => query,
+        match medulla_sql::sql::classify(&sql).unwrap() {
+            medulla_sql::sql::StatementKind::GraphTableReadRequiresCatalogAdmission(query) => query,
             _ => panic!("expected a GRAPH_TABLE read"),
         }
     }
@@ -4217,9 +4218,9 @@ mod tests {
             .property_graph(alice.tenant_scope(), &graph_table_query("shop").graph)
             .unwrap()
             .unwrap();
-        let mut txn = medulla_query::TableTxn::new();
-        txn.push(medulla_query::TxnOp::PropertyGraphDdl(
-            medulla_query::PropertyGraphTxnOp::GrantSelect {
+        let mut txn = medulla_table_store::tables::TableTxn::new();
+        txn.push(medulla_table_store::tables::TxnOp::PropertyGraphDdl(
+            medulla_table_store::tables::PropertyGraphTxnOp::GrantSelect {
                 tenant_scope: alice.tenant_scope().to_string(),
                 name: graph_table_query("shop").graph,
                 expected_object_id: record.object_id,
@@ -4273,9 +4274,9 @@ mod tests {
             .property_graph(alice.tenant_scope(), &query.graph)
             .unwrap()
             .unwrap();
-        let mut txn = medulla_query::TableTxn::new();
-        txn.push(medulla_query::TxnOp::PropertyGraphDdl(
-            medulla_query::PropertyGraphTxnOp::GrantSelect {
+        let mut txn = medulla_table_store::tables::TableTxn::new();
+        txn.push(medulla_table_store::tables::TxnOp::PropertyGraphDdl(
+            medulla_table_store::tables::PropertyGraphTxnOp::GrantSelect {
                 tenant_scope: alice.tenant_scope().to_string(),
                 name: query.graph,
                 expected_object_id: record.object_id,

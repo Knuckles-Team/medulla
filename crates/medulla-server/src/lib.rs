@@ -1265,7 +1265,7 @@ mod tests {
         let view = core.analysis_snapshot();
         let semantic = core.semantic_store.read().clone();
         // The oracle's FILTER leg drives DataFusion via a current-thread runtime
-        // (medulla_query::exec_sql), which cannot nest inside this #[tokio::test] reactor —
+        // (medulla_sql::sql::exec_sql), which cannot nest inside this #[tokio::test] reactor —
         // run it off-reactor, exactly as the served handler does via spawn_blocking.
         let oracle = tokio::task::spawn_blocking(move || {
             medulla_plan::oracle::separate_surfaces(
@@ -2306,7 +2306,7 @@ pub mod shex_served;
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
         let state = test_state();
-        // `node_type`, not `type`: `medulla_query::cypher::exec::node_has_label`
+        // `node_type`, not `type`: `medulla_cypher::cypher::exec::node_has_label`
         // deliberately treats a bare `type`/`label` property as a legacy payload
         // that must never satisfy a Cypher node label (its `CREATE`/`MERGE` path
         // canonicalizes onto `node_type` only) — a documented, intentional
@@ -6108,7 +6108,7 @@ ex:Animal rdfs:subClassOf ex:LivingThing .
 
     /// SparqlVirtual Method round-trips through dispatch (CONCEPT:MEDULLA-KG.query.r2rml-virtual-graph /
     /// CONCEPT:MEDULLA-KG.query.obda-query-rewrite): a real user SQL table (created via
-    /// `Method::Sql` DDL/DML — the SAME owner-scoped `medulla_query::TableStore`
+    /// `Method::Sql` DDL/DML — the SAME owner-scoped `medulla_table_store::tables::TableStore`
     /// `ImportSqliteFile` and the pgwire shim resolve for this caller) is exposed as RDF via a compact R2RML-style mapping and queried
     /// with SPARQL — WITHOUT any `AddTriples`/materialize step ever touching this graph.
     #[cfg(feature = "obda")]

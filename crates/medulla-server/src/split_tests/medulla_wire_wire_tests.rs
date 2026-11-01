@@ -9,15 +9,44 @@ use tokio::sync::RwLock;
 
 use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::protocol::Request;
-use medulla_query::{
-    AlterTableAction, AlterTablePlan, AnnIndexPlan, Column, ColumnType, ContinuousAggPlan,
-    CopyFormat, CopyPlan, CreateFunctionPlan, CreateTablePlan, CreateViewPlan, DeleteNodes,
-    DeleteNodesJoin, DeleteTable, DropFunctionPlan, DropTablePlan, DropViewPlan, HypertablePlan,
-    IndexCatalogTxnOp, InsertNodes, InsertNodesSelect, InsertSelect, InsertTable, OnConflict,
-    OnConflictAction, PgColType, PropertyGraphTxnOp, StatementKind, TableSchema, TableStore,
-    TableTxn, TxnOp, TypedColumn, TypedQueryResult, UpdateNodes, UpdateNodesJoin, UpdateTable,
-    WhereEq,
-};
+use medulla_sql::sql::AlterTableAction;
+use medulla_sql::sql::AlterTablePlan;
+use medulla_table_store::tables::ann_plan::AnnIndexPlan;
+use medulla_tables::schema::Column;
+use medulla_tables::schema::ColumnType;
+use medulla_sql::sql::ContinuousAggPlan;
+use medulla_sql::sql::CopyFormat;
+use medulla_sql::sql::CopyPlan;
+use medulla_sql::sql::CreateFunctionPlan;
+use medulla_sql::sql::CreateTablePlan;
+use medulla_sql::sql::CreateViewPlan;
+use medulla_sql::sql::DeleteNodes;
+use medulla_sql::sql::DeleteNodesJoin;
+use medulla_sql::sql::DeleteTable;
+use medulla_sql::sql::DropFunctionPlan;
+use medulla_sql::sql::DropTablePlan;
+use medulla_sql::sql::DropViewPlan;
+use medulla_table_store::tables::ann_plan::HypertablePlan;
+use medulla_table_store::tables::IndexCatalogTxnOp;
+use medulla_sql::sql::InsertNodes;
+use medulla_sql::sql::InsertNodesSelect;
+use medulla_sql::sql::InsertSelect;
+use medulla_sql::sql::InsertTable;
+use medulla_sql::sql::OnConflict;
+use medulla_sql::sql::OnConflictAction;
+use medulla_sql::sql::PgColType;
+use medulla_table_store::tables::PropertyGraphTxnOp;
+use medulla_sql::sql::StatementKind;
+use medulla_tables::schema::TableSchema;
+use medulla_table_store::tables::TableStore;
+use medulla_table_store::tables::TableTxn;
+use medulla_table_store::tables::TxnOp;
+use medulla_sql::sql::TypedColumn;
+use medulla_sql::sql::TypedQueryResult;
+use medulla_sql::sql::UpdateNodes;
+use medulla_sql::sql::UpdateNodesJoin;
+use medulla_sql::sql::UpdateTable;
+use medulla_sql::sql::WhereEq;
 use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 use medulla_wire::wire::*;
@@ -237,7 +266,7 @@ mod ne_004_ne_005_tests {
 
     /// NE-004, DoD item 2: an injected failure AT the table-commit step
     /// (here, a natural one — the target table does not exist, which
-    /// `medulla_query::classify` cannot detect syntactically, only the table
+    /// `medulla_sql::sql::classify` cannot detect syntactically, only the table
     /// store's own commit-time schema lookup can) leaves ZERO graph writes
     /// applied. The graph side already landed durably by the time the table
     /// commit is attempted; this proves the synchronous COMPENSATION path
@@ -1953,8 +1982,8 @@ pub mod wired_catalog_tests {
         assert!(store
             .property_graph(
                 &canonical_tenant,
-                &medulla_query::tables::SqlName::new(vec![
-                    medulla_query::tables::SqlIdentifier::unquoted("social").unwrap(),
+                &medulla_table_store::tables::SqlName::new(vec![
+                    medulla_table_store::tables::SqlIdentifier::unquoted("social").unwrap(),
                 ])
                 .unwrap(),
             )

@@ -44,9 +44,9 @@ pub(super) async fn handle_sparql_virtual(
 }
 
 /// A [`medulla_virtual_graph::obda::ObdaSource`] backed by one table of the caller's TENANT-shared
-/// [`medulla_query::TableStore`], opened through an authorized [`AuthorizedTable`]
+/// [`medulla_table_store::tables::TableStore`], opened through an authorized [`AuthorizedTable`]
 /// (CONCEPT:NE-046 — MEDULLA-WIRE-CATALOG; CONCEPT:MEDULLA-KG.query.r2rml-virtual-graph). Bridges
-/// the SQL-side typed [`medulla_query::Cell`] to the OBDA seam's lexical `String` columns
+/// the SQL-side typed [`medulla_tables::schema::Cell`] to the OBDA seam's lexical `String` columns
 /// (R2RML templates/literal object maps consume the lexical form; typed SQL
 /// round-tripping through a `rr:datatype` object map is a documented follow-up,
 /// mirrored from the MEDULLA-101 `ObdaSource` contract). Rows come from
@@ -59,8 +59,8 @@ pub(super) async fn handle_sparql_virtual(
 /// column/predicate-pushed.
 #[cfg(feature = "obda")]
 struct TableStoreSource {
-    schema: medulla_query::TableSchema,
-    rows: Vec<Vec<medulla_query::Cell>>,
+    schema: medulla_tables::schema::TableSchema,
+    rows: Vec<Vec<medulla_tables::schema::Cell>>,
 }
 
 #[cfg(feature = "obda")]
@@ -89,8 +89,8 @@ impl TableStoreSource {
     /// The lexical form of one cell (R2RML templates/literal object maps consume a
     /// string; `Null` yields no lexical value so a template/column referencing it
     /// correctly omits the triple, per the OBDA `expand_template`/`term_for` contract).
-    fn lexical(cell: &medulla_query::Cell) -> Option<String> {
-        use medulla_query::Cell;
+    fn lexical(cell: &medulla_tables::schema::Cell) -> Option<String> {
+        use medulla_tables::schema::Cell;
         match cell {
             Cell::Null => None,
             Cell::Int(i) => Some(i.to_string()),

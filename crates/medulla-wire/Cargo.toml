@@ -12,6 +12,11 @@ name = "medulla_wire"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-cypher = { path = "../medulla-cypher" }
+medulla-sql = { path = "../medulla-sql" }
+medulla-sql-udfs = { path = "../medulla-sql-udfs" }
+medulla-table-store = { path = "../medulla-table-store" }
+medulla-tables = { path = "../medulla-tables" }
 async-trait = { version = "0.1", optional = true }
 futures = { version = "0.3", optional = true }
 hex = "0.4"
@@ -25,7 +30,6 @@ medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-persistence = { path = "../medulla-persistence" }
 medulla-plan = { path = "../medulla-plan", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
-medulla-query = { path = "../medulla-query", optional = true }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-server-api = { path = "../medulla-server-api" }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
@@ -71,7 +75,7 @@ obs = ["server", "tsdb", "text"]
 owl = ["sparql"]
 pgwire = ["dep:rustix", "dep:pgwire", "dep:futures", "query", "server"]
 policy_export = ["security"]
-query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "dep:medulla-query", "medulla-query/sql", "dep:medulla-plan", "medulla-plan/query", "redb"]
+query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "medulla-cypher/sql", "dep:medulla-plan", "medulla-plan/query", "redb"]
 raft = ["dep:futures", "server", "redb"]
 redb = []
 redis-wire = ["kv", "server"]
@@ -100,7 +104,7 @@ knowledge-batch = ["dep:medulla-plan", "medulla-plan/knowledge-batch", "dep:medu
 quantum-agent-api = ["dep:medulla-capabilities", "medulla-capabilities/quantum"]
 kvcache-compression = ["dep:medulla-kvcache", "medulla-kvcache/compression"]
 epistemic = ["dep:medulla-plan", "medulla-plan/epistemic"]
-numeric = ["dep:medulla-query", "medulla-query?/numeric", "dep:medulla-plan", "medulla-plan?/numeric"]
+numeric = ["medulla-sql-udfs/numeric", "medulla-sql/numeric", "dep:medulla-plan", "medulla-plan?/numeric"]
 cost-opt = ["dep:medulla-plan", "medulla-plan/cost-opt"]
 par-runtime = ["dep:medulla-plan", "medulla-plan/par-runtime"]
 federation-sql = ["dep:medulla-plan", "medulla-plan/federation-sql"]
@@ -112,9 +116,9 @@ wasm-udf = ["dep:medulla-plan", "medulla-plan?/wasm-udf"]
 gpu = ["dep:medulla-plan", "medulla-plan/tensor-gpu"]
 gpu-cuda = ["dep:medulla-plan", "medulla-plan/tensor-gpu-cuda"]
 owl-plan = ["dep:medulla-plan", "medulla-plan/owl"]
-cypher = ["dep:medulla-query", "medulla-query/cypher"]
-cypher-plan = ["dep:medulla-query", "medulla-query/cypher-plan"]
-result-cache = ["dep:medulla-query", "medulla-query?/result-cache"]
+cypher = ["medulla-cypher/cypher"]
+cypher-plan = ["medulla-cypher/cypher-plan"]
+result-cache = ["medulla-cypher/result-cache"]
 promql = ["dep:medulla-tsdb", "medulla-tsdb/promql"]
 sqlite-file = ["dep:rustix"]
 

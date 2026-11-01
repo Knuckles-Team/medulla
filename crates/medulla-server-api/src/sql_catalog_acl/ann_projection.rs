@@ -17,7 +17,13 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use medulla_query::{Cell, TableStore, UserAnnDecision, UserAnnPushdown};
+use medulla_tables::schema::Cell;
+
+use medulla_table_store::tables::TableStore;
+
+use medulla_sql::sql::UserAnnDecision;
+
+use medulla_sql::sql::UserAnnPushdown;
 
 use super::{
     open_authorized_table, project_read_store, selectable_tables, AuthorizedReadStore,
@@ -47,7 +53,7 @@ pub fn authorized_read_store_for_query(
     graph: &RequestGraph,
 ) -> Result<AuthorizedReadStore, String> {
     let tenant = sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)?;
-    let narrowing = match medulla_query::user_ann_decision(query, &tenant)? {
+    let narrowing = match medulla_sql::sql::user_ann_decision(query, &tenant)? {
         UserAnnDecision::Pushdown(pushdown) => Some(pushdown),
         UserAnnDecision::Declined(reason) => {
             tracing::debug!(
@@ -74,7 +80,7 @@ fn adopt_edge_index_status(
     graph: &RequestGraph,
     projection: &TableStore,
 ) -> Result<(), String> {
-    medulla_query::edge_index::install_edge_indexes(tenant, &graph.name, &graph.core)?;
+    medulla_cypher::edge_index::install_edge_indexes(tenant, &graph.name, &graph.core)?;
     projection
         .ann_authority()
         .adopt_statuses(graph.core.indexes().managed_statuses());
@@ -167,10 +173,14 @@ mod tests {
     use super::*;
     use crate::auth::VerifiedRequestContext;
     use crate::sql_tables::test_persist_dir;
-    use medulla_query::{
-        AnnIndexPlan, AnnMethod, AnnRefreshPolicy, AnnServingPath, Column, ColumnType, TableSchema,
-        VectorMetric,
-    };
+    use medulla_table_store::tables::ann_plan::AnnIndexPlan;
+    use medulla_table_store::tables::ann_plan::AnnMethod;
+    use medulla_table_store::tables::AnnRefreshPolicy;
+    use medulla_table_store::tables::AnnServingPath;
+    use medulla_tables::schema::Column;
+    use medulla_tables::schema::ColumnType;
+    use medulla_tables::schema::TableSchema;
+    use medulla_table_store::tables::ann_plan::VectorMetric;
     use serde_json::{json, Value};
 
     const TENANT: &str = "tenant-ann-projection";
@@ -251,7 +261,7 @@ mod tests {
         let projection =
             authorized_read_store_for_query(&authority(who), dir, sql, None, &no_graph()).unwrap();
         let view = medulla_graph_core::graph::GraphView::default();
-        medulla_query::exec_sql_typed_with_tables(&view, projection.store(), sql)
+        medulla_sql::sql::exec_sql_typed_with_tables(&view, projection.store(), sql)
             .unwrap()
             .rows
     }
