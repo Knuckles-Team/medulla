@@ -610,10 +610,10 @@ impl EmbeddedEngine {
         &self,
         graph: &str,
         sql: &str,
-    ) -> Result<medulla_sql::sql::TypedQueryResult, String> {
-        use medulla_sql::sql::StatementKind;
+    ) -> Result<medulla_sql_lang::sql::typed_result::TypedQueryResult, String> {
+        use medulla_sql_lang::sql::classify::StatementKind;
         let store = &self.inner.tables;
-        match medulla_sql::sql::classify(sql)? {
+        match medulla_sql_lang::sql::classify::classify(sql)? {
             // SELECT / WITH: the read path over the graph snapshot + the user tables.
             // Auto-create the (possibly empty) graph so a table-only SELECT works
             // without a pre-existing graph, matching the firehose write path.
@@ -721,9 +721,9 @@ impl EmbeddedEngine {
 #[cfg(feature = "query")]
 fn apply_alter_table(
     store: &medulla_table_store::tables::TableStore,
-    plan: medulla_sql::sql::AlterTablePlan,
+    plan: medulla_sql_lang::sql::classify::AlterTablePlan,
 ) -> Result<(), String> {
-    use medulla_sql::sql::AlterTableAction as A;
+    use medulla_sql_lang::sql::classify::AlterTableAction as A;
     match plan.action {
         A::AddColumn(col) => {
             let columns = medulla_sql::columns_from_defs(std::slice::from_ref(&col))?;
@@ -746,11 +746,11 @@ fn apply_alter_table(
 
 /// A one-row `status` result for a DDL statement (CREATE/ALTER/DROP TABLE).
 #[cfg(feature = "query")]
-fn status_result(tag: &str) -> medulla_sql::sql::TypedQueryResult {
-    medulla_sql::sql::TypedQueryResult {
-        columns: vec![medulla_sql::sql::TypedColumn {
+fn status_result(tag: &str) -> medulla_sql_lang::sql::typed_result::TypedQueryResult {
+    medulla_sql_lang::sql::typed_result::TypedQueryResult {
+        columns: vec![medulla_sql_lang::sql::typed_result::TypedColumn {
             name: "status".to_string(),
-            ty: medulla_sql::sql::PgColType::Text,
+            ty: medulla_sql_lang::sql::typed_result::PgColType::Text,
         }],
         rows: vec![vec![serde_json::Value::String(tag.to_string())]],
     }
@@ -758,11 +758,11 @@ fn status_result(tag: &str) -> medulla_sql::sql::TypedQueryResult {
 
 /// A one-row `inserted` count result for an INSERT statement.
 #[cfg(feature = "query")]
-fn count_result(n: usize) -> medulla_sql::sql::TypedQueryResult {
-    medulla_sql::sql::TypedQueryResult {
-        columns: vec![medulla_sql::sql::TypedColumn {
+fn count_result(n: usize) -> medulla_sql_lang::sql::typed_result::TypedQueryResult {
+    medulla_sql_lang::sql::typed_result::TypedQueryResult {
+        columns: vec![medulla_sql_lang::sql::typed_result::TypedColumn {
             name: "inserted".to_string(),
-            ty: medulla_sql::sql::PgColType::Int8,
+            ty: medulla_sql_lang::sql::typed_result::PgColType::Int8,
         }],
         rows: vec![vec![serde_json::Value::from(n as i64)]],
     }
