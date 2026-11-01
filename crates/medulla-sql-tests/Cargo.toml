@@ -17,7 +17,7 @@ medulla-result-types = { path = "../medulla-result-types" }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 tokio = { version = "1.53", features = ["rt", "rt-multi-thread", "macros"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
-medulla-table-store = { path = "../medulla-table-store" }
+medulla-table-store = { path = "../medulla-table-store", features = ["dev-scope-grant"] }
 medulla-tables = { path = "../medulla-tables" }
 medulla-sql-udfs = { path = "../medulla-sql-udfs" }
 medulla-cypher = { path = "../medulla-cypher" }

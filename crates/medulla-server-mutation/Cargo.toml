@@ -82,4 +82,5 @@ streaming = ["medulla-server-api/streaming", "medulla-server-cdc/streaming"]
 test-support = ["medulla-server-api/test-support", "medulla-server-auth/test-support"]
 
 [dev-dependencies]
+medulla-table-store = { path = "../medulla-table-store", features = ["dev-scope-grant"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }

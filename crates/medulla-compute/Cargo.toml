@@ -43,7 +43,7 @@ reasoning = []
 # leaf-bound certificates and an independent verifier (`Method::Solve`). The
 # wire DTOs (validated models with integer rows and a lexicographic objective)
 # live in `medulla-types::solve`; this gates the search and the certificate verifier.
-solve = []
+solve = ["medulla-decision-policy/solve"]
 # RF-ADR-010 A2: `is_a` derivation, evidence classification and the task ->
 # capability closure the assembly layer reasons with. It builds and solves a
 # model, so it implies `solve`.
