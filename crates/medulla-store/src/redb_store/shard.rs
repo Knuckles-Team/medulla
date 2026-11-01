@@ -140,10 +140,7 @@ pub static IMPORT_AFTER_RESERVED_STAGE: NamedBarrierSlot = OnceLock::new();
 pub static GRAFT_BEFORE_PROTOCOL_LOCK: NamedBarrierSlot = OnceLock::new();
 
 #[cfg(all(any(test, feature = "test-support"), feature = "server"))]
-pub fn take_test_barrier(
-    slot: &NamedBarrierSlot,
-    graph_fname: &str,
-) -> Option<Arc<Barrier>> {
+pub fn take_test_barrier(slot: &NamedBarrierSlot, graph_fname: &str) -> Option<Arc<Barrier>> {
     let mut barrier = slot.get()?.lock().ok()?;
     if barrier
         .as_ref()
@@ -1238,11 +1235,13 @@ mod tests {
     use crate::redb_store::GRAPH_META;
     use crate::redb_store::NODES;
     use crate::redb_store::RAFT_LOG;
-    use medulla_protocol_types::mutation_batch::{authority_scope_for, DurabilityDomain};
-    use medulla_protocol_types::protocol::Method;
-    use medulla_types::{
-        MutationOperation, MutationSurface, VersionExpectation, MUTATION_BATCH_VERSION,
+    use medulla_mutation_types::mutation_scope::{
+        DurabilityDomain, MutationSurface, MUTATION_BATCH_VERSION,
     };
+    use medulla_protocol_types::mutation_batch::{
+        authority_scope_for, MutationOperation, VersionExpectation,
+    };
+    use medulla_protocol_types::protocol::Method;
     use redb::ReadableTable;
 
     fn temp_path(tag: &str) -> std::path::PathBuf {

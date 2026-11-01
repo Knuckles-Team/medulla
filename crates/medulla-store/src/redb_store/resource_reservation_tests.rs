@@ -5,9 +5,6 @@
 //! integration suites can layer on top without duplicating policy logic.
 
 use super::*;
-use medulla_mutation_types::mutation_scope::IncarnationId;
-use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
-use medulla_mutation_types::mutation_scope::ScopeTenantId;
 use crate::redb_store::resource::*;
 use crate::redb_store::shard::Shard;
 use crate::redb_store::shard::ShardWrite;
@@ -53,7 +50,8 @@ fn host() -> DurableResourceHost {
 
 fn request() -> ResourceReservationRequest {
     ResourceReservationRequest {
-        schema_version: medulla_result_types::epistemic_operations::ResourceReservationRequestSchemaVersion::V1,
+        schema_version:
+            medulla_result_types::epistemic_operations::ResourceReservationRequestSchemaVersion::V1,
         tenant_ref: "tenant-a".to_string(),
         work_item_id: "work-1".to_string(),
         owner_id: "worker-a".to_string(),
@@ -618,7 +616,8 @@ fn batch_resource_result(commit: &MutationBatchCommit) -> ResourceReservationRes
         .result_msgpack
         .as_ref()
         .expect("resource mutation stores a typed result");
-    let payload: medulla_protocol_types::protocol::ResultPayload = rmp_serde::from_slice(bytes).unwrap();
+    let payload: medulla_protocol_types::protocol::ResultPayload =
+        rmp_serde::from_slice(bytes).unwrap();
     resource_decode_result_payload(payload).unwrap()
 }
 
@@ -639,7 +638,8 @@ fn batch_host_result(commit: &MutationBatchCommit) -> ResourceHostUpdateResult {
         .result_msgpack
         .as_ref()
         .expect("host mutation stores a typed result");
-    let payload: medulla_protocol_types::protocol::ResultPayload = rmp_serde::from_slice(bytes).unwrap();
+    let payload: medulla_protocol_types::protocol::ResultPayload =
+        rmp_serde::from_slice(bytes).unwrap();
     let medulla_protocol_types::protocol::ResultPayload::Raw(bytes) = payload else {
         panic!("host mutation result must be raw typed payload");
     };
@@ -1301,7 +1301,8 @@ fn mutation_batch_transient_refusal_needs_fresh_invocation_but_acceptance_replay
     }
 
     let host_update = ResourceHostUpdateRequest {
-        schema_version: medulla_result_types::epistemic_operations::ResourceHostUpdateRequestSchemaVersion::V1,
+        schema_version:
+            medulla_result_types::epistemic_operations::ResourceHostUpdateRequestSchemaVersion::V1,
         tenant_ref: draining.tenant_ref.clone(),
         host_ref: draining.host_ref.clone(),
         revision: draining.revision + 1,
@@ -2015,7 +2016,10 @@ fn host_refresh_rejects_filesystem_shrink_under_existing_held_disk() {
             })
             .unwrap()
             .expect("host update returns a typed refusal");
-            assert!(matches!(result, medulla_protocol_types::protocol::ResultPayload::Raw(_)));
+            assert!(matches!(
+                result,
+                medulla_protocol_types::protocol::ResultPayload::Raw(_)
+            ));
             let after = resource_load_host(&mut hosts, "graph-a", "host-1", crypto)
                 .unwrap()
                 .expect("host remains present");
@@ -2100,7 +2104,8 @@ fn host_disk_policy_projection_caps_at_schema_bound() {
                     .insert(("graph-a", key.as_str()), bytes.as_slice())
                     .unwrap();
             }
-            let update = |revision| ResourceHostUpdateRequest {
+            let update = |revision| {
+                ResourceHostUpdateRequest {
                 schema_version:
                     medulla_result_types::epistemic_operations::ResourceHostUpdateRequestSchemaVersion::V1,
                 tenant_ref: "tenant-a".to_string(),
@@ -2118,6 +2123,7 @@ fn host_disk_policy_projection_caps_at_schema_bound() {
                 target_alias: None,
                 disk_used_mib: current.disk_used_mib,
                 disk_capacity_mib: current.disk_capacity_mib,
+            }
             };
             let mut invalid_ttl = update(8);
             invalid_ttl.heartbeat_ttl_ms = 999;
@@ -3255,22 +3261,23 @@ fn checkpoint_replaces_graph_rows_but_preserves_native_resource_domain() {
 
         let work_item_bytes = rmp_serde::to_vec_named(&work_item_props_for_request(&request))
             .expect("encode linked WorkItem");
-        let make_dump = |incarnation_id: &str,
-                         source_snapshot_version: u64,
-                         nodes: Vec<(String, Vec<u8>)>| {
-            GraphDump::in_place_core_checkpoint(InPlaceCoreCheckpoint {
-                graph: "graph-a".to_string(),
-                name: "graph-a".to_string(),
-                graph_type: GraphType::Global,
-                incarnation_id: incarnation_id.to_string(),
-                source_snapshot_version,
-                schema_sources: std::sync::Arc::new(medulla_core::graph::GraphSchemaSources::default()),
-                nodes,
-                edges: Vec::new(),
-                ledger: Vec::new(),
-                semantic: Vec::new(),
-            })
-        };
+        let make_dump =
+            |incarnation_id: &str, source_snapshot_version: u64, nodes: Vec<(String, Vec<u8>)>| {
+                GraphDump::in_place_core_checkpoint(InPlaceCoreCheckpoint {
+                    graph: "graph-a".to_string(),
+                    name: "graph-a".to_string(),
+                    graph_type: GraphType::Global,
+                    incarnation_id: incarnation_id.to_string(),
+                    source_snapshot_version,
+                    schema_sources: std::sync::Arc::new(
+                        medulla_core::graph::GraphSchemaSources::default(),
+                    ),
+                    nodes,
+                    edges: Vec::new(),
+                    ledger: Vec::new(),
+                    semantic: Vec::new(),
+                })
+            };
 
         // Establish a valid image first.  The incoming snapshot contains the
         // exact live WorkItem linked by the native hold. Installed directly

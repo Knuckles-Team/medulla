@@ -725,6 +725,8 @@ mod outbox_reactivation_tests {
         mutation_scope::MutationOutboxIntent, mutation_scope::MutationScopeIdentity,
         mutation_scope::MutationSurface, mutation_scope::MUTATION_BATCH_VERSION,
     };
+    use medulla_transaction::OutboxClaimBudget;
+    use medulla_types::contract::Digest256;
     pub const GRAPH: &str = "graph-a";
     pub const CONSUMER: &str = "reactivation-worker";
     pub const TOPIC: &str = "repository.enrichment.pending";

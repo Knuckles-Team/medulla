@@ -957,14 +957,6 @@ mod mutation_batch_tests {
     use medulla_mutation_types::mutation_scope::ScopeTenantId;
     use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
     use medulla_kernel::test_rendezvous::{join_bounded, meet};
-    use medulla_mutation_types::mutation_scope::DurabilityDomain;
-    use medulla_mutation_types::mutation_scope::IncarnationId;
-    use medulla_mutation_types::mutation_scope::LogicalName;
-    use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
-    use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
-    use medulla_mutation_types::mutation_scope::MutationSurface;
-    use medulla_mutation_types::mutation_scope::ScopeTenantId;
-    use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
     use medulla_result_types::{
         outcome_bundle::CommitOutcomeBundle, outcome_bundle::OutcomeCompleteness,
         outcome_bundle::ReceiptNode, outcome_bundle::ReceiptNodeKind, outcome_bundle::RunEvent,

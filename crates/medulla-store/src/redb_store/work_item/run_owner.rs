@@ -155,7 +155,7 @@ pub fn validate_completion_owner(
 
 #[allow(clippy::too_many_arguments)]
 pub fn project_completion(
-    scope: &medulla_types::MutationScopeIdentity,
+    scope: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     tenant: &str,
     run: &str,
     id: &str,

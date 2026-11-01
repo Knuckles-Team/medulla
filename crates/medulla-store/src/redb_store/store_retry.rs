@@ -57,7 +57,9 @@ pub(crate) fn native_retry_method(method: &Method) -> Option<Method> {
 /// carry a fresh request/trace/expiry window. Keep the security-bearing scope
 /// and subject fields in the idempotency comparison while normalizing only the
 /// authority-issued temporal/correlation fields.
-pub(crate) fn normalize_submit_context(context: &mut medulla_result_types::epistemic_operations::RequestContext) {
+pub(crate) fn normalize_submit_context(
+    context: &mut medulla_result_types::epistemic_operations::RequestContext,
+) {
     context.request_id.clear();
     context.trace_id.clear();
     context.issued_at_ms = 0;
@@ -235,7 +237,7 @@ pub(crate) fn mutation_operations_retry_match(
 /// case the kernel must replay rather than refuse.
 #[cfg(any(test, feature = "test-support"))]
 pub fn fixture_operation_envelope(
-    identity: &medulla_types::MutationScopeIdentity,
+    identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     actor: &str,
     request_id: u64,
     idempotency_key: &str,
