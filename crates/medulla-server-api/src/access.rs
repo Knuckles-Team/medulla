@@ -102,7 +102,7 @@ impl CarrierAuthority {
             .expect("verified test carrier")
     }
 
-    pub(crate) fn from_verified(context: &VerifiedRequestContext) -> Result<Self, String> {
+    pub fn from_verified(context: &VerifiedRequestContext) -> Result<Self, String> {
         let tenant = context.tenant().trim();
         let principal = context.principal().trim();
         let agent_id = context.agent_id().trim();
@@ -116,11 +116,7 @@ impl CarrierAuthority {
         let tenant_scope = if opaque_scope(tenant, "carrier-tenant") {
             tenant.to_string()
         } else {
-            crate::mutation_batch::opaque_coordinator_key(
-                "carrier-tenant",
-                "verified",
-                tenant,
-            )
+            crate::mutation_batch::opaque_coordinator_key("carrier-tenant", "verified", tenant)
         };
         let actor_scope = if opaque_scope(principal, "principal:sha256") {
             principal.to_string()
@@ -243,12 +239,12 @@ impl CarrierAuthority {
     /// Stable caller-supplied idempotency key from the verified envelope.
     /// Self-routed stores use it as the operation replay key rather than
     /// inventing a second key from request metadata.
-    pub(crate) fn idempotency_key(&self) -> &str {
+    pub fn idempotency_key(&self) -> &str {
         &self.idempotency_key
     }
 
     /// Collision-proof tenant+actor namespace for a caller-controlled local name.
-    pub(crate) fn namespace(&self, domain: &str, local: &str) -> String {
+    pub fn namespace(&self, domain: &str, local: &str) -> String {
         crate::mutation_batch::opaque_coordinator_key(domain, &self.owner_scope, local)
     }
 
@@ -1560,7 +1556,10 @@ mod universal_row_read_tests {
             medulla_compute::algorithms::get_shortest_path(&topology, "alice-private", "public"),
             Some(vec!["alice-private".to_string(), "public".to_string()])
         );
-        assert!(medulla_compute::algorithms::get_shortest_path(&topology, "bob-private", "public").is_none());
+        assert!(
+            medulla_compute::algorithms::get_shortest_path(&topology, "bob-private", "public")
+                .is_none()
+        );
 
         // Semantic candidates are rebuilt from visible embeddings only; querying
         // exactly for Bob's hidden vector still cannot return Bob's id to Alice.
@@ -1762,7 +1761,9 @@ mod universal_row_read_tests {
     #[cfg(feature = "security")]
     #[test]
     fn principal_may_access_follows_registration_and_revocation() {
-        use medulla_types::acl::{AccessCheck, Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+        use medulla_types::acl::{
+            AccessCheck, Grant, GrantEffect, RbacAction, ResourceSelector, Role,
+        };
         let reader = |roles: Vec<String>| AgentIdentity {
             agent_id: "alice".to_string(),
             role: AgentRole::Agent,

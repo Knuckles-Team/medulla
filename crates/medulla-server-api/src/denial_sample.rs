@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 use medulla_types::identity::{DenialSample, DenialSampler};
 use tokio::sync::RwLock;
 
-use crate::server::ServerState;
+use crate::state::ServerState;
 
 /// How often kept samples are written.
 const FLUSH_EVERY: std::time::Duration = std::time::Duration::from_secs(60);
@@ -44,7 +44,7 @@ pub(crate) async fn flush(state: &Arc<RwLock<ServerState>>) {
     if samples.is_empty() && dropped == 0 {
         return;
     }
-    let mut guard = super::dispatch::timed_write(state).await;
+    let mut guard = crate::state::timed_write(state).await;
     if let Err(error) = guard.isolation.try_record_denials(samples, dropped) {
         tracing::warn!(%error, "denial sample could not be written; dropped");
     }

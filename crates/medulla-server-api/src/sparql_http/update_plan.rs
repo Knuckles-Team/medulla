@@ -7,14 +7,17 @@ use medulla_rdf::sparql::Projection;
 use medulla_rdf::update::GraphStore;
 use tokio::sync::RwLock;
 
+use crate::state::ServerState;
 use medulla_core::graph::GraphCore;
-use crate::server::ServerState;
 
 /// A snapshot of the caller-authorized graphs at plan time: each entry's
 /// `(type, core)` if the graph already exists live in the registry, or `None`
 /// for a graph the update may create.
 #[cfg(feature = "shacl")]
-type LiveGraphSnapshot = Vec<(String, Option<(medulla_types::protocol::GraphType, Arc<GraphCore>)>)>;
+type LiveGraphSnapshot = Vec<(
+    String,
+    Option<(medulla_types::protocol::GraphType, Arc<GraphCore>)>,
+)>;
 
 /// Detached staging state threaded through one update's plan: pre-image bytes,
 /// the staged (post-update) core, whether the graph existed before, and its

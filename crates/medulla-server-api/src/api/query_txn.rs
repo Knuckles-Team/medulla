@@ -20,7 +20,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::server::ServerState;
+use crate::state::ServerState;
 
 /// Query handler behaviour reachable from crates below `medulla-h-query`.
 pub trait QueryApi: Send + Sync {

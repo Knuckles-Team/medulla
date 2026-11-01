@@ -38,9 +38,13 @@ pub(crate) use compile::{
     CompileBatch,
 };
 #[cfg(feature = "redb")]
-pub(crate) use compile::{compile_opaque_digest, COMPILED_BATCH_INCARNATION};
+pub use compile::compile_opaque_digest;
 #[cfg(feature = "redb")]
-pub(crate) use compile::{compile_opaque_method, effective_policy_digest};
+pub(crate) use compile::COMPILED_BATCH_INCARNATION;
+#[cfg(feature = "redb")]
+pub use compile::compile_opaque_method;
+#[cfg(feature = "redb")]
+pub(crate) use compile::effective_policy_digest;
 #[cfg(any(
     feature = "raft",
     feature = "blob",

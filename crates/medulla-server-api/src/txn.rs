@@ -46,9 +46,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use tokio::sync::RwLock;
 
+use crate::state::ServerState;
 use medulla_core::graph::GraphCore;
 use medulla_types::protocol::Method;
-use crate::server::ServerState;
 
 #[path = "txn/modality.rs"]
 mod modality;

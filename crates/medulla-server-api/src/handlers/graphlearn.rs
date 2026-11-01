@@ -33,7 +33,7 @@ use medulla_types::protocol::ResultPayload;
 
 /// Handle a `GraphLearn*` method. `Err(method)` hands a non-graphlearn method back to
 /// the dispatcher (routing fall-through). (CONCEPT:MEDULLA-KG.query.dispatch-convention.)
-pub(crate) fn try_handle(
+pub fn try_handle(
     // Both params are now unused: every `GraphLearn*` variant is `mutation::
     // GATEWAY_ROUTED` (runtime-conditional), so `dispatch_graph_op` always routes
     // through `graph_ops::try_handle_gateway` before this fallback is ever called
@@ -104,7 +104,7 @@ fn dispatch_for_test(
 /// (CONCEPT:MEDULLA-KG.graphlearn.link-predictor). Deterministic given the seed; the
 /// response is discarded.
 #[allow(dead_code)]
-pub(crate) fn replay(core: &GraphCore, method: &Method) {
+pub fn replay(core: &GraphCore, method: &Method) {
     match method {
         Method::GraphLearnFit {
             source,
@@ -142,7 +142,7 @@ pub(crate) fn replay(core: &GraphCore, method: &Method) {
 // call, whether THIS invocation mutates, so the gateway match arm calls the SAME
 // handler either way and only drives the durable/audit/CDC side through
 // `commit_mutation` when `writeback` is true (see `mutation::commit_conditional_mutation`).
-pub(crate) fn handle_fit(
+pub fn handle_fit(
     req_id: u64,
     core: &GraphCore,
     source: GraphSource,
@@ -258,7 +258,7 @@ fn edge_function_rows(model: &KanLinkModel) -> Vec<EdgeFunctionRow> {
 // ─────────────────────────── Predict ───────────────────────────
 
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn handle_predict(
+pub fn handle_predict(
     req_id: u64,
     core: &GraphCore,
     model_json: serde_json::Value,
@@ -378,7 +378,7 @@ fn build_graph(
 /// the EXACT SAME graph-derived subgraph construction (label vertices + intra-label
 /// observed edges) for both its structural-embedding feature step and its `graphlearn`
 /// model family — one subgraph builder, never a drifting second copy.
-pub(crate) fn build_graph_with_set(
+pub fn build_graph_with_set(
     core: &GraphCore,
     source: &GraphSource,
 ) -> (AdjacencyGraph<String>, HashSet<(usize, usize)>) {

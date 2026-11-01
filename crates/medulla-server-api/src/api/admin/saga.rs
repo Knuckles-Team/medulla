@@ -2,6 +2,8 @@
 //!
 //! The saga ledger is reached through [`AdminSagaLedger`], implemented by the durable backend.
 
+use crate::access::CarrierAuthority;
+use medulla_types::contract::Nonce;
 use medulla_types::mutation_batch::DurabilityDomain;
 use medulla_types::mutation_batch::MutationBatch;
 use medulla_types::mutation_batch::MutationBatchCommit;
@@ -9,8 +11,6 @@ use medulla_types::mutation_batch::MutationBatchRecord;
 use medulla_types::mutation_batch::MutationScopeIdentity;
 use medulla_types::mutation_batch::MutationSurface;
 use medulla_types::protocol::Method;
-use crate::access::CarrierAuthority;
-use medulla_types::contract::Nonce;
 
 /// The admin-mutations ledger operations an admin saga needs, implemented by the durable
 /// backend.
@@ -90,7 +90,7 @@ pub struct AdminSaga {
 
 #[cfg(feature = "redb")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum AdminSagaResultContract {
+pub enum AdminSagaResultContract {
     Bool,
     Count,
     Text,
@@ -120,7 +120,7 @@ enum DurableAdminResult {
 
 #[cfg(feature = "redb")]
 impl DurableAdminResult {
-    fn from_result(result: &medulla_types::protocol::ResultPayload) -> Result<Self, String> {
+    pub fn from_result(result: &medulla_types::protocol::ResultPayload) -> Result<Self, String> {
         use medulla_types::protocol::ResultPayload;
         match result {
             ResultPayload::Bool(value) => Ok(Self::Bool(*value)),
@@ -146,7 +146,7 @@ impl DurableAdminResult {
 
 #[cfg(feature = "redb")]
 impl AdminSagaResultContract {
-    fn for_method(method: &Method) -> Result<Self, String> {
+    pub fn for_method(method: &Method) -> Result<Self, String> {
         #[cfg(feature = "graphql")]
         let graphql_contract =
             matches!(method, Method::GraphQl { .. }).then_some(Self::GraphQlResponse);
@@ -247,7 +247,7 @@ impl AdminSagaResultContract {
         }
     }
 
-    fn for_private_event(event_type: &str) -> Result<Self, String> {
+    pub fn for_private_event(event_type: &str) -> Result<Self, String> {
         match event_type {
             "transaction_recovery_plan" | "sparql_http_compensation_v1" => Ok(Self::Bool),
             "sparql_http_recovery_plan_v1" => Ok(Self::SparqlRecoveryOutcome),
@@ -257,7 +257,7 @@ impl AdminSagaResultContract {
         }
     }
 
-    pub(crate) fn validate(self, result: &medulla_types::protocol::ResultPayload) -> Result<(), String> {
+    pub fn validate(self, result: &medulla_types::protocol::ResultPayload) -> Result<(), String> {
         use medulla_types::protocol::ResultPayload;
         match self {
             Self::Bool => matches!(result, ResultPayload::Bool(_))
@@ -297,7 +297,7 @@ impl AdminSagaResultContract {
         }
     }
 
-    fn public_discriminator(self) -> &'static str {
+    pub fn public_discriminator(self) -> &'static str {
         match self {
             Self::Bool => "bool",
             Self::Count => "count",
@@ -314,7 +314,7 @@ impl AdminSagaResultContract {
         }
     }
 
-    fn for_public_discriminator(discriminator: &str) -> Result<Self, String> {
+    pub fn for_public_discriminator(discriminator: &str) -> Result<Self, String> {
         (discriminator == "graphql-response-v1")
             .then_some(Self::GraphQlResponse)
             .or_else(|| Self::for_public_scalar_discriminator(discriminator))
@@ -353,7 +353,9 @@ impl AdminSagaResultContract {
 const PUBLIC_ADMIN_EVENT_PREFIX: &str = "cluster_admin_operation/";
 
 #[cfg(feature = "redb")]
-fn validate_sparql_recovery_outcome(result: &medulla_types::protocol::ResultPayload) -> Result<(), String> {
+fn validate_sparql_recovery_outcome(
+    result: &medulla_types::protocol::ResultPayload,
+) -> Result<(), String> {
     let medulla_types::protocol::ResultPayload::Json(value) = result else {
         return Err("SPARQL recovery replay requires a JSON body".to_string());
     };
@@ -387,7 +389,7 @@ fn validate_sparql_recovery_outcome(result: &medulla_types::protocol::ResultPayl
 #[cfg(feature = "redb")]
 pub struct AdminSagaBatch {
     durable: MutationBatch,
-    pub(crate) result_contract: Option<AdminSagaResultContract>,
+    pub result_contract: Option<AdminSagaResultContract>,
 }
 
 #[cfg(feature = "redb")]
@@ -833,7 +835,7 @@ pub fn decode_durable_saga_result(
 }
 
 #[cfg(feature = "redb")]
-fn decode_admin_result(
+pub fn decode_admin_result(
     bytes: &[u8],
     result_contract: AdminSagaResultContract,
 ) -> Result<medulla_types::protocol::ResultPayload, String> {
@@ -856,7 +858,3 @@ fn decode_admin_result(
     };
     Ok(result)
 }
-
-#[cfg(test)]
-#[path = "saga_tests.rs"]
-mod saga_tests;

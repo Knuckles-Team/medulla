@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use tokio::sync::RwLock;
 
+use crate::state::ServerState;
 use medulla_types::change_envelope::ChangeCursor;
 use medulla_types::change_envelope::ChangeEnvelope;
 use medulla_types::change_envelope::ChangeEnvelopeCommit;
@@ -28,9 +29,8 @@ use medulla_types::mutation_batch::MutationBatchRecord;
 use medulla_types::mutation_batch::MutationOutboxLease;
 use medulla_types::mutation_batch::MutationOutboxRecord;
 use medulla_types::mutation_batch::MutationProjectionCursor;
-use medulla_types::protocol::Method;
-use crate::server::ServerState;
 use medulla_types::native_control::CapacityStatusResult;
+use medulla_types::protocol::Method;
 // The sweep-scoped claim budget carrying DESIGN.md's per-tenant weighted round
 // robin between graphs. It is a kernel type, so the claim it parameterises is
 // gated on `redb` exactly like the two WorkItem-capability methods below: the
@@ -762,7 +762,10 @@ pub trait PersistenceBackend: Send + Sync {
         use medulla_core::registry::GraphMaterializer as _;
         struct Once(Option<medulla_core::registry::GraphMaterial>);
         impl medulla_core::registry::GraphMaterializer for Once {
-            fn materialize(&self, _graph_name: &str) -> Option<medulla_core::registry::GraphMaterial> {
+            fn materialize(
+                &self,
+                _graph_name: &str,
+            ) -> Option<medulla_core::registry::GraphMaterial> {
                 self.0.clone()
             }
         }

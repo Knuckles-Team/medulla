@@ -6,12 +6,12 @@
 //! re-exported there so existing server call sites cannot construct a trusted
 //! context through an alternate path.
 
-use medulla_types::acl::RequestContextClaims;
+use crate::auth::coarse_kg_admin_only;
 #[cfg(feature = "oidc")]
 use crate::auth::iceberg_bearer_scopes;
-use crate::auth::coarse_kg_admin_only;
 use crate::auth::request_context_policy;
 use hmac::{Hmac, Mac};
+use medulla_types::acl::RequestContextClaims;
 use medulla_types::contract::{Digest256, Nonce};
 use sha2::Sha256;
 use std::collections::HashSet;
@@ -71,10 +71,7 @@ impl VerifiedRequestContext {
         context
     }
 
-    pub(crate) fn from_verified_claims(
-        claims: RequestContextClaims,
-        idempotency_key: String,
-    ) -> Self {
+    pub fn from_verified_claims(claims: RequestContextClaims, idempotency_key: String) -> Self {
         Self::from_verified_claims_with_nonce(claims, idempotency_key, None)
     }
 
@@ -247,7 +244,7 @@ impl VerifiedRequestContext {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn idempotency_key(&self) -> &str {
+    pub fn idempotency_key(&self) -> &str {
         &self.idempotency_key
     }
 

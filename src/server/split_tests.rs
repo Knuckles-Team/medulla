@@ -9,11 +9,13 @@ mod admin_agent_library_security;
 mod placement_harness;
 #[cfg(all(test, feature = "raft"))]
 mod resource_acceptance_test;
-#[cfg(test)]
-mod wired_edge_index;
-#[cfg(all(test, feature = "raft", feature = "harness"))]
-mod xshard_harness;
+#[cfg(all(test, feature = "redb"))]
+mod server_api_saga;
 #[cfg(test)]
 mod store_run_owner;
 #[cfg(all(test, any(feature = "server", feature = "redb")))]
 mod store_terminal_batch;
+#[cfg(test)]
+mod wired_edge_index;
+#[cfg(all(test, feature = "raft", feature = "harness"))]
+mod xshard_harness;

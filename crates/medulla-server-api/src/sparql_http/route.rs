@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use crate::http1::HttpMessage;
-use crate::server::ServerState;
+use crate::state::ServerState;
 
 use super::{parse_form, run_query, signed_request, DEFAULT_GRAPH_ENV, SPARQL_HTTP_UPDATE_EVENT};
 

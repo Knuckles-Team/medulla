@@ -4,11 +4,11 @@ use dashmap::DashMap;
 use std::sync::Arc;
 use tokio::sync::Semaphore;
 
-use medulla_kernel::channels::ChannelManager;
-use medulla_core::isolation::IsolationLayer;
-use medulla_core::registry::GraphRegistry;
 use crate::txn::GraphTxnState;
 use crate::txn::TxnIdGen;
+use medulla_core::isolation::IsolationLayer;
+use medulla_core::registry::GraphRegistry;
+use medulla_kernel::channels::ChannelManager;
 use parking_lot::Mutex;
 
 /// A type-erased handle to a state-held service owned by an upper crate
@@ -252,8 +252,7 @@ pub struct ServerState {
     /// this is a SEPARATE registry from `write_coalescer`: its worker queues
     /// the WHOLE prepare→durable-commit→RAM-publish sequence, not just the RAM
     /// apply, and needs no `core` handle (each queued job carries its own).
-    pub routed_write_coalescer:
-        Arc<crate::routed_write_coalescer::RoutedWriteCoalescerRegistry>,
+    pub routed_write_coalescer: Arc<crate::routed_write_coalescer::RoutedWriteCoalescerRegistry>,
     /// Open server-staged OCC transactions (CONCEPT:MEDULLA-KG.txn.multi-op-occ-acid), keyed by the
     /// server-issued `txn_id`. A staged txn holds its write-set + read-set off the
     /// graph lock; the lock is taken only at commit. Each entry is behind a `Mutex`
@@ -584,7 +583,9 @@ impl medulla_kernel::kernel::persistence::ResidentProjectionHost for ServerState
             .collect()
     }
 
-    fn durable_presence(&self) -> Option<Arc<dyn medulla_kernel::kernel::persistence::DurableNodePresence>> {
+    fn durable_presence(
+        &self,
+    ) -> Option<Arc<dyn medulla_kernel::kernel::persistence::DurableNodePresence>> {
         self.persistence.clone().map(|backend| {
             Arc::new(crate::api::persistence::BackendPresence(backend))
                 as Arc<dyn medulla_kernel::kernel::persistence::DurableNodePresence>
@@ -622,4 +623,14 @@ mod construction_tests {
         #[cfg(feature = "blob")]
         assert_eq!(state.blob_cursor_ttl_secs, 300);
     }
+}
+
+/// Acquire the process-wide `ServerState` write lock, recording the wait (D-EIMG-2).
+pub async fn timed_write(
+    state: &std::sync::Arc<tokio::sync::RwLock<ServerState>>,
+) -> tokio::sync::RwLockWriteGuard<'_, ServerState> {
+    let started = std::time::Instant::now();
+    let guard = state.write().await;
+    medulla_kernel::metrics::observe_dispatch_lock_wait("write", started.elapsed().as_secs_f64());
+    guard
 }

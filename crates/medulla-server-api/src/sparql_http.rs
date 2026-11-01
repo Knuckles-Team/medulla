@@ -30,11 +30,11 @@ use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 
-use medulla_core::graph::GraphCore;
 use crate::http1;
 use crate::http1::HttpMessage;
 use crate::http1::RequestLimits;
-use crate::server::ServerState;
+use crate::state::ServerState;
+use medulla_core::graph::GraphCore;
 use medulla_rdf::sparql::{Binding, Dataset, Projection, QueryOutcome, SparqlResult};
 
 mod graph_store;
@@ -301,8 +301,7 @@ async fn handle_nl(
         agent_id: Some("service:local-query".to_string()),
         method: medulla_types::protocol::Method::NlQuery { text, graph },
     };
-    let resp =
-        crate::api::reentry::dispatch_authenticated_local_query(state, request).await;
+    let resp = crate::api::reentry::dispatch_authenticated_local_query(state, request).await;
     if let Some(err) = resp.error {
         return (
             "400 Bad Request",

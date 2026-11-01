@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use sha2::{Digest, Sha256};
 
+use crate::api::persistence::PersistenceBackend;
 use medulla_core::graph::GraphCore;
 use medulla_types::mutation_batch::DurabilityDomain;
 use medulla_types::mutation_batch::MutationBatch;
@@ -15,7 +16,6 @@ use medulla_types::mutation_batch::MutationStateDescriptor;
 use medulla_types::mutation_batch::MutationSurface;
 use medulla_types::mutation_batch::MUTATION_BATCH_VERSION;
 use medulla_types::protocol::Method;
-use crate::api::persistence::PersistenceBackend;
 
 use super::canonical::{domain_for, lower_canonical_operation, surface_for};
 use super::digest::principal_fingerprint;
@@ -224,7 +224,7 @@ fn derive_compiled_methods_scope(operations: &[MutationOperation]) -> Result<boo
 /// statements and other independently-staged domains must retain a canonical
 /// status/idempotency/outbox record without persisting query text, bound parameters,
 /// repository paths, document bodies, or caller identifiers.
-pub(crate) fn compile_opaque_method(
+pub fn compile_opaque_method(
     ctx: CompileBatch<'_>,
     method: &Method,
     surface: MutationSurface,
@@ -331,7 +331,7 @@ mod sql_source_tests;
 /// is the binding used for encrypted private recovery material: only the digest is
 /// retained in the canonical batch/outbox, while ciphertext is stored out-of-line
 /// by the coordinator's native transaction.
-pub(crate) fn compile_opaque_digest(
+pub fn compile_opaque_digest(
     ctx: CompileBatch<'_>,
     digest: &str,
     surface: MutationSurface,

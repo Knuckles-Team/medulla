@@ -64,7 +64,7 @@ mod tests {
     }
     #[test]
     fn default_state_rejects_unsigned_correlation() {
-        let state = crate::server::ServerState::new(
+        let state = crate::state::ServerState::new(
             "synthetic-test-secret",
             medulla_core::isolation::IsolationLayer::new(),
         );
