@@ -12,6 +12,19 @@ name = "medulla_sql"
 path = "src/lib.rs"
 
 [dependencies]
+ipnet = { version = "2.12", optional = true }
+base64 = { version = "0.23", optional = true }
+hex = { version = "0.4", optional = true }
+sha2 = { version = "0.10", optional = true }
+sha1 = { version = "0.10", optional = true }
+md-5 = { version = "0.10", optional = true }
+medulla-text = { path = "../medulla-text", optional = true }
+medulla-transaction = { path = "../medulla-transaction", optional = true }
+medulla-storage = { path = "../medulla-storage", optional = true }
+redb = { workspace = true, optional = true }
+medulla-tsdb = { path = "../medulla-tsdb", optional = true }
+ndarray = { version = "0.17", optional = true }
+medulla-numeric = { path = "../medulla-numeric", optional = true }
 medulla-query = { path = "../medulla-query" }
 medulla-types = { path = "../medulla-types" }
 medulla-core = { path = "../medulla-core" }
