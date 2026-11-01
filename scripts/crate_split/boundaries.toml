@@ -60,7 +60,7 @@ responsibility = "Issuer, principal, scope, tenancy, ACL and authority types."
 moves = ["crates/medulla-types/src/identity", "crates/medulla-types/src/rbac_*", "crates/medulla-types/src/tenancy", "crates/medulla-types/src/authority", "crates/medulla-types/src/authority_audit", "crates/medulla-types/src/platform_admission", "crates/medulla-types/src/identity_fixtures"]
 specs = ["engine-identity-and-scope (types)"]
 current_lines = 16950
-projected_lines = 18150
+projected_lines = 18050
 
 [crates.medulla-agent-types]
 level = "L1b"
@@ -78,7 +78,7 @@ responsibility = "Mutation scope, commit descriptor, outbox, governed change, le
 moves = ["crates/medulla-types/src/mutation", "crates/medulla-types/src/mutation_*", "crates/medulla-types/src/commit_descriptor", "crates/medulla-types/src/governed_change", "crates/medulla-types/src/outbox", "crates/medulla-types/src/sealed_record", "crates/medulla-types/src/write_back", "crates/medulla-types/src/consensus", "crates/medulla-types/src/capacity_*"]
 specs = ["durable-graph-kernel (types)"]
 current_lines = 9392
-projected_lines = 11792
+projected_lines = 11092
 
 [crates.medulla-index-types]
 level = "L1"
@@ -87,7 +87,7 @@ responsibility = "Semantic index, embedding, managed index and entity resolution
 moves = ["crates/medulla-types/src/semantic_index", "crates/medulla-types/src/embedding", "crates/medulla-types/src/managed_index", "crates/medulla-types/src/entity_resolution"]
 specs = ["federated-query-and-reasoning (index types)"]
 current_lines = 10631
-projected_lines = 10731
+projected_lines = 10631
 
 [crates.medulla-result-types]
 level = "L1"
@@ -114,7 +114,7 @@ responsibility = "Connector pack, schema, catalog, source ingestion, lineage and
 moves = ["crates/medulla-types/src/connector_pack", "crates/medulla-types/src/graph_schema", "crates/medulla-types/src/domain_pack", "crates/medulla-types/src/*_catalog", "crates/medulla-types/src/lineage", "crates/medulla-types/src/postgres_adapter", "crates/medulla-types/src/pg_compat_feature", "crates/medulla-types/src/supply_chain_report", "crates/medulla-types/src/standards_drift", "crates/medulla-types/src/distribution", "crates/medulla-types/src/changeset_review", "crates/medulla-types/src/pre_merge_test_module", "crates/medulla-types/src/live_artifact", "crates/medulla-types/src/lifecycle", "crates/medulla-types/src/foreign_read", "crates/medulla-types/src/mssql_driver_connection", "crates/medulla-types/src/sqlite_live_attach", "crates/medulla-types/src/catalog_fixtures"]
 specs = ["typed-packs-and-catalog (types)", "ingest-worker (types)"]
 current_lines = 12311
-projected_lines = 20051
+projected_lines = 19251
 
 [crates.medulla-source-types]
 level = "L1d"
@@ -132,7 +132,7 @@ responsibility = "Decision ladder vocabulary: ResolutionKind, evidence classes, 
 moves = ["crates/medulla-types/src/decision", "crates/medulla-types/src/solve", "crates/medulla-types/src/decision_fixtures"]
 specs = ["decision-engine (new or changed types)"]
 current_lines = 11937
-projected_lines = 22257
+projected_lines = 22157
 
 # ---------------------------------------------------------------- L2 primitives
 [crates.medulla-decision-outcome-types]
@@ -151,7 +151,7 @@ responsibility = "Physical storage owner, recovery, kernel, capabilities and sco
 moves = []
 specs = ["durable-graph-kernel (storage, recovery)", "object-storage-backend"]
 current_lines = 17426
-projected_lines = 18526
+projected_lines = 18226
 
 [crates.medulla-direct-state]
 level = "L2a"
@@ -178,7 +178,7 @@ responsibility = "Transaction graft, outbox and change capture."
 moves = []
 specs = ["durable-graph-kernel (outbox, change feed)", "source-changesets (apply)"]
 current_lines = 21063
-projected_lines = 21763
+projected_lines = 21163
 
 [crates.medulla-rdf]
 level = "L2"
@@ -206,7 +206,7 @@ responsibility = "Tenant isolation, RBAC persistence and dependency scopes."
 moves = ["crates/medulla-core/src/isolation", "crates/medulla-core/src/rbac_persist", "crates/medulla-core/src/rbac", "crates/medulla-core/src/dep_scope"]
 specs = ["engine-identity-and-scope", "placement-and-worker-policy (scope)"]
 current_lines = 8219
-projected_lines = 11619
+projected_lines = 11519
 
 [crates.medulla-core]
 level = "L3"
@@ -233,7 +233,7 @@ responsibility = "OWL, tableau and rule reasoning, proof contract and reasoning 
 moves = ["crates/medulla-compute/src/reasoning", "crates/medulla-compute/src/reasoning_closure", "crates/medulla-rdf/src/contract", "crates/medulla-rdf/src/owl", "crates/medulla-rdf/src/owl_wire", "crates/medulla-rdf/src/rules", "crates/medulla-rdf/src/tableau"]
 specs = ["federated-query-and-reasoning (reasoning)", "durable-graph-kernel (forward chaining)"]
 current_lines = 13340
-projected_lines = 14740
+projected_lines = 14040
 
 [crates.medulla-decision-stats]
 level = "L3"
@@ -297,7 +297,7 @@ responsibility = "Cypher language, its executor, graph data science calls and th
 moves = ["crates/medulla-query/src/cypher", "crates/medulla-query/src/edge_index"]
 specs = ["engine-parity (Cypher)"]
 current_lines = 15515
-projected_lines = 16215
+projected_lines = 15815
 
 [crates.medulla-tables]
 level = "L4a"
@@ -351,7 +351,7 @@ responsibility = "Attached sources read as virtual graphs: OBDA, source selectio
 moves = ["crates/medulla-rdf/src/obda", "crates/medulla-rdf/src/source_selection", "crates/medulla-rdf/src/supply_chain_impact"]
 specs = ["unified-data-plane", "source-authority"]
 current_lines = 6580
-projected_lines = 15260
+projected_lines = 10960
 
 [crates.medulla-graph-algos]
 level = "L4b"
@@ -387,7 +387,7 @@ responsibility = "Finance portfolio layer: lot accounting, exchange records, imp
 moves = ["crates/medulla-compute/src/finance", "crates/medulla-compute/src/finance/exchange", "crates/medulla-compute/src/finance/forensic", "crates/medulla-compute/src/finance/ghostfolio_import", "crates/medulla-compute/src/finance/golden_fixture", "crates/medulla-compute/src/finance/lot_accounting", "crates/medulla-compute/src/finance/mod", "crates/medulla-compute/src/finance/strategy", "crates/medulla-numeric/src/attribution", "crates/medulla-numeric/src/banking"]
 specs = ["finance-primitives"]
 current_lines = 3995
-projected_lines = 8195
+projected_lines = 8095
 
 [crates.medulla-decision-policy]
 level = "L3b"
@@ -396,7 +396,7 @@ responsibility = "Ladder stages 3-5: policy, hard constraints, knobs, admission,
 moves = ["crates/medulla-compute/src/solve"]
 specs = ["decision-engine (policy and constraints)"]
 current_lines = 2449
-projected_lines = 16849
+projected_lines = 16749
 
 [crates.medulla-decision-rank]
 level = "L4"
@@ -433,7 +433,7 @@ responsibility = "Federated planning across sources: federation optimizer, SSRF 
 moves = ["crates/medulla-plan/src/federation", "crates/medulla-plan/src/federation_age", "crates/medulla-plan/src/federation_brain_guarded", "crates/medulla-plan/src/federation_capabilities", "crates/medulla-plan/src/federation_cypher_unbound", "crates/medulla-plan/src/federation_opt", "crates/medulla-plan/src/federation_registry_tests", "crates/medulla-plan/src/federation_spark", "crates/medulla-plan/src/federation_sql_tests", "crates/medulla-plan/src/federation_ssrf", "crates/medulla-plan/src/federation_stats", "crates/medulla-plan/src/federation_tests", "crates/medulla-plan/src/federation_trino", "crates/medulla-plan/src/mirror_target"]
 specs = ["federated-query-and-reasoning (federation)"]
 current_lines = 10582
-projected_lines = 15362
+projected_lines = 15262
 
 [crates.medulla-exec]
 level = "L5a"
@@ -451,7 +451,7 @@ responsibility = "Retrieval and expansion: knowledge assembly, LeanRAG, verdicts
 moves = ["crates/medulla-plan/src/feedback_boost", "crates/medulla-plan/src/knowledge", "crates/medulla-plan/src/knowledge_batch", "crates/medulla-plan/src/knowledge_scope", "crates/medulla-plan/src/leanrag", "crates/medulla-plan/src/result_stream", "crates/medulla-plan/src/retrieval_verdict"]
 specs = ["federated-query-and-reasoning (retrieval)"]
 current_lines = 5711
-projected_lines = 21811
+projected_lines = 19611
 
 [crates.medulla-plan]
 level = "L5f"
@@ -469,7 +469,7 @@ responsibility = "Ladder stages 6-7 and task planning: AgentAssemble, bounded ta
 moves = ["crates/medulla-compute/src/assemble"]
 specs = ["decision-engine (assembly and task planning)"]
 current_lines = 5141
-projected_lines = 11101
+projected_lines = 10501
 
 [crates.medulla-packs]
 level = "L5"
@@ -478,7 +478,7 @@ responsibility = "Typed pack import, validation and roll-up to core classes."
 moves = ["crates/medulla-rdf/src/pack"]
 specs = ["typed-packs-and-catalog (packs)"]
 current_lines = 726
-projected_lines = 16926
+projected_lines = 12226
 
 [crates.medulla-catalog]
 level = "L5"
@@ -487,7 +487,7 @@ responsibility = "The catalog over packs, sources and schemas: lookup, lineage a
 moves = []
 specs = ["typed-packs-and-catalog (catalog)"]
 current_lines = 8
-projected_lines = 908
+projected_lines = 508
 
 [crates.medulla-vocab]
 level = "L5"
@@ -496,7 +496,7 @@ responsibility = "Ontology modules and shapes for the data-platform, media, supp
 moves = []
 specs = ["data-platform-vocabulary", "media-and-personal-vocabulary", "supply-chain-vocabulary", "orchestration-vocabulary"]
 current_lines = 8
-projected_lines = 4808
+projected_lines = 4508
 
 [crates.medulla-ingest]
 level = "L5"
@@ -505,7 +505,7 @@ responsibility = "Ingest worker loop, lanes and queues."
 moves = []
 specs = ["ingest-worker"]
 current_lines = 8
-projected_lines = 6208
+projected_lines = 5408
 
 # ---------------------------------------------------------------- L6
 [crates.medulla-decision-records]
@@ -515,7 +515,7 @@ responsibility = "Decision records: receipts, ledger, the revision lifecycle (R8
 moves = []
 specs = ["decision-engine (records and revision lifecycle)"]
 current_lines = 8
-projected_lines = 11508
+projected_lines = 9108
 
 [crates.medulla-decision-eval]
 level = "L6"
@@ -524,7 +524,7 @@ responsibility = "Decision evaluation: served proof suites, quality and relevanc
 moves = []
 specs = ["decision-engine (evaluation and proof)"]
 current_lines = 8
-projected_lines = 10308
+projected_lines = 10208
 
 [crates.medulla-decision-memory]
 level = "L6"
@@ -542,7 +542,7 @@ responsibility = "Connector competency questions answered through the served que
 moves = []
 specs = ["connector-competency"]
 current_lines = 8
-projected_lines = 8588
+projected_lines = 4508
 
 [crates.medulla-competency-xsrc]
 level = "L6"
@@ -551,7 +551,7 @@ responsibility = "Cross-source and orchestration competency questions."
 moves = []
 specs = ["cross-source-competency", "orchestration-competency"]
 current_lines = 8
-projected_lines = 3548
+projected_lines = 2948
 
 [crates.medulla-repo-index]
 level = "L6"
@@ -560,7 +560,7 @@ responsibility = "Repository indexing, source changesets and branch merge as gra
 moves = []
 specs = ["repository-index-and-ingestion", "source-changesets", "branch-merge"]
 current_lines = 8
-projected_lines = 6108
+projected_lines = 4908
 
 [crates.medulla-sdlc]
 level = "L6"
@@ -578,7 +578,7 @@ responsibility = "Engine compatibility features and their parity proofs against 
 moves = []
 specs = ["engine-parity"]
 current_lines = 8
-projected_lines = 3808
+projected_lines = 2908
 
 [crates.medulla-placement]
 level = "L6"
@@ -587,7 +587,7 @@ responsibility = "Worker admission and placement policy."
 moves = []
 specs = ["placement-and-worker-policy"]
 current_lines = 8
-projected_lines = 2908
+projected_lines = 2008
 
 # ---------------------------------------------------------------- facade
 [crates.medulla-kernel]
@@ -597,7 +597,7 @@ responsibility = "Persist, store authority, mutation apply and channels."
 moves = []
 specs = ["durable-graph-kernel (mutation gateway)"]
 current_lines = 8818
-projected_lines = 26218
+projected_lines = 15818
 
 [crates.medulla-store]
 level = "F1"
@@ -624,7 +624,7 @@ responsibility = "Resource reservations and capacity leases."
 moves = ["src/redb_store/resource", "src/redb_store/capacity_lease", "crates/medulla-store/src/redb_store/capacity_lease", "crates/medulla-store/src/redb_store/resource"]
 specs = ["durable-graph-kernel (leases, scheduler)"]
 current_lines = 5938
-projected_lines = 7138
+projected_lines = 6638
 
 [crates.medulla-lane-store]
 level = "F2c"
@@ -650,8 +650,8 @@ kind = "api"
 responsibility = "Server state, seam traits, request context, transactions and the shared served-API helpers."
 moves = []
 specs = []
-current_lines = 15417
-projected_lines = 15417
+current_lines = 15458
+projected_lines = 15458
 
 [crates.medulla-server-auth]
 level = "F4a"
@@ -884,8 +884,8 @@ kind = "server-part"
 responsibility = "Graph-op dispatch pipeline: graph pipeline, change envelopes, SPARQL update, policy evolution, request payload preflight and the shared dispatch helpers."
 moves = ["src/server/dispatch/graph_pipeline", "src/server/dispatch/sparql_update", "src/server/dispatch/change_envelope", "crates/medulla-server/src/dispatch/change_envelope", "crates/medulla-server/src/dispatch/change_envelope_draft", "crates/medulla-server/src/dispatch/graph_pipeline", "crates/medulla-server/src/dispatch/policy_evolution", "crates/medulla-server/src/dispatch/request_boundary/preflight", "crates/medulla-server/src/dispatch/request_boundary/screen", "crates/medulla-server/src/dispatch/shared", "crates/medulla-server/src/dispatch/sparql_update", "crates/medulla-server/src/handlers", "crates/medulla-server/src/semantic_activation", "src/server/dispatch/policy_evolution"]
 specs = []
-current_lines = 13037
-projected_lines = 17077
+current_lines = 12549
+projected_lines = 16589
 
 [crates.medulla-server-consensus]
 level = "F10c"
@@ -893,8 +893,8 @@ kind = "server-part"
 responsibility = "Consensus dispatch: replicated apply, native proposal routing, transactions, job publication, server registry and fleet catalog."
 moves = ["src/server/dispatch/consensus", "crates/medulla-server/src/dispatch/consensus"]
 specs = []
-current_lines = 4673
-projected_lines = 4873
+current_lines = 4726
+projected_lines = 4926
 
 [crates.medulla-server-obs]
 level = "F10a"
@@ -902,8 +902,8 @@ kind = "server-part"
 responsibility = "Observability serving: logs, metrics, PromQL, OTLP traces and QoS classes."
 moves = ["src/server/obs", "src/server/traces", "src/server/qos", "crates/medulla-server/src/obs", "crates/medulla-server/src/promql", "crates/medulla-server/src/qos", "crates/medulla-server/src/traces"]
 specs = []
-current_lines = 8214
-projected_lines = 8214
+current_lines = 8260
+projected_lines = 8260
 
 [crates.medulla-server-lake]
 level = "F10a"
@@ -911,8 +911,8 @@ kind = "server-part"
 responsibility = "Lake serving, GraphQL subscriptions and policy export."
 moves = ["src/server/lake", "src/server/graphql_sub", "src/server/policy_export", "crates/medulla-server/src/graphql_sub", "crates/medulla-server/src/lake", "crates/medulla-server/src/policy_export"]
 specs = []
-current_lines = 7729
-projected_lines = 8429
+current_lines = 7764
+projected_lines = 8464
 
 [crates.medulla-server-identity]
 level = "F10c"
@@ -920,8 +920,8 @@ kind = "server-part"
 responsibility = "Identity dispatch: identity stamping, signing secrets, resolution context, request elevation and governed actors."
 moves = ["src/server/dispatch/identity_store", "crates/medulla-server/src/dispatch/elevation", "crates/medulla-server/src/dispatch/governed", "crates/medulla-server/src/dispatch/identity_store"]
 specs = []
-current_lines = 3767
-projected_lines = 3867
+current_lines = 1494
+projected_lines = 1594
 
 [crates.medulla-server-router]
 level = "F10d"
@@ -929,8 +929,8 @@ kind = "server-part"
 responsibility = "Request entry and method router: request boundary, method tables, telemetry methods, the dispatch seam and the end-to-end dispatch tests."
 moves = ["src/server/dispatch/router", "crates/medulla-server/src/dispatch/dispatch_e2e_tests", "crates/medulla-server/src/dispatch/request_boundary", "crates/medulla-server/src/dispatch/router", "crates/medulla-server/src/dispatch/seam", "crates/medulla-server/src/dispatch/telemetry", "crates/medulla-server/src/dispatch/test_support", "src/server/dispatch/telemetry", "src/server/dispatch/request_boundary"]
 specs = []
-current_lines = 7881
-projected_lines = 9681
+current_lines = 11488
+projected_lines = 13288
 
 [crates.medulla-server]
 level = "F11"
@@ -938,8 +938,8 @@ kind = "server"
 responsibility = "Server composition root: startup, seam installation, transport, issuer trust, replica, registry reaper, retention and CDC sink."
 moves = ["crates/medulla-h-query/src/query/seam"]
 specs = []
-current_lines = 13138
-projected_lines = 13138
+current_lines = 5999
+projected_lines = 5999
 
 [crates.medulla-server-served-tests]
 level = "F11a"
@@ -947,8 +947,8 @@ kind = "tests"
 responsibility = "End-to-end served tests: the full dispatch chain, handler and wire protocol round trips through the assembled server."
 moves = ["crates/medulla-server/src/split_tests/medulla_h_admin_boot_regression", "crates/medulla-server/src/split_tests/medulla_h_decide_decide_guardrail_tests", "crates/medulla-server/src/split_tests/medulla_h_decide_harness_config_tests", "crates/medulla-server/src/split_tests/medulla_h_ingest_repository_index_tests", "crates/medulla-server/src/split_tests/medulla_h_ingest_web_ingest_tests", "crates/medulla-server/src/split_tests/medulla_h_jobs_wire_tests", "crates/medulla-server/src/split_tests/medulla_h_query_dispatch_pipeline_tests", "crates/medulla-server/src/split_tests/medulla_h_query_sql_source_read_tests", "crates/medulla-server/src/split_tests/medulla_wire_wire_tests", "crates/medulla-server/src/split_tests/wired_edge_index", "crates/medulla-server/src/tests"]
 specs = []
-current_lines = 6481
-projected_lines = 6481
+current_lines = 12932
+projected_lines = 12932
 
 [crates.medulla-server-store-tests]
 level = "F11a"
@@ -956,8 +956,8 @@ kind = "tests"
 responsibility = "Served mutation, batch, saga, persistence and store run-owner tests across the server API and store crates."
 moves = ["crates/medulla-server/src/split_tests/admin_agent_library_security", "crates/medulla-server/src/split_tests/impact_watch", "crates/medulla-server/src/split_tests/mutation_batch_internal_replay", "crates/medulla-server/src/split_tests/mutation_batch_lifecycle", "crates/medulla-server/src/split_tests/mutation_redb", "crates/medulla-server/src/split_tests/persistence_txn", "crates/medulla-server/src/split_tests/server_api_mutation_inventory", "crates/medulla-server/src/split_tests/server_api_saga", "crates/medulla-server/src/split_tests/store_run_owner", "crates/medulla-server/src/split_tests/store_terminal_batch"]
 specs = []
-current_lines = 7304
-projected_lines = 7304
+current_lines = 7347
+projected_lines = 7347
 
 [crates.medulla-server-cluster-tests]
 level = "F11a"
@@ -965,8 +965,8 @@ kind = "tests"
 responsibility = "Cluster tests: raft clusters and commands, cross-shard harness, placement and resource acceptance."
 moves = ["crates/medulla-server/src/split_tests/placement_harness", "crates/medulla-server/src/split_tests/raft_cluster", "crates/medulla-server/src/split_tests/raft_command", "crates/medulla-server/src/split_tests/resource_acceptance_test", "crates/medulla-server/src/split_tests/xshard_harness"]
 specs = []
-current_lines = 10031
-projected_lines = 10031
+current_lines = 10069
+projected_lines = 10069
 
 [crates.medulla-engine]
 level = "F12"
@@ -975,7 +975,7 @@ responsibility = "The one server executable and the embedded engine."
 moves = []
 specs = ["public-engine-contract-and-release"]
 current_lines = 7507
-projected_lines = 10707
+projected_lines = 10307
 
 # ---------------------------------------------------------------- routing
 # Rules are tried in order: (1) [[route]] keyword rules for the row's spec, matched
