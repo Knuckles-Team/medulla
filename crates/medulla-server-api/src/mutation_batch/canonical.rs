@@ -725,7 +725,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::KgDelegate { .. }
         | Method::SubmitWorkItem { .. }
         | Method::SubmitWorkItems { .. }
-        | medulla_types::capacity_lease_writes!()
+        | medulla_protocol_types::capacity_lease_writes!()
         | medulla_store::work_item_kernel_writes!()
         | Method::CommitWorkItemResult { .. }
         | medulla_store::work_item_resource_writes!()

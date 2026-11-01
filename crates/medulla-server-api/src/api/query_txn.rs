@@ -126,6 +126,6 @@ pub trait WireApi: Send + Sync {
         &self,
         store: &medulla_query::TableStore,
         authority: &crate::access::CarrierAuthority,
-        batch: &medulla_types::MutationBatch,
+        batch: &medulla_protocol_types::mutation_batch::MutationBatch,
     ) -> Result<Option<medulla_protocol_types::mutation_batch::MutationBatchRecord>, String>;
 }

@@ -601,7 +601,7 @@ fn named_domain(line: &str) -> Option<String> {
 fn family_variants(family: &str) -> Vec<String> {
     let source = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../medulla-types/src/protocol/method/families.rs"
+        "/../medulla-protocol-types/src/protocol/method/families.rs"
     ));
     let mut pending: Vec<String> = Vec::new();
     for line in code_lines(function_body(source, "fn write_family")) {
@@ -1151,11 +1151,11 @@ fn served_owner_store_batch_commits_and_its_actor_survives_in_the_ledger() {
     let (kernel, owner_authority) = kernel.into_read_and_mutation_authority().unwrap();
     let mutations = MutationKernel::new(owner_authority);
 
-    let identity = medulla_types::MutationScopeIdentity::native(
-        medulla_types::ScopeTenantId::new("tenant-a".to_string()).unwrap(),
+    let identity = medulla_mutation_types::mutation_scope::MutationScopeIdentity::native(
+        medulla_mutation_types::mutation_scope::ScopeTenantId::new("tenant-a".to_string()).unwrap(),
         medulla_mutation_types::mutation_scope::DurabilityDomain::KvStore,
-        medulla_types::LogicalName::new("kv-scope-a".to_string()).unwrap(),
-        medulla_types::IncarnationId::new(crate::mutation_batch::COMPILED_BATCH_INCARNATION)
+        medulla_mutation_types::mutation_scope::LogicalName::new("kv-scope-a".to_string()).unwrap(),
+        medulla_mutation_types::mutation_scope::IncarnationId::new(crate::mutation_batch::COMPILED_BATCH_INCARNATION)
             .unwrap(),
     )
     .unwrap();

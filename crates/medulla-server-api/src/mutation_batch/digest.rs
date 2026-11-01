@@ -23,7 +23,7 @@ use medulla_protocol_types::protocol::Method;
 /// `None` for a batch that carries no outbox row or no header -- which no batch
 /// this module compiles ever is, so a caller-scope check must treat `None` as a
 /// refusal rather than a match.
-pub fn batch_actor(batch: &medulla_types::MutationBatch) -> Option<&str> {
+pub fn batch_actor(batch: &medulla_protocol_types::mutation_batch::MutationBatch) -> Option<&str> {
     batch
         .outbox
         .first()?

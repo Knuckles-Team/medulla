@@ -8,7 +8,6 @@ use medulla_protocol_types::storage_wire::{
     SqlSourceBatch, SqlSourceBatchRequest, SqlSourceCell, SqlSourceDescriptor, SqlSourceJson,
     SqlSourceMappingDescriptor, SqlSourceText,
 };
-use medulla_types::contract::{BoundedVec, Digest256, Nonce, RecordBytes, ResourceId};
 
 const ROW_MARKER: &str = "row-content-private-marker";
 const MAPPING_MARKER: &[u8] = b"mapping-content-private-marker";
