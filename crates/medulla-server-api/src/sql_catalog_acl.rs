@@ -110,7 +110,7 @@ pub(crate) struct SqlSourceAclSnapshot {
     pub(crate) decision_digest: String,
     pub(crate) owner: bool,
     pub(crate) privileges: BTreeSet<SqlPrivilege>,
-    pub(crate) rls_column: Option<String>,
+    pub rls_column: Option<String>,
     pub(crate) ordering: SqlSourceAuthorityOrdering,
 }
 

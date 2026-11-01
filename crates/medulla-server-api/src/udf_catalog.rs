@@ -39,7 +39,7 @@ fn catalog_key(owner_scope: &str, id: &str) -> String {
 
 impl UdfCatalog {
     /// Compile + record `owner`'s UDF `id`, replacing only `owner`'s own prior module.
-    pub(crate) fn register(
+    pub fn register(
         &self,
         owner: &CarrierAuthority,
         id: &str,
@@ -57,7 +57,7 @@ impl UdfCatalog {
 
     /// Run `caller`'s own UDF `id` over `input`. Another owner's id is "not
     /// registered", byte-identical to a typo.
-    pub(crate) fn run(
+    pub fn run(
         &self,
         caller: &CarrierAuthority,
         id: &str,

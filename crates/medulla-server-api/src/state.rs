@@ -358,7 +358,7 @@ pub struct ServerState {
     /// Bounded host-driven foreign-read page buffers.  Durable approval remains
     /// in the Agent Library; this map is only request-scoped execution state.
     #[cfg(feature = "federation")]
-    pub(crate) foreign_reads: Arc<crate::api::query_txn::foreign_read::ForeignReadSessions>,
+    pub foreign_reads: Arc<crate::api::query_txn::foreign_read::ForeignReadSessions>,
     /// Generic namespaced Key→Value store (CONCEPT:MEDULLA-KG.storage.namespaced-kv-surface, feature `kv`). `Some` on a
     /// `kv` build: a durable `{persist_dir}/kv.redb` when a persist dir is set, else an
     /// in-memory scratch map. The `Kv*` handlers get/put/delete/scan/cas through it; it

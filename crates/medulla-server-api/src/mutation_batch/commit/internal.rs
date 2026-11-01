@@ -108,7 +108,7 @@ impl<'a> InternalGraphCommitRequest<'a> {
 
     /// Preserve verified tenant attribution for caller-owned consensus children.
     /// Engine-internal callers retain their existing graph-scoped default.
-    pub(crate) fn with_tenant_scope(mut self, tenant: &'a str) -> Self {
+    pub fn with_tenant_scope(mut self, tenant: &'a str) -> Self {
         self.tenant = Some(tenant);
         self
     }

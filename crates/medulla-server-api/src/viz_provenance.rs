@@ -165,7 +165,7 @@ impl VizProvenanceStore {
     /// append-only). Returns `true` if this call actually inserted a new
     /// record, `false` if it was already present (a cache-hit re-serve, or a
     /// concurrent duplicate submit — both harmless no-ops here).
-    pub(crate) fn put_if_absent(&self, record: VizProvenanceRecord) -> Result<bool, String> {
+    pub fn put_if_absent(&self, record: VizProvenanceRecord) -> Result<bool, String> {
         validate_key(&record.result_ref)?;
         {
             let entries = self.entries.read();
@@ -192,7 +192,7 @@ impl VizProvenanceStore {
         Ok(inserted)
     }
 
-    pub(crate) fn get(&self, result_ref: &str) -> Option<VizProvenanceRecord> {
+    pub fn get(&self, result_ref: &str) -> Option<VizProvenanceRecord> {
         self.entries.read().get(result_ref).cloned()
     }
 

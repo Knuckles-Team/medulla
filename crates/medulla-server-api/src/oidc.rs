@@ -206,7 +206,7 @@ pub struct VerifiedTokenClaims {
     pub subject: String,
     pub tenant: Option<String>,
     pub(crate) roles: HashSet<String>,
-    pub(crate) scopes: HashSet<String>,
+    pub scopes: HashSet<String>,
 }
 
 /// A Keycloak-realm JWT validator with a lazily-refreshed JWKS key cache.

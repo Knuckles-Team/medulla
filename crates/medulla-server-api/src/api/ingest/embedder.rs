@@ -32,8 +32,8 @@ pub(crate) const REMOTE: &str = "openai-compatible";
 #[derive(Clone)]
 pub struct EmbedderConfig {
     endpoint: Option<String>,
-    pub(crate) model: Option<String>,
-    pub(crate) dims: usize,
+    pub model: Option<String>,
+    pub dims: usize,
     api_key: Option<String>,
 }
 
@@ -81,7 +81,7 @@ impl EmbedderConfig {
     }
 
     /// The provenance name of the embedder this config selects.
-    pub(crate) fn name(&self) -> &'static str {
+    pub fn name(&self) -> &'static str {
         if self.endpoint.is_some() {
             REMOTE
         } else {

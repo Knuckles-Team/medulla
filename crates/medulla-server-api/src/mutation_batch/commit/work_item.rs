@@ -154,7 +154,7 @@ impl<'a> WorkItemCommitRequest<'a> {
         self
     }
 
-    pub(crate) fn with_placement_fencing_token(mut self, token: Option<u64>) -> Self {
+    pub fn with_placement_fencing_token(mut self, token: Option<u64>) -> Self {
         self.placement_fencing_token = token;
         self
     }

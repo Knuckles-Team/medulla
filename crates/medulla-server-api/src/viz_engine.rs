@@ -59,9 +59,9 @@ const RENDER_CACHE_CAPACITY: usize = 512;
 /// recomputation (no re-resolve, no re-tier-select, no re-encode).
 #[derive(Clone)]
 pub struct CachedRender {
-    pub(crate) view_result: ViewResult,
-    pub(crate) content_type: &'static str,
-    pub(crate) bytes: Arc<[u8]>,
+    pub view_result: ViewResult,
+    pub content_type: &'static str,
+    pub bytes: Arc<[u8]>,
 }
 
 #[derive(Default)]
@@ -89,7 +89,7 @@ impl RenderCache {
         RenderCache(RwLock::new(RenderCacheInner::default()))
     }
 
-    fn get(&self, key: &str) -> Option<CachedRender> {
+    pub fn get(&self, key: &str) -> Option<CachedRender> {
         let mut inner = self.0.write();
         let hit = inner.entries.get(key).cloned();
         if hit.is_some() {

@@ -55,7 +55,7 @@ impl<'a> LifecycleCommitRequest<'a> {
     }
 
     /// Bind the verified carrier tenant scope the durable batch id is keyed on.
-    pub(crate) fn with_tenant_scope(mut self, tenant_scope: &'a str) -> Self {
+    pub fn with_tenant_scope(mut self, tenant_scope: &'a str) -> Self {
         self.tenant_scope = Some(tenant_scope);
         self
     }
