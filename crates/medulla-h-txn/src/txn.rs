@@ -59,18 +59,18 @@ mod staging;
 
 use commit_core::*;
 pub(crate) use commit_modal::*;
-pub(crate) use commit_multi_graph::*;
+pub use commit_multi_graph::*;
 use commit_prepared::*;
 #[cfg(feature = "raft")]
-pub(crate) use consensus::*;
-pub(crate) use dispatch::*;
-pub(crate) use receipts::*;
+pub use consensus::*;
+pub use dispatch::*;
+pub use receipts::*;
 use reconcile::*;
 use rollback::*;
-pub(crate) use staging::*;
+pub use staging::*;
 #[path = "txn/seam.rs"]
 mod seam;
-pub(crate) use seam::TxnSeam;
+pub use seam::TxnSeam;
 
 fn consensus_apply_is_authorized() -> bool {
     #[cfg(feature = "raft")]

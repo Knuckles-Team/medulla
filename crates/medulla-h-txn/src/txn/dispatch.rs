@@ -2,7 +2,7 @@
 
 use super::*;
 
-pub(crate) async fn try_handle(
+pub async fn try_handle(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     caller: &str,

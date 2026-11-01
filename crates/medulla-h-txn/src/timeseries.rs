@@ -166,7 +166,7 @@ async fn store_of(
 /// Handle the `Ts*` methods. Returns `Err(method)` for any non-ts method so the
 /// dispatch chain falls through (routing convention) — though dispatch only ever
 /// routes Ts* methods here.
-pub(crate) async fn try_handle(
+pub async fn try_handle(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     authority: &CarrierAuthority,
@@ -196,7 +196,7 @@ pub(crate) async fn try_handle(
 /// epoch and fencing token are what a stale route is rejected by -- committing
 /// under the right graph but a stale epoch is exactly the split-brain write the
 /// pair exists to stop, so no caller gets to supply one without the other two.
-pub(crate) struct SeriesPlacement<'a> {
+pub struct SeriesPlacement<'a> {
     pub(crate) graph: &'a str,
     pub(crate) placement_epoch: u64,
     /// `None` when the route carries no fencing token (single-node / non-raft).
@@ -662,7 +662,7 @@ async fn handle_list_series(context: &TsRequestContext<'_>) -> Response {
     }
 }
 
-pub(crate) async fn try_handle_with_nonce(
+pub async fn try_handle_with_nonce(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     authority: &CarrierAuthority,
@@ -748,8 +748,8 @@ mod nested_payload_tests;
 #[cfg(test)]
 mod derived_tests;
 
-#[cfg(test)]
-pub(crate) fn open_test_series_store(path: &std::path::Path) -> Arc<SeriesStore> {
+#[cfg(any(test, feature = "test-support"))]
+pub fn open_test_series_store(path: &std::path::Path) -> Arc<SeriesStore> {
     Arc::new(
         SeriesStore::open(
             path,

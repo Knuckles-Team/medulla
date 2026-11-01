@@ -158,7 +158,7 @@ pub(super) async fn finish_participant_cleanup(
 }
 
 #[cfg(feature = "raft")]
-pub(crate) async fn apply_consensus_transaction_decision(
+pub async fn apply_consensus_transaction_decision(
     state: &Arc<RwLock<ServerState>>,
     coordinator_id: &str,
     authority: &medulla_server_api::api::persistence::RaftMutationContext,
@@ -197,7 +197,7 @@ pub(crate) async fn apply_consensus_transaction_decision(
 }
 
 #[cfg(feature = "raft")]
-pub(crate) async fn apply_consensus_transaction_finalize(
+pub async fn apply_consensus_transaction_finalize(
     state: &Arc<RwLock<ServerState>>,
     coordinator_id: &str,
     authority: &medulla_server_api::api::persistence::RaftMutationContext,

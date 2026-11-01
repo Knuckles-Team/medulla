@@ -193,7 +193,7 @@ impl<'a> DistributedRequest<'a> {
 
 /// Try to handle a distributed-compute method. `Ok(resp)` = handled; `Err(method)` =
 /// not mine.
-pub(crate) async fn try_handle(
+pub async fn try_handle(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     caller: Option<&str>,

@@ -666,12 +666,12 @@ pub(super) async fn stage_materialize_belief(
 /// byte-for-byte the wire shape it always had (`ResultPayload` is untagged) -- the
 /// VERIFY contract's "without the key the behaviour is unchanged". An error
 /// response passes through unchanged; any other outcome is a broken receipt.
-pub(crate) struct CommitResponseOptions {
+pub struct CommitResponseOptions {
     pub(crate) replayed: bool,
     pub(crate) keyed: bool,
 }
 
-pub(crate) fn tag_commit_response(response: Response, options: CommitResponseOptions) -> Response {
+pub fn tag_commit_response(response: Response, options: CommitResponseOptions) -> Response {
     if let Some(refusal) = response.refusal_text() {
         return Response::err(response.id, refusal);
     }

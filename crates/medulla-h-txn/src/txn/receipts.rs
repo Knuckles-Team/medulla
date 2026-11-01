@@ -138,7 +138,7 @@ fn valid_receipt_operation_id(operation_id: &str) -> bool {
 /// Check a specific open transaction's ownership without consulting durable
 /// receipt state. Durable keyed replay must remain in `begin_txn_receipt`, after
 /// the commit handler has removed the transaction under its restore guard.
-pub(crate) async fn preflight_open_txn_authority(
+pub async fn preflight_open_txn_authority(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified_context: &VerifiedRequestContext,

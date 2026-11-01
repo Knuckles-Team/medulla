@@ -123,7 +123,7 @@ async fn tenant_persist_dir(
 /// immediately visible/joinable to every other tenant member with a grant on it
 /// — and import registers ownership of each table it creates, so a subsequent
 /// non-admin `GRANT`/`REVOKE` on it works.
-pub(crate) async fn try_handle(
+pub async fn try_handle(
     state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     req_id: u64,
     authority: &CarrierAuthority,

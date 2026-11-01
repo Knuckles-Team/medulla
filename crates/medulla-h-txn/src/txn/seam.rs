@@ -35,7 +35,7 @@ impl medulla_server_api::api::query_txn::TxnApi for TxnSeam {
         .await
     }
 
-    async fn try_handle(
+    pub async fn try_handle(
         &self,
         state: &Arc<RwLock<ServerState>>,
         req_id: u64,

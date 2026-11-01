@@ -99,7 +99,7 @@ pub(crate) async fn commit_coordinated_graph_methods(
     .await
 }
 
-pub(crate) async fn commit_coordinated_graph_methods_with_nonce(
+pub async fn commit_coordinated_graph_methods_with_nonce(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     caller: Option<&str>,

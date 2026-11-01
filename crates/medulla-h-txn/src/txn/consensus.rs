@@ -8,7 +8,7 @@ use medulla_persistence::AsRedb;
 
 #[path = "consensus/authority.rs"]
 mod authority;
-pub(crate) use authority::*;
+pub use authority::*;
 
 pub(super) const CONSENSUS_TXN_SCHEMA_VERSION: u16 = 1;
 
@@ -27,23 +27,23 @@ pub(super) struct ConsensusPreparedTransaction {
 
 /// One engine-placed participant command built from a prepared transaction.
 #[cfg(feature = "raft")]
-pub(crate) struct ConsensusTransactionParticipant {
+pub struct ConsensusTransactionParticipant {
     pub(crate) coordinator_id: String,
-    pub(crate) participant_id: u64,
+    pub participant_id: u64,
     pub(crate) graph_name: String,
-    pub(crate) graph_type: medulla_protocol_types::protocol::GraphType,
-    pub(crate) group_id: medulla_raft::raft::GroupId,
-    pub(crate) placement_epoch: u64,
-    pub(crate) fencing_token: Option<u64>,
+    pub graph_type: medulla_protocol_types::protocol::GraphType,
+    pub group_id: medulla_raft::raft::GroupId,
+    pub placement_epoch: u64,
+    pub fencing_token: Option<u64>,
     pub(crate) sealed_plan_source: Vec<u8>,
 }
 
 /// Fully resolved participant fanout. Placement comes only from the engine's
 /// catalog and is revalidated by each participant state machine before prepare.
 #[cfg(feature = "raft")]
-pub(crate) struct ConsensusTransactionFanout {
-    pub(crate) coordinator_id: String,
-    pub(crate) participants: Vec<ConsensusTransactionParticipant>,
+pub struct ConsensusTransactionFanout {
+    pub coordinator_id: String,
+    pub participants: Vec<ConsensusTransactionParticipant>,
 }
 
 #[cfg(feature = "raft")]
@@ -68,7 +68,7 @@ pub(super) struct ConsensusParticipantPlan {
 /// participant prepare, a control-group decision, participant commit, and final
 /// parent terminalization without issuing Raft writes from state-machine apply.
 #[cfg(feature = "raft")]
-pub(crate) async fn prepare_consensus_commit(
+pub async fn prepare_consensus_commit(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     caller: Option<&str>,
@@ -221,7 +221,7 @@ pub(super) fn consensus_participant_id(coordinator_id: &str, graph_name: &str) -
 /// catalog and build one sealed-command source per graph participant. No caller
 /// placement hint or local hash is accepted.
 #[cfg(feature = "raft")]
-pub(crate) async fn build_consensus_transaction_fanout(
+pub async fn build_consensus_transaction_fanout(
     state: &Arc<RwLock<ServerState>>,
     prepared_bytes: &[u8],
 ) -> Result<ConsensusTransactionFanout, String> {
@@ -418,7 +418,7 @@ pub(super) fn consensus_participant_receipt_id(
 /// coordinator, its participant id, and the encoded plan it carries -- threaded as
 /// one value through both the PREPARE and the decided COMMIT apply.
 #[cfg(feature = "raft")]
-pub(crate) struct ConsensusParticipantRef<'a> {
+pub struct ConsensusParticipantRef<'a> {
     pub(crate) coordinator_id: &'a str,
     pub(crate) participant_id: u64,
     pub(crate) plan_bytes: &'a [u8],
@@ -428,7 +428,7 @@ pub(crate) struct ConsensusParticipantRef<'a> {
 /// own Raft group. The encrypted durable intent is idempotent and byte-bound to the
 /// parent plan; a conflicting retry fails closed.
 #[cfg(feature = "raft")]
-pub(crate) async fn apply_consensus_participant_prepare(
+pub async fn apply_consensus_participant_prepare(
     state: &Arc<RwLock<ServerState>>,
     applying_group: medulla_raft::raft::GroupId,
     applying_epoch: u64,
@@ -560,7 +560,7 @@ pub(super) fn isolate_participant_transaction(
 /// batch id binds graph + participant + parent, making command and snapshot replay
 /// idempotent. A missing/mismatched prepared intent never authorizes a first apply.
 #[cfg(feature = "raft")]
-pub(crate) async fn apply_consensus_participant_commit(
+pub async fn apply_consensus_participant_commit(
     state: &Arc<RwLock<ServerState>>,
     request_id: u64,
     applying_group: medulla_raft::raft::GroupId,
@@ -652,7 +652,7 @@ pub(crate) async fn apply_consensus_participant_commit(
 }
 
 #[cfg(feature = "raft")]
-pub(crate) async fn apply_consensus_participant_abort(
+pub async fn apply_consensus_participant_abort(
     state: &Arc<RwLock<ServerState>>,
     authority: &medulla_server_api::api::persistence::RaftMutationContext,
     coordinator_id: &str,
