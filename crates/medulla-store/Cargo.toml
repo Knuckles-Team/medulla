@@ -12,6 +12,11 @@ name = "medulla_store"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-result-types = { path = "../medulla-result-types" }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-agent-types = { path = "../medulla-agent-types" }
 tempfile = { version = "3", optional = true }
 hex = "0.4"
 medulla-compute = { path = "../medulla-compute" }
@@ -50,8 +55,3 @@ traces = ["dep:medulla-tsdb", "medulla-tsdb/traces"]
 
 [dev-dependencies]
 tempfile = "3"
-medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
-medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
-medulla-mutation-types = { path = "../medulla-mutation-types" }
-medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
-medulla-result-types = { path = "../medulla-result-types" }

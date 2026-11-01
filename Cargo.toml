@@ -1456,6 +1456,14 @@ quantum-agent-api = [
 ]
 
 [dependencies]
+medulla-agent-types = { path = "crates/medulla-agent-types" }
+medulla-catalog-types = { path = "crates/medulla-catalog-types" }
+medulla-decision-types = { path = "crates/medulla-decision-types" }
+medulla-identity-types = { path = "crates/medulla-identity-types" }
+medulla-index-types = { path = "crates/medulla-index-types" }
+medulla-mutation-types = { path = "crates/medulla-mutation-types" }
+medulla-protocol-types = { path = "crates/medulla-protocol-types" }
+medulla-result-types = { path = "crates/medulla-result-types" }
 chrono = { version = "0.4", optional = true, default-features = false, features = ["std"] }
 medulla-resource = { path = "crates/medulla-resource" }
 medulla-kernel = { path = "crates/medulla-kernel" }
