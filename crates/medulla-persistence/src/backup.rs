@@ -878,9 +878,9 @@ impl EnvVarGuard {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 impl Drop for EnvVarGuard {
-    pub fn drop(&mut self) {
+    fn drop(&mut self) {
         match self.previous.take() {
             Some(value) => std::env::set_var(self.key, value),
             None => std::env::remove_var(self.key),
