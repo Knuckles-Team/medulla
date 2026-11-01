@@ -686,8 +686,8 @@ kind = "persistence"
 responsibility = "Persistence backend: redb backend, cold offload and tiering, read-through, cost accounting, node info and durable stores."
 moves = []
 specs = []
-current_lines = 24519
-projected_lines = 24519
+current_lines = 24520
+projected_lines = 24520
 
 [crates.medulla-persistence-records]
 level = "F6a"
