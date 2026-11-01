@@ -44,7 +44,10 @@ pub trait DecideApi: Send + Sync {
         tenant: Option<&str>,
         graph: &str,
         core: &medulla_graph_core::graph::GraphCore,
-    ) -> Option<Arc<served_adapter::ServedAdapter>>;
+    ) -> Option<Arc<served_adapter::ServedAdapter>> {
+        let _ = (state, tenant, graph, core);
+        None
+    }
 
     /// The caller's read-only SQL relations (the decision record views) when `query` can see
     /// them.
@@ -54,7 +57,10 @@ pub trait DecideApi: Send + Sync {
         state: &Arc<RwLock<ServerState>>,
         authority: &medulla_server_api::carrier::CarrierAuthority,
         query: &str,
-    ) -> Option<medulla_server_auth::sql_catalog_acl::SharedRelations>;
+    ) -> Option<medulla_server_auth::sql_catalog_acl::SharedRelations> {
+        let _ = (state, authority, query);
+        None
+    }
 
     /// The caller's visible decision log as a UQL `DECISIONS` source.
     #[cfg(all(feature = "decide", feature = "query"))]
@@ -62,7 +68,10 @@ pub trait DecideApi: Send + Sync {
         &self,
         state: &Arc<RwLock<ServerState>>,
         authority: &medulla_server_api::carrier::CarrierAuthority,
-    ) -> Option<Arc<dyn medulla_exec::exec::DecisionSource>>;
+    ) -> Option<Arc<dyn medulla_exec::exec::DecisionSource>> {
+        let _ = (state, authority);
+        None
+    }
 }
 
 /// The installed decide seam of `state`, or `None` before installation.
