@@ -1901,6 +1901,8 @@ medulla-h-ingest = { path = "crates/medulla-h-ingest", features = ["test-support
 medulla-h-decide = { path = "crates/medulla-h-decide", features = ["test-support"] }
 medulla-raft = { path = "crates/medulla-raft" }
 medulla-persistence = { path = "crates/medulla-persistence", features = ["test-support"] }
+medulla-persistence-records = { path = "crates/medulla-persistence-records", features = ["test-support"] }
+medulla-persistence-ops = { path = "crates/medulla-persistence-ops", features = ["test-support"] }
 medulla-server-api = { path = "crates/medulla-server-api", features = ["test-support"] }
 medulla-store = { path = "crates/medulla-store", features = ["test-support"] }
 medulla-protocol-types = { path = "crates/medulla-protocol-types", features = ["test-support"] }
