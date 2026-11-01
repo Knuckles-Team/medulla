@@ -105,7 +105,7 @@ pub struct ResolvedConnectorSchemaMapping {
 
 /// One digest-verified semantic body selected from a connector's visible head.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct ResolvedConnectorSchemaBody {
+pub struct ResolvedConnectorSchemaBody {
     pub kind: PackEntryKind,
     pub uri: String,
     pub body_sha256: Digest256,
@@ -117,7 +117,7 @@ pub(crate) struct ResolvedConnectorSchemaBody {
 /// Blob CAS and are read+verified only after this Agent Library snapshot has
 /// fixed their exact visible record identity.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct ResolvedConnectorSchemaHead {
+pub struct ResolvedConnectorSchemaHead {
     pub record_id: String,
     pub bodies: Vec<ResolvedConnectorSchemaBody>,
 }
