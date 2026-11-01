@@ -20,8 +20,8 @@ use sha2::Sha256;
 use tokio::sync::RwLock;
 
 use medulla_core::graph::GraphCore;
-#[cfg(test)]
-use medulla_types::knowledge_stream::KnowledgeStreamProjection;
+#[cfg(any(test, feature = "test-support"))]
+pub use medulla_types::knowledge_stream::KnowledgeStreamProjection;
 use medulla_types::knowledge_stream::KnowledgeResultFamily;
 use medulla_types::knowledge_stream::KnowledgeStreamBatch;
 use medulla_types::knowledge_stream::KnowledgeStreamCursor;
