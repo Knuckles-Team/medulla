@@ -14,8 +14,11 @@ mod pipeline_model;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::graph::GraphCore;
-use crate::protocol::{GraphSource, Method, Response, ResultPayload};
+use medulla_core::graph::GraphCore;
+use medulla_protocol_types::protocol::GraphSource;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_compute::datascience::estimators;
 use medulla_compute::graphlearn::edge_fn::Basis;
 use medulla_compute::graphlearn::link_predict::{self, FeatureCtx, KanLinkConfig, KanLinkModel};
@@ -906,8 +909,8 @@ fn now_secs() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::isolation::IsolationLayer;
-    use crate::protocol::GraphSource;
+    use medulla_core::isolation::IsolationLayer;
+    use medulla_protocol_types::protocol::GraphSource;
     use medulla_server_api::access::GraphReadAuthority;
     use medulla_server_api::auth::VerifiedRequestContext;
     use medulla_types::wire::{FeatureStep, ModelSpec, SplitSpec};

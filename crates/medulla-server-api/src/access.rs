@@ -1406,7 +1406,7 @@ mod universal_row_read_tests {
     /// `isolation::tests::rls::default_deny::unowned_bare_visibility_tag_alone_is_no_longer_trusted`).
     /// A real production write through the mutation gateway now stamps
     /// `_owner_id` from the caller's identity when absent
-    /// (`stamp_owner_id_if_absent`, wired in `handlers::graph_ops::
+    /// (`stamp_owner_id_if_absent`, wired in `medulla_h_graph::graph_ops::
     /// try_handle_gateway`); this fixture models that shape rather than the
     /// unstamped one no production write path can produce anymore. With no
     /// `_visibility`/`_shared_scope` key set, the row keeps the pre-existing

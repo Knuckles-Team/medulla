@@ -126,7 +126,7 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "MatchOntologyTerms",
     "MaterializationStatus",
     "MineClassifyFit",
-    // t1-grounding-0802 follow-up audit: `handlers::pipeline::try_handle` (module doc,
+    // t1-grounding-0802 follow-up audit: `medulla_h_graph::pipeline::try_handle` (module doc,
     // `src/server/handlers/pipeline.rs`) receives the SAME `core.clone()` the mining/
     // graphlearn handlers ahead of it in dispatch.rs's `'dispatch` block do -- the
     // already-`project_core`-projected core built once at the top of
@@ -188,7 +188,7 @@ pub(super) const REASON_SERVER_LIFECYCLE: &str =
 pub(super) const REASON_AUDIT_CHAIN_ADMIN_GATED: &str =
     "AuditVerify/AuditReadEvent/AuditProveInclusion walk the hash-chained audit log under security:audit and graph ACL; audit events are control records, not graph rows";
 // BUG A1 (2026-08-12): GetLedger was previously (wrongly) RLS_ROUTED. Its handler
-// (`handlers::graph_ops::try_handle`, `Method::GetLedger` arm) reads the mutation
+// (`medulla_h_graph::graph_ops::try_handle`, `Method::GetLedger` arm) reads the mutation
 // ledger off `raw_core` (captured before `read_authority.project_core` shadows
 // `core`), the SAME raw-core pattern `raw_ledger_len` uses just above in that file
 // for `Metrics.total_mutations` -- the ledger is process-observability (an

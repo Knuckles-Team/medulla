@@ -2,8 +2,8 @@
 //! (MEDULLA-ORCH-VOCAB-R801.3).
 
 use super::{decode_props, direct_add_node};
-use crate::graph::GraphCore;
-use crate::protocol::Method;
+use medulla_core::graph::GraphCore;
+use medulla_protocol_types::protocol::Method;
 
 fn harness_version_props(
     component_id: &str,

@@ -10,7 +10,8 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::protocol::{Response, ResultPayload};
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_persistence::agent_library::AgentLibraryStore;
 use medulla_server_api::state::ServerState;

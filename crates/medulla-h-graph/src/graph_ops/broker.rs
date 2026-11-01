@@ -118,8 +118,8 @@ pub(super) async fn try_handle_streams(
             from_offset,
             max,
         } => {
-            let from = crate::broker::ReadFrom::from_wire(from_offset);
-            let msgs = crate::broker::stream_read(core, &stream, from, max as usize);
+            let from = medulla_core::broker::ReadFrom::from_wire(from_offset);
+            let msgs = medulla_core::broker::stream_read(core, &stream, from, max as usize);
             ControlFlow::Break(Response::ok(req_id, ResultPayload::of_ref::<medulla_protocol_types::result_contract::messaging::StreamRead>(&msgs)))
         }
         #[cfg(feature = "broker")]
@@ -134,7 +134,7 @@ pub(super) async fn try_handle_streams(
         ),
         #[cfg(feature = "broker")]
         Method::StreamCommittedOffset { stream, group } => {
-            let committed = crate::broker::committed_offset(core, &stream, &group);
+            let committed = medulla_core::broker::committed_offset(core, &stream, &group);
             ControlFlow::Break(Response::ok(req_id, ResultPayload::of_ref::<medulla_protocol_types::result_contract::messaging::StreamCommittedOffset>(&committed)))
         }
         other => ControlFlow::Continue(other),

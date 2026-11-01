@@ -78,7 +78,7 @@ fn handle_get_neighbors(req_id: u64, core: &Arc<GraphCore>, node_id: &str) -> Re
 /// byte-identical behaviour, no signature change.
 fn handle_degree_centrality(req_id: u64, core: &Arc<GraphCore>, node_id: &str) -> Response {
     let g = core.topology_snapshot();
-    match crate::algorithms::compute_degree_centrality(&g, node_id) {
+    match medulla_compute::algorithms::compute_degree_centrality(&g, node_id) {
         Ok(val) => Response::ok(
             req_id,
             ResultPayload::scalar::<results::DegreeCentrality>(val),
@@ -122,7 +122,7 @@ async fn handle_betweenness_centrality(req_id: u64, core: &Arc<GraphCore>) -> Re
     // O(V·E) Brandes — snapshot topology, compute off-lock (KG-2.51).
     let snap = { core.topology_snapshot() };
     match compute_off_lock(req_id, move || {
-        crate::algorithms::betweenness_centrality(&snap)
+        medulla_compute::algorithms::betweenness_centrality(&snap)
     })
     .await
     {
@@ -146,7 +146,7 @@ async fn handle_personalized_page_rank(
     // O(iterations·E) — snapshot topology, compute off-lock (KG-2.51).
     let snap = { core.topology_snapshot() };
     match compute_off_lock(req_id, move || {
-        crate::algorithms::personalized_pagerank(&snap, &seed_nodes, damping, iterations)
+        medulla_compute::algorithms::personalized_pagerank(&snap, &seed_nodes, damping, iterations)
     })
     .await
     {
@@ -179,7 +179,7 @@ async fn handle_community_detection(
     // writer on the graph. Snapshot topology, compute off-lock (KG-2.51).
     let snap = { core.topology_snapshot() };
     match compute_off_lock(req_id, move || {
-        crate::algorithms::community_detection(&snap, resolution)
+        medulla_compute::algorithms::community_detection(&snap, resolution)
     })
     .await
     {
@@ -200,7 +200,7 @@ async fn handle_compute_similarity_edges(
     // property blobs it reads, compute off-lock (KG-2.51).
     let snap = { core.analysis_snapshot() };
     match compute_off_lock(req_id, move || {
-        crate::algorithms::compute_similarity_edges(&snap, threshold)
+        medulla_compute::algorithms::compute_similarity_edges(&snap, threshold)
     })
     .await
     {
@@ -227,7 +227,7 @@ async fn handle_resolve_candidates(
     // cosine pass). Returns merge proposals; never mutates the graph.
     let snap = { core.analysis_snapshot() };
     match compute_off_lock(req_id, move || {
-        crate::algorithms::resolve_candidates(
+        medulla_compute::algorithms::resolve_candidates(
             &snap,
             sim_threshold,
             merge_threshold,
@@ -257,7 +257,7 @@ async fn handle_resolve_candidates(
 /// byte-identical behaviour, no signature change.
 fn handle_topological_sort(req_id: u64, core: &Arc<GraphCore>) -> Response {
     let g = core.topology_snapshot();
-    match crate::algorithms::topological_sort(&g) {
+    match medulla_compute::algorithms::topological_sort(&g) {
         Ok(order) => Response::ok(req_id, ResultPayload::of::<results::TopologicalSort>(order)),
         Err(e) => Response::err(req_id, format!("INVALID_ARGUMENT: {e}")),
     }
@@ -274,7 +274,7 @@ async fn handle_page_rank(
     // O(iterations·E) — snapshot topology, compute off-lock (KG-2.51).
     let snap = { core.topology_snapshot() };
     match compute_off_lock(req_id, move || {
-        crate::algorithms::pagerank(&snap, damping, iterations)
+        medulla_compute::algorithms::pagerank(&snap, damping, iterations)
     })
     .await
     {
@@ -290,7 +290,7 @@ async fn handle_minimum_spanning_tree(req_id: u64, core: &Arc<GraphCore>) -> Res
     // edge property blobs it reads), compute off-lock (KG-2.51).
     let snap = { core.analysis_snapshot() };
     match compute_off_lock(req_id, move || {
-        crate::algorithms::minimum_spanning_tree(&snap)
+        medulla_compute::algorithms::minimum_spanning_tree(&snap)
     })
     .await
     {
@@ -311,7 +311,7 @@ async fn handle_metrics(req_id: u64, core: &Arc<GraphCore>, raw_ledger_len: u64)
     let snap = core.analysis_snapshot();
     let ledger_len = raw_ledger_len;
     let m = match compute_off_lock(req_id, move || {
-        let mut m = crate::algorithms::compute_metrics(&snap);
+        let mut m = medulla_compute::algorithms::compute_metrics(&snap);
         m.total_mutations = ledger_len;
         m
     })
@@ -340,7 +340,7 @@ async fn handle_community_detect_ephemeral(
 ) -> Response {
     let quality = to_quality_function(quality);
     match compute_off_lock(req_id, move || {
-        crate::algorithms::community_detection_weighted(node_ids, edges, resolution, quality)
+        medulla_compute::algorithms::community_detection_weighted(node_ids, edges, resolution, quality)
     })
     .await
     {
@@ -369,7 +369,7 @@ pub(super) async fn try_handle_graph_algorithms(
             let g = core.topology_snapshot();
             Response::ok(
                 req_id,
-                ResultPayload::of::<results::FindCycle>(crate::algorithms::find_cycle(&g)),
+                ResultPayload::of::<results::FindCycle>(medulla_compute::algorithms::find_cycle(&g)),
             )
         }
         Method::GetShortestPath {
@@ -380,7 +380,7 @@ pub(super) async fn try_handle_graph_algorithms(
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::GetShortestPath>(
-                    crate::algorithms::get_shortest_path(&g, &source_id, &target_id),
+                    medulla_compute::algorithms::get_shortest_path(&g, &source_id, &target_id),
                 ),
             )
         }
@@ -393,7 +393,7 @@ pub(super) async fn try_handle_graph_algorithms(
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::ConnectedComponents>(
-                    crate::algorithms::connected_components(&g),
+                    medulla_compute::algorithms::connected_components(&g),
                 ),
             )
         }
@@ -402,7 +402,7 @@ pub(super) async fn try_handle_graph_algorithms(
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::StronglyConnectedComponents>(
-                    crate::algorithms::strongly_connected_components(&g),
+                    medulla_compute::algorithms::strongly_connected_components(&g),
                 ),
             )
         }
@@ -445,7 +445,7 @@ pub(super) async fn try_handle_centrality_algorithms(
             let g = core.topology_snapshot();
             Response::ok(
                 req_id,
-                ResultPayload::of::<results::GetBlastRadius>(crate::algorithms::get_blast_radius(
+                ResultPayload::of::<results::GetBlastRadius>(medulla_compute::algorithms::get_blast_radius(
                     &g, &node_id, max_depth,
                 )),
             )
@@ -456,7 +456,7 @@ pub(super) async fn try_handle_centrality_algorithms(
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::DegreeCentralityAll>(
-                    crate::algorithms::degree_centrality_all(&g),
+                    medulla_compute::algorithms::degree_centrality_all(&g),
                 ),
             )
         }
@@ -497,7 +497,7 @@ pub(super) async fn try_handle_community_algorithms(
             let g = core.topology_snapshot();
             Response::ok(
                 req_id,
-                ResultPayload::of::<results::GraphColoring>(crate::algorithms::graph_coloring(&g)),
+                ResultPayload::of::<results::GraphColoring>(medulla_compute::algorithms::graph_coloring(&g)),
             )
         }
         Method::ComputeSimilarityEdges { threshold } => {

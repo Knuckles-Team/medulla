@@ -663,7 +663,7 @@ async fn try_handle_policy(
                     .graph_schema_gateway(state, tenant_id, ctx, plan, method, op)
                     .await
             }
-            None => crate::protocol::Response::err(
+            None => medulla_protocol_types::protocol::Response::err(
                 ctx.req_id,
                 "GraphSchema handler is not installed".to_string(),
             ),
@@ -730,7 +730,7 @@ async fn try_handle_analytics(
         } => {
             let (max_age_secs, min_score) = (*max_age_secs, *min_score);
             commit_gateway(ctx, plan, method, move |core| {
-                let stats = crate::algorithms::prune_by_lifecycle(core, max_age_secs, min_score);
+                let stats = medulla_compute::algorithms::prune_by_lifecycle(core, max_age_secs, min_score);
                 ResultPayload::of::<medulla_protocol_types::result_contract::graph::PruneByLifecycle>(stats)
             })
             .await

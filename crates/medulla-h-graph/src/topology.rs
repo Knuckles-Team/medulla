@@ -23,7 +23,9 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use tokio::sync::RwLock;
 
-use crate::protocol::{Method, Response, ResultPayload};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 

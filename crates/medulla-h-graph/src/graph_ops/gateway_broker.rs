@@ -12,12 +12,12 @@ fn apply_declare_exchange(
     exchange: &str,
     kind: &str,
 ) -> Result<ResultPayload, String> {
-    let Some(k) = crate::broker::ExchangeKind::parse(kind) else {
+    let Some(k) = medulla_core::broker::ExchangeKind::parse(kind) else {
         return Err(format!(
             "unknown exchange kind '{kind}' (want direct/topic/fanout)"
         ));
     };
-    crate::broker::declare_exchange(core, exchange, k)
+    medulla_core::broker::declare_exchange(core, exchange, k)
         .map(|()| ResultPayload::scalar::<results::DeclareExchange>("ok".to_string()))
 }
 
@@ -92,7 +92,7 @@ async fn try_handle_exchange(
         Method::DeleteExchange { exchange } => {
             let exchange = exchange.clone();
             commit_gateway(ctx, plan, method, move |core| {
-                let existed = crate::broker::delete_exchange(core, &exchange);
+                let existed = medulla_core::broker::delete_exchange(core, &exchange);
                 Ok(ResultPayload::scalar::<results::DeleteExchange>(existed))
             })
             .await
@@ -105,7 +105,7 @@ async fn try_handle_exchange(
             let (exchange, queue, routing_key) =
                 (exchange.clone(), queue.clone(), routing_key.clone());
             commit_gateway(ctx, plan, method, move |core| {
-                crate::broker::bind_queue(core, &exchange, &queue, &routing_key);
+                medulla_core::broker::bind_queue(core, &exchange, &queue, &routing_key);
                 Ok(ResultPayload::scalar::<results::BindQueue>(
                     "ok".to_string(),
                 ))
@@ -120,7 +120,7 @@ async fn try_handle_exchange(
             let (exchange, queue, routing_key) =
                 (exchange.clone(), queue.clone(), routing_key.clone());
             commit_gateway(ctx, plan, method, move |core| {
-                let existed = crate::broker::unbind_queue(core, &exchange, &queue, &routing_key);
+                let existed = medulla_core::broker::unbind_queue(core, &exchange, &queue, &routing_key);
                 Ok(ResultPayload::scalar::<results::UnbindQueue>(existed))
             })
             .await
@@ -133,7 +133,7 @@ async fn try_handle_exchange(
             let (exchange, routing_key, payload) =
                 (exchange.clone(), routing_key.clone(), payload.clone());
             commit_gateway(ctx, plan, method, move |core| {
-                let delivered = crate::broker::publish(core, &exchange, &routing_key, &payload);
+                let delivered = medulla_core::broker::publish(core, &exchange, &routing_key, &payload);
                 Ok(ResultPayload::scalar::<results::Publish>(delivered as u64))
             })
             .await
@@ -176,7 +176,7 @@ async fn try_handle_queue(
                 *max_priority,
             );
             commit_gateway(ctx, plan, method, move |core| {
-                let policy = crate::broker::QueuePolicy {
+                let policy = medulla_core::broker::QueuePolicy {
                     dl_exchange,
                     dl_routing_key,
                     max_delivery_count,
@@ -184,7 +184,7 @@ async fn try_handle_queue(
                     queue_expiry_ms,
                     max_priority,
                 };
-                crate::broker::declare_queue(core, &queue, &policy);
+                medulla_core::broker::declare_queue(core, &queue, &policy);
                 Ok(ResultPayload::scalar::<results::DeclareQueue>(
                     "ok".to_string(),
                 ))
@@ -210,7 +210,7 @@ async fn try_handle_queue(
                 *now_ms,
             );
             commit_gateway(ctx, plan, method, move |core| {
-                let delivered = crate::broker::publish_ex(
+                let delivered = medulla_core::broker::publish_ex(
                     core,
                     &exchange,
                     &routing_key,
@@ -240,7 +240,7 @@ async fn try_handle_stream(
         Method::SweepExpired { now_ms } => {
             let now_ms = *now_ms;
             commit_gateway(ctx, plan, method, move |core| {
-                let acted = crate::broker::sweep_expired(core, now_ms);
+                let acted = medulla_core::broker::sweep_expired(core, now_ms);
                 Ok(ResultPayload::scalar::<results::SweepExpired>(acted as u64))
             })
             .await
@@ -252,11 +252,11 @@ async fn try_handle_stream(
         } => {
             let (stream, max_messages, max_age_ms) = (stream.clone(), *max_messages, *max_age_ms);
             commit_gateway(ctx, plan, method, move |core| {
-                let retention = crate::broker::StreamRetention {
+                let retention = medulla_core::broker::StreamRetention {
                     max_messages,
                     max_age_ms,
                 };
-                crate::broker::declare_stream(core, &stream, &retention);
+                medulla_core::broker::declare_stream(core, &stream, &retention);
                 Ok(ResultPayload::scalar::<results::StreamDeclare>(
                     "ok".to_string(),
                 ))
@@ -270,7 +270,7 @@ async fn try_handle_stream(
         } => {
             let (stream, payload, now_ms) = (stream.clone(), payload.clone(), *now_ms);
             commit_gateway(ctx, plan, method, move |core| {
-                let offset = crate::broker::stream_publish(core, &stream, &payload, now_ms);
+                let offset = medulla_core::broker::stream_publish(core, &stream, &payload, now_ms);
                 Ok(ResultPayload::scalar::<results::StreamPublish>(
                     offset as u64,
                 ))
@@ -280,7 +280,7 @@ async fn try_handle_stream(
         Method::StreamTrim { stream, now_ms } => {
             let (stream, now_ms) = (stream.clone(), *now_ms);
             commit_gateway(ctx, plan, method, move |core| {
-                let dropped = crate::broker::stream_trim(core, &stream, now_ms);
+                let dropped = medulla_core::broker::stream_trim(core, &stream, now_ms);
                 Ok(ResultPayload::scalar::<results::StreamTrim>(dropped as u64))
             })
             .await
@@ -292,7 +292,7 @@ async fn try_handle_stream(
         } => {
             let (stream, group, offset) = (stream.clone(), group.clone(), *offset);
             commit_gateway(ctx, plan, method, move |core| {
-                crate::broker::commit_offset(core, &stream, &group, offset);
+                medulla_core::broker::commit_offset(core, &stream, &group, offset);
                 Ok(ResultPayload::scalar::<results::StreamCommitOffset>(
                     "ok".to_string(),
                 ))
@@ -327,7 +327,7 @@ async fn try_handle_delivery(
                 *prefetch,
             );
             commit_gateway(ctx, plan, method, move |core| {
-                let claimed = crate::broker::broker_consume(
+                let claimed = medulla_core::broker::broker_consume(
                     core, &queue, &group, &consumer, now_ms, lease_ms, prefetch,
                 );
                 ResultPayload::of_ref::<results::BrokerConsume>(&claimed)
@@ -337,7 +337,7 @@ async fn try_handle_delivery(
         Method::BrokerAck { queue, node_id } => {
             let (queue, node_id) = (queue.clone(), node_id.clone());
             commit_gateway(ctx, plan, method, move |core| {
-                let existed = crate::broker::broker_ack(core, &queue, &node_id);
+                let existed = medulla_core::broker::broker_ack(core, &queue, &node_id);
                 Ok(ResultPayload::scalar::<results::BrokerAck>(existed))
             })
             .await
@@ -351,7 +351,7 @@ async fn try_handle_delivery(
             let (queue, node_id, requeue, now_ms) =
                 (queue.clone(), node_id.clone(), *requeue, *now_ms);
             commit_gateway(ctx, plan, method, move |core| {
-                let outcome = crate::broker::broker_reject(core, &queue, &node_id, requeue, now_ms);
+                let outcome = medulla_core::broker::broker_reject(core, &queue, &node_id, requeue, now_ms);
                 Ok(ResultPayload::scalar::<results::BrokerReject>(outcome))
             })
             .await
@@ -386,7 +386,7 @@ async fn try_handle_publish_confirmations(
                 *now_ms,
             );
             commit_gateway(ctx, plan, method, move |core| {
-                let token = crate::broker::publish_confirmed(
+                let token = medulla_core::broker::publish_confirmed(
                     core,
                     &exchange,
                     &routing_key,
@@ -434,7 +434,7 @@ async fn try_handle_publish_confirmations(
             );
             commit_gateway(ctx, plan, method, move |core| {
                 let result =
-                    crate::broker::publish_idempotent(crate::broker::IdempotentPublishRequest {
+                    medulla_core::broker::publish_idempotent(medulla_core::broker::IdempotentPublishRequest {
                         core,
                         exchange: &exchange,
                         routing_key: &routing_key,
@@ -467,7 +467,7 @@ async fn try_handle_tag_confirmations(
         } => {
             let (delivery_tag, consumer) = (*delivery_tag, consumer.clone());
             commit_gateway(ctx, plan, method, move |core| {
-                let existed = crate::broker::broker_ack_tag(core, delivery_tag, &consumer);
+                let existed = medulla_core::broker::broker_ack_tag(core, delivery_tag, &consumer);
                 Ok(ResultPayload::scalar::<results::BrokerAckTag>(existed))
             })
             .await
@@ -482,7 +482,7 @@ async fn try_handle_tag_confirmations(
                 (*delivery_tag, consumer.clone(), *requeue, *now_ms);
             commit_gateway(ctx, plan, method, move |core| {
                 let outcome =
-                    crate::broker::broker_nack_tag(core, delivery_tag, &consumer, requeue, now_ms);
+                    medulla_core::broker::broker_nack_tag(core, delivery_tag, &consumer, requeue, now_ms);
                 Ok(ResultPayload::scalar::<results::BrokerNackTag>(outcome))
             })
             .await
@@ -497,7 +497,7 @@ async fn try_handle_tag_confirmations(
                 (*delivery_tag, consumer.clone(), *now_ms, *lease_ms);
             commit_gateway(ctx, plan, method, move |core| {
                 Ok(ResultPayload::scalar::<results::BrokerRenewTag>(
-                    crate::broker::broker_renew_tag(
+                    medulla_core::broker::broker_renew_tag(
                         core,
                         delivery_tag,
                         &consumer,

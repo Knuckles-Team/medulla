@@ -559,7 +559,7 @@ pub fn method_variant_name(m: &Method) -> &'static str {
 }
 
 /// Is `method` one of [`GATEWAY_ROUTED`]? `dispatch_graph_op` routes this set to
-/// `handlers::graph_ops::try_handle_gateway`, where one kernel owns apply,
+/// `medulla_h_graph::graph_ops::try_handle_gateway`, where one kernel owns apply,
 /// durability, audit, and CDC.
 pub fn is_gateway_routed(m: &Method) -> bool {
     GATEWAY_ROUTED.contains(&method_variant_name(m))
@@ -586,7 +586,7 @@ pub enum ClusterMutationRoute {
     /// Cluster-wide, non-graph-scoped admin mutation with its OWN dedicated
     /// handler that resolves `MultiRaft` and performs the leader check /
     /// `OPERATION_REDIRECTED` routing itself (`handlers::raft_admin::try_handle`,
-    /// the same shape `handlers::placement::try_handle` uses for reads) — it
+    /// the same shape `medulla_h_graph::placement::try_handle` uses for reads) — it
     /// does NOT go through [`propose_native_mutation`](crate::server::dispatch)'s
     /// generic `NativeMutationCommand` proposal/replication path, so it must
     /// never be classified `ConsensusNative` (see [`SELF_ROUTED_ADMIN_METHODS`]).
@@ -608,7 +608,7 @@ pub const CONSENSUS_FANOUT_METHODS: &[&str] = &["MultiGraphBatchUpdate", "ApplyC
 /// in the command catalog; THIS list is every mutating method that instead owns
 /// a dedicated, self-routing handler (resolves `MultiRaft`,
 /// performs the leader check, and answers `OPERATION_REDIRECTED` itself — exactly
-/// like `handlers::placement::try_handle` does for the read-only `PlacementRoute`,
+/// like `medulla_h_graph::placement::try_handle` does for the read-only `PlacementRoute`,
 /// just for a method that also mutates). Routing a `SelfRoutedAdmin` method
 /// through `propose_native_mutation` instead would hit
 /// `NativeMutationCommand::from_public_method`'s `Err` arm (no bounded native
@@ -800,7 +800,7 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
         // `SELF_ROUTED_ADMIN_METHODS`'s doc comment — and are handled entirely by
         // `handlers::raft_admin::try_handle`, which resolves `MultiRaft` and does
         // its own leader check/`OPERATION_REDIRECTED` redirect, exactly like
-        // `handlers::placement::try_handle` does for `PlacementRoute`.
+        // `medulla_h_graph::placement::try_handle` does for `PlacementRoute`.
         debug_assert!(
             SELF_ROUTED_ADMIN_METHODS.contains(&method_variant_name(method)),
             "SELF_ROUTED_ADMIN_METHODS drifted from this match arm"
@@ -815,7 +815,7 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
     // `ConsensusNative`'s generic `propose_native_mutation` wrapper (as `Reshard`/
     // `CatalogAssign` correctly do — they have no self-contained commit of their
     // own) would propose a SECOND, redundant raft entry and, worse, re-enter
-    // `handlers::placement::try_handle` -> another `commit_placement` proposal from
+    // `medulla_h_graph::placement::try_handle` -> another `commit_placement` proposal from
     // INSIDE that second entry's own apply callback. `VolatileControl` is the
     // existing bucket for "this method's own mechanism handles durability; the
     // generic cluster-routing layer does nothing extra" (see `Shutdown` above) --

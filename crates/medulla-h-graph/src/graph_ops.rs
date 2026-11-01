@@ -9,9 +9,12 @@ use std::ops::ControlFlow;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::graph::GraphCore;
-use crate::isolation::AccessLevel;
-use crate::protocol::{LedgerReadResult, Method, Response, ResultPayload};
+use medulla_core::graph::GraphCore;
+use medulla_core::isolation::AccessLevel;
+use medulla_protocol_types::protocol::LedgerReadResult;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::access::{check_graph_access, requires_write, GraphReadAuthority};
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::compute::{compute_off_lock, weight_semantic_results};

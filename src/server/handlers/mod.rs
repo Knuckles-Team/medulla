@@ -3,7 +3,6 @@
 //! stay centralized in the shell. Each module exposes `try_handle(...) ->
 //! Result<Response, Method>`: `Ok` = handled, `Err(method)` = not mine, try next.
 
-pub(crate) mod graph_ops;
 // Engine-native WorkItem lifecycle transitions. The handler owns the six
 // result-producing transition Methods explicitly; their durable effect remains
 // the one MutationBatch commit in `mutation_batch::commit_work_item`.
@@ -28,14 +27,6 @@ pub(crate) mod development_lane;
 // `MineAssociate` variant falls to the graph_ops "not available" catch-all.
 #[cfg(feature = "mining")]
 pub(crate) mod mining;
-// ML pipeline domain (CONCEPT:MEDULLA-KG.mining.ml-pipeline, feature `ml-pipeline`). A
-// composable train→eval→serve→predict lifecycle over a versioned `:Model` artifact
-// that generalizes the KAN one-off. GRAPH-SCOPED (like mining/graphlearn) — it reuses
-// graphlearn's subgraph builder + the medulla-compute classify/estimator/KAN/embedding/
-// metrics primitives. A build without `ml-pipeline` omits the module and the
-// `MiningPipeline*` variants fall to the graph_ops "not available" catch-all.
-#[cfg(feature = "ml-pipeline")]
-pub(crate) mod pipeline;
 // M3 catalog-driven resharding admin (CONCEPT:MEDULLA-KG.backend.m3-admin-dispatch): the wire surface that DRIVES online
 // resharding (MEDULLA-032), the tenant catalog (MEDULLA-031) and the rebalance planner (MEDULLA-035) +
 // its execution (MEDULLA-039). Always declared; the real logic is `redb`-gated (the only build
@@ -45,9 +36,6 @@ pub(crate) mod admin;
 pub(crate) mod decide;
 // X10 — the mutation-outbox operator surface.
 pub(crate) mod mutation_outbox;
-// RF-ADR-009 D18 — EG-owned governed source change sets and receipts.
-#[cfg(feature = "redb")]
-pub(crate) mod write_back;
 // The general bounded 0-1 integer programme.
 pub(crate) mod solve;
 // Read-only query surface: SQL (CONCEPT:MEDULLA-KG.query.read-only-sql-query, DataFusion behind `query`),
@@ -167,22 +155,9 @@ pub(crate) mod semantic_index;
 // vector, time-series, analytics jobs, and cross-modal plans.
 #[cfg(feature = "knowledge-batch")]
 pub(crate) mod knowledge_stream;
-// Placement-catalog wire RPC (CONCEPT:MEDULLA-KG.sharding.placement-route-rpc, DIST-P2-4): exposes the
-// DIST-P2-1 `PlacementCatalog` (raft/placement.rs) over `Method::PlacementRoute`. Always
-// declared (like `admin`); the real answer is `raft`-gated (the only build where
-// `MultiRaft`/the catalog exist), and a non-raft build (or a raft build with no live
-// cluster) answers a well-formed "no explicit placement" JSON rather than an error.
-pub(crate) mod placement;
 // Raft cluster-membership ADMIN RPC (CONCEPT:MEDULLA-KG.storage.kg-kg-2 — cluster_deployment.md
 // §5 item 2): exposes `MultiRaft::add_group_learner`/`change_group_voters`
 // (raft/multi.rs) over `Method::RaftAddLearner`/`Method::RaftChangeMembership`. Always
 // declared (like `placement`); the real answer is `raft`-gated, and a non-raft build
 // answers a clean typed error.
 pub(crate) mod raft_admin;
-// Cluster topology discovery (CONCEPT:MEDULLA-KG.sharding.cluster-topology, ADR-1 / W1.1):
-// public `Method::ClusterMembers` plus typed internal node self-reports over the durable
-// `server::persistence::node_info_store::NodeInfoStore`, replacing the static
-// `GRAPH_RAFT_GROUP_ENDPOINTS` client map. Always declared (like `placement`/
-// `raft_admin`); the real cross-referenced answer is `raft`-gated, and a
-// non-raft build answers a well-formed empty topology.
-pub(crate) mod topology;

@@ -46,7 +46,7 @@ pub(super) fn decode_json_object(blob: &[u8]) -> serde_json::Map<String, serde_j
 pub(super) fn stamp_owner_id_if_applicable(
     method: Method,
     caller: Option<&str>,
-    isolation: &crate::isolation::IsolationLayer,
+    isolation: &medulla_core::isolation::IsolationLayer,
 ) -> Method {
     // Flat guard clauses rather than nested `if`s: each exemption below returns
     // `method` untouched, which is byte-for-byte what the nested form did by
@@ -77,7 +77,7 @@ pub(super) fn stamp_owner_id_if_applicable(
         _ => unreachable!("matched above"),
     };
     // Already owned (or unstampable) => leave the blob exactly as the caller sent it.
-    let Some(stamped) = crate::isolation::stamp_owner_id_if_absent(blob, caller_id) else {
+    let Some(stamped) = medulla_core::isolation::stamp_owner_id_if_absent(blob, caller_id) else {
         return method;
     };
     let mut method = method;
@@ -328,7 +328,7 @@ fn collect_datalog_inferences(
         range_rules,
         property_chains,
     } = input;
-    let mut all_inferred = crate::reasoning::run_datalog_reasoning(
+    let mut all_inferred = medulla_compute::reasoning::run_datalog_reasoning(
         core,
         subclass_relations,
         subproperty_relations,
@@ -343,7 +343,7 @@ fn collect_datalog_inferences(
         range_rules,
         property_chains,
     );
-    crate::reasoning::bind_inference_schema_digests(core, &mut all_inferred, &schema_digests);
+    medulla_compute::reasoning::bind_inference_schema_digests(core, &mut all_inferred, &schema_digests);
     Ok((schema_digests, all_inferred))
 }
 
@@ -356,14 +356,14 @@ fn append_optional_datalog_inferences(
     property_chains: Vec<(Vec<String>, String)>,
 ) {
     if !domain_rules.is_empty() || !range_rules.is_empty() {
-        all_inferred.extend(crate::reasoning::infer_domain_range(
+        all_inferred.extend(medulla_compute::reasoning::infer_domain_range(
             core,
             domain_rules,
             range_rules,
         ));
     }
     if !property_chains.is_empty() {
-        all_inferred.extend(crate::reasoning::infer_property_chain_axioms(
+        all_inferred.extend(medulla_compute::reasoning::infer_property_chain_axioms(
             core,
             property_chains,
         ));
@@ -566,7 +566,7 @@ fn apply_add_embedding(
     // completeness manifest must advance with the graph version that
     // commit_finalize publishes.
     core.maintain_indexes_at(
-        &crate::index::ChangeSet::new(),
+        &medulla_core::index::ChangeSet::new(),
         source_version.saturating_add(1),
         core.node_count(),
         core.edge_count(),
@@ -614,7 +614,7 @@ fn apply_batch_update(
     core: &GraphCore,
     operations_msgpack: &[u8],
 ) -> Result<ResultPayload, String> {
-    let summary = crate::algorithms::batch_update(core, operations_msgpack)?;
+    let summary = medulla_compute::algorithms::batch_update(core, operations_msgpack)?;
     medulla_protocol_types::result_contract::transactions::BatchUpdateReport::decode(&summary)
         .and_then(
             ResultPayload::of::<medulla_protocol_types::result_contract::transactions::BatchUpdate>,

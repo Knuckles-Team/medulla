@@ -64,7 +64,7 @@ pub(crate) async fn try_handle_gateway(
     graph_name: &str,
     core: &Arc<GraphCore>,
     materialization_manifest: Option<
-        &Arc<std::sync::RwLock<crate::registry::MaterializationManifest>>,
+        &Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>,
     >,
     read_authority: Option<&GraphReadAuthority>,
     persistence: Option<&Arc<dyn PersistenceBackend>>,
@@ -123,7 +123,7 @@ pub(crate) async fn try_handle_gateway(
     // to the current version before either the durable commit or the apply
     // closure sees the method. The admitted (possibly stamped) method is the
     // one that commits.
-    let method = match crate::server::harness_admission::direct_add_node(
+    let method = match crate::harness_admission::direct_add_node(
         &method,
         core,
         medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),

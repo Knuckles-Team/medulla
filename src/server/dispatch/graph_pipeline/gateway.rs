@@ -100,7 +100,7 @@ async fn commit_query_gateway(ctx: GatewayRouteCtx<'_>, method: Method) -> Respo
                 .map_err(|_| {
                     "ENGINE_UNAVAILABLE: query surface not available in this build".to_string()
                 })
-                .and_then(handlers::graph_ops::gateway_response_result)
+                .and_then(medulla_h_graph::graph_ops::gateway_response_result)
             },
         )
         .await;
@@ -178,7 +178,7 @@ async fn commit_rdf_gateway(ctx: GatewayRouteCtx<'_>, method: Method) -> Respons
                 .map_err(|_| {
                     "ENGINE_UNAVAILABLE: rdf surface not available in this build".to_string()
                 })
-                .and_then(handlers::graph_ops::gateway_response_result)
+                .and_then(medulla_h_graph::graph_ops::gateway_response_result)
             },
         )
         .await;

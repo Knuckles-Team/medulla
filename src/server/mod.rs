@@ -202,12 +202,6 @@ pub(crate) mod handlers;
 pub mod registry_reaper;
 // EH-558: policy-driven expiry of sealed records through their owning op.
 pub mod sealed_retention;
-// MEDULLA-ORCH-VOCAB-R801 — engine-side admission of the versioned
-// harness-component writes on both write paths (direct AddNode and
-// ChangeEnvelope). `pub` (not `pub(crate)`) so the hot-path receipt
-// (`benches/harness_components.rs`, MEDULLA-ORCH-VOCAB-R801.6) measures the
-// engine's real per-write path. See the module docs for the shared rules.
-pub mod harness_admission;
 // Durable incremental reasoning authority. It tails the committed MutationBatch
 // outbox, fsyncs each per-graph projection before cursor acknowledgement, and serves
 // status/recompute directly from that projection.

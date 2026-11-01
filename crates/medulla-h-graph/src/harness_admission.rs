@@ -39,8 +39,8 @@
 
 use std::collections::BTreeMap;
 
-use crate::graph::GraphCore;
-use crate::protocol::Method;
+use medulla_core::graph::GraphCore;
+use medulla_protocol_types::protocol::Method;
 use medulla_agent_types::{
     orchestration::decode_component_write, orchestration::is_harness_component_write,
     orchestration::HarnessComponentRefusal,

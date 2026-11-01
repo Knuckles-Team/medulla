@@ -568,7 +568,7 @@ fn harness_boundary_envelope(
     envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
     core: &Arc<crate::graph::GraphCore>,
 ) -> Result<(), String> {
-    let mut state = crate::server::harness_admission::HarnessBoundaryState::default();
+    let mut state = medulla_h_graph::harness_admission::HarnessBoundaryState::default();
     state.check_envelope(envelope, core)
 }
 
@@ -826,7 +826,7 @@ async fn apply_change_envelope_batch(
     // atomic commit. ONE boundary state spans the batch, in envelope order,
     // so a supersession may name a version written by an earlier envelope of
     // the same write.
-    let mut harness = crate::server::harness_admission::HarnessBoundaryState::default();
+    let mut harness = medulla_h_graph::harness_admission::HarnessBoundaryState::default();
     for (index, envelope) in envelopes.iter().enumerate() {
         if let Err(error) = harness.check_envelope(envelope, &core) {
             // The check error already carries its declared refusal code

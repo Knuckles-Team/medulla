@@ -1215,7 +1215,7 @@ mod placement_admin_wire_rpc {
         );
 
         // ── 4a. PlacementRoute is a placement-CONTROL-group-leader-only read
-        //      (`handlers::placement::handle_route`, unchanged by this seam's
+        //      (`medulla_h_graph::placement::handle_route`, unchanged by this seam's
         //      work): a THIRD, non-leader node must redirect, not answer locally
         //      — proving the "only the leader answers" invariant is enforced
         //      cluster-wide, not merely present. ──

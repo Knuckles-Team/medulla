@@ -49,7 +49,7 @@ pub(super) async fn dispatch_cluster_admin_methods(
         // Raft node without MultiRaft is an invalid cluster and fails closed.
         // The admin mutation (CONCEPT:MEDULLA-KG.sharding.placement-catalog-admin-rpc, DIST-P2-5) is
         // routed through the SAME handler, self-routing exactly like the M3 admin
-        // block above -- see `handlers::placement::try_handle`'s per-variant arms.
+        // block above -- see `medulla_h_graph::placement::try_handle`'s per-variant arms.
                 method @ (Method::PlacementRoute { .. } | Method::PlacementAdmin { .. }) => dispatch_cluster_admin_methods_arm_1(ctx, method).await,
 
         // ── Raft cluster membership admin (CONCEPT:MEDULLA-KG.storage.kg-kg-2 — cluster_deployment.md §5
@@ -150,7 +150,7 @@ async fn dispatch_cluster_admin_methods_arm_1(ctx: DispatchCtx<'_>, method: Meth
             dispatch_boxed(async {
                 let req_id = req.id;
                 {
-                    match handlers::placement::try_handle(state, req_id, method).await {
+                    match medulla_h_graph::placement::try_handle(state, req_id, method).await {
                         Ok(resp) => resp,
                         // Unreachable: every variant matched above is a placement method.
                         Err(_) => Response::err(req_id, "placement dispatch routing error"),
@@ -204,7 +204,7 @@ async fn dispatch_cluster_admin_methods_arm_3(ctx: DispatchCtx<'_>, method: Meth
             dispatch_boxed(async {
                 let req_id = req.id;
                 {
-                    match handlers::topology::try_handle(state, req_id, method, verified_context)
+                    match medulla_h_graph::topology::try_handle(state, req_id, method, verified_context)
                         .await
                     {
                         Ok(resp) => resp,

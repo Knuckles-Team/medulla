@@ -26,7 +26,7 @@ async fn dispatch_write_back_method(
     {
         ControlFlow::Break(
             dispatch_boxed(async {
-                handlers::write_back::handle_write_back(
+                medulla_h_graph::write_back::handle_write_back(
                     ctx.state,
                     ctx.req.id,
                     ctx.verified_context,

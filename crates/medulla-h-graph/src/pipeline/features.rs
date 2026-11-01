@@ -1,7 +1,7 @@
 //! Feature construction shared by the pipeline train, evaluate, and predict paths.
 
-use crate::graph::GraphCore;
-use crate::protocol::GraphSource;
+use medulla_core::graph::GraphCore;
+use medulla_protocol_types::protocol::GraphSource;
 use medulla_compute::graph_algos::AdjacencyGraph;
 use medulla_compute::graphlearn::embeddings::{
     fastrp, l2_normalize_rows, node2vec, to_f64_rows, FastRpConfig, Node2VecConfig,

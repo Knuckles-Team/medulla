@@ -47,7 +47,7 @@
 //! identify their native atomic coordinator. `OPEN_NOT_JUSTIFIED` is asserted
 //! empty, so a new mutating method cannot silently bypass both categories.
 //!
-//! `src/server/dispatch.rs` wires `handlers::graph_ops::try_handle_gateway` ahead
+//! `src/server/dispatch.rs` wires `medulla_h_graph::graph_ops::try_handle_gateway` ahead
 //! of the generic handler chain. A routed method therefore reaches exactly one
 //! mutation kernel. The five coalescable structural writes route through
 //! [`commit_coalescable_mutation`] (L18, see its doc) instead of [`commit_mutation`],
@@ -71,7 +71,7 @@
 //! (L18/MEDULLA-P0-6, rewritten): the five coalescable structural writes
 //! (`AddNode`/`RemoveNode`/`AddEdge`/`RemoveEdge`/`CompareAndSetNodeFields`) are routed through
 //! [`commit_coalescable_mutation`] instead of [`commit_mutation`] (see
-//! `handlers::graph_ops::try_handle_gateway`'s dedicated arms). That function
+//! `medulla_h_graph::graph_ops::try_handle_gateway`'s dedicated arms). That function
 //! hands the WHOLE prepare→durable-commit→RAM-publish sequence — not just the RAM
 //! apply — to the per-graph `server::routed_write_coalescer` worker, which runs a
 //! flushed batch's sequences back-to-back inside ONE `mutation_batch::lock_graph`

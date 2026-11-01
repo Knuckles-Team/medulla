@@ -26,8 +26,10 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::epistemic_operations::PlacementRouteSchemaVersion;
-use crate::protocol::{Method, Response, ResultPayload};
+use medulla_result_types::epistemic_operations::PlacementRouteSchemaVersion;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::state::ServerState;
 use medulla_protocol_types::result_contract::cluster::PlacementRouteWire;
 
@@ -145,7 +147,7 @@ async fn resolve_group_endpoints(
 async fn handle_route(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-    request: crate::epistemic_operations::PlacementRouteRequest,
+    request: medulla_result_types::epistemic_operations::PlacementRouteRequest,
 ) -> Response {
     let tenant = request.tenant_ref;
     let sub_key = request.partition_ref;
@@ -265,19 +267,19 @@ async fn handle_assign(
 async fn handle_placement_admin_op(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-    op: crate::protocol::PlacementAdminOp,
+    op: medulla_protocol_types::protocol::PlacementAdminOp,
 ) -> Response {
     match op {
-        crate::protocol::PlacementAdminOp::Assign { tenant, group } => {
+        medulla_protocol_types::protocol::PlacementAdminOp::Assign { tenant, group } => {
             handle_assign(state, req_id, tenant, group).await
         }
-        crate::protocol::PlacementAdminOp::Move {
+        medulla_protocol_types::protocol::PlacementAdminOp::Move {
             tenant,
             range_start,
             range_end,
             target,
         } => handle_move(state, req_id, tenant, range_start, range_end, target).await,
-        crate::protocol::PlacementAdminOp::AbortMove { move_id } => {
+        medulla_protocol_types::protocol::PlacementAdminOp::AbortMove { move_id } => {
             handle_abort_move(state, req_id, move_id).await
         }
     }

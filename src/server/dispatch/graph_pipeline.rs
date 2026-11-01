@@ -2018,7 +2018,7 @@ mod blob_dispatch_tests {
 // scope check alone is `dispatch_inner`'s ONLY gate for this method now.
 //
 // No per-request tenant-ownership check is layered on top (see
-// `handlers::placement::try_handle`'s doc comment): `PlacementRouteRequest.
+// `medulla_h_graph::placement::try_handle`'s doc comment): `PlacementRouteRequest.
 // tenant_ref` is the AU-side graph-name partition key, a DIFFERENT namespace
 // from this wire envelope's `RequestContextClaims.tenant` (the fixed
 // per-deployment security boundary -- under `#[cfg(test)]`,

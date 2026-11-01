@@ -3221,7 +3221,7 @@ pub mod tests {
 
     /// GetLedger RPC-boundary regression (BUG A1, 2026-08-12): `GetLedger` used to
     /// read the mutation ledger off the RLS-projected `core` shadowed inside
-    /// `handlers::graph_ops::try_handle` (`GraphReadAuthority::project_core`),
+    /// `medulla_h_graph::graph_ops::try_handle` (`GraphReadAuthority::project_core`),
     /// whose detached copy is built via `add_node_no_ledger`/`add_edge_no_ledger`
     /// and therefore NEVER carries a ledger at all -- see `build_projection`'s own
     /// doc in `server::access`. Because `security` (hence
