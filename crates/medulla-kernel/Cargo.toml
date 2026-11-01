@@ -35,6 +35,9 @@ opentelemetry = { version = "0.33", optional = true }
 opentelemetry_sdk = { version = "0.33.1", optional = true, features = ["rt-tokio"] }
 opentelemetry-otlp = { version = "0.33", optional = true, features = ["grpc-tonic"] }
 tracing-opentelemetry = { version = "0.34", optional = true }
+medulla-query = { path = "../medulla-query", optional = true }
+medulla-storage = { path = "../medulla-storage", optional = true }
+uuid = { version = "1.28", features = ["v4"] }
 
 [dev-dependencies]
 tokio = { version = "1.53", features = ["full", "test-util"] }
@@ -49,11 +52,11 @@ test-support = ["dep:tokio"]
 metrics = ["dep:prometheus", "medulla-types/metrics"]
 server = ["dep:tokio", "dep:tracing-subscriber", "dep:medulla-capabilities"]
 otel = ["server", "dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-otlp", "dep:tracing-opentelemetry"]
-redb = []
+redb = ["dep:medulla-storage", ]
 security = ["redb", "dep:chacha20poly1305", "medulla-types/security", "medulla-core/security"]
 raft = ["server", "redb", "dep:chacha20poly1305"]
 broker = ["medulla-core/broker", "medulla-types/broker"]
-query = ["redb", "medulla-types/query"]
+query = ["dep:medulla-query", "medulla-query/sql", "redb", "medulla-types/query"]
 epistemic = ["query", "dep:medulla-epistemic", "medulla-types/epistemic"]
 epistemic-tms = ["epistemic", "medulla-epistemic/epistemic-tms"]
 datascience = ["medulla-compute/datascience", "medulla-types/datascience"]
@@ -69,3 +72,7 @@ rdf = ["server", "medulla-types/rdf"]
 sparql = ["rdf", "medulla-types/sparql"]
 shacl = ["rdf"]
 sqlite-file = ["query", "server", "medulla-types/sqlite-file"]
+numeric = ["dep:medulla-query", "medulla-query?/numeric"]
+cypher = ["dep:medulla-query", "medulla-query/cypher"]
+cypher-plan = ["dep:medulla-query", "medulla-query/cypher-plan"]
+result-cache = ["dep:medulla-query", "medulla-query?/result-cache"]

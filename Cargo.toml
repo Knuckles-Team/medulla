@@ -285,7 +285,7 @@ epistemic-causal = ["epistemic", "medulla-epistemic/epistemic-causal"]
 # for targeted crate checks; it does not define another supported product build. The
 # weak `medulla-plan?/numeric` edge turns on the UQL `ATTRIBUTE` executor (EH-523) whenever
 # the query planner is built.
-numeric = ["dep:medulla-numeric", "medulla-query?/numeric", "medulla-plan?/numeric"]
+numeric = ["medulla-kernel/numeric", "dep:medulla-numeric", "medulla-query?/numeric", "medulla-plan?/numeric"]
 # The general bounded 0-1 integer programme (`Method::Solve`). Wire DTOs are
 # unconditional in medulla-types; this gates the medulla-compute search and verifier.
 solve = ["medulla-compute/solve"]
@@ -613,11 +613,11 @@ nl-query = ["query", "dep:medulla-plan", "medulla-plan/nl-query", "server"]
 # Dep-free Cypher query surface (CONCEPT:KG-2.179): `MATCH … RETURN …` compiled to
 # the engine's own primitives (label index / VF2 / BFS). It is included in the one main
 # build; a targeted `cypher`-only feature check links no DataFusion.
-cypher = ["dep:medulla-query", "medulla-query/cypher"]
+cypher = ["medulla-kernel/cypher", "dep:medulla-query", "medulla-query/cypher"]
 # CONCEPT:MEDULLA-KG.query.cypher-engine-shadow — the `MEDULLA_CYPHER_ENGINE`
 # rollout surface (legacy | plan | shadow) + its shadow-differential divergence log.
 # In the one main `full` build; a lean `cypher`-only build stays legacy-only.
-cypher-plan = ["cypher", "medulla-query/cypher-plan"]
+cypher-plan = ["medulla-kernel/cypher-plan", "cypher", "medulla-query/cypher-plan"]
 # Native GraphQL READ surface (CONCEPT:KG-2.235): a GraphQL query compiled to scans +
 # BFS over the GraphView via the medulla-graphql crate (schema-from-graph + a hand-written
 # parser + resolver). PURE-RUST — NO async-graphql (evaluated: ~80+ transitive crates +
@@ -721,7 +721,7 @@ cdc-kafka = ["streaming", "dep:medulla-stream", "medulla-stream/cdc-kafka"]
 # `GraphView::projection_scope` — a field that only exists under `medulla-core/result-cache` — and is
 # therefore compiled in ONLY when `medulla-query` is already enabled (`cypher`/`query`), mirroring the
 # `numeric`/`wasm-udf` weak-dep precedents below.
-result-cache = ["medulla-core/result-cache", "medulla-query?/result-cache"]
+result-cache = ["medulla-kernel/result-cache", "medulla-core/result-cache", "medulla-query?/result-cache"]
 # Plan-backed materialized views (CONCEPT:MEDULLA-KG.storage.plan-backed-matview): a NAMED,
 # DURABLE `wire::Plan` over one graph whose RESULT rides the version-keyed, RLS-aware
 # result cache. Defining it executes the plan once (via the medulla-plan runtime) and caches
