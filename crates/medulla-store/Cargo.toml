@@ -50,3 +50,8 @@ traces = ["dep:medulla-tsdb", "medulla-tsdb/traces"]
 
 [dev-dependencies]
 tempfile = "3"
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-result-types = { path = "../medulla-result-types" }
