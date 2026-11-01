@@ -74,7 +74,7 @@ impl std::ops::Deref for Args {
 ///   actual default transport on Windows is TCP loopback (see the transport
 ///   section). Keeping the value defined preserves parity for config/logging.
 /// Run one bounded, stdin-driven exact performance probe and return.
-fn run_exact_performance_probe(root: Option<&std::path::Path>) -> Result<(), BoxError> {
+fn run_exact_performance_probe(root: Option<&std::path::Path>) -> Result<(), Box<dyn std::error::Error>> {
     let root = root.ok_or("exact performance probe root is required")?;
     #[cfg(feature = "full")]
     {
