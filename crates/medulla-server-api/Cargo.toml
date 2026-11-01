@@ -141,7 +141,7 @@ streaming = ["server", "medulla-protocol-types/streaming", "medulla-types/stream
 text = ["dep:medulla-plan", "medulla-plan/text", "medulla-exec/text", "query", "medulla-federation?/text", "medulla-types/text"]
 tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries", "medulla-exec/timeseries", "server", "redb", "medulla-store/tsdb"]
 viz = ["dep:medulla-viz-core", "dep:medulla-capabilities", "medulla-capabilities?/viz", "medulla-protocol-types/viz", "medulla-types/viz", "medulla-viz-core?/viz"]
-viz-static-export = ["server"]
+viz-static-export = ["server", "viz-columnstore"]
 wasm-udf = ["dep:medulla-wasm", "medulla-wasm/wasm-udf", "dep:medulla-plan", "medulla-plan?/wasm-udf", "medulla-exec/wasm-udf", "server", "medulla-protocol-types/wasm-udf", "medulla-types/wasm-udf"]
 epistemic-redaction = ["dep:medulla-epistemic", "medulla-epistemic/epistemic-redaction"]
 evidence-graph = ["dep:medulla-epistemic", "medulla-epistemic/evidence-graph"]
@@ -162,7 +162,7 @@ geosparql = ["dep:medulla-rdf", "medulla-rdf/geosparql"]
 owl-dl = ["dep:medulla-rdf", "medulla-rdf/owl-dl", "medulla-reasoner/owl-dl"]
 promql = ["dep:medulla-tsdb", "medulla-tsdb/promql", "medulla-store/promql"]
 traces = ["dep:medulla-tsdb", "medulla-tsdb/traces", "medulla-store/traces"]
-viz-columnstore = ["dep:medulla-viz-columnstore"]
+viz-columnstore = ["dep:medulla-viz-columnstore", "viz"]
 
 [dev-dependencies]
 tempfile = "3"
