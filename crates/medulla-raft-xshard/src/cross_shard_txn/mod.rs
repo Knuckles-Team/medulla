@@ -5,7 +5,7 @@
 //!
 //! Today a transaction is single-graph: one [`GraphCore`], one OCC validation, one
 //! redb `WriteTransaction` (`src/server/txn.rs` + `handlers/txn.rs`). A graph belongs
-//! to exactly one Raft [`GroupId`] ([`super::multi::GroupRouter`]), and a txn stays
+//! to exactly one Raft [`GroupId`] ([`medulla_raft::raft::multi::GroupRouter`]), and a txn stays
 //! inside that group — so atomically touching two graphs that route to DIFFERENT
 //! groups had no atomic commit (a crash mid-way left a partial write). This module
 //! adds an atomic commit ACROSS groups.
@@ -96,7 +96,7 @@
 //!
 //! **Cross-NODE participants (GOC-13) — honest status.** [`prepare_participant`]
 //! still resolves a participant through `self.multi.group(gid)`, i.e. this
-//! coordinator's OWN in-process [`super::multi::MultiRaft`] must carry a LOCAL
+//! coordinator's OWN in-process [`medulla_raft::raft::multi::MultiRaft`] must carry a LOCAL
 //! replica of every participant group — a participant group whose ENTIRE
 //! membership lives on a different physical host, with no local replica here at
 //! all, is not yet reachable from this module. What GOC-13 DID close: every
@@ -104,7 +104,7 @@
 //! built against, and [`CrossShardCoordinator::prepare_participant`]/
 //! [`CrossShardCoordinator::validate_read_only_participant`] reject (vote NO,
 //! never durably prepare) a participant whose captured fencing no longer matches
-//! `gid`'s CURRENT [`super::placement::PlacementRoute`] — the "stale/fenced
+//! `gid`'s CURRENT [`medulla_raft::raft::placement::PlacementRoute`] — the "stale/fenced
 //! participant is rejected" invariant, proved by `slice_fence_is_current`'s unit
 //! tests and (against a live cluster) `xshard_modality_harness`'s
 //! `stale_fenced_participant_is_rejected_current_epoch_accepted` scenario. The
@@ -201,10 +201,10 @@ mod commit;
 mod prepare_record;
 use prepare_record::{decode_prepared_slices, encode_prepared_slices};
 
-use super::multi::MultiRaft;
+use medulla_raft::raft::multi::MultiRaft;
 #[cfg(any(feature = "calvin", test, feature = "harness"))]
-use super::NodeId;
-use super::{GroupId, RaftRequest};
+use medulla_raft::raft::NodeId;
+use medulla_raft::raft::{GroupId, RaftRequest};
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 use medulla_server_api::api::persistence::PersistenceBackend;
@@ -241,11 +241,11 @@ fn prepared_slices_exceed_limits(slices: &[GraphSlice]) -> bool {
 /// second fencing vocabulary.
 ///
 /// `slice_epoch == 0` is the sentinel "no placement authority was consulted when
-/// this slice was built" ([`super::placement::PlacementRoute::unplaced`] also
+/// this slice was built" ([`medulla_raft::raft::placement::PlacementRoute::unplaced`] also
 /// answers epoch `0`, and a pre-fencing durable prepare record from an older
 /// binary decodes with `#[serde(default)]` `0`) — the check is a no-op in that
 /// case, byte-for-byte the pre-fencing behavior for an unplaced graph or an
-/// in-process harness that never routed through [`super::multi::MultiRaft::
+/// in-process harness that never routed through [`medulla_raft::raft::multi::MultiRaft::
 /// route_graph`].
 ///
 /// Once `slice_epoch > 0`, EVERY field must match: the group the slice targets,
@@ -257,7 +257,7 @@ fn slice_fence_is_current(
     gid: GroupId,
     slice_epoch: u64,
     slice_fence: Option<GroupId>,
-    current: super::placement::PlacementRoute,
+    current: medulla_raft::raft::placement::PlacementRoute,
 ) -> bool {
     if slice_epoch == 0 {
         return true;
@@ -279,7 +279,7 @@ pub struct GraphSlice {
     pub graph_type: GraphType,
     /// Staged durable mutations for this graph, applied in order at COMMIT.
     pub methods: Vec<Method>,
-    /// The [`super::placement::PlacementRoute`] epoch captured for this graph WHEN
+    /// The [`medulla_raft::raft::placement::PlacementRoute`] epoch captured for this graph WHEN
     /// the slice was built (GOC-13 fencing — mirrors the same `(group, epoch,
     /// fencing_token)` triple [`medulla_server::handlers::txn::
     /// validate_consensus_participant_placement`] already checks for the separate
@@ -287,14 +287,14 @@ pub struct GraphSlice {
     /// fencing vocabulary). `0` is the sentinel "no placement authority was
     /// consulted" (the same 0-means-absent convention `CommitDescriptor::
     /// source_graph_version` uses) — a caller that never routed through
-    /// [`super::multi::MultiRaft::route_graph`] (an in-process/non-clustered
+    /// [`medulla_raft::raft::multi::MultiRaft::route_graph`] (an in-process/non-clustered
     /// harness, or a pre-fencing durable prepare record from an older binary)
     /// leaves this `0` and [`CrossShardCoordinator::prepare_participant`] skips
     /// the fence check entirely, byte-for-byte the pre-fencing behavior.
     #[serde(default)]
     pub placement_epoch: u64,
     /// The route's `fencing_token()` (today numerically the same as [`GroupId`] —
-    /// see [`super::placement::PlacementRoute::fencing_token`]) captured alongside
+    /// see [`medulla_raft::raft::placement::PlacementRoute::fencing_token`]) captured alongside
     /// `placement_epoch`. `None` when `placement_epoch == 0`.
     #[serde(default)]
     pub fencing_token: Option<GroupId>,
@@ -324,7 +324,7 @@ impl GraphSlice {
                         0,
                         0,
                     ),
-                    command: super::ReplicatedMutation::graph(m.clone(), server_secret)?,
+                    command: medulla_raft::raft::ReplicatedMutation::graph(m.clone(), server_secret)?,
                 })
             })
             .collect()

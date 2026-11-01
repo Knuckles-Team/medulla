@@ -174,7 +174,7 @@ pub(super) fn decision_node_method(
 #[cfg(any(feature = "nonblocking", test, feature = "harness"))]
 pub(super) async fn write_decision_graph(
     multi: &MultiRaft,
-    group: &super::super::multi::Group,
+    group: &medulla_raft::raft::multi::Group,
     (namespace, coordinator_id): (&str, &str),
     method: Method,
 ) -> Result<(), String> {
@@ -191,7 +191,7 @@ pub(super) async fn write_decision_graph(
             0,
             0,
         ),
-        command: super::super::ReplicatedMutation::graph(method, &server_secret)?,
+        command: medulla_raft::raft::ReplicatedMutation::graph(method, &server_secret)?,
     };
     group.client_write(req).await?;
     Ok(())

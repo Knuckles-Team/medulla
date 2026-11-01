@@ -16,7 +16,7 @@ use std::collections::BTreeSet;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use super::NodeId;
+use medulla_raft::raft::NodeId;
 
 // CCCC burn-down (L-raft-a): the per-placement admission helpers `plan()`
 // dispatches to (and the `MoveBudget` they thread through) live in this

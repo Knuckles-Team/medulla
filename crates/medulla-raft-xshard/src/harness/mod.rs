@@ -26,7 +26,7 @@
 //!   load gen already records a full timestamped history to assert against.
 //! * **A new nemesis** (e.g. lane resharding: split a group mid-write; E: kill a
 //!   replication follower): add a [`nemesis::Fault`] variant + an arm in
-//!   [`nemesis::Nemesis::inject`]. The partition gate ([`super::network::partition`])
+//!   [`nemesis::Nemesis::inject`]. The partition gate ([`medulla_raft::raft::network::partition`])
 //!   and the kill/restart cluster controls are reusable primitives.
 //! * **A new gauntlet**: compose `Cluster::start` → `loadgen::run` → `Nemesis::inject`
 //!   → `checker::check` exactly as [`run_gauntlet`] does, with the new fault schedule.
@@ -119,7 +119,7 @@ mod gauntlet_test;
 mod catchup_test;
 
 /// EH-286: automatic openraft/raft-module trace capture on cluster-test failure.
-/// `pub(crate)` (not `mod`) because `super::tests::cluster_cfg_with_groups` calls
+/// `pub(crate)` (not `mod`) because `medulla_raft::raft::tests::cluster_cfg_with_groups` calls
 /// [`trace_capture::init`] directly; `#[cfg(test)]` because it depends on the
 /// `tracing-subscriber` DEV-dependency, which is not linked into non-test builds.
 #[cfg(any(test, feature = "test-support"))]
@@ -160,7 +160,7 @@ pub async fn run_gauntlet(
     // The partition controller is process-global. Hold its test guard across
     // cluster startup, fault injection, healing, checking, and teardown so a
     // concurrent harness cannot clear this run's partition mid-RPC.
-    let _partition_guard = super::network::partition::test_guard();
+    let _partition_guard = medulla_raft::raft::network::partition::test_guard();
 
     // ── Elect ──────────────────────────────────────────────────────────────
     let cluster = Cluster::start(n, tag).await?;
@@ -218,7 +218,7 @@ pub async fn run_gauntlet(
     }
 
     // ── Heal + drain ────────────────────────────────────────────────────────
-    super::network::partition::heal();
+    medulla_raft::raft::network::partition::heal();
     let _ = load_handle.await;
     sampler_stop.store(true, std::sync::atomic::Ordering::Relaxed);
     let _ = sampler_handle.await;

@@ -67,12 +67,12 @@ use std::time::Duration;
 
 use tokio::sync::RwLock;
 
-use super::cross_shard_txn::{CrossShardCoordinator, CrossShardTxn, GraphSlice, TxnOutcome};
-use super::multi::MultiRaft;
+use crate::cross_shard_txn::{CrossShardCoordinator, CrossShardTxn, GraphSlice, TxnOutcome};
+use medulla_raft::raft::multi::MultiRaft;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 
-use super::fixture;
+use crate::fixture;
 
 /// Group + graph names for the two modalities the cross-shard txn spans.
 const GROUP_A: u64 = 100;
@@ -491,9 +491,9 @@ async fn scenario_stale_fenced_participant_rejected() -> Result<bool, String> {
 /// in `bring_up` — needs its own election tick before `client_write_group` can
 /// find a leader. Wait for it explicitly, the same way `bring_up` does for A/B.
 async fn await_default_placement_leader(multi: &MultiRaft) -> Result<(), String> {
-    multi.ensure_group(super::DEFAULT_GROUP).await?;
+    multi.ensure_group(medulla_raft::raft::DEFAULT_GROUP).await?;
     let default_group = multi
-        .group(super::DEFAULT_GROUP)
+        .group(medulla_raft::raft::DEFAULT_GROUP)
         .await
         .ok_or("default placement group missing after ensure_group")?;
     fixture::wait_until(Duration::from_secs(15), || {

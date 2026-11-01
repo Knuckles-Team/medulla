@@ -30,7 +30,7 @@ use tokio::sync::RwLock;
 
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_raft::raft::config::RaftClusterConfig;
-use medulla_raft::raft::harness::cluster::fixture;
+use medulla_raft_xshard::harness::cluster::fixture;
 use medulla_raft::raft::multi::MultiRaft;
 use medulla_raft::raft::node::{self, StartedNode};
 use medulla_raft::raft::{NodeId, RaftRequest};
@@ -55,7 +55,7 @@ async fn make_state_with_backend(
         .register_graph("__commons__", "__commons__", GraphType::Commons)
         .await
         .expect("register mandatory commons graph");
-    medulla_raft::raft::harness_support::make_state_with_cdc(
+    medulla_raft_xshard::harness_support::make_state_with_cdc(
         dir,
         backend,
         medulla_isolation::isolation::IsolationLayer::new(),
@@ -95,8 +95,8 @@ fn cluster_cfg_with_groups(node_id: NodeId, ports: &[u16], groups: u64) -> RaftC
     // this function, so this one call site is the whole cluster-test surface.
     // Idempotent: the actual subscriber/panic-hook install happens at most once
     // per test binary.
-    medulla_raft::raft::harness::trace_capture::init();
-    medulla_raft::raft::harness::cluster_slots::claim();
+    medulla_raft_xshard::harness::trace_capture::init();
+    medulla_raft_xshard::harness::cluster_slots::claim();
     let peers = fixture::peer_map(ports);
     let bind_addr = peers.get(&node_id).unwrap().addr.clone();
     RaftClusterConfig {
@@ -138,8 +138,8 @@ async fn start_multi(
     backend: Arc<dyn PersistenceBackend>,
     ctx: medulla_raft::raft::AppCtx,
 ) -> Result<Arc<MultiRaft>, String> {
-    medulla_raft::raft::harness::trace_capture::init();
-    medulla_raft::raft::harness::cluster_slots::claim();
+    medulla_raft_xshard::harness::trace_capture::init();
+    medulla_raft_xshard::harness::cluster_slots::claim();
     MultiRaft::start(node_id, bind_addr, backend, ctx).await
 }
 
@@ -167,7 +167,7 @@ async fn direct_multi_raft_construction_reaches_trace_capture() {
         .await
         .expect("start multi via the direct-construction choke point");
 
-    let dump = medulla_raft::raft::harness::trace_capture::render_dump();
+    let dump = medulla_raft_xshard::harness::trace_capture::render_dump();
     assert!(
         dump.contains("medulla_raft::raft::multi"),
         "trace capture must be initialized by the direct MultiRaft::start path \
@@ -396,7 +396,7 @@ async fn cluster_members_reports_topology_and_tracks_leader_failover() {
     const SECRET: &str = "raft-test"; // matches make_state's ServerState.auth_secret
     static NONCE_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 
-    let _auth_env = medulla_raft::raft::harness::test_env::configure_auth_test_environment(
+    let _auth_env = medulla_raft_xshard::harness::test_env::configure_auth_test_environment(
         "tenant-shared",
         "cluster-members-wire-auth",
     );
@@ -1060,7 +1060,7 @@ mod placement_admin_wire_rpc {
         use medulla_raft::raft::DEFAULT_GROUP;
         const TARGET_GROUP: medulla_raft::raft::GroupId = 1;
 
-        let _auth_env = medulla_raft::raft::harness::test_env::configure_auth_test_environment(
+        let _auth_env = medulla_raft_xshard::harness::test_env::configure_auth_test_environment(
             "tenant-shared",
             "placement-wire-auth",
         );
@@ -1341,7 +1341,7 @@ use openraft::type_config::alias::EntryOf;
 
 /// A fresh temp dir for one test, removed first.
 fn fresh_dir(tag: &str) -> String {
-    medulla_raft::raft::harness::cluster::fixture::fresh_dir("medulla-raft", tag)
+    medulla_raft_xshard::harness::cluster::fixture::fresh_dir("medulla-raft", tag)
 }
 
 /// Build the unscoped application context used by direct Raft-store tests.
@@ -2663,12 +2663,12 @@ async fn wire_raft_add_learner_and_change_membership_resolve_through_dispatch() 
     const SECRET: &str = "raft-test";
 
     fn signed_request(id: u64, method: Method) -> medulla_protocol_types::protocol::Request {
-        medulla_raft::raft::harness_support::signed_request(
+        medulla_raft_xshard::harness_support::signed_request(
             id,
             "__commons__",
             method,
             SECRET,
-            medulla_raft::raft::harness_support::HarnessLabels {
+            medulla_raft_xshard::harness_support::HarnessLabels {
                 agent_id: TEST_AGENT,
                 nonce: "raft-admin",
                 idempotency: "raft-admin-request",
@@ -2957,7 +2957,7 @@ mod dist_compute {
     use super::*;
     use medulla_types::acl::{AgentIdentity, AgentRole};
     use medulla_protocol_types::protocol::{DistAlgo, GraphType};
-    use medulla_raft::raft::pregel;
+    use medulla_raft_xshard::pregel;
     use medulla_server_api::access::GraphReadAuthority;
     use medulla_protocol_types::result_contract::cluster::DistResult;
 

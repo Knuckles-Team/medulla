@@ -108,8 +108,8 @@ pub fn add_node_slice(
     node: &str,
     placement_epoch: u64,
     fencing_token: Option<u64>,
-) -> crate::raft::cross_shard_txn::GraphSlice {
-    crate::raft::cross_shard_txn::GraphSlice {
+) -> crate::cross_shard_txn::GraphSlice {
+    crate::cross_shard_txn::GraphSlice {
         graph_name: graph.to_string(),
         graph_fname: medulla_kernel::persist::sanitize(graph),
         graph_type: medulla_protocol_types::protocol::GraphType::Global,
@@ -140,13 +140,13 @@ where
 }
 
 /// Build the peer map used by multi-node in-process cluster fixtures.
-pub fn peer_map(ports: &[u16]) -> BTreeMap<crate::raft::NodeId, BasicNode> {
+pub fn peer_map(ports: &[u16]) -> BTreeMap<medulla_raft::raft::NodeId, BasicNode> {
     ports
         .iter()
         .enumerate()
         .fold(BTreeMap::new(), |mut peers, (index, port)| {
             peers.insert(
-                (index + 1) as crate::raft::NodeId,
+                (index + 1) as medulla_raft::raft::NodeId,
                 BasicNode::new(format!("127.0.0.1:{port}")),
             );
             peers
@@ -166,7 +166,7 @@ pub async fn node_count(state: &Arc<RwLock<ServerState>>, graph: &str) -> usize 
 /// Build and rehydrate the managed cluster's authoritative test state.
 pub async fn make_rehydrated_state(dir: &str) -> Result<Arc<RwLock<ServerState>>, String> {
     let backend = open_backend(dir)?;
-    let state = crate::raft::harness_support::make_state_with_cdc(
+    let state = crate::harness_support::make_state_with_cdc(
         dir,
         backend.clone(),
         IsolationLayer::new(),
@@ -192,9 +192,9 @@ pub async fn start_single_node_groups(
     backend: Backend,
     isolation: IsolationLayer,
     auth_secret: &str,
-    group_ids: &[crate::raft::GroupId],
-) -> (Arc<crate::raft::multi::MultiRaft>, Arc<RwLock<ServerState>>) {
-    crate::raft::harness_support::start_single_node_groups(
+    group_ids: &[medulla_raft::raft::GroupId],
+) -> (Arc<medulla_raft::raft::multi::MultiRaft>, Arc<RwLock<ServerState>>) {
+    crate::harness_support::start_single_node_groups(
         dir,
         backend,
         isolation,
@@ -212,9 +212,9 @@ pub async fn start_recovered_single_node_groups(
     backend: Backend,
     isolation: IsolationLayer,
     auth_secret: &str,
-    group_ids: &[crate::raft::GroupId],
-) -> (Arc<crate::raft::multi::MultiRaft>, Arc<RwLock<ServerState>>) {
-    crate::raft::harness_support::start_recovered_single_node_groups(
+    group_ids: &[medulla_raft::raft::GroupId],
+) -> (Arc<medulla_raft::raft::multi::MultiRaft>, Arc<RwLock<ServerState>>) {
+    crate::harness_support::start_recovered_single_node_groups(
         dir,
         backend,
         isolation,
@@ -230,9 +230,9 @@ pub async fn start_routed_groups(
     backend: Backend,
     isolation: IsolationLayer,
     auth_secret: &str,
-    group_ids: &[crate::raft::GroupId],
-    assignments: &[(&str, crate::raft::GroupId)],
-) -> (Arc<crate::raft::multi::MultiRaft>, Arc<RwLock<ServerState>>) {
+    group_ids: &[medulla_raft::raft::GroupId],
+    assignments: &[(&str, medulla_raft::raft::GroupId)],
+) -> (Arc<medulla_raft::raft::multi::MultiRaft>, Arc<RwLock<ServerState>>) {
     let (multi, state) =
         start_single_node_groups(dir, backend, isolation, auth_secret, group_ids).await;
     for &(graph, group) in assignments {

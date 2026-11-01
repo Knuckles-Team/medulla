@@ -8,8 +8,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use openraft::BasicNode;
 use tokio::sync::RwLock;
 
-use super::multi::MultiRaft;
-use super::{AppCtx, GroupId, NodeId};
+use medulla_raft::raft::multi::MultiRaft;
+use medulla_raft::raft::{AppCtx, GroupId, NodeId};
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
@@ -229,7 +229,7 @@ async fn start_groups_on_state(
         .expect("start multi");
 
     for &gid in group_ids {
-        if gid == super::DEFAULT_GROUP {
+        if gid == medulla_raft::raft::DEFAULT_GROUP {
             multi.ensure_group(gid).await.unwrap();
         } else {
             multi.create_group(gid, peers.clone(), true).await.unwrap();

@@ -1905,7 +1905,7 @@ async fn start_raft(
                             let backend = state.read().await.persistence.clone();
                             if let Some(backend) = backend {
                                 let coord =
-                                    medulla_raft::raft::cross_shard_txn::CrossShardCoordinator::new(
+                                    medulla_raft_xshard::cross_shard_txn::CrossShardCoordinator::new(
                                         started.multi.clone(),
                                         backend,
                                     );

@@ -25,8 +25,8 @@ use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use tokio::sync::Mutex;
 
-use super::super::network::partition;
-use super::super::NodeId;
+use medulla_raft::raft::network::partition;
+use medulla_raft::raft::NodeId;
 use super::cluster::Cluster;
 
 /// A single scheduled fault.

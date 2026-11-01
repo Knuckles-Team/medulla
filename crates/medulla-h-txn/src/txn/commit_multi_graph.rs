@@ -215,10 +215,10 @@ pub(super) async fn commit_cross_shard(
     multi: std::sync::Arc<medulla_raft::raft::multi::MultiRaft>,
     slices: Vec<CommitSlice>,
 ) -> Response {
-    use medulla_raft::raft::cross_shard_txn::CrossShardCoordinator;
-    use medulla_raft::raft::cross_shard_txn::CrossShardTxn;
-    use medulla_raft::raft::cross_shard_txn::GraphSlice;
-    use medulla_raft::raft::cross_shard_txn::TxnOutcome;
+    use medulla_raft_xshard::cross_shard_txn::CrossShardCoordinator;
+    use medulla_raft_xshard::cross_shard_txn::CrossShardTxn;
+    use medulla_raft_xshard::cross_shard_txn::GraphSlice;
+    use medulla_raft_xshard::cross_shard_txn::TxnOutcome;
 
     let backend = {
         let s = state.read().await;

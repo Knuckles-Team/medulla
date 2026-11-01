@@ -2970,7 +2970,7 @@ async fn cross_shard_raft_2pc_single_decision_eg396() {
     #[cfg(all(feature = "security", feature = "redb"))]
     let _enc_env_guard = ENC_ENV_LOCK.lock().await;
     let report =
-        medulla_raft::raft::xshard_modality_harness::prove_crossshard_modality_2pc_single_decision()
+        medulla_raft_xshard::xshard_modality_harness::prove_crossshard_modality_2pc_single_decision()
             .await
             .expect("cross-shard modality 2PC coordinator-kill proof runs");
     assert!(

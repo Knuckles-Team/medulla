@@ -63,7 +63,7 @@ async fn follower_catchup_replays_create_graph_then_write() {
     // See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     const NEW_GRAPH: &str = "raft-catchup-newgraph";
-    let _partition_guard = super::super::network::partition::test_guard();
+    let _partition_guard = medulla_raft::raft::network::partition::test_guard();
 
     let mut cluster = ClusterGuard::new(
         Cluster::start(3, "raft-catchup-newgraph")
