@@ -19,28 +19,28 @@ from rust_module_tree import read_module_tree
 ROOT = Path(__file__).resolve().parents[1]
 
 STRUCTURAL_READERS = (
-    "crates/medulla-core/src/graph.rs",
+    "crates/medulla-graph-core/src/graph.rs",
     "crates/medulla-graphql/src/schema.rs",
     "crates/medulla-graphql/src/resolver.rs",
     "crates/medulla-cypher/src/cypher/exec.rs",
     "crates/medulla-cypher/src/cypher/proc.rs",
-    "crates/medulla-plan/src/exec.rs",
+    "crates/medulla-exec/src/exec.rs",
     "crates/medulla-rdf/src/mapping.rs",
     "crates/medulla-rdf/src/update.rs",
     "crates/medulla-rdf/src/sparql.rs",
-    "crates/medulla-rdf/src/owl.rs",
-    "crates/medulla-compute/src/reasoning.rs",
+    "crates/medulla-reasoner/src/owl.rs",
+    "crates/medulla-reasoner/src/reasoning.rs",
     "crates/medulla-epistemic/src/adapter.rs",
     "crates/medulla-epistemic/src/incremental.rs",
     "crates/medulla-epistemic/src/recompute.rs",
     "crates/medulla-jobs/src/claim.rs",
-    "src/server/handlers/mining.rs",
-    "src/server/handlers/graphlearn.rs",
-    "src/server/handlers/graph_ops.rs",
-    "src/server/handlers/txn.rs",
-    "src/server/reasoning_projection.rs",
+    "crates/medulla-h-mining/src/mining.rs",
+    "crates/medulla-server-api/src/handlers/graphlearn.rs",
+    "crates/medulla-h-graph/src/graph_ops.rs",
+    "crates/medulla-h-txn/src/txn.rs",
+    "crates/medulla-h-retrieve/src/reasoning_projection.rs",
 )
-KNOWLEDGE_READER = "crates/medulla-plan/src/knowledge.rs"
+KNOWLEDGE_READER = "crates/medulla-retrieval/src/knowledge.rs"
 CYPHER_READERS = (
     "crates/medulla-cypher/src/cypher/exec.rs",
     "crates/medulla-cypher/src/cypher/proc.rs",
@@ -77,7 +77,7 @@ def _edge_relationship_failures() -> list[str]:
     for path in STRUCTURAL_READERS:
         source = (
             read_module_tree(path, root_dir=ROOT)
-            if path == "src/server/handlers/graph_ops.rs"
+            if path == "crates/medulla-h-graph/src/graph_ops.rs"
             else text(path)
         )
         for pattern in EDGE_TYPE_FALLBACKS:

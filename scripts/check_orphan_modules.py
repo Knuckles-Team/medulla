@@ -33,7 +33,7 @@ throwaway first version):
   ``autoexamples``.
 * ``mod`` declarations bind PER DIRECTORY.  ``mod semantic_index;`` in
   ``medulla-types/src/lib.rs`` declares ``medulla-types/src/semantic_index.rs`` and says
-  nothing whatever about ``src/server/semantic_index.rs``.  A global
+  nothing whatever about ``crates/medulla-h-retrieve/src/semantic_index_runtime.rs``.  A global
   match-by-name produced 95 false positives here and still missed a true orphan.
 * Both module layouts (``dir/mod.rs`` and the 2018 ``dir.rs`` + ``dir/``),
   ``#[path = "..."]`` overrides and ``include!`` inputs are all real

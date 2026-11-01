@@ -43,7 +43,7 @@ def _read_rust_module(relative: str) -> str:
     """The compiler-declared source of a Rust module, not one facade file.
 
     The fault seam this gate pins is a property of the `mutation_batch` module,
-    not of `crates/medulla-types/src/mutation_batch.rs` specifically. When that
+    not of `crates/medulla-protocol-types/src/mutation_batch.rs` specifically. When that
     module was decomposed into `mutation_batch.rs` + `mutation_batch/**` every
     one of the twelve seam tokens moved into `mutation_batch/fault.rs` and
     `mutation_batch/model/request.rs`, and this gate reported the entire
@@ -230,7 +230,7 @@ def _check_harness_contract(harness: str) -> list[str]:
 
 def _check_fault_seam_contract() -> list[str]:
     errors: list[str] = []
-    types = _read_rust_module("crates/medulla-types/src/mutation_batch.rs")
+    types = _read_rust_module("crates/medulla-protocol-types/src/mutation_batch.rs")
     types_code = _rust_code_mask(types)
     _require(
         types_code,
@@ -328,7 +328,7 @@ def _check_store_contract() -> list[str]:
     # in its declared `store_batch`/`store_mutation` children. Read the exact
     # source family the compiler assembles so a child omission cannot make the
     # graph mutation contract look satisfied by an unrelated facade comment.
-    graph_store = _read_rust_module("src/redb_store.rs")
+    graph_store = _read_rust_module("crates/medulla-store/src/redb_store.rs")
     sql_store = _read("crates/medulla-table-store/src/tables/store.rs")
     native_store = "\n".join(_read(path) for path in _NATIVE_STORE_COMMIT_SOURCES)
     phase_variants = {
@@ -362,18 +362,18 @@ def _check_store_contract() -> list[str]:
     )
 
     for relative in (
-        "src/server/kv.rs",
-        "src/server/blob/store.rs",
+        "crates/medulla-server-blob/src/kv.rs",
+        "crates/medulla-server-blob/src/blob/store.rs",
         "crates/medulla-tsdb/src/store.rs",
         "crates/medulla-jobs/src/store.rs",
-        "crates/medulla-core/src/rbac_persist.rs",
+        "crates/medulla-isolation/src/rbac_persist.rs",
     ):
         source = _read(relative)
-        if relative == "crates/medulla-core/src/rbac_persist.rs":
+        if relative == "crates/medulla-isolation/src/rbac_persist.rs":
             # The actual write path lives in this declared submodule, not the
             # rbac_persist.rs facade itself.
             source += "\n" + _read(
-                "crates/medulla-core/src/rbac_persist/durable_write.rs"
+                "crates/medulla-isolation/src/rbac_persist/durable_write.rs"
             )
         if "MutationKernel" not in source:
             errors.append(f"{relative}: does not hold a native MutationKernel")

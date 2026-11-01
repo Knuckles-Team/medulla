@@ -17,8 +17,8 @@ def _source(path: str) -> str:
     Each needle below names a behaviour a *module* must carry. Reading only the
     facade file made every assertion silently stale the moment that module was
     decomposed into `<name>.rs` + `<name>/**`: the four consensus needles this
-    gate reported missing from `src/server/dispatch.rs` all still exist, they
-    just moved into `src/server/dispatch/consensus.rs`. The test-inclusive
+    gate reported missing from `crates/medulla-server-router/src/dispatch.rs` all still exist, they
+    just moved into `crates/medulla-server-consensus/src/dispatch/consensus.rs`. The test-inclusive
     view is deliberate -- it is the exact superset of the single file this gate
     used to read (one needle here, `replicated_submission_and_claim_converge_
     across_independent_projections`, names a required test), so repointing adds
@@ -62,7 +62,7 @@ _REQUIRED_MARKERS: dict[str, tuple[str, ...]] = {
         "job_id_for_batch(",
         "replicated_submission_and_claim_converge_across_independent_projections",
     ),
-    "src/server/handlers/jobs.rs": (
+    "crates/medulla-h-jobs/src/jobs.rs": (
         "mine_labeled_cancellable(",
         "TenantJobQuota",
         "stage_result_fenced(",
@@ -83,17 +83,17 @@ _REQUIRED_MARKERS: dict[str, tuple[str, ...]] = {
         "apply_consensus_job_publication_commit(",
         "apply_consensus_job_publication_finalize(",
     ),
-    "src/server/dispatch.rs": (
+    "crates/medulla-server-router/src/dispatch.rs": (
         "execute_consensus_job_publication(",
         "submit_consensus_job_publication_command(",
         '"target-commit"',
         '"scheduler-finalize"',
     ),
-    "src/raft/mod.rs": (
+    "crates/medulla-raft/src/raft/mod.rs": (
         "JobPublicationCommit {",
         "JobPublicationFinalize {",
     ),
-    "crates/medulla-types/src/jobs.rs": (
+    "crates/medulla-work-types/src/jobs.rs": (
         "WorkerClaim {",
         "WorkerRenew {",
         "WorkerCheckpoint {",
@@ -107,11 +107,11 @@ _REQUIRED_MARKERS: dict[str, tuple[str, ...]] = {
     ),
     # The analytics-worker capability belongs to the verified authority context,
     # declared beside auth in server/mod.rs rather than below auth.rs.
-    "src/server/authority_context.rs": (
+    "crates/medulla-server-api/src/authority_context.rs": (
         "allows_analytics_worker",
         'allows_action("analytics:worker")',
     ),
-    "src/server/reasoning_projection.rs": (
+    "crates/medulla-h-retrieve/src/reasoning_projection.rs": (
         "claim_mutation_outbox(",
         "read_mutation_batch(",
         "ReasoningProjectionWakeup",
@@ -138,7 +138,7 @@ _REQUIRED_MARKERS: dict[str, tuple[str, ...]] = {
         "IncrementalReasoningEvent::Recompute",
         "recompute_from_ref(",
     ),
-    "src/server/handlers/query.rs": (
+    "crates/medulla-h-query/src/query.rs": (
         '"reasoning-recompute"',
         'status: "Queued".to_string()',
         "projection_pending: true",
@@ -206,13 +206,13 @@ def _publication_barrier_failures(store: str) -> list[str]:
 
 def _analytics_ordering_failures(sources: dict[str, str]) -> list[str]:
     """Ordering and authority contracts no single marker can express."""
-    handler = sources["src/server/handlers/jobs.rs"]
-    reasoning = sources["src/server/reasoning_projection.rs"]
+    handler = sources["crates/medulla-h-jobs/src/jobs.rs"]
+    reasoning = sources["crates/medulla-h-retrieve/src/reasoning_projection.rs"]
     failures = _publication_barrier_failures(sources[_JOB_STORE])
     failures.extend(
         _ordered_markers(
             handler,
-            "src/server/handlers/jobs.rs",
+            "crates/medulla-h-jobs/src/jobs.rs",
             "stage_result_fenced(",
             "complete_publication_fenced(",
             "handler completes publication before staging the typed result",
@@ -221,7 +221,7 @@ def _analytics_ordering_failures(sources: dict[str, str]) -> list[str]:
     failures.extend(
         _ordered_markers(
             reasoning,
-            "src/server/reasoning_projection.rs",
+            "crates/medulla-h-retrieve/src/reasoning_projection.rs",
             "persist_index(",
             "ack_mutation_outbox(",
             "reasoning cursor can advance before projection persistence",

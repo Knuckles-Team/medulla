@@ -9,8 +9,8 @@ correct and semantically empty: there is no nesting, no interleaving of
 conditions, and no path a reader has to hold in their head.  The measurement
 that shows it (cccc 1.6.0, this tree, 2026-09-11):
 
-    src/server/wire/mod.rs::dispatch_kind            cyclomatic 32, cognitive 1
-    src/server/persistence/redb_backend.rs::handle_cmd    cyclomatic 54, cognitive 8
+    crates/medulla-wire-core/src/wire/mod.rs::dispatch_kind            cyclomatic 32, cognitive 1
+    crates/medulla-persistence/src/redb_backend.rs::handle_cmd    cyclomatic 54, cognitive 8
         (50 arms, no catch-all, residual 4)
 
 Cognitive complexity -- which does NOT charge a flat match per arm -- reports

@@ -571,7 +571,7 @@ def _check_mutation_applier_inventory(
     )
     # SubmitWorkItem/SubmitWorkItems are `is_work_item_method` but admitted through
     # a dedicated engine-native atomic WorkItem command-log path (mutation_batch.rs/
-    # redb_store.rs; see `src/server/mutation.rs`'s "dedicated engine-native atomic
+    # redb_store.rs; see `crates/medulla-server-mutation/src/mutation.rs`'s "dedicated engine-native atomic
     # WorkItem command-log admission" NON_GATEWAY_COORDINATED entry and `src/raft/
     # store.rs::require_durable_graph_method`, which explicitly EXCLUDES
     # `is_work_item_method` methods from the generic classify/apply "graph command"
@@ -1197,15 +1197,15 @@ def _graph_gateway_sources(declared_paths: set[Path]) -> tuple[str, str]:
 def mutation_inventory_sources() -> dict[str, str]:
     """Load the complete live source set consumed by the inventory proof."""
 
-    mutation_runtime = read_compiler_family("src/server/mutation.rs")
-    mutation_batch = read_compiler_family("src/server/mutation_batch.rs")
-    graph_ops = read_compiler_family("src/server/handlers/graph_ops.rs")
+    mutation_runtime = read_compiler_family("crates/medulla-server-mutation/src/mutation.rs")
+    mutation_batch = read_compiler_family("crates/medulla-server-mutation/src/mutation_batch.rs")
+    graph_ops = read_compiler_family("crates/medulla-h-graph/src/graph_ops.rs")
     graph_gateway, graph_gateway_routes = _graph_gateway_sources(
-        read_module_paths("src/server/handlers/graph_ops.rs", include_tests=False)
+        read_module_paths("crates/medulla-h-graph/src/graph_ops.rs", include_tests=False)
     )
-    dispatch = read_compiler_family("src/server/dispatch.rs")
-    raft = read_compiler_family("src/raft/mod.rs")
-    blob_store = read_compiler_family("src/server/blob/store.rs")
+    dispatch = read_compiler_family("crates/medulla-server-router/src/dispatch.rs")
+    raft = read_compiler_family("crates/medulla-raft/src/raft/mod.rs")
+    blob_store = read_compiler_family("crates/medulla-server-blob/src/blob/store.rs")
     blob_shared = read_compiler_family(
         "crates/medulla-storage/src/owner/blob_shared.rs"
     )
@@ -1216,11 +1216,11 @@ def mutation_inventory_sources() -> dict[str, str]:
         "consistency": read_module_tree(
             "crates/medulla-capabilities/tests/consistency.rs", include_tests=True
         ),
-        "mutation_apply": read_module_tree("src/mutation_apply.rs"),
+        "mutation_apply": read_module_tree("crates/medulla-server-api/src/mutation_apply.rs"),
         # Hoisted 2026-08-25 (3810eb00, "Hoist durable-mutation classify/apply +
         # single-writer guard into medulla-core"): the base graph-mutation set and the
-        # `broker` family moved out of src/mutation_apply.rs into
-        # medulla_core::durable_apply. src/mutation_apply.rs now keeps only the four
+        # `broker` family moved out of crates/medulla-server-api/src/mutation_apply.rs into
+        # medulla_core::durable_apply. crates/medulla-server-api/src/mutation_apply.rs now keeps only the four
         # DAG-forced families explicit and delegates everything else to this
         # module's `is_durable_mutation`/`apply` via its `_` arm — so the
         # classifier/applier inventory below must read BOTH sources and union
@@ -1229,7 +1229,7 @@ def mutation_inventory_sources() -> dict[str, str]:
         # The feature-gated triple / mining / graph-learning write-backs are
         # classified in medulla-types, under the same gates as their variants.
         "writeback": read_module_tree(
-            "crates/medulla-types/src/protocol/method/writeback.rs"
+            "crates/medulla-protocol-types/src/protocol/method/writeback.rs"
         ),
         "method_families": families_source(ROOT),
         "mutation_runtime": mutation_runtime.production,
@@ -1254,13 +1254,13 @@ def mutation_inventory_sources() -> dict[str, str]:
         "sparql_execution": dispatch.production,
         "raft": raft.production,
         "raft_tests": raft.with_tests,
-        "sparql_http": read_module_tree("src/server/sparql_http.rs"),
-        "ros2_bridge": read("src/server/ros2_bridge.rs"),
+        "sparql_http": read_module_tree("crates/medulla-server-blob/src/sparql_http.rs"),
+        "ros2_bridge": read("crates/medulla-wire-msg/src/ros2_bridge.rs"),
         "blob_store": blob_store.production,
         "blob_store_tests": blob_store.with_tests,
         "blob_shared": blob_shared.production,
         "main": read("src/main.rs"),
-        "state": read("src/server/state.rs"),
+        "state": read("crates/medulla-server-api/src/state.rs"),
         "server": read("src/server/mod.rs"),
         "external_compute_e2e": read("tests/external_compute_e2e.rs"),
     }
@@ -1696,7 +1696,7 @@ def _semantic_authority_sources() -> dict[str, str]:
             "crates/medulla-tables/src/migration.rs",
         )
     )
-    server = read("src/server/semantic_activation.rs")
+    server = read("crates/medulla-server-graph/src/semantic_activation.rs")
     return {"query": query, "server": server}
 
 
@@ -1880,20 +1880,20 @@ def main() -> None:
     # crash before it can report a contract violation whenever the module is
     # decomposed (the compiler follows the same tree).  Keep this structural
     # source union in lock-step with the live Rust module tree.
-    contract = read_module_tree("crates/medulla-types/src/mutation_batch.rs")
+    contract = read_module_tree("crates/medulla-protocol-types/src/mutation_batch.rs")
     contract_with_tests = read_module_tree(
-        "crates/medulla-types/src/mutation_batch.rs", include_tests=True
+        "crates/medulla-protocol-types/src/mutation_batch.rs", include_tests=True
     )
-    graph_store = read_module_tree("src/redb_store.rs")
+    graph_store = read_module_tree("crates/medulla-store/src/redb_store.rs")
     native_store = mutation_kernel_source()
     native_store_with_tests = mutation_kernel_source(include_tests=True)
     sql_store = read_module_tree("crates/medulla-table-store/src/tables/store.rs")
-    reasoning = read("src/server/reasoning_projection.rs")
+    reasoning = read("crates/medulla-h-retrieve/src/reasoning_projection.rs")
     reasoning_index = read_module_tree("crates/medulla-epistemic/src/incremental.rs")
     row_delta_producer = read_module_tree("crates/medulla-kernel/src/graph_delta.rs")
     compiler = inventory_sources["mutation_batch"]
-    mutation_runtime = read("src/server/mutation.rs")
-    protocol = read("crates/medulla-types/src/protocol.rs")
+    mutation_runtime = read("crates/medulla-server-mutation/src/mutation.rs")
+    protocol = read("crates/medulla-protocol-types/src/protocol.rs")
     check_m1_mutation_identity(
         contract,
         native_store,

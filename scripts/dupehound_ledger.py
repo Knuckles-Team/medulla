@@ -7,8 +7,8 @@ right question for finding copy-paste, and it is why this repository runs it
 fail-closed with no baseline.  But shape is not meaning, and a small number of
 pairs are structurally identical while being semantically unrelated -- two
 `matches!` arms over different literal sets, over different argument types,
-answering different questions.  `src/server/http1.rs`'s `is_token_byte(u8)`
-(the RFC 7230 `tchar` set) and `src/server/redis_wire/mod.rs`'s
+answering different questions.  `crates/medulla-server-api/src/http1.rs`'s `is_token_byte(u8)`
+(the RFC 7230 `tchar` set) and `crates/medulla-wire-msg/src/redis_wire/mod.rs`'s
 `is_known_command(&str)` (Redis verbs) are the canonical example: merging them
 would produce worse code, not better.
 

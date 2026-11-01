@@ -185,7 +185,7 @@ def sanitized_command(raft: str) -> tuple[str, str]:
 def require_modality_raft_replication() -> None:
     """The replicated modality command is closed and carries no source field."""
 
-    raft = read_compiler_family("src/raft/mod.rs", ROOT).production
+    raft = read_compiler_family("crates/medulla-raft/src/raft/mod.rs", ROOT).production
     attrs, body = sanitized_command(raft)
     fields = re.findall(r"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?(\w+)\s*:", body)
     require(
@@ -213,7 +213,7 @@ def require_ingest_stream_item_bound(python_client: str) -> None:
         len(client_bounds) == 1,
         "Python client ingest_stream item bound is absent or inconsistent",
     )
-    server = _rust_comments_mask(compiler_source("src/server/handlers/modality.rs"))
+    server = _rust_comments_mask(compiler_source("crates/medulla-h-ingest/src/modality.rs"))
     server_bound = _SERVER_INGEST_STREAM_BOUND.search(server)
     require(server_bound is not None, "server MAX_INGEST_STREAM_ITEMS not found")
     assert server_bound is not None
@@ -232,10 +232,10 @@ def main() -> None:
         compiler_source("crates/medulla-types/src/knowledge_stream.rs")
     )
     require_graph_dispatch_ordering(
-        read_module_tree("src/server/dispatch.rs", root_dir=ROOT)
+        read_module_tree("crates/medulla-server-router/src/dispatch.rs", root_dir=ROOT)
     )
     require_source_free_receipt(
-        read_module_tree("src/server/mutation.rs", root_dir=ROOT)
+        read_module_tree("crates/medulla-server-mutation/src/mutation.rs", root_dir=ROOT)
     )
     require_modality_raft_replication()
     require_ingest_stream_item_bound(read("medulla/client.py"))
