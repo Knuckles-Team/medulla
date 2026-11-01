@@ -17,7 +17,7 @@ pub(crate) struct ReplicatedApplyScope {
 #[cfg(feature = "raft")]
 tokio::task_local! {
     /// The replicated-apply scope of the command currently being applied.
-    pub(crate) static REPLICATED_APPLY: ReplicatedApplyScope;
+    pub static REPLICATED_APPLY: ReplicatedApplyScope;
 }
 
 /// One authoritative clock for a replicated native command. Followers must not
