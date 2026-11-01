@@ -2,11 +2,9 @@
 //! result-contract DTOs. The owner crate keeps its receipt/status types private
 //! to the runtime crate DAG; the wire contract mirrors their serialized fields.
 
-use medulla_core::compute::semantic_ann_codes::SemanticMutationReceipt as RuntimeReceipt;
-use medulla_core::compute::semantic_index_service::{
-    SemanticSqlSourcePageAdmission as RuntimePageAdmission,
-    SemanticSqlSourceReconciliationAdmission as RuntimeReconciliationAdmission,
-};
+use medulla_ann_codes::semantic_ann_codes::SemanticMutationReceipt as RuntimeReceipt;
+use medulla_ann_codes::semantic_index_service::SemanticSqlSourcePageAdmission as RuntimePageAdmission;
+use medulla_ann_codes::semantic_index_service::SemanticSqlSourceReconciliationAdmission as RuntimeReconciliationAdmission;
 use medulla_index_types::semantic_index::SemanticStageTransition;
 use medulla_protocol_types::{
     result_contract::ingestion::SemanticMutationReceipt,

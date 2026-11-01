@@ -79,12 +79,19 @@ use std::sync::Arc;
 
 #[cfg(feature = "query")]
 use crate::protocol::Response;
-use medulla_core::compute::semantic_index_service::SemanticIndexService;
 #[cfg(feature = "query")]
-use medulla_core::compute::semantic_index_service::{
-    sql_source_deletion_proof, sql_source_revision_for_epoch, SemanticSqlSourceReadPage,
-    SemanticSqlSourceReadPort, SemanticSqlSourceRecord, SemanticSqlSourceValue,
-};
+use medulla_ann_codes::semantic_index_service::sql_source_deletion_proof;
+#[cfg(feature = "query")]
+use medulla_ann_codes::semantic_index_service::sql_source_revision_for_epoch;
+use medulla_ann_codes::semantic_index_service::SemanticIndexService;
+#[cfg(feature = "query")]
+use medulla_ann_codes::semantic_index_service::SemanticSqlSourceReadPage;
+#[cfg(feature = "query")]
+use medulla_ann_codes::semantic_index_service::SemanticSqlSourceReadPort;
+#[cfg(feature = "query")]
+use medulla_ann_codes::semantic_index_service::SemanticSqlSourceRecord;
+#[cfg(feature = "query")]
+use medulla_ann_codes::semantic_index_service::SemanticSqlSourceValue;
 use medulla_server_api::access::CarrierAuthority;
 #[cfg(feature = "query")]
 use medulla_server_api::compute::compute_off_lock;
@@ -329,7 +336,7 @@ fn tenant_semantic_owner_file(persist_dir: &std::path::Path, tenant: &str) -> st
     persist_dir
         .join("semantic-index")
         .join(sanitize_owner_segment(tenant))
-        .join(medulla_core::compute::semantic_ann_codes::tenant_owner_file_name(tenant))
+        .join(medulla_ann_codes::semantic_ann_codes::tenant_owner_file_name(tenant))
 }
 
 /// Durable authority fence. Once promotion starts, loss of the v3 owner name

@@ -31,7 +31,7 @@ ann = ["medulla-graph-core/ann", "medulla-semantic-index/ann", "dep:rayon"]
 # `medulla_ann` owner table of `OwnerLayout::SemanticIndex`, written through the
 # mutation kernel (RF-RULING-007) -- so this pulls the two kernels, not a raw
 # `redb` handle for medulla-ann, which declares no storage dependency at all.
-ann-redb = ["ann", "dep:redb", "dep:sha2", "dep:medulla-storage", "dep:medulla-transaction"]
+ann-redb = ["medulla-ann-codes/ann-redb", "ann", "dep:redb", "dep:sha2", "dep:medulla-storage", "dep:medulla-transaction"]
 # GPU distance dispatch seam (CONCEPT:MEDULLA-326) / real CUDA backend (CONCEPT:MEDULLA-327) for
 # the medulla-ann index. `ann-gpu` opts into the seam; `ann-gpu-cuda` pulls the real cudarc
 # backend (dynamic-loading — no CUDA toolkit to build). OUT of pi/full (facade folds it
@@ -127,6 +127,7 @@ medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-query-cache = { path = "../medulla-query-cache" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
+medulla-ann-codes = { path = "../medulla-ann-codes" }
 
 [dev-dependencies]
 # The commercial-vocabulary contract tests (MEDULLA-SUPPLY-VOCAB-R003.13-.16) parse

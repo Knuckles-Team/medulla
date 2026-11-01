@@ -44,7 +44,11 @@ const FORBIDDEN: [&str; 12] = [
 
 /// Regions this gate owns, relative to the workspace root. Both were cleared by
 /// this slice; nothing in either may reacquire a store.
-const REGIONS: [&str; 2] = ["crates/medulla-ann/src", "crates/medulla-core/src/compute"];
+const REGIONS: [&str; 3] = [
+    "crates/medulla-ann/src",
+    "crates/medulla-semantic-index/src",
+    "crates/medulla-ann-codes/src",
+];
 
 /// Files exempted from the scan. **Empty, and it must stay empty** — an entry
 /// here is a bypass with a comment on it. The one module that legitimately
@@ -58,7 +62,7 @@ const REGIONS: [&str; 2] = ["crates/medulla-ann/src", "crates/medulla-core/src/c
 const ALLOWLIST: [&str; 0] = [];
 
 /// This module's own path, relative to the workspace root.
-const SELF_PATH: &str = concat!("crates/medulla-core/", file!());
+const SELF_PATH: &str = concat!("crates/medulla-ann-codes/", file!());
 
 /// `file!()` is relative to the workspace root under cargo, but relative to the
 /// package under some invocations; normalise to the workspace-relative form the
@@ -73,11 +77,11 @@ fn self_path() -> String {
 }
 
 fn workspace_root() -> PathBuf {
-    // `crates/medulla-core` -> the workspace root.
+    // `crates/medulla-ann-codes` -> the workspace root.
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .and_then(Path::parent)
-        .expect("medulla-core must live two levels below the workspace root")
+        .expect("medulla-ann-codes must live two levels below the workspace root")
         .to_path_buf()
 }
 

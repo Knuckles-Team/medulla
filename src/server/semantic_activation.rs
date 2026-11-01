@@ -42,7 +42,7 @@ use medulla_semantic_index::semantic_ann::ANN_BUILD_THRESHOLD;
 use medulla_server_api::state::ServerState;
 
 #[cfg(feature = "ann-redb")]
-use crate::compute::semantic_ann_codes::SemanticCodeStore;
+use medulla_ann_codes::semantic_ann_codes::SemanticCodeStore;
 #[cfg(feature = "ann-redb")]
 use medulla_semantic_index::semantic::SemanticStore;
 

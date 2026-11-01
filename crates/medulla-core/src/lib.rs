@@ -23,7 +23,6 @@ pub use medulla_types::{acl, types, wire};
 // CONCEPT:MEDULLA-KG.compute.message-broker-exchanges — message-broker exchanges/routing on top of the KG-2.303 queue.
 #[cfg(feature = "broker")]
 pub mod broker;
-pub mod compute;
 /// ModalityContract retrofit (CONCEPT:E4): `impl ModalityContract for
 /// index::NodeChange` + the `modality_conformance_tests!` battery. Behind the
 /// crate's own opt-in `contract` feature (default OFF). See `src/contract.rs`.
@@ -62,5 +61,3 @@ pub mod ontology_codegen;
 /// fallback path structurally unrepresentable.
 pub mod persist_lock;
 pub mod registry;
-#[cfg(all(test, any(feature = "security", feature = "path-persist")))]
-pub(crate) mod test_scope_grant;

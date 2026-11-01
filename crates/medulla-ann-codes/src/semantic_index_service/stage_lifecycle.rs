@@ -52,10 +52,10 @@ impl SemanticIndexService {
         worker: &str,
         now_ms: u64,
     ) -> Result<Vec<OutboxStatus>, SemanticCodeError> {
-        crate::compute::semantic_ann_codes::SEMANTIC_QUEUE_CLASSES
+        crate::semantic_ann_codes::SEMANTIC_QUEUE_CLASSES
             .iter()
             .map(|class| {
-                let consumer = crate::compute::semantic_ann_codes::stage_consumer(worker, *class);
+                let consumer = crate::semantic_ann_codes::stage_consumer(worker, *class);
                 self.stage_status(&consumer, now_ms)
             })
             .collect()

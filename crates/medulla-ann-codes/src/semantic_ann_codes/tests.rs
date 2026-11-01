@@ -21,7 +21,9 @@ use super::reconciliation::{compare_source_revision, validate_sql_source_revisio
 use super::rows::BoundCodeRows;
 use super::stage::stage_intent_outbox;
 use super::{ExistingTenantOwnerOpen, OperationAttribution, SemanticCodeStore};
-use crate::test_scope_grant::{TestScopeVerifier, TEST_PRINCIPAL, TEST_PROOF};
+use crate::test_scope_grant::TestScopeVerifier;
+use crate::test_scope_grant::TEST_PRINCIPAL;
+use crate::test_scope_grant::TEST_PROOF;
 use medulla_index_types::embedding::EmbeddingSpaceRef;
 use medulla_index_types::{
     semantic_index::SemanticActivationTarget, semantic_index::SemanticActivePointer,
@@ -495,7 +497,7 @@ fn binding_for_generation_with_id(
 
 #[test]
 fn tenant_owner_merge_preserves_populated_binding_replay_and_outbox_rows() {
-    use crate::compute::semantic_index_service::SemanticIndexService;
+    use crate::semantic_index_service::SemanticIndexService;
     use medulla_storage::{merge_semantic_owner_files, strict_recovery_evidence_read_only};
 
     let root = tmp_dir("tenant-owner-populated-merge");

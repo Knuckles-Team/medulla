@@ -29,7 +29,9 @@ use super::tests::{
     TENANT,
 };
 use super::{OperationAttribution, SemanticCodeError, SemanticCodeStore, SemanticMutationReceipt};
-use crate::test_scope_grant::{TestScopeVerifier, TEST_PRINCIPAL, TEST_PROOF};
+use crate::test_scope_grant::TestScopeVerifier;
+use crate::test_scope_grant::TEST_PRINCIPAL;
+use crate::test_scope_grant::TEST_PROOF;
 
 const ACTOR: &str = "actor-lifecycle-refusal";
 

@@ -31,8 +31,8 @@ mod worker;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use medulla_core::compute::semantic_ann_codes::SemanticCodeError;
-use medulla_core::compute::semantic_index_service::SemanticIndexService;
+use medulla_ann_codes::semantic_ann_codes::SemanticCodeError;
+use medulla_ann_codes::semantic_index_service::SemanticIndexService;
 use medulla_index_types::{
     semantic_index::SemanticBinding, semantic_index::SemanticIndexError,
     semantic_index::SemanticIndexOp,
@@ -194,7 +194,7 @@ pub(crate) fn own_lease(
     lease: &medulla_mutation_types::mutation_scope::MutationOutboxLease,
     authority: &CarrierAuthority,
 ) -> Result<(), String> {
-    let owner = medulla_core::compute::semantic_ann_codes::stage_consumer_parts(&lease.consumer)
+    let owner = medulla_ann_codes::semantic_ann_codes::stage_consumer_parts(&lease.consumer)
         .map(|(worker, _)| worker);
     if owner != Some(authority.agent_id()) {
         return Err(
@@ -251,7 +251,7 @@ pub(super) fn consumer_ack() -> bool {
 pub(super) async fn blocking<T, F>(req_id: u64, work: F) -> Result<T, Response>
 where
     T: Send + 'static,
-    F: FnOnce() -> Result<T, medulla_core::compute::semantic_ann_codes::SemanticCodeError>
+    F: FnOnce() -> Result<T, medulla_ann_codes::semantic_ann_codes::SemanticCodeError>
         + Send
         + 'static,
 {
@@ -304,7 +304,7 @@ where
 #[cfg(test)]
 mod error_contract_tests {
     use super::{decode_cursor, semantic_failure_response};
-    use medulla_core::compute::semantic_ann_codes::SemanticCodeError;
+    use medulla_ann_codes::semantic_ann_codes::SemanticCodeError;
 
     #[test]
     fn worker_errors_use_declared_codes_without_backend_text() {

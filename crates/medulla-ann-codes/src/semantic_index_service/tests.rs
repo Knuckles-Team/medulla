@@ -11,7 +11,8 @@ use super::{
     SemanticSqlSourceReadPage, SemanticSqlSourceReadPort, SemanticSqlSourceRecord,
     SemanticSqlSourceValue,
 };
-use crate::test_scope_grant::{TEST_PRINCIPAL, TEST_PROOF};
+use crate::test_scope_grant::TEST_PRINCIPAL;
+use crate::test_scope_grant::TEST_PROOF;
 use medulla_index_types::{
     semantic_index::SemanticBinding, semantic_index::SemanticDigest,
     semantic_index::SemanticIndexError, semantic_index::SemanticSourceDirtyIntent,

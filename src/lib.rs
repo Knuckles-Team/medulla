@@ -23,7 +23,6 @@
 // isolation, semantic search) lives in `medulla-core`. Re-export both under the
 // historical `crate::` paths so every module's `crate::protocol::` /
 // `crate::graph::` / `crate::registry::` reference resolves unchanged.
-pub use medulla_core::compute;
 pub use medulla_core::decay;
 pub use medulla_core::registry;
 pub use medulla_graph_core::graph;

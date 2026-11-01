@@ -12,7 +12,6 @@
 
 // The leaf-crate modules these files name with their historical `crate::` paths.
 pub(crate) use medulla_compute::algorithms;
-pub(crate) use medulla_core::compute;
 pub(crate) use medulla_graph_core::graph;
 pub(crate) use medulla_graph_core::index;
 pub(crate) use medulla_protocol_types::{mutation_batch, protocol};

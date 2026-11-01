@@ -299,7 +299,7 @@ decide = ["medulla-h-ingest/decide", "medulla-h-graph/decide", "medulla-raft/dec
 # the one main build; a persisted index reopens WITHOUT rebuilding from raw vectors.
 ann = ["medulla-core/ann", "medulla-graph-core/ann", "medulla-semantic-index/ann", "dep:medulla-ann"]
 # Persist the ANN codes into the redb durable tier too (needs `redb`).
-ann-redb = ["medulla-server-api/ann-redb", "ann", "redb", "medulla-core/ann-redb"]
+ann-redb = ["medulla-server-api/ann-redb", "ann", "redb", "medulla-core/ann-redb", "medulla-ann-codes/ann-redb"]
 # CONCEPT:MEDULLA-P0-2 -- `dep:medulla-capabilities` folded in here (not a standalone feature):
 # the mutation gateway (`src/server/mutation.rs`) is server-only, so the binary
 # linking the MethodPolicy ledger is exactly the `server` build, matching every other
@@ -1862,6 +1862,7 @@ medulla-semantic-index = { path = "crates/medulla-semantic-index" }
 medulla-query-cache = { path = "crates/medulla-query-cache" }
 medulla-graph-core = { path = "crates/medulla-graph-core" }
 medulla-isolation = { path = "crates/medulla-isolation" }
+medulla-ann-codes = { path = "crates/medulla-ann-codes" }
 
 [dev-dependencies]
 medulla-h-ingest = { path = "crates/medulla-h-ingest", features = ["test-support"] }

@@ -65,6 +65,7 @@ medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-query-cache = { path = "../medulla-query-cache" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
+medulla-ann-codes = { path = "../medulla-ann-codes" }
 
 [features]
 test-support = []

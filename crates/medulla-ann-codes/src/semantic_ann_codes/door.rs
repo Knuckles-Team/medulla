@@ -627,8 +627,11 @@ pub(super) fn tenant_store_file_name(tenant: &str) -> String {
 #[cfg(test)]
 mod tenant_open_tests {
     use super::{store_file_name, tenant_store_file_name};
-    use crate::compute::semantic_ann_codes::{ExistingTenantOwnerOpen, SemanticCodeStore};
-    use crate::test_scope_grant::{TestScopeVerifier, TEST_PRINCIPAL, TEST_PROOF};
+    use crate::semantic_ann_codes::ExistingTenantOwnerOpen;
+    use crate::semantic_ann_codes::SemanticCodeStore;
+    use crate::test_scope_grant::TestScopeVerifier;
+    use crate::test_scope_grant::TEST_PRINCIPAL;
+    use crate::test_scope_grant::TEST_PROOF;
     use medulla_storage::{merge_semantic_owner_files, OwnerLayout, PhysicalStoreIdentity};
     use std::sync::Arc;
 

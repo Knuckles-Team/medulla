@@ -152,7 +152,7 @@ enum Owner {
     },
     #[cfg(feature = "ann-redb")]
     SemanticBinding {
-        service: Arc<medulla_core::compute::semantic_index_service::SemanticIndexService>,
+        service: Arc<medulla_ann_codes::semantic_index_service::SemanticIndexService>,
     },
     #[cfg(feature = "query")]
     SqlResource {

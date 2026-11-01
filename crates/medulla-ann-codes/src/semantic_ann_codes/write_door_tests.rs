@@ -41,7 +41,9 @@ use super::batch::MetadataMutation;
 use super::door::{scope_identity, serving_identity};
 use super::tests::{binding_for_generation, open_store, pending_binding, tmp_dir, BINDING, TENANT};
 use super::{SemanticCodeError, SemanticCodeStore, SemanticMutationReceipt};
-use crate::test_scope_grant::{TestScopeVerifier, TEST_PRINCIPAL, TEST_PROOF};
+use crate::test_scope_grant::TestScopeVerifier;
+use crate::test_scope_grant::TEST_PRINCIPAL;
+use crate::test_scope_grant::TEST_PROOF;
 
 /// Every use of kernel write or scope vocabulary, paired with the ONE function
 /// allowed to make it. The observed pairs must equal this table exactly: an

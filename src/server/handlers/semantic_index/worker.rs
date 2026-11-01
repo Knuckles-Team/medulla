@@ -90,7 +90,7 @@ async fn claim(
     let now_ms = ctx.now_ms;
     let claimed = blocking(ctx.req_id, move || {
         let mut budget = OutboxClaimBudget::new(limit, lease_ms, now_ms)
-            .map_err(medulla_core::compute::semantic_ann_codes::SemanticCodeError::Refused)?;
+            .map_err(medulla_ann_codes::semantic_ann_codes::SemanticCodeError::Refused)?;
         let outcome = service.claim_stage_class(&consumer, queue_class, &mut budget)?;
         let mut entries = Vec::with_capacity(outcome.claims.len());
         for lease in outcome.claims {
@@ -121,10 +121,10 @@ async fn on_own_lease<T, F>(
 where
     T: Send + 'static,
     F: FnOnce(
-            &medulla_core::compute::semantic_index_service::SemanticIndexService,
+            &medulla_ann_codes::semantic_index_service::SemanticIndexService,
             &medulla_mutation_types::mutation_scope::MutationOutboxLease,
             u64,
-        ) -> Result<T, medulla_core::compute::semantic_ann_codes::SemanticCodeError>
+        ) -> Result<T, medulla_ann_codes::semantic_ann_codes::SemanticCodeError>
         + Send
         + 'static,
 {
@@ -149,7 +149,7 @@ async fn status(
     ctx: &SemanticIndexContext<'_>,
     queue_class: medulla_index_types::semantic_index::SemanticQueueClass,
 ) -> Response {
-    let consumer = medulla_core::compute::semantic_ann_codes::stage_consumer(
+    let consumer = medulla_ann_codes::semantic_ann_codes::stage_consumer(
         ctx.authority.agent_id(),
         queue_class,
     );
@@ -298,7 +298,7 @@ async fn authorize_and_replay(
 async fn authorize_replay(
     ctx: &SemanticIndexContext<'_>,
     lease: &medulla_mutation_types::mutation_scope::MutationOutboxLease,
-) -> Result<Arc<medulla_core::compute::semantic_index_service::SemanticIndexService>, Response> {
+) -> Result<Arc<medulla_ann_codes::semantic_index_service::SemanticIndexService>, Response> {
     own_lease(lease, ctx.authority).map_err(|error| Response::err(ctx.req_id, error))?;
     let binding = current_binding(ctx.req_id, &ctx.service).await?;
     let adapter = SemanticIndexServerAdapter::new(Arc::clone(&ctx.service));

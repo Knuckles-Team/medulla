@@ -33,7 +33,7 @@ pub trait QueryApi: Send + Sync {
         persist_dir: &std::path::Path,
         tenant: &str,
         binding_id: &str,
-    ) -> Result<Arc<medulla_core::compute::semantic_index_service::SemanticIndexService>, String>;
+    ) -> Result<Arc<medulla_ann_codes::semantic_index_service::SemanticIndexService>, String>;
 
     /// Run `plan` over a staged (transaction-overlaid) view with the core indexes, committed
     /// and staged embeddings, and the caller's governed foreign and time-series legs bound,
