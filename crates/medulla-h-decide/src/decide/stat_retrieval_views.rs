@@ -21,7 +21,7 @@ use medulla_decision_types::{
     decision::statistical::retrieval::ReturnedEvidence,
 };
 use medulla_numeric::decision::retrieval::{class_usage, hard_negatives, proven_paths, Verdict};
-use medulla_query::ColumnType;
+use medulla_tables::schema::ColumnType;
 use medulla_types::solve_scalar::digest_text;
 use serde_json::Value;
 

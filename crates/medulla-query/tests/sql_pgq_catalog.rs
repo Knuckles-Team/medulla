@@ -5,10 +5,10 @@
 
 use medulla_core::graph::GraphCore;
 use medulla_sql::{sql::classify, sql::exec_graph_table_typed_with_tables, sql::parse_property_graph_ddl, sql::StatementKind};
-use medulla_query::schema::TableConstraint;
+use medulla_tables::schema::TableConstraint;
 use medulla_table_store::tables::AlterPropertyGraphAction;
-use medulla_query::schema::Column;
-use medulla_query::schema::ColumnType;
+use medulla_tables::schema::Column;
+use medulla_tables::schema::ColumnType;
 use medulla_table_store::tables::DropBehavior;
 use medulla_table_store::tables::ElementKind;
 use medulla_table_store::tables::GraphOwner;
@@ -20,7 +20,7 @@ use medulla_table_store::tables::PropertyGraphTxnOp;
 use medulla_table_store::tables::PropertySet;
 use medulla_table_store::tables::SqlIdentifier;
 use medulla_table_store::tables::SqlName;
-use medulla_query::schema::TableSchema;
+use medulla_tables::schema::TableSchema;
 use medulla_table_store::tables::TableStore;
 use medulla_table_store::tables::TableTxn;
 use medulla_table_store::tables::TxnOp;

@@ -50,7 +50,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 use hmac::{Hmac, Mac};
-use medulla_query::{Cell, Column, ColumnType, TableSchema};
+use medulla_tables::{schema::Cell, schema::Column, schema::ColumnType, schema::TableSchema};
 use medulla_table_store::{tables::TableStore, tables::TableTxn, tables::TxnOp};
 use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
 use serde_json::Value;
@@ -1268,7 +1268,7 @@ fn primary_key_indexes(schema: &TableSchema) -> Result<Vec<usize>, String> {
         .filter_map(|(index, column)| column.primary_key.then_some(index))
         .collect();
     let table_primary_key = schema.constraints().iter().find_map(|constraint| {
-        if let medulla_query::schema::TableConstraint::PrimaryKey { columns, .. } =
+        if let medulla_tables::schema::TableConstraint::PrimaryKey { columns, .. } =
             constraint
         {
             Some(columns)
@@ -3696,7 +3696,7 @@ mod tests {
 
     #[test]
     fn semantic_record_identity_respects_composite_primary_key_order() {
-        use medulla_query::schema::TableConstraint;
+        use medulla_tables::schema::TableConstraint;
 
         let columns = vec![
             Column::new("left", ColumnType::Text, false, false),
@@ -3908,13 +3908,13 @@ mod tests {
         );
 
         let current_schema = reopened.store.get_schema("documents").unwrap().unwrap();
-        let migration = medulla_query::migration::SchemaMigration::for_schema(
+        let migration = medulla_tables::migration::SchemaMigration::for_schema(
             "semantic-cursor-schema-change",
             alice.tenant_scope(),
             0,
             &current_schema,
             vec![
-                medulla_query::migration::SchemaMigrationOperation::AddColumn {
+                medulla_tables::migration::SchemaMigrationOperation::AddColumn {
                     column: Column::new("label", ColumnType::Text, true, false),
                 },
             ],

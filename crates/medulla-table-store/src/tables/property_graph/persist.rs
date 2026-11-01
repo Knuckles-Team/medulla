@@ -18,7 +18,7 @@ use redb::{ReadableTable, TableDefinition};
 
 use crate::tables::store::{SqlRead, SqlWrite};
 
-use medulla_query::schema::TableSchema;
+use medulla_tables::schema::TableSchema;
 
 use super::alter::apply_alter_action;
 use super::{

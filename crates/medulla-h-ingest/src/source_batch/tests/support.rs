@@ -5,7 +5,7 @@ use super::*;
 use medulla_server_api::sql_catalog_acl::create_owned_table;
 use medulla_server_api::sql_catalog_acl::grant;
 use medulla_server_api::sql_catalog_acl::SqlPrivilege;
-use medulla_query::{Column, ColumnType, TableSchema};
+use medulla_tables::{schema::Column, schema::ColumnType, schema::TableSchema};
 use medulla_types::acl::RequestContextClaims;
 
 pub(super) struct Fixture {

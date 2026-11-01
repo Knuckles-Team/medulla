@@ -40,6 +40,7 @@ tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sy
 tracing = "0.1"
 tempfile = { version = "3", optional = true }
 medulla-sql = { path = "../medulla-sql" }
+medulla-tables = { path = "../medulla-tables" }
 
 [features]
 ann = ["dep:medulla-ann", ]
@@ -48,7 +49,7 @@ decide = ["dep:medulla-numeric", "medulla-numeric/decision", "dep:medulla-ann", 
 epistemic = ["dep:medulla-plan", "medulla-plan/epistemic", "query"]
 finance = []
 owl = ["dep:medulla-rdf", "medulla-rdf/owl", ]
-query = ["dep:medulla-query", "medulla-query/sql", "medulla-sql/sql", "dep:medulla-plan", "medulla-plan/query", "redb"]
+query = ["dep:medulla-query", "medulla-query/sql", "medulla-tables/sql", "medulla-sql/sql", "dep:medulla-plan", "medulla-plan/query", "redb"]
 raft = ["redb"]
 redb = []
 security = ["redb"]

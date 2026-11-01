@@ -25,7 +25,7 @@ use medulla_decision_types::{
     decision::statistical::log::DecisionLogEntry, decision::statistical::log::StoredEvaluation,
     decision::statistical::log::StoredResolution,
 };
-use medulla_query::{Column, ColumnType, TableSchema};
+use medulla_tables::{schema::Column, schema::ColumnType, schema::TableSchema};
 use serde::Serialize;
 use serde_json::{Map, Value};
 

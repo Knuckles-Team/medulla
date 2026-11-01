@@ -356,11 +356,11 @@ mod tests {
         let first_store = user_table_store(&first, Some(&base)).unwrap();
         let peer_store = user_table_store(&peer, Some(&base)).unwrap();
         let other_store = user_table_store(&other_tenant, Some(&base)).unwrap();
-        let schema = medulla_query::TableSchema::new(
+        let schema = medulla_tables::schema::TableSchema::new(
             "private_rows",
-            vec![medulla_query::Column::new(
+            vec![medulla_tables::schema::Column::new(
                 "value",
-                medulla_query::ColumnType::Text,
+                medulla_tables::schema::ColumnType::Text,
                 false,
                 false,
             )],

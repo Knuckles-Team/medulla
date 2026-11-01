@@ -101,7 +101,7 @@ pub(crate) fn parse_query_vector(raw: &str) -> Option<Vec<f32>> {
     if s.is_empty() || s.starts_with('$') {
         return None;
     }
-    medulla_query::schema::parse_vector_text(s)
+    medulla_tables::schema::parse_vector_text(s)
         .ok()
         .filter(|v| !v.is_empty())
 }

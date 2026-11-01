@@ -4,14 +4,14 @@ use medulla_core::graph::GraphCore;
 use medulla_sql::{sql::classify, sql::exec_graph_table_typed_with_tables, sql::lower_graph_table, sql::lower_graph_table_to_datafusion, sql::parse_graph_table, sql::parse_graph_table_sql, sql::parse_property_graph_ddl, sql::parse_property_graph_privilege, sql::PropertyGraphDdlOperation, sql::StatementKind};
 use medulla_table_store::tables::decode_property_graph;
 use medulla_table_store::tables::AlterPropertyGraphAction;
-use medulla_query::schema::Column;
-use medulla_query::schema::ColumnType;
+use medulla_tables::schema::Column;
+use medulla_tables::schema::ColumnType;
 use medulla_table_store::tables::DropBehavior;
 use medulla_table_store::tables::PropertyGraphDefinition;
 use medulla_table_store::tables::PropertyGraphPrivilegeOperation;
 use medulla_table_store::tables::PropertyGraphStatement;
 use medulla_table_store::tables::PropertySet;
-use medulla_query::schema::TableSchema;
+use medulla_tables::schema::TableSchema;
 use medulla_table_store::tables::TableStore;
 use serde_json::json;
 

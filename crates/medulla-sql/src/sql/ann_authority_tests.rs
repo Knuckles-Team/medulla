@@ -21,12 +21,12 @@ use medulla_table_store::tables::ann_plan::metric_to_ann;
 use medulla_table_store::tables::ann_plan::AnnIndexPlan;
 use medulla_table_store::tables::ann_plan::AnnMethod;
 use medulla_table_store::tables::ann_plan::VectorMetric;
-use medulla_query::schema::Cell;
+use medulla_tables::schema::Cell;
 use medulla_table_store::{tables::store::dev_scope_grant::dev_verifier, tables::store::dev_scope_grant::DEV_PRINCIPAL, tables::store::dev_scope_grant::DEV_PROOF};
 use medulla_table_store::tables::store::AnnSourceRows;
-use medulla_query::schema::Column;
-use medulla_query::schema::ColumnType;
-use medulla_query::schema::TableSchema;
+use medulla_tables::schema::Column;
+use medulla_tables::schema::ColumnType;
+use medulla_tables::schema::TableSchema;
 use medulla_table_store::tables::TableStore;
 
 const DIM: usize = 8;

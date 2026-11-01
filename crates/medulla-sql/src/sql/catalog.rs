@@ -54,7 +54,7 @@ use datafusion::prelude::SessionContext;
 
 use medulla_table_store::tables::PropertyGraphCatalogRecord;
 use medulla_table_store::tables::SqlName;
-use medulla_query::schema::StoredFunction;
+use medulla_tables::schema::StoredFunction;
 
 /// The OID we synthesize for the single user schema (`public`). Drivers only use OIDs
 /// to JOIN catalog rows together, so a stable arbitrary value is sufficient.
@@ -523,7 +523,7 @@ fn pg_type_batch() -> Result<(SchemaRef, RecordBatch), String> {
 /// `prorettype` maps the declared scalar return type (a table/setof function reports
 /// `record`-ish `text`); `prosrc` is the stored body.
 fn pg_proc_batch(functions: &[StoredFunction]) -> Result<(SchemaRef, RecordBatch), String> {
-    use medulla_query::schema::FunctionReturns;
+    use medulla_tables::schema::FunctionReturns;
     let schema = Arc::new(Schema::new(vec![
         Field::new("oid", DataType::Int32, false),
         Field::new("proname", DataType::Utf8, false),
@@ -770,7 +770,7 @@ fn info_views_batch(views: &[(String, String)]) -> Result<(SchemaRef, RecordBatc
 
 /// `information_schema.routines`: one row per durable SQL stored function (CONCEPT:MEDULLA-KG.query.create-drop-function).
 fn info_routines_batch(functions: &[StoredFunction]) -> Result<(SchemaRef, RecordBatch), String> {
-    use medulla_query::schema::FunctionReturns;
+    use medulla_tables::schema::FunctionReturns;
     let schema = Arc::new(Schema::new(vec![
         Field::new("routine_catalog", DataType::Utf8, false),
         Field::new("routine_schema", DataType::Utf8, false),

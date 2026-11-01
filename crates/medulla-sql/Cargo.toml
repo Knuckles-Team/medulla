@@ -55,9 +55,10 @@ medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-sql-udfs = { path = "../medulla-sql-udfs" }
 medulla-table-store = { path = "../medulla-table-store" }
+medulla-tables = { path = "../medulla-tables" }
 
 [features]
 finance = ["sql", "medulla-query/finance", "medulla-sql-udfs/finance"]
 iceberg-federation = ["dep:iceberg", "dep:iceberg-catalog-rest", "dep:iceberg-storage-opendal", "medulla-query/iceberg-federation"]
 numeric = ["sql", "dep:medulla-numeric", "dep:ndarray", "dep:medulla-tsdb", "medulla-query/numeric", "medulla-sql-udfs/numeric"]
-sql = ["iceberg-federation", "dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petgraph", "dep:tracing", "dep:async-trait", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-query/sql", "medulla-table-store/sql", "medulla-sql-udfs/sql"]
+sql = ["iceberg-federation", "dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petgraph", "dep:tracing", "dep:async-trait", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-query/sql", "medulla-tables/sql", "medulla-table-store/sql", "medulla-sql-udfs/sql"]

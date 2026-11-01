@@ -372,7 +372,7 @@ pub(crate) async fn exec_sql_write_create_table(
     };
     let mut txn = medulla_table_store::tables::TableTxn::new();
     txn.push(medulla_table_store::tables::TxnOp::CreateTable {
-        schema: medulla_query::TableSchema::new(plan.name, columns),
+        schema: medulla_tables::schema::TableSchema::new(plan.name, columns),
         if_not_exists: plan.if_not_exists,
     });
     commit_sql_catalog_txn(req_id, scope, sql_method, store, txn, "CREATE TABLE").await

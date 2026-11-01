@@ -2,7 +2,7 @@ use medulla_protocol_types::protocol_fixtures::sql_source::change;
 use medulla_protocol_types::protocol_fixtures::sql_source::id;
 use super::*;
 use medulla_protocol_types::storage_wire::SqlSourceCell;
-use medulla_query::Cell;
+use medulla_tables::schema::Cell;
 
 mod served;
 mod support;

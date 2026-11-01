@@ -11,16 +11,16 @@
 
 use medulla_core::graph::{GraphCore, GraphView};
 use medulla_sql::{sql::classify, sql::exec_sql_typed_with_tables, sql::AlterTableAction, sql::PgColType, sql::StatementKind, sql::TypedQueryResult};
-use medulla_query::{Cell, Column, ColumnType, TableSchema};
+use medulla_tables::{schema::Cell, schema::Column, schema::ColumnType, schema::TableSchema};
 use medulla_table_store::tables::TableStore;
 // CONCEPT:MEDULLA-KG.query.table-schema-constraints/NE-001/NE-002 — table-level constraints + the new scalar types are
 // reachable via the fully-qualified `tables::schema` path (not yet added to the
 // crate's top-level re-export list in `tables/mod.rs`, a file this track does not
 // own — see the final report's "files touched outside the owned list" note).
 use medulla_sql::sql::parse_property_graph_ddl;
-use medulla_query::schema::ArrayElemType;
-use medulla_query::schema::RefAction;
-use medulla_query::schema::TableConstraint;
+use medulla_tables::schema::ArrayElemType;
+use medulla_tables::schema::RefAction;
+use medulla_tables::schema::TableConstraint;
 use medulla_table_store::tables::PropertyGraphStatement;
 use serde_json::{json, Value};
 

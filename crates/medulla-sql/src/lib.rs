@@ -17,7 +17,7 @@ pub mod provider;
 #[cfg(feature = "sql")]
 use crate::sql::ColumnDef;
 #[cfg(feature = "sql")]
-use medulla_query::{Column, ColumnType};
+use medulla_tables::{schema::Column, schema::ColumnType};
 
 #[cfg(feature = "sql")]
 /// Resolve parsed SQL column declarations into the durable table-schema columns

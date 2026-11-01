@@ -406,7 +406,7 @@ pub(crate) fn alter_table_txn_op(
             new_name,
         }),
         A::AlterColumnType { column, new_type } => {
-            let ty = medulla_query::ColumnType::parse(&new_type)?;
+            let ty = medulla_tables::schema::ColumnType::parse(&new_type)?;
             Ok(medulla_table_store::tables::TxnOp::AlterColumnType {
                 table: plan.name,
                 column,

@@ -56,18 +56,18 @@ use serde_json::{Map, Value};
 
 use super::pgq::GraphTableQuery;
 use medulla_table_store::{tables::property_graph::PropertyGraphPrivilegeStatement, tables::property_graph::PropertyGraphStatement, tables::property_graph::SqlName};
-use medulla_query::schema::CheckExpr;
-use medulla_query::schema::CmpOp;
-use medulla_query::schema::ColCheck;
-use medulla_query::schema::ColumnType;
-use medulla_query::schema::FunctionArg as CatalogArg;
-use medulla_query::schema::FunctionLanguage;
-use medulla_query::schema::FunctionReturns;
-use medulla_query::schema::RefAction;
-use medulla_query::schema::StoredFunction;
-use medulla_query::schema::TableConstraint;
-use medulla_query::schema::MAX_TABLE_COLUMNS;
-use medulla_query::schema::MAX_TABLE_CONSTRAINTS;
+use medulla_tables::schema::CheckExpr;
+use medulla_tables::schema::CmpOp;
+use medulla_tables::schema::ColCheck;
+use medulla_tables::schema::ColumnType;
+use medulla_tables::schema::FunctionArg as CatalogArg;
+use medulla_tables::schema::FunctionLanguage;
+use medulla_tables::schema::FunctionReturns;
+use medulla_tables::schema::RefAction;
+use medulla_tables::schema::StoredFunction;
+use medulla_tables::schema::TableConstraint;
+use medulla_tables::schema::MAX_TABLE_COLUMNS;
+use medulla_tables::schema::MAX_TABLE_CONSTRAINTS;
 
 /// Catalog mutation requested by a parsed SQL/PGQ DDL statement. Classification
 /// intentionally carries no tenant, ACL decision, or executable SQL: the

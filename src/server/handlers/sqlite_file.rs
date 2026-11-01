@@ -28,7 +28,7 @@
 
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_mutation_types::mutation_scope::MutationSurface;
-use medulla_query::{Cell, Column, ColumnType, TableSchema};
+use medulla_tables::{schema::Cell, schema::Column, schema::ColumnType, schema::TableSchema};
 use medulla_table_store::{tables::TableStore, tables::TableTxn, tables::TxnOp};
 use medulla_sqlite_format::{ColumnDef as SqliteColumnDef, Reader, Value as SqliteValue, Writer};
 use serde_json::Value as JsonValue;
@@ -773,7 +773,7 @@ mod tests {
     use std::sync::atomic::AtomicUsize;
     use std::sync::{Arc, Barrier};
 
-    use medulla_query::schema::ArrayElemType;
+    use medulla_tables::schema::ArrayElemType;
 
     use super::*;
     use medulla_kernel::test_rendezvous::meet;

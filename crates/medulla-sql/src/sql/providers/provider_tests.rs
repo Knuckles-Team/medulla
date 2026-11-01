@@ -66,10 +66,10 @@ fn supports_filters_classifies_predicates() {
 #[test]
 fn user_table_pushdown_uses_index() {
     use crate::provider::materialize;
-    use medulla_query::schema::Cell;
-    use medulla_query::schema::Column;
-    use medulla_query::schema::ColumnType;
-    use medulla_query::schema::TableSchema;
+    use medulla_tables::schema::Cell;
+    use medulla_tables::schema::Column;
+    use medulla_tables::schema::ColumnType;
+    use medulla_tables::schema::TableSchema;
     use datafusion::logical_expr::{col, lit};
 
     let schema = TableSchema::new(

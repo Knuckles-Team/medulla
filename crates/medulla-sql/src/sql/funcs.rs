@@ -31,7 +31,7 @@ use datafusion::sql::sqlparser::ast::{
 use datafusion::sql::sqlparser::dialect::PostgreSqlDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 
-use medulla_query::schema::StoredFunction;
+use medulla_tables::schema::StoredFunction;
 
 /// Guard against an unbounded rewrite loop from a (rejected-at-runtime) recursive
 /// function definition (CONCEPT:MEDULLA-KG.query.create-drop-function).

@@ -28,7 +28,7 @@ use super::ann_filter::{admissible_prefilter, ann_query_shape, AnnDeclineReason,
 use super::pgfamily::{plan_ann_search, AnnSearchPlan};
 use medulla_table_store::{tables::ann_plan::AnnIndexPlan, tables::ann_plan::AnnMethod};
 use medulla_table_store::tables::ann_authority::AnnTopKRequest;
-use medulla_query::schema::TableSchema;
+use medulla_tables::schema::TableSchema;
 use medulla_table_store::tables::TableStore;
 
 /// Conservative predicate: could `sql` trigger an ANN pushdown against

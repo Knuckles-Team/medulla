@@ -19,7 +19,7 @@ use super::generation::AnnGeneration;
 use super::{AnnFallbackReason, AnnLimits, AnnServeReceipt, AnnServingPath};
 use crate::tables::ann_plan::metric_to_ann;
 use crate::tables::ann_plan::AnnIndexPlan;
-use medulla_query::schema::Cell;
+use medulla_tables::schema::Cell;
 use crate::tables::store::{AnnRowReader, ScanExtent};
 use crate::tables::TableStore;
 

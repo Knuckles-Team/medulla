@@ -213,3 +213,4 @@ tokio = { version = "1.53", features = ["rt", "rt-multi-thread", "macros"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-sql = { path = "../medulla-sql" }
 medulla-table-store = { path = "../medulla-table-store" }
+medulla-tables = { path = "../medulla-tables" }

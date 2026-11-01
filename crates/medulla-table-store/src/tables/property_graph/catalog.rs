@@ -6,8 +6,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
-use medulla_query::schema::ColumnType;
-use medulla_query::schema::TableSchema;
+use medulla_tables::schema::ColumnType;
+use medulla_tables::schema::TableSchema;
 
 use super::model::{
     digest_value, require, validate_bounded_text, validate_digest, validate_revision,

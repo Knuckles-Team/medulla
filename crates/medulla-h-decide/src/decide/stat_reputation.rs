@@ -45,7 +45,7 @@ use medulla_numeric::risk::{
     ReputationRules, SampleGate, SubjectReputation,
 };
 use medulla_plan::exec::LearnedReliability;
-use medulla_query::ColumnType;
+use medulla_tables::schema::ColumnType;
 use serde_json::Value;
 
 use super::stat_log::{executed_option, joined, LogReader, MAX_LOG_ROWS};

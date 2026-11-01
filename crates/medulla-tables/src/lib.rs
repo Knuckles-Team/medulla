@@ -6,3 +6,13 @@
 
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
+
+#[cfg(feature = "sql")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod schema;
+#[cfg(feature = "sql")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod index;
+#[cfg(feature = "sql")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod migration;

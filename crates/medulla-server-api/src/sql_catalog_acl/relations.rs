@@ -9,7 +9,7 @@
 
 use std::sync::Arc;
 
-use medulla_query::TableSchema;
+use medulla_tables::schema::TableSchema;
 use medulla_table_store::tables::TableStore;
 use serde_json::Value;
 

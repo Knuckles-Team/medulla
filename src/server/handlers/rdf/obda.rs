@@ -58,8 +58,8 @@ pub(super) async fn handle_sparql_virtual(
 /// column/predicate-pushed.
 #[cfg(feature = "obda")]
 struct TableStoreSource {
-    schema: medulla_query::TableSchema,
-    rows: Vec<Vec<medulla_query::Cell>>,
+    schema: medulla_tables::schema::TableSchema,
+    rows: Vec<Vec<medulla_tables::schema::Cell>>,
 }
 
 #[cfg(feature = "obda")]
@@ -88,8 +88,8 @@ impl TableStoreSource {
     /// The lexical form of one cell (R2RML templates/literal object maps consume a
     /// string; `Null` yields no lexical value so a template/column referencing it
     /// correctly omits the triple, per the OBDA `expand_template`/`term_for` contract).
-    fn lexical(cell: &medulla_query::Cell) -> Option<String> {
-        use medulla_query::Cell;
+    fn lexical(cell: &medulla_tables::schema::Cell) -> Option<String> {
+        use medulla_tables::schema::Cell;
         match cell {
             Cell::Null => None,
             Cell::Int(i) => Some(i.to_string()),

@@ -69,7 +69,7 @@ use pgwire::error::{ErrorInfo, PgWireError, PgWireResult};
 use pgwire::messages::data::DataRow;
 use pgwire::tokio::process_socket;
 
-use medulla_query::{ColumnType, TableSchema};
+use medulla_tables::{schema::ColumnType, schema::TableSchema};
 use medulla_sql::{sql::CopyFormat, sql::DeleteNodes, sql::InsertNodes, sql::PgColType, sql::StatementKind, sql::TypedQueryResult, sql::UpdateNodes};
 
 use crate::server::wire::{CopyState, WireError, WireOutcome, WireProtocol, WireSession};
@@ -2249,7 +2249,7 @@ mod copy_tests {
     //! Unit tests for the `COPY … FROM STDIN` decoders + a full decode→ingest proving
     //! "COPY ingests N rows" deterministically (CONCEPT:MEDULLA-KG.query.register-each-user-table), without a socket.
     use super::*;
-    use medulla_query::{Column, ColumnType, TableSchema};
+    use medulla_tables::{schema::Column, schema::ColumnType, schema::TableSchema};
 
     fn items_schema() -> TableSchema {
         TableSchema::new(

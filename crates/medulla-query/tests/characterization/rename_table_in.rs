@@ -13,9 +13,9 @@
 
 #![cfg(feature = "sql")]
 
-use medulla_query::schema::RefAction;
-use medulla_query::schema::TableConstraint;
-use medulla_query::{Cell, Column, ColumnType, TableSchema};
+use medulla_tables::schema::RefAction;
+use medulla_tables::schema::TableConstraint;
+use medulla_tables::{schema::Cell, schema::Column, schema::ColumnType, schema::TableSchema};
 use medulla_table_store::tables::TableStore;
 
 fn widgets_schema() -> TableSchema {

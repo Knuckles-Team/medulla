@@ -210,18 +210,18 @@ pub(crate) fn row_to_vector(array: &dyn Array, row: usize) -> Option<Vec<f32>> {
             .map(|a| (0..a.len()).map(|i| a.value(i) as f32).collect())
     };
     match array.data_type() {
-        DataType::Utf8 => medulla_query::schema::parse_vector_text(
+        DataType::Utf8 => medulla_tables::schema::parse_vector_text(
             array.as_any().downcast_ref::<StringArray>()?.value(row),
         )
         .ok(),
-        DataType::LargeUtf8 => medulla_query::schema::parse_vector_text(
+        DataType::LargeUtf8 => medulla_tables::schema::parse_vector_text(
             array
                 .as_any()
                 .downcast_ref::<LargeStringArray>()?
                 .value(row),
         )
         .ok(),
-        DataType::Utf8View => medulla_query::schema::parse_vector_text(
+        DataType::Utf8View => medulla_tables::schema::parse_vector_text(
             array.as_any().downcast_ref::<StringViewArray>()?.value(row),
         )
         .ok(),

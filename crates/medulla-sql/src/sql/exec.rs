@@ -31,8 +31,8 @@ use super::spill::CancellationToken;
 use super::store_catalog::{reads_index_status, StoreCatalog};
 use medulla_sql_udfs::{tablefuncs::BetweennessFunc, tablefuncs::GenerateSeriesFunc, tablefuncs::PagerankFunc};
 use medulla_sql_udfs::{udfs::base64_decode_udf, udfs::base64_encode_udf, udfs::bm25_match_udf, udfs::bm25_score_udf, udfs::bm25_snippet_udf, udfs::epistemic_decay_udf, udfs::greatest_udf, udfs::int4range_udf, udfs::ipcontains_udf, udfs::ipfamily_udf, udfs::iphost_udf, udfs::ipmasklen_udf, udfs::json_get_f64_udf, udfs::json_get_i64_udf, udfs::json_get_udf, udfs::least_udf, udfs::md5_udf, udfs::range_contained_by_udf, udfs::range_contains_range_udf, udfs::range_contains_udf, udfs::range_overlaps_udf, udfs::sha1_udf, udfs::sha256_udf, udfs::time_bucket_udf, udfs::tsrange_udf, udfs::vector_cosine_udf, udfs::vector_ip_udf, udfs::vector_l2_udf};
-use medulla_query::schema::StoredFunction;
-use medulla_query::schema::TableSchema;
+use medulla_tables::schema::StoredFunction;
+use medulla_tables::schema::TableSchema;
 use medulla_table_store::tables::TableStore;
 
 /// One user table's registration plan for `build_ctx` (CONCEPT:MEDULLA-KG.query.register-user-tables-alongside):

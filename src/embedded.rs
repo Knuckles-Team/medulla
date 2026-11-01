@@ -623,7 +623,7 @@ impl EmbeddedEngine {
             }
             StatementKind::CreateTable(plan) => {
                 let columns = medulla_sql::columns_from_defs(&plan.columns)?;
-                let schema = medulla_query::TableSchema::new(plan.name, columns);
+                let schema = medulla_tables::schema::TableSchema::new(plan.name, columns);
                 store.create_table(&schema, plan.if_not_exists)?;
                 Ok(status_result("CREATE TABLE"))
             }
@@ -734,7 +734,7 @@ fn apply_alter_table(
         A::RenameColumn { from, to } => store.rename_column(&plan.name, &from, &to),
         A::RenameTable { new_name } => store.rename_table(&plan.name, &new_name),
         A::AlterColumnType { column, new_type } => {
-            let ty = medulla_query::ColumnType::parse(&new_type)?;
+            let ty = medulla_tables::schema::ColumnType::parse(&new_type)?;
             store.alter_column_type(&plan.name, &column, ty)
         }
         A::DropConstraint {

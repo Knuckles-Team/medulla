@@ -147,7 +147,7 @@ pub trait WireApi: Send + Sync {
         table_store: &medulla_table_store::tables::TableStore,
         txn: &mut medulla_table_store::tables::TableTxn,
         committed_replay: bool,
-    ) -> Result<Vec<medulla_query::TableSchema>, String>;
+    ) -> Result<Vec<medulla_tables::schema::TableSchema>, String>;
 
     /// The committed SQL receipt that authorizes owner repair for a crash replay.
     #[cfg(feature = "query")]

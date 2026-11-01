@@ -1480,11 +1480,11 @@ mod dispatch_write_tests {
         )
         .expect("open tenant ACL store");
         acl.create_table(
-            &medulla_query::TableSchema::new(
+            &medulla_tables::schema::TableSchema::new(
                 "__eg_sql_owners__",
-                vec![medulla_query::Column::new(
+                vec![medulla_tables::schema::Column::new(
                     "table_name",
-                    medulla_query::ColumnType::Text,
+                    medulla_tables::schema::ColumnType::Text,
                     false,
                     true,
                 )],

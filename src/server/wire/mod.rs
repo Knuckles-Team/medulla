@@ -47,7 +47,7 @@ use tokio::sync::RwLock;
 
 use medulla_sql::{sql::AlterTableAction, sql::AlterTablePlan, sql::ContinuousAggPlan, sql::CopyFormat, sql::CopyPlan, sql::CreateFunctionPlan, sql::CreateTablePlan, sql::CreateViewPlan, sql::DeleteNodes, sql::DeleteNodesJoin, sql::DeleteTable, sql::DropFunctionPlan, sql::DropTablePlan, sql::DropViewPlan, sql::InsertNodes, sql::InsertNodesSelect, sql::InsertSelect, sql::InsertTable, sql::OnConflict, sql::OnConflictAction, sql::PgColType, sql::StatementKind, sql::TypedColumn, sql::TypedQueryResult, sql::UpdateNodes, sql::UpdateNodesJoin, sql::UpdateTable, sql::WhereEq};
 use medulla_table_store::{tables::AnnIndexPlan, tables::HypertablePlan, tables::IndexCatalogTxnOp, tables::PropertyGraphTxnOp, tables::TableStore, tables::TableTxn, tables::TxnOp};
-use medulla_query::{Column, ColumnType, TableSchema};
+use medulla_tables::{schema::Column, schema::ColumnType, schema::TableSchema};
 
 use crate::isolation::AccessLevel;
 use crate::protocol::Request;
