@@ -208,7 +208,7 @@ reasoning = ["medulla-h-graph/reasoning", "medulla-raft/reasoning", "medulla-ser
 # `as_claim` unset the write-back is byte-identical, and a build without `query` simply lacks
 # the E2 plan ops (the E6 mining write-back is unaffected either way). The default
 # `full` artifact enables this feature.
-epistemic = ["medulla-h-graph/epistemic", "medulla-raft/epistemic", "medulla-server-api/epistemic", "medulla-kernel/epistemic",
+epistemic = ["medulla-h-ingest/epistemic", "medulla-h-graph/epistemic", "medulla-raft/epistemic", "medulla-server-api/epistemic", "medulla-kernel/epistemic",
     "query",
     "dep:medulla-epistemic",
     "medulla-types/epistemic", "medulla-protocol-types/epistemic",
@@ -285,7 +285,7 @@ epistemic-causal = ["medulla-server-api/epistemic-causal", "epistemic", "medulla
 # for targeted crate checks; it does not define another supported product build. The
 # weak `medulla-plan?/numeric` edge turns on the UQL `ATTRIBUTE` executor (EH-523) whenever
 # the query planner is built.
-numeric = ["medulla-h-graph/numeric", "medulla-raft/numeric", "medulla-persistence/numeric", "medulla-server-api/numeric", "medulla-kernel/numeric", "dep:medulla-numeric", "medulla-query?/numeric", "medulla-plan?/numeric"]
+numeric = ["medulla-h-ingest/numeric", "medulla-h-graph/numeric", "medulla-raft/numeric", "medulla-persistence/numeric", "medulla-server-api/numeric", "medulla-kernel/numeric", "dep:medulla-numeric", "medulla-query?/numeric", "medulla-plan?/numeric"]
 # The general bounded 0-1 integer programme (`Method::Solve`). Wire DTOs are
 # unconditional in medulla-types; this gates the medulla-compute search and verifier.
 solve = ["medulla-compute/solve"]
@@ -304,7 +304,7 @@ ann-redb = ["medulla-server-api/ann-redb", "ann", "redb", "medulla-core/ann-redb
 # the mutation gateway (`src/server/mutation.rs`) is server-only, so the binary
 # linking the MethodPolicy ledger is exactly the `server` build, matching every other
 # server-only dependency in this list.
-server = ["medulla-h-graph/server", "medulla-h-compute/server", "medulla-raft/server", "medulla-persistence/server", "medulla-server-api/server", "medulla-store/server", "medulla-kernel/server", "dep:tokio", "dep:clap", "dep:tracing-subscriber", "dep:async-trait", "dep:medulla-capabilities"]
+server = ["medulla-h-ingest/server", "medulla-h-graph/server", "medulla-h-compute/server", "medulla-raft/server", "medulla-persistence/server", "medulla-server-api/server", "medulla-store/server", "medulla-kernel/server", "dep:tokio", "dep:clap", "dep:tracing-subscriber", "dep:async-trait", "dep:medulla-capabilities"]
 # Pure-Rust TLS/mTLS for the native MessagePack TCP service. The one main build
 # includes it so remote-engine deployments can terminate TLS in the binary.
 server-tls = ["server", "dep:rustls", "dep:tokio-rustls"]
@@ -352,7 +352,7 @@ blob-s3 = ["medulla-server-api/blob-s3", "blob", "dep:object_store"]
 # `AlignmentGraph` join (doc span <-> image region <-> claim) resolving end-to-end
 # through fixture CAS content — the alignment graph itself never links `blob`; only
 # this resolver does.
-alignment = ["medulla-raft/alignment", "medulla-server-api/alignment", "blob", "dep:medulla-alignment", "dep:medulla-modality"]
+alignment = ["medulla-h-ingest/alignment", "medulla-raft/alignment", "medulla-server-api/alignment", "blob", "dep:medulla-alignment", "dep:medulla-modality"]
 # CONCEPT:INT-P2-1 — the durable analytics-job plane: `Method::AnalyticsJob` (async
 # submit/status/cancel/resume over a redb-backed `AnalyticsJob` state machine) +
 # `src/server/handlers/jobs.rs`. Pulls `server` (Tokio dispatch) + `mining` (the
@@ -429,7 +429,7 @@ viz-gpu-export = ["viz"]
 # `cargo tree` (no ort/espeak-rs-sys hit without `--features tts-piper`). This feature
 # exposes only the internal provider library. No public synthesis method is served
 # until the accepted CAS-backed job/consent contract exists.
-tts-piper = [
+tts-piper = ["medulla-h-ingest/tts-piper", 
     "dep:medulla-tts-piper", "dep:medulla-audio", "medulla-audio/tts",
 ]
 # D-VZ-1 lane V1: the ColumnStore (canonical columns, zone maps, content-addressed
@@ -528,7 +528,7 @@ asr-whisper = ["medulla-h-ingest/asr-whisper", "medulla-raft/asr-whisper", "medu
 query = ["medulla-h-ingest/query", "medulla-h-graph/query", "medulla-raft/query", "medulla-persistence/query", "medulla-server-api/query", "medulla-store/query", "medulla-kernel/query", "redb", "dep:medulla-query", "medulla-query/sql", "dep:medulla-plan", "medulla-plan/query", "medulla-types/query", "medulla-tsdb?/arrow-seg", "medulla-result-types/query", "medulla-decision-types/query", "medulla-protocol-types/query"]
 # The one native streaming query/job result currency. Every served family adapts to
 # governed, bounded KnowledgeBatch envelopes with stable Arrow schemas.
-knowledge-batch = ["medulla-raft/knowledge-batch", "medulla-persistence/knowledge-batch", "medulla-server-api/knowledge-batch", "medulla-kernel/knowledge-batch",
+knowledge-batch = ["medulla-h-ingest/knowledge-batch", "medulla-raft/knowledge-batch", "medulla-persistence/knowledge-batch", "medulla-server-api/knowledge-batch", "medulla-kernel/knowledge-batch",
     "query",
     "dep:medulla-plan",
     "dep:medulla-modality",
@@ -613,11 +613,11 @@ nl-query = ["medulla-raft/nl-query", "medulla-server-api/nl-query", "query", "de
 # Dep-free Cypher query surface (CONCEPT:KG-2.179): `MATCH … RETURN …` compiled to
 # the engine's own primitives (label index / VF2 / BFS). It is included in the one main
 # build; a targeted `cypher`-only feature check links no DataFusion.
-cypher = ["medulla-h-graph/cypher", "medulla-persistence/cypher", "medulla-server-api/cypher", "medulla-kernel/cypher", "dep:medulla-query", "medulla-query/cypher"]
+cypher = ["medulla-h-ingest/cypher", "medulla-h-graph/cypher", "medulla-persistence/cypher", "medulla-server-api/cypher", "medulla-kernel/cypher", "dep:medulla-query", "medulla-query/cypher"]
 # CONCEPT:MEDULLA-KG.query.cypher-engine-shadow — the `MEDULLA_CYPHER_ENGINE`
 # rollout surface (legacy | plan | shadow) + its shadow-differential divergence log.
 # In the one main `full` build; a lean `cypher`-only build stays legacy-only.
-cypher-plan = ["medulla-persistence/cypher-plan", "medulla-server-api/cypher-plan", "medulla-kernel/cypher-plan", "cypher", "medulla-query/cypher-plan"]
+cypher-plan = ["medulla-h-ingest/cypher-plan", "medulla-persistence/cypher-plan", "medulla-server-api/cypher-plan", "medulla-kernel/cypher-plan", "cypher", "medulla-query/cypher-plan"]
 # Native GraphQL READ surface (CONCEPT:KG-2.235): a GraphQL query compiled to scans +
 # BFS over the GraphView via the medulla-graphql crate (schema-from-graph + a hand-written
 # parser + resolver). PURE-RUST — NO async-graphql (evaluated: ~80+ transitive crates +
@@ -721,7 +721,7 @@ cdc-kafka = ["medulla-server-api/cdc-kafka", "streaming", "dep:medulla-stream", 
 # `GraphView::projection_scope` — a field that only exists under `medulla-core/result-cache` — and is
 # therefore compiled in ONLY when `medulla-query` is already enabled (`cypher`/`query`), mirroring the
 # `numeric`/`wasm-udf` weak-dep precedents below.
-result-cache = ["medulla-persistence/result-cache", "medulla-server-api/result-cache", "medulla-kernel/result-cache", "medulla-core/result-cache", "medulla-query?/result-cache"]
+result-cache = ["medulla-h-ingest/result-cache", "medulla-persistence/result-cache", "medulla-server-api/result-cache", "medulla-kernel/result-cache", "medulla-core/result-cache", "medulla-query?/result-cache"]
 # Plan-backed materialized views (CONCEPT:MEDULLA-KG.storage.plan-backed-matview): a NAMED,
 # DURABLE `wire::Plan` over one graph whose RESULT rides the version-keyed, RLS-aware
 # result cache. Defining it executes the plan once (via the medulla-plan runtime) and caches
