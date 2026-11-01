@@ -3,7 +3,7 @@
 
 use super::blob;
 use medulla_compute::graph_algos::impact::{noisy_or, ImpactGraph, Seed};
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::UqlResult;
 use serde_json::json;
@@ -13,7 +13,7 @@ use crate::uql::serve::run_statement;
 use crate::uql::{parse_statement, Params};
 
 /// api, cache and web depend (transitively) on db; web's edge carries no transmission.
-fn fixture(db_p_seed: Option<f64>) -> (medulla_core::graph::GraphView, SemanticStore) {
+fn fixture(db_p_seed: Option<f64>) -> (medulla_graph_core::graph::GraphView, SemanticStore) {
     let core = GraphCore::new();
     for id in ["db", "api", "web", "cache", "other"] {
         let mut props = json!({ "type": "Service", "name": id });

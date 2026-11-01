@@ -982,7 +982,7 @@ mod federation_served_tests;
 #[cfg(all(test, feature = "tensor"))]
 mod tensor_served_round_trip_tests {
     use super::*;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use medulla_semantic_index::semantic::SemanticStore;
     use medulla_tensor::{Buffer, Tensor};
     use medulla_types::wire::{TensorOpKind, TensorReduceKind};

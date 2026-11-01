@@ -4,7 +4,7 @@
 //! the full-scan path. A WHERE on a non-indexed predicate still works (fallback).
 #![cfg(feature = "sql")]
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_query::exec_sql;
 use medulla_query::tables::{Cell, SecondaryIndexLookup, TableStore};
 use serde_json::{json, Value};

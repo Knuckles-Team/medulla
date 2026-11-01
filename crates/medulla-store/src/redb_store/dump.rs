@@ -386,7 +386,7 @@ pub struct GraphDumpPage {
     /// convention so a paged replay attaches the semantic store exactly once.
     pub semantic: Vec<u8>,
     /// Authoritative graph-control state, populated on the first page only.
-    pub schema_sources: Option<std::sync::Arc<medulla_core::graph::GraphSchemaSources>>,
+    pub schema_sources: Option<std::sync::Arc<medulla_graph_core::graph::GraphSchemaSources>>,
     pub nodes_exhausted: bool,
     pub edges_exhausted: bool,
     /// Effective durable keyset positions after this page. They preserve the
@@ -632,7 +632,7 @@ mod keyset_page_tests {
 
     #[test]
     fn graph_metadata_requires_the_current_version_and_complete_identity() {
-        let sources = medulla_core::graph::GraphSchemaSources::default();
+        let sources = medulla_graph_core::graph::GraphSchemaSources::default();
         let encoded = encode_meta_record(
             "graph",
             GraphType::Global,
@@ -703,7 +703,7 @@ mod keyset_page_tests {
                 incarnation_id: "incarnation:test:keyset".to_string(),
                 source_snapshot_version: 7,
                 schema_sources: std::sync::Arc::new(
-                    medulla_core::graph::GraphSchemaSources::default(),
+                    medulla_graph_core::graph::GraphSchemaSources::default(),
                 ),
                 nodes: nodes.clone(),
                 edges: edges.clone(),
@@ -823,7 +823,7 @@ pub fn encode_meta_with_incarnation(
         name,
         gtype,
         incarnation_id,
-        &medulla_core::graph::GraphSchemaSources::default(),
+        &medulla_graph_core::graph::GraphSchemaSources::default(),
     )
 }
 
@@ -831,7 +831,7 @@ pub fn encode_meta_record(
     name: &str,
     graph_type: GraphType,
     incarnation_id: &str,
-    schema_sources: &medulla_core::graph::GraphSchemaSources,
+    schema_sources: &medulla_graph_core::graph::GraphSchemaSources,
 ) -> Result<Vec<u8>, String> {
     if name.trim().is_empty() || incarnation_id.trim().is_empty() {
         return Err("graph metadata identity fields must not be empty".to_string());
@@ -861,7 +861,7 @@ pub struct GraphMetaRecord {
     pub(crate) graph_type: GraphType,
     pub(crate) incarnation_id: String,
     /// Required current graph schema authority.
-    pub(crate) schema_sources: std::sync::Arc<medulla_core::graph::GraphSchemaSources>,
+    pub(crate) schema_sources: std::sync::Arc<medulla_graph_core::graph::GraphSchemaSources>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -871,7 +871,7 @@ struct GraphMetaRecordCurrent {
     name: String,
     graph_type: GraphType,
     incarnation_id: String,
-    schema_sources: std::sync::Arc<medulla_core::graph::GraphSchemaSources>,
+    schema_sources: std::sync::Arc<medulla_graph_core::graph::GraphSchemaSources>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -882,7 +882,7 @@ struct LegacyGraphMetaRecordWithPolicy {
     graph_type: GraphType,
     incarnation_id: String,
     #[serde(deserialize_with = "deserialize_required_option")]
-    integrity_policy: Option<medulla_core::graph::LegacyIntegrityPolicy>,
+    integrity_policy: Option<medulla_graph_core::graph::LegacyIntegrityPolicy>,
 }
 
 #[derive(serde::Deserialize)]
@@ -920,7 +920,7 @@ impl<'de> serde::Deserialize<'de> for GraphMetaRecord {
                 name: value.name,
                 graph_type: value.graph_type,
                 incarnation_id: value.incarnation_id,
-                schema_sources: medulla_core::graph::lift_v2_integrity_policy(
+                schema_sources: medulla_graph_core::graph::lift_v2_integrity_policy(
                     value.integrity_policy,
                 )
                 .map_err(D::Error::custom)?,
@@ -1055,7 +1055,9 @@ pub(crate) fn decode_legacy_meta_record(graph: &str, blob: &[u8]) -> Option<Grap
         incarnation_id: legacy_incarnation_id(&legacy.name),
         name: legacy.name,
         graph_type: legacy.graph_type,
-        schema_sources: std::sync::Arc::new(medulla_core::graph::GraphSchemaSources::default()),
+        schema_sources: std::sync::Arc::new(
+            medulla_graph_core::graph::GraphSchemaSources::default(),
+        ),
     })
     .inspect(|_| {
         tracing::info!(
@@ -1208,7 +1210,7 @@ mod graph_meta_migration_tests {
             name: name.to_string(),
             graph_type: gtype,
             incarnation_id: incarnation_id.to_string(),
-            integrity_policy: Some(medulla_core::graph::LegacyIntegrityPolicy {
+            integrity_policy: Some(medulla_graph_core::graph::LegacyIntegrityPolicy {
                 shapes_ttl: "@prefix sh: <http://www.w3.org/ns/shacl#> .".to_string(),
             }),
         })
@@ -1216,7 +1218,7 @@ mod graph_meta_migration_tests {
     }
 
     fn prior_core_blob(name: &str, gtype: GraphType, incarnation_id: &str) -> Vec<u8> {
-        let mut sources = medulla_core::graph::GraphSchemaSources::default();
+        let mut sources = medulla_graph_core::graph::GraphSchemaSources::default();
         sources.core.pop_first();
         rmp_serde::to_vec_named(&GraphMetaRecordCurrent {
             schema_version: GRAPH_META_SCHEMA_VERSION,
@@ -1288,7 +1290,7 @@ mod graph_meta_migration_tests {
             name: "g".to_string(),
             graph_type: GraphType::Global,
             incarnation_id: "inc-v2".to_string(),
-            integrity_policy: Some(medulla_core::graph::LegacyIntegrityPolicy {
+            integrity_policy: Some(medulla_graph_core::graph::LegacyIntegrityPolicy {
                 shapes_ttl: "@prefix sh: <http://www.w3.org/ns/shacl#> .".to_string(),
             }),
         };
@@ -1299,7 +1301,7 @@ mod graph_meta_migration_tests {
         assert!(record
             .schema_sources
             .dynamic
-            .contains_key(medulla_core::graph::OPERATOR_SOURCE_ID));
+            .contains_key(medulla_graph_core::graph::OPERATOR_SOURCE_ID));
         assert_eq!(record.incarnation_id, "inc-v2");
     }
 
@@ -1358,7 +1360,7 @@ mod graph_meta_migration_tests {
         assert!(migrated
             .schema_sources
             .dynamic
-            .contains_key(medulla_core::graph::OPERATOR_SOURCE_ID));
+            .contains_key(medulla_graph_core::graph::OPERATOR_SOURCE_ID));
         let raw = catalog.get("graph-prior-core").unwrap().unwrap();
         let migrated: GraphMetaRecord = decode_durable(raw.value()).unwrap();
         migrated.schema_sources.validate().unwrap();

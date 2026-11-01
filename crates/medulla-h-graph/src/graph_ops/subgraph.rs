@@ -8,7 +8,7 @@ use super::terminal::GraphOpsContext;
 /// exactly this way — one walk so a fix to how a bad blob decodes can't land
 /// on one wire shape and not the other.
 pub(super) fn decoded_edge_properties(
-    sub: &medulla_core::graph::GraphView,
+    sub: &medulla_graph_core::graph::GraphView,
 ) -> Vec<(String, String, serde_json::Value)> {
     let mut decoded = Vec::new();
     for ((src, tgt), blobs) in &sub.edge_properties {
@@ -57,7 +57,9 @@ fn handle_get_subgraph(req_id: u64, core: &Arc<GraphCore>, node_ids: &[String]) 
     )
 }
 
-fn prepare_fork_value(snapshot: &medulla_core::graph::GraphSnapshot) -> Result<serde_json::Value, String> {
+fn prepare_fork_value(
+    snapshot: &medulla_graph_core::graph::GraphSnapshot,
+) -> Result<serde_json::Value, String> {
     let mut value = snapshot.to_msgpack().and_then(|bytes| {
         rmp_serde::from_slice::<serde_json::Value>(&bytes).map_err(|e| e.to_string())
     })?;
@@ -210,7 +212,7 @@ pub(super) async fn try_handle_subgraph_reads(
 mod tests {
     #[test]
     fn fork_snapshot_projects_decoded_nested_properties() {
-        use medulla_core::graph::GraphCore;
+        use medulla_graph_core::graph::GraphCore;
         use medulla_protocol_types::protocol::ResultPayload;
         use std::sync::Arc;
 
@@ -279,7 +281,7 @@ mod tests {
 
     #[test]
     fn fork_snapshot_rejects_malformed_property_blob() {
-        use medulla_core::graph::GraphCore;
+        use medulla_graph_core::graph::GraphCore;
         use std::sync::Arc;
 
         let core = Arc::new(GraphCore::new());
@@ -296,7 +298,7 @@ mod tests {
 
     #[test]
     fn fork_snapshot_rejects_malformed_edge_property_blob() {
-        use medulla_core::graph::GraphCore;
+        use medulla_graph_core::graph::GraphCore;
         use std::sync::Arc;
 
         let core = Arc::new(GraphCore::new());

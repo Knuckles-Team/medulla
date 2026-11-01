@@ -46,7 +46,7 @@
 //!   own right at this tier).
 
 use medulla_core::isolation::IsolationLayer;
-use medulla_core::rls::RowVisibility;
+use medulla_graph_core::rls::RowVisibility;
 use serde::{Deserialize, Serialize};
 
 use crate::adapter::BeliefGraph;

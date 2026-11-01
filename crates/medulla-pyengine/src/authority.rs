@@ -208,7 +208,7 @@ impl EmbeddedAuthority {
             return true;
         };
         let vis = match blob {
-            Some(bytes) => medulla_core::rls::row_visibility(bytes),
+            Some(bytes) => medulla_graph_core::rls::row_visibility(bytes),
             // `RowVisibility::default_public()` (`isolation.rs:386`) is the
             // exact value used here, but it is `pub(crate)` to medulla-core (not
             // reachable from this crate, same DAG constraint as the module
@@ -224,7 +224,7 @@ impl EmbeddedAuthority {
             // bypasses `can_see_row` entirely. See
             // `no_property_blob_at_all_is_denied_once_an_identity_is_asserted`
             // below for the verified behavior.
-            None => medulla_core::rls::RowVisibility {
+            None => medulla_graph_core::rls::RowVisibility {
                 owner: None,
                 public: true,
                 grants: Vec::new(),
@@ -350,11 +350,11 @@ mod tests {
         let authority = EmbeddedAuthority::new(Some(owner_id.to_string()), None);
         let mut props = std::collections::BTreeMap::new();
         props.insert(
-            medulla_core::rls::RLS_OWNER_KEY,
+            medulla_graph_core::rls::RLS_OWNER_KEY,
             serde_json::Value::String(owner_id.to_string()),
         );
         props.insert(
-            medulla_core::rls::RLS_VISIBILITY_KEY,
+            medulla_graph_core::rls::RLS_VISIBILITY_KEY,
             serde_json::Value::String("private".to_string()),
         );
         let blob = rmp_serde::to_vec_named(&props).unwrap();

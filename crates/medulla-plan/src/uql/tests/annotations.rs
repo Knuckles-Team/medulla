@@ -1,6 +1,6 @@
 //! Statement row annotations: `WITH KNOWLEDGE` (EH-450) and `WITH PROOF` (EH-448).
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::{UqlProofCoverage, UqlProofStep, UqlResult, UqlRow};
 use serde_json::json;
@@ -17,7 +17,7 @@ fn rows_of(src: &str, ctx: &PlanCtx) -> Vec<UqlRow> {
     }
 }
 
-fn docs() -> (medulla_core::graph::GraphView, SemanticStore) {
+fn docs() -> (medulla_graph_core::graph::GraphView, SemanticStore) {
     let core = GraphCore::new();
     for (id, year) in [("d1", 2020), ("d2", 2021)] {
         let props = json!({ "type": "Doc", "year": year, "valid_from": 5 });
@@ -72,7 +72,7 @@ mod owl {
     use medulla_types::rdf_report::SparqlProofCoverage;
 
     /// `Article ⊑ Paper ⊑ Work`; p1 a Paper, p2 an Article, t1 a Topic.
-    fn papers() -> (medulla_core::graph::GraphView, SemanticStore) {
+    fn papers() -> (medulla_graph_core::graph::GraphView, SemanticStore) {
         let ttl = r#"
 @prefix ex:  <http://example.org/> .
 @prefix rdfs:<http://www.w3.org/2000/01/rdf-schema#> .

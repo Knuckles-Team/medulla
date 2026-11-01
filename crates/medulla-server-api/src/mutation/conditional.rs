@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use medulla_capabilities::DurabilityDomain;
 
-use medulla_core::graph::GraphCore;
+use crate::access::check_graph_access;
+use crate::api::persistence::PersistenceBackend;
 use medulla_core::isolation::AccessLevel;
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use crate::access::check_graph_access;
-use crate::api::persistence::PersistenceBackend;
 
 use super::{
     advance_authoritative_manifest, commit_finalize, commit_mutation, commit_prepare,
@@ -296,8 +296,7 @@ where
     // mutation lands, so this call is a fast no-op for those (no diff to find);
     // for a native Cypher write it is the ONLY enforcement point.
     #[cfg(feature = "shacl")]
-    if let Err(rejection) =
-        crate::icv_guard::check_native_write(ctx.graph_name, ctx.core, &staged)
+    if let Err(rejection) = crate::icv_guard::check_native_write(ctx.graph_name, ctx.core, &staged)
     {
         return Err(Response::err(
             ctx.req_id,

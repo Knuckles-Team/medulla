@@ -490,7 +490,7 @@ fn op_name(op: &Op) -> &'static str {
 /// The `Scan` label test: the SAME label set `exec::scan_label` and the label index
 /// read (spec: MEDULLA-FEDERATED-QUERY-R022.1).
 fn label_matches(props: &Map<String, Value>, label: &str) -> bool {
-    medulla_core::graph::props_carry_label(props, label)
+    medulla_graph_core::graph::props_carry_label(props, label)
 }
 
 /// Evaluate one relational `Filter` predicate against a row's props: SQL three-valued

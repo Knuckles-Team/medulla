@@ -2,8 +2,8 @@
 //! exactly the graphs the operator opted in (`MEDULLA_IMPACT_ON_WRITE`),
 //! one engine-provisioned role per graph (`impact-watch:<graph>`).
 
-use medulla_core::isolation::IsolationLayer;
 use crate::service_grant::ServiceGraphGrant;
+use medulla_core::isolation::IsolationLayer;
 
 /// The fixed service principal the watch writes as.
 pub(crate) const WATCH_ACTOR: &str = "service:impact-watch";

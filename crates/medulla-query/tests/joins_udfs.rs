@@ -3,7 +3,7 @@
 //! the version-keyed schema cache.
 #![cfg(feature = "sql")]
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_query::{exec_sql, exec_sql_cached, QueryResult, SqlCache};
 use serde_json::json;
 
@@ -261,7 +261,7 @@ fn version_keyed_cache_hits_then_invalidates() {
 #[cfg(feature = "finance")]
 #[test]
 fn var_cvar_finance_aggregates() {
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     // A graph whose nodes carry a `ret` (daily return) column to aggregate over.
     let core = GraphCore::new();
     for (id, ret) in [

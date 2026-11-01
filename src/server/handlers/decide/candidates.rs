@@ -239,7 +239,7 @@ fn row_view(id: String, properties: &serde_json::Value) -> CandidateView {
 /// RLS has already filtered.
 #[cfg(feature = "query")]
 pub(super) fn graph_candidates(
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     graph: &str,
     plan: &medulla_types::wire::Plan,
     principal: String,
@@ -432,7 +432,7 @@ pub(super) fn read_candidates(
     store: &AgentLibraryStore,
     tenant_id: &str,
     source: &CandidateSource,
-    graph_view: Option<&medulla_core::graph::GraphView>,
+    graph_view: Option<&medulla_graph_core::graph::GraphView>,
     principal: &str,
     kind: QuestionKind,
 ) -> Result<ReadCandidates, String> {
@@ -472,7 +472,7 @@ pub(super) async fn filtered_graph_view(
     state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     agent_id: &str,
     source: &CandidateSource,
-) -> Result<Option<medulla_core::graph::GraphView>, String> {
+) -> Result<Option<medulla_graph_core::graph::GraphView>, String> {
     let CandidateSource::Graph { graph, .. } = source else {
         return Ok(None);
     };
@@ -487,6 +487,6 @@ pub(super) async fn filtered_graph_view(
     _state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     _agent_id: &str,
     _source: &CandidateSource,
-) -> Result<Option<medulla_core::graph::GraphView>, String> {
+) -> Result<Option<medulla_graph_core::graph::GraphView>, String> {
     Ok(None)
 }

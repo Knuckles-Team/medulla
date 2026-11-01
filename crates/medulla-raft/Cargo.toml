@@ -50,6 +50,7 @@ tracing-subscriber = { version = "0.3", optional = true }
 uuid = { version = "1.28", features = ["v4"] }
 serde_bytes = "0.11.19"
 medulla-semantic-index = { path = "../medulla-semantic-index" }
+medulla-graph-core = { path = "../medulla-graph-core" }
 
 [features]
 blob = ["redb"]

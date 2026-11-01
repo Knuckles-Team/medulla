@@ -31,8 +31,8 @@ use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 
-use crate::broker_keys::*;
-use crate::graph::GraphCore;
+use medulla_graph_core::broker_keys::*;
+use medulla_graph_core::graph::GraphCore;
 
 mod producer;
 mod routing;
@@ -828,9 +828,9 @@ pub fn broker_nack_tag(
     now_ms: u64,
 ) -> String {
     match core.broker_nack_delivery_tag(delivery_tag, consumer, requeue) {
-        crate::graph::BrokerNackTransition::Absent => "absent".into(),
-        crate::graph::BrokerNackTransition::Requeued => "requeued".into(),
-        crate::graph::BrokerNackTransition::Terminal {
+        medulla_graph_core::graph::BrokerNackTransition::Absent => "absent".into(),
+        medulla_graph_core::graph::BrokerNackTransition::Requeued => "requeued".into(),
+        medulla_graph_core::graph::BrokerNackTransition::Terminal {
             node_id,
             queue,
             properties,

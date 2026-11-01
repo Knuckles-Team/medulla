@@ -67,7 +67,7 @@ pub fn event_to_delta(event: &CdcEvent) -> Delta {
 /// path uses, so window (bucket) and set (membership) state are both correctly seeded —
 /// exactly how `execute` would have produced the initial rows, but leaving the circuit
 /// ready to retract on later deltas.
-pub fn seed_delta_from_core(core: &medulla_core::graph::GraphCore) -> Delta {
+pub fn seed_delta_from_core(core: &medulla_graph_core::graph::GraphCore) -> Delta {
     let ids = core.node_ids();
     let mut rows = Vec::with_capacity(ids.len());
     for id in ids {

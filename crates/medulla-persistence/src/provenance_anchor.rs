@@ -32,7 +32,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_server_api::state::ServerState;
 
 /// Default cap on how many `:ToolCall`/`:RunTrace` node ids a single anchor tick
@@ -121,9 +121,12 @@ pub async fn sweep(state: &Arc<RwLock<ServerState>>) -> u64 {
             continue;
         }
         let fname = medulla_kernel::persist::sanitize(&name);
-        if let Err(error) =
-            medulla_server_api::mutation_batch::authoritative_graph_version(&persistence, &fname, &core)
-                .await
+        if let Err(error) = medulla_server_api::mutation_batch::authoritative_graph_version(
+            &persistence,
+            &fname,
+            &core,
+        )
+        .await
         {
             tracing::warn!(graph = %name, %error, "provenance anchor: version preflight failed");
             continue;

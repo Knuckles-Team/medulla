@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use medulla_rdf::owl::{
     asserted_types_with_confidence_from_view, explain_instance, instances_of_weighted,
     Classification, Reasoner,

@@ -6,7 +6,8 @@
 //! result but AGREE on the truly-relevant doc — which is exactly when fusion wins and
 //! why modern agent retrieval fuses lexical + vector instead of picking one.
 
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_text::TextIndex;
 use serde_json::json;
@@ -248,7 +249,7 @@ fn rank_text_without_index_is_empty_not_error() {
 /// 2-candidate query). `RankText` searches within the candidate set, so BOTH surface.
 #[test]
 fn rank_text_finds_selective_candidates_behind_many_higher_scoring_noise_docs() {
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
 
     let core = GraphCore::new();
     let mut text = TextIndex::in_memory().unwrap();

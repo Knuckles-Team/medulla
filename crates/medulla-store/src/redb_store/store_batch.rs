@@ -57,7 +57,7 @@ pub(crate) fn apply_post_row_cleanup(
 pub(crate) struct MutationBatchPlan {
     pub(crate) staged_state: Option<AuthoritativeGraphState>,
     pub(crate) schema_sources_update:
-        Option<std::sync::Arc<medulla_core::graph::GraphSchemaSources>>,
+        Option<std::sync::Arc<medulla_graph_core::graph::GraphSchemaSources>>,
     pub(crate) lifecycle: Option<(bool, String, Option<GraphType>)>,
 }
 
@@ -547,7 +547,7 @@ pub(crate) fn resolve_default_graph_meta_update(
     meta: &redb::Table<'_, &str, &[u8]>,
     graph_fname: &str,
     batch: &MutationBatch,
-    schema_sources_update: Option<&std::sync::Arc<medulla_core::graph::GraphSchemaSources>>,
+    schema_sources_update: Option<&std::sync::Arc<medulla_graph_core::graph::GraphSchemaSources>>,
 ) -> Result<Option<Vec<u8>>, String> {
     let existing = meta
         .get(graph_fname)
@@ -569,7 +569,7 @@ pub(crate) fn resolve_default_graph_meta_update(
         // `graph_scope_identity(graph_fname)` -- so that name is the durable KEY,
         // not the caller's logical name. See `catalog_display_name`.
         (None, sources) => {
-            let defaults = medulla_core::graph::GraphSchemaSources::default();
+            let defaults = medulla_graph_core::graph::GraphSchemaSources::default();
             Some(encode_meta_record(
                 &catalog_display_name(mutation_batch_graph_name(batch)?),
                 GraphType::Global,
@@ -586,7 +586,7 @@ pub(crate) fn write_mutation_batch_graph_meta_row(
     graph_fname: &str,
     batch: &MutationBatch,
     lifecycle: Option<(bool, String, Option<GraphType>)>,
-    schema_sources_update: Option<std::sync::Arc<medulla_core::graph::GraphSchemaSources>>,
+    schema_sources_update: Option<std::sync::Arc<medulla_graph_core::graph::GraphSchemaSources>>,
 ) -> Result<(), String> {
     let mut meta = write
         .control()
@@ -594,7 +594,7 @@ pub(crate) fn write_mutation_batch_graph_meta_row(
         .map_err(|e| e.to_string())?;
     match lifecycle {
         Some((true, graph_name, Some(graph_type))) => {
-            let defaults = medulla_core::graph::GraphSchemaSources::default();
+            let defaults = medulla_graph_core::graph::GraphSchemaSources::default();
             let encoded = encode_meta_record(
                 &graph_name,
                 graph_type,

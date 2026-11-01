@@ -43,7 +43,7 @@ use std::time::Duration;
 use redb::{ReadableTable, TableDefinition};
 use tokio::sync::RwLock;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_store::redb_store::GraphDump;
 
 #[cfg(test)]

@@ -80,43 +80,46 @@ impl MedullaStore {
                 coordinator_id,
                 commit,
             } => {
-                let outcome = medulla_server_api::api::reentry::apply_replicated_transaction_decision(
-                    &self.ctx.state,
-                    req.committed_at_ms,
-                    &req.mutation,
-                    coordinator_id,
-                    *commit,
-                )
-                .await;
+                let outcome =
+                    medulla_server_api::api::reentry::apply_replicated_transaction_decision(
+                        &self.ctx.state,
+                        req.committed_at_ms,
+                        &req.mutation,
+                        coordinator_id,
+                        *commit,
+                    )
+                    .await;
                 Ok(Some(Self::native_bool_outcome_to_response(outcome)))
             }
             NativeMutationCommand::TransactionFinalize {
                 coordinator_id,
                 commit,
             } => {
-                let outcome = medulla_server_api::api::reentry::apply_replicated_transaction_finalize(
-                    &self.ctx.state,
-                    req.committed_at_ms,
-                    &req.mutation,
-                    coordinator_id,
-                    *commit,
-                )
-                .await;
+                let outcome =
+                    medulla_server_api::api::reentry::apply_replicated_transaction_finalize(
+                        &self.ctx.state,
+                        req.committed_at_ms,
+                        &req.mutation,
+                        coordinator_id,
+                        *commit,
+                    )
+                    .await;
                 Ok(Some(Self::native_bool_outcome_to_response(outcome)))
             }
             #[cfg(feature = "jobs")]
             NativeMutationCommand::JobPublicationCommit { coordinator_id, .. } => {
                 let plan = command.open_job_publication_payload(server_secret)?;
-                let outcome = medulla_server_api::api::reentry::apply_replicated_job_publication_commit(
-                    &self.ctx.state,
-                    req.mutation.request_id,
-                    req.committed_at_ms,
-                    &req.mutation,
-                    self.group_id,
-                    coordinator_id,
-                    &plan,
-                )
-                .await;
+                let outcome =
+                    medulla_server_api::api::reentry::apply_replicated_job_publication_commit(
+                        &self.ctx.state,
+                        req.mutation.request_id,
+                        req.committed_at_ms,
+                        &req.mutation,
+                        self.group_id,
+                        coordinator_id,
+                        &plan,
+                    )
+                    .await;
                 Ok(Some(Self::native_commit_outcome_to_response(outcome)))
             }
             #[cfg(feature = "jobs")]
@@ -449,7 +452,7 @@ impl MedullaStore {
         req: &RaftRequest,
     ) -> Result<
         (
-            Arc<medulla_core::graph::GraphCore>,
+            Arc<medulla_graph_core::graph::GraphCore>,
             Option<Arc<dyn PersistenceBackend>>,
         ),
         String,

@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use medulla_core::graph::GraphCore;
+use crate::api::persistence::PersistenceBackend;
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use crate::api::persistence::PersistenceBackend;
 
 use super::{
     commit_finalize, commit_mutation_body_replay_response, compile_batch_and_encode_result,
@@ -30,8 +30,8 @@ pub(super) fn staged_commit_error(req_id: u64, error: &str) -> Response {
 /// [`super::conditional::commit_conditional_stage_and_diff`].
 pub(super) fn diff_and_serialize_staged_mutation(
     ctx: &MutationCtx<'_>,
-    base_snapshot_for_delta: &medulla_core::graph::GraphSnapshot,
-    staged_snapshot: &medulla_core::graph::GraphSnapshot,
+    base_snapshot_for_delta: &medulla_graph_core::graph::GraphSnapshot,
+    staged_snapshot: &medulla_graph_core::graph::GraphSnapshot,
 ) -> Result<(medulla_kernel::graph_delta::GraphRowDelta, Vec<u8>), Response> {
     let row_delta = match medulla_kernel::graph_delta::GraphRowDelta::between(
         base_snapshot_for_delta,
@@ -223,12 +223,14 @@ pub(super) fn staged_mutation_descriptor(
             ));
         }
     };
-    Ok(medulla_protocol_types::mutation_batch::MutationStateDescriptor {
-        algorithm: medulla_kernel::graph_delta::ROW_DELTA_ALGORITHM.to_string(),
-        digest: hex::encode(Sha256::digest(state_msgpack)),
-        source_graph_version: source_version,
-        target_graph_version,
-    })
+    Ok(
+        medulla_protocol_types::mutation_batch::MutationStateDescriptor {
+            algorithm: medulla_kernel::graph_delta::ROW_DELTA_ALGORITHM.to_string(),
+            digest: hex::encode(Sha256::digest(state_msgpack)),
+            source_graph_version: source_version,
+            target_graph_version,
+        },
+    )
 }
 
 pub(super) fn preserves_node_derived_indexes(method: &Method) -> bool {

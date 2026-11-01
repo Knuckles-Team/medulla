@@ -141,7 +141,7 @@ fn can_see_row_for_identities(
 fn can_see_node_for_identities(
     identities: &std::collections::BTreeMap<String, AgentIdentity>,
     agent_id: &str,
-    view: &crate::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     id: &str,
 ) -> bool {
     let mut vis = match view.visibility_index.get(id) {
@@ -466,7 +466,7 @@ impl PolicyDecisionLease {
     pub fn filter_view(
         &self,
         store: &dyn crate::rbac_persist::RbacPolicyStore,
-        view: &mut crate::graph::GraphView,
+        view: &mut medulla_graph_core::graph::GraphView,
     ) -> Result<(), LeaseStaleError> {
         let authority = self.reload_and_verify_fresh(store)?;
         if matches!(self.decision_basis, PolicyDecisionBasis::System) {

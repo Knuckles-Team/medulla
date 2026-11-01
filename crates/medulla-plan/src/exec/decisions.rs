@@ -73,7 +73,7 @@ pub(super) fn decision_scan(ctx: &PlanCtx, preds: &[Pred]) -> Result<RowSet, Str
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use medulla_semantic_index::semantic::SemanticStore;
     use medulla_types::wire::{CmpOp, PredLiteral};
     use serde_json::json;

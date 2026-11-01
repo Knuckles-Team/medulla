@@ -41,7 +41,7 @@ use sha2::{Digest, Sha256};
 use crate::parser::{parse_raw, Field, GqlValue};
 use crate::resolver::{bind_variables, execute_with_variables, flatten_document};
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 
 /// The production controls for the GraphQL surface (CONCEPT:MEDULLA-KG.domains.graphql-enterprise-hardening): the depth/complexity
 /// LIMITS plus the introspection/APQ TOGGLES, bundled into one config the server layer
@@ -413,7 +413,7 @@ pub fn execute_with_policy(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use serde_json::json;
 
     fn pbytes(v: Value) -> Vec<u8> {
@@ -422,7 +422,7 @@ mod tests {
 
     /// alice/bob/carol People (+ a Doc), alice-KNOWS->bob-KNOWS->carol — the same shape
     /// the crate-level tests use, so hardening is exercised over a real resolvable graph.
-    fn view() -> medulla_core::graph::GraphView {
+    fn view() -> medulla_graph_core::graph::GraphView {
         let core = GraphCore::new();
         core.add_node(
             "alice".into(),

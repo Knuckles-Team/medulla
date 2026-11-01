@@ -48,7 +48,7 @@ use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
 
 use medulla_agent_types::{jobs::JobKind, jobs::JobOp, jobs::SubmitJobSpec};
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_jobs::model::InputSnapshotHandle;
 use medulla_jobs::store::{JobStore, SubmitSpec};
 use medulla_types::contract::Nonce;

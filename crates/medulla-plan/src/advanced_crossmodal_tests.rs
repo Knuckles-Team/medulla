@@ -38,7 +38,8 @@
     feature = "tensor",
     all(feature = "stream", feature = "timeseries"),
 ))]
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
 #[cfg(any(
     feature = "owl",
     feature = "geo",

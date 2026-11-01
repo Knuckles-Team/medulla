@@ -9,7 +9,10 @@
 //!
 //! Re-export the lower crates under the historical `crate::` paths so the moved
 //! bodies (`crate::graph::`, `crate::types::`, `crate::wire::`) resolve unchanged.
-pub use medulla_core::{compute, graph, isolation, registry};
+pub use medulla_core::compute;
+pub use medulla_core::isolation;
+pub use medulla_core::registry;
+pub use medulla_graph_core::graph;
 pub use medulla_protocol_types::protocol;
 pub use medulla_types::{acl, types, wire};
 

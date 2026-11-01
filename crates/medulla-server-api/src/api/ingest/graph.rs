@@ -1,12 +1,12 @@
 //! Graph-handler commit gateway shared by crates below `medulla-h-graph`.
 
-use medulla_core::graph::GraphCore;
-use medulla_protocol_types::protocol::Method;
-use medulla_protocol_types::protocol::Response;
-use medulla_protocol_types::protocol::ResultPayload;
 use crate::mutation;
 use crate::mutation::MutationCtx;
 use crate::mutation::MutationPlan;
+use medulla_graph_core::graph::GraphCore;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 
 /// Keep the mutation kernel behind a heap indirection so this module's large
 /// gateway match does not embed one copy of the kernel future in every arm.

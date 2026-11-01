@@ -49,7 +49,7 @@
 //! `server::sparql_service`'s own env-based tests — no shared mutable global state, and
 //! nothing live-network-dependent about them.)
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use medulla_rdf::sparql::{execute, Dataset, Projection, QueryOutcome, RemoteSparql};
 
 use medulla_server_api::sparql_http::ServiceClient;

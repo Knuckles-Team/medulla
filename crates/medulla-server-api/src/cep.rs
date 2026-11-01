@@ -349,7 +349,7 @@ fn parse_cep_broker_exchange(raw: Option<&str>) -> Option<String> {
 /// panics or blocks the match stream over a broker-side problem.
 #[cfg(feature = "broker")]
 fn publish_match_to_broker(
-    core: &medulla_core::graph::GraphCore,
+    core: &medulla_graph_core::graph::GraphCore,
     exchange: &str,
     sub_id: u64,
     m: &Match,
@@ -388,7 +388,7 @@ fn publish_match_to_broker(
 /// blocks CEP ingestion, matching the poll surface's own drop-oldest contract.
 #[cfg(feature = "broker")]
 fn spawn_cep_broker_forwarder(
-    core: Arc<medulla_core::graph::GraphCore>,
+    core: Arc<medulla_graph_core::graph::GraphCore>,
     exchange: String,
     sub_id: u64,
     mut rx: CepSubscription,
@@ -842,7 +842,7 @@ mod tests {
     #[cfg(feature = "broker")]
     #[tokio::test]
     async fn cep_match_reaches_the_broker_queue_end_to_end() {
-        let core = medulla_core::graph::GraphCore::new();
+        let core = medulla_graph_core::graph::GraphCore::new();
         let exchange = "cep-test-exchange";
         medulla_core::broker::declare_exchange(
             &core,
@@ -878,7 +878,7 @@ mod tests {
             .unwrap()
             .clone();
         let got = core.claim_next_fields(
-            &medulla_core::broker_keys::queue_msg_label("watchers"),
+            &medulla_graph_core::broker_keys::queue_msg_label("watchers"),
             &claim,
         );
         assert!(got.is_some(), "the match must reach the bound broker queue");
@@ -897,7 +897,7 @@ mod tests {
         // The non-matching Doc event never produced a Match, so nothing else is queued.
         assert!(
             core.claim_next_fields(
-                &medulla_core::broker_keys::queue_msg_label("watchers"),
+                &medulla_graph_core::broker_keys::queue_msg_label("watchers"),
                 &claim
             )
             .is_none(),
@@ -940,7 +940,7 @@ mod tests {
             .as_object()
             .unwrap()
             .clone();
-        let label = medulla_core::broker_keys::queue_msg_label("live");
+        let label = medulla_graph_core::broker_keys::queue_msg_label("live");
         // Bounded retry: the forwarder runs on its own tokio task, so delivery is
         // asynchronous — not a fixed sleep, so this is fast on a healthy box and never
         // hangs on a slow/contended one (a genuine miss still fails after the bound).

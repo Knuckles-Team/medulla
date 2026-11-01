@@ -1,10 +1,14 @@
 //! Registry-installed secondary-index factories: a failed rebuild publishes `Failed`.
 
-use crate::graph::GraphCore;
-use crate::index::{
-    ChangeSet, IndexDescriptor, IndexError, IndexKind, IndexManifest, IndexValidity, SecondaryIndex,
-    SecondaryIndexFactory,
-};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::index::ChangeSet;
+use medulla_graph_core::index::IndexDescriptor;
+use medulla_graph_core::index::IndexError;
+use medulla_graph_core::index::IndexKind;
+use medulla_graph_core::index::IndexManifest;
+use medulla_graph_core::index::IndexValidity;
+use medulla_graph_core::index::SecondaryIndex;
+use medulla_graph_core::index::SecondaryIndexFactory;
 
 struct ManifestProbe {
     manifest: std::sync::Mutex<IndexManifest>,

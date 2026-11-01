@@ -103,7 +103,7 @@ impl MedullaStore {
     pub(super) async fn stage_and_commit_ordinary_mutation(
         &self,
         req: &RaftRequest,
-        core: &Arc<medulla_core::graph::GraphCore>,
+        core: &Arc<medulla_graph_core::graph::GraphCore>,
         persistence: &Arc<dyn PersistenceBackend>,
         graph_method: Option<Method>,
         #[cfg(feature = "modality-serving")] modality_command: Option<
@@ -215,17 +215,25 @@ impl MedullaStore {
     pub(super) async fn stage_ordinary_mutation_snapshot(
         &self,
         req: &RaftRequest,
-        core: &Arc<medulla_core::graph::GraphCore>,
+        core: &Arc<medulla_graph_core::graph::GraphCore>,
         persistence: &Arc<dyn PersistenceBackend>,
         graph_method: &Option<Method>,
         #[cfg(feature = "modality-serving")] modality_command: Option<
             &super::super::SanitizedModalityRaftCommand,
         >,
-    ) -> Result<(medulla_core::graph::GraphSnapshot, u64, Option<ResultPayload>), String> {
+    ) -> Result<
+        (
+            medulla_graph_core::graph::GraphSnapshot,
+            u64,
+            Option<ResultPayload>,
+        ),
+        String,
+    > {
         let (base_snapshot, source_version) = self
             .resolve_mutation_base_snapshot(req, core, persistence)
             .await?;
-        let staged = medulla_core::graph::GraphCore::from_snapshot(base_snapshot, source_version)?;
+        let staged =
+            medulla_graph_core::graph::GraphCore::from_snapshot(base_snapshot, source_version)?;
         let result = Self::apply_staged_ordinary_mutation(
             &staged,
             graph_method,
@@ -242,9 +250,9 @@ impl MedullaStore {
     pub(super) async fn resolve_mutation_base_snapshot(
         &self,
         req: &RaftRequest,
-        core: &Arc<medulla_core::graph::GraphCore>,
+        core: &Arc<medulla_graph_core::graph::GraphCore>,
         persistence: &Arc<dyn PersistenceBackend>,
-    ) -> Result<(medulla_core::graph::GraphSnapshot, u64), String> {
+    ) -> Result<(medulla_graph_core::graph::GraphSnapshot, u64), String> {
         match persistence
             .read_authoritative_graph_snapshot(&req.graph_fname)
             .await?
@@ -267,7 +275,7 @@ impl MedullaStore {
     /// re-runs the ordinary typed `Method` through `mutation_apply::apply`.
     /// Pure extract-method, byte-identical behaviour.
     pub(super) fn apply_staged_ordinary_mutation(
-        staged: &medulla_core::graph::GraphCore,
+        staged: &medulla_graph_core::graph::GraphCore,
         graph_method: &Option<Method>,
         #[cfg(feature = "modality-serving")] modality_command: Option<
             &super::super::SanitizedModalityRaftCommand,
@@ -344,10 +352,10 @@ impl MedullaStore {
     pub(super) async fn finalize_ordinary_commit(
         &self,
         req: &RaftRequest,
-        core: &Arc<medulla_core::graph::GraphCore>,
+        core: &Arc<medulla_graph_core::graph::GraphCore>,
         persistence: &Arc<dyn PersistenceBackend>,
         committed: &medulla_protocol_types::mutation_batch::MutationBatchCommit,
-        staged_snapshot: medulla_core::graph::GraphSnapshot,
+        staged_snapshot: medulla_graph_core::graph::GraphSnapshot,
         source_version: u64,
     ) -> Result<(), String> {
         if committed.replayed {

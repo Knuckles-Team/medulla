@@ -17,8 +17,8 @@ use medulla_catalog_types::{
 };
 use medulla_rdf::oxrdf::{NamedOrBlankNode, Term, Triple};
 
-use medulla_core::graph::GraphCore;
-use medulla_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 
@@ -142,8 +142,8 @@ fn declared_position(triple: &Triple) -> Option<GraphSchemaTermPosition> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_core::graph::GraphSchemaSource;
-    use medulla_core::graph::SchemaSourceOrigin;
+    use medulla_graph_core::graph::GraphSchemaSource;
+    use medulla_graph_core::graph::SchemaSourceOrigin;
 
     const ADMIN_ONTOLOGY: &str = "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n\
         @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n\

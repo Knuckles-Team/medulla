@@ -575,7 +575,7 @@ impl ServerState {
 }
 
 impl medulla_kernel::kernel::persistence::ResidentProjectionHost for ServerState {
-    fn resident_graphs(&self) -> Vec<(String, Arc<medulla_core::graph::GraphCore>)> {
+    fn resident_graphs(&self) -> Vec<(String, Arc<medulla_graph_core::graph::GraphCore>)> {
         self.registry
             .all_entries()
             .iter()

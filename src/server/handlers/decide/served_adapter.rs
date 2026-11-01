@@ -18,8 +18,8 @@ use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::collections::BTreeMap;
 use std::sync::{Arc, OnceLock};
 
-use medulla_core::graph::GraphCore;
 use medulla_decision_types::decision::statistical::retrieval_adapter::AdapterFitted;
+use medulla_graph_core::graph::GraphCore;
 
 use medulla_persistence::agent_library::AgentLibraryStore;
 use medulla_persistence::decision_jobs::decode_artifact;

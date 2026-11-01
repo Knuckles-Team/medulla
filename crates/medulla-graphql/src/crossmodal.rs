@@ -39,7 +39,7 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use serde_json::{Map, Value};
 
 use crate::parser::{parse_operation, Field, GqlValue, Operation};
@@ -469,7 +469,7 @@ fn rollback_transaction(
 /// Overlay a txn's staged graph writes onto a cloned `GraphView` (CONCEPT:MEDULLA-KG.query.medulla-9), so an
 /// in-txn `unifiedQuery`'s scan/traverse legs observe the txn's own uncommitted graph
 /// writes. The SAME `GraphView::overlay_*` ops the facade's `overlay_write_set` uses.
-fn overlay_txn(view: &mut medulla_core::graph::GraphView, txn: &CrossModalTxn) {
+fn overlay_txn(view: &mut medulla_graph_core::graph::GraphView, txn: &CrossModalTxn) {
     for w in &txn.graph {
         match w {
             GraphWrite::Node { id, blob } => view.overlay_add_node(id.clone(), blob.clone()),

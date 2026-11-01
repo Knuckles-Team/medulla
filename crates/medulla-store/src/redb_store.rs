@@ -2346,7 +2346,7 @@ mod mutation_batch_tests {
                 incarnation_id: "incarnation:test:duplicate-checkpoint".to_string(),
                 source_snapshot_version: 1,
                 schema_sources: std::sync::Arc::new(
-                    medulla_core::graph::GraphSchemaSources::default(),
+                    medulla_graph_core::graph::GraphSchemaSources::default(),
                 ),
                 nodes: Vec::new(),
                 edges: Vec::new(),
@@ -2378,7 +2378,9 @@ mod mutation_batch_tests {
             graph_type: GraphType::Global,
             incarnation_id: "incarnation:test:native-authority-refusal".to_string(),
             source_snapshot_version: 1,
-            schema_sources: std::sync::Arc::new(medulla_core::graph::GraphSchemaSources::default()),
+            schema_sources: std::sync::Arc::new(
+                medulla_graph_core::graph::GraphSchemaSources::default(),
+            ),
             nodes: Vec::new(),
             edges: Vec::new(),
             ledger: Vec::new(),
@@ -4341,7 +4343,7 @@ mod mutation_batch_tests {
 
         let path = temp_path("authoritative-state");
         let db = open(&path);
-        let staged = medulla_core::graph::GraphCore::new();
+        let staged = medulla_graph_core::graph::GraphCore::new();
         staged.add_node(
             "replacement".to_string(),
             rmp_serde::to_vec_named(&serde_json::json!({"value": 7})).unwrap(),
@@ -4475,7 +4477,7 @@ mod mutation_batch_tests {
         let initial = batch("batch-row-delta-base", "idem-row-delta-base");
         commit_at(&db, &initial, None).unwrap();
 
-        let before = medulla_core::graph::GraphCore::new();
+        let before = medulla_graph_core::graph::GraphCore::new();
         before.add_node(
             "a".to_string(),
             rmp_serde::to_vec_named(&serde_json::json!({"value": 1})).unwrap(),
@@ -4486,8 +4488,8 @@ mod mutation_batch_tests {
         );
         before.clear_ledger();
         let before_snapshot = before.snapshot();
-        let after =
-            medulla_core::graph::GraphCore::from_snapshot(before_snapshot.clone(), 0).unwrap();
+        let after = medulla_graph_core::graph::GraphCore::from_snapshot(before_snapshot.clone(), 0)
+            .unwrap();
         after.add_node(
             "a".to_string(),
             rmp_serde::to_vec_named(&serde_json::json!({"value": 9})).unwrap(),
@@ -4507,9 +4509,9 @@ mod mutation_batch_tests {
         let mut sources = (*after.schema_sources()).clone();
         sources
             .attach_dynamic(
-                medulla_core::graph::OPERATOR_SOURCE_ID.to_string(),
-                medulla_core::graph::GraphSchemaSource::new(
-                    medulla_core::graph::SchemaSourceOrigin::Operator,
+                medulla_graph_core::graph::OPERATOR_SOURCE_ID.to_string(),
+                medulla_graph_core::graph::GraphSchemaSource::new(
+                    medulla_graph_core::graph::SchemaSourceOrigin::Operator,
                     Some(std::sync::Arc::from(
                         "@prefix sh: <http://www.w3.org/ns/shacl#> .",
                     )),
@@ -4605,16 +4607,16 @@ mod mutation_batch_tests {
         let db = open(&path);
         commit_at(&db, &batch("batch-policy-base", "idem-policy-base"), None).unwrap();
 
-        let before = medulla_core::graph::GraphCore::new();
+        let before = medulla_graph_core::graph::GraphCore::new();
         let before_snapshot = before.snapshot();
-        let after =
-            medulla_core::graph::GraphCore::from_snapshot(before_snapshot.clone(), 0).unwrap();
+        let after = medulla_graph_core::graph::GraphCore::from_snapshot(before_snapshot.clone(), 0)
+            .unwrap();
         let mut sources = (*after.schema_sources()).clone();
         sources
             .attach_dynamic(
-                medulla_core::graph::OPERATOR_SOURCE_ID.to_string(),
-                medulla_core::graph::GraphSchemaSource::new(
-                    medulla_core::graph::SchemaSourceOrigin::Operator,
+                medulla_graph_core::graph::OPERATOR_SOURCE_ID.to_string(),
+                medulla_graph_core::graph::GraphSchemaSource::new(
+                    medulla_graph_core::graph::SchemaSourceOrigin::Operator,
                     Some(std::sync::Arc::from(
                         "@prefix sh: <http://www.w3.org/ns/shacl#> .",
                     )),

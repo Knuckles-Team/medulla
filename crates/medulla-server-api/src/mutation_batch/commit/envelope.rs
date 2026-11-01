@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::change_envelope::ChangeEnvelope;
-use medulla_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 
 /// Vectors and node removals an envelope carries. Vectors live in the

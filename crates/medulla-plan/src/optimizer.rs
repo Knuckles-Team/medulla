@@ -876,7 +876,7 @@ mod tests {
     #[cfg(feature = "text")]
     #[test]
     fn selective_filter_pushed_ahead_of_rank_text_and_preserves_result() {
-        use medulla_core::graph::GraphCore;
+        use medulla_graph_core::graph::GraphCore;
         use medulla_text::TextIndex;
 
         fn blob(v: serde_json::Value) -> Vec<u8> {
@@ -965,7 +965,7 @@ mod tests {
     #[test]
     fn selective_numeric_range_pushed_but_broad_range_stays() {
         use crate::cost::{CostModel, Order, PlanStats, Stats};
-        use medulla_core::graph::GraphCore;
+        use medulla_graph_core::graph::GraphCore;
         use medulla_semantic_index::semantic::SemanticStore;
         use serde_json::json;
 
@@ -1122,7 +1122,7 @@ mod tests {
     /// reorder test in this module.
     #[test]
     fn global_chain_reorders_three_op_segment_beyond_pairwise_reach() {
-        use medulla_core::graph::GraphCore;
+        use medulla_graph_core::graph::GraphCore;
         use medulla_semantic_index::semantic::SemanticStore;
         use serde_json::json;
 
@@ -1228,7 +1228,7 @@ mod tests {
     #[cfg(feature = "owl")]
     #[test]
     fn global_chain_reorders_cross_modal_reason_filter_rank() {
-        use medulla_core::graph::GraphCore;
+        use medulla_graph_core::graph::GraphCore;
         use medulla_semantic_index::semantic::SemanticStore;
         use serde_json::json;
 
@@ -1446,7 +1446,7 @@ ex:p4 a ex:Paper .
     /// and the join node's own op is never touched.
     #[test]
     fn optimizer_never_reorders_across_a_branch_boundary() {
-        use medulla_core::graph::GraphCore;
+        use medulla_graph_core::graph::GraphCore;
         use medulla_semantic_index::semantic::SemanticStore;
         use serde_json::json;
 

@@ -21,7 +21,7 @@ macro_rules! persistence_graph_reads {
     async fn read_authoritative_graph_snapshot(
         &self,
         graph_fname: &str,
-    ) -> Result<Option<(medulla_core::graph::GraphSnapshot, u64)>, String> {
+    ) -> Result<Option<(medulla_graph_core::graph::GraphSnapshot, u64)>, String> {
         let graph = graph_fname.to_string();
         let writer = self.shard_for(graph_fname);
         let tx = writer.tx.clone();
@@ -58,8 +58,8 @@ macro_rules! persistence_graph_reads {
                 decode_durable_semantic(&dump.semantic)?
             };
             Ok((
-                medulla_core::graph::GraphSnapshot {
-                    schema_version: medulla_core::graph::GRAPH_SNAPSHOT_SCHEMA_VERSION,
+                medulla_graph_core::graph::GraphSnapshot {
+                    schema_version: medulla_graph_core::graph::GRAPH_SNAPSHOT_SCHEMA_VERSION,
                     schema_sources: dump.schema_sources,
                     nodes: dump
                         .nodes

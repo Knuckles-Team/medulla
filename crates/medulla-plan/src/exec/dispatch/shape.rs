@@ -11,7 +11,7 @@
 
 use std::collections::HashSet;
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use medulla_rdf::oxrdf::{BlankNode, NamedNode, Term};
 use medulla_types::wire::ShapeKeep;
 

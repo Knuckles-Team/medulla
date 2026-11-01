@@ -2,8 +2,8 @@ use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 
-use crate::broker_keys::*;
-use crate::graph::GraphCore;
+use medulla_graph_core::broker_keys::*;
+use medulla_graph_core::graph::GraphCore;
 
 pub(crate) fn decode_property(bytes: &[u8]) -> Result<serde_json::Value, ()> {
     medulla_types::msgpack::decode_property_value(bytes).map_err(|_| ())

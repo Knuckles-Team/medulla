@@ -17,7 +17,7 @@ use datafusion::catalog::TableProvider;
 use datafusion::datasource::MemTable;
 use datafusion::execution::context::SessionContext;
 use datafusion::prelude::SessionConfig;
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 // The wire DTO lives at the bottom of the DAG (medulla-types); the algorithm stays here.
 pub use medulla_protocol_types::protocol::QueryResult;
 

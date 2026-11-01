@@ -24,7 +24,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_plan::{execute, Circuit, Delta, Op, Plan, PlanCtx, Pred, RowSet, ZRow};
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::TimeAxis;

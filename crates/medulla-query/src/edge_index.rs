@@ -51,11 +51,14 @@ pub use serve::{
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, MutexGuard, RwLock};
 
-use medulla_core::graph::GraphCore;
-use medulla_core::index::{
-    IndexBlock, IndexBlockReason, IndexManifest, ManagedIndexFamily, ManagedIndexState,
-    ManagedIndexStatus, ManagedIndexTarget,
-};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::index::IndexBlock;
+use medulla_graph_core::index::IndexBlockReason;
+use medulla_graph_core::index::IndexManifest;
+use medulla_graph_core::index::ManagedIndexFamily;
+use medulla_graph_core::index::ManagedIndexState;
+use medulla_graph_core::index::ManagedIndexStatus;
+use medulla_graph_core::index::ManagedIndexTarget;
 use serde::{Deserialize, Serialize};
 
 use crate::sql::VectorMetric;
@@ -295,7 +298,7 @@ impl EdgeIndex {
 /// the version read BEFORE the snapshot. A batch committed while the snapshot
 /// was taken has a pre-version at or above it, so its pairs are still scored
 /// exactly; at worst they are scored twice, never missed.
-pub fn snapshot(core: &GraphCore) -> (medulla_core::graph::GraphView, u64) {
+pub fn snapshot(core: &GraphCore) -> (medulla_graph_core::graph::GraphView, u64) {
     let version = core.version();
     (core.analysis_snapshot(), version)
 }

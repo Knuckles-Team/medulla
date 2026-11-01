@@ -39,8 +39,6 @@
 
 use std::collections::BTreeMap;
 
-use medulla_core::graph::GraphCore;
-use medulla_protocol_types::protocol::Method;
 use medulla_agent_types::{
     orchestration::decode_component_write, orchestration::is_harness_component_write,
     orchestration::HarnessComponentRefusal,
@@ -56,7 +54,9 @@ use medulla_agent_types::{
     orchestration::improvement::is_harness_probe_run_write,
     orchestration::improvement::ImprovementLibraryRefusal,
 };
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::change_envelope::ChangeEnvelope;
+use medulla_protocol_types::protocol::Method;
 
 type Props = serde_json::Map<String, serde_json::Value>;
 

@@ -19,7 +19,7 @@ fn authoritative_snapshot_and_row_delta_paths_refuse_orphaning_lane_work_item() 
     let accepted: DevelopmentLaneResult =
         fixture.decode(&fixture.commit(fixture.reserve_method("reserve:state-path"), TEST_NOW));
     let hold = accepted.hold.expect("state-path hold");
-    let mut linked = medulla_core::graph::GraphCore::new().snapshot();
+    let mut linked = medulla_graph_core::graph::GraphCore::new().snapshot();
     fixture.with_read(|read| {
         let nodes = read
             .scoped_owner_table(NODES)
@@ -154,7 +154,7 @@ fn authoritative_snapshot_and_row_delta_paths_refuse_orphaning_lane_work_item() 
 
     // Neither `orphaned` nor `linked` above ever committed, so the durable graph version
     // is still 0 (unchanged from `commit_ops` never being called on this fixture's graph).
-    let after = medulla_core::graph::GraphCore::new().snapshot();
+    let after = medulla_graph_core::graph::GraphCore::new().snapshot();
     let delta = medulla_kernel::graph_delta::GraphRowDelta::between(&linked, &after)
         .expect("build orphaning row delta");
     let delta_state = delta.to_msgpack().expect("encode orphaning row delta");

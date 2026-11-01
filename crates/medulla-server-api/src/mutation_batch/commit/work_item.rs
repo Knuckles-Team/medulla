@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use sha2::{Digest, Sha256};
 
-use medulla_core::graph::GraphCore;
+use crate::api::persistence::PersistenceBackend;
+use medulla_graph_core::graph::GraphCore;
 use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::ResultPayload;
-use crate::api::persistence::PersistenceBackend;
 use medulla_types::contract::Nonce;
 
 use super::super::compile::{authoritative_graph_version, compile_methods, CompileBatch};
@@ -361,9 +361,7 @@ fn mark_work_item_replayed(
 /// Execute a WorkItem claim/renew/result transition inside the redb
 /// MutationBatch transaction and then refresh every affected in-memory node from
 /// the authoritative store. No selection or transition runs in RAM first.
-pub async fn commit_work_item(
-    request: WorkItemCommitRequest<'_>,
-) -> Result<ResultPayload, String> {
+pub async fn commit_work_item(request: WorkItemCommitRequest<'_>) -> Result<ResultPayload, String> {
     commit_work_item_inner(request).await
 }
 /// The durably committed submit result a replay re-answers, as its declared body.

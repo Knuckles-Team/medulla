@@ -326,10 +326,10 @@ fn epistemic_ops_dag_matches_linear() {
 /// contradicted by `counter1`, attacked by `attacker1`, supporting `derived1`.
 #[cfg(feature = "epistemic")]
 fn build_beliefs() -> (
-    medulla_core::graph::GraphView,
+    medulla_graph_core::graph::GraphView,
     medulla_semantic_index::semantic::SemanticStore,
 ) {
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 

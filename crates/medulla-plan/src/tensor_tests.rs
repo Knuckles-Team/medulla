@@ -9,7 +9,8 @@
 //!
 //! And a compose proof: `TensorScan` then a `TensorOp` (a valid slice) in ONE plan.
 
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_tensor::{content_hash, Buffer, Tensor, TensorStore};
 use medulla_types::wire::{TensorElementwiseOp, TensorOpKind, TensorReduceKind};

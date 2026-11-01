@@ -6,8 +6,8 @@
 use std::sync::Arc;
 
 use medulla_capabilities::DurabilityDomain;
-use medulla_core::graph::GraphCore;
 use medulla_core::isolation::IsolationLayer;
+use medulla_graph_core::graph::GraphCore;
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_protocol_types::protocol::{GraphType, Method, ResultPayload};
 use medulla_server_api::api::persistence::PersistenceBackend;

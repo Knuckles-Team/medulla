@@ -10,7 +10,8 @@
 mod common;
 
 use common::*;
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
 use medulla_plan::{execute, Op, Plan, PlanCtx, Pred, RowSet};
 use medulla_semantic_index::semantic::SemanticStore;
 use serde_json::json;

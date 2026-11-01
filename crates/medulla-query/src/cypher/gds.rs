@@ -27,7 +27,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use petgraph::visit::{EdgeRef, IntoEdgeReferences};
 use serde_json::Value;
 
@@ -1604,7 +1604,7 @@ impl CypherProcedure for GraphCatalogList {
 mod tests {
     use super::*;
     use crate::cypher::exec_cypher;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use medulla_protocol_types::protocol::QueryResult;
 
     fn pbytes(v: Value) -> Vec<u8> {
@@ -2747,9 +2747,9 @@ mod tests {
         // `mark_dirty` are what actually bump `version()` and record the write's footprint.
         let d_props = pbytes(serde_json::json!({"node_type": "N"}));
         core.add_node("d".into(), d_props.clone());
-        let mut cs = medulla_core::index::ChangeSet::new();
+        let mut cs = medulla_graph_core::index::ChangeSet::new();
         cs.added_nodes
-            .push(medulla_core::index::NodeChange::with_properties(
+            .push(medulla_graph_core::index::NodeChange::with_properties(
                 "d".to_string(),
                 d_props,
             ));

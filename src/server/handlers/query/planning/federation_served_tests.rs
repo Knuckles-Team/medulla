@@ -4,7 +4,7 @@
 //! any request, which the naive full-fetch path could not produce.
 
 use super::{run_unified_with, ServedIndexes};
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_plan::federation::ForeignSourceRegistry;
 use medulla_plan::Op;
 use medulla_semantic_index::semantic::SemanticStore;

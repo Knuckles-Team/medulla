@@ -32,7 +32,6 @@ use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome, OutboxStatus};
 use medulla_types::contract::Nonce;
 use sha2::{Digest, Sha256};
 
-use medulla_semantic_index::semantic::SemanticGenerationImage;
 use super::semantic_ann_codes::reconciliation::{
     SemanticSourceReconciliationCheckpoint, SemanticSourceReconciliationPhase,
 };
@@ -40,6 +39,7 @@ use super::semantic_ann_codes::{
     semantic_contract_error, ExistingTenantOwnerOpen, OperationAttribution, SemanticCodeError,
     SemanticCodeStore, SemanticMutationReceipt,
 };
+use medulla_semantic_index::semantic::SemanticGenerationImage;
 
 /// Construct the canonical tenant-wide SQL source revision returned by E3.
 ///

@@ -4,7 +4,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_stream::telemetry::{
     DeclaredHealth, EntityClass, FactEdge, FactGraph, FactNode, Measure, Outcome,
 };

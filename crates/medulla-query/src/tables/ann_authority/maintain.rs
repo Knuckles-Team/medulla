@@ -17,7 +17,8 @@ use serde::{Deserialize, Serialize};
 
 use super::durable::{encode, Encoding};
 use super::generation::AnnGeneration;
-use medulla_core::index::{IndexBlock, IndexBlockReason};
+use medulla_graph_core::index::IndexBlock;
+use medulla_graph_core::index::IndexBlockReason;
 
 use super::{lock, read, write, AnnIndexStatus, AnnLimits, AnnSlot, DurableMark};
 use crate::sql::{AnnIndexPlan, AnnMethod};

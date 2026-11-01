@@ -10,7 +10,7 @@ impl IndexManifest {
     /// This manifest marked `validity` and incomplete, so no planner selects the
     /// index until recovery rebuilds it (`Stale` after a failed or unsafe delta,
     /// `Failed` after a failed rebuild).
-    pub(crate) fn marked_incomplete(mut self, validity: IndexValidity) -> Self {
+    pub fn marked_incomplete(mut self, validity: IndexValidity) -> Self {
         self.validity = validity;
         self.completeness.complete = false;
         self

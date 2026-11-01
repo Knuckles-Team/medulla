@@ -10,7 +10,7 @@
 
 use arrow::array::{Int64Array, StringArray};
 use arrow::datatypes::DataType;
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_query::{
     exec_sql, exec_sql_arrow, exec_sql_cached, exec_sql_typed,
     exec_sql_typed_with_tables_cached_cancellable, CancellationToken, PgColType, SqlCache,

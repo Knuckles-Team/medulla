@@ -20,8 +20,7 @@ pub fn uql_text_embedder() -> Option<&'static dyn medulla_plan::TextEmbedder> {
             // endpoint is set, so query vectors share the stored chunks' space.
             #[cfg(feature = "modality-serving")]
             {
-                let config =
-                    crate::api::ingest::embedder::EmbedderConfig::from_env();
+                let config = crate::api::ingest::embedder::EmbedderConfig::from_env();
                 if config.name() == crate::api::ingest::embedder::REMOTE {
                     return Some(Box::new(config) as Box<dyn medulla_plan::TextEmbedder>);
                 }
@@ -120,7 +119,7 @@ pub fn plan_needs_tsdb(ops: &[medulla_plan::Op]) -> bool {
 /// query observe the txn's own uncommitted graph writes. Only the durable-mutation set
 /// is ever staged (the protocol restricts `Txn*` to it); any other variant is a no-op.
 #[cfg(feature = "query")]
-pub fn overlay_write_set(view: &mut medulla_core::graph::GraphView, write_set: &[Method]) {
+pub fn overlay_write_set(view: &mut medulla_graph_core::graph::GraphView, write_set: &[Method]) {
     for m in write_set {
         match m {
             Method::AddNode {

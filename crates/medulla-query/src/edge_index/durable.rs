@@ -12,8 +12,12 @@
 
 use std::collections::BTreeMap;
 
-use medulla_core::graph::{GraphCore, GraphView};
-use medulla_core::index::{IndexBlock, IndexBlockReason, IndexManifest, ManagedIndexStatus};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
+use medulla_graph_core::index::IndexBlock;
+use medulla_graph_core::index::IndexBlockReason;
+use medulla_graph_core::index::IndexManifest;
+use medulla_graph_core::index::ManagedIndexStatus;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 

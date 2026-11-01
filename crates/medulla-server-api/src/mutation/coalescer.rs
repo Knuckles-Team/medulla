@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use medulla_core::graph::GraphCore;
 use medulla_core::isolation::IsolationLayer;
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
@@ -119,13 +119,10 @@ pub fn is_coalescable_structural_write(method: &Method) -> bool {
 /// force one or the other to give up its own txn-scoping. The five match arms
 /// are intentionally the same shape as `apply_batch`'s (so the two stay easy
 /// to compare/keep in sync by inspection), not shared code.
-pub fn apply_coalescable_write(
-    core: &GraphCore,
-    method: &Method,
-) -> Result<ResultPayload, String> {
+pub fn apply_coalescable_write(core: &GraphCore, method: &Method) -> Result<ResultPayload, String> {
     let mut txn = core.txn();
     let capture_content = core.wants_change_content();
-    let mut change = medulla_core::index::ChangeSet::new();
+    let mut change = medulla_graph_core::index::ChangeSet::new();
     let result = apply_coalescable_write_op(core, &mut txn, &mut change, capture_content, method);
     if !change.is_empty() {
         core.maintain_indexes_at(
@@ -145,8 +142,8 @@ pub fn apply_coalescable_write(
 /// `write_coalescer::apply_batch`'s — see [`apply_coalescable_write`]'s doc).
 fn apply_coalescable_write_op(
     core: &GraphCore,
-    txn: &mut medulla_core::graph::GraphTxn<'_>,
-    change: &mut medulla_core::index::ChangeSet,
+    txn: &mut medulla_graph_core::graph::GraphTxn<'_>,
+    change: &mut medulla_graph_core::index::ChangeSet,
     capture_content: bool,
     method: &Method,
 ) -> Result<ResultPayload, String> {
@@ -186,8 +183,8 @@ fn apply_coalescable_write_op(
 }
 
 fn apply_coalescable_add_node(
-    txn: &mut medulla_core::graph::GraphTxn<'_>,
-    change: &mut medulla_core::index::ChangeSet,
+    txn: &mut medulla_graph_core::graph::GraphTxn<'_>,
+    change: &mut medulla_graph_core::index::ChangeSet,
     capture_content: bool,
     node_id: &str,
     properties_msgpack: &[u8],
@@ -195,7 +192,7 @@ fn apply_coalescable_add_node(
     if capture_content {
         change
             .added_nodes
-            .push(medulla_core::index::NodeChange::with_properties(
+            .push(medulla_graph_core::index::NodeChange::with_properties(
                 node_id.to_string(),
                 properties_msgpack.to_vec(),
             ));
@@ -213,8 +210,8 @@ fn apply_coalescable_add_node(
 
 fn apply_coalescable_remove_node(
     core: &GraphCore,
-    txn: &mut medulla_core::graph::GraphTxn<'_>,
-    change: &mut medulla_core::index::ChangeSet,
+    txn: &mut medulla_graph_core::graph::GraphTxn<'_>,
+    change: &mut medulla_graph_core::index::ChangeSet,
     node_id: &str,
 ) -> Result<ResultPayload, String> {
     match txn.get_node_properties(node_id) {
@@ -233,8 +230,8 @@ fn apply_coalescable_remove_node(
 }
 
 fn apply_coalescable_add_edge(
-    txn: &mut medulla_core::graph::GraphTxn<'_>,
-    change: &mut medulla_core::index::ChangeSet,
+    txn: &mut medulla_graph_core::graph::GraphTxn<'_>,
+    change: &mut medulla_graph_core::index::ChangeSet,
     source_id: &str,
     target_id: &str,
     properties_msgpack: &[u8],
@@ -253,8 +250,8 @@ fn apply_coalescable_add_edge(
 }
 
 fn apply_coalescable_remove_edge(
-    txn: &mut medulla_core::graph::GraphTxn<'_>,
-    change: &mut medulla_core::index::ChangeSet,
+    txn: &mut medulla_graph_core::graph::GraphTxn<'_>,
+    change: &mut medulla_graph_core::index::ChangeSet,
     source_id: &str,
     target_id: &str,
 ) -> Result<ResultPayload, String> {
@@ -270,8 +267,8 @@ fn apply_coalescable_remove_edge(
 }
 
 fn apply_coalescable_cas_fields(
-    txn: &mut medulla_core::graph::GraphTxn<'_>,
-    change: &mut medulla_core::index::ChangeSet,
+    txn: &mut medulla_graph_core::graph::GraphTxn<'_>,
+    change: &mut medulla_graph_core::index::ChangeSet,
     capture_content: bool,
     node_id: &str,
     conditions_msgpack: &[u8],
@@ -290,17 +287,17 @@ fn apply_coalescable_cas_fields(
         if capture_content {
             let blob = rmp_serde::to_vec_named(&serde_json::Value::Object(updates.clone()))
                 .unwrap_or_default();
-            change
-                .updated_nodes
-                .push(medulla_core::index::NodeChange::with_properties_and_fields(
+            change.updated_nodes.push(
+                medulla_graph_core::index::NodeChange::with_properties_and_fields(
                     node_id.to_string(),
                     blob,
                     updates.keys().cloned().collect(),
-                ));
+                ),
+            );
         } else {
             change
                 .updated_nodes
-                .push(medulla_core::index::NodeChange::with_fields(
+                .push(medulla_graph_core::index::NodeChange::with_fields(
                     node_id.to_string(),
                     updates.keys().cloned().collect(),
                 ));
@@ -486,8 +483,8 @@ where
 
     let (reply, reply_rx) = tokio::sync::oneshot::channel();
     let writer = coalescer.writer_for(ctx.graph_name);
-    let job = crate::routed_write_coalescer::RoutedCommitJob::new(run, reply)
-        .with_request_id(req_id);
+    let job =
+        crate::routed_write_coalescer::RoutedCommitJob::new(run, reply).with_request_id(req_id);
     match writer.try_enqueue(job) {
         Ok(()) => reply_rx.await.unwrap_or_else(|_| {
             Response::err(

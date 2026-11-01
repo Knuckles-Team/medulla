@@ -5,7 +5,7 @@
 #[cfg(feature = "numeric")]
 mod served {
     use super::super::blob;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use medulla_semantic_index::semantic::SemanticStore;
     use medulla_types::wire::{UqlResult, UqlRow};
     use serde_json::json;
@@ -15,7 +15,7 @@ mod served {
     use crate::uql::{parse_statement, Params};
 
     /// Five services on two pods, each with a p95 latency; `s5` has no latency.
-    fn fixture() -> (medulla_core::graph::GraphView, SemanticStore) {
+    fn fixture() -> (medulla_graph_core::graph::GraphView, SemanticStore) {
         let core = GraphCore::new();
         let services = [
             ("s1", 120.0, "pod-a"),

@@ -19,7 +19,7 @@
 use std::collections::{BTreeSet, HashMap};
 use std::sync::OnceLock;
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use serde_json::Value;
 
 use medulla_compute::algorithms;

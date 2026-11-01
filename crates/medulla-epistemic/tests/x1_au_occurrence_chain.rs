@@ -4,8 +4,8 @@
 
 use std::sync::Arc;
 
-use medulla_core::graph::GraphView;
 use medulla_epistemic::{evidence_citations, resolve_locus, BeliefGraph, EdgeKind};
+use medulla_graph_core::graph::GraphView;
 use medulla_modality::{EvidenceAddress, ResourceId};
 use serde_json::json;
 

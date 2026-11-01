@@ -58,8 +58,8 @@ use medulla_rdf::owl::{parse_ontology, tbox_triples_from_view, Classification, R
 use medulla_rdf::oxrdf::Triple;
 use tokio::sync::RwLock;
 
-use medulla_core::graph::GraphCore;
 use crate::state::ServerState;
+use medulla_graph_core::graph::GraphCore;
 
 /// Opt-in graph allowlist env var — comma-separated exact graph names. Absent
 /// or empty ⇒ disabled (the default; NEVER default-on).

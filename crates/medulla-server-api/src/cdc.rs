@@ -692,7 +692,7 @@ impl CdcHub {
 // consumer rebuilds from the ledger/checkpoint) — the single-row node/edge changes are
 // the reactive unit. Returns the `Method`'s captured pre-image for the post-emit.
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 
 /// The pre-image captured before a durable mutation applies (the affected node/edge's

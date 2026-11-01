@@ -22,7 +22,8 @@
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
 use petgraph::visit::EdgeRef;
 use serde_json::Value;
 
@@ -2747,7 +2748,7 @@ fn lookup_property_eq(index: IndexSource<'_>, key: &str, value: &str) -> Option<
     }
     let result = index.core.indexes().lookup(
         index.core,
-        &medulla_core::index::Predicate::PropertyEq {
+        &medulla_graph_core::index::Predicate::PropertyEq {
             key: key.to_string(),
             value: value.to_string(),
         },
@@ -4078,7 +4079,8 @@ mod engine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_core::graph::{vf2_match_views, GraphCore};
+    use medulla_graph_core::graph::vf2_match_views;
+    use medulla_graph_core::graph::GraphCore;
 
     fn pbytes(v: Value) -> Vec<u8> {
         rmp_serde::to_vec_named(&v).unwrap()

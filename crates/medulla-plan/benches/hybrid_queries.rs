@@ -26,7 +26,8 @@
 //! the `execute` leg is `query`-gated).
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
 use medulla_plan::{
     cost_opt_enabled, execute, execute_ops, optimize, AnnIndex, GraphTopology,
     HierarchicalRetriever, Op, Plan, PlanCtx, Pred, RetrievalParams, Scored,

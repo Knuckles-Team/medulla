@@ -605,7 +605,7 @@ fn materialize_property_chain_edges(
 
 fn materialize_property_chain_edge(
     core: &GraphCore,
-    txn: &mut medulla_core::graph::GraphTxn<'_>,
+    txn: &mut medulla_graph_core::graph::GraphTxn<'_>,
     inferred: &mut [HashMap<String, String>],
     (src, tgt, prop, premises, fact_index): &PropertyChainEdge,
 ) {

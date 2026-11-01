@@ -6,8 +6,8 @@
 
 use std::sync::Arc;
 
-use medulla_core::graph::GraphCore;
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_graph_core::graph::GraphCore;
 
 use super::stat_support::readable_graph;
 use crate::isolation::IsolationLayer;
@@ -46,8 +46,10 @@ impl GraphVectors {
     #[cfg(feature = "security")]
     fn visible(&self, id: &str) -> bool {
         self.core.get_node_properties(id).is_some_and(|blob| {
-            self.isolation
-                .can_see_row(&self.caller, &medulla_core::rls::row_visibility(&blob))
+            self.isolation.can_see_row(
+                &self.caller,
+                &medulla_graph_core::rls::row_visibility(&blob),
+            )
         })
     }
 

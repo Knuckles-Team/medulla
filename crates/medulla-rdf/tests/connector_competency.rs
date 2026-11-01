@@ -20,7 +20,8 @@
 mod common;
 
 use common::{connection_fixture, parse_all};
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
 use medulla_rdf::mapping::{load_triples, parse_turtle, IriStore};
 use medulla_rdf::sparql::{execute, Dataset, Projection, QueryOutcome};
 
@@ -226,7 +227,9 @@ fn fan_manager_duty_above_threshold_answers() {
     // above its threshold?" — answered from the fan-manager connector alone
     // (Vocabulary: infrastructure-v1.ttl). Frozen as-of: 2026-01-03T00:00:00Z.
     let view = graph(
-        &[include_str!("../../medulla-core/ontology/infrastructure-v1.ttl")],
+        &[include_str!(
+            "../../medulla-core/ontology/infrastructure-v1.ttl"
+        )],
         FAN_DUTY_FIXTURE,
     );
     let (vars, rows) = fan_duty_answer(&view);
@@ -297,7 +300,9 @@ f:baseline-temp a infra:HealthBaseline ;
 f:sensor-idle a infra:Entity .
 "#;
     let view = graph(
-        &[include_str!("../../medulla-core/ontology/infrastructure-v1.ttl")],
+        &[include_str!(
+            "../../medulla-core/ontology/infrastructure-v1.ttl"
+        )],
         fixture,
     );
     let (vars, rows) = select(
@@ -547,7 +552,9 @@ fn fan_manager_max_duty_during_grafana_alert_answers() {
     // alerted on temperature?" — fan-manager, systems-manager and lgtm linked
     // through the shared `host` concept (Vocabulary: infrastructure-v1.ttl).
     let view = graph(
-        &[include_str!("../../medulla-core/ontology/infrastructure-v1.ttl")],
+        &[include_str!(
+            "../../medulla-core/ontology/infrastructure-v1.ttl"
+        )],
         FAN_CROSS_FIXTURE,
     );
     let (vars, rows) = select(&view, FAN_CROSS_QUERY);
@@ -782,7 +789,9 @@ fn uptime_services_down_in_window_answer() {
     // "Which monitored services were down in the last 24 hours and for how
     // long?" — answered from uptime alone (Vocabulary: infrastructure-v1.ttl).
     let view = graph(
-        &[include_str!("../../medulla-core/ontology/infrastructure-v1.ttl")],
+        &[include_str!(
+            "../../medulla-core/ontology/infrastructure-v1.ttl"
+        )],
         UPTIME_DOWN_FIXTURE,
     );
     let (vars, rows) = select(&view, UPTIME_DOWN_QUERY);
@@ -926,7 +935,9 @@ fn uptime_down_with_grafana_alert_or_route_error_answers() {
     // error at the same time?" — uptime, lgtm and caddy linked through the
     // shared `service` concept (Vocabulary: infrastructure-v1.ttl).
     let view = graph(
-        &[include_str!("../../medulla-core/ontology/infrastructure-v1.ttl")],
+        &[include_str!(
+            "../../medulla-core/ontology/infrastructure-v1.ttl"
+        )],
         UPTIME_CROSS_FIXTURE,
     );
     let (vars, rows) = select(&view, UPTIME_CROSS_QUERY);

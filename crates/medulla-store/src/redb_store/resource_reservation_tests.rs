@@ -3270,7 +3270,7 @@ fn checkpoint_replaces_graph_rows_but_preserves_native_resource_domain() {
                     incarnation_id: incarnation_id.to_string(),
                     source_snapshot_version,
                     schema_sources: std::sync::Arc::new(
-                        medulla_core::graph::GraphSchemaSources::default(),
+                        medulla_graph_core::graph::GraphSchemaSources::default(),
                     ),
                     nodes,
                     edges: Vec::new(),

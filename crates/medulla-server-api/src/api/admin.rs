@@ -47,7 +47,7 @@ pub trait DecideApi: Send + Sync {
         state: &Arc<RwLock<ServerState>>,
         tenant: Option<&str>,
         graph: &str,
-        core: &medulla_core::graph::GraphCore,
+        core: &medulla_graph_core::graph::GraphCore,
     ) -> Option<Arc<served_adapter::ServedAdapter>>;
 
     /// The caller's read-only SQL relations (the decision record views) when `query` can see

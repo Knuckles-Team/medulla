@@ -8,7 +8,8 @@
 //!
 //! Plus a compose proof: a relational `Scan` then a JSONPath `Filter` in ONE plan.
 
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::JsonPathOp;
 use serde_json::json;

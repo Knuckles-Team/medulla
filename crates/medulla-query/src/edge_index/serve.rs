@@ -8,7 +8,7 @@ use std::cell::{Cell, RefCell};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use medulla_result_types::row_predicate::RowPredicate;
 use serde::{Deserialize, Serialize};
 

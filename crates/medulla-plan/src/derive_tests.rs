@@ -1,7 +1,7 @@
 //! EH-522 — UQL `DERIVE` over `TSSCAN` series rows, end to end through the parser, the
 //! serve path and the executor, against the `medulla_numeric::series` kernels run directly.
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_tsdb::derive::kernels::{apply, Rolling, Shift, Smoothing, Spec, State};
 use medulla_types::wire::{UqlResult, UqlRow};

@@ -27,7 +27,7 @@ use datafusion::datasource::MemTable;
 use datafusion::error::{DataFusionError, Result as DfResult};
 use datafusion::logical_expr::Expr;
 use datafusion::scalar::ScalarValue;
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 
 /// PageRank damping / iteration defaults — match the engine's graph-op handler
 /// defaults so the table function and the `PageRank` method agree.
@@ -88,8 +88,11 @@ fn generate_series_values(start: i64, stop: i64, step: i64) -> DfResult<Vec<i64>
 
 impl TableFunctionImpl for PagerankFunc {
     fn call_with_args(&self, _args: TableFunctionArgs<'_, '_>) -> DfResult<Arc<dyn TableProvider>> {
-        let rows =
-            medulla_compute::algorithms::pagerank(&self.view, PAGERANK_DAMPING, PAGERANK_ITERATIONS);
+        let rows = medulla_compute::algorithms::pagerank(
+            &self.view,
+            PAGERANK_DAMPING,
+            PAGERANK_ITERATIONS,
+        );
         scores_table(rows)
     }
 }

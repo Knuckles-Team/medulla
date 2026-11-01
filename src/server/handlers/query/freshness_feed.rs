@@ -39,7 +39,7 @@ pub(crate) async fn handle_freshness_feed(
 #[cfg(feature = "security")]
 fn row_filter(ctx: &QueryHandlerCtx<'_>) -> impl Fn(&[u8]) -> bool + Send + 'static {
     let (rls, caller) = (Arc::clone(ctx.rls), ctx.caller.to_string());
-    move |blob: &[u8]| rls.can_see_row(&caller, &medulla_core::rls::row_visibility(blob))
+    move |blob: &[u8]| rls.can_see_row(&caller, &medulla_graph_core::rls::row_visibility(blob))
 }
 
 #[cfg(not(feature = "security"))]
@@ -96,7 +96,8 @@ fn wire_event(record: medulla_query_cache::dep_scope::InvalidationRecord) -> Inv
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_core::index::{ChangeSet, NodeChange};
+    use medulla_graph_core::index::ChangeSet;
+    use medulla_graph_core::index::NodeChange;
     use medulla_result_types::{freshness::VolatilityClass, freshness::VOLATILITY_CLASS_KEY};
 
     fn commit_node(core: &GraphCore, id: &str, props: serde_json::Value) {

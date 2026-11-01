@@ -30,8 +30,8 @@ mod terms;
 mod triples;
 mod where_ops;
 
-pub use medulla_types::rdf_report::UpdateReport;
 pub use engine::{execute, execute_str, UpdateError};
+pub use medulla_types::rdf_report::UpdateReport;
 pub use parse::{insert_data_triples, parse_update, referenced_named_graphs};
 pub use store::{GraphStore, MapStore};
 pub use triples::{insert_triples, remove_triples};
@@ -392,7 +392,7 @@ mod tests {
         // Build a dataset over both named graphs and ask which graph holds ex:a.
         let v1 = store.core_of(Some("http://g/1")).analysis_snapshot();
         let v2 = store.core_of(Some("http://g/2")).analysis_snapshot();
-        let default = medulla_core::graph::GraphView::default();
+        let default = medulla_graph_core::graph::GraphView::default();
         let ds = Dataset::new(
             &default,
             vec![

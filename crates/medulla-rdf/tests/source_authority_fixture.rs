@@ -5,7 +5,9 @@
 
 use std::sync::Arc;
 
-use medulla_core::graph::{GraphSchemaSource, GraphSchemaSources, SchemaSourceOrigin};
+use medulla_graph_core::graph::GraphSchemaSource;
+use medulla_graph_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::SchemaSourceOrigin;
 use medulla_rdf::source_selection::{
     audit_from, authority_rows_from_turtle, fixture_from_schema_sources, select_sources,
     AuthorityOrigin, AuthorityRow, CoverageFixture, CoverageResult, SelectionQuery,

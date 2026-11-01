@@ -6,15 +6,15 @@ use std::sync::Arc;
 use sha2::{Digest, Sha256};
 
 use crate::api::persistence::PersistenceBackend;
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
-use medulla_protocol_types::mutation_batch::MutationBatch;
-use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
-use medulla_protocol_types::mutation_batch::MutationStateDescriptor;
 use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::mutation_batch::MutationOperation;
+use medulla_protocol_types::mutation_batch::MutationStateDescriptor;
 use medulla_protocol_types::protocol::Method;
 
 use super::canonical::{domain_for, lower_canonical_operation, surface_for};

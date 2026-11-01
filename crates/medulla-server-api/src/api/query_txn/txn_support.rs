@@ -56,7 +56,7 @@ pub fn triples_to_methods(
 /// Returns `(methods, schema_refs)` — see [`triples_to_methods`]'s doc.
 #[cfg(feature = "sparql")]
 pub fn construct_view_to_methods(
-    snap: &medulla_core::graph::GraphView,
+    snap: &medulla_graph_core::graph::GraphView,
     sparql: &str,
 ) -> Result<(Vec<Method>, Vec<String>), String> {
     let proj = medulla_rdf::sparql::Projection::from_wire("", "");
@@ -91,7 +91,7 @@ pub struct GraphQlCrossModalCommit<'a> {
     pub state: &'a Arc<RwLock<ServerState>>,
     pub request_id: u64,
     pub graph_name: &'a str,
-    pub core: &'a medulla_core::graph::GraphCore,
+    pub core: &'a medulla_graph_core::graph::GraphCore,
     pub registry: &'a medulla_graphql::CrossModalTxnRegistry,
     pub txn_id: &'a str,
     pub authority: &'a CarrierAuthority,

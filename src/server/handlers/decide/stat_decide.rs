@@ -131,7 +131,7 @@ async fn serve(
 fn decide_blocking(
     ctx: &ExecutionContext,
     request: &DecideRequest,
-    graph_view: Option<&medulla_core::graph::GraphView>,
+    graph_view: Option<&medulla_graph_core::graph::GraphView>,
     principal: String,
     started: Instant,
 ) -> Result<DecisionBatch, String> {

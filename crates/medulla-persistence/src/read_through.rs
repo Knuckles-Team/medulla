@@ -13,7 +13,8 @@
 
 use std::sync::Arc;
 
-use medulla_core::read_through::{ReadThrough, ReadThroughFactory};
+use medulla_graph_core::read_through::ReadThrough;
+use medulla_graph_core::read_through::ReadThroughFactory;
 
 use medulla_kernel::persist::sanitize;
 use medulla_server_api::api::persistence::PersistenceBackend;
@@ -21,10 +22,10 @@ use medulla_server_api::api::persistence::PersistenceBackend;
 #[cfg(all(test, feature = "redb"))]
 mod production_wiring_tests {
     use super::*;
+    use crate::redb_backend::RedbBackend;
+    use medulla_core::registry::GraphRegistry;
     use medulla_protocol_types::protocol::GraphType;
     use medulla_protocol_types::protocol::Method;
-    use medulla_core::registry::GraphRegistry;
-    use crate::redb_backend::RedbBackend;
 
     // spec: MEDULLA-DURABLE-KERNEL-R086.4
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

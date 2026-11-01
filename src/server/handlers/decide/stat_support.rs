@@ -35,7 +35,7 @@ pub(super) async fn filtered_view(
     state: &Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     agent_id: &str,
     graph: &str,
-) -> Result<medulla_core::graph::GraphView, String> {
+) -> Result<medulla_graph_core::graph::GraphView, String> {
     let (core, isolation) = readable_graph(
         state,
         agent_id,
@@ -63,7 +63,7 @@ pub(super) async fn readable_graph(
     missing_code: StatisticalErrorCode,
 ) -> Result<
     (
-        Arc<medulla_core::graph::GraphCore>,
+        Arc<medulla_graph_core::graph::GraphCore>,
         crate::isolation::IsolationLayer,
     ),
     String,

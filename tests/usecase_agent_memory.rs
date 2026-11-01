@@ -27,7 +27,8 @@
 //! Module-gated on the modality legs it fuses; compiles + runs under `--features full`.
 #![cfg(all(feature = "query", feature = "text", feature = "owl-plan"))]
 
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
 use medulla_plan::{execute, Op, Plan, PlanCtx};
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_text::TextIndex;

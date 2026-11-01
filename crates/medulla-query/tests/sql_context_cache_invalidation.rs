@@ -28,7 +28,7 @@
 
 #![cfg(feature = "sql")]
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_mutation_types::mutation_scope::IncarnationId;
 use medulla_mutation_types::mutation_scope::LogicalName;
@@ -521,8 +521,8 @@ fn edges_never_leak_across_callers_through_the_cache() {
 /// caller-specific `filter_view` RESULT without needing the `security` feature
 /// (unavailable to this crate — RLS filtering itself is a facade-crate concern;
 /// see this file's module doc) or a real `IsolationLayer`.
-fn view_with_only(ids: &[&str]) -> medulla_core::graph::GraphView {
-    let mut v = medulla_core::graph::GraphView::default();
+fn view_with_only(ids: &[&str]) -> medulla_graph_core::graph::GraphView {
+    let mut v = medulla_graph_core::graph::GraphView::default();
     for id in ids {
         let idx = v.graph.add_node((*id).to_string());
         v.node_map.insert((*id).to_string(), idx);
@@ -539,7 +539,7 @@ fn view_with_only(ids: &[&str]) -> medulla_core::graph::GraphView {
 /// caller sees, not just the nodes (`IsolationLayer::filter_view` drops any edge
 /// incident to a hidden node too, so a real filtered view never has an edge to a
 /// node absent from `ids`).
-fn view_with_edges(ids: &[&str], edges: &[(&str, &str)]) -> medulla_core::graph::GraphView {
+fn view_with_edges(ids: &[&str], edges: &[(&str, &str)]) -> medulla_graph_core::graph::GraphView {
     let mut v = view_with_only(ids);
     for (src, dst) in edges {
         let src_idx = v.node_map[*src];

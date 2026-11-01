@@ -12,7 +12,7 @@ use medulla_result_types::{
     freshness::VOLATILITY_CLASS_KEY,
 };
 
-use crate::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_query_cache::dep_scope::Dim;
 
 /// A byte string every volatility-annotated blob contains (both key spellings end with it), so a

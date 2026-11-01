@@ -297,7 +297,7 @@ decide = ["medulla-h-ingest/decide", "medulla-h-graph/decide", "medulla-raft/dec
 # SemanticStore compression backend alongside the in-tree native HNSW index. Pure-Rust,
 # CPU integer-table serving (no GPU/native-ML/faiss in the tree). It is included in
 # the one main build; a persisted index reopens WITHOUT rebuilding from raw vectors.
-ann = ["medulla-core/ann", "medulla-semantic-index/ann", "dep:medulla-ann"]
+ann = ["medulla-core/ann", "medulla-graph-core/ann", "medulla-semantic-index/ann", "dep:medulla-ann"]
 # Persist the ANN codes into the redb durable tier too (needs `redb`).
 ann-redb = ["medulla-server-api/ann-redb", "ann", "redb", "medulla-core/ann-redb"]
 # CONCEPT:MEDULLA-P0-2 -- `dep:medulla-capabilities` folded in here (not a standalone feature):
@@ -721,7 +721,7 @@ cdc-kafka = ["medulla-server-api/cdc-kafka", "streaming", "dep:medulla-stream", 
 # `GraphView::projection_scope` — a field that only exists under `medulla-core/result-cache` — and is
 # therefore compiled in ONLY when `medulla-query` is already enabled (`cypher`/`query`), mirroring the
 # `numeric`/`wasm-udf` weak-dep precedents below.
-result-cache = ["medulla-h-ingest/result-cache", "medulla-persistence/result-cache", "medulla-server-api/result-cache", "medulla-kernel/result-cache", "medulla-core/result-cache", "medulla-query-cache/result-cache", "medulla-query?/result-cache"]
+result-cache = ["medulla-h-ingest/result-cache", "medulla-persistence/result-cache", "medulla-server-api/result-cache", "medulla-kernel/result-cache", "medulla-core/result-cache", "medulla-graph-core/result-cache", "medulla-query-cache/result-cache", "medulla-query?/result-cache"]
 # Plan-backed materialized views (CONCEPT:MEDULLA-KG.storage.plan-backed-matview): a NAMED,
 # DURABLE `wire::Plan` over one graph whose RESULT rides the version-keyed, RLS-aware
 # result cache. Defining it executes the plan once (via the medulla-plan runtime) and caches
@@ -746,7 +746,7 @@ matview = ["medulla-raft/matview", "medulla-persistence/matview", "medulla-serve
 # The trait + default are pure Rust and included in the one main build. An S3-backed
 # implementation lives behind the separate `cold-tier-s3` source feature so the
 # product bundles link no object-store SDK.
-cold-tier = ["medulla-persistence/cold-tier", "medulla-core/cold-tier"]
+cold-tier = ["medulla-persistence/cold-tier", "medulla-core/cold-tier", "medulla-graph-core/cold-tier"]
 # S3/object-store ColdTier impl — reuses the blob `ChunkStore` S3 seam. It is absent
 # from the main, `cluster`, and `full-extras` bundles; only an explicit source feature
 # selection links the object_store SDK.
@@ -919,7 +919,7 @@ mysql-wire = ["dep:sha1", "query", "server"]
 # + `GraphCore::broker_enqueue`) + `medulla-types/broker` (the broker `Method` variants).
 # PURE-RUST — NO new dependency (only serde/serde_json/rmp already linked) — and
 # included in the one main build.
-broker = ["medulla-h-graph/broker", "medulla-server-api/broker", "medulla-kernel/broker", "medulla-core/broker", "medulla-types/broker", "medulla-protocol-types/broker"]
+broker = ["medulla-h-graph/broker", "medulla-server-api/broker", "medulla-kernel/broker", "medulla-core/broker", "medulla-graph-core/broker", "medulla-types/broker", "medulla-protocol-types/broker"]
 # AMQP 0.9.1 wire listener (CONCEPT:MEDULLA-275): a HAND-ROLLED AMQP 0.9.1 server with no
 # third-party AMQP crate that maps connection/channel/exchange/queue/basic.*
 # frames onto the `broker` primitives via the engine dispatch. Needs `broker` + `server`
@@ -1241,7 +1241,7 @@ compute = ["finance", "ast", "ast-extended", "datascience", "mining", "graphlear
 # capability (verified-identity envelope claims, not just HMAC channel integrity).
 # Security is mandatory in the one main `full` build and remains present in both
 # source-built layers.
-security = ["medulla-h-ingest/security", "medulla-h-graph/security", "medulla-raft/security", "medulla-persistence/security", "medulla-server-api/security", "medulla-store/security", "medulla-kernel/security", "redb", "oidc", "dep:chacha20poly1305", "dep:argon2", "dep:sha1", "medulla-types/security", "medulla-core/security", "medulla-protocol-types/security"]
+security = ["medulla-h-ingest/security", "medulla-h-graph/security", "medulla-raft/security", "medulla-persistence/security", "medulla-server-api/security", "medulla-store/security", "medulla-kernel/security", "redb", "oidc", "dep:chacha20poly1305", "dep:argon2", "dep:sha1", "medulla-types/security", "medulla-core/security", "medulla-graph-core/security", "medulla-protocol-types/security"]
 # RLS marking-predicate export (CA-16), off by default. This is one authenticated
 # HTTP implementation (`/policy/export`), not a duplicate unbound MessagePack method.
 # Implies `security` for the shared verified-identity authority.
@@ -1860,6 +1860,7 @@ medulla-h-graph = { path = "crates/medulla-h-graph" }
 medulla-h-ingest = { path = "crates/medulla-h-ingest" }
 medulla-semantic-index = { path = "crates/medulla-semantic-index" }
 medulla-query-cache = { path = "crates/medulla-query-cache" }
+medulla-graph-core = { path = "crates/medulla-graph-core" }
 
 [dev-dependencies]
 medulla-h-ingest = { path = "crates/medulla-h-ingest", features = ["test-support"] }

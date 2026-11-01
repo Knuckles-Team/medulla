@@ -51,9 +51,11 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
-use medulla_core::index::{
-    IndexBlock, ManagedIndexFamily, ManagedIndexState, ManagedIndexStatus, ManagedIndexTarget,
-};
+use medulla_graph_core::index::IndexBlock;
+use medulla_graph_core::index::ManagedIndexFamily;
+use medulla_graph_core::index::ManagedIndexState;
+use medulla_graph_core::index::ManagedIndexStatus;
+use medulla_graph_core::index::ManagedIndexTarget;
 
 use crate::sql::{AnnIndexPlan, AnnMethod, VectorMetric};
 use generation::AnnGeneration;

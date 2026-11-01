@@ -107,7 +107,7 @@ pub struct CrossModalBatchRows<'a> {
 /// Authenticated graph material supplied by a complex MutationBatch. Callers may
 /// provide a complete snapshot or persist only the affected rows.
 pub(crate) enum AuthoritativeGraphState {
-    Snapshot(Box<medulla_core::graph::GraphSnapshot>),
+    Snapshot(Box<medulla_graph_core::graph::GraphSnapshot>),
     RowDelta(medulla_kernel::graph_delta::GraphRowDelta),
 }
 

@@ -21,10 +21,10 @@ use medulla_rdf::guard::{GuardRejection, WriteGuard};
 use medulla_rdf::oxrdf::{Graph, Triple};
 use medulla_shacl::policy::{IcvPolicy, IcvPolicyRegistry};
 
-use medulla_core::graph::GraphCore;
-use medulla_core::graph::GraphSchemaSource;
-use medulla_core::graph::SchemaSourceOrigin;
-use medulla_core::graph::OPERATOR_SOURCE_ID;
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphSchemaSource;
+use medulla_graph_core::graph::SchemaSourceOrigin;
+use medulla_graph_core::graph::OPERATOR_SOURCE_ID;
 
 /// Stage a current enforcing policy on the request graph. The optional wire
 /// target is an assertion, not an alternate route: cross-graph configuration

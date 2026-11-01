@@ -5,7 +5,7 @@
 
 use std::collections::HashSet;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_semantic_index::semantic::SemanticStore;
 use serde_json::json;
 

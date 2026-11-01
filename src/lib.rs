@@ -23,7 +23,12 @@
 // isolation, semantic search) lives in `medulla-core`. Re-export both under the
 // historical `crate::` paths so every module's `crate::protocol::` /
 // `crate::graph::` / `crate::registry::` reference resolves unchanged.
-pub use medulla_core::{compute, decay, graph, index, isolation, registry};
+pub use medulla_core::compute;
+pub use medulla_core::decay;
+pub use medulla_core::isolation;
+pub use medulla_core::registry;
+pub use medulla_graph_core::graph;
+pub use medulla_graph_core::index;
 // CONCEPT:MEDULLA-KG.compute.message-broker-exchanges — message-broker primitives, re-exported under `crate::broker`.
 #[cfg(feature = "broker")]
 pub use medulla_core::broker;
@@ -43,11 +48,6 @@ pub use medulla_compute::finance;
 pub use medulla_compute::reasoning;
 pub use medulla_compute::{algorithms, ast, parser, screen};
 
-
-
-
-
-
 // CONCEPT:INT-P2-2 / ADR-6 (W2.3) -- the agent-instance lifecycle statechart: an agent
 // instance's own `dormant ⇄ active` (+ `terminated`) lifecycle as ONE reusable
 // `medulla_statechart::StatechartDef`, the canonical "statechart template" the agents-as-data
@@ -59,7 +59,6 @@ pub use medulla_compute::{algorithms, ast, parser, screen};
 // derivation.
 #[cfg(feature = "statechart")]
 pub mod agent_lifecycle_statechart;
-
 
 // In-process embedded library API (CONCEPT:MEDULLA-KG.backend.engine-modes) — SQLite/DuckDB-style. Drives
 // the SAME GraphCore + redb durable rows the socket dispatch does, with NO Tokio

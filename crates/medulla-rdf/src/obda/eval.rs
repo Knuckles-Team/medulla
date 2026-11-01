@@ -27,8 +27,8 @@ pub(super) fn run_materialized_virtual(
 }
 
 /// Build a transient [`GraphView`] from materialized triples (nothing persisted).
-fn build_view(triples: Vec<Triple>) -> Result<medulla_core::graph::GraphView, String> {
-    let core = medulla_core::graph::GraphCore::new();
+fn build_view(triples: Vec<Triple>) -> Result<medulla_graph_core::graph::GraphView, String> {
+    let core = medulla_graph_core::graph::GraphCore::new();
     let mut iris = crate::mapping::IriStore::default();
     // RDF graphs are sets of triples. The LPG lowering layer retains repeated
     // literal property cells, so collapse identical foreign rows here before

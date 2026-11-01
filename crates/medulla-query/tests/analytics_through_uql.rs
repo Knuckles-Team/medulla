@@ -15,8 +15,11 @@
 //! `numeric`.
 #![cfg(feature = "numeric")]
 
-use medulla_core::graph::{GraphCore, GraphView};
-use medulla_query::{exec_sql, exec_sql_typed_with_tables, QueryResult, TableStore, TypedQueryResult};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
+use medulla_query::{
+    exec_sql, exec_sql_typed_with_tables, QueryResult, TableStore, TypedQueryResult,
+};
 use serde_json::{json, Value};
 
 /// A 6-node graph carrying, per node:

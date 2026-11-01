@@ -1,6 +1,8 @@
 //! Native parser contract for the shared data-platform vocabulary.
 
-use medulla_core::graph::{current_core_set_digest, GraphSchemaSources, SchemaSourceOrigin};
+use medulla_graph_core::graph::current_core_set_digest;
+use medulla_graph_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::SchemaSourceOrigin;
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::{NamedNode, NamedOrBlankNode, Term, Triple};
 use medulla_shacl::validate_turtle;
@@ -826,9 +828,9 @@ fn assert_via_operations(triples: &[Triple], operations: &[&str]) {
             triples.iter().any(|triple| {
                 triple.predicate == via_operation
                     && triple.object
-                        == medulla_rdf::oxrdf::Term::Literal(medulla_rdf::oxrdf::Literal::new_simple_literal(
-                            *operation,
-                        ))
+                        == medulla_rdf::oxrdf::Term::Literal(
+                            medulla_rdf::oxrdf::Literal::new_simple_literal(*operation),
+                        )
             }),
             "a mapping via {operation} must be present in the fixture"
         );

@@ -3,7 +3,7 @@
 //! and the finance entries (`medulla_compute::finance::signals`). Only compiles under `numeric`.
 #![cfg(feature = "numeric")]
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_query::{exec_sql, CancellationToken};
 use medulla_tsdb::derive::Program;
 use medulla_types::series_expr::{SeriesExpr, SeriesFunc};

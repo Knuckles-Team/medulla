@@ -109,7 +109,8 @@ fn contradictory_parent_mutations_are_detected() {
 #[cfg(feature = "sparql")]
 mod run_trace {
     use super::*;
-    use medulla_core::graph::{GraphCore, GraphSchemaSources};
+    use medulla_graph_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphSchemaSources;
     use medulla_rdf::mapping::{load_triples, IriStore};
     use medulla_rdf::sparql::{execute, Dataset, Projection, QueryOutcome};
 
@@ -264,7 +265,8 @@ mod vocabulary {
     use super::*;
     use medulla_agent_types::agent_guardrail::entailed_guardrails;
     use medulla_agent_types::agent_guardrail::GuardrailRule;
-    use medulla_core::graph::{GraphCore, GraphView};
+    use medulla_graph_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphView;
     use medulla_rdf::mapping::{load_triples, IriStore};
     use medulla_rdf::owl::saturate_object_properties;
     use medulla_rdf::sparql::{execute, Dataset, Projection, QueryOutcome};
@@ -521,7 +523,7 @@ mod vocabulary {
         assert!(swarm.contains(&"<http://knuckles.team/kg/orchestration>".to_string()));
         // The import closure has no cycle: orchestration imports nothing back.
         assert!(imports(ORCHESTRATION).is_empty());
-        medulla_core::graph::GraphSchemaSources::default()
+        medulla_graph_core::graph::GraphSchemaSources::default()
             .validate()
             .unwrap();
         consistent_with(FIXTURE);

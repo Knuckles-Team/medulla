@@ -252,12 +252,12 @@ mod graph_schema_restart_tests {
         let before_sources = core.schema_sources();
         let before_version = core.version();
 
-        let mut sources = medulla_core::graph::GraphSchemaSources::default();
+        let mut sources = medulla_graph_core::graph::GraphSchemaSources::default();
         sources
             .attach_dynamic(
                 "admin:old-release".to_string(),
-                medulla_core::graph::GraphSchemaSource::new(
-                    medulla_core::graph::SchemaSourceOrigin::Admin {
+                medulla_graph_core::graph::GraphSchemaSource::new(
+                    medulla_graph_core::graph::SchemaSourceOrigin::Admin {
                         name: "old-release".to_string(),
                     },
                     None,

@@ -384,7 +384,9 @@ mod tests {
     fn open_test_path_store(
         dir: &std::path::Path,
     ) -> Result<RedbPathIndexStore, redb_store::PathPersistError> {
-        use crate::test_scope_grant::{TestScopeVerifier, TEST_PRINCIPAL, TEST_PROOF};
+        use crate::test_scope_grant::TestScopeVerifier;
+        use crate::test_scope_grant::TEST_PRINCIPAL;
+        use crate::test_scope_grant::TEST_PROOF;
         RedbPathIndexStore::open(
             dir,
             &TestScopeVerifier {

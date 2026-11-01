@@ -368,7 +368,7 @@ where
 async fn resolve_core(
     state: &Arc<RwLock<ServerState>>,
     graph: &str,
-) -> Option<std::sync::Arc<medulla_core::graph::GraphCore>> {
+) -> Option<std::sync::Arc<medulla_graph_core::graph::GraphCore>> {
     let s = state.read().await;
     s.registry.get(graph).map(|e| e.core.clone())
 }

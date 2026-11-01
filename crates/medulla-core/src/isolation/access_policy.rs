@@ -195,7 +195,12 @@ impl IsolationLayer {
     }
 
     #[cfg(feature = "security")]
-    pub fn can_see_node(&self, agent_id: &str, view: &crate::graph::GraphView, id: &str) -> bool {
+    pub fn can_see_node(
+        &self,
+        agent_id: &str,
+        view: &medulla_graph_core::graph::GraphView,
+        id: &str,
+    ) -> bool {
         let mut visibility = view
             .visibility_index
             .get(id)
@@ -211,7 +216,7 @@ impl IsolationLayer {
     }
 
     #[cfg(feature = "security")]
-    pub fn filter_view(&self, agent_id: &str, view: &mut crate::graph::GraphView) {
+    pub fn filter_view(&self, agent_id: &str, view: &mut medulla_graph_core::graph::GraphView) {
         let hidden: HashSet<String> = view
             .node_map
             .keys()

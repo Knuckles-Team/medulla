@@ -3745,7 +3745,8 @@ mod concurrency_tests {
     // every write lands, and topology membership always agrees with the property
     // maps (each mutation is atomic under the topology write guard).
     use super::*;
-    use crate::test_threads::{BoundedThreads, StartGate};
+    use crate::test_threads::BoundedThreads;
+    use crate::test_threads::StartGate;
     use std::sync::Arc;
 
     fn pbytes(i: usize) -> Vec<u8> {

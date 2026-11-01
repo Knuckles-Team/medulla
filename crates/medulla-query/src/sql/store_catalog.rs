@@ -3,7 +3,7 @@
 //! pgvector ANN registrations and the managed-index status rows (EH-352). Read
 //! once per statement and handed to the context builder as one value.
 
-use medulla_core::index::ManagedIndexStatus;
+use medulla_graph_core::index::ManagedIndexStatus;
 
 use super::pgfamily::AnnIndexPlan;
 use crate::tables::{PropertyGraphCatalogRecord, StoredFunction, TableStore};

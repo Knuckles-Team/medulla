@@ -23,7 +23,7 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use oxrdf::{BlankNode, GraphName, Literal, NamedNode, NamedOrBlankNode, Quad, Term, Triple};
 use oxttl::{
     NQuadsParser, NQuadsSerializer, NTriplesParser, NTriplesSerializer, TriGParser, TriGSerializer,
@@ -200,8 +200,8 @@ mod parsing;
 mod serialization;
 
 pub use canonical::{quad_set_key, triple_set_key};
-pub use medulla_types::rdf_report::LoadReport;
 pub use lowering::{load_triples, lower_triples, register_named_graph, LoweredTripleGraph};
+pub use medulla_types::rdf_report::LoadReport;
 #[cfg(feature = "json-ld")]
 pub use parsing::parse_jsonld;
 pub use parsing::{

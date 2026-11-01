@@ -340,7 +340,9 @@ async fn handle_community_detect_ephemeral(
 ) -> Response {
     let quality = to_quality_function(quality);
     match compute_off_lock(req_id, move || {
-        medulla_compute::algorithms::community_detection_weighted(node_ids, edges, resolution, quality)
+        medulla_compute::algorithms::community_detection_weighted(
+            node_ids, edges, resolution, quality,
+        )
     })
     .await
     {
@@ -369,7 +371,9 @@ pub(super) async fn try_handle_graph_algorithms(
             let g = core.topology_snapshot();
             Response::ok(
                 req_id,
-                ResultPayload::of::<results::FindCycle>(medulla_compute::algorithms::find_cycle(&g)),
+                ResultPayload::of::<results::FindCycle>(medulla_compute::algorithms::find_cycle(
+                    &g,
+                )),
             )
         }
         Method::GetShortestPath {
@@ -445,9 +449,9 @@ pub(super) async fn try_handle_centrality_algorithms(
             let g = core.topology_snapshot();
             Response::ok(
                 req_id,
-                ResultPayload::of::<results::GetBlastRadius>(medulla_compute::algorithms::get_blast_radius(
-                    &g, &node_id, max_depth,
-                )),
+                ResultPayload::of::<results::GetBlastRadius>(
+                    medulla_compute::algorithms::get_blast_radius(&g, &node_id, max_depth),
+                ),
             )
         }
         Method::DegreeCentrality { node_id } => handle_degree_centrality(req_id, core, &node_id),
@@ -497,7 +501,9 @@ pub(super) async fn try_handle_community_algorithms(
             let g = core.topology_snapshot();
             Response::ok(
                 req_id,
-                ResultPayload::of::<results::GraphColoring>(medulla_compute::algorithms::graph_coloring(&g)),
+                ResultPayload::of::<results::GraphColoring>(
+                    medulla_compute::algorithms::graph_coloring(&g),
+                ),
             )
         }
         Method::ComputeSimilarityEdges { threshold } => {

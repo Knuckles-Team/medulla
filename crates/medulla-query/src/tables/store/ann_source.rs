@@ -5,7 +5,8 @@
 //! all observe the same snapshot. Nothing here writes: building and serving an
 //! ANN generation are reads of the source of record, never a second copy of it.
 
-use medulla_core::index::{IndexBlock, IndexBlockReason};
+use medulla_graph_core::index::IndexBlock;
+use medulla_graph_core::index::IndexBlockReason;
 use medulla_result_types::row_predicate::RowPredicate;
 
 use super::ann_durable::{changed_since, ChangedRows, DirtyReadTable};

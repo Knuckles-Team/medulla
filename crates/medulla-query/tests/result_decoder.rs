@@ -11,7 +11,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use medulla_query::exec_sql;
 use serde_json::json;
 
@@ -36,8 +36,12 @@ fn sample_view() -> GraphView {
 }
 
 fn run(sql: &str) -> medulla_query::QueryResult {
-    exec_sql(&sample_view(), sql, &medulla_query::CancellationToken::new())
-        .expect("sql executed and decoded")
+    exec_sql(
+        &sample_view(),
+        sql,
+        &medulla_query::CancellationToken::new(),
+    )
+    .expect("sql executed and decoded")
 }
 
 fn rows(r: &medulla_query::QueryResult) -> Vec<Vec<serde_json::Value>> {

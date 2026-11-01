@@ -47,7 +47,7 @@ async fn every_graph_of_a_sweep_is_leased_from_the_moment_it_is_claimed() {
             .map(|graph| {
                 (
                     graph.clone(),
-                    Arc::new(medulla_core::graph::GraphCore::new()),
+                    Arc::new(medulla_graph_core::graph::GraphCore::new()),
                 )
             })
             .collect(),

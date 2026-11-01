@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use medulla_alignment::{subject_ref, EvidenceResolver, ResolvedArtifact, UnresolvedReason};
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use medulla_modality::{EvidenceAddress, EvidenceLocus};
 
 use super::store::ChunkStore;
@@ -110,7 +110,7 @@ mod tests {
     use crate::blob::store::RedbChunkStore;
     use crate::blob::stream::stream_blob_put;
     use medulla_alignment::{AlignmentGraph, AlignmentNode, AlignmentRelation};
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use medulla_modality::{ArtifactId, DerivationId, EvidenceLocusId, OpaqueRef, ResourceId};
     use serde_json::json;
 

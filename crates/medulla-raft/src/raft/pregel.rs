@@ -116,7 +116,7 @@ impl PartitionBuilder {
         }
     }
 
-    fn add_view(&mut self, shard_idx: usize, view: &medulla_core::graph::GraphView) {
+    fn add_view(&mut self, shard_idx: usize, view: &medulla_graph_core::graph::GraphView) {
         for id in view.node_map.keys() {
             if let std::collections::hash_map::Entry::Vacant(entry) = self.owner.entry(id.clone()) {
                 entry.insert(shard_idx);
@@ -205,14 +205,14 @@ async fn gather_shards(
     // per-CORE cache, so distinct shards never collide) instead of re-decoding
     // every node of every shard on every job.
     #[cfg(feature = "security")]
-    let mut snaps: Vec<std::sync::Arc<medulla_core::graph::GraphView>> =
+    let mut snaps: Vec<std::sync::Arc<medulla_graph_core::graph::GraphView>> =
         Vec::with_capacity(cores.len());
     #[cfg(feature = "security")]
     for core in &cores {
         snaps.push(read_authority.cached_filter_view(core));
     }
     #[cfg(not(feature = "security"))]
-    let mut snaps: Vec<medulla_core::graph::GraphView> = Vec::with_capacity(cores.len());
+    let mut snaps: Vec<medulla_graph_core::graph::GraphView> = Vec::with_capacity(cores.len());
     #[cfg(not(feature = "security"))]
     for core in cores {
         let mut view = core.analysis_snapshot();

@@ -11,8 +11,11 @@
 
 #![cfg(feature = "sql")]
 
-use medulla_core::graph::{GraphCore, GraphView};
-use medulla_query::{classify, exec_sql_typed_with_tables, StatementKind, TableStore, TypedQueryResult};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
+use medulla_query::{
+    classify, exec_sql_typed_with_tables, StatementKind, TableStore, TypedQueryResult,
+};
 use serde_json::json;
 
 /// Drive ONE statement through the same classify → route path the server uses. A

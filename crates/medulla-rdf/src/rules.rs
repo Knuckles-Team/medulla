@@ -233,7 +233,7 @@ pub fn run_rule_reasoning(req: &RuleReasonRequest) -> Result<RuleReasonResponse,
 /// explicit ontology document is supplied (CONCEPT:MEDULLA-KG.ontology.medulla-runtime-swrl-datalog).
 #[cfg(feature = "rdf")]
 pub fn run_rule_reasoning_on_view(
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     req: &RuleReasonRequest,
 ) -> Result<RuleReasonResponse, String> {
     let mut triples = crate::owl::tbox_triples_from_view(view);

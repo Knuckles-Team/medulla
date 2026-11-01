@@ -6,7 +6,8 @@
 //! executor, mirroring `probabilistic_tests.rs`'s shape (a hand-built `GraphView` +
 //! `PlanCtx`, `plan.execute(&ctx)`, assert on the resulting `RowSet` ids/order).
 
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::TimeAxis;
 use serde_json::json;

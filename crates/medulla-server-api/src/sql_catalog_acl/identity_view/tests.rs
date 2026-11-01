@@ -42,7 +42,7 @@ fn store() -> IdentityStore {
 fn no_graph() -> super::super::RequestGraph {
     super::super::RequestGraph {
         name: "identity-view-test-graph".to_string(),
-        core: std::sync::Arc::new(medulla_core::graph::GraphCore::new()),
+        core: std::sync::Arc::new(medulla_graph_core::graph::GraphCore::new()),
     }
 }
 
@@ -57,7 +57,7 @@ fn query_as(
 ) -> Result<Vec<Vec<String>>, String> {
     let projection =
         super::super::authorized_read_store_for_query(authority, dir, sql, None, &no_graph())?;
-    let view = medulla_core::graph::GraphView::default();
+    let view = medulla_graph_core::graph::GraphView::default();
     let typed = medulla_query::exec_sql_typed_with_tables(&view, projection.store(), sql)?;
     Ok(typed
         .rows

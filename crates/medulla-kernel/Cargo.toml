@@ -42,6 +42,7 @@ medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
+medulla-graph-core = { path = "../medulla-graph-core" }
 
 [dev-dependencies]
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
@@ -59,9 +60,9 @@ metrics = ["dep:prometheus", "medulla-types/metrics", "medulla-protocol-types/me
 server = ["dep:tokio", "dep:tracing-subscriber", "dep:medulla-capabilities"]
 otel = ["server", "dep:opentelemetry", "dep:opentelemetry_sdk", "dep:opentelemetry-otlp", "dep:tracing-opentelemetry"]
 redb = ["dep:medulla-storage", ]
-security = ["redb", "dep:chacha20poly1305", "medulla-types/security", "medulla-protocol-types/security", "medulla-core/security"]
+security = ["redb", "dep:chacha20poly1305", "medulla-types/security", "medulla-protocol-types/security", "medulla-core/security", "medulla-graph-core/security"]
 raft = ["server", "redb", "dep:chacha20poly1305"]
-broker = ["medulla-core/broker", "medulla-types/broker", "medulla-protocol-types/broker"]
+broker = ["medulla-core/broker", "medulla-graph-core/broker", "medulla-types/broker", "medulla-protocol-types/broker"]
 query = ["dep:medulla-query", "medulla-query/sql", "redb", "medulla-types/query", "medulla-protocol-types/query"]
 epistemic = ["query", "dep:medulla-epistemic", "medulla-types/epistemic", "medulla-protocol-types/epistemic"]
 epistemic-tms = ["epistemic", "medulla-epistemic/epistemic-tms"]

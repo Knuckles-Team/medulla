@@ -27,7 +27,7 @@
 //! handles these same DAG-forced families explicitly, then delegates everything
 //! else (its `_` arm) to `medulla_core::durable_apply::apply`.
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 
 /// True for the methods whose effect must survive a crash in the authoritative store.

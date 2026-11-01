@@ -110,7 +110,7 @@ pub use subscription::{poll as subscribe, poll_versioned as subscribe_versioned,
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use serde_json::{json, Value};
 
     fn pbytes(v: Value) -> Vec<u8> {
@@ -165,7 +165,7 @@ mod tests {
     /// a key Cypher is documented to ignore. `medulla-query/cypher`'s own fixtures already
     /// use `node_type` (see `exec.rs`'s `MATCH`/`MERGE` test fixtures) -- matching
     /// that here is what makes "the SAME shape" claim above actually true.
-    fn fixture() -> medulla_core::graph::GraphView {
+    fn fixture() -> medulla_graph_core::graph::GraphView {
         let core = GraphCore::new();
         core.add_node(
             "alice".into(),
@@ -477,7 +477,8 @@ mod tests {
     /// medulla-graphql re-resolve wiring the server carrier drives (minus the transport).
     #[test]
     fn live_query_re_resolves_on_change_event() {
-        use medulla_core::graph::{ChangeEvent, ChangeSink};
+        use medulla_graph_core::graph::ChangeEvent;
+        use medulla_graph_core::graph::ChangeSink;
         use std::sync::{Arc, Mutex as StdMutex};
 
         let core = Arc::new(core_fixture());

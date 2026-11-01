@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use medulla_compute::graph_algos::impact::{
     independent_cascade, noisy_or, CascadeSpec, ImpactGraph, Seed, MAX_HOPS,
 };
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use medulla_types::wire::{EdgeDir, Op, PropagateModel};
 use petgraph::stable_graph::NodeIndex;
 use serde_json::{Map, Value};

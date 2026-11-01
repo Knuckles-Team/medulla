@@ -10,7 +10,7 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
 use serde_json::{json, Value};
 
@@ -634,7 +634,7 @@ fn a_failed_build_is_visible_and_a_dropped_registration_is_forgotten() {
     assert_eq!(failed.state, ManagedIndexState::Blocked);
     assert_eq!(
         failed.block.map(|block| block.reason),
-        Some(medulla_core::index::IndexBlockReason::NotIndexable),
+        Some(medulla_graph_core::index::IndexBlockReason::NotIndexable),
         "a typed diagnostic"
     );
 

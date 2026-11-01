@@ -343,7 +343,11 @@ fn collect_datalog_inferences(
         range_rules,
         property_chains,
     );
-    medulla_compute::reasoning::bind_inference_schema_digests(core, &mut all_inferred, &schema_digests);
+    medulla_compute::reasoning::bind_inference_schema_digests(
+        core,
+        &mut all_inferred,
+        &schema_digests,
+    );
     Ok((schema_digests, all_inferred))
 }
 
@@ -566,7 +570,7 @@ fn apply_add_embedding(
     // completeness manifest must advance with the graph version that
     // commit_finalize publishes.
     core.maintain_indexes_at(
-        &medulla_core::index::ChangeSet::new(),
+        &medulla_graph_core::index::ChangeSet::new(),
         source_version.saturating_add(1),
         core.node_count(),
         core.edge_count(),
@@ -627,9 +631,9 @@ fn apply_batch_update(
 /// reads back as the identity pose, since translation/rotation default to identity
 /// and scale to unit). Keeps the `medulla-types` wire crate free of the medulla-core scene
 /// dependency — the Pose lives only handler-side.
-fn decode_pose(blob: &[u8]) -> Option<medulla_core::scene::Pose> {
+fn decode_pose(blob: &[u8]) -> Option<medulla_graph_core::scene::Pose> {
     let val = medulla_types::msgpack::decode_property_value(blob).ok()?;
-    medulla_core::scene::Pose::from_json(&val)
+    medulla_graph_core::scene::Pose::from_json(&val)
 }
 
 pub(super) async fn try_handle(

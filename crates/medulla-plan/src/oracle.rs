@@ -10,7 +10,7 @@
 
 use std::collections::HashSet;
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use medulla_semantic_index::semantic::SemanticStore;
 
 use crate::algebra::Pred;

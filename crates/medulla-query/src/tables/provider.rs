@@ -765,7 +765,7 @@ impl TableProvider for UserTableProvider {
 mod user_table_provider_tests {
     use super::*;
     use crate::tables::schema::{ArrayElemType, Column};
-    use medulla_core::graph::GraphView;
+    use medulla_graph_core::graph::GraphView;
     use serde_json::json;
 
     #[test]

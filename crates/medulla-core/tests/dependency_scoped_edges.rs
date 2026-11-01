@@ -14,8 +14,9 @@
 
 #![cfg(feature = "result-cache")]
 
-use medulla_core::graph::GraphCore;
-use medulla_core::index::{ChangeSet, NodeChange};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::index::ChangeSet;
+use medulla_graph_core::index::NodeChange;
 use medulla_query_cache::dep_scope::DepProbe;
 use medulla_query_cache::dep_scope::DepSet;
 use medulla_query_cache::dep_scope::Dim;

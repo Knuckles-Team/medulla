@@ -11,7 +11,13 @@ use crate::protocol::GraphType;
 use std::collections::HashMap;
 
 #[cfg(feature = "security")]
-use crate::rls::{row_visibility, RowVisibility, RLS_OWNER_ID_KEY, RLS_OWNER_KEY};
+use medulla_graph_core::rls::row_visibility;
+#[cfg(feature = "security")]
+use medulla_graph_core::rls::RowVisibility;
+#[cfg(feature = "security")]
+use medulla_graph_core::rls::RLS_OWNER_ID_KEY;
+#[cfg(feature = "security")]
+use medulla_graph_core::rls::RLS_OWNER_KEY;
 
 /// Access level for a graph operation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -261,7 +267,7 @@ mod tests {
             teams: vec![],
             roles: vec![],
         });
-        let core = crate::graph::GraphCore::new();
+        let core = medulla_graph_core::graph::GraphCore::new();
         core.add_node("<http://ex/Sensor>".to_string(), Vec::new());
         core.add_node("<http://ex/Device>".to_string(), Vec::new());
         core.mark_schema_ref("<http://ex/Sensor>");
@@ -409,7 +415,7 @@ mod tests {
     #[cfg(feature = "security")]
     mod rls {
         use super::*;
-        use crate::graph::GraphView;
+        use medulla_graph_core::graph::GraphView;
 
         /// Build a node property blob from a list of (key,value) string pairs.
         fn props(pairs: &[(&str, &str)]) -> std::sync::Arc<Vec<u8>> {

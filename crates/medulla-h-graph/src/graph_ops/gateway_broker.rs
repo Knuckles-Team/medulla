@@ -1,8 +1,8 @@
 use super::*;
 
-use medulla_server_api::api::ingest::graph::commit_gateway;
 #[cfg(feature = "broker")]
 use medulla_protocol_types::result_contract::messaging as results;
+use medulla_server_api::api::ingest::graph::commit_gateway;
 
 /// `DeclareExchange`: pure extract-method from `try_handle_gateway`'s closure,
 /// byte-identical behaviour, no signature change.
@@ -120,7 +120,8 @@ async fn try_handle_exchange(
             let (exchange, queue, routing_key) =
                 (exchange.clone(), queue.clone(), routing_key.clone());
             commit_gateway(ctx, plan, method, move |core| {
-                let existed = medulla_core::broker::unbind_queue(core, &exchange, &queue, &routing_key);
+                let existed =
+                    medulla_core::broker::unbind_queue(core, &exchange, &queue, &routing_key);
                 Ok(ResultPayload::scalar::<results::UnbindQueue>(existed))
             })
             .await
@@ -133,7 +134,8 @@ async fn try_handle_exchange(
             let (exchange, routing_key, payload) =
                 (exchange.clone(), routing_key.clone(), payload.clone());
             commit_gateway(ctx, plan, method, move |core| {
-                let delivered = medulla_core::broker::publish(core, &exchange, &routing_key, &payload);
+                let delivered =
+                    medulla_core::broker::publish(core, &exchange, &routing_key, &payload);
                 Ok(ResultPayload::scalar::<results::Publish>(delivered as u64))
             })
             .await
@@ -351,7 +353,8 @@ async fn try_handle_delivery(
             let (queue, node_id, requeue, now_ms) =
                 (queue.clone(), node_id.clone(), *requeue, *now_ms);
             commit_gateway(ctx, plan, method, move |core| {
-                let outcome = medulla_core::broker::broker_reject(core, &queue, &node_id, requeue, now_ms);
+                let outcome =
+                    medulla_core::broker::broker_reject(core, &queue, &node_id, requeue, now_ms);
                 Ok(ResultPayload::scalar::<results::BrokerReject>(outcome))
             })
             .await
@@ -433,8 +436,8 @@ async fn try_handle_publish_confirmations(
                 *now_ms,
             );
             commit_gateway(ctx, plan, method, move |core| {
-                let result =
-                    medulla_core::broker::publish_idempotent(medulla_core::broker::IdempotentPublishRequest {
+                let result = medulla_core::broker::publish_idempotent(
+                    medulla_core::broker::IdempotentPublishRequest {
                         core,
                         exchange: &exchange,
                         routing_key: &routing_key,
@@ -445,7 +448,8 @@ async fn try_handle_publish_confirmations(
                         delay_ms,
                         ttl_ms,
                         now_ms,
-                    });
+                    },
+                );
                 ResultPayload::of_ref::<results::PublishIdempotent>(&result)
             })
             .await
@@ -481,8 +485,13 @@ async fn try_handle_tag_confirmations(
             let (delivery_tag, consumer, requeue, now_ms) =
                 (*delivery_tag, consumer.clone(), *requeue, *now_ms);
             commit_gateway(ctx, plan, method, move |core| {
-                let outcome =
-                    medulla_core::broker::broker_nack_tag(core, delivery_tag, &consumer, requeue, now_ms);
+                let outcome = medulla_core::broker::broker_nack_tag(
+                    core,
+                    delivery_tag,
+                    &consumer,
+                    requeue,
+                    now_ms,
+                );
                 Ok(ResultPayload::scalar::<results::BrokerNackTag>(outcome))
             })
             .await

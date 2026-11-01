@@ -12,8 +12,7 @@ use hmac::{Hmac, Mac};
 use serde::{de::DeserializeOwned, Serialize};
 use sha2::Sha256;
 
-use medulla_core::graph::GraphCore;
-use medulla_protocol_types::protocol::ResultPayload;
+use medulla_graph_core::graph::GraphCore;
 use medulla_kernel::crypto::ValueCipher;
 use medulla_modality::{
     tck_report, ApplyDisposition, ApplyOutcome, ArtifactBundle, Classification,
@@ -21,6 +20,7 @@ use medulla_modality::{
     OccurrenceId, OpaqueRef, SegmentKind, ServedDelete, ServedIngest, ServedModalityRuntime,
     ServedNativeQuery, ServedPolicyScope, ServedQuery, ServedRecord,
 };
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_types::acl::RequestContextClaims;
 use medulla_types::{
     ServedModalityIngestItem, ServedModalityKind, ServedModalityOp, ServedNativePredicate,

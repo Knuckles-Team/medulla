@@ -9,7 +9,7 @@
 
 use std::collections::HashMap;
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 
 use crate::model::{classify_relationship, BiTemporalRecord, EdgeKind, TimeAxis};
 
@@ -33,7 +33,7 @@ pub struct BeliefGraph {
     /// the same default-deny rule `filter_view` applies. Behind `epistemic-redaction` so a plain
     /// build carries no extra dependency or per-node decode cost.
     #[cfg(feature = "epistemic-redaction")]
-    pub node_visibility: HashMap<String, medulla_core::rls::RowVisibility>,
+    pub node_visibility: HashMap<String, medulla_graph_core::rls::RowVisibility>,
     /// node id → its stored bitemporal window (EPI-P3-5, CONCEPT:MEDULLA-KG.epistemic.bitemporal-reasoning).
     /// Populated from the SAME `valid_from`/`valid_until`/`tx_from`/`tx_to` property
     /// keys `medulla-plan::exec::live_at` reads for `Op::AsOf` — a node absent from this map
@@ -124,7 +124,7 @@ impl BeliefGraph {
             .node_properties
             .iter()
             .map(|(id, blob)| {
-                let mut vis = medulla_core::rls::row_visibility(blob);
+                let mut vis = medulla_graph_core::rls::row_visibility(blob);
                 vis.schema = view.schema_node_ids.contains(id);
                 (id.clone(), vis)
             })
@@ -262,7 +262,7 @@ impl BeliefGraph {
     #[cfg(feature = "epistemic-redaction")]
     pub fn with_visibility<'a, V>(mut self, visibility: V) -> Self
     where
-        V: IntoIterator<Item = (&'a str, medulla_core::rls::RowVisibility)>,
+        V: IntoIterator<Item = (&'a str, medulla_graph_core::rls::RowVisibility)>,
     {
         for (id, vis) in visibility {
             self.node_visibility.insert(id.to_string(), vis);

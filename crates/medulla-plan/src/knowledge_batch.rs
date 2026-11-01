@@ -589,7 +589,7 @@ fn arrow_schema(score_names: &[String]) -> Schema {
 mod tests {
     use super::*;
     use crate::rowset::RowSet;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use serde_json::json;
 
     fn blob(v: serde_json::Value) -> Vec<u8> {

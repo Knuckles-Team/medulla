@@ -47,14 +47,14 @@ pub use program::{
 use crate::mutation_batch::compile::compile_methods;
 use crate::mutation_batch::compile::CompileBatch;
 #[cfg(test)]
-use medulla_core::graph::GraphCore;
-#[cfg(test)]
-use medulla_types::contract::Nonce;
-#[cfg(test)]
-use medulla_protocol_types::mutation_batch::MutationStateDescriptor;
+use medulla_graph_core::graph::GraphCore;
 use medulla_mutation_types::mutation_scope::MutationSurface;
 #[cfg(test)]
+use medulla_protocol_types::mutation_batch::MutationStateDescriptor;
+#[cfg(test)]
 use medulla_protocol_types::protocol::Method;
+#[cfg(test)]
+use medulla_types::contract::Nonce;
 #[cfg(test)]
 use sha2::{Digest, Sha256};
 

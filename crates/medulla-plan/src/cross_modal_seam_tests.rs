@@ -13,7 +13,9 @@
 //! / `tensor`), so the module compiles under any feature subset of `query`.
 
 #[cfg(any(feature = "owl", feature = "timeseries", feature = "tensor"))]
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+#[cfg(any(feature = "owl", feature = "timeseries", feature = "tensor"))]
+use medulla_graph_core::graph::GraphView;
 #[cfg(any(feature = "owl", feature = "timeseries", feature = "tensor"))]
 use medulla_semantic_index::semantic::SemanticStore;
 #[cfg(any(feature = "owl", feature = "timeseries", feature = "tensor"))]

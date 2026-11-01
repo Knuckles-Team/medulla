@@ -47,7 +47,7 @@
 //! `BeliefGraph`/`propagate_confidence`, exactly like the `SUPPORTS` edges above are
 //! deliberately IN that whitelist.
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use medulla_result_types::{epistemic_node::Claim, epistemic_node::Evidence};
 

@@ -238,7 +238,7 @@ pub(crate) fn resolve_mutation_authoritative_state(
                 }
                 let state = match descriptor.algorithm.as_str() {
                     "sha256" => AuthoritativeGraphState::Snapshot(Box::new(
-                        decode_durable::<medulla_core::graph::GraphSnapshot>(bytes).map_err(
+                        decode_durable::<medulla_graph_core::graph::GraphSnapshot>(bytes).map_err(
                             |_| {
                                 "authoritative graph state is invalid or exceeds resource limits"
                                     .to_string()
@@ -291,7 +291,7 @@ fn decode_authoritative_row_delta(
 // graph-local source without confusing "unchanged" with "core-only".
 pub(crate) fn resolve_schema_sources_update(
     staged_state: Option<&AuthoritativeGraphState>,
-) -> Option<std::sync::Arc<medulla_core::graph::GraphSchemaSources>> {
+) -> Option<std::sync::Arc<medulla_graph_core::graph::GraphSchemaSources>> {
     match staged_state {
         Some(AuthoritativeGraphState::Snapshot(snapshot)) => {
             Some(std::sync::Arc::clone(&snapshot.schema_sources))
@@ -583,7 +583,7 @@ pub(crate) fn validate_change_envelope_preconditions(
 pub(crate) fn apply_snapshot_state(
     write: &ShardWrite<'_>,
     graph_fname: &str,
-    snapshot: &medulla_core::graph::GraphSnapshot,
+    snapshot: &medulla_graph_core::graph::GraphSnapshot,
     batch: &MutationBatch,
     crypto: DurableCrypto<'_>,
     #[cfg(feature = "security")] staged_audit_tail: &mut AuditTailCache,
@@ -615,7 +615,7 @@ pub(crate) fn apply_snapshot_state(
 fn apply_snapshot_graph_rows(
     write: &ShardWrite<'_>,
     graph_fname: &str,
-    snapshot: &medulla_core::graph::GraphSnapshot,
+    snapshot: &medulla_graph_core::graph::GraphSnapshot,
     crypto: DurableCrypto<'_>,
 ) -> Result<(), String> {
     let mut nodes = write
@@ -701,7 +701,7 @@ fn insert_snapshot_ledger(
 fn apply_snapshot_semantic_row(
     write: &ShardWrite<'_>,
     graph_fname: &str,
-    snapshot: &medulla_core::graph::GraphSnapshot,
+    snapshot: &medulla_graph_core::graph::GraphSnapshot,
     crypto: DurableCrypto<'_>,
 ) -> Result<(), String> {
     let semantic_bytes =

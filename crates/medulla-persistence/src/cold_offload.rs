@@ -27,8 +27,8 @@ use std::time::{Duration, Instant};
 use parking_lot::Mutex;
 use tokio::sync::RwLock;
 
-use medulla_core::graph::GraphCore;
 use medulla_core::registry::GraphHandle;
+use medulla_graph_core::graph::GraphCore;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::state::ServerState;
 
@@ -666,7 +666,7 @@ mod tracker_tests {
 #[cfg(all(test, feature = "redb"))]
 mod unsafe_eviction_tests {
     use super::offload_graph_core;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use medulla_server_api::api::persistence::PersistenceBackend;
     use std::sync::Arc;
 
@@ -749,20 +749,20 @@ mod admission_tests {
     //! backend (CONCEPT:MEDULLA-KG.sharding.lazy-graph-catalog, DIST-P2-3) — the durable tier a lazily-opened
     //! graph rehydrates from, and the tier that makes eviction loss-free.
     use super::*;
-    #[cfg(feature = "security")]
-    use medulla_types::acl::AgentIdentity;
-    use medulla_types::acl::AgentRole;
+    use crate::read_through::BackendGraphMaterializer;
+    use crate::read_through::BackendReadThroughFactory;
+    use crate::redb_backend::RedbBackend;
     use medulla_core::isolation::IsolationLayer;
     use medulla_protocol_types::protocol::GraphType;
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;
     use medulla_server_api::api::persistence::PersistenceBackend;
-    use crate::read_through::BackendGraphMaterializer;
-    use crate::read_through::BackendReadThroughFactory;
-    use crate::redb_backend::RedbBackend;
     use medulla_server_api::auth::build_current_test_request;
     use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
     use medulla_server_api::state::ServerState;
+    #[cfg(feature = "security")]
+    use medulla_types::acl::AgentIdentity;
+    use medulla_types::acl::AgentRole;
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::sync::Arc;
     use tokio::sync::{RwLock, Semaphore};

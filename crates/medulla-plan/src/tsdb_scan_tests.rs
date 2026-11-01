@@ -16,7 +16,7 @@
 #[cfg(feature = "timeseries")]
 use crate::exec::{execute, PlanCtx};
 #[cfg(feature = "timeseries")]
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 #[cfg(feature = "timeseries")]
 use medulla_semantic_index::semantic::SemanticStore;
 #[cfg(feature = "timeseries")]
@@ -32,10 +32,10 @@ use medulla_types::wire::Plan;
 /// plain `CITES` edge to a distinct target node so a downstream `Traverse` has topology.
 #[cfg(feature = "owl")]
 fn reason_compose_fixture() -> (
-    medulla_core::graph::GraphView,
+    medulla_graph_core::graph::GraphView,
     medulla_semantic_index::semantic::SemanticStore,
 ) {
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 
@@ -318,7 +318,7 @@ fn tsdb_in_plan_fusion() {
 fn tsdb_in_txn_ryow_staged_overlay() {
     use crate::exec::{execute, PlanCtx};
     use crate::StagedSeries;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use medulla_semantic_index::semantic::SemanticStore;
     use medulla_types::wire::Plan;
 
@@ -505,7 +505,7 @@ fn window_agg_selects_the_aggregate() {
 #[test]
 fn window_over_graph_nodes_is_unchanged() {
     use crate::exec::{execute, PlanCtx};
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use medulla_semantic_index::semantic::SemanticStore;
     use medulla_types::wire::{Op, Plan};
     use serde_json::json;
@@ -548,7 +548,7 @@ fn window_over_graph_nodes_is_unchanged() {
 #[test]
 fn tsdb_scan_without_store_is_empty() {
     use crate::exec::{execute, PlanCtx};
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use medulla_semantic_index::semantic::SemanticStore;
     use medulla_types::wire::Plan;
 
@@ -666,7 +666,7 @@ fn series_fixture(
 ) -> (
     std::path::PathBuf,
     medulla_tsdb::store::SeriesStore,
-    medulla_core::graph::GraphCore,
+    medulla_graph_core::graph::GraphCore,
     medulla_semantic_index::semantic::SemanticStore,
 ) {
     let path = temp_store_path(tag);
@@ -674,14 +674,14 @@ fn series_fixture(
     (
         path,
         store,
-        medulla_core::graph::GraphCore::new(),
+        medulla_graph_core::graph::GraphCore::new(),
         medulla_semantic_index::semantic::SemanticStore::new(),
     )
 }
 
 #[cfg(feature = "timeseries")]
 fn scoped_context<'a>(
-    view: &'a medulla_core::graph::GraphView,
+    view: &'a medulla_graph_core::graph::GraphView,
     semantic: &'a medulla_semantic_index::semantic::SemanticStore,
     store: &'a medulla_tsdb::store::SeriesStore,
 ) -> crate::exec::PlanCtx<'a> {
