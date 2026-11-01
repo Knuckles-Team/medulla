@@ -202,7 +202,7 @@ medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-result-types = { path = "../medulla-result-types" }
 
 [dev-dependencies]
-medulla-result-types = { path = "../medulla-result-types", features = ["test-support"] }
+medulla-result-types = { path = "../medulla-result-types" }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 # The spike's OUTER reactor mimics the server's multi-thread runtime; the inner
 # DataFusion driver uses only the current-thread runtime from the `sql` dep.
