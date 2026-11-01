@@ -855,7 +855,7 @@ wasm-udf = ["medulla-server/wasm-udf", "medulla-wire/wasm-udf", "medulla-h-admin
 # partition hook it needs in the raft network is
 # `#[cfg(any(test, feature = "harness"))]`, so a non-harness build has byte-for-byte the
 # production network path.
-harness = ["medulla-server/harness", "medulla-raft/harness", "raft"]
+harness = ["medulla-server/harness", "medulla-raft/harness", "medulla-raft/test-support", "raft"]
 # Postgres wire-protocol shim (CONCEPT:KG-2.189). A facade-only listener that lets
 # psql / BI tools / ORMs run SQL against a graph, reusing the medulla-query DataFusion
 # path (so it IMPLIES `query`) over the Tokio server (`server`) via the wire-neutral
@@ -1873,7 +1873,7 @@ medulla-h-txn = { path = "crates/medulla-h-txn", features = ["test-support"] }
 medulla-h-query = { path = "crates/medulla-h-query", features = ["test-support"] }
 medulla-h-ingest = { path = "crates/medulla-h-ingest", features = ["test-support"] }
 medulla-h-decide = { path = "crates/medulla-h-decide", features = ["test-support"] }
-medulla-raft = { path = "crates/medulla-raft", features = ["test-support"] }
+medulla-raft = { path = "crates/medulla-raft" }
 medulla-persistence = { path = "crates/medulla-persistence", features = ["test-support"] }
 medulla-server-api = { path = "crates/medulla-server-api", features = ["test-support"] }
 medulla-store = { path = "crates/medulla-store", features = ["test-support"] }
