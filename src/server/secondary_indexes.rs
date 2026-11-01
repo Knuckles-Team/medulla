@@ -264,7 +264,7 @@ impl ServedTextIndex {
 }
 
 #[cfg(feature = "text")]
-impl medulla_plan::TextSource for ServedTextIndex {
+impl medulla_exec::exec::TextSource for ServedTextIndex {
     fn search_within(
         &self,
         query: &str,
@@ -797,7 +797,7 @@ impl ServedSpatialIndex {
 }
 
 #[cfg(feature = "geo")]
-impl medulla_plan::SpatialSource for ServedSpatialIndex {
+impl medulla_exec::exec::SpatialSource for ServedSpatialIndex {
     fn query_bbox(&self, layer: &str, bbox: [f64; 4]) -> Vec<String> {
         read_current_index(
             &self.core,

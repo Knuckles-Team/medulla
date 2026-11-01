@@ -306,7 +306,7 @@ where
 #[cfg(feature = "query")]
 pub(crate) async fn handle_unified_query(
     ctx: &QueryHandlerCtx<'_>,
-    plan: medulla_plan::Plan,
+    plan: medulla_exec::algebra::Plan,
     foreign_execution: Option<medulla_catalog_types::foreign_read::ForeignReadExecutionRef>,
     foreign_executions: medulla_types::contract::BoundedVec<
         medulla_catalog_types::foreign_read::ForeignReadExecutionRef,

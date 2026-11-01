@@ -10,7 +10,7 @@ use medulla_server_api::api::query_txn::query_support::TsdbLegBind;
 use medulla_core::compute::semantic::SemanticStore;
 use medulla_core::graph::GraphCore;
 use medulla_plan::federation::ForeignSourceRegistry;
-use medulla_plan::Op;
+use medulla_exec::algebra::Op;
 use medulla_types::wire::{ForeignSourceSpec, HttpFieldMap};
 
 fn blob(v: serde_json::Value) -> Vec<u8> {
@@ -32,7 +32,7 @@ fn run(
         ..ServedIndexes::default()
     };
     run_unified_with(
-        medulla_plan::Plan::new(ops),
+        medulla_exec::algebra::Plan::new(ops),
         &view,
         &semantic,
         served,

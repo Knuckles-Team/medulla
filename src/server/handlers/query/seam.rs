@@ -23,7 +23,7 @@ impl medulla_server_api::api::query_txn::QueryApi for QuerySeam {
     #[cfg(feature = "query")]
     fn run_unified_staged_rows(
         &self,
-        plan: medulla_plan::Plan,
+        plan: medulla_exec::algebra::Plan,
         view: &crate::graph::GraphView,
         core: &Arc<crate::graph::GraphCore>,
         staged: &[(String, Vec<f32>)],

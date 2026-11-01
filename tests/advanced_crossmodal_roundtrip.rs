@@ -440,7 +440,7 @@ async fn five_modality_in_txn_ryow_then_commit_eg390() {
         "the staged edge must make tn BFS-reachable in-txn"
     );
     // ── 1. RYOW: native tsdb measurement via TsScan over the StagedSeries overlay ──
-    let ts_plan = medulla_plan::Plan::new(vec![medulla_plan::Op::TsScan {
+    let ts_plan = medulla_exec::algebra::Plan::new(vec![medulla_exec::algebra::Op::TsScan {
         series: vec!["sensor.temp".into()],
         from: 0.0,
         to: 10.0,
@@ -464,11 +464,11 @@ async fn five_modality_in_txn_ryow_then_commit_eg390() {
     );
     // ── 1. RYOW: OWL reasoning over the staged graph write (inline ontology — the staged
     // axiom lands in the graph at COMMIT, so in-txn the ontology is supplied to REASON). ──
-    let reason_plan = medulla_plan::Plan::new(vec![
-        medulla_plan::Op::Scan {
+    let reason_plan = medulla_exec::algebra::Plan::new(vec![
+        medulla_exec::algebra::Op::Scan {
             label: "Robot".into(),
         },
-        medulla_plan::Op::Reason {
+        medulla_exec::algebra::Op::Reason {
             target_class: "<http://ex/Machine>".into(),
             ontology: "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n\
                        <http://ex/Robot> rdfs:subClassOf <http://ex/Machine> .\n"
@@ -548,11 +548,11 @@ async fn five_modality_in_txn_ryow_then_commit_eg390() {
     );
     // ── 4. the committed OWL axiom is in the TBox: REASON with EMPTY ontology (read from
     // the committed graph) now infers sn a Machine — the axiom modality committed atomically. ──
-    let committed_reason = medulla_plan::Plan::new(vec![
-        medulla_plan::Op::Scan {
+    let committed_reason = medulla_exec::algebra::Plan::new(vec![
+        medulla_exec::algebra::Op::Scan {
             label: "Robot".into(),
         },
-        medulla_plan::Op::Reason {
+        medulla_exec::algebra::Op::Reason {
             target_class: "<http://ex/Machine>".into(),
             ontology: String::new(),
         },
@@ -873,17 +873,17 @@ async fn rls_per_agent_fused_reason_rank_overlay_eg391() {
     // The fused Reason→Rank plan: infer Machine members over the (RLS-filtered) view, then
     // vector-rank them. `Reason` bridges the bare `Robot` type ↔ `<http://ex/Robot>`.
     let fused = || {
-        medulla_plan::Plan::new(vec![
-            medulla_plan::Op::Reason {
+        medulla_exec::algebra::Plan::new(vec![
+            medulla_exec::algebra::Op::Reason {
                 target_class: "<http://ex/Machine>".into(),
                 ontology: "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n\
                            <http://ex/Robot> rdfs:subClassOf <http://ex/Machine> .\n"
                     .into(),
             },
-            medulla_plan::Op::Rank {
+            medulla_exec::algebra::Op::Rank {
                 query: vec![1.0, 0.0],
             },
-            medulla_plan::Op::Limit { k: 10 },
+            medulla_exec::algebra::Op::Limit { k: 10 },
         ])
     };
     let run_as = |id: u64, agent: &'static str, txn: String| {
@@ -1566,7 +1566,7 @@ async fn plan_writeback_stages_and_commits_inferred_edges_atomically_d7() {
         6,
         Method::TxnPlanWriteback {
             txn_id: txn.clone(),
-            plan: medulla_plan::Plan::new(vec![medulla_plan::Op::Scan {
+            plan: medulla_exec::algebra::Plan::new(vec![medulla_exec::algebra::Op::Scan {
                 label: "Entity".into(),
             }]),
             anchor_id: "hub".into(),
@@ -1654,15 +1654,15 @@ async fn explain_plan_surfaces_the_optimizer_rewrite() {
         )
         .await;
     }
-    let plan = medulla_plan::Plan::new(vec![
-        medulla_plan::Op::Scan {
+    let plan = medulla_exec::algebra::Plan::new(vec![
+        medulla_exec::algebra::Op::Scan {
             label: "Doc".into(),
         },
-        medulla_plan::Op::Rank {
+        medulla_exec::algebra::Op::Rank {
             query: vec![1.0, 0.0],
         },
-        medulla_plan::Op::Filter {
-            preds: vec![medulla_plan::Pred::GtNum {
+        medulla_exec::algebra::Op::Filter {
+            preds: vec![medulla_exec::algebra::Pred::GtNum {
                 prop: "year".into(),
                 n: 2045.0,
             }],
@@ -1810,11 +1810,11 @@ async fn explain_plan_cost_estimate_respects_rls_eg_goc12() {
     }
 
     let plan = || {
-        medulla_plan::Plan::new(vec![
-            medulla_plan::Op::Scan {
+        medulla_exec::algebra::Plan::new(vec![
+            medulla_exec::algebra::Op::Scan {
                 label: "Robot".into(),
             },
-            medulla_plan::Op::Rank {
+            medulla_exec::algebra::Op::Rank {
                 query: vec![1.0, 0.0],
             },
         ])

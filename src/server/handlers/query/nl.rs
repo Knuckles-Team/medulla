@@ -60,7 +60,7 @@ pub(crate) fn handle_nl_query_plan(
     view: &crate::graph::GraphView,
     req_id: u64,
     foreign_sources: Option<&std::collections::BTreeSet<String>>,
-) -> Result<(String, medulla_plan::Plan), Response> {
+) -> Result<(String, medulla_exec::algebra::Plan), Response> {
     let planner = crate::server::nl::resolve_planner()
         .map_err(|e| Response::err(req_id, nl_config_refusal(&e)))?
         .ok_or_else(|| {
@@ -249,7 +249,7 @@ fn plan_nl_only(
     planner: &dyn medulla_plan::NlPlanner,
     text: &str,
     req_id: u64,
-) -> Result<(String, medulla_plan::Plan), Response> {
+) -> Result<(String, medulla_exec::algebra::Plan), Response> {
     let candidate = medulla_plan::nl::plan_only(
         planner,
         text,

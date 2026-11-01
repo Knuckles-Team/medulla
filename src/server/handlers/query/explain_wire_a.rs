@@ -35,12 +35,12 @@ pub(crate) fn explain_snapshot(
 /// result rows (see `rank_op`'s candidate-allowlist doc in `medulla-plan/src/exec.rs`).
 #[cfg(feature = "query")]
 pub(crate) fn explain_plan(
-    plan: medulla_plan::Plan,
+    plan: medulla_exec::algebra::Plan,
     view: &crate::graph::GraphView,
     semantic: &medulla_core::compute::semantic::SemanticStore,
 ) -> Result<crate::protocol::ExplainPlanResult, String> {
     use crate::protocol::{ExplainNodeWire, ExplainPlanResult};
-    use medulla_plan::{Cardinality, ModalityCardinality, PlanCtx, PlanStats};
+    use medulla_exec::{cost::Cardinality, cost::ModalityCardinality, exec::PlanCtx, cost::PlanStats};
 
     // Keep this byte contract identical to the foreign-read query binder: a
     // host can obtain the authoritative digest from ExplainPlan without
@@ -55,7 +55,7 @@ pub(crate) fn explain_plan(
     /// diagnostics-only surface, so a best-effort annotation beats refusing to EXPLAIN at
     /// all over a shape the optimizer itself already tolerates the same way elsewhere.
     fn to_wire(
-        dag: &medulla_plan::PlanDag,
+        dag: &medulla_exec::dag::PlanDag,
         card: &ModalityCardinality,
         ctx: &PlanCtx,
     ) -> Vec<ExplainNodeWire> {
@@ -92,13 +92,13 @@ pub(crate) fn explain_plan(
 
     let ctx = PlanCtx::new(view, semantic);
     let card = ModalityCardinality::new(PlanStats::collect(&ctx));
-    let before = medulla_plan::PlanDag::from(plan);
-    let after = medulla_plan::optimize_dag(&before, &ctx);
+    let before = medulla_exec::dag::PlanDag::from(plan);
+    let after = medulla_exec::optimizer::optimize_dag(&before, &ctx);
     Ok(ExplainPlanResult {
         plan_digest: Some(plan_digest),
         before: to_wire(&before, &card, &ctx),
         after: to_wire(&after, &card, &ctx),
-        applied_rules: medulla_plan::cost_opt_rule_names()
+        applied_rules: medulla_exec::optimizer::cost_opt_rule_names()
             .into_iter()
             .map(str::to_string)
             .collect(),
@@ -271,14 +271,14 @@ fn evidence_address_wire_runtime(
 #[cfg(feature = "query")]
 pub(crate) fn explain_provenance(
     request_id: u64,
-    plan: medulla_plan::Plan,
+    plan: medulla_exec::algebra::Plan,
     view: &crate::graph::GraphView,
     semantic: &medulla_core::compute::semantic::SemanticStore,
 ) -> Result<crate::epistemic_operations::EvidenceBundle, String> {
-    use medulla_plan::PlanCtx;
+    use medulla_exec::exec::PlanCtx;
 
     let ctx = PlanCtx::new(view, semantic);
-    let rs = medulla_plan::execute(&plan, &ctx)?;
+    let rs = medulla_exec::exec::execute(&plan, &ctx)?;
     let ks = medulla_plan::KnowledgeSet::from_rowset(&rs, view, &[]);
     Ok(explain_provenance_result(request_id, &ks, &ctx))
 }
@@ -297,10 +297,10 @@ pub(crate) fn explain_provenance_by_ids(
     view: &crate::graph::GraphView,
     semantic: &medulla_core::compute::semantic::SemanticStore,
 ) -> Result<crate::epistemic_operations::EvidenceBundle, String> {
-    use medulla_plan::PlanCtx;
+    use medulla_exec::exec::PlanCtx;
 
     let ctx = PlanCtx::new(view, semantic);
-    let rs = medulla_plan::RowSet::from_ids(ids);
+    let rs = medulla_exec::rowset::RowSet::from_ids(ids);
     let ks = medulla_plan::KnowledgeSet::from_rowset(&rs, view, &[]);
     Ok(explain_provenance_result(request_id, &ks, &ctx))
 }
@@ -316,7 +316,7 @@ pub(crate) fn explain_provenance_by_ids(
 pub(crate) fn explain_provenance_result(
     request_id: u64,
     ks: &medulla_plan::KnowledgeSet,
-    _ctx: &medulla_plan::PlanCtx<'_>,
+    _ctx: &medulla_exec::exec::PlanCtx<'_>,
 ) -> crate::epistemic_operations::EvidenceBundle {
     use crate::epistemic_operations::{
         EvidenceBundle, EvidenceBundleSchemaVersion, EvidenceClaim, EvidenceTimeRange,
@@ -329,10 +329,10 @@ pub(crate) fn explain_provenance_result(
         .map(|row| {
             // Reuse the SAME `Op::EvidenceFor` resolution the plan-Op surface runs, as
             // its own tiny one-op plan — no private medulla-plan access needed.
-            let evidence_plan = medulla_plan::Plan::new(vec![medulla_plan::Op::EvidenceFor {
+            let evidence_plan = medulla_exec::algebra::Plan::new(vec![medulla_exec::algebra::Op::EvidenceFor {
                 claim_id: row.id.clone(),
             }]);
-            let source_refs = medulla_plan::execute(&evidence_plan, _ctx)
+            let source_refs = medulla_exec::exec::execute(&evidence_plan, _ctx)
                 .map(|r| r.ids())
                 .unwrap_or_default();
             // X1: the row's own located evidence, already resolved by
@@ -407,21 +407,21 @@ pub(crate) fn explain_provenance_result(
 /// `policy_denied_ids` is always empty.
 #[cfg(feature = "query")]
 pub(crate) fn explain_policy(
-    plan: medulla_plan::Plan,
+    plan: medulla_exec::algebra::Plan,
     full_view: &crate::graph::GraphView,
     filtered_view: &crate::graph::GraphView,
     semantic: &medulla_core::compute::semantic::SemanticStore,
 ) -> Result<crate::protocol::ExplainPolicyResult, String> {
     use crate::protocol::ExplainPolicyResult;
-    use medulla_plan::PlanCtx;
+    use medulla_exec::exec::PlanCtx;
 
     let full_ctx = PlanCtx::new(full_view, semantic);
     let filtered_ctx = PlanCtx::new(filtered_view, semantic);
-    let full_ids: std::collections::HashSet<String> = medulla_plan::execute(&plan, &full_ctx)?
+    let full_ids: std::collections::HashSet<String> = medulla_exec::exec::execute(&plan, &full_ctx)?
         .ids()
         .into_iter()
         .collect();
-    let visible_ids: Vec<String> = medulla_plan::execute(&plan, &filtered_ctx)?.ids();
+    let visible_ids: Vec<String> = medulla_exec::exec::execute(&plan, &filtered_ctx)?.ids();
     let visible_set: std::collections::HashSet<&str> =
         visible_ids.iter().map(String::as_str).collect();
     let mut policy_denied_ids: Vec<String> = full_ids
@@ -486,8 +486,8 @@ pub(crate) fn explain_belief(
     // `ctx.belief_policy` (default, unbound on this path — no facade caller binds a
     // tenant-specific policy today, matching every other served epistemic op).
     let semantic = medulla_core::compute::semantic::SemanticStore::new();
-    let ctx = medulla_plan::PlanCtx::new(view, &semantic);
-    let tree = medulla_plan::explain_belief_tree(&ctx, node_id);
+    let ctx = medulla_exec::exec::PlanCtx::new(view, &semantic);
+    let tree = medulla_exec::exec::explain_belief_tree(&ctx, node_id);
 
     // CONCEPT:MEDULLA-OS.observability.slow-query-descriptor — OTEL epistemic span attributes (WS-1b).
     // Mirrors the `write_coalescer.apply_batch`/`ann_index_build` span idiom (a plain

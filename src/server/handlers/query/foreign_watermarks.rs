@@ -32,7 +32,7 @@ pub(crate) enum ForeignWatermarks {
 
 impl ForeignWatermarks {
     /// Decide for the foreign sources `ops` read, against the watermark nodes in `core`.
-    pub(crate) fn for_ops(core: &GraphCore, ops: &[medulla_plan::Op]) -> Self {
+    pub(crate) fn for_ops(core: &GraphCore, ops: &[medulla_exec::algebra::Op]) -> Self {
         let mut sources = BTreeSet::new();
         if !ops.iter().all(|op| collect_foreign(op, &mut sources)) {
             return Self::Unfresh;
@@ -49,7 +49,7 @@ impl ForeignWatermarks {
     #[cfg(feature = "federation")]
     pub(crate) fn fragment_sources(
         core: &GraphCore,
-        ops: &[medulla_plan::Op],
+        ops: &[medulla_exec::algebra::Op],
     ) -> Option<HashMap<String, medulla_plan::federation_opt::SourceWatermark>> {
         let mut sources = BTreeSet::new();
         if !ops.iter().all(|op| collect_foreign(op, &mut sources)) || sources.is_empty() {
@@ -92,14 +92,14 @@ impl ForeignWatermarks {
 }
 
 /// Record the named foreign sources `op` reads; `false` when it reads an unnamed inline spec.
-fn collect_foreign(op: &medulla_plan::Op, sources: &mut BTreeSet<String>) -> bool {
+fn collect_foreign(op: &medulla_exec::algebra::Op, sources: &mut BTreeSet<String>) -> bool {
     match op {
-        medulla_plan::Op::Foreign { name } => {
+        medulla_exec::algebra::Op::Foreign { name } => {
             sources.insert(name.clone());
             true
         }
         #[cfg(feature = "federation")]
-        medulla_plan::Op::ForeignScan { source, .. } => match &**source {
+        medulla_exec::algebra::Op::ForeignScan { source, .. } => match &**source {
             medulla_types::wire::ForeignSourceSpec::Named { name } => {
                 sources.insert(name.clone());
                 true
@@ -107,7 +107,7 @@ fn collect_foreign(op: &medulla_plan::Op, sources: &mut BTreeSet<String>) -> boo
             _ => false,
         },
         #[cfg(feature = "text")]
-        medulla_plan::Op::FuseRrf { branches, .. } => branches
+        medulla_exec::algebra::Op::FuseRrf { branches, .. } => branches
             .iter()
             .flatten()
             .all(|op| collect_foreign(op, sources)),
@@ -140,8 +140,8 @@ mod tests {
         freshness::WATERMARK_AT_KEY, freshness::WATERMARK_KEY,
     };
 
-    fn foreign(name: &str) -> medulla_plan::Op {
-        medulla_plan::Op::Foreign { name: name.into() }
+    fn foreign(name: &str) -> medulla_exec::algebra::Op {
+        medulla_exec::algebra::Op::Foreign { name: name.into() }
     }
 
     fn watermark(core: &GraphCore, source: &str, mark: &str, at_ms: u64) {
@@ -206,7 +206,7 @@ mod tests {
     #[test]
     fn a_graph_only_plan_is_not_affected() {
         let core = GraphCore::new();
-        let ops = [medulla_plan::Op::Scan { label: "A".into() }];
+        let ops = [medulla_exec::algebra::Op::Scan { label: "A".into() }];
         assert_eq!(
             ForeignWatermarks::for_ops(&core, &ops),
             ForeignWatermarks::NotRead

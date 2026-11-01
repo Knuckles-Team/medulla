@@ -2,7 +2,7 @@
 
 use super::plan_dependency_set;
 use medulla_core::dep_scope::Dim;
-use medulla_plan::{Op, Plan, Pred};
+use medulla_exec::{algebra::Op, algebra::Plan, algebra::Pred};
 
 fn deps(ops: Vec<Op>, generation: Option<u64>) -> Option<Vec<Dim>> {
     plan_dependency_set(&Plan::new(ops), generation).map(|set| set.dims().to_vec())

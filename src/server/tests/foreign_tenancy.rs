@@ -54,17 +54,17 @@ async fn registered_by_owner_a(id: u64) -> (Arc<RwLock<ServerState>>, Arc<RwLock
 
 fn named_scan_plan() -> Method {
     Method::UnifiedQuery {
-        plan: medulla_plan::Plan::new(vec![
-            medulla_plan::Op::Scan {
+        plan: medulla_exec::algebra::Plan::new(vec![
+            medulla_exec::algebra::Op::Scan {
                 label: "Doc".into(),
             },
-            medulla_plan::Op::ForeignScan {
+            medulla_exec::algebra::Op::ForeignScan {
                 source: Box::new(medulla_types::wire::ForeignSourceSpec::Named {
                     name: "remote_docs".into(),
                 }),
                 join: true,
             },
-            medulla_plan::Op::Limit { k: 10 },
+            medulla_exec::algebra::Op::Limit { k: 10 },
         ]),
         foreign_execution: None,
 

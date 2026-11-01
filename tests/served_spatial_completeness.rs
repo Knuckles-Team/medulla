@@ -17,7 +17,7 @@ use std::sync::Arc;
 
 use serde_json::json;
 
-use medulla_plan::{Op, Plan};
+use medulla_exec::{algebra::Op, algebra::Plan};
 use medulla::protocol::{GraphType, Method};
 use medulla::registry::{GraphMaterial, GraphMaterializer, GraphRegistry};
 use medulla::server::dispatch;
@@ -239,7 +239,7 @@ fn paged_lazy_open_advertises_spatial_only_after_final_page_backfill() {
                     core.edge_count() as u64,
                 )
         }));
-    let mut hits = medulla_plan::SpatialSource::query_bbox(&served, "City", [0.0, 0.0, 10.0, 10.0]);
+    let mut hits = medulla_exec::exec::SpatialSource::query_bbox(&served, "City", [0.0, 0.0, 10.0, 10.0]);
     hits.sort();
     assert_eq!(hits, vec!["a".to_string(), "b".to_string()]);
 }

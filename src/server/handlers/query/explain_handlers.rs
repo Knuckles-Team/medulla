@@ -4,7 +4,7 @@ use super::*;
 #[cfg(feature = "query")]
 pub(crate) async fn handle_explain_plan(
     ctx: &QueryHandlerCtx<'_>,
-    plan: medulla_plan::Plan,
+    plan: medulla_exec::algebra::Plan,
 ) -> Result<Response, Method> {
     let req_id = ctx.req_id;
     let caller = ctx.caller;
@@ -48,7 +48,7 @@ pub(crate) async fn handle_explain_plan(
 #[cfg(feature = "query")]
 pub(crate) async fn handle_explain_provenance(
     ctx: &QueryHandlerCtx<'_>,
-    plan: medulla_plan::Plan,
+    plan: medulla_exec::algebra::Plan,
 ) -> Result<Response, Method> {
     let req_id = ctx.req_id;
     let caller = ctx.caller;
@@ -129,7 +129,7 @@ pub(crate) async fn handle_explain_provenance_by_ids(
 #[cfg(feature = "query")]
 pub(crate) async fn handle_explain_policy(
     ctx: &QueryHandlerCtx<'_>,
-    plan: medulla_plan::Plan,
+    plan: medulla_exec::algebra::Plan,
 ) -> Result<Response, Method> {
     let req_id = ctx.req_id;
     let caller = ctx.caller;

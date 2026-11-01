@@ -22,7 +22,7 @@ use std::sync::Arc;
 use serde_json::json;
 use tokio::sync::RwLock;
 
-use medulla_plan::{Op, Plan};
+use medulla_exec::{algebra::Op, algebra::Plan};
 use medulla_types::wire::UqlResult;
 use medulla::protocol::{Method, Response, ResultPayload};
 use medulla::server::{dispatch};
@@ -349,7 +349,7 @@ async fn served_filtered_ranktext_returns_every_matching_candidate() {
             label: "Doc".into(),
         },
         Op::Filter {
-            preds: vec![medulla_plan::Pred::Eq {
+            preds: vec![medulla_exec::algebra::Pred::Eq {
                 prop: "category".into(),
                 value: "pick".into(),
             }],

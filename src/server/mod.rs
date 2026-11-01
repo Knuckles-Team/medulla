@@ -1324,7 +1324,7 @@ mod tests {
         // still for this whole body. READ guard: it excludes only a key MUTATOR, never
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        use medulla_plan::{Op, Pred};
+        use medulla_exec::{algebra::Op, algebra::Pred};
         let state = test_state();
         build_unified_fixture(&state).await;
 
@@ -1355,7 +1355,7 @@ mod tests {
                 "__commons__",
                 None,
                 Method::UnifiedQuery {
-                    plan: medulla_plan::Plan::new(plan),
+                    plan: medulla_exec::algebra::Plan::new(plan),
                     foreign_execution: None,
 
                     foreign_executions: Default::default(),
@@ -1377,7 +1377,7 @@ mod tests {
         // (medulla_query::exec_sql), which cannot nest inside this #[tokio::test] reactor —
         // run it off-reactor, exactly as the served handler does via spawn_blocking.
         let oracle = tokio::task::spawn_blocking(move || {
-            medulla_plan::oracle::separate_surfaces(
+            medulla_exec::oracle::separate_surfaces(
                 &view,
                 &semantic,
                 "Doc",
@@ -1448,7 +1448,7 @@ mod tests {
         // still for this whole body. READ guard: it excludes only a key MUTATOR, never
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        use medulla_plan::Op;
+        use medulla_exec::algebra::Op;
         use medulla_types::wire::{FuseClock, FuseInterp, FuseStream};
 
         const NS: i64 = 1_000_000_000;
@@ -1467,7 +1467,7 @@ mod tests {
         }
 
         let align = |interp| Method::UnifiedQuery {
-            plan: medulla_plan::Plan::new(vec![Op::SensorAlign {
+            plan: medulla_exec::algebra::Plan::new(vec![Op::SensorAlign {
                 streams: vec![FuseStream {
                     layer: "imu".into(),
                     interp,
@@ -1534,7 +1534,7 @@ mod tests {
                 "__commons__",
                 None,
                 Method::UnifiedQuery {
-                    plan: medulla_plan::Plan::new(vec![Op::SensorFuse {
+                    plan: medulla_exec::algebra::Plan::new(vec![Op::SensorFuse {
                         streams: vec!["imu".into()],
                         tolerance_ns: (10 * NS) as u64,
                     }]),
@@ -1564,7 +1564,7 @@ mod tests {
         // still for this whole body. READ guard: it excludes only a key MUTATOR, never
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        use medulla_plan::Op;
+        use medulla_exec::algebra::Op;
         use medulla_types::wire::{FuseClock, FuseInterp, FuseStream};
 
         const NS: i64 = 1_000_000_000;
@@ -1587,7 +1587,7 @@ mod tests {
                 "__commons__",
                 None,
                 Method::UnifiedQuery {
-                    plan: medulla_plan::Plan::new(vec![Op::SensorAlign {
+                    plan: medulla_exec::algebra::Plan::new(vec![Op::SensorAlign {
                         streams: vec![FuseStream {
                             layer: "imu".into(),
                             interp: FuseInterp::AsofHold,
@@ -1629,7 +1629,7 @@ mod tests {
         // still for this whole body. READ guard: it excludes only a key MUTATOR, never
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        use medulla_plan::{Op, Pred};
+        use medulla_exec::{algebra::Op, algebra::Pred};
         let state = test_state();
         build_unified_fixture(&state).await;
 
@@ -1661,7 +1661,7 @@ mod tests {
                 "__commons__",
                 None,
                 Method::UnifiedQuery {
-                    plan: medulla_plan::Plan::new(plan),
+                    plan: medulla_exec::algebra::Plan::new(plan),
                     foreign_execution: None,
 
                     foreign_executions: Default::default(),
@@ -1703,7 +1703,7 @@ mod tests {
         let view = core.analysis_snapshot();
         let semantic = core.semantic_store.read().clone();
         let oracle = tokio::task::spawn_blocking(move || {
-            medulla_plan::oracle::separate_surfaces(
+            medulla_exec::oracle::separate_surfaces(
                 &view,
                 &semantic,
                 "Doc",
@@ -1819,7 +1819,7 @@ mod tests {
                 "__commons__",
                 None,
                 Method::UnifiedQuery {
-                    plan: medulla_plan::Plan::new(vec![medulla_plan::Op::Scan {
+                    plan: medulla_exec::algebra::Plan::new(vec![medulla_exec::algebra::Op::Scan {
                         label: "Paper".into(),
                     }]),
                     foreign_execution: None,
@@ -2017,7 +2017,7 @@ mod tests {
         // still for this whole body. READ guard: it excludes only a key MUTATOR, never
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        use medulla_plan::{Op, Pred};
+        use medulla_exec::{algebra::Op, algebra::Pred};
 
         // ── engine B (the REMOTE), served over TCP ──
         let (_remote, remote_addr) = spawn_federation_remote().await;
@@ -2060,7 +2060,7 @@ mod tests {
                 "__commons__",
                 None,
                 Method::UnifiedQuery {
-                    plan: medulla_plan::Plan::new(plan),
+                    plan: medulla_exec::algebra::Plan::new(plan),
                     foreign_execution: None,
 
                     foreign_executions: Default::default(),
@@ -2175,7 +2175,7 @@ mod tests {
         // still for this whole body. READ guard: it excludes only a key MUTATOR, never
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        use medulla_plan::{Op, Pred};
+        use medulla_exec::{algebra::Op, algebra::Pred};
 
         let (_remote, remote_addr) = spawn_federation_remote().await;
         let local = test_state();
@@ -2227,7 +2227,7 @@ mod tests {
                 "__commons__",
                 None,
                 Method::UnifiedQuery {
-                    plan: medulla_plan::Plan::new(named_plan),
+                    plan: medulla_exec::algebra::Plan::new(named_plan),
                     foreign_execution: None,
 
                     foreign_executions: Default::default(),
@@ -2252,7 +2252,7 @@ mod tests {
                 "__commons__",
                 None,
                 Method::UnifiedQuery {
-                    plan: medulla_plan::Plan::new(vec![
+                    plan: medulla_exec::algebra::Plan::new(vec![
                         Op::Foreign {
                             name: "remote_docs".into(),
                         },
@@ -2288,7 +2288,7 @@ mod tests {
         // still for this whole body. READ guard: it excludes only a key MUTATOR, never
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        use medulla_plan::{Op, Pred};
+        use medulla_exec::{algebra::Op, algebra::Pred};
 
         let (_remote, remote_addr) = spawn_federation_remote().await;
         let local = test_state();
@@ -2316,7 +2316,7 @@ mod tests {
                 "__commons__",
                 None,
                 Method::UnifiedQuery {
-                    plan: medulla_plan::Plan::new(vec![
+                    plan: medulla_exec::algebra::Plan::new(vec![
                         Op::Scan {
                             label: "Doc".into(),
                         },
@@ -2359,7 +2359,7 @@ mod tests {
                 "__commons__",
                 None,
                 Method::UnifiedQuery {
-                    plan: medulla_plan::Plan::new(vec![Op::Foreign {
+                    plan: medulla_exec::algebra::Plan::new(vec![Op::Foreign {
                         name: "typo_docs".into(),
                     }]),
                     foreign_execution: None,

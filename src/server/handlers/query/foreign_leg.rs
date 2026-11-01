@@ -10,7 +10,7 @@ use medulla_persistence::agent_library::AgentLibraryStateExt;
 /// caller-facing refusal text.
 pub(crate) async fn served_foreign_leg(
     state: &Arc<RwLock<ServerState>>,
-    plan: &medulla_plan::Plan,
+    plan: &medulla_exec::algebra::Plan,
     read_authority: Option<&GraphReadAuthority>,
     execution: Option<&medulla_catalog_types::foreign_read::ForeignReadExecutionRef>,
     executions: &[medulla_catalog_types::foreign_read::ForeignReadExecutionRef],

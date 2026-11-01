@@ -73,7 +73,7 @@ fn bind_served_statement(
     req_id: u64,
     text: &str,
     params: &UqlParams,
-) -> Result<(medulla_plan::uql::Statement, medulla_plan::Plan), Response> {
+) -> Result<(medulla_plan::uql::Statement, medulla_exec::algebra::Plan), Response> {
     let statement = medulla_plan::uql::parse_statement(text, params).map_err(|error| {
         Response::err(req_id, format!("{}: {}", error.code, error.render(text)))
     })?;

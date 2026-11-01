@@ -255,7 +255,7 @@ fn register_table_sources(
 /// lexical-cast form so every SELECTed column comes back as text (the `ForeignRow` currency).
 /// One owner for SQL text sent across a federation boundary: [`medulla_plan::sql_text`].
 #[cfg(feature = "obda")]
-pub(super) type ObdaSqlDialect = medulla_plan::sql_text::SqlDialect;
+pub(super) type ObdaSqlDialect = medulla_exec::sql_text::SqlDialect;
 
 /// Infer the dialect from a DSN scheme (`postgres://…` / `mysql://…`).
 #[cfg(feature = "obda")]
@@ -297,7 +297,7 @@ impl SqlObdaSource {
     /// failing the first time `run_select` dials out.
     fn connect(dsn: &str, table: &str) -> Result<Self, String> {
         let dialect = obda_dialect(dsn)?;
-        medulla_plan::sql_text::validate_identifier(table).map_err(|e| format!("obda: {e}"))?;
+        medulla_exec::sql_text::validate_identifier(table).map_err(|e| format!("obda: {e}"))?;
         #[cfg(feature = "federation-sql")]
         medulla_plan::federation_ssrf::check_sql_dsn(dsn)?;
         let executor = federation_sql_executor(dsn)?;
@@ -616,13 +616,13 @@ fn render_in_list(col: &str, values: &[String], dialect: ObdaSqlDialect) -> Resu
 /// Validate + quote an identifier through the shared renderer, with the OBDA error prefix.
 #[cfg(feature = "obda")]
 fn quote(ident: &str, dialect: ObdaSqlDialect) -> Result<String, String> {
-    medulla_plan::sql_text::quote_identifier(ident, dialect).map_err(|e| format!("obda: {e}"))
+    medulla_exec::sql_text::quote_identifier(ident, dialect).map_err(|e| format!("obda: {e}"))
 }
 
 /// Render a literal through the shared renderer, with the OBDA error prefix.
 #[cfg(feature = "obda")]
 fn literal(value: &str, numeric: bool, dialect: ObdaSqlDialect) -> Result<String, String> {
-    medulla_plan::sql_text::render_literal(value, numeric, dialect)
+    medulla_exec::sql_text::render_literal(value, numeric, dialect)
         .map_err(|e| format!("obda: {e}"))
 }
 

@@ -94,9 +94,9 @@ pub(crate) async fn run_unified_overlaid_resolve_txn(
 pub(crate) async fn run_unified_overlaid_staged_series(
     state: &Arc<RwLock<ServerState>>,
     txn_id: &str,
-) -> medulla_plan::StagedSeries {
+) -> medulla_exec::exec::StagedSeries {
     let s = state.read().await;
-    let mut staged = medulla_plan::StagedSeries::new();
+    let mut staged = medulla_exec::exec::StagedSeries::new();
     let Some(entry) = s.open_txns.get(txn_id) else {
         return staged;
     };
@@ -115,7 +115,7 @@ pub(crate) async fn run_unified_overlaid<M>(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     txn_id: &str,
-    plan: medulla_plan::Plan,
+    plan: medulla_exec::algebra::Plan,
     read_authority: Option<&GraphReadAuthority>,
     caller: &str,
     #[cfg(feature = "security")] rls: &Arc<crate::isolation::IsolationLayer>,
@@ -159,8 +159,8 @@ pub(crate) struct OverlaidTxn<'a> {
 #[cfg(feature = "query")]
 pub(crate) async fn run_unified_overlaid_with<T>(
     txn: OverlaidTxn<'_>,
-    plan: medulla_plan::Plan,
-    finish: impl FnOnce(&medulla_plan::Plan, &medulla_plan::PlanCtx) -> Result<T, String>
+    plan: medulla_exec::algebra::Plan,
+    finish: impl FnOnce(&medulla_exec::algebra::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>
         + Send
         + 'static,
 ) -> Result<Result<T, String>, Response>
@@ -253,7 +253,7 @@ where
 /// The caller chooses the row projection through `finish`.
 #[cfg(feature = "query")]
 pub(crate) fn run_unified_with_staged_finish<T>(
-    plan: medulla_plan::Plan,
+    plan: medulla_exec::algebra::Plan,
     view: &crate::graph::GraphView,
     core: &Arc<GraphCore>,
     staged: &[(String, Vec<f32>)],
@@ -261,7 +261,7 @@ pub(crate) fn run_unified_with_staged_finish<T>(
         &medulla_plan::federation::ForeignSourceRegistry,
     >,
     #[cfg(feature = "tsdb")] tsdb_ctx: TsdbLegBind<'_>,
-    finish: impl FnOnce(&medulla_plan::Plan, &medulla_plan::PlanCtx) -> Result<T, String>,
+    finish: impl FnOnce(&medulla_exec::algebra::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>,
 ) -> Result<T, String> {
     let indexes = CoreIndexes::open(core);
     let served = indexes.served(

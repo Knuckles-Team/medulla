@@ -23,7 +23,7 @@
 
 use medulla_core::compute::semantic::SemanticStore;
 use medulla_core::graph::{GraphCore, GraphView};
-use medulla_plan::{execute, Op, Plan, PlanCtx};
+use medulla_exec::{exec::execute, algebra::Op, algebra::Plan, exec::PlanCtx};
 use medulla_tsdb::point::Point;
 use medulla_tsdb::store::{SeriesKey, SeriesStore};
 use serde_json::json;

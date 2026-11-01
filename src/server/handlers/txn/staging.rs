@@ -434,14 +434,14 @@ pub(super) async fn stage_construct(
 #[cfg(feature = "query")]
 pub(crate) fn plan_writeback_to_methods(
     core: &crate::graph::GraphCore,
-    plan: medulla_plan::Plan,
+    plan: medulla_exec::algebra::Plan,
     anchor_id: &str,
     relationship: &str,
 ) -> Result<Vec<Method>, String> {
     let view = core.analysis_snapshot();
     let semantic = core.semantic_store.read().clone();
-    let ctx = medulla_plan::PlanCtx::new(&view, &semantic);
-    let rs = medulla_plan::execute(&plan, &ctx)?;
+    let ctx = medulla_exec::exec::PlanCtx::new(&view, &semantic);
+    let rs = medulla_exec::exec::execute(&plan, &ctx)?;
     let props = rmp_serde::to_vec_named(&serde_json::json!({ "relationship": relationship }))
         .map_err(|e| format!("plan writeback property encode: {e}"))?;
     Ok(rs
@@ -464,14 +464,14 @@ pub(crate) fn plan_writeback_to_methods(
 /// [`stage_plan_writeback`] stays under the clippy argument-count ceiling.
 #[cfg(feature = "query")]
 pub(super) struct PlanWritebackArgs {
-    plan: medulla_plan::Plan,
+    plan: medulla_exec::algebra::Plan,
     anchor_id: String,
     relationship: String,
 }
 
 #[cfg(feature = "query")]
 impl PlanWritebackArgs {
-    pub(super) fn new(plan: medulla_plan::Plan, anchor_id: String, relationship: String) -> Self {
+    pub(super) fn new(plan: medulla_exec::algebra::Plan, anchor_id: String, relationship: String) -> Self {
         Self {
             plan,
             anchor_id,

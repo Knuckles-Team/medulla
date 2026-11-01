@@ -4670,7 +4670,7 @@ impl WireSession {
         // staged, uncommitted measurements (empty off-txn ⇒ committed series only).
         #[cfg(feature = "tsdb")]
         let staged_series = {
-            let mut staged = medulla_plan::StagedSeries::new();
+            let mut staged = medulla_exec::exec::StagedSeries::new();
             if in_txn {
                 for m in &self.xmodal.lock().measurements {
                     staged.push_points(&m.series, m.points.iter().cloned());
