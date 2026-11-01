@@ -162,7 +162,7 @@ def load_chain(root: Path) -> list[str]:
     return cfg["types_split"]["chain"]
 
 
-def plan(root: Path, frm: str, to: str):
+def plan(root: Path, frm: str, to: str, chain_opt: list[str] | None = None):
     pats = load_patterns(root, frm)
     src = root / "crates" / frm / "src"
     mods = list_mods(src)
@@ -188,7 +188,7 @@ def plan(root: Path, frm: str, to: str):
     # depend on any crate earlier in it. Crates move top-down (the hub first), so every
     # module still in <from> belongs to a crate at or below <to>. `phys` is where each
     # module lives once <to> has moved; it, not the target map, drives the rewrite.
-    chain = load_chain(root)
+    chain = chain_opt or load_chain(root)
     rank = {c: i for i, c in enumerate(chain)}
     rank_to = rank[to]
     moving = {m for m in mods if assign[m] == to}
@@ -196,6 +196,14 @@ def plan(root: Path, frm: str, to: str):
     pinned: dict[str, str] = {}
     for m, ds in deps.items():
         for d in ds:
+            if chain_opt:
+                # explicit chain: only a lower crate depending on a higher one is a violation
+                # (crates outside the chain are treated as lower than every chain member)
+                if m in moving or m in mods:
+                    lo, hi = rank.get(phys[m], -1), rank.get(phys[d], -1)
+                    if lo < hi:
+                        pinned[d] = f"VIOLATION: {m} in {phys[m]} needs {d} in higher {phys[d]}"
+                continue
             if m in moving and phys[d] not in (frm, to) and rank.get(phys[d], 99) > rank_to:
                 pinned[d] = f"VIOLATION: moving {m} needs {d} in higher {phys[d]}"
             if m in mods and m not in moving and d in moving:
@@ -436,9 +444,11 @@ def main() -> int:
     ap.add_argument("--to", required=True)
     ap.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
     ap.add_argument("--plan", action="store_true")
+    ap.add_argument("--chain", help="comma-separated crate order, lowest first; replaces [types_split].chain and "
+                    "flags only edges from a lower crate to a higher one (moves in either direction)")
     a = ap.parse_args()
     root, frm, to = a.root, a.frm, a.to
-    assign, pinned, deps, rn, mods, lib_text = plan(root, frm, to)
+    assign, pinned, deps, rn, mods, lib_text = plan(root, frm, to, a.chain.split(",") if a.chain else None)
     per: dict[str, int] = {}
     for m, c in assign.items():
         paths = mods.get(m) or list_mods(root / "crates" / c / "src").get(m, [])
