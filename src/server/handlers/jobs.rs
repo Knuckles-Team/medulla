@@ -42,7 +42,7 @@
 //! retry attempts, whereas an expired publication lease safely replays the same
 //! deterministic claim batch without recomputing or discarding the staged result.
 
-use medulla_kernel::lock_recovery::LockRecovery;
+use medulla_kernel::lock_recovery::{LockRecovery, WriteRecovery};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;

@@ -463,7 +463,8 @@ fn ordinary_completion_native_fence_and_terminal_noop_preserve_binding() {
 #[cfg(feature = "server")]
 #[test]
 fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
-    use crate::mutation_batch::{MutationBatch, MutationSurface};
+    use crate::mutation_batch::MutationBatch;
+    use medulla_mutation_types::mutation_scope::MutationSurface;
     use medulla_server_api::mutation_batch::compile_methods;
     use medulla_server_api::mutation_batch::principal_fingerprint;
     use medulla_server_api::mutation_batch::CompileBatch;

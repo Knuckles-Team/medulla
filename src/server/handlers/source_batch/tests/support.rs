@@ -1,5 +1,5 @@
 use medulla_protocol_types::storage_wire::SqlSourceJson;
-use medulla_protocol_types::protocol_fixtures::SqlSourceTarget;
+use medulla_protocol_types::protocol_fixtures::sql_source::SqlSourceTarget;
 use medulla_protocol_types::storage_wire::SqlSourceText;
 use super::*;
 use medulla_server_api::sql_catalog_acl::create_owned_table;

@@ -323,7 +323,7 @@ fn begin_sealed_sparql_saga(
         Some(coord.verified_actor),
         coord.verified_context.attempt_nonce(),
         medulla_server_api::api::admin::saga::AdminSagaPayload {
-            domain: crate::mutation_batch::DurabilityDomain::MultiGraph,
+            domain: medulla_mutation_types::mutation_scope::DurabilityDomain::MultiGraph,
             batch_id,
             event_type,
             payload_digest: &digest,

@@ -1,6 +1,6 @@
 //! Private graph-ref cache tests for the analytics job handler.
 
-use medulla_kernel::lock_recovery::LockRecovery;
+use medulla_kernel::lock_recovery::{LockRecovery, WriteRecovery};
 use super::*;
 
 #[cfg(test)]

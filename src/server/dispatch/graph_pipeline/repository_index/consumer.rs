@@ -31,7 +31,6 @@ use crate::parser::enrichment_snapshot::{
 use medulla_server_api::api::persistence::PersistenceBackend;
 #[cfg(feature = "blob")]
 use medulla_server_api::api::reentry::DrainOutcome;
-use medulla_server_api::api::persistence::PersistenceBackend;
 
 pub(super) const PENDING_TOPIC: &str = "repository.enrichment.pending";
 #[cfg(feature = "blob")]

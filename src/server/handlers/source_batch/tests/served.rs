@@ -2,8 +2,8 @@
 //! request boundary, the capability scope gate, request preflight, the durable
 //! mutation replay ledger and the data-plane router -- not the handler alone.
 
-use medulla_protocol_types::protocol_fixtures::change;
-use medulla_protocol_types::protocol_fixtures::id;
+use medulla_protocol_types::protocol_fixtures::sql_source::change;
+use medulla_protocol_types::protocol_fixtures::sql_source::id;
 use super::*;
 use crate::protocol::{Method, Request};
 use medulla_server_api::auth::dispatch_test_on_heap;

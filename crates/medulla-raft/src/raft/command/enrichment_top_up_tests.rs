@@ -9,9 +9,8 @@ use medulla_store::redb_store::enrichment_top_up::CONSUMER;
 use medulla_store::redb_store::enrichment_top_up::TOPIC;
 use medulla_protocol_types::mutation_batch::RepositoryEnrichmentTopUp;
 use medulla_agent_types::native_control::{EnrichmentBudgetCheckpoint, EnrichmentBudgetPark};
-use medulla_types::{
-    MutationBatch, MutationBatchRecord, MutationBatchStatus, MutationOutboxRecord,
-};
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
+use medulla_protocol_types::mutation_batch::{MutationBatch, MutationBatchRecord, MutationBatchStatus};
 
 fn transition() -> EnrichmentTopUpTransition {
     let old = medulla_compute::test_support::repository_enrichment_snapshot(
