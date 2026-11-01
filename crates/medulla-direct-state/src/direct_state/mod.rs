@@ -63,8 +63,8 @@ pub(crate) fn private_tempdir() -> tempfile::TempDir {
 /// Offline-upgrade inspection deliberately refuses `/tmp` as a staging root.
 /// Tests keep their disposable source and staging under this checkout instead
 /// of requiring a pre-provisioned host path.
-#[cfg(test)]
-pub(crate) fn private_local_tempdir() -> tempfile::TempDir {
+#[cfg(any(test, feature = "test-support"))]
+pub fn private_local_tempdir() -> tempfile::TempDir {
     use std::os::unix::fs::PermissionsExt;
 
     let directory = tempfile::Builder::new()
@@ -84,7 +84,7 @@ mod authority;
 mod capture;
 mod contract;
 mod filesystem;
-pub(crate) use filesystem::PinnedPrivateDirectory;
+pub use filesystem::PinnedPrivateDirectory;
 mod generation;
 mod image;
 mod journal;

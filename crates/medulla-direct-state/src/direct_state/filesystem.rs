@@ -1,6 +1,6 @@
 use super::{contract::*, *};
 
-pub(crate) struct PinnedPrivateDirectory {
+pub struct PinnedPrivateDirectory {
     pub(super) path: PathBuf,
     pub(super) authority: File,
 }
