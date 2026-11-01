@@ -59,7 +59,7 @@ $($variants)*
     /// (always claims). Reads one tenant-bound agent-library snapshot; ranks
     /// nothing, commits nothing.
     CapabilityCoverage {
-        request: Box<medulla_decision_types::decision::coverage::CapabilityCoverageRequest>,
+        request: Box<medulla_decision_outcome_types::decision::coverage::CapabilityCoverageRequest>,
     },
     /// Advisory guardrail entailment over the verified tenant's published
     /// Agent Library rules (MEDULLA-DECISION-ENGINE-R127.2.2). Returns subclass
@@ -110,7 +110,7 @@ $($variants)*
     /// Manifest mapping under the verified tenant, admits raw records to CAS,
     /// maps them and atomically commits graph material, provenance and cursor.
     SourceIngest {
-        request: Box<medulla_catalog_types::source_ingestion::SourceIngestionRequest>,
+        request: Box<medulla_source_types::source_ingestion::SourceIngestionRequest>,
     },
 
     /// Latest authoritative SourceIngest checkpoint for restart/failover CAS

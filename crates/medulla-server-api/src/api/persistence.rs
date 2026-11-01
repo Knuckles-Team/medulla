@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
 use crate::state::ServerState;
-use medulla_agent_types::native_control::CapacityStatusResult;
+use medulla_work_types::native_control::CapacityStatusResult;
 use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use medulla_mutation_types::mutation_scope::MutationProjectionCursor;
@@ -120,7 +120,7 @@ pub trait PersistenceBackend: Send + Sync {
     async fn read_capacity_status(
         &self,
         _graph_fname: &str,
-        _request: &medulla_agent_types::native_control::CapacityStatusRequest,
+        _request: &medulla_work_types::native_control::CapacityStatusRequest,
     ) -> Result<CapacityStatusResult, String> {
         Err("persistence backend does not support native capacity status".to_string())
     }
@@ -144,7 +144,7 @@ pub trait PersistenceBackend: Send + Sync {
         &self,
         _graph_fname: &str,
         _source_envelope: &str,
-    ) -> Result<Option<medulla_agent_types::native_control::EnrichmentBudgetCheckpoint>, String>
+    ) -> Result<Option<medulla_work_types::native_control::EnrichmentBudgetCheckpoint>, String>
     {
         Err("persistence backend does not support enrichment budget reads".to_string())
     }
@@ -167,7 +167,7 @@ pub trait PersistenceBackend: Send + Sync {
     async fn read_enrichment_budget_park(
         &self,
         _graph_fname: &str,
-    ) -> Result<Option<medulla_agent_types::native_control::EnrichmentBudgetPark>, String> {
+    ) -> Result<Option<medulla_work_types::native_control::EnrichmentBudgetPark>, String> {
         Err("persistence backend does not support enrichment park reads".to_string())
     }
 
@@ -189,7 +189,7 @@ pub trait PersistenceBackend: Send + Sync {
     async fn park_enrichment_budget(
         &self,
         _graph_fname: &str,
-        _park: medulla_agent_types::native_control::EnrichmentBudgetPark,
+        _park: medulla_work_types::native_control::EnrichmentBudgetPark,
     ) -> Result<(), String> {
         Err("persistence backend does not support enrichment budget parking".to_string())
     }

@@ -24,9 +24,7 @@ use crate::decision::statistical::{
     FeatureMatrixRef, QuestionKind, StatisticalDecisionRecord, StatisticalOutcome,
 };
 use crate::decision::QuantScaleTag;
-use medulla_agent_types::{
-    orchestration::improvement::AdoptedHarness, orchestration::improvement::HarnessContrast,
-};
+use medulla_work_types::{orchestration::improvement::AdoptedHarness, orchestration::improvement::HarnessContrast};
 use medulla_types::closed_error_codes;
 use medulla_types::contract::BoundedVec;
 
@@ -188,7 +186,7 @@ pub struct ContrastEvidence<'a> {
     pub held_versions: &'a BTreeSet<String>,
     /// The stored probe runs, by trace id.
     pub probe_runs:
-        &'a BTreeMap<String, medulla_agent_types::orchestration::improvement::HarnessProbeRun>,
+        &'a BTreeMap<String, medulla_work_types::orchestration::improvement::HarnessProbeRun>,
     /// The stored contrasts, by node id.
     pub stored_contrasts: &'a BTreeMap<String, HarnessContrast>,
 }
@@ -480,7 +478,7 @@ mod tests {
         DecisionPolicyRef, EvidenceClass, PremiseRef, ResolutionKind, StatisticalOutcome,
         TraceFidelity, UnitRationalWire, STATISTICAL_DECISION_RECORD_SCHEMA_VERSION,
     };
-    use medulla_agent_types::orchestration::improvement::HarnessProbeRun;
+    use medulla_work_types::orchestration::improvement::HarnessProbeRun;
     use medulla_types::contract::BoundedVec;
     use medulla_types::solve_scalar::digest_text;
 

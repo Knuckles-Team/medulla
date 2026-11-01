@@ -289,3 +289,5 @@ medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
+medulla-work-types = { path = "../medulla-work-types" }
+medulla-source-types = { path = "../medulla-source-types" }

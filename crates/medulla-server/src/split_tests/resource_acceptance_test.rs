@@ -2591,7 +2591,7 @@ async fn kg_delegate_public_dispatch_replicates_and_replays_after_failover_scena
         medulla_types::msgpack::MsgpackLimits::new(64 * 1024, 10_000, 32),
     )
     .expect("decode reopened native result envelope");
-    let native: medulla_agent_types::native_control::SubmitWorkItemResult = match native_payload {
+    let native: medulla_work_types::native_control::SubmitWorkItemResult = match native_payload {
         ResultPayload::Raw(bytes) => medulla_types::msgpack::decode_bounded(
             &bytes,
             medulla_types::msgpack::MsgpackLimits::new(64 * 1024, 10_000, 32),

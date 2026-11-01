@@ -59,7 +59,7 @@ pub(crate) fn property_string<'a>(
 ///
 /// Every native write of a WorkItem row goes through here, so this is the one
 /// place the row's revision advances: `props` leaves carrying
-/// `medulla_agent_types::work_item_read::WORK_ITEM_ROW_REVISION` one past the revision it
+/// `medulla_work_types::work_item_read::WORK_ITEM_ROW_REVISION` one past the revision it
 /// was read at (1 for a new row). `GetWorkItem`/`ListWorkItems` project it as
 /// the caller-visible `version`.
 pub fn write_work_item_props(
@@ -69,7 +69,7 @@ pub fn write_work_item_props(
     props: &mut serde_json::Map<String, serde_json::Value>,
     crypto: DurableCrypto<'_>,
 ) -> Result<(), String> {
-    use medulla_agent_types::work_item_read::WORK_ITEM_ROW_REVISION;
+    use medulla_work_types::work_item_read::WORK_ITEM_ROW_REVISION;
     let revision = property_u64(props, WORK_ITEM_ROW_REVISION).saturating_add(1);
     props.insert(
         WORK_ITEM_ROW_REVISION.into(),

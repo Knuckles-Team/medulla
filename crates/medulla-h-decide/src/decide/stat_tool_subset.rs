@@ -24,7 +24,7 @@
 use medulla_decision_policy::{
     solve::solve, solve::verify, solve::Model, solve::SolveStatus, solve::SolverConfig,
 };
-use medulla_decision_types::decision::rapid_r056::StatisticalSolverCertificate;
+use medulla_decision_outcome_types::decision::rapid_r056::StatisticalSolverCertificate;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::{
     decision::statistical::tool_subset::ToolCoverageCandidate,

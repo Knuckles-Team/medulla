@@ -47,6 +47,8 @@ medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
 medulla-table-store = { path = "../medulla-table-store" }
+medulla-work-types = { path = "../medulla-work-types" }
+medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 
 [features]
 test-support = ["dep:tempfile"]

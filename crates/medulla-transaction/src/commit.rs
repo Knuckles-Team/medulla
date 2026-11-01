@@ -683,7 +683,7 @@ fn write_outbox<D: OwnerDomain>(
 
 fn is_terminal_topic(topic: &str) -> bool {
     topic == medulla_result_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC
-        || topic == medulla_agent_types::run_completion::RUN_COMPLETION_TOPIC
+        || topic == medulla_work_types::run_completion::RUN_COMPLETION_TOPIC
 }
 
 fn terminal_outbox_intent_applies(

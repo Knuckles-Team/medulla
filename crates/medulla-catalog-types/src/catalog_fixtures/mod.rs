@@ -2,4 +2,3 @@
 
 pub mod contract_control;
 pub mod contract_pack;
-pub mod source_ingestion;

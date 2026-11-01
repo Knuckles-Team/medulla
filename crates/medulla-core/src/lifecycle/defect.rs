@@ -2,10 +2,7 @@
 //! and deduplication. An open defect with the same signature absorbs a new
 //! symptom; a closed one reopens.
 
-use medulla_catalog_types::{
-    lifecycle::sha256_hex, lifecycle::Defect, lifecycle::DefectIntake, lifecycle::DefectStatus,
-    lifecycle::Severity, lifecycle::Symptom,
-};
+use medulla_source_types::{lifecycle::sha256_hex, lifecycle::Defect, lifecycle::DefectIntake, lifecycle::DefectStatus, lifecycle::Severity, lifecycle::Symptom};
 
 fn is_hex_address(token: &str) -> bool {
     token

@@ -23,7 +23,7 @@
 //!     classification table (mirrors `RLS_ROUTED`/`NON_ROW_SCOPED` in
 //!     `medulla_server::access`, and `RUNTIME_CONDITIONAL`/`ACCESS_RS_COVERAGE_GAP` in
 //!     `crates/medulla-capabilities/tests/consistency.rs`) — so a variant added to
-//!     `medulla_agent_types::jobs::JobKind` without a matching classification entry HERE
+//!     `medulla_work_types::jobs::JobKind` without a matching classification entry HERE
 //!     fails a `cargo test`, independent of whatever the exhaustive match
 //!     itself decided.
 //!  2. A textual self-scan (mirrors `scripts/check_universal_read_rls.py`'s

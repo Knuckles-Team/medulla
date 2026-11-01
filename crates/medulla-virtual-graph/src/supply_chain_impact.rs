@@ -9,11 +9,7 @@
 //! cross-repo (owner: Arbora) and is not claimed here; this slice fixes the
 //! method body and proves its output matches the typed model.
 
-use medulla_catalog_types::{
-    supply_chain_report::assemble_supply_chain_report, supply_chain_report::ImpactRow,
-    supply_chain_report::ReportAbstention, supply_chain_report::ReportError,
-    supply_chain_report::SourcePremise, supply_chain_report::SupplyChainImpactReport,
-};
+use medulla_source_types::{supply_chain_report::assemble_supply_chain_report, supply_chain_report::ImpactRow, supply_chain_report::ReportAbstention, supply_chain_report::ReportError, supply_chain_report::SourcePremise, supply_chain_report::SupplyChainImpactReport};
 
 use crate::source_selection::{
     select_sources, AbstainReason, CoverageFixture, CoverageResult, Premise,
@@ -130,7 +126,7 @@ mod tests {
             supplier: "http://knuckles.team/xsrc#supplier-acme".to_string(),
             component_version: "http://knuckles.team/xsrc#version-1.18.0".to_string(),
             vulnerability: Some("CVE-2021-23017".to_string()),
-            impact_kind: medulla_catalog_types::supply_chain_report::ImpactKind::RuntimeChain,
+            impact_kind: medulla_source_types::supply_chain_report::ImpactKind::RuntimeChain,
             source: "gitlab-mcp".to_string(),
         }];
         let report = supply_chain_impact(&fixture, &roots, 2, &rows).expect("the report assembles");

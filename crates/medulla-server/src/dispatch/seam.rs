@@ -278,7 +278,7 @@ impl DispatchApi for DispatchSeam {
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         verified: VerifiedRequestContext,
-        request: medulla_agent_types::native_control::SubmitWorkItemsRequest,
+        request: medulla_work_types::native_control::SubmitWorkItemsRequest,
     ) -> SeamFuture<'a, Result<(), String>> {
         Box::pin(super::submit_repository_enrichment_page(
             state, verified, request,
@@ -297,7 +297,7 @@ impl DispatchApi for DispatchSeam {
         Result<
             (
                 medulla_compute::parser::enrichment_snapshot::EligibleSnapshot,
-                medulla_agent_types::native_control::EnrichmentBudgetPark,
+                medulla_work_types::native_control::EnrichmentBudgetPark,
             ),
             String,
         >,

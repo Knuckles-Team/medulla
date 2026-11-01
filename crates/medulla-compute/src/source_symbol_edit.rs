@@ -9,7 +9,7 @@
 use std::collections::BTreeMap;
 use std::ops::Range;
 
-use medulla_catalog_types::lifecycle::sha256_hex;
+use medulla_source_types::lifecycle::sha256_hex;
 use medulla_types::source_changeset::{ChangedPath, Changeset, PathOp, Trailers};
 use medulla_types::source_symbol_edit::{SymbolEdit, SymbolEditKind, SymbolEditOp};
 

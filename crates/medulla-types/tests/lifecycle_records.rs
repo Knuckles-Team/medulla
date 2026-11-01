@@ -1,12 +1,6 @@
 //! Lifecycle record models (MEDULLA-SDLC-R002.1, R002.2, R003.1, R005.1, R006.1).
 
-use medulla_catalog_types::{
-    lifecycle::record_deployment, lifecycle::release_range, lifecycle::Defect,
-    lifecycle::DefectIntake, lifecycle::DefectStatus, lifecycle::Deployment,
-    lifecycle::DeploymentInput, lifecycle::DeploymentOutcome, lifecycle::LifecycleKind,
-    lifecycle::LifecycleTraceRequest, lifecycle::Release, lifecycle::Severity,
-    lifecycle::SpecRowState, lifecycle::SpecState, lifecycle::SpecStatusAnswer, lifecycle::Symptom,
-};
+use medulla_source_types::{lifecycle::record_deployment, lifecycle::release_range, lifecycle::Defect, lifecycle::DefectIntake, lifecycle::DefectStatus, lifecycle::Deployment, lifecycle::DeploymentInput, lifecycle::DeploymentOutcome, lifecycle::LifecycleKind, lifecycle::LifecycleTraceRequest, lifecycle::Release, lifecycle::Severity, lifecycle::SpecRowState, lifecycle::SpecState, lifecycle::SpecStatusAnswer, lifecycle::Symptom};
 
 fn release(version: &str, digests: &[&str]) -> Release {
     Release {

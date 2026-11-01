@@ -3,10 +3,7 @@
 //! bit-exact from the digest the record names, and the hold check refuses any
 //! reference the caller does not own at exactly the declared length.
 
-use medulla_decision_types::{
-    policy_evolution::ArrayEncoding, policy_evolution::PolicyCapture,
-    policy_evolution::PolicyEvolutionRecord,
-};
+use medulla_decision_outcome_types::{policy_evolution::ArrayEncoding, policy_evolution::PolicyCapture, policy_evolution::PolicyEvolutionRecord};
 use medulla_types::contract::Digest256;
 
 use super::*;

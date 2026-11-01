@@ -26,7 +26,7 @@ use medulla_catalog_types::{
     connector_pack::PackImportReceipt, connector_pack::PackImportResult,
     connector_pack::PackRetireResult,
 };
-use medulla_decision_types::decision::coverage::CapabilityCoverageResult;
+use medulla_decision_outcome_types::decision::coverage::CapabilityCoverageResult;
 use medulla_decision_types::{decision::AssemblyResult, decision::DecisionCommitResult};
 use medulla_mutation_types::{
     write_back::ReconciliationReceipt, write_back::SourceChangeSet, write_back::WriteBackReceipt,

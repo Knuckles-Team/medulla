@@ -19,10 +19,8 @@
 //! the generic row applier, so every generic node write -- single, batched or
 //! create-if-absent -- is checked in the same durable transaction it commits in.
 
-use medulla_agent_types::work_item_read::NATIVE_WORK_ITEM_ROW_KEYS;
-use medulla_decision_types::{
-    policy_evolution::is_policy_evolution_row, policy_evolution::PolicyRefusal,
-};
+use medulla_work_types::work_item_read::NATIVE_WORK_ITEM_ROW_KEYS;
+use medulla_decision_outcome_types::{policy_evolution::is_policy_evolution_row, policy_evolution::PolicyRefusal};
 
 use super::*;
 
@@ -147,8 +145,8 @@ impl RowGuard<'_, '_> {
 
 fn refuse_stored_lease(stored: Option<&NodeMap>) -> Result<(), String> {
     if stored.is_some_and(|row| {
-        row.contains_key(medulla_agent_types::run_completion::RUN_COMPLETION_BATCH)
-            || row.contains_key(medulla_agent_types::run_completion::RUN_COMPLETION_DIGEST)
+        row.contains_key(medulla_work_types::run_completion::RUN_COMPLETION_BATCH)
+            || row.contains_key(medulla_work_types::run_completion::RUN_COMPLETION_DIGEST)
             || row.contains_key("run_owner_binding")
             || row.contains_key(super::run_owner::ADMISSION_REQUEST)
     }) {
@@ -389,8 +387,8 @@ mod completion_tests {
     fn ordinary_completion_bindings_cannot_be_planted_on_unlabelled_rows() {
         let temp = open("completion-guard");
         for key in [
-            medulla_agent_types::run_completion::RUN_COMPLETION_BATCH,
-            medulla_agent_types::run_completion::RUN_COMPLETION_DIGEST,
+            medulla_work_types::run_completion::RUN_COMPLETION_BATCH,
+            medulla_work_types::run_completion::RUN_COMPLETION_DIGEST,
         ] {
             let properties = serde_json::json!({key: "forged"});
             let method = Method::AddNode {
@@ -405,8 +403,8 @@ mod completion_tests {
 /// Reserve native bindings even on rows not yet labelled WorkItem.
 fn has_reserved_run_binding(row: &NodeMap) -> bool {
     [
-        medulla_agent_types::run_completion::RUN_COMPLETION_BATCH,
-        medulla_agent_types::run_completion::RUN_COMPLETION_DIGEST,
+        medulla_work_types::run_completion::RUN_COMPLETION_BATCH,
+        medulla_work_types::run_completion::RUN_COMPLETION_DIGEST,
         "current_plan",
         "run_owner_binding",
         super::run_owner::ADMISSION_REQUEST,

@@ -9,7 +9,7 @@
 //!    scope, and nothing outside them can appear in the answer.
 //! 2. **1b constraints** ([`eliminate`]): denies, lifecycle, external agents,
 //!    hard model facts and budgets remove candidates, each with its violation.
-//! 3. **2 entailment** (`medulla_decision_types::decision::derivation`): the request's
+//! 3. **2 entailment** (`medulla_decision_outcome_types::decision::derivation`): the request's
 //!    typed tasks close over the native vocabulary into required capabilities,
 //!    and a candidate covers one only through a checkable `is_a` chain.
 //! 4. **3 optimisation** ([`model`], [`objective`], [`conclude`]): the legal
@@ -140,7 +140,7 @@ pub fn replay_check(record: &DecisionRecord) -> Result<Assembly, AssembleError> 
         .clone()
         .checked()
         .map_err(|code| AssembleError::new(code, "the record's version is not served"))?;
-    medulla_decision_types::decision::derivation::verify_record(&record).map_err(|defect| {
+    medulla_decision_outcome_types::decision::derivation::verify_record(&record).map_err(|defect| {
         AssembleError::new(DecisionErrorCode::DerivationRejected, defect.to_string())
     })?;
     let again = assemble(record.inputs.clone(), RecordIdentity::of(&record))?;

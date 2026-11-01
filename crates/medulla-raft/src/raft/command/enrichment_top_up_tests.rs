@@ -8,7 +8,7 @@ use medulla_store::redb_store::enrichment_top_up::EnrichmentTopUpTransition;
 use medulla_store::redb_store::enrichment_top_up::CONSUMER;
 use medulla_store::redb_store::enrichment_top_up::TOPIC;
 use medulla_protocol_types::mutation_batch::RepositoryEnrichmentTopUp;
-use medulla_agent_types::native_control::{EnrichmentBudgetCheckpoint, EnrichmentBudgetPark};
+use medulla_work_types::{native_control::EnrichmentBudgetCheckpoint, native_control::EnrichmentBudgetPark};
 use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use medulla_protocol_types::mutation_batch::{MutationBatch, MutationBatchRecord, MutationBatchStatus};
 

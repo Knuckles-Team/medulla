@@ -1,8 +1,8 @@
 //! Signed dispatch to native provenance. These tests need the redb server build;
 //! they do not qualify deployment identity, current sessions, or host launch.
 use super::*;
-use medulla_agent_types::control_lease::ControlLeaseIssued;
-use medulla_agent_types::host_start::{
+use medulla_work_types::control_lease::ControlLeaseIssued;
+use medulla_work_types::host_start::{
     HostStartBinding, HostStartInterfaces, IssueHostStartGrantRequest,
 };
 use medulla_persistence::redb_backend::RedbBackend;
@@ -229,7 +229,7 @@ async fn signed_wrong_tenant_and_forged_provenance_refuse_without_mutation() {
     );
     assert_eq!(
         issued.outcome,
-        medulla_agent_types::control_lease::ControlLeaseIssueOutcome::Issued
+        medulla_work_types::control_lease::ControlLeaseIssueOutcome::Issued
     );
     assert_eq!(
         issued

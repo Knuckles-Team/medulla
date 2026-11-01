@@ -20,7 +20,7 @@ mod harness_bench;
 
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
-use medulla_agent_types::orchestration::HarnessComponentVersion;
+use medulla_work_types::orchestration::HarnessComponentVersion;
 
 const COMPONENT: &str = "comp:bench-prompt";
 const KIND: &str = "system_prompt";
@@ -35,7 +35,7 @@ fn version_write(index: usize, tx_now: u64) -> (String, Method) {
     let content_ref = format!("blob:v{index:04}");
     let record = HarnessComponentVersion {
         component_id: COMPONENT.to_string(),
-        kind: medulla_agent_types::orchestration::HarnessComponentKind::from_wire(KIND).unwrap(),
+        kind: medulla_work_types::orchestration::HarnessComponentKind::from_wire(KIND).unwrap(),
         content_ref: content_ref.clone(),
         content_digest: HarnessComponentVersion::content_digest(&content_ref),
         valid_from: index as u64 * 10,

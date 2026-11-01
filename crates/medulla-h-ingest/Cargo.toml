@@ -48,6 +48,8 @@ medulla-isolation = { path = "../medulla-isolation" }
 medulla-decision-stats = { path = "../medulla-decision-stats" }
 medulla-table-store = { path = "../medulla-table-store" }
 medulla-tables = { path = "../medulla-tables" }
+medulla-work-types = { path = "../medulla-work-types" }
+medulla-source-types = { path = "../medulla-source-types" }
 
 [features]
 test-support = []

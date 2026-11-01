@@ -650,16 +650,16 @@ fn validate_harness_component_write(
 ) -> Result<(), String> {
     let props =
         medulla_types::msgpack::decode_property_object(properties_msgpack).unwrap_or_default();
-    if !medulla_agent_types::orchestration::is_harness_component_write(&props) {
+    if !medulla_work_types::orchestration::is_harness_component_write(&props) {
         return Ok(());
     }
-    let refuse = |refusal: medulla_agent_types::orchestration::HarnessComponentRefusal,
+    let refuse = |refusal: medulla_work_types::orchestration::HarnessComponentRefusal,
                   detail: String| { format!("{}: {}", refusal.code(), detail) };
-    let record = medulla_agent_types::orchestration::decode_component_write(&props)
+    let record = medulla_work_types::orchestration::decode_component_write(&props)
         .map_err(|refusal| refuse(refusal, "harness component version record".to_string()))?;
     if record.node_id() != node_id {
         return Err(refuse(
-            medulla_agent_types::orchestration::HarnessComponentRefusal::ContentDigestMismatch,
+            medulla_work_types::orchestration::HarnessComponentRefusal::ContentDigestMismatch,
             format!(
                 "node id '{node_id}' does not match the record's content address '{}'",
                 record.node_id()
@@ -669,9 +669,9 @@ fn validate_harness_component_write(
     record
         .validate()
         .map_err(|refusal| refuse(refusal, format!("component '{}'", record.component_id)))?;
-    if medulla_agent_types::orchestration::component_tx_stamp(&props).is_none() {
+    if medulla_work_types::orchestration::component_tx_stamp(&props).is_none() {
         return Err(refuse(
-            medulla_agent_types::orchestration::HarnessComponentRefusal::WithoutStamp,
+            medulla_work_types::orchestration::HarnessComponentRefusal::WithoutStamp,
             format!(
                 "harness component version '{}' must carry its transaction-time stamp `tx_from`",
                 record.node_id()

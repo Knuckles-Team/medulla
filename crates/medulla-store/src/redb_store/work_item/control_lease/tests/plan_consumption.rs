@@ -1,5 +1,5 @@
 use super::*;
-use medulla_agent_types::control_lease::PendingPlanPreimage;
+use medulla_work_types::control_lease::PendingPlanPreimage;
 
 fn fixture(
     tag: &str,

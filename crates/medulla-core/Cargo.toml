@@ -128,6 +128,7 @@ medulla-query-cache = { path = "../medulla-query-cache" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
 medulla-ann-codes = { path = "../medulla-ann-codes" }
+medulla-source-types = { path = "../medulla-source-types" }
 
 [dev-dependencies]
 # The commercial-vocabulary contract tests (MEDULLA-SUPPLY-VOCAB-R003.13-.16) parse

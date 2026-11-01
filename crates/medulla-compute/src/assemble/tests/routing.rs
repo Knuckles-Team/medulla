@@ -201,7 +201,7 @@ fn a_solved_record_carries_premises_derivations_and_a_claim_class() {
         3,
         "one derivation per required capability"
     );
-    medulla_decision_types::decision::derivation::verify_record(record)
+    medulla_decision_outcome_types::decision::derivation::verify_record(record)
         .expect("derivations re-check");
     assert!(record.record_id.starts_with("decision:"));
     assert_eq!(

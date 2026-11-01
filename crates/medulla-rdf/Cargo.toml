@@ -123,6 +123,7 @@ medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-source-types = { path = "../medulla-source-types" }
 
 [dev-dependencies]
 # ICV integration test (CONCEPT:MEDULLA-146). medulla-shacl sits ABOVE medulla-rdf in the DAG (it

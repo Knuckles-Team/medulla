@@ -50,6 +50,8 @@ medulla-finance = { path = "../medulla-finance" }
 medulla-decision-stats = { path = "../medulla-decision-stats" }
 medulla-sql = { path = "../medulla-sql" }
 medulla-tables = { path = "../medulla-tables" }
+medulla-work-types = { path = "../medulla-work-types" }
+medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 
 [features]
 ann = ["dep:medulla-ann", ]

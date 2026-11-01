@@ -22,6 +22,7 @@ sha2 = "0.10"
 # `src/contract.rs`.
 medulla-modality = { path = "../medulla-modality", optional = true }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-source-types = { path = "../medulla-source-types" }
 
 [features]
 default = []

@@ -1,7 +1,7 @@
 // MEDULLA-UNIFIED-DATA-PLANE-R651.7: the enrichment write-set links every chunk and
 // vector to its Document, replays an enriched digest and supersedes an old one.
 
-use medulla_catalog_types::source_ingestion::web_document::{EnrichDocumentRequest, FetchBackend};
+use medulla_source_types::{source_ingestion::web_document::EnrichDocumentRequest, source_ingestion::web_document::FetchBackend};
 use medulla_document::processing::ChunkSpan;
 use medulla_h_ingest::web_ingest::*;
 use medulla_protocol_types::protocol::Method;

@@ -4,7 +4,7 @@
 //! Reads the same tenant-bound Agent Library snapshot `AgentAssemble` reads
 //! (the caller's candidate scope, plus every registered `A2aAgentCard`
 //! component) and hands it to the pure
-//! `medulla_decision_types::decision::derivation::capability_coverage_query`. No model, no
+//! `medulla_decision_outcome_types::decision::derivation::capability_coverage_query`. No model, no
 //! ranking, no commit.
 
 use super::SharedState;
@@ -12,7 +12,7 @@ use medulla_protocol_types::protocol::Response;
 use medulla_server_api::auth::VerifiedRequestContext;
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
-use medulla_decision_types::decision::coverage::CapabilityCoverageRequest;
+use medulla_decision_outcome_types::decision::coverage::CapabilityCoverageRequest;
 
 /// Resolve the tenant's visible candidates and A2A cards and answer their
 /// per-capability coverage of the request's closure.
@@ -39,15 +39,11 @@ async fn coverage_for(
     state: &SharedState,
     verified: &VerifiedRequestContext,
     request: &CapabilityCoverageRequest,
-) -> Result<medulla_decision_types::decision::coverage::CapabilityCoverageResult, String> {
+) -> Result<medulla_decision_outcome_types::decision::coverage::CapabilityCoverageResult, String> {
     use medulla_agent_types::agent_component::AgentComponentKind;
-    use medulla_decision_types::decision::derivation::capability_coverage_query;
+    use medulla_decision_outcome_types::decision::derivation::capability_coverage_query;
     use medulla_decision_types::decision::LibraryCandidateScope;
-    use medulla_decision_types::{
-        decision::coverage::CapabilityCoverageOutcome,
-        decision::coverage::CapabilityCoverageResult,
-        decision::coverage::CAPABILITY_COVERAGE_RESULT_SCHEMA_VERSION,
-    };
+    use medulla_decision_outcome_types::{decision::coverage::CapabilityCoverageOutcome, decision::coverage::CapabilityCoverageResult, decision::coverage::CAPABILITY_COVERAGE_RESULT_SCHEMA_VERSION};
 
     if request.tenant_id != verified.tenant() {
         return Err("ACCESS_DENIED: coverage tenant must match the verified request tenant".into());

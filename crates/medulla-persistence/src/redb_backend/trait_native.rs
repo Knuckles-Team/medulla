@@ -131,8 +131,8 @@ macro_rules! persistence_native {
     async fn read_capacity_status(
         &self,
         graph_fname: &str,
-        request: &medulla_agent_types::native_control::CapacityStatusRequest,
-    ) -> Result<medulla_agent_types::native_control::CapacityStatusResult, String> {
+        request: &medulla_work_types::native_control::CapacityStatusRequest,
+    ) -> Result<medulla_work_types::native_control::CapacityStatusResult, String> {
         let graph = graph_fname.to_owned();
         let request = request.clone();
         self.read_snapshot(graph_fname, move |shard, crypto| {
@@ -161,7 +161,7 @@ macro_rules! persistence_native {
         &self,
         graph_fname: &str,
         source_envelope: &str,
-    ) -> Result<Option<medulla_agent_types::native_control::EnrichmentBudgetCheckpoint>, String> {
+    ) -> Result<Option<medulla_work_types::native_control::EnrichmentBudgetCheckpoint>, String> {
         super::trait_native::read_enrichment_shard!(self, graph_fname, |shard, crypto| {
             medulla_store::redb_store::enrichment_budget::read(&shard, graph_fname, source_envelope, crypto)
         })
@@ -185,7 +185,7 @@ macro_rules! persistence_native {
     async fn read_enrichment_budget_park(
         &self,
         graph_fname: &str,
-    ) -> Result<Option<medulla_agent_types::native_control::EnrichmentBudgetPark>, String> {
+    ) -> Result<Option<medulla_work_types::native_control::EnrichmentBudgetPark>, String> {
         super::trait_native::read_enrichment_shard!(self, graph_fname, |shard, crypto| {
             medulla_store::redb_store::enrichment_budget::read_park(&shard, graph_fname, crypto)
         })
@@ -211,7 +211,7 @@ macro_rules! persistence_native {
     async fn park_enrichment_budget(
         &self,
         graph_fname: &str,
-        park: medulla_agent_types::native_control::EnrichmentBudgetPark,
+        park: medulla_work_types::native_control::EnrichmentBudgetPark,
     ) -> Result<(), String> {
         let (done, rx) = oneshot::channel();
         let cmd = Cmd::ParkEnrichmentBudget {

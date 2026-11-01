@@ -257,6 +257,9 @@ medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
 medulla-decision-stats = { path = "../medulla-decision-stats" }
+medulla-work-types = { path = "../medulla-work-types" }
+medulla-source-types = { path = "../medulla-source-types" }
+medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 
 [dev-dependencies]
 medulla-result-types = { path = "../medulla-result-types" }

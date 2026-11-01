@@ -23,7 +23,7 @@ use serde_json::Value;
 
 use super::repair::RecordContract;
 use super::GraphSchemaErrorCode;
-use medulla_agent_types::{control_lease::ControlLeaseStatus, control_lease::ControlLeaseView};
+use medulla_work_types::{control_lease::ControlLeaseStatus, control_lease::ControlLeaseView};
 use medulla_types::contract::Digest256;
 
 /// Key prefix of a governed, approval-bound schema source.

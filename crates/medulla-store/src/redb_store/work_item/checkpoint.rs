@@ -1,15 +1,7 @@
 //! Private immutable checkpoints and the WorkItem head share one native transaction.
 use super::*;
-use medulla_agent_types::{
-    run_checkpoint::CheckpointClaim, run_checkpoint::CheckpointContent,
-    run_checkpoint::GetRunCheckpointRequest, run_checkpoint::PublishRunCheckpointRequest,
-    run_checkpoint::RunCheckpointPublished, run_checkpoint::RunCheckpointRead,
-    run_checkpoint::RunCheckpointSnapshot,
-};
-use medulla_agent_types::{
-    work_item_read::WORK_ITEM_CHECKPOINT_DIGEST, work_item_read::WORK_ITEM_CHECKPOINT_REF,
-    work_item_read::WORK_ITEM_CHECKPOINT_REVISION,
-};
+use medulla_work_types::{run_checkpoint::CheckpointClaim, run_checkpoint::CheckpointContent, run_checkpoint::GetRunCheckpointRequest, run_checkpoint::PublishRunCheckpointRequest, run_checkpoint::RunCheckpointPublished, run_checkpoint::RunCheckpointRead, run_checkpoint::RunCheckpointSnapshot};
+use medulla_work_types::{work_item_read::WORK_ITEM_CHECKPOINT_DIGEST, work_item_read::WORK_ITEM_CHECKPOINT_REF, work_item_read::WORK_ITEM_CHECKPOINT_REVISION};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -22,7 +14,7 @@ fn admitted_context(row: &Row, graph: &str, tenant: &str, run_id: &str, context_
         return false;
     };
     let Ok(admission) = serde_json::from_value::<
-        medulla_agent_types::native_control::SubmitWorkItemRequest,
+        medulla_work_types::native_control::SubmitWorkItemRequest,
     >(value.clone()) else {
         return false;
     };
@@ -34,7 +26,7 @@ fn admitted_context(row: &Row, graph: &str, tenant: &str, run_id: &str, context_
 }
 
 fn admission_context_matches(
-    admission: &medulla_agent_types::native_control::SubmitWorkItemRequest,
+    admission: &medulla_work_types::native_control::SubmitWorkItemRequest,
     context_id: &str,
 ) -> bool {
     let legacy = admission.metadata.get("a2a_context_id");
@@ -365,7 +357,7 @@ pub fn read_current(
         .ok_or("checkpoint snapshot is missing")?;
     let stored: StoredCheckpoint = decode_durable(&crypto.unseal(bytes.value())?)?;
     verify_stored(&stored, request, actor, revision, &digest)?;
-    let work_item = medulla_agent_types::work_item_read::WorkItemView::from_tenant_row(
+    let work_item = medulla_work_types::work_item_read::WorkItemView::from_tenant_row(
         &request.work_item_id,
         &row,
         &request.tenant,

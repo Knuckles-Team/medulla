@@ -81,7 +81,7 @@ fn writes(tenant: &str) -> Vec<(&'static str, Value)> {
         ),
         (
             "IssueHostStartGrant",
-            json!({"request": medulla_agent_types::agent_fixtures::host_start::host_start_request(tenant)}),
+            json!({"request": medulla_work_types::host_start::fixtures::host_start_request(tenant)}),
         ),
         (
             "IssueControlLease",

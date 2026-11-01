@@ -3,7 +3,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::OnceLock;
 
-use medulla_agent_types::orchestration::HarnessVocabularyErrorCode;
+use medulla_work_types::orchestration::HarnessVocabularyErrorCode;
 use medulla_catalog_types::connector_pack::result::PackWriteErrorCode;
 use medulla_catalog_types::graph_schema::GraphSchemaErrorCode;
 use medulla_decision_types::decision::harness_contrast::HarnessContrastErrorCode;

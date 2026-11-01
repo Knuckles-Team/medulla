@@ -348,7 +348,7 @@ fn mark_work_item_replayed(
         return mark_submit_replayed(result, submit_batch);
     }
     if checkpoint {
-        let mut body: medulla_agent_types::run_checkpoint::RunCheckpointPublished =
+        let mut body: medulla_work_types::run_checkpoint::RunCheckpointPublished =
             decode_submit_receipt(result)?;
         body.replayed = true;
         return ResultPayload::of::<
@@ -388,7 +388,7 @@ fn mark_submit_replayed(result: ResultPayload, batch: bool) -> Result<ResultPayl
 }
 
 fn replayed_submit_batch(result: ResultPayload) -> Result<ResultPayload, String> {
-    let mut body: medulla_agent_types::native_control::SubmitWorkItemsResult =
+    let mut body: medulla_work_types::native_control::SubmitWorkItemsResult =
         decode_submit_receipt(result)?;
     body.replayed = true;
     for child in &mut body.results {
@@ -401,7 +401,7 @@ fn replayed_submit_batch(result: ResultPayload) -> Result<ResultPayload, String>
 }
 
 fn replayed_submit(result: ResultPayload) -> Result<ResultPayload, String> {
-    let mut body: medulla_agent_types::native_control::SubmitWorkItemResult =
+    let mut body: medulla_work_types::native_control::SubmitWorkItemResult =
         decode_submit_receipt(result)?;
     body.created = false;
     body.replayed = true;

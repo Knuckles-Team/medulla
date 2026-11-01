@@ -257,7 +257,7 @@ async fn route_work_item_reads(
             kind,
             metadata_match,
         } => medulla_h_jobs::work_item_read::WorkItemRead::List(
-            medulla_agent_types::work_item_read::WorkItemListRequest {
+            medulla_work_types::work_item_read::WorkItemListRequest {
                 tenant,
                 cursor,
                 limit,
@@ -398,7 +398,7 @@ async fn route_source_ingestion_or_resources(
     let source_method = match method {
         Method::SourceIngest { request } => SourceIngestionRoute::Ingest(request),
         Method::SourceIngestStatus { connector, stream } => SourceIngestionRoute::Status(
-            medulla_catalog_types::source_ingestion::SourceIngestStatusRequest {
+            medulla_source_types::source_ingestion::SourceIngestStatusRequest {
                 connector,
                 stream,
             },
@@ -448,7 +448,7 @@ async fn route_source_ingestion_dispatch(
 
 async fn route_source_ingestion_status(
     ctx: GraphOpRouting<'_>,
-    request: medulla_catalog_types::source_ingestion::SourceIngestStatusRequest,
+    request: medulla_source_types::source_ingestion::SourceIngestStatusRequest,
 ) -> Response {
     let Some(persistence) = ctx.persistence.as_ref() else {
         return Response::err(
@@ -469,7 +469,7 @@ async fn route_source_ingestion_status(
 
 async fn route_source_ingestion_request(
     ctx: GraphOpRouting<'_>,
-    request: medulla_catalog_types::source_ingestion::SourceIngestionRequest,
+    request: medulla_source_types::source_ingestion::SourceIngestionRequest,
     placement_epoch: u64,
     fencing_token: Option<u64>,
 ) -> Response {
@@ -515,8 +515,8 @@ async fn route_source_ingestion_request(
 }
 
 enum SourceIngestionRoute {
-    Ingest(Box<medulla_catalog_types::source_ingestion::SourceIngestionRequest>),
-    Status(medulla_catalog_types::source_ingestion::SourceIngestStatusRequest),
+    Ingest(Box<medulla_source_types::source_ingestion::SourceIngestionRequest>),
+    Status(medulla_source_types::source_ingestion::SourceIngestStatusRequest),
     /// EH-280 — a branch-aware batch commits its projection through the
     /// same placement fence and ChangeEnvelope authority as source ingestion.
     IndexRepository {

@@ -24,6 +24,7 @@ medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-work-types = { path = "../medulla-work-types" }
 
 [features]
 # Compiles the certification fault points (which abort the process at an exact

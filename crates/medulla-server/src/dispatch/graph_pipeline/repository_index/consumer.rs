@@ -9,12 +9,8 @@ use std::collections::BTreeMap;
 use std::{future::Future, sync::Arc};
 
 #[cfg(feature = "blob")]
-use medulla_agent_types::native_control::EnrichmentBudgetPark;
-use medulla_agent_types::{
-    native_control::EnrichmentBudgetCheckpoint as DurableBudgetCheckpoint,
-    native_control::EnrichmentBudgetReservation, native_control::NativeControlSchemaVersion,
-    native_control::SubmitWorkItemsRequest, native_control::MAX_SUBMIT_BATCH,
-};
+use medulla_work_types::native_control::EnrichmentBudgetPark;
+use medulla_work_types::{native_control::EnrichmentBudgetCheckpoint as DurableBudgetCheckpoint, native_control::EnrichmentBudgetReservation, native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemsRequest, native_control::MAX_SUBMIT_BATCH};
 use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 #[cfg(feature = "blob")]
 use medulla_mutation_types::mutation_scope::MutationOutboxLease;

@@ -41,6 +41,8 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
 medulla-mining = { path = "../medulla-mining" }
 medulla-table-store = { path = "../medulla-table-store" }
+medulla-work-types = { path = "../medulla-work-types" }
+medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 
 [features]
 ann-redb = ["redb"]

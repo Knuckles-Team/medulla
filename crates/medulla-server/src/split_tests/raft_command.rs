@@ -69,7 +69,7 @@ fn sealed_repository_budget_is_bound_to_exact_source_intent() {
 
 #[test]
 fn enrichment_park_command_is_sealed_and_not_public() {
-    let park = medulla_agent_types::native_control::EnrichmentBudgetPark {
+    let park = medulla_work_types::native_control::EnrichmentBudgetPark {
         schema_version: 1,
         source_envelope: "repository-index:source".into(),
         snapshot_digest: "a".repeat(64),

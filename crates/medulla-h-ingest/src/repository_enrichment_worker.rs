@@ -63,7 +63,7 @@ mod worker {
 
     #[cfg(feature = "security")]
     use crate::repository_enrichment_worker::grant;
-    use medulla_agent_types::native_control::SubmitWorkItemsRequest;
+    use medulla_work_types::native_control::SubmitWorkItemsRequest;
     #[cfg(not(feature = "raft"))]
     use medulla_protocol_types::protocol::Method;
     use medulla_result_types::{

@@ -21,10 +21,7 @@ use medulla_agent_types::{
     delegation::KgDelegateDecision, delegation::KgDelegateRequest, delegation::KgDelegateResult,
 };
 #[cfg(feature = "redb")]
-use medulla_agent_types::{
-    native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemRequest,
-    native_control::SubmitWorkItemResult,
-};
+use medulla_work_types::{native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemRequest, native_control::SubmitWorkItemResult};
 #[cfg(feature = "redb")]
 use medulla_protocol_types::mutation_batch::MutationBatchStatus;
 #[cfg(feature = "redb")]

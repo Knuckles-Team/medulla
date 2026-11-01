@@ -19,7 +19,7 @@
 use medulla_persistence::AsRedb;
 use std::sync::OnceLock;
 
-use medulla_agent_types::control_lease::ControlLeaseKindPolicy;
+use medulla_work_types::control_lease::ControlLeaseKindPolicy;
 
 use super::HandleContext;
 use medulla_protocol_types::protocol::Method;
@@ -49,7 +49,7 @@ enum LeaseTarget<'a> {
 fn lease_target(method: &Method) -> Option<LeaseTarget<'_>> {
     match method {
         Method::IssueHostStartGrant { .. } => Some(LeaseTarget::Kind(
-            medulla_agent_types::host_start::HOST_START_KIND,
+            medulla_work_types::host_start::HOST_START_KIND,
         )),
         Method::IssueControlLease { request } => Some(LeaseTarget::Kind(&request.kind)),
         Method::TransitionControlLease { request } => Some(LeaseTarget::Stored {
@@ -106,7 +106,7 @@ fn require_pending_work_authority(
     kind: &str,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
 ) -> Result<(), String> {
-    if kind == medulla_agent_types::control_lease::PENDING_CALL_KIND
+    if kind == medulla_work_types::control_lease::PENDING_CALL_KIND
         && !verified.allows_method("work:write", true)
     {
         return Err("ACCESS_DENIED: pending-call storage requires work:write authority".into());
@@ -167,7 +167,7 @@ fn require_host_start_issuer(
         .claims()
         .scopes
         .iter()
-        .any(|scope| scope == medulla_agent_types::host_start::HOST_START_ISSUE_SCOPE)
+        .any(|scope| scope == medulla_work_types::host_start::HOST_START_ISSUE_SCOPE)
     {
         return Err("ACCESS_DENIED: host-start issuance requires exact host:issue-start".into());
     }
@@ -220,7 +220,7 @@ mod tests {
     // spec: MEDULLA-DURABLE-KERNEL-R039.3
     #[test]
     fn lease_write_alone_cannot_change_pending_work_item_state() {
-        use medulla_agent_types::control_lease::PENDING_CALL_KIND;
+        use medulla_work_types::control_lease::PENDING_CALL_KIND;
         use medulla_server_api::auth::VerifiedRequestContext;
         let lease_only = VerifiedRequestContext::verified_for_test_with_scopes(
             "worker-a",
@@ -240,7 +240,7 @@ mod tests {
     // spec: MEDULLA-DURABLE-KERNEL-R039.3
     #[test]
     fn absent_lookup_returns_a_terminal_refusal_before_any_later_registration() {
-        use medulla_agent_types::control_lease::{ControlLeaseKindPolicy, PENDING_CALL_KIND};
+        use medulla_work_types::control_lease::{ControlLeaseKindPolicy, PENDING_CALL_KIND};
         use medulla_server_api::auth::VerifiedRequestContext;
         let verified = VerifiedRequestContext::verified_for_test_with_scopes(
             "worker-a",

@@ -205,7 +205,7 @@ impl<'a> HarnessView<'a> {
     fn probe_run(
         &self,
         trace_id: &str,
-    ) -> Option<medulla_agent_types::orchestration::improvement::HarnessProbeRun> {
+    ) -> Option<medulla_work_types::orchestration::improvement::HarnessProbeRun> {
         let node_id = format!("harness-probe-run:{trace_id}");
         self.props(&node_id)
             .and_then(|props| decode_harness_probe_run_write(&props).ok())

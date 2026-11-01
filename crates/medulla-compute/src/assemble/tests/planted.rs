@@ -8,7 +8,7 @@ use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_agent_types::{
     agent_component::AgentComponentKind, agent_component::ComponentDependency,
 };
-use medulla_decision_types::decision::derivation::verify_record;
+use medulla_decision_outcome_types::decision::derivation::verify_record;
 use medulla_decision_types::{
     decision::AbstainReason, decision::CostBudget, decision::DecisionErrorCode,
     decision::DecisionOutcome, decision::EvidenceClass, decision::PremiseClass,
@@ -290,8 +290,8 @@ fn the_nogood_loop_terminates_after_its_bounded_rounds() {
 
 fn required(
     inputs: &medulla_decision_types::decision::DecisionInputs,
-) -> Vec<medulla_decision_types::decision::derivation::RequiredCapability> {
-    medulla_decision_types::decision::derivation::required_capabilities(
+) -> Vec<medulla_decision_outcome_types::decision::derivation::RequiredCapability> {
+    medulla_decision_outcome_types::decision::derivation::required_capabilities(
         &inputs.request.requirements,
         &inputs.ontology_digest,
     )

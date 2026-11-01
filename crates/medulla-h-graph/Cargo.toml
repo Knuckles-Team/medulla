@@ -39,6 +39,7 @@ medulla-isolation = { path = "../medulla-isolation" }
 medulla-graph-algos = { path = "../medulla-graph-algos" }
 medulla-mining = { path = "../medulla-mining" }
 medulla-reasoner = { path = "../medulla-reasoner" }
+medulla-work-types = { path = "../medulla-work-types" }
 
 [features]
 broker = []
