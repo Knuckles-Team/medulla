@@ -34,7 +34,7 @@ pub type SeamFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
     feature = "graphql",
     feature = "rdf"
 ))]
-pub(crate) struct TryHandleContext<'a> {
+pub struct TryHandleContext<'a> {
     pub(crate) req_id: u64,
     pub(crate) graph_name: &'a str,
     pub(crate) read_authority: Option<&'a crate::access::GraphReadAuthority>,
@@ -64,7 +64,7 @@ pub(crate) struct ReplicatedParticipantRef<'a> {
 /// Outcome of one bounded repository-enrichment outbox sweep.
 #[cfg(feature = "blob")]
 #[derive(Debug, Eq, PartialEq)]
-pub(crate) enum DrainOutcome {
+pub enum DrainOutcome {
     /// Nothing was pending.
     Idle,
     /// The graph's enrichment budget is parked.
@@ -78,7 +78,7 @@ pub(crate) enum DrainOutcome {
 
 /// Per-page authority resolver handed to the enrichment drain.
 #[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
-pub(crate) type PageAuthorityFn = Box<
+pub type PageAuthorityFn = Box<
     dyn FnMut(
             String,
             String,
@@ -97,7 +97,7 @@ pub(crate) type PageAuthorityFn = Box<
 
 /// Page submit callback handed to the enrichment drain.
 #[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
-pub(crate) type PageSubmitFn = Box<
+pub type PageSubmitFn = Box<
     dyn FnMut(
             VerifiedRequestContext,
             medulla_types::native_control::SubmitWorkItemsRequest,
@@ -107,7 +107,7 @@ pub(crate) type PageSubmitFn = Box<
 
 /// Budget-park callback handed to the enrichment drain.
 #[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
-pub(crate) type PageParkFn = Box<
+pub type PageParkFn = Box<
     dyn FnMut(
             medulla_types::mutation_batch::MutationOutboxLease,
             medulla_types::native_control::EnrichmentBudgetPark,
@@ -126,7 +126,7 @@ pub trait DispatchApi: Send + Sync {
     ) -> SeamFuture<'a, Response>;
 
     /// Dispatch a request under an already verified request context.
-    fn dispatch_verified_request<'a>(
+    pub fn dispatch_verified_request<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         req: Request,
@@ -135,7 +135,7 @@ pub trait DispatchApi: Send + Sync {
 
     /// Dispatch an engine-owned local query under its fixed read-only service identity.
     #[cfg(any(feature = "federation-search", feature = "nl-query"))]
-    fn dispatch_authenticated_local_query<'a>(
+    pub fn dispatch_authenticated_local_query<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         req: Request,
@@ -149,7 +149,7 @@ pub trait DispatchApi: Send + Sync {
         feature = "mssql-wire",
         feature = "redis-wire",
     ))]
-    fn dispatch_authenticated_broker_actor<'a>(
+    pub fn dispatch_authenticated_broker_actor<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         req: Request,
@@ -253,14 +253,14 @@ pub trait DispatchApi: Send + Sync {
     ) -> SeamFuture<'a, Result<ResultPayload, String>>;
 
     /// Make a cold graph resident before an operation that needs its registry.
-    fn ensure_graph_resident<'a>(
+    pub fn ensure_graph_resident<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         graph: &'a str,
     ) -> SeamFuture<'a, ()>;
 
     /// Create an internal global graph through the authoritative lifecycle path.
-    fn ensure_internal_global_graph<'a>(
+    pub fn ensure_internal_global_graph<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         req_id: u64,
@@ -270,7 +270,7 @@ pub trait DispatchApi: Send + Sync {
     ) -> SeamFuture<'a, Result<(), String>>;
 
     /// Read one registered MCP server under the verified caller's authority.
-    fn verified_served_registration<'a>(
+    pub fn verified_served_registration<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         verified: &'a VerifiedRequestContext,
@@ -343,7 +343,7 @@ pub trait DispatchApi: Send + Sync {
 
     /// One bounded durable repository-enrichment outbox sweep.
     #[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
-    fn drain_repository_enrichment_once<'a>(
+    pub fn drain_repository_enrichment_once<'a>(
         &'a self,
         persistence: &'a dyn crate::api::persistence::PersistenceBackend,
         graph_fname: &'a str,
@@ -380,14 +380,14 @@ pub async fn dispatch(state: &Arc<RwLock<ServerState>>, req: Request) -> Respons
 }
 
 /// Make a cold graph resident; a missing installation leaves the graph as it is.
-pub(crate) async fn ensure_graph_resident(state: &Arc<RwLock<ServerState>>, graph: &str) {
+pub async fn ensure_graph_resident(state: &Arc<RwLock<ServerState>>, graph: &str) {
     if let Ok(api) = dispatch_api(state).await {
         api.ensure_graph_resident(state, graph).await;
     }
 }
 
 /// Create an internal global graph through the authoritative lifecycle path.
-pub(crate) async fn ensure_internal_global_graph(
+pub async fn ensure_internal_global_graph(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
@@ -401,7 +401,7 @@ pub(crate) async fn ensure_internal_global_graph(
 }
 
 /// Read one registered MCP server under the verified caller's authority.
-pub(crate) async fn verified_served_registration(
+pub async fn verified_served_registration(
     state: &Arc<RwLock<ServerState>>,
     verified: &VerifiedRequestContext,
     server_name: &str,
@@ -420,7 +420,7 @@ pub(crate) async fn verified_served_registration(
 }
 
 /// Dispatch a request under an already verified request context.
-pub(crate) async fn dispatch_verified_request(
+pub async fn dispatch_verified_request(
     state: &Arc<RwLock<ServerState>>,
     req: Request,
     context: VerifiedRequestContext,
@@ -434,7 +434,7 @@ pub(crate) async fn dispatch_verified_request(
 
 /// Dispatch an engine-owned local query under its fixed read-only service identity.
 #[cfg(any(feature = "federation-search", feature = "nl-query"))]
-pub(crate) async fn dispatch_authenticated_local_query(
+pub async fn dispatch_authenticated_local_query(
     state: &Arc<RwLock<ServerState>>,
     req: Request,
 ) -> Response {
@@ -453,7 +453,7 @@ pub(crate) async fn dispatch_authenticated_local_query(
     feature = "mssql-wire",
     feature = "redis-wire",
 ))]
-pub(crate) async fn dispatch_authenticated_broker_actor(
+pub async fn dispatch_authenticated_broker_actor(
     state: &Arc<RwLock<ServerState>>,
     req: Request,
     actor_ref: &str,
@@ -731,7 +731,7 @@ pub(crate) async fn enrichment_intent_for_snapshot(
 
 /// One bounded durable repository-enrichment outbox sweep.
 #[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
-pub(crate) async fn drain_repository_enrichment_once(
+pub async fn drain_repository_enrichment_once(
     state: &Arc<RwLock<ServerState>>,
     persistence: &dyn crate::api::persistence::PersistenceBackend,
     graph_fname: &str,

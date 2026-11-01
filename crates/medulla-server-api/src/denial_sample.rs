@@ -23,7 +23,7 @@ fn sampler() -> &'static Mutex<DenialSampler> {
 
 /// Offer one denial. Never blocks on durable state and never fails the
 /// denial it describes.
-pub(crate) fn offer(principal: &str, action: &str, reason: &str) {
+pub fn offer(principal: &str, action: &str, reason: &str) {
     let sample = DenialSample {
         at_ms: medulla_core::isolation::access_clock_ms(),
         principal: principal.to_string(),

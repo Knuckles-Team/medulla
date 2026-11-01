@@ -3,7 +3,7 @@
 use medulla_types::delegation::KgDelegateRequest;
 
 /// The provenance references a delegation work item retains.
-pub(crate) fn provenance_refs(request: &KgDelegateRequest) -> Vec<String> {
+pub fn provenance_refs(request: &KgDelegateRequest) -> Vec<String> {
     vec![
         format!("delegation:{}", request.delegation_id),
         format!("run:{}", request.run_id),

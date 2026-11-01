@@ -238,7 +238,7 @@ fn hash_bytes(bytes: &[u8]) -> u64 {
 /// (per-node OCC read-set only); `Serializable` additionally re-evaluates a captured
 /// predicate read-set at commit to reject phantom/range anomalies.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub(crate) enum IsolationLevel {
+pub enum IsolationLevel {
     Snapshot,
     Serializable,
 }
@@ -286,7 +286,7 @@ pub(crate) fn parse_isolation(
 /// a label scan — the minimal staged-read primitive the txn subsystem can express
 /// without a protocol change.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub(crate) enum PredicateRead {
+pub enum PredicateRead {
     /// `get_nodes_by_label(label)` — the set of nodes carrying `label`.
     Label(String),
 }
@@ -421,7 +421,7 @@ pub struct GraphTxnState {
 /// is authoritative and these are ignored. Decoded once at stage time so the commit path
 /// is a pure durable write.
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
-pub(crate) struct StagedMeasurement {
+pub struct StagedMeasurement {
     pub(crate) series: String,
     pub(crate) n_fields: usize,
     pub(crate) bucket_ns: u64,
@@ -447,7 +447,7 @@ impl StagedMeasurement {
 /// Constructor arguments for [`GraphTxnState::new`], bundled (alongside the
 /// separately-borrowed `core: &GraphCore` snapshot argument) so the constructor
 /// stays under the clippy argument-count ceiling.
-pub(crate) struct NewTxnArgs {
+pub struct NewTxnArgs {
     pub(crate) graph: String,
     pub(crate) tenant_scope: String,
     pub(crate) begin_version: u64,

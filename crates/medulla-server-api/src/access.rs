@@ -33,7 +33,7 @@ pub(crate) fn two_agent_isolation() -> IsolationLayer {
 /// authority claim.  This object can only be derived from the verified v2 request
 /// context and supplies stable opaque tenant/actor keys for durable ownership.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct CarrierAuthority {
+pub struct CarrierAuthority {
     tenant_scope: String,
     actor_scope: String,
     /// The verified tenant id and principal persistence id exactly as the Agent
@@ -70,7 +70,7 @@ pub(crate) struct CarrierAuthority {
 /// field.
 #[cfg(any(feature = "wasm-udf", feature = "federation"))]
 #[derive(Clone, Copy)]
-pub(crate) struct OwnerScopedCall<'a> {
+pub struct OwnerScopedCall<'a> {
     pub(crate) state: &'a Arc<tokio::sync::RwLock<crate::state::ServerState>>,
     pub(crate) req_id: u64,
     pub(crate) carrier: Option<&'a CarrierAuthority>,
@@ -258,7 +258,7 @@ impl CarrierAuthority {
 
     /// The verified identity actor, for the identity store's own check.
     #[cfg(feature = "security")]
-    pub(crate) fn identity_actor(&self) -> &medulla_types::identity::IdentityActor {
+    pub fn identity_actor(&self) -> &medulla_types::identity::IdentityActor {
         &self.identity_actor
     }
 
@@ -309,7 +309,7 @@ fn opaque_scope(value: &str, namespace: &str) -> bool {
 /// cryptographic proof succeeds). This function's only job is to ask whether
 /// that succeeded; it cannot itself authenticate anything, since a per-request
 /// credential is never available at this layer.
-pub(crate) fn unauthenticated_carrier_denied(carrier: Option<&CarrierAuthority>) -> bool {
+pub fn unauthenticated_carrier_denied(carrier: Option<&CarrierAuthority>) -> bool {
     carrier.is_none()
 }
 
@@ -323,7 +323,7 @@ pub(crate) fn unauthenticated_carrier_denied(carrier: Option<&CarrierAuthority>)
 /// batch, semantic, topology, and path side channels at the lowest shared read
 /// boundary instead of relying on every response serializer to remember a filter.
 #[derive(Clone)]
-pub(crate) struct GraphReadAuthority {
+pub struct GraphReadAuthority {
     carrier: Option<CarrierAuthority>,
     #[cfg(feature = "security")]
     actor: String,
@@ -713,7 +713,7 @@ pub(crate) use write_classification::requires_write;
 /// INSERT/UPDATE/DELETE/COPY on a user table), classify as writes; a `SELECT`/`WITH`/
 /// transaction-control statement, or one that does not parse, is not a write.
 #[cfg(feature = "query")]
-pub(crate) fn sql_is_write(query: &str) -> bool {
+pub fn sql_is_write(query: &str) -> bool {
     use medulla_query::StatementKind;
     !matches!(
         medulla_query::classify(query),
@@ -736,7 +736,7 @@ pub(crate) fn sql_is_write(query: &str) -> bool {
 /// classification matches the executor exactly; an unparseable document is treated as
 /// a non-write (the handler surfaces the parse error on a read snapshot).
 #[cfg(feature = "graphql")]
-pub(crate) fn graphql_is_mutation(query: &str) -> bool {
+pub fn graphql_is_mutation(query: &str) -> bool {
     matches!(
         medulla_graphql::parse_operation(query),
         Ok(medulla_graphql::Operation::Mutation(_))
@@ -749,7 +749,7 @@ pub(crate) fn graphql_is_mutation(query: &str) -> bool {
 /// `check_access` decides: peer agent graphs are denied,
 /// managers reach subordinate graphs, team graphs are member-read/manager-write,
 /// the `__commons__` stays open to all authenticated agents.
-pub(crate) fn check_graph_access(
+pub fn check_graph_access(
     isolation: &IsolationLayer,
     caller: Option<&str>,
     graph_name: &str,
@@ -800,7 +800,7 @@ fn check_graph_access_with_policy(
 /// The served graph-access decision: the isolation chokepoint's answer, with
 /// every access that only a just-in-time elevation allowed (EH-404) written
 /// to the elevation audit target -- each use, not just the grant.
-pub(crate) fn decide_graph_access(
+pub fn decide_graph_access(
     isolation: &IsolationLayer,
     query: &medulla_core::isolation::AccessQuery<'_>,
 ) -> bool {
@@ -822,7 +822,7 @@ pub(crate) fn decide_graph_access(
 /// graph be admitted now? The same decision [`check_graph_access`] applies to
 /// that principal's requests, as a boolean; an unregistered or revoked
 /// principal (or an unprovisioned policy) is `false`.
-pub(crate) fn principal_may_access(
+pub fn principal_may_access(
     isolation: &IsolationLayer,
     agent_id: &str,
     graph_name: &str,

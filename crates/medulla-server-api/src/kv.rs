@@ -50,7 +50,7 @@ use medulla_types::result_contract::storage as results;
 const KV: TableDefinition<(&str, &str), &[u8]> = TableDefinition::new("kv");
 /// Operator-facing identity of the ONE physical `kv.redb` owner file — the physical
 /// authority boundary, independent of any logical serving scope.
-pub(crate) const KV_PHYSICAL_STORE: &str = "epistemic-graph:kv";
+pub const KV_PHYSICAL_STORE: &str = "epistemic-graph:kv";
 const MAX_KV_NAMESPACE_BYTES: usize = 256;
 const MAX_KV_KEY_BYTES: usize = 4 * 1024;
 const MAX_KV_VALUE_BYTES: usize = 64 * 1024 * 1024;
@@ -584,7 +584,7 @@ fn decode_batch_result<T: serde::de::DeserializeOwned>(
 /// blob/tsdb self-routing handlers: `Err(method)` for a non-KV method (the caller then
 /// falls through), `Ok(Response)` otherwise. Classification (`requires_write`) lives in
 /// `server::access` alongside the graph-op classifier.
-pub(crate) async fn try_handle(
+pub async fn try_handle(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     authority: &CarrierAuthority,

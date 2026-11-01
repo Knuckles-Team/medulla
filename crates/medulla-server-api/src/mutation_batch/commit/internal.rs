@@ -18,7 +18,7 @@ use super::super::compile::{authoritative_graph_version, compile_methods, Compil
 /// cannot race a gateway write while its durable-before-RAM batch is in flight. A
 /// fixed number of deterministic stripes bounds memory across create/delete churn; a hash
 /// collision only serializes two unrelated graphs and cannot weaken correctness.
-pub(crate) async fn lock_graph(graph: &str) -> OwnedMutexGuard<()> {
+pub async fn lock_graph(graph: &str) -> OwnedMutexGuard<()> {
     static LOCKS: OnceLock<Vec<Arc<Mutex<()>>>> = OnceLock::new();
     striped_lock(&LOCKS, graph).await
 }
@@ -30,7 +30,7 @@ pub(crate) async fn lock_graph(graph: &str) -> OwnedMutexGuard<()> {
 /// re-entered a non-reentrant mutex and hung that Commit forever; a collision
 /// with another graph's stripe could close a lock-order cycle with a writer of
 /// that graph. With two tables the order is always coordinator, then graph.
-pub(crate) async fn lock_txn_coordinator(parent_id: &str) -> OwnedMutexGuard<()> {
+pub async fn lock_txn_coordinator(parent_id: &str) -> OwnedMutexGuard<()> {
     static LOCKS: OnceLock<Vec<Arc<Mutex<()>>>> = OnceLock::new();
     striped_lock(&LOCKS, parent_id).await
 }
@@ -62,7 +62,7 @@ async fn striped_lock(
 /// Parameters for one internal graph write. Keeping the coordinator's options
 /// in one object makes the strict promotion path share exactly the same commit
 /// protocol as ordinary internal writes.
-pub(crate) struct InternalGraphCommitRequest<'a> {
+pub struct InternalGraphCommitRequest<'a> {
     pub(crate) persistence: Option<&'a Arc<dyn PersistenceBackend>>,
     pub(crate) core: &'a Arc<GraphCore>,
     pub(crate) request_id: u64,
@@ -140,13 +140,13 @@ struct InternalGraphCommit<'a> {
 /// opaque digests in coordinator metadata; their values exist only in the
 /// authoritative graph image, avoiding a second PII-bearing copy in status/outbox
 /// tables.
-pub(crate) async fn commit_internal_graph_methods(
+pub async fn commit_internal_graph_methods(
     request: InternalGraphCommitRequest<'_>,
 ) -> Result<medulla_types::mutation_batch::MutationBatchCommit, String> {
     commit_internal_graph_methods_with_nonce_mode(request).await
 }
 
-pub(crate) async fn commit_internal_graph_methods_with_nonce(
+pub async fn commit_internal_graph_methods_with_nonce(
     request: InternalGraphCommitRequest<'_>,
 ) -> Result<medulla_types::mutation_batch::MutationBatchCommit, String> {
     commit_internal_graph_methods_with_nonce_mode(request).await

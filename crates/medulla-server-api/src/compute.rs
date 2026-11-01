@@ -13,7 +13,7 @@ use medulla_types::protocol::Response;
 /// the request is cancelled (client gone, dispatch deadline) the caller is
 /// answered at once, and reasoning inside `f` stops at its next step charge;
 /// a result computed under a tripped cancellation is never returned.
-pub(crate) async fn compute_off_lock<T, F>(req_id: u64, f: F) -> Result<T, Response>
+pub async fn compute_off_lock<T, F>(req_id: u64, f: F) -> Result<T, Response>
 where
     F: FnOnce() -> T + Send + 'static,
     T: Send + 'static,

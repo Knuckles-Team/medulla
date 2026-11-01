@@ -47,7 +47,7 @@ const CHUNK_BYTES: usize = 4096;
 /// The two byte budgets that genuinely differ between surfaces: a metrics
 /// scrape and a 64 MiB object PUT are not the same request.
 #[derive(Clone, Copy)]
-pub(crate) struct RequestLimits {
+pub struct RequestLimits {
     /// Cap on the bytes read before the `\r\n\r\n` header terminator.
     pub max_head_bytes: usize,
     /// Cap on `Content-Length`, and therefore on the body actually read.
@@ -55,7 +55,7 @@ pub(crate) struct RequestLimits {
 }
 
 /// One framed HTTP/1.1 request.
-pub(crate) struct HttpMessage {
+pub struct HttpMessage {
     /// The request method, verbatim (`GET`, `POST`, …).
     pub method: String,
     /// The origin-form request target, verbatim (`/v1/logs?since=1`).
@@ -89,7 +89,7 @@ impl HttpMessage {
 /// Read and frame one HTTP/1.1 request from `stream`. `None` means the request
 /// is unframeable — malformed, ambiguous, or over `limits` — and the caller
 /// must close the connection rather than guess at a response.
-pub(crate) async fn read_request(
+pub async fn read_request(
     stream: &mut TcpStream,
     limits: RequestLimits,
 ) -> Option<HttpMessage> {
@@ -263,6 +263,6 @@ async fn read_body(
 
 /// The offset of `needle` in `haystack`, the one copy of a search eight
 /// listeners each carried.
-pub(crate) fn find_subslice(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+pub fn find_subslice(haystack: &[u8], needle: &[u8]) -> Option<usize> {
     haystack.windows(needle.len()).position(|w| w == needle)
 }

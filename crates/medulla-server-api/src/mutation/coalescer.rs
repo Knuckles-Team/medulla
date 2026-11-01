@@ -86,7 +86,7 @@ impl<'a> TryFrom<&'a Method> for CoalescableWrite<'a> {
     }
 }
 
-pub(crate) fn is_coalescable_structural_write(method: &Method) -> bool {
+pub fn is_coalescable_structural_write(method: &Method) -> bool {
     CoalescableWrite::try_from(method).is_ok()
 }
 

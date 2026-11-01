@@ -24,7 +24,7 @@ type HmacSha256 = Hmac<Sha256>;
 /// Fields are private so downstream code cannot construct a trusted context
 /// from caller-supplied JSON.
 #[derive(Debug, Clone)]
-pub(crate) struct VerifiedRequestContext {
+pub struct VerifiedRequestContext {
     // Historical type name: origin distinguishes verified identity from a
     // deployment-authorized anonymous local store owner. Never caller-set.
     origin: AuthorityOrigin,
@@ -560,8 +560,8 @@ impl VerifiedRequestContext {
 /// The signed request-context claims the server test harnesses issue for `agent` in the
 /// deployment's one tenant (wildcard scope): the native, sqlite and wire front-end
 /// tests all sign with exactly these.
-#[cfg(test)]
-pub(crate) fn signed_test_claims(agent: &str) -> RequestContextClaims {
+#[cfg(any(test, feature = "test-support"))]
+pub fn signed_test_claims(agent: &str) -> RequestContextClaims {
     RequestContextClaims {
         principal: agent.to_string(),
         tenant: "tenant-shared".to_string(),

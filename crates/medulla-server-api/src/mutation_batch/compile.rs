@@ -30,7 +30,7 @@ use finish_helpers::{compiled_outbox, compiled_scope_identity};
 /// once RAM has advanced, the durable version row must exist. A durable version
 /// ahead of RAM is accounted into the serving projection; RAM ahead of the
 /// durable version is refused.
-pub(crate) async fn authoritative_graph_version(
+pub async fn authoritative_graph_version(
     persistence: &Arc<dyn PersistenceBackend>,
     graph_fname: &str,
     core: &GraphCore,
@@ -92,7 +92,7 @@ pub(crate) async fn authoritative_graph_version(
 /// ledger principal is the serving principal, and per-instance attribution moves
 /// to the outbox `actor` header. The persisted image's own `actor` field, where a
 /// domain has one, is untouched.
-pub(crate) struct CompileBatch<'a> {
+pub struct CompileBatch<'a> {
     pub batch_id: &'a str,
     pub request_id: u64,
     /// The VERIFIED transport nonce when this request carried one, `None` when
@@ -127,7 +127,7 @@ pub(crate) struct CompileBatch<'a> {
 }
 
 /// Compile an ordered engine write-set into the universal durable unit.
-pub(crate) fn compile_methods(
+pub fn compile_methods(
     ctx: CompileBatch<'_>,
     methods: Vec<Method>,
 ) -> Result<MutationBatch, String> {
@@ -137,7 +137,7 @@ pub(crate) fn compile_methods(
 /// Compile a graph write and its additional durable intentions together.
 /// The caller supplies the intents before `finish_batch` mints the canonical
 /// envelope, so its payload digest covers both operations and outbox bytes.
-pub(crate) fn compile_methods_with_outbox(
+pub fn compile_methods_with_outbox(
     ctx: CompileBatch<'_>,
     methods: Vec<Method>,
     additional_outbox: Vec<MutationOutboxIntent>,
@@ -246,7 +246,7 @@ pub fn compile_opaque_method(
 /// through the wire at all. Per-caller isolation for that store is enforced where it
 /// belongs, by `authority.owns(tenant, actor)` on the job row itself, not by the
 /// physical scope identity of a store that has exactly one.
-pub(crate) fn compile_opaque_method_in_scope(
+pub fn compile_opaque_method_in_scope(
     ctx: CompileBatch<'_>,
     method: &Method,
     surface: MutationSurface,
@@ -294,7 +294,7 @@ pub(crate) fn compile_opaque_method_in_scope(
 /// The owner consumes the exact typed method; only digests enter wakeup metadata.
 /// Generic opaque callers retain their original ApplyMutation representation.
 #[cfg(feature = "query")]
-pub(crate) fn compile_sql_source_batch(
+pub fn compile_sql_source_batch(
     ctx: CompileBatch<'_>,
     request: medulla_types::storage_wire::SqlSourceBatchRequest,
 ) -> Result<MutationBatch, String> {
@@ -373,7 +373,7 @@ pub fn compile_opaque_digest(
 /// graph methods and vector/blob/time-series payloads into idempotency and outbox
 /// identity without copying those potentially sensitive values into coordinator
 /// metadata; authoritative rows remain the recovery source.
-pub(crate) fn compile_crossmodal(
+pub fn compile_crossmodal(
     ctx: CompileBatch<'_>,
     modality_payload: &[u8],
     graph_method_count: usize,
@@ -711,7 +711,7 @@ fn contract_catalog_digest() -> Result<medulla_types::contract::Digest256, Strin
 /// the method policies `medulla-capabilities` declares for the batch's own operations
 /// -- so a policy change moves the identity and conflicts a reused idempotency
 /// key, which is what RF-RULING-004 means by "a changed policy conflicts".
-pub(crate) fn effective_policy_digest(
+pub fn effective_policy_digest(
     method: &medulla_types::contract::MethodId,
     operations: &[MutationOperation],
 ) -> Result<medulla_types::contract::Digest256, String> {

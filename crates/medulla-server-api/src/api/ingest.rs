@@ -28,7 +28,7 @@ pub trait JobsApi: Send + Sync {}
 pub trait ComputeApi: Send + Sync {}
 
 /// Compile a blob mutation batch at the authoritative clock and the current native version.
-pub(crate) fn compile_blob_batch(
+pub fn compile_blob_batch(
     store: &dyn crate::blob::store::ChunkStore,
     req_id: u64,
     authority: &CarrierAuthority,
@@ -38,7 +38,7 @@ pub(crate) fn compile_blob_batch(
 }
 
 /// [`compile_blob_batch`] with an explicit attempt nonce.
-pub(crate) fn compile_blob_batch_with_nonce(
+pub fn compile_blob_batch_with_nonce(
     store: &dyn crate::blob::store::ChunkStore,
     req_id: u64,
     authority: &CarrierAuthority,
@@ -104,7 +104,7 @@ pub(crate) fn compile_blob_batch_at(
 }
 
 /// [`compile_blob_batch_at`] with an explicit attempt nonce.
-pub(crate) fn compile_blob_batch_at_with_nonce(
+pub fn compile_blob_batch_at_with_nonce(
     _store: &dyn crate::blob::store::ChunkStore,
     identity_id: u64,
     authority: &CarrierAuthority,
@@ -142,8 +142,8 @@ pub(crate) fn compile_blob_batch_at_with_nonce(
 
 /// Convenience: build a `BlobCursors` over a fresh native CAS in `dir` (used by
 /// integration tests to drive the handler end to end).
-#[cfg(test)]
-pub(crate) fn cursors_for_test(dir: &str) -> std::sync::Arc<crate::blob::BlobCursors> {
+#[cfg(any(test, feature = "test-support"))]
+pub fn cursors_for_test(dir: &str) -> std::sync::Arc<crate::blob::BlobCursors> {
     let store = std::sync::Arc::new(crate::blob::store::RedbChunkStore::open(dir).unwrap());
     std::sync::Arc::new(crate::blob::BlobCursors::new(store))
 }

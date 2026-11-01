@@ -58,7 +58,7 @@ const RENDER_CACHE_CAPACITY: usize = 512;
 /// One cached, fully-rendered response — a cache HIT returns this with ZERO
 /// recomputation (no re-resolve, no re-tier-select, no re-encode).
 #[derive(Clone)]
-pub(crate) struct CachedRender {
+pub struct CachedRender {
     pub(crate) view_result: ViewResult,
     pub(crate) content_type: &'static str,
     pub(crate) bytes: Arc<[u8]>,
@@ -119,7 +119,7 @@ impl RenderCache {
 /// `format`/`budget` into an already-content-addressed `query_hash` (see the
 /// module doc's "cache key" section for why those extra fields are necessary
 /// and why `query_hash` alone is not sufficient).
-pub(crate) fn render_cache_key(
+pub fn render_cache_key(
     query_hash: &str,
     width_px: u32,
     height_px: u32,

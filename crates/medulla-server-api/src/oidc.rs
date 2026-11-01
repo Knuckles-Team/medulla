@@ -202,7 +202,7 @@ struct ResourceAccessEntry {
 /// field here has already passed RSA/JWKS signature, issuer, audience, and
 /// expiry verification — this is trusted data, not caller input.
 #[derive(Debug, Clone, Default)]
-pub(crate) struct VerifiedTokenClaims {
+pub struct VerifiedTokenClaims {
     pub(crate) subject: String,
     pub(crate) tenant: Option<String>,
     pub(crate) roles: HashSet<String>,
@@ -479,8 +479,8 @@ impl JwtValidator {
     }
 }
 
-#[cfg(test)]
-pub(crate) mod tests {
+#[cfg(any(test, feature = "test-support"))]
+pub mod tests {
     use super::*;
     use jsonwebtoken::{encode, EncodingKey, Header};
     use std::time::{SystemTime, UNIX_EPOCH};

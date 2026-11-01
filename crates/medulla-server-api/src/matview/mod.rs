@@ -14,7 +14,7 @@
 //! The handler (`server::handlers::dist_compute`) drives Define / Get / Refresh / Drop;
 //! `reload_plan_matviews` re-hydrates the manager from redb on boot.
 
-pub(crate) mod incremental;
+pub mod incremental;
 mod lifecycle;
 mod manager;
 

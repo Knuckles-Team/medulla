@@ -61,12 +61,12 @@ use crate::sql_tables;
 // RF-019: the served projection's maintained-ANN narrowing, with this caller's
 // row-level security applied inside the probe.
 mod ann_projection;
-pub(crate) use ann_projection::{
+pub use ann_projection::{
     alterable_ann_index_table, authorized_read_store_for_query, RequestGraph,
 };
 // EH-066: read-only relations (the decision record views) beside the caller's tables.
-pub(crate) mod relations;
-pub(crate) use relations::{wants_read_only_relations, ReadOnlyRelations, SharedRelations};
+pub mod relations;
+pub use relations::{wants_read_only_relations, ReadOnlyRelations, SharedRelations};
 #[cfg(feature = "security")]
 mod identity_view;
 
@@ -75,7 +75,7 @@ mod identity_view;
 /// admin call. Deliberately generic: a caller must not be able to distinguish
 /// "you're not allowed" from "that isn't a real table" (hard constraint: no
 /// existence leak).
-pub(crate) const ACCESS_DENIED: &str = "ACCESS_DENIED: table is not accessible";
+pub const ACCESS_DENIED: &str = "ACCESS_DENIED: table is not accessible";
 
 const OWNERS_TABLE: &str = "__eg_sql_owners__";
 const GRANTS_TABLE: &str = "__eg_sql_grants__";
@@ -150,7 +150,7 @@ fn run_snapshot_before_read_lock_hook() {
 /// owner-or-admin-bypass / generic-denial CONVENTIONS below still follow
 /// `medulla-core::rbac`/`medulla-types::acl`; only the action vocabulary is domain-specific.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub(crate) enum SqlPrivilege {
+pub enum SqlPrivilege {
     Select,
     Insert,
     Update,
@@ -166,7 +166,7 @@ pub(crate) enum SqlPrivilege {
 /// absent and the create is not `IF NOT EXISTS`; the underlying redb transaction
 /// therefore remains the final first-writer-wins collision fence.
 #[derive(Debug, Clone)]
-pub(crate) struct ProvisionalCreateAuthority {
+pub struct ProvisionalCreateAuthority {
     tenant_scope: String,
     actor: String,
     table: String,
@@ -344,7 +344,7 @@ impl SourceAuthorityProof for std::sync::RwLockReadGuard<'_, ()> {}
 /// Non-cloneable proof that one tenant's local SQL source authority is held
 /// exclusively. Wire commits keep this value alive from authorization through
 /// the physical table commit and any owner registration it entails.
-pub(crate) struct SqlSourceAuthorityWrite<'scope, 'lock> {
+pub struct SqlSourceAuthorityWrite<'scope, 'lock> {
     _guard: &'scope std::sync::RwLockWriteGuard<'lock, ()>,
     acl: TableStore,
     authority: &'scope CarrierAuthority,
@@ -355,7 +355,7 @@ impl SourceAuthorityProof for SqlSourceAuthorityWrite<'_, '_> {}
 /// Execute one current-catalog operation while holding the cached tenant ACL
 /// handle's sole source-authority write lock. No migration or fallback path is
 /// entered before or during the capability.
-pub(crate) fn with_source_authority_write<T>(
+pub fn with_source_authority_write<T>(
     persist_dir: &Path,
     authority: &CarrierAuthority,
     operation: impl FnOnce(&SqlSourceAuthorityWrite<'_, '_>) -> Result<T, String>,
@@ -459,7 +459,7 @@ fn require_source_ordering(
 
 /// Fail closed unless this process can truthfully serialize SQL source
 /// authority. Current storage provides only process-local ordering.
-pub(crate) fn require_source_authority() -> Result<(), String> {
+pub fn require_source_authority() -> Result<(), String> {
     require_source_ordering(
         SqlSourceAuthorityOrdering::LocalOnly,
         cluster_source_ordering_required(),
@@ -556,7 +556,7 @@ fn commit_source_acl_mutation(
 /// Derive a stable source-operation UUID from an opaque durable caller key.
 /// Callers retain one parent identity for a whole logical operation; each ACL
 /// effect is disambiguated internally by [`commit_source_acl_mutation`].
-pub(crate) fn stable_source_operation_id(operation_key: &str) -> uuid::Uuid {
+pub fn stable_source_operation_id(operation_key: &str) -> uuid::Uuid {
     let mut digest = Sha256::new();
     update_len_prefixed(&mut digest, b"medulla/sql-source-operation-id");
     update_len_prefixed(&mut digest, operation_key.as_bytes());
@@ -642,7 +642,7 @@ fn owner_of(acl: &TableStore, table: &str) -> Result<Option<String>, String> {
 ///
 /// `Ok(None)` means normal ACL authorization already suffices (admin or the same
 /// retained owner). A different owner always receives the generic denial.
-pub(crate) fn begin_provisional_create(
+pub fn begin_provisional_create(
     source: &SqlSourceAuthorityWrite<'_, '_>,
     table: &str,
 ) -> Result<Option<ProvisionalCreateAuthority>, String> {
@@ -907,7 +907,7 @@ fn authorized_snapshot(
 /// SAME tenant as `grantor` (there is no cross-tenant grant surface — the tenant
 /// is derived from `grantor`'s own verified authority, never caller-supplied).
 /// Only the table's owner or an admin carrier may grant (item 2).
-pub(crate) fn grant(
+pub fn grant(
     persist_dir: &Path,
     grantor: &CarrierAuthority,
     table: &str,
@@ -943,7 +943,7 @@ pub(crate) fn grant(
 /// backing row(s) outright (no tombstone/deny-row) so the NEXT [`authorize`] call
 /// — there is no cache in front of the ACL catalog — sees the change immediately
 /// (item: "revoke takes effect immediately").
-pub(crate) fn revoke(
+pub fn revoke(
     persist_dir: &Path,
     revoker: &CarrierAuthority,
     table: &str,
@@ -977,7 +977,7 @@ pub(crate) fn revoke(
 
 /// Declare (`Some(column)`) or clear (`None`) the row-level tenant/principal
 /// discriminator column for `table` (item 3). Owner-or-admin only.
-pub(crate) fn set_row_level_column(
+pub fn set_row_level_column(
     persist_dir: &Path,
     authority: &CarrierAuthority,
     table: &str,
@@ -1032,7 +1032,7 @@ fn row_level_column(acl: &TableStore, table: &str) -> Result<Option<String>, Str
 /// already-existing table (`if_not_exists: true` no-op) is left exactly as-is —
 /// this function never silently reassigns ownership.
 #[cfg(test)]
-pub(crate) fn create_owned_table(
+pub fn create_owned_table(
     authority: &CarrierAuthority,
     persist_dir: &Path,
     schema: &TableSchema,
@@ -1155,7 +1155,7 @@ impl std::fmt::Debug for AuthorizedTable {
 
 /// Resolve, authorize, and open one table for one privilege (items 2 + 3 combined
 /// entry point).
-pub(crate) fn open_authorized_table(
+pub fn open_authorized_table(
     authority: &CarrierAuthority,
     persist_dir: &Path,
     table: &str,
@@ -1877,7 +1877,7 @@ impl AuthorizedTable {
 /// the raw batch commit performs the actual DDL) and does not leak whether the
 /// denial was "no such table" vs. "exists but not yours" (the SAME [`authorize`]
 /// path every other entry point uses).
-pub(crate) fn authorize_ddl(
+pub fn authorize_ddl(
     source: &SqlSourceAuthorityWrite<'_, '_>,
     table: &str,
     privilege: SqlPrivilege,
@@ -1890,7 +1890,7 @@ pub(crate) fn authorize_ddl(
 /// `rows` the wire layer must substitute back into that op before the batch
 /// commits — the SAME stamping as the test-only authorized-table insert helper, without
 /// executing the write itself (the batch commit does that).
-pub(crate) fn authorize_insert(
+pub fn authorize_insert(
     source: &SqlSourceAuthorityWrite<'_, '_>,
     table: &str,
     col_order: &[String],
@@ -1912,7 +1912,7 @@ pub(crate) fn authorize_insert(
 /// principal's visibility) and ANDs `rls_column = principal` into `selector` (a
 /// principal can only ever touch their own rows), exactly like
 /// the test-only authorized-table update helper.
-pub(crate) fn authorize_update(
+pub fn authorize_update(
     source: &SqlSourceAuthorityWrite<'_, '_>,
     table: &str,
     mut set: serde_json::Map<String, Value>,
@@ -1937,7 +1937,7 @@ pub(crate) fn authorize_update(
 /// Authorize a buffered `TxnOp::Delete` against `table` for
 /// [`SqlPrivilege::Delete`] and return the RLS-scoped `selector` the wire layer
 /// must substitute back into that op, exactly like the test-only delete helper.
-pub(crate) fn authorize_delete(
+pub fn authorize_delete(
     source: &SqlSourceAuthorityWrite<'_, '_>,
     table: &str,
     selector: RowPredicate,
@@ -1954,7 +1954,7 @@ pub(crate) fn authorize_delete(
 /// commit path calls this before releasing the exclusive capability that fenced
 /// its schema commit, eliminating the orphan-observation window between the two
 /// separately persisted catalogs.
-pub(crate) fn register_owner_after_create_in(
+pub fn register_owner_after_create_in(
     source: &SqlSourceAuthorityWrite<'_, '_>,
     table: &str,
     operation_id: uuid::Uuid,
@@ -1993,7 +1993,7 @@ pub(crate) fn register_owner_after_create_in(
 /// from the others. Past that gate the caller may already `Select` every
 /// relation involved, so lowering diagnostics (unknown label, unresolved
 /// property) are returned verbatim: they disclose nothing new.
-pub(crate) fn authorized_graph_table_sql(
+pub fn authorized_graph_table_sql(
     authority: &CarrierAuthority,
     persist_dir: &Path,
     query: &medulla_query::GraphTableQuery,
@@ -2059,7 +2059,7 @@ pub(crate) fn authorized_property_graph_records(
 /// One per-read physical projection containing only rows and graph metadata
 /// visible to the verified caller. Dropping it closes the redb handle before
 /// removing its temporary backing file.
-pub(crate) struct AuthorizedReadStore {
+pub struct AuthorizedReadStore {
     store: Option<TableStore>,
     path: std::path::PathBuf,
 }
@@ -2083,7 +2083,7 @@ impl Drop for AuthorizedReadStore {
 /// surface. Tables carry RLS-filtered rows; property graphs are re-admitted
 /// only after graph and dependency authorization, under the ephemeral store's
 /// internal scope because tenant identity is not a SQL-visible catalog column.
-pub(crate) fn authorized_read_store(
+pub fn authorized_read_store(
     authority: &CarrierAuthority,
     persist_dir: &Path,
 ) -> Result<AuthorizedReadStore, String> {

@@ -48,7 +48,7 @@ use graph_store::{export_graph, gsp_default_graph, gsp_target, parse_rdf_body};
 use negotiation::{choose_ct, render_query_outcome, serialize_graph, GRAPH_FORMS};
 #[cfg(test)]
 use negotiation::{negotiate, SELECT_FORMS};
-pub(crate) use update_plan::{
+pub use update_plan::{
     plan_update, update_graphs, update_uses_variable_graph, PlannedGraphUpdate,
 };
 
@@ -160,7 +160,7 @@ pub async fn serve(listener: TcpListener, state: Arc<RwLock<ServerState>>) {
 /// the `eg2.` signing leg requires it to be a request number, and a caller
 /// that sent a malformed one is refused here rather than served a read and
 /// denied an update.
-async fn read_request(stream: &mut tokio::net::TcpStream) -> Option<HttpMessage> {
+pub async fn read_request(stream: &mut tokio::net::TcpStream) -> Option<HttpMessage> {
     let request = http1::read_request(stream, HTTP_LIMITS).await?;
     let id = request.header("x-epistemic-request-id");
     if !id.is_empty() && id.parse::<u64>().is_err() {

@@ -879,7 +879,7 @@ pub(crate) fn is_work_item_method(method: &Method) -> bool {
 /// ledger, not lowered into graph-node mutations.  Keeping the classifier
 /// beside the existing WorkItem/resource families prevents a generic gateway
 /// from accidentally treating lease authority as ordinary graph data.
-pub(crate) fn is_capacity_method(method: &Method) -> bool {
+pub fn is_capacity_method(method: &Method) -> bool {
     matches!(
         method,
         medulla_types::capacity_lease_writes!()
@@ -897,14 +897,14 @@ pub(crate) fn is_work_item_mutation_method(method: &Method) -> bool {
     is_work_item_method(method) || is_resource_reservation_method(method)
 }
 
-pub(crate) fn is_resource_reservation_query_method(method: &Method) -> bool {
+pub fn is_resource_reservation_query_method(method: &Method) -> bool {
     matches!(
         method,
         Method::QueryWorkItemReservation { .. } | Method::ResourceReservationStatus { .. }
     )
 }
 
-pub(crate) fn is_resource_reservation_method(method: &Method) -> bool {
+pub fn is_resource_reservation_method(method: &Method) -> bool {
     matches!(
         method,
         Method::ReserveWorkItemResources { .. }

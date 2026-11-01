@@ -29,7 +29,7 @@ use medulla_core::graph::OPERATOR_SOURCE_ID;
 /// Stage a current enforcing policy on the request graph. The optional wire
 /// target is an assertion, not an alternate route: cross-graph configuration
 /// must be dispatched and authorized against that graph explicitly.
-pub(crate) fn configure(
+pub fn configure(
     core: &GraphCore,
     request_graph: &str,
     graph: Option<&str>,
@@ -74,7 +74,7 @@ enum PolicyAuthority<'a> {
 /// A derived write guard backed exclusively by authoritative graph images.
 /// `Single` is used by graph-scoped RPC mutation staging; `Routed` follows the
 /// SPARQL endpoint store's `"" = default graph` convention.
-pub(crate) struct CoreIcvGuard<'a> {
+pub struct CoreIcvGuard<'a> {
     authority: PolicyAuthority<'a>,
 }
 
@@ -129,7 +129,7 @@ impl WriteGuard for CoreIcvGuard<'_> {
 
 /// Enforce the policy on a direct property-graph RDF write. Export failure and
 /// absent/invalid policy are hard rejections before any live mutation occurs.
-pub(crate) fn check_before_write(
+pub fn check_before_write(
     core: &Arc<GraphCore>,
     graph_name: &str,
     additions: &[Triple],

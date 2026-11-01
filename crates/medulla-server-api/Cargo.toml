@@ -52,8 +52,10 @@ tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sy
 tracing = "0.1"
 ureq = { version = "3.4.2", optional = true }
 uuid = { version = "1.28", features = ["v4"] }
+medulla-jobs = { path = "../medulla-jobs", optional = true }
 
 [features]
+test-support = []
 alignment = ["dep:medulla-modality", "dep:medulla-alignment", "blob"]
 amqp-wire = ["broker", "server"]
 ann-redb = ["redb"]
@@ -73,7 +75,7 @@ federation-search = ["dep:ureq", "server", "federation"]
 federation-sql = ["dep:medulla-plan", "medulla-plan/federation-sql", "federation"]
 graphlearn = []
 graphql = ["dep:medulla-graphql", "medulla-graphql/hardening", "server", "security"]
-jobs = ["dep:medulla-capabilities", "medulla-capabilities/jobs", "server", "mining", "epistemic"]
+jobs = ["dep:medulla-jobs", "dep:medulla-capabilities", "medulla-capabilities/jobs", "server", "mining", "epistemic"]
 knowledge-batch = ["dep:medulla-plan", "medulla-plan/knowledge-batch", "dep:medulla-modality", "dep:medulla-capabilities", "medulla-capabilities/knowledge-batch", "query"]
 kv = ["server", "redb"]
 lake = ["dep:ureq", "server", "blob", "tsdb"]
@@ -135,3 +137,7 @@ owl-dl = ["dep:medulla-rdf", "medulla-rdf/owl-dl"]
 promql = ["dep:medulla-tsdb", "medulla-tsdb/promql"]
 traces = ["dep:medulla-tsdb", "medulla-tsdb/traces"]
 viz-columnstore = ["dep:medulla-viz-columnstore"]
+
+[dev-dependencies]
+tempfile = "3"
+wat = "1"

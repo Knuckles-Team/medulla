@@ -7,7 +7,7 @@ use medulla_types::contract::Nonce;
 #[cfg(feature = "program-optimization")]
 use medulla_modality::OpaqueRef;
 
-pub(crate) struct ProgramPromotionRequest<'a> {
+pub struct ProgramPromotionRequest<'a> {
     pub(crate) persistence: Option<&'a std::sync::Arc<dyn PersistenceBackend>>,
     pub(crate) core: &'a std::sync::Arc<GraphCore>,
     pub(crate) request_id: u64,
@@ -62,7 +62,7 @@ impl<'a> ProgramPromotionRequest<'a> {
 /// same graph authority. The stable batch identity is checked before this
 /// function performs any pointer/CAS validation, so a retry with a new nonce
 /// returns its stored receipt even when the active pointer has since moved.
-pub(crate) async fn commit_program_promotion(
+pub async fn commit_program_promotion(
     request: ProgramPromotionRequest<'_>,
 ) -> Result<medulla_types::mutation_batch::MutationBatchCommit, String> {
     let ProgramPromotionRequest {
@@ -394,7 +394,7 @@ fn validate_program_claim_lineage(
 /// Resolve a promoted revision only through its durable revision, candidate,
 /// and selected-result-claim chain. The analytics job row may be purged after
 /// publication; these graph rows remain the immutable execution identity.
-pub(crate) fn resolve_program_promotion_identity(
+pub fn resolve_program_promotion_identity(
     core: &GraphCore,
     revision_ref: &OpaqueRef,
 ) -> Result<medulla_program::ProgramRevisionIdentity, String> {

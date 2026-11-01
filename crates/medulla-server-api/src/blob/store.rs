@@ -65,8 +65,8 @@ mod native;
 mod policy;
 #[cfg(feature = "blob-s3")]
 mod sidecar;
-#[cfg(test)]
-pub(crate) mod test_support;
+#[cfg(any(test, feature = "test-support"))]
+pub mod test_support;
 mod uploads;
 
 pub use holders::{

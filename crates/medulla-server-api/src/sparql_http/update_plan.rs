@@ -32,7 +32,7 @@ type StagedGraphState = (
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct PlannedGraphUpdate {
+pub struct PlannedGraphUpdate {
     pub graph: String,
     pub graph_type: medulla_types::protocol::GraphType,
     pub existed_before: bool,
@@ -42,7 +42,7 @@ pub(crate) struct PlannedGraphUpdate {
 
 /// Return the complete graph set an update may address. Lifecycle creation stays
 /// in dispatch so it uses the verified caller and durable graph coordinator.
-pub(crate) fn update_graphs(update_text: &str, default_graph: &str) -> Result<Vec<String>, String> {
+pub fn update_graphs(update_text: &str, default_graph: &str) -> Result<Vec<String>, String> {
     let parsed = medulla_rdf::update::parse_update(update_text)?;
     let mut graphs = medulla_rdf::update::referenced_named_graphs(&parsed);
     graphs.push(default_graph.to_string());
@@ -51,7 +51,7 @@ pub(crate) fn update_graphs(update_text: &str, default_graph: &str) -> Result<Ve
     Ok(graphs)
 }
 
-pub(crate) fn update_uses_variable_graph(update_text: &str) -> bool {
+pub fn update_uses_variable_graph(update_text: &str) -> bool {
     let tokens = update_text.split_whitespace().collect::<Vec<_>>();
     tokens.windows(2).any(|pair| {
         pair[0].eq_ignore_ascii_case("graph")
@@ -62,7 +62,7 @@ pub(crate) fn update_uses_variable_graph(update_text: &str) -> bool {
 /// Plan a SPARQL UPDATE entirely on detached graph images. The returned before/
 /// after images are consumed by dispatch's per-graph MutationBatch coordinator;
 /// this function never exposes or mutates a live registry core.
-pub(crate) async fn plan_update(
+pub async fn plan_update(
     state: &Arc<RwLock<ServerState>>,
     update_text: &str,
     default_graph: &str,

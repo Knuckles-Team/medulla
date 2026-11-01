@@ -17,12 +17,12 @@ use std::future::Future;
 use std::sync::Arc;
 
 /// Error prefix a cancelled request reports (nobody is normally left to read it).
-pub(crate) const CANCELLED: &str =
+pub const CANCELLED: &str =
     "CANCELLED: the request was abandoned (client disconnected or deadline expired)";
 
 /// One request's cancellation flag, awaitable and cheap to clone.
 #[derive(Clone)]
-pub(crate) struct RequestCancel(Arc<tokio::sync::watch::Sender<bool>>);
+pub struct RequestCancel(Arc<tokio::sync::watch::Sender<bool>>);
 
 impl RequestCancel {
     pub(crate) fn new() -> Self {
@@ -50,13 +50,13 @@ tokio::task_local! {
 }
 
 /// Run one request's dispatch future with `cancel` as its [`current`] scope.
-pub(crate) async fn scope<F: Future>(cancel: RequestCancel, dispatch: F) -> F::Output {
+pub async fn scope<F: Future>(cancel: RequestCancel, dispatch: F) -> F::Output {
     CURRENT.scope(cancel, dispatch).await
 }
 
 /// The running request's cancellation; a never-cancelled one outside a served
 /// request (in-process callers, background tasks).
-pub(crate) fn current() -> RequestCancel {
+pub fn current() -> RequestCancel {
     CURRENT
         .try_with(RequestCancel::clone)
         .unwrap_or_else(|_| RequestCancel::new())
@@ -65,7 +65,7 @@ pub(crate) fn current() -> RequestCancel {
 /// Run blocking `work` interruptibly on behalf of `cancel`'s request. An
 /// interrupted run's result is partial by construction, so once `cancel` has
 /// tripped the result is discarded and [`CANCELLED`] is returned instead.
-pub(crate) fn interruptible<T>(
+pub fn interruptible<T>(
     cancel: &RequestCancel,
     work: impl FnOnce() -> T,
 ) -> Result<T, String> {

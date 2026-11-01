@@ -32,7 +32,7 @@ use crate::auth::VerifiedRequestContext;
 use crate::state::ServerState;
 
 #[cfg(feature = "security")]
-mod grant;
+pub mod grant;
 pub mod plan;
 #[cfg(test)]
 mod tests;

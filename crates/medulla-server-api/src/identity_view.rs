@@ -21,7 +21,7 @@ use super::auth::VerifiedRequestContext;
 /// delegated, and its EXACT `identity:*` scopes (wildcards and aggregates
 /// excluded). Every identity authority check -- the op families and the SQL
 /// relations -- starts from this one value.
-pub(crate) fn identity_actor(context: &VerifiedRequestContext) -> IdentityActor {
+pub fn identity_actor(context: &VerifiedRequestContext) -> IdentityActor {
     let claims = context.claims();
     IdentityActor {
         principal_id: claims.principal.clone(),

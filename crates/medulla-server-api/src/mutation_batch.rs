@@ -14,26 +14,26 @@ mod terminal_outcome;
 
 #[cfg(feature = "raft")]
 pub(crate) use canonical::is_work_item_method;
-pub(crate) use canonical::{
+pub use canonical::{
     domain_for, is_capacity_method, is_resource_reservation_method,
     is_resource_reservation_query_method, is_work_item_mutation_method,
 };
 #[cfg(any(feature = "jobs", all(feature = "raft", feature = "epistemic-tms")))]
-pub(crate) use commit::commit_internal_graph_methods;
-pub(crate) use commit::{
+pub use commit::commit_internal_graph_methods;
+pub use commit::{
     commit_internal_graph_methods_with_nonce, commit_lifecycle, commit_work_item,
     lifecycle_was_committed, lock_graph, lock_txn_coordinator, publish_change_envelope_projection,
     CommitOrigin, InternalGraphCommitRequest, LifecycleCommitRequest, WorkItemCommitRequest,
 };
 #[cfg(feature = "program-optimization")]
-pub(crate) use commit::{
+pub use commit::{
     commit_program_promotion, resolve_program_promotion_identity, ProgramPromotionRequest,
 };
 #[cfg(feature = "jobs")]
-pub(crate) use compile::compile_opaque_method_in_scope;
+pub use compile::compile_opaque_method_in_scope;
 #[cfg(feature = "query")]
-pub(crate) use compile::compile_sql_source_batch;
-pub(crate) use compile::{
+pub use compile::compile_sql_source_batch;
+pub use compile::{
     authoritative_graph_version, compile_crossmodal, compile_methods, compile_methods_with_outbox,
     CompileBatch,
 };
@@ -44,7 +44,7 @@ pub(crate) use compile::COMPILED_BATCH_INCARNATION;
 #[cfg(feature = "redb")]
 pub use compile::compile_opaque_method;
 #[cfg(feature = "redb")]
-pub(crate) use compile::effective_policy_digest;
+pub use compile::effective_policy_digest;
 #[cfg(any(
     feature = "raft",
     feature = "blob",
@@ -53,10 +53,10 @@ pub(crate) use compile::effective_policy_digest;
     feature = "jobs",
     feature = "sparql-http"
 ))]
-pub(crate) use digest::opaque_request_key;
+pub use digest::opaque_request_key;
 #[cfg(feature = "redb")]
-pub(crate) use digest::work_item_batch_identity;
-pub(crate) use digest::{
+pub use digest::work_item_batch_identity;
+pub use digest::{
     batch_actor, lifecycle_batch_id, opaque_coordinator_key, opaque_idempotency_key_for_context,
     principal_fingerprint,
 };
@@ -64,7 +64,7 @@ pub(crate) use digest::{
 /// The verified coordinates one governed graph-row write is compiled under:
 /// the request, the verified caller, the tenant/graph it targets and the
 /// placement fence (epoch, graph version, fencing token) it commits behind.
-pub(crate) struct GraphWriteScope<'a> {
+pub struct GraphWriteScope<'a> {
     pub request_id: u64,
     pub graph_name: &'a str,
     pub tenant_scope: &'a str,

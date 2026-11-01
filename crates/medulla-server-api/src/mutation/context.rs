@@ -70,7 +70,7 @@ pub struct MutationCtx<'a> {
 /// It lives beside [`MutationCtx`] rather than in `mutation_batch::commit`
 /// because the lifecycle dispatcher constructs it and the commit lane consumes
 /// it, and `mutation_batch`'s submodules are private to that namespace.
-pub(crate) struct LifecycleAttempt<'a> {
+pub struct LifecycleAttempt<'a> {
     /// The lifecycle verb (`"create"` / `"delete"`) the batch id is keyed on.
     pub(crate) action: &'a str,
     /// Verified carrier tenant scope (EH-375) — never a request field.

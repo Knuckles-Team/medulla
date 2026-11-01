@@ -58,7 +58,7 @@ const MAX_RESULT_REF_BYTES: usize = 512;
 /// rendered bytes (those live in [`super::viz_engine::RenderCache`], which is
 /// bounded/evictable; provenance is meant to outlive an evicted cache entry).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub(crate) struct VizProvenanceRecord {
+pub struct VizProvenanceRecord {
     /// `medulla_jobs::compute_result_ref(&InputSnapshotHandle, &AlgoVersion)` — the
     /// SAME content-derived identity scheme the durable analytics-job plane
     /// uses, so a viz render's provenance sits in the same identity space as

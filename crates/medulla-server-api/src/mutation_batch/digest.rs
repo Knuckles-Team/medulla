@@ -23,7 +23,7 @@ use medulla_types::protocol::Method;
 /// `None` for a batch that carries no outbox row or no header -- which no batch
 /// this module compiles ever is, so a caller-scope check must treat `None` as a
 /// refusal rather than a match.
-pub(crate) fn batch_actor(batch: &medulla_types::MutationBatch) -> Option<&str> {
+pub fn batch_actor(batch: &medulla_types::MutationBatch) -> Option<&str> {
     batch
         .outbox
         .first()?
@@ -33,7 +33,7 @@ pub(crate) fn batch_actor(batch: &medulla_types::MutationBatch) -> Option<&str> 
 }
 
 /// Durable pseudonym used by every native coordinator retry check.
-pub(crate) fn principal_fingerprint(principal: &str) -> Result<String, String> {
+pub fn principal_fingerprint(principal: &str) -> Result<String, String> {
     use sha2::{Digest, Sha256};
     let principal = principal.trim();
     if principal.is_empty() {
@@ -63,7 +63,7 @@ pub(crate) fn principal_fingerprint(principal: &str) -> Result<String, String> {
 /// are global and a verified `agent_id` is not tenant-qualified, so without the
 /// tenant two tenants' principals sharing an agent id and an idempotency key would
 /// address ONE lifecycle batch and replay each other's CreateGraph/DeleteGraph result.
-pub(crate) fn lifecycle_batch_id(
+pub fn lifecycle_batch_id(
     action: &str,
     tenant_scope: &str,
     graph: &str,
@@ -89,7 +89,7 @@ fn graph_identity_hasher(namespace: &str, graph: &str) -> sha2::Sha256 {
     digest
 }
 
-pub(crate) fn opaque_request_key(
+pub fn opaque_request_key(
     namespace: &str,
     graph: &str,
     request_id: u64,
@@ -144,7 +144,7 @@ pub(crate) struct WorkItemBatchIdentity {
     pub(crate) uses_native_row_cas: bool,
 }
 
-pub(crate) fn work_item_batch_identity(
+pub fn work_item_batch_identity(
     graph: &str,
     tenant: &str,
     transport_request_id: u64,
@@ -333,7 +333,7 @@ fn scoped_work_item_identity(
 
 /// Stable privacy-safe identity for a multi-request/native coordinator. The raw
 /// transaction/session id is never written to durable status or outbox rows.
-pub(crate) fn opaque_coordinator_key(namespace: &str, graph: &str, coordinator_id: &str) -> String {
+pub fn opaque_coordinator_key(namespace: &str, graph: &str, coordinator_id: &str) -> String {
     use sha2::Digest;
     let mut digest = graph_identity_hasher(namespace, graph);
     digest.update(coordinator_id.as_bytes());

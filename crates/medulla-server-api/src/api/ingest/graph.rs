@@ -12,7 +12,7 @@ use crate::mutation::MutationPlan;
 /// gateway match does not embed one copy of the kernel future in every arm.
 /// Without this boundary the generated `try_handle_gateway` future exceeds
 /// Tokio's default worker-thread stack on ordinary mutation requests.
-pub(crate) async fn commit_gateway<F>(
+pub async fn commit_gateway<F>(
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
     method: &Method,

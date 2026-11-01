@@ -40,7 +40,7 @@ use medulla_types::protocol::build_context_operation_signature_bytes;
 use medulla_types::protocol::build_envelope_v2_bytes;
 use medulla_types::protocol::Method;
 use medulla_types::protocol::Request;
-pub(crate) use crate::authority_context::VerifiedRequestContext;
+pub use crate::authority_context::VerifiedRequestContext;
 use crate::request_replay::durable_replay_ledger;
 use crate::request_replay::PresentedNonce;
 use crate::request_replay::ReplayLedger;
@@ -74,7 +74,7 @@ const ENVELOPE_V2_PREFIX: &str = "eg2.";
 /// does (see [`VerifiedRequestContext::authenticated_fixed_service_actor`]).
 /// Returns `None` on a failed or absent credential (fail closed); the caller
 /// denies through [`crate::server::access::unauthenticated_carrier_denied`].
-pub(crate) fn mint_fixed_service_carrier(
+pub fn mint_fixed_service_carrier(
     credential_verified: bool,
     service: &str,
     scopes: &[&str],
@@ -143,7 +143,7 @@ pub(crate) fn iceberg_bearer_scopes(claimed: &HashSet<String>) -> Result<Vec<Str
 /// [`crate::server::access::unauthenticated_carrier_denied`], the SAME shared
 /// gate every other auxiliary surface uses.
 #[cfg(feature = "oidc")]
-pub(crate) fn mint_iceberg_carrier(
+pub fn mint_iceberg_carrier(
     verified: Option<&crate::oidc::VerifiedTokenClaims>,
 ) -> Option<crate::access::CarrierAuthority> {
     let verified = verified?;
@@ -174,7 +174,7 @@ pub(crate) fn mint_iceberg_carrier(
 /// each feature's `Cargo.toml` entry.
 #[derive(Clone)]
 #[cfg(feature = "oidc")]
-pub(crate) enum BearerCredential {
+pub enum BearerCredential {
     Static(String),
     Jwt(std::sync::Arc<crate::oidc::JwtValidator>),
 }
@@ -231,7 +231,7 @@ pub(crate) fn coarse_kg_admin_only(action: &str) -> bool {
 /// The explicit constructor is intentionally test/adapter friendly; production
 /// builds resolve the same fields from environment configuration.
 #[derive(Debug, Clone)]
-pub(crate) struct RequestContextPolicy {
+pub struct RequestContextPolicy {
     pub(crate) expected_audience: String,
     pub(crate) expected_tenant: String,
     pub(crate) expected_policy_version: String,
@@ -255,7 +255,7 @@ impl RequestContextPolicy {
 }
 
 #[cfg(not(test))]
-pub(crate) fn request_context_policy() -> Result<&'static RequestContextPolicy, String> {
+pub fn request_context_policy() -> Result<&'static RequestContextPolicy, String> {
     static POLICY: OnceLock<Result<RequestContextPolicy, String>> = OnceLock::new();
     match POLICY.get_or_init(RequestContextPolicy::from_env) {
         Ok(policy) => Ok(policy),
@@ -264,7 +264,7 @@ pub(crate) fn request_context_policy() -> Result<&'static RequestContextPolicy, 
 }
 
 #[cfg(test)]
-pub(crate) fn request_context_policy() -> Result<&'static RequestContextPolicy, String> {
+pub fn request_context_policy() -> Result<&'static RequestContextPolicy, String> {
     static POLICY: OnceLock<RequestContextPolicy> = OnceLock::new();
     Ok(POLICY.get_or_init(|| RequestContextPolicy {
         expected_audience: "medulla-test".to_string(),
@@ -578,7 +578,7 @@ pub fn compute_verified_envelope_token(
 
 /// Who a scoped test request is signed as, and under which nonce and key.
 #[cfg(test)]
-pub(crate) struct ScopedTestCaller<'a> {
+pub struct ScopedTestCaller<'a> {
     pub(crate) principal: &'a str,
     pub(crate) tenant: &'a str,
     pub(crate) scopes: &'a [&'a str],
@@ -589,8 +589,8 @@ pub(crate) struct ScopedTestCaller<'a> {
 /// A `__commons__` request carrying `method`, signed for `caller` under the
 /// fixed test audience and policy version: the served-surface fixtures'
 /// one envelope builder.
-#[cfg(test)]
-pub(crate) fn scoped_test_request(
+#[cfg(any(test, feature = "test-support"))]
+pub fn scoped_test_request(
     secret: &str,
     id: u64,
     method: Method,
@@ -600,8 +600,8 @@ pub(crate) fn scoped_test_request(
 }
 
 /// [`scoped_test_request`] against a named request graph.
-#[cfg(test)]
-pub(crate) fn scoped_test_request_on(
+#[cfg(any(test, feature = "test-support"))]
+pub fn scoped_test_request_on(
     secret: &str,
     id: u64,
     graph: &str,
@@ -641,8 +641,8 @@ pub(crate) fn scoped_test_request_on(
     request
 }
 
-#[cfg(test)]
-pub(crate) fn sign_current_test_request(secret: &str, request: Request) -> Request {
+#[cfg(any(test, feature = "test-support"))]
+pub fn sign_current_test_request(secret: &str, request: Request) -> Request {
     sign_test_request_with_context(secret, request, "tenant-shared", vec!["test".to_string()])
 }
 
@@ -664,7 +664,7 @@ pub(crate) fn sign_current_test_request_in_tenant(
 /// call site. The envelope details remain centralized in
 /// [`sign_current_test_request_in_tenant`].
 #[cfg(test)]
-pub(crate) fn build_current_test_request(
+pub fn build_current_test_request(
     secret: &str,
     tenant: &str,
     id: u64,
@@ -687,7 +687,7 @@ pub(crate) fn build_current_test_request(
 
 /// Build the common-tenant form used by the ordinary dispatch fixtures.
 #[cfg(test)]
-pub(crate) fn build_shared_test_request(
+pub fn build_shared_test_request(
     secret: &str,
     id: u64,
     graph: &str,
@@ -701,7 +701,7 @@ pub(crate) fn build_shared_test_request(
 /// The full method router produces a large future, so callers must not embed it
 /// in another test future before polling.
 #[cfg(test)]
-pub(crate) fn dispatch_test_on_heap<'a>(
+pub fn dispatch_test_on_heap<'a>(
     state: &'a std::sync::Arc<tokio::sync::RwLock<crate::state::ServerState>>,
     request: Request,
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = medulla_types::protocol::Response> + Send + 'a>> {
@@ -1225,7 +1225,7 @@ pub(crate) fn authentication_refusal(error: &str) -> String {
 
 /// Top-level authentication gate. Only the current verified context envelope
 /// is accepted.
-pub(crate) fn verify_request(
+pub fn verify_request(
     secret: &str,
     req: &Request,
 ) -> Result<VerifiedRequestContext, String> {
@@ -1271,7 +1271,7 @@ pub(super) fn validate_verified_context_startup(
     Ok(())
 }
 
-pub(crate) fn verify_request_with_security_dir(
+pub fn verify_request_with_security_dir(
     secret: &str,
     req: &Request,
     state_dir: Option<&str>,
@@ -1620,7 +1620,7 @@ impl SignerRegistryStore {
         }
     }
 
-    fn current(&self) -> std::sync::Arc<SignerKeyRegistry> {
+    pub fn current(&self) -> std::sync::Arc<SignerKeyRegistry> {
         std::sync::Arc::clone(&self.current.lock_or_panic("signer key registry"))
     }
 
@@ -1649,7 +1649,7 @@ impl SignerRegistryStore {
     /// to wait out. Idempotent and infallible: revoking an id that is not
     /// currently trusted (already gone, or never existed) is a silent no-op,
     /// so the caller cannot use this to probe which signer ids exist.
-    fn revoke(&self, signer_id: &str) {
+    pub fn revoke(&self, signer_id: &str) {
         let mut current = self.current.write_or_panic("signer key registry");
         if current.signers.contains_key(signer_id) {
             let mut signers = current.signers.clone();

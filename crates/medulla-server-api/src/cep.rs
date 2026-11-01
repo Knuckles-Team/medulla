@@ -465,7 +465,7 @@ async fn surface_of(
 /// Handle the live CEP standing-query methods (CONCEPT:MEDULLA-KG.query.protocol-types). Returns `Err(method)` for
 /// any non-CEP method so the dispatch chain falls through — though dispatch only routes the
 /// `Cep*` methods here.
-pub(crate) async fn try_handle(
+pub async fn try_handle(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     authority: &CarrierAuthority,

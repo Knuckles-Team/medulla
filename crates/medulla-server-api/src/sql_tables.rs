@@ -39,11 +39,11 @@ mod ann_maintenance;
 pub use ann_maintenance::sweep_ann_generations;
 
 /// Directory, under the persistence directory, that holds every SQL catalog file.
-pub(crate) const SQL_CATALOG_DIR: &str = "sql-catalog";
+pub const SQL_CATALOG_DIR: &str = "sql-catalog";
 
 /// One carrier-owned native SQL-owner mutation: compiled at the owner scope's
 /// current version under the verified carrier's idempotency identity.
-pub(crate) struct SqlOwnerMutation<'a> {
+pub struct SqlOwnerMutation<'a> {
     pub(crate) authority: &'a CarrierAuthority,
     /// Idempotency namespace for this kind of owner mutation.
     pub(crate) kind: &'static str,
@@ -144,7 +144,7 @@ fn registry_key(path: &Path) -> String {
     hex::encode(digest.finalize())
 }
 
-pub(crate) fn validate_served_configuration(persist_dir: Option<&Path>) -> std::io::Result<()> {
+pub fn validate_served_configuration(persist_dir: Option<&Path>) -> std::io::Result<()> {
     if persist_dir.is_some() {
         Ok(())
     } else {
@@ -242,7 +242,7 @@ pub(crate) fn user_table_store(
 /// through [`crate::server::sql_catalog_acl`] — this function performs no
 /// authorization of its own, exactly like `user_table_store` performs none: the
 /// physical-open layer answers "which file", never "is this caller allowed".
-pub(crate) fn tenant_table_store(
+pub fn tenant_table_store(
     tenant_scope: &str,
     persist_dir: &Path,
 ) -> Result<TableStore, String> {
@@ -253,7 +253,7 @@ pub(crate) fn tenant_table_store(
 /// for `tenant_scope` (CONCEPT:NE-003). A SEPARATE physical file from
 /// [`tenant_table_store`] so the user-data catalog's schema/row tables never
 /// intermix with access-control metadata.
-pub(crate) fn tenant_acl_table_store(
+pub fn tenant_acl_table_store(
     tenant_scope: &str,
     persist_dir: &Path,
 ) -> Result<TableStore, String> {
@@ -279,18 +279,18 @@ pub(crate) fn tenant_source_authority_lock(
 /// Panics (via the lock) only on registry poisoning, matching every other
 /// registry accessor in this module.
 #[cfg(test)]
-pub(crate) fn evict_for_test(path: &Path) {
+pub fn evict_for_test(path: &Path) {
     let key = registry_key(path);
     registry().lock().unwrap().remove(&key);
 }
 
 #[cfg(test)]
-pub(crate) fn tenant_table_path_for_test(tenant_scope: &str, persist_dir: &Path) -> PathBuf {
+pub fn tenant_table_path_for_test(tenant_scope: &str, persist_dir: &Path) -> PathBuf {
     tenant_table_path(tenant_scope, persist_dir)
 }
 
 #[cfg(test)]
-pub(crate) fn tenant_acl_path_for_test(tenant_scope: &str, persist_dir: &Path) -> PathBuf {
+pub fn tenant_acl_path_for_test(tenant_scope: &str, persist_dir: &Path) -> PathBuf {
     tenant_acl_path(tenant_scope, persist_dir)
 }
 
@@ -326,8 +326,8 @@ pub(crate) fn sql_context_cache(
     Ok(cache)
 }
 
-#[cfg(test)]
-pub(crate) fn test_persist_dir() -> PathBuf {
+#[cfg(any(test, feature = "test-support"))]
+pub fn test_persist_dir() -> PathBuf {
     static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
     std::env::temp_dir().join(format!(
         "medulla-sql-test-{}-{}",

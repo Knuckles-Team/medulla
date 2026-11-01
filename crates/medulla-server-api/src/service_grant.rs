@@ -18,7 +18,7 @@ use medulla_core::isolation::AgentRole;
 use medulla_core::isolation::IsolationLayer;
 
 /// One service writer's per-graph grant: `actor` holds role `<role_prefix>:<graph>`.
-pub(crate) struct ServiceGraphGrant<'a> {
+pub struct ServiceGraphGrant<'a> {
     pub(crate) actor: &'a str,
     pub(crate) role_prefix: &'a str,
     /// The refusal code prefix when the policy is not bootstrapped yet.
@@ -46,7 +46,7 @@ impl ServiceGraphGrant<'_> {
 
 /// Install an exact-graph read/write role and attach it to one service actor.
 /// Callers retain their own policy-bootstrap refusal before entering here.
-pub(crate) fn ensure_exact_graph_grant(
+pub fn ensure_exact_graph_grant(
     isolation: &mut IsolationLayer,
     graph: &str,
     actor: &str,

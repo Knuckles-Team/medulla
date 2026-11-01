@@ -10,7 +10,7 @@ use medulla_types::contract::Nonce;
 use super::super::compile::{compile_methods, CompileBatch};
 use super::super::digest::{lifecycle_batch_id, principal_fingerprint};
 
-pub(crate) struct LifecycleCommitRequest<'a> {
+pub struct LifecycleCommitRequest<'a> {
     pub(crate) persistence: &'a Arc<dyn PersistenceBackend>,
     pub(crate) action: &'a str,
     pub(crate) request_id: u64,
@@ -64,7 +64,7 @@ impl<'a> LifecycleCommitRequest<'a> {
 /// Commit one CreateGraph/DeleteGraph batch before the caller mutates the in-RAM
 /// registry. The redb kernel applies graph_meta/purge, status, idempotency and
 /// outbox atomically; `replayed` lets the caller finish a post-commit RAM publish.
-pub(crate) async fn commit_lifecycle(
+pub async fn commit_lifecycle(
     request: LifecycleCommitRequest<'_>,
 ) -> Result<medulla_types::mutation_batch::MutationBatchCommit, String> {
     let LifecycleCommitRequest {
@@ -143,7 +143,7 @@ fn validate_lifecycle_replay_result(
 /// key address the receipt through [`lifecycle_batch_id`]; the receipt's own
 /// operation, actor attribution and idempotency key are then checked against the
 /// request, and any disagreement is a conflict, not a replay.
-pub(crate) async fn lifecycle_was_committed(
+pub async fn lifecycle_was_committed(
     persistence: &Arc<dyn PersistenceBackend>,
     attempt: LifecycleAttempt<'_>,
     method: Method,

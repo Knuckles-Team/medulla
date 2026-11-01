@@ -61,7 +61,7 @@ fn cached_positive_usize_from_env(
 /// at each call so a process can observe an operator's current setting.
 /// Trimming and rejecting zero preserve the contract shared by the maintenance
 /// limit accessors; the concrete unsigned type remains with each caller.
-pub(crate) fn positive_runtime_limit_from_env<T>(variable: &str, default: T) -> T
+pub fn positive_runtime_limit_from_env<T>(variable: &str, default: T) -> T
 where
     T: std::str::FromStr + PartialOrd + Default,
 {

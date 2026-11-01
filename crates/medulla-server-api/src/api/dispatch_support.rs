@@ -2,7 +2,7 @@
 
 /// Run blocking store work off the async runtime; a task that panics or is
 /// cancelled answers `"<task> task failed: …"`, the work's own error otherwise.
-pub(crate) async fn blocking_task<T: Send + 'static>(
+pub async fn blocking_task<T: Send + 'static>(
     task: &str,
     work: impl FnOnce() -> Result<T, String> + Send + 'static,
 ) -> Result<T, String> {
@@ -65,7 +65,7 @@ pub fn validate_direct_wire_security(
 /// non-reversible actor reference before it reaches engine authorization or durable
 /// audit state. The same principal maps to the same actor across AMQP/MQTT/STOMP,
 /// while the deployment secret prevents offline recovery of low-entropy usernames.
-pub(crate) fn pseudonymous_broker_actor(secret: &str, principal: &str) -> std::io::Result<String> {
+pub fn pseudonymous_broker_actor(secret: &str, principal: &str) -> std::io::Result<String> {
     if secret.is_empty() || principal.is_empty() || principal.len() > 4 * 1024 {
         return Err(std::io::Error::new(
             std::io::ErrorKind::PermissionDenied,
@@ -112,7 +112,7 @@ pub fn require_loopback_listener(listener: &tokio::net::TcpListener) -> std::io:
 /// this is the widest feature that still keeps the fn used (never dead code)
 /// in every build that calls it.
 #[cfg(feature = "redb")]
-pub(crate) fn unique_temp_dir(prefix: &str) -> std::path::PathBuf {
+pub fn unique_temp_dir(prefix: &str) -> std::path::PathBuf {
     use std::sync::atomic::{AtomicU64, Ordering};
     static SEQ: AtomicU64 = AtomicU64::new(0);
     std::env::temp_dir().join(format!(
@@ -133,7 +133,7 @@ pub(crate) fn unique_temp_dir(prefix: &str) -> std::path::PathBuf {
     feature = "lake",
     feature = "oidc"
 ))]
-pub(crate) fn outbound_http_config() -> ureq::config::ConfigBuilder<ureq::typestate::AgentScope> {
+pub fn outbound_http_config() -> ureq::config::ConfigBuilder<ureq::typestate::AgentScope> {
     ureq::Agent::config_builder()
         .proxy(None)
         .max_redirects(5)

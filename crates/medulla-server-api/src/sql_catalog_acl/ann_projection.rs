@@ -28,7 +28,7 @@ use medulla_core::graph::GraphCore;
 /// The request graph of a served read: its edge indexes' statuses join the
 /// status relation beside the tenant's table indexes (EH-352).
 #[derive(Clone)]
-pub(crate) struct RequestGraph {
+pub struct RequestGraph {
     pub(crate) name: String,
     pub(crate) core: Arc<GraphCore>,
 }
@@ -39,7 +39,7 @@ use crate::sql_tables;
 /// read of a user table, that table holds only its nearest visible rows; every
 /// other table is the full visible copy [`super::authorized_read_store`] makes. The
 /// caller's read-only relations (EH-066) join the projection when `query` can see them.
-pub(crate) fn authorized_read_store_for_query(
+pub fn authorized_read_store_for_query(
     authority: &CarrierAuthority,
     persist_dir: &Path,
     query: &str,
@@ -85,7 +85,7 @@ fn adopt_edge_index_status(
 /// table the caller may not alter is reported exactly like a missing one, so
 /// `DROP INDEX [IF EXISTS]` never discloses an index across an authorization
 /// boundary (EH-352).
-pub(crate) fn alterable_ann_index_table(
+pub fn alterable_ann_index_table(
     authority: &CarrierAuthority,
     persist_dir: &Path,
     name: &str,

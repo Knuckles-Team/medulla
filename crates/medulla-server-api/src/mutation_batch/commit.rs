@@ -8,12 +8,12 @@ mod work_item;
 #[cfg(feature = "program-optimization")]
 mod program;
 
-pub(crate) use envelope::publish_change_envelope_projection;
+pub use envelope::publish_change_envelope_projection;
 
 /// Which wire request a durable commit answers and the verified principal it is
 /// attributed to: the attribution pair every commit-request constructor takes.
 #[derive(Clone, Copy)]
-pub(crate) struct CommitOrigin<'a> {
+pub struct CommitOrigin<'a> {
     pub(crate) request_id: u64,
     pub(crate) principal: Option<&'a str>,
 }
@@ -23,23 +23,23 @@ pub(crate) struct CommitOrigin<'a> {
     feature = "jobs",
     all(feature = "raft", feature = "epistemic-tms")
 ))]
-pub(crate) use internal::commit_internal_graph_methods;
-pub(crate) use internal::{
+pub use internal::commit_internal_graph_methods;
+pub use internal::{
     commit_internal_graph_methods_with_nonce, lock_graph, lock_txn_coordinator,
     InternalGraphCommitRequest,
 };
 #[cfg(all(test, feature = "redb"))]
 pub(crate) use lifecycle::lifecycle_identity_matches;
-pub(crate) use lifecycle::{commit_lifecycle, lifecycle_was_committed, LifecycleCommitRequest};
+pub use lifecycle::{commit_lifecycle, lifecycle_was_committed, LifecycleCommitRequest};
 #[cfg(test)]
 pub(crate) use work_item::changed_work_item_ids;
-pub(crate) use work_item::{commit_work_item, WorkItemCommitRequest};
+pub use work_item::{commit_work_item, WorkItemCommitRequest};
 
 #[cfg(test)]
 use internal::{apply_projectable_method, install_validated_internal_replay_snapshot};
 
 #[cfg(feature = "program-optimization")]
-pub(crate) use program::{
+pub use program::{
     commit_program_promotion, resolve_program_promotion_identity, ProgramPromotionRequest,
 };
 

@@ -112,7 +112,7 @@ fn control_lease_tenant(method: &Method) -> Result<String, String> {
     }
 }
 
-pub(crate) struct WorkItemCommitRequest<'a> {
+pub struct WorkItemCommitRequest<'a> {
     pub(crate) persistence: Option<&'a Arc<dyn PersistenceBackend>>,
     pub(crate) core: &'a Arc<GraphCore>,
     pub(crate) request_id: u64,
@@ -361,7 +361,7 @@ fn mark_work_item_replayed(
 /// Execute a WorkItem claim/renew/result transition inside the redb
 /// MutationBatch transaction and then refresh every affected in-memory node from
 /// the authoritative store. No selection or transition runs in RAM first.
-pub(crate) async fn commit_work_item(
+pub async fn commit_work_item(
     request: WorkItemCommitRequest<'_>,
 ) -> Result<ResultPayload, String> {
     commit_work_item_inner(request).await

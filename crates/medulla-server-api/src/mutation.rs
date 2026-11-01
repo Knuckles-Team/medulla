@@ -129,10 +129,10 @@ use plan::{CONSENSUS_FANOUT_METHODS, SELF_ROUTED_ADMIN_METHODS};
 
 pub use context::MutationCtx;
 use context::{advance_authoritative_manifest, idempotency_store, response_dedup_key};
-pub(crate) use context::{durable_receipt_method, LifecycleAttempt};
+pub use context::{durable_receipt_method, LifecycleAttempt};
 
 pub use coalescer::commit_coalescable_mutation;
-pub(crate) use coalescer::{apply_coalescable_write, is_coalescable_structural_write};
+pub use coalescer::{apply_coalescable_write, is_coalescable_structural_write};
 
 pub use commit_entry::commit_mutation;
 use commit_entry::{

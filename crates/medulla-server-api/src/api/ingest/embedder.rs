@@ -26,11 +26,11 @@ const TIMEOUT_S: u64 = 60;
 const MAX_RESPONSE_BYTES: u64 = 256 * 1024 * 1024;
 
 /// The embedder named in provenance.
-pub(crate) const HASH: &str = "hash";
+pub const HASH: &str = "hash";
 pub(crate) const REMOTE: &str = "openai-compatible";
 
 #[derive(Clone)]
-pub(crate) struct EmbedderConfig {
+pub struct EmbedderConfig {
     endpoint: Option<String>,
     pub(crate) model: Option<String>,
     pub(crate) dims: usize,

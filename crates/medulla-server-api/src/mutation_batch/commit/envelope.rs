@@ -17,7 +17,7 @@ struct StagedVectors<'a> {
 /// Durable redb state remains authoritative; a failure here is repaired from the
 /// transactional `engine.projection.rebuild` outbox rather than rolling back or
 /// pretending the envelope did not commit.
-pub(crate) fn publish_change_envelope_projection(
+pub fn publish_change_envelope_projection(
     core: &Arc<GraphCore>,
     envelope: &ChangeEnvelope,
 ) -> Result<(), String> {

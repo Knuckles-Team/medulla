@@ -55,7 +55,7 @@ pub trait QueryApi: Send + Sync {
 #[async_trait::async_trait]
 pub trait TxnApi: Send + Sync {
     /// Route one transaction-family method through the transaction handler.
-    async fn try_handle(
+    pub async fn try_handle(
         &self,
         state: &Arc<RwLock<ServerState>>,
         req_id: u64,
