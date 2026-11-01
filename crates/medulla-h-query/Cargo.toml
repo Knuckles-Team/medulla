@@ -71,6 +71,11 @@ medulla-server-blob = { path = "../medulla-server-blob" }
 medulla-server-mutation = { path = "../medulla-server-mutation" }
 medulla-server-cdc = { path = "../medulla-server-cdc" }
 medulla-server-auth = { path = "../medulla-server-auth" }
+medulla-exec = { path = "../medulla-exec" }
+medulla-federation = { path = "../medulla-federation" }
+medulla-nlq = { path = "../medulla-nlq" }
+medulla-retrieval = { path = "../medulla-retrieval" }
+medulla-uql = { path = "../medulla-uql" }
 
 [features]
 test-support = []
