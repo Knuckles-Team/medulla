@@ -144,7 +144,7 @@ impl VerifiedAuthority {
     /// Structural evidence validation only. This does not verify a signature,
     /// consult a key registry or policy store, consume replay state, compare a
     /// trusted clock, or admit execution.
-    pub(crate) fn validate_evidence_bindings(
+    pub fn validate_evidence_bindings(
         &self,
         operation_identity: &OperationReplayIdentity,
         nonce_key: &NonceReplayKey,
