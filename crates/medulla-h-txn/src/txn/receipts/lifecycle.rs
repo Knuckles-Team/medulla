@@ -10,7 +10,7 @@ use medulla_persistence::AsRedb;
 /// `open_txns` state without ever presenting the verified nonce to the kernel.
 /// Use the existing named admin saga as the one admission/receipt authority for
 /// those lifecycle steps; this helper does not introduce a second replay table.
-pub(in crate::server::handlers::txn) fn is_txn_lifecycle_method(method: &Method) -> bool {
+pub(crate) fn is_txn_lifecycle_method(method: &Method) -> bool {
     matches!(method, Method::BeginTxn { .. })
         || (method_txn_id(method).is_some() && !matches!(method, Method::Commit { .. }))
 }
@@ -20,7 +20,7 @@ pub(in crate::server::handlers::txn) fn is_txn_lifecycle_method(method: &Method)
 /// process, but it cannot recreate `open_txns`; returning its old success after
 /// restart would hand the caller a dead Begin handle or claim a Stage/Rollback
 /// succeeded before the next request fails with `unknown transaction`.
-pub(in crate::server::handlers::txn) fn validate_txn_lifecycle_result(
+pub(crate) fn validate_txn_lifecycle_result(
     method: &Method,
     result: &ResultPayload,
 ) -> Result<(), String> {
@@ -77,7 +77,7 @@ fn matches_lifecycle_result(expected: &str, result: &ResultPayload) -> bool {
     }
 }
 
-pub(in crate::server::handlers::txn) async fn validate_txn_lifecycle_replay(
+pub(crate) async fn validate_txn_lifecycle_replay(
     state: &Arc<RwLock<ServerState>>,
     method: &Method,
     owner: &str,
@@ -115,7 +115,7 @@ pub(in crate::server::handlers::txn) async fn validate_txn_lifecycle_replay(
     Ok(())
 }
 
-pub(in crate::server::handlers::txn) fn txn_lifecycle_batch_id(
+pub(crate) fn txn_lifecycle_batch_id(
     authority: &CarrierAuthority,
     method: &Method,
 ) -> String {
@@ -133,16 +133,16 @@ pub(in crate::server::handlers::txn) fn txn_lifecycle_batch_id(
 
 #[cfg(feature = "redb")]
 pub(crate) struct TxnLifecycleReceipt {
-    pub(in crate::server::handlers::txn) backend:
+    pub(crate) backend:
         Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
-    pub(in crate::server::handlers::txn) saga: medulla_server_api::api::admin::saga::AdminSaga,
+    pub(crate) saga: medulla_server_api::api::admin::saga::AdminSaga,
 }
 
 #[cfg(not(feature = "redb"))]
 pub(crate) struct TxnLifecycleReceipt;
 
 #[cfg(feature = "redb")]
-pub(in crate::server::handlers::txn) async fn begin_txn_lifecycle_receipt(
+pub(crate) async fn begin_txn_lifecycle_receipt(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     caller: &str,
@@ -190,7 +190,7 @@ pub(in crate::server::handlers::txn) async fn begin_txn_lifecycle_receipt(
 }
 
 #[cfg(not(feature = "redb"))]
-pub(in crate::server::handlers::txn) async fn begin_txn_lifecycle_receipt(
+pub(crate) async fn begin_txn_lifecycle_receipt(
     _state: &Arc<RwLock<ServerState>>,
     _req_id: u64,
     _caller: &str,
@@ -204,7 +204,7 @@ pub(in crate::server::handlers::txn) async fn begin_txn_lifecycle_receipt(
 }
 
 #[cfg(feature = "redb")]
-pub(in crate::server::handlers::txn) fn finish_txn_lifecycle_receipt(
+pub(crate) fn finish_txn_lifecycle_receipt(
     receipt: TxnLifecycleReceipt,
     result: ResultPayload,
     method: Option<&Method>,
@@ -221,7 +221,7 @@ pub(in crate::server::handlers::txn) fn finish_txn_lifecycle_receipt(
 }
 
 #[cfg(not(feature = "redb"))]
-pub(in crate::server::handlers::txn) fn finish_txn_lifecycle_receipt(
+pub(crate) fn finish_txn_lifecycle_receipt(
     _receipt: TxnLifecycleReceipt,
     _result: ResultPayload,
     _method: Option<&Method>,
