@@ -6,7 +6,7 @@ use medulla_index_types::semantic_index::SemanticSourceDirtyIntent;
 use medulla_index_types::semantic_index::SemanticStageTransition;
 use std::path::Path;
 
-use medulla_h_query::semantic_index_runtime::*;
+use medulla_h_retrieve::semantic_index_runtime::*;
 #[cfg(feature = "query")]
 use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_index_types::semantic_index::SemanticIndexError;
@@ -493,7 +493,7 @@ async fn leased_sql_source_completion_replays_after_reopen_and_acl_change() {
             // ("mutation principal authority must be an opaque digest").
             // This fixture passed a plain agent id, which is the failure
             // this test hit the first time it was ever compiled.
-            medulla_h_query::semantic_index_runtime::semantic_owner_principal(),
+            medulla_h_retrieve::semantic_index_runtime::semantic_owner_principal(),
             SEMANTIC_PROOF,
             worker.tenant_scope(),
             &binding.binding_id,

@@ -110,6 +110,7 @@ medulla-nlq = { path = "../medulla-nlq" }
 medulla-uql = { path = "../medulla-uql" }
 medulla-h-mining = { path = "../medulla-h-mining" }
 medulla-h-sparql = { path = "../medulla-h-sparql" }
+medulla-h-retrieve = { path = "../medulla-h-retrieve" }
 
 [features]
 amqp-wire = ["server"]
