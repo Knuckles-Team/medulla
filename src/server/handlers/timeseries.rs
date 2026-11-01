@@ -52,11 +52,11 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use super::super::compute::compute_off_lock;
-use super::super::state::ServerState;
 use crate::mutation_batch::{DurabilityDomain, MutationBatch, MutationSurface};
 use crate::protocol::{Method, Response, ResultPayload};
 use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::compute::compute_off_lock;
+use medulla_server_api::state::ServerState;
 
 use medulla_tsdb::point::Point;
 use medulla_tsdb::query::{asof_join_backward, gap_fill_locf, time_bucket, Agg};

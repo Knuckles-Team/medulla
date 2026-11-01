@@ -82,7 +82,7 @@ fn consensus_placement_fence_lock() -> &'static Arc<tokio::sync::Mutex<()>> {
 
 /// Serialize placement cutovers with the prepare-fence check-and-persist interval.
 #[cfg(feature = "raft")]
-pub(crate) async fn consensus_placement_fence_guard() -> tokio::sync::OwnedMutexGuard<()> {
+pub async fn consensus_placement_fence_guard() -> tokio::sync::OwnedMutexGuard<()> {
     Arc::clone(consensus_placement_fence_lock())
         .lock_owned()
         .await
@@ -92,7 +92,7 @@ pub(crate) async fn consensus_placement_fence_guard() -> tokio::sync::OwnedMutex
 /// fence is process-local serving state reconstructed by Raft history; its durable
 /// authority remains the encrypted participant intent.
 #[cfg(feature = "raft")]
-pub(crate) fn acquire_consensus_graph_fence(
+pub fn acquire_consensus_graph_fence(
     graph: &str,
     coordinator_id: &str,
     participant_id: u64,
@@ -114,11 +114,7 @@ pub(crate) fn acquire_consensus_graph_fence(
 }
 
 #[cfg(feature = "raft")]
-pub(crate) fn release_consensus_graph_fence(
-    graph: &str,
-    coordinator_id: &str,
-    participant_id: u64,
-) {
+pub fn release_consensus_graph_fence(graph: &str, coordinator_id: &str, participant_id: u64) {
     let should_remove = consensus_graph_fences()
         .get(graph)
         .map(|fence| {
@@ -131,14 +127,14 @@ pub(crate) fn release_consensus_graph_fence(
 }
 
 #[cfg(feature = "raft")]
-pub(crate) fn consensus_graph_is_prepared(graph: &str) -> bool {
+pub fn consensus_graph_is_prepared(graph: &str) -> bool {
     consensus_graph_fences().contains_key(graph)
 }
 
 /// Reject control-plane operations that would move, reroute, or remove a graph
 /// while a replicated participant intent owns its prepare fence.
 #[cfg(feature = "raft")]
-pub(crate) fn consensus_control_conflicts(method: &Method) -> bool {
+pub fn consensus_control_conflicts(method: &Method) -> bool {
     match method {
         Method::Reshard { graph, .. }
         | Method::CatalogAssign { graph, .. }
@@ -153,7 +149,7 @@ pub(crate) fn consensus_control_conflicts(method: &Method) -> bool {
 /// Placement administration for a tenant cannot race any prepared graph in that
 /// tenant's exact or partition-qualified keyspace.
 #[cfg(feature = "raft")]
-pub(crate) fn consensus_tenant_is_prepared(tenant: &str) -> bool {
+pub fn consensus_tenant_is_prepared(tenant: &str) -> bool {
     let partition_prefix = format!("{tenant}:");
     consensus_graph_fences()
         .iter()
@@ -161,7 +157,7 @@ pub(crate) fn consensus_tenant_is_prepared(tenant: &str) -> bool {
 }
 
 #[cfg(feature = "raft")]
-pub(crate) fn consensus_has_prepared_graphs() -> bool {
+pub fn consensus_has_prepared_graphs() -> bool {
     !consensus_graph_fences().is_empty()
 }
 
@@ -208,7 +204,7 @@ pub fn sweep_expired_txns(state: &Arc<RwLock<ServerState>>, ttl_secs: u64, now: 
 /// Fingerprint of a node's current state, captured when a staged op first
 /// references it and re-checked at commit for OCC conflict detection.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub(crate) enum NodeFingerprint {
+pub enum NodeFingerprint {
     /// Node absent at capture time.
     Absent,
     /// Node present; the hash of its property blob at capture time. Hashing (not
@@ -250,7 +246,7 @@ pub enum IsolationLevel {
 ///   * `None` / `""` / `"snapshot"`        → (Snapshot, None)
 ///   * `"serializable"`                     → (Serializable, None)
 ///   * `"serializable:label=<L>"`           → (Serializable, Some(Label(<L>)))
-pub(crate) fn parse_isolation(
+pub fn parse_isolation(
     hint: Option<&str>,
 ) -> Result<(IsolationLevel, Option<PredicateRead>), String> {
     let raw = hint.unwrap_or("").trim();
@@ -345,37 +341,37 @@ impl PredicateRead {
 #[derive(Clone)]
 pub struct GraphTxnState {
     /// Target graph (resolved at begin; all staged ops apply here).
-    pub(crate) graph: String,
+    pub graph: String,
     /// Opaque tenant authority derived from the verified request context. This is
     /// the sole durable tenant scope for every batch produced by the transaction.
-    pub(crate) tenant_scope: String,
+    pub tenant_scope: String,
     /// `core.version()` at begin — the coarse OCC guard.
-    pub(crate) begin_version: u64,
+    pub begin_version: u64,
     /// Staged durable mutations, applied in order at commit. Restricted to the
     /// durable-mutation set (AddNode/RemoveNode/AddEdge/RemoveEdge/CompareAndSet).
     pub write_set: Vec<Method>,
     /// Per-node fingerprints captured when first referenced — the OCC read-set.
-    pub(crate) read_set: HashMap<String, NodeFingerprint>,
+    pub read_set: HashMap<String, NodeFingerprint>,
     /// Isolation level (CONCEPT:MEDULLA-KG.txn.serializable-zero-cost). `Snapshot` validates only `read_set`;
     /// `Serializable` additionally re-checks `predicate_reads`.
-    pub(crate) isolation: IsolationLevel,
+    pub isolation: IsolationLevel,
     /// Predicate/range reads captured at begin and re-evaluated at commit under
     /// serializable — each entry is `(predicate, fingerprint-at-begin)`. Empty under
     /// snapshot (so snapshot pays no extra cost).
     pub predicate_reads: Vec<(PredicateRead, u64)>,
     /// Owning verified tenant+actor scope (for authorization and the per-owner
     /// open-txn cap).
-    pub(crate) agent: String,
+    pub agent: String,
     /// Monotonic ms timestamp of the last staged/begun activity, for TTL idle
     /// expiry. Updated on every stage so an actively-used txn is never swept.
-    pub(crate) last_active_ms: u64,
+    pub last_active_ms: u64,
     /// Multi-graph staged write-set (CONCEPT:MEDULLA-KG.txn.routes-cross-shard-txn — Lane N). A `Txn*` op naming a
     /// graph OTHER than the default `graph` accumulates here, keyed by graph name, in
     /// stage order. EMPTY for an ordinary single-graph txn (the fast path pays
     /// nothing). At commit, if these touch graphs in a DIFFERENT Raft group than the
     /// default graph, the txn is CROSS-SHARD and routes through the 2PC coordinator;
     /// otherwise the spanned graphs collapse onto one group and stay single-group.
-    pub(crate) extra_writes: HashMap<String, Vec<Method>>,
+    pub extra_writes: HashMap<String, Vec<Method>>,
     /// Staged VECTOR upserts `(node_id, embedding)` for the DEFAULT graph (CONCEPT:
     /// KG-2.225 — cross-modal ACID). EMPTY for a graph-only txn. When non-empty, the
     /// commit lands graph + vectors (+ blob-refs) in ONE redb `WriteTransaction` so a
@@ -384,7 +380,7 @@ pub struct GraphTxnState {
     /// Staged BLOB REFERENCES `(node_id, digest)` for the DEFAULT graph (CONCEPT:
     /// KG-2.225). Each records a durable graph-side `__blob__` link to an already-
     /// stored content-addressed blob; lands in the SAME cross-modal commit txn.
-    pub(crate) blob_refs: Vec<(String, String)>,
+    pub blob_refs: Vec<(String, String)>,
     /// Staged TIME-SERIES measurement batches for the DEFAULT graph (CONCEPT:MEDULLA-KG.backend.cross-modal-atomic-commit —
     /// extended cross-modal staging). EMPTY for a txn with no measurements. When
     /// non-empty, the commit lands each batch into the graph's SERIES tables inside the
@@ -403,7 +399,7 @@ pub struct GraphTxnState {
     /// `AddEdge` methods at stage time (CONCEPT:MEDULLA-KG.txn.construct-evaluated — the CONSTRUCT is evaluated
     /// against the committed snapshot when staged). Applied through the SAME cross-modal
     /// wtx as `axioms`. EMPTY for a non-construct txn.
-    pub(crate) constructs: Vec<Method>,
+    pub constructs: Vec<Method>,
     /// Staged PLANNER WRITEBACK methods (CONCEPT:MEDULLA-KG.query.plan-dag, D7 — the planner-writeback
     /// ACID seam), already LOWERED to graph-native `AddNode`/`AddEdge` methods at stage
     /// time from a `medulla_plan::Plan`'s (or `PlanDag`'s) executed `RowSet` result — e.g.
@@ -412,7 +408,7 @@ pub struct GraphTxnState {
     /// (`apply_method_rows` durably + `apply_staged` in-memory) as `axioms`/`constructs`,
     /// so the committed planner-inferred edges are atomic with the txn's other staged
     /// modalities. EMPTY for a txn with no plan writeback.
-    pub(crate) plan_writeback: Vec<Method>,
+    pub plan_writeback: Vec<Method>,
 }
 
 /// One staged time-series measurement batch (CONCEPT:MEDULLA-KG.backend.cross-modal-atomic-commit). Carries the decoded points
@@ -423,9 +419,9 @@ pub struct GraphTxnState {
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct StagedMeasurement {
     pub series: String,
-    pub(crate) n_fields: usize,
-    pub(crate) bucket_ns: u64,
-    pub(crate) field_names: Vec<String>,
+    pub n_fields: usize,
+    pub bucket_ns: u64,
+    pub field_names: Vec<String>,
     /// `(ts_nanos, field_values)` points — the SAME shape `TsAppend` carries on the wire.
     pub points: Vec<(i64, Vec<f64>)>,
 }
@@ -433,7 +429,7 @@ pub struct StagedMeasurement {
 impl StagedMeasurement {
     /// Flatten into the persistence-layer [`medulla_store::MeasurementBatch`] tuple threaded
     /// through `commit_crossmodal`.
-    pub(crate) fn to_batch(&self) -> medulla_store::MeasurementBatch {
+    pub fn to_batch(&self) -> medulla_store::MeasurementBatch {
         (
             self.series.clone(),
             self.n_fields,
@@ -448,13 +444,13 @@ impl StagedMeasurement {
 /// separately-borrowed `core: &GraphCore` snapshot argument) so the constructor
 /// stays under the clippy argument-count ceiling.
 pub struct NewTxnArgs {
-    pub(crate) graph: String,
-    pub(crate) tenant_scope: String,
-    pub(crate) begin_version: u64,
-    pub(crate) isolation: IsolationLevel,
-    pub(crate) predicate: Option<PredicateRead>,
-    pub(crate) agent: String,
-    pub(crate) now_ms: u64,
+    pub graph: String,
+    pub tenant_scope: String,
+    pub begin_version: u64,
+    pub isolation: IsolationLevel,
+    pub predicate: Option<PredicateRead>,
+    pub agent: String,
+    pub now_ms: u64,
 }
 
 impl GraphTxnState {
@@ -515,7 +511,7 @@ impl GraphTxnState {
     /// no predicate read-set to protect at that level, so this never silently
     /// weakens anything — it can only ADD protection a caller explicitly
     /// captured).
-    pub(crate) fn add_predicate_read(&mut self, core: &GraphCore, predicate: PredicateRead) {
+    pub fn add_predicate_read(&mut self, core: &GraphCore, predicate: PredicateRead) {
         if self.isolation != IsolationLevel::Serializable {
             return;
         }
@@ -526,7 +522,7 @@ impl GraphTxnState {
     /// True when this txn staged any NON-graph-topology modality — a vector, blob-ref,
     /// measurement, OWL axiom, CONSTRUCT, or planner writeback — i.e. it is a CROSS-MODAL
     /// txn whose commit must land all modalities in ONE redb `WriteTransaction`.
-    pub(crate) fn is_cross_modal(&self) -> bool {
+    pub fn is_cross_modal(&self) -> bool {
         !self.vectors.is_empty()
             || !self.blob_refs.is_empty()
             || !self.measurements.is_empty()
@@ -541,7 +537,7 @@ impl GraphTxnState {
     /// unchanged). Otherwise the op accumulates in `extra_writes` for that graph; the
     /// op is NOT applied (the cross-shard coordinator applies the multi-graph slices
     /// atomically at commit, with its own per-participant OCC validation).
-    pub(crate) fn stage_in(
+    pub fn stage_in(
         &mut self,
         default_core: &GraphCore,
         target_graph: &str,
@@ -561,7 +557,7 @@ impl GraphTxnState {
 
     /// Every graph this txn touches: the default plus any extra-graph targets
     /// (CONCEPT:MEDULLA-KG.txn.routes-cross-shard-txn). Used at commit to detect a cross-shard span.
-    pub(crate) fn touched_graphs(&self) -> Vec<String> {
+    pub fn touched_graphs(&self) -> Vec<String> {
         let mut out = vec![self.graph.clone()];
         out.extend(self.extra_writes.keys().cloned());
         out
@@ -570,7 +566,7 @@ impl GraphTxnState {
     /// True when this txn staged ops against a graph other than its default
     /// (CONCEPT:MEDULLA-KG.txn.routes-cross-shard-txn) — i.e. it is a multi-graph txn whose span the commit path
     /// must evaluate against the router.
-    pub(crate) fn is_multi_graph(&self) -> bool {
+    pub fn is_multi_graph(&self) -> bool {
         !self.extra_writes.is_empty()
     }
 
@@ -625,7 +621,7 @@ impl GraphTxnState {
     /// additionally re-evaluate each captured predicate read-set and require its
     /// result-set fingerprint to be unchanged (rejects phantoms/range anomalies).
     /// Returns `true` when the transaction may commit.
-    pub(crate) fn validate(&self, core: &GraphCore) -> bool {
+    pub fn validate(&self, core: &GraphCore) -> bool {
         // Coarse guard: no write landed at all since begin → nothing to re-check
         // (CONCEPT:MEDULLA-KG.txn.serializable-zero-cost — serializable pays nothing when the graph is untouched).
         if core.version() == self.begin_version {

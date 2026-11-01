@@ -2,17 +2,13 @@
 
 use super::super::*;
 
-pub(super) fn mutation_version(
-    store: &RedbChunkStore,
-    tenant: &str,
-    graph: &str,
-) -> Result<u64, String> {
+pub fn mutation_version(store: &RedbChunkStore, tenant: &str, graph: &str) -> Result<u64, String> {
     let identity = blob_scope_identity(ScopeTenantId::new(tenant.to_string())?, graph)?;
     let owner = store.scope_handle(&identity)?;
     medulla_transaction::version(&store.kernel.read_scope(&owner)?)
 }
 
-pub(super) fn sweep_batch(
+pub fn sweep_batch(
     store: &RedbChunkStore,
     request: &SweepRequest,
     batch: &MutationBatch,
@@ -24,7 +20,7 @@ pub(super) fn sweep_batch(
     })
 }
 
-pub(super) fn begin_upload_batch(
+pub fn begin_upload_batch(
     store: &RedbChunkStore,
     cursor: u64,
     chunk_size: u32,
@@ -41,7 +37,7 @@ pub(super) fn begin_upload_batch(
     })
 }
 
-pub(super) fn put_upload_chunk_batch(
+pub fn put_upload_chunk_batch(
     store: &RedbChunkStore,
     cursor: u64,
     bytes: &[u8],
@@ -64,10 +60,7 @@ pub(super) fn put_upload_chunk_batch(
     })
 }
 
-pub(super) fn load_upload(
-    store: &RedbChunkStore,
-    cursor: u64,
-) -> Result<Option<BlobManifest>, String> {
+pub fn load_upload(store: &RedbChunkStore, cursor: u64) -> Result<Option<BlobManifest>, String> {
     store.flush_chunks()?;
     let read = store.read()?;
     let table = read.open_owner_table(CAS_UPLOADS)?;
@@ -79,7 +72,7 @@ pub(super) fn load_upload(
     .transpose()
 }
 
-pub(super) fn commit_upload_batch(
+pub fn commit_upload_batch(
     store: &RedbChunkStore,
     cursor: u64,
     batch: &MutationBatch,

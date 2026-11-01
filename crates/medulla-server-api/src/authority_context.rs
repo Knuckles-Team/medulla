@@ -102,7 +102,7 @@ impl VerifiedRequestContext {
     /// before the leader can propose the entry. Raw tenant/principal identities are
     /// intentionally unavailable here; followers operate on their one-way scopes.
     #[cfg(feature = "raft")]
-    pub(crate) fn replicated_mutation(
+    pub fn replicated_mutation(
         authority: &crate::api::persistence::RaftMutationContext,
     ) -> Result<Self, String> {
         let policy = request_context_policy()?;
@@ -200,11 +200,11 @@ impl VerifiedRequestContext {
 
     /// Dedicated authority for remote analytics worker leases. A general
     /// `kg:write` grant cannot read job payloads or publish results.
-    pub(crate) fn allows_analytics_worker(&self) -> bool {
+    pub fn allows_analytics_worker(&self) -> bool {
         self.allows_action("analytics:worker") || self.scope_index.contains("kg:admin")
     }
 
-    pub(crate) fn allows_identity_bootstrap(&self) -> bool {
+    pub fn allows_identity_bootstrap(&self) -> bool {
         self.claims.principal == self.claims.agent_id
             && self.claims.delegation.is_empty()
             && self.claims.scopes.len() == 1
@@ -288,10 +288,7 @@ impl VerifiedRequestContext {
     /// per-request idempotency key into the signed envelope's MAC -- so the fix
     /// belongs in the fixture, not in the key derivation.
     #[cfg(test)]
-    pub(crate) fn verified_for_test_with_idempotency_key(
-        agent_id: &str,
-        idempotency_key: &str,
-    ) -> Self {
+    pub fn verified_for_test_with_idempotency_key(agent_id: &str, idempotency_key: &str) -> Self {
         Self::from_verified_claims(
             RequestContextClaims {
                 principal: format!("principal:{agent_id}"),
@@ -311,11 +308,7 @@ impl VerifiedRequestContext {
     /// need to exercise a carrier with a specific `kg:read`/`kg:write` grant
     /// rather than the shared fixture's fixed `kg:read`-only default.
     #[cfg(any(test, feature = "test-support"))]
-    pub fn verified_for_test_with_scopes(
-        agent_id: &str,
-        tenant: &str,
-        scopes: &[&str],
-    ) -> Self {
+    pub fn verified_for_test_with_scopes(agent_id: &str, tenant: &str, scopes: &[&str]) -> Self {
         Self::from_verified_claims(
             RequestContextClaims {
                 principal: format!("principal:{agent_id}"),
@@ -333,10 +326,7 @@ impl VerifiedRequestContext {
     /// Build the authenticated in-process context used only after an auxiliary broker
     /// protocol has verified its own credential and converted the principal to
     /// a secret-keyed opaque actor reference.
-    pub(crate) fn authenticated_broker_actor(
-        actor_ref: &str,
-        request_id: u64,
-    ) -> Result<Self, String> {
+    pub fn authenticated_broker_actor(actor_ref: &str, request_id: u64) -> Result<Self, String> {
         let digest = actor_ref
             .strip_prefix("broker:actor:hmac-sha256:")
             .ok_or_else(|| "broker actor reference is invalid".to_string())?;
@@ -365,7 +355,7 @@ impl VerifiedRequestContext {
     /// External traffic reaches this path only after its carrier has passed the
     /// adapter's authentication gate; the service identity must also be present
     /// in durable RBAC policy and receives read scope only.
-    pub(crate) fn authenticated_local_query(request_id: u64) -> Result<Self, String> {
+    pub fn authenticated_local_query(request_id: u64) -> Result<Self, String> {
         let policy = request_context_policy()?;
         Ok(Self::from_verified_claims(
             RequestContextClaims {

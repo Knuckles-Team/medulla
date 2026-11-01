@@ -104,14 +104,14 @@ pub const DEFAULT_MAX_RESPONSE_EDGES: usize = 50_000;
 /// missing `MultiRaft` as either a local bypass or a valid clustered route.
 #[cfg(feature = "raft")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum PlacementAuthorityKind {
+pub enum PlacementAuthorityKind {
     Local,
     MultiRaft,
     Missing,
 }
 
 #[cfg(feature = "raft")]
-pub(crate) const MISSING_PLACEMENT_AUTHORITY: &str =
+pub const MISSING_PLACEMENT_AUTHORITY: &str =
     "CLUSTER_CONFIGURATION_INVALID: MultiRaft placement authority is required";
 
 #[cfg(feature = "raft")]

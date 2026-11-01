@@ -2,7 +2,7 @@
 
 use super::super::*;
 
-pub(super) fn has_named_holder(
+pub fn has_named_holder(
     store: &RedbChunkStore,
     digest: &str,
     holder: &str,
@@ -18,7 +18,7 @@ pub(super) fn has_named_holder(
     Ok(found)
 }
 
-pub(super) fn holder_batch(
+pub fn holder_batch(
     store: &RedbChunkStore,
     change: &HolderChange,
     batch: &MutationBatch,
@@ -31,7 +31,7 @@ pub(super) fn holder_batch(
     })
 }
 
-pub(super) fn reconcile_holders_batch(
+pub fn reconcile_holders_batch(
     store: &RedbChunkStore,
     request: &HolderReconcile,
     batch: &MutationBatch,

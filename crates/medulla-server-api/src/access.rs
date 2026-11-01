@@ -10,8 +10,8 @@ use medulla_core::isolation::IsolationLayer;
 use medulla_types::contract::{Digest256, Nonce};
 use std::sync::Arc;
 
-#[cfg(all(test, feature = "security"))]
-pub(crate) fn two_agent_isolation() -> IsolationLayer {
+#[cfg(all(any(test, feature = "test-support"), feature = "security"))]
+pub fn two_agent_isolation() -> IsolationLayer {
     use medulla_core::isolation::AgentIdentity;
     use medulla_core::isolation::AgentRole;
 
@@ -73,7 +73,7 @@ pub struct CarrierAuthority {
 pub struct OwnerScopedCall<'a> {
     pub state: &'a Arc<tokio::sync::RwLock<crate::state::ServerState>>,
     pub req_id: u64,
-    pub(crate) carrier: Option<&'a CarrierAuthority>,
+    pub carrier: Option<&'a CarrierAuthority>,
 }
 
 #[cfg(any(feature = "wasm-udf", feature = "federation"))]
@@ -97,7 +97,7 @@ impl CarrierAuthority {
     /// A verified carrier for `agent` in the deployment's one tenant (the owner-scoped
     /// catalog test fixtures).
     #[cfg(all(test, any(feature = "federation", feature = "wasm-udf")))]
-    pub(crate) fn verified_for_test(agent: &str) -> Self {
+    pub fn verified_for_test(agent: &str) -> Self {
         Self::from_verified(&VerifiedRequestContext::verified_for_test(agent))
             .expect("verified test carrier")
     }
@@ -477,7 +477,7 @@ impl GraphReadAuthority {
     /// `schema_node_ids` reverse index, not every node's property blob); the
     /// expensive half is the sort + per-node clone into a second core, which is
     /// exactly what this skips.
-    pub(crate) fn node_visible(&self, core: &GraphCore, node_id: &str) -> bool {
+    pub fn node_visible(&self, core: &GraphCore, node_id: &str) -> bool {
         let view = core.analysis_snapshot();
         if !view.node_map.contains_key(node_id) {
             return false;
@@ -590,7 +590,7 @@ impl GraphReadAuthority {
     /// See `IsolationLayer::filter_view` for the bulk-path sibling of this
     /// same derivation.
     #[cfg(feature = "security")]
-    pub(crate) fn can_see_node(&self, properties_msgpack: &[u8], is_schema: bool) -> bool {
+    pub fn can_see_node(&self, properties_msgpack: &[u8], is_schema: bool) -> bool {
         let mut vis = row_visibility(properties_msgpack);
         vis.schema = is_schema;
         self.isolation.can_see_row(&self.actor, &vis)
@@ -600,7 +600,7 @@ impl GraphReadAuthority {
     /// `security`, so the projection is never bypassed) — exists only so callers
     /// type-check in a `not(security)` build, mirroring `project_core_active`.
     #[cfg(not(feature = "security"))]
-    pub(crate) fn can_see_node(&self, _properties_msgpack: &[u8], _is_schema: bool) -> bool {
+    pub fn can_see_node(&self, _properties_msgpack: &[u8], _is_schema: bool) -> bool {
         true
     }
 
@@ -705,7 +705,7 @@ impl GraphReadAuthority {
 }
 
 mod write_classification;
-pub(crate) use write_classification::requires_write;
+pub use write_classification::requires_write;
 
 /// Whether a wire `Method::Sql` statement mutates state (CONCEPT:MEDULLA-KG.query.mirrors-pgwire). Reuses the
 /// SAME `medulla_query::classify` the pgwire shim routes on, so a graph-node DML
@@ -853,7 +853,7 @@ pub fn principal_may_access(
 /// IS registered always falls through unchanged to the existing
 /// existence-then-`check_graph_access` sequence, which still makes the real,
 /// graph-type/owner-aware decision.
-pub(crate) fn check_caller_is_known(
+pub fn check_caller_is_known(
     isolation: &IsolationLayer,
     caller: Option<&str>,
     graph_name: &str,
@@ -1077,7 +1077,7 @@ mod l10_broker_stream_write_tests {
 /// `RebalanceExecute` (`"admin:cluster"`), `CatalogList` / `RebalancePlan`
 /// (`"admin:cluster-read"`), and `Backup` / `Restore` (`"admin:backup"`) — the exact
 /// set `src/server/dispatch.rs`'s M3-admin arm + Zero-Trust-Consensus arms route.
-pub(crate) fn is_admin_authz_action(action: &str) -> bool {
+pub fn is_admin_authz_action(action: &str) -> bool {
     action == "security:admin" || action.starts_with("admin:")
 }
 
@@ -1088,7 +1088,7 @@ pub(crate) fn is_admin_authz_action(action: &str) -> bool {
 /// `Admin` grant) — there is no coarse-ACL fallback for admin actions the way graph
 /// Read/Write has one, so an agent with no admin grant is DENIED, not defaulted
 /// open.
-pub(crate) fn require_admin_capability(
+pub fn require_admin_capability(
     isolation: &IsolationLayer,
     caller: Option<&str>,
     action: &'static str,

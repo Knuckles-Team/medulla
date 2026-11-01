@@ -27,12 +27,14 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use super::super::compute::compute_off_lock;
-use super::super::state::ServerState;
 use crate::graph::GraphCore;
 use crate::protocol::Method;
 #[cfg(any(feature = "query", feature = "cypher", feature = "graphql"))]
 use crate::protocol::{Response, ResultPayload};
+#[cfg(feature = "result-cache")]
+use medulla_core::result_cache::ResultCache;
+#[cfg(feature = "graphql")]
+use medulla_graphql::parser::{Field, GqlValue};
 use medulla_server_api::access::GraphReadAuthority;
 #[cfg(feature = "federation")]
 use medulla_server_api::api::query_txn::foreign_catalog::bound_registry;
@@ -40,14 +42,12 @@ use medulla_server_api::api::query_txn::foreign_catalog::bound_registry;
 use medulla_server_api::api::query_txn::query_support::bind_sql_text_embedder;
 use medulla_server_api::api::query_txn::query_support::execute_rows;
 use medulla_server_api::api::query_txn::query_support::overlay_write_set;
-use medulla_server_api::api::query_txn::query_support::uql_text_embedder;
 #[cfg(all(feature = "query", feature = "tsdb"))]
 use medulla_server_api::api::query_txn::query_support::plan_needs_tsdb;
+use medulla_server_api::api::query_txn::query_support::uql_text_embedder;
 use medulla_server_api::api::query_txn::query_support::TsdbLegBind;
-#[cfg(feature = "result-cache")]
-use medulla_core::result_cache::ResultCache;
-#[cfg(feature = "graphql")]
-use medulla_graphql::parser::{Field, GqlValue};
+use medulla_server_api::compute::compute_off_lock;
+use medulla_server_api::state::ServerState;
 
 #[cfg(feature = "query")]
 use medulla_types::result_contract::EncodeRef;
@@ -1440,7 +1440,11 @@ mod dispatch_write_tests {
     /// completes`) gets this right by going through a real `CarrierAuthority`;
     /// this derives the same scope the same way production does.
     fn carrier_tenant_scope(tenant: &str) -> String {
-        medulla_server_api::mutation_batch::opaque_coordinator_key("carrier-tenant", "verified", tenant)
+        medulla_server_api::mutation_batch::opaque_coordinator_key(
+            "carrier-tenant",
+            "verified",
+            tenant,
+        )
     }
 
     /// A direct signed CREATE that committed its table before owner

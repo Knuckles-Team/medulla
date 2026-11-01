@@ -452,7 +452,7 @@ async fn dispatch_inner(
                     medulla_kernel::metrics::auth_failure();
                     return Response::err(
                         req.id,
-                        super::super::auth::authentication_refusal(&error),
+                        medulla_server_api::auth::authentication_refusal(&error),
                     );
                 }
             }
@@ -530,7 +530,11 @@ async fn dispatch_admitted_request(
         finalize_dispatch_response(req_id, response, &method_for_finalize, session_control)
     };
     #[cfg(feature = "redb")]
-    return medulla_server_api::api::admin::saga::scope_admin_saga_authority(saga_authority, operation).await;
+    return medulla_server_api::api::admin::saga::scope_admin_saga_authority(
+        saga_authority,
+        operation,
+    )
+    .await;
     #[cfg(not(feature = "redb"))]
     operation.await
 }

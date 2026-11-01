@@ -228,9 +228,7 @@ impl CdcHub {
     /// so a Tokio runtime is live. Subsequent `emit`s feed the surface via [`CdcHub::emit`].
     #[cfg(feature = "stream")]
     pub fn cep_surface(&self) -> Arc<crate::cep::CepSurface> {
-        self.cep
-            .get_or_init(crate::cep::CepSurface::new)
-            .clone()
+        self.cep.get_or_init(crate::cep::CepSurface::new).clone()
     }
 
     /// Install the reasoning cascade (W3.6/E16). Called at most once, at
@@ -802,7 +800,7 @@ pub use dispatch::emit_for_method;
 /// gateway and the sanitized Raft state machine. No occurrence or partition id is
 /// exposed to CDC consumers.
 #[cfg(feature = "modality-serving")]
-pub(crate) fn emit_served_modality(
+pub fn emit_served_modality(
     hub: &CdcHub,
     graph: &str,
     modality: medulla_types::ServedModalityKind,

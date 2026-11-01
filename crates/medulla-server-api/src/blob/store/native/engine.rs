@@ -5,7 +5,7 @@ use crate::blob::engine_bodies::EngineBody;
 use crate::blob::engine_bodies::PlannedEngineBody;
 use crate::blob::engine_bodies::StoredEngineBody;
 
-pub(super) fn put_engine_bodies(
+pub fn put_engine_bodies(
     store: &RedbChunkStore,
     tenant_id: &str,
     bodies: &[EngineBody],
@@ -22,7 +22,7 @@ pub(super) fn put_engine_bodies(
     )
 }
 
-pub(super) fn put_repository_bodies(
+pub fn put_repository_bodies(
     store: &RedbChunkStore,
     tenant_id: &str,
     repository_id: &str,

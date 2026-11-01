@@ -20,8 +20,9 @@ pub(super) async fn try_handle(
             let (source, params, writeback) = (source.clone(), params.clone(), *writeback);
             let req_id = ctx.req_id;
             mutation::commit_conditional_mutation(ctx, plan, method, writeback, move |core| {
-                let resp =
-                    super::super::graphlearn::handle_fit(req_id, core, source, params, writeback);
+                let resp = medulla_server_api::handlers::graphlearn::handle_fit(
+                    req_id, core, source, params, writeback,
+                );
                 super::gateway::mining_response_to_gateway_result(resp)
             })
             .await
@@ -43,7 +44,7 @@ pub(super) async fn try_handle(
             );
             let req_id = ctx.req_id;
             mutation::commit_conditional_mutation(ctx, plan, method, writeback, move |core| {
-                let resp = super::super::graphlearn::handle_predict(
+                let resp = medulla_server_api::handlers::graphlearn::handle_predict(
                     req_id,
                     core,
                     model,

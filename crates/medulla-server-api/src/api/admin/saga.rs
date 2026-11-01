@@ -110,7 +110,7 @@ pub enum AdminSagaResultContract {
 #[cfg(feature = "redb")]
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(tag = "kind", content = "value")]
-enum DurableAdminResult {
+pub enum DurableAdminResult {
     Bool(bool),
     Count(u64),
     Text(String),

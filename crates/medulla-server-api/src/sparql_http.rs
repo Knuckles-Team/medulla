@@ -48,9 +48,7 @@ use graph_store::{export_graph, gsp_default_graph, gsp_target, parse_rdf_body};
 use negotiation::{choose_ct, render_query_outcome, serialize_graph, GRAPH_FORMS};
 #[cfg(test)]
 use negotiation::{negotiate, SELECT_FORMS};
-pub use update_plan::{
-    plan_update, update_graphs, update_uses_variable_graph, PlannedGraphUpdate,
-};
+pub use update_plan::{plan_update, update_graphs, update_uses_variable_graph, PlannedGraphUpdate};
 
 /// Env var naming the default-graph the endpoint resolves a bare query against.
 pub const DEFAULT_GRAPH_ENV: &str = "MEDULLA_SPARQL_DEFAULT_GRAPH";
@@ -448,7 +446,7 @@ fn run_dataset_query(ds: &Dataset, query: &str) -> Result<QueryOutcome, String> 
 /// crate-visibility for that reuse. No behavior changed; `select`'s dispatch is unchanged
 /// (trait-method visibility already follows `RemoteSparql`, which is `pub`).
 #[cfg(feature = "sparql-service")]
-pub(crate) struct ServiceClient {
+pub struct ServiceClient {
     /// Allowed hosts / `scheme://host:port` origins (lower-cased), from `SERVICE_ALLOW_ENV`.
     allow: Vec<String>,
 }
@@ -470,7 +468,7 @@ impl ServiceClient {
     /// production code (which always goes through `from_env`, so a live deploy's
     /// fail-closed default is untouched by this constructor's existence).
     #[cfg(test)]
-    pub(crate) fn with_allow(allow: Vec<String>) -> Self {
+    pub fn with_allow(allow: Vec<String>) -> Self {
         Self { allow }
     }
 

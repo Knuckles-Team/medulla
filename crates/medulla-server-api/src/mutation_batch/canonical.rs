@@ -868,7 +868,7 @@ pub(super) fn surface_for(method: &Method) -> Option<MutationSurface> {
     }
 }
 
-pub(crate) fn is_work_item_method(method: &Method) -> bool {
+pub fn is_work_item_method(method: &Method) -> bool {
     matches!(
         method.write_family(),
         Some(MethodWriteFamily::WorkItemSubmission | MethodWriteFamily::WorkItemLease)

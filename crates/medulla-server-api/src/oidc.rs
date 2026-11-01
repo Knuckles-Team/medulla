@@ -205,7 +205,7 @@ struct ResourceAccessEntry {
 pub struct VerifiedTokenClaims {
     pub subject: String,
     pub tenant: Option<String>,
-    pub(crate) roles: HashSet<String>,
+    pub roles: HashSet<String>,
     pub scopes: HashSet<String>,
 }
 
@@ -307,7 +307,7 @@ impl JwtValidator {
     /// `OIDC_ISSUER`/`OIDC_AUDIENCE` when a dedicated value is not set. No
     /// issuer configured ⇒ `Ok(None)`: `eg2.` keeps today's HMAC-only
     /// behavior (unauthenticated local/dev deployments are unaffected).
-    pub(crate) fn from_env_primary() -> Result<Option<Self>, String> {
+    pub fn from_env_primary() -> Result<Option<Self>, String> {
         Self::from_envs(
             "eg2-oidc",
             PRIMARY_ISSUER_ENVS,
@@ -543,7 +543,7 @@ pub mod tests {
         validator_for(ISSUER, AUDIENCE, KID)
     }
 
-    pub(crate) fn validator_for(issuer: &str, audience: &str, kid: &str) -> JwtValidator {
+    pub fn validator_for(issuer: &str, audience: &str, kid: &str) -> JwtValidator {
         let mut keys = HashMap::new();
         let n = hex::decode(TEST_RSA_MODULUS_HEX).expect("modulus hex");
         let e = hex::decode(TEST_RSA_EXPONENT_HEX).expect("exponent hex");

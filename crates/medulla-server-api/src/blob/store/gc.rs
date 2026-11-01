@@ -25,14 +25,14 @@ use std::collections::BTreeSet;
 
 /// The manifest, upload and retention tables one plan reads.
 pub(super) struct SweepTables<'a, B, U, R> {
-    pub(super) blobs: &'a B,
-    pub(super) uploads: &'a U,
-    pub(super) retention: &'a R,
+    pub blobs: &'a B,
+    pub uploads: &'a U,
+    pub retention: &'a R,
 }
 
 /// The shared-service facts a plan needs, from a write or a read.
 pub(super) struct SharedFacts<'a> {
-    pub(super) refcount: &'a dyn Fn(&str) -> Result<u64, String>,
+    pub refcount: &'a dyn Fn(&str) -> Result<u64, String>,
     pub(super) chunk_present: &'a dyn Fn(&str) -> Result<bool, String>,
     /// Digests whose reference count row reads zero.
     pub(super) zero_refs: BTreeSet<String>,

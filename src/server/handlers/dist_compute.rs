@@ -11,9 +11,9 @@ use crate::server::persistence::AsRedb;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use super::super::access::GraphReadAuthority;
-use super::super::state::ServerState;
 use crate::protocol::{Method, Response, ResultPayload};
+use medulla_server_api::access::GraphReadAuthority;
+use medulla_server_api::state::ServerState;
 // The algo-only Pregel matview lives behind `compute-dist` (it runs cross-shard
 // supersteps over multi-Raft groups). The plan-backed matview path below shares this
 // module but touches NONE of it.

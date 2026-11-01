@@ -13,7 +13,7 @@ mod digest;
 mod terminal_outcome;
 
 #[cfg(feature = "raft")]
-pub(crate) use canonical::is_work_item_method;
+pub use canonical::is_work_item_method;
 pub use canonical::{
     domain_for, is_capacity_method, is_resource_reservation_method,
     is_resource_reservation_query_method, is_work_item_mutation_method,
@@ -41,7 +41,7 @@ pub use compile::compile_sql_source_batch;
 #[cfg(feature = "redb")]
 pub use compile::effective_policy_digest;
 #[cfg(feature = "redb")]
-pub(crate) use compile::COMPILED_BATCH_INCARNATION;
+pub use compile::COMPILED_BATCH_INCARNATION;
 pub use compile::{
     authoritative_graph_version, compile_crossmodal, compile_methods, compile_methods_with_outbox,
     CompileBatch,

@@ -860,7 +860,7 @@ pub struct CrossModalCommitArgs<'a> {
 /// (groups), so N can never exceed the shard ceiling ([`crate::redb_layout::MAX_SHARD_COUNT`]).
 /// Pure (no env access) so it is unit tested directly without the process-global
 /// env-var races a `from_env` test would need.
-pub(crate) fn parse_groups(raw: Option<String>, default: u64) -> Result<u64, String> {
+pub fn parse_groups(raw: Option<String>, default: u64) -> Result<u64, String> {
     let ceiling = medulla_store::redb_layout::MAX_SHARD_COUNT as u64;
     // Absent / empty / an explicit `0` all mean "unspecified" ⇒ the cores-derived
     // `default` (preserving the pre-ADR-2 "None/empty/0 collapse together" semantic,
@@ -885,7 +885,7 @@ pub(crate) fn parse_groups(raw: Option<String>, default: u64) -> Result<u64, Str
 /// (for HA) gets the SAME write-sharding a single-node deployment gets by default rather
 /// than collapsing to one group. Under raft K (redb shards) == N (groups), so this is the
 /// ONE default both `resolve_shard_count` and [`raft_group_count`] derive from.
-pub(crate) fn default_raft_group_count() -> u64 {
+pub fn default_raft_group_count() -> u64 {
     let cpus = medulla_kernel::autosize::detect_capacity().reserved_cpus() as u64;
     (cpus / 2).clamp(1, medulla_store::redb_layout::MAX_SHARD_COUNT as u64)
 }
@@ -897,7 +897,7 @@ pub(crate) fn default_raft_group_count() -> u64 {
 /// is raised once by `RaftClusterConfig::from_env`, which gates startup, so this
 /// accessor (reached only on an already-accepted raft-configured node) never needs to
 /// re-report it.
-pub(crate) fn raft_group_count() -> u64 {
+pub fn raft_group_count() -> u64 {
     parse_groups(
         std::env::var("MEDULLA_RAFT_GROUPS").ok(),
         default_raft_group_count(),
@@ -957,7 +957,7 @@ impl medulla_kernel::kernel::persistence::DurableNodePresence for BackendPresenc
 }
 
 /// Deserializes a field that must be present (an explicit `null` is allowed).
-pub(crate) fn deserialize_required_option<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+pub fn deserialize_required_option<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
 where
     D: serde::Deserializer<'de>,
     T: serde::Deserialize<'de>,
@@ -994,16 +994,16 @@ pub struct RaftMutationContext {
 /// The timing and placement fence attached to an already verified mutation.
 /// Grouping these adjacent fields keeps the request-boundary constructor small
 /// without changing the serialized authority shape.
-pub(crate) struct RaftMutationTiming {
-    pub(crate) placement_epoch: u64,
-    pub(crate) fencing_token: Option<u64>,
-    pub(crate) created_at_ms: u64,
+pub struct RaftMutationTiming {
+    pub placement_epoch: u64,
+    pub fencing_token: Option<u64>,
+    pub created_at_ms: u64,
 }
 
 impl RaftMutationContext {
     /// Construct caller authority only from the already-verified, privacy-safe
     /// carrier facts at the dispatch boundary.
-    pub(crate) fn from_verified_request(
+    pub fn from_verified_request(
         batch_id: String,
         request_id: u64,
         attempt_nonce: Option<medulla_types::contract::Nonce>,
@@ -1035,7 +1035,7 @@ impl RaftMutationContext {
     /// Construct engine-owned control-plane authority. The tenant and principal
     /// are fixed opaque digests, while the child batch id deterministically binds
     /// the operation to its graph and coordinator without persisting either raw id.
-    pub(crate) fn internal(
+    pub fn internal(
         namespace: &str,
         graph: &str,
         coordinator_id: &str,
@@ -1059,7 +1059,7 @@ impl RaftMutationContext {
         }
     }
 
-    pub(crate) fn internal_tenant_scope() -> String {
+    pub fn internal_tenant_scope() -> String {
         crate::mutation_batch::opaque_coordinator_key(
             "raft-internal-tenant",
             "control-plane",
@@ -1067,7 +1067,7 @@ impl RaftMutationContext {
         )
     }
 
-    pub(crate) fn internal_principal_fingerprint() -> String {
+    pub fn internal_principal_fingerprint() -> String {
         crate::mutation_batch::opaque_coordinator_key(
             "principal:sha256",
             "medulla-raft-control-plane",
@@ -1075,14 +1075,14 @@ impl RaftMutationContext {
         )
     }
 
-    pub(crate) fn is_internal(&self) -> bool {
+    pub fn is_internal(&self) -> bool {
         self.tenant_scope == Self::internal_tenant_scope()
             && self.principal_fingerprint == Self::internal_principal_fingerprint()
             && self.attempt_nonce.is_none()
             && !self.identity_bootstrap
     }
 
-    pub(crate) fn validate(&self) -> Result<(), String> {
+    pub fn validate(&self) -> Result<(), String> {
         if self.batch_id.trim().is_empty() {
             return Err("Raft mutation batch authority must not be empty".to_string());
         }

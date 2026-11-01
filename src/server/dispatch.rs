@@ -10,28 +10,28 @@ use std::time::Instant as DispatchLockInstant;
 use tokio::sync::RwLock;
 use tracing::info;
 
-use super::access::{
+use medulla_server_api::access::{
     check_caller_is_known, check_graph_access, is_admin_authz_action, require_admin_capability,
     requires_write, CarrierAuthority, GraphReadAuthority,
 };
-use super::auth::{
+use medulla_server_api::auth::{
     verify_multisig_mutation_signatures, verify_register_identity_signature, VerifiedRequestContext,
 };
 // Only the ast-gated ParseFiles handler offloads to the blocking pool here; the
 // graph-op off-lock sites live in handlers/graph_ops.rs.
-#[cfg(feature = "ast")]
-use super::compute::compute_off_lock;
 use super::handlers;
+#[cfg(feature = "ast")]
+use medulla_server_api::compute::compute_off_lock;
 // NOT `#[cfg(feature = "redb")]`: `server::persistence` is an unconditional module
 // (server/mod.rs) and three ungated signatures below -- `reconcile_existing_graph_create`,
 // `read_committed_graph_version`, `reconcile_missing_graph_delete` -- name this trait
 // unqualified. Gating the import broke every build without `redb`
 // (`--no-default-features --features server`) with E0405 while the default full build,
 // which enables `redb`, stayed green. See plans/complex/lane-reports/WD10-R-DISPATCH.md.
-use super::state::ServerState;
 use crate::isolation::AccessLevel;
 use crate::protocol::{Method, Request, Response, ResultPayload};
 use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_server_api::state::{timed_write, ServerState};
 
 /// Stable, privacy-safe rejection for a graph lifecycle type that this binary
 /// does not support.  The wire decoder normally rejects unknown enum strings
@@ -343,7 +343,6 @@ mod resource_status_privacy_tests {
         assert_eq!(related.host_ref.as_deref(), Some("host-secret"));
     }
 }
-
 
 // Nested MessagePack values ride inside outer `bin` fields, which are opaque to
 // the transport's top-level grammar scan. Keep a second, tighter budget here so

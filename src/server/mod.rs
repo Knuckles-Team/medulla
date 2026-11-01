@@ -4,7 +4,7 @@
 // and serves requests over UDS or TCP with HMAC-SHA256 authentication.
 
 #[cfg(feature = "security")]
-pub use denial_sample::spawn_flusher as spawn_denial_sample_flusher;
+pub use medulla_server_api::denial_sample::spawn_flusher as spawn_denial_sample_flusher;
 pub mod seams_install;
 pub use seams_install::install_seams;
 pub(crate) mod issuer_trust;
@@ -127,7 +127,7 @@ pub fn validate_verified_request_context_startup(
     secret: &str,
     state_dir: Option<&str>,
 ) -> Result<(), String> {
-    auth::validate_verified_context_startup(secret, state_dir)
+    medulla_server_api::auth::validate_verified_context_startup(secret, state_dir)
 }
 pub mod boot_maintenance;
 pub mod namespace_migration;
@@ -540,7 +540,7 @@ pub(crate) fn test_state_with_services(
     std::sync::Arc::new(tokio::sync::RwLock::new(state))
 }
 
-pub use request_replay::seal_request_replay_ledger;
+pub use medulla_server_api::request_replay::seal_request_replay_ledger;
 pub use transport::{
     bind_tcp, handle_connection, prepare_tcp_tls, run_idle_watcher, serve_tcp, serve_tcp_listener,
     PreparedTcpTls, ShutdownCoordinator, TcpTlsConfig,
@@ -689,11 +689,11 @@ mod ca17_feature_stub_contract {
 
 #[cfg(test)]
 mod tests {
-    use super::compute::weight_semantic_results;
     use super::*;
     use crate::acl::RequestContextClaims;
     use crate::isolation::{AgentIdentity, AgentRole};
     use crate::protocol::{GraphType, Method, Request, Response, ResultPayload};
+    use medulla_server_api::compute::weight_semantic_results;
     use std::sync::Arc;
     use tokio::sync::RwLock;
     #[cfg(feature = "redb")]
@@ -1009,10 +1009,10 @@ mod tests {
             std::process::id(),
             NONCE.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         );
-        request.auth_token = compute_verified_envelope_token(
+        request.auth_token = medulla_server_api::auth::compute_verified_envelope_token(
             SECRET,
             &request,
-            &VerifiedEnvelopeParams {
+            &medulla_server_api::auth::VerifiedEnvelopeParams {
                 context: &claims,
                 timestamp: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
@@ -2842,8 +2842,14 @@ mod tests {
             2,
             "6 nodes capped at 4 -> evict 2"
         );
-        assert_eq!(medulla_kernel::persist::evict_oversized_all(&state, 4).await, 0);
-        assert_eq!(medulla_kernel::persist::evict_oversized_all(&state, 100).await, 0);
+        assert_eq!(
+            medulla_kernel::persist::evict_oversized_all(&state, 4).await,
+            0
+        );
+        assert_eq!(
+            medulla_kernel::persist::evict_oversized_all(&state, 100).await,
+            0
+        );
         assert_eq!(
             medulla_kernel::persist::evict_oversized_all(&state, 0).await,
             4,
@@ -2923,7 +2929,7 @@ mod tests {
                 "__commons__",
                 None,
                 Method::GetNodePropertiesBatch {
-                    node_ids: vec!["x".to_string(); MAX_BATCH_IDS + 1],
+                    node_ids: vec!["x".to_string(); medulla_server_api::state::MAX_BATCH_IDS + 1],
                 },
             ),
         )
@@ -3016,7 +3022,7 @@ mod tests {
                 "__commons__",
                 None,
                 Method::GetNeighborsBatch {
-                    node_ids: vec!["x".to_string(); MAX_BATCH_IDS + 1],
+                    node_ids: vec!["x".to_string(); medulla_server_api::state::MAX_BATCH_IDS + 1],
                 },
             ),
         )
@@ -3221,9 +3227,11 @@ mod tests {
         );
         core.mark_dirty();
 
-        let context = super::auth::VerifiedRequestContext::verified_for_test("worker1");
-        let authority = super::access::GraphReadAuthority::from_verified(&context, &isolation)
-            .expect("worker1 is a registered non-System identity");
+        let context =
+            medulla_server_api::auth::VerifiedRequestContext::verified_for_test("worker1");
+        let authority =
+            medulla_server_api::access::GraphReadAuthority::from_verified(&context, &isolation)
+                .expect("worker1 is a registered non-System identity");
         let projected = authority.project_core(&core);
         assert!(
             projected.has_node("native-write"),

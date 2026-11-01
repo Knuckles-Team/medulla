@@ -188,7 +188,8 @@ fn handle_train_graphlearn(
     };
     // Reuse graphlearn's own subgraph builder (label vertices + observed intra-label
     // edges as positives) — one builder, no drift.
-    let (graph, edge_set) = super::graphlearn::build_graph_with_set(core, &source);
+    let (graph, edge_set) =
+        medulla_server_api::handlers::graphlearn::build_graph_with_set(core, &source);
     if graph.node_count() < 2 {
         return Response::err(
             req_id,
@@ -473,7 +474,8 @@ fn predict_graphlearn(
         Ok(m) => m,
         Err(e) => return Response::err(req_id, e),
     };
-    let (graph, existing) = super::graphlearn::build_graph_with_set(core, &source);
+    let (graph, existing) =
+        medulla_server_api::handlers::graphlearn::build_graph_with_set(core, &source);
     if graph.node_count() < 2 {
         return Response::err(
             req_id,
@@ -1225,9 +1227,10 @@ mod tests {
         visibility: &str,
         owner: Option<&str>,
     ) {
-        let mut props =
-            medulla_types::msgpack::decode_property_value(&core.get_node_properties(model_id).unwrap())
-                .unwrap();
+        let mut props = medulla_types::msgpack::decode_property_value(
+            &core.get_node_properties(model_id).unwrap(),
+        )
+        .unwrap();
         match owner {
             Some(owner) => {
                 props["_owner"] = json!(owner);

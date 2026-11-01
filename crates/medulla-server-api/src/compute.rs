@@ -46,7 +46,7 @@ fn compute_join_failure(req_id: u64) -> Response {
 /// decay (30-day half-life) to each hit's confidence, re-rank by the
 /// decay-weighted similarity and truncate to `n_results`. Pure function —
 /// runs on the blocking pool, never under the graph lock.
-pub(crate) fn weight_semantic_results(
+pub fn weight_semantic_results(
     candidates: Vec<(String, f32, Option<Vec<u8>>)>,
     now: u64,
     n_results: usize,

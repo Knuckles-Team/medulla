@@ -16,12 +16,12 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use super::super::state::ServerState;
 use crate::mutation_batch::MutationBatch;
 use crate::protocol::{Method, Response, ResultPayload};
 use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::blob::store;
 use medulla_server_api::blob::BlobCursors;
+use medulla_server_api::state::ServerState;
 use medulla_types::contract::Nonce;
 use medulla_types::result_contract::storage as results;
 

@@ -9,14 +9,16 @@ use std::ops::ControlFlow;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use super::super::access::{check_graph_access, requires_write, GraphReadAuthority};
-use super::super::compute::{compute_off_lock, weight_semantic_results};
-use super::super::mutation::{self, GatewayAuthzCtx, MutationCtx, MutationPlan};
-use super::super::state::{max_response_edges, max_response_nodes, ServerState, MAX_BATCH_IDS};
 use crate::graph::GraphCore;
 use crate::isolation::AccessLevel;
 use crate::protocol::{LedgerReadResult, Method, Response, ResultPayload};
+use medulla_server_api::access::{check_graph_access, requires_write, GraphReadAuthority};
 use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_server_api::compute::{compute_off_lock, weight_semantic_results};
+use medulla_server_api::mutation::{self, GatewayAuthzCtx, MutationCtx, MutationPlan};
+use medulla_server_api::state::{
+    max_response_edges, max_response_nodes, ServerState, MAX_BATCH_IDS,
+};
 
 mod algorithms;
 mod broker;

@@ -35,10 +35,10 @@ pub type SeamFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
     feature = "rdf"
 ))]
 pub struct TryHandleContext<'a> {
-    pub(crate) req_id: u64,
-    pub(crate) graph_name: &'a str,
-    pub(crate) read_authority: Option<&'a crate::access::GraphReadAuthority>,
-    pub(crate) caller: &'a str,
+    pub req_id: u64,
+    pub graph_name: &'a str,
+    pub read_authority: Option<&'a crate::access::GraphReadAuthority>,
+    pub caller: &'a str,
 }
 
 /// Phase of a replicated cross-shard transaction participant command.
@@ -55,10 +55,10 @@ pub enum TransactionParticipantPhase {
 
 /// Coordinator, participant and optional sealed plan of one replicated participant command.
 #[cfg(feature = "raft")]
-pub(crate) struct ReplicatedParticipantRef<'a> {
-    pub(crate) coordinator_id: &'a str,
-    pub(crate) participant_id: u64,
-    pub(crate) plan: Option<&'a [u8]>,
+pub struct ReplicatedParticipantRef<'a> {
+    pub coordinator_id: &'a str,
+    pub participant_id: u64,
+    pub plan: Option<&'a [u8]>,
 }
 
 /// Outcome of one bounded repository-enrichment outbox sweep.
@@ -470,7 +470,7 @@ pub async fn dispatch_authenticated_broker_actor(
 
 /// Propose a native mutation through the graph's Raft group.
 #[cfg(feature = "raft")]
-pub(crate) async fn propose_native_mutation(
+pub async fn propose_native_mutation(
     state: &Arc<RwLock<ServerState>>,
     request_graph: &str,
     request_id: u64,
@@ -496,7 +496,7 @@ pub(crate) async fn propose_native_mutation(
 
 /// Apply a committed bounded native command.
 #[cfg(feature = "raft")]
-pub(crate) async fn apply_replicated_native(
+pub async fn apply_replicated_native(
     state: &Arc<RwLock<ServerState>>,
     graph: String,
     request_id: u64,
@@ -522,7 +522,7 @@ pub(crate) async fn apply_replicated_native(
 
 /// Apply a committed cross-shard transaction participant command.
 #[cfg(feature = "raft")]
-pub(crate) async fn apply_replicated_transaction_participant(
+pub async fn apply_replicated_transaction_participant(
     state: &Arc<RwLock<ServerState>>,
     request_id: u64,
     committed_at_ms: u64,
@@ -547,7 +547,7 @@ pub(crate) async fn apply_replicated_transaction_participant(
 
 /// Apply a committed transaction prepare.
 #[cfg(feature = "raft")]
-pub(crate) async fn apply_replicated_transaction_prepare(
+pub async fn apply_replicated_transaction_prepare(
     state: &Arc<RwLock<ServerState>>,
     request_id: u64,
     committed_at_ms: u64,
@@ -575,7 +575,7 @@ pub(crate) async fn apply_replicated_transaction_prepare(
 
 /// Apply a committed transaction decision.
 #[cfg(feature = "raft")]
-pub(crate) async fn apply_replicated_transaction_decision(
+pub async fn apply_replicated_transaction_decision(
     state: &Arc<RwLock<ServerState>>,
     committed_at_ms: u64,
     authority: &crate::api::persistence::RaftMutationContext,
@@ -596,7 +596,7 @@ pub(crate) async fn apply_replicated_transaction_decision(
 
 /// Apply a committed transaction finalize.
 #[cfg(feature = "raft")]
-pub(crate) async fn apply_replicated_transaction_finalize(
+pub async fn apply_replicated_transaction_finalize(
     state: &Arc<RwLock<ServerState>>,
     committed_at_ms: u64,
     authority: &crate::api::persistence::RaftMutationContext,
@@ -617,7 +617,7 @@ pub(crate) async fn apply_replicated_transaction_finalize(
 
 /// Apply a committed job-publication commit.
 #[cfg(all(feature = "raft", feature = "jobs"))]
-pub(crate) async fn apply_replicated_job_publication_commit(
+pub async fn apply_replicated_job_publication_commit(
     state: &Arc<RwLock<ServerState>>,
     request_id: u64,
     committed_at_ms: u64,
@@ -642,7 +642,7 @@ pub(crate) async fn apply_replicated_job_publication_commit(
 
 /// Apply a committed job-publication finalize.
 #[cfg(all(feature = "raft", feature = "jobs"))]
-pub(crate) async fn apply_replicated_job_publication_finalize(
+pub async fn apply_replicated_job_publication_finalize(
     state: &Arc<RwLock<ServerState>>,
     committed_at_ms: u64,
     authority: &crate::api::persistence::RaftMutationContext,
@@ -663,7 +663,7 @@ pub(crate) async fn apply_replicated_job_publication_finalize(
 
 /// Submit one funded repository page through the authenticated boundary.
 #[cfg(all(feature = "ast", feature = "redb", feature = "blob", feature = "raft"))]
-pub(crate) async fn submit_repository_enrichment_page(
+pub async fn submit_repository_enrichment_page(
     state: &Arc<RwLock<ServerState>>,
     verified: VerifiedRequestContext,
     request: medulla_types::native_control::SubmitWorkItemsRequest,
@@ -676,7 +676,7 @@ pub(crate) async fn submit_repository_enrichment_page(
 
 /// Bind an internal park proposal to one held event and the latest durable budget row.
 #[cfg(all(feature = "ast", feature = "redb", feature = "blob", feature = "raft"))]
-pub(crate) async fn plan_held_underfunded_park(
+pub async fn plan_held_underfunded_park(
     state: &Arc<RwLock<ServerState>>,
     persistence: &dyn crate::api::persistence::PersistenceBackend,
     graph_fname: &str,
@@ -703,7 +703,7 @@ pub(crate) async fn plan_held_underfunded_park(
     feature = "raft",
     feature = "security"
 ))]
-pub(crate) async fn decode_pending_enrichment_intent(
+pub async fn decode_pending_enrichment_intent(
     state: &Arc<RwLock<ServerState>>,
     intent: &medulla_types::mutation_batch::MutationOutboxIntent,
 ) -> Result<medulla_compute::parser::enrichment_snapshot::EligibleSnapshot, String> {
@@ -720,7 +720,7 @@ pub(crate) async fn decode_pending_enrichment_intent(
     feature = "raft",
     feature = "security"
 ))]
-pub(crate) async fn enrichment_intent_for_snapshot(
+pub async fn enrichment_intent_for_snapshot(
     state: &Arc<RwLock<ServerState>>,
     snapshot: medulla_compute::parser::enrichment_snapshot::EligibleSnapshot,
 ) -> Result<medulla_types::mutation_batch::MutationOutboxIntent, String> {

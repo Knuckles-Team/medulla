@@ -66,11 +66,6 @@ pub fn observe_rf019_tenant_owner(
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use super::access::CarrierAuthority;
-#[cfg(feature = "query")]
-use super::compute::compute_off_lock;
-#[cfg(feature = "query")]
-use super::sql_catalog_acl::{open_authorized_table, SemanticTextSnapshot, SqlPrivilege};
 #[cfg(feature = "query")]
 use crate::protocol::Response;
 use medulla_core::compute::semantic_index_service::SemanticIndexService;
@@ -78,6 +73,13 @@ use medulla_core::compute::semantic_index_service::SemanticIndexService;
 use medulla_core::compute::semantic_index_service::{
     sql_source_deletion_proof, sql_source_revision_for_epoch, SemanticSqlSourceReadPage,
     SemanticSqlSourceReadPort, SemanticSqlSourceRecord, SemanticSqlSourceValue,
+};
+use medulla_server_api::access::CarrierAuthority;
+#[cfg(feature = "query")]
+use medulla_server_api::compute::compute_off_lock;
+#[cfg(feature = "query")]
+use medulla_server_api::sql_catalog_acl::{
+    open_authorized_table, SemanticTextSnapshot, SqlPrivilege,
 };
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
 #[cfg(feature = "query")]
@@ -775,8 +777,10 @@ mod dispatch_pipeline_tests;
 #[cfg(test)]
 #[test]
 fn semantic_owner_registry_is_scoped_to_persistence_root() {
-    let first_root = medulla_kernel::kernel::persistence::temp_dir("medulla-semantic-registry", "first");
-    let second_root = medulla_kernel::kernel::persistence::temp_dir("medulla-semantic-registry", "second");
+    let first_root =
+        medulla_kernel::kernel::persistence::temp_dir("medulla-semantic-registry", "first");
+    let second_root =
+        medulla_kernel::kernel::persistence::temp_dir("medulla-semantic-registry", "second");
     let tenant = "tenant-registry-isolation";
     let binding = "binding:registry-isolation";
     let first = open_semantic_service(&first_root, tenant, binding).unwrap();

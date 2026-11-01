@@ -116,7 +116,7 @@ use plan::consensus_apply_is_authorized;
 pub use plan::GATEWAY_ROUTED;
 #[cfg(feature = "raft")]
 pub use plan::LOCAL_ONLY_CLUSTER_REFUSAL;
-#[cfg(any(feature = "raft", test))]
+#[cfg(any(feature = "raft", test, feature = "test-support"))]
 pub use plan::{cluster_mutation_route, ClusterMutationRoute};
 pub use plan::{is_gateway_routed, method_variant_name, GatewayAuthzCtx, MutationPlan};
 #[cfg(all(test, feature = "raft"))]

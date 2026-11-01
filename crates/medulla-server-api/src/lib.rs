@@ -144,7 +144,7 @@ pub mod sql_tables;
 pub mod state;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod test_support;
 

@@ -1,6 +1,6 @@
 //! Query, transaction and wire seams (`QueryApi`, `TxnApi`, `WireApi`).
 
-#[cfg(all(test, feature = "query"))]
+#[cfg(all(any(test, feature = "test-support"), feature = "query"))]
 pub mod edge_test_support;
 /// Owner-scoped foreign-source catalog (CONCEPT:MEDULLA-KG.query.query-federation, EH-373): the one
 /// place a caller's verified owner (tenant+principal) selects which sources a plan may resolve.

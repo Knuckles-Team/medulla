@@ -43,7 +43,8 @@ fn build_source_features(
     for step in steps {
         match step {
             FeatureStep::Embedding { .. } => {
-                let (graph, _) = super::super::graphlearn::build_graph_with_set(core, source);
+                let (graph, _) =
+                    medulla_server_api::handlers::graphlearn::build_graph_with_set(core, source);
                 if graph.node_count() == 0 {
                     return Err("pipeline: source subgraph is empty".to_string());
                 }

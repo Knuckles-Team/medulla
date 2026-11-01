@@ -2,7 +2,7 @@
 
 /// Decode a successful raw typed server response in route-level tests.
 #[cfg(feature = "server")]
-pub(crate) fn decode_raw_response<T: serde::de::DeserializeOwned>(
+pub fn decode_raw_response<T: serde::de::DeserializeOwned>(
     label: &str,
     response: medulla_types::protocol::Response,
 ) -> T {
@@ -17,6 +17,7 @@ pub(crate) fn decode_raw_response<T: serde::de::DeserializeOwned>(
     rmp_serde::from_slice(&bytes).expect("decode raw typed server response")
 }
 
+#[cfg(test)]
 #[test]
 fn concurrent_temporary_paths_are_unique() {
     let paths = std::thread::scope(|scope| {
@@ -24,7 +25,12 @@ fn concurrent_temporary_paths_are_unique() {
             .map(|_| {
                 scope.spawn(|| {
                     (0..256)
-                        .map(|_| medulla_kernel::kernel::persistence::temp_dir("medulla-path", "parallel"))
+                        .map(|_| {
+                            medulla_kernel::kernel::persistence::temp_dir(
+                                "medulla-path",
+                                "parallel",
+                            )
+                        })
                         .collect::<Vec<_>>()
                 })
             })
@@ -41,7 +47,7 @@ fn concurrent_temporary_paths_are_unique() {
 /// Isolate an exact outbound allowlist for a server fixture and restore it on drop.
 /// Both constructors use the durable-fixture environment lock when crypto is enabled.
 #[cfg(feature = "federation-sql")]
-pub(crate) struct FederationAllowGuard {
+pub struct FederationAllowGuard {
     previous: Option<std::ffi::OsString>,
     _lock: tokio::sync::RwLockWriteGuard<'static, ()>,
 }
@@ -70,11 +76,11 @@ impl FederationAllowGuard {
         }
     }
 
-    pub(crate) fn blocking(origin: &str) -> Self {
+    pub fn blocking(origin: &str) -> Self {
         Self::install(origin, Self::env_lock().blocking_write())
     }
 
-    pub(crate) async fn acquire(origin: &str) -> Self {
+    pub async fn acquire(origin: &str) -> Self {
         Self::install(origin, Self::env_lock().write().await)
     }
 }
@@ -93,7 +99,7 @@ impl Drop for FederationAllowGuard {
 
 /// Common terminal fixture used by durable and transport retry identity tests.
 #[cfg(any(feature = "server", feature = "redb"))]
-pub(crate) fn terminal_method(lease_epoch: u64, fencing_token: u64) -> medulla_types::protocol::Method {
+pub fn terminal_method(lease_epoch: u64, fencing_token: u64) -> medulla_types::protocol::Method {
     medulla_types::protocol::Method::CommitWorkItemResult {
         tenant: "tenant-a".into(),
         work_item_id: "work-1".into(),

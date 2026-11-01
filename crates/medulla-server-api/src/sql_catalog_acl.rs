@@ -103,15 +103,15 @@ pub(crate) struct SqlSourceAclSnapshot {
     /// first-time intent consumes one revision even when its requested ACL row
     /// state is already effective, because the same stable retry must remain a
     /// no-op after intervening mutations. Exact receipt replay consumes none.
-    pub(crate) source_acl_revision: u64,
+    pub source_acl_revision: u64,
     /// Canonical semantic ACL row identity. Unlike the operation revision, this
     /// remains unchanged for an accepted semantic no-op.
-    pub(crate) source_acl_digest: String,
-    pub(crate) decision_digest: String,
-    pub(crate) owner: bool,
-    pub(crate) privileges: BTreeSet<SqlPrivilege>,
+    pub source_acl_digest: String,
+    pub decision_digest: String,
+    pub owner: bool,
+    pub privileges: BTreeSet<SqlPrivilege>,
     pub rls_column: Option<String>,
-    pub(crate) ordering: SqlSourceAuthorityOrdering,
+    pub ordering: SqlSourceAuthorityOrdering,
 }
 
 #[cfg(test)]
@@ -540,8 +540,7 @@ fn commit_source_acl_mutation(
         "sql_source_acl_operation",
     )?;
     let committed = acl.commit_txn_batch(txn, &batch, created_at_ms)?;
-    let expected_actor =
-        crate::mutation_batch::principal_fingerprint(authority.actor_scope())?;
+    let expected_actor = crate::mutation_batch::principal_fingerprint(authority.actor_scope())?;
     if committed.record.committing_actor()? != expected_actor {
         return Err(
             "IDEMPOTENCY_CONFLICT: SQL source ACL receipt is owned by another actor".to_string(),
@@ -1031,7 +1030,7 @@ fn row_level_column(acl: &TableStore, table: &str) -> Result<Option<String>, Str
 /// that actually created it, registers `authority` as its owner. An
 /// already-existing table (`if_not_exists: true` no-op) is left exactly as-is —
 /// this function never silently reassigns ownership.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub fn create_owned_table(
     authority: &CarrierAuthority,
     persist_dir: &Path,
@@ -1084,8 +1083,8 @@ pub(crate) struct SemanticTextRecord {
     /// removes the old logical identity and creates a new one. A consumer can
     /// therefore reconcile delete/create semantics across complete snapshots
     /// without treating the redb physical row id as durable identity.
-    pub(crate) record_identity_digest: [u8; 32],
-    pub(crate) text: String,
+    pub record_identity_digest: [u8; 32],
+    pub text: String,
 }
 
 /// Eight encrypted position bytes plus a 32-byte HMAC. This server-private token
@@ -1094,34 +1093,34 @@ pub(crate) struct SemanticTextRecord {
 pub(crate) type SemanticTextCursor = [u8; 40];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct SemanticTextSnapshot {
-    pub(crate) tenant_scope: String,
-    pub(crate) table: String,
-    pub(crate) column: String,
-    pub(crate) schema_revision: u64,
-    pub(crate) schema_digest: String,
+pub struct SemanticTextSnapshot {
+    pub tenant_scope: String,
+    pub table: String,
+    pub column: String,
+    pub schema_revision: u64,
+    pub schema_digest: String,
     /// The physical tenant SQL-source authority sampled with this page. It is
     /// opaque to the semantic adapter and is part of the source revision.
-    pub(crate) source_authority_digest: [u8; 32],
+    pub source_authority_digest: [u8; 32],
     /// Tenant-wide source epoch sampled from the same redb read transaction as
     /// schema and rows. Native scope versions are not a substitute.
-    pub(crate) source_epoch: u64,
+    pub source_epoch: u64,
     /// Keyed proof that this page is complete. It is present only when the
     /// authenticated input cursor reaches the end of the source.
-    pub(crate) complete_snapshot_receipt_digest: Option<[u8; 32]>,
+    pub complete_snapshot_receipt_digest: Option<[u8; 32]>,
     /// Trusted instant at which this authorized source decision was returned.
     /// It is sampled while the source-authority read guard remains held and is
     /// carried separately from the ACL decision digest.
-    pub(crate) decision_at_ms: u64,
-    pub(crate) source_acl_revision: u64,
-    pub(crate) source_acl_digest: String,
-    pub(crate) decision_digest: String,
-    pub(crate) records: Vec<SemanticTextRecord>,
+    pub decision_at_ms: u64,
+    pub source_acl_revision: u64,
+    pub source_acl_digest: String,
+    pub decision_digest: String,
+    pub records: Vec<SemanticTextRecord>,
     /// Opaque, authenticated server-private continuation. Physical row ids are
     /// never exposed by this authorized projection.
-    pub(crate) next_cursor: Option<SemanticTextCursor>,
+    pub next_cursor: Option<SemanticTextCursor>,
     /// Visible rows whose selected text cell is SQL NULL.
-    pub(crate) visible_null_count: usize,
+    pub visible_null_count: usize,
     /// Already-authorized rows skipped because they contain no text content.
     /// RLS-hidden rows are nonexistent to this count.
     pub(crate) skipped_count: usize,
@@ -1666,7 +1665,7 @@ impl AuthorizedTable {
     /// selector. The tenant ACL read lock stays held while schema, schema
     /// revision, physical rows, ACL revision, and RLS visibility are sampled.
     /// Raw primary keys and the executable RLS predicate never enter the result.
-    pub(crate) fn semantic_text_snapshot(
+    pub fn semantic_text_snapshot(
         &self,
         source_selector: &medulla_types::semantic_index::SemanticSourceSelector,
         cursor_auth_secret: &[u8; 32],

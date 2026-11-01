@@ -1187,7 +1187,7 @@ const AUTHENTICATION_FAILED: &str = "AUTHENTICATION_REQUIRED: Authentication fai
 /// redacted, so verification is never an oracle for secrets or nonces. Every
 /// class except a bad signature is decided after the MAC verifies, so only a
 /// holder of the signing secret ever learns it.
-pub(crate) fn authentication_refusal(error: &str) -> String {
+pub fn authentication_refusal(error: &str) -> String {
     const FIXED: [&str; 7] = [
         "AUTH_TENANT_MISMATCH: request context tenant does not match graph tenant",
         "AUTH_POLICY_VERSION_MISMATCH: request context policy version is not active",
@@ -1230,7 +1230,7 @@ pub fn verify_request(secret: &str, req: &Request) -> Result<VerifiedRequestCont
     verify_request_with_security_dir(secret, req, None)
 }
 
-pub(super) fn validate_verified_context_startup(
+pub fn validate_verified_context_startup(
     secret: &str,
     state_dir: Option<&str>,
 ) -> Result<(), String> {
@@ -1803,7 +1803,7 @@ fn multisig_mutation_digest(
     )
 }
 
-pub(crate) fn verify_register_identity_signature(
+pub fn verify_register_identity_signature(
     context: &VerifiedRequestContext,
     graph: &str,
     agent_id: &str,
@@ -1826,7 +1826,7 @@ pub(crate) fn verify_register_identity_signature(
     Ok(())
 }
 
-pub(crate) fn verify_multisig_mutation_signatures(
+pub fn verify_multisig_mutation_signatures(
     context: &VerifiedRequestContext,
     graph: &str,
     signatures: &[String],

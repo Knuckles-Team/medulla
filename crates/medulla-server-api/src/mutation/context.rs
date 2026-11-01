@@ -2,12 +2,12 @@ use std::sync::Arc;
 
 use medulla_capabilities::DurabilityDomain;
 
+use crate::api::persistence::PersistenceBackend;
 use medulla_core::graph::GraphCore;
 use medulla_core::isolation::IsolationLayer;
 use medulla_types::protocol::GraphType;
 use medulla_types::protocol::Method;
 use medulla_types::protocol::Response;
-use crate::api::persistence::PersistenceBackend;
 
 use super::MutationPlan;
 
@@ -72,18 +72,18 @@ pub struct MutationCtx<'a> {
 /// it, and `mutation_batch`'s submodules are private to that namespace.
 pub struct LifecycleAttempt<'a> {
     /// The lifecycle verb (`"create"` / `"delete"`) the batch id is keyed on.
-    pub(crate) action: &'a str,
+    pub action: &'a str,
     /// Verified carrier tenant scope (EH-375) — never a request field.
-    pub(crate) tenant_scope: &'a str,
+    pub tenant_scope: &'a str,
     /// The durable graph name, NOT the sanitized on-disk file name.
     pub graph: &'a str,
     pub request_id: u64,
     /// Authenticated per-attempt transport nonce; see [`MutationCtx`]. A replay
     /// probe refuses an attempt that re-presents the nonce its receipt consumed.
-    pub(crate) attempt_nonce: Option<medulla_types::contract::Nonce>,
-    pub(crate) principal: Option<&'a str>,
+    pub attempt_nonce: Option<medulla_types::contract::Nonce>,
+    pub principal: Option<&'a str>,
     /// Stable across attempts, unlike `request_id`/`attempt_nonce`.
-    pub(crate) idempotency_key: &'a str,
+    pub idempotency_key: &'a str,
 }
 
 /// Publish the resident freshness watermark only after an authoritative gateway

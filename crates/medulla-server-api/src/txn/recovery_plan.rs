@@ -37,7 +37,7 @@ impl GraphTxnState {
     /// Serialize the complete staged transaction into a stable canonical ordering.
     /// The returned bytes are plaintext only in process memory and MUST be sealed
     /// before persistence.
-    pub(crate) fn encode_recovery_plan(&self) -> Result<Vec<u8>, String> {
+    pub fn encode_recovery_plan(&self) -> Result<Vec<u8>, String> {
         let plan = DurableTxnPlan {
             schema_version: DURABLE_TXN_PLAN_VERSION,
             graph: self.graph.clone(),

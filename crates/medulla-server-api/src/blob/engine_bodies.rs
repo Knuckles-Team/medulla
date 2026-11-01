@@ -42,10 +42,10 @@ pub struct StoredEngineBody {
 }
 
 pub(super) struct PlannedEngineBody<'a> {
-    pub(super) stored: StoredEngineBody,
-    pub(super) manifest: BlobManifest,
-    pub(super) chunk_digest: Option<String>,
-    pub(super) body: &'a [u8],
+    pub stored: StoredEngineBody,
+    pub manifest: BlobManifest,
+    pub chunk_digest: Option<String>,
+    pub body: &'a [u8],
 }
 
 pub(super) fn plan_engine_bodies<'a>(

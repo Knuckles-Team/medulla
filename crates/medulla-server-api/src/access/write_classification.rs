@@ -53,7 +53,8 @@ fn requires_write_agent_surface(method: &Method) -> Option<bool> {
     if let Method::AgentLibrary { op } = method {
         return Some(matches!(
             op,
-            medulla_types::AgentLibraryOp::Publish { .. } | medulla_types::AgentLibraryOp::Retire { .. }
+            medulla_types::AgentLibraryOp::Publish { .. }
+                | medulla_types::AgentLibraryOp::Retire { .. }
         ));
     }
     // Agent graphs are the same runtime-conditional shape. `is_mutation` lives
@@ -276,7 +277,9 @@ fn requires_write_mining_surface(method: &Method) -> Option<bool> {
         ..
     } = method
     {
-        return Some(*writeback && !matches!(algorithm, medulla_types::protocol::TextAlgorithm::Tfidf));
+        return Some(
+            *writeback && !matches!(algorithm, medulla_types::protocol::TextAlgorithm::Tfidf),
+        );
     }
     // MineSubgraph: writeback only mutates for gspan (its :FrequentSubgraph
     // nodes) — motif is always read-only (a pure census, no patterns to write).
@@ -286,7 +289,9 @@ fn requires_write_mining_surface(method: &Method) -> Option<bool> {
         ..
     } = method
     {
-        return Some(*writeback && !matches!(algorithm, medulla_types::protocol::SubgraphAlgorithm::Motif));
+        return Some(
+            *writeback && !matches!(algorithm, medulla_types::protocol::SubgraphAlgorithm::Motif),
+        );
     }
     // Classification FIT is read-only (returns a model blob; no graph mutation).
     if matches!(method, Method::MineClassifyFit { .. }) {
@@ -344,7 +349,7 @@ fn requires_write_learning_surface(method: &Method) -> Option<bool> {
 /// can be operation-conditional: its publish/retire writes are distinct from
 /// the current/history/status read sub-operations. Pure-compute methods
 /// (finance, datascience, parse) never touch graph state and classify as Read.
-pub(crate) fn requires_write(method: &Method) -> bool {
+pub fn requires_write(method: &Method) -> bool {
     #[cfg(feature = "security")]
     if matches!(method, Method::AuditAppend { .. }) {
         return true;

@@ -44,13 +44,13 @@ pub const SQL_CATALOG_DIR: &str = "sql-catalog";
 /// One carrier-owned native SQL-owner mutation: compiled at the owner scope's
 /// current version under the verified carrier's idempotency identity.
 pub struct SqlOwnerMutation<'a> {
-    pub(crate) authority: &'a CarrierAuthority,
+    pub authority: &'a CarrierAuthority,
     /// Idempotency namespace for this kind of owner mutation.
-    pub(crate) kind: &'static str,
-    pub(crate) scope: &'a str,
-    pub(crate) request_id: u64,
-    pub(crate) attempt_nonce: Option<medulla_types::contract::Nonce>,
-    pub(crate) created_at_ms: u64,
+    pub kind: &'static str,
+    pub scope: &'a str,
+    pub request_id: u64,
+    pub attempt_nonce: Option<medulla_types::contract::Nonce>,
+    pub created_at_ms: u64,
 }
 
 impl SqlOwnerMutation<'_> {
@@ -242,10 +242,7 @@ pub(crate) fn user_table_store(
 /// through [`crate::server::sql_catalog_acl`] — this function performs no
 /// authorization of its own, exactly like `user_table_store` performs none: the
 /// physical-open layer answers "which file", never "is this caller allowed".
-pub fn tenant_table_store(
-    tenant_scope: &str,
-    persist_dir: &Path,
-) -> Result<TableStore, String> {
+pub fn tenant_table_store(tenant_scope: &str, persist_dir: &Path) -> Result<TableStore, String> {
     open_or_get(&tenant_table_path(tenant_scope, persist_dir), tenant_scope)
 }
 
@@ -278,26 +275,27 @@ pub(crate) fn tenant_source_authority_lock(
 /// (as opposed to in-process cache reuse) without an actual process restart.
 /// Panics (via the lock) only on registry poisoning, matching every other
 /// registry accessor in this module.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub fn evict_for_test(path: &Path) {
     let key = registry_key(path);
     registry().lock().unwrap().remove(&key);
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub fn tenant_table_path_for_test(tenant_scope: &str, persist_dir: &Path) -> PathBuf {
     tenant_table_path(tenant_scope, persist_dir)
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub fn tenant_acl_path_for_test(tenant_scope: &str, persist_dir: &Path) -> PathBuf {
     tenant_acl_path(tenant_scope, persist_dir)
 }
 
 fn context_cache_registry(
 ) -> &'static Mutex<HashMap<String, std::sync::Arc<medulla_query::SqlContextCache>>> {
-    static CACHES: OnceLock<Mutex<HashMap<String, std::sync::Arc<medulla_query::SqlContextCache>>>> =
-        OnceLock::new();
+    static CACHES: OnceLock<
+        Mutex<HashMap<String, std::sync::Arc<medulla_query::SqlContextCache>>>,
+    > = OnceLock::new();
     CACHES.get_or_init(|| Mutex::new(HashMap::new()))
 }
 

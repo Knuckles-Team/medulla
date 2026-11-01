@@ -145,8 +145,8 @@ async fn qos_verification_rejects_unsigned_agent_before_admission() {
 // spec: MEDULLA-CONTRACT-R014.1
 #[tokio::test]
 async fn qos_verification_names_the_audience_mismatch_cause() {
-    use super::super::auth::{compute_verified_envelope_token, VerifiedEnvelopeParams};
     use crate::acl::RequestContextClaims;
+    use medulla_server_api::auth::{compute_verified_envelope_token, VerifiedEnvelopeParams};
     let scheduler = Arc::new(super::super::qos::QosScheduler::new(
         super::super::qos::QosConfig::auto(8),
     ));

@@ -25,9 +25,9 @@ use tokio::sync::{Notify, RwLock, Semaphore};
 use tracing::{error, info};
 
 use super::dispatch::dispatch_verified_request;
-use super::request_scope::{self, RequestCancel};
 use super::{dispatch, ServerState};
 use crate::protocol::{Method, Request, Response};
+use medulla_server_api::request_scope::{self, RequestCancel};
 
 mod framing;
 mod tls;
@@ -337,7 +337,7 @@ impl AdmissionPools {
 
 #[derive(Default)]
 struct QosAdmission {
-    context: Option<super::auth::VerifiedRequestContext>,
+    context: Option<medulla_server_api::auth::VerifiedRequestContext>,
     permit: Option<super::qos::QosPermit>,
 }
 
@@ -359,7 +359,10 @@ async fn admit_qos_request(
         medulla_kernel::metrics::auth_failure();
         // Same typed refusal as dispatch: QoS admission verifies first when it is
         // enabled, so a generic refusal here would hide the cause class.
-        Response::err(req.id, super::auth::authentication_refusal(&error))
+        Response::err(
+            req.id,
+            medulla_server_api::auth::authentication_refusal(&error),
+        )
     })?;
     let principal_scope = context.principal_persistence_id();
     let qos_request =
@@ -421,7 +424,7 @@ async fn reserve_request(
         Ok(permit) => permit,
         Err(_) => return Err(AdmissionFailure::Closed),
     };
-    let is_write = super::access::requires_write(&req.method);
+    let is_write = medulla_server_api::access::requires_write(&req.method);
     let qos = match admit_qos_request(req, state, scheduler).await {
         Ok(admission) => admission,
         Err(response) => {

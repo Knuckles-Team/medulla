@@ -66,9 +66,9 @@ use medulla_types::contract::Digest256;
 use medulla_types::wire::ForeignSourceSpec;
 
 use super::foreign_share::{may_use_shared, share_resource, shared_name};
-use medulla_core::isolation::IsolationLayer;
 use crate::access::CarrierAuthority;
 use crate::api::persistence::SourceApprovalStore;
+use medulla_core::isolation::IsolationLayer;
 
 /// `(verified owner scope, source name)` — the catalog key.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -468,7 +468,7 @@ impl ForeignSourceCatalog {
     }
 
     /// The spec `owner` registered under `name`, if any.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fn spec_for(&self, owner: &CarrierAuthority, name: &str) -> Option<ForeignSourceSpec> {
         let key = CatalogKey {
             owner_scope: owner.owner_scope().to_string(),

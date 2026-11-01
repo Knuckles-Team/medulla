@@ -8,21 +8,21 @@
 //! An empty policy awaiting its signer-backed System bootstrap is never
 //! touched: registering an identity there would consume the bootstrap.
 
+use medulla_core::isolation::AgentIdentity;
+use medulla_core::isolation::AgentRole;
+use medulla_core::isolation::IsolationLayer;
 use medulla_types::acl::Grant;
 use medulla_types::acl::GrantEffect;
 use medulla_types::acl::RbacAction;
 use medulla_types::acl::ResourceSelector;
 use medulla_types::acl::Role;
-use medulla_core::isolation::AgentIdentity;
-use medulla_core::isolation::AgentRole;
-use medulla_core::isolation::IsolationLayer;
 
 /// One service writer's per-graph grant: `actor` holds role `<role_prefix>:<graph>`.
 pub struct ServiceGraphGrant<'a> {
-    pub(crate) actor: &'a str,
-    pub(crate) role_prefix: &'a str,
+    pub actor: &'a str,
+    pub role_prefix: &'a str,
     /// The refusal code prefix when the policy is not bootstrapped yet.
-    pub(crate) unbootstrapped: &'a str,
+    pub unbootstrapped: &'a str,
 }
 
 impl ServiceGraphGrant<'_> {
