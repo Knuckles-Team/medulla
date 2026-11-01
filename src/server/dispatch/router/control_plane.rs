@@ -613,7 +613,7 @@ async fn dispatch_compute_and_media_methods_arm_2(
         identity_bootstrap,
     } = ctx;
     match method {
-        Method::Quantum { op } => handlers::quantum::handle(req.id, op).await,
+        Method::Quantum { op } => medulla_h_compute::quantum::handle(req.id, op).await,
         _ => Response::err(req.id, "router dispatch helper routing mismatch"),
     }
 }
@@ -657,12 +657,12 @@ async fn dispatch_compute_and_media_methods_arm_4(
                 {
                     // No durable owner-scoped state to attribute a render to; the carrier
                     // is still resolved for parity with the sibling self-routed handlers
-                    // (see `handlers::viz::handle`'s doc).
+                    // (see `medulla_h_compute::viz::handle`'s doc).
                     let carrier = match CarrierAuthority::from_verified(verified_context) {
                         Ok(authority) => authority,
                         Err(denied) => return Response::err(req_id, denied),
                     };
-                    handlers::viz::handle(state, req_id, &carrier, op).await
+                    medulla_h_compute::viz::handle(state, req_id, &carrier, op).await
                 }
             })
             .await

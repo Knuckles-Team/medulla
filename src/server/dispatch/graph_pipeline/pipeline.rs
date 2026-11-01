@@ -95,7 +95,7 @@ pub(super) async fn route_gateway_and_stateless_domains(
     // Feature-gated: in a slim build the line is absent and the method flows
     // straight through to graph_ops (whose catch-all reports "not available").
     #[cfg(feature = "finance")]
-    let method = match handlers::finance::try_handle(req_id, method) {
+    let method = match medulla_h_compute::finance::try_handle(req_id, method) {
         Ok(r) => return Ok(r),
         Err(m) => m,
     };
@@ -120,7 +120,7 @@ pub(super) async fn route_graph_scoped_domains(
     #[cfg(all(feature = "mining", feature = "query", feature = "tsdb"))]
     let tsdb_store = &ctx.tsdb_store;
     #[cfg(feature = "datascience")]
-    let method = match handlers::datascience::try_handle(req_id, method) {
+    let method = match medulla_h_compute::datascience::try_handle(req_id, method) {
         Ok(r) => return Ok(r),
         Err(m) => m,
     };
@@ -319,7 +319,7 @@ pub(super) async fn route_process_global_domains(
     // `state` for the owner-scoped UdfCatalog, keyed by the VERIFIED carrier's
     // tenant+principal (EH-374). A method whose feature is off falls through.
     #[cfg(feature = "wasm-udf")]
-    let method = match handlers::wasm_udf::try_handle(owner_call, method).await {
+    let method = match medulla_h_compute::wasm_udf::try_handle(owner_call, method).await {
         Ok(r) => return Ok(r),
         Err(m) => m,
     };

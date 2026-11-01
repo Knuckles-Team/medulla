@@ -960,7 +960,7 @@ async fn spawn_viz_interactive_listener(
     // viz-interactive` AND --viz-interactive-addr /
     // MEDULLA_VIZ_INTERACTIVE_ADDR is set. Eagerly constructs the
     // shared `VizEngineState` (rather than leaving it to lazy-init on the
-    // first `Method::Viz` RPC call, `handlers::viz::engine_state`) and installs
+    // first `Method::Viz` RPC call, `medulla_h_compute::viz::engine_state`) and installs
     // it on `ServerState` BEFORE spawning the listener, so the RPC render path
     // and this HTTP path always share the SAME persistent ColumnStore/render
     // cache/provenance -- never two independent engines silently diverging.

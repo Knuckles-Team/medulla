@@ -9,7 +9,7 @@
 //! for graph-scoped, worker-claimed, async-executed jobs — a real mismatch for
 //! a synchronous request/response render with no `GraphCore` to snapshot and
 //! no worker pool to claim it), this module identifies a record by
-//! `handlers::viz::provenance_result_ref` — a content-addressed id derived
+//! `medulla_h_compute::viz::provenance_result_ref` — a content-addressed id derived
 //! from the SAME `render_cache_key` the render cache itself keys on, so
 //! provenance and cache entries for one render always agree on "which render
 //! this is" without a second, independently-computed identity scheme. (An

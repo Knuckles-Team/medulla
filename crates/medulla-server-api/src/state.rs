@@ -205,7 +205,7 @@ pub struct ServerState {
     /// Persistent native-visualization engine state (D-VZ-1 lane V4: persistent
     /// ColumnStore + content-addressed render cache + durable provenance),
     /// feature `viz-static-export`. `None` until the first `Method::Viz`
-    /// request lazily initializes it (`handlers::viz::engine_state`) — almost
+    /// request lazily initializes it (`medulla_h_compute::viz::engine_state`) — almost
     /// every `ServerState` construction site (every test not exercising viz)
     /// never needs a real one, mirroring `blob`/`raft`/`tsdb_store`'s own
     /// `Option<..> = None`-almost-everywhere shape on this same struct.
