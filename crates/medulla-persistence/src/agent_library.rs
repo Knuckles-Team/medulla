@@ -710,7 +710,7 @@ impl AgentLibraryStateExt for medulla_server_api::state::ServerState {
 }
 
 /// Open one physical Agent Library handle across request and background paths.
-pub(crate) fn open_shared_agent_library(
+pub fn open_shared_agent_library(
     slot: &Mutex<Option<medulla_server_api::state::ErasedHandle>>,
     persist_dir: &str,
 ) -> Result<Arc<AgentLibraryStore>, String> {
@@ -866,7 +866,7 @@ pub(crate) fn seed_agent_draft_for_test(
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::replay::record_event;
     use super::*;
     use medulla_server_api::api::persistence::BundledStoreSource;

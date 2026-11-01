@@ -1848,6 +1848,7 @@ medulla-server-api = { path = "crates/medulla-server-api" }
 medulla-persistence = { path = "crates/medulla-persistence" }
 
 [dev-dependencies]
+medulla-persistence = { path = "crates/medulla-persistence", features = ["test-support"] }
 medulla-server-api = { path = "crates/medulla-server-api", features = ["test-support"] }
 medulla-store = { path = "crates/medulla-store", features = ["test-support"] }
 tokio = { version = "1.53", features = ["full", "test-util"] }

@@ -23,7 +23,7 @@ impl RedbBackend {
 
     /// One scoped read over the admin-mutations ledger — the capability every
     /// `medulla_transaction::read_*` / `version` call over this store is a function of.
-    pub(crate) fn admin_mutations_read(&self) -> Result<AdminScopedRead<'_>, String> {
+    pub fn admin_mutations_read(&self) -> Result<AdminScopedRead<'_>, String> {
         self.admin_mutations.read()
     }
 
@@ -79,7 +79,7 @@ impl RedbBackend {
     /// resolved from its own env var (falling back to the shared key only when the
     /// dedicated one is absent), so it can be turned on independently.
     #[cfg(feature = "security")]
-    pub(crate) fn transaction_recovery_cipher(&self) -> Option<medulla_kernel::crypto::ValueCipher> {
+    pub fn transaction_recovery_cipher(&self) -> Option<medulla_kernel::crypto::ValueCipher> {
         self.shard0().txn_recovery_cipher.clone()
     }
 

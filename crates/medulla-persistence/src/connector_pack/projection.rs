@@ -41,7 +41,7 @@ pub(crate) struct ConnectorPackProjectionPlan {
 }
 
 impl AgentLibraryStore {
-    pub(crate) fn prepare_connector_pack_projection(
+    pub fn prepare_connector_pack_projection(
         &self,
         tenant_id: &str,
         connector: &ResourceId,
@@ -158,7 +158,7 @@ impl AgentLibraryStore {
         })
     }
 
-    pub(crate) fn commit_connector_pack_projection(
+    pub fn commit_connector_pack_projection(
         &self,
         context: AgentLibraryMutationContext,
         plan: &ConnectorPackProjectionPlan,
@@ -363,7 +363,7 @@ fn apply_projection_rows(
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use medulla_types::agent_component::{AgentComponentKind, ComponentDependency};
     use medulla_types::connector_pack::{

@@ -65,4 +65,4 @@ impl AgentLibraryStore {
 }
 
 #[cfg(test)]
-mod tests;
+pub mod tests;

@@ -60,7 +60,7 @@ use super::agent_row;
 
 mod status;
 #[cfg(test)]
-mod tests;
+pub mod tests;
 mod write;
 
 pub(super) use status::{committed_status, ledger_status_record, status_result_bytes};

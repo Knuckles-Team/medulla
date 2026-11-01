@@ -274,7 +274,7 @@ impl medulla_server_api::api::persistence::BundledStoreSource for TenantCatalog 
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use crate::redb_backend::shard_index;
 

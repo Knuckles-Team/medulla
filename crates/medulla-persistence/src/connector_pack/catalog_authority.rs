@@ -198,7 +198,7 @@ impl AgentLibraryStore {
 
     /// Read the current scoped binding for a separately authenticated
     /// pack-control service. The handler must check its verified tenant/grant.
-    pub(crate) fn mcp_catalog_binding_status(
+    pub fn mcp_catalog_binding_status(
         &self,
         tenant_id: &str,
         server_name: &str,
@@ -217,7 +217,7 @@ impl AgentLibraryStore {
 
     /// Read a validated self-served authority row, the authority an import of
     /// that row's connector must honour. Mounted rows answer `None`.
-    pub(crate) fn mcp_self_served_catalog_row(
+    pub fn mcp_self_served_catalog_row(
         &self,
         tenant_id: &str,
         server_name: &str,
@@ -234,7 +234,7 @@ impl AgentLibraryStore {
     }
 
     /// Read the scoped generation from one committed owner snapshot.
-    pub(crate) fn mcp_catalog_authority_status(
+    pub fn mcp_catalog_authority_status(
         &self,
         tenant_id: &str,
         server_name: &str,
@@ -261,7 +261,7 @@ impl AgentLibraryStore {
     }
 
     /// One admitted owner transaction writes both authority rows or neither.
-    pub(crate) fn reconcile_mcp_catalog_authority(
+    pub fn reconcile_mcp_catalog_authority(
         &self,
         context: AgentLibraryMutationContext,
         component_id: String,
@@ -415,7 +415,7 @@ fn attested_candidate_digest(
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
 
     fn authority_row() -> McpCatalogAuthorityRow {

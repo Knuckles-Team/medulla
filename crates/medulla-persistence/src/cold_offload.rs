@@ -620,8 +620,8 @@ pub(crate) async fn test_state_with_backend(
     state
 }
 
-#[cfg(test)]
-pub(crate) async fn test_redb_state(
+#[cfg(any(test, feature = "test-support"))]
+pub async fn test_redb_state(
     secret: &str,
     dir_s: &str,
     isolation: medulla_core::isolation::IsolationLayer,

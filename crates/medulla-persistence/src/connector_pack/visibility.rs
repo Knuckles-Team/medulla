@@ -52,7 +52,7 @@ pub(crate) fn pack_component_visible(
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
 
     #[test]

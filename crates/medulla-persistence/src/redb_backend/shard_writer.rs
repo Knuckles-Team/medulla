@@ -26,7 +26,7 @@ use crate::writer_reply::await_writer_reply;
 /// Stable FNV-1a routing of a graph's sanitized fname to a shard index (CONCEPT:MEDULLA-KG.backend.sharded-k-way-durable).
 /// Deterministic across processes/restarts (NOT `DefaultHasher` randomness) — a graph
 /// MUST resolve to the same shard every boot or its durable rows become unreachable.
-pub(crate) fn shard_index(graph_fname: &str, k: usize) -> usize {
+pub fn shard_index(graph_fname: &str, k: usize) -> usize {
     if k <= 1 {
         return 0;
     }

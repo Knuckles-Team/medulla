@@ -323,5 +323,5 @@ pub type AgentGraphStoreRef = Arc<AgentLibraryStore>;
 
 #[cfg(test)]
 mod references;
-#[cfg(test)]
-pub(crate) mod tests;
+#[cfg(any(test, feature = "test-support"))]
+pub mod tests;

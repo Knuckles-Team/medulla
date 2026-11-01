@@ -50,7 +50,7 @@ impl RedbBackend {
 
     /// `GetWorkItem`: the caller's view of one row, `None` when no WorkItem
     /// with this id belongs to `tenant`.
-    pub(crate) async fn read_work_item(
+    pub async fn read_work_item(
         &self,
         graph_fname: &str,
         tenant: &str,
@@ -62,7 +62,7 @@ impl RedbBackend {
     }
 
     /// `GetWorkItemOutcome`: a WorkItem of `tenant` and its committed provenance.
-    pub(crate) async fn read_work_item_outcome(
+    pub async fn read_work_item_outcome(
         &self,
         graph_fname: &str,
         tenant: &str,
@@ -74,7 +74,7 @@ impl RedbBackend {
     }
 
     /// `GetControlLease`: one native control lease of `tenant`.
-    pub(crate) async fn read_control_lease(
+    pub async fn read_control_lease(
         &self,
         graph_fname: &str,
         tenant: &str,
@@ -86,7 +86,7 @@ impl RedbBackend {
     }
 
     /// `ListControlLeases`: one bounded, tenant-bound page.
-    pub(crate) async fn list_control_leases(
+    pub async fn list_control_leases(
         &self,
         graph_fname: &str,
         request: ListControlLeasesRequest,
@@ -96,7 +96,7 @@ impl RedbBackend {
     }
 
     /// `GapGet`: one canonical Gap of `tenant`.
-    pub(crate) async fn read_gap(
+    pub async fn read_gap(
         &self,
         graph_fname: &str,
         tenant: &str,
@@ -108,7 +108,7 @@ impl RedbBackend {
     }
 
     /// `GapList`: one bounded, tenant-bound page of Gaps.
-    pub(crate) async fn list_gaps(
+    pub async fn list_gaps(
         &self,
         graph_fname: &str,
         request: GapListRequest,
@@ -118,7 +118,7 @@ impl RedbBackend {
     }
 
     /// `ListWorkItems`: one bounded, tenant-bound page.
-    pub(crate) async fn list_work_items(
+    pub async fn list_work_items(
         &self,
         graph_fname: &str,
         request: WorkItemListRequest,
@@ -172,7 +172,7 @@ impl RedbBackend {
         .await
     }
 
-    pub(crate) async fn read_run_work_item(
+    pub async fn read_run_work_item(
         &self,
         graph_fname: &str,
         tenant: &str,
@@ -189,7 +189,7 @@ impl RedbBackend {
         .await
     }
 
-    pub(crate) async fn read_session_usage(
+    pub async fn read_session_usage(
         &self,
         graph_fname: &str,
         tenant: &str,
@@ -206,7 +206,7 @@ impl RedbBackend {
         .await
     }
 
-    pub(crate) async fn current_plan_owner(
+    pub async fn current_plan_owner(
         &self,
         graph_fname: &str,
         tenant: &str,
@@ -223,7 +223,7 @@ impl RedbBackend {
         .await
     }
 
-    pub(crate) async fn read_current_plan(
+    pub async fn read_current_plan(
         &self,
         graph_fname: &str,
         tenant: &str,
@@ -252,7 +252,7 @@ impl RedbBackend {
 }
 
 impl RedbBackend {
-    pub(crate) async fn checkpoint_owner(
+    pub async fn checkpoint_owner(
         &self,
         graph_fname: &str,
         request: medulla_types::run_checkpoint::GetRunCheckpointRequest,
@@ -266,7 +266,7 @@ impl RedbBackend {
         })
         .await
     }
-    pub(crate) async fn read_run_checkpoint(
+    pub async fn read_run_checkpoint(
         &self,
         graph_fname: &str,
         request: medulla_types::run_checkpoint::GetRunCheckpointRequest,

@@ -21,7 +21,7 @@ use crate::agent_library::AgentLibraryStore;
 
 impl AgentLibraryStore {
     /// Answer one operator view of a consumer's stream in `tenant_id`'s scope.
-    pub(crate) fn outbox_view(
+    pub fn outbox_view(
         &self,
         tenant_id: &str,
         view: &OutboxView,
@@ -33,7 +33,7 @@ impl AgentLibraryStore {
     }
 
     /// Apply one reject or rewind in `tenant_id`'s scope.
-    pub(crate) fn outbox_write(
+    pub fn outbox_write(
         &self,
         tenant_id: &str,
         write: OutboxWrite,
@@ -44,7 +44,7 @@ impl AgentLibraryStore {
 
     /// Durably subscribe `consumer` to `topic` in `tenant_id`'s scope.
     /// Idempotent for the same topic; refused for a different one.
-    pub(crate) fn outbox_subscribe(
+    pub fn outbox_subscribe(
         &self,
         tenant_id: &str,
         consumer: &str,
@@ -55,7 +55,7 @@ impl AgentLibraryStore {
     }
 
     /// Lease pending rows of `consumer` in `tenant_id`'s scope.
-    pub(crate) fn outbox_claim(
+    pub fn outbox_claim(
         &self,
         tenant_id: &str,
         consumer: &str,
@@ -66,7 +66,7 @@ impl AgentLibraryStore {
     }
 
     /// Acknowledge one held lease in `tenant_id`'s scope.
-    pub(crate) fn outbox_ack(
+    pub fn outbox_ack(
         &self,
         tenant_id: &str,
         lease: &MutationOutboxLease,

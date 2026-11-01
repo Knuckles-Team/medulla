@@ -50,7 +50,7 @@ pub(crate) struct ConnectorPackCommitPlan {
 
 impl AgentLibraryStore {
     /// Commit every catalog-visible effect of one validated import atomically.
-    pub(crate) fn commit_connector_pack(
+    pub fn commit_connector_pack(
         &self,
         plan: ConnectorPackCommitPlan,
     ) -> Result<PackImportResult, String> {

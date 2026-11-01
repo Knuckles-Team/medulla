@@ -251,7 +251,7 @@ impl BundledStoreSource for RbacBundledStore {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
 
     /// Every bundled store must declare the kernel authority a restore adopts it

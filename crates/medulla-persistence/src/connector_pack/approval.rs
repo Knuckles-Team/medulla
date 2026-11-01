@@ -25,7 +25,7 @@ impl AgentLibraryStore {
     /// Approve one current held source registration after the caller's
     /// admitted policy decision. The member row is the only source of truth;
     /// no declaration or approval bit is accepted from the request.
-    pub(crate) fn approve_connector_pack_source(
+    pub fn approve_connector_pack_source(
         &self,
         context: AgentLibraryMutationContext,
         connector: &ResourceId,
@@ -83,7 +83,7 @@ impl AgentLibraryStore {
     /// again from the Agent Library snapshot.  This keeps a stale or modified
     /// receipt from turning the request-scoped registry seam into an approval
     /// bypass.
-    pub(crate) fn verify_connector_pack_source_approval(
+    pub fn verify_connector_pack_source_approval(
         &self,
         receipt: &ConnectorPackSourceApprovalResult,
     ) -> Result<(), String> {

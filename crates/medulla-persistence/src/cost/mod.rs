@@ -464,7 +464,7 @@ fn graph_matches_tenant(graph_name: &str, verified_tenant: &str) -> bool {
 /// candidate heap, or metric.  The raw two-argument function below remains only
 /// as a bounded in-process compatibility helper for existing Rust callers/tests;
 /// the served RPC always uses this authority-bearing path.
-pub(crate) async fn collect_resource_stats_authorized(
+pub async fn collect_resource_stats_authorized(
     state: &Arc<RwLock<ServerState>>,
     authority: &medulla_server_api::access::GraphReadAuthority,
     verified_tenant: &str,
@@ -624,7 +624,7 @@ pub fn capacity_estimate(
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
 
     #[test]

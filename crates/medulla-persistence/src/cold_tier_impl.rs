@@ -194,7 +194,7 @@ mod s3 {
 pub use s3::S3ColdTier;
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
 
     fn tmp_dir() -> String {

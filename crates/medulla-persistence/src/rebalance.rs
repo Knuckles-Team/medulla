@@ -285,7 +285,7 @@ fn best_move_graph(graphs: &[GraphLoad], gap: u64) -> Option<usize> {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
 
     fn gl(name: &str, load: u64) -> GraphLoad {

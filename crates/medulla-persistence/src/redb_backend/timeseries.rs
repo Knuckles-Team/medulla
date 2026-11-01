@@ -191,7 +191,7 @@ impl RedbBackend {
     /// The synchronous core of [`Self::reconcile_time_series`]: pure redb I/O
     /// with no await points, so the post-bind maintenance task runs it off the
     /// reactor through the blocking-task boundary (MEDULLA-DURABLE-KERNEL-R006.4).
-    pub(crate) fn reconcile_time_series_sync(
+    pub fn reconcile_time_series_sync(
         &self,
         tsdb_store: &medulla_tsdb::store::SeriesStore,
     ) -> Result<TsReconcileReport, String> {

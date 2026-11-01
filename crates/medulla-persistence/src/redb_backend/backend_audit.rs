@@ -27,7 +27,7 @@ impl RedbBackend {
     /// was appended, and a retry under the same request identity settles
     /// whether it was.
     #[cfg(feature = "security")]
-    pub(crate) async fn audit_append(
+    pub async fn audit_append(
         &self,
         graph_fname: &str,
         event: medulla_store::redb_store::OperationAuditEvent,

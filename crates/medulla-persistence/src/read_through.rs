@@ -218,7 +218,7 @@ impl medulla_core::registry::GraphMaterializer for BackendGraphMaterializer {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use std::io::Write;
     use std::sync::Mutex;

@@ -115,7 +115,7 @@ pub fn decode_relationship_mappings(
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
 
     // spec: MEDULLA-TYPED-PACKS-R101.10

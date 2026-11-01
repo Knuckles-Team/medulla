@@ -24,19 +24,19 @@ use super::agent_library::AgentLibraryStore;
 /// verified tenant id exactly as pack import writes it. Import, status and
 /// `SourceIngest` all call this, never a graph route's opaque carrier
 /// `tenant_scope` digest (MEDULLA-TYPED-PACKS-R101.9).
-pub(crate) fn pack_tenant_key(verified: &medulla_server_api::auth::VerifiedRequestContext) -> &str {
+pub fn pack_tenant_key(verified: &medulla_server_api::auth::VerifiedRequestContext) -> &str {
     verified.tenant()
 }
 
-pub(crate) mod admin;
-pub(crate) mod admitted;
+pub mod admin;
+pub mod admitted;
 pub(crate) mod approval;
-pub(crate) mod catalog_authority;
-pub(crate) mod commit;
+pub mod catalog_authority;
+pub mod commit;
 mod declaration;
 pub(crate) mod outbox;
 mod pins;
-pub(crate) mod projection;
+pub mod projection;
 pub(crate) mod visibility;
 
 pub use declaration::{
@@ -52,7 +52,7 @@ pub(crate) struct ConnectorPackHeadRow {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct ConnectorPackMemberRow {
+pub struct ConnectorPackMemberRow {
     pub uri: String,
     pub kind: PackEntryKind,
     pub entry_digest: Digest256,
@@ -162,7 +162,7 @@ impl AgentLibraryStore {
     /// one Agent Library snapshot. A committed-but-unprojected head is not
     /// attachable: using it would let GraphSchema publish schema from a pack
     /// whose component revision is still intentionally hidden.
-    pub(crate) fn resolve_visible_connector_schema_head(
+    pub fn resolve_visible_connector_schema_head(
         &self,
         tenant_id: &str,
         connector: &ResourceId,
@@ -233,7 +233,7 @@ impl AgentLibraryStore {
     /// resurrection of an administratively retired member. The subsequent
     /// atomic commit still compares the pack head, so this read never becomes
     /// the write authority by itself.
-    pub(crate) fn connector_pack_members(
+    pub fn connector_pack_members(
         &self,
         tenant_id: &str,
         connector: &ResourceId,
@@ -665,7 +665,7 @@ impl AgentLibraryStore {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
 
     #[test]

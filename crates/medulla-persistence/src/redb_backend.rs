@@ -109,7 +109,7 @@ pub(crate) use commands::{
     ChangeEnvelopePayload, ChangeEnvelopesPayload, Cmd, CrossModalBatchPayload, CrossModalPayload,
     MutationBatchPayload, PageQuery,
 };
-pub(crate) use shard_writer::shard_index;
+pub use shard_writer::shard_index;
 use shard_writer::{join_blocking_in_order, resolve_flush_threshold, resolve_shard_count};
 use shard_writer::{PreparedShard, ShardWriter};
 #[cfg(feature = "tsdb")]
@@ -648,7 +648,7 @@ struct TxnRecoveryPrivateIntegrity(medulla_kernel::crypto::ValueCipher);
 /// recovery binds the stable semantic intent so a retry may carry fresh OCC
 /// observations without becoming a different operation.
 #[cfg(feature = "security")]
-pub(crate) fn authenticate_private_payload(
+pub fn authenticate_private_payload(
     cipher: &medulla_kernel::crypto::ValueCipher,
     sealed: &[u8],
     expected_binding: &str,
@@ -810,7 +810,7 @@ pub(crate) fn seed_raw_row<'k, 'v, K, V>(
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use crate::AsRedb;
     use super::*;
     // A raw `redb::Database` survives HERE and nowhere else: these fixtures plant

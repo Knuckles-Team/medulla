@@ -447,7 +447,7 @@ pub(crate) fn seed_template_for_test(
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::super::agent_library::AgentLibraryStore;
     use medulla_types::agent_library::{
         AgentLibraryEntryDraft, AgentLibraryMutationContext, AgentLibraryPublishRequest,

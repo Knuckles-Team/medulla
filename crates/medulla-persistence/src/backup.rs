@@ -861,7 +861,7 @@ fn adopt_bundled_store(
 /// share the one guard: `Some(previous) => restore it`, `None => remove the
 /// var entirely`.
 #[cfg(test)]
-pub(crate) struct EnvVarGuard {
+pub struct EnvVarGuard {
     key: &'static str,
     // `OsString`, not `String`: an environment value that is not valid UTF-8 must
     // still be restored exactly. Reading it through `var()` would drop such a
@@ -889,7 +889,7 @@ impl Drop for EnvVarGuard {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use medulla_types::protocol::GraphType;
     use medulla_types::protocol::Method;

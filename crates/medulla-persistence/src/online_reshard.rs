@@ -1937,7 +1937,7 @@ pub(crate) fn graft_graph_from_with_payload(
 mod store_graft_tests;
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use medulla_store::redb_store::encode_meta_with_incarnation;
 

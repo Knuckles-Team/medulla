@@ -70,7 +70,7 @@ impl AgentLibraryStore {
     ///
     /// `apply` writes the owner rows and returns the typed result the ledger
     /// records; every fallible step after the write opens aborts it.
-    pub(crate) fn commit_pack_write<R>(
+    pub fn commit_pack_write<R>(
         &self,
         context: &AgentLibraryMutationContext,
         identity: PackWriteIdentity<'_>,

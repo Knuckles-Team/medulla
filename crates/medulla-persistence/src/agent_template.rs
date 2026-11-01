@@ -274,4 +274,4 @@ pub(super) fn decode_template(bytes: &[u8]) -> Result<AgentTemplateEntry, String
 pub type AgentTemplateStoreRef = Arc<AgentLibraryStore>;
 
 #[cfg(test)]
-mod tests;
+pub mod tests;

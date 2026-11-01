@@ -427,8 +427,8 @@ pub type AgentComponentStoreRef = Arc<AgentLibraryStore>;
 /// here instead of a same-line change at every call site -- precisely the
 /// growth that pushed these builders' shared boilerplate over the clone
 /// gate's detection floor once already.
-#[cfg(test)]
-pub(crate) fn test_component_draft(
+#[cfg(any(test, feature = "test-support"))]
+pub fn test_component_draft(
     tenant_id: &str,
     component_id: &str,
 ) -> medulla_types::agent_component::AgentComponentDraft {
@@ -587,8 +587,8 @@ pub(crate) fn seed_component_for_test(
 
 /// Seed every component an agent draft pins and rewrite each pin to the real
 /// digest.
-#[cfg(test)]
-pub(crate) fn seed_draft_components_for_test(
+#[cfg(any(test, feature = "test-support"))]
+pub fn seed_draft_components_for_test(
     store: &AgentLibraryStore,
     draft: &mut medulla_types::agent_library::AgentLibraryEntryDraft,
     nonce_base: u8,
@@ -625,7 +625,7 @@ pub(crate) fn seed_draft_components_for_test(
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::super::agent_fixtures::mutation_context;
     use super::*;
     use medulla_types::agent_component::{

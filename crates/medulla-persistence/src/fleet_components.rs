@@ -54,7 +54,7 @@ impl AgentLibraryStore {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
 
     #[test]

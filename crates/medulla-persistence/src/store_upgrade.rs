@@ -345,4 +345,4 @@ fn not_admitted(
 #[cfg(test)]
 mod auto_migrate_tests;
 #[cfg(test)]
-mod tests;
+pub mod tests;

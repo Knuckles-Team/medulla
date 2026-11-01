@@ -392,4 +392,4 @@ fn snapshot_check(
 mod sources;
 
 #[cfg(all(test, feature = "decide"))]
-pub(crate) mod tests;
+pub mod tests;

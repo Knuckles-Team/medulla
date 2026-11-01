@@ -694,7 +694,7 @@ fn receipt_sequence(receipt: &WriteBackReceiptRecord) -> u64 {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use std::collections::BTreeMap;
 
     use medulla_types::contract::Digest256;

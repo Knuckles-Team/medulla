@@ -592,7 +592,7 @@ pub(crate) async fn apply_replicated_node_info(
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
 
     fn info(node_id: u64) -> NodeInfo {

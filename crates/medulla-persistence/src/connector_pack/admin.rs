@@ -59,7 +59,7 @@ pub(crate) fn validate_importer(importer: &str) -> Result<(), String> {
 
 impl AgentLibraryStore {
     /// Bind a connector to one importer, or remove its binding.
-    pub(crate) fn change_connector_pack_binding(
+    pub fn change_connector_pack_binding(
         &self,
         context: AgentLibraryMutationContext,
         connector: &ResourceId,
@@ -110,7 +110,7 @@ impl AgentLibraryStore {
     /// member row follows, and its body stays held by the new revision (every
     /// revision stays resolvable). A retired member that reappears in a later
     /// pack is refused with `RETIRED_ENTRY_RETURNED`.
-    pub(crate) fn retire_connector_pack_entries(
+    pub fn retire_connector_pack_entries(
         &self,
         context: AgentLibraryMutationContext,
         connector: &ResourceId,
@@ -200,7 +200,7 @@ impl AgentLibraryStore {
     /// Every body digest some component revision of `tenant_id` holds, in one
     /// Agent Library snapshot. The reconciler releases every engine pack body
     /// of the tenant that is NOT in this set.
-    pub(crate) fn connector_pack_held_bodies(
+    pub fn connector_pack_held_bodies(
         &self,
         tenant_id: &str,
     ) -> Result<BTreeSet<Digest256>, String> {
@@ -330,7 +330,7 @@ fn apply_binding(
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     use crate::agent_fixtures::mutation_context;
     use crate::agent_fixtures::open_agent_store;
