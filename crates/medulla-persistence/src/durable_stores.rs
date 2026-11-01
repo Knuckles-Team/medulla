@@ -172,7 +172,7 @@ pub const DURABLE_STORES: &[DurableStore] = &[
 /// drifting is `backup.rs`'s `backup_restore_carries_non_shard_durable_stores`,
 /// which reopens the restored `rbac.redb` through `RbacStore::open` — a
 /// mismatched identity fails that adoption closed.
-pub(crate) fn bundled_store_authority(
+pub fn bundled_store_authority(
     file_name: &str,
 ) -> Option<(&'static str, medulla_storage::OwnerLayout)> {
     match file_name {
