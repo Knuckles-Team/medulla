@@ -255,7 +255,7 @@ where
 }
 
 /// Decode the bounded native request body, preserving typed refusal and correlation.
-pub(crate) fn decode_request_payload(
+pub fn decode_request_payload(
     payload: &[u8],
     max_items: usize,
 ) -> Result<Request, Response> {
