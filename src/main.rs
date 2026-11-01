@@ -62,6 +62,12 @@ impl std::ops::Deref for Args {
     }
 }
 
+impl std::ops::DerefMut for Args {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.server
+    }
+}
+
 /// Resolve the default UDS path per-platform. Explicit > $GRAPH_SERVICE_SOCKET
 /// (handled by clap's `env`) > per-OS runtime dir > temp dir fallback.
 ///
