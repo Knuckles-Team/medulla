@@ -53,7 +53,6 @@ use crate::protocol::*;
 use crate::redb_layout::shard_filename;
 #[cfg(test)]
 use crate::server::ServerState;
-use medulla_types::rdf_report::*;
 #[cfg(test)]
 use tokio::sync::oneshot;
 
