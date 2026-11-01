@@ -1152,21 +1152,21 @@ async fn spawn_pgwire_listener(
     // when pgwire's own startup policy proves native TLS is configured. The other
     // auxiliary listeners continue using the loopback-only resolver below.
     #[cfg(feature = "pgwire")]
-    if let Some(addr) = medulla::server::pgwire::resolve_listener_addr(
-        std::env::var(medulla::server::pgwire::PGWIRE_ADDR_ENV)
+    if let Some(addr) = medulla_wire::pgwire::resolve_listener_addr(
+        std::env::var(medulla_wire::pgwire::PGWIRE_ADDR_ENV)
             .ok()
             .as_deref(),
         "127.0.0.1:5433",
     ) {
         let pg_auth_secret = state.read().await.auth_secret.clone();
-        let pg_auth_mode = medulla::server::pgwire::PgWireAuthMode::resolve(&pg_auth_secret)?;
+        let pg_auth_mode = medulla_wire::pgwire::PgWireAuthMode::resolve(&pg_auth_secret)?;
         let prepared_pgwire =
-            medulla::server::pgwire::prepare_startup_policy(&addr, pg_auth_secret, pg_auth_mode)
+            medulla_wire::pgwire::prepare_startup_policy(&addr, pg_auth_secret, pg_auth_mode)
                 .await?;
         let pg_state = state.clone();
         info!("pgwire: enabling the configured listener (TLS policy applies)");
         tokio::spawn(async move {
-            if let Err(e) = medulla::server::pgwire::serve_prepared(pg_state, prepared_pgwire).await
+            if let Err(e) = medulla_wire::pgwire::serve_prepared(pg_state, prepared_pgwire).await
             {
                 tracing::error!("pgwire server error: {}", e);
             }
@@ -1189,7 +1189,7 @@ async fn spawn_sqlite_listener(
     // default `127.0.0.1:5461`; non-loopback requires the protected-ingress policy.
     #[cfg(feature = "sqlite-wire")]
     if let Some(addr) = resolve_listener_addr(
-        std::env::var(medulla::server::sqlite_wire::SQLITE_ADDR_ENV)
+        std::env::var(medulla_wire::sqlite_wire::SQLITE_ADDR_ENV)
             .ok()
             .as_deref(),
         "127.0.0.1:5461",
@@ -1202,7 +1202,7 @@ async fn spawn_sqlite_listener(
                 );
                 let sq_state = state.clone();
                 tokio::spawn(async move {
-                    medulla::server::sqlite_wire::serve(listener, sq_state).await;
+                    medulla_wire::sqlite_wire::serve(listener, sq_state).await;
                 });
             }
             Err(e) => tracing::error!("sqlite-wire bind {} failed: {}", addr, e),
@@ -1225,15 +1225,15 @@ async fn spawn_mysql_listener(
     // core as pgwire (CONCEPT:MEDULLA-KG.compute.subsystems-reference), so a MySQL driver/ORM runs SQL over `nodes`/`edges`.
     #[cfg(feature = "mysql-wire")]
     if let Some(addr) = resolve_listener_addr(
-        std::env::var(medulla::server::mysql_wire::MYSQL_ADDR_ENV)
+        std::env::var(medulla_wire::mysql_wire::MYSQL_ADDR_ENV)
             .ok()
             .as_deref(),
         "127.0.0.1:3306",
     ) {
         let mysql_auth_secret = state.read().await.auth_secret.clone();
         let mysql_auth_mode =
-            medulla::server::mysql_wire::MysqlAuthMode::resolve(&mysql_auth_secret)?;
-        medulla::server::mysql_wire::validate_startup_policy(
+            medulla_wire::mysql_wire::MysqlAuthMode::resolve(&mysql_auth_secret)?;
+        medulla_wire::mysql_wire::validate_startup_policy(
             &addr,
             &mysql_auth_secret,
             mysql_auth_mode,
@@ -1242,7 +1242,7 @@ async fn spawn_mysql_listener(
         info!("mysql-wire: enabling the configured loopback listener");
         tokio::spawn(async move {
             if let Err(e) =
-                medulla::server::mysql_wire::serve_with_auth(&addr, my_state, mysql_auth_mode).await
+                medulla_wire::mysql_wire::serve_with_auth(&addr, my_state, mysql_auth_mode).await
             {
                 tracing::error!("mysql-wire server error: {}", e);
             }
@@ -1380,7 +1380,7 @@ async fn spawn_redis_listener(
     // gateway. Each verified principal receives a pseudonymous isolated keyspace.
     #[cfg(feature = "redis-wire")]
     if let Some(addr) = resolve_listener_addr(
-        std::env::var(medulla::server::redis_wire::REDIS_ADDR_ENV)
+        std::env::var(medulla_wire::redis_wire::REDIS_ADDR_ENV)
             .ok()
             .as_deref(),
         "127.0.0.1:6379",
@@ -1388,7 +1388,7 @@ async fn spawn_redis_listener(
         let redis_state = state.clone();
         info!("redis-wire: serving Redis RESP protocol on {}", addr);
         tokio::spawn(async move {
-            if let Err(e) = medulla::server::redis_wire::serve(&addr, redis_state).await {
+            if let Err(e) = medulla_wire::redis_wire::serve(&addr, redis_state).await {
                 tracing::error!("redis-wire server error: {}", e);
             }
         });
@@ -1450,7 +1450,7 @@ async fn spawn_s3_listener(
     // closed unless both access and secret credentials are runtime-injected.
     #[cfg(feature = "s3-api")]
     if let Some(addr) = resolve_listener_addr(
-        std::env::var(medulla::server::s3::S3_ADDR_ENV)
+        std::env::var(medulla_wire::s3::S3_ADDR_ENV)
             .ok()
             .as_deref(),
         "127.0.0.1:9000",
@@ -1467,7 +1467,7 @@ async fn spawn_s3_listener(
         info!("s3-api: serving S3-compatible REST surface on {}", addr);
         tokio::spawn(async move {
             if let Err(e) =
-                medulla::server::s3::serve_with_blob_store(&addr, s3_state, selected_blob).await
+                medulla_wire::s3::serve_with_blob_store(&addr, s3_state, selected_blob).await
             {
                 tracing::error!("s3-api server error: {}", e);
             }
@@ -1490,7 +1490,7 @@ async fn spawn_kvcache_listener(
     // validation or a runtime-injected bearer secret is configured.
     #[cfg(feature = "kvcache-server")]
     if let Some(addr) = resolve_listener_addr(
-        std::env::var(medulla::server::kvcache_http::KVCACHE_ADDR_ENV)
+        std::env::var(medulla_wire::kvcache_http::KVCACHE_ADDR_ENV)
             .ok()
             .as_deref(),
         "127.0.0.1:9130",
@@ -1502,7 +1502,7 @@ async fn spawn_kvcache_listener(
         );
         tokio::spawn(async move {
             if let Err(e) =
-                medulla::server::kvcache_http::serve_with_security(&addr, kvcache_state).await
+                medulla_wire::kvcache_http::serve_with_security(&addr, kvcache_state).await
             {
                 tracing::error!("kvcache-server error: {}", e);
             }

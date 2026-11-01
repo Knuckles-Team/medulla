@@ -42,8 +42,12 @@ use tokio::sync::RwLock;
 
 use medulla_query::PgColType;
 
-use crate::server::broker_wire::{self, BrokerProtocol};
-use crate::server::wire::{WireError, WireOutcome, WireProtocol, WireSession};
+use crate::broker_wire;
+use crate::broker_wire::BrokerProtocol;
+use crate::wire::WireError;
+use crate::wire::WireOutcome;
+use crate::wire::WireProtocol;
+use crate::wire::WireSession;
 use medulla_server_api::state::ServerState;
 
 use protocol::{

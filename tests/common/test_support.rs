@@ -155,12 +155,12 @@ pub async fn wait_for_listener_ready(addr: &str) {
 #[cfg(feature = "pgwire")]
 pub async fn spawn_pgwire_listener(
     state: SharedState,
-    mode: medulla::server::pgwire::PgWireAuthMode,
+    mode: medulla_wire::pgwire::PgWireAuthMode,
 ) -> String {
     let addr_s = ephemeral_listener_addr().await;
     let serve_addr = addr_s.clone();
     tokio::spawn(async move {
-        let _ = medulla::server::pgwire::serve_with_auth(&serve_addr, state, mode).await;
+        let _ = medulla_wire::pgwire::serve_with_auth(&serve_addr, state, mode).await;
     });
     wait_for_listener_ready(&addr_s).await;
     addr_s
@@ -173,7 +173,7 @@ pub async fn connect_pgwire(
     user: &str,
     dbname: &str,
 ) -> Result<tokio_postgres::Client, tokio_postgres::Error> {
-    let password = medulla::server::pgwire::derive_pg_password(secret, user);
+    let password = medulla_wire::pgwire::derive_pg_password(secret, user);
     connect_pgwire_with_password(addr, &password, user, dbname).await
 }
 

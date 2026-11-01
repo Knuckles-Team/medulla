@@ -56,7 +56,8 @@ use tokio::net::TcpListener;
 use tokio::sync::mpsc;
 use tokio::sync::RwLock;
 
-use crate::server::broker_wire::{self, BrokerProtocol};
+use crate::broker_wire;
+use crate::broker_wire::BrokerProtocol;
 use medulla_server_api::kv::KvStore;
 use medulla_server_api::state::ServerState;
 

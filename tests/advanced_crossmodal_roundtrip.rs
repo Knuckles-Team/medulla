@@ -1039,7 +1039,7 @@ async fn pgwire_sparql_native_consistent_snapshot_eg393() {
         tokio::time::sleep(std::time::Duration::from_millis(20)).await;
     }
 
-    // The pgwire user "tester" IS the engine `agent_id` (`server::pgwire::auth`: "a pg
+    // The pgwire user "tester" IS the engine `agent_id` (`medulla_wire::pgwire::auth`: "a pg
     // connection's `user` IS an engine `agent_id`" -- SCRAM binds the login to that
     // `AgentIdentity` for every subsequent query's ACL check). Register it up front with
     // the `commons-user` RBAC role ([`commons_isolation`]) so its post-login queries can
@@ -1098,7 +1098,7 @@ async fn pgwire_sparql_native_consistent_snapshot_eg393() {
     // named type". `Seed` matches neither the `:Robot` label nor the `ex/robot` subject,
     // so every before-commit "sees nothing" assertion still holds. Tagged
     // `_visibility: "public"`: default-deny RLS hides an untagged, unowned row from the
-    // pgwire "tester" actor (`server::pgwire::auth`: the pg user IS the ACL actor) --
+    // pgwire "tester" actor (`medulla_wire::pgwire::auth`: the pg user IS the ACL actor) --
     // an untagged seed would drop out of `infer_nodes`' RLS-filtered snapshot entirely,
     // reproducing the exact "no field named type" this seed exists to prevent.
     ok(
@@ -1406,7 +1406,7 @@ async fn encryption_at_rest_wrong_key_fails_eg394() {
 #[cfg(feature = "streaming")]
 #[tokio::test]
 async fn streaming_cdc_matview_rebuild_eg395() {
-    use medulla::wire::{ContinuousAgg, ContinuousQuerySpec};
+    use medulla_wire::wire::{ContinuousAgg, ContinuousQuerySpec};
 
     let state = state().await;
     let hub = {

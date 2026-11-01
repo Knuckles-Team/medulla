@@ -7,7 +7,9 @@ use sha2::Sha256;
 #[cfg(test)]
 use tokio::sync::RwLock;
 
-use crate::protocol::{Method, Request, ResultPayload};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Request;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::api::reentry::dispatch_authenticated_broker_actor;
 use medulla_server_api::state::ServerState;
 
@@ -22,12 +24,12 @@ pub(crate) mod prelude {
 
 #[cfg(test)]
 pub(crate) fn register_broker_test_agent(
-    isolation: &mut crate::isolation::IsolationLayer,
+    isolation: &mut medulla_core::isolation::IsolationLayer,
     agent_id: impl Into<String>,
 ) {
-    isolation.register_agent(crate::isolation::AgentIdentity {
+    isolation.register_agent(medulla_core::isolation::AgentIdentity {
         agent_id: agent_id.into(),
-        role: crate::isolation::AgentRole::Agent,
+        role: medulla_core::isolation::AgentRole::Agent,
         teams: Vec::new(),
         roles: if cfg!(feature = "security") {
             vec!["commons-user".to_string()]
@@ -42,12 +44,16 @@ pub(crate) async fn test_state_with_broker_agents(
     prefix: &str,
     principals: &[&str],
 ) -> Arc<RwLock<ServerState>> {
-    use crate::isolation::IsolationLayer;
+    use medulla_core::isolation::IsolationLayer;
 
     let mut isolation = IsolationLayer::new();
     #[cfg(feature = "security")]
     {
-        use crate::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+        use medulla_types::acl::Grant;
+        use medulla_types::acl::GrantEffect;
+        use medulla_types::acl::RbacAction;
+        use medulla_types::acl::ResourceSelector;
+        use medulla_types::acl::Role;
 
         let graph = ResourceSelector::Graph("__commons__".to_string());
         isolation.add_role(Role::new("commons-user"));
@@ -80,7 +86,7 @@ pub(crate) async fn test_state_with_broker_agents(
             .register_graph(
                 "__commons__",
                 "__commons__",
-                crate::protocol::GraphType::Commons,
+                medulla_protocol_types::protocol::GraphType::Commons,
             )
             .await
             .unwrap();
@@ -247,7 +253,7 @@ pub(crate) fn decode_claim(
     let body = props
         .get("payload")
         .and_then(|value| value.as_str())
-        .and_then(crate::broker::hex_decode)
+        .and_then(medulla_core::broker::hex_decode)
         .unwrap_or_default();
     let exchange = props
         .get("exchange")

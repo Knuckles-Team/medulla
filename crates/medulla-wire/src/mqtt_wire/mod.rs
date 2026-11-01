@@ -43,11 +43,13 @@
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::protocol::Method;
-use crate::server::broker_wire::{self, invalid_data, prelude::*, BrokerProtocol};
-use crate::server::broker_wire::{
-    derive_password as derive_mqtt_password_impl, verify_password as verify_mqtt_password_impl,
-};
+use medulla_protocol_types::protocol::Method;
+use crate::broker_wire;
+use crate::broker_wire::invalid_data;
+use crate::broker_wire::prelude::*;
+use crate::broker_wire::BrokerProtocol;
+use crate::broker_wire::derive_password as derive_mqtt_password_impl;
+use crate::broker_wire::verify_password as verify_mqtt_password_impl;
 use medulla_server_api::state::ServerState;
 
 /// Env var: when set (and the binary is built `--features mqtt-wire`), the MQTT wire
@@ -675,11 +677,11 @@ mod tests {
         assert_eq!(mqtt_filter_to_pattern("sport/#"), "sport.#");
         assert_eq!(mqtt_filter_to_pattern("#"), "#");
         // The translated pattern matches the broker's topic matcher as expected.
-        assert!(crate::broker::topic_matches(
+        assert!(medulla_core::broker::topic_matches(
             &mqtt_filter_to_pattern("sport/+/player1"),
             &mqtt_topic_to_key("sport/tennis/player1")
         ));
-        assert!(crate::broker::topic_matches(
+        assert!(medulla_core::broker::topic_matches(
             &mqtt_filter_to_pattern("sport/#"),
             &mqtt_topic_to_key("sport")
         ));

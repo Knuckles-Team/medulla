@@ -309,7 +309,7 @@ pub(super) fn commit_sql_change(
     )
     .unwrap();
     with_source_authority_write(persist_dir, authority, |source| {
-        crate::server::wire::authorize_table_txn(source, store, &mut txn, false)
+        medulla_wire::wire::authorize_table_txn(source, store, &mut txn, false)
             .map_err(|error| error.message)?;
         store.commit_txn_batch(&txn, &batch, request_id).map(|_| ())
     })

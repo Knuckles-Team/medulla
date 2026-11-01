@@ -14,11 +14,16 @@ use medulla_query::TableStore;
 use tokio::sync::RwLock;
 
 use crate::protocol::Method;
-use crate::server::wire::wired_catalog_tests::{
-    authority, create_test_graph, read_rows, request, session_for, test_persist_dir_of, test_state,
-    CREATOR,
-};
-use crate::server::wire::{WireProtocol as _, WireSession};
+use medulla_wire::wire::wired_catalog_tests::authority;
+use medulla_wire::wire::wired_catalog_tests::create_test_graph;
+use medulla_wire::wire::wired_catalog_tests::read_rows;
+use medulla_wire::wire::wired_catalog_tests::request;
+use medulla_wire::wire::wired_catalog_tests::session_for;
+use medulla_wire::wire::wired_catalog_tests::test_persist_dir_of;
+use medulla_wire::wire::wired_catalog_tests::test_state;
+use medulla_wire::wire::wired_catalog_tests::CREATOR;
+use medulla_wire::wire::WireProtocol as _;
+use medulla_wire::wire::WireSession;
 use medulla_server_api::state::ServerState;
 
 const TENANT: &str = "tenant-shared";

@@ -34,7 +34,10 @@
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::server::broker_wire::{self, invalid_data, prelude::*, BrokerProtocol};
+use crate::broker_wire;
+use crate::broker_wire::invalid_data;
+use crate::broker_wire::prelude::*;
+use crate::broker_wire::BrokerProtocol;
 use medulla_server_api::state::ServerState;
 
 /// Env var: when set (and the binary is built `--features stomp-wire`), the STOMP wire
@@ -111,7 +114,7 @@ impl<'a> StompBroker<'a> {
         }
     }
 
-    async fn dispatch(&self, method: crate::protocol::Method) {
+    async fn dispatch(&self, method: medulla_protocol_types::protocol::Method) {
         let _ =
             broker_wire::engine_call(self.state, self.graph, self.actor, next_req_id, method).await;
     }
@@ -175,7 +178,7 @@ async fn requeue_message(
     node_id: &str,
 ) {
     StompBroker::new(state, graph, actor)
-        .dispatch(crate::protocol::Method::BrokerReject {
+        .dispatch(medulla_protocol_types::protocol::Method::BrokerReject {
             queue: queue.to_string(),
             node_id: node_id.to_string(),
             requeue: true,
@@ -380,7 +383,7 @@ async fn handle_connect(
         &principal,
     )?;
     StompBroker::new(context.state, context.graph, &actor)
-        .dispatch(crate::protocol::Method::DeclareExchange {
+        .dispatch(medulla_protocol_types::protocol::Method::DeclareExchange {
             exchange: context.exchange.to_string(),
             kind: "direct".to_string(),
         })
@@ -443,7 +446,7 @@ async fn handle_send(
 ) -> std::io::Result<()> {
     let destination = required_header(frame, "destination")?;
     StompBroker::new(context.state, context.graph, actor)
-        .dispatch(crate::protocol::Method::Publish {
+        .dispatch(medulla_protocol_types::protocol::Method::Publish {
             exchange: context.exchange.to_string(),
             routing_key: destination,
             payload: frame.body.clone(),
@@ -473,7 +476,7 @@ async fn handle_subscribe(
     let queue = format!("stomp.{}", next_req_id());
     // Bind the per-subscription queue to the destination (exact match).
     StompBroker::new(context.state, context.graph, actor)
-        .dispatch(crate::protocol::Method::BindQueue {
+        .dispatch(medulla_protocol_types::protocol::Method::BindQueue {
             exchange: context.exchange.to_string(),
             queue: queue.clone(),
             routing_key: destination.clone(),
@@ -500,7 +503,7 @@ async fn handle_unsubscribe(
     if let Some(pos) = subs.iter().position(|s| s.id == sub_id) {
         let s = subs.remove(pos);
         StompBroker::new(context.state, context.graph, actor)
-            .dispatch(crate::protocol::Method::UnbindQueue {
+            .dispatch(medulla_protocol_types::protocol::Method::UnbindQueue {
                 exchange: context.exchange.to_string(),
                 queue: s.queue.clone(),
                 routing_key: s.destination.clone(),

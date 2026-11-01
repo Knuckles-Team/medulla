@@ -60,8 +60,8 @@ use serde_json::Value;
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use super::ros2_bridge::{cdc_to_publish, publish_to_method, RosbridgeOp};
-use crate::protocol::Method;
-use crate::wire::CdcEvent;
+use medulla_protocol_types::protocol::Method;
+use medulla_types::wire::CdcEvent;
 
 /// The ROS2 transport seam (CONCEPT:MEDULLA-KG.ingest.dds-transport): publish/subscribe/advertise ROS2 topics over
 /// a concrete transport (native DDS/RTPS, or the MEDULLA-325 rosbridge WebSocket). Messages are
@@ -864,7 +864,7 @@ pub use cyclone::CycloneDdsTransport;
 #[cfg(all(test, feature = "ros2-dds"))]
 mod tests {
     use super::*;
-    use crate::server::ros2_bridge::ROS_STRING_TYPE;
+    use crate::ros2_bridge::ROS_STRING_TYPE;
 
     /// MEDULLA-349: the rmw topic-name mangling matches the `rmw_cyclonedds`/`rmw_fastrtps`
     /// convention (ROS 2 Humble+): a ROS topic gets the `rt` prefix on the DDS wire, and a

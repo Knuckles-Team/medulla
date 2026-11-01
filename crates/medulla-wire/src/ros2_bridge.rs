@@ -30,8 +30,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::protocol::{Method, Request};
-use crate::wire::{CdcEvent, CdcKind};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Request;
+use medulla_types::wire::CdcEvent;
+use medulla_types::wire::CdcKind;
 
 // ── The rosbridge JSON protocol (CONCEPT:MEDULLA-KG.domains.robotics-gpu-distribution) ─────────────────────────────
 
@@ -250,7 +252,7 @@ pub async fn apply_inbound(
 /// publishing the unfiltered feed would leak rows a verified reader would never be
 /// authorized to see, so the bridge must fail closed instead of blasting every change.
 #[cfg(feature = "server")]
-fn ros2_cdc_denied(isolation: &crate::isolation::IsolationLayer) -> bool {
+fn ros2_cdc_denied(isolation: &medulla_core::isolation::IsolationLayer) -> bool {
     isolation.has_rules() && medulla_server_api::access::unauthenticated_carrier_denied(None)
 }
 
@@ -521,7 +523,9 @@ mod tests {
     #[cfg(feature = "server")]
     #[test]
     fn ros2_cdc_fails_closed_only_once_row_ownership_is_active() {
-        use crate::isolation::{AgentIdentity, AgentRole, IsolationLayer};
+        use medulla_core::isolation::AgentIdentity;
+        use medulla_core::isolation::AgentRole;
+        use medulla_core::isolation::IsolationLayer;
 
         // No identities registered yet: nothing to protect, so the unauthenticated
         // outbound leg is allowed to publish, same as before this fix.

@@ -41,7 +41,10 @@ use tokio::sync::RwLock;
 
 use medulla_query::PgColType;
 
-use crate::server::wire::{WireError, WireOutcome, WireProtocol, WireSession};
+use crate::wire::WireError;
+use crate::wire::WireOutcome;
+use crate::wire::WireProtocol;
+use crate::wire::WireSession;
 use medulla_server_api::state::ServerState;
 
 mod auth;
@@ -476,7 +479,7 @@ mod tests {
     //! TCP socket (no mysql client crate) — proving SELECT / CREATE TABLE / INSERT
     //! end-to-end through the shared `WireSession` execution core (CONCEPT:MEDULLA-KG.query.kg-2).
     use super::*;
-    use crate::isolation::IsolationLayer;
+    use medulla_core::isolation::IsolationLayer;
     use medulla_h_query::query::current_auth_test_support::grant_commons_user;
     use medulla_h_query::query::current_auth_test_support::register_commons_agent;
     use medulla_server_api::state::ServerState;

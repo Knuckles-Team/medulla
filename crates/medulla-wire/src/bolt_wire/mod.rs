@@ -36,8 +36,12 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 
-use crate::graph::{GraphCore, GraphSnapshot};
-use crate::protocol::{Method, QueryResult, Response, ResultPayload};
+use medulla_core::graph::GraphCore;
+use medulla_core::graph::GraphSnapshot;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::QueryResult;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::access::check_graph_access;
 use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::access::GraphReadAuthority;
@@ -243,7 +247,7 @@ async fn authenticate_session(
     })?;
     let probe = Method::CypherQuery {
         query: "MATCH (n) RETURN n LIMIT 0".to_string(),
-        mode: crate::protocol::CypherMode::Read,
+        mode: medulla_protocol_types::protocol::CypherMode::Read,
     };
     let action = medulla_capabilities::policy(&probe).authz_action;
     if !verified.allows_method(action, false) && !verified.allows_method(action, true) {
@@ -366,10 +370,10 @@ fn ignored() -> PackValue {
 struct BoltGraphContext {
     core: Arc<GraphCore>,
     materialization_manifest:
-        Option<Arc<std::sync::RwLock<crate::registry::MaterializationManifest>>>,
-    graph_type: crate::protocol::GraphType,
+        Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
+    graph_type: medulla_protocol_types::protocol::GraphType,
     owner: Option<String>,
-    isolation: crate::isolation::IsolationLayer,
+    isolation: medulla_core::isolation::IsolationLayer,
     persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
     cdc: Option<Arc<medulla_server_api::cdc::CdcHub>>,
@@ -414,9 +418,9 @@ fn authorize_cypher(
     let method = Method::CypherQuery {
         query: "BOLT CYPHER AUTHORIZATION".to_string(),
         mode: if is_write {
-            crate::protocol::CypherMode::Write
+            medulla_protocol_types::protocol::CypherMode::Write
         } else {
-            crate::protocol::CypherMode::Read
+            medulla_protocol_types::protocol::CypherMode::Read
         },
     };
     let action = medulla_capabilities::policy(&method).authz_action;
@@ -428,9 +432,9 @@ fn authorize_cypher(
         ));
     }
     let level = if is_write {
-        crate::isolation::AccessLevel::Write
+        medulla_core::isolation::AccessLevel::Write
     } else {
-        crate::isolation::AccessLevel::Read
+        medulla_core::isolation::AccessLevel::Read
     };
     check_graph_access(
         &context.isolation,
@@ -532,7 +536,7 @@ fn receipt_method(writes: &[BufferedCypher]) -> Method {
     }
     Method::CypherQuery {
         query: format!("BOLT CYPHER sha256:{}", hex::encode(digest.finalize())),
-        mode: crate::protocol::CypherMode::Write,
+        mode: medulla_protocol_types::protocol::CypherMode::Write,
     }
 }
 
@@ -911,7 +915,7 @@ mod tests {
     //! PULL → SUCCESS auto-commit round-trip against the Cypher engine, plus BEGIN/COMMIT
     //! and FAILURE/RESET flows — no external Neo4j driver.
     use super::*;
-    use crate::isolation::IsolationLayer;
+    use medulla_core::isolation::IsolationLayer;
     use medulla_server_api::state::ServerState;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -934,7 +938,11 @@ mod tests {
         let mut isolation = IsolationLayer::default();
         #[cfg(feature = "security")]
         {
-            use crate::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+            use medulla_types::acl::Grant;
+            use medulla_types::acl::GrantEffect;
+            use medulla_types::acl::RbacAction;
+            use medulla_types::acl::ResourceSelector;
+            use medulla_types::acl::Role;
             isolation.add_role(Role::new("commons-user"));
             let grant = |action| Grant {
                 role: "commons-user".to_owned(),
@@ -947,9 +955,9 @@ mod tests {
             }
         }
 
-        isolation.register_agent(crate::isolation::AgentIdentity {
+        isolation.register_agent(medulla_core::isolation::AgentIdentity {
             agent_id: "service:bolt-test".to_owned(),
-            role: crate::isolation::AgentRole::Agent,
+            role: medulla_core::isolation::AgentRole::Agent,
             teams: Vec::new(),
             roles: if cfg!(feature = "security") {
                 vec!["commons-user".to_owned()]
@@ -1019,7 +1027,7 @@ mod tests {
         Arc<RwLock<ServerState>>,
         Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     ) {
-        use crate::protocol::GraphType;
+        use medulla_protocol_types::protocol::GraphType;
         use medulla_persistence::redb_backend::RedbBackend;
 
         let backend = RedbBackend::open(dir.to_string_lossy().to_string(), 64)
@@ -1039,10 +1047,10 @@ mod tests {
         (state, persistence)
     }
 
-    fn signed_session_request(graph: &str) -> crate::protocol::Request {
+    fn signed_session_request(graph: &str) -> medulla_protocol_types::protocol::Request {
         medulla_server_api::auth::sign_current_test_request(
             "test",
-            crate::protocol::Request {
+            medulla_protocol_types::protocol::Request {
                 id: next_conn_id(),
                 graph: graph.to_string(),
                 auth_token: String::new(),
@@ -1052,7 +1060,7 @@ mod tests {
         )
     }
 
-    fn auth_map(request: &crate::protocol::Request) -> HashMap<String, PackValue> {
+    fn auth_map(request: &medulla_protocol_types::protocol::Request) -> HashMap<String, PackValue> {
         PackValue::map(vec![
             ("scheme", PackValue::String(BOLT_AUTH_SCHEME.into())),
             (
@@ -1104,11 +1112,11 @@ mod tests {
         // still for this whole body. READ guard: it excludes only a key MUTATOR, never
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        use crate::acl::RequestContextClaims;
+        use medulla_types::acl::RequestContextClaims;
         use medulla_server_api::auth::compute_verified_envelope_token;
         use medulla_server_api::auth::VerifiedEnvelopeParams;
 
-        let mut request = crate::protocol::Request {
+        let mut request = medulla_protocol_types::protocol::Request {
             id: next_conn_id(),
             graph: "__commons__".to_string(),
             auth_token: String::new(),

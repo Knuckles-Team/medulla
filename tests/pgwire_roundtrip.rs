@@ -763,7 +763,7 @@ async fn catalog_introspection_then_select() {
 // one, and post-login queries run under the mapped engine AgentIdentity/ACL.
 // ───────────────────────────────────────────────────────────────────────────
 
-use medulla::server::pgwire::derive_pg_password;
+use medulla_wire::pgwire::derive_pg_password;
 
 /// A SCRAM-auth state: a known engine secret + a registered identity so the
 /// IsolationLayer has rules (the ACL is enforced once any identity exists). The

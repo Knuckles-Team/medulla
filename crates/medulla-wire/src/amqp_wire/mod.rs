@@ -48,11 +48,14 @@
 
 use std::sync::atomic::AtomicU64;
 
-use crate::protocol::{Method, ResultPayload};
-use crate::server::broker_wire::{self, invalid_data, prelude::*, BrokerProtocol};
-use crate::server::broker_wire::{
-    derive_password as derive_amqp_password_impl, verify_password as verify_amqp_password_impl,
-};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::ResultPayload;
+use crate::broker_wire;
+use crate::broker_wire::invalid_data;
+use crate::broker_wire::prelude::*;
+use crate::broker_wire::BrokerProtocol;
+use crate::broker_wire::derive_password as derive_amqp_password_impl;
+use crate::broker_wire::verify_password as verify_amqp_password_impl;
 use medulla_server_api::state::ServerState;
 
 /// Env var: when set (and the binary is built `--features amqp-wire`), the AMQP wire
@@ -766,7 +769,7 @@ async fn pump_consumers(
 /// non-`Raw` / undecodable result fails closed and is negatively acknowledged.
 fn decode_confirmed(result: &ResultPayload) -> bool {
     if let ResultPayload::Raw(bytes) = result {
-        if let Some(ip) = decode_broker_result::<crate::broker::IdempotentPublish>(bytes) {
+        if let Some(ip) = decode_broker_result::<medulla_core::broker::IdempotentPublish>(bytes) {
             return ip.confirmed;
         }
     }
@@ -974,7 +977,7 @@ mod tests {
     fn eg314_decode_confirmed_reads_idempotent_publish_flag() {
         let confirmed = ResultPayload::of_ref::<
             medulla_protocol_types::result_contract::messaging::PublishIdempotent,
-        >(&crate::broker::IdempotentPublish {
+        >(&medulla_core::broker::IdempotentPublish {
             confirmed: true,
             duplicate: false,
             delivered: 1,
@@ -983,7 +986,7 @@ mod tests {
         assert!(decode_confirmed(&confirmed));
         let nacked = ResultPayload::of_ref::<
             medulla_protocol_types::result_contract::messaging::PublishIdempotent,
-        >(&crate::broker::IdempotentPublish {
+        >(&medulla_core::broker::IdempotentPublish {
             confirmed: false,
             duplicate: false,
             delivered: 0,

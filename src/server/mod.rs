@@ -9,8 +9,6 @@ pub use medulla_server_api::denial_sample::spawn_flusher as spawn_denial_sample_
 pub mod seams_install;
 pub use seams_install::install_seams;
 pub(crate) mod issuer_trust;
-#[cfg(any(feature = "mysql-wire", feature = "pgwire"))]
-pub(crate) mod sql_wire_auth;
 
 /// Verified minimum stack for engine Tokio workers.
 ///
@@ -201,76 +199,6 @@ pub(crate) mod split_tests;
     feature = "mssql-wire",
     feature = "redis-wire"
 ))]
-pub(crate) mod broker_wire;
-// Wire-agnostic SQL execution core (CONCEPT:MEDULLA-KG.compute.subsystems-reference) — the multi-wire keystone. The
-// wire-NEUTRAL `classify → dispatch → exec` pipeline + per-connection session/txn
-// state that EVERY wire (Postgres today; SQLite/MySQL/MSSQL Phase J; AMQP Phase Y)
-// reuses. Built with `query`: the native `Method::Sql` catalog path shares its SQL
-// authorization and replay-receipt authority (`authorize_table_txn`,
-// `committed_sql_replay_receipt`), so every SQL-serving build carries it.
-#[cfg(feature = "query")]
-pub mod wire;
-// Postgres wire-protocol shim (CONCEPT:AU-KG.query.raw-python). Facade-only, behind the `pgwire`
-// cargo feature (cluster tier). The FIRST `wire::WireProtocol` adapter (CONCEPT:MEDULLA-KG.compute.subsystems-reference).
-// Default/pi/node builds compile NONE of it.
-#[cfg(feature = "pgwire")]
-pub mod pgwire;
-// SQLite-compatible served surface (CONCEPT:MEDULLA-KG.query.concept-3) — Phase J. SQLite has NO client/
-// server wire protocol, so this is a lightweight NDJSON-over-TCP endpoint that accepts
-// SQLite-dialect SQL, rewrites the SQLite-isms (AUTOINCREMENT / INTEGER PRIMARY KEY /
-// PRAGMA no-ops) and runs them through the shared `WireSession` (CONCEPT:MEDULLA-KG.compute.subsystems-reference). The
-// SECOND `wire` consumer after pgwire; behind the `sqlite-wire` feature (pulls in
-// `wire`). Pure-Rust — NO C-linked sqlite. Kept OUT of node/full — the orchestrator folds it.
-#[cfg(feature = "sqlite-wire")]
-pub mod sqlite_wire;
-// MySQL / MariaDB wire-protocol listener (CONCEPT:MEDULLA-KG.query.kg-2). A hand-rolled MySQL
-// client/server protocol (handshake v10 + `mysql_native_password` + `COM_QUERY`)
-// behind the `mysql-wire` cargo feature. The SECOND `wire::WireProtocol` adapter
-// (CONCEPT:MEDULLA-KG.compute.subsystems-reference), reusing the shared `WireSession` execution core. Default/pi/node/
-// full builds compile NONE of it.
-#[cfg(feature = "mysql-wire")]
-pub mod mysql_wire;
-// MSSQL TDS wire-protocol listener (CONCEPT:MEDULLA-KG.query.hand-rolled-tds-server). A hand-rolled TDS server — the
-// MSSQL `wire::WireProtocol` adapter (CONCEPT:MEDULLA-KG.compute.subsystems-reference), sibling of `pgwire`. Behind the
-// `mssql-wire` cargo feature (which pulls `wire`); DELIBERATELY kept OUT of
-// `node`/`full`/`pi` — the orchestrator folds it into a tier. Default builds compile
-// NONE of it.
-#[cfg(feature = "mssql-wire")]
-pub mod mssql_wire;
-// AMQP 0.9.1 wire-protocol listener (CONCEPT:MEDULLA-KG.compute.message-broker-exchanges). A hand-rolled AMQP 0.9.1 server
-// mapping exchange/queue/basic.* frames onto the `broker` primitives via the engine
-// dispatch. Behind the `amqp-wire` cargo feature; links NO AMQP crate (Pi contract).
-// Default/pi/node/full builds compile NONE of it.
-#[cfg(feature = "amqp-wire")]
-pub mod amqp_wire;
-// Neo4j Bolt wire-protocol listener (CONCEPT:MEDULLA-KG.query.bolt-wire-protocol). A native Bolt v4.4 server — a
-// hand-rolled PackStream v2 codec + chunked framing + message state machine over
-// `tokio::net`, routing RUN's Cypher straight to the medulla-query cypher engine. Behind the
-// `bolt-wire` cargo feature (which pulls `cypher` + `server`); it does NOT use the SQL
-// `wire`/`WireSession` core (Bolt speaks Cypher). Default/pi builds compile NONE of it.
-#[cfg(feature = "bolt-wire")]
-pub mod bolt_wire;
-// Redis RESP wire-protocol listener (CONCEPT:MEDULLA-KG.ontology.resp2-resp3-codec-round). A native, hand-rolled Redis
-// server — a RESP2 + RESP3 codec + the core command set (string/list/hash/set/zset,
-// GET/SET/EXPIRE/SCAN/…) over the engine's durable KV surface (CONCEPT:MEDULLA-KG.storage.namespaced-kv-surface).
-// Behind the `redis-wire` cargo feature (pulls `kv`); links NO redis crate (Pi
-// contract). Default/pi builds compile NONE of it.
-#[cfg(feature = "redis-wire")]
-pub mod redis_wire;
-// MQTT 3.1.1 (+ basic 5.0) wire-protocol listener (CONCEPT:MEDULLA-KG.query.mqtt-packet-codec). A hand-rolled MQTT
-// broker front-end mapping CONNECT/PUBLISH/SUBSCRIBE/… onto the `broker` topic exchange
-// + per-session queues via the engine dispatch. Behind the `mqtt-wire` cargo feature
-// (pulls `broker` + `server`); links NO MQTT crate (Pi contract). Default/pi builds
-// compile NONE of it.
-#[cfg(feature = "mqtt-wire")]
-pub mod mqtt_wire;
-// STOMP 1.2 wire-protocol listener (CONCEPT:MEDULLA-KG.ontology.stomp-frame-codec-unit). A hand-rolled STOMP text-frame
-// server mapping CONNECT/SEND/SUBSCRIBE/ACK/… onto the `broker` primitives (destinations
-// → exchange + per-subscription queues) via the engine dispatch. Behind the `stomp-wire`
-// cargo feature (pulls `broker` + `server`); links NO STOMP crate (Pi contract).
-// Default/pi builds compile NONE of it.
-#[cfg(feature = "stomp-wire")]
-pub mod stomp_wire;
 // S3-compatible object-storage REST surface (CONCEPT:MEDULLA-KG.ontology.object-put-get-head). A hand-rolled HTTP/1.1
 // listener exposing PutObject/GetObject/ListObjectsV2/CreateBucket/… over the
 // content-addressed BLOB CAS (bytes) + the durable KV index (listing), with a
@@ -297,13 +225,6 @@ pub mod graphql_sub;
     feature = "lake",
     feature = "s3-api",
 ))]
-/// Remote KV-cache HTTP surface (CONCEPT:MEDULLA-KG.backend.is-configured-so-co, feature `kvcache-server`): a
-/// hand-rolled HTTP listener exposing the `medulla-kvcache` shared, content-addressed
-/// backend (MEDULLA-186) so parallel vLLM/LMCache instances SHARE KV blocks by token-hash
-/// over GET/PUT/HEAD /kv/<hash> + /kv/stats, with a bearer-token guard. Default/pi
-/// builds compile NONE of it (no medulla-kvcache/ureq in pi).
-#[cfg(feature = "kvcache-server")]
-pub mod kvcache_http;
 /// Observability log ingestion + Parquet segment substrate (CONCEPT:AU-KG.ingest.self-ingest/161,
 /// feature `obs`): a hand-rolled HTTP listener accepting OTLP/HTTP, Elasticsearch
 /// `_bulk`/`_doc` and JSON-lines log records, landing them in medulla-tsdb series +
@@ -313,8 +234,6 @@ pub mod kvcache_http;
 #[cfg(feature = "obs")]
 pub mod obs;
 
-#[cfg(feature = "s3-api")]
-pub mod s3;
 // OBDA wire method + Python client seam (CA-13, feature `obda-wire`, off by default).
 // Reserved and EMPTY until CA-13 implements it; landed by CA-17's single feature-stub
 // commit so CA-13 never edits this shared module list. The OBDA mapping/rewrite engine
@@ -355,24 +274,6 @@ pub mod traces;
 // NO new dep, kept OUT of the Pi tier).
 #[cfg(feature = "federation-search")]
 pub mod replica;
-// ROS2 bridge over the rosbridge-WebSocket JSON protocol (CONCEPT:MEDULLA-KG.domains.robotics-gpu-distribution): bridges engine
-// CDC events ↔ ROS2 topics by talking `rosbridge_suite` JSON-over-WebSocket to a
-// `rosbridge_server` — NO CycloneDDS/rmw/DDS C stack, just a pure-Rust tokio-tungstenite
-// client. Behind the `ros2-bridge` cargo feature; kept OUT of the Pi tier (a slim build
-// links no tokio-tungstenite). Also compiled behind `ros2-dds`/`ros2-rmw` (CONCEPT:MEDULLA-KG.ingest.dds-transport), which
-// reuse this module's PURE CDC↔ROS2 message mapping (`cdc_to_publish`/`publish_to_method`)
-// as the shared shaping for the native DDS legs — only the tungstenite driver
-// (`run_ros2_bridge`) is `ros2-bridge`-specific.
-#[cfg(any(feature = "ros2-bridge", feature = "ros2-dds", feature = "ros2-rmw"))]
-pub mod ros2_bridge;
-// Native DDS/RTPS ROS2 transport seam (CONCEPT:MEDULLA-KG.ingest.dds-transport): the `DdsTransport` trait that
-// unifies the MEDULLA-325 rosbridge-WebSocket leg and TWO native DDS legs behind ONE
-// interface — the pure-Rust `rustdds`-backed `NativeDdsTransport` (feature `ros2-dds`)
-// and the CycloneDDS-C-backed `CycloneDdsTransport` (feature `ros2-rmw`, S5). Kept OUT of
-// pi/default/node/full — only the opt-in `full-extras` bundle (a default/pi/full build
-// links no rustdds/cyclonedds).
-#[cfg(any(feature = "ros2-bridge", feature = "ros2-dds", feature = "ros2-rmw"))]
-pub mod dds;
 // Real-time QoS / SLO-aware admission scheduler (CONCEPT:MEDULLA-KG.coordination.backpressure-busy-signal). An additive, opt-in
 // gate (enabled by `MEDULLA_QOS`) the transport runs BEFORE the baseline
 // admission: priority-class preemption + per-tenant fair-share + hard quotas +

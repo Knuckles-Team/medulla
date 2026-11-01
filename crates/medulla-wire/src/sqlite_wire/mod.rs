@@ -65,8 +65,12 @@ use tokio::sync::RwLock;
 use medulla_query::PgColType;
 use serde::Deserialize;
 
-use crate::protocol::{Method, Request};
-use crate::server::wire::{WireError, WireOutcome, WireProtocol, WireSession};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Request;
+use crate::wire::WireError;
+use crate::wire::WireOutcome;
+use crate::wire::WireProtocol;
+use crate::wire::WireSession;
 use medulla_server_api::state::ServerState;
 
 pub mod dialect;
@@ -254,7 +258,9 @@ fn sqlite_type_name(t: PgColType) -> &'static str {
 mod tests {
     use super::*;
 
-    use crate::isolation::{AgentIdentity, AgentRole, IsolationLayer};
+    use medulla_core::isolation::AgentIdentity;
+    use medulla_core::isolation::AgentRole;
+    use medulla_core::isolation::IsolationLayer;
     use medulla_server_api::api::persistence::PersistenceBackend;
     #[cfg(feature = "redb")]
     use medulla_persistence::redb_backend::RedbBackend;
@@ -312,7 +318,7 @@ mod tests {
             .register_graph(
                 "__commons__",
                 "__commons__",
-                crate::protocol::GraphType::Commons,
+                medulla_protocol_types::protocol::GraphType::Commons,
             )
             .await
             .expect("register SQLite durability graph");

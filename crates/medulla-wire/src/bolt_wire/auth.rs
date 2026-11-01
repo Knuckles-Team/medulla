@@ -8,7 +8,7 @@
 //! key.  The server verifies and durably consumes that envelope before creating
 //! a session authority.  The principal field in the Bolt map is never trusted.
 
-use crate::protocol::Request;
+use medulla_protocol_types::protocol::Request;
 
 /// The only Bolt authentication scheme accepted by the engine.
 pub const BOLT_AUTH_SCHEME: &str = "epistemic";
@@ -50,7 +50,8 @@ pub(super) fn decode_session_credential(credential: &str) -> Result<Request, Str
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::{Method, Request};
+    use medulla_protocol_types::protocol::Method;
+    use medulla_protocol_types::protocol::Request;
 
     #[test]
     fn signed_request_credential_roundtrips_and_is_bounded() {

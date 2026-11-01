@@ -19,7 +19,7 @@ use serde_json::Value;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
-use medulla::server::mssql_wire::{self, derive_mssql_password, protocol};
+use medulla_wire::mssql_wire::{self, derive_mssql_password, protocol};
 
 use protocol::{
     frame_message, parse_header, utf16le_bytes, utf16le_to_string, TdsType, HEADER_LEN, PKT_LOGIN7,

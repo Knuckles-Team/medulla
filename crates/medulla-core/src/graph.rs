@@ -626,7 +626,7 @@ pub struct GraphCore {
     /// consultation) IS correct in isolation and IS correctly wired for the
     /// pgwire `SPARQL UPDATE INSERT DATA` cross-modal seam specifically,
     /// because THAT commit path
-    /// (`server::wire::WireSession::commit_txn_state` →
+    /// (`medulla_wire::wire::WireSession::commit_txn_state` →
     /// `medulla_h_txn::txn::commit_cross_modal_txn`) mutates the live core
     /// directly rather than staging through a throwaway `GraphCore` +
     /// `GraphSnapshot` round-trip. Closing this gap for the gateway-routed

@@ -74,7 +74,11 @@ use medulla_query::{
     TypedQueryResult, UpdateNodes,
 };
 
-use crate::server::wire::{CopyState, WireError, WireOutcome, WireProtocol, WireSession};
+use crate::wire::CopyState;
+use crate::wire::WireError;
+use crate::wire::WireOutcome;
+use crate::wire::WireProtocol;
+use crate::wire::WireSession;
 use medulla_server_api::state::ServerState;
 
 mod auth;

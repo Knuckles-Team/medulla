@@ -55,8 +55,8 @@ use medulla_query::{
     WhereEq,
 };
 
-use crate::isolation::AccessLevel;
-use crate::protocol::Request;
+use medulla_core::isolation::AccessLevel;
+use medulla_protocol_types::protocol::Request;
 use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 
@@ -837,7 +837,7 @@ type SqlTableCommitIdentity = (
     String,
     String,
     String,
-    crate::protocol::Method,
+    medulla_protocol_types::protocol::Method,
     String,
     String,
     u64,
@@ -1130,7 +1130,7 @@ struct XmodalStaged {
     /// LOWERED to graph-native `AddNode`/`AddEdge` methods at stage time (reusing the
     /// SAME `triples_to_methods` lowering the RPC stagers use). Fed to the cross-modal
     /// commit as the txn's `axioms`, and overlaid onto an in-txn UQL read for RYOW.
-    owl_methods: Vec<crate::protocol::Method>,
+    owl_methods: Vec<medulla_protocol_types::protocol::Method>,
 }
 
 #[cfg(feature = "query")]
@@ -1297,7 +1297,7 @@ impl TxnBeginVersion {
     /// legitimately reads `core.version()` now (there is nothing earlier to
     /// read); `Begin` always uses the already-captured value, whatever it is
     /// — never re-derived, never defaulted.
-    fn resolve(self, core: &crate::graph::GraphCore) -> u64 {
+    fn resolve(self, core: &medulla_core::graph::GraphCore) -> u64 {
         match self {
             TxnBeginVersion::Autocommit => core.version(),
             TxnBeginVersion::Begin(v) => v,
@@ -1537,7 +1537,7 @@ impl WireSession {
     #[cfg(feature = "security")]
     async fn filter_view_for_verified_actor(
         &self,
-        view: &mut crate::graph::GraphView,
+        view: &mut medulla_core::graph::GraphView,
     ) -> WireResult<()> {
         let actor = self.verified_actor()?;
         self.state.read().await.isolation.filter_view(&actor, view);
@@ -1774,7 +1774,7 @@ impl WireSession {
 
     /// Clone the target graph's `Arc<GraphCore>` out of the registry (read lock),
     /// or a clean error if it doesn't exist.
-    pub(crate) async fn graph_core(&self, graph: &str) -> WireResult<Arc<crate::graph::GraphCore>> {
+    pub(crate) async fn graph_core(&self, graph: &str) -> WireResult<Arc<medulla_core::graph::GraphCore>> {
         let s = self.state.read().await;
         match s.registry.get(graph) {
             Some(e) => Ok(e.core.clone()),
@@ -1794,13 +1794,13 @@ impl WireSession {
             // the not-found error surfaces instead of a misleading ACCESS_DENIED.
             None => return Ok(()),
         };
-        let query = crate::isolation::AccessQuery {
+        let query = medulla_core::isolation::AccessQuery {
             agent_id: &actor,
             graph_name: graph,
             graph_type,
             graph_owner: owner.as_deref(),
             access,
-            now_ms: crate::isolation::access_clock_ms(),
+            now_ms: medulla_core::isolation::access_clock_ms(),
         };
         if medulla_server_api::access::decide_graph_access(&s.isolation, &query) {
             Ok(())
@@ -1892,7 +1892,7 @@ impl WireSession {
     /// Replay this connection's buffered graph-node ops onto `view` (CONCEPT:MEDULLA-KG.compute.kg-transaction-is-pinned),
     /// in statement order, so a read over `view` reflects the open transaction's own
     /// writes. Never touches the live `GraphCore`.
-    fn apply_node_buffer(&self, view: &mut crate::graph::GraphView) {
+    fn apply_node_buffer(&self, view: &mut medulla_core::graph::GraphView) {
         for op in &self.graph_txn.lock().ops {
             match op {
                 NodeOp::Add { id, blob } => view.overlay_add_node(id.clone(), blob.clone()),
@@ -1912,7 +1912,7 @@ impl WireSession {
     /// transaction (CONCEPT:MEDULLA-KG.compute.kg-transaction-is-pinned) — the live snapshot plus every buffered node op.
     /// Used to resolve RETURNING rows / ON CONFLICT checks against the txn's own
     /// uncommitted state.
-    async fn overlaid_snapshot(&self, graph: &str) -> WireResult<crate::graph::GraphView> {
+    async fn overlaid_snapshot(&self, graph: &str) -> WireResult<medulla_core::graph::GraphView> {
         let core = self.graph_core(graph).await?;
         let mut view = core.analysis_snapshot();
         self.apply_node_buffer(&mut view);
@@ -2520,11 +2520,11 @@ impl WireSession {
     /// compensation). `Self::node_ops_to_methods` only ever produces `AddNode`
     /// / `CompareAndSetNodeFields` / `RemoveNode`, so those are the only
     /// variants this needs to recognize.
-    fn method_node_id(method: &crate::protocol::Method) -> Option<&str> {
+    fn method_node_id(method: &medulla_protocol_types::protocol::Method) -> Option<&str> {
         match method {
-            crate::protocol::Method::AddNode { node_id, .. }
-            | crate::protocol::Method::CompareAndSetNodeFields { node_id, .. }
-            | crate::protocol::Method::RemoveNode { node_id } => Some(node_id.as_str()),
+            medulla_protocol_types::protocol::Method::AddNode { node_id, .. }
+            | medulla_protocol_types::protocol::Method::CompareAndSetNodeFields { node_id, .. }
+            | medulla_protocol_types::protocol::Method::RemoveNode { node_id } => Some(node_id.as_str()),
             _ => None,
         }
     }
@@ -2540,8 +2540,8 @@ impl WireSession {
     async fn compensating_methods(
         &self,
         graph: &str,
-        methods: &[crate::protocol::Method],
-    ) -> WireResult<Vec<crate::protocol::Method>> {
+        methods: &[medulla_protocol_types::protocol::Method],
+    ) -> WireResult<Vec<medulla_protocol_types::protocol::Method>> {
         let core = self.graph_core(graph).await?;
         let mut seen = std::collections::HashSet::new();
         let mut compensating = Vec::new();
@@ -2553,11 +2553,11 @@ impl WireSession {
                 continue;
             }
             match core.get_node_properties(node_id) {
-                Some(bytes) => compensating.push(crate::protocol::Method::AddNode {
+                Some(bytes) => compensating.push(medulla_protocol_types::protocol::Method::AddNode {
                     node_id: node_id.to_string(),
                     properties_msgpack: bytes,
                 }),
-                None => compensating.push(crate::protocol::Method::RemoveNode {
+                None => compensating.push(medulla_protocol_types::protocol::Method::RemoveNode {
                     node_id: node_id.to_string(),
                 }),
             }
@@ -3215,12 +3215,12 @@ impl WireSession {
         on_conflict: Option<&OnConflict>,
         returning: bool,
         id_pos: usize,
-        view: &mut crate::graph::GraphView,
+        view: &mut medulla_core::graph::GraphView,
         cond_blob: &[u8],
         empty: &serde_json::Map<String, serde_json::Value>,
     ) -> WireResult<
         Option<(
-            crate::protocol::Method,
+            medulla_protocol_types::protocol::Method,
             Option<(String, serde_json::Map<String, serde_json::Value>)>,
         )>,
     > {
@@ -3238,7 +3238,7 @@ impl WireSession {
                 Some(OnConflictAction::DoUpdate(set)) => {
                     let upd_blob = rmp_serde::to_vec_named(&serde_json::Value::Object(set.clone()))
                         .map_err(|e| user_err(format!("encode CAS updates: {e}")))?;
-                    let method = crate::protocol::Method::CompareAndSetNodeFields {
+                    let method = medulla_protocol_types::protocol::Method::CompareAndSetNodeFields {
                         node_id: node_id.clone(),
                         conditions_msgpack: cond_blob.to_vec(),
                         updates_msgpack: upd_blob,
@@ -3252,7 +3252,7 @@ impl WireSession {
         }
         let blob = rmp_serde::to_vec_named(&serde_json::Value::Object(props.clone()))
             .map_err(|e| user_err(format!("encode node properties: {e}")))?;
-        let method = crate::protocol::Method::AddNode {
+        let method = medulla_protocol_types::protocol::Method::AddNode {
             node_id: node_id.clone(),
             properties_msgpack: blob.clone(),
         };
@@ -3371,7 +3371,7 @@ impl WireSession {
             }
             let upd_blob = rmp_serde::to_vec_named(&serde_json::Value::Object(updates.clone()))
                 .map_err(|e| user_err(format!("encode CAS updates: {e}")))?;
-            methods.push(crate::protocol::Method::CompareAndSetNodeFields {
+            methods.push(medulla_protocol_types::protocol::Method::CompareAndSetNodeFields {
                 node_id: id.clone(),
                 conditions_msgpack: cond_blob.clone(),
                 updates_msgpack: upd_blob,
@@ -3417,7 +3417,7 @@ impl WireSession {
                 let props = self.node_props(graph, &id).await?;
                 affected.push((id.clone(), props));
             }
-            methods.push(crate::protocol::Method::RemoveNode {
+            methods.push(medulla_protocol_types::protocol::Method::RemoveNode {
                 node_id: id.clone(),
             });
         }
@@ -3727,7 +3727,7 @@ impl WireSession {
         on_conflict: Option<&OnConflict>,
         returning: bool,
         id_pos: usize,
-        view: &mut crate::graph::GraphView,
+        view: &mut medulla_core::graph::GraphView,
         empty: &serde_json::Map<String, serde_json::Value>,
     ) -> WireResult<Option<Option<(String, serde_json::Map<String, serde_json::Value>)>>> {
         let node_id = Self::cell_to_node_id(&row[id_pos])?;
@@ -3928,7 +3928,7 @@ impl WireSession {
             let blob = rmp_serde::to_vec_named(&serde_json::Value::Object(node.properties))
                 .map_err(|e| user_err(format!("encode node properties: {e}")))?;
             let node_id = node.node_id.clone();
-            methods.push(crate::protocol::Method::AddNode {
+            methods.push(medulla_protocol_types::protocol::Method::AddNode {
                 node_id: node_id.clone(),
                 properties_msgpack: blob,
             });
@@ -3973,7 +3973,7 @@ impl WireSession {
         };
         let methods = ids
             .iter()
-            .map(|id| crate::protocol::Method::CompareAndSetNodeFields {
+            .map(|id| medulla_protocol_types::protocol::Method::CompareAndSetNodeFields {
                 node_id: id.clone(),
                 conditions_msgpack: cond_blob.clone(),
                 updates_msgpack: upd_blob.clone(),
@@ -4021,7 +4021,7 @@ impl WireSession {
         };
         let methods = ids
             .iter()
-            .map(|id| crate::protocol::Method::RemoveNode {
+            .map(|id| medulla_protocol_types::protocol::Method::RemoveNode {
                 node_id: id.clone(),
             })
             .collect();
@@ -4044,7 +4044,7 @@ impl WireSession {
     async fn commit_graph_methods(
         &self,
         graph: &str,
-        methods: Vec<crate::protocol::Method>,
+        methods: Vec<medulla_protocol_types::protocol::Method>,
     ) -> WireResult<()> {
         let use_caller_key = { self.attempt_nonce.lock().is_some() };
         self.commit_graph_methods_with_op(
@@ -4087,7 +4087,7 @@ impl WireSession {
     async fn commit_graph_methods_with_op(
         &self,
         graph: &str,
-        methods: Vec<crate::protocol::Method>,
+        methods: Vec<medulla_protocol_types::protocol::Method>,
         operation_id: uuid::Uuid,
         isolation: medulla_server_api::txn::IsolationLevel,
         begin_version: TxnBeginVersion,
@@ -4314,7 +4314,7 @@ impl WireSession {
         let tenant = authority.tenant_scope().to_string();
         let graph = graph.to_string();
         let principal = authority.actor_scope().to_string();
-        let operation = crate::protocol::Method::Sql {
+        let operation = medulla_protocol_types::protocol::Method::Sql {
             query: operation.to_string(),
             params_msgpack: Vec::new(),
         };
@@ -4386,11 +4386,11 @@ impl WireSession {
     /// the in-txn UQL overlay and the cross-modal COMMIT consume, so the NodeOp→Method
     /// mapping is never re-derived.
     #[cfg(feature = "query")]
-    fn node_ops_to_methods(node_ops: &[NodeOp]) -> WireResult<Vec<crate::protocol::Method>> {
+    fn node_ops_to_methods(node_ops: &[NodeOp]) -> WireResult<Vec<medulla_protocol_types::protocol::Method>> {
         let mut methods = Vec::with_capacity(node_ops.len());
         for op in node_ops {
             match op {
-                NodeOp::Add { id, blob } => methods.push(crate::protocol::Method::AddNode {
+                NodeOp::Add { id, blob } => methods.push(medulla_protocol_types::protocol::Method::AddNode {
                     node_id: id.clone(),
                     properties_msgpack: blob.clone(),
                 }),
@@ -4405,13 +4405,13 @@ impl WireSession {
                     let upd_blob =
                         rmp_serde::to_vec_named(&serde_json::Value::Object(updates.clone()))
                             .map_err(|e| user_err(format!("encode CAS updates: {e}")))?;
-                    methods.push(crate::protocol::Method::CompareAndSetNodeFields {
+                    methods.push(medulla_protocol_types::protocol::Method::CompareAndSetNodeFields {
                         node_id: id.clone(),
                         conditions_msgpack: cond_blob,
                         updates_msgpack: upd_blob,
                     });
                 }
-                NodeOp::Remove { id } => methods.push(crate::protocol::Method::RemoveNode {
+                NodeOp::Remove { id } => methods.push(medulla_protocol_types::protocol::Method::RemoveNode {
                     node_id: id.clone(),
                 }),
             }
@@ -4578,7 +4578,7 @@ impl WireSession {
     async fn stage_or_commit_owl(
         &self,
         graph: &str,
-        methods: Vec<crate::protocol::Method>,
+        methods: Vec<medulla_protocol_types::protocol::Method>,
         schema_refs: Vec<String>,
         in_txn: bool,
     ) -> WireResult<WireOutcome> {
@@ -5297,12 +5297,12 @@ impl WireProtocol for WireSession {
 }
 
 #[cfg(test)]
-fn test_isolation(agents: &[&str]) -> crate::isolation::IsolationLayer {
-    let mut isolation = crate::isolation::IsolationLayer::new();
+fn test_isolation(agents: &[&str]) -> medulla_core::isolation::IsolationLayer {
+    let mut isolation = medulla_core::isolation::IsolationLayer::new();
     for agent in agents {
-        isolation.register_agent(crate::isolation::AgentIdentity {
+        isolation.register_agent(medulla_core::isolation::AgentIdentity {
             agent_id: (*agent).into(),
-            role: crate::isolation::AgentRole::System,
+            role: medulla_core::isolation::AgentRole::System,
             teams: Vec::new(),
             roles: Vec::new(),
         });
@@ -5322,7 +5322,8 @@ mod ne_004_ne_005_tests {
     //! is the SAME native-SQL-identity seam `sqlite_wire`/`mysql_wire` use;
     //! it is not a test-only shortcut.
     use super::*;
-    use crate::protocol::{GraphType, Method};
+    use medulla_protocol_types::protocol::GraphType;
+    use medulla_protocol_types::protocol::Method;
 
     const SECRET: &str = "medulla-txn-atomicity-test-secret";
     const AGENT: &str = "txn-test-agent";
@@ -6084,7 +6085,8 @@ pub(crate) mod wired_catalog_tests {
     //! path (`run_read` / `authorized_read_store`) — to prove the ACL is
     //! actually ENFORCED at those sites now, not merely correct on its own.
     use super::*;
-    use crate::protocol::{GraphType, Method};
+    use medulla_protocol_types::protocol::GraphType;
+    use medulla_protocol_types::protocol::Method;
     use medulla_server_api::auth::VerifiedRequestContext;
     use medulla_server_api::sql_catalog_acl;
     use medulla_server_api::sql_catalog_acl::SqlPrivilege;
@@ -6544,7 +6546,7 @@ pub(crate) mod wired_catalog_tests {
             owner.owner_scope(),
             &operation_id.simple().to_string(),
         );
-        let operation = crate::protocol::Method::Sql {
+        let operation = medulla_protocol_types::protocol::Method::Sql {
             query: descriptor,
             params_msgpack: Vec::new(),
         };
@@ -6685,7 +6687,7 @@ pub(crate) mod wired_catalog_tests {
         let store = medulla_server_api::sql_tables::tenant_table_store(&tenant_scope, &persist_dir)
             .expect("open tenant table store");
 
-        let operation = crate::protocol::Method::Sql {
+        let operation = medulla_protocol_types::protocol::Method::Sql {
             query: "CREATE TABLE actor_header_target (id TEXT PRIMARY KEY)".to_string(),
             params_msgpack: Vec::new(),
         };

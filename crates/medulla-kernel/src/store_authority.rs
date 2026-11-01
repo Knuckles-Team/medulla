@@ -284,7 +284,7 @@ fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
 /// build of this binary -- test or production -- links a development stand-in.
 ///
 /// The caller owns the returned path: an ephemeral store is a real redb file and
-/// nothing else removes it (see `server::wire::EphemeralStoreGuard`).
+/// nothing else removes it (see `medulla_wire::wire::EphemeralStoreGuard`).
 #[cfg(feature = "query")]
 pub fn open_ephemeral_sql_store() -> Result<(medulla_query::TableStore, std::path::PathBuf), String>
 {

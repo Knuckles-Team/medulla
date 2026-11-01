@@ -57,7 +57,7 @@ pub fn install_seams(state: &ServerState) {
     let _ = state
         .seams
         .wire
-        .set(std::sync::Arc::new(crate::server::wire::WireSeam));
+        .set(std::sync::Arc::new(medulla_wire::wire::WireSeam));
 
     // L6 persistence, raft, server-api.
 }
