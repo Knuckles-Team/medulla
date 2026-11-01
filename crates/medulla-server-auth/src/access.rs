@@ -1,6 +1,6 @@
 //! Write/read classification + isolation-ACL enforcement for graph ops.
 
-use super::authority_context::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
 #[cfg(feature = "security")]

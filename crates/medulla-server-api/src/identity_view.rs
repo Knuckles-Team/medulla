@@ -45,7 +45,7 @@ fn views() -> &'static Views {
 }
 
 /// Publish `store` as the identity view of the engine at `persist_dir`.
-pub(crate) fn publish(persist_dir: Option<&str>, store: &IdentityStore) {
+pub fn publish(persist_dir: Option<&str>, store: &IdentityStore) {
     let Some(dir) = persist_dir else {
         return;
     };
@@ -55,7 +55,7 @@ pub(crate) fn publish(persist_dir: Option<&str>, store: &IdentityStore) {
 }
 
 /// The last published store of the engine at `persist_dir`.
-pub(crate) fn published(persist_dir: &Path) -> Option<Arc<IdentityStore>> {
+pub fn published(persist_dir: &Path) -> Option<Arc<IdentityStore>> {
     views().read().ok()?.get(persist_dir).cloned()
 }
 
