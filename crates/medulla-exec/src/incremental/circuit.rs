@@ -1,4 +1,4 @@
-//! The incremental circuit (CONCEPT:MEDULLA-KG.storage.incremental-matview).
+//! The incremental circuit (MEDULLA-INCREMENTAL-VIEWS-R001).
 //!
 //! Compiles a `wire::Plan` into a [`Circuit`] over the SUBSET of `Op` that is provably
 //! safe to maintain by delta, and maintains the materialized result as [`Delta`]s arrive
@@ -620,6 +620,7 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R001.2
     #[test]
     fn compile_rejects_unsupported_ops_with_index() {
         // Traverse → fallback, naming its index.
@@ -701,6 +702,7 @@ mod tests {
         assert_eq!(c.current().ids(), vec!["a", "b"]);
     }
 
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R001.1
     #[test]
     fn scan_add_update_remove_matches_recompute() {
         let plan = Plan::new(vec![Op::Scan {

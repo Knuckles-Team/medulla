@@ -207,7 +207,7 @@ pub const MATVIEWS: TableDefinition<&str, &[u8]> = TableDefinition::new("matview
 // the in-RAM plan-matview manager on boot.
 pub const PLAN_MATVIEWS: TableDefinition<&str, &[u8]> = TableDefinition::new("plan_matviews");
 
-// DBSP INCREMENTAL operator state (CONCEPT:MEDULLA-KG.storage.incremental-matview): the durable
+// DBSP INCREMENTAL operator state (MEDULLA-INCREMENTAL-VIEWS-R001): the durable
 // snapshot of an incrementally-maintained plan-backed matview's circuit state (its
 // membership map / per-bucket accumulators + CDC watermark), keyed by view name. The
 // direct analogue of turso's `dbsp_state` btree, scoped down to redb. DISJOINT from

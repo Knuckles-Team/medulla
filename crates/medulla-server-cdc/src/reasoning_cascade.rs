@@ -537,6 +537,7 @@ mod tests {
 
     // ── The opted-in refresh proof: a new inference appears ──────────────
 
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R011.2
     #[tokio::test(flavor = "multi_thread")]
     async fn opted_in_graph_axiom_write_makes_a_new_inference_appear_after_debounce() {
         let state = test_state();
@@ -606,6 +607,7 @@ mod tests {
 
     // ── A pure retraction still yields a sound (rebuilt) closure ─────────
 
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R011.3
     #[tokio::test(flavor = "multi_thread")]
     async fn a_retraction_rebuilds_instead_of_serving_a_stale_entailment() {
         let state = test_state();

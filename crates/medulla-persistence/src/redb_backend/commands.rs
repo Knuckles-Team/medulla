@@ -504,7 +504,7 @@ pub(crate) enum Cmd {
         reply: std::sync::mpsc::SyncSender<MatViewScanResult>,
     },
     /// Durably upsert an incremental matview's operator-state snapshot
-    /// (CONCEPT:MEDULLA-KG.storage.incremental-matview).
+    /// (MEDULLA-INCREMENTAL-VIEWS-R001).
     #[cfg(feature = "matview")]
     MatViewOperatorStatePut {
         name: String,

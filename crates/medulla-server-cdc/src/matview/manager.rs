@@ -24,7 +24,7 @@ pub struct PlanMatView {
 }
 
 /// Which maintenance mode a tracked view runs in
-/// (CONCEPT:MEDULLA-KG.storage.incremental-matview).
+/// (MEDULLA-INCREMENTAL-VIEWS-R001).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Mode {
     /// Its plan compiled to a DBSP circuit: `apply_delta` folds each CDC change into the
@@ -46,7 +46,7 @@ struct Tracked {
     /// cache entry somehow lingered. A freshly-materialized view clears it. Governs
     /// `Mode::Recompute` views only; an `Incremental` view is fresh by construction.
     stale: bool,
-    /// The maintenance mode (CONCEPT:MEDULLA-KG.storage.incremental-matview).
+    /// The maintenance mode (MEDULLA-INCREMENTAL-VIEWS-R001).
     mode: Mode,
     /// `Some` ⇒ `Mode::Incremental`: the compiled DBSP circuit `apply_delta` folds
     /// deltas into. Its maintained STATE (membership map / bucket accumulators) is the
@@ -54,7 +54,7 @@ struct Tracked {
     /// per-delta maintenance stays O(delta), not O(view). `None` ⇒ `Mode::Recompute`.
     circuit: Option<Circuit>,
     /// The typed reason this view fell back to `Mode::Recompute` (the first unsupported
-    /// op) — first-class + queryable (CONCEPT:MEDULLA-KG.storage.incremental-matview), never a
+    /// op) — first-class + queryable (MEDULLA-INCREMENTAL-VIEWS-R001), never a
     /// silent drop. `None` for an `Incremental` view or a boot-reloaded view.
     fallback_reason: Option<String>,
     /// CDC watermark — the next `seq` this view expects (mirrors
@@ -85,7 +85,7 @@ impl PlanMatViewManager {
 
     /// Insert (or replace) a view in `Mode::Recompute` because its plan carried an op the
     /// circuit compiler can't incrementalize, recording the TYPED `reason` so the fallback
-    /// is queryable (CONCEPT:MEDULLA-KG.storage.incremental-matview) — never a silent drop.
+    /// is queryable (MEDULLA-INCREMENTAL-VIEWS-R001) — never a silent drop.
     pub fn note_fallback(&self, def: PlanMatView, reason: String) {
         self.insert_recompute(def, Some(reason));
     }
@@ -106,7 +106,7 @@ impl PlanMatViewManager {
 
     /// Install (or replace) a view in `Mode::Incremental` with its compiled + seeded
     /// `circuit` and the CDC `through_seq` watermark captured at definition time
-    /// (CONCEPT:MEDULLA-KG.storage.incremental-matview). The circuit's maintained state is the
+    /// (MEDULLA-INCREMENTAL-VIEWS-R001). The circuit's maintained state is the
     /// authoritative result; `Get` projects it lazily.
     pub fn install_incremental(&self, def: PlanMatView, circuit: Circuit, through_seq: u64) {
         self.views.lock().insert(
@@ -164,7 +164,7 @@ impl PlanMatViewManager {
         self.views.lock().get(name).and_then(|t| t.circuit.clone())
     }
 
-    /// INCREMENTAL CDC maintenance (CONCEPT:MEDULLA-KG.storage.incremental-matview): fold one
+    /// INCREMENTAL CDC maintenance (MEDULLA-INCREMENTAL-VIEWS-R001): fold one
     /// change into every `Mode::Incremental` view over `graph`. For each such view, only a
     /// change at/after its watermark is applied (mirroring `cdc::maintain`); the circuit's
     /// output updates `current` and the watermark advances. Returns how many views it
@@ -319,6 +319,7 @@ mod tests {
         }
     }
 
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R001.6
     #[test]
     fn apply_delta_maintains_incremental_view_end_to_end() {
         use medulla_types::wire::{Op, Plan, Pred};
@@ -391,6 +392,7 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R001.7
     #[test]
     fn note_fallback_records_queryable_reason() {
         // The first-class fallback: an unsupported-op plan is Recompute mode AND exposes

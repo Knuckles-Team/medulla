@@ -1,5 +1,5 @@
 //! Assembling a [`super::Circuit`] from a plan, one op at a time
-//! (CONCEPT:MEDULLA-KG.query.incremental-view-maintenance).
+//! (MEDULLA-INCREMENTAL-VIEWS-R001.2).
 //!
 //! Each supported op's incrementalization rule — and the reason an unsupported op has no
 //! incremental form — is stated in its own method here rather than inside one loop body,

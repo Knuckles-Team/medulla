@@ -29,7 +29,7 @@ pub fn note_change(graph: &str) -> usize {
     manager().note_change(graph)
 }
 
-/// INCREMENTAL CDC hook (CONCEPT:MEDULLA-KG.storage.incremental-matview): fold one `CdcEvent`
+/// INCREMENTAL CDC hook (MEDULLA-INCREMENTAL-VIEWS-R001): fold one `CdcEvent`
 /// into every `Incremental`-mode plan-backed matview over `graph` — the delta-driven
 /// sibling of [`note_change`], called from the SAME `CdcHub::emit` spot. Returns how many
 /// views it maintained. A `Recompute`-mode view is a no-op here.

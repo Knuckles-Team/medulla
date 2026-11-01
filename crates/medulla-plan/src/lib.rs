@@ -110,7 +110,7 @@ mod engine_peer_tests;
 /// The typed DAG plan surface (CONCEPT:MEDULLA-KG.query.plan-dag, E5): the node/edge shape plus
 /// its physical executor, so a caller building a genuine multi-branch plan names them
 /// through `medulla_plan` directly (mirroring how `Op`/`Plan` are re-exported from `algebra`).
-/// The incremental-matview surface (CONCEPT:MEDULLA-KG.storage.incremental-matview): the Z-set
+/// The incremental-matview surface (MEDULLA-INCREMENTAL-VIEWS-R001): the Z-set
 /// delta model + the circuit a caller compiles a `Plan` into and folds CDC deltas through.
 /// The RowSet v2 surface (CONCEPT:MEDULLA-KG.query.knowledge-set): the enriched, ready-to-consume
 /// row/set shape a caller builds from a finished `RowSet` + the `GraphView` it ran over.

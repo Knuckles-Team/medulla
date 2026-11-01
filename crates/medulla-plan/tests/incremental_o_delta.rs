@@ -1,4 +1,4 @@
-//! The O(Δ) maintenance-cost proof (CONCEPT:MEDULLA-KG.storage.incremental-matview).
+//! The O(Δ) maintenance-cost proof (MEDULLA-INCREMENTAL-VIEWS-R001).
 //!
 //! The DBSP value proposition, made into a checkable assertion: maintaining an
 //! incremental view under a delta batch touches a number of state entries bounded by the
@@ -56,6 +56,7 @@ fn scan_filter() -> Plan {
     ])
 }
 
+// spec: MEDULLA-INCREMENTAL-VIEWS-R001.5
 #[test]
 fn maintenance_cost_is_o_delta_not_o_view() {
     let rungs = [1_000usize, 10_000, 100_000];

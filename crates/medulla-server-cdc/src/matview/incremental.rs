@@ -1,5 +1,5 @@
 //! CDC-feed glue for DBSP-style incremental plan-backed matviews
-//! (CONCEPT:MEDULLA-KG.storage.incremental-matview).
+//! (MEDULLA-INCREMENTAL-VIEWS-R001).
 //!
 //! The facade side of the medulla-plan `incremental` circuit: it translates a `CdcEvent`
 //! into the circuit's [`Delta`] (the "update = retract old + insert new" idiom the CDC

@@ -439,7 +439,7 @@ async fn define_plan_matview(
 }
 
 /// Index a freshly-defined view into the manager: attempt to compile its plan into a DBSP
-/// circuit (CONCEPT:MEDULLA-KG.storage.incremental-matview). On success it installs the view in
+/// circuit (MEDULLA-INCREMENTAL-VIEWS-R001). On success it installs the view in
 /// `Mode::Incremental` — seeded from the current graph so future CDC deltas maintain it in
 /// O(delta) and `Get` serves the maintained result directly — and durably snapshots the
 /// operator state. On an unsupported op it falls back to `Mode::Recompute` (today's
@@ -449,7 +449,7 @@ async fn index_matview(state: &Arc<RwLock<ServerState>>, def: PlanMatView) {
     let mut circuit = match medulla_exec::incremental::Circuit::compile(&def.plan) {
         Ok(circuit) => circuit,
         Err(unsupported) => {
-            // First-class, queryable fallback (CONCEPT:MEDULLA-KG.storage.incremental-matview):
+            // First-class, queryable fallback (MEDULLA-INCREMENTAL-VIEWS-R001):
             // record the TYPED reason on the tracked view and log it structured — never a
             // silent drop. The view stays correct on today's recompute-on-`Get` path.
             tracing::info!(
@@ -500,7 +500,7 @@ async fn get_plan_matview(state: &Arc<RwLock<ServerState>>, req_id: u64, name: &
     let Some(def) = matview::manager().get(name) else {
         return Response::err(req_id, format!("no plan materialized view '{name}'"));
     };
-    // INCREMENTAL fast path (CONCEPT:MEDULLA-KG.storage.incremental-matview): the view's plan
+    // INCREMENTAL fast path (MEDULLA-INCREMENTAL-VIEWS-R001): the view's plan
     // compiled to a DBSP circuit that CDC deltas already maintained, so serve the live
     // `current` result directly — no recompute, no `ResultCache` round-trip, no staleness
     // check (it is fresh by construction).
@@ -592,7 +592,7 @@ async fn drop_plan_matview(
             .as_redb()
             .ok_or_else(|| "materialized-view mutation requires durable redb".to_string())?;
         redb.plan_matview_delete(name).await?;
-        // Also drop the incremental operator-state row (CONCEPT:MEDULLA-KG.storage.incremental-matview);
+        // Also drop the incremental operator-state row (MEDULLA-INCREMENTAL-VIEWS-R001);
         // best-effort — a missing row is a clean no-op.
         if let Err(error) = redb.matview_operator_state_delete(name).await {
             tracing::warn!("drop matview '{name}' operator state failed: {error}");

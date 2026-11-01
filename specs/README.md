@@ -139,3 +139,4 @@ bootstrap skill, together with the [SDD full lifecycle](https://github.com/Knuck
 - [`MEDULLA-PLACEMENT`](placement-and-worker-policy/spec.md) — placement decisions, engine-owned worker policy and association-mining bounds
 - [`MEDULLA-MEDIA-VOCAB`](media-and-personal-vocabulary/spec.md) — media and personal-content vocabulary and per-connector virtual-graph mappings.
 - [`MEDULLA-SUPPLY-VOCAB`](supply-chain-vocabulary/spec.md) — supply-chain, commercial and host-limit vocabulary for the cross-source competency
+- [`MEDULLA-INCREMENTAL-VIEWS`](incremental-views/spec.md) — incremental view maintenance for plan views, SQL views and the ontology closure.

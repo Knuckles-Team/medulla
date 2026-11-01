@@ -1,5 +1,5 @@
 //! Differential oracle: the incremental circuit MUST equal the REAL `medulla_plan::execute`
-//! recompute (CONCEPT:MEDULLA-KG.storage.incremental-matview).
+//! recompute (MEDULLA-INCREMENTAL-VIEWS-R001).
 //!
 //! This is the acceptance-grade proof the design (`dbsp-incremental-matview-design.md`
 //! §5.1) specifies: `materialize(&plan, …)` — i.e. `medulla_plan::execute` — on the recompute
@@ -244,6 +244,7 @@ fn churn_matches_execute(plan: &Plan, mutations: &[Mutation]) -> Result<(), Test
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(48))]
 
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R001.3
     /// Membership (Scan/Filter/AsOf) incremental == real `execute` recompute, every step.
     #[test]
     fn membership_matches_execute(
@@ -342,6 +343,7 @@ mod window {
     proptest! {
         #![proptest_config(ProptestConfig::with_cases(48))]
 
+        // spec: MEDULLA-INCREMENTAL-VIEWS-R001.4
         /// WindowAgg incremental == real `exec::window_aggregate` recompute, every step.
         #[test]
         fn window_matches_execute(

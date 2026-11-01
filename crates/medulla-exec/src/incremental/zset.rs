@@ -1,5 +1,5 @@
 //! The Z-set delta model for incremental materialized views
-//! (CONCEPT:MEDULLA-KG.storage.incremental-matview).
+//! (MEDULLA-INCREMENTAL-VIEWS-R001).
 //!
 //! `RowSet` is an **id-deduplicated ordered set** (`rowset.rs`), so the Z-set this
 //! engine needs is the SPECIALIZATION of a general DBSP multiset to **signed
