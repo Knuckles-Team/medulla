@@ -122,6 +122,7 @@ medulla-rdf = { path = "../medulla-rdf", optional = true }
 medulla-jobs = { path = "../medulla-jobs", optional = true }
 medulla-statechart = { path = "../medulla-statechart", optional = true }
 medulla-wasm = { path = "../medulla-wasm", optional = true }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
 
 [dev-dependencies]
 # Test-only: `authority.rs`'s `per_call_override_lets_two_principals_share_one_authority`
