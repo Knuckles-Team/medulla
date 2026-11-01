@@ -39,7 +39,7 @@ tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sy
 medulla-ann-codes = { path = "../medulla-ann-codes" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
-medulla-mining = { path = "../medulla-mining" }
+medulla-mining = { path = "../medulla-mining", features = ["mining"] }
 medulla-table-store = { path = "../medulla-table-store" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
