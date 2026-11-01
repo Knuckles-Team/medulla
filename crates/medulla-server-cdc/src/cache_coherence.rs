@@ -23,7 +23,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::state::ServerState;
+use medulla_server_api::state::ServerState;
 use medulla_types::wire::CdcEvent;
 
 /// Apply one remote [`CdcEvent`] as a cache-coherence invalidation against the local

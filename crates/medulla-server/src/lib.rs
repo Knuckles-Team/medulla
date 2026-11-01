@@ -28,7 +28,7 @@ pub mod server_startup;
 
 // ---- merged from the moved module root (src/server/mod.rs) ----
 use medulla_server_ops::api::query_txn::ForeignStateExt;
-use medulla_server_api::cdc::CdcStateExt;
+use medulla_server_cdc::cdc::CdcStateExt;
 use medulla_h_query::semantic_index_runtime::PendingRf019Activation;
 // CONCEPT:MEDULLA-KG.query.tokio-service-server — Tokio Service Server
 //

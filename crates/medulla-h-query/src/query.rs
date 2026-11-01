@@ -444,7 +444,7 @@ mod rls_no_exfiltrate_tests {
     feature = "redb"
 ))]
 mod result_cache_dispatch_tests {
-    use medulla_server_api::cdc::CdcStateExt;
+    use medulla_server_cdc::cdc::CdcStateExt;
     use super::current_auth_test_support::prelude::*;
 
     const SECRET: &str = "result-cache-test-secret";
@@ -656,7 +656,7 @@ mod result_cache_dispatch_tests {
         // graph (bumps B's version). This is the cross-replica invalidation signal.
         let v_b_before = core_b.version();
         let next =
-            medulla_server_api::cache_coherence::drain_and_invalidate(&b, &hub_a, "__commons__", 0, 0)
+            medulla_server_cdc::cache_coherence::drain_and_invalidate(&b, &hub_a, "__commons__", 0, 0)
                 .await
                 .unwrap();
         assert!(next > 0, "drained at least one event");

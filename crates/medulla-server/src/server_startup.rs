@@ -7,7 +7,7 @@
 //! fatal at boot (loud + early).
 
 use medulla_server_blob::blob::BlobStateExt;
-use medulla_server_api::cdc::CdcStateExt;
+use medulla_server_cdc::cdc::CdcStateExt;
 use medulla_server_blob::kv::KvStateExt;
 use std::net::SocketAddr;
 use std::sync::Arc;

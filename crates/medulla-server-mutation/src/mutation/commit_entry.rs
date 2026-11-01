@@ -24,7 +24,7 @@ pub(super) struct CommitPrep {
     pub(super) dedup_key: Option<String>,
     /// CDC pre-image captured before apply (Skip when policy `emits_cdc == false`).
     #[cfg(feature = "streaming")]
-    pub(super) cdc_pre: medulla_server_api::cdc::CdcPre,
+    pub(super) cdc_pre: medulla_server_cdc::cdc::CdcPre,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -100,9 +100,9 @@ pub(super) fn commit_prepare(
     // POLICY's `emits_cdc`.
     #[cfg(feature = "streaming")]
     let cdc_pre = if plan.emits_cdc {
-        medulla_server_api::cdc::capture_before(ctx.core, method)
+        medulla_server_cdc::cdc::capture_before(ctx.core, method)
     } else {
-        medulla_server_api::cdc::CdcPre::Skip
+        medulla_server_cdc::cdc::CdcPre::Skip
     };
 
     Ok(CommitPrep {
@@ -244,13 +244,13 @@ pub(super) fn commit_finalize_emit_cdc(
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
     method: &Method,
-    cdc_pre: medulla_server_api::cdc::CdcPre,
+    cdc_pre: medulla_server_cdc::cdc::CdcPre,
 ) {
     if !plan.emits_cdc {
         return;
     }
     let Some(hub) = ctx.cdc else { return };
-    medulla_server_api::cdc::emit_for_method(hub, ctx.core, ctx.graph_name, method, cdc_pre);
+    medulla_server_cdc::cdc::emit_for_method(hub, ctx.core, ctx.graph_name, method, cdc_pre);
 }
 
 /// The single commit gateway (CONCEPT:MEDULLA-P0-2): authz, apply, durable commit,

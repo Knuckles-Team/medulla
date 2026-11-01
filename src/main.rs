@@ -8,7 +8,7 @@
 // the UDS/TCP listener.
 
 use medulla_server_blob::blob::BlobStateExt;
-use medulla_server_api::cdc::CdcStateExt;
+use medulla_server_cdc::cdc::CdcStateExt;
 use clap::Parser;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -1447,7 +1447,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     #[cfg(all(feature = "owl", feature = "streaming"))]
     {
         let cascade =
-            std::sync::Arc::new(medulla_server_api::reasoning_cascade::ReasoningCascade::from_env());
+            std::sync::Arc::new(medulla_server_cdc::reasoning_cascade::ReasoningCascade::from_env());
         if cascade.is_active() {
             if let Some(hub) = state.read().await.cdc_hub() {
                 hub.install_reasoning_cascade(cascade.clone());
@@ -1456,7 +1456,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
                 "Reasoning cascade (REASON_ON_WRITE) armed: debounce {}ms",
                 cascade.debounce_window().as_millis()
             );
-            medulla_server_api::reasoning_cascade::spawn(state.clone(), cascade);
+            medulla_server_cdc::reasoning_cascade::spawn(state.clone(), cascade);
         }
     }
     // EH-526 standing impact watches (opt-in, `MEDULLA_IMPACT_ON_WRITE`): a
@@ -1464,13 +1464,13 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     // ordinary `MineRiskPropagation` writeback path. Unset ⇒ nothing installed/spawned.
     #[cfg(all(feature = "streaming", feature = "mining", feature = "query"))]
     {
-        let hub = std::sync::Arc::new(medulla_server_api::impact_watch::ImpactWatchHub::from_env());
+        let hub = std::sync::Arc::new(medulla_server_cdc::impact_watch::ImpactWatchHub::from_env());
         if hub.is_active() {
             if let Some(cdc) = state.read().await.cdc_hub() {
                 cdc.install_impact_watch(hub.clone());
             }
             info!("Impact watches (MEDULLA_IMPACT_ON_WRITE) armed");
-            medulla_server_api::impact_watch::spawn(state.clone(), hub);
+            medulla_server_cdc::impact_watch::spawn(state.clone(), hub);
         }
     }
     // CONCEPT:MEDULLA-KG.storage.incremental-text / .incremental-temporal / .incremental-derived-owl —

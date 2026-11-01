@@ -56,7 +56,7 @@ pub(crate) mod writer;
 
 pub use writer::writer_auth_configured;
 
-use medulla_server_api::cdc::CdcStateExt;
+use medulla_server_cdc::cdc::CdcStateExt;
 use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 use std::sync::atomic::AtomicU64;

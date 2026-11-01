@@ -6,8 +6,6 @@
 use super::authority_context::VerifiedRequestContext;
 use medulla_protocol_types::protocol::Request;
 use serde::Deserialize;
-#[cfg(test)]
-use crate::auth::RequestAuthorityExt;
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -63,16 +61,6 @@ mod tests {
         assert_eq!(a.tenant(), "local");
         assert_eq!(a.idempotency_key(), b.idempotency_key());
         assert_ne!(a.attempt_nonce(), b.attempt_nonce());
-    }
-    #[test]
-    fn default_state_rejects_unsigned_correlation() {
-        let state = crate::state::ServerState::new(
-            "synthetic-test-secret",
-            medulla_isolation::isolation::IsolationLayer::new(),
-        );
-        assert!(state
-            .request_authority(&request("anon1.{\"idempotency_key\":\"one-operation\"}"))
-            .is_err());
     }
     #[test]
     fn anonymous_metadata_bounds_and_empty_keys_are_rejected() {

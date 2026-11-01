@@ -3679,3 +3679,25 @@ impl RequestAuthorityExt for crate::state::ServerState {
         }
     }
 }
+
+#[cfg(test)]
+mod default_state_authority_tests {
+    use super::RequestAuthorityExt;
+    use medulla_protocol_types::protocol::Request;
+
+    #[test]
+    fn default_state_rejects_unsigned_correlation() {
+        let state = crate::state::ServerState::new(
+            "synthetic-test-secret",
+            medulla_isolation::isolation::IsolationLayer::new(),
+        );
+        let request = Request {
+            id: 1,
+            graph: "__commons__".into(),
+            agent_id: None,
+            auth_token: "anon1.{\"idempotency_key\":\"one-operation\"}".into(),
+            method: medulla_protocol_types::protocol::Method::Ping,
+        };
+        assert!(state.request_authority(&request).is_err());
+    }
+}

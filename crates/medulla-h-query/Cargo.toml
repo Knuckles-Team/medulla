@@ -68,6 +68,7 @@ medulla-mining = { path = "../medulla-mining" }
 medulla-server-ops = { path = "../medulla-server-ops" }
 medulla-server-blob = { path = "../medulla-server-blob" }
 medulla-server-mutation = { path = "../medulla-server-mutation" }
+medulla-server-cdc = { path = "../medulla-server-cdc" }
 
 [features]
 test-support = []

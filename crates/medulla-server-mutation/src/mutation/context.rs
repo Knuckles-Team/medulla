@@ -34,7 +34,7 @@ pub struct MutationCtx<'a> {
     pub core: &'a Arc<GraphCore>,
     pub persistence: Option<&'a Arc<dyn PersistenceBackend>>,
     #[cfg(feature = "streaming")]
-    pub cdc: Option<&'a Arc<medulla_server_api::cdc::CdcHub>>,
+    pub cdc: Option<&'a Arc<medulla_server_cdc::cdc::CdcHub>>,
     /// Generation-owned completeness/freshness watermark for this resident core.
     /// The registry replaces or invalidates this handle on lifecycle transitions,
     /// so a stale gateway completion cannot publish into a same-name recreation.

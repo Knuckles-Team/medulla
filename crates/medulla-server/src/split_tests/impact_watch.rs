@@ -11,7 +11,7 @@ use serde_json::json;
 use tokio::sync::RwLock;
 
 use medulla_protocol_types::protocol::{GraphType, Method};
-use medulla_server_api::impact_watch::*;
+use medulla_server_cdc::impact_watch::*;
 use medulla_server_api::state::ServerState;
 
 fn blob(v: serde_json::Value) -> Vec<u8> {

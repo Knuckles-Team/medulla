@@ -6,3 +6,28 @@
 
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
+
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(all(feature = "result-cache", feature = "streaming"))]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod cache_coherence;
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(feature = "streaming")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod cdc;
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(all(feature = "streaming", feature = "stream"))]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod cep;
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(all(feature = "streaming", feature = "mining", feature = "query"))]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod impact_watch;
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(feature = "matview")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod matview;
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(feature = "owl")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod reasoning_cascade;

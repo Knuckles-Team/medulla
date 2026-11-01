@@ -96,6 +96,7 @@ medulla-work-types = { path = "../medulla-work-types" }
 medulla-server-ops = { path = "../medulla-server-ops" }
 medulla-server-blob = { path = "../medulla-server-blob" }
 medulla-server-mutation = { path = "../medulla-server-mutation" }
+medulla-server-cdc = { path = "../medulla-server-cdc" }
 
 [features]
 amqp-wire = ["server"]

@@ -1,6 +1,6 @@
 //! Shared setup for in-process Raft harnesses.
 
-use medulla_server_api::cdc::CdcStateExt;
+use medulla_server_cdc::cdc::CdcStateExt;
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -60,7 +60,7 @@ pub async fn make_state_with_cdc(
     let state = make_state(dir, backend, isolation, auth_secret).await;
     #[cfg(feature = "streaming")]
     {
-        state.write().await.set_cdc_hub(Some(Arc::new(medulla_server_api::cdc::CdcHub::new())));
+        state.write().await.set_cdc_hub(Some(Arc::new(medulla_server_cdc::cdc::CdcHub::new())));
     }
     state
 }

@@ -2,7 +2,7 @@
 //! exactly the graphs the operator opted in (`MEDULLA_IMPACT_ON_WRITE`),
 //! one engine-provisioned role per graph (`impact-watch:<graph>`).
 
-use crate::service_grant::ServiceGraphGrant;
+use medulla_server_api::service_grant::ServiceGraphGrant;
 use medulla_isolation::isolation::IsolationLayer;
 
 /// The fixed service principal the watch writes as.

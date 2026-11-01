@@ -263,7 +263,7 @@ fn ros2_cdc_denied(isolation: &medulla_isolation::isolation::IsolationLayer) -> 
 pub async fn run_ros2_bridge(
     state: std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     cfg: Ros2BridgeConfig,
-    cdc: std::sync::Arc<medulla_server_api::cdc::CdcHub>,
+    cdc: std::sync::Arc<medulla_server_cdc::cdc::CdcHub>,
 ) -> Result<(), String> {
     use futures::{SinkExt, StreamExt};
     use tokio_tungstenite::tungstenite::Message;

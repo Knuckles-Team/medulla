@@ -27,7 +27,7 @@ mod virtual_graph_tests;
 #[cfg(test)]
 mod world_model_tests;
 
-use medulla_server_api::cdc::CdcStateExt;
+use medulla_server_cdc::cdc::CdcStateExt;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 

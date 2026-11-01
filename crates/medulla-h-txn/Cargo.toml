@@ -50,6 +50,7 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
 medulla-server-ops = { path = "../medulla-server-ops" }
 medulla-server-mutation = { path = "../medulla-server-mutation" }
+medulla-server-cdc = { path = "../medulla-server-cdc" }
 
 [features]
 test-support = []

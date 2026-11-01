@@ -1,4 +1,4 @@
-use medulla_server_api::cdc::CdcStateExt;
+use medulla_server_cdc::cdc::CdcStateExt;
 use super::*;
 
 pub(super) struct MutationBatchCommitArgs<'a> {
@@ -387,7 +387,7 @@ impl MedullaStore {
         };
         let hub = self.ctx.state.read().await.cdc_hub().cloned();
         if let Some(hub) = hub.as_ref() {
-            medulla_server_api::cdc::emit_served_modality(hub, &req.graph_name, command.modality);
+            medulla_server_cdc::cdc::emit_served_modality(hub, &req.graph_name, command.modality);
         }
     }
 }

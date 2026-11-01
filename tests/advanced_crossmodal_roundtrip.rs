@@ -44,7 +44,7 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use medulla_server_api::cdc::CdcStateExt;
+use medulla_server_cdc::cdc::CdcStateExt;
 use std::sync::Arc;
 
 use serde_json::json;

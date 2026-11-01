@@ -58,7 +58,7 @@ use medulla_reasoner::{owl::parse_ontology, owl::tbox_triples_from_view, owl::Cl
 use medulla_rdf::oxrdf::Triple;
 use tokio::sync::RwLock;
 
-use crate::state::ServerState;
+use medulla_server_api::state::ServerState;
 use medulla_graph_core::graph::GraphCore;
 
 /// Opt-in graph allowlist env var — comma-separated exact graph names. Absent

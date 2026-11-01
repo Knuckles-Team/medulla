@@ -61,7 +61,7 @@ pub async fn try_handle_gateway(
     >,
     read_authority: Option<&GraphReadAuthority>,
     persistence: Option<&Arc<dyn PersistenceBackend>>,
-    #[cfg(feature = "streaming")] cdc: Option<&Arc<medulla_server_api::cdc::CdcHub>>,
+    #[cfg(feature = "streaming")] cdc: Option<&Arc<medulla_server_cdc::cdc::CdcHub>>,
     write_coalescer: Option<
         &Arc<medulla_server_api::routed_write_coalescer::RoutedWriteCoalescerRegistry>,
     >,

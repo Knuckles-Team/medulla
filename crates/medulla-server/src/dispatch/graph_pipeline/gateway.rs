@@ -16,7 +16,7 @@ pub(super) struct GatewayRouteCtx<'a> {
     pub(super) core: Arc<medulla_graph_core::graph::GraphCore>,
     pub(super) persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
-    pub(super) cdc: Option<Arc<medulla_server_api::cdc::CdcHub>>,
+    pub(super) cdc: Option<Arc<medulla_server_cdc::cdc::CdcHub>>,
     pub(super) materialization_manifest:
         Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
     pub(super) gateway_authz_ctx: &'a Option<medulla_server_mutation::mutation::GatewayAuthzCtx>,

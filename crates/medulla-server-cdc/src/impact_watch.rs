@@ -28,8 +28,8 @@ use std::time::{Duration, Instant};
 use dashmap::DashMap;
 use tokio::sync::RwLock;
 
-use crate::authority_context::VerifiedRequestContext;
-use crate::state::ServerState;
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_api::state::ServerState;
 
 #[cfg(feature = "security")]
 pub mod grant;
@@ -256,7 +256,7 @@ async fn submit(
         agent_id: Some(context.agent_id().to_string()),
         method,
     };
-    let response = crate::api::reentry::dispatch_verified_request(state, request, context).await;
+    let response = medulla_server_api::api::reentry::dispatch_verified_request(state, request, context).await;
     match response.refusal_text() {
         None => Ok(()),
         Some(refusal) => Err(format!("writeback refused: {refusal}")),

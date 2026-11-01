@@ -300,7 +300,7 @@ pub(super) struct ServedModalityCtx<'a> {
         Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
     pub(super) persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
-    pub(super) cdc: Option<Arc<medulla_server_api::cdc::CdcHub>>,
+    pub(super) cdc: Option<Arc<medulla_server_cdc::cdc::CdcHub>>,
     #[cfg(feature = "raft")]
     pub(super) routed_raft: Option<medulla_raft::raft::multi::RoutedRaftHandle>,
     pub(super) modality_authority: Option<medulla_h_ingest::modality::ModalityAuthority>,

@@ -6,7 +6,7 @@
 //! `RefreshMatView` manage named, durable, incrementally-maintained materialized
 //! views of those results. The heavy superstep loop runs off the reactor.
 
-use medulla_server_api::cdc::CdcStateExt;
+use medulla_server_cdc::cdc::CdcStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 use std::sync::Arc;
@@ -24,8 +24,8 @@ use medulla_server_api::state::ServerState;
 use medulla_raft::raft::pregel;
 use medulla_server_api::api::persistence::MatView;
 #[cfg(feature = "matview")]
-use medulla_server_api::matview;
-use medulla_server_api::matview::PlanMatView;
+use medulla_server_cdc::matview;
+use medulla_server_cdc::matview::PlanMatView;
 
 #[cfg(feature = "compute-dist")]
 const MAX_DISTRIBUTED_MATVIEW_BYTES: usize = 64 * 1024 * 1024;

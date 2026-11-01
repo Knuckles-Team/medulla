@@ -1354,25 +1354,25 @@ pub trait CdcStateExt {
     fn set_cdc_hub(&mut self, v: Option<Arc<CdcHub>>);
 }
 
-impl CdcStateExt for crate::state::ServerState {
+impl CdcStateExt for medulla_server_api::state::ServerState {
     fn cdc_hub(&self) -> Option<&Arc<CdcHub>> {
         self.cdc
             .get_or_init(|| {
-                Some(Arc::new(Arc::new(CdcHub::default())) as crate::state::ErasedHandle)
+                Some(Arc::new(Arc::new(CdcHub::default())) as medulla_server_api::state::ErasedHandle)
             })
             .as_deref()
             .and_then(|h| h.downcast_ref::<Arc<CdcHub>>())
     }
 
     fn set_cdc_hub(&mut self, v: Option<Arc<CdcHub>>) {
-        self.cdc = std::sync::OnceLock::from(v.map(|h| Arc::new(h) as crate::state::ErasedHandle));
+        self.cdc = std::sync::OnceLock::from(v.map(|h| Arc::new(h) as medulla_server_api::state::ErasedHandle));
     }
 }
 
 #[cfg(test)]
 mod state_ext_tests {
     use super::CdcStateExt;
-    use crate::state::ServerState;
+    use medulla_server_api::state::ServerState;
     use medulla_isolation::isolation::IsolationLayer;
 
     #[test]

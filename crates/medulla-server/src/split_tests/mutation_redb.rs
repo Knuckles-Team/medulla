@@ -85,7 +85,7 @@ async fn routed_mutation_produces_one_durable_record_one_audit_entry_and_one_cdc
 
     let core = Arc::new(GraphCore::new());
     let isolation = isolation_with_system_agent();
-    let cdc_hub = Arc::new(medulla_server_api::cdc::CdcHub::new());
+    let cdc_hub = Arc::new(medulla_server_cdc::cdc::CdcHub::new());
     let graph_name = "g-medulla-p0-2-a";
 
     let method = Method::AddNode {
@@ -290,7 +290,7 @@ async fn audited_mutation_writes_audit_but_cdc_stays_policy_gated() {
     let core = Arc::new(GraphCore::new());
     core.add_node("n1".to_string(), Vec::new());
     let isolation = isolation_with_system_agent();
-    let cdc_hub = Arc::new(medulla_server_api::cdc::CdcHub::new());
+    let cdc_hub = Arc::new(medulla_server_cdc::cdc::CdcHub::new());
     let graph_name = "g-medulla-p0-2-a2";
 
     let method = Method::Reinforce {
@@ -364,7 +364,7 @@ where
     let persistence: Arc<dyn PersistenceBackend> = Arc::new(backend);
     let core = Arc::new(GraphCore::new());
     let isolation = isolation_with_system_agent();
-    let cdc_hub = Arc::new(medulla_server_api::cdc::CdcHub::new());
+    let cdc_hub = Arc::new(medulla_server_cdc::cdc::CdcHub::new());
     let graph_name = format!("g-w1c-{tag}");
 
     let plan = MutationPlan::for_method(&method);
@@ -558,7 +558,7 @@ async fn w1c_from_msgpack_and_reconcile_reset_the_cdc_feed_and_audit() {
         let persistence: Arc<dyn PersistenceBackend> = Arc::new(backend);
         let core = Arc::new(GraphCore::new());
         let isolation = isolation_with_system_agent();
-        let cdc_hub = Arc::new(medulla_server_api::cdc::CdcHub::new());
+        let cdc_hub = Arc::new(medulla_server_cdc::cdc::CdcHub::new());
         let graph_name = format!("g-w1c-{tag}");
 
         let ctx = MutationCtx {
@@ -664,7 +664,7 @@ async fn broker_family_routed_mutation_is_audited_with_no_cdc() {
 
     let core = Arc::new(GraphCore::new());
     let isolation = isolation_with_system_agent();
-    let cdc_hub = Arc::new(medulla_server_api::cdc::CdcHub::new());
+    let cdc_hub = Arc::new(medulla_server_cdc::cdc::CdcHub::new());
     let graph_name = "g-medulla-p0-2-l11-broker-a";
 
     let method = Method::DeclareExchange {

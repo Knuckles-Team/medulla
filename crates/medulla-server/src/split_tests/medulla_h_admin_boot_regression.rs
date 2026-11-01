@@ -449,14 +449,14 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
         .await
         .expect("authoritative-shard-only commit must succeed");
     // A durable plan-backed matview awaiting its RAM re-hydration.
-    let view = medulla_server_api::matview::PlanMatView {
+    let view = medulla_server_cdc::matview::PlanMatView {
         name: MV_NAME.to_string(),
         graph: GRAPH.to_string(),
         plan: medulla_types::wire::Plan::new(Vec::new()),
     };
     redb.plan_matview_put(
         MV_NAME,
-        medulla_server_api::matview::encode_def(&view).unwrap(),
+        medulla_server_cdc::matview::encode_def(&view).unwrap(),
     )
     .await
     .unwrap();
@@ -584,7 +584,7 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
             }
         }
         if !reloaded {
-            reloaded = medulla_server_api::matview::manager()
+            reloaded = medulla_server_cdc::matview::manager()
                 .get(MV_NAME)
                 .is_some();
         }

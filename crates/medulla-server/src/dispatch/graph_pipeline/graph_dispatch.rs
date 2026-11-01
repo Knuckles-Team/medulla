@@ -1,4 +1,4 @@
-use medulla_server_api::cdc::CdcStateExt;
+use medulla_server_cdc::cdc::CdcStateExt;
 use super::*;
 #[cfg(feature = "redb")]
 use medulla_persistence::cold_offload::ColdTrackerStateExt;
@@ -19,7 +19,7 @@ struct GraphDispatchCapture<'a> {
         Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
     persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
-    cdc: Option<Arc<medulla_server_api::cdc::CdcHub>>,
+    cdc: Option<Arc<medulla_server_cdc::cdc::CdcHub>>,
     routed_write_coalescer:
         Arc<medulla_server_api::routed_write_coalescer::RoutedWriteCoalescerRegistry>,
     #[cfg(feature = "raft")]
@@ -259,7 +259,7 @@ pub(in crate::dispatch) struct GraphOpRouting<'a> {
     pub(in crate::dispatch) persistence:
         &'a Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
-    pub(super) cdc: &'a Option<Arc<medulla_server_api::cdc::CdcHub>>,
+    pub(super) cdc: &'a Option<Arc<medulla_server_cdc::cdc::CdcHub>>,
     #[cfg(feature = "security")]
     pub(super) rls: &'a std::sync::Arc<medulla_isolation::isolation::IsolationLayer>,
     #[cfg(feature = "raft")]

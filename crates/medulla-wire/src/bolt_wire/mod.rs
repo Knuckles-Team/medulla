@@ -28,7 +28,7 @@
 //! Bolt routing / cluster discovery (`ROUTE`) and the full Bolt 5.x feature set
 //! (notifications config, element-id, etc.) are not implemented.
 
-use medulla_server_api::cdc::CdcStateExt;
+use medulla_server_cdc::cdc::CdcStateExt;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -377,7 +377,7 @@ struct BoltGraphContext {
     isolation: medulla_isolation::isolation::IsolationLayer,
     persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
-    cdc: Option<Arc<medulla_server_api::cdc::CdcHub>>,
+    cdc: Option<Arc<medulla_server_cdc::cdc::CdcHub>>,
 }
 
 async fn graph_context(session: &BoltSession) -> Result<(String, BoltGraphContext), BoltFailure> {

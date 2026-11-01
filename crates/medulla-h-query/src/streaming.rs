@@ -12,7 +12,7 @@
 //! `timeout_ms` for the first change, then returns whatever arrived (NOT a streaming
 //! frame side-channel).
 
-use medulla_server_api::cdc::CdcStateExt;
+use medulla_server_cdc::cdc::CdcStateExt;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -37,7 +37,7 @@ use medulla_protocol_types::result_contract::messaging as results;
 async fn hub_of(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-) -> Result<Arc<medulla_server_api::cdc::CdcHub>, Response> {
+) -> Result<Arc<medulla_server_cdc::cdc::CdcHub>, Response> {
     let s = state.read().await;
     match s.cdc_hub() {
         Some(h) => Ok(h.clone()),
@@ -154,7 +154,7 @@ async fn authorized_hub(
     req_id: u64,
     carrier: &CarrierAuthority,
     graph: &str,
-) -> Result<Arc<medulla_server_api::cdc::CdcHub>, Response> {
+) -> Result<Arc<medulla_server_cdc::cdc::CdcHub>, Response> {
     if let Err(error) = authorize_graph(state, carrier, graph, AccessLevel::Read).await {
         return Err(Response::err(req_id, error));
     }

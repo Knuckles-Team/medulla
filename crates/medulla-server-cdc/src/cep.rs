@@ -75,7 +75,7 @@ use medulla_stream::live::{CepEngine, CepSubscription, DEFAULT_MATCH_BUFFER};
 use medulla_stream::{AttrPredicate, CepPattern, Event, EventMatcher, Match, Window};
 
 use super::state::ServerState;
-use crate::carrier::CarrierAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
@@ -706,7 +706,7 @@ mod tests {
     async fn try_handle_pins_admin_gate_refusals_and_lifecycle() {
         let authority = |scopes: &[&str]| {
             CarrierAuthority::from_verified(
-                &crate::authority_context::VerifiedRequestContext::verified_for_test_with_scopes(
+                &medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_with_scopes(
                     "cep-admin",
                     "tenant-cep",
                     scopes,

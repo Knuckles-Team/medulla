@@ -32,7 +32,7 @@
 //! failure leaves BOTH images (memory and disk) untouched, self-healing on
 //! the next sweep instead of risking divergence.
 
-use medulla_server_api::cdc::CdcStateExt;
+use medulla_server_cdc::cdc::CdcStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -122,7 +122,7 @@ pub async fn reap_expired_servers(state: &Arc<RwLock<ServerState>>, now_ms: u64)
             node_id: node_id.clone(),
         };
         #[cfg(feature = "streaming")]
-        let pre = medulla_server_api::cdc::capture_before(&core, &method);
+        let pre = medulla_server_cdc::cdc::capture_before(&core, &method);
 
         // Durable-first (see module docs): only touch the in-memory core / emit
         // CDC once the durable record is confirmed.
@@ -132,7 +132,7 @@ pub async fn reap_expired_servers(state: &Arc<RwLock<ServerState>>, now_ms: u64)
                 core.mark_dirty();
                 #[cfg(feature = "streaming")]
                 if let Some(hub) = &hub {
-                    medulla_server_api::cdc::emit_for_method(
+                    medulla_server_cdc::cdc::emit_for_method(
                         hub,
                         &core,
                         "__commons__",
