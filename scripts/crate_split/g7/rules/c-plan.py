@@ -1,0 +1,10 @@
+RANK={'medulla-exec':1,'medulla-retrieval':2,'medulla-uql':3,'medulla-federation':4,'medulla-nlq':5,'medulla-plan':6}
+EXEC=['exec','optimizer','cost','learned_cost','runtime','dag','dag_exec','pred_eval','incremental','access_check','algebra','rowset','budget','sql_text','fixture','oracle','policy_mask','pushdown_plan','stored_query']
+RULES=[(x,'medulla-exec') for x in EXEC]+[('knowledge','medulla-retrieval'),('knowledge_batch','medulla-retrieval'),('leanrag','medulla-retrieval'),('retrieval_verdict*','medulla-retrieval'),('result_stream','medulla-retrieval'),('knowledge_scope','medulla-retrieval'),('feedback_boost','medulla-retrieval'),
+('uql::serve','medulla-plan'),('uql::tests','medulla-plan'),('uql*','medulla-uql'),
+('federation*','medulla-federation'),('mirror_target','medulla-federation'),
+('nl','medulla-nlq'),('nl_regressions','medulla-nlq'),('decide_text','medulla-nlq')]
+DEFAULT='medulla-plan'
+CUTS={'federation_opt::FederationBudget':'medulla-exec','knowledge::ProjectionSchema':'medulla-exec','decide_text::grammar':'medulla-plan','uql::serve::run_statement':'medulla-federation',
+'federation_opt::FederationSession':'PORT','federation_opt::foreign_named':'PORT','federation_opt::foreign_scan':'PORT','federation_opt::prepare':'PORT','federation::ForeignSourceRegistry':'PORT'}
+RANK['PORT']=0
