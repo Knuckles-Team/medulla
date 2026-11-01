@@ -35,7 +35,7 @@ pub struct ConsensusTransactionParticipant {
     pub group_id: medulla_raft::raft::GroupId,
     pub placement_epoch: u64,
     pub fencing_token: Option<u64>,
-    pub(crate) sealed_plan_source: Vec<u8>,
+    pub sealed_plan_source: Vec<u8>,
 }
 
 /// Fully resolved participant fanout. Placement comes only from the engine's
