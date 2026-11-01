@@ -407,7 +407,7 @@ fn install_panic_hook() {
 /// Make trace capture the default for cluster tests: install the subscriber and
 /// panic hook, exactly once per test binary. Cheap and safe to call from every
 /// cluster test's node-startup path.
-pub(crate) fn init() {
+pub fn init() {
     SETUP.get_or_init(|| {
         install_subscriber();
         install_panic_hook();
@@ -418,7 +418,7 @@ pub(crate) fn init() {
 /// its own thread -- and never another concurrently running test's (EH-326,
 /// EH-534). Used by the panic hook (which runs on the panicking thread, inside the
 /// failing test's runtime) and directly by tests.
-pub(crate) fn render_dump() -> String {
+pub fn render_dump() -> String {
     let scope = current_scope();
     let map = registry().lock_recovering("raft trace capture registry");
     match map.get(&scope).and_then(Weak::upgrade) {

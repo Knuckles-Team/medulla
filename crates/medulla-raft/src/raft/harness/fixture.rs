@@ -14,17 +14,17 @@ use medulla_persistence::redb_backend::RedbBackend;
 use medulla_server_api::state::ServerState;
 
 /// The concrete backend shape shared by the Raft harness fixtures.
-pub(crate) type Backend = Arc<dyn PersistenceBackend>;
+pub type Backend = Arc<dyn PersistenceBackend>;
 
 /// Open the authoritative test backend used by the Raft harnesses.
-pub(crate) fn open_backend(dir: &str) -> Result<Backend, String> {
+pub fn open_backend(dir: &str) -> Result<Backend, String> {
     RedbBackend::open(dir.to_string(), 4096)
         .map(|backend| Arc::new(backend) as Backend)
         .map_err(|error| format!("open redb {dir}: {error}"))
 }
 
 /// Create a fresh authoritative backend for a named harness scenario.
-pub(crate) fn fresh_backend(prefix: &str, tag: &str) -> (String, Backend) {
+pub fn fresh_backend(prefix: &str, tag: &str) -> (String, Backend) {
     let dir = fresh_dir(prefix, tag);
     let backend = open_backend(&dir).expect("open redb");
     (dir, backend)
@@ -51,7 +51,7 @@ const BACKEND_RELEASE_TIMEOUT: Duration = Duration::from_secs(30);
 /// lifetime bug it is. So prove exclusivity rather than assume it: wait,
 /// bounded, for this to be the last reference, and if it never is, say exactly
 /// that.
-pub(crate) fn reopen_backend(backend: Backend, dir: &str) -> Result<Backend, String> {
+pub fn reopen_backend(backend: Backend, dir: &str) -> Result<Backend, String> {
     backend.shutdown();
     release_sole_reference(backend, dir)?;
     open_backend(dir)
@@ -81,7 +81,7 @@ fn release_sole_reference(backend: Backend, dir: &str) -> Result<(), String> {
 }
 
 /// Open an authoritative test backend with an explicit shard count.
-pub(crate) fn open_backend_with_shards(
+pub fn open_backend_with_shards(
     dir: &str,
     max_nodes: usize,
     shards: usize,
@@ -92,7 +92,7 @@ pub(crate) fn open_backend_with_shards(
 }
 
 /// Create a unique, empty temporary directory for a harness scenario.
-pub(crate) fn fresh_dir(prefix: &str, tag: &str) -> String {
+pub fn fresh_dir(prefix: &str, tag: &str) -> String {
     let dir = std::env::temp_dir().join(format!("{prefix}-{tag}-{}", std::process::id()));
     std::fs::remove_dir_all(&dir).ok();
     std::fs::create_dir_all(&dir).expect("create harness directory");
@@ -103,7 +103,7 @@ pub(crate) fn fresh_dir(prefix: &str, tag: &str) -> String {
 
 /// One cross-shard participant slice that adds `node` (properties `{"n": node}`)
 /// to the global graph `graph` under the given placement fence.
-pub(crate) fn add_node_slice(
+pub fn add_node_slice(
     graph: &str,
     node: &str,
     placement_epoch: u64,
@@ -124,7 +124,7 @@ pub(crate) fn add_node_slice(
 }
 
 /// Wait for an asynchronous harness condition with an explicit polling cadence.
-pub(crate) async fn wait_until<F, Fut>(timeout: Duration, mut predicate: F) -> Result<(), ()>
+pub async fn wait_until<F, Fut>(timeout: Duration, mut predicate: F) -> Result<(), ()>
 where
     F: FnMut() -> Fut,
     Fut: Future<Output = bool>,
@@ -140,7 +140,7 @@ where
 }
 
 /// Build the peer map used by multi-node in-process cluster fixtures.
-pub(crate) fn peer_map(ports: &[u16]) -> BTreeMap<crate::raft::NodeId, BasicNode> {
+pub fn peer_map(ports: &[u16]) -> BTreeMap<crate::raft::NodeId, BasicNode> {
     ports
         .iter()
         .enumerate()
@@ -154,7 +154,7 @@ pub(crate) fn peer_map(ports: &[u16]) -> BTreeMap<crate::raft::NodeId, BasicNode
 }
 
 /// Count the nodes currently resident in a named graph.
-pub(crate) async fn node_count(state: &Arc<RwLock<ServerState>>, graph: &str) -> usize {
+pub async fn node_count(state: &Arc<RwLock<ServerState>>, graph: &str) -> usize {
     state
         .read()
         .await
@@ -164,7 +164,7 @@ pub(crate) async fn node_count(state: &Arc<RwLock<ServerState>>, graph: &str) ->
 }
 
 /// Build and rehydrate the managed cluster's authoritative test state.
-pub(crate) async fn make_rehydrated_state(dir: &str) -> Result<Arc<RwLock<ServerState>>, String> {
+pub async fn make_rehydrated_state(dir: &str) -> Result<Arc<RwLock<ServerState>>, String> {
     let backend = open_backend(dir)?;
     let state = crate::raft::harness_support::make_state_with_cdc(
         dir,
@@ -187,7 +187,7 @@ pub(crate) async fn make_rehydrated_state(dir: &str) -> Result<Arc<RwLock<Server
 }
 
 /// Start one local node with the requested groups and wait for each leader.
-pub(crate) async fn start_single_node_groups(
+pub async fn start_single_node_groups(
     dir: &str,
     backend: Backend,
     isolation: IsolationLayer,
@@ -207,7 +207,7 @@ pub(crate) async fn start_single_node_groups(
 /// Start one local node the way a RESTART does: recover the durable graph image
 /// into the serving projection BEFORE any Raft group opens. See
 /// `harness_support::start_recovered_single_node_groups`.
-pub(crate) async fn start_recovered_single_node_groups(
+pub async fn start_recovered_single_node_groups(
     dir: &str,
     backend: Backend,
     isolation: IsolationLayer,
@@ -225,7 +225,7 @@ pub(crate) async fn start_recovered_single_node_groups(
 }
 
 /// Start one local node, create groups, and assign named graphs to their owners.
-pub(crate) async fn start_routed_groups(
+pub async fn start_routed_groups(
     dir: &str,
     backend: Backend,
     isolation: IsolationLayer,

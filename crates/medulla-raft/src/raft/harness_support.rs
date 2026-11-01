@@ -30,7 +30,7 @@ static NONCE_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 /// graph) and no CDC hub unless a harness asks for one
 /// ([`make_state_with_cdc`]). Starting from the baseline keeps a newly added
 /// server field from needing a second hand-written default here.
-pub(crate) async fn make_state(
+pub async fn make_state(
     dir: &str,
     backend: Arc<dyn PersistenceBackend>,
     isolation: IsolationLayer,
@@ -50,7 +50,7 @@ pub(crate) async fn make_state(
 }
 
 /// Build the state shape used by tests that exercise the in-memory CDC side effect.
-pub(crate) async fn make_state_with_cdc(
+pub async fn make_state_with_cdc(
     dir: &str,
     backend: Arc<dyn PersistenceBackend>,
     isolation: IsolationLayer,
@@ -65,7 +65,7 @@ pub(crate) async fn make_state_with_cdc(
 }
 
 /// Build the explicit System-role identity used by handler-facing harnesses.
-pub(crate) fn current_isolation(agent_id: &str) -> IsolationLayer {
+pub fn current_isolation(agent_id: &str) -> IsolationLayer {
     let identity = AgentIdentity {
         agent_id: agent_id.to_owned(),
         role: AgentRole::System,
@@ -83,15 +83,15 @@ pub(crate) fn current_isolation(agent_id: &str) -> IsolationLayer {
 /// names its nonce, idempotency key and security-state directory after itself --
 /// and because eight positional `&str`s at one call site is exactly the shape
 /// that silently swaps two of them.
-pub(crate) struct HarnessLabels<'a> {
-    pub(crate) agent_id: &'a str,
-    pub(crate) nonce: &'a str,
-    pub(crate) idempotency: &'a str,
-    pub(crate) security_state: &'a str,
+pub struct HarnessLabels<'a> {
+    pub agent_id: &'a str,
+    pub nonce: &'a str,
+    pub idempotency: &'a str,
+    pub security_state: &'a str,
 }
 
 /// Mint a verified request envelope with the harness's test deployment claims.
-pub(crate) fn signed_request(
+pub fn signed_request(
     id: u64,
     graph: &str,
     method: Method,
@@ -177,7 +177,7 @@ async fn wait_for_leader(multi: &Arc<MultiRaft>, gid: GroupId, node_id: NodeId) 
 /// applied pointers and the on-disk graph data agree." A harness that brings the
 /// groups up and only then calls `load_all` inverts that, and is not simulating
 /// the restart it claims to.
-pub(crate) async fn start_recovered_single_node_groups(
+pub async fn start_recovered_single_node_groups(
     dir: &str,
     backend: Arc<dyn PersistenceBackend>,
     isolation: IsolationLayer,
@@ -192,7 +192,7 @@ pub(crate) async fn start_recovered_single_node_groups(
     start_groups_on_state(backend, group_ids, state).await
 }
 
-pub(crate) async fn start_single_node_groups(
+pub async fn start_single_node_groups(
     dir: &str,
     backend: Arc<dyn PersistenceBackend>,
     isolation: IsolationLayer,

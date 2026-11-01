@@ -2,6 +2,7 @@
 //! medulla-server-api because it needs medulla-raft; MEDULLA-CONTRACT-R056).
 #![allow(unused_imports)]
 use medulla_server_api::mutation::*;
+use medulla_server_api::mutation::plan::{self, *};
 use std::collections::BTreeSet;
 
 /// Clustered admission has no deferred mutation family. The union of the

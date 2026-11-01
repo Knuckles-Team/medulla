@@ -55,7 +55,7 @@ thread_local! {
 
 /// Claim a cluster slot for the calling test thread, waiting for one to free.
 /// Idempotent per thread: a test building several nodes holds one slot.
-pub(crate) fn claim() {
+pub fn claim() {
     if HELD.with(|held| held.borrow().is_some()) {
         return;
     }

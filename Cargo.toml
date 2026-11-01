@@ -1849,6 +1849,7 @@ medulla-persistence = { path = "crates/medulla-persistence" }
 medulla-raft = { path = "crates/medulla-raft" }
 
 [dev-dependencies]
+medulla-raft = { path = "crates/medulla-raft", features = ["test-support"] }
 medulla-persistence = { path = "crates/medulla-persistence", features = ["test-support"] }
 medulla-server-api = { path = "crates/medulla-server-api", features = ["test-support"] }
 medulla-store = { path = "crates/medulla-store", features = ["test-support"] }

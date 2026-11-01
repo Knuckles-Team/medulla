@@ -27,7 +27,7 @@ use super::super::{NodeId, RaftRequest};
 use medulla_types::protocol::GraphType;
 use medulla_types::protocol::Method;
 
-pub(crate) use super::super::fixture;
+pub use super::super::fixture;
 
 /// The graph every harness write targets.
 pub const GRAPH: &str = "__commons__";

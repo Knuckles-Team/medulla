@@ -11,10 +11,10 @@
 //! 5. EVERY committed write survives on the new leader (no data loss, no
 //!    split-brain — the survivors form a quorum of 2/3).
 
-#[cfg(feature = "raft")]
-use medulla_raft::raft::RaftStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
+#[cfg(feature = "raft")]
+use medulla_raft::raft::RaftStateExt;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 use std::time::Duration;
@@ -28,15 +28,15 @@ use openraft::async_runtime::watch::WatchReceiver;
 use openraft::BasicNode;
 use tokio::sync::RwLock;
 
-use super::config::RaftClusterConfig;
-use super::harness::cluster::fixture;
-use super::multi::MultiRaft;
-use super::node::{self, StartedNode};
-use super::{NodeId, RaftRequest};
-use crate::protocol::{GraphType, Method};
-use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_persistence::redb_backend::RedbBackend;
+use medulla_raft::raft::config::RaftClusterConfig;
+use medulla_raft::raft::harness::cluster::fixture;
+use medulla_raft::raft::multi::MultiRaft;
+use medulla_raft::raft::node::{self, StartedNode};
+use medulla_raft::raft::{NodeId, RaftRequest};
+use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::state::ServerState;
+use medulla_types::protocol::{GraphType, Method};
 
 /// Build a ServerState with a redb-AUTHORITATIVE backend rooted at `dir`.
 async fn make_state(dir: &str) -> Arc<RwLock<ServerState>> {
@@ -55,7 +55,7 @@ async fn make_state_with_backend(
         .register_graph("__commons__", "__commons__", GraphType::Commons)
         .await
         .expect("register mandatory commons graph");
-    super::harness_support::make_state_with_cdc(
+    medulla_raft::raft::harness_support::make_state_with_cdc(
         dir,
         backend,
         crate::isolation::IsolationLayer::new(),
@@ -95,8 +95,8 @@ fn cluster_cfg_with_groups(node_id: NodeId, ports: &[u16], groups: u64) -> RaftC
     // this function, so this one call site is the whole cluster-test surface.
     // Idempotent: the actual subscriber/panic-hook install happens at most once
     // per test binary.
-    super::harness::trace_capture::init();
-    super::harness::cluster_slots::claim();
+    medulla_raft::raft::harness::trace_capture::init();
+    medulla_raft::raft::harness::cluster_slots::claim();
     let peers = fixture::peer_map(ports);
     let bind_addr = peers.get(&node_id).unwrap().addr.clone();
     RaftClusterConfig {
@@ -117,7 +117,7 @@ fn cluster_cfg_with_groups(node_id: NodeId, ports: &[u16], groups: u64) -> RaftC
         is_bootstrap: peers.keys().next() == Some(&node_id),
         groups,
         transport_secret: Some(
-            super::config::RaftTransportSecret::from_material(&[0x5a; 32]).unwrap(),
+            medulla_raft::raft::config::RaftTransportSecret::from_material(&[0x5a; 32]).unwrap(),
         ),
     }
 }
@@ -136,10 +136,10 @@ async fn start_multi(
     node_id: NodeId,
     bind_addr: String,
     backend: Arc<dyn PersistenceBackend>,
-    ctx: super::AppCtx,
+    ctx: medulla_raft::raft::AppCtx,
 ) -> Result<Arc<MultiRaft>, String> {
-    super::harness::trace_capture::init();
-    super::harness::cluster_slots::claim();
+    medulla_raft::raft::harness::trace_capture::init();
+    medulla_raft::raft::harness::cluster_slots::claim();
     MultiRaft::start(node_id, bind_addr, backend, ctx).await
 }
 
@@ -167,7 +167,7 @@ async fn direct_multi_raft_construction_reaches_trace_capture() {
         .await
         .expect("start multi via the direct-construction choke point");
 
-    let dump = super::harness::trace_capture::render_dump();
+    let dump = medulla_raft::raft::harness::trace_capture::render_dump();
     assert!(
         dump.contains("medulla_raft::raft::multi"),
         "trace capture must be initialized by the direct MultiRaft::start path \
@@ -269,7 +269,7 @@ async fn three_node_cluster_replicates_and_survives_leader_failover() {
                 k,
                 0,
             ),
-            command: super::ReplicatedMutation::graph(
+            command: medulla_raft::raft::ReplicatedMutation::graph(
                 Method::AddNode {
                     node_id: format!("n{k}"),
                     properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({"k": k}))
@@ -328,7 +328,7 @@ async fn three_node_cluster_replicates_and_survives_leader_failover() {
             n_writes,
             0,
         ),
-        command: super::ReplicatedMutation::graph(
+        command: medulla_raft::raft::ReplicatedMutation::graph(
             Method::AddNode {
                 node_id: "after-failover".to_string(),
                 properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({"post": true}))
@@ -390,13 +390,13 @@ async fn cluster_members_reports_topology_and_tracks_leader_failover() {
     use crate::acl::{AgentIdentity, AgentRole, RequestContextClaims};
     use crate::protocol::{Request, ResultPayload};
     use medulla_server_api::auth::compute_verified_envelope_token;
-use medulla_server_api::auth::VerifiedEnvelopeParams;
+    use medulla_server_api::auth::VerifiedEnvelopeParams;
 
     const TEST_AGENT: &str = "cluster-members-wire-test-agent";
     const SECRET: &str = "raft-test"; // matches make_state's ServerState.auth_secret
     static NONCE_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 
-    let _auth_env = super::harness::test_env::configure_auth_test_environment(
+    let _auth_env = medulla_raft::raft::harness::test_env::configure_auth_test_environment(
         "tenant-shared",
         "cluster-members-wire-auth",
     );
@@ -457,7 +457,7 @@ use medulla_server_api::auth::VerifiedEnvelopeParams;
         })
         .collect();
     let ports = free_ports(3);
-    let gid = super::DEFAULT_GROUP;
+    let gid = medulla_raft::raft::DEFAULT_GROUP;
 
     // ── Start three nodes through the REAL production path (`node::start`),
     // so ADR-1's self-report (`raft::node::start` -> `MultiRaft::commit_node_info`)
@@ -731,7 +731,7 @@ where
 
 /// `cfg.groups > 1` (DIST-P2-2, `MEDULLA_RAFT_GROUPS`) makes PRODUCTION
 /// `node::start` stand up every group `0..groups` on this node and configure the
-/// tenant-range ring across all of them — the same [`super::multi::MultiRaft`]
+/// tenant-range ring across all of them — the same [`medulla_raft::raft::multi::MultiRaft`]
 /// machinery the placement/xshard test harnesses already exercise, now reachable from
 /// the real boot path instead of only from a test's manual `create_group` calls.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -766,7 +766,7 @@ async fn multi_group_startup_creates_n_groups_from_config() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// A graph with no explicit [`super::placement::PlacementCatalog`] entry hash-spreads
+/// A graph with no explicit [`medulla_raft::raft::placement::PlacementCatalog`] entry hash-spreads
 /// across the configured ring (DIST-P2-2) — deterministically, so the SAME graph name
 /// always lands on the SAME group.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -805,7 +805,7 @@ async fn graph_routes_to_its_ring_assigned_group_after_multi_group_startup() {
 
 /// The DEFAULT (unconfigured, `groups <= 1`) production boot is BYTE-FOR-BYTE the
 /// pre-existing single-group path: no extra group, an empty ring, every graph on
-/// [`super::DEFAULT_GROUP`] — the guardrail this whole feature must not regress.
+/// [`medulla_raft::raft::DEFAULT_GROUP`] — the guardrail this whole feature must not regress.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn default_startup_stays_single_group_unchanged() {
     // Opens a durable store, so the ambient encryption env must hold still for
@@ -825,7 +825,11 @@ async fn default_startup_stays_single_group_unchanged() {
         started.multi.router().group_ring().is_empty(),
         "no ring configured by default"
     );
-    assert!(started.multi.group(super::DEFAULT_GROUP).await.is_some());
+    assert!(started
+        .multi
+        .group(medulla_raft::raft::DEFAULT_GROUP)
+        .await
+        .is_some());
     assert!(
         started.multi.group(1).await.is_none(),
         "no extra group should exist without MEDULLA_RAFT_GROUPS"
@@ -833,7 +837,7 @@ async fn default_startup_stays_single_group_unchanged() {
     let route = started.multi.route_graph("any-tenant:ws1").await;
     assert_eq!(
         route.group,
-        super::DEFAULT_GROUP,
+        medulla_raft::raft::DEFAULT_GROUP,
         "every unplaced graph must be authoritatively routed to the default group"
     );
     assert_eq!(route.epoch, 0);
@@ -878,9 +882,9 @@ mod placement_admin_wire_rpc {
     use super::*;
     use crate::acl::{AgentIdentity, AgentRole, RequestContextClaims};
     use crate::protocol::{Response, ResultPayload};
-    use crate::server::{dispatch};
-use medulla_server_api::auth::compute_verified_envelope_token;
-use medulla_server_api::auth::VerifiedEnvelopeParams;
+    use crate::server::dispatch;
+    use medulla_server_api::auth::compute_verified_envelope_token;
+    use medulla_server_api::auth::VerifiedEnvelopeParams;
 
     const TEST_AGENT: &str = "placement-admin-wire-test-agent";
     const SECRET: &str = "raft-test"; // matches `make_state`'s `auth_secret`.
@@ -997,7 +1001,7 @@ use medulla_server_api::auth::VerifiedEnvelopeParams;
 
     async fn wait_for_group_leader(
         nodes: &BTreeMap<NodeId, StartedNode>,
-        gid: super::super::GroupId,
+        gid: medulla_raft::raft::GroupId,
         timeout: Duration,
     ) -> Option<NodeId> {
         let start = std::time::Instant::now();
@@ -1053,10 +1057,10 @@ use medulla_server_api::auth::VerifiedEnvelopeParams;
     const PLACEMENT_ADMIN_SCENARIO_TIMEOUT: Duration = Duration::from_secs(300);
 
     async fn placement_admin_wire_rpcs_move_data_across_a_real_three_node_cluster_body() {
-        use super::super::DEFAULT_GROUP;
-        const TARGET_GROUP: super::super::GroupId = 1;
+        use medulla_raft::raft::DEFAULT_GROUP;
+        const TARGET_GROUP: medulla_raft::raft::GroupId = 1;
 
-        let _auth_env = super::super::harness::test_env::configure_auth_test_environment(
+        let _auth_env = medulla_raft::raft::harness::test_env::configure_auth_test_environment(
             "tenant-shared",
             "placement-wire-auth",
         );
@@ -1324,8 +1328,8 @@ use medulla_server_api::auth::VerifiedEnvelopeParams;
 // KG-2.204: durable redb Raft log — replay after restart + fault injection
 // ─────────────────────────────────────────────────────────────────────────
 
-use super::store::MedullaStore;
-use super::AppCtx;
+use medulla_raft::raft::store::MedullaStore;
+use medulla_raft::raft::AppCtx;
 // openraft 0.10 v2 split-storage traits (CONCEPT:AU-KG.backend.authority-has-already-acked): the combined `RaftStorage`
 // is gone — log ops live on `RaftLogStorage` + its super-trait `RaftLogReader`, and
 // `append` signals durability through an `IOFlushed` callback.
@@ -1337,7 +1341,7 @@ use openraft::type_config::alias::EntryOf;
 
 /// A fresh temp dir for one test, removed first.
 fn fresh_dir(tag: &str) -> String {
-    super::harness::cluster::fixture::fresh_dir("medulla-raft", tag)
+    medulla_raft::raft::harness::cluster::fixture::fresh_dir("medulla-raft", tag)
 }
 
 /// Build the unscoped application context used by direct Raft-store tests.
@@ -1353,7 +1357,7 @@ fn unscoped_context(state: Arc<RwLock<ServerState>>) -> AppCtx {
 /// openraft 0.10: `Entry` is no longer `Entry<C>` — we build it via the generic
 /// `RaftEntry::new_normal` over the concrete `EntryOf<TypeConfig>`, with the advanced
 /// committed-leader id (`LeaderId { term, node_id }`) the default type config uses.
-fn make_log_entry(index: u64, term: u64, node_id: &str) -> EntryOf<super::TypeConfig> {
+fn make_log_entry(index: u64, term: u64, node_id: &str) -> EntryOf<medulla_raft::raft::TypeConfig> {
     use openraft::impls::leader_id_adv::LeaderId;
     use openraft::LogId;
     let log_id = LogId::new(
@@ -1363,7 +1367,7 @@ fn make_log_entry(index: u64, term: u64, node_id: &str) -> EntryOf<super::TypeCo
         },
         index,
     );
-    EntryOf::<super::TypeConfig>::new_normal(
+    EntryOf::<medulla_raft::raft::TypeConfig>::new_normal(
         log_id,
         RaftRequest {
             graph_fname: medulla_kernel::persist::sanitize("__commons__"),
@@ -1377,7 +1381,7 @@ fn make_log_entry(index: u64, term: u64, node_id: &str) -> EntryOf<super::TypeCo
                 index,
                 0,
             ),
-            command: super::ReplicatedMutation::graph(
+            command: medulla_raft::raft::ReplicatedMutation::graph(
                 Method::AddNode {
                     node_id: node_id.to_string(),
                     properties_msgpack: rmp_serde::to_vec_named(
@@ -1410,8 +1414,12 @@ async fn durable_log_replays_from_redb_after_restart() {
 
     // ── Append 12 entries through the real RaftStorage::append_to_log path ──
     {
-        let mut store =
-            MedullaStore::open(super::DEFAULT_GROUP, backend.clone(), ctx.clone()).unwrap();
+        let mut store = MedullaStore::open(
+            medulla_raft::raft::DEFAULT_GROUP,
+            backend.clone(),
+            ctx.clone(),
+        )
+        .unwrap();
         let entries: Vec<_> = (1..=12)
             .map(|i| make_log_entry(i, 1, &format!("n{i}")))
             .collect();
@@ -1426,8 +1434,12 @@ async fn durable_log_replays_from_redb_after_restart() {
     }
 
     // ── Re-open the store over the SAME redb; no leader, no network ─────────
-    let mut store2 =
-        MedullaStore::open(super::DEFAULT_GROUP, backend.clone(), ctx.clone()).unwrap();
+    let mut store2 = MedullaStore::open(
+        medulla_raft::raft::DEFAULT_GROUP,
+        backend.clone(),
+        ctx.clone(),
+    )
+    .unwrap();
     let log_state = store2.get_log_state().await.expect("get_log_state");
     assert_eq!(
         log_state.last_log_id.map(|l| l.index),
@@ -1469,8 +1481,12 @@ async fn fault_injection_no_committed_log_entry_lost_on_restart() {
     };
 
     {
-        let mut store =
-            MedullaStore::open(super::DEFAULT_GROUP, backend.clone(), ctx.clone()).unwrap();
+        let mut store = MedullaStore::open(
+            medulla_raft::raft::DEFAULT_GROUP,
+            backend.clone(),
+            ctx.clone(),
+        )
+        .unwrap();
         // Append 8 entries; each append_to_log awaits the durable group-commit fsync
         // (commit-before-ack), so all 8 are provably on disk when this returns Ok.
         for i in 1..=8u64 {
@@ -1496,7 +1512,8 @@ async fn fault_injection_no_committed_log_entry_lost_on_restart() {
     // must still be present — no lost committed entry.
     let backend2: Arc<dyn PersistenceBackend> =
         Arc::new(RedbBackend::open(dir.clone(), 4096).expect("reopen redb"));
-    let mut store2 = MedullaStore::open(super::DEFAULT_GROUP, backend2.clone(), ctx).unwrap();
+    let mut store2 =
+        MedullaStore::open(medulla_raft::raft::DEFAULT_GROUP, backend2.clone(), ctx).unwrap();
     let entries = store2
         .try_get_log_entries(1..=8)
         .await
@@ -1650,7 +1667,7 @@ async fn two_groups_one_node_commit_independently() {
                 gid,
                 0,
             ),
-            command: super::ReplicatedMutation::graph(
+            command: medulla_raft::raft::ReplicatedMutation::graph(
                 Method::AddNode {
                     node_id: format!("{graph}-n1"),
                     properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({"g": graph}))
@@ -1696,7 +1713,7 @@ async fn two_groups_one_node_commit_independently() {
 /// sequential RPCs — three round-trips to one peer pay exactly ONE TCP connect.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn peer_pool_reuses_warm_connection() {
-    use super::network::{read_frame, write_frame, PeerPool};
+    use medulla_raft::raft::network::{read_frame, write_frame, PeerPool};
 
     // A tiny echo server speaking the Raft frame protocol: read a frame, write it back.
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -1738,7 +1755,7 @@ async fn peer_pool_reuses_warm_connection() {
 /// FRESH connection — the reuse optimization never surfaces a spurious failure.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn peer_pool_retries_on_stale_connection() {
-    use super::network::{read_frame, write_frame, PeerPool};
+    use medulla_raft::raft::network::{read_frame, write_frame, PeerPool};
 
     // Echo server that serves EXACTLY ONE frame per connection, then closes — so any
     // connection returned to the pool is stale for the next round-trip.
@@ -1774,12 +1791,12 @@ async fn peer_pool_retries_on_stale_connection() {
 /// groups, explicit overrides win, and an empty ring is the single-group default.
 #[test]
 fn group_router_distributes_tenants_across_ring() {
-    use super::multi::GroupRouter;
+    use medulla_raft::raft::multi::GroupRouter;
 
     let r = GroupRouter::new();
     // Default (no ring): every graph routes to DEFAULT_GROUP — scaffold behavior.
     for g in ["a", "b", "__commons__", "tenant-42"] {
-        assert_eq!(r.group_of(g), super::DEFAULT_GROUP);
+        assert_eq!(r.group_of(g), medulla_raft::raft::DEFAULT_GROUP);
     }
 
     // Configure a 4-group tenant-range ring (sorted + de-duplicated).
@@ -1813,7 +1830,10 @@ fn group_router_distributes_tenants_across_ring() {
 
     // Collapse back to the single-group default.
     r.set_group_ring(&[]);
-    assert_eq!(r.group_of("an-unpinned-graph"), super::DEFAULT_GROUP);
+    assert_eq!(
+        r.group_of("an-unpinned-graph"),
+        medulla_raft::raft::DEFAULT_GROUP
+    );
 }
 
 /// KG-2.267: a group's snapshot dump is SCOPED to its own tenant-range graphs — a
@@ -1825,7 +1845,7 @@ async fn group_snapshot_is_scoped_to_its_tenant_range() {
     // this whole body. READ guard: it excludes only a key MUTATOR, never another
     // opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    use super::multi::GroupRouter;
+    use medulla_raft::raft::multi::GroupRouter;
 
     let dir = fresh_dir("scopedsnap");
     let backend: Arc<dyn PersistenceBackend> =
@@ -1906,7 +1926,7 @@ async fn group_snapshot_is_scoped_to_its_tenant_range() {
 
 /// An empty-entries `AppendEntries` for group `gid` — exactly what openraft sends as a
 /// HEARTBEAT (the case R2 coalesces).
-fn heartbeat_req() -> openraft::raft::AppendEntriesRequest<super::TypeConfig> {
+fn heartbeat_req() -> openraft::raft::AppendEntriesRequest<medulla_raft::raft::TypeConfig> {
     openraft::raft::AppendEntriesRequest {
         vote: openraft::Vote::new(1, 1),
         prev_log_id: None,
@@ -1916,7 +1936,7 @@ fn heartbeat_req() -> openraft::raft::AppendEntriesRequest<super::TypeConfig> {
 }
 
 /// A log-bearing `AppendEntries` (NON-heartbeat) — must NOT coalesce.
-fn append_with_entry() -> openraft::raft::AppendEntriesRequest<super::TypeConfig> {
+fn append_with_entry() -> openraft::raft::AppendEntriesRequest<medulla_raft::raft::TypeConfig> {
     openraft::raft::AppendEntriesRequest {
         vote: openraft::Vote::new(1, 1),
         prev_log_id: None,
@@ -1929,7 +1949,7 @@ fn append_with_entry() -> openraft::raft::AppendEntriesRequest<super::TypeConfig
 /// deterministically — the property that makes the cooperative balancer converge.
 #[test]
 fn desired_leader_round_robin_spreads_across_voters() {
-    use super::multi::desired_leader;
+    use medulla_raft::raft::multi::desired_leader;
 
     // Empty voter set ⇒ no target.
     assert_eq!(desired_leader(0, &[]), None);
@@ -1962,7 +1982,7 @@ fn desired_leader_round_robin_spreads_across_voters() {
 /// domain; node-id diversity alone is not a safety proof.
 #[test]
 fn leader_balance_failure_domain_gate_is_fail_closed() {
-    use super::multi::failure_domain_safe;
+    use medulla_raft::raft::multi::failure_domain_safe;
 
     let distinct = [(1u64, "az-a".to_string()), (2, "az-b".to_string())]
         .into_iter()
@@ -1981,7 +2001,7 @@ fn leader_balance_failure_domain_gate_is_fail_closed() {
 /// through, and drains one batch per peer (the batch-construction logic).
 #[test]
 fn heartbeat_coalescer_batches_per_peer() {
-    use super::network::{GroupRpc, HeartbeatCoalescer};
+    use medulla_raft::raft::network::{GroupRpc, HeartbeatCoalescer};
 
     let c = HeartbeatCoalescer::new();
 
@@ -2028,7 +2048,7 @@ async fn coalesced_batch_round_trips_on_one_connection() {
     // this whole body. READ guard: it excludes only a key MUTATOR, never another
     // opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    use super::network::{GroupRpc, GroupRpcReply, HeartbeatCoalescer, PeerPool};
+    use medulla_raft::raft::network::{GroupRpc, GroupRpcReply, HeartbeatCoalescer, PeerPool};
 
     let dir = fresh_dir("hbbatch");
     let backend: Arc<dyn PersistenceBackend> =
@@ -2108,7 +2128,7 @@ async fn coalesced_batch_round_trips_on_one_connection() {
 /// peer would have been withheld behind the slow one.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn heartbeat_flush_is_independent_per_peer_a_slow_peer_cannot_stall_the_others() {
-    use super::network::{
+    use medulla_raft::raft::network::{
         decode_wire, read_frame, write_frame, GroupRpc, GroupRpcReply, HeartbeatCoalescer,
         PeerPool, RaftFrame, RaftFrameReply,
     };
@@ -2221,7 +2241,7 @@ async fn heartbeat_flush_is_independent_per_peer_a_slow_peer_cannot_stall_the_ot
 
 /// Every listed member's local Raft reports `leader` as the current leader of `gid`.
 async fn all_members_observe_leader(
-    members: &[&Arc<super::multi::MultiRaft>],
+    members: &[&Arc<medulla_raft::raft::multi::MultiRaft>],
     gid: u64,
     leader: NodeId,
 ) -> bool {
@@ -2257,7 +2277,7 @@ async fn start_group_cluster(
     n: u64,
 ) -> Vec<(
     NodeId,
-    Arc<super::multi::MultiRaft>,
+    Arc<medulla_raft::raft::multi::MultiRaft>,
     Arc<RwLock<ServerState>>,
 )> {
     let addr = |i: u64| format!("127.0.0.1:{}", ports[i as usize - 1]);
@@ -2318,8 +2338,8 @@ async fn multi_node_group_join_then_leader_rebalance() {
     // this whole body. READ guard: it excludes only a key MUTATOR, never another
     // opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    use super::multi::desired_leader;
-    use super::xread::{ReadPageRequest, RouteToken};
+    use medulla_raft::raft::multi::desired_leader;
+    use medulla_raft::raft::xread::{ReadPageRequest, RouteToken};
 
     let root = std::env::temp_dir().join(format!("medulla-mnjoin-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
@@ -2369,7 +2389,7 @@ async fn multi_node_group_join_then_leader_rebalance() {
                 gid,
                 0,
             ),
-            command: super::ReplicatedMutation::graph(
+            command: medulla_raft::raft::ReplicatedMutation::graph(
                 Method::AddNode {
                     node_id: "joined-write".to_string(),
                     properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({"ok": true}))
@@ -2520,7 +2540,7 @@ async fn multi_add_group_learner_attaches_non_voting_learner_then_promotes() {
     // this whole body. READ guard: it excludes only a key MUTATOR, never another
     // opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    use super::multi::MultiRaft;
+    use medulla_raft::raft::multi::MultiRaft;
 
     let root = std::env::temp_dir().join(format!("medulla-mnlearner-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
@@ -2643,12 +2663,12 @@ async fn wire_raft_add_learner_and_change_membership_resolve_through_dispatch() 
     const SECRET: &str = "raft-test";
 
     fn signed_request(id: u64, method: Method) -> crate::protocol::Request {
-        super::harness_support::signed_request(
+        medulla_raft::raft::harness_support::signed_request(
             id,
             "__commons__",
             method,
             SECRET,
-            super::harness_support::HarnessLabels {
+            medulla_raft::raft::harness_support::HarnessLabels {
                 agent_id: TEST_AGENT,
                 nonce: "raft-admin",
                 idempotency: "raft-admin-request",
@@ -2671,7 +2691,7 @@ async fn wire_raft_add_learner_and_change_membership_resolve_through_dispatch() 
     let _ = std::fs::remove_dir_all(&root);
     let ports = free_ports(2);
     let addr = |i: usize| format!("127.0.0.1:{}", ports[i - 1]);
-    let gid = super::DEFAULT_GROUP;
+    let gid = medulla_raft::raft::DEFAULT_GROUP;
 
     let multis = start_group_cluster(&root, &ports, gid, 2).await;
     for (_, multi, state) in &multis {
@@ -2822,7 +2842,7 @@ async fn member_add_follows_the_current_leader_after_a_leader_change() {
     // this whole body. READ guard: it excludes only a key MUTATOR, never another
     // opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    use super::multi::MultiRaft;
+    use medulla_raft::raft::multi::MultiRaft;
 
     let root = std::env::temp_dir().join(format!("medulla-memadd-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);
@@ -3024,8 +3044,9 @@ mod dist_compute {
     }
 
     async fn read_authority(state: &Arc<RwLock<ServerState>>) -> GraphReadAuthority {
-        let context =
-            medulla_server_api::auth::VerifiedRequestContext::verified_for_test("pregel-test-authority");
+        let context = medulla_server_api::auth::VerifiedRequestContext::verified_for_test(
+            "pregel-test-authority",
+        );
         let state = state.read().await;
         GraphReadAuthority::from_verified(&context, &state.isolation).unwrap()
     }
@@ -3274,8 +3295,8 @@ mod matview {
 /// against the sanitized storage hash.
 #[test]
 fn group_of_equals_durable_shard_index_under_production_ring() {
-    use super::multi::GroupRouter;
     use medulla_persistence::redb_backend::shard_index;
+    use medulla_raft::raft::multi::GroupRouter;
 
     let mut names: Vec<String> = vec![
         "__commons__",
@@ -3334,7 +3355,7 @@ fn scale_add_node_req(graph: &str, node_id: &str, seq: u64) -> RaftRequest {
         // The native command is AEAD-sealed with the node's server secret and unsealed at
         // apply; this MUST match `make_state_with_backend`'s `auth_secret` ("raft-test")
         // or apply fails "native Raft command authentication failed".
-        command: super::ReplicatedMutation::graph(
+        command: medulla_raft::raft::ReplicatedMutation::graph(
             Method::AddNode {
                 node_id: node_id.to_string(),
                 properties_msgpack: rmp_serde::to_vec_named(
@@ -3406,7 +3427,7 @@ async fn map_group_leaders(
     nodes: &BTreeMap<NodeId, StartedNode>,
     n_groups: u64,
     timeout: Duration,
-) -> BTreeMap<u64, std::sync::Arc<super::multi::MultiRaft>> {
+) -> BTreeMap<u64, std::sync::Arc<medulla_raft::raft::multi::MultiRaft>> {
     let mut map = BTreeMap::new();
     for gid in 0..n_groups {
         let leader = wait_for_group_leader(nodes, gid, timeout).await;
@@ -3492,7 +3513,7 @@ fn is_leadership_redirect(error: &str) -> bool {
 /// following leadership the way a client follows a redirect: a leader election or
 /// balancer transfer in flight is re-resolved, never reported as a failed write.
 async fn write_following_leader(
-    multi: &super::multi::MultiRaft,
+    multi: &medulla_raft::raft::multi::MultiRaft,
     graph: &str,
     seq: u64,
 ) -> Result<(), String> {
@@ -3518,7 +3539,7 @@ async fn write_following_leader(
 /// Commit `writes` sequential replicated writes to `graph`, each through its
 /// group's current leader.
 async fn write_graph_workload(
-    entry: Arc<super::multi::MultiRaft>,
+    entry: Arc<medulla_raft::raft::multi::MultiRaft>,
     graph: String,
     writes: u64,
 ) -> Result<(), String> {
@@ -3531,7 +3552,7 @@ async fn write_graph_workload(
 /// Deterministic graph names for the workload: `graphs_per_group` names routed to
 /// EACH of the `n_groups` groups, so every group (and its shard) owns load.
 fn graphs_per_group(tag: &str, n_groups: u64, graphs_per_group: usize) -> Vec<String> {
-    let router = super::multi::GroupRouter::new();
+    let router = medulla_raft::raft::multi::GroupRouter::new();
     router.set_group_ring(&(0..n_groups).collect::<Vec<u64>>());
     let mut owned = vec![0usize; n_groups as usize];
     let mut graphs = Vec::new();
@@ -3562,7 +3583,7 @@ struct GroupLogLoad {
 /// routes to. The log is read from the group's own shard (`group_id % K`).
 fn group_log_load(
     backend: &RedbBackend,
-    router: &super::multi::GroupRouter,
+    router: &medulla_raft::raft::multi::GroupRouter,
     gid: u64,
     prefix: &str,
 ) -> GroupLogLoad {
@@ -3574,7 +3595,7 @@ fn group_log_load(
         .raft_log_read(gid, first, last)
         .expect("raft log read")
     {
-        let entry: openraft::type_config::alias::EntryOf<super::TypeConfig> =
+        let entry: openraft::type_config::alias::EntryOf<medulla_raft::raft::TypeConfig> =
             rmp_serde::from_slice(&blob).expect("raft log entry decodes");
         let openraft::EntryPayload::Normal(request) = entry.payload else {
             continue;
@@ -3731,7 +3752,7 @@ fn assert_group_logs(loads: &[Vec<GroupLogLoad>], expected: &[usize]) {
 }
 
 /// A graph name routed to group `want`.
-fn graph_in_group(router: &super::multi::GroupRouter, want: u64) -> String {
+fn graph_in_group(router: &medulla_raft::raft::multi::GroupRouter, want: u64) -> String {
     (0..10_000)
         .map(|i| format!("w12-fo-{i}"))
         .find(|g| router.group_of(g) == want)
@@ -3768,7 +3789,10 @@ async fn converge_failover_leaders(nodes: &BTreeMap<NodeId, StartedNode>) {
 }
 
 /// `gid`'s current Raft term and leader as `multi`'s local replica sees them.
-async fn group_term_and_leader(multi: &super::multi::MultiRaft, gid: u64) -> (u64, Option<NodeId>) {
+async fn group_term_and_leader(
+    multi: &medulla_raft::raft::multi::MultiRaft,
+    gid: u64,
+) -> (u64, Option<NodeId>) {
     let group = multi.group(gid).await.expect("group runs on this node");
     let metrics = group.raft.metrics();
     let current = metrics.borrow_watched();
@@ -3827,7 +3851,7 @@ async fn per_group_leader_failover_is_independent() {
     // this whole body. READ guard: it excludes only a key MUTATOR, never another
     // opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    use super::multi::desired_leader;
+    use medulla_raft::raft::multi::desired_leader;
 
     let root = std::env::temp_dir().join(format!("medulla-w12-failover-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&root);

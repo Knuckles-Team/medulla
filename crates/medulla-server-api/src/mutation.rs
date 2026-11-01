@@ -109,7 +109,7 @@ mod commit_paths;
 mod commit_replay;
 mod conditional;
 mod context;
-mod plan;
+pub mod plan;
 
 use plan::consensus_apply_is_authorized;
 #[cfg(test)]

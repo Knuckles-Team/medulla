@@ -112,8 +112,8 @@ pub mod store;
 pub mod xread;
 
 /// Shared setup helpers for in-process Raft harnesses.
-#[cfg(any(test, feature = "harness", feature = "compute-dist"))]
-pub(crate) mod harness_support;
+#[cfg(any(test, feature = "harness", feature = "compute-dist", feature = "test-support"))]
+pub mod harness_support;
 
 /// The in-process Raft cluster fixture. It is shared by the `harness` gauntlets
 /// (through `harness::cluster::fixture`) and the `compute-dist` modality harness,
@@ -121,7 +121,7 @@ pub(crate) mod harness_support;
 /// from both places compiled it twice (`clippy::duplicate_mod`).
 #[cfg(any(test, feature = "harness", feature = "compute-dist"))]
 #[path = "harness/fixture.rs"]
-pub(crate) mod fixture;
+pub mod fixture;
 
 /// Correctness + load harness (CONCEPT:AU-KG.ontology.emits-database-ontology-entities) — the standing proof-engine that
 /// gates every distributed/durability claim. Compiled under tests OR the explicit
@@ -192,7 +192,7 @@ pub trait RaftStateExt {
     /// Compose the deliberately incomplete cluster state used by a negative
     /// configuration test.  It is never a local fallback: `placement_authority`
     /// resolves it to `Missing` and the dispatch seam returns the typed denial.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     fn install_missing_placement_authority(&mut self, raft: RaftHandle);
 }
 
@@ -226,7 +226,7 @@ impl RaftStateExt for ServerState {
         self.set_multi_raft(Some(multi_raft));
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     fn install_missing_placement_authority(&mut self, raft: RaftHandle) {
         self.set_raft(Some(raft));
         self.set_multi_raft(None);

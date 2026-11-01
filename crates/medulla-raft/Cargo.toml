@@ -52,6 +52,7 @@ epistemic = ["dep:medulla-plan", "medulla-plan/epistemic", "dep:medulla-modality
 federation = ["dep:medulla-plan", "medulla-plan/federation", "query"]
 graphql = ["security"]
 harness = ["raft"]
+test-support = ["harness", "dep:tracing-subscriber"]
 jobs = ["dep:medulla-capabilities", "medulla-capabilities/jobs", "epistemic"]
 kv = ["redb"]
 matview = ["query", "streaming"]

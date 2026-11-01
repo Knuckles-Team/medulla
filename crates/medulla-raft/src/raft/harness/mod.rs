@@ -52,8 +52,8 @@ pub mod nemesis;
 /// boundary. The request verifier reads these values from process-global
 /// environment, so every harness using this helper must hold the guard for the
 /// complete test lifetime, including its async cluster work.
-#[cfg(test)]
-pub(crate) mod test_env {
+#[cfg(any(test, feature = "test-support"))]
+pub mod test_env {
     use std::ffi::OsString;
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::sync::{Mutex, MutexGuard};
@@ -63,7 +63,7 @@ pub(crate) mod test_env {
     static AUTH_ENV_LOCK: Mutex<()> = Mutex::new(());
     static AUTH_ENV_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 
-    pub(crate) struct AuthEnvGuard {
+    pub struct AuthEnvGuard {
         _lock: MutexGuard<'static, ()>,
         previous: Vec<(&'static str, Option<OsString>)>,
     }
@@ -79,7 +79,7 @@ pub(crate) mod test_env {
         }
     }
 
-    pub(crate) fn configure_auth_test_environment(
+    pub fn configure_auth_test_environment(
         tenant: &str,
         state_dir_tag: &str,
     ) -> AuthEnvGuard {
@@ -122,12 +122,12 @@ mod catchup_test;
 /// `pub(crate)` (not `mod`) because `super::tests::cluster_cfg_with_groups` calls
 /// [`trace_capture::init`] directly; `#[cfg(test)]` because it depends on the
 /// `tracing-subscriber` DEV-dependency, which is not linked into non-test builds.
-#[cfg(test)]
-pub(crate) mod trace_capture;
+#[cfg(any(test, feature = "test-support"))]
+pub mod trace_capture;
 
 /// EH-534: per-process cap on concurrently running cluster tests.
-#[cfg(test)]
-pub(crate) mod cluster_slots;
+#[cfg(any(test, feature = "test-support"))]
+pub mod cluster_slots;
 
 use std::sync::Arc;
 use std::time::Duration;

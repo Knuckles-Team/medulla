@@ -15,8 +15,8 @@ pub use native::{NativeMutationCommand, SealedNativeMethod, NATIVE_CONSENSUS_MET
 
 /// Build the same pending-source outbox record for Raft command tests in both
 /// this module and its top-up child. The production decoder still validates it.
-#[cfg(test)]
-fn pending_repository_intent(
+#[cfg(any(test, feature = "test-support"))]
+pub fn pending_repository_intent(
     snapshot: medulla_compute::parser::enrichment_snapshot::EligibleSnapshot,
     topic: &str,
 ) -> medulla_types::MutationOutboxIntent {
