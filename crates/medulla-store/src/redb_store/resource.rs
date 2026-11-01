@@ -47,7 +47,7 @@ mod codec;
 mod extension;
 mod fingerprint;
 mod query;
-mod status;
+pub mod status;
 mod validation;
 mod write_admission;
 mod write_admit;

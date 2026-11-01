@@ -43,8 +43,10 @@ serde_json = "1.0"
 sha2 = "0.10"
 tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
 tracing = "0.1"
+uuid = { version = "1.28", features = ["v4"] }
 
 [features]
+test-support = []
 asr-whisper = ["dep:medulla-audio", "medulla-audio/asr", ]
 ast = []
 blob = ["dep:chrono", "redb"]
@@ -63,3 +65,6 @@ cypher = ["dep:medulla-query", "medulla-query/cypher"]
 cypher-plan = ["dep:medulla-query", "medulla-query/cypher-plan"]
 result-cache = ["dep:medulla-query", "medulla-query?/result-cache"]
 server = ["dep:tokio"]
+
+[dev-dependencies]
+tempfile = "3"

@@ -215,7 +215,7 @@ impl ScanAccumulator {
         }
     }
 
-    fn finish(mut self, request: &ResourceStatsRequest) -> ScanSummary {
+    pub fn finish(mut self, request: &ResourceStatsRequest) -> ScanSummary {
         for rollup in self.tenant_rollup.values_mut() {
             rollup.over_budget = rollup.memory_bytes > rollup.budget_bytes;
         }

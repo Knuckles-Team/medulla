@@ -34,12 +34,12 @@ const VERSION_TYPE: &str = "repository-index-sha256";
 const POLICY_VERSION: &str = "repository-index";
 
 /// The verified request coordinates one scoped commit is compiled under.
-pub(crate) type IndexCommitContext<'a> = medulla_server_api::mutation_batch::GraphWriteScope<'a>;
+pub type IndexCommitContext<'a> = medulla_server_api::mutation_batch::GraphWriteScope<'a>;
 
 /// A batch that lowers past the mutation batch's operation budget is refused
 /// with this code BEFORE compilation: it commits as ONE atomic envelope or not
 /// at all, and the source transport halves it and re-sends.
-pub(crate) const BATCH_TOO_LARGE: &str = "REPOSITORY_BATCH_TOO_LARGE";
+pub const BATCH_TOO_LARGE: &str = "REPOSITORY_BATCH_TOO_LARGE";
 
 /// Encoded write-set bounds, under the durable ledger's per-record budget
 /// (64 MiB / 1 000 000 MessagePack items) with room for the envelope.
@@ -48,14 +48,14 @@ const MAX_WRITE_SET_ITEMS: usize = 900_000;
 const RECORD_ITEMS_PER_OPERATION: usize = 10;
 
 /// The lowered, digest-keyed write-set of one scoped result.
-pub(crate) struct IndexWriteSet {
+pub struct IndexWriteSet {
     pub envelope_id: String,
     digest: Digest256,
     methods: Vec<Method>,
 }
 
 /// What a property value holding host identity is stored as.
-pub(crate) const REDACTED_HOST_IDENTITY: &str = "[redacted: host identity]";
+pub const REDACTED_HOST_IDENTITY: &str = "[redacted: host identity]";
 
 /// The value as stored: repository content may quote an e-mail address or an
 /// absolute host path (a `pyproject.toml` author, a docstring). The
@@ -112,7 +112,7 @@ fn edge_method(edge: &ExtractedEdge) -> Result<Method, String> {
 /// keep one method per `(source, target, relation_type)` triple. This preserves
 /// the semantic-bridge relations that repository hydration emits while still
 /// suppressing duplicate resolver output for the same triple.
-pub(crate) fn lower(result: &IndexResult) -> Result<IndexWriteSet, String> {
+pub fn lower(result: &IndexResult) -> Result<IndexWriteSet, String> {
     let mut methods = result
         .nodes
         .iter()
@@ -188,7 +188,7 @@ pub(crate) struct EnvelopeLabels {
     pub policy_version: &'static str,
 }
 
-const REPOSITORY_LABELS: EnvelopeLabels = EnvelopeLabels {
+pub const REPOSITORY_LABELS: EnvelopeLabels = EnvelopeLabels {
     version_type: VERSION_TYPE,
     policy_version: POLICY_VERSION,
 };
@@ -218,7 +218,7 @@ pub(crate) fn build_envelope(
 
 /// Compile repository rows and its bounded enrichment intent as one commit.
 /// The compiler includes the outbox bytes in the canonical payload digest.
-pub(crate) fn build_envelope_with_outbox(
+pub fn build_envelope_with_outbox(
     ctx: &IndexCommitContext<'_>,
     write_set: IndexWriteSet,
     outbox: Vec<medulla_mutation_types::mutation_scope::MutationOutboxIntent>,
@@ -241,7 +241,7 @@ pub(crate) fn build_envelope_with_outbox(
 /// Compile an engine-lowered write-set as one envelope under `labels`. The
 /// values were already screened with [`stored_value`], so the
 /// repository-snapshot rule admits them.
-pub(crate) fn build_labelled_envelope(
+pub fn build_labelled_envelope(
     ctx: &IndexCommitContext<'_>,
     write_set: IndexWriteSet,
     labels: &EnvelopeLabels,
@@ -256,7 +256,7 @@ pub(crate) fn build_labelled_envelope(
 }
 
 /// Wrap a compiled batch as the repository-snapshot envelope of `digest`.
-fn seal(
+pub fn seal(
     mutation: medulla_protocol_types::mutation_batch::MutationBatch,
     envelope_id: String,
     digest: &Digest256,
@@ -298,7 +298,7 @@ fn seal(
 }
 
 /// Answer a batch whose write-set is durable (committed now, or already).
-pub(crate) fn respond(request_id: u64, result: IndexResult) -> Response {
+pub fn respond(request_id: u64, result: IndexResult) -> Response {
     Response::ok(
         request_id,
         ResultPayload::of::<medulla_protocol_types::result_contract::ingestion::IndexRepository>(
@@ -308,12 +308,12 @@ pub(crate) fn respond(request_id: u64, result: IndexResult) -> Response {
 }
 
 /// Answer the commit of a batch: its index result, or the commit's refusal.
-pub(crate) fn finish(result: IndexResult, commit: Response) -> Response {
+pub fn finish(result: IndexResult, commit: Response) -> Response {
     match commit.refusal_text() {
         Some(refusal) => Response::err(commit.id, refusal),
         None => respond(commit.id, result),
     }
 }
 
-#[cfg(test)]
-pub(crate) use tests::repository_envelope;
+#[cfg(any(test, feature = "test-support"))]
+pub use tests::repository_envelope;

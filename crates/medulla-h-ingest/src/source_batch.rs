@@ -29,7 +29,7 @@ mod authorization;
 #[cfg(test)]
 mod tests;
 
-pub(crate) async fn handle(
+pub async fn handle(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,

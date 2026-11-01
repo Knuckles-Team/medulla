@@ -136,7 +136,7 @@ impl PartitionBuilder {
         }
     }
 
-    fn finish(mut self) -> Partitioning {
+    pub fn finish(mut self) -> Partitioning {
         if !self.owned.is_empty() {
             let targets: Vec<VertexId> = self.out_edges.values().flatten().cloned().collect();
             for target in targets {

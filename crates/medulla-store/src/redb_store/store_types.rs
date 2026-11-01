@@ -536,7 +536,7 @@ impl<'a> DurableCrypto<'a> {
     /// memcpy of every node/edge/property value blob from inside the held write txn on
     /// the CPU-bound writer thread, for the common at-rest-encryption-off deployment.
     #[inline]
-    pub(crate) fn seal<'b>(&self, plaintext: &'b [u8]) -> Cow<'b, [u8]> {
+    pub fn seal<'b>(&self, plaintext: &'b [u8]) -> Cow<'b, [u8]> {
         #[cfg(feature = "security")]
         if let Some(c) = self.cipher {
             return Cow::Owned(c.seal(plaintext));

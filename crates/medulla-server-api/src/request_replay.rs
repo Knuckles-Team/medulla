@@ -110,7 +110,7 @@ impl NonceWindow {
     /// nonce, then closes the window (the floor becomes `u64::MAX`) so nothing
     /// accepted after the snapshot can be missing from it.
     #[cfg(feature = "security")]
-    fn seal(&mut self) -> (u64, Vec<(String, u64)>) {
+    pub fn seal(&mut self) -> (u64, Vec<(String, u64)>) {
         let floor = std::mem::replace(&mut self.floor, u64::MAX);
         (floor, self.seen.drain().collect())
     }
@@ -233,7 +233,7 @@ impl RedbReplayLedger {
     /// Writes the window as a handoff for the next incarnation and closes it.
     /// Called once the accept loops have stopped; a request still in flight
     /// after this is refused. Returns how many nonces were handed off.
-    pub(crate) fn seal(&self) -> Result<usize, String> {
+    pub fn seal(&self) -> Result<usize, String> {
         let mut window = self.window.lock_recovering("replay ledger window");
         let (floor, rows) = window.seal();
         self.durable.maintain("request_replay_handoff", |owner| {

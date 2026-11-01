@@ -20,7 +20,7 @@ impl ClusterGuard {
         Self(Some(cluster))
     }
 
-    async fn finish(mut self) {
+    pub async fn finish(mut self) {
         if let Some(cluster) = self.0.take() {
             cluster.teardown().await;
         }

@@ -89,7 +89,7 @@ impl PartitionMoveJournal {
         })
     }
 
-    pub(super) fn node_id(&self) -> String {
+    pub fn node_id(&self) -> String {
         format!("{MOVE_JOURNAL_NODE_PREFIX}{}", self.move_id)
     }
 

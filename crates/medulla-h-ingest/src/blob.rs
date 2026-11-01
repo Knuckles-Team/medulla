@@ -31,7 +31,7 @@ use medulla_types::contract::Nonce;
 /// dispatch chain falls through (routing convention). When the engine is built
 /// `--features blob` but the substrate is disabled (no persist dir), the methods
 /// return an explicit error rather than panicking.
-pub(crate) async fn try_handle(
+pub async fn try_handle(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     authority: &CarrierAuthority,

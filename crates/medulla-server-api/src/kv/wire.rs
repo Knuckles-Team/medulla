@@ -316,7 +316,7 @@ impl<'a> PageBuilder<'a> {
         Ok(true)
     }
 
-    fn finish(self) -> KvScanPage {
+    pub fn finish(self) -> KvScanPage {
         let next_cursor = self
             .more
             .then(|| self.entries.last().map(|row| row.key.clone()))

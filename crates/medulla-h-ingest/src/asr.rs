@@ -48,7 +48,7 @@ struct TranscriptionSettings {
     window_ms: u32,
 }
 
-pub(crate) async fn handle(req_id: u64, op: AsrOp) -> Response {
+pub async fn handle(req_id: u64, op: AsrOp) -> Response {
     match op {
         AsrOp::TranscribeFile {
             model_path,

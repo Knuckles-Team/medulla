@@ -180,7 +180,7 @@ impl PartitionKey {
     /// The durable control-graph node id for this key. Unique per (tenant, range) —
     /// the actual key/state live in the node's `properties_msgpack` ([`PlacementEntry`]),
     /// so this id never needs to be parsed back.
-    fn node_id(&self) -> String {
+    pub fn node_id(&self) -> String {
         format!(
             "{}\u{1}{:020}\u{1}{:020}",
             self.tenant, self.range_start, self.range_end

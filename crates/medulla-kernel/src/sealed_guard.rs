@@ -55,7 +55,7 @@ enum NodeWrite<'a> {
 }
 
 impl NodeWrite<'_> {
-    fn node_id(&self) -> &str {
+    pub fn node_id(&self) -> &str {
         match self {
             Self::Replace(id, _) | Self::Merge(id, _) | Self::Remove(id) => id,
             Self::Upsert(id, _) => id,

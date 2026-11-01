@@ -32,7 +32,7 @@ macro_rules! dispatch_modality {
     };
 }
 
-pub(super) fn handle(
+pub fn handle(
     core: &GraphCore,
     authority: &ModalityAuthority,
     op: ServedModalityOp,

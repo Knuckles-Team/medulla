@@ -62,14 +62,14 @@ use super::agent_library::{
 };
 use super::agent_row;
 
-mod status;
+pub mod status;
 #[cfg(test)]
 pub mod tests;
 mod write;
 
-pub(crate) use status::{committed_status, ledger_status_record, status_result_bytes};
+pub use status::{committed_status, ledger_status_record, status_result_bytes};
 #[cfg(any(test, feature = "test-support"))]
-pub(crate) use status::{decode_status_result, validate_status_record};
+pub use status::{decode_status_result, validate_status_record};
 pub(super) use write::{
     apply_owner_rows, finish_committed_ledger, finish_replayed, policy_admitted_context,
     require_context_tenant, retire_revision, revision_scope, stage_batch, within_write,

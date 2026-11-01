@@ -281,7 +281,7 @@ fn migrate_store(store: &StoreFile, staging: &Staging) -> Result<StoreReport, Au
     }
 }
 
-fn finish(migration: &AutoMigration) {
+pub fn finish(migration: &AutoMigration) {
     let outcome = match (migration.stores.is_empty(), migration.refused.is_empty()) {
         (_, false) => "refused",
         (true, true) => "nothing_to_do",

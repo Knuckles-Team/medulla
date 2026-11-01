@@ -34,7 +34,7 @@ use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
-pub(crate) struct PrepareContext<'a> {
+pub struct PrepareContext<'a> {
     pub state: &'a Arc<RwLock<ServerState>>,
     pub request_id: u64,
     pub graph_name: &'a str,
@@ -65,7 +65,7 @@ pub(crate) struct PreparedSourceIngestion {
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]
-pub(crate) async fn status(
+pub async fn status(
     request_id: u64,
     graph_name: &str,
     tenant_scope: &str,
@@ -133,7 +133,7 @@ pub(crate) async fn status(
 }
 
 #[cfg(not(all(feature = "redb", feature = "blob")))]
-pub(crate) async fn status(
+pub async fn status(
     request_id: u64,
     _graph_name: &str,
     _tenant_scope: &str,
@@ -148,7 +148,7 @@ pub(crate) async fn status(
 }
 
 #[cfg(not(all(feature = "redb", feature = "blob")))]
-pub(crate) async fn prepare(
+pub async fn prepare(
     _ctx: PrepareContext<'_>,
     _request: SourceIngestionRequest,
 ) -> Result<PreparedSourceIngestion, String> {
@@ -159,7 +159,7 @@ pub(crate) async fn prepare(
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]
-pub(crate) async fn prepare(
+pub async fn prepare(
     ctx: PrepareContext<'_>,
     request: SourceIngestionRequest,
 ) -> Result<PreparedSourceIngestion, String> {
@@ -1727,7 +1727,7 @@ fn build_envelope(
 /// It still refuses by the same code rather than panicking, and it exists so the
 /// shared dispatch route compiles identically in every feature profile.
 #[cfg(not(all(feature = "redb", feature = "blob")))]
-pub(crate) fn finish(_prepared: PreparedSourceIngestion, response: Response) -> Response {
+pub fn finish(_prepared: PreparedSourceIngestion, response: Response) -> Response {
     Response::err(
         response.id,
         "SOURCE_INGESTION_UNAVAILABLE: native source ingestion requires redb and blob support",
@@ -1735,7 +1735,7 @@ pub(crate) fn finish(_prepared: PreparedSourceIngestion, response: Response) -> 
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]
-pub(crate) fn finish(prepared: PreparedSourceIngestion, response: Response) -> Response {
+pub fn finish(prepared: PreparedSourceIngestion, response: Response) -> Response {
     let response_id = response.id;
     if let Some(refusal) = response.refusal_text() {
         return Response::err(response_id, refusal);

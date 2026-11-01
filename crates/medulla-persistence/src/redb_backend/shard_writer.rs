@@ -197,7 +197,7 @@ impl ShardWriter {
     /// [`Self::spawn`], so a persist dir whose open is refused is byte-identical
     /// to what it was before the call — see [`CanaryPlan`] for the bricking this
     /// separation prevents.
-    pub(super) fn prepare(db_path: String) -> Result<PreparedShard, String> {
+    pub fn prepare(db_path: String) -> Result<PreparedShard, String> {
         // ONE shared `Shard` per file (CONCEPT:MEDULLA-KG.storage.snapshot-read-off-writer): the writer thread and
         // the snapshot-read path both hold a clone of this `Arc`, and redb's exclusive
         // per-file lock is why reads share it rather than re-opening.

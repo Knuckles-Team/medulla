@@ -91,7 +91,7 @@ async fn bind_retained_top_up_identity(
 
 /// Fetch graph policy and the source from committed owner rows. The proposal
 /// only names them; it never supplies an outbox record, ceiling, or route fence.
-async fn prepare(
+pub async fn prepare(
     state: &Arc<RwLock<ServerState>>,
     verified: &VerifiedRequestContext,
     proposal: &BudgetRevisionProposal,

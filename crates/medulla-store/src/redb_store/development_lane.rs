@@ -134,7 +134,7 @@ mod cleanup;
 #[path = "development_lane/dispatch.rs"]
 mod dispatch;
 #[path = "development_lane/finish.rs"]
-mod finish;
+pub mod finish;
 #[path = "development_lane/identity.rs"]
 mod identity;
 #[path = "development_lane/invocation.rs"]
@@ -156,7 +156,7 @@ mod results;
 #[path = "development_lane/rows.rs"]
 mod rows;
 #[path = "development_lane/status.rs"]
-mod status;
+pub mod status;
 #[path = "development_lane/types.rs"]
 mod types;
 #[path = "development_lane/validation.rs"]
@@ -168,7 +168,7 @@ pub mod work_item;
 // used by redb_store and its sibling modules.
 #[cfg(any(test, feature = "server"))]
 pub use dispatch::{commit_development_lane, read_development_lane};
-pub(crate) use finish::transition_work_item_terminal_hold;
+pub use finish::transition_work_item_terminal_hold;
 pub(crate) use links::{
     validate_checkpoint_lane_links, validate_current_lane_links_in_wtx, validate_lane_links_in_wtx,
 };

@@ -1860,6 +1860,7 @@ medulla-h-graph = { path = "crates/medulla-h-graph" }
 medulla-h-ingest = { path = "crates/medulla-h-ingest" }
 
 [dev-dependencies]
+medulla-h-ingest = { path = "crates/medulla-h-ingest", features = ["test-support"] }
 medulla-raft = { path = "crates/medulla-raft", features = ["test-support"] }
 medulla-persistence = { path = "crates/medulla-persistence", features = ["test-support"] }
 medulla-server-api = { path = "crates/medulla-server-api", features = ["test-support"] }

@@ -28,7 +28,7 @@ pub(crate) const CHUNK_TYPE: &str = "DocumentChunk";
 pub(crate) const CHUNK_OF: &str = "chunkOf";
 pub(crate) const HAS_ENRICHMENT: &str = "hasEnrichment";
 const ENVELOPE_PREFIX: &str = "document-enrichment:";
-pub(crate) const LABELS: EnvelopeLabels = EnvelopeLabels {
+pub const LABELS: EnvelopeLabels = EnvelopeLabels {
     version_type: "document-enrichment-sha256",
     policy_version: "document-enrichment",
 };
@@ -249,7 +249,7 @@ fn chunk_properties(plan: &EnrichmentPlan<'_>, span: &ChunkSpan) -> Value {
 }
 
 /// Lower a plan to its digest-keyed write-set and its receipt.
-pub(crate) fn lower(
+pub fn lower(
     plan: EnrichmentPlan<'_>,
 ) -> Result<(IndexWriteSet, EnrichDocumentReceipt), String> {
     let digest_hex = &plan.document.digest_hex;

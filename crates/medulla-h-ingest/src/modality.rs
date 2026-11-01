@@ -45,7 +45,7 @@ use ingest::ingest_stream;
 /// Verified, privacy-safe authority for one request. Raw tenant, subject, policy,
 /// role, scope, and delegation values never leave request memory.
 #[derive(Clone, Debug)]
-pub(crate) struct ModalityAuthority {
+pub struct ModalityAuthority {
     scope: ServedPolicyScope,
     can_manage: bool,
     partition_token: String,
@@ -54,7 +54,7 @@ pub(crate) struct ModalityAuthority {
 }
 
 impl ModalityAuthority {
-    pub(crate) fn from_verified(
+    pub fn from_verified(
         server_secret: &str,
         claims: &RequestContextClaims,
     ) -> Result<Self, String> {
@@ -112,7 +112,7 @@ impl ModalityAuthority {
         })
     }
 
-    pub(crate) fn node_id(&self, modality: ServedModalityKind) -> String {
+    pub fn node_id(&self, modality: ServedModalityKind) -> String {
         format!(
             "__eg_internal_served_{}_{}",
             modality_name(modality),
@@ -719,7 +719,7 @@ fn capabilities<T: ConformanceTestable>() -> Result<ResultPayload, String> {
 
 /// Execute one graph-scoped served operation. Mutating calls are invoked against
 /// the mutation gateway's staged `GraphCore`; read calls receive the live snapshot.
-pub(crate) fn handle(
+pub fn handle(
     core: &GraphCore,
     authority: &ModalityAuthority,
     op: ServedModalityOp,
