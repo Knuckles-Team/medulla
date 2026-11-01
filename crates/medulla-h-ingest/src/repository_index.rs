@@ -316,6 +316,11 @@ pub fn finish(result: IndexResult, commit: Response) -> Response {
 }
 
 #[cfg(any(test, feature = "test-support"))]
+use medulla_mutation_types::mutation_scope::MutationSurface;
+#[cfg(any(test, feature = "test-support"))]
+use medulla_server_api::mutation_batch::{compile_methods, CompileBatch};
+
+#[cfg(any(test, feature = "test-support"))]
 /// The repository-snapshot envelope the durable route commits for `result`.
 pub fn repository_envelope(result: &IndexResult) -> Result<ChangeEnvelope, String> {
     let IndexWriteSet {
