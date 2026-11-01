@@ -100,3 +100,19 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T093 [US2] MEDULLA-SDLC-R018 Release graph is ingested .
 - [ ] T094 [US2] MEDULLA-SDLC-R018.1 Bundle plans ingest as records.
 - [ ] T095 [US2] MEDULLA-SDLC-R018.2 Hot-path proof: release graph competency.
+- [ ] T096 [US6] MEDULLA-SDLC-R019 Autonomous delivery of a change proposal (rollup).
+- [ ] T097 [P] [US6] MEDULLA-SDLC-R019.1 Model: delivery vocabulary.
+- [ ] T098 [P] [US6] MEDULLA-SDLC-R019.2 Model: delivery records.
+- [ ] T099 [US6] MEDULLA-SDLC-R019.3 Open one delivery per dispatched slice.
+- [ ] T100 [US6] MEDULLA-SDLC-R019.4 Shadow dispatch records what the loop would deliver.
+- [ ] T101 [US6] MEDULLA-SDLC-R019.5 Feedback reaches the delivery that follows the proposal.
+- [ ] T102 [P] [US6] MEDULLA-SDLC-R019.6 Mandate revalidation before a resume.
+- [ ] T103 [US6] MEDULLA-SDLC-R019.7 Assignment reports and the derived delivery stage.
+- [ ] T104 [US6] MEDULLA-SDLC-R019.8 One structured question per delivery.
+- [ ] T105 [P] [US6] MEDULLA-SDLC-R019.9 Automated review rounds have a budget.
+- [ ] T106 [US6] MEDULLA-SDLC-R019.10 Merge arming verdict keeps owner-only merge.
+- [ ] T107 [US6] MEDULLA-SDLC-R019.11 A delivery ends with the outcome of its proposals.
+- [ ] T108 [P] [US6] MEDULLA-SDLC-R019.12 A person's proposal that carries the work supersedes the delivery.
+- [ ] T109 [US6] MEDULLA-SDLC-R019.13 Restart recovery never repeats an outside effect blindly.
+- [ ] T110 [US6] MEDULLA-SDLC-R019.14 Wiring: served delivery methods.
+- [ ] T111 [US6] MEDULLA-SDLC-R019.15 Hot-path proof: served delivery journey.

@@ -99,6 +99,22 @@ Governing spec: [spec.md](spec.md).
 | `MEDULLA-SDLC-R018` | Release graph is ingested  | See each child. |
 | `MEDULLA-SDLC-R018.1` | Bundle plans ingest as records | `tests/sdlc/test_release_graph_served.py::test_bundle_plan_becomes_records_with_in_bundle_edges` |
 | `MEDULLA-SDLC-R018.2` | Hot-path proof: release graph competency | `tests/sdlc/test_release_graph_served.py::test_open_tasks_of_bundle_in_train_order_match_plan` |
+| `MEDULLA-SDLC-R019` | Autonomous delivery of a change proposal | `tests/sdlc/test_delivery_served.py::test_slice_to_merged_proposal_through_feedback` |
+| `MEDULLA-SDLC-R019.1` | Model: delivery vocabulary | `crates/medulla-core/tests/delivery_vocab.rs::delivery_classes_extend_core_and_are_shaped` |
+| `MEDULLA-SDLC-R019.2` | Model: delivery records | `crates/medulla-source-types/tests/delivery_records.rs::delivery_records_round_trip_and_refuse_unknown_values` |
+| `MEDULLA-SDLC-R019.3` | Open one delivery per dispatched slice | `crates/medulla-sdlc/tests/delivery_open.rs::one_delivery_per_slice_and_idempotent_reopen` and `tests/sdlc/test_delivery_served.py::test_dispatch_opens_one_delivery_per_slice` |
+| `MEDULLA-SDLC-R019.4` | Shadow dispatch records what the loop would deliver | `tests/sdlc/test_delivery_served.py::test_unprompted_slice_is_recorded_not_run_in_development_mode` |
+| `MEDULLA-SDLC-R019.5` | Feedback reaches the delivery that follows the proposal | `crates/medulla-sdlc/tests/delivery_feedback.rs::events_route_to_following_deliveries_and_bots_never_resume` and `tests/sdlc/test_delivery_served.py::test_failed_check_reaches_the_delivery` |
+| `MEDULLA-SDLC-R019.6` | Mandate revalidation before a resume | `crates/medulla-sdlc/tests/delivery_mandate.rs::resume_needs_open_rows_mode_and_principal` |
+| `MEDULLA-SDLC-R019.7` | Assignment reports and the derived delivery stage | `crates/medulla-sdlc/tests/delivery_stage.rs::stage_table_first_match_wins` |
+| `MEDULLA-SDLC-R019.8` | One structured question per delivery | `crates/medulla-sdlc/tests/delivery_stage.rs::one_question_replaced_or_cleared` |
+| `MEDULLA-SDLC-R019.9` | Automated review rounds have a budget | `crates/medulla-sdlc/tests/delivery_rounds.rs::fourth_automated_round_is_not_addressed` |
+| `MEDULLA-SDLC-R019.10` | Merge arming verdict keeps owner-only merge | `crates/medulla-sdlc/tests/delivery_arming.rs::arm_needs_owner_approval_on_head_and_passing_gates` and `tests/sdlc/test_delivery_served.py::test_pushed_revision_returns_disarm` |
+| `MEDULLA-SDLC-R019.11` | A delivery ends with the outcome of its proposals | `crates/medulla-sdlc/tests/delivery_ending.rs::merge_of_last_open_proposal_ends_as_merged` |
+| `MEDULLA-SDLC-R019.12` | A person's proposal that carries the work supersedes the delivery | `crates/medulla-sdlc/tests/delivery_superseded.rs::containing_person_proposal_supersedes_and_related_does_not` |
+| `MEDULLA-SDLC-R019.13` | Restart recovery never repeats an outside effect blindly | `crates/medulla-sdlc/tests/delivery_recovery.rs::expired_assignment_restarts_with_note_and_unread_inputs_once` |
+| `MEDULLA-SDLC-R019.14` | Wiring: served delivery methods | `tests/sdlc/test_delivery_served.py::test_every_delivery_method_is_served_and_scoped` |
+| `MEDULLA-SDLC-R019.15` | Hot-path proof: served delivery journey | `tests/sdlc/test_delivery_served.py::test_slice_to_merged_proposal_through_feedback` |
 
 ## Negative and boundary cases
 

@@ -1,11 +1,11 @@
-# MEDULLA-SDLC — Design and implementation plan
+# MEDULLA-SDLC — Implementation plan
 
 Governing spec: [spec.md](spec.md).
 Code: ../../crates/medulla-compute/src/parser/tree_sitter.rs ../../src/server/dispatch/router/source_ingest.rs
 
 ## Summary
 
-The engine holds the whole software lifecycle as typed records. This plan extends that chain with spec artifacts as graph records. A deterministic parser ingests specs, rows, plans, tasks and contracts with the repository code graph. Per-file digests keep the ingest incremental. Competency questions, task dispatch, a research loop and typed proposals read those records. The existing owners are reused: MEDULLA-SCM for changesets and gates, MEDULLA-REPO-INGEST for code items, and MEDULLA-DECISION-ENGINE for decisions.
+The engine holds the whole software lifecycle as typed records. This plan extends that chain with spec artifacts as graph records. A deterministic parser ingests specs, rows, plans, tasks and contracts with the repository code graph. Per-file digests keep the ingest incremental. Competency questions, task dispatch, a research loop and typed proposals read those records. The existing owners are reused: MEDULLA-SCM for changesets and gates, MEDULLA-REPO-INGEST for code items, and MEDULLA-DECISION-ENGINE for decisions. Row R019 adds the autonomous delivery of each slice as a pull request, with feedback routing and an owner-only merge verdict.
 
 ## Technical Context
 
@@ -35,11 +35,22 @@ src/server/handlers/source_ingestion/spec_projection.rs   existing  incremental 
 src/server/handlers/lifecycle.rs                      existing  mode, goal and proposal methods
 src/server/handlers/decide/family/task_context.rs     new   run-context assembly (R015.2)
 specs/development-lifecycle/contracts/                new   seam contracts
+crates/medulla-core/ontology/sdlc_lifecycle-v1.ttl    existing  delivery classes (R019.1)
+crates/medulla-source-types/src/delivery.rs           new   delivery records (R019.2)
+crates/medulla-sdlc/src/lifecycle/delivery/           new   open, feedback, mandate, stage, rounds, arming, ending, superseded, recovery (R019.3 to R019.13)
+crates/medulla-server-router/src/dispatch/router/lifecycle.rs  existing  delivery method arms (R019.14)
+crates/medulla-protocol-types/src/protocol/method/method_10.rs existing  delivery methods (R019.14)
 ```
 
 ## Phase 0: Research
 
-No unknowns. The budgets of R014.2 are starting defaults. A measurement on this platform replaces them.
+The budgets of R014.2 are starting defaults. A measurement on this platform replaces them. The delivery rows of R019 had five unknowns. [research.md](research.md) resolves each one.
+
+1. Which events must reach a delivery, and how does the engine avoid waking a run for noise?
+2. Which facts must hold before the platform may arm a merge, and who performs the arming?
+3. How many automated review rounds should a delivery address?
+4. How does a delivery recover after a restart without a repeated outside effect?
+5. How does an owner gain trust before unprompted delivery starts?
 
 ## Phase 1: Design
 
@@ -165,6 +176,21 @@ Each codebase has a ProjectMode record: `reference`, `development` or `evolving`
 
 `Decide` with `TaskPlan` builds dependency layers from Task records. The engine assembles a context for each task and hands it to an agent run. The run result enters only through `SubmitChangeset` and the gates. A failure files a defect and raises evidence for a proposal. A plan unknown triggers research through the connectors. Findings return as cited proposals. Proposals have twelve closed kinds and land only as pull requests.
 
+#### Autonomous delivery
+
+A delivery is the record of one slice on its way to a merged pull request. R015.3 dispatches the slice, and R019.3 opens the delivery with an immutable mandate. Meristem runs each assignment and reports one of six states. Arbora turns check, review and merge events of the code host into `DeliveryFeedback` calls. The engine routes each event to the deliveries that follow its proposal. It derives the stage, counts automated review rounds and decides merge arming. The owner approval on the head commit is the only path to `arm`. The engine never merges, and arbora never merges as the platform principal. [data-model.md](data-model.md) lists the records. [quickstart.md](quickstart.md) runs the served journey.
+
+```mermaid
+flowchart LR
+  D[TaskPlan slice] -->|DeliveryOpen| V[Delivery]
+  V -->|assignment| M[Meristem run]
+  M -->|DeliveryReport| V
+  H[Code host event] -->|arbora intake| F[DeliveryFeedback]
+  F --> V
+  V -->|MergeArming| A{arm, disarm, hold}
+  A -->|owner approval on head| R[arbora arm call]
+```
+
 ### Interfaces and data model
 
 - `RecordRelease { tenant, repo, version, ref, changeset_head, artifact_digests }` returns the sealed release record.
@@ -178,11 +204,36 @@ Each codebase has a ProjectMode record: `reference`, `development` or `evolving`
 - `ProjectModeSet { tenant, repo, mode, approval_ref? }` returns the ProjectMode record.
 - `GoalPut { tenant, repo, statement, targets }` returns the Goal record.
 - `ProposalPut`, `ProposalList` and `ProposalDecide` write, list and decide proposals.
-- Contracts: [spec-artifact-graph](contracts/spec-artifact-graph.md) and [proposal-review](contracts/proposal-review.md).
+- `DeliveryOpen`, `DeliveryFeedback`, `DeliveryReport`, `DeliveryStatus`, `DeliveryList`, `DeliveryStop` and `DeliveryRetry` hold one delivery each (R019.14).
+- `Decide` with `QuestionKind::MergeArming` returns `arm`, `disarm` or `hold` with its premises (R019.10).
+- Contracts: [spec-artifact-graph](contracts/spec-artifact-graph.md), [proposal-review](contracts/proposal-review.md), [gate-verdicts-and-release](contracts/gate-verdicts-and-release.md), [task-run](contracts/task-run.md) and [autonomous-delivery](contracts/autonomous-delivery.md).
+
+### Risks, alternatives, and decisions
+
+- **Derived, not declared.** Agents never write lifecycle edges by hand. Rules derive them, so the graph cannot drift from the log.
+- **Status from the graph.** The derived state replaces hand-run status files as truth. A file export stays for public pages.
+- **Defect is not incident.** An incident is an operational event. A defect is a code fault. An incident may raise a defect.
+- **Risk:** test binding markers vary by language. The `verified.binding` rule reads the two marker forms of the spec standard only.
+- **Deterministic ingest.** A model call in ingest makes state irreproducible and slow. The parser reads fixed forms only.
+- **Proposals are not writes.** A loop that edits specs directly bypasses review. Every change goes through a pull request.
+- **Risk:** the parser refuses an unknown file form and names the file and line. Authors fix the source.
+- **Owner-only merge.** The platform may open, revise and close its own pull requests. Only an owner approval on the head commit leads to `arm`, and no platform principal merges.
+- **Shadow before autonomy.** An unprompted slice in mode `development` records what it would deliver. The owner reads those records before promotion to `evolving`.
+- **Risk:** feedback noise wakes runs and costs model time. Check and bot events never resume an ended delivery, and automated review rounds have a budget.
+- **Risk:** a restart repeats a pull-request comment or push. Effects without a receipt are `uncertain` and need reconciliation before a retry.
+
+### North star
+
+The engine drives development from its own graph. Specs, plans, tasks and contracts are records. A planner asks the next unblocked task and gets its context. Agent runs implement it, the gates accept it, and the evolution loop proposes improvements for review. The exit gate is the competency question set of `MEDULLA-SDLC-R014.6` answered through the served path (`MEDULLA-CQ-ORCH`).
+
+### Delivery phase
+
+Rows `R014` to `R018` serve P5. The next-task question of `R014.6` supports the execution-plan answer of `MEDULLA-CQ-ORCH-R012` in scenario `ARBORA-ACCEPTANCE-R006.7`. Row `R012.8` sets the mode that gates every proposal and has no phase of its own. Rows `R019` to `R019.15` serve P5 and land after the crate split. Rows `R001` to `R006` and `R012.1` to `R012.7` serve P1 to P4.
 
 ## Phase 2: Task approach
 
 `tasks.md` holds one task line per row, producer first. Model rows come before behaviour, wiring and hot-path rows. Rows `R014.1`, `R014.5`, `R016.5` and `R017.2` carry `[P]` because they share no file with their siblings.
+Rows `R019.1`, `R019.2`, `R019.6`, `R019.9` and `R019.12` carry `[P]` for the same reason. The R019 rows land after the medulla 3.0.0 crate split, on the post-split paths.
 
 ## Complexity Tracking
 
@@ -196,6 +247,8 @@ status derivation has a differential test against the shared status generator.
 
 The ingest budget gates are the bench groups `lifecycle/spec_parse` and `lifecycle/spec_ingest`. The parser makes no model call, and a test proves it.
 
+The delivery budget gates are the bench groups `lifecycle/delivery`, `lifecycle/delivery_feedback`, `lifecycle/delivery_stage` and `lifecycle/delivery_arming`. Each gates a 10 percent regression. The knobs `sdlc.delivery.owner_approval_required` and `sdlc.delivery.shadow_unprompted_in_development` are Fixed safety knobs. The knobs `sdlc.delivery.max_automated_review_rounds` (3) and `sdlc.delivery.arm_max_changed_lines` (400) are tunable starting values.
+
 ## Production caller chain
 
 1. MEDULLA-SCM-R003 accepts a changeset. The accept path calls the re-index hook of MEDULLA-SCM-R006.
@@ -207,30 +260,18 @@ The ingest budget gates are the bench groups `lifecycle/spec_parse` and `lifecyc
 7. arbora serves the artifact reads, the run dispatch, the mode and the proposal operations through `ARBORA-OPS-R896`.
 8. `run.dispatch` calls `Decide` with `TaskPlan`. The engine hands each task to a run through the MERISTEM-SCM task-run row. The result returns through `SubmitChangeset` and the gates.
 
+9. arbora `development.run.start` dispatches a slice. `open_delivery` in `crates/medulla-sdlc/src/lifecycle/delivery/open.rs` opens its delivery (R019.3).
+10. arbora receives a code-host event and calls `DeliveryFeedback`. `route_feedback` in `feedback.rs` routes it (R019.5).
+11. arbora asks `Decide` with `MergeArming` before any arming call. `arming_verdict` in `arming.rs` answers (R019.10).
+
 Obsolete paths: no hand-run status file is truth, and no spec file is written outside a changeset.
 
 ## Cross-repo seams
 
-- `ARBORA-OPS-R853` and `ARBORA-OPS-R896.1` to `R896.5` serve the lifecycle, artifact, mode, run and proposal operations. Contracts: `contracts/spec-artifact-graph.md`, `contracts/proposal-review.md`.
-- `PIPE-GATES-R004` and `PIPE-CONNSPEC-R009` publish gate verdicts and read the derived state.
-- `PIPE-RELEASE-R025` computes release plans that `MEDULLA-SDLC-R018` ingests.
-- `MERISTEM-SCM-R011.2` performs one task run. `OVERSTORY-DECIDE-R009` shows proposals.
-- `MEDULLA-DECISION-ENGINE-R134.111`, `R705`, `R654`, `R811`, `R817`, `R805` and `R179` own the decisions that this spec consumes.
+- `ARBORA-OPS-R853` and `ARBORA-OPS-R896.1` to `R896.4` serve the lifecycle, artifact, mode and run operations. Contract: `contracts/spec-artifact-graph.md`.
+- `ARBORA-OPS-R896.5` and `OVERSTORY-DECIDE-R009` list and decide proposals. Contract: `contracts/proposal-review.md`.
+- `PIPE-GATES-R004`, `PIPE-CONNSPEC-R009` and `PIPE-RELEASE-R025` publish verdicts, read the derived state and compute release plans. Contract: `contracts/gate-verdicts-and-release.md`.
+- `MERISTEM-SCM-R011.2` performs one task run for `MEDULLA-SDLC-R015.3`. Contract: `contracts/task-run.md`.
+- `ARBORA-OPS-R896` serves the delivery methods of `MEDULLA-SDLC-R019.14`. Contract: `contracts/autonomous-delivery.md`.
 
-## Risks, alternatives, and decisions
-
-- **Derived, not declared.** Agents never write lifecycle edges by hand. Rules derive them, so the graph cannot drift from the log.
-- **Status from the graph.** The derived state replaces hand-run status files as truth. A file export stays for public pages.
-- **Defect is not incident.** An incident is an operational event. A defect is a code fault. An incident may raise a defect.
-- **Risk:** test binding markers vary by language. The `verified.binding` rule reads the two marker forms of the spec standard only.
-- **Deterministic ingest.** A model call in ingest makes state irreproducible and slow. The parser reads fixed forms only.
-- **Proposals are not writes.** A loop that edits specs directly bypasses review. Every change goes through a pull request.
-- **Risk:** the parser refuses an unknown file form and names the file and line. Authors fix the source.
-
-## North star
-
-The engine drives development from its own graph. Specs, plans, tasks and contracts are records. A planner asks the next unblocked task and gets its context. Agent runs implement it, the gates accept it, and the evolution loop proposes improvements for review. The exit gate is the competency question set of `MEDULLA-SDLC-R014.6` answered through the served path (`MEDULLA-CQ-ORCH`).
-
-## Delivery phase
-
-Rows `R014` to `R018` serve P5. The next-task question of `R014.6` supports the execution-plan answer of `MEDULLA-CQ-ORCH-R012` in scenario `ARBORA-ACCEPTANCE-R006.7`. Row `R012.8` sets the mode that gates every proposal and has no phase of its own. Rows `R001` to `R006` and `R012.1` to `R012.7` serve P1 to P4.
+The decisions this spec consumes stay inside medulla: `MEDULLA-DECISION-ENGINE-R134.111`, `R705`, `R654`, `R811`, `R817`, `R805` and `R179`.
