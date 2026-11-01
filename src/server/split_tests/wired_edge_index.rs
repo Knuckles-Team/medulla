@@ -17,7 +17,7 @@ use crate::server::wire::wired_catalog_tests::{
     authority, create_test_graph, read_rows, request, session_for, test_persist_dir_of, test_state,
     CREATOR,
 };
-use crate::server::wire::WireSession;
+use crate::server::wire::{WireProtocol as _, WireSession};
 use crate::server::ServerState;
 
 const TENANT: &str = "tenant-shared";
