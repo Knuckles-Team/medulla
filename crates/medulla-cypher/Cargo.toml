@@ -47,7 +47,7 @@ medulla-mining = { path = "../medulla-mining", optional = true }
 
 [features]
 cypher = ["dep:petgraph"]
-cypher-graphlearn = ["cypher"]
+cypher-graphlearn = ["cypher", "medulla-graph-algos/graphlearn"]
 cypher-mining = ["cypher", "dep:medulla-mining", "medulla-mining/mining"]
 cypher-plan = ["cypher", "dep:tracing"]
 result-cache = ["cypher", "medulla-core/result-cache", "medulla-graph-core/result-cache", "medulla-query-cache/result-cache"]

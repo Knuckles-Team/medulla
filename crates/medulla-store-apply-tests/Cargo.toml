@@ -33,9 +33,9 @@ tracing = "0.1"
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-work-types = { path = "../medulla-work-types" }
-medulla-resource-store = { path = "../medulla-resource-store" }
+medulla-resource-store = { path = "../medulla-resource-store", features = ["server"] }
 medulla-work-store = { path = "../medulla-work-store" }
-medulla-lane-store = { path = "../medulla-lane-store" }
+medulla-lane-store = { path = "../medulla-lane-store", features = ["server"] }
 
 medulla-statechart = { path = "../medulla-statechart", optional = true }
 
