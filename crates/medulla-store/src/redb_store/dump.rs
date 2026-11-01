@@ -831,7 +831,7 @@ pub fn encode_meta_with_incarnation(
     )
 }
 
-pub(crate) fn encode_meta_record(
+pub fn encode_meta_record(
     name: &str,
     graph_type: GraphType,
     incarnation_id: &str,
@@ -995,7 +995,7 @@ pub(crate) fn legacy_incarnation_id(graph: &str) -> String {
     format!("{:x}", digest.finalize())[..32].to_string()
 }
 
-pub(crate) fn new_incarnation_id(graph: &str) -> String {
+pub fn new_incarnation_id(graph: &str) -> String {
     static NEXT_INCARNATION: AtomicU64 = AtomicU64::new(1);
     use sha2::{Digest, Sha256};
     let mut digest = Sha256::new();
@@ -1016,7 +1016,7 @@ pub(crate) fn new_incarnation_id(graph: &str) -> String {
     format!("incarnation:durable:{}", hex::encode(digest.finalize()))
 }
 
-pub(crate) fn decode_meta_record(graph: &str, blob: &[u8]) -> Result<GraphMetaRecord, String> {
+pub fn decode_meta_record(graph: &str, blob: &[u8]) -> Result<GraphMetaRecord, String> {
     let record: GraphMetaRecord = match decode_durable::<GraphMetaRecord>(blob) {
         Ok(record) => record,
         // A legacy row cannot decode into the versioned record at all (it has no

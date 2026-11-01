@@ -26,7 +26,7 @@ type NodeRows<'table> = ScopedOwnerTableMut<'table, (&'static str, &'static str)
 /// The rows and commit scope a native record write (control lease or work
 /// market) may touch: the node table, plus the edge and command-sequence
 /// tables a `GapUpsert` needs to admit its WorkItem.
-pub(crate) struct NativeRecordRequest<'args, 'table, 'crypto> {
+pub struct NativeRecordRequest<'args, 'table, 'crypto> {
     pub(crate) graph: &'args str,
     pub(crate) batch_id: &'args str,
     pub(crate) method: &'args Method,
@@ -40,7 +40,7 @@ pub(crate) struct NativeRecordRequest<'args, 'table, 'crypto> {
 
 /// The native-record arm of the WorkItem-family applier: control leases, then
 /// the work market. `None` for any method that is neither.
-pub(crate) fn apply_native_record_rows(
+pub fn apply_native_record_rows(
     request: NativeRecordRequest<'_, '_, '_>,
 ) -> Result<Option<medulla_types::protocol::ResultPayload>, String> {
     let lease = apply_control_lease_rows(

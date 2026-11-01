@@ -67,7 +67,7 @@ pub(super) fn owned(
 }
 
 /// Historical owner-bound evidence, independent of current execution authority.
-pub(crate) fn read_admission(
+pub fn read_admission(
     shard: &Shard,
     graph: &str,
     tenant: &str,

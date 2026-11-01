@@ -93,7 +93,7 @@ pub(super) fn fresh_attempt_id(prefix: &str) -> String {
 /// is the hash we just stored. So the persisted chain is byte-for-byte what the scanning
 /// version produced — tamper-evidence and `verify_audit` are unchanged.
 #[cfg(feature = "security")]
-pub(crate) fn append_audit_entry(
+pub fn append_audit_entry(
     audit: &mut ScopedOwnerTableMut<'_, (&str, u64), &[u8]>,
     cache: &mut AuditTailCache,
     graph: &str,

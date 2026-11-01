@@ -39,7 +39,7 @@ pub(super) fn load_row(
 
 /// The control-lease arm of the WorkItem-family applier: `None` for any
 /// method that is not a control-lease write.
-pub(crate) fn apply_control_lease_rows(
+pub fn apply_control_lease_rows(
     graph: &str,
     method: &Method,
     nodes: &mut NativeNodeRows<'_>,
