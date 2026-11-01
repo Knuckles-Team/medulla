@@ -57,11 +57,11 @@ pub(super) async fn dispatch_identity_and_access_methods(
         // Security-only like `RbacAdmin`: the ledger lives in the RBAC image.
         #[cfg(feature = "security")]
         Method::RbacElevation { op, actor } => {
-            crate::dispatch::elevation::dispatch_rbac_elevation(
+            medulla_server_identity::dispatch::elevation::dispatch_rbac_elevation(
                 state,
                 req.id,
                 verified_context,
-                crate::dispatch::elevation::ElevationStampAuthority::of(
+                medulla_server_identity::dispatch::elevation::ElevationStampAuthority::of(
                     state_machine_authorized,
                 ),
                 (op, actor),
@@ -71,11 +71,11 @@ pub(super) async fn dispatch_identity_and_access_methods(
         // ── Governed changes (EH-560) ─────────────────────────────────────
         #[cfg(feature = "security")]
         Method::GovernedChange { op, actor } => {
-            crate::dispatch::governed::dispatch_governed_change(
+            medulla_server_identity::dispatch::governed::dispatch_governed_change(
                 state,
                 req.id,
                 verified_context,
-                crate::dispatch::elevation::ElevationStampAuthority::of(
+                medulla_server_identity::dispatch::elevation::ElevationStampAuthority::of(
                     state_machine_authorized,
                 ),
                 (op, actor),
@@ -96,11 +96,11 @@ async fn dispatch_identity_store_method(
     match method {
         #[cfg(feature = "security")]
         Method::Identity { op, stamp } => ControlFlow::Break(
-            crate::dispatch::identity_store::dispatch_identity(
+            medulla_server_identity::dispatch::identity_store::dispatch_identity(
                 ctx.state,
                 ctx.req.id,
                 ctx.verified_context,
-                crate::dispatch::elevation::ElevationStampAuthority::of(
+                medulla_server_identity::dispatch::elevation::ElevationStampAuthority::of(
                     ctx.state_machine_authorized,
                 ),
                 (op, stamp),

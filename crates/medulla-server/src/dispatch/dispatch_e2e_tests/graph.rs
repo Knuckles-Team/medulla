@@ -2,7 +2,7 @@
 
 use medulla_server_graph::dispatch::graph_pipeline::*;
 use crate::dispatch::request_boundary::dispatch;
-use crate::dispatch::*;
+use DISPATCHGLOB;
 use medulla_server_blob::blob::BlobStateExt;
 
 // ── Admin-scope enforcement dispatch round-trip (CONCEPT:MEDULLA-KG.compute.feature, MEDULLA-P0-6) ──────

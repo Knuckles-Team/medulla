@@ -1,15 +1,16 @@
 //! Source regressions only: these fixtures do not qualify a deployed broker,
 //! credential authority, generated client or mounted serving surface.
-use crate::dispatch::*;
-use crate::dispatch::identity_store::resolution_context::*;
+use DISPATCHGLOB;
+use medulla_server_identity::dispatch::identity_store::resolution_context::*;
 use medulla_identity_types::{
     identity::IdentityOp, identity::IdentityRefusal, identity::IdentityReply,
     identity::IdentityStamp, identity::IdentityStore, identity::PrincipalResolution,
     identity::SessionOp, identity::TokenOp, identity::UserOp,
 };
 use medulla_types::acl::RequestContextClaims;
-use crate::dispatch::elevation::ElevationStampAuthority;
-use crate::dispatch::{ServerState, VerifiedRequestContext};
+use medulla_server_identity::dispatch::elevation::ElevationStampAuthority;
+use medulla_server_api::state::ServerState;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::authority_context::request_context_policy;
 use medulla_server_api::authority_context::RequestContextPolicy;
 use medulla_server_api::identity_view::identity_actor;
@@ -528,7 +529,7 @@ fn all_producer_refusals_survive_final_response_classification() {
         ),
     ];
     for (error, expected) in cases {
-        let response = crate::dispatch::identity_store::respond(9, &session_op(), &stamp, Err(error));
+        let response = medulla_server_identity::dispatch::identity_store::respond(9, &session_op(), &stamp, Err(error));
         assert_refusal(&response, expected);
     }
 }
@@ -562,14 +563,14 @@ async fn credential_expiring_while_waiting_for_write_lock_refuses_without_touch(
         op: session_request(),
         stamp: None,
     };
-    crate::dispatch::identity_store::stamp_identity(&state, &mut method, &ctx, ElevationStampAuthority::External)
+    medulla_server_identity::dispatch::identity_store::stamp_identity(&state, &mut method, &ctx, ElevationStampAuthority::External)
         .await
         .unwrap();
     let Method::Identity { op, stamp } = method else {
         unreachable!()
     };
     let mut guard = state.write().await;
-    let hash = crate::dispatch::identity_store::secrets::token_hash(SESSION);
+    let hash = medulla_server_identity::dispatch::identity_store::secrets::token_hash(SESSION);
     let before_poll = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let expires = before_poll + 200;
     let old_touch = before_poll - 120_000;
@@ -578,7 +579,7 @@ async fn credential_expiring_while_waiting_for_write_lock_refuses_without_touch(
         identity["sessions"][&hash]["last_seen_at_ms"] = json!(old_touch);
     });
     let before = guard.isolation.rbac().identity_store().clone();
-    let mut blocked = Box::pin(crate::dispatch::identity_store::dispatch_identity(
+    let mut blocked = Box::pin(medulla_server_identity::dispatch::identity_store::dispatch_identity(
         &state,
         10,
         &ctx,
@@ -615,9 +616,9 @@ async fn credential_expiring_while_waiting_for_write_lock_refuses_without_touch(
 #[tokio::test]
 async fn pending_mfa_refusal_preserves_a_completable_ceremony_after_touch() {
     let state = ready_engine().await;
-    let hash = crate::dispatch::identity_store::secrets::token_hash(SESSION);
+    let hash = medulla_server_identity::dispatch::identity_store::secrets::token_hash(SESSION);
     let code = "recovery-0123456789abcdefghijklmnop";
-    let code_hash = crate::dispatch::identity_store::secrets::token_hash(code);
+    let code_hash = medulla_server_identity::dispatch::identity_store::secrets::token_hash(code);
     let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     {
         let mut guard = state.write().await;

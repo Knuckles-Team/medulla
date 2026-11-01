@@ -41,13 +41,8 @@ use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::state::{timed_write, ServerState};
 
 
-pub mod consensus;
 #[cfg(test)]
 pub mod dispatch_e2e_tests;
-pub mod elevation;
-pub mod governed;
-#[cfg(feature = "security")]
-pub mod identity_store;
 
 pub mod request_boundary;
 pub mod router;

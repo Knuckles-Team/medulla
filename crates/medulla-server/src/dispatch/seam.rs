@@ -77,7 +77,7 @@ impl DispatchApi for DispatchSeam {
             String,
         >,
     > {
-        Box::pin(super::consensus::verified_served_registration(
+        Box::pin(medulla_server_consensus::dispatch::consensus::verified_served_registration(
             state,
             verified,
             server_name,
@@ -123,7 +123,7 @@ impl DispatchApi for DispatchSeam {
         identity_bootstrap: bool,
         method: Method,
     ) -> SeamFuture<'a, Response> {
-        Box::pin(super::consensus::propose_native_mutation(
+        Box::pin(medulla_server_consensus::dispatch::consensus::propose_native_mutation(
             state,
             request_graph,
             request_id,
@@ -143,7 +143,7 @@ impl DispatchApi for DispatchSeam {
         authority: &'a medulla_server_api::api::persistence::RaftMutationContext,
         method: Method,
     ) -> SeamFuture<'a, Response> {
-        Box::pin(super::consensus::apply_replicated_native(
+        Box::pin(medulla_server_consensus::dispatch::consensus::apply_replicated_native(
             state,
             graph,
             request_id,
@@ -164,7 +164,7 @@ impl DispatchApi for DispatchSeam {
         phase: medulla_server_api::api::reentry::TransactionParticipantPhase,
         participant: medulla_server_api::api::reentry::ReplicatedParticipantRef<'a>,
     ) -> SeamFuture<'a, Result<bool, String>> {
-        Box::pin(super::consensus::apply_replicated_transaction_participant(
+        Box::pin(medulla_server_consensus::dispatch::consensus::apply_replicated_transaction_participant(
             state,
             request_id,
             committed_at_ms,
@@ -186,7 +186,7 @@ impl DispatchApi for DispatchSeam {
         idempotency_key: Option<&'a str>,
         expected_tenant: Option<&'a str>,
     ) -> SeamFuture<'a, Response> {
-        Box::pin(super::consensus::apply_replicated_transaction_prepare(
+        Box::pin(medulla_server_consensus::dispatch::consensus::apply_replicated_transaction_prepare(
             state,
             request_id,
             committed_at_ms,
@@ -206,7 +206,7 @@ impl DispatchApi for DispatchSeam {
         coordinator_id: &'a str,
         commit: bool,
     ) -> SeamFuture<'a, Result<bool, String>> {
-        Box::pin(super::consensus::apply_replicated_transaction_decision(
+        Box::pin(medulla_server_consensus::dispatch::consensus::apply_replicated_transaction_decision(
             state,
             committed_at_ms,
             authority,
@@ -224,7 +224,7 @@ impl DispatchApi for DispatchSeam {
         coordinator_id: &'a str,
         commit: bool,
     ) -> SeamFuture<'a, Result<bool, String>> {
-        Box::pin(super::consensus::apply_replicated_transaction_finalize(
+        Box::pin(medulla_server_consensus::dispatch::consensus::apply_replicated_transaction_finalize(
             state,
             committed_at_ms,
             authority,
@@ -244,7 +244,7 @@ impl DispatchApi for DispatchSeam {
         coordinator_id: &'a str,
         plan: &'a [u8],
     ) -> SeamFuture<'a, Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String>> {
-        Box::pin(super::consensus::apply_replicated_job_publication_commit(
+        Box::pin(medulla_server_consensus::dispatch::consensus::apply_replicated_job_publication_commit(
             state,
             request_id,
             committed_at_ms,
@@ -264,7 +264,7 @@ impl DispatchApi for DispatchSeam {
         coordinator_id: &'a str,
         receipt: &'a [u8],
     ) -> SeamFuture<'a, Result<medulla_protocol_types::protocol::ResultPayload, String>> {
-        Box::pin(super::consensus::apply_replicated_job_publication_finalize(
+        Box::pin(medulla_server_consensus::dispatch::consensus::apply_replicated_job_publication_finalize(
             state,
             committed_at_ms,
             authority,

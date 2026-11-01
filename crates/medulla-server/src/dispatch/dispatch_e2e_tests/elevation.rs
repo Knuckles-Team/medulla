@@ -3,8 +3,8 @@
 //! identity, a replayed approval is refused, and revocation closes the
 //! chokepoint at once.
 
-use crate::dispatch::*;
-use crate::dispatch::elevation::*;
+use DISPATCHGLOB;
+use medulla_server_identity::dispatch::elevation::*;
 #[cfg(feature = "security")]
 use medulla_identity_types::rbac_elevation::RbacElevationOp;
 use medulla_identity_types::{
@@ -17,7 +17,7 @@ use medulla_protocol_types::{
     result_contract::security::RbacElevationRequest,
     result_contract::security::RbacElevationRevoke,
 };
-use crate::dispatch::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_protocol_types::protocol::Method;
 #[cfg(feature = "security")]
 use medulla_protocol_types::protocol::Response;

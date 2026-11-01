@@ -62,7 +62,7 @@ async fn approval_key_stamping_erases_session_secret_and_replaces_untrusted_evid
         assert_eq!(stamp.token_hashes, vec![secrets::token_hash(SESSION)]);
         assert_eq!(
             stamp.session_tenant,
-            crate::dispatch::identity_store::resolution_context::record_tenant(&context)
+            medulla_server_identity::dispatch::identity_store::resolution_context::record_tenant(&context)
         );
         assert_eq!(stamp.actor.principal_id, "svc:graph-os");
     }

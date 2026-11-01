@@ -5,7 +5,7 @@ use medulla_server_auth::auth::RequestAuthorityExt;
 #[cfg(feature = "raft")]
 use medulla_server_graph::dispatch::change_envelope::multi_graph_batch_update;
 #[cfg(feature = "raft")]
-use super::consensus::propose_native_mutation;
+use medulla_server_consensus::dispatch::consensus::propose_native_mutation;
 use super::router::dispatch_request_method;
 #[cfg(all(feature = "sparql-http", feature = "raft"))]
 use medulla_server_graph::dispatch::sparql_update::coordinated_sparql_http_update;
@@ -305,11 +305,11 @@ async fn stamp_identity_request(
     verified_context: &VerifiedRequestContext,
     state_machine_authorized: bool,
 ) -> Result<(), Response> {
-    super::identity_store::stamp_identity(
+    medulla_server_identity::dispatch::identity_store::stamp_identity(
         state,
         &mut req.method,
         verified_context,
-        super::elevation::ElevationStampAuthority::of(state_machine_authorized),
+        medulla_server_identity::dispatch::elevation::ElevationStampAuthority::of(state_machine_authorized),
     )
     .await
     .map_err(|error| Response::err(req.id, error))
@@ -324,16 +324,16 @@ async fn dispatch_preamble_checks(
     // EH-404: who acts on an elevation comes from the verified context, never
     // the body, and is fixed here -- before consensus routing -- so a replica
     // applies exactly the actor this boundary authorized.
-    super::elevation::stamp_elevation_actor(
+    medulla_server_identity::dispatch::elevation::stamp_elevation_actor(
         &mut req.method,
         verified_context,
-        super::elevation::ElevationStampAuthority::of(state_machine_authorized),
+        medulla_server_identity::dispatch::elevation::ElevationStampAuthority::of(state_machine_authorized),
     );
     // EH-560: the governed-change actor, the same way.
-    super::governed::stamp_governed_actor(
+    medulla_server_identity::dispatch::governed::stamp_governed_actor(
         &mut req.method,
         verified_context,
-        super::elevation::ElevationStampAuthority::of(state_machine_authorized),
+        medulla_server_identity::dispatch::elevation::ElevationStampAuthority::of(state_machine_authorized),
     );
     let method_policy = medulla_capabilities::policy(&req.method);
     let action = method_policy.authz_action;

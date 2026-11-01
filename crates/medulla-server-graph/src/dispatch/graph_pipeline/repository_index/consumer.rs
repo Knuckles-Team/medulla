@@ -63,7 +63,7 @@ enum PendingBudgetStatus {
 
 /// Decode only the server-owned, path-free snapshot for this exact outbox key.
 /// The caller must obtain the intent from a held durable outbox lease.
-pub(crate) fn decode_pending_intent(
+pub fn decode_pending_intent(
     intent: &MutationOutboxIntent,
 ) -> Result<EligibleSnapshot, String> {
     if intent.topic != PENDING_TOPIC || intent.payload.len() > MAX_PENDING_INTENT_BYTES {
@@ -450,7 +450,7 @@ where
 /// native WorkItem+budget commit receipt. Neither identity nor budget authority
 /// is reconstructed from the outbox body.
 #[cfg(feature = "blob")]
-pub(crate) async fn drain_once<A, S, P>(
+pub async fn drain_once<A, S, P>(
     persistence: &dyn PersistenceBackend,
     graph_fname: &str,
     store: Arc<dyn medulla_server_blob::blob::store::ChunkStore>,

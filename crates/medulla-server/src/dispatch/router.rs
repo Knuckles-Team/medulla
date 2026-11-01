@@ -1,8 +1,5 @@
 use medulla_server_graph::{dispatch::change_envelope::dispatch_change_envelopes, dispatch::change_envelope::multi_graph_batch_update};
-use super::consensus::{
-    handle_fleet_catalog, handle_list_registered_servers, handle_register_server,
-    replicated_identity_bootstrap_authorized, ServerRegistration,
-};
+use medulla_server_consensus::{dispatch::consensus::handle_fleet_catalog, dispatch::consensus::handle_list_registered_servers, dispatch::consensus::handle_register_server, dispatch::consensus::replicated_identity_bootstrap_authorized, dispatch::consensus::ServerRegistration};
 use medulla_server_graph::dispatch::graph_pipeline::dispatch_graph_op;
 #[cfg(feature = "knowledge-batch")]
 use medulla_server_graph::dispatch::graph_pipeline::dispatch_knowledge_stream;

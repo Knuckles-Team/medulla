@@ -4,8 +4,8 @@
 //! is refused.
 
 use super::super::test_support::{refused_with, send, state, verified};
-use crate::dispatch::*;
-use crate::dispatch::governed::*;
+use DISPATCHGLOB;
+use medulla_server_identity::dispatch::governed::*;
 use medulla_mutation_types::governed_change::GovernedActor;
 #[cfg(feature = "security")]
 use medulla_mutation_types::governed_change::GovernedChangeOp;
@@ -15,8 +15,8 @@ use medulla_protocol_types::{
     result_contract::security::GovernedList, result_contract::security::GovernedPropose,
     result_contract::security::GovernedRevoke,
 };
-use crate::dispatch::elevation::ElevationStampAuthority;
-use crate::dispatch::VerifiedRequestContext;
+use medulla_server_identity::dispatch::elevation::ElevationStampAuthority;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_protocol_types::protocol::Method;
 #[cfg(feature = "security")]
 use medulla_protocol_types::protocol::Response;

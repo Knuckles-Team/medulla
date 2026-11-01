@@ -1,5 +1,5 @@
 use medulla_server_graph::dispatch::graph_pipeline::dispatch_graph_op;
-use super::*;
+use crate::dispatch::*;
 
 mod fleet_catalog;
 #[cfg(all(feature = "raft", feature = "jobs"))]
