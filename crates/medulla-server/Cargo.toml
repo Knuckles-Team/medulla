@@ -79,6 +79,10 @@ medulla-document = { path = "../medulla-document", optional = true }
 medulla-index-types = { path = "../medulla-index-types" }
 openraft = { version = "=0.10.0-alpha.26", features = ["serde"], optional = true }
 medulla-direct-state = { path = "../medulla-direct-state" }
+medulla-ann-codes = { path = "../medulla-ann-codes" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-isolation = { path = "../medulla-isolation" }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
 
 [features]
 amqp-wire = ["server"]
