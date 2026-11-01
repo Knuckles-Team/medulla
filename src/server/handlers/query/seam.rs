@@ -28,7 +28,7 @@ impl medulla_server_api::api::query_txn::QueryApi for QuerySeam {
         core: &Arc<crate::graph::GraphCore>,
         staged: &[(String, Vec<f32>)],
         #[cfg(feature = "federation")] foreign: Option<
-            &medulla_plan::federation::ForeignSourceRegistry,
+            &medulla_federation::federation::ForeignSourceRegistry,
         >,
         #[cfg(feature = "tsdb")]
         tsdb_ctx: medulla_server_api::api::query_txn::query_support::TsdbLegBind<'_>,

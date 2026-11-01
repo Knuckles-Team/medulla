@@ -35,7 +35,7 @@ mod decisions;
 mod reliability;
 // The OWL membership closure behind `REASON` (and its `WITH PROOF` explanation, EH-448).
 #[cfg(feature = "owl")]
-pub(crate) mod reason;
+pub mod reason;
 pub use decisions::{DecisionSource, LearnedReliability};
 pub(crate) mod dispatch;
 #[cfg(feature = "federation")]
@@ -67,14 +67,14 @@ pub(crate) use events::events_op;
 // EH-521 — the `TSSCAN` source and the in-txn staged-series overlay it reads.
 #[cfg(feature = "timeseries")]
 mod tsscan;
-pub(crate) mod vector_rank;
-pub(crate) use dispatch::{apply, apply_with_channels, StageChannels};
+pub mod vector_rank;
+pub use dispatch::{apply, apply_with_channels, StageChannels};
 pub(crate) use pred_sql::{sql_literal, where_clause};
 #[cfg(feature = "timeseries")]
 pub use tsscan::StagedSeries;
 #[cfg(feature = "timeseries")]
 pub(crate) use tsscan::{tsdb_scan_op, CommittedSeries};
-pub(crate) use vector_rank::rank_op;
+pub use vector_rank::rank_op;
 
 /// Everything an operator might touch, gathered from ONE consistent snapshot. In a
 /// handler this is exactly what is already available off-lock: the `GraphView`
@@ -2577,7 +2577,7 @@ fn sql_filter_ids(
 /// to accept a direction/undirected form is a language change, not a matcher bug —
 /// out of scope here; see the AU ingest writer for whether edge direction should be
 /// normalized at write time instead.
-pub(crate) fn bfs_reached(
+pub fn bfs_reached(
     view: &GraphView,
     seeds: &[String],
     rel: &str,

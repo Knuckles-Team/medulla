@@ -95,7 +95,7 @@ fn define(
     if def.series_id == def.source {
         return Err("INVALID_ARGUMENT: a derived series cannot derive from itself".into());
     }
-    let expr = medulla_plan::uql::parse_series_expr(&def.expr)
+    let expr = medulla_uql::parse_series_expr(&def.expr)
         .map_err(|e| format!("INVALID_ARGUMENT: {}", e.render(&def.expr)))?;
     let source_key = scope.key(&def.source)?;
     let source_meta = meta(store, &source_key)?.ok_or_else(|| {

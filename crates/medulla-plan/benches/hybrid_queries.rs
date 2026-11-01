@@ -28,8 +28,8 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use medulla_core::compute::semantic::SemanticStore;
 use medulla_core::graph::{GraphCore, GraphView};
-use medulla_exec::{optimizer::cost_opt_enabled, exec::execute, runtime::execute_ops, optimizer::optimize, algebra::Op, algebra::Plan, exec::PlanCtx, algebra::Pred};
-use medulla_plan::{AnnIndex, GraphTopology, HierarchicalRetriever, RetrievalParams, Scored};
+use medulla_exec::{optimizer::enabled as cost_opt_enabled, exec::execute, runtime::execute_ops, optimizer::optimize, algebra::Op, algebra::Plan, exec::PlanCtx, algebra::Pred};
+use medulla_retrieval::{leanrag::AnnIndex, leanrag::GraphTopology, leanrag::HierarchicalRetriever, leanrag::RetrievalParams, leanrag::Scored};
 use serde_json::json;
 use std::hint::black_box;
 

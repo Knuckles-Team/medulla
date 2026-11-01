@@ -2,7 +2,7 @@
 //! materialize the induced subgraph over it.
 //!
 //! This is deliberately a THIN wrapper over the engine's EXISTING query surface
-//! (`medulla_plan::uql::parse` + `medulla_plan::execute`) — no new query language, no new
+//! (`medulla_uql::parse` + `medulla_plan::execute`) — no new query language, no new
 //! executor. A caller hands a UQL string (e.g. `"MATCH (:Concept) |> LIMIT 12"`); this
 //! module runs it against one `GraphCore::analysis_snapshot()` (an OCC-consistent
 //! point-in-time view, per `medulla-plan`'s own snapshot-isolation guarantee) and reads
@@ -62,7 +62,7 @@ pub fn pull_candidate_subgraph(
     uql: &str,
     max_qubits: u32,
 ) -> Result<CandidateSubgraph, SubgraphError> {
-    let plan = medulla_plan::uql::parse(uql).map_err(|e| SubgraphError::Parse(e.render(uql)))?;
+    let plan = medulla_uql::parse(uql).map_err(|e| SubgraphError::Parse(e.render(uql)))?;
     let view: GraphView = core.analysis_snapshot();
     let semantic = SemanticStore::new();
     let ctx = PlanCtx::new(&view, &semantic);

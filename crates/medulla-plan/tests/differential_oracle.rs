@@ -5,7 +5,7 @@
 //! a different plan/result, this trips.
 //!
 //! Surfaces exercised here (all in-process against medulla-plan's public API):
-//!  * **UQL text** — `medulla_plan::uql::parse(text)`
+//!  * **UQL text** — `medulla_uql::parse(text)`
 //!  * **Rust builder** — a hand-built `Plan { ops: vec![Op::…] }`
 //!  * **the separate-surfaces oracle** — `medulla_plan::oracle::separate_surfaces`, the
 //!    three-siloed-round-trip baseline the fused planner must reproduce (cross-checked
@@ -38,7 +38,7 @@ use medulla_types::wire::TimeAxis;
 /// vector scores, in order). Returns the shared `RowSet` for further assertions.
 fn agree(uql: &str, builder: &Plan, view: &GraphView, semantic: &SemanticStore) -> RowSet {
     let parsed =
-        medulla_plan::uql::parse(uql).unwrap_or_else(|e| panic!("UQL parse `{uql}`: {}", e.msg));
+        medulla_uql::parse(uql).unwrap_or_else(|e| panic!("UQL parse `{uql}`: {}", e.msg));
     assert_eq!(
         &parsed, builder,
         "UQL and the Rust builder must lower to the IDENTICAL plan AST\n  UQL: {uql}"
@@ -260,7 +260,7 @@ fn reason_rank_traverse_interchangeable() {
     // input, so the leading Scan is overwritten by the reasoner's member set. To keep
     // the plan ASTs identical we compare against a builder that OMITS the Scan (REASON
     // is the true source), and prove the parsed UQL's REASON-onward tail matches.
-    let parsed = medulla_plan::uql::parse(uql).unwrap();
+    let parsed = medulla_uql::parse(uql).unwrap();
     // Drop the leading Scan the MATCH emits; REASON is the real source.
     let tail: Vec<Op> = parsed.ops.iter().skip(1).cloned().collect();
     assert_eq!(

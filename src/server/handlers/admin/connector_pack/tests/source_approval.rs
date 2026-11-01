@@ -471,7 +471,7 @@ async fn foreign_read_four_phase_uses_authenticated_dispatch() {
 
 struct BoundRows;
 
-impl medulla_plan::federation::ForeignSource for BoundRows {
+impl medulla_federation::federation::ForeignSource for BoundRows {
     fn fetch(&self) -> Result<medulla_exec::rowset::RowSet, String> {
         Ok(medulla_exec::rowset::RowSet::from_ids(["bound-row".to_string()]))
     }

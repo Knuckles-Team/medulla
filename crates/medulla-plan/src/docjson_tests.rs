@@ -13,9 +13,9 @@ use medulla_core::graph::{GraphCore, GraphView};
 use medulla_types::wire::JsonPathOp;
 use serde_json::json;
 
-use crate::algebra::{Op, Plan, Pred};
-use crate::exec::PlanCtx;
-use crate::PlanExt;
+use medulla_exec::algebra::{Op, Plan, Pred};
+use medulla_exec::exec::PlanCtx;
+use medulla_exec::exec::PlanExt;
 
 fn blob(v: serde_json::Value) -> Vec<u8> {
     rmp_serde::to_vec_named(&v).unwrap()

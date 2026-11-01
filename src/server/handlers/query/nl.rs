@@ -41,7 +41,7 @@ pub(crate) async fn handle_txn_uql(
 /// The `NlQuery` refusal for invalid planner request config: the registered
 /// `ENGINE_UNAVAILABLE` code plus a detail naming the bad key (MEDULLA-FEDERATED-QUERY-R058.5).
 #[cfg(feature = "nl-query")]
-pub(crate) fn nl_config_refusal(e: &medulla_plan::NlConfigError) -> String {
+pub(crate) fn nl_config_refusal(e: &medulla_nlq::nl::NlConfigError) -> String {
     format!("ENGINE_UNAVAILABLE: NlQuery: invalid NL planner config: {e}")
 }
 
@@ -76,12 +76,12 @@ pub(crate) fn handle_nl_query_plan(
     let context = nl_schema_context(view, foreign_sources);
     // MEDULLA-FEDERATED-QUERY-R058.2.1: the SAME typed budget refuses an over-budget
     // answer before it reaches the parser, inside every correction step.
-    let candidate = medulla_plan::nl::context::plan_grounded(
+    let candidate = medulla_nlq::nl::context::plan_grounded(
         planner.as_ref(),
         text,
         &context,
-        medulla_plan::nl::NlQueryBudget::default(),
-        medulla_plan::nl::context::DEFAULT_MAX_STEPS,
+        medulla_nlq::nl::NlQueryBudget::default(),
+        medulla_nlq::nl::context::DEFAULT_MAX_STEPS,
     )
     .map_err(|e| Response::err(req_id, nl_refusal(&e)))?;
     Ok((candidate.uql, candidate.plan))
@@ -93,8 +93,8 @@ pub(crate) fn handle_nl_query_plan(
 pub(crate) fn nl_schema_context(
     view: &crate::graph::GraphView,
     foreign_sources: Option<&std::collections::BTreeSet<String>>,
-) -> medulla_plan::nl::context::SchemaContext {
-    let mut context = medulla_plan::nl::context::SchemaContext::from_view(view);
+) -> medulla_nlq::nl::context::SchemaContext {
+    let mut context = medulla_nlq::nl::context::SchemaContext::from_view(view);
     #[cfg(all(feature = "rdf", feature = "shacl"))]
     context.link_ontology(&crate::server::handlers::rdf::composed_ontology_properties(
         &view.schema_sources,
@@ -124,8 +124,8 @@ async fn nl_foreign_sources(
 
 /// The served refusal for a planner answer that was never executed.
 #[cfg(feature = "nl-query")]
-pub(crate) fn nl_refusal(error: &medulla_plan::nl::NlQueryError) -> String {
-    use medulla_plan::nl::NlQueryError as E;
+pub(crate) fn nl_refusal(error: &medulla_nlq::nl::NlQueryError) -> String {
+    use medulla_nlq::nl::NlQueryError as E;
     match error {
         E::Planner(message) => medulla_protocol_types::error_registry::classify_refusal(
             "INVALID_ARGUMENT",
@@ -146,7 +146,7 @@ pub(crate) fn nl_refusal(error: &medulla_plan::nl::NlQueryError) -> String {
 
 /// The last step's typed reason first, then every step's text and outcome.
 #[cfg(feature = "nl-query")]
-fn ungrounded_detail(steps: &[medulla_plan::nl::context::NlPlanStep]) -> String {
+fn ungrounded_detail(steps: &[medulla_nlq::nl::context::NlPlanStep]) -> String {
     let last = steps.last().map_or("no step ran", |s| s.outcome.as_str());
     let trail: Vec<String> = steps
         .iter()
@@ -246,19 +246,19 @@ pub(crate) async fn handle_nl_query_plan_only(
 /// time only to obtain the canonical pin input used by `Uql prepare=true`.
 #[cfg(feature = "nl-query")]
 fn plan_nl_only(
-    planner: &dyn medulla_plan::NlPlanner,
+    planner: &dyn medulla_nlq::nl::NlPlanner,
     text: &str,
     req_id: u64,
 ) -> Result<(String, medulla_exec::algebra::Plan), Response> {
-    let candidate = medulla_plan::nl::plan_only(
+    let candidate = medulla_nlq::nl::plan_only(
         planner,
         text,
         "",
-        medulla_plan::nl::NlQueryBudget::default(),
+        medulla_nlq::nl::NlQueryBudget::default(),
     )
     .map_err(|e| Response::err(req_id, nl_refusal(&e)))?;
     let params = UqlParams::default();
-    let statement = medulla_plan::uql::parse_statement(&candidate.uql, &params)
+    let statement = medulla_uql::parse_statement(&candidate.uql, &params)
         .map_err(|e| Response::err(req_id, format!("{}: {}", e.code, e.render(&candidate.uql))))?;
     let plan = medulla_plan::uql::serve::binding_plan(&statement);
     Ok((candidate.uql, plan))
@@ -279,7 +279,7 @@ async fn run_nl_query(
     // CONCEPT:MEDULLA-KG.query.core-query-input/MEDULLA-080 — natural-language → executable query → rows. Resolve
     // the configured/injected `NlPlanner`, turn the NL into a UQL query STRING,
     // then run it through the IDENTICAL UQL pipeline
-    // (`medulla_plan::uql::parse` + `run_unified`). NO LLM in the engine core and NO
+    // (`medulla_uql::parse` + `run_unified`). NO LLM in the engine core and NO
     // new execution path — the produced query rides the deterministic pipeline.
     // The graph was already used for routing; the handler runs against `core`.
     let _ = graph;
@@ -387,10 +387,10 @@ mod nl_config_refusal_tests {
     // spec: MEDULLA-FEDERATED-QUERY-R058.5
     #[test]
     fn invalid_planner_config_is_refused_with_code_and_key() {
-        let msg = super::nl_config_refusal(&medulla_plan::NlConfigError::ReadTimeoutOutOfRange(0));
+        let msg = super::nl_config_refusal(&medulla_nlq::nl::NlConfigError::ReadTimeoutOutOfRange(0));
         assert!(msg.starts_with("ENGINE_UNAVAILABLE:"), "{msg}");
         assert!(msg.contains("read_timeout_secs"), "{msg}");
-        let msg = super::nl_config_refusal(&medulla_plan::NlConfigError::ExtraBodyReservedKey(
+        let msg = super::nl_config_refusal(&medulla_nlq::nl::NlConfigError::ExtraBodyReservedKey(
             "model".into(),
         ));
         assert!(msg.contains("extra_body") && msg.contains("model"), "{msg}");
@@ -401,7 +401,7 @@ mod nl_config_refusal_tests {
 mod nl_plan_only_tests {
     struct PurePlanner;
 
-    impl medulla_plan::NlPlanner for PurePlanner {
+    impl medulla_nlq::nl::NlPlanner for PurePlanner {
         fn plan(&self, nl: &str, schema_hint: &str) -> Result<String, String> {
             assert!(
                 schema_hint.is_empty(),

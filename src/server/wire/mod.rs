@@ -4644,7 +4644,7 @@ impl WireSession {
     /// committed series only.
     #[cfg(feature = "query")]
     async fn exec_uql(&self, graph: &str, text: &str, in_txn: bool) -> WireResult<WireOutcome> {
-        let plan = medulla_plan::uql::parse(text).map_err(|e| user_err(e.render(text)))?;
+        let plan = medulla_uql::parse(text).map_err(|e| user_err(e.render(text)))?;
         #[cfg(feature = "tsdb")]
         let tsdb_scope = if medulla_server_api::api::query_txn::query_support::plan_needs_tsdb(&plan.ops)
         {

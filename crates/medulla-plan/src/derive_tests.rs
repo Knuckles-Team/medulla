@@ -6,10 +6,10 @@ use medulla_core::graph::GraphCore;
 use medulla_tsdb::derive::kernels::{apply, Rolling, Shift, Smoothing, Spec, State};
 use medulla_types::wire::{UqlResult, UqlRow};
 
-use crate::exec::PlanCtx;
+use medulla_exec::exec::PlanCtx;
 use crate::uql::serve::run_statement;
-use crate::uql::{parse_statement, Params, UqlCode};
-use crate::StagedSeries;
+use medulla_uql::{parse_statement, Params, UqlCode};
+use medulla_exec::exec::StagedSeries;
 
 const ONE_S: i64 = 1_000_000_000;
 
@@ -51,7 +51,7 @@ fn column(rows: &[UqlRow], series: &str, col: usize) -> Vec<Option<f64>> {
     let mut picked: Vec<(i64, Option<f64>)> = rows
         .iter()
         .filter_map(|r| {
-            let (s, ts) = crate::rowset::parse_series_row_id(&r.id)?;
+            let (s, ts) = medulla_exec::rowset::parse_series_row_id(&r.id)?;
             (s == series).then(|| (ts, r.channels[col]))
         })
         .collect();
@@ -153,12 +153,12 @@ fn derive_refuses_unknown_channels_functions_and_arities() {
 fn derive_prints_canonically_and_reparses() {
     let src = "TSSCAN ['a'] FROM 0 TO 1 |> DERIVE div(wsum(v0, v1, 20), rsum(v1, 20)) AS vwap, \
                ratio(v0, 2) AS half";
-    let plan = crate::uql::parse(src).unwrap();
+    let plan = medulla_uql::parse(src).unwrap();
     let printed = plan.to_uql().unwrap();
     assert!(
         printed.contains("DERIVE div(wsum(v0, v1, 20), rsum(v1, 20)) AS vwap, div(v0, 2) AS half")
     );
-    assert_eq!(crate::uql::parse(&printed).unwrap(), plan);
+    assert_eq!(medulla_uql::parse(&printed).unwrap(), plan);
 }
 
 /// `SKILL` (EH-522 FeatureSkill) through UQL equals the evaluation kernel run directly,

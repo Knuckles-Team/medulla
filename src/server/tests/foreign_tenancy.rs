@@ -19,7 +19,7 @@ const OTHER_B: &str = "worker2";
 /// own foreign binding with a deterministic plan.
 struct EchoPlanner;
 
-impl medulla_plan::NlPlanner for EchoPlanner {
+impl medulla_nlq::nl::NlPlanner for EchoPlanner {
     fn plan(&self, nl: &str, _schema_hint: &str) -> Result<String, String> {
         Ok(nl.to_string())
     }
@@ -251,7 +251,7 @@ async fn foreign_column_http_read_returns_projected_filtered_rows() {
     struct RestoreAllow(Option<std::ffi::OsString>);
     impl Drop for RestoreAllow {
         fn drop(&mut self) {
-            let key = medulla_plan::federation::HTTP_JSON_FEDERATION_ALLOW_ENV;
+            let key = medulla_federation::federation::HTTP_JSON_FEDERATION_ALLOW_ENV;
             if let Some(previous) = self.0.take() {
                 std::env::set_var(key, previous);
             } else {
@@ -274,7 +274,7 @@ async fn foreign_column_http_read_returns_projected_filtered_rows() {
         );
         socket.write_all(response.as_bytes()).await.unwrap();
     });
-    let key = medulla_plan::federation::HTTP_JSON_FEDERATION_ALLOW_ENV;
+    let key = medulla_federation::federation::HTTP_JSON_FEDERATION_ALLOW_ENV;
     let _restore = RestoreAllow(std::env::var_os(key));
     std::env::set_var(key, &origin);
 

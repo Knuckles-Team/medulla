@@ -147,7 +147,7 @@ impl CostModel {
     /// no cost logic — so both callers agree byte-for-byte on the mechanical rewrite while
     /// each supplies its own cost-derived decision.
     #[cfg(any(feature = "query", test))]
-    pub(crate) fn place_narrower(
+    pub fn place_narrower(
         mut plan: Vec<Op>,
         narrower_idx: usize,
         rank_idx: usize,

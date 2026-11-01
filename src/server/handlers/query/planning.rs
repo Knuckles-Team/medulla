@@ -244,7 +244,7 @@ pub(crate) struct ServedIndexes<'a> {
     /// bound and a name-resolving op stays a clean typed error — never a silent empty
     /// set, never silently-local rows.
     #[cfg(feature = "federation")]
-    pub foreign: Option<&'a medulla_plan::federation::ForeignSourceRegistry>,
+    pub foreign: Option<&'a medulla_federation::federation::ForeignSourceRegistry>,
     /// EH-196 — the graph's composed GraphSchema SHACL shapes
     /// (`handlers::rdf::ServedShapes`), which a `VALIDATE SHAPE` stage without its own
     /// `USING` document validates against. `None` ⇒ such a stage is a typed error.
@@ -294,7 +294,7 @@ impl<'c> CoreIndexes<'c> {
     pub(crate) fn served<'a>(
         &'a self,
         #[cfg(feature = "federation")] foreign: Option<
-            &'a medulla_plan::federation::ForeignSourceRegistry,
+            &'a medulla_federation::federation::ForeignSourceRegistry,
         >,
     ) -> ServedIndexes<'a> {
         ServedIndexes {
@@ -351,7 +351,7 @@ pub(crate) fn run_unified_with<T>(
     // source: the server budget, the plan's LIMIT hints and the per-fragment trace.
     #[cfg(feature = "federation")]
     let federation =
-        plan_touches_foreign(&ops).then(medulla_plan::federation_opt::FederationSession::from_env);
+        plan_touches_foreign(&ops).then(medulla_federation::federation_opt::FederationSession::from_env);
 
     // CONCEPT:MEDULLA-KG.query.served-text-index-binding — bind a live BM25 lexical search surface into the
     // served `PlanCtx` so a served `UnifiedQuery`/`Uql` whose plan carries
@@ -400,7 +400,7 @@ pub(crate) fn run_unified_with<T>(
     // `Op::ForeignScan` resolves the caller's OWN registered sources (EH-373).
     #[cfg(feature = "federation")]
     let federated =
-        medulla_plan::federation_opt::FederatedExec::new(served.foreign, federation.as_ref());
+        medulla_federation::federation_opt::FederatedExec::new(served.foreign, federation.as_ref());
     let ctx = run_unified_bind_foreign(ctx, &federated);
     // CONCEPT:MEDULLA-KG.query.bind-server-side-text — bind the server-side text→vector embedder so a UQL `RANK BY ~ "text"`
     // (`Op::RankEmbed`) resolves its query vector at exec time (the NL→vector seam,
@@ -469,13 +469,13 @@ fn plan_touches_foreign(ops: &[medulla_exec::algebra::Op]) -> bool {
 
 /// Log what one served federated query moved, fragment by fragment (EH-563 §7).
 #[cfg(all(feature = "query", feature = "federation"))]
-fn log_federation_trace(session: Option<&medulla_plan::federation_opt::FederationSession>) {
+fn log_federation_trace(session: Option<&medulla_federation::federation_opt::FederationSession>) {
     let Some(trace) = session.map(|s| s.trace()).filter(|t| !t.is_empty()) else {
         return;
     };
     tracing::info!(
         fragments = trace.len(),
-        trace = %medulla_plan::federation_opt::render_trace(&trace),
+        trace = %medulla_federation::federation_opt::render_trace(&trace),
         "federated query (EH-563)"
     );
 }
@@ -486,7 +486,7 @@ fn log_federation_trace(session: Option<&medulla_plan::federation_opt::Federatio
 #[cfg(feature = "federation")]
 pub(crate) fn run_unified_bind_foreign<'a>(
     ctx: medulla_exec::exec::PlanCtx<'a>,
-    federated: &'a medulla_plan::federation_opt::FederatedExec<'a>,
+    federated: &'a medulla_federation::federation_opt::FederatedExec<'a>,
 ) -> medulla_exec::exec::PlanCtx<'a> {
     if let Some(session) = federated.session {
         session.set_cache_scope(
@@ -735,7 +735,7 @@ async fn served_decision_leg(
 /// the caret-annotated refusal response.
 #[cfg(feature = "query")]
 pub(crate) fn parse_uql(req_id: u64, text: &str) -> Result<medulla_exec::algebra::Plan, Response> {
-    medulla_plan::uql::parse(text)
+    medulla_uql::parse(text)
         .map_err(|e| Response::err(req_id, format!("{}: {}", e.code, e.render(text))))
 }
 
@@ -763,7 +763,7 @@ mod foreign_query_digest_tests {
 
     #[test]
     fn plan_pin_is_available_without_federation() {
-        let plan = medulla_plan::uql::parse("MATCH (:Issue)").expect("valid plan");
+        let plan = medulla_uql::parse("MATCH (:Issue)").expect("valid plan");
         let bytes = rmp_serde::to_vec_named(&plan).expect("serializable plan");
         assert_eq!(
             canonical_plan_digest(&plan).expect("canonical digest"),

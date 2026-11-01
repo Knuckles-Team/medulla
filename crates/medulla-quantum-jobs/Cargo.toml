@@ -34,6 +34,7 @@ medulla-quantum-core = { path = "../medulla-quantum-core" }
 medulla-quantum-sim = { path = "../medulla-quantum-sim" }
 medulla-numeric = { path = "../medulla-numeric", features = ["complex"] }
 medulla-plan = { path = "../medulla-plan", optional = true }
+medulla-federation = { path = "../medulla-federation", optional = true }
 # Already resolved workspace-wide via `medulla-numeric` (see its own Cargo.toml) --
 # declared directly here only so this crate can name `ndarray::Array1` in the Q6
 # numeric-bridge surface. Adds NO new crate to the resolved dependency tree.
@@ -61,4 +62,4 @@ default = []
 # graph/vector/SQL legs with NO change to medulla-types::wire::Op. Do not confuse this
 # with a native `Op::SubmitQuantum`/`Op::JoinQuantumResults` (step 3) -- deliberately
 # NOT implemented here; see `src/lib.rs` module doc for why.
-federation-bridge = ["dep:medulla-plan", "medulla-plan/federation", "medulla-exec/federation"]
+federation-bridge = ["dep:medulla-plan", "dep:medulla-federation", "medulla-federation/federation", "medulla-plan/federation", "medulla-exec/federation"]

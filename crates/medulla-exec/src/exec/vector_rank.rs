@@ -38,7 +38,7 @@ const OVERSAMPLE: usize = 4;
 const ANN_ROUNDS: usize = 3;
 
 /// `RANK BY ~query` over every candidate (the whole order).
-pub(crate) fn rank_op(ctx: &PlanCtx, query: &[f32], input: RowSet) -> Result<RowSet, String> {
+pub fn rank_op(ctx: &PlanCtx, query: &[f32], input: RowSet) -> Result<RowSet, String> {
     rank_top(ctx, query, input, None)
 }
 
@@ -94,7 +94,7 @@ fn check_width(semantic: &SemanticStore, query: &[f32]) -> Result<(), String> {
 
 /// The best `want` candidates, by the path the candidate count selects (see the module
 /// docs). `exact_max` is the exact-path ceiling ([`EXACT_RANK_MAX`] when serving).
-pub(crate) fn ranked(
+pub fn ranked(
     semantic: &SemanticStore,
     query: &[f32],
     candidates: &HashSet<&str>,

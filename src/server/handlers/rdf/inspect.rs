@@ -83,7 +83,7 @@ fn inspect(
 #[cfg(feature = "nl-query")]
 pub(crate) fn composed_ontology_properties(
     sources: &GraphSchemaSources,
-) -> Vec<medulla_plan::nl::context::OntologyProperty> {
+) -> Vec<medulla_nlq::nl::context::OntologyProperty> {
     let Ok(inspected) = composed_documents(sources, &[]) else {
         return Vec::new();
     };
@@ -91,7 +91,7 @@ pub(crate) fn composed_ontology_properties(
     view.object_properties
         .into_iter()
         .chain(view.datatype_properties)
-        .map(|property| medulla_plan::nl::context::OntologyProperty {
+        .map(|property| medulla_nlq::nl::context::OntologyProperty {
             name: iri_local_name(&property.iri).to_string(),
             label: property.label,
             domains: property

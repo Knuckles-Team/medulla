@@ -1,6 +1,6 @@
 //! The predicate algebra (UQL-01): operators, precedence, typed literals.
 
-use crate::uql::{parse, UqlCode};
+use medulla_uql::{parse, UqlCode};
 use medulla_types::wire::{CmpOp, JsonPathOp, Op, Pred, PredLiteral};
 
 fn preds(where_body: &str) -> Vec<Pred> {

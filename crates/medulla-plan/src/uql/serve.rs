@@ -20,14 +20,14 @@ use std::time::Instant;
 
 use medulla_types::wire::{op_kind, Op, Plan, UqlResult, UqlRow, UqlStageReport};
 
-use super::{Body, Mode, Statement};
+use medulla_uql::{Body, Mode, Statement};
 
 mod annotate;
 mod dag;
 mod proof;
-use crate::cost::{Cardinality, ModalityCardinality, PlanStats};
-use crate::exec::{apply, apply_with_channels, plan_optimize, PlanCtx, StageChannels};
-use crate::rowset::RowSet;
+use medulla_exec::cost::{Cardinality, ModalityCardinality, PlanStats};
+use medulla_exec::exec::{apply, apply_with_channels, plan_optimize, PlanCtx, StageChannels};
+use medulla_exec::rowset::RowSet;
 
 // UQL-12, read-only by construction: the op dispatch every stage runs through takes the
 // snapshot context by SHARED reference and returns a new RowSet — it has no path to a
@@ -87,7 +87,7 @@ fn apply_federation_budget(stmt: &Statement, ctx: &PlanCtx) -> Result<(), String
 /// EXPLAIN is plan-only; PROFILE adds actual fragments from the same request session.
 #[cfg(feature = "federation")]
 pub(crate) fn attach_federation_report(result: &mut UqlResult, stmt: &Statement, ctx: &PlanCtx) {
-    use crate::federation_opt::explain_source;
+    use medulla_federation::federation_opt::explain_source;
 
     fn remote_ops(ops: &[Op], reports: &mut Vec<UqlStageReport>) {
         for op in ops {
@@ -190,7 +190,7 @@ fn row_channels(id: &str, columns: &[String], table: &ChannelTable) -> Vec<Optio
 fn run(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResult, String> {
     let columns = returned_channels(&plan.ops);
     if columns.is_empty() {
-        let rows = crate::exec::execute(plan, ctx)?;
+        let rows = medulla_exec::exec::execute(plan, ctx)?;
         return Ok(UqlResult::Rows {
             rows: rows_of(&rows, &columns, &ChannelTable::new()),
             columns,
@@ -291,7 +291,7 @@ fn explain(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResul
             micros: None,
         })
         .collect();
-    let (incremental, incremental_note) = match crate::incremental::Circuit::compile(plan) {
+    let (incremental, incremental_note) = match medulla_exec::incremental::Circuit::compile(plan) {
         Ok(_) => (true, String::new()),
         Err(why) => (false, why.to_string()),
     };

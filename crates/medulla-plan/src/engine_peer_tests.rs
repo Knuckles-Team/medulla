@@ -16,11 +16,11 @@ use medulla_protocol_types::{
 use medulla_types::acl::RequestContextClaims;
 use medulla_types::wire::{ForeignSourceSpec, UqlResult};
 
-use crate::budget::FederationBudget;
-use crate::federation_opt::{FederationSession, FetchStrategy, FragmentTrace, BUDGET_EXCEEDED};
-use crate::algebra::Op;
-use crate::exec::{execute, PlanCtx};
-use crate::Plan;
+use medulla_exec::budget::FederationBudget;
+use medulla_federation::federation_opt::{FederationSession, FetchStrategy, FragmentTrace, BUDGET_EXCEEDED};
+use medulla_exec::algebra::Op;
+use medulla_exec::exec::{execute, PlanCtx};
+use medulla_exec::algebra::Plan;
 
 /// The registered statement: `d1`, `d2`, `d4` and `d5` of the fixture.
 const BASE: &str = "MATCH (:Doc) |> WHERE year > 2023";
@@ -114,7 +114,7 @@ impl Policy {
         }
         match &request.method {
             Method::Uql { text, params, .. } if self.pushdown || text == BASE => {
-                let statement = crate::uql::parse_statement(text, params).expect("peer UQL");
+                let statement = medulla_uql::parse_statement(text, params).expect("peer UQL");
                 let result = crate::uql::serve::run_statement(&statement, ctx).expect("peer run");
                 self.serve(text, result)
             }
@@ -176,7 +176,7 @@ impl Peer {
         let seen = Arc::new(Mutex::new(Seen::default()));
         let record = seen.clone();
         std::thread::spawn(move || {
-            let fixture = crate::fixture::build();
+            let fixture = medulla_exec::fixture::build();
             let ctx = PlanCtx::new(&fixture.view, &fixture.semantic);
             for stream in listener.incoming().take(64) {
                 let Ok(mut stream) = stream else { continue };
@@ -244,7 +244,7 @@ fn run(
     limit: Option<usize>,
     budget: FederationBudget,
 ) -> (Result<Vec<String>, String>, Vec<FragmentTrace>) {
-    let fixture = crate::fixture::build();
+    let fixture = medulla_exec::fixture::build();
     let session = FederationSession::new(budget);
     let source = Box::new(spec);
     let ops = match limit {
@@ -262,7 +262,7 @@ fn run(
             Op::Limit { k },
         ],
     };
-    let federated = crate::federation_opt::FederatedExec::with_session(&session);
+    let federated = medulla_federation::federation_opt::FederatedExec::with_session(&session);
     let ctx = PlanCtx::new(&fixture.view, &fixture.semantic).with_foreign_executor(&federated);
     let rows = execute(&Plan::new(ops), &ctx).map(|rows| rows.ids());
     (rows, session.trace())
@@ -447,12 +447,12 @@ mod engine_remote_tests {
     use medulla_types::acl::RequestContextClaims;
     use medulla_types::wire::ForeignSourceSpec;
 
-    use crate::federation_opt::capability::RemoteRequest;
-    use crate::federation_opt::engine::EngineRemote;
-    use crate::federation_opt::remote::RemoteFetch;
-    use crate::exec::{execute, PlanCtx};
+    use medulla_federation::federation_opt::capability::RemoteRequest;
+    use medulla_federation::federation_opt::engine::EngineRemote;
+    use medulla_federation::federation_opt::remote::RemoteFetch;
+    use medulla_exec::exec::{execute, PlanCtx};
     use super::verified_claims;
-    use crate::federation_opt::remote::Identity;
+    use medulla_federation::federation_opt::remote::Identity;
 
     fn remote(query: &str) -> ForeignSourceSpec {
         ForeignSourceSpec::RemoteEngine {
@@ -470,16 +470,16 @@ mod engine_remote_tests {
     fn pushed_keys_and_limit_match_full_peer_execution() {
         let spec = remote("MATCH (:Doc) |> WHERE year > 2023");
         let peer = EngineRemote::new(&spec, Identity::of_spec(&spec, None));
-        let fixture = crate::fixture::build();
+        let fixture = medulla_exec::fixture::build();
         let ctx = PlanCtx::new(&fixture.view, &fixture.semantic);
         let full = execute(
-            &crate::uql::parse("MATCH (:Doc) |> WHERE year > 2023").unwrap(),
+            &medulla_uql::parse("MATCH (:Doc) |> WHERE year > 2023").unwrap(),
             &ctx,
         )
         .unwrap();
         let request = RemoteRequest::keys(vec!["d2".into(), "d4".into()]);
         let text = peer.render(&request).unwrap();
-        let pushed = execute(&crate::uql::parse(&text).unwrap(), &ctx).unwrap();
+        let pushed = execute(&medulla_uql::parse(&text).unwrap(), &ctx).unwrap();
         let wanted = full
             .ids()
             .into_iter()
@@ -494,7 +494,7 @@ mod engine_remote_tests {
                 ..RemoteRequest::full()
             })
             .unwrap();
-        let first_two = execute(&crate::uql::parse(&limited).unwrap(), &ctx).unwrap();
+        let first_two = execute(&medulla_uql::parse(&limited).unwrap(), &ctx).unwrap();
         assert_eq!(first_two.ids(), full.ids()[..2]);
     }
 
@@ -517,7 +517,7 @@ mod engine_remote_tests {
         let peer = EngineRemote::new(&spec, Identity::of_spec(&spec, None));
         let key = "x' |> LIMIT 0".to_string();
         let request = RemoteRequest::keys(vec![key.clone()]);
-        let parsed = crate::uql::parse(&peer.render(&request).unwrap()).unwrap();
+        let parsed = medulla_uql::parse(&peer.render(&request).unwrap()).unwrap();
         assert!(
             matches!(&parsed.ops[1], medulla_types::wire::Op::Filter { preds }
             if matches!(&preds[..], [medulla_types::wire::Pred::In { values, .. }]
@@ -542,7 +542,7 @@ mod engine_remote_tests {
             unreachable!()
         };
         std::thread::spawn(move || {
-            let fixture = crate::fixture::build();
+            let fixture = medulla_exec::fixture::build();
             let ctx = PlanCtx::new(&fixture.view, &fixture.semantic);
             let mut served = Vec::new();
             for _ in 0..3 {
@@ -560,7 +560,7 @@ mod engine_remote_tests {
                     panic!("the peer must receive UQL");
                 };
                 assert!(params.is_empty());
-                let statement = crate::uql::parse_statement(&text, &params).unwrap();
+                let statement = medulla_uql::parse_statement(&text, &params).unwrap();
                 let result = crate::uql::serve::run_statement(&statement, &ctx).unwrap();
                 let medulla_types::wire::UqlResult::Rows { rows, .. } = &result else {
                     panic!("rows expected");

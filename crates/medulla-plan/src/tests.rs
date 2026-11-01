@@ -1,10 +1,10 @@
 //! The planner's runnable proofs (`cargo test -p medulla-plan --features query`).
 
-use crate::algebra::{Op, Plan, Pred};
-use crate::cost::{CostModel, Order, Stats};
-use crate::exec::{PlanCtx, PlanExt};
-use crate::fixture::{build, query_vec};
-use crate::oracle::separate_surfaces;
+use medulla_exec::algebra::{Op, Plan, Pred};
+use medulla_exec::cost::{CostModel, Order, Stats};
+use medulla_exec::exec::{PlanCtx, PlanExt};
+use medulla_exec::fixture::{build, query_vec};
+use medulla_exec::oracle::separate_surfaces;
 
 /// THE oracle proof (non-negotiable): the fused single-plan execution returns the
 /// BYTE-IDENTICAL ordered id list as the three siloed surfaces done separately.
@@ -188,8 +188,8 @@ fn cost_reorder_picks_winner_same_result() {
 /// not contrived-via-raw-numbers, trigger for the runtime feedback loop.
 #[test]
 fn adaptive_reopt_auto_wires_into_ordinary_execution() {
-    use crate::cost::{Cardinality, ModalityCardinality, PlanStats};
-    use crate::optimizer::{self, ADAPTIVE_REOPT_THRESHOLD};
+    use medulla_exec::cost::{Cardinality, ModalityCardinality, PlanStats};
+    use medulla_exec::optimizer::{self, ADAPTIVE_REOPT_THRESHOLD};
     use medulla_core::compute::semantic::SemanticStore;
     use medulla_core::graph::GraphCore;
     use serde_json::json;
@@ -323,7 +323,7 @@ fn adaptive_reopt_auto_wires_into_ordinary_execution() {
 #[cfg(feature = "wasm-udf")]
 #[test]
 fn udf_op_runs_a_sandboxed_rowset_transform() {
-    use crate::rowset::RowSet;
+    use medulla_exec::rowset::RowSet;
 
     // A wasm UDF: read `Vec<(String, Option<f32>)>` (MessagePack) from the input region,
     // keep only ids starting with 'd' (0x64), re-encode, return the output region. The
@@ -395,8 +395,8 @@ fn udf_op_without_registry_errs() {
 /// UQL `TRAVERSE -[:REL]->{m,n}` consumes the canonical `relationship` field.
 #[cfg(test)]
 mod relationship_traverse_tests {
-    use crate::algebra::{Op, Plan};
-    use crate::exec::{PlanCtx, PlanExt};
+    use medulla_exec::algebra::{Op, Plan};
+    use medulla_exec::exec::{PlanCtx, PlanExt};
     use medulla_core::compute::semantic::SemanticStore;
     use medulla_core::graph::GraphCore;
     use serde_json::json;
@@ -451,8 +451,8 @@ mod relationship_traverse_tests {
 /// zips to the shorter slice) result.
 #[cfg(test)]
 mod rank_dim_mismatch_tests {
-    use crate::algebra::{Op, Plan};
-    use crate::exec::{PlanCtx, PlanExt};
+    use medulla_exec::algebra::{Op, Plan};
+    use medulla_exec::exec::{PlanCtx, PlanExt};
     use medulla_core::compute::semantic::SemanticStore;
     use medulla_core::graph::GraphCore;
     use serde_json::json;
@@ -520,8 +520,8 @@ mod rank_dim_mismatch_tests {
 /// the RowSet by validity/transaction windows instead of passing rows through.
 #[cfg(test)]
 mod temporal_tests {
-    use crate::algebra::{Op, Plan};
-    use crate::exec::{PlanCtx, PlanExt};
+    use medulla_exec::algebra::{Op, Plan};
+    use medulla_exec::exec::{PlanCtx, PlanExt};
     use medulla_core::compute::semantic::SemanticStore;
     use medulla_core::graph::GraphCore;
     use medulla_types::wire::TimeAxis;
@@ -695,7 +695,7 @@ mod temporal_tests {
 
     #[test]
     fn uql_as_of_tx_keyword_parses_and_filters() {
-        use crate::uql::parse;
+        use medulla_uql::parse;
         let p = parse("MATCH (:Event) |> AS OF TX @150").unwrap();
         assert!(matches!(
             p.ops.last(),
@@ -820,8 +820,8 @@ mod temporal_tests {
 /// Graph-native reranker proofs (CONCEPT:MEDULLA-KG.query.uql-parser-ops) — node-distance + mentions.
 #[cfg(test)]
 mod rerank_tests {
-    use crate::algebra::{Op, Plan};
-    use crate::exec::{PlanCtx, PlanExt};
+    use medulla_exec::algebra::{Op, Plan};
+    use medulla_exec::exec::{PlanCtx, PlanExt};
     use medulla_core::compute::semantic::SemanticStore;
     use medulla_core::graph::GraphCore;
     use serde_json::json;
@@ -878,7 +878,7 @@ mod rerank_tests {
 
     #[test]
     fn uql_rerank_keywords_parse() {
-        use crate::uql::parse;
+        use medulla_uql::parse;
         let p = parse("MATCH (:N) |> RERANK NODE_DISTANCE FROM a").unwrap();
         assert!(matches!(
             p.ops.last(),
@@ -1011,8 +1011,8 @@ mod rerank_tests {
 /// the rows through.
 #[cfg(feature = "timeseries")]
 mod timeseries_tests {
-    use crate::algebra::{Op, Plan};
-    use crate::exec::{PlanCtx, PlanExt};
+    use medulla_exec::algebra::{Op, Plan};
+    use medulla_exec::exec::{PlanCtx, PlanExt};
     use medulla_core::compute::semantic::SemanticStore;
     use medulla_core::graph::GraphCore;
     use serde_json::json;
@@ -1072,12 +1072,12 @@ mod timeseries_tests {
     }
 }
 
-/// RANK 10 — the ID/point-lookup fast path (`crate::exec::point_lookup_ids`, wired into
+/// RANK 10 — the ID/point-lookup fast path (`medulla_exec::exec::point_lookup_ids`, wired into
 /// `filter_op`): a lone `id = <id>` equality bypasses `sql_filter_ids`'s DataFusion round
 /// trip for an O(1) `HashMap` check, byte-identical in RESULT to the SQL path it replaces.
 mod point_lookup_tests {
-    use crate::algebra::{Op, Plan, Pred};
-    use crate::exec::{PlanCtx, PlanExt};
+    use medulla_exec::algebra::{Op, Plan, Pred};
+    use medulla_exec::exec::{PlanCtx, PlanExt};
     use medulla_core::compute::semantic::SemanticStore;
     use medulla_core::graph::{GraphCore, GraphView};
     use serde_json::json;

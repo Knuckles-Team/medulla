@@ -62,9 +62,6 @@ pub mod warehouse_pushdown;
 // MEDULLA-UNIFIED-DATA-PLANE-R005 — mapping approval-state machine for named R2RML
 // virtual graphs; an unapproved or model-only mapping refuses to be queried.
 pub mod virtual_graph_mapping;
-// MEDULLA-UNIFIED-DATA-PLANE-R007 — named pushdown operations and a dialect's
-// declared capability set, refusing an unknown operation name.
-pub mod federation_capabilities;
 // MEDULLA-UNIFIED-DATA-PLANE-R011 — typed freshness route and a bounded
 // read-your-writes wait, refusing an unbounded (zero-timeout) wait.
 pub mod freshness_router;
@@ -74,15 +71,6 @@ pub mod freshness_router;
 #[cfg(feature = "query")]
 pub mod code_context;
 
-/// Structured hierarchical retrieval (CONCEPT:MEDULLA-KG.retrieval.bounded-drill) — the LeanRAG method as a
-/// library API over the MEDULLA-220 summary tier: retrieve at the summary/abstraction
-/// level, then drill down `SUMMARIZES`/`CONSOLIDATES` provenance to the supporting
-/// leaves, assembling a de-duplicated multi-level context that beats flat top-k on
-/// coverage. Pure-Rust + dep-free (Pi-tier clean): it reads the graph and ANN index
-/// through the small [`leanrag::GraphTopology`] / [`leanrag::AnnIndex`] accessor
-/// traits, so it links no DataFusion and edits no medulla-core. It is a retrieval helper
-/// a caller composes ABOVE the planner, NOT a wire `Op`.
-pub mod leanrag;
 
 /// The UQL text front-end (CONCEPT:AU-KG.query.top-nodes-by-degree) — `uql::parse(text) -> wire::Plan`. It
 /// is a pure parser (lexer + recursive descent, NO DataFusion), so it ships in a
@@ -90,30 +78,7 @@ pub mod leanrag;
 /// Plan is `query`-gated.
 pub mod uql;
 
-/// DecideText (EH-073): the decision front end, kept out of UQL and `wire::Op`.
-pub mod decide_text;
 
-/// RowSet v2, additive (CONCEPT:MEDULLA-KG.query.knowledge-set): [`knowledge::KnowledgeSet`] is the
-/// enriched shape (kind/confidence/bitemporal window/column-projection/provenance+policy
-/// frames) a caller builds from a FINISHED `RowSet` + the `GraphView` it ran over — a
-/// terminal step above the op loop, exactly like `leanrag`. `RowSet` and `Op::execute`
-/// are unchanged; this module is only exercised when a caller explicitly asks for it.
-/// Sits under the existing `query` feature (no new cargo feature) because it borrows
-/// `GraphView::node_row_object`'s decode.
-#[cfg(feature = "query")]
-pub mod knowledge;
-/// The Arrow-columnar `KnowledgeBatch` (CONCEPT:MEDULLA-P1-2, P1 roadmap feedback) — a
-/// RecordBatch-backed columnar projection of `KnowledgeSet`: entity/artifact id,
-/// N named score columns, calibrated confidence, typed evidence-ref columns,
-/// bitemporal valid/tx-time, provenance/policy-label list columns, lazy
-/// blob-handle columns and native bounded result streams. Behind the
-/// `knowledge-batch` feature (implies `query` and is enabled by facade `full`) so a
-/// default/Pi build still links no Arrow. Family adapters cover graph, SQL, RDF,
-/// vector, time-series, jobs, and cross-modal results.
-#[cfg(feature = "knowledge-batch")]
-pub mod knowledge_batch;
-#[cfg(feature = "knowledge-batch")]
-pub mod result_stream;
 // The natural-language → query planning seam (CONCEPT:MEDULLA-KG.query.core-query-input) + the concrete standalone
 // `UreqNlPlanner` (CONCEPT:MEDULLA-KG.query.fence-stripper). The `NlPlanner` trait + the `plan_and_execute*`
 // helpers are pure (only touch the existing `uql::parse` + `execute`), so they ride the
@@ -124,63 +89,13 @@ pub mod result_stream;
 /// (MEDULLA-UNIFIED-DATA-PLANE-R017.2.1). Pure `std`, always compiled: no heavy HTTP/native
 /// client dependency is needed until the live slice (`R017.2.2`) issues real requests.
 pub mod clickhouse_connection;
-#[cfg(feature = "nl-query")]
-pub mod nl;
 /// Oracle/Db2 attached-source driver config + connect/refusal path
 /// (MEDULLA-UNIFIED-DATA-PLANE-R018.2.1). Pure `std`, always compiled: no driver/ODBC
 /// client dependency is needed until the live slice (`R018.2.2`) issues real reads.
 pub mod relational_connection;
-// The federation foreign-source seam (CONCEPT:MEDULLA-KG.query.query-federation) — the `ForeignSource` trait +
-// the remote-engine / HTTP-JSON kinds backing `Op::ForeignScan`. Implies `query`.
-#[cfg(feature = "federation")]
-pub mod federation;
-/// AGE graph reads bound to the existing guarded PostgreSQL federation transport
-/// (MEDULLA-DURABLE-KERNEL-R024.1).
-#[cfg(feature = "federation-sql")]
-pub mod federation_age;
-/// The brain-guarded backend source (MEDULLA-DURABLE-KERNEL-R024.6): typed shape
-/// validation plus an explicit, named refusal, since no bound guard-policy
-/// evaluation driver exists yet.
-#[cfg(feature = "federation")]
-pub mod federation_brain_guarded;
-/// The Neo4j/FalkorDb halves of the Cypher transpiler source
-/// (MEDULLA-DURABLE-KERNEL-R024.3): typed shape validation plus an explicit,
-/// named refusal, since no bound Bolt/RESP driver exists yet. AGE (the
-/// third Cypher dialect) is bound in `federation_age` behind
-/// `federation-sql`.
-#[cfg(feature = "federation")]
-pub mod federation_cypher_unbound;
-/// The federation optimizer (EH-563): capability-driven pushdown of keys, limits and pages
-/// into foreign sources, bind joins, the per-query network budget and the fragment trace.
-#[cfg(feature = "federation")]
-pub mod federation_opt;
 /// Pushdown to a peer engine, end to end (they run `uql::serve::run_statement`, so they sit above federation).
 #[cfg(all(test, feature = "federation"))]
 mod engine_peer_tests;
-/// The Spark job backend source's explicit-registration half
-/// (MEDULLA-DURABLE-KERNEL-R024.8): typed `artifact://`-scheme shape validation
-/// plus an explicit, named refusal, since no bound Spark artifact-store
-/// driver exists yet. `federation::source_for`'s generic dispatch already
-/// refuses an inline `SparkBatch` spec through `Oq2Unbound`; this is the
-/// per-registration counterpart `federation_age`/`federation_trino` give
-/// their own backend.
-#[cfg(feature = "federation")]
-pub mod federation_spark;
-/// The one outbound-destination gate for federation (HTTP URLs, SQL DSN hosts).
-#[cfg(feature = "federation")]
-pub mod federation_ssrf;
-/// Learned, provenanced join cardinality statistics for ordering joins across foreign
-/// sources (MEDULLA-FEDERATED-QUERY-R048.1 — typed-model slice of R048).
-#[cfg(feature = "federation")]
-pub mod federation_stats;
-/// Explicitly bound, probed Trino client protocol source (EH-580).
-#[cfg(feature = "federation-sql")]
-pub mod federation_trino;
-/// The write-side mirror-target seam (MEDULLA-DURABLE-KERNEL-R024.2) — the
-/// `MirrorTarget` trait binding a [`medulla_types::wire::MirrorTargetSpec`] to a
-/// driver. Mirrors `federation`'s read-side `ForeignSource` seam.
-#[cfg(feature = "federation")]
-pub mod mirror_target;
 
 
 // The hierarchical-retrieval surface (CONCEPT:MEDULLA-KG.retrieval.bounded-drill): the retriever + its accessor
@@ -190,18 +105,6 @@ pub mod mirror_target;
 /// (CONCEPT:MEDULLA-KG.query.cost-cardinality-traits): the per-op [`cost::Cardinality`] estimator
 /// and the [`cost::CostEstimate`] triple. Gated on `query` (the estimator borrows `PlanCtx`);
 /// this tier only defines the shape — no estimator is wired, so behavior is unchanged.
-pub use leanrag::{
-    flat_top_k, retrieve_vector_free, AnnIndex, GraphTopology, HierResult, HierarchicalRetriever,
-    RetrievalParams, Scored, SectionGranularity, SectionRecord, SectionSpan, SectionTopology,
-    TraversalLimit, VectorFreeError, VectorFreeLimits, VectorFreeResult,
-};
-/// Document boosts from retrieval feedback (MEDULLA-FEDERATED-QUERY-R705).
-pub mod feedback_boost;
-/// Agent knowledge scopes applied before truncation (MEDULLA-FEDERATED-QUERY-R704).
-pub mod knowledge_scope;
-/// Retrieval sufficiency, selection and hierarchy decisions (MEDULLA-FEDERATED-QUERY-R081).
-pub mod retrieval_verdict;
-
 /// The `PROPAGATE` cone as plain ids (EH-526): what a standing impact watch recomputes.
 /// The in-txn tsdb read-your-own-writes staged-series overlay (CONCEPT:MEDULLA-KG.query.txn-tsdb-read-your).
 /// The typed DAG plan surface (CONCEPT:MEDULLA-KG.query.plan-dag, E5): the node/edge shape plus
@@ -211,23 +114,8 @@ pub mod retrieval_verdict;
 /// delta model + the circuit a caller compiles a `Plan` into and folds CDC deltas through.
 /// The RowSet v2 surface (CONCEPT:MEDULLA-KG.query.knowledge-set): the enriched, ready-to-consume
 /// row/set shape a caller builds from a finished `RowSet` + the `GraphView` it ran over.
-#[cfg(feature = "query")]
-pub use knowledge::{
-    KnowledgeRow, KnowledgeSet, PayloadRef, PolicyFrame, ProvenanceFrame,
-};
-
 /// The Arrow-columnar `KnowledgeBatch` surface (CONCEPT:MEDULLA-P1-2): the RecordBatch-
 /// backed columnar projection of a `KnowledgeSet` and its row type.
-#[cfg(feature = "knowledge-batch")]
-pub use knowledge_batch::{KnowledgeBatch, KnowledgeBatchRow};
-#[cfg(feature = "knowledge-batch")]
-pub use result_stream::{
-    cross_modal_result_stream, graph_result_stream, job_result_stream, rdf_result_stream,
-    sql_result_stream, time_series_result_stream, validate_native_batch, vector_result_stream,
-    KnowledgeBatchEnvelope, KnowledgeBatchStream, KnowledgeRowResult, KnowledgeStreamContext,
-    KnowledgeStreamError, ResultStreamCursor, ServedResultFamily,
-};
-
 /// The Lane-0 foundation seams the follow-on lanes hang off (append-only): the logical-plan
 /// optimization hook `plan_optimize` (CONCEPT:MEDULLA-KG.query.plan-optimize-seam — Lane A's cost
 /// optimizer fills its body) and the physical `Driver` execution trait + its `SerialDriver`
@@ -270,26 +158,12 @@ pub use result_stream::{
 /// `Method::ExplainBelief` wire-projects (mirroring `Method::OwlExplain`'s `ProofNodeWire`).
 // The NL→query seam surface (CONCEPT:MEDULLA-KG.query.core-query-input/MEDULLA-080): the trait + the LLM-optional
 // `Option<&dyn NlPlanner>` entry point, and the concrete `UreqNlPlanner`.
-#[cfg(feature = "nl-query")]
-pub use nl::{
-    plan_and_execute, plan_and_execute_opt, NlConfigError, NlPlanner, OAuth2ClientCredentials,
-    TokenAuthStyle, UreqNlPlanner,
-};
-
 // Re-export the federation surface so a caller naming a foreign source goes through
 // medulla-plan: the trait + the spec-dispatcher.
-#[cfg(feature = "federation")]
-pub use federation::{source_for, ForeignSource};
-
 // The federation NAME-RESOLUTION seam (CONCEPT:MEDULLA-KG.query.closure-backed-source): the by-name registry + the
 // registerable owned source kinds (spec-backed / table / closure) + the shared handle.
 // These complete `Op::Foreign` / a `Named` `Op::ForeignScan` — a name → live source →
 // rows resolution the executor consults via `PlanCtx::with_foreign`.
-#[cfg(feature = "federation")]
-pub use federation::{
-    ClosureSource, ForeignSourceRegistry, SharedForeignSource, SpecSource, TableSource,
-};
-
 // Re-export the lexical surface (CONCEPT:AU-KG.query.text-spatial-time) so a caller wiring a text plan
 // names them through medulla-plan: the BM25 index, the hit row, and the RRF helper.
 #[cfg(feature = "text")]
@@ -323,22 +197,8 @@ mod text_tests;
 #[cfg(all(test, feature = "owl"))]
 mod owl_tests;
 
-// The federation foreign-scan + compose-join-with-local proofs (CONCEPT:MEDULLA-KG.query.query-federation):
-// a mock HTTP/JSON source joined with the local graph in ONE plan == the manual join.
-#[cfg(all(test, feature = "federation"))]
-mod federation_tests;
 
-// The federation NAME-REGISTRY proofs (CONCEPT:MEDULLA-KG.query.closure-backed-source): a registered source resolves by
-// name (`Named` `Op::ForeignScan` + `Op::Foreign`), composes with a local Join, an
-// unbound name errors cleanly, and an empty/absent registry keeps the prior behavior.
-#[cfg(all(test, feature = "federation"))]
-mod federation_registry_tests;
 
-// The external-SQL federation proofs (CONCEPT:MEDULLA-KG.query.feature): an external relational-SQL
-// source (`ForeignSourceSpec::Sql`) joined with the local graph in ONE plan == the
-// manual join, plus the real sqlx DSN path errors cleanly when unreachable.
-#[cfg(all(test, feature = "federation-sql"))]
-mod federation_sql_tests;
 
 // The spatial `SpatialScan` + `Spatial{Within,DWithin}` executor proofs
 // (CONCEPT:MEDULLA-KG.ontology.singles-concept): a bbox R-tree scan + geometry filters compose with the graph/

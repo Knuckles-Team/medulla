@@ -10,9 +10,9 @@
 
 use std::collections::BTreeSet;
 
-use crate::uql::grammar::{self, Feature, PRODUCTIONS};
-use crate::uql::parser::Parser;
-use crate::uql::{canonicalize, parse, parse_statement, Params, UqlCode, UqlError};
+use medulla_uql::grammar::{self, Feature, PRODUCTIONS};
+use medulla_uql::parser::Parser;
+use medulla_uql::{canonicalize, parse, parse_statement, Params, UqlCode, UqlError};
 use medulla_types::wire::{
     uql_sample_op, uql_sample_pred, Op, OpKind, Plan, PredKind, UQL_RESERVED_WORDS,
 };
@@ -115,7 +115,7 @@ fn docs_embed_the_generated_grammars() {
     );
     assert_eq!(
         generated_block(&doc, "decide-text-grammar"),
-        crate::decide_text::grammar::ebnf(),
+        medulla_nlq::decide_text::grammar::ebnf(),
         "docs/uql.md DecideText grammar drifted; {regen}"
     );
 }

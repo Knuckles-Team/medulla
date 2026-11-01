@@ -142,7 +142,7 @@ fn walk(from: i64, to: i64) -> Vec<(i64, f64)> {
 
 /// `DERIVE zscore(ewma(v0, 4), 8)` on the fly over `points`: `(ts, value bits)`.
 fn on_the_fly(points: &[(i64, f64)]) -> Vec<(i64, u64)> {
-    let expr = medulla_plan::uql::parse_series_expr(EXPR).unwrap();
+    let expr = medulla_uql::parse_series_expr(EXPR).unwrap();
     let mut program = Program::compile(&expr).unwrap();
     points
         .iter()

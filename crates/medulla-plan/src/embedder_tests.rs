@@ -10,7 +10,7 @@
 //!  * `hash_embedder_is_deterministic` — the fallback `HashEmbedder` maps a text to a
 //!    stable unit-norm vector and a wrong-width result fails closed at the shared rank guard.
 
-use crate::exec::{execute, HashEmbedder, PlanCtx, TextEmbedder};
+use medulla_exec::exec::{execute, HashEmbedder, PlanCtx, TextEmbedder};
 use medulla_core::compute::semantic::SemanticStore;
 use medulla_core::graph::GraphCore;
 use medulla_types::wire::{Op, Plan};

@@ -189,7 +189,7 @@ impl ForeignReadSessions {
     pub fn page_source(
         &self,
         execution_id: u64,
-    ) -> Result<medulla_plan::federation::SharedForeignSource, String> {
+    ) -> Result<medulla_federation::federation::SharedForeignSource, String> {
         let record = self
             .sessions
             .get(&execution_id)
@@ -461,7 +461,7 @@ impl ForeignReadSessions {
             if !plan_names.contains(record.source_name.as_str()) {
                 return Err("FOREIGN_READ_UNUSED: execution source is absent from plan".into());
             }
-            let driver: medulla_plan::federation::SharedForeignSource =
+            let driver: medulla_federation::federation::SharedForeignSource =
                 Arc::new(PageBackedSource {
                     record: Arc::downgrade(handle),
                 });
@@ -612,7 +612,7 @@ struct PageBackedSource {
     record: Weak<Mutex<SessionRecord>>,
 }
 
-impl medulla_plan::federation::ForeignSource for PageBackedSource {
+impl medulla_federation::federation::ForeignSource for PageBackedSource {
     fn fetch(&self) -> Result<medulla_exec::rowset::RowSet, String> {
         let record = self
             .record
@@ -633,7 +633,7 @@ impl medulla_plan::federation::ForeignSource for PageBackedSource {
         ))
     }
 
-    fn fetch_columns(&self) -> Result<medulla_plan::federation_opt::ForeignRows, String> {
+    fn fetch_columns(&self) -> Result<medulla_federation::federation_opt::ForeignRows, String> {
         let record = self
             .record
             .upgrade()
@@ -694,20 +694,20 @@ impl medulla_plan::federation::ForeignSource for PageBackedSource {
                         ));
                     }
                 }
-                Ok(medulla_plan::federation_opt::ForeignRow {
+                Ok(medulla_federation::federation_opt::ForeignRow {
                     id: row.id.clone(),
                     score: row.score,
                     columns,
                 })
             })
             .collect::<Result<Vec<_>, String>>()?;
-        Ok(medulla_plan::federation_opt::ForeignRows::from_rows(rows))
+        Ok(medulla_federation::federation_opt::ForeignRows::from_rows(rows))
     }
 
     fn fetch_projected(
         &self,
-        plan: &medulla_plan::federation_opt::ColumnPlan,
-    ) -> Result<medulla_plan::federation_opt::ForeignRows, String> {
+        plan: &medulla_federation::federation_opt::ColumnPlan,
+    ) -> Result<medulla_federation::federation_opt::ForeignRows, String> {
         // Reuse the same mapped-cell currency and local residual semantics as
         // SQL/HTTP foreign sources. The host has already supplied cells that
         // the approved connector mapping permits; this step only filters and
@@ -1128,9 +1128,7 @@ mod tests {
 
     #[test]
     fn mapped_cells_use_existing_foreign_rows_residual_and_projection() {
-        use medulla_plan::federation_opt::{
-            ColumnPlan, ColumnPredicate, Comparison, PushdownSupport,
-        };
+        use medulla_federation::{federation_opt::ColumnPlan, federation_opt::ColumnPredicate, federation_opt::Comparison, federation_opt::PushdownSupport};
 
         let sessions = ForeignReadSessions::default();
         let owner = CarrierAuthority::verified_for_test("owner");

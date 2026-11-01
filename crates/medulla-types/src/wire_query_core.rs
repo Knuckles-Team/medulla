@@ -34,7 +34,7 @@ pub enum Pred {
     /// `prop <op> value` over a TYPED scalar (UQL predicate algebra, UQL-01). The three
     /// legacy forms above stay the canonical spelling of what they express —
     /// `Cmp{Eq,Str}` ≡ `Eq`, `Cmp{Gt,Num}` ≡ `GtNum`, `Cmp{Lt,Num}` ≡ `LtNum` (the UQL
-    /// parser never emits those three `Cmp` shapes; `medulla_plan::uql::canonicalize` rewrites
+    /// parser never emits those three `Cmp` shapes; `medulla_uql::canonicalize` rewrites
     /// them) — so the wire keeps ONE encoding per meaning. A `Num` compares numerically
     /// and a `Bool` as a boolean, never as their JSON text.
     Cmp {

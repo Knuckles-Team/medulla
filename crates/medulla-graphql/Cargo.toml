@@ -51,7 +51,7 @@ hardening = ["dep:sha2"]
 # Build a cross-modal-free surface with `--no-default-features`. The facade enables
 # `crossmodal-tsdb` from its tsdb-bearing GraphQL tier and owns the sole authoritative
 # `commitTransaction` path (see crossmodal.rs module docs).
-crossmodal = ["dep:medulla-plan", "medulla-plan/query", "medulla-exec/query", "dep:medulla-rdf", "medulla-rdf/sparql"]
+crossmodal = ["dep:medulla-uql", "medulla-uql/query", "dep:medulla-plan", "medulla-plan/query", "medulla-exec/query", "dep:medulla-rdf", "medulla-rdf/sparql"]
 # MEDULLA-381 — the tsdb leg of the cross-modal seam: `addMeasurement` staging + the in-txn
 # `medulla_plan::StagedSeries` read-your-own-writes overlay (CONCEPT:MEDULLA-374 parity). Pulls
 # `medulla-plan/timeseries` (→ medulla-tsdb). Default-OFF (parity with the facade's `tsdb`-gated
@@ -59,6 +59,7 @@ crossmodal = ["dep:medulla-plan", "medulla-plan/query", "medulla-exec/query", "d
 crossmodal-tsdb = ["crossmodal", "medulla-plan/timeseries", "medulla-exec/timeseries"]
 
 [dependencies]
+medulla-uql = { path = "../medulla-uql", optional = true }
 medulla-types = { path = "../medulla-types" }
 medulla-core = { path = "../medulla-core" }
 # MEDULLA-379: the unified-query plan front-end + executor (uql parse, `Plan`/`Op`, `execute`,

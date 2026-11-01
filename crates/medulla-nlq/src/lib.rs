@@ -6,3 +6,10 @@
 
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
+
+/// DecideText (EH-073): the decision front end, kept out of UQL and `wire::Op`.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod decide_text;
+#[cfg(feature = "nl-query")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod nl;

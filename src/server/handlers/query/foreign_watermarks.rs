@@ -50,7 +50,7 @@ impl ForeignWatermarks {
     pub(crate) fn fragment_sources(
         core: &GraphCore,
         ops: &[medulla_exec::algebra::Op],
-    ) -> Option<HashMap<String, medulla_plan::federation_opt::SourceWatermark>> {
+    ) -> Option<HashMap<String, medulla_federation::federation_opt::SourceWatermark>> {
         let mut sources = BTreeSet::new();
         if !ops.iter().all(|op| collect_foreign(op, &mut sources)) || sources.is_empty() {
             return None;
@@ -69,7 +69,7 @@ impl ForeignWatermarks {
                     .unwrap_or(60_000);
                 Some((
                     name,
-                    medulla_plan::federation_opt::SourceWatermark {
+                    medulla_federation::federation_opt::SourceWatermark {
                         watermark,
                         valid_through_ms: now_ms.saturating_add(remaining),
                     },

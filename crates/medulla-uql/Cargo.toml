@@ -12,3 +12,20 @@ name = "medulla_uql"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-exec = { path = "../medulla-exec" }
+medulla-types = { path = "../medulla-types" }
+serde_json = "1.0"
+
+[features]
+query = ["medulla-exec/query"]
+epistemic = ["query", "medulla-exec/epistemic"]
+federation = ["query", "medulla-exec/federation"]
+geo = ["query", "medulla-exec/geo"]
+numeric = ["query", "medulla-exec/numeric"]
+owl = ["query", "medulla-exec/owl"]
+probabilistic = ["query", "medulla-exec/probabilistic"]
+stream = ["query", "medulla-exec/stream"]
+tensor = ["query", "medulla-exec/tensor"]
+text = ["query", "medulla-exec/text"]
+timeseries = ["query", "medulla-exec/timeseries"]
+wasm-udf = ["query", "medulla-exec/wasm-udf"]

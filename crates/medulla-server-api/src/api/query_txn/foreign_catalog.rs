@@ -62,7 +62,7 @@ use medulla_catalog_types::{
     connector_pack::ConnectorPackSourceApprovalResult, connector_pack::PackSourceApproval,
     connector_pack::PackSourceRegistration,
 };
-use medulla_plan::federation::{ForeignSourceRegistry, SharedForeignSource};
+use medulla_federation::{federation::ForeignSourceRegistry, federation::SharedForeignSource};
 use medulla_types::contract::Digest256;
 use medulla_types::wire::ForeignSourceSpec;
 
@@ -120,10 +120,10 @@ impl OwnedForeignRegistry {
     #[cfg(feature = "result-cache")]
     pub fn install_fragment_cache(
         &mut self,
-        sources: std::collections::HashMap<String, medulla_plan::federation_opt::SourceWatermark>,
+        sources: std::collections::HashMap<String, medulla_federation::federation_opt::SourceWatermark>,
     ) {
         self.registry.set_cache_scope(std::sync::Arc::new(
-            medulla_plan::federation_opt::FragmentCacheScope::new(self.cache_salt.clone(), sources),
+            medulla_federation::federation_opt::FragmentCacheScope::new(self.cache_salt.clone(), sources),
         ));
     }
     /// The verified owner (tenant+principal) scope this registry was built for.
@@ -494,7 +494,7 @@ impl ForeignSourceCatalog {
 fn verify_outbound_before_register(spec: &ForeignSourceSpec) -> Result<(), String> {
     #[cfg(feature = "federation-sql")]
     if let ForeignSourceSpec::Sql { dsn, .. } = spec {
-        return medulla_plan::federation_ssrf::check_sql_dsn(dsn);
+        return medulla_federation::federation_ssrf::check_sql_dsn(dsn);
     }
     let _ = spec;
     Ok(())

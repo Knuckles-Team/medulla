@@ -29,6 +29,7 @@ name = "medulla_quantum_workloads"
 # this tool's `run_qaoa_maxcut`/`plan_maxcut_proposal` logic behind, without this
 # lane having raced ahead into that job plane itself.
 [dependencies]
+medulla-uql = { path = "../medulla-uql", features = ["query"] }
 medulla-types = { path = "../medulla-types" }
 medulla-core = { path = "../medulla-core" }
 medulla-plan = { path = "../medulla-plan", features = ["query"] }

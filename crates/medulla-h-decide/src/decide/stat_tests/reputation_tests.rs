@@ -88,7 +88,7 @@ fn reliability(h: &Harness, who: &str) -> (Option<f64>, Option<f64>, Option<f64>
     let semantic = medulla_core::compute::semantic::SemanticStore::new();
     let ctx = medulla_exec::exec::PlanCtx::new(&graph, &semantic).with_decisions(&views);
     let text = "MATCH () |> SOURCE RELIABILITY 'plan-hyde' |> RETURN belief, reliability_lo, reliability_hi";
-    let stmt = medulla_plan::uql::parse_statement(text, &medulla_plan::uql::Params::new()).unwrap();
+    let stmt = medulla_uql::parse_statement(text, &medulla_uql::Params::new()).unwrap();
     let UqlResult::Rows { rows, .. } =
         medulla_plan::uql::serve::run_statement(&stmt, &ctx).unwrap()
     else {

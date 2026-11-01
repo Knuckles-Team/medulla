@@ -258,7 +258,7 @@ pub(crate) fn run_unified_with_staged_finish<T>(
     core: &Arc<GraphCore>,
     staged: &[(String, Vec<f32>)],
     #[cfg(feature = "federation")] foreign: Option<
-        &medulla_plan::federation::ForeignSourceRegistry,
+        &medulla_federation::federation::ForeignSourceRegistry,
     >,
     #[cfg(feature = "tsdb")] tsdb_ctx: TsdbLegBind<'_>,
     finish: impl FnOnce(&medulla_exec::algebra::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>,

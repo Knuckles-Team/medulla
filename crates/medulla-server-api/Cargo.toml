@@ -28,6 +28,7 @@ medulla-kernel = { path = "../medulla-kernel" }
 medulla-modality = { path = "../medulla-modality", optional = true }
 medulla-numeric = { path = "../medulla-numeric", optional = true }
 medulla-plan = { path = "../medulla-plan", optional = true }
+medulla-federation = { path = "../medulla-federation", optional = true }
 medulla-program = { path = "../medulla-program", optional = true }
 medulla-query = { path = "../medulla-query", optional = true }
 medulla-rdf = { path = "../medulla-rdf", optional = true }
@@ -79,9 +80,9 @@ cypher = ["dep:medulla-query", "medulla-query/cypher", ]
 decide = ["dep:medulla-numeric", "medulla-numeric/decision", "dep:medulla-capabilities", "medulla-capabilities?/decide", "jobs", "redb", "shacl"]
 epistemic = ["dep:medulla-plan", "medulla-plan/epistemic", "medulla-exec/epistemic", "dep:medulla-modality", "dep:medulla-epistemic", "query"]
 epistemic-tms = ["dep:medulla-epistemic", "medulla-epistemic/epistemic-tms", "epistemic"]
-federation = ["dep:medulla-plan", "medulla-plan/federation", "medulla-exec/federation", "query", "server"]
+federation = ["dep:medulla-plan", "dep:medulla-federation", "medulla-federation/federation", "medulla-plan/federation", "medulla-exec/federation", "query", "server"]
 federation-search = ["dep:ureq", "server", "federation"]
-federation-sql = ["dep:medulla-plan", "medulla-plan/federation-sql", "federation"]
+federation-sql = ["dep:medulla-plan", "medulla-federation/federation-sql", "medulla-plan/federation-sql", "federation"]
 graphlearn = []
 graphql = ["dep:medulla-graphql", "medulla-graphql/hardening", "server", "security"]
 jobs = ["dep:medulla-jobs", "dep:medulla-capabilities", "medulla-capabilities/jobs", "server", "mining", "epistemic"]

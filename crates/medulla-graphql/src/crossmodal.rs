@@ -396,7 +396,7 @@ fn unified_query(
 ) -> Result<Value, String> {
     let txn_id = arg_str(field, "txnId")?;
     let uql = arg_str(field, "uql")?;
-    let plan = medulla_plan::uql::parse(&uql).map_err(|e| e.render(&uql))?;
+    let plan = medulla_uql::parse(&uql).map_err(|e| e.render(&uql))?;
 
     let guard = registry.txns.lock().unwrap();
     let txn = guard

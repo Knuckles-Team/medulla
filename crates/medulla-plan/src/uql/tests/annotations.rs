@@ -5,9 +5,9 @@ use medulla_core::graph::GraphCore;
 use medulla_types::wire::{UqlProofCoverage, UqlProofStep, UqlResult, UqlRow};
 use serde_json::json;
 
-use crate::exec::PlanCtx;
+use medulla_exec::exec::PlanCtx;
 use crate::uql::serve::run_statement;
-use crate::uql::{parse_statement, Params};
+use medulla_uql::{parse_statement, Params};
 
 fn rows_of(src: &str, ctx: &PlanCtx) -> Vec<UqlRow> {
     let stmt = parse_statement(src, &Params::new()).unwrap_or_else(|e| panic!("{}", e.render(src)));

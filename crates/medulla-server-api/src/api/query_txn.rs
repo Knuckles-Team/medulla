@@ -46,7 +46,7 @@ pub trait QueryApi: Send + Sync {
         core: &Arc<medulla_core::graph::GraphCore>,
         staged: &[(String, Vec<f32>)],
         #[cfg(feature = "federation")] foreign: Option<
-            &medulla_plan::federation::ForeignSourceRegistry,
+            &medulla_federation::federation::ForeignSourceRegistry,
         >,
         #[cfg(feature = "tsdb")] tsdb_ctx: query_support::TsdbLegBind<'_>,
     ) -> Result<Vec<(String, Option<f32>)>, String>;

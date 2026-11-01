@@ -11,8 +11,8 @@ use medulla_core::graph::{GraphCore, GraphView};
 use medulla_text::TextIndex;
 use serde_json::json;
 
-use crate::algebra::{Op, Plan};
-use crate::exec::{PlanCtx, PlanExt};
+use medulla_exec::algebra::{Op, Plan};
+use medulla_exec::exec::{PlanCtx, PlanExt};
 
 fn blob(v: serde_json::Value) -> Vec<u8> {
     rmp_serde::to_vec_named(&v).unwrap()
@@ -270,15 +270,15 @@ fn rank_text_finds_selective_candidates_behind_many_higher_scoring_noise_docs() 
             "a sentence that mentions apple exactly once among other words",
         );
     }
-    let (view, semantic, text) = crate::fixture::finish_text_fixture(core, text);
-    let ctx = crate::fixture::text_context(&view, &semantic, &text);
+    let (view, semantic, text) = medulla_exec::fixture::finish_text_fixture(core, text);
+    let ctx = medulla_exec::fixture::text_context(&view, &semantic, &text);
 
     let plan = Plan::new(vec![
         Op::Scan {
             label: "Doc".into(),
         },
         Op::Filter {
-            preds: vec![crate::algebra::Pred::Eq {
+            preds: vec![medulla_exec::algebra::Pred::Eq {
                 prop: "keep".into(),
                 value: "yes".into(),
             }],
@@ -328,8 +328,8 @@ fn filtered_rank_text_equals_the_brute_force_restricted_ranking() {
         );
         text.upsert(&id, &body);
     }
-    let (view, semantic, text) = crate::fixture::finish_text_fixture(core, text);
-    let ctx = crate::fixture::text_context(&view, &semantic, &text);
+    let (view, semantic, text) = medulla_exec::fixture::finish_text_fixture(core, text);
+    let ctx = medulla_exec::fixture::text_context(&view, &semantic, &text);
     let full = text.search("graph", 400);
     for category in CATEGORIES {
         let plan = Plan::new(vec![
@@ -337,7 +337,7 @@ fn filtered_rank_text_equals_the_brute_force_restricted_ranking() {
                 label: "Doc".into(),
             },
             Op::Filter {
-                preds: vec![crate::algebra::Pred::Eq {
+                preds: vec![medulla_exec::algebra::Pred::Eq {
                     prop: "category".into(),
                     value: category.into(),
                 }],

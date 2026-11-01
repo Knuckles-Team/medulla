@@ -55,7 +55,7 @@ pub struct FederationAllowGuard {
 #[cfg(feature = "federation-sql")]
 impl FederationAllowGuard {
     fn install(origin: &str, lock: tokio::sync::RwLockWriteGuard<'static, ()>) -> Self {
-        let key = medulla_plan::federation::HTTP_JSON_FEDERATION_ALLOW_ENV;
+        let key = medulla_federation::federation::HTTP_JSON_FEDERATION_ALLOW_ENV;
         let previous = std::env::var_os(key);
         std::env::set_var(key, origin);
         Self {
@@ -88,7 +88,7 @@ impl FederationAllowGuard {
 #[cfg(feature = "federation-sql")]
 impl Drop for FederationAllowGuard {
     fn drop(&mut self) {
-        let key = medulla_plan::federation::HTTP_JSON_FEDERATION_ALLOW_ENV;
+        let key = medulla_federation::federation::HTTP_JSON_FEDERATION_ALLOW_ENV;
         if let Some(previous) = self.previous.take() {
             std::env::set_var(key, previous);
         } else {

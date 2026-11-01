@@ -159,7 +159,7 @@ pub(crate) fn propagate_op(
 }
 
 /// Run a `PROPAGATE` op over `ctx` (any other op is a routing defect).
-pub(crate) fn apply(op: &Op, input: &RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
+pub fn apply(op: &Op, input: &RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
     let Op::Propagate {
         model,
         rel,

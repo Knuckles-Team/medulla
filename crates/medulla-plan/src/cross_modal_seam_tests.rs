@@ -20,15 +20,15 @@ use medulla_core::graph::{GraphCore, GraphView};
 use serde_json::json;
 
 #[cfg(feature = "owl")]
-use crate::algebra::Pred;
+use medulla_exec::algebra::Pred;
 #[cfg(any(feature = "owl", feature = "timeseries", feature = "tensor"))]
-use crate::algebra::{Op, Plan};
+use medulla_exec::algebra::{Op, Plan};
 #[cfg(feature = "owl")]
-use crate::exec::execute;
+use medulla_exec::exec::execute;
 #[cfg(any(feature = "owl", feature = "timeseries", feature = "tensor"))]
-use crate::exec::PlanCtx;
+use medulla_exec::exec::PlanCtx;
 #[cfg(any(feature = "timeseries", feature = "tensor"))]
-use crate::exec::PlanExt;
+use medulla_exec::exec::PlanExt;
 
 #[cfg(any(feature = "owl", feature = "timeseries", feature = "tensor"))]
 fn blob(v: serde_json::Value) -> Vec<u8> {
@@ -150,7 +150,7 @@ fn reason_then_traverse_then_rank_equals_separate() {
     let cls = reasoner.classify();
     let asserted = medulla_rdf::owl::asserted_types_from_view(&view, "http://example.org/").unwrap();
     let members: Vec<String> = medulla_rdf::owl::instances_of(&cls, &asserted, target);
-    let reached = crate::exec::bfs_reached(&view, &members, "CITES", 1, 1);
+    let reached = medulla_exec::exec::bfs_reached(&view, &members, "CITES", 1, 1);
     let reached_set: HashSet<&str> = reached.iter().map(String::as_str).collect();
     let ranked = semantic.semantic_search(&q, 64);
     let separate: Vec<String> = ranked
@@ -184,7 +184,7 @@ fn reason_then_traverse_then_rank_equals_separate() {
 #[cfg(feature = "owl")]
 #[test]
 fn reason_seeded_reorder_picks_winner() {
-    use crate::cost::{CostModel, Order, Stats};
+    use medulla_exec::cost::{CostModel, Order, Stats};
 
     let reason = Op::Reason {
         target_class: "<http://example.org/ScholarlyWork>".into(),

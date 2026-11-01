@@ -19,7 +19,7 @@ use std::collections::HashMap;
 use medulla_types::wire::{op_kind, Op, ProofRole, UqlProofCoverage, UqlProofStep, UqlRow, UqlRowProof};
 
 use super::stage_text;
-use crate::exec::PlanCtx;
+use medulla_exec::exec::PlanCtx;
 
 /// Attach a proof to every row, proving each stage's admissions once for all rows.
 pub(super) fn attach(rows: &mut [UqlRow], ops: &[Op], ctx: &PlanCtx) -> Result<(), String> {
@@ -78,7 +78,7 @@ enum Prover {
     Sparql(HashMap<String, medulla_types::rdf_report::SparqlRowProof>),
     /// The stage's OWL membership closure.
     #[cfg(feature = "owl")]
-    Reason(Box<crate::exec::reason::ReasonMembership>),
+    Reason(Box<medulla_exec::exec::reason::ReasonMembership>),
 }
 
 impl Prover {
@@ -129,7 +129,7 @@ fn certifying(op: &Op, ctx: &PlanCtx) -> Result<Prover, String> {
             target_class,
             ontology,
         } => {
-            let membership = crate::exec::reason::ReasonMembership::of(
+            let membership = medulla_exec::exec::reason::ReasonMembership::of(
                 ctx.view,
                 ctx.decay,
                 target_class,

@@ -15,7 +15,7 @@ use crate::rowset::RowSet;
 
 /// The classification, the asserted instance types (with their possibly decayed
 /// confidences) and the canonical target class of one `REASON` stage.
-pub(crate) struct ReasonMembership {
+pub struct ReasonMembership {
     cls: Classification,
     asserted: HashMap<String, Vec<(String, f64)>>,
     target: String,
@@ -34,7 +34,7 @@ impl ReasonMembership {
     /// half_life)` decay context Ebbinghaus-decays each asserted fact's confidence by
     /// the node's age (CONCEPT:MEDULLA-KG.query.reason-decay-in-plan); without one the stage
     /// is decay-neutral.
-    pub(crate) fn of(
+    pub fn of(
         view: &GraphView,
         decay: Option<(u64, f64)>,
         target_class: &str,
@@ -69,7 +69,7 @@ impl ReasonMembership {
 
     /// The proof that `id` is a member: an asserted type fact plus the TBox subsumption
     /// chain to the target class; `None` when it is not (provably) one.
-    pub(crate) fn explain(&self, id: &str) -> Option<ProofNodeWire> {
+    pub fn explain(&self, id: &str) -> Option<ProofNodeWire> {
         explain_instance(&self.cls, &self.asserted, id, &self.target)
             .map(medulla_rdf::owl_wire::proof_node_to_wire)
     }

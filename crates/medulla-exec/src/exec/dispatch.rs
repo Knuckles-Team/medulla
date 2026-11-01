@@ -40,7 +40,7 @@ pub(crate) fn is_epistemic_op(op: &Op) -> bool {
 /// Grouped by theme into the tier functions below purely to keep each match's own arm
 /// count under the complexity cap — [`Op`] itself, and every arm's behavior, is
 /// unchanged; each tier is exactly the arms that theme always had.
-pub(crate) fn apply(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
+pub fn apply(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
     match op {
         Op::Scan { .. }
         | Op::ScanAll {}
@@ -179,13 +179,13 @@ fn attribute_spec<'s>(
 
 /// A stage's SECONDARY channels ([`medulla_types::wire::OpKind::extra_channels`]): per channel,
 /// the `(row id, value)` pairs the stage wrote.
-pub(crate) type StageChannels = Vec<(&'static str, Vec<(String, f32)>)>;
+pub type StageChannels = Vec<(&'static str, Vec<(String, f32)>)>;
 
 /// [`apply`], plus the secondary channels of the stages that write them: an
 /// `ATTRIBUTE`'s CI half-widths (EH-523) and a learned `SOURCE RELIABILITY`'s interval
 /// (EH-525). The traced UQL paths (`RETURN`, `PROFILE`) run every stage through here;
 /// every other stage is exactly `apply`.
-pub(crate) fn apply_with_channels(
+pub fn apply_with_channels(
     op: &Op,
     input: RowSet,
     ctx: &PlanCtx,

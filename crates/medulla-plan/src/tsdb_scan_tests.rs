@@ -14,7 +14,7 @@
 //! Plus the regression that an EMPTY-input `Reason` still behaves as a pure SOURCE.
 
 #[cfg(feature = "timeseries")]
-use crate::exec::{execute, PlanCtx};
+use medulla_exec::exec::{execute, PlanCtx};
 #[cfg(feature = "timeseries")]
 use medulla_core::compute::semantic::SemanticStore;
 #[cfg(feature = "timeseries")]
@@ -101,7 +101,7 @@ ex:p4 a ex:Paper .
 #[cfg(feature = "owl")]
 #[test]
 fn reason_mid_pipeline() {
-    use crate::exec::{execute, PlanCtx};
+    use medulla_exec::exec::{execute, PlanCtx};
     use medulla_types::wire::{Op, Plan};
 
     let (view, semantic) = reason_compose_fixture();
@@ -150,7 +150,7 @@ fn reason_mid_pipeline() {
 #[cfg(feature = "owl")]
 #[test]
 fn reason_empty_input_is_source() {
-    use crate::exec::{execute, PlanCtx};
+    use medulla_exec::exec::{execute, PlanCtx};
     use medulla_types::wire::{Op, Plan};
 
     let (view, semantic) = reason_compose_fixture();
@@ -249,7 +249,7 @@ fn build_series(path: &std::path::Path) -> medulla_tsdb::store::SeriesStore {
 #[cfg(feature = "timeseries")]
 #[test]
 fn tsdb_in_plan_fusion() {
-    use crate::exec::execute;
+    use medulla_exec::exec::execute;
     use medulla_types::wire::{Op, Plan};
 
     let (path, store, core, mut semantic) = series_fixture("fusion", build_series);
@@ -313,8 +313,8 @@ fn tsdb_in_plan_fusion() {
 #[cfg(feature = "timeseries")]
 #[test]
 fn tsdb_in_txn_ryow_staged_overlay() {
-    use crate::exec::{execute, PlanCtx};
-    use crate::StagedSeries;
+    use medulla_exec::exec::{execute, PlanCtx};
+    use medulla_exec::exec::StagedSeries;
     use medulla_core::compute::semantic::SemanticStore;
     use medulla_core::graph::GraphCore;
     use medulla_types::wire::Plan;
@@ -338,7 +338,7 @@ fn tsdb_in_txn_ryow_staged_overlay() {
     let view = core.analysis_snapshot();
 
     let scan_plan = |series: &str| Plan::new(vec![scan(&[series], 10.0)]);
-    let by_id = |rs: crate::rowset::RowSet| -> std::collections::HashMap<String, Option<f32>> {
+    let by_id = |rs: medulla_exec::rowset::RowSet| -> std::collections::HashMap<String, Option<f32>> {
         rs.rows().iter().map(|r| (r.id.clone(), r.score)).collect()
     };
 
@@ -412,7 +412,7 @@ fn tsdb_in_txn_ryow_staged_overlay() {
 #[cfg(feature = "timeseries")]
 #[test]
 fn tsscan_window_mean_consumes_and_composes() {
-    use crate::exec::execute;
+    use medulla_exec::exec::execute;
     use medulla_types::wire::{Op, Plan};
 
     // Series "temp": 1s=10, 2s=20, 3s=30 (see build_series). A 60s window aligns all three
@@ -464,7 +464,7 @@ fn tsscan_window_mean_consumes_and_composes() {
 #[cfg(feature = "timeseries")]
 #[test]
 fn window_agg_selects_the_aggregate() {
-    use crate::exec::execute;
+    use medulla_exec::exec::execute;
     use medulla_types::wire::{Op, Plan};
 
     let (path, store, core, semantic) = series_fixture("window_agg", build_series);
@@ -501,7 +501,7 @@ fn window_agg_selects_the_aggregate() {
 #[cfg(feature = "timeseries")]
 #[test]
 fn window_over_graph_nodes_is_unchanged() {
-    use crate::exec::{execute, PlanCtx};
+    use medulla_exec::exec::{execute, PlanCtx};
     use medulla_core::compute::semantic::SemanticStore;
     use medulla_core::graph::GraphCore;
     use medulla_types::wire::{Op, Plan};
@@ -544,7 +544,7 @@ fn window_over_graph_nodes_is_unchanged() {
 #[cfg(feature = "timeseries")]
 #[test]
 fn tsdb_scan_without_store_is_empty() {
-    use crate::exec::{execute, PlanCtx};
+    use medulla_exec::exec::{execute, PlanCtx};
     use medulla_core::compute::semantic::SemanticStore;
     use medulla_core::graph::GraphCore;
     use medulla_types::wire::Plan;
@@ -681,8 +681,8 @@ fn scoped_context<'a>(
     view: &'a medulla_core::graph::GraphView,
     semantic: &'a medulla_core::compute::semantic::SemanticStore,
     store: &'a medulla_tsdb::store::SeriesStore,
-) -> crate::exec::PlanCtx<'a> {
-    crate::exec::PlanCtx::new(view, semantic)
+) -> medulla_exec::exec::PlanCtx<'a> {
+    medulla_exec::exec::PlanCtx::new(view, semantic)
         .with_tsdb(store)
         .with_tsdb_scope(TEST_TENANT, TEST_GRAPH)
 }
@@ -693,7 +693,7 @@ fn scoped_context<'a>(
 // spec: MEDULLA-FEDERATED-QUERY-R030
 #[test]
 fn tsscan_keeps_both_series_at_a_shared_timestamp() {
-    use crate::exec::execute;
+    use medulla_exec::exec::execute;
     use medulla_types::wire::Plan;
 
     let (path, store, core, semantic) = series_fixture("two_series", build_two_series);
@@ -714,7 +714,7 @@ fn tsscan_keeps_both_series_at_a_shared_timestamp() {
 #[test]
 fn tsscan_value_channels_are_exact_f64_through_uql_return() {
     use crate::uql::serve::run_statement;
-    use crate::uql::{parse_statement, Params};
+    use medulla_uql::{parse_statement, Params};
     use medulla_types::wire::UqlResult;
 
     let (path, store, core, semantic) = series_fixture("f64_channel", build_two_series);
@@ -746,7 +746,7 @@ fn tsscan_value_channels_are_exact_f64_through_uql_return() {
 #[cfg(feature = "timeseries")]
 #[test]
 fn tsscan_window_reads_series_row_ids_and_exact_values() {
-    use crate::exec::execute;
+    use medulla_exec::exec::execute;
     use medulla_types::wire::{Op, Plan};
 
     let (path, store, core, semantic) = series_fixture("two_series_window", build_two_series);

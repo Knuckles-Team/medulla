@@ -98,7 +98,7 @@ pub(crate) fn explain_plan(
         plan_digest: Some(plan_digest),
         before: to_wire(&before, &card, &ctx),
         after: to_wire(&after, &card, &ctx),
-        applied_rules: medulla_exec::optimizer::cost_opt_rule_names()
+        applied_rules: medulla_exec::optimizer::rule_names()
             .into_iter()
             .map(str::to_string)
             .collect(),
@@ -279,7 +279,7 @@ pub(crate) fn explain_provenance(
 
     let ctx = PlanCtx::new(view, semantic);
     let rs = medulla_exec::exec::execute(&plan, &ctx)?;
-    let ks = medulla_plan::KnowledgeSet::from_rowset(&rs, view, &[]);
+    let ks = medulla_retrieval::knowledge::KnowledgeSet::from_rowset(&rs, view, &[]);
     Ok(explain_provenance_result(request_id, &ks, &ctx))
 }
 
@@ -301,7 +301,7 @@ pub(crate) fn explain_provenance_by_ids(
 
     let ctx = PlanCtx::new(view, semantic);
     let rs = medulla_exec::rowset::RowSet::from_ids(ids);
-    let ks = medulla_plan::KnowledgeSet::from_rowset(&rs, view, &[]);
+    let ks = medulla_retrieval::knowledge::KnowledgeSet::from_rowset(&rs, view, &[]);
     Ok(explain_provenance_result(request_id, &ks, &ctx))
 }
 
@@ -315,7 +315,7 @@ pub(crate) fn explain_provenance_by_ids(
 #[cfg(feature = "query")]
 pub(crate) fn explain_provenance_result(
     request_id: u64,
-    ks: &medulla_plan::KnowledgeSet,
+    ks: &medulla_retrieval::knowledge::KnowledgeSet,
     _ctx: &medulla_exec::exec::PlanCtx<'_>,
 ) -> crate::epistemic_operations::EvidenceBundle {
     use crate::epistemic_operations::{

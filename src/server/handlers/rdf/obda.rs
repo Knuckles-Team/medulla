@@ -299,7 +299,7 @@ impl SqlObdaSource {
         let dialect = obda_dialect(dsn)?;
         medulla_exec::sql_text::validate_identifier(table).map_err(|e| format!("obda: {e}"))?;
         #[cfg(feature = "federation-sql")]
-        medulla_plan::federation_ssrf::check_sql_dsn(dsn)?;
+        medulla_federation::federation_ssrf::check_sql_dsn(dsn)?;
         let executor = federation_sql_executor(dsn)?;
         Ok(Self {
             table: table.to_string(),
@@ -656,7 +656,7 @@ struct FederationSqlExecutor {
 #[cfg(all(feature = "obda", feature = "federation-sql"))]
 impl ObdaSqlExecutor for FederationSqlExecutor {
     fn run_select(&self, sql: &str) -> Result<Vec<medulla_rdf::obda::ForeignRow>, String> {
-        medulla_plan::federation::fetch_sql_columns(&self.dsn, sql)
+        medulla_federation::federation::fetch_sql_columns(&self.dsn, sql)
     }
 }
 

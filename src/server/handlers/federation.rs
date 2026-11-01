@@ -35,7 +35,7 @@ pub(crate) async fn try_handle(
                 Ok(owner) => owner,
                 Err(refusal) => return Ok(refusal),
             };
-            if let Err(error) = medulla_plan::federation::validate_column_mapping(&source) {
+            if let Err(error) = medulla_federation::federation::validate_column_mapping(&source) {
                 return Ok(Response::err(req_id, error));
             }
             // EH-378: provision the source's share role (assigned to nobody) under the
@@ -305,7 +305,7 @@ async fn query_columns(
         state.foreign_sources.registry_for(&owner, &state.isolation)
     };
     let result = tokio::task::spawn_blocking(move || {
-        use medulla_plan::federation_opt::{ColumnPredicate, Comparison, FederationSession};
+        use medulla_federation::{federation_opt::ColumnPredicate, federation_opt::Comparison, federation_opt::FederationSession};
         use medulla_types::wire::ForeignColumnComparison as WireComparison;
 
         let predicates = predicates
@@ -354,13 +354,13 @@ async fn query_columns(
 /// Map connector and planner prose to the codes declared for this read method.
 /// Do not promote a source-supplied prefix into an arbitrary wire code.
 fn column_query_error(error: &str) -> String {
-    if error.starts_with(medulla_plan::federation_opt::BUDGET_EXCEEDED) {
+    if error.starts_with(medulla_federation::federation_opt::BUDGET_EXCEEDED) {
         if error.contains(":wall_ms:") {
             return "ENGINE_DEADLINE_EXCEEDED: foreign column read exceeded time budget".into();
         }
         return "ENGINE_RESOURCE_EXHAUSTED: foreign column read exceeded resource budget".into();
     }
-    if error.starts_with(medulla_plan::federation_opt::RESULT_INCOMPLETE) {
+    if error.starts_with(medulla_federation::federation_opt::RESULT_INCOMPLETE) {
         return "ENGINE_RESOURCE_EXHAUSTED: foreign column result incomplete".into();
     }
     if error.contains("HTTP column projection exceeds limit") {
@@ -376,7 +376,7 @@ fn column_query_error(error: &str) -> String {
     ]
     .iter()
     .any(|message| error.contains(message))
-        || error.starts_with(medulla_plan::federation_opt::REQUIRES_KEYS)
+        || error.starts_with(medulla_federation::federation_opt::REQUIRES_KEYS)
     {
         return "INVALID_ARGUMENT: foreign column request is invalid".into();
     }

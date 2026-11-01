@@ -7,10 +7,10 @@ use medulla_core::graph::GraphCore;
 use medulla_types::wire::{UqlParam, UqlResult};
 use serde_json::json;
 
-use crate::budget::Budget;
-use crate::exec::PlanCtx;
+use medulla_exec::budget::Budget;
+use medulla_exec::exec::PlanCtx;
 use crate::uql::serve::run_statement;
-use crate::uql::{parse_statement, Params};
+use medulla_uql::{parse_statement, Params};
 
 /// d1 → d2 → d3 (CITES), d4 isolated; d2 and d3 are cited once each.
 fn fixture() -> (medulla_core::graph::GraphView, SemanticStore) {
@@ -145,8 +145,8 @@ fn explain_has_redacted_remote_and_local_sections_without_running_source() {
 #[cfg(feature = "federation")]
 #[test]
 fn budget_hint_requires_bound_session_and_never_bypasses_server_cap() {
-    use crate::budget::FederationBudget;
-    use crate::federation_opt::FederationSession;
+    use medulla_exec::budget::FederationBudget;
+    use medulla_federation::federation_opt::FederationSession;
     let (view, semantic) = fixture();
     let unbound = PlanCtx::new(&view, &semantic);
     let hint = "PROFILE FEDERATION BUDGET (REQUESTS=5) MATCH (:Doc)";
@@ -160,7 +160,7 @@ fn budget_hint_requires_bound_session_and_never_bypasses_server_cap() {
         max_bind_keys: 4,
         max_wall_ms: 100,
     });
-    let federated = crate::federation_opt::FederatedExec::with_session(&session);
+    let federated = medulla_federation::federation_opt::FederatedExec::with_session(&session);
     let bound = PlanCtx::new(&view, &semantic).with_foreign_executor(&federated);
     run(hint, &Params::new(), &bound).unwrap();
     assert_eq!(session.budget().max_requests, 2);
@@ -178,10 +178,10 @@ fn budget_hint_requires_bound_session_and_never_bypasses_server_cap() {
 #[cfg(feature = "federation")]
 #[test]
 fn profile_remote_fragment_has_redacted_golden_output_and_provenance() {
-    use crate::federation_opt::{
+    use medulla_federation::federation_opt::{
         EstimateProvenance, FederationSession, FetchStrategy, FragmentTrace,
     };
-    use crate::budget::FederationBudget;
+    use medulla_exec::budget::FederationBudget;
     let (view, semantic) = fixture();
     let session = FederationSession::new(FederationBudget::default());
     session.record(FragmentTrace {
@@ -198,7 +198,7 @@ fn profile_remote_fragment_has_redacted_golden_output_and_provenance() {
             rows: 12.5,
         },
     });
-    let federated = crate::federation_opt::FederatedExec::with_session(&session);
+    let federated = medulla_federation::federation_opt::FederatedExec::with_session(&session);
     let ctx = PlanCtx::new(&view, &semantic).with_foreign_executor(&federated);
     let stmt = parse_statement("PROFILE FOREIGN 'registered'", &Params::new()).unwrap();
     let mut result = UqlResult::Profile {
@@ -253,7 +253,7 @@ fn budgets_refuse_with_a_typed_error() {
         max_series_work: Budget::DEFAULT_MAX_SERIES_WORK,
     });
     let err = run("MATCH (:Doc)", &Params::new(), &ctx).unwrap_err();
-    assert!(err.starts_with(crate::budget::BUDGET_EXCEEDED), "{err}");
+    assert!(err.starts_with(medulla_exec::budget::BUDGET_EXCEEDED), "{err}");
 }
 
 // Regression coverage for MEDULLA-FEDERATED-QUERY-R070; native acceptance remains pending.
@@ -266,7 +266,7 @@ fn profile_refuses_when_final_rows_exceed_budget() {
         max_series_work: Budget::DEFAULT_MAX_SERIES_WORK,
     });
     let err = run("PROFILE MATCH (:Doc)", &Params::new(), &ctx).unwrap_err();
-    assert!(err.starts_with(crate::budget::BUDGET_EXCEEDED), "{err}");
+    assert!(err.starts_with(medulla_exec::budget::BUDGET_EXCEEDED), "{err}");
     assert!(err.contains("max_result_rows = 1"), "{err}");
 }
 
@@ -294,7 +294,7 @@ fn a_program_explains_node_by_node() {
     };
     assert_eq!(canonical, optimized, "a program runs as written");
     let reparsed = parse_statement(&canonical, &Params::new()).unwrap();
-    assert!(matches!(reparsed.body, crate::uql::Body::Dag(_)));
+    assert!(matches!(reparsed.body, medulla_uql::Body::Dag(_)));
     let names: Vec<&str> = stages.iter().map(|s| s.stage.as_str()).collect();
     assert_eq!(names.len(), 4, "{names:?}");
     assert!(names[0].starts_with("#0 MATCH (:Doc)"), "{names:?}");

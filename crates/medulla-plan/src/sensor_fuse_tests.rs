@@ -12,9 +12,9 @@ use medulla_core::graph::{GraphCore, GraphView};
 use medulla_types::wire::{FuseClock, FuseInterp, FuseStream};
 use serde_json::json;
 
-use crate::algebra::{Op, Plan};
-use crate::exec::PlanCtx;
-use crate::PlanExt;
+use medulla_exec::algebra::{Op, Plan};
+use medulla_exec::exec::PlanCtx;
+use medulla_exec::exec::PlanExt;
 
 const NS: i64 = 1_000_000_000; // 1 second in ns
 

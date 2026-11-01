@@ -85,4 +85,5 @@ shacl = ["dep:medulla-shacl"]
 test-support = ["dep:tempfile", "redb"]
 
 [dev-dependencies]
+medulla-uql = { path = "../medulla-uql", features = ["query"] }
 tempfile = "3"

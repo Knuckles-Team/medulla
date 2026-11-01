@@ -49,7 +49,7 @@ pub(crate) async fn handle_uql(
     };
     let stmt_for_run = if prepare {
         let mut prepared = stmt.clone();
-        prepared.mode = medulla_plan::uql::Mode::Explain;
+        prepared.mode = medulla_uql::Mode::Explain;
         prepared
     } else {
         stmt
@@ -126,10 +126,10 @@ fn uql_cache_key(
     ctx: &QueryHandlerCtx<'_>,
     text: &str,
     params: &std::collections::BTreeMap<String, medulla_types::wire::UqlParam>,
-    stmt: &medulla_plan::uql::Statement,
+    stmt: &medulla_uql::Statement,
     legs: &ServedPlanLegs,
 ) -> Result<Option<(u128, Option<medulla_core::dep_scope::DepSet>)>, String> {
-    use medulla_plan::uql::{Body, Mode};
+    use medulla_uql::{Body, Mode};
     if stmt.mode == Mode::Profile || !legs.cache_admissible() {
         return Ok(None);
     }
@@ -262,7 +262,7 @@ mod served_tests {
         };
 
         let params = std::collections::BTreeMap::new();
-        let statement = medulla_plan::uql::parse_statement(text, &params).expect("parse explain");
+        let statement = medulla_uql::parse_statement(text, &params).expect("parse explain");
         let binding = medulla_plan::uql::serve::binding_plan(&statement);
         assert_eq!(
             query_digest,
@@ -302,7 +302,7 @@ mod served_tests {
             panic!("prepare must return server-owned foreign-read pins: {response:?}");
         };
         let params = std::collections::BTreeMap::new();
-        let statement = medulla_plan::uql::parse_statement(text, &params).expect("parse query");
+        let statement = medulla_uql::parse_statement(text, &params).expect("parse query");
         let binding = medulla_plan::uql::serve::binding_plan(&statement);
         assert_eq!(
             query_digest,

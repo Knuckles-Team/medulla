@@ -1,6 +1,6 @@
 //! The OWL/SPARQL compose-oracle proofs (CONCEPT:MEDULLA-KG.ontology.concept-12).
 //!
-//! Mirrors the [`crate::oracle`] pattern for the semantic tier: a SINGLE
+//! Mirrors the [`medulla_exec::oracle`] pattern for the semantic tier: a SINGLE
 //! `UnifiedQuery` plan that seeds its candidate set from `Op::Reason` (OWL-inferred
 //! class members) or `Op::SparqlBgp` (SPARQL-selected ids) and then vector-`Rank`s
 //! them must return the BYTE-IDENTICAL ordered id list as doing the two steps
@@ -14,7 +14,7 @@ use std::collections::HashSet;
 use medulla_core::compute::semantic::SemanticStore;
 use medulla_core::graph::{GraphCore, GraphView};
 
-use crate::exec::{execute, PlanCtx};
+use medulla_exec::exec::{execute, PlanCtx};
 use medulla_types::wire::{Op, Plan};
 
 /// An OWL ontology with an existential-restriction + role-chain subsumption the EL

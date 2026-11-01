@@ -9,7 +9,7 @@ use medulla_server_api::api::query_txn::query_support::execute_rows;
 use medulla_server_api::api::query_txn::query_support::TsdbLegBind;
 use medulla_core::compute::semantic::SemanticStore;
 use medulla_core::graph::GraphCore;
-use medulla_plan::federation::ForeignSourceRegistry;
+use medulla_federation::federation::ForeignSourceRegistry;
 use medulla_exec::algebra::Op;
 use medulla_types::wire::{ForeignSourceSpec, HttpFieldMap};
 
@@ -70,7 +70,7 @@ fn a_served_scan_of_a_key_only_source_is_refused_by_the_optimizer() {
     )
     .unwrap_err();
     assert!(
-        err.starts_with(medulla_plan::federation_opt::REQUIRES_KEYS),
+        err.starts_with(medulla_federation::federation_opt::REQUIRES_KEYS),
         "the served path must plan with source capabilities: {err}"
     );
 }

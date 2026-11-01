@@ -9,7 +9,7 @@ use super::*;
 /// process-wide planner first, every NL test sees the same echo behaviour.
 struct EchoPlanner;
 
-impl medulla_plan::NlPlanner for EchoPlanner {
+impl medulla_nlq::nl::NlPlanner for EchoPlanner {
     fn plan(&self, nl: &str, _schema_hint: &str) -> Result<String, String> {
         Ok(nl.to_string())
     }
@@ -97,7 +97,7 @@ async fn nl_query_explain_returns_planner_uql_and_nl_query_rows() {
 async fn nl_query_explain_refuses_exactly_like_nl_query() {
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     let state = echo_planned_fixture().await;
-    let over_budget = "x".repeat(medulla_plan::nl::NlQueryBudget::default().max_uql_len + 1);
+    let over_budget = "x".repeat(medulla_nlq::nl::NlQueryBudget::default().max_uql_len + 1);
     for (id, text, code) in [
         (950, "MATCH ((( not uql", "INVALID_ARGUMENT"),
         (952, over_budget.as_str(), "UQL_BUDGET_EXCEEDED"),
@@ -133,7 +133,7 @@ async fn nl_query_plan_returns_pins_without_executing_rows() {
     assert_ne!(body.query_digest.to_hex(), "0".repeat(64));
     let params = std::collections::BTreeMap::new();
     let statement =
-        medulla_plan::uql::parse_statement(&body.uql, &params).expect("parse planned UQL");
+        medulla_uql::parse_statement(&body.uql, &params).expect("parse planned UQL");
     let binding = medulla_plan::uql::serve::binding_plan(&statement);
     assert_eq!(
         body.plan_digest,

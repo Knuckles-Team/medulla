@@ -9,8 +9,8 @@ use medulla_core::compute::semantic::SemanticStore;
 use medulla_core::graph::GraphCore;
 use serde_json::json;
 
-use crate::algebra::{Op, Plan, Pred};
-use crate::exec::{bfs_reached, PlanCtx, PlanExt};
+use medulla_exec::algebra::{Op, Plan, Pred};
+use medulla_exec::exec::{bfs_reached, PlanCtx, PlanExt};
 
 const DOCS: usize = 3_000;
 const DIM: usize = 16;
@@ -348,7 +348,7 @@ fn rank_then_limit_is_the_exact_top_k_under_the_ceiling() {
 /// the walk is likely to strand, where the exact top-up must still deliver `k`.
 #[test]
 fn filtered_ann_path_returns_k_candidates_with_high_recall() {
-    use crate::exec::vector_rank::ranked;
+    use medulla_exec::exec::vector_rank::ranked;
 
     let (_core, semantic) = corpus();
     let broad: Vec<String> = (0..DOCS)
