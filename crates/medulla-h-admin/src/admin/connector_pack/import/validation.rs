@@ -1,0 +1,1021 @@
+//! Bounded ConnectorPack archive and entry validation.
+
+use std::collections::{BTreeMap, BTreeSet};
+
+use medulla_catalog_types::{
+    connector_pack::ConnectorPackImportRequest, connector_pack::PackEntry,
+    connector_pack::PackEntryKind, connector_pack::PackViolation,
+    connector_pack::PackViolationCode, connector_pack::PackWarning,
+    connector_pack::PackWarningCode,
+};
+use medulla_types::contract::Digest256;
+use sha2::{Digest, Sha256};
+
+use medulla_persistence::connector_pack::decode_schema_mappings;
+use medulla_persistence::connector_pack::CONNECTOR_DECLARATION_URI;
+
+use super::facts::uri_prefix;
+use super::json::parse_bounded_json;
+
+pub(super) fn validate_index(
+    request: &ConnectorPackImportRequest,
+    archive: &[u8],
+    all: &[&PackEntry],
+    violations: &mut Vec<PackViolation>,
+    warnings: &mut Vec<PackWarning>,
+) {
+    let mut validator = IndexValidator::new(request, archive, all, violations, warnings);
+    validate_header(request, archive, validator.violations);
+    check_duplicate_component_ids(request.index.connector.as_str(), all, validator.violations);
+    for entry in all {
+        validator.validate_entry(entry);
+    }
+    finish_validation(&mut validator);
+}
+
+/// MEDULLA-DECISION-ENGINE-R075.2: wire the standalone
+/// `medulla_catalog_types::connector_pack::rapid_r075::check_unique_component_ids` into
+/// this real pack-import entry point, over every entry's actual minted
+/// component id (connector + kind + name), rather than leaving it exercised
+/// only by its own module test.
+fn check_duplicate_component_ids(
+    connector: &str,
+    all: &[&PackEntry],
+    violations: &mut Vec<PackViolation>,
+) {
+    let ids: Vec<String> = all
+        .iter()
+        .map(|entry| {
+            medulla_catalog_types::connector_pack::pack_component_id(
+                connector,
+                entry.kind,
+                &entry.name,
+            )
+        })
+        .collect();
+    if medulla_catalog_types::connector_pack::rapid_r075::check_unique_component_ids(
+        ids.iter().map(String::as_str),
+    )
+    .is_err()
+    {
+        violations.push(violation(
+            PackViolationCode::DuplicateComponentId,
+            None,
+            "two entries mint the same component id",
+        ));
+    }
+}
+
+fn validate_header(
+    request: &ConnectorPackImportRequest,
+    archive: &[u8],
+    violations: &mut Vec<PackViolation>,
+) {
+    if request.index.server.kind != PackEntryKind::McpServer
+        || archive.len() as u64 != request.index.archive.length
+    {
+        violations.push(violation(
+            PackViolationCode::MalformedIndex,
+            None,
+            "pack must name exactly one MCP server and the declared archive length",
+        ));
+    }
+    if request
+        .index
+        .entries
+        .windows(2)
+        .any(|pair| pair[0].uri >= pair[1].uri)
+    {
+        violations.push(violation(
+            PackViolationCode::MalformedIndex,
+            None,
+            "pack entries must be sorted by unique URI",
+        ));
+    }
+    validate_catalog_binding(request, violations);
+}
+
+fn validate_catalog_binding(
+    request: &ConnectorPackImportRequest,
+    violations: &mut Vec<PackViolation>,
+) {
+    if request.index.catalog.catalog_generation == 0
+        || request.index.catalog.child_connection_generation == 0
+    {
+        violations.push(violation(
+            PackViolationCode::MalformedIndex,
+            None,
+            "catalog and child connection generations must be non-zero",
+        ));
+    }
+}
+
+struct IndexValidator<'a> {
+    request: &'a ConnectorPackImportRequest,
+    archive: &'a [u8],
+    violations: &'a mut Vec<PackViolation>,
+    warnings: &'a mut Vec<PackWarning>,
+    uris: BTreeSet<String>,
+    ids: BTreeSet<String>,
+    ranges: Vec<(u64, u64)>,
+    ontologies: Vec<String>,
+    shapes: Vec<String>,
+    ontology_iris: BTreeSet<&'a str>,
+    shape_owners: BTreeMap<String, String>,
+}
+
+impl<'a> IndexValidator<'a> {
+    fn new(
+        request: &'a ConnectorPackImportRequest,
+        archive: &'a [u8],
+        all: &[&'a PackEntry],
+        violations: &'a mut Vec<PackViolation>,
+        warnings: &'a mut Vec<PackWarning>,
+    ) -> Self {
+        Self {
+            request,
+            archive,
+            violations,
+            warnings,
+            uris: BTreeSet::new(),
+            ids: BTreeSet::new(),
+            ranges: Vec::new(),
+            ontologies: Vec::new(),
+            shapes: Vec::new(),
+            ontology_iris: all
+                .iter()
+                .filter(|entry| entry.kind == PackEntryKind::Ontology)
+                .map(|entry| entry.uri.as_str())
+                .collect(),
+            shape_owners: BTreeMap::new(),
+        }
+    }
+
+    fn validate_entry(&mut self, entry: &PackEntry) {
+        self.validate_identity(entry);
+        self.validate_sections(entry);
+        let body = section_bytes(self.archive, &entry.body).unwrap_or_default();
+        self.validate_body(entry, body);
+        self.validate_schemas(entry);
+        self.validate_annotations(entry);
+        if entry_description(entry, body).is_none() {
+            self.warnings.push(PackWarning {
+                code: PackWarningCode::EmptyDescription,
+                uri: Some(entry.uri.clone()),
+                detail: "entry description is empty".into(),
+            });
+        }
+    }
+
+    fn validate_identity(&mut self, entry: &PackEntry) {
+        if !canonical_identity(entry) {
+            self.reject(
+                PackViolationCode::MalformedIndex,
+                Some(&entry.uri),
+                "entry URI and name must be non-empty canonical text",
+            );
+        }
+        if !self.uris.insert(entry.uri.clone()) {
+            self.reject(
+                PackViolationCode::MalformedIndex,
+                Some(&entry.uri),
+                "entry URI is duplicated",
+            );
+        }
+        validate_uri_kind(self, entry);
+        let expected_server = format!("mcp-server://{}", self.request.index.connector.as_str());
+        if entry.kind == PackEntryKind::McpServer && entry.uri != expected_server {
+            self.reject(
+                PackViolationCode::MalformedIndex,
+                Some(&entry.uri),
+                "server URI must name the pack connector exactly",
+            );
+        }
+        let id = medulla_catalog_types::connector_pack::pack_component_id(
+            self.request.index.connector.as_str(),
+            entry.kind,
+            &entry.name,
+        );
+        if !self.ids.insert(id) {
+            self.reject(
+                PackViolationCode::DuplicateComponentId,
+                Some(&entry.uri),
+                "two entries mint the same component id",
+            );
+        }
+    }
+
+    fn validate_sections(&mut self, entry: &PackEntry) {
+        let sections = [(
+            &entry.body,
+            medulla_catalog_types::connector_pack::MAX_PACK_BODY_BYTES,
+        )]
+        .into_iter()
+        .chain(entry.input_schema.iter().map(|section| {
+            (
+                section,
+                medulla_catalog_types::connector_pack::MAX_PACK_SCHEMA_SECTION_BYTES,
+            )
+        }))
+        .chain(entry.output_schema.iter().map(|section| {
+            (
+                section,
+                medulla_catalog_types::connector_pack::MAX_PACK_SCHEMA_SECTION_BYTES,
+            )
+        }));
+        for (section, limit) in sections {
+            self.validate_section(entry, section, limit);
+        }
+    }
+
+    fn validate_section(
+        &mut self,
+        entry: &PackEntry,
+        section: &medulla_catalog_types::connector_pack::PackSection,
+        limit: u64,
+    ) {
+        let Ok(bytes) = section_bytes(self.archive, section) else {
+            self.reject(
+                PackViolationCode::MalformedSections,
+                Some(&entry.uri),
+                "section is out of range or exceeds its bound",
+            );
+            return;
+        };
+        // An in-range section covers its bytes whatever else is wrong with it,
+        // so an oversized section is reported as G2 alone, never also as a G4
+        // coverage gap it did not cause.
+        self.ranges.push((
+            section.offset,
+            section.offset.saturating_add(section.length),
+        ));
+        if section.length > limit {
+            self.reject(
+                PackViolationCode::PackTooLarge,
+                Some(&entry.uri),
+                "section exceeds its served size bound",
+            );
+            return;
+        }
+        if Digest256::from_bytes(Sha256::digest(bytes).into()) != section.sha256 {
+            self.reject(
+                PackViolationCode::PackDigestMismatch,
+                Some(&entry.uri),
+                "section digest differs from archive bytes",
+            );
+        }
+    }
+
+    fn validate_body(&mut self, entry: &PackEntry, body: &[u8]) {
+        self.validate_text_body(entry, body);
+        self.validate_json_body(entry, body);
+        self.validate_declaration_body(entry, body);
+        self.validate_skill_body(entry, body);
+        if let Err(detail) = super::skill_files::validate_skill_file(entry) {
+            self.reject(PackViolationCode::MalformedIndex, Some(&entry.uri), detail);
+        }
+    }
+
+    fn validate_text_body(&mut self, entry: &PackEntry, body: &[u8]) {
+        if !text_kind(entry.kind) {
+            return;
+        }
+        match std::str::from_utf8(body) {
+            Ok(text) if !text.starts_with('\u{feff}') => self.validate_text(entry, text),
+            _ => self.reject(
+                PackViolationCode::MalformedBody,
+                Some(&entry.uri),
+                "text body must be UTF-8 without BOM",
+            ),
+        }
+    }
+
+    fn validate_json_body(&mut self, entry: &PackEntry, body: &[u8]) {
+        if json_kind(entry.kind) && parse_bounded_json(body).is_err() {
+            self.reject(
+                PackViolationCode::MalformedBody,
+                Some(&entry.uri),
+                "entry body is not bounded JSON",
+            );
+        }
+    }
+
+    fn validate_declaration_body(&mut self, entry: &PackEntry, body: &[u8]) {
+        if entry.kind != PackEntryKind::Resource || entry.uri != CONNECTOR_DECLARATION_URI {
+            return;
+        }
+        // An unreadable section is reported by the section checks, not here.
+        if section_bytes(self.archive, &entry.body).is_err() {
+            return;
+        }
+        if decode_schema_mappings(body).is_err() {
+            self.reject(
+                PackViolationCode::MalformedBody,
+                Some(&entry.uri),
+                "connector declaration schema mappings are invalid",
+            );
+        }
+    }
+
+    fn validate_skill_body(&mut self, entry: &PackEntry, body: &[u8]) {
+        if entry.kind != PackEntryKind::Skill {
+            return;
+        }
+        if !valid_skill_frontmatter(body, &entry.name) {
+            self.reject(
+                PackViolationCode::MalformedBody,
+                Some(&entry.uri),
+                "skill front matter is absent, unsafe, or does not name the entry",
+            );
+        } else if super::front_matter::declared_skill_type(body).is_err() {
+            self.reject(
+                PackViolationCode::MalformedBody,
+                Some(&entry.uri),
+                "skill front-matter type is not skill, workflow, graph or mcp_skill",
+            );
+        }
+    }
+
+    fn validate_text(&mut self, entry: &PackEntry, text: &str) {
+        if !matches!(entry.kind, PackEntryKind::Ontology | PackEntryKind::Shapes) {
+            return;
+        }
+        if text
+            .lines()
+            .any(|line| line.trim_start().starts_with("@base"))
+        {
+            let code = rdf_invalid_code(entry.kind);
+            self.reject(
+                code,
+                Some(&entry.uri),
+                "RDF @base declarations are forbidden",
+            );
+        }
+        match parse_rdf_bounded(entry.kind, text) {
+            Ok(()) if entry.kind == PackEntryKind::Ontology => self.validate_ontology(entry, text),
+            Ok(()) => self.validate_shapes(entry, text),
+            Err((code, detail)) => self.reject(code, Some(&entry.uri), detail),
+        }
+    }
+
+    fn validate_ontology(&mut self, entry: &PackEntry, text: &str) {
+        if let Err(detail) = validate_ontology_imports(text, &entry.uri, &self.ontology_iris) {
+            self.reject(PackViolationCode::OntologyInvalid, Some(&entry.uri), detail);
+        } else {
+            self.ontologies.push(text.to_string());
+        }
+    }
+
+    fn validate_shapes(&mut self, entry: &PackEntry, text: &str) {
+        for shape in declared_shape_iris(text) {
+            if let Some(first) = self.shape_owners.insert(shape.clone(), entry.uri.clone()) {
+                self.warnings.push(PackWarning {
+                    code: PackWarningCode::DuplicateShapeIri,
+                    uri: Some(entry.uri.clone()),
+                    detail: format!("shape IRI {shape} is also declared by {first}")
+                        .chars()
+                        .take(1024)
+                        .collect(),
+                });
+            }
+        }
+        self.shapes.push(text.to_string());
+    }
+
+    fn validate_schemas(&mut self, entry: &PackEntry) {
+        if entry.kind == PackEntryKind::Tool && entry.input_schema.is_none() {
+            self.reject(
+                PackViolationCode::MissingToolSchema,
+                Some(&entry.uri),
+                "tool input_schema is required",
+            );
+        }
+        validate_mcp_schemas(self, entry);
+        for section in entry.input_schema.iter().chain(entry.output_schema.iter()) {
+            self.validate_schema(entry, section);
+        }
+    }
+
+    fn validate_schema(
+        &mut self,
+        entry: &PackEntry,
+        section: &medulla_catalog_types::connector_pack::PackSection,
+    ) {
+        let Ok(bytes) = section_bytes(self.archive, section) else {
+            return;
+        };
+        let Ok(value) = parse_bounded_json(bytes) else {
+            self.reject(
+                PackViolationCode::MalformedBody,
+                Some(&entry.uri),
+                "schema is not bounded JSON",
+            );
+            return;
+        };
+        let is_input = entry
+            .input_schema
+            .as_ref()
+            .is_some_and(|input| std::ptr::eq(section, input));
+        if entry.kind == PackEntryKind::Tool
+            && is_input
+            && value.get("type").and_then(|value| value.as_str()) != Some("object")
+        {
+            self.reject(
+                PackViolationCode::MalformedBody,
+                Some(&entry.uri),
+                "tool input schema root type must be object",
+            );
+        }
+    }
+
+    fn validate_annotations(&mut self, entry: &PackEntry) {
+        let findings = super::annotations::check_annotations(entry.kind, &entry.annotations);
+        for (code, detail) in findings.violations {
+            self.reject(code, Some(&entry.uri), detail);
+        }
+        for (code, detail) in findings.warnings {
+            self.warnings.push(PackWarning {
+                code,
+                uri: Some(entry.uri.clone()),
+                detail,
+            });
+        }
+    }
+
+    fn reject(&mut self, code: PackViolationCode, uri: Option<&str>, detail: &str) {
+        self.violations.push(violation(code, uri, detail));
+    }
+}
+
+fn validate_uri_kind(validator: &mut IndexValidator<'_>, entry: &PackEntry) {
+    if matches!(
+        entry.kind,
+        PackEntryKind::Resource | PackEntryKind::ResourceTemplate
+    ) {
+        if !generic_mcp_uri(&entry.uri) {
+            validator.reject(
+                PackViolationCode::MalformedIndex,
+                Some(&entry.uri),
+                "MCP resource URI/template must have an absolute URI scheme",
+            );
+        }
+    } else if !entry.uri.starts_with(uri_prefix(entry.kind)) {
+        validator.reject(
+            PackViolationCode::MalformedIndex,
+            Some(&entry.uri),
+            "entry URI scheme does not match its kind",
+        );
+    }
+}
+
+fn validate_mcp_schemas(validator: &mut IndexValidator<'_>, entry: &PackEntry) {
+    if entry.kind == PackEntryKind::Resource && entry.output_schema.is_none() {
+        validator.reject(
+            PackViolationCode::MalformedBody,
+            Some(&entry.uri),
+            "resource content schema is required",
+        );
+    }
+    if entry.kind == PackEntryKind::ResourceTemplate
+        && (entry.input_schema.is_none() || entry.output_schema.is_none())
+    {
+        validator.reject(
+            PackViolationCode::MalformedBody,
+            Some(&entry.uri),
+            "resource template argument and result schemas are required",
+        );
+    }
+}
+
+fn canonical_identity(entry: &PackEntry) -> bool {
+    entry.uri.trim() == entry.uri
+        && !entry.uri.is_empty()
+        && entry.name.trim() == entry.name
+        && !entry.name.is_empty()
+        && entry.name.len() <= 256
+        && !entry.name.chars().any(char::is_control)
+}
+
+fn generic_mcp_uri(uri: &str) -> bool {
+    let scheme_end = uri.find(':').unwrap_or_default();
+    scheme_end > 0
+        && uri[..scheme_end].bytes().enumerate().all(|(index, byte)| {
+            byte.is_ascii_alphabetic()
+                || (index > 0 && (byte.is_ascii_digit() || matches!(byte, b'+' | b'-' | b'.')))
+        })
+}
+
+fn finish_validation(validator: &mut IndexValidator<'_>) {
+    validator.ranges.sort_unstable();
+    let mut cursor = 0;
+    let mut malformed = false;
+    for (start, end) in validator.ranges.clone() {
+        if start != cursor || end < start {
+            validator.reject(
+                PackViolationCode::MalformedSections,
+                None,
+                "archive sections must be non-overlapping and cover the archive exactly",
+            );
+            malformed = true;
+            break;
+        }
+        cursor = end;
+    }
+    if malformed || cursor != validator.archive.len() as u64 {
+        validator.reject(
+            PackViolationCode::MalformedSections,
+            None,
+            "archive sections do not cover the complete archive",
+        );
+    }
+    if let Err((code, detail)) = validate_rdf_unions(&validator.ontologies, &validator.shapes) {
+        validator.reject(code, None, detail);
+    }
+    flag_ontology_orphans(validator);
+}
+
+/// How the deployment treats a pack ontology class with no subclass path to the
+/// parent catalog. `warn` (the default while the fleet's vocabularies are being
+/// linked) imports the pack and reports `ONTOLOGY_ORPHAN`; `refuse` rejects it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OrphanPolicy {
+    Warn,
+    Refuse,
+}
+
+/// `MEDULLA_ONTOLOGY_ORPHANS=warn|refuse`, read once; any other value
+/// keeps the default.
+fn orphan_policy() -> OrphanPolicy {
+    static POLICY: std::sync::OnceLock<OrphanPolicy> = std::sync::OnceLock::new();
+    *POLICY.get_or_init(|| {
+        match std::env::var("MEDULLA_ONTOLOGY_ORPHANS")
+            .unwrap_or_default()
+            .trim()
+            .to_ascii_lowercase()
+            .as_str()
+        {
+            "refuse" => OrphanPolicy::Refuse,
+            _ => OrphanPolicy::Warn,
+        }
+    })
+}
+
+/// The bounded `ONTOLOGY_ORPHAN` detail: the count, then as many class IRIs as
+/// fit in one kibibyte.
+fn orphan_detail(orphans: &[String]) -> String {
+    let mut detail = format!(
+        "{} class(es) have no rdfs:subClassOf path to the parent catalog: ",
+        orphans.len()
+    );
+    for (index, class) in orphans.iter().enumerate() {
+        let item = if index == 0 {
+            class.clone()
+        } else {
+            format!(", {class}")
+        };
+        if detail.len() + item.len() > 1024 {
+            detail.truncate(1020.min(detail.len()));
+            detail.push_str(" ...");
+            break;
+        }
+        detail.push_str(&item);
+    }
+    detail
+}
+
+#[cfg(feature = "rdf")]
+fn parent_classes() -> &'static BTreeSet<String> {
+    static CLASSES: std::sync::OnceLock<BTreeSet<String>> = std::sync::OnceLock::new();
+    CLASSES.get_or_init(|| {
+        medulla_core::graph::GraphSchemaSources::default()
+            .ontologies()
+            .flat_map(|(_, text)| medulla_rdf::pack::declared_classes_and_ontologies(text).0)
+            .collect()
+    })
+}
+
+#[cfg(feature = "rdf")]
+fn flag_ontology_orphans(validator: &mut IndexValidator<'_>) {
+    flag_ontology_orphans_with(validator, orphan_policy());
+}
+
+#[cfg(feature = "rdf")]
+fn flag_ontology_orphans_with(validator: &mut IndexValidator<'_>, policy: OrphanPolicy) {
+    if validator.ontologies.is_empty() {
+        return;
+    }
+    let documents: Vec<&str> = validator.ontologies.iter().map(String::as_str).collect();
+    let orphans = medulla_rdf::pack::ontology_orphan_classes(&documents, parent_classes());
+    if orphans.is_empty() {
+        return;
+    }
+    let detail = orphan_detail(&orphans);
+    match policy {
+        OrphanPolicy::Refuse => validator.reject(PackViolationCode::OntologyOrphan, None, &detail),
+        OrphanPolicy::Warn => validator.warnings.push(PackWarning {
+            code: PackWarningCode::OntologyOrphan,
+            uri: None,
+            detail,
+        }),
+    }
+}
+
+#[cfg(not(feature = "rdf"))]
+fn flag_ontology_orphans(_validator: &mut IndexValidator<'_>) {}
+
+/// Kinds whose body is SDK-serialized JSON (G8): the server identity, a tool
+/// descriptor, a prompt's rendered `prompts/get` capture, a model profile and
+/// an A2A card. Every one goes through the one bounded parser.
+fn json_kind(kind: PackEntryKind) -> bool {
+    matches!(
+        kind,
+        PackEntryKind::McpServer
+            | PackEntryKind::Tool
+            | PackEntryKind::Prompt
+            | PackEntryKind::ModelProfile
+            | PackEntryKind::A2aCard
+    )
+}
+
+fn rdf_invalid_code(kind: PackEntryKind) -> PackViolationCode {
+    if kind == PackEntryKind::Ontology {
+        PackViolationCode::OntologyInvalid
+    } else {
+        PackViolationCode::ShapesInvalid
+    }
+}
+
+fn text_kind(kind: PackEntryKind) -> bool {
+    !matches!(
+        kind,
+        PackEntryKind::A2aCard
+            | PackEntryKind::ModelProfile
+            | PackEntryKind::Resource
+            | PackEntryKind::ResourceTemplate
+            | PackEntryKind::SkillFile
+    )
+}
+
+#[cfg(feature = "rdf")]
+pub(super) use medulla_rdf::pack::{declared_shape_iris, validate_ontology_imports};
+
+#[cfg(feature = "rdf")]
+fn parse_rdf_bounded(
+    kind: PackEntryKind,
+    text: &str,
+) -> Result<(), (PackViolationCode, &'static str)> {
+    medulla_rdf::pack::validate_document(rdf_invalid_code(kind), text)
+}
+
+#[cfg(not(feature = "rdf"))]
+pub(super) fn validate_ontology_imports(
+    _text: &str,
+    _current: &str,
+    _allowed: &BTreeSet<&str>,
+) -> Result<(), &'static str> {
+    Err("RDF validation is unavailable in this build")
+}
+
+#[cfg(not(feature = "rdf"))]
+pub(super) fn declared_shape_iris(_text: &str) -> BTreeSet<String> {
+    BTreeSet::new()
+}
+
+#[cfg(not(feature = "rdf"))]
+fn parse_rdf_bounded(
+    _kind: PackEntryKind,
+    _text: &str,
+) -> Result<(), (PackViolationCode, &'static str)> {
+    Err((
+        PackViolationCode::ValidationBudgetExceeded,
+        "RDF validation is unavailable in this build",
+    ))
+}
+
+#[cfg(all(feature = "owl", feature = "shacl"))]
+fn validate_rdf_unions(
+    ontologies: &[String],
+    shapes: &[String],
+) -> Result<(), (PackViolationCode, &'static str)> {
+    if ontologies.is_empty() && shapes.is_empty() {
+        return Ok(());
+    }
+    let ontology = medulla_rdf::pack::scoped_union(ontologies).map_err(|_| {
+        (
+            PackViolationCode::OntologyInvalid,
+            "an ontology file is not valid Turtle",
+        )
+    })?;
+    let triples = ontology.triples;
+    if triples.len() > 100_000 {
+        return Err((
+            PackViolationCode::ValidationBudgetExceeded,
+            "ontology union exceeds the triple validation budget",
+        ));
+    }
+    // G14 (EH-119, EH-355 ruling (c)): the EL+/RL classification and then the
+    // full-ABox tableau, each inside one deterministic step budget -- the same
+    // verdict on every host, and the same budget the schema attach uses.
+    const MAX_REASONING_STEPS: u64 = 10_000_000;
+    match medulla_rdf::tableau::check_pack_ontology(&triples, MAX_REASONING_STEPS) {
+        Ok(()) => {}
+        Err(medulla_rdf::tableau::BoundedCheckRefusal::Inconsistent { .. }) => {
+            return Err((
+                PackViolationCode::OntologyInconsistent,
+                "ontology union is inconsistent: an unsatisfiable class or individual",
+            ));
+        }
+        Err(medulla_rdf::tableau::BoundedCheckRefusal::BudgetExceeded { .. }) => {
+            return Err((
+                PackViolationCode::ValidationBudgetExceeded,
+                "ontology reasoning exceeds the deterministic step budget",
+            ));
+        }
+    }
+    if shapes.is_empty() {
+        return Ok(());
+    }
+    validate_shapes_union(shapes, &ontology.ntriples, triples.len())
+}
+
+/// G15/G16 over the file-scoped shapes union, against the ontology union.
+#[cfg(all(feature = "owl", feature = "shacl"))]
+fn validate_shapes_union(
+    shapes: &[String],
+    ontology: &str,
+    ontology_triples: usize,
+) -> Result<(), (PackViolationCode, &'static str)> {
+    let shape_union = medulla_rdf::pack::scoped_union(shapes).map_err(|_| {
+        (
+            PackViolationCode::ShapesInvalid,
+            "a shapes file is not valid Turtle",
+        )
+    })?;
+    let shape_triples = shape_union.triples;
+    let shape_graph = shape_union.ntriples;
+    // The ICV parser represents unsupported paths but ignores them during
+    // evaluation. A pack must refuse one rather than silently drop a declared
+    // constraint (G15): this build supports only predicate paths.
+    const SH_PATH: &str = "http://www.w3.org/ns/shacl#path";
+    if shape_triples.iter().any(|triple| {
+        triple.predicate.as_str() == SH_PATH
+            && !matches!(&triple.object, medulla_rdf::oxrdf::Term::NamedNode(_))
+    }) {
+        return Err((
+            PackViolationCode::ShapesInvalid,
+            "SHACL property paths must be predicate IRIs",
+        ));
+    }
+    const MAX_SHACL_STEPS: usize = 10_000_000;
+    if shape_triples.len().saturating_mul(ontology_triples.max(1)) > MAX_SHACL_STEPS {
+        return Err((
+            PackViolationCode::ValidationBudgetExceeded,
+            "SHACL validation exceeds the deterministic evaluation budget",
+        ));
+    }
+    if shape_triples.iter().any(sparql_constraint_names_service) {
+        return Err((
+            PackViolationCode::ShapesInvalid,
+            "SHACL SPARQL SERVICE constraints are forbidden",
+        ));
+    }
+    medulla_shacl::IcvPolicy::from_turtle(&shape_graph).map_err(|_| {
+        (
+            PackViolationCode::ShapesInvalid,
+            "shapes union is not a supported ICV policy",
+        )
+    })?;
+    let report = medulla_shacl::validate_icv_turtle(&shape_graph, ontology).map_err(|_| {
+        (
+            PackViolationCode::ShapesInvalid,
+            "SHACL validation could not evaluate the shapes union",
+        )
+    })?;
+    if !report.conforms {
+        return Err((
+            PackViolationCode::ShaclViolation,
+            "ontology union does not conform to the shapes union",
+        ));
+    }
+    Ok(())
+}
+
+/// A SHACL-SPARQL constraint (`sh:select` / `sh:ask`) whose query names the
+/// `SERVICE` keyword. Only constraint queries can federate: the word in a
+/// label, comment or IRI of a shape is not a SERVICE clause.
+#[cfg(all(feature = "owl", feature = "shacl"))]
+fn sparql_constraint_names_service(triple: &medulla_rdf::oxrdf::Triple) -> bool {
+    const SH_SELECT: &str = "http://www.w3.org/ns/shacl#select";
+    const SH_ASK: &str = "http://www.w3.org/ns/shacl#ask";
+    let predicate = triple.predicate.as_str();
+    let medulla_rdf::oxrdf::Term::Literal(query) = &triple.object else {
+        return false;
+    };
+    (predicate == SH_SELECT || predicate == SH_ASK)
+        && query
+            .value()
+            .split(|c: char| c.is_whitespace() || matches!(c, '{' | '}' | '(' | ')'))
+            .any(|token| token.eq_ignore_ascii_case("SERVICE"))
+}
+
+#[cfg(not(all(feature = "owl", feature = "shacl")))]
+fn validate_rdf_unions(
+    ontologies: &[String],
+    shapes: &[String],
+) -> Result<(), (PackViolationCode, &'static str)> {
+    if ontologies.is_empty() && shapes.is_empty() {
+        Ok(())
+    } else {
+        Err((
+            PackViolationCode::ValidationBudgetExceeded,
+            "OWL and SHACL validation are unavailable in this build",
+        ))
+    }
+}
+
+pub(super) fn entry_description(entry: &PackEntry, body: &[u8]) -> Option<String> {
+    if entry.kind == PackEntryKind::Skill {
+        return super::front_matter::front_matter_value(body, "description");
+    }
+    serde_json::from_slice::<serde_json::Value>(body)
+        .ok()?
+        .get("description")?
+        .as_str()
+        .map(|value| value.split_whitespace().collect::<Vec<_>>().join(" "))
+        .filter(|value| !value.is_empty())
+}
+
+pub(super) fn valid_skill_frontmatter(body: &[u8], expected_name: &str) -> bool {
+    let Ok(text) = std::str::from_utf8(body) else {
+        return false;
+    };
+    let Some(rest) = text
+        .strip_prefix("---\n")
+        .or_else(|| text.strip_prefix("---\r\n"))
+    else {
+        return false;
+    };
+    let end = rest.find("\n---\n").or_else(|| rest.find("\r\n---\r\n"));
+    let Some(end) = end.filter(|end| *end <= 16 * 1024) else {
+        return false;
+    };
+    let front = &rest[..end];
+    if front.lines().any(|line| {
+        line.contains('&')
+            || line.contains('*')
+            || line.contains('!')
+            || line.contains('{')
+            || line.contains('}')
+            || line.trim() == "---"
+            || line.trim() == "..."
+    }) {
+        return false;
+    }
+    let mut name = None;
+    let mut description = None;
+    for line in front.lines() {
+        let line = line.trim_end_matches('\r');
+        if line.chars().next().is_some_and(char::is_whitespace)
+            || line.trim_start().starts_with('-')
+        {
+            continue;
+        }
+        let Some((key, value)) = line.split_once(':') else {
+            return false;
+        };
+        let value = value.trim();
+        match key.trim() {
+            "name" => name = Some(value.trim_matches(&['\'', '"'][..])),
+            "description" => description = Some(value),
+            _ => {}
+        }
+    }
+    name == Some(expected_name) && description.is_some_and(|value| !value.is_empty())
+}
+pub(super) fn section_bytes<'a>(
+    archive: &'a [u8],
+    section: &medulla_catalog_types::connector_pack::PackSection,
+) -> Result<&'a [u8], String> {
+    let start =
+        usize::try_from(section.offset).map_err(|_| "section offset overflow".to_string())?;
+    let end = usize::try_from(
+        section
+            .offset
+            .checked_add(section.length)
+            .ok_or_else(|| "section range overflow".to_string())?,
+    )
+    .map_err(|_| "section end overflow".to_string())?;
+    archive
+        .get(start..end)
+        .ok_or_else(|| "section outside archive".to_string())
+}
+
+pub(super) fn violation(code: PackViolationCode, uri: Option<&str>, detail: &str) -> PackViolation {
+    PackViolation {
+        code,
+        uri: uri.map(str::to_string),
+        detail: detail.chars().take(1024).collect(),
+    }
+}
+
+#[cfg(test)]
+mod mcp_resource_uri_tests {
+    use super::generic_mcp_uri;
+
+    #[test]
+    fn accepts_generic_absolute_resource_uris_and_templates() {
+        assert!(generic_mcp_uri("file:///srv/catalog/item.json"));
+        assert!(generic_mcp_uri("https://example.test/items/{item_id}"));
+        assert!(generic_mcp_uri("company+graph://tenant/{kind}/{id}"));
+    }
+
+    #[test]
+    fn rejects_relative_or_malformed_resource_uris() {
+        assert!(!generic_mcp_uri("resources/item.json"));
+        assert!(!generic_mcp_uri(":missing-scheme"));
+        assert!(!generic_mcp_uri("1invalid://item"));
+    }
+}
+
+#[cfg(test)]
+mod duplicate_component_id_wiring_tests {
+    use super::{check_duplicate_component_ids, PackEntry, PackEntryKind, PackViolationCode};
+    use medulla_catalog_types::{connector_pack::PackAnnotations, connector_pack::PackSection};
+    use medulla_types::contract::Digest256;
+
+    fn entry(name: &str, uri: &str) -> PackEntry {
+        PackEntry {
+            kind: PackEntryKind::Tool,
+            uri: uri.to_string(),
+            name: name.to_string(),
+            media_type: "application/json".to_string(),
+            body: PackSection {
+                offset: 0,
+                length: 0,
+                sha256: Digest256::from_bytes([0u8; 32]),
+            },
+            input_schema: None,
+            output_schema: None,
+            annotations: PackAnnotations::default(),
+            references: Default::default(),
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R075.2
+    #[test]
+    fn the_real_entry_point_calls_the_shared_duplicate_id_check() {
+        let a = entry("search", "tool://connector/a");
+        let b = entry("search", "tool://connector/b");
+        let all: Vec<&PackEntry> = vec![&a, &b];
+        let mut violations = Vec::new();
+        check_duplicate_component_ids("connector", &all, &mut violations);
+        assert!(
+            violations
+                .iter()
+                .any(|v| v.code == PackViolationCode::DuplicateComponentId),
+            "wiring check_unique_component_ids into validate_index must reject \
+             two entries minting the same component id, got {violations:?}"
+        );
+    }
+
+    #[test]
+    fn distinct_names_mint_distinct_ids_and_are_not_rejected() {
+        let a = entry("search", "tool://connector/a");
+        let b = entry("fetch", "tool://connector/b");
+        let all: Vec<&PackEntry> = vec![&a, &b];
+        let mut violations = Vec::new();
+        check_duplicate_component_ids("connector", &all, &mut violations);
+        assert!(violations.is_empty(), "got {violations:?}");
+    }
+}
+
+#[cfg(all(test, feature = "owl", feature = "shacl"))]
+mod shacl_service_tests {
+    use super::sparql_constraint_names_service;
+    use medulla_rdf::oxrdf::{Literal, NamedNode, Triple};
+
+    fn triple(predicate: &str, object: &str) -> Triple {
+        Triple::new(
+            NamedNode::new("urn:shape").unwrap(),
+            NamedNode::new(predicate).unwrap(),
+            Literal::new_simple_literal(object),
+        )
+    }
+
+    #[test]
+    fn only_a_constraint_query_service_clause_is_refused() {
+        let select = "http://www.w3.org/ns/shacl#select";
+        assert!(sparql_constraint_names_service(&triple(
+            select,
+            "SELECT $this WHERE { service <http://x> { ?s ?p ?o } }"
+        )));
+        assert!(!sparql_constraint_names_service(&triple(
+            select,
+            "SELECT $this WHERE { $this <urn:service> ?service }"
+        )));
+        assert!(!sparql_constraint_names_service(&triple(
+            "http://www.w3.org/2000/01/rdf-schema#label",
+            "Service registration shape"
+        )));
+    }
+}

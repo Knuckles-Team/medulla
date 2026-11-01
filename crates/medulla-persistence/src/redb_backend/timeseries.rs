@@ -7,7 +7,7 @@ use super::*;
 // BETWEEN those two commits leaves the measurement durable + authoritative in
 // after its SERIES-table commit may not be reflected in the served store.
 // The pass below closes that window: run ONCE at boot, after both stores are open —
-// as POST-BIND background maintenance (`server::boot_maintenance::
+// as POST-BIND background maintenance (`medulla_h_admin::boot_maintenance::
 // spawn_post_bind_maintenance`, MEDULLA-DURABLE-KERNEL-R006.4), never on the
 // pre-listener critical path — so a prior crash's residual never lingers.
 #[cfg(feature = "tsdb")]

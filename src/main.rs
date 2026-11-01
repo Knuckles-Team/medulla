@@ -597,7 +597,7 @@ async fn spawn_optional_service_listeners(
     spawn_s3_listener(state).await?;
     spawn_kvcache_listener(state).await?;
     recover_durable_catalog(state).await?;
-    medulla::server::connector_pack_projection::spawn(state.clone());
+    medulla_h_admin::connector_pack_projection::spawn(state.clone());
     medulla_h_ingest::repository_enrichment_worker::spawn(state.clone());
     #[cfg(feature = "epistemic-tms")]
     medulla_h_query::reasoning_projection::spawn(state.clone());
@@ -1552,7 +1552,7 @@ async fn recover_durable_catalog(
         // The time-series startup reconciliation (CONCEPT:MEDULLA-KG.backend.ts-
         // startup-reconcile, L16) no longer runs here: it is crash-window
         // residual closing, not a serving precondition, so it runs as post-bind
-        // background maintenance (`server::boot_maintenance::
+        // background maintenance (`medulla_h_admin::boot_maintenance::
         // spawn_post_bind_maintenance`, MEDULLA-DURABLE-KERNEL-R006.4) — running it
         // pre-listener is exactly what stalled the boot for minutes on a
         // legacy store (G9).
@@ -1982,7 +1982,7 @@ fn spawn_lifecycle_sweeps(state: &Arc<tokio::sync::RwLock<ServerState>>, txn_ttl
 /// before serving (writes route through consensus). The materialized-view
 /// reload that used to sit in this function (hence the old name) is RAM
 /// re-hydration, not a serving precondition, and moved to post-bind
-/// background maintenance (`server::boot_maintenance::
+/// background maintenance (`medulla_h_admin::boot_maintenance::
 /// spawn_post_bind_maintenance`, MEDULLA-DURABLE-KERNEL-R006.4) — running it here
 /// stalled the pre-listener path behind the projection drain for minutes on
 /// a large store (G9).

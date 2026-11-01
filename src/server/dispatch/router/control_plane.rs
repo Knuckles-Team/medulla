@@ -114,7 +114,7 @@ async fn dispatch_cluster_admin_methods_arm_0(ctx: DispatchCtx<'_>, method: Meth
     let req_id = req.id;
     let req_agent_id = req.agent_id.clone();
     {
-            match handlers::admin::try_handle(
+            match medulla_h_admin::admin::try_handle(
                 state,
                 req_id,
                 req_agent_id.as_deref(),
@@ -177,7 +177,7 @@ async fn dispatch_cluster_admin_methods_arm_2(ctx: DispatchCtx<'_>, method: Meth
             dispatch_boxed(async {
                 let req_id = req.id;
                 {
-                    match handlers::raft_admin::try_handle(state, req_id, method).await {
+                    match medulla_h_admin::raft_admin::try_handle(state, req_id, method).await {
                         Ok(resp) => resp,
                         // Unreachable: both variants matched above are raft-admin methods.
                         Err(_) => Response::err(req_id, "raft-admin dispatch routing error"),
@@ -332,7 +332,7 @@ pub(super) async fn dispatch_agent_library_methods(
             #[cfg(feature = "redb")]
             {
                 dispatch_boxed(async {
-                    handlers::admin::handle_agent_library(state, req.id, verified_context, op).await
+                    medulla_h_admin::admin::handle_agent_library(state, req.id, verified_context, op).await
                 })
                 .await
             }
@@ -349,7 +349,7 @@ pub(super) async fn dispatch_agent_library_methods(
             #[cfg(feature = "redb")]
             {
                 dispatch_boxed(async {
-                    handlers::admin::handle_agent_graph(state, req.id, verified_context, op).await
+                    medulla_h_admin::admin::handle_agent_graph(state, req.id, verified_context, op).await
                 })
                 .await
             }
@@ -366,7 +366,7 @@ pub(super) async fn dispatch_agent_library_methods(
             #[cfg(feature = "redb")]
             {
                 dispatch_boxed(async {
-                    handlers::admin::handle_agent_component(state, req.id, verified_context, op)
+                    medulla_h_admin::admin::handle_agent_component(state, req.id, verified_context, op)
                         .await
                 })
                 .await
@@ -407,7 +407,7 @@ pub(super) async fn dispatch_agent_library_methods(
             #[cfg(feature = "redb")]
             {
                 dispatch_boxed(async {
-                    handlers::admin::handle_agent_template(state, req.id, verified_context, op)
+                    medulla_h_admin::admin::handle_agent_template(state, req.id, verified_context, op)
                         .await
                 })
                 .await

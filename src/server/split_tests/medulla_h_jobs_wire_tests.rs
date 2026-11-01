@@ -51,7 +51,7 @@ mod mine_associate_wire_tests {
             }}}
         }))
         .unwrap();
-        let request = crate::server::transport::decode_request_payload(&payload, 128)
+        let request = medulla_h_admin::transport::decode_request_payload(&payload, 128)
             .expect("the same envelope must accept valid transactions with defaults");
         let medulla_protocol_types::protocol::Method::AnalyticsJob {
             op: JobOp::Submit(spec),
@@ -104,7 +104,7 @@ mod mine_associate_wire_tests {
                 }}}
             }))
             .unwrap();
-            let response = crate::server::transport::decode_request_payload(&payload, 128)
+            let response = medulla_h_admin::transport::decode_request_payload(&payload, 128)
                 .expect_err("malformed transactions must be refused before submission");
             assert_eq!(response.id, 82);
             assert_eq!(response.error.as_deref(), Some("INVALID_ARGUMENT"));

@@ -301,7 +301,7 @@ pub(in crate::server::dispatch) fn decode_multi_graph_batches(
         if total_operations_bytes > MAX_MULTI_GRAPH_TOTAL_OPERATIONS_BYTES {
             return Err("multi-graph batch exceeds the resource limit".to_string());
         }
-        crate::server::transport::validate_nested_msgpack(
+        medulla_h_admin::transport::validate_nested_msgpack(
             operations,
             MAX_MULTI_GRAPH_OPERATIONS_BYTES,
             MAX_MULTI_GRAPH_OPERATION_ITEMS,

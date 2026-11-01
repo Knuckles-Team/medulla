@@ -1,3 +1,7 @@
+use medulla_h_admin::transport::parse_unix_socket_mode;
+use medulla_h_admin::transport::serve_uds;
+use medulla_h_admin::transport::serve_tcp;
+use medulla_h_admin::transport::handle_connection;
 use medulla_h_query::semantic_index_runtime::PendingRf019Activation;
 // CONCEPT:MEDULLA-KG.query.tokio-service-server — Tokio Service Server
 //
@@ -130,8 +134,6 @@ pub fn validate_verified_request_context_startup(
 ) -> Result<(), String> {
     medulla_server_api::auth::validate_verified_context_startup(secret, state_dir)
 }
-pub mod boot_maintenance;
-pub mod namespace_migration;
 // CDC -> Kafka sink (CA-11, feature `cdc-kafka`, off by default). Reserved and EMPTY
 // until CA-11 implements it; landed by CA-17's single feature-stub commit so CA-11 never
 // edits this shared module list.
@@ -190,15 +192,6 @@ pub(crate) mod handlers;
 pub mod registry_reaper;
 // EH-558: policy-driven expiry of sealed records through their owning op.
 pub mod sealed_retention;
-// PB1 — the connector-pack projection worker, the first Agent Library outbox
-// consumer. `pub` so the server binary can start it after catalog recovery.
-pub mod connector_pack_projection;
-// X9 — keyed schema sources on one request graph.  The authority composes both
-// OWL and SHACL documents and is therefore present only in the certified SHACL
-// build (which implies `owl-dl`).  Minimal/server-only profiles must not pull
-// the RDF stack through this internal module accidentally.
-#[cfg(feature = "shacl")]
-pub(crate) mod graph_schema;
 
 /// Tests that need the full server: the router, seam installation and the redb backend.
 #[cfg(test)]
@@ -390,7 +383,6 @@ pub mod dds;
 // deadline-aware ordering + typed backpressure. With QoS unconfigured the transport never
 // touches it and the baseline path is byte-for-byte unchanged.
 pub mod qos;
-mod transport;
 // The durable cross-store commit-intent log (`txn_intent`) lives under
 // `api::query_txn` (R056.8).
 
@@ -405,7 +397,6 @@ pub use dispatch::dispatch;
 pub use medulla_h_txn::dist_compute::reload_matviews;
 // Post-bind maintenance hook (MEDULLA-DURABLE-KERNEL-R006.4): the binary calls this
 // from `serve_transports` right after the listeners bind.
-pub use boot_maintenance::spawn_post_bind_maintenance;
 use medulla_server_api::state::{txn_limits_from_env, ServerState};
 
 /// Build the canonical feature-complete state used by dispatch and wire tests.
@@ -460,20 +451,13 @@ pub(crate) fn test_state_with_services(
 }
 
 pub use medulla_server_api::request_replay::seal_request_replay_ledger;
-pub use transport::{
-    bind_tcp, handle_connection, prepare_tcp_tls, run_idle_watcher, serve_tcp, serve_tcp_listener,
-    PreparedTcpTls, ShutdownCoordinator, TcpTlsConfig,
-};
 // serve_uds is Unix-only (UnixListener); on Windows the server uses serve_tcp,
 // so gate the re-export to keep the windows-msvc wheel building (main.rs already
 // guards its serve_uds call with #[cfg(unix)]).
-#[cfg(unix)]
-pub use transport::{bind_uds, serve_uds, serve_uds_listener};
 // parse_unix_socket_mode is pure parsing/validation (no fs calls) and is exported
 // unconditionally so main.rs can validate --socket-mode/GRAPH_SERVICE_SOCKET_MODE
 // up front on every platform, even though the mode itself is only applied by
 // serve_uds on unix.
-pub use transport::parse_unix_socket_mode;
 
 /// CA-17-W00 feature-stub contract.
 ///

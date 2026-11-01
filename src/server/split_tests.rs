@@ -50,3 +50,5 @@ mod medulla_h_decide_harness_config_tests;
 mod medulla_h_query_sql_source_read_tests;
 #[cfg(all(test, feature = "query", feature = "redb", feature = "ann-redb"))]
 mod medulla_h_query_dispatch_pipeline_tests;
+#[cfg(test)]
+mod medulla_h_admin_transport_tests;

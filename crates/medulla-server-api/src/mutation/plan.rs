@@ -585,7 +585,7 @@ pub enum ClusterMutationRoute {
     ConsensusFanout,
     /// Cluster-wide, non-graph-scoped admin mutation with its OWN dedicated
     /// handler that resolves `MultiRaft` and performs the leader check /
-    /// `OPERATION_REDIRECTED` routing itself (`handlers::raft_admin::try_handle`,
+    /// `OPERATION_REDIRECTED` routing itself (`medulla_h_admin::raft_admin::try_handle`,
     /// the same shape `medulla_h_graph::placement::try_handle` uses for reads) — it
     /// does NOT go through [`propose_native_mutation`](crate::server::dispatch)'s
     /// generic `NativeMutationCommand` proposal/replication path, so it must
@@ -798,7 +798,7 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
         // `RaftAddLearner`/`RaftChangeMembership` apart is that they have NO
         // bounded `NativeMutationCommand` at all — see
         // `SELF_ROUTED_ADMIN_METHODS`'s doc comment — and are handled entirely by
-        // `handlers::raft_admin::try_handle`, which resolves `MultiRaft` and does
+        // `medulla_h_admin::raft_admin::try_handle`, which resolves `MultiRaft` and does
         // its own leader check/`OPERATION_REDIRECTED` redirect, exactly like
         // `medulla_h_graph::placement::try_handle` does for `PlacementRoute`.
         debug_assert!(

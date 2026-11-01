@@ -12,3 +12,20 @@ name = "medulla_h_admin"
 path = "src/lib.rs"
 
 [dependencies]
+
+[features]
+blob = ["redb"]
+compute-dist = ["raft"]
+jobs = []
+kv = ["redb"]
+matview = ["streaming"]
+owl = []
+raft = ["redb"]
+rdf = []
+redb = []
+security = ["redb"]
+server-tls = []
+shacl = ["rdf"]
+sparql-star = []
+streaming = []
+tsdb = ["redb"]

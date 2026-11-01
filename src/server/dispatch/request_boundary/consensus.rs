@@ -34,7 +34,7 @@ fn clustered_route_admission(
     use medulla_server_api::mutation::ClusterMutationRoute;
     match medulla_server_api::mutation::cluster_mutation_route(&req.method) {
         // `SelfRoutedAdmin` owns its OWN `MultiRaft`-presence check
-        // (`handlers::raft_admin::try_handle` answers
+        // (`medulla_h_admin::raft_admin::try_handle` answers
         // `RAFT_NOT_CONFIGURED`/`CLUSTER_CONFIGURATION_INVALID` itself,
         // matching this exact pair of messages) — it must not be
         // preempted here, exactly like `ReadOnly`/`VolatileControl`.

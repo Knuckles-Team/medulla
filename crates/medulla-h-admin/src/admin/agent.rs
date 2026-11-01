@@ -1,0 +1,861 @@
+//! Authenticated Agent Library operation handlers.
+
+#[cfg(feature = "redb")]
+use medulla_agent_types::agent_library::AgentLibraryEntryDraft;
+use medulla_agent_types::agent_library::AgentLibraryMutationContext;
+use medulla_agent_types::agent_library::AgentLibraryOp;
+use medulla_agent_types::agent_library::AgentLibraryPublishRequest;
+use medulla_agent_types::agent_library::AgentLibraryRetireRequest;
+use medulla_agent_types::agent_library::AgentLibraryStatusRequest;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
+use std::sync::Arc;
+
+use tokio::sync::RwLock;
+
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
+#[cfg(feature = "redb")]
+use medulla_persistence::agent_library::context::bind_agent_library_context;
+use medulla_server_api::state::ServerState;
+
+/// Bind the context of a read-only Agent Library status query. Status never
+/// reaches the mutation kernel, so no attempt nonce is required; a binding
+/// failure is answered as this request's error response.
+#[cfg(feature = "redb")]
+fn bind_status_context(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    context: medulla_agent_types::agent_library::AgentLibraryMutationContext,
+    purpose_id: &str,
+) -> Result<medulla_agent_types::agent_library::AgentLibraryMutationContext, Response> {
+    bind_agent_library_context(store, req_id, verified, context, purpose_id, false)
+        .map_err(|error| Response::err(req_id, error))
+}
+
+#[cfg(feature = "redb")]
+pub(crate) fn bind_agent_library_draft(
+    draft: medulla_agent_types::agent_library::AgentLibraryEntryDraft,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    _action_context: &medulla_agent_types::agent_library::AgentLibraryMutationContext,
+) -> Result<medulla_agent_types::agent_library::AgentLibraryEntryDraft, String> {
+    if draft.tenant_id != verified.tenant() {
+        return Err(
+            "ACCESS_DENIED: Agent Library definition tenant must match verified request tenant"
+                .to_string(),
+        );
+    }
+    // `draft.agent_id` names the selected built definition. Its actor scope,
+    // purpose, and policy digest are immutable definition provenance and must
+    // survive a later action by another caller under a newer policy. The
+    // authenticated request's action authority is carried separately in the
+    // mutation context and outbox event; body attribution never authorizes the
+    // action or replaces historical definition fields.
+    Ok(draft)
+}
+
+#[cfg(feature = "redb")]
+async fn ensure_agent_library(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+) -> Result<Arc<medulla_persistence::agent_library::AgentLibraryStore>, Response> {
+    let mut guard = state.write().await;
+    guard
+        .ensure_agent_library()
+        .map_err(|error| Response::err(req_id, error))
+}
+
+#[cfg(feature = "redb")]
+fn validate_component_op(
+    op: &medulla_agent_types::agent_component::AgentComponentOp,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+) -> Result<(), String> {
+    op.validate()?;
+    if op.tenant_id() != verified.tenant() {
+        return Err(
+            "ACCESS_DENIED: agent component tenant must match verified request tenant".to_string(),
+        );
+    }
+    Ok(())
+}
+
+#[cfg(feature = "redb")]
+fn validate_template_op(
+    op: &medulla_agent_types::agent_template::AgentTemplateOp,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+) -> Result<(), String> {
+    op.validate()?;
+    if op.tenant_id() != verified.tenant() {
+        return Err(
+            "ACCESS_DENIED: agent template tenant must match verified request tenant".to_string(),
+        );
+    }
+    Ok(())
+}
+
+/// Serve the typed RF-020 Agent Library operations from the same authenticated
+/// dispatch boundary as every other self-routing control-plane method.
+#[cfg(feature = "redb")]
+/// Publish, retire, inspect or SEARCH one durable agent component
+/// (RF-ADR-008 layer 1).
+///
+/// Same store as the two layers above it. `Search` is the capability query the
+/// layer exists for -- it resolves a task through EG's native ontology and
+/// matches components by subsumption, so the answer comes from the graph rather
+/// than from a model.
+pub(crate) async fn handle_agent_component(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    op: medulla_agent_types::agent_component::AgentComponentOp,
+) -> Response {
+    use medulla_agent_types::agent_component::AgentComponentOp;
+
+    if let Err(error) = validate_component_op(&op, verified) {
+        return Response::err(req_id, error);
+    }
+    let store = match ensure_agent_library(state, req_id).await {
+        Ok(store) => store,
+        Err(response) => return response,
+    };
+    match op {
+        AgentComponentOp::Publish { request } => {
+            component_publish(&store, req_id, verified, request)
+        }
+        AgentComponentOp::Retire { request } => component_retire(&store, req_id, verified, request),
+        AgentComponentOp::Current {
+            tenant_id,
+            component_id,
+        } => component_current(&store, req_id, tenant_id, component_id),
+        AgentComponentOp::History {
+            tenant_id,
+            component_id,
+        } => component_history(&store, req_id, tenant_id, component_id),
+        AgentComponentOp::Status { request } => component_status(&store, req_id, verified, request),
+        AgentComponentOp::Search { request } => component_search(&store, req_id, request),
+        AgentComponentOp::Content { request } => {
+            super::component_content::handle_component_content(
+                state, &store, req_id, verified, request,
+            )
+            .await
+        }
+    }
+}
+
+#[cfg(feature = "redb")]
+fn component_publish(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    mut request: Box<medulla_agent_types::agent_component::AgentComponentPublishRequest>,
+) -> Response {
+    let context = match bind_agent_library_context(
+        store,
+        req_id,
+        verified,
+        request.context,
+        "agent-component:publish",
+        true,
+    ) {
+        Ok(context) => context,
+        Err(error) => return Response::err(req_id, error),
+    };
+    request.component.tenant_id = context.tenant_id.clone();
+    request.component.actor_scope = context.actor_scope.clone();
+    request.component.purpose_id = context.purpose_id.clone();
+    request.component.policy_digest = context.policy_digest.clone();
+    request.context = context;
+    match store.publish_component(*request) {
+        Ok(result) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentPublish,
+            >(&result.result),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+#[cfg(feature = "redb")]
+fn component_retire(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    mut request: medulla_agent_types::agent_component::AgentComponentRetireRequest,
+) -> Response {
+    let context = match bind_agent_library_context(
+        store,
+        req_id,
+        verified,
+        request.context,
+        "agent-component:retire",
+        true,
+    ) {
+        Ok(context) => context,
+        Err(error) => return Response::err(req_id, error),
+    };
+    request.context = context;
+    match store.retire_component(request) {
+        Ok(result) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentRetire,
+            >(&result.result),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+#[cfg(feature = "redb")]
+fn component_current(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    tenant_id: String,
+    component_id: String,
+) -> Response {
+    match store.current_component(&tenant_id, &component_id) {
+        Ok(entry) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentCurrent,
+            >(&entry),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+#[cfg(feature = "redb")]
+fn component_history(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    tenant_id: String,
+    component_id: String,
+) -> Response {
+    match store.component_revisions(&tenant_id, &component_id) {
+        Ok(entries) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentHistory,
+            >(&entries),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+/// The `bind_agent_library_context` purpose for a status read, named by the
+/// mutation kind it is reporting on. A pack member's withdrawal and its
+/// return are importer actions, not caller ones; the status read still has
+/// to name them so a new kind cannot inherit an unrelated purpose.
+///
+/// A free function rather than a match inline in `component_status`: the
+/// kind enum is exhaustive by design (RF-ADR-010), and every variant this
+/// module adds would otherwise read as `component_status` itself getting
+/// more complex, when the dispatch is the whole story.
+#[cfg(feature = "redb")]
+fn component_status_purpose(
+    kind: medulla_agent_types::agent_component::AgentComponentMutationKind,
+) -> &'static str {
+    match kind {
+        medulla_agent_types::agent_component::AgentComponentMutationKind::Publish => {
+            "agent-component:publish"
+        }
+        medulla_agent_types::agent_component::AgentComponentMutationKind::Retire => {
+            "agent-component:retire"
+        }
+        medulla_agent_types::agent_component::AgentComponentMutationKind::Withdraw => {
+            "agent-component:withdraw"
+        }
+        medulla_agent_types::agent_component::AgentComponentMutationKind::Republish => {
+            "agent-component:republish"
+        }
+    }
+}
+
+#[cfg(feature = "redb")]
+fn component_status(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    mut request: medulla_agent_types::agent_component::AgentComponentStatusRequest,
+) -> Response {
+    let purpose = component_status_purpose(request.kind);
+    request.context = match bind_status_context(store, req_id, verified, request.context, purpose) {
+        Ok(context) => context,
+        Err(response) => return response,
+    };
+    match store.component_status(request) {
+        Ok(result) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentStatus,
+            >(&result.map(|result| result.result)),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+#[cfg(feature = "redb")]
+fn component_search(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    request: medulla_agent_types::agent_component::AgentComponentSearchRequest,
+) -> Response {
+    match store.search_components(&request) {
+        Ok(page) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentSearch,
+            >(&page),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+/// Publish, retire, inspect or INSTANTIATE one durable agent template
+/// (RF-ADR-008 item C).
+///
+/// Same store as the three layers beside it. `Instantiate` is the operation
+/// the layer exists for, and it is a READ: it binds parameters and returns an
+/// ordinary `AgentLibraryEntryDraft`, which the caller then publishes through
+/// `Method::AgentLibrary`. Nothing here commits an instance, so the library
+/// write privilege is still what admits one.
+#[cfg(feature = "redb")]
+pub(crate) async fn handle_agent_template(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    op: medulla_agent_types::agent_template::AgentTemplateOp,
+) -> Response {
+    use medulla_agent_types::agent_template::AgentTemplateOp;
+
+    if let Err(error) = validate_template_op(&op, verified) {
+        return Response::err(req_id, error);
+    }
+    let store = match ensure_agent_library(state, req_id).await {
+        Ok(store) => store,
+        Err(response) => return response,
+    };
+    match op {
+        AgentTemplateOp::Publish { request } => template_publish(&store, req_id, verified, request),
+        AgentTemplateOp::Retire { request } => template_retire(&store, req_id, verified, request),
+        AgentTemplateOp::Current {
+            tenant_id,
+            template_id,
+        } => template_current(&store, req_id, tenant_id, template_id),
+        AgentTemplateOp::History {
+            tenant_id,
+            template_id,
+        } => template_history(&store, req_id, tenant_id, template_id),
+        AgentTemplateOp::Status { request } => template_status(&store, req_id, verified, request),
+        AgentTemplateOp::Instantiate { request } => template_instantiate(&store, req_id, request),
+    }
+}
+
+#[cfg(feature = "redb")]
+fn template_publish(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    mut request: Box<medulla_agent_types::agent_template::AgentTemplatePublishRequest>,
+) -> Response {
+    let context = match bind_agent_library_context(
+        store,
+        req_id,
+        verified,
+        request.context,
+        "agent-template:publish",
+        true,
+    ) {
+        Ok(context) => context,
+        Err(error) => return Response::err(req_id, error),
+    };
+    // Definition provenance is bound to the AUTHENTICATED caller, not
+    // to whatever the body claimed -- the same rule the three layers
+    // beside it apply. The base's own tenant has to move with it or
+    // `AgentTemplateDraft::validate` refuses the pair.
+    request.template.tenant_id = context.tenant_id.clone();
+    request.template.base.tenant_id = context.tenant_id.clone();
+    request.template.actor_scope = context.actor_scope.clone();
+    request.template.purpose_id = context.purpose_id.clone();
+    request.template.policy_digest = context.policy_digest.clone();
+    request.context = context;
+    match store.publish_template(*request) {
+        Ok(result) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentTemplatePublish,
+            >(&result.result),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+#[cfg(feature = "redb")]
+fn template_retire(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    mut request: medulla_agent_types::agent_template::AgentTemplateRetireRequest,
+) -> Response {
+    let context = match bind_agent_library_context(
+        store,
+        req_id,
+        verified,
+        request.context,
+        "agent-template:retire",
+        true,
+    ) {
+        Ok(context) => context,
+        Err(error) => return Response::err(req_id, error),
+    };
+    request.context = context;
+    match store.retire_template(request) {
+        Ok(result) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentTemplateRetire,
+            >(&result.result),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+#[cfg(feature = "redb")]
+fn template_current(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    tenant_id: String,
+    template_id: String,
+) -> Response {
+    match store.current_template(&tenant_id, &template_id) {
+        Ok(entry) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentTemplateCurrent,
+            >(&entry),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+#[cfg(feature = "redb")]
+fn template_history(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    tenant_id: String,
+    template_id: String,
+) -> Response {
+    match store.template_revisions(&tenant_id, &template_id) {
+        Ok(entries) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentTemplateHistory,
+            >(&entries),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+#[cfg(feature = "redb")]
+fn template_status(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    mut request: medulla_agent_types::agent_template::AgentTemplateStatusRequest,
+) -> Response {
+    let purpose = match request.kind {
+        medulla_agent_types::agent_template::AgentTemplateMutationKind::Publish => {
+            "agent-template:publish"
+        }
+        medulla_agent_types::agent_template::AgentTemplateMutationKind::Retire => {
+            "agent-template:retire"
+        }
+    };
+    request.context = match bind_status_context(store, req_id, verified, request.context, purpose) {
+        Ok(context) => context,
+        Err(response) => return response,
+    };
+    match store.template_status(request) {
+        Ok(result) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentTemplateStatus,
+            >(&result.map(|result| result.result)),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+#[cfg(feature = "redb")]
+fn template_instantiate(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    request: medulla_agent_types::agent_template::AgentTemplateInstantiateRequest,
+) -> Response {
+    match store.instantiate_template(&request) {
+        Ok(draft) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentTemplateInstantiate,
+            >(&draft),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+/// Publish, retire, or inspect one durable agent GRAPH (RF-ADR-008).
+///
+/// Routed to the SAME store as [`handle_agent_library`]: a graph is published
+/// into the agent-library owner alongside the entries it composes, so there is
+/// one `ensure_agent_library` and one physical authority (RF-RULING-004).
+pub(crate) async fn handle_agent_graph(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    op: medulla_agent_types::agent_graph::AgentGraphOp,
+) -> Response {
+    use medulla_agent_types::agent_graph::AgentGraphOp;
+
+    if let Err(error) = op.validate() {
+        return Response::err(req_id, error);
+    }
+    let store = match ensure_agent_library(state, req_id).await {
+        Ok(store) => store,
+        Err(response) => return response,
+    };
+    match op {
+        AgentGraphOp::Publish { request } => graph_publish(&store, req_id, verified, request),
+        AgentGraphOp::Retire { request } => graph_retire(&store, req_id, verified, request),
+        AgentGraphOp::Current {
+            tenant_id,
+            graph_id,
+        } => graph_current(&store, req_id, verified, tenant_id, graph_id),
+        AgentGraphOp::History {
+            tenant_id,
+            graph_id,
+        } => graph_history(&store, req_id, verified, tenant_id, graph_id),
+        AgentGraphOp::Status { request } => graph_status(&store, req_id, verified, request),
+    }
+}
+
+#[cfg(feature = "redb")]
+fn graph_publish(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    mut request: Box<medulla_agent_types::agent_graph::AgentGraphPublishRequest>,
+) -> Response {
+    let context = match bind_agent_library_context(
+        store,
+        req_id,
+        verified,
+        request.context,
+        "agent-graph:publish",
+        true,
+    ) {
+        Ok(context) => context,
+        Err(error) => return Response::err(req_id, error),
+    };
+    // The verified caller owns the tenant/actor/purpose on the record,
+    // not the request body: a caller must not be able to publish a
+    // graph attributed to another tenant.
+    request.graph.tenant_id = context.tenant_id.clone();
+    request.graph.actor_scope = context.actor_scope.clone();
+    request.graph.purpose_id = context.purpose_id.clone();
+    request.graph.policy_digest = context.policy_digest.clone();
+    request.context = context;
+    if let Some(refusal) = medulla_server_api::api::admin::topology_shape::refusal(&request.graph) {
+        return Response::err(req_id, refusal);
+    }
+    match store.publish_graph(*request) {
+        Ok(result) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentGraphPublish,
+            >(&result.result),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+#[cfg(feature = "redb")]
+fn graph_retire(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    mut request: medulla_agent_types::agent_graph::AgentGraphRetireRequest,
+) -> Response {
+    let context = match bind_agent_library_context(
+        store,
+        req_id,
+        verified,
+        request.context,
+        "agent-graph:retire",
+        true,
+    ) {
+        Ok(context) => context,
+        Err(error) => return Response::err(req_id, error),
+    };
+    request.context = context;
+    match store.retire_graph(request) {
+        Ok(result) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentGraphRetire,
+            >(&result.result),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+#[cfg(feature = "redb")]
+fn graph_current(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    tenant_id: String,
+    graph_id: String,
+) -> Response {
+    if tenant_id != verified.tenant() {
+        return Response::err(
+            req_id,
+            "ACCESS_DENIED: agent graph tenant must match verified request tenant",
+        );
+    }
+    match store.current_graph(&tenant_id, &graph_id) {
+        Ok(entry) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentGraphCurrent,
+            >(&entry),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+#[cfg(feature = "redb")]
+fn graph_history(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    tenant_id: String,
+    graph_id: String,
+) -> Response {
+    if tenant_id != verified.tenant() {
+        return Response::err(
+            req_id,
+            "ACCESS_DENIED: agent graph tenant must match verified request tenant",
+        );
+    }
+    match store.graph_revisions(&tenant_id, &graph_id) {
+        Ok(entries) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentGraphHistory,
+            >(&entries),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+#[cfg(feature = "redb")]
+fn graph_status(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    mut request: medulla_agent_types::agent_graph::AgentGraphStatusRequest,
+) -> Response {
+    let purpose = match request.kind {
+        medulla_agent_types::agent_graph::AgentGraphMutationKind::Publish => "agent-graph:publish",
+        medulla_agent_types::agent_graph::AgentGraphMutationKind::Retire => "agent-graph:retire",
+    };
+    request.context = match bind_status_context(store, req_id, verified, request.context, purpose) {
+        Ok(context) => context,
+        Err(response) => return response,
+    };
+    match store.graph_status(request) {
+        Ok(result) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentGraphStatus,
+            >(&result.map(|result| result.result)),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+pub(crate) async fn handle_agent_library(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    op: medulla_agent_types::agent_library::AgentLibraryOp,
+) -> Response {
+    let store = match ensure_agent_library(state, req_id).await {
+        Ok(store) => store,
+        Err(response) => return response,
+    };
+    match op {
+        medulla_agent_types::agent_library::AgentLibraryOp::Publish { request } => {
+            library_publish(&store, req_id, verified, request)
+        }
+        medulla_agent_types::agent_library::AgentLibraryOp::Retire { request } => {
+            library_retire(&store, req_id, verified, request)
+        }
+        medulla_agent_types::agent_library::AgentLibraryOp::Current {
+            tenant_id,
+            agent_id,
+        } => library_current(&store, req_id, verified, tenant_id, agent_id),
+        medulla_agent_types::agent_library::AgentLibraryOp::History {
+            tenant_id,
+            agent_id,
+        } => library_history(&store, req_id, verified, tenant_id, agent_id),
+        medulla_agent_types::agent_library::AgentLibraryOp::Status { request } => {
+            library_status(&store, req_id, verified, request)
+        }
+    }
+}
+
+#[cfg(feature = "redb")]
+fn library_publish(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    mut request: Box<medulla_agent_types::agent_library::AgentLibraryPublishRequest>,
+) -> Response {
+    let context = match bind_agent_library_context(
+        store,
+        req_id,
+        verified,
+        request.context,
+        "agent-library:publish",
+        true,
+    ) {
+        Ok(context) => context,
+        Err(error) => return Response::err(req_id, error),
+    };
+    request.context = context.clone();
+    request.entry = match bind_agent_library_draft(request.entry, verified, &context) {
+        Ok(entry) => entry,
+        Err(error) => return Response::err(req_id, error),
+    };
+    match store.publish(*request) {
+        Ok(result) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentLibraryPublish,
+            >(&result),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+#[cfg(feature = "redb")]
+fn library_retire(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    mut request: medulla_agent_types::agent_library::AgentLibraryRetireRequest,
+) -> Response {
+    let context = match bind_agent_library_context(
+        store,
+        req_id,
+        verified,
+        request.context,
+        "agent-library:retire",
+        true,
+    ) {
+        Ok(context) => context,
+        Err(error) => return Response::err(req_id, error),
+    };
+    request.context = context;
+    match store.retire(request) {
+        Ok(result) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentLibraryRetire,
+            >(&result),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+#[cfg(feature = "redb")]
+fn library_current(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    tenant_id: String,
+    agent_id: String,
+) -> Response {
+    if tenant_id != verified.tenant() {
+        return Response::err(
+            req_id,
+            "ACCESS_DENIED: Agent Library tenant must match verified request tenant",
+        );
+    }
+    match store.current(&tenant_id, &agent_id) {
+        Ok(result) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentLibraryCurrent,
+            >(&result),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+#[cfg(feature = "redb")]
+fn library_history(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    tenant_id: String,
+    agent_id: String,
+) -> Response {
+    if tenant_id != verified.tenant() {
+        return Response::err(
+            req_id,
+            "ACCESS_DENIED: Agent Library tenant must match verified request tenant",
+        );
+    }
+    match store.revisions(&tenant_id, &agent_id) {
+        Ok(result) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentLibraryHistory,
+            >(&result),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+#[cfg(feature = "redb")]
+fn library_status(
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    req_id: u64,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    mut request: medulla_agent_types::agent_library::AgentLibraryStatusRequest,
+) -> Response {
+    let kind = request.kind;
+    let purpose = match kind {
+        medulla_agent_types::agent_library::AgentLibraryMutationKind::Publish => {
+            "agent-library:publish"
+        }
+        medulla_agent_types::agent_library::AgentLibraryMutationKind::Retire => {
+            "agent-library:retire"
+        }
+    };
+    request.context = match bind_status_context(store, req_id, verified, request.context, purpose) {
+        Ok(context) => context,
+        Err(response) => return response,
+    };
+    match store.status(request) {
+        Ok(result) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentLibraryStatus,
+            >(&result),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
