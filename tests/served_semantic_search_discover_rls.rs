@@ -55,7 +55,7 @@ mod test_support;
 
 use serde_json::json;
 
-use medulla_core::isolation::AgentRole;
+use medulla_types::acl::AgentRole;
 use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
 use medulla_server::dispatch::dispatch;
 

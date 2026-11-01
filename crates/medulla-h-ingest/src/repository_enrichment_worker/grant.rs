@@ -129,8 +129,8 @@ mod tests {
     use medulla_types::acl::ResourceSelector;
     use medulla_types::acl::Role;
     use medulla_core::isolation::AccessLevel;
-    use medulla_core::isolation::AgentIdentity;
-    use medulla_core::isolation::AgentRole;
+    use medulla_types::acl::AgentIdentity;
+    use medulla_types::acl::AgentRole;
     use medulla_protocol_types::protocol::GraphType;
 
     #[test]

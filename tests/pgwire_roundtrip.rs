@@ -24,7 +24,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_core::isolation::{AgentIdentity, AgentRole};
+use medulla_types::acl::{AgentIdentity, AgentRole};
 use medulla_core::registry::GraphRegistry;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_wire::pgwire;

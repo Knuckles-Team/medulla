@@ -8,8 +8,8 @@
 //! An empty policy awaiting its signer-backed System bootstrap is never
 //! touched: registering an identity there would consume the bootstrap.
 
-use medulla_core::isolation::AgentIdentity;
-use medulla_core::isolation::AgentRole;
+use medulla_types::acl::AgentIdentity;
+use medulla_types::acl::AgentRole;
 use medulla_core::isolation::IsolationLayer;
 use medulla_types::acl::Grant;
 use medulla_types::acl::GrantEffect;

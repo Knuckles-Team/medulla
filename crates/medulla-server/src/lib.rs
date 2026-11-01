@@ -539,8 +539,8 @@ mod ca17_feature_stub_contract {
 mod tests {
     use super::*;
     use medulla_types::acl::RequestContextClaims;
-    use medulla_core::isolation::AgentIdentity;
-    use medulla_core::isolation::AgentRole;
+    use medulla_types::acl::AgentIdentity;
+    use medulla_types::acl::AgentRole;
     use medulla_protocol_types::protocol::GraphType;
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;

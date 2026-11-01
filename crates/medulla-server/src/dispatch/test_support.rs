@@ -86,9 +86,9 @@ pub(super) fn state() -> Arc<RwLock<ServerState>> {
 pub(super) fn bootstrapped_state() -> Arc<RwLock<ServerState>> {
     let mut layer = medulla_core::isolation::IsolationLayer::new();
     layer
-        .try_bootstrap_system_identity(medulla_core::isolation::AgentIdentity {
+        .try_bootstrap_system_identity(medulla_types::acl::AgentIdentity {
             agent_id: "engine-root".to_string(),
-            role: medulla_core::isolation::AgentRole::System,
+            role: medulla_types::acl::AgentRole::System,
             teams: Vec::new(),
             roles: Vec::new(),
         })

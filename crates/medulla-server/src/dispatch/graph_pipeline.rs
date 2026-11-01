@@ -1220,7 +1220,7 @@ mod admin_scope_tests {
     use medulla_types::acl::RbacAdminOp;
     use medulla_types::acl::ResourceSelector;
     use medulla_types::acl::Role;
-    use medulla_core::isolation::AgentRole;
+    use medulla_types::acl::AgentRole;
     use medulla_core::isolation::IsolationLayer;
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;

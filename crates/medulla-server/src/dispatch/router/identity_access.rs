@@ -154,7 +154,7 @@ async fn dispatch_identity_and_access_methods_arm_0(
                         return Response::err(req_id, message);
                     }
                     let mut s = timed_write(state).await;
-                    let identity = medulla_core::isolation::AgentIdentity {
+                    let identity = medulla_types::acl::AgentIdentity {
                         agent_id: agent_id.clone(),
                         role,
                         teams,
@@ -242,7 +242,7 @@ struct IdentityRegistrationMode<'a> {
 
 fn register_identity(
     state: &mut ServerState,
-    identity: medulla_core::isolation::AgentIdentity,
+    identity: medulla_types::acl::AgentIdentity,
     mode: IdentityRegistrationMode<'_>,
 ) -> Result<(), String> {
     if mode.bootstrap

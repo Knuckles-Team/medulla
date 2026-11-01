@@ -356,7 +356,7 @@ pub fn sql_test_persist_dir(label: &str) -> String {
 #[cfg(feature = "security")]
 pub fn wire_isolation(users: &[&str]) -> IsolationLayer {
     use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
-    use medulla_core::isolation::{AgentIdentity, AgentRole};
+    use medulla_types::acl::{AgentIdentity, AgentRole};
 
     let mut isolation = IsolationLayer::new();
     isolation.add_role(Role::new("commons-user"));

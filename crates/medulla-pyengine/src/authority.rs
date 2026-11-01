@@ -51,7 +51,8 @@
 
 use std::sync::Arc;
 
-use medulla_core::isolation::{AccessLevel, AgentIdentity, AgentRole, IsolationLayer};
+use medulla_core::isolation::{AccessLevel, IsolationLayer};
+use medulla_types::acl::{AgentIdentity, AgentRole};
 use medulla_protocol_types::protocol::GraphType;
 
 /// The one RLS contract every domain module threads through: an asserted

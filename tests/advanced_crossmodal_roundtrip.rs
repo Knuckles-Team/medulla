@@ -788,7 +788,7 @@ fn register_root_req(id: u64, actor: &str) -> Request {
 #[cfg(feature = "security")]
 #[tokio::test]
 async fn rls_per_agent_fused_reason_rank_overlay_eg391() {
-    use medulla_core::isolation::AgentRole;
+    use medulla_types::acl::AgentRole;
 
     let state = state().await;
 
@@ -1049,9 +1049,9 @@ async fn pgwire_sparql_native_consistent_snapshot_eg393() {
     {
         let mut s = state.write().await;
         s.isolation
-            .register_agent(medulla_core::isolation::AgentIdentity {
+            .register_agent(medulla_types::acl::AgentIdentity {
                 agent_id: "tester".to_string(),
-                role: medulla_core::isolation::AgentRole::Agent,
+                role: medulla_types::acl::AgentRole::Agent,
                 teams: Vec::new(),
                 roles: vec!["commons-user".to_string()],
             });
@@ -1758,7 +1758,7 @@ async fn explain_plan_surfaces_the_optimizer_rewrite() {
 #[cfg(feature = "security")]
 #[tokio::test]
 async fn explain_plan_cost_estimate_respects_rls_eg_goc12() {
-    use medulla_core::isolation::AgentRole;
+    use medulla_types::acl::AgentRole;
 
     let state = state().await;
 
@@ -1936,7 +1936,7 @@ async fn explain_belief_returns_full_justification_tree() {
 #[cfg(feature = "epistemic-redaction")]
 #[tokio::test]
 async fn explain_belief_disclosure_level_returns_redacted_skeleton_over_rpc() {
-    use medulla_core::isolation::AgentRole;
+    use medulla_types::acl::AgentRole;
     use medulla_protocol_types::protocol::{DisclosureLevelWire, ExplainBeliefRedactedResult};
 
     let state = state().await;
@@ -2303,7 +2303,7 @@ async fn explain_evidence_resolves_a_located_citation_over_rpc() {
 #[cfg(all(feature = "evidence-graph", feature = "security"))]
 #[tokio::test]
 async fn explain_evidence_hides_other_agents_private_evidence_over_rpc() {
-    use medulla_core::isolation::AgentRole;
+    use medulla_types::acl::AgentRole;
     use medulla_protocol_types::protocol::ExplainEvidenceResult;
 
     let state = state().await;
@@ -2779,7 +2779,7 @@ async fn resolve_conflict_matches_tms_crate_semantics_over_rpc() {
 #[cfg(all(feature = "epistemic-tms", feature = "security"))]
 #[tokio::test]
 async fn resolve_conflict_hides_other_agents_private_argument_over_rpc() {
-    use medulla_core::isolation::AgentRole;
+    use medulla_types::acl::AgentRole;
     use medulla_protocol_types::protocol::ResolveConflictResult;
 
     let state = state().await;

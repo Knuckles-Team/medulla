@@ -47,8 +47,8 @@ use medulla_result_types::epistemic_operations::ResourceReservationStatusRequest
 use medulla_result_types::epistemic_operations::ResourceReservationStatusRequestSchemaVersion;
 use medulla_result_types::epistemic_operations::ResourceReservationStatusResult;
 use medulla_result_types::epistemic_operations::ResourceReservationSummaryState;
-use medulla_core::isolation::AgentIdentity;
-use medulla_core::isolation::AgentRole;
+use medulla_types::acl::AgentIdentity;
+use medulla_types::acl::AgentRole;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;

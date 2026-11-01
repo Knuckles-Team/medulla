@@ -955,9 +955,9 @@ mod tests {
             }
         }
 
-        isolation.register_agent(medulla_core::isolation::AgentIdentity {
+        isolation.register_agent(medulla_types::acl::AgentIdentity {
             agent_id: "service:bolt-test".to_owned(),
-            role: medulla_core::isolation::AgentRole::Agent,
+            role: medulla_types::acl::AgentRole::Agent,
             teams: Vec::new(),
             roles: if cfg!(feature = "security") {
                 vec!["commons-user".to_owned()]

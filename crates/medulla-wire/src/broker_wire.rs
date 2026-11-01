@@ -27,9 +27,9 @@ pub(crate) fn register_broker_test_agent(
     isolation: &mut medulla_core::isolation::IsolationLayer,
     agent_id: impl Into<String>,
 ) {
-    isolation.register_agent(medulla_core::isolation::AgentIdentity {
+    isolation.register_agent(medulla_types::acl::AgentIdentity {
         agent_id: agent_id.into(),
-        role: medulla_core::isolation::AgentRole::Agent,
+        role: medulla_types::acl::AgentRole::Agent,
         teams: Vec::new(),
         roles: if cfg!(feature = "security") {
             vec!["commons-user".to_string()]

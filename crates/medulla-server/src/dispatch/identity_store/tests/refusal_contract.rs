@@ -4,8 +4,8 @@
 //! goes through the full signed dispatch.
 
 use super::*;
-use medulla_core::isolation::AgentIdentity;
-use medulla_core::isolation::AgentRole;
+use medulla_types::acl::AgentIdentity;
+use medulla_types::acl::AgentRole;
 use medulla_core::isolation::IsolationLayer;
 use medulla_protocol_types::protocol::Request;
 use medulla_server_api::auth::sign_current_test_request;

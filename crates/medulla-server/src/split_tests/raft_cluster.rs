@@ -2955,7 +2955,7 @@ async fn member_add_follows_the_current_leader_after_a_leader_change() {
 #[cfg(feature = "compute-dist")]
 mod dist_compute {
     use super::*;
-    use medulla_core::isolation::{AgentIdentity, AgentRole};
+    use medulla_types::acl::{AgentIdentity, AgentRole};
     use medulla_protocol_types::protocol::{DistAlgo, GraphType};
     use medulla_raft::raft::pregel;
     use medulla_server_api::access::GraphReadAuthority;

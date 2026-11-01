@@ -344,8 +344,8 @@ mod rls_no_exfiltrate_tests {
     //! SQL nor Cypher can exfiltrate a forbidden row. Agent A's query MUST exclude
     //! agent B's private node; a public node is visible to both.
     use medulla_core::graph::GraphView;
-    use medulla_core::isolation::AgentIdentity;
-    use medulla_core::isolation::AgentRole;
+    use medulla_types::acl::AgentIdentity;
+    use medulla_types::acl::AgentRole;
     use medulla_core::isolation::IsolationLayer;
     use std::sync::Arc;
 

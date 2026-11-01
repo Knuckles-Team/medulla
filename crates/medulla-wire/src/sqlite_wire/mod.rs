@@ -258,8 +258,8 @@ fn sqlite_type_name(t: PgColType) -> &'static str {
 mod tests {
     use super::*;
 
-    use medulla_core::isolation::AgentIdentity;
-    use medulla_core::isolation::AgentRole;
+    use medulla_types::acl::AgentIdentity;
+    use medulla_types::acl::AgentRole;
     use medulla_core::isolation::IsolationLayer;
     use medulla_server_api::api::persistence::PersistenceBackend;
     #[cfg(feature = "redb")]

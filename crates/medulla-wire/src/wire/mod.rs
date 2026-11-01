@@ -5300,9 +5300,9 @@ impl WireProtocol for WireSession {
 pub fn test_isolation(agents: &[&str]) -> medulla_core::isolation::IsolationLayer {
     let mut isolation = medulla_core::isolation::IsolationLayer::new();
     for agent in agents {
-        isolation.register_agent(medulla_core::isolation::AgentIdentity {
+        isolation.register_agent(medulla_types::acl::AgentIdentity {
             agent_id: (*agent).into(),
-            role: medulla_core::isolation::AgentRole::System,
+            role: medulla_types::acl::AgentRole::System,
             teams: Vec::new(),
             roles: Vec::new(),
         });

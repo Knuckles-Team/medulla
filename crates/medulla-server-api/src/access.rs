@@ -12,8 +12,8 @@ use std::sync::Arc;
 
 #[cfg(all(any(test, feature = "test-support"), feature = "security"))]
 pub fn two_agent_isolation() -> IsolationLayer {
-    use medulla_core::isolation::AgentIdentity;
-    use medulla_core::isolation::AgentRole;
+    use medulla_types::acl::AgentIdentity;
+    use medulla_types::acl::AgentRole;
 
     let mut isolation = IsolationLayer::new();
     for agent_id in ["alice", "bob"] {
@@ -1126,8 +1126,8 @@ mod secure_empty_policy_tests {
     #[cfg(feature = "security")]
     #[test]
     fn served_graph_access_refuses_a_system_identity_demoted_by_another_clone() {
-        use medulla_core::isolation::AgentIdentity;
-        use medulla_core::isolation::AgentRole;
+        use medulla_types::acl::AgentIdentity;
+        use medulla_types::acl::AgentRole;
         let mut writer = IsolationLayer::new();
         let mut identity = AgentIdentity {
             agent_id: "revoked-system".into(),
@@ -1388,8 +1388,8 @@ mod durability_closure_tests {
 #[cfg(all(test, feature = "security"))]
 mod universal_row_read_tests {
     use super::*;
-    use medulla_core::isolation::AgentIdentity;
-    use medulla_core::isolation::AgentRole;
+    use medulla_types::acl::AgentIdentity;
+    use medulla_types::acl::AgentRole;
 
     fn properties(values: &[(&str, &str)]) -> Vec<u8> {
         let map: std::collections::BTreeMap<String, String> = values

@@ -390,11 +390,7 @@ impl RowVisibility {
     }
 }
 
-/// `AgentRole` / `AgentIdentity` are defined in `medulla-types::acl` (the `protocol`
-/// enum's `RegisterIdentity` carries `AgentRole` over the wire, and `protocol`
-/// sits below `isolation` in the DAG); re-exported here so `IsolationLayer` and
-/// every call site reference `crate::isolation::AgentRole` unchanged.
-pub use medulla_types::acl::{AgentIdentity, AgentRole};
+use medulla_types::acl::{AgentIdentity, AgentRole};
 
 #[cfg(feature = "security")]
 mod policy_lease;
