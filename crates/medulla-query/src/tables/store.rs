@@ -44,15 +44,15 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::{Arc, RwLock};
 
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
+use medulla_mutation_types::mutation_scope::MutationScope;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::mutation_batch::MutationBatchCommit;
 use medulla_protocol_types::mutation_batch::MutationBatchRecord;
 use medulla_storage::ScopeGrantVerifier;
 use medulla_transaction::Begin;
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::MutationOutboxRecord;
-use medulla_types::mutation_scope::MutationScope;
-use medulla_types::mutation_scope::MutationScopeIdentity;
 use redb::{ReadableTable, TableDefinition};
 use serde_json::Value;
 
@@ -663,7 +663,7 @@ impl TableStore {
         // free of the path- and address-shaped text `medulla-types` refuses to
         // persist. Checked here so the failure names the argument rather than
         // surfacing from inside the storage kernel.
-        medulla_types::mutation_scope::ScopeTenantId::new(&tenant_scope)
+        medulla_mutation_types::mutation_scope::ScopeTenantId::new(&tenant_scope)
             .map_err(|error| format!("SQL table-store tenant scope is invalid: {error}"))?;
         let authority =
             SqlAuthority::open(path.as_ref(), &tenant_scope, verifier, principal, proof)?;
@@ -6874,17 +6874,17 @@ mod tests {
     use crate::tables::schema::{CmpOp, ColCheck, ColumnType};
     // The mutation ledger is the kernel's now, so the store itself no longer
     // imports these; the fixtures that build a `MutationBatch` still need them.
+    use medulla_mutation_types::mutation_scope::IncarnationId;
+    use medulla_mutation_types::mutation_scope::LogicalName;
+    use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+    use medulla_mutation_types::mutation_scope::MutationSurface;
+    use medulla_mutation_types::mutation_scope::ScopeTenantId;
+    use medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION;
+    use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
     use medulla_protocol_types::mutation_batch::MutationBatchStatus;
     use medulla_protocol_types::mutation_batch::MutationEnvelope;
     use medulla_protocol_types::mutation_batch::MutationOperation;
     use medulla_protocol_types::mutation_batch::VersionExpectation;
-    use medulla_types::mutation_scope::IncarnationId;
-    use medulla_types::mutation_scope::LogicalName;
-    use medulla_types::mutation_scope::MutationOutboxIntent;
-    use medulla_types::mutation_scope::MutationSurface;
-    use medulla_types::mutation_scope::ScopeTenantId;
-    use medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION;
-    use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
 
     #[test]
     fn stored_sql_decoder_rejects_declared_allocation_bombs() {
@@ -8267,11 +8267,12 @@ mod tests {
         // literal calling graph) must ALSO change the fingerprint: this is the
         // property `mutation_version(tenant, ONE_graph)` cannot offer on its own.
         let mut batch_b = sql_batch("fp-b");
-        batch_b.identity = medulla_types::mutation_scope::MutationScopeIdentity::native(
-            medulla_types::mutation_scope::ScopeTenantId::new("tenant-a").unwrap(),
+        batch_b.identity = medulla_mutation_types::mutation_scope::MutationScopeIdentity::native(
+            medulla_mutation_types::mutation_scope::ScopeTenantId::new("tenant-a").unwrap(),
             DurabilityDomain::SqlCatalog,
-            medulla_types::mutation_scope::LogicalName::new("graph-b").unwrap(),
-            medulla_types::mutation_scope::IncarnationId::new(COMPILED_BATCH_INCARNATION).unwrap(),
+            medulla_mutation_types::mutation_scope::LogicalName::new("graph-b").unwrap(),
+            medulla_mutation_types::mutation_scope::IncarnationId::new(COMPILED_BATCH_INCARNATION)
+                .unwrap(),
         )
         .unwrap();
         // Re-mint the envelope for the new scope: the retry key lives inside it,

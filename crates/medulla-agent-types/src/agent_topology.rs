@@ -20,8 +20,10 @@ pub mod plan;
 
 use serde::{Deserialize, Serialize};
 
+use medulla_mutation_types::{
+    capacity_lease::CapacityResourceClass, capacity_lease::LeasePriority,
+};
 use medulla_types::contract::BoundedVec;
-use medulla_types::{capacity_lease::CapacityResourceClass, capacity_lease::LeasePriority};
 
 pub use plan::{
     CapacityHeadroom, CellLease, LeasePlan, SchemaAuthority, SlotPlan, SubagentAllowance,

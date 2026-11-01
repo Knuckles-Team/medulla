@@ -96,7 +96,7 @@ pub(in crate::server::persistence) fn decode_status_result<L: RevisionLayer>(
 /// about.
 pub(in crate::server::persistence) fn validate_status_record<L: RevisionLayer>(
     record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
-    owner_identity: &medulla_types::MutationScopeIdentity,
+    owner_identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     context: &AgentLibraryMutationContext,
     operation: (&str, L::Kind),
     committed: &L::Committed,
@@ -120,7 +120,7 @@ fn validate_status_durable_state<L: RevisionLayer>(
 
 fn validate_status_identity<L: RevisionLayer>(
     record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
-    owner_identity: &medulla_types::MutationScopeIdentity,
+    owner_identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     context: &AgentLibraryMutationContext,
     committed: &L::Committed,
 ) -> Result<(), String> {

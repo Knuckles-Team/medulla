@@ -22,9 +22,12 @@ use crate::outbox::rows::{
 use crate::outbox::stream::{read_outbox_row_in_write, subscribe_in, subscribed_topic};
 use crate::tables::{OUTBOX_CURSORS, OUTBOX_DELIVERIES};
 use crate::{commit, Begin};
+use medulla_mutation_types::{
+    mutation_scope::MutationOutboxRecord, mutation_scope::MutationProjectionCursor,
+    mutation_scope::MUTATION_BATCH_VERSION,
+};
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_storage::{ledger_scope_key, OwnedStoreHandle, OwnerDomain};
-use medulla_types::{MutationOutboxRecord, MutationProjectionCursor, MUTATION_BATCH_VERSION};
 
 const ENRICHMENT_CONSUMER: &str = "repository-enrichment-v1";
 const ENRICHMENT_TOPIC: &str = "repository.enrichment.pending";
@@ -133,7 +136,7 @@ impl MutationKernel {
 
 fn validate_source_route<D: OwnerDomain>(
     write: &AdmittedMutation<'_, D>,
-    identity: &medulla_types::MutationScopeIdentity,
+    identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     consumer: &str,
     expected: &MutationOutboxRecord,
 ) -> Result<(), String> {
@@ -151,7 +154,7 @@ fn validate_source_route<D: OwnerDomain>(
 fn validate_source_row<D: OwnerDomain>(
     write: &AdmittedMutation<'_, D>,
     scope: &str,
-    identity: &medulla_types::MutationScopeIdentity,
+    identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     expected: &MutationOutboxRecord,
     position: &OutboxPosition,
 ) -> Result<(), String> {
@@ -164,7 +167,7 @@ fn validate_source_row<D: OwnerDomain>(
 
 fn supersede_in<D: OwnerDomain>(
     write: &AdmittedMutation<'_, D>,
-    identity: &medulla_types::MutationScopeIdentity,
+    identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     consumer: &str,
     expected: &MutationOutboxRecord,
     now_ms: u64,
@@ -278,7 +281,7 @@ fn read_delivery<D: OwnerDomain>(
     write: &AdmittedMutation<'_, D>,
     scope: &str,
     consumer: &str,
-    identity: &medulla_types::MutationScopeIdentity,
+    identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     position: &OutboxPosition,
 ) -> Result<Option<OutboxDelivery>, String> {
     let row = write

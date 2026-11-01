@@ -118,7 +118,7 @@ async fn commit_prepublish_durable_batch(
             batch_id,
             source_version,
             created_at_ms,
-            medulla_types::mutation_scope::MutationSurface::Graph,
+            medulla_mutation_types::mutation_scope::MutationSurface::Graph,
             None,
         ),
         vec![method.clone()],
@@ -167,7 +167,7 @@ where
         ctx,
         plan,
         vec![durable_receipt_method(method)],
-        medulla_types::mutation_scope::MutationSurface::Graph,
+        medulla_mutation_types::mutation_scope::MutationSurface::Graph,
         DurableBatchTarget {
             persistence,
             fname,

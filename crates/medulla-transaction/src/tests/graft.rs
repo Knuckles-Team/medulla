@@ -11,9 +11,9 @@ use crate::graft::{GraftDestination, GraftSource};
 use crate::outbox::{outbox_cursor, outbox_status, OutboxClaimBudget};
 use crate::read::{read_batches, read_class, read_fences};
 use crate::AdmittedMutation;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 use medulla_protocol_types::mutation_batch::MutationBatchRecord;
 use medulla_storage::{encode_bounded, ledger_scope_key, ScopeFence};
-use medulla_types::MutationOutboxIntent;
 use std::collections::BTreeMap;
 
 const TOPIC: &str = "engine.projection.rebuild";

@@ -406,7 +406,7 @@ fn native_catalog_is_complete_unique_and_has_domain_representatives() {
     );
     assert_native_round_trip(
         Method::GovernedChange {
-            op: medulla_types::governed_change::GovernedChangeOp::List,
+            op: medulla_mutation_types::governed_change::GovernedChangeOp::List,
             actor: None,
         },
         NativeMutationDomain::Identity,

@@ -25,9 +25,9 @@
 //! bindings were keyed by the *binding* digest, so the lookup could never
 //! succeed and any store with one committed batch failed validation.
 
+use medulla_mutation_types::mutation::MutationReceipt;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use medulla_types::contract::Digest256;
-use medulla_types::mutation::MutationReceipt;
-use medulla_types::MutationScopeIdentity;
 use redb::{TableDefinition, TableHandle};
 use serde::{Deserialize, Serialize};
 

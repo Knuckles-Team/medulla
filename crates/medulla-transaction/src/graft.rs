@@ -54,6 +54,12 @@ use crate::tables::{
     REPLAY_NONCES, REPLAY_OPERATIONS, VERSIONS,
 };
 use crate::{Begin, MutationKernel};
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationScope;
+use medulla_mutation_types::{
+    mutation_scope::MutationScopeIdentity, mutation_scope::MutationSurface,
+    mutation_scope::MUTATION_BATCH_VERSION,
+};
 use medulla_protocol_types::mutation_batch::MutationEnvelope;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::{
@@ -66,9 +72,6 @@ use medulla_storage::{
     OwnerDomain, OwnerPayloadRetirement, PhysicalWriteCapability, ScopeFence, ScopedOwnerTableMut,
     ScopedRead, StorageKernel,
 };
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::MutationScope;
-use medulla_types::{MutationScopeIdentity, MutationSurface, MUTATION_BATCH_VERSION};
 use redb::TableDefinition;
 
 /// The owner-row write granted while a destination reservation is in force.

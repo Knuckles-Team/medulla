@@ -4,8 +4,8 @@
 use crate::raft::RaftStateExt;
 use std::sync::Arc;
 
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use medulla_protocol_types::mutation_batch::RepositoryEnrichmentTopUp;
-use medulla_types::MutationOutboxRecord;
 use tokio::sync::RwLock;
 
 use crate::parser::enrichment_reactivation::{plan_reactivation, BudgetRevisionProposal};

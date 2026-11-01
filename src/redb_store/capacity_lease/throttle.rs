@@ -11,8 +11,8 @@ use medulla_agent_types::{
     native_control::CapacityThrottleRequest, native_control::CapacityThrottleResult,
     native_control::NativeControlSchemaVersion,
 };
-use medulla_types::capacity_lease::CapacityCell;
-use medulla_types::capacity_throttle::apply_error_budget;
+use medulla_mutation_types::capacity_lease::CapacityCell;
+use medulla_mutation_types::capacity_throttle::apply_error_budget;
 
 use super::super::shard::ShardWrite;
 use super::super::{decode_durable, DurableCrypto};

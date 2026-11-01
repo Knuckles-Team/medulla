@@ -11,11 +11,12 @@ use crate::outbox::{
     outbox_cursor, outbox_status, OutboxClaimBudget, OutboxClaimCursor, OutboxConsumerState,
     OutboxDeferral, OutboxDelivery, OutboxPosition, OutboxRejectReason, OutboxRewindTarget,
 };
-use medulla_protocol_types::mutation_batch::MutationCapability;
-use medulla_types::mutation_scope::RESERVED_SYSTEM_TENANT;
-use medulla_types::{
-    MutationOutboxIntent, MutationOutboxLease, MutationProjectionCursor, MUTATION_BATCH_VERSION,
+use medulla_mutation_types::mutation_scope::RESERVED_SYSTEM_TENANT;
+use medulla_mutation_types::{
+    mutation_scope::MutationOutboxIntent, mutation_scope::MutationOutboxLease,
+    mutation_scope::MutationProjectionCursor, mutation_scope::MUTATION_BATCH_VERSION,
 };
+use medulla_protocol_types::mutation_batch::MutationCapability;
 use std::collections::BTreeMap;
 
 pub(super) const TOPIC: &str = "engine.projection.rebuild";
@@ -911,7 +912,7 @@ fn a_legacy_outbox_row_without_a_commit_sequence_fails_backfill_closed() {
 
 fn assert_backfill_rejects_corrupt_primary(
     incarnation: &str,
-    mutate: impl FnOnce(&mut medulla_types::MutationOutboxRecord),
+    mutate: impl FnOnce(&mut medulla_mutation_types::mutation_scope::MutationOutboxRecord),
 ) {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("native.redb");

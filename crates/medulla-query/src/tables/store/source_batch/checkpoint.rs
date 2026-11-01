@@ -17,7 +17,7 @@ const CHECKPOINT_SCHEMA_VERSION: u16 = 1;
 #[serde(deny_unknown_fields)]
 pub(super) struct Checkpoint {
     schema_version: u16,
-    tenant: medulla_types::mutation_scope::ScopeTenantId,
+    tenant: medulla_mutation_types::mutation_scope::ScopeTenantId,
     source: ResourceId,
     partition: SqlSourceText,
     table: ResourceId,
@@ -116,7 +116,7 @@ pub(super) fn finalize(
     };
     let checkpoint = Checkpoint {
         schema_version: CHECKPOINT_SCHEMA_VERSION,
-        tenant: medulla_types::mutation_scope::ScopeTenantId::new(invocation.tenant)?,
+        tenant: medulla_mutation_types::mutation_scope::ScopeTenantId::new(invocation.tenant)?,
         source: submitted.source.clone(),
         partition: submitted.partition.clone(),
         table: submitted.table.clone(),

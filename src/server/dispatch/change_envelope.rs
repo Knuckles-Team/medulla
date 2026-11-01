@@ -888,7 +888,7 @@ async fn read_change_envelope(
                     .identity
                     .scope()
                     .graph_name()
-                    .map(medulla_types::mutation_scope::LogicalName::as_str)
+                    .map(medulla_mutation_types::mutation_scope::LogicalName::as_str)
                     == Some(graph_name) =>
         {
             Response::ok(

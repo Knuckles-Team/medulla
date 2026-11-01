@@ -90,11 +90,11 @@ use medulla_index_types::{
     semantic_index::SemanticStage, semantic_index::SemanticStageIntent,
     semantic_index::SemanticStageTransition,
 };
+#[cfg(feature = "query")]
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+#[cfg(feature = "query")]
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
-#[cfg(feature = "query")]
-use medulla_types::mutation_scope::MutationOutboxLease;
-#[cfg(feature = "query")]
-use medulla_types::mutation_scope::MutationOutboxRecord;
 
 fn request_validation_refusal(error: &SemanticIndexError) -> &'static str {
     match error {
@@ -157,7 +157,7 @@ impl medulla_storage::ScopeGrantVerifier for TenantScopedSemanticVerifier {
         &self,
         _physical: &medulla_storage::PhysicalStoreIdentity,
         layout: medulla_storage::OwnerLayout,
-        identity: &medulla_types::MutationScopeIdentity,
+        identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
         _principal: &str,
         proof: &[u8],
     ) -> Result<(), String> {

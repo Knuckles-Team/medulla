@@ -47,15 +47,15 @@ use redb::ReadableTable;
 use medulla_agent_types::{
     agent_library::AgentLibraryLifecycle, agent_library::AgentLibraryMutationContext,
 };
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_mutation_types::{mutation::MutationReceipt, mutation::MutationResult};
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_protocol_types::protocol::Method;
 use medulla_storage::{RecordedOperation, ScopedRead};
 use medulla_transaction::{AdmittedOwnerWrite, ReplayResolution};
-use medulla_types::mutation::{MutationReceipt, MutationResult};
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::MutationOutboxIntent;
-use medulla_types::mutation_scope::MutationSurface;
 
 use super::agent_library::{
     native_lifecycle_batch, next_revision, require_expected_revision, AgentLibraryStore,

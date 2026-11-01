@@ -175,7 +175,7 @@ fn the_elevation_kind_cannot_be_issued_as_a_generic_control_lease() {
 #[test]
 fn a_governed_kind_cannot_be_issued_as_a_generic_control_lease() {
     for kind in [
-        medulla_types::governed_change::SCHEMA_REPAIR_KIND,
+        medulla_mutation_types::governed_change::SCHEMA_REPAIR_KIND,
         "governed.anything-new",
     ] {
         let mut request = issue();

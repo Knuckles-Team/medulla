@@ -9,7 +9,7 @@ use crate::raft::RaftStateExt;
 use std::sync::Arc;
 
 use medulla_agent_types::native_control::EnrichmentBudgetPark;
-use medulla_types::mutation_scope::MutationOutboxLease;
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use tokio::sync::RwLock;
 
 use crate::server::api::persistence::PersistenceBackend;

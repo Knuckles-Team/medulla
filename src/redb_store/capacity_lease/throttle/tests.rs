@@ -7,9 +7,10 @@ use medulla_agent_types::{
     native_control::CapacityThrottleRequest, native_control::CapacityThrottleResult,
     native_control::NativeControlSchemaVersion,
 };
-use medulla_types::capacity_lease::{CapacityCell, CapacityResourceClass};
-use medulla_types::capacity_throttle::{
-    CapacityThrottle, CapacityThrottlePolicy, ErrorBudgetSample, ThrottleAction,
+use medulla_mutation_types::{capacity_lease::CapacityCell, capacity_lease::CapacityResourceClass};
+use medulla_mutation_types::{
+    capacity_throttle::CapacityThrottle, capacity_throttle::CapacityThrottlePolicy,
+    capacity_throttle::ErrorBudgetSample, capacity_throttle::ThrottleAction,
 };
 
 use super::super::super::shard::Shard;

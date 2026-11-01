@@ -153,7 +153,7 @@ pub(super) fn modality_receipt_binding_matches(
             .identity
             .scope()
             .graph_name()
-            .map(medulla_types::mutation_scope::LogicalName::as_str)
+            .map(medulla_mutation_types::mutation_scope::LogicalName::as_str)
             == Some(graph_fname)
         && record.batch.placement_epoch == ctx.placement_epoch
         && record.batch.fencing_token == ctx.fencing_token

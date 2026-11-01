@@ -35,7 +35,7 @@ pub(super) fn compile_batch_context<'a>(
     batch_id: &'a str,
     source_version: u64,
     created_at_ms: u64,
-    default_surface: medulla_types::mutation_scope::MutationSurface,
+    default_surface: medulla_mutation_types::mutation_scope::MutationSurface,
     authoritative_state: Option<crate::mutation_batch::MutationStateDescriptor>,
 ) -> crate::server::mutation_batch::CompileBatch<'a> {
     crate::server::mutation_batch::CompileBatch {
@@ -66,7 +66,7 @@ pub(super) async fn commit_staged_replay_probe(
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
     methods: Vec<Method>,
-    default_surface: medulla_types::mutation_scope::MutationSurface,
+    default_surface: medulla_mutation_types::mutation_scope::MutationSurface,
     target: DurableBatchTarget<'_>,
     prep: &CommitPrep,
 ) -> Option<Response> {
@@ -108,7 +108,7 @@ async fn commit_staged_replay_found(
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
     methods: Vec<Method>,
-    default_surface: medulla_types::mutation_scope::MutationSurface,
+    default_surface: medulla_mutation_types::mutation_scope::MutationSurface,
     target: DurableBatchTarget<'_>,
     record: medulla_protocol_types::mutation_batch::MutationBatchRecord,
     prep: &CommitPrep,
@@ -191,7 +191,7 @@ fn compile_replay_batch(
     batch_id: &str,
     source_version: u64,
     created_at_ms: u64,
-    default_surface: medulla_types::mutation_scope::MutationSurface,
+    default_surface: medulla_mutation_types::mutation_scope::MutationSurface,
     authoritative_state: Option<crate::mutation_batch::MutationStateDescriptor>,
     methods: Vec<Method>,
 ) -> Result<crate::mutation_batch::MutationBatch, Response> {
@@ -324,7 +324,7 @@ async fn commit_row_replay_found(
         batch_id,
         source_version,
         created_at_ms,
-        medulla_types::mutation_scope::MutationSurface::Graph,
+        medulla_mutation_types::mutation_scope::MutationSurface::Graph,
         None,
         vec![method.clone()],
     ) {

@@ -68,7 +68,7 @@ impl DraftAuthority<'_> {
                 ),
                 fencing_token: draft.mutation.fencing_token,
                 created_at_ms: self.created_at_ms,
-                default_surface: medulla_types::mutation_scope::MutationSurface::Graph,
+                default_surface: medulla_mutation_types::mutation_scope::MutationSurface::Graph,
                 authoritative_state: None,
             },
             methods,
@@ -181,13 +181,13 @@ fn compile_draft_batch(
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
+    use medulla_mutation_types::mutation_scope::DurabilityDomain;
+    use medulla_mutation_types::mutation_scope::MutationSurface;
     use medulla_protocol_types::mutation_batch::MutationOperation;
     use medulla_protocol_types::{
         change_envelope::ChangeMutationDraft, change_envelope::ContentVersion,
         change_envelope::ContentVersionPosition, change_envelope::PrivacyAttestation,
     };
-    use medulla_types::mutation_scope::DurabilityDomain;
-    use medulla_types::mutation_scope::MutationSurface;
 
     fn draft() -> ChangeEnvelopeDraft {
         draft_for("tenant-a", serde_json::json!({"type": "Document"}))
@@ -290,7 +290,7 @@ pub(crate) mod tests {
                 .identity
                 .scope()
                 .graph_name()
-                .map(medulla_types::mutation_scope::LogicalName::as_str),
+                .map(medulla_mutation_types::mutation_scope::LogicalName::as_str),
             Some("graph-a")
         );
     }

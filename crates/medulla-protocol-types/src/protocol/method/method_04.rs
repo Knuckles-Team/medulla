@@ -545,9 +545,9 @@ $($variants)*
     /// `actor` is SERVER-STAMPED from the verified request context at the
     /// request boundary; a caller-supplied value is overwritten.
     GovernedChange {
-        op: medulla_types::governed_change::GovernedChangeOp,
+        op: medulla_mutation_types::governed_change::GovernedChangeOp,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        actor: Option<medulla_types::governed_change::GovernedActor>,
+        actor: Option<medulla_mutation_types::governed_change::GovernedActor>,
     },
 
     /// The engine-owned identity store: principals, credentials,

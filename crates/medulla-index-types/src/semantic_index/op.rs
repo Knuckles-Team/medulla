@@ -33,8 +33,8 @@ use super::{
     SemanticQueueClass, SemanticSqlSourceManifestDraft, SemanticStageArtifact, SemanticStageIntent,
     SemanticStageTransition,
 };
-use medulla_types::mutation_scope::MutationOutboxLease;
-use medulla_types::mutation_scope::MutationOutboxRecord;
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 
 /// The largest number of stage leases one claim may take.
 ///

@@ -4,8 +4,8 @@ use std::sync::Arc;
 use crate::protocol::{GraphType, Method, ResultPayload};
 use crate::server::api::persistence::PersistenceBackend;
 use crate::server::persistence::redb_backend::RedbBackend;
+use medulla_mutation_types::mutation_scope::CommittedVersion;
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_scope::CommittedVersion;
 
 use super::commit::lifecycle_identity_matches;
 use super::{

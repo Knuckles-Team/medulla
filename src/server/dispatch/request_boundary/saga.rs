@@ -86,7 +86,7 @@ pub(crate) async fn begin_session_control_saga(
         request_id,
         &authority,
         method,
-        medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::ControlPlane,
         attempt_nonce,
     )?;
     reject_prepared_session_control_saga(&saga)?;

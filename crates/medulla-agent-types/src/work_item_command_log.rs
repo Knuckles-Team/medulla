@@ -45,7 +45,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_types::commit_descriptor::CommitDescriptor;
+use medulla_mutation_types::commit_descriptor::CommitDescriptor;
 
 /// One admitted (or replayed) WorkItem submission command.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -220,7 +220,7 @@ impl WorkItemCommandLog {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::{
+    use medulla_mutation_types::{
         commit_descriptor::CommitParticipantDomain, commit_descriptor::CommitStatus,
         commit_descriptor::COMMIT_DESCRIPTOR_VERSION,
     };

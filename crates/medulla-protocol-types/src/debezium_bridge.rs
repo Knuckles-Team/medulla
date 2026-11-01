@@ -28,8 +28,8 @@ use crate::change_envelope::{
 };
 use crate::mutation_batch::MutationOperation;
 use crate::protocol::Method;
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::MutationSurface;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationSurface;
 
 /// Debezium's `op` field: `c` (create), `u` (update), `d` (delete), `r` (read,
 /// the initial snapshot). Closed — an unrecognized code is refused, never guessed at.

@@ -11,6 +11,10 @@ use super::{
     SemanticMutationReceipt,
 };
 use medulla_index_types::{semantic_index::SemanticDigest, semantic_index::SemanticIndexMutation};
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_protocol_types::mutation_batch::BatchContent;
 use medulla_protocol_types::mutation_batch::CompiledOperation;
 use medulla_protocol_types::mutation_batch::CompiledScope;
@@ -19,10 +23,6 @@ use medulla_protocol_types::{mutation_batch::MutationBatch, mutation_batch::Muta
 use medulla_storage::{OwnedStoreHandle, SemanticIndexOwner};
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite};
 use medulla_types::contract::Digest256;
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::MutationOutboxIntent;
-use medulla_types::mutation_scope::MutationOutboxLease;
-use medulla_types::mutation_scope::MutationSurface;
 use sha2::{Digest, Sha256};
 
 /// What one semantic metadata mutation records.

@@ -5,7 +5,7 @@
 #[test]
 fn governed_refusals_preserve_their_declared_wire_codes() {
     use super::Response;
-    use medulla_types::governed_change::GovernedRefusal;
+    use medulla_mutation_types::governed_change::GovernedRefusal;
 
     for refusal in [
         GovernedRefusal::InvalidRequest,

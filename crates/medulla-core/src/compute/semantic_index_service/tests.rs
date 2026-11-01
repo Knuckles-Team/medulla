@@ -20,12 +20,12 @@ use medulla_index_types::{
     semantic_index::SemanticStageTransition, semantic_index::SqlColumnRef,
     semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC, semantic_index::SEMANTIC_SQL_CATALOG_ID,
 };
-use medulla_types::mutation_scope::CommittedVersion;
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::MutationOutboxIntent;
-use medulla_types::mutation_scope::MutationOutboxRecord;
-use medulla_types::mutation_scope::MutationScopeIdentity;
-use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
+use medulla_mutation_types::mutation_scope::CommittedVersion;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
 
 fn digest(byte: u8) -> SemanticDigest {
     SemanticDigest::from_bytes([byte; 32])

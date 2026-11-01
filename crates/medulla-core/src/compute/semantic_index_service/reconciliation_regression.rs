@@ -10,14 +10,14 @@ use medulla_index_types::{
     semantic_index::SemanticStageReceipt, semantic_index::SemanticStageTransition,
     semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC,
 };
+use medulla_mutation_types::mutation_scope::CommittedVersion;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
 use medulla_transaction::OutboxClaimBudget;
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_scope::CommittedVersion;
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::MutationOutboxIntent;
-use medulla_types::mutation_scope::MutationOutboxRecord;
-use medulla_types::mutation_scope::MutationScopeIdentity;
-use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
 use sha2::{Digest, Sha256};
 
 use super::{

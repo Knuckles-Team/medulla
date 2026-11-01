@@ -3,11 +3,12 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::authority::AuthorityScope;
-use crate::contract::{
-    BoundedVec, Digest256, OpaqueId, RecordBytes, ResourceId, TenantId, UtcUnixNanos,
-};
 use crate::mutation::{MutationReceipt, MutationRequestEnvelope};
+use medulla_types::authority::AuthorityScope;
+use medulla_types::{
+    contract::BoundedVec, contract::Digest256, contract::OpaqueId, contract::RecordBytes,
+    contract::ResourceId, contract::TenantId, contract::UtcUnixNanos,
+};
 
 pub const MAX_OUTBOX_HEADERS: usize = 64;
 
@@ -476,9 +477,11 @@ impl OutboxProjectionCursor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::authority::ScopeKind;
-    use crate::contract::{MutationDisposition, TenantId, MAX_SCOPE_COMPONENTS};
     use crate::mutation::{MutationReceipt, MutationResult};
+    use medulla_types::authority::ScopeKind;
+    use medulla_types::{
+        contract::MutationDisposition, contract::TenantId, contract::MAX_SCOPE_COMPONENTS,
+    };
 
     fn digest(byte: u8) -> Digest256 {
         Digest256::from_bytes([byte; 32])

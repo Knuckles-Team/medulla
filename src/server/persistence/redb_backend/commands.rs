@@ -9,8 +9,8 @@ use crate::protocol::{GraphType, Method};
 #[cfg(any(feature = "compute-dist", feature = "matview"))]
 use crate::redb_store::MatViewScanResult;
 use crate::redb_store::{XshardDecisionScan, XshardPrepareScan};
-use medulla_types::mutation_scope::MutationOutboxLease;
-use medulla_types::mutation_scope::MutationProjectionCursor;
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+use medulla_mutation_types::mutation_scope::MutationProjectionCursor;
 
 /// Boxed payload of a [`Cmd::CrossModalCommit`] (CONCEPT:MEDULLA-KG.txn.reader-never-sees-node + MEDULLA-360). Holds ONE
 /// graph's full multi-modal write-set — graph methods (incl. lowered OWL-axiom /

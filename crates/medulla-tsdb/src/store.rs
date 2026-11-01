@@ -46,13 +46,13 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::{Arc, RwLock};
 
+use medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION;
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_storage::{
     GraphShardOwner, OwnedStoreHandle, PhysicalStoreIdentity, ScopeGrantVerifier, ScopedRead,
     StorageKernel, TimeSeriesOwner,
 };
 use medulla_transaction::{AdmittedOwnerWrite, Begin, MutationKernel};
-use medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION;
 use redb::{
     ReadOnlyTable, ReadTransaction, ReadableTable, Table, TableDefinition, TableError,
     WriteTransaction,
@@ -302,7 +302,8 @@ const SERIES_BOOTSTRAP_RESOURCE: &str = "series-store-bootstrap";
 /// manifest, independent of any logical serving scope.
 const SERIES_PHYSICAL_STORE: &str = "eg-tsdb:series-store";
 
-fn series_bootstrap_identity() -> Result<medulla_types::MutationScopeIdentity> {
+fn series_bootstrap_identity(
+) -> Result<medulla_mutation_types::mutation_scope::MutationScopeIdentity> {
     series_scope_identity(SERIES_BOOTSTRAP_TENANT, SERIES_BOOTSTRAP_RESOURCE)
 }
 
@@ -317,14 +318,17 @@ fn series_bootstrap_identity() -> Result<medulla_types::MutationScopeIdentity> {
 fn series_scope_identity(
     tenant: &str,
     resource: &str,
-) -> Result<medulla_types::MutationScopeIdentity> {
-    let tenant = medulla_types::ScopeTenantId::new(tenant).map_err(codec_err)?;
-    let resource = medulla_types::LogicalName::new(resource).map_err(codec_err)?;
+) -> Result<medulla_mutation_types::mutation_scope::MutationScopeIdentity> {
+    let tenant =
+        medulla_mutation_types::mutation_scope::ScopeTenantId::new(tenant).map_err(codec_err)?;
+    let resource =
+        medulla_mutation_types::mutation_scope::LogicalName::new(resource).map_err(codec_err)?;
     let incarnation_id =
-        medulla_types::IncarnationId::new(COMPILED_BATCH_INCARNATION).map_err(codec_err)?;
-    medulla_types::MutationScopeIdentity::native(
+        medulla_mutation_types::mutation_scope::IncarnationId::new(COMPILED_BATCH_INCARNATION)
+            .map_err(codec_err)?;
+    medulla_mutation_types::mutation_scope::MutationScopeIdentity::native(
         tenant,
-        medulla_types::mutation_scope::DurabilityDomain::TimeSeries,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::TimeSeries,
         resource,
         incarnation_id,
     )
@@ -342,7 +346,7 @@ fn bind_serving_scope(
     verifier: &dyn ScopeGrantVerifier,
     principal: &str,
     proof: &[u8],
-    identity: &medulla_types::MutationScopeIdentity,
+    identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
 ) -> Result<OwnedStoreHandle<TimeSeriesOwner>> {
     let grant = kernel
         .authenticate_scope::<TimeSeriesOwner>(
@@ -365,22 +369,22 @@ fn bind_serving_scope(
 fn maintenance_batch(
     kind: &str,
     storage_key: &str,
-    identity: &medulla_types::MutationScopeIdentity,
+    identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     principal: &str,
     expected_version: u64,
 ) -> Result<MutationBatch> {
     let batch_id = format!("tsdb-{kind}:v{expected_version}");
     let operation = medulla_protocol_types::mutation_batch::MutationOperation {
         ordinal: 0,
-        surface: medulla_types::MutationSurface::Other,
-        domain: medulla_types::mutation_scope::DurabilityDomain::TimeSeries,
+        surface: medulla_mutation_types::mutation_scope::MutationSurface::Other,
+        domain: medulla_mutation_types::mutation_scope::DurabilityDomain::TimeSeries,
         method: medulla_protocol_types::protocol::Method::ApplyMutation {
             event_type: format!("timeseries_{kind}"),
             query: storage_key.to_string(),
         },
     };
     let batch = MutationBatch {
-        schema_version: medulla_types::MUTATION_BATCH_VERSION,
+        schema_version: medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION,
         batch_id: batch_id.clone(),
         // Compaction and retention have no caller, so they are MAINTENANCE
         // mutations (RF-RULING-005): ledgered, fenced and version-bumping, with
@@ -862,7 +866,7 @@ impl SeriesStore {
     /// The bound handle for one series' serving scope, binding it on first use.
     fn scope_handle(
         &self,
-        identity: &medulla_types::MutationScopeIdentity,
+        identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     ) -> Result<Arc<OwnedStoreHandle<TimeSeriesOwner>>> {
         let key = medulla_storage::ledger_scope_key(identity);
         if let Some(handle) = self

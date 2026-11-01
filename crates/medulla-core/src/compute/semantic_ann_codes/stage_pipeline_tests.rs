@@ -29,11 +29,11 @@ use medulla_index_types::{
     semantic_index::SemanticStageReceipt, semantic_index::SemanticStageScope,
     semantic_index::SemanticStageTransition, semantic_index::SemanticVector,
 };
+use medulla_mutation_types::mutation_outbox::RewindTarget;
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_storage::SEMANTIC_SOURCE_PROGRESS;
 use medulla_transaction::{OutboxClaimBudget, OutboxWrite, OutboxWriteReply};
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_outbox::RewindTarget;
-use medulla_types::mutation_scope::MutationOutboxLease;
 
 use super::tests::{
     completed_sql_source_artifact, open_store, pending_binding, source_commit_intent,

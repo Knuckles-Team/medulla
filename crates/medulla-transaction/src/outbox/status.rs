@@ -14,8 +14,8 @@ use crate::outbox::rows::{
 };
 use crate::outbox::{claim, cursor, index, stream};
 use crate::tables::{OUTBOX_DELIVERIES, OUTBOX_FAIRNESS};
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use medulla_storage::{ledger_scope_key, OwnerDomain, ScopedRead};
-use medulla_types::MutationScopeIdentity;
 
 /// One consumer's observable queue state on one bound scope.
 /// Serializable: `Method::SemanticIndex`'s `StageStatus` returns it verbatim,
@@ -267,7 +267,9 @@ fn consumer_state<D: OwnerDomain>(
     match row {
         Some(state) => {
             validate_stamp(&state.identity, read.scope())?;
-            if state.schema_version != medulla_types::MUTATION_BATCH_VERSION {
+            if state.schema_version
+                != medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION
+            {
                 return Err("CORRUPT_OUTBOX_FAIRNESS: unsupported row schema".to_string());
             }
             if state.consumer != consumer {
@@ -279,7 +281,7 @@ fn consumer_state<D: OwnerDomain>(
             Ok(state)
         }
         None => Ok(OutboxConsumerState {
-            schema_version: medulla_types::MUTATION_BATCH_VERSION,
+            schema_version: medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION,
             identity: read.scope().clone(),
             consumer: consumer.to_string(),
             consecutive_claims: 0,

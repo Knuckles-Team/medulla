@@ -33,9 +33,9 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use medulla_index_types::{semantic_index::SemanticBindingState, semantic_index::SemanticDigest};
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use medulla_storage::{OwnerLayout, PhysicalStoreIdentity, ScopeGrantVerifier};
 use medulla_types::contract::Nonce;
-use medulla_types::MutationScopeIdentity;
 
 use super::batch::MetadataMutation;
 use super::door::{scope_identity, serving_identity};

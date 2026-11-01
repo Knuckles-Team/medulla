@@ -6,7 +6,7 @@ impl SemanticIndexService {
     /// and acknowledge through the existing durable consumer port.
     pub fn validate_stage_lease(
         &self,
-        lease: &medulla_types::mutation_scope::MutationOutboxLease,
+        lease: &medulla_mutation_types::mutation_scope::MutationOutboxLease,
         consumer: &str,
         now_ms: u64,
     ) -> Result<SemanticStageIntent, SemanticCodeError> {

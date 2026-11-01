@@ -27,7 +27,7 @@ use medulla_decision_types::{
     solve::Coefficient, solve::ConstraintBody, solve::ConstraintSpec, solve::ObjectiveLevelSpec,
     solve::ObjectiveTerm, solve::Relation, solve::Term, solve::VarId,
 };
-use medulla_types::capacity_lease::CapacityResourceClass;
+use medulla_mutation_types::capacity_lease::CapacityResourceClass;
 
 use super::super::model::Built;
 use super::super::AssembleError;

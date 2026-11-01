@@ -17,11 +17,11 @@ use medulla_agent_types::{
 use medulla_catalog_types::{
     connector_pack::ConnectorPackBindingResult, connector_pack::PackRetireResult,
 };
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_protocol_types::protocol::Method;
 use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::MutationSurface;
 
 use super::admitted::{PackOwnerWrite, PackWriteEffects, PackWriteIdentity};
 use super::commit::{

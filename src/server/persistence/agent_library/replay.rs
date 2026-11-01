@@ -6,10 +6,10 @@ use medulla_agent_types::{
     agent_library::AgentLibraryMutationKind, agent_library::AgentLibraryOutboxEvent,
     agent_library::AgentLibraryWriteResult,
 };
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::{mutation::MutationReceipt, mutation::MutationResult};
 use medulla_protocol_types::mutation_batch::MutationBatchStatus;
 use medulla_transaction::{MutationKernel, ReplayResolution};
-use medulla_types::mutation::{MutationReceipt, MutationResult};
-use medulla_types::mutation_scope::MutationOutboxIntent;
 
 use super::receipt::agent_library_effect_digest;
 use super::{
@@ -325,7 +325,7 @@ fn validate_replay_intent(
 
 fn validate_replay_outbox(
     record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
-    physical_outbox: &[medulla_types::MutationOutboxRecord],
+    physical_outbox: &[medulla_mutation_types::mutation_scope::MutationOutboxRecord],
     txn: &medulla_transaction::AdmittedMutation<'_, medulla_storage::AgentLibraryOwner>,
 ) -> Result<(), String> {
     if physical_outbox.len() != 1 {

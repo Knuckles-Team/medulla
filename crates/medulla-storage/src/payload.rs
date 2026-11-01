@@ -43,7 +43,7 @@ pub(crate) fn recovery_plan_digest(record: &MutationBatchRecord) -> Option<&str>
     else {
         return None;
     };
-    if !medulla_types::mutation_scope::PRIVATE_PAYLOAD_EVENT_TYPES
+    if !medulla_mutation_types::mutation_scope::PRIVATE_PAYLOAD_EVENT_TYPES
         .iter()
         .any(|known| known == event_type)
     {

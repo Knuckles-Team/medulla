@@ -22,7 +22,7 @@ use medulla_decision_types::decision::DecisionCommitRequest;
 use medulla_decision_types::decision::DecisionCommitResult;
 use medulla_decision_types::decision::DecisionRecord;
 use medulla_decision_types::decision::TemplateFacts;
-use medulla_types::capacity_lease::{CapacityCell, CapacityResourceClass};
+use medulla_mutation_types::{capacity_lease::CapacityCell, capacity_lease::CapacityResourceClass};
 use medulla_types::contract::BoundedVec;
 use tokio::sync::RwLock;
 

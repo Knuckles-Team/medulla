@@ -18,7 +18,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::acl::{Grant, GrantEffect, RbacAction, ResourceContext, Role};
-use medulla_types::governed_change::GovernedLedger;
+use medulla_mutation_types::governed_change::GovernedLedger;
 use medulla_types::identity::IdentityStore;
 use medulla_types::rbac_elevation::ElevationLedger;
 use serde::{Deserialize, Serialize};

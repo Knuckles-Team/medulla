@@ -6,12 +6,12 @@ use medulla_index_types::{
 use medulla_index_types::{
     semantic_index::SemanticIndexError, semantic_index::SemanticSourceDirtyIntent,
 };
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use medulla_storage::{OwnerLayout, PhysicalStoreIdentity, ScopeGrantVerifier};
 use medulla_transaction::OutboxClaimBudget;
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_scope::MutationOutboxLease;
-use medulla_types::mutation_scope::MutationOutboxRecord;
-use medulla_types::MutationScopeIdentity;
 use std::sync::{Arc, Mutex};
 
 use super::{

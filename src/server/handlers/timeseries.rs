@@ -57,8 +57,8 @@ use super::super::state::ServerState;
 use crate::mutation_batch::MutationBatch;
 use crate::protocol::{Method, Response, ResultPayload};
 use crate::server::access::CarrierAuthority;
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::MutationSurface;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationSurface;
 
 use medulla_protocol_types::result_contract::storage as results;
 use medulla_tsdb::point::Point;

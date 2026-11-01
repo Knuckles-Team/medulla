@@ -10,11 +10,11 @@ use medulla_index_types::{
     semantic_index::SemanticBindingState, semantic_index::SemanticDigest,
     semantic_index::SemanticIndexMutation,
 };
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_storage::SemanticIndexOwner;
 use medulla_storage::{ANN_CODES, SEMANTIC_BINDINGS, SEMANTIC_POINTERS, SEMANTIC_STAGES};
 use medulla_transaction::OutboxClaimBudget;
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite};
-use medulla_types::mutation_scope::MutationOutboxLease;
 
 use super::batch::MetadataMutation;
 use super::tests::{

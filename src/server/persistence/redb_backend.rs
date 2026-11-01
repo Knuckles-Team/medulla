@@ -826,14 +826,14 @@ mod tests {
     use crate::server::auth::{
         build_shared_test_request, dispatch_test_on_heap as dispatch_on_heap,
     };
-    use medulla_types::mutation_scope::DurabilityDomain;
-    use medulla_types::mutation_scope::IncarnationId;
-    use medulla_types::mutation_scope::LogicalName;
-    use medulla_types::mutation_scope::MutationOutboxIntent;
-    use medulla_types::mutation_scope::MutationScopeIdentity;
-    use medulla_types::mutation_scope::MutationSurface;
-    use medulla_types::mutation_scope::ScopeTenantId;
-    use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
+    use medulla_mutation_types::mutation_scope::DurabilityDomain;
+    use medulla_mutation_types::mutation_scope::IncarnationId;
+    use medulla_mutation_types::mutation_scope::LogicalName;
+    use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+    use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+    use medulla_mutation_types::mutation_scope::MutationSurface;
+    use medulla_mutation_types::mutation_scope::ScopeTenantId;
+    use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
     #[cfg(feature = "tsdb")]
     use sha2::Digest;
 

@@ -25,9 +25,9 @@ use crate::mutation_batch::MutationBatchRecord;
 use crate::protocol::Method;
 use crate::server::ServerState;
 use medulla_agent_types::native_control::CapacityStatusResult;
-use medulla_types::mutation_scope::MutationOutboxLease;
-use medulla_types::mutation_scope::MutationOutboxRecord;
-use medulla_types::mutation_scope::MutationProjectionCursor;
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
+use medulla_mutation_types::mutation_scope::MutationProjectionCursor;
 // The sweep-scoped claim budget carrying DESIGN.md's per-tenant weighted round
 // robin between graphs. It is a kernel type, so the claim it parameterises is
 // gated on `redb` exactly like the two WorkItem-capability methods below: the
@@ -129,7 +129,7 @@ pub trait PersistenceBackend: Send + Sync {
         &self,
         _graph_fname: &str,
         _cells: &[String],
-        _priority: medulla_types::capacity_lease::LeasePriority,
+        _priority: medulla_mutation_types::capacity_lease::LeasePriority,
     ) -> Result<Vec<medulla_agent_types::agent_topology::CapacityHeadroom>, String> {
         Err("persistence backend does not support native capacity headroom".to_string())
     }

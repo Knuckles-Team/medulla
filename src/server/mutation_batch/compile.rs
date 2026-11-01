@@ -11,11 +11,11 @@ use crate::mutation_batch::MutationOperation;
 use crate::mutation_batch::MutationStateDescriptor;
 use crate::protocol::Method;
 use crate::server::api::persistence::PersistenceBackend;
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::MutationOutboxIntent;
-use medulla_types::mutation_scope::MutationScopeIdentity;
-use medulla_types::mutation_scope::MutationSurface;
-use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
 
 use super::canonical::{domain_for, lower_canonical_operation, surface_for};
 use super::digest::principal_fingerprint;
@@ -471,7 +471,7 @@ fn reasoning_wakeup_payload(
 /// the type (`IncarnationId::new` rejects anything resource-shaped by construction
 /// elsewhere, but does not require per-generation freshness), not a security
 /// decision -- flagged in the migration report for follow-up.
-pub(crate) use medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION;
+pub(crate) use medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION;
 
 /// Compile the universal `MutationScopeIdentity`/`VersionExpectation` pair shared
 /// by every batch this module builds.

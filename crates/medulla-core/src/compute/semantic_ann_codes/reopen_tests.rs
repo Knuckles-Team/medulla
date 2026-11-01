@@ -25,7 +25,9 @@ fn intent(
     source_commit_intent(binding, entity, SemanticDigest::from_bytes([seed; 32]))
 }
 
-fn status(codes: &SemanticCodeStore) -> medulla_types::mutation_outbox::MutationOutboxStatusView {
+fn status(
+    codes: &SemanticCodeStore,
+) -> medulla_mutation_types::mutation_outbox::MutationOutboxStatusView {
     let view = OutboxView::Status {
         consumer: stage_consumer(WORKER, SemanticQueueClass::Fast),
     };

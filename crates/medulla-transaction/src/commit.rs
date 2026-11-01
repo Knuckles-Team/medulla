@@ -10,6 +10,10 @@ use crate::replay::{
 };
 use crate::tables::{visit_ledger_tables, BATCHES, CLASSES, FENCES, OUTBOX, VERSIONS};
 use crate::Begin;
+use medulla_mutation_types::{
+    mutation_scope::CommittedVersion, mutation_scope::MutationOutboxRecord,
+    mutation_scope::MutationScopeIdentity, mutation_scope::MUTATION_BATCH_VERSION,
+};
 use medulla_protocol_types::mutation_batch::MutationCommitPhase;
 use medulla_protocol_types::{
     mutation_batch::MutationBatch, mutation_batch::MutationBatchRecord,
@@ -20,9 +24,6 @@ use medulla_storage::{
     decode_batch_record, decode_ledger_record, decode_outbox_record, encode_bounded,
     ledger_scope_key, owner_table_names, CollectionBudget, MutationClass, MutationClassRow,
     OwnerDomain, OwnerPayloadRetirement, RecordedOperation, ScopeFence,
-};
-use medulla_types::{
-    CommittedVersion, MutationOutboxRecord, MutationScopeIdentity, MUTATION_BATCH_VERSION,
 };
 
 /// The certification fault points, compiled only under `fault-injection`.
@@ -421,7 +422,7 @@ pub(crate) fn finish_with_replay<D: OwnerDomain>(
     replay_receipt: (
         &medulla_types::authority::OperationReplayIdentity,
         &medulla_types::authority::NonceReplayKey,
-        &medulla_types::mutation::MutationReceipt,
+        &medulla_mutation_types::mutation::MutationReceipt,
     ),
 ) -> Result<MutationBatchRecord, String> {
     let (operation, nonce, receipt) = replay_receipt;
@@ -451,7 +452,7 @@ fn finish_inner<D: OwnerDomain>(
     replay: Option<(
         &medulla_types::authority::OperationReplayIdentity,
         &medulla_types::authority::NonceReplayKey,
-        &medulla_types::mutation::MutationReceipt,
+        &medulla_mutation_types::mutation::MutationReceipt,
     )>,
 ) -> Result<MutationBatchRecord, String> {
     write.verify_scope(&batch.identity)?;
@@ -686,7 +687,7 @@ fn is_terminal_topic(topic: &str) -> bool {
 }
 
 fn terminal_outbox_intent_applies(
-    intent: &medulla_types::mutation_scope::MutationOutboxIntent,
+    intent: &medulla_mutation_types::mutation_scope::MutationOutboxIntent,
     result_msgpack: Option<&[u8]>,
 ) -> Result<bool, String> {
     if !is_terminal_topic(&intent.topic) {

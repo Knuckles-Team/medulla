@@ -45,6 +45,13 @@ use std::sync::{Arc, RwLock};
 #[cfg(all(test, feature = "server"))]
 use std::sync::{Barrier, OnceLock};
 
+#[cfg(feature = "raft")]
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
+use medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION;
+use medulla_mutation_types::{
+    mutation_scope::MutationOutboxLease, mutation_scope::MutationProjectionCursor,
+    mutation_scope::MutationScopeIdentity,
+};
 use medulla_protocol_types::{mutation_batch::MutationBatch, mutation_batch::MutationBatchRecord};
 use medulla_storage::{
     GraphShardOwner, OwnedStoreHandle, OwnerDomain, PhysicalStoreIdentity, ScopedRead,
@@ -56,10 +63,6 @@ use medulla_transaction::{
 };
 #[cfg(feature = "server")]
 use medulla_transaction::{GraftDestination, GraftedScope};
-use medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION;
-#[cfg(feature = "raft")]
-use medulla_types::MutationOutboxRecord;
-use medulla_types::{MutationOutboxLease, MutationProjectionCursor, MutationScopeIdentity};
 
 mod batch;
 pub(crate) use batch::bind_caller_batch;
@@ -1233,13 +1236,15 @@ impl<'g> ShardWrite<'g> {
 mod tests {
     use super::*;
     use crate::redb_store::{GRAPH_META, NODES, RAFT_LOG};
+    use medulla_mutation_types::mutation_scope::DurabilityDomain;
+    use medulla_mutation_types::{
+        mutation_scope::MutationSurface, mutation_scope::MUTATION_BATCH_VERSION,
+    };
     use medulla_protocol_types::mutation_batch::authority_scope_for;
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::{
         mutation_batch::MutationOperation, mutation_batch::VersionExpectation,
     };
-    use medulla_types::mutation_scope::DurabilityDomain;
-    use medulla_types::{MutationSurface, MUTATION_BATCH_VERSION};
     use redb::ReadableTable;
 
     fn temp_path(tag: &str) -> std::path::PathBuf {

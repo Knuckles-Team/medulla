@@ -287,7 +287,7 @@ impl DispatchApi for DispatchSeam {
         &'a self,
         persistence: &'a dyn crate::server::api::persistence::PersistenceBackend,
         graph_fname: &'a str,
-        lease: &'a medulla_types::mutation_scope::MutationOutboxLease,
+        lease: &'a medulla_mutation_types::mutation_scope::MutationOutboxLease,
         committed_at_ms: u64,
     ) -> SeamFuture<
         'a,
@@ -316,7 +316,7 @@ impl DispatchApi for DispatchSeam {
     ))]
     fn decode_pending_enrichment_intent(
         &self,
-        intent: &medulla_types::mutation_scope::MutationOutboxIntent,
+        intent: &medulla_mutation_types::mutation_scope::MutationOutboxIntent,
     ) -> Result<crate::parser::enrichment_snapshot::EligibleSnapshot, String> {
         super::graph_pipeline::decode_pending_enrichment_intent(intent)
     }
@@ -331,7 +331,7 @@ impl DispatchApi for DispatchSeam {
     fn enrichment_intent_for_snapshot(
         &self,
         snapshot: crate::parser::enrichment_snapshot::EligibleSnapshot,
-    ) -> Result<medulla_types::mutation_scope::MutationOutboxIntent, String> {
+    ) -> Result<medulla_mutation_types::mutation_scope::MutationOutboxIntent, String> {
         super::graph_pipeline::enrichment_intent_for_snapshot(snapshot)
     }
 

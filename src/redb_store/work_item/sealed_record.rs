@@ -8,8 +8,8 @@
 //! Generic writers never reach this path, and the generic row guard refuses them
 //! any change to the row.
 
+use medulla_mutation_types::sealed_record::RetireSealedRecordRequest;
 use medulla_protocol_types::result_contract::coordination::RetireSealedRecord;
-use medulla_types::sealed_record::RetireSealedRecordRequest;
 
 use super::*;
 

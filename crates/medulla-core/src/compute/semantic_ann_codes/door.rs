@@ -12,6 +12,9 @@
 
 use super::{corrupt, kernel_error, SemanticCodeError, SemanticMutationReceipt};
 use medulla_index_types::semantic_index::SemanticDigest;
+use medulla_mutation_types::mutation_scope::CommittedVersion;
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+use medulla_mutation_types::mutation_scope::MutationProjectionCursor;
 use medulla_protocol_types::mutation_batch::CompiledOperation;
 use medulla_protocol_types::mutation_batch::CompiledScope;
 use medulla_protocol_types::mutation_batch::MutationBatch;
@@ -26,9 +29,6 @@ use medulla_transaction::{
     OutboxClaimOutcome,
 };
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_scope::CommittedVersion;
-use medulla_types::mutation_scope::MutationOutboxLease;
-use medulla_types::mutation_scope::MutationProjectionCursor;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -253,7 +253,7 @@ impl ServingDoor {
         let mutation_digest = mutation_digest_from_batch(&record.batch)
             .map_err(|error| format!("stage replay has no mutation digest receipt: {error}"))?;
         let (source_version, target_version) = match record.committed_version {
-            medulla_types::mutation_scope::CommittedVersion::Native { source, target } => {
+            medulla_mutation_types::mutation_scope::CommittedVersion::Native { source, target } => {
                 (source, target)
             }
             other => return Err(format!("stage replay has non-native version {other:?}")),
@@ -550,7 +550,7 @@ pub(super) fn mutation_digest_from_batch(batch: &MutationBatch) -> Result<Semant
 pub(super) fn serving_identity(
     tenant: &str,
     binding: &str,
-) -> Result<medulla_types::MutationScopeIdentity, SemanticCodeError> {
+) -> Result<medulla_mutation_types::mutation_scope::MutationScopeIdentity, SemanticCodeError> {
     scope_identity(
         tenant,
         &format!("{binding}:serving"),
@@ -562,10 +562,10 @@ pub(super) fn scope_identity(
     tenant: &str,
     resource: &str,
     incarnation: &str,
-) -> Result<medulla_types::MutationScopeIdentity, SemanticCodeError> {
-    medulla_types::MutationScopeIdentity::fixed_native(
+) -> Result<medulla_mutation_types::mutation_scope::MutationScopeIdentity, SemanticCodeError> {
+    medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_native(
         tenant,
-        medulla_types::mutation_scope::DurabilityDomain::SemanticIndex,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::SemanticIndex,
         resource,
         incarnation,
     )
@@ -584,7 +584,7 @@ fn bind_scope(
     verifier: &dyn ScopeGrantVerifier,
     principal: &str,
     proof: &[u8],
-    identity: medulla_types::MutationScopeIdentity,
+    identity: medulla_mutation_types::mutation_scope::MutationScopeIdentity,
 ) -> Result<OwnedStoreHandle<SemanticIndexOwner>, SemanticCodeError> {
     // Decide reopen vs first open from the binding row (a plain read), so the
     // scope is authenticated exactly once on either path.

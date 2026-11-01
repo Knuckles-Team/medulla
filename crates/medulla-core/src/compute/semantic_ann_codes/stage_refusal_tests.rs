@@ -16,12 +16,12 @@ use medulla_index_types::{
     semantic_index::SemanticStagePredecessor, semantic_index::SemanticStageReceipt,
     semantic_index::SemanticStageScope,
 };
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_storage::{
     SemanticIndexOwner, SEMANTIC_AUTH_RECEIPTS, SEMANTIC_CHECKPOINTS, SEMANTIC_SOURCE_PROGRESS,
     SEMANTIC_SQL_SOURCES, SEMANTIC_STAGES,
 };
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite, OutboxClaimBudget};
-use medulla_types::mutation_scope::MutationOutboxLease;
 
 use super::batch::{semantic_digest, MetadataMutation};
 use super::persist::{advance_checkpoint_head, put_bytes_once, store_checkpoint};

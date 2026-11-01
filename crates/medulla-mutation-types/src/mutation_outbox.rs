@@ -12,7 +12,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::BoundedVec;
+use medulla_types::contract::BoundedVec;
 
 /// Format identity (RF-ADR-006) of the outbox views.
 pub const MUTATION_OUTBOX_VIEW_SCHEMA_VERSION: u16 = 1;

@@ -3,7 +3,7 @@ use super::envelope::MutationRequestEnvelope;
 use super::payload::{
     digest_sequence, recompute_canonical_payload_digest, recompute_egress_authorization_digest,
 };
-use crate::contract::Digest256;
+use medulla_types::contract::Digest256;
 
 impl MutationRequestEnvelope {
     pub fn recompute_canonical_payload_digest(&self) -> Result<Digest256, String> {

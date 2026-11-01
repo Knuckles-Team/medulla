@@ -4,15 +4,15 @@ use crate::redb_store::enrichment_top_up::{EnrichmentTopUpTransition, CONSUMER, 
 use medulla_agent_types::{
     native_control::EnrichmentBudgetCheckpoint, native_control::EnrichmentBudgetPark,
 };
+use medulla_mutation_types::mutation_scope::CommittedVersion;
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION;
 use medulla_protocol_types::mutation_batch::RepositoryEnrichmentTopUp;
 use medulla_protocol_types::{
     mutation_batch::MutationBatch, mutation_batch::MutationBatchRecord,
     mutation_batch::MutationBatchStatus,
 };
-use medulla_types::mutation_scope::CommittedVersion;
-use medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION;
-use medulla_types::MutationOutboxRecord;
-use medulla_types::MutationScopeIdentity;
 
 fn transition() -> EnrichmentTopUpTransition {
     let old = medulla_compute::test_support::repository_enrichment_snapshot(
@@ -39,7 +39,7 @@ fn transition() -> EnrichmentTopUpTransition {
         MutationScopeIdentity::fixed_graph("tenant-a", "graph-a", COMPILED_BATCH_INCARNATION)
             .unwrap();
     let old_delivery = MutationOutboxRecord {
-        schema_version: medulla_types::MUTATION_BATCH_VERSION,
+        schema_version: medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION,
         batch_id: "source-one".into(),
         ordinal: 0,
         identity,

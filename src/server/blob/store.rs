@@ -39,16 +39,16 @@
 
 use crate::mutation_batch::MutationBatch;
 use crate::mutation_batch::MutationCommitPhase;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::IncarnationId;
+use medulla_mutation_types::mutation_scope::LogicalName;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::ScopeTenantId;
 use medulla_storage::{
     BlobOwner, BlobSharedRead, BlobSharedServiceHandle, BlobSharedWrite, CasChunkRows,
     OwnedStoreHandle, PhysicalStoreIdentity, ScopedRead, StorageKernel, StoreOpenOptions,
 };
 use medulla_transaction::{AdmittedOwnerWrite, Begin, MaintenanceBatch, MutationKernel};
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::IncarnationId;
-use medulla_types::mutation_scope::LogicalName;
-use medulla_types::mutation_scope::MutationScopeIdentity;
-use medulla_types::mutation_scope::ScopeTenantId;
 use redb::{ReadableTableMetadata, TableDefinition};
 use serde::de::DeserializeOwned;
 use sha2::{Digest, Sha256};

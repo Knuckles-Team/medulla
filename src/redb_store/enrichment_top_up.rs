@@ -7,6 +7,7 @@ use crate::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision;
 use medulla_agent_types::{
     native_control::EnrichmentBudgetCheckpoint, native_control::EnrichmentBudgetPark,
 };
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use medulla_protocol_types::{
     mutation_batch::MutationBatch, mutation_batch::MutationBatchRecord,
     mutation_batch::MutationBatchStatus,
@@ -14,7 +15,6 @@ use medulla_protocol_types::{
 use medulla_protocol_types::{
     mutation_batch::RepositoryEnrichmentTopUp, mutation_batch::VersionExpectation,
 };
-use medulla_types::MutationOutboxRecord;
 use serde::{Deserialize, Serialize};
 
 pub(crate) const TOPIC: &str = "repository.enrichment.pending";

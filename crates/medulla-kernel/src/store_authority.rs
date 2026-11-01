@@ -44,10 +44,10 @@
 //! be a second grant authority for the same files, which is the shape
 //! RF-RULING-004 forbids.
 
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use medulla_storage::{
     BlobSharedServiceVerifier, OwnerLayout, PhysicalStoreIdentity, ScopeGrantVerifier,
 };
-use medulla_types::MutationScopeIdentity;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, OnceLock};
@@ -316,7 +316,7 @@ mod tests {
     fn scope() -> MutationScopeIdentity {
         MutationScopeIdentity::fixed_native(
             "native",
-            medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
+            medulla_mutation_types::mutation_scope::DurabilityDomain::ControlPlane,
             "a",
             "test:v1",
         )
@@ -334,7 +334,7 @@ mod tests {
     fn other_scope() -> MutationScopeIdentity {
         MutationScopeIdentity::fixed_native(
             "native",
-            medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
+            medulla_mutation_types::mutation_scope::DurabilityDomain::ControlPlane,
             "b",
             "test:v1",
         )

@@ -4,8 +4,10 @@
 use serde::{Deserialize, Serialize};
 
 use super::StopRule;
+use medulla_mutation_types::{
+    capacity_lease::CapacityResourceClass, capacity_lease::LeasePriority,
+};
 use medulla_types::contract::BoundedVec;
-use medulla_types::{capacity_lease::CapacityResourceClass, capacity_lease::LeasePriority};
 
 /// One capacity cell's headroom, observed through `CapacityStatus` at the
 /// request's priority when the decision was taken. An OBSERVATION premise:

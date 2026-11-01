@@ -7,11 +7,11 @@ use medulla_catalog_types::{
     connector_pack::PackImportRecord, connector_pack::PackImportResult,
     connector_pack::CONNECTOR_PACK_IMPORT_TOPIC, connector_pack::CONNECTOR_PACK_RESULT_SCHEMA_ID,
 };
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::{mutation::MutationReceipt, mutation::MutationResult};
 use medulla_protocol_types::mutation_batch::MutationBatchRecord;
 use medulla_protocol_types::mutation_batch::MutationBatchStatus;
 use medulla_types::contract::{Digest256, Nonce};
-use medulla_types::mutation::{MutationReceipt, MutationResult};
-use medulla_types::mutation_scope::MutationOutboxIntent;
 
 use crate::server::persistence::agent_library::AgentLibraryStore;
 use crate::server::persistence::connector_pack::admitted::{PackWriteEffects, PackWriteIdentity};

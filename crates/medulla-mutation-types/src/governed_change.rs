@@ -24,7 +24,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::identity::{AuditRecord, AuditTrail, IdentityEvent};
+use medulla_types::{identity::AuditRecord, identity::AuditTrail, identity::IdentityEvent};
 
 /// Prefix of every governed kind; reserved against generic control leases.
 pub const GOVERNED_KIND_PREFIX: &str = "governed.";
@@ -49,7 +49,7 @@ pub const GOVERNED_KINDS: [(&str, &str, &str); 2] = [
 /// Read scope for `get`/`list`.
 pub const GOVERNANCE_READ_SCOPE: &str = "governance:read";
 /// Longest proposal and approval windows (the control-lease span cap).
-pub const MAX_GOVERNED_WINDOW_MS: u64 = crate::lease_vocab::MAX_CONTROL_LEASE_SPAN_MS;
+pub const MAX_GOVERNED_WINDOW_MS: u64 = medulla_types::lease_vocab::MAX_CONTROL_LEASE_SPAN_MS;
 /// Most changes (live and recently ended) one ledger holds.
 pub const MAX_GOVERNED_CHANGES: usize = 1024;
 /// How long an ended change stays on record (its id cannot be reused).
@@ -89,7 +89,7 @@ impl GovernedActor {
         let mut parties: Vec<String> = identities
             .into_iter()
             .chain(std::iter::once(agent_id))
-            .map(crate::rbac_elevation::party_id)
+            .map(medulla_types::rbac_elevation::party_id)
             .collect();
         parties.sort();
         parties.dedup();
@@ -270,20 +270,28 @@ pub enum GovernedRefusal {
 impl GovernedRefusal {
     pub fn code(self) -> &'static str {
         match self {
-            Self::InvalidRequest => crate::contract::ServerErrorCode::GovernedInvalid.as_str(),
-            Self::UnknownKind => crate::contract::ServerErrorCode::GovernedUnknownKind.as_str(),
-            Self::NotAuthorized => crate::contract::ServerErrorCode::GovernedNotAuthorized.as_str(),
-            Self::Collision => crate::contract::ServerErrorCode::GovernedCollision.as_str(),
-            Self::Full => crate::contract::ServerErrorCode::GovernedLedgerFull.as_str(),
-            Self::NotFound => crate::contract::ServerErrorCode::GovernedNotFound.as_str(),
-            Self::SelfApproval => crate::contract::ServerErrorCode::GovernedSelfApproval.as_str(),
+            Self::InvalidRequest => {
+                medulla_types::contract::ServerErrorCode::GovernedInvalid.as_str()
+            }
+            Self::UnknownKind => {
+                medulla_types::contract::ServerErrorCode::GovernedUnknownKind.as_str()
+            }
+            Self::NotAuthorized => {
+                medulla_types::contract::ServerErrorCode::GovernedNotAuthorized.as_str()
+            }
+            Self::Collision => medulla_types::contract::ServerErrorCode::GovernedCollision.as_str(),
+            Self::Full => medulla_types::contract::ServerErrorCode::GovernedLedgerFull.as_str(),
+            Self::NotFound => medulla_types::contract::ServerErrorCode::GovernedNotFound.as_str(),
+            Self::SelfApproval => {
+                medulla_types::contract::ServerErrorCode::GovernedSelfApproval.as_str()
+            }
             Self::DelegatedApprover => {
-                crate::contract::ServerErrorCode::GovernedDelegatedApprover.as_str()
+                medulla_types::contract::ServerErrorCode::GovernedDelegatedApprover.as_str()
             }
             Self::DigestMismatch => {
-                crate::contract::ServerErrorCode::GovernedDigestMismatch.as_str()
+                medulla_types::contract::ServerErrorCode::GovernedDigestMismatch.as_str()
             }
-            Self::Conflict => crate::contract::ServerErrorCode::GovernedConflict.as_str(),
+            Self::Conflict => medulla_types::contract::ServerErrorCode::GovernedConflict.as_str(),
         }
     }
 }

@@ -85,13 +85,15 @@ pub(super) fn domain_result<T: serde::Serialize>(
     result: &T,
     schema_id: &str,
     what: &str,
-) -> Result<medulla_types::mutation::MutationResult, String> {
+) -> Result<medulla_mutation_types::mutation::MutationResult, String> {
     let payload =
         medulla_storage::encode_bounded(result, &format!("{what} domain result payload"))?;
     let payload = medulla_types::contract::RecordBytes::new(payload)?;
-    Ok(medulla_types::mutation::MutationResult::DomainResult {
-        schema_id: medulla_types::contract::SchemaId::new(schema_id)?,
-        payload_digest: payload.digest()?,
-        payload,
-    })
+    Ok(
+        medulla_mutation_types::mutation::MutationResult::DomainResult {
+            schema_id: medulla_types::contract::SchemaId::new(schema_id)?,
+            payload_digest: payload.digest()?,
+            payload,
+        },
+    )
 }

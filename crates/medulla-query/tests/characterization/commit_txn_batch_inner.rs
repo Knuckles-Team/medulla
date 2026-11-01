@@ -22,20 +22,20 @@
 
 #![cfg(feature = "sql")]
 
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::IncarnationId;
+use medulla_mutation_types::mutation_scope::LogicalName;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_mutation_types::mutation_scope::ScopeTenantId;
+use medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION;
+use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::mutation_batch::MutationEnvelope;
 use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_protocol_types::mutation_batch::VersionExpectation;
 use medulla_query::{Column, ColumnType, TableSchema, TableStore, TableTxn, TxnOp};
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::IncarnationId;
-use medulla_types::mutation_scope::LogicalName;
-use medulla_types::mutation_scope::MutationOutboxIntent;
-use medulla_types::mutation_scope::MutationScopeIdentity;
-use medulla_types::mutation_scope::MutationSurface;
-use medulla_types::mutation_scope::ScopeTenantId;
-use medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION;
-use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
 
 const TENANT: &str = "tenant-commit-txn-batch";
 const GRAPH: &str = "graph-commit-txn-batch";

@@ -96,6 +96,7 @@ serde_bytes = "0.11"
 # required trait. See `src/contract.rs`.
 medulla-modality = { path = "../medulla-modality", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
 
 [dev-dependencies]
 tempfile = "3"

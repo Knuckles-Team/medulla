@@ -10,8 +10,8 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 
 use crate::agent_component::AgentComponentKind;
+use medulla_mutation_types::mutation_scope::ScopeTenantId;
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_scope::ScopeTenantId;
 
 /// Advanced whenever the meaning of a stored entry changes, so a reader built
 /// against the older meaning gives a typed version rejection instead of a

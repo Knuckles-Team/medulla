@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::protocol::Method;
-use medulla_types::{mutation_scope::DurabilityDomain, mutation_scope::MutationSurface};
+use medulla_mutation_types::{mutation_scope::DurabilityDomain, mutation_scope::MutationSurface};
 
 /// Admission capabilities that materially change persistence semantics.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]

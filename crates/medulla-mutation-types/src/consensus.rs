@@ -4,9 +4,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::authority::AuthorityScope;
-use crate::contract::{
-    BoundedVec, Digest256, OpaqueId, ResourceId, UtcUnixNanos, MAX_PARTICIPANTS,
+use medulla_types::authority::AuthorityScope;
+use medulla_types::{
+    contract::BoundedVec, contract::Digest256, contract::OpaqueId, contract::ResourceId,
+    contract::UtcUnixNanos, contract::MAX_PARTICIPANTS,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -398,8 +399,8 @@ impl ParticipantTransactionRecord {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::authority::ScopeKind;
-    use crate::contract::{TenantId, MAX_SCOPE_COMPONENTS};
+    use medulla_types::authority::ScopeKind;
+    use medulla_types::{contract::TenantId, contract::MAX_SCOPE_COMPONENTS};
 
     fn digest(byte: u8) -> Digest256 {
         Digest256::from_bytes([byte; 32])

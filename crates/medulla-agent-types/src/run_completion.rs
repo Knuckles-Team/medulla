@@ -87,7 +87,7 @@ pub struct RunCompletionPayload {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct CommittedRunCompletion {
     pub payload: RunCompletionPayload,
-    pub scope: medulla_types::mutation_scope::MutationScopeIdentity,
+    pub scope: medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     pub commit_sequence: u64,
     pub ordinal: u32,
     pub payload_digest: String,

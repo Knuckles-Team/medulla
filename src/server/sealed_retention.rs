@@ -20,9 +20,10 @@
 
 use std::sync::Arc;
 
-use medulla_types::sealed_record::{
-    expires_at_ms, sealed_class, sealed_record_class, RetireSealedRecordRequest, SealedClass,
-    SEALED_TOMBSTONE_TYPE,
+use medulla_mutation_types::{
+    sealed_record::expires_at_ms, sealed_record::sealed_class, sealed_record::sealed_record_class,
+    sealed_record::RetireSealedRecordRequest, sealed_record::SealedClass,
+    sealed_record::SEALED_TOMBSTONE_TYPE,
 };
 use tokio::sync::RwLock;
 

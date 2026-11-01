@@ -8,7 +8,7 @@ use medulla_agent_types::{
     agent_component::MeasuredFact, agent_component::ObservationRef,
     agent_component::ShellProficiency, agent_component::StoppingBehaviour,
 };
-use medulla_types::capacity_lease::LeasePriority;
+use medulla_mutation_types::capacity_lease::LeasePriority;
 use medulla_types::contract::BoundedVec;
 
 mod context_policy;

@@ -7,10 +7,10 @@ use crate::mutation_batch::MutationBatchCommit;
 use crate::mutation_batch::MutationBatchRecord;
 use crate::protocol::Method;
 use crate::server::access::CarrierAuthority;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::MutationScopeIdentity;
-use medulla_types::mutation_scope::MutationSurface;
 
 /// The admin-mutations ledger operations an admin saga needs, implemented by the durable
 /// backend.
@@ -54,8 +54,9 @@ pub trait AdminSagaLedger {
 /// `AdminOwner`'s `OwnerLayout::LedgerOnly` can serve it: declaring no owner tables, it
 /// is the one layout that places no shape requirement on the scopes it binds.
 #[cfg(feature = "redb")]
-pub fn cluster_admin_scope_identity() -> Result<medulla_types::MutationScopeIdentity, String> {
-    medulla_types::MutationScopeIdentity::fixed_graph(
+pub fn cluster_admin_scope_identity(
+) -> Result<medulla_mutation_types::mutation_scope::MutationScopeIdentity, String> {
+    medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_graph(
         "native",
         "cluster-admin",
         crate::server::mutation_batch::COMPILED_BATCH_INCARNATION,

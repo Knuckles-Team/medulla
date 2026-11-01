@@ -333,7 +333,7 @@ mod tests {
     #[test]
     fn repository_index_forwards_enrichment_budget_with_pending_intent() {
         let pending = super::enrichment::PendingEnrichment {
-            intent: medulla_types::mutation_scope::MutationOutboxIntent {
+            intent: medulla_mutation_types::mutation_scope::MutationOutboxIntent {
                 topic: "repository.enrichment.pending".into(),
                 key: "source-envelope".into(),
                 payload: Vec::new(),

@@ -534,9 +534,9 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
     assert!(store.copy_into(&backup_path).unwrap() >= 1);
     let database = redb::Database::open(&backup_path).unwrap();
     let read = database.begin_read().unwrap();
-    let identity = medulla_types::MutationScopeIdentity::fixed_native(
+    let identity = medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_native(
         "tenant-shared",
-        medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::ControlPlane,
         "agent-library",
         "agent-library:v1",
     )
@@ -554,18 +554,19 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
         .to_vec();
     let publish_batch = medulla_storage::decode_batch_record(&publish_batch).unwrap();
     assert!(publish_batch.result_msgpack.is_some());
-    let result = medulla_types::msgpack::decode_bounded::<medulla_types::mutation::MutationResult>(
-        publish_batch.result_msgpack.as_deref().unwrap(),
-        medulla_types::msgpack::MsgpackLimits::new(
-            16 * 1024 * 1024,
-            200_000,
-            medulla_types::msgpack::DEFAULT_MAX_DEPTH,
-        ),
-    )
-    .unwrap();
+    let result =
+        medulla_types::msgpack::decode_bounded::<medulla_mutation_types::mutation::MutationResult>(
+            publish_batch.result_msgpack.as_deref().unwrap(),
+            medulla_types::msgpack::MsgpackLimits::new(
+                16 * 1024 * 1024,
+                200_000,
+                medulla_types::msgpack::DEFAULT_MAX_DEPTH,
+            ),
+        )
+        .unwrap();
     assert!(matches!(
         result,
-        medulla_types::mutation::MutationResult::DomainResult { .. }
+        medulla_mutation_types::mutation::MutationResult::DomainResult { .. }
     ));
     let replay_operations = read.open_table(REPLAY_OPERATIONS).unwrap();
     let publish_replay = replay_operations

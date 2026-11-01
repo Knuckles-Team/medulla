@@ -131,10 +131,11 @@ const COLD_SCOPE_RESOURCE: &str = "kvcache-cold";
 const COLD_SCOPE_INCARNATION: &str = "kvcache-cold:v1";
 
 #[cfg(feature = "durable")]
-fn cold_scope_identity() -> io::Result<medulla_types::MutationScopeIdentity> {
-    medulla_types::MutationScopeIdentity::fixed_native(
+fn cold_scope_identity() -> io::Result<medulla_mutation_types::mutation_scope::MutationScopeIdentity>
+{
+    medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_native(
         COLD_SCOPE_TENANT,
-        medulla_types::mutation_scope::DurabilityDomain::KvStore,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::KvStore,
         COLD_SCOPE_RESOURCE,
         COLD_SCOPE_INCARNATION,
     )
@@ -151,13 +152,13 @@ fn cold_scope_identity() -> io::Result<medulla_types::MutationScopeIdentity> {
 #[cfg(feature = "durable")]
 fn cold_batch(
     kind: &str,
-    identity: &medulla_types::MutationScopeIdentity,
+    identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     principal: &str,
     expected_version: u64,
 ) -> io::Result<medulla_protocol_types::mutation_batch::MutationBatch> {
     let batch_id = format!("kvcache-cold-{kind}:v{expected_version}");
     let batch = medulla_protocol_types::mutation_batch::MutationBatch {
-        schema_version: medulla_types::MUTATION_BATCH_VERSION,
+        schema_version: medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION,
         batch_id: batch_id.clone(),
         // See this function's own doc comment: a demoted KV page carries no
         // caller identity, so the envelope is the maintenance one and carries
@@ -178,8 +179,8 @@ fn cold_batch(
         authoritative_state: None,
         operations: vec![medulla_protocol_types::mutation_batch::MutationOperation {
             ordinal: 0,
-            surface: medulla_types::MutationSurface::Other,
-            domain: medulla_types::mutation_scope::DurabilityDomain::KvStore,
+            surface: medulla_mutation_types::mutation_scope::MutationSurface::Other,
+            domain: medulla_mutation_types::mutation_scope::DurabilityDomain::KvStore,
             method: medulla_protocol_types::protocol::Method::ApplyMutation {
                 event_type: format!("kvcache_cold_{kind}"),
                 query: batch_id,
@@ -352,7 +353,7 @@ pub(crate) mod tests {
             &self,
             _physical: &medulla_storage::PhysicalStoreIdentity,
             layout: medulla_storage::OwnerLayout,
-            _identity: &medulla_types::MutationScopeIdentity,
+            _identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
             principal: &str,
             proof: &[u8],
         ) -> Result<(), String> {

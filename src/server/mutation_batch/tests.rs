@@ -5,7 +5,7 @@ use crate::mutation_batch::MutationBatch;
 use crate::mutation_batch::VersionExpectation;
 use crate::protocol::{Method, ResultPayload};
 use crate::server::api::persistence::PersistenceBackend;
-use medulla_types::mutation_scope::MutationSurface;
+use medulla_mutation_types::mutation_scope::MutationSurface;
 
 use super::commit::changed_work_item_ids;
 use super::digest::work_item_batch_identity;
@@ -642,7 +642,7 @@ fn durability_domain_classification_matches_the_golden() {
 #[test]
 fn classifier_source_map_agrees_with_domain_for() {
     use crate::server::mutation_batch::domain_for;
-    use medulla_types::mutation_scope::DurabilityDomain;
+    use medulla_mutation_types::mutation_scope::DurabilityDomain;
 
     let map = classification_map_from_source();
     let lookup = |name: &str| {
@@ -717,7 +717,7 @@ fn classifier_source_map_agrees_with_domain_for() {
 #[test]
 fn owner_domain_classifies_wire_unconditional_methods_regardless_of_this_crates_own_feature() {
     use crate::server::mutation_batch::domain_for;
-    use medulla_types::mutation_scope::DurabilityDomain;
+    use medulla_mutation_types::mutation_scope::DurabilityDomain;
 
     assert_eq!(
         domain_for(
@@ -922,7 +922,7 @@ fn owner_store_batch_names_the_serving_principal_and_carries_the_caller_actor() 
             shared: false,
         },
         MutationSurface::Other,
-        medulla_types::mutation_scope::DurabilityDomain::KvStore,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::KvStore,
         "kv_operation",
     )
     .unwrap();
@@ -967,7 +967,7 @@ fn compile_sql_source_dirty_batch(
         },
         &method,
         MutationSurface::Query,
-        medulla_types::mutation_scope::DurabilityDomain::SqlCatalog,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::SqlCatalog,
         "sql_catalog_operation",
     )
     .unwrap();
@@ -1044,7 +1044,7 @@ fn sql_catalog_compile_declares_one_retry_stable_typed_source_dirty_intent() {
             node_id: "node-a".into(),
         },
         MutationSurface::Graph,
-        medulla_types::mutation_scope::DurabilityDomain::GraphRows,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::GraphRows,
         "graph_operation",
     )
     .unwrap();
@@ -1076,7 +1076,7 @@ fn sql_source_rows_receipt_version_and_dirty_intent_commit_and_replay_atomically
     assert!(!committed.replayed);
     assert_eq!(
         committed.record.committed_version,
-        medulla_types::mutation_scope::CommittedVersion::Native {
+        medulla_mutation_types::mutation_scope::CommittedVersion::Native {
             source: 0,
             target: 1,
         }
@@ -1147,11 +1147,11 @@ fn served_owner_store_batch_commits_and_its_actor_survives_in_the_ledger() {
     let (kernel, owner_authority) = kernel.into_read_and_mutation_authority().unwrap();
     let mutations = MutationKernel::new(owner_authority);
 
-    let identity = medulla_types::MutationScopeIdentity::native(
-        medulla_types::ScopeTenantId::new("tenant-a".to_string()).unwrap(),
-        medulla_types::mutation_scope::DurabilityDomain::KvStore,
-        medulla_types::LogicalName::new("kv-scope-a".to_string()).unwrap(),
-        medulla_types::IncarnationId::new(
+    let identity = medulla_mutation_types::mutation_scope::MutationScopeIdentity::native(
+        medulla_mutation_types::mutation_scope::ScopeTenantId::new("tenant-a".to_string()).unwrap(),
+        medulla_mutation_types::mutation_scope::DurabilityDomain::KvStore,
+        medulla_mutation_types::mutation_scope::LogicalName::new("kv-scope-a".to_string()).unwrap(),
+        medulla_mutation_types::mutation_scope::IncarnationId::new(
             crate::server::mutation_batch::COMPILED_BATCH_INCARNATION,
         )
         .unwrap(),
@@ -1190,7 +1190,7 @@ fn served_owner_store_batch_commits_and_its_actor_survives_in_the_ledger() {
             shared: false,
         },
         MutationSurface::Other,
-        medulla_types::mutation_scope::DurabilityDomain::KvStore,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::KvStore,
         "kv_operation",
     )
     .unwrap();
@@ -1344,14 +1344,14 @@ fn editing_a_compiled_batch_after_the_mint_is_refused() {
 
     // An outbox intent appended after the mint.
     let mut appended = compiled();
-    appended
-        .outbox
-        .push(medulla_types::mutation_scope::MutationOutboxIntent {
+    appended.outbox.push(
+        medulla_mutation_types::mutation_scope::MutationOutboxIntent {
             topic: "engine.crossmodal.committed".to_string(),
             key: "post-mint-edit".to_string(),
             payload: vec![7],
             headers: Default::default(),
-        });
+        },
+    );
     let error = appended.validate().unwrap_err();
     assert!(
         error.contains("canonical payload digest"),

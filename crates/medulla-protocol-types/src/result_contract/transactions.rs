@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use crate::change_envelope::ChangeEnvelopeCommit;
-use medulla_types::{
+use medulla_mutation_types::{
     mutation_outbox::MutationOutboxStatusView, mutation_outbox::OutboxDeadLetterPage,
     mutation_outbox::OutboxRewindReceipt,
 };

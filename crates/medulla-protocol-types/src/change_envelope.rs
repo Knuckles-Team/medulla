@@ -981,7 +981,7 @@ mod tests {
     // reject, so the assertion is true under v1 as written.
     #[test]
     fn unsafe_text_in_core_mutation_field_is_rejected() {
-        let err = medulla_types::mutation_scope::ScopeTenantId::new("/home/person")
+        let err = medulla_mutation_types::mutation_scope::ScopeTenantId::new("/home/person")
             .expect_err("tenant identity must reject unsafe machine-path text");
         assert!(err.contains("path semantics"), "got: {err}");
     }
@@ -1044,15 +1044,14 @@ mod tests {
     #[test]
     fn outbox_intent_unsafe_topic_is_rejected() {
         let mut envelope = minimal_envelope();
-        envelope
-            .mutation
-            .outbox
-            .push(medulla_types::mutation_scope::MutationOutboxIntent {
+        envelope.mutation.outbox.push(
+            medulla_mutation_types::mutation_scope::MutationOutboxIntent {
                 topic: "topic@bad".into(),
                 key: "key-1".into(),
                 payload: rmp_serde::to_vec_named(&serde_json::json!({"a": 1})).unwrap(),
                 headers: Default::default(),
-            });
+            },
+        );
         reseal(&mut envelope);
         let err = envelope.validate().unwrap_err();
         assert!(err.contains("persistence privacy policy"), "got: {err}");
@@ -1061,16 +1060,15 @@ mod tests {
     #[test]
     fn outbox_intent_privacy_violating_payload_is_rejected() {
         let mut envelope = minimal_envelope();
-        envelope
-            .mutation
-            .outbox
-            .push(medulla_types::mutation_scope::MutationOutboxIntent {
+        envelope.mutation.outbox.push(
+            medulla_mutation_types::mutation_scope::MutationOutboxIntent {
                 topic: "topic-1".into(),
                 key: "key-1".into(),
                 payload: rmp_serde::to_vec_named(&serde_json::json!({"path": "/home/person/x"}))
                     .unwrap(),
                 headers: Default::default(),
-            });
+            },
+        );
         reseal(&mut envelope);
         let err = envelope.validate().unwrap_err();
         assert!(err.contains("persistence privacy policy"), "got: {err}");

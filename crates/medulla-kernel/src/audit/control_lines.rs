@@ -203,15 +203,15 @@ fn source_control_audit_line(method: &Method) -> Option<String> {
     }
 }
 
-fn write_back_operation(op: &medulla_types::write_back::WriteBackOp) -> &'static str {
+fn write_back_operation(op: &medulla_mutation_types::write_back::WriteBackOp) -> &'static str {
     match op {
-        medulla_types::write_back::WriteBackOp::Create { .. } => "create",
-        medulla_types::write_back::WriteBackOp::Get { .. } => "get",
-        medulla_types::write_back::WriteBackOp::RecordAttempt { .. } => "record_attempt",
-        medulla_types::write_back::WriteBackOp::RecordReconciliation { .. } => {
+        medulla_mutation_types::write_back::WriteBackOp::Create { .. } => "create",
+        medulla_mutation_types::write_back::WriteBackOp::Get { .. } => "get",
+        medulla_mutation_types::write_back::WriteBackOp::RecordAttempt { .. } => "record_attempt",
+        medulla_mutation_types::write_back::WriteBackOp::RecordReconciliation { .. } => {
             "record_reconciliation"
         }
-        medulla_types::write_back::WriteBackOp::Receipts { .. } => "receipts",
+        medulla_mutation_types::write_back::WriteBackOp::Receipts { .. } => "receipts",
     }
 }
 

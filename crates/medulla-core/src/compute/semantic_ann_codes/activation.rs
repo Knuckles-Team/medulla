@@ -30,9 +30,9 @@ use medulla_index_types::{
     semantic_index::SemanticStageIntent, semantic_index::SemanticStageOutcome,
     semantic_index::SemanticStageScope, semantic_index::SemanticStageTransition,
 };
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_storage::{SemanticIndexOwner, ANN_CODES, SEMANTIC_POINTERS};
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite};
-use medulla_types::mutation_scope::MutationOutboxLease;
 use sha2::{Digest, Sha256};
 
 /// The dimension and model digest an ANN image describes itself with.

@@ -225,9 +225,9 @@ method_results! {
     // carry a hash, token or sealed secret.
     Identity(Identity) => Json<medulla_types::identity::IdentityReply<medulla_types::acl::RequestContextClaims>>;
     // EH-560: every write answers the governed change as it now stands.
-    GovernedPropose(GovernedChange / "propose") => Json<medulla_types::governed_change::GovernedChange>;
-    GovernedApprove(GovernedChange / "approve") => Json<medulla_types::governed_change::GovernedChange>;
-    GovernedRevoke(GovernedChange / "revoke") => Json<medulla_types::governed_change::GovernedChange>;
-    GovernedGet(GovernedChange / "get") => Json<Option<medulla_types::governed_change::GovernedChange>>;
-    GovernedList(GovernedChange / "list") => Json<Vec<medulla_types::governed_change::GovernedChange>>;
+    GovernedPropose(GovernedChange / "propose") => Json<medulla_mutation_types::governed_change::GovernedChange>;
+    GovernedApprove(GovernedChange / "approve") => Json<medulla_mutation_types::governed_change::GovernedChange>;
+    GovernedRevoke(GovernedChange / "revoke") => Json<medulla_mutation_types::governed_change::GovernedChange>;
+    GovernedGet(GovernedChange / "get") => Json<Option<medulla_mutation_types::governed_change::GovernedChange>>;
+    GovernedList(GovernedChange / "list") => Json<Vec<medulla_mutation_types::governed_change::GovernedChange>>;
 }

@@ -12,14 +12,16 @@ use super::payload::{
 };
 use super::targets::MutationPrecondition;
 use super::{MAX_MUTATION_PRECONDITIONS, MAX_PROVENANCE_REFS};
-use crate::authority::{
-    AuthorityScope, NonceReplayKey, OperationReplayIdentity, VerifiedAuthority,
-};
-use crate::contract::{
-    BoundedVec, Digest256, OpaqueId, RequestedMutationResult, ResourceId, MAX_MUTATION_EFFECTS,
-    MAX_OUTBOX_INTENTS,
-};
 use crate::outbox::OutboxIntent;
+use medulla_types::{
+    authority::AuthorityScope, authority::NonceReplayKey, authority::OperationReplayIdentity,
+    authority::VerifiedAuthority,
+};
+use medulla_types::{
+    contract::BoundedVec, contract::Digest256, contract::OpaqueId,
+    contract::RequestedMutationResult, contract::ResourceId, contract::MAX_MUTATION_EFFECTS,
+    contract::MAX_OUTBOX_INTENTS,
+};
 /// Compiler-produced mutation payload before authority evidence is attached.
 /// It is intentionally not deserializable: producers use the checked
 /// constructor and then present its digests to the trusted admission boundary.

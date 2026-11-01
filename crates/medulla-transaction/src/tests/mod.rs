@@ -16,6 +16,15 @@ mod write_authority;
 use crate::read::{read_ledger, read_outbox, read_private_payload, version};
 use crate::tables::{FENCES, OUTBOX, PRIVATE_PAYLOADS};
 use crate::{Begin, MutationKernel};
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::IncarnationId;
+use medulla_mutation_types::mutation_scope::LogicalName;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_mutation_types::mutation_scope::ScopeTenantId;
+use medulla_mutation_types::{mutation::MutationReceipt, mutation::MutationResult};
+use medulla_mutation_types::{
+    mutation_scope::MutationScopeIdentity, mutation_scope::MUTATION_BATCH_VERSION,
+};
 use medulla_protocol_types::mutation_batch::VersionExpectation;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::{mutation_batch::MutationBatch, mutation_batch::MutationOperation};
@@ -32,13 +41,6 @@ use medulla_types::contract::{
     MutationDisposition, Nonce, OpaqueId, Operation, PolicyRevision, ProtocolId, PurposeKind,
     ResourceId, SchemaId, ScopeKind, TenantId, UtcUnixNanos,
 };
-use medulla_types::mutation::{MutationReceipt, MutationResult};
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::IncarnationId;
-use medulla_types::mutation_scope::LogicalName;
-use medulla_types::mutation_scope::MutationSurface;
-use medulla_types::mutation_scope::ScopeTenantId;
-use medulla_types::{MutationScopeIdentity, MUTATION_BATCH_VERSION};
 use redb::{TableDefinition, TableHandle};
 use std::collections::BTreeSet;
 use std::path::Path;

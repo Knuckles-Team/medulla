@@ -9,8 +9,10 @@ use crate::agent_topology::StopRule;
 use crate::agent_topology::TopologyCaps;
 use crate::agent_topology::TopologyFacts;
 use crate::agent_topology::TopologyRequirements;
+use medulla_mutation_types::{
+    capacity_lease::CapacityResourceClass, capacity_lease::LeasePriority,
+};
 use medulla_types::contract::BoundedVec;
-use medulla_types::{capacity_lease::CapacityResourceClass, capacity_lease::LeasePriority};
 
 /// The fan-out/join class IRI the fixtures use.
 pub const FAN_OUT_JOIN: &str = "http://knuckles.team/kg/swarm#FanOutJoin";

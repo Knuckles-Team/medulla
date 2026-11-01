@@ -1,7 +1,7 @@
 //! Scope identity tests that reach the batch envelope helpers.
 
 mod tests {
-    use medulla_types::mutation_scope::*;
+    use medulla_mutation_types::mutation_scope::*;
 
     fn incarnation(value: &str) -> IncarnationId {
         IncarnationId::new(value).unwrap()

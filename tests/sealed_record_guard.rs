@@ -184,7 +184,7 @@ async fn ordinary_nodes_and_maintenance_are_unaffected() {
 
 fn retire(digest: &str, key: &str) -> Method {
     Method::RetireSealedRecord {
-        request: medulla_types::sealed_record::RetireSealedRecordRequest {
+        request: medulla_mutation_types::sealed_record::RetireSealedRecordRequest {
             tenant: "integration-test-tenant".to_string(),
             node_id: "snap".to_string(),
             digest: digest.to_string(),
@@ -256,9 +256,7 @@ async fn retirement_is_the_owning_op_and_leaves_an_audited_tombstone() {
 /// a second sweep has nothing left to do.
 #[tokio::test]
 async fn retention_policy_expires_records_through_the_owning_op() {
-    use medulla::server::sealed_retention::{
-        expire_sealed_records, parse_policy, RETENTION_ACTOR,
-    };
+    use medulla::server::sealed_retention::{expire_sealed_records, parse_policy, RETENTION_ACTOR};
 
     let mut served = Served::new();
     let mut young = snapshot("{}");

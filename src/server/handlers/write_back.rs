@@ -14,7 +14,7 @@ use crate::protocol::{Response, ResultPayload};
 use crate::server::auth::VerifiedRequestContext;
 use crate::server::persistence::agent_library::AgentLibraryStore;
 use crate::server::state::ServerState;
-use medulla_types::write_back::{SourceChangeSet, WriteBackOp};
+use medulla_mutation_types::{write_back::SourceChangeSet, write_back::WriteBackOp};
 
 pub(crate) async fn handle_write_back(
     state: &Arc<RwLock<ServerState>>,
@@ -122,7 +122,7 @@ fn record_attempt(
     idempotency_key: &str,
     actor: String,
     now_ms: u64,
-    attempt: medulla_types::write_back::WriteBackAttempt,
+    attempt: medulla_mutation_types::write_back::WriteBackAttempt,
 ) -> Result<ResultPayload, String> {
     if attempt.idempotency_key != idempotency_key {
         return Err(
@@ -143,7 +143,7 @@ fn record_reconciliation(
     idempotency_key: &str,
     actor: String,
     now_ms: u64,
-    observation: medulla_types::write_back::ReconciliationObservation,
+    observation: medulla_mutation_types::write_back::ReconciliationObservation,
 ) -> Result<ResultPayload, String> {
     if observation.idempotency_key != idempotency_key {
         return Err(

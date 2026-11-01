@@ -2,10 +2,11 @@ use serde::{Deserialize, Serialize};
 
 use super::envelope::MutationRequestEnvelope;
 use super::payload::digest_sequence;
-use crate::authority::{AuthorityScope, ReplayReceipt};
-use crate::contract::{
-    BoundedVec, Digest256, MutationDisposition, OpaqueId, RecordBytes, RequestedMutationResult,
-    ResourceId, SchemaId, UtcUnixNanos, MAX_MUTATION_EFFECTS,
+use medulla_types::{authority::AuthorityScope, authority::ReplayReceipt};
+use medulla_types::{
+    contract::BoundedVec, contract::Digest256, contract::MutationDisposition, contract::OpaqueId,
+    contract::RecordBytes, contract::RequestedMutationResult, contract::ResourceId,
+    contract::SchemaId, contract::UtcUnixNanos, contract::MAX_MUTATION_EFFECTS,
 };
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]

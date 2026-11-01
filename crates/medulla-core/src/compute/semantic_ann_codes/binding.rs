@@ -18,6 +18,7 @@ use medulla_index_types::{
     semantic_index::SemanticIndexMutation, semantic_index::SemanticTombstone,
     semantic_index::SemanticTombstoneDraft,
 };
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_storage::{
     SemanticIndexOwner, SEMANTIC_BINDINGS, SEMANTIC_HEADS, SEMANTIC_POINTERS, SEMANTIC_STATES,
@@ -25,7 +26,6 @@ use medulla_storage::{
 };
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite};
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_scope::MutationOutboxIntent;
 use redb::ReadableTable;
 use std::collections::BTreeMap;
 

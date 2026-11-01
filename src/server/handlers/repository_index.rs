@@ -219,7 +219,7 @@ pub(crate) fn build_envelope(
 pub(crate) fn build_envelope_with_outbox(
     ctx: &IndexCommitContext<'_>,
     write_set: IndexWriteSet,
-    outbox: Vec<medulla_types::mutation_scope::MutationOutboxIntent>,
+    outbox: Vec<medulla_mutation_types::mutation_scope::MutationOutboxIntent>,
 ) -> Result<ChangeEnvelope, String> {
     let IndexWriteSet {
         envelope_id,

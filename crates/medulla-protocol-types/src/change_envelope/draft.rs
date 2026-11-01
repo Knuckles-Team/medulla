@@ -15,7 +15,7 @@ use super::{
 };
 use crate::mutation_batch::MutationBatch;
 use crate::mutation_batch::MutationOperation;
-use medulla_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 
 /// What a caller may author of an envelope's mutation.
 #[derive(Debug, Clone, Serialize, Deserialize)]

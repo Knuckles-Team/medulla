@@ -28,11 +28,11 @@ use medulla_catalog_types::{
 };
 use medulla_decision_types::decision::coverage::CapabilityCoverageResult;
 use medulla_decision_types::{decision::AssemblyResult, decision::DecisionCommitResult};
-use medulla_types::series_expr::DerivedSeriesReceipt;
-use medulla_types::{
+use medulla_mutation_types::{
     write_back::ReconciliationReceipt, write_back::SourceChangeSet, write_back::WriteBackReceipt,
     write_back::WriteBackReceiptPage,
 };
+use medulla_types::series_expr::DerivedSeriesReceipt;
 
 method_results! {
     visit_storage;

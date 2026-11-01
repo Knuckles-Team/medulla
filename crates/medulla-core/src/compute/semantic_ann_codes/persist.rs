@@ -21,13 +21,13 @@ use medulla_index_types::{
     semantic_index::SemanticStageArtifact, semantic_index::SemanticStageIntent,
     semantic_index::SemanticStagePredecessor, semantic_index::SemanticStageTransition,
 };
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_storage::{
     SemanticIndexOwner, SEMANTIC_ANN, SEMANTIC_AUTH_RECEIPTS, SEMANTIC_CHECKPOINTS,
     SEMANTIC_CHECKPOINT_HEADS, SEMANTIC_DEAD_LETTERS, SEMANTIC_GRAPH_PROJECTIONS, SEMANTIC_LEXICAL,
     SEMANTIC_SOURCE_PROGRESS, SEMANTIC_SQL_SOURCES, SEMANTIC_STAGES, SEMANTIC_VECTORS,
 };
 use medulla_transaction::AdmittedOwnerWrite;
-use medulla_types::mutation_scope::MutationOutboxLease;
 use redb::{ReadableTable, TableDefinition};
 use std::collections::BTreeMap;
 

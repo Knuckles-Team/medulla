@@ -38,6 +38,7 @@ sha2 = "0.10"
 hex = "0.4"
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-result-types = { path = "../medulla-result-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
 
 [dev-dependencies]
 tempfile = "3"

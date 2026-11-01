@@ -263,7 +263,7 @@ fn ordinary_completion_projection_requires_exact_committed_payload() {
         result_ref: None,
         error_ref: Some("error".into()),
     };
-    let intent = medulla_types::MutationOutboxIntent {
+    let intent = medulla_mutation_types::mutation_scope::MutationOutboxIntent {
         topic: RUN_COMPLETION_TOPIC.into(),
         key: receipt.batch.batch_id.clone(),
         payload: rmp_serde::to_vec_named(&payload).unwrap(),
@@ -271,7 +271,7 @@ fn ordinary_completion_projection_requires_exact_committed_payload() {
     };
     let digest = hex::encode(Sha256::digest(&intent.payload));
     receipt.batch.outbox = vec![intent.clone()];
-    let event = medulla_types::MutationOutboxRecord {
+    let event = medulla_mutation_types::mutation_scope::MutationOutboxRecord {
         schema_version: 1,
         batch_id: receipt.batch.batch_id.clone(),
         ordinal: 0,
@@ -281,23 +281,24 @@ fn ordinary_completion_projection_requires_exact_committed_payload() {
         intent,
         created_at_ms: receipt.committed_at_ms,
     };
-    let project = |tenant: &str,
-                   run: &str,
-                   status: &str,
-                   digest: &str,
-                   event: &medulla_types::MutationOutboxRecord| {
-        project_completion(
-            snapshot.scope(),
-            tenant,
-            run,
-            &id,
-            status,
-            &receipt.batch.batch_id,
-            digest,
-            &receipt,
-            std::slice::from_ref(event),
-        )
-    };
+    let project =
+        |tenant: &str,
+         run: &str,
+         status: &str,
+         digest: &str,
+         event: &medulla_mutation_types::mutation_scope::MutationOutboxRecord| {
+            project_completion(
+                snapshot.scope(),
+                tenant,
+                run,
+                &id,
+                status,
+                &receipt.batch.batch_id,
+                digest,
+                &receipt,
+                std::slice::from_ref(event),
+            )
+        };
     assert_eq!(
         project("tenant", "run", "failed", &digest, &event)
             .unwrap()
@@ -447,10 +448,10 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
     use crate::mutation_batch::MutationBatch;
     use crate::server::mutation_batch::{compile_methods, principal_fingerprint, CompileBatch};
     use medulla_agent_types::run_completion::*;
+    use medulla_mutation_types::mutation_scope::MutationSurface;
     use medulla_result_types::{
         epistemic_operations::ClaimWorkItemRequest, epistemic_operations::ClaimWorkItemResult,
     };
-    use medulla_types::mutation_scope::MutationSurface;
     let compile = |shard: &Shard, tag: &str, method: Method, now| {
         compile_methods(
             CompileBatch {

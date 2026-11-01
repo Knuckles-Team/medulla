@@ -31,10 +31,10 @@ use crate::redb_store::{
 use crate::server::api::persistence::PersistenceBackend;
 use crate::server::persistence::writer_reply::await_writer_reply;
 use crate::server::ServerState;
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
+use medulla_mutation_types::mutation_scope::MutationProjectionCursor;
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
-use medulla_types::mutation_scope::MutationOutboxLease;
-use medulla_types::mutation_scope::MutationOutboxRecord;
-use medulla_types::mutation_scope::MutationProjectionCursor;
 
 // `async_trait` must see the concrete methods when it expands. Invoking method
 // macros directly inside its annotated impl leaves those methods untransformed,

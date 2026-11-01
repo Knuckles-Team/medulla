@@ -49,6 +49,7 @@ use medulla_index_types::{
     semantic_index::SemanticStageTransition, semantic_index::SemanticVectorMetric,
     semantic_index::SqlColumnRef, semantic_index::SEMANTIC_SQL_CATALOG_ID,
 };
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 use medulla_storage::{
     OwnerLayout, PhysicalStoreIdentity, ScopeGrantVerifier, ANN_CODES, SEMANTIC_ANN,
     SEMANTIC_BINDINGS, SEMANTIC_CHECKPOINTS, SEMANTIC_CHECKPOINT_HEADS, SEMANTIC_DEAD_LETTERS,
@@ -56,7 +57,6 @@ use medulla_storage::{
     SEMANTIC_SQL_SOURCES, SEMANTIC_STAGES, SEMANTIC_STATES,
 };
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_scope::MutationOutboxIntent;
 // `ReadableTable` only: it is the trait that puts `.get()` on the kernel's own
 // returned table handles, and `semantic_arch_gate` deliberately excludes
 // `redb::Table`/`redb::ReadOnlyTable` from its forbidden set for exactly that
@@ -90,7 +90,7 @@ impl ScopeGrantVerifier for AnyTenantSemanticScopeVerifier {
         &self,
         _physical: &PhysicalStoreIdentity,
         layout: OwnerLayout,
-        _identity: &medulla_types::MutationScopeIdentity,
+        _identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
         principal: &str,
         proof: &[u8],
     ) -> Result<(), String> {
@@ -403,7 +403,7 @@ fn seed_batch(
 ) -> medulla_protocol_types::mutation_batch::MutationBatch {
     let batch_id = format!("semantic-ann:{BINDING}:{generation}:{digest}");
     medulla_protocol_types::mutation_batch::MutationBatch {
-        schema_version: medulla_types::MUTATION_BATCH_VERSION,
+        schema_version: medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION,
         batch_id: batch_id.clone(),
         envelope: medulla_protocol_types::mutation_batch::MutationEnvelope::maintenance(
             owner.principal(),
@@ -421,8 +421,8 @@ fn seed_batch(
         authoritative_state: None,
         operations: vec![medulla_protocol_types::mutation_batch::MutationOperation {
             ordinal: 0,
-            surface: medulla_types::MutationSurface::Other,
-            domain: medulla_types::mutation_scope::DurabilityDomain::SemanticIndex,
+            surface: medulla_mutation_types::mutation_scope::MutationSurface::Other,
+            domain: medulla_mutation_types::mutation_scope::DurabilityDomain::SemanticIndex,
             method: medulla_protocol_types::protocol::Method::ApplyMutation {
                 event_type: "semantic_index_generation_activated".to_string(),
                 query: format!("sha256:{digest}"),

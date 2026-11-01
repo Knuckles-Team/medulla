@@ -286,7 +286,7 @@ fn mutation_batch_audit_and_outbox_retain_only_the_safe_receipt() {
             expected_graph_version: Some(0),
             fencing_token: Some(1),
             created_at_ms: 1,
-            default_surface: medulla_types::mutation_scope::MutationSurface::Graph,
+            default_surface: medulla_mutation_types::mutation_scope::MutationSurface::Graph,
             authoritative_state: Some(crate::mutation_batch::MutationStateDescriptor {
                 algorithm: "sha256".to_string(),
                 digest: "c".repeat(64),

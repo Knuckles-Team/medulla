@@ -29,6 +29,15 @@
 #![cfg(feature = "sql")]
 
 use medulla_core::graph::GraphCore;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::IncarnationId;
+use medulla_mutation_types::mutation_scope::LogicalName;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_mutation_types::mutation_scope::ScopeTenantId;
+use medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION;
+use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::mutation_batch::MutationEnvelope;
 use medulla_protocol_types::mutation_batch::MutationOperation;
@@ -38,15 +47,6 @@ use medulla_query::{
     CancellationToken, Column, ColumnType, SqlContextCache, TableSchema, TableStore, TableTxn,
     TxnOp, TypedQueryResult,
 };
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::IncarnationId;
-use medulla_types::mutation_scope::LogicalName;
-use medulla_types::mutation_scope::MutationOutboxIntent;
-use medulla_types::mutation_scope::MutationScopeIdentity;
-use medulla_types::mutation_scope::MutationSurface;
-use medulla_types::mutation_scope::ScopeTenantId;
-use medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION;
-use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
 use serde_json::json;
 
 const TENANT: &str = "tenant-cache-a";

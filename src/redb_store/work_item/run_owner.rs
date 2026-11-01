@@ -158,7 +158,7 @@ pub(super) fn validate_completion_owner(
 
 #[allow(clippy::too_many_arguments)]
 fn project_completion(
-    scope: &medulla_types::MutationScopeIdentity,
+    scope: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     tenant: &str,
     run: &str,
     id: &str,
@@ -166,7 +166,7 @@ fn project_completion(
     batch: &str,
     digest: &str,
     receipt: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
-    records: &[medulla_types::MutationOutboxRecord],
+    records: &[medulla_mutation_types::mutation_scope::MutationOutboxRecord],
 ) -> Result<medulla_agent_types::run_completion::CommittedRunCompletion, String> {
     use medulla_agent_types::run_completion::*;
     let mut matching = records
@@ -223,14 +223,14 @@ fn validate_completion_payload(
 }
 
 fn validate_completion_event(
-    scope: &medulla_types::MutationScopeIdentity,
+    scope: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     batch: &str,
     digest: &str,
     receipt: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
-    event: &medulla_types::MutationOutboxRecord,
+    event: &medulla_mutation_types::mutation_scope::MutationOutboxRecord,
 ) -> Result<(), String> {
     use sha2::{Digest, Sha256};
-    if event.schema_version != medulla_types::mutation_scope::MUTATION_BATCH_VERSION
+    if event.schema_version != medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION
         || &event.identity != scope
         || event.batch_id != batch
         || event.intent.key != batch
@@ -242,10 +242,10 @@ fn validate_completion_event(
 }
 
 fn validate_completion_ledger(
-    scope: &medulla_types::MutationScopeIdentity,
+    scope: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     batch: &str,
     receipt: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
-    event: &medulla_types::MutationOutboxRecord,
+    event: &medulla_mutation_types::mutation_scope::MutationOutboxRecord,
 ) -> Result<(), String> {
     if receipt.status != medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed
         || &receipt.identity != scope

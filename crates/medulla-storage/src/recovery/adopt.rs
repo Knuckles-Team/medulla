@@ -14,8 +14,11 @@ use crate::recovery::evidence::{
 use crate::recovery::validate::{validate_recovery_content, RecoveryStoreCounts};
 use crate::tables::{SCOPE_BINDINGS, STORE_ROOT, VERSIONS};
 use crate::StorageKernel;
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::{IncarnationId, LogicalName, MutationScopeIdentity, ScopeTenantId};
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::{
+    mutation_scope::IncarnationId, mutation_scope::LogicalName,
+    mutation_scope::MutationScopeIdentity, mutation_scope::ScopeTenantId,
+};
 use redb::{
     Database, ReadTransaction, ReadableDatabase, ReadableTable, TableHandle, WriteTransaction,
 };

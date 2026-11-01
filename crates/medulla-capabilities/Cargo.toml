@@ -162,3 +162,4 @@ medulla-decision-types = { path = "../medulla-decision-types", features = ["wire
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["wire-contract"] }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["wire-contract"] }
 medulla-index-types = { path = "../medulla-index-types", features = ["wire-contract"] }
+medulla-mutation-types = { path = "../medulla-mutation-types", features = ["wire-contract"] }

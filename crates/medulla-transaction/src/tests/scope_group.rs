@@ -835,12 +835,14 @@ fn current_graph_batch_with_stable_outbox(
     version: u64,
 ) -> MutationBatch {
     let mut batch = current_graph_batch(graph, batch_id, version);
-    batch.outbox.push(medulla_types::MutationOutboxIntent {
-        topic: "scope-group.replay".to_string(),
-        key: "graph-a-stable".to_string(),
-        payload: b"stable-intent".to_vec(),
-        headers: Default::default(),
-    });
+    batch.outbox.push(
+        medulla_mutation_types::mutation_scope::MutationOutboxIntent {
+            topic: "scope-group.replay".to_string(),
+            key: "graph-a-stable".to_string(),
+            payload: b"stable-intent".to_vec(),
+            headers: Default::default(),
+        },
+    );
     batch
         .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
         .expect("a current graph fixture batch reseals its outbox content");

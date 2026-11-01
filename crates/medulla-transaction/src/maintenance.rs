@@ -17,6 +17,11 @@
 //! only when they genuinely are the same write, retried after a crash that lost
 //! the commit -- which is precisely when a replay is the right answer.
 
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::{
+    mutation_scope::MutationScope, mutation_scope::MutationSurface,
+    mutation_scope::MUTATION_BATCH_VERSION,
+};
 use medulla_protocol_types::mutation_batch::MutationEnvelope;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::{
@@ -24,8 +29,6 @@ use medulla_protocol_types::{
     mutation_batch::VersionExpectation,
 };
 use medulla_storage::{OwnedStoreHandle, OwnerDomain};
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::{MutationScope, MutationSurface, MUTATION_BATCH_VERSION};
 
 /// One owner-maintenance write, named by what it does (`kind`) and the row set
 /// it acts on (`subject`).

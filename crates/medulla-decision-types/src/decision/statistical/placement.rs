@@ -5,7 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use medulla_types::capacity_lease::LeasePriority;
+use medulla_mutation_types::capacity_lease::LeasePriority;
 
 /// Supported deployment targets. Systemd is not a placement target.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]

@@ -29,10 +29,6 @@ pub mod mysql_mariadb_connection;
 // `medulla-asr-whisper`.
 #[cfg(feature = "asr-native")]
 pub mod asr_wire;
-// CONCEPT:AU-ORCH.scheduling — GOC-21 distributed CapacityCell/CapacityLease
-// wire contract + pure fencing/admission algorithm (cross-host capacity
-// authority for the AU fair scheduler). Unconditional, like `acl`/`jobs`.
-pub mod capacity_lease;
 // MEDULLA-DURABLE-KERNEL-R076.1 — authoritative scheduler policy data and validation.
 pub mod scheduler_config;
 // MEDULLA-INGEST-WORKER-R002.1/.2 — induced ontology proposals and admission scores.
@@ -167,16 +163,6 @@ pub mod nl_query;
 // non-Match classification. Pure data; blocking, field-similarity scoring
 // and the real Fellegi-Sunter model are later children.
 pub mod entity_link_proposal;
-// GOC-03 — the cross-domain commit-descriptor/read-barrier currency shared by
-// graph, modality, vector, blob/refcount, time-series, evidence, table/lake, and
-// terminal-analytics-outcome participants. Deliberately a NEW module (not folded
-// into `mutation_batch`): `MutationBatch`/`MutationProjectionCursor` remain the
-// per-surface request/outbox envelope; `CommitDescriptor` is the one commit
-// identity every domain's participant registers against. See
-// `plans/graph-os-completion-program/lanes/GOC-03-cross-domain-commit-currency.md`.
-pub mod commit_descriptor;
-// RF-RULING-004 — current-only parent/participant transaction coordination DTOs.
-pub mod consensus;
 // RF-RULING-004 — bounded scalar/collection primitives shared by kernel DTOs.
 pub mod contract;
 // MEDULLA-DURABLE-KERNEL-R032 — the native primary-key fast-path routing decision
@@ -248,11 +234,6 @@ pub mod msgpack;
 // X10 — the operator view of one owner's mutation outbox: standing, dead
 // letters and bounded re-delivery.
 pub mod lease_vocab;
-pub mod mutation;
-pub mod mutation_outbox;
-pub mod mutation_scope;
-// RF-RULING-004 — mutation-kernel-owned outbox intent, delivery, and cursor DTOs.
-pub mod outbox;
 // MEDULLA-FINANCE-PRIMITIVES-R011.1 — the typed finance alert envelope staged for
 // the finance outbox topic family; net-new slice (model + validation +
 // refusal tests only, no outbox-append wiring yet).
@@ -272,8 +253,6 @@ pub mod ontology_inspection;
 // F3: RDF load/update/rule/shape-validation report bodies (medulla-rdf/medulla-shacl/medulla-shex results).
 pub mod rdf_report;
 pub mod runtime_limit;
-// EH-558 — sealed record classes: content-addressed rows generic writes may not change.
-pub mod sealed_record;
 // EH-522 — the series-expression algebra (`DERIVE` columns, derived series). Pure serde.
 pub mod series_expr;
 // MEDULLA-SCM-R002 — the source changeset record and its structured trailers.
@@ -305,12 +284,6 @@ pub mod stewardship;
 // EH-404 -- just-in-time RBAC elevation: an `rbac.elevation` control lease the
 // graph-access chokepoint consults (two-person, exact-scope, hard expiry).
 pub mod rbac_elevation;
-// EH-560 -- governed changes: reserved control-lease kinds whose approval EG
-// proves two-person (approver != proposer, exact digest, single use).
-pub mod governed_change;
-// EH-406 -- error-budget adaptive (AIMD) throttling on a capacity cell:
-// automatic steps only narrow or give back what they narrowed.
-pub mod capacity_throttle;
 // MEDULLA-UNIFIED-DATA-PLANE-R004 — bounded, policy-gated column-sampling budget
 // for deterministic schema inference.
 pub mod schema_inference;
@@ -328,9 +301,6 @@ pub mod usage;
 #[cfg(feature = "viz")]
 pub mod viz;
 pub mod wire;
-// RF-ADR-009 D18 — EG-owned versioned source change sets and append-only
-// write-back/reconciliation receipts. Connector transports remain in the SDK.
-pub mod write_back;
 
 // CONCEPT:MEDULLA-KG.query.compound-predicate-decode — the serializable compound-WHERE predicate AST lives at the
 // bottom of the DAG so `medulla-core` can evaluate it; `medulla-query` decodes SQL into it.
@@ -350,9 +320,3 @@ pub use modality::{
 // representable. `MutationVersionScope` and `NON_GRAPH_SOURCE_VERSION` are therefore
 // not re-exported: they have no v1 meaning, and keeping an alias would be exactly the
 // compatibility seam RF-ADR-001 forbids.
-pub use mutation_scope::MUTATION_BATCH_VERSION;
-pub use mutation_scope::{
-    CommittedVersion, IncarnationId, LogicalName, MutationOutboxIntent, MutationOutboxLease,
-    MutationOutboxRecord, MutationProjectionCursor, MutationScope, MutationScopeIdentity,
-    MutationSurface, ScopeTenantId,
-};

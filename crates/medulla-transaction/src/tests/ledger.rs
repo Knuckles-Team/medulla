@@ -266,14 +266,14 @@ fn staged_adoption_reanchors_only_root_and_bindings() {
     let mut committed_batch = batch(identity.clone(), "staged-committed");
     committed_batch.placement_epoch = 7;
     committed_batch.fencing_token = Some(9);
-    committed_batch
-        .outbox
-        .push(medulla_types::MutationOutboxIntent {
+    committed_batch.outbox.push(
+        medulla_mutation_types::mutation_scope::MutationOutboxIntent {
             topic: "staged.adoption".to_string(),
             key: "staged-committed".to_string(),
             payload: b"preserved".to_vec(),
             headers: Default::default(),
-        });
+        },
+    );
     committed_batch
         .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
         .expect("the staged-adoption fixture reseals its final outbox");

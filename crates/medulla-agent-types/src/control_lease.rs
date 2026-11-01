@@ -280,7 +280,7 @@ impl IssueControlLeaseRequest {
         }
         if self
             .kind
-            .starts_with(medulla_types::governed_change::GOVERNED_KIND_PREFIX)
+            .starts_with(medulla_mutation_types::governed_change::GOVERNED_KIND_PREFIX)
         {
             // EH-560: a governed change is proposed, approved (two-person)
             // and consumed only through `GovernedChange`; a generic lease of

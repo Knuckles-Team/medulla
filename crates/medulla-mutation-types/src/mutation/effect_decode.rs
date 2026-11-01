@@ -9,7 +9,7 @@ use super::budget::{
 use super::effects::{MutationEffect, RecordMutation};
 use super::targets::RecordTarget;
 use super::EFFECT_FIXED_BUDGET;
-use crate::contract::{Digest256, RecordBytes};
+use medulla_types::{contract::Digest256, contract::RecordBytes};
 
 #[derive(Deserialize)]
 #[serde(field_identifier, rename_all = "snake_case")]

@@ -324,7 +324,7 @@ mod current_snapshot_schema_tests {
                 expected_graph_version: Some(0),
                 fencing_token: None,
                 created_at_ms: 13,
-                default_surface: medulla_types::mutation_scope::MutationSurface::Graph,
+                default_surface: medulla_mutation_types::mutation_scope::MutationSurface::Graph,
                 authoritative_state: None,
             },
             vec![Method::CompareAndSetNodeFields {
@@ -340,10 +340,11 @@ mod current_snapshot_schema_tests {
                 batch,
                 identity: identity.clone(),
                 status: crate::mutation_batch::MutationBatchStatus::Committed,
-                committed_version: medulla_types::mutation_scope::CommittedVersion::Graph {
-                    source: 0,
-                    target: 1,
-                },
+                committed_version:
+                    medulla_mutation_types::mutation_scope::CommittedVersion::Graph {
+                        source: 0,
+                        target: 1,
+                    },
                 result_msgpack: Some(encoded_result(ResultPayload::Bool(false))),
                 committed_at_ms: 13,
             },

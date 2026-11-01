@@ -3,8 +3,8 @@ use std::sync::Arc;
 use crate::protocol::{Method, ResultPayload};
 use crate::server::api::persistence::PersistenceBackend;
 use crate::server::mutation::LifecycleAttempt;
+use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_scope::MutationSurface;
 
 use super::super::compile::{compile_methods, CompileBatch};
 use super::super::digest::{lifecycle_batch_id, principal_fingerprint};

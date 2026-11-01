@@ -1,6 +1,8 @@
 //! Store-level proof of sealed-record retirement over a real shard.
 
-use medulla_types::sealed_record::{RetireSealedRecordRequest, SealedRecordRetirement};
+use medulla_mutation_types::{
+    sealed_record::RetireSealedRecordRequest, sealed_record::SealedRecordRetirement,
+};
 
 use super::super::test_shard::{open, with_nodes, GRAPH};
 use super::*;
@@ -38,7 +40,7 @@ fn stored(shard: &Shard, tag: &str) -> Option<NodeRow> {
 
 #[test]
 fn retirement_replaces_the_record_by_its_tombstone_in_the_same_row() {
-    use medulla_types::sealed_record::SealedRecordRetireOutcome as Outcome;
+    use medulla_mutation_types::sealed_record::SealedRecordRetireOutcome as Outcome;
 
     let temp = open("sealed-retire");
     let record = serde_json::json!({

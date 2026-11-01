@@ -5,8 +5,10 @@ use super::budget::{
     PRECONDITION_FIXED_BUDGET,
 };
 use super::MutationDomain;
-use crate::authority::AuthorityScope;
-use crate::contract::{Digest256, ResourceId, SchemaId, TenantId};
+use medulla_types::authority::AuthorityScope;
+use medulla_types::{
+    contract::Digest256, contract::ResourceId, contract::SchemaId, contract::TenantId,
+};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct RecordTarget {

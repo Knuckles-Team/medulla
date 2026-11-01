@@ -3,17 +3,18 @@
 //! Change sets and receipts share `agent_library.redb` and its mutation kernel.
 //! There is no second database, ledger, writer, or source-side transport here.
 
+use medulla_mutation_types::{
+    write_back::ReconciliationObservation, write_back::ReconciliationReceipt,
+    write_back::SourceChangeSet, write_back::WriteBackAttempt, write_back::WriteBackAttemptKind,
+    write_back::WriteBackEffectStatus, write_back::WriteBackOutcome, write_back::WriteBackReceipt,
+    write_back::WriteBackReceiptPage, write_back::WriteBackReceiptRecord,
+    write_back::MAX_WRITE_BACK_RECEIPTS, write_back::WRITE_BACK_SCHEMA_VERSION,
+};
 use medulla_storage::{
     ledger_scope_key, AgentLibraryOwner, WRITE_BACK_CHANGE_SETS, WRITE_BACK_IDEMPOTENCY,
     WRITE_BACK_RECEIPTS, WRITE_BACK_RECEIPT_HEADS,
 };
 use medulla_transaction::{AdmittedOwnerWrite, Begin, MaintenanceBatch};
-use medulla_types::write_back::{
-    ReconciliationObservation, ReconciliationReceipt, SourceChangeSet, WriteBackAttempt,
-    WriteBackAttemptKind, WriteBackEffectStatus, WriteBackOutcome, WriteBackReceipt,
-    WriteBackReceiptPage, WriteBackReceiptRecord, MAX_WRITE_BACK_RECEIPTS,
-    WRITE_BACK_SCHEMA_VERSION,
-};
 use redb::ReadableTable;
 
 use super::agent_library::AgentLibraryStore;
@@ -39,7 +40,7 @@ impl AgentLibraryStore {
         let owner = self.scope_handle(tenant_id)?;
         let subject = ledger_scope_key(owner.identity());
         let write = MaintenanceBatch::new(
-            medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
+            medulla_mutation_types::mutation_scope::DurabilityDomain::ControlPlane,
             event,
             &subject,
         );
@@ -697,8 +698,10 @@ fn receipt_sequence(receipt: &WriteBackReceiptRecord) -> u64 {
 mod tests {
     use std::collections::BTreeMap;
 
+    use medulla_mutation_types::{
+        write_back::WriteBackAuthorizationDecision, write_back::WriteBackAuthorizationMode,
+    };
     use medulla_types::contract::Digest256;
-    use medulla_types::write_back::{WriteBackAuthorizationDecision, WriteBackAuthorizationMode};
 
     use super::*;
 

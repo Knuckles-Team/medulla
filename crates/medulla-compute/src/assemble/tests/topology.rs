@@ -22,7 +22,7 @@ use medulla_decision_types::decision::DecisionPolicy;
 use medulla_decision_types::decision::EvidenceClass;
 use medulla_decision_types::decision::TemplateFacts;
 use medulla_decision_types::decision::TOPOLOGY_DECISION_RECORD_SCHEMA_VERSION;
-use medulla_types::capacity_lease::CapacityResourceClass;
+use medulla_mutation_types::capacity_lease::CapacityResourceClass;
 
 use super::super::{assemble, inputs as build_inputs, replay_check, AssembleError, Assembly};
 use super::fixture::*;

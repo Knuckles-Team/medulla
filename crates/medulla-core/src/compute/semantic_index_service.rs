@@ -25,11 +25,11 @@ use medulla_index_types::{
     semantic_index::SemanticStageIntentDraft, semantic_index::SemanticStageScope,
     semantic_index::SemanticStageTransition,
 };
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use medulla_storage::ScopeGrantVerifier;
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome, OutboxStatus};
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_scope::MutationOutboxLease;
-use medulla_types::mutation_scope::MutationOutboxRecord;
 use sha2::{Digest, Sha256};
 
 use super::semantic::SemanticGenerationImage;

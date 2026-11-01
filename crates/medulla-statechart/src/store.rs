@@ -60,6 +60,11 @@ use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::mutation_batch::MutationBatchRecord;
 use medulla_protocol_types::mutation_batch::MutationEnvelope;
@@ -71,11 +76,6 @@ use medulla_storage::{
     StorageKernel,
 };
 use medulla_transaction::{Begin, MutationKernel};
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::MutationOutboxIntent;
-use medulla_types::mutation_scope::MutationScopeIdentity;
-use medulla_types::mutation_scope::MutationSurface;
-use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
 use redb::{ReadableTable, TableDefinition};
 use serde::{de::DeserializeOwned, Serialize};
 

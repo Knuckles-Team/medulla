@@ -15,10 +15,10 @@ use medulla_agent_types::{
     native_control::EnrichmentBudgetReservation, native_control::NativeControlSchemaVersion,
     native_control::SubmitWorkItemsRequest, native_control::MAX_SUBMIT_BATCH,
 };
-use medulla_result_types::epistemic_operations::RequestContext;
-use medulla_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 #[cfg(feature = "blob")]
-use medulla_types::mutation_scope::MutationOutboxLease;
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+use medulla_result_types::epistemic_operations::RequestContext;
 use serde::Deserialize;
 
 use crate::parser::enrichment_admission::{
@@ -727,7 +727,7 @@ mod tests {
 
     #[cfg(feature = "blob")]
     struct DeadLetterProbe {
-        row: medulla_types::MutationOutboxRecord,
+        row: medulla_mutation_types::mutation_scope::MutationOutboxRecord,
         superseded: bool,
     }
 
@@ -738,7 +738,8 @@ mod tests {
             &self,
             _graph_fname: &str,
             batch_id: &str,
-        ) -> Result<Vec<medulla_types::MutationOutboxRecord>, String> {
+        ) -> Result<Vec<medulla_mutation_types::mutation_scope::MutationOutboxRecord>, String>
+        {
             Ok((self.row.batch_id == batch_id)
                 .then(|| self.row.clone())
                 .into_iter()
@@ -762,18 +763,18 @@ mod tests {
     async fn dead_letter_requires_exact_ordered_operator_rewind() {
         let source = snapshot(1, 1);
         let intent = super::super::enrichment::intent_for_snapshot(source).unwrap();
-        let identity = medulla_types::MutationScopeIdentity::fixed_graph(
+        let identity = medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_graph(
             "tenant",
             "code",
-            medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION,
+            medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION,
         )
         .unwrap();
-        let row = medulla_types::MutationOutboxRecord {
-            schema_version: medulla_types::MUTATION_BATCH_VERSION,
+        let row = medulla_mutation_types::mutation_scope::MutationOutboxRecord {
+            schema_version: medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION,
             batch_id: "source-batch".into(),
             ordinal: 0,
             identity,
-            committed_version: medulla_types::CommittedVersion::Graph {
+            committed_version: medulla_mutation_types::mutation_scope::CommittedVersion::Graph {
                 source: 0,
                 target: 1,
             },
@@ -807,13 +808,14 @@ mod tests {
         forged.sequence += 1;
         assert!(classify_dead_letter(&live, "code", &forged).await.is_err());
         let wrong_graph = DeadLetterProbe {
-            row: medulla_types::MutationOutboxRecord {
-                identity: medulla_types::MutationScopeIdentity::fixed_graph(
-                    "tenant",
-                    "other-graph",
-                    medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION,
-                )
-                .unwrap(),
+            row: medulla_mutation_types::mutation_scope::MutationOutboxRecord {
+                identity:
+                    medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_graph(
+                        "tenant",
+                        "other-graph",
+                        medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION,
+                    )
+                    .unwrap(),
                 ..live.row
             },
             superseded: false,

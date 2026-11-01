@@ -393,7 +393,7 @@ fn admit_txn_saga(
             caller,
             attempt_nonce,
             crate::server::api::admin::saga::AdminSagaPayload {
-                domain: medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
+                domain: medulla_mutation_types::mutation_scope::DurabilityDomain::ControlPlane,
                 batch_id: &batch_id,
                 event_type: "transaction_recovery_plan",
                 payload_digest: &payload_digest,
@@ -442,7 +442,7 @@ fn retry_txn_receipt(
             Some(caller),
             Some(attempt_nonce),
             crate::server::api::admin::saga::AdminSagaPayload {
-                domain: medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
+                domain: medulla_mutation_types::mutation_scope::DurabilityDomain::ControlPlane,
                 batch_id: &saga.batch.batch_id,
                 event_type: "transaction_recovery_plan",
                 payload_digest: &payload_digest,

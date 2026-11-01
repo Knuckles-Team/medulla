@@ -6,19 +6,24 @@ use serde::de::DeserializeSeed;
 use serde::ser::SerializeMap;
 use serde::Serialize;
 
-use crate::authority::{
-    AdmissionOutcome, AuthorityContext, AuthorityScope, DecisionOutcome, EffectState,
-    IngressSurface, NonceReplayKey, Operation, OperationReplayIdentity, ReplayReceipt,
-    ReplayStatus, ScopeKind, SignedAuthorityEnvelopeEvidence, VerificationStatus,
-    VerifiedAuthority, AUTHORITY_CONTEXT_SCHEMA_V1, AUTHORITY_PROTOCOL_V1,
-};
-use crate::contract::{
-    ActorId, AudienceId, BoundedVec, Digest256, Ed25519Signature, IdempotencyKey, MethodId, Nonce,
-    OpaqueId, PolicyRevision, ProtocolId, RecordBytes, ResourceId, SchemaId, TenantId,
-    UtcUnixNanos, MAX_MUTATION_EFFECTS, MAX_MUTATION_ENVELOPE_BYTES, MAX_OUTBOX_INTENTS,
-    MAX_SCOPE_COMPONENTS,
-};
 use crate::outbox::{OutboxHeader, OutboxIntent};
+use medulla_types::{
+    authority::AdmissionOutcome, authority::AuthorityContext, authority::AuthorityScope,
+    authority::DecisionOutcome, authority::EffectState, authority::IngressSurface,
+    authority::NonceReplayKey, authority::Operation, authority::OperationReplayIdentity,
+    authority::ReplayReceipt, authority::ReplayStatus, authority::ScopeKind,
+    authority::SignedAuthorityEnvelopeEvidence, authority::VerificationStatus,
+    authority::VerifiedAuthority, authority::AUTHORITY_CONTEXT_SCHEMA_V1,
+    authority::AUTHORITY_PROTOCOL_V1,
+};
+use medulla_types::{
+    contract::ActorId, contract::AudienceId, contract::BoundedVec, contract::Digest256,
+    contract::Ed25519Signature, contract::IdempotencyKey, contract::MethodId, contract::Nonce,
+    contract::OpaqueId, contract::PolicyRevision, contract::ProtocolId, contract::RecordBytes,
+    contract::ResourceId, contract::SchemaId, contract::TenantId, contract::UtcUnixNanos,
+    contract::MAX_MUTATION_EFFECTS, contract::MAX_MUTATION_ENVELOPE_BYTES,
+    contract::MAX_OUTBOX_INTENTS, contract::MAX_SCOPE_COMPONENTS,
+};
 
 fn digest(byte: u8) -> Digest256 {
     Digest256::from_bytes([byte; 32])
@@ -83,7 +88,7 @@ fn authority_for(
         audience: AudienceId::new("eg").unwrap(),
         tenant: TenantId::new("tenant:a").unwrap(),
         authority_scope: scope(),
-        purpose_kind: crate::authority::PurposeKind::new("graph_write").unwrap(),
+        purpose_kind: medulla_types::authority::PurposeKind::new("graph_write").unwrap(),
         purpose_resource: Some(scope().scope_id),
         operation: Operation::new("mutation").unwrap(),
         policy_revision: PolicyRevision::new("policy:1").unwrap(),
@@ -308,8 +313,11 @@ fn four_thousand_ninety_six_small_effects_round_trip_under_budget() {
 fn checked_payload_rejects_aggregate_over_sixteen_mib() {
     let effects = (0..16_u32)
         .map(|ordinal| {
-            let payload =
-                RecordBytes::new(vec![ordinal as u8; crate::contract::MAX_RECORD_BYTES]).unwrap();
+            let payload = RecordBytes::new(vec![
+                ordinal as u8;
+                medulla_types::contract::MAX_RECORD_BYTES
+            ])
+            .unwrap();
             MutationEffect {
                 ordinal,
                 target: RecordTarget {
@@ -369,8 +377,8 @@ fn egress_destination_must_match_the_authority_decision() {
 
 #[test]
 fn record_payload_is_bounded_before_envelope_admission() {
-    assert!(RecordBytes::new(vec![0; crate::contract::MAX_RECORD_BYTES]).is_ok());
-    assert!(RecordBytes::new(vec![0; crate::contract::MAX_RECORD_BYTES + 1]).is_err());
+    assert!(RecordBytes::new(vec![0; medulla_types::contract::MAX_RECORD_BYTES]).is_ok());
+    assert!(RecordBytes::new(vec![0; medulla_types::contract::MAX_RECORD_BYTES + 1]).is_err());
 }
 
 #[test]

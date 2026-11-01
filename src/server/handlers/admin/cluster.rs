@@ -13,8 +13,8 @@ use crate::server::persistence::rebalance::{
     plan_rebalance, shard_loads_from_catalog, shard_loads_from_graph_loads,
 };
 use crate::server::state::ServerState;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_scope::DurabilityDomain;
 
 use super::backup::{
     cleanup_backup_stage, cleanup_restore_retry_stage, create_private_directory, now_secs,

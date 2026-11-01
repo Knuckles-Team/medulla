@@ -3,9 +3,11 @@
 //! rolled back if the write fails -- the elevation discipline.
 #![cfg(feature = "security")]
 
-use medulla_types::governed_change::{
-    GovernedActor, GovernedApproval, GovernedChange, GovernedConsumption, GovernedLedger,
-    GovernedProposal, GovernedRefusal,
+use medulla_mutation_types::{
+    governed_change::GovernedActor, governed_change::GovernedApproval,
+    governed_change::GovernedChange, governed_change::GovernedConsumption,
+    governed_change::GovernedLedger, governed_change::GovernedProposal,
+    governed_change::GovernedRefusal,
 };
 
 use super::IsolationLayer;

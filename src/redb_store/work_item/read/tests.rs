@@ -250,7 +250,9 @@ fn a_bound_event_read_refuses_a_committed_batch_without_its_event() {
 // spec: MEDULLA-DURABLE-KERNEL-R028.2
 #[test]
 fn present_event_payload_corruption_is_refused() {
-    use medulla_types::{MutationOutboxIntent, MutationOutboxRecord};
+    use medulla_mutation_types::{
+        mutation_scope::MutationOutboxIntent, mutation_scope::MutationOutboxRecord,
+    };
     use sha2::{Digest, Sha256};
     let temp = open("corrupt-terminal-event");
     write_rows(

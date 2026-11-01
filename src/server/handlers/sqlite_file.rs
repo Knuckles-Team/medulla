@@ -34,6 +34,8 @@ use std::path::{Path, PathBuf};
 use crate::mutation_batch::MutationBatch;
 use crate::protocol::{Method, Response, ResultPayload};
 use crate::server::access::CarrierAuthority;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_protocol_types::result_contract::storage as results;
 use medulla_protocol_types::{
     storage_wire::SqliteExportDestination, storage_wire::SqliteExportReport,
@@ -41,8 +43,6 @@ use medulla_protocol_types::{
     storage_wire::SqliteTableRows,
 };
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::MutationSurface;
 
 mod transfer_fs;
 

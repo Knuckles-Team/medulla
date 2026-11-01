@@ -22,12 +22,13 @@ sha2 = "0.10"
 hex = "0.4"
 strum = { version = "0.28", features = ["derive"], optional = true }
 schemars = { version = "1.2.3", optional = true }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
 
 [features]
-wire-contract = ["finance", "datascience", "mining", "graphlearn", "ml-pipeline", "query", "compute-dist", "medulla-types/wire-contract"]
-wire-complete = ["wire-contract", "medulla-types/wire-complete"]
+wire-contract = ["finance", "datascience", "mining", "graphlearn", "ml-pipeline", "query", "compute-dist", "medulla-types/wire-contract", "medulla-mutation-types/wire-contract"]
+wire-complete = ["wire-contract", "medulla-types/wire-complete", "medulla-mutation-types/wire-complete"]
 compute-dist = ["medulla-types/compute-dist"]
-contract-schema = ["dep:schemars", "medulla-types/contract-schema"]
+contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-mutation-types/contract-schema"]
 datascience = ["medulla-types/datascience"]
 finance = ["medulla-types/finance"]
 graphlearn = ["datascience", "medulla-types/graphlearn"]

@@ -71,7 +71,7 @@ fn authority_batch(
 ) -> medulla_protocol_types::mutation_batch::MutationBatch {
     let batch_id = format!("rbac:{target}:{digest}");
     medulla_protocol_types::mutation_batch::MutationBatch {
-        schema_version: medulla_types::MUTATION_BATCH_VERSION,
+        schema_version: medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION,
         batch_id: batch_id.clone(),
         // An RBAC authority write has no caller: it publishes the whole
         // policy/identity/bootstrap image the process already authorized, so it
@@ -95,19 +95,21 @@ fn authority_batch(
         authoritative_state: None,
         operations: vec![medulla_protocol_types::mutation_batch::MutationOperation {
             ordinal: 0,
-            surface: medulla_types::MutationSurface::Other,
-            domain: medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
+            surface: medulla_mutation_types::mutation_scope::MutationSurface::Other,
+            domain: medulla_mutation_types::mutation_scope::DurabilityDomain::ControlPlane,
             method: medulla_protocol_types::protocol::Method::ApplyMutation {
                 event_type: "security_state_snapshot".to_string(),
                 query: format!("sha256:{digest}"),
             },
         }],
-        outbox: vec![medulla_types::MutationOutboxIntent {
-            topic: "engine.security.committed".to_string(),
-            key: batch_id,
-            payload: digest.as_bytes().to_vec(),
-            headers: BTreeMap::new(),
-        }],
+        outbox: vec![
+            medulla_mutation_types::mutation_scope::MutationOutboxIntent {
+                topic: "engine.security.committed".to_string(),
+                key: batch_id,
+                payload: digest.as_bytes().to_vec(),
+                headers: BTreeMap::new(),
+            },
+        ],
         created_at_ms: 0,
     }
 }

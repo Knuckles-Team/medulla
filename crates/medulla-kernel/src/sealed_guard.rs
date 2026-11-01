@@ -23,7 +23,7 @@
 
 use std::borrow::Cow;
 
-use medulla_types::sealed_record::{sealed_class, SealedClass};
+use medulla_mutation_types::{sealed_record::sealed_class, sealed_record::SealedClass};
 
 use crate::graph::GraphCore;
 use crate::protocol::Method;

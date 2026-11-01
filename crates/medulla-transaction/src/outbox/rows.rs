@@ -22,8 +22,10 @@
 //! lease, a cursor or a consumer-state row can be written, expired and
 //! rewritten without touching what the batch is.
 
+use medulla_mutation_types::{
+    mutation_scope::MutationScopeIdentity, mutation_scope::MUTATION_BATCH_VERSION,
+};
 use medulla_storage::{decode_ledger_record, encode_bounded};
-use medulla_types::{MutationScopeIdentity, MUTATION_BATCH_VERSION};
 use serde::{Deserialize, Serialize};
 
 /// Greatest `&str` key component in redb's byte order.

@@ -11,4 +11,4 @@ pub use request::*;
 #[cfg(test)]
 mod identity_tests;
 
-use medulla_types::mutation_scope::*;
+use medulla_mutation_types::mutation_scope::*;

@@ -1,8 +1,10 @@
 use super::envelope::{MutationPayload, MutationRequestEnvelope, MutationRequestEnvelopeParts};
 use super::payload::{validate_payload_byte_budget, validate_payload_shape_and_scope};
 use super::MUTATION_ENVELOPE_SCHEMA_V1;
-use crate::contract::{Digest256, ResourceId, MAX_MUTATION_ENVELOPE_BYTES};
-use crate::msgpack::{validate_single_value, MsgpackLimits};
+use medulla_types::{
+    contract::Digest256, contract::ResourceId, contract::MAX_MUTATION_ENVELOPE_BYTES,
+};
+use medulla_types::{msgpack::validate_single_value, msgpack::MsgpackLimits};
 
 impl MutationRequestEnvelope {
     /// Builds a structurally checked untrusted envelope without a

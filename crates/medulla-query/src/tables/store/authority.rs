@@ -17,6 +17,11 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::{Arc, RwLock};
 
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION;
+use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::mutation_batch::MutationBatchRecord;
 use medulla_protocol_types::mutation_batch::MutationEnvelope;
@@ -28,11 +33,6 @@ use medulla_storage::{
     SqlOwner, StorageKernel, SQL_SOURCE_AUTHORITY,
 };
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite, Begin, MutationKernel};
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::MutationScopeIdentity;
-use medulla_types::mutation_scope::MutationSurface;
-use medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION;
-use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
 use redb::ReadableTable;
 
 /// Operator-facing identity of the ONE physical SQL owner file. It names the

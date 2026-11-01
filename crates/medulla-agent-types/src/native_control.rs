@@ -12,11 +12,11 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use medulla_result_types::epistemic_operations::RequestContext;
-use medulla_types::{
+use medulla_mutation_types::{
     capacity_lease::CapacityCell, capacity_lease::CapacityLease,
     capacity_lease::CapacityResourceClass, capacity_lease::LeasePriority,
 };
+use medulla_result_types::epistemic_operations::RequestContext;
 
 pub const NATIVE_CONTROL_SCHEMA_VERSION: u16 = 1;
 pub const MAX_CAPACITY_DEMANDS: usize = 16;
@@ -226,7 +226,7 @@ pub struct CapacityCellUpdateResult {
 pub struct CapacityThrottleRequest {
     pub schema_version: NativeControlSchemaVersion,
     pub cell_id: String,
-    pub sample: medulla_types::capacity_throttle::ErrorBudgetSample,
+    pub sample: medulla_mutation_types::capacity_throttle::ErrorBudgetSample,
     /// Authority-owned: stamped by the engine, never trusted from a caller.
     pub now_ms: u64,
 }
@@ -250,7 +250,7 @@ impl CapacityThrottleRequest {
 pub struct CapacityThrottleResult {
     pub schema_version: NativeControlSchemaVersion,
     pub cell: CapacityCell,
-    pub action: medulla_types::capacity_throttle::ThrottleActionRecord,
+    pub action: medulla_mutation_types::capacity_throttle::ThrottleActionRecord,
 }
 
 /// Expected conversation head for one newly admitted run. Revision zero creates

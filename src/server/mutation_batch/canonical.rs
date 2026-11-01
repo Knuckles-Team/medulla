@@ -1,8 +1,8 @@
 //! Canonical mutation classification and one-to-one method lowering.
 
 use crate::protocol::{CypherMode, Method, MethodWriteFamily};
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::MutationSurface;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationSurface;
 
 /// Exhaustive durability-domain classifier for mutating methods accepted by a
 /// batch adapter. Public mutation inventory tests ensure no mutating method lacks

@@ -15,14 +15,14 @@ use crate::replay::{
 };
 use crate::tables::ledger_table_names;
 use crate::{commit, saga, Begin, SagaBegin};
+use medulla_mutation_types::mutation::MutationReceipt;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use medulla_protocol_types::{mutation_batch::MutationBatch, mutation_batch::MutationBatchRecord};
 use medulla_storage::{
     declared_table_names, MutationOwnerAuthority, OwnedStoreHandle, OwnerDomain, OwnerLayout,
     OwnerPayloadRetirement, StorageKernel,
 };
 use medulla_types::authority::{NonceReplayKey, OperationReplayIdentity};
-use medulla_types::mutation::MutationReceipt;
-use medulla_types::MutationScopeIdentity;
 use std::collections::BTreeSet;
 
 mod outbox;
@@ -504,7 +504,7 @@ impl MutationKernel {
         Option<(
             MutationBatchRecord,
             medulla_storage::MutationClass,
-            Vec<medulla_types::MutationOutboxRecord>,
+            Vec<medulla_mutation_types::mutation_scope::MutationOutboxRecord>,
         )>,
         String,
     > {

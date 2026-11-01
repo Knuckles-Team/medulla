@@ -23,6 +23,9 @@ use medulla_agent_types::{
     agent_library::AGENT_LIBRARY_OUTBOX_SCHEMA_VERSION,
     agent_library::AGENT_LIBRARY_RESULT_SCHEMA_ID,
 };
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::{mutation::MutationReceipt, mutation::MutationResult};
 use medulla_protocol_types::mutation_batch::BatchContent;
 use medulla_protocol_types::mutation_batch::CompiledEnvelope;
 use medulla_protocol_types::mutation_batch::CompiledOperation;
@@ -34,9 +37,6 @@ use medulla_storage::{
     OwnedStoreHandle, PhysicalStoreIdentity, RecordedOperation, ScopedRead, StorageKernel,
 };
 use medulla_transaction::{AdmittedOwnerWrite, MutationKernel};
-use medulla_types::mutation::{MutationReceipt, MutationResult};
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::MutationOutboxIntent;
 
 use crate::server::api::persistence::BundledStoreSource;
 
@@ -103,12 +103,13 @@ impl AgentLibraryStore {
         }?;
         let (kernel, authority) = kernel.into_read_and_mutation_authority()?;
         let mutations = MutationKernel::new(authority);
-        let bootstrap_identity = medulla_types::MutationScopeIdentity::fixed_native(
-            AGENT_LIBRARY_BOOTSTRAP_TENANT,
-            DurabilityDomain::ControlPlane,
-            AGENT_LIBRARY_BOOTSTRAP_RESOURCE,
-            AGENT_LIBRARY_SCOPE_INCARNATION,
-        )?;
+        let bootstrap_identity =
+            medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_native(
+                AGENT_LIBRARY_BOOTSTRAP_TENANT,
+                DurabilityDomain::ControlPlane,
+                AGENT_LIBRARY_BOOTSTRAP_RESOURCE,
+                AGENT_LIBRARY_SCOPE_INCARNATION,
+            )?;
         let bootstrap = bind_scope(&kernel, &bootstrap_identity)?;
         let serving_principal = bootstrap.principal().to_string();
         mutations.bootstrap_ledger(&bootstrap)?;
@@ -135,7 +136,7 @@ impl AgentLibraryStore {
         if let Some(handle) = self.scopes.lock().get(tenant_id) {
             return Ok(Arc::clone(handle));
         }
-        let identity = medulla_types::MutationScopeIdentity::fixed_native(
+        let identity = medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_native(
             tenant_id,
             DurabilityDomain::ControlPlane,
             AGENT_LIBRARY_SCOPE_RESOURCE,
@@ -323,7 +324,7 @@ fn validate_status_identity(
 
 fn bind_scope(
     kernel: &StorageKernel,
-    identity: &medulla_types::MutationScopeIdentity,
+    identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
 ) -> Result<Arc<OwnedStoreHandle<medulla_storage::AgentLibraryOwner>>, String> {
     let authority = medulla_kernel::store_authority::process_authority();
     let grant = kernel.authenticate_scope::<medulla_storage::AgentLibraryOwner>(

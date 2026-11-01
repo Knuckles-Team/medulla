@@ -17,11 +17,11 @@ use medulla_index_types::{
     semantic_index::SemanticStageOutcome, semantic_index::SemanticStagePredecessor,
     semantic_index::SemanticStageScope, semantic_index::SemanticStageTransition,
 };
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use medulla_storage::{SemanticIndexOwner, SEMANTIC_SOURCE_PROGRESS};
 use medulla_transaction::{AdmittedMutation, OutboxClaimBudget, OutboxClaimOutcome};
-use medulla_types::mutation_scope::MutationOutboxIntent;
-use medulla_types::mutation_scope::MutationOutboxLease;
-use medulla_types::MutationScopeIdentity;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 

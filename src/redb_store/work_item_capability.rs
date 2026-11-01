@@ -1095,10 +1095,10 @@ mod tests {
     use crate::mutation_batch::MutationBatch;
     use crate::protocol::Method;
     use crate::redb_store::shard::Shard;
-    use medulla_types::mutation_scope::IncarnationId;
-    use medulla_types::mutation_scope::LogicalName;
-    use medulla_types::mutation_scope::MutationScopeIdentity;
-    use medulla_types::mutation_scope::ScopeTenantId;
+    use medulla_mutation_types::mutation_scope::IncarnationId;
+    use medulla_mutation_types::mutation_scope::LogicalName;
+    use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+    use medulla_mutation_types::mutation_scope::ScopeTenantId;
     use std::path::{Path, PathBuf};
 
     /// One process-unique admission id per ATTEMPT, exactly as the production

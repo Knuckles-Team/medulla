@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use super::budget::MutationBudgetCharge;
 use super::targets::RecordTarget;
 use super::EFFECT_FIXED_BUDGET;
-use crate::authority::AuthorityScope;
-use crate::contract::{Digest256, RecordBytes, TenantId};
+use medulla_types::authority::AuthorityScope;
+use medulla_types::{contract::Digest256, contract::RecordBytes, contract::TenantId};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum RecordMutation {

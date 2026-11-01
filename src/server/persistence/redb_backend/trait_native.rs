@@ -147,7 +147,7 @@ macro_rules! persistence_native {
         &self,
         graph_fname: &str,
         cells: &[String],
-        priority: medulla_types::capacity_lease::LeasePriority,
+        priority: medulla_mutation_types::capacity_lease::LeasePriority,
     ) -> Result<Vec<medulla_agent_types::agent_topology::CapacityHeadroom>, String> {
         let graph = graph_fname.to_owned();
         let cells = cells.to_vec();

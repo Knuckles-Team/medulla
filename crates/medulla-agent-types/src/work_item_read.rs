@@ -258,7 +258,7 @@ pub enum TerminalEventRead {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct CommittedTerminalEvent {
     pub tenant: String,
-    pub scope: medulla_types::mutation_scope::MutationScopeIdentity,
+    pub scope: medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     pub batch_id: String,
     pub commit_sequence: u64,
     pub ordinal: u32,

@@ -21,8 +21,8 @@ mod tests;
 fn pending_repository_intent(
     snapshot: crate::parser::enrichment_snapshot::EligibleSnapshot,
     topic: &str,
-) -> medulla_types::MutationOutboxIntent {
-    medulla_types::MutationOutboxIntent {
+) -> medulla_mutation_types::mutation_scope::MutationOutboxIntent {
+    medulla_mutation_types::mutation_scope::MutationOutboxIntent {
         topic: topic.into(),
         key: snapshot.source_envelope.clone(),
         payload: rmp_serde::to_vec_named(&serde_json::json!({

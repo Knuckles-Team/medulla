@@ -122,7 +122,7 @@ impl MutationBatch {
             input.revision_idempotency_key,
         )?;
         let batch = Self {
-            schema_version: medulla_types::mutation_scope::MUTATION_BATCH_VERSION,
+            schema_version: medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION,
             batch_id: input.replacement_batch_id.to_string(),
             envelope,
             identity,
@@ -178,7 +178,7 @@ impl MutationBatch {
     ) -> Self {
         let (operations, outbox) = content;
         Self {
-            schema_version: medulla_types::mutation_scope::MUTATION_BATCH_VERSION,
+            schema_version: medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION,
             batch_id: batch_id.to_string(),
             envelope,
             identity,

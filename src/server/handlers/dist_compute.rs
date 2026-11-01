@@ -309,7 +309,7 @@ async fn begin_control_saga(
         req_id,
         caller,
         method,
-        medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::ControlPlane,
     )?;
     Ok(ControlSaga { backend, saga })
 }

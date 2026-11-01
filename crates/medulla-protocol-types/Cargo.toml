@@ -27,15 +27,16 @@ medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-index-types = { path = "../medulla-index-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
 
 [features]
-wire-contract = ["finance", "datascience", "mining", "graphlearn", "ml-pipeline", "epistemic", "query", "graphql", "broker", "blob", "kv", "sqlite-file", "streaming", "cost", "rdf", "sparql", "owl", "obda", "wasm-udf", "compute-dist", "matview", "security", "federation", "medulla-types/wire-contract", "medulla-index-types/wire-contract", "medulla-result-types/wire-contract", "medulla-agent-types/wire-contract", "medulla-catalog-types/wire-contract", "medulla-decision-types/wire-contract"]
-wire-complete = ["wire-contract", "jobs", "statechart", "knowledge-batch", "modality-serving", "quantum", "asr-native", "viz", "medulla-types/wire-complete", "medulla-index-types/wire-complete", "medulla-result-types/wire-complete", "medulla-agent-types/wire-complete", "medulla-catalog-types/wire-complete", "medulla-decision-types/wire-complete"]
+wire-contract = ["finance", "datascience", "mining", "graphlearn", "ml-pipeline", "epistemic", "query", "graphql", "broker", "blob", "kv", "sqlite-file", "streaming", "cost", "rdf", "sparql", "owl", "obda", "wasm-udf", "compute-dist", "matview", "security", "federation", "medulla-types/wire-contract", "medulla-mutation-types/wire-contract", "medulla-index-types/wire-contract", "medulla-result-types/wire-contract", "medulla-agent-types/wire-contract", "medulla-catalog-types/wire-contract", "medulla-decision-types/wire-contract"]
+wire-complete = ["wire-contract", "jobs", "statechart", "knowledge-batch", "modality-serving", "quantum", "asr-native", "viz", "medulla-types/wire-complete", "medulla-mutation-types/wire-complete", "medulla-index-types/wire-complete", "medulla-result-types/wire-complete", "medulla-agent-types/wire-complete", "medulla-catalog-types/wire-complete", "medulla-decision-types/wire-complete"]
 asr-native = ["medulla-types/asr-native"]
 blob = ["medulla-types/blob"]
 broker = ["medulla-types/broker"]
 compute-dist = ["medulla-types/compute-dist", "medulla-result-types/compute-dist"]
-contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-index-types/contract-schema", "medulla-result-types/contract-schema", "medulla-agent-types/contract-schema", "medulla-catalog-types/contract-schema", "medulla-decision-types/contract-schema"]
+contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-mutation-types/contract-schema", "medulla-index-types/contract-schema", "medulla-result-types/contract-schema", "medulla-agent-types/contract-schema", "medulla-catalog-types/contract-schema", "medulla-decision-types/contract-schema"]
 cost = ["medulla-types/cost"]
 datascience = ["medulla-types/datascience", "medulla-result-types/datascience"]
 epistemic = ["query", "medulla-types/epistemic"]

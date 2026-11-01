@@ -8,10 +8,10 @@ use super::*;
 use crate::redb_store::resource::*;
 use crate::redb_store::shard::{Shard, ShardWrite};
 use medulla_kernel::test_rendezvous::{join_bounded, meet};
+use medulla_mutation_types::mutation_scope::IncarnationId;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::ScopeTenantId;
 use medulla_storage::{GraphShardOwner, ScopedRead};
-use medulla_types::mutation_scope::IncarnationId;
-use medulla_types::mutation_scope::MutationScopeIdentity;
-use medulla_types::mutation_scope::ScopeTenantId;
 
 fn host() -> DurableResourceHost {
     DurableResourceHost {
@@ -424,7 +424,10 @@ fn ledger_receipt(
 
 /// Every outbox row of one batch of `graph-a`'s scope, from the kernel ledger
 /// that replaced the shard's private `mutation_outbox` table.
-fn ledger_outbox(shard: &Shard, batch_id: &str) -> Vec<medulla_types::MutationOutboxRecord> {
+fn ledger_outbox(
+    shard: &Shard,
+    batch_id: &str,
+) -> Vec<medulla_mutation_types::mutation_scope::MutationOutboxRecord> {
     let read = resource_read(shard, "graph-a");
     medulla_transaction::read_outbox(&read, batch_id).expect("read kernel ledger outbox")
 }

@@ -222,11 +222,12 @@ pub(crate) fn validate_job_publication_commit(
     if batch.batch_id != prepared.batch_id || batch.idempotency_key() != prepared.batch_id {
         return Err("job publication receipt has the wrong batch identity".to_string());
     }
-    let expected_scope = medulla_types::MutationScopeIdentity::fixed_graph(
-        &prepared.target_graph,
-        &prepared.target_graph,
-        crate::server::mutation_batch::COMPILED_BATCH_INCARNATION,
-    )?;
+    let expected_scope =
+        medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_graph(
+            &prepared.target_graph,
+            &prepared.target_graph,
+            crate::server::mutation_batch::COMPILED_BATCH_INCARNATION,
+        )?;
     if batch.identity != expected_scope
         || committed.record.identity != expected_scope
         || committed.identity != expected_scope
@@ -705,10 +706,11 @@ mod publication_receipt_tests {
                 batch,
                 identity: identity.clone(),
                 status: crate::mutation_batch::MutationBatchStatus::Committed,
-                committed_version: medulla_types::mutation_scope::CommittedVersion::Graph {
-                    source: 0,
-                    target: 1,
-                },
+                committed_version:
+                    medulla_mutation_types::mutation_scope::CommittedVersion::Graph {
+                        source: 0,
+                        target: 1,
+                    },
                 result_msgpack: Some(rmp_serde::to_vec_named(&result).unwrap()),
                 committed_at_ms: 17,
             },
@@ -741,24 +743,26 @@ mod publication_receipt_tests {
         );
         assert!(validate_job_publication_commit(&prepared, &wrong_result).is_err());
 
-        let wrong_tenant = medulla_types::MutationScopeIdentity::fixed_graph(
-            "other-publication-tenant",
-            &prepared.target_graph,
-            crate::server::mutation_batch::COMPILED_BATCH_INCARNATION,
-        )
-        .unwrap();
+        let wrong_tenant =
+            medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_graph(
+                "other-publication-tenant",
+                &prepared.target_graph,
+                crate::server::mutation_batch::COMPILED_BATCH_INCARNATION,
+            )
+            .unwrap();
         let mut wrong_tenant_receipt = receipt_for(&prepared);
         wrong_tenant_receipt.record.batch.identity = wrong_tenant.clone();
         wrong_tenant_receipt.record.identity = wrong_tenant.clone();
         wrong_tenant_receipt.identity = wrong_tenant;
         assert!(validate_job_publication_commit(&prepared, &wrong_tenant_receipt).is_err());
 
-        let wrong_incarnation = medulla_types::MutationScopeIdentity::fixed_graph(
-            &prepared.target_graph,
-            &prepared.target_graph,
-            "epistemic-graph:mutation-batch-compiler:wrong-incarnation",
-        )
-        .unwrap();
+        let wrong_incarnation =
+            medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_graph(
+                &prepared.target_graph,
+                &prepared.target_graph,
+                "epistemic-graph:mutation-batch-compiler:wrong-incarnation",
+            )
+            .unwrap();
         let mut wrong_incarnation_receipt = receipt_for(&prepared);
         wrong_incarnation_receipt.record.batch.identity = wrong_incarnation.clone();
         wrong_incarnation_receipt.record.identity = wrong_incarnation.clone();

@@ -361,7 +361,7 @@ fn identity_payload_digest(
             expected_graph_version: Some(0),
             fencing_token: None,
             created_at_ms: 1,
-            default_surface: medulla_types::mutation_scope::MutationSurface::Job,
+            default_surface: medulla_mutation_types::mutation_scope::MutationSurface::Job,
             authoritative_state: None,
         },
         vec![method],

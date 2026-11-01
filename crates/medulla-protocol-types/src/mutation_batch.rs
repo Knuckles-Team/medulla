@@ -14,7 +14,7 @@ pub use fanout::{ShardFanoutOutcome, ShardFanoutReport, MAX_FANOUT_SUB_BATCHES};
 pub use fault::apply_certification_fault;
 pub use model::*;
 
-use medulla_types::mutation_scope::*;
+use medulla_mutation_types::mutation_scope::*;
 
 #[cfg(test)]
 pub(crate) mod tests {

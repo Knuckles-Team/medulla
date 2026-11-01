@@ -206,7 +206,7 @@ $($variants)*
     /// tenant, and the engine stamps `retired_by` from the verified caller. See
     /// [`crate::sealed_record`].
     RetireSealedRecord {
-        request: medulla_types::sealed_record::RetireSealedRecordRequest,
+        request: medulla_mutation_types::sealed_record::RetireSealedRecordRequest,
     },
 
     // ── Web page ingest (MEDULLA-UNIFIED-DATA-PLANE-R651.7, MEDULLA-DECISION-ENGINE-R802) ──

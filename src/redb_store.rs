@@ -56,7 +56,7 @@ where
 /// binding, but retain their own actor, attempt time, and stable identity.
 #[cfg(test)]
 pub(crate) struct ControlFixtureBatch {
-    pub(crate) identity: medulla_types::MutationScopeIdentity,
+    pub(crate) identity: medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     pub(crate) batch_id: String,
     pub(crate) actor: String,
     pub(crate) request_id: u64,
@@ -935,6 +935,14 @@ mod mutation_batch_tests {
     };
     use crate::mutation_batch::MutationOperation;
     use medulla_kernel::test_rendezvous::{join_bounded, meet};
+    use medulla_mutation_types::mutation_scope::DurabilityDomain;
+    use medulla_mutation_types::mutation_scope::IncarnationId;
+    use medulla_mutation_types::mutation_scope::LogicalName;
+    use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+    use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+    use medulla_mutation_types::mutation_scope::MutationSurface;
+    use medulla_mutation_types::mutation_scope::ScopeTenantId;
+    use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
     use medulla_result_types::{
         outcome_bundle::CommitOutcomeBundle, outcome_bundle::OutcomeCompleteness,
         outcome_bundle::ReceiptNode, outcome_bundle::ReceiptNodeKind, outcome_bundle::RunEvent,
@@ -942,14 +950,6 @@ mod mutation_batch_tests {
         outcome_bundle::RUN_EVENT_OUTBOX_TOPIC,
     };
     use medulla_transaction::OutboxClaimBudget;
-    use medulla_types::mutation_scope::DurabilityDomain;
-    use medulla_types::mutation_scope::IncarnationId;
-    use medulla_types::mutation_scope::LogicalName;
-    use medulla_types::mutation_scope::MutationOutboxIntent;
-    use medulla_types::mutation_scope::MutationScopeIdentity;
-    use medulla_types::mutation_scope::MutationSurface;
-    use medulla_types::mutation_scope::ScopeTenantId;
-    use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
     use sha2::{Digest, Sha256};
 
     fn temp_path(tag: &str) -> std::path::PathBuf {
@@ -5746,7 +5746,7 @@ mod mutation_batch_tests {
         batch_id: &str,
         node_id: &str,
         event: &str,
-    ) -> Vec<medulla_types::mutation_scope::MutationOutboxRecord> {
+    ) -> Vec<medulla_mutation_types::mutation_scope::MutationOutboxRecord> {
         let receipt = read_mutation_batch_for_graph(shard, "graph-a", batch_id)
             .unwrap()
             .expect("the committed envelope must leave one durable kernel receipt");

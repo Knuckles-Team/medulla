@@ -21,11 +21,11 @@
 
 use crate::admitted::AdmittedMutation;
 use crate::Begin;
+use medulla_mutation_types::mutation_scope::MutationScope;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::mutation_batch::VersionExpectation;
 use medulla_storage::{OwnedStoreHandle, OwnerDomain};
-use medulla_types::mutation_scope::MutationScope;
-use medulla_types::MutationScopeIdentity;
 
 /// One member of a scope group: the bound scope it is admitted for and the
 /// batch it applies. The batch envelope supplies its own mutation class.

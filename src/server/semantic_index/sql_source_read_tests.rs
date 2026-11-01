@@ -25,12 +25,12 @@ use medulla_index_types::{
     semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC, semantic_index::SEMANTIC_SQL_CATALOG_ID,
     semantic_index::SEMANTIC_SQL_SCHEMA_ID,
 };
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_result_types::row_predicate::CmpOp;
 use medulla_result_types::row_predicate::RowPredicate;
 use medulla_storage::{OwnerLayout, PhysicalStoreIdentity, ScopeGrantVerifier};
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::MutationSurface;
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 
@@ -46,7 +46,7 @@ impl ScopeGrantVerifier for ExactSemanticScopeVerifier {
         &self,
         _physical: &PhysicalStoreIdentity,
         layout: OwnerLayout,
-        identity: &medulla_types::MutationScopeIdentity,
+        identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
         _principal: &str,
         proof: &[u8],
     ) -> Result<(), String> {

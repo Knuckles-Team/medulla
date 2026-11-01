@@ -59,9 +59,9 @@ use crate::server::api::persistence::PersistenceBackend;
 #[cfg(test)]
 use crate::server::mutation_batch::compile::{compile_methods, CompileBatch};
 #[cfg(test)]
-use medulla_types::contract::Nonce;
+use medulla_mutation_types::mutation_scope::MutationSurface;
 #[cfg(test)]
-use medulla_types::mutation_scope::MutationSurface;
+use medulla_types::contract::Nonce;
 #[cfg(test)]
 use sha2::{Digest, Sha256};
 
@@ -87,7 +87,7 @@ mod internal_replay_tests {
             &self,
             _physical: &medulla_storage::PhysicalStoreIdentity,
             layout: medulla_storage::OwnerLayout,
-            _identity: &medulla_types::MutationScopeIdentity,
+            _identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
             principal: &str,
             proof: &[u8],
         ) -> Result<(), String> {

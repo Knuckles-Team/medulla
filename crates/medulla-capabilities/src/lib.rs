@@ -450,7 +450,7 @@ fn connector_pack_policy(
     )
 }
 
-fn write_back_policy(op: &medulla_types::write_back::WriteBackOp) -> MethodPolicy {
+fn write_back_policy(op: &medulla_mutation_types::write_back::WriteBackOp) -> MethodPolicy {
     native_owner_policy(
         op.is_mutation(),
         DurabilityDomain::ControlRedb,
@@ -473,7 +473,9 @@ fn decision_job_policy(mutates: bool, authz_action: &'static str) -> MethodPolic
 
 /// The mutation outbox's policy. `rewind` resets a durable cursor through
 /// bounded transactions, so it is a saga rather than one atomic write.
-fn mutation_outbox_policy(op: &medulla_types::mutation_outbox::MutationOutboxOp) -> MethodPolicy {
+fn mutation_outbox_policy(
+    op: &medulla_mutation_types::mutation_outbox::MutationOutboxOp,
+) -> MethodPolicy {
     native_owner_policy(
         op.is_mutation(),
         DurabilityDomain::ControlRedb,

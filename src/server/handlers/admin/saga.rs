@@ -10,8 +10,8 @@ use tokio::sync::RwLock;
 use crate::protocol::{Method, Response};
 use crate::server::api::admin::saga::{begin_admin_saga_with_nonce, finish_admin_saga, AdminSaga};
 use crate::server::state::ServerState;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_scope::DurabilityDomain;
 
 #[cfg(feature = "redb")]
 fn catalog_saga_replay_response(

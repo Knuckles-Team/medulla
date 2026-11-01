@@ -24,9 +24,9 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 use std::sync::Arc;
 
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use medulla_storage::{KvOwner, OwnedStoreHandle, ScopedRead, StorageKernel};
 use medulla_transaction::{AdmittedOwnerWrite, Begin, MaintenanceBatch, MutationKernel};
-use medulla_types::MutationScopeIdentity;
 use parking_lot::Mutex;
 use redb::{ReadableTable, ReadableTableMetadata, TableDefinition};
 use serde::{de::DeserializeOwned, Serialize};
@@ -37,9 +37,9 @@ use crate::mutation_batch::MutationBatch;
 use crate::protocol::{Method, Response, ResultPayload};
 use crate::server::access::CarrierAuthority;
 use crate::server::mutation_batch::COMPILED_BATCH_INCARNATION;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_protocol_types::result_contract::storage as results;
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::MutationSurface;
 
 /// The single KV table: `(namespace, key) -> value bytes`. Composite key so one file
 /// holds every namespace and a prefix scan of one is a contiguous range. `medulla-storage`
@@ -112,10 +112,11 @@ fn kv_bootstrap_identity() -> Result<MutationScopeIdentity, String> {
 /// `OwnerLayout::Kv` accepts) and the SAME `COMPILED_BATCH_INCARNATION`. The kernel's
 /// binding validator rejects any mismatch, so drift on any of the three fails closed.
 fn kv_scope_identity(tenant: &str, resource: &str) -> Result<MutationScopeIdentity, String> {
-    let tenant = medulla_types::ScopeTenantId::new(tenant)?;
-    let resource = medulla_types::LogicalName::new(resource)?;
-    let incarnation_id = medulla_types::IncarnationId::new(COMPILED_BATCH_INCARNATION)
-        .map_err(|e| format!("invalid KV scope incarnation id: {e}"))?;
+    let tenant = medulla_mutation_types::mutation_scope::ScopeTenantId::new(tenant)?;
+    let resource = medulla_mutation_types::mutation_scope::LogicalName::new(resource)?;
+    let incarnation_id =
+        medulla_mutation_types::mutation_scope::IncarnationId::new(COMPILED_BATCH_INCARNATION)
+            .map_err(|e| format!("invalid KV scope incarnation id: {e}"))?;
     MutationScopeIdentity::native(tenant, DurabilityDomain::KvStore, resource, incarnation_id)
 }
 

@@ -3,7 +3,7 @@ use std::fmt;
 use serde::de::{DeserializeSeed, Error as _, MapAccess, SeqAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 
-use crate::contract::{BoundedVec, MAX_MUTATION_ENVELOPE_BYTES};
+use medulla_types::{contract::BoundedVec, contract::MAX_MUTATION_ENVELOPE_BYTES};
 // complete 64-parent scope copies are < 200 KiB, fewer than 96 bounded 1 KiB
 // identifiers are < 96 KiB, and all fixed digests, map keys, markers, and
 // integers fit in the remaining > 700 KiB. Repeated collections are charged
@@ -184,7 +184,7 @@ impl<'de> Visitor<'de> for BorrowedRecordBytesVisitor {
     where
         E: serde::de::Error,
     {
-        if value.len() > crate::contract::MAX_RECORD_BYTES {
+        if value.len() > medulla_types::contract::MAX_RECORD_BYTES {
             return Err(E::custom("record exceeds the 1 MiB contract limit"));
         }
         Ok(value)

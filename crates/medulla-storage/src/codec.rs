@@ -3,8 +3,8 @@
 //! These helpers are serialization only. They carry no authority: a caller
 //! still needs a kernel-issued read or write capability to reach a transaction.
 
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use medulla_protocol_types::mutation_batch::MutationBatchRecord;
-use medulla_types::MutationOutboxRecord;
 use serde::Serialize;
 use std::io::Write;
 

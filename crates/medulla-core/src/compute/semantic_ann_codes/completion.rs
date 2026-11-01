@@ -28,10 +28,10 @@ use medulla_index_types::{
     semantic_index::SemanticStageIntent, semantic_index::SemanticStageOutcome,
     semantic_index::SemanticStageTransition,
 };
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_storage::{SemanticIndexOwner, SEMANTIC_SOURCE_PROGRESS, SEMANTIC_STAGES};
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite};
-use medulla_types::mutation_scope::MutationOutboxIntent;
-use medulla_types::mutation_scope::MutationOutboxLease;
 use redb::ReadableTable;
 
 /// One proved stage completion, recorded inside the admitted write.

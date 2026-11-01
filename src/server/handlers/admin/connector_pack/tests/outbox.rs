@@ -11,11 +11,13 @@ use medulla_agent_types::{
     agent_component::AgentComponentSearchPage, agent_component::AgentComponentSearchRequest,
 };
 use medulla_catalog_types::{connector_pack::PackAnnotations, connector_pack::PackEntryKind};
-use medulla_types::contract::ResourceId;
-use medulla_types::mutation_outbox::{
-    MutationOutboxOp, MutationOutboxStatusView, NativeOutboxScope, NativeOutboxStore,
-    OutboxRewindReceipt, OutboxTarget, RewindTarget,
+use medulla_mutation_types::{
+    mutation_outbox::MutationOutboxOp, mutation_outbox::MutationOutboxStatusView,
+    mutation_outbox::NativeOutboxScope, mutation_outbox::NativeOutboxStore,
+    mutation_outbox::OutboxRewindReceipt, mutation_outbox::OutboxTarget,
+    mutation_outbox::RewindTarget,
 };
+use medulla_types::contract::ResourceId;
 
 use super::{bind, build_pack, imported, ok, tool, Content, Served, ADMIN, TENANT};
 use crate::protocol::Method;

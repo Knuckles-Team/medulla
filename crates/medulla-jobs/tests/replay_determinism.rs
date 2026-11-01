@@ -24,16 +24,16 @@ use medulla_jobs::{
     AlgoVersion, AnalyticsJob, Checkpoint, InputSnapshotHandle, JobId, JobPolicy,
     ReproducibilityManifest, ResultColumn, SubmitSpec, TenantJobQuota, TypedJobResult,
 };
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::mutation_batch::MutationEnvelope;
 use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_protocol_types::mutation_batch::VersionExpectation;
 use medulla_protocol_types::protocol::Method;
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::MutationOutboxIntent;
-use medulla_types::mutation_scope::MutationScopeIdentity;
-use medulla_types::mutation_scope::MutationSurface;
-use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
 use proptest::prelude::*;
 use std::collections::BTreeMap;
 

@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::Digest256;
+use medulla_types::contract::Digest256;
 
 pub const WRITE_BACK_SCHEMA_VERSION: u16 = 1;
 pub const MAX_WRITE_BACK_FIELDS: usize = 256;

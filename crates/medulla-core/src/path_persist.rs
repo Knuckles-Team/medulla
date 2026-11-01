@@ -119,22 +119,22 @@ pub use redb_store::{PathPersistError, RedbPathIndexStore};
 /// which makes a retry a replay rather than an `IDEMPOTENCY_CONFLICT`.
 #[cfg(feature = "path-persist")]
 fn path_index_batch(
-    identity: &medulla_types::MutationScopeIdentity,
+    identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     principal: &str,
     expected_version: u64,
 ) -> Result<medulla_protocol_types::mutation_batch::MutationBatch, redb_store::PathPersistError> {
     let batch_id = format!("path-index-snapshot:v{expected_version}");
     let operation = medulla_protocol_types::mutation_batch::MutationOperation {
         ordinal: 0,
-        surface: medulla_types::MutationSurface::Other,
-        domain: medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
+        surface: medulla_mutation_types::mutation_scope::MutationSurface::Other,
+        domain: medulla_mutation_types::mutation_scope::DurabilityDomain::ControlPlane,
         method: medulla_protocol_types::protocol::Method::ApplyMutation {
             event_type: "path_index_snapshot".to_string(),
             query: batch_id.clone(),
         },
     };
     let batch = medulla_protocol_types::mutation_batch::MutationBatch {
-        schema_version: medulla_types::MUTATION_BATCH_VERSION,
+        schema_version: medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION,
         batch_id: batch_id.clone(),
         // A path-index snapshot has no caller, so it is a MAINTENANCE mutation
         // (RF-RULING-005): still ledgered, fenced and version-bumping, but with
@@ -192,10 +192,12 @@ mod redb_store {
     const PATH_SCOPE_RESOURCE: &str = "path-index";
     const PATH_SCOPE_INCARNATION: &str = "path-index:v1";
 
-    fn path_scope_identity() -> Result<medulla_types::MutationScopeIdentity, PathPersistError> {
-        medulla_types::MutationScopeIdentity::fixed_native(
+    fn path_scope_identity(
+    ) -> Result<medulla_mutation_types::mutation_scope::MutationScopeIdentity, PathPersistError>
+    {
+        medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_native(
             PATH_SCOPE_TENANT,
-            medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
+            medulla_mutation_types::mutation_scope::DurabilityDomain::ControlPlane,
             PATH_SCOPE_RESOURCE,
             PATH_SCOPE_INCARNATION,
         )

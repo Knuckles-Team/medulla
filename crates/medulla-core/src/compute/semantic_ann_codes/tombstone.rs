@@ -32,10 +32,10 @@ use medulla_index_types::{
     semantic_index::SemanticStageOutcome, semantic_index::SemanticStagePredecessor,
     semantic_index::SemanticStageTransition,
 };
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_storage::{SemanticIndexOwner, SEMANTIC_SOURCE_PROGRESS, SEMANTIC_STAGES};
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite};
-use medulla_types::mutation_scope::MutationOutboxIntent;
-use medulla_types::mutation_scope::MutationOutboxLease;
 use sha2::{Digest, Sha256};
 use std::cmp::Ordering;
 

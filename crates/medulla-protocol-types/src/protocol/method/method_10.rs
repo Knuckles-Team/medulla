@@ -122,7 +122,7 @@ $($variants)*
     /// EG-owned D18 source change sets and append-only write-back receipts.
     /// The engine records governed observations; it never calls a vendor API.
     WriteBack {
-        op: Box<medulla_types::write_back::WriteBackOp>,
+        op: Box<medulla_mutation_types::write_back::WriteBackOp>,
     },
 
     // ── Graph schema sources and the mutation outbox (X9, X10) ─────────────
@@ -145,7 +145,7 @@ $($variants)*
     },
     /// Operator view and in-order re-delivery of one owner's mutation outbox.
     MutationOutbox {
-        op: Box<medulla_types::mutation_outbox::MutationOutboxOp>,
+        op: Box<medulla_mutation_types::mutation_outbox::MutationOutboxOp>,
     },
 
     // ── User-managed edge-native indexes (EH-351 / EH-352) ─────────────────

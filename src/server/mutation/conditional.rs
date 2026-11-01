@@ -237,9 +237,9 @@ pub(super) async fn commit_conditional_replay_check(
     prep: &CommitPrep,
 ) -> Option<Response> {
     let default_surface = if is_rdf_gateway_method(method) {
-        medulla_types::mutation_scope::MutationSurface::Rdf
+        medulla_mutation_types::mutation_scope::MutationSurface::Rdf
     } else {
-        medulla_types::mutation_scope::MutationSurface::Query
+        medulla_mutation_types::mutation_scope::MutationSurface::Query
     };
     commit_staged_replay_probe(
         ctx,
@@ -326,9 +326,9 @@ pub(super) async fn commit_conditional_commit_staged(
     staged: StagedMutation,
 ) -> Response {
     let surface = if is_rdf_gateway_method(method) {
-        medulla_types::mutation_scope::MutationSurface::Rdf
+        medulla_mutation_types::mutation_scope::MutationSurface::Rdf
     } else {
-        medulla_types::mutation_scope::MutationSurface::Query
+        medulla_mutation_types::mutation_scope::MutationSurface::Query
     };
     commit_staged_with_receipt(
         ctx,

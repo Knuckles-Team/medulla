@@ -451,7 +451,7 @@ impl medulla_storage::OwnerPayloadRetirement<GraphShardOwner> for GraphShardReti
     fn retire_owner_payload(
         &self,
         write: &medulla_storage::PhysicalWriteCapability<'_, GraphShardOwner>,
-        _scope: &medulla_types::MutationScopeIdentity,
+        _scope: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     ) -> Result<(), String> {
         retire_scoped_table(write, NODES)?;
         retire_scoped_table(write, EDGES)?;

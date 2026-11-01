@@ -88,7 +88,7 @@ impl<'a> Invocation<'a> {
         let [operation] = batch.operations.as_slice() else {
             return Err("SQL source publication requires exactly one operation".into());
         };
-        if operation.surface != medulla_types::mutation_scope::MutationSurface::Query {
+        if operation.surface != medulla_mutation_types::mutation_scope::MutationSurface::Query {
             return Err("SQL source publication requires the query mutation surface".into());
         }
         let Method::SqlSourceBatch { batch: request } = &operation.method else {

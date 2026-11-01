@@ -7,8 +7,8 @@ use crate::graph::GraphCore;
 use crate::mutation_batch::MutationStateDescriptor;
 use crate::protocol::{Method, ResultPayload};
 use crate::server::api::persistence::PersistenceBackend;
+use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_scope::MutationSurface;
 
 use super::super::compile::{authoritative_graph_version, compile_methods, CompileBatch};
 

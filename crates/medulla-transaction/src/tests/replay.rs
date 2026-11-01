@@ -7,8 +7,8 @@
 use super::*;
 use crate::tables::{OUTBOX, REPLAY_OPERATIONS};
 use crate::ReplayResolution;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 use medulla_storage::RecordedOperation;
-use medulla_types::MutationOutboxIntent;
 
 /// Record one committed attempt: consume its nonce and store its receipt in the
 /// same admitted write as the batch, then commit.

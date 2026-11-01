@@ -2,6 +2,10 @@
 
 use super::*;
 use crate::tables::store::dev_scope_grant;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
 use medulla_protocol_types::mutation_batch::method_schema_id;
 use medulla_protocol_types::mutation_batch::CompiledOperation;
 use medulla_protocol_types::mutation_batch::CompiledScope;
@@ -11,10 +15,6 @@ use medulla_protocol_types::mutation_batch::VersionExpectation;
 use medulla_protocol_types::mutation_batch::BATCH_COMPILED_METHODS;
 use medulla_protocol_types::protocol_fixtures::sql_source;
 use medulla_types::contract::{BoundedVec, Digest256, MethodId, Nonce};
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::MutationOutboxIntent;
-use medulla_types::mutation_scope::MutationSurface;
-use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};

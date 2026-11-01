@@ -3,12 +3,13 @@ use super::effects::MutationEffect;
 use super::outbox_decode::ProvenanceBinding;
 use super::targets::MutationPrecondition;
 use super::{MAX_MUTATION_PRECONDITIONS, MAX_PROVENANCE_REFS};
-use crate::authority::AuthorityScope;
-use crate::contract::{
-    BoundedVec, Digest256, OpaqueId, RequestedMutationResult, TenantId, MAX_MUTATION_EFFECTS,
-    MAX_OUTBOX_INTENTS,
-};
 use crate::outbox::OutboxIntent;
+use medulla_types::authority::AuthorityScope;
+use medulla_types::{
+    contract::BoundedVec, contract::Digest256, contract::OpaqueId,
+    contract::RequestedMutationResult, contract::TenantId, contract::MAX_MUTATION_EFFECTS,
+    contract::MAX_OUTBOX_INTENTS,
+};
 pub(super) fn validate_payload_shape_and_scope(
     tenant: &TenantId,
     scope: &AuthorityScope,

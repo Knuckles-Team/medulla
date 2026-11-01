@@ -235,7 +235,7 @@ pub(crate) fn mutation_operations_retry_match(
 /// case the kernel must replay rather than refuse.
 #[cfg(test)]
 pub(crate) fn fixture_operation_envelope(
-    identity: &medulla_types::MutationScopeIdentity,
+    identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     actor: &str,
     request_id: u64,
     idempotency_key: &str,

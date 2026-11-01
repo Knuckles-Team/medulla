@@ -32,10 +32,12 @@ use medulla_agent_types::{
     native_control::MAX_CAPACITY_MUTATION_BATCH, native_control::MAX_CAPACITY_RECLAIM_BATCH,
     native_control::MAX_CAPACITY_STATUS_ROWS, native_control::MAX_CAPACITY_TTL_MS,
 };
+use medulla_mutation_types::{
+    capacity_lease::CapacityCell, capacity_lease::CapacityLease, capacity_lease::LeaseState,
+};
 use medulla_storage::{
     GraphShardOwner, PhysicalWriteCapability, ScopedOwnerTable, ScopedOwnerTableMut,
 };
-use medulla_types::capacity_lease::{CapacityCell, CapacityLease, LeaseState};
 
 use super::shard::{Shard, ShardWrite};
 use super::{decode_durable, DurableCrypto};
@@ -482,7 +484,7 @@ fn price_demand(
     cells: &CapacityRows<'_>,
     usage: &CapacityRows<'_>,
     graph: &str,
-    priority: medulla_types::capacity_lease::LeasePriority,
+    priority: medulla_mutation_types::capacity_lease::LeasePriority,
     demand: &CapacityDemand,
     crypto: DurableCrypto<'_>,
 ) -> Result<(CapacityCell, DurableUsage, CapacityAvailability), String> {

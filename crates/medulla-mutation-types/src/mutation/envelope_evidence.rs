@@ -1,6 +1,6 @@
 use super::envelope::MutationRequestEnvelope;
-use crate::contract::{Digest256, OpaqueId, RequestedMutationResult};
 use crate::outbox::OutboxIntent;
+use medulla_types::{contract::Digest256, contract::OpaqueId, contract::RequestedMutationResult};
 
 impl MutationRequestEnvelope {
     pub fn requested_result(&self) -> &RequestedMutationResult {

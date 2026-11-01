@@ -44,10 +44,12 @@ use medulla_catalog_types::{
     connector_pack::PackProducer, connector_pack::PackSection,
     connector_pack::CONNECTOR_PACK_SCHEMA_VERSION,
 };
-use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
-use medulla_types::mutation_outbox::{
-    MutationOutboxOp, MutationOutboxStatusView, NativeOutboxScope, NativeOutboxStore, OutboxTarget,
+use medulla_mutation_types::{
+    mutation_outbox::MutationOutboxOp, mutation_outbox::MutationOutboxStatusView,
+    mutation_outbox::NativeOutboxScope, mutation_outbox::NativeOutboxStore,
+    mutation_outbox::OutboxTarget,
 };
+use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
 use serde::de::DeserializeOwned;
 use sha2::{Digest, Sha256};
 use tokio::sync::RwLock;

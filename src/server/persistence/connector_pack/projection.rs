@@ -14,11 +14,11 @@ use medulla_catalog_types::{
     connector_pack::PackImportResult, connector_pack::PackProjectionState,
     connector_pack::CONNECTOR_PACK_RESULT_SCHEMA_ID,
 };
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_protocol_types::protocol::Method;
 use medulla_types::contract::{Digest256, ResourceId};
-use medulla_types::mutation_scope::DurabilityDomain;
-use medulla_types::mutation_scope::MutationSurface;
 use redb::ReadableTable;
 
 use super::admitted::{PackOwnerWrite, PackWriteEffects, PackWriteIdentity};
