@@ -22,6 +22,7 @@ medulla-kernel = { path = "../medulla-kernel" }
 medulla-server-api = { path = "../medulla-server-api" }
 medulla-storage = { path = "../medulla-storage", optional = true }
 medulla-store = { path = "../medulla-store" }
+medulla-store-apply = { path = "../medulla-store-apply" }
 medulla-types = { path = "../medulla-types" }
 redb = { workspace = true, optional = true }
 rmp-serde = "1.3"
