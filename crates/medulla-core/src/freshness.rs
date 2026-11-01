@@ -12,8 +12,8 @@ use medulla_result_types::{
     freshness::VOLATILITY_CLASS_KEY,
 };
 
-use crate::dep_scope::Dim;
 use crate::graph::GraphCore;
+use medulla_query_cache::dep_scope::Dim;
 
 /// A byte string every volatility-annotated blob contains (both key spellings end with it), so a
 /// node whose blob lacks it is skipped without a decode.
@@ -30,7 +30,7 @@ pub fn policy_version(core: &GraphCore) -> u64 {
         MAX_STALENESS_KEY,
     ]
     .map(|key| Dim::Key(key.to_string()));
-    crate::dep_scope::last_write_version(core.dep_clock(), &dims)
+    medulla_query_cache::dep_scope::last_write_version(core.dep_clock(), &dims)
 }
 
 /// The graph's resolved class volatility policy. Scans the resident node blobs once, decoding

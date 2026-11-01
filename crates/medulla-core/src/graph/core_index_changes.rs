@@ -112,7 +112,10 @@ impl GraphCore {
     /// from its LIVE pair (a later removal in the same batch captured them or marked the batch
     /// unattributed); a removed or cascaded edge's types were captured before the delete.
     #[cfg(feature = "result-cache")]
-    fn edge_footprint(&self, change: &crate::index::ChangeSet) -> crate::dep_scope::WriteFootprint {
+    fn edge_footprint(
+        &self,
+        change: &crate::index::ChangeSet,
+    ) -> medulla_query_cache::dep_scope::WriteFootprint {
         let mut rels = change.removed_edge_rels.clone();
         for edge in &change.added_edges {
             rels.merge(super::txn_edges::pair_edge_rels(
@@ -121,7 +124,7 @@ impl GraphCore {
                 &edge.target,
             ));
         }
-        crate::dep_scope::WriteFootprint {
+        medulla_query_cache::dep_scope::WriteFootprint {
             edge_changed: Self::change_touches_edges(change) || !rels.is_empty(),
             edge_types: rels.types.into_iter().collect(),
             edge_unattributed: rels.unattributed,
@@ -175,7 +178,7 @@ impl GraphCore {
     /// The dependency-clock footprint of ONE added node.
     #[cfg(feature = "result-cache")]
     pub(super) fn note_added_node(
-        footprint: &mut crate::dep_scope::WriteFootprint,
+        footprint: &mut medulla_query_cache::dep_scope::WriteFootprint,
         val: Option<&serde_json::Value>,
     ) {
         footprint.node_changed = true;
@@ -191,7 +194,7 @@ impl GraphCore {
     /// floors the clock.
     #[cfg(feature = "result-cache")]
     pub(super) fn note_replaced_node(
-        footprint: &mut crate::dep_scope::WriteFootprint,
+        footprint: &mut medulla_query_cache::dep_scope::WriteFootprint,
         val: Option<&serde_json::Value>,
         prior: Option<&ReplacedImage>,
     ) {
@@ -253,7 +256,7 @@ impl GraphCore {
     /// coarsely floors the clock (its labels/keys are unknown).
     #[cfg(feature = "result-cache")]
     pub(super) fn note_removed_node(
-        footprint: &mut crate::dep_scope::WriteFootprint,
+        footprint: &mut medulla_query_cache::dep_scope::WriteFootprint,
         captured: Option<&serde_json::Value>,
     ) {
         footprint.node_changed = true;

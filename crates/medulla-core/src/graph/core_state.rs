@@ -38,11 +38,13 @@ impl GraphCore {
             index_stamps: IndexStamps::default(),
             index_rebuilds: std::sync::atomic::AtomicU64::new(0),
             #[cfg(feature = "result-cache")]
-            dep_clock: Arc::new(crate::dep_scope::DepClock::new()),
+            dep_clock: Arc::new(medulla_query_cache::dep_scope::DepClock::new()),
             #[cfg(feature = "result-cache")]
-            result_cache: crate::result_cache::ResultCache::new(),
+            result_cache: medulla_query_cache::result_cache::ResultCache::new(),
             #[cfg(feature = "result-cache")]
-            graph_projections: Arc::new(crate::projection_catalog::ProjectionCatalog::new()),
+            graph_projections: Arc::new(
+                medulla_query_cache::projection_catalog::ProjectionCatalog::new(),
+            ),
             #[cfg(feature = "security")]
             rls_projection_cache: crate::rls_projection_cache::ProjectionCache::default(),
             #[cfg(feature = "security")]
@@ -63,7 +65,7 @@ impl GraphCore {
     /// rests on `version()` keying (a write bumps the version, retiring every prior
     /// result). See `crate::result_cache`.
     #[cfg(feature = "result-cache")]
-    pub fn result_cache(&self) -> &crate::result_cache::ResultCache {
+    pub fn result_cache(&self) -> &medulla_query_cache::result_cache::ResultCache {
         &self.result_cache
     }
 
@@ -74,7 +76,7 @@ impl GraphCore {
     /// set. Write paths feed it via `maintain_indexes` (fine dimensions) and `mark_dirty` (the
     /// coarse floor). See `crate::dep_scope`.
     #[cfg(feature = "result-cache")]
-    pub fn dep_clock(&self) -> &crate::dep_scope::DepClock {
+    pub fn dep_clock(&self) -> &medulla_query_cache::dep_scope::DepClock {
         &self.dep_clock
     }
 
@@ -83,8 +85,8 @@ impl GraphCore {
     /// query may be vector-ranked; its [`crate::dep_scope::DepProbe::embedding_generation`] is
     /// also the stamp a freshly computed result records.
     #[cfg(feature = "result-cache")]
-    pub fn dep_probe(&self) -> crate::dep_scope::DepProbe<'_> {
-        crate::dep_scope::DepProbe::new(
+    pub fn dep_probe(&self) -> medulla_query_cache::dep_scope::DepProbe<'_> {
+        medulla_query_cache::dep_scope::DepProbe::new(
             &self.dep_clock,
             Some(self.semantic_store.read().generation()),
         )
@@ -99,7 +101,7 @@ impl GraphCore {
     /// `GraphCore`-holding callers (tests, admin/introspection surfaces). See
     /// `crate::projection_catalog`.
     #[cfg(feature = "result-cache")]
-    pub fn graph_projections(&self) -> &crate::projection_catalog::ProjectionCatalog {
+    pub fn graph_projections(&self) -> &medulla_query_cache::projection_catalog::ProjectionCatalog {
         &self.graph_projections
     }
 

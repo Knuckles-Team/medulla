@@ -62,6 +62,7 @@ medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
+medulla-query-cache = { path = "../medulla-query-cache" }
 
 [features]
 test-support = []

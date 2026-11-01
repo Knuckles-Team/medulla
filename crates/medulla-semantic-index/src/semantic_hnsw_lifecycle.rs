@@ -18,7 +18,7 @@ impl SemanticStore {
         }
     }
 
-    pub(in crate::compute::semantic) fn mismatched_row_dim(
+    pub(in crate::semantic) fn mismatched_row_dim(
         &self,
         requested: usize,
     ) -> Option<usize> {

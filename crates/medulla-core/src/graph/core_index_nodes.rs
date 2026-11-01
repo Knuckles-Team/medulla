@@ -52,7 +52,7 @@ impl GraphCore {
     /// both floor the clock (EH-393 soundness fix).
     #[cfg(feature = "result-cache")]
     pub(super) fn note_updated_node(
-        footprint: &mut crate::dep_scope::WriteFootprint,
+        footprint: &mut medulla_query_cache::dep_scope::WriteFootprint,
         fields: &[String],
         current: Option<&serde_json::Value>,
     ) {

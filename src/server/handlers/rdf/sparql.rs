@@ -86,10 +86,10 @@ fn sparql_cache_hash(cache_key: &str, #[cfg(feature = "security")] caller: &str)
     #[cfg(feature = "security")]
     {
         let kind = format!("rls:{caller}:sparql");
-        medulla_core::result_cache::ResultCache::hash_query(&kind, cache_key.as_bytes())
+        medulla_query_cache::result_cache::ResultCache::hash_query(&kind, cache_key.as_bytes())
     }
     #[cfg(not(feature = "security"))]
-    medulla_core::result_cache::ResultCache::hash_query("sparql", cache_key.as_bytes())
+    medulla_query_cache::result_cache::ResultCache::hash_query("sparql", cache_key.as_bytes())
 }
 
 #[cfg(feature = "result-cache")]
@@ -189,7 +189,7 @@ async fn evaluate_sparql(
             ) {
                 Ok(payload) => {
                     #[cfg(feature = "result-cache")]
-                    medulla_core::result_cache::cache_result(
+                    medulla_query_cache::result_cache::cache_result(
                         core.result_cache(),
                         hash,
                         version,

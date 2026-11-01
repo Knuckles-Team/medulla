@@ -14,9 +14,11 @@
 
 #![cfg(feature = "result-cache")]
 
-use medulla_core::dep_scope::{DepProbe, DepSet, Dim};
 use medulla_core::graph::GraphCore;
 use medulla_core::index::{ChangeSet, NodeChange};
+use medulla_query_cache::dep_scope::DepProbe;
+use medulla_query_cache::dep_scope::DepSet;
+use medulla_query_cache::dep_scope::Dim;
 use serde_json::{json, Value};
 
 const Q: u128 = 0x5EED_0393;

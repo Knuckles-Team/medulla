@@ -48,7 +48,7 @@ security = ["dep:redb", "dep:sha2", "dep:hmac", "dep:medulla-storage", "dep:medu
 # Version-keyed query-RESULT cache (CONCEPT:KG-2.233) on `GraphCore`. Pure-Rust
 # bounded LRU + 128-bit query hash — no new dep — so the facade folds it into the
 # lean Pi tier as well as node/cluster/full.
-result-cache = []
+result-cache = ["medulla-query-cache/result-cache", ]
 # Durable JSONPath index persistence (CONCEPT:MEDULLA-308): the redb-backed
 # `RedbPathIndexStore` impl of the dep-free `PathIndexPersistence` seam, so the
 # demand-driven MEDULLA-084 JSONPath index (`path → value → ids` / `path → ids`) is
@@ -124,6 +124,7 @@ medulla-index-types = { path = "../medulla-index-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
+medulla-query-cache = { path = "../medulla-query-cache" }
 
 [dev-dependencies]
 # The commercial-vocabulary contract tests (MEDULLA-SUPPLY-VOCAB-R003.13-.16) parse

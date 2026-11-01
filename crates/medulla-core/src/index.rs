@@ -939,32 +939,6 @@ mod tests {
         );
     }
 
-    /// Installing a secondary-index factory rebuilds each registered index before
-    /// publication; a failed rebuild is published `Failed` and incomplete.
-    #[test]
-    fn registry_factory_publishes_a_failed_rebuild_as_failed() {
-        struct ProbeFactory(bool);
-        impl SecondaryIndexFactory for ProbeFactory {
-            fn for_graph(&self, _name: &str) -> Vec<Box<dyn SecondaryIndex>> {
-                vec![manifest_probe(IndexManifest::default(), self.0)]
-            }
-        }
-        let registered = |fails: bool| {
-            let mut registry = crate::registry::GraphRegistry::new();
-            registry.set_secondary_index_factory(std::sync::Arc::new(ProbeFactory(fails)));
-            let core = &registry.get("__commons__").expect("commons exists").core;
-            let manifests = core.indexes().server_manifests();
-            assert_eq!(manifests.len(), 1);
-            (core.version(), manifests[0].1)
-        };
-        let (version, valid) = registered(false);
-        assert_eq!(valid, IndexManifest::valid(version, 0, 0));
-        let (version, failed) = registered(true);
-        assert_eq!(failed.validity, IndexValidity::Failed);
-        assert!(!failed.completeness.complete);
-        assert_eq!(failed.source_snapshot_version, version);
-    }
-
     /// `index_for` routes a label predicate to the LABEL index and a property
     /// predicate to the PROPERTY index — the one-registry pushdown question.
     #[test]

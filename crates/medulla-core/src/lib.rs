@@ -41,13 +41,6 @@ pub mod compute;
 #[cfg(feature = "contract")]
 mod contract;
 pub mod decay;
-/// CONCEPT:MEDULLA-KG.coordination.dependency-scoped-cache-invalidation (W1.6/P7) — the per-graph
-/// dependency clock backing the result cache's dependency-scoped invalidation: a write
-/// bumps only the label / property-key / node / edge dimensions it actually touched, so a
-/// cached query result survives every write whose change-set is DISJOINT from the query's
-/// dependency set. Gated with the result cache it serves.
-#[cfg(feature = "result-cache")]
-pub mod dep_scope;
 /// Canonical durable-mutation classification/application, hoisted down from the
 /// facade's `src/mutation_apply.rs` (`plans/pyengine/MEDULLA-PYENGINE-PLAN.md` §4.2) so a
 /// caller below the facade (`crates/medulla-pyengine`) can share it instead of
@@ -95,11 +88,6 @@ pub(crate) mod per_actor_cache;
 /// MEDULLA-PYENGINE-PLAN.md` §9.2 Gate A / BUG-PE-003) that makes an unconfigured silent
 /// fallback path structurally unrepresentable.
 pub mod persist_lock;
-/// CONCEPT:MEDULLA-KG.query.named-graph-projection-catalog (W4.5 / N5) — the `gds.graph.project`-
-/// equivalent named/materialized graph-projection catalog, invalidated via the SAME `dep_scope`
-/// `DepClock` the result cache's dependency-scoped entries use. Gated with it (needs the clock).
-#[cfg(feature = "result-cache")]
-pub mod projection_catalog;
 #[cfg(feature = "security")]
 pub mod rbac;
 /// CONCEPT:MEDULLA-KG.compute.durable-rbac-identity-persistence — durable RBAC/identity persistence (redb-backed, feature `security`).
@@ -107,8 +95,6 @@ pub mod rbac;
 pub mod rbac_persist;
 pub mod read_through;
 pub mod registry;
-#[cfg(feature = "result-cache")]
-pub mod result_cache;
 pub mod rls;
 /// CONCEPT:MEDULLA-KG.sharding.row-level-security (D-OP-1 / D-OB-20) — bounded per-actor
 /// cache for `GraphReadAuthority::project_core`'s RLS projection, so a repeat read

@@ -79,12 +79,14 @@ pub(crate) fn build_feed(
     }
 }
 
-fn wire_event(record: medulla_core::dep_scope::InvalidationRecord) -> InvalidationEvent {
+fn wire_event(record: medulla_query_cache::dep_scope::InvalidationRecord) -> InvalidationEvent {
     InvalidationEvent {
         version: record.version,
         scope: match record.scope {
-            medulla_core::dep_scope::InvalidationScope::Classes => InvalidationScope::Classes,
-            medulla_core::dep_scope::InvalidationScope::All => InvalidationScope::All,
+            medulla_query_cache::dep_scope::InvalidationScope::Classes => {
+                InvalidationScope::Classes
+            }
+            medulla_query_cache::dep_scope::InvalidationScope::All => InvalidationScope::All,
         },
         classes: record.classes,
         edge_types: record.edge_types,

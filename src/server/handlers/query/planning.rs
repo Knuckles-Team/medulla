@@ -26,7 +26,7 @@ use super::*;
 pub(crate) fn plan_dependency_set(
     plan: &medulla_plan::Plan,
     embedding_generation: Option<u64>,
-) -> Option<medulla_core::dep_scope::DepSet> {
+) -> Option<medulla_query_cache::dep_scope::DepSet> {
     let mut walk = DepWalk {
         dims: Vec::new(),
         has_source: false,
@@ -37,7 +37,7 @@ pub(crate) fn plan_dependency_set(
     // A plan with no graph SOURCE op (e.g. a pure federation/tsdb seed) is not a bounded graph
     // read — fall back rather than claim a dependency set.
     walk.has_source
-        .then(|| medulla_core::dep_scope::DepSet::new(walk.dims))
+        .then(|| medulla_query_cache::dep_scope::DepSet::new(walk.dims))
 }
 
 #[cfg(all(test, feature = "result-cache", feature = "query"))]
@@ -46,7 +46,7 @@ mod plan_deps_tests;
 /// The accumulator [`plan_dependency_set`] threads through a plan (and each `FuseRrf` branch).
 #[cfg(feature = "result-cache")]
 struct DepWalk {
-    dims: Vec<medulla_core::dep_scope::Dim>,
+    dims: Vec<medulla_query_cache::dep_scope::Dim>,
     has_source: bool,
     /// The current rows may be nodes of ANY label (a traversal reached them).
     rows_unscoped: bool,
@@ -60,7 +60,7 @@ impl DepWalk {
     }
 
     fn op(&mut self, op: &medulla_plan::Op) -> Option<()> {
-        use medulla_core::dep_scope::Dim;
+        use medulla_query_cache::dep_scope::Dim;
         match op {
             medulla_plan::Op::Scan { label } => self.source(label),
             medulla_plan::Op::ScanAll {} => self.source(""),
@@ -92,7 +92,7 @@ impl DepWalk {
     }
 
     fn source(&mut self, label: &str) {
-        use medulla_core::dep_scope::Dim;
+        use medulla_query_cache::dep_scope::Dim;
         self.has_source = true;
         self.rows_unscoped = false;
         self.dims.push(if label.is_empty() {

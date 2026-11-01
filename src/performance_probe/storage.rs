@@ -4,12 +4,12 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use super::{allocation_bytes, timed, Observation, ProbeError};
-use medulla_core::result_cache::ResultCache;
+use medulla::graph::GraphCore;
+use medulla::server::qos::{plan_admissions, QosClass, QosRequest};
 use medulla_epistemic::{ChangeEvent as TmsEvent, TruthMaintenance};
 use medulla_jobs::store::{JobStore, SubmitSpec, TenantJobQuota};
 use medulla_jobs::{AlgoVersion, InputSnapshotHandle, JobPolicy};
-use medulla::graph::GraphCore;
-use medulla::server::qos::{plan_admissions, QosClass, QosRequest};
+use medulla_query_cache::result_cache::ResultCache;
 
 fn job_spec(index: usize) -> SubmitSpec {
     SubmitSpec {

@@ -201,7 +201,7 @@ pub(crate) async fn handle_sql(
 #[cfg(all(feature = "query", feature = "result-cache"))]
 pub(crate) struct CacheSlot {
     pub(crate) hash: u128,
-    pub(crate) dep: Option<medulla_core::dep_scope::DepSet>,
+    pub(crate) dep: Option<medulla_query_cache::dep_scope::DepSet>,
     pub(crate) version: u64,
 }
 
@@ -210,7 +210,7 @@ impl CacheSlot {
     /// Store `payload` under this slot.
     pub(crate) fn store(&self, core: &GraphCore, payload: &ResultPayload) {
         match &self.dep {
-            Some(deps) => medulla_core::result_cache::cache_dep_result(
+            Some(deps) => medulla_query_cache::result_cache::cache_dep_result(
                 core.result_cache(),
                 self.hash,
                 0,
@@ -218,7 +218,7 @@ impl CacheSlot {
                 deps.clone(),
                 payload,
             ),
-            None => medulla_core::result_cache::cache_result(
+            None => medulla_query_cache::result_cache::cache_result(
                 core.result_cache(),
                 self.hash,
                 self.version,
@@ -258,7 +258,7 @@ pub(crate) fn served_cache_hash(
 pub(crate) fn cached_payload(
     core: &GraphCore,
     hash: u128,
-    dep: &Option<medulla_core::dep_scope::DepSet>,
+    dep: &Option<medulla_query_cache::dep_scope::DepSet>,
 ) -> Option<Vec<u8>> {
     match dep {
         Some(_) => core.result_cache().get_dep(hash, 0, core.dep_probe()),

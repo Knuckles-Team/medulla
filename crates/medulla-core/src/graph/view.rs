@@ -121,8 +121,8 @@ pub struct GraphView {
 #[derive(Clone)]
 #[cfg(feature = "result-cache")]
 pub struct ProjectionScope {
-    pub catalog: Arc<crate::projection_catalog::ProjectionCatalog>,
-    pub dep_clock: Arc<crate::dep_scope::DepClock>,
+    pub catalog: Arc<medulla_query_cache::projection_catalog::ProjectionCatalog>,
+    pub dep_clock: Arc<medulla_query_cache::dep_scope::DepClock>,
     /// The graph version this VIEW reflects — what a NEWLY materialized projection is stamped
     /// `computed_at` with, so it validates correctly against `dep_clock` on the next lookup.
     pub version: u64,

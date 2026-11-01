@@ -1447,6 +1447,8 @@ fn secondary_indexes_valid(core: &Arc<GraphCore>) -> bool {
 }
 
 #[cfg(test)]
+mod index_factory_tests;
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::sync::Mutex;

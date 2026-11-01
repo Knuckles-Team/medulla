@@ -31,10 +31,10 @@ use crate::graph::GraphCore;
 use crate::protocol::Method;
 #[cfg(any(feature = "query", feature = "cypher", feature = "graphql"))]
 use crate::protocol::{Response, ResultPayload};
-#[cfg(feature = "result-cache")]
-use medulla_core::result_cache::ResultCache;
 #[cfg(feature = "graphql")]
 use medulla_graphql::parser::{Field, GqlValue};
+#[cfg(feature = "result-cache")]
+use medulla_query_cache::result_cache::ResultCache;
 use medulla_server_api::access::GraphReadAuthority;
 #[cfg(feature = "federation")]
 use medulla_server_api::api::query_txn::foreign_catalog::bound_registry;
@@ -85,7 +85,7 @@ fn bind_served_statement(
 fn cached_served_response<M>(
     req_id: u64,
     core: &GraphCore,
-    key: &Option<(u128, Option<medulla_core::dep_scope::DepSet>)>,
+    key: &Option<(u128, Option<medulla_query_cache::dep_scope::DepSet>)>,
 ) -> Option<Response>
 where
     M: MethodResult<Encoding = encoding::Raw>,

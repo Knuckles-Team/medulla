@@ -1452,9 +1452,9 @@ impl CypherProcedure for GraphCatalogProject {
             name,
             Arc::new(g) as Arc<dyn std::any::Any + Send + Sync>,
             scope.version,
-            medulla_core::dep_scope::DepSet::new(vec![
-                medulla_core::dep_scope::Dim::AllNodes,
-                medulla_core::dep_scope::Dim::AllEdges,
+            medulla_query_cache::dep_scope::DepSet::new(vec![
+                medulla_query_cache::dep_scope::Dim::AllNodes,
+                medulla_query_cache::dep_scope::Dim::AllEdges,
             ]),
             node_count,
             edge_count,

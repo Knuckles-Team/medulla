@@ -128,7 +128,7 @@ fn uql_cache_key(
     params: &std::collections::BTreeMap<String, medulla_types::wire::UqlParam>,
     stmt: &medulla_plan::uql::Statement,
     legs: &ServedPlanLegs,
-) -> Result<Option<(u128, Option<medulla_core::dep_scope::DepSet>)>, String> {
+) -> Result<Option<(u128, Option<medulla_query_cache::dep_scope::DepSet>)>, String> {
     use medulla_plan::uql::{Body, Mode};
     if stmt.mode == Mode::Profile || !legs.cache_admissible() {
         return Ok(None);

@@ -523,7 +523,7 @@ pub struct GraphCore {
     /// `&self` (interior mutability throughout), so they resolve through the `Arc` via ordinary
     /// auto-deref with no call-site changes.
     #[cfg(feature = "result-cache")]
-    dep_clock: Arc<crate::dep_scope::DepClock>,
+    dep_clock: Arc<medulla_query_cache::dep_scope::DepClock>,
     /// Version-keyed query-RESULT cache (CONCEPT:MEDULLA-KG.coordination.distributed-cache-coherence, feature `result-cache`).
     /// Caches the serialized bytes of a read query (`Sql`/`Cypher`/`Sparql`/
     /// `UnifiedQuery`) keyed by `(query-hash, version())`. A repeated identical query
@@ -531,7 +531,7 @@ pub struct GraphCore {
     /// on a new version and misses (recompute) — staleness is impossible by
     /// construction. Bounded LRU, pure-Rust, so it folds into the lean Pi tier.
     #[cfg(feature = "result-cache")]
-    result_cache: crate::result_cache::ResultCache,
+    result_cache: medulla_query_cache::result_cache::ResultCache,
     /// Named graph-projection catalog (CONCEPT:MEDULLA-KG.query.named-graph-projection-catalog, W4.5 /
     /// N5, feature `result-cache`) — the `gds.graph.project`-equivalent: a materialized
     /// projection an algorithm re-runs against without re-scanning the graph, invalidated via
@@ -539,7 +539,7 @@ pub struct GraphCore {
     /// `dep_clock`: shared into a [`GraphView`]'s [`ProjectionScope`] so `medulla-query`'s `gds.*`
     /// procedures can populate/consult it. See `crate::projection_catalog`.
     #[cfg(feature = "result-cache")]
-    graph_projections: Arc<crate::projection_catalog::ProjectionCatalog>,
+    graph_projections: Arc<medulla_query_cache::projection_catalog::ProjectionCatalog>,
     /// D-OP-1 / D-OB-20 — bounded per-actor cache of `GraphReadAuthority::project_core`'s
     /// RLS projection, invalidated by `version` advancing. See
     /// `crate::rls_projection_cache` for the full rationale (mirrors the
@@ -851,7 +851,10 @@ fn remove_sorted(ids: &mut Vec<String>, id: &str) {
 /// feature `result-cache`) so the dependency clock bumps exactly the dimensions this node's
 /// add/remove/update touched.
 #[cfg(feature = "result-cache")]
-fn collect_dep_footprint(fp: &mut crate::dep_scope::WriteFootprint, val: &serde_json::Value) {
+fn collect_dep_footprint(
+    fp: &mut medulla_query_cache::dep_scope::WriteFootprint,
+    val: &serde_json::Value,
+) {
     fp.labels.extend(labels_of(val));
     if let Some(obj) = val.as_object() {
         fp.keys.extend(obj.keys().cloned());

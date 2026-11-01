@@ -10,12 +10,8 @@
 use crate::protocol::GraphType;
 use std::collections::HashMap;
 
-#[cfg(test)]
-use crate::rls::RLS_SCHEMA_KEY;
 #[cfg(feature = "security")]
 use crate::rls::{row_visibility, RowVisibility, RLS_OWNER_ID_KEY, RLS_OWNER_KEY};
-#[cfg(all(test, feature = "security"))]
-use crate::rls::{RLS_GRANTS_KEY, RLS_SHARED_SCOPE_KEY, RLS_VISIBILITY_KEY};
 
 /// Access level for a graph operation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
