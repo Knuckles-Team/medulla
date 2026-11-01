@@ -548,7 +548,7 @@ impl<'a> DurableCrypto<'a> {
     /// configured current format is plaintext. A sealed blob without its cipher and
     /// an unsealed blob with an active cipher both fail closed.
     #[inline]
-    pub(crate) fn unseal(&self, stored: &[u8]) -> Result<Vec<u8>, String> {
+    pub fn unseal(&self, stored: &[u8]) -> Result<Vec<u8>, String> {
         self.open(stored)
             .map_err(|failure| failure.message().to_string())
     }

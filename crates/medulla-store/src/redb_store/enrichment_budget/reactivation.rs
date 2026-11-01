@@ -18,23 +18,23 @@ struct Supersession {
 #[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct RepositoryEnrichmentPolicyRevision {
-    pub(crate) schema_version: u8,
-    pub(crate) tenant_id: String,
-    pub(crate) graph: String,
-    pub(crate) repository_id: String,
-    pub(crate) source_envelope: String,
-    pub(crate) snapshot_digest: String,
-    pub(crate) policy_digest: String,
-    pub(crate) total_budget_units: u64,
+    pub schema_version: u8,
+    pub tenant_id: String,
+    pub graph: String,
+    pub repository_id: String,
+    pub source_envelope: String,
+    pub snapshot_digest: String,
+    pub policy_digest: String,
+    pub total_budget_units: u64,
     /// Immutable source-committed operator ceiling; legacy rows decode as
     /// zero and cannot authorize a top-up.
     #[serde(default)]
-    pub(crate) max_total_units: u64,
-    pub(crate) sequence: u64,
+    pub max_total_units: u64,
+    pub sequence: u64,
     pub(crate) prior_source_envelope: Option<String>,
     pub(crate) prior_snapshot_digest: Option<String>,
     pub(crate) prior_policy_digest: Option<String>,
-    pub(crate) caller_subject: Option<String>,
+    pub caller_subject: Option<String>,
     pub(crate) verified_action: Option<String>,
     pub(crate) idempotency_key: Option<String>,
 }

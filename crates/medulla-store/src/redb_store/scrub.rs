@@ -56,11 +56,11 @@ pub struct ScrubBudget {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ScrubPass {
     /// Node payloads opened by this pass.
-    pub(crate) scanned: u64,
+    pub scanned: u64,
     /// Every unreadable row the pass reached, in walk order.
-    pub(crate) findings: Vec<NodeUnreadable>,
+    pub findings: Vec<NodeUnreadable>,
     /// Where the next pass starts.
-    pub(crate) next: ScrubCursor,
+    pub next: ScrubCursor,
 }
 
 /// One graph's share of a pass.

@@ -197,7 +197,7 @@ impl<'a> BatchCommitInput<'a> {
         }
     }
 
-    pub(crate) fn with_crashpoint(mut self, crashpoint: Option<MutationBatchCrashpoint>) -> Self {
+    pub fn with_crashpoint(mut self, crashpoint: Option<MutationBatchCrashpoint>) -> Self {
         self.rows.crashpoint = crashpoint;
         self
     }

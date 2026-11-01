@@ -255,7 +255,7 @@ impl Shard {
             .unwrap_or(0)
     }
 
-    pub(crate) fn mutations(&self) -> &MutationKernel {
+    pub fn mutations(&self) -> &MutationKernel {
         &self.mutations
     }
 
@@ -264,7 +264,7 @@ impl Shard {
     /// authority across restart; this guard only closes the live interleave
     /// between owner staging/catalog metadata and source-writer cancellation.
     #[cfg(feature = "server")]
-    pub(crate) fn graft_protocol_guard(&self, graph_fname: &str) -> Result<Arc<Mutex<()>>, String> {
+    pub fn graft_protocol_guard(&self, graph_fname: &str) -> Result<Arc<Mutex<()>>, String> {
         let mut guards = self
             .graft_protocols
             .write()
@@ -283,12 +283,12 @@ impl Shard {
     /// and `validate_recovery_store`. Handing it out is not a widening -- a
     /// `StorageKernel` mints capabilities, it does not bypass them, and every
     /// row access still goes through a bound scope.
-    pub(crate) fn kernel(&self) -> &StorageKernel {
+    pub fn kernel(&self) -> &StorageKernel {
         &self.kernel
     }
 
     /// The file's control handle.
-    pub(crate) fn control(&self) -> &OwnedStoreHandle<GraphShardOwner> {
+    pub fn control(&self) -> &OwnedStoreHandle<GraphShardOwner> {
         &self.control
     }
 
@@ -298,7 +298,7 @@ impl Shard {
     /// group's transaction is open. Callers that are about to admit a group
     /// resolve every handle they need through this first -- see
     /// [`Shard::graph_handles`].
-    pub(crate) fn graph(&self, graph_fname: &str) -> Result<ShardHandle, String> {
+    pub fn graph(&self, graph_fname: &str) -> Result<ShardHandle, String> {
         crate::redb_store::reject_reserved_graph(graph_fname)?;
         if let Some(handle) = self
             .graphs
@@ -334,7 +334,7 @@ impl Shard {
     /// [`Self::admit_maintenance`] and [`ShardWrite::open`] all take it -- so
     /// the pairing is done once here rather than at each of the shard's write
     /// sites.
-    pub(crate) fn graph_members<S: AsRef<str>>(
+    pub fn graph_members<S: AsRef<str>>(
         &self,
         graphs: &[S],
     ) -> Result<Vec<(String, ShardHandle)>, String> {
@@ -354,7 +354,7 @@ impl Shard {
     /// same-name recreate reuse a retired binding and fail closed forever. The
     /// identity check keeps a concurrent replacement from being removed by a
     /// late cleanup of the old generation.
-    pub(crate) fn forget_graph(
+    pub fn forget_graph(
         &self,
         graph_fname: &str,
         retired_identity: &MutationScopeIdentity,
@@ -409,7 +409,7 @@ impl Shard {
     /// maintenance class -- durable and version-bumping like any other
     /// mutation, but outside operation-replay conflict semantics entirely.
     /// `members` may be empty, which is the control-only write.
-    pub(crate) fn admit_maintenance<'a>(
+    pub fn admit_maintenance<'a>(
         &'a self,
         members: &'a [(String, ShardHandle)],
         op_id: &'a str,
@@ -518,7 +518,7 @@ impl Shard {
     /// `Begin::Replay` has a durable receipt already and is skipped -- it wrote
     /// no rows, and re-finishing it would rewrite the receipt of a batch this
     /// drain did not apply.
-    pub(crate) fn commit_drain(
+    pub fn commit_drain(
         &self,
         group: AdmittedGroup<'_, GraphShardOwner>,
         batches: &[MutationBatch],
@@ -566,7 +566,7 @@ impl Shard {
     /// subscription is the durable record of which topic a consumer reads, and
     /// a claim by an unsubscribed consumer is refused rather than silently
     /// treated as "everything".
-    pub(crate) fn outbox_subscribe(
+    pub fn outbox_subscribe(
         &self,
         graph_fname: &str,
         consumer: &str,
@@ -585,7 +585,7 @@ impl Shard {
     /// the budget, which a sweep carries between graphs and which the kernel
     /// also mirrors durably per `(scope, consumer)` so the cap survives a
     /// restart.
-    pub(crate) fn outbox_claim(
+    pub fn outbox_claim(
         &self,
         graph_fname: &str,
         consumer: &str,
@@ -598,7 +598,7 @@ impl Shard {
 
     /// Acknowledge one lease. The ack IS the cursor advance, in one
     /// transaction: a crash between the two is not representable.
-    pub(crate) fn outbox_ack(
+    pub fn outbox_ack(
         &self,
         graph_fname: &str,
         lease: &MutationOutboxLease,
@@ -649,7 +649,7 @@ impl Shard {
 
     /// Give one lease back unacknowledged, so another worker may claim it now
     /// rather than after it expires.
-    pub(crate) fn outbox_release(
+    pub fn outbox_release(
         &self,
         graph_fname: &str,
         lease: &MutationOutboxLease,
@@ -671,7 +671,7 @@ impl Shard {
     }
 
     /// One consumer's durable projection watermark on one graph.
-    pub(crate) fn outbox_cursor(
+    pub fn outbox_cursor(
         &self,
         graph_fname: &str,
         consumer: &str,
@@ -723,7 +723,7 @@ impl Shard {
     /// used only to select the owner-only staging path; the subsequent write
     /// re-proves the exact reservation and its source/destination digests.
     #[cfg(feature = "server")]
-    pub(crate) fn graft_destination_reserved(&self, graph_fname: &str) -> Result<bool, String> {
+    pub fn graft_destination_reserved(&self, graph_fname: &str) -> Result<bool, String> {
         let handle = self.graph(graph_fname)?;
         let read = self.read(&handle)?;
         Ok(medulla_transaction::read_batches(&read)?
@@ -746,7 +746,7 @@ impl Shard {
     /// retained reservation is left fenced as the recovery handle; this helper
     /// never clears it by observation alone.
     #[cfg(feature = "server")]
-    pub(crate) fn cleanup_wrong_target_reservation(
+    pub fn cleanup_wrong_target_reservation(
         &self,
         source: &Shard,
         graph_fname: &str,
@@ -821,7 +821,7 @@ impl Shard {
     /// durable receipt, so the command need not trust an out-of-band source
     /// string.
     #[cfg(feature = "server")]
-    pub(crate) fn stage_reserved_graft_owner_payload<F>(
+    pub fn stage_reserved_graft_owner_payload<F>(
         &self,
         graph_fname: &str,
         stage: F,
@@ -941,7 +941,7 @@ impl Shard {
     /// One kernel-issued scoped read on the file's control scope: the graph
     /// catalog, the Raft rows, the cross-shard records and the other key spaces
     /// that belong to the file rather than to any one graph.
-    pub(crate) fn control_read(&self) -> Result<ScopedRead<'_, GraphShardOwner>, String> {
+    pub fn control_read(&self) -> Result<ScopedRead<'_, GraphShardOwner>, String> {
         self.kernel.read_scope(&self.control)
     }
 }
@@ -1201,13 +1201,13 @@ impl<'g> ShardWrite<'g> {
     }
 
     /// The control member's owner-row write: the 12 file-wide shard tables.
-    pub(crate) fn control(&self) -> &AdmittedOwnerWrite<'g, GraphShardOwner> {
+    pub fn control(&self) -> &AdmittedOwnerWrite<'g, GraphShardOwner> {
         &self.control
     }
 
     /// One graph member's owner-row write: the 41 scope-prefixed shard tables,
     /// bounded to that graph's rows by the capability, not by an argument.
-    pub(crate) fn graph(
+    pub fn graph(
         &self,
         graph_fname: &str,
     ) -> Result<&AdmittedOwnerWrite<'g, GraphShardOwner>, String> {
@@ -1223,7 +1223,7 @@ impl<'g> ShardWrite<'g> {
 
     /// Close every member's owner-row admission. Dropping one unfinished
     /// poisons the shared transaction, so this is not optional.
-    pub(crate) fn finish(self) -> Result<(), String> {
+    pub fn finish(self) -> Result<(), String> {
         for (_, write) in self.graphs {
             write.finish_owner()?;
         }

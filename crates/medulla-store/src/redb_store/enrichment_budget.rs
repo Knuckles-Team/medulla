@@ -43,14 +43,14 @@ const MAX_ELIGIBLE_UNITS: u32 = 4096;
 #[serde(deny_unknown_fields)]
 pub struct SourceBudgetAuthority {
     pub(crate) tenant_id: String,
-    pub(crate) source_envelope: String,
+    pub source_envelope: String,
     pub(crate) snapshot_digest: String,
     pub(crate) repository_id: String,
     pub(crate) policy_digest: String,
-    pub(crate) total_budget_units: u64,
+    pub total_budget_units: u64,
     /// Source-committed ceiling. Zero on legacy rows denies reactivation.
     #[serde(default)]
-    pub(crate) max_total_units: u64,
+    pub max_total_units: u64,
 }
 
 /// A budget seed may accompany only the engine-attested source intent in its
