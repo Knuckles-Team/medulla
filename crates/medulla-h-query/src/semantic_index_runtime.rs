@@ -496,9 +496,9 @@ struct AuthorizedSqlSourcePage {
 #[cfg(feature = "query")]
 #[derive(Clone)]
 pub struct AuthorizedSqlSourceClaim {
-    source: SemanticSqlSourceRecord,
+    pub source: SemanticSqlSourceRecord,
     page_cursor: Option<Vec<u8>>,
-    decision_at_ms: u64,
+    pub decision_at_ms: u64,
     intent_digest: SemanticDigest,
 }
 
