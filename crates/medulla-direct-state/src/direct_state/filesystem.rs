@@ -6,7 +6,7 @@ pub struct PinnedPrivateDirectory {
 }
 
 impl PinnedPrivateDirectory {
-    pub(crate) fn open(path: &Path) -> Result<Self, String> {
+    pub fn open(path: &Path) -> Result<Self, String> {
         ensure_private_directory(path)?;
         let authority = open_directory_nofollow(path, "open direct-state private root")?;
         let pinned = Self {
@@ -17,7 +17,7 @@ impl PinnedPrivateDirectory {
         Ok(pinned)
     }
 
-    pub(crate) fn validate_live(&self, label: &str) -> Result<(), String> {
+    pub fn validate_live(&self, label: &str) -> Result<(), String> {
         validate_same_file_identity(
             &self.authority,
             &open_directory_nofollow(&self.path, &format!("open {label}"))?,
@@ -50,7 +50,7 @@ impl PinnedPrivateDirectory {
         Ok(name)
     }
 
-    pub(crate) fn validate_file(
+    pub fn validate_file(
         &self,
         path: &Path,
         expected: &File,
@@ -65,7 +65,7 @@ impl PinnedPrivateDirectory {
         PinnedDirectoryRead { root: self }
     }
 
-    pub(crate) fn mutations(&self) -> PinnedDirectoryMutations<'_> {
+    pub fn mutations(&self) -> PinnedDirectoryMutations<'_> {
         PinnedDirectoryMutations { root: self }
     }
 
@@ -175,12 +175,12 @@ impl PinnedDirectoryRead<'_> {
     }
 }
 
-pub(crate) struct PinnedDirectoryMutations<'a> {
+pub struct PinnedDirectoryMutations<'a> {
     root: &'a PinnedPrivateDirectory,
 }
 
 impl PinnedDirectoryMutations<'_> {
-    pub(crate) fn create_new(&self, name: &str, operation: &str) -> Result<File, String> {
+    pub fn create_new(&self, name: &str, operation: &str) -> Result<File, String> {
         #[cfg(unix)]
         {
             validate_relative_basename(name)?;
@@ -343,7 +343,7 @@ impl PinnedDirectoryMutations<'_> {
     /// that may have been ABA-reused. The public name is atomically moved to a
     /// unique quarantine, the moved inode is compared with the pinned descriptor,
     /// and only that quarantine name is then removed.
-    pub(crate) fn retire_unjournaled_exact(
+    pub fn retire_unjournaled_exact(
         &self,
         name: &str,
         expected: &File,
