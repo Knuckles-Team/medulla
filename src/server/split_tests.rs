@@ -45,8 +45,6 @@ mod medulla_h_jobs_wire_tests;
 mod medulla_h_decide_decide_guardrail_tests;
 #[cfg(all(test, feature = "decide"))]
 mod medulla_h_decide_harness_config_tests;
-#[cfg(test)]
-mod medulla_h_query_knowledge_stream_tests;
 
 #[cfg(all(test, feature = "query", feature = "ann-redb"))]
 mod medulla_h_query_sql_source_read_tests;

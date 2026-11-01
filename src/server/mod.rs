@@ -586,7 +586,10 @@ mod ca17_feature_stub_contract {
             ),
             (
                 "src/server/federation/mod.rs",
-                include_str!("federation/mod.rs"),
+                include_str!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/crates/medulla-h-query/src/federation/mod.rs"
+                )),
                 "federation-opensearch",
                 "pub mod opensearch;",
             ),

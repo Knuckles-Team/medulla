@@ -198,7 +198,7 @@ fn semantic_server_secrets() -> &'static ([u8; 32], [u8; 32]) {
 }
 
 /// The opaque-cursor MAC key every semantic SQL source read is bound to.
-pub(crate) fn semantic_cursor_secret() -> [u8; 32] {
+pub fn semantic_cursor_secret() -> [u8; 32] {
     semantic_server_secrets().1
 }
 
@@ -248,7 +248,7 @@ fn activated_semantic_owner_present(
 /// tenant with the verified request tenant. The tenant is part of both the key
 /// and the on-disk path, so one tenant's binding id cannot resolve another's
 /// owner even if the ids collide.
-pub(crate) fn open_semantic_service(
+pub fn open_semantic_service(
     persist_dir: &std::path::Path,
     tenant: &str,
     binding_id: &str,
@@ -295,7 +295,7 @@ pub(crate) fn open_semantic_service(
 /// The semantic owner of an EXISTING binding, for operator reads: unlike
 /// [`open_semantic_service`] it never creates an owner file for a binding
 /// that was never admitted.
-pub(crate) fn existing_semantic_service(
+pub fn existing_semantic_service(
     persist_dir: &std::path::Path,
     tenant: &str,
     binding_id: &str,
@@ -380,7 +380,7 @@ fn sanitize_owner_segment(value: &str) -> String {
     )
 }
 
-pub(crate) struct SemanticIndexServerAdapter {
+pub struct SemanticIndexServerAdapter {
     service: Arc<SemanticIndexService>,
 }
 
@@ -394,7 +394,7 @@ mod authority;
 /// schema image, and tenant-wide SQL source epoch.
 #[cfg(feature = "query")]
 #[derive(Clone)]
-pub(crate) struct AuthorizedSqlSourceReadPort {
+pub struct AuthorizedSqlSourceReadPort {
     persist_dir: PathBuf,
     authority: CarrierAuthority,
     cursor_auth_secret: [u8; 32],
@@ -410,16 +410,16 @@ pub(crate) struct AuthorizedSqlSourceReadPort {
 /// in the same mutation. Passed flattened, a caller could pair a lease for one
 /// stage with a transition for another and the arity alone would not say so.
 #[cfg(feature = "query")]
-pub(crate) struct SqlSourceStageCompletion {
-    pub(crate) lease: MutationOutboxLease,
-    pub(crate) transition: SemanticStageTransition,
-    pub(crate) claim: AuthorizedSqlSourceClaim,
-    pub(crate) successor: Option<SemanticStageIntent>,
+pub struct SqlSourceStageCompletion {
+    pub lease: MutationOutboxLease,
+    pub transition: SemanticStageTransition,
+    pub claim: AuthorizedSqlSourceClaim,
+    pub successor: Option<SemanticStageIntent>,
 }
 
 #[cfg(feature = "query")]
 impl AuthorizedSqlSourceReadPort {
-    pub(crate) fn new(
+    pub fn new(
         persist_dir: impl Into<PathBuf>,
         authority: CarrierAuthority,
         cursor_auth_secret: [u8; 32],
@@ -434,7 +434,7 @@ impl AuthorizedSqlSourceReadPort {
     /// The carrier whose entitlement this port was minted for. The S1
     /// completion path needs it for the durable replay probe, which runs
     /// BEFORE any authorized read and so cannot go through the port itself.
-    pub(crate) fn authority(&self) -> &CarrierAuthority {
+    pub fn authority(&self) -> &CarrierAuthority {
         &self.authority
     }
 
@@ -495,7 +495,7 @@ struct AuthorizedSqlSourcePage {
 /// sibling server module can supply receipt evidence.
 #[cfg(feature = "query")]
 #[derive(Clone)]
-pub(crate) struct AuthorizedSqlSourceClaim {
+pub struct AuthorizedSqlSourceClaim {
     source: SemanticSqlSourceRecord,
     page_cursor: Option<Vec<u8>>,
     decision_at_ms: u64,

@@ -1,6 +1,4 @@
-#[allow(unused_imports)]
-use medulla_h_query::knowledge_stream::*;
-use medulla_h_query::knowledge_stream::*;
+use super::*;
 
 fn authority(policy: u8) -> KnowledgeStreamAuthority {
     KnowledgeStreamAuthority {
@@ -333,11 +331,11 @@ pub(super) struct DurableReadLease {
     pub(super) policy: medulla_core::rbac::RbacPolicy,
     pub(super) identities: std::collections::BTreeMap<String, medulla_types::acl::AgentIdentity>,
     pub(super) grant: medulla_types::acl::Grant,
-    pub(super) isolation: crate::isolation::IsolationLayer,
+    pub(super) isolation: medulla_core::isolation::IsolationLayer,
     pub(super) claims: RequestContextClaims,
     pub(super) carrier: CarrierAuthority,
     pub(super) verified_context: medulla_server_api::auth::VerifiedRequestContext,
-    pub(super) lease: std::sync::Arc<crate::isolation::PolicyDecisionLease>,
+    pub(super) lease: std::sync::Arc<medulla_core::isolation::PolicyDecisionLease>,
     pub(super) policy_store: std::sync::Arc<dyn medulla_core::rbac_persist::RbacPolicyStore>,
 }
 
@@ -346,7 +344,7 @@ pub(super) fn durable_read_lease(graph: &str, agent: &str) -> DurableReadLease {
     use std::collections::BTreeMap;
     use std::sync::Arc;
 
-    use crate::isolation::IsolationLayer;
+    use medulla_core::isolation::IsolationLayer;
     use medulla_core::rbac::RbacPolicy;
     use medulla_core::rbac_persist::{IdentityBootstrapState, RbacStore};
     use medulla_types::acl::{
@@ -426,12 +424,12 @@ pub(super) fn durable_read_lease(graph: &str, agent: &str) -> DurableReadLease {
     // `MintAuthorization`, obtained only by presenting the server secret plus
     // an HMAC over the exact claims (same secret `from_verified_with_lease`
     // below is bound with).
-    let mint_mac = crate::isolation::MintAuthorization::compute_mac("server-secret", &claims)
+    let mint_mac = medulla_core::isolation::MintAuthorization::compute_mac("server-secret", &claims)
         .expect("compute mint authorization mac");
-    let mint_auth = crate::isolation::MintAuthorization::new("server-secret", &claims, &mint_mac)
+    let mint_auth = medulla_core::isolation::MintAuthorization::new("server-secret", &claims, &mint_mac)
         .expect("construct mint authorization");
     let lease = isolation
-        .mint_policy_decision_lease(&mint_auth, graph, crate::isolation::AccessLevel::Read)
+        .mint_policy_decision_lease(&mint_auth, graph, medulla_core::isolation::AccessLevel::Read)
         .expect("mint policy decision lease");
     let lease = Arc::new(lease);
     let policy_store = isolation
@@ -473,11 +471,10 @@ async fn knowledge_stream_sql_lists_the_request_graph_edge_indexes() {
 
     let _env_read_lock = medulla_kernel::crypto::provisioned_test_env_read_lock().await;
     let fixture = durable_read_lease("tenant-graph", "alice");
-    let state = crate::server::test_state_with_services(
+    let state = query_state_with_services(
         "ks-edge-status-secret",
         fixture.isolation.clone(),
         "medulla-ks-edge-status-test",
-        "medulla-ks-edge-status-tsdb-test",
     );
     let persist_dir = std::path::PathBuf::from(state.read().await.persist_dir.clone().unwrap());
     let tenant = fixture.carrier.tenant_scope();
@@ -498,7 +495,7 @@ async fn knowledge_stream_sql_lists_the_request_graph_edge_indexes() {
             read_authority: Some(&read_authority),
             caller: "alice",
         },
-        std::sync::Arc::new(crate::graph::GraphCore::new()),
+        std::sync::Arc::new(medulla_core::graph::GraphCore::new()),
         PolicyAwareQuery::Sql {
             query: EDGE_STATUS_SQL.to_string(),
             params_msgpack: Vec::new(),
@@ -638,4 +635,30 @@ fn claims_only_authority_cannot_enter_the_served_path() {
         .is_err());
     assert!(authority.validate_before().is_err());
     assert!(authority.validate_after().is_err());
+}
+
+/// The query + durable-store slice of the facade's canonical test state: the persist dir the SQL
+/// catalog reads and a redb backend. The knowledge-stream SQL tests need nothing else.
+#[cfg(all(feature = "query", feature = "redb"))]
+fn query_state_with_services(
+    auth_secret: &str,
+    isolation: medulla_core::isolation::IsolationLayer,
+    persistence_label: &str,
+) -> std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>> {
+    let mut state = medulla_server_api::state::ServerState::new_for_test(auth_secret.to_owned(), isolation);
+    state.persist_dir = Some(
+        medulla_server_api::sql_tables::test_persist_dir()
+            .to_string_lossy()
+            .into_owned(),
+    );
+    state.persistence = Some(std::sync::Arc::new(
+        medulla_persistence::redb_backend::RedbBackend::open(
+            medulla_server_api::api::dispatch_support::unique_temp_dir(persistence_label)
+                .to_string_lossy()
+                .into_owned(),
+            256,
+        )
+        .expect("open test redb backend"),
+    ));
+    std::sync::Arc::new(tokio::sync::RwLock::new(state))
 }

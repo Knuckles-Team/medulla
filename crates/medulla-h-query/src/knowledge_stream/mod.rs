@@ -572,3 +572,6 @@ mod families;
 mod stream;
 
 use stream::*;
+
+#[cfg(test)]
+mod tests;
