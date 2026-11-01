@@ -171,7 +171,7 @@ impl GroupRouter {
 /// membership, sorted), so all nodes agree which node should lead each group WITHOUT
 /// coordination — the property that makes the cooperative balancer converge. `None`
 /// for an empty voter set.
-pub(crate) fn desired_leader(gid: GroupId, sorted_voters: &[NodeId]) -> Option<NodeId> {
+pub fn desired_leader(gid: GroupId, sorted_voters: &[NodeId]) -> Option<NodeId> {
     if sorted_voters.is_empty() {
         return None;
     }
@@ -182,7 +182,7 @@ pub(crate) fn desired_leader(gid: GroupId, sorted_voters: &[NodeId]) -> Option<N
 /// those domains differ.  Equality/absence is deliberately a hard no-op: a
 /// balancer must never infer that two addresses represent independent failure
 /// domains merely because their node ids differ.
-pub(crate) fn failure_domain_safe(
+pub fn failure_domain_safe(
     domains: &BTreeMap<NodeId, String>,
     current: NodeId,
     target: NodeId,
@@ -364,7 +364,7 @@ impl ConnectionTaskSet {
         }
     }
 
-    fn stop(&self) {
+    pub fn stop(&self) {
         self.stopping.store(true, Ordering::Release);
         let tasks = self.tasks.lock_recovering(CONNECTION_TASKS_LOCK);
         // Retain the handles so a later full shutdown can await cancellation and
@@ -867,7 +867,7 @@ impl MultiRaft {
     }
 
     /// Serve one placement-fenced graph page on the owning group's current leader.
-    pub(crate) async fn read_page_group(
+    pub async fn read_page_group(
         &self,
         group_id: GroupId,
         request: super::xread::ReadPageRequest,

@@ -53,7 +53,7 @@ const MAX_ADVERTISED_FIELD_BYTES: usize = 1_024;
 pub struct RaftTransportSecret([u8; 32]);
 
 impl RaftTransportSecret {
-    pub(crate) fn from_material(material: &[u8]) -> Result<Self, String> {
+    pub fn from_material(material: &[u8]) -> Result<Self, String> {
         if !(MIN_RAFT_AUTH_SECRET_BYTES..=MAX_RAFT_AUTH_SECRET_BYTES).contains(&material.len()) {
             return Err(format!(
                 "Raft transport secret must contain {MIN_RAFT_AUTH_SECRET_BYTES}..={MAX_RAFT_AUTH_SECRET_BYTES} bytes"

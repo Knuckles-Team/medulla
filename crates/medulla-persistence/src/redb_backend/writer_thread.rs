@@ -37,7 +37,7 @@ use medulla_store::redb_store::RAFT_LOG;
 /// sits unflushed. Neither boundary changes the Immediate durability level.
 const GROUP_COMMIT_TICK: Duration = Duration::from_millis(100);
 
-pub(super) fn run(
+pub fn run(
     rx: Receiver<Cmd>,
     // Shared kernel-owned `Shard` (CONCEPT:MEDULLA-KG.storage.snapshot-read-off-writer): the writer OWNS one clone of
     // the Arc (kept alive for the thread's whole life); the `ShardWriter` holds a

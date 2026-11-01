@@ -51,7 +51,7 @@ struct Member {
 
 /// A managed N-node in-process Raft cluster the harness drives.
 pub struct Cluster {
-    members: BTreeMap<NodeId, Member>,
+    pub members: BTreeMap<NodeId, Member>,
     ports: Vec<u16>,
     n: usize,
     /// Root temp dir (removed on `teardown`).

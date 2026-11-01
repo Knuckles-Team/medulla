@@ -22,7 +22,7 @@ impl HeartbeatCoalescer {
     /// Each wake gets one short window, then every READY peer (EH-288: one not already
     /// mid-flush) is spawned as its OWN independent flush over the shared [`PeerPool`],
     /// and this loop returns to waiting at once rather than waiting for them.
-    pub(crate) async fn run(self: Arc<Self>, pool: Arc<PeerPool>) {
+    pub async fn run(self: Arc<Self>, pool: Arc<PeerPool>) {
         loop {
             self.wake.notified().await;
             if self.stopping.load(Ordering::Acquire) {
@@ -43,7 +43,7 @@ impl HeartbeatCoalescer {
     /// Stop the worker and release every caller still waiting on a QUEUED heartbeat.
     /// A heartbeat already handed to an in-flight per-peer flush (EH-288) completes or
     /// fails on its own round trip, same as before this peer-independent flush split.
-    pub(crate) fn stop(&self) {
+    pub fn stop(&self) {
         self.stopping.store(true, Ordering::Release);
         self.wake.notify_waiters();
         self.fail_pending("raft heartbeat coalescer stopped");

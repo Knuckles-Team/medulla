@@ -168,7 +168,7 @@ fn invalid_data(message: &'static str) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message)
 }
 
-pub(crate) fn decode_wire<T: serde::de::DeserializeOwned>(body: &[u8]) -> io::Result<T> {
+pub fn decode_wire<T: serde::de::DeserializeOwned>(body: &[u8]) -> io::Result<T> {
     medulla_types::msgpack::decode_bounded(
         body,
         medulla_types::msgpack::MsgpackLimits::new(MAX_RAFT_FRAME_BYTES, MAX_RAFT_FRAME_ITEMS, 64),
@@ -652,7 +652,7 @@ impl PeerPool {
     /// One framed request→response round-trip to `addr`, reusing a warm connection
     /// when possible. A reused connection that fails is discarded and the call retries
     /// ONCE on a fresh connection, so a stale idle entry never surfaces to openraft.
-    pub(crate) async fn round_trip(&self, addr: &str, body: &[u8]) -> Result<Vec<u8>, io::Error> {
+    pub async fn round_trip(&self, addr: &str, body: &[u8]) -> Result<Vec<u8>, io::Error> {
         if addr.is_empty()
             || addr.len() > MAX_RAFT_PEER_ADDRESS_BYTES
             || body.is_empty()
@@ -890,7 +890,7 @@ impl HeartbeatCoalescer {
     /// Queue one live OpenRaft heartbeat and return its eventual ordered reply.
     /// The caller owns the await; the coalescer owns only the bounded queue and
     /// completion sender.  Non-heartbeats never enter this path.
-    pub(crate) async fn heartbeat_round_trip(
+    pub async fn heartbeat_round_trip(
         &self,
         addr: &str,
         rpc: GroupRpc,
@@ -947,7 +947,7 @@ impl HeartbeatCoalescer {
 
     /// Send one coalesced batch to `addr` over the shared [`PeerPool`] and return the
     /// ORDERED per-RPC replies (CONCEPT:MEDULLA-KG.storage.concept-2).
-    pub(crate) async fn send_batch(
+    pub async fn send_batch(
         pool: &PeerPool,
         addr: &str,
         batch: Vec<GroupRpc>,
@@ -1045,7 +1045,7 @@ pub struct GroupNetworkClient {
 }
 
 impl GroupNetworkClient {
-    async fn round_trip(&self, rpc: GroupRpc) -> Result<GroupRpcReply, io::Error> {
+    pub async fn round_trip(&self, rpc: GroupRpc) -> Result<GroupRpcReply, io::Error> {
         // ── harness fault-injection: partition gate (CONCEPT:AU-KG.ontology.emits-database-ontology-entities) ──
         #[cfg(any(test, feature = "harness"))]
         if !partition::reachable(self.local, self.target) {
