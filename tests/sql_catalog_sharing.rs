@@ -26,7 +26,7 @@
 //! (`Method::SparqlVirtual` → `handle_sparql_virtual` →
 //! `sql_catalog_acl::open_authorized_table`, per that file's own CONCEPT:NE-046
 //! comment). Of those, `Method::SparqlVirtual` is reached through
-//! `medulla_h_query::rdf::try_handle`, which — like `medulla_h_query::query::try_handle` — is
+//! `medulla_h_sparql::rdf::try_handle`, which — like `medulla_h_query::query::try_handle` — is
 //! reached from `dispatch_graph_op_inner`, so the guard below checks ordering
 //! against BOTH. `medulla_h_txn::sqlite_file::try_handle` is instead called from the
 //! sibling function `dispatch_inner`, so it falls outside this guard's bound;
@@ -58,7 +58,7 @@ use std::path::{Path, PathBuf};
 /// `src/server/dispatch.rs` and silently stopped describing anything the day the
 /// function moved into the `dispatch/` submodule tree.
 fn dispatch_sources() -> Vec<PathBuf> {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/server");
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("crates/medulla-server-graph/src");
     let mut files = vec![root.join("dispatch.rs")];
     let mut stack = vec![root.join("dispatch")];
     while let Some(dir) = stack.pop() {
@@ -380,9 +380,9 @@ fn assert_handler_reachable_only_through_gateway(
 }
 
 /// `check_graph_access` must run strictly BEFORE every dispatch-reachable
-/// `medulla_h_query::query::try_handle` / `medulla_h_query::rdf::try_handle` — the ordering
+/// `medulla_h_query::query::try_handle` / `medulla_h_sparql::rdf::try_handle` — the ordering
 /// this track was explicitly told to preserve, now covering NE-003's actual live
-/// dispatch-reachable entry point (`medulla_h_query::rdf::try_handle` →
+/// dispatch-reachable entry point (`medulla_h_sparql::rdf::try_handle` →
 /// `Method::SparqlVirtual` → `sql_catalog_acl::open_authorized_table`) as well as
 /// the pre-existing `medulla_h_query::query::try_handle` path.
 ///
@@ -437,7 +437,7 @@ fn check_graph_access_precedes_query_and_rdf_try_handle_in_dispatch() {
          dispatch_graph_op_inner — this ordering is the gate every table access \
          (SQL included, via NE-003's sql_catalog_acl) must pass through"
     );
-    for callee in ["medulla_h_query::query::try_handle(", "medulla_h_query::rdf::try_handle("] {
+    for callee in ["medulla_h_query::query::try_handle(", "medulla_h_sparql::rdf::try_handle("] {
         assert!(
             !entry.contains(callee),
             "dispatch_graph_op_inner must not call {callee} directly — it is \
@@ -493,7 +493,7 @@ fn check_graph_access_precedes_query_and_rdf_try_handle_in_dispatch() {
             Some(("async fn commit_query_gateway", "commit_query_gateway(")),
         ),
         (
-            "medulla_h_query::rdf::try_handle(",
+            "medulla_h_sparql::rdf::try_handle(",
             "async fn route_rdf_gateway",
             Some(("async fn commit_rdf_gateway", "commit_rdf_gateway(")),
         ),
@@ -521,22 +521,27 @@ fn check_graph_access_precedes_query_and_rdf_try_handle_in_dispatch() {
 /// guard against an accidental visibility widening or feature-gate drift.
 #[test]
 fn sql_catalog_acl_module_is_declared_crate_private_and_query_gated() {
-    let mod_rs = fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/src/server/mod.rs"))
-        .expect("src/server/mod.rs must exist and be readable");
-    assert!(
-        mod_rs.contains("pub(crate) mod sql_catalog_acl;"),
-        "sql_catalog_acl must be declared pub(crate), not pub — its access-control \
-         primitives must only be reachable from inside src/server/, not the crate's \
-         public API"
-    );
-    let acl_src = fs::read_to_string(concat!(
+    let lib_rs = fs::read_to_string(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/src/server/sql_catalog_acl.rs"
+        "/crates/medulla-server-auth/src/lib.rs"
     ))
-    .expect("src/server/sql_catalog_acl.rs must exist and be readable");
+    .expect("medulla-server-auth lib.rs must exist and be readable");
     assert!(
-        !acl_src.contains("\npub fn ") && !acl_src.contains("\npub struct "),
-        "sql_catalog_acl must expose only pub(crate) items — a bare `pub` item here \
-         would leak past the module boundary this test just checked"
+        lib_rs.contains("#[cfg(feature = \"query\")]\n#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)\npub mod sql_catalog_acl;"),
+        "sql_catalog_acl must stay gated on `query` in medulla-server-auth"
     );
+    // The module was `pub(crate)` inside the single crate; after the split the
+    // crate boundary replaces that visibility, so the guard moves to the public
+    // facade: medulla-engine must never re-export the access-control primitives.
+    for facade in ["src/lib.rs", "src/server/mod.rs"] {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(facade);
+        let Ok(text) = fs::read_to_string(&path) else {
+            continue;
+        };
+        assert!(
+            !text.contains("pub use medulla_server_auth::sql_catalog_acl")
+                && !text.contains("pub mod sql_catalog_acl"),
+            "{facade} must not re-export sql_catalog_acl"
+        );
+    }
 }

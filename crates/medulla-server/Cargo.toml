@@ -121,7 +121,7 @@ medulla-server-identity = { path = "../medulla-server-identity" }
 medulla-server-router = { path = "../medulla-server-router" }
 
 [features]
-test-support = []
+test-support = ["medulla-server-auth/test-support"]
 amqp-wire = ["medulla-server-router/amqp-wire", "medulla-server-lake/amqp-wire", "server"]
 ann = ["medulla-server-router/ann", "medulla-server-graph/ann", ]
 ann-redb = ["medulla-server-router/ann-redb", "medulla-server-graph/ann-redb", "ann", "redb"]

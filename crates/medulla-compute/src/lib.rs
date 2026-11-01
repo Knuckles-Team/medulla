@@ -75,6 +75,10 @@ pub mod node_labels;
 // Pure-Rust, deterministic, generic over node id; decoupled from the live engine
 // graph so it is unit-testable in isolation. Always-on (no heavy deps).
 pub mod ast;
+
+// ModalityContract retrofit for `ast::symbol::Symbol` (CONCEPT:E4/X1), opt-in `contract` feature.
+#[cfg(feature = "contract")]
+mod contract;
 pub mod parser;
 pub mod screen;
 // MEDULLA-SCM-R013.2 — projection of a graph-native symbol edit to file bytes and one changeset.

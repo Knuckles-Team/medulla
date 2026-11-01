@@ -57,7 +57,7 @@ medulla-exec = { path = "../medulla-exec" }
 medulla-uql = { path = "../medulla-uql" }
 
 [features]
-test-support = []
+test-support = ["medulla-server-auth/test-support"]
 compute-dist = ["raft"]
 epistemic = ["dep:medulla-plan", "medulla-plan/epistemic", "dep:medulla-epistemic", "query"]
 graphql = ["dep:medulla-graphql", "medulla-graphql/hardening", "security"]

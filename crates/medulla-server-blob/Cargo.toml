@@ -45,10 +45,12 @@ medulla-shacl = { path = "../medulla-shacl", optional = true }
 medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-federation = { path = "../medulla-federation" }
 
+object_store = { version = "0.14.2", optional = true, features = ["aws"] }
+
 [features]
 alignment = ["blob", "dep:medulla-modality", "dep:medulla-alignment", "medulla-server-api/alignment"]
 blob = ["redb", "medulla-server-api/blob"]
-blob-s3 = ["blob", "medulla-server-api/blob-s3"]
+blob-s3 = ["blob", "medulla-server-api/blob-s3", "dep:object_store"]
 kv = ["redb", "medulla-server-api/kv"]
 nl-query = ["dep:medulla-plan", "medulla-server-api/nl-query"]
 rdf-xml = ["dep:medulla-rdf", "medulla-server-api/rdf-xml"]

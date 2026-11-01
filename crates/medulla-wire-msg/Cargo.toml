@@ -40,15 +40,19 @@ medulla-server-auth = { path = "../medulla-server-auth" }
 sha1 = { version = "0.10", optional = true }
 medulla-capabilities = { path = "../medulla-capabilities", optional = true }
 
+tokio-tungstenite = { version = "0.30", optional = true, default-features = false, features = ["connect", "handshake"] }
+dust_dds = { version = "0.15", optional = true }
+cyclonedds = { version = "1.8.0", optional = true, default-features = false, features = ["std"] }
+
 [features]
 amqp-wire = ["server"]
 kv = ["server"]
 kvcache-server = ["server", "dep:medulla-kvcache"]
 mqtt-wire = ["server"]
 redis-wire = ["kv", "server"]
-ros2-bridge = ["server", "streaming", "dep:futures"]
-ros2-dds = ["server", "streaming", "dep:futures"]
-ros2-rmw = ["server", "streaming", "dep:futures"]
+ros2-bridge = ["server", "streaming", "dep:futures", "dep:tokio-tungstenite"]
+ros2-dds = ["server", "streaming", "dep:futures", "dep:dust_dds"]
+ros2-rmw = ["server", "streaming", "dep:futures", "dep:cyclonedds"]
 s3-api = ["kv", "server"]
 security = ["dep:sha1"]
 server = ["dep:tokio", "dep:medulla-capabilities", "dep:async-trait"]

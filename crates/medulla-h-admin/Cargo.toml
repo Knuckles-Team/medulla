@@ -57,7 +57,7 @@ medulla-exec = { path = "../medulla-exec" }
 medulla-federation = { path = "../medulla-federation" }
 
 [features]
-test-support = []
+test-support = ["medulla-server-auth/test-support"]
 blob = ["redb"]
 compute-dist = ["raft"]
 jobs = []

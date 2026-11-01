@@ -36,9 +36,11 @@ medulla-direct-state = { path = "../medulla-direct-state" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-table-store = { path = "../medulla-table-store" }
 
+object_store = { version = "0.14.2", optional = true, features = ["aws"] }
+
 [features]
 cold-tier = ["medulla-persistence/cold-tier"]
-cold-tier-s3 = ["cold-tier", "medulla-persistence/cold-tier-s3"]
+cold-tier-s3 = ["cold-tier", "medulla-persistence/cold-tier-s3", "dep:object_store"]
 metrics = ["medulla-persistence/metrics"]
 query = ["redb", "medulla-persistence/query"]
 raft = ["redb", "medulla-persistence/raft"]

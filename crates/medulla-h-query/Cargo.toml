@@ -81,7 +81,7 @@ medulla-uql = { path = "../medulla-uql" }
 medulla-sql-lang = { path = "../medulla-sql-lang" }
 
 [features]
-test-support = []
+test-support = ["medulla-server-auth/test-support"]
 alignment = ["dep:medulla-modality", "dep:medulla-alignment", ]
 ann-redb = ["redb", "medulla-h-retrieve/ann-redb"]
 cypher = ["medulla-cypher/cypher"]

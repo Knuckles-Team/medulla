@@ -390,6 +390,8 @@ pub fn infer_semi_naive(
 // ── CONCEPT:MEDULLA-KG.backend.real-cuda-tensor-backend — the real CUDA transitive-join backend ──
 
 #[cfg(feature = "gpu-cuda")]
+// SAFETY: the only unsafe are cudarc kernel launches whose argument lists match the NVRTC-compiled kernel signatures.
+#[allow(unsafe_code)]
 pub mod cuda;
 
 #[cfg(test)]

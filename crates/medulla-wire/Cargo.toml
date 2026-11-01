@@ -60,7 +60,7 @@ medulla-uql = { path = "../medulla-uql" }
 medulla-sql-lang = { path = "../medulla-sql-lang" }
 
 [features]
-test-support = []
+test-support = ["medulla-server-auth/test-support"]
 amqp-wire = ["server"]
 ann = []
 ann-redb = ["ann", "redb"]

@@ -43,11 +43,12 @@ medulla-table-store = { path = "../medulla-table-store" }
 medulla-graph-algos = { path = "../medulla-graph-algos" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-query-cache = { path = "../medulla-query-cache" }
+medulla-mining = { path = "../medulla-mining", optional = true }
 
 [features]
 cypher = ["dep:petgraph"]
 cypher-graphlearn = ["cypher"]
-cypher-mining = ["cypher"]
+cypher-mining = ["cypher", "dep:medulla-mining"]
 cypher-plan = ["cypher", "dep:tracing"]
 result-cache = ["cypher"]
 sql = ["dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petgraph", "dep:tracing", "dep:async-trait", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-table-store/sql"]

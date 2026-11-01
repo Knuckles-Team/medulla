@@ -56,9 +56,11 @@ medulla-server-blob = { path = "../medulla-server-blob" }
 medulla-server-mutation = { path = "../medulla-server-mutation" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 
+medulla-asr-whisper = { path = "../medulla-asr-whisper", optional = true }
+
 [features]
-test-support = []
-asr-whisper = ["dep:medulla-audio", "medulla-audio/asr", ]
+test-support = ["medulla-server-auth/test-support"]
+asr-whisper = ["dep:medulla-audio", "medulla-audio/asr", "dep:medulla-asr-whisper"]
 ast = []
 blob = ["dep:chrono", "redb"]
 decide = ["dep:medulla-numeric", "medulla-numeric/decision", "medulla-decision-stats/decision", "redb"]

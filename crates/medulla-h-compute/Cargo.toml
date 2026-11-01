@@ -37,10 +37,13 @@ medulla-finance-quant = { path = "../medulla-finance-quant" }
 medulla-finance-market = { path = "../medulla-finance-market" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 
+medulla-quantum-core = { path = "../medulla-quantum-core", optional = true }
+medulla-quantum-sim = { path = "../medulla-quantum-sim", optional = true }
+
 [features]
 datascience = []
 finance = ["medulla-finance-quant/analytics"]
-quantum-agent-api = []
+quantum-agent-api = ["dep:medulla-quantum-core", "dep:medulla-quantum-sim"]
 viz-graph-tiles = ["dep:medulla-viz-graph-tiles", "viz-interactive"]
 viz-interactive = ["dep:medulla-viz-kernels", "viz-static-export"]
 viz-static-export = ["dep:medulla-viz-export", ]

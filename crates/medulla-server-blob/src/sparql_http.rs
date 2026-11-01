@@ -465,7 +465,7 @@ impl ServiceClient {
     /// so racing `std::env::set_var` calls would make the suite flaky. Not used by
     /// production code (which always goes through `from_env`, so a live deploy's
     /// fail-closed default is untouched by this constructor's existence).
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fn with_allow(allow: Vec<String>) -> Self {
         Self { allow }
     }

@@ -83,7 +83,7 @@ fn state_with_sensor_seed() -> test_support::SharedState {
         core.add_node("s0".to_string(), blob);
     }
     let (persist_dir, persistence) = common::tempdir_persistence();
-    let mut state = ServerState::new_for_test(AUTH_SECRET, ServerState::test_isolation(AGENT));
+    let mut state = medulla_server::seams_install::new_state_for_test(AUTH_SECRET, ServerState::test_isolation(AGENT));
     state.registry = registry;
     state.persist_dir = persist_dir;
     state.persistence = persistence;

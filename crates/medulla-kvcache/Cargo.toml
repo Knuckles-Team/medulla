@@ -45,6 +45,7 @@ medulla-compute = { path = "../medulla-compute", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-graph-algos = { path = "../medulla-graph-algos" }
+medulla-graph-core = { path = "../medulla-graph-core", optional = true }
 
 [features]
 default = []
@@ -70,7 +71,7 @@ contract = ["dep:medulla-modality", "dep:serde"]
 # `medulla-compute::GraphView` for `TieredCache::apply_importance_scores`. OFF by default so
 # the base/pi build stays dependency-free (`TieredCache::set_importance` itself needs no
 # feature — it takes a caller-supplied `f64` either way). Pulls `medulla-compute`.
-graph = ["dep:medulla-compute"]
+graph = ["dep:medulla-compute", "dep:medulla-graph-core"]
 
 [dev-dependencies]
 # Only the `durable` redb cold-tier test touches the filesystem.

@@ -58,7 +58,7 @@ medulla-server-blob = { path = "../medulla-server-blob" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 
 [features]
-test-support = ["dep:tempfile"]
+test-support = ["dep:tempfile", "medulla-server-auth/test-support"]
 cold-tier = []
 cold-tier-s3 = ["cold-tier"]
 compute-dist = ["raft"]
