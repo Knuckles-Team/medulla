@@ -26,6 +26,8 @@ serde_json = "1.0"
 ureq = { version = "3.4.2", optional = true }
 webpki-root-certs = { version = "1.0.10", optional = true }
 base64 = { version = "0.23", optional = true }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
 
 [features]
 nl-query = ["medulla-exec/query", "dep:ureq", "dep:rustls", "dep:webpki-root-certs", "dep:base64"]

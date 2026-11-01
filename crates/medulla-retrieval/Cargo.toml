@@ -23,6 +23,7 @@ rmp-serde = "1.3"
 arrow = { version = "58.4", optional = true }
 medulla-result-types = { path = "../medulla-result-types", features = ["query"] }
 medulla-ann = { path = "../medulla-ann", optional = true }
+medulla-graph-core = { path = "../medulla-graph-core" }
 
 [features]
 epistemic = ["query", "dep:medulla-epistemic", "medulla-exec/epistemic"]
