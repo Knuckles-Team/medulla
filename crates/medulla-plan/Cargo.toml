@@ -438,7 +438,7 @@ medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-result-types = { path = "../medulla-result-types", features = ["query"] }
 
 [dev-dependencies]
-medulla-result-types = { path = "../medulla-result-types", features = ["test-support", "query"] }
+medulla-result-types = { path = "../medulla-result-types", features = ["query"] }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support", "query"] }
