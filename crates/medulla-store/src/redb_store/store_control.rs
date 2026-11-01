@@ -102,7 +102,7 @@ pub struct InPlaceCoreCheckpoint {
 /// diagnostic native rows but omit other graph-scoped authorities. Complete moves
 /// must use the fenced `RedbBackend::reshard_graph` / `RawGraphRows` protocol.
 pub struct GraphDump {
-    pub(crate) kind: GraphDumpKind,
+    pub kind: GraphDumpKind,
     pub graph: String,
     pub name: String,
     pub graph_type: GraphType,

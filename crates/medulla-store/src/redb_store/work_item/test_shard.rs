@@ -8,7 +8,7 @@ pub(crate) mod run_fixture;
 
 pub const GRAPH: &str = "graph-a";
 
-pub(super) struct TempShard {
+pub struct TempShard {
     path: std::path::PathBuf,
     pub shard: Shard,
 }

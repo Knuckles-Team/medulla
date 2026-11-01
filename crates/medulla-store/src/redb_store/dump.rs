@@ -859,7 +859,7 @@ pub fn encode_meta_record(
 /// module, which a private field of a child would hide from.
 #[derive(serde::Serialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct GraphMetaRecord {
+pub struct GraphMetaRecord {
     pub(crate) schema_version: u16,
     pub(crate) name: String,
     pub(crate) graph_type: GraphType,
