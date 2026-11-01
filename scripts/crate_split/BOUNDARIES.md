@@ -290,3 +290,72 @@ the script.
 | `medulla-engine` | F12 | The one server executable and the embedded engine. | 7,771 | 10,971 | public-engine-contract-and-release 32 |
 
 Unchanged leaf crates receiving rows: `medulla-ann` (1), `medulla-capabilities` (27), `medulla-document` (8), `medulla-durable` (3), `medulla-enrich` (6), `medulla-epistemic` (5), `medulla-jobs` (3), `medulla-kvcache` (2), `medulla-lake` (11), `medulla-modality` (2), `medulla-program` (1), `medulla-resource` (1), `medulla-shacl` (8), `medulla-sqlite-format` (1), `medulla-statechart` (2), `medulla-tsdb` (7), `medulla-viz-core` (1)
+
+## G7 split of the large crates
+
+Every crate that is over 25,000 lines today, or projected over it, splits per one manifest in
+`g7/` (see `g7/README.md`). Levels with a letter suffix order crates inside one level band
+(`L4a` < `L4b`); a crate depends only on strictly lower levels. Deps below are the
+in-family edges; lines are measured and projected by `route_rows.py --update`.
+
+| Source | Target | Level | Responsibility | In-family deps | Today | Projected |
+|---|---|---|---|---|---:|---:|
+| `medulla-agent-types` | `medulla-work-types` | L1a | Work items, work market, control leases, host start, jobs, worker registry, run history and orchestration record types. | - | 9,390 | 10,970 |
+| `medulla-agent-types` | `medulla-agent-types` | L1b | Agent components, graphs, libraries, templates, work items, jobs and run history types. | `medulla-work-types` | 13,118 | 15,118 |
+| `medulla-catalog-types` | `medulla-catalog-types` | L1c | Connector pack, schema, catalog, source ingestion, lineage and release record types. | - | 12,346 | 19,286 |
+| `medulla-catalog-types` | `medulla-source-types` | L1d | Source ingestion, source documents and transcripts, ingest jobs and development-lifecycle record types (changeset review, pre-merge tests, standards drift, live artifacts, supply-chain reports). | `medulla-catalog-types` | 4,881 | 5,481 |
+| `medulla-compute` | `medulla-reasoner` | L3 | OWL, tableau and rule reasoning, proof contract and reasoning closure. | - | 13,290 | 13,890 |
+| `medulla-compute` | `medulla-decision-policy` | L3b | Ladder stages 3-5: policy, hard constraints, knobs, admission, refusals, budgets and the bounded exact solve. | - | 2,428 | 16,728 |
+| `medulla-compute` | `medulla-compute` | L4a | Compute expression language: parser, AST, data science operators and sketches. | `medulla-decision-policy` | 13,285 | 14,185 |
+| `medulla-compute` | `medulla-finance-market` | L3 | Market data primitives: quotes, bars, books, calendars, corporate actions, indicators, finance signals, backtest validation and the special functions. | - | 5,645 | 5,745 |
+| `medulla-compute` | `medulla-graph-algos` | L4b | Graph algorithms and graph learning. | `medulla-compute` | 16,128 | 16,628 |
+| `medulla-compute` | `medulla-finance-quant` | L4a | Finance quantitative math: pricing, derivatives, state-space filters, regimes, signal models, factors, optimizer, risk, leverage, execution kernels and sizing. | `medulla-finance-market` | 5,308 | 6,708 |
+| `medulla-compute` | `medulla-mining` | L4b | Pattern and process mining over graph records. | - | 9,511 | 9,611 |
+| `medulla-compute` | `medulla-finance` | L4b | Finance portfolio layer: lot accounting, exchange records, imports, forensics, strategies, attribution, banking and the served finance entry points. | - | 4,008 | 8,108 |
+| `medulla-decision-types` | `medulla-decision-types` | L1e | Decision ladder vocabulary: ResolutionKind, evidence classes, decision requests, answers and revision records. | - | 11,976 | 21,996 |
+| `medulla-decision-types` | `medulla-decision-outcome-types` | L1f | Decision outcome and governance types: answer ranking, guards, trust, triage, red team, promotion, recommendations, policy evolution and the current plan. | `medulla-decision-types` | 6,098 | 6,698 |
+| `medulla-numeric` | `medulla-numeric` | L2 | Deterministic numeric kernels: series, risk bounds, stats, calibration, evaluation, clustering and the Python bridge. | - | 10,958 | 12,958 |
+| `medulla-numeric` | `medulla-decision-stats` | L3 | Statistical ranking for the decision ladder: fitted heads, calibration, conformal bounds, off-policy evaluation and scores. | `medulla-numeric` | 7,910 | 14,330 |
+| `medulla-numeric` | `medulla-finance-quant` | L4a | Finance quantitative math: pricing, derivatives, state-space filters, regimes, signal models, factors, optimizer, risk, leverage, execution kernels and sizing. | `medulla-numeric` | 5,308 | 6,708 |
+| `medulla-numeric` | `medulla-finance` | L4b | Finance portfolio layer: lot accounting, exchange records, imports, forensics, strategies, attribution, banking and the served finance entry points. | `medulla-numeric` | 4,008 | 8,108 |
+| `medulla-persistence` | `medulla-persistence` | F5 | Persistence backend: redb backend, cold offload and tiering, read-through, cost accounting, node info and durable stores. | - | 18,112 | 18,112 |
+| `medulla-persistence` | `medulla-persistence-records` | F6a | Persisted agent, decision, connector pack, guardrail and write-back records. | - | 16,299 | 17,399 |
+| `medulla-persistence` | `medulla-persistence-ops` | F6b | Backup, online reshard, shard migration and store upgrade. | `medulla-persistence`, `medulla-persistence-records` | 9,162 | 9,362 |
+| `medulla-plan` | `medulla-exec` | L5a | Physical plan execution: optimizer, cost models, runtime, DAG, incremental and streamed results. | - | 13,336 | 15,436 |
+| `medulla-plan` | `medulla-retrieval` | L5b | Retrieval and expansion: knowledge assembly, LeanRAG, verdicts and stop rules. | `medulla-exec` | 5,262 | 18,262 |
+| `medulla-plan` | `medulla-uql` | L5c | UQL syntax: lexer, grammar, parser, printer and diagnostics. | `medulla-exec` | 4,491 | 5,191 |
+| `medulla-plan` | `medulla-federation` | L5d | Federated planning across sources: federation optimizer, SSRF guard and remote engines. | `medulla-exec`, `medulla-uql` | 10,925 | 15,545 |
+| `medulla-plan` | `medulla-nlq` | L5e | Natural-language questions to UQL, with regressions. | `medulla-exec`, `medulla-federation`, `medulla-uql` | 4,191 | 4,991 |
+| `medulla-plan` | `medulla-plan` | L5f | Planner entry: UQL serving, cross-modal plan tests and the engine-peer federation tests. | `medulla-exec`, `medulla-federation`, `medulla-nlq`, `medulla-retrieval`, `medulla-uql` | 12,819 | 15,919 |
+| `medulla-query` | `medulla-tables` | L4a | Table schema model: schema, secondary index and migration definitions. | - | 3,770 | 3,770 |
+| `medulla-query` | `medulla-table-store` | L4b | Physical table store, property-graph tables, the ANN authority and plan types, embedding bindings and plan scopes. | `medulla-tables` | 19,953 | 20,653 |
+| `medulla-query` | `medulla-sql-udfs` | L4c | SQL scalar, numeric, sketch, window and table functions registered into the SQL engine. | `medulla-tables` | 3,220 | 3,320 |
+| `medulla-query` | `medulla-cypher` | L4d | Cypher language, its executor, graph data science calls and the edge index. | `medulla-table-store` | 15,474 | 15,574 |
+| `medulla-query` | `medulla-sql` | L4d | SQL dialect: parse, classify, plan and execute over tables, including the table providers. | `medulla-sql-udfs`, `medulla-table-store`, `medulla-tables` | 19,744 | 20,644 |
+| `medulla-raft` | `medulla-raft` | F7 | Raft consensus: command log, network, store, multi-raft and placement. | - | 16,306 | 16,506 |
+| `medulla-raft` | `medulla-raft-xshard` | F8 | Cross-shard transactions, elasticity, exchange, pregel, drain and the raft test harnesses. | `medulla-raft` | 11,543 | 11,643 |
+| `medulla-rdf` | `medulla-rdf` | L2 | RDF model, SPARQL algebra and update, and the serialisations (JSON-LD, RDF/XML, GeoSPARQL). | - | 11,828 | 12,328 |
+| `medulla-rdf` | `medulla-reasoner` | L3 | OWL, tableau and rule reasoning, proof contract and reasoning closure. | `medulla-rdf` | 13,290 | 13,890 |
+| `medulla-rdf` | `medulla-virtual-graph` | L4a | Attached sources read as virtual graphs: OBDA, source selection and supply-chain impact. | `medulla-rdf` | 6,556 | 10,636 |
+| `medulla-server-api` | `medulla-server-api` | F3 | Server state, seam traits, request context, transactions and the shared served-API helpers. | - | 8,925 | 8,925 |
+| `medulla-server-api` | `medulla-server-auth` | F4a | Request authentication, access checks, the SQL catalog ACL and SQL tables. | `medulla-server-api` | 13,107 | 13,607 |
+| `medulla-server-api` | `medulla-server-cdc` | F4b | Change data capture hub, CEP, materialised views, reasoning cascade and impact watch. | `medulla-server-api`, `medulla-server-auth` | 4,491 | 4,491 |
+| `medulla-server-api` | `medulla-server-mutation` | F4c | Served mutation and mutation batches. | `medulla-server-api`, `medulla-server-auth`, `medulla-server-cdc` | 12,245 | 12,745 |
+| `medulla-server-api` | `medulla-server-blob` | F4d | Served blob, key-value and SPARQL HTTP endpoints. | `medulla-server-api`, `medulla-server-auth`, `medulla-server-mutation` | 9,993 | 10,393 |
+| `medulla-server-api` | `medulla-server-ops` | F4e | Served API seams: admin, ingest, query-transaction and re-entry seams and their registry. | `medulla-server-api`, `medulla-server-auth`, `medulla-server-blob`, `medulla-server-mutation` | 7,804 | 7,804 |
+| `medulla-storage` | `medulla-direct-state` | L2a | Direct state: the storage owner's in-place state tables and their codecs. | - | 9,410 | 9,410 |
+| `medulla-storage` | `medulla-storage` | L2b | Physical storage owner, recovery, kernel, capabilities and scoped tables (one cycle; kept together). | `medulla-direct-state` | 17,427 | 18,227 |
+| `medulla-store` | `medulla-store` | F1 | redb store core, layout, sidecar and shards. | - | 21,529 | 21,529 |
+| `medulla-store` | `medulla-resource-store` | F2a | Resource reservations and capacity leases. | `medulla-store` | 9,512 | 10,212 |
+| `medulla-store` | `medulla-work-store` | F2a | Durable work items, their capability records and graph-row tables. | `medulla-store` | 12,446 | 13,246 |
+| `medulla-store` | `medulla-store-apply` | F2b | Store apply composition: native apply dispatch over work and resource rows, control, cleanup, checkpoints and the whole-batch store tests. | `medulla-resource-store`, `medulla-store`, `medulla-work-store` | 2,447 | 2,447 |
+| `medulla-store` | `medulla-lane-store` | F2c | Development lane records in the store. | `medulla-store` | 10,383 | 10,383 |
+
+Finance family: `medulla-finance-market` (L3, market data, calendars, signals, backtest
+validation) < `medulla-finance-quant` (L4a, pricing, filters, regimes, factors, risk, sizing,
+execution kernels) < `medulla-finance` (L4b, accounting, portfolio, attribution, served entry
+points). `medulla-numeric` keeps the shared risk bounds, calibration and evaluation kernels.
+`medulla-tsdb` reads finance-market and so sits above L3.
+
+`medulla-storage-owner` is dropped: owner, physical, recovery, kernel, capability and scoped
+form one cycle, so `direct_state` (no dependencies) moves out instead.
