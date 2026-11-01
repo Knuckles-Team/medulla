@@ -17,8 +17,9 @@ use std::collections::BTreeMap;
 use medulla_types::decision::statistical::log::StoredEvaluation;
 use medulla_types::decision::{DecisionOutcome, DecisionRecord};
 
-use crate::server::persistence::agent_library::AgentLibraryStore;
-use crate::server::persistence::decision_jobs::{decode_artifact, record_key};
+use medulla_persistence::agent_library::AgentLibraryStore;
+use medulla_persistence::decision_jobs::decode_artifact;
+use medulla_persistence::decision_jobs::record_key;
 
 /// The question id slate rows are aggregated under.
 pub(super) const SLATE_QUESTION: &str = "assembly";

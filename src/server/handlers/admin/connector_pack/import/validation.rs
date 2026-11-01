@@ -9,9 +9,8 @@ use medulla_types::connector_pack::{
 use medulla_types::contract::Digest256;
 use sha2::{Digest, Sha256};
 
-use crate::server::persistence::connector_pack::{
-    decode_schema_mappings, CONNECTOR_DECLARATION_URI,
-};
+use medulla_persistence::connector_pack::decode_schema_mappings;
+use medulla_persistence::connector_pack::CONNECTOR_DECLARATION_URI;
 
 use super::facts::uri_prefix;
 use super::json::parse_bounded_json;

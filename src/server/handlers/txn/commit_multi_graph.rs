@@ -4,7 +4,7 @@ use super::*;
 #[cfg(feature = "raft")]
 use crate::raft::RaftStateExt;
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 
 pub(super) struct CommitSlice {
     graph_name: String,

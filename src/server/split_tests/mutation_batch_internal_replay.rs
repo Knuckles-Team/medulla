@@ -57,7 +57,7 @@ async fn internal_replay_rejects_a_conflicting_terminal_result_after_kernel_admi
         "terminal-result-conflict",
     );
     let persistence: Arc<dyn PersistenceBackend> = Arc::new(
-        crate::server::persistence::redb_backend::RedbBackend::open(
+        medulla_persistence::redb_backend::RedbBackend::open(
             dir.to_string_lossy().into_owned(),
             64,
         )
@@ -462,7 +462,7 @@ async fn promotion_replay_and_failed_cas_preserve_authority_and_restart_identity
     let dir =
         medulla_kernel::kernel::persistence::temp_dir("medulla-program-promotion", "cas-replay");
     let persistence: Arc<dyn PersistenceBackend> = Arc::new(
-        crate::server::persistence::redb_backend::RedbBackend::open(
+        medulla_persistence::redb_backend::RedbBackend::open(
             dir.to_string_lossy().into_owned(),
             64,
         )
@@ -1022,7 +1022,7 @@ async fn promotion_replay_and_failed_cas_preserve_authority_and_restart_identity
     persistence.shutdown();
     drop(persistence);
     let reopened_persistence: Arc<dyn PersistenceBackend> = Arc::new(
-        crate::server::persistence::redb_backend::RedbBackend::open(
+        medulla_persistence::redb_backend::RedbBackend::open(
             dir.to_string_lossy().into_owned(),
             64,
         )

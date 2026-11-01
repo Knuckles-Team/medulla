@@ -4,7 +4,7 @@ use super::*;
 use medulla_server_api::auth::dispatch_test_on_heap;
 use medulla_server_api::auth::scoped_test_request_on;
 use medulla_server_api::auth::ScopedTestCaller;
-use crate::server::persistence::redb_backend::RedbBackend;
+use medulla_persistence::redb_backend::RedbBackend;
 use medulla_server_api::state::ServerState;
 use medulla_types::control_lease::ControlLeaseIssued;
 use medulla_types::host_start::{HostStartBinding, HostStartInterfaces, IssueHostStartGrantRequest};

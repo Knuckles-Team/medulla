@@ -31,7 +31,7 @@ use medulla_types::decision::{CandidateSourceRecord, LibraryCandidateScope, MAX_
 
 use super::stat_classes::{current_rules, derive, DerivedClasses};
 use super::stat_support::refusal;
-use crate::server::persistence::agent_library::AgentLibraryStore;
+use medulla_persistence::agent_library::AgentLibraryStore;
 
 /// Domain of a declared option set's digest.
 const DECLARED_OPTIONS_DOMAIN: &str = "eg/decide-declared-options/v1";

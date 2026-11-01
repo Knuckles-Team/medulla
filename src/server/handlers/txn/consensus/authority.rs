@@ -2,11 +2,11 @@
 
 use super::*;
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 
 #[cfg(feature = "raft")]
 pub(super) fn validate_consensus_parent_authority(
-    redb: &crate::server::persistence::redb_backend::RedbBackend,
+    redb: &medulla_persistence::redb_backend::RedbBackend,
     coordinator_id: &str,
     authority: &medulla_server_api::api::persistence::RaftMutationContext,
 ) -> Result<medulla_server_api::api::admin::saga::AdminSaga, String> {
@@ -23,7 +23,7 @@ pub(super) fn validate_consensus_parent_authority(
 
 #[cfg(feature = "raft")]
 pub(super) fn validate_consensus_participant_authority(
-    redb: &crate::server::persistence::redb_backend::RedbBackend,
+    redb: &medulla_persistence::redb_backend::RedbBackend,
     coordinator_id: &str,
     txn: &GraphTxnState,
     authority: &medulla_server_api::api::persistence::RaftMutationContext,
@@ -52,7 +52,7 @@ pub(super) enum ParticipantAdmission {
 
 #[cfg(feature = "raft")]
 pub(super) fn participant_phase_admission(
-    redb: &crate::server::persistence::redb_backend::RedbBackend,
+    redb: &medulla_persistence::redb_backend::RedbBackend,
     parent: &medulla_server_api::api::admin::saga::AdminSaga,
     phase: medulla_server_api::api::reentry::TransactionParticipantPhase,
 ) -> Result<ParticipantAdmission, String> {
@@ -144,7 +144,7 @@ fn validate_committed_participant_record(
 
 #[cfg(feature = "raft")]
 pub(super) async fn finish_participant_cleanup(
-    redb: &crate::server::persistence::redb_backend::RedbBackend,
+    redb: &medulla_persistence::redb_backend::RedbBackend,
     plan: &ConsensusParticipantPlan,
 ) -> Result<(), String> {
     redb.xshard_prepare_clear(&plan.coordinator_id, plan.participant_id)

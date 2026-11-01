@@ -15,7 +15,7 @@
 //! the tenant's shared SQL catalog.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -140,7 +140,7 @@ enum Owner {
         graph_fname: String,
     },
     AgentLibrary {
-        store: Arc<crate::server::persistence::agent_library::AgentLibraryStore>,
+        store: Arc<medulla_persistence::agent_library::AgentLibraryStore>,
         tenant_id: String,
     },
     #[cfg(feature = "jobs")]

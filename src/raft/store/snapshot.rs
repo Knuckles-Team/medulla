@@ -1,6 +1,6 @@
 use super::*;
 #[cfg(feature = "redb")]
-use crate::server::persistence::cold_offload::ColdTrackerStateExt;
+use medulla_persistence::cold_offload::ColdTrackerStateExt;
 
 impl MedullaStore {
     /// Dump THIS group's graphs for a snapshot (CONCEPT:AU-KG.ingest.staged). When the store runs
@@ -180,7 +180,7 @@ impl MedullaStore {
         self.redb()
             .import_graph_raw_from_snapshot(
                 &fname,
-                crate::server::persistence::online_reshard::RawGraphRows::default(),
+                medulla_persistence::online_reshard::RawGraphRows::default(),
             )
             .await?;
         let mut s = self.ctx.state.write().await;

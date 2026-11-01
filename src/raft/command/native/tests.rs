@@ -233,10 +233,10 @@ fn work_item_native_inventory_excludes_read_only_reservation_queries() {
 
 #[test]
 fn node_info_is_typed_internal_and_sealed() {
-    let info = crate::server::persistence::node_info_store::NodeInfo {
+    let info = medulla_persistence::node_info_store::NodeInfo {
         cluster_id: "cluster-authority".to_string(),
         node_id: 7,
-        member_identity: crate::server::persistence::node_info_store::member_identity_for(
+        member_identity: medulla_persistence::node_info_store::member_identity_for(
             "cluster-authority",
             7,
         ),

@@ -161,7 +161,7 @@ async fn harness_config_replay_refuses_a_relabelled_generic_record() {
             .store
             .decision_artifact(
                 TENANT,
-                &crate::server::persistence::decision_jobs::record_key(&relabelled.record_id),
+                &medulla_persistence::decision_jobs::record_key(&relabelled.record_id),
             )
             .unwrap()
             .is_none());

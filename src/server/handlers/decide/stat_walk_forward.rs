@@ -35,8 +35,9 @@ use medulla_types::decision::{DecisionEvalRequest, DecisionJobOutput, QuantisedV
 
 use super::stat_jobs::{candidate_head, dataset_digest, EvalInputs, JobRun};
 use super::stat_support::refusal;
-use crate::server::persistence::agent_library::AgentLibraryStore;
-use crate::server::persistence::decision_jobs::{encode_artifact, evaluation_run_key};
+use medulla_persistence::agent_library::AgentLibraryStore;
+use medulla_persistence::decision_jobs::encode_artifact;
+use medulla_persistence::decision_jobs::evaluation_run_key;
 
 /// Domain of an `EvaluationRun` digest.
 const RUN_DOMAIN: &str = "eg/decision/evaluation-run/v1";

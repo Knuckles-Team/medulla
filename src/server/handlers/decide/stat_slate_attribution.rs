@@ -28,7 +28,7 @@ use medulla_types::decision::{EvidenceClass, RecordWindow};
 use super::stat_log::{LogReader, MAX_LOG_ROWS};
 use super::stat_slate::{evaluated_slates, Slate, SLATE_QUESTION};
 use super::stat_support::default_statistical_policy;
-use crate::server::persistence::agent_library::AgentLibraryStore;
+use medulla_persistence::agent_library::AgentLibraryStore;
 
 /// Digest domain of a slate split.
 const SLATE_ATTRIBUTION_DOMAIN: &str = "eg/slate-attribution/v1";

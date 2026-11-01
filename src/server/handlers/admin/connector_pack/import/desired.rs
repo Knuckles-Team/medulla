@@ -13,10 +13,9 @@ use medulla_types::connector_pack::{
 };
 use medulla_types::contract::Digest256;
 
-use crate::server::persistence::agent_library::AgentLibraryStore;
-use crate::server::persistence::connector_pack::{
-    ConnectorPackMemberRow, CONNECTOR_DECLARATION_URI,
-};
+use medulla_persistence::agent_library::AgentLibraryStore;
+use medulla_persistence::connector_pack::ConnectorPackMemberRow;
+use medulla_persistence::connector_pack::CONNECTOR_DECLARATION_URI;
 
 use super::annotations::partition_capabilities;
 use super::facts::{component_kind, facts};

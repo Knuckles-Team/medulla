@@ -2,7 +2,7 @@
 //! admin saga ledger.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -50,10 +50,10 @@ fn catalog_saga_replay_response(
 pub(crate) fn catalog_saga<M>(
     req_id: u64,
     caller: Option<&str>,
-    backend: &crate::server::persistence::redb_backend::RedbBackend,
+    backend: &medulla_persistence::redb_backend::RedbBackend,
     method: &Method,
     attempt_nonce: Option<Nonce>,
-    apply: impl FnOnce(&crate::server::persistence::tenant_catalog::TenantCatalog) -> Result<(), String>,
+    apply: impl FnOnce(&medulla_persistence::tenant_catalog::TenantCatalog) -> Result<(), String>,
 ) -> Response
 where
     M: medulla_types::result_contract::MethodResult<
@@ -95,7 +95,7 @@ where
 /// Build the reshard result payload from a report.
 #[cfg(feature = "redb")]
 pub(crate) fn reshard_report(
-    report: &crate::server::persistence::online_reshard::ReshardReport,
+    report: &medulla_persistence::online_reshard::ReshardReport,
 ) -> medulla_types::result_contract::cluster::ShardReshardReport {
     medulla_types::result_contract::cluster::ShardReshardReport {
         graph: report.graph.clone(),
@@ -115,8 +115,8 @@ pub(crate) fn reshard_report(
 /// Build the rebalance plan result payload.
 #[cfg(feature = "redb")]
 pub(crate) fn rebalance_plan_report(
-    plan: &crate::server::persistence::rebalance::RebalancePlan,
-    shards: &[crate::server::persistence::rebalance::ShardLoad],
+    plan: &medulla_persistence::rebalance::RebalancePlan,
+    shards: &[medulla_persistence::rebalance::ShardLoad],
 ) -> medulla_types::result_contract::cluster::RebalancePlanReport {
     medulla_types::result_contract::cluster::RebalancePlanReport {
         moves: plan
@@ -157,8 +157,8 @@ pub(crate) fn no_catalog(req_id: u64) -> Response {
 pub(crate) fn rebalance_opts(
     tolerance: Option<f64>,
     max_moves: Option<usize>,
-) -> crate::server::persistence::rebalance::RebalanceOptions {
-    let mut opts = crate::server::persistence::rebalance::RebalanceOptions::default();
+) -> medulla_persistence::rebalance::RebalanceOptions {
+    let mut opts = medulla_persistence::rebalance::RebalanceOptions::default();
     if let Some(t) = tolerance {
         opts.tolerance = t;
     }

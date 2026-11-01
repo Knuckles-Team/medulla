@@ -6,7 +6,7 @@
 //! left to the commit that makes the record durable.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 use std::time::Instant;
 

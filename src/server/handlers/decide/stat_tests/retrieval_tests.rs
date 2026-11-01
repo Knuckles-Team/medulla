@@ -75,9 +75,9 @@ pub(super) async fn executed_template(h: &Harness) -> DecisionLogEntry {
         evaluator: None,
     };
     let logged: DecisionLogCommitted = decode(log_op(h, "decider", commit).await).unwrap();
-    let key = crate::server::persistence::decision_jobs::record_key(&logged.record_id);
+    let key = medulla_persistence::decision_jobs::record_key(&logged.record_id);
     let bytes = h.store.decision_artifact(TENANT, &key).unwrap().unwrap();
-    crate::server::persistence::decision_jobs::decode_artifact(&bytes, "entry").unwrap()
+    medulla_persistence::decision_jobs::decode_artifact(&bytes, "entry").unwrap()
 }
 
 /// The persistence id of test principal `who`.
@@ -121,8 +121,8 @@ pub(super) fn clone_record(h: &Harness, template: &DecisionLogEntry, record_id: 
         option_id: "plan-hyde".to_string(),
         propensity: rational(1, 1),
     };
-    let key = crate::server::persistence::decision_jobs::record_key(record_id);
-    let bytes = crate::server::persistence::decision_jobs::encode_artifact(&entry).unwrap();
+    let key = medulla_persistence::decision_jobs::record_key(record_id);
+    let bytes = medulla_persistence::decision_jobs::encode_artifact(&entry).unwrap();
     h.store
         .put_decision_artifacts(TENANT, &[(key, bytes)])
         .unwrap();

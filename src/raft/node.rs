@@ -27,7 +27,7 @@
 #[cfg(feature = "raft")]
 use crate::raft::RaftStateExt;
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -191,7 +191,7 @@ pub async fn start(
         let cluster_id = cfg.cluster_id.clone();
         let node_id = cfg.node_id;
         let member_identity =
-            crate::server::persistence::node_info_store::member_identity_for(&cluster_id, node_id);
+            medulla_persistence::node_info_store::member_identity_for(&cluster_id, node_id);
         let advertised_client_addr = cfg.advertised_client_addr.clone();
         let advertised_tls_server_name = cfg.advertised_tls_server_name.clone();
         let advertised_certificate_id = cfg.advertised_certificate_id.clone();

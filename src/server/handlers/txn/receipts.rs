@@ -2,7 +2,7 @@
 
 use super::*;
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 
 #[path = "receipts/lifecycle.rs"]
 mod lifecycle;
@@ -337,7 +337,7 @@ pub(super) fn begin_txn_receipt(
 
 #[cfg(feature = "redb")]
 fn admit_txn_saga(
-    redb: &crate::server::persistence::redb_backend::RedbBackend,
+    redb: &medulla_persistence::redb_backend::RedbBackend,
     req_id: u64,
     caller: Option<&str>,
     txn_id: &str,
@@ -423,7 +423,7 @@ pub(super) type ResumedTxnReceipt = (TxnReceipt, Option<ResultPayload>, Option<G
 
 #[cfg(feature = "redb")]
 fn retry_txn_receipt(
-    redb: &crate::server::persistence::redb_backend::RedbBackend,
+    redb: &medulla_persistence::redb_backend::RedbBackend,
     req_id: u64,
     caller: &str,
     saga: medulla_server_api::api::admin::saga::AdminSaga,
@@ -464,7 +464,7 @@ fn retry_txn_receipt(
 
 #[cfg(feature = "redb")]
 fn txn_receipt_retry_payload(
-    redb: &crate::server::persistence::redb_backend::RedbBackend,
+    redb: &medulla_persistence::redb_backend::RedbBackend,
     saga: &medulla_server_api::api::admin::saga::AdminSaga,
     prepared: bool,
 ) -> Result<Vec<u8>, String> {
@@ -481,7 +481,7 @@ fn txn_receipt_retry_payload(
 
 #[cfg(feature = "redb")]
 fn resume_txn_staging(
-    redb: &crate::server::persistence::redb_backend::RedbBackend,
+    redb: &medulla_persistence::redb_backend::RedbBackend,
     saga: &medulla_server_api::api::admin::saga::AdminSaga,
     caller: &str,
     expected_tenant: Option<&str>,
@@ -588,7 +588,7 @@ pub(super) fn resume_txn_receipt(
 
 #[cfg(all(feature = "redb", feature = "security"))]
 pub(super) fn seal_txn_recovery_plan(
-    backend: &crate::server::persistence::redb_backend::RedbBackend,
+    backend: &medulla_persistence::redb_backend::RedbBackend,
     txn: &GraphTxnState,
 ) -> Result<(String, Vec<u8>), String> {
     let plaintext = txn.encode_recovery_plan()?;
@@ -601,7 +601,7 @@ pub(super) fn seal_txn_recovery_plan(
 
 #[cfg(all(feature = "redb", not(feature = "security")))]
 pub(super) fn seal_txn_recovery_plan(
-    _backend: &crate::server::persistence::redb_backend::RedbBackend,
+    _backend: &medulla_persistence::redb_backend::RedbBackend,
     _txn: &GraphTxnState,
 ) -> Result<(String, Vec<u8>), String> {
     Err(
@@ -612,7 +612,7 @@ pub(super) fn seal_txn_recovery_plan(
 
 #[cfg(all(feature = "redb", feature = "security"))]
 pub(super) fn open_txn_recovery_plan(
-    backend: &crate::server::persistence::redb_backend::RedbBackend,
+    backend: &medulla_persistence::redb_backend::RedbBackend,
     batch: &crate::mutation_batch::MutationBatch,
     encrypted: &[u8],
     agent: String,
@@ -641,7 +641,7 @@ pub(super) fn open_txn_recovery_plan(
 
 #[cfg(all(feature = "redb", not(feature = "security")))]
 pub(super) fn open_txn_recovery_plan(
-    _backend: &crate::server::persistence::redb_backend::RedbBackend,
+    _backend: &medulla_persistence::redb_backend::RedbBackend,
     _batch: &crate::mutation_batch::MutationBatch,
     _encrypted: &[u8],
     _agent: String,

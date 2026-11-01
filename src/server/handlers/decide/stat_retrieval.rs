@@ -18,8 +18,8 @@ use super::stat_log::{
     evaluations_of, executed_option, store_once, visible_entry, LogReader, MAX_LOG_ROWS,
 };
 use super::stat_support::{default_statistical_policy, refusal};
-use crate::server::persistence::agent_library::AgentLibraryStore;
-use crate::server::persistence::decision_jobs::decode_artifact;
+use medulla_persistence::agent_library::AgentLibraryStore;
+use medulla_persistence::decision_jobs::decode_artifact;
 
 /// Key family of retrieval outcomes.
 const OUTCOME_PREFIX: &str = "retrieval:";

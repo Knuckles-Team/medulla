@@ -1826,7 +1826,7 @@ async fn spawn_memory_sweeps(
     // byte dimension on top).
     #[cfg(feature = "cost")]
     {
-        let cost_config = medulla::cost::CostConfig::from_env().unwrap_or_else(|error| {
+        let cost_config = medulla_persistence::cost::CostConfig::from_env().unwrap_or_else(|error| {
             eprintln!("error: {error}");
             std::process::exit(2);
         });

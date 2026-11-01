@@ -176,7 +176,7 @@ async fn clustered_placement_refuses_source_batch_before_publication() {
     let raft_dir = served.fixture.directory.join("raft-node");
     std::fs::create_dir_all(&raft_dir).unwrap();
     let backend: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> = Arc::new(
-        crate::server::persistence::redb_backend::RedbBackend::open(
+        medulla_persistence::redb_backend::RedbBackend::open(
             raft_dir.to_str().unwrap().to_string(),
             4096,
         )

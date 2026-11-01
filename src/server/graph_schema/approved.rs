@@ -11,7 +11,7 @@
 //! that records the lease id as provenance.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 use std::sync::Arc;
 
 use medulla_types::graph_schema::approval::{approved_candidate_digest, verify_schema_approval};

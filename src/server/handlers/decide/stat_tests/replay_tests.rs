@@ -3,7 +3,7 @@
 //! cannot answer honestly.
 
 use super::*;
-use crate::server::persistence::decision_jobs::evaluation_run_key;
+use medulla_persistence::decision_jobs::evaluation_run_key;
 use medulla_types::decision::replay::{
     AllocationRule, EvalMode, EvaluationRun, RefitSpec, ReplayEnvironment, ReplaySpec, SharedCap,
     TrialLog, WalkForward,

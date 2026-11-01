@@ -1,6 +1,6 @@
 use super::*;
 #[cfg(feature = "redb")]
-use crate::server::persistence::cold_offload::ColdTrackerStateExt;
+use medulla_persistence::cold_offload::ColdTrackerStateExt;
 struct GraphDispatchCapture<'a> {
     state: &'a Arc<RwLock<ServerState>>,
     graph_name: &'a str,
@@ -30,7 +30,7 @@ struct GraphDispatchCapture<'a> {
     #[cfg(feature = "redb")]
     graph_incarnation_id: String,
     #[cfg(feature = "redb")]
-    cold_tracker: Option<Arc<crate::server::persistence::cold_offload::ColdTenantTracker>>,
+    cold_tracker: Option<Arc<medulla_persistence::cold_offload::ColdTenantTracker>>,
     #[cfg(feature = "security")]
     rls: std::sync::Arc<crate::isolation::IsolationLayer>,
     #[cfg(all(feature = "mining", feature = "query", feature = "tsdb"))]

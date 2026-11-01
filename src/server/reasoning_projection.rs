@@ -1190,12 +1190,12 @@ mod tests {
     ) -> (
         PathBuf,
         String,
-        Arc<crate::server::persistence::redb_backend::RedbBackend>,
+        Arc<medulla_persistence::redb_backend::RedbBackend>,
     ) {
         let root = test_root();
         let root_str = root.to_string_lossy().to_string();
         let backend = Arc::new(
-            crate::server::persistence::redb_backend::RedbBackend::open_with_shards(
+            medulla_persistence::redb_backend::RedbBackend::open_with_shards(
                 root_str.clone(),
                 256,
                 1,

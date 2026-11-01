@@ -7,7 +7,7 @@
 //! a foreign tenant, an idempotency conflict, graph candidates.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -47,9 +47,9 @@ use medulla_types::decision::{
 };
 
 use medulla_server_api::auth::VerifiedRequestContext;
-use crate::server::persistence::agent_component::test_component_draft;
-use crate::server::persistence::agent_fixtures::mutation_context;
-use crate::server::persistence::agent_library::AgentLibraryStore;
+use medulla_persistence::agent_component::test_component_draft;
+use medulla_persistence::agent_fixtures::mutation_context;
+use medulla_persistence::agent_library::AgentLibraryStore;
 use medulla_server_api::state::ServerState;
 
 const TENANT: &str = "tenant-shared";
@@ -495,7 +495,7 @@ async fn inline_human_labels_cannot_publish_threshold(
         .store
         .decision_artifact(
             TENANT,
-            &crate::server::persistence::decision_jobs::receipt_threshold_key(
+            &medulla_persistence::decision_jobs::receipt_threshold_key(
                 &receipt.receipt_digest,
             ),
         )
@@ -792,7 +792,7 @@ async fn fit_evaluate_publish_and_decide_end_to_end() {
         .store
         .decision_artifact(
             TENANT,
-            &crate::server::persistence::decision_jobs::receipt_threshold_key(
+            &medulla_persistence::decision_jobs::receipt_threshold_key(
                 &human_receipt.receipt_digest,
             ),
         )

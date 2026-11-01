@@ -103,7 +103,7 @@ fn channel_group_join_leave_rejoin_replays_each_tagged_result() {
         .prefix("medulla-admin-channel-rejoin-contract-")
         .tempdir()
         .unwrap();
-    let backend = crate::server::persistence::redb_backend::RedbBackend::open_with_shards(
+    let backend = medulla_persistence::redb_backend::RedbBackend::open_with_shards(
         directory.path().to_string_lossy().into_owned(),
         16,
         1,
@@ -309,7 +309,7 @@ fn reshard_report(graph: &str) -> medulla_types::result_contract::cluster::Shard
 }
 
 fn sealed_private_payload(
-    backend: &crate::server::persistence::redb_backend::RedbBackend,
+    backend: &medulla_persistence::redb_backend::RedbBackend,
     plaintext: &[u8],
 ) -> (String, Vec<u8>) {
     let digest = hex::encode(sha2::Sha256::digest(plaintext));
@@ -321,7 +321,7 @@ fn sealed_private_payload(
 }
 
 fn opaque_recovery_batch(
-    backend: &crate::server::persistence::redb_backend::RedbBackend,
+    backend: &medulla_persistence::redb_backend::RedbBackend,
     batch_id: &str,
     event_type: &str,
     payload_digest: &str,
@@ -352,7 +352,7 @@ fn opaque_recovery_batch(
 }
 
 fn legacy_public_batch(
-    backend: &crate::server::persistence::redb_backend::RedbBackend,
+    backend: &medulla_persistence::redb_backend::RedbBackend,
     batch_id: &str,
     method: &Method,
 ) -> MutationBatch {
@@ -388,7 +388,7 @@ fn recovery_rejects_unknown_prepared_and_committed_events_but_replays_known_priv
         .prefix("medulla-admin-saga-recovery-contract-")
         .tempdir()
         .unwrap();
-    let backend = crate::server::persistence::redb_backend::RedbBackend::open_with_shards(
+    let backend = medulla_persistence::redb_backend::RedbBackend::open_with_shards(
         directory.path().to_string_lossy().into_owned(),
         16,
         1,
@@ -479,7 +479,7 @@ fn sparql_recovery_rejects_untyped_results_while_prepared_and_replays_exact_outc
         .prefix("medulla-admin-sparql-recovery-contract-")
         .tempdir()
         .unwrap();
-    let backend = crate::server::persistence::redb_backend::RedbBackend::open_with_shards(
+    let backend = medulla_persistence::redb_backend::RedbBackend::open_with_shards(
         directory.path().to_string_lossy().into_owned(),
         16,
         1,
@@ -605,7 +605,7 @@ fn method_bearing_retry_recovers_legacy_public_sagas_but_direct_resume_refuses()
         .prefix("medulla-admin-public-legacy-contract-")
         .tempdir()
         .unwrap();
-    let backend = crate::server::persistence::redb_backend::RedbBackend::open_with_shards(
+    let backend = medulla_persistence::redb_backend::RedbBackend::open_with_shards(
         directory.path().to_string_lossy().into_owned(),
         16,
         1,
@@ -723,7 +723,7 @@ fn durable_reshard_saga_rejects_wrong_result_then_replays_typed_result() {
         .prefix("medulla-admin-saga-contract-")
         .tempdir()
         .unwrap();
-    let backend = crate::server::persistence::redb_backend::RedbBackend::open_with_shards(
+    let backend = medulla_persistence::redb_backend::RedbBackend::open_with_shards(
         directory.path().to_string_lossy().into_owned(),
         16,
         1,

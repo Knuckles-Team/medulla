@@ -1,18 +1,18 @@
 //! M3 cluster-admin routing and catalog/rebalance operations.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
 use crate::mutation_batch::DurabilityDomain;
 use crate::protocol::{Method, Response, ResultPayload};
-use crate::server::persistence::rebalance::{
-    plan_rebalance, shard_loads_from_catalog, shard_loads_from_graph_loads,
-};
+use medulla_persistence::rebalance::plan_rebalance;
+use medulla_persistence::rebalance::shard_loads_from_catalog;
+use medulla_persistence::rebalance::shard_loads_from_graph_loads;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::Nonce;
 
@@ -130,7 +130,7 @@ async fn handle_reshard(call: AdminSagaCall<'_>, graph: String, to_shard: u32) -
 #[cfg(feature = "redb")]
 fn handle_catalog_list(
     req_id: u64,
-    backend: &crate::server::persistence::redb_backend::RedbBackend,
+    backend: &medulla_persistence::redb_backend::RedbBackend,
 ) -> Response {
     let Some(cat) = backend.catalog() else {
         return no_catalog(req_id);
@@ -158,7 +158,7 @@ fn handle_catalog_list(
 async fn handle_rebalance_plan(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-    backend: &crate::server::persistence::redb_backend::RedbBackend,
+    backend: &medulla_persistence::redb_backend::RedbBackend,
     tolerance: Option<f64>,
     max_moves: Option<usize>,
 ) -> Result<Response, Method> {
@@ -172,7 +172,7 @@ async fn handle_rebalance_plan(
                 .map(|(g, l)| {
                     (
                         g.clone(),
-                        crate::server::persistence::redb_backend::shard_index(g, k) as u32,
+                        medulla_persistence::redb_backend::shard_index(g, k) as u32,
                         *l,
                     )
                 })
@@ -196,7 +196,7 @@ async fn handle_rebalance_plan(
 struct AdminSagaCall<'a> {
     req_id: u64,
     caller: Option<&'a str>,
-    backend: &'a crate::server::persistence::redb_backend::RedbBackend,
+    backend: &'a medulla_persistence::redb_backend::RedbBackend,
     original_method: &'a Method,
     attempt_nonce: Option<Nonce>,
 }
@@ -269,7 +269,7 @@ async fn handle_rebalance_execute(
 async fn handle_backup(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-    backend: &crate::server::persistence::redb_backend::RedbBackend,
+    backend: &medulla_persistence::redb_backend::RedbBackend,
     destination: String,
     label: Option<String>,
 ) -> Result<Response, Method> {
@@ -301,7 +301,7 @@ async fn handle_backup(
         guard
             .isolation
             .policy_store()
-            .map(crate::server::persistence::durable_stores::RbacBundledStore)
+            .map(medulla_persistence::durable_stores::RbacBundledStore)
     };
     #[cfg(feature = "kv")]
     let kv_store = { state.read().await.kv.clone() };
@@ -464,7 +464,7 @@ async fn handle_restore(
     if let Err(error) = create_private_directory(&stage) {
         return Ok(Response::err(req_id, error));
     }
-    match crate::server::persistence::backup::restore_bundle(&source, &stage, target_shards) {
+    match medulla_persistence::backup::restore_bundle(&source, &stage, target_shards) {
         Ok(r) => {
             // The receipt is portable and contains no local username or
             // filesystem reference. The deterministic stage token is

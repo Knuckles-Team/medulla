@@ -61,7 +61,7 @@
 #![cfg(feature = "compute-dist")]
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 use std::sync::Arc;
 use std::time::Duration;
 

@@ -2,7 +2,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use crate::protocol::{GraphType, Method, ResultPayload};
-use crate::server::persistence::redb_backend::RedbBackend;
+use medulla_persistence::redb_backend::RedbBackend;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_types::contract::Nonce;
 use medulla_types::mutation_batch::CommittedVersion;

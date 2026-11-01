@@ -5,7 +5,7 @@
 
 use std::sync::Arc;
 
-use crate::server::persistence::redb_backend::RedbBackend;
+use medulla_persistence::redb_backend::RedbBackend;
 use medulla_capabilities::DurabilityDomain;
 use medulla_core::graph::GraphCore;
 use medulla_core::isolation::IsolationLayer;

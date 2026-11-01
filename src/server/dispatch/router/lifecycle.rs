@@ -2,7 +2,7 @@
 
 use super::*;
 #[cfg(feature = "redb")]
-use crate::server::persistence::cold_offload::ColdTrackerStateExt;
+use medulla_persistence::cold_offload::ColdTrackerStateExt;
 
 /// A `CreateGraph` that finds the graph already resident is either a retry of a
 /// durably-committed create (idempotent success) or a genuine collision.
@@ -237,9 +237,9 @@ async fn create_declared_graph(
     // the coldest resident graph if the finite cap is already reached.
     #[cfg(feature = "redb")]
     {
-        let cap = crate::server::persistence::cold_offload::max_resident_graphs();
+        let cap = medulla_persistence::cold_offload::max_resident_graphs();
         let tracker = s.ensure_cold_tracker();
-        crate::server::persistence::cold_offload::admit_capacity(
+        medulla_persistence::cold_offload::admit_capacity(
             &mut s,
             &tracker,
             &graph_name,

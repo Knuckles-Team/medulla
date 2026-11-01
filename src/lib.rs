@@ -72,12 +72,6 @@ pub mod embedded;
 // preserving each caller's existing path prefix and cleanup contract.
 #[cfg(feature = "server")]
 pub mod server;
-// Per-tenant memory budget + autoscale signals (CONCEPT:MEDULLA-KG.compute.lane-v, Lane V). The budget
-// enforcer (periodic over-budget eviction/hibernation), the per-tenant resident-RAM
-// tracking, the ResourceStats snapshot, and the capacity-planning cost model. PURE-RUST
-// (a sweep over the registry reusing the existing evict/hibernate ops); gated on `cost`.
-#[cfg(feature = "cost")]
-pub mod cost;
 // In-engine Raft replication (CONCEPT:AU-KG.ingest.source-sync-canonical) — cluster tier only, behind the
 // `raft` feature. A default/pi/full build links no openraft. The module is
 // self-`#![cfg(feature = "raft")]`-gated; this `mod` line is also gated so it does

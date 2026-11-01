@@ -2,7 +2,7 @@
 
 use super::*;
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 
 /// Every mutating transaction-family method bypasses the transport replay
 /// ledger because its effect belongs to the durable kernel.  Begin/stage/

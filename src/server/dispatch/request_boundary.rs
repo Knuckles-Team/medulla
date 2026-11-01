@@ -197,7 +197,7 @@ pub(super) async fn dispatch_resource_stats(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified_context: &VerifiedRequestContext,
-    request: crate::cost::ResourceStatsRequest,
+    request: medulla_persistence::cost::ResourceStatsRequest,
 ) -> Response {
     // ResourceStats is service-scoped, so construct the same verified graph
     // read authority used by graph reads before scanning the registry.  The
@@ -208,7 +208,7 @@ pub(super) async fn dispatch_resource_stats(
         Ok(authority) => authority,
         Err(error) => return Response::err(req_id, error),
     };
-    match crate::cost::collect_resource_stats_authorized(
+    match medulla_persistence::cost::collect_resource_stats_authorized(
         state,
         &authority,
         verified_context.tenant(),

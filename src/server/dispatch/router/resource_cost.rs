@@ -40,7 +40,7 @@ pub(super) async fn dispatch_resource_cost_methods(
                             state,
                             req_id,
                             verified_context,
-                            crate::cost::ResourceStatsRequest {
+                            medulla_persistence::cost::ResourceStatsRequest {
                                 cursor,
                                 limit,
                                 summary,

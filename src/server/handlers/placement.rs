@@ -21,7 +21,7 @@
 #[cfg(feature = "raft")]
 use crate::raft::RaftStateExt;
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;

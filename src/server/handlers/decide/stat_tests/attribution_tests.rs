@@ -4,7 +4,7 @@
 
 use super::consumer_tests::evaluate_assembly;
 use super::*;
-use crate::server::persistence::decision_record::tests as v1;
+use medulla_persistence::decision_record::tests as v1;
 use medulla_types::agent_component::ComponentDependency;
 use medulla_types::decision::record::SlotAssignment;
 use medulla_types::decision::statistical::log::{

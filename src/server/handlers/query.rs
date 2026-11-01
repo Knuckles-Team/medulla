@@ -279,7 +279,7 @@ pub(crate) mod current_auth_test_support {
     #[cfg(feature = "redb")]
     pub(super) fn open_test_backend(dir: String) -> Arc<dyn PersistenceBackend> {
         Arc::new(
-            crate::server::persistence::redb_backend::RedbBackend::open(dir, 4096)
+            medulla_persistence::redb_backend::RedbBackend::open(dir, 4096)
                 .expect("open test redb backend"),
         )
     }

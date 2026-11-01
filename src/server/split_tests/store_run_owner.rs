@@ -147,7 +147,7 @@ fn run_admission_recovery_refuses_missing_evidence() {
 async fn run_admission_unavailable_is_a_declared_wire_refusal() {
     use medulla_server_api::api::persistence::PersistenceBackend;
     use crate::server::handlers::work_item_read::{answer, WorkItemRead};
-    use crate::server::persistence::redb_backend::RedbBackend;
+    use medulla_persistence::redb_backend::RedbBackend;
     use std::sync::Arc;
     for (tag, evidence) in [("legacy", None), ("malformed", Some(serde_json::json!({})))] {
         let dir = medulla_store::redb_store::temp_path("medulla-run-wire-refusal", tag);

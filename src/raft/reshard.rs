@@ -45,7 +45,7 @@
 //! the next access. Proof: a hibernated graph rehydrates with every node intact.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 use std::sync::Arc;
 
 use super::multi::MultiRaft;
@@ -54,7 +54,7 @@ use super::placement::{
 };
 use super::GroupId;
 use medulla_server_api::api::persistence::PersistenceBackend;
-use crate::server::persistence::redb_backend::rehydrate_core_from_dump;
+use medulla_persistence::redb_backend::rehydrate_core_from_dump;
 
 /// The outcome of a reshard, for observability + the proof.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -473,7 +473,7 @@ impl TenantManager {
             s.registry.get(graph_name).map(|e| e.core.clone())
         };
         let core = core.ok_or_else(|| format!("graph '{graph_name}' not found"))?;
-        let freed = crate::server::persistence::cold_offload::offload_graph_core(
+        let freed = medulla_persistence::cold_offload::offload_graph_core(
             &core,
             &self.backend,
             graph_name,

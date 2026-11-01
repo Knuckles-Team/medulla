@@ -1,6 +1,6 @@
 use super::*;
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 async fn route_native_resource_ops(
     ctx: GraphOpRouting<'_>,
     method: Method,

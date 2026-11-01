@@ -48,7 +48,7 @@ async fn attest(
     use super::catalog_authority::{
         admit_catalog_write, observed_registration, require_catalog_attester, ObservedRegistration,
     };
-    use crate::server::persistence::connector_pack::catalog_authority::published_server_content;
+    use medulla_persistence::connector_pack::catalog_authority::published_server_content;
     use medulla_types::connector_pack::{
         pack_component_id, self_served_candidate, self_served_component_revision,
         validate_connector, PackEntryKind, SelfServedAttester,

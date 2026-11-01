@@ -10,7 +10,7 @@ use tokio::sync::RwLock;
 
 use crate::isolation::IsolationLayer;
 use medulla_server_api::api::persistence::PersistenceBackend;
-use crate::server::persistence::redb_backend::RedbBackend;
+use medulla_persistence::redb_backend::RedbBackend;
 use medulla_server_api::state::ServerState;
 
 /// The concrete backend shape shared by the Raft harness fixtures.

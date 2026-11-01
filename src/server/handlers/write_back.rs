@@ -5,14 +5,14 @@
 //! tenant-scoped ControlRedb owner.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
 use crate::protocol::{Response, ResultPayload};
 use medulla_server_api::auth::VerifiedRequestContext;
-use crate::server::persistence::agent_library::AgentLibraryStore;
+use medulla_persistence::agent_library::AgentLibraryStore;
 use medulla_server_api::state::ServerState;
 use medulla_types::write_back::{SourceChangeSet, WriteBackOp};
 

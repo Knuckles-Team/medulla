@@ -450,7 +450,7 @@ mod eg318_dispatch_tests {
     use medulla_server_api::auth::sign_current_test_request;
     use medulla_server_api::auth::build_shared_test_request;
     use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
-    use crate::server::persistence::redb_backend::RedbBackend;
+    use medulla_persistence::redb_backend::RedbBackend;
     use std::ops::Deref;
     use std::path::PathBuf;
     use std::sync::Arc;
@@ -1648,7 +1648,7 @@ mod blob_dispatch_tests {
         #[cfg(feature = "redb")]
         {
             state.persistence = Some(std::sync::Arc::new(
-                crate::server::persistence::redb_backend::RedbBackend::open(
+                medulla_persistence::redb_backend::RedbBackend::open(
                     medulla_server_api::api::dispatch_support::unique_temp_dir(
                         "medulla-blob-dispatch-graph",
                     )

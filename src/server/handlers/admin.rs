@@ -14,7 +14,7 @@
 #[cfg(not(feature = "redb"))]
 use crate::protocol::{Method, Response};
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 #[cfg(not(feature = "redb"))]
 use medulla_server_api::state::ServerState;
 #[cfg(not(feature = "redb"))]

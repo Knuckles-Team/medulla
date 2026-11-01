@@ -168,7 +168,7 @@ mod tests {
     const TEST_AGENT: &str = "unit-test-agent";
 
     async fn redb_state(dir_s: &str) -> Arc<RwLock<ServerState>> {
-        crate::server::persistence::cold_offload::test_redb_state(
+        medulla_persistence::cold_offload::test_redb_state(
             SECRET,
             dir_s,
             ServerState::test_isolation(TEST_AGENT),

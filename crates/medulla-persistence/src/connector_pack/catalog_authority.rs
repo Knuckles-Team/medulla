@@ -1,0 +1,589 @@
+//! Atomically persist the joined configuration and one scoped catalog row.
+//!
+//! The handler must authenticate the served-child (or self-served) attester and
+//! verify every source before calling this method. An owner row alone is not
+//! authorization.
+
+use medulla_types::agent_component::{AgentComponentEntry, AgentComponentKind};
+use medulla_types::agent_library::AgentLibraryLifecycle;
+use medulla_types::agent_library::AgentLibraryMutationContext;
+use medulla_types::connector_pack::{
+    catalog_authority::joined_configuration_digest, reconcile_catalog_authority,
+    reconcile_joined_configuration, McpCatalogAttestation, McpCatalogAuthorityCandidate,
+    McpCatalogAuthorityRow, McpCatalogSnapshotBinding, McpJoinedConfigurationRow,
+};
+use medulla_types::contract::Digest256;
+use medulla_types::mutation_batch::{DurabilityDomain, MutationOperation, MutationSurface};
+use medulla_types::protocol::Method;
+use redb::ReadableTable;
+
+use super::admitted::{PackOwnerWrite, PackWriteEffects, PackWriteIdentity};
+use crate::agent_library::AgentLibraryStore;
+
+const RESULT_SCHEMA: &str = "mcp-catalog-authority-result.v1";
+
+fn checked_scoped_binding(
+    row: McpCatalogAuthorityRow,
+    tenant_id: &str,
+    server_name: &str,
+    scope_digest: Digest256,
+    attester_principal_id: &str,
+) -> Result<McpCatalogSnapshotBinding, String> {
+    checked_catalog_binding(
+        row,
+        tenant_id,
+        server_name,
+        scope_digest,
+        Some(attester_principal_id),
+    )
+}
+
+/// Validate the persisted key and binding for either a mounted attester or a
+/// separate pack-control reader. Only the attester path compares principals.
+fn checked_catalog_binding(
+    row: McpCatalogAuthorityRow,
+    tenant_id: &str,
+    server_name: &str,
+    scope_digest: Digest256,
+    attester_principal_id: Option<&str>,
+) -> Result<McpCatalogSnapshotBinding, String> {
+    let configuration_digest = joined_configuration_digest(
+        &row.tenant_id,
+        &row.server_name,
+        row.component_digest,
+        row.registration_config_digest,
+    )?;
+    if catalog_scope_mismatch(
+        &row,
+        tenant_id,
+        server_name,
+        scope_digest,
+        attester_principal_id,
+    ) || catalog_binding_invalid(&row, configuration_digest)
+    {
+        return Err("MCP catalog authority row differs from verified scope".into());
+    }
+    Ok(row.binding)
+}
+
+fn catalog_scope_mismatch(
+    row: &McpCatalogAuthorityRow,
+    tenant_id: &str,
+    server_name: &str,
+    scope_digest: Digest256,
+    attester_principal_id: Option<&str>,
+) -> bool {
+    row.tenant_id != tenant_id
+        || row.server_name != server_name
+        || row.binding.authorization_scope_digest != scope_digest
+        || row.attester_principal_id.is_empty()
+        || attester_principal_id.is_some_and(|principal| row.attester_principal_id != principal)
+}
+
+/// The content digest a component publishes, as a bare SHA-256.
+pub(crate) fn component_content_digest(
+    component: &AgentComponentEntry,
+) -> Result<Digest256, String> {
+    Digest256::parse(
+        component
+            .content_digest
+            .strip_prefix("sha256:")
+            .unwrap_or(&component.content_digest),
+    )
+}
+
+/// The published revision and content of an MCP server component, the only
+/// shape a self-served pin can name. Any other kind under the id is refused.
+pub(crate) fn published_server_content(
+    component: Option<&AgentComponentEntry>,
+) -> Result<Option<(u64, Digest256)>, String> {
+    let Some(component) = component else {
+        return Ok(None);
+    };
+    if component.kind != AgentComponentKind::McpServer {
+        return Err("component id names a component that is not an MCP server".into());
+    }
+    if component.lifecycle != AgentLibraryLifecycle::Published {
+        return Ok(None);
+    }
+    Ok(Some((
+        component.entry_revision,
+        component_content_digest(component)?,
+    )))
+}
+
+/// Re-read the candidate's component inside the authority transaction, so the
+/// row is fenced against a component that moved after the handler checked it.
+fn verify_component_source(
+    write: &PackOwnerWrite<'_>,
+    tenant_id: &str,
+    component_id: &str,
+    candidate: &McpCatalogAuthorityCandidate,
+) -> Result<(), String> {
+    let current = current_component_in(write, tenant_id, component_id)?;
+    let unchanged = match &candidate.attestation {
+        McpCatalogAttestation::MountedChild => {
+            let current = current
+                .ok_or_else(|| "MCP server component has no current revision".to_string())?;
+            current.entry_revision == candidate.component_revision
+                && component_content_digest(&current)? == candidate.component_digest
+                && current.lifecycle == AgentLibraryLifecycle::Published
+                && current.kind == AgentComponentKind::McpServer
+        }
+        McpCatalogAttestation::SelfServed { .. } => {
+            medulla_types::connector_pack::self_served_component_revision(
+                published_server_content(current.as_ref())?,
+                candidate.component_digest,
+            ) == candidate.component_revision
+        }
+    };
+    if !unchanged {
+        return Err("MCP server component changed before catalog commit".into());
+    }
+    Ok(())
+}
+
+fn current_component_in(
+    write: &PackOwnerWrite<'_>,
+    tenant_id: &str,
+    component_id: &str,
+) -> Result<Option<AgentComponentEntry>, String> {
+    let current_revision = {
+        let heads = write.open_table(medulla_storage::AGENT_COMPONENT_HEADS)?;
+        let revision = heads
+            .get((tenant_id, component_id))
+            .map_err(|error| error.to_string())?
+            .map(|row| row.value());
+        revision
+    };
+    let Some(current_revision) = current_revision else {
+        return Ok(None);
+    };
+    let revisions = write.open_table(medulla_storage::AGENT_COMPONENT_REVISIONS)?;
+    let row = revisions
+        .get((tenant_id, component_id, current_revision))
+        .map_err(|error| error.to_string())?
+        .ok_or_else(|| "MCP server component head is missing".to_string())?;
+    crate::agent_row::decode(row.value(), "MCP server component").map(Some)
+}
+
+fn catalog_binding_invalid(row: &McpCatalogAuthorityRow, configuration_digest: Digest256) -> bool {
+    row.binding.configuration_revision == 0
+        || row.binding.catalog_generation == 0
+        || row.binding.child_connection_generation == 0
+        || row.configuration_digest != configuration_digest
+        || row.registry_digest == Digest256::from_bytes([0; 32])
+        || row.binding.snapshot_digest == Digest256::from_bytes([0; 32])
+}
+
+impl AgentLibraryStore {
+    fn catalog_authority_row(
+        &self,
+        tenant_id: &str,
+        server_name: &str,
+        scope_digest: Digest256,
+    ) -> Result<Option<McpCatalogAuthorityRow>, String> {
+        let scope_hex = scope_digest.to_hex();
+        let read = self.read()?;
+        let table = read.open_owner_table(medulla_storage::MCP_CATALOG_SCOPES)?;
+        let row = table
+            .get((tenant_id, server_name, scope_hex.as_str()))
+            .map_err(|error| error.to_string())?
+            .map(|value| {
+                crate::agent_row::decode(value.value(), "MCP scoped catalog")
+            })
+            .transpose()?;
+        Ok(row)
+    }
+
+    /// Read the current scoped binding for a separately authenticated
+    /// pack-control service. The handler must check its verified tenant/grant.
+    pub(crate) fn mcp_catalog_binding_status(
+        &self,
+        tenant_id: &str,
+        server_name: &str,
+        scope_digest: Digest256,
+    ) -> Result<Option<McpCatalogSnapshotBinding>, String> {
+        if tenant_id.is_empty()
+            || !medulla_types::result_contract::cluster::is_valid_server_name(server_name)
+            || scope_digest == Digest256::from_bytes([0; 32])
+        {
+            return Err("invalid scoped MCP catalog binding read".into());
+        }
+        let row = self.catalog_authority_row(tenant_id, server_name, scope_digest)?;
+        row.map(|row| checked_catalog_binding(row, tenant_id, server_name, scope_digest, None))
+            .transpose()
+    }
+
+    /// Read a validated self-served authority row, the authority an import of
+    /// that row's connector must honour. Mounted rows answer `None`.
+    pub(crate) fn mcp_self_served_catalog_row(
+        &self,
+        tenant_id: &str,
+        server_name: &str,
+        scope_digest: Digest256,
+    ) -> Result<Option<McpCatalogAuthorityRow>, String> {
+        let Some(row) = self.catalog_authority_row(tenant_id, server_name, scope_digest)? else {
+            return Ok(None);
+        };
+        if row.attestation.is_mounted_child() {
+            return Ok(None);
+        }
+        checked_catalog_binding(row.clone(), tenant_id, server_name, scope_digest, None)?;
+        Ok(Some(row))
+    }
+
+    /// Read the scoped generation from one committed owner snapshot.
+    pub(crate) fn mcp_catalog_authority_status(
+        &self,
+        tenant_id: &str,
+        server_name: &str,
+        scope_digest: Digest256,
+        attester_principal_id: &str,
+    ) -> Result<Option<McpCatalogSnapshotBinding>, String> {
+        if tenant_id.is_empty()
+            || !medulla_types::result_contract::cluster::is_valid_server_name(server_name)
+            || attester_principal_id.is_empty()
+        {
+            return Err("invalid scoped MCP catalog authority read".into());
+        }
+        let row = self.catalog_authority_row(tenant_id, server_name, scope_digest)?;
+        row.map(|row| {
+            checked_scoped_binding(
+                row,
+                tenant_id,
+                server_name,
+                scope_digest,
+                attester_principal_id,
+            )
+        })
+        .transpose()
+    }
+
+    /// One admitted owner transaction writes both authority rows or neither.
+    pub(crate) fn reconcile_mcp_catalog_authority(
+        &self,
+        context: AgentLibraryMutationContext,
+        component_id: String,
+        candidate: McpCatalogAuthorityCandidate,
+    ) -> Result<McpCatalogSnapshotBinding, String> {
+        if context.tenant_id != candidate.tenant_id {
+            return Err("catalog authority tenant differs from verified mutation context".into());
+        }
+        let source_digest = candidate_digest(&component_id, &candidate)?;
+        let source_hex = source_digest.to_hex();
+        let subject = candidate.server_name.clone();
+        let identity = PackWriteIdentity {
+            purpose: "mcp-catalog:reconcile",
+            kind: "mcp-catalog-reconcile",
+            slug: "mcp-catalog-reconcile",
+            subject: &subject,
+            revision: candidate.expected_catalog_generation.unwrap_or(0),
+            discriminator: Some(&source_hex),
+            result_schema: RESULT_SCHEMA,
+            noun: "MCP catalog authority",
+        };
+        let effects = PackWriteEffects {
+            operations: vec![MutationOperation {
+                ordinal: 0,
+                surface: MutationSurface::Lifecycle,
+                domain: DurabilityDomain::ControlPlane,
+                method: Method::ApplyMutation {
+                    event_type: "mcp_catalog_reconcile".into(),
+                    query: source_hex.clone(),
+                },
+            }],
+            outbox: Vec::new(),
+        };
+        self.commit_pack_write(&context, identity, effects, |write, _staged| {
+            write_catalog_rows(write, &context.tenant_id, &component_id, &candidate)
+        })
+    }
+}
+
+/// Load, reduce and write both authority rows inside the admitted write.
+fn write_catalog_rows(
+    write: &PackOwnerWrite<'_>,
+    tenant_id: &str,
+    component_id: &str,
+    candidate: &McpCatalogAuthorityCandidate,
+) -> Result<McpCatalogSnapshotBinding, String> {
+    let scope_hex = candidate.authorization_scope_digest.to_hex();
+    verify_component_source(write, tenant_id, component_id, candidate)?;
+    let config_key = (tenant_id, candidate.server_name.as_str());
+    let previous_config = {
+        let table = write.open_table(medulla_storage::MCP_CATALOG_CONFIGS)?;
+        let previous = table
+            .get(config_key)
+            .map_err(|error| error.to_string())?
+            .map(|row| {
+                crate::agent_row::decode::<McpJoinedConfigurationRow>(
+                    row.value(),
+                    "MCP joined configuration",
+                )
+            })
+            .transpose()?;
+        previous
+    };
+    let configuration = reconcile_joined_configuration(previous_config.as_ref(), candidate)?;
+    let scope_key = (
+        tenant_id,
+        candidate.server_name.as_str(),
+        scope_hex.as_str(),
+    );
+    let previous_scope = {
+        let table = write.open_table(medulla_storage::MCP_CATALOG_SCOPES)?;
+        let previous = table
+            .get(scope_key)
+            .map_err(|error| error.to_string())?
+            .map(|row| {
+                crate::agent_row::decode::<McpCatalogAuthorityRow>(
+                    row.value(),
+                    "MCP scoped catalog",
+                )
+            })
+            .transpose()?;
+        previous
+    };
+    let scoped = reconcile_catalog_authority(previous_scope.as_ref(), &configuration, candidate)?;
+    let config_bytes = medulla_storage::encode_bounded(&configuration, "MCP joined configuration")?;
+    let scope_bytes = medulla_storage::encode_bounded(&scoped, "MCP scoped catalog")?;
+    write
+        .open_table(medulla_storage::MCP_CATALOG_CONFIGS)?
+        .insert(config_key, config_bytes.as_slice())
+        .map_err(|error| error.to_string())?;
+    write
+        .open_table(medulla_storage::MCP_CATALOG_SCOPES)?
+        .insert(scope_key, scope_bytes.as_slice())
+        .map_err(|error| error.to_string())?;
+    Ok(scoped.binding)
+}
+
+/// The replay identity of one reconciliation. A self-served candidate folds
+/// its connector over the same framing; mounted identities are unchanged.
+fn candidate_digest(
+    component_id: &str,
+    candidate: &McpCatalogAuthorityCandidate,
+) -> Result<Digest256, String> {
+    attested_candidate_digest(
+        mounted_candidate_digest(component_id, candidate)?,
+        &candidate.attestation,
+    )
+}
+
+fn mounted_candidate_digest(
+    component_id: &str,
+    candidate: &McpCatalogAuthorityCandidate,
+) -> Result<Digest256, String> {
+    Digest256::framed(
+        b"eg/mcp-catalog-authority-candidate/v1",
+        &[
+            candidate.tenant_id.as_bytes(),
+            candidate.server_name.as_bytes(),
+            candidate.attester_principal_id.as_bytes(),
+            candidate.discovery_tenant.as_bytes(),
+            component_id.as_bytes(),
+            &candidate.component_revision.to_be_bytes(),
+            candidate.component_digest.as_bytes(),
+            &candidate.registry_revision.to_be_bytes(),
+            candidate.registry_digest.as_bytes(),
+            candidate.registration_config_digest.as_bytes(),
+            candidate.four_family_digest.as_bytes(),
+            candidate.child_id.as_bytes(),
+            &candidate.local_catalog_epoch.to_be_bytes(),
+            &candidate.child_connection_generation.to_be_bytes(),
+            candidate.authorization_scope_digest.as_bytes(),
+            &candidate
+                .expected_catalog_generation
+                .unwrap_or(0)
+                .to_be_bytes(),
+        ],
+    )
+}
+
+fn attested_candidate_digest(
+    digest: Digest256,
+    attestation: &McpCatalogAttestation,
+) -> Result<Digest256, String> {
+    match attestation {
+        McpCatalogAttestation::MountedChild => Ok(digest),
+        McpCatalogAttestation::SelfServed { connector } => Digest256::framed(
+            b"eg/mcp-self-served-catalog-candidate/v1",
+            &[digest.as_bytes(), connector.as_bytes()],
+        ),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn authority_row() -> McpCatalogAuthorityRow {
+        let candidate = medulla_types::connector_pack::catalog_authority::sample_authority_candidate();
+        let config = reconcile_joined_configuration(None, &candidate).unwrap();
+        reconcile_catalog_authority(None, &config, &candidate).unwrap()
+    }
+
+    #[test]
+    fn scoped_status_never_crosses_tenant_scope_or_attester() {
+        let row = authority_row();
+        let scope = row.binding.authorization_scope_digest;
+        assert_eq!(
+            checked_scoped_binding(
+                row.clone(),
+                "tenant-a",
+                "child-a",
+                scope,
+                "principal:sha256:attester-a"
+            )
+            .unwrap(),
+            row.binding
+        );
+        for (tenant, server, digest, principal) in [
+            ("tenant-b", "child-a", scope, "principal:sha256:attester-a"),
+            ("tenant-a", "child-b", scope, "principal:sha256:attester-a"),
+            (
+                "tenant-a",
+                "child-a",
+                Digest256::from_bytes([5; 32]),
+                "principal:sha256:attester-a",
+            ),
+            ("tenant-a", "child-a", scope, "principal:sha256:attester-b"),
+        ] {
+            assert!(
+                checked_scoped_binding(row.clone(), tenant, server, digest, principal).is_err()
+            );
+        }
+    }
+
+    #[test]
+    fn request_binding_read_keeps_tenant_server_scope_and_digest_checks() {
+        let row = authority_row();
+        let scope = row.binding.authorization_scope_digest;
+        assert_eq!(
+            checked_catalog_binding(row.clone(), "tenant-a", "child-a", scope, None).unwrap(),
+            row.binding
+        );
+        for (tenant, server, digest) in [
+            ("tenant-b", "child-a", scope),
+            ("tenant-a", "child-b", scope),
+            ("tenant-a", "child-a", Digest256::from_bytes([5; 32])),
+        ] {
+            assert!(checked_catalog_binding(row.clone(), tenant, server, digest, None).is_err());
+        }
+        let mut corrupt = row.clone();
+        corrupt.binding.snapshot_digest = Digest256::from_bytes([0; 32]);
+        assert!(checked_catalog_binding(corrupt, "tenant-a", "child-a", scope, None).is_err());
+        let mut corrupt = row;
+        corrupt.configuration_digest = Digest256::from_bytes([0; 32]);
+        assert!(checked_catalog_binding(corrupt, "tenant-a", "child-a", scope, None).is_err());
+    }
+
+    fn self_served(expected: Option<u64>, four_family: u8) -> McpCatalogAuthorityCandidate {
+        let mut candidate =
+            medulla_types::connector_pack::catalog_authority::sample_authority_candidate();
+        candidate.component_revision = 0;
+        candidate.child_id = candidate.attester_principal_id.clone();
+        candidate.local_catalog_epoch = 1;
+        candidate.child_connection_generation = 1;
+        candidate.four_family_digest = Digest256::from_bytes([four_family; 32]);
+        candidate.expected_catalog_generation = expected;
+        candidate.attestation = McpCatalogAttestation::SelfServed {
+            connector: "child-a".into(),
+        };
+        candidate
+    }
+
+    /// The first self-served binding needs no published component; reruns are
+    /// idempotent, generations only advance, and a stale expectation, a false
+    /// published-revision claim or a mounted takeover are refused atomically.
+    #[test]
+    fn self_served_rows_persist_before_the_component_and_fence_generations() {
+        let (_dir, store) = crate::agent_fixtures::open_agent_store();
+        let commit = |nonce: u8, candidate: McpCatalogAuthorityCandidate| {
+            let context = crate::agent_fixtures::mutation_context(
+                &store,
+                "tenant-a",
+                &format!("self-served:{nonce}"),
+                nonce,
+                0,
+                "mcp-catalog:reconcile",
+            );
+            store.reconcile_mcp_catalog_authority(
+                context,
+                "mcp:child-a/mcp_server/child-a".into(),
+                candidate,
+            )
+        };
+        let first = commit(1, self_served(None, 3)).unwrap();
+        assert_eq!(
+            (first.configuration_revision, first.catalog_generation),
+            (1, 1)
+        );
+        assert_eq!(commit(2, self_served(Some(1), 3)).unwrap(), first);
+        assert!(commit(3, self_served(None, 3)).is_err());
+        let changed = commit(4, self_served(Some(1), 5)).unwrap();
+        assert_eq!(changed.catalog_generation, 2);
+        let mut unpublished = self_served(Some(2), 5);
+        unpublished.component_revision = 1;
+        assert!(commit(5, unpublished).is_err());
+        let mut mounted = medulla_types::connector_pack::catalog_authority::sample_authority_candidate();
+        mounted.expected_catalog_generation = Some(2);
+        assert!(commit(6, mounted).is_err());
+        let scope = changed.authorization_scope_digest;
+        let row = store
+            .mcp_self_served_catalog_row("tenant-a", "child-a", scope)
+            .unwrap()
+            .expect("self-served row");
+        assert_eq!(row.binding, changed);
+        assert_eq!(
+            store
+                .mcp_catalog_binding_status("tenant-a", "child-a", scope)
+                .unwrap(),
+            Some(changed.clone())
+        );
+        assert_eq!(
+            store
+                .mcp_catalog_authority_status("tenant-a", "child-a", scope, &row.child_id)
+                .unwrap(),
+            Some(changed)
+        );
+    }
+
+    #[test]
+    fn replay_identity_binds_scope_child_and_source() {
+        let mut candidate =
+            medulla_types::connector_pack::catalog_authority::sample_authority_candidate();
+        candidate.expected_catalog_generation = Some(1);
+        let original = candidate_digest("mcp:a/mcp_server/child-a", &candidate).unwrap();
+        candidate.authorization_scope_digest = Digest256::from_bytes([5; 32]);
+        assert_ne!(
+            original,
+            candidate_digest("mcp:a/mcp_server/child-a", &candidate).unwrap()
+        );
+        candidate.authorization_scope_digest = Digest256::from_bytes([4; 32]);
+        candidate.child_connection_generation = 3;
+        assert_ne!(
+            original,
+            candidate_digest("mcp:a/mcp_server/child-a", &candidate).unwrap()
+        );
+        candidate.child_connection_generation = 2;
+        candidate.registration_config_digest = Digest256::from_bytes([6; 32]);
+        assert_ne!(
+            original,
+            candidate_digest("mcp:a/mcp_server/child-a", &candidate).unwrap()
+        );
+        candidate.registration_config_digest = Digest256::from_bytes([2; 32]);
+        assert_ne!(
+            original,
+            candidate_digest("mcp:b/mcp_server/child-a", &candidate).unwrap()
+        );
+        candidate.attestation = McpCatalogAttestation::SelfServed {
+            connector: "a".into(),
+        };
+        assert_ne!(
+            original,
+            candidate_digest("mcp:a/mcp_server/child-a", &candidate).unwrap()
+        );
+    }
+}

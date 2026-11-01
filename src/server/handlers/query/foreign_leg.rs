@@ -3,7 +3,7 @@
 use super::*;
 use medulla_server_api::api::query_txn::foreign_catalog::OwnedForeignRegistry;
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 
 /// [`ForeignSourceCatalog::resolve_for_plan`] against the server's catalog for a served
 /// plan, with the caller's verified carrier taken from its read authority. `Err` is the

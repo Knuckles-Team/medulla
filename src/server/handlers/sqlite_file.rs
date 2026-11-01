@@ -779,7 +779,7 @@ mod tests {
     // first needed it (`persistence::backup::EnvVarGuard`); this module had an
     // identical private copy.
     #[cfg(any(feature = "raft", target_os = "linux"))]
-    use crate::server::persistence::backup::EnvVarGuard as EnvVarRestore;
+    use medulla_persistence::backup::EnvVarGuard as EnvVarRestore;
 
     fn authority(agent: &str, tenant: &str) -> CarrierAuthority {
         CarrierAuthority::from_verified(

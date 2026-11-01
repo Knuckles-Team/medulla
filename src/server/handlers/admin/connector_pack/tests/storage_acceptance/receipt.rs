@@ -1,7 +1,7 @@
 //! R073.4 reads receipts produced by the signed served import, not synthetic receipts.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 use medulla_types::agent_library::AgentLibraryMutationContext;
 use medulla_types::connector_pack::{
     PackImportRecord, PackImportResult, CONNECTOR_PACK_IMPORT_TOPIC,
@@ -13,8 +13,9 @@ use medulla_types::mutation_batch::{
     MutationBatchRecord, MutationBatchStatus, MutationOutboxIntent,
 };
 
-use crate::server::persistence::agent_library::AgentLibraryStore;
-use crate::server::persistence::connector_pack::admitted::{PackWriteEffects, PackWriteIdentity};
+use medulla_persistence::agent_library::AgentLibraryStore;
+use medulla_persistence::connector_pack::admitted::PackWriteEffects;
+use medulla_persistence::connector_pack::admitted::PackWriteIdentity;
 
 use super::{
     bind, build_pack, head_of, imported, snapshot, tool, Served, ADMIN, CONNECTOR, TENANT,

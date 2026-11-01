@@ -6,7 +6,7 @@
 //! test can observe another's committed state.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -83,7 +83,7 @@ impl Served {
         let guard = medulla_kernel::crypto::acquire_test_env_read_lock().await;
         let root = self.dir.path().join("graphs");
         std::fs::create_dir_all(&root).unwrap();
-        let backend = crate::server::persistence::redb_backend::RedbBackend::open(
+        let backend = medulla_persistence::redb_backend::RedbBackend::open(
             root.to_string_lossy().into_owned(),
             64,
         )
@@ -539,10 +539,10 @@ pub(super) async fn seed_server_only_import(
     pack: &(ConnectorPackIndex, Vec<u8>),
     previous: &medulla_types::connector_pack::PackImportReceipt,
 ) -> medulla_types::connector_pack::PackImportReceipt {
-    use crate::server::persistence::connector_pack::commit::{
-        ConnectorPackCommitPlan, ConnectorPackComponentCommit, ConnectorPackHolderCommit,
-    };
-    use crate::server::persistence::connector_pack::ConnectorPackBodyHolderRow;
+    use medulla_persistence::connector_pack::commit::ConnectorPackCommitPlan;
+    use medulla_persistence::connector_pack::commit::ConnectorPackComponentCommit;
+    use medulla_persistence::connector_pack::commit::ConnectorPackHolderCommit;
+    use medulla_persistence::connector_pack::ConnectorPackBodyHolderRow;
     use medulla_types::agent_component::{
         AgentComponentEntry, AgentComponentMutationKind, ComponentDependency,
     };
@@ -565,7 +565,7 @@ pub(super) async fn seed_server_only_import(
     let canonical = donor_store.current_component(TENANT, &id).unwrap().unwrap();
     let store = served.state.write().await.ensure_agent_library().unwrap();
     let old = store.current_component(TENANT, &id).unwrap().unwrap();
-    let mut context = crate::server::persistence::agent_fixtures::mutation_context(
+    let mut context = medulla_persistence::agent_fixtures::mutation_context(
         &store,
         TENANT,
         "seed-legacy-server-only",

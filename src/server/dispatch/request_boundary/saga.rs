@@ -1,6 +1,6 @@
 use super::*;
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 
 #[cfg(feature = "redb")]
 pub(crate) struct SessionControlSaga {

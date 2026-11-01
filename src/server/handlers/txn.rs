@@ -261,8 +261,8 @@ mod materialize_belief_tests {
 mod keyed_recovery_window_tests {
     use super::*;
     use crate::protocol::GraphType;
-    use crate::server::persistence::backup::EnvVarGuard;
-    use crate::server::persistence::redb_backend::RedbBackend;
+    use medulla_persistence::backup::EnvVarGuard;
+    use medulla_persistence::redb_backend::RedbBackend;
     use medulla_server_api::api::persistence::PersistenceBackend;
     use medulla_server_api::state::ServerState;
     use std::path::{Path, PathBuf};

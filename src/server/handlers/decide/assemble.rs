@@ -11,7 +11,7 @@ use super::SharedState;
 use crate::protocol::Response;
 use medulla_server_api::auth::VerifiedRequestContext;
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 use medulla_types::decision::AssemblyRequest;
 
 /// The audit target every Decide-layer decision line is written under.
@@ -56,7 +56,7 @@ async fn assemble_for(
     let store = state.write().await.ensure_agent_library()?;
     let policy = resolve_policy(&store, &request)?;
     let entries = store.assembly_candidates(&request.tenant_id, &request.candidates)?;
-    let candidates = crate::server::persistence::decision_record::candidate_facts(&entries)?;
+    let candidates = medulla_persistence::decision_record::candidate_facts(&entries)?;
     let templates = request
         .templates
         .iter()
@@ -90,7 +90,7 @@ async fn assemble_for(
 /// body of the published `DecisionPolicy` component revision it pins.
 #[cfg(feature = "decide")]
 fn resolve_policy(
-    store: &crate::server::persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
     request: &AssemblyRequest,
 ) -> Result<medulla_types::decision::DecisionPolicy, String> {
     use medulla_types::decision::{DecisionPolicy, DecisionPolicyRef};

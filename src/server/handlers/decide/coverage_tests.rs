@@ -4,16 +4,16 @@
 //! invisible components, driven through the dispatcher's handler.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
 use crate::protocol::ResultPayload;
 use medulla_server_api::auth::VerifiedRequestContext;
-use crate::server::persistence::agent_component::test_component_draft;
-use crate::server::persistence::agent_fixtures::mutation_context;
-use crate::server::persistence::agent_library::AgentLibraryStore;
+use medulla_persistence::agent_component::test_component_draft;
+use medulla_persistence::agent_fixtures::mutation_context;
+use medulla_persistence::agent_library::AgentLibraryStore;
 use medulla_server_api::state::ServerState;
 use medulla_types::agent_component::{AgentComponentKind, AgentComponentPublishRequest};
 use medulla_types::contract::BoundedVec;

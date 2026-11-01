@@ -7,7 +7,7 @@
 //! which is why they are separate functions rather than one body.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 #[cfg(feature = "redb")]
 use std::{hash::Hash, sync::OnceLock};
@@ -91,7 +91,7 @@ pub(crate) async fn handle_connector_pack(
 #[cfg(feature = "redb")]
 async fn agent_library_store(
     state: &Arc<RwLock<ServerState>>,
-) -> Result<Arc<crate::server::persistence::agent_library::AgentLibraryStore>, String> {
+) -> Result<Arc<medulla_persistence::agent_library::AgentLibraryStore>, String> {
     state.write().await.ensure_agent_library()
 }
 
@@ -110,7 +110,7 @@ async fn serve_status(
     #[cfg(feature = "redb")]
     {
         if request.tenant_id
-            != crate::server::persistence::connector_pack::pack_tenant_key(verified)
+            != medulla_persistence::connector_pack::pack_tenant_key(verified)
         {
             return Response::err(
                 req_id,
@@ -155,7 +155,7 @@ async fn serve_import(
     #[cfg(all(feature = "redb", feature = "blob"))]
     {
         let tenant_pack_guard = match tenant_pack_lock(
-            crate::server::persistence::connector_pack::pack_tenant_key(verified),
+            medulla_persistence::connector_pack::pack_tenant_key(verified),
         )
         .await
         {
@@ -279,7 +279,7 @@ async fn bind_import_context(
 ) -> Result<Box<medulla_types::connector_pack::ConnectorPackImportRequest>, String> {
     let store = agent_library_store(state).await?;
     request.context =
-        crate::server::persistence::agent_library::context::bind_agent_library_context(
+        medulla_persistence::agent_library::context::bind_agent_library_context(
             &store,
             req_id,
             verified,
@@ -294,7 +294,7 @@ async fn bind_import_context(
 enum Preflight {
     Unchanged(medulla_types::connector_pack::PackImportResult),
     Ready {
-        store: Arc<crate::server::persistence::agent_library::AgentLibraryStore>,
+        store: Arc<medulla_persistence::agent_library::AgentLibraryStore>,
         blob: Arc<medulla_server_api::blob::BlobCursors>,
         archive: Vec<u8>,
     },
@@ -478,7 +478,7 @@ async fn read_import_archive(
 /// here cannot be re-pinned before this import commits.
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn honour_self_served_pin(
-    store: &crate::server::persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
     verified: &VerifiedRequestContext,
     request: &medulla_types::connector_pack::ConnectorPackImportRequest,
 ) -> Result<(), String> {
@@ -495,7 +495,7 @@ fn honour_self_served_pin(
 
 #[cfg(feature = "redb")]
 fn authorize_importer(
-    store: &crate::server::persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
     verified: &VerifiedRequestContext,
     connector: &medulla_types::contract::ResourceId,
 ) -> Result<(), String> {

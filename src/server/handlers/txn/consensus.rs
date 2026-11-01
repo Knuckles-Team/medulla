@@ -4,7 +4,7 @@ use super::*;
 #[cfg(feature = "raft")]
 use crate::raft::RaftStateExt;
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 
 #[path = "consensus/authority.rs"]
 mod authority;
@@ -693,7 +693,7 @@ pub(crate) async fn apply_consensus_participant_abort(
 
 #[cfg(feature = "raft")]
 fn authorize_participant_abort(
-    redb: &crate::server::persistence::redb_backend::RedbBackend,
+    redb: &medulla_persistence::redb_backend::RedbBackend,
     coordinator_id: &str,
     participant_id: u64,
     authority: &medulla_server_api::api::persistence::RaftMutationContext,

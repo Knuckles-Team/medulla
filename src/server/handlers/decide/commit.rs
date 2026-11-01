@@ -13,7 +13,7 @@ use super::SharedState;
 use crate::protocol::Response;
 use medulla_server_api::auth::VerifiedRequestContext;
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 use medulla_types::decision::DecisionCommitRequest;
 
 /// Commit one `DecisionRecord` as a component revision, idempotently.
@@ -82,7 +82,7 @@ async fn commit(
         ));
     }
     let store = state.write().await.ensure_agent_library()?;
-    let context = crate::server::persistence::agent_library::context::bind_agent_library_context(
+    let context = medulla_persistence::agent_library::context::bind_agent_library_context(
         &store,
         req_id,
         verified,

@@ -1,6 +1,6 @@
 use super::*;
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 
 /// A native durable read must run on the CURRENT placement leader and behind a
 /// read barrier, or a follower would answer from its own stale log. `stale_hint`

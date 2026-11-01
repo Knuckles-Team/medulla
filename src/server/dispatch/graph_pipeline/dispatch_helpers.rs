@@ -1,6 +1,6 @@
 use super::*;
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 /// The caller/isolation-scoping fields shared by every `dispatch_graph_op_inner`
 /// entry point, bundled so the function stays under the clippy argument-count
 /// ceiling once the feature-gated authority parameters are unified in.
@@ -622,7 +622,7 @@ mod tests {
     use medulla_store::redb_store::operation_audit::tests::event;
     use medulla_store::redb_store::operation_audit::tests::TENANT;
     use medulla_server_api::api::persistence::PersistenceBackend;
-    use crate::server::persistence::redb_backend::audit_append_tests::seeded;
+    use medulla_persistence::redb_backend::audit_append_tests::seeded;
 
     const GRAPH: &str = "audit_skew_graph";
 

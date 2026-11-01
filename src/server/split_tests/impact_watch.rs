@@ -176,7 +176,7 @@ const SECRET: &str = "impact-watch-test-secret";
 /// A served state with a real persistence backend: the watch's writeback is an
 /// authoritative MutationBatch commit, which a backendless state refuses.
 fn persisted_state() -> Arc<RwLock<ServerState>> {
-    use crate::server::persistence::redb_backend::RedbBackend;
+    use medulla_persistence::redb_backend::RedbBackend;
     let dir = medulla_server_api::sql_tables::test_persist_dir()
         .to_string_lossy()
         .into_owned();

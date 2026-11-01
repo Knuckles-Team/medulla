@@ -223,9 +223,9 @@ mod worker {
     ) -> Result<(VerifiedRequestContext, RequestContext), String> {
         // The graph core is needed only for a funded held lease. Idle catalog
         // polling must not materialize every cold graph into the resident cap.
-        let cap = crate::server::persistence::cold_offload::max_resident_graphs();
-        let page_size = crate::server::persistence::cold_offload::lazy_open_page_size();
-        if !crate::server::persistence::cold_offload::lazy_open(state, graph, cap, page_size).await
+        let cap = medulla_persistence::cold_offload::max_resident_graphs();
+        let page_size = medulla_persistence::cold_offload::lazy_open_page_size();
+        if !medulla_persistence::cold_offload::lazy_open(state, graph, cap, page_size).await
         {
             return Err("CONFLICT: repository enrichment graph could not be opened".into());
         }

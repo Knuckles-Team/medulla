@@ -16,7 +16,7 @@ use medulla_server_api::api::persistence::RaftMutationTiming;
 use medulla_server_api::auth::VerifiedRequestContext;
 use crate::server::dispatch::apply_replicated_native;
 use crate::server::dispatch::test_support::{send, verified};
-use crate::server::persistence::redb_backend::RedbBackend;
+use medulla_persistence::redb_backend::RedbBackend;
 use medulla_server_api::state::ServerState;
 
 const GRAPH: &str = "tenant__subjectbinding__default";

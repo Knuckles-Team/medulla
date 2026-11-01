@@ -11,8 +11,9 @@ use medulla_types::decision::statistical::retrieval_pointer::{
 use medulla_types::decision::statistical::StatisticalErrorCode;
 
 use super::stat_support::refusal;
-use crate::server::persistence::agent_library::AgentLibraryStore;
-use crate::server::persistence::decision_jobs::{decode_artifact, encode_artifact};
+use medulla_persistence::agent_library::AgentLibraryStore;
+use medulla_persistence::decision_jobs::decode_artifact;
+use medulla_persistence::decision_jobs::encode_artifact;
 
 /// Who moves which pointer, and when.
 pub(super) struct PointerMove<'a> {

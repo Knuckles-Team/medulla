@@ -6,7 +6,7 @@
 //! transition/result/outbox before refreshing the in-memory graph projection.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 use std::sync::Arc;
 
 use crate::graph::GraphCore;
@@ -179,7 +179,7 @@ fn publication_authority<'a>(
     kind: &str,
 ) -> Result<
     (
-        &'a crate::server::persistence::redb_backend::RedbBackend,
+        &'a medulla_persistence::redb_backend::RedbBackend,
         String,
         String,
     ),

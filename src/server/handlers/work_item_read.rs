@@ -17,7 +17,7 @@
 //!   never advertises them.)
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 use std::sync::Arc;
 
 use medulla_types::work_item_read::WorkItemListRequest;

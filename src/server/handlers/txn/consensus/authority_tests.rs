@@ -2,8 +2,8 @@
 
 use super::*;
 use medulla_server_api::api::persistence::PersistenceBackend;
-use crate::server::persistence::backup::EnvVarGuard;
-use crate::server::persistence::redb_backend::RedbBackend;
+use medulla_persistence::backup::EnvVarGuard;
+use medulla_persistence::redb_backend::RedbBackend;
 
 fn carrier(tenant: &str) -> CarrierAuthority {
     CarrierAuthority::from_verified(&VerifiedRequestContext::verified_for_test_in_tenant(

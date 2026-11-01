@@ -41,7 +41,7 @@ use medulla_server_api::api::persistence::PersistenceBackend;
 use crate::graph::GraphCore;
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStore;
+use medulla_persistence::agent_library::AgentLibraryStore;
 
 // The whole kg-delegate admission adapter commits through the redb-backed
 // native WorkItem path, so it is compiled only with `redb`.
@@ -490,9 +490,9 @@ mod tests {
     /// admission resolves it.
     #[cfg(feature = "redb")]
     fn nested_graph(store: &AgentLibraryStore) -> medulla_types::agent_graph::AgentGraphEntry {
-        use crate::server::persistence::agent_graph::tests::{
-            child_shape, parent_shape, publish_shape,
-        };
+        use medulla_persistence::agent_graph::tests::child_shape;
+        use medulla_persistence::agent_graph::tests::parent_shape;
+        use medulla_persistence::agent_graph::tests::publish_shape;
         let child = publish_shape(
             store,
             "graph:child",
@@ -559,7 +559,7 @@ mod tests {
     #[cfg(feature = "redb")]
     #[test]
     fn a_published_nested_graph_is_delegated_end_to_end() {
-        let (_dir, store) = crate::server::persistence::agent_fixtures::open_agent_store();
+        let (_dir, store) = medulla_persistence::agent_fixtures::open_agent_store();
         let graph = nested_graph(&store);
         // The parent runs the child: 3 iterations x the child's 4.
         assert_eq!(graph.composed_work_ceiling, 12);
@@ -601,7 +601,7 @@ mod tests {
         // The escape this field exists to close: a caller declaring a ceiling
         // the composition check never admitted would fan out past the bound
         // publish enforced.
-        let (_dir, store) = crate::server::persistence::agent_fixtures::open_agent_store();
+        let (_dir, store) = medulla_persistence::agent_fixtures::open_agent_store();
         let graph = nested_graph(&store);
         let mut request = graph_request(&graph);
         let medulla_types::delegation::DelegationTarget::Graph { graph: reference } =
@@ -629,7 +629,7 @@ mod tests {
         // Each of these three is a DISTINCT refusal on the graph arm, and each
         // is asserted by its own message: an `error.contains("digest")` would
         // pass on any of them, and on several unrelated ones.
-        let (_dir, store) = crate::server::persistence::agent_fixtures::open_agent_store();
+        let (_dir, store) = medulla_persistence::agent_fixtures::open_agent_store();
         let graph = nested_graph(&store);
 
         let mut wrong_digest = graph_request(&graph);
@@ -689,7 +689,7 @@ mod tests {
         // an unprefixed one failed the comparison, so the graph arm could never
         // admit anything. Nothing caught it because nothing ever built a graph
         // target end to end.
-        let (_dir, store) = crate::server::persistence::agent_fixtures::open_agent_store();
+        let (_dir, store) = medulla_persistence::agent_fixtures::open_agent_store();
         let graph = nested_graph(&store);
         let mut unprefixed = graph_request(&graph);
         if let medulla_types::delegation::DelegationTarget::Graph { graph: reference } =

@@ -56,11 +56,11 @@ const IDENTITY_GRAPH_SCOPE_ERROR: &str =
 pub(crate) async fn ensure_graph_resident(state: &Arc<RwLock<ServerState>>, graph: &str) {
     #[cfg(feature = "redb")]
     if timed_read(state).await.registry.get(graph).is_none() {
-        crate::server::persistence::cold_offload::lazy_open(
+        medulla_persistence::cold_offload::lazy_open(
             state,
             graph,
-            crate::server::persistence::cold_offload::max_resident_graphs(),
-            crate::server::persistence::cold_offload::lazy_open_page_size(),
+            medulla_persistence::cold_offload::max_resident_graphs(),
+            medulla_persistence::cold_offload::lazy_open_page_size(),
         )
         .await;
     }

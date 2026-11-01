@@ -182,7 +182,7 @@
 //! Calvin deterministic ordering.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 use std::collections::BTreeMap;
 #[cfg(any(feature = "calvin", test, feature = "harness"))]
 use std::collections::{BTreeSet, HashMap};
@@ -207,7 +207,7 @@ use super::NodeId;
 use super::{GroupId, RaftRequest};
 use crate::protocol::{GraphType, Method};
 use medulla_server_api::api::persistence::PersistenceBackend;
-use crate::server::persistence::redb_backend::RedbBackend;
+use medulla_persistence::redb_backend::RedbBackend;
 
 const MAX_PREPARED_TXN_BYTES: usize = 256 * 1024 * 1024;
 const MAX_PREPARED_TXN_ITEMS: usize = 4_000_000;

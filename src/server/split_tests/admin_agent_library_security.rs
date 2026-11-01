@@ -5,8 +5,8 @@ use crate::protocol::{Method, Request};
 use medulla_server_api::api::persistence::BundledStoreSource;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use crate::server::handlers::admin::{backup_bundle_name, bind_agent_library_draft};
-use crate::server::persistence::agent_library::context::bind_agent_library_context;
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::context::bind_agent_library_context;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 use medulla_types::contract::Nonce;
 use medulla_types::{
     AgentLibraryEntryDraft, AgentLibraryMutationContext, AgentLibraryMutationKind, AgentLibraryOp,
@@ -34,7 +34,7 @@ fn digest(byte: char) -> String {
 }
 
 fn forged_context(
-    _store: &crate::server::persistence::agent_library::AgentLibraryStore,
+    _store: &medulla_persistence::agent_library::AgentLibraryStore,
     tenant_id: &str,
 ) -> AgentLibraryMutationContext {
     AgentLibraryMutationContext {
@@ -62,11 +62,11 @@ fn forged_context(
 /// has to seed them; a test that expects a refusal before the store does
 /// not.
 fn seeded_definition(
-    store: &crate::server::persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
     tenant_id: &str,
 ) -> AgentLibraryEntryDraft {
     let mut draft = definition(tenant_id);
-    crate::server::persistence::agent_component::seed_draft_components_for_test(
+    medulla_persistence::agent_component::seed_draft_components_for_test(
         store, &mut draft, 50,
     );
     draft
@@ -180,7 +180,7 @@ fn response_write_result(
 const SEEDED_COMPONENT_OUTBOX: usize = 5;
 
 fn native_outbox_count(
-    store: &crate::server::persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence::agent_library::AgentLibraryStore,
 ) -> usize {
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("agent_library.redb");
@@ -210,7 +210,7 @@ fn backup_bundle_names_are_logical_not_paths() {
 #[test]
 fn agent_library_route_binds_verified_action_and_preserves_definition_provenance() {
     let directory = tempfile::tempdir().unwrap();
-    let store = crate::server::persistence::agent_library::AgentLibraryStore::open(
+    let store = medulla_persistence::agent_library::AgentLibraryStore::open(
         directory.path().to_str().unwrap(),
     )
     .unwrap();
@@ -254,7 +254,7 @@ fn agent_library_route_binds_verified_action_and_preserves_definition_provenance
 #[test]
 fn agent_library_write_route_rejects_missing_verified_nonce() {
     let directory = tempfile::tempdir().unwrap();
-    let store = crate::server::persistence::agent_library::AgentLibraryStore::open(
+    let store = medulla_persistence::agent_library::AgentLibraryStore::open(
         directory.path().to_str().unwrap(),
     )
     .unwrap();
@@ -285,7 +285,7 @@ fn agent_library_write_route_rejects_missing_verified_nonce() {
 #[test]
 fn agent_library_signed_route_uses_wire_nonce_and_idempotency() {
     let directory = tempfile::tempdir().unwrap();
-    let store = crate::server::persistence::agent_library::AgentLibraryStore::open(
+    let store = medulla_persistence::agent_library::AgentLibraryStore::open(
         directory.path().to_str().unwrap(),
     )
     .unwrap();

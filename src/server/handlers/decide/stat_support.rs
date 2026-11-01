@@ -21,7 +21,7 @@ use medulla_types::decision::{
     TraceFidelityLevel, UnitRationalWire,
 };
 
-use crate::server::persistence::agent_library::AgentLibraryStore;
+use medulla_persistence::agent_library::AgentLibraryStore;
 
 /// Open `graph` for one caller and return its analysis snapshot filtered by
 /// that caller's row-level isolation, before any statistical read.

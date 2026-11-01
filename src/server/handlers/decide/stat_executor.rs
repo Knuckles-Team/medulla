@@ -25,7 +25,7 @@ use medulla_types::decision::statistical::{
 use medulla_types::decision::AbstainReason;
 
 use super::stat_support::{pinned_body, refusal, ResolvedPolicy};
-use crate::server::persistence::agent_library::AgentLibraryStore;
+use medulla_persistence::agent_library::AgentLibraryStore;
 
 /// What the executor needs besides the request.
 pub(super) struct ExecutionContext<'a> {

@@ -14,7 +14,7 @@
 #[cfg(feature = "raft")]
 use crate::raft::RaftStateExt;
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 use std::time::Duration;
@@ -35,7 +35,7 @@ use super::node::{self, StartedNode};
 use super::{NodeId, RaftRequest};
 use crate::protocol::{GraphType, Method};
 use medulla_server_api::api::persistence::PersistenceBackend;
-use crate::server::persistence::redb_backend::RedbBackend;
+use medulla_persistence::redb_backend::RedbBackend;
 use medulla_server_api::state::ServerState;
 
 /// Build a ServerState with a redb-AUTHORITATIVE backend rooted at `dir`.
@@ -3275,7 +3275,7 @@ mod matview {
 #[test]
 fn group_of_equals_durable_shard_index_under_production_ring() {
     use super::multi::GroupRouter;
-    use crate::server::persistence::redb_backend::shard_index;
+    use medulla_persistence::redb_backend::shard_index;
 
     let mut names: Vec<String> = vec![
         "__commons__",

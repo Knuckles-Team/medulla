@@ -1,7 +1,7 @@
 //! Bounded R073 storage acceptance through signed, served pack imports.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::collections::BTreeSet;
 
 use medulla_types::agent_component::AgentComponentOutboxEvent;

@@ -6,7 +6,7 @@
 //! records, the committing principal only for graph-sourced ones.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::collections::BTreeMap;
 use std::time::Instant;
 
@@ -42,11 +42,11 @@ use super::telemetry;
 use super::SharedState;
 use crate::protocol::{Response, ResultPayload};
 use medulla_server_api::auth::VerifiedRequestContext;
-use crate::server::persistence::agent_library::AgentLibraryStore;
-use crate::server::persistence::decision_jobs::decode_artifact;
-use crate::server::persistence::decision_jobs::encode_artifact;
-use crate::server::persistence::decision_jobs::evaluation_key;
-use crate::server::persistence::decision_jobs::record_key;
+use medulla_persistence::agent_library::AgentLibraryStore;
+use medulla_persistence::decision_jobs::decode_artifact;
+use medulla_persistence::decision_jobs::encode_artifact;
+use medulla_persistence::decision_jobs::evaluation_key;
+use medulla_persistence::decision_jobs::record_key;
 
 /// Most log rows one read walks before refusing as unbounded.
 pub(super) const MAX_LOG_ROWS: usize = 100_000;

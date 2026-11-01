@@ -63,7 +63,7 @@ impl Served {
         let dir = tempfile::tempdir().unwrap();
         let mut state = ServerState::new_for_test(SECRET, ServerState::test_isolation(ADMIN));
         state.persist_dir = Some(dir.path().to_string_lossy().into_owned());
-        let backend = crate::server::persistence::redb_backend::RedbBackend::open(
+        let backend = medulla_persistence::redb_backend::RedbBackend::open(
             dir.path().join("graphs").to_string_lossy().into_owned(),
             64,
         )

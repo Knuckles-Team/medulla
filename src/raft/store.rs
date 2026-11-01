@@ -69,7 +69,7 @@ use super::{
 };
 use crate::protocol::{GraphType, Method, ResultPayload};
 use medulla_server_api::api::persistence::PersistenceBackend;
-use crate::server::persistence::redb_backend::RedbBackend;
+use medulla_persistence::redb_backend::RedbBackend;
 
 fn deserialize_required_option<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
 where
@@ -156,7 +156,7 @@ struct GraphSnapshot {
     fname: String,
     /// Complete graph-scoped redb authority, required for every current snapshot;
     /// its `graph_meta` row is the sole source of the logical name and graph type.
-    durable: crate::server::persistence::online_reshard::RawGraphRows,
+    durable: medulla_persistence::online_reshard::RawGraphRows,
 }
 
 impl GraphSnapshot {
@@ -254,17 +254,17 @@ mod current_snapshot_schema_tests {
         let encoded = rmp_serde::to_vec_named(&incomplete).unwrap();
         assert!(rmp_serde::from_slice::<GraphSnapshot>(&encoded).is_err());
 
-        let rows = crate::server::persistence::online_reshard::RawGraphRows {
+        let rows = medulla_persistence::online_reshard::RawGraphRows {
             schema_version: 0,
             ..Default::default()
         };
         assert!(rows.validate_schema().is_err());
 
-        let mut orphaned = crate::server::persistence::online_reshard::RawGraphRows::default();
+        let mut orphaned = medulla_persistence::online_reshard::RawGraphRows::default();
         orphaned.nodes.push(("node".to_string(), Vec::new()));
         assert!(orphaned.durable_identity("graph").is_err());
 
-        let durable = crate::server::persistence::online_reshard::RawGraphRows {
+        let durable = medulla_persistence::online_reshard::RawGraphRows {
             meta: Some(
                 medulla_store::redb_store::encode_meta_with_incarnation(
                     "graph",

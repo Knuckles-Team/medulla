@@ -1,6 +1,6 @@
 use super::*;
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 #[cfg(feature = "redb")]
 use medulla_types::result_contract::transactions as txn_results;
 
@@ -60,7 +60,7 @@ pub(in crate::server::dispatch) async fn multi_graph_batch_update(
 /// saga (when there is one) over it.
 #[cfg(feature = "redb")]
 fn finish_multi_graph_report(
-    redb: &crate::server::persistence::redb_backend::RedbBackend,
+    redb: &medulla_persistence::redb_backend::RedbBackend,
     req_id: u64,
     saga: Option<medulla_server_api::api::admin::saga::AdminSaga>,
     report: txn_results::MultiGraphBatchReport,
@@ -96,7 +96,7 @@ pub(super) fn declared_json_response<T: serde::de::DeserializeOwned>(
 /// replayed result of an attempt that already committed.
 #[cfg(feature = "redb")]
 fn begin_multi_graph_saga(
-    redb: &crate::server::persistence::redb_backend::RedbBackend,
+    redb: &medulla_persistence::redb_backend::RedbBackend,
     req_id: u64,
     verified_context: &VerifiedRequestContext,
     batches_msgpack: &[u8],
@@ -114,7 +114,7 @@ fn begin_multi_graph_saga(
 
 #[cfg(feature = "redb")]
 fn begin_multi_graph_authorized_saga(
-    redb: &crate::server::persistence::redb_backend::RedbBackend,
+    redb: &medulla_persistence::redb_backend::RedbBackend,
     req_id: u64,
     verified_context: &VerifiedRequestContext,
     method: &Method,
@@ -152,7 +152,7 @@ fn finish_multi_graph_saga_begin(
 /// Close the saga (when there is one) over the assembled partial-success reply.
 #[cfg(feature = "redb")]
 fn finish_multi_graph_batch(
-    redb: &crate::server::persistence::redb_backend::RedbBackend,
+    redb: &medulla_persistence::redb_backend::RedbBackend,
     req_id: u64,
     saga: Option<medulla_server_api::api::admin::saga::AdminSaga>,
     result: ResultPayload,

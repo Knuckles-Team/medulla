@@ -3,14 +3,14 @@ use super::request_boundary::dispatch_with_context;
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 use super::*;
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 const MAX_PRIVATE_COORDINATOR_PLAN_BYTES: usize = 256 * 1024 * 1024;
 
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 fn seal_private_coordinator_plan<T: serde::Serialize>(
-    backend: &crate::server::persistence::redb_backend::RedbBackend,
+    backend: &medulla_persistence::redb_backend::RedbBackend,
     plan: &T,
 ) -> Result<(String, Vec<u8>), String> {
     let cipher = backend.transaction_recovery_cipher().ok_or_else(|| {
@@ -67,7 +67,7 @@ fn private_coordinator_plan_digest(
 
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 fn open_private_coordinator_plan<T: serde::de::DeserializeOwned>(
-    backend: &crate::server::persistence::redb_backend::RedbBackend,
+    backend: &medulla_persistence::redb_backend::RedbBackend,
     batch: &crate::mutation_batch::MutationBatch,
     event_type: &str,
     encrypted: &[u8],
@@ -144,7 +144,7 @@ fn coordinator_result_is_compensated(result: &ResultPayload) -> bool {
     feature = "raft"
 ))]
 async fn clear_coordinated_graph_decision(
-    backend: &crate::server::persistence::redb_backend::RedbBackend,
+    backend: &medulla_persistence::redb_backend::RedbBackend,
     coordinator_id: &str,
 ) -> Result<(), String> {
     backend.xshard_decision_clear(coordinator_id).await
@@ -157,7 +157,7 @@ async fn clear_coordinated_graph_decision(
     not(feature = "raft")
 ))]
 async fn clear_coordinated_graph_decision(
-    _backend: &crate::server::persistence::redb_backend::RedbBackend,
+    _backend: &medulla_persistence::redb_backend::RedbBackend,
     _coordinator_id: &str,
 ) -> Result<(), String> {
     Ok(())
@@ -174,7 +174,7 @@ struct SparqlUpdateCoordination<'a> {
     req_id: u64,
     verified_context: &'a VerifiedRequestContext,
     verified_actor: &'a str,
-    redb: &'a crate::server::persistence::redb_backend::RedbBackend,
+    redb: &'a medulla_persistence::redb_backend::RedbBackend,
     parent_id: &'a str,
     compensation_id: &'a str,
 }
@@ -498,7 +498,7 @@ async fn finish_sparql_commit(
 /// Close the parent saga over the committed update's declared `ApplyMutation` report.
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 fn finish_sparql_parent_saga(
-    redb: &crate::server::persistence::redb_backend::RedbBackend,
+    redb: &medulla_persistence::redb_backend::RedbBackend,
     saga: medulla_server_api::api::admin::saga::AdminSaga,
     plan: &SparqlRecoveryPlan,
 ) -> Result<ResultPayload, String> {
@@ -828,7 +828,7 @@ mod coordinator_restart_tests {
             sealed: &[u8],
             expected_plaintext_digest: &str,
         ) -> Result<(), String> {
-            crate::server::persistence::redb_backend::authenticate_private_payload(
+            medulla_persistence::redb_backend::authenticate_private_payload(
                 &self.0,
                 sealed,
                 expected_plaintext_digest,

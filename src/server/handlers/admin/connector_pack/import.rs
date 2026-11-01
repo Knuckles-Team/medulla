@@ -13,7 +13,7 @@ use sha2::{Digest, Sha256};
 use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_server_api::blob::engine_bodies::EngineBody;
 use medulla_server_api::blob::BlobCursors;
-use crate::server::persistence::agent_library::AgentLibraryStore;
+use medulla_persistence::agent_library::AgentLibraryStore;
 use medulla_server_api::request_scope::interruptible;
 use medulla_server_api::request_scope::RequestCancel;
 

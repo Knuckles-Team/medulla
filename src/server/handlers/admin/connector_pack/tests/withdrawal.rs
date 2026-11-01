@@ -6,7 +6,7 @@ use super::{
 };
 use crate::protocol::Method;
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 use medulla_types::agent_component::{
     AgentComponentContentRequest, AgentComponentContentResult, AgentComponentKind,
     AgentComponentOp, AgentComponentPublishRequest, AgentComponentSearchPage,
@@ -109,7 +109,7 @@ async fn withdrawn_tool_leaves_search_but_keeps_historical_content() {
     );
     assert_eq!(content.body, withdrawn.body);
 
-    let mut draft = crate::server::persistence::agent_component::test_component_draft(
+    let mut draft = medulla_persistence::agent_component::test_component_draft(
         TENANT,
         "skill:new-withdrawn-pin",
     );

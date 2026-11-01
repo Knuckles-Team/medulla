@@ -15,7 +15,7 @@
 #[cfg(feature = "raft")]
 use crate::raft::RaftStateExt;
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 use std::sync::Arc;
 
 use hmac::{Hmac, Mac};
@@ -138,7 +138,7 @@ fn member_role(
 
 #[cfg(feature = "raft")]
 fn certificate_value(
-    info: &crate::server::persistence::node_info_store::NodeInfo,
+    info: &medulla_persistence::node_info_store::NodeInfo,
 ) -> medulla_types::result_contract::cluster::ClusterMemberCertificate {
     medulla_types::result_contract::cluster::ClusterMemberCertificate {
         id: info.certificate_id.clone(),
@@ -177,7 +177,7 @@ struct MemberProjection {
 
 #[cfg(feature = "raft")]
 fn project_group_members(
-    store: &crate::server::persistence::node_info_store::NodeInfoStore,
+    store: &medulla_persistence::node_info_store::NodeInfoStore,
     cluster_id: &str,
     ids: &[crate::raft::NodeId],
     voters: &[crate::raft::NodeId],
@@ -192,7 +192,7 @@ fn project_group_members(
         })?;
         if info.cluster_id != cluster_id
             || info.member_identity
-                != crate::server::persistence::node_info_store::member_identity_for(
+                != medulla_persistence::node_info_store::member_identity_for(
                     cluster_id, node_id,
                 )
         {
@@ -233,7 +233,7 @@ fn project_group_members(
 #[cfg(feature = "raft")]
 async fn collect_group_projection(
     multi: &crate::raft::multi::MultiRaft,
-    store: &crate::server::persistence::node_info_store::NodeInfoStore,
+    store: &medulla_persistence::node_info_store::NodeInfoStore,
     cluster_id: &str,
     group_id: crate::raft::NodeId,
     member_count: usize,

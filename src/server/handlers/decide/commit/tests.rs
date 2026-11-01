@@ -1,7 +1,7 @@
 //! The served guard must refuse before either durable owner changes.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
 use medulla_compute::assemble::{assemble, inputs, replay_check, RecordIdentity};
@@ -23,11 +23,12 @@ use tokio::sync::RwLock;
 use crate::protocol::{Method, ResultPayload};
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::auth::VerifiedRequestContext;
-use crate::server::persistence::agent_library::AgentLibraryStore;
-use crate::server::persistence::decision_record::tests::{
-    commit_context, decided, seed_library, TENANT,
-};
-use crate::server::persistence::redb_backend::RedbBackend;
+use medulla_persistence::agent_library::AgentLibraryStore;
+use medulla_persistence::decision_record::tests::commit_context;
+use medulla_persistence::decision_record::tests::decided;
+use medulla_persistence::decision_record::tests::seed_library;
+use medulla_persistence::decision_record::tests::TENANT;
+use medulla_persistence::redb_backend::RedbBackend;
 use medulla_server_api::state::ServerState;
 
 fn topology_record(store: &AgentLibraryStore) -> DecisionRecord {

@@ -4,7 +4,7 @@
 //! a TBox-only classification could not see.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 use medulla_types::connector_pack::{
     PackAnnotations, PackEntryKind, PackImportResult, PackViolationCode,
 };
@@ -215,7 +215,7 @@ async fn source_claims_persist_held_and_old_or_other_tenant_members_stay_unbound
         .as_object_mut()
         .unwrap()
         .remove("source_registrations");
-    let legacy: crate::server::persistence::connector_pack::ConnectorPackMemberRow =
+    let legacy: medulla_persistence::connector_pack::ConnectorPackMemberRow =
         serde_json::from_value(legacy).unwrap();
     assert!(legacy.source_registrations.is_empty());
     let unchanged = ok(
@@ -227,7 +227,7 @@ async fn source_claims_persist_held_and_old_or_other_tenant_members_stay_unbound
     let super::Served { dir, state } = served;
     drop(store);
     drop(state);
-    let reopened = crate::server::persistence::agent_library::AgentLibraryStore::open(
+    let reopened = medulla_persistence::agent_library::AgentLibraryStore::open(
         dir.path().to_str().unwrap(),
     )
     .unwrap();

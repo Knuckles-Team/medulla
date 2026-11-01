@@ -69,7 +69,8 @@ pub(crate) mod worker {
 
     use medulla_server_api::auth::VerifiedRequestContext;
     use medulla_server_api::outbox_operator::OutboxWrite;
-    use crate::server::persistence::agent_library::{AgentLibraryStateExt, AgentLibraryStore};
+    use medulla_persistence::agent_library::AgentLibraryStateExt;
+    use medulla_persistence::agent_library::AgentLibraryStore;
     use medulla_server_api::state::ServerState;
 
     /// The label a failed blocking store task names.
@@ -174,7 +175,7 @@ pub(crate) mod worker {
             })?;
             (persist_dir, Arc::clone(&guard.agent_library_open))
         };
-        let opened = crate::server::persistence::agent_library::open_shared_agent_library(
+        let opened = medulla_persistence::agent_library::open_shared_agent_library(
             &slot,
             &persist_dir,
         )?;
@@ -317,7 +318,7 @@ pub(crate) mod worker {
             service_context(&plan.record_id)?
         };
         let context =
-            crate::server::persistence::agent_library::context::bind_agent_library_context(
+            medulla_persistence::agent_library::context::bind_agent_library_context(
                 store,
                 0,
                 &verified,

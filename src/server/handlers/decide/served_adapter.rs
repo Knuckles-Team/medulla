@@ -14,7 +14,7 @@
 //! adapter state that cannot be read -- serves the base query unchanged.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::collections::BTreeMap;
 use std::sync::{Arc, OnceLock};
 
@@ -22,8 +22,8 @@ use medulla_core::graph::GraphCore;
 use medulla_types::decision::statistical::retrieval_adapter::AdapterFitted;
 
 use medulla_server_api::api::admin::served_adapter::ServedAdapter;
-use crate::server::persistence::agent_library::AgentLibraryStore;
-use crate::server::persistence::decision_jobs::decode_artifact;
+use medulla_persistence::agent_library::AgentLibraryStore;
+use medulla_persistence::decision_jobs::decode_artifact;
 use medulla_server_api::state::ServerState;
 
 /// Bodies kept decoded; the cache is cleared when it would grow past this.

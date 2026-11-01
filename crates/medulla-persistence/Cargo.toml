@@ -12,3 +12,23 @@ name = "medulla_persistence"
 path = "src/lib.rs"
 
 [dependencies]
+
+[features]
+cold-tier = []
+cold-tier-s3 = ["cold-tier"]
+compute-dist = ["raft"]
+cost = ["server"]
+cypher = []
+decide = ["redb", "shacl"]
+kv = ["server", "redb"]
+matview = ["query"]
+metrics = []
+query = ["redb"]
+raft = ["server", "redb"]
+rdf = ["server"]
+redb = []
+security = ["redb"]
+server = []
+shacl = ["rdf"]
+sparql = ["rdf"]
+tsdb = ["server", "redb"]

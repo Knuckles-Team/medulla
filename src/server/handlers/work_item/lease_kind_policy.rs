@@ -16,7 +16,7 @@
 //! concurrent issue must not supply an unapproved kind after this lookup.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 use std::sync::OnceLock;
 
 use medulla_types::control_lease::ControlLeaseKindPolicy;

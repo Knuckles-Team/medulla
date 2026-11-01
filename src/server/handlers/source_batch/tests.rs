@@ -225,7 +225,7 @@ fn active_raft_refuses_local_sql_source_authority_before_publication() {
     let request = fixture.request("bob");
     let _environment_lock = medulla_kernel::crypto::acquire_test_env_lock_blocking();
     let _environment =
-        crate::server::persistence::backup::EnvVarGuard::set("MEDULLA_RAFT_NODE_ID", "1");
+        medulla_persistence::backup::EnvVarGuard::set("MEDULLA_RAFT_NODE_ID", "1");
     assert!(submit(&fixture, &carrier, request, 1)
         .unwrap_err()
         .contains("no replicated ordering"));

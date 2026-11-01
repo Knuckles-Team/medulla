@@ -756,8 +756,8 @@ pub(super) async fn memcap_tick(state: SharedState, max_nodes_per_graph: usize) 
 }
 
 #[cfg(feature = "cost")]
-pub(super) async fn budget_tick(state: SharedState, config: medulla::cost::CostConfig) {
-    let (evicted, hibernated) = medulla::cost::enforce_memory_budgets(&state, config).await;
+pub(super) async fn budget_tick(state: SharedState, config: medulla_persistence::cost::CostConfig) {
+    let (evicted, hibernated) = medulla_persistence::cost::enforce_memory_budgets(&state, config).await;
     if evicted > 0 || hibernated > 0 {
         tracing::info!(
             "Memory budget: evicted {} node(s), hibernated {} graph(s) to keep \

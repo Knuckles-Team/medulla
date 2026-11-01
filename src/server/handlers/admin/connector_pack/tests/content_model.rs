@@ -1,7 +1,7 @@
 //! The content model (pack design §3.5, review B3): identity follows content.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 use medulla_types::agent_component::AgentComponentEntry;
 use medulla_types::agent_library::AgentLibraryLifecycle;
 use medulla_types::connector_pack::{
@@ -298,9 +298,9 @@ async fn chain_components(served: &Served) -> Vec<AgentComponentEntry> {
 }
 
 type PackSnapshot = Vec<(
-    crate::server::persistence::connector_pack::ConnectorPackMemberRow,
+    medulla_persistence::connector_pack::ConnectorPackMemberRow,
     AgentComponentEntry,
-    Vec<crate::server::persistence::connector_pack::ConnectorPackContentPointer>,
+    Vec<medulla_persistence::connector_pack::ConnectorPackContentPointer>,
 )>;
 
 /// Capture every member, persisted component and historical body-holder pointer.

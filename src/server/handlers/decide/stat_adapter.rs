@@ -28,8 +28,8 @@ use super::stat_pointer::Qualified;
 use super::stat_retrieval::{judged_outcomes, Scope};
 use super::stat_support::{invalid_parameter as invalid, refusal};
 use super::stat_vectors::GraphVectors;
-use crate::server::persistence::agent_library::AgentLibraryStore;
-use crate::server::persistence::decision_jobs::encode_artifact;
+use medulla_persistence::agent_library::AgentLibraryStore;
+use medulla_persistence::decision_jobs::encode_artifact;
 
 const TRAINING_DOMAIN: &str = "eg/adapter-training/v1";
 const HOLDOUT_DOMAIN: &str = "eg/adapter-holdout/v1";

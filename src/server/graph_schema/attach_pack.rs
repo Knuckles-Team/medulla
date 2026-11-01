@@ -6,7 +6,7 @@
 //! length. Caller bytes never enter this path.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
 use medulla_types::contract::ResourceId;

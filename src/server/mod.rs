@@ -141,10 +141,6 @@ pub mod cdc_sink;
 // Needs BOTH the cache (`result-cache`) and the CDC feed (`streaming`).
 #[cfg(all(feature = "result-cache", feature = "streaming"))]
 pub mod cache_coherence;
-// Facade-side ColdTier impls (CONCEPT:MEDULLA-KG.coordination.distributed-cache-coherence): redb-durable default + S3 behind
-// `cold-tier-s3`. The seam + in-memory impl live in medulla-core; this needs redb.
-#[cfg(all(feature = "cold-tier", feature = "redb"))]
-pub mod cold_tier_impl;
 // Semantic ANN index activation (W0.4, CONCEPT:MEDULLA-KG.storage.semantic-index-directory): the ONE
 // reopen-else-build-else-activate body plus the two triggers the boot-time task
 // cannot supply — the post-write hook and the periodic backstop — for a graph
@@ -245,7 +241,6 @@ pub mod repository_enrichment_worker;
 // the RDF stack through this internal module accidentally.
 #[cfg(feature = "shacl")]
 pub(crate) mod graph_schema;
-pub mod persistence;
 
 /// Tests that need the full server: the router, seam installation and the redb backend.
 #[cfg(test)]
@@ -516,7 +511,7 @@ pub(crate) fn test_state_with_services(
     #[cfg(feature = "redb")]
     {
         state.persistence = Some(std::sync::Arc::new(
-            crate::server::persistence::redb_backend::RedbBackend::open(
+            medulla_persistence::redb_backend::RedbBackend::open(
                 medulla_server_api::api::dispatch_support::unique_temp_dir(persistence_label)
                     .to_string_lossy()
                     .into_owned(),
@@ -3079,7 +3074,7 @@ mod tests {
             // which fails closed without a REAL backend.  Give this focused
             // fixture its own uniquely-named backend, as `test_state()` does.
             state.persistence = Some(std::sync::Arc::new(
-                crate::server::persistence::redb_backend::RedbBackend::open(
+                medulla_persistence::redb_backend::RedbBackend::open(
                     medulla_server_api::api::dispatch_support::unique_temp_dir(
                         "medulla-per-graph-backpressure",
                     )

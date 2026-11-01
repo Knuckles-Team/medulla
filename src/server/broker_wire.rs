@@ -69,7 +69,7 @@ pub(crate) async fn test_state_with_broker_agents(
 
     #[cfg(feature = "redb")]
     let (persist_dir, persistence) = {
-        use crate::server::persistence::redb_backend::RedbBackend;
+        use medulla_persistence::redb_backend::RedbBackend;
 
         let dir = medulla_server_api::api::dispatch_support::unique_temp_dir(prefix);
         let dir_s = dir.to_string_lossy().into_owned();

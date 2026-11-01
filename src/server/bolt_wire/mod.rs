@@ -984,7 +984,7 @@ mod tests {
         #[cfg(feature = "redb")]
         {
             state.persistence = Some(std::sync::Arc::new(
-                crate::server::persistence::redb_backend::RedbBackend::open(
+                medulla_persistence::redb_backend::RedbBackend::open(
                     medulla_server_api::api::dispatch_support::unique_temp_dir(
                         "medulla-bolt-server-test",
                     )
@@ -1020,7 +1020,7 @@ mod tests {
         Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     ) {
         use crate::protocol::GraphType;
-        use crate::server::persistence::redb_backend::RedbBackend;
+        use medulla_persistence::redb_backend::RedbBackend;
 
         let backend = RedbBackend::open(dir.to_string_lossy().to_string(), 64)
             .expect("open Bolt test backend");
@@ -1431,7 +1431,7 @@ mod tests {
     #[cfg(feature = "redb")]
     #[tokio::test(flavor = "multi_thread")]
     async fn bolt_atomic_commit_survives_backend_restart() {
-        use crate::server::persistence::redb_backend::RedbBackend;
+        use medulla_persistence::redb_backend::RedbBackend;
 
         // Held for the whole test: this test opens a `RedbBackend`, then DROPS it and
         // reopens the SAME persist dir below ("survives_backend_restart"). A

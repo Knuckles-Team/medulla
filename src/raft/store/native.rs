@@ -28,7 +28,7 @@ impl MedullaStore {
                 }
                 NativeMutationCommand::NodeInfo { .. } => {
                     let info = command.open_node_info(server_secret)?;
-                    let outcome = crate::server::persistence::node_info_store::apply_replicated_node_info(
+                    let outcome = medulla_persistence::node_info_store::apply_replicated_node_info(
                         &self.ctx.state,
                         req.mutation.request_id,
                         info,
@@ -461,9 +461,9 @@ impl MedullaStore {
                 s.registry.get(&req.graph_name).is_none()
             };
             if miss {
-                let cap = crate::server::persistence::cold_offload::max_resident_graphs();
-                let page_size = crate::server::persistence::cold_offload::lazy_open_page_size();
-                crate::server::persistence::cold_offload::lazy_open(
+                let cap = medulla_persistence::cold_offload::max_resident_graphs();
+                let page_size = medulla_persistence::cold_offload::lazy_open_page_size();
+                medulla_persistence::cold_offload::lazy_open(
                     &self.ctx.state,
                     &req.graph_name,
                     cap,

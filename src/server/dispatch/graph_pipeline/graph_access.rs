@@ -48,9 +48,9 @@ pub(super) fn stamp_resource_and_capacity_timestamps(method: &mut Method) {
 /// unchanged for that case.
 #[cfg(feature = "redb")]
 pub(super) async fn lazy_open_graph(state: &Arc<RwLock<ServerState>>, graph_name: &str) {
-    let cap = crate::server::persistence::cold_offload::max_resident_graphs();
-    let page_size = crate::server::persistence::cold_offload::lazy_open_page_size();
-    crate::server::persistence::cold_offload::lazy_open(state, graph_name, cap, page_size).await;
+    let cap = medulla_persistence::cold_offload::max_resident_graphs();
+    let page_size = medulla_persistence::cold_offload::lazy_open_page_size();
+    medulla_persistence::cold_offload::lazy_open(state, graph_name, cap, page_size).await;
 }
 
 /// Universal served-data authority (CONCEPT:MEDULLA-P0-4): derive the row actor from

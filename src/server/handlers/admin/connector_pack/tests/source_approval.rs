@@ -1,7 +1,7 @@
 //! R722.2 served source approval and current-contract reset proof.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 

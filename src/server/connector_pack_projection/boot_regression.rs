@@ -29,9 +29,9 @@
 //!    a per-boot one.
 
 #[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 #[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -394,7 +394,7 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
     // ── Seed a temp durable store: N pending import rows, a shard-durable
     // series against an EMPTY served store, and a durable matview. ──
     let backend: Arc<dyn PersistenceBackend> = Arc::new(
-        crate::server::persistence::redb_backend::RedbBackend::open(persist.clone(), 64).unwrap(),
+        medulla_persistence::redb_backend::RedbBackend::open(persist.clone(), 64).unwrap(),
     );
     let redb = backend.as_redb().expect("redb backend");
     let series_store = Arc::new(
