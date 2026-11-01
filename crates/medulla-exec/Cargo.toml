@@ -15,7 +15,6 @@ path = "src/lib.rs"
 medulla-types = { path = "../medulla-types", features = ["query", "geo"] }
 medulla-core = { path = "../medulla-core" }
 tracing = { version = "0.1", optional = true }
-medulla-query = { path = "../medulla-query", optional = true }
 medulla-wasm = { path = "../medulla-wasm", optional = true }
 medulla-text = { path = "../medulla-text", optional = true }
 medulla-rdf = { path = "../medulla-rdf", optional = true }
@@ -45,7 +44,7 @@ numeric = ["query", "dep:medulla-numeric"]
 owl = ["query", "dep:medulla-rdf", "medulla-rdf/owl", "medulla-rdf/sparql", "dep:medulla-shacl", "medulla-types/owl-plan"]
 par-runtime = ["query", "dep:rayon"]
 probabilistic = ["query", "medulla-types/probabilistic", "dep:medulla-compute", "medulla-compute/reasoning"]
-query = ["dep:medulla-query", "medulla-query/sql", "dep:medulla-compute", "dep:tracing"]
+query = ["dep:medulla-compute", "dep:tracing"]
 raft = []
 stream = ["query", "dep:medulla-stream", "medulla-stream/stream", "medulla-types/stream"]
 tensor = ["query", "dep:medulla-tensor", "medulla-types/tensor"]
