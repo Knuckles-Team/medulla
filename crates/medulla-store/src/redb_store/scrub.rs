@@ -40,9 +40,9 @@ pub struct ScrubCursor {
     /// The graph the walk is inside, or `None` at a cycle boundary.
     pub graph: Option<String>,
     /// The last node id already opened in `graph`; the pass resumes after it.
-    pub(crate) after: Option<String>,
+    pub after: Option<String>,
     /// Completed full walks of this file.
-    pub(crate) cycles: u64,
+    pub cycles: u64,
 }
 
 /// How much one pass may do.

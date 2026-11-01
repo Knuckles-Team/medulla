@@ -122,11 +122,11 @@ mod unreadable;
 
 pub(crate) use commit_timing::CommitPhaseTimer;
 pub(crate) use store_batch::*;
-pub(crate) use store_cleanup::*;
-pub(crate) use store_control::*;
-pub(crate) use store_mutation::*;
+pub use store_cleanup::*;
+pub use store_control::*;
+pub use store_mutation::*;
 pub(crate) use store_native::*;
-pub(crate) use store_read::*;
+pub use store_read::*;
 pub(crate) use store_retry::*;
 // The exact performance harness is a separate binary crate and must reach the
 // sole public item in `store_rows`; all remaining helpers in that module stay
@@ -134,7 +134,7 @@ pub(crate) use store_retry::*;
 pub use store_rows::*;
 pub(crate) use store_state::*;
 pub(crate) use store_state_tables::*;
-pub(crate) use store_types::*;
+pub use store_types::*;
 pub use unreadable::{NodeUnreadable, UnsealFailure};
 
 #[cfg(test)]
