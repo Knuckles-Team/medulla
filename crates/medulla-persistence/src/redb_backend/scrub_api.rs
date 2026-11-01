@@ -16,7 +16,7 @@ use tokio::sync::oneshot;
 
 impl RedbBackend {
     /// One bounded scrub pass on every shard, in shard order.
-    pub(crate) async fn scrub_step(&self, budget: ScrubBudget) -> Result<Vec<ScrubPass>, String> {
+    pub async fn scrub_step(&self, budget: ScrubBudget) -> Result<Vec<ScrubPass>, String> {
         let mut passes = Vec::with_capacity(self.shards.len());
         for writer in &self.shards {
             passes.push(scrub_shard(writer, budget).await?);

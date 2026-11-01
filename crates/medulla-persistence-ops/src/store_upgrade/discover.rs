@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use medulla_storage::OwnerLayout;
 
-use super::super::durable_stores::{bundled_store_authority, BackupScope, DURABLE_STORES};
+use medulla_persistence::durable_stores::{bundled_store_authority, BackupScope, DURABLE_STORES};
 
 /// The physical identity the SQL table store opens every catalog file under.
 /// That crate exports no accessor for it, so it is restated here; the SQL
