@@ -6,7 +6,7 @@ use medulla_server_api::api::reentry::TryHandleContext;
 #[cfg(feature = "query")]
 mod edge_index;
 
-pub(in crate::server) fn try_handle<'a>(
+pub fn try_handle<'a>(
     state: &'a Arc<RwLock<ServerState>>,
     ctx: TryHandleContext<'a>,
     core: Arc<GraphCore>,
@@ -349,7 +349,7 @@ async fn dispatch_external_query_method(
 // future `Method` variant silently inherit stream authorization without a
 // compile-time decision to add lease-based filtering for it.
 #[cfg(feature = "query")]
-pub(in crate::server) enum PolicyAwareQuery {
+pub enum PolicyAwareQuery {
     Sql {
         query: String,
         params_msgpack: Vec<u8>,
@@ -359,7 +359,7 @@ pub(in crate::server) enum PolicyAwareQuery {
 }
 
 #[cfg(all(feature = "query", feature = "security"))]
-pub(in crate::server) fn try_handle_with_policy<'a>(
+pub fn try_handle_with_policy<'a>(
     state: &'a Arc<RwLock<ServerState>>,
     ctx: TryHandleContext<'a>,
     core: Arc<GraphCore>,
@@ -385,7 +385,7 @@ pub(in crate::server) fn try_handle_with_policy<'a>(
 /// only its trailing `policy_lease`/`rls` ARGUMENTS are `#[cfg]`-gated —
 /// compiles in that configuration too; it is never reachable in practice.
 #[cfg(all(feature = "query", not(feature = "security")))]
-pub(in crate::server) fn try_handle_with_policy<'a>(
+pub fn try_handle_with_policy<'a>(
     state: &'a Arc<RwLock<ServerState>>,
     ctx: TryHandleContext<'a>,
     core: Arc<GraphCore>,

@@ -104,7 +104,7 @@ impl SemanticIndexServerAdapter {
                 })?,
             )
             .map_err(|error| {
-                crate::semantic_index::semantic_failure_message(&error)
+                crate::semantic_index_runtime::semantic_failure_message(&error)
                     .to_string()
             })
     }
@@ -123,7 +123,7 @@ impl SemanticIndexServerAdapter {
         self.service
             .subscribe_stage_consumer(authority.agent_id())
             .map_err(|error| {
-                crate::semantic_index::semantic_failure_message(&error)
+                crate::semantic_index_runtime::semantic_failure_message(&error)
                     .to_string()
             })
     }
@@ -141,7 +141,7 @@ impl SemanticIndexServerAdapter {
         self.service
             .claim_stage_leases(authority.agent_id(), budget)
             .map_err(|error| {
-                crate::semantic_index::semantic_failure_message(&error)
+                crate::semantic_index_runtime::semantic_failure_message(&error)
                     .to_string()
             })
     }

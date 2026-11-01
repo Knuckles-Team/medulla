@@ -42,9 +42,9 @@ use tokio::sync::RwLock;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::access::CarrierAuthority;
-use crate::semantic_index::open_semantic_service;
-use crate::semantic_index::semantic_cursor_secret;
-use crate::semantic_index::SemanticIndexServerAdapter;
+use crate::semantic_index_runtime::open_semantic_service;
+use crate::semantic_index_runtime::semantic_cursor_secret;
+use crate::semantic_index_runtime::SemanticIndexServerAdapter;
 use medulla_server_api::state::ServerState;
 
 pub(super) struct SemanticIndexContext<'a> {
@@ -208,8 +208,8 @@ pub(crate) fn own_lease(
 pub(super) fn read_port(
     persist_dir: &Path,
     authority: &CarrierAuthority,
-) -> crate::semantic_index::AuthorizedSqlSourceReadPort {
-    crate::semantic_index::AuthorizedSqlSourceReadPort::new(
+) -> crate::semantic_index_runtime::AuthorizedSqlSourceReadPort {
+    crate::semantic_index_runtime::AuthorizedSqlSourceReadPort::new(
         persist_dir.to_path_buf(),
         authority.clone(),
         semantic_cursor_secret(),

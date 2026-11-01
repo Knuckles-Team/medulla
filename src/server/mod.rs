@@ -1,4 +1,4 @@
-use medulla_h_query::semantic_index::PendingRf019Activation;
+use medulla_h_query::semantic_index_runtime::PendingRf019Activation;
 // CONCEPT:MEDULLA-KG.query.tokio-service-server — Tokio Service Server
 //
 // Long-running Tokio server that holds the GraphRegistry in memory
@@ -150,7 +150,7 @@ pub mod semantic_activation;
 pub fn preflight_rf019_activation(
     persist_dir: &std::path::Path,
 ) -> Result<PendingRf019Activation, String> {
-    semantic_index::preflight_rf019_activation(persist_dir)
+    medulla_h_query::semantic_index_runtime::preflight_rf019_activation(persist_dir)
 }
 
 #[cfg(feature = "ann-redb")]
@@ -158,7 +158,7 @@ pub fn install_rf019_activation(
     pending: PendingRf019Activation,
     persist_dir: &std::path::Path,
 ) -> Result<(), String> {
-    semantic_index::install_rf019_activation(pending, persist_dir)
+    medulla_h_query::semantic_index_runtime::install_rf019_activation(pending, persist_dir)
 }
 
 /// Operator-only, offline RF-019 observation. The public server route remains
@@ -171,7 +171,7 @@ pub fn observe_rf019_tenant_owner(
     max_source_bytes: u64,
     max_owner_bytes: u64,
 ) -> Result<serde_json::Value, String> {
-    semantic_index::observe_rf019_tenant_owner(
+    medulla_h_query::semantic_index_runtime::observe_rf019_tenant_owner(
         persist_dir,
         tenant,
         binding_ids,

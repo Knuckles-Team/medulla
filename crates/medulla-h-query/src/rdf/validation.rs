@@ -51,13 +51,13 @@ pub(super) async fn handle_shacl_validate(
 /// against exactly the shapes `ShaclValidate` uses when its `shapes` is omitted — one
 /// composition path ([`load_shacl_shapes`]), resolved only when a stage asks.
 #[cfg(all(feature = "shacl", feature = "owl-plan"))]
-pub(in crate::server) struct ServedShapes<'a> {
+pub struct ServedShapes<'a> {
     core: &'a GraphCore,
 }
 
 #[cfg(all(feature = "shacl", feature = "owl-plan"))]
 impl<'a> ServedShapes<'a> {
-    pub(in crate::server) fn new(core: &'a GraphCore) -> Self {
+    pub fn new(core: &'a GraphCore) -> Self {
         Self { core }
     }
 }

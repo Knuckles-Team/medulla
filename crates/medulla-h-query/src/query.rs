@@ -145,9 +145,9 @@ mod foreign_leg;
 #[cfg(feature = "federation")]
 pub(crate) use foreign_leg::*;
 mod dispatch;
-pub(in crate::server) use dispatch::try_handle;
+pub use dispatch::try_handle;
 #[cfg(feature = "knowledge-batch")]
-pub(in crate::server) use dispatch::{try_handle_with_policy, PolicyAwareQuery};
+pub use dispatch::{try_handle_with_policy, PolicyAwareQuery};
 mod sql_read;
 pub(crate) use sql_read::*;
 mod explain_handlers;

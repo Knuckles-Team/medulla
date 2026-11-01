@@ -885,7 +885,7 @@
 "src/server/seams_install.rs" = "medulla-server"
 "crates/medulla-h-query/src/secondary_indexes.rs" = "medulla-h-query"
 "src/server/semantic_activation.rs" = "medulla-server"
-"crates/medulla-h-query/src/semantic_index.rs" = "medulla-h-query"
+"crates/medulla-h-query/src/semantic_index_runtime.rs" = "medulla-h-query"
 "crates/medulla-h-query/src/semantic_index/activation.rs" = "medulla-h-query"
 "crates/medulla-h-query/src/semantic_index/authority.rs" = "medulla-h-query"
 "crates/medulla-h-query/src/semantic_index/dispatch.rs" = "medulla-h-query"

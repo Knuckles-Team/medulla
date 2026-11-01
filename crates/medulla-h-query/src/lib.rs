@@ -60,6 +60,11 @@ pub mod secondary_indexes;
 pub mod semantic_index;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(feature = "ann-redb")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod semantic_index_runtime;
+
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "sparql-fuseki")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod sparql_service;

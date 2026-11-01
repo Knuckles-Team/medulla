@@ -11,7 +11,7 @@ use medulla_server_api::state::ServerState;
 
 /// Route the native RDF family while keeping each protocol surface in its own
 /// cohesive handler. An unmatched method is returned for the next dispatcher.
-pub(in crate::server) async fn try_handle(
+pub async fn try_handle(
     state: &Arc<RwLock<ServerState>>,
     ctx: TryHandleContext<'_>,
     core: Arc<GraphCore>,

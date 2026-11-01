@@ -18,12 +18,12 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use super::sql_source_read_tests::{
+use super::medulla_h_query_sql_source_read_tests::{
     binding_draft, commit_sql_change, dispatch_table_fixture, selector,
 };
-use crate::acl::RequestContextClaims;
-use crate::protocol::Request;
-use crate::protocol::{Method, Response};
+use medulla_types::acl::RequestContextClaims;
+use medulla_protocol_types::protocol::Request;
+use medulla_protocol_types::protocol::{Method, Response};
 use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::auth::compute_verified_envelope_token;
 use medulla_server_api::auth::VerifiedEnvelopeParams;
@@ -37,14 +37,14 @@ use medulla_index_types::semantic_index::{
     SemanticStagePredecessor, SemanticStageReceipt, SemanticStageScope, SemanticStageTransition,
 };
 
-/// Synthetic HMAC fixture for `ServerState::new_for_test`: it authenticates
-/// nothing outside this process and is never a live credential.
+//! Synthetic HMAC fixture for `ServerState::new_for_test`: it authenticates
+//! nothing outside this process and is never a live credential.
 const SECRET: &str = "semantic-index-dispatch-fixture-secret"; // sanitizer:ignore
-/// `auth::request_context_policy` is a FIXED triple under `cfg(test)`:
-/// audience `medulla-test`, tenant `tenant-shared`, policy version
-/// `policy-test`. A signed envelope that names anything else is refused at
-/// the request boundary before the method is ever looked at, so these are
-/// not arbitrary fixture names.
+//! `auth::request_context_policy` is a FIXED triple under `cfg(test)`:
+//! audience `medulla-test`, tenant `tenant-shared`, policy version
+//! `policy-test`. A signed envelope that names anything else is refused at
+//! the request boundary before the method is ever looked at, so these are
+//! not arbitrary fixture names.
 const TENANT: &str = "tenant-shared";
 const WORKER: &str = "semantic-dispatch-worker";
 
@@ -73,9 +73,9 @@ fn claims(principal: &str) -> RequestContextClaims {
     }
 }
 
-/// One signed `Method::SemanticIndex` request, exactly as a connector mints
-/// it. The attempt nonce and idempotency key the handler uses are derived
-/// from THIS envelope, not from the op body.
+//! One signed `Method::SemanticIndex` request, exactly as a connector mints
+//! it. The attempt nonce and idempotency key the handler uses are derived
+//! from THIS envelope, not from the op body.
 fn signed(id: u64, op: SemanticIndexOp) -> Request {
     let context = claims(WORKER);
     let mut request = Request {
@@ -101,9 +101,9 @@ fn signed(id: u64, op: SemanticIndexOp) -> Request {
     request
 }
 
-/// A completion stamp comfortably after the engine's own ACL decision
-/// instant, which the handler samples inside the dispatch call and the test
-/// therefore cannot observe beforehand.
+//! A completion stamp comfortably after the engine's own ACL decision
+//! instant, which the handler samples inside the dispatch call and the test
+//! therefore cannot observe beforehand.
 fn future_ms() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -126,17 +126,17 @@ fn refused(label: &str, response: Response) -> String {
         .unwrap_or_else(|| panic!("{label} was accepted but must be refused"))
 }
 
-/// Drive one source from admission to a leased, completed S1 and a published
-/// S2, entirely through `dispatch`.
-///
-/// This is the wiring proof, and it asserts the two properties that make the
-/// queue a PIPELINE rather than a work list:
-///   * the queue class is honoured -- a `Fast` consumer is not handed the
-///     `Medium` S2 row, and vice versa;
-///   * the predecessor relation is STRUCTURAL, not advisory -- S2 does not
-///     exist to be claimed until S1's completion derives it, and a
-///     transition presented against a lease that does not name it is
-///     refused outright.
+//! Drive one source from admission to a leased, completed S1 and a published
+//! S2, entirely through `dispatch`.
+//!
+//! This is the wiring proof, and it asserts the two properties that make the
+//! queue a PIPELINE rather than a work list:
+//!   * the queue class is honoured -- a `Fast` consumer is not handed the
+//!     `Medium` S2 row, and vice versa;
+//!   * the predecessor relation is STRUCTURAL, not advisory -- S2 does not
+//!     exist to be claimed until S1's completion derives it, and a
+//!     transition presented against a lease that does not name it is
+//!     refused outright.
 #[tokio::test]
 async fn dispatch_drives_a_source_through_s1_and_publishes_s2() {
     let worker = worker_authority();
@@ -493,7 +493,7 @@ async fn dispatch_drives_a_source_through_s1_and_publishes_s2() {
     assert_eq!(medium.entries[0].queue_class, SemanticQueueClass::Medium);
 }
 
-/// One tenant may not reach another's binding by naming its id.
+//! One tenant may not reach another's binding by naming its id.
 #[tokio::test]
 async fn dispatch_refuses_a_cross_tenant_semantic_operation() {
     let worker = worker_authority();
@@ -553,8 +553,8 @@ async fn dispatch_refuses_a_cross_tenant_semantic_operation() {
     let _ = selector();
 }
 
-/// A claim above the named bound is refused BY THAT NAME, not by a store
-/// message about an anonymous "bounded consumer budget".
+//! A claim above the named bound is refused BY THAT NAME, not by a store
+//! message about an anonymous "bounded consumer budget".
 #[tokio::test]
 async fn dispatch_refuses_an_unbounded_stage_claim_by_name() {
     let worker = worker_authority();
@@ -586,19 +586,19 @@ async fn dispatch_refuses_an_unbounded_stage_claim_by_name() {
     let _ = commit_sql_change;
 }
 
-/// MEDULLA-IDENTITY-R005: a worker presents ONE verified identity across every
-/// queue class it processes, rather than switching principals per class.
-///
-/// Every op below carries a client-claimed `consumer` field naming a
-/// DIFFERENT, unverified principal for each class -- exactly what a
-/// compromised or misconfigured caller would send. If the handler ever
-/// trusted that field, the two classes' durable leases would be attributed
-/// to two different principals. They are not: `claim()` and `subscribe()`
-/// (src/server/handlers/semantic_index/worker.rs) derive the lease owner
-/// solely from `ctx.authority.agent_id()`, the one identity the envelope
-/// signature verified, so both classes' leases -- Fast's S1 and Medium's
-/// published S2 successor -- are attributed to the same verified worker,
-/// and the claimed field is never read for authorization.
+//! MEDULLA-IDENTITY-R005: a worker presents ONE verified identity across every
+//! queue class it processes, rather than switching principals per class.
+//!
+//! Every op below carries a client-claimed `consumer` field naming a
+//! DIFFERENT, unverified principal for each class -- exactly what a
+//! compromised or misconfigured caller would send. If the handler ever
+//! trusted that field, the two classes' durable leases would be attributed
+//! to two different principals. They are not: `claim()` and `subscribe()`
+//! (src/server/handlers/semantic_index/worker.rs) derive the lease owner
+//! solely from `ctx.authority.agent_id()`, the one identity the envelope
+//! signature verified, so both classes' leases -- Fast's S1 and Medium's
+//! published S2 successor -- are attributed to the same verified worker,
+//! and the claimed field is never read for authorization.
 // spec: MEDULLA-IDENTITY-R005
 #[tokio::test]
 async fn dispatch_attributes_every_queue_class_to_the_one_verified_principal() {

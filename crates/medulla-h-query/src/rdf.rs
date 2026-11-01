@@ -37,11 +37,11 @@ pub(crate) use inspect::composed_ontology_properties;
 #[cfg(feature = "shacl")]
 mod typed_triples;
 
-pub(in crate::server) use dispatch::try_handle;
+pub use dispatch::try_handle;
 #[cfg(feature = "owl")]
-pub(in crate::server) use reasoning::try_handle_distributed;
+pub use reasoning::try_handle_distributed;
 #[cfg(all(feature = "shacl", feature = "owl-plan"))]
-pub(in crate::server) use validation::ServedShapes;
+pub use validation::ServedShapes;
 
 // ── RunRules dispatch wiring (CONCEPT:MEDULLA-KG.ontology.medulla-runtime-swrl-datalog / MEDULLA-023) ────────────────────────────
 #[cfg(all(test, feature = "rdf"))]

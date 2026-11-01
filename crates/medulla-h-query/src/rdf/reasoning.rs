@@ -111,7 +111,7 @@ pub(super) async fn handle_run_rules(request: RunRulesRequest<'_>) -> Response {
 /// It is NOT graph-scoped (it unions several graphs), so dispatch routes it here directly
 /// with `state` rather than through `dispatch_graph_op`. `Err(method)` ⇒ not mine.
 #[cfg(feature = "owl")]
-pub(in crate::server) async fn try_handle_distributed(
+pub async fn try_handle_distributed(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     read_authority: &GraphReadAuthority,

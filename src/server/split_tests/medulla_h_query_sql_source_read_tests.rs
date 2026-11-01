@@ -5,8 +5,8 @@ use medulla_index_types::semantic_index::SemanticSourceDirtyIntent;
 use medulla_index_types::semantic_index::SemanticStageTransition;
 use std::path::Path;
 
-use super::*;
-use crate::protocol::Method;
+use medulla_h_query::semantic_index_runtime::*;
+use medulla_protocol_types::protocol::Method;
 use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_server_api::mutation_batch::compile_opaque_method;
 use medulla_server_api::mutation_batch::CompileBatch;
@@ -467,7 +467,7 @@ async fn leased_sql_source_completion_replays_after_reopen_and_acl_change() {
             // ("mutation principal authority must be an opaque digest").
             // This fixture passed a plain agent id, which is the failure
             // this test hit the first time it was ever compiled.
-            super::semantic_owner_principal(),
+            medulla_h_query::semantic_index_runtime::semantic_owner_principal(),
             SEMANTIC_PROOF,
             worker.tenant_scope(),
             &binding.binding_id,

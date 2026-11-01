@@ -753,28 +753,6 @@ fn source_claim_matches_intent(
 #[cfg(feature = "query")]
 mod dispatch;
 
-#[cfg(all(test, feature = "query"))]
-mod sql_source_read_tests;
-
-/// End-to-end wiring proof for `Method::SemanticIndex`.
-///
-/// The module above is the AUTHORITY seam; this module is the DISPATCH seam,
-/// and it exists because the expensive defects in this program were never
-/// logic defects. They were wiring gaps that every unit test passed through:
-/// this whole subsystem sat uncompiled for days while its own tests looked
-/// green, because nothing ever declared the module.
-///
-/// So none of these tests call `SemanticIndexService` or the adapter. Every one
-/// of them builds a signed `Request`, hands it to the real
-/// `crate::server::dispatch::dispatch`, and asserts on the `Response` -- the
-/// exact path an external connector takes, through envelope verification,
-/// `requires_write`, the capability policy, the router arm, and the handler.
-/// A test that reached past any of those would prove nothing about whether the
-/// method is reachable at all, which is the only thing that has ever gone wrong
-/// here.
-#[cfg(all(test, feature = "query", feature = "redb"))]
-mod dispatch_pipeline_tests;
-
 #[cfg(test)]
 #[test]
 fn semantic_owner_registry_is_scoped_to_persistence_root() {

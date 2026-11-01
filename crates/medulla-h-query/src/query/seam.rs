@@ -17,7 +17,7 @@ impl medulla_server_api::api::query_txn::QueryApi for QuerySeam {
         binding_id: &str,
     ) -> Result<Arc<medulla_core::compute::semantic_index_service::SemanticIndexService>, String>
     {
-        crate::semantic_index::existing_semantic_service(persist_dir, tenant, binding_id)
+        crate::semantic_index_runtime::existing_semantic_service(persist_dir, tenant, binding_id)
     }
 
     #[cfg(feature = "query")]

@@ -8,9 +8,9 @@ use medulla_protocol_types::result_contract::ingestion as ingestion_results;
 use medulla_transaction::OutboxClaimBudget;
 
 use medulla_protocol_types::protocol::Response;
-use crate::semantic_index::AuthorizedSqlSourceClaim;
-use crate::semantic_index::SemanticIndexServerAdapter;
-use crate::semantic_index::SqlSourceStageCompletion;
+use crate::semantic_index_runtime::AuthorizedSqlSourceClaim;
+use crate::semantic_index_runtime::SemanticIndexServerAdapter;
+use crate::semantic_index_runtime::SqlSourceStageCompletion;
 
 use super::{
     blocking, consumer_ack, contracts, current_binding, decode_cursor, own_lease, read_port, reply,

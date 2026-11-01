@@ -10,7 +10,7 @@ use medulla_protocol_types::result_contract::ingestion as ingestion_results;
 use medulla_types::contract::Nonce;
 
 use medulla_protocol_types::protocol::Response;
-use crate::semantic_index::SemanticIndexServerAdapter;
+use crate::semantic_index_runtime::SemanticIndexServerAdapter;
 
 use super::{blocking, contracts, reply, stamp_draft_identity, SemanticIndexContext};
 

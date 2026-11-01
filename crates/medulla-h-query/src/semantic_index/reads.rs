@@ -11,7 +11,7 @@ use medulla_protocol_types::result_contract::ingestion as ingestion_results;
 use medulla_protocol_types::protocol::Response;
 
 use super::{blocking, reply, SemanticIndexContext};
-use crate::semantic_index::SemanticIndexServerAdapter;
+use crate::semantic_index_runtime::SemanticIndexServerAdapter;
 
 pub(super) async fn handle(ctx: &SemanticIndexContext<'_>, op: SemanticIndexOp) -> Response {
     match op {
