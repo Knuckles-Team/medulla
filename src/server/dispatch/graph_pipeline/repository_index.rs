@@ -189,8 +189,8 @@ pub(super) fn commit_context<'a>(
     ctx: &GraphOpRouting<'a>,
     placement_epoch: u64,
     fencing_token: Option<u64>,
-) -> handlers::repository_index::IndexCommitContext<'a> {
-    handlers::repository_index::IndexCommitContext {
+) -> medulla_h_ingest::repository_index::IndexCommitContext<'a> {
+    medulla_h_ingest::repository_index::IndexCommitContext {
         request_id: ctx.req_id,
         graph_name: ctx.graph_name,
         tenant_scope: ctx.tenant_scope,
@@ -213,13 +213,13 @@ pub(super) async fn route_repository_index(
         Ok(result) => result,
         Err(response) => return response,
     };
-    let write_set = match handlers::repository_index::lower(&result) {
+    let write_set = match medulla_h_ingest::repository_index::lower(&result) {
         Ok(write_set) => write_set,
         Err(error) => return Response::err(ctx.req_id, error),
     };
     let envelope_id = write_set.envelope_id.clone();
     match already_committed(&ctx, &envelope_id).await {
-        Ok(true) => return handlers::repository_index::respond(ctx.req_id, result),
+        Ok(true) => return medulla_h_ingest::repository_index::respond(ctx.req_id, result),
         Ok(false) => {}
         Err(response) => return response,
     }
@@ -239,7 +239,7 @@ pub(super) async fn route_repository_index(
     #[cfg(not(all(feature = "ast", feature = "redb")))]
     let outbox = Vec::new();
     let commit_ctx = commit_context(&ctx, placement_epoch, fencing_token);
-    let envelope = match handlers::repository_index::build_envelope_with_outbox(
+    let envelope = match medulla_h_ingest::repository_index::build_envelope_with_outbox(
         &commit_ctx,
         write_set,
         outbox,
@@ -257,7 +257,7 @@ pub(super) async fn route_repository_index(
     #[cfg(not(all(feature = "ast", feature = "redb")))]
     let commit =
         crate::server::dispatch::change_envelope::apply_one_change_envelope(ctx, envelope).await;
-    handlers::repository_index::finish(result, commit)
+    medulla_h_ingest::repository_index::finish(result, commit)
 }
 
 #[cfg(all(feature = "ast", feature = "redb"))]
@@ -320,7 +320,7 @@ mod tests {
             }],
             ..Default::default()
         };
-        let envelope = crate::server::handlers::repository_index::repository_envelope(&result)
+        let envelope = medulla_h_ingest::repository_index::repository_envelope(&result)
             .expect("repository envelope");
         let error = preflight_request_msgpack(&Method::ApplyChangeEnvelope {
             envelope: Box::new(envelope),

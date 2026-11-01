@@ -23,7 +23,9 @@ use medulla_protocol_types::{
 use medulla_types::contract::Digest256;
 use medulla_types::ingestion_wire::{ExtractedEdge, ExtractedNode, IndexResult};
 
-use crate::protocol::{Method, Response, ResultPayload};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 
 /// The projection edge a tombstone is reported as; it lowers to a removal.
 const TOMBSTONE_EDGE: &str = "removesFileVersion";

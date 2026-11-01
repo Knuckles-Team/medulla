@@ -25,9 +25,10 @@ use medulla_catalog_types::{
 use medulla_types::contract::Digest256;
 use tokio::sync::RwLock;
 
-use crate::protocol::Response;
+use medulla_protocol_types::protocol::Response;
 #[cfg(all(feature = "redb", feature = "blob"))]
-use crate::protocol::{Method, ResultPayload};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::ResultPayload;
 #[cfg(all(feature = "redb", feature = "blob"))]
 use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::auth::VerifiedRequestContext;
@@ -1992,7 +1993,7 @@ fn replay_graph_version(
     envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
 ) -> Result<u64, String> {
     match envelope.mutation.version_expectation {
-        crate::mutation_batch::VersionExpectation::Graph(version) => version
+        medulla_protocol_types::mutation_batch::VersionExpectation::Graph(version) => version
             .checked_add(1)
             .ok_or_else(|| "source ingestion graph version overflow".to_string()),
         _ => Err("SOURCE_INGESTION_REPLAY_INVALID: graph version expectation is missing".into()),
@@ -2607,7 +2608,7 @@ mod tests {
             fn shutdown(&self) {}
         }
 
-        let core = crate::graph::GraphCore::new();
+        let core = medulla_core::graph::GraphCore::new();
         let source_node =
             source_node_id("tenant-shared", "demo-connector", "items", "source").unwrap();
         let target_node =

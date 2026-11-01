@@ -18,8 +18,9 @@ use medulla_query::TableStore;
 use medulla_types::contract::{Digest256, Nonce};
 use tokio::sync::RwLock;
 
-use crate::mutation_batch::MutationBatch;
-use crate::protocol::{Response, ResultPayload};
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;

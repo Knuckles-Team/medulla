@@ -303,7 +303,7 @@ pub(super) struct ServedModalityCtx<'a> {
     pub(super) cdc: Option<Arc<medulla_server_api::cdc::CdcHub>>,
     #[cfg(feature = "raft")]
     pub(super) routed_raft: Option<medulla_raft::raft::multi::RoutedRaftHandle>,
-    pub(super) modality_authority: Option<handlers::modality::ModalityAuthority>,
+    pub(super) modality_authority: Option<medulla_h_ingest::modality::ModalityAuthority>,
 }
 
 #[cfg(feature = "modality-serving")]
@@ -339,7 +339,7 @@ async fn try_replicate_served_modality(
     ctx: &ServedModalityCtx<'_>,
     op: &medulla_types::ServedModalityOp,
     method: &Method,
-    authority: &handlers::modality::ModalityAuthority,
+    authority: &medulla_h_ingest::modality::ModalityAuthority,
 ) -> Option<Response> {
     if !op.mutates() {
         return None;
@@ -382,7 +382,7 @@ async fn commit_served_modality(
     ctx: ServedModalityCtx<'_>,
     method: Method,
     op: medulla_types::ServedModalityOp,
-    authority: handlers::modality::ModalityAuthority,
+    authority: medulla_h_ingest::modality::ModalityAuthority,
 ) -> Response {
     let ServedModalityCtx {
         req_id,
@@ -425,7 +425,7 @@ async fn commit_served_modality(
         &plan,
         &method,
         op.mutates(),
-        move |staged_core| handlers::modality::handle(staged_core, &authority, op),
+        move |staged_core| medulla_h_ingest::modality::handle(staged_core, &authority, op),
     )
     .await
 }

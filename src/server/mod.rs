@@ -210,8 +210,6 @@ pub mod reasoning_projection;
 // PB1 — the connector-pack projection worker, the first Agent Library outbox
 // consumer. `pub` so the server binary can start it after catalog recovery.
 pub mod connector_pack_projection;
-// EH-557 — bounded local repository enrichment outbox consumer.
-pub mod repository_enrichment_worker;
 // X9 — keyed schema sources on one request graph.  The authority composes both
 // OWL and SHACL documents and is therefore present only in the certified SHACL
 // build (which implies `owl-dl`).  Minimal/server-only profiles must not pull

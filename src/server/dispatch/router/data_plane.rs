@@ -167,7 +167,7 @@ pub(super) async fn dispatch_sql_source_methods(
 ) -> ControlFlow<Response, Method> {
     ControlFlow::Break(match method {
         Method::SqlSourceBatch { batch } => {
-            dispatch_boxed(handlers::source_batch::handle(
+            dispatch_boxed(medulla_h_ingest::source_batch::handle(
                 ctx.state,
                 ctx.req.id,
                 ctx.verified_context,
@@ -206,7 +206,7 @@ async fn dispatch_store_methods_arm_0(ctx: DispatchCtx<'_>, method: Method) -> R
                         Ok(authority) => authority,
                         Err(denied) => return Response::err(req_id, denied),
                     };
-                    match handlers::blob::try_handle(
+                    match medulla_h_ingest::blob::try_handle(
                         state,
                         req_id,
                         &carrier,
@@ -508,7 +508,7 @@ async fn dispatch_served_modality_method(ctx: DispatchCtx<'_>, method: Method) -
                 let req_graph = req.graph.clone();
                 {
                     let auth_secret = timed_read(state).await.auth_secret.clone();
-                    let authority = match handlers::modality::ModalityAuthority::from_verified(
+                    let authority = match medulla_h_ingest::modality::ModalityAuthority::from_verified(
                         &auth_secret,
                         verified_context.claims(),
                     ) {

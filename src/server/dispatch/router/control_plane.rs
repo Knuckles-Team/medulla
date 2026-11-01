@@ -632,7 +632,7 @@ async fn dispatch_compute_and_media_methods_arm_3(
         identity_bootstrap,
     } = ctx;
     match method {
-        Method::Asr { op } => handlers::asr::handle(req.id, op).await,
+        Method::Asr { op } => medulla_h_ingest::asr::handle(req.id, op).await,
         _ => Response::err(req.id, "router dispatch helper routing mismatch"),
     }
 }

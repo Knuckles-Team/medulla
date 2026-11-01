@@ -21,7 +21,7 @@ use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 
 use super::repository_index::{stored_value, EnvelopeLabels, IndexWriteSet};
-use crate::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 
 pub(crate) const ENRICHMENT_TYPE: &str = "DocumentEnrichment";
 pub(crate) const CHUNK_TYPE: &str = "DocumentChunk";

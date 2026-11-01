@@ -159,7 +159,7 @@ async fn terminal_response_uses_raw_typed_result_and_verified_nonce() {
         "terminal".into(),
         Some(Nonce::from_bytes([9; 32])),
     );
-    let mut state = ServerState::new("test", crate::isolation::IsolationLayer::new());
+    let mut state = ServerState::new("test", medulla_core::isolation::IsolationLayer::new());
     state.persist_dir = Some(fixture.directory.to_str().unwrap().into());
     let state = Arc::new(RwLock::new(state));
     let request = fixture.request("bob");
@@ -241,7 +241,7 @@ fn audit_line_carries_only_the_canonical_batch_digest() {
     let fixture = Fixture::new();
     let request = fixture.request("bob");
     let expected = request.canonical_digests().unwrap().batch_digest.to_hex();
-    let line = medulla_kernel::audit::audit_line(&crate::protocol::Method::SqlSourceBatch {
+    let line = medulla_kernel::audit::audit_line(&medulla_protocol_types::protocol::Method::SqlSourceBatch {
         batch: request,
     })
     .unwrap();

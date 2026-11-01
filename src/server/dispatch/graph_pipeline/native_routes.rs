@@ -456,7 +456,7 @@ async fn route_source_ingestion_status(
             "source ingestion status requires durable persistence",
         );
     };
-    handlers::source_ingestion::status(
+    medulla_h_ingest::source_ingestion::status(
         ctx.req_id,
         ctx.graph_name,
         ctx.tenant_scope,
@@ -490,8 +490,8 @@ async fn route_source_ingestion_request(
         },
         None => ctx.core.version(),
     };
-    let prepared = match handlers::source_ingestion::prepare(
-        handlers::source_ingestion::PrepareContext {
+    let prepared = match medulla_h_ingest::source_ingestion::prepare(
+        medulla_h_ingest::source_ingestion::PrepareContext {
             state: ctx.state,
             request_id: ctx.req_id,
             graph_name: ctx.graph_name,
@@ -511,7 +511,7 @@ async fn route_source_ingestion_request(
     let envelope = prepared.envelope.clone();
     let response =
         crate::server::dispatch::change_envelope::apply_one_change_envelope(ctx, envelope).await;
-    handlers::source_ingestion::finish(prepared, response)
+    medulla_h_ingest::source_ingestion::finish(prepared, response)
 }
 
 enum SourceIngestionRoute {

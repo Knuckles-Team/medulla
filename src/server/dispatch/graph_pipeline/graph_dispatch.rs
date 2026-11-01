@@ -129,7 +129,7 @@ pub(super) async fn dispatch_graph_op_inner(
     ctx: GraphOpContext<'_>,
     mut method: Method,
     #[cfg(feature = "modality-serving")] modality_authority: Option<
-        handlers::modality::ModalityAuthority,
+        medulla_h_ingest::modality::ModalityAuthority,
     >,
     #[cfg(feature = "knowledge-batch")] knowledge_stream_authority: Option<
         handlers::knowledge_stream::KnowledgeStreamAuthority,
@@ -270,7 +270,7 @@ pub(in crate::server::dispatch) struct GraphOpRouting<'a> {
     #[cfg(feature = "redb")]
     pub(super) graph_incarnation_id: &'a String,
     #[cfg(feature = "modality-serving")]
-    pub(super) modality_authority: &'a Option<handlers::modality::ModalityAuthority>,
+    pub(super) modality_authority: &'a Option<medulla_h_ingest::modality::ModalityAuthority>,
     #[cfg(feature = "knowledge-batch")]
     pub(super) knowledge_stream_authority:
         &'a Option<handlers::knowledge_stream::KnowledgeStreamAuthority>,

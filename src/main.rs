@@ -598,7 +598,7 @@ async fn spawn_optional_service_listeners(
     spawn_kvcache_listener(state).await?;
     recover_durable_catalog(state).await?;
     medulla::server::connector_pack_projection::spawn(state.clone());
-    medulla::server::repository_enrichment_worker::spawn(state.clone());
+    medulla_h_ingest::repository_enrichment_worker::spawn(state.clone());
     #[cfg(feature = "epistemic-tms")]
     medulla::server::reasoning_projection::spawn(state.clone());
     // Sampled authorization denials reach the identity audit trail.

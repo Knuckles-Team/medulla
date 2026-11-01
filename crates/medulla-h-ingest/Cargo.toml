@@ -12,3 +12,14 @@ name = "medulla_h_ingest"
 path = "src/lib.rs"
 
 [dependencies]
+
+[features]
+asr-whisper = []
+ast = []
+blob = ["redb"]
+decide = ["redb"]
+modality-serving = ["redb", "security"]
+query = ["redb"]
+raft = ["redb"]
+redb = []
+security = ["redb"]

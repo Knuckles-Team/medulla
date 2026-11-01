@@ -18,7 +18,7 @@ use super::{
     capture_befores, load_runtime, shadow_write_deltas, store_runtime_excluding_sources,
     validate_content_binding, validate_request_sizes, ModalityAuthority,
 };
-use crate::graph::GraphCore;
+use medulla_core::graph::GraphCore;
 use medulla_server_api::api::ingest::MAX_INGEST_STREAM_ITEMS;
 
 struct ResourceClosure {

@@ -1,6 +1,6 @@
 //! Exact-graph RBAC grant for the in-process repository enrichment consumer.
 
-use crate::isolation::IsolationLayer;
+use medulla_core::isolation::IsolationLayer;
 
 pub(super) const SERVICE_ACTOR: &str = "service:repository-enrichment-v1";
 
@@ -25,7 +25,7 @@ pub(super) fn ensure(isolation: &mut IsolationLayer, graph: &str) -> Result<(), 
 
 fn retained_source_matches(
     retained: &medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision,
-    proposal: &crate::parser::enrichment_reactivation::BudgetRevisionProposal,
+    proposal: &medulla_compute::parser::enrichment_reactivation::BudgetRevisionProposal,
 ) -> bool {
     retained.schema_version == 1
         && retained.tenant_id == proposal.tenant_id
@@ -39,7 +39,7 @@ fn retained_source_matches(
 
 fn retained_budget_allows(
     retained: &medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision,
-    proposal: &crate::parser::enrichment_reactivation::BudgetRevisionProposal,
+    proposal: &medulla_compute::parser::enrichment_reactivation::BudgetRevisionProposal,
 ) -> bool {
     retained.max_total_units > 0
         && retained.total_budget_units < proposal.replacement_total_units
@@ -49,11 +49,11 @@ fn retained_budget_allows(
 fn caller_has_authority(
     verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     isolation: &IsolationLayer,
-    graph_type: crate::protocol::GraphType,
+    graph_type: medulla_protocol_types::protocol::GraphType,
     graph_owner: Option<&str>,
-    proposal: &crate::parser::enrichment_reactivation::BudgetRevisionProposal,
+    proposal: &medulla_compute::parser::enrichment_reactivation::BudgetRevisionProposal,
 ) -> bool {
-    use crate::parser::enrichment_reactivation::TOP_UP_ACTION;
+    use medulla_compute::parser::enrichment_reactivation::TOP_UP_ACTION;
     verified.allows_action(TOP_UP_ACTION)
         && medulla_server_api::access::principal_may_access(
             isolation,
@@ -77,13 +77,13 @@ fn caller_has_authority(
 pub(super) fn bind_top_up_identity(
     verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     isolation: &IsolationLayer,
-    graph_type: crate::protocol::GraphType,
+    graph_type: medulla_protocol_types::protocol::GraphType,
     graph_owner: Option<&str>,
     retained: &medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision,
-    proposal: &crate::parser::enrichment_reactivation::BudgetRevisionProposal,
+    proposal: &medulla_compute::parser::enrichment_reactivation::BudgetRevisionProposal,
     replacement: &medulla_agent_types::native_control::EnrichmentBudgetCheckpoint,
 ) -> Result<medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision, String> {
-    use crate::parser::enrichment_reactivation::TOP_UP_ACTION;
+    use medulla_compute::parser::enrichment_reactivation::TOP_UP_ACTION;
     if !caller_has_authority(verified, isolation, graph_type, graph_owner, proposal)
         || proposal.next_policy_sequence
             != proposal
@@ -123,13 +123,20 @@ pub(super) fn bind_top_up_identity(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
-    use crate::isolation::{AccessLevel, AgentIdentity, AgentRole};
-    use crate::protocol::GraphType;
+    use medulla_types::acl::Grant;
+    use medulla_types::acl::GrantEffect;
+    use medulla_types::acl::RbacAction;
+    use medulla_types::acl::ResourceSelector;
+    use medulla_types::acl::Role;
+    use medulla_core::isolation::AccessLevel;
+    use medulla_core::isolation::AgentIdentity;
+    use medulla_core::isolation::AgentRole;
+    use medulla_protocol_types::protocol::GraphType;
 
     #[test]
     fn top_up_identity_requires_exact_verified_scope_subject_and_key() {
-        use crate::parser::enrichment_reactivation::{BudgetRevisionProposal, TOP_UP_ACTION};
+        use medulla_compute::parser::enrichment_reactivation::BudgetRevisionProposal;
+        use medulla_compute::parser::enrichment_reactivation::TOP_UP_ACTION;
         use medulla_server_api::authority_context::VerifiedRequestContext;
         let verified = VerifiedRequestContext::verified_for_test_with_scopes(
             "operator",

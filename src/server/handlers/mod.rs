@@ -54,12 +54,6 @@ pub(crate) mod txn;
 // `tsdb` omits the module and the variants fall to the graph_ops not-built catch-all.
 #[cfg(feature = "tsdb")]
 pub(crate) mod timeseries;
-// Streamed content-addressed BLOB substrate (CONCEPT:MEDULLA-KG.storage.blob-namespace). Behind `blob`
-// (which pulls `redb` + `server`); the stateful Blob* methods drive the CAS store
-// + cursors on ServerState. A build without `blob` drops both the module and the
-// Method variants, so the dispatch chain never routes them.
-#[cfg(feature = "blob")]
-pub(crate) mod blob;
 // Streaming / CDC / subscriptions / triggers (CONCEPT:MEDULLA-KG.query.streaming-cdc-subscriptions/230, feature
 // `streaming`). The Cdc*/ContinuousQuery/Watch/Trigger methods are stateful (they
 // drive the `CdcHub` on `state`); a build without `streaming` omits the module and
@@ -92,19 +86,6 @@ pub(crate) mod dist_compute;
 // catch-all.
 #[cfg(feature = "federation")]
 pub(crate) mod federation;
-// Closed typed SQL source batches append through the native SQL owner gate.
-#[cfg(feature = "query")]
-pub(crate) mod source_batch;
-// RF-ADR-009 native raw-source authority. Present in every server build so a
-// build lacking redb/blob can return a named refusal for the wire method.
-pub(crate) mod source_ingestion;
-// EH-280 — durable projection of a branch-aware IndexRepository batch,
-// committed through the same ChangeEnvelope authority as source ingestion.
-pub(crate) mod repository_index;
-// MEDULLA-UNIFIED-DATA-PLANE-R651.7 / MEDULLA-DECISION-ENGINE-R802 — Document enrichment
-// and web page selection; enrichment commits through the same envelope authority.
-#[cfg(all(feature = "query", feature = "modality-serving"))]
-pub(crate) mod web_ingest;
 
 // SQLite `.db` FILE import/export (CONCEPT:MEDULLA-KG.query.medulla-feature/MEDULLA-332, feature `sqlite-file`). The
 // ImportSqliteFile/ExportSqliteFile methods move rows between an on-disk `sqlite3` `.db`
@@ -133,19 +114,6 @@ pub(crate) mod jobs;
 // `GraphCore`.
 #[cfg(feature = "statechart")]
 pub(crate) mod statechart;
-// Native ASR provider surface (GOC-33, `OWNER-VOICE-ASR`, feature `asr-whisper`).
-// `Method::Asr { op }` over the whisper-rs/whisper.cpp provider in `medulla-asr-whisper`
-// — a direct, non-durable batch-file transcription call. NOT graph-scoped (reads
-// no persisted graph state, commits no durable asr.result.v1) — self-routes in
-// `dispatch.rs` before the per-graph chain, exactly like `quantum`/`viz`. Needs no
-// `state` at all (no persistence of its own).
-#[cfg(feature = "asr-whisper")]
-pub(crate) mod asr;
-// Governed document/image/audio/video serving. The wire carries an ephemeral
-// source body, while this handler persists only an encrypted, opaque runtime
-// snapshot through the graph mutation gateway.
-#[cfg(feature = "modality-serving")]
-pub(crate) mod modality;
 // RF-019's S1-S6 tiered semantic ingestion queue. Always declared: the module
 // carries its own `#![cfg(all(ann-redb, query))]`, the durable semantic owner
 // plus the authorized SQL source read port it needs, and the router refuses

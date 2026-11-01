@@ -19,7 +19,7 @@ fn sealed_repository_budget_is_bound_to_exact_source_intent() {
         ..Default::default()
     };
     let mut envelope =
-        crate::server::handlers::repository_index::repository_envelope(&result).unwrap();
+        medulla_h_ingest::repository_index::repository_envelope(&result).unwrap();
     let snapshot = EligibleSnapshot {
         schema_version: 1,
         tenant_id: "tenant-a".into(),

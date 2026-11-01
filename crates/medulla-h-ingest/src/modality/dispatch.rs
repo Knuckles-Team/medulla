@@ -8,8 +8,8 @@ use super::{
     capabilities, collect_tombstones, delete, events, ingest, ingest_stream, lifecycle,
     native_predicate, native_query, query, response, stats, ModalityAuthority,
 };
-use crate::graph::GraphCore;
-use crate::protocol::ResultPayload;
+use medulla_core::graph::GraphCore;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::api::ingest::MAX_INGEST_STREAM_ITEMS;
 
 fn validate_ingest_stream_request_cardinality(items: usize) -> Result<(), String> {

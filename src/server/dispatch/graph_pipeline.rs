@@ -98,7 +98,7 @@ pub(super) async fn dispatch_served_modality(
     caller: Option<&str>,
     verified_context: &VerifiedRequestContext,
     op: medulla_types::ServedModalityOp,
-    authority: handlers::modality::ModalityAuthority,
+    authority: medulla_h_ingest::modality::ModalityAuthority,
 ) -> Response {
     dispatch_graph_op_inner(
         state,

@@ -8,7 +8,7 @@ use medulla_types::ServedModalityKind;
 use serde::{de::DeserializeOwned, Serialize};
 
 use super::{delta_row_node_id, load_runtime, DeltaManifest, ModalityAuthority};
-use crate::graph::GraphCore;
+use medulla_core::graph::GraphCore;
 
 /// BUG-017 one-time snapshot-to-rows migration backfill. The plan keeps the
 /// legacy snapshot and its exported rows together while the durable row writes

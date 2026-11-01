@@ -8,7 +8,8 @@ use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use medulla_protocol_types::mutation_batch::RepositoryEnrichmentTopUp;
 use tokio::sync::RwLock;
 
-use crate::parser::enrichment_reactivation::{plan_reactivation, BudgetRevisionProposal};
+use medulla_compute::parser::enrichment_reactivation::plan_reactivation;
+use medulla_compute::parser::enrichment_reactivation::BudgetRevisionProposal;
 use medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision;
 use medulla_store::redb_store::enrichment_top_up::EnrichmentTopUpTransition;
 use medulla_server_api::api::persistence::PersistenceBackend;
@@ -20,7 +21,7 @@ use medulla_server_api::state::ServerState;
 struct PreparedTopUp {
     transition: EnrichmentTopUpTransition,
     routed: medulla_raft::raft::multi::RoutedRaftHandle,
-    graph_type: crate::protocol::GraphType,
+    graph_type: medulla_protocol_types::protocol::GraphType,
     committed_at_ms: u64,
 }
 
@@ -95,7 +96,7 @@ async fn prepare(
     verified: &VerifiedRequestContext,
     proposal: &BudgetRevisionProposal,
 ) -> Result<PreparedTopUp, String> {
-    if !verified.allows_action(crate::parser::enrichment_reactivation::TOP_UP_ACTION) {
+    if !verified.allows_action(medulla_compute::parser::enrichment_reactivation::TOP_UP_ACTION) {
         return Err("ACCESS_DENIED: repository enrichment top-up scope is absent".into());
     }
     let graph = proposal.graph.as_str();
@@ -338,7 +339,7 @@ pub(crate) async fn propose_top_up(
     verified: &VerifiedRequestContext,
     request_id: u64,
     proposal: &BudgetRevisionProposal,
-) -> Result<crate::mutation_batch::MutationBatchCommit, String> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {
     let prepared = prepare(state, verified, proposal).await?;
     let attempt_nonce = verified
         .attempt_nonce()

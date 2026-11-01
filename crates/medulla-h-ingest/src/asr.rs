@@ -36,7 +36,8 @@ use medulla_asr_whisper::{
 use medulla_audio::asr::AsrError;
 use medulla_types::asr_wire::{AsrOp, AsrTranscriptSegment, AsrTranscription};
 
-use crate::protocol::{Response, ResultPayload};
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 
 const DEFAULT_WINDOW_MS: u32 = 30_000;
 

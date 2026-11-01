@@ -116,7 +116,7 @@ async fn propose_park(
                 graph,
                 graph_type,
                 owner.as_deref(),
-                crate::isolation::AccessLevel::Write,
+                medulla_core::isolation::AccessLevel::Write,
             )
         {
             return Err("ACCESS_DENIED: repository enrichment park graph grant is absent".into());
@@ -156,7 +156,7 @@ async fn propose_park(
     }
     if !matches!(
         response.native_result,
-        Some(crate::protocol::ResultPayload::Bool(true))
+        Some(medulla_protocol_types::protocol::ResultPayload::Bool(true))
     ) {
         return Err("CONFLICT: replicated repository enrichment park has no receipt".into());
     }

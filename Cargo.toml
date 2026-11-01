@@ -169,7 +169,7 @@ otel = ["medulla-kernel/otel",
     "server",
 ]
 finance = ["medulla-h-compute/finance", "medulla-compute/finance", "medulla-types/finance", "medulla-result-types/finance", "medulla-protocol-types/finance"]
-ast = ["medulla-server-api/ast", "medulla-store/ast", "medulla-compute/ast"]
+ast = ["medulla-h-ingest/ast", "medulla-server-api/ast", "medulla-store/ast", "medulla-compute/ast"]
 # Extended-language grammar tier (CONCEPT:KG-2.106), folded into `full`.
 ast-extended = ["medulla-compute/ast-extended"]
 datascience = ["medulla-h-compute/datascience", "medulla-kernel/datascience", "medulla-compute/datascience", "medulla-types/datascience", "medulla-result-types/datascience", "medulla-protocol-types/datascience"]
@@ -292,7 +292,7 @@ solve = ["medulla-compute/solve"]
 # RF-ADR-010: the Decide layer's handlers. The wire contract is unconditional
 # (the capability rows are, following the `SemanticIndex` precedent), so this
 # gates only the server-side implementation and the crates it needs.
-decide = ["medulla-h-graph/decide", "medulla-raft/decide", "medulla-persistence/decide", "medulla-server-api/decide", "solve", "medulla-capabilities?/decide", "medulla-compute/decide", "medulla-compute/decide-stats", "numeric", "medulla-numeric/decision", "medulla-ann?/drift", "jobs", "redb", "shacl"]
+decide = ["medulla-h-ingest/decide", "medulla-h-graph/decide", "medulla-raft/decide", "medulla-persistence/decide", "medulla-server-api/decide", "solve", "medulla-capabilities?/decide", "medulla-compute/decide", "medulla-compute/decide-stats", "numeric", "medulla-numeric/decision", "medulla-ann?/drift", "jobs", "redb", "shacl"]
 # Native medulla-ann IVF-PQ + OPQ + SQ8-refine vector index (CONCEPT:KG-2.207) as the
 # SemanticStore compression backend alongside the in-tree native HNSW index. Pure-Rust,
 # CPU integer-table serving (no GPU/native-ML/faiss in the tree). It is included in
@@ -315,13 +315,13 @@ server-tls = ["server", "dep:rustls", "dep:tokio-rustls"]
 # is layered ON TOP and is itself gated on `server` (it talks to `ServerState`
 # + the Tokio dispatch). So `redb` alone (no `server`) compiles a usable durable
 # store — exactly what the EMBEDDED API drives on an edge host with no Tokio.
-redb = ["medulla-h-graph/redb", "medulla-raft/redb", "medulla-persistence/redb", "medulla-server-api/redb", "medulla-store/redb", "medulla-kernel/redb", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction"]
+redb = ["medulla-h-ingest/redb", "medulla-h-graph/redb", "medulla-raft/redb", "medulla-persistence/redb", "medulla-server-api/redb", "medulla-store/redb", "medulla-kernel/redb", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction"]
 # Streamed content-addressed BLOB substrate (CONCEPT:KG-2.206): the bytes tier
 # under multimodal `:Media`/`:Blob`. Pulls `redb` (the native CAS lives in
 # `blob.redb`) + `server` (the streaming protocol rides the Tokio transport). The
 # native redb-CAS links NO object-store SDK — that remains isolated behind the
 # explicit `blob-s3` source feature below. `blob` is included in the one main build.
-blob = ["medulla-raft/blob", "medulla-server-api/blob", "server", "redb", "medulla-types/blob", "dep:chrono", "medulla-protocol-types/blob"]
+blob = ["medulla-h-ingest/blob", "medulla-raft/blob", "medulla-server-api/blob", "server", "redb", "medulla-types/blob", "dep:chrono", "medulla-protocol-types/blob"]
 # Generic namespaced Key→Value surface (CONCEPT:MEDULLA-022): the `Method::Kv*` ops over a
 # redb-backed `(namespace, key) -> bytes` store, so the engine is a drop-in KV store.
 # Pulls `server` (the handler routes through the Tokio dispatch) + `redb` (the durable
@@ -498,7 +498,7 @@ durable = ["dep:medulla-durable"]
 # Concrete governed document/image/audio/video service. The dependency-light native
 # decoders feed the shared ServedModalityRuntime; graph snapshots and the universal
 # MutationBatch gateway provide the authoritative restart/idempotency boundary.
-modality-serving = ["medulla-raft/modality-serving", "medulla-persistence/modality-serving", "medulla-server-api/modality-serving", "medulla-kernel/modality-serving",
+modality-serving = ["medulla-h-ingest/modality-serving", "medulla-raft/modality-serving", "medulla-persistence/modality-serving", "medulla-server-api/modality-serving", "medulla-kernel/modality-serving",
     "server", "redb", "security", "streaming",
     "dep:medulla-modality",
     "dep:medulla-document", "medulla-document/serving",
@@ -516,7 +516,7 @@ modality-serving = ["medulla-raft/modality-serving", "medulla-persistence/modali
 # `--features asr-whisper`). NOT graph-scoped (a transcription reads no persisted
 # graph state) — self-routes in `dispatch.rs`, ahead of the per-graph
 # `dispatch_graph_op` chain, exactly like `quantum-agent-api`/`viz-static-export`.
-asr-whisper = ["medulla-raft/asr-whisper", "medulla-persistence/asr-whisper", "medulla-server-api/asr-whisper", "server", "dep:medulla-asr-whisper", "medulla-audio/asr", "medulla-types/asr-native", "medulla-capabilities/asr-native", "medulla-protocol-types/asr-native"]
+asr-whisper = ["medulla-h-ingest/asr-whisper", "medulla-raft/asr-whisper", "medulla-persistence/asr-whisper", "medulla-server-api/asr-whisper", "server", "dep:medulla-asr-whisper", "medulla-audio/asr", "medulla-types/asr-native", "medulla-capabilities/asr-native", "medulla-protocol-types/asr-native"]
 # Read-only SQL query surface (CONCEPT:KG-2.178). Pulls medulla-query + DataFusion/Arrow
 # and is included in the one main build.
 # `redb` is REQUIRED, not incidental: RF-RULING-006 opens the SQL catalog through
@@ -525,7 +525,7 @@ asr-whisper = ["medulla-raft/asr-whisper", "medulla-persistence/asr-whisper", "m
 # when `dep:medulla-storage` is linked, which is what the `redb` feature does. A
 # `--features query` build without it cannot name the composition root's
 # verifier, so the edge is stated here rather than left to fail at link time.
-query = ["medulla-h-graph/query", "medulla-raft/query", "medulla-persistence/query", "medulla-server-api/query", "medulla-store/query", "medulla-kernel/query", "redb", "dep:medulla-query", "medulla-query/sql", "dep:medulla-plan", "medulla-plan/query", "medulla-types/query", "medulla-tsdb?/arrow-seg", "medulla-result-types/query", "medulla-decision-types/query", "medulla-protocol-types/query"]
+query = ["medulla-h-ingest/query", "medulla-h-graph/query", "medulla-raft/query", "medulla-persistence/query", "medulla-server-api/query", "medulla-store/query", "medulla-kernel/query", "redb", "dep:medulla-query", "medulla-query/sql", "dep:medulla-plan", "medulla-plan/query", "medulla-types/query", "medulla-tsdb?/arrow-seg", "medulla-result-types/query", "medulla-decision-types/query", "medulla-protocol-types/query"]
 # The one native streaming query/job result currency. Every served family adapts to
 # governed, bounded KnowledgeBatch envelopes with stable Arrow schemas.
 knowledge-batch = ["medulla-raft/knowledge-batch", "medulla-persistence/knowledge-batch", "medulla-server-api/knowledge-batch", "medulla-kernel/knowledge-batch",
@@ -771,7 +771,7 @@ cost = ["medulla-persistence/cost", "server", "medulla-types/cost", "medulla-pro
 # committed log entry applies through the same PersistenceBackend/GraphCore path.
 # Activates only when built `--features raft` AND configured at runtime
 # (MEDULLA_RAFT_NODE_ID + MEDULLA_RAFT_PEERS); off → single-node.
-raft = ["medulla-h-graph/raft", "medulla-raft/raft", "medulla-persistence/raft", "medulla-server-api/raft", "medulla-store/raft", "medulla-kernel/raft",
+raft = ["medulla-h-ingest/raft", "medulla-h-graph/raft", "medulla-raft/raft", "medulla-persistence/raft", "medulla-server-api/raft", "medulla-store/raft", "medulla-kernel/raft",
     "server",
     "redb",
     "dep:openraft",
@@ -1241,7 +1241,7 @@ compute = ["finance", "ast", "ast-extended", "datascience", "mining", "graphlear
 # capability (verified-identity envelope claims, not just HMAC channel integrity).
 # Security is mandatory in the one main `full` build and remains present in both
 # source-built layers.
-security = ["medulla-h-graph/security", "medulla-raft/security", "medulla-persistence/security", "medulla-server-api/security", "medulla-store/security", "medulla-kernel/security", "redb", "oidc", "dep:chacha20poly1305", "dep:argon2", "dep:sha1", "medulla-types/security", "medulla-core/security", "medulla-protocol-types/security"]
+security = ["medulla-h-ingest/security", "medulla-h-graph/security", "medulla-raft/security", "medulla-persistence/security", "medulla-server-api/security", "medulla-store/security", "medulla-kernel/security", "redb", "oidc", "dep:chacha20poly1305", "dep:argon2", "dep:sha1", "medulla-types/security", "medulla-core/security", "medulla-protocol-types/security"]
 # RLS marking-predicate export (CA-16), off by default. This is one authenticated
 # HTTP implementation (`/policy/export`), not a duplicate unbound MessagePack method.
 # Implies `security` for the shared verified-identity authority.
@@ -1857,6 +1857,7 @@ medulla-persistence = { path = "crates/medulla-persistence" }
 medulla-raft = { path = "crates/medulla-raft" }
 medulla-h-compute = { path = "crates/medulla-h-compute" }
 medulla-h-graph = { path = "crates/medulla-h-graph" }
+medulla-h-ingest = { path = "crates/medulla-h-ingest" }
 
 [dev-dependencies]
 medulla-raft = { path = "crates/medulla-raft", features = ["test-support"] }

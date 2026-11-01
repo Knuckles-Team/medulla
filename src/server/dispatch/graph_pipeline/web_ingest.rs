@@ -92,7 +92,7 @@ async fn enrich(
 #[cfg(all(feature = "query", feature = "modality-serving"))]
 async fn commit(
     ctx: GraphOpRouting<'_>,
-    write_set: handlers::repository_index::IndexWriteSet,
+    write_set: medulla_h_ingest::repository_index::IndexWriteSet,
     receipt: medulla_catalog_types::source_ingestion::web_document::EnrichDocumentReceipt,
 ) -> Response {
     let (placement_epoch, fencing_token) = match source_ingestion_route_fence(&ctx).await {
@@ -100,10 +100,10 @@ async fn commit(
         Err(response) => return response,
     };
     let commit_ctx = commit_context(&ctx, placement_epoch, fencing_token);
-    let envelope = match handlers::repository_index::build_labelled_envelope(
+    let envelope = match medulla_h_ingest::repository_index::build_labelled_envelope(
         &commit_ctx,
         write_set,
-        &handlers::web_ingest::LABELS,
+        &medulla_h_ingest::web_ingest::LABELS,
     ) {
         Ok(envelope) => envelope,
         Err(error) => return Response::err(ctx.req_id, error),

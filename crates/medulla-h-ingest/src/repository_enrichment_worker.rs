@@ -68,7 +68,7 @@ mod worker {
     use medulla_server_api::mutation_batch::CommitOrigin;
     use medulla_server_api::mutation_batch::WorkItemCommitRequest;
     #[cfg(feature = "security")]
-    use crate::server::repository_enrichment_worker::grant;
+    use crate::repository_enrichment_worker::grant;
     use medulla_agent_types::native_control::SubmitWorkItemsRequest;
     #[cfg(not(feature = "raft"))]
     use medulla_protocol_types::protocol::Method;
@@ -247,7 +247,7 @@ mod worker {
                 graph,
                 graph_type,
                 owner.as_deref(),
-                crate::isolation::AccessLevel::Write,
+                medulla_core::isolation::AccessLevel::Write,
             ) {
                 return Err("ACCESS_DENIED: repository enrichment graph grant is absent".into());
             }

@@ -6,7 +6,7 @@ use medulla_protocol_types::result_contract::ingestion as results;
 use serde::{de::DeserializeOwned, Serialize};
 
 use super::ModalityAuthority;
-use crate::protocol::ResultPayload;
+use medulla_protocol_types::protocol::ResultPayload;
 
 pub(super) fn encode_authority(authority: &ModalityAuthority) -> Result<ResultPayload, String> {
     ResultPayload::of::<results::ServedModalityAuthority>(results::ServedModalityAuthorityResult {
