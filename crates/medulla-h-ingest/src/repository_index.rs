@@ -316,4 +316,36 @@ pub fn finish(result: IndexResult, commit: Response) -> Response {
 }
 
 #[cfg(any(test, feature = "test-support"))]
-pub use tests::repository_envelope;
+/// The repository-snapshot envelope the durable route commits for `result`.
+pub fn repository_envelope(result: &IndexResult) -> Result<ChangeEnvelope, String> {
+    let IndexWriteSet {
+        envelope_id,
+        digest,
+        methods,
+    } = lower(result)?;
+    let mutation = compile_methods(
+        CompileBatch {
+            batch_id: &envelope_id,
+            request_id: 1,
+            attempt_nonce: None,
+            principal: Some("test-principal"),
+            tenant: "tenant-a",
+            graph: "graph-a",
+            placement_epoch: 0,
+            idempotency_key: "repository-index-test",
+            expected_graph_version: Some(0),
+            fencing_token: None,
+            created_at_ms: 1,
+            default_surface: MutationSurface::Graph,
+            authoritative_state: None,
+        },
+        methods,
+    )?;
+    seal(
+        mutation,
+        envelope_id,
+        &digest,
+        "tenant-a",
+        &REPOSITORY_LABELS,
+    )
+}

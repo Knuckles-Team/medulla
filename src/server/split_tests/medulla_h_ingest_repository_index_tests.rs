@@ -1,3 +1,4 @@
+use medulla_h_ingest::repository_index::repository_envelope;
 // EH-280 — the lowered write-set is deterministic and tombstones remove.
 
 use medulla_mutation_types::mutation_scope::MutationSurface;
@@ -134,39 +135,6 @@ fn code_result(extra: &[(&str, &str)]) -> IndexResult {
     }
 }
 
-/// The repository-snapshot envelope the durable route commits for `result`.
-pub(crate) fn repository_envelope(result: &IndexResult) -> Result<ChangeEnvelope, String> {
-    let IndexWriteSet {
-        envelope_id,
-        digest,
-        methods,
-    } = lower(result)?;
-    let mutation = compile_methods(
-        CompileBatch {
-            batch_id: &envelope_id,
-            request_id: 1,
-            attempt_nonce: None,
-            principal: Some("test-principal"),
-            tenant: "tenant-a",
-            graph: "graph-a",
-            placement_epoch: 0,
-            idempotency_key: "repository-index-test",
-            expected_graph_version: Some(0),
-            fencing_token: None,
-            created_at_ms: 1,
-            default_surface: MutationSurface::Graph,
-            authoritative_state: None,
-        },
-        methods,
-    )?;
-    seal(
-        mutation,
-        envelope_id,
-        &digest,
-        "tenant-a",
-        &REPOSITORY_LABELS,
-    )
-}
 
 #[test]
 fn repository_code_passes_the_repository_content_rule() {
