@@ -336,3 +336,4 @@ R085.4–R085.7 preserve their parent obligations as rollups. Their .1 children 
 - [ ] **MEDULLA-TYPED-PACKS-R105.7:** The parent catalog declares a data-platform and machine-learning module aligned to DCAT, PROV-O and ML-Schema.
 - [ ] **MEDULLA-TYPED-PACKS-R105.8:** The parent catalog declares a media and content module aligned to schema.org media types, EBUCore, IFLA LRM and ActivityStreams.
 - [ ] **MEDULLA-TYPED-PACKS-R105.9:** The parent catalog declares a search, retrieval and information-source module aligned to OpenSearch, DCMI Terms and PROV-O.
+- [ ] **MEDULLA-TYPED-PACKS-R700.7:** Distill a source set into a skill-graph bundle.

@@ -970,6 +970,7 @@ The bindings are static: no test claims that a path exists in a run-time output.
 - `MEDULLA-DECISION-ENGINE-R814.5`: `tests/decision/test_prompt_candidates_served.py::test_record_names_prompt_connector_digest_and_capability`.
 - `MEDULLA-DECISION-ENGINE-R814.6`: `tests/decision/test_prompt_candidates_served.py::test_dynamic_agent_gets_the_matching_connector_system_prompt`.
 - `MEDULLA-DECISION-ENGINE-R814.7`: `tests/decision/test_prompt_candidates_served.py::test_system_prompt_query_lists_candidates_for_a_task`. Vector: `SELECT ?prompt ?connector ?digest WHERE { ?prompt a :PromptCandidate ; :systemPromptFor ?t ; cp:ofConnector ?connector ; cp:digest ?digest . ?t :requiresCapability ?need . <Y> :requiresCapability ?need }`. `:systemPromptFor` ranges over `:Task`, so the join goes through the task. The query returns the prompt of the connector that serves task Y and not the other connector's prompt.
+- `MEDULLA-DECISION-ENGINE-R814.8`: `tests/decide/test_prompt_candidates_served.py::test_non_canonical_prompt_is_refused_with_field_path`.
 
 ## Model media declarations: source, generated consumers and qualification
 

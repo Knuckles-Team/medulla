@@ -607,3 +607,4 @@ consumption acceptance remain open. No atomic approval consumption is added.
 - `MEDULLA-TYPED-PACKS-R105.7`: `crates/medulla-rdf/tests/domain_modules_classes.rs::dataplatform_classes_exist_with_their_parents`, `crates/medulla-rdf/tests/domain_modules_classes.rs::dataplatform_edges_declare_domain_and_range`.
 - `MEDULLA-TYPED-PACKS-R105.8`: `crates/medulla-rdf/tests/domain_modules_classes.rs::media_classes_exist_with_their_parents`, `crates/medulla-rdf/tests/domain_modules_classes.rs::media_edges_declare_domain_and_range`.
 - `MEDULLA-TYPED-PACKS-R105.9`: `crates/medulla-rdf/tests/domain_modules_classes.rs::retrieval_classes_exist_with_their_parents`, `crates/medulla-rdf/tests/domain_modules_classes.rs::retrieval_edges_declare_domain_and_range`.
+- `MEDULLA-TYPED-PACKS-R700.7`: `tests/packs/test_skill_graph_distill_served.py::test_distilled_bundle_validates_and_is_not_published`.

@@ -1071,6 +1071,7 @@ Deliver these additive leaves in order; preserve R137.1–.6 and R128 unchanged.
 - [ ] **MEDULLA-DECISION-ENGINE-R814.5:** Evidence.
 - [ ] **MEDULLA-DECISION-ENGINE-R814.6:** Hot-path proof.
 - [ ] **MEDULLA-DECISION-ENGINE-R814.7:** Competency query.
+- [ ] **MEDULLA-DECISION-ENGINE-R814.8:** Packaged prompts validate against the canonical blueprint.
 ## Usage ledger (R801)
 - [ ] **MEDULLA-DECISION-ENGINE-R801.7:** Serve `UsageRead` over the durable ledger; take the tenant from the verified context; add the served test.
 - [ ] **MEDULLA-DECISION-ENGINE-R036.106:** Wire profile-use grant records and the offline RBAC layout upgrade. Qualify grant issuance and composed model admission.
