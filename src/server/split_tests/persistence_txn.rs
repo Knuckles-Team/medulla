@@ -66,14 +66,14 @@ fn current_request(secret: &str, id: u64, graph: &str, method: Method) -> Reques
     medulla_server_api::auth::build_shared_test_request(secret, id, graph, TEST_AGENT, method)
 }
 
-use crate::server::handlers::txn::try_handle as txn_try_handle;
+use medulla_h_txn::txn::try_handle as txn_try_handle;
 use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 
 fn cm_dir(tag: &str) -> String {
     // The cross-modal handler-commit path seals its transaction recovery plan
-    // (`server::handlers::txn::seal_txn_recovery_plan`), which fail-closed REQUIRES
+    // (`medulla_h_txn::txn::seal_txn_recovery_plan`), which fail-closed REQUIRES
     // `MEDULLA_ENCRYPTION_KEY` to be configured — the same seal requirement
     // the xshard harness hit. Provision it ONCE before any backend opens. Encryption
     // is symmetric and transparent to every durable round-trip these tests make, so
@@ -293,7 +293,7 @@ async fn crossmodal_txn_commits_all_modalities_atomically() {
 /// bearing twice over, and both halves were missing:
 ///
 /// * `as_redb` defaults to `None` on the trait (`persistence/mod.rs`), and
-///   `handlers::txn::begin_txn_lifecycle_receipt` refuses every
+///   `medulla_h_txn::txn::begin_txn_lifecycle_receipt` refuses every
 ///   txn-lifecycle method — `BeginTxn` included — without it ("transaction
 ///   lifecycle requires durable redb"). So this double failed the very FIRST
 ///   call of `stage_crossmodal`, and both tests using it died on
@@ -945,7 +945,7 @@ async fn crossmodal_measurement_visible_via_public_tsrange_post_commit_and_resta
 /// L16 startup reconciliation (CONCEPT:MEDULLA-KG.backend.ts-startup-reconcile) — the proof that closes the
 /// MEDULLA-P0-4 residual. Simulates a crash STRICTLY BETWEEN the two commits by landing a
 /// measurement batch in the authoritative shard via the low-level `commit_crossmodal` (the atomic
-/// barrier alone) WITHOUT going through `handlers::txn::commit_cross_modal_txn` (which
+/// barrier alone) WITHOUT going through `medulla_h_txn::txn::commit_cross_modal_txn` (which
 /// is what performs the served-store replay) — so the served `series.redb` never sees
 /// it, exactly the documented gap. Asserts:
 ///  1. Before reconciliation, the measurement is invisible via the PUBLIC `TsRange`.

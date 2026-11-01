@@ -305,7 +305,7 @@ pub(super) async fn stage_measurement(
 /// Returns `(methods, schema_refs)` — see [`triples_to_methods`]'s doc.
 #[cfg(feature = "sparql")]
 pub(crate) fn construct_to_methods(
-    core: &crate::graph::GraphCore,
+    core: &medulla_core::graph::GraphCore,
     sparql: &str,
 ) -> Result<(Vec<Method>, Vec<String>), String> {
     let snap = core.analysis_snapshot();
@@ -322,7 +322,7 @@ pub(super) fn resolve_txn_default_core(
     txn_id: &str,
     target_graph: Option<&str>,
     kind: &str,
-) -> Result<Arc<crate::graph::GraphCore>, Response> {
+) -> Result<Arc<medulla_core::graph::GraphCore>, Response> {
     let entry = match s.open_txns.get(txn_id) {
         Some(e) => e,
         None => {
@@ -433,7 +433,7 @@ pub(super) async fn stage_construct(
 /// `Reason`/`Traverse`-inferred edge set. Shared by the RPC [`stage_plan_writeback`].
 #[cfg(feature = "query")]
 pub(crate) fn plan_writeback_to_methods(
-    core: &crate::graph::GraphCore,
+    core: &medulla_core::graph::GraphCore,
     plan: medulla_plan::Plan,
     anchor_id: &str,
     relationship: &str,
@@ -552,7 +552,7 @@ pub(super) async fn stage_plan_writeback(
 /// crate docs warn a naive "always re-propagate from current state" design would risk.
 #[cfg(feature = "epistemic")]
 pub(crate) fn materialize_belief_to_methods(
-    core: &crate::graph::GraphCore,
+    core: &medulla_core::graph::GraphCore,
     node_id: &str,
 ) -> Result<(Vec<Method>, f64), String> {
     if !core.has_node(node_id) {

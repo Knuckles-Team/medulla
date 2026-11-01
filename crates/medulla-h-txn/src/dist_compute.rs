@@ -11,7 +11,9 @@ use medulla_persistence::AsRedb;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::protocol::{Method, Response, ResultPayload};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::access::GraphReadAuthority;
 use medulla_server_api::state::ServerState;
 // The algo-only Pregel matview lives behind `compute-dist` (it runs cross-shard
@@ -72,7 +74,7 @@ impl<'a> DistributedRequest<'a> {
     async fn distributed_compute(
         &self,
         graphs: Vec<String>,
-        algo: crate::protocol::DistAlgo,
+        algo: medulla_protocol_types::protocol::DistAlgo,
     ) -> Response {
         let read_authority = match self.require_distributed_read(
             "distributed graph reads require the universal read authority",
@@ -96,7 +98,7 @@ impl<'a> DistributedRequest<'a> {
         &self,
         name: String,
         graphs: Vec<String>,
-        algo: crate::protocol::DistAlgo,
+        algo: medulla_protocol_types::protocol::DistAlgo,
     ) -> Response {
         let read_authority = match self.require_distributed_read(
             "distributed materialized views require the universal read authority",
@@ -319,7 +321,7 @@ fn finish_control_saga(
     control: ControlSaga,
     result: ResultPayload,
 ) -> Result<ResultPayload, String> {
-    crate::server::handlers::txn::finish_saga_via_redb(
+    crate::txn::finish_saga_via_redb(
         &control.backend,
         control.saga,
         result,

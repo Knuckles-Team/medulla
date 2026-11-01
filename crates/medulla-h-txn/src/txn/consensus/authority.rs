@@ -109,13 +109,13 @@ pub(super) async fn committed_participant_receipt(
 
 #[cfg(feature = "raft")]
 fn validate_committed_participant_record(
-    record: &crate::mutation_batch::MutationBatchRecord,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
     receipt_id: &str,
     fname: &str,
     authority: &medulla_server_api::api::persistence::RaftMutationContext,
 ) -> Result<(), String> {
     record.validate()?;
-    if record.status != crate::mutation_batch::MutationBatchStatus::Committed
+    if record.status != medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed
         || record.batch.batch_id != receipt_id
         || record
             .identity

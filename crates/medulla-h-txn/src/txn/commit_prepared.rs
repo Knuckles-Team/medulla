@@ -3,7 +3,7 @@
 use super::*;
 
 pub(super) type CommitPreparedAuthorized = (
-    Arc<crate::graph::GraphCore>,
+    Arc<medulla_core::graph::GraphCore>,
     Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     String,
 );
@@ -46,7 +46,7 @@ pub(super) fn commit_prepared_authorize(
 /// terminalize once that commit succeeds.
 pub(super) fn commit_prepared_validate(
     req_id: u64,
-    core: &crate::graph::GraphCore,
+    core: &medulla_core::graph::GraphCore,
     txn: &GraphTxnState,
     receipt: TxnReceipt,
 ) -> Result<(Vec<Method>, TxnReceipt), Response> {
@@ -221,7 +221,7 @@ pub(super) struct CommitPreparedDurableArgs<'a> {
     req_id: u64,
     caller: Option<&'a str>,
     receipt: TxnReceipt,
-    core: Arc<crate::graph::GraphCore>,
+    core: Arc<medulla_core::graph::GraphCore>,
     persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     graph_name: String,
     coordinator_id: String,
@@ -256,7 +256,7 @@ pub(super) struct CompilePreparedBatchArgs<'a> {
 /// durable commit call.
 pub(super) async fn compile_prepared_batch(
     args: CompilePreparedBatchArgs<'_>,
-) -> Result<(crate::mutation_batch::MutationBatch, Vec<u8>), Response> {
+) -> Result<(medulla_protocol_types::mutation_batch::MutationBatch, Vec<u8>), Response> {
     let CompilePreparedBatchArgs {
         req_id,
         caller,
@@ -419,10 +419,10 @@ pub(super) async fn commit_prepared_durable(args: CommitPreparedDurableArgs<'_>)
 async fn commit_prepared_batch_durable(
     authority: &dyn medulla_server_api::api::persistence::PersistenceBackend,
     graph_name: &str,
-    batch: &crate::mutation_batch::MutationBatch,
+    batch: &medulla_protocol_types::mutation_batch::MutationBatch,
     result_msgpack: &[u8],
     committed_at_ms: u64,
-) -> Result<crate::mutation_batch::MutationBatchCommit, String> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {
     let fname = medulla_kernel::persist::sanitize(graph_name);
     authority
         .commit_mutation_batch(&fname, batch, Some(result_msgpack), committed_at_ms)
@@ -437,10 +437,10 @@ async fn commit_prepared_batch_durable(
 pub(super) async fn commit_prepared_replayed(
     req_id: u64,
     receipt: TxnReceipt,
-    core: &Arc<crate::graph::GraphCore>,
+    core: &Arc<medulla_core::graph::GraphCore>,
     authority: &dyn medulla_server_api::api::persistence::PersistenceBackend,
     graph_name: &str,
-    committed: &crate::mutation_batch::MutationBatchCommit,
+    committed: &medulla_protocol_types::mutation_batch::MutationBatchCommit,
 ) -> Response {
     let fname = medulla_kernel::persist::sanitize(graph_name);
     let Some(bytes) = committed.record.result_msgpack.as_deref() else {

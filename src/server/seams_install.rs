@@ -52,7 +52,7 @@ pub fn install_seams(state: &ServerState) {
     let _ = state
         .seams
         .txn
-        .set(std::sync::Arc::new(crate::server::handlers::txn::TxnSeam));
+        .set(std::sync::Arc::new(medulla_h_txn::txn::TxnSeam));
     #[cfg(feature = "query")]
     let _ = state
         .seams

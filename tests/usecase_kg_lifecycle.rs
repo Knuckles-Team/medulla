@@ -39,7 +39,7 @@ const SECRET: &str = "usecase-lifecycle-secret";
 
 /// A fully-featured state with a real redb persistence backend. The multi-op
 /// `BeginTxn`..`Commit` path in this test seals its transaction recovery plan
-/// (`server::handlers::txn::seal_txn_recovery_plan`), which fail-closed REQUIRES
+/// (`medulla_h_txn::txn::seal_txn_recovery_plan`), which fail-closed REQUIRES
 /// `MEDULLA_ENCRYPTION_KEY` at the backend's `open()` call -- the same
 /// requirement `redb_backend::tests::cm_dir` / `advanced_crossmodal_roundtrip.rs::state`
 /// provision. Encryption is symmetric and transparent to this test's assertions;

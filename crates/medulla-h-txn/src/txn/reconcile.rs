@@ -4,9 +4,9 @@ use super::*;
 
 pub(super) const RECONCILE_LOOKUP_CONCURRENCY: usize = 32;
 
-type ReconcileLookup = (String, Arc<crate::graph::GraphCore>, String, String);
+type ReconcileLookup = (String, Arc<medulla_core::graph::GraphCore>, String, String);
 type ReconcileLookupResult =
-    Option<Result<Option<crate::mutation_batch::MutationBatchRecord>, String>>;
+    Option<Result<Option<medulla_protocol_types::mutation_batch::MutationBatchRecord>, String>>;
 
 struct ReconcileContext {
     persistence: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
@@ -151,10 +151,10 @@ pub(super) struct ReconcileTxnCandidate<'a> {
     persistence: &'a Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     expected_principal: &'a str,
     graph: String,
-    core: Arc<crate::graph::GraphCore>,
+    core: Arc<medulla_core::graph::GraphCore>,
     fname: String,
     batch_id: String,
-    lookup: Option<Result<Option<crate::mutation_batch::MutationBatchRecord>, String>>,
+    lookup: Option<Result<Option<medulla_protocol_types::mutation_batch::MutationBatchRecord>, String>>,
 }
 
 /// Validate and, if it matches, terminalize one durable batch-record lookup
@@ -242,14 +242,14 @@ pub(super) enum ReconcileCandidateMatch {
 /// "some other row" and must not abort the search, while a foreign-authority
 /// row at the caller's own coordinator key must.
 pub(super) fn reconcile_candidate_mismatch(
-    record: &crate::mutation_batch::MutationBatchRecord,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
     batch_id: &str,
     physical_graph: &str,
     logical_graph: &str,
     expected_tenant: Option<&str>,
     expected_principal: &str,
 ) -> ReconcileCandidateMatch {
-    if record.status != crate::mutation_batch::MutationBatchStatus::Committed
+    if record.status != medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed
         || record.batch.batch_id != batch_id
         || record
             .batch
@@ -307,7 +307,7 @@ pub(super) fn caller_scope_digest(tenant: &str, graph: &str) -> String {
 /// `MutationBatchRecord::committing_actor`, which reads the actor header of the
 /// same attribution row.
 pub(super) fn committed_scope_digest(
-    record: &crate::mutation_batch::MutationBatchRecord,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
 ) -> Option<String> {
     record
         .batch

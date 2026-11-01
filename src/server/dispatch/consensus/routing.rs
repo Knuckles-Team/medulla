@@ -446,7 +446,7 @@ async fn coordinate_native_result(
             .await
         }
         (NativeCoordination::TransactionCommit, ResultPayload::Raw(prepared)) => {
-            handlers::txn::tag_commit_response(
+            medulla_h_txn::txn::tag_commit_response(
                 execute_consensus_transaction(TransactionExecution {
                     state: proposal.state,
                     request_id: proposal.request_id,
@@ -458,7 +458,7 @@ async fn coordinate_native_result(
                     prepared_bytes: &prepared,
                 })
                 .await,
-                handlers::txn::CommitResponseOptions {
+                medulla_h_txn::txn::CommitResponseOptions {
                     replayed: false,
                     keyed: proposal.commit_keyed,
                 },
@@ -483,9 +483,9 @@ fn terminal_commit_response(
 ) -> Response {
     match terminal {
         ResultPayload::Json(value) => Response::ok(request_id, ResultPayload::Json(value)),
-        terminal => handlers::txn::tag_commit_response(
+        terminal => medulla_h_txn::txn::tag_commit_response(
             Response::ok(request_id, terminal),
-            handlers::txn::CommitResponseOptions {
+            medulla_h_txn::txn::CommitResponseOptions {
                 replayed: false,
                 keyed: commit_keyed,
             },

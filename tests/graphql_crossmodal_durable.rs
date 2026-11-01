@@ -2,7 +2,7 @@
 //!
 //! Proves the facade reconcile hook the `medulla-graphql` crate left open (MEDULLA-383): a GraphQL
 //! cross-modal `commitTransaction`, routed through the facade carrier
-//! (`handlers::query.rs` `Method::GraphQl` → `handlers::txn::commit_graphql_cross_modal`),
+//! (`handlers::query.rs` `Method::GraphQl` → `medulla_h_txn::txn::commit_graphql_cross_modal`),
 //! lands its staged modalities in the redb durable tier via `commit_cross_modal_txn` — the
 //! SAME committed machinery pgwire's `commit_txn_state` drives — so the write SURVIVES a
 //! reopen of the persist dir. Before MEDULLA-419 the crate committed graph+vector in-memory

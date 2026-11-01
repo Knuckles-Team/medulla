@@ -402,7 +402,7 @@ pub use dispatch::dispatch;
 // Distributed-compute materialized-view boot reload (CONCEPT:MEDULLA-KG.storage.feature): the binary
 // calls this on startup to repopulate the in-RAM matview index from redb.
 #[cfg(any(feature = "compute-dist", feature = "matview"))]
-pub use handlers::dist_compute::reload_matviews;
+pub use medulla_h_txn::dist_compute::reload_matviews;
 // Post-bind maintenance hook (MEDULLA-DURABLE-KERNEL-R006.4): the binary calls this
 // from `serve_transports` right after the listeners bind.
 pub use boot_maintenance::spawn_post_bind_maintenance;
@@ -644,7 +644,7 @@ mod tests {
     }
 
     /// Provision `MEDULLA_ENCRYPTION_KEY` for every test in this module that
-    /// reaches a multi-op transaction `Commit` (`handlers::txn::seal_txn_recovery_plan`
+    /// reaches a multi-op transaction `Commit` (`medulla_h_txn::txn::seal_txn_recovery_plan`
     /// fails closed without a configured key — see `crypto::TXN_RECOVERY_KEY_ENV`'s
     /// doc). Every caller MUST already hold `medulla_kernel::crypto::acquire_test_env_lock()`
     /// for its entire test body before calling this (see each call site) — this
@@ -4295,7 +4295,7 @@ mod tests {
     /// different code path than this test already does (both go through
     /// `mutation_batch::lock_graph`, unconditionally, with no per-caller
     /// carve-out).
-    // This test drives `handlers::txn::seal_txn_recovery_plan`'s REAL
+    // This test drives `medulla_h_txn::txn::seal_txn_recovery_plan`'s REAL
     // `#[cfg(all(feature = "redb", feature = "security"))]` arm (it configures
     // `medulla_kernel::crypto::ENCRYPTION_KEY_ENV` and asserts a committed transaction),
     // so it needs the same two features that arm does. `crypto` itself is only
@@ -4310,7 +4310,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
     async fn coalesced_write_and_transaction_commit_share_one_graph_lane() {
         // Transaction commit fail-closed requires a configured recovery-plan
-        // seal key (`handlers::txn::seal_txn_recovery_plan`); an unfiltered
+        // seal key (`medulla_h_txn::txn::seal_txn_recovery_plan`); an unfiltered
         // full-suite run happens to have it set by the time this test runs
         // (some OTHER test in this binary sets it first, e.g.
         // `persistence::redb_backend::tests::cm_dir`'s `Once`), but that is an

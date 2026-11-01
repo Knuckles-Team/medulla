@@ -818,7 +818,7 @@ mod tests {
         ("CepUnsubscribe", "opaque prepared/committed session-control MutationBatch"),
         // ── Cluster-wide / cross-shard admin ops: operate across the WHOLE
         // registry/cluster under a durable control-plane saga
-        // (handlers::admin::try_handle / handlers::dist_compute::try_handle), not
+        // (handlers::admin::try_handle / medulla_h_txn::dist_compute::try_handle), not
         // a single resolved graph's core. ──
         ("Reshard", "prepared/committed admin MutationBatch saga around cluster-wide resharding"),
         ("CatalogAssign", "prepared/committed admin MutationBatch saga around the durable tenant catalog"),

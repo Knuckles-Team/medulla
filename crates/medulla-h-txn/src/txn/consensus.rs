@@ -31,7 +31,7 @@ pub(crate) struct ConsensusTransactionParticipant {
     pub(crate) coordinator_id: String,
     pub(crate) participant_id: u64,
     pub(crate) graph_name: String,
-    pub(crate) graph_type: crate::protocol::GraphType,
+    pub(crate) graph_type: medulla_protocol_types::protocol::GraphType,
     pub(crate) group_id: medulla_raft::raft::GroupId,
     pub(crate) placement_epoch: u64,
     pub(crate) fencing_token: Option<u64>,
@@ -54,7 +54,7 @@ pub(super) struct ConsensusParticipantPlan {
     coordinator_id: String,
     participant_id: u64,
     graph_name: String,
-    graph_type: crate::protocol::GraphType,
+    graph_type: medulla_protocol_types::protocol::GraphType,
     group_id: medulla_raft::raft::GroupId,
     placement_epoch: u64,
     fencing_token: Option<u64>,
@@ -319,7 +319,7 @@ pub(super) async fn validate_consensus_participant_placement(
     applying_group: medulla_raft::raft::GroupId,
     applying_epoch: u64,
     applying_fence: Option<u64>,
-) -> Result<Arc<crate::graph::GraphCore>, String> {
+) -> Result<Arc<medulla_core::graph::GraphCore>, String> {
     if plan.group_id != applying_group
         || plan.placement_epoch != applying_epoch
         || plan.fencing_token != applying_fence
@@ -351,7 +351,7 @@ pub(super) async fn validate_consensus_participant_placement(
 
 #[cfg(feature = "raft")]
 pub(super) fn extra_participant_is_valid(
-    core: &crate::graph::GraphCore,
+    core: &medulla_core::graph::GraphCore,
     methods: &[Method],
 ) -> bool {
     let inserts: std::collections::BTreeSet<&str> = methods
@@ -516,7 +516,7 @@ pub(crate) async fn apply_consensus_participant_prepare(
 fn participant_write_set_is_valid(
     txn: &GraphTxnState,
     graph_name: &str,
-    core: &crate::graph::GraphCore,
+    core: &medulla_core::graph::GraphCore,
 ) -> Result<bool, String> {
     let methods = participant_methods(txn, graph_name)
         .ok_or_else(|| "consensus participant has no graph slice".to_string())?;
@@ -531,7 +531,7 @@ fn participant_write_set_is_valid(
 pub(super) fn isolate_participant_transaction(
     mut txn: GraphTxnState,
     graph_name: &str,
-    core: &crate::graph::GraphCore,
+    core: &medulla_core::graph::GraphCore,
 ) -> Result<GraphTxnState, String> {
     if txn.graph == graph_name {
         txn.extra_writes.clear();

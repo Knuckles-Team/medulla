@@ -338,7 +338,7 @@ pub(super) async fn route_process_global_domains(
     // DistributedCompute + the matview lifecycle. Cross-shard, so it takes
     // `state` (it gathers each shard graph's snapshot from the registry).
     #[cfg(any(feature = "compute-dist", feature = "matview"))]
-    let method = match handlers::dist_compute::try_handle(
+    let method = match medulla_h_txn::dist_compute::try_handle(
         state,
         req_id,
         caller,

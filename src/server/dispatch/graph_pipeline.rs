@@ -506,7 +506,7 @@ mod eg318_dispatch_tests {
                 .as_nanos()
         ));
         state.write().await.tsdb_store = Some(
-            crate::server::handlers::timeseries::open_test_series_store(&path),
+            medulla_h_txn::timeseries::open_test_series_store(&path),
         );
         (state, path)
     }

@@ -20,7 +20,7 @@ pub(super) async fn rollback(
 /// add_edge / a failed CAS are NOT surfaced per-op in M6: a staged add_edge to a
 /// missing endpoint is a no-op (its endpoints were validated into the read-set; if
 /// absent the edge simply isn't added), matching the inline best-effort contract.
-pub(super) fn apply_staged(gtxn: &mut crate::graph::GraphTxn<'_>, method: &Method) {
+pub(super) fn apply_staged(gtxn: &mut medulla_core::graph::GraphTxn<'_>, method: &Method) {
     match method {
         Method::AddNode {
             node_id,

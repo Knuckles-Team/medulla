@@ -198,7 +198,7 @@ async fn submit_consensus_transaction_phase(
 async fn abort_consensus_transaction(
     coordination: &TransactionCoordination<'_>,
     coordinator_id: &str,
-    participants: &[crate::server::handlers::txn::ConsensusTransactionParticipant],
+    participants: &[medulla_h_txn::txn::ConsensusTransactionParticipant],
 ) -> Result<bool, String> {
     let decided = submit_consensus_transaction_phase(TransactionPhaseSubmission {
         phase: TransactionConsensusPhase::Decision,
@@ -280,7 +280,7 @@ struct TransactionCoordination<'a> {
 impl TransactionCoordination<'_> {
     async fn abort(
         &self,
-        fanout: &handlers::txn::ConsensusTransactionFanout,
+        fanout: &medulla_h_txn::txn::ConsensusTransactionFanout,
     ) -> Result<bool, String> {
         abort_consensus_transaction(self, &fanout.coordinator_id, &fanout.participants).await
     }
@@ -293,7 +293,7 @@ impl TransactionCoordination<'_> {
 #[cfg(feature = "raft")]
 async fn resolve_failed_consensus_prepare(
     coordination: &TransactionCoordination<'_>,
-    fanout: &handlers::txn::ConsensusTransactionFanout,
+    fanout: &medulla_h_txn::txn::ConsensusTransactionFanout,
     prepare_error: Option<String>,
 ) -> Response {
     let request_id = coordination.request_id;
@@ -317,7 +317,7 @@ async fn resolve_failed_consensus_prepare(
 #[cfg(feature = "raft")]
 async fn prepare_consensus_participants(
     coordination: &TransactionCoordination<'_>,
-    fanout: &handlers::txn::ConsensusTransactionFanout,
+    fanout: &medulla_h_txn::txn::ConsensusTransactionFanout,
 ) -> Result<(), Response> {
     let request_id = coordination.request_id;
     for participant in &fanout.participants {
@@ -364,7 +364,7 @@ async fn prepare_consensus_participants(
 #[cfg(feature = "raft")]
 async fn decide_consensus_commit(
     coordination: &TransactionCoordination<'_>,
-    fanout: &handlers::txn::ConsensusTransactionFanout,
+    fanout: &medulla_h_txn::txn::ConsensusTransactionFanout,
 ) -> Result<(), Response> {
     let request_id = coordination.request_id;
     let decided = submit_consensus_transaction_phase(TransactionPhaseSubmission {
@@ -414,7 +414,7 @@ async fn decide_consensus_commit(
 #[cfg(feature = "raft")]
 async fn commit_consensus_participants(
     coordination: &TransactionCoordination<'_>,
-    fanout: &handlers::txn::ConsensusTransactionFanout,
+    fanout: &medulla_h_txn::txn::ConsensusTransactionFanout,
 ) -> Result<(), Response> {
     let request_id = coordination.request_id;
     for participant in &fanout.participants {
@@ -486,7 +486,7 @@ pub(super) async fn execute_consensus_transaction(execution: TransactionExecutio
         prepared_bytes,
     } = execution;
     let fanout =
-        match handlers::txn::build_consensus_transaction_fanout(state, prepared_bytes).await {
+        match medulla_h_txn::txn::build_consensus_transaction_fanout(state, prepared_bytes).await {
             Ok(fanout) => fanout,
             Err(error) => return Response::err(request_id, error),
         };

@@ -22,7 +22,9 @@ use medulla_tsdb::store::{DerivedWrite, ScopedAppendBatch, SeriesKey, SeriesMeta
 use medulla_types::series_expr::{DerivedSeriesReceipt, SeriesExpr};
 
 use super::{compute_off_lock, results, store_of, BatchScope, TsRequestContext};
-use crate::protocol::{Method, Response, ResultPayload};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 
 /// Source points one maintenance step may consume: the per-call work budget.
 const WORK_BUDGET: usize = 100_000;

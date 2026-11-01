@@ -17,8 +17,10 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::isolation::AccessLevel;
-use crate::protocol::{Method, Response, ResultPayload};
+use medulla_core::isolation::AccessLevel;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::access::{check_graph_access, CarrierAuthority, GraphReadAuthority};
 use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
@@ -122,7 +124,7 @@ fn decode_txn_object(bytes: &[u8]) -> Result<serde_json::Map<String, serde_json:
 #[cfg(all(test, feature = "epistemic"))]
 mod materialize_belief_tests {
     use super::*;
-    use crate::graph::GraphCore;
+    use medulla_core::graph::GraphCore;
 
     fn node(props: serde_json::Value) -> Vec<u8> {
         rmp_serde::to_vec_named(&props).unwrap()
@@ -260,7 +262,7 @@ mod materialize_belief_tests {
 #[cfg(all(test, feature = "redb", feature = "security"))]
 mod keyed_recovery_window_tests {
     use super::*;
-    use crate::protocol::GraphType;
+    use medulla_protocol_types::protocol::GraphType;
     use medulla_persistence::backup::EnvVarGuard;
     use medulla_persistence::redb_backend::RedbBackend;
     use medulla_server_api::api::persistence::PersistenceBackend;
@@ -287,7 +289,7 @@ mod keyed_recovery_window_tests {
     ) -> (
         Arc<RwLock<ServerState>>,
         Arc<RedbBackend>,
-        Arc<crate::graph::GraphCore>,
+        Arc<medulla_core::graph::GraphCore>,
     ) {
         let backend = Arc::new(
             RedbBackend::open_with_shards(dir.to_string_lossy().into_owned(), 64, 1)
@@ -312,7 +314,7 @@ mod keyed_recovery_window_tests {
         (Arc::new(RwLock::new(server)), backend, core)
     }
 
-    fn staged_cross_modal_txn(core: &crate::graph::GraphCore, graph: &str) -> GraphTxnState {
+    fn staged_cross_modal_txn(core: &medulla_core::graph::GraphCore, graph: &str) -> GraphTxnState {
         let mut txn = GraphTxnState::new(
             core,
             NewTxnArgs {

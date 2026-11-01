@@ -1795,7 +1795,7 @@ mod txn_ryow_dispatch_tests {
         // Mirrors `result_cache_dispatch_tests::state`'s already-fixed fixture.
         //
         // A second, layered requirement: the cross-modal handler-commit path seals
-        // its transaction recovery plan (`server::handlers::txn::seal_txn_recovery_plan`),
+        // its transaction recovery plan (`medulla_h_txn::txn::seal_txn_recovery_plan`),
         // which fail-closed REQUIRES `MEDULLA_ENCRYPTION_KEY` to be configured —
         // the SAME seal requirement `redb_backend::tests::cm_dir` already documents and
         // provisions for its own cross-modal ACID tests. Mirror that exact pattern (a

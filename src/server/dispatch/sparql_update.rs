@@ -543,7 +543,7 @@ async fn try_sparql_forward_commit(
     if let Err(response) = create_missing_sparql_graphs(coord, plan).await {
         return SparqlForwardOutcome::Settled(Box::new(response));
     }
-    let forward = handlers::txn::commit_coordinated_graph_methods_with_nonce(
+    let forward = medulla_h_txn::txn::commit_coordinated_graph_methods_with_nonce(
         coord.state,
         coord.req_id,
         Some(coord.verified_actor),
@@ -583,7 +583,7 @@ async fn apply_sparql_rollback(
     if rollback_methods.is_empty() {
         return Ok(());
     }
-    let rollback = handlers::txn::commit_coordinated_graph_methods_with_nonce(
+    let rollback = medulla_h_txn::txn::commit_coordinated_graph_methods_with_nonce(
         coord.state,
         coord.req_id,
         Some(coord.verified_actor),

@@ -21,9 +21,9 @@ impl medulla_server_api::api::query_txn::TxnApi for TxnSeam {
         graph: &str,
         placement_epoch: u64,
         fencing_token: Option<u64>,
-        method: crate::protocol::Method,
-    ) -> Result<crate::protocol::Response, crate::protocol::Method> {
-        crate::server::handlers::timeseries::try_handle(
+        method: medulla_protocol_types::protocol::Method,
+    ) -> Result<medulla_protocol_types::protocol::Response, medulla_protocol_types::protocol::Method> {
+        crate::timeseries::try_handle(
             state,
             req_id,
             authority,
@@ -41,8 +41,8 @@ impl medulla_server_api::api::query_txn::TxnApi for TxnSeam {
         req_id: u64,
         caller: &str,
         verified_context: &medulla_server_api::auth::VerifiedRequestContext,
-        method: crate::protocol::Method,
-    ) -> Result<crate::protocol::Response, crate::protocol::Method> {
+        method: medulla_protocol_types::protocol::Method,
+    ) -> Result<medulla_protocol_types::protocol::Response, medulla_protocol_types::protocol::Method> {
         super::dispatch::try_handle(state, req_id, caller, verified_context, method).await
     }
 
@@ -81,7 +81,7 @@ impl medulla_server_api::api::query_txn::TxnApi for TxnSeam {
         req_id: u64,
         caller: &str,
         authority: &medulla_server_api::access::CarrierAuthority,
-        method: &crate::protocol::Method,
+        method: &medulla_protocol_types::protocol::Method,
     ) -> Result<medulla_server_api::api::query_txn::txn_support::GraphQlLifecycleAdmission, String> {
         use medulla_server_api::api::query_txn::txn_support as api;
         let admission =
@@ -101,8 +101,8 @@ impl medulla_server_api::api::query_txn::TxnApi for TxnSeam {
     fn finish_graphql_lifecycle(
         &self,
         token: medulla_server_api::api::query_txn::txn_support::LifecycleToken,
-        result: crate::protocol::ResultPayload,
-    ) -> Result<crate::protocol::ResultPayload, String> {
+        result: medulla_protocol_types::protocol::ResultPayload,
+    ) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
         let receipt = token
             .0
             .downcast::<super::receipts::TxnLifecycleReceipt>()
@@ -114,6 +114,6 @@ impl medulla_server_api::api::query_txn::TxnApi for TxnSeam {
 
     #[cfg(any(feature = "compute-dist", feature = "matview"))]
     async fn reload_matviews(&self, state: &Arc<RwLock<ServerState>>) -> Result<usize, String> {
-        crate::server::handlers::dist_compute::reload_matviews(state).await
+        crate::dist_compute::reload_matviews(state).await
     }
 }

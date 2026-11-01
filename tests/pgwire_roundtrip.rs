@@ -484,7 +484,7 @@ impl PersistenceBackend for RecordingBackend {
         Ok(())
     }
     // Wire graph-node writes now route through the universal cross-modal
-    // MutationBatch kernel (`server::handlers::txn::commit_cross_modal_txn`), not
+    // MutationBatch kernel (`medulla_h_txn::txn::commit_cross_modal_txn`), not
     // a bare `record_durable` call — the trait's default `commit_mutation_batch_crossmodal`
     // fails closed ("persistence backend does not support atomic cross-modal
     // MutationBatch commits"), which would defeat this backend's whole purpose

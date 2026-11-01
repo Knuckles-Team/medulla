@@ -484,7 +484,7 @@ fn overlay_txn(view: &mut medulla_core::graph::GraphView, txn: &CrossModalTxn) {
 
 /// Lower a slice of RDF triples to staged graph writes (CONCEPT:MEDULLA-KG.query.medulla-9), mirroring the
 /// canonical `medulla_rdf::mapping::load_triples` property-graph projection (and the facade's
-/// `handlers::txn::triples_to_methods`) so the durable rows match the in-memory model:
+/// `medulla_h_txn::txn::triples_to_methods`) so the durable rows match the in-memory model:
 ///   * literal object  → a property `{predicate: literal-cell}` on the subject node;
 ///   * resource object → subject + object nodes + a typed edge
 ///     `{"relationship": predicate}`,

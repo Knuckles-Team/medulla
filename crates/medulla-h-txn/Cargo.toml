@@ -12,3 +12,18 @@ name = "medulla_h_txn"
 path = "src/lib.rs"
 
 [dependencies]
+
+[features]
+compute-dist = ["raft"]
+epistemic = ["query"]
+graphql = ["security"]
+matview = ["query"]
+metrics = []
+owl = ["sparql"]
+query = ["redb"]
+raft = ["redb"]
+redb = []
+security = ["redb"]
+sparql = []
+sqlite-file = ["query"]
+tsdb = ["redb"]

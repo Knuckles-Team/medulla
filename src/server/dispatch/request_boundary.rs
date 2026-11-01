@@ -294,7 +294,7 @@ async fn preflight_commit_owner(
     let Method::Commit { txn_id, .. } = &req.method else {
         return Ok(());
     };
-    crate::server::handlers::txn::preflight_open_txn_authority(
+    medulla_h_txn::txn::preflight_open_txn_authority(
         state,
         req_id,
         verified_context,

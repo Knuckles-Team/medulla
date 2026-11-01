@@ -325,7 +325,7 @@ fn apply_coalescable_cas_fields(
 /// caller's OWN, per-op lock hold, as it always was). That is UNSAFE: once a
 /// caller's durable commit finishes and it drops the lock — before its RAM
 /// publish has actually landed in `core` — ANY other `lock_graph` holder that
-/// reads live graph state (`handlers::txn::commit_transaction`'s
+/// reads live graph state (`medulla_h_txn::txn::commit_transaction`'s
 /// `txn.validate(&core)`, `dispatch::ApplyChangeEnvelope`'s `core.version()`
 /// check, or a second coalescable write's own CDC pre-image capture) can
 /// observe a `core` that is durably stale — behind the redb-authoritative

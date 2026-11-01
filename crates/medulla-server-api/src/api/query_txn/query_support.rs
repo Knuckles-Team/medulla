@@ -114,7 +114,7 @@ pub fn plan_needs_tsdb(ops: &[medulla_plan::Op]) -> bool {
 }
 
 /// Replay a txn's staged durable-mutation `write_set` onto a cloned `GraphView` as an
-/// overlay (CONCEPT:MEDULLA-KG.query.txn-cross-modal-ryow — in-txn cross-modal RYOW). Mirrors `handlers::txn::
+/// overlay (CONCEPT:MEDULLA-KG.query.txn-cross-modal-ryow — in-txn cross-modal RYOW). Mirrors `medulla_h_txn::txn::
 /// apply_staged`, but against a view's overlay ops (no ledger/durability): so the
 /// Filter (node props) and Traverse (BFS over staged edges) legs of an in-txn unified
 /// query observe the txn's own uncommitted graph writes. Only the durable-mutation set

@@ -1,7 +1,7 @@
 use super::*;
 
 // ── Time-series STARTUP RECONCILIATION (CONCEPT:MEDULLA-KG.backend.ts-startup-reconcile, L16) ──────────────
-// MEDULLA-P0-4 (see `handlers::txn::commit_cross_modal_txn`'s doc comment) replays a
+// MEDULLA-P0-4 (see `medulla_h_txn::txn::commit_cross_modal_txn`'s doc comment) replays a
 // cross-modal-committed measurement into the served `series.redb` immediately after the
 // the authoritative-shard commit succeeds, but documents one residual: a crash strictly
 // BETWEEN those two commits leaves the measurement durable + authoritative in

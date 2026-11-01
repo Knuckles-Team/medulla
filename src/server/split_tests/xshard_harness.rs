@@ -534,7 +534,7 @@ use crate::protocol::{Response, ResultPayload};
 
 const XSHARD_HARNESS_TEST_AGENT: &str = "xshard-harness-agent";
 
-/// Thin wrapper over `handlers::txn::try_handle` binding the harness's fixed test
+/// Thin wrapper over `medulla_h_txn::txn::try_handle` binding the harness's fixed test
 /// identity to a `VerifiedRequestContext` (CONCEPT:MEDULLA-KG.txn.routes-cross-shard-txn drift fix
 /// cbde3e3: `try_handle` gained a mandatory `caller`/`verified_context` pair that this
 /// harness's call sites never picked up). Mirrors the identical pattern in

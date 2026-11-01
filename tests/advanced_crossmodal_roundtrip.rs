@@ -66,7 +66,7 @@ const SECRET: &str = "advanced-crossmodal-secret";
 /// adapter's owner-scoped catalog directory, so nothing is lost).
 ///
 /// The multi-op `BeginTxn`..`Commit` path additionally seals its transaction recovery
-/// plan (`server::handlers::txn::seal_txn_recovery_plan`), which fail-closed REQUIRES
+/// plan (`medulla_h_txn::txn::seal_txn_recovery_plan`), which fail-closed REQUIRES
 /// `MEDULLA_ENCRYPTION_KEY` at the backend's `open()` call -- the same
 /// requirement `redb_backend::tests::cm_dir` provisions. Encryption is symmetric and
 /// transparent to every round-trip these tests make, so a keyed store behaves

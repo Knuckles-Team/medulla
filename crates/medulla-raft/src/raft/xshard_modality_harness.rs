@@ -52,7 +52,7 @@
 //!     replicates GRAPH-CORE methods (property graph, RDF triples, broker, streaming —
 //!     everything `mutation_apply::apply` handles). ANN embeddings and time-series measurements are
 //!     a **single-graph** cross-modal barrier: they land atomically in ONE redb
-//!     `WriteTransaction` via `handlers::txn::commit_cross_modal` (they are NOT part of
+//!     `WriteTransaction` via `medulla_h_txn::txn::commit_cross_modal` (they are NOT part of
 //!     a cross-shard slice's `write_set`/`extra_writes`, and `mutation_apply::apply` no-ops them).
 //!     So "no half-committed vector/measurement" is proven WITHIN a group; carrying
 //!     staged vector/measurement batches into the cross-shard slice apply + a per-group
@@ -442,7 +442,7 @@ async fn scenario_coord_kill_pre_decision() -> Result<bool, String> {
 /// its prepare actually lands the catalog has cut over to E+1).
 ///
 /// Modeled directly against [`CrossShardCoordinator`] (bypassing
-/// `handlers::txn::commit_cross_shard`, which always re-reads the CURRENT route at
+/// `medulla_h_txn::txn::commit_cross_shard`, which always re-reads the CURRENT route at
 /// build time and therefore cannot itself construct a stale slice) so the race
 /// window can be deterministically reproduced without needing to win an actual
 /// timing race.

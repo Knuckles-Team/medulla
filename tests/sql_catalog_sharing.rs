@@ -28,7 +28,7 @@
 //! comment). Of those, `Method::SparqlVirtual` is reached through
 //! `medulla_h_query::rdf::try_handle`, which — like `medulla_h_query::query::try_handle` — is
 //! reached from `dispatch_graph_op_inner`, so the guard below checks ordering
-//! against BOTH. `handlers::sqlite_file::try_handle` is instead called from the
+//! against BOTH. `medulla_h_txn::sqlite_file::try_handle` is instead called from the
 //! sibling function `dispatch_inner`, so it falls outside this guard's bound;
 //! that remains a known, disclosed gap rather than coverage silently claimed.
 //!

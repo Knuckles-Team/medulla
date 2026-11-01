@@ -128,7 +128,7 @@ async fn parent_only_phases_reject_foreign_tenant_with_same_principal() {
     server.persistence = Some(backend.clone());
     server
         .registry
-        .create_graph("delegated-graph", crate::protocol::GraphType::Global, None)
+        .create_graph("delegated-graph", medulla_protocol_types::protocol::GraphType::Global, None)
         .unwrap();
     let state = Arc::new(RwLock::new(server));
     let owner = carrier("tenant-a");
@@ -136,7 +136,7 @@ async fn parent_only_phases_reject_foreign_tenant_with_same_principal() {
     assert_eq!(owner.actor_scope(), foreign.actor_scope());
     for key in [None, Some("stable-key")] {
         let mut txn = GraphTxnState::new(
-            &crate::graph::GraphCore::new(),
+            &medulla_core::graph::GraphCore::new(),
             NewTxnArgs {
                 graph: "graph".into(),
                 tenant_scope: owner.tenant_scope().into(),
@@ -221,7 +221,7 @@ fn participant_plan(parent_id: &str, txn: &GraphTxnState) -> (u64, Vec<u8>) {
         coordinator_id: parent_id.into(),
         participant_id,
         graph_name: txn.graph.clone(),
-        graph_type: crate::protocol::GraphType::Global,
+        graph_type: medulla_protocol_types::protocol::GraphType::Global,
         group_id: 0,
         placement_epoch: 0,
         fencing_token: None,
@@ -289,7 +289,7 @@ async fn store_committed_child(
 ) {
     let (id, _) = participant_plan(parent, txn);
     let child_id = consensus_participant_child_id(parent, id, &txn.graph);
-    let core = Arc::new(crate::graph::GraphCore::new());
+    let core = Arc::new(medulla_core::graph::GraphCore::new());
     let persistence: Arc<dyn PersistenceBackend> = backend.clone();
     let result = medulla_server_api::mutation_batch::commit_internal_graph_methods_with_nonce(
         medulla_server_api::mutation_batch::InternalGraphCommitRequest::new(
@@ -350,7 +350,7 @@ async fn store_committed_child(
     )
     .is_err());
     let mut prepared = result.record.clone();
-    prepared.status = crate::mutation_batch::MutationBatchStatus::Prepared;
+    prepared.status = medulla_protocol_types::mutation_batch::MutationBatchStatus::Prepared;
     assert!(
         validate_committed_participant_record(&prepared, &child_id, &fname, &authority).is_err()
     );

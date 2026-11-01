@@ -1,5 +1,5 @@
 //! Ack-lost `Commit` retry reconciliation (CONCEPT:MEDULLA-KG.txn.multi-op-occ-acid),
-//! covering the W1d hot-path fix in `handlers::txn::reconcile_committed_txn`.
+//! covering the W1d hot-path fix in `medulla_h_txn::txn::reconcile_committed_txn`.
 //!
 //! When a client's `Commit` response is lost after the transaction already
 //! committed durably, the retried `Commit { txn_id }` finds nothing in
@@ -98,7 +98,7 @@ fn carrier_tenant_scope(raw_tenant: &str) -> String {
     opaque_coordinator_key("carrier-tenant", "verified", raw_tenant)
 }
 
-/// Reproduce `handlers::txn::receipts::commit_receipt_id` (crate-private) for
+/// Reproduce `medulla_h_txn::txn::receipts::commit_receipt_id` (crate-private) for
 /// the keyed signed Commit: the durable parent receipt id is the tenant-scoped
 /// operation id `transaction-receipt:<digest>` prefixed by its verifiable tenant
 /// binding, `<transaction-receipt-scope:digest>:<operation id>`. The cross-modal

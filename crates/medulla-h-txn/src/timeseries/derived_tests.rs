@@ -10,7 +10,9 @@ use medulla_tsdb::point::Point;
 use medulla_types::series_expr::DerivedSeriesReceipt;
 use tokio::sync::RwLock;
 
-use crate::protocol::{Method, Response, ResultPayload};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::auth::build_current_test_request;
 use medulla_server_api::auth::dispatch_test_on_heap;
 use medulla_server_api::state::ServerState;

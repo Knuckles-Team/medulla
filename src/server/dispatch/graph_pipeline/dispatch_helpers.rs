@@ -141,12 +141,12 @@ pub(super) async fn dispatch_op_tsdb_ops(
         Ok(authority) => authority,
         Err(denied) => return Response::err(req_id, denied),
     };
-    return match handlers::timeseries::try_handle_with_nonce(
+    return match medulla_h_txn::timeseries::try_handle_with_nonce(
         state,
         req_id,
         &carrier,
         verified_context.attempt_nonce(),
-        handlers::timeseries::SeriesPlacement {
+        medulla_h_txn::timeseries::SeriesPlacement {
             graph: graph_name,
             placement_epoch: ts_placement_epoch,
             fencing_token: ts_fencing_token,

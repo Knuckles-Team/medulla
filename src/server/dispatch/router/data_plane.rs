@@ -53,7 +53,7 @@ pub(super) async fn dispatch_transaction_methods(
         | Method::Rollback { .. }) => dispatch_transaction_methods_arm_0(ctx, method).await,
 
         // Extended cross-modal STAGING (CONCEPT:MEDULLA-KG.compute.medulla-187, closing MEDULLA-360/361/362 at RPC) — the tsdb-measurement,
-        // OWL-axiom and SPARQL-CONSTRUCT stage methods. `handlers::txn::try_handle` handles
+        // OWL-axiom and SPARQL-CONSTRUCT stage methods. `medulla_h_txn::txn::try_handle` handles
         // them (feature-gated), but they carry their OWN `graph` (like `TxnAddEmbedding`),
         // so they route straight there — NO `BeginTxn` graph-default rewrite. Without these
         // arms the variants fell through to the graph-op "not available" catch-all, so an
@@ -284,7 +284,7 @@ async fn dispatch_store_methods_arm_2(ctx: DispatchCtx<'_>, method: Method) -> R
                         Ok(authority) => authority,
                         Err(denied) => return Response::err(req_id, denied),
                     };
-                    match handlers::sqlite_file::try_handle(
+                    match medulla_h_txn::sqlite_file::try_handle(
                         state,
                         req_id,
                         &carrier,

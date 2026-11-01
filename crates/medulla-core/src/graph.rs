@@ -627,7 +627,7 @@ pub struct GraphCore {
     /// pgwire `SPARQL UPDATE INSERT DATA` cross-modal seam specifically,
     /// because THAT commit path
     /// (`server::wire::WireSession::commit_txn_state` →
-    /// `handlers::txn::commit_cross_modal_txn`) mutates the live core
+    /// `medulla_h_txn::txn::commit_cross_modal_txn`) mutates the live core
     /// directly rather than staging through a throwaway `GraphCore` +
     /// `GraphSnapshot` round-trip. Closing this gap for the gateway-routed
     /// paths needs `schema_refs` added to `GraphSnapshot` (a

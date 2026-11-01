@@ -152,7 +152,7 @@ pub(crate) async fn commit_graphql_cross_modal(
 /// to decode/re-encode a node's properties just leaves RAM momentarily behind
 /// the durable row rather than failing the whole commit that already succeeded.
 pub(super) fn mirror_blob_refs_into_ram(
-    core: &crate::graph::GraphCore,
+    core: &medulla_core::graph::GraphCore,
     blob_refs: &[(String, String)],
 ) {
     for (node_id, digest) in blob_refs {
@@ -196,7 +196,7 @@ async fn resolve_cross_modal_target(
     txn: &GraphTxnState,
 ) -> Result<
     (
-        Arc<crate::graph::GraphCore>,
+        Arc<medulla_core::graph::GraphCore>,
         Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     ),
     String,
@@ -295,7 +295,7 @@ pub(crate) async fn commit_cross_modal_txn_with_nonce(
 
 struct CrossModalDurableArgs<'a> {
     state: &'a Arc<RwLock<ServerState>>,
-    core: &'a Arc<crate::graph::GraphCore>,
+    core: &'a Arc<medulla_core::graph::GraphCore>,
     authority: &'a dyn medulla_server_api::api::persistence::PersistenceBackend,
     fname: &'a str,
     coordinator_id: &'a str,
@@ -309,7 +309,7 @@ struct CrossModalDurableArgs<'a> {
 
 async fn compile_cross_modal_batch(
     args: &CrossModalDurableArgs<'_>,
-) -> Result<(crate::mutation_batch::MutationBatch, Vec<u8>), String> {
+) -> Result<(medulla_protocol_types::mutation_batch::MutationBatch, Vec<u8>), String> {
     let batch_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
         "crossmodal",
         &args.txn.graph,
@@ -446,7 +446,7 @@ pub(super) async fn project_committed_measurements(
 }
 #[cfg(feature = "graphql")]
 fn build_graphql_txn(
-    core: &crate::graph::GraphCore,
+    core: &medulla_core::graph::GraphCore,
     graph_name: &str,
     authority: &CarrierAuthority,
     staged: medulla_graphql::CrossModalTxn,

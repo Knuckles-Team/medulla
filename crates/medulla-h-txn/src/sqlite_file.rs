@@ -33,8 +33,10 @@ use medulla_sqlite_format::{ColumnDef as SqliteColumnDef, Reader, Value as Sqlit
 use serde_json::Value as JsonValue;
 use std::path::{Path, PathBuf};
 
-use crate::mutation_batch::MutationBatch;
-use crate::protocol::{Method, Response, ResultPayload};
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::access::CarrierAuthority;
 use medulla_types::contract::Nonce;
 use medulla_protocol_types::result_contract::storage as results;

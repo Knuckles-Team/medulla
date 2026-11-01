@@ -411,7 +411,7 @@ pub struct CrossModalStaged<'a> {
 ///     the CONTROL member, because those tables are file-wide. `tsdb`-gated; a
 ///     slim redb-only build errors on a non-empty batch. This shard copy is the
 ///     atomic/authoritative one; the caller
-///     (`handlers::txn::commit_cross_modal_txn`) additionally replays the same
+///     (`medulla_h_txn::txn::commit_cross_modal_txn`) additionally replays the same
 ///     batch into the SERVED `series.redb` right after this call returns `Ok`, so
 ///     it is actually reachable through the public `Ts*`/`Op::TsScan` read path
 ///     (CONCEPT:MEDULLA-KG.backend.ts-served-materialize, MEDULLA-P0-4) -- see that

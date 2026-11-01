@@ -40,7 +40,7 @@ pub(super) async fn dispatch_transaction_methods_arm_0(
                         },
                         m => m,
                     };
-                    match handlers::txn::try_handle(
+                    match medulla_h_txn::txn::try_handle(
                         state,
                         req_id,
                         verified_context.agent_id(),
@@ -79,7 +79,7 @@ pub(super) async fn dispatch_transaction_methods_arm_1(
             dispatch_boxed(async {
                 let req_id = req.id;
                 {
-                    match handlers::txn::try_handle(
+                    match medulla_h_txn::txn::try_handle(
                         state,
                         req_id,
                         verified_context.agent_id(),
@@ -117,7 +117,7 @@ pub(super) async fn dispatch_transaction_methods_arm_2(
             dispatch_boxed(async {
                 let req_id = req.id;
                 {
-                    match handlers::txn::try_handle(
+                    match medulla_h_txn::txn::try_handle(
                         state,
                         req_id,
                         verified_context.agent_id(),
@@ -155,7 +155,7 @@ pub(super) async fn dispatch_transaction_methods_arm_3(
             dispatch_boxed(async {
                 let req_id = req.id;
                 {
-                    match handlers::txn::try_handle(
+                    match medulla_h_txn::txn::try_handle(
                         state,
                         req_id,
                         verified_context.agent_id(),
@@ -193,7 +193,7 @@ pub(super) async fn dispatch_transaction_methods_arm_4(
             dispatch_boxed(async {
                 let req_id = req.id;
                 {
-                    match handlers::txn::try_handle(
+                    match medulla_h_txn::txn::try_handle(
                         state,
                         req_id,
                         verified_context.agent_id(),
@@ -231,7 +231,7 @@ pub(super) async fn dispatch_transaction_methods_arm_5(
             dispatch_boxed(async {
                 let req_id = req.id;
                 {
-                    match handlers::txn::try_handle(
+                    match medulla_h_txn::txn::try_handle(
                         state,
                         req_id,
                         verified_context.agent_id(),

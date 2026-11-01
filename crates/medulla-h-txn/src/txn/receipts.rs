@@ -258,7 +258,7 @@ pub(super) async fn cleanup_cross_shard_decision(
             .ok_or_else(|| "retained cross-shard transaction is still undecided".to_string())?;
         let parent = medulla_transaction::read_ledger(&redb.admin_mutations_read()?, parent_id)?
             .ok_or_else(|| "retained cross-shard decision has no parent receipt".to_string())?;
-        if parent.status != crate::mutation_batch::MutationBatchStatus::Committed {
+        if parent.status != medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed {
             return Err("cross-shard decision cannot be collected before its parent".to_string());
         }
         let bytes = parent
@@ -614,7 +614,7 @@ pub(super) fn seal_txn_recovery_plan(
 #[cfg(all(feature = "redb", feature = "security"))]
 pub(super) fn open_txn_recovery_plan(
     backend: &medulla_persistence::redb_backend::RedbBackend,
-    batch: &crate::mutation_batch::MutationBatch,
+    batch: &medulla_protocol_types::mutation_batch::MutationBatch,
     encrypted: &[u8],
     agent: String,
 ) -> Result<GraphTxnState, String> {
@@ -643,7 +643,7 @@ pub(super) fn open_txn_recovery_plan(
 #[cfg(all(feature = "redb", not(feature = "security")))]
 pub(super) fn open_txn_recovery_plan(
     _backend: &medulla_persistence::redb_backend::RedbBackend,
-    _batch: &crate::mutation_batch::MutationBatch,
+    _batch: &medulla_protocol_types::mutation_batch::MutationBatch,
     _encrypted: &[u8],
     _agent: String,
 ) -> Result<GraphTxnState, String> {
@@ -652,7 +652,7 @@ pub(super) fn open_txn_recovery_plan(
 
 #[cfg(feature = "redb")]
 pub(super) fn transaction_plan_digest(
-    batch: &crate::mutation_batch::MutationBatch,
+    batch: &medulla_protocol_types::mutation_batch::MutationBatch,
 ) -> Result<String, String> {
     let operation = batch
         .operations

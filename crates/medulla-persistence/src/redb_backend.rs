@@ -637,7 +637,7 @@ impl RedbCommitStats {
 
 /// [`medulla_storage::PrivatePayloadIntegrity`] for the admin-mutations store, backed by the
 /// SAME transaction-recovery-plan cipher (D-ORC-50) that sealed the bytes in the first
-/// place (`handlers::txn::seal_txn_recovery_plan`/`open_txn_recovery_plan`). The storage
+/// place (`medulla_h_txn::txn::seal_txn_recovery_plan`/`open_txn_recovery_plan`). The storage
 /// kernel enforces it on every private-payload read/write, so without a real authority
 /// here every 2PC recovery-plan write/read fails closed — not optional plumbing.
 #[cfg(feature = "security")]

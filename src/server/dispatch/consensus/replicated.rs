@@ -110,13 +110,13 @@ pub(crate) async fn apply_replicated_transaction_participant(
         .scope(replicated_apply_scope(committed_at_ms, authority), async {
             match phase {
                 medulla_server_api::api::reentry::TransactionParticipantPhase::Prepare => {
-                    handlers::txn::apply_consensus_participant_prepare(
+                    medulla_h_txn::txn::apply_consensus_participant_prepare(
                         state,
                         applying_group,
                         authority.placement_epoch,
                         authority.fencing_token,
                         authority,
-                        handlers::txn::ConsensusParticipantRef {
+                        medulla_h_txn::txn::ConsensusParticipantRef {
                             coordinator_id,
                             participant_id,
                             plan_bytes: plan.ok_or_else(|| {
@@ -127,12 +127,12 @@ pub(crate) async fn apply_replicated_transaction_participant(
                     .await
                 }
                 medulla_server_api::api::reentry::TransactionParticipantPhase::Commit => {
-                    handlers::txn::apply_consensus_participant_commit(
+                    medulla_h_txn::txn::apply_consensus_participant_commit(
                         state,
                         request_id,
                         applying_group,
                         authority,
-                        handlers::txn::ConsensusParticipantRef {
+                        medulla_h_txn::txn::ConsensusParticipantRef {
                             coordinator_id,
                             participant_id,
                             plan_bytes: plan.ok_or_else(|| {
@@ -143,7 +143,7 @@ pub(crate) async fn apply_replicated_transaction_participant(
                     .await
                 }
                 medulla_server_api::api::reentry::TransactionParticipantPhase::Abort => {
-                    handlers::txn::apply_consensus_participant_abort(
+                    medulla_h_txn::txn::apply_consensus_participant_abort(
                         state,
                         authority,
                         coordinator_id,
@@ -196,7 +196,7 @@ async fn apply_replicated_transaction_prepare_inner(
     REPLICATED_APPLY
         .scope(
             replicated_apply_scope(committed_at_ms, authority),
-            handlers::txn::prepare_consensus_commit(
+            medulla_h_txn::txn::prepare_consensus_commit(
                 state,
                 request_id,
                 Some(&authority.principal_fingerprint),
@@ -234,7 +234,7 @@ pub(crate) async fn apply_replicated_transaction_decision(
 ) -> Result<bool, String> {
     REPLICATED_APPLY
         .scope(replicated_apply_scope(committed_at_ms, authority), async {
-            handlers::txn::apply_consensus_transaction_decision(
+            medulla_h_txn::txn::apply_consensus_transaction_decision(
                 state,
                 coordinator_id,
                 authority,
@@ -255,7 +255,7 @@ pub(crate) async fn apply_replicated_transaction_finalize(
 ) -> Result<bool, String> {
     REPLICATED_APPLY
         .scope(replicated_apply_scope(committed_at_ms, authority), async {
-            handlers::txn::apply_consensus_transaction_finalize(
+            medulla_h_txn::txn::apply_consensus_transaction_finalize(
                 state,
                 coordinator_id,
                 authority,

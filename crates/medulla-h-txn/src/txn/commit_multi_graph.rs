@@ -10,7 +10,7 @@ pub(super) struct CommitSlice {
     graph_name: String,
     graph_fname: String,
     #[cfg_attr(not(feature = "raft"), allow(dead_code))]
-    graph_type: crate::protocol::GraphType,
+    graph_type: medulla_protocol_types::protocol::GraphType,
     methods: Vec<Method>,
 }
 
@@ -86,7 +86,7 @@ pub(crate) async fn commit_coordinated_graph_methods(
     req_id: u64,
     caller: Option<&str>,
     coordinator_id: &str,
-    graph_methods: Vec<(String, crate::protocol::GraphType, Vec<Method>)>,
+    graph_methods: Vec<(String, medulla_protocol_types::protocol::GraphType, Vec<Method>)>,
 ) -> Response {
     commit_coordinated_graph_methods_with_nonce(
         state,
@@ -104,7 +104,7 @@ pub(crate) async fn commit_coordinated_graph_methods_with_nonce(
     req_id: u64,
     caller: Option<&str>,
     coordinator_id: &str,
-    graph_methods: Vec<(String, crate::protocol::GraphType, Vec<Method>)>,
+    graph_methods: Vec<(String, medulla_protocol_types::protocol::GraphType, Vec<Method>)>,
     attempt_nonce: Option<Nonce>,
 ) -> Response {
     let mut slices = Vec::with_capacity(graph_methods.len());

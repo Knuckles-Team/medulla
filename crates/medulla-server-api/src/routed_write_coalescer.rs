@@ -18,7 +18,7 @@
 //! `lock_graph` around the RAM flush — is UNSAFE. It opens a window, between
 //! "the caller's durable commit finished" and "the worker re-acquired the
 //! lock to publish it to RAM", in which another `lock_graph` holder (most
-//! severely `handlers::txn::commit_transaction`, which validates
+//! severely `medulla_h_txn::txn::commit_transaction`, which validates
 //! `txn.validate(&core)`, durably commits, AND RAM-publishes atomically under
 //! ONE lock hold) can run its entire sequence while `core` is still stale —
 //! producing a RAM apply order that diverges from the durable commit order.
