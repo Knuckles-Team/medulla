@@ -413,7 +413,7 @@ pub(crate) fn alter_txn_op(plan: AlterTablePlan) -> WireResult<TxnOp> {
 ///     cross-actor side effect the OLD per-owner-file layout never allowed at
 ///     all. A real per-object ownership model for these is a follow-up, not a
 ///     silent gap.
-pub(crate) fn authorize_table_txn(
+pub fn authorize_table_txn(
     source: &medulla_server_api::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
     table_store: &TableStore,
     txn: &mut TableTxn,
@@ -6074,8 +6074,8 @@ mod ne_004_ne_005_tests {
     }
 }
 
-#[cfg(all(test, feature = "query"))]
-pub(crate) mod wired_catalog_tests {
+#[cfg(all(any(test, feature = "test-support"), feature = "query"))]
+pub mod wired_catalog_tests {
     //! NE-046 (MEDULLA-WIRE-CATALOG) wiring tests. `sql_catalog_acl.rs`'s own 13
     //! tests already prove the ACL primitives (ownership/grants/RLS)
     //! are correct in isolation; these drive the REAL wire `execute()`

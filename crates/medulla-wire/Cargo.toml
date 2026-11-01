@@ -45,6 +45,7 @@ tracing = "0.1"
 uuid = { version = "1.28", features = ["v4"] }
 
 [features]
+test-support = []
 amqp-wire = ["server"]
 ann = []
 ann-redb = ["ann", "redb"]

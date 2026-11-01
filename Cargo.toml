@@ -1866,6 +1866,7 @@ medulla-h-admin = { path = "crates/medulla-h-admin" }
 medulla-wire = { path = "crates/medulla-wire" }
 
 [dev-dependencies]
+medulla-wire = { path = "crates/medulla-wire", features = ["test-support"] }
 medulla-h-admin = { path = "crates/medulla-h-admin", features = ["test-support"] }
 medulla-h-txn = { path = "crates/medulla-h-txn", features = ["test-support"] }
 medulla-h-query = { path = "crates/medulla-h-query", features = ["test-support"] }
