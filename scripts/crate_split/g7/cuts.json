@@ -1,0 +1,262 @@
+{
+ "medulla-query": [
+  {
+   "kind": "item",
+   "from": "sql::pgfamily",
+   "items": [
+    "VectorMetric",
+    "AnnMethod",
+    "AnnIndexPlan",
+    "HypertablePlan",
+    "DropAnnIndex"
+   ],
+   "to_module": "tables::ann_plan",
+   "to_crate": "medulla-table-store",
+   "unit": "tables::ann_plan",
+   "note": "new file crates/medulla-query/src/tables/ann_plan.rs; move the four types with their derives and impls; sql keeps `use crate::tables::ann_plan::{...}` until the move rewrites it to medulla_table_store",
+   "covers": [
+    "sql::*",
+    "sql::VectorMetric",
+    "sql::AnnMethod",
+    "sql::AnnIndexPlan",
+    "sql::HypertablePlan",
+    "sql::DropAnnIndex",
+    "sql::metric_to_ann",
+    "sql::isqrt"
+   ]
+  },
+  {
+   "kind": "item",
+   "from": "sql::ann",
+   "items": [
+    "metric_to_ann",
+    "isqrt"
+   ],
+   "to_module": "tables::ann_plan",
+   "to_crate": "medulla-table-store",
+   "note": "widen pub(crate) -> pub"
+  },
+  {
+   "kind": "file",
+   "from": "tables/ann_authority/tests.rs",
+   "to_module": "sql::ann_authority_tests",
+   "to_crate": "medulla-sql",
+   "unit": "sql::ann_authority_tests",
+   "note": "the tests call sql::exec_sql_typed_with_tables; move tests.rs and tests/managed.rs under crates/medulla-query/src/sql/ann_authority_tests/ and declare #[cfg(test)] mod ann_authority_tests in sql/mod.rs; paths to ann_authority items become crate::tables::ann_authority::.. (then medulla_table_store::..)",
+   "covers": [
+    "sql::exec::exec_sql_typed_with_tables",
+    "sql::exec_sql_typed_with_tables"
+   ]
+  },
+  {
+   "kind": "path",
+   "from": "sql::providers::EdgesTableProvider",
+   "to_module": "doc link only",
+   "note": "tables/store.rs:547 intra-doc link: replace with plain text"
+  }
+ ],
+ "medulla-compute": [
+  {
+   "kind": "file",
+   "from": "finance/quant/validation.rs",
+   "to_module": "finance::market::validation",
+   "to_crate": "medulla-finance-market",
+   "note": "re-point quant.rs `pub use validation::{..}` callers to finance::market::validation (no re-export kept)",
+   "covers": [
+    "finance::quant::*",
+    "finance::quant::CvSplit",
+    "finance::quant::deflated_sharpe_ratio",
+    "finance::quant::probability_of_backtest_overfit",
+    "finance::quant::purged_cpcv_splits"
+   ]
+  },
+  {
+   "kind": "item",
+   "from": "finance::quant::sf",
+   "items": [
+    "mod sf (whole inline module)"
+   ],
+   "to_module": "finance::market::special",
+   "to_crate": "medulla-finance-market",
+   "note": "inline `mod sf` in quant.rs becomes file finance/market/special.rs, `pub mod special`; quant and validation use it as ..market::special"
+  }
+ ],
+ "medulla-plan": [
+  {
+   "kind": "item",
+   "from": "federation_opt",
+   "items": [
+    "FederationBudget"
+   ],
+   "to_module": "budget",
+   "to_crate": "medulla-exec",
+   "note": "uql::parser::program names it; plain data struct"
+  },
+  {
+   "kind": "item",
+   "from": "knowledge",
+   "items": [
+    "ProjectionSchema"
+   ],
+   "to_module": "dag",
+   "to_crate": "medulla-exec"
+  },
+  {
+   "kind": "file",
+   "from": "federation_opt/engine_peer_tests.rs + the #[cfg(test)] mod tests of federation_opt/engine.rs",
+   "to_module": "engine_peer_tests",
+   "to_crate": "medulla-plan",
+   "unit": "engine_peer_tests",
+   "note": "they run uql::serve::run_statement; make EngineRemote and the items the tests name pub",
+   "covers": [
+    "uql::serve::run_statement"
+   ]
+  },
+  {
+   "kind": "port",
+   "from": "exec -> federation",
+   "items": [
+    "federation::ForeignSourceRegistry",
+    "federation_opt::FederationSession",
+    "federation_opt::prepare",
+    "federation_opt::foreign_scan",
+    "federation_opt::foreign_named"
+   ],
+   "to_module": "exec::foreign",
+   "to_crate": "medulla-exec",
+   "note": "add to exec: `pub trait ForeignExecutor: Sync { fn prepare(&self, ctx: &PlanCtx, ops: &[Op]); fn foreign_scan(&self, op: &Op, input: RowSet, source: &ForeignSourceSpec, join: bool, ctx: &PlanCtx) -> Result<RowSet, String>; fn foreign_named(&self, op: &Op, name: &str, ctx: &PlanCtx) -> Result<RowSet, String>; }`. Replace PlanCtx fields `foreign` and `federation` with one `pub federation: Option<&'a dyn ForeignExecutor>`; exec/dispatch.rs and exec.rs:549 call through it. In federation add `pub struct FederatedExec<'a> { pub session: Option<&'a FederationSession>, pub registry: Option<&'a ForeignSourceRegistry> }` implementing the trait with today's bodies (foreign_named reads self.registry instead of ctx.foreign), and move PlanCtx::with_foreign / with_federation into a `PlanCtxFederationExt` trait there. Every caller of with_foreign/with_federation builds one FederatedExec. Land this cut as its own commit before any move.",
+   "covers": [
+    "federation_opt::FederationSession",
+    "federation_opt::foreign_named",
+    "federation_opt::foreign_scan",
+    "federation_opt::prepare",
+    "federation::ForeignSourceRegistry"
+   ]
+  }
+ ],
+ "medulla-agent-types": [
+  {
+   "kind": "file",
+   "from": "agent_fixtures/host_start.rs",
+   "to_module": "host_start::fixtures",
+   "to_crate": "medulla-work-types",
+   "unit": "host_start::fixtures",
+   "note": "host_start/tests.rs calls agent_fixtures::host_start::host_start_request"
+  }
+ ],
+ "medulla-catalog-types": [
+  {
+   "kind": "file",
+   "from": "catalog_fixtures/source_ingestion.rs",
+   "to_module": "source_ingestion::fixtures",
+   "to_crate": "medulla-source-types",
+   "unit": "source_ingestion::fixtures",
+   "note": "catalog_fixtures/contract_pack.rs and contract_control.rs stay (connector_pack tests use them)"
+  }
+ ],
+ "medulla-store": [
+  {
+   "kind": "file",
+   "from": "redb_store.rs `mod security_tests` (lines 233-939)",
+   "to_module": "redb_store::security_tests",
+   "to_crate": "medulla-lane-store",
+   "unit": "redb_store::security_tests",
+   "note": "it opens development_lane tables; cut to its own file first; its apply_checkpoint calls (lines ~2324-2391) go with it",
+   "covers": [
+    "redb_store::development_lane::COUNTERS",
+    "redb_store::development_lane::HOLDS",
+    "redb_store::development_lane::INVOCATIONS",
+    "redb_store::development_lane::LANE_INDEX",
+    "redb_store::development_lane::POLICIES",
+    "redb_store::development_lane::PRESSURE_INDEX",
+    "redb_store::development_lane::REPOSITORY_BRANCH_INDEX",
+    "redb_store::development_lane::TENANT_INDEX",
+    "redb_store::development_lane::WORKTREE_INDEX",
+    "redb_store::development_lane::WORK_ITEM_INDEX",
+    "redb_store::checkpoint::apply_checkpoint"
+   ]
+  },
+  {
+   "kind": "file",
+   "from": "redb_store.rs `mod mutation_batch_tests` (line 940 to end)",
+   "to_module": "redb_store::mutation_batch_tests",
+   "to_crate": "medulla-store-apply",
+   "unit": "redb_store::mutation_batch_tests",
+   "note": "it reads work_item outcomes; widen every pub(crate) item of the store core it names to pub (compiler lists them)",
+   "covers": [
+    "redb_store::work_item::read_work_item_outcome"
+   ]
+  },
+  {
+   "kind": "path",
+   "from": "redb_store.rs pub(crate) use resource::{..} / work_item::{..} / checkpoint::apply_checkpoint",
+   "to_module": "drop",
+   "note": "delete these root re-exports; callers name the owning crate (hard cutover)"
+  }
+ ],
+ "medulla-server-api": [
+  {
+   "kind": "path",
+   "from": "auth::VerifiedRequestContext",
+   "to_module": "authority_context",
+   "to_crate": "medulla-server-api",
+   "note": "drop the auth.rs re-export; callers use authority_context"
+  },
+  {
+   "kind": "file",
+   "from": "mutation_batch/digest.rs",
+   "to_module": "batch_digest",
+   "to_crate": "medulla-server-api",
+   "unit": "batch_digest",
+   "note": "principal_fingerprint, opaque_*_key, compile_opaque_digest"
+  },
+  {
+   "kind": "item",
+   "from": "auth",
+   "items": [
+    "coarse_kg_admin_only",
+    "iceberg_bearer_scopes",
+    "request_context_policy",
+    "RequestContextPolicy"
+   ],
+   "to_module": "authority_context",
+   "to_crate": "medulla-server-api"
+  },
+  {
+   "kind": "item",
+   "from": "access",
+   "items": [
+    "CarrierAuthority",
+    "GraphReadAuthority"
+   ],
+   "to_module": "carrier",
+   "to_crate": "medulla-server-api",
+   "unit": "carrier",
+   "note": "with their impls; cep, api and auth use them"
+  },
+  {
+   "kind": "item",
+   "from": "mutation_batch::commit::internal",
+   "items": [
+    "lock_graph"
+   ],
+   "to_module": "routed_write_coalescer",
+   "to_crate": "medulla-server-api"
+  },
+  {
+   "kind": "item",
+   "from": "sparql_http",
+   "items": [
+    "SPARQL_HTTP_UPDATE_EVENT"
+   ],
+   "to_module": "api::dispatch_support",
+   "to_crate": "medulla-server-api"
+  },
+  {
+   "kind": "open",
+   "from": "state -> blob/kv/cdc field types; api seam traits -> mutation_batch/mutation/blob/access/sql_catalog_acl signature types; auth/impact_watch/sparql_http -> api::reentry::dispatch",
+   "to_module": "STOP",
+   "note": "not mechanical: ServerState and the api seam traits are the bottom of the SCC and name types of every feature module. Run g7/check.py with this manifest after the cuts above; the residual violations it prints are the seam-type list. Resolve in a design lane (move each named type into a medulla-server-api `seam_types` module, or behind the existing SeamRegistry dyn traits) before any move. Sonnet executors stop here."
+  }
+ ]
+}
