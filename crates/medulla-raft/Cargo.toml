@@ -12,31 +12,83 @@ name = "medulla_raft"
 path = "src/lib.rs"
 
 [dependencies]
+chacha20poly1305 = { version = "0.10", optional = true }
+dashmap = "6.2"
+futures = { version = "0.3", optional = true }
+hex = "0.4"
+hmac = "0.12"
+medulla-capabilities = { path = "../medulla-capabilities", optional = true }
+medulla-compute = { path = "../medulla-compute" }
+medulla-core = { path = "../medulla-core" }
+medulla-kernel = { path = "../medulla-kernel" }
+medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-persistence = { path = "../medulla-persistence" }
+medulla-plan = { path = "../medulla-plan", optional = true }
+medulla-server-api = { path = "../medulla-server-api" }
+medulla-storage = { path = "../medulla-storage", optional = true }
+medulla-store = { path = "../medulla-store" }
+medulla-transaction = { path = "../medulla-transaction", optional = true }
+medulla-types = { path = "../medulla-types" }
+openraft = { version = "=0.10.0-alpha.26", features = ["serde"], optional = true }
+parking_lot = "0.12"
+petgraph = { version = "0.8.3", features = ["serde-1"] }
+rand = "0.8"
+rmp-serde = "1.3"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+sha2 = "0.10"
+thiserror = "2.0"
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", optional = true }
+uuid = { version = "1.28", features = ["v4"] }
 
 [features]
 blob = ["redb"]
 calvin = ["nonblocking"]
 compute-dist = ["raft"]
-epistemic = ["query"]
-federation = ["query"]
+epistemic = ["dep:medulla-plan", "medulla-plan/epistemic", "dep:medulla-modality", "query"]
+federation = ["dep:medulla-plan", "medulla-plan/federation", "query"]
 graphql = ["security"]
 harness = ["raft"]
-jobs = ["epistemic"]
+jobs = ["dep:medulla-capabilities", "medulla-capabilities/jobs", "epistemic"]
 kv = ["redb"]
 matview = ["query", "streaming"]
-modality-serving = ["redb", "security", "streaming"]
+modality-serving = ["dep:medulla-modality", "dep:medulla-capabilities", "medulla-capabilities/modality-serving", "redb", "security", "streaming"]
 nonblocking = ["raft"]
 owl = ["sparql"]
-query = ["redb"]
-raft = ["redb"]
+query = ["dep:medulla-plan", "medulla-plan/query", "redb"]
+raft = ["dep:openraft", "dep:futures", "dep:chacha20poly1305", "redb"]
 reasoning = []
-redb = []
-security = ["redb"]
+redb = ["dep:medulla-transaction", "dep:medulla-storage", ]
+security = ["dep:chacha20poly1305", "redb"]
 shacl = []
 sparql = []
 sqlite-file = ["query"]
-statechart = []
-stream = ["query"]
+statechart = ["dep:medulla-capabilities", "medulla-capabilities/statechart", ]
+stream = ["dep:medulla-plan", "medulla-plan/stream", "query"]
 streaming = []
-tsdb = ["redb"]
-wasm-udf = []
+tsdb = ["dep:medulla-plan", "medulla-plan/timeseries", "redb"]
+wasm-udf = ["dep:medulla-plan", "medulla-plan?/wasm-udf", ]
+pgwire = ["dep:futures"]
+ros2-bridge = ["dep:futures"]
+ros2-dds = ["dep:futures"]
+ros2-rmw = ["dep:futures"]
+decide = ["dep:medulla-capabilities", "medulla-capabilities?/decide"]
+server = ["dep:tracing-subscriber", "dep:tokio", "dep:medulla-capabilities"]
+viz = ["dep:medulla-capabilities", "medulla-capabilities?/viz"]
+asr-whisper = ["dep:medulla-capabilities", "medulla-capabilities/asr-native"]
+knowledge-batch = ["dep:medulla-plan", "medulla-plan/knowledge-batch", "dep:medulla-modality", "dep:medulla-capabilities", "medulla-capabilities/knowledge-batch"]
+quantum-agent-api = ["dep:medulla-capabilities", "medulla-capabilities/quantum"]
+alignment = ["dep:medulla-modality"]
+numeric = ["dep:medulla-plan", "medulla-plan?/numeric"]
+cost-opt = ["dep:medulla-plan", "medulla-plan/cost-opt"]
+par-runtime = ["dep:medulla-plan", "medulla-plan/par-runtime"]
+text = ["dep:medulla-plan", "medulla-plan/text"]
+federation-sql = ["dep:medulla-plan", "medulla-plan/federation-sql"]
+geo = ["dep:medulla-plan", "medulla-plan/geo"]
+tensor = ["dep:medulla-plan", "medulla-plan/tensor"]
+nl-query = ["dep:medulla-plan", "medulla-plan/nl-query"]
+gpu = ["dep:medulla-plan", "medulla-plan/tensor-gpu"]
+gpu-cuda = ["dep:medulla-plan", "medulla-plan/tensor-gpu-cuda"]
+owl-plan = ["dep:medulla-plan", "medulla-plan/owl"]
