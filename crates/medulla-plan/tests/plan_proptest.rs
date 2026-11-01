@@ -16,7 +16,7 @@
 mod common;
 
 use common::*;
-use medulla_plan::{execute, Op, Plan, PlanCtx, Pred};
+use medulla_exec::{exec::execute, algebra::Op, algebra::Plan, exec::PlanCtx, algebra::Pred};
 use proptest::prelude::*;
 
 // ── a constrained generator of VALID UQL pipeline text ───────────────────────
@@ -238,7 +238,7 @@ proptest! {
 
     #[test]
     fn serial_and_parallel_drivers_agree(q in pipeline_strategy()) {
-        use medulla_plan::{Driver, ParallelDriver, RuntimeConfig, SerialDriver};
+        use medulla_exec::{exec::Driver, runtime::ParallelDriver, runtime::RuntimeConfig, exec::SerialDriver};
 
         let (view, semantic) = build_docs();
         let plan = medulla_plan::uql::parse(&q).expect("valid UQL");

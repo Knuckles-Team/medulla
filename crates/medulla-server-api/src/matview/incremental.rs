@@ -8,7 +8,7 @@
 //! operator state for the `matview_operator_state` redb table. This is the analogue of
 //! turso's `incremental/persistence.rs`.
 
-use medulla_plan::incremental::{Circuit, Delta, ZRow};
+use medulla_exec::{incremental::Circuit, incremental::Delta, incremental::ZRow};
 use medulla_types::wire::{CdcEvent, CdcKind};
 use serde_json::{Map, Value};
 

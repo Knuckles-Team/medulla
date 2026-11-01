@@ -689,7 +689,7 @@ pub fn reoptimize_remaining(
 mod tests {
     use super::*;
     use crate::algebra::{Op, Plan, Pred};
-    use crate::{execute, PlanCtx, RowSet};
+    use crate::{exec::execute, exec::PlanCtx, rowset::RowSet};
 
     fn sorted_ids(rs: &RowSet) -> Vec<String> {
         let mut v = rs.ids();

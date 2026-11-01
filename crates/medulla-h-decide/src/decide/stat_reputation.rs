@@ -44,7 +44,7 @@ use medulla_numeric::risk::{
     anchored_reliability, learn_reputation, ConcentrationBounds, Estimate, Observation, Reputation,
     ReputationRules, SampleGate, SubjectReputation,
 };
-use medulla_plan::exec::LearnedReliability;
+use medulla_exec::exec::LearnedReliability;
 use medulla_query::ColumnType;
 use serde_json::Value;
 

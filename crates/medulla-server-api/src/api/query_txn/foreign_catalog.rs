@@ -394,7 +394,7 @@ impl ForeignSourceCatalog {
     /// without a verified carrier is refused rather than run with no scope.
     pub fn resolve_for_plan(
         &self,
-        ops: &[medulla_plan::Op],
+        ops: &[medulla_exec::algebra::Op],
         caller: Option<&CarrierAuthority>,
         isolation: &IsolationLayer,
     ) -> Result<Option<OwnedForeignRegistry>, String> {
@@ -424,22 +424,22 @@ impl ForeignSourceCatalog {
     /// grant, known and unknown names both remain the executor's typed not-found response.
     fn plan_names_another_owners_source(
         &self,
-        ops: &[medulla_plan::Op],
+        ops: &[medulla_exec::algebra::Op],
         caller: &CarrierAuthority,
         isolation: &IsolationLayer,
     ) -> bool {
         ops.iter().any(|op| match op {
-            medulla_plan::Op::Foreign { name } => {
+            medulla_exec::algebra::Op::Foreign { name } => {
                 self.name_belongs_to_another_owner(name, caller, isolation)
             }
-            medulla_plan::Op::ForeignScan { source, .. } => match source.as_ref() {
+            medulla_exec::algebra::Op::ForeignScan { source, .. } => match source.as_ref() {
                 medulla_types::wire::ForeignSourceSpec::Named { name } => {
                     self.name_belongs_to_another_owner(name, caller, isolation)
                 }
                 _ => false,
             },
             #[cfg(feature = "text")]
-            medulla_plan::Op::FuseRrf { branches, .. } => branches
+            medulla_exec::algebra::Op::FuseRrf { branches, .. } => branches
                 .iter()
                 .any(|branch| self.plan_names_another_owners_source(branch, caller, isolation)),
             _ => false,
@@ -583,8 +583,8 @@ mod tests {
         }
     }
 
-    fn foreign_plan(name: &str) -> Vec<medulla_plan::Op> {
-        vec![medulla_plan::Op::Foreign { name: name.into() }]
+    fn foreign_plan(name: &str) -> Vec<medulla_exec::algebra::Op> {
+        vec![medulla_exec::algebra::Op::Foreign { name: name.into() }]
     }
 
     #[test]
@@ -664,7 +664,7 @@ mod tests {
         let catalog = ForeignSourceCatalog::default();
         let refused = catalog.resolve_for_plan(&foreign_plan("src"), None, &IsolationLayer::new());
         assert!(matches!(refused, Err(ref e) if e.starts_with("ACCESS_DENIED")));
-        let local = vec![medulla_plan::Op::Scan {
+        let local = vec![medulla_exec::algebra::Op::Scan {
             label: "Doc".into(),
         }];
         assert!(matches!(

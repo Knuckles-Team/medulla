@@ -580,8 +580,8 @@ fn uql_decisions(h: &Harness, who: &str) -> Vec<String> {
     let graph = medulla_core::graph::GraphCore::new().analysis_snapshot();
     let semantic = medulla_core::compute::semantic::SemanticStore::new();
     let plan = medulla_plan::uql::parse("DECISIONS WHERE outcome = 'abstained'").unwrap();
-    let ctx = medulla_plan::PlanCtx::new(&graph, &semantic).with_decisions(&views);
-    medulla_plan::execute(&plan, &ctx).unwrap().ids()
+    let ctx = medulla_exec::exec::PlanCtx::new(&graph, &semantic).with_decisions(&views);
+    medulla_exec::exec::execute(&plan, &ctx).unwrap().ids()
 }
 
 /// The relation names the decision views materialize for `who`.

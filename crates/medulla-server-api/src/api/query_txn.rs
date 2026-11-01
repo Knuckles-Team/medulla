@@ -41,7 +41,7 @@ pub trait QueryApi: Send + Sync {
     #[cfg(feature = "query")]
     fn run_unified_staged_rows(
         &self,
-        plan: medulla_plan::Plan,
+        plan: medulla_exec::algebra::Plan,
         view: &medulla_core::graph::GraphView,
         core: &Arc<medulla_core::graph::GraphCore>,
         staged: &[(String, Vec<f32>)],

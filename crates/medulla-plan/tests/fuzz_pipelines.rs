@@ -32,7 +32,7 @@ use common::*;
 use medulla_core::compute::semantic::SemanticStore;
 use medulla_core::graph::{GraphCore, GraphView};
 use medulla_plan::federation::ForeignSourceRegistry;
-use medulla_plan::{execute, PlanCtx};
+use medulla_exec::{exec::execute, exec::PlanCtx};
 use proptest::prelude::*;
 use serde_json::json;
 use std::collections::HashSet;

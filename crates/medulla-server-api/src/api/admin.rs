@@ -66,7 +66,7 @@ pub trait DecideApi: Send + Sync {
         &self,
         state: &Arc<RwLock<ServerState>>,
         authority: &crate::access::CarrierAuthority,
-    ) -> Option<Arc<dyn medulla_plan::exec::DecisionSource>>;
+    ) -> Option<Arc<dyn medulla_exec::exec::DecisionSource>>;
 }
 
 /// The installed decide seam of `state`, or `None` before installation.

@@ -12,7 +12,7 @@ mod common;
 use common::*;
 use medulla_core::compute::semantic::SemanticStore;
 use medulla_core::graph::{GraphCore, GraphView};
-use medulla_plan::{execute, Op, Plan, PlanCtx, Pred, RowSet};
+use medulla_exec::{exec::execute, algebra::Op, algebra::Plan, exec::PlanCtx, algebra::Pred, rowset::RowSet};
 use serde_json::json;
 use std::collections::HashSet;
 

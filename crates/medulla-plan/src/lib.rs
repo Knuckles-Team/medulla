@@ -53,8 +53,6 @@
 //!  * **Cross-shard** — per-shard sub-plans + a coordinator merge + traversal
 //!    frontier forwarding (the multi-quarter piece).
 
-pub mod algebra;
-pub mod cost;
 // MEDULLA-UNIFIED-DATA-PLANE-R020.2.1 — warehouse federation pushdown-transport
 // dispatch: Arrow Flight SQL vs. native per WarehouseSourceKind, with a
 // refusal for an invalid config or an unmet Flight SQL preference. Pure
@@ -64,9 +62,6 @@ pub mod warehouse_pushdown;
 // MEDULLA-UNIFIED-DATA-PLANE-R005 — mapping approval-state machine for named R2RML
 // virtual graphs; an unapproved or model-only mapping refuses to be queried.
 pub mod virtual_graph_mapping;
-// MEDULLA-UNIFIED-DATA-PLANE-R006 — typed pushdown decision/fallback-reason,
-// refusing a self-contradictory pushed-down-with-fallback state.
-pub mod pushdown_plan;
 // MEDULLA-UNIFIED-DATA-PLANE-R007 — named pushdown operations and a dialect's
 // declared capability set, refusing an unknown operation name.
 pub mod federation_capabilities;
@@ -98,32 +93,6 @@ pub mod uql;
 /// DecideText (EH-073): the decision front end, kept out of UQL and `wire::Op`.
 pub mod decide_text;
 
-/// Execution budgets (UQL-09): typed resource bounds on result size and traversal fan-out.
-pub mod budget;
-/// The typed DAG plan representation (CONCEPT:MEDULLA-KG.query.plan-dag, E5 phase 1): [`dag::PlanDag`]
-/// generalizes the linear [`Plan`] into a real graph of operators (a node's `inputs` name
-/// its dependency nodes), with a lossless conversion from every existing linear `Plan` (a
-/// degenerate chain). `Op` is unchanged; execution over a `PlanDag` lives in
-/// [`dag_exec`]. Sits beside `exec`/`knowledge` under the same `query` gate (a `PlanNode`
-/// carries an optional `dag::ProjectionSchema`).
-#[cfg(feature = "query")]
-pub mod dag;
-/// Physical execution of a [`dag::PlanDag`] (CONCEPT:MEDULLA-KG.query.plan-dag-exec, E5 phase 2) —
-/// [`dag_exec::execute_dag`] runs ALONGSIDE the untouched [`exec::execute`]; for a
-/// degenerate linear-chain dag it is byte-identical to it (the differential oracle proves
-/// this over the whole fixture suite).
-#[cfg(feature = "query")]
-pub mod dag_exec;
-#[cfg(feature = "query")]
-pub mod exec;
-/// DBSP-style INCREMENTAL materialized-view maintenance (CONCEPT:MEDULLA-KG.storage.incremental-matview):
-/// a dep-free Z-set delta model + a circuit compiler for the LINEAR operator subset
-/// (`Scan`/`Filter`/`AsOf`/`WindowAgg`(linear)/`Limit`), generalizing `src/server/cdc.rs`'s
-/// hand-rolled `ContinuousQuery`/`maintain()` mini-DBSP to an arbitrary supported `Plan`.
-/// An unsupported op returns [`incremental::UnsupportedOp`] so the server keeps that view
-/// on the recompute path — a per-view fallback, never a silently-wrong incremental result.
-#[cfg(feature = "query")]
-pub mod incremental;
 /// RowSet v2, additive (CONCEPT:MEDULLA-KG.query.knowledge-set): [`knowledge::KnowledgeSet`] is the
 /// enriched shape (kind/confidence/bitemporal window/column-projection/provenance+policy
 /// frames) a caller builds from a FINISHED `RowSet` + the `GraphView` it ran over — a
@@ -143,17 +112,8 @@ pub mod knowledge;
 /// vector, time-series, jobs, and cross-modal results.
 #[cfg(feature = "knowledge-batch")]
 pub mod knowledge_batch;
-/// Per-row, SQL-three-valued evaluation of the relational predicate algebra (UQL-01) —
-/// the Rust twin of the FILTER leg's SQL for incremental maintenance and edge predicates.
-pub mod pred_eval;
 #[cfg(feature = "knowledge-batch")]
 pub mod result_stream;
-/// The physical EXECUTION runtime (CONCEPT:MEDULLA-KG.query.parallel-runtime) — Lane B. The
-/// `execute_ops` driver-dispatch `execute` routes through + the rayon-morsel, memory-accounted,
-/// spilling `ParallelDriver` (feature `par-runtime`). Gated on `query` (it schedules the
-/// `query`-tier physical fns); a default/Pi build dispatches to the Lane-0 `SerialDriver`.
-#[cfg(feature = "query")]
-pub mod runtime;
 // The natural-language → query planning seam (CONCEPT:MEDULLA-KG.query.core-query-input) + the concrete standalone
 // `UreqNlPlanner` (CONCEPT:MEDULLA-KG.query.fence-stripper). The `NlPlanner` trait + the `plan_and_execute*`
 // helpers are pure (only touch the existing `uql::parse` + `execute`), so they ride the
@@ -221,85 +181,34 @@ pub mod federation_trino;
 /// driver. Mirrors `federation`'s read-side `ForeignSource` seam.
 #[cfg(feature = "federation")]
 pub mod mirror_target;
-/// The cross-modal cost-based optimizer (CONCEPT:MEDULLA-KG.query.xmodal-cost-optimizer) — Lane A's
-/// rule engine over the logical `Vec<Op>` that [`exec::plan_optimize`] calls to reorder
-/// operators across modalities into a cheaper-but-equivalent plan. Compiled under `query`;
-/// runtime kill-switch `MEDULLA_COST_OPT=0` → identity passthrough.
-#[cfg(feature = "query")]
-pub mod optimizer;
-#[cfg(feature = "query")]
-pub mod oracle;
-/// SQL text crossing a federation boundary: dialects, identifiers, literals (one owner).
-#[cfg(feature = "query")]
-pub mod sql_text;
 
-/// KAN-learned cardinality-estimate correction (CONCEPT:MEDULLA-KG.query.adaptive-reoptimization,
-/// W4.12 phase 2): an online, per-op-kind correction trained continuously from the
-/// SAME `(estimated, actual)` pairs [`exec::run_with_adaptive_reopt`] already observes,
-/// so a systematic estimation bias learned on one query nudges later queries' plan-time
-/// estimates instead of only triggering reactive re-planning. Opt-in twice over — the
-/// `learned-cost` cargo feature AND the `MEDULLA_LEARNED_COST=1` runtime flag —
-/// so a default build/deployment is byte-for-byte unaffected. See the module doc for
-/// the design and the "queryable artifact" surface.
-#[cfg(feature = "learned-cost")]
-pub mod learned_cost;
-
-pub use algebra::{Op, Plan, Pred};
 
 // The hierarchical-retrieval surface (CONCEPT:MEDULLA-KG.retrieval.bounded-drill): the retriever + its accessor
 // traits + the structured result + the flat-top-k baseline, so a caller names them
 // through medulla-plan.
-pub use cost::{CostModel, Order, Stats};
-
 /// The Lane-0 shared cost traits A's optimizer + B's runtime both read
 /// (CONCEPT:MEDULLA-KG.query.cost-cardinality-traits): the per-op [`cost::Cardinality`] estimator
 /// and the [`cost::CostEstimate`] triple. Gated on `query` (the estimator borrows `PlanCtx`);
 /// this tier only defines the shape — no estimator is wired, so behavior is unchanged.
-#[cfg(feature = "query")]
-pub use cost::{Cardinality, CostEstimate};
 pub use leanrag::{
     flat_top_k, retrieve_vector_free, AnnIndex, GraphTopology, HierResult, HierarchicalRetriever,
     RetrievalParams, Scored, SectionGranularity, SectionRecord, SectionSpan, SectionTopology,
     TraversalLimit, VectorFreeError, VectorFreeLimits, VectorFreeResult,
 };
-pub use rowset::RowSet;
-
-/// Read-time access checks for `checked_at_read` sources (MEDULLA-FEDERATED-QUERY-R703).
-pub mod access_check;
 /// Document boosts from retrieval feedback (MEDULLA-FEDERATED-QUERY-R705).
 pub mod feedback_boost;
 /// Agent knowledge scopes applied before truncation (MEDULLA-FEDERATED-QUERY-R704).
 pub mod knowledge_scope;
-/// Column mask and row-filter policies (MEDULLA-FEDERATED-QUERY-R706).
-pub mod policy_mask;
 /// Retrieval sufficiency, selection and hierarchy decisions (MEDULLA-FEDERATED-QUERY-R081).
 pub mod retrieval_verdict;
-pub mod rowset;
-/// Stored, versioned queries (MEDULLA-FEDERATED-QUERY-R708).
-pub mod stored_query;
 
 /// The `PROPAGATE` cone as plain ids (EH-526): what a standing impact watch recomputes.
-#[cfg(feature = "query")]
-pub use exec::propagate::{impact_cone, ImpactCone, ImpactEdges};
 /// The in-txn tsdb read-your-own-writes staged-series overlay (CONCEPT:MEDULLA-KG.query.txn-tsdb-read-your).
-#[cfg(feature = "timeseries")]
-pub use exec::StagedSeries;
-#[cfg(feature = "query")]
-pub use exec::{execute, PlanCtx, PlanExt};
-
 /// The typed DAG plan surface (CONCEPT:MEDULLA-KG.query.plan-dag, E5): the node/edge shape plus
 /// its physical executor, so a caller building a genuine multi-branch plan names them
 /// through `medulla_plan` directly (mirroring how `Op`/`Plan` are re-exported from `algebra`).
-#[cfg(feature = "query")]
-pub use dag::{NodeId, PlanDag, PlanNode, ProjectionSchema};
-
-#[cfg(feature = "query")]
-pub use dag_exec::{execute_dag, execute_dag_with};
 /// The incremental-matview surface (CONCEPT:MEDULLA-KG.storage.incremental-matview): the Z-set
 /// delta model + the circuit a caller compiles a `Plan` into and folds CDC deltas through.
-#[cfg(feature = "query")]
-pub use incremental::{Circuit, Delta, UnsupportedOp, ZRow};
-
 /// The RowSet v2 surface (CONCEPT:MEDULLA-KG.query.knowledge-set): the enriched, ready-to-consume
 /// row/set shape a caller builds from a finished `RowSet` + the `GraphView` it ran over.
 #[cfg(feature = "query")]
@@ -324,34 +233,20 @@ pub use result_stream::{
 /// optimizer fills its body) and the physical `Driver` execution trait + its `SerialDriver`
 /// impl (CONCEPT:MEDULLA-KG.query.exec-driver-seam — Lane B swaps in a parallel driver). Both are
 /// identity/serial in this tier, so `execute` is behavior-identical.
-#[cfg(feature = "query")]
-pub use exec::{plan_optimize, Driver, SerialDriver};
-
 /// The Lane B physical runtime surface (CONCEPT:MEDULLA-KG.query.parallel-runtime): the
 /// `execute_ops` driver-dispatch `execute` routes through (always, on `query`), plus — only
 /// on the opt-in `par-runtime` feature — the rayon-morsel `ParallelDriver` and its
 /// `RuntimeConfig` (pool width / spill budget, from `MEDULLA_EXEC_THREADS` /
 /// `_SPILL_MB`). A default build has neither; `execute_ops` dispatches to `SerialDriver`,
 /// byte-for-byte the prior fold.
-#[cfg(feature = "query")]
-pub use runtime::execute_ops;
-#[cfg(feature = "par-runtime")]
-pub use runtime::{ParallelDriver, RuntimeConfig};
-
 /// Lane A's cross-modal optimizer surface (CONCEPT:MEDULLA-KG.query.xmodal-cost-optimizer): the
 /// `optimize(plan, ctx) -> Plan` rule-engine entry point `plan_optimize` drives, its
 /// `enabled()` runtime kill-switch, and the plan-time cardinality/cost estimators the rules
 /// read (`ModalityCardinality` + the snapshot-memoized `PlanStats` catalog).
-#[cfg(feature = "query")]
-pub use cost::{ModalityCardinality, PlanStats};
 /// The DAG-aware optimizer (CONCEPT:MEDULLA-KG.query.dag-optimizer, E5 phase 3) — [`optimizer::optimize_dag`]
 /// reorders ops within each maximal linear chain segment of a [`dag::PlanDag`] through the
 /// SAME rule engine `optimize` drives, never crossing a branch/fan-out boundary (the DAG
 /// generalization of the MEDULLA-405 adjacency guard).
-#[cfg(feature = "query")]
-pub use optimizer::optimize_dag;
-#[cfg(feature = "query")]
-pub use optimizer::{enabled as cost_opt_enabled, optimize, rule_names as cost_opt_rule_names};
 /// The adaptive re-optimization hook (CONCEPT:MEDULLA-KG.query.adaptive-reoptimization): re-cost and,
 /// if warranted, re-order the not-yet-executed tail of a plan once an earlier op's ACTUAL
 /// output cardinality diverges from what plan-time estimation predicted — the runtime feedback
@@ -360,34 +255,19 @@ pub use optimizer::{enabled as cost_opt_enabled, optimize, rule_names as cost_op
 /// `par-runtime` `runtime::ParallelDriver` share that one loop), so every ordinary
 /// `Plan::execute` already calls this after each op; see [`optimizer::reoptimize_remaining`]
 /// for the divergence threshold.
-#[cfg(feature = "query")]
-pub use optimizer::{reoptimize_remaining, ADAPTIVE_REOPT_THRESHOLD};
-
 /// The learned-cost queryable-artifact surface (CONCEPT:MEDULLA-KG.query.adaptive-reoptimization,
 /// W4.12 phase 2): the process-wide [`learned_cost::LearnedCostStore`], its serializable
 /// [`learned_cost::CostCorrectionArtifact`] snapshot, and the runtime opt-in flag —
 /// re-exported at the crate root mirroring [`optimizer::enabled`]'s `cost_opt_enabled`
 /// re-export above.
-#[cfg(feature = "learned-cost")]
-pub use learned_cost::{
-    artifacts as learned_cost_artifacts, enabled as learned_cost_enabled, CostCorrectionArtifact,
-    LearnedCostStore,
-};
-
 /// The server-side text→vector embedder seam (CONCEPT:MEDULLA-KG.compute.no-embedder-bound-op): the `TextEmbedder` trait
 /// backing the UQL `RANK BY ~ "text"` (`Op::RankEmbed`) NL→vector resolver, plus the
 /// deterministic `HashEmbedder` fallback for tests/offline use. A facade binds a concrete
 /// model onto a `PlanCtx` via `with_embedder`.
-#[cfg(feature = "query")]
-pub use exec::{HashEmbedder, TextEmbedder};
-
 /// The full, un-flattened E1 justification tree behind `EXPLAIN BELIEF` (E5 phase 4,
 /// CONCEPT:MEDULLA-KG.epistemic.epistemic-substrate) — mirrors `Op::ExplainBelief`'s RowSet
 /// projection but returns the verbatim `medulla_epistemic::JustificationGraph` a standalone
 /// `Method::ExplainBelief` wire-projects (mirroring `Method::OwlExplain`'s `ProofNodeWire`).
-#[cfg(feature = "epistemic")]
-pub use exec::explain_belief_tree;
-
 // The NL→query seam surface (CONCEPT:MEDULLA-KG.query.core-query-input/MEDULLA-080): the trait + the LLM-optional
 // `Option<&dyn NlPlanner>` entry point, and the concrete `UreqNlPlanner`.
 #[cfg(feature = "nl-query")]
@@ -417,16 +297,9 @@ pub use medulla_text::{rrf_fuse, TextHit, TextIndex, RRF_K};
 // The `PlanCtx::with_text` search-surface trait (CONCEPT:MEDULLA-KG.query.served-text-index-binding) — a facade
 // implements this over its OWN maintained persistent index (rather than a plain
 // `medulla_text::TextIndex`) to push a served `RankText`/`FuseRrf` leg down into it.
-#[cfg(feature = "text")]
-pub use exec::TextSource;
 // The `PlanCtx::with_spatial` search-surface trait (CONCEPT:MEDULLA-KG.storage.incremental-spatial, L37) — mirrors
 // `TextSource`: a facade implements this over its OWN maintained persistent spatial
 // index to push a served `Op::SpatialScan` down into it.
-#[cfg(feature = "geo")]
-pub use exec::SpatialSource;
-
-#[cfg(all(test, feature = "query"))]
-mod fixture;
 #[cfg(all(test, feature = "query"))]
 mod tests;
 

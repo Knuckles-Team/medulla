@@ -57,8 +57,8 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
-use medulla_plan::dag::NodeId as DagNodeId;
-use medulla_plan::{execute_dag, execute_dag_with, PlanCtx, PlanDag, RowSet};
+use medulla_exec::dag::NodeId as DagNodeId;
+use medulla_exec::{dag_exec::execute_dag, dag_exec::execute_dag_with, exec::PlanCtx, dag::PlanDag, rowset::RowSet};
 
 use super::multi::GroupRouter;
 use super::GroupId;
@@ -400,7 +400,7 @@ mod tests {
     use super::*;
     use medulla_core::compute::semantic::SemanticStore;
     use medulla_core::graph::GraphCore;
-    use medulla_plan::{Op, PlanNode};
+    use medulla_exec::{algebra::Op, dag::PlanNode};
     use serde_json::json;
 
     fn blob(v: serde_json::Value) -> Vec<u8> {

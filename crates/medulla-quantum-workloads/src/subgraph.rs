@@ -18,7 +18,7 @@ use std::collections::{BTreeMap, HashSet};
 
 use medulla_core::compute::semantic::SemanticStore;
 use medulla_core::graph::{GraphCore, GraphView};
-use medulla_plan::exec::PlanCtx;
+use medulla_exec::exec::PlanCtx;
 
 /// The induced subgraph over a UQL-selected candidate node set: node ids in
 /// selection order (order matters — it fixes the qubit index each node maps to
@@ -66,7 +66,7 @@ pub fn pull_candidate_subgraph(
     let view: GraphView = core.analysis_snapshot();
     let semantic = SemanticStore::new();
     let ctx = PlanCtx::new(&view, &semantic);
-    let rowset = medulla_plan::execute(&plan, &ctx).map_err(SubgraphError::Exec)?;
+    let rowset = medulla_exec::exec::execute(&plan, &ctx).map_err(SubgraphError::Exec)?;
 
     let node_ids = rowset.ids();
     if node_ids.is_empty() {

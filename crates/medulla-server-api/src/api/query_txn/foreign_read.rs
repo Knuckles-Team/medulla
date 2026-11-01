@@ -410,7 +410,7 @@ impl ForeignReadSessions {
         &self,
         caller: &CarrierAuthority,
         executions: &[ForeignReadExecutionRef],
-        plan: &medulla_plan::Plan,
+        plan: &medulla_exec::algebra::Plan,
         plan_digest: Digest256,
         binding: ForeignBindingContext<'_>,
     ) -> Result<OwnedForeignRegistry, String> {
@@ -439,8 +439,8 @@ impl ForeignReadSessions {
             .ops
             .iter()
             .filter_map(|op| match op {
-                medulla_plan::Op::Foreign { name } => Some(name.as_str()),
-                medulla_plan::Op::ForeignScan { source, .. } => match source.as_ref() {
+                medulla_exec::algebra::Op::Foreign { name } => Some(name.as_str()),
+                medulla_exec::algebra::Op::ForeignScan { source, .. } => match source.as_ref() {
                     medulla_types::wire::ForeignSourceSpec::Named { name } => Some(name.as_str()),
                     _ => None,
                 },
@@ -613,7 +613,7 @@ struct PageBackedSource {
 }
 
 impl medulla_plan::federation::ForeignSource for PageBackedSource {
-    fn fetch(&self) -> Result<medulla_plan::RowSet, String> {
+    fn fetch(&self) -> Result<medulla_exec::rowset::RowSet, String> {
         let record = self
             .record
             .upgrade()
@@ -628,7 +628,7 @@ impl medulla_plan::federation::ForeignSource for PageBackedSource {
         if record.state != SessionState::Complete {
             return Err("FOREIGN_READ_NOT_COMPLETE: source pages are not complete".into());
         }
-        Ok(medulla_plan::RowSet::from_rows(
+        Ok(medulla_exec::rowset::RowSet::from_rows(
             record.rows.iter().map(|row| (row.id.clone(), row.score)),
         ))
     }
@@ -787,7 +787,7 @@ mod tests {
     #[cfg(feature = "query")]
     #[test]
     fn canonical_plan_digest_is_the_query_binding_pin() {
-        let plan = medulla_plan::Plan::new(vec![medulla_plan::Op::Scan {
+        let plan = medulla_exec::algebra::Plan::new(vec![medulla_exec::algebra::Op::Scan {
             label: "Issue".into(),
         }]);
         let expected =

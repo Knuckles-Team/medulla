@@ -10,7 +10,7 @@
 
 use medulla_core::compute::semantic::SemanticStore;
 use medulla_core::graph::{GraphCore, GraphView};
-use medulla_plan::RowSet;
+use medulla_exec::rowset::RowSet;
 use serde_json::json;
 
 pub fn blob(v: serde_json::Value) -> Vec<u8> {

@@ -13,7 +13,7 @@
 mod common;
 
 use common::{build_docs, ids_sorted, query_vec};
-use medulla_plan::{execute, optimize, Op, Plan, PlanCtx, Pred};
+use medulla_exec::{exec::execute, optimizer::optimize, algebra::Op, algebra::Plan, exec::PlanCtx, algebra::Pred};
 
 /// Render a plan's ops as a stable, reviewable multi-line string.
 fn render(ops: &[Op]) -> String {

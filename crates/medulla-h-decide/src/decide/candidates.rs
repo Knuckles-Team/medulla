@@ -246,7 +246,7 @@ pub(super) fn graph_candidates(
 ) -> Result<ReadCandidates, String> {
     check_selecting_plan(plan)?;
     let semantic = medulla_core::compute::semantic::SemanticStore::new();
-    let rows = medulla_plan::execute(plan, &medulla_plan::PlanCtx::new(view, &semantic))
+    let rows = medulla_exec::exec::execute(plan, &medulla_exec::exec::PlanCtx::new(view, &semantic))
         .map_err(|detail| refusal(StatisticalErrorCode::CandidatePlanRefused, detail))?;
     let mut ids = rows.ids();
     ids.sort_unstable();

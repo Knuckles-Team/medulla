@@ -13,7 +13,7 @@
 use std::collections::BTreeSet;
 
 use medulla_core::graph::GraphView;
-use medulla_plan::{impact_cone, ImpactEdges};
+use medulla_exec::{exec::impact_cone, exec::ImpactEdges};
 use medulla_result_types::{
     compute_result::mining::ImpactOptions, compute_result::mining::RiskModel,
 };
@@ -21,7 +21,7 @@ use medulla_types::wire::EdgeDir;
 use serde::Deserialize;
 use serde_json::{Map, Value};
 
-pub use medulla_plan::exec::propagate::node_props;
+pub use medulla_exec::exec::propagate::node_props;
 
 use medulla_protocol_types::protocol::Method;
 

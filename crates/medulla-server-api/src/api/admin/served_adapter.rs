@@ -97,7 +97,7 @@ pub async fn served_plan_adapter(
     state: &Arc<tokio::sync::RwLock<ServerState>>,
     graph: &str,
     authority: Option<&crate::access::GraphReadAuthority>,
-    plan: &medulla_plan::Plan,
+    plan: &medulla_exec::algebra::Plan,
 ) -> Option<Arc<ServedAdapter>> {
     if !plan_ranks_by_vector(&plan.ops) {
         return None;
@@ -109,12 +109,12 @@ pub async fn served_plan_adapter(
 /// `plan` with every vector rank re-aimed by `adapter` (unchanged without one).
 #[cfg(feature = "query")]
 pub fn adapt_plan(
-    plan: medulla_plan::Plan,
+    plan: medulla_exec::algebra::Plan,
     adapter: Option<Arc<ServedAdapter>>,
-    embedder: Option<&dyn medulla_plan::TextEmbedder>,
-) -> medulla_plan::Plan {
+    embedder: Option<&dyn medulla_exec::exec::TextEmbedder>,
+) -> medulla_exec::algebra::Plan {
     match adapter {
-        Some(adapter) => medulla_plan::Plan::new(rewrite_ops(plan.ops, &adapter, embedder)),
+        Some(adapter) => medulla_exec::algebra::Plan::new(rewrite_ops(plan.ops, &adapter, embedder)),
         None => plan,
     }
 }
@@ -125,11 +125,11 @@ pub fn adapt_plan(
 /// it reported before.
 #[cfg(feature = "query")]
 fn rewrite_ops(
-    ops: Vec<medulla_plan::Op>,
+    ops: Vec<medulla_exec::algebra::Op>,
     adapter: &ServedAdapter,
-    embedder: Option<&dyn medulla_plan::TextEmbedder>,
-) -> Vec<medulla_plan::Op> {
-    use medulla_plan::Op;
+    embedder: Option<&dyn medulla_exec::exec::TextEmbedder>,
+) -> Vec<medulla_exec::algebra::Op> {
+    use medulla_exec::algebra::Op;
     let adapt = |query: Vec<f32>| Op::Rank {
         query: adapter.adapt(&query).unwrap_or(query),
     };
@@ -154,8 +154,8 @@ fn rewrite_ops(
 
 /// Whether a plan ranks by vector anywhere (only then is an adapter looked up).
 #[cfg(feature = "query")]
-pub fn plan_ranks_by_vector(ops: &[medulla_plan::Op]) -> bool {
-    use medulla_plan::Op;
+pub fn plan_ranks_by_vector(ops: &[medulla_exec::algebra::Op]) -> bool {
+    use medulla_exec::algebra::Op;
     ops.iter().any(|op| match op {
         Op::Rank { .. } | Op::RankEmbed { .. } => true,
         Op::FuseRrf { branches, .. } => branches.iter().any(|b| plan_ranks_by_vector(b)),

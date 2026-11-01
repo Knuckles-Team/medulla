@@ -48,7 +48,7 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use medulla_core::compute::semantic::SemanticStore;
 use medulla_core::graph::{GraphCore, GraphView};
-use medulla_plan::{execute, Op, Plan, PlanCtx, Pred};
+use medulla_exec::{exec::execute, algebra::Op, algebra::Plan, exec::PlanCtx, algebra::Pred};
 use serde_json::json;
 use std::hint::black_box;
 

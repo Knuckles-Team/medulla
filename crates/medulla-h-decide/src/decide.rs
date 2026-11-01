@@ -144,9 +144,9 @@ async fn read_only_relations(
 async fn decision_source(
     state: &SharedState,
     authority: &medulla_server_api::access::CarrierAuthority,
-) -> Option<std::sync::Arc<dyn medulla_plan::exec::DecisionSource>> {
+) -> Option<std::sync::Arc<dyn medulla_exec::exec::DecisionSource>> {
     let views = stat_view::DecisionViews::served(state, authority).await?;
-    Some(views as std::sync::Arc<dyn medulla_plan::exec::DecisionSource>)
+    Some(views as std::sync::Arc<dyn medulla_exec::exec::DecisionSource>)
 }
 
 /// The decide handler's implementation of [`DecideApi`](crate::server::api::admin::DecideApi).
@@ -180,7 +180,7 @@ impl medulla_server_api::api::admin::DecideApi for DecideSeam {
         &self,
         state: &SharedState,
         authority: &medulla_server_api::access::CarrierAuthority,
-    ) -> Option<std::sync::Arc<dyn medulla_plan::exec::DecisionSource>> {
+    ) -> Option<std::sync::Arc<dyn medulla_exec::exec::DecisionSource>> {
         decision_source(state, authority).await
     }
 }

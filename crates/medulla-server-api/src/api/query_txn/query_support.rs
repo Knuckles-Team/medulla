@@ -11,9 +11,9 @@ use medulla_protocol_types::protocol::Method;
 /// deterministic `HashEmbedder` fallback (offline/testing — arbitrary ranking). A real
 /// embedding model (an ONNX/remote-service impl of `medulla_plan::TextEmbedder`) is wired in HERE.
 #[cfg(feature = "query")]
-pub fn uql_text_embedder() -> Option<&'static dyn medulla_plan::TextEmbedder> {
+pub fn uql_text_embedder() -> Option<&'static dyn medulla_exec::exec::TextEmbedder> {
     use std::sync::OnceLock;
-    static EMBEDDER: OnceLock<Option<Box<dyn medulla_plan::TextEmbedder>>> = OnceLock::new();
+    static EMBEDDER: OnceLock<Option<Box<dyn medulla_exec::exec::TextEmbedder>>> = OnceLock::new();
     EMBEDDER
         .get_or_init(|| {
             // The configured chunk embedder (MEDULLA-UNIFIED-DATA-PLANE-R651.7.2) when an
@@ -23,12 +23,12 @@ pub fn uql_text_embedder() -> Option<&'static dyn medulla_plan::TextEmbedder> {
                 let config =
                     crate::api::ingest::embedder::EmbedderConfig::from_env();
                 if config.name() == crate::api::ingest::embedder::REMOTE {
-                    return Some(Box::new(config) as Box<dyn medulla_plan::TextEmbedder>);
+                    return Some(Box::new(config) as Box<dyn medulla_exec::exec::TextEmbedder>);
                 }
             }
             match std::env::var("MEDULLA_UQL_TEXT_EMBEDDER").ok().as_deref() {
-                Some("hash") => Some(Box::new(medulla_plan::HashEmbedder::default())
-                    as Box<dyn medulla_plan::TextEmbedder>),
+                Some("hash") => Some(Box::new(medulla_exec::exec::HashEmbedder::default())
+                    as Box<dyn medulla_exec::exec::TextEmbedder>),
                 _ => None,
             }
         })
@@ -83,17 +83,17 @@ pub struct TsdbLegBind<'a> {
     /// In-txn tsdb read-your-own-writes (CONCEPT:MEDULLA-KG.query.txn-tsdb-read-your): the resolved txn's OWN staged,
     /// uncommitted series points, overlaid onto `Op::TsScan` BEFORE the committed store so
     /// an in-txn UQL reads its own measurements. `None` off-txn ⇒ committed series only.
-    pub staged_series: Option<&'a medulla_plan::StagedSeries>,
+    pub staged_series: Option<&'a medulla_exec::exec::StagedSeries>,
 }
 
 /// Execute a unified cross-modal plan (CONCEPT:AU-KG.compute.vector/209) over
 /// the bound context and project its rows as `[id, score|nil]`.
 #[cfg(feature = "query")]
 pub fn execute_rows(
-    plan: &medulla_plan::Plan,
-    ctx: &medulla_plan::PlanCtx,
+    plan: &medulla_exec::algebra::Plan,
+    ctx: &medulla_exec::exec::PlanCtx,
 ) -> Result<Vec<(String, Option<f32>)>, String> {
-    let result = medulla_plan::execute(plan, ctx)?;
+    let result = medulla_exec::exec::execute(plan, ctx)?;
     Ok(result
         .rows()
         .iter()
@@ -102,11 +102,11 @@ pub fn execute_rows(
 }
 
 #[cfg(all(feature = "query", feature = "tsdb"))]
-pub fn plan_needs_tsdb(ops: &[medulla_plan::Op]) -> bool {
+pub fn plan_needs_tsdb(ops: &[medulla_exec::algebra::Op]) -> bool {
     ops.iter().any(|op| match op {
-        medulla_plan::Op::TsScan { .. } => true,
+        medulla_exec::algebra::Op::TsScan { .. } => true,
         #[cfg(feature = "text")]
-        medulla_plan::Op::FuseRrf { branches, .. } => {
+        medulla_exec::algebra::Op::FuseRrf { branches, .. } => {
             branches.iter().any(|branch| plan_needs_tsdb(branch))
         }
         _ => false,
@@ -170,16 +170,16 @@ pub fn overlay_write_set(view: &mut medulla_core::graph::GraphView, write_set: &
 /// non-federated plan pays nothing. A self-describing (inline-spec)
 /// `Op::ForeignScan` resolves without a registry, so it does not need the binding.
 #[cfg(all(feature = "query", feature = "federation"))]
-pub fn plan_needs_foreign(ops: &[medulla_plan::Op]) -> bool {
+pub fn plan_needs_foreign(ops: &[medulla_exec::algebra::Op]) -> bool {
     ops.iter().any(|op| match op {
-        medulla_plan::Op::Foreign { .. } => true,
-        medulla_plan::Op::ForeignScan { source, .. } => {
+        medulla_exec::algebra::Op::Foreign { .. } => true,
+        medulla_exec::algebra::Op::ForeignScan { source, .. } => {
             matches!(
                 **source,
                 medulla_types::wire::ForeignSourceSpec::Named { .. }
             )
         }
-        medulla_plan::Op::FuseRrf { branches, .. } => {
+        medulla_exec::algebra::Op::FuseRrf { branches, .. } => {
             branches.iter().any(|b| plan_needs_foreign(b))
         }
         _ => false,
@@ -190,7 +190,7 @@ pub fn plan_needs_foreign(ops: &[medulla_plan::Op]) -> bool {
 /// in query-only builds without the federation feature.
 #[cfg(feature = "query")]
 pub fn canonical_plan_digest(
-    plan: &medulla_plan::Plan,
+    plan: &medulla_exec::algebra::Plan,
 ) -> Result<medulla_types::contract::Digest256, String> {
     let plan_bytes = rmp_serde::to_vec_named(plan)
         .map_err(|error| format!("INTERNAL: plan digest serialization failed: {error}"))?;

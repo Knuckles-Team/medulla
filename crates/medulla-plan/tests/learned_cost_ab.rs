@@ -21,7 +21,7 @@
 
 #![cfg(feature = "learned-cost")]
 
-use medulla_plan::{learned_cost_artifacts, CostCorrectionArtifact, LearnedCostStore};
+use medulla_exec::{learned_cost::learned_cost_artifacts, learned_cost::CostCorrectionArtifact, learned_cost::LearnedCostStore};
 
 /// Deterministic LCG (no `rand` dep, matching the convention `benches/hybrid_queries.rs`
 /// and `src/learned_cost.rs`'s own tests already use) — a unit-ish multiplier in
