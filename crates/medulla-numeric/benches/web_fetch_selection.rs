@@ -6,10 +6,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::hint::black_box;
 use std::time::Instant;
 
-use medulla_decision_types::{
-    decision::web_fetch_selection::SelectWebPagesRequest,
-    decision::web_fetch_selection::WebCandidate,
-};
+use medulla_decision_outcome_types::{decision::web_fetch_selection::SelectWebPagesRequest, decision::web_fetch_selection::WebCandidate};
 use medulla_numeric::decision::web_fetch_selection::{select_web_pages, HeldPage};
 
 const NOW: u64 = 1_800_000_000_000;

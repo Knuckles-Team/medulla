@@ -2,7 +2,7 @@
 //! mutation context, never by a principal field in the request.
 use serde::{Deserialize, Serialize};
 
-use crate::decision::task_plan::{plan_explicit_tasks, TaskPlan, TaskPlanProposal};
+use medulla_decision_types::{decision::task_plan::plan_explicit_tasks, decision::task_plan::TaskPlan, decision::task_plan::TaskPlanProposal};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

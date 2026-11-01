@@ -1,5 +1,5 @@
 use super::*;
-use crate::decision::request::{ClaimProvenance, ClaimedTaskMapping};
+use medulla_decision_types::{decision::request::ClaimProvenance, decision::request::ClaimedTaskMapping};
 use medulla_agent_types::agent_component::AgentComponentKind;
 
 const ONTOLOGY: &str = "sha256:0000000000000000000000000000000000000000000000000000000000000000";
@@ -9,7 +9,7 @@ fn bounded<T, const N: usize>(values: Vec<T>) -> BoundedVec<T, N> {
 }
 
 fn candidate(component_id: &str, classification: &[&str]) -> CandidateFacts {
-    crate::decision_fixtures::decision::published_candidate(
+    medulla_decision_types::decision_fixtures::decision::published_candidate(
         component_id,
         AgentComponentKind::Tool,
         ONTOLOGY,

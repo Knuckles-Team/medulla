@@ -9,7 +9,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::numeric::UnitRationalWire;
+use medulla_decision_types::decision::numeric::UnitRationalWire;
 
 /// Named, replaceable defaults (MEDULLA-DECISION-ENGINE-R137.2).
 pub const DEFAULT_OVER_WINDOW_NUMERATOR: u64 = 4;

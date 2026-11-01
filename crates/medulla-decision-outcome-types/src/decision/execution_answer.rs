@@ -6,7 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::record::{AbstainReason, EvidenceClass, PremiseRef};
+use medulla_decision_types::{decision::record::AbstainReason, decision::record::EvidenceClass, decision::record::PremiseRef};
 use medulla_types::contract::BoundedVec;
 use medulla_types::solve_scalar::digest_text;
 

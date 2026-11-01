@@ -13,12 +13,7 @@
 //! * `store` -- node encoding, and decoding that re-verifies each record's id.
 //! * `blobs` -- held Blob-CAS references.
 
-use medulla_decision_types::{
-    policy_evolution::PolicyEvolutionRecord, policy_evolution::PolicyRecordGetRequest,
-    policy_evolution::PolicyRecordKind, policy_evolution::PolicyRecordReceipt,
-    policy_evolution::PolicyRecordStored, policy_evolution::PolicyWriteDisposition,
-    policy_evolution::StoredPolicyRecord,
-};
+use medulla_decision_outcome_types::{policy_evolution::PolicyEvolutionRecord, policy_evolution::PolicyRecordGetRequest, policy_evolution::PolicyRecordKind, policy_evolution::PolicyRecordReceipt, policy_evolution::PolicyRecordStored, policy_evolution::PolicyWriteDisposition, policy_evolution::StoredPolicyRecord};
 use medulla_protocol_types::{
     result_contract::graph::ModelPolicyVersionRegister,
     result_contract::graph::PolicyCapabilityPut, result_contract::graph::PolicyCaptureCommit,
@@ -49,7 +44,7 @@ pub(super) async fn handle_policy_evolution(
     state: &Arc<RwLock<ServerState>>,
     target: PolicyEvolutionTarget<'_>,
     verified: &VerifiedRequestContext,
-    op: medulla_decision_types::policy_evolution::PolicyEvolutionOp,
+    op: medulla_decision_outcome_types::policy_evolution::PolicyEvolutionOp,
 ) -> Response {
     match op.into_record() {
         Ok(record) => {

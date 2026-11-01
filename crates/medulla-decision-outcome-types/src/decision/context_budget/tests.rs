@@ -28,7 +28,7 @@ fn context_budget_round_trips() {
     let mut unknown = value[1].clone();
     unknown["reserved"] = serde_json::json!(1);
     assert!(serde_json::from_value::<WindowBudget>(unknown).is_err());
-    let kind = serde_json::to_value(crate::decision::statistical::QuestionKind::ContextBudget);
+    let kind = serde_json::to_value(medulla_decision_types::decision::statistical::QuestionKind::ContextBudget);
     assert_eq!(kind.unwrap(), "context_budget");
 }
 

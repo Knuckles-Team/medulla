@@ -6,7 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::numeric::UnitRationalWire;
+use medulla_decision_types::decision::numeric::UnitRationalWire;
 
 /// The named default round count.
 pub const DEFAULT_EVOLUTION_ROUNDS: u32 = 1;

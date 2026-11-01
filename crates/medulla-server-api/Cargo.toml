@@ -62,6 +62,7 @@ medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-work-types = { path = "../medulla-work-types" }
+medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 
 [features]
 test-support = []

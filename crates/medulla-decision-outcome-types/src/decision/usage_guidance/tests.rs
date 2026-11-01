@@ -35,7 +35,7 @@ fn guidance_round_trips() {
     blank["steps"][1]["tool"] = serde_json::json!(" ");
     assert!(serde_json::from_value::<UsageGuidance>(blank).is_err());
     assert_eq!(
-        serde_json::to_value(crate::decision::statistical::QuestionKind::UsageGuidance).unwrap(),
+        serde_json::to_value(medulla_decision_types::decision::statistical::QuestionKind::UsageGuidance).unwrap(),
         "usage_guidance"
     );
 }

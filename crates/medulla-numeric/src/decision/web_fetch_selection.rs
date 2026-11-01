@@ -13,13 +13,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_types::{
-    decision::web_fetch_selection::SelectWebPagesAnswer,
-    decision::web_fetch_selection::SelectWebPagesRequest,
-    decision::web_fetch_selection::SelectedPage, decision::web_fetch_selection::SkipReason,
-    decision::web_fetch_selection::SkippedPage,
-    decision::web_fetch_selection::DEFAULT_FRESHNESS_WINDOW_S,
-};
+use medulla_decision_outcome_types::{decision::web_fetch_selection::SelectWebPagesAnswer, decision::web_fetch_selection::SelectWebPagesRequest, decision::web_fetch_selection::SelectedPage, decision::web_fetch_selection::SkipReason, decision::web_fetch_selection::SkippedPage, decision::web_fetch_selection::DEFAULT_FRESHNESS_WINDOW_S};
 
 const RRF_K: f64 = 60.0;
 const MICROS: f64 = 1_000_000.0;
@@ -236,7 +230,7 @@ pub fn select_web_pages(
 }
 
 fn score(
-    row: &medulla_decision_types::decision::web_fetch_selection::WebCandidate,
+    row: &medulla_decision_outcome_types::decision::web_fetch_selection::WebCandidate,
     canonical: String,
     entry: Fused,
     query_terms: &BTreeSet<String>,
@@ -293,7 +287,7 @@ fn score(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_decision_types::decision::web_fetch_selection::WebCandidate;
+    use medulla_decision_outcome_types::decision::web_fetch_selection::WebCandidate;
 
     const NOW: u64 = 1_800_000_000_000;
 

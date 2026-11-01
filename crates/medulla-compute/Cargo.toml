@@ -254,6 +254,7 @@ medulla-result-types = { path = "../medulla-result-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-source-types = { path = "../medulla-source-types" }
+medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 
 [dev-dependencies]
 medulla-result-types = { path = "../medulla-result-types" }

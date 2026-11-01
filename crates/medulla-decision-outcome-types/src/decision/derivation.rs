@@ -24,11 +24,8 @@
 
 use std::collections::BTreeMap;
 
-use super::record::{
-    AbstainReason, CandidateFacts, CoverageDerivation, DecisionRecord, DerivationEdge, EdgeSource,
-    EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef,
-};
-use super::request::AssemblyRequirements;
+use medulla_decision_types::{decision::record::AbstainReason, decision::record::CandidateFacts, decision::record::CoverageDerivation, decision::record::DecisionRecord, decision::record::DerivationEdge, decision::record::EdgeSource, decision::record::EvidenceClass, decision::record::PremiseClass, decision::record::PremiseProvenance, decision::record::PremiseRef};
+use medulla_decision_types::decision::request::AssemblyRequirements;
 use medulla_agent_types::agent_ontology;
 use medulla_types::contract::BoundedVec;
 
@@ -462,7 +459,7 @@ mod tests;
 #[cfg(test)]
 mod capability_coverage_query_tests {
     use super::*;
-    use crate::decision::request::AssemblyRequirements;
+    use medulla_decision_types::decision::request::AssemblyRequirements;
 
     #[test]
     fn an_unresolved_capability_iri_is_refused_before_any_coverage_is_computed() {

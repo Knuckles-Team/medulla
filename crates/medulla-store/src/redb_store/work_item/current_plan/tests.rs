@@ -59,13 +59,13 @@ fn current_plan_publication_readback() {
     apply(shard, "zero", &request(0), "owner", 2000).unwrap();
     let mut next = request(2);
     next.snapshot.items = vec![
-        medulla_decision_types::current_plan::PlanItem {
+        medulla_decision_outcome_types::current_plan::PlanItem {
             text: "first".into(),
-            status: medulla_decision_types::current_plan::PlanStatus::Done,
+            status: medulla_decision_outcome_types::current_plan::PlanStatus::Done,
         },
-        medulla_decision_types::current_plan::PlanItem {
+        medulla_decision_outcome_types::current_plan::PlanItem {
             text: "second".into(),
-            status: medulla_decision_types::current_plan::PlanStatus::Pending,
+            status: medulla_decision_outcome_types::current_plan::PlanStatus::Pending,
         },
     ];
     apply(shard, "two", &next, "owner", 2000).unwrap();

@@ -72,10 +72,10 @@ method_results! {
     CasWorkItemMetadata(CasWorkItemMetadata) => Raw<CasWorkItemMetadataResult>;
     // EH-219 typed WorkItem reads. `null` when no WorkItem with this id is
     // visible to the verified tenant.
-    PublishCurrentPlan(PublishCurrentPlan) => Raw<medulla_decision_types::current_plan::CurrentPlanPublished>;
+    PublishCurrentPlan(PublishCurrentPlan) => Raw<medulla_decision_outcome_types::current_plan::CurrentPlanPublished>;
     PublishRunCheckpoint(PublishRunCheckpoint) => Raw<medulla_work_types::run_checkpoint::RunCheckpointPublished>;
     GetRunCheckpoint(GetRunCheckpoint) => Raw<Option<medulla_work_types::run_checkpoint::RunCheckpointRead>>;
-    GetCurrentPlan(GetCurrentPlan) => Raw<Option<medulla_decision_types::current_plan::CurrentPlanSnapshot>>;
+    GetCurrentPlan(GetCurrentPlan) => Raw<Option<medulla_decision_outcome_types::current_plan::CurrentPlanSnapshot>>;
     GetSessionUsage(GetSessionUsage) => Raw<medulla_work_types::run_usage::SessionUsage>;
     GetRunWorkItem(GetRunWorkItem) => Raw<Option<medulla_work_types::work_item_read::RunWorkItemView>>;
     GetWorkItem(GetWorkItem) => Raw<Option<WorkItemView>>;

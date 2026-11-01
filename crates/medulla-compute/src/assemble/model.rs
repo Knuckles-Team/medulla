@@ -26,7 +26,7 @@
 
 use medulla_agent_types::agent_component::AgentComponentKind;
 use medulla_agent_types::agent_ontology::is_capability;
-use medulla_decision_types::decision::derivation::RequiredCapability;
+use medulla_decision_outcome_types::decision::derivation::RequiredCapability;
 use medulla_decision_types::{
     decision::AbstainReason, decision::CandidateFacts, decision::DecisionInputs,
 };

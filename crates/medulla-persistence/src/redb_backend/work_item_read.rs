@@ -227,7 +227,7 @@ impl RedbBackend {
         tenant: &str,
         run_id: &str,
         actor: &str,
-    ) -> Result<Option<medulla_decision_types::current_plan::CurrentPlanSnapshot>, String> {
+    ) -> Result<Option<medulla_decision_outcome_types::current_plan::CurrentPlanSnapshot>, String> {
         self.owner_point_read(
             graph_fname,
             tenant,

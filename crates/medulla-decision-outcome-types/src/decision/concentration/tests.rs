@@ -48,7 +48,7 @@ fn policy_round_trips() {
         verdict
     );
     assert_eq!(
-        serde_json::to_value(crate::decision::statistical::QuestionKind::EditConcentration)
+        serde_json::to_value(medulla_decision_types::decision::statistical::QuestionKind::EditConcentration)
             .unwrap(),
         "edit_concentration"
     );

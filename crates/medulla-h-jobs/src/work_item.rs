@@ -199,7 +199,7 @@ fn publication_authority<'a>(
 /// Authorization precedes the ledger lookup even for an expired historical retry.
 async fn prepare_current_plan(
     ctx: &HandleContext<'_>,
-    request: medulla_decision_types::current_plan::PublishCurrentPlanRequest,
+    request: medulla_decision_outcome_types::current_plan::PublishCurrentPlanRequest,
 ) -> Result<Method, String> {
     #[cfg(feature = "redb")]
     {

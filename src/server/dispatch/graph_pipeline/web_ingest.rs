@@ -143,7 +143,7 @@ async fn enrich(
 #[cfg(all(feature = "query", feature = "modality-serving", feature = "decide"))]
 async fn select(
     ctx: GraphOpRouting<'_>,
-    request: medulla_decision_types::decision::web_fetch_selection::SelectWebPagesRequest,
+    request: medulla_decision_outcome_types::decision::web_fetch_selection::SelectWebPagesRequest,
 ) -> Response {
     use medulla_h_ingest::web_ingest as web;
     let documents: Vec<_> = ctx
@@ -173,7 +173,7 @@ async fn select(
 #[cfg(not(all(feature = "query", feature = "modality-serving", feature = "decide")))]
 async fn select(
     ctx: GraphOpRouting<'_>,
-    _request: medulla_decision_types::decision::web_fetch_selection::SelectWebPagesRequest,
+    _request: medulla_decision_outcome_types::decision::web_fetch_selection::SelectWebPagesRequest,
 ) -> Response {
     Response::err(
         ctx.req_id,

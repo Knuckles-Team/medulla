@@ -59,7 +59,7 @@ $($variants)*
     /// (always claims). Reads one tenant-bound agent-library snapshot; ranks
     /// nothing, commits nothing.
     CapabilityCoverage {
-        request: Box<medulla_decision_types::decision::coverage::CapabilityCoverageRequest>,
+        request: Box<medulla_decision_outcome_types::decision::coverage::CapabilityCoverageRequest>,
     },
     /// Advisory guardrail entailment over the verified tenant's published
     /// Agent Library rules (MEDULLA-DECISION-ENGINE-R127.2.2). Returns subclass

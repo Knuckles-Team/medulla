@@ -1,5 +1,5 @@
 use super::*;
-use crate::decision::{PremiseClass, PremiseProvenance};
+use medulla_decision_types::{decision::PremiseClass, decision::PremiseProvenance};
 
 // spec: MEDULLA-DECISION-ENGINE-R176.1
 #[test]
@@ -45,7 +45,7 @@ fn load_set_round_trips() {
         answer
     );
     assert_eq!(
-        serde_json::to_value(crate::decision::statistical::QuestionKind::LoadSet).unwrap(),
+        serde_json::to_value(medulla_decision_types::decision::statistical::QuestionKind::LoadSet).unwrap(),
         "load_set"
     );
 }

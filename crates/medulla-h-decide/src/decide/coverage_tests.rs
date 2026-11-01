@@ -17,9 +17,7 @@ use medulla_persistence::agent_library::AgentLibraryStore;
 use medulla_server_api::state::ServerState;
 use medulla_agent_types::agent_component::{AgentComponentKind, AgentComponentPublishRequest};
 use medulla_types::contract::BoundedVec;
-use medulla_decision_types::decision::coverage::{
-    CapabilityCoverageOutcome, CapabilityCoverageRequest, CapabilityCoverageResult,
-};
+use medulla_decision_outcome_types::{decision::coverage::CapabilityCoverageOutcome, decision::coverage::CapabilityCoverageRequest, decision::coverage::CapabilityCoverageResult};
 use medulla_decision_types::decision::record::PremiseClass;
 use medulla_decision_types::{
     decision::AssemblyRequirements, decision::EvidenceClass, decision::LibraryCandidateScope,

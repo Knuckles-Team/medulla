@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use medulla_types::contract::BoundedVec;
 
-use super::{PremiseClass, PremiseProvenance, PremiseRef};
+use medulla_decision_types::{decision::PremiseClass, decision::PremiseProvenance, decision::PremiseRef};
 use medulla_types::solve_scalar::digest_text;
 
 pub const ANSWER_RANKING_SCHEMA: &str = "answer-candidate-ranking/v1";

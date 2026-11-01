@@ -46,7 +46,7 @@ fn request_round_trips() {
         answer
     );
     assert_eq!(
-        serde_json::to_value(crate::decision::statistical::QuestionKind::ItemRecommendation)
+        serde_json::to_value(medulla_decision_types::decision::statistical::QuestionKind::ItemRecommendation)
             .unwrap(),
         "item_recommendation"
     );

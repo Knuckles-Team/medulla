@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Deserializer, Serialize};
 
-use super::PremiseRef;
+use medulla_decision_types::decision::PremiseRef;
 
 pub const DEFAULT_LOAD_SET_MAX_TOOLS: u16 = 32;
 pub const LOAD_SET_MAX_TOOLS_LIMIT: u16 = 128;
