@@ -121,7 +121,7 @@ pub(super) fn holds_only_identity_store_state(
 /// Whether every role and grant is the identity store's own projection.
 #[cfg(feature = "security")]
 fn projection_only(rbac: &crate::rbac::RbacPolicy) -> bool {
-    let owned = |name: &str| name.starts_with(medulla_types::identity::RBAC_ROLE_PREFIX);
+    let owned = |name: &str| name.starts_with(medulla_identity_types::identity::RBAC_ROLE_PREFIX);
     rbac.roles().all(|role| owned(&role.name))
         && rbac.grants().iter().all(|grant| owned(&grant.role))
 }
@@ -137,7 +137,7 @@ pub(super) fn holds_only_identity_seed<'a>(
     rbac: &crate::rbac::RbacPolicy,
     mut principals: impl Iterator<Item = &'a String>,
 ) -> bool {
-    principals.all(|principal| principal == medulla_types::identity::BOOTSTRAP_PRINCIPAL)
+    principals.all(|principal| principal == medulla_identity_types::identity::BOOTSTRAP_PRINCIPAL)
         && rbac.identity_store().holds_only_seed()
         && projection_only(rbac)
 }

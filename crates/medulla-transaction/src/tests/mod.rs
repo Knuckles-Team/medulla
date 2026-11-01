@@ -16,6 +16,11 @@ mod write_authority;
 use crate::read::{read_ledger, read_outbox, read_private_payload, version};
 use crate::tables::{FENCES, OUTBOX, PRIVATE_PAYLOADS};
 use crate::{Begin, MutationKernel};
+use medulla_identity_types::{
+    authority::AuthorityContext, authority::AuthorityScope, authority::NonceReplayKey,
+    authority::OperationReplayIdentity, authority::AUTHORITY_CONTEXT_SCHEMA_V1,
+    authority::AUTHORITY_PROTOCOL_V1,
+};
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_mutation_types::mutation_scope::IncarnationId;
 use medulla_mutation_types::mutation_scope::LogicalName;
@@ -31,10 +36,6 @@ use medulla_protocol_types::{mutation_batch::MutationBatch, mutation_batch::Muta
 use medulla_storage::{
     strict_recovery_evidence, BlobOwner, LedgerOnlyOwner, OwnedStoreHandle, OwnerDomain,
     OwnerLayout, PhysicalStoreIdentity, PrivatePayloadIntegrity, ScopeGrantVerifier, StorageKernel,
-};
-use medulla_types::authority::{
-    AuthorityContext, AuthorityScope, NonceReplayKey, OperationReplayIdentity,
-    AUTHORITY_CONTEXT_SCHEMA_V1, AUTHORITY_PROTOCOL_V1,
 };
 use medulla_types::contract::{
     ActorId, AudienceId, BoundedVec, Digest256, IdempotencyKey, IngressSurface, MethodId,

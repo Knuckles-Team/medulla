@@ -7,7 +7,7 @@ use serde::ser::SerializeMap;
 use serde::Serialize;
 
 use crate::outbox::{OutboxHeader, OutboxIntent};
-use medulla_types::{
+use medulla_identity_types::{
     authority::AdmissionOutcome, authority::AuthorityContext, authority::AuthorityScope,
     authority::DecisionOutcome, authority::EffectState, authority::IngressSurface,
     authority::NonceReplayKey, authority::Operation, authority::OperationReplayIdentity,
@@ -88,7 +88,7 @@ fn authority_for(
         audience: AudienceId::new("eg").unwrap(),
         tenant: TenantId::new("tenant:a").unwrap(),
         authority_scope: scope(),
-        purpose_kind: medulla_types::authority::PurposeKind::new("graph_write").unwrap(),
+        purpose_kind: medulla_identity_types::authority::PurposeKind::new("graph_write").unwrap(),
         purpose_resource: Some(scope().scope_id),
         operation: Operation::new("mutation").unwrap(),
         policy_revision: PolicyRevision::new("policy:1").unwrap(),

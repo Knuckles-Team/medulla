@@ -13,9 +13,10 @@ pub use self::context::{
 };
 pub use self::evidence::{SignedAuthorityEnvelopeEvidence, VerifiedAuthority};
 pub use self::replay::{NonceReplayKey, OperationReplayIdentity, ReplayReceipt};
-pub use crate::contract::{
-    AdmissionOutcome, DecisionOutcome, EffectState, IngressSurface, Operation, PurposeKind,
-    ReplayStatus, ScopeKind, VerificationStatus,
+pub use medulla_types::{
+    contract::AdmissionOutcome, contract::DecisionOutcome, contract::EffectState,
+    contract::IngressSurface, contract::Operation, contract::PurposeKind, contract::ReplayStatus,
+    contract::ScopeKind, contract::VerificationStatus,
 };
 
 #[cfg(test)]

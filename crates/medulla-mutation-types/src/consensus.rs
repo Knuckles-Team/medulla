@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use medulla_types::authority::AuthorityScope;
+use medulla_identity_types::authority::AuthorityScope;
 use medulla_types::{
     contract::BoundedVec, contract::Digest256, contract::OpaqueId, contract::ResourceId,
     contract::UtcUnixNanos, contract::MAX_PARTICIPANTS,
@@ -399,7 +399,7 @@ impl ParticipantTransactionRecord {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::authority::ScopeKind;
+    use medulla_identity_types::authority::ScopeKind;
     use medulla_types::{contract::TenantId, contract::MAX_SCOPE_COMPONENTS};
 
     fn digest(byte: u8) -> Digest256 {

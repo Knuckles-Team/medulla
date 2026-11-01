@@ -4,7 +4,7 @@ use super::outbox_decode::ProvenanceBinding;
 use super::targets::MutationPrecondition;
 use super::{MAX_MUTATION_PRECONDITIONS, MAX_PROVENANCE_REFS};
 use crate::outbox::OutboxIntent;
-use medulla_types::authority::AuthorityScope;
+use medulla_identity_types::authority::AuthorityScope;
 use medulla_types::{
     contract::BoundedVec, contract::Digest256, contract::OpaqueId,
     contract::RequestedMutationResult, contract::TenantId, contract::MAX_MUTATION_EFFECTS,

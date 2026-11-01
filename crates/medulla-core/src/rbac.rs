@@ -18,9 +18,9 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::acl::{Grant, GrantEffect, RbacAction, ResourceContext, Role};
+use medulla_identity_types::identity::IdentityStore;
+use medulla_identity_types::rbac_elevation::ElevationLedger;
 use medulla_mutation_types::governed_change::GovernedLedger;
-use medulla_types::identity::IdentityStore;
-use medulla_types::rbac_elevation::ElevationLedger;
 use serde::{Deserialize, Serialize};
 
 /// The durable RBAC policy: named roles (with parents) + a flat list of grants.
@@ -116,7 +116,8 @@ impl RbacPolicy {
     /// Replace every role and grant in the store-owned `idm:` namespace with
     /// `roles` and `grants`, leaving every other role and grant untouched.
     pub(crate) fn replace_projected(&mut self, roles: Vec<Role>, grants: Vec<Grant>) {
-        let owned = |name: &str| name.starts_with(medulla_types::identity::RBAC_ROLE_PREFIX);
+        let owned =
+            |name: &str| name.starts_with(medulla_identity_types::identity::RBAC_ROLE_PREFIX);
         self.roles.retain(|name, _| !owned(name));
         self.grants.retain(|grant| !owned(&grant.role));
         for role in roles {

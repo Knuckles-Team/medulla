@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use super::envelope::MutationRequestEnvelope;
 use super::payload::digest_sequence;
-use medulla_types::{authority::AuthorityScope, authority::ReplayReceipt};
+use medulla_identity_types::{authority::AuthorityScope, authority::ReplayReceipt};
 use medulla_types::{
     contract::BoundedVec, contract::Digest256, contract::MutationDisposition, contract::OpaqueId,
     contract::RecordBytes, contract::RequestedMutationResult, contract::ResourceId,

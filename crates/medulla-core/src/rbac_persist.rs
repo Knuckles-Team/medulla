@@ -209,9 +209,9 @@ fn authority_policy_digest(policy: &RbacPolicy) -> Result<String, RbacPersistErr
         // digest, so a policy decision lease minted before it fails closed.
         // Omitted while empty, so an image without elevations keeps its digest.
         #[serde(skip_serializing_if = "no_elevations")]
-        elevations: &'a medulla_types::rbac_elevation::ElevationLedger,
+        elevations: &'a medulla_identity_types::rbac_elevation::ElevationLedger,
     }
-    fn no_elevations(ledger: &&medulla_types::rbac_elevation::ElevationLedger) -> bool {
+    fn no_elevations(ledger: &&medulla_identity_types::rbac_elevation::ElevationLedger) -> bool {
         ledger.is_empty()
     }
     let canonical = CanonicalPolicy {

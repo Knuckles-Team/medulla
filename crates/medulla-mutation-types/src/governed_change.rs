@@ -24,7 +24,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
-use medulla_types::{identity::AuditRecord, identity::AuditTrail, identity::IdentityEvent};
+use medulla_identity_types::{
+    identity::AuditRecord, identity::AuditTrail, identity::IdentityEvent,
+};
 
 /// Prefix of every governed kind; reserved against generic control leases.
 pub const GOVERNED_KIND_PREFIX: &str = "governed.";
@@ -89,7 +91,7 @@ impl GovernedActor {
         let mut parties: Vec<String> = identities
             .into_iter()
             .chain(std::iter::once(agent_id))
-            .map(medulla_types::rbac_elevation::party_id)
+            .map(medulla_identity_types::rbac_elevation::party_id)
             .collect();
         parties.sort();
         parties.dedup();

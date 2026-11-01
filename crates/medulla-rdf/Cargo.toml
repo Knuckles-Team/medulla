@@ -120,6 +120,7 @@ oxjsonld = { version = "0.2", optional = true }
 medulla-modality = { path = "../medulla-modality", optional = true }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
+medulla-identity-types = { path = "../medulla-identity-types" }
 
 [dev-dependencies]
 # ICV integration test (CONCEPT:MEDULLA-146). medulla-shacl sits ABOVE medulla-rdf in the DAG (it

@@ -191,8 +191,8 @@ impl<'a, D: OwnerDomain> AdmittedMutation<'a, D> {
     pub fn begin_with_replay_identity(
         &self,
         batch: &MutationBatch,
-        operation: &medulla_types::authority::OperationReplayIdentity,
-        nonce: &medulla_types::authority::NonceReplayKey,
+        operation: &medulla_identity_types::authority::OperationReplayIdentity,
+        nonce: &medulla_identity_types::authority::NonceReplayKey,
     ) -> Result<crate::Begin, String> {
         crate::commit::begin_with_replay_identity(self, batch, operation, nonce)
     }

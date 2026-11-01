@@ -4,7 +4,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use medulla_types::identity::*;
+use medulla_identity_types::identity::*;
 use tokio::sync::RwLock;
 
 use crate::isolation::{AccessLevel, AgentIdentity, AgentRole, IsolationLayer};

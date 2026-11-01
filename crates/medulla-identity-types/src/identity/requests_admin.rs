@@ -5,7 +5,7 @@ use std::collections::BTreeSet;
 use serde::{Deserialize, Serialize};
 
 use super::config::{LocalFallback, RegistrationPolicy};
-use crate::acl::{GrantEffect, RbacAction, ResourceSelector};
+use medulla_types::{acl::GrantEffect, acl::RbacAction, acl::ResourceSelector};
 
 /// One graph grant of a role, projected into the RBAC image under the role
 /// `idm:<role_id>`.

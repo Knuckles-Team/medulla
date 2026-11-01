@@ -106,11 +106,11 @@ impl IsolationLayer {
         let (action, elevation_action) = match query.access {
             AccessLevel::Read => (
                 crate::acl::RbacAction::Read,
-                medulla_types::rbac_elevation::ElevationAction::Read,
+                medulla_identity_types::rbac_elevation::ElevationAction::Read,
             ),
             AccessLevel::Write => (
                 crate::acl::RbacAction::Write,
-                medulla_types::rbac_elevation::ElevationAction::Write,
+                medulla_identity_types::rbac_elevation::ElevationAction::Write,
             ),
         };
         match policy.evaluate(&identity.roles, &context, action) {

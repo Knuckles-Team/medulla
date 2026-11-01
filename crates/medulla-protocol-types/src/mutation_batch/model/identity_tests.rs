@@ -138,7 +138,7 @@ mod tests {
             super::super::authority_scope_for_physical_graph(&hashed_physical).unwrap();
         let escaped_hash_scope =
             super::super::authority_scope_for_physical_graph(&escaped_hash_physical).unwrap();
-        let external_alias_scope = medulla_types::authority::AuthorityScope {
+        let external_alias_scope = medulla_identity_types::authority::AuthorityScope {
             kind: medulla_types::contract::ScopeKind::new("graph").unwrap(),
             scope_id: medulla_types::contract::ResourceId::new("tenant/3ascope").unwrap(),
             tenant: Some(medulla_types::contract::TenantId::new("tenant-a").unwrap()),
@@ -148,14 +148,15 @@ mod tests {
             .unwrap(),
             graph_incarnation: None,
         };
-        let replay_digest = |scope: medulla_types::authority::AuthorityScope, tenant: &str| {
-            medulla_types::authority::OperationReplayIdentity {
+        let replay_digest = |scope: medulla_identity_types::authority::AuthorityScope,
+                             tenant: &str| {
+            medulla_identity_types::authority::OperationReplayIdentity {
                 schema_version: medulla_types::contract::ResourceId::new(
                     "operation-replay-identity.v1",
                 )
                 .unwrap(),
                 protocol_id: medulla_types::contract::ProtocolId::new(
-                    medulla_types::authority::AUTHORITY_PROTOCOL_V1,
+                    medulla_identity_types::authority::AUTHORITY_PROTOCOL_V1,
                 )
                 .unwrap(),
                 catalog_digest: medulla_types::contract::Digest256::from_bytes([0; 32]),

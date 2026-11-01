@@ -3,7 +3,7 @@
 //! hashed and cleared before apply, and the floors refuse weak secrets.
 
 use super::*;
-use medulla_types::identity::*;
+use medulla_identity_types::identity::*;
 
 const PASSWORD: &str = "correct horse battery staple";
 const SESSION: &str = "sess-0123456789abcdefghijklmnopqrstuv";

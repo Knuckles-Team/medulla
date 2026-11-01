@@ -344,10 +344,10 @@ pub(super) fn resolve_nonce_first(
     mutations: &MutationKernel,
     txn: &medulla_transaction::AdmittedMutation<'_, medulla_storage::AgentLibraryOwner>,
     context: &AgentLibraryMutationContext,
-) -> Result<medulla_types::authority::NonceReplayKey, String> {
-    let nonce = medulla_types::authority::NonceReplayKey {
+) -> Result<medulla_identity_types::authority::NonceReplayKey, String> {
+    let nonce = medulla_identity_types::authority::NonceReplayKey {
         protocol_id: medulla_types::contract::ProtocolId::new(
-            medulla_types::authority::AUTHORITY_PROTOCOL_V1,
+            medulla_identity_types::authority::AUTHORITY_PROTOCOL_V1,
         )?,
         catalog_digest: medulla_types::contract::Digest256::parse(
             medulla_capabilities::contract_catalog_digest(),
@@ -399,8 +399,8 @@ pub(super) fn agent_library_operation_identity(
     agent_id: &str,
     expected_revision: u64,
     definition_digest: Option<&str>,
-) -> Result<medulla_types::authority::OperationReplayIdentity, String> {
-    use medulla_types::authority::AUTHORITY_PROTOCOL_V1;
+) -> Result<medulla_identity_types::authority::OperationReplayIdentity, String> {
+    use medulla_identity_types::authority::AUTHORITY_PROTOCOL_V1;
     use medulla_types::contract::{
         ActorId, AudienceId, Digest256, IdempotencyKey, MethodId, Operation, PolicyRevision,
         ProtocolId, PurposeKind, ResourceId, SchemaId, TenantId,
@@ -430,7 +430,7 @@ pub(super) fn agent_library_operation_identity(
             context.policy_decision_id.as_bytes(),
         ],
     )?;
-    let operation = medulla_types::authority::OperationReplayIdentity {
+    let operation = medulla_identity_types::authority::OperationReplayIdentity {
         schema_version: ResourceId::new("operation-replay-identity.v1")?,
         protocol_id: ProtocolId::new(AUTHORITY_PROTOCOL_V1)?,
         catalog_digest,

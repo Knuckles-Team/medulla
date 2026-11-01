@@ -30,7 +30,7 @@ fn engine() -> Arc<RwLock<ServerState>> {
     stamp.password_hash = Some("$argon2id$bootstrap".to_string());
     isolation
         .try_apply_identity(
-            &medulla_types::identity_fixtures::identity::bootstrap_local_op(),
+            &medulla_identity_types::identity_fixtures::identity::bootstrap_local_op(),
             &stamp,
             1_800_000_000_000,
             &medulla_capabilities::scopes::ScopeRegistry,

@@ -19,7 +19,7 @@ fn a_token() -> VerifiedRequestContext {
 }
 
 fn create_ann() -> IdentityOp {
-    medulla_types::identity_fixtures::identity::create_administrator_op("ann", ANN)
+    medulla_identity_types::identity_fixtures::identity::create_administrator_op("ann", ANN)
 }
 
 fn set_status(status: UserStatus) -> IdentityOp {

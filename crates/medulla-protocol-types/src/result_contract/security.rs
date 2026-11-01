@@ -213,17 +213,17 @@ method_results! {
     RbacList(RbacAdmin / "List") => Json<RbacPolicyListing>;
     // EH-404: every write answers the lease as it now stands; `list` answers
     // the caller's visible leases with their status at the engine's clock.
-    RbacElevationRequest(RbacElevation / "request") => Json<medulla_types::rbac_elevation::ElevationLease>;
-    RbacElevationApprove(RbacElevation / "approve") => Json<medulla_types::rbac_elevation::ElevationLease>;
-    RbacElevationRevoke(RbacElevation / "revoke") => Json<medulla_types::rbac_elevation::ElevationLease>;
-    RbacElevationList(RbacElevation / "list") => Json<Vec<medulla_types::rbac_elevation::ElevationLease>>;
+    RbacElevationRequest(RbacElevation / "request") => Json<medulla_identity_types::rbac_elevation::ElevationLease>;
+    RbacElevationApprove(RbacElevation / "approve") => Json<medulla_identity_types::rbac_elevation::ElevationLease>;
+    RbacElevationRevoke(RbacElevation / "revoke") => Json<medulla_identity_types::rbac_elevation::ElevationLease>;
+    RbacElevationList(RbacElevation / "list") => Json<Vec<medulla_identity_types::rbac_elevation::ElevationLease>>;
     // `null` when no identity is registered for the agent; an identity holding no
     // roles is a present identity with an empty `roles` list.
     GetIdentity(GetIdentity) => Json<Option<AgentIdentity>>;
     CheckAccess(CheckAccess) => Json<AccessDecision>;
     // Every identity op answers one tagged reply; no reply variant can
     // carry a hash, token or sealed secret.
-    Identity(Identity) => Json<medulla_types::identity::IdentityReply<medulla_types::acl::RequestContextClaims>>;
+    Identity(Identity) => Json<medulla_identity_types::identity::IdentityReply<medulla_types::acl::RequestContextClaims>>;
     // EH-560: every write answers the governed change as it now stands.
     GovernedPropose(GovernedChange / "propose") => Json<medulla_mutation_types::governed_change::GovernedChange>;
     GovernedApprove(GovernedChange / "approve") => Json<medulla_mutation_types::governed_change::GovernedChange>;

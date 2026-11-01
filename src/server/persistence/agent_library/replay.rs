@@ -48,7 +48,7 @@ pub(super) fn replayed_receipt(
     mutations: &MutationKernel,
     txn: &medulla_transaction::AdmittedMutation<'_, medulla_storage::AgentLibraryOwner>,
     replay: ReplayResolution,
-    operation: &medulla_types::authority::OperationReplayIdentity,
+    operation: &medulla_identity_types::authority::OperationReplayIdentity,
     context: &AgentLibraryMutationContext,
     expected: ExpectedAgentLibraryMutation<'_>,
 ) -> Result<Option<(AgentLibraryWriteResult, MutationReceipt)>, String> {
@@ -78,7 +78,7 @@ pub(super) fn replayed_receipt(
 
 fn validate_replay_receipt_identity(
     receipt: &MutationReceipt,
-    operation: &medulla_types::authority::OperationReplayIdentity,
+    operation: &medulla_identity_types::authority::OperationReplayIdentity,
 ) -> Result<(), String> {
     receipt.validate()?;
     let operation_digest = operation.digest()?;
@@ -170,7 +170,7 @@ fn validate_replay_effect_digest(
 fn validate_replay_evidence(
     mutations: &MutationKernel,
     txn: &medulla_transaction::AdmittedMutation<'_, medulla_storage::AgentLibraryOwner>,
-    operation: &medulla_types::authority::OperationReplayIdentity,
+    operation: &medulla_identity_types::authority::OperationReplayIdentity,
     context: &AgentLibraryMutationContext,
     claimed: &ClaimedReplay<'_>,
 ) -> Result<(), String> {
@@ -251,7 +251,7 @@ fn replay_batch_context_matches(
 fn validate_replay_operation(
     record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
     receipt: &MutationReceipt,
-    operation: &medulla_types::authority::OperationReplayIdentity,
+    operation: &medulla_identity_types::authority::OperationReplayIdentity,
     stable_result: &AgentLibraryCommittedResult,
     kind: AgentLibraryMutationKind,
 ) -> Result<(), String> {
@@ -287,7 +287,7 @@ fn validate_replay_operation(
 fn validate_replay_operation_identity(
     record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
     receipt: &MutationReceipt,
-    operation: &medulla_types::authority::OperationReplayIdentity,
+    operation: &medulla_identity_types::authority::OperationReplayIdentity,
 ) -> Result<(), String> {
     let physical_envelope = record.batch.envelope.operation().ok_or_else(|| {
         "CORRUPT_MUTATION_LEDGER: Agent Library replay batch is not an operation".to_string()

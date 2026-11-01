@@ -58,7 +58,7 @@ pub(crate) struct CarrierAuthority {
     /// The verified identity actor: the identity store decides from it, against
     /// its current state, whether its SQL relations are visible.
     #[cfg(feature = "security")]
-    identity_actor: medulla_types::identity::IdentityActor,
+    identity_actor: medulla_identity_types::identity::IdentityActor,
 }
 
 /// One owner-scoped process-global call (EH-373/EH-374): the server state, the request
@@ -259,7 +259,7 @@ impl CarrierAuthority {
 
     /// The verified identity actor, for the identity store's own check.
     #[cfg(feature = "security")]
-    pub(crate) fn identity_actor(&self) -> &medulla_types::identity::IdentityActor {
+    pub(crate) fn identity_actor(&self) -> &medulla_identity_types::identity::IdentityActor {
         &self.identity_actor
     }
 

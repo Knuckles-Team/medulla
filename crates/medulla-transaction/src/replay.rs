@@ -20,6 +20,7 @@
 use crate::admitted::AdmittedMutation;
 use crate::ledger::read_record_in_write;
 use crate::tables::{REPLAY_NONCES, REPLAY_OPERATIONS};
+use medulla_identity_types::{authority::NonceReplayKey, authority::OperationReplayIdentity};
 use medulla_mutation_types::mutation::MutationReceipt;
 use medulla_protocol_types::{
     mutation_batch::MutationBatch, mutation_batch::MutationBatchRecord,
@@ -29,7 +30,6 @@ use medulla_storage::{
     decode_ledger_record, encode_bounded, ledger_scope_key, OperationReplayRow, OwnerDomain,
     RecordedOperation,
 };
-use medulla_types::authority::{NonceReplayKey, OperationReplayIdentity};
 use medulla_types::contract::Digest256;
 
 /// The one durable replay decision for one proposed attempt.

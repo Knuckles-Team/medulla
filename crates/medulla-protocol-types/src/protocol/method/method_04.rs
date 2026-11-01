@@ -535,9 +535,9 @@ $($variants)*
     /// at the request boundary -- any caller-supplied value is overwritten --
     /// so the replicated command carries who acted without trusting the body.
     RbacElevation {
-        op: medulla_types::rbac_elevation::RbacElevationOp,
+        op: medulla_identity_types::rbac_elevation::RbacElevationOp,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        actor: Option<medulla_types::rbac_elevation::ElevationActor>,
+        actor: Option<medulla_identity_types::rbac_elevation::ElevationActor>,
     },
 
     /// Governed changes (EH-560): propose, approve (two-person, exact scope,
@@ -558,9 +558,9 @@ $($variants)*
     /// the replicated command nor a log ever carries one; a caller-supplied
     /// stamp is always overwritten.
     Identity {
-        op: medulla_types::identity::IdentityOp,
+        op: medulla_identity_types::identity::IdentityOp,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        stamp: Option<medulla_types::identity::IdentityStamp>,
+        stamp: Option<medulla_identity_types::identity::IdentityStamp>,
     },
 
     ApplyMultisigMutation {

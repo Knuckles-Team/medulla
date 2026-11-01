@@ -1,7 +1,9 @@
 use super::*;
-use crate::contract::{
-    ActorId, AudienceId, BoundedVec, Digest256, Ed25519Signature, IdempotencyKey, MethodId, Nonce,
-    OpaqueId, PolicyRevision, ProtocolId, ResourceId, SchemaId, TenantId, UtcUnixNanos,
+use medulla_types::{
+    contract::ActorId, contract::AudienceId, contract::BoundedVec, contract::Digest256,
+    contract::Ed25519Signature, contract::IdempotencyKey, contract::MethodId, contract::Nonce,
+    contract::OpaqueId, contract::PolicyRevision, contract::ProtocolId, contract::ResourceId,
+    contract::SchemaId, contract::TenantId, contract::UtcUnixNanos,
 };
 
 fn digest(byte: u8) -> Digest256 {

@@ -44,13 +44,8 @@ pub mod ingest_rules;
 // MEDULLA-TYPED-PACKS-R803.1 — typed sensitive-data detector and detection records.
 pub mod sensitive_detect;
 // MEDULLA-TYPED-PACKS-R804.1 — ontology revision difference and impact records.
-pub mod ontology_diff;
-// RF-RULING-004 — canonical serializable authority/replay evidence for the future
-// medulla-transaction admission boundary. This module grants no executable capability.
-pub mod authority;
-// MEDULLA-SRC-AUTH-R007.1 — typed audit entries for source selection evidence.
-pub mod authority_audit;
 pub mod code_health;
+pub mod ontology_diff;
 // MEDULLA-UNIFIED-DATA-PLANE-R019.3.1 — typed conformance-entry constructor for the
 // MongoDB/DocumentDB adapter, over the generic R022.1 report entry. Pure
 // data; actually running the comparison is a later child.
@@ -90,11 +85,6 @@ pub mod pitr_schedule;
 // digest comparison. No restore is run yet; automating the real drill is a
 // later child.
 pub mod restore_drill;
-// MEDULLA-UNIFIED-DATA-PLANE-R024.1 — typed one-at-a-time application admission
-// stage machine, refusing to retire an ingest connector before parity is
-// confirmed. Pure data; the admission runner, rollback path, and the
-// per-application admission test are later children.
-pub mod platform_admission;
 // MEDULLA-UNIFIED-DATA-PLANE-R025.1 — typed pgrx companion-extension spike
 // decision record, refusing an outcome recorded without evidence for every
 // declared scope area. Pure data; running the spike and the ADR review are
@@ -257,9 +247,6 @@ pub mod runtime_limit;
 pub mod series_expr;
 // MEDULLA-SCM-R002 — the source changeset record and its structured trailers.
 pub mod source_changeset;
-// MEDULLA-SCM-R013 — graph-native symbol edits.
-#[cfg(any(test, feature = "test-support"))]
-pub mod identity_fixtures;
 pub mod source_symbol_edit;
 #[cfg(feature = "statechart")]
 pub mod statechart;
@@ -267,23 +254,15 @@ pub mod telemetry_derive;
 #[cfg(any(test, feature = "test-support"))]
 pub mod test_support;
 pub mod types;
-// MEDULLA-IDENTITY-R610 — tenant parent chains, secured reads and ownership claims.
-pub mod tenancy;
 // The opaque tenant-bound keyset cursor shared by every paged read
 // (`AgentComponent.Search`, `ListWorkItems`).
 pub mod tenant_cursor;
 // The three-bound keyset page shared by the tenant-bound native listings.
 pub mod keyset_page;
-// The engine-owned identity store: principals, credentials,
-// sessions, roles/groups/IdPs, the auth-mode singleton and scope classes.
-pub mod identity;
 // MEDULLA-TYPED-PACKS-R802.1/R805.1 — governance record models: stewardship and
 // data products. Pure data and field validation; served wiring lands in later children.
 pub mod data_product;
 pub mod stewardship;
-// EH-404 -- just-in-time RBAC elevation: an `rbac.elevation` control lease the
-// graph-access chokepoint consults (two-person, exact-scope, hard expiry).
-pub mod rbac_elevation;
 // MEDULLA-UNIFIED-DATA-PLANE-R004 — bounded, policy-gated column-sampling budget
 // for deterministic schema inference.
 pub mod schema_inference;

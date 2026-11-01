@@ -134,8 +134,8 @@ fn begin_operation<D: OwnerDomain>(
 pub(crate) fn begin_with_replay_identity<D: OwnerDomain>(
     write: &AdmittedMutation<'_, D>,
     batch: &MutationBatch,
-    operation: &medulla_types::authority::OperationReplayIdentity,
-    nonce: &medulla_types::authority::NonceReplayKey,
+    operation: &medulla_identity_types::authority::OperationReplayIdentity,
+    nonce: &medulla_identity_types::authority::NonceReplayKey,
 ) -> Result<Begin, String> {
     batch.validate_write_budget()?;
     write.verify_scope(&batch.identity)?;
@@ -158,8 +158,8 @@ pub(crate) fn begin_with_replay_identity<D: OwnerDomain>(
 fn begin_operation_with_identity<D: OwnerDomain>(
     write: &AdmittedMutation<'_, D>,
     batch: &MutationBatch,
-    operation: &medulla_types::authority::OperationReplayIdentity,
-    nonce: &medulla_types::authority::NonceReplayKey,
+    operation: &medulla_identity_types::authority::OperationReplayIdentity,
+    nonce: &medulla_identity_types::authority::NonceReplayKey,
 ) -> Result<Begin, String> {
     match resolve_replay_in(write, operation, nonce)? {
         // A duplicated attempt nonce inside one transaction is a caller bug, not
@@ -420,8 +420,8 @@ pub(crate) fn finish_with_replay<D: OwnerDomain>(
     // and the receipt itself. These three are never meaningful apart, so
     // they travel as one group rather than as three positional parameters.
     replay_receipt: (
-        &medulla_types::authority::OperationReplayIdentity,
-        &medulla_types::authority::NonceReplayKey,
+        &medulla_identity_types::authority::OperationReplayIdentity,
+        &medulla_identity_types::authority::NonceReplayKey,
         &medulla_mutation_types::mutation::MutationReceipt,
     ),
 ) -> Result<MutationBatchRecord, String> {
@@ -450,8 +450,8 @@ fn finish_inner<D: OwnerDomain>(
     committed_at_ms: u64,
     source_version: Option<u64>,
     replay: Option<(
-        &medulla_types::authority::OperationReplayIdentity,
-        &medulla_types::authority::NonceReplayKey,
+        &medulla_identity_types::authority::OperationReplayIdentity,
+        &medulla_identity_types::authority::NonceReplayKey,
         &medulla_mutation_types::mutation::MutationReceipt,
     )>,
 ) -> Result<MutationBatchRecord, String> {

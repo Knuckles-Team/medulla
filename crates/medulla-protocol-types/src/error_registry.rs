@@ -86,7 +86,7 @@ mod tests {
     /// unclassified internal error.
     #[test]
     fn every_refusal_is_reported_as_a_declared_wire_code() {
-        for refusal in medulla_types::identity::IdentityRefusal::ALL {
+        for refusal in medulla_identity_types::identity::IdentityRefusal::ALL {
             let code = refusal.to_string();
             assert!(code.starts_with("IDENTITY_"), "{code}");
             assert!(declared_error_code(&code), "{code}");

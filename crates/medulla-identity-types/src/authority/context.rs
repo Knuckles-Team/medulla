@@ -2,10 +2,12 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::{
-    ActorId, AudienceId, BoundedVec, Digest256, IdempotencyKey, IngressSurface, Nonce, OpaqueId,
-    Operation, PolicyRevision, ProtocolId, PurposeKind, ResourceId, ScopeKind, TenantId,
-    UtcUnixNanos, MAX_SCOPE_COMPONENTS,
+use medulla_types::{
+    contract::ActorId, contract::AudienceId, contract::BoundedVec, contract::Digest256,
+    contract::IdempotencyKey, contract::IngressSurface, contract::Nonce, contract::OpaqueId,
+    contract::Operation, contract::PolicyRevision, contract::ProtocolId, contract::PurposeKind,
+    contract::ResourceId, contract::ScopeKind, contract::TenantId, contract::UtcUnixNanos,
+    contract::MAX_SCOPE_COMPONENTS,
 };
 
 pub const AUTHORITY_CONTEXT_SCHEMA_V1: &str = "authority-context.v1";

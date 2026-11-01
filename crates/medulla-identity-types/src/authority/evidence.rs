@@ -4,9 +4,10 @@ use serde::{Deserialize, Serialize};
 
 use super::context::{AuthorityContext, AUTHORITY_PROTOCOL_V1};
 use super::replay::{NonceReplayKey, OperationReplayIdentity, ReplayReceipt};
-use crate::contract::{
-    AdmissionOutcome, DecisionOutcome, Digest256, Ed25519Signature, MethodId, OpaqueId, ResourceId,
-    SchemaId, UtcUnixNanos, VerificationStatus,
+use medulla_types::{
+    contract::AdmissionOutcome, contract::DecisionOutcome, contract::Digest256,
+    contract::Ed25519Signature, contract::MethodId, contract::OpaqueId, contract::ResourceId,
+    contract::SchemaId, contract::UtcUnixNanos, contract::VerificationStatus,
 };
 
 /// Immutable signed-envelope evidence. Validation proves only canonical field
@@ -15,12 +16,12 @@ use crate::contract::{
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SignedAuthorityEnvelopeEvidence {
-    pub protocol_id: crate::contract::ProtocolId,
+    pub protocol_id: medulla_types::contract::ProtocolId,
     pub schema_version: ResourceId,
     pub catalog_digest: Digest256,
     pub context_digest: Digest256,
     pub payload_digest: Digest256,
-    pub audience: crate::contract::AudienceId,
+    pub audience: medulla_types::contract::AudienceId,
     pub issued_at: UtcUnixNanos,
     pub expires_at: UtcUnixNanos,
     pub signer_key_id: OpaqueId,

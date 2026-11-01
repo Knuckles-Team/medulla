@@ -27,8 +27,8 @@ const LIBRARY_NOUN: &str = "agent library";
 /// last one already as an inline tuple) -- so they are threaded as one value
 /// rather than as two positional arguments that could drift apart.
 struct ReplayIdentity<'a> {
-    operation: &'a medulla_types::authority::OperationReplayIdentity,
-    nonce: &'a medulla_types::authority::NonceReplayKey,
+    operation: &'a medulla_identity_types::authority::OperationReplayIdentity,
+    nonce: &'a medulla_identity_types::authority::NonceReplayKey,
 }
 
 /// One append-only revision transition to commit: the entry as it will be
@@ -48,14 +48,14 @@ struct AgentLibraryRevisionCommit {
 /// boxed; the enum itself stays small whichever path is taken.
 enum PreparedLibraryWrite {
     Replay {
-        operation: medulla_types::authority::OperationReplayIdentity,
-        nonce: medulla_types::authority::NonceReplayKey,
+        operation: medulla_identity_types::authority::OperationReplayIdentity,
+        nonce: medulla_identity_types::authority::NonceReplayKey,
         result: Box<AgentLibraryWriteResult>,
         receipt: Box<MutationReceipt>,
     },
     Fresh {
-        operation: medulla_types::authority::OperationReplayIdentity,
-        nonce: medulla_types::authority::NonceReplayKey,
+        operation: medulla_identity_types::authority::OperationReplayIdentity,
+        nonce: medulla_identity_types::authority::NonceReplayKey,
         context: Box<AgentLibraryMutationContext>,
         entry: Box<AgentLibraryEntry>,
     },
@@ -374,8 +374,8 @@ fn build_entry_commit_plan(
 
 fn build_entry_receipt(
     plan: &EntryCommitPlan,
-    operation: &medulla_types::authority::OperationReplayIdentity,
-    nonce: &medulla_types::authority::NonceReplayKey,
+    operation: &medulla_identity_types::authority::OperationReplayIdentity,
+    nonce: &medulla_identity_types::authority::NonceReplayKey,
 ) -> Result<MutationReceipt, String> {
     let key = format!(
         "{}:{}:{}",

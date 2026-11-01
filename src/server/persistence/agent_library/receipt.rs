@@ -24,8 +24,8 @@ pub(crate) struct OwnerReceiptInput<'a> {
 }
 
 pub(in crate::server::persistence) fn owner_receipt(
-    operation: &medulla_types::authority::OperationReplayIdentity,
-    nonce: &medulla_types::authority::NonceReplayKey,
+    operation: &medulla_identity_types::authority::OperationReplayIdentity,
+    nonce: &medulla_identity_types::authority::NonceReplayKey,
     batch: &MutationBatch,
     input: OwnerReceiptInput<'_>,
 ) -> Result<MutationReceipt, String> {
@@ -82,8 +82,8 @@ pub(in crate::server::persistence) fn owner_receipt(
 /// fold binds intent order as well as every topic, key, payload and header, so
 /// omitting one per-component event changes the receipt effect digest.
 pub(in crate::server::persistence) fn owner_batch_receipt(
-    operation: &medulla_types::authority::OperationReplayIdentity,
-    nonce: &medulla_types::authority::NonceReplayKey,
+    operation: &medulla_identity_types::authority::OperationReplayIdentity,
+    nonce: &medulla_identity_types::authority::NonceReplayKey,
     batch: &MutationBatch,
     slug: &str,
     mutation_result: MutationResult,

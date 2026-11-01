@@ -1850,8 +1850,10 @@ medulla-agent-types = { path = "crates/medulla-agent-types" }
 medulla-result-types = { path = "crates/medulla-result-types" }
 medulla-index-types = { path = "crates/medulla-index-types" }
 medulla-mutation-types = { path = "crates/medulla-mutation-types" }
+medulla-identity-types = { path = "crates/medulla-identity-types" }
 
 [dev-dependencies]
+medulla-identity-types = { path = "crates/medulla-identity-types", features = ["test-support"] }
 medulla-result-types = { path = "crates/medulla-result-types" }
 medulla-agent-types = { path = "crates/medulla-agent-types", features = ["test-support"] }
 medulla-catalog-types = { path = "crates/medulla-catalog-types", features = ["test-support"] }

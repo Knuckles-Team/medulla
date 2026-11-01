@@ -1,7 +1,7 @@
 //! Scope-class invariants and the RBAC projection.
 
 use super::*;
-use crate::acl::{GrantEffect, RbacAction, ResourceSelector};
+use medulla_types::{acl::GrantEffect, acl::RbacAction, acl::ResourceSelector};
 
 fn role(role_id: &str, scopes: &[&str]) -> IdentityOp {
     IdentityOp::Access(AccessOp::UpsertRole {

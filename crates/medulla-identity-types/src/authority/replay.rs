@@ -6,10 +6,12 @@ use super::context::{
     digest_purpose, validate_operation_purpose, AuthorityContext, AuthorityScope,
     AUTHORITY_PROTOCOL_V1,
 };
-use crate::contract::{
-    ActorId, AudienceId, Digest256, EffectState, IdempotencyKey, MethodId, Nonce, OpaqueId,
-    Operation, PolicyRevision, ProtocolId, PurposeKind, ReplayStatus, ResourceId, SchemaId,
-    TenantId, UtcUnixNanos,
+use medulla_types::{
+    contract::ActorId, contract::AudienceId, contract::Digest256, contract::EffectState,
+    contract::IdempotencyKey, contract::MethodId, contract::Nonce, contract::OpaqueId,
+    contract::Operation, contract::PolicyRevision, contract::ProtocolId, contract::PurposeKind,
+    contract::ReplayStatus, contract::ResourceId, contract::SchemaId, contract::TenantId,
+    contract::UtcUnixNanos,
 };
 
 /// Stable effect identity. The type cannot contain nonce, request/trace IDs, or

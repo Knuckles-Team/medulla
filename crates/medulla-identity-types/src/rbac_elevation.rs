@@ -43,9 +43,9 @@ pub use ledger::{
 };
 
 /// The reserved control-lease kind of an elevation.
-use crate::lease_vocab::RBAC_ELEVATION_KIND;
+use medulla_types::lease_vocab::RBAC_ELEVATION_KIND;
 /// Longest window an approval can open: the control-lease span cap (24 h).
-pub const MAX_ELEVATION_SPAN_MS: u64 = crate::lease_vocab::MAX_CONTROL_LEASE_SPAN_MS;
+pub const MAX_ELEVATION_SPAN_MS: u64 = medulla_types::lease_vocab::MAX_CONTROL_LEASE_SPAN_MS;
 /// Shortest window worth approving; anything shorter is a caller error.
 pub const MIN_ELEVATION_SPAN_MS: u64 = 1_000;
 /// How long a request waits for its approval before it expires unapproved.
@@ -322,7 +322,7 @@ impl std::fmt::Display for ElevationRefusal {
 impl std::error::Error for ElevationRefusal {}
 
 fn bounded_text(value: &str, max: usize) -> Result<(), ElevationRefusal> {
-    crate::contract::bounded_text_or(value, max, ElevationRefusal::InvalidRequest)
+    medulla_types::contract::bounded_text_or(value, max, ElevationRefusal::InvalidRequest)
 }
 
 /// Validate an elevation id (also used by approve/revoke).

@@ -1,7 +1,7 @@
 //! Field validation shared by every identity record.
 
 use super::{IdentityRefusal, MIN_TOKEN_CHARS};
-use crate::contract::bounded_text_or;
+use medulla_types::contract::bounded_text_or;
 
 /// Longest username (after normalization).
 pub const MAX_USERNAME_BYTES: usize = 64;

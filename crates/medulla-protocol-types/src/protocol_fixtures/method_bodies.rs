@@ -33,7 +33,9 @@ pub fn typed_samples() -> Vec<(&'static str, Method)> {
     samples.push((
         "Identity",
         Method::Identity {
-            op: medulla_types::identity::IdentityOp::Config(medulla_types::identity::ConfigOp::Get),
+            op: medulla_identity_types::identity::IdentityOp::Config(
+                medulla_identity_types::identity::ConfigOp::Get,
+            ),
             stamp: None,
         },
     ));

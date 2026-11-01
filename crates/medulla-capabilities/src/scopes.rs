@@ -16,7 +16,7 @@
 //! * `approver` -- humans only, only through the scope's built-in group;
 //! * `admin` -- humans only.
 
-use medulla_types::identity::{ScopeClass, ScopeClassifier};
+use medulla_identity_types::{identity::ScopeClass, identity::ScopeClassifier};
 
 use ScopeClass::{Admin, Approver, Domain, ServiceOnly, User};
 

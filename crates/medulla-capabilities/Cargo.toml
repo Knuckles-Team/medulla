@@ -56,6 +56,7 @@ path = "../medulla-protocol-types"
 features = ["metrics", "wire-contract"]
 
 [dev-dependencies]
+medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
@@ -163,3 +164,4 @@ medulla-catalog-types = { path = "../medulla-catalog-types", features = ["wire-c
 medulla-agent-types = { path = "../medulla-agent-types", features = ["wire-contract"] }
 medulla-index-types = { path = "../medulla-index-types", features = ["wire-contract"] }
 medulla-mutation-types = { path = "../medulla-mutation-types", features = ["wire-contract"] }
+medulla-identity-types = { path = "../medulla-identity-types", features = ["wire-contract"] }

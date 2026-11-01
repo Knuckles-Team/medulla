@@ -1,8 +1,9 @@
 //! Source regressions only: these fixtures do not qualify a deployed broker,
 //! credential authority, generated client or mounted serving surface.
 use super::*;
-use medulla_types::identity::{
-    ApiKeyUse, ObjectRef, Secret, SessionTouch, UserKind, UserStatus, IDENTITY_AUTHENTICATE_SCOPE,
+use medulla_identity_types::{
+    identity::ApiKeyUse, identity::ObjectRef, identity::Secret, identity::SessionTouch,
+    identity::UserKind, identity::UserStatus, identity::IDENTITY_AUTHENTICATE_SCOPE,
 };
 use serde_json::json;
 
@@ -337,9 +338,10 @@ async fn unauthorized_broker_cannot_use_subject_credential() {
 
 use crate::protocol::{Method, Response, ResultPayload};
 use crate::server::dispatch::test_support::{bootstrapped_state, send, verified};
-use medulla_types::identity::{
-    AccessOp, AuthMode, AuthenticateRequest, ConfigOp, CredentialOp, InitializeRequest, MfaOp,
-    BOOTSTRAP_PRINCIPAL, IDENTITY_ADMIN_SCOPE,
+use medulla_identity_types::{
+    identity::AccessOp, identity::AuthMode, identity::AuthenticateRequest, identity::ConfigOp,
+    identity::CredentialOp, identity::InitializeRequest, identity::MfaOp,
+    identity::BOOTSTRAP_PRINCIPAL, identity::IDENTITY_ADMIN_SCOPE,
 };
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -681,7 +683,7 @@ fn session_authority(response: &Response) -> IdentityReply<RequestContextClaims>
 // spec: MEDULLA-TYPED-PACKS-R085.4.3
 #[tokio::test]
 async fn reference_renewal_rechecks_boundary_and_global_revision() {
-    use medulla_types::identity::IDENTITY_SELF_SCOPE;
+    use medulla_identity_types::identity::IDENTITY_SELF_SCOPE;
     let state = ready_engine().await;
     let resolution = resolved(&send_op(&state, live_broker(), session_request()).await);
     let record = resolution.session_record.unwrap();
@@ -781,7 +783,7 @@ async fn reference_renewal_rechecks_boundary_and_global_revision() {
 // spec: MEDULLA-TYPED-PACKS-R085.4.3
 #[tokio::test]
 async fn served_reference_renewal_refuses_scope_mismatch_without_touching_authority() {
-    use medulla_types::identity::IDENTITY_SELF_SCOPE;
+    use medulla_identity_types::identity::IDENTITY_SELF_SCOPE;
     let state = ready_engine().await;
     let resolution = resolved(&send_op(&state, live_broker(), session_request()).await);
     let record = resolution.session_record.unwrap();

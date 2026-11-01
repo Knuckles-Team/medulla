@@ -5,7 +5,7 @@ use super::budget::{
     PRECONDITION_FIXED_BUDGET,
 };
 use super::MutationDomain;
-use medulla_types::authority::AuthorityScope;
+use medulla_identity_types::authority::AuthorityScope;
 use medulla_types::{
     contract::Digest256, contract::ResourceId, contract::SchemaId, contract::TenantId,
 };

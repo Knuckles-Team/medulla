@@ -8,7 +8,7 @@ use super::super::access::RoleRecord;
 use super::super::requests_admin::RoleGraphGrant;
 use super::super::{IdentityRefusal, MAX_ROLES};
 use super::IdentityStore;
-use crate::acl::{GrantEffect, RbacAction, ResourceSelector};
+use medulla_types::{acl::GrantEffect, acl::RbacAction, acl::ResourceSelector};
 
 impl IdentityStore {
     /// Bind an active managed creator to the tenant role after graph creation.

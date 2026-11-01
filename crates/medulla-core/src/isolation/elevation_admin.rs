@@ -6,9 +6,11 @@
 //! transition changes nothing, not even the ledger's expiry bookkeeping.
 #![cfg(feature = "security")]
 
-use medulla_types::rbac_elevation::{
-    ElevationActor, ElevationApproval, ElevationLease, ElevationLedger, ElevationRefusal,
-    ElevationRequest, ElevationRevoke,
+use medulla_identity_types::{
+    rbac_elevation::ElevationActor, rbac_elevation::ElevationApproval,
+    rbac_elevation::ElevationLease, rbac_elevation::ElevationLedger,
+    rbac_elevation::ElevationRefusal, rbac_elevation::ElevationRequest,
+    rbac_elevation::ElevationRevoke,
 };
 
 use super::IsolationLayer;
