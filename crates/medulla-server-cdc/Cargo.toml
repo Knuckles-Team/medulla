@@ -1,0 +1,14 @@
+[package]
+name = "medulla-server-cdc"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Change data capture hub, CEP, materialised views, reasoning cascade and impact watch"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_server_cdc"
+path = "src/lib.rs"
+
+[dependencies]
