@@ -7,9 +7,9 @@ use medulla_compute::mining::{
 
 #[derive(Clone, Copy)]
 pub struct WritebackOptions {
-    pub(crate) enabled: bool,
+    pub enabled: bool,
     #[cfg(feature = "epistemic")]
-    pub(crate) as_claim: bool,
+    pub as_claim: bool,
 }
 
 pub(super) struct WritebackNodeId(String);

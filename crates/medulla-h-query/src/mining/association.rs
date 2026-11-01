@@ -7,12 +7,12 @@ use medulla_result_types::{
 };
 
 pub struct AssociationRequest {
-    pub(crate) transactions: Vec<Vec<String>>,
-    pub(crate) source: Option<TransactionSource>,
-    pub(crate) min_support: f64,
-    pub(crate) min_confidence: f64,
-    pub(crate) algorithm: MineAlgorithm,
-    pub(crate) writeback: WritebackOptions,
+    pub transactions: Vec<Vec<String>>,
+    pub source: Option<TransactionSource>,
+    pub min_support: f64,
+    pub min_confidence: f64,
+    pub algorithm: MineAlgorithm,
+    pub writeback: WritebackOptions,
 }
 
 pub fn handle_associate(
