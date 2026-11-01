@@ -84,6 +84,7 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-reasoner = { path = "../medulla-reasoner" }
+medulla-graph-algos = { path = "../medulla-graph-algos" }
 
 [features]
 amqp-wire = ["server"]
