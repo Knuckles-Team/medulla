@@ -47,4 +47,6 @@ raft = ["redb", "medulla-persistence/raft", "medulla-kernel/raft", "medulla-serv
 server = ["dep:tokio", "medulla-persistence/server", "medulla-kernel/server", "medulla-server-api/server", "medulla-store/server"]
 redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-persistence/redb", "medulla-persistence-records/redb", "medulla-kernel/redb", "medulla-server-api/redb", "medulla-store/redb"]
 [dev-dependencies]
+medulla-store = { path = "../medulla-store", features = ["test-support", "server"] }
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 tempfile = "3"

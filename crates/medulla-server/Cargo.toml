@@ -218,6 +218,7 @@ geosparql = ["dep:medulla-rdf", "medulla-rdf/geosparql", "medulla-h-admin/geospa
 owl-dl = ["dep:medulla-rdf", "medulla-rdf/owl-dl", "medulla-h-admin/owl-dl", "medulla-h-decide/owl-dl", "medulla-h-graph/owl-dl", "medulla-h-query/owl-dl", "medulla-h-txn/owl-dl", "medulla-persistence/owl-dl", "medulla-reasoner/owl-dl", "medulla-server-api/owl-dl", "owl", "rdf", "server", "sparql"]
 mysql-wire = ["dep:sha1", "medulla-wire-core/mysql-wire", "medulla-wire/mysql-wire", "query", "redb", "server"]
 [dev-dependencies]
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros", "test-util"] }
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
 tempfile = "3"
