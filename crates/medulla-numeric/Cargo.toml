@@ -140,7 +140,7 @@ medulla-types = { path = "../medulla-types", features = ["test-support"] }
 serde_json = "1.0"
 # Series-kernel checkpoint round trips (`series::tests`), bit-exact. Already in the lockfile.
 rmp-serde = "1.3"
-medulla-decision-stats = { path = "../medulla-decision-stats" }
+medulla-decision-stats = { path = "../medulla-decision-stats", features = ["decision"] }
 medulla-work-types = { path = "../medulla-work-types" }
 
 [[example]]
