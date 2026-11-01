@@ -8,9 +8,9 @@
 use serde::{Deserialize, Serialize};
 
 use super::certificate::{Certificate, SolverConfigSpec};
-use super::scalar::Sha256Digest;
 use super::spec::ModelSpec;
 use crate::contract::closed_error_codes;
+use crate::solve_scalar::Sha256Digest;
 
 /// Format identity (RF-ADR-006) of [`SolveResult`].
 pub const SOLVE_RESULT_SCHEMA_VERSION: u16 = 1;

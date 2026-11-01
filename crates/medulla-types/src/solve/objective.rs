@@ -9,7 +9,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::scalar::Scalar;
+use crate::solve_scalar::Scalar;
 
 /// Value of one objective level under an assignment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

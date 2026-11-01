@@ -3,7 +3,6 @@
 use serde::{Deserialize, Serialize};
 
 use crate::contract::{BoundedVec, Digest256};
-use crate::fleet_catalog::is_valid_server_name;
 
 /// Current schema of a [`RegisteredServerListPage`].
 ///
@@ -138,14 +137,17 @@ mod tests {
 
     #[test]
     fn server_name_bound_matches_the_config_sync_alphabet() {
-        assert!(is_valid_server_name("github-mcp_1.0"));
-        assert!(is_valid_server_name(
+        assert!(crate::fleet_catalog::is_valid_server_name("github-mcp_1.0"));
+        assert!(crate::fleet_catalog::is_valid_server_name(
             &"a".repeat(crate::fleet_catalog::MAX_REGISTERED_SERVER_NAME_BYTES)
         ));
         for invalid in ["", "has space", "slash/name", "tilde~name", "\u{e9}"] {
-            assert!(!is_valid_server_name(invalid), "{invalid:?}");
+            assert!(
+                !crate::fleet_catalog::is_valid_server_name(invalid),
+                "{invalid:?}"
+            );
         }
-        assert!(!is_valid_server_name(&"a".repeat(
+        assert!(!crate::fleet_catalog::is_valid_server_name(&"a".repeat(
             crate::fleet_catalog::MAX_REGISTERED_SERVER_NAME_BYTES + 1
         )));
     }

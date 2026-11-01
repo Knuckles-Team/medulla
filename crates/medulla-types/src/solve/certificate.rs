@@ -32,8 +32,8 @@
 use serde::{Deserialize, Serialize};
 
 use super::objective::ObjectiveValue;
-use super::scalar::{Scalar, Sha256Digest};
 use super::spec::{RowId, VarId};
+use crate::solve_scalar::{Scalar, Sha256Digest};
 
 /// Default deterministic node-expansion budget.
 pub const DEFAULT_NODE_BUDGET: u64 = 100_000;
