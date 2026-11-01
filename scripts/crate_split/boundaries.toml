@@ -629,11 +629,11 @@ projected_lines = 2447
 [crates.medulla-server-api]
 level = "F3"
 kind = "api"
-responsibility = "Server state, seam traits, request context, transactions and the shared served-API helpers."
+responsibility = "Server state with type-erased feature handles, the seam registry and re-entry dispatch seam, request context, the batch compiler, schema composition, transactions and the shared served-API helpers."
 moves = []
 specs = []
 current_lines = 8925
-projected_lines = 8925
+projected_lines = 14557
 
 [crates.medulla-server-auth]
 level = "F4a"
@@ -656,11 +656,11 @@ projected_lines = 4491
 [crates.medulla-server-mutation]
 level = "F4c"
 kind = "api"
-responsibility = "Served mutation and mutation batches."
+responsibility = "Served mutation and mutation-batch commit."
 moves = ["src/server/mutation", "src/server/mutation_batch", "src/server/txn", "crates/medulla-server-api/src/mutation", "crates/medulla-server-api/src/mutation_batch"]
 specs = ["durable-graph-kernel (served mutation)"]
 current_lines = 12245
-projected_lines = 12745
+projected_lines = 9384
 
 [crates.medulla-server-blob]
 level = "F4d"
@@ -674,11 +674,11 @@ projected_lines = 10393
 [crates.medulla-server-ops]
 level = "F4e"
 kind = "api"
-responsibility = "Served API seams: admin, ingest, query-transaction and re-entry seams and their registry."
-moves = ["crates/medulla-server-api/src/api/admin", "crates/medulla-server-api/src/api/ingest", "crates/medulla-server-api/src/api/query_txn", "crates/medulla-server-api/src/api/reentry", "crates/medulla-server-api/src/api/registry"]
+responsibility = "Served API handler seams: the admin, decide, ingest, graph, jobs, compute, query, transaction and wire seam traits, their typed accessors and their support modules."
+moves = ["crates/medulla-server-api/src/api/admin", "crates/medulla-server-api/src/api/ingest", "crates/medulla-server-api/src/api/query_txn"]
 specs = []
 current_lines = 7804
-projected_lines = 7804
+projected_lines = 5533
 
 [crates.medulla-persistence]
 level = "F5"

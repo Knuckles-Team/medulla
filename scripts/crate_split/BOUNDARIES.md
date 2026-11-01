@@ -337,12 +337,12 @@ in-family edges; lines are measured and projected by `route_rows.py --update`.
 | `medulla-rdf` | `medulla-rdf` | L2 | RDF model, SPARQL algebra and update, and the serialisations (JSON-LD, RDF/XML, GeoSPARQL). | - | 11,828 | 12,328 |
 | `medulla-rdf` | `medulla-reasoner` | L3 | OWL, tableau and rule reasoning, proof contract and reasoning closure. | `medulla-rdf` | 13,290 | 13,890 |
 | `medulla-rdf` | `medulla-virtual-graph` | L4a | Attached sources read as virtual graphs: OBDA, source selection and supply-chain impact. | `medulla-rdf` | 6,556 | 10,636 |
-| `medulla-server-api` | `medulla-server-api` | F3 | Server state, seam traits, request context, transactions and the shared served-API helpers. | - | 8,925 | 8,925 |
+| `medulla-server-api` | `medulla-server-api` | F3 | Server state with type-erased feature handles, the seam registry and re-entry dispatch seam, request context, the batch compiler, schema composition, transactions and the shared served-API helpers. | - | 8,925 | 14,557 |
 | `medulla-server-api` | `medulla-server-auth` | F4a | Request authentication, access checks, the SQL catalog ACL and SQL tables. | `medulla-server-api` | 13,107 | 13,607 |
 | `medulla-server-api` | `medulla-server-cdc` | F4b | Change data capture hub, CEP, materialised views, reasoning cascade and impact watch. | `medulla-server-api`, `medulla-server-auth` | 4,491 | 4,491 |
-| `medulla-server-api` | `medulla-server-mutation` | F4c | Served mutation and mutation batches. | `medulla-server-api`, `medulla-server-auth`, `medulla-server-cdc` | 12,245 | 12,745 |
+| `medulla-server-api` | `medulla-server-mutation` | F4c | Served mutation and mutation-batch commit. | `medulla-server-api`, `medulla-server-auth`, `medulla-server-cdc` | 12,245 | 9,384 |
 | `medulla-server-api` | `medulla-server-blob` | F4d | Served blob, key-value and SPARQL HTTP endpoints. | `medulla-server-api`, `medulla-server-auth`, `medulla-server-mutation` | 9,993 | 10,393 |
-| `medulla-server-api` | `medulla-server-ops` | F4e | Served API seams: admin, ingest, query-transaction and re-entry seams and their registry. | `medulla-server-api`, `medulla-server-auth`, `medulla-server-blob`, `medulla-server-mutation` | 7,804 | 7,804 |
+| `medulla-server-api` | `medulla-server-ops` | F4e | Served API handler seams: the admin, decide, ingest, graph, jobs, compute, query, transaction and wire seam traits, their typed accessors and their support modules. | `medulla-server-api`, `medulla-server-auth`, `medulla-server-blob`, `medulla-server-mutation` | 7,804 | 5,533 |
 | `medulla-storage` | `medulla-direct-state` | L2a | Direct state: the storage owner's in-place state tables and their codecs. | - | 9,410 | 9,410 |
 | `medulla-storage` | `medulla-storage` | L2b | Physical storage owner, recovery, kernel, capabilities and scoped tables (one cycle; kept together). | `medulla-direct-state` | 17,427 | 18,227 |
 | `medulla-store` | `medulla-store` | F1 | redb store core, layout, sidecar and shards. | - | 21,529 | 21,529 |

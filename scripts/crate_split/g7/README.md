@@ -29,9 +29,9 @@ separate PR.
 
 Group B is after the chain. It waits for the facade move chain:
 `medulla-store`, `medulla-persistence` and `medulla-raft` (parallel with each other), then
-`medulla-server-api`. `medulla-server-api` is partial. Its last cut is `open`: the
-`ServerState` and seam-trait SCC (52k lines) needs a seam-types design before any move.
-Sonnet executors stop at that cut.
+`medulla-server-api`. Its `handle` cuts break the old `ServerState` and seam-trait SCC
+(52k lines): feature state behind `ErasedHandle` plus per-owner extension traits, the seam
+registry slots type-erased, and the batch compiler and schema composition moved down.
 
 ## Regenerating
 
