@@ -133,4 +133,5 @@ traces = ["dep:medulla-tsdb", "medulla-tsdb/traces"]
 
 [dev-dependencies]
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
 tempfile = "3"
