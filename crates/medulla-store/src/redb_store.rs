@@ -127,7 +127,7 @@ pub use store_rows::*;
 pub(crate) use store_state::*;
 pub(crate) use store_state_tables::*;
 pub(crate) use store_types::*;
-pub(crate) use unreadable::{NodeUnreadable, UnsealFailure};
+pub use unreadable::{NodeUnreadable, UnsealFailure};
 
 #[cfg(test)]
 mod commit_ops_phase_measurement;
@@ -163,20 +163,20 @@ pub mod work_item;
 // explicitly: child modules use `super::*`, while persistence code reaches the
 // durable machinery through `crate::redb_store`, never through a second store.
 #[cfg(feature = "security")]
-pub(crate) use audit::{
+pub use audit::{
     append_audit_entry, prove_inclusion, provenance_anchor_commit, provenance_leaf_hashes,
     verify_audit, AuditTailCache, ProvenanceAnchorCache,
 };
 #[cfg(any(test, feature = "embedded"))]
-pub(crate) use checkpoint::apply_checkpoint;
+pub use checkpoint::apply_checkpoint;
 #[cfg(any(test, feature = "server"))]
-pub(crate) use control::{
+pub use control::{
     clear_xshard_decision, clear_xshard_prepare, get_xshard_decision, get_xshard_decision_retain,
     get_xshard_prepare, put_xshard_decision, put_xshard_prepare, put_xshard_recoverable_pending,
     scan_xshard_decisions, scan_xshard_prepares,
 };
 #[cfg(feature = "matview")]
-pub(crate) use control::{
+pub use control::{
     delete_matview_operator_state, delete_plan_matview, put_matview_operator_state,
     put_plan_matview, scan_matview_operator_state, scan_plan_matviews,
 };
@@ -184,24 +184,24 @@ pub(crate) use control::{
 pub(crate) use control::{put_matview, scan_matviews};
 pub(crate) use crossmodal::apply_crossmodal_projection_rows;
 #[cfg(any(test, feature = "server"))]
-pub(crate) use crossmodal::{commit_crossmodal, CrossModalStaged};
+pub use crossmodal::{commit_crossmodal, CrossModalStaged};
 pub(crate) use crossmodal::{BlobRefRow, VectorUpsert};
 #[cfg(any(test, feature = "embedded", feature = "server"))]
-pub(crate) use dump::read_all_dumps;
+pub use dump::read_all_dumps;
 #[cfg(any(test, feature = "server"))]
-pub(crate) use dump::{
+pub use dump::{
     decode_graph_meta_identity, graph_meta_schema_version, read_all_graph_meta, read_graph_dump,
     read_graph_dump_page, upgrade_legacy_graph_meta, GraphDumpPage, PageCursorRef,
 };
-pub(crate) use dump::{
+pub use dump::{
     decode_meta_record, encode_meta_record, encode_meta_with_incarnation, new_incarnation_id,
 };
 #[cfg(feature = "security")]
-pub(crate) use operation_audit::{
+pub use operation_audit::{
     audit_writer_unavailable, operation_audit_append, operation_audit_read, OperationAuditEvent,
 };
 #[cfg(any(test, feature = "server"))]
-pub(crate) use resource::{read_resource_reservation, read_resource_reservation_status};
+pub use resource::{read_resource_reservation, read_resource_reservation_status};
 pub(crate) use resource::{
     resource_decode, resource_encode, resource_host_update_snapshot_kind, resource_load_host,
     resource_metadata_maps, resource_record_target_kind, resource_record_work_item_live,
@@ -209,7 +209,7 @@ pub(crate) use resource::{
     resource_target_selection_matches, resource_text, resource_validate_work_item,
     MAX_RESOURCE_CLEAR_SCAN, MAX_RESOURCE_HOST_DISK_POLICIES,
 };
-pub(crate) use shard::{Shard, ShardWrite};
+pub use shard::{Shard, ShardWrite};
 pub(crate) use work_item::{
     apply_submit_work_item_rows, apply_submit_work_items_rows, apply_work_item_rows,
     WorkItemCommitScope,

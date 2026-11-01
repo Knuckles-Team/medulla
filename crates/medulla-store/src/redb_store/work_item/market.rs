@@ -18,7 +18,7 @@ mod lifecycle;
 pub mod read;
 mod upsert;
 
-pub(crate) use read::{list_gaps, read_gap};
+pub use read::{list_gaps, read_gap};
 
 type NodeRow = serde_json::Map<String, serde_json::Value>;
 type NodeRows<'table> = ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>;

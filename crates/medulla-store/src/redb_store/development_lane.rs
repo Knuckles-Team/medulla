@@ -167,7 +167,7 @@ pub mod work_item;
 // These crate-visible entry points retain the flat development_lane path
 // used by redb_store and its sibling modules.
 #[cfg(any(test, feature = "server"))]
-pub(crate) use dispatch::{commit_development_lane, read_development_lane};
+pub use dispatch::{commit_development_lane, read_development_lane};
 pub(crate) use finish::transition_work_item_terminal_hold;
 pub(crate) use links::{
     validate_checkpoint_lane_links, validate_current_lane_links_in_wtx, validate_lane_links_in_wtx,
@@ -177,7 +177,7 @@ pub(crate) use rows::{
     retire_graph_rows,
 };
 #[cfg(any(test, feature = "server"))]
-pub(crate) use status::read_development_lane_status;
+pub use status::read_development_lane_status;
 
 #[cfg(test)]
 #[path = "development_lane/tests.rs"]

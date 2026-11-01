@@ -91,7 +91,7 @@ pub fn commit_mutation_batch_state(
 mod change_envelope;
 #[cfg(test)]
 pub(crate) use change_envelope::{commit_change_envelope, ChangeEnvelopesError};
-pub(crate) use change_envelope::{commit_change_envelope_with_budget, commit_change_envelopes};
+pub use change_envelope::{commit_change_envelope_with_budget, commit_change_envelopes};
 
 /// Non-graph rows that participate in an authoritative cross-modal
 /// [`MutationBatch`] commit. The coordinator metadata, graph rows, semantic/blob

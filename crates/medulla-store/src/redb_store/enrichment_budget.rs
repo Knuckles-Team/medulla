@@ -514,13 +514,13 @@ pub fn park_underfunded(
 }
 
 mod reactivation;
-pub(crate) use reactivation::is_superseded;
-pub(crate) use reactivation::read_policy_revision;
+pub use reactivation::is_superseded;
+pub use reactivation::read_policy_revision;
 #[cfg(feature = "raft")]
 pub(crate) use reactivation::stage_parked_reactivation;
 #[cfg(feature = "raft")]
 pub(crate) use reactivation::verify_reactivation_replay;
-pub(crate) use reactivation::RepositoryEnrichmentPolicyRevision;
+pub use reactivation::RepositoryEnrichmentPolicyRevision;
 
 /// Read before each outbox claim, including the first claim after restart.
 pub fn read_park(
