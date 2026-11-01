@@ -75,7 +75,7 @@ impl RevisionLayer for TemplateLayer {
     const RECORD: &'static str = "template";
     const SLUG: &'static str = "agent-template";
     const OPERATION: &'static str = "template";
-    pub const TOPIC: &'static str = AGENT_TEMPLATE_OUTBOX_TOPIC;
+    const TOPIC: &'static str = AGENT_TEMPLATE_OUTBOX_TOPIC;
     const RESULT_SCHEMA_ID: &'static str = AGENT_TEMPLATE_RESULT_SCHEMA_ID;
     const SCHEMA_VERSION: u16 = AGENT_TEMPLATE_SCHEMA_VERSION;
     const ID_HEADER: &'static str = "template_id";

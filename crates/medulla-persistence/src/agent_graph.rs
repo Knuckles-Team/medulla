@@ -73,7 +73,7 @@ impl RevisionLayer for GraphLayer {
     const RECORD: &'static str = "graph";
     const SLUG: &'static str = "agent-graph";
     const OPERATION: &'static str = "graph";
-    pub const TOPIC: &'static str = AGENT_GRAPH_OUTBOX_TOPIC;
+    const TOPIC: &'static str = AGENT_GRAPH_OUTBOX_TOPIC;
     const RESULT_SCHEMA_ID: &'static str = AGENT_GRAPH_RESULT_SCHEMA_ID;
     const SCHEMA_VERSION: u16 = AGENT_GRAPH_ENTRY_SCHEMA_VERSION;
     const ID_HEADER: &'static str = "graph_id";
