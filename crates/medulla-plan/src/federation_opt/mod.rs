@@ -57,7 +57,6 @@ pub use columns::{
 pub use oq2::{target_capabilities as oq2_target_capabilities, Oq2ReadMode, Oq2TargetCapabilities};
 pub use session::FederationSession;
 pub use stats::{stats_snapshot, SourceStats};
-pub(crate) use trace::redacted_label;
 pub use trace::{render_trace, EstimateProvenance, FetchStrategy, FragmentTrace};
 
 mod federated;

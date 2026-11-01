@@ -136,7 +136,6 @@ use std::collections::HashMap;
 
 use medulla_core::graph::GraphView;
 use medulla_modality::EvidenceLocus;
-use serde::{Deserialize, Serialize};
 
 use crate::dag::ProjectionSchema;
 use crate::rowset::RowSet;

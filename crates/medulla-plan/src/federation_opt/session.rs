@@ -5,7 +5,8 @@ use std::sync::{Arc, Mutex, MutexGuard};
 
 use crate::algebra::Op;
 
-use super::budget::{BudgetMeter, FederationBudget};
+use super::budget::BudgetMeter;
+use crate::budget::FederationBudget;
 use super::cache::FragmentCacheScope;
 use super::trace::FragmentTrace;
 
