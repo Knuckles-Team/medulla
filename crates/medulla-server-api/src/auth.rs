@@ -663,7 +663,7 @@ pub(crate) fn sign_current_test_request_in_tenant(
 /// leaving the request's identity, tenant, graph, and method explicit at the
 /// call site. The envelope details remain centralized in
 /// [`sign_current_test_request_in_tenant`].
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub fn build_current_test_request(
     secret: &str,
     tenant: &str,

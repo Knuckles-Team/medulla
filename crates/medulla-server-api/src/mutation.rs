@@ -233,7 +233,7 @@ mod tests {
             idempotency_key: "test-idempotency",
             tenant_scope: "opaque-test-tenant",
             graph_name: "agent:owner",
-            graph_type: GraphType::Agent,
+            graph_type: medulla_types::protocol::GraphType::Agent,
             owner: Some("owner"),
             isolation: &isolation,
             core: &core,
@@ -1112,7 +1112,7 @@ mod tests {
         assert_eq!(
             cluster_mutation_route(&Method::CreateGraph {
                 graph_name: "opaque-graph".to_string(),
-                graph_type: GraphType::Global,
+                graph_type: medulla_types::protocol::GraphType::Global,
             }),
             ClusterMutationRoute::ConsensusNative,
         );
