@@ -1,8 +1,9 @@
 //! Shared domain imports for private analytics-job modules.
 
-pub(super) use medulla_agent_types::{
-    jobs::JobKind, jobs::JobOp, jobs::JobResult, jobs::SubmitJobSpec,
-};
+pub(super) use medulla_work_types::jobs::JobKind;
+pub(super) use medulla_work_types::jobs::JobOp;
+pub(super) use medulla_work_types::jobs::JobResult;
+pub(super) use medulla_work_types::jobs::SubmitJobSpec;
 pub(super) use medulla_jobs::model::{
     AlgoVersion, AnalyticsJob, Checkpoint, InputSnapshotHandle, JobPolicy, JobState,
 };
