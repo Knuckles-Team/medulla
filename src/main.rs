@@ -660,7 +660,7 @@ async fn spawn_sparql_listener(
         );
         let sparql_state = state.clone();
         tokio::spawn(async move {
-            medulla::server::sparql_http::serve(listener, sparql_state).await;
+            medulla_server_api::sparql_http::serve(listener, sparql_state).await;
         });
     }
     #[cfg(not(feature = "sparql-http"))]
@@ -877,7 +877,7 @@ fn spawn_obs_rum_retention_sweep(obs_state: &std::sync::Arc<medulla::server::obs
     spawn_periodic_sweep(3600, "obs_rum_retention", move || {
         let obs = rum_obs_state.clone();
         async move {
-            let now_ns = i64::try_from(medulla::server::txn::now_ms())
+            let now_ns = i64::try_from(medulla_server_api::txn::now_ms())
                 .unwrap_or(i64::MAX)
                 .saturating_mul(1_000_000);
             let swept =
@@ -968,7 +968,7 @@ async fn spawn_viz_interactive_listener(
     #[cfg(feature = "viz-interactive")]
     if let Some(ref viz_interactive_addr) = viz_interactive_addr {
         let viz_persist_dir = state.read().await.persist_dir.clone();
-        let engine = std::sync::Arc::new(medulla::server::viz_engine::VizEngineState::new(
+        let engine = std::sync::Arc::new(medulla_server_api::viz_engine::VizEngineState::new(
             viz_persist_dir.as_deref(),
         ));
         state.write().await.viz_engine = Some(engine.clone());
@@ -1576,7 +1576,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     #[cfg(all(feature = "owl", feature = "streaming"))]
     {
         let cascade =
-            std::sync::Arc::new(medulla::server::reasoning_cascade::ReasoningCascade::from_env());
+            std::sync::Arc::new(medulla_server_api::reasoning_cascade::ReasoningCascade::from_env());
         if cascade.is_active() {
             if let Some(hub) = state.read().await.cdc.as_ref() {
                 hub.install_reasoning_cascade(cascade.clone());
@@ -1585,7 +1585,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
                 "Reasoning cascade (REASON_ON_WRITE) armed: debounce {}ms",
                 cascade.debounce_window().as_millis()
             );
-            medulla::server::reasoning_cascade::spawn(state.clone(), cascade);
+            medulla_server_api::reasoning_cascade::spawn(state.clone(), cascade);
         }
     }
     // EH-526 standing impact watches (opt-in, `MEDULLA_IMPACT_ON_WRITE`): a
@@ -1593,13 +1593,13 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     // ordinary `MineRiskPropagation` writeback path. Unset ⇒ nothing installed/spawned.
     #[cfg(all(feature = "streaming", feature = "mining", feature = "query"))]
     {
-        let hub = std::sync::Arc::new(medulla::server::impact_watch::ImpactWatchHub::from_env());
+        let hub = std::sync::Arc::new(medulla_server_api::impact_watch::ImpactWatchHub::from_env());
         if hub.is_active() {
             if let Some(cdc) = state.read().await.cdc.as_ref() {
                 cdc.install_impact_watch(hub.clone());
             }
             info!("Impact watches (MEDULLA_IMPACT_ON_WRITE) armed");
-            medulla::server::impact_watch::spawn(state.clone(), hub);
+            medulla_server_api::impact_watch::spawn(state.clone(), hub);
         }
     }
     // CONCEPT:MEDULLA-KG.storage.incremental-text / .incremental-temporal / .incremental-derived-owl —
@@ -1734,7 +1734,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     spawn_periodic_sweep(
         30,
         "sql_ann_generation_sweep",
-        medulla::server::sql_tables::sweep_ann_generations,
+        medulla_server_api::sql_tables::sweep_ann_generations,
     );
 
     // Periodic Ebbinghaus decay sweep (CONCEPT:MEDULLA-KG.compute.graph-compute-engine) — opt-in. Confidence on

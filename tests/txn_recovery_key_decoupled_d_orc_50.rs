@@ -47,7 +47,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use medulla::protocol::{GraphType, Method, Request, Response, ResultPayload};
-use medulla::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla::server::persistence::redb_backend::RedbBackend;
 use medulla_server_api::state::ServerState;
 use medulla_kernel::crypto::{ENCRYPTION_KEY_ENV, TXN_RECOVERY_KEY_ENV};

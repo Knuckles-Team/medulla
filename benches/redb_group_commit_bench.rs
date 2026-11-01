@@ -27,7 +27,7 @@ mod redb_fan_in;
 use std::sync::Arc;
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use medulla::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla::server::persistence::redb_backend::RedbBackend;
 use redb_fan_in::fan_in;
 use tokio::runtime::Builder;

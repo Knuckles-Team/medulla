@@ -188,8 +188,8 @@ fn scoped_index_pins_source_content_in_blob_cas() {
 
 #[cfg(feature = "blob")]
 async fn index_with_durable_source_refs() {
-    use medulla::server::blob::store::{ChunkStore, RedbChunkStore};
-    use medulla::server::blob::BlobCursors;
+    use medulla_server_api::blob::store::{ChunkStore, RedbChunkStore};
+    use medulla_server_api::blob::BlobCursors;
     use std::sync::Arc;
 
     let (_dir, dir_s, _backend, state) = durable_graph("medulla-repoindex-cas").await;

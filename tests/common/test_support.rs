@@ -7,7 +7,7 @@ use std::sync::Arc;
 use medulla::isolation::IsolationLayer;
 use medulla::protocol::{Method, Request, Response, ResultPayload};
 use medulla::registry::GraphRegistry;
-use medulla::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::state::ServerState;
 use tokio::sync::RwLock;
 

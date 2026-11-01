@@ -24,7 +24,7 @@ use medulla::knowledge_stream::{
     KnowledgeStreamRequest, KNOWLEDGE_STREAM_SCHEMA_VERSION,
 };
 use medulla::protocol::{Method, Request, Response, ResultPayload};
-use medulla::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla::server::persistence::redb_backend::RedbBackend;
 use medulla_types::jobs::{JobKind, JobOp, SubmitJobSpec};
 

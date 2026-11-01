@@ -26,7 +26,7 @@ use tokio::sync::RwLock;
 
 use medulla::isolation::{AgentIdentity, AgentRole};
 use medulla::registry::GraphRegistry;
-use medulla::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla::server::pgwire;
 use medulla_server_api::state::ServerState;
 
@@ -494,7 +494,7 @@ impl PersistenceBackend for RecordingBackend {
     // authoritative-commit-flip seam this mock must speak now.
     async fn commit_mutation_batch_crossmodal(
         &self,
-        args: medulla::server::api::persistence::CrossModalCommitArgs<'_>,
+        args: medulla_server_api::api::persistence::CrossModalCommitArgs<'_>,
     ) -> Result<medulla_server_api::mutation_batch::MutationBatchCommit, String> {
         self.durable
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);

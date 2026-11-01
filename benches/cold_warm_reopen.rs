@@ -22,7 +22,7 @@ use std::time::Duration;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use medulla::protocol::Method;
-use medulla::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla::server::persistence::redb_backend::RedbBackend;
 use std::hint::black_box;
 use tokio::runtime::Builder;

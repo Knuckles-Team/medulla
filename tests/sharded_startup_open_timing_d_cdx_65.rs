@@ -32,7 +32,7 @@
 use std::sync::{Arc, Mutex};
 
 use medulla::protocol::Method;
-use medulla::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla::server::persistence::redb_backend::RedbBackend;
 
 /// Node count per graph and payload size, tuned to produce multi-hundred-MB shard

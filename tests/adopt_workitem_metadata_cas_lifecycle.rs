@@ -65,7 +65,7 @@ use medulla::epistemic_operations_ext::{
 };
 use medulla::protocol::{GraphType, Method, Request, Response, ResultPayload};
 use medulla::registry::GraphRegistry;
-use medulla::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla::server::persistence::redb_backend::RedbBackend;
 
 const SECRET: &str = "adopt-workitem-cas-lifecycle-secret";

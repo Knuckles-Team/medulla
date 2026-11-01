@@ -264,7 +264,7 @@ pub struct SignedRegisterIdentity<'a> {
 #[allow(dead_code)]
 pub fn tempdir_persistence() -> (
     Option<String>,
-    Option<std::sync::Arc<dyn medulla::server::api::persistence::PersistenceBackend>>,
+    Option<std::sync::Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
 ) {
     use std::sync::atomic::{AtomicU64, Ordering};
     static SEQ: AtomicU64 = AtomicU64::new(0);
@@ -274,7 +274,7 @@ pub fn tempdir_persistence() -> (
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).expect("create test persist dir");
     let dir_s = dir.to_string_lossy().into_owned();
-    let backend: std::sync::Arc<dyn medulla::server::api::persistence::PersistenceBackend> =
+    let backend: std::sync::Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> =
         std::sync::Arc::new(
             medulla::server::persistence::redb_backend::RedbBackend::open(dir_s.clone(), 4096)
                 .expect("open tempdir redb backend"),
@@ -289,7 +289,7 @@ pub fn tempdir_persistence() -> (
 #[allow(dead_code)]
 pub fn tempdir_persistence() -> (
     Option<String>,
-    Option<std::sync::Arc<dyn medulla::server::api::persistence::PersistenceBackend>>,
+    Option<std::sync::Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
 ) {
     (None, None)
 }

@@ -30,7 +30,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 
 use medulla_viz_graph_tiles::{decode_cluster_expansion, decode_cluster_level, read_frames, TileKind};
-use medulla::server::viz_engine::VizEngineState;
+use medulla_server_api::viz_engine::VizEngineState;
 use medulla::server::viz_interactive::serve;
 
 /// Start a real `viz_interactive` listener on an OS-assigned loopback port and
