@@ -25,10 +25,8 @@ use medulla_decision_types::{
     decision::statistical::retrieval_adapter::MAX_ADAPTER_RANK,
     decision::statistical::retrieval_adapter::QUERY_ADAPTER_SCHEMA_VERSION,
 };
-use medulla_numeric::decision::adapter::{
-    directions_of, evaluate, fit, to_body, to_q16, JudgedItem,
-};
-use medulla_numeric::decision::retrieval::{hard_negatives, Verdict};
+use medulla_decision_stats::{decision::adapter::directions_of, decision::adapter::evaluate, decision::adapter::fit, decision::adapter::to_body, decision::adapter::to_q16, decision::adapter::JudgedItem};
+use medulla_decision_stats::{decision::retrieval::hard_negatives, decision::retrieval::Verdict};
 use medulla_types::solve_scalar::digest_text;
 
 use super::served_adapter::{adapter_key, read_fitted};

@@ -1803,7 +1803,7 @@ R036 and the Arbora requirement remain open for these acceptance obligations.
 
 The engine decides which web candidates to ingest. arbora `research.web` (`ARBORA-OPS-R067`) sends the search rows, the query and a page budget as one served `SelectWebPages` call. arbora computes no ranking.
 
-Call path: served `SelectWebPages` -> `src/server/dispatch/graph_pipeline/web_ingest.rs` -> RLS-visible held `Document` rows -> `medulla_numeric::decision::web_fetch_selection::select_web_pages` -> ordered selection with reasons, and one skip entry per other candidate.
+Call path: served `SelectWebPages` -> `src/server/dispatch/graph_pipeline/web_ingest.rs` -> RLS-visible held `Document` rows -> `medulla_decision_stats::decision::web_fetch_selection::select_web_pages` -> ordered selection with reasons, and one skip entry per other candidate.
 
 The selection is deterministic and runs no model. It is a dedicated method, not a `Decide` question kind, because it needs no feature schema, head or decision policy. Selected pages enter through `MEDULLA-UNIFIED-DATA-PLANE-R651.7`. Near-duplicate content by the index of `MEDULLA-INGEST-WORKER-R702` is not yet used.
 

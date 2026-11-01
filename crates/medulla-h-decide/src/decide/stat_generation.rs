@@ -23,8 +23,8 @@ use medulla_decision_types::{
     decision::statistical::retrieval_generation::GENERATION_RECEIPT_SCHEMA_VERSION,
     decision::statistical::retrieval_generation::MAX_GENERATION_TOP_K,
 };
-use medulla_numeric::decision::adapter::{to_q16, wilson_lower};
-use medulla_numeric::decision::retrieval::Verdict;
+use medulla_decision_stats::{decision::adapter::to_q16, decision::adapter::wilson_lower};
+use medulla_decision_stats::decision::retrieval::Verdict;
 
 use super::stat_executor::ExecutionContext;
 use super::stat_log::LogReader;

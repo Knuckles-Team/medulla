@@ -40,9 +40,9 @@ use medulla_decision_types::{
 use medulla_decision_types::{
     decision::CandidateSourceRecord, decision::QuantScaleTag, decision::RecordWindow,
 };
-use medulla_numeric::decision::aggregate::{aggregate, AggregateRules, JoinedRecord};
-use medulla_numeric::decision::candidate::CandidateView;
-use medulla_numeric::decision::features::outcome_rate_key;
+use medulla_decision_stats::{decision::aggregate::aggregate, decision::aggregate::AggregateRules, decision::aggregate::JoinedRecord};
+use medulla_decision_stats::decision::candidate::CandidateView;
+use medulla_decision_stats::decision::features::outcome_rate_key;
 use medulla_types::contract::BoundedVec;
 
 use super::stat_executor::ExecutionContext;

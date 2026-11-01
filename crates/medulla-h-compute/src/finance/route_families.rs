@@ -489,10 +489,10 @@ pub(super) fn handle_sizing(req_id: u64, method: Method) -> Result<Response, Met
             fraction,
             max_risk,
         } => {
-            use medulla_numeric::sizing::kelly_fraction;
-            use medulla_numeric::sizing::KellyInput;
-            use medulla_numeric::sizing::DEFAULT_KELLY_FRACTION;
-            use medulla_numeric::sizing::DEFAULT_MAX_RISK;
+            use medulla_finance_quant::sizing::kelly_fraction;
+            use medulla_finance_quant::sizing::KellyInput;
+            use medulla_finance_quant::sizing::DEFAULT_KELLY_FRACTION;
+            use medulla_finance_quant::sizing::DEFAULT_MAX_RISK;
             match KellyInput::new(
                 accuracy,
                 win_loss_ratio,
@@ -510,7 +510,7 @@ pub(super) fn handle_sizing(req_id: u64, method: Method) -> Result<Response, Met
             reference,
             current,
             threshold,
-        } => match medulla_numeric::sizing::distribution_shift(&reference, &current, threshold) {
+        } => match medulla_finance_quant::sizing::distribution_shift(&reference, &current, threshold) {
             Ok(shift) => Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceDistributionShift>(

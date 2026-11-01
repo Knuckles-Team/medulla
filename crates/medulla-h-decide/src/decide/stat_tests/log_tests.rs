@@ -539,7 +539,7 @@ fn assert_forecast_is_available(h: &Harness, record: &StatisticalDecisionRecord)
         panic!("executed exploration")
     };
     assert!(
-        medulla_numeric::decision::track_record::executed_forecast(&head, &matrix, option_id)
+        medulla_decision_stats::decision::track_record::executed_forecast(&head, &matrix, option_id)
             .unwrap()
             .is_some(),
         "fixture must supply a scoreable synthetic forecast"

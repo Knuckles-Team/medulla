@@ -69,6 +69,7 @@ medulla-isolation = { path = "../medulla-isolation" }
 medulla-ann-codes = { path = "../medulla-ann-codes" }
 medulla-reasoner = { path = "../medulla-reasoner" }
 medulla-graph-algos = { path = "../medulla-graph-algos" }
+medulla-decision-stats = { path = "../medulla-decision-stats" }
 
 [features]
 test-support = []
@@ -83,7 +84,7 @@ broker = []
 cdc-kafka = ["dep:medulla-stream", "medulla-stream/cdc-kafka", "streaming"]
 compute-dist = ["raft"]
 cypher = ["dep:medulla-query", "medulla-query/cypher", ]
-decide = ["dep:medulla-numeric", "medulla-numeric/decision", "dep:medulla-capabilities", "medulla-capabilities?/decide", "jobs", "redb", "shacl"]
+decide = ["dep:medulla-numeric", "medulla-numeric/decision", "medulla-decision-stats/decision", "dep:medulla-capabilities", "medulla-capabilities?/decide", "jobs", "redb", "shacl"]
 epistemic = ["dep:medulla-plan", "medulla-plan/epistemic", "dep:medulla-modality", "dep:medulla-epistemic", "query"]
 epistemic-tms = ["dep:medulla-epistemic", "medulla-epistemic/epistemic-tms", "epistemic"]
 federation = ["dep:medulla-plan", "medulla-plan/federation", "query", "server"]

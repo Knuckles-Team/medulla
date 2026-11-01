@@ -7,7 +7,7 @@
 //! of its retained revisions must carry the pinned definition digest. The body
 //! is then re-hashed against the revision's content digest.
 
-use medulla_numeric::decision::features::FeatureMatrix;
+use medulla_decision_stats::decision::features::FeatureMatrix;
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
 

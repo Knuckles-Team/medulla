@@ -12,7 +12,7 @@
 //!   re-read from the record's own inputs.
 //!
 //! What counts is the outcome aggregate's ONE label rule
-//! ([`medulla_numeric::decision::aggregate::label_use`]): an observation (not a claim), at
+//! ([`medulla_decision_stats::decision::aggregate::label_use`]): an observation (not a claim), at
 //! or above the fidelity floor, by an evaluator that is neither the selected agent, its
 //! lease holder nor the decider — so a self-report never moves a reputation.
 //! Visibility is the log's (EH-066, EH-395 ruling): only records the caller may
@@ -34,11 +34,9 @@ use medulla_decision_types::{
     decision::statistical::FeatureMatrixRef, decision::statistical::StatisticalErrorCode,
 };
 use medulla_numeric::calibration::ProperScores;
-use medulla_numeric::decision::aggregate::{label_use, LabelUse};
-use medulla_numeric::decision::features::FeatureMatrix;
-use medulla_numeric::decision::track_record::{
-    executed_forecast, track_records, ResolvedForecast, TrackRecord,
-};
+use medulla_decision_stats::{decision::aggregate::label_use, decision::aggregate::LabelUse};
+use medulla_decision_stats::decision::features::FeatureMatrix;
+use medulla_decision_stats::{decision::track_record::executed_forecast, decision::track_record::track_records, decision::track_record::ResolvedForecast, decision::track_record::TrackRecord};
 use medulla_numeric::detkernel::Level;
 use medulla_numeric::risk::{
     anchored_reliability, learn_reputation, ConcentrationBounds, Estimate, Observation, Reputation,

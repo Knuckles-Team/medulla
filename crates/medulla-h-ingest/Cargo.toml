@@ -46,13 +46,14 @@ tracing = "0.1"
 uuid = { version = "1.28", features = ["v4"] }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
+medulla-decision-stats = { path = "../medulla-decision-stats" }
 
 [features]
 test-support = []
 asr-whisper = ["dep:medulla-audio", "medulla-audio/asr", ]
 ast = []
 blob = ["dep:chrono", "redb"]
-decide = ["dep:medulla-numeric", "medulla-numeric/decision", "redb"]
+decide = ["dep:medulla-numeric", "medulla-numeric/decision", "medulla-decision-stats/decision", "redb"]
 modality-serving = ["dep:medulla-video", "medulla-video/runtime", "dep:medulla-modality", "dep:medulla-image", "medulla-image/runtime", "dep:medulla-document", "medulla-document/serving", "dep:medulla-audio", "medulla-audio/runtime", "redb", "security"]
 query = ["dep:medulla-query", "medulla-query/sql", "redb"]
 raft = ["redb"]

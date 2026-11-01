@@ -21,15 +21,11 @@ use medulla_decision_types::{
     decision::statistical::StatisticalOutcome, decision::statistical::StatisticalQuestion,
     decision::statistical::TypedParam,
 };
-use medulla_numeric::decision::candidate::CandidateView;
-use medulla_numeric::decision::exploration::permit;
-use medulla_numeric::decision::features::{
-    feature_matrix, FeatureInputs, FeatureMatrix, MatrixOutcome,
-};
-use medulla_numeric::decision::head_eval::{
-    check_compatible, explanation, read_head, Evaluated, HeadReading,
-};
-use medulla_numeric::decision::ladder::{decide, LadderInputs, LadderResult};
+use medulla_decision_stats::decision::candidate::CandidateView;
+use medulla_decision_stats::decision::exploration::permit;
+use medulla_decision_stats::{decision::features::feature_matrix, decision::features::FeatureInputs, decision::features::FeatureMatrix, decision::features::MatrixOutcome};
+use medulla_decision_stats::{decision::head_eval::check_compatible, decision::head_eval::explanation, decision::head_eval::read_head, decision::head_eval::Evaluated, decision::head_eval::HeadReading};
+use medulla_decision_stats::{decision::ladder::decide, decision::ladder::LadderInputs, decision::ladder::LadderResult};
 use medulla_types::contract::BoundedVec;
 
 use super::stat_support::{pinned_body, refusal, ResolvedPolicy};

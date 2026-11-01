@@ -20,7 +20,7 @@ use medulla_decision_types::{
     decision::statistical::retrieval::RetrievalPathTemplate,
     decision::statistical::retrieval::ReturnedEvidence,
 };
-use medulla_numeric::decision::retrieval::{class_usage, hard_negatives, proven_paths, Verdict};
+use medulla_decision_stats::{decision::retrieval::class_usage, decision::retrieval::hard_negatives, decision::retrieval::proven_paths, decision::retrieval::Verdict};
 use medulla_query::ColumnType;
 use medulla_types::solve_scalar::digest_text;
 use serde_json::Value;

@@ -35,8 +35,8 @@ use medulla_decision_types::{
     decision::statistical::TypedValue,
 };
 use medulla_decision_types::{decision::AbstainReason, decision::UnitRationalWire};
-use medulla_numeric::decision::features::FeatureMatrix;
-use medulla_numeric::decision::ladder::LadderResult;
+use medulla_decision_stats::decision::features::FeatureMatrix;
+use medulla_decision_stats::decision::ladder::LadderResult;
 
 use super::stat_executor::Executed;
 use super::stat_support::{filtered_view, invalid_parameter};

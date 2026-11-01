@@ -41,7 +41,7 @@ use medulla_decision_types::{
     decision::CandidateSourceRecord, decision::LibraryCandidateScope,
     decision::MAX_ASSEMBLY_CANDIDATES,
 };
-use medulla_numeric::decision::candidate::CandidateView;
+use medulla_decision_stats::decision::candidate::CandidateView;
 
 use super::stat_classes::{current_rules, derive, DerivedClasses};
 use super::stat_support::refusal;
@@ -225,7 +225,7 @@ fn row_view(id: String, properties: &serde_json::Value) -> CandidateView {
     let mut texts = BTreeMap::new();
     for (key, value) in properties.as_object().into_iter().flatten() {
         if let Some(number) = value.as_f64() {
-            if let Ok(q) = medulla_numeric::decision::quant::q32(number) {
+            if let Ok(q) = medulla_decision_stats::decision::quant::q32(number) {
                 numbers.insert(key.clone(), q.value);
             }
         } else if let Some(text) = value.as_str() {

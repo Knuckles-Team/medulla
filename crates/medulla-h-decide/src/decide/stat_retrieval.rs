@@ -16,7 +16,7 @@ use medulla_decision_types::{
 use medulla_decision_types::{
     decision::statistical::QuestionKind, decision::statistical::StatisticalErrorCode,
 };
-use medulla_numeric::decision::retrieval::{verdict, Verdict};
+use medulla_decision_stats::{decision::retrieval::verdict, decision::retrieval::Verdict};
 
 use super::stat_executor::ExecutionContext;
 use super::stat_log::{

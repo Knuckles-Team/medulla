@@ -6,11 +6,7 @@ use crate::common::{
     uniform_in,
 };
 use medulla_numeric::calibration::ProbabilityMatrix;
-use medulla_numeric::conformal::{
-    acceptability_score, aps_label_scores, aps_scores, binary_conformal, lac_scores,
-    mondrian_conformal, realised_coverage_interval, split_conformal, weighted_split_conformal,
-    AdaptiveConformal, BinarySet, ClassThreshold, PredictionSet, RapsPenalty, Threshold,
-};
+use medulla_decision_stats::{conformal::acceptability_score, conformal::aps_label_scores, conformal::aps_scores, conformal::binary_conformal, conformal::lac_scores, conformal::mondrian_conformal, conformal::realised_coverage_interval, conformal::split_conformal, conformal::weighted_split_conformal, conformal::AdaptiveConformal, conformal::BinarySet, conformal::ClassThreshold, conformal::PredictionSet, conformal::RapsPenalty, conformal::Threshold};
 use medulla_numeric::detkernel::kernels::softmax;
 use medulla_numeric::detkernel::Level;
 use medulla_numeric::risk::sample_gate::coverage_standard_deviation;

@@ -22,9 +22,9 @@ use medulla_decision_types::{
     decision::statistical::log::StoredEvaluation,
 };
 use medulla_decision_types::{decision::EvidenceClass, decision::RecordWindow};
-use medulla_numeric::attribution::{additive_fit, shapley_exact, Attribution, LoggedGame};
-use medulla_numeric::decision::aggregate::{label_use, LabelUse};
-use medulla_numeric::decision::quant::q32;
+use medulla_finance::{attribution::additive_fit, attribution::shapley_exact, attribution::Attribution, attribution::LoggedGame};
+use medulla_decision_stats::{decision::aggregate::label_use, decision::aggregate::LabelUse};
+use medulla_decision_stats::decision::quant::q32;
 use medulla_types::contract::BoundedVec;
 use medulla_types::solve_scalar::digest_text;
 

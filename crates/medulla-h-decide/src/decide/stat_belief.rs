@@ -15,10 +15,10 @@ use medulla_decision_types::{
 use medulla_decision_types::{
     decision::statistical::DecideRequest, decision::statistical::StatisticalErrorCode,
 };
-use medulla_numeric::decision::candidate::CandidateView;
-use medulla_numeric::decision::features::{feature_matrix, FeatureInputs, MatrixOutcome};
-use medulla_numeric::decision::quant::q32;
-use medulla_numeric::decision::trajectory::{belief, Prefix};
+use medulla_decision_stats::decision::candidate::CandidateView;
+use medulla_decision_stats::{decision::features::feature_matrix, decision::features::FeatureInputs, decision::features::MatrixOutcome};
+use medulla_decision_stats::decision::quant::q32;
+use medulla_decision_stats::{decision::trajectory::belief, decision::trajectory::Prefix};
 use medulla_types::contract::BoundedVec;
 
 use super::stat_executor::{ExecutionContext, Pinned};

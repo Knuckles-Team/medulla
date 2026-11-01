@@ -22,7 +22,6 @@
 //! float transcendentals crate-wide), reductions are serial and ordered, and
 //! digests are taken over quantised integers.
 
-pub mod attribution;
 pub mod cluster;
 pub mod elementwise;
 pub mod error;
@@ -35,22 +34,13 @@ pub mod reductions;
 // (`detkernel`), calibration, risk control, conformal prediction and off-policy
 // evaluation. Always built: they add only the pinned pure-Rust `libm`.
 pub mod calibration;
-pub mod conformal;
-#[cfg(feature = "decision")]
-pub mod decision;
 pub mod detkernel;
-pub mod ope;
 pub mod risk;
 // Incremental series kernels (EH-522): the one implementation behind UQL `DERIVE`, the SQL
 // `eg_*` window functions, the coinciding PromQL functions and the finance signals.
 pub mod series;
 // Evaluation kernels (EH-530): special functions, backtest validation, predictive skill.
 pub mod evaluation;
-// Banking risk calculations (MEDULLA-FINANCE-PRIMITIVES-R901) and position sizing and
-// distribution-shift detection (MEDULLA-FINANCE-PRIMITIVES-R900).
-pub mod banking;
-pub mod execution;
-pub mod sizing;
 // ModalityContract retrofit (CONCEPT:E4): `impl ModalityContract for
 // cluster::KMeansResult` + the `modality_conformance_tests!` battery. Behind the
 // crate's own opt-in `contract` feature (default OFF). See `src/contract.rs`.

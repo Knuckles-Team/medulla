@@ -1,5 +1,5 @@
 //! MEDULLA-FINANCE-PRIMITIVES-R900.3: the served `FinancePositionSize` and
-//! `FinanceDistributionShift` routes run the shared `medulla_numeric::sizing` kernels
+//! `FinanceDistributionShift` routes run the shared `medulla_finance_quant::sizing` kernels
 //! through the real signed `dispatch` surface.
 #![cfg(all(feature = "server", feature = "security", feature = "finance"))]
 

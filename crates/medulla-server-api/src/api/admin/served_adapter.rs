@@ -9,7 +9,7 @@
 use std::sync::Arc;
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_numeric::decision::adapter::AdapterKernel;
+use medulla_decision_stats::decision::adapter::AdapterKernel;
 
 use crate::state::ServerState;
 

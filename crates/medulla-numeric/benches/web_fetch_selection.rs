@@ -10,7 +10,7 @@ use medulla_decision_types::{
     decision::web_fetch_selection::SelectWebPagesRequest,
     decision::web_fetch_selection::WebCandidate,
 };
-use medulla_numeric::decision::web_fetch_selection::{select_web_pages, HeldPage};
+use medulla_decision_stats::{decision::web_fetch_selection::select_web_pages, decision::web_fetch_selection::HeldPage};
 
 const NOW: u64 = 1_800_000_000_000;
 const SAMPLES: usize = 2_000;
@@ -29,7 +29,7 @@ fn main() {
         .collect();
     let held: BTreeMap<String, HeldPage> = (0..10)
         .map(|i| {
-            let url = medulla_numeric::decision::web_fetch_selection::canonical_url(
+            let url = medulla_decision_stats::decision::web_fetch_selection::canonical_url(
                 &candidates[i * 4].url,
             )
             .unwrap();

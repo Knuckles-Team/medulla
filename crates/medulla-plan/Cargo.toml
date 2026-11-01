@@ -440,6 +440,7 @@ medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-reasoner = { path = "../medulla-reasoner" }
 medulla-graph-algos = { path = "../medulla-graph-algos" }
+medulla-finance = { path = "../medulla-finance" }
 
 [dev-dependencies]
 medulla-result-types = { path = "../medulla-result-types", features = ["query"] }

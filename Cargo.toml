@@ -168,7 +168,7 @@ otel = ["medulla-kernel/otel",
     "dep:tracing-opentelemetry",
     "server",
 ]
-finance = ["medulla-server/finance", "medulla-h-decide/finance", "medulla-h-compute/finance", "medulla-compute/finance", "medulla-types/finance", "medulla-result-types/finance", "medulla-protocol-types/finance"]
+finance = ["medulla-server/finance", "medulla-h-decide/finance", "medulla-h-compute/finance", "medulla-compute/finance", "medulla-types/finance", "medulla-result-types/finance", "medulla-protocol-types/finance", "medulla-finance-quant/analytics"]
 ast = ["medulla-server/ast", "medulla-h-ingest/ast", "medulla-server-api/ast", "medulla-store/ast", "medulla-compute/ast"]
 # Extended-language grammar tier (CONCEPT:KG-2.106), folded into `full`.
 ast-extended = ["medulla-compute/ast-extended"]
@@ -292,7 +292,7 @@ solve = ["medulla-decision-policy/solve", "medulla-h-decide/solve", "medulla-com
 # RF-ADR-010: the Decide layer's handlers. The wire contract is unconditional
 # (the capability rows are, following the `SemanticIndex` precedent), so this
 # gates only the server-side implementation and the crates it needs.
-decide = ["medulla-server/decide", "medulla-wire/decide", "medulla-h-query/decide", "medulla-h-decide/decide", "medulla-h-jobs/decide", "medulla-h-ingest/decide", "medulla-h-graph/decide", "medulla-raft/decide", "medulla-persistence/decide", "medulla-server-api/decide", "solve", "medulla-capabilities?/decide", "medulla-compute/decide", "medulla-compute/decide-stats", "numeric", "medulla-numeric/decision", "medulla-ann?/drift", "jobs", "redb", "shacl"]
+decide = ["medulla-server/decide", "medulla-wire/decide", "medulla-h-query/decide", "medulla-h-decide/decide", "medulla-h-jobs/decide", "medulla-h-ingest/decide", "medulla-h-graph/decide", "medulla-raft/decide", "medulla-persistence/decide", "medulla-server-api/decide", "solve", "medulla-capabilities?/decide", "medulla-compute/decide", "medulla-compute/decide-stats", "numeric", "medulla-numeric/decision", "medulla-ann?/drift", "jobs", "redb", "shacl", "medulla-decision-stats/decision"]
 # Native medulla-ann IVF-PQ + OPQ + SQ8-refine vector index (CONCEPT:KG-2.207) as the
 # SemanticStore compression backend alongside the in-tree native HNSW index. Pure-Rust,
 # CPU integer-table serving (no GPU/native-ML/faiss in the tree). It is included in
@@ -1879,6 +1879,7 @@ medulla-finance-quant = { path = "crates/medulla-finance-quant" }
 medulla-mining = { path = "crates/medulla-mining" }
 medulla-finance-market = { path = "crates/medulla-finance-market" }
 medulla-decision-policy = { path = "crates/medulla-decision-policy" }
+medulla-decision-stats = { path = "crates/medulla-decision-stats" }
 
 [dev-dependencies]
 medulla-direct-state = { path = "crates/medulla-direct-state", features = ["test-support"] }

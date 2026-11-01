@@ -8,13 +8,11 @@ use medulla_decision_types::{
     decision::statistical::dataset::LabelledDataset,
 };
 use medulla_numeric::calibration::metrics::{reliability, BinCount};
-use medulla_numeric::decision::admission::{admit, Regime};
-use medulla_numeric::decision::evaluate::{evaluate, EvalSpec, ECE_BINS};
-use medulla_numeric::decision::features::FeatureMatrix;
-use medulla_numeric::decision::head_eval::{
-    act_rule, calibration_statement, read_head, top_index, HeadReading,
-};
-use medulla_numeric::decision::scorer::fixed::{to_f64, ONE};
+use medulla_decision_stats::{decision::admission::admit, decision::admission::Regime};
+use medulla_decision_stats::{decision::evaluate::evaluate, decision::evaluate::EvalSpec, decision::evaluate::ECE_BINS};
+use medulla_decision_stats::decision::features::FeatureMatrix;
+use medulla_decision_stats::{decision::head_eval::act_rule, decision::head_eval::calibration_statement, decision::head_eval::read_head, decision::head_eval::top_index, decision::head_eval::HeadReading};
+use medulla_decision_stats::{decision::scorer::fixed::to_f64, decision::scorer::fixed::ONE};
 
 use super::common::{dataset, gold_item_for, statistical, FEATURES};
 use super::fit_eval::{fitted, rules};
