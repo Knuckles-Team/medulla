@@ -26,6 +26,7 @@ mod imp {
 }
 
 #[cfg(not(feature = "metrics"))]
+#[allow(missing_docs)] // no-op shims; the metrics build documents the same functions
 mod imp {
     pub fn store_migration_step(_step: &str, _outcome: &str) {}
 }
