@@ -12,3 +12,16 @@ name = "medulla_store"
 path = "src/lib.rs"
 
 [dependencies]
+
+[features]
+ast = []
+compute-dist = ["raft"]
+embedded = ["redb"]
+matview = []
+metrics = []
+raft = ["server", "redb"]
+redb = []
+security = ["redb"]
+server = []
+statechart = ["server"]
+tsdb = ["server", "redb"]

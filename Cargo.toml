@@ -152,7 +152,7 @@ algorithms = []
 # Prometheus observability: request/latency/in-flight counters, per-graph
 # gauges and a /metrics HTTP listener (--metrics-addr). ON by default; opt out
 # with --no-default-features for a leaner lib-only build.
-metrics = ["medulla-kernel/metrics", "dep:prometheus", "medulla-types/metrics"]
+metrics = ["medulla-store/metrics", "medulla-kernel/metrics", "dep:prometheus", "medulla-types/metrics"]
 # OpenTelemetry OTLP span export (CONCEPT:MEDULLA-091). Layers a `tracing-opentelemetry`
 # batch OTLP exporter ON TOP of the existing `tracing` subscriber, additively: it
 # installs ONLY when built with this feature AND `MEDULLA_OTLP_ENDPOINT` is
@@ -169,7 +169,7 @@ otel = ["medulla-kernel/otel",
     "server",
 ]
 finance = ["medulla-compute/finance", "medulla-types/finance"]
-ast = ["medulla-compute/ast"]
+ast = ["medulla-store/ast", "medulla-compute/ast"]
 # Extended-language grammar tier (CONCEPT:KG-2.106), folded into `full`.
 ast-extended = ["medulla-compute/ast-extended"]
 datascience = ["medulla-kernel/datascience", "medulla-compute/datascience", "medulla-types/datascience"]
@@ -304,7 +304,7 @@ ann-redb = ["ann", "redb", "medulla-core/ann-redb"]
 # the mutation gateway (`src/server/mutation.rs`) is server-only, so the binary
 # linking the MethodPolicy ledger is exactly the `server` build, matching every other
 # server-only dependency in this list.
-server = ["medulla-kernel/server", "dep:tokio", "dep:clap", "dep:tracing-subscriber", "dep:async-trait", "dep:medulla-capabilities"]
+server = ["medulla-store/server", "medulla-kernel/server", "dep:tokio", "dep:clap", "dep:tracing-subscriber", "dep:async-trait", "dep:medulla-capabilities"]
 # Pure-Rust TLS/mTLS for the native MessagePack TCP service. The one main build
 # includes it so remote-engine deployments can terminate TLS in the binary.
 server-tls = ["server", "dep:rustls", "dep:tokio-rustls"]
@@ -315,7 +315,7 @@ server-tls = ["server", "dep:rustls", "dep:tokio-rustls"]
 # is layered ON TOP and is itself gated on `server` (it talks to `ServerState`
 # + the Tokio dispatch). So `redb` alone (no `server`) compiles a usable durable
 # store — exactly what the EMBEDDED API drives on an edge host with no Tokio.
-redb = ["medulla-kernel/redb", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction"]
+redb = ["medulla-store/redb", "medulla-kernel/redb", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction"]
 # Streamed content-addressed BLOB substrate (CONCEPT:KG-2.206): the bytes tier
 # under multimodal `:Media`/`:Blob`. Pulls `redb` (the native CAS lives in
 # `blob.redb`) + `server` (the streaming protocol rides the Tokio transport). The
@@ -375,7 +375,7 @@ jobs = [
 # LOCKSTEP, exactly like `jobs`). Unlike `jobs` it needs neither `mining` nor `epistemic`
 # -- phase-1 does not reuse a compute kernel or write claims. Included in the main `full`
 # build.
-statechart = [
+statechart = ["medulla-store/statechart", 
     "server",
     "dep:medulla-statechart", "medulla-types/statechart", "medulla-capabilities/statechart",
 ]
@@ -634,7 +634,7 @@ graphql = ["medulla-kernel/graphql", "dep:medulla-graphql", "medulla-graphql/har
 # series handler routes through dispatch) and is included in the one main build. With
 # `query`, medulla-tsdb's `arrow-seg` lights up the
 # DataFusion `time_bucket = GROUP BY (ts/w)*w` leg (see the `query` feature below).
-tsdb = ["server", "redb", "dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries"]
+tsdb = ["medulla-store/tsdb", "server", "redb", "dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries"]
 # Observability log ingestion front door + Parquet-on-blob-CAS segments
 # (CONCEPT:MEDULLA-160/161) — the first slice of Phase T ("surpass OpenObserve"). A
 # hand-rolled HTTP listener (the SAME dep-free idiom as `metrics`/`sparql-http` — NO
@@ -734,7 +734,7 @@ result-cache = ["medulla-kernel/result-cache", "medulla-core/result-cache", "med
 # CDC delta source) — ALL THREE already in the single-node `full` build. It no longer
 # implies `compute-dist`/`raft`, so PLAN-BACKED incremental matviews are native to the
 # single-node main build; only the UNRELATED algo-only Pregel matview stays cluster-gated.
-matview = [
+matview = ["medulla-store/matview", 
     "query",
     "result-cache",
     "streaming",
@@ -771,7 +771,7 @@ cost = ["server", "medulla-types/cost"]
 # committed log entry applies through the same PersistenceBackend/GraphCore path.
 # Activates only when built `--features raft` AND configured at runtime
 # (MEDULLA_RAFT_NODE_ID + MEDULLA_RAFT_PEERS); off → single-node.
-raft = ["medulla-kernel/raft",
+raft = ["medulla-store/raft", "medulla-kernel/raft",
     "server",
     "redb",
     "dep:openraft",
@@ -810,7 +810,7 @@ raft = ["medulla-kernel/raft",
 # here too, cfg-gate its four ROWS entries) -- deferred because it also requires
 # regenerating and re-verifying the committed capability-ledger contract
 # artifacts, which no lane has done yet for this feature.
-compute-dist = ["raft", "medulla-types/compute-dist"]
+compute-dist = ["medulla-store/compute-dist", "raft", "medulla-types/compute-dist"]
 # Non-blocking cross-shard commit (CONCEPT:MEDULLA-082) — Paxos-Commit-lite. ADDITIVE: the
 # default cross-shard path stays classic 2PC (`src/raft/cross_shard_txn/`), which
 # holds its sole durable COMMIT decision in the coordinator's private redb and so
@@ -1066,7 +1066,7 @@ kvcache-compression = ["kvcache-server", "medulla-kvcache/compression"]
 # `redb_store`), so there is ONE core, two transports. The feature itself pulls only
 # `redb`, allowing targeted embedded checks without a Tokio server runtime; the one
 # main build includes the embedded API alongside the served transport.
-embedded = ["redb"]
+embedded = ["medulla-store/embedded", "redb"]
 # Native RDF surface (CONCEPT:KG-2.217, Lane W): maps an RDF dataset onto the
 # property-graph + serializes it back (Turtle/N-Triples via oxrdf/oxttl in the
 # medulla-rdf crate). PURE-RUST — links NO C/native dep (proven by cargo tree) — and is
@@ -1241,7 +1241,7 @@ compute = ["finance", "ast", "ast-extended", "datascience", "mining", "graphlear
 # capability (verified-identity envelope claims, not just HMAC channel integrity).
 # Security is mandatory in the one main `full` build and remains present in both
 # source-built layers.
-security = ["medulla-kernel/security", "redb", "oidc", "dep:chacha20poly1305", "dep:argon2", "dep:sha1", "medulla-types/security", "medulla-core/security"]
+security = ["medulla-store/security", "medulla-kernel/security", "redb", "oidc", "dep:chacha20poly1305", "dep:argon2", "dep:sha1", "medulla-types/security", "medulla-core/security"]
 # RLS marking-predicate export (CA-16), off by default. This is one authenticated
 # HTTP implementation (`/policy/export`), not a duplicate unbound MessagePack method.
 # Implies `security` for the shared verified-identity authority.
@@ -1843,7 +1843,7 @@ rand = "0.8"
 # at the engine level (complements the Python-side spawn guard).
 fs4 = "1.1"
 serde_bytes = "0.11.19"
-
+medulla-store = { path = "crates/medulla-store" }
 
 [dev-dependencies]
 tokio = { version = "1.53", features = ["full", "test-util"] }
