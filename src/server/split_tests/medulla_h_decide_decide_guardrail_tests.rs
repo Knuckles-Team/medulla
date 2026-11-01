@@ -1,7 +1,7 @@
-#[allow(unused_imports)]
-use medulla_h_decide::decide::*;
 //! MEDULLA-DECISION-ENGINE-R127.2.2: real dispatcher, persisted rules and typed results.
 
+#[allow(unused_imports)]
+use medulla_h_decide::decide::*;
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;

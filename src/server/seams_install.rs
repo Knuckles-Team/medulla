@@ -32,7 +32,7 @@ pub fn install_seams(state: &ServerState) {
     let _ = state
         .seams
         .decide
-        .set(std::sync::Arc::new(super::handlers::decide::DecideSeam));
+        .set(std::sync::Arc::new(medulla_h_decide::decide::DecideSeam));
 
     // L5 query, txn, wire.
     #[cfg(all(feature = "mining", feature = "server"))]

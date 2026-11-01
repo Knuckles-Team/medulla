@@ -30,7 +30,8 @@ mod stat_belief;
 #[cfg(feature = "decide")]
 mod stat_classes;
 #[cfg(feature = "decide")]
-mod stat_decide;
+#[allow(missing_docs)]
+pub mod stat_decide;
 #[cfg(feature = "decide")]
 mod stat_evaluator;
 #[cfg(feature = "decide")]
@@ -86,6 +87,9 @@ mod stat_reputation;
 // EH-396: the query adapter on the served read paths.
 #[cfg(feature = "decide")]
 pub(crate) mod served_adapter;
+#[cfg(all(any(test, feature = "test-support"), feature = "redb"))]
+#[allow(missing_docs)]
+pub mod stat_test_support;
 #[cfg(all(test, feature = "decide"))]
 mod stat_tests;
 // EH-066 — the decision record views (SQL catalog relations + the UQL `DECISIONS` source).

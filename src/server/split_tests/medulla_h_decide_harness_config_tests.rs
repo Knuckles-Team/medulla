@@ -1,7 +1,15 @@
 //! The published harness kind must fail closed until its executor is served.
 
-use super::*;
-use crate::protocol::{Method, Request, Response};
+use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_decision_types::decision::statistical::{DecideRequest, DecisionBatch, QuestionKind, QuestionSafety};
+use medulla_decision_types::decision::statistical::log::{DecisionLogCommitted, DecisionLogOp};
+use medulla_decision_types::decision::DecisionPolicyRef;
+use medulla_h_decide::decide::stat_test_support::{
+    decode, publish_route_schema, request, Harness, TENANT,
+};
+use medulla_protocol_types::protocol::{Method, Request, Response};
+use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::state::ServerState;
 
 async fn dispatch(h: &Harness, method: Method) -> Response {
     let method = rmp_serde::from_slice(&rmp_serde::to_vec_named(&method).unwrap()).unwrap();
@@ -136,7 +144,7 @@ async fn harness_config_replay_refuses_a_relabelled_generic_record() {
             relabelled.question.kind = QuestionKind::HarnessConfig;
         }
         relabelled.inputs_digest = medulla_types::solve_scalar::digest_text(
-            super::super::stat_decide::STATISTICAL_INPUTS_DOMAIN,
+            medulla_h_decide::decide::stat_decide::STATISTICAL_INPUTS_DOMAIN,
             &(&relabelled.question, &relabelled.inputs),
         );
         relabelled.record_id = format!(

@@ -43,3 +43,5 @@ mod medulla_h_ingest_web_ingest_tests;
 mod medulla_h_jobs_wire_tests;
 #[cfg(all(test, feature = "decide"))]
 mod medulla_h_decide_decide_guardrail_tests;
+#[cfg(all(test, feature = "decide"))]
+mod medulla_h_decide_harness_config_tests;

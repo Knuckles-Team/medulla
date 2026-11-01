@@ -54,7 +54,7 @@ use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
 /// Domain of a statistical record's input digest.
-pub(super) const STATISTICAL_INPUTS_DOMAIN: &str = "eg/decision-statistical-inputs/v1";
+pub const STATISTICAL_INPUTS_DOMAIN: &str = "eg/decision-statistical-inputs/v1";
 
 /// Answer one statistical decision; commit nothing.
 pub async fn handle_decide(
