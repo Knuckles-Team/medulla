@@ -11,7 +11,7 @@
 //! governed form, so a draft can never bypass what an envelope must satisfy.
 
 use crate::dispatch::shared::timed_read;
-use super::*;
+use crate::dispatch::*;
 use medulla_protocol_types::{
     change_envelope::ChangeEnvelope, change_envelope::ChangeEnvelopeDraft,
 };
@@ -114,7 +114,7 @@ async fn current_graph_version(
 
 /// Replace a draft method with the governed method its drafts compile to;
 /// every other method passes through unchanged.
-pub(super) async fn compile_change_envelope_drafts(
+pub async fn compile_change_envelope_drafts(
     state: &Arc<RwLock<ServerState>>,
     mut req: Request,
     verified: &VerifiedRequestContext,
@@ -179,8 +179,8 @@ fn compile_draft_batch(
     Ok(Method::ApplyChangeEnvelopes { envelopes })
 }
 
-#[cfg(test)]
-pub(crate) mod tests {
+#[cfg(any(test, feature = "test-support"))]
+pub mod tests {
     use super::*;
     use medulla_mutation_types::mutation_scope::DurabilityDomain;
     use medulla_mutation_types::mutation_scope::MutationSurface;
@@ -196,7 +196,7 @@ pub(crate) mod tests {
 
     /// A one-node document draft for `tenant` whose node carries `properties`.
     /// Shared with the served admission tests in `server::tests`.
-    pub(crate) fn draft_for(tenant: &str, properties: serde_json::Value) -> ChangeEnvelopeDraft {
+    pub fn draft_for(tenant: &str, properties: serde_json::Value) -> ChangeEnvelopeDraft {
         ChangeEnvelopeDraft {
             schema_version: medulla_protocol_types::change_envelope::CHANGE_ENVELOPE_VERSION,
             envelope_id: "envelope:doc:1".into(),

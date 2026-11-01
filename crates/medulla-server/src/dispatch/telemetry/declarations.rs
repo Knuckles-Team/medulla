@@ -30,7 +30,7 @@ use super::classes::{bindable_types, BindableTypes};
 use serde_json::Value;
 use tokio::sync::RwLock;
 
-use super::super::shared::timed_read;
+use medulla_server_graph::dispatch::shared::timed_read;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
@@ -56,10 +56,10 @@ pub(super) async fn read(
     graph: &str,
     verified: &VerifiedRequestContext,
 ) -> Result<ReadDeclarations, String> {
-    crate::dispatch::shared::ensure_graph_resident(state, graph).await;
+    medulla_server_graph::dispatch::shared::ensure_graph_resident(state, graph).await;
     let (core, authority) = {
         let current = timed_read(state).await;
-        crate::dispatch::shared::authorized_graph_read(
+        medulla_server_graph::dispatch::shared::authorized_graph_read(
             &current,
             graph,
             verified,

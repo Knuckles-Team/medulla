@@ -1,4 +1,4 @@
-use crate::dispatch::shared::timed_read;
+use medulla_server_graph::dispatch::shared::timed_read;
 use super::*;
 
 /// Process-level service control: liveness, readiness, in-flight request

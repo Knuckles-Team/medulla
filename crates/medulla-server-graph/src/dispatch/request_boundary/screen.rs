@@ -10,7 +10,7 @@ use crate::dispatch::shared::MAX_SCREEN_OBSERVATION_ITEMS;
 use crate::dispatch::shared::MAX_SCREEN_OBSERVATION_BYTES;
 use crate::dispatch::shared::MAX_SCREEN_TOTAL_TEXT_BYTES;
 use crate::dispatch::shared::MAX_SCREEN_ELEMENTS;
-use super::*;
+use crate::dispatch::request_boundary::*;
 
 #[derive(serde::Deserialize)]
 struct ScreenObservationWire {
@@ -134,7 +134,7 @@ fn validate_screen_elements(elements: &[medulla_compute::screen::UiElementInput]
     Ok(())
 }
 
-pub(crate) fn decode_screen_observation(
+pub fn decode_screen_observation(
     obs_msgpack: &[u8],
 ) -> Result<medulla_compute::screen::ScreenObservationInput, String> {
     let wire: ScreenObservationWire = medulla_types::msgpack::decode_bounded(

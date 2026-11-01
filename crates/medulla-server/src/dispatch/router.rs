@@ -1,22 +1,22 @@
-use super::change_envelope::{dispatch_change_envelopes, multi_graph_batch_update};
+use medulla_server_graph::{dispatch::change_envelope::dispatch_change_envelopes, dispatch::change_envelope::multi_graph_batch_update};
 use super::consensus::{
     handle_fleet_catalog, handle_list_registered_servers, handle_register_server,
     replicated_identity_bootstrap_authorized, ServerRegistration,
 };
-use super::graph_pipeline::dispatch_graph_op;
+use medulla_server_graph::dispatch::graph_pipeline::dispatch_graph_op;
 #[cfg(feature = "knowledge-batch")]
-use super::graph_pipeline::dispatch_knowledge_stream;
+use medulla_server_graph::dispatch::graph_pipeline::dispatch_knowledge_stream;
 #[cfg(feature = "modality-serving")]
-use super::graph_pipeline::dispatch_served_modality;
-use super::policy_evolution::{handle_policy_evolution, PolicyEvolutionTarget};
+use medulla_server_graph::dispatch::graph_pipeline::dispatch_served_modality;
+use medulla_server_graph::{dispatch::policy_evolution::handle_policy_evolution, dispatch::policy_evolution::PolicyEvolutionTarget};
 #[cfg(feature = "cost")]
 use super::request_boundary::dispatch_resource_stats;
 use super::request_boundary::{append_native_capacity_ops, append_native_resource_ops, append_native_work_item_ops, dispatch_boxed, dispatch_boxed_typed, DispatchAuthority};
-use super::request_boundary::screen::decode_screen_observation;
+use medulla_server_graph::dispatch::request_boundary::screen::decode_screen_observation;
 #[cfg(feature = "ast")]
-use super::request_boundary::preflight::{ast_input_limits, decode_ast_files, validate_ast_logical_path};
+use medulla_server_graph::{dispatch::request_boundary::preflight::ast_input_limits, dispatch::request_boundary::preflight::decode_ast_files, dispatch::request_boundary::preflight::validate_ast_logical_path};
 #[cfg(feature = "sparql-http")]
-use super::sparql_update::coordinated_sparql_http_update;
+use medulla_server_graph::dispatch::sparql_update::coordinated_sparql_http_update;
 use super::*;
 
 mod channels;

@@ -21,7 +21,7 @@ use medulla_protocol_types::result_contract::transactions as txn_results;
 /// The reply is `{"results": {graph: <batch_result>}, "errors": {graph: msg}}`;
 /// one graph's failure never aborts the others (partial-success contract).
 #[cfg(feature = "redb")]
-pub(in crate::dispatch) async fn multi_graph_batch_update(
+pub async fn multi_graph_batch_update(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     caller: Option<&str>,
@@ -249,7 +249,7 @@ async fn run_multi_graph_batches(
 }
 
 #[cfg(not(feature = "redb"))]
-pub(in crate::dispatch) async fn multi_graph_batch_update(
+pub async fn multi_graph_batch_update(
     _state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     _caller: Option<&str>,

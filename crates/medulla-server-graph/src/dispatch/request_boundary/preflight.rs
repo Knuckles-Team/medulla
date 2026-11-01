@@ -1,6 +1,6 @@
 use crate::dispatch::shared::MAX_NESTED_MSGPACK_ITEMS;
 use crate::dispatch::shared::MAX_NESTED_MSGPACK_BYTES;
-use super::*;
+use crate::dispatch::request_boundary::*;
 
 /// Item ceiling no request limit may exceed.
 pub const HARD_MAX_MSGPACK_ITEMS: usize = 4_000_000;
@@ -246,7 +246,7 @@ fn preflight_source_ingestion_msgpack(method: &Method) -> Option<Result<(), &'st
 /// routing. Raw source/blob/KV/broker/WASM bytes are intentionally excluded: they
 /// are opaque binary, not nested MessagePack. Operation handlers still enforce
 /// their narrower schema/count limits after this allocation-safety gate.
-pub(crate) fn preflight_request_msgpack(method: &Method) -> Result<(), &'static str> {
+pub fn preflight_request_msgpack(method: &Method) -> Result<(), &'static str> {
     preflight_graph_write_msgpack(method)
         .or_else(|| preflight_memory_msgpack(method))
         .or_else(|| preflight_batch_msgpack(method))
@@ -295,7 +295,7 @@ fn bounded_ast_limit(name: &str, default: usize, hard: usize) -> usize {
 }
 
 #[cfg(feature = "ast")]
-pub(crate) fn ast_input_limits() -> AstInputLimits {
+pub fn ast_input_limits() -> AstInputLimits {
     static LIMITS: OnceLock<AstInputLimits> = OnceLock::new();
     *LIMITS.get_or_init(|| AstInputLimits {
         max_files: bounded_ast_limit(
@@ -317,7 +317,7 @@ pub(crate) fn ast_input_limits() -> AstInputLimits {
 }
 
 #[cfg(feature = "ast")]
-pub(crate) fn validate_ast_logical_path(path: &str) -> Result<(), String> {
+pub fn validate_ast_logical_path(path: &str) -> Result<(), String> {
     if path.is_empty() || path.len() > MAX_AST_LOGICAL_PATH_BYTES {
         return Err("AST_INPUT_INVALID: source name must be a bounded logical path".to_string());
     }
@@ -427,7 +427,7 @@ fn take_msgpack_slice<'a>(
 /// unique: a path-keyed parse (ParseFiles, an unscoped IndexRepository) cannot
 /// tell two sources under one name apart.
 #[cfg(feature = "ast")]
-pub(crate) fn decode_ast_files(
+pub fn decode_ast_files(
     input: &[u8],
     limits: AstInputLimits,
 ) -> Result<Vec<(String, Vec<u8>)>, String> {

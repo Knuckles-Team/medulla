@@ -164,14 +164,6 @@ pub fn validate_verified_request_context_startup(
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 #[cfg(feature = "cdc-kafka")]
 pub mod cdc_sink;
-// Semantic ANN index activation (W0.4, CONCEPT:MEDULLA-KG.storage.semantic-index-directory): the ONE
-// reopen-else-build-else-activate body plus the two triggers the boot-time task
-// cannot supply — the post-write hook and the periodic backstop — for a graph
-// created, or crossing `ANN_BUILD_THRESHOLD`, after boot. Gated with the `ann`
-// feature the mechanism requires; its durable tier additionally needs `ann-redb`.
-#[cfg(feature = "ann")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod semantic_activation;
 
 
 /// Validate the persisted RF-019 semantic-index activation state before the listeners bind.
@@ -211,12 +203,6 @@ pub fn observe_rf019_tenant_owner(
 }
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod dispatch;
-// Fleet server registry stale-lease reaper (CONCEPT:MEDULLA-KG.sharding.server-registry, W2.5): periodic
-// sweep that expires a `:Server` node whose `Method::RegisterServer`-issued
-// lease has lapsed. Always declared (mirrors `semantic_activation` above) — the
-// sweep is a no-op when nothing has registered.
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod handlers;
 // The owner-scoped foreign-source catalog, host-driven foreign reads and source sharing live
 // under `api::query_txn` (R056.8).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

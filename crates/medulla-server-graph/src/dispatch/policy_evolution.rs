@@ -23,7 +23,7 @@ use medulla_protocol_types::{
 };
 
 use super::graph_pipeline::dispatch_graph_op;
-use super::*;
+use crate::dispatch::*;
 
 mod blobs;
 mod gate;
@@ -32,7 +32,7 @@ mod store;
 use store::GraphRecords;
 
 /// Where one policy-evolution request lands: the request graph, and who asked.
-pub(super) struct PolicyEvolutionTarget<'a> {
+pub struct PolicyEvolutionTarget<'a> {
     pub(super) req_id: u64,
     pub(super) graph: &'a str,
     pub(super) caller: Option<&'a str>,
@@ -41,7 +41,7 @@ pub(super) struct PolicyEvolutionTarget<'a> {
 /// Route one operation. Scope and admin authority were checked against the
 /// op's own `authz_action` before dispatch; the tenant and writer come only
 /// from `verified`.
-pub(super) async fn handle_policy_evolution(
+pub async fn handle_policy_evolution(
     state: &Arc<RwLock<ServerState>>,
     target: PolicyEvolutionTarget<'_>,
     verified: &VerifiedRequestContext,

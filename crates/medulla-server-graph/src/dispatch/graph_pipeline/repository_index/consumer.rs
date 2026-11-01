@@ -226,7 +226,7 @@ pub(super) fn plan_underfunded_park(
 /// Bind an internal park proposal to one exact held local event and the latest
 /// durable budget row. No caller-supplied snapshot, cursor, or cost is trusted.
 #[cfg(feature = "blob")]
-pub(crate) async fn plan_held_underfunded_park(
+pub async fn plan_held_underfunded_park(
     persistence: &dyn PersistenceBackend,
     graph_fname: &str,
     lease: &MutationOutboxLease,

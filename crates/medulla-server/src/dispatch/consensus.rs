@@ -1,4 +1,4 @@
-use super::graph_pipeline::dispatch_graph_op;
+use medulla_server_graph::dispatch::graph_pipeline::dispatch_graph_op;
 use super::*;
 
 mod fleet_catalog;

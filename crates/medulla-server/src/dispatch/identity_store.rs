@@ -18,7 +18,8 @@ use medulla_protocol_types::result_contract::security::Identity as IdentityResul
 use tokio::sync::RwLock;
 
 use super::elevation::ElevationStampAuthority;
-use super::{ServerState, VerifiedRequestContext};
+use medulla_server_api::state::ServerState;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
@@ -52,7 +53,7 @@ pub async fn stamp_identity(
     let mut derived = IdentityStamp::for_actor(identity_actor(context));
     derived.session_tenant = resolution_context::record_tenant(context);
     let (store, service_secret) = {
-        let guard = super::shared::timed_read(state).await;
+        let guard = medulla_server_graph::dispatch::shared::timed_read(state).await;
         (
             guard.isolation.rbac().identity_store().clone(),
             guard.auth_secret.clone(),

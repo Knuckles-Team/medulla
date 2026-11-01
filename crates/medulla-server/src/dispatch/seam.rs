@@ -41,7 +41,7 @@ impl DispatchApi for DispatchSeam {
         state: &'a Arc<RwLock<ServerState>>,
         graph: &'a str,
     ) -> SeamFuture<'a, ()> {
-        Box::pin(super::shared::ensure_graph_resident(state, graph))
+        Box::pin(medulla_server_graph::dispatch::shared::ensure_graph_resident(state, graph))
     }
 
     fn ensure_internal_global_graph<'a>(
@@ -302,7 +302,7 @@ impl DispatchApi for DispatchSeam {
             String,
         >,
     > {
-        Box::pin(super::graph_pipeline::plan_held_underfunded_park(
+        Box::pin(medulla_server_graph::dispatch::graph_pipeline::plan_held_underfunded_park(
             persistence,
             graph_fname,
             lease,
@@ -321,7 +321,7 @@ impl DispatchApi for DispatchSeam {
         &self,
         intent: &medulla_mutation_types::mutation_scope::MutationOutboxIntent,
     ) -> Result<medulla_compute::parser::enrichment_snapshot::EligibleSnapshot, String> {
-        super::graph_pipeline::decode_pending_enrichment_intent(intent)
+        medulla_server_graph::dispatch::graph_pipeline::decode_pending_enrichment_intent(intent)
     }
 
     #[cfg(all(
@@ -335,7 +335,7 @@ impl DispatchApi for DispatchSeam {
         &self,
         snapshot: medulla_compute::parser::enrichment_snapshot::EligibleSnapshot,
     ) -> Result<medulla_mutation_types::mutation_scope::MutationOutboxIntent, String> {
-        super::graph_pipeline::enrichment_intent_for_snapshot(snapshot)
+        medulla_server_graph::dispatch::graph_pipeline::enrichment_intent_for_snapshot(snapshot)
     }
 
     #[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
@@ -356,7 +356,7 @@ impl DispatchApi for DispatchSeam {
                 Err("CONFLICT: repository enrichment CAS handle has the wrong type".to_string())
             });
         };
-        Box::pin(super::graph_pipeline::drain_repository_enrichment_once(
+        Box::pin(medulla_server_graph::dispatch::graph_pipeline::drain_repository_enrichment_once(
             persistence,
             graph_fname,
             store,

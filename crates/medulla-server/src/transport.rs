@@ -43,7 +43,7 @@ use framing::{
     validate_msgpack_frame, FrameReadError, HARD_MAX_REQUEST_FRAME_BYTES,
 };
 #[cfg(test)]
-use crate::dispatch::request_boundary::preflight::MAX_MSGPACK_NESTING_DEPTH;
+use medulla_server_graph::dispatch::request_boundary::preflight::MAX_MSGPACK_NESTING_DEPTH;
 use framing::{
     encode_bounded_frame, encode_frame, next_request, seconds_from_env, write_responses,
     ConnectionLimits, IngressEnd,

@@ -2,7 +2,7 @@ use crate::dispatch::shared::timed_read;
 #[cfg(feature = "redb")]
 use super::graph_pipeline::dispatch_graph_op;
 use super::graph_pipeline::GraphOpRouting;
-use super::*;
+use crate::dispatch::*;
 use medulla_protocol_types::result_contract::transactions as txn_results;
 
 /// Batch envelope coordinator (CONCEPT:MEDULLA-KG.ingest.batched-change-envelopes). Validates
@@ -14,7 +14,7 @@ use medulla_protocol_types::result_contract::transactions as txn_results;
 /// into REQUEST order under `{"results": [...]}` so a caller can advance a watermark
 /// through the contiguous success prefix.
 #[cfg(not(feature = "redb"))]
-pub(super) async fn dispatch_change_envelopes(
+pub async fn dispatch_change_envelopes(
     _state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     _caller: Option<&str>,
@@ -28,7 +28,7 @@ pub(super) async fn dispatch_change_envelopes(
 }
 
 #[cfg(feature = "redb")]
-pub(super) async fn dispatch_change_envelopes(
+pub async fn dispatch_change_envelopes(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     caller: Option<&str>,
@@ -251,7 +251,7 @@ mod multi_graph;
 use multi_graph::declared_json_response;
 #[cfg(test)]
 pub(in crate::dispatch) use multi_graph::decode_multi_graph_batches;
-pub(in crate::dispatch) use multi_graph::multi_graph_batch_update;
+pub use multi_graph::multi_graph_batch_update;
 
 fn change_envelope_result(
     committed: &medulla_protocol_types::change_envelope::ChangeEnvelopeCommit,

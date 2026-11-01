@@ -16,7 +16,7 @@ use medulla_protocol_types::{
 };
 
 use super::elevation::ElevationStampAuthority;
-use super::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_protocol_types::protocol::Method;
 #[cfg(feature = "security")]
 use medulla_protocol_types::protocol::Response;

@@ -10,7 +10,7 @@ use super::request_boundary::preflight::{decode_ast_files, decode_ast_sources, A
 use super::request_boundary::screen::decode_screen_observation;
 #[cfg(test)]
 use super::request_boundary::preflight::preflight_request_msgpack;
-use super::*;
+use crate::dispatch::*;
 mod dispatch_helpers;
 #[cfg(any(
     feature = "query",
@@ -29,9 +29,9 @@ mod pipeline;
 mod repository_index;
 mod web_ingest;
 #[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
-pub(crate) use repository_index::drain_repository_enrichment_once;
+pub use repository_index::drain_repository_enrichment_once;
 #[cfg(all(feature = "ast", feature = "redb", feature = "blob", feature = "raft"))]
-pub(crate) use repository_index::plan_held_underfunded_park;
+pub use repository_index::plan_held_underfunded_park;
 #[cfg(all(
     feature = "ast",
     feature = "redb",
@@ -39,7 +39,7 @@ pub(crate) use repository_index::plan_held_underfunded_park;
     feature = "raft",
     feature = "security"
 ))]
-pub(crate) use repository_index::{
+pub use repository_index::{
     decode_pending_enrichment_intent, enrichment_intent_for_snapshot,
 };
 mod work_governance;
@@ -68,7 +68,7 @@ use work_governance::{
 
 /// Dispatch a graph-level operation to the target named graph, enforcing the
 /// isolation ACL (`isolation.rs::check_access`) when rules are registered.
-pub(super) async fn dispatch_graph_op(
+pub async fn dispatch_graph_op(
     state: &Arc<RwLock<ServerState>>,
     graph_name: &str,
     req_id: u64,
@@ -94,7 +94,7 @@ pub(super) async fn dispatch_graph_op(
 }
 
 #[cfg(feature = "modality-serving")]
-pub(super) async fn dispatch_served_modality(
+pub async fn dispatch_served_modality(
     state: &Arc<RwLock<ServerState>>,
     graph_name: &str,
     req_id: u64,
@@ -120,7 +120,7 @@ pub(super) async fn dispatch_served_modality(
 }
 
 #[cfg(feature = "knowledge-batch")]
-pub(super) async fn dispatch_knowledge_stream(
+pub async fn dispatch_knowledge_stream(
     state: &Arc<RwLock<ServerState>>,
     graph_name: &str,
     req_id: u64,

@@ -1,8 +1,8 @@
-use crate::dispatch::shared::MAX_REGISTER_SERVER_TTL_SECS;
-use crate::dispatch::shared::MIN_REGISTER_SERVER_TTL_SECS;
-use crate::dispatch::shared::MAX_REGISTER_SERVER_RESOURCES_BYTES;
-use crate::dispatch::shared::MAX_REGISTER_SERVER_URL_BYTES;
-use crate::dispatch::shared::timed_read;
+use medulla_server_graph::dispatch::shared::MAX_REGISTER_SERVER_TTL_SECS;
+use medulla_server_graph::dispatch::shared::MIN_REGISTER_SERVER_TTL_SECS;
+use medulla_server_graph::dispatch::shared::MAX_REGISTER_SERVER_RESOURCES_BYTES;
+use medulla_server_graph::dispatch::shared::MAX_REGISTER_SERVER_URL_BYTES;
+use medulla_server_graph::dispatch::shared::timed_read;
 use super::*;
 
 use medulla_catalog_types::fleet_catalog::is_valid_server_name;
@@ -254,7 +254,7 @@ pub(in crate::dispatch) async fn handle_list_registered_servers(
     verified_context: &VerifiedRequestContext,
     request: RegisteredServerListRequest,
 ) -> Response {
-    crate::dispatch::shared::ensure_graph_resident(state, REGISTRY_GRAPH).await;
+    medulla_server_graph::dispatch::shared::ensure_graph_resident(state, REGISTRY_GRAPH).await;
     let _registry_guard = medulla_server_api::routed_write_coalescer::lock_graph(REGISTRY_GRAPH).await;
     let (raw_core, read_authority) = {
         let current = timed_read(state).await;
@@ -284,7 +284,7 @@ pub(in crate::dispatch) async fn handle_list_registered_servers(
     let live = live_registered_servers(&raw_core, observed_at_ms, |node_id, properties| {
         read_authority.can_see_node(properties, raw_core.is_schema_node(node_id))
     });
-    crate::dispatch::shared::typed_response::<
+    medulla_server_graph::dispatch::shared::typed_response::<
         medulla_protocol_types::result_contract::cluster::ListRegisteredServers,
     >(
         req_id,
@@ -303,7 +303,7 @@ pub(crate) async fn verified_served_registration(
 ) -> Result<(u64, Digest256, RegisteredServerView), String> {
     let (core, authority) = {
         let current = timed_read(state).await;
-        crate::dispatch::shared::authorized_graph_read(
+        medulla_server_graph::dispatch::shared::authorized_graph_read(
             &current,
             REGISTRY_GRAPH,
             verified,

@@ -1201,7 +1201,7 @@
         let state = test_state();
         let tenant = test_claims("system").tenant;
         let apply = |id: u64, text: &str| {
-            let draft = crate::dispatch::change_envelope_draft::tests::draft_for(
+            let draft = medulla_server_graph::dispatch::change_envelope_draft::tests::draft_for(
                 &tenant,
                 serde_json::json!({"type": "Document", "text": text}),
             );

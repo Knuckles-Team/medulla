@@ -1,7 +1,7 @@
 use crate::dispatch::shared::timed_read;
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
-use super::*;
+use crate::dispatch::*;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 
@@ -744,7 +744,7 @@ async fn run_coordinated_sparql_http_update(
 /// child MutationBatches. A durable compensation marker makes restart choose one
 /// direction forever, so a crash cannot alternate roll-forward and rollback.
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
-pub(super) async fn coordinated_sparql_http_update(
+pub async fn coordinated_sparql_http_update(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     _caller: Option<&str>,
@@ -794,7 +794,7 @@ pub(super) async fn coordinated_sparql_http_update(
     feature = "sparql-http",
     not(all(feature = "redb", feature = "security"))
 ))]
-pub(super) async fn coordinated_sparql_http_update(
+pub async fn coordinated_sparql_http_update(
     _state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     _caller: Option<&str>,

@@ -9,7 +9,7 @@
 //! protection is keyed by the request, so a second write inside the same
 //! request would be answered as a replay of the first.
 
-use crate::dispatch::shared::timed_read;
+use medulla_server_graph::dispatch::shared::timed_read;
 use medulla_catalog_types::{
     fleet_catalog::FleetDiscoveryRecordRequest, fleet_catalog::FleetOverrideClearRequest,
     fleet_catalog::FleetOverrideSetRequest, fleet_catalog::FleetWriteDisposition,
@@ -226,7 +226,7 @@ async fn commit_and_respond<M: MethodResult<Body = FleetWriteReceipt>>(
         Ok(write) => commit(state, req_id, caller, verified, write).await,
         Err(error) => Err(error),
     };
-    crate::dispatch::shared::typed_response::<M>(req_id, receipt)
+    medulla_server_graph::dispatch::shared::typed_response::<M>(req_id, receipt)
 }
 
 pub(super) async fn record_discovery(

@@ -1,6 +1,6 @@
 //! Framed ingress and the single response-writer loop for one native connection.
 
-use crate::dispatch::request_boundary::preflight::{HARD_MAX_MSGPACK_ITEMS, MAX_MSGPACK_NESTING_DEPTH};
+use medulla_server_graph::{dispatch::request_boundary::preflight::HARD_MAX_MSGPACK_ITEMS, dispatch::request_boundary::preflight::MAX_MSGPACK_NESTING_DEPTH};
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::protocol::Response;
 

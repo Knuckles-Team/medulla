@@ -9,7 +9,9 @@ use medulla_identity_types::{
 };
 use medulla_types::acl::RequestContextClaims;
 
-use super::{ElevationStampAuthority, ServerState, VerifiedRequestContext};
+use super::ElevationStampAuthority;
+use medulla_server_api::state::ServerState;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::authority_context::request_context_policy;
 use medulla_server_api::authority_context::RequestContextPolicy;
 use medulla_server_api::identity_view::identity_actor;

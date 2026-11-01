@@ -23,7 +23,7 @@ use medulla_server_auth::auth::verify_register_identity_signature;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 // Only the ast-gated ParseFiles handler offloads to the blocking pool here; the
 // graph-op off-lock sites live in handlers/graph_ops.rs.
-use super::handlers;
+use medulla_server_graph::handlers;
 #[cfg(feature = "ast")]
 use medulla_server_api::compute::compute_off_lock;
 // NOT `#[cfg(feature = "redb")]`: `server::persistence` is an unconditional module
@@ -40,19 +40,14 @@ use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::state::{timed_write, ServerState};
 
-pub mod shared;
 
-pub mod change_envelope;
-pub mod change_envelope_draft;
 pub mod consensus;
 #[cfg(test)]
 pub mod dispatch_e2e_tests;
 pub mod elevation;
 pub mod governed;
-pub mod graph_pipeline;
 #[cfg(feature = "security")]
 pub mod identity_store;
-pub mod policy_evolution;
 
 pub mod request_boundary;
 pub mod router;
@@ -60,7 +55,6 @@ pub mod seam;
 #[cfg(test)]
 pub mod test_support;
 
-pub mod sparql_update;
 // EH-408 / EH-409: stored telemetry → ontology-bound facts. Needs the
 // observability store (`obs`) and the schema reasoner (`shacl`).
 #[cfg(all(feature = "obs", feature = "shacl"))]

@@ -20,11 +20,11 @@ mod enrichment;
     feature = "raft",
     feature = "security"
 ))]
-pub(crate) use consumer::decode_pending_intent as decode_pending_enrichment_intent;
+pub use consumer::decode_pending_intent as decode_pending_enrichment_intent;
 #[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
-pub(crate) use consumer::drain_once as drain_repository_enrichment_once;
+pub use consumer::drain_once as drain_repository_enrichment_once;
 #[cfg(all(feature = "ast", feature = "redb", feature = "blob", feature = "raft"))]
-pub(crate) use consumer::plan_held_underfunded_park;
+pub use consumer::plan_held_underfunded_park;
 #[cfg(all(
     feature = "ast",
     feature = "redb",
@@ -32,7 +32,7 @@ pub(crate) use consumer::plan_held_underfunded_park;
     feature = "raft",
     feature = "security"
 ))]
-pub(crate) use enrichment::intent_for_snapshot as enrichment_intent_for_snapshot;
+pub use enrichment::intent_for_snapshot as enrichment_intent_for_snapshot;
 
 type IndexScope = Box<medulla_types::ingestion_wire::IndexRepositoryScope>;
 
