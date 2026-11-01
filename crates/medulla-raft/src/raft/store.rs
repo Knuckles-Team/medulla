@@ -491,7 +491,7 @@ mod native;
 #[path = "store/open.rs"]
 mod open;
 #[path = "store/replay.rs"]
-mod replay;
+pub mod replay;
 #[path = "store/snapshot.rs"]
 mod snapshot;
 #[path = "store/state_machine.rs"]

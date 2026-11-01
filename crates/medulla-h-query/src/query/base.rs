@@ -16,7 +16,7 @@ pub(crate) fn sql_refusal(error: impl std::fmt::Display) -> String {
 /// The mode is an authorization and durability claim, not a parser hint. Callers
 /// must reject a mismatch before choosing a read lane or MutationBatch path.
 #[cfg(feature = "cypher")]
-pub(crate) fn validate_cypher_mode(method: &Method) -> Result<(), String> {
+pub fn validate_cypher_mode(method: &Method) -> Result<(), String> {
     let Method::CypherQuery { query, mode } = method else {
         return Ok(());
     };

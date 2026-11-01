@@ -264,7 +264,7 @@ async fn claim_sql_source(
     Ok((binding, claim))
 }
 
-async fn replay(
+pub async fn replay(
     ctx: &SemanticIndexContext<'_>,
     lease: medulla_mutation_types::mutation_scope::MutationOutboxLease,
     expected_intent: medulla_index_types::semantic_index::SemanticStageIntent,

@@ -56,7 +56,7 @@ pub(super) fn outbox_status(value: OutboxStatus) -> SemanticOutboxStatus {
     }
 }
 
-pub(super) fn replay(
+pub fn replay(
     value: Option<(SemanticStageTransition, RuntimeReceipt)>,
 ) -> Option<(SemanticStageTransition, SemanticMutationReceipt)> {
     value.map(|(transition, receipt_value)| (transition, receipt(receipt_value)))

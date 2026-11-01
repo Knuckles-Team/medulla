@@ -53,7 +53,7 @@ type HmacSha256 = Hmac<Sha256>;
 /// authority. Claims-derived references are cursor material only and are never
 /// accepted as authorization proof by [`try_handle`].
 #[derive(Clone)]
-pub(crate) struct KnowledgeStreamAuthority {
+pub struct KnowledgeStreamAuthority {
     tenant_ref: OpaqueRef,
     access_policy_ref: OpaqueRef,
     reference_key: [u8; 32],
@@ -129,7 +129,7 @@ impl KnowledgeStreamAuthority {
     /// policy reference and reference-key domain are re-derived from the lease,
     /// never from the signed `policy_version` claim.
     #[cfg(feature = "security")]
-    pub(crate) fn from_verified_with_lease(
+    pub fn from_verified_with_lease(
         server_secret: &str,
         claims: &RequestContextClaims,
         graph_name: &str,
@@ -429,7 +429,7 @@ pub(super) struct FamilyExecution {
     source_result: ResultPayload,
 }
 
-pub(crate) struct KnowledgeStreamHandlerCtx<'a> {
+pub struct KnowledgeStreamHandlerCtx<'a> {
     pub(crate) state: &'a Arc<RwLock<ServerState>>,
     pub(crate) req_id: u64,
     pub(crate) graph_name: &'a str,
@@ -473,7 +473,7 @@ fn validate_stream_preflight(
 }
 
 /// Route the one native stream method. A non-stream method is returned unchanged.
-pub(crate) async fn try_handle(
+pub async fn try_handle(
     ctx: KnowledgeStreamHandlerCtx<'_>,
     method: Method,
 ) -> Result<Response, Method> {

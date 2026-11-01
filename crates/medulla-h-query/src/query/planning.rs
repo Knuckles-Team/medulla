@@ -746,7 +746,7 @@ pub(crate) fn parse_uql(req_id: u64, text: &str) -> Result<medulla_plan::Plan, R
 /// parameter values are part of the query identity; the parsed plan digest is
 /// checked separately by the served leg resolver.
 #[cfg(feature = "query")]
-pub(crate) fn foreign_uql_query_digest(
+pub fn foreign_uql_query_digest(
     text: &str,
     params: &std::collections::BTreeMap<String, medulla_types::wire::UqlParam>,
 ) -> Result<medulla_types::contract::Digest256, String> {

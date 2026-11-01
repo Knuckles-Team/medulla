@@ -403,7 +403,7 @@ impl<'a> StreamingRequest<'a> {
 
 /// Handle the streaming methods. Returns `Err(method)` for any non-streaming method so
 /// the dispatch chain falls through — though dispatch only routes streaming methods here.
-pub(crate) async fn try_handle(
+pub async fn try_handle(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     carrier: &CarrierAuthority,

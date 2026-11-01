@@ -162,7 +162,7 @@ fn pinned_and_policy(
 }
 
 /// Re-derive `record` and return the copy to log, with its seed revealed.
-pub(super) fn replay(
+pub fn replay(
     ctx: &ExecutionContext,
     record: &StatisticalDecisionRecord,
 ) -> Result<StatisticalDecisionRecord, String> {

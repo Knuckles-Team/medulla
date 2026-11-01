@@ -54,6 +54,7 @@ medulla-storage = { path = "../medulla-storage", optional = true }
 uuid = { version = "1.28", features = ["v4"] }
 
 [features]
+test-support = []
 alignment = ["dep:medulla-modality", "dep:medulla-alignment", ]
 ann-redb = ["redb"]
 cypher = ["dep:medulla-query", "medulla-query/cypher", ]

@@ -6,7 +6,7 @@ use medulla_compute::mining::{
 };
 
 #[derive(Clone, Copy)]
-pub(crate) struct WritebackOptions {
+pub struct WritebackOptions {
     pub(crate) enabled: bool,
     #[cfg(feature = "epistemic")]
     pub(crate) as_claim: bool,

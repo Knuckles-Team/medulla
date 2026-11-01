@@ -124,7 +124,7 @@ mod error_contract_tests;
 /// ("mutation principal authority must be an opaque digest": `principal:sha256:`
 /// plus 64 lowercase hex). Derived once from the stable name below, exactly as
 /// `VerifiedRequestContext::principal_persistence_id` derives a caller's.
-fn semantic_owner_principal() -> &'static str {
+pub fn semantic_owner_principal() -> &'static str {
     static PRINCIPAL: std::sync::OnceLock<String> = std::sync::OnceLock::new();
     PRINCIPAL.get_or_init(|| {
         use sha2::Digest;

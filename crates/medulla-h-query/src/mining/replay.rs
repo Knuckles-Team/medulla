@@ -13,7 +13,7 @@ use medulla_compute::mining::{
 /// Re-run mining write-back operations during WAL replay. Deterministic explicit
 /// inputs are reused, while graph-derived inputs are projected from current state.
 #[allow(dead_code)]
-pub(crate) fn replay(core: &GraphCore, method: &Method) {
+pub fn replay(core: &GraphCore, method: &Method) {
     // Keep the replay entry point as a small family router. Each family helper
     // recognizes its own writeback request and returns true even for a
     // validation no-op, so one request cannot be replayed twice.

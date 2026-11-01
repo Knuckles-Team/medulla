@@ -654,7 +654,7 @@ mod tests {
         assert_eq!(replay.schema_sources(), after.schema_sources());
     }
 
-    fn replay(before: &GraphSnapshot, after: &GraphSnapshot) -> GraphSnapshot {
+    pub fn replay(before: &GraphSnapshot, after: &GraphSnapshot) -> GraphSnapshot {
         let delta = GraphRowDelta::between(before, after).unwrap();
         let replay = GraphCore::from_snapshot(before.clone(), 0).unwrap();
         delta.apply_to(&replay).unwrap();

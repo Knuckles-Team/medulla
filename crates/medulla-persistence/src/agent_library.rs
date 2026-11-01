@@ -46,7 +46,7 @@ mod history;
 #[cfg(test)]
 mod open_tests;
 mod receipt;
-mod replay;
+pub mod replay;
 mod write;
 
 pub(super) use batch::native_lifecycle_batch;

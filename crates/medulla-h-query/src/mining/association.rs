@@ -6,7 +6,7 @@ use medulla_result_types::{
     compute_result::mining::AssociationMiningResult, compute_result::mining::AssociationRuleRow,
 };
 
-pub(crate) struct AssociationRequest {
+pub struct AssociationRequest {
     pub(crate) transactions: Vec<Vec<String>>,
     pub(crate) source: Option<TransactionSource>,
     pub(crate) min_support: f64,
@@ -15,7 +15,7 @@ pub(crate) struct AssociationRequest {
     pub(crate) writeback: WritebackOptions,
 }
 
-pub(crate) fn handle_associate(
+pub fn handle_associate(
     req_id: u64,
     core: &GraphCore,
     request: AssociationRequest,

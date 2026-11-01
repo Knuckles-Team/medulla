@@ -47,11 +47,11 @@ mod impact;
 mod input;
 mod insight;
 mod process;
-mod replay;
+pub mod replay;
 mod vector;
 mod writeback;
 
-pub(crate) use association::{handle_associate, AssociationRequest};
+pub use association::{handle_associate, AssociationRequest};
 pub(super) use classic::{
     handle_forecast, handle_sequence, handle_subgraph, handle_text, ForecastRequest, TextRequest,
 };
@@ -64,20 +64,20 @@ pub(super) use insight::{
     CommunityRequest, RiskPropagationRequest, RootCauseRequest,
 };
 pub(super) use process::{handle_causal_impact, handle_process};
-pub(crate) use replay::replay;
+pub use replay::replay;
 use vector::handle_classify_fit;
 pub(crate) use vector::{
     handle_anomaly, handle_classify_predict, handle_cluster, handle_reduce, AnomalyRequest,
     ClassifyPredictRequest, ClusterRequest, ReduceRequest,
 };
-pub(crate) use writeback::WritebackOptions;
+pub use writeback::WritebackOptions;
 
 #[cfg(test)]
 use medulla_compute::mining::classify::FittedClassifier;
 
 /// Handle a `Mine*` method. `Err(method)` hands a non-mining method back to the
 /// dispatcher (routing fall-through). (CONCEPT:MEDULLA-KG.query.dispatch-convention.)
-pub(crate) fn try_handle(
+pub fn try_handle(
     req_id: u64,
     core: Arc<GraphCore>,
     read_authority: Option<&medulla_server_api::access::GraphReadAuthority>,

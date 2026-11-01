@@ -314,7 +314,7 @@ async fn dispatch_mining_with_tsdb(
     .await
 }
 
-pub(crate) async fn try_handle(
+pub async fn try_handle(
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
     method: &Method,

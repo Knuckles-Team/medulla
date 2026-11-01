@@ -56,7 +56,7 @@ pub(super) struct SemanticIndexContext<'a> {
 }
 
 /// Route one semantic-index operation.
-pub(crate) async fn handle_semantic_index(
+pub async fn handle_semantic_index(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,

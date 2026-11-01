@@ -137,9 +137,9 @@ where
 }
 
 mod base;
-pub(crate) use base::*;
+pub use base::*;
 mod seam;
-pub(crate) use seam::QuerySeam;
+pub use seam::QuerySeam;
 #[cfg(feature = "federation")]
 mod foreign_leg;
 #[cfg(feature = "federation")]
@@ -163,7 +163,7 @@ mod cypher;
 #[cfg(feature = "cypher")]
 pub(crate) use cypher::*;
 mod planning;
-pub(crate) use planning::*;
+pub use planning::*;
 #[cfg(all(feature = "query", feature = "result-cache"))]
 mod foreign_watermarks;
 #[cfg(all(feature = "query", feature = "result-cache"))]
@@ -197,8 +197,8 @@ pub(crate) use sql_catalog::*;
 #[cfg(feature = "query")]
 mod uql_statement;
 
-#[cfg(test)]
-pub(crate) mod current_auth_test_support {
+#[cfg(any(test, feature = "test-support"))]
+pub mod current_auth_test_support {
     use medulla_types::acl::AgentIdentity;
     use medulla_types::acl::AgentRole;
     use medulla_core::isolation::IsolationLayer;
