@@ -49,7 +49,7 @@ mod test_support;
 use std::sync::Arc;
 
 use medulla::registry::GraphRegistry;
-use medulla::server::pgwire;
+use medulla_wire::pgwire;
 use medulla_server_api::state::ServerState;
 use tokio::sync::RwLock;
 

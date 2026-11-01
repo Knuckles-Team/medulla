@@ -975,7 +975,7 @@ async fn sparql_post(addr: &str, query: &str) -> String {
 #[cfg(all(feature = "pgwire", feature = "sparql-http"))]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn pgwire_sparql_native_consistent_snapshot_eg393() {
-    use medulla::server::pgwire;
+    use medulla_wire::pgwire;
     use medulla_server_api::sparql_http;
 
     let state = state().await;
@@ -1406,7 +1406,7 @@ async fn encryption_at_rest_wrong_key_fails_eg394() {
 #[cfg(feature = "streaming")]
 #[tokio::test]
 async fn streaming_cdc_matview_rebuild_eg395() {
-    use medulla_wire::wire::{ContinuousAgg, ContinuousQuerySpec};
+    use medulla_types::wire_streaming::{ContinuousAgg, ContinuousQuerySpec};
 
     let state = state().await;
     let hub = {

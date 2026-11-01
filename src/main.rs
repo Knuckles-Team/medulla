@@ -1293,16 +1293,16 @@ macro_rules! define_authenticated_wire_listener {
                 spawn_authenticated_wire_listener(
                             _state,
                             resolve_listener_addr(
-                                std::env::var(medulla::server::$module::$addr_env)
+                                std::env::var(medulla_wire::$module::$addr_env)
                                     .ok()
                                     .as_deref(),
                                 $default_addr,
                             ),
                             $service_name,
                             $enable_message,
-                            medulla::server::$module::validate_startup_policy,
+                            medulla_wire::$module::validate_startup_policy,
                             |addr, state| async move {
-                                medulla::server::$module::serve(&addr, state).await
+                                medulla_wire::$module::serve(&addr, state).await
                             },
                         )
                         .await?;

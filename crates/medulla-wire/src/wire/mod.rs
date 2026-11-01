@@ -165,7 +165,7 @@ pub trait WireProtocol: Send + Sync {
 
 /// Map an internal engine error string to a wire user error (SQLSTATE 58000 —
 /// system error) — keeps clients reporting a clean message instead of a drop.
-pub(crate) fn user_err(msg: impl Into<String>) -> WireError {
+pub fn user_err(msg: impl Into<String>) -> WireError {
     WireError {
         code: "58000".to_owned(),
         message: msg.into(),
@@ -797,7 +797,7 @@ fn authorize_delete_op(
 /// own rule any more; it decides whether the kernel's answer is already durable,
 /// which is a different and strictly narrower question the authorization step
 /// needs before the commit.
-pub(crate) fn committed_sql_replay_receipt(
+pub fn committed_sql_replay_receipt(
     store: &TableStore,
     authority: &CarrierAuthority,
     batch: &medulla_protocol_types::mutation_batch::MutationBatch,
@@ -845,8 +845,8 @@ type SqlTableCommitIdentity = (
     Option<medulla_types::contract::Nonce>,
 );
 type SqlTableCommit = (TableStore, TableTxn, SqlTableCommitIdentity);
-const SQL_OWNER_REPAIR_PENDING: &str = "SQL_OWNER_REPAIR_PENDING";
-const SQL_REPLAY_OPERATION_CONFLICT: &str =
+pub const SQL_OWNER_REPAIR_PENDING: &str = "SQL_OWNER_REPAIR_PENDING";
+pub const SQL_REPLAY_OPERATION_CONFLICT: &str =
     "IDEMPOTENCY_CONFLICT: SQL batch identity was used by a different operation";
 const SQL_REPLAY_OWNER_CONFLICT: &str =
     "IDEMPOTENCY_CONFLICT: SQL batch identity is owned by another actor";
@@ -5297,7 +5297,7 @@ impl WireProtocol for WireSession {
 }
 
 #[cfg(any(test, feature = "test-support"))]
-fn test_isolation(agents: &[&str]) -> medulla_core::isolation::IsolationLayer {
+pub fn test_isolation(agents: &[&str]) -> medulla_core::isolation::IsolationLayer {
     let mut isolation = medulla_core::isolation::IsolationLayer::new();
     for agent in agents {
         isolation.register_agent(medulla_core::isolation::AgentIdentity {

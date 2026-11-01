@@ -27,7 +27,7 @@ use tokio::sync::RwLock;
 use medulla::isolation::{AgentIdentity, AgentRole};
 use medulla::registry::GraphRegistry;
 use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla::server::pgwire;
+use medulla_wire::pgwire;
 use medulla_server_api::state::ServerState;
 
 fn sql_test_persist_dir() -> String {
