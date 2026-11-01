@@ -71,3 +71,4 @@ medulla-table-store = { path = "../medulla-table-store" }
 medulla-tables = { path = "../medulla-tables" }
 medulla-sql-udfs = { path = "../medulla-sql-udfs" }
 medulla-cypher = { path = "../medulla-cypher" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }

@@ -67,7 +67,7 @@ pub struct AnnChangedRows {
     pub(crate) epoch: u64,
     /// `(row id, current vector)`; `None` for a deleted row or one without a
     /// vector.
-    pub(crate) rows: Vec<RowVector>,
+    pub rows: Vec<RowVector>,
     /// `false` when more rows changed than the bound admitted.
     pub(crate) complete: bool,
 }
