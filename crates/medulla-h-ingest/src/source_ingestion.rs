@@ -45,7 +45,7 @@ pub struct PrepareContext<'a> {
     pub fencing_token: Option<u64>,
 }
 
-pub(crate) struct PreparedSourceIngestion {
+pub struct PreparedSourceIngestion {
     pub envelope: medulla_protocol_types::change_envelope::ChangeEnvelope,
     batch_digest: Digest256,
     mode: SourceIngestionMode,

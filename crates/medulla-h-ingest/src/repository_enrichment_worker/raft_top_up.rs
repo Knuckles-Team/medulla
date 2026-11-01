@@ -18,7 +18,7 @@ use medulla_server_api::api::persistence::RaftMutationTiming;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
-struct PreparedTopUp {
+pub struct PreparedTopUp {
     transition: EnrichmentTopUpTransition,
     routed: medulla_raft::raft::multi::RoutedRaftHandle,
     graph_type: medulla_protocol_types::protocol::GraphType,
