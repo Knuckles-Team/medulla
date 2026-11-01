@@ -1,5 +1,5 @@
 //! Incremental (DBSP-style) materialized-view maintenance
-//! (CONCEPT:MEDULLA-KG.storage.incremental-matview).
+//! (MEDULLA-INCREMENTAL-VIEWS-R001).
 //!
 //! A dep-free Z-set delta model ([`zset`]) + a circuit compiler ([`circuit`]) that
 //! generalizes `src/server/cdc.rs`'s hand-rolled two-aggregate `ContinuousQuery`/

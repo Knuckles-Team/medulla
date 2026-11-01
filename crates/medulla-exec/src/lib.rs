@@ -40,7 +40,7 @@ pub mod exec;
 #[cfg(all(feature = "query", any(test, feature = "test-support")))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod fixture;
-/// DBSP-style INCREMENTAL materialized-view maintenance (CONCEPT:MEDULLA-KG.storage.incremental-matview):
+/// DBSP-style INCREMENTAL materialized-view maintenance (MEDULLA-INCREMENTAL-VIEWS-R001):
 /// a dep-free Z-set delta model + a circuit compiler for the LINEAR operator subset
 /// (`Scan`/`Filter`/`AsOf`/`WindowAgg`(linear)/`Limit`), generalizing `src/server/cdc.rs`'s
 /// hand-rolled `ContinuousQuery`/`maintain()` mini-DBSP to an arbitrary supported `Plan`.

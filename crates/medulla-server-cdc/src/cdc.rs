@@ -350,7 +350,7 @@ impl CdcHub {
         {
             // Recompute-mode views: blunt stale flag (belt-and-braces on the OCC version).
             crate::matview::note_change(graph);
-            // Incremental-mode views: DBSP delta maintenance (CONCEPT:MEDULLA-KG.storage.incremental-matview)
+            // Incremental-mode views: DBSP delta maintenance (MEDULLA-INCREMENTAL-VIEWS-R001)
             // — fold this exact before/after image through the compiled circuit so the
             // view's `current` stays fresh WITHOUT a full recompute. One is a no-op per
             // view depending on its mode.

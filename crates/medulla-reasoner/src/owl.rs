@@ -3585,6 +3585,7 @@ ex:Dog rdfs:subClassOf ex:Animal .
         .is_none());
     }
 
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R011.1
     /// Incremental materialization: classify, then ADD an axiom and re-saturate —
     /// only the new consequence appears, and the result equals a from-scratch run.
     #[test]

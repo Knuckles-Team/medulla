@@ -83,7 +83,7 @@ impl RedbBackend {
     }
 
     /// Durably upsert an incremental matview's operator-state snapshot
-    /// (CONCEPT:MEDULLA-KG.storage.incremental-matview). Awaits the fsync.
+    /// (MEDULLA-INCREMENTAL-VIEWS-R001). Awaits the fsync.
     #[cfg(feature = "matview")]
     pub async fn matview_operator_state_put(
         &self,
