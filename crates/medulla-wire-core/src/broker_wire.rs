@@ -98,7 +98,7 @@ pub async fn test_state_with_broker_agents(
         (None, None)
     };
 
-    let mut state = medulla_server::seams_install::new_state_for_test("test", isolation);
+    let mut state = ServerState::new_for_test("test", isolation);
     state.persist_dir = persist_dir;
     state.persistence = persistence;
     Arc::new(RwLock::new(state))
