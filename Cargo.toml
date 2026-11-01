@@ -304,7 +304,7 @@ ann-redb = ["medulla-server-api/ann-redb", "ann", "redb", "medulla-core/ann-redb
 # the mutation gateway (`src/server/mutation.rs`) is server-only, so the binary
 # linking the MethodPolicy ledger is exactly the `server` build, matching every other
 # server-only dependency in this list.
-server = ["medulla-h-compute/server", "medulla-raft/server", "medulla-persistence/server", "medulla-server-api/server", "medulla-store/server", "medulla-kernel/server", "dep:tokio", "dep:clap", "dep:tracing-subscriber", "dep:async-trait", "dep:medulla-capabilities"]
+server = ["medulla-h-graph/server", "medulla-h-compute/server", "medulla-raft/server", "medulla-persistence/server", "medulla-server-api/server", "medulla-store/server", "medulla-kernel/server", "dep:tokio", "dep:clap", "dep:tracing-subscriber", "dep:async-trait", "dep:medulla-capabilities"]
 # Pure-Rust TLS/mTLS for the native MessagePack TCP service. The one main build
 # includes it so remote-engine deployments can terminate TLS in the binary.
 server-tls = ["server", "dep:rustls", "dep:tokio-rustls"]
@@ -664,14 +664,14 @@ obs = ["medulla-server-api/obs",
 # parser + evaluator (`medulla-tsdb/promql`) + the facade glue in `src/server/promql`; NO
 # new heavy dep. Implies `obs` (needs the listener + the durable SeriesStore + tsdb)
 # and is included in the one main build.
-promql = ["medulla-persistence/promql", "medulla-server-api/promql", "medulla-store/promql", "obs", "medulla-tsdb/promql"]
+promql = ["medulla-h-graph/promql", "medulla-persistence/promql", "medulla-server-api/promql", "medulla-store/promql", "obs", "medulla-tsdb/promql"]
 # CONCEPT:MEDULLA-163 — distributed traces: OTLP-JSON span ingest + a Jaeger/OpenObserve
 # trace-search / assembly / service-dependency-graph HTTP API served on the obs
 # listener, over the pure-Rust `medulla-tsdb/traces` span store + the facade glue in
 # `src/server/traces`. Completes the observability trilogy (logs + metrics + traces).
 # NO new heavy dep. Implies `obs` (needs the listener + ObsState) and is included in
 # the one main build.
-traces = ["medulla-persistence/traces", "medulla-server-api/traces", "medulla-store/traces", "obs", "medulla-tsdb/traces"]
+traces = ["medulla-h-graph/traces", "medulla-persistence/traces", "medulla-server-api/traces", "medulla-store/traces", "obs", "medulla-tsdb/traces"]
 # CONCEPT:MEDULLA-316 — the OBSERVABILITY EGRESS half + a Prometheus push receiver. Two
 # additive, feature-gated capabilities that close the obs loop the engine already
 # INGESTS (logs MEDULLA-160, metrics/PromQL MEDULLA-172, traces MEDULLA-163):
@@ -1085,17 +1085,17 @@ sparql-fuseki = ["sparql"]
 # SPARQL standards completeness (CONCEPT:MEDULLA-127/130/131) forwarded from medulla-rdf. All
 # pure-Rust (RustCrypto hashes; quick-xml/oxjsonld; oxrdf/oxttl/spargebra rdf-12 flags)
 # and included in the one main build.
-sparql-hash = ["medulla-persistence/sparql-hash", "medulla-server-api/sparql-hash", "sparql", "medulla-rdf/sparql-hash"]     # MD5/SHA1/SHA2 SPARQL hash builtins
-rdf-xml = ["medulla-persistence/rdf-xml", "medulla-server-api/rdf-xml", "rdf", "medulla-rdf/rdf-xml"]                 # RDF/XML reader+writer
-json-ld = ["medulla-persistence/json-ld", "medulla-server-api/json-ld", "rdf", "medulla-rdf/json-ld"]                 # JSON-LD 1.1 (expansion form)
-sparql-star = ["medulla-persistence/sparql-star", "medulla-server-api/sparql-star", "sparql", "medulla-rdf/sparql-star"]      # RDF-star / SPARQL-star quoted triples
+sparql-hash = ["medulla-h-graph/sparql-hash", "medulla-persistence/sparql-hash", "medulla-server-api/sparql-hash", "sparql", "medulla-rdf/sparql-hash"]     # MD5/SHA1/SHA2 SPARQL hash builtins
+rdf-xml = ["medulla-h-graph/rdf-xml", "medulla-persistence/rdf-xml", "medulla-server-api/rdf-xml", "rdf", "medulla-rdf/rdf-xml"]                 # RDF/XML reader+writer
+json-ld = ["medulla-h-graph/json-ld", "medulla-persistence/json-ld", "medulla-server-api/json-ld", "rdf", "medulla-rdf/json-ld"]                 # JSON-LD 1.1 (expansion form)
+sparql-star = ["medulla-h-graph/sparql-star", "medulla-persistence/sparql-star", "medulla-server-api/sparql-star", "sparql", "medulla-rdf/sparql-star"]      # RDF-star / SPARQL-star quoted triples
 # OGC GeoSPARQL baseline (CONCEPT:MEDULLA-261): the `geo:`/`geof:` vocabulary, `geo:wktLiteral`
 # parsing, and the core `geof:` spatial FILTER functions (sfWithin/sfIntersects/sfContains/
 # sfEquals/distance/buffer) over the SPARQL surface, forwarded from medulla-rdf's `geosparql`.
 # Composes the RDF/SPARQL surface with the existing spatial modality: IMPLIES both `sparql`
 # and `geo` (CONCEPT:MEDULLA-083 — the medulla-geo executor/leaf crate), reusing medulla-geo for ALL
 # geometry math (NO new external dep). Included in the one main build.
-geosparql = ["medulla-persistence/geosparql", "medulla-server-api/geosparql", "sparql", "geo", "medulla-rdf/geosparql"]
+geosparql = ["medulla-h-graph/geosparql", "medulla-persistence/geosparql", "medulla-server-api/geosparql", "sparql", "geo", "medulla-rdf/geosparql"]
 # W3C SPARQL 1.1 Protocol HTTP endpoint (CONCEPT:MEDULLA-017): a minimal hand-rolled
 # HTTP/1.1 listener (the SAME dep-free idiom as the Prometheus `--metrics-addr`
 # exposition — NO axum/hyper/warp) so existing Stardog/Jena/rdflib SPARQL clients can
@@ -1184,7 +1184,7 @@ owl = ["medulla-h-graph/owl", "medulla-raft/owl", "medulla-persistence/owl", "me
 # path (full cardinality/negation/nominals/reasoning-by-cases) that the tractable `owl`
 # EL⁺/RL path cannot decide. Pure Rust, no new dep, IMPLIES `owl`, and is included in
 # the one main build.
-owl-dl = ["medulla-persistence/owl-dl", "medulla-server-api/owl-dl", "owl", "medulla-rdf/owl-dl"]
+owl-dl = ["medulla-h-graph/owl-dl", "medulla-persistence/owl-dl", "medulla-server-api/owl-dl", "owl", "medulla-rdf/owl-dl"]
 # The OWL/SPARQL cross-modal plan SOURCE ops `Op::Reason` / `Op::SparqlBgp`
 # (CONCEPT:KG-2.220) inside a UnifiedQuery plan. The unified-plan executor needs
 # DataFusion, so this IMPLIES `query` and is included in the one main build. Pulls
