@@ -47,3 +47,9 @@ pub mod rules;
 #[cfg(feature = "owl-dl")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod tableau;
+#[cfg(feature = "reasoning")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod reasoning;
+#[cfg(feature = "reasoning")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod reasoning_closure;
