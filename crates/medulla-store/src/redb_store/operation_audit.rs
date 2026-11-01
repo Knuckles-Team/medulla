@@ -364,6 +364,6 @@ pub fn operation_audit_read(
     })
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 #[path = "operation_audit_tests.rs"]
-pub(crate) mod tests;
+pub mod tests;

@@ -570,7 +570,7 @@ struct GenericValidationTables<'borrow, 'txn, 'crypto> {
 }
 
 impl<'borrow, 'txn, 'crypto> GenericValidationTables<'borrow, 'txn, 'crypto> {
-    fn new(
+    pub fn new(
         nodes: &'borrow WorkItemTable<'txn>,
         native_work_items: &'borrow WorkItemTable<'txn>,
         crypto: DurableCrypto<'crypto>,
@@ -584,7 +584,7 @@ impl<'borrow, 'txn, 'crypto> GenericValidationTables<'borrow, 'txn, 'crypto> {
 }
 
 impl<'borrow, 'txn, 'crypto> GenericValidationContext<'borrow, 'txn, 'crypto> {
-    fn new(
+    pub fn new(
         graph: &'borrow str,
         node_id: &'borrow str,
         tables: GenericValidationTables<'borrow, 'txn, 'crypto>,

@@ -83,8 +83,8 @@ pub use run_owner::read_admission as read_run_admission;
 pub use session_usage::read_session_usage;
 mod sealed_record;
 mod submit;
-#[cfg(test)]
-pub(crate) mod test_shard;
+#[cfg(any(test, feature = "test-support"))]
+pub mod test_shard;
 
 pub(crate) use cancel::*;
 pub(crate) use claim::*;

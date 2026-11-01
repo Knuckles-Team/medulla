@@ -121,7 +121,7 @@ pub struct GraphDump {
 }
 
 impl GraphDump {
-    pub(crate) fn in_place_core_checkpoint(checkpoint: InPlaceCoreCheckpoint) -> Self {
+    pub fn in_place_core_checkpoint(checkpoint: InPlaceCoreCheckpoint) -> Self {
         Self {
             kind: GraphDumpKind::InPlaceCoreCheckpoint,
             graph: checkpoint.graph,
