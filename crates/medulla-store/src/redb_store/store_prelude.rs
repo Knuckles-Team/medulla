@@ -50,20 +50,20 @@ pub(super) use medulla_result_types::epistemic_operations::ResourceReservationSu
 pub(super) use medulla_result_types::epistemic_operations::ResourceTargetSnapshot;
 pub(super) use medulla_result_types::epistemic_operations::ResourceTargetSnapshotKind;
 #[cfg(test)]
-pub(super) use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
+pub use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
 pub(super) use medulla_mutation_types::mutation_scope::CommittedVersion;
-pub(super) use medulla_mutation_types::mutation_scope::DurabilityDomain;
-pub(super) use medulla_mutation_types::mutation_scope::LogicalName;
+pub use medulla_mutation_types::mutation_scope::DurabilityDomain;
+pub use medulla_mutation_types::mutation_scope::LogicalName;
 pub(super) use medulla_protocol_types::mutation_batch::MutationBatch;
 pub(super) use medulla_protocol_types::mutation_batch::MutationBatchCommit;
 pub(super) use medulla_protocol_types::mutation_batch::MutationBatchRecord;
 pub(super) use medulla_protocol_types::mutation_batch::MutationBatchStatus;
 pub(super) use medulla_protocol_types::mutation_batch::MutationOperation;
-pub(super) use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+pub use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 pub(super) use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 pub(super) use medulla_mutation_types::mutation_scope::MutationProjectionCursor;
 pub(super) use medulla_mutation_types::mutation_scope::MutationScope;
-pub(super) use medulla_mutation_types::mutation_scope::MutationSurface;
+pub use medulla_mutation_types::mutation_scope::MutationSurface;
 pub(super) use medulla_protocol_types::mutation_batch::VersionExpectation;
 pub(super) use medulla_protocol_types::protocol::GraphType;
 pub(super) use medulla_protocol_types::protocol::Method;
