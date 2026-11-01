@@ -1,0 +1,214 @@
+{
+ "chain": [
+  "medulla-types",
+  "medulla-identity-types",
+  "medulla-mutation-types",
+  "medulla-index-types",
+  "medulla-result-types",
+  "medulla-work-types",
+  "medulla-agent-types",
+  "medulla-catalog-types",
+  "medulla-source-types",
+  "medulla-decision-types",
+  "medulla-decision-outcome-types",
+  "medulla-protocol-types"
+ ],
+ "remove": [
+  "medulla-storage-owner"
+ ],
+ "crates": {
+  "medulla-work-types": {
+   "after": "medulla-result-types",
+   "level": "L1a",
+   "kind": "leaf-types",
+   "responsibility": "Work items, work market, control leases, host start, jobs, worker registry, run history and orchestration record types.",
+   "specs": [
+    "orchestration-vocabulary (work and run types)"
+   ]
+  },
+  "medulla-source-types": {
+   "after": "medulla-catalog-types",
+   "level": "L1d",
+   "kind": "leaf-types",
+   "responsibility": "Source ingestion, source documents and transcripts, ingest jobs and development-lifecycle record types (changeset review, pre-merge tests, standards drift, live artifacts, supply-chain reports).",
+   "specs": [
+    "ingest-worker (types)",
+    "repository-index-and-ingestion (types)",
+    "development-lifecycle (types)"
+   ]
+  },
+  "medulla-decision-outcome-types": {
+   "after": "medulla-decision-types",
+   "level": "L1f",
+   "kind": "leaf-types",
+   "responsibility": "Decision outcome and governance types: answer ranking, guards, trust, triage, red team, promotion, recommendations, policy evolution and the current plan.",
+   "specs": [
+    "decision-engine (outcome types)"
+   ]
+  },
+  "medulla-direct-state": {
+   "after": "medulla-storage",
+   "level": "L2a",
+   "kind": "leaf",
+   "responsibility": "Direct state: the storage owner's in-place state tables and their codecs.",
+   "specs": []
+  },
+  "medulla-sql-udfs": {
+   "after": "medulla-table-store",
+   "level": "L4c",
+   "kind": "leaf",
+   "responsibility": "SQL scalar, numeric, sketch, window and table functions registered into the SQL engine.",
+   "specs": []
+  },
+  "medulla-finance-quant": {
+   "after": "medulla-finance-market",
+   "level": "L4a",
+   "kind": "leaf",
+   "responsibility": "Finance quantitative math: pricing, derivatives, state-space filters, regimes, signal models, factors, optimizer, risk, leverage, execution kernels and sizing.",
+   "specs": [
+    "finance-primitives (quant kernels)"
+   ]
+  },
+  "medulla-store-apply": {
+   "after": "medulla-lane-store",
+   "level": "F2b",
+   "kind": "store",
+   "responsibility": "Store apply composition: native apply dispatch over work and resource rows, control, cleanup, checkpoints and the whole-batch store tests.",
+   "specs": []
+  },
+  "medulla-server-cdc": {
+   "after": "medulla-server-auth",
+   "level": "F4b",
+   "kind": "api",
+   "responsibility": "Change data capture hub, CEP, materialised views, reasoning cascade and impact watch.",
+   "specs": []
+  },
+  "medulla-server-ops": {
+   "after": "medulla-server-blob",
+   "level": "F4e",
+   "kind": "api",
+   "responsibility": "Served API seams: admin, ingest, query-transaction and re-entry seams and their registry.",
+   "specs": []
+  }
+ },
+ "levels": {
+  "medulla-agent-types": "L1b",
+  "medulla-catalog-types": "L1c",
+  "medulla-decision-types": "L1e",
+  "medulla-storage": "L2b",
+  "medulla-numeric": "L2",
+  "medulla-finance-market": "L3",
+  "medulla-decision-stats": "L3",
+  "medulla-reasoner": "L3",
+  "medulla-decision-policy": "L3b",
+  "medulla-tables": "L4a",
+  "medulla-table-store": "L4b",
+  "medulla-sql": "L4d",
+  "medulla-cypher": "L4d",
+  "medulla-compute": "L4a",
+  "medulla-graph-algos": "L4b",
+  "medulla-mining": "L4b",
+  "medulla-finance": "L4b",
+  "medulla-virtual-graph": "L4a",
+  "medulla-exec": "L5a",
+  "medulla-retrieval": "L5b",
+  "medulla-uql": "L5c",
+  "medulla-federation": "L5d",
+  "medulla-nlq": "L5e",
+  "medulla-plan": "L5f",
+  "medulla-store": "F1",
+  "medulla-work-store": "F2a",
+  "medulla-resource-store": "F2a",
+  "medulla-lane-store": "F2c",
+  "medulla-server-api": "F3",
+  "medulla-server-auth": "F4a",
+  "medulla-server-mutation": "F4c",
+  "medulla-server-blob": "F4d",
+  "medulla-persistence": "F5",
+  "medulla-persistence-records": "F6a",
+  "medulla-persistence-ops": "F6b",
+  "medulla-raft": "F7",
+  "medulla-raft-xshard": "F8"
+ },
+ "responsibility": {
+  "medulla-tables": "Table schema model: schema, secondary index and migration definitions.",
+  "medulla-table-store": "Physical table store, property-graph tables, the ANN authority and plan types, embedding bindings and plan scopes.",
+  "medulla-sql": "SQL dialect: parse, classify, plan and execute over tables, including the table providers.",
+  "medulla-query": "Removed after the split: every module moves out; leftovers go to medulla-table-store.",
+  "medulla-finance-market": "Market data primitives: quotes, bars, books, calendars, corporate actions, indicators, finance signals, backtest validation and the special functions.",
+  "medulla-finance": "Finance portfolio layer: lot accounting, exchange records, imports, forensics, strategies, attribution, banking and the served finance entry points.",
+  "medulla-numeric": "Deterministic numeric kernels: series, risk bounds, stats, calibration, evaluation, clustering and the Python bridge.",
+  "medulla-storage": "Physical storage owner, recovery, kernel, capabilities and scoped tables (one cycle; kept together).",
+  "medulla-reasoner": "OWL, tableau and rule reasoning, proof contract and reasoning closure.",
+  "medulla-virtual-graph": "Attached sources read as virtual graphs: OBDA, source selection and supply-chain impact.",
+  "medulla-uql": "UQL syntax: lexer, grammar, parser, printer and diagnostics.",
+  "medulla-plan": "Planner entry: UQL serving, cross-modal plan tests and the engine-peer federation tests.",
+  "medulla-work-store": "Durable work items, their capability records and graph-row tables.",
+  "medulla-resource-store": "Resource reservations and capacity leases.",
+  "medulla-server-api": "Server state, seam traits, request context, transactions and the shared served-API helpers.",
+  "medulla-server-auth": "Request authentication, access checks, the SQL catalog ACL and SQL tables.",
+  "medulla-server-mutation": "Served mutation and mutation batches.",
+  "medulla-server-blob": "Served blob, key-value and SPARQL HTTP endpoints.",
+  "medulla-persistence": "Persistence backend: redb backend, cold offload and tiering, read-through, cost accounting, node info and durable stores.",
+  "medulla-persistence-records": "Persisted agent, decision, connector pack, guardrail and write-back records.",
+  "medulla-persistence-ops": "Backup, online reshard, shard migration and store upgrade.",
+  "medulla-raft-xshard": "Cross-shard transactions, elasticity, exchange, pregel, drain and the raft test harnesses."
+ },
+ "extra_moves": {
+  "medulla-work-types": [
+   "crates/medulla-types/src/work_*",
+   "crates/medulla-types/src/orchestration",
+   "crates/medulla-types/src/control_lease",
+   "crates/medulla-types/src/jobs",
+   "crates/medulla-types/src/worker_registry",
+   "crates/medulla-types/src/action_spec",
+   "crates/medulla-types/src/native_control",
+   "crates/medulla-types/src/memory",
+   "crates/medulla-types/src/search_task",
+   "crates/medulla-types/src/run_*",
+   "crates/medulla-types/src/host_start"
+  ],
+  "medulla-source-types": [
+   "crates/medulla-types/src/source_ingestion",
+   "crates/medulla-types/src/source_document",
+   "crates/medulla-types/src/source_transcript",
+   "crates/medulla-types/src/ingest_job"
+  ],
+  "medulla-decision-outcome-types": [
+   "crates/medulla-types/src/policy_evolution",
+   "crates/medulla-types/src/current_plan"
+  ],
+  "medulla-store-apply": [
+   "crates/medulla-store/src/redb_store/mutation_batch_tests",
+   "crates/medulla-store/src/redb_store/security_tests=medulla-lane-store"
+  ],
+  "medulla-plan": [
+   "crates/medulla-plan/src/uql/serve",
+   "crates/medulla-plan/src/uql/tests"
+  ]
+ },
+ "drop_moves": [
+  "src/work_item_statechart",
+  "src/loop_statechart",
+  "src/redb_store/enrichment_budget",
+  "src/raft/xread",
+  "crates/medulla-storage/src/owner",
+  "crates/medulla-types/src/orchestration",
+  "crates/medulla-types/src/work_*",
+  "crates/medulla-types/src/jobs",
+  "crates/medulla-types/src/run_*",
+  "crates/medulla-types/src/control_lease",
+  "crates/medulla-types/src/worker_registry",
+  "crates/medulla-types/src/action_spec",
+  "crates/medulla-types/src/native_control",
+  "crates/medulla-types/src/memory",
+  "crates/medulla-types/src/search_task",
+  "crates/medulla-types/src/host_start",
+  "crates/medulla-types/src/source_ingestion",
+  "crates/medulla-types/src/source_document",
+  "crates/medulla-types/src/source_transcript",
+  "crates/medulla-types/src/ingest_job",
+  "crates/medulla-types/src/policy_evolution",
+  "crates/medulla-types/src/current_plan"
+ ]
+}
