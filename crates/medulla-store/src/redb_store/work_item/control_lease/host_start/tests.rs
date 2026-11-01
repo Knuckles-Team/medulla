@@ -6,7 +6,7 @@ use medulla_agent_types::host_start::HostStartInterfaces;
 
 fn request() -> IssueHostStartGrantRequest {
     let mut request =
-        medulla_agent_types::agent_fixtures::host_start::host_start_request("tenant-a");
+        medulla_agent_types::host_start::fixtures::host_start_request("tenant-a");
     request.binding.interfaces = HostStartInterfaces::Terminal;
     request.binding.policy_revision = "revision-1".into();
     request

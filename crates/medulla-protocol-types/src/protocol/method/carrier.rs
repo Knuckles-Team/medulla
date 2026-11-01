@@ -113,7 +113,7 @@ pub(crate) mod tests {
 
     #[test]
     fn host_start_cannot_be_hidden_inside_a_generic_carrier() {
-        let request = medulla_agent_types::agent_fixtures::host_start::host_start_request("t");
+        let request = medulla_agent_types::host_start::fixtures::host_start_request("t");
         let host = from_json(serde_json::json!({
             "method": "IssueHostStartGrant", "params": {"request": request}
         }));
