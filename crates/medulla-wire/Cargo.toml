@@ -19,7 +19,6 @@ hmac = "0.12"
 medulla-capabilities = { path = "../medulla-capabilities", optional = true }
 medulla-compute = { path = "../medulla-compute" }
 medulla-core = { path = "../medulla-core" }
-medulla-h-query = { path = "../medulla-h-query" }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-kvcache = { path = "../medulla-kvcache", optional = true }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
@@ -117,4 +116,5 @@ promql = ["dep:medulla-tsdb", "medulla-tsdb/promql"]
 sqlite-file = ["dep:rustix"]
 
 [dev-dependencies]
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
 tempfile = "3"

@@ -116,3 +116,43 @@ pub fn terminal_method(lease_epoch: u64, fencing_token: u64) -> medulla_protocol
         now_ms: 1_000,
     }
 }
+
+/// Add the Commons RBAC grant shared by authenticated protocol fixtures.
+/// Keeping this beside the other shared fixtures lets query and wire tests reuse the
+/// exact policy shape without copying an agent-registration block.
+pub fn grant_commons_user(isolation: &mut medulla_core::isolation::IsolationLayer) {
+    #[cfg(feature = "security")]
+    {
+        use medulla_types::acl::Grant;
+        use medulla_types::acl::GrantEffect;
+        use medulla_types::acl::RbacAction;
+        use medulla_types::acl::ResourceSelector;
+        use medulla_types::acl::Role;
+        isolation.add_role(Role::new("commons-user"));
+        let commons_graph = ResourceSelector::Graph("__commons__".to_string());
+        for action in [RbacAction::Read, RbacAction::Write] {
+            isolation.add_grant(Grant {
+                role: "commons-user".to_string(),
+                resource: commons_graph.clone(),
+                action,
+                effect: GrantEffect::Allow,
+            });
+        }
+    }
+}
+
+/// Register a non-System fixture principal with the shared Commons role.
+/// Both query and protocol round-trip tests use this helper; the caller
+/// remains responsible for choosing the principal's identity and any
+/// additional roles required by its scenario.
+pub fn register_commons_agent(isolation: &mut medulla_core::isolation::IsolationLayer, agent_id: &str) {
+    isolation.register_agent(medulla_types::acl::AgentIdentity {
+        agent_id: agent_id.to_string(),
+        role: medulla_types::acl::AgentRole::Agent,
+        teams: Vec::new(),
+        #[cfg(feature = "security")]
+        roles: vec!["commons-user".to_string()],
+        #[cfg(not(feature = "security"))]
+        roles: Vec::new(),
+    });
+}

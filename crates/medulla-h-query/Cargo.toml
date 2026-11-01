@@ -118,4 +118,5 @@ promql = ["dep:medulla-tsdb", "medulla-tsdb/promql"]
 traces = ["dep:medulla-tsdb", "medulla-tsdb/traces"]
 
 [dev-dependencies]
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
 tempfile = "3"

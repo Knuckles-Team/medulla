@@ -212,45 +212,7 @@ pub mod current_auth_test_support {
 
     const TEST_AGENT: &str = "unit-test-agent";
 
-    /// Add the Commons RBAC grant shared by authenticated protocol fixtures.
-    /// Keeping this in the query test-support seam lets wire tests reuse the
-    /// exact policy shape without copying an agent-registration block.
-    pub fn grant_commons_user(isolation: &mut IsolationLayer) {
-        #[cfg(feature = "security")]
-        {
-            use medulla_types::acl::Grant;
-            use medulla_types::acl::GrantEffect;
-            use medulla_types::acl::RbacAction;
-            use medulla_types::acl::ResourceSelector;
-            use medulla_types::acl::Role;
-            isolation.add_role(Role::new("commons-user"));
-            let commons_graph = ResourceSelector::Graph("__commons__".to_string());
-            for action in [RbacAction::Read, RbacAction::Write] {
-                isolation.add_grant(Grant {
-                    role: "commons-user".to_string(),
-                    resource: commons_graph.clone(),
-                    action,
-                    effect: GrantEffect::Allow,
-                });
-            }
-        }
-    }
-
-    /// Register a non-System fixture principal with the shared Commons role.
-    /// Both query and protocol round-trip tests use this helper; the caller
-    /// remains responsible for choosing the principal's identity and any
-    /// additional roles required by its scenario.
-    pub fn register_commons_agent(isolation: &mut IsolationLayer, agent_id: &str) {
-        isolation.register_agent(AgentIdentity {
-            agent_id: agent_id.to_string(),
-            role: AgentRole::Agent,
-            teams: Vec::new(),
-            #[cfg(feature = "security")]
-            roles: vec!["commons-user".to_string()],
-            #[cfg(not(feature = "security"))]
-            roles: Vec::new(),
-        });
-    }
+    use medulla_server_api::test_support::{grant_commons_user, register_commons_agent};
 
     pub(super) fn current_isolation() -> IsolationLayer {
         current_isolation_with_agents(&[])

@@ -480,8 +480,8 @@ mod tests {
     //! end-to-end through the shared `WireSession` execution core (CONCEPT:MEDULLA-KG.query.kg-2).
     use super::*;
     use medulla_core::isolation::IsolationLayer;
-    use medulla_h_query::query::current_auth_test_support::grant_commons_user;
-    use medulla_h_query::query::current_auth_test_support::register_commons_agent;
+    use medulla_server_api::test_support::grant_commons_user;
+    use medulla_server_api::test_support::register_commons_agent;
     use medulla_server_api::state::ServerState;
     use medulla_query::{TypedColumn, TypedQueryResult};
     use tokio::net::TcpStream;
