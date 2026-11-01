@@ -158,8 +158,8 @@ pub(crate) async fn handle_sql(
         query: query.clone(),
         params_msgpack,
     };
-    match medulla_sql::sql::classify(&query) {
-        Ok(kind) if !matches!(kind, medulla_sql::sql::StatementKind::Read) => Ok(exec_sql_write(
+    match medulla_sql_lang::sql::classify::classify(&query) {
+        Ok(kind) if !matches!(kind, medulla_sql_lang::sql::classify::StatementKind::Read) => Ok(exec_sql_write(
             req_id,
             SqlWriteScope {
                 graph_name: ctx.graph_name,

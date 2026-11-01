@@ -350,7 +350,7 @@ pub(crate) type ConstEmbedFn<'a> = &'a dyn Fn(&str) -> Option<Vec<f32>>;
 /// untouched, so no `Display` round-trip of the user's statement can ever change what
 /// runs. The executed `medulla_embed` call resolves to the same vector by the immutability
 /// contract.
-pub(crate) fn fold_const_embed_order_key(sql: &str, embed: ConstEmbedFn<'_>) -> Option<String> {
+pub fn fold_const_embed_order_key(sql: &str, embed: ConstEmbedFn<'_>) -> Option<String> {
     let mut stmts = Parser::parse_sql(&PostgreSqlDialect {}, sql).ok()?;
     let [stmt] = stmts.as_mut_slice() else {
         return None;

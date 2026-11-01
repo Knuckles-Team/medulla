@@ -57,7 +57,6 @@ mod ann_filter;
 /// authority, `nodes` through its batch slice — RF-019.
 mod ann_pushdown;
 mod catalog;
-mod classify;
 /// `medulla_embed(text)` — the server-side text→vector SQL scalar function (design
 /// `plans/semantic-indexing/DESIGN-embedding-bindings.md` §3.1, §9 phase 2). Returns the
 /// `List<Float32>` a `vector(n)` column materializes as, so it drops straight into the
@@ -66,27 +65,11 @@ mod classify;
 mod embed_udf;
 mod exec;
 pub(crate) mod filter_shape;
-/// SQL stored-function (`CREATE FUNCTION … LANGUAGE sql`) expansion (CONCEPT:MEDULLA-KG.query.create-drop-function) —
-/// inline a scalar function body as a scalar subquery, expand a table function as a
-/// parameterized-view subquery in `FROM`; reuses the SQL exec path (no new evaluator).
-mod funcs;
 /// CA-19 (GOC-77 W01-W05, BUG-224) — the `iceberg('namespace.table'[, snapshot_id])`
 /// federated table function over the official apache/iceberg-rust REST-catalog client.
 /// Gated `iceberg-federation` (implied by `sql`, see that feature's Cargo.toml comment).
 #[cfg(feature = "iceberg-federation")]
 mod iceberg_federation;
-/// Postgres-family extension parity: pgvector ANN index pushdown, TimescaleDB hypertables/continuous-aggregates, and
-/// ParadeDB `@@@` BM25 — the pure parse/plan/project layer.
-mod pgfamily;
-/// SQL:2023 SQL/PGQ property-graph definitions and bounded `GRAPH_TABLE`
-/// relational lowering. Execution stays on this module's sole DataFusion path.
-mod pgq;
-mod pgvector_ddl;
-/// PL/pgSQL procedural interpreter (CONCEPT:MEDULLA-KG.query.medulla-validate-procedural-body/MEDULLA-341): parse + execute a
-/// `LANGUAGE plpgsql` body (DECLARE vars, BEGIN..END, `:=`, IF/ELSIF/ELSE, LOOP/WHILE/
-/// FOR, RETURN, RAISE, `SELECT … INTO`) against a variable environment, running embedded
-/// SQL back through the same read path. Pure Rust — no new deps (folds into `sql`).
-mod plpgsql;
 // `pub(crate)` (not `mod providers;`) so `crate::tables::provider::UserTableProvider`
 // (CONCEPT:MEDULLA-KG.query.register-each-user-table) can reuse `NodesTableProvider`'s generic equality-index
 // pushdown for its own full-scan fallback, instead of duplicating that machinery.
@@ -95,7 +78,6 @@ mod plpgsql;
 // re-exports below (`SqlCache`), unchanged.
 pub(crate) mod providers;
 mod spill;
-pub mod typed_result;
 // The catalog objects of one table store a SQL read registers (EH-352 status rows).
 mod store_catalog;
 // `information_schema.medulla_index_status` (EH-352), synthesized like the other catalogs.
@@ -109,21 +91,11 @@ pub use read_only::require_single_read;
 pub use ann::ColumnVectorBinding;
 pub use ann_filter::{AnnDeclineReason, AnnQueryShape};
 pub use ann_pushdown::{user_ann_decision, UserAnnDecision, UserAnnPushdown};
-pub use classify::{
-    classify, infer_param_sites, json_pred_from_expr, mongo_match_to_preds, returning_columns,
-    schema_probe_sql, AlterTableAction, AlterTablePlan, ColumnDef, CopyFormat, CopyPlan,
-    CreateFunctionPlan, CreateTablePlan, CreateViewPlan, DeleteNodes, DeleteNodesJoin, DeleteTable,
-    DropFunctionPlan, DropTablePlan, DropViewPlan, InsertNode, InsertNodes, InsertNodesSelect,
-    InsertSelect, InsertTable, OnConflict, OnConflictAction, ParamLiteralType, ParamSite,
-    PropertyGraphCatalogAdmission, PropertyGraphDdlOperation, StatementKind, TableWhereEq,
-    UpdateNodes, UpdateNodesJoin, UpdateTable, WhereEq, READ_ONLY_RELATION_NAMES,
-};
 // Design §9 phase 2 — the `medulla_embed(text)` scalar function plus the seam a facade binds
 // the engine's existing `medulla_plan::TextEmbedder` through (`medulla-query` cannot name that
 // trait directly: `medulla-plan` depends on `medulla-query`, so the reverse edge is a package
 // cycle — see `embed_udf`'s module doc).
 pub use embed_udf::{bind_text_embedder, medulla_embed_udf, medulla_embed_udf_with, EmbedFn};
-pub use pgfamily::MEDULLA_EMBED_FN;
 pub use exec::{
     exec_graph_table_typed_with_tables, exec_graph_table_typed_with_tables_cancellable, exec_sql,
     exec_sql_arrow, exec_sql_arrow_cancellable, exec_sql_cached, exec_sql_over_tables,
@@ -131,19 +103,8 @@ pub use exec::{
     exec_sql_typed_with_tables_cached_cancellable, exec_sql_typed_with_tables_cancellable,
     QueryResult, SqlContextCache,
 };
-pub use typed_result::{PgColType, TypedColumn, TypedQueryResult};
-pub use pgq::{
-    lower_graph_table, lower_graph_table_to_datafusion, parse_graph_table, parse_graph_table_sql,
-    parse_property_graph_ddl, parse_property_graph_privilege, BinaryOp as GraphBinaryOp,
-    EdgeDirection, EdgePattern, ElementPattern, GraphExpr, GraphLiteral, GraphTableColumn,
-    GraphTableQuery, LabelExpr, PathPattern, RelationalGraphPlan, SqlNumber, MAX_PGQ_SQL_BYTES,
-};
 pub use spill::{default_spill_rows, CancellationToken, StreamOutcome};
 // Postgres-family extension parity plans + planners.
-pub use pgfamily::{
-    plan_ann_search, plan_bm25_search, AnnSearchPlan, Bm25SearchPlan, ContinuousAggPlan,
-};
-pub use pgvector_ddl::parse_create_ann_index;
 pub use providers::SqlCache;
 // CA-19 (GOC-77 W01-W05, BUG-224) — federated Iceberg read pushdown stats, exposed so a
 // test can assert real manifest-level file skipping (P1's proof shape) rather than

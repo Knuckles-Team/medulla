@@ -177,7 +177,7 @@ impl ObsState {
     /// `severity`, `body`, `attrs`), so `SELECT severity, count(*) FROM logs GROUP BY
     /// severity` aggregates over the columnar segments; `json_get('<attrs>', 'key')`
     /// reaches a schema-on-read attribute. Synchronous — safe under `spawn_blocking`.
-    pub fn search_sql(&self, sql: &str) -> Result<medulla_sql::sql::TypedQueryResult, String> {
+    pub fn search_sql(&self, sql: &str) -> Result<medulla_sql_lang::sql::typed_result::TypedQueryResult, String> {
         let mut batches = Vec::new();
 
         // (cold) every Parquet segment → Arrow batch (read bytes from the CAS, decode).

@@ -44,7 +44,7 @@ const MAX_PASSES: usize = 32;
 /// resolve. An `Err` is returned only for a genuinely malformed call (argument-count
 /// mismatch) — a body that fails to re-parse leaves the text unchanged (DataFusion then
 /// reports the precise error).
-pub(super) fn expand_functions(sql: &str, functions: &[StoredFunction]) -> Result<String, String> {
+pub fn expand_functions(sql: &str, functions: &[StoredFunction]) -> Result<String, String> {
     if functions.is_empty() {
         return Ok(sql.to_string());
     }

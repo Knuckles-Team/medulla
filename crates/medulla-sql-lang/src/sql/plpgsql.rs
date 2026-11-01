@@ -1196,7 +1196,7 @@ fn exec_function(
 /// (CONCEPT:MEDULLA-KG.query.medulla-validate-procedural-body). Returns `Ok(None)` when the statement is NOT such a call (so the
 /// caller runs the normal SQL path). `run_sql` executes embedded SQL back through the same
 /// read path.
-pub(super) fn try_exec_call(
+pub fn try_exec_call(
     sql: &str,
     functions: &[StoredFunction],
     run_sql: &dyn Fn(&str) -> Result<TypedQueryResult, String>,

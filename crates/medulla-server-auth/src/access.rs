@@ -69,9 +69,9 @@ pub use write_classification::requires_write;
 /// transaction-control statement, or one that does not parse, is not a write.
 #[cfg(feature = "query")]
 pub fn sql_is_write(query: &str) -> bool {
-    use medulla_sql::sql::StatementKind;
+    use medulla_sql_lang::sql::classify::StatementKind;
     !matches!(
-        medulla_sql::sql::classify(query),
+        medulla_sql_lang::sql::classify::classify(query),
         Ok(StatementKind::Read)
             // SQL:2023 `GRAPH_TABLE` is a read over base relations. It is a
             // separate classification only because it needs an authoritative
@@ -1733,8 +1733,8 @@ mod read_rls_coverage_tests {
     fn graph_table_is_a_read_at_the_shared_write_classification_chokepoint() {
         let graph_table = "SELECT * FROM GRAPH_TABLE (shop MATCH (c:customer) COLUMNS (c.name))";
         assert!(matches!(
-            medulla_sql::sql::classify(graph_table),
-            Ok(medulla_sql::sql::StatementKind::GraphTableReadRequiresCatalogAdmission(_))
+            medulla_sql_lang::sql::classify::classify(graph_table),
+            Ok(medulla_sql_lang::sql::classify::StatementKind::GraphTableReadRequiresCatalogAdmission(_))
         ));
         assert!(!sql_is_write(graph_table));
         assert!(!requires_write(

@@ -28,7 +28,7 @@ use super::catalog::register_system_catalogs;
 use medulla_table_store::tables::ann_plan::AnnIndexPlan;
 use super::providers::{infer_nodes, EdgesTableProvider, NodesTableProvider, SqlCache};
 use super::spill::CancellationToken;
-use super::typed_result::{PgColType, TypedColumn, TypedQueryResult};
+use medulla_sql_lang::{sql::typed_result::PgColType, sql::typed_result::TypedColumn, sql::typed_result::TypedQueryResult};
 use super::store_catalog::{reads_index_status, StoreCatalog};
 use medulla_sql_udfs::{tablefuncs::BetweennessFunc, tablefuncs::GenerateSeriesFunc, tablefuncs::PagerankFunc};
 use medulla_sql_udfs::{udfs::base64_decode_udf, udfs::base64_encode_udf, udfs::bm25_match_udf, udfs::bm25_score_udf, udfs::bm25_snippet_udf, udfs::epistemic_decay_udf, udfs::greatest_udf, udfs::int4range_udf, udfs::ipcontains_udf, udfs::ipfamily_udf, udfs::iphost_udf, udfs::ipmasklen_udf, udfs::json_get_f64_udf, udfs::json_get_i64_udf, udfs::json_get_udf, udfs::least_udf, udfs::md5_udf, udfs::range_contained_by_udf, udfs::range_contains_range_udf, udfs::range_contains_udf, udfs::range_overlaps_udf, udfs::sha1_udf, udfs::sha256_udf, udfs::time_bucket_udf, udfs::tsrange_udf, udfs::vector_cosine_udf, udfs::vector_ip_udf, udfs::vector_l2_udf};
@@ -155,7 +155,7 @@ pub fn exec_sql_over_tables(
         .enable_all()
         .build()
         .map_err(|e| format!("runtime build: {e}"))?;
-    let sql = super::classify::desugar_vector_ops(sql);
+    let sql = medulla_sql_lang::sql::classify::desugar_vector_ops(sql);
     rt.block_on(async move {
         let config = SessionConfig::new().with_information_schema(true);
         let ctx = SessionContext::new_with_config(config);
@@ -277,7 +277,7 @@ pub fn exec_sql_typed_with_tables(
 pub fn exec_graph_table_typed_with_tables(
     view: &GraphView,
     store: &TableStore,
-    query: &super::pgq::GraphTableQuery,
+    query: &medulla_sql_lang::sql::pgq::GraphTableQuery,
     definition: &medulla_table_store::tables::property_graph::PropertyGraphDefinition,
     verified_tenant_scope: &str,
 ) -> Result<TypedQueryResult, String> {
@@ -296,12 +296,12 @@ pub fn exec_graph_table_typed_with_tables(
 pub fn exec_graph_table_typed_with_tables_cancellable(
     view: &GraphView,
     store: &TableStore,
-    query: &super::pgq::GraphTableQuery,
+    query: &medulla_sql_lang::sql::pgq::GraphTableQuery,
     definition: &medulla_table_store::tables::property_graph::PropertyGraphDefinition,
     verified_tenant_scope: &str,
     cancel: &CancellationToken,
 ) -> Result<TypedQueryResult, String> {
-    let lowered = super::pgq::lower_graph_table(query, definition, verified_tenant_scope)?.to_sql();
+    let lowered = medulla_sql_lang::sql::pgq::lower_graph_table(query, definition, verified_tenant_scope)?.to_sql();
     exec_sql_typed_with_tables_cancellable(view, store, &lowered, cancel)
 }
 
@@ -330,7 +330,7 @@ pub fn exec_sql_typed_with_tables_cancellable(
     // stops an in-flight plpgsql-embedded SELECT.
     if catalog.functions.iter().any(|f| f.is_plpgsql()) {
         let run_sql = |q: &str| exec_sql_typed_with_tables_cancellable(view, store, q, cancel);
-        if let Some(res) = super::plpgsql::try_exec_call(sql, &catalog.functions, &run_sql)? {
+        if let Some(res) = medulla_sql_lang::sql::plpgsql::try_exec_call(sql, &catalog.functions, &run_sql)? {
             return Ok(res);
         }
     }
@@ -743,8 +743,8 @@ pub fn exec_sql_typed_with_tables_cached_cancellable(
     // strip the `pg_catalog.` function qualifier, expand stored SQL functions, then
     // desugar the pgvector operators. None of these depend on the epoch.
     let sql_text = super::catalog::strip_pg_catalog_fn_qualifier(sql);
-    let sql_text = super::funcs::expand_functions(&sql_text, &functions)?;
-    let sql_text = super::classify::desugar_vector_ops(&sql_text);
+    let sql_text = medulla_sql_lang::sql::funcs::expand_functions(&sql_text, &functions)?;
+    let sql_text = medulla_sql_lang::sql::classify::desugar_vector_ops(&sql_text);
     let snap = Arc::new(view.clone());
 
     with_thread_runtime(|rt| {
@@ -982,7 +982,7 @@ fn collect_sql_batches(
     // CONCEPT:MEDULLA-KG.query.create-drop-function — expand SQL stored-function calls into inline SQL (scalar subquery /
     // parameterized-view subquery) BEFORE the pgvector desugar + planning, so an inlined
     // body is itself desugared and planned. A no-op when there are no functions.
-    let sql = super::funcs::expand_functions(&sql, &catalog.functions)?;
+    let sql = medulla_sql_lang::sql::funcs::expand_functions(&sql, &catalog.functions)?;
     // CONCEPT:MEDULLA-KG.query.real-pgvector-ann-top — real pgvector ANN top-k pushdown on the PRE-desugar SQL (the
     // `<->`/`<=>`/`<#>` operators are still intact for the planner). Narrows the target
     // batch to the true nearest-k via a real medulla-ann index when one is registered.
@@ -990,7 +990,7 @@ fn collect_sql_batches(
     // CONCEPT:MEDULLA-KG.query.view-pgvector-operators — rewrite pgvector distance operators (`<->`/`<=>`/`<#>`) to the
     // registered `vector_*` UDF calls BEFORE DataFusion plans the SQL (it has no
     // operator for them). A no-op when none are present or the SQL doesn't parse.
-    let sql = super::classify::desugar_vector_ops(&sql);
+    let sql = medulla_sql_lang::sql::classify::desugar_vector_ops(&sql);
     rt.block_on(async move {
         let built = build_ctx(snap, nodes, user_tables)?;
         let ctx = built.ctx;
@@ -1100,10 +1100,10 @@ async fn register_views(
 ) -> Result<(), String> {
     for (name, select_sql) in views {
         // CONCEPT:MEDULLA-KG.query.create-drop-function — a view body may itself call a stored function; expand it first.
-        let select_sql = super::funcs::expand_functions(select_sql, functions)
+        let select_sql = medulla_sql_lang::sql::funcs::expand_functions(select_sql, functions)
             .unwrap_or_else(|_| select_sql.clone());
         // CONCEPT:MEDULLA-KG.query.view-pgvector-operators — a view body may itself use the pgvector operators.
-        let select_sql = super::classify::desugar_vector_ops(&select_sql);
+        let select_sql = medulla_sql_lang::sql::classify::desugar_vector_ops(&select_sql);
         match ctx.sql(&select_sql).await {
             Ok(df) => {
                 let provider = df.into_view();
@@ -1770,7 +1770,7 @@ mod medulla_embed_ann_pushdown_tests {
             .expect("register");
         ctx.register_udf(vector_cosine_udf());
         ctx.register_udf(medulla_embed_udf_with(Some(embed)));
-        let planned = crate::sql::classify::desugar_vector_ops(sql);
+        let planned = medulla_sql_lang::sql::classify::desugar_vector_ops(sql);
         let batches = ctx
             .sql(&planned)
             .await

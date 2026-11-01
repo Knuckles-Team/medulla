@@ -363,8 +363,8 @@ pub fn is_query_gateway_method(m: &Method) -> bool {
 pub fn is_query_native_coordinator(m: &Method) -> bool {
     #[cfg(feature = "query")]
     if let Method::Sql { query, .. } = m {
-        use medulla_sql::sql::StatementKind;
-        return match medulla_sql::sql::classify(query) {
+        use medulla_sql_lang::sql::classify::StatementKind;
+        return match medulla_sql_lang::sql::classify::classify(query) {
             Ok(
                 StatementKind::InsertNodes(_)
                 | StatementKind::InsertNodesSelect(_)

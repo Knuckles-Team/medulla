@@ -1,6 +1,6 @@
 //! Tests of the Postgres-family extension planners (they run SQL through the executor).
 
-use crate::sql::pgfamily::*;
+use medulla_sql_lang::sql::pgfamily::*;
 use datafusion::sql::sqlparser::dialect::PostgreSqlDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 use medulla_table_store::tables::ann_plan::{AnnIndexPlan, AnnMethod, VectorMetric};

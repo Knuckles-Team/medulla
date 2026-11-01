@@ -103,7 +103,7 @@ where
 /// typed rows — one owner so a change to how a cell fails to encode can't
 /// land on one path and not the others.
 #[cfg(feature = "query")]
-fn typed_sql_response(req_id: u64, typed: medulla_sql::sql::TypedQueryResult) -> Response {
+fn typed_sql_response(req_id: u64, typed: medulla_sql_lang::sql::typed_result::TypedQueryResult) -> Response {
     match typed.rows.iter().map(msgpack_bytes).collect() {
         Ok(rows) => dynamic_response::<query_results::Sql, _>(
             req_id,

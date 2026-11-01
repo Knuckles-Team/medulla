@@ -10,14 +10,15 @@
 #![cfg(feature = "sql")]
 
 use medulla_graph_core::graph::{GraphCore, GraphView};
-use medulla_sql::{sql::classify, sql::exec_sql_typed_with_tables, sql::AlterTableAction, sql::PgColType, sql::StatementKind, sql::TypedQueryResult};
+use medulla_sql_lang::{sql::classify::classify, sql::classify::AlterTableAction, sql::typed_result::PgColType, sql::classify::StatementKind, sql::typed_result::TypedQueryResult};
+use medulla_sql::sql::exec_sql_typed_with_tables;
 use medulla_tables::{schema::Cell, schema::Column, schema::ColumnType, schema::TableSchema};
 use medulla_table_store::tables::TableStore;
 // CONCEPT:MEDULLA-KG.query.table-schema-constraints/NE-001/NE-002 — table-level constraints + the new scalar types are
 // reachable via the fully-qualified `tables::schema` path (not yet added to the
 // crate's top-level re-export list in `tables/mod.rs`, a file this track does not
 // own — see the final report's "files touched outside the owned list" note).
-use medulla_sql::sql::parse_property_graph_ddl;
+use medulla_sql_lang::sql::pgq::parse_property_graph_ddl;
 use medulla_tables::schema::ArrayElemType;
 use medulla_tables::schema::RefAction;
 use medulla_tables::schema::TableConstraint;
@@ -25,7 +26,7 @@ use medulla_table_store::tables::PropertyGraphStatement;
 use serde_json::{json, Value};
 
 /// Resolve a `classify::ColumnDef` (raw type spelling) into a store `Column`.
-fn to_store_column(c: &medulla_sql::sql::ColumnDef) -> Column {
+fn to_store_column(c: &medulla_sql_lang::sql::classify::ColumnDef) -> Column {
     Column {
         name: c.name.clone(),
         ty: ColumnType::parse(&c.type_name).expect("known column type"),

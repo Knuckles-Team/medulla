@@ -36,3 +36,6 @@ medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 finance = ["medulla-sql/finance"]
 numeric = ["medulla-sql/numeric", "dep:medulla-tsdb"]
 sql = ["medulla-sql/sql"]
+
+[dev-dependencies]
+medulla-sql-lang = { path = "../medulla-sql-lang" }
