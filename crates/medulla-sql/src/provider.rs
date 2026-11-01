@@ -631,7 +631,7 @@ pub(crate) struct UserTableProvider {
 }
 
 impl UserTableProvider {
-    pub(crate) fn new(store: TableStore, schema: TableSchema) -> Self {
+    pub fn new(store: TableStore, schema: TableSchema) -> Self {
         let arrow_schema = arrow_schema(&schema);
         let serial_col = schema.columns().iter().position(|c| c.serial);
         Self {

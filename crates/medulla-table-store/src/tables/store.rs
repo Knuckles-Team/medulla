@@ -68,7 +68,7 @@ mod source_batch;
 
 use ann_durable::{drop_ann_index_in, drop_ann_indexes_for_column_in, put_ann_index_in};
 pub use ann_durable::{GenerationWrite, StoredGeneration};
-pub(crate) use ann_source::{AnnChangedRows, AnnRowReader, AnnSourceRows, ScanExtent};
+pub use ann_source::{AnnChangedRows, AnnRowReader, AnnSourceRows, ScanExtent};
 use authority::{sql_scope_identity, SqlAuthority, SqlMutation};
 pub(crate) use authority::{SqlRead, SqlWrite};
 
@@ -1833,7 +1833,7 @@ impl TableStore {
 
     /// The catalog key for an ANN index: `"<table>.<column>.<metric>"` (lower-cased),
     /// so one column may register a separate index per distance metric.
-    pub(crate) fn ann_index_key(plan: &AnnIndexPlan) -> String {
+    pub fn ann_index_key(plan: &AnnIndexPlan) -> String {
         format!(
             "{}.{}.{:?}",
             plan.table.to_ascii_lowercase(),

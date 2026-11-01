@@ -1246,7 +1246,7 @@ mod finance_udf {
     }
 
     impl RiskAcc {
-        fn new(kernel: fn(&[f64], f64) -> f64) -> Self {
+        pub fn new(kernel: fn(&[f64], f64) -> f64) -> Self {
             Self {
                 returns: Vec::new(),
                 kernel,

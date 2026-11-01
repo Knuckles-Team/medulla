@@ -557,7 +557,7 @@ impl CheckExpr {
     /// Validate the bounded shape persisted in a catalog. The classifier already
     /// rejects unsupported SQL expressions; this second boundary also protects
     /// callers that construct a `TableConstraint` directly.
-    pub(crate) fn validate_limits(&self, depth: usize) -> Result<(), String> {
+    pub fn validate_limits(&self, depth: usize) -> Result<(), String> {
         let mut nodes = 0;
         self.validate_limits_inner(depth, &mut nodes)
     }

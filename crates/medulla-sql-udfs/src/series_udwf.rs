@@ -38,7 +38,7 @@ struct SeriesWindow {
 }
 
 impl SeriesWindow {
-    fn new(func: SeriesFunc) -> Self {
+    pub fn new(func: SeriesFunc) -> Self {
         let sig = func.signature();
         Self {
             func,

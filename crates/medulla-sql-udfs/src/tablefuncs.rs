@@ -61,7 +61,7 @@ pub struct PagerankFunc {
 }
 
 impl PagerankFunc {
-    pub(crate) fn new(view: Arc<GraphView>) -> Self {
+    pub fn new(view: Arc<GraphView>) -> Self {
         Self { view }
     }
 }
@@ -101,7 +101,7 @@ pub struct BetweennessFunc {
 }
 
 impl BetweennessFunc {
-    pub(crate) fn new(view: Arc<GraphView>) -> Self {
+    pub fn new(view: Arc<GraphView>) -> Self {
         Self { view }
     }
 }

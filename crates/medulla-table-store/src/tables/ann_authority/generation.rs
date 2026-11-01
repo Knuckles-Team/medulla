@@ -41,13 +41,13 @@ const IVF_EXHAUSTIVE_CELLS: usize = 64;
 const IVF_REFINE_FACTOR: usize = 4;
 
 /// One built generation. Immutable once activated.
-pub(crate) struct AnnGeneration {
-    pub(super) generation: u64,
+pub struct AnnGeneration {
+    pub generation: u64,
     pub(super) method: AnnMethod,
     /// The vector width, when the snapshot held any vector.
     pub(super) dim: Option<usize>,
     /// The tenant SQL source epoch the snapshot observed.
-    pub(super) built_epoch: u64,
+    pub built_epoch: u64,
     /// Highest row id in the snapshot; rows above it are scored exactly.
     pub(super) max_rowid: Option<u64>,
     /// Rows this generation indexes.

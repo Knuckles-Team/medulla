@@ -405,7 +405,7 @@ fn live_generation_number(rtx: &SqlRead<'_>, index: &str) -> Result<Option<u64>,
 impl TableStore {
     /// Persist one activated generation and move the live pointer to it, in one
     /// maintenance write that also prunes the changed-row log.
-    pub(crate) fn persist_ann_generation(&self, write: &GenerationWrite<'_>) -> Result<(), String> {
+    pub fn persist_ann_generation(&self, write: &GenerationWrite<'_>) -> Result<(), String> {
         self.authority
             .maintain("ann-generation", write.table, |wtx| {
                 write_generation_in(wtx, write)?;
@@ -446,7 +446,7 @@ impl TableStore {
     }
 
     /// The live persisted generation of `index`, when one was activated.
-    pub(crate) fn live_ann_generation(
+    pub fn live_ann_generation(
         &self,
         index: &str,
     ) -> Result<Option<StoredGeneration>, String> {
@@ -464,7 +464,7 @@ impl TableStore {
     }
 
     /// The epoch of `table`'s last row change (per-table ANN staleness).
-    pub(crate) fn ann_table_change_epoch(&self, table: &str) -> Result<u64, String> {
+    pub fn ann_table_change_epoch(&self, table: &str) -> Result<u64, String> {
         let rtx = self.authority.read()?;
         table_change_epoch(&rtx.open_owner_table(SQL_ANN_DIRTY)?, table)
     }

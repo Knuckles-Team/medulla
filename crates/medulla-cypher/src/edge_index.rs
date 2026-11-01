@@ -158,7 +158,7 @@ pub struct EdgeIndex {
 }
 
 impl EdgeIndex {
-    fn new(spec: EdgeIndexSpec) -> Self {
+    pub fn new(spec: EdgeIndexSpec) -> Self {
         Self {
             spec,
             limits: RwLock::new(EdgeIndexLimits::default()),

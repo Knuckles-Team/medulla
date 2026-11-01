@@ -282,7 +282,7 @@ impl UserAnnAuthority {
     }
 
     /// Catalog keys that currently own a slot.
-    pub(crate) fn slot_keys(&self) -> Vec<String> {
+    pub fn slot_keys(&self) -> Vec<String> {
         read(&self.slots).keys().cloned().collect()
     }
 

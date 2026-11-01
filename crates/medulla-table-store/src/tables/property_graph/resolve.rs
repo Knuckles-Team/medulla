@@ -26,7 +26,7 @@ pub(super) struct RelationIndex<'a> {
 }
 
 impl<'a> RelationIndex<'a> {
-    pub(super) fn new(
+    pub fn new(
         tenant_scope: &str,
         relations: &'a [RelationCatalogSnapshot],
     ) -> Result<Self, String> {

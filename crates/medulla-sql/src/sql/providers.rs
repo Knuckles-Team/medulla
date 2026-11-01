@@ -340,7 +340,7 @@ pub(crate) struct EdgesTableProvider {
 }
 
 impl EdgesTableProvider {
-    pub(crate) fn new(view: Arc<GraphView>) -> Self {
+    pub fn new(view: Arc<GraphView>) -> Self {
         Self {
             schema: edges_schema(),
             view,
@@ -588,7 +588,7 @@ pub(crate) struct PushdownRegistry {
 }
 
 impl PushdownRegistry {
-    fn new(schema: SchemaRef, batch: RecordBatch) -> Self {
+    pub fn new(schema: SchemaRef, batch: RecordBatch) -> Self {
         Self {
             schema,
             batch,
@@ -734,7 +734,7 @@ pub(crate) struct NodesTableProvider {
 }
 
 impl NodesTableProvider {
-    pub(crate) fn new(schema: SchemaRef, batch: RecordBatch) -> Self {
+    pub fn new(schema: SchemaRef, batch: RecordBatch) -> Self {
         Self {
             schema: schema.clone(),
             batch: batch.clone(),

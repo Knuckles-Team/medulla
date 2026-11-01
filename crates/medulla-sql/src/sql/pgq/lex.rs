@@ -111,7 +111,7 @@ pub(super) struct Cursor {
 }
 
 impl Cursor {
-    pub(super) fn new(sql: &str) -> Result<Self, String> {
+    pub fn new(sql: &str) -> Result<Self, String> {
         Ok(Self {
             tokens: lex(sql)?,
             at: 0,

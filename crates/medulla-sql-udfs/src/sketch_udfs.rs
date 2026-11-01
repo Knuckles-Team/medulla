@@ -90,7 +90,7 @@ struct ApproxDistinctAcc {
 }
 
 impl ApproxDistinctAcc {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             hll: HyperLogLog::default(),
         }
@@ -205,7 +205,7 @@ struct ApproxFrequencyAcc {
 }
 
 impl ApproxFrequencyAcc {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             cms: CountMinSketch::with_error_rate(CMS_EPSILON, CMS_DELTA),
             probe: None,
@@ -324,7 +324,7 @@ struct MinHashAcc {
 }
 
 impl MinHashAcc {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             mh: MinHashSketch::new(MINHASH_K),
         }

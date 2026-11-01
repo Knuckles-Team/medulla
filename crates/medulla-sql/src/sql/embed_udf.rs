@@ -130,7 +130,7 @@ struct MedullaEmbedUdf {
 }
 
 impl MedullaEmbedUdf {
-    fn new(source: EmbedderSource) -> Self {
+    pub fn new(source: EmbedderSource) -> Self {
         // `any(1)` matches the house style of the pgvector distance UDFs: accept whatever
         // string flavour the planner produced (`Utf8`/`LargeUtf8`/`Utf8View`) and reject
         // a non-text argument with a named error rather than a coercion failure.

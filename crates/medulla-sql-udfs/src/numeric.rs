@@ -262,7 +262,7 @@ struct CovAcc {
 }
 
 impl CovAcc {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             a: Vec::new(),
             b: Vec::new(),
@@ -427,7 +427,7 @@ struct MatrixAcc {
 }
 
 impl MatrixAcc {
-    fn new(op: MatrixOp) -> Self {
+    pub fn new(op: MatrixOp) -> Self {
         Self {
             op,
             flat: Vec::new(),

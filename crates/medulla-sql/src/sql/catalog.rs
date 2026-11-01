@@ -958,7 +958,7 @@ struct ConstStringUdf {
 }
 
 impl ConstStringUdf {
-    fn new(name: &str, value: &str) -> Self {
+    pub fn new(name: &str, value: &str) -> Self {
         Self {
             name: name.to_string(),
             value: value.to_string(),
@@ -1006,7 +1006,7 @@ struct ConstTextUdf {
 }
 
 impl ConstTextUdf {
-    fn new(name: &str, value: Option<&str>) -> Self {
+    pub fn new(name: &str, value: Option<&str>) -> Self {
         Self {
             name: name.to_string(),
             value: value.map(|s| s.to_string()),

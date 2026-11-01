@@ -632,6 +632,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(unsafe_code)]
     fn missing_catalog_uri_errors_clearly_never_silently_empty() {
         // SAFETY: single-threaded test process env mutation, scoped to this test only.
         unsafe {

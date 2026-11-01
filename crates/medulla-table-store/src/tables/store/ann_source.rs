@@ -16,7 +16,7 @@ use medulla_tables::schema::ColumnType;
 use medulla_tables::schema::TableSchema;
 
 /// Every indexable vector of one column, read in one snapshot.
-pub(crate) struct AnnSourceRows {
+pub struct AnnSourceRows {
     /// Tenant SQL source epoch the snapshot observed.
     pub(crate) epoch: u64,
     /// The generation's vector width: the declared width, else the first
@@ -189,7 +189,7 @@ impl TableStore {
     /// Every indexable vector of `table.column`, read in ONE snapshot and
     /// bounded by `limit` indexed rows. The maintenance worker's only source; a
     /// failure is the typed diagnostic the index is blocked with.
-    pub(crate) fn ann_source_rows(
+    pub fn ann_source_rows(
         &self,
         table: &str,
         column: &str,
@@ -224,7 +224,7 @@ impl TableStore {
     /// The rows of `table` changed after `since`, with their current `column`
     /// vectors, from one snapshot and bounded by `limit` rows. The maintenance
     /// worker's source for an incremental refresh.
-    pub(crate) fn ann_changed_rows(
+    pub fn ann_changed_rows(
         &self,
         table: &str,
         column: &str,

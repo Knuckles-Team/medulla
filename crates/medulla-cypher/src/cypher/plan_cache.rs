@@ -99,7 +99,7 @@ impl Default for PlanCache {
 }
 
 impl PlanCache {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self::with_cap(cap_from_env())
     }
 

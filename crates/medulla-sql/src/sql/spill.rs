@@ -140,7 +140,7 @@ struct SpillAppendCompletion {
 }
 
 impl SpillAppendCompletion {
-    fn new(acknowledgement: Arc<SpillAppendAck>) -> Self {
+    pub fn new(acknowledgement: Arc<SpillAppendAck>) -> Self {
         Self {
             acknowledgement,
             completed: false,

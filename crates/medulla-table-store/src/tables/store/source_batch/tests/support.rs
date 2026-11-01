@@ -25,7 +25,7 @@ pub(super) struct Fixture {
 }
 
 impl Fixture {
-    pub(super) fn new(schema: &TableSchema) -> Self {
+    pub fn new(schema: &TableSchema) -> Self {
         static SEQUENCE: AtomicU64 = AtomicU64::new(0);
         let directory = std::env::temp_dir().join(format!(
             "medulla-source-adapter-{}-{}-{}",
