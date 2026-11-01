@@ -2129,7 +2129,7 @@ mod tls_policy_tests {
 
     #[test]
     fn engine_startup_awaits_tls_preparation_before_listener_detachment() {
-        let main_source = include_str!("../../main.rs");
+        let main_source = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../src/main.rs"));
         let listener_start = main_source
             .find("async fn spawn_pgwire_listener(")
             .expect("pgwire startup function");

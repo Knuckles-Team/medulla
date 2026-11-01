@@ -61,3 +61,5 @@ mod medulla_h_query_dispatch_pipeline_tests;
     feature = "matview"
 ))]
 mod medulla_h_admin_boot_regression;
+#[cfg(all(test, feature = "query"))]
+mod medulla_wire_wire_tests;
