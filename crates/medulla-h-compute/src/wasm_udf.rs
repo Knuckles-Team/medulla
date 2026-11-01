@@ -14,7 +14,7 @@ use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::access::OwnerScopedCall;
 
 /// Try to handle a WASM-UDF method. `Ok(resp)` = handled; `Err(method)` = not mine.
-pub(crate) async fn try_handle(
+pub async fn try_handle(
     call: OwnerScopedCall<'_>,
     method: Method,
 ) -> Result<Response, Method> {

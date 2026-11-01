@@ -13,7 +13,7 @@ use super::market::answer;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 
-fn handle(req_id: u64, op: FinanceSignalModelsOp) -> Response {
+pub fn handle(req_id: u64, op: FinanceSignalModelsOp) -> Response {
     match op {
         FinanceSignalModelsOp::BayesFuse { request } => {
             answer::<results::FinanceSignalModelsBayesFuse>(req_id, bayes_fuse(&request))

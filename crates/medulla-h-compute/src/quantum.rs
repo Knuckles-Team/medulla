@@ -116,7 +116,7 @@ const DEFAULT_MEMORY_BOUND_BYTES: u64 = 256 * 1024 * 1024;
 /// registry per call (both backends are cheap, stateless-besides-an-in-memory-job-
 /// store), so the dispatch shell can call this directly with no per-graph routing
 /// and no `state`.
-pub(crate) async fn handle(req_id: u64, op: QuantumOp) -> Response {
+pub async fn handle(req_id: u64, op: QuantumOp) -> Response {
     match op {
         QuantumOp::Rank {
             candidates,

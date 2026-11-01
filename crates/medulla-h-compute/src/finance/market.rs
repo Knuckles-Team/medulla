@@ -26,7 +26,7 @@ pub(super) fn answer<M: MethodResult>(req_id: u64, result: MarketResult<M::Body>
 }
 
 /// Serve one `FinanceMarket` op.
-fn handle(req_id: u64, op: FinanceMarketOp) -> Response {
+pub fn handle(req_id: u64, op: FinanceMarketOp) -> Response {
     match op {
         FinanceMarketOp::EncodePoints { records } => {
             answer::<results::FinanceMarketEncodePoints>(req_id, codec::encode_all(&records))

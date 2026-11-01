@@ -192,7 +192,7 @@ fn signed_request(
 }
 
 /// Route + execute a request → `(status, content_type, body)`.
-async fn handle(
+pub async fn handle(
     state: &Arc<RwLock<ServerState>>,
     bearer: &Option<crate::auth::BearerCredential>,
     req: HttpMessage,

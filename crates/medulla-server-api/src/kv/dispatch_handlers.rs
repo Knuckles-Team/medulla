@@ -175,7 +175,7 @@ fn names_shared(method: &Method) -> bool {
 }
 
 /// Serve one `Method::Kv*` call. The caller has already checked `is_kv_method`.
-pub(super) fn handle(call: &KvCall<'_>, method: Method) -> Response {
+pub fn handle(call: &KvCall<'_>, method: Method) -> Response {
     let call = &KvCall {
         shared: names_shared(&method),
         ..*call

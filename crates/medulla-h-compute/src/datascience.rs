@@ -12,6 +12,6 @@ use medulla_protocol_types::protocol::Response;
 
 /// Handle a `Ds*` method. `Err(method)` hands a non-datascience method back to the
 /// dispatcher (routing fall-through). (CONCEPT:MEDULLA-KG.query.dispatch-convention — server dispatch convention)
-pub(crate) fn try_handle(req_id: u64, method: Method) -> Result<Response, Method> {
+pub fn try_handle(req_id: u64, method: Method) -> Result<Response, Method> {
     routes::try_handle(req_id, method)
 }

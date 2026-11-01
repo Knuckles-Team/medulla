@@ -34,7 +34,7 @@ fn route_for(method: &Method) -> DataScienceRoute {
     }
 }
 
-pub(super) fn try_handle(req_id: u64, method: Method) -> Result<Response, Method> {
+pub fn try_handle(req_id: u64, method: Method) -> Result<Response, Method> {
     match route_for(&method) {
         DataScienceRoute::Primitives => handle_primitives(req_id, method),
         DataScienceRoute::Training => handle_training(req_id, method),

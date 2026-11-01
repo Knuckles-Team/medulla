@@ -134,7 +134,7 @@ fn route_for_calibration(method: &Method) -> Option<FinanceRoute> {
     }
 }
 
-pub(super) fn try_handle(req_id: u64, method: Method) -> Result<Response, Method> {
+pub fn try_handle(req_id: u64, method: Method) -> Result<Response, Method> {
     match route_for(&method) {
         FinanceRoute::Portfolio => super::route_families::handle_portfolio(req_id, method),
         FinanceRoute::Risk => super::route_families::handle_risk(req_id, method),

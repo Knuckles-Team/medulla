@@ -107,7 +107,7 @@ const MAX_SCOPED_RESULT_REF_BYTES: usize = 512;
 /// scoped, the persistent ColumnStore and provenance side-store are
 /// owner-scoped by the verified carrier. Scope is applied before any state
 /// lookup or mutation, so cache/provenance hits cannot cross principals.
-pub(crate) async fn handle(
+pub async fn handle(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     authority: &CarrierAuthority,
