@@ -38,7 +38,7 @@ use self::features::{build_features, compute_embedding_rows, first_embedding};
 pub(crate) fn try_handle(
     req_id: u64,
     core: Arc<GraphCore>,
-    read_authority: Option<&crate::server::access::GraphReadAuthority>,
+    read_authority: Option<&medulla_server_api::access::GraphReadAuthority>,
     method: Method,
 ) -> Result<Response, Method> {
     match method {
@@ -901,8 +901,8 @@ mod tests {
     use super::*;
     use crate::isolation::IsolationLayer;
     use crate::protocol::GraphSource;
-    use crate::server::access::GraphReadAuthority;
-    use crate::server::auth::VerifiedRequestContext;
+    use medulla_server_api::access::GraphReadAuthority;
+    use medulla_server_api::auth::VerifiedRequestContext;
     use medulla_types::wire::{FeatureStep, ModelSpec, SplitSpec};
 
     fn node(props: Value) -> Vec<u8> {

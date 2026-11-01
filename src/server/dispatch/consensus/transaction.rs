@@ -39,14 +39,14 @@ pub(super) async fn commit_carrier_native_command(
     proposal: CarrierNativeCommand<'_>,
 ) -> Result<crate::raft::RaftResponse, String> {
     let committed_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-    let mutation = crate::server::api::persistence::RaftMutationContext::from_verified_request(
+    let mutation = medulla_server_api::api::persistence::RaftMutationContext::from_verified_request(
         proposal.batch_id,
         proposal.request_id,
         proposal.attempt_nonce,
         proposal.authority.tenant_scope(),
         proposal.authority.actor_scope().to_string(),
         false,
-        crate::server::api::persistence::RaftMutationTiming {
+        medulla_server_api::api::persistence::RaftMutationTiming {
             placement_epoch: proposal.placement_epoch,
             fencing_token: proposal.fencing_token,
             created_at_ms: committed_at_ms,
@@ -84,12 +84,12 @@ async fn submit_consensus_transaction_command(
         graph_type,
         command,
     } = submission;
-    let route_key = crate::server::mutation_batch::opaque_coordinator_key(
+    let route_key = medulla_server_api::mutation_batch::opaque_coordinator_key(
         "raft-consensus-transaction-route",
         coordinator_id,
         operation,
     );
-    let batch_id = crate::server::mutation_batch::opaque_coordinator_key(
+    let batch_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
         "raft-consensus-transaction-command",
         coordinator_id,
         operation,
@@ -221,7 +221,7 @@ async fn abort_consensus_transaction(
     // idempotent when no durable intent exists.
     for participant in participants {
         let command = crate::raft::NativeMutationCommand::transaction_participant(
-            crate::server::api::reentry::TransactionParticipantPhase::Abort,
+            medulla_server_api::api::reentry::TransactionParticipantPhase::Abort,
             coordinator_id.to_string(),
             participant.participant_id,
             None,
@@ -322,7 +322,7 @@ async fn prepare_consensus_participants(
     let request_id = coordination.request_id;
     for participant in &fanout.participants {
         let command = match crate::raft::NativeMutationCommand::transaction_participant(
-            crate::server::api::reentry::TransactionParticipantPhase::Prepare,
+            medulla_server_api::api::reentry::TransactionParticipantPhase::Prepare,
             fanout.coordinator_id.clone(),
             participant.participant_id,
             Some(&participant.sealed_plan_source),
@@ -419,7 +419,7 @@ async fn commit_consensus_participants(
     let request_id = coordination.request_id;
     for participant in &fanout.participants {
         let command = match crate::raft::NativeMutationCommand::transaction_participant(
-            crate::server::api::reentry::TransactionParticipantPhase::Commit,
+            medulla_server_api::api::reentry::TransactionParticipantPhase::Commit,
             fanout.coordinator_id.clone(),
             participant.participant_id,
             Some(&participant.sealed_plan_source),

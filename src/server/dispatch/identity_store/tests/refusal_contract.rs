@@ -6,7 +6,7 @@
 use super::*;
 use crate::isolation::{AgentIdentity, AgentRole, IsolationLayer};
 use crate::protocol::Request;
-use crate::server::auth::sign_current_test_request;
+use medulla_server_api::auth::sign_current_test_request;
 
 const SECRET: &str = "refusal-contract-test-secret";
 

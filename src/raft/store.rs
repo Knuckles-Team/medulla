@@ -68,7 +68,7 @@ use super::{
     TypeConfig,
 };
 use crate::protocol::{GraphType, Method, ResultPayload};
-use crate::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use crate::server::persistence::redb_backend::RedbBackend;
 
 fn deserialize_required_option<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
@@ -308,8 +308,8 @@ mod current_snapshot_schema_tests {
     fn receipt_for_transport(replayed: bool) -> crate::mutation_batch::MutationBatchCommit {
         let conditions = rmp_serde::to_vec_named(&serde_json::json!({"epoch": 0})).unwrap();
         let updates = rmp_serde::to_vec_named(&serde_json::json!({"epoch": 1})).unwrap();
-        let batch = crate::server::mutation_batch::compile_methods(
-            crate::server::mutation_batch::CompileBatch {
+        let batch = medulla_server_api::mutation_batch::compile_methods(
+            medulla_server_api::mutation_batch::CompileBatch {
                 batch_id: "raft-store-receipt-cas",
                 request_id: 9,
                 // Keep the synthetic fresh and replay receipts byte-identical;

@@ -13,7 +13,7 @@ use super::test_support::{
     subject_iri, unmapped_classes, wired_with_fixture, KG, OWL_CLASS, OWL_IMPORTS, RDF_TYPE,
 };
 use crate::graph::GraphSchemaSources;
-use crate::server::api::admin::compose::validate_and_compose;
+use medulla_server_api::api::admin::compose::validate_and_compose;
 
 const FINANCE: &str = include_str!("../../../crates/medulla-core/ontology/finance-v1.ttl");
 const FINANCE_SHAPES: &str = include_str!("../../../crates/medulla-core/ontology/finance-v1.shapes.ttl");

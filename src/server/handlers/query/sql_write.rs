@@ -21,10 +21,10 @@ pub(crate) struct SqlWriteScope<'a> {
     pub(crate) graph_name: &'a str,
     pub(crate) tenant_scope: &'a str,
     pub(crate) caller: Option<&'a str>,
-    pub(crate) authority: &'a crate::server::access::CarrierAuthority,
+    pub(crate) authority: &'a medulla_server_api::access::CarrierAuthority,
     pub(crate) persist_dir: &'a std::path::Path,
     /// The installed wire seam that authorizes and replays the SQL catalog batch.
-    pub(crate) wire: Option<&'a Arc<dyn crate::server::api::query_txn::WireApi>>,
+    pub(crate) wire: Option<&'a Arc<dyn medulla_server_api::api::query_txn::WireApi>>,
 }
 
 /// Execute `Method::Sql`'s `INSERT INTO nodes …` DML — pure extract-method out of

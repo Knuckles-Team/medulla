@@ -213,7 +213,7 @@ fn restore_graph_dump(core: &GraphCore, dump: GraphDump) -> Result<(), String> {
     // that conflicts with a newly-owned core term must make startup fail closed,
     // never expose a partially upgraded graph.
     #[cfg(feature = "shacl")]
-    crate::server::api::admin::compose::validate_and_compose(&dump.schema_sources)?;
+    medulla_server_api::api::admin::compose::validate_and_compose(&dump.schema_sources)?;
     // `GraphRegistry::new` pre-creates `__commons__`, so its fresh projection does
     // not pass through `create_graph_with_incarnation`. Adopt the durable watermark
     // before replaying rows, while leaving an already materialized projection alone.

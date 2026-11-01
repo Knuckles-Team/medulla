@@ -134,7 +134,7 @@ fn change_envelope_batch_authority_error(
             // `Option<String>` that could only ever have refused every
             // caller-supplied envelope; the real policy revision is inside the
             // stable replay identity, where a change conflicts.
-            || crate::server::mutation_batch::batch_actor(&envelope.mutation)
+            || medulla_server_api::mutation_batch::batch_actor(&envelope.mutation)
                 != Some(principal.as_str())
         {
             return Some(Response::err(
@@ -364,7 +364,7 @@ async fn try_replicate_change_envelope(
         .operation()
         .and_then(|operation| operation.nonce_replay_key().ok())
         .map(|key| key.nonce);
-    let mutation = match crate::server::api::persistence::RaftMutationContext::from_verified_request(
+    let mutation = match medulla_server_api::api::persistence::RaftMutationContext::from_verified_request(
         envelope.mutation.batch_id.clone(),
         // The dispatch request number the batch was compiled for, read back
         // through the one encoder rather than from a second field.
@@ -374,11 +374,11 @@ async fn try_replicate_change_envelope(
         // The CALLER, which under RF-RULING-004's application note is the outbox
         // `actor` header -- never the serving principal, which is this engine's
         // own and would compare equal for every caller.
-        crate::server::mutation_batch::batch_actor(&envelope.mutation)
+        medulla_server_api::mutation_batch::batch_actor(&envelope.mutation)
             .unwrap_or_default()
             .to_string(),
         false,
-        crate::server::api::persistence::RaftMutationTiming {
+        medulla_server_api::api::persistence::RaftMutationTiming {
             placement_epoch: envelope.mutation.placement_epoch,
             fencing_token: envelope.mutation.fencing_token,
             created_at_ms: envelope.mutation.created_at_ms,
@@ -465,7 +465,7 @@ async fn try_replicate_new_change_envelope(
 /// entries and the atomic-abort's per-envelope conflict entries are the same
 /// shape either way, so callers never have to branch on which happened.
 async fn commit_change_envelope_batch_results(
-    backend: &Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+    backend: &Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     core: &Arc<crate::graph::GraphCore>,
     fname: &str,
     envelopes: &[medulla_types::change_envelope::ChangeEnvelope],
@@ -498,7 +498,7 @@ fn change_envelope_applied_entry(
     let projection_error = if committed.replayed {
         None
     } else {
-        crate::server::mutation_batch::publish_change_envelope_projection(core, envelope).err()
+        medulla_server_api::mutation_batch::publish_change_envelope_projection(core, envelope).err()
     };
     let entry = change_envelope_result(committed, projection_error.is_some());
     if committed.replayed {
@@ -634,7 +634,7 @@ async fn apply_one_change_envelope_inner(
         return resp;
     }
 
-    let _mutation_guard = crate::server::mutation_batch::lock_graph(graph_name).await;
+    let _mutation_guard = medulla_server_api::mutation_batch::lock_graph(graph_name).await;
     // MEDULLA-ORCH-VOCAB-R801.3: the harness-component writes of this envelope are
     // graph-relative (a supersession must name the CURRENT version, a
     // published version must not mutate), so they are verified under the
@@ -725,7 +725,7 @@ async fn apply_one_change_envelope_inner(
     let projection_error = if committed.replayed {
         None
     } else {
-        crate::server::mutation_batch::publish_change_envelope_projection(core, &envelope).err()
+        medulla_server_api::mutation_batch::publish_change_envelope_projection(core, &envelope).err()
     };
     let result = change_envelope_result(&committed, projection_error.is_some());
     Response::ok(
@@ -735,13 +735,13 @@ async fn apply_one_change_envelope_inner(
 }
 
 async fn prepare_change_envelope_commit(
-    backend: Option<&Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
+    backend: Option<&Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     graph_fname: &str,
     envelope: &medulla_types::change_envelope::ChangeEnvelope,
     current_version: u64,
 ) -> Result<
     (
-        Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+        Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
         bool,
     ),
     String,
@@ -759,7 +759,7 @@ async fn prepare_change_envelope_commit(
 /// version fence; byte-identical content is a replay, while the same id with
 /// different content remains a conflict in the backend ledger.
 async fn change_envelope_is_known_replay(
-    backend: &Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+    backend: &Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     graph_fname: &str,
     envelope: &medulla_types::change_envelope::ChangeEnvelope,
 ) -> Result<bool, String> {
@@ -811,7 +811,7 @@ async fn apply_change_envelope_batch(
             "CHANGE_BATCH_UNAVAILABLE_UNDER_PLACEMENT: use per-envelope ApplyChangeEnvelope",
         );
     }
-    let _mutation_guard = crate::server::mutation_batch::lock_graph(graph_name).await;
+    let _mutation_guard = medulla_server_api::mutation_batch::lock_graph(graph_name).await;
     for envelope in &envelopes {
         if envelope.mutation.placement_epoch != 0 || envelope.mutation.fencing_token.is_some() {
             return Response::err(

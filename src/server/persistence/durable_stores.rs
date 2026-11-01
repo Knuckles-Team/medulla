@@ -32,7 +32,7 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use crate::server::api::persistence::BundledStoreSource;
+use medulla_server_api::api::persistence::BundledStoreSource;
 
 /// Whether a durable store is captured by the online backup bundle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -183,7 +183,7 @@ pub(crate) fn bundled_store_authority(
         )),
         #[cfg(feature = "kv")]
         "kv.redb" => Some((
-            crate::server::kv::KV_PHYSICAL_STORE,
+            medulla_server_api::kv::KV_PHYSICAL_STORE,
             medulla_storage::OwnerLayout::Kv,
         )),
         "node_info.redb" => Some((

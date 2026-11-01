@@ -67,7 +67,7 @@ async fn index_scoped(
     // Validate the complete scope and parse before acquiring CAS holders. A
     // malformed membership must never pin unreferenced source bytes forever.
     let (mut result, files, repository_id) =
-        crate::server::compute::compute_off_lock(req_id, move || {
+        medulla_server_api::compute::compute_off_lock(req_id, move || {
             let result = crate::parser::branch_index::index_branches(files.clone(), &scope)?;
             Ok::<_, String>((result, files, scope.repository_id.clone()))
         })
@@ -126,7 +126,7 @@ async fn admit_repository_sources(
     let bodies: Vec<_> = files
         .iter()
         .map(
-            |(_, bytes)| crate::server::blob::engine_bodies::EngineBody {
+            |(_, bytes)| medulla_server_api::blob::engine_bodies::EngineBody {
                 sha256: medulla_types::contract::Digest256::from_bytes(
                     Sha256::digest(bytes).into(),
                 ),

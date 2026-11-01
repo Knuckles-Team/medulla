@@ -17,7 +17,7 @@ pub(crate) async fn check_cluster_placement_before_consensus(
     };
     if !matches!(
         placement,
-        crate::server::state::PlacementAuthorityKind::Local
+        medulla_server_api::state::PlacementAuthorityKind::Local
     ) {
         return clustered_route_admission(req, &placement);
     }
@@ -29,10 +29,10 @@ pub(crate) async fn check_cluster_placement_before_consensus(
 #[cfg(feature = "raft")]
 fn clustered_route_admission(
     req: &Request,
-    placement: &crate::server::state::PlacementAuthorityKind,
+    placement: &medulla_server_api::state::PlacementAuthorityKind,
 ) -> Result<(), Response> {
-    use crate::server::mutation::ClusterMutationRoute;
-    match crate::server::mutation::cluster_mutation_route(&req.method) {
+    use medulla_server_api::mutation::ClusterMutationRoute;
+    match medulla_server_api::mutation::cluster_mutation_route(&req.method) {
         // `SelfRoutedAdmin` owns its OWN `MultiRaft`-presence check
         // (`handlers::raft_admin::try_handle` answers
         // `RAFT_NOT_CONFIGURED`/`CLUSTER_CONFIGURATION_INVALID` itself,
@@ -44,7 +44,7 @@ fn clustered_route_admission(
         ClusterMutationRoute::LocalOnly => {
             return Err(Response::err(
                 req.id,
-                crate::server::mutation::LOCAL_ONLY_CLUSTER_REFUSAL,
+                medulla_server_api::mutation::LOCAL_ONLY_CLUSTER_REFUSAL,
             ));
         }
         ClusterMutationRoute::ConsensusGraph
@@ -76,11 +76,11 @@ pub(crate) async fn route_consensus_before_gateway(
     if !medulla_kernel::kernel::dispatch_support::is_replicated_apply()
         && matches!(
             timed_read(state).await.placement_authority(),
-            crate::server::state::PlacementAuthorityKind::MultiRaft
+            medulla_server_api::state::PlacementAuthorityKind::MultiRaft
         )
         && matches!(
-            crate::server::mutation::cluster_mutation_route(&req.method),
-            crate::server::mutation::ClusterMutationRoute::ConsensusNative
+            medulla_server_api::mutation::cluster_mutation_route(&req.method),
+            medulla_server_api::mutation::ClusterMutationRoute::ConsensusNative
         )
     {
         return Err(propose_native_mutation(
@@ -96,8 +96,8 @@ pub(crate) async fn route_consensus_before_gateway(
 
     if !medulla_kernel::kernel::dispatch_support::is_replicated_apply()
         && matches!(
-            crate::server::mutation::cluster_mutation_route(&req.method),
-            crate::server::mutation::ClusterMutationRoute::ConsensusFanout
+            medulla_server_api::mutation::cluster_mutation_route(&req.method),
+            medulla_server_api::mutation::ClusterMutationRoute::ConsensusFanout
         )
     {
         return Err(match req.method {
@@ -113,7 +113,7 @@ pub(crate) async fn route_consensus_before_gateway(
             }
             #[cfg(feature = "sparql-http")]
             Method::ApplyMutation { event_type, query }
-                if event_type == crate::server::sparql_http::SPARQL_HTTP_UPDATE_EVENT =>
+                if event_type == medulla_server_api::sparql_http::SPARQL_HTTP_UPDATE_EVENT =>
             {
                 coordinated_sparql_http_update(
                     state,

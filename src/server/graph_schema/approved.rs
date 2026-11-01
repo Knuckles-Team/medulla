@@ -18,7 +18,8 @@ use medulla_types::graph_schema::approval::{approved_candidate_digest, verify_sc
 use medulla_types::graph_schema::GraphSchemaOp;
 
 use crate::protocol::{Method, Response};
-use crate::server::mutation::{MutationCtx, MutationPlan};
+use medulla_server_api::mutation::MutationCtx;
+use medulla_server_api::mutation::MutationPlan;
 
 /// Verify the approval, then commit the attach through the gateway.
 pub(super) async fn handle_gateway(
@@ -33,7 +34,7 @@ pub(super) async fn handle_gateway(
     }
     let op = op.clone();
     let graph_name = ctx.graph_name.to_string();
-    crate::server::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
+    medulla_server_api::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
         super::apply(core, &graph_name, &op)
     })
     .await
@@ -57,7 +58,7 @@ async fn admit(tenant_id: &str, ctx: &MutationCtx<'_>, op: &GraphSchemaOp) -> Re
         lease.as_ref(),
         source_id,
         &candidate,
-        crate::server::txn::now_ms(),
+        medulla_server_api::txn::now_ms(),
     )
 }
 
@@ -71,7 +72,7 @@ pub(super) async fn handle_validate(
 ) -> Response {
     let op = op.clone();
     let graph_name = ctx.graph_name.to_string();
-    crate::server::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
+    medulla_server_api::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
         validate(core, &graph_name, &op)
     })
     .await
@@ -86,7 +87,7 @@ fn validate(
     let mut sources = (*core.schema_sources()).clone();
     super::check_expected_digest(&sources, op.expected_composed_digest())?;
     sources.attach_dynamic(op.source_token().to_string(), source(op)?)?;
-    crate::server::api::admin::compose::validate_entering_schema(&sources)?;
+    medulla_server_api::api::admin::compose::validate_entering_schema(&sources)?;
     let current = core.schema_sources().composed_digest().to_hex();
     crate::protocol::ResultPayload::of::<medulla_types::result_contract::reasoning::GraphSchema>(
         medulla_types::graph_schema::GraphSchemaCommitted {

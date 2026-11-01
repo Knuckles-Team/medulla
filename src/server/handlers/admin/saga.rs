@@ -9,8 +9,10 @@ use tokio::sync::RwLock;
 
 use crate::mutation_batch::DurabilityDomain;
 use crate::protocol::{Method, Response};
-use crate::server::api::admin::saga::{begin_admin_saga_with_nonce, finish_admin_saga, AdminSaga};
-use crate::server::state::ServerState;
+use medulla_server_api::api::admin::saga::begin_admin_saga_with_nonce;
+use medulla_server_api::api::admin::saga::finish_admin_saga;
+use medulla_server_api::api::admin::saga::AdminSaga;
+use medulla_server_api::state::ServerState;
 use medulla_types::contract::Nonce;
 
 #[cfg(feature = "redb")]

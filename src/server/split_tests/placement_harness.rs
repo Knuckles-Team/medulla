@@ -81,7 +81,7 @@ async fn write_via_owner(multi: &Arc<MultiRaft>, graph: &str, node_id: &str) -> 
         graph_name: graph.to_string(),
         graph_type: GraphType::Global,
         committed_at_ms: 0,
-        mutation: crate::server::api::persistence::RaftMutationContext::internal(
+        mutation: medulla_server_api::api::persistence::RaftMutationContext::internal(
             "raft-placement-harness",
             graph,
             node_id,
@@ -105,7 +105,7 @@ fn epoch_cas_request(
     nonce: u8,
     method: Method,
 ) -> Result<RaftRequest, String> {
-    let mut mutation = crate::server::api::persistence::RaftMutationContext::internal(
+    let mut mutation = medulla_server_api::api::persistence::RaftMutationContext::internal(
         "raft-placement-contention",
         crate::raft::placement::PLACEMENT_GRAPH,
         coordinator_id,

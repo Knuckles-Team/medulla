@@ -59,8 +59,8 @@ async fn enrich(
         let receipt = web::replay_receipt(&doc_id, &document.digest_hex, &record);
         return respond(req_id, receipt);
     }
-    let embedder = crate::server::api::ingest::embedder::EmbedderConfig::from_env();
-    let embedded = crate::server::compute::compute_off_lock(req_id, move || {
+    let embedder = medulla_server_api::api::ingest::embedder::EmbedderConfig::from_env();
+    let embedded = medulla_server_api::compute::compute_off_lock(req_id, move || {
         let spans = web::chunks(&document, &config)?;
         let texts: Vec<&str> = spans.iter().map(|span| span.text(&document.text)).collect();
         let vectors = embedder.embed(&texts)?;

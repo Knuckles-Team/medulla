@@ -18,8 +18,8 @@ use tokio::sync::RwLock;
 
 use crate::mutation_batch::MutationBatch;
 use crate::protocol::{Response, ResultPayload};
-use crate::server::access::CarrierAuthority;
-use crate::server::auth::VerifiedRequestContext;
+use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::auth::VerifiedRequestContext;
 use crate::server::ServerState;
 
 mod authorization;
@@ -105,10 +105,10 @@ fn publish(
         return Err("ACCESS_DENIED: SQL source publication requires kg:write".into());
     }
     // LocalOnly is refused before opening or mutating a SQL owner in active Raft.
-    crate::server::sql_catalog_acl::with_source_authority_write(persist_dir, authority, |source| {
+    medulla_server_api::sql_catalog_acl::with_source_authority_write(persist_dir, authority, |source| {
         authorization::authorize_source_insert(source, authority, &request)?;
         let store =
-            crate::server::sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)?;
+            medulla_server_api::sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)?;
         let batch = compile_batch(&store, req_id, authority, attempt_nonce, request, now_ms)?;
         let committed = store.commit_source_batch(&batch, now_ms)?;
         let bytes = committed
@@ -129,7 +129,7 @@ fn compile_batch(
     now_ms: u64,
 ) -> Result<MutationBatch, String> {
     let scope = publication_scope(authority, &request)?;
-    crate::server::sql_tables::SqlOwnerMutation {
+    medulla_server_api::sql_tables::SqlOwnerMutation {
         authority,
         kind: "sql-source",
         scope: &scope,
@@ -138,7 +138,7 @@ fn compile_batch(
         created_at_ms: now_ms,
     }
     .compile(store, |context| {
-        crate::server::mutation_batch::compile_sql_source_batch(context, request)
+        medulla_server_api::mutation_batch::compile_sql_source_batch(context, request)
     })
 }
 

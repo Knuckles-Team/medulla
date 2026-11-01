@@ -33,8 +33,9 @@ use tokio::sync::RwLock;
 use crate::graph::GraphCore;
 
 use crate::protocol::{Method, Response, ResultPayload};
-use crate::server::mutation::{MutationCtx, MutationPlan};
-use crate::server::state::ServerState;
+use medulla_server_api::mutation::MutationCtx;
+use medulla_server_api::mutation::MutationPlan;
+use medulla_server_api::state::ServerState;
 
 const PACK_PROJECTION_GRAPH_DOMAIN: &[u8] = b"eg/connector-pack-projection-graph/v1";
 
@@ -79,7 +80,7 @@ pub(crate) fn pack_projection_graph_name(
 pub(crate) async fn commit_pack_projection(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     connector: &medulla_types::contract::ResourceId,
     record_id: &str,
     shapes: Vec<PackSchemaDocument>,
@@ -94,7 +95,7 @@ pub(crate) async fn commit_pack_projection(
                 .to_string(),
         );
     }
-    crate::server::api::reentry::ensure_internal_global_graph(
+    medulla_server_api::api::reentry::ensure_internal_global_graph(
         state,
         req_id,
         verified,
@@ -102,7 +103,7 @@ pub(crate) async fn commit_pack_projection(
         idempotency_key,
     )
     .await?;
-    let authority = crate::server::access::CarrierAuthority::from_verified(verified)?;
+    let authority = medulla_server_api::access::CarrierAuthority::from_verified(verified)?;
     let (entry, isolation, persistence, materialization_manifest, write_coalescer) = {
         let state = state.read().await;
         let entry = state
@@ -158,7 +159,7 @@ pub(crate) async fn commit_pack_projection(
     let connector = connector.clone();
     let record_id = record_id.to_string();
     let response =
-        crate::server::api::ingest::graph::commit_gateway(&ctx, &plan, &method, move |core| {
+        medulla_server_api::api::ingest::graph::commit_gateway(&ctx, &plan, &method, move |core| {
             apply_pack_source(
                 core,
                 &result_graph_name,
@@ -200,7 +201,7 @@ pub(crate) async fn handle_gateway(
         GraphSchemaOp::Attach { .. } | GraphSchemaOp::Detach { .. } => {
             let op = op.clone();
             let graph_name = ctx.graph_name.to_string();
-            crate::server::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
+            medulla_server_api::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
                 apply(core, &graph_name, &op)
             })
             .await
@@ -259,7 +260,7 @@ async fn handle_attach_pack_gateway(
     let connector = connector.clone();
     let expected_digest = expected_digest.map(str::to_owned);
     let graph_name = ctx.graph_name.to_string();
-    crate::server::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
+    medulla_server_api::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
         apply_pack_source(
             core,
             &graph_name,
@@ -322,7 +323,7 @@ pub(crate) fn apply_pack_source(
     )?;
     let source_id = format!("pack:{}", connector.as_str());
     let changed = sources.attach_dynamic(source_id, source)?;
-    crate::server::api::admin::compose::validate_entering_schema(&sources)?;
+    medulla_server_api::api::admin::compose::validate_entering_schema(&sources)?;
     if changed {
         core.install_schema_sources(Arc::new(sources.clone()));
     }
@@ -379,7 +380,7 @@ fn compose_pack_documents(
             },
         )?;
         for triple in triples {
-            let triple = crate::server::api::admin::compose::scope_blank_nodes(triple, &scope)
+            let triple = medulla_server_api::api::admin::compose::scope_blank_nodes(triple, &scope)
                 .map_err(|error| {
                     format!(
                         "ATTACH_PACK_SCHEMA_INVALID: {kind} member '{}': {error}",
@@ -431,9 +432,9 @@ fn apply(
         }
     };
     if matches!(op, GraphSchemaOp::Detach { .. }) {
-        crate::server::api::admin::compose::validate_and_compose(&sources)?;
+        medulla_server_api::api::admin::compose::validate_and_compose(&sources)?;
     } else {
-        crate::server::api::admin::compose::validate_entering_schema(&sources)?;
+        medulla_server_api::api::admin::compose::validate_entering_schema(&sources)?;
     }
     let composed_digest = sources.composed_digest().to_hex();
     if changed {

@@ -12,7 +12,7 @@ use crate::protocol::{Response, ResultPayload};
 #[cfg(feature = "obda")]
 pub(super) async fn handle_sparql_virtual(
     req_id: u64,
-    authority: crate::server::access::CarrierAuthority,
+    authority: medulla_server_api::access::CarrierAuthority,
     persist_dir: std::path::PathBuf,
     query: String,
     mapping: String,
@@ -68,15 +68,15 @@ impl TableStoreSource {
     /// granted — no existence leak through the OBDA surface) and returns its
     /// RLS-filtered rows.
     fn load(
-        authority: &crate::server::access::CarrierAuthority,
+        authority: &medulla_server_api::access::CarrierAuthority,
         persist_dir: &std::path::Path,
         table: &str,
     ) -> Result<Self, String> {
-        let authorized = crate::server::sql_catalog_acl::open_authorized_table(
+        let authorized = medulla_server_api::sql_catalog_acl::open_authorized_table(
             authority,
             persist_dir,
             table,
-            crate::server::sql_catalog_acl::SqlPrivilege::Select,
+            medulla_server_api::sql_catalog_acl::SqlPrivilege::Select,
         )?;
         let schema = authorized.schema()?;
         let rows = authorized.select(None)?;
@@ -170,7 +170,7 @@ impl medulla_rdf::obda::ObdaSource for TableStoreSource {
 /// the table scan + SPARQL evaluation are both synchronous CPU/redb-read work.
 #[cfg(feature = "obda")]
 fn sparql_virtual(
-    authority: &crate::server::access::CarrierAuthority,
+    authority: &medulla_server_api::access::CarrierAuthority,
     persist_dir: &std::path::Path,
     query: &str,
     mapping: &str,
@@ -666,7 +666,7 @@ mod outbound_verification_tests {
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R002.2
     #[test]
     fn a_disallowed_obda_destination_is_refused_before_registration() {
-        let _allow = crate::test_support::FederationAllowGuard::blocking("");
+        let _allow = medulla_server_api::test_support::FederationAllowGuard::blocking("");
         // Same fixture `crates/medulla-plan/src/federation_ssrf.rs` already proves is
         // refused: loopback on a non-default port, no allow-list entry.
         let Err(err) = SqlObdaSource::connect("postgres://u@127.0.0.1:5433/db", "people") else {
@@ -677,7 +677,7 @@ mod outbound_verification_tests {
 
     #[test]
     fn an_allowed_obda_destination_still_connects() {
-        let _allow = crate::test_support::FederationAllowGuard::blocking("127.0.0.1:5432");
+        let _allow = medulla_server_api::test_support::FederationAllowGuard::blocking("127.0.0.1:5432");
         // Same fixture `crates/medulla-plan/src/federation_ssrf.rs` already proves is
         // admitted: loopback with an explicit exact allowlist entry. `connect` only
         // validates and stores the DSN here; it dials lazily inside `run_select`.
@@ -688,7 +688,7 @@ mod outbound_verification_tests {
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R002.2
     #[test]
     fn a_refused_source_does_not_skip_later_allowed_registration() {
-        let _allow = crate::test_support::FederationAllowGuard::blocking("127.0.0.1:5432");
+        let _allow = medulla_server_api::test_support::FederationAllowGuard::blocking("127.0.0.1:5432");
         let mut registry = medulla_rdf::obda::ObdaSourceRegistry::new();
         let sources = vec![
             crate::protocol::ObdaExternalSource {

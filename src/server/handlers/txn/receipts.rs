@@ -42,7 +42,7 @@ impl Drop for TxnRestoreGuard {
 }
 
 pub(super) fn transaction_receipt_id(txn_id: &str) -> String {
-    crate::server::mutation_batch::opaque_coordinator_key(
+    medulla_server_api::mutation_batch::opaque_coordinator_key(
         "transaction-receipt",
         "transaction",
         txn_id,
@@ -71,18 +71,18 @@ pub(super) fn commit_receipt_id(
             let tenant = tenant_scope
                 .filter(|value| !value.trim().is_empty())
                 .unwrap_or("unknown");
-            let scoped_key = crate::server::mutation_batch::opaque_coordinator_key(
+            let scoped_key = medulla_server_api::mutation_batch::opaque_coordinator_key(
                 "transaction-receipt-tenant",
                 tenant,
                 key,
             );
-            crate::server::mutation_batch::opaque_coordinator_key(
+            medulla_server_api::mutation_batch::opaque_coordinator_key(
                 "transaction-receipt",
                 "idempotency",
                 &scoped_key,
             )
         }
-        None => crate::server::mutation_batch::opaque_coordinator_key(
+        None => medulla_server_api::mutation_batch::opaque_coordinator_key(
             "transaction-receipt-tenant",
             tenant_scope.unwrap_or("unknown"),
             &transaction_receipt_id(txn_id),
@@ -92,7 +92,7 @@ pub(super) fn commit_receipt_id(
 }
 
 fn tenant_bound_receipt_id(tenant_scope: &str, operation_id: &str) -> String {
-    let binding = crate::server::mutation_batch::opaque_coordinator_key(
+    let binding = medulla_server_api::mutation_batch::opaque_coordinator_key(
         "transaction-receipt-scope",
         tenant_scope,
         operation_id,
@@ -167,17 +167,17 @@ pub(crate) async fn preflight_open_txn_authority(
 /// agent ACL attribution. Replicated prepare already carries its fingerprint.
 pub(super) fn txn_receipt_principal(caller: Option<&str>) -> Result<String, String> {
     #[cfg(feature = "redb")]
-    if let Ok(authority) = crate::server::api::admin::saga::current_admin_saga_authority() {
+    if let Ok(authority) = medulla_server_api::api::admin::saga::current_admin_saga_authority() {
         return Ok(authority.actor_scope().to_string());
     }
-    crate::server::mutation_batch::principal_fingerprint(
+    medulla_server_api::mutation_batch::principal_fingerprint(
         caller.ok_or_else(|| "transaction receipt requires a verified principal".to_string())?,
     )
 }
 
 pub(super) fn txn_owner_scope(tenant_scope: &str, principal: &str) -> Result<String, String> {
     let actor_scope = txn_receipt_principal(Some(principal))?;
-    Ok(crate::server::mutation_batch::opaque_coordinator_key(
+    Ok(medulla_server_api::mutation_batch::opaque_coordinator_key(
         "carrier-owner",
         tenant_scope,
         &actor_scope,
@@ -283,8 +283,8 @@ pub(super) async fn cleanup_cross_shard_decision(
 
 #[cfg(feature = "redb")]
 pub(super) struct TxnReceipt {
-    pub(super) backend: Arc<dyn crate::server::api::persistence::PersistenceBackend>,
-    pub(super) saga: crate::server::api::admin::saga::AdminSaga,
+    pub(super) backend: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
+    pub(super) saga: medulla_server_api::api::admin::saga::AdminSaga,
 }
 
 #[cfg(not(feature = "redb"))]
@@ -306,7 +306,7 @@ pub(super) fn receipt_coordinator_id(_receipt: &TxnReceipt) -> String {
 /// (or, when absent, does NOT change) the receipt's identity.
 #[cfg(feature = "redb")]
 pub(super) fn begin_txn_receipt(
-    backend: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
+    backend: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     req_id: u64,
     caller: Option<&str>,
     txn_id: &str,
@@ -344,7 +344,7 @@ fn admit_txn_saga(
     txn: &GraphTxnState,
     idempotency_key: Option<&str>,
     attempt_nonce: Option<Nonce>,
-) -> Result<crate::server::api::admin::saga::AdminSaga, String> {
+) -> Result<medulla_server_api::api::admin::saga::AdminSaga, String> {
     let intent_digest = txn.replay_intent_digest()?;
     let batch_id = commit_receipt_id(txn_id, idempotency_key, Some(txn.tenant_scope.as_str()));
     // This function is called only after the open transaction has been removed
@@ -354,7 +354,7 @@ fn admit_txn_saga(
     // reused key are a conflict, while a changed OCC snapshot is replay-safe.
     if idempotency_key.is_some() {
         if let Some(existing) =
-            crate::server::api::admin::saga::resume_named_admin_saga(redb, &batch_id, caller)?
+            medulla_server_api::api::admin::saga::resume_named_admin_saga(redb, &batch_id, caller)?
         {
             let existing_digest = transaction_plan_digest(&existing.batch)?;
             if existing_digest != intent_digest {
@@ -387,12 +387,12 @@ fn admit_txn_saga(
     }
     let (payload_digest, encrypted_payload) = seal_txn_recovery_plan(redb, txn)?;
     let saga =
-        crate::server::api::admin::saga::begin_named_admin_saga_with_private_payload_and_nonce(
+        medulla_server_api::api::admin::saga::begin_named_admin_saga_with_private_payload_and_nonce(
             redb,
             req_id,
             caller,
             attempt_nonce,
-            crate::server::api::admin::saga::AdminSagaPayload {
+            medulla_server_api::api::admin::saga::AdminSagaPayload {
                 domain: crate::mutation_batch::DurabilityDomain::ControlPlane,
                 batch_id: &batch_id,
                 event_type: "transaction_recovery_plan",
@@ -405,7 +405,7 @@ fn admit_txn_saga(
 
 #[cfg(not(feature = "redb"))]
 pub(super) fn begin_txn_receipt(
-    _backend: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
+    _backend: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     _req_id: u64,
     _caller: Option<&str>,
     _txn_id: &str,
@@ -426,9 +426,9 @@ fn retry_txn_receipt(
     redb: &crate::server::persistence::redb_backend::RedbBackend,
     req_id: u64,
     caller: &str,
-    saga: crate::server::api::admin::saga::AdminSaga,
+    saga: medulla_server_api::api::admin::saga::AdminSaga,
     attempt_nonce: Option<Nonce>,
-) -> Result<crate::server::api::admin::saga::AdminSaga, String> {
+) -> Result<medulla_server_api::api::admin::saga::AdminSaga, String> {
     let Some(attempt_nonce) = attempt_nonce else {
         return Ok(saga);
     };
@@ -436,12 +436,12 @@ fn retry_txn_receipt(
     let prepared = saga.prepared;
     let encrypted_payload = txn_receipt_retry_payload(redb, &saga, prepared)?;
     let admitted =
-        crate::server::api::admin::saga::begin_named_admin_saga_with_private_payload_and_nonce(
+        medulla_server_api::api::admin::saga::begin_named_admin_saga_with_private_payload_and_nonce(
             redb,
             req_id,
             Some(caller),
             Some(attempt_nonce),
-            crate::server::api::admin::saga::AdminSagaPayload {
+            medulla_server_api::api::admin::saga::AdminSagaPayload {
                 domain: crate::mutation_batch::DurabilityDomain::ControlPlane,
                 batch_id: &saga.batch.batch_id,
                 event_type: "transaction_recovery_plan",
@@ -465,7 +465,7 @@ fn retry_txn_receipt(
 #[cfg(feature = "redb")]
 fn txn_receipt_retry_payload(
     redb: &crate::server::persistence::redb_backend::RedbBackend,
-    saga: &crate::server::api::admin::saga::AdminSaga,
+    saga: &medulla_server_api::api::admin::saga::AdminSaga,
     prepared: bool,
 ) -> Result<Vec<u8>, String> {
     if prepared {
@@ -482,7 +482,7 @@ fn txn_receipt_retry_payload(
 #[cfg(feature = "redb")]
 fn resume_txn_staging(
     redb: &crate::server::persistence::redb_backend::RedbBackend,
-    saga: &crate::server::api::admin::saga::AdminSaga,
+    saga: &medulla_server_api::api::admin::saga::AdminSaga,
     caller: &str,
     expected_tenant: Option<&str>,
 ) -> Result<(Option<ResultPayload>, Option<GraphTxnState>), String> {
@@ -520,7 +520,7 @@ fn resume_txn_staging(
 /// into ephemeral staging.
 #[cfg(feature = "redb")]
 pub(super) fn resume_txn_receipt(
-    backend: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
+    backend: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     req_id: u64,
     caller: Option<&str>,
     txn_id: &str,
@@ -541,7 +541,7 @@ pub(super) fn resume_txn_receipt(
     let redb = backend
         .as_redb()
         .ok_or_else(|| "transaction recovery requires durable redb".to_string())?;
-    let Some(saga) = crate::server::api::admin::saga::resume_named_admin_saga(
+    let Some(saga) = medulla_server_api::api::admin::saga::resume_named_admin_saga(
         redb,
         &commit_receipt_id(txn_id, idempotency_key, expected_tenant),
         Some(caller),
@@ -550,7 +550,7 @@ pub(super) fn resume_txn_receipt(
         return Ok(None);
     };
     if saga.batch.identity
-        != crate::server::api::admin::saga::cluster_admin_scope_identity()?
+        != medulla_server_api::api::admin::saga::cluster_admin_scope_identity()?
     {
         return Err("transaction parent receipt has the wrong coordinator scope".to_string());
     }
@@ -575,7 +575,7 @@ pub(super) type ResumedTxnReceiptStub = ((), Option<ResultPayload>, Option<Graph
 
 #[cfg(not(feature = "redb"))]
 pub(super) fn resume_txn_receipt(
-    _backend: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
+    _backend: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     _req_id: u64,
     _caller: Option<&str>,
     _txn_id: &str,
@@ -719,15 +719,15 @@ pub(super) async fn authorize_txn_plan(
 /// coordinator" wording is the only thing that varies between the three sites.
 #[cfg(feature = "redb")]
 pub(crate) fn finish_saga_via_redb(
-    backend: &Arc<dyn crate::server::api::persistence::PersistenceBackend>,
-    saga: crate::server::api::admin::saga::AdminSaga,
+    backend: &Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
+    saga: medulla_server_api::api::admin::saga::AdminSaga,
     result: ResultPayload,
     lost_backend_message: &str,
 ) -> Result<ResultPayload, String> {
     let redb = backend
         .as_redb()
         .ok_or_else(|| lost_backend_message.to_string())?;
-    crate::server::api::admin::saga::finish_admin_saga(
+    medulla_server_api::api::admin::saga::finish_admin_saga(
         redb,
         saga.batch,
         saga.created_at_ms,

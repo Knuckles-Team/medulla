@@ -39,7 +39,7 @@ use tokio::sync::RwLock;
 
 use crate::compute::semantic_ann::ANN_BUILD_THRESHOLD;
 use crate::graph::GraphCore;
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 
 #[cfg(feature = "ann-redb")]
 use crate::compute::semantic::SemanticStore;

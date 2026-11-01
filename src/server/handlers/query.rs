@@ -33,15 +33,17 @@ use crate::graph::GraphCore;
 use crate::protocol::Method;
 #[cfg(any(feature = "query", feature = "cypher", feature = "graphql"))]
 use crate::protocol::{Response, ResultPayload};
-use crate::server::access::GraphReadAuthority;
+use medulla_server_api::access::GraphReadAuthority;
 #[cfg(feature = "federation")]
-use crate::server::api::query_txn::foreign_catalog::bound_registry;
+use medulla_server_api::api::query_txn::foreign_catalog::bound_registry;
 #[cfg(feature = "query")]
-use crate::server::api::query_txn::query_support::{
-    bind_sql_text_embedder, execute_rows, overlay_write_set, uql_text_embedder,
-};
+use medulla_server_api::api::query_txn::query_support::bind_sql_text_embedder;
+use medulla_server_api::api::query_txn::query_support::execute_rows;
+use medulla_server_api::api::query_txn::query_support::overlay_write_set;
+use medulla_server_api::api::query_txn::query_support::uql_text_embedder;
 #[cfg(all(feature = "query", feature = "tsdb"))]
-use crate::server::api::query_txn::query_support::{plan_needs_tsdb, TsdbLegBind};
+use medulla_server_api::api::query_txn::query_support::plan_needs_tsdb;
+use medulla_server_api::api::query_txn::query_support::TsdbLegBind;
 #[cfg(feature = "result-cache")]
 use medulla_core::result_cache::ResultCache;
 #[cfg(feature = "graphql")]
@@ -196,9 +198,9 @@ pub(crate) mod current_auth_test_support {
     use crate::acl::{AgentIdentity, AgentRole};
     use crate::isolation::IsolationLayer;
     use crate::protocol::{Method, Request};
-    use crate::server::api::persistence::PersistenceBackend;
-    use crate::server::auth::build_shared_test_request;
-    use crate::server::state::ServerState;
+    use medulla_server_api::api::persistence::PersistenceBackend;
+    use medulla_server_api::auth::build_shared_test_request;
+    use medulla_server_api::state::ServerState;
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
@@ -299,7 +301,7 @@ pub(crate) mod current_auth_test_support {
         secret: &str,
         isolation: IsolationLayer,
     ) -> Arc<RwLock<ServerState>> {
-        let dir = crate::server::sql_tables::test_persist_dir()
+        let dir = medulla_server_api::sql_tables::test_persist_dir()
             .to_string_lossy()
             .into_owned();
         std::fs::create_dir_all(&dir).expect("create test persist dir");
@@ -315,8 +317,8 @@ pub(crate) mod current_auth_test_support {
         };
         pub(in super::super) use crate::acl::{AgentIdentity, AgentRole};
         pub(in super::super) use crate::protocol::{Method, Request, Response, ResultPayload};
-        pub(in super::super) use crate::server::auth::dispatch_test_on_heap as dispatch_on_heap;
-        pub(in super::super) use crate::server::state::ServerState;
+        pub(in super::super) use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
+        pub(in super::super) use medulla_server_api::state::ServerState;
         pub(in super::super) use std::sync::Arc;
         pub(in super::super) use tokio::sync::RwLock;
     }
@@ -1114,10 +1116,10 @@ mod dispatch_write_tests {
             .duration_since(std::time::UNIX_EPOCH)
             .expect("test clock after epoch")
             .as_secs();
-        request.auth_token = crate::server::auth::compute_verified_envelope_token(
+        request.auth_token = medulla_server_api::auth::compute_verified_envelope_token(
             SECRET,
             &request,
-            &crate::server::auth::VerifiedEnvelopeParams {
+            &medulla_server_api::auth::VerifiedEnvelopeParams {
                 context: &context,
                 timestamp,
                 nonce,
@@ -1438,7 +1440,7 @@ mod dispatch_write_tests {
     /// completes`) gets this right by going through a real `CarrierAuthority`;
     /// this derives the same scope the same way production does.
     fn carrier_tenant_scope(tenant: &str) -> String {
-        crate::server::mutation_batch::opaque_coordinator_key("carrier-tenant", "verified", tenant)
+        medulla_server_api::mutation_batch::opaque_coordinator_key("carrier-tenant", "verified", tenant)
     }
 
     /// A direct signed CREATE that committed its table before owner
@@ -1465,7 +1467,7 @@ mod dispatch_write_tests {
         // Install the same deterministic cross-redb fault used by pgwire's
         // recovery proof: physical CREATE can commit, while owner registration
         // fails against the malformed source-authority catalog.
-        let acl = crate::server::sql_tables::tenant_acl_table_store(
+        let acl = medulla_server_api::sql_tables::tenant_acl_table_store(
             &carrier_tenant_scope("tenant-shared"),
             std::path::Path::new(&persist_dir),
         )
@@ -1508,7 +1510,7 @@ mod dispatch_write_tests {
             "owner catalog fault must surface after physical commit: {:?}",
             first.error
         );
-        let store = crate::server::sql_tables::tenant_table_store(
+        let store = medulla_server_api::sql_tables::tenant_table_store(
             &carrier_tenant_scope("tenant-shared"),
             std::path::Path::new(&persist_dir),
         )
@@ -1579,7 +1581,7 @@ mod dispatch_write_tests {
                 guest_alter.error.as_deref(),
                 guest_alter.error_detail.as_deref()
             ),
-            crate::server::sql_catalog_acl::ACCESS_DENIED
+            medulla_server_api::sql_catalog_acl::ACCESS_DENIED
                 .split_once(": ")
                 .map(|(code, detail)| (Some(code), Some(detail)))
                 .unwrap(),
@@ -1982,8 +1984,9 @@ mod txn_ryow_dispatch_tests {
 mod evidence_resolver_wiring_tests {
     use super::explain_evidence_wire;
     use crate::graph::GraphCore;
-    use crate::server::blob::stream::stream_blob_put;
-    use crate::server::blob::{ChunkStore, RedbChunkStore};
+    use medulla_server_api::blob::stream::stream_blob_put;
+    use medulla_server_api::blob::ChunkStore;
+    use medulla_server_api::blob::RedbChunkStore;
     use serde_json::json;
     use std::sync::Arc;
 

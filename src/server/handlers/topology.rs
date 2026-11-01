@@ -24,8 +24,8 @@ use sha2::{Digest, Sha256};
 use tokio::sync::RwLock;
 
 use crate::protocol::{Method, Response, ResultPayload};
-use crate::server::auth::VerifiedRequestContext;
-use crate::server::state::ServerState;
+use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::state::ServerState;
 
 type HmacSha256 = Hmac<Sha256>;
 

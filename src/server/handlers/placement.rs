@@ -28,7 +28,7 @@ use tokio::sync::RwLock;
 
 use crate::epistemic_operations::PlacementRouteSchemaVersion;
 use crate::protocol::{Method, Response, ResultPayload};
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 use medulla_types::result_contract::cluster::PlacementRouteWire;
 
 // GOC-15/BUG-030: `PlacementRoute`'s `authz_action` was narrowed from
@@ -222,7 +222,7 @@ async fn resolve_admin_authority(
 ) -> Result<
     (
         std::sync::Arc<crate::raft::multi::MultiRaft>,
-        std::sync::Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+        std::sync::Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     ),
     String,
 > {

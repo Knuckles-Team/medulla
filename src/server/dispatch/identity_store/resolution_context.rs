@@ -9,8 +9,9 @@ use medulla_types::identity::{
 };
 
 use super::{ElevationStampAuthority, ServerState, VerifiedRequestContext};
-use crate::server::auth::{request_context_policy, RequestContextPolicy};
-use crate::server::identity_view::identity_actor;
+use medulla_server_api::auth::request_context_policy;
+use medulla_server_api::auth::RequestContextPolicy;
+use medulla_server_api::identity_view::identity_actor;
 
 // Use the existing closed error vocabulary: Response::err must preserve these
 // as classified refusals, not collapse a new undeclared prefix to INTERNAL.

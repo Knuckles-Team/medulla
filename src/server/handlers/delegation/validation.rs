@@ -70,19 +70,19 @@ pub(crate) async fn placement_authority(
     {
         let authority = ctx.state.read().await.placement_authority();
         match authority {
-            crate::server::state::PlacementAuthorityKind::Local => return Ok((0, None, false)),
-            crate::server::state::PlacementAuthorityKind::Missing => {
+            medulla_server_api::state::PlacementAuthorityKind::Local => return Ok((0, None, false)),
+            medulla_server_api::state::PlacementAuthorityKind::Missing => {
                 return Err(Response::err(
                     ctx.req_id,
-                    crate::server::state::MISSING_PLACEMENT_AUTHORITY,
+                    medulla_server_api::state::MISSING_PLACEMENT_AUTHORITY,
                 ));
             }
-            crate::server::state::PlacementAuthorityKind::MultiRaft => {}
+            medulla_server_api::state::PlacementAuthorityKind::MultiRaft => {}
         }
         let Some(routed) = ctx.routed_raft.as_ref() else {
             return Err(Response::err(
                 ctx.req_id,
-                crate::server::state::MISSING_PLACEMENT_AUTHORITY,
+                medulla_server_api::state::MISSING_PLACEMENT_AUTHORITY,
             ));
         };
         let leader = routed.handle.current_leader().await;
@@ -134,7 +134,7 @@ pub(crate) fn bind_request(
     validate_request_binding(&request, verified_context, graph_name)?;
     validate_retained_target(&request, verified_context, retained)?;
 
-    let provenance_refs = crate::server::api::ingest::jobs::provenance_refs(&request);
+    let provenance_refs = medulla_server_api::api::ingest::jobs::provenance_refs(&request);
     let metadata = delegation_metadata(&request, retained);
     let work_item = lower_work_item(&request, metadata, provenance_refs);
 

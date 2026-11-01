@@ -16,7 +16,7 @@ const GRAPH: &str = "tenant__acme__default";
 const REQUEST_SCOPE: &str = "rbac:elevation";
 
 fn state() -> Arc<RwLock<super::super::ServerState>> {
-    let isolation = crate::server::access::two_agent_isolation();
+    let isolation = medulla_server_api::access::two_agent_isolation();
     Arc::new(RwLock::new(super::super::ServerState::new_for_test(
         "elevation-test-secret",
         isolation,

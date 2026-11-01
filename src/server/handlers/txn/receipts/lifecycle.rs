@@ -124,7 +124,7 @@ pub(in crate::server::handlers::txn) fn txn_lifecycle_batch_id(
     // input.  The full method body remains in the kernel operation digest, so a
     // changed txn id, graph, or payload still conflicts under the same key.
     let operation_key = format!("{}:{}", method.tag_name(), authority.idempotency_key());
-    crate::server::mutation_batch::opaque_coordinator_key(
+    medulla_server_api::mutation_batch::opaque_coordinator_key(
         "transaction-lifecycle",
         authority.owner_scope(),
         &operation_key,
@@ -134,8 +134,8 @@ pub(in crate::server::handlers::txn) fn txn_lifecycle_batch_id(
 #[cfg(feature = "redb")]
 pub(crate) struct TxnLifecycleReceipt {
     pub(in crate::server::handlers::txn) backend:
-        Arc<dyn crate::server::api::persistence::PersistenceBackend>,
-    pub(in crate::server::handlers::txn) saga: crate::server::api::admin::saga::AdminSaga,
+        Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
+    pub(in crate::server::handlers::txn) saga: medulla_server_api::api::admin::saga::AdminSaga,
 }
 
 #[cfg(not(feature = "redb"))]
@@ -168,9 +168,9 @@ pub(in crate::server::handlers::txn) async fn begin_txn_lifecycle_receipt(
     // therefore preserves the kernel's REPLAY_NONCE_CONSUMED / conflict
     // decisions for retries.
     let prepared =
-        crate::server::api::admin::saga::resume_named_admin_saga(redb, &batch_id, Some(caller))?
+        medulla_server_api::api::admin::saga::resume_named_admin_saga(redb, &batch_id, Some(caller))?
             .is_some_and(|saga| saga.prepared);
-    let saga = crate::server::api::admin::saga::begin_named_admin_saga_with_nonce(
+    let saga = medulla_server_api::api::admin::saga::begin_named_admin_saga_with_nonce(
         redb,
         req_id,
         Some(caller),

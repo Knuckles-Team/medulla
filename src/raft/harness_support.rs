@@ -13,7 +13,7 @@ use super::{AppCtx, GroupId, NodeId};
 use crate::acl::{AgentIdentity, AgentRole, RequestContextClaims};
 use crate::isolation::IsolationLayer;
 use crate::protocol::{Method, Request};
-use crate::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use crate::server::{compute_verified_envelope_token, ServerState, VerifiedEnvelopeParams};
 
 static NONCE_SEQUENCE: AtomicU64 = AtomicU64::new(1);
@@ -54,7 +54,7 @@ pub(crate) async fn make_state_with_cdc(
     let state = make_state(dir, backend, isolation, auth_secret).await;
     #[cfg(feature = "streaming")]
     {
-        state.write().await.cdc = Some(Arc::new(crate::server::cdc::CdcHub::new()));
+        state.write().await.cdc = Some(Arc::new(medulla_server_api::cdc::CdcHub::new()));
     }
     state
 }

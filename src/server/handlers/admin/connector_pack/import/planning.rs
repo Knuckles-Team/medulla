@@ -43,7 +43,7 @@ impl ReadyPlan {
     pub(super) fn finish(
         mut self,
         request: ConnectorPackImportRequest,
-        stored: Vec<crate::server::blob::engine_bodies::StoredEngineBody>,
+        stored: Vec<medulla_server_api::blob::engine_bodies::StoredEngineBody>,
     ) -> Result<ConnectorPackCommitPlan, String> {
         let by_digest: BTreeMap<_, _> = stored
             .into_iter()
@@ -88,7 +88,7 @@ impl ReadyPlan {
 
 pub(super) fn prepare(
     store: &AgentLibraryStore,
-    blob: &dyn crate::server::blob::ChunkStore,
+    blob: &dyn medulla_server_api::blob::ChunkStore,
     request: &ConnectorPackImportRequest,
     archive: &[u8],
     prior: Vec<ConnectorPackMemberRow>,
@@ -185,7 +185,7 @@ fn mass_withdrawal_violation(
 
 struct PlanCollector<'a> {
     store: &'a AgentLibraryStore,
-    blob: &'a dyn crate::server::blob::ChunkStore,
+    blob: &'a dyn medulla_server_api::blob::ChunkStore,
     request: &'a ConnectorPackImportRequest,
     record_id: String,
     components: Vec<ConnectorPackComponentCommit>,
@@ -201,7 +201,7 @@ struct PlanCollector<'a> {
 impl<'a> PlanCollector<'a> {
     fn new(
         store: &'a AgentLibraryStore,
-        blob: &'a dyn crate::server::blob::ChunkStore,
+        blob: &'a dyn medulla_server_api::blob::ChunkStore,
         request: &'a ConnectorPackImportRequest,
     ) -> Self {
         Self {
@@ -426,7 +426,7 @@ impl<'a> PlanCollector<'a> {
     ) -> Result<(), String> {
         self.holder_specs
             .push((old.body_sha256, old.component_id.clone(), revision));
-        let body = crate::server::blob::engine_bodies::read_engine_body(
+        let body = medulla_server_api::blob::engine_bodies::read_engine_body(
             self.blob,
             &self.request.context.tenant_id,
             &old.engine_manifest_digest,

@@ -23,7 +23,7 @@ use std::sync::Arc;
 use medulla_types::work_item_read::WorkItemListRequest;
 
 use crate::protocol::{Response, ResultPayload};
-use crate::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 
 /// One decoded WorkItem read.
 pub(crate) enum WorkItemRead {
@@ -142,7 +142,7 @@ async fn serve_native(
             run_id,
             actor,
         } => {
-            let actor = crate::server::mutation_batch::principal_fingerprint(&actor)?;
+            let actor = medulla_server_api::mutation_batch::principal_fingerprint(&actor)?;
             ResultPayload::of::<medulla_types::result_contract::coordination::GetRunWorkItem>(
                 backend
                     .read_run_work_item(graph, &tenant, &run_id, &actor)
@@ -154,7 +154,7 @@ async fn serve_native(
             context_id,
             actor,
         } => {
-            let actor = crate::server::mutation_batch::principal_fingerprint(&actor)?;
+            let actor = medulla_server_api::mutation_batch::principal_fingerprint(&actor)?;
             ResultPayload::of::<medulla_types::result_contract::coordination::GetSessionUsage>(
                 backend
                     .read_session_usage(graph, &tenant, &context_id, &actor)
@@ -162,7 +162,7 @@ async fn serve_native(
             )
         }
         WorkItemRead::Checkpoint { request, actor } => {
-            let actor = crate::server::mutation_batch::principal_fingerprint(&actor)?;
+            let actor = medulla_server_api::mutation_batch::principal_fingerprint(&actor)?;
             ResultPayload::of::<medulla_types::result_contract::coordination::GetRunCheckpoint>(
                 backend.read_run_checkpoint(graph, request, &actor).await?,
             )
@@ -172,7 +172,7 @@ async fn serve_native(
             run_id,
             actor,
         } => {
-            let actor = crate::server::mutation_batch::principal_fingerprint(&actor)?;
+            let actor = medulla_server_api::mutation_batch::principal_fingerprint(&actor)?;
             ResultPayload::of::<medulla_types::result_contract::coordination::GetCurrentPlan>(
                 backend
                     .read_current_plan(graph, &tenant, &run_id, &actor)

@@ -129,14 +129,14 @@ macro_rules! persistence_outbox {
         async fn read_mutation_outbox_view(
             &self,
             graph_fname: &str,
-            view: crate::server::outbox_operator::OutboxView,
-        ) -> Result<crate::server::outbox_operator::OutboxViewAnswer, String> {
+            view: medulla_server_api::outbox_operator::OutboxView,
+        ) -> Result<medulla_server_api::outbox_operator::OutboxViewAnswer, String> {
             let graph = graph_fname.to_owned();
             let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
             self.read_snapshot(graph_fname, move |shard, _crypto| {
                 let handle = shard.graph(&graph)?;
                 let read = shard.read(&handle)?;
-                crate::server::outbox_operator::read_view(shard.mutations(), &read, &view, now_ms)
+                medulla_server_api::outbox_operator::read_view(shard.mutations(), &read, &view, now_ms)
             })
             .await
         }
@@ -144,8 +144,8 @@ macro_rules! persistence_outbox {
         async fn write_mutation_outbox(
             &self,
             graph_fname: &str,
-            write: crate::server::outbox_operator::OutboxWrite,
-        ) -> Result<crate::server::outbox_operator::OutboxWriteReply, String> {
+            write: medulla_server_api::outbox_operator::OutboxWrite,
+        ) -> Result<medulla_server_api::outbox_operator::OutboxWriteReply, String> {
             let (done, rx) = oneshot::channel();
             let cmd = Cmd::MutationOutboxWrite {
                 graph: graph_fname.to_string(),

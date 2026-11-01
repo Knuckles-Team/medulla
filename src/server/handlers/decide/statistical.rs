@@ -5,7 +5,7 @@
 
 use super::SharedState;
 use crate::protocol::Response;
-use crate::server::auth::VerifiedRequestContext;
+use medulla_server_api::auth::VerifiedRequestContext;
 
 /// Answer a batch of statistical decision records; commit none.
 pub(crate) async fn handle_decide(

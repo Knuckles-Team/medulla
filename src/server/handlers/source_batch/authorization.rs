@@ -2,8 +2,10 @@
 //! snapshot as native SQL inserts. No source descriptor or mapping digest
 //! grants access.
 
-use crate::server::access::CarrierAuthority;
-use crate::server::sql_catalog_acl::{SqlPrivilege, SqlSourceAuthorityWrite, ACCESS_DENIED};
+use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::sql_catalog_acl::SqlPrivilege;
+use medulla_server_api::sql_catalog_acl::SqlSourceAuthorityWrite;
+use medulla_server_api::sql_catalog_acl::ACCESS_DENIED;
 use medulla_types::storage_wire::{SqlSourceBatchRequest, SqlSourceCell};
 
 /// Authorize exact typed source cells under the existing INSERT grant and RLS

@@ -159,20 +159,20 @@ fn graph_request(graph_name: &str, group_id: crate::raft::GroupId) -> crate::raf
         )
         .unwrap(),
         committed_at_ms: 19,
-        mutation: crate::server::api::persistence::RaftMutationContext {
-            batch_id: crate::server::mutation_batch::opaque_coordinator_key(
+        mutation: medulla_server_api::api::persistence::RaftMutationContext {
+            batch_id: medulla_server_api::mutation_batch::opaque_coordinator_key(
                 "raft-graph-test",
                 graph_name,
                 "batch",
             ),
             request_id: 7,
             attempt_nonce: Some(medulla_types::contract::Nonce::from_bytes([3; 32])),
-            tenant_scope: crate::server::mutation_batch::opaque_coordinator_key(
+            tenant_scope: medulla_server_api::mutation_batch::opaque_coordinator_key(
                 "carrier-tenant",
                 "verified",
                 "tenant-a",
             ),
-            principal_fingerprint: crate::server::mutation_batch::opaque_coordinator_key(
+            principal_fingerprint: medulla_server_api::mutation_batch::opaque_coordinator_key(
                 "principal:sha256",
                 "principal-a",
                 "authority",
@@ -211,7 +211,7 @@ fn ordinary_graph_command_is_bound_to_request_group_and_authenticated_authority(
         .is_err());
 
     let mut fresh_identity = request.clone();
-    fresh_identity.mutation.batch_id = crate::server::mutation_batch::opaque_coordinator_key(
+    fresh_identity.mutation.batch_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
         "raft-graph-test",
         "tenant-a:graph-a",
         "fresh-batch",
@@ -240,7 +240,7 @@ fn ordinary_graph_command_is_bound_to_request_group_and_authenticated_authority(
         .is_err());
 
     let mut wrong_tenant = request.clone();
-    wrong_tenant.mutation.tenant_scope = crate::server::mutation_batch::opaque_coordinator_key(
+    wrong_tenant.mutation.tenant_scope = medulla_server_api::mutation_batch::opaque_coordinator_key(
         "carrier-tenant",
         "verified",
         "tenant-b",
@@ -251,7 +251,7 @@ fn ordinary_graph_command_is_bound_to_request_group_and_authenticated_authority(
 
     let mut wrong_principal = request;
     wrong_principal.mutation.principal_fingerprint =
-        crate::server::mutation_batch::opaque_coordinator_key(
+        medulla_server_api::mutation_batch::opaque_coordinator_key(
             "principal:sha256",
             "principal-b",
             "authority",
@@ -319,7 +319,7 @@ fn internal_graph_command_requires_the_typed_internal_authority() {
         .validate_graph_command("cluster-test-key", 0)
         .is_err());
 
-    request.mutation = crate::server::api::persistence::RaftMutationContext::internal(
+    request.mutation = medulla_server_api::api::persistence::RaftMutationContext::internal(
         "raft-placement",
         "__placement_catalog__",
         "internal-node",
@@ -330,14 +330,14 @@ fn internal_graph_command_requires_the_typed_internal_authority() {
         .validate_graph_command("cluster-test-key", 0)
         .expect("typed internal command accepts only engine-owned authority");
 
-    let claimed = crate::server::api::persistence::RaftMutationContext::from_verified_request(
+    let claimed = medulla_server_api::api::persistence::RaftMutationContext::from_verified_request(
         "caller-batch".to_string(),
         1,
         Some(medulla_types::contract::Nonce::from_bytes([8; 32])),
         &request.mutation.tenant_scope,
         request.mutation.principal_fingerprint.clone(),
         false,
-        crate::server::api::persistence::RaftMutationTiming {
+        medulla_server_api::api::persistence::RaftMutationTiming {
             placement_epoch: 0,
             fencing_token: None,
             created_at_ms: 1,

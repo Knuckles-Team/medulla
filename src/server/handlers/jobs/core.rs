@@ -119,10 +119,10 @@ pub(super) fn compile_job_batch(
         .mutation_version(authority.tenant_scope(), &scope)
         .map_err(|error| error.to_string())?;
     let batch_id =
-        crate::server::mutation_batch::opaque_request_key("analytics-job", &scope, req_id, method);
+        medulla_server_api::mutation_batch::opaque_request_key("analytics-job", &scope, req_id, method);
     let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-    let batch = crate::server::mutation_batch::compile_opaque_method_in_scope(
-        crate::server::mutation_batch::CompileBatch {
+    let batch = medulla_server_api::mutation_batch::compile_opaque_method_in_scope(
+        medulla_server_api::mutation_batch::CompileBatch {
             batch_id: &batch_id,
             request_id: req_id,
             attempt_nonce,

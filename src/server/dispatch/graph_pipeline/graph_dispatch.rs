@@ -12,17 +12,17 @@ struct GraphDispatchCapture<'a> {
     read_authority: Option<GraphReadAuthority>,
     verified_actor: String,
     tenant_scope: String,
-    gateway_authz_ctx: Option<crate::server::mutation::GatewayAuthzCtx>,
+    gateway_authz_ctx: Option<medulla_server_api::mutation::GatewayAuthzCtx>,
     core: Arc<crate::graph::GraphCore>,
     materialization_manifest:
         Option<Arc<std::sync::RwLock<crate::registry::MaterializationManifest>>>,
-    persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
+    persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
-    cdc: Option<Arc<crate::server::cdc::CdcHub>>,
+    cdc: Option<Arc<medulla_server_api::cdc::CdcHub>>,
     routed_write_coalescer:
-        Arc<crate::server::routed_write_coalescer::RoutedWriteCoalescerRegistry>,
+        Arc<medulla_server_api::routed_write_coalescer::RoutedWriteCoalescerRegistry>,
     #[cfg(feature = "raft")]
-    placement_authority: crate::server::state::PlacementAuthorityKind,
+    placement_authority: medulla_server_api::state::PlacementAuthorityKind,
     #[cfg(feature = "raft")]
     multi_raft: Option<Arc<crate::raft::multi::MultiRaft>>,
     #[cfg(feature = "raft")]
@@ -251,14 +251,14 @@ pub(in crate::server::dispatch) struct GraphOpRouting<'a> {
     pub(super) read_authority: &'a Option<GraphReadAuthority>,
     pub(super) verified_actor: &'a str,
     pub(in crate::server::dispatch) tenant_scope: &'a str,
-    pub(super) gateway_authz_ctx: &'a Option<crate::server::mutation::GatewayAuthzCtx>,
+    pub(super) gateway_authz_ctx: &'a Option<medulla_server_api::mutation::GatewayAuthzCtx>,
     pub(in crate::server::dispatch) core: &'a Arc<crate::graph::GraphCore>,
     pub(super) materialization_manifest:
         &'a Option<Arc<std::sync::RwLock<crate::registry::MaterializationManifest>>>,
     pub(in crate::server::dispatch) persistence:
-        &'a Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
+        &'a Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
-    pub(super) cdc: &'a Option<Arc<crate::server::cdc::CdcHub>>,
+    pub(super) cdc: &'a Option<Arc<medulla_server_api::cdc::CdcHub>>,
     #[cfg(feature = "security")]
     pub(super) rls: &'a std::sync::Arc<crate::isolation::IsolationLayer>,
     #[cfg(feature = "raft")]

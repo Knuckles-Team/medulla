@@ -8,9 +8,9 @@ use crate::server::persistence::AsRedb;
 pub(super) fn validate_consensus_parent_authority(
     redb: &crate::server::persistence::redb_backend::RedbBackend,
     coordinator_id: &str,
-    authority: &crate::server::api::persistence::RaftMutationContext,
-) -> Result<crate::server::api::admin::saga::AdminSaga, String> {
-    let parent = crate::server::api::admin::saga::resume_named_admin_saga(
+    authority: &medulla_server_api::api::persistence::RaftMutationContext,
+) -> Result<medulla_server_api::api::admin::saga::AdminSaga, String> {
+    let parent = medulla_server_api::api::admin::saga::resume_named_admin_saga(
         redb,
         coordinator_id,
         Some(&authority.principal_fingerprint),
@@ -26,8 +26,8 @@ pub(super) fn validate_consensus_participant_authority(
     redb: &crate::server::persistence::redb_backend::RedbBackend,
     coordinator_id: &str,
     txn: &GraphTxnState,
-    authority: &crate::server::api::persistence::RaftMutationContext,
-    phase: crate::server::api::reentry::TransactionParticipantPhase,
+    authority: &medulla_server_api::api::persistence::RaftMutationContext,
+    phase: medulla_server_api::api::reentry::TransactionParticipantPhase,
 ) -> Result<ParticipantAdmission, String> {
     if txn.tenant_scope != authority.tenant_scope {
         return Err(
@@ -53,10 +53,12 @@ pub(super) enum ParticipantAdmission {
 #[cfg(feature = "raft")]
 pub(super) fn participant_phase_admission(
     redb: &crate::server::persistence::redb_backend::RedbBackend,
-    parent: &crate::server::api::admin::saga::AdminSaga,
-    phase: crate::server::api::reentry::TransactionParticipantPhase,
+    parent: &medulla_server_api::api::admin::saga::AdminSaga,
+    phase: medulla_server_api::api::reentry::TransactionParticipantPhase,
 ) -> Result<ParticipantAdmission, String> {
-    use crate::server::api::reentry::TransactionParticipantPhase::{Abort, Commit, Prepare};
+    use medulla_server_api::api::reentry::TransactionParticipantPhase::Abort;
+    use medulla_server_api::api::reentry::TransactionParticipantPhase::Commit;
+    use medulla_server_api::api::reentry::TransactionParticipantPhase::Prepare;
     match (parent.prepared, parent.replayed.as_ref()) {
         (false, Some(ResultPayload::Bool(false))) if matches!(phase, Abort) => {
             return Ok(ParticipantAdmission::Execute)
@@ -86,10 +88,10 @@ pub(super) fn participant_phase_admission(
 /// before using it as proof of a terminal replay.
 #[cfg(feature = "raft")]
 pub(super) async fn committed_participant_receipt(
-    backend: &dyn crate::server::api::persistence::PersistenceBackend,
+    backend: &dyn medulla_server_api::api::persistence::PersistenceBackend,
     txn: &GraphTxnState,
     plan: &ConsensusParticipantPlan,
-    authority: &crate::server::api::persistence::RaftMutationContext,
+    authority: &medulla_server_api::api::persistence::RaftMutationContext,
 ) -> Result<bool, String> {
     let receipt_id = consensus_participant_receipt_id(
         txn,
@@ -110,7 +112,7 @@ fn validate_committed_participant_record(
     record: &crate::mutation_batch::MutationBatchRecord,
     receipt_id: &str,
     fname: &str,
-    authority: &crate::server::api::persistence::RaftMutationContext,
+    authority: &medulla_server_api::api::persistence::RaftMutationContext,
 ) -> Result<(), String> {
     record.validate()?;
     if record.status != crate::mutation_batch::MutationBatchStatus::Committed
@@ -147,7 +149,7 @@ pub(super) async fn finish_participant_cleanup(
 ) -> Result<(), String> {
     redb.xshard_prepare_clear(&plan.coordinator_id, plan.participant_id)
         .await?;
-    crate::server::txn::release_consensus_graph_fence(
+    medulla_server_api::txn::release_consensus_graph_fence(
         &plan.graph_name,
         &plan.coordinator_id,
         plan.participant_id,
@@ -159,7 +161,7 @@ pub(super) async fn finish_participant_cleanup(
 pub(crate) async fn apply_consensus_transaction_decision(
     state: &Arc<RwLock<ServerState>>,
     coordinator_id: &str,
-    authority: &crate::server::api::persistence::RaftMutationContext,
+    authority: &medulla_server_api::api::persistence::RaftMutationContext,
     commit: bool,
 ) -> Result<bool, String> {
     let backend = state
@@ -198,7 +200,7 @@ pub(crate) async fn apply_consensus_transaction_decision(
 pub(crate) async fn apply_consensus_transaction_finalize(
     state: &Arc<RwLock<ServerState>>,
     coordinator_id: &str,
-    authority: &crate::server::api::persistence::RaftMutationContext,
+    authority: &medulla_server_api::api::persistence::RaftMutationContext,
     commit: bool,
 ) -> Result<bool, String> {
     let backend = state
@@ -220,7 +222,7 @@ pub(crate) async fn apply_consensus_transaction_finalize(
     let result = if let Some(result) = saga.replayed {
         result
     } else {
-        crate::server::api::admin::saga::finish_admin_saga(
+        medulla_server_api::api::admin::saga::finish_admin_saga(
             redb,
             saga.batch,
             saga.created_at_ms,

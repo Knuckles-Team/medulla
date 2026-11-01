@@ -94,7 +94,7 @@ fn load_shacl_shapes(core: &GraphCore, shapes: Option<&str>) -> Result<LoadedSha
         .collect();
     schema_digests.sort_unstable();
     schema_digests.dedup();
-    crate::server::api::admin::compose::validate_and_compose(&sources)
+    medulla_server_api::api::admin::compose::validate_and_compose(&sources)
         .and_then(|composed| {
             if composed.shapes.is_empty() {
                 return Err("no committed GraphSchema SHACL sources".to_string());

@@ -332,8 +332,8 @@ mod tests {
             core
         }
 
-        let isolation = crate::server::access::two_agent_isolation();
-        let context = crate::server::auth::VerifiedRequestContext::verified_for_test("alice");
+        let isolation = medulla_server_api::access::two_agent_isolation();
+        let context = medulla_server_api::auth::VerifiedRequestContext::verified_for_test("alice");
         let authority = GraphReadAuthority::from_verified(&context, &isolation).unwrap();
         let filtered_projection = Arc::new(GraphCore::new());
 

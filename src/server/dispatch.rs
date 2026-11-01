@@ -31,7 +31,7 @@ use super::handlers;
 use super::state::ServerState;
 use crate::isolation::AccessLevel;
 use crate::protocol::{Method, Request, Response, ResultPayload};
-use crate::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 
 /// Stable, privacy-safe rejection for a graph lifecycle type that this binary
 /// does not support.  The wire decoder normally rejects unknown enum strings

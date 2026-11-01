@@ -164,7 +164,7 @@ async fn foreign_source_resolves_only_for_the_registering_principal() {
 #[tokio::test]
 async fn foreign_column_read_is_owner_scoped_and_mapping_gated() {
     #[cfg(feature = "federation-sql")]
-    let _allow = crate::test_support::FederationAllowGuard::acquire("127.0.0.1:5432").await;
+    let _allow = medulla_server_api::test_support::FederationAllowGuard::acquire("127.0.0.1:5432").await;
     #[cfg(not(feature = "federation-sql"))]
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     let state = multi_tenant_state().await;
@@ -439,7 +439,7 @@ async fn shared_source_needs_an_explicit_grant() {
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     let (_remote, local) = registered_by_owner_a(940).await;
     let qualified =
-        crate::server::api::query_txn::foreign_share::shared_name(OWNER_A, "remote_docs");
+        medulla_server_api::api::query_txn::foreign_share::shared_name(OWNER_A, "remote_docs");
     let text = || {
         uql(format!(
             "MATCH (:Doc) |> FOREIGN \"{qualified}\" |> LIMIT 10"
@@ -480,7 +480,7 @@ async fn shared_source_needs_an_explicit_grant() {
     assert_refused(&dispatch_as(&local, 941, OTHER_B, text()).await, "no grant");
 
     let mut granted = original.clone();
-    granted.push(crate::server::api::query_txn::foreign_share::share_role(
+    granted.push(medulla_server_api::api::query_txn::foreign_share::share_role(
         OWNER_A,
         "remote_docs",
     ));
@@ -515,7 +515,7 @@ async fn a_graph_cannot_take_a_reserved_foreign_source_resource_name() {
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     let local = multi_tenant_state().await;
     let reserved =
-        crate::server::api::query_txn::foreign_share::share_resource(OWNER_A, "remote_docs");
+        medulla_server_api::api::query_txn::foreign_share::share_resource(OWNER_A, "remote_docs");
     let create = Method::CreateGraph {
         graph_name: reserved.clone(),
         graph_type: GraphType::Global,

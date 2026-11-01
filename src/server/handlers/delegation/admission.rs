@@ -7,7 +7,7 @@ use crate::server::persistence::agent_library::AgentLibraryStateExt;
 /// handler never accepts an entry supplied by a caller as the source of truth.
 #[cfg(feature = "redb")]
 pub(crate) struct HandleContext<'a> {
-    pub(crate) state: &'a Arc<tokio::sync::RwLock<crate::server::state::ServerState>>,
+    pub(crate) state: &'a Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     pub(crate) req_id: u64,
     pub(crate) graph_name: &'a str,
     pub(crate) caller: Option<&'a str>,
@@ -149,7 +149,7 @@ pub(crate) async fn replay_before_library(
         return Ok(None);
     };
     let probe = lower_work_item(request, BTreeMap::new(), Vec::new());
-    let identity = crate::server::mutation_batch::work_item_batch_identity(
+    let identity = medulla_server_api::mutation_batch::work_item_batch_identity(
         ctx.graph_name,
         ctx.verified_context.tenant(),
         ctx.req_id,
@@ -234,7 +234,7 @@ pub(crate) async fn submit_native(
 ) -> Result<ResultPayload, AdmissionError> {
     #[cfg(feature = "raft")]
     if clustered && !medulla_kernel::kernel::dispatch_support::is_replicated_apply() {
-        let response = crate::server::api::reentry::propose_native_mutation(
+        let response = medulla_server_api::api::reentry::propose_native_mutation(
             ctx.state,
             ctx.graph_name,
             ctx.req_id,

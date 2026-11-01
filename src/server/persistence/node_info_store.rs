@@ -515,7 +515,7 @@ impl NodeInfoStore {
 /// the store (it is a `RedbBackend` field) but never copied it, so a restored engine
 /// answered `Method::ClusterMembers` from an EMPTY topology and every peer had to
 /// re-self-report before routing worked again.
-impl crate::server::api::persistence::BundledStoreSource for NodeInfoStore {
+impl medulla_server_api::api::persistence::BundledStoreSource for NodeInfoStore {
     fn file_name(&self) -> &'static str {
         "node_info.redb"
     }

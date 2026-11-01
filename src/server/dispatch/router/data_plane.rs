@@ -250,7 +250,7 @@ async fn dispatch_store_methods_arm_1(ctx: DispatchCtx<'_>, method: Method) -> R
                         Ok(authority) => authority,
                         Err(denied) => return Response::err(req_id, denied),
                     };
-                    match crate::server::kv::try_handle(state, req_id, &carrier, &req.graph, method)
+                    match medulla_server_api::kv::try_handle(state, req_id, &carrier, &req.graph, method)
                         .await
                     {
                         Ok(resp) => resp,
@@ -444,7 +444,7 @@ async fn dispatch_streaming_methods_arm_1(ctx: DispatchCtx<'_>, method: Method) 
                         Ok(authority) => authority,
                         Err(denied) => return Response::err(req_id, denied),
                     };
-                    match crate::server::cep::try_handle(state, req_id, &carrier, method).await {
+                    match medulla_server_api::cep::try_handle(state, req_id, &carrier, method).await {
                         Ok(resp) => resp,
                         // Unreachable: every variant matched above is a CEP method.
                         Err(_) => Response::err(req_id, "cep dispatch routing error"),

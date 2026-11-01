@@ -98,7 +98,7 @@ fn verify_mqtt_password(secret: &str, principal: &str, password: &[u8]) -> bool 
 
 /// Fail closed before binding the plaintext MQTT listener.
 pub fn validate_startup_policy(addr: &str, secret: &str) -> std::io::Result<()> {
-    crate::server::api::dispatch_support::validate_direct_wire_security(
+    medulla_server_api::api::dispatch_support::validate_direct_wire_security(
         addr,
         "mqtt-wire",
         !secret.is_empty(),
@@ -560,7 +560,7 @@ fn authenticate_connect(payload: &[u8], secret: &str) -> Option<String> {
     if !c.valid || c.remaining() != 0 || !verify_mqtt_password(secret, &principal, password) {
         return None;
     }
-    crate::server::api::dispatch_support::pseudonymous_broker_actor(secret, &principal).ok()
+    medulla_server_api::api::dispatch_support::pseudonymous_broker_actor(secret, &principal).ok()
 }
 
 fn parse_connect_header<'a>(payload: &'a [u8]) -> Option<(Cursor<'a>, u8, u8)> {
@@ -797,7 +797,7 @@ mod tests {
         let actor = authenticate_connect(&connect, "test").unwrap();
         assert_eq!(
             actor,
-            crate::server::api::dispatch_support::pseudonymous_broker_actor("test", principal)
+            medulla_server_api::api::dispatch_support::pseudonymous_broker_actor("test", principal)
                 .unwrap()
         );
         assert!(!actor.contains(principal));

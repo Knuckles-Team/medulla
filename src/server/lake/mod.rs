@@ -81,7 +81,7 @@ use medulla_lake::LakeTable;
 use medulla_tsdb::point::Point;
 use medulla_tsdb::store::SeriesStore;
 
-use crate::server::blob::store::ChunkStore;
+use medulla_server_api::blob::store::ChunkStore;
 
 use catalog_ops::{
     prepare_materialization, publish_artifacts, rollback_artifacts, stage_artifacts,
@@ -865,7 +865,9 @@ fn sanitize_table_name(series_id: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::server::blob::store::{BlobManifest, RedbChunkStore, SweepStats};
+    use medulla_server_api::blob::store::BlobManifest;
+    use medulla_server_api::blob::store::RedbChunkStore;
+    use medulla_server_api::blob::store::SweepStats;
 
     struct FailureState {
         fail_on_manifest: Option<usize>,

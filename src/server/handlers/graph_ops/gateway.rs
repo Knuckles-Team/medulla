@@ -68,9 +68,9 @@ pub(crate) async fn try_handle_gateway(
     >,
     read_authority: Option<&GraphReadAuthority>,
     persistence: Option<&Arc<dyn PersistenceBackend>>,
-    #[cfg(feature = "streaming")] cdc: Option<&Arc<crate::server::cdc::CdcHub>>,
+    #[cfg(feature = "streaming")] cdc: Option<&Arc<medulla_server_api::cdc::CdcHub>>,
     write_coalescer: Option<
-        &Arc<crate::server::routed_write_coalescer::RoutedWriteCoalescerRegistry>,
+        &Arc<medulla_server_api::routed_write_coalescer::RoutedWriteCoalescerRegistry>,
     >,
     authz_ctx: Option<&GatewayAuthzCtx>,
     // CONCEPT:MEDULLA-KG.mining.tsdb-typed-absent — the server's live tsdb store, needed ONLY by

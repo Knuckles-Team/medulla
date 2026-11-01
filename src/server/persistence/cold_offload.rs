@@ -29,7 +29,7 @@ use tokio::sync::RwLock;
 
 use crate::graph::GraphCore;
 use crate::registry::GraphHandle;
-use crate::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use crate::server::ServerState;
 
 /// Identity for one access/offload tracker entry.  The name is only a routing
@@ -336,7 +336,7 @@ async fn offload_one_cold_tenant(
     // Lifecycle work and ordinary writes share this lane.  This prevents
     // a delete/recreate or concurrent write from changing the durable
     // authority between the presence check and hibernation.
-    let _lifecycle_guard = crate::server::mutation_batch::lock_graph(name).await;
+    let _lifecycle_guard = medulla_server_api::mutation_batch::lock_graph(name).await;
     let persistence = {
         let s = state.read().await;
         if !s.registry.is_current_handle(handle) {
@@ -390,7 +390,7 @@ pub const DEFAULT_PRODUCTION_LAZY_OPEN_PAGE_SIZE: usize = 4096;
 
 /// The configured finite cap on resident hot-context graphs.
 pub fn max_resident_graphs() -> usize {
-    crate::server::state::positive_runtime_limit_from_env(
+    medulla_server_api::state::positive_runtime_limit_from_env(
         "MEDULLA_MAX_RESIDENT_GRAPHS",
         DEFAULT_PRODUCTION_MAX_RESIDENT_GRAPHS,
     )
@@ -452,7 +452,7 @@ pub fn admit_capacity(
 /// the graph's material is paged in by [`page_in_remaining`] as a background task;
 /// no incomplete whole-graph result is served in the interim.
 pub fn lazy_open_page_size() -> usize {
-    crate::server::state::positive_runtime_limit_from_env(
+    medulla_server_api::state::positive_runtime_limit_from_env(
         "MEDULLA_LAZY_OPEN_PAGE_SIZE",
         DEFAULT_PRODUCTION_LAZY_OPEN_PAGE_SIZE,
     )
@@ -490,7 +490,7 @@ pub async fn lazy_open(
     // The same striped per-graph lane used by Create/Delete/MutationBatch fences
     // lifecycle work without serializing unrelated graphs. Durable page reads run
     // outside the server-wide state lock.
-    let _lifecycle_guard = crate::server::mutation_batch::lock_graph(graph_name).await;
+    let _lifecycle_guard = medulla_server_api::mutation_batch::lock_graph(graph_name).await;
     let ticket = {
         let s = state.read().await;
         if s.registry.is_resident(graph_name) {
@@ -545,7 +545,7 @@ async fn page_in_remaining(
     page_size: usize,
 ) {
     loop {
-        let _lifecycle_guard = crate::server::mutation_batch::lock_graph(ticket.name()).await;
+        let _lifecycle_guard = medulla_server_api::mutation_batch::lock_graph(ticket.name()).await;
         if ticket.is_cancelled() {
             return;
         }
@@ -668,7 +668,7 @@ mod tracker_tests {
 mod unsafe_eviction_tests {
     use super::offload_graph_core;
     use crate::graph::GraphCore;
-    use crate::server::api::persistence::PersistenceBackend;
+    use medulla_server_api::api::persistence::PersistenceBackend;
     use std::sync::Arc;
 
     #[derive(Clone, Copy)]
@@ -754,15 +754,14 @@ mod admission_tests {
     use crate::acl::{AgentIdentity, AgentRole};
     use crate::isolation::IsolationLayer;
     use crate::protocol::{GraphType, Method, Request};
-    use crate::server::api::persistence::PersistenceBackend;
+    use medulla_server_api::api::persistence::PersistenceBackend;
     use crate::server::persistence::read_through::{
         BackendGraphMaterializer, BackendReadThroughFactory,
     };
     use crate::server::persistence::redb_backend::RedbBackend;
-    use crate::server::{
-        auth::{build_current_test_request, dispatch_test_on_heap as dispatch_on_heap},
-        ServerState,
-    };
+    use medulla_server_api::auth::build_current_test_request;
+    use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
+    use crate::server::ServerState;
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::sync::Arc;
     use tokio::sync::{RwLock, Semaphore};

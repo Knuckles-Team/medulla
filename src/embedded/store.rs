@@ -111,7 +111,7 @@ impl EmbeddedRedbStore {
     /// byte-identical to the server's group-commit writer. The embedded path never
     /// appends Raft log ops, so that vector is always empty.
     pub(super) fn commit(&self, graph_fname: &str, method: &Method) -> Result<(), String> {
-        if !crate::mutation_apply::is_durable_mutation(method) {
+        if !medulla_server_api::mutation_apply::is_durable_mutation(method) {
             return Ok(());
         }
         let mut ops = vec![(graph_fname.to_string(), method.clone())];

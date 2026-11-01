@@ -7,8 +7,10 @@ use medulla_types::contract::Digest256;
 use medulla_types::policy_evolution::{ArrayEncoding, PolicyCapture, PolicyEvolutionRecord};
 
 use super::*;
-use crate::server::blob::store::test_support::{chunked_as, reassemble};
-use crate::server::blob::{ChunkStore, RedbChunkStore};
+use medulla_server_api::blob::store::test_support::chunked_as;
+use medulla_server_api::blob::store::test_support::reassemble;
+use medulla_server_api::blob::ChunkStore;
+use medulla_server_api::blob::RedbChunkStore;
 
 const OWNER: &str = "carrier-owner:policy-test";
 

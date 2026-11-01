@@ -1,7 +1,7 @@
 //! Bounded fixture regression checks, not a proof that hashing is injective.
 
 use super::{submit::submit_job_mine_associate, CarrierAuthority, JobKind};
-use crate::server::auth::VerifiedRequestContext;
+use medulla_server_api::auth::VerifiedRequestContext;
 use std::collections::BTreeSet;
 
 fn fixture_authority() -> CarrierAuthority {

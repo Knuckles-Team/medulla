@@ -46,7 +46,7 @@ async fn tenant_catalog(
         .ok_or_else(|| "ACCESS_DENIED: current signed tenant authority is required".to_string())?;
     let persist_dir = sql_persist_dir(ctx.state).await?;
     let store =
-        crate::server::sql_tables::tenant_table_store(carrier.tenant_scope(), &persist_dir)?;
+        medulla_server_api::sql_tables::tenant_table_store(carrier.tenant_scope(), &persist_dir)?;
     install_edge_indexes(&store, ctx.graph_name, ctx.core)?;
     Ok((carrier.tenant_scope().to_string(), store))
 }

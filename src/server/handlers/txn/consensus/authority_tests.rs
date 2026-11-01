@@ -1,7 +1,7 @@
 //! Parent-only phases must authenticate the durable tenant even without a plan.
 
 use super::*;
-use crate::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use crate::server::persistence::backup::EnvVarGuard;
 use crate::server::persistence::redb_backend::RedbBackend;
 
@@ -15,15 +15,15 @@ fn carrier(tenant: &str) -> CarrierAuthority {
 
 fn phase_authority(
     carrier: &CarrierAuthority,
-) -> crate::server::api::persistence::RaftMutationContext {
-    crate::server::api::persistence::RaftMutationContext::from_verified_request(
+) -> medulla_server_api::api::persistence::RaftMutationContext {
+    medulla_server_api::api::persistence::RaftMutationContext::from_verified_request(
         "phase-authority".into(),
         1,
         None,
         carrier.tenant_scope(),
         carrier.actor_scope().to_string(),
         false,
-        crate::server::api::persistence::RaftMutationTiming {
+        medulla_server_api::api::persistence::RaftMutationTiming {
             placement_epoch: 0,
             fencing_token: None,
             created_at_ms: 1,
@@ -36,8 +36,8 @@ async fn check_parent_only_phases(
     state: &Arc<RwLock<ServerState>>,
     redb: &RedbBackend,
     parent_id: &str,
-    owner: &crate::server::api::persistence::RaftMutationContext,
-    foreign: &crate::server::api::persistence::RaftMutationContext,
+    owner: &medulla_server_api::api::persistence::RaftMutationContext,
+    foreign: &medulla_server_api::api::persistence::RaftMutationContext,
 ) {
     assert!(redb.xshard_prepare_get(parent_id, 7).unwrap().is_none());
     let denied = apply_consensus_participant_abort(state, foreign, parent_id, 7)
@@ -141,7 +141,7 @@ async fn parent_only_phases_reject_foreign_tenant_with_same_principal() {
                 graph: "graph".into(),
                 tenant_scope: owner.tenant_scope().into(),
                 begin_version: 0,
-                isolation: crate::server::txn::IsolationLevel::Snapshot,
+                isolation: medulla_server_api::txn::IsolationLevel::Snapshot,
                 predicate: None,
                 agent: owner.owner_scope().into(),
                 now_ms: 1,
@@ -202,7 +202,7 @@ fn malformed_operation_ids_fail_even_with_a_matching_tenant_hash() {
         "transaction-receipt:abcd",
         "transaction-receipt-tenant:",
     ] {
-        let binding = crate::server::mutation_batch::opaque_coordinator_key(
+        let binding = medulla_server_api::mutation_batch::opaque_coordinator_key(
             "transaction-receipt-scope",
             "tenant-a",
             malformed,
@@ -234,7 +234,7 @@ async fn delayed_phases(
     state: &Arc<RwLock<ServerState>>,
     parent: &str,
     txn: &GraphTxnState,
-    authority: &crate::server::api::persistence::RaftMutationContext,
+    authority: &medulla_server_api::api::persistence::RaftMutationContext,
 ) -> [Result<bool, String>; 2] {
     let (participant_id, bytes) = participant_plan(parent, txn);
     [
@@ -271,14 +271,14 @@ async fn check_delayed_abort_phases(
     backend: &RedbBackend,
     parent: &str,
     txn: &GraphTxnState,
-    authority: &crate::server::api::persistence::RaftMutationContext,
+    authority: &medulla_server_api::api::persistence::RaftMutationContext,
 ) {
     for result in delayed_phases(state, parent, txn, authority).await {
         assert!(result.unwrap_err().contains("terminal parent outcome"));
     }
     let (id, _) = participant_plan(parent, txn);
     assert!(backend.xshard_prepare_get(parent, id).unwrap().is_none());
-    assert!(!crate::server::txn::consensus_graph_is_prepared(&txn.graph));
+    assert!(!medulla_server_api::txn::consensus_graph_is_prepared(&txn.graph));
 }
 
 async fn store_committed_child(
@@ -291,11 +291,11 @@ async fn store_committed_child(
     let child_id = consensus_participant_child_id(parent, id, &txn.graph);
     let core = Arc::new(crate::graph::GraphCore::new());
     let persistence: Arc<dyn PersistenceBackend> = backend.clone();
-    let result = crate::server::mutation_batch::commit_internal_graph_methods_with_nonce(
-        crate::server::mutation_batch::InternalGraphCommitRequest::new(
+    let result = medulla_server_api::mutation_batch::commit_internal_graph_methods_with_nonce(
+        medulla_server_api::mutation_batch::InternalGraphCommitRequest::new(
             Some(&persistence),
             &core,
-            crate::server::mutation_batch::CommitOrigin {
+            medulla_server_api::mutation_batch::CommitOrigin {
                 request_id: 3,
                 principal: Some(actor),
             },
@@ -309,11 +309,11 @@ async fn store_committed_child(
     .await
     .unwrap();
     assert_eq!(result.record.committing_tenant().unwrap(), txn.tenant_scope);
-    let foreign = crate::server::mutation_batch::commit_internal_graph_methods_with_nonce(
-        crate::server::mutation_batch::InternalGraphCommitRequest::new(
+    let foreign = medulla_server_api::mutation_batch::commit_internal_graph_methods_with_nonce(
+        medulla_server_api::mutation_batch::InternalGraphCommitRequest::new(
             Some(&persistence),
             &core,
-            crate::server::mutation_batch::CommitOrigin {
+            medulla_server_api::mutation_batch::CommitOrigin {
                 request_id: 4,
                 principal: Some(actor),
             },
@@ -341,7 +341,7 @@ async fn store_committed_child(
     .is_err());
     foreign_authority = authority.clone();
     foreign_authority.principal_fingerprint =
-        crate::server::mutation_batch::principal_fingerprint("foreign-principal").unwrap();
+        medulla_server_api::mutation_batch::principal_fingerprint("foreign-principal").unwrap();
     assert!(validate_committed_participant_record(
         &result.record,
         &child_id,
@@ -440,7 +440,7 @@ async fn check_delegated_recovery(state: &Arc<RwLock<ServerState>>, backend: &Ar
             graph: "delegated-graph".into(),
             tenant_scope: owner.tenant_scope().into(),
             begin_version: core.version(),
-            isolation: crate::server::txn::IsolationLevel::Snapshot,
+            isolation: medulla_server_api::txn::IsolationLevel::Snapshot,
             predicate: None,
             agent: owner.owner_scope().into(),
             now_ms: 1,
@@ -451,7 +451,7 @@ async fn check_delegated_recovery(state: &Arc<RwLock<ServerState>>, backend: &Ar
         properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({"type":"Record"})).unwrap(),
     });
     let parent =
-        crate::server::api::admin::saga::scope_admin_saga_authority(owner.clone(), async {
+        medulla_server_api::api::admin::saga::scope_admin_saga_authority(owner.clone(), async {
             let (receipt, _) = begin_txn_receipt(
                 Some(backend.clone()),
                 10,
@@ -477,7 +477,7 @@ async fn check_delegated_recovery(state: &Arc<RwLock<ServerState>>, backend: &Ar
             parent
         })
         .await;
-    let child = crate::server::mutation_batch::opaque_coordinator_key(
+    let child = medulla_server_api::mutation_batch::opaque_coordinator_key(
         "crossmodal",
         "delegated-graph",
         &parent,
@@ -490,9 +490,9 @@ async fn check_delegated_recovery(state: &Arc<RwLock<ServerState>>, backend: &Ar
     assert_eq!(record.committing_actor().unwrap(), owner.actor_scope());
     assert_ne!(
         record.committing_actor().unwrap(),
-        crate::server::mutation_batch::principal_fingerprint("same-principal").unwrap()
+        medulla_server_api::mutation_batch::principal_fingerprint("same-principal").unwrap()
     );
-    let denied = crate::server::api::admin::saga::scope_admin_saga_authority(foreign, async {
+    let denied = medulla_server_api::api::admin::saga::scope_admin_saga_authority(foreign, async {
         reconcile_committed_txn(
             state,
             12,
@@ -509,7 +509,7 @@ async fn check_delegated_recovery(state: &Arc<RwLock<ServerState>>, backend: &Ar
     assert!(denied.contains("principal"), "{denied}");
     let version = core.version();
     let replay =
-        crate::server::api::admin::saga::scope_admin_saga_authority(owner.clone(), async {
+        medulla_server_api::api::admin::saga::scope_admin_saga_authority(owner.clone(), async {
             reconcile_committed_txn(
                 state,
                 13,

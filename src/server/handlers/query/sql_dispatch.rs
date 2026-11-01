@@ -8,7 +8,7 @@ struct SqlDispatchCtx<'a> {
     core: &'a Arc<GraphCore>,
     store: &'a medulla_query::TableStore,
     read_core: Arc<GraphCore>,
-    authorized_read_store: Option<crate::server::sql_catalog_acl::AuthorizedReadStore>,
+    authorized_read_store: Option<medulla_server_api::sql_catalog_acl::AuthorizedReadStore>,
 }
 
 #[cfg(feature = "query")]
@@ -29,14 +29,14 @@ async fn authorized_sql_read_store(
     req_id: u64,
     scope: SqlWriteScope<'_>,
     kind: &medulla_query::StatementKind,
-) -> Result<Option<crate::server::sql_catalog_acl::AuthorizedReadStore>, Response> {
+) -> Result<Option<medulla_server_api::sql_catalog_acl::AuthorizedReadStore>, Response> {
     if !sql_needs_source_read(kind) {
         return Ok(None);
     }
     let authority = scope.authority.clone();
     let persist_dir = scope.persist_dir.to_path_buf();
     let authorized = match compute_off_lock(req_id, move || {
-        crate::server::sql_catalog_acl::authorized_read_store(&authority, &persist_dir)
+        medulla_server_api::sql_catalog_acl::authorized_read_store(&authority, &persist_dir)
     })
     .await
     {
@@ -108,7 +108,7 @@ async fn exec_sql_graph_statement(
     } = ctx;
     let read_store = authorized_read_store.as_ref().map_or(
         store,
-        crate::server::sql_catalog_acl::AuthorizedReadStore::store,
+        medulla_server_api::sql_catalog_acl::AuthorizedReadStore::store,
     );
     match kind {
         K::InsertNodes(ins) => exec_sql_write_insert_nodes(req_id, core, &read_core, ins).await,
@@ -257,7 +257,7 @@ async fn exec_sql_catalog_insert(
     } = ctx;
     let read_store = authorized_read_store.as_ref().map_or(
         store,
-        crate::server::sql_catalog_acl::AuthorizedReadStore::store,
+        medulla_server_api::sql_catalog_acl::AuthorizedReadStore::store,
     );
     match kind {
         K::InsertTable(ins) => {
@@ -394,7 +394,7 @@ async fn exec_sql_catalog_drop(ctx: SqlDispatchCtx<'_>, kind: medulla_query::Sta
             .await
         }
         K::DropAnnIndex { name, if_exists } => {
-            let visible = crate::server::sql_catalog_acl::alterable_ann_index_table(
+            let visible = medulla_server_api::sql_catalog_acl::alterable_ann_index_table(
                 scope.authority,
                 scope.persist_dir,
                 &name,
@@ -586,7 +586,7 @@ async fn exec_classified_sql_catalog_terminal(
     } = ctx;
     let read_store = authorized_read_store.as_ref().map_or(
         store,
-        crate::server::sql_catalog_acl::AuthorizedReadStore::store,
+        medulla_server_api::sql_catalog_acl::AuthorizedReadStore::store,
     );
     match classify_sql_catalog_terminal(&kind) {
         SqlCatalogTerminalClass::TransactionControl => Response::err(

@@ -102,7 +102,7 @@ fn decode_txn_result(bytes: &[u8]) -> Result<ResultPayload, String> {
     // durable encoding; reading them as the untagged wire enum would turn
     // `Bool(true)` into `Json({"kind":"Bool","value":true})`.
     #[cfg(feature = "redb")]
-    if let Some(result) = crate::server::api::admin::saga::decode_durable_saga_result(
+    if let Some(result) = medulla_server_api::api::admin::saga::decode_durable_saga_result(
         bytes,
         medulla_types::msgpack::MsgpackLimits::new(
             MAX_TXN_RESULT_BYTES,
@@ -261,7 +261,7 @@ mod materialize_belief_tests {
 mod keyed_recovery_window_tests {
     use super::*;
     use crate::protocol::GraphType;
-    use crate::server::api::persistence::PersistenceBackend;
+    use medulla_server_api::api::persistence::PersistenceBackend;
     use crate::server::persistence::backup::EnvVarGuard;
     use crate::server::persistence::redb_backend::RedbBackend;
     use crate::server::ServerState;
@@ -319,7 +319,7 @@ mod keyed_recovery_window_tests {
                 graph: graph.to_string(),
                 tenant_scope: TENANT.to_string(),
                 begin_version: core.version(),
-                isolation: crate::server::txn::IsolationLevel::Snapshot,
+                isolation: medulla_server_api::txn::IsolationLevel::Snapshot,
                 predicate: None,
                 agent: CALLER.to_string(),
                 now_ms: now_ms(),
@@ -369,12 +369,12 @@ mod keyed_recovery_window_tests {
 
     fn lifecycle_authority(key: &str, nonce: [u8; 32]) -> CarrierAuthority {
         let base =
-            crate::server::authority_context::VerifiedRequestContext::verified_for_test_with_scopes(
+            medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_with_scopes(
                 CALLER,
                 TENANT,
                 &["*"],
             );
-        let context = crate::server::authority_context::VerifiedRequestContext::from_verified_claims_with_nonce(
+        let context = medulla_server_api::authority_context::VerifiedRequestContext::from_verified_claims_with_nonce(
             base.claims().clone(),
             key.to_string(),
             Some(Nonce::from_bytes(nonce)),

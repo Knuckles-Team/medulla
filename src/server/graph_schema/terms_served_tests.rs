@@ -10,8 +10,9 @@ use tokio::sync::RwLock;
 
 use crate::graph::{GraphSchemaSource, GraphSchemaSources, SchemaSourceOrigin};
 use crate::protocol::{GraphType, Method, Response, ResultPayload};
-use crate::server::auth::{build_current_test_request, dispatch_test_on_heap};
-use crate::server::state::ServerState;
+use medulla_server_api::auth::build_current_test_request;
+use medulla_server_api::auth::dispatch_test_on_heap;
+use medulla_server_api::state::ServerState;
 use medulla_types::graph_schema::{GraphSchemaClassesView, GraphSchemaSourcesView};
 
 const SECRET: &str = "graph-schema-classes-served-secret";

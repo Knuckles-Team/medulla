@@ -123,7 +123,7 @@ const SPARQL_COMPENSATION_EVENT: &str = "sparql_http_compensation_v1";
 #[serde(deny_unknown_fields)]
 struct SparqlRecoveryPlan {
     schema_version: u8,
-    graphs: Vec<crate::server::sparql_http::PlannedGraphUpdate>,
+    graphs: Vec<medulla_server_api::sparql_http::PlannedGraphUpdate>,
     /// The planner's operation counts, sealed with the plan so a resumed saga answers
     /// the same `ApplyMutation` report as the attempt that planned it. A plan sealed
     /// before this field existed decodes with zero counts.
@@ -206,10 +206,10 @@ async fn replay_sparql_update(
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 async fn resume_sparql_update_plan(
     coord: &SparqlUpdateCoordination<'_>,
-    saga: crate::server::api::admin::saga::AdminSaga,
+    saga: medulla_server_api::api::admin::saga::AdminSaga,
 ) -> Result<
     (
-        crate::server::api::admin::saga::AdminSaga,
+        medulla_server_api::api::admin::saga::AdminSaga,
         SparqlRecoveryPlan,
     ),
     Response,
@@ -252,11 +252,11 @@ async fn resolve_sparql_update_graphs(
     query: &str,
     default_graph: &str,
 ) -> Result<Vec<String>, Response> {
-    let mut graphs = match crate::server::sparql_http::update_graphs(query, default_graph) {
+    let mut graphs = match medulla_server_api::sparql_http::update_graphs(query, default_graph) {
         Ok(graphs) => graphs,
         Err(error) => return Err(Response::err(coord.req_id, error)),
     };
-    if crate::server::sparql_http::update_uses_variable_graph(query) {
+    if medulla_server_api::sparql_http::update_uses_variable_graph(query) {
         graphs.extend(
             coord
                 .state
@@ -312,17 +312,17 @@ fn begin_sealed_sparql_saga(
     plan: &SparqlRecoveryPlan,
     batch_id: &str,
     event_type: &str,
-) -> Result<crate::server::api::admin::saga::AdminSaga, Response> {
+) -> Result<medulla_server_api::api::admin::saga::AdminSaga, Response> {
     let (digest, encrypted) = match seal_private_coordinator_plan(coord.redb, plan) {
         Ok(value) => value,
         Err(error) => return Err(Response::err(coord.req_id, error)),
     };
-    crate::server::api::admin::saga::begin_named_admin_saga_with_private_payload_and_nonce(
+    medulla_server_api::api::admin::saga::begin_named_admin_saga_with_private_payload_and_nonce(
         coord.redb,
         coord.req_id,
         Some(coord.verified_actor),
         coord.verified_context.attempt_nonce(),
-        crate::server::api::admin::saga::AdminSagaPayload {
+        medulla_server_api::api::admin::saga::AdminSagaPayload {
             domain: crate::mutation_batch::DurabilityDomain::MultiGraph,
             batch_id,
             event_type,
@@ -342,7 +342,7 @@ async fn build_sparql_update_plan(
     default_graph: &str,
 ) -> Result<
     (
-        crate::server::api::admin::saga::AdminSaga,
+        medulla_server_api::api::admin::saga::AdminSaga,
         SparqlRecoveryPlan,
     ),
     Response,
@@ -356,7 +356,7 @@ async fn build_sparql_update_plan(
         ));
     }
     let (planned, counts) =
-        match crate::server::sparql_http::plan_update(coord.state, query, default_graph, &graphs)
+        match medulla_server_api::sparql_http::plan_update(coord.state, query, default_graph, &graphs)
             .await
         {
             Ok(planned) => planned,
@@ -380,12 +380,12 @@ async fn stage_sparql_update(
     default_graph: &str,
 ) -> Result<
     (
-        crate::server::api::admin::saga::AdminSaga,
+        medulla_server_api::api::admin::saga::AdminSaga,
         SparqlRecoveryPlan,
     ),
     Response,
 > {
-    let resumed = match crate::server::api::admin::saga::resume_named_admin_saga(
+    let resumed = match medulla_server_api::api::admin::saga::resume_named_admin_saga(
         coord.redb,
         coord.parent_id,
         Some(coord.verified_actor),
@@ -482,7 +482,7 @@ fn sparql_rollback_methods(
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 async fn finish_sparql_commit(
     coord: &SparqlUpdateCoordination<'_>,
-    saga: crate::server::api::admin::saga::AdminSaga,
+    saga: medulla_server_api::api::admin::saga::AdminSaga,
     plan: &SparqlRecoveryPlan,
 ) -> Response {
     let committed = match finish_sparql_parent_saga(coord.redb, saga, plan) {
@@ -499,7 +499,7 @@ async fn finish_sparql_commit(
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 fn finish_sparql_parent_saga(
     redb: &crate::server::persistence::redb_backend::RedbBackend,
-    saga: crate::server::api::admin::saga::AdminSaga,
+    saga: medulla_server_api::api::admin::saga::AdminSaga,
     plan: &SparqlRecoveryPlan,
 ) -> Result<ResultPayload, String> {
     let report = medulla_types::result_contract::transactions::SparqlUpdateReport {
@@ -514,7 +514,7 @@ fn finish_sparql_parent_saga(
             .count() as u64,
     };
     let result = ResultPayload::of::<medulla_types::result_contract::graph::ApplyMutation>(report)?;
-    crate::server::api::admin::saga::finish_admin_saga(redb, saga.batch, saga.created_at_ms, result)
+    medulla_server_api::api::admin::saga::finish_admin_saga(redb, saga.batch, saga.created_at_ms, result)
 }
 
 /// What the roll-forward attempt decided.
@@ -526,8 +526,8 @@ enum SparqlForwardOutcome {
     /// and the durable compensation marker that pins the direction.
     Compensate(
         Box<(
-            crate::server::api::admin::saga::AdminSaga,
-            crate::server::api::admin::saga::AdminSaga,
+            medulla_server_api::api::admin::saga::AdminSaga,
+            medulla_server_api::api::admin::saga::AdminSaga,
         )>,
     ),
 }
@@ -538,7 +538,7 @@ enum SparqlForwardOutcome {
 async fn try_sparql_forward_commit(
     coord: &SparqlUpdateCoordination<'_>,
     plan: &SparqlRecoveryPlan,
-    saga: crate::server::api::admin::saga::AdminSaga,
+    saga: medulla_server_api::api::admin::saga::AdminSaga,
 ) -> SparqlForwardOutcome {
     if let Err(response) = create_missing_sparql_graphs(coord, plan).await {
         return SparqlForwardOutcome::Settled(Box::new(response));
@@ -652,11 +652,11 @@ async fn delete_created_sparql_graphs(
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 async fn finish_sparql_compensation(
     coord: &SparqlUpdateCoordination<'_>,
-    saga: crate::server::api::admin::saga::AdminSaga,
-    compensation_saga: Option<crate::server::api::admin::saga::AdminSaga>,
+    saga: medulla_server_api::api::admin::saga::AdminSaga,
+    compensation_saga: Option<medulla_server_api::api::admin::saga::AdminSaga>,
 ) -> Response {
     if let Some(marker) = compensation_saga {
-        if let Err(error) = crate::server::api::admin::saga::finish_admin_saga(
+        if let Err(error) = medulla_server_api::api::admin::saga::finish_admin_saga(
             coord.redb,
             marker.batch,
             marker.created_at_ms,
@@ -670,7 +670,7 @@ async fn finish_sparql_compensation(
         "updated_graphs": 0,
         "created_graphs": 0,
     }));
-    if let Err(error) = crate::server::api::admin::saga::finish_admin_saga(
+    if let Err(error) = medulla_server_api::api::admin::saga::finish_admin_saga(
         coord.redb,
         saga.batch,
         saga.created_at_ms,
@@ -700,7 +700,7 @@ async fn run_coordinated_sparql_http_update(
         Ok(value) => value,
         Err(response) => return response,
     };
-    let existing_marker = match crate::server::api::admin::saga::resume_named_admin_saga(
+    let existing_marker = match medulla_server_api::api::admin::saga::resume_named_admin_saga(
         coord.redb,
         coord.compensation_id,
         Some(coord.verified_actor),
@@ -747,7 +747,7 @@ pub(super) async fn coordinated_sparql_http_update(
         return Response::err(req_id, "ACCESS_DENIED: SPARQL update has no verified actor");
     }
     let parent_method = Method::ApplyMutation {
-        event_type: crate::server::sparql_http::SPARQL_HTTP_UPDATE_EVENT.to_string(),
+        event_type: medulla_server_api::sparql_http::SPARQL_HTTP_UPDATE_EVENT.to_string(),
         query: query.clone(),
     };
     let backend = timed_read(state).await.persistence.clone();
@@ -757,13 +757,13 @@ pub(super) async fn coordinated_sparql_http_update(
     let Some(redb) = backend.as_redb() else {
         return Response::err(req_id, "SPARQL HTTP update requires durable redb");
     };
-    let parent_id = crate::server::mutation_batch::opaque_request_key(
+    let parent_id = medulla_server_api::mutation_batch::opaque_request_key(
         "sparql-http-parent",
         default_graph,
         req_id,
         &parent_method,
     );
-    let compensation_id = crate::server::mutation_batch::opaque_coordinator_key(
+    let compensation_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
         "sparql-http-compensation",
         default_graph,
         &parent_id,
@@ -900,8 +900,8 @@ mod coordinator_restart_tests {
     }
 
     fn parent_batch(id: &str, digest: &str, event_type: &str) -> medulla_types::MutationBatch {
-        crate::server::mutation_batch::compile_opaque_digest(
-            crate::server::mutation_batch::CompileBatch {
+        medulla_server_api::mutation_batch::compile_opaque_digest(
+            medulla_server_api::mutation_batch::CompileBatch {
                 batch_id: id,
                 request_id: 41,
                 attempt_nonce: None,
@@ -931,7 +931,7 @@ mod coordinator_restart_tests {
         let cipher = medulla_kernel::crypto::ValueCipher::from_key_material(b"restart-test-key");
         let plan = SparqlRecoveryPlan {
             schema_version: 1,
-            graphs: vec![crate::server::sparql_http::PlannedGraphUpdate {
+            graphs: vec![medulla_server_api::sparql_http::PlannedGraphUpdate {
                 graph: "graph-opaque".to_string(),
                 graph_type: crate::protocol::GraphType::Global,
                 existed_before: true,

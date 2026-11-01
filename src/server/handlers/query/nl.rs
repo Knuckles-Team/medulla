@@ -218,7 +218,7 @@ pub(crate) async fn handle_nl_query_plan_only(
         Err(response) => return Ok(response),
     };
     let plan_digest =
-        match crate::server::api::query_txn::query_support::canonical_plan_digest(&plan) {
+        match medulla_server_api::api::query_txn::query_support::canonical_plan_digest(&plan) {
             Ok(digest) => digest,
             Err(error) => return Ok(Response::err(req_id, error)),
         };

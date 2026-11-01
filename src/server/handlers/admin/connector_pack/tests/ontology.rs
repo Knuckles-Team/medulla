@@ -89,7 +89,9 @@ fn subclass_chain(length: usize) -> String {
 // spec: MEDULLA-TYPED-PACKS-R084
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cancelled_import_does_not_block_the_next_bind() {
-    use crate::server::request_scope::{scope, RequestCancel, CANCELLED};
+    use medulla_server_api::request_scope::scope;
+    use medulla_server_api::request_scope::RequestCancel;
+    use medulla_server_api::request_scope::CANCELLED;
     use std::time::Duration;
 
     let connector = "eh536-abandoned";

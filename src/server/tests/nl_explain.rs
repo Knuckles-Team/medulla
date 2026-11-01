@@ -137,7 +137,7 @@ async fn nl_query_plan_returns_pins_without_executing_rows() {
     let binding = medulla_plan::uql::serve::binding_plan(&statement);
     assert_eq!(
         body.plan_digest,
-        crate::server::api::query_txn::query_support::canonical_plan_digest(&binding)
+        medulla_server_api::api::query_txn::query_support::canonical_plan_digest(&binding)
             .expect("plan digest")
     );
     assert_eq!(

@@ -89,7 +89,9 @@ use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 
-use crate::server::http1::{self, HttpMessage, RequestLimits};
+use medulla_server_api::http1;
+use medulla_server_api::http1::HttpMessage;
+use medulla_server_api::http1::RequestLimits;
 use crate::server::ServerState;
 use medulla_kvcache::{
     BranchId, DataVersion, ReleaseOutcome, SharedKvBackend, SharedKvIndex, SnapshotId,
@@ -399,7 +401,7 @@ impl KvCacheStore {
 // SAME way instead of growing a third bespoke bearer/JWT implementation. The
 // JWT verifier itself still lives in `crate::server::oidc` (feature `oidc`),
 // shared with the primary `eg2.` protocol's identity binding.
-use crate::server::auth::BearerCredential as KvAuth;
+use medulla_server_api::auth::BearerCredential as KvAuth;
 
 /// Require a valid `Authorization: Bearer <token>` — a static-secret match or a
 /// signature/issuer/audience/expiry-verified Keycloak JWT
@@ -503,12 +505,12 @@ fn handle(store: &KvCacheStore, auth: &KvAuth, req: &HttpMessage) -> KvResponse 
     // leg, ...), then gate through the SAME shared check (real now: denies
     // iff no carrier was minted; here it can only be minted once `authorized`
     // passed).
-    let carrier = crate::server::auth::mint_fixed_service_carrier(
+    let carrier = medulla_server_api::auth::mint_fixed_service_carrier(
         credential_verified,
         "kvcache-client",
         &["kg:read", "kg:write"],
     );
-    if crate::server::access::unauthenticated_carrier_denied(carrier.as_ref()) {
+    if medulla_server_api::access::unauthenticated_carrier_denied(carrier.as_ref()) {
         return KvResponse::error(
             "403 Forbidden",
             "AccessDenied",
@@ -779,7 +781,7 @@ async fn resolve_store(state: &Arc<RwLock<ServerState>>) -> std::io::Result<KvCa
 fn resolve_auth() -> std::io::Result<KvAuth> {
     // JWT first — paired with the platform's configured OIDC provider. An issuer
     // selects JWT mode and therefore makes its audience and JWKS URL mandatory.
-    match crate::server::oidc::JwtValidator::from_env() {
+    match medulla_server_api::oidc::JwtValidator::from_env() {
         Ok(Some(validator)) => return Ok(KvAuth::Jwt(std::sync::Arc::new(validator))),
         Ok(None) => {}
         Err(message) => {
@@ -807,7 +809,7 @@ async fn serve_with_store_inner(
     auth: KvAuth,
 ) -> std::io::Result<()> {
     let listener = TcpListener::bind(addr).await?;
-    crate::server::api::dispatch_support::require_loopback_listener(&listener)?;
+    medulla_server_api::api::dispatch_support::require_loopback_listener(&listener)?;
     tracing::info!(
         "kvcache-server: serving authenticated shared KV-cache HTTP surface on {}",
         addr

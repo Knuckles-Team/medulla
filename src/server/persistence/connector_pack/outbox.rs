@@ -11,9 +11,12 @@
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
 use medulla_types::mutation_batch::MutationOutboxLease;
 
-use crate::server::outbox_operator::{
-    operate, read_view, OutboxView, OutboxViewAnswer, OutboxWrite, OutboxWriteReply,
-};
+use medulla_server_api::outbox_operator::operate;
+use medulla_server_api::outbox_operator::read_view;
+use medulla_server_api::outbox_operator::OutboxView;
+use medulla_server_api::outbox_operator::OutboxViewAnswer;
+use medulla_server_api::outbox_operator::OutboxWrite;
+use medulla_server_api::outbox_operator::OutboxWriteReply;
 use crate::server::persistence::agent_library::AgentLibraryStore;
 
 impl AgentLibraryStore {

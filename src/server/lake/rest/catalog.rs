@@ -17,9 +17,9 @@ use super::{
     parse_pagination, percent_decode, schema_from_create_request, scope_authorized,
     table_ident_namespace, visibility_for,
 };
-use crate::server::access::CarrierAuthority;
-use crate::server::blob::store::ChunkStore;
-use crate::server::http1::HttpMessage;
+use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::blob::store::ChunkStore;
+use medulla_server_api::http1::HttpMessage;
 
 /// Who the caller is for every routed operation: what it may see, and the
 /// owner label its audit events carry.

@@ -893,7 +893,7 @@ mod tests {
     use super::*;
     use crate::protocol::{GraphType, Method};
     use medulla_store::redb_store::shard::SHARD_PHYSICAL_STORE;
-    use crate::server::api::persistence::PersistenceBackend;
+    use medulla_server_api::api::persistence::PersistenceBackend;
     use crate::server::persistence::redb_backend::seed_raw_row;
     use crate::server::persistence::redb_backend::RedbBackend;
     #[cfg(feature = "security")]
@@ -1155,13 +1155,13 @@ mod tests {
         )
         .expect("persist identity");
 
-        let kv = crate::server::kv::KvStore::open(Some(&src_s)).expect("open kv");
+        let kv = medulla_server_api::kv::KvStore::open(Some(&src_s)).expect("open kv");
         kv.put("probe", "key", b"value".to_vec()).expect("kv put");
 
         let backend = RedbBackend::open_with_shards(src_s.clone(), 256, 1).expect("reopen");
         // Exactly the adapter the production admin handler hands in.
         let rbac_source = super::super::durable_stores::RbacBundledStore(std::sync::Arc::new(rbac));
-        let extra: Vec<&dyn crate::server::api::persistence::BundledStoreSource> =
+        let extra: Vec<&dyn medulla_server_api::api::persistence::BundledStoreSource> =
             vec![&rbac_source, &kv];
         let report = backend
             .backup(&bundle, "test-engine", 7, "sibling", &extra)
@@ -1227,7 +1227,7 @@ mod tests {
         drop(restored_rbac);
         // The restored KV surface answers the write taken before the backup.
         let restored_s = restored.to_string_lossy().to_string();
-        let restored_kv = crate::server::kv::KvStore::open(Some(&restored_s)).expect("open kv");
+        let restored_kv = medulla_server_api::kv::KvStore::open(Some(&restored_s)).expect("open kv");
         assert_eq!(
             restored_kv.get("probe", "key").expect("kv get").as_deref(),
             Some(&b"value"[..]),
@@ -1243,7 +1243,7 @@ mod tests {
         #[cfg(feature = "security")]
         let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
         struct Bogus;
-        impl crate::server::api::persistence::BundledStoreSource for Bogus {
+        impl medulla_server_api::api::persistence::BundledStoreSource for Bogus {
             fn file_name(&self) -> &'static str {
                 "not-in-the-registry.redb"
             }
@@ -1260,7 +1260,7 @@ mod tests {
         seed(&src_s, 1, &["alpha"]).await;
         let backend = RedbBackend::open_with_shards(src_s.clone(), 256, 1).expect("reopen");
         let bogus = Bogus;
-        let extra: Vec<&dyn crate::server::api::persistence::BundledStoreSource> = vec![&bogus];
+        let extra: Vec<&dyn medulla_server_api::api::persistence::BundledStoreSource> = vec![&bogus];
         let error = backend
             .backup(&root.join("bundle"), "test-engine", 7, "", &extra)
             .expect_err("unregistered store must be refused");

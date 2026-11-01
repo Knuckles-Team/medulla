@@ -80,7 +80,7 @@ impl MedullaStore {
                 coordinator_id,
                 commit,
             } => {
-                let outcome = crate::server::api::reentry::apply_replicated_transaction_decision(
+                let outcome = medulla_server_api::api::reentry::apply_replicated_transaction_decision(
                     &self.ctx.state,
                     req.committed_at_ms,
                     &req.mutation,
@@ -94,7 +94,7 @@ impl MedullaStore {
                 coordinator_id,
                 commit,
             } => {
-                let outcome = crate::server::api::reentry::apply_replicated_transaction_finalize(
+                let outcome = medulla_server_api::api::reentry::apply_replicated_transaction_finalize(
                     &self.ctx.state,
                     req.committed_at_ms,
                     &req.mutation,
@@ -107,7 +107,7 @@ impl MedullaStore {
             #[cfg(feature = "jobs")]
             NativeMutationCommand::JobPublicationCommit { coordinator_id, .. } => {
                 let plan = command.open_job_publication_payload(server_secret)?;
-                let outcome = crate::server::api::reentry::apply_replicated_job_publication_commit(
+                let outcome = medulla_server_api::api::reentry::apply_replicated_job_publication_commit(
                     &self.ctx.state,
                     req.mutation.request_id,
                     req.committed_at_ms,
@@ -123,7 +123,7 @@ impl MedullaStore {
             NativeMutationCommand::JobPublicationFinalize { coordinator_id, .. } => {
                 let receipt = command.open_job_publication_payload(server_secret)?;
                 let outcome =
-                    crate::server::api::reentry::apply_replicated_job_publication_finalize(
+                    medulla_server_api::api::reentry::apply_replicated_job_publication_finalize(
                         &self.ctx.state,
                         req.committed_at_ms,
                         &req.mutation,
@@ -141,20 +141,20 @@ impl MedullaStore {
         &self,
         req: &RaftRequest,
         command: &NativeMutationCommand,
-        phase: crate::server::api::reentry::TransactionParticipantPhase,
+        phase: medulla_server_api::api::reentry::TransactionParticipantPhase,
         coordinator_id: &str,
         participant_id: u64,
         server_secret: &str,
     ) -> Result<RaftResponse, String> {
         let plan = command.open_transaction_plan(server_secret)?;
-        let outcome = crate::server::api::reentry::apply_replicated_transaction_participant(
+        let outcome = medulla_server_api::api::reentry::apply_replicated_transaction_participant(
             &self.ctx.state,
             req.mutation.request_id,
             req.committed_at_ms,
             &req.mutation,
             self.group_id,
             phase,
-            crate::server::api::reentry::ReplicatedParticipantRef {
+            medulla_server_api::api::reentry::ReplicatedParticipantRef {
                 coordinator_id,
                 participant_id,
                 plan: plan.as_deref(),
@@ -173,7 +173,7 @@ impl MedullaStore {
             .command
             .open_enrichment_top_up(&req.graph_name, req.committed_at_ms, server_secret)?
             .ok_or("replicated enrichment top-up payload is absent")?;
-        let expected_tenant_scope = crate::server::mutation_batch::opaque_coordinator_key(
+        let expected_tenant_scope = medulla_server_api::mutation_batch::opaque_coordinator_key(
             "carrier-tenant",
             "verified",
             &transition.revision.tenant_id,
@@ -181,7 +181,7 @@ impl MedullaStore {
         if Self::top_up_authority_changed(req, &transition, &expected_tenant_scope) {
             return Err("ACCESS_DENIED: replicated enrichment top-up authority changed".into());
         }
-        if crate::server::txn::consensus_graph_is_prepared(&req.graph_name) {
+        if medulla_server_api::txn::consensus_graph_is_prepared(&req.graph_name) {
             return Err("CONFLICT: graph is reserved by a prepared consensus transaction".into());
         }
         let (core, persistence) = self.resolve_replicated_graph(req).await?;
@@ -345,8 +345,8 @@ impl MedullaStore {
         req: &RaftRequest,
         method: Method,
     ) -> Result<RaftResponse, String> {
-        if crate::server::txn::consensus_graph_is_prepared(&req.graph_name)
-            || crate::server::txn::consensus_control_conflicts(&method)
+        if medulla_server_api::txn::consensus_graph_is_prepared(&req.graph_name)
+            || medulla_server_api::txn::consensus_control_conflicts(&method)
         {
             return Ok(RaftResponse {
                 applied: true,
@@ -364,7 +364,7 @@ impl MedullaStore {
             else {
                 unreachable!();
             };
-            crate::server::api::reentry::apply_replicated_transaction_prepare(
+            medulla_server_api::api::reentry::apply_replicated_transaction_prepare(
                 &self.ctx.state,
                 req.mutation.request_id,
                 req.committed_at_ms,
@@ -375,7 +375,7 @@ impl MedullaStore {
             )
             .await
         } else {
-            crate::server::api::reentry::apply_replicated_native(
+            medulla_server_api::api::reentry::apply_replicated_native(
                 &self.ctx.state,
                 req.graph_name.clone(),
                 req.mutation.request_id,
@@ -434,8 +434,8 @@ impl MedullaStore {
         let Some(method) = graph_method else {
             return Ok(());
         };
-        if !crate::mutation_apply::is_durable_mutation(method)
-            || crate::server::mutation_batch::is_work_item_method(method)
+        if !medulla_server_api::mutation_apply::is_durable_mutation(method)
+            || medulla_server_api::mutation_batch::is_work_item_method(method)
         {
             return Err(
                 "Raft graph command is not a deterministic replicated mutation".to_string(),

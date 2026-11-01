@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::graph::{GraphCore, GraphView};
 use crate::protocol::{Response, ResultPayload};
-use crate::server::compute::compute_off_lock;
+use medulla_server_api::compute::compute_off_lock;
 
 /// Whether a SPARQL response carries per-row witness proofs (EH-197).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

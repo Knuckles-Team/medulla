@@ -60,7 +60,8 @@ use openraft::BasicNode;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::server::api::persistence::{deserialize_required_option, RaftMutationContext};
+use medulla_server_api::api::persistence::deserialize_required_option;
+use medulla_server_api::api::persistence::RaftMutationContext;
 use crate::server::ServerState;
 
 pub mod config;
@@ -211,11 +212,11 @@ impl RaftStateExt for ServerState {
     }
 
     fn set_raft(&mut self, raft: Option<RaftHandle>) {
-        self.raft = raft.map(|h| Arc::new(h) as crate::server::state::ErasedHandle);
+        self.raft = raft.map(|h| Arc::new(h) as medulla_server_api::state::ErasedHandle);
     }
 
     fn set_multi_raft(&mut self, multi_raft: Option<Arc<multi::MultiRaft>>) {
-        self.multi_raft = multi_raft.map(|m| m as crate::server::state::ErasedHandle);
+        self.multi_raft = multi_raft.map(|m| m as medulla_server_api::state::ErasedHandle);
     }
 
     fn install_multi_raft_placement_authority(
@@ -657,8 +658,8 @@ mod raft_response_receipt_tests {
     fn cas_receipt(replayed: bool) -> crate::mutation_batch::MutationBatchCommit {
         let conditions = rmp_serde::to_vec_named(&serde_json::json!({"epoch": 0})).unwrap();
         let updates = rmp_serde::to_vec_named(&serde_json::json!({"epoch": 1})).unwrap();
-        let batch = crate::server::mutation_batch::compile_methods(
-            crate::server::mutation_batch::CompileBatch {
+        let batch = medulla_server_api::mutation_batch::compile_methods(
+            medulla_server_api::mutation_batch::CompileBatch {
                 batch_id: "raft-receipt-cas",
                 request_id: 7,
                 attempt_nonce: None,

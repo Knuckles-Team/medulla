@@ -73,7 +73,7 @@ pub fn validate_startup_policy(
     auth_secret: &str,
     mode: MysqlAuthMode,
 ) -> std::io::Result<()> {
-    crate::server::api::dispatch_support::validate_direct_wire_security(
+    medulla_server_api::api::dispatch_support::validate_direct_wire_security(
         addr,
         "mysql-wire",
         mode.verified_identity_binding(auth_secret),
@@ -444,7 +444,7 @@ pub async fn serve_with_auth(
         (state.auth_secret.clone(), state.persist_dir.clone())
     };
     validate_startup_policy(addr, &auth_secret, mode)?;
-    crate::server::sql_tables::validate_served_configuration(
+    medulla_server_api::sql_tables::validate_served_configuration(
         persist_dir.as_deref().map(std::path::Path::new),
     )?;
     let listener = TcpListener::bind(addr).await?;
@@ -535,7 +535,7 @@ mod tests {
         register_commons_agent(&mut isolation, "tester");
         let mut state = ServerState::new_for_test("test", isolation);
         state.persist_dir = Some(
-            crate::server::sql_tables::test_persist_dir()
+            medulla_server_api::sql_tables::test_persist_dir()
                 .to_string_lossy()
                 .into_owned(),
         );

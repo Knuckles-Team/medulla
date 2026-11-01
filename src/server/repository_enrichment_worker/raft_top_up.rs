@@ -11,10 +11,11 @@ use tokio::sync::RwLock;
 use crate::parser::enrichment_reactivation::{plan_reactivation, BudgetRevisionProposal};
 use medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision;
 use medulla_store::redb_store::enrichment_top_up::EnrichmentTopUpTransition;
-use crate::server::api::persistence::PersistenceBackend;
-use crate::server::api::persistence::{RaftMutationContext, RaftMutationTiming};
-use crate::server::authority_context::VerifiedRequestContext;
-use crate::server::state::ServerState;
+use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::RaftMutationContext;
+use medulla_server_api::api::persistence::RaftMutationTiming;
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_api::state::ServerState;
 
 struct PreparedTopUp {
     transition: EnrichmentTopUpTransition,
@@ -108,7 +109,7 @@ async fn prepare(
             .registry
             .get(graph)
             .ok_or("ACCESS_DENIED: repository enrichment graph is unavailable")?;
-        if !crate::server::access::principal_may_access(
+        if !medulla_server_api::access::principal_may_access(
             &current.isolation,
             verified.agent_id(),
             graph,
@@ -254,7 +255,7 @@ async fn prepare_fresh(
     )
     .await?;
     let snapshot =
-        crate::server::api::reentry::decode_pending_enrichment_intent(state, &old_delivery.intent)
+        medulla_server_api::api::reentry::decode_pending_enrichment_intent(state, &old_delivery.intent)
             .await?;
     let plan = plan_reactivation(
         &snapshot,
@@ -272,7 +273,7 @@ async fn prepare_fresh(
         .ok_or("CONFLICT: repository enrichment graph version is absent")?;
     let committed_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let replacement_intent =
-        crate::server::api::reentry::enrichment_intent_for_snapshot(state, plan.snapshot).await?;
+        medulla_server_api::api::reentry::enrichment_intent_for_snapshot(state, plan.snapshot).await?;
     let replacement_batch =
         medulla_types::MutationBatch::repository_enrichment_top_up(RepositoryEnrichmentTopUp {
             old_delivery: &old_delivery,
@@ -340,7 +341,7 @@ pub(crate) async fn propose_top_up(
     let attempt_nonce = verified
         .attempt_nonce()
         .ok_or("ACCESS_DENIED: repository enrichment top-up needs transport nonce")?;
-    let access = crate::server::access::CarrierAuthority::from_verified(verified)?;
+    let access = medulla_server_api::access::CarrierAuthority::from_verified(verified)?;
     let mutation = RaftMutationContext::from_verified_request(
         prepared.transition.replacement_batch.batch_id.clone(),
         request_id,

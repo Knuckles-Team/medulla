@@ -1,7 +1,7 @@
 #[cfg(feature = "query")]
 use super::uql_statement::handle_uql;
 use super::*;
-use crate::server::api::reentry::TryHandleContext;
+use medulla_server_api::api::reentry::TryHandleContext;
 
 #[cfg(feature = "query")]
 mod edge_index;
@@ -509,7 +509,7 @@ async fn handle_sql_with_lease(
     // `families::execute_sql` already rejects a write statement before this
     // is reached; reject again here so this function is safe to call on its
     // own, never a second, wider-scoped SQL entry point.
-    if crate::server::access::sql_is_write(&query) {
+    if medulla_server_api::access::sql_is_write(&query) {
         return Err("KnowledgeStream SQL accepts read-only statements".to_string());
     }
     // `params_msgpack` is unused on the read path, exactly like `handle_sql`'s
@@ -528,7 +528,7 @@ async fn handle_sql_with_lease(
         "ENGINE_UNAVAILABLE: SQL error: tenant SQL catalog requires the configured persistence directory".to_string()
     })?;
     let (snap, _graph_version) = lease_filtered_snapshot(core, policy_lease, store)?;
-    let graph = crate::server::sql_catalog_acl::RequestGraph {
+    let graph = medulla_server_api::sql_catalog_acl::RequestGraph {
         name: ctx.graph_name.to_string(),
         core: Arc::clone(core),
     };

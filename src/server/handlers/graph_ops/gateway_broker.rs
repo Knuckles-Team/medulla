@@ -1,6 +1,6 @@
 use super::*;
 
-use crate::server::api::ingest::graph::commit_gateway;
+use medulla_server_api::api::ingest::graph::commit_gateway;
 #[cfg(feature = "broker")]
 use medulla_types::result_contract::messaging as results;
 

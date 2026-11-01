@@ -31,10 +31,11 @@ use serde_json::{Map, Value};
 use super::stat_log::{evaluations_of, visible_entries, LogReader, MAX_LOG_ROWS};
 use super::stat_retention::Retention;
 use super::SharedState;
-use crate::server::access::CarrierAuthority;
+use medulla_server_api::access::CarrierAuthority;
 use crate::server::persistence::agent_library::AgentLibraryStore;
 use crate::server::persistence::decision_jobs::decode_artifact;
-use crate::server::sql_catalog_acl::relations::{ReadOnlyRelations, Relation};
+use medulla_server_api::sql_catalog_acl::relations::ReadOnlyRelations;
+use medulla_server_api::sql_catalog_acl::relations::Relation;
 
 /// One column: name, SQL type, and its cell for an item.
 pub(super) type Col<T> = (&'static str, ColumnType, fn(&T) -> Value);

@@ -85,7 +85,7 @@ fn verify_amqp_password(secret: &str, principal: &str, password: &str) -> bool {
 
 /// Fail closed before binding the plaintext AMQP listener.
 pub fn validate_startup_policy(addr: &str, secret: &str) -> std::io::Result<()> {
-    crate::server::api::dispatch_support::validate_direct_wire_security(
+    medulla_server_api::api::dispatch_support::validate_direct_wire_security(
         addr,
         "amqp-wire",
         !secret.is_empty(),
@@ -800,7 +800,7 @@ fn authenticate_start_ok(args: &[u8], secret: &str) -> Option<String> {
     {
         return None;
     }
-    crate::server::api::dispatch_support::pseudonymous_broker_actor(secret, principal).ok()
+    medulla_server_api::api::dispatch_support::pseudonymous_broker_actor(secret, principal).ok()
 }
 
 #[cfg(test)]
@@ -866,7 +866,7 @@ mod tests {
         let actor = authenticate_start_ok(&args, "test").unwrap();
         assert_eq!(
             actor,
-            crate::server::api::dispatch_support::pseudonymous_broker_actor("test", principal)
+            medulla_server_api::api::dispatch_support::pseudonymous_broker_actor("test", principal)
                 .unwrap()
         );
         assert!(!actor.contains(principal));

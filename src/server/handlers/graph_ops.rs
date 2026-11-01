@@ -16,7 +16,7 @@ use super::super::state::{max_response_edges, max_response_nodes, ServerState, M
 use crate::graph::GraphCore;
 use crate::isolation::AccessLevel;
 use crate::protocol::{LedgerReadResult, Method, Response, ResultPayload};
-use crate::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 
 mod algorithms;
 mod broker;

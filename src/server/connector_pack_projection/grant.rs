@@ -18,7 +18,7 @@
 //! touched: registering an identity there would consume the bootstrap.
 
 use crate::isolation::IsolationLayer;
-use crate::server::service_grant::ServiceGraphGrant;
+use medulla_server_api::service_grant::ServiceGraphGrant;
 
 /// The fixed service principal the projection worker writes as.
 pub(crate) const PROJECTION_ACTOR: &str = "service:connector-pack-projection";
@@ -42,7 +42,7 @@ mod tests {
     use crate::protocol::GraphType;
 
     fn policy() -> IsolationLayer {
-        crate::server::state::ServerState::test_isolation("pack-grant-admin")
+        medulla_server_api::state::ServerState::test_isolation("pack-grant-admin")
     }
 
     fn may_write(isolation: &IsolationLayer, graph: &str) -> bool {
@@ -72,7 +72,7 @@ mod tests {
     #[test]
     fn the_granted_principal_is_the_principal_the_worker_signs_as() {
         let signer =
-            crate::server::auth::VerifiedRequestContext::authenticated_fixed_service_actor(
+            medulla_server_api::auth::VerifiedRequestContext::authenticated_fixed_service_actor(
                 super::super::worker::CONSUMER,
                 &["kg:write"],
             )

@@ -18,9 +18,9 @@ use crate::protocol::Response;
 #[cfg(feature = "redb")]
 use crate::protocol::ResultPayload;
 #[cfg(all(feature = "redb", feature = "blob"))]
-use crate::server::access::CarrierAuthority;
-use crate::server::auth::VerifiedRequestContext;
-use crate::server::state::ServerState;
+use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::state::ServerState;
 
 pub(crate) mod admin;
 mod approval;
@@ -245,10 +245,10 @@ async fn tenant_pack_lock(tenant_id: &str) -> Result<tokio::sync::OwnedMutexGuar
             .collect()
     });
     let stripe = locks[tenant_stripe(tenant_id)].clone();
-    let cancel = crate::server::request_scope::current();
+    let cancel = medulla_server_api::request_scope::current();
     tokio::select! {
         biased;
-        () = cancel.cancelled() => Err(crate::server::request_scope::CANCELLED.to_string()),
+        () = cancel.cancelled() => Err(medulla_server_api::request_scope::CANCELLED.to_string()),
         guard = stripe.lock_owned() => Ok(guard),
     }
 }
@@ -295,7 +295,7 @@ enum Preflight {
     Unchanged(medulla_types::connector_pack::PackImportResult),
     Ready {
         store: Arc<crate::server::persistence::agent_library::AgentLibraryStore>,
-        blob: Arc<crate::server::blob::BlobCursors>,
+        blob: Arc<medulla_server_api::blob::BlobCursors>,
         archive: Vec<u8>,
     },
 }
@@ -419,7 +419,7 @@ fn replay_or_unchanged(
 async fn import_blob_store(
     state: &Arc<RwLock<ServerState>>,
     _request: &medulla_types::connector_pack::ConnectorPackImportRequest,
-) -> Result<Arc<crate::server::blob::BlobCursors>, String> {
+) -> Result<Arc<medulla_server_api::blob::BlobCursors>, String> {
     state
         .read()
         .await
@@ -430,7 +430,7 @@ async fn import_blob_store(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 async fn read_import_archive(
-    blob: &Arc<crate::server::blob::BlobCursors>,
+    blob: &Arc<medulla_server_api::blob::BlobCursors>,
     verified: &VerifiedRequestContext,
     request: &medulla_types::connector_pack::ConnectorPackImportRequest,
 ) -> Result<Vec<u8>, String> {

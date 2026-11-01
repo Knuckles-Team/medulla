@@ -15,7 +15,7 @@ pub(super) fn ensure(isolation: &mut IsolationLayer, graph: &str) -> Result<(), 
     if isolation.identity_bootstrap_pending() {
         return Err("REPOSITORY_ENRICHMENT_POLICY_UNBOOTSTRAPPED".into());
     }
-    crate::server::service_grant::ensure_exact_graph_grant(
+    medulla_server_api::service_grant::ensure_exact_graph_grant(
         isolation,
         graph,
         SERVICE_ACTOR,
@@ -47,7 +47,7 @@ fn retained_budget_allows(
 }
 
 fn caller_has_authority(
-    verified: &crate::server::authority_context::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     isolation: &IsolationLayer,
     graph_type: crate::protocol::GraphType,
     graph_owner: Option<&str>,
@@ -55,7 +55,7 @@ fn caller_has_authority(
 ) -> bool {
     use crate::parser::enrichment_reactivation::TOP_UP_ACTION;
     verified.allows_action(TOP_UP_ACTION)
-        && crate::server::access::principal_may_access(
+        && medulla_server_api::access::principal_may_access(
             isolation,
             verified.agent_id(),
             &proposal.graph,
@@ -75,7 +75,7 @@ fn caller_has_authority(
 /// compare and swap makes that read authoritative at commit time.
 #[allow(dead_code)]
 pub(super) fn bind_top_up_identity(
-    verified: &crate::server::authority_context::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     isolation: &IsolationLayer,
     graph_type: crate::protocol::GraphType,
     graph_owner: Option<&str>,
@@ -130,7 +130,7 @@ mod tests {
     #[test]
     fn top_up_identity_requires_exact_verified_scope_subject_and_key() {
         use crate::parser::enrichment_reactivation::{BudgetRevisionProposal, TOP_UP_ACTION};
-        use crate::server::authority_context::VerifiedRequestContext;
+        use medulla_server_api::authority_context::VerifiedRequestContext;
         let verified = VerifiedRequestContext::verified_for_test_with_scopes(
             "operator",
             "tenant-a",
@@ -288,7 +288,7 @@ mod tests {
 
     #[test]
     fn service_grant_is_idempotent_and_exact_graph() {
-        let mut isolation = crate::server::state::ServerState::test_isolation("admin");
+        let mut isolation = medulla_server_api::state::ServerState::test_isolation("admin");
         ensure(&mut isolation, "code-a").unwrap();
         ensure(&mut isolation, "code-a").unwrap();
         assert!(isolation.check_access(

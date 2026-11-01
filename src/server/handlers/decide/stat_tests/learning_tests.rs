@@ -168,7 +168,7 @@ async fn an_adapter_is_served_only_after_its_passing_receipt_and_rolls_back() {
     assert!(receipt.adapted_mrr_q16 > receipt.base_mrr_q16);
     assert_eq!(receipt.n_training + receipt.n_eval, 40);
 
-    let tenant = crate::server::access::CarrierAuthority::from_verified(&verified())
+    let tenant = medulla_server_api::access::CarrierAuthority::from_verified(&verified())
         .unwrap()
         .tenant_scope()
         .to_string();
@@ -233,7 +233,7 @@ fn a_plan_rewrite_re_aims_every_vector_rank_only() {
     )
     .unwrap();
     let adapter =
-        crate::server::api::admin::served_adapter::ServedAdapter::for_body("d", &body).unwrap();
+        medulla_server_api::api::admin::served_adapter::ServedAdapter::for_body("d", &body).unwrap();
     let plan = medulla_plan::Plan::new(vec![
         medulla_plan::Op::Scan {
             label: "Doc".to_string(),
@@ -248,10 +248,10 @@ fn a_plan_rewrite_re_aims_every_vector_rank_only() {
             query: vec![1.0, 1.0],
         },
     ]);
-    let rewritten = crate::server::api::admin::served_adapter::adapt_plan(
+    let rewritten = medulla_server_api::api::admin::served_adapter::adapt_plan(
         plan,
         Some(Arc::new(adapter)),
-        crate::server::api::query_txn::query_support::uql_text_embedder(),
+        medulla_server_api::api::query_txn::query_support::uql_text_embedder(),
     );
     let expected = medulla_plan::Op::Rank {
         query: vec![1.0, 1.5],

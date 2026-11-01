@@ -9,7 +9,7 @@
 
 use super::SharedState;
 use crate::protocol::Response;
-use crate::server::auth::VerifiedRequestContext;
+use medulla_server_api::auth::VerifiedRequestContext;
 #[cfg(feature = "redb")]
 use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use medulla_types::decision::coverage::CapabilityCoverageRequest;

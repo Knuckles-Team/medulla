@@ -341,8 +341,8 @@ pub(crate) enum Cmd {
     /// of the same shard.
     MutationOutboxWrite {
         graph: String,
-        write: Box<crate::server::outbox_operator::OutboxWrite>,
-        done: oneshot::Sender<Result<crate::server::outbox_operator::OutboxWriteReply, String>>,
+        write: Box<medulla_server_api::outbox_operator::OutboxWrite>,
+        done: oneshot::Sender<Result<medulla_server_api::outbox_operator::OutboxWriteReply, String>>,
     },
     Shutdown {
         reply: std::sync::mpsc::SyncSender<()>,

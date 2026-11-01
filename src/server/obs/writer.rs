@@ -38,7 +38,7 @@ fn foreign(claimed: &str) -> String {
 #[cfg(feature = "oidc")]
 pub(crate) fn writer_from_header(
     authorization: &str,
-    validator: Option<&crate::server::oidc::JwtValidator>,
+    validator: Option<&medulla_server_api::oidc::JwtValidator>,
 ) -> Option<TelemetryWriter> {
     let token = authorization.strip_prefix("Bearer ")?.trim();
     let claims = validator?.validate_claims(token)?;
@@ -51,12 +51,12 @@ pub(crate) fn writer_from_header(
 
 /// The listener's writer validator, built once from the environment.
 #[cfg(feature = "oidc")]
-fn obs_validator() -> Option<&'static crate::server::oidc::JwtValidator> {
-    static VALIDATOR: std::sync::OnceLock<Option<crate::server::oidc::JwtValidator>> =
+fn obs_validator() -> Option<&'static medulla_server_api::oidc::JwtValidator> {
+    static VALIDATOR: std::sync::OnceLock<Option<medulla_server_api::oidc::JwtValidator>> =
         std::sync::OnceLock::new();
     VALIDATOR
         .get_or_init(|| {
-            crate::server::oidc::JwtValidator::from_env_obs().unwrap_or_else(|error| {
+            medulla_server_api::oidc::JwtValidator::from_env_obs().unwrap_or_else(|error| {
                 tracing::warn!(%error, "observability writer JWT configuration is invalid");
                 None
             })

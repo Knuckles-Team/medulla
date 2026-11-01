@@ -5,7 +5,7 @@ use crate::protocol::{GraphType, Method};
 use medulla_store::redb_store::CHANGE_CURSORS;
 use medulla_store::redb_store::CHANGE_ENVELOPES;
 use medulla_store::redb_store::CONTENT_VERSIONS;
-use crate::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use crate::server::persistence::redb_backend::RedbBackend;
 use medulla_storage::{OwnerRowScope, OwnerRowScopeStart};
 

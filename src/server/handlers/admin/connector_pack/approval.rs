@@ -9,8 +9,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::protocol::Response;
-use crate::server::auth::VerifiedRequestContext;
-use crate::server::state::ServerState;
+use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::state::ServerState;
 
 pub(crate) async fn serve(
     state: &Arc<RwLock<ServerState>>,
@@ -50,7 +50,7 @@ pub(crate) async fn serve(
         let resource_uri = request.resource_uri;
         let expected_head = request.expected_head;
         let contract_digest = request.contract_digest;
-        let result = crate::server::api::dispatch_support::blocking_task(
+        let result = medulla_server_api::api::dispatch_support::blocking_task(
             "connector pack source approval",
             move || {
                 let _held = tenant_pack_guard;

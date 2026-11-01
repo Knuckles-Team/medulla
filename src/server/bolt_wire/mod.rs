@@ -38,9 +38,13 @@ use tokio::sync::RwLock;
 
 use crate::graph::{GraphCore, GraphSnapshot};
 use crate::protocol::{Method, QueryResult, Response, ResultPayload};
-use crate::server::access::{check_graph_access, CarrierAuthority, GraphReadAuthority};
-use crate::server::auth::{verify_request_with_security_dir, VerifiedRequestContext};
-use crate::server::mutation::{MutationCtx, MutationPlan};
+use medulla_server_api::access::check_graph_access;
+use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::access::GraphReadAuthority;
+use medulla_server_api::auth::verify_request_with_security_dir;
+use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::mutation::MutationCtx;
+use medulla_server_api::mutation::MutationPlan;
 use crate::server::ServerState;
 
 mod auth;
@@ -60,7 +64,7 @@ pub const BOLT_ADDR_ENV: &str = "MEDULLA_BOLT_ADDR";
 /// terminate TLS, so it is a loopback backend only. The non-empty engine key is
 /// used solely by the shared current-envelope verifier.
 pub fn validate_startup_policy(addr: &str, auth_secret: &str) -> std::io::Result<()> {
-    crate::server::api::dispatch_support::validate_direct_wire_security(
+    medulla_server_api::api::dispatch_support::validate_direct_wire_security(
         addr,
         "bolt-wire",
         !auth_secret.is_empty(),
@@ -366,9 +370,9 @@ struct BoltGraphContext {
     graph_type: crate::protocol::GraphType,
     owner: Option<String>,
     isolation: crate::isolation::IsolationLayer,
-    persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
+    persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
-    cdc: Option<Arc<crate::server::cdc::CdcHub>>,
+    cdc: Option<Arc<medulla_server_api::cdc::CdcHub>>,
 }
 
 async fn graph_context(session: &BoltSession) -> Result<(String, BoltGraphContext), BoltFailure> {
@@ -590,7 +594,7 @@ async fn commit_writes(
         materialization_manifest: graph_context.materialization_manifest.as_ref(),
         write_coalescer: None,
     };
-    let response = crate::server::mutation::commit_conditional_mutation_async(
+    let response = medulla_server_api::mutation::commit_conditional_mutation_async(
         &ctx,
         &plan,
         &method,
@@ -708,7 +712,7 @@ async fn begin_transaction(session: &BoltSession) -> Result<BoltTransaction, Bol
     })?;
     let (graph, context) = graph_context(session).await?;
     authorize_cypher(verified, &graph, &context, false)?;
-    let _guard = crate::server::mutation_batch::lock_graph(&graph).await;
+    let _guard = medulla_server_api::mutation_batch::lock_graph(&graph).await;
     Ok(BoltTransaction {
         base_snapshot: context.core.snapshot(),
         base_version: context.core.version(),
@@ -981,7 +985,7 @@ mod tests {
         {
             state.persistence = Some(std::sync::Arc::new(
                 crate::server::persistence::redb_backend::RedbBackend::open(
-                    crate::server::api::dispatch_support::unique_temp_dir(
+                    medulla_server_api::api::dispatch_support::unique_temp_dir(
                         "medulla-bolt-server-test",
                     )
                     .to_string_lossy()
@@ -1013,14 +1017,14 @@ mod tests {
         dir: &std::path::Path,
     ) -> (
         Arc<RwLock<ServerState>>,
-        Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+        Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     ) {
         use crate::protocol::GraphType;
         use crate::server::persistence::redb_backend::RedbBackend;
 
         let backend = RedbBackend::open(dir.to_string_lossy().to_string(), 64)
             .expect("open Bolt test backend");
-        let persistence: Arc<dyn crate::server::api::persistence::PersistenceBackend> =
+        let persistence: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> =
             Arc::new(backend);
         persistence
             .register_graph("__commons__", "__commons__", GraphType::Commons)
@@ -1036,7 +1040,7 @@ mod tests {
     }
 
     fn signed_session_request(graph: &str) -> crate::protocol::Request {
-        crate::server::auth::sign_current_test_request(
+        medulla_server_api::auth::sign_current_test_request(
             "test",
             crate::protocol::Request {
                 id: next_conn_id(),
@@ -1101,7 +1105,8 @@ mod tests {
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
         use crate::acl::RequestContextClaims;
-        use crate::server::auth::{compute_verified_envelope_token, VerifiedEnvelopeParams};
+        use medulla_server_api::auth::compute_verified_envelope_token;
+        use medulla_server_api::auth::VerifiedEnvelopeParams;
 
         let mut request = crate::protocol::Request {
             id: next_conn_id(),
@@ -1488,7 +1493,7 @@ mod tests {
         persistence.shutdown();
         drop(persistence);
 
-        let reopened: Arc<dyn crate::server::api::persistence::PersistenceBackend> = Arc::new(
+        let reopened: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> = Arc::new(
             RedbBackend::open(dir.to_string_lossy().to_string(), 64)
                 .expect("reopen Bolt test backend"),
         );

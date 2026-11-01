@@ -9,7 +9,7 @@ use tokio::sync::RwLock;
 use crate::protocol::{Response, ResultPayload};
 #[cfg(feature = "redb")]
 use crate::server::persistence::agent_library::context::bind_agent_library_context;
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// Bind the context of a read-only Agent Library status query. Status never
 /// reaches the mutation kernel, so no attempt nonce is required; a binding
@@ -18,7 +18,7 @@ use crate::server::state::ServerState;
 fn bind_status_context(
     store: &crate::server::persistence::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     context: medulla_types::AgentLibraryMutationContext,
     purpose_id: &str,
 ) -> Result<medulla_types::AgentLibraryMutationContext, Response> {
@@ -29,7 +29,7 @@ fn bind_status_context(
 #[cfg(feature = "redb")]
 pub(crate) fn bind_agent_library_draft(
     draft: medulla_types::AgentLibraryEntryDraft,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     _action_context: &medulla_types::AgentLibraryMutationContext,
 ) -> Result<medulla_types::AgentLibraryEntryDraft, String> {
     if draft.tenant_id != verified.tenant() {
@@ -61,7 +61,7 @@ async fn ensure_agent_library(
 #[cfg(feature = "redb")]
 fn validate_component_op(
     op: &medulla_types::agent_component::AgentComponentOp,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
 ) -> Result<(), String> {
     op.validate()?;
     if op.tenant_id() != verified.tenant() {
@@ -75,7 +75,7 @@ fn validate_component_op(
 #[cfg(feature = "redb")]
 fn validate_template_op(
     op: &medulla_types::agent_template::AgentTemplateOp,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
 ) -> Result<(), String> {
     op.validate()?;
     if op.tenant_id() != verified.tenant() {
@@ -99,7 +99,7 @@ fn validate_template_op(
 pub(crate) async fn handle_agent_component(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     op: medulla_types::agent_component::AgentComponentOp,
 ) -> Response {
     use medulla_types::agent_component::AgentComponentOp;
@@ -139,7 +139,7 @@ pub(crate) async fn handle_agent_component(
 fn component_publish(
     store: &crate::server::persistence::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: Box<medulla_types::agent_component::AgentComponentPublishRequest>,
 ) -> Response {
     let context = match bind_agent_library_context(
@@ -173,7 +173,7 @@ fn component_publish(
 fn component_retire(
     store: &crate::server::persistence::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: medulla_types::agent_component::AgentComponentRetireRequest,
 ) -> Response {
     let context = match bind_agent_library_context(
@@ -268,7 +268,7 @@ fn component_status_purpose(
 fn component_status(
     store: &crate::server::persistence::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: medulla_types::agent_component::AgentComponentStatusRequest,
 ) -> Response {
     let purpose = component_status_purpose(request.kind);
@@ -316,7 +316,7 @@ fn component_search(
 pub(crate) async fn handle_agent_template(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     op: medulla_types::agent_template::AgentTemplateOp,
 ) -> Response {
     use medulla_types::agent_template::AgentTemplateOp;
@@ -348,7 +348,7 @@ pub(crate) async fn handle_agent_template(
 fn template_publish(
     store: &crate::server::persistence::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: Box<medulla_types::agent_template::AgentTemplatePublishRequest>,
 ) -> Response {
     let context = match bind_agent_library_context(
@@ -387,7 +387,7 @@ fn template_publish(
 fn template_retire(
     store: &crate::server::persistence::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: medulla_types::agent_template::AgentTemplateRetireRequest,
 ) -> Response {
     let context = match bind_agent_library_context(
@@ -453,7 +453,7 @@ fn template_history(
 fn template_status(
     store: &crate::server::persistence::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: medulla_types::agent_template::AgentTemplateStatusRequest,
 ) -> Response {
     let purpose = match request.kind {
@@ -502,7 +502,7 @@ fn template_instantiate(
 pub(crate) async fn handle_agent_graph(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     op: medulla_types::agent_graph::AgentGraphOp,
 ) -> Response {
     use medulla_types::agent_graph::AgentGraphOp;
@@ -533,7 +533,7 @@ pub(crate) async fn handle_agent_graph(
 fn graph_publish(
     store: &crate::server::persistence::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: Box<medulla_types::agent_graph::AgentGraphPublishRequest>,
 ) -> Response {
     let context = match bind_agent_library_context(
@@ -555,7 +555,7 @@ fn graph_publish(
     request.graph.purpose_id = context.purpose_id.clone();
     request.graph.policy_digest = context.policy_digest.clone();
     request.context = context;
-    if let Some(refusal) = crate::server::api::admin::topology_shape::refusal(&request.graph) {
+    if let Some(refusal) = medulla_server_api::api::admin::topology_shape::refusal(&request.graph) {
         return Response::err(req_id, refusal);
     }
     match store.publish_graph(*request) {
@@ -573,7 +573,7 @@ fn graph_publish(
 fn graph_retire(
     store: &crate::server::persistence::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: medulla_types::agent_graph::AgentGraphRetireRequest,
 ) -> Response {
     let context = match bind_agent_library_context(
@@ -603,7 +603,7 @@ fn graph_retire(
 fn graph_current(
     store: &crate::server::persistence::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     tenant_id: String,
     graph_id: String,
 ) -> Response {
@@ -628,7 +628,7 @@ fn graph_current(
 fn graph_history(
     store: &crate::server::persistence::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     tenant_id: String,
     graph_id: String,
 ) -> Response {
@@ -653,7 +653,7 @@ fn graph_history(
 fn graph_status(
     store: &crate::server::persistence::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: medulla_types::agent_graph::AgentGraphStatusRequest,
 ) -> Response {
     let purpose = match request.kind {
@@ -678,7 +678,7 @@ fn graph_status(
 pub(crate) async fn handle_agent_library(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     op: medulla_types::AgentLibraryOp,
 ) -> Response {
     let store = match ensure_agent_library(state, req_id).await {
@@ -710,7 +710,7 @@ pub(crate) async fn handle_agent_library(
 fn library_publish(
     store: &crate::server::persistence::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: Box<medulla_types::AgentLibraryPublishRequest>,
 ) -> Response {
     let context = match bind_agent_library_context(
@@ -744,7 +744,7 @@ fn library_publish(
 fn library_retire(
     store: &crate::server::persistence::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: medulla_types::AgentLibraryRetireRequest,
 ) -> Response {
     let context = match bind_agent_library_context(
@@ -774,7 +774,7 @@ fn library_retire(
 fn library_current(
     store: &crate::server::persistence::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     tenant_id: String,
     agent_id: String,
 ) -> Response {
@@ -799,7 +799,7 @@ fn library_current(
 fn library_history(
     store: &crate::server::persistence::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     tenant_id: String,
     agent_id: String,
 ) -> Response {
@@ -824,7 +824,7 @@ fn library_history(
 fn library_status(
     store: &crate::server::persistence::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: medulla_types::AgentLibraryStatusRequest,
 ) -> Response {
     let kind = request.kind;

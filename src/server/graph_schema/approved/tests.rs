@@ -20,8 +20,8 @@ use medulla_types::graph_schema::{
 
 use super::*;
 use crate::protocol::ResultPayload;
-use crate::server::auth::dispatch_test_on_heap;
-use crate::server::state::ServerState;
+use medulla_server_api::auth::dispatch_test_on_heap;
+use medulla_server_api::state::ServerState;
 
 const SECRET: &str = "schema-approval-served-secret"; // sanitizer:ignore
 const TENANT: &str = "tenant-shared";
@@ -90,12 +90,12 @@ impl Served {
 
     async fn call(&self, graph: &str, key: &str, method: Method) -> Response {
         let id = next_id();
-        let request = crate::server::auth::scoped_test_request_on(
+        let request = medulla_server_api::auth::scoped_test_request_on(
             SECRET,
             id,
             graph,
             method,
-            crate::server::auth::ScopedTestCaller {
+            medulla_server_api::auth::ScopedTestCaller {
                 principal: ADMIN,
                 tenant: TENANT,
                 scopes: &["*"],
@@ -109,7 +109,7 @@ impl Served {
     /// Issue an approval lease whose grant names `candidate`, and approve it
     /// (`active -> consumed`) unless `approve` is false.
     async fn approval(&self, lease_id: &str, candidate: &str, approve: bool) {
-        let now = crate::server::txn::now_ms();
+        let now = medulla_server_api::txn::now_ms();
         let Value::Object(grant) = json!({
             "kind": SCHEMA_APPROVAL_ACTION,
             "target": SOURCE,

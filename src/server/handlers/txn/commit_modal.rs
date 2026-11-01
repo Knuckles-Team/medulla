@@ -2,7 +2,7 @@
 
 use super::*;
 #[cfg(feature = "graphql")]
-use crate::server::api::query_txn::txn_support::GraphQlCrossModalCommit;
+use medulla_server_api::api::query_txn::txn_support::GraphQlCrossModalCommit;
 
 pub(super) async fn commit_cross_modal(
     state: &Arc<RwLock<ServerState>>,
@@ -197,7 +197,7 @@ async fn resolve_cross_modal_target(
 ) -> Result<
     (
         Arc<crate::graph::GraphCore>,
-        Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
+        Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     ),
     String,
 > {
@@ -238,7 +238,7 @@ pub(crate) async fn commit_cross_modal_txn_with_nonce(
 ) -> Result<bool, String> {
     let (core, persistence) = resolve_cross_modal_target(state, caller, &txn).await?;
 
-    let _mutation_guard = crate::server::mutation_batch::lock_graph(&txn.graph).await;
+    let _mutation_guard = medulla_server_api::mutation_batch::lock_graph(&txn.graph).await;
     {
         let gtxn = core.txn();
         let valid = txn.validate(&core);
@@ -296,7 +296,7 @@ pub(crate) async fn commit_cross_modal_txn_with_nonce(
 struct CrossModalDurableArgs<'a> {
     state: &'a Arc<RwLock<ServerState>>,
     core: &'a Arc<crate::graph::GraphCore>,
-    authority: &'a dyn crate::server::api::persistence::PersistenceBackend,
+    authority: &'a dyn medulla_server_api::api::persistence::PersistenceBackend,
     fname: &'a str,
     coordinator_id: &'a str,
     request_id: u64,
@@ -310,7 +310,7 @@ struct CrossModalDurableArgs<'a> {
 async fn compile_cross_modal_batch(
     args: &CrossModalDurableArgs<'_>,
 ) -> Result<(crate::mutation_batch::MutationBatch, Vec<u8>), String> {
-    let batch_id = crate::server::mutation_batch::opaque_coordinator_key(
+    let batch_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
         "crossmodal",
         &args.txn.graph,
         args.coordinator_id,
@@ -328,8 +328,8 @@ async fn compile_cross_modal_batch(
     ))
     .map_err(|error| format!("cross-modal manifest encode failed: {error}"))?;
     let principal = txn_receipt_principal(args.caller)?;
-    let batch = crate::server::mutation_batch::compile_crossmodal(
-        crate::server::mutation_batch::CompileBatch {
+    let batch = medulla_server_api::mutation_batch::compile_crossmodal(
+        medulla_server_api::mutation_batch::CompileBatch {
             batch_id: &batch_id,
             request_id: args.request_id,
             attempt_nonce: args.attempt_nonce,
@@ -361,7 +361,7 @@ async fn commit_cross_modal_durable(
     let (batch, result) = compile_cross_modal_batch(&args).await?;
     let committed = args
         .authority
-        .commit_mutation_batch_crossmodal(crate::server::api::persistence::CrossModalCommitArgs {
+        .commit_mutation_batch_crossmodal(medulla_server_api::api::persistence::CrossModalCommitArgs {
             graph_fname: args.fname,
             batch: &batch,
             methods: args.methods,

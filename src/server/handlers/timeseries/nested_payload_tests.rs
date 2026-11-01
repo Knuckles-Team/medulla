@@ -24,19 +24,19 @@ fn point_decoder_rejects_bombs_ragged_rows_and_non_finite_values() {
 #[test]
 fn same_series_name_isolated_by_actor_and_tenant() {
     let alice = CarrierAuthority::from_verified(
-        &crate::server::auth::VerifiedRequestContext::verified_for_test_in_tenant(
+        &medulla_server_api::auth::VerifiedRequestContext::verified_for_test_in_tenant(
             "alice", "tenant-a",
         ),
     )
     .unwrap();
     let bob = CarrierAuthority::from_verified(
-        &crate::server::auth::VerifiedRequestContext::verified_for_test_in_tenant(
+        &medulla_server_api::auth::VerifiedRequestContext::verified_for_test_in_tenant(
             "bob", "tenant-a",
         ),
     )
     .unwrap();
     let cross_tenant = CarrierAuthority::from_verified(
-        &crate::server::auth::VerifiedRequestContext::verified_for_test_in_tenant(
+        &medulla_server_api::auth::VerifiedRequestContext::verified_for_test_in_tenant(
             "alice", "tenant-b",
         ),
     )
@@ -77,19 +77,19 @@ fn cross_actor_and_cross_tenant_reads_see_no_points_through_the_real_store() {
     .expect("open test store");
 
     let alice = CarrierAuthority::from_verified(
-        &crate::server::auth::VerifiedRequestContext::verified_for_test_in_tenant(
+        &medulla_server_api::auth::VerifiedRequestContext::verified_for_test_in_tenant(
             "alice", "tenant-a",
         ),
     )
     .unwrap();
     let bob = CarrierAuthority::from_verified(
-        &crate::server::auth::VerifiedRequestContext::verified_for_test_in_tenant(
+        &medulla_server_api::auth::VerifiedRequestContext::verified_for_test_in_tenant(
             "bob", "tenant-a",
         ),
     )
     .unwrap();
     let cross_tenant_alice = CarrierAuthority::from_verified(
-        &crate::server::auth::VerifiedRequestContext::verified_for_test_in_tenant(
+        &medulla_server_api::auth::VerifiedRequestContext::verified_for_test_in_tenant(
             "alice", "tenant-b",
         ),
     )
@@ -123,10 +123,10 @@ fn cross_actor_and_cross_tenant_reads_see_no_points_through_the_real_store() {
         points_msgpack: Vec::new(),
     };
     let batch_id =
-        crate::server::mutation_batch::opaque_request_key("timeseries", &scope, 1, &method);
+        medulla_server_api::mutation_batch::opaque_request_key("timeseries", &scope, 1, &method);
     let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-    let batch = crate::server::mutation_batch::compile_opaque_method(
-        crate::server::mutation_batch::CompileBatch {
+    let batch = medulla_server_api::mutation_batch::compile_opaque_method(
+        medulla_server_api::mutation_batch::CompileBatch {
             batch_id: &batch_id,
             request_id: 1,
             attempt_nonce: None,

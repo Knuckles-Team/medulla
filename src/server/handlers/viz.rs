@@ -81,10 +81,12 @@ use medulla_viz_core::{
 use medulla_viz_export::ColumnStoreExportBackend;
 
 use crate::protocol::{Response, ResultPayload};
-use crate::server::access::CarrierAuthority;
-use crate::server::state::ServerState;
-use crate::server::viz_engine::{render_cache_key, CachedRender, VizEngineState};
-use crate::server::viz_provenance::VizProvenanceRecord;
+use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::state::ServerState;
+use medulla_server_api::viz_engine::render_cache_key;
+use medulla_server_api::viz_engine::CachedRender;
+use medulla_server_api::viz_engine::VizEngineState;
+use medulla_server_api::viz_provenance::VizProvenanceRecord;
 
 const MIN_CANVAS_PX: u32 = 16;
 const MAX_CANVAS_PX: u32 = 8192;
@@ -679,7 +681,7 @@ fn synthetic_graph_edges(node_count: u64, edge_count: u64, seed: u64) -> Vec<(u3
 #[cfg(test)]
 mod authority_tests {
     use super::*;
-    use crate::server::auth::VerifiedRequestContext;
+    use medulla_server_api::auth::VerifiedRequestContext;
 
     fn authority(agent_id: &str, tenant: &str) -> CarrierAuthority {
         CarrierAuthority::from_verified(&VerifiedRequestContext::verified_for_test_in_tenant(

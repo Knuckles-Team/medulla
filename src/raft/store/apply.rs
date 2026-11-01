@@ -35,7 +35,7 @@ impl MedullaStore {
             if let Some(early) = self.try_apply_native_command(req, &server_secret).await? {
                 return Ok(early);
             }
-            if crate::server::txn::consensus_graph_is_prepared(&req.graph_name) {
+            if medulla_server_api::txn::consensus_graph_is_prepared(&req.graph_name) {
                 return Ok(RaftResponse {
                     applied: true,
                     native_error: Some(
@@ -142,7 +142,7 @@ impl MedullaStore {
                 "replicated ChangeEnvelope graph does not match request authority".to_string(),
             );
         }
-        let expected_tenant_scope = crate::server::mutation_batch::opaque_coordinator_key(
+        let expected_tenant_scope = medulla_server_api::mutation_batch::opaque_coordinator_key(
             "carrier-tenant",
             "verified",
             envelope.mutation.identity.tenant().as_str(),
@@ -173,7 +173,7 @@ impl MedullaStore {
         let projection_pending = if committed.replayed {
             false
         } else {
-            match crate::server::mutation_batch::publish_change_envelope_projection(core, envelope)
+            match medulla_server_api::mutation_batch::publish_change_envelope_projection(core, envelope)
             {
                 Ok(()) => false,
                 Err(error) => {

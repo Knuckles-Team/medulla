@@ -15,15 +15,15 @@ pub(super) struct DispatchPipelineCtx<'a> {
     pub(super) verified_actor: &'a str,
     pub(super) tenant_id: String,
     pub(super) tenant_scope: String,
-    pub(super) gateway_authz_ctx: Option<crate::server::mutation::GatewayAuthzCtx>,
+    pub(super) gateway_authz_ctx: Option<medulla_server_api::mutation::GatewayAuthzCtx>,
     pub(super) core: Arc<crate::graph::GraphCore>,
     pub(super) materialization_manifest:
         Option<Arc<std::sync::RwLock<crate::registry::MaterializationManifest>>>,
-    pub(super) persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
+    pub(super) persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
-    pub(super) cdc: Option<Arc<crate::server::cdc::CdcHub>>,
+    pub(super) cdc: Option<Arc<medulla_server_api::cdc::CdcHub>>,
     pub(super) routed_write_coalescer:
-        Arc<crate::server::routed_write_coalescer::RoutedWriteCoalescerRegistry>,
+        Arc<medulla_server_api::routed_write_coalescer::RoutedWriteCoalescerRegistry>,
     #[cfg(feature = "security")]
     pub(super) rls: std::sync::Arc<crate::isolation::IsolationLayer>,
     #[cfg(all(feature = "mining", feature = "query", feature = "tsdb"))]
@@ -306,7 +306,7 @@ pub(super) async fn route_process_global_domains(
     // The verified carrier whose owner (tenant+principal) the process-global UDF +
     // foreign-source catalogs key their entries by (EH-373/EH-374) — never a request field.
     #[cfg(any(feature = "wasm-udf", feature = "federation"))]
-    let owner_call = crate::server::access::OwnerScopedCall {
+    let owner_call = medulla_server_api::access::OwnerScopedCall {
         state,
         req_id,
         carrier: read_authority

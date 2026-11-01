@@ -6,11 +6,11 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::protocol::{Method, Request, Response, ResultPayload};
-use crate::server::auth::VerifiedRequestContext;
+use medulla_server_api::auth::VerifiedRequestContext;
 use crate::server::persistence::agent_component::test_component_draft;
 use crate::server::persistence::agent_fixtures::mutation_context;
 use crate::server::persistence::agent_library::AgentLibraryStore;
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 use medulla_types::agent_component::{
     AgentComponentKind, AgentComponentPublishRequest, AgentComponentRetireRequest,
 };

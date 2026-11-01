@@ -18,7 +18,7 @@ use tokio::sync::RwLock;
 #[cfg(feature = "raft")]
 use crate::protocol::ResultPayload;
 use crate::protocol::{Method, Response};
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 
 #[cfg(feature = "raft")]
 enum RaftAdminOp {

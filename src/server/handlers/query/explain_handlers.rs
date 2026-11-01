@@ -317,7 +317,7 @@ pub(crate) async fn handle_recompute_materialization(
         };
         let graph_fname = medulla_kernel::persist::sanitize(graph_name);
         let authoritative_graph_version =
-            match crate::server::mutation_batch::authoritative_graph_version(
+            match medulla_server_api::mutation_batch::authoritative_graph_version(
                 &persistence,
                 &graph_fname,
                 &core,
@@ -353,17 +353,17 @@ pub(crate) async fn handle_recompute_materialization(
                 Ok(payload) => payload,
                 Err(error) => return Ok(Response::err(req_id, error)),
             };
-        let batch_id = crate::server::mutation_batch::opaque_request_key(
+        let batch_id = medulla_server_api::mutation_batch::opaque_request_key(
             "reasoning-recompute",
             graph_name,
             req_id,
             &method,
         );
-        if let Err(error) = crate::server::mutation_batch::commit_internal_graph_methods(
-            crate::server::mutation_batch::InternalGraphCommitRequest::new(
+        if let Err(error) = medulla_server_api::mutation_batch::commit_internal_graph_methods(
+            medulla_server_api::mutation_batch::InternalGraphCommitRequest::new(
                 Some(&persistence),
                 &core,
-                crate::server::mutation_batch::CommitOrigin {
+                medulla_server_api::mutation_batch::CommitOrigin {
                     request_id: req_id,
                     principal: Some(caller),
                 },

@@ -45,7 +45,7 @@ pub(crate) async fn run_unified_overlaid_resolve_txn(
     let guard = entry.value().lock();
     let Some(expected_owner) = read_authority
         .and_then(GraphReadAuthority::carrier)
-        .map(crate::server::access::CarrierAuthority::owner_scope)
+        .map(medulla_server_api::access::CarrierAuthority::owner_scope)
     else {
         medulla_kernel::metrics::access_denied();
         return Err(Response::err(

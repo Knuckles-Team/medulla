@@ -395,7 +395,7 @@ impl EmbeddedEngine {
         // 2) Publish only after the durable commit succeeds. This is the
         // canonical durable Method → GraphCore applier used by WAL replay and
         // the Raft state machine, so a failed admission never becomes visible.
-        crate::mutation_apply::apply(&core, &method);
+        medulla_server_api::mutation_apply::apply(&core, &method);
         // The replay applier deliberately only applies rows to a core; it does
         // not advance the serving OCC clock. The embedded write gate owns the
         // publication boundary, so advance that clock exactly once after the

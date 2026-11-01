@@ -305,7 +305,7 @@ pub(crate) fn construct_to_methods(
     sparql: &str,
 ) -> Result<(Vec<Method>, Vec<String>), String> {
     let snap = core.analysis_snapshot();
-    crate::server::api::query_txn::txn_support::construct_view_to_methods(&snap, sparql)
+    medulla_server_api::api::query_txn::txn_support::construct_view_to_methods(&snap, sparql)
 }
 
 /// Resolve the txn's DEFAULT-graph core, enforcing that `target_graph` (if given) is the
@@ -378,7 +378,7 @@ pub(super) async fn stage_axiom(
     // does not get the TBox exemption (ordinary ABox default-deny), never a
     // widened one.
     let (methods, _schema_refs) =
-        match crate::server::api::query_txn::txn_support::triples_to_methods(&triples) {
+        match medulla_server_api::api::query_txn::txn_support::triples_to_methods(&triples) {
             Ok(result) => result,
             Err(error) => return Response::err(req_id, format!("TxnAxiom: {error}")),
         };
@@ -508,7 +508,7 @@ pub(super) async fn stage_plan_writeback(
         let mut anchor_view = projected.analysis_snapshot();
         if let Some(entry) = s.open_txns.get(txn_id) {
             let write_set = entry.value().lock().write_set.clone();
-            crate::server::api::query_txn::query_support::overlay_write_set(
+            medulla_server_api::api::query_txn::query_support::overlay_write_set(
                 &mut anchor_view,
                 &write_set,
             );

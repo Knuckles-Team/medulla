@@ -9,7 +9,7 @@ type ReconcileLookupResult =
     Option<Result<Option<crate::mutation_batch::MutationBatchRecord>, String>>;
 
 struct ReconcileContext {
-    persistence: Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+    persistence: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     expected_principal: String,
     lookups: Vec<ReconcileLookup>,
 }
@@ -40,7 +40,7 @@ async fn collect_reconcile_context(
     for (graph, core) in graphs {
         let fname = medulla_kernel::persist::sanitize(&graph);
         for namespace in ["txn", "crossmodal"] {
-            let batch_id = crate::server::mutation_batch::opaque_coordinator_key(
+            let batch_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
                 namespace, &graph, &parent_id,
             );
             lookups.push((graph.clone(), core.clone(), fname.clone(), batch_id));
@@ -54,7 +54,7 @@ async fn collect_reconcile_context(
 }
 
 async fn fanout_reconcile_lookups(
-    persistence: &Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+    persistence: &Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     lookups: &[ReconcileLookup],
 ) -> Result<Vec<ReconcileLookupResult>, String> {
     let semaphore = Arc::new(tokio::sync::Semaphore::new(RECONCILE_LOOKUP_CONCURRENCY));
@@ -148,7 +148,7 @@ pub(super) struct ReconcileTxnCandidate<'a> {
     idempotency_key: Option<&'a str>,
     expected_tenant: Option<&'a str>,
     attempt_nonce: Option<Nonce>,
-    persistence: &'a Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+    persistence: &'a Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     expected_principal: &'a str,
     graph: String,
     core: Arc<crate::graph::GraphCore>,

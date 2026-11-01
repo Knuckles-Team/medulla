@@ -7,7 +7,8 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 
-use crate::server::blob::store::{ChunkStore, RedbChunkStore};
+use medulla_server_api::blob::store::ChunkStore;
+use medulla_server_api::blob::store::RedbChunkStore;
 use medulla_text::TextIndex;
 use medulla_tsdb::point::Point;
 use medulla_tsdb::store::SeriesStore;
@@ -67,7 +68,7 @@ fn open_obs_state_blocking(
         }
         None => {
             // A repeated clock tick must not alias another live store.
-            let base = crate::server::api::dispatch_support::unique_temp_dir("medulla-obs");
+            let base = medulla_server_api::api::dispatch_support::unique_temp_dir("medulla-obs");
             let series = SeriesStore::open_in_dir(
                 &base,
                 medulla_kernel::store_authority::process_verifier(),

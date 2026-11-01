@@ -101,7 +101,7 @@ const MAX_LINE_BYTES: u64 = 8 * 1024 * 1024;
 /// `MEDULLA_SQLITE_ADDR` is set.
 pub async fn serve(listener: TcpListener, state: Arc<RwLock<ServerState>>) {
     let persist_dir = state.read().await.persist_dir.clone();
-    if crate::server::sql_tables::validate_served_configuration(
+    if medulla_server_api::sql_tables::validate_served_configuration(
         persist_dir.as_deref().map(std::path::Path::new),
     )
     .is_err()
@@ -255,7 +255,7 @@ mod tests {
     use super::*;
 
     use crate::isolation::{AgentIdentity, AgentRole, IsolationLayer};
-    use crate::server::api::persistence::PersistenceBackend;
+    use medulla_server_api::api::persistence::PersistenceBackend;
     #[cfg(feature = "redb")]
     use crate::server::persistence::redb_backend::RedbBackend;
 
@@ -278,7 +278,7 @@ mod tests {
         });
         let mut state = ServerState::new_for_test("test-sqlite-wire-secret", isolation);
         state.persist_dir = Some(
-            crate::server::sql_tables::test_persist_dir()
+            medulla_server_api::sql_tables::test_persist_dir()
                 .to_string_lossy()
                 .into_owned(),
         );
@@ -357,7 +357,7 @@ mod tests {
     fn req(sql: &str) -> String {
         static REQUEST_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
         let id = REQUEST_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        let signed = crate::server::auth::sign_current_test_request(
+        let signed = medulla_server_api::auth::sign_current_test_request(
             "test-sqlite-wire-secret",
             Request {
                 id,
@@ -382,7 +382,7 @@ mod tests {
 
     #[cfg(feature = "redb")]
     fn signed_req(sql: &str, id: u64, agent: &str, nonce: &str, idempotency_key: &str) -> String {
-        let context = crate::server::authority_context::signed_test_claims(agent);
+        let context = medulla_server_api::authority_context::signed_test_claims(agent);
         let mut signed = Request {
             id,
             graph: "__commons__".to_string(),

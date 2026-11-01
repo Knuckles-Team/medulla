@@ -36,13 +36,6 @@ pub(crate) mod development_lane;
 // `MineAssociate` variant falls to the graph_ops "not available" catch-all.
 #[cfg(feature = "mining")]
 pub(crate) mod mining;
-// Graph-learning / neuro-symbolic domain (CONCEPT:MEDULLA-KG.graphlearn.link-predictor,
-// feature `graphlearn`). A KAN link-predictor learned over a graph-derived subgraph;
-// GRAPH-SCOPED (like mining) — the source + `:PredictedEdge`/`:EdgeFunction`
-// write-back need the live core. A build without `graphlearn` omits the module and
-// the `GraphLearn*` variants fall to the graph_ops "not available" catch-all.
-#[cfg(feature = "graphlearn")]
-pub(crate) mod graphlearn;
 // ML pipeline domain (CONCEPT:MEDULLA-KG.mining.ml-pipeline, feature `ml-pipeline`). A
 // composable train→eval→serve→predict lifecycle over a versioned `:Model` artifact
 // that generalizes the KAN one-off. GRAPH-SCOPED (like mining/graphlearn) — it reuses

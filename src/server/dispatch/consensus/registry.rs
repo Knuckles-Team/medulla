@@ -246,7 +246,7 @@ pub(in crate::server::dispatch) async fn handle_list_registered_servers(
     request: RegisteredServerListRequest,
 ) -> Response {
     crate::server::dispatch::ensure_graph_resident(state, REGISTRY_GRAPH).await;
-    let _registry_guard = crate::server::mutation_batch::lock_graph(REGISTRY_GRAPH).await;
+    let _registry_guard = medulla_server_api::mutation_batch::lock_graph(REGISTRY_GRAPH).await;
     let (raw_core, read_authority) = {
         let current = timed_read(state).await;
         let Some(entry) = current.registry.get(REGISTRY_GRAPH) else {
@@ -663,7 +663,7 @@ mod list_registered_servers_tests {
             "srv:bob-server".to_string(),
             private_row("bob-server", "bob"),
         );
-        let isolation = crate::server::access::two_agent_isolation();
+        let isolation = medulla_server_api::access::two_agent_isolation();
         let context = VerifiedRequestContext::verified_for_test("alice");
         let authority = GraphReadAuthority::from_verified(&context, &isolation).unwrap();
         let visible = live_registered_servers(&core, 50_000, |node_id, properties| {

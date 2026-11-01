@@ -11,13 +11,13 @@ use crate::server::ServerState;
 pub struct TxnSeam;
 
 #[async_trait::async_trait]
-impl crate::server::api::query_txn::TxnApi for TxnSeam {
+impl medulla_server_api::api::query_txn::TxnApi for TxnSeam {
     async fn try_handle(
         &self,
         state: &Arc<RwLock<ServerState>>,
         req_id: u64,
         caller: &str,
-        verified_context: &crate::server::auth::VerifiedRequestContext,
+        verified_context: &medulla_server_api::auth::VerifiedRequestContext,
         method: crate::protocol::Method,
     ) -> Result<crate::protocol::Response, crate::protocol::Method> {
         super::dispatch::try_handle(state, req_id, caller, verified_context, method).await
@@ -29,7 +29,7 @@ impl crate::server::api::query_txn::TxnApi for TxnSeam {
         request_id: u64,
         caller: Option<&str>,
         coordinator_id: &str,
-        txn: crate::server::txn::GraphTxnState,
+        txn: medulla_server_api::txn::GraphTxnState,
         attempt_nonce: Option<medulla_types::contract::Nonce>,
     ) -> Result<bool, String> {
         super::commit_modal::commit_cross_modal_txn_with_nonce(
@@ -46,7 +46,7 @@ impl crate::server::api::query_txn::TxnApi for TxnSeam {
     #[cfg(feature = "graphql")]
     async fn commit_graphql_cross_modal(
         &self,
-        ctx: crate::server::api::query_txn::txn_support::GraphQlCrossModalCommit<'_>,
+        ctx: medulla_server_api::api::query_txn::txn_support::GraphQlCrossModalCommit<'_>,
     ) -> Result<bool, String> {
         super::commit_modal::commit_graphql_cross_modal(ctx).await
     }
@@ -57,10 +57,10 @@ impl crate::server::api::query_txn::TxnApi for TxnSeam {
         state: &Arc<RwLock<ServerState>>,
         req_id: u64,
         caller: &str,
-        authority: &crate::server::access::CarrierAuthority,
+        authority: &medulla_server_api::access::CarrierAuthority,
         method: &crate::protocol::Method,
-    ) -> Result<crate::server::api::query_txn::txn_support::GraphQlLifecycleAdmission, String> {
-        use crate::server::api::query_txn::txn_support as api;
+    ) -> Result<medulla_server_api::api::query_txn::txn_support::GraphQlLifecycleAdmission, String> {
+        use medulla_server_api::api::query_txn::txn_support as api;
         let admission =
             super::receipts::begin_graphql_lifecycle(state, req_id, caller, authority, method)
                 .await?;
@@ -77,7 +77,7 @@ impl crate::server::api::query_txn::TxnApi for TxnSeam {
     #[cfg(feature = "graphql")]
     fn finish_graphql_lifecycle(
         &self,
-        token: crate::server::api::query_txn::txn_support::LifecycleToken,
+        token: medulla_server_api::api::query_txn::txn_support::LifecycleToken,
         result: crate::protocol::ResultPayload,
     ) -> Result<crate::protocol::ResultPayload, String> {
         let receipt = token

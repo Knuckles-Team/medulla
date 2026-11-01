@@ -50,9 +50,11 @@ use sha2::{Digest, Sha256};
 use tokio::sync::RwLock;
 
 use crate::protocol::{GraphType, Method, Response, ResultPayload};
-use crate::server::api::persistence::PersistenceBackend;
-use crate::server::auth::{dispatch_test_on_heap, scoped_test_request_on, ScopedTestCaller};
-use crate::server::state::ServerState;
+use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_server_api::auth::dispatch_test_on_heap;
+use medulla_server_api::auth::scoped_test_request_on;
+use medulla_server_api::auth::ScopedTestCaller;
+use medulla_server_api::state::ServerState;
 
 const SECRET: &str = "g9-boot-critical-fixture-secret"; // sanitizer:ignore
 /// The fixed tenant `auth::request_context_policy` expects under `cfg(test)`.
@@ -361,17 +363,17 @@ async fn outbox_status(state: &Arc<RwLock<ServerState>>) -> Option<MutationOutbo
 /// durable fixture in `redb_backend.rs` uses.
 fn scoped_series_key(graph: &str, series: &str, principal: &str) -> String {
     let tenant_scope =
-        crate::server::mutation_batch::opaque_coordinator_key("carrier-tenant", "verified", TENANT);
+        medulla_server_api::mutation_batch::opaque_coordinator_key("carrier-tenant", "verified", TENANT);
     let actor_scope = format!(
         "principal:sha256:{}",
         hex::encode(Sha256::digest(principal.as_bytes()))
     );
-    let owner_scope = crate::server::mutation_batch::opaque_coordinator_key(
+    let owner_scope = medulla_server_api::mutation_batch::opaque_coordinator_key(
         "carrier-owner",
         &tenant_scope,
         &actor_scope,
     );
-    let graph_scope = crate::server::mutation_batch::opaque_coordinator_key(
+    let graph_scope = medulla_server_api::mutation_batch::opaque_coordinator_key(
         "timeseries-graph",
         &owner_scope,
         graph,
@@ -410,7 +412,7 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
     state.persist_dir = Some(persist.clone());
     state.persistence = Some(backend.clone());
     state.tsdb_store = Some(series_store.clone());
-    state.blob = Some(crate::server::api::ingest::cursors_for_test(
+    state.blob = Some(medulla_server_api::api::ingest::cursors_for_test(
         blob_dir.to_str().unwrap(),
     ));
     let _ = state.registry.create_graph(GRAPH, GraphType::Global, None);
@@ -435,12 +437,12 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
         .await
         .expect("authoritative-shard-only commit must succeed");
     // A durable plan-backed matview awaiting its RAM re-hydration.
-    let view = crate::server::matview::PlanMatView {
+    let view = medulla_server_api::matview::PlanMatView {
         name: MV_NAME.to_string(),
         graph: GRAPH.to_string(),
         plan: medulla_types::wire::Plan::new(Vec::new()),
     };
-    redb.plan_matview_put(MV_NAME, crate::server::matview::encode_def(&view).unwrap())
+    redb.plan_matview_put(MV_NAME, medulla_server_api::matview::encode_def(&view).unwrap())
         .await
         .unwrap();
     // N real imports → N pending connector-pack-import outbox rows.
@@ -567,7 +569,7 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
             }
         }
         if !reloaded {
-            reloaded = crate::server::matview::manager().get(MV_NAME).is_some();
+            reloaded = medulla_server_api::matview::manager().get(MV_NAME).is_some();
         }
         if reconciled && reloaded {
             break;

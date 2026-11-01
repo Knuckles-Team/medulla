@@ -196,7 +196,7 @@ impl RedbBackend {
 }
 
 #[cfg(feature = "redb")]
-impl crate::server::api::admin::saga::AdminSagaLedger for RedbBackend {
+impl medulla_server_api::api::admin::saga::AdminSagaLedger for RedbBackend {
     fn admin_mutations_read(&self) -> Result<AdminScopedRead<'_>, String> {
         RedbBackend::admin_mutations_read(self)
     }

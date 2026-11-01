@@ -36,8 +36,8 @@ use medulla_statechart::{Context, EventInput, StatechartDef, StatechartError, St
 use medulla_types::statechart::StatechartOp;
 
 use crate::protocol::{Method, Response, ResultPayload};
-use crate::server::access::CarrierAuthority;
-use crate::server::state::ServerState;
+use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::state::ServerState;
 
 /// Bounded decode limits for a submitted `StatechartDef` MessagePack blob — the same
 /// belt-and-braces shape `jobs.rs` applies to `ProgramOptimize` request payloads.
@@ -174,7 +174,7 @@ fn op_instantiate(
             context: context.clone(),
         },
     };
-    let request_batch_id = crate::server::mutation_batch::opaque_request_key(
+    let request_batch_id = medulla_server_api::mutation_batch::opaque_request_key(
         "statechart-instantiate",
         &authority.namespace("statechart-instances", "instantiate"),
         req_id,
@@ -300,7 +300,7 @@ mod tests {
     /// `sql_tables.rs`'s own test helper of the same shape.
     fn authority(actor: &str, tenant: &str) -> CarrierAuthority {
         CarrierAuthority::from_verified(
-            &crate::server::auth::VerifiedRequestContext::verified_for_test_in_tenant(
+            &medulla_server_api::auth::VerifiedRequestContext::verified_for_test_in_tenant(
                 actor, tenant,
             ),
         )

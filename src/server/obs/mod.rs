@@ -78,14 +78,14 @@ impl ObsStateExt for crate::server::ServerState {
     }
 
     fn set_obs(&mut self, obs: Option<Arc<ObsState>>) {
-        self.obs = obs.map(|o| o as crate::server::state::ErasedHandle);
+        self.obs = obs.map(|o| o as medulla_server_api::state::ErasedHandle);
     }
 }
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use parking_lot::Mutex;
 
-use crate::server::blob::store::ChunkStore;
+use medulla_server_api::blob::store::ChunkStore;
 use medulla_text::TextIndex;
 use medulla_tsdb::store::SeriesStore;
 
@@ -221,8 +221,8 @@ mod tests {
         SNAPSHOT_WRITE_ERROR,
     };
     use super::*;
-    use crate::server::blob::store::RedbChunkStore;
-    use crate::server::http1::HttpMessage;
+    use medulla_server_api::blob::store::RedbChunkStore;
+    use medulla_server_api::http1::HttpMessage;
     use medulla_kernel::lock_recovery::LockRecovery;
     use medulla_kernel::test_rendezvous::{join_bounded, recv_within};
     use std::path::Path;

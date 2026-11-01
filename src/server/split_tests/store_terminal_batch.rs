@@ -49,7 +49,7 @@ fn terminal_work_item_retry_replays_and_conflicting_payload_fails_closed() {
     assert_eq!(claimed.lease_epoch, Some(1));
     assert_eq!(claimed.fencing_token, Some(1));
 
-    let terminal_method = crate::test_support::terminal_method(1, 1);
+    let terminal_method = medulla_server_api::test_support::terminal_method(1, 1);
     let mut terminal = batch(
         "work:terminal-stable-batch",
         "work-idem:terminal-stable-key",

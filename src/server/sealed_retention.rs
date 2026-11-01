@@ -80,7 +80,7 @@ pub fn configured_policy() -> Vec<Retention> {
 
 /// The configured positive sweep interval.
 pub fn sweep_interval_secs() -> u64 {
-    crate::server::state::positive_runtime_limit_from_env(
+    medulla_server_api::state::positive_runtime_limit_from_env(
         "MEDULLA_SEALED_RETENTION_SECS",
         DEFAULT_SWEEP_SECS,
     )
@@ -164,18 +164,18 @@ pub async fn expire_sealed_records(
 
 /// Commit one policy retirement through the native WorkItem kernel.
 async fn retire(
-    persistence: Option<&Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
+    persistence: Option<&Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     core: &Arc<GraphCore>,
     graph: &str,
     request: RetireSealedRecordRequest,
 ) -> bool {
     let key = request.idempotency_key.clone();
     let node_id = request.node_id.clone();
-    let commit = crate::server::mutation_batch::commit_work_item(
-        crate::server::mutation_batch::WorkItemCommitRequest::new(
+    let commit = medulla_server_api::mutation_batch::commit_work_item(
+        medulla_server_api::mutation_batch::WorkItemCommitRequest::new(
             persistence,
             core,
-            crate::server::mutation_batch::CommitOrigin {
+            medulla_server_api::mutation_batch::CommitOrigin {
                 request_id: 0,
                 principal: Some(RETENTION_ACTOR),
             },

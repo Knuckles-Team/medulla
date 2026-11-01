@@ -25,8 +25,8 @@ use medulla_types::mutation_outbox::MutationOutboxOp;
 use medulla_types::mutation_outbox::{NativeOutboxScope, NativeOutboxStore, OutboxTarget};
 
 use crate::protocol::Response;
-use crate::server::auth::VerifiedRequestContext;
-use crate::server::state::ServerState;
+use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::state::ServerState;
 
 /// Read one consumer's standing, its dead letters, or rewind its cursor.
 pub(crate) async fn handle_mutation_outbox(
@@ -50,9 +50,11 @@ pub(crate) async fn handle_mutation_outbox(
 }
 
 #[cfg(feature = "redb")]
-use crate::server::outbox_operator::{
-    position, OutboxView, OutboxViewAnswer, OutboxWrite, OutboxWriteReply,
-};
+use medulla_server_api::outbox_operator::position;
+use medulla_server_api::outbox_operator::OutboxView;
+use medulla_server_api::outbox_operator::OutboxViewAnswer;
+use medulla_server_api::outbox_operator::OutboxWrite;
+use medulla_server_api::outbox_operator::OutboxWriteReply;
 
 /// The label a failed blocking store task names.
 #[cfg(feature = "redb")]
@@ -134,7 +136,7 @@ async fn serve(
 #[cfg(feature = "redb")]
 enum Owner {
     Graph {
-        persistence: Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+        persistence: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
         graph_fname: String,
     },
     AgentLibrary {
@@ -232,7 +234,7 @@ async fn semantic_owner(
     verified: &VerifiedRequestContext,
     binding_id: &str,
 ) -> Result<Owner, String> {
-    let authority = crate::server::access::CarrierAuthority::from_verified(verified)?;
+    let authority = medulla_server_api::access::CarrierAuthority::from_verified(verified)?;
     let persist_dir = persist_dir(state).await?;
     let query = state
         .read()
@@ -262,10 +264,10 @@ async fn sql_owner(
     verified: &VerifiedRequestContext,
     resource: &str,
 ) -> Result<Owner, String> {
-    let authority = crate::server::access::CarrierAuthority::from_verified(verified)?;
+    let authority = medulla_server_api::access::CarrierAuthority::from_verified(verified)?;
     let tenant_scope = authority.tenant_scope().to_string();
     let store =
-        crate::server::sql_tables::tenant_table_store(&tenant_scope, &persist_dir(state).await?)?;
+        medulla_server_api::sql_tables::tenant_table_store(&tenant_scope, &persist_dir(state).await?)?;
     Ok(Owner::SqlResource {
         store,
         tenant_scope,
@@ -308,7 +310,7 @@ impl Owner {
             }
             Owner::AgentLibrary { store, tenant_id } => {
                 let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-                crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+                medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     store.outbox_view(&tenant_id, &view, now_ms)
                 })
                 .await
@@ -316,7 +318,7 @@ impl Owner {
             #[cfg(feature = "ann-redb")]
             Owner::SemanticBinding { service } => {
                 let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-                crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+                medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     service
                         .outbox_operator_view(&view, now_ms)
                         .map_err(|error| error.to_string())
@@ -330,7 +332,7 @@ impl Owner {
                 resource,
             } => {
                 let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-                crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+                medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     store.outbox_operator_view(&tenant_scope, &resource, &view, now_ms)
                 })
                 .await
@@ -338,10 +340,10 @@ impl Owner {
             #[cfg(feature = "jobs")]
             Owner::Jobs { store } => {
                 let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-                crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+                medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     let (mutations, kernel, owner) = store.outbox_owner();
                     let read = kernel.read_scope(owner)?;
-                    crate::server::outbox_operator::read_view(mutations, &read, &view, now_ms)
+                    medulla_server_api::outbox_operator::read_view(mutations, &read, &view, now_ms)
                 })
                 .await
             }
@@ -355,14 +357,14 @@ impl Owner {
                 graph_fname,
             } => persistence.write_mutation_outbox(&graph_fname, write).await,
             Owner::AgentLibrary { store, tenant_id } => {
-                crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+                medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     store.outbox_write(&tenant_id, write)
                 })
                 .await
             }
             #[cfg(feature = "ann-redb")]
             Owner::SemanticBinding { service } => {
-                crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+                medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     service
                         .outbox_operator_write(write)
                         .map_err(|error| error.to_string())
@@ -375,16 +377,16 @@ impl Owner {
                 tenant_scope,
                 resource,
             } => {
-                crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+                medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     store.outbox_operator_write(&tenant_scope, &resource, write)
                 })
                 .await
             }
             #[cfg(feature = "jobs")]
             Owner::Jobs { store } => {
-                crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+                medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     let (mutations, _, owner) = store.outbox_owner();
-                    crate::server::outbox_operator::operate(mutations, owner, write)
+                    medulla_server_api::outbox_operator::operate(mutations, owner, write)
                 })
                 .await
             }

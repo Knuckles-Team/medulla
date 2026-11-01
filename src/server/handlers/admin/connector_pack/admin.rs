@@ -12,12 +12,12 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::protocol::Response;
-use crate::server::auth::VerifiedRequestContext;
+use medulla_server_api::auth::VerifiedRequestContext;
 #[cfg(feature = "redb")]
 use crate::server::persistence::agent_library::AgentLibraryStore;
 #[cfg(feature = "redb")]
 use crate::server::persistence::connector_pack::admin as binding;
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// One served admin entry point: the dispatch signature, the named refusal in
 /// a build without the Agent Library, and the redb body `$body`.
@@ -203,7 +203,7 @@ where
     )?;
     // The blocking write owns the lock: a dropped dispatch future cannot free
     // the tenant while the write still runs (EH-536).
-    crate::server::api::dispatch_support::blocking_task("connector pack admin", move || {
+    medulla_server_api::api::dispatch_support::blocking_task("connector pack admin", move || {
         let _held = tenant_pack_guard;
         write(&store, context)
     })

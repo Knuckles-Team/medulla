@@ -89,7 +89,7 @@ pub fn verify_mssql_login(secret: &str, user: &str, password: &str) -> bool {
 /// Fail closed before binding the direct TDS listener. TDS encryption
 /// is not implemented here, so the only safe direct bind is authenticated loopback.
 pub fn validate_startup_policy(addr: &str, secret: &str) -> std::io::Result<()> {
-    crate::server::api::dispatch_support::validate_direct_wire_security(
+    medulla_server_api::api::dispatch_support::validate_direct_wire_security(
         addr,
         "mssql-wire",
         !secret.is_empty(),
@@ -310,7 +310,7 @@ pub async fn serve(addr: &str, state: Arc<RwLock<ServerState>>) -> std::io::Resu
         (state.auth_secret.clone(), state.persist_dir.clone())
     };
     validate_startup_policy(addr, &auth_secret)?;
-    crate::server::sql_tables::validate_served_configuration(
+    medulla_server_api::sql_tables::validate_served_configuration(
         persist_dir.as_deref().map(std::path::Path::new),
     )?;
     let listener = TcpListener::bind(addr).await?;

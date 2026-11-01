@@ -12,9 +12,9 @@ use medulla_types::mutation_batch::MutationOutboxLease;
 use medulla_types::native_control::EnrichmentBudgetPark;
 use tokio::sync::RwLock;
 
-use crate::server::api::persistence::PersistenceBackend;
-use crate::server::auth::VerifiedRequestContext;
-use crate::server::state::ServerState;
+use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::state::ServerState;
 
 const SERVICE: &str = "repository-enrichment-v1";
 
@@ -88,7 +88,7 @@ async fn propose_park(
     if now_ms == 0 || now_ms > medulla_kernel::kernel::dispatch_support::authoritative_now_ms() {
         return Err("CONFLICT: repository enrichment park timestamp is invalid".into());
     }
-    let (snapshot, park) = crate::server::api::reentry::plan_held_underfunded_park(
+    let (snapshot, park) = medulla_server_api::api::reentry::plan_held_underfunded_park(
         state,
         persistence,
         graph,
@@ -127,7 +127,7 @@ async fn propose_park(
         "{}:{}:{}",
         park.source_envelope, park.next_index, park.snapshot_digest
     );
-    let mut mutation = crate::server::api::persistence::RaftMutationContext::internal(
+    let mut mutation = medulla_server_api::api::persistence::RaftMutationContext::internal(
         "raft-enrichment-park",
         graph,
         &coordinator,

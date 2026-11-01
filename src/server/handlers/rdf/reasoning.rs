@@ -10,10 +10,11 @@ use crate::isolation::AccessLevel;
 use crate::protocol::Method;
 use crate::protocol::{Response, ResultPayload};
 #[cfg(feature = "owl")]
-use crate::server::access::{check_graph_access, GraphReadAuthority};
-use crate::server::compute::compute_off_lock;
+use medulla_server_api::access::check_graph_access;
+use medulla_server_api::access::GraphReadAuthority;
+use medulla_server_api::compute::compute_off_lock;
 #[cfg(feature = "owl")]
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// Run a parameterised custom-rule reasoning request over the request's graph view
 /// (CONCEPT:MEDULLA-KG.ontology.medulla-runtime-swrl-datalog / MEDULLA-023). Read-only: it reasons over an off-lock snapshot (its
@@ -392,7 +393,7 @@ fn validated_schema_digests(views: &[&crate::graph::GraphView]) -> Result<Vec<St
     // caller Turtle remains an explicit extension, never a replacement.
     #[cfg(feature = "shacl")]
     for view in views {
-        crate::server::api::admin::compose::validate_and_compose(&view.schema_sources)?;
+        medulla_server_api::api::admin::compose::validate_and_compose(&view.schema_sources)?;
     }
     Ok(schema_digests)
 }
@@ -458,7 +459,7 @@ fn owl_explain(
     };
     medulla_rdf::owl::validate_supported_profile(&caller_extra)?;
     #[cfg(feature = "shacl")]
-    crate::server::api::admin::compose::validate_and_compose(&view.schema_sources)?;
+    medulla_server_api::api::admin::compose::validate_and_compose(&view.schema_sources)?;
     let mut triples = medulla_rdf::owl::tbox_triples_from_view(view);
     triples.extend(caller_extra);
 

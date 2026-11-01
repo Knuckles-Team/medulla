@@ -338,7 +338,7 @@ fn commit_and_notify(
         &mut pending.ops,
         &mut pending.raft_log_ops,
         &shard_write_attempt_id("shard_drain"),
-        crate::server::txn::now_ms(),
+        medulla_server_api::txn::now_ms(),
         crypto,
         // O(1) audit-chain tail cache (CONCEPT:MEDULLA-KG.storage.embedded-store), persistent across batches.
         #[cfg(feature = "security")]
@@ -405,7 +405,7 @@ fn in_write<T>(
     })();
     match applied {
         Ok(value) => {
-            shard.commit_drain(group, &batches, crate::server::txn::now_ms())?;
+            shard.commit_drain(group, &batches, medulla_server_api::txn::now_ms())?;
             Ok(value)
         }
         Err(error) => {

@@ -53,7 +53,7 @@ use super::placement::{
     MoveStage, PartitionMoveJournal, PartitionState, PlacementEntry, PlacementFence,
 };
 use super::GroupId;
-use crate::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use crate::server::persistence::redb_backend::rehydrate_core_from_dump;
 
 /// The outcome of a reshard, for observability + the proof.

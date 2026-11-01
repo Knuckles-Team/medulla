@@ -4,9 +4,9 @@ use tokio::sync::RwLock;
 
 use crate::graph::GraphCore;
 use crate::protocol::{Method, Response};
-use crate::server::access::GraphReadAuthority;
-use crate::server::api::reentry::TryHandleContext;
-use crate::server::state::ServerState;
+use medulla_server_api::access::GraphReadAuthority;
+use medulla_server_api::api::reentry::TryHandleContext;
+use medulla_server_api::state::ServerState;
 
 /// Route the native RDF family while keeping each protocol surface in its own
 /// cohesive handler. An unmatched method is returned for the next dispatcher.
@@ -322,7 +322,7 @@ async fn try_handle_validation(
         )),
         #[cfg(feature = "shacl")]
         Method::GraphSchemaList => Some(
-            crate::server::api::admin::schema_read::handle_list(req_id, graph_name, core).await,
+            medulla_server_api::api::admin::schema_read::handle_list(req_id, graph_name, core).await,
         ),
         #[cfg(feature = "shacl")]
         Method::GraphSchemaClasses {
@@ -330,11 +330,11 @@ async fn try_handle_validation(
             cursor,
             limit,
         } => Some(
-            crate::server::api::admin::terms::handle_classes(
+            medulla_server_api::api::admin::terms::handle_classes(
                 req_id,
                 graph_name,
                 core,
-                crate::server::api::admin::terms::TermPageRequest {
+                medulla_server_api::api::admin::terms::TermPageRequest {
                     kind: *kind,
                     cursor: cursor.as_deref(),
                     limit: *limit,

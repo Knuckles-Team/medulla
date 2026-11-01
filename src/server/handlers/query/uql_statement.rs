@@ -56,7 +56,7 @@ pub(crate) async fn handle_uql(
     };
     #[cfg(feature = "federation")]
     let plan_digest =
-        match crate::server::api::query_txn::query_support::canonical_plan_digest(&binding) {
+        match medulla_server_api::api::query_txn::query_support::canonical_plan_digest(&binding) {
             Ok(digest) => digest,
             Err(error) => return Ok(Response::err(req_id, error)),
         };
@@ -270,7 +270,7 @@ mod served_tests {
         );
         assert_eq!(
             plan_digest,
-            crate::server::api::query_txn::query_support::canonical_plan_digest(&binding)
+            medulla_server_api::api::query_txn::query_support::canonical_plan_digest(&binding)
                 .expect("plan digest")
         );
     }
@@ -310,7 +310,7 @@ mod served_tests {
         );
         assert_eq!(
             plan_digest,
-            crate::server::api::query_txn::query_support::canonical_plan_digest(&binding)
+            medulla_server_api::api::query_txn::query_support::canonical_plan_digest(&binding)
                 .expect("plan digest")
         );
     }

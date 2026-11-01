@@ -2,12 +2,15 @@ use std::path::Path;
 
 use super::*;
 use crate::protocol::Method;
-use crate::server::auth::VerifiedRequestContext;
-use crate::server::mutation_batch::{compile_opaque_method, CompileBatch};
-use crate::server::sql_catalog_acl::{
-    create_owned_table, grant, revoke, with_source_authority_write,
-};
-use crate::server::sql_tables::{tenant_table_store, test_persist_dir};
+use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::mutation_batch::compile_opaque_method;
+use medulla_server_api::mutation_batch::CompileBatch;
+use medulla_server_api::sql_catalog_acl::create_owned_table;
+use medulla_server_api::sql_catalog_acl::grant;
+use medulla_server_api::sql_catalog_acl::revoke;
+use medulla_server_api::sql_catalog_acl::with_source_authority_write;
+use medulla_server_api::sql_tables::tenant_table_store;
+use medulla_server_api::sql_tables::test_persist_dir;
 use medulla_query::{Column, ColumnType, TableSchema, TableStore, TableTxn, TxnOp};
 // `CmpOp` exists in BOTH medulla_query and medulla_types and they are distinct types.
 // `TxnOp::Update`'s selector is an `medulla_types::RowPredicate`, so this is the

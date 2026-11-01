@@ -19,8 +19,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::protocol::Method;
-use crate::server::auth::VerifiedRequestContext;
-use crate::server::state::ServerState;
+use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::state::ServerState;
 
 /// The namespace stores written before the rename carry.
 pub const RETIRED_OWL_NAMESPACE: &str = "http://epistemic-graph/owl#";
@@ -351,7 +351,7 @@ async fn submit(
         method,
     };
     let response =
-        crate::server::api::reentry::dispatch_verified_request(state, request, context).await;
+        medulla_server_api::api::reentry::dispatch_verified_request(state, request, context).await;
     match response.refusal_text() {
         None => Ok(()),
         Some(refusal) => Err(refusal.to_string()),
@@ -361,7 +361,7 @@ async fn submit(
 #[cfg(feature = "security")]
 mod grant {
     use crate::isolation::IsolationLayer;
-    use crate::server::service_grant::ServiceGraphGrant;
+    use medulla_server_api::service_grant::ServiceGraphGrant;
 
     const GRANT: ServiceGraphGrant<'static> = ServiceGraphGrant {
         actor: super::MIGRATION_ACTOR,

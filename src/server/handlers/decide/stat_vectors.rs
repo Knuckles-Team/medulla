@@ -90,7 +90,7 @@ impl GraphVectors {
 
 /// `graph`, ACL-checked for `agent_id`, as that caller may see it.
 pub(super) async fn graph_vectors(
-    state: &Arc<tokio::sync::RwLock<crate::server::state::ServerState>>,
+    state: &Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     agent_id: &str,
     graph: &str,
 ) -> Result<GraphVectors, String> {

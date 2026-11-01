@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::protocol::Method;
-use crate::server::api::reentry::TransactionParticipantPhase;
+use medulla_server_api::api::reentry::TransactionParticipantPhase;
 
 #[cfg(feature = "modality-serving")]
 use super::super::SanitizedModalityRaftCommand;

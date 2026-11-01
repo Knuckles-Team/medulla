@@ -4,9 +4,9 @@
 //! any request, which the naive full-fetch path could not produce.
 
 use super::{run_unified_with, ServedIndexes};
-use crate::server::api::query_txn::query_support::execute_rows;
+use medulla_server_api::api::query_txn::query_support::execute_rows;
 #[cfg(feature = "tsdb")]
-use crate::server::api::query_txn::query_support::TsdbLegBind;
+use medulla_server_api::api::query_txn::query_support::TsdbLegBind;
 use medulla_core::compute::semantic::SemanticStore;
 use medulla_core::graph::GraphCore;
 use medulla_plan::federation::ForeignSourceRegistry;

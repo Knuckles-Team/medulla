@@ -19,9 +19,10 @@ use crate::protocol::{Method, Response, ResultPayload};
 // module but touches NONE of it.
 #[cfg(feature = "compute-dist")]
 use crate::raft::pregel;
-use crate::server::api::persistence::MatView;
+use medulla_server_api::api::persistence::MatView;
 #[cfg(feature = "matview")]
-use crate::server::matview::{self, PlanMatView};
+use medulla_server_api::matview;
+use medulla_server_api::matview::PlanMatView;
 
 #[cfg(feature = "compute-dist")]
 const MAX_DISTRIBUTED_MATVIEW_BYTES: usize = 64 * 1024 * 1024;
@@ -285,8 +286,8 @@ fn admit_plan_matview_under_rls(
 }
 
 struct ControlSaga {
-    backend: Arc<dyn crate::server::api::persistence::PersistenceBackend>,
-    saga: crate::server::api::admin::saga::AdminSaga,
+    backend: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
+    saga: medulla_server_api::api::admin::saga::AdminSaga,
 }
 
 async fn begin_control_saga(
@@ -304,7 +305,7 @@ async fn begin_control_saga(
     let redb = backend
         .as_redb()
         .ok_or_else(|| "materialized-view mutation requires durable redb".to_string())?;
-    let saga = crate::server::api::admin::saga::begin_admin_saga(
+    let saga = medulla_server_api::api::admin::saga::begin_admin_saga(
         redb,
         req_id,
         caller,
@@ -449,7 +450,7 @@ async fn index_matview(state: &Arc<RwLock<ServerState>>, def: PlanMatView) {
             // record the TYPED reason on the tracked view and log it structured — never a
             // silent drop. The view stays correct on today's recompute-on-`Get` path.
             tracing::info!(
-                target: "medulla::matview",
+                target: "medulla_server_api::matview",
                 view = %def.name,
                 graph = %def.graph,
                 op_index = unsupported.index,

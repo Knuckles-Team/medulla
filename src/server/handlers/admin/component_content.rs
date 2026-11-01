@@ -5,9 +5,9 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::protocol::{Response, ResultPayload};
-use crate::server::auth::VerifiedRequestContext;
+use medulla_server_api::auth::VerifiedRequestContext;
 use crate::server::persistence::agent_library::AgentLibraryStore;
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// Read one component revision through its tenant-scoped Agent Library holder,
 /// then verify the engine-owned CAS bytes before returning them.
@@ -86,7 +86,7 @@ async fn serve_component_content(
         };
         let tenant_id = request.tenant_id;
         let read = tokio::task::spawn_blocking(move || {
-            crate::server::blob::engine_bodies::read_engine_body(
+            medulla_server_api::blob::engine_bodies::read_engine_body(
                 blob.store.as_ref(),
                 &tenant_id,
                 &pointer.engine_manifest_digest,

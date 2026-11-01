@@ -52,7 +52,9 @@ use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 
-use crate::server::http1::{self, HttpMessage, RequestLimits};
+use medulla_server_api::http1;
+use medulla_server_api::http1::HttpMessage;
+use medulla_server_api::http1::RequestLimits;
 use crate::server::ServerState;
 
 /// Comma-separated peer engine base-URLs, e.g.
@@ -353,7 +355,7 @@ async fn local_execute(
         method,
     };
     let resp =
-        crate::server::api::reentry::dispatch_authenticated_local_query(state, request).await;
+        medulla_server_api::api::reentry::dispatch_authenticated_local_query(state, request).await;
     if let Some(refusal) = resp.refusal_text() {
         return Err(refusal);
     }
@@ -580,7 +582,7 @@ async fn handle(
     // reports/issue-register.md, A18), so no `CarrierAuthority` can ever be
     // minted here today; this always denies, honestly (via the real check)
     // rather than via the old unconditional stub.
-    if crate::server::access::unauthenticated_carrier_denied(None) {
+    if medulla_server_api::access::unauthenticated_carrier_denied(None) {
         return (
             "403 Forbidden",
             "application/json",

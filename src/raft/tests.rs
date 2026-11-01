@@ -34,7 +34,7 @@ use super::multi::MultiRaft;
 use super::node::{self, StartedNode};
 use super::{NodeId, RaftRequest};
 use crate::protocol::{GraphType, Method};
-use crate::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use crate::server::persistence::redb_backend::RedbBackend;
 use crate::server::ServerState;
 
@@ -262,7 +262,7 @@ async fn three_node_cluster_replicates_and_survives_leader_failover() {
             graph_name: graph.to_string(),
             graph_type: GraphType::Commons,
             committed_at_ms: 0,
-            mutation: crate::server::api::persistence::RaftMutationContext::internal(
+            mutation: medulla_server_api::api::persistence::RaftMutationContext::internal(
                 "raft-test",
                 graph,
                 &format!("cluster-write-{k}"),
@@ -321,7 +321,7 @@ async fn three_node_cluster_replicates_and_survives_leader_failover() {
         graph_name: graph.to_string(),
         graph_type: GraphType::Commons,
         committed_at_ms: 0,
-        mutation: crate::server::api::persistence::RaftMutationContext::internal(
+        mutation: medulla_server_api::api::persistence::RaftMutationContext::internal(
             "raft-test",
             graph,
             "after-failover",
@@ -1367,7 +1367,7 @@ fn make_log_entry(index: u64, term: u64, node_id: &str) -> EntryOf<super::TypeCo
             graph_name: "__commons__".to_string(),
             graph_type: GraphType::Commons,
             committed_at_ms: 0,
-            mutation: crate::server::api::persistence::RaftMutationContext::internal(
+            mutation: medulla_server_api::api::persistence::RaftMutationContext::internal(
                 "raft-log-test",
                 "__commons__",
                 &format!("{term}:{index}:{node_id}"),
@@ -1640,7 +1640,7 @@ async fn two_groups_one_node_commit_independently() {
             graph_name: graph.to_string(),
             graph_type: GraphType::Global,
             committed_at_ms: 0,
-            mutation: crate::server::api::persistence::RaftMutationContext::internal(
+            mutation: medulla_server_api::api::persistence::RaftMutationContext::internal(
                 "raft-group-test",
                 graph,
                 "first-write",
@@ -2359,7 +2359,7 @@ async fn multi_node_group_join_then_leader_rebalance() {
             graph_name: "graph7".to_string(),
             graph_type: GraphType::Global,
             committed_at_ms: 0,
-            mutation: crate::server::api::persistence::RaftMutationContext::internal(
+            mutation: medulla_server_api::api::persistence::RaftMutationContext::internal(
                 "raft-membership-test",
                 "graph7",
                 "joined-write",
@@ -2935,7 +2935,7 @@ mod dist_compute {
     use crate::isolation::{AgentIdentity, AgentRole};
     use crate::protocol::{DistAlgo, GraphType};
     use crate::raft::pregel;
-    use crate::server::access::GraphReadAuthority;
+    use medulla_server_api::access::GraphReadAuthority;
     use medulla_types::result_contract::cluster::DistResult;
 
     fn props(n: &str) -> Vec<u8> {
@@ -3022,7 +3022,7 @@ mod dist_compute {
 
     async fn read_authority(state: &Arc<RwLock<ServerState>>) -> GraphReadAuthority {
         let context =
-            crate::server::auth::VerifiedRequestContext::verified_for_test("pregel-test-authority");
+            medulla_server_api::auth::VerifiedRequestContext::verified_for_test("pregel-test-authority");
         let state = state.read().await;
         GraphReadAuthority::from_verified(&context, &state.isolation).unwrap()
     }
@@ -3212,7 +3212,7 @@ mod dist_compute {
 mod matview {
     use super::*;
     use crate::protocol::DistAlgo;
-    use crate::server::api::persistence::MatView;
+    use medulla_server_api::api::persistence::MatView;
     use medulla_types::result_contract::cluster::DistResult;
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -3321,7 +3321,7 @@ fn scale_add_node_req(graph: &str, node_id: &str, seq: u64) -> RaftRequest {
         graph_name: graph.to_string(),
         graph_type: GraphType::Global,
         committed_at_ms: 0,
-        mutation: crate::server::api::persistence::RaftMutationContext::internal(
+        mutation: medulla_server_api::api::persistence::RaftMutationContext::internal(
             "w12-scale",
             graph,
             node_id,

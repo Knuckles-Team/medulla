@@ -46,7 +46,7 @@ async fn submit_consensus_job_publication_response(
         fencing_token,
         command,
     } = submission;
-    let batch_id = crate::server::mutation_batch::opaque_coordinator_key(
+    let batch_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
         "raft-job-publication-command",
         coordinator_id,
         operation,

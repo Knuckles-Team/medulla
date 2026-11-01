@@ -36,7 +36,7 @@ pub(super) async fn verify_held_blobs(
     if blobs.is_empty() {
         return Ok(());
     }
-    let carrier = crate::server::access::CarrierAuthority::from_verified(verified)
+    let carrier = medulla_server_api::access::CarrierAuthority::from_verified(verified)
         .map_err(PolicyRefusal::InvalidRecord)?;
     let owner_scope = carrier.owner_scope().to_string();
     let store = timed_read(state)
@@ -54,7 +54,7 @@ pub(super) async fn verify_held_blobs(
 /// the declared length.
 #[cfg(feature = "blob")]
 fn check_held(
-    store: &dyn crate::server::blob::ChunkStore,
+    store: &dyn medulla_server_api::blob::ChunkStore,
     owner_scope: &str,
     blobs: &[HeldBlobRef],
 ) -> Result<(), PolicyRefusal> {

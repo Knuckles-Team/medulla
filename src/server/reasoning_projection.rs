@@ -19,7 +19,7 @@ use medulla_epistemic::IncrementalReasoningIndex;
 use sha2::{Digest, Sha256};
 use tokio::sync::RwLock;
 
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 
 // The outbox-tailing half of this module. The durable outbox -- its leases, its
 // claim budget and its projection cursors -- is a mutation-kernel ledger only the
@@ -195,7 +195,7 @@ pub fn spawn(state: Arc<RwLock<ServerState>>) {
 
 #[cfg(feature = "redb")]
 struct ProjectionContext {
-    persistence: Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+    persistence: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     persist_dir: Option<String>,
     graphs: Vec<(String, Arc<medulla_core::graph::GraphCore>)>,
     /// The worker's wall clock, injected so a sweep's lease arithmetic is
@@ -289,7 +289,7 @@ fn subscribed_graphs() -> &'static RwLock<HashSet<String>> {
 /// without anyone having decided to.
 #[cfg(feature = "redb")]
 async fn ensure_subscription(
-    persistence: &Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+    persistence: &Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     graph_fname: &str,
 ) -> bool {
     if subscribed_graphs().read().await.contains(graph_fname) {
@@ -499,7 +499,7 @@ async fn process_lease(
 
 #[cfg(feature = "redb")]
 async fn resolve_projection_wakeup(
-    persistence: &Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+    persistence: &Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     graph_fname: &str,
     lease: &MutationOutboxLease,
 ) -> Result<ReasoningProjectionWakeup, ()> {
@@ -1170,7 +1170,7 @@ mod tests {
     use medulla_types::protocol::Method;
 
     #[cfg(feature = "redb")]
-    use crate::server::api::persistence::PersistenceBackend;
+    use medulla_server_api::api::persistence::PersistenceBackend;
 
     use super::*;
 
@@ -1637,10 +1637,10 @@ mod tests {
 
     #[cfg(feature = "redb")]
     #[async_trait::async_trait]
-    impl crate::server::api::persistence::PersistenceBackend for DeferredProjectionBackend {
+    impl medulla_server_api::api::persistence::PersistenceBackend for DeferredProjectionBackend {
         async fn load_all(
             &self,
-            _state: &Arc<RwLock<crate::server::state::ServerState>>,
+            _state: &Arc<RwLock<medulla_server_api::state::ServerState>>,
         ) -> Result<usize, String> {
             Ok(0)
         }
@@ -1695,7 +1695,7 @@ mod tests {
         let root_str = root.to_string_lossy().to_string();
         let graph = format!("deferred-budget-{}", std::process::id());
         let backend = Arc::new(DeferredProjectionBackend::new());
-        let persistence: Arc<dyn crate::server::api::persistence::PersistenceBackend> =
+        let persistence: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> =
             backend.clone();
         let core = Arc::new(medulla_core::graph::GraphCore::new());
         let context = ProjectionContext {
@@ -1735,10 +1735,10 @@ mod tests {
 
     #[cfg(feature = "redb")]
     #[async_trait::async_trait]
-    impl crate::server::api::persistence::PersistenceBackend for DeadLetteredProjectionBackend {
+    impl medulla_server_api::api::persistence::PersistenceBackend for DeadLetteredProjectionBackend {
         async fn load_all(
             &self,
-            _state: &Arc<RwLock<crate::server::state::ServerState>>,
+            _state: &Arc<RwLock<medulla_server_api::state::ServerState>>,
         ) -> Result<usize, String> {
             Ok(0)
         }
@@ -1820,7 +1820,7 @@ mod tests {
             .is_some());
 
         let backend = Arc::new(DeadLetteredProjectionBackend::new());
-        let persistence: Arc<dyn crate::server::api::persistence::PersistenceBackend> =
+        let persistence: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> =
             backend.clone();
         let core = Arc::new(medulla_core::graph::GraphCore::new());
         let context = ProjectionContext {
@@ -1893,7 +1893,7 @@ mod tests {
             )
             .expect("valid incarnation"),
         );
-        let actor = crate::server::mutation_batch::principal_fingerprint(
+        let actor = medulla_server_api::mutation_batch::principal_fingerprint(
             "reasoning-projection-budget-test",
         )
         .expect("test actor fingerprint");
@@ -1971,7 +1971,7 @@ mod tests {
         let graph_fname = medulla_kernel::persist::sanitize(&graph);
         subscribed_graphs().write().await.remove(&graph_fname);
 
-        let persistence: Arc<dyn crate::server::api::persistence::PersistenceBackend> =
+        let persistence: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> =
             backend.clone();
         let retired_batch =
             projection_batch(&graph_fname, 0, format!("projection-retired-{graph_fname}"));
@@ -2110,7 +2110,7 @@ mod tests {
         let graph_names: Vec<String> = (0..5)
             .map(|index| format!("shared-budget-{}-{index}", std::process::id()))
             .collect();
-        let persistence: Arc<dyn crate::server::api::persistence::PersistenceBackend> =
+        let persistence: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> =
             backend.clone();
 
         for graph in &graph_names {

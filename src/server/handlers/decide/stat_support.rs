@@ -26,7 +26,7 @@ use crate::server::persistence::agent_library::AgentLibraryStore;
 /// Open `graph` for one caller and return its analysis snapshot filtered by
 /// that caller's row-level isolation, before any statistical read.
 pub(super) async fn filtered_view(
-    state: &Arc<tokio::sync::RwLock<crate::server::state::ServerState>>,
+    state: &Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     agent_id: &str,
     graph: &str,
 ) -> Result<medulla_core::graph::GraphView, String> {
@@ -51,7 +51,7 @@ pub(super) async fn filtered_view(
 
 /// Open a graph for one caller before exposing its data to a statistical read.
 pub(super) async fn readable_graph(
-    state: &Arc<tokio::sync::RwLock<crate::server::state::ServerState>>,
+    state: &Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     agent_id: &str,
     graph: &str,
     missing_code: StatisticalErrorCode,
@@ -67,7 +67,7 @@ pub(super) async fn readable_graph(
         .registry
         .get(graph)
         .ok_or_else(|| refusal(missing_code, format!("unknown graph {graph}")))?;
-    crate::server::access::check_graph_access(
+    medulla_server_api::access::check_graph_access(
         &guard.isolation,
         Some(agent_id),
         graph,

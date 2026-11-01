@@ -466,7 +466,7 @@ fn graph_matches_tenant(graph_name: &str, verified_tenant: &str) -> bool {
 /// the served RPC always uses this authority-bearing path.
 pub(crate) async fn collect_resource_stats_authorized(
     state: &Arc<RwLock<ServerState>>,
-    authority: &crate::server::access::GraphReadAuthority,
+    authority: &medulla_server_api::access::GraphReadAuthority,
     verified_tenant: &str,
     request: ResourceStatsRequest,
 ) -> Result<ResourceSnapshot, String> {
@@ -777,9 +777,8 @@ mod tests {
     mod integration {
         use super::super::*;
         use crate::protocol::{GraphType, Method, Request, ResultPayload};
-        use crate::server::auth::{
-            build_shared_test_request, dispatch_test_on_heap as dispatch_on_heap,
-        };
+        use medulla_server_api::auth::build_shared_test_request;
+        use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
 
         const SECRET: &str = "cost-budget-test";
         const TEST_AGENT: &str = "unit-test-agent";

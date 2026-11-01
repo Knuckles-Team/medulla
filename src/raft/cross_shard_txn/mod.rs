@@ -206,7 +206,7 @@ use super::multi::MultiRaft;
 use super::NodeId;
 use super::{GroupId, RaftRequest};
 use crate::protocol::{GraphType, Method};
-use crate::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use crate::server::persistence::redb_backend::RedbBackend;
 
 const MAX_PREPARED_TXN_BYTES: usize = 256 * 1024 * 1024;
@@ -316,7 +316,7 @@ impl GraphSlice {
                     // lost.  A deterministic child authority makes every replicated
                     // operation an exact MutationBatch replay rather than applying it
                     // twice after the prepare/decision rows are eventually collected.
-                    mutation: crate::server::api::persistence::RaftMutationContext::internal(
+                    mutation: medulla_server_api::api::persistence::RaftMutationContext::internal(
                         "raft-xshard-child",
                         &self.graph_name,
                         &format!("{txn_id}:{ordinal}"),

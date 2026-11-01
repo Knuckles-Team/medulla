@@ -5,7 +5,7 @@ use super::*;
 use crate::protocol::Method;
 use medulla_store::redb_store::operation_audit::tests::event;
 use medulla_store::redb_store::operation_audit::tests::TENANT;
-use crate::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 
 const GRAPH: &str = "audit_append_graph";
 const REFUSAL: &str = "AUDIT_WRITER_UNAVAILABLE: ";

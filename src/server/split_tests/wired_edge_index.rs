@@ -4,9 +4,10 @@
 //! reads (the KnowledgeStream read is proven in `handlers::knowledge_stream`'s
 //! tests) through the one shared projection builder.
 
-use crate::server::api::query_txn::edge_test_support::{
-    edge_status_row, register_detached_edge_index, sql_rows, EDGE_STATUS_SQL,
-};
+use medulla_server_api::api::query_txn::edge_test_support::edge_status_row;
+use medulla_server_api::api::query_txn::edge_test_support::register_detached_edge_index;
+use medulla_server_api::api::query_txn::edge_test_support::sql_rows;
+use medulla_server_api::api::query_txn::edge_test_support::EDGE_STATUS_SQL;
 use std::sync::Arc;
 
 use medulla_query::TableStore;
@@ -33,7 +34,7 @@ async fn outcome(session: &WireSession, sql: &str) -> Result<String, String> {
 async fn registered_store(state: &Arc<RwLock<ServerState>>, agent: &str) -> (String, TableStore) {
     let tenant = authority(agent, TENANT).tenant_scope().to_string();
     let persist_dir = test_persist_dir_of(state).await;
-    let store = crate::server::sql_tables::tenant_table_store(&tenant, &persist_dir).unwrap();
+    let store = medulla_server_api::sql_tables::tenant_table_store(&tenant, &persist_dir).unwrap();
     (tenant, store)
 }
 

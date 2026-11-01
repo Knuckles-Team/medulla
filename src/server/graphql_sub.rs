@@ -35,9 +35,13 @@ use tokio::sync::{OwnedSemaphorePermit, RwLock, Semaphore};
 use crate::graph::{ChangeEvent, ChangeSink, GraphCore, GraphView};
 use crate::isolation::{AccessLevel, IsolationLayer};
 use crate::protocol::{GraphType, Method, Request};
-use crate::server::access::{check_graph_access, GraphReadAuthority};
-use crate::server::auth::{verify_request_with_security_dir, VerifiedRequestContext};
-use crate::server::http1::{self, HttpMessage, RequestLimits};
+use medulla_server_api::access::check_graph_access;
+use medulla_server_api::access::GraphReadAuthority;
+use medulla_server_api::auth::verify_request_with_security_dir;
+use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::http1;
+use medulla_server_api::http1::HttpMessage;
+use medulla_server_api::http1::RequestLimits;
 use crate::server::ServerState;
 
 /// Environment/CLI address used by `main.rs` to opt into this listener.
@@ -735,7 +739,8 @@ referrer-policy: no-referrer\r\n\
 mod tests {
     use super::*;
     use crate::acl::{AgentIdentity, AgentRole, RequestContextClaims};
-    use crate::server::auth::{compute_verified_envelope_token, VerifiedEnvelopeParams};
+    use medulla_server_api::auth::compute_verified_envelope_token;
+    use medulla_server_api::auth::VerifiedEnvelopeParams;
     use serde_json::json;
     use std::time::{SystemTime, UNIX_EPOCH};
 

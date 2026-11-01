@@ -42,8 +42,8 @@ impl DraftAuthority<'_> {
             .iter()
             .map(|operation| operation.method.clone())
             .collect();
-        let batch = crate::server::mutation_batch::compile_methods_with_outbox(
-            crate::server::mutation_batch::CompileBatch {
+        let batch = medulla_server_api::mutation_batch::compile_methods_with_outbox(
+            medulla_server_api::mutation_batch::CompileBatch {
                 batch_id: &draft.mutation.batch_id,
                 request_id: self.req_id,
                 // One request carries one attempt nonce; the envelopes of a
@@ -101,7 +101,7 @@ async fn current_graph_version(
             .ok_or_else(|| "change envelopes require durable persistence".to_string())?;
         (core, persistence)
     };
-    crate::server::mutation_batch::authoritative_graph_version(
+    medulla_server_api::mutation_batch::authoritative_graph_version(
         &persistence,
         &medulla_kernel::persist::sanitize(graph),
         &core,
@@ -275,7 +275,7 @@ pub(crate) mod tests {
             Some(7)
         );
         assert_eq!(
-            crate::server::mutation_batch::batch_actor(&envelope.mutation),
+            medulla_server_api::mutation_batch::batch_actor(&envelope.mutation),
             Some(verified.principal_persistence_id().as_str())
         );
         assert_eq!(envelope.mutation.identity.tenant().as_str(), "tenant-a");

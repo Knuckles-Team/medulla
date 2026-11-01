@@ -11,9 +11,9 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::protocol::{Response, ResultPayload};
-use crate::server::auth::VerifiedRequestContext;
+use medulla_server_api::auth::VerifiedRequestContext;
 use crate::server::persistence::agent_library::AgentLibraryStore;
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 use medulla_types::write_back::{SourceChangeSet, WriteBackOp};
 
 pub(crate) async fn handle_write_back(

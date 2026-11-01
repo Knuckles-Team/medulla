@@ -264,7 +264,7 @@ pub struct MultiRaft {
     groups: Arc<RwLock<BTreeMap<GroupId, MedullaRaft>>>,
     router: Arc<GroupRouter>,
     /// The shared M2 backend handle every group's store is opened over.
-    backend: Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+    backend: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     ctx: AppCtx,
     /// Shared per-peer outbound connection pool (CONCEPT:AU-KG.ontology.manage-arbitrary) — one per node,
     /// reused by every group's network clients.
@@ -464,7 +464,7 @@ impl MultiRaft {
     pub async fn start(
         node_id: NodeId,
         bind_addr: String,
-        backend: Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+        backend: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
         ctx: AppCtx,
     ) -> Result<Arc<Self>, String> {
         let state = ctx.state.clone();
@@ -493,7 +493,7 @@ impl MultiRaft {
     pub async fn start(
         _node_id: NodeId,
         _bind_addr: String,
-        _backend: Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+        _backend: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
         _ctx: AppCtx,
     ) -> Result<Arc<Self>, String> {
         Err(
@@ -511,7 +511,7 @@ impl MultiRaft {
         bind_addr: String,
         peers: &super::PeerMap,
         secret: Option<&super::config::RaftTransportSecret>,
-        backend: Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+        backend: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
         ctx: AppCtx,
     ) -> Result<Arc<Self>, String> {
         let failure_domains = super::config::resolve_failure_domains(peers)?;
@@ -544,7 +544,7 @@ impl MultiRaft {
     async fn start_inner(
         node_id: NodeId,
         bind_addr: String,
-        backend: Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+        backend: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
         ctx: AppCtx,
         auth: Option<Arc<network::RaftTransportAuth>>,
         failure_domains: BTreeMap<NodeId, String>,
@@ -733,7 +733,7 @@ impl MultiRaft {
     }
 
     /// The shared M2 backend (for the cross-shard coordinator's durable 2PC records).
-    pub fn backend(&self) -> Arc<dyn crate::server::api::persistence::PersistenceBackend> {
+    pub fn backend(&self) -> Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> {
         self.backend.clone()
     }
 
@@ -1182,7 +1182,7 @@ impl MultiRaft {
             graph_name: placement::PLACEMENT_GRAPH.to_string(),
             graph_type: crate::protocol::GraphType::Commons,
             committed_at_ms: 0,
-            mutation: crate::server::api::persistence::RaftMutationContext::internal(
+            mutation: medulla_server_api::api::persistence::RaftMutationContext::internal(
                 "raft-placement",
                 placement::PLACEMENT_GRAPH,
                 coordinator_id,
@@ -1205,7 +1205,7 @@ impl MultiRaft {
     }
 
     async fn commit_placement_method(&self, method: &Method) -> Result<RaftResponse, String> {
-        let coordinator_id = crate::server::mutation_batch::opaque_request_key(
+        let coordinator_id = medulla_server_api::mutation_batch::opaque_request_key(
             "placement-operation",
             placement::PLACEMENT_GRAPH,
             0,
@@ -1221,7 +1221,7 @@ impl MultiRaft {
         ordinal: u64,
         method: &Method,
     ) -> Result<RaftResponse, String> {
-        let coordinator_id = crate::server::mutation_batch::opaque_request_key(
+        let coordinator_id = medulla_server_api::mutation_batch::opaque_request_key(
             "placement-plan",
             operation_id,
             ordinal,
@@ -1310,7 +1310,7 @@ impl MultiRaft {
             graph_name: placement::PLACEMENT_GRAPH.to_string(),
             graph_type: crate::protocol::GraphType::Commons,
             committed_at_ms: 0,
-            mutation: crate::server::api::persistence::RaftMutationContext::internal(
+            mutation: medulla_server_api::api::persistence::RaftMutationContext::internal(
                 "raft-node-info",
                 placement::PLACEMENT_GRAPH,
                 &format!("node-{node_id}"),
@@ -1361,8 +1361,8 @@ impl MultiRaft {
     /// Assign the WHOLE keyspace of `tenant` to `group` (CONCEPT:MEDULLA-KG.sharding.placement-catalog admin
     /// API). Collapses any prior split. Returns the new routing epoch.
     pub async fn placement_assign(&self, tenant: &str, group: GroupId) -> Result<u64, String> {
-        let _placement_guard = crate::server::txn::consensus_placement_fence_guard().await;
-        if crate::server::txn::consensus_tenant_is_prepared(tenant) {
+        let _placement_guard = medulla_server_api::txn::consensus_placement_fence_guard().await;
+        if medulla_server_api::txn::consensus_tenant_is_prepared(tenant) {
             return Err("placement change conflicts with a prepared transaction".to_string());
         }
         self.require_placement_leader().await?;
@@ -1387,8 +1387,8 @@ impl MultiRaft {
         group_a: GroupId,
         group_b: GroupId,
     ) -> Result<u64, String> {
-        let _placement_guard = crate::server::txn::consensus_placement_fence_guard().await;
-        if crate::server::txn::consensus_tenant_is_prepared(tenant) {
+        let _placement_guard = medulla_server_api::txn::consensus_placement_fence_guard().await;
+        if medulla_server_api::txn::consensus_tenant_is_prepared(tenant) {
             return Err("placement change conflicts with a prepared transaction".to_string());
         }
         self.require_placement_leader().await?;
@@ -1410,8 +1410,8 @@ impl MultiRaft {
     /// admin API — the inverse of `placement_split`; also how independent small
     /// tenants are made to share a group, by `placement_assign`ing each to it).
     pub async fn placement_merge(&self, tenant: &str, group: GroupId) -> Result<u64, String> {
-        let _placement_guard = crate::server::txn::consensus_placement_fence_guard().await;
-        if crate::server::txn::consensus_tenant_is_prepared(tenant) {
+        let _placement_guard = medulla_server_api::txn::consensus_placement_fence_guard().await;
+        if medulla_server_api::txn::consensus_tenant_is_prepared(tenant) {
             return Err("placement change conflicts with a prepared transaction".to_string());
         }
         self.require_placement_leader().await?;
@@ -1437,8 +1437,8 @@ impl MultiRaft {
         range: (u64, u64),
         target: GroupId,
     ) -> Result<(), String> {
-        let _placement_guard = crate::server::txn::consensus_placement_fence_guard().await;
-        if crate::server::txn::consensus_tenant_is_prepared(tenant) {
+        let _placement_guard = medulla_server_api::txn::consensus_placement_fence_guard().await;
+        if medulla_server_api::txn::consensus_tenant_is_prepared(tenant) {
             return Err("placement change conflicts with a prepared transaction".to_string());
         }
         self.require_placement_leader().await?;
@@ -1459,8 +1459,8 @@ impl MultiRaft {
         range: (u64, u64),
         target: GroupId,
     ) -> Result<u64, String> {
-        let _placement_guard = crate::server::txn::consensus_placement_fence_guard().await;
-        if crate::server::txn::consensus_tenant_is_prepared(tenant) {
+        let _placement_guard = medulla_server_api::txn::consensus_placement_fence_guard().await;
+        if medulla_server_api::txn::consensus_tenant_is_prepared(tenant) {
             return Err("placement change conflicts with a prepared transaction".to_string());
         }
         self.require_placement_leader().await?;
@@ -1488,8 +1488,8 @@ impl MultiRaft {
         target: GroupId,
         original_epoch: u64,
     ) -> Result<(), String> {
-        let _placement_guard = crate::server::txn::consensus_placement_fence_guard().await;
-        if crate::server::txn::consensus_tenant_is_prepared(tenant) {
+        let _placement_guard = medulla_server_api::txn::consensus_placement_fence_guard().await;
+        if medulla_server_api::txn::consensus_tenant_is_prepared(tenant) {
             return Err("placement change conflicts with a prepared transaction".to_string());
         }
         self.require_placement_leader().await?;
@@ -1506,8 +1506,8 @@ impl MultiRaft {
     /// here; durable graph lifecycle/GC owns data destruction separately. This stops replication
     /// and frees the in-RAM group. Idempotent.
     pub async fn close_group(&self, gid: GroupId) -> Result<(), String> {
-        let _placement_guard = crate::server::txn::consensus_placement_fence_guard().await;
-        if crate::server::txn::consensus_has_prepared_graphs() {
+        let _placement_guard = medulla_server_api::txn::consensus_placement_fence_guard().await;
+        if medulla_server_api::txn::consensus_has_prepared_graphs() {
             return Err("group close conflicts with a prepared transaction".to_string());
         }
         let raft = self.groups.write().await.remove(&gid);
@@ -1709,19 +1709,19 @@ mod placement_identity_tests {
     #[test]
     fn identical_methods_from_distinct_plans_get_distinct_child_keys() {
         let method = PlacementCatalog::epoch_cas_method(4, 5);
-        let first = crate::server::mutation_batch::opaque_request_key(
+        let first = medulla_server_api::mutation_batch::opaque_request_key(
             "placement-plan",
             "plan-a",
             0,
             &method,
         );
-        let second = crate::server::mutation_batch::opaque_request_key(
+        let second = medulla_server_api::mutation_batch::opaque_request_key(
             "placement-plan",
             "plan-b",
             0,
             &method,
         );
-        let later_step = crate::server::mutation_batch::opaque_request_key(
+        let later_step = medulla_server_api::mutation_batch::opaque_request_key(
             "placement-plan",
             "plan-a",
             1,

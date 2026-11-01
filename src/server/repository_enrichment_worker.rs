@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 
 #[cfg(all(
     feature = "redb",
@@ -61,11 +61,12 @@ mod worker {
     use super::*;
     use std::time::Duration;
 
-    use crate::server::api::persistence::PersistenceBackend;
-    use crate::server::auth::VerifiedRequestContext;
-    use crate::server::blob::store::ChunkStore;
+    use medulla_server_api::api::persistence::PersistenceBackend;
+    use medulla_server_api::auth::VerifiedRequestContext;
+    use medulla_server_api::blob::store::ChunkStore;
     #[cfg(not(feature = "raft"))]
-    use crate::server::mutation_batch::{CommitOrigin, WorkItemCommitRequest};
+    use medulla_server_api::mutation_batch::CommitOrigin;
+    use medulla_server_api::mutation_batch::WorkItemCommitRequest;
     #[cfg(feature = "security")]
     use crate::server::repository_enrichment_worker::grant;
     use medulla_types::epistemic_operations::{
@@ -169,7 +170,7 @@ mod worker {
         #[cfg(not(feature = "raft"))]
         let park_persistence = Arc::clone(&persistence);
         let park_graph = graph_name.clone();
-        let outcome = crate::server::api::reentry::drain_repository_enrichment_once(
+        let outcome = medulla_server_api::api::reentry::drain_repository_enrichment_once(
             state,
             persistence.as_ref(),
             &graph_name,
@@ -210,7 +211,7 @@ mod worker {
         .await?;
         Ok(matches!(
             outcome,
-            crate::server::api::reentry::DrainOutcome::Acknowledged { .. }
+            medulla_server_api::api::reentry::DrainOutcome::Acknowledged { .. }
         ))
     }
 
@@ -316,7 +317,7 @@ mod worker {
         #[cfg(feature = "raft")]
         {
             let _ = (persistence, graph);
-            return crate::server::api::reentry::submit_repository_enrichment_page(
+            return medulla_server_api::api::reentry::submit_repository_enrichment_page(
                 &state, verified, request,
             )
             .await;
@@ -334,7 +335,7 @@ mod worker {
                 .core
                 .clone();
             let backend = Some(persistence);
-            crate::server::mutation_batch::commit_work_item(
+            medulla_server_api::mutation_batch::commit_work_item(
                 WorkItemCommitRequest::new(
                     backend.as_ref(),
                     &core,

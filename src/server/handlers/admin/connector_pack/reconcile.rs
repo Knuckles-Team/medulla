@@ -18,8 +18,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::protocol::Response;
-use crate::server::auth::VerifiedRequestContext;
-use crate::server::state::ServerState;
+use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::state::ServerState;
 
 /// How long one sweep's verdict stays useful: the reconciler runs on its own
 /// at most this often per tenant stripe, and reports this horizon.
@@ -126,8 +126,8 @@ pub(super) async fn reconcile_locked(
         .blob
         .clone()
         .ok_or_else(|| "BODY_MISSING: Blob substrate disabled".to_string())?;
-    let authority = crate::server::access::CarrierAuthority::from_verified(verified)?;
-    let (batch, now_ms) = crate::server::api::ingest::compile_blob_batch(
+    let authority = medulla_server_api::access::CarrierAuthority::from_verified(verified)?;
+    let (batch, now_ms) = medulla_server_api::api::ingest::compile_blob_batch(
         blob.store.as_ref(),
         req_id,
         &authority,
@@ -159,9 +159,12 @@ pub(super) async fn reconcile_locked(
 pub(super) fn live_holders(
     tenant_id: &str,
     held: &std::collections::BTreeSet<medulla_types::contract::Digest256>,
-) -> Result<crate::server::blob::store::HolderReconcile, String> {
-    use crate::server::blob::engine_bodies::{engine_body_holder, engine_body_holder_namespace};
-    use crate::server::blob::store::{HolderId, HolderNamespace, HolderReconcile};
+) -> Result<medulla_server_api::blob::store::HolderReconcile, String> {
+    use medulla_server_api::blob::engine_bodies::engine_body_holder;
+    use medulla_server_api::blob::engine_bodies::engine_body_holder_namespace;
+    use medulla_server_api::blob::store::HolderId;
+    use medulla_server_api::blob::store::HolderNamespace;
+    use medulla_server_api::blob::store::HolderReconcile;
 
     let namespace = HolderNamespace::new(&engine_body_holder_namespace(tenant_id))?;
     let live = held

@@ -84,7 +84,7 @@ async fn list_graphs(
                         // an unregistered caller drops every graph at once. The
                         // reason names the refusal class and the graph only.
                         tracing::debug!(
-                            target: "medulla::access::list_graphs",
+                            target: "medulla_server_api::access::list_graphs",
                             graph = name.as_str(),
                             graph_type = ?entry.graph_type,
                             reason = %reason,

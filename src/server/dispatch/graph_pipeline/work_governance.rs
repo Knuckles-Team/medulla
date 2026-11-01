@@ -45,7 +45,7 @@ pub(super) async fn dispatch_op_resource_reservation_query(
     req_id: u64,
     graph_name: &str,
     verified_context: &VerifiedRequestContext,
-    persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
+    persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "raft")] multi_raft: Option<std::sync::Arc<crate::raft::multi::MultiRaft>>,
     #[cfg(feature = "raft")] routed_raft: Option<crate::raft::multi::RoutedRaftHandle>,
     method: Method,
@@ -111,7 +111,7 @@ pub(super) struct NativeOpCtx<'a> {
     pub(super) req_id: u64,
     pub(super) graph_name: &'a str,
     pub(super) verified_context: &'a VerifiedRequestContext,
-    pub(super) persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
+    pub(super) persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "raft")]
     pub(super) multi_raft: Option<std::sync::Arc<crate::raft::multi::MultiRaft>>,
     #[cfg(feature = "raft")]
@@ -198,7 +198,7 @@ pub(super) async fn dispatch_op_capacity_ops(
         return Response::err(req_id, "ACCESS_DENIED: capacity owner digest mismatch");
     }
     let fname = medulla_kernel::persist::sanitize(graph_name);
-    let _mutation_guard = crate::server::mutation_batch::lock_graph(graph_name).await;
+    let _mutation_guard = medulla_server_api::mutation_batch::lock_graph(graph_name).await;
     match method {
         Method::CapacityStatus { ref request } | Method::ReconcileCapacity { ref request } => {
             capacity_status_response(
@@ -237,7 +237,7 @@ fn capacity_status_result(
 }
 
 async fn capacity_status_response(
-    backend: &Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+    backend: &Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     fname: &str,
     request: &medulla_types::native_control::CapacityStatusRequest,
     declared: fn(
@@ -258,7 +258,7 @@ async fn capacity_status_response(
 }
 
 async fn capacity_commit_response(
-    backend: &Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+    backend: &Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     fname: &str,
     method: Method,
     req_id: u64,
@@ -343,7 +343,7 @@ pub(super) async fn dispatch_op_workitem_claim_capability(
             now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
         };
         let fname = medulla_kernel::persist::sanitize(graph_name);
-        let _mutation_guard = crate::server::mutation_batch::lock_graph(graph_name).await;
+        let _mutation_guard = medulla_server_api::mutation_batch::lock_graph(graph_name).await;
         match method {
             Method::MintWorkItemClaimCapability { request } => redb
                 .mint_work_item_claim_capability(&fname, request, authority)
@@ -401,7 +401,7 @@ pub(super) async fn dispatch_op_workitem_claim_capability(
 /// graph and placement context the WorkItem lifecycle handler receives.
 fn require_enrichment_budget_service_scope(
     has_budget_debit: bool,
-    verified_context: &crate::server::auth::VerifiedRequestContext,
+    verified_context: &medulla_server_api::auth::VerifiedRequestContext,
 ) -> Result<(), &'static str> {
     if has_budget_debit && !verified_context.allows_action("repository:enrichment:submit") {
         return Err("ACCESS_DENIED: repository enrichment budget admission requires service scope");
@@ -459,11 +459,11 @@ pub(super) async fn dispatch_op_workitem_submission_or_resources(
         }
         _ => caller,
     };
-    return match crate::server::mutation_batch::commit_work_item(
-        crate::server::mutation_batch::WorkItemCommitRequest::new(
+    return match medulla_server_api::mutation_batch::commit_work_item(
+        medulla_server_api::mutation_batch::WorkItemCommitRequest::new(
             persistence.as_ref(),
             core,
-            crate::server::mutation_batch::CommitOrigin {
+            medulla_server_api::mutation_batch::CommitOrigin {
                 request_id: req_id,
                 principal,
             },
@@ -488,7 +488,7 @@ mod enrichment_budget_scope_tests {
 
     #[test]
     fn ordinary_work_submitter_cannot_debit_repository_enrichment_budget() {
-        let ordinary = crate::server::auth::VerifiedRequestContext::verified_for_test_with_scopes(
+        let ordinary = medulla_server_api::auth::VerifiedRequestContext::verified_for_test_with_scopes(
             "worker",
             "tenant",
             &["work:submit"],
@@ -497,7 +497,7 @@ mod enrichment_budget_scope_tests {
         assert!(require_enrichment_budget_service_scope(true, &ordinary)
             .unwrap_err()
             .starts_with("ACCESS_DENIED:"));
-        let service = crate::server::auth::VerifiedRequestContext::verified_for_test_with_scopes(
+        let service = medulla_server_api::auth::VerifiedRequestContext::verified_for_test_with_scopes(
             "enrichment-service",
             "tenant",
             &["work:submit", "repository:enrichment:submit"],

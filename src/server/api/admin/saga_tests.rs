@@ -1,6 +1,6 @@
 //! Authenticated saga key and async scope isolation.
 use super::*;
-use crate::server::auth::VerifiedRequestContext;
+use medulla_server_api::auth::VerifiedRequestContext;
 use sha2::Digest;
 
 fn authority(actor: &str, tenant: &str, key: &str) -> CarrierAuthority {
@@ -323,8 +323,8 @@ fn opaque_recovery_batch(
     payload_digest: &str,
 ) -> MutationBatch {
     let expected = medulla_transaction::version(&backend.admin_mutations_read().unwrap()).unwrap();
-    crate::server::mutation_batch::compile_opaque_digest(
-        crate::server::mutation_batch::CompileBatch {
+    medulla_server_api::mutation_batch::compile_opaque_digest(
+        medulla_server_api::mutation_batch::CompileBatch {
             batch_id,
             request_id: 90,
             attempt_nonce: None,
@@ -353,8 +353,8 @@ fn legacy_public_batch(
     method: &Method,
 ) -> MutationBatch {
     let expected = medulla_transaction::version(&backend.admin_mutations_read().unwrap()).unwrap();
-    crate::server::mutation_batch::compile_opaque_method(
-        crate::server::mutation_batch::CompileBatch {
+    medulla_server_api::mutation_batch::compile_opaque_method(
+        medulla_server_api::mutation_batch::CompileBatch {
             batch_id,
             request_id: 90,
             attempt_nonce: None,

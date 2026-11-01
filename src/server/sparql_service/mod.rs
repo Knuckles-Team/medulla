@@ -130,7 +130,7 @@ impl HealthCheckOutcome {
 #[cfg(feature = "sparql-service")]
 mod probe {
     use super::{HealthCheckOutcome, FUSEKI_HEALTH_CHECK_ENDPOINT_ENV};
-    use crate::server::sparql_http::ServiceClient;
+    use medulla_server_api::sparql_http::ServiceClient;
     use medulla_rdf::sparql::RemoteSparql;
 
     /// A trivial, dataset-agnostic probe: valid SPARQL 1.1 against ANY endpoint regardless
@@ -207,7 +207,7 @@ mod tests {
                 FUSEKI_HEALTH_CHECK_ENDPOINT_ENV,
                 "http://example.invalid/sparql",
             );
-            std::env::remove_var(crate::server::sparql_http::SERVICE_ALLOW_ENV);
+            std::env::remove_var(medulla_server_api::sparql_http::SERVICE_ALLOW_ENV);
             assert_eq!(
                 startup_health_check(),
                 HealthCheckOutcome::AllowlistEmpty {

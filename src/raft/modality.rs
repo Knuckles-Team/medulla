@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::protocol::Method;
 #[cfg(feature = "modality-serving")]
-use crate::server::api::ingest::MAX_INGEST_STREAM_ITEMS;
+use medulla_server_api::api::ingest::MAX_INGEST_STREAM_ITEMS;
 
 #[cfg(feature = "modality-serving")]
 const MAX_REPLICATED_MODALITY_STATE_BYTES: usize = 128 * 1024 * 1024;

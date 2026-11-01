@@ -1,6 +1,6 @@
 use super::*;
 
-use crate::server::api::ingest::graph::commit_gateway;
+use medulla_server_api::api::ingest::graph::commit_gateway;
 
 #[path = "gateway_graph_routes.rs"]
 mod gateway_graph_routes;
@@ -188,7 +188,7 @@ fn apply_apply_mutation(
             let update_core =
                 std::sync::Arc::new(GraphCore::from_snapshot(core.snapshot(), core.version())?);
             let store = SingleCoreStore(update_core.clone());
-            let guard = crate::server::icv_guard::CoreIcvGuard::single(update_core.as_ref());
+            let guard = medulla_server_api::icv_guard::CoreIcvGuard::single(update_core.as_ref());
             let report = medulla_rdf::update::execute(
                 &update,
                 &store,
@@ -383,7 +383,7 @@ fn datalog_input_from_graph_schema(core: &GraphCore) -> Result<DatalogReasoningI
     // Always reason over the validated composition. Parsing source documents
     // independently would let their local blank-node labels alias one another
     // and would bypass the conflict/import checks used at commit time.
-    let composed = crate::server::api::admin::compose::validate_and_compose(&sources)?;
+    let composed = medulla_server_api::api::admin::compose::validate_and_compose(&sources)?;
     let ontology = medulla_rdf::owl::parse_ontology(&composed.ontology);
     Ok(datalog_input_from_ontology(
         ontology,

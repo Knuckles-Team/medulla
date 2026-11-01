@@ -5,7 +5,7 @@
 //! contract wave; the package that lands a handler replaces only its body.
 
 /// The server state every Decide entry point is handed.
-type SharedState = std::sync::Arc<tokio::sync::RwLock<crate::server::state::ServerState>>;
+type SharedState = std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>;
 
 pub(crate) mod assemble;
 pub(crate) mod commit;
@@ -119,16 +119,16 @@ pub(crate) use statistical::handle_decide;
 #[cfg(feature = "query")]
 async fn read_only_relations(
     state: &SharedState,
-    authority: &crate::server::access::CarrierAuthority,
+    authority: &medulla_server_api::access::CarrierAuthority,
     query: &str,
-) -> Option<crate::server::sql_catalog_acl::SharedRelations> {
+) -> Option<medulla_server_api::sql_catalog_acl::SharedRelations> {
     #[cfg(feature = "decide")]
     {
-        if !crate::server::sql_catalog_acl::wants_read_only_relations(query) {
+        if !medulla_server_api::sql_catalog_acl::wants_read_only_relations(query) {
             return None;
         }
         let views = stat_view::DecisionViews::served(state, authority).await?;
-        Some(views as crate::server::sql_catalog_acl::SharedRelations)
+        Some(views as medulla_server_api::sql_catalog_acl::SharedRelations)
     }
     #[cfg(not(feature = "decide"))]
     {
@@ -141,7 +141,7 @@ async fn read_only_relations(
 #[cfg(all(feature = "decide", feature = "query"))]
 async fn decision_source(
     state: &SharedState,
-    authority: &crate::server::access::CarrierAuthority,
+    authority: &medulla_server_api::access::CarrierAuthority,
 ) -> Option<std::sync::Arc<dyn medulla_plan::exec::DecisionSource>> {
     let views = stat_view::DecisionViews::served(state, authority).await?;
     Some(views as std::sync::Arc<dyn medulla_plan::exec::DecisionSource>)
@@ -151,7 +151,7 @@ async fn decision_source(
 pub struct DecideSeam;
 
 #[async_trait::async_trait]
-impl crate::server::api::admin::DecideApi for DecideSeam {
+impl medulla_server_api::api::admin::DecideApi for DecideSeam {
     #[cfg(feature = "decide")]
     async fn served_adapter(
         &self,
@@ -159,7 +159,7 @@ impl crate::server::api::admin::DecideApi for DecideSeam {
         tenant: Option<&str>,
         graph: &str,
         core: &crate::graph::GraphCore,
-    ) -> Option<std::sync::Arc<crate::server::api::admin::served_adapter::ServedAdapter>> {
+    ) -> Option<std::sync::Arc<medulla_server_api::api::admin::served_adapter::ServedAdapter>> {
         served_adapter::served_for(state, tenant, graph, core).await
     }
 
@@ -167,9 +167,9 @@ impl crate::server::api::admin::DecideApi for DecideSeam {
     async fn read_only_relations(
         &self,
         state: &SharedState,
-        authority: &crate::server::access::CarrierAuthority,
+        authority: &medulla_server_api::access::CarrierAuthority,
         query: &str,
-    ) -> Option<crate::server::sql_catalog_acl::SharedRelations> {
+    ) -> Option<medulla_server_api::sql_catalog_acl::SharedRelations> {
         read_only_relations(state, authority, query).await
     }
 
@@ -177,7 +177,7 @@ impl crate::server::api::admin::DecideApi for DecideSeam {
     async fn decision_source(
         &self,
         state: &SharedState,
-        authority: &crate::server::access::CarrierAuthority,
+        authority: &medulla_server_api::access::CarrierAuthority,
     ) -> Option<std::sync::Arc<dyn medulla_plan::exec::DecisionSource>> {
         decision_source(state, authority).await
     }

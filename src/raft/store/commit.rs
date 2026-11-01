@@ -69,8 +69,8 @@ impl MedullaStore {
         // policy-audited answer for the REAL replicated method must be captured
         // here or it becomes unrecoverable.
         let audited = medulla_capabilities::policy(&durable_method).audited;
-        let batch = crate::server::mutation_batch::compile_methods(
-            crate::server::mutation_batch::CompileBatch {
+        let batch = medulla_server_api::mutation_batch::compile_methods(
+            medulla_server_api::mutation_batch::CompileBatch {
                 batch_id,
                 request_id: authority.request_id,
                 attempt_nonce: authority.attempt_nonce,
@@ -309,7 +309,7 @@ impl MedullaStore {
                 Some(ResultPayload::Bool(applied))
             }
             _ => {
-                crate::mutation_apply::apply(staged, method);
+                medulla_server_api::mutation_apply::apply(staged, method);
                 None
             }
         };
@@ -378,7 +378,7 @@ impl MedullaStore {
         };
         let hub = self.ctx.state.read().await.cdc.clone();
         if let Some(hub) = hub.as_ref() {
-            crate::server::cdc::emit_served_modality(hub, &req.graph_name, command.modality);
+            medulla_server_api::cdc::emit_served_modality(hub, &req.graph_name, command.modality);
         }
     }
 }

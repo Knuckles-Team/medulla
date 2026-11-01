@@ -14,7 +14,7 @@ use super::test_support::{
     wired_with_fixture, KG, OWL_IMPORTS,
 };
 use crate::graph::GraphSchemaSources;
-use crate::server::api::admin::compose::validate_and_compose;
+use medulla_server_api::api::admin::compose::validate_and_compose;
 
 const FOX: &str = "<http://example.org/world#fox>";
 const WOODLAND: &str = "<http://example.org/world#woodland>";

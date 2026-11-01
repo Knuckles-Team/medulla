@@ -2,8 +2,8 @@
 
 use crate::acl::RequestContextClaims;
 use crate::protocol::{Method, Request};
-use crate::server::api::persistence::BundledStoreSource;
-use crate::server::authority_context::VerifiedRequestContext;
+use medulla_server_api::api::persistence::BundledStoreSource;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use crate::server::handlers::admin::{backup_bundle_name, bind_agent_library_draft};
 use crate::server::persistence::agent_library::context::bind_agent_library_context;
 use crate::server::persistence::agent_library::AgentLibraryStateExt;
@@ -149,10 +149,10 @@ fn signed_agent_library_request(
         agent_id: Some(claims.agent_id.clone()),
         method: Method::AgentLibrary { op },
     };
-    request.auth_token = crate::server::auth::compute_verified_envelope_token(
+    request.auth_token = medulla_server_api::auth::compute_verified_envelope_token(
         secret,
         &request,
-        &crate::server::auth::VerifiedEnvelopeParams {
+        &medulla_server_api::auth::VerifiedEnvelopeParams {
             context: claims,
             timestamp: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -168,7 +168,7 @@ fn signed_agent_library_request(
 fn response_write_result(
     response: crate::protocol::Response,
 ) -> medulla_types::AgentLibraryWriteResult {
-    crate::test_support::decode_raw_response("Agent Library route", response)
+    medulla_server_api::test_support::decode_raw_response("Agent Library route", response)
 }
 
 /// Outbox rows the fixture's own component seeds contribute.
@@ -312,10 +312,10 @@ fn agent_library_signed_route_uses_wire_nonce_and_idempotency() {
             },
         },
     };
-    request.auth_token = crate::server::auth::compute_verified_envelope_token(
+    request.auth_token = medulla_server_api::auth::compute_verified_envelope_token(
         "agent-library-test-secret",
         &request,
-        &crate::server::auth::VerifiedEnvelopeParams {
+        &medulla_server_api::auth::VerifiedEnvelopeParams {
             context: &claims,
             timestamp: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -326,7 +326,7 @@ fn agent_library_signed_route_uses_wire_nonce_and_idempotency() {
         },
     );
     let verified =
-        crate::server::auth::verify_request("agent-library-test-secret", &request).unwrap();
+        medulla_server_api::auth::verify_request("agent-library-test-secret", &request).unwrap();
     let context = match request.method {
         crate::protocol::Method::AgentLibrary {
             op: AgentLibraryOp::Publish { request },
@@ -361,7 +361,7 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
     // this process and is never a live credential.
     let secret = "agent-library-public-dispatch-secret"; // sanitizer:ignore
     let directory = tempfile::tempdir().unwrap();
-    let mut server_state = crate::server::state::ServerState::new_for_test(
+    let mut server_state = medulla_server_api::state::ServerState::new_for_test(
         secret,
         crate::isolation::IsolationLayer::new(),
     );

@@ -51,7 +51,8 @@ use tokio::sync::RwLock;
 
 use crate::isolation::AccessLevel;
 use crate::protocol::DistAlgo;
-use crate::server::access::{check_graph_access, GraphReadAuthority};
+use medulla_server_api::access::check_graph_access;
+use medulla_server_api::access::GraphReadAuthority;
 use crate::server::ServerState;
 
 /// A single vertex's identity: its global id. Vertices are addressed by their string

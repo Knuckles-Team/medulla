@@ -16,7 +16,7 @@ use crate::protocol::{Method, Response};
 #[cfg(feature = "redb")]
 use crate::server::persistence::agent_library::AgentLibraryStateExt;
 #[cfg(not(feature = "redb"))]
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 #[cfg(not(feature = "redb"))]
 use medulla_types::contract::Nonce;
 #[cfg(not(feature = "redb"))]
@@ -103,14 +103,14 @@ mod security_tests {
 pub struct AdminSeam;
 
 #[async_trait::async_trait]
-impl crate::server::api::admin::AdminApi for AdminSeam {
+impl medulla_server_api::api::admin::AdminApi for AdminSeam {
     #[cfg(feature = "shacl")]
     async fn graph_schema_gateway(
         &self,
-        state: &std::sync::Arc<tokio::sync::RwLock<crate::server::state::ServerState>>,
+        state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
         tenant_id: &str,
-        ctx: &crate::server::mutation::MutationCtx<'_>,
-        plan: &crate::server::mutation::MutationPlan,
+        ctx: &medulla_server_api::mutation::MutationCtx<'_>,
+        plan: &medulla_server_api::mutation::MutationPlan,
         method: &crate::protocol::Method,
         op: &medulla_types::graph_schema::GraphSchemaOp,
     ) -> crate::protocol::Response {

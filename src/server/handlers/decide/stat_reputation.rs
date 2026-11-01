@@ -49,7 +49,7 @@ use super::stat_slate::evaluated_slates;
 use super::stat_support::{default_statistical_policy, materialize_matrix, pinned_body};
 use super::stat_view::{relation, Col};
 use crate::server::persistence::agent_library::AgentLibraryStore;
-use crate::server::sql_catalog_acl::relations::Relation;
+use medulla_server_api::sql_catalog_acl::relations::Relation;
 
 /// Outcomes lose half their weight every 30 days.
 pub(super) const HALF_LIFE_MS: u64 = 30 * 24 * 60 * 60 * 1000;

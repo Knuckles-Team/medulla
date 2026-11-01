@@ -24,11 +24,11 @@ use super::sql_source_read_tests::{
 use crate::acl::RequestContextClaims;
 use crate::protocol::Request;
 use crate::protocol::{Method, Response};
-use crate::server::access::CarrierAuthority;
-use crate::server::auth::{
-    compute_verified_envelope_token, VerifiedEnvelopeParams, VerifiedRequestContext,
-};
-use crate::test_support::decode_raw_response as ok;
+use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::auth::compute_verified_envelope_token;
+use medulla_server_api::auth::VerifiedEnvelopeParams;
+use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::test_support::decode_raw_response as ok;
 use medulla_types::semantic_index::{
     SemanticBinding, SemanticBindingState, SemanticIndexCommand, SemanticIndexFilter,
     SemanticIndexOp, SemanticIndexOutcome, SemanticIndexRequest, SemanticIndexResponse,
@@ -48,8 +48,8 @@ const SECRET: &str = "semantic-index-dispatch-fixture-secret"; // sanitizer:igno
 const TENANT: &str = "tenant-shared";
 const WORKER: &str = "semantic-dispatch-worker";
 
-fn dispatch_state(persist_dir: &std::path::Path) -> Arc<RwLock<crate::server::state::ServerState>> {
-    let mut state = crate::server::state::ServerState::new_for_test(
+fn dispatch_state(persist_dir: &std::path::Path) -> Arc<RwLock<medulla_server_api::state::ServerState>> {
+    let mut state = medulla_server_api::state::ServerState::new_for_test(
         SECRET,
         crate::isolation::IsolationLayer::new(),
     );

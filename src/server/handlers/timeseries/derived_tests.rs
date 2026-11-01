@@ -11,8 +11,9 @@ use medulla_types::series_expr::DerivedSeriesReceipt;
 use tokio::sync::RwLock;
 
 use crate::protocol::{Method, Response, ResultPayload};
-use crate::server::auth::{build_current_test_request, dispatch_test_on_heap};
-use crate::server::state::ServerState;
+use medulla_server_api::auth::build_current_test_request;
+use medulla_server_api::auth::dispatch_test_on_heap;
+use medulla_server_api::state::ServerState;
 
 const SECRET: &str = "eh524-derived-series";
 const TENANT: &str = "tenant-shared";

@@ -8,7 +8,7 @@
 use std::sync::Arc;
 
 use crate::protocol::{Method, Response, ResultPayload};
-use crate::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_types::result_contract::coordination;
 
 /// Already-authorized graph and placement context for one development-lane op.
@@ -73,7 +73,7 @@ async fn prepare(ctx: &HandleContext<'_>) -> Result<PreparedOperation, Response>
         backend,
         graph: medulla_kernel::persist::sanitize(ctx.graph_name),
         now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
-        _mutation_guard: crate::server::mutation_batch::lock_graph(ctx.graph_name).await,
+        _mutation_guard: medulla_server_api::mutation_batch::lock_graph(ctx.graph_name).await,
     })
 }
 

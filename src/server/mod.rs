@@ -3,20 +3,11 @@
 // Long-running Tokio server that holds the GraphRegistry in memory
 // and serves requests over UDS or TCP with HMAC-SHA256 authentication.
 
-pub(crate) mod access;
-pub(crate) mod denial_sample;
-pub(crate) mod identity_view;
 #[cfg(feature = "security")]
 pub use denial_sample::spawn_flusher as spawn_denial_sample_flusher;
-mod anonymous;
-pub mod api;
 pub mod seams_install;
 pub use seams_install::install_seams;
-pub(crate) mod auth;
-pub(crate) mod authority_context;
 pub(crate) mod issuer_trust;
-pub(crate) mod request_replay;
-pub(crate) mod request_scope;
 #[cfg(any(feature = "mysql-wire", feature = "pgwire"))]
 pub(crate) mod sql_wire_auth;
 
@@ -138,58 +129,13 @@ pub fn validate_verified_request_context_startup(
 ) -> Result<(), String> {
     auth::validate_verified_context_startup(secret, state_dir)
 }
-// Streamed content-addressed BLOB substrate (CONCEPT:MEDULLA-KG.storage.blob-namespace). Facade-only,
-// behind the `blob` cargo feature. Default/server-only builds compile NONE of it;
-// the Blob* methods then fall to the dispatch "not available" catch-all.
-//
-// BUG (pre-existing, not caused by any recent merge): a 2026-08-09 commit
-// (02f70963, GOC-59-W09/BUG-027) inserted `unique_temp_dir` between this
-// `#[cfg(feature = "blob")]` attribute and its intended target, so the
-// attribute silently re-attached to the new function instead of gating this
-// `mod` declaration. That made `server::blob` (and therefore `blob/store.rs`'s
-// unconditional `redb`/`medulla_storage`/`medulla_transaction` imports) compile in EVERY build,
-// including `--no-default-features --features server`, breaking the slim
-// server. It went unnoticed because this repo has not pushed in a long time,
-// so CI never ran that feature-matrix row. Restoring the attribute here is
-// the fix (AGENTS.md "Feature-gating gates three sites").
-// Post-bind boot maintenance (MEDULLA-DURABLE-KERNEL-R006.4): the background
-// materialized-view reload + time-series startup reconciliation that run
-// AFTER the primary listeners bind — never on the pre-listener critical
-// path. Both tasks are feature-gated inside; without either, a no-op.
-#[cfg(feature = "blob")]
-pub mod blob;
 pub mod boot_maintenance;
 pub mod namespace_migration;
-// Generic namespaced Key→Value surface (CONCEPT:MEDULLA-KG.storage.namespaced-kv-surface). Self-routing (NOT graph-
-// scoped) like blob/tsdb, behind the `kv` cargo feature. A build without it compiles
-// none of it; the Kv* methods then fall to the dispatch "not available" catch-all.
-#[cfg(feature = "kv")]
-pub mod kv;
-// Change-Data-Capture hub + continuous queries + subscriptions/triggers
-// (CONCEPT:MEDULLA-KG.query.streaming-cdc-subscriptions/230). Facade-only, behind the `streaming` cargo feature (no heavy
-// dep, folds into pi/node/cluster/full). A build without it compiles none of it.
-#[cfg(feature = "streaming")]
-pub mod cdc;
 // CDC -> Kafka sink (CA-11, feature `cdc-kafka`, off by default). Reserved and EMPTY
 // until CA-11 implements it; landed by CA-17's single feature-stub commit so CA-11 never
 // edits this shared module list.
 #[cfg(feature = "cdc-kafka")]
 pub mod cdc_sink;
-// Live CEP standing-query surface (CONCEPT:MEDULLA-KG.query.protocol-types): the PUSH half of the event-stream +
-// CEP modality (CONCEPT:MEDULLA-KG.query.pipelined-execution). Owns an `medulla_stream::live::CepEngine` (feature `stream`)
-// adapted onto the CDC feed (feature `streaming`) — register a CEP pattern once, then
-// poll pushed matches. Needs BOTH: the CDC hub to feed it (`streaming`) AND the live NFA
-// engine (`stream`, the only thing that pulls medulla-stream's tokio). A build with one but
-// not the other compiles none of it.
-#[cfg(all(feature = "streaming", feature = "stream"))]
-pub mod cep;
-// Plan-backed materialized views (CONCEPT:MEDULLA-KG.storage.plan-backed-matview): a NAMED,
-// DURABLE `wire::Plan` whose result rides the version-keyed, RLS-aware result cache. The
-// manager subscribes to the CDC feed (`CdcHub::emit`) to mark views over a changed graph
-// stale. Gated behind `matview` (which pulls `compute-dist`/`query`/`result-cache`/
-// `streaming`); its Method variants route through the `compute-dist` dispatch line.
-#[cfg(feature = "matview")]
-pub mod matview;
 // Distributed result-cache coherence over the CDC feed (CONCEPT:MEDULLA-KG.coordination.distributed-cache-coherence): a replica
 // tailing CDC invalidates its local version-keyed result cache on a remote write.
 // Needs BOTH the cache (`result-cache`) and the CDC feed (`streaming`).
@@ -249,28 +195,6 @@ pub fn observe_rf019_tenant_owner(
         max_owner_bytes,
     )
 }
-// Native visualization engine-side state (D-VZ-1 lane V4, "engine integration"):
-// a persistent (process-lifetime, not fresh-per-request) ColumnStore plus a
-// content-addressed render cache and durable render provenance. Gated the SAME
-// as `handlers::viz` (`viz-static-export`) -- this state exists only where that
-// handler exists to use it. `viz_provenance` is a separate module (not under
-// `persistence/`, which is themed around the authoritative GRAPH store this is
-// NOT -- a render is explicitly not graph-scoped) so it can compile durability
-// support conditionally on `redb` internally while `viz_engine` itself never
-// requires `redb` (matches `viz-static-export` not implying `redb`).
-// `pub` (not `pub(crate)`): `main.rs` (a separate crate from this facade lib)
-// constructs `viz_engine::VizEngineState` directly to eagerly share it between
-// the RPC render path and the V3b interactive listener — see that struct's
-// own doc.
-#[cfg(feature = "viz-static-export")]
-pub mod viz_engine;
-#[cfg(feature = "viz-static-export")]
-pub(crate) mod viz_provenance;
-// D-VZ-1 lane V3b: the interactive HTTP listener (WebGPU/WebGL2 reference
-// client + binary viewport-tile protocol). `pub` (not `pub(crate)`) so
-// `main.rs` can call `serve` directly, mirroring `obs`/`lake::rest`'s own
-// top-level HTTP-surface modules.
-mod compute;
 mod dispatch;
 #[cfg(feature = "viz-interactive")]
 pub mod viz_interactive;
@@ -299,63 +223,22 @@ pub(crate) mod handlers;
 pub mod registry_reaper;
 // EH-558: policy-driven expiry of sealed records through their owning op.
 pub mod sealed_retention;
-// Owner-scoped WASM UDF catalog (CONCEPT:MEDULLA-KG.query.rowset-execution, EH-374):
-// `RegisterUdf`/`RunUdf` resolve ids only within the caller's verified owner (tenant+principal).
-#[cfg(feature = "wasm-udf")]
-pub mod udf_catalog;
-// MutationPlan + the single commit gateway (CONCEPT:MEDULLA-P0-2): consumes
-// `medulla-capabilities`' MethodPolicy to drive authz + durable-commit + audit + CDC for
-// the GATEWAY_ROUTED mutation set from ONE call site. See its module docs for scope.
-pub(crate) mod mutation;
-pub(crate) mod mutation_batch;
 // MEDULLA-ORCH-VOCAB-R801 — engine-side admission of the versioned
 // harness-component writes on both write paths (direct AddNode and
 // ChangeEnvelope). `pub` (not `pub(crate)`) so the hot-path receipt
 // (`benches/harness_components.rs`, MEDULLA-ORCH-VOCAB-R801.6) measures the
 // engine's real per-write path. See the module docs for the shared rules.
 pub mod harness_admission;
-// Per-graph batching worker for the five coalescable GATEWAY_ROUTED structural
-// writes (CONCEPT:MEDULLA-KG.sharding.per-graph-write-coalescer, L18 rewrite). See its module
-// docs and `mutation::commit_coalescable_mutation` for why the durable commit, not
-// just the RAM publish, must run inside the worker's ONE `lock_graph` hold per batch.
-// `pub` (not `pub(crate)`) so `ServerState::routed_write_coalescer`'s field type is
-// nameable from the `medulla-server` binary crate, mirroring `write_coalescer`.
-pub mod routed_write_coalescer;
 // Durable incremental reasoning authority. It tails the committed MutationBatch
 // outbox, fsyncs each per-graph projection before cursor acknowledgement, and serves
 // status/recompute directly from that projection.
 #[cfg(feature = "epistemic-tms")]
 pub mod reasoning_projection;
-// Reasoning auto-cascade (W3.6/E16, opt-in via `REASON_ON_WRITE`): CDC-triggered,
-// debounced OWL/RL closure re-materialization per graph. Wires the EXISTING
-// `medulla_rdf::owl::Reasoner` incremental delta re-seed (`add_axioms`) into the write
-// path via the CDC hub's `emit` choke point (see `cdc.rs`). Gated on `owl` alone
-// (this module's real dependency) — a `streaming`-less build compiles it, but its
-// only call site (the `owl`-gated hook inside `cdc.rs`, itself `streaming`-gated)
-// then has nothing to reach it, so nothing spawns.
-#[cfg(feature = "owl")]
-pub mod reasoning_cascade;
-// X5-enforce (CONCEPT:MEDULLA-KG.ontology.rdf-update-guard): wires the EXISTING medulla-shacl ICV
-// commit guard onto the live RDF write path (AddTriples/RemoveTriples/ApplyMutation).
-// Pure-Rust (no new dep — `medulla-shacl` + `std::sync::OnceLock`), gated `shacl`; a build
-// without it compiles none of it and every write path stays byte-identical.
-#[cfg(feature = "shacl")]
-pub(crate) mod icv_guard;
-// A background writer's exact per-graph grant (PB1 projection worker, EH-526 impact watch).
-#[cfg(feature = "security")]
-pub(crate) mod service_grant;
-// EH-526 — standing impact watches: CDC-noticed seed changes recompute their
-// downstream impact through the ordinary `MineRiskPropagation` writeback path.
-#[cfg(all(feature = "streaming", feature = "mining", feature = "query"))]
-pub mod impact_watch;
 // PB1 — the connector-pack projection worker, the first Agent Library outbox
 // consumer. `pub` so the server binary can start it after catalog recovery.
 pub mod connector_pack_projection;
 // EH-557 — bounded local repository enrichment outbox consumer.
 pub mod repository_enrichment_worker;
-// X10 — the operator and consumer surface over every owner's mutation outbox.
-#[cfg(feature = "redb")]
-pub(crate) mod outbox_operator;
 // X9 — keyed schema sources on one request graph.  The authority composes both
 // OWL and SHACL documents and is therefore present only in the certified SHACL
 // build (which implies `owl-dl`).  Minimal/server-only profiles must not pull
@@ -472,7 +355,6 @@ pub mod graphql_sub;
     feature = "lake",
     feature = "s3-api",
 ))]
-pub(crate) mod http1;
 /// Remote KV-cache HTTP surface (CONCEPT:MEDULLA-KG.backend.is-configured-so-co, feature `kvcache-server`): a
 /// hand-rolled HTTP listener exposing the `medulla-kvcache` shared, content-addressed
 /// backend (MEDULLA-186) so parallel vLLM/LMCache instances SHARE KV blocks by token-hash
@@ -489,17 +371,8 @@ pub mod kvcache_http;
 #[cfg(feature = "obs")]
 pub mod obs;
 
-/// Shared OIDC/JWKS bearer-token verification core (feature `oidc`, pulled in by
-/// both `security` and `kvcache-server`): one RSA-signature-against-JWKS
-/// verifier reused by the KV-cache HTTP bearer guard AND `auth`'s primary
-/// `eg2.` identity binding. See the module doc for the full split.
-#[cfg(feature = "oidc")]
-pub(crate) mod oidc;
 #[cfg(feature = "s3-api")]
 pub mod s3;
-/// W3C SPARQL 1.1 Protocol HTTP endpoint (CONCEPT:MEDULLA-KG.query.named-graph-support, feature `sparql-http`).
-#[cfg(feature = "sparql-http")]
-pub mod sparql_http;
 // SPARQL graph publication to an external Fuseki endpoint (CA-12, feature
 // `sparql-fuseki`, off by default). Reserved and EMPTY until CA-12 implements it; landed
 // by CA-17's single feature-stub commit so CA-12 never edits this shared module list.
@@ -539,17 +412,6 @@ pub mod promql;
 /// completing the observability trilogy (logs + metrics + traces).
 #[cfg(feature = "traces")]
 pub mod traces;
-// Owner-scoped user-defined relational catalogs (CONCEPT:MEDULLA-KG.query.register-user-tables-alongside/MEDULLA-023): one
-// `medulla_query::TableStore` per verified tenant+actor, shared across Method::Sql and every
-// native SQL/SQLite/OBDA surface for that owner. Opaque files live under the configured
-// persistence directory; there is no global or temporary fallback.
-#[cfg(feature = "query")]
-pub mod sql_tables;
-// Tenant-scoped SQL table ownership, grants, and row-level security layered on top
-// of `sql_tables`'s tenant-shared catalog (CONCEPT:NE-003). Crate-private: not yet
-// wired into any live request path — see the module doc for why.
-#[cfg(feature = "query")]
-pub(crate) mod sql_catalog_acl;
 // Natural-language query planner resolution (CONCEPT:MEDULLA-KG.query.fence-stripper, feature `nl-query`): owns
 // which `medulla_plan::NlPlanner` the facade uses (injected vs standalone-config default).
 #[cfg(feature = "nl-query")]
@@ -607,11 +469,7 @@ pub mod secondary_indexes;
 // (which implies `medulla-query/sql`).
 #[cfg(feature = "query")]
 pub mod request_cancel;
-mod state;
 mod transport;
-// Server-staged OCC ACID transactions (CONCEPT:MEDULLA-KG.txn.multi-op-occ-acid). `txn` holds the staged
-// transaction state + id source; `handlers::txn` owns the Txn* methods.
-pub mod txn;
 // The durable cross-store commit-intent log (`txn_intent`) lives under
 // `api::query_txn` (R056.8).
 
@@ -651,7 +509,7 @@ pub(crate) fn test_state_with_services(
     #[cfg(feature = "query")]
     {
         state.persist_dir = Some(
-            crate::server::sql_tables::test_persist_dir()
+            medulla_server_api::sql_tables::test_persist_dir()
                 .to_string_lossy()
                 .into_owned(),
         );
@@ -660,7 +518,7 @@ pub(crate) fn test_state_with_services(
     {
         state.persistence = Some(std::sync::Arc::new(
             crate::server::persistence::redb_backend::RedbBackend::open(
-                crate::server::api::dispatch_support::unique_temp_dir(persistence_label)
+                medulla_server_api::api::dispatch_support::unique_temp_dir(persistence_label)
                     .to_string_lossy()
                     .into_owned(),
                 256,
@@ -672,7 +530,7 @@ pub(crate) fn test_state_with_services(
     {
         state.tsdb_store = Some(std::sync::Arc::new(
             medulla_tsdb::store::SeriesStore::open_in_dir(
-                &crate::server::api::dispatch_support::unique_temp_dir(tsdb_label),
+                &medulla_server_api::api::dispatch_support::unique_temp_dir(tsdb_label),
                 medulla_kernel::store_authority::process_verifier(),
                 medulla_kernel::store_authority::process_authority().principal(),
                 &medulla_kernel::store_authority::process_authority().proof(),
@@ -1170,18 +1028,18 @@ mod tests {
 
     /// The signed claims [`request`] issues for `agent` in the deployment's one tenant.
     fn test_claims(agent: &str) -> RequestContextClaims {
-        crate::server::authority_context::signed_test_claims(agent)
+        medulla_server_api::authority_context::signed_test_claims(agent)
     }
 
     /// The verified carrier the server derives for a [`request`] made as `agent`
     /// (EH-373/EH-374 owner-scoped catalogs key on its `owner_scope`).
     #[cfg(any(feature = "federation", feature = "wasm-udf"))]
-    fn carrier_as(agent: &str) -> crate::server::access::CarrierAuthority {
-        let context = crate::server::auth::VerifiedRequestContext::from_verified_claims(
+    fn carrier_as(agent: &str) -> medulla_server_api::access::CarrierAuthority {
+        let context = medulla_server_api::auth::VerifiedRequestContext::from_verified_claims(
             test_claims(agent),
             "carrier-as".to_string(),
         );
-        crate::server::access::CarrierAuthority::from_verified(&context)
+        medulla_server_api::access::CarrierAuthority::from_verified(&context)
             .expect("verified test carrier")
     }
 
@@ -3217,7 +3075,7 @@ mod tests {
             // fixture its own uniquely-named backend, as `test_state()` does.
             state.persistence = Some(std::sync::Arc::new(
                 crate::server::persistence::redb_backend::RedbBackend::open(
-                    crate::server::api::dispatch_support::unique_temp_dir(
+                    medulla_server_api::api::dispatch_support::unique_temp_dir(
                         "medulla-per-graph-backpressure",
                     )
                     .to_string_lossy()
@@ -4402,7 +4260,7 @@ mod tests {
         // Force genuine contention deterministically (see doc above): hold the
         // per-graph lock every landing path needs before any of the N writers
         // can be spawned.
-        let hold = crate::server::mutation_batch::lock_graph("__commons__").await;
+        let hold = medulla_server_api::mutation_batch::lock_graph("__commons__").await;
 
         let started = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0));
         let mut handles = Vec::with_capacity(N as usize);
@@ -4589,7 +4447,7 @@ mod tests {
         );
 
         // Hold the SAME per-graph lane externally.
-        let held = crate::server::mutation_batch::lock_graph(GRAPH).await;
+        let held = medulla_server_api::mutation_batch::lock_graph(GRAPH).await;
 
         let st1 = state.clone();
         let coalesced = tokio::spawn(async move {
@@ -5340,7 +5198,8 @@ mod tests {
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         #[cfg(any(feature = "security", feature = "raft"))]
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        use crate::server::txn::{now_ms, sweep_expired_txns};
+        use medulla_server_api::txn::now_ms;
+        use medulla_server_api::txn::sweep_expired_txns;
         let state = test_state();
         let txn = begin_txn(&state, 1, "__commons__").await;
         assert!(state.read().await.open_txns.get(&txn).is_some());

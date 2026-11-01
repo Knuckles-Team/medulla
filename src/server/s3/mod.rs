@@ -58,9 +58,11 @@ use tokio::sync::RwLock;
 mod calendar;
 mod route;
 
-use crate::server::blob::store::{ChunkStore, RedbChunkStore};
-use crate::server::http1::{self, RequestLimits};
-use crate::server::kv::KvStore;
+use medulla_server_api::blob::store::ChunkStore;
+use medulla_server_api::blob::store::RedbChunkStore;
+use medulla_server_api::http1;
+use medulla_server_api::http1::RequestLimits;
+use medulla_server_api::kv::KvStore;
 use crate::server::ServerState;
 use calendar::{iso8601, valid_amz_date};
 
@@ -897,12 +899,12 @@ fn handle(store: &S3Store, auth: &S3Auth, req: &S3Request) -> S3Response {
     // Denied" (an S3 client expects the standard error code/message, not
     // custom prose — unlike the KV-cache/observability surfaces, which own
     // their own wire protocol).
-    let carrier = crate::server::auth::mint_fixed_service_carrier(
+    let carrier = medulla_server_api::auth::mint_fixed_service_carrier(
         authorized(auth, req),
         "s3-api-client",
         &["kg:read", "kg:write"],
     );
-    if crate::server::access::unauthenticated_carrier_denied(carrier.as_ref()) {
+    if medulla_server_api::access::unauthenticated_carrier_denied(carrier.as_ref()) {
         return S3Response::error("403 Forbidden", "AccessDenied", "Access Denied");
     }
     handle_authorized(store, req)
@@ -1169,7 +1171,7 @@ async fn serve_with_store_inner(
     auth: S3Auth,
 ) -> std::io::Result<()> {
     let listener = TcpListener::bind(addr).await?;
-    crate::server::api::dispatch_support::require_loopback_listener(&listener)?;
+    medulla_server_api::api::dispatch_support::require_loopback_listener(&listener)?;
     tracing::info!(
         "s3-api: serving authenticated S3-compatible REST surface on {} (durable={})",
         addr,

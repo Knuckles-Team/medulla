@@ -519,7 +519,8 @@ fn is_admin_claims(
 #[cfg(feature = "oidc")]
 mod http {
     use super::{generate_bundle, is_admin_claims, BundleCaller, GenerateBundleInput, MarkingDef};
-    use crate::server::http1::{self, RequestLimits};
+    use medulla_server_api::http1;
+    use medulla_server_api::http1::RequestLimits;
     use std::collections::BTreeMap;
     use std::sync::Arc;
     use tokio::io::AsyncWriteExt;
@@ -553,7 +554,7 @@ mod http {
 
     async fn handle(
         stream: &mut TcpStream,
-        validator: Option<Arc<crate::server::oidc::JwtValidator>>,
+        validator: Option<Arc<medulla_server_api::oidc::JwtValidator>>,
     ) {
         let Ok(Some(req)) =
             tokio::time::timeout(READ_TIMEOUT, http1::read_request(stream, HTTP_LIMITS)).await
@@ -677,12 +678,12 @@ mod http {
     /// static secret cannot provide.
     pub async fn serve(listener: TcpListener) {
         if let Err(error) =
-            crate::server::api::dispatch_support::require_loopback_listener(&listener)
+            medulla_server_api::api::dispatch_support::require_loopback_listener(&listener)
         {
             tracing::error!("policy-export listener refused: {error}");
             return;
         }
-        let validator = match crate::server::oidc::JwtValidator::from_env_primary() {
+        let validator = match medulla_server_api::oidc::JwtValidator::from_env_primary() {
             Ok(Some(v)) => Some(Arc::new(v)),
             Ok(None) => {
                 tracing::warn!(
@@ -1007,7 +1008,8 @@ mod tests {
     mod live_token_proof {
         use super::super::*;
         use crate::isolation::IsolationLayer;
-        use crate::server::oidc::tests::{now, sign};
+        use medulla_server_api::oidc::tests::now;
+        use medulla_server_api::oidc::tests::sign;
 
         // Reuse the OIDC test-only RSA signer while exercising a distinct
         // issuer and key id for this policy-bundle proof.
@@ -1015,8 +1017,8 @@ mod tests {
         const AUDIENCE: &str = "medulla";
         const KID: &str = "ca16-test-kid-1";
 
-        fn validator() -> crate::server::oidc::JwtValidator {
-            crate::server::oidc::tests::validator_for(ISSUER, AUDIENCE, KID)
+        fn validator() -> medulla_server_api::oidc::JwtValidator {
+            medulla_server_api::oidc::tests::validator_for(ISSUER, AUDIENCE, KID)
         }
 
         /// A real RS256-signed, issuer/audience/expiry-verified token shaped

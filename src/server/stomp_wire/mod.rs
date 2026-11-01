@@ -119,7 +119,7 @@ impl<'a> StompBroker<'a> {
 
 /// Fail closed before binding the plaintext STOMP listener.
 pub fn validate_startup_policy(addr: &str, secret: &str) -> std::io::Result<()> {
-    crate::server::api::dispatch_support::validate_direct_wire_security(
+    medulla_server_api::api::dispatch_support::validate_direct_wire_security(
         addr,
         "stomp-wire",
         !secret.is_empty(),
@@ -375,7 +375,7 @@ async fn handle_connect(
     if !verify_stomp_passcode(context.auth_secret, &principal, &passcode) {
         return Err(invalid_data("STOMP authentication failed"));
     }
-    let actor = crate::server::api::dispatch_support::pseudonymous_broker_actor(
+    let actor = medulla_server_api::api::dispatch_support::pseudonymous_broker_actor(
         context.auth_secret,
         &principal,
     )?;
@@ -964,7 +964,7 @@ mod tests {
         assert!(!verify_stomp_passcode("", principal, &passcode));
         assert!(!verify_stomp_passcode("test", "agent:other", &passcode));
         let actor =
-            crate::server::api::dispatch_support::pseudonymous_broker_actor("test", principal)
+            medulla_server_api::api::dispatch_support::pseudonymous_broker_actor("test", principal)
                 .unwrap();
         assert!(!actor.contains(principal));
     }

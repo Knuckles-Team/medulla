@@ -56,7 +56,7 @@ use crate::{mutation_batch::*, protocol::*};
 use tokio::sync::oneshot;
 
 #[cfg(test)]
-use crate::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 
 // The graph table layout + the PURE durable-row machinery (Method→rows apply,
 // group-commit, checkpoint/load) now live in the server-INDEPENDENT
@@ -655,7 +655,7 @@ pub(crate) fn authenticate_private_payload(
     use sha2::Digest;
     let plaintext = cipher.unseal(sealed)?;
     let exact_binding = hex::encode(sha2::Sha256::digest(&plaintext));
-    let semantic_binding = crate::server::txn::GraphTxnState::decode_recovery_plan(
+    let semantic_binding = medulla_server_api::txn::GraphTxnState::decode_recovery_plan(
         &plaintext,
         "private-recovery-integrity".to_string(),
     )
@@ -719,7 +719,7 @@ fn open_admin_mutations(path: &std::path::Path) -> Result<AdminMutationStore, St
     AdminMutationStore::open_with(
         path,
         ADMIN_MUTATIONS_STORE,
-        crate::server::api::admin::saga::cluster_admin_scope_identity()?,
+        medulla_server_api::api::admin::saga::cluster_admin_scope_identity()?,
         admin_mutations_private_integrity(),
         medulla_kernel::store_authority::process_authority(),
     )
@@ -773,7 +773,7 @@ pub fn rehydrate_core_from_dump(core: &GraphCore, dump: &GraphDump) -> Result<()
     // projection.  Reshard/hibernate rehydration therefore has the same atomic
     // engine-upgrade rule as ordinary startup.
     #[cfg(feature = "shacl")]
-    crate::server::api::admin::compose::validate_and_compose(&dump.schema_sources)?;
+    medulla_server_api::api::admin::compose::validate_and_compose(&dump.schema_sources)?;
     core.clear();
     core.install_schema_sources(std::sync::Arc::clone(&dump.schema_sources));
     for (id, props) in &dump.nodes {
@@ -824,9 +824,8 @@ mod tests {
         MUTATION_ACTOR_HEADER, MUTATION_BATCH_VERSION,
     };
     use crate::protocol::Request;
-    use crate::server::auth::{
-        build_shared_test_request, dispatch_test_on_heap as dispatch_on_heap,
-    };
+    use medulla_server_api::auth::build_shared_test_request;
+    use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
     #[cfg(feature = "tsdb")]
     use sha2::Digest;
 
@@ -838,7 +837,7 @@ mod tests {
 
     #[cfg(feature = "tsdb")]
     fn scoped_series_key(graph: &str, series: &str, principal: &str) -> String {
-        let tenant_scope = crate::server::mutation_batch::opaque_coordinator_key(
+        let tenant_scope = medulla_server_api::mutation_batch::opaque_coordinator_key(
             "carrier-tenant",
             "verified",
             "tenant-shared",
@@ -847,12 +846,12 @@ mod tests {
             "principal:sha256:{}",
             hex::encode(sha2::Sha256::digest(principal.as_bytes()))
         );
-        let owner_scope = crate::server::mutation_batch::opaque_coordinator_key(
+        let owner_scope = medulla_server_api::mutation_batch::opaque_coordinator_key(
             "carrier-owner",
             &tenant_scope,
             &actor_scope,
         );
-        let graph_scope = crate::server::mutation_batch::opaque_coordinator_key(
+        let graph_scope = medulla_server_api::mutation_batch::opaque_coordinator_key(
             "timeseries-graph",
             &owner_scope,
             graph,
@@ -1839,7 +1838,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
 
-        let backend: Arc<dyn crate::server::api::persistence::PersistenceBackend> =
+        let backend: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> =
             Arc::new(RedbBackend::open(dir_s.clone(), 64).expect("open redb backend"));
         backend
             .register_graph("__commons__", "__commons__", GraphType::Commons)
@@ -1980,7 +1979,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
 
-        let backend: Arc<dyn crate::server::api::persistence::PersistenceBackend> =
+        let backend: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> =
             Arc::new(RedbBackend::open(dir_s.clone(), 256).expect("open"));
         let state = new_state(Some(dir_s.clone()));
         {
@@ -2115,7 +2114,7 @@ mod tests {
         // the file lock on process exit regardless — same rationale as the
         // `s.persistence = None` note on `dispatch_authoritative_durable_without_checkpoint`),
         // so bound it with a short retry rather than a flat sleep.
-        let backend2: Arc<dyn crate::server::api::persistence::PersistenceBackend> = {
+        let backend2: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> = {
             let mut attempt = 0;
             loop {
                 match RedbBackend::open(dir_s.clone(), 256) {
@@ -2187,7 +2186,7 @@ mod tests {
             let _ = std::fs::remove_dir_all(&dir);
             let dir_s = dir.to_string_lossy().to_string();
 
-            let backend: Arc<dyn crate::server::api::persistence::PersistenceBackend> =
+            let backend: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> =
                 Arc::new(RedbBackend::open(dir_s.clone(), 256).expect("open"));
             let state = new_state(Some(dir_s.clone()));
             {
@@ -2319,7 +2318,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
 
-        let backend: Arc<dyn crate::server::api::persistence::PersistenceBackend> =
+        let backend: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> =
             Arc::new(RedbBackend::open(dir_s.clone(), 256).expect("open"));
         let state = new_state(Some(dir_s.clone()));
         {
@@ -3146,7 +3145,7 @@ mod tests {
     // ── Cross-modal ACID (CONCEPT:MEDULLA-KG.txn.reader-never-sees-node) ─────────────────────────────────────
 
     use crate::protocol::{Response, ResultPayload};
-    use crate::server::auth::VerifiedRequestContext;
+    use medulla_server_api::auth::VerifiedRequestContext;
     use crate::server::handlers::txn::try_handle as txn_try_handle;
 
     fn cm_dir(tag: &str) -> String {
@@ -3417,7 +3416,7 @@ mod tests {
         }
         async fn commit_mutation_batch_crossmodal(
             &self,
-            _args: crate::server::api::persistence::CrossModalCommitArgs<'_>,
+            _args: medulla_server_api::api::persistence::CrossModalCommitArgs<'_>,
         ) -> Result<crate::mutation_batch::MutationBatchCommit, String> {
             // The seam the cross-modal Commit handler actually calls.
             Err("injected durable commit failure".to_string())

@@ -45,7 +45,7 @@ pub const DEFAULT_MAX_WINDOW_NODES: usize = 50_000;
 /// `MEDULLA_PROVENANCE_ANCHOR_MAX_NODES`. Zero, absent, and
 /// non-parsable values resolve to [`DEFAULT_MAX_WINDOW_NODES`].
 pub fn max_window_nodes() -> usize {
-    crate::server::state::positive_runtime_limit_from_env(
+    medulla_server_api::state::positive_runtime_limit_from_env(
         "MEDULLA_PROVENANCE_ANCHOR_MAX_NODES",
         DEFAULT_MAX_WINDOW_NODES,
     )
@@ -106,7 +106,7 @@ pub async fn sweep(state: &Arc<RwLock<ServerState>>) -> u64 {
         // Serialize the maintenance commit and its serving-version publication
         // with ordinary graph writes. The captured entry may have been retired
         // while this sweep waited for the lane.
-        let _mutation_guard = crate::server::mutation_batch::lock_graph(&name).await;
+        let _mutation_guard = medulla_server_api::mutation_batch::lock_graph(&name).await;
         if !state
             .read()
             .await
@@ -122,7 +122,7 @@ pub async fn sweep(state: &Arc<RwLock<ServerState>>) -> u64 {
         }
         let fname = medulla_kernel::persist::sanitize(&name);
         if let Err(error) =
-            crate::server::mutation_batch::authoritative_graph_version(&persistence, &fname, &core)
+            medulla_server_api::mutation_batch::authoritative_graph_version(&persistence, &fname, &core)
                 .await
         {
             tracing::warn!(graph = %name, %error, "provenance anchor: version preflight failed");

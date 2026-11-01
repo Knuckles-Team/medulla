@@ -42,8 +42,8 @@ use super::stat_support::{
 use super::stat_tool_subset::tool_subset_outcome;
 use super::telemetry;
 use crate::protocol::{Response, ResultPayload};
-use crate::server::auth::VerifiedRequestContext;
-use crate::server::state::ServerState;
+use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::state::ServerState;
 
 /// Domain of a statistical record's input digest.
 pub(super) const STATISTICAL_INPUTS_DOMAIN: &str = "eg/decision-statistical-inputs/v1";

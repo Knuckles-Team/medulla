@@ -48,7 +48,7 @@ const DEFAULT_REAP_INTERVAL_SECS: u64 = 15;
 
 /// The configured positive sweep interval.
 pub fn reap_interval_secs() -> u64 {
-    crate::server::state::positive_runtime_limit_from_env(
+    medulla_server_api::state::positive_runtime_limit_from_env(
         "MEDULLA_SERVER_REGISTRY_REAP_SECS",
         DEFAULT_REAP_INTERVAL_SECS,
     )
@@ -108,7 +108,7 @@ pub async fn reap_expired_servers(state: &Arc<RwLock<ServerState>>, now_ms: u64)
         // Serialize against a concurrent RegisterServer renewal of the SAME node
         // (the same per-graph lane every routed mutation takes) and re-check
         // under the lock: a heartbeat may have renewed the lease since the scan.
-        let _guard = crate::server::mutation_batch::lock_graph("__commons__").await;
+        let _guard = medulla_server_api::mutation_batch::lock_graph("__commons__").await;
         let still_expired = core
             .get_node_properties(&node_id)
             .and_then(|blob| is_expired_server_node(&blob, now_ms))
@@ -121,7 +121,7 @@ pub async fn reap_expired_servers(state: &Arc<RwLock<ServerState>>, now_ms: u64)
             node_id: node_id.clone(),
         };
         #[cfg(feature = "streaming")]
-        let pre = crate::server::cdc::capture_before(&core, &method);
+        let pre = medulla_server_api::cdc::capture_before(&core, &method);
 
         // Durable-first (see module docs): only touch the in-memory core / emit
         // CDC once the durable record is confirmed.
@@ -131,7 +131,7 @@ pub async fn reap_expired_servers(state: &Arc<RwLock<ServerState>>, now_ms: u64)
                 core.mark_dirty();
                 #[cfg(feature = "streaming")]
                 if let Some(hub) = &hub {
-                    crate::server::cdc::emit_for_method(hub, &core, "__commons__", &method, pre);
+                    medulla_server_api::cdc::emit_for_method(hub, &core, "__commons__", &method, pre);
                 }
                 reaped += 1;
                 tracing::info!(
@@ -161,9 +161,8 @@ pub async fn reap_expired_servers(state: &Arc<RwLock<ServerState>>, now_ms: u64)
 mod tests {
     use super::*;
     use crate::protocol::Request;
-    use crate::server::auth::{
-        build_shared_test_request, dispatch_test_on_heap as dispatch_on_heap,
-    };
+    use medulla_server_api::auth::build_shared_test_request;
+    use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
 
     const SECRET: &str = "registry-reaper-test";
     const TEST_AGENT: &str = "unit-test-agent";
@@ -216,7 +215,7 @@ mod tests {
 
         register(&state, 1, "alive-server", 3_600).await;
 
-        let now_ms = crate::server::txn::now_ms();
+        let now_ms = medulla_server_api::txn::now_ms();
         let reaped = reap_expired_servers(&state, now_ms).await;
         assert_eq!(reaped, 0, "a live lease must never be reaped");
 
@@ -342,7 +341,7 @@ mod tests {
         // this call rewrites `lease_expires_at_ms` off the SAME "now".
         register(&state, 2, "racy-server", 3_600).await;
 
-        let now_ms = crate::server::txn::now_ms() + 2_000;
+        let now_ms = medulla_server_api::txn::now_ms() + 2_000;
         let reaped = reap_expired_servers(&state, now_ms).await;
         assert_eq!(reaped, 0, "the renewed lease must not be reaped");
 
@@ -388,7 +387,7 @@ mod tests {
         .await;
         assert!(r.error.is_none());
 
-        let now_ms = crate::server::txn::now_ms() + 1_000;
+        let now_ms = medulla_server_api::txn::now_ms() + 1_000;
         let reaped = reap_expired_servers(&state, now_ms).await;
         assert_eq!(reaped, 0, "a malformed lease row must never be reaped");
 
@@ -434,7 +433,7 @@ mod tests {
 
         // "about-to-die-mcp" is killed -- it never renews. The other two keep
         // heartbeating well inside their TTL (unaffected by the sweep below).
-        let now_ms = crate::server::txn::now_ms() + 2_000;
+        let now_ms = medulla_server_api::txn::now_ms() + 2_000;
         let reaped = reap_expired_servers(&state, now_ms).await;
         assert_eq!(reaped, 1, "exactly the one dead server must be reaped");
 
@@ -566,12 +565,12 @@ mod tests {
             .and_then(|v| v.as_u64())
             .expect("lease field present");
         assert!(
-            lease_expires_at_ms > crate::server::txn::now_ms(),
+            lease_expires_at_ms > medulla_server_api::txn::now_ms(),
             "the repaired lease must be live again, not the hand-corrupted past timestamp"
         );
 
         // And the repaired row is no longer a reap candidate.
-        let now_ms = crate::server::txn::now_ms();
+        let now_ms = medulla_server_api::txn::now_ms();
         let reaped = reap_expired_servers(&state, now_ms).await;
         assert_eq!(reaped, 0, "a freshly-repaired row must not be reaped");
 

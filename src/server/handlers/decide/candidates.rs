@@ -453,7 +453,7 @@ pub(super) fn read_candidates(
 /// is filtered before any plan stage sees it.
 #[cfg(feature = "query")]
 pub(super) async fn filtered_graph_view(
-    state: &std::sync::Arc<tokio::sync::RwLock<crate::server::state::ServerState>>,
+    state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     agent_id: &str,
     source: &CandidateSource,
 ) -> Result<Option<medulla_core::graph::GraphView>, String> {
@@ -468,7 +468,7 @@ pub(super) async fn filtered_graph_view(
 /// Without the query feature a graph source is refused before any read.
 #[cfg(not(feature = "query"))]
 pub(super) async fn filtered_graph_view(
-    _state: &std::sync::Arc<tokio::sync::RwLock<crate::server::state::ServerState>>,
+    _state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     _agent_id: &str,
     _source: &CandidateSource,
 ) -> Result<Option<medulla_core::graph::GraphView>, String> {

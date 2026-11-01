@@ -8,7 +8,7 @@ use crate::raft::RaftStateExt;
 /// replicas applying these in step.
 #[cfg(feature = "raft")]
 fn native_route_opaque_key(label: &str, tenant_scope: &str, kind: &str) -> String {
-    crate::server::mutation_batch::opaque_coordinator_key(label, tenant_scope, kind)
+    medulla_server_api::mutation_batch::opaque_coordinator_key(label, tenant_scope, kind)
 }
 
 /// A graph-lifecycle command routes to the graph it NAMES, not to the graph the
@@ -378,28 +378,28 @@ fn build_native_raft_request(
 ) -> Result<crate::raft::RaftRequest, Response> {
     let committed_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let graph_fname = medulla_kernel::persist::sanitize(proposal.graph_name);
-    let graph_scope = crate::server::mutation_batch::opaque_idempotency_key_for_context(
+    let graph_scope = medulla_server_api::mutation_batch::opaque_idempotency_key_for_context(
         "raft-graph-scope",
         proposal.authority.tenant_scope(),
         proposal.graph_name,
         None,
         &graph_fname,
     );
-    let batch_id = crate::server::mutation_batch::opaque_idempotency_key_for_context(
+    let batch_id = medulla_server_api::mutation_batch::opaque_idempotency_key_for_context(
         "raft-native",
         proposal.authority.tenant_scope(),
         &graph_scope,
         Some(proposal.authority.actor_scope()),
         proposal.authority.idempotency_key(),
     );
-    let mutation = match crate::server::api::persistence::RaftMutationContext::from_verified_request(
+    let mutation = match medulla_server_api::api::persistence::RaftMutationContext::from_verified_request(
         batch_id,
         proposal.request_id,
         proposal.attempt_nonce,
         proposal.authority.tenant_scope(),
         proposal.authority.actor_scope().to_string(),
         identity_bootstrap,
-        crate::server::api::persistence::RaftMutationTiming {
+        medulla_server_api::api::persistence::RaftMutationTiming {
             placement_epoch: routed.epoch,
             fencing_token: routed.placed.then_some(routed.group_id),
             created_at_ms: committed_at_ms,
@@ -602,7 +602,7 @@ pub(in crate::server::dispatch) async fn propose_native_mutation(
     let Some(multi) = multi else {
         return Response::err(
             request_id,
-            crate::server::state::MISSING_PLACEMENT_AUTHORITY,
+            medulla_server_api::state::MISSING_PLACEMENT_AUTHORITY,
         );
     };
     let Some(routed) = multi.handle_for_graph(&graph_name).await else {

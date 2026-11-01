@@ -37,11 +37,11 @@ use medulla_types::semantic_index::{SemanticBinding, SemanticIndexError, Semanti
 use tokio::sync::RwLock;
 
 use crate::protocol::{Response, ResultPayload};
-use crate::server::access::CarrierAuthority;
+use medulla_server_api::access::CarrierAuthority;
 use crate::server::semantic_index::{
     open_semantic_service, semantic_cursor_secret, SemanticIndexServerAdapter,
 };
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 
 pub(super) struct SemanticIndexContext<'a> {
     pub(super) req_id: u64,
@@ -55,7 +55,7 @@ pub(super) struct SemanticIndexContext<'a> {
 pub(crate) async fn handle_semantic_index(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     op: Box<SemanticIndexOp>,
 ) -> Response {
     let op = *op;
@@ -80,7 +80,7 @@ pub(crate) async fn handle_semantic_index(
 
 fn authorize(
     req_id: u64,
-    verified: &crate::server::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::auth::VerifiedRequestContext,
     op: &SemanticIndexOp,
 ) -> Result<CarrierAuthority, Response> {
     // Echo only the refused shape field and its static reason, never the

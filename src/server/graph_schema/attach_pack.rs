@@ -12,7 +12,7 @@ use std::sync::Arc;
 use medulla_types::contract::ResourceId;
 use tokio::sync::RwLock;
 
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// Engine-owned schema bytes selected from one visible ConnectorPack head.
 ///
@@ -53,7 +53,7 @@ pub(super) async fn resolve(
         let mut shapes = Vec::new();
         let mut ontologies = Vec::new();
         for body in head.bodies {
-            let bytes = crate::server::blob::engine_bodies::read_engine_body(
+            let bytes = medulla_server_api::blob::engine_bodies::read_engine_body(
                 blob.store.as_ref(),
                 tenant_id,
                 &body.engine_manifest_digest,

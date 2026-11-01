@@ -72,12 +72,6 @@ pub mod embedded;
 // preserving each caller's existing path prefix and cleanup contract.
 #[cfg(feature = "server")]
 pub mod server;
-#[cfg(test)]
-pub(crate) mod test_support;
-// Canonical durable mutation classification/application is shared by the socket,
-// embedded, and Raft paths.
-#[cfg(any(feature = "server", feature = "redb"))]
-pub mod mutation_apply;
 // Per-tenant memory budget + autoscale signals (CONCEPT:MEDULLA-KG.compute.lane-v, Lane V). The budget
 // enforcer (periodic over-budget eviction/hibernation), the per-tenant resident-RAM
 // tracking, the ResourceStats snapshot, and the capacity-planning cost model. PURE-RUST

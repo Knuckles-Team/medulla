@@ -21,14 +21,14 @@ use medulla_types::test_support::topology::{
 use tokio::sync::RwLock;
 
 use crate::protocol::{Method, ResultPayload};
-use crate::server::api::persistence::PersistenceBackend;
-use crate::server::auth::VerifiedRequestContext;
+use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_server_api::auth::VerifiedRequestContext;
 use crate::server::persistence::agent_library::AgentLibraryStore;
 use crate::server::persistence::decision_record::tests::{
     commit_context, decided, seed_library, TENANT,
 };
 use crate::server::persistence::redb_backend::RedbBackend;
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 
 fn topology_record(store: &AgentLibraryStore) -> DecisionRecord {
     let base = decided(store);

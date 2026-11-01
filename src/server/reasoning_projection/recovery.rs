@@ -48,7 +48,7 @@ pub(super) async fn reject_invalid(
     core: Arc<medulla_core::graph::GraphCore>,
     lease: &MutationOutboxLease,
 ) {
-    let write = crate::server::outbox_operator::OutboxWrite::Reject {
+    let write = medulla_server_api::outbox_operator::OutboxWrite::Reject {
         lease: Box::new(lease.clone()),
         reason: OutboxRejectReason::InvalidEvent,
         now_ms: (context.clock)(),

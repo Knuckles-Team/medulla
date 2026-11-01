@@ -2,7 +2,7 @@ use super::*;
 #[cfg(feature = "raft")]
 use crate::raft::RaftStateExt;
 pub(super) fn stamp_resource_reservation_timestamp(method: &mut Method) {
-    if !crate::server::mutation_batch::is_resource_reservation_method(method) {
+    if !medulla_server_api::mutation_batch::is_resource_reservation_method(method) {
         return;
     }
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
@@ -18,7 +18,7 @@ pub(super) fn stamp_resource_reservation_timestamp(method: &mut Method) {
 }
 
 pub(super) fn stamp_capacity_timestamp(method: &mut Method) {
-    if !crate::server::mutation_batch::is_capacity_method(method) {
+    if !medulla_server_api::mutation_batch::is_capacity_method(method) {
         return;
     }
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
@@ -87,8 +87,8 @@ pub(super) fn graph_op_gateway_authz_ctx(
     s: &ServerState,
     method: &Method,
     entry: &GraphEntryFacts,
-) -> Option<crate::server::mutation::GatewayAuthzCtx> {
-    if !crate::server::mutation::is_gateway_routed(method) {
+) -> Option<medulla_server_api::mutation::GatewayAuthzCtx> {
+    if !medulla_server_api::mutation::is_gateway_routed(method) {
         return None;
     }
     Some((s.isolation.clone(), entry.graph_type, entry.owner.clone()))
@@ -100,7 +100,7 @@ pub(super) struct GraphOpGate {
     pub(super) read_authority: GraphReadAuthority,
     pub(super) tenant_scope: String,
     pub(super) verified_actor: String,
-    pub(super) gateway_authz_ctx: Option<crate::server::mutation::GatewayAuthzCtx>,
+    pub(super) gateway_authz_ctx: Option<medulla_server_api::mutation::GatewayAuthzCtx>,
 }
 
 /// Gate and resolve one graph operation under the registry lock, in the ORIGINAL
@@ -232,14 +232,14 @@ pub(super) fn check_graph_op_access(
 #[cfg(feature = "raft")]
 pub(super) fn resolve_multi_raft(
     s: &ServerState,
-    placement_authority: &crate::server::state::PlacementAuthorityKind,
+    placement_authority: &medulla_server_api::state::PlacementAuthorityKind,
 ) -> Option<Arc<crate::raft::multi::MultiRaft>> {
     if medulla_kernel::kernel::dispatch_support::is_replicated_apply() {
         return None;
     }
     if !matches!(
         placement_authority,
-        crate::server::state::PlacementAuthorityKind::MultiRaft
+        medulla_server_api::state::PlacementAuthorityKind::MultiRaft
     ) {
         return None;
     }

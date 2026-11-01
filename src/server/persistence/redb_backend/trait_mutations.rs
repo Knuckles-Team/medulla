@@ -106,7 +106,7 @@ macro_rules! persistence_mutations {
 
         async fn commit_mutation_batch_crossmodal(
             &self,
-            args: crate::server::api::persistence::CrossModalCommitArgs<'_>,
+            args: medulla_server_api::api::persistence::CrossModalCommitArgs<'_>,
         ) -> Result<MutationBatchCommit, String> {
             let graph_fname = args.graph_fname;
             let (done, rx) = oneshot::channel();

@@ -8,7 +8,7 @@ use sha2::Sha256;
 use tokio::sync::RwLock;
 
 use crate::protocol::{Method, Request, ResultPayload};
-use crate::server::api::reentry::dispatch_authenticated_broker_actor;
+use medulla_server_api::api::reentry::dispatch_authenticated_broker_actor;
 use crate::server::ServerState;
 
 /// Common async/socket imports used by every native broker adapter.
@@ -62,7 +62,7 @@ pub(crate) async fn test_state_with_broker_agents(
     }
     for principal in principals {
         let actor_ref =
-            crate::server::api::dispatch_support::pseudonymous_broker_actor("test", principal)
+            medulla_server_api::api::dispatch_support::pseudonymous_broker_actor("test", principal)
                 .expect("test principal pseudonymizes");
         register_broker_test_agent(&mut isolation, actor_ref);
     }
@@ -71,10 +71,10 @@ pub(crate) async fn test_state_with_broker_agents(
     let (persist_dir, persistence) = {
         use crate::server::persistence::redb_backend::RedbBackend;
 
-        let dir = crate::server::api::dispatch_support::unique_temp_dir(prefix);
+        let dir = medulla_server_api::api::dispatch_support::unique_temp_dir(prefix);
         let dir_s = dir.to_string_lossy().into_owned();
         let backend = RedbBackend::open(dir_s.clone(), 64).expect("open broker-wire test backend");
-        let persistence: Arc<dyn crate::server::api::persistence::PersistenceBackend> =
+        let persistence: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> =
             Arc::new(backend);
         persistence
             .register_graph(

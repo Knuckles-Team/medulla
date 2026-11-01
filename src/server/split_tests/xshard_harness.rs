@@ -549,7 +549,7 @@ async fn txn_handle(
     // transaction-lifecycle saga key and the second was refused with
     // `IDEMPOTENCY_CONFLICT`. See `verified_for_test_with_idempotency_key`.
     let context =
-        crate::server::auth::VerifiedRequestContext::verified_for_test_with_idempotency_key(
+        medulla_server_api::auth::VerifiedRequestContext::verified_for_test_with_idempotency_key(
             XSHARD_HARNESS_TEST_AGENT,
             &format!("xshard-harness:{req_id}"),
         );
@@ -1339,7 +1339,7 @@ async fn write_node(
         graph_name: graph.to_string(),
         graph_type: GraphType::Global,
         committed_at_ms: 0,
-        mutation: crate::server::api::persistence::RaftMutationContext::internal(
+        mutation: medulla_server_api::api::persistence::RaftMutationContext::internal(
             "raft-xshard-harness",
             graph,
             &format!("{node}:{props}"),

@@ -210,9 +210,9 @@ impl RaftClusterConfig {
         // DIST-P2-2 / ADR-2 W1.2: multi-group production startup. Absent ⇒ the
         // cores-derived default (K == N groups, write-sharded like the non-raft path);
         // set explicitly to size the pool. Clamped to MAX_SHARD_COUNT (K's ceiling).
-        let groups = crate::server::api::persistence::parse_groups(
+        let groups = medulla_server_api::api::persistence::parse_groups(
             std::env::var("MEDULLA_RAFT_GROUPS").ok(),
-            crate::server::api::persistence::default_raft_group_count(),
+            medulla_server_api::api::persistence::default_raft_group_count(),
         )?;
         let transport_secret = resolve_transport_secret()?;
         let loopback_only = peers.len() == 1

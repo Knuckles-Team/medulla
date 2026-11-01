@@ -20,7 +20,9 @@ use tokio::sync::RwLock;
 use super::super::state::ServerState;
 use crate::isolation::AccessLevel;
 use crate::protocol::{Method, Response, ResultPayload};
-use crate::server::access::{check_graph_access, CarrierAuthority, GraphReadAuthority};
+use medulla_server_api::access::check_graph_access;
+use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::access::GraphReadAuthority;
 use crate::wire::{CdcEvent, ContinuousAgg, ContinuousQuerySpec, WatchBatch};
 use medulla_types::result_contract::messaging as results;
 
@@ -29,7 +31,7 @@ use medulla_types::result_contract::messaging as results;
 async fn hub_of(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-) -> Result<Arc<crate::server::cdc::CdcHub>, Response> {
+) -> Result<Arc<medulla_server_api::cdc::CdcHub>, Response> {
     let s = state.read().await;
     match &s.cdc {
         Some(h) => Ok(h.clone()),
@@ -146,7 +148,7 @@ async fn authorized_hub(
     req_id: u64,
     carrier: &CarrierAuthority,
     graph: &str,
-) -> Result<Arc<crate::server::cdc::CdcHub>, Response> {
+) -> Result<Arc<medulla_server_api::cdc::CdcHub>, Response> {
     if let Err(error) = authorize_graph(state, carrier, graph, AccessLevel::Read).await {
         return Err(Response::err(req_id, error));
     }

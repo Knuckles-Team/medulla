@@ -13,7 +13,7 @@ use crate::protocol::{Method, Response, ResultPayload};
 use crate::server::persistence::rebalance::{
     plan_rebalance, shard_loads_from_catalog, shard_loads_from_graph_loads,
 };
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 use medulla_types::contract::Nonce;
 
 use super::backup::{
@@ -24,7 +24,8 @@ use super::saga::{
     catalog_saga, live_graph_loads, no_catalog, rebalance_opts, rebalance_plan_report,
     reshard_report,
 };
-use crate::server::api::admin::saga::{begin_admin_saga_with_nonce, finish_admin_saga};
+use medulla_server_api::api::admin::saga::begin_admin_saga_with_nonce;
+use medulla_server_api::api::admin::saga::finish_admin_saga;
 
 /// Route an M3 admin method (CONCEPT:MEDULLA-KG.backend.m3-admin-dispatch). `Ok(resp)` = handled; `Err(method)` = not an
 /// admin method (unreachable — the dispatch arm only routes admin variants here).
@@ -208,7 +209,7 @@ impl AdminSagaCall<'_> {
     fn begin_saga(
         &self,
         domain: DurabilityDomain,
-    ) -> Result<crate::server::api::admin::saga::AdminSaga, Response> {
+    ) -> Result<medulla_server_api::api::admin::saga::AdminSaga, Response> {
         let mut saga = begin_admin_saga_with_nonce(
             self.backend,
             self.req_id,
@@ -312,7 +313,7 @@ async fn handle_backup(
             Err(error) => return Ok(Response::err(req_id, error)),
         }
     };
-    let mut extra_stores: Vec<&dyn crate::server::api::persistence::BundledStoreSource> =
+    let mut extra_stores: Vec<&dyn medulla_server_api::api::persistence::BundledStoreSource> =
         Vec::new();
     #[cfg(feature = "security")]
     if let Some(rbac_store) = rbac_store.as_ref() {

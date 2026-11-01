@@ -28,7 +28,7 @@ impl MedullaStore {
                 != Some(req.mutation.request_id)
             || req.mutation.tenant_scope != expected_tenant_scope
             || Some(req.mutation.principal_fingerprint.as_str())
-                != crate::server::mutation_batch::batch_actor(&envelope.mutation)
+                != medulla_server_api::mutation_batch::batch_actor(&envelope.mutation)
             || req.mutation.placement_epoch != envelope.mutation.placement_epoch
             || req.mutation.fencing_token != envelope.mutation.fencing_token
             || req.mutation.created_at_ms != envelope.mutation.created_at_ms
@@ -117,8 +117,8 @@ impl MedullaStore {
             .checked_add(1)
             .ok_or_else(|| "authoritative graph version overflow".to_string())?;
         let audited = medulla_capabilities::policy(durable_method).audited;
-        let probe = crate::server::mutation_batch::compile_methods(
-            crate::server::mutation_batch::CompileBatch {
+        let probe = medulla_server_api::mutation_batch::compile_methods(
+            medulla_server_api::mutation_batch::CompileBatch {
                 batch_id,
                 request_id: authority.request_id,
                 attempt_nonce: authority.attempt_nonce,
@@ -335,8 +335,8 @@ mod tests {
             properties_msgpack: Vec::new(),
         };
         let batch_id = "replay-scope-proof";
-        let batch = crate::server::mutation_batch::compile_methods(
-            crate::server::mutation_batch::CompileBatch {
+        let batch = medulla_server_api::mutation_batch::compile_methods(
+            medulla_server_api::mutation_batch::CompileBatch {
                 batch_id,
                 request_id: 9,
                 attempt_nonce: None,
@@ -387,7 +387,7 @@ mod tests {
             command: ReplicatedMutation::graph(method, "cluster-test-key")
                 .expect("replay fixture command must seal"),
             committed_at_ms: 11,
-            mutation: crate::server::api::persistence::RaftMutationContext {
+            mutation: medulla_server_api::api::persistence::RaftMutationContext {
                 batch_id: batch_id.to_string(),
                 request_id: 9,
                 attempt_nonce: None,

@@ -69,8 +69,10 @@ use medulla_viz_core::{
 };
 use medulla_viz_kernels::lttb_reduce;
 
-use crate::server::http1::{self, HttpMessage, RequestLimits};
-use crate::server::viz_engine::VizEngineState;
+use medulla_server_api::http1;
+use medulla_server_api::http1::HttpMessage;
+use medulla_server_api::http1::RequestLimits;
+use medulla_server_api::viz_engine::VizEngineState;
 
 /// This surface serves GET tile reads only; it never accepts a request body.
 const HTTP_LIMITS: RequestLimits = RequestLimits {
@@ -438,7 +440,7 @@ fn test_store_with(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::server::viz_engine::VizEngineState;
+    use medulla_server_api::viz_engine::VizEngineState;
 
     fn params(pairs: &[(&str, &str)]) -> HashMap<String, String> {
         pairs

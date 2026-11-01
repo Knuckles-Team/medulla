@@ -9,7 +9,7 @@
 //! fuel-killed infinite loop therefore never stalls the runtime).
 
 use crate::protocol::{Method, Response, ResultPayload};
-use crate::server::access::OwnerScopedCall;
+use medulla_server_api::access::OwnerScopedCall;
 
 /// Try to handle a WASM-UDF method. `Ok(resp)` = handled; `Err(method)` = not mine.
 pub(crate) async fn try_handle(

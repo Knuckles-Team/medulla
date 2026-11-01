@@ -1,7 +1,7 @@
 //! Served foreign-source leg resolution over the server's catalog (federation).
 
 use super::*;
-use crate::server::api::query_txn::foreign_catalog::OwnedForeignRegistry;
+use medulla_server_api::api::query_txn::foreign_catalog::OwnedForeignRegistry;
 #[cfg(feature = "redb")]
 use crate::server::persistence::agent_library::AgentLibraryStateExt;
 
@@ -21,7 +21,7 @@ pub(crate) async fn served_foreign_leg(
         return Err("INVALID_ARGUMENT: conflicting foreign execution forms".into());
     }
     if (execution.is_some() || !executions.is_empty())
-        && !crate::server::api::query_txn::query_support::plan_needs_foreign(&plan.ops)
+        && !medulla_server_api::api::query_txn::query_support::plan_needs_foreign(&plan.ops)
     {
         return Err(
             "FOREIGN_READ_UNUSED: execution is attached to a plan without a foreign source".into(),
@@ -36,7 +36,7 @@ pub(crate) async fn served_foreign_leg(
             "SOURCE_APPROVAL_STORE_UNAVAILABLE: foreign read requires the Agent Library".to_string()
         })?;
         let plan_digest =
-            crate::server::api::query_txn::query_support::canonical_plan_digest(plan)?;
+            medulla_server_api::api::query_txn::query_support::canonical_plan_digest(plan)?;
         return s
             .foreign_reads
             .bind_many_for_query(
@@ -44,7 +44,7 @@ pub(crate) async fn served_foreign_leg(
                 executions,
                 plan,
                 plan_digest,
-                crate::server::api::query_txn::foreign_read::ForeignBindingContext {
+                medulla_server_api::api::query_txn::foreign_read::ForeignBindingContext {
                     catalog: &s.foreign_sources,
                     store,
                     isolation: &s.isolation,
@@ -61,7 +61,7 @@ pub(crate) async fn served_foreign_leg(
             "SOURCE_APPROVAL_STORE_UNAVAILABLE: foreign read requires the Agent Library".to_string()
         })?;
         let plan_digest =
-            crate::server::api::query_txn::query_support::canonical_plan_digest(plan)?;
+            medulla_server_api::api::query_txn::query_support::canonical_plan_digest(plan)?;
         return s
             .foreign_reads
             .bind_for_query(

@@ -28,7 +28,7 @@ use medulla_store::redb_store::read_mutation_outbox as read_mutation_outbox_reco
 use medulla_store::redb_store::read_one_node;
 use medulla_store::redb_store::read_resource_reservation as read_resource_reservation_record;
 use medulla_store::redb_store::read_resource_reservation_status as read_resource_reservation_status_record;
-use crate::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use crate::server::persistence::writer_reply::await_writer_reply;
 use crate::server::ServerState;
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};

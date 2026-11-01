@@ -8,7 +8,7 @@ struct SqlReadScope<'a> {
     core: &'a Arc<GraphCore>,
     graph_name: &'a str,
     caller: &'a str,
-    authority: &'a crate::server::access::CarrierAuthority,
+    authority: &'a medulla_server_api::access::CarrierAuthority,
     persist_dir: &'a std::path::Path,
     #[cfg(feature = "security")]
     rls: &'a Arc<crate::isolation::IsolationLayer>,
@@ -21,7 +21,7 @@ fn required_sql_authority(
 ) -> Result<
     (
         &GraphReadAuthority,
-        &crate::server::access::CarrierAuthority,
+        &medulla_server_api::access::CarrierAuthority,
     ),
     Response,
 > {
@@ -60,11 +60,11 @@ pub(crate) async fn sql_persist_dir(
 
 #[cfg(feature = "query")]
 fn sql_tenant_store(
-    authority: &crate::server::access::CarrierAuthority,
+    authority: &medulla_server_api::access::CarrierAuthority,
     persist_dir: &std::path::Path,
     req_id: u64,
 ) -> Result<medulla_query::TableStore, Response> {
-    crate::server::sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)
+    medulla_server_api::sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)
         .map_err(|error| Response::err(req_id, sql_refusal(error)))
 }
 
@@ -116,7 +116,7 @@ async fn handle_sql_read(scope: SqlReadScope<'_>, query: String) -> Response {
         #[cfg(feature = "security")]
         rls,
     );
-    let graph = crate::server::sql_catalog_acl::RequestGraph {
+    let graph = medulla_server_api::sql_catalog_acl::RequestGraph {
         name: graph_name.to_string(),
         core: Arc::clone(core),
     };
@@ -423,12 +423,12 @@ pub(super) async fn catalog_sql_response(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     snap: Arc<crate::graph::GraphView>,
-    authority: crate::server::access::CarrierAuthority,
+    authority: medulla_server_api::access::CarrierAuthority,
     persist_dir: std::path::PathBuf,
     query: String,
-    graph: crate::server::sql_catalog_acl::RequestGraph,
+    graph: medulla_server_api::sql_catalog_acl::RequestGraph,
 ) -> Response {
-    let read_only = match crate::server::api::admin::decide_seam(state).await {
+    let read_only = match medulla_server_api::api::admin::decide_seam(state).await {
         Some(decide) => decide.read_only_relations(state, &authority, &query).await,
         None => None,
     };
@@ -437,7 +437,7 @@ pub(super) async fn catalog_sql_response(
     let timeout_task = crate::server::request_cancel::spawn_timeout(cancel.clone());
     let cancel_for_task = cancel.clone();
     let resp = match compute_off_lock(req_id, move || {
-        let authorized = crate::server::sql_catalog_acl::authorized_read_store_for_query(
+        let authorized = medulla_server_api::sql_catalog_acl::authorized_read_store_for_query(
             &authority,
             &persist_dir,
             &query,

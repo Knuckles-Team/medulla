@@ -244,7 +244,7 @@ impl TenantCatalog {
 /// When a catalog is attached its explicit placements OVERRIDE MEDULLA-026 hash routing, so a
 /// restore that dropped `catalog.redb` would silently re-route every explicitly-placed
 /// graph back to its hash shard.
-impl crate::server::api::persistence::BundledStoreSource for TenantCatalog {
+impl medulla_server_api::api::persistence::BundledStoreSource for TenantCatalog {
     fn file_name(&self) -> &'static str {
         "catalog.redb"
     }

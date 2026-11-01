@@ -6,7 +6,7 @@
 
 use super::SharedState;
 use crate::protocol::Response;
-use crate::server::auth::VerifiedRequestContext;
+use medulla_server_api::auth::VerifiedRequestContext;
 
 /// Submit or read one head-fitting job.
 pub(crate) async fn handle_decision_fit(

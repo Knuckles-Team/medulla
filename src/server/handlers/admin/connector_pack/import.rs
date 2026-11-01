@@ -10,11 +10,12 @@ use medulla_types::contract::Digest256;
 #[cfg(test)]
 use sha2::{Digest, Sha256};
 
-use crate::server::auth::VerifiedRequestContext;
-use crate::server::blob::engine_bodies::EngineBody;
-use crate::server::blob::BlobCursors;
+use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::blob::engine_bodies::EngineBody;
+use medulla_server_api::blob::BlobCursors;
 use crate::server::persistence::agent_library::AgentLibraryStore;
-use crate::server::request_scope::{interruptible, RequestCancel};
+use medulla_server_api::request_scope::interruptible;
+use medulla_server_api::request_scope::RequestCancel;
 
 mod annotations;
 mod catalog_attributes;
@@ -50,7 +51,7 @@ pub(super) async fn validate_and_commit(
     archive: Vec<u8>,
     tenant_pack_guard: tokio::sync::OwnedMutexGuard<()>,
 ) -> Result<PackImportResult, String> {
-    let cancel = crate::server::request_scope::current();
+    let cancel = medulla_server_api::request_scope::current();
     let chunks = blob.store.clone();
     tokio::task::spawn_blocking(move || {
         let _held = tenant_pack_guard;
@@ -62,7 +63,7 @@ pub(super) async fn validate_and_commit(
 
 fn run_import(
     store: &AgentLibraryStore,
-    chunks: &dyn crate::server::blob::ChunkStore,
+    chunks: &dyn medulla_server_api::blob::ChunkStore,
     request: ConnectorPackImportRequest,
     archive: &[u8],
     cancel: &RequestCancel,
@@ -96,7 +97,7 @@ fn run_import(
 
 fn still_wanted(cancel: &RequestCancel) -> Result<(), String> {
     if cancel.is_cancelled() {
-        return Err(crate::server::request_scope::CANCELLED.to_string());
+        return Err(medulla_server_api::request_scope::CANCELLED.to_string());
     }
     Ok(())
 }

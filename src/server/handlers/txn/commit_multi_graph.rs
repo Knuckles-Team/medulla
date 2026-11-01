@@ -314,16 +314,16 @@ async fn apply_authorized_slices(
                 }
             }
         };
-        let child_id = crate::server::mutation_batch::opaque_coordinator_key(
+        let child_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
             "multi-graph-child",
             &slice.graph_name,
             coordinator_id,
         );
-        if let Err(error) = crate::server::mutation_batch::commit_internal_graph_methods_with_nonce(
-            crate::server::mutation_batch::InternalGraphCommitRequest::new(
+        if let Err(error) = medulla_server_api::mutation_batch::commit_internal_graph_methods_with_nonce(
+            medulla_server_api::mutation_batch::InternalGraphCommitRequest::new(
                 Some(&backend),
                 &core,
-                crate::server::mutation_batch::CommitOrigin {
+                medulla_server_api::mutation_batch::CommitOrigin {
                     request_id: req_id,
                     principal: Some(principal),
                 },

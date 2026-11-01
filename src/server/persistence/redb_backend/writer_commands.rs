@@ -211,7 +211,7 @@ macro_rules! writer_command_arms {
                     measurements: &measurements,
                 },
                 &op_id,
-                crate::server::txn::now_ms(),
+                medulla_server_api::txn::now_ms(),
                 crypto,
                 // Shares the writer's persistent tail cache (CONCEPT:MEDULLA-KG.storage.embedded-store).
                 #[cfg(feature = "security")]
@@ -499,7 +499,7 @@ macro_rules! writer_command_arms {
             // ack: a rewind or reject must observe the committed stream.
             flush(pending);
             let result = shard.graph(&graph).and_then(|handle| {
-                crate::server::outbox_operator::operate(shard.mutations(), handle.as_ref(), *write)
+                medulla_server_api::outbox_operator::operate(shard.mutations(), handle.as_ref(), *write)
             });
             let _ = done.send(result);
             false

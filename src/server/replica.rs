@@ -50,7 +50,8 @@ use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 
 use crate::protocol::{GraphType, Method};
-use crate::server::http1::{self, RequestLimits};
+use medulla_server_api::http1;
+use medulla_server_api::http1::RequestLimits;
 
 // ── CONCEPT:MEDULLA-KG.sharding.follower-pull-loop — the replication log + shipped op ────────────────────────
 
@@ -482,7 +483,7 @@ pub async fn apply_replicated_batch(
             s.registry.get(&op.graph_name).map(|e| e.core.clone())
         };
         if let Some(core) = core {
-            crate::mutation_apply::apply(&core, &op.method);
+            medulla_server_api::mutation_apply::apply(&core, &op.method);
             core.mark_dirty();
             max_lsn = max_lsn.max(op.lsn);
         }
@@ -499,7 +500,7 @@ pub fn pull_replication_tail(
 ) -> Result<Vec<ReplicationOp>, String> {
     use std::io::Read;
     let endpoint = format!("{}/replicate?since={}", cfg.primary_url, cursor);
-    let agent = crate::server::api::dispatch_support::outbound_http_config()
+    let agent = medulla_server_api::api::dispatch_support::outbound_http_config()
         .timeout_connect(Some(Duration::from_secs(cfg.timeout_secs)))
         .timeout_recv_response(Some(Duration::from_secs(cfg.timeout_secs)))
         .timeout_recv_body(Some(Duration::from_secs(cfg.timeout_secs)))

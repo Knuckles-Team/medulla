@@ -1,7 +1,7 @@
 use super::*;
 
 use super::gateway::commit_gateway_coalescable;
-use crate::server::api::ingest::graph::commit_gateway;
+use medulla_server_api::api::ingest::graph::commit_gateway;
 
 #[derive(Clone, Copy)]
 enum Route {
@@ -127,7 +127,7 @@ type RouteMatcher = fn(&Method) -> bool;
 
 const ROUTE_MATCHERS: &[(RouteMatcher, Route)] = &[
     (
-        crate::server::mutation::is_coalescable_structural_write,
+        medulla_server_api::mutation::is_coalescable_structural_write,
         Route::Coalescable,
     ),
     (is_node_state, Route::NodeState),
@@ -641,7 +641,7 @@ async fn try_handle_policy(
             let (graph, mode, shapes) = (graph.clone(), mode.clone(), shapes.clone());
             let request_graph = ctx.graph_name.to_string();
             commit_gateway(ctx, plan, method, move |core| {
-                crate::server::icv_guard::configure(
+                medulla_server_api::icv_guard::configure(
                     core,
                     &request_graph,
                     graph.as_deref(),
@@ -653,7 +653,7 @@ async fn try_handle_policy(
             .await
         }
         #[cfg(feature = "shacl")]
-        Method::GraphSchema { op } => match crate::server::api::admin::admin_seam(state).await {
+        Method::GraphSchema { op } => match medulla_server_api::api::admin::admin_seam(state).await {
             Some(admin) => {
                 admin
                     .graph_schema_gateway(state, tenant_id, ctx, plan, method, op)

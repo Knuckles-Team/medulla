@@ -32,10 +32,10 @@ use medulla_types::protocol::{Response, ResultPayload};
 #[cfg(feature = "redb")]
 use serde_json::json;
 
-use crate::server::auth::VerifiedRequestContext;
+use medulla_server_api::auth::VerifiedRequestContext;
 
 #[cfg(feature = "redb")]
-use crate::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 
 #[cfg(feature = "redb")]
 use crate::graph::GraphCore;

@@ -20,7 +20,7 @@ use tokio::sync::RwLock;
 use super::elevation::ElevationStampAuthority;
 use super::{ServerState, VerifiedRequestContext};
 use crate::protocol::{Method, Response, ResultPayload};
-use crate::server::identity_view::identity_actor;
+use medulla_server_api::identity_view::identity_actor;
 
 mod exposure;
 #[cfg(test)]

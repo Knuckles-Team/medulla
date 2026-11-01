@@ -60,8 +60,8 @@ use medulla_program::ProgramRevisionIdentity;
 use medulla_kernel::lock_recovery::{LockRecovery, WriteRecovery};
 use crate::mutation_batch::MutationBatch;
 use crate::protocol::Response;
-use crate::server::access::CarrierAuthority;
-use crate::server::state::ServerState;
+use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::state::ServerState;
 
 /// The engine build that ran a job (CONCEPT:INT-P2-1 lineage) — `CARGO_PKG_VERSION`
 /// of the `medulla` facade crate itself.

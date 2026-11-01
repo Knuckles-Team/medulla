@@ -271,8 +271,8 @@ fn mutation_batch_audit_and_outbox_retain_only_the_safe_receipt() {
     );
     let command = fixture_command(image_move, sealed.clone(), result()).unwrap();
     let safe_receipt = command.receipt_method();
-    let batch = crate::server::mutation_batch::compile_methods(
-        crate::server::mutation_batch::CompileBatch {
+    let batch = medulla_server_api::mutation_batch::compile_methods(
+        medulla_server_api::mutation_batch::CompileBatch {
             batch_id: "opaque-batch",
             request_id: 1,
             attempt_nonce: None,

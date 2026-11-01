@@ -2,7 +2,10 @@
 
 use serde_json::{json, Value};
 
-use crate::server::blob::store::{hex_digest, BlobManifest, ChunkStore, DEFAULT_CHUNK_SIZE};
+use medulla_server_api::blob::store::hex_digest;
+use medulla_server_api::blob::store::BlobManifest;
+use medulla_server_api::blob::store::ChunkStore;
+use medulla_server_api::blob::store::DEFAULT_CHUNK_SIZE;
 
 use super::{
     CreateTableError, LakeManager, LakeOp, LakeVisibility, LoadTableAsOfError, MaterializeInput,
@@ -38,8 +41,8 @@ fn stage_path_bytes(
         chunk_lens.push(part.len() as u32);
     }
     let manifest = BlobManifest {
-        schema_version: crate::server::blob::BLOB_MANIFEST_VERSION,
-        owner_scope: crate::server::blob::ENGINE_BLOB_OWNER_SCOPE.to_string(),
+        schema_version: medulla_server_api::blob::BLOB_MANIFEST_VERSION,
+        owner_scope: medulla_server_api::blob::ENGINE_BLOB_OWNER_SCOPE.to_string(),
         chunks,
         chunk_lens,
         len: bytes.len() as u64,

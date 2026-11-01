@@ -15,7 +15,7 @@
 //! off-reactor work needed.
 
 use crate::protocol::{Method, Response, ResultPayload};
-use crate::server::access::OwnerScopedCall;
+use medulla_server_api::access::OwnerScopedCall;
 #[cfg(feature = "redb")]
 use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use medulla_types::foreign_read::{
@@ -41,7 +41,7 @@ pub(crate) async fn try_handle(
             // EH-378: provision the source's share role (assigned to nobody) under the
             // same write lock as the registration, so a registered source always has one.
             let mut s = call.state.write().await;
-            if let Err(error) = crate::server::api::query_txn::foreign_share::provision_share_role(
+            if let Err(error) = medulla_server_api::api::query_txn::foreign_share::provision_share_role(
                 &mut s.isolation,
                 owner.agent_id(),
                 &name,

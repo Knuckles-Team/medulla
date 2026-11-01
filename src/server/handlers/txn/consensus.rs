@@ -77,7 +77,7 @@ pub(crate) async fn prepare_consensus_commit(
     expected_tenant: Option<&str>,
     attempt_nonce: Option<Nonce>,
 ) -> Response {
-    let _coordinator_guard = crate::server::mutation_batch::lock_txn_coordinator(
+    let _coordinator_guard = medulla_server_api::mutation_batch::lock_txn_coordinator(
         &commit_receipt_id(txn_id, idempotency_key, expected_tenant),
     )
     .await;
@@ -392,7 +392,7 @@ pub(super) fn consensus_participant_child_id(
     participant_id: u64,
     graph_name: &str,
 ) -> String {
-    crate::server::mutation_batch::opaque_coordinator_key(
+    medulla_server_api::mutation_batch::opaque_coordinator_key(
         "consensus-transaction-child",
         graph_name,
         &format!("{coordinator_id}:{participant_id}"),
@@ -408,7 +408,7 @@ pub(super) fn consensus_participant_receipt_id(
 ) -> String {
     let child = consensus_participant_child_id(coordinator_id, participant_id, graph_name);
     if txn.graph == graph_name && txn.is_cross_modal() {
-        crate::server::mutation_batch::opaque_coordinator_key("crossmodal", graph_name, &child)
+        medulla_server_api::mutation_batch::opaque_coordinator_key("crossmodal", graph_name, &child)
     } else {
         child
     }
@@ -433,7 +433,7 @@ pub(crate) async fn apply_consensus_participant_prepare(
     applying_group: crate::raft::GroupId,
     applying_epoch: u64,
     applying_fence: Option<u64>,
-    authority: &crate::server::api::persistence::RaftMutationContext,
+    authority: &medulla_server_api::api::persistence::RaftMutationContext,
     participant: ConsensusParticipantRef<'_>,
 ) -> Result<bool, String> {
     let ConsensusParticipantRef {
@@ -441,7 +441,7 @@ pub(crate) async fn apply_consensus_participant_prepare(
         participant_id,
         plan_bytes,
     } = participant;
-    let _placement_guard = crate::server::txn::consensus_placement_fence_guard().await;
+    let _placement_guard = medulla_server_api::txn::consensus_placement_fence_guard().await;
     let (plan, txn) = decode_consensus_participant(plan_bytes, coordinator_id, participant_id)?;
     let backend = state
         .read()
@@ -457,7 +457,7 @@ pub(crate) async fn apply_consensus_participant_prepare(
         coordinator_id,
         &txn,
         authority,
-        crate::server::api::reentry::TransactionParticipantPhase::Prepare,
+        medulla_server_api::api::reentry::TransactionParticipantPhase::Prepare,
     )?;
     if committed_participant_receipt(backend.as_ref(), &txn, &plan, authority).await? {
         finish_participant_cleanup(redb, &plan).await?;
@@ -478,7 +478,7 @@ pub(crate) async fn apply_consensus_participant_prepare(
     if !valid {
         return Ok(false);
     }
-    let acquired = crate::server::txn::acquire_consensus_graph_fence(
+    let acquired = medulla_server_api::txn::acquire_consensus_graph_fence(
         &plan.graph_name,
         coordinator_id,
         participant_id,
@@ -486,7 +486,7 @@ pub(crate) async fn apply_consensus_participant_prepare(
     if let Some(existing_plan) = redb.xshard_prepare_get(coordinator_id, participant_id)? {
         if existing_plan != plan_bytes {
             if acquired {
-                crate::server::txn::release_consensus_graph_fence(
+                medulla_server_api::txn::release_consensus_graph_fence(
                     &plan.graph_name,
                     coordinator_id,
                     participant_id,
@@ -501,7 +501,7 @@ pub(crate) async fn apply_consensus_participant_prepare(
         .await
     {
         if acquired {
-            crate::server::txn::release_consensus_graph_fence(
+            medulla_server_api::txn::release_consensus_graph_fence(
                 &plan.graph_name,
                 coordinator_id,
                 participant_id,
@@ -564,7 +564,7 @@ pub(crate) async fn apply_consensus_participant_commit(
     state: &Arc<RwLock<ServerState>>,
     request_id: u64,
     applying_group: crate::raft::GroupId,
-    authority: &crate::server::api::persistence::RaftMutationContext,
+    authority: &medulla_server_api::api::persistence::RaftMutationContext,
     participant: ConsensusParticipantRef<'_>,
 ) -> Result<bool, String> {
     let ConsensusParticipantRef {
@@ -573,7 +573,7 @@ pub(crate) async fn apply_consensus_participant_commit(
         plan_bytes,
     } = participant;
     let principal =
-        crate::server::mutation_batch::principal_fingerprint(&authority.principal_fingerprint)?;
+        medulla_server_api::mutation_batch::principal_fingerprint(&authority.principal_fingerprint)?;
     let (plan, txn) = decode_consensus_participant(plan_bytes, coordinator_id, participant_id)?;
     let backend = state
         .read()
@@ -589,7 +589,7 @@ pub(crate) async fn apply_consensus_participant_commit(
         coordinator_id,
         &txn,
         authority,
-        crate::server::api::reentry::TransactionParticipantPhase::Commit,
+        medulla_server_api::api::reentry::TransactionParticipantPhase::Commit,
     )?;
     if committed_participant_receipt(backend.as_ref(), &txn, &plan, authority).await? {
         finish_participant_cleanup(redb, &plan).await?;
@@ -626,11 +626,11 @@ pub(crate) async fn apply_consensus_participant_commit(
     } else if participant.write_set.is_empty() {
         true
     } else {
-        crate::server::mutation_batch::commit_internal_graph_methods_with_nonce(
-            crate::server::mutation_batch::InternalGraphCommitRequest::new(
+        medulla_server_api::mutation_batch::commit_internal_graph_methods_with_nonce(
+            medulla_server_api::mutation_batch::InternalGraphCommitRequest::new(
                 Some(&backend),
                 &core,
-                crate::server::mutation_batch::CommitOrigin {
+                medulla_server_api::mutation_batch::CommitOrigin {
                     request_id,
                     principal: Some(&principal),
                 },
@@ -654,7 +654,7 @@ pub(crate) async fn apply_consensus_participant_commit(
 #[cfg(feature = "raft")]
 pub(crate) async fn apply_consensus_participant_abort(
     state: &Arc<RwLock<ServerState>>,
-    authority: &crate::server::api::persistence::RaftMutationContext,
+    authority: &medulla_server_api::api::persistence::RaftMutationContext,
     coordinator_id: &str,
     participant_id: u64,
 ) -> Result<bool, String> {
@@ -681,7 +681,7 @@ pub(crate) async fn apply_consensus_participant_abort(
         if let Ok((decoded, _)) =
             decode_consensus_participant(&plan, coordinator_id, participant_id)
         {
-            crate::server::txn::release_consensus_graph_fence(
+            medulla_server_api::txn::release_consensus_graph_fence(
                 &decoded.graph_name,
                 coordinator_id,
                 participant_id,
@@ -696,7 +696,7 @@ fn authorize_participant_abort(
     redb: &crate::server::persistence::redb_backend::RedbBackend,
     coordinator_id: &str,
     participant_id: u64,
-    authority: &crate::server::api::persistence::RaftMutationContext,
+    authority: &medulla_server_api::api::persistence::RaftMutationContext,
     plan: Option<&[u8]>,
 ) -> Result<(), String> {
     if let Some(plan_bytes) = plan {
@@ -706,14 +706,14 @@ fn authorize_participant_abort(
             coordinator_id,
             &txn,
             authority,
-            crate::server::api::reentry::TransactionParticipantPhase::Abort,
+            medulla_server_api::api::reentry::TransactionParticipantPhase::Abort,
         )?;
     } else {
         let parent = validate_consensus_parent_authority(redb, coordinator_id, authority)?;
         participant_phase_admission(
             redb,
             &parent,
-            crate::server::api::reentry::TransactionParticipantPhase::Abort,
+            medulla_server_api::api::reentry::TransactionParticipantPhase::Abort,
         )?;
     }
     Ok(())

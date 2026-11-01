@@ -21,10 +21,10 @@ use std::sync::{Arc, OnceLock};
 use medulla_core::graph::GraphCore;
 use medulla_types::decision::statistical::retrieval_adapter::AdapterFitted;
 
-use crate::server::api::admin::served_adapter::ServedAdapter;
+use medulla_server_api::api::admin::served_adapter::ServedAdapter;
 use crate::server::persistence::agent_library::AgentLibraryStore;
 use crate::server::persistence::decision_jobs::decode_artifact;
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// Bodies kept decoded; the cache is cleared when it would grow past this.
 const MAX_CACHED_BODIES: usize = 32;

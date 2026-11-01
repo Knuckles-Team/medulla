@@ -98,7 +98,7 @@ async fn dispatch_sparql_http_update(
     } = ctx;
     ControlFlow::Break(match method {
         Method::ApplyMutation { event_type, query }
-            if event_type == crate::server::sparql_http::SPARQL_HTTP_UPDATE_EVENT =>
+            if event_type == medulla_server_api::sparql_http::SPARQL_HTTP_UPDATE_EVENT =>
         {
             coordinated_sparql_http_update(
                 state,

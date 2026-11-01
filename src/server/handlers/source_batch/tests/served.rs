@@ -4,7 +4,7 @@
 
 use super::*;
 use crate::protocol::{Method, Request};
-use crate::server::auth::dispatch_test_on_heap;
+use medulla_server_api::auth::dispatch_test_on_heap;
 use medulla_types::contract::RecordBytes;
 
 const SECRET: &str = "sql-source-served-secret";
@@ -31,11 +31,11 @@ impl Served {
     }
 
     fn signed(&self, attempt: Attempt<'_>, batch: SqlSourceBatchRequest) -> Request {
-        crate::server::auth::scoped_test_request(
+        medulla_server_api::auth::scoped_test_request(
             SECRET,
             attempt.id,
             Method::SqlSourceBatch { batch },
-            crate::server::auth::ScopedTestCaller {
+            medulla_server_api::auth::ScopedTestCaller {
                 principal: WRITER,
                 tenant: TENANT,
                 scopes: attempt.scopes,
@@ -160,8 +160,8 @@ fn source_batch_is_a_local_only_cluster_route() {
         batch: fixture.request(WRITER),
     };
     assert_eq!(
-        crate::server::mutation::cluster_mutation_route(&method),
-        crate::server::mutation::ClusterMutationRoute::LocalOnly
+        medulla_server_api::mutation::cluster_mutation_route(&method),
+        medulla_server_api::mutation::ClusterMutationRoute::LocalOnly
     );
 }
 
@@ -175,7 +175,7 @@ async fn clustered_placement_refuses_source_batch_before_publication() {
     let served = Served::new();
     let raft_dir = served.fixture.directory.join("raft-node");
     std::fs::create_dir_all(&raft_dir).unwrap();
-    let backend: Arc<dyn crate::server::api::persistence::PersistenceBackend> = Arc::new(
+    let backend: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> = Arc::new(
         crate::server::persistence::redb_backend::RedbBackend::open(
             raft_dir.to_str().unwrap().to_string(),
             4096,
@@ -200,7 +200,7 @@ async fn clustered_placement_refuses_source_batch_before_publication() {
     .unwrap();
     assert_eq!(
         served.state.read().await.placement_authority(),
-        crate::server::state::PlacementAuthorityKind::MultiRaft
+        medulla_server_api::state::PlacementAuthorityKind::MultiRaft
     );
     let attempt = Attempt {
         id: 1,
@@ -212,7 +212,7 @@ async fn clustered_placement_refuses_source_batch_before_publication() {
         .await;
     assert_eq!(
         refusal(&response),
-        crate::server::mutation::LOCAL_ONLY_CLUSTER_REFUSAL
+        medulla_server_api::mutation::LOCAL_ONLY_CLUSTER_REFUSAL
     );
     assert_eq!(served.rows(), 0);
     multi.shutdown().await;

@@ -313,7 +313,7 @@ fn visible_to_authority(
         return false;
     }
     admin
-        || crate::server::access::check_graph_access(
+        || medulla_server_api::access::check_graph_access(
             isolation,
             actor,
             &entry.name,

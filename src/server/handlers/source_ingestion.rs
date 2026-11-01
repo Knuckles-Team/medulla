@@ -27,8 +27,8 @@ use crate::protocol::Response;
 #[cfg(all(feature = "redb", feature = "blob"))]
 use crate::protocol::{Method, ResultPayload};
 #[cfg(all(feature = "redb", feature = "blob"))]
-use crate::server::access::CarrierAuthority;
-use crate::server::auth::VerifiedRequestContext;
+use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::auth::VerifiedRequestContext;
 use crate::server::ServerState;
 
 pub(crate) struct PrepareContext<'a> {
@@ -67,7 +67,7 @@ pub(crate) async fn status(
     graph_name: &str,
     tenant_scope: &str,
     verified: &VerifiedRequestContext,
-    persistence: &Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+    persistence: &Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     request: medulla_types::source_ingestion::SourceIngestStatusRequest,
 ) -> Response {
     if !verified.allows_method("source:ingest", false) {
@@ -133,7 +133,7 @@ pub(crate) async fn status(
     _graph_name: &str,
     _tenant_scope: &str,
     _verified: &VerifiedRequestContext,
-    _persistence: &Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+    _persistence: &Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     _request: medulla_types::source_ingestion::SourceIngestStatusRequest,
 ) -> Response {
     Response::err(
@@ -327,7 +327,7 @@ fn authorize_empty_reconciliation(
 #[cfg(all(feature = "redb", feature = "blob"))]
 struct IngestionResources {
     agent_library: Arc<crate::server::persistence::agent_library::AgentLibraryStore>,
-    blob: Arc<crate::server::blob::BlobCursors>,
+    blob: Arc<medulla_server_api::blob::BlobCursors>,
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -369,7 +369,7 @@ struct ReconciliationPlan {
 #[cfg(all(feature = "redb", feature = "blob"))]
 async fn load_persistence(
     ctx: &PrepareContext<'_>,
-) -> Result<Arc<dyn crate::server::api::persistence::PersistenceBackend>, String> {
+) -> Result<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>, String> {
     let state = ctx.state.read().await;
     state.persistence.clone().ok_or_else(|| {
         "SOURCE_INGESTION_UNAVAILABLE: graph persistence is not configured".to_string()
@@ -537,7 +537,7 @@ async fn reconcile_batch(
     batch: &medulla_types::source_ingestion::SourceIngestionBatch,
     batch_digest: Digest256,
     receipt_id: &str,
-    persistence: &dyn crate::server::api::persistence::PersistenceBackend,
+    persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
     graph_fname: &str,
     resolved_revision: Option<u64>,
 ) -> Result<ReconciliationPlan, String> {
@@ -619,7 +619,7 @@ async fn reconcile_batch(
 /// (its first batch, or batches committed before this keying) chains from none.
 #[cfg(all(feature = "redb", feature = "blob"))]
 async fn stream_content_digest(
-    persistence: &dyn crate::server::api::persistence::PersistenceBackend,
+    persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
     graph_fname: &str,
     mutation: &medulla_types::mutation_batch::MutationBatch,
     stream_object_id: &str,
@@ -838,7 +838,7 @@ fn validate_tombstone_targets(
     ctx: &PrepareContext<'_>,
     batch: &medulla_types::source_ingestion::SourceIngestionBatch,
     withdrawals: &[SourceWithdrawal],
-    persistence: &dyn crate::server::api::persistence::PersistenceBackend,
+    persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
     graph_fname: &str,
 ) -> Result<(), String> {
     for withdrawal in withdrawals {
@@ -865,7 +865,7 @@ fn validate_tombstone_targets(
 fn validate_authoritative_live_targets(
     ctx: &PrepareContext<'_>,
     batch: &medulla_types::source_ingestion::SourceIngestionBatch,
-    persistence: &dyn crate::server::api::persistence::PersistenceBackend,
+    persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
     graph_fname: &str,
 ) -> Result<(), String> {
     let observed: BTreeSet<_> = batch
@@ -969,7 +969,7 @@ fn admit_records(
     ctx: &PrepareContext<'_>,
     batch: &medulla_types::source_ingestion::SourceIngestionBatch,
     authority: &CarrierAuthority,
-    blob: &Arc<crate::server::blob::BlobCursors>,
+    blob: &Arc<medulla_server_api::blob::BlobCursors>,
     resolved: &ResolvedIngestionMappings,
     policy_subject: &str,
 ) -> Result<AdmittedRecords, String> {
@@ -1019,10 +1019,10 @@ struct RelationshipAdmissionContext<'a, 'ctx> {
     ctx: &'a PrepareContext<'ctx>,
     batch: &'a medulla_types::source_ingestion::SourceIngestionBatch,
     authority: &'a CarrierAuthority,
-    blob: &'a Arc<crate::server::blob::BlobCursors>,
+    blob: &'a Arc<medulla_server_api::blob::BlobCursors>,
     resolved: &'a ResolvedIngestionMappings,
     policy_subject: &'a str,
-    persistence: &'a dyn crate::server::api::persistence::PersistenceBackend,
+    persistence: &'a dyn medulla_server_api::api::persistence::PersistenceBackend,
     graph_fname: &'a str,
 }
 
@@ -1229,7 +1229,7 @@ fn validate_relationship_endpoint(
     submitted: &BTreeMap<SourceEntityRef, String>,
     entity: &SourceEntityRef,
     expected_type: &str,
-    persistence: &dyn crate::server::api::persistence::PersistenceBackend,
+    persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
     graph_fname: &str,
 ) -> Result<(), String> {
     if let Some(actual_type) = submitted.get(entity) {
@@ -1470,7 +1470,7 @@ fn admit_record(
     batch: &medulla_types::source_ingestion::SourceIngestionBatch,
     record: &medulla_types::source_ingestion::SourceRecord,
     authority: &CarrierAuthority,
-    blob: &Arc<crate::server::blob::BlobCursors>,
+    blob: &Arc<medulla_server_api::blob::BlobCursors>,
     resolved: &ResolvedIngestionMappings,
     policy_subject: &str,
 ) -> Result<AdmittedRecord, String> {
@@ -1535,21 +1535,21 @@ fn admit_record(
 fn admit_raw(
     ctx: &PrepareContext<'_>,
     authority: &CarrierAuthority,
-    blob: &Arc<crate::server::blob::BlobCursors>,
+    blob: &Arc<medulla_server_api::blob::BlobCursors>,
     raw: &[u8],
 ) -> Result<String, String> {
     let (raw_digest_hex, _was_new) = blob.store.put_chunk(raw)?;
     // Admission precedes mapping/graph commit by design. The owner-scoped
     // holder is set-like, so transport retries do not leak refcounts. The
     // holder change and its native receipt commit in one blob-owner WTX.
-    let holder = crate::server::blob::store::HolderChange::owner_acquire(
+    let holder = medulla_server_api::blob::store::HolderChange::owner_acquire(
         &raw_digest_hex,
         authority.owner_scope(),
     )?;
     let blob_method = Method::BlobRef {
         digest: raw_digest_hex.clone(),
     };
-    let (holder_batch, admitted_at_ms) = crate::server::api::ingest::compile_blob_batch(
+    let (holder_batch, admitted_at_ms) = medulla_server_api::api::ingest::compile_blob_batch(
         blob.store.as_ref(),
         ctx.request_id,
         authority,
@@ -1618,7 +1618,7 @@ fn compile_mutation(
     batch_id: &str,
     methods: Vec<Method>,
 ) -> Result<medulla_types::mutation_batch::MutationBatch, String> {
-    crate::server::mutation_batch::GraphWriteScope {
+    medulla_server_api::mutation_batch::GraphWriteScope {
         request_id: ctx.request_id,
         graph_name: ctx.graph_name,
         tenant_scope: ctx.tenant_scope,
@@ -2590,7 +2590,7 @@ mod tests {
         };
 
         struct NoReadPersistence;
-        impl crate::server::api::persistence::PersistenceBackend for NoReadPersistence {
+        impl medulla_server_api::api::persistence::PersistenceBackend for NoReadPersistence {
             fn shutdown(&self) {}
         }
 
@@ -2705,12 +2705,12 @@ mod tests {
         }
 
         let verified =
-            crate::server::authority_context::VerifiedRequestContext::verified_for_test_with_scopes(
+            medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_with_scopes(
                 "source-ingest-r0092",
                 "tenant-shared",
                 &["source:ingest", "blob:write", "kg:read", "kg:write"],
             );
-        let authority = crate::server::access::CarrierAuthority::from_verified(&verified).unwrap();
+        let authority = medulla_server_api::access::CarrierAuthority::from_verified(&verified).unwrap();
         let state = Arc::new(RwLock::new(crate::server::ServerState::new_for_test(
             "source-ingest-r0092",
             crate::server::ServerState::test_isolation("source-ingest-r0092"),
@@ -2726,7 +2726,7 @@ mod tests {
             fencing_token: None,
         };
         let blob_dir = tempfile::tempdir().unwrap();
-        let blob = crate::server::api::ingest::cursors_for_test(blob_dir.path().to_str().unwrap());
+        let blob = medulla_server_api::api::ingest::cursors_for_test(blob_dir.path().to_str().unwrap());
         let persistence = NoReadPersistence;
         let mut admitted = AdmittedRecords {
             raw_admissions: Vec::new(),

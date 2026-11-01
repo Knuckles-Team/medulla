@@ -6,7 +6,7 @@ use tokio::sync::RwLock;
 use crate::graph::GraphCore;
 use crate::protocol::{Response, ResultPayload};
 #[cfg(feature = "shacl")]
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// Parse Turtle/N-Triples and store into the target graph; route multi-valued
 /// literal extras to the lossless quad store when configured.
@@ -32,7 +32,7 @@ pub(super) async fn handle_add_triples(
     // X5-enforce (CONCEPT:MEDULLA-KG.ontology.rdf-update-guard): reject BEFORE the write
     // lands. Missing feature, policy, or invalid policy all fail closed.
     #[cfg(feature = "shacl")]
-    if let Err(rej) = crate::server::icv_guard::check_before_write(core, graph_name, &triples, &[])
+    if let Err(rej) = medulla_server_api::icv_guard::check_before_write(core, graph_name, &triples, &[])
     {
         return Response::err(req_id, format!("AddTriples rejected: {rej}"));
     }
@@ -96,7 +96,7 @@ pub(super) async fn handle_remove_triples(
     #[cfg(feature = "shacl")]
     {
         if let Err(rej) =
-            crate::server::icv_guard::check_before_write(core, graph_name, &[], &triples)
+            medulla_server_api::icv_guard::check_before_write(core, graph_name, &[], &triples)
         {
             return Response::err(req_id, format!("RemoveTriples rejected: {rej}"));
         }
@@ -131,7 +131,7 @@ pub(super) async fn handle_drop_named_graph(
             Err(error) => return Response::err(req_id, error),
         };
         if let Err(rejection) =
-            crate::server::icv_guard::check_before_write(core, graph_name, &[], &removals)
+            medulla_server_api::icv_guard::check_before_write(core, graph_name, &[], &removals)
         {
             return Response::err(req_id, format!("DropNamedGraph rejected: {rejection}"));
         }

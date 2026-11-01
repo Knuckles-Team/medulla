@@ -8,7 +8,7 @@
 //! in one function.
 
 use super::{on_read, on_write, parsed_id, release_outcome_response, KvCacheStore, KvResponse};
-use crate::server::http1::HttpMessage;
+use medulla_server_api::http1::HttpMessage;
 
 /// A route on the snapshot/fork surface.
 pub(super) enum ForkRoute<'a> {

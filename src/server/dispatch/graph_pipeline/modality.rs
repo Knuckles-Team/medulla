@@ -15,7 +15,7 @@ pub(super) struct ModalityReplication<'a> {
     tenant_scope: &'a str,
     principal_fingerprint: &'a str,
     core: &'a Arc<crate::graph::GraphCore>,
-    persistence: &'a Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+    persistence: &'a Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
 }
 
 /// The sanitized, source-free facts derived from the public method. The
@@ -47,7 +47,7 @@ pub(super) struct ModalityReplicationRequest<'a> {
     pub(super) tenant_scope: &'a str,
     pub(super) principal_fingerprint: &'a str,
     pub(super) core: &'a Arc<crate::graph::GraphCore>,
-    pub(super) persistence: &'a Arc<dyn crate::server::api::persistence::PersistenceBackend>,
+    pub(super) persistence: &'a Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     pub(super) method: Method,
     pub(super) authority: &'a handlers::modality::ModalityAuthority,
 }
@@ -77,7 +77,7 @@ pub(super) fn decode_modality_replication_inputs(
     req_id: u64,
     method: Method,
 ) -> Result<(medulla_types::ServedModalityOp, ModalityMutationInputs), Response> {
-    let safe_method = crate::server::mutation::durable_receipt_method(&method);
+    let safe_method = medulla_server_api::mutation::durable_receipt_method(&method);
     let Method::ServedModality { op } = method else {
         return Err(Response::err(
             req_id,
@@ -408,14 +408,14 @@ pub(super) async fn submit_modality_replication(
     payload: ResultPayload,
 ) -> Response {
     let created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-    let mutation = match crate::server::api::persistence::RaftMutationContext::from_verified_request(
+    let mutation = match medulla_server_api::api::persistence::RaftMutationContext::from_verified_request(
         batch_id,
         ctx.req_id,
         ctx.attempt_nonce,
         ctx.tenant_scope,
         ctx.principal_fingerprint.to_string(),
         false,
-        crate::server::api::persistence::RaftMutationTiming {
+        medulla_server_api::api::persistence::RaftMutationTiming {
             placement_epoch: ctx.placement_epoch,
             fencing_token: ctx.fencing_token,
             created_at_ms,
@@ -475,7 +475,7 @@ pub(super) async fn replicate_served_modality(request: ModalityReplicationReques
         return stale;
     }
 
-    let _mutation_guard = crate::server::mutation_batch::lock_graph(request.graph_name).await;
+    let _mutation_guard = medulla_server_api::mutation_batch::lock_graph(request.graph_name).await;
     let (op, inputs) = match decode_modality_replication_inputs(request.req_id, method) {
         Ok(decoded) => decoded,
         Err(response) => return response,

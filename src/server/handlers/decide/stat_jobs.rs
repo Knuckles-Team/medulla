@@ -42,7 +42,7 @@ use super::stat_support::{pinned_body, refusal, resolve_policy, ResolvedPolicy};
 use super::telemetry;
 use super::SharedState;
 use crate::protocol::{Response, ResultPayload};
-use crate::server::auth::VerifiedRequestContext;
+use medulla_server_api::auth::VerifiedRequestContext;
 use crate::server::persistence::agent_library::AgentLibraryStore;
 use crate::server::persistence::decision_jobs::{
     decode_artifact, draft_key, encode_artifact, job_key, receipt_key, receipt_threshold_key,
@@ -573,7 +573,7 @@ async fn serve_fit(
                 now_ms,
             );
             let job =
-                crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+                medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     submit_job(&store, &id, || run_fit(&store, &reader, &request))
                 })
                 .await?;
@@ -604,7 +604,7 @@ async fn serve_eval(
                 now_ms,
             );
             let job =
-                crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+                medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     submit_job(&store, &id, || run_eval_job(&store, &reader, &request))
                 })
                 .await?;

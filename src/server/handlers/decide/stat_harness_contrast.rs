@@ -103,7 +103,7 @@ fn declared_trace(option: &DeclaredOption) -> Result<Option<String>, String> {
 /// read: named by its `graph` typed param, read through the same
 /// RLS-filtered snapshot a graph-sourced candidate plan gets.
 pub(super) async fn contrast_evidence_view(
-    state: &std::sync::Arc<tokio::sync::RwLock<crate::server::state::ServerState>>,
+    state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     agent_id: &str,
     request: &DecideRequest,
 ) -> Result<medulla_core::graph::GraphView, String> {

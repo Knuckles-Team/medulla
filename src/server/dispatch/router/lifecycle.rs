@@ -8,13 +8,13 @@ use crate::server::persistence::cold_offload::ColdTrackerStateExt;
 /// durably-committed create (idempotent success) or a genuine collision.
 async fn reconcile_existing_graph_create(
     backend: &Arc<dyn PersistenceBackend>,
-    attempt: crate::server::mutation::LifecycleAttempt<'_>,
+    attempt: medulla_server_api::mutation::LifecycleAttempt<'_>,
     graph_type: crate::protocol::GraphType,
     created_result: ResultPayload,
 ) -> Response {
     let req_id = attempt.request_id;
     let graph_name = attempt.graph;
-    match crate::server::mutation_batch::lifecycle_was_committed(
+    match medulla_server_api::mutation_batch::lifecycle_was_committed(
         backend,
         attempt,
         Method::CreateGraph {
@@ -85,7 +85,7 @@ impl GraphLifecycleRequest {
         verified: &VerifiedRequestContext,
         idempotency_key: String,
     ) -> Result<Self, String> {
-        let carrier = crate::server::access::CarrierAuthority::from_verified(verified)?;
+        let carrier = medulla_server_api::access::CarrierAuthority::from_verified(verified)?;
         Ok(Self {
             req_id,
             req_agent_id,
@@ -159,7 +159,7 @@ async fn create_declared_graph(
     // Lifecycle shares the same per-graph serialization lane as ordinary
     // MutationBatch/txn writes.  The durable identity must land before the
     // registry publishes this incarnation.
-    let _mutation_guard = crate::server::mutation_batch::lock_graph(&graph_name).await;
+    let _mutation_guard = medulla_server_api::mutation_batch::lock_graph(&graph_name).await;
     let (backend, already_exists) = {
         let s = timed_read(state).await;
         (s.persistence.clone(), s.registry.exists(&graph_name))
@@ -170,7 +170,7 @@ async fn create_declared_graph(
             "ENGINE_UNAVAILABLE: graph creation requires durable persistence",
         );
     };
-    let incarnation_id = crate::server::mutation_batch::lifecycle_batch_id(
+    let incarnation_id = medulla_server_api::mutation_batch::lifecycle_batch_id(
         "create",
         &tenant_scope,
         &graph_name,
@@ -180,7 +180,7 @@ async fn create_declared_graph(
     if already_exists {
         return reconcile_existing_graph_create(
             &backend,
-            crate::server::mutation::LifecycleAttempt {
+            medulla_server_api::mutation::LifecycleAttempt {
                 action: "create",
                 tenant_scope: &tenant_scope,
                 graph: &graph_name,
@@ -194,11 +194,11 @@ async fn create_declared_graph(
         )
         .await;
     }
-    if let Err(e) = crate::server::mutation_batch::commit_lifecycle(
-        crate::server::mutation_batch::LifecycleCommitRequest::new(
+    if let Err(e) = medulla_server_api::mutation_batch::commit_lifecycle(
+        medulla_server_api::mutation_batch::LifecycleCommitRequest::new(
             &backend,
             "create",
-            crate::server::mutation_batch::CommitOrigin {
+            medulla_server_api::mutation_batch::CommitOrigin {
                 request_id: req_id,
                 principal: req_agent_id.as_deref(),
             },
@@ -292,12 +292,12 @@ async fn create_declared_graph(
 /// durably-committed delete (idempotent success) or a genuine miss.
 async fn reconcile_missing_graph_delete(
     backend: &Arc<dyn PersistenceBackend>,
-    attempt: crate::server::mutation::LifecycleAttempt<'_>,
+    attempt: medulla_server_api::mutation::LifecycleAttempt<'_>,
     deleted_result: ResultPayload,
 ) -> Response {
     let req_id = attempt.request_id;
     let graph_name = attempt.graph;
-    match crate::server::mutation_batch::lifecycle_was_committed(
+    match medulla_server_api::mutation_batch::lifecycle_was_committed(
         backend,
         attempt,
         Method::DeleteGraph {
@@ -367,7 +367,7 @@ async fn delete_declared_graph(
     // Fence gateway/txn writes for this graph across durable purge and RAM
     // teardown.  A retry after a crash at that boundary reconciles from the
     // durable batch record.
-    let _mutation_guard = crate::server::mutation_batch::lock_graph(graph_name).await;
+    let _mutation_guard = medulla_server_api::mutation_batch::lock_graph(graph_name).await;
     let (backend, exists, denied) = {
         let s = timed_read(state).await;
         let record = s.registry.catalog_record(graph_name);
@@ -402,7 +402,7 @@ async fn delete_declared_graph(
     if !exists {
         return reconcile_missing_graph_delete(
             &backend,
-            crate::server::mutation::LifecycleAttempt {
+            medulla_server_api::mutation::LifecycleAttempt {
                 action: "delete",
                 tenant_scope: &tenant_scope,
                 graph: graph_name,
@@ -415,11 +415,11 @@ async fn delete_declared_graph(
         )
         .await;
     }
-    if let Err(e) = crate::server::mutation_batch::commit_lifecycle(
-        crate::server::mutation_batch::LifecycleCommitRequest::new(
+    if let Err(e) = medulla_server_api::mutation_batch::commit_lifecycle(
+        medulla_server_api::mutation_batch::LifecycleCommitRequest::new(
             &backend,
             "delete",
-            crate::server::mutation_batch::CommitOrigin {
+            medulla_server_api::mutation_batch::CommitOrigin {
                 request_id: req_id,
                 principal: req_agent_id.as_deref(),
             },

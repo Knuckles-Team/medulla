@@ -51,10 +51,13 @@ use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::RwLock;
 
-use crate::server::access::CarrierAuthority;
-use crate::server::blob::store::ChunkStore;
-use crate::server::http1::{self, HttpMessage, RequestLimits};
-use crate::server::oidc::{JwtValidator, VerifiedTokenClaims};
+use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::blob::store::ChunkStore;
+use medulla_server_api::http1;
+use medulla_server_api::http1::HttpMessage;
+use medulla_server_api::http1::RequestLimits;
+use medulla_server_api::oidc::JwtValidator;
+use medulla_server_api::oidc::VerifiedTokenClaims;
 use crate::server::ServerState;
 use medulla_lake::schema::{LakeField, LakeSchema, LakeType};
 
@@ -163,8 +166,8 @@ fn resolve_carrier(
         return Ok(None);
     }
     let verified = verify_bearer(credential, headers);
-    let carrier = crate::server::auth::mint_iceberg_carrier(verified.as_ref());
-    if crate::server::access::unauthenticated_carrier_denied(carrier.as_ref()) {
+    let carrier = medulla_server_api::auth::mint_iceberg_carrier(verified.as_ref());
+    if medulla_server_api::access::unauthenticated_carrier_denied(carrier.as_ref()) {
         Err(())
     } else {
         Ok(carrier)
@@ -296,7 +299,7 @@ async fn serve_inner(
     store: Arc<dyn ChunkStore>,
     security_state: Option<Arc<RwLock<ServerState>>>,
 ) {
-    if let Err(error) = crate::server::api::dispatch_support::require_loopback_listener(&listener) {
+    if let Err(error) = medulla_server_api::api::dispatch_support::require_loopback_listener(&listener) {
         tracing::error!("Iceberg listener refused: {error}");
         return;
     }
@@ -669,7 +672,7 @@ fn handle_oauth_token(
     let verified = credential.validator.validate_claims(&token);
     match verified
         .as_ref()
-        .and_then(|v| crate::server::auth::mint_iceberg_carrier(Some(v)))
+        .and_then(|v| medulla_server_api::auth::mint_iceberg_carrier(Some(v)))
     {
         Some(_carrier) => (
             "200 OK",
@@ -702,7 +705,7 @@ use catalog::handle;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::server::blob::store::RedbChunkStore;
+    use medulla_server_api::blob::store::RedbChunkStore;
     use medulla_tsdb::point::Point;
     use medulla_tsdb::store::SeriesStore;
     use tokio::io::AsyncReadExt as _;
@@ -710,7 +713,7 @@ mod tests {
     fn seed() -> (LakeManager, RedbChunkStore) {
         let store = RedbChunkStore::open_temp().unwrap();
         let tsdb = SeriesStore::open_in_dir(
-            &crate::server::api::dispatch_support::unique_temp_dir("medulla-lake-rest-test"),
+            &medulla_server_api::api::dispatch_support::unique_temp_dir("medulla-lake-rest-test"),
             medulla_kernel::store_authority::process_verifier(),
             medulla_kernel::store_authority::process_authority().principal(),
             &medulla_kernel::store_authority::process_authority().proof(),
@@ -1342,7 +1345,7 @@ mod tests {
 
     fn carrier_for_scopes(agent: &str, tenant: &str, scopes: &[&str]) -> CarrierAuthority {
         CarrierAuthority::from_verified(
-            &crate::server::auth::VerifiedRequestContext::verified_for_test_with_scopes(
+            &medulla_server_api::auth::VerifiedRequestContext::verified_for_test_with_scopes(
                 agent, tenant, scopes,
             ),
         )
@@ -1935,7 +1938,7 @@ mod tests {
             let verified = verify_bearer(Some(&credential), &headers_with_bearer(&token));
             let minted = verified
                 .as_ref()
-                .and_then(|v| crate::server::auth::mint_iceberg_carrier(Some(v)));
+                .and_then(|v| medulla_server_api::auth::mint_iceberg_carrier(Some(v)));
             assert!(
                 minted.is_none(),
                 "a bearer with an empty scope claim must not mint a carrier"
@@ -2007,12 +2010,12 @@ mod tests {
             let matching = sign("agent:reader", "tenant-shared", 300);
             let verified_matching =
                 verify_bearer(Some(&credential), &headers_with_bearer(&matching)).unwrap();
-            assert!(crate::server::auth::mint_iceberg_carrier(Some(&verified_matching)).is_some());
+            assert!(medulla_server_api::auth::mint_iceberg_carrier(Some(&verified_matching)).is_some());
 
             let other_tenant = sign("agent:reader", "tenant-other", 300);
             let verified_other =
                 verify_bearer(Some(&credential), &headers_with_bearer(&other_tenant)).unwrap();
-            assert!(crate::server::auth::mint_iceberg_carrier(Some(&verified_other)).is_none());
+            assert!(medulla_server_api::auth::mint_iceberg_carrier(Some(&verified_other)).is_none());
         }
 
         /// W03: `/v1/oauth/tokens` gives an already-verifying bearer the SAME

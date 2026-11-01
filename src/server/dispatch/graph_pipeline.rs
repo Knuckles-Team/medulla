@@ -445,12 +445,11 @@ mod eg318_dispatch_tests {
     #[cfg(feature = "tsdb")]
     use crate::acl::{AgentIdentity, AgentRole};
     use crate::protocol::{Method, Request};
-    use crate::server::api::persistence::PersistenceBackend;
+    use medulla_server_api::api::persistence::PersistenceBackend;
     #[cfg(feature = "tsdb")]
-    use crate::server::auth::sign_current_test_request;
-    use crate::server::auth::{
-        build_shared_test_request, dispatch_test_on_heap as dispatch_on_heap,
-    };
+    use medulla_server_api::auth::sign_current_test_request;
+    use medulla_server_api::auth::build_shared_test_request;
+    use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
     use crate::server::persistence::redb_backend::RedbBackend;
     use std::ops::Deref;
     use std::path::PathBuf;
@@ -1209,7 +1208,7 @@ mod admin_scope_tests {
     };
     use crate::isolation::{AgentRole, IsolationLayer};
     use crate::protocol::{Method, Request};
-    use crate::server::auth::sign_current_test_request;
+    use medulla_server_api::auth::sign_current_test_request;
     use std::sync::Arc;
 
     const SECRET: &str = "admin-scope-test-secret";
@@ -1619,9 +1618,11 @@ mod admin_scope_tests {
 mod blob_dispatch_tests {
     use super::*;
     use crate::protocol::{Method, Request};
-    use crate::server::auth::sign_current_test_request;
-    use crate::server::blob::store::DEFAULT_UPLOAD_TTL_MS;
-    use crate::server::blob::{BlobCursors, BlobRetentionPolicy, RedbChunkStore};
+    use medulla_server_api::auth::sign_current_test_request;
+    use medulla_server_api::blob::store::DEFAULT_UPLOAD_TTL_MS;
+    use medulla_server_api::blob::BlobCursors;
+    use medulla_server_api::blob::BlobRetentionPolicy;
+    use medulla_server_api::blob::RedbChunkStore;
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
@@ -1648,7 +1649,7 @@ mod blob_dispatch_tests {
         {
             state.persistence = Some(std::sync::Arc::new(
                 crate::server::persistence::redb_backend::RedbBackend::open(
-                    crate::server::api::dispatch_support::unique_temp_dir(
+                    medulla_server_api::api::dispatch_support::unique_temp_dir(
                         "medulla-blob-dispatch-graph",
                     )
                     .to_string_lossy()

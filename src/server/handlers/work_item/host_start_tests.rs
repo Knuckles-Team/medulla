@@ -1,9 +1,11 @@
 //! Signed dispatch to native provenance. These tests need the redb server build;
 //! they do not qualify deployment identity, current sessions, or host launch.
 use super::*;
-use crate::server::auth::{dispatch_test_on_heap, scoped_test_request_on, ScopedTestCaller};
+use medulla_server_api::auth::dispatch_test_on_heap;
+use medulla_server_api::auth::scoped_test_request_on;
+use medulla_server_api::auth::ScopedTestCaller;
 use crate::server::persistence::redb_backend::RedbBackend;
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 use medulla_types::control_lease::ControlLeaseIssued;
 use medulla_types::host_start::{HostStartBinding, HostStartInterfaces, IssueHostStartGrantRequest};
 use tokio::sync::RwLock;
@@ -78,7 +80,7 @@ async fn fixture() -> (
     );
     let created = dispatch_test_on_heap(&state, create).await;
     assert!(created.error.is_none(), "{:?}", created.error);
-    let now = crate::server::txn::now_ms();
+    let now = medulla_server_api::txn::now_ms();
     let request = IssueHostStartGrantRequest {
         tenant: TENANT.into(),
         lease_id: "host-grant".into(),
@@ -149,7 +151,7 @@ async fn signed_issuer_is_stamped_and_retry_retains_attribution() {
     let provenance = issued.lease.unwrap().host_start_provenance.unwrap();
     assert_eq!(
         provenance.issuer_ref,
-        crate::server::mutation_batch::principal_fingerprint(ISSUER).unwrap()
+        medulla_server_api::mutation_batch::principal_fingerprint(ISSUER).unwrap()
     );
     assert_ne!(provenance.issuer_ref, ISSUER);
 }
@@ -177,7 +179,7 @@ async fn signed_wrong_tenant_and_forged_provenance_refuse_without_mutation() {
     let mut foreign = request.clone();
     foreign.tenant = "foreign-tenant".into();
     foreign.idempotency_key = "foreign-issue".into();
-    let mut forged = request.lease_at(crate::server::txn::now_ms()).unwrap();
+    let mut forged = request.lease_at(medulla_server_api::txn::now_ms()).unwrap();
     forged.idempotency_key = "forged-issue".into();
     forged.grant.insert(
         "host_start_provenance".into(),
@@ -234,6 +236,6 @@ async fn signed_wrong_tenant_and_forged_provenance_refuse_without_mutation() {
             .host_start_provenance
             .unwrap()
             .issuer_ref,
-        crate::server::mutation_batch::principal_fingerprint(ISSUER).unwrap()
+        medulla_server_api::mutation_batch::principal_fingerprint(ISSUER).unwrap()
     );
 }

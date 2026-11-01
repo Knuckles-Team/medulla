@@ -1290,7 +1290,7 @@ fn attempt_id(kind: &str, graph: &str) -> String {
     static ATTEMPT: AtomicU64 = AtomicU64::new(0);
     format!(
         "online_reshard/{kind}/{graph}:{}:{}",
-        crate::server::txn::now_ms(),
+        medulla_server_api::txn::now_ms(),
         ATTEMPT.fetch_add(1, Ordering::Relaxed)
     )
 }
@@ -1317,7 +1317,7 @@ where
     // failed: dropping one unfinished poisons the shared transaction.
     let outcome = rows(&write).and(write.finish());
     match outcome {
-        Ok(()) => shard.commit_drain(group, &batches, crate::server::txn::now_ms()),
+        Ok(()) => shard.commit_drain(group, &batches, medulla_server_api::txn::now_ms()),
         Err(error) => {
             shard.mutations().abort_group(group)?;
             Err(error)

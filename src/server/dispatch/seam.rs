@@ -6,9 +6,10 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::protocol::{Method, Request, Response};
-use crate::server::api::reentry::{DispatchApi, SeamFuture};
-use crate::server::auth::VerifiedRequestContext;
-use crate::server::state::ServerState;
+use medulla_server_api::api::reentry::DispatchApi;
+use medulla_server_api::api::reentry::SeamFuture;
+use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::state::ServerState;
 
 /// Routes lower-crate re-entry calls to the real method router and its consensus callbacks.
 pub struct DispatchSeam;
@@ -137,7 +138,7 @@ impl DispatchApi for DispatchSeam {
         graph: String,
         request_id: u64,
         committed_at_ms: u64,
-        authority: &'a crate::server::api::persistence::RaftMutationContext,
+        authority: &'a medulla_server_api::api::persistence::RaftMutationContext,
         method: Method,
     ) -> SeamFuture<'a, Response> {
         Box::pin(super::apply_replicated_native(
@@ -156,10 +157,10 @@ impl DispatchApi for DispatchSeam {
         state: &'a Arc<RwLock<ServerState>>,
         request_id: u64,
         committed_at_ms: u64,
-        authority: &'a crate::server::api::persistence::RaftMutationContext,
+        authority: &'a medulla_server_api::api::persistence::RaftMutationContext,
         applying_group: medulla_storage::direct_state::GroupId,
-        phase: crate::server::api::reentry::TransactionParticipantPhase,
-        participant: crate::server::api::reentry::ReplicatedParticipantRef<'a>,
+        phase: medulla_server_api::api::reentry::TransactionParticipantPhase,
+        participant: medulla_server_api::api::reentry::ReplicatedParticipantRef<'a>,
     ) -> SeamFuture<'a, Result<bool, String>> {
         Box::pin(super::apply_replicated_transaction_participant(
             state,
@@ -178,7 +179,7 @@ impl DispatchApi for DispatchSeam {
         state: &'a Arc<RwLock<ServerState>>,
         request_id: u64,
         committed_at_ms: u64,
-        authority: &'a crate::server::api::persistence::RaftMutationContext,
+        authority: &'a medulla_server_api::api::persistence::RaftMutationContext,
         txn_id: &'a str,
         idempotency_key: Option<&'a str>,
         expected_tenant: Option<&'a str>,
@@ -199,7 +200,7 @@ impl DispatchApi for DispatchSeam {
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         committed_at_ms: u64,
-        authority: &'a crate::server::api::persistence::RaftMutationContext,
+        authority: &'a medulla_server_api::api::persistence::RaftMutationContext,
         coordinator_id: &'a str,
         commit: bool,
     ) -> SeamFuture<'a, Result<bool, String>> {
@@ -217,7 +218,7 @@ impl DispatchApi for DispatchSeam {
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         committed_at_ms: u64,
-        authority: &'a crate::server::api::persistence::RaftMutationContext,
+        authority: &'a medulla_server_api::api::persistence::RaftMutationContext,
         coordinator_id: &'a str,
         commit: bool,
     ) -> SeamFuture<'a, Result<bool, String>> {
@@ -236,7 +237,7 @@ impl DispatchApi for DispatchSeam {
         state: &'a Arc<RwLock<ServerState>>,
         request_id: u64,
         committed_at_ms: u64,
-        authority: &'a crate::server::api::persistence::RaftMutationContext,
+        authority: &'a medulla_server_api::api::persistence::RaftMutationContext,
         applying_group: medulla_storage::direct_state::GroupId,
         coordinator_id: &'a str,
         plan: &'a [u8],
@@ -257,7 +258,7 @@ impl DispatchApi for DispatchSeam {
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         committed_at_ms: u64,
-        authority: &'a crate::server::api::persistence::RaftMutationContext,
+        authority: &'a medulla_server_api::api::persistence::RaftMutationContext,
         coordinator_id: &'a str,
         receipt: &'a [u8],
     ) -> SeamFuture<'a, Result<crate::protocol::ResultPayload, String>> {
@@ -285,7 +286,7 @@ impl DispatchApi for DispatchSeam {
     #[cfg(all(feature = "ast", feature = "redb", feature = "blob", feature = "raft"))]
     fn plan_held_underfunded_park<'a>(
         &'a self,
-        persistence: &'a dyn crate::server::api::persistence::PersistenceBackend,
+        persistence: &'a dyn medulla_server_api::api::persistence::PersistenceBackend,
         graph_fname: &'a str,
         lease: &'a medulla_types::mutation_batch::MutationOutboxLease,
         committed_at_ms: u64,
@@ -338,13 +339,13 @@ impl DispatchApi for DispatchSeam {
     #[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
     fn drain_repository_enrichment_once<'a>(
         &'a self,
-        persistence: &'a dyn crate::server::api::persistence::PersistenceBackend,
+        persistence: &'a dyn medulla_server_api::api::persistence::PersistenceBackend,
         graph_fname: &'a str,
-        store: Arc<dyn crate::server::blob::store::ChunkStore>,
-        mut authority_for_page: crate::server::api::reentry::PageAuthorityFn,
-        mut submit: crate::server::api::reentry::PageSubmitFn,
-        mut park_source: crate::server::api::reentry::PageParkFn,
-    ) -> SeamFuture<'a, Result<crate::server::api::reentry::DrainOutcome, String>> {
+        store: Arc<dyn medulla_server_api::blob::store::ChunkStore>,
+        mut authority_for_page: medulla_server_api::api::reentry::PageAuthorityFn,
+        mut submit: medulla_server_api::api::reentry::PageSubmitFn,
+        mut park_source: medulla_server_api::api::reentry::PageParkFn,
+    ) -> SeamFuture<'a, Result<medulla_server_api::api::reentry::DrainOutcome, String>> {
         Box::pin(super::graph_pipeline::drain_repository_enrichment_once(
             persistence,
             graph_fname,

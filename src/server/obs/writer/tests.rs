@@ -26,7 +26,12 @@ fn log_streams_move_under_the_writer_tenant_once() {
 #[cfg(feature = "oidc")]
 mod token {
     use super::*;
-    use crate::server::oidc::tests::{now, sign, validator, AUDIENCE, ISSUER, KID};
+    use medulla_server_api::oidc::tests::now;
+    use medulla_server_api::oidc::tests::sign;
+    use medulla_server_api::oidc::tests::validator;
+    use medulla_server_api::oidc::tests::AUDIENCE;
+    use medulla_server_api::oidc::tests::ISSUER;
+    use medulla_server_api::oidc::tests::KID;
 
     fn token(scope: &str, tenant: Option<&str>) -> String {
         let mut claims = serde_json::json!({

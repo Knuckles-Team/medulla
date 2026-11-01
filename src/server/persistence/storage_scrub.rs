@@ -13,7 +13,7 @@
 //!   shard. Zero, absent or unparsable values mean [`DEFAULT_ROWS_PER_PASS`].
 
 use medulla_store::redb_store::scrub::ScrubBudget;
-use crate::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 #[cfg(feature = "redb")]
 use crate::server::persistence::AsRedb;
 
@@ -36,7 +36,7 @@ pub fn interval_secs() -> u64 {
 
 /// Node payloads one pass may open per shard (always at least one).
 pub fn rows_per_pass() -> usize {
-    crate::server::state::positive_runtime_limit_from_env(ROWS_ENV, DEFAULT_ROWS_PER_PASS)
+    medulla_server_api::state::positive_runtime_limit_from_env(ROWS_ENV, DEFAULT_ROWS_PER_PASS)
 }
 
 /// Run one scrub step when the backend is redb; returns how many unreadable

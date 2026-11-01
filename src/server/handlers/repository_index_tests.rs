@@ -10,7 +10,8 @@ use super::{
 };
 use crate::mutation_batch::MutationSurface;
 use crate::protocol::Method;
-use crate::server::mutation_batch::{compile_methods, CompileBatch};
+use medulla_server_api::mutation_batch::compile_methods;
+use medulla_server_api::mutation_batch::CompileBatch;
 
 fn node(id: &str, kind: &str, properties: &[(&str, &str)]) -> ExtractedNode {
     ExtractedNode {

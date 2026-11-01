@@ -165,7 +165,7 @@ pub(super) async fn dispatch_op_audit_read_event(
     req_id: u64,
     graph_name: &str,
     verified_tenant: &str,
-    persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
+    persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     seq: u64,
 ) -> Response {
     let fname = medulla_kernel::persist::sanitize(graph_name);
@@ -188,7 +188,7 @@ pub(super) async fn dispatch_op_audit_append(
     req_id: u64,
     graph_name: &str,
     core: Arc<crate::graph::GraphCore>,
-    persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
+    persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     event: medulla_store::redb_store::OperationAuditEvent,
 ) -> Response {
     let fname = medulla_kernel::persist::sanitize(graph_name);
@@ -234,7 +234,7 @@ pub(super) async fn dispatch_op_audit_append(
 pub(super) async fn dispatch_op_audit_verify(
     req_id: u64,
     graph_name: &str,
-    persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
+    persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
 ) -> Response {
     let fname = medulla_kernel::persist::sanitize(graph_name);
     match persistence.as_ref().and_then(|p| p.as_redb()) {
@@ -256,7 +256,7 @@ pub(super) async fn dispatch_op_audit_verify(
 pub(super) async fn prove_audit_inclusion(
     req_id: u64,
     graph_name: &str,
-    persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
+    persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     node_id: String,
     anchor_seq: Option<u64>,
 ) -> Response {
@@ -292,13 +292,13 @@ pub(super) struct ServedModalityCtx<'a> {
     pub(super) caller: Option<&'a str>,
     pub(super) verified_context: &'a VerifiedRequestContext,
     pub(super) tenant_scope: &'a str,
-    pub(super) gateway_authz_ctx: &'a Option<crate::server::mutation::GatewayAuthzCtx>,
+    pub(super) gateway_authz_ctx: &'a Option<medulla_server_api::mutation::GatewayAuthzCtx>,
     pub(super) core: Arc<crate::graph::GraphCore>,
     pub(super) materialization_manifest:
         Option<Arc<std::sync::RwLock<crate::registry::MaterializationManifest>>>,
-    pub(super) persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
+    pub(super) persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
-    pub(super) cdc: Option<Arc<crate::server::cdc::CdcHub>>,
+    pub(super) cdc: Option<Arc<medulla_server_api::cdc::CdcHub>>,
     #[cfg(feature = "raft")]
     pub(super) routed_raft: Option<crate::raft::multi::RoutedRaftHandle>,
     pub(super) modality_authority: Option<handlers::modality::ModalityAuthority>,
@@ -399,8 +399,8 @@ async fn commit_served_modality(
     let (isolation, graph_type, owner) = gateway_authz_ctx
         .as_ref()
         .expect("ServedModality must be registered in the mutation gateway");
-    let plan = crate::server::mutation::MutationPlan::for_method(&method);
-    let mutation_ctx = crate::server::mutation::MutationCtx {
+    let plan = medulla_server_api::mutation::MutationPlan::for_method(&method);
+    let mutation_ctx = medulla_server_api::mutation::MutationCtx {
         anonymous: !verified_context.is_authenticated(),
         req_id,
         caller,
@@ -418,7 +418,7 @@ async fn commit_served_modality(
         materialization_manifest: materialization_manifest.as_ref(),
         write_coalescer: None,
     };
-    crate::server::mutation::commit_conditional_mutation(
+    medulla_server_api::mutation::commit_conditional_mutation(
         &mutation_ctx,
         &plan,
         &method,
@@ -459,14 +459,14 @@ pub(super) fn replicated_graph_batch_id(
     principal_fingerprint: &str,
     idempotency_key: &str,
 ) -> String {
-    let graph_scope = crate::server::mutation_batch::opaque_idempotency_key_for_context(
+    let graph_scope = medulla_server_api::mutation_batch::opaque_idempotency_key_for_context(
         "raft-graph-scope",
         tenant_scope,
         graph_name,
         None,
         graph_fname,
     );
-    crate::server::mutation_batch::opaque_idempotency_key_for_context(
+    medulla_server_api::mutation_batch::opaque_idempotency_key_for_context(
         namespace,
         tenant_scope,
         &graph_scope,
@@ -507,14 +507,14 @@ pub(super) async fn dispatch_op_raft_write_routing_barrier(
         &principal_fingerprint,
         verified_context.idempotency_key(),
     );
-    let mutation = match crate::server::api::persistence::RaftMutationContext::from_verified_request(
+    let mutation = match medulla_server_api::api::persistence::RaftMutationContext::from_verified_request(
         batch_id,
         req_id,
         verified_context.attempt_nonce(),
         tenant_scope,
         principal_fingerprint,
         false,
-        crate::server::api::persistence::RaftMutationTiming {
+        medulla_server_api::api::persistence::RaftMutationTiming {
             placement_epoch: routed.epoch,
             fencing_token: Some(routed.group_id),
             created_at_ms,
@@ -566,7 +566,7 @@ struct BoundGraphRequest<'a> {
     graph_fname: String,
     graph_type: crate::protocol::GraphType,
     committed_at_ms: u64,
-    mutation: crate::server::api::persistence::RaftMutationContext,
+    mutation: medulla_server_api::api::persistence::RaftMutationContext,
     method: Method,
     server_secret: &'a str,
     group_id: crate::raft::GroupId,
@@ -621,7 +621,7 @@ mod tests {
     use crate::protocol::Method;
     use medulla_store::redb_store::operation_audit::tests::event;
     use medulla_store::redb_store::operation_audit::tests::TENANT;
-    use crate::server::api::persistence::PersistenceBackend;
+    use medulla_server_api::api::persistence::PersistenceBackend;
     use crate::server::persistence::redb_backend::audit_append_tests::seeded;
 
     const GRAPH: &str = "audit_skew_graph";

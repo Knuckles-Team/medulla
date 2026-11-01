@@ -57,7 +57,7 @@ use tokio::sync::mpsc;
 use tokio::sync::RwLock;
 
 use crate::server::broker_wire::{self, BrokerProtocol};
-use crate::server::kv::KvStore;
+use medulla_server_api::kv::KvStore;
 use crate::server::ServerState;
 
 /// Env var: when set (and built `--features redis-wire`) the Redis RESP listener
@@ -1562,7 +1562,7 @@ fn authenticate_redis_principal(
     if !verify_redis_password(auth_secret, principal, credential) {
         return None;
     }
-    crate::server::api::dispatch_support::pseudonymous_broker_actor(auth_secret, principal).ok()
+    medulla_server_api::api::dispatch_support::pseudonymous_broker_actor(auth_secret, principal).ok()
 }
 
 /// If `args[1]` parses as a protocol version number, validate and apply it
@@ -2538,7 +2538,7 @@ pub async fn serve(addr: &str, state: Arc<RwLock<ServerState>>) -> std::io::Resu
         let state = state.read().await;
         (state.persist_dir.clone(), state.auth_secret.clone())
     };
-    crate::server::api::dispatch_support::validate_direct_wire_security(
+    medulla_server_api::api::dispatch_support::validate_direct_wire_security(
         addr,
         "redis-wire",
         !auth_secret.is_empty(),
@@ -2601,7 +2601,7 @@ mod tests {
     fn authenticated_connection(proto: u8, principal: &str) -> ConnState {
         let mut connection = ConnState::new(3);
         connection.actor_scope = Some(
-            crate::server::api::dispatch_support::pseudonymous_broker_actor(TEST_SECRET, principal)
+            medulla_server_api::api::dispatch_support::pseudonymous_broker_actor(TEST_SECRET, principal)
                 .unwrap(),
         );
         connection.proto = proto;

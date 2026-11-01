@@ -47,10 +47,9 @@ pub(in crate::server) use validation::ServedShapes;
 #[cfg(all(test, feature = "rdf"))]
 mod run_rules_dispatch_tests {
     use crate::protocol::{Method, Request, Response, ResultPayload};
-    use crate::server::auth::{
-        build_shared_test_request, dispatch_test_on_heap as dispatch_on_heap,
-    };
-    use crate::server::state::ServerState;
+    use medulla_server_api::auth::build_shared_test_request;
+    use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
+    use medulla_server_api::state::ServerState;
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
@@ -60,7 +59,7 @@ mod run_rules_dispatch_tests {
     fn state() -> Arc<RwLock<ServerState>> {
         let mut state = ServerState::new_for_test(SECRET, ServerState::test_isolation(TEST_AGENT));
         state.persist_dir = Some(
-            crate::server::sql_tables::test_persist_dir()
+            medulla_server_api::sql_tables::test_persist_dir()
                 .to_string_lossy()
                 .into_owned(),
         );

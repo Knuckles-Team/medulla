@@ -62,7 +62,7 @@ use medulla_compute::mining::classify::FittedClassifier;
 pub(crate) fn try_handle(
     req_id: u64,
     core: Arc<GraphCore>,
-    read_authority: Option<&crate::server::access::GraphReadAuthority>,
+    read_authority: Option<&medulla_server_api::access::GraphReadAuthority>,
     // CONCEPT:MEDULLA-KG.mining.tsdb-typed-absent — the graph this request is scoped to, and the
     // server's live tsdb store handle, both needed ONLY to bind a plan-sourced `Op::TsScan`
     // leg for `MineClassifyFit` (the one Mine* method NOT routed through

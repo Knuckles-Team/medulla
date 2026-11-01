@@ -30,7 +30,7 @@ const VERSION_TYPE: &str = "repository-index-sha256";
 const POLICY_VERSION: &str = "repository-index";
 
 /// The verified request coordinates one scoped commit is compiled under.
-pub(crate) type IndexCommitContext<'a> = crate::server::mutation_batch::GraphWriteScope<'a>;
+pub(crate) type IndexCommitContext<'a> = medulla_server_api::mutation_batch::GraphWriteScope<'a>;
 
 /// A batch that lowers past the mutation batch's operation budget is refused
 /// with this code BEFORE compilation: it commits as ONE atomic envelope or not

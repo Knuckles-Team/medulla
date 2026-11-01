@@ -495,7 +495,7 @@ impl PersistenceBackend for RecordingBackend {
     async fn commit_mutation_batch_crossmodal(
         &self,
         args: medulla::server::api::persistence::CrossModalCommitArgs<'_>,
-    ) -> Result<medulla::mutation_batch::MutationBatchCommit, String> {
+    ) -> Result<medulla_server_api::mutation_batch::MutationBatchCommit, String> {
         self.durable
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         for method in args.methods {
@@ -516,8 +516,8 @@ impl PersistenceBackend for RecordingBackend {
         // `VersionExpectation::Graph`, and production fails closed on anything
         // else, so this mock does too rather than stubbing a default.
         let committed_version = match args.batch.version_expectation {
-            medulla::mutation_batch::VersionExpectation::Graph(expected) => {
-                medulla::mutation_batch::CommittedVersion::checked_graph(expected)?
+            medulla_server_api::mutation_batch::VersionExpectation::Graph(expected) => {
+                medulla_server_api::mutation_batch::CommittedVersion::checked_graph(expected)?
             }
             other => {
                 return Err(format!(
@@ -525,11 +525,11 @@ impl PersistenceBackend for RecordingBackend {
                 ))
             }
         };
-        Ok(medulla::mutation_batch::MutationBatchCommit {
-            record: medulla::mutation_batch::MutationBatchRecord {
+        Ok(medulla_server_api::mutation_batch::MutationBatchCommit {
+            record: medulla_server_api::mutation_batch::MutationBatchRecord {
                 batch: args.batch.clone(),
                 identity: args.batch.identity.clone(),
-                status: medulla::mutation_batch::MutationBatchStatus::Committed,
+                status: medulla_server_api::mutation_batch::MutationBatchStatus::Committed,
                 committed_version,
                 result_msgpack: args.result_msgpack.map(|b| b.to_vec()),
                 committed_at_ms: args.committed_at_ms,

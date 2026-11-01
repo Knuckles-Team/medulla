@@ -12,7 +12,7 @@ use tokio::sync::RwLock;
 
 use super::*;
 use crate::protocol::{GraphType, Method};
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 
 fn blob(v: serde_json::Value) -> Vec<u8> {
     rmp_serde::to_vec_named(&v).unwrap()
@@ -177,7 +177,7 @@ const SECRET: &str = "impact-watch-test-secret";
 /// authoritative MutationBatch commit, which a backendless state refuses.
 fn persisted_state() -> Arc<RwLock<ServerState>> {
     use crate::server::persistence::redb_backend::RedbBackend;
-    let dir = crate::server::sql_tables::test_persist_dir()
+    let dir = medulla_server_api::sql_tables::test_persist_dir()
         .to_string_lossy()
         .into_owned();
     std::fs::create_dir_all(&dir).expect("create test persist dir");
@@ -209,8 +209,8 @@ async fn populate_served(state: &Arc<RwLock<ServerState>>, queue_status: &str) {
     }
     for (id, method) in (1_u64..).zip(writes) {
         let request =
-            crate::server::auth::build_shared_test_request(SECRET, id, "ops", "system", method);
-        let response = crate::server::auth::dispatch_test_on_heap(state, request).await;
+            medulla_server_api::auth::build_shared_test_request(SECRET, id, "ops", "system", method);
+        let response = medulla_server_api::auth::dispatch_test_on_heap(state, request).await;
         assert!(
             response.error.is_none(),
             "fixture write: {:?}",

@@ -141,7 +141,7 @@ pub(super) async fn dispatch_txn_method(
                     "transaction lifecycle handler returned no result",
                 ));
             };
-            crate::server::api::query_txn::txn_support::fault_after_txn_lifecycle_effect(req_id);
+            medulla_server_api::api::query_txn::txn_support::fault_after_txn_lifecycle_effect(req_id);
             match finish_txn_lifecycle_receipt(receipt, result, Some(&lifecycle_method)) {
                 Ok(result) => Ok(Response::ok(req_id, result)),
                 Err(error) => Ok(Response::err(req_id, error)),

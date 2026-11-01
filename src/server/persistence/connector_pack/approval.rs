@@ -337,7 +337,7 @@ fn current_member(
     ))
 }
 
-impl crate::server::api::persistence::SourceApprovalStore for AgentLibraryStore {
+impl medulla_server_api::api::persistence::SourceApprovalStore for AgentLibraryStore {
     fn verify_connector_pack_source_approval(
         &self,
         receipt: &ConnectorPackSourceApprovalResult,

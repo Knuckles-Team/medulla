@@ -11,7 +11,9 @@ use std::time::Duration;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpListener;
 
-use crate::server::http1::{self, HttpMessage, RequestLimits};
+use medulla_server_api::http1;
+use medulla_server_api::http1::HttpMessage;
+use medulla_server_api::http1::RequestLimits;
 
 use super::parse::{doc_to_record, parse_es_bulk, parse_json_lines, parse_otlp_logs};
 use super::{IngestOutcome, LogRecord, ObsState};
@@ -192,7 +194,7 @@ fn admit(
     let operation = classify_observability_operation(path);
     let writer = match operation {
         // No carrier on this surface can prove tenant ownership of a read.
-        ObsOperation::Read if crate::server::access::unauthenticated_carrier_denied(None) => None,
+        ObsOperation::Read if medulla_server_api::access::unauthenticated_carrier_denied(None) => None,
         ObsOperation::Read => return Ok(None),
         ObsOperation::Mutation => super::writer::request_writer(req.header("authorization")),
     };

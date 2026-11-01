@@ -31,7 +31,7 @@ use medulla_types::{
     AGENT_LIBRARY_RESULT_SCHEMA_ID,
 };
 
-use crate::server::api::persistence::BundledStoreSource;
+use medulla_server_api::api::persistence::BundledStoreSource;
 
 mod batch;
 pub mod context;
@@ -501,7 +501,7 @@ fn agent_library_operations(
 pub(super) fn effective_agent_library_policy_digest(
     operations: &[MutationOperation],
 ) -> Result<medulla_types::contract::Digest256, String> {
-    crate::server::mutation_batch::effective_policy_digest(
+    medulla_server_api::mutation_batch::effective_policy_digest(
         &medulla_types::contract::MethodId::new("ApplyMutation")?,
         operations,
     )
@@ -692,7 +692,7 @@ impl AgentLibraryStateExt for crate::server::ServerState {
     }
 
     fn set_agent_library(&mut self, store: Option<Arc<AgentLibraryStore>>) {
-        self.agent_library = store.map(|s| s as crate::server::state::ErasedHandle);
+        self.agent_library = store.map(|s| s as medulla_server_api::state::ErasedHandle);
     }
 
     fn ensure_agent_library(&mut self) -> Result<Arc<AgentLibraryStore>, String> {
@@ -711,7 +711,7 @@ impl AgentLibraryStateExt for crate::server::ServerState {
 
 /// Open one physical Agent Library handle across request and background paths.
 pub(crate) fn open_shared_agent_library(
-    slot: &Mutex<Option<crate::server::state::ErasedHandle>>,
+    slot: &Mutex<Option<medulla_server_api::state::ErasedHandle>>,
     persist_dir: &str,
 ) -> Result<Arc<AgentLibraryStore>, String> {
     let mut guard = slot.lock();
@@ -722,7 +722,7 @@ pub(crate) fn open_shared_agent_library(
         return Ok(store);
     }
     let store = Arc::new(AgentLibraryStore::open(persist_dir)?);
-    *guard = Some(Arc::clone(&store) as crate::server::state::ErasedHandle);
+    *guard = Some(Arc::clone(&store) as medulla_server_api::state::ErasedHandle);
     Ok(store)
 }
 
@@ -869,7 +869,7 @@ pub(crate) fn seed_agent_draft_for_test(
 mod tests {
     use super::replay::record_event;
     use super::*;
-    use crate::server::api::persistence::BundledStoreSource;
+    use medulla_server_api::api::persistence::BundledStoreSource;
     use medulla_types::contract::Nonce;
     use medulla_types::mutation_batch::MutationBatchStatus;
 

@@ -27,7 +27,7 @@ use std::time::Instant;
 
 use tokio::sync::RwLock;
 
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// Spawn the post-bind maintenance tasks. Called from `serve_transports`
 /// after the primary listener(s) have bound — the one boot point where
@@ -113,7 +113,7 @@ async fn spawn_time_series_reconcile(state: Arc<RwLock<ServerState>>) {
         // The redb lookup is repeated INSIDE the blocking closure (it borrows
         // from the owned backend, which must be moved into the 'static
         // closure); the `None` arm is unreachable after the check above.
-        let report = match crate::server::api::dispatch_support::blocking_task(
+        let report = match medulla_server_api::api::dispatch_support::blocking_task(
             "time-series startup reconciliation",
             move || {
                 let Some(redb) = backend.as_redb() else {

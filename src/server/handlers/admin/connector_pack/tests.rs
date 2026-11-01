@@ -22,8 +22,8 @@ use medulla_types::connector_pack::{
 use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
 
 use crate::protocol::{Method, Response, ResultPayload};
-use crate::server::auth::dispatch_test_on_heap;
-use crate::server::state::ServerState;
+use medulla_server_api::auth::dispatch_test_on_heap;
+use medulla_server_api::state::ServerState;
 
 mod admin;
 mod content_model;
@@ -66,7 +66,7 @@ impl Served {
         state.persist_dir = Some(dir.path().to_string_lossy().into_owned());
         let blob_dir = dir.path().join("blob");
         std::fs::create_dir_all(&blob_dir).unwrap();
-        state.blob = Some(crate::server::api::ingest::cursors_for_test(
+        state.blob = Some(medulla_server_api::api::ingest::cursors_for_test(
             blob_dir.to_str().unwrap(),
         ));
         Self {
@@ -114,12 +114,12 @@ impl Served {
         method: Method,
     ) -> Response {
         let id = next_id();
-        let request = crate::server::auth::scoped_test_request_on(
+        let request = medulla_server_api::auth::scoped_test_request_on(
             SECRET,
             id,
             graph,
             method,
-            crate::server::auth::ScopedTestCaller {
+            medulla_server_api::auth::ScopedTestCaller {
                 principal,
                 tenant: TENANT,
                 scopes,
@@ -511,7 +511,9 @@ pub(super) fn head_of(
 /// request is cancelled instead of waiting out the holder.
 #[tokio::test]
 async fn a_cancelled_waiter_leaves_the_pack_lock_queue() {
-    use crate::server::request_scope::{scope, RequestCancel, CANCELLED};
+    use medulla_server_api::request_scope::scope;
+    use medulla_server_api::request_scope::RequestCancel;
+    use medulla_server_api::request_scope::CANCELLED;
 
     let held = super::tenant_pack_lock("eh536-busy-tenant")
         .await
@@ -581,7 +583,7 @@ pub(super) async fn seed_server_only_import(
     )
     .unwrap();
     let section = &index.server.body;
-    let body = crate::server::blob::engine_bodies::EngineBody {
+    let body = medulla_server_api::blob::engine_bodies::EngineBody {
         sha256: section.sha256,
         body: pack.1[section.offset as usize..(section.offset + section.length) as usize].to_vec(),
     };

@@ -25,7 +25,7 @@ use serde::{Deserialize, Serialize};
 use super::multi::{GroupRouter, MultiRaft};
 use super::placement::{PlacementCatalog, PlacementRoute};
 use super::{GroupId, MedullaRaft};
-use crate::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 
 mod assemble;
 mod checks;

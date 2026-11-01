@@ -277,8 +277,8 @@ pub(super) async fn admit_catalog_write(
     verified: &VerifiedRequestContext,
     observed: ObservedRegistration<'_>,
 ) -> Result<CatalogWriteAdmission, String> {
-    crate::server::api::reentry::ensure_graph_resident(state, "__commons__").await;
-    let guard = crate::server::mutation_batch::lock_graph("__commons__").await;
+    medulla_server_api::api::reentry::ensure_graph_resident(state, "__commons__").await;
+    let guard = medulla_server_api::mutation_batch::lock_graph("__commons__").await;
     let context = observed.context.clone();
     verify_observed_registration(state, verified, observed).await?;
     let store = state.write().await.ensure_agent_library()?;
@@ -320,7 +320,7 @@ async fn verify_observed_registration(
     use medulla_types::result_contract::cluster::ServerDesiredState;
 
     let (registry_revision, registry_digest, registration) =
-        crate::server::api::reentry::verified_served_registration(
+        medulla_server_api::api::reentry::verified_served_registration(
             state,
             verified,
             observed.server_name,

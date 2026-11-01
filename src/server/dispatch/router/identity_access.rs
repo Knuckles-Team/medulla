@@ -200,7 +200,7 @@ async fn dispatch_check_access(
     };
     let caller = Some(ctx.verified_context.agent_id());
     let owner = entry.owner.as_deref();
-    if let Err(denied) = crate::server::access::check_graph_access(
+    if let Err(denied) = medulla_server_api::access::check_graph_access(
         &s.isolation,
         caller,
         &graph,
@@ -210,7 +210,7 @@ async fn dispatch_check_access(
     ) {
         return Response::err(req_id, denied);
     }
-    let allowed = crate::server::access::principal_may_access(
+    let allowed = medulla_server_api::access::principal_may_access(
         &s.isolation,
         &agent_id,
         &graph,

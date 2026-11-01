@@ -9,7 +9,7 @@ use openraft::BasicNode;
 use tokio::sync::RwLock;
 
 use crate::isolation::IsolationLayer;
-use crate::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use crate::server::persistence::redb_backend::RedbBackend;
 use crate::server::ServerState;
 

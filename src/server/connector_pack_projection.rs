@@ -22,7 +22,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// Start the singleton projection worker. A build without the Agent Library,
 /// the Blob CAS or the SHACL projection has nothing to project.
@@ -67,10 +67,10 @@ pub(crate) mod worker {
     use medulla_types::connector_pack::{PackImportRecord, CONNECTOR_PACK_IMPORT_TOPIC};
     use medulla_types::mutation_batch::MutationOutboxLease;
 
-    use crate::server::auth::VerifiedRequestContext;
-    use crate::server::outbox_operator::OutboxWrite;
+    use medulla_server_api::auth::VerifiedRequestContext;
+    use medulla_server_api::outbox_operator::OutboxWrite;
     use crate::server::persistence::agent_library::{AgentLibraryStateExt, AgentLibraryStore};
-    use crate::server::state::ServerState;
+    use medulla_server_api::state::ServerState;
 
     /// The label a failed blocking store task names.
     const BLOCKING_TASK: &str = "connector pack projection";
@@ -116,14 +116,14 @@ pub(crate) mod worker {
                 .tenant()
                 .to_string()
         } else {
-            crate::server::auth::request_context_policy()?
+            medulla_server_api::auth::request_context_policy()?
                 .expected_tenant
                 .clone()
         };
         let store = open_agent_library(state).await?;
         if !subscribed.load(Ordering::Acquire) {
             let (store, tenant) = (Arc::clone(&store), tenant.clone());
-            crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+            medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                 store.outbox_subscribe(&tenant, CONSUMER, CONNECTOR_PACK_IMPORT_TOPIC)
             })
             .await?;
@@ -194,7 +194,7 @@ pub(crate) mod worker {
         let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
         let mut budget = OutboxClaimBudget::new(CLAIM_LIMIT, LEASE_MS, now_ms)?;
         let (store, tenant) = (Arc::clone(store), tenant.to_string());
-        crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+        medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
             store.outbox_claim(&tenant, CONSUMER, &mut budget)
         })
         .await
@@ -259,7 +259,7 @@ pub(crate) mod worker {
         let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
         let (store, tenant) = (Arc::clone(store), tenant.to_string());
         let Some(reason) = reason else {
-            return crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+            return medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                 store.outbox_ack(&tenant, &lease, now_ms)
             })
             .await;
@@ -275,7 +275,7 @@ pub(crate) mod worker {
             reason,
             now_ms,
         };
-        crate::server::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
+        medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
             store.outbox_write(&tenant, write).map(drop)
         })
         .await

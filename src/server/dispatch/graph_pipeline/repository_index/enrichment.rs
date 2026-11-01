@@ -227,14 +227,14 @@ fn candidate_sources(
 /// rule that a background worker uses. Manifest hashes are NOT source hashes.
 #[cfg(feature = "blob")]
 fn verify_input_refs(
-    store: &dyn crate::server::blob::store::ChunkStore,
+    store: &dyn medulla_server_api::blob::store::ChunkStore,
     tenant: &str,
     repository_id: &str,
     candidates: Vec<CandidateSource>,
 ) -> Result<BTreeMap<UnitKey, (String, u64)>, String> {
     let mut refs = BTreeMap::new();
     for (unit, reference, length) in candidates {
-        crate::server::blob::engine_bodies::read_repository_content_ref(
+        medulla_server_api::blob::engine_bodies::read_repository_content_ref(
             store,
             tenant,
             repository_id,
@@ -417,7 +417,7 @@ mod tests {
         AdmissionPlan, EnrichmentCandidate, EnrichmentStage,
     };
     #[cfg(feature = "blob")]
-    use crate::server::blob::store::ChunkStore;
+    use medulla_server_api::blob::store::ChunkStore;
     #[cfg(feature = "blob")]
     use medulla_types::ingestion_wire::ExtractedNode;
     use medulla_types::ingestion_wire::{IndexFileOutcome, IndexFileStatus, NativeRungEvidence};
@@ -506,7 +506,7 @@ mod tests {
     #[test]
     fn worker_input_must_be_a_committed_cas_blob_ref() {
         use sha2::{Digest, Sha256};
-        let store = crate::server::blob::store::RedbChunkStore::open_temp().unwrap();
+        let store = medulla_server_api::blob::store::RedbChunkStore::open_temp().unwrap();
         let body = b"source bytes";
         let other = b"different source bytes";
         let source_digest =
@@ -518,11 +518,11 @@ mod tests {
                 "tenant",
                 "repo",
                 &[
-                    crate::server::blob::engine_bodies::EngineBody {
+                    medulla_server_api::blob::engine_bodies::EngineBody {
                         sha256: source_digest,
                         body: body.to_vec(),
                     },
-                    crate::server::blob::engine_bodies::EngineBody {
+                    medulla_server_api::blob::engine_bodies::EngineBody {
                         sha256: other_digest,
                         body: other.to_vec(),
                     },

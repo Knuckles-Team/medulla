@@ -42,9 +42,9 @@ use tokio::sync::RwLock;
 use super::graph_pipeline::dispatch_graph_op;
 use super::timed_read;
 use crate::protocol::{Method, Response};
-use crate::server::auth::VerifiedRequestContext;
+use medulla_server_api::auth::VerifiedRequestContext;
 use crate::server::obs::ObsState;
-use crate::server::state::ServerState;
+use medulla_server_api::state::ServerState;
 
 use collect::Window;
 use materialize::{FactBatch, FactOwner};

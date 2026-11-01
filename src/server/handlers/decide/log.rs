@@ -5,7 +5,7 @@
 
 use super::SharedState;
 use crate::protocol::Response;
-use crate::server::auth::VerifiedRequestContext;
+use medulla_server_api::auth::VerifiedRequestContext;
 
 /// Commit, evaluate or read the decision log.
 pub(crate) async fn handle_decision_log(

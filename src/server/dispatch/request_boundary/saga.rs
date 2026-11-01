@@ -4,8 +4,8 @@ use crate::server::persistence::AsRedb;
 
 #[cfg(feature = "redb")]
 pub(crate) struct SessionControlSaga {
-    backend: Arc<dyn crate::server::api::persistence::PersistenceBackend>,
-    saga: crate::server::api::admin::saga::AdminSaga,
+    backend: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
+    saga: medulla_server_api::api::admin::saga::AdminSaga,
 }
 
 #[cfg(feature = "redb")]
@@ -53,7 +53,7 @@ fn is_session_control_mutation(method: &Method) -> bool {
 
 #[cfg(feature = "redb")]
 fn reject_prepared_session_control_saga(
-    saga: &crate::server::api::admin::saga::AdminSaga,
+    saga: &medulla_server_api::api::admin::saga::AdminSaga,
 ) -> Result<(), String> {
     if saga.prepared {
         Err("session control saga is Prepared; refusing to re-execute its mutation".to_string())
@@ -81,7 +81,7 @@ pub(crate) async fn begin_session_control_saga(
         .as_redb()
         .ok_or_else(|| "session control mutation requires durable redb coordination".to_string())?;
     let authority = CarrierAuthority::from_verified(verified_context)?;
-    let saga = crate::server::api::admin::saga::begin_authenticated_admin_saga(
+    let saga = medulla_server_api::api::admin::saga::begin_authenticated_admin_saga(
         redb,
         request_id,
         &authority,
@@ -117,7 +117,7 @@ fn finish_session_control_saga(
         .backend
         .as_redb()
         .ok_or_else(|| "session control mutation lost its redb coordinator".to_string())?;
-    crate::server::api::admin::saga::finish_admin_saga(
+    medulla_server_api::api::admin::saga::finish_admin_saga(
         redb,
         control.saga.batch,
         control.saga.created_at_ms,

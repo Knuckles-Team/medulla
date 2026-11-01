@@ -56,7 +56,7 @@ use super::super::compute::compute_off_lock;
 use super::super::state::ServerState;
 use crate::mutation_batch::{DurabilityDomain, MutationBatch, MutationSurface};
 use crate::protocol::{Method, Response, ResultPayload};
-use crate::server::access::CarrierAuthority;
+use medulla_server_api::access::CarrierAuthority;
 
 use medulla_tsdb::point::Point;
 use medulla_tsdb::query::{asof_join_backward, gap_fill_locf, time_bucket, Agg};
@@ -268,14 +268,14 @@ impl BatchScope {
         let expected = store
             .mutation_version(self.authority.tenant_scope(), &scope)
             .map_err(|error| format!("time-series MutationBatch version read failed: {error}"))?;
-        let batch_id = crate::server::mutation_batch::opaque_request_key(
+        let batch_id = medulla_server_api::mutation_batch::opaque_request_key(
             "timeseries",
             &scope,
             self.req_id,
             method,
         );
-        crate::server::mutation_batch::compile_opaque_method(
-            crate::server::mutation_batch::CompileBatch {
+        medulla_server_api::mutation_batch::compile_opaque_method(
+            medulla_server_api::mutation_batch::CompileBatch {
                 batch_id: &batch_id,
                 request_id: self.req_id,
                 attempt_nonce: self.attempt_nonce,
