@@ -12,9 +12,9 @@ name = "medulla_finance"
 path = "src/lib.rs"
 
 [dependencies]
-medulla-types = { path = "../medulla-types" }
+medulla-types = { path = "../medulla-types", features = ["finance"] }
 serde = { version = "1.0", features = ["derive", "rc"] }
-medulla-result-types = { path = "../medulla-result-types" }
+medulla-result-types = { path = "../medulla-result-types", features = ["finance"] }
 medulla-numeric = { path = "../medulla-numeric" }
 ndarray = "0.17"
 serde_json = "1.0"
