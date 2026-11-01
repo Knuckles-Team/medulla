@@ -175,7 +175,7 @@ where
 /// the route binding this used to re-check by decoding is enforced before the
 /// read: `Shard::graph` binds the scope derived from `graph_fname`, and a
 /// `ScopedRead` on that scope can only see that scope's receipts.
-pub(crate) fn read_mutation_batch_for_graph(
+pub fn read_mutation_batch_for_graph(
     shard: &Shard,
     graph_fname: &str,
     batch_id: &str,
@@ -184,7 +184,7 @@ pub(crate) fn read_mutation_batch_for_graph(
     medulla_transaction::read_ledger(&shard.read(&handle)?, batch_id)
 }
 
-pub(crate) fn read_change_envelope(
+pub fn read_change_envelope(
     shard: &Shard,
     graph_fname: &str,
     envelope_id: &str,
@@ -200,7 +200,7 @@ pub(crate) fn read_change_envelope(
     )
 }
 
-pub(crate) fn read_content_version(
+pub fn read_content_version(
     shard: &Shard,
     tenant: &str,
     graph_fname: &str,
@@ -217,7 +217,7 @@ pub(crate) fn read_content_version(
     )
 }
 
-pub(crate) fn read_change_cursor(
+pub fn read_change_cursor(
     shard: &Shard,
     tenant: &str,
     graph_fname: &str,
@@ -236,7 +236,7 @@ pub(crate) fn read_change_cursor(
 }
 
 /// Every immutable outbox row of one batch, in ordinal order.
-pub(crate) fn read_mutation_outbox(
+pub fn read_mutation_outbox(
     shard: &Shard,
     graph_fname: &str,
     batch_id: &str,
@@ -254,13 +254,13 @@ pub(crate) fn read_mutation_outbox(
 /// Two counters over one file in one transaction is the dual authority
 /// RF-RULING-004 forbids, which is why this is a rename of the reader and a
 /// deletion of the table rather than a migration.
-pub(crate) fn read_mutation_graph_version(shard: &Shard, graph_fname: &str) -> Result<u64, String> {
+pub fn read_mutation_graph_version(shard: &Shard, graph_fname: &str) -> Result<u64, String> {
     let handle = shard.graph(graph_fname)?;
     medulla_transaction::version(&shard.read(&handle)?)
 }
 
 /// Durably write/overwrite a graph_meta identity row in its OWN transaction.
-pub(crate) fn write_graph_meta(
+pub fn write_graph_meta(
     shard: &Shard,
     graph: &str,
     name: &str,
@@ -287,7 +287,7 @@ pub(crate) fn write_graph_meta(
 /// Durably register an exact lifecycle incarnation. Repeating the same identity
 /// is idempotent; attempting to overwrite a live same-name incarnation fails
 /// closed so stale work cannot silently retarget itself.
-pub(crate) fn write_graph_meta_with_incarnation(
+pub fn write_graph_meta_with_incarnation(
     shard: &Shard,
     graph: &str,
     name: &str,
@@ -333,7 +333,7 @@ pub(crate) fn write_graph_meta_with_incarnation(
 }
 
 /// Point-read a single node's stored properties (read-through path).
-pub(crate) fn read_one_node(
+pub fn read_one_node(
     shard: &Shard,
     graph: &str,
     node_id: &str,
@@ -353,7 +353,7 @@ pub(crate) fn read_one_node(
 /// Test a batch of node ids against one MVCC snapshot. Eviction needs presence,
 /// not decrypted properties, so this avoids N transactions and N payload copies.
 /// The returned vector is positionally aligned with `node_ids`.
-pub(crate) fn durable_node_presence(
+pub fn durable_node_presence(
     shard: &Shard,
     graph: &str,
     node_ids: &[String],

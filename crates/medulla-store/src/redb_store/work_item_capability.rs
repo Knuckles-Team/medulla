@@ -264,7 +264,7 @@ fn purge_private_rows(write: &impl OwnerPayloadWrite) -> Result<(), String> {
 
 /// Drop this module's rows for one graph inside an admitted group, opening the
 /// native provenance table itself.
-pub(crate) fn clear_graph_rows(write: &ShardWrite<'_>, graph: &str) -> Result<(), String> {
+pub fn clear_graph_rows(write: &ShardWrite<'_>, graph: &str) -> Result<(), String> {
     let mut native_work_items = write.graph(graph)?.open_scoped_table(NATIVE_WORK_ITEMS)?;
     clear_graph_rows_with_native(write, graph, &mut native_work_items)
 }

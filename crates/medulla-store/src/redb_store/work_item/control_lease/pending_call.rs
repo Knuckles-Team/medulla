@@ -44,7 +44,7 @@ fn worker_digest(fence: &CasWorkItemMetadataLeaseFence) -> Result<String, String
     Ok(hex::encode(hash.finalize()))
 }
 
-fn work_item(
+pub fn work_item(
     graph: &str,
     tenant: &str,
     fence: &PendingCallFence,

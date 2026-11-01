@@ -136,10 +136,10 @@ static IMPORT_AFTER_RESERVED_STAGE: NamedBarrierSlot = OnceLock::new();
 /// the interleave regression prove that the competing cleanup has entered the
 /// protocol before the staged import is released.
 #[cfg(all(test, feature = "server"))]
-pub(crate) static GRAFT_BEFORE_PROTOCOL_LOCK: NamedBarrierSlot = OnceLock::new();
+pub static GRAFT_BEFORE_PROTOCOL_LOCK: NamedBarrierSlot = OnceLock::new();
 
 #[cfg(all(test, feature = "server"))]
-pub(crate) fn take_test_barrier(
+pub fn take_test_barrier(
     slot: &NamedBarrierSlot,
     graph_fname: &str,
 ) -> Option<Arc<Barrier>> {
@@ -194,7 +194,7 @@ pub(crate) fn chunk_graphs<T: Clone>(graphs: &[T]) -> Vec<Vec<T>> {
 }
 
 /// One graph shard file, opened through the storage kernel.
-pub(crate) struct Shard {
+pub struct Shard {
     kernel: StorageKernel,
     mutations: MutationKernel,
     /// The exact path this shard was opened with (EH-290 write-amplification

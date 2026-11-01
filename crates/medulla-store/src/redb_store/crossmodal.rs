@@ -380,7 +380,7 @@ pub(crate) fn apply_crossmodal_body(
 /// stays inside clippy's parameter cap. Each slice is exactly the borrow callers
 /// used to pass positionally, in the same order.
 #[derive(Clone, Copy, Default)]
-pub(crate) struct CrossModalStaged<'a> {
+pub struct CrossModalStaged<'a> {
     pub methods: &'a [Method],
     pub vectors: &'a [VectorUpsert],
     pub blob_refs: &'a [BlobRefRow],
@@ -433,7 +433,7 @@ pub(crate) struct CrossModalStaged<'a> {
 /// must: the kernel resolves a batch id that already carries a durable receipt
 /// to `Begin::Replay` and SKIPS it, so a reused id would silently drop this
 /// commit after a restart.
-pub(crate) fn commit_crossmodal(
+pub fn commit_crossmodal(
     shard: &Shard,
     graph: &str,
     staged: CrossModalStaged<'_>,

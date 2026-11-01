@@ -338,7 +338,7 @@ pub(crate) fn read_graph_catalog(shard: &Shard) -> Result<Vec<(String, GraphMeta
 /// [`apply_checkpoint`]; cross-store moves use the complete fenced
 /// `RawGraphRows`/`RedbBackend::reshard_graph` protocol. `None` means the graph has
 /// no durable identity (`graph_meta`) row.
-pub(crate) fn read_graph_dump(
+pub fn read_graph_dump(
     shard: &Shard,
     graph: &str,
     crypto: DurableCrypto<'_>,
@@ -381,7 +381,7 @@ pub(crate) fn read_graph_dump(
 /// combined rows and reports whether more remain — so the caller (`RedbBackend`'s
 /// `GraphMaterializer::materialize_page` override) never holds more than one page's worth
 /// of rows in memory at a time, at the SOURCE, not just when replaying into `GraphCore`.
-pub(crate) struct GraphDumpPage {
+pub struct GraphDumpPage {
     pub nodes: Vec<(String, Vec<u8>)>,
     pub edges: Vec<(String, String, Vec<u8>)>,
     /// Only populated on the first page (no keyset cursor) — mirrors
@@ -404,7 +404,7 @@ pub(crate) struct GraphDumpPage {
 /// the routing `shard`/`graph`/`crypto`, borrowed so the caller's owned
 /// [`crate::server::persistence::redb_backend::PageQuery`] (or a test literal)
 /// need not be cloned just to make this call.
-pub(crate) struct PageCursorRef<'a> {
+pub struct PageCursorRef<'a> {
     pub node_offset: usize,
     pub edge_offset: usize,
     pub node_after: Option<&'a str>,
@@ -574,7 +574,7 @@ pub(crate) fn read_graph_dump_page_semantic(
         .unwrap_or_default())
 }
 
-pub(crate) fn read_graph_dump_page(
+pub fn read_graph_dump_page(
     shard: &Shard,
     graph: &str,
     crypto: DurableCrypto<'_>,
@@ -773,7 +773,7 @@ mod keyset_page_tests {
 ///
 /// These views are not cross-store transfer images and are rejected by
 /// [`apply_checkpoint`].
-pub(crate) fn read_all_dumps(
+pub fn read_all_dumps(
     shard: &Shard,
     crypto: DurableCrypto<'_>,
 ) -> Result<Vec<GraphDump>, String> {
@@ -809,7 +809,7 @@ pub(crate) fn read_all_dumps(
 /// `read_all_dumps`'s full per-graph rehydrate. Each returned graph materializes its
 /// `GraphCore` lazily on first access via the registry's `GraphMaterializer` seam (which
 /// reuses [`read_graph_dump`] to fetch the SAME durable rows this scan skipped).
-pub(crate) fn read_all_graph_meta(
+pub fn read_all_graph_meta(
     shard: &Shard,
 ) -> Result<Vec<(String, String, GraphType, String)>, String> {
     Ok(read_graph_catalog(shard)?
@@ -818,7 +818,7 @@ pub(crate) fn read_all_graph_meta(
         .collect())
 }
 
-pub(crate) fn encode_meta_with_incarnation(
+pub fn encode_meta_with_incarnation(
     name: &str,
     gtype: GraphType,
     incarnation_id: &str,
@@ -950,7 +950,7 @@ where
 pub(crate) const GRAPH_META_SCHEMA_VERSION: u16 = 3;
 
 /// The durable `graph_meta` schema version this build writes.
-pub(crate) fn graph_meta_schema_version() -> u16 {
+pub fn graph_meta_schema_version() -> u16 {
     GRAPH_META_SCHEMA_VERSION
 }
 
@@ -1138,7 +1138,7 @@ fn insert_catalog_rows(write: &ShardWrite<'_>, rows: &[(String, Vec<u8>)]) -> Re
 /// untouched, so a second run is a no-op and rewrites nothing.
 ///
 /// Returns the number of rows upgraded.
-pub(crate) fn upgrade_legacy_graph_meta(shard: &Shard) -> Result<usize, String> {
+pub fn upgrade_legacy_graph_meta(shard: &Shard) -> Result<usize, String> {
     let stale: Vec<(String, Vec<u8>)> = {
         let control = shard.control_read()?;
         let catalog = control.open_owner_table(GRAPH_META)?;
@@ -1176,7 +1176,7 @@ pub(crate) fn upgrade_legacy_graph_meta(shard: &Shard) -> Result<usize, String> 
 /// Raft snapshots and online resharding copy this row verbatim.  Consumers must
 /// derive the logical name/type from that sole durable authority rather than
 /// trusting a second, independently serialized copy that could disagree with it.
-pub(crate) fn decode_graph_meta_identity(
+pub fn decode_graph_meta_identity(
     graph: &str,
     blob: &[u8],
 ) -> Result<(String, GraphType, String), String> {

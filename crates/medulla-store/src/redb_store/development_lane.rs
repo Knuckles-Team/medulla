@@ -162,7 +162,7 @@ mod types;
 #[path = "development_lane/validation.rs"]
 mod validation;
 #[path = "development_lane/work_item.rs"]
-mod work_item;
+pub mod work_item;
 
 // These crate-visible entry points retain the flat development_lane path
 // used by redb_store and its sibling modules.

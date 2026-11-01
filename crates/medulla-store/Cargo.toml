@@ -31,6 +31,7 @@ tracing = "0.1"
 serde_bytes = "0.11.19"
 
 [features]
+test-support = []
 ast = []
 compute-dist = ["raft"]
 embedded = ["redb"]

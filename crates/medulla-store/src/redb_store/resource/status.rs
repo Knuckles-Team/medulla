@@ -379,7 +379,7 @@ pub(crate) fn build_resource_reservation_status_result(
     }
 }
 
-pub(crate) fn read_resource_reservation_status(
+pub fn read_resource_reservation_status(
     shard: &Shard,
     graph: &str,
     request: &ResourceReservationStatusRequest,

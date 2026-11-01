@@ -42,7 +42,7 @@ pub(crate) const AUDIT_IDEMPOTENCY_CONFLICT: &str = "AUDIT_IDEMPOTENCY_CONFLICT"
 
 /// The declared refusal for an append no durable writer answered, with its
 /// cause. The caller is never told the event was appended.
-pub(crate) fn audit_writer_unavailable(cause: impl std::fmt::Display) -> String {
+pub fn audit_writer_unavailable(cause: impl std::fmt::Display) -> String {
     format!("{AUDIT_WRITER_UNAVAILABLE}: {cause}")
 }
 
@@ -61,7 +61,7 @@ type AuditChain<'w> = ScopedOwnerTableMut<'w, (&'static str, u64), &'static [u8]
 /// Validated, privacy-safe fields for a served operation outcome. Tenant and
 /// principal are derived from the verified carrier, not from method params.
 #[derive(Clone, Debug)]
-pub(crate) struct OperationAuditEvent {
+pub struct OperationAuditEvent {
     pub tenant: String,
     pub principal: String,
     pub op: String,
@@ -283,7 +283,7 @@ fn apply_event(
 /// Append the event and its replay index in one admitted graph group. A retry
 /// with the same request identity and payload returns its original receipt;
 /// changed payload under that identity fails closed.
-pub(crate) fn operation_audit_append(
+pub fn operation_audit_append(
     shard: &Shard,
     tail: &mut AuditTailCache,
     graph: &str,
@@ -326,7 +326,7 @@ pub(crate) fn operation_audit_append(
 /// Fetch one operation event and verify the entire graph chain before giving
 /// the caller a proof status. This is an operator read, so the O(history)
 /// verification is explicit; appends remain O(log history) on a cold tail.
-pub(crate) fn operation_audit_read(
+pub fn operation_audit_read(
     shard: &Shard,
     graph: &str,
     verified_tenant: &str,

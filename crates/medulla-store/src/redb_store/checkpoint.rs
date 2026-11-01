@@ -309,7 +309,7 @@ pub(crate) fn validate_checkpoint_dumps(graphs: &[GraphDump]) -> Result<(), Stri
 
 /// Snapshot the full registry dump into the kernel-owned shard, overwriting each
 /// graph's rows and committing the pending mutations and image as one group.
-pub(crate) fn apply_checkpoint(
+pub fn apply_checkpoint(
     shard: &Shard,
     pending: &mut Vec<(String, Method)>,
     graphs: Vec<GraphDump>,

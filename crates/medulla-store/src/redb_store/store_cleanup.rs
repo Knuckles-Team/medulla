@@ -1,7 +1,7 @@
 use super::store_prelude::*;
 use super::*;
 
-pub(crate) fn clear_graph_rows(
+pub fn clear_graph_rows(
     graph: &str,
     nodes: &mut ScopedOwnerTableMut<'_, (&str, &str), &[u8]>,
     edges: &mut ScopedOwnerTableMut<'_, (&str, &str, &str, u32), &[u8]>,
@@ -630,7 +630,7 @@ pub(crate) fn clear_change_material_rows(
 /// Admitted-member variant used by online reshard imports.  The member's bound
 /// graph identity supplies the scope; the graph argument is checked before any
 /// table is opened, then every removal goes through the scoped owner handles.
-pub(crate) fn clear_change_material_rows_in_wtx(
+pub fn clear_change_material_rows_in_wtx(
     write: &impl OwnerPayloadWrite,
     graph: &str,
 ) -> Result<(), String> {
@@ -713,7 +713,7 @@ pub(crate) fn clear_change_material_rows_in_wtx(
 /// The catalog row is the exception and is removed separately: `graph_meta` is
 /// FILE-WIDE, so it belongs to the control scope, not to the graph being
 /// retired.
-pub(crate) fn purge_graph_rows(shard: &Shard, graph: &str) -> Result<(), String> {
+pub fn purge_graph_rows(shard: &Shard, graph: &str) -> Result<(), String> {
     reject_reserved_graph(graph)?;
     let handle = shard.graph(graph)?;
     let identity = handle.identity().clone();

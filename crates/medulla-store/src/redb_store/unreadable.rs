@@ -16,7 +16,7 @@ use std::fmt;
 
 /// Why one stored value blob could not be opened. Closed and exhaustive.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum UnsealFailure {
+pub enum UnsealFailure {
     /// The stored blob, or the plaintext it opens to, exceeds the durable
     /// resource bound.
     Oversize,
@@ -53,7 +53,7 @@ impl UnsealFailure {
 
 /// One node row whose stored payload cannot be opened.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct NodeUnreadable {
+pub struct NodeUnreadable {
     pub(crate) graph: String,
     pub(crate) key: String,
     pub(crate) cause: UnsealFailure,

@@ -281,21 +281,21 @@ pub(crate) fn resource_collect_disk_policy_rows(
     Ok(rows)
 }
 
-pub(crate) const NODES: TableDefinition<(&str, &str), &[u8]> = TableDefinition::new("nodes");
-pub(crate) const EDGES: TableDefinition<(&str, &str, &str, u32), &[u8]> =
+pub const NODES: TableDefinition<(&str, &str), &[u8]> = TableDefinition::new("nodes");
+pub const EDGES: TableDefinition<(&str, &str, &str, u32), &[u8]> =
     TableDefinition::new("edges");
-pub(crate) const LEDGER: TableDefinition<(&str, u64), &str> = TableDefinition::new("ledger");
-pub(crate) const SEMANTIC: TableDefinition<&str, &[u8]> = TableDefinition::new("semantic_store");
+pub const LEDGER: TableDefinition<(&str, u64), &str> = TableDefinition::new("ledger");
+pub const SEMANTIC: TableDefinition<&str, &[u8]> = TableDefinition::new("semantic_store");
 // Tamper-evident hash-chained audit log (CONCEPT:MEDULLA-KG.sharding.row-level-security, feature `security`). One
 // row per durable mutation, keyed `(graph, seq)`, value = `prev_hash | entry_hash |
 // line` (see `medulla_kernel::audit`). Appended in the SAME WriteTransaction as the mutation
 // it records, so the audit entry and the data it audits are durable together. The
 // table const is always defined (so the layout is stable) but only WRITTEN/READ under
 // `security`.
-pub(crate) const AUDIT: TableDefinition<(&str, u64), &[u8]> = TableDefinition::new("audit_chain");
+pub const AUDIT: TableDefinition<(&str, u64), &[u8]> = TableDefinition::new("audit_chain");
 /// Per-graph idempotency index for application audit appends. It commits with
 /// the corresponding hash-chain entry and contains only a digest and receipt.
-pub(crate) const AUDIT_REQUESTS: TableDefinition<(&str, &str), &[u8]> =
+pub const AUDIT_REQUESTS: TableDefinition<(&str, &str), &[u8]> =
     TableDefinition::new("audit_requests");
 // Provenance-anchor MEMBER list (CONCEPT:MEDULLA-KG.sharding.row-level-security, provenance anchoring): `(graph,
 // audit_seq) -> msgpack Vec<(node_id, leaf_hash_bytes)>` for the `:ToolCall`/`:RunTrace`
@@ -306,70 +306,70 @@ pub(crate) const AUDIT_REQUESTS: TableDefinition<(&str, &str), &[u8]> =
 // tamper-evident AUDIT entry at that seq -- so tampering this side table cannot
 // forge a passing inclusion proof; it can only make an otherwise-valid proof fail
 // closed (see `crate::redb_store::prove_inclusion`).
-pub(crate) const PROVENANCE_ANCHOR_MEMBERS: TableDefinition<(&str, u64), &[u8]> =
+pub const PROVENANCE_ANCHOR_MEMBERS: TableDefinition<(&str, u64), &[u8]> =
     TableDefinition::new("provenance_anchor_members");
-pub(crate) const GRAPH_META: TableDefinition<&str, &[u8]> = TableDefinition::new("graph_meta");
+pub const GRAPH_META: TableDefinition<&str, &[u8]> = TableDefinition::new("graph_meta");
 /// Monotonic native WorkItem command sequence, scoped by graph.  The sequence
 /// is allocated in the same transaction as the submitted WorkItem row and its
 /// mutation/outbox record, so replay never allocates a second command number.
-pub(crate) const WORK_ITEM_COMMAND_SEQUENCE: TableDefinition<&str, u64> =
+pub const WORK_ITEM_COMMAND_SEQUENCE: TableDefinition<&str, u64> =
     TableDefinition::new("work_item_command_sequence");
 /// Native reservation identity, keyed `(graph, reservation_id)`.
-pub(crate) const RESOURCE_RESERVATIONS: TableDefinition<(&str, &str), &[u8]> =
+pub const RESOURCE_RESERVATIONS: TableDefinition<(&str, &str), &[u8]> =
     TableDefinition::new("resource_reservations");
 /// Tenant-scoped reservation keyset for bounded status pagination. The value
 /// repeats the reservation id so a repaired index can be validated without
 /// trusting a caller-provided cursor.
-pub(crate) const RESOURCE_RESERVATION_TENANT_INDEX: TableDefinition<(&str, &str, &str), &str> =
+pub const RESOURCE_RESERVATION_TENANT_INDEX: TableDefinition<(&str, &str, &str), &str> =
     TableDefinition::new("resource_reservation_tenant_index");
 /// One immutable reservation winner per `(graph, WorkItem, attempt)`.
-pub(crate) const RESOURCE_RESERVATION_ATTEMPTS: TableDefinition<(&str, &str, u64), &str> =
+pub const RESOURCE_RESERVATION_ATTEMPTS: TableDefinition<(&str, &str, u64), &str> =
     TableDefinition::new("resource_reservation_attempts");
 /// Native host capacity/telemetry and held accounting.
-pub(crate) const RESOURCE_HOSTS: TableDefinition<(&str, &str), &[u8]> =
+pub const RESOURCE_HOSTS: TableDefinition<(&str, &str), &[u8]> =
     TableDefinition::new("resource_hosts");
 /// Global repository/branch/concurrency ownership keys.
-pub(crate) const RESOURCE_EXCLUSIVITY: TableDefinition<(&str, &str), &str> =
+pub const RESOURCE_EXCLUSIVITY: TableDefinition<(&str, &str), &str> =
     TableDefinition::new("resource_exclusivity");
 /// Native fairness service debt by tenant/group.
-pub(crate) const RESOURCE_FAIRNESS: TableDefinition<(&str, &str), &[u8]> =
+pub const RESOURCE_FAIRNESS: TableDefinition<(&str, &str), &[u8]> =
     TableDefinition::new("resource_fairness");
 /// Exact active count for each global concurrency key.  The count is updated
 /// with the reservation row, so admission never scans an unbounded history.
-pub(crate) const RESOURCE_CONCURRENCY: TableDefinition<(&str, &str), u64> =
+pub const RESOURCE_CONCURRENCY: TableDefinition<(&str, &str), u64> =
     TableDefinition::new("resource_concurrency");
 /// Host-local anti-affinity tag counts, updated with reservation lifecycle rows.
-pub(crate) const RESOURCE_ANTI_AFFINITY: TableDefinition<(&str, &str, &str), u64> =
+pub const RESOURCE_ANTI_AFFINITY: TableDefinition<(&str, &str, &str), u64> =
     TableDefinition::new("resource_anti_affinity");
 /// Per-host/profile disk hysteresis.  The blocked bit is native policy state,
 /// never a caller-provided telemetry field, and is retained across restarts.
-pub(crate) const RESOURCE_DISK_POLICIES: TableDefinition<(&str, &str), &[u8]> =
+pub const RESOURCE_DISK_POLICIES: TableDefinition<(&str, &str), &[u8]> =
     TableDefinition::new("resource_disk_policies");
 /// Complete governed envelope retained for replay/audit reconciliation.
-pub(crate) const CHANGE_ENVELOPES: TableDefinition<(&str, &str), &[u8]> =
+pub const CHANGE_ENVELOPES: TableDefinition<(&str, &str), &[u8]> =
     TableDefinition::new("change_envelopes");
 /// Current content version, scoped by verified tenant and owning graph.
-pub(crate) const CONTENT_VERSIONS: TableDefinition<(&str, &str, &str), &[u8]> =
+pub const CONTENT_VERSIONS: TableDefinition<(&str, &str, &str), &[u8]> =
     TableDefinition::new("content_versions");
 /// Current typed source cursor. No component is converted into a filename.
-pub(crate) const CHANGE_CURSORS: TableDefinition<(&str, &str, &str, &str), &[u8]> =
+pub const CHANGE_CURSORS: TableDefinition<(&str, &str, &str, &str), &[u8]> =
     TableDefinition::new("change_cursors");
-pub(crate) const CHANGE_BLOBS: TableDefinition<(&str, &str, &str), &[u8]> =
+pub const CHANGE_BLOBS: TableDefinition<(&str, &str, &str), &[u8]> =
     TableDefinition::new("change_blobs");
-pub(crate) const CHANGE_FEATURES: TableDefinition<(&str, &str, &str), &[u8]> =
+pub const CHANGE_FEATURES: TableDefinition<(&str, &str, &str), &[u8]> =
     TableDefinition::new("change_features");
-pub(crate) const CHANGE_EVIDENCE: TableDefinition<(&str, &str, &str), &[u8]> =
+pub const CHANGE_EVIDENCE: TableDefinition<(&str, &str, &str), &[u8]> =
     TableDefinition::new("change_evidence");
-pub(crate) const CHANGE_POLICIES: TableDefinition<(&str, &str, &str), &[u8]> =
+pub const CHANGE_POLICIES: TableDefinition<(&str, &str, &str), &[u8]> =
     TableDefinition::new("change_policies");
-pub(crate) const CHANGE_LINEAGE: TableDefinition<(&str, &str, &str), &[u8]> =
+pub const CHANGE_LINEAGE: TableDefinition<(&str, &str, &str), &[u8]> =
     TableDefinition::new("change_lineage");
 // Durable Raft log table (CONCEPT:MEDULLA-KG.storage.one-fsync-covers-raft). Defined here so `commit_ops` (shared
 // with the server's group-commit writer, which folds replicated log appends into
 // the SAME `WriteTransaction` as graph mutations) is self-contained. The embedded
 // path never appends log ops, so this table stays empty for an embedded-only DB —
 // the const costs nothing and keeps the two callers on one durable layout.
-pub(crate) const RAFT_LOG: TableDefinition<(u64, u64), &[u8]> = TableDefinition::new("raft_log");
+pub const RAFT_LOG: TableDefinition<(u64, u64), &[u8]> = TableDefinition::new("raft_log");
 // Cross-shard 2PC prepare records (CONCEPT:MEDULLA-KG.storage.lane-n-increment). One row per participant group
 // of an in-flight cross-shard transaction, keyed by `(txn_id, group_id)`, holding
 // that group's PREPARED-but-not-applied slice (its staged write-set). Durable so an
@@ -378,7 +378,7 @@ pub(crate) const RAFT_LOG: TableDefinition<(u64, u64), &[u8]> = TableDefinition:
 // as the Raft log; the PURE put/clear/scan logic lives here (shared store) next to
 // NODES/EDGES/purge_graph_rows, while the writer-thread `Cmd` arms in `redb_backend`
 // call into it (mirrors how the graph-row machinery is shared, CONCEPT:MEDULLA-KG.backend.engine-modes).
-pub(crate) const XSHARD_PREPARE: TableDefinition<(&str, u64), &[u8]> =
+pub const XSHARD_PREPARE: TableDefinition<(&str, u64), &[u8]> =
     TableDefinition::new("xshard_prepare");
 // The coordinator's durable DECISION record for a cross-shard txn, keyed by `txn_id`
 // (CONCEPT:MEDULLA-KG.storage.lane-n-increment). Values `0/1` are ordinary ABORT/COMMIT;
@@ -386,7 +386,7 @@ pub(crate) const XSHARD_PREPARE: TableDefinition<(&str, u64), &[u8]> =
 // recoverable attempt started before phase 1 but not yet decided. Writing a terminal
 // value is the ATOMIC COMMIT POINT: once it reads COMMIT every participant applies on
 // recovery; absent/pending/ABORT ⇒ no new participant applies (presumed-abort).
-pub(crate) const XSHARD_DECISION: TableDefinition<&str, u8> =
+pub const XSHARD_DECISION: TableDefinition<&str, u8> =
     TableDefinition::new("xshard_decision");
 // Named distributed-compute MATERIALIZED VIEWS (CONCEPT:MEDULLA-KG.storage.feature). One row per matview
 // keyed by `name`, holding the MessagePack-serialized `MatView` (its definition +
@@ -402,7 +402,7 @@ pub(crate) const MATVIEWS: TableDefinition<&str, &[u8]> = TableDefinition::new("
 // `matviews` table above (and from Lane D's secondary-index tables): a distinct redb
 // table name, so the two matview families and the index rows never collide. Reloaded into
 // the in-RAM plan-matview manager on boot.
-pub(crate) const PLAN_MATVIEWS: TableDefinition<&str, &[u8]> =
+pub const PLAN_MATVIEWS: TableDefinition<&str, &[u8]> =
     TableDefinition::new("plan_matviews");
 
 // DBSP INCREMENTAL operator state (CONCEPT:MEDULLA-KG.storage.incremental-matview): the durable
@@ -411,7 +411,7 @@ pub(crate) const PLAN_MATVIEWS: TableDefinition<&str, &[u8]> =
 // direct analogue of turso's `dbsp_state` btree, scoped down to redb. DISJOINT from
 // `plan_matviews` (that table holds the DEFINITION; this holds the maintained STATE).
 // Written when an incremental view is defined and dropped with it.
-pub(crate) const MATVIEW_OPERATOR_STATE: TableDefinition<&str, &[u8]> =
+pub const MATVIEW_OPERATOR_STATE: TableDefinition<&str, &[u8]> =
     TableDefinition::new("matview_operator_state");
 
 /// Retire one graph's owner rows when its scope is retired.
@@ -432,7 +432,7 @@ pub(crate) const MATVIEW_OPERATOR_STATE: TableDefinition<&str, &[u8]> =
 /// The twelve file-wide tables are deliberately NOT swept: they belong to the
 /// file, not to any one graph, and a retired graph owns no row in them. The
 /// catalog row is removed by [`remove_graph_catalog_row`] on the control scope.
-pub(crate) struct GraphShardRetirement;
+pub struct GraphShardRetirement;
 
 /// Sweep one scope-prefixed owner table for the capability's own scope.
 pub(crate) fn retire_scoped_table<K, V>(
@@ -488,16 +488,16 @@ impl medulla_storage::OwnerPayloadRetirement<GraphShardOwner> for GraphShardReti
 
 /// In-doubt cross-shard prepare records `(txn_id, group_id, slice-blob)` returned by
 /// the recovery scan (CONCEPT:MEDULLA-KG.storage.lane-n-increment).
-pub(crate) type XshardPrepareScan = Result<Vec<(String, u64, Vec<u8>)>, String>;
+pub type XshardPrepareScan = Result<Vec<(String, u64, Vec<u8>)>, String>;
 /// Durable 2PC decisions `(opaque_parent_id, outcome, retained_for_parent)`.
 /// `outcome=None` is the recoverable protocol-start marker (not yet decided).
-pub(crate) type XshardDecisionScan = Result<Vec<(String, Option<bool>, bool)>, String>;
+pub type XshardDecisionScan = Result<Vec<(String, Option<bool>, bool)>, String>;
 
 /// Persisted materialized views `(name, blob)` returned by the boot reload scan
 /// (CONCEPT:MEDULLA-KG.storage.feature). Shared by the algo-only distributed matview
 /// (`compute-dist`) and the plan-backed incremental matview (`matview`) scan surfaces.
 #[cfg(any(feature = "compute-dist", feature = "matview"))]
-pub(crate) type MatViewScanResult = Result<Vec<(String, Vec<u8>)>, String>;
+pub type MatViewScanResult = Result<Vec<(String, Vec<u8>)>, String>;
 
 /// Encryption-at-rest cipher handle threaded through the durable read/write paths
 /// (CONCEPT:MEDULLA-KG.sharding.row-level-security). A thin wrapper so the SAME function signatures carry it

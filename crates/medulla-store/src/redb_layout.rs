@@ -5,10 +5,10 @@ use std::path::{Path, PathBuf};
 /// Unindexed filename accepted only by the explicit offline migrator.
 pub(crate) const RETIRED_SINGLE_SHARD_FILENAME: &str = "graph.redb";
 /// Hard resource ceiling shared by startup, restore, and migration.
-pub(crate) const MAX_SHARD_COUNT: usize = 64;
+pub const MAX_SHARD_COUNT: usize = 64;
 
 /// Validate the process-wide shard-count ceiling before allocating files or writers.
-pub(crate) fn validate_shard_count(count: usize) -> Result<usize, String> {
+pub fn validate_shard_count(count: usize) -> Result<usize, String> {
     if !(1..=MAX_SHARD_COUNT).contains(&count) {
         return Err(format!(
             "redb shard count must be in 1..={MAX_SHARD_COUNT}, got {count}"
@@ -18,13 +18,13 @@ pub(crate) fn validate_shard_count(count: usize) -> Result<usize, String> {
 }
 
 /// The sole current filename for an authoritative shard.
-pub(crate) fn shard_filename(index: usize) -> String {
+pub fn shard_filename(index: usize) -> String {
     format!("graph-{index}.redb")
 }
 
 /// Discover and validate current indexed shard files without considering the retired
 /// unindexed filename. An empty result means a fresh store.
-pub(crate) fn discover_indexed_shards(dir: &Path) -> Result<Vec<PathBuf>, String> {
+pub fn discover_indexed_shards(dir: &Path) -> Result<Vec<PathBuf>, String> {
     let entries = std::fs::read_dir(dir)
         .map_err(|error| format!("read redb persist directory failed: {error}"))?;
     let mut indexed = Vec::new();
@@ -70,7 +70,7 @@ pub(crate) fn discover_indexed_shards(dir: &Path) -> Result<Vec<PathBuf>, String
 
 /// Inspect the retired K=1 filename. The offline migrator may consume a regular file;
 /// every runtime path rejects the returned value.
-pub(crate) fn retired_single_shard(dir: &Path) -> Result<Option<PathBuf>, String> {
+pub fn retired_single_shard(dir: &Path) -> Result<Option<PathBuf>, String> {
     let path = dir.join(RETIRED_SINGLE_SHARD_FILENAME);
     match std::fs::symlink_metadata(&path) {
         Ok(metadata) => {
@@ -86,7 +86,7 @@ pub(crate) fn retired_single_shard(dir: &Path) -> Result<Option<PathBuf>, String
 
 /// Discover the current layout and reject the retired filename even when current files
 /// also exist. This is the only discovery function runtime-adjacent code may call.
-pub(crate) fn discover_current_shards(dir: &Path) -> Result<Vec<PathBuf>, String> {
+pub fn discover_current_shards(dir: &Path) -> Result<Vec<PathBuf>, String> {
     if retired_single_shard(dir)?.is_some() {
         return Err(
             "retired redb layout detected (graph.redb); run the offline migrate-shards command before startup"
@@ -97,7 +97,7 @@ pub(crate) fn discover_current_shards(dir: &Path) -> Result<Vec<PathBuf>, String
 }
 
 /// Honor an existing current K, or use `requested_k` for a fresh store.
-pub(crate) fn reconcile_shard_layout(dir: &Path, requested_k: usize) -> Result<usize, String> {
+pub fn reconcile_shard_layout(dir: &Path, requested_k: usize) -> Result<usize, String> {
     let requested_k = validate_shard_count(requested_k)?;
     let shards = discover_current_shards(dir)?;
     if shards.is_empty() {

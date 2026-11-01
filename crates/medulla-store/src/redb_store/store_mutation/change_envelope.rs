@@ -23,7 +23,7 @@ pub(crate) fn commit_change_envelope(
     )
 }
 
-pub(crate) fn commit_change_envelope_with_budget(
+pub fn commit_change_envelope_with_budget(
     shard: &Shard,
     graph_fname: &str,
     envelope: &ChangeEnvelope,
@@ -99,7 +99,7 @@ pub(crate) struct ChangeEnvelopesError {
 /// transaction still commits its non-replayed siblings. When every envelope is a
 /// replay, nothing was written and the transaction is dropped without an fsync,
 /// exactly like the single-envelope path.
-pub(crate) fn commit_change_envelopes(
+pub fn commit_change_envelopes(
     shard: &Shard,
     graph_fname: &str,
     envelopes: &[ChangeEnvelope],

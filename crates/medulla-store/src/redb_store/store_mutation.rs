@@ -5,7 +5,7 @@ use super::*;
 /// Production always calls with `None`; unit tests use these boundaries to prove
 /// that restart observes either no batch or one complete committed batch.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum MutationBatchCrashpoint {
+pub enum MutationBatchCrashpoint {
     BeforeRows,
     AfterRowsBeforeMetadata,
     BeforeCommit,
@@ -22,7 +22,7 @@ pub(crate) enum MutationBatchCrashpoint {
 /// the OCC version from the current authoritative observation while the durable
 /// record retains the original. Reusing an idempotency key for different work
 /// fails closed.
-pub(crate) fn commit_mutation_batch(
+pub fn commit_mutation_batch(
     shard: &Shard,
     graph_fname: &str,
     batch: &MutationBatch,
@@ -51,7 +51,7 @@ pub(crate) fn commit_mutation_batch(
 /// Borrowed carrier for [`commit_mutation_batch_state`]'s graph-identifying and
 /// coordinator-record inputs, bundled so the function stays under the clippy
 /// argument-count ceiling.
-pub(crate) struct StateCommitInput<'a> {
+pub struct StateCommitInput<'a> {
     pub(crate) graph_fname: &'a str,
     pub(crate) batch: &'a MutationBatch,
     pub(crate) authoritative_state_msgpack: &'a [u8],
@@ -60,7 +60,7 @@ pub(crate) struct StateCommitInput<'a> {
     pub(crate) audited: bool,
 }
 
-pub(crate) fn commit_mutation_batch_state(
+pub fn commit_mutation_batch_state(
     shard: &Shard,
     input: StateCommitInput<'_>,
     crypto: DurableCrypto<'_>,
@@ -97,7 +97,7 @@ pub(crate) use change_envelope::{commit_change_envelope_with_budget, commit_chan
 /// [`MutationBatch`] commit. The coordinator metadata, graph rows, semantic/blob
 /// projections, time-series batches, result and outbox are written by the same redb
 /// transaction; this borrowed carrier is never serialized as a second authority.
-pub(crate) struct CrossModalBatchRows<'a> {
+pub struct CrossModalBatchRows<'a> {
     pub(crate) methods: &'a [Method],
     pub(crate) vectors: &'a [VectorUpsert],
     pub(crate) blob_refs: &'a [BlobRefRow],
@@ -114,7 +114,7 @@ pub(crate) enum AuthoritativeGraphState {
 /// Borrowed carrier for [`commit_mutation_batch_crossmodal`]'s graph-identifying
 /// and coordinator-record inputs, bundled alongside the row material so the
 /// function itself stays under the clippy argument-count ceiling.
-pub(crate) struct CrossModalCommitInput<'a> {
+pub struct CrossModalCommitInput<'a> {
     pub(crate) graph_fname: &'a str,
     pub(crate) batch: &'a MutationBatch,
     pub(crate) rows: CrossModalBatchRows<'a>,
@@ -125,7 +125,7 @@ pub(crate) struct CrossModalCommitInput<'a> {
 /// Commit a canonical cross-modal batch through the universal status/fence/
 /// idempotency/outbox kernel. Public mutation surfaces use this canonical path;
 /// [`commit_crossmodal`] remains the low-level atomic projection primitive.
-pub(crate) fn commit_mutation_batch_crossmodal(
+pub fn commit_mutation_batch_crossmodal(
     shard: &Shard,
     input: CrossModalCommitInput<'_>,
     crypto: DurableCrypto<'_>,
@@ -166,7 +166,7 @@ pub(crate) struct BatchRowInput<'a> {
 
 /// The inputs every batch-commit entry point shares, bundled so the phases
 /// below stay inside the argument cap without positional strings.
-pub(crate) struct BatchCommitInput<'a> {
+pub struct BatchCommitInput<'a> {
     pub(crate) rows: BatchRowInput<'a>,
     pub(crate) crossmodal: Option<CrossModalBatchRows<'a>>,
     pub(crate) result_msgpack: Option<&'a [u8]>,
@@ -364,7 +364,7 @@ struct OutboxBatchEffect<'a> {
 /// function sees the operation, the original method's own
 /// `medulla_capabilities::policy(..).audited` answer is unrecoverable. Callers pass
 /// their already-resolved `MutationPlan::audited`.
-pub(crate) fn commit_mutation_batch_inner(
+pub fn commit_mutation_batch_inner(
     shard: &Shard,
     input: BatchCommitInput<'_>,
     crypto: DurableCrypto<'_>,

@@ -233,8 +233,8 @@ pub(crate) fn mutation_operations_retry_match(
 /// gets. The attempt nonce is server-minted, so rebuilding a fixture for the
 /// same key is a FRESH attempt over the same stable operation -- which is the
 /// case the kernel must replay rather than refuse.
-#[cfg(test)]
-pub(crate) fn fixture_operation_envelope(
+#[cfg(any(test, feature = "test-support"))]
+pub fn fixture_operation_envelope(
     identity: &medulla_types::MutationScopeIdentity,
     actor: &str,
     request_id: u64,

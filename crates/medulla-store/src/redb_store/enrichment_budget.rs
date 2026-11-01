@@ -536,7 +536,7 @@ pub(crate) fn read_park(
         .transpose()
 }
 
-pub(crate) fn clear_graph_rows(write: &ShardWrite<'_>, graph: &str) -> Result<(), String> {
+pub fn clear_graph_rows(write: &ShardWrite<'_>, graph: &str) -> Result<(), String> {
     write
         .graph(graph)?
         .open_scoped_table(POLICY_REVISIONS)?

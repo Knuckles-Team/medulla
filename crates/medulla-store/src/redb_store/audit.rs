@@ -39,7 +39,7 @@ use super::shard::{Shard, ShardWrite};
 /// every append. `apply_checkpoint`/`purge_graph_rows`/`ClearGraph` never delete AUDIT
 /// rows, so the cached tail is never invalidated by those paths.
 #[cfg(feature = "security")]
-pub(crate) type AuditTailCache = std::collections::HashMap<String, (u64, medulla_kernel::audit::Hash)>;
+pub type AuditTailCache = std::collections::HashMap<String, (u64, medulla_kernel::audit::Hash)>;
 
 /// A maintenance admission id unique per ATTEMPT, shared by every caller on
 /// this writer thread that needs one. `admit_maintenance` resolves a repeated
@@ -231,7 +231,7 @@ pub(crate) fn cold_seed_rows_touched_take() -> u64 {
 /// replaces the old hand-written `if k.value().0 != graph { break }` — a reader
 /// that forgot that line used to read every following graph's rows.
 #[cfg(feature = "security")]
-pub(crate) fn verify_audit(
+pub fn verify_audit(
     shard: &Shard,
     graph: &str,
 ) -> Result<medulla_types::protocol::AuditReport, String> {
@@ -275,7 +275,7 @@ pub(crate) fn verify_audit(
 /// design so the periodic anchor sweep's "did anything change since the last
 /// anchor" check never range-scans on the common (unchanged) tick.
 #[cfg(feature = "security")]
-pub(crate) type ProvenanceAnchorCache = HashMap<String, (u64, medulla_kernel::audit::Hash)>;
+pub type ProvenanceAnchorCache = HashMap<String, (u64, medulla_kernel::audit::Hash)>;
 
 /// One provenance-anchor write's operation id, unique per ATTEMPT: a stable
 /// id derived only from the graph and root would silently drop the second
@@ -294,7 +294,7 @@ fn anchor_op_id(graph: &str) -> String {
 /// silently excluded: the window is "whatever is durably present right now", not
 /// a promise that every candidate survives to be anchored.
 #[cfg(feature = "security")]
-pub(crate) fn provenance_leaf_hashes(
+pub fn provenance_leaf_hashes(
     shard: &Shard,
     graph: &str,
     node_ids: &[String],
@@ -365,7 +365,7 @@ pub(crate) fn read_latest_provenance_anchor_root(
 /// assigned seq so a later inclusion proof can reconstruct the sibling path (see
 /// [`prove_inclusion`]), and returns `Ok(Some(seq))`.
 #[cfg(feature = "security")]
-pub(crate) fn provenance_anchor_commit(
+pub fn provenance_anchor_commit(
     shard: &Shard,
     cache: &mut ProvenanceAnchorCache,
     audit_tail: &mut AuditTailCache,
@@ -456,7 +456,7 @@ fn anchor_rows(
 /// whatever happened to any OTHER node in the window (each leaf's proof only
 /// needs its own O(log n) sibling hashes, not its neighbors' current content).
 #[cfg(feature = "security")]
-pub(crate) fn prove_inclusion(
+pub fn prove_inclusion(
     shard: &Shard,
     graph: &str,
     node_id: &str,

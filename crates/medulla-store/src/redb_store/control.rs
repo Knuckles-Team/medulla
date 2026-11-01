@@ -70,7 +70,7 @@ macro_rules! control_write {
 }
 
 /// Durably persist one participant group's prepared slice (its own transaction).
-pub(crate) fn put_xshard_prepare(
+pub fn put_xshard_prepare(
     shard: &Shard,
     txn_id: &str,
     gid: u64,
@@ -95,7 +95,7 @@ pub(crate) fn put_xshard_prepare(
 }
 
 /// Read one participant's prepared slice by its exact composite key.
-pub(crate) fn get_xshard_prepare(
+pub fn get_xshard_prepare(
     shard: &Shard,
     txn_id: &str,
     gid: u64,
@@ -113,7 +113,7 @@ pub(crate) fn get_xshard_prepare(
 }
 
 /// Durably write the coordinator's decision row (the atomic commit point).
-pub(crate) fn put_xshard_decision(
+pub fn put_xshard_decision(
     shard: &Shard,
     txn_id: &str,
     commit: bool,
@@ -143,7 +143,7 @@ pub(crate) fn put_xshard_decision(
 /// Mark a parent-recoverable 2PC attempt as started but not yet decided. Value
 /// 4 is deliberately not COMMIT/ABORT; recovery resolves it by presumed abort
 /// while retaining that outcome until the MutationBatch parent is terminal.
-pub(crate) fn put_xshard_recoverable_pending(shard: &Shard, txn_id: &str) -> Result<(), String> {
+pub fn put_xshard_recoverable_pending(shard: &Shard, txn_id: &str) -> Result<(), String> {
     let op_id = format!("xshard/pending/{txn_id}");
     control_write!(shard, &op_id, |control| {
         let mut table = control
@@ -160,7 +160,7 @@ pub(crate) fn put_xshard_recoverable_pending(shard: &Shard, txn_id: &str) -> Res
 }
 
 /// Clear one participant's prepare record after resolution.
-pub(crate) fn clear_xshard_prepare(shard: &Shard, txn_id: &str, gid: u64) -> Result<(), String> {
+pub fn clear_xshard_prepare(shard: &Shard, txn_id: &str, gid: u64) -> Result<(), String> {
     let op_id = format!("xshard/prepare-clear/{txn_id}/{gid}");
     control_write!(shard, &op_id, |control| {
         let mut table = control
@@ -172,7 +172,7 @@ pub(crate) fn clear_xshard_prepare(shard: &Shard, txn_id: &str, gid: u64) -> Res
 }
 
 /// Clear a resolved txn's decision record.
-pub(crate) fn clear_xshard_decision(shard: &Shard, txn_id: &str) -> Result<(), String> {
+pub fn clear_xshard_decision(shard: &Shard, txn_id: &str) -> Result<(), String> {
     let op_id = format!("xshard/decision-clear/{txn_id}");
     control_write!(shard, &op_id, |control| {
         let mut table = control
@@ -184,7 +184,7 @@ pub(crate) fn clear_xshard_decision(shard: &Shard, txn_id: &str) -> Result<(), S
 }
 
 /// Scan every in-doubt prepare record `(txn_id, group_id, slice)` for recovery.
-pub(crate) fn scan_xshard_prepares(shard: &Shard, crypto: DurableCrypto<'_>) -> XshardPrepareScan {
+pub fn scan_xshard_prepares(shard: &Shard, crypto: DurableCrypto<'_>) -> XshardPrepareScan {
     let read = shard.control_read()?;
     let table = read
         .open_owner_table(XSHARD_PREPARE)
@@ -199,7 +199,7 @@ pub(crate) fn scan_xshard_prepares(shard: &Shard, crypto: DurableCrypto<'_>) -> 
 }
 
 /// Read a txn's durable decision (Some(true)=commit, Some(false)=abort, None=undecided).
-pub(crate) fn get_xshard_decision(shard: &Shard, txn_id: &str) -> Result<Option<bool>, String> {
+pub fn get_xshard_decision(shard: &Shard, txn_id: &str) -> Result<Option<bool>, String> {
     let read = shard.control_read()?;
     let table = read
         .open_owner_table(XSHARD_DECISION)
@@ -218,7 +218,7 @@ pub(crate) fn get_xshard_decision(shard: &Shard, txn_id: &str) -> Result<Option<
 
 /// Whether the decision/pending marker must survive participant recovery until a
 /// separate MutationBatch parent receipt is durable.
-pub(crate) fn get_xshard_decision_retain(shard: &Shard, txn_id: &str) -> Result<bool, String> {
+pub fn get_xshard_decision_retain(shard: &Shard, txn_id: &str) -> Result<bool, String> {
     let read = shard.control_read()?;
     let table = read
         .open_owner_table(XSHARD_DECISION)
@@ -233,7 +233,7 @@ pub(crate) fn get_xshard_decision_retain(shard: &Shard, txn_id: &str) -> Result<
 
 /// Scan digest-only decision keys for parent-aware startup GC. No prepared slice
 /// or source payload is returned.
-pub(crate) fn scan_xshard_decisions(shard: &Shard) -> XshardDecisionScan {
+pub fn scan_xshard_decisions(shard: &Shard) -> XshardDecisionScan {
     let read = shard.control_read()?;
     let table = read
         .open_owner_table(XSHARD_DECISION)
@@ -285,7 +285,7 @@ pub(crate) fn scan_matviews(shard: &Shard) -> MatViewScanResult {
 
 /// Durably upsert a PLAN-BACKED matview's serialized definition.
 #[cfg(feature = "matview")]
-pub(crate) fn put_plan_matview(shard: &Shard, name: &str, blob: &[u8]) -> Result<(), String> {
+pub fn put_plan_matview(shard: &Shard, name: &str, blob: &[u8]) -> Result<(), String> {
     let op_id = format!("plan-matview/put/{name}");
     control_write!(shard, &op_id, |control| {
         control
@@ -299,7 +299,7 @@ pub(crate) fn put_plan_matview(shard: &Shard, name: &str, blob: &[u8]) -> Result
 
 /// Durably delete a plan-backed matview definition. A missing row is a clean no-op.
 #[cfg(feature = "matview")]
-pub(crate) fn delete_plan_matview(shard: &Shard, name: &str) -> Result<(), String> {
+pub fn delete_plan_matview(shard: &Shard, name: &str) -> Result<(), String> {
     let op_id = format!("plan-matview/delete/{name}");
     control_write!(shard, &op_id, |control| {
         control
@@ -313,7 +313,7 @@ pub(crate) fn delete_plan_matview(shard: &Shard, name: &str) -> Result<(), Strin
 
 /// Scan every persisted plan-backed matview `(name, definition-blob)` for reload on boot.
 #[cfg(feature = "matview")]
-pub(crate) fn scan_plan_matviews(shard: &Shard) -> Result<Vec<(String, Vec<u8>)>, String> {
+pub fn scan_plan_matviews(shard: &Shard) -> Result<Vec<(String, Vec<u8>)>, String> {
     let read = shard.control_read()?;
     let table = match read.open_owner_table(PLAN_MATVIEWS) {
         Ok(table) => table,
@@ -329,7 +329,7 @@ pub(crate) fn scan_plan_matviews(shard: &Shard) -> Result<Vec<(String, Vec<u8>)>
 
 /// Durably upsert an incremental matview's operator-state snapshot.
 #[cfg(feature = "matview")]
-pub(crate) fn put_matview_operator_state(
+pub fn put_matview_operator_state(
     shard: &Shard,
     name: &str,
     blob: &[u8],
@@ -347,7 +347,7 @@ pub(crate) fn put_matview_operator_state(
 
 /// Durably delete an incremental matview's operator-state snapshot (missing = no-op).
 #[cfg(feature = "matview")]
-pub(crate) fn delete_matview_operator_state(shard: &Shard, name: &str) -> Result<(), String> {
+pub fn delete_matview_operator_state(shard: &Shard, name: &str) -> Result<(), String> {
     let op_id = format!("matview-operator-state/delete/{name}");
     control_write!(shard, &op_id, |control| {
         control
@@ -361,7 +361,7 @@ pub(crate) fn delete_matview_operator_state(shard: &Shard, name: &str) -> Result
 
 /// Scan every persisted incremental-matview operator-state snapshot `(name, blob)`.
 #[cfg(feature = "matview")]
-pub(crate) fn scan_matview_operator_state(shard: &Shard) -> Result<Vec<(String, Vec<u8>)>, String> {
+pub fn scan_matview_operator_state(shard: &Shard) -> Result<Vec<(String, Vec<u8>)>, String> {
     let read = shard.control_read()?;
     let table = match read.open_owner_table(MATVIEW_OPERATOR_STATE) {
         Ok(table) => table,

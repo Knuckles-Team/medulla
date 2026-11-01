@@ -415,7 +415,7 @@ pub(crate) fn read_resource_reservation_by_id(
     build_resource_reservation_query_result(read, nodes, graph, request, &stored, crypto)
 }
 
-pub(crate) fn read_resource_reservation(
+pub fn read_resource_reservation(
     shard: &Shard,
     graph: &str,
     request: &ResourceReservationStatusRequest,

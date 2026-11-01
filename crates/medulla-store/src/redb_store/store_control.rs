@@ -73,7 +73,7 @@ pub(crate) fn unsanitize(key: &str) -> Option<String> {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum GraphDumpKind {
+pub enum GraphDumpKind {
     InPlaceCoreCheckpoint,
     DurableReadOnlyMaterialization,
 }
@@ -83,7 +83,7 @@ pub(crate) enum GraphDumpKind {
 /// Keeping this input distinct from [`GraphDump`] makes the authority boundary
 /// structural: callers cannot accidentally attach durable native rows or reuse a
 /// read-only materialization while constructing an ordinary checkpoint.
-pub(crate) struct InPlaceCoreCheckpoint {
+pub struct InPlaceCoreCheckpoint {
     pub graph: String,
     pub name: String,
     pub graph_type: GraphType,
@@ -257,7 +257,7 @@ impl NativeOperationDumpRows {
 /// Raft applied index, which is persisted after the effect lands and never
 /// regresses. Deriving the id from `(raft_group, index)` instead would
 /// manufacture a conflicting replay out of a path that never needed one.
-pub(crate) fn commit_ops(
+pub fn commit_ops(
     shard: &Shard,
     ops: &mut Vec<(String, Method)>,
     raft_log_ops: &mut Vec<(u64, u64, Vec<u8>)>,

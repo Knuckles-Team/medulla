@@ -136,17 +136,17 @@ mod resource_reservation_tests;
 #[cfg(test)]
 mod shard_control_tests;
 
-pub(crate) mod capacity_lease;
+pub mod capacity_lease;
 #[cfg(feature = "redb")]
-pub(crate) mod development_lane;
-pub(crate) mod enrichment_budget;
+pub mod development_lane;
+pub mod enrichment_budget;
 /// Bounded background node-payload scrub (EH-384).
 #[cfg(feature = "redb")]
-pub(crate) mod scrub;
+pub mod scrub;
 /// The graph shard as a kernel-owned store (RF-RULING-004 step 8).
 #[cfg(feature = "redb")]
-pub(crate) mod shard;
-pub(crate) mod work_item_capability;
+pub mod shard;
+pub mod work_item_capability;
 
 pub(crate) mod audit;
 pub(crate) mod checkpoint;
@@ -154,9 +154,9 @@ pub(crate) mod control;
 pub(crate) mod crossmodal;
 pub(crate) mod dump;
 #[cfg(feature = "security")]
-pub(crate) mod operation_audit;
+pub mod operation_audit;
 pub(crate) mod resource;
-pub(crate) mod work_item;
+pub mod work_item;
 
 // The decomposition keeps the physical file as one `redb_store` API surface.
 // Keep the root's imports and its server/embedded callers on that surface
@@ -914,8 +914,8 @@ mod security_tests {
 /// dump tests, the shard bootstrap/graft tests, and the online-reshard tests)
 /// used to hand-roll this same construction independently, varying only the
 /// prefix; they now call through this one definition instead.
-#[cfg(test)]
-pub(crate) fn temp_path(prefix: &str, tag: &str) -> std::path::PathBuf {
+#[cfg(any(test, feature = "test-support"))]
+pub fn temp_path(prefix: &str, tag: &str) -> std::path::PathBuf {
     std::env::temp_dir().join(format!(
         "{prefix}-{tag}-{}-{}.redb",
         std::process::id(),

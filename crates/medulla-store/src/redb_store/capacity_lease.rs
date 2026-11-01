@@ -76,7 +76,7 @@ struct DurableReplay {
 /// [`retire_graph_rows`] performs, through the same kernel primitive; the two
 /// differ only in the capability the caller holds -- a group member's
 /// owner-row write here, the scope's own physical write capability there.
-pub(crate) fn clear_graph_rows(write: &ShardWrite<'_>, graph: &str) -> Result<(), String> {
+pub fn clear_graph_rows(write: &ShardWrite<'_>, graph: &str) -> Result<(), String> {
     let rows = write.graph(graph)?;
     rows.open_scoped_table(CELLS)?.purge_scope_rows()?;
     rows.open_scoped_table(LEASES)?.purge_scope_rows()?;
