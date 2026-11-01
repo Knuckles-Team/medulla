@@ -946,7 +946,7 @@ pub enum UqlProofStep {
     #[cfg(feature = "owl")]
     Reason {
         stage: String,
-        proof: crate::protocol::ProofNodeWire,
+        proof: crate::rdf_report::ProofNodeWire,
     },
     /// A stage that admitted or produced rows without carrying a proof.
     Unproved { stage: String },

@@ -360,25 +360,6 @@ pub struct OwlReasonResult {
     pub unsatisfiable: Vec<String>,
 }
 
-/// One node of a reconstructed OWL proof tree (CONCEPT:MEDULLA-KG.ontology.owl-proof-tree-explanation) — the wire
-/// projection of `medulla_rdf::owl::ProofNode`. `rule == "asserted"` marks a LEAF (a
-/// reflexive seed or a base fact with no recorded justification — the proof bottoms
-/// out there); any other `rule` is a completion rule name (`"CR-sub"`, `"CR-some⁺"`,
-/// `"CR-instance"`, …) that consumed `premises` (each itself a full sub-proof) plus the
-/// cited `axioms`. Recursive — `premises` nests to the tree's actual depth (never
-/// flattened), so a client walks it exactly like the reasoner derived it.
-#[cfg(feature = "owl")]
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct ProofNodeWire {
-    pub sub: String,
-    pub sup: String,
-    pub rule: String,
-    pub axioms: Vec<String>,
-    pub confidence: f64,
-    pub premises: Vec<ProofNodeWire>,
-}
-
 /// Materialized result of a `Method::OwlExplain` run (CONCEPT:MEDULLA-KG.ontology.owl-proof-tree-explanation). Returned
 /// via `ResultPayload::raw`. `tree` is `None` when `sub ⊑ sup` does not hold (nothing
 /// to explain) — `found` mirrors that as a convenience boolean for callers that only

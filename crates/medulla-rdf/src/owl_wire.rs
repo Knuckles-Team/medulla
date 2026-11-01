@@ -2,7 +2,7 @@
 //! (CONCEPT:MEDULLA-KG.ontology.owl-proof-tree-explanation): `OwlExplain` and the UQL
 //! `WITH PROOF` `REASON` step both return [`ProofNodeWire`].
 
-use medulla_types::protocol::ProofNodeWire;
+use medulla_types::rdf_report::ProofNodeWire;
 
 use crate::owl::ProofNode;
 

@@ -71,8 +71,10 @@ def list_mods(src: Path) -> dict[str, list[Path]]:
     out: dict[str, list[Path]] = {}
     if not src.is_dir():
         return out
+    # files a top-level module includes with `#[path = "x.rs"]` belong to that module
+    included = {m for f in src.glob("*.rs") for m in re.findall(r'#\[path\s*=\s*"([^"/]+\.rs)"\]', f.read_text())}
     for e in sorted(src.iterdir()):
-        if e.name == "lib.rs":
+        if e.name == "lib.rs" or e.name in included:
             continue
         if e.is_file() and e.suffix == ".rs":
             out.setdefault(e.stem, []).append(e)
@@ -84,6 +86,8 @@ def list_mods(src: Path) -> dict[str, list[Path]]:
 def files_of(paths: list[Path]) -> list[Path]:
     fs = []
     for p in paths:
+        if p.is_file():
+            fs += [p.parent / m for m in re.findall(r'#\[path\s*=\s*"([^"/]+\.rs)"\]', p.read_text())]
         fs += [p] if p.is_file() else sorted(p.rglob("*.rs"))
     return fs
 
