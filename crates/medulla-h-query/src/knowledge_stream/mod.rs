@@ -54,9 +54,9 @@ type HmacSha256 = Hmac<Sha256>;
 /// accepted as authorization proof by [`try_handle`].
 #[derive(Clone)]
 pub struct KnowledgeStreamAuthority {
-    tenant_ref: OpaqueRef,
-    access_policy_ref: OpaqueRef,
-    reference_key: [u8; 32],
+    pub tenant_ref: OpaqueRef,
+    pub access_policy_ref: OpaqueRef,
+    pub reference_key: [u8; 32],
     #[cfg(feature = "security")]
     policy_lease: Option<Arc<medulla_core::isolation::PolicyDecisionLease>>,
     #[cfg(feature = "security")]
@@ -66,7 +66,7 @@ pub struct KnowledgeStreamAuthority {
 }
 
 impl KnowledgeStreamAuthority {
-    pub(crate) fn from_verified(
+    pub fn from_verified(
         server_secret: &str,
         claims: &RequestContextClaims,
     ) -> Result<Self, String> {
@@ -222,7 +222,7 @@ impl KnowledgeStreamAuthority {
     /// This is intentionally a closed check with a generic error.  Policy
     /// versions/digests are never included in a response error or log field
     /// sourced from a caller-controlled cursor.
-    pub(super) fn validate_request_binding(
+    pub fn validate_request_binding(
         &self,
         graph_name: &str,
         carrier: &CarrierAuthority,
@@ -251,12 +251,12 @@ impl KnowledgeStreamAuthority {
     }
 
     /// Revalidate the durable policy image immediately before using a page.
-    pub(super) fn validate_before(&self) -> Result<(), String> {
+    pub fn validate_before(&self) -> Result<(), String> {
         self.validate_lease(true)
     }
 
     /// Revalidate the durable policy image immediately after producing a page.
-    pub(super) fn validate_after(&self) -> Result<(), String> {
+    pub fn validate_after(&self) -> Result<(), String> {
         self.validate_lease(false)
     }
 
@@ -430,18 +430,18 @@ pub(super) struct FamilyExecution {
 }
 
 pub struct KnowledgeStreamHandlerCtx<'a> {
-    pub(crate) state: &'a Arc<RwLock<ServerState>>,
-    pub(crate) req_id: u64,
-    pub(crate) graph_name: &'a str,
-    pub(crate) core: Arc<GraphCore>,
-    pub(crate) caller: &'a str,
-    pub(crate) carrier: &'a CarrierAuthority,
-    pub(crate) authority: &'a KnowledgeStreamAuthority,
-    pub(crate) placement_epoch: u64,
-    pub(crate) fencing_token: Option<u64>,
-    pub(crate) read_authority: &'a GraphReadAuthority,
+    pub state: &'a Arc<RwLock<ServerState>>,
+    pub req_id: u64,
+    pub graph_name: &'a str,
+    pub core: Arc<GraphCore>,
+    pub caller: &'a str,
+    pub carrier: &'a CarrierAuthority,
+    pub authority: &'a KnowledgeStreamAuthority,
+    pub placement_epoch: u64,
+    pub fencing_token: Option<u64>,
+    pub read_authority: &'a GraphReadAuthority,
     #[cfg(feature = "security")]
-    pub(crate) rls: &'a Arc<medulla_core::isolation::IsolationLayer>,
+    pub rls: &'a Arc<medulla_core::isolation::IsolationLayer>,
 }
 
 fn validate_stream_preflight(

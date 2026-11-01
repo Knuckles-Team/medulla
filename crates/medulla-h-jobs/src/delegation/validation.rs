@@ -218,7 +218,7 @@ pub(crate) fn normalize_replay_context(context: &mut RequestContext) {
     context.placement_epoch = None;
 }
 
-pub(crate) fn validate_request_binding(
+pub fn validate_request_binding(
     request: &KgDelegateRequest,
     verified_context: &VerifiedRequestContext,
     graph_name: &str,

@@ -215,7 +215,7 @@ pub mod current_auth_test_support {
     /// Add the Commons RBAC grant shared by authenticated protocol fixtures.
     /// Keeping this in the query test-support seam lets wire tests reuse the
     /// exact policy shape without copying an agent-registration block.
-    pub(crate) fn grant_commons_user(isolation: &mut IsolationLayer) {
+    pub fn grant_commons_user(isolation: &mut IsolationLayer) {
         #[cfg(feature = "security")]
         {
             use medulla_types::acl::Grant;
@@ -240,7 +240,7 @@ pub mod current_auth_test_support {
     /// Both query and protocol round-trip tests use this helper; the caller
     /// remains responsible for choosing the principal's identity and any
     /// additional roles required by its scenario.
-    pub(crate) fn register_commons_agent(isolation: &mut IsolationLayer, agent_id: &str) {
+    pub fn register_commons_agent(isolation: &mut IsolationLayer, agent_id: &str) {
         isolation.register_agent(AgentIdentity {
             agent_id: agent_id.to_string(),
             role: AgentRole::Agent,
