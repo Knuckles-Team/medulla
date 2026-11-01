@@ -93,9 +93,9 @@ fn build_metrics() -> SeriesStore {
     ));
     let store = SeriesStore::open_in_dir(
         &dir,
-        medulla::store_authority::process_verifier(),
-        medulla::store_authority::process_authority().principal(),
-        &medulla::store_authority::process_authority().proof(),
+        medulla_kernel::store_authority::process_verifier(),
+        medulla_kernel::store_authority::process_authority().principal(),
+        &medulla_kernel::store_authority::process_authority().proof(),
     )
     .expect("open tsdb store");
     let series = "svc.database.latency_ms";

@@ -152,9 +152,9 @@ async fn tenant_graph_owner_visibility_survives_an_isolation_layer_restart() {
     {
         let mut isolation = IsolationLayer::with_persist_dir(
             &dir_s,
-            medulla::store_authority::process_authority().as_ref(),
-            medulla::store_authority::process_authority().principal(),
-            &medulla::store_authority::process_authority().proof(),
+            medulla_kernel::store_authority::process_authority().as_ref(),
+            medulla_kernel::store_authority::process_authority().principal(),
+            &medulla_kernel::store_authority::process_authority().proof(),
         )
         .expect("open rbac store");
         isolation.register_agent(AgentIdentity {
@@ -202,9 +202,9 @@ async fn tenant_graph_owner_visibility_survives_an_isolation_layer_restart() {
         loop {
             match IsolationLayer::with_persist_dir(
                 &dir_s,
-                medulla::store_authority::process_authority().as_ref(),
-                medulla::store_authority::process_authority().principal(),
-                &medulla::store_authority::process_authority().proof(),
+                medulla_kernel::store_authority::process_authority().as_ref(),
+                medulla_kernel::store_authority::process_authority().principal(),
+                &medulla_kernel::store_authority::process_authority().proof(),
             ) {
                 Ok(layer) => break layer,
                 Err(error) if attempt < 100 => {

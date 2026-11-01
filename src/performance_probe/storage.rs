@@ -58,9 +58,9 @@ pub(super) fn probe_analytics(
     let result = (|| -> Result<Observation, ProbeError> {
         let store = JobStore::open(
             &path,
-            medulla::store_authority::process_authority().as_ref(),
-            medulla::store_authority::process_authority().principal(),
-            &medulla::store_authority::process_authority().proof(),
+            medulla_kernel::store_authority::process_authority().as_ref(),
+            medulla_kernel::store_authority::process_authority().principal(),
+            &medulla_kernel::store_authority::process_authority().proof(),
         )?;
         let mut last = None;
         for index in 0..scale {
@@ -76,9 +76,9 @@ pub(super) fn probe_analytics(
                 drop(store);
                 let reopened = JobStore::open(
                     &path,
-                    medulla::store_authority::process_authority().as_ref(),
-                    medulla::store_authority::process_authority().principal(),
-                    &medulla::store_authority::process_authority().proof(),
+                    medulla_kernel::store_authority::process_authority().as_ref(),
+                    medulla_kernel::store_authority::process_authority().principal(),
+                    &medulla_kernel::store_authority::process_authority().proof(),
                 )?;
                 let (next, latency) = timed(|| reopened.submit(job_spec(scale)));
                 let next = next?;

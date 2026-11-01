@@ -72,9 +72,9 @@ fn lake_materialize_lineage_event_reaches_the_openlineage_topic() {
     let s = store();
     let tsdb = SeriesStore::open_in_dir(
         &tsdb_dir("tsdb"),
-        medulla::store_authority::process_verifier(),
-        medulla::store_authority::process_authority().principal(),
-        &medulla::store_authority::process_authority().proof(),
+        medulla_kernel::store_authority::process_verifier(),
+        medulla_kernel::store_authority::process_authority().principal(),
+        &medulla_kernel::store_authority::process_authority().proof(),
     )
     .unwrap();
     tsdb.append_batch(

@@ -1752,7 +1752,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
             loop {
                 ticker.tick().await;
                 let __loop_tick_started = std::time::Instant::now();
-                let stats = medulla::persist::decay_all(&dk_state, half_life, floor, prune).await;
+                let stats = medulla_kernel::persist::decay_all(&dk_state, half_life, floor, prune).await;
                 tracing::info!(
                     "Decay sweep: {} nodes / {} edges decayed, {} nodes / {} edges pruned",
                     stats.nodes_decayed,

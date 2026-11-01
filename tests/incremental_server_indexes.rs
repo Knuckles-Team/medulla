@@ -32,9 +32,9 @@ fn tmp_series() -> (tempfile::TempDir, Arc<SeriesStore>) {
     let series = Arc::new(
         SeriesStore::open(
             &dir.path().join("series.redb"),
-            medulla::store_authority::process_verifier(),
-            medulla::store_authority::process_authority().principal(),
-            &medulla::store_authority::process_authority().proof(),
+            medulla_kernel::store_authority::process_verifier(),
+            medulla_kernel::store_authority::process_authority().principal(),
+            &medulla_kernel::store_authority::process_authority().proof(),
         )
         .expect("open temp series store"),
     );

@@ -69,9 +69,9 @@ fn as_of_reads_current_historical_and_empty_history_but_denies_uncommitted_lsns(
     let s = store();
     let tsdb = SeriesStore::open_in_dir(
         &tsdb_dir("history"),
-        medulla::store_authority::process_verifier(),
-        medulla::store_authority::process_authority().principal(),
-        &medulla::store_authority::process_authority().proof(),
+        medulla_kernel::store_authority::process_verifier(),
+        medulla_kernel::store_authority::process_authority().principal(),
+        &medulla_kernel::store_authority::process_authority().proof(),
     )
     .expect("open series store");
     let series_id = "adopt-asof-history";

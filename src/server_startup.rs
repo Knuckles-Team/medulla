@@ -344,8 +344,8 @@ pub(super) fn open_tsdb_store(
         Some(dir) => std::path::Path::new(dir).join("series.redb"),
         None => std::env::temp_dir().join(format!("medulla-tsdb-{}.redb", std::process::id())),
     };
-    let authority = medulla::store_authority::process_authority();
-    let verifier = medulla::store_authority::process_verifier();
+    let authority = medulla_kernel::store_authority::process_authority();
+    let verifier = medulla_kernel::store_authority::process_verifier();
     match medulla_tsdb::store::SeriesStore::open(
         &path,
         verifier,
@@ -515,7 +515,7 @@ pub(super) fn open_isolation_layer(
             1,
         );
     };
-    let authority = medulla::store_authority::process_authority();
+    let authority = medulla_kernel::store_authority::process_authority();
     let mut isolation = medulla::isolation::IsolationLayer::with_persist_dir(
         dir,
         authority.as_ref(),
@@ -748,7 +748,7 @@ pub(super) fn optional_sweep_secs(variable: &str) -> u64 {
 }
 
 pub(super) async fn memcap_tick(state: SharedState, max_nodes_per_graph: usize) {
-    let evicted = medulla::persist::evict_oversized_all(&state, max_nodes_per_graph).await;
+    let evicted = medulla_kernel::persist::evict_oversized_all(&state, max_nodes_per_graph).await;
     if evicted > 0 {
         tracing::info!("Memory cap: evicted {} LRU node(s) over cap", evicted);
     }
