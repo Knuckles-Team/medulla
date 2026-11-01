@@ -153,7 +153,7 @@ struct Ring {
 }
 
 impl Ring {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Ring {
             start: Instant::now(),
             seq: AtomicUsize::new(0),

@@ -250,9 +250,9 @@ mod modality;
 #[cfg(feature = "modality-serving")]
 pub use modality::SanitizedModalityRaftCommand;
 #[cfg(feature = "modality-serving")]
-pub(crate) use modality::{decode_sanitized_modality_result, SanitizedModalityMutation};
+pub use modality::{decode_sanitized_modality_result, SanitizedModalityMutation};
 
-mod command;
+pub mod command;
 pub use command::{
     NativeMutationCommand, ReplicatedMutation, SealedNativeMethod, NATIVE_CONSENSUS_METHODS,
 };
@@ -338,7 +338,7 @@ impl RaftRequest {
         Ok(())
     }
 
-    pub(crate) fn bind_graph_command(
+    pub fn bind_graph_command(
         &mut self,
         server_secret: &str,
         group_id: GroupId,
@@ -356,7 +356,7 @@ impl RaftRequest {
         Ok(())
     }
 
-    pub(crate) fn validate_graph_command(
+    pub fn validate_graph_command(
         &self,
         server_secret: &str,
         group_id: GroupId,

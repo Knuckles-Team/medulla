@@ -190,7 +190,7 @@ pub struct ReadPageError {
 }
 
 impl ReadPageError {
-    pub(crate) fn new(code: ReadPageErrorCode) -> Self {
+    pub fn new(code: ReadPageErrorCode) -> Self {
         Self {
             code,
             current_route: None,
@@ -319,7 +319,7 @@ pub(crate) struct ReadPageService {
 }
 
 impl ReadPageService {
-    pub(crate) fn new(
+    pub fn new(
         backend: Arc<dyn PersistenceBackend>,
         placement: Arc<PlacementCatalog>,
         router: Arc<GroupRouter>,

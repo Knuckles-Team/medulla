@@ -106,7 +106,7 @@ struct PartitionBuilder {
 }
 
 impl PartitionBuilder {
-    fn new(n_shards: usize) -> Self {
+    pub fn new(n_shards: usize) -> Self {
         Self {
             owner: HashMap::new(),
             owned: vec![BTreeSet::new(); n_shards],
@@ -232,7 +232,7 @@ pub use medulla_types::compute_result::distributed::{DistResult, LabelRows, Scor
 /// Run a distributed graph algorithm across `graphs` (each a shard), returning the
 /// per-vertex result over the UNION. The cross-shard superstep coordinator: gather the
 /// partitioning, then dispatch to the algorithm's superstep loop.
-pub(crate) async fn run_distributed(
+pub async fn run_distributed(
     state: &Arc<RwLock<ServerState>>,
     graphs: &[String],
     algo: &DistAlgo,
@@ -532,7 +532,7 @@ fn incremental_seed_labels<'a>(
 ///
 /// This is the streaming variant: only the affected vertices' values are recomputed; the
 /// rest are carried over from `prior`.
-pub(crate) async fn incremental_connected_components(
+pub async fn incremental_connected_components(
     state: &Arc<RwLock<ServerState>>,
     graphs: &[String],
     prior: &LabelRows,

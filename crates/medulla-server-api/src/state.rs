@@ -116,7 +116,7 @@ pub const MISSING_PLACEMENT_AUTHORITY: &str =
 
 #[cfg(feature = "raft")]
 impl PlacementAuthorityKind {
-    pub(crate) fn missing_error(self) -> Option<&'static str> {
+    pub fn missing_error(self) -> Option<&'static str> {
         (self == Self::Missing).then_some(MISSING_PLACEMENT_AUTHORITY)
     }
 }
@@ -402,7 +402,7 @@ impl ServerState {
     /// live `MultiRaft` owns the durable catalog.  `raft == Some` without a
     /// live `MultiRaft` is a configured-but-incomplete cluster and remains a
     /// typed denial; it must never silently fall back to local placement.
-    pub(crate) fn placement_authority(&self) -> PlacementAuthorityKind {
+    pub fn placement_authority(&self) -> PlacementAuthorityKind {
         placement_authority_kind(self.raft.is_some(), self.multi_raft.is_some())
     }
 }

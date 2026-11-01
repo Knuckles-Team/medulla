@@ -73,7 +73,7 @@ impl SealedNativeMethod {
         .map_err(|_| "native Raft command payload is invalid".to_string())
     }
 
-    pub(in crate::raft::command) fn new(
+    pub fn new(
         server_secret: &str,
         method: &Method,
     ) -> Result<Self, String> {
@@ -109,7 +109,7 @@ impl SealedNativeMethod {
         self.open_value(server_secret)
     }
 
-    pub(in crate::raft::command) fn bind_graph_command(
+    pub fn bind_graph_command(
         &mut self,
         server_secret: &str,
         request: &RaftRequest,

@@ -135,7 +135,7 @@ impl EmbeddedAuthority {
     /// unnecessary complexity the simplicity directive warns against,
     /// MEDULLA-PYENGINE-PLAN.md §12.1), not a signal the method is unwanted.
     #[allow(dead_code)]
-    pub(crate) fn new(agent_id: Option<String>, tenant: Option<String>) -> Self {
+    pub fn new(agent_id: Option<String>, tenant: Option<String>) -> Self {
         EmbeddedAuthority {
             isolation: Arc::new(IsolationLayer::new()),
             agent_id,

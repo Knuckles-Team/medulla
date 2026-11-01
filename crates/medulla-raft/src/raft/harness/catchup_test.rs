@@ -16,7 +16,7 @@ use medulla_types::protocol::GraphType;
 struct ClusterGuard(Option<Cluster>);
 
 impl ClusterGuard {
-    fn new(cluster: Cluster) -> Self {
+    pub fn new(cluster: Cluster) -> Self {
         Self(Some(cluster))
     }
 

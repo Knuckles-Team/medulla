@@ -25,7 +25,7 @@ pub(super) struct StoreFile {
 }
 
 impl StoreFile {
-    fn new(data_dir: &Path, path: PathBuf, served_layout: Option<OwnerLayout>) -> Self {
+    pub fn new(data_dir: &Path, path: PathBuf, served_layout: Option<OwnerLayout>) -> Self {
         let name = path
             .strip_prefix(data_dir)
             .unwrap_or(&path)

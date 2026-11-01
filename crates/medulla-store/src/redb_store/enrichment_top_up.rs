@@ -18,12 +18,12 @@ const MAX_INTENT_BYTES: usize = 4 * 1024 * 1024;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct EnrichmentTopUpTransition {
-    pub(crate) old_delivery: MutationOutboxRecord,
-    pub(crate) consumer: String,
+    pub old_delivery: MutationOutboxRecord,
+    pub consumer: String,
     pub replacement_batch: MutationBatch,
-    pub(crate) expected_budget: EnrichmentBudgetCheckpoint,
-    pub(crate) expected_park: EnrichmentBudgetPark,
-    pub(crate) replacement_budget: EnrichmentBudgetCheckpoint,
+    pub expected_budget: EnrichmentBudgetCheckpoint,
+    pub expected_park: EnrichmentBudgetPark,
+    pub replacement_budget: EnrichmentBudgetCheckpoint,
     pub revision: RepositoryEnrichmentPolicyRevision,
 }
 

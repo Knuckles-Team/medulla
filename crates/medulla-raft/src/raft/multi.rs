@@ -741,7 +741,7 @@ impl MultiRaft {
     /// it over the authenticated Raft peer channel when this node is not that
     /// group's leader. This is the non-nested coordinator seam used by distributed
     /// transaction prepare/decision/commit; state-machine apply never calls it.
-    pub(crate) async fn client_write_group(
+    pub async fn client_write_group(
         &self,
         group_id: GroupId,
         request: RaftRequest,
@@ -840,7 +840,7 @@ impl MultiRaft {
 
     /// Per-group ReadIndex routed to the current leader over the authenticated peer
     /// pool when the leader is remote.
-    pub(crate) async fn read_barrier_group(
+    pub async fn read_barrier_group(
         &self,
         group_id: GroupId,
     ) -> Result<u64, super::xread::ReadPageError> {

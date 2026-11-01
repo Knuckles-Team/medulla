@@ -507,7 +507,7 @@ pub(super) fn effective_agent_library_policy_digest(
     )
 }
 
-pub(crate) fn current_agent_library_policy_digest() -> Result<String, String> {
+pub fn current_agent_library_policy_digest() -> Result<String, String> {
     let operations = super::agent_revision::lifecycle_operations(
         "agent_library_policy".to_string(),
         String::new(),

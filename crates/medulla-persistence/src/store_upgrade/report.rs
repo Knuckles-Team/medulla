@@ -55,7 +55,7 @@ pub struct StoreReport {
 }
 
 impl StoreReport {
-    pub(super) fn new(
+    pub fn new(
         file: &str,
         layout: Option<OwnerLayout>,
         status: StoreStatus,

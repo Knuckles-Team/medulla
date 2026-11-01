@@ -198,7 +198,7 @@ impl Drop for RaftTransportAuth {
 }
 
 impl RaftTransportAuth {
-    pub(crate) fn new(
+    pub fn new(
         local_node: NodeId,
         key: &[u8; 32],
         peers: impl IntoIterator<Item = (NodeId, String)>,

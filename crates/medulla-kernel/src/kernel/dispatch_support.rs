@@ -3,7 +3,7 @@
 /// The replicated-apply scope carried by every committed native command.
 #[cfg(feature = "raft")]
 #[derive(Clone, Copy)]
-pub(crate) struct ReplicatedApplyScope {
+pub struct ReplicatedApplyScope {
     /// Leader-selected commit time every replica applies.
     pub(crate) committed_at_ms: u64,
     /// Placement epoch of the committing authority.
@@ -11,7 +11,7 @@ pub(crate) struct ReplicatedApplyScope {
     /// Fencing token of the committing authority, when present.
     pub(crate) fencing_token: Option<u64>,
     /// Whether this command may bootstrap identity.
-    pub(crate) identity_bootstrap: bool,
+    pub identity_bootstrap: bool,
 }
 
 #[cfg(feature = "raft")]

@@ -272,7 +272,7 @@ impl NativeMutationCommand {
 
     /// Convert only an explicitly inventoried public mutation into its bounded,
     /// encrypted native consensus domain. There is no raw public-method variant.
-    pub(crate) fn from_public_method(
+    pub fn from_public_method(
         method: Method,
         server_secret: &str,
     ) -> Result<Self, Box<Method>> {
@@ -286,11 +286,11 @@ impl NativeMutationCommand {
         Ok(NATIVE_DOMAIN_CONSTRUCTORS[domain as usize](sealed_method))
     }
 
-    pub(crate) fn domain(&self) -> Option<NativeMutationDomain> {
+    pub fn domain(&self) -> Option<NativeMutationDomain> {
         command_domain(self)
     }
 
-    pub(crate) fn open_public_method(&self, server_secret: &str) -> Result<Option<Method>, String> {
+    pub fn open_public_method(&self, server_secret: &str) -> Result<Option<Method>, String> {
         let Some(sealed) = sealed_method(self) else {
             return Ok(None);
         };
@@ -329,7 +329,7 @@ impl NativeMutationCommand {
         Ok(())
     }
 
-    pub(crate) fn transaction_participant(
+    pub fn transaction_participant(
         phase: TransactionParticipantPhase,
         coordinator_id: String,
         participant_id: u64,
@@ -353,7 +353,7 @@ impl NativeMutationCommand {
         Ok(command)
     }
 
-    pub(crate) fn node_info(
+    pub fn node_info(
         info: &medulla_persistence::node_info_store::NodeInfo,
         server_secret: &str,
     ) -> Result<Self, String> {
@@ -391,7 +391,7 @@ impl NativeMutationCommand {
     }
 
     #[cfg(feature = "jobs")]
-    pub(crate) fn job_publication_commit(
+    pub fn job_publication_commit(
         coordinator_id: String,
         plan: &[u8],
         server_secret: &str,
@@ -405,7 +405,7 @@ impl NativeMutationCommand {
     }
 
     #[cfg(feature = "jobs")]
-    pub(crate) fn job_publication_finalize(
+    pub fn job_publication_finalize(
         coordinator_id: String,
         receipt: &[u8],
         server_secret: &str,

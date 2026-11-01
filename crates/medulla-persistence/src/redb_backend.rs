@@ -476,7 +476,7 @@ pub(crate) struct RedbGroupCommitTestControl {
 
 #[cfg(test)]
 impl RedbGroupCommitTestControl {
-    pub(crate) fn new() -> (
+    pub fn new() -> (
         Arc<Self>,
         std::sync::mpsc::Receiver<()>,
         std::sync::mpsc::SyncSender<()>,
@@ -514,7 +514,7 @@ struct ReleaseOnDrop(Option<std::sync::mpsc::SyncSender<()>>);
 
 #[cfg(test)]
 impl ReleaseOnDrop {
-    fn new(sender: std::sync::mpsc::SyncSender<()>) -> Self {
+    pub fn new(sender: std::sync::mpsc::SyncSender<()>) -> Self {
         Self(Some(sender))
     }
 

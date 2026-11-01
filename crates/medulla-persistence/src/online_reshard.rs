@@ -271,7 +271,7 @@ pub struct RawGraphRows {
     /// graft.  It must not fall through to an ordinary import if the durable
     /// reservation was canceled while the command was queued.
     #[serde(skip)]
-    pub(crate) requires_graft_reservation: bool,
+    pub requires_graft_reservation: bool,
 }
 
 impl Default for RawGraphRows {

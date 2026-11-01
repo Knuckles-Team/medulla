@@ -170,7 +170,7 @@ struct Staging {
 }
 
 impl Staging {
-    fn new(data_dir: &Path, options: &ApplyOptions) -> Self {
+    pub fn new(data_dir: &Path, options: &ApplyOptions) -> Self {
         Self {
             data_dir: data_dir.to_path_buf(),
             explicit_root: options.staging_dir.clone(),

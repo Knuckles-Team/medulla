@@ -58,7 +58,7 @@ impl RedbBackend {
     /// The durable cluster-topology self-report store (CONCEPT:MEDULLA-KG.sharding.cluster-topology, ADR-1 / W1.1).
     /// Always present (see the field doc); empty on a single-node deployment that
     /// never ran a clustered startup.
-    pub(crate) fn node_info(&self) -> Arc<super::super::node_info_store::NodeInfoStore> {
+    pub fn node_info(&self) -> Arc<super::super::node_info_store::NodeInfoStore> {
         self.node_info.clone()
     }
 

@@ -286,7 +286,7 @@ struct SnapshotPair<T> {
 }
 
 impl<T> SnapshotPair<T> {
-    fn new(before: T, after: T) -> Self {
+    pub fn new(before: T, after: T) -> Self {
         Self { before, after }
     }
 }

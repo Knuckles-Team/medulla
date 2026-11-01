@@ -73,7 +73,7 @@ where
 #[cfg(feature = "modality-serving")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum SanitizedModalityMutation {
+pub enum SanitizedModalityMutation {
     Ingest,
     IngestStream,
     Delete,
@@ -84,7 +84,7 @@ pub(crate) enum SanitizedModalityMutation {
 
 #[cfg(feature = "modality-serving")]
 impl SanitizedModalityMutation {
-    pub(crate) fn from_served(
+    pub fn from_served(
         op: &medulla_types::ServedModalityOp,
     ) -> Option<(Self, medulla_types::ServedModalityKind)> {
         use medulla_types::ServedModalityOp;
@@ -277,7 +277,7 @@ fn encode_sanitized_modality_payload<T: Serialize + ?Sized>(
 /// both Raft state-machine apply and leader retry/replay; callers must not
 /// reimplement the untagged `ResultPayload` or stream-cardinality checks.
 #[cfg(feature = "modality-serving")]
-pub(crate) fn decode_sanitized_modality_result(
+pub fn decode_sanitized_modality_result(
     modality: medulla_types::ServedModalityKind,
     operation: SanitizedModalityMutation,
     result_msgpack: &[u8],
@@ -300,7 +300,7 @@ struct SanitizedModalityAuthorityBinding {
 
 #[cfg(feature = "modality-serving")]
 impl SanitizedModalityAuthorityBinding {
-    fn new(tenant_scope: &str, graph_name: &str, graph_fname: &str) -> Self {
+    pub fn new(tenant_scope: &str, graph_name: &str, graph_fname: &str) -> Self {
         Self {
             tenant_scope: tenant_scope.to_string(),
             graph_name: graph_name.to_string(),
@@ -347,7 +347,7 @@ pub struct SanitizedModalityRaftCommand {
 
 #[cfg(feature = "modality-serving")]
 impl SanitizedModalityRaftCommand {
-    pub(crate) fn new(
+    pub fn new(
         server_secret: &str,
         authority: (&str, &str, &str),
         kind: (medulla_types::ServedModalityKind, SanitizedModalityMutation),

@@ -41,7 +41,7 @@ impl Drop for NativeLaneFixture {
 }
 
 impl NativeLaneFixture {
-    pub(super) fn new(policy: DevelopmentLaneQuotaPolicy) -> Self {
+    pub fn new(policy: DevelopmentLaneQuotaPolicy) -> Self {
         let path = test_path("fixture");
         // `Shard::open` materializes the whole declared shard census, so
         // the hand-written table bootstrap the raw path needed is gone.

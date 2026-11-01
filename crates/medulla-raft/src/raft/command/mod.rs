@@ -60,7 +60,7 @@ impl ReplicatedMutation {
     /// Build the sole caller-shaped graph command. The raw method is only an
     /// in-process intermediate and must be destination-bound with
     /// [`RaftRequest::bind_graph_command`] before it reaches Raft.
-    pub(crate) fn caller_graph(method: Method, server_secret: &str) -> Result<Self, String> {
+    pub fn caller_graph(method: Method, server_secret: &str) -> Result<Self, String> {
         Ok(Self::Graph {
             sealed_method: SealedNativeMethod::new_caller_graph(server_secret, &method)?,
         })
@@ -75,7 +75,7 @@ impl ReplicatedMutation {
         }
     }
 
-    pub(crate) fn bind_graph_command(
+    pub fn bind_graph_command(
         &mut self,
         server_secret: &str,
         request: &crate::raft::RaftRequest,
@@ -89,7 +89,7 @@ impl ReplicatedMutation {
         }
     }
 
-    pub(crate) fn validate_graph_command(
+    pub fn validate_graph_command(
         &self,
         server_secret: &str,
         request: &crate::raft::RaftRequest,
@@ -116,7 +116,7 @@ impl ReplicatedMutation {
         Self::change_envelope_with_budget(envelope, None, server_secret)
     }
 
-    pub(crate) fn change_envelope_with_budget(
+    pub fn change_envelope_with_budget(
         envelope: &medulla_types::change_envelope::ChangeEnvelope,
         source_budget: Option<&medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,
         server_secret: &str,
@@ -200,7 +200,7 @@ impl ReplicatedMutation {
     /// Build one internal replicated park command after a durable checkpoint
     /// determined that the next immutable unit is underfunded. No public
     /// Method variant can construct this command.
-    pub(crate) fn enrichment_park(
+    pub fn enrichment_park(
         park: &medulla_types::native_control::EnrichmentBudgetPark,
         server_secret: &str,
     ) -> Result<Self, String> {
@@ -250,7 +250,7 @@ impl ReplicatedMutation {
     }
 
     #[cfg(feature = "modality-serving")]
-    pub(crate) fn served_modality(command: SanitizedModalityRaftCommand) -> Self {
+    pub fn served_modality(command: SanitizedModalityRaftCommand) -> Self {
         Self::Native {
             command: NativeMutationCommand::ServedModality {
                 command: Box::new(command),

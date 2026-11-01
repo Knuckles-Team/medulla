@@ -88,7 +88,7 @@ struct ScanAccumulator {
 }
 
 impl ScanAccumulator {
-    fn new(limit: usize) -> Self {
+    pub fn new(limit: usize) -> Self {
         Self {
             page_candidates: BinaryHeap::with_capacity(limit),
             tenant_rollup: HashMap::new(),

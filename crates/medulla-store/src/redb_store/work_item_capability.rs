@@ -44,7 +44,7 @@ pub const NATIVE_WORK_ITEMS: TableDefinition<(&str, &str), &[u8]> =
 /// Stable privacy-safe refusal used when a capability operation reaches a
 /// replicated state-machine apply without the original authenticated envelope.
 /// The apply path must return this before leader/barrier/private-ledger work.
-pub(crate) const AUTHORITY_UNAVAILABLE: &str = "authority_unavailable";
+pub const AUTHORITY_UNAVAILABLE: &str = "authority_unavailable";
 
 // Private exact-input storage does not exist in this checkpoint.  This
 // test-only boundary counter is wired to the actual private-row accesses

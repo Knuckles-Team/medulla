@@ -427,7 +427,7 @@ struct TenantMatcher {
 }
 
 impl TenantMatcher {
-    fn new(tenant: &str) -> Self {
+    pub fn new(tenant: &str) -> Self {
         let tenant = tenant.trim().to_string();
         let slug = canonical_tenant_slug(&tenant);
         Self {

@@ -77,7 +77,7 @@ type Sidecars = (
 struct SidecarOpenCleanup(Vec<std::path::PathBuf>);
 
 impl SidecarOpenCleanup {
-    fn new(paths: &[std::path::PathBuf]) -> Self {
+    pub fn new(paths: &[std::path::PathBuf]) -> Self {
         let mut created = Vec::new();
         for path in paths {
             let mut marker = path.as_os_str().to_os_string();

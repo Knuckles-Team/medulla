@@ -321,7 +321,7 @@ mod py {
         /// (`agent_utilities/knowledge_graph/core/graph_compute.py:1914-1921`).
         #[new]
         #[pyo3(signature = (persist_dir=None, agent_id=None, tenant=None))]
-        fn new(
+        pub fn new(
             persist_dir: Option<String>,
             agent_id: Option<String>,
             tenant: Option<String>,
