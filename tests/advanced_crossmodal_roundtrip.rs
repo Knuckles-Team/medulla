@@ -1406,7 +1406,7 @@ async fn encryption_at_rest_wrong_key_fails_eg394() {
 #[cfg(feature = "streaming")]
 #[tokio::test]
 async fn streaming_cdc_matview_rebuild_eg395() {
-    use medulla_types::wire_streaming::{ContinuousAgg, ContinuousQuerySpec};
+    use medulla_types::wire::{ContinuousAgg, ContinuousQuerySpec};
 
     let state = state().await;
     let hub = {
