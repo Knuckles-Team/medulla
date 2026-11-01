@@ -141,7 +141,7 @@ mod cross_path_consistency_tests {
     use super::{p95_latency, per_call_cost, Declared};
     use medulla_numeric::decision::candidate::CandidateView;
     use medulla_types::decision::CandidateFacts;
-    use medulla_types::test_support::decision::tool_entry_with_cost_latency;
+    use medulla_types::decision_fixtures::decision::tool_entry_with_cost_latency;
 
     #[test]
     fn the_exact_solver_path_and_the_statistical_path_read_the_same_declared_values() {

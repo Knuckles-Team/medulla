@@ -9,7 +9,7 @@ fn bounded<T, const N: usize>(values: Vec<T>) -> BoundedVec<T, N> {
 }
 
 fn candidate(component_id: &str, classification: &[&str]) -> CandidateFacts {
-    crate::test_support::decision::published_candidate(
+    crate::decision_fixtures::decision::published_candidate(
         component_id,
         AgentComponentKind::Tool,
         ONTOLOGY,

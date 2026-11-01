@@ -2,6 +2,10 @@
 //! §13): the plan, the planted refusals, and a brute-force oracle over every
 //! (width, rounds) choice.
 
+use medulla_types::agent_fixtures::topology::facts;
+use medulla_types::agent_fixtures::topology::requirements;
+use medulla_types::agent_fixtures::topology::FAN_OUT_JOIN;
+use medulla_types::agent_fixtures::topology::INDEPENDENT_SUBTASKS;
 use medulla_types::agent_topology::CapacityHeadroom;
 use medulla_types::agent_topology::SchemaAuthority;
 use medulla_types::agent_topology::SubagentFallback;
@@ -19,9 +23,6 @@ use medulla_types::decision::DecisionPolicy;
 use medulla_types::decision::EvidenceClass;
 use medulla_types::decision::TemplateFacts;
 use medulla_types::decision::TOPOLOGY_DECISION_RECORD_SCHEMA_VERSION;
-use medulla_types::test_support::topology::{
-    facts, requirements, FAN_OUT_JOIN, INDEPENDENT_SUBTASKS,
-};
 
 use super::super::{assemble, inputs as build_inputs, replay_check, AssembleError, Assembly};
 use super::fixture::*;

@@ -21,8 +21,8 @@ use crate::decision::statistical::dataset::{
 };
 use crate::decision::EvidenceClass;
 
-use super::decision::{dependency, every_abstain_reason, unit_rational};
-use super::{bounded, digest_text};
+use super::contract_decision::{dependency, every_abstain_reason, unit_rational};
+use crate::test_support::wave::{bounded, digest_text};
 
 /// The question every statistical sample answers.
 pub fn question() -> StatisticalQuestion {

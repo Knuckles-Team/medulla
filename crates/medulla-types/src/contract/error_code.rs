@@ -7,7 +7,9 @@
 //! Writing those three by hand per surface is how five near-identical `as_str`
 //! matches appear; this macro is the single definition they all expand from.
 
-/// Declare a closed refusal-code enum with its wire tokens.
+/// Declare a closed refusal-code enum with its wire tokens. Exported so every
+/// type crate declares its codes the same way: `medulla_types::closed_error_codes!`.
+#[macro_export]
 macro_rules! closed_error_codes {
     (
         $(#[$enum_meta:meta])*
@@ -40,5 +42,3 @@ macro_rules! closed_error_codes {
         }
     };
 }
-
-pub(crate) use closed_error_codes;

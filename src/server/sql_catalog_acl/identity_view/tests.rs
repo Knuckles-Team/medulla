@@ -30,7 +30,7 @@ fn store() -> IdentityStore {
         scopes: [IDENTITY_AUTHENTICATE_SCOPE.to_string()].into(),
     });
     stamp.password_hash = Some("$argon2id$v=19$m=1024,t=1,p=1$c2FsdA$aGFzaA".to_string());
-    let op = medulla_types::test_support::identity::bootstrap_local_op();
+    let op = medulla_types::identity_fixtures::identity::bootstrap_local_op();
     let ctx = ApplyContext {
         now_ms: 1_800_000_000_000,
         classifier: &medulla_capabilities::scopes::ScopeRegistry,
@@ -98,7 +98,7 @@ fn store_with_ann() -> IdentityStore {
         scopes: [IDENTITY_ADMIN_SCOPE.to_string()].into(),
     });
     let create =
-        medulla_types::test_support::identity::create_administrator_op("ann", "principal:ann");
+        medulla_types::identity_fixtures::identity::create_administrator_op("ann", "principal:ann");
     apply(&mut store, &create, &admin);
     store
 }

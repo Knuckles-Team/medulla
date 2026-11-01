@@ -2,8 +2,11 @@ use super::*;
 use crate::server::sql_catalog_acl::{create_owned_table, grant, SqlPrivilege};
 use medulla_query::{Column, ColumnType, TableSchema};
 use medulla_types::acl::RequestContextClaims;
+pub(super) use medulla_types::protocol_fixtures::sql_source;
+pub(super) use medulla_types::protocol_fixtures::sql_source::change;
+pub(super) use medulla_types::protocol_fixtures::sql_source::id;
+pub(super) use medulla_types::protocol_fixtures::sql_source::SqlSourceTarget;
 use medulla_types::storage_wire::{SqlSourceCell, SqlSourceJson, SqlSourceText};
-pub(super) use medulla_types::test_support::sql_source::{self, change, id, SqlSourceTarget};
 
 pub(super) struct Fixture {
     pub(super) directory: PathBuf,

@@ -88,7 +88,7 @@ fn modality_lists_enforce_wire_types_and_both_size_edges() {
 // spec: MEDULLA-TYPED-PACKS-R043
 #[test]
 fn modality_digest_replay_is_canonical_and_direction_sensitive() {
-    let annotations = medulla_types::test_support::contract_wave::pack::annotations();
+    let annotations = medulla_types::catalog_fixtures::contract_pack::annotations();
     assert_eq!(
         annotations_digest(&annotations).unwrap().to_hex(),
         // The golden digest Python's connector-pack client must also produce.

@@ -633,7 +633,7 @@ mod tests {
         graph: &str,
         node: &str,
     ) -> crate::change_envelope::ChangeEnvelope {
-        let mut envelope = medulla_types::test_support::change_envelope::minimal_envelope();
+        let mut envelope = medulla_types::protocol_fixtures::change_envelope::minimal_envelope();
         envelope.envelope_id = format!("envelope-audit-skew-{node}");
         let mutation = &mut envelope.mutation;
         mutation.batch_id = format!("batch-audit-skew-{node}");

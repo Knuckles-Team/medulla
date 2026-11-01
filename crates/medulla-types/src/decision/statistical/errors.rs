@@ -4,7 +4,7 @@
 //! surface's `DecisionErrorCode`: these refusals are about feature schemas,
 //! heads, datasets and jobs, none of which the assembly layer has.
 
-use crate::contract::closed_error_codes;
+use crate::closed_error_codes;
 
 closed_error_codes! {
     /// Every typed refusal `Decide`, `DecisionFit` and `DecisionEval` answer with.

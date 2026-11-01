@@ -5,13 +5,5 @@
 //! (the same precedent as medulla-query's `dev-scope-grant`). Production builds never
 //! enable it.
 
-pub mod change_envelope;
-pub mod contract_wave;
-pub mod decision;
-pub mod host_start;
-pub mod identity;
-pub mod method_bodies;
 pub mod repository_index;
-pub mod source_ingestion;
-pub mod sql_source;
-pub mod topology;
+pub mod wave;

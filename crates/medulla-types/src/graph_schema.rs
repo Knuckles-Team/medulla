@@ -14,7 +14,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::{closed_error_codes, BoundedVec, Digest256, ResourceId};
+use crate::closed_error_codes;
+use crate::contract::{BoundedVec, Digest256, ResourceId};
 
 pub mod approval;
 pub mod drift;

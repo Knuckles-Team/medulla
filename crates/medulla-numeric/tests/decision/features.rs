@@ -32,7 +32,7 @@ fn schema(missing: MissingValue) -> FeatureSchemaBody {
                 },
                 missing: MissingValue::Abstain,
             },
-            medulla_types::test_support::decision::summary_text_feature(),
+            medulla_types::decision_fixtures::decision::summary_text_feature(),
             FeatureSpec {
                 name: "cost".to_string(),
                 kind: FeatureKind::DeclaredCostMicros,

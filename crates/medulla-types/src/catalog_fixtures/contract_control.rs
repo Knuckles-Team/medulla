@@ -8,7 +8,7 @@ use crate::mutation_outbox::{
     RewindTarget,
 };
 
-use super::pack::connector;
+use super::contract_pack::connector;
 
 /// Every schema-source operation, labelled by its wire op tag.
 pub fn graph_schema_ops() -> Vec<(&'static str, GraphSchemaOp)> {
@@ -19,7 +19,7 @@ pub fn graph_schema_ops() -> Vec<(&'static str, GraphSchemaOp)> {
                 source_id: "admin:contract-sample".to_string(),
                 shapes_ttl: Some("@prefix sh: <http://www.w3.org/ns/shacl#> .".to_string()),
                 ontology_ttl: Some("@prefix owl: <http://www.w3.org/2002/07/owl#> .".to_string()),
-                if_composed_digest: Some(super::digest_text(0xd1)),
+                if_composed_digest: Some(crate::test_support::wave::digest_text(0xd1)),
             },
         ),
         (
@@ -33,7 +33,7 @@ pub fn graph_schema_ops() -> Vec<(&'static str, GraphSchemaOp)> {
             "GraphSchema.detach",
             GraphSchemaOp::Detach {
                 source_id: "admin:contract-sample".to_string(),
-                if_composed_digest: Some(super::digest_text(0xd2)),
+                if_composed_digest: Some(crate::test_support::wave::digest_text(0xd2)),
             },
         ),
         (
@@ -42,7 +42,7 @@ pub fn graph_schema_ops() -> Vec<(&'static str, GraphSchemaOp)> {
                 source_id: "approved:contract-sample".to_string(),
                 contract: repair_contract(),
                 approval_lease_id: "action_approval:contract-sample".to_string(),
-                if_composed_digest: Some(super::digest_text(0xd3)),
+                if_composed_digest: Some(crate::test_support::wave::digest_text(0xd3)),
             },
         ),
         (

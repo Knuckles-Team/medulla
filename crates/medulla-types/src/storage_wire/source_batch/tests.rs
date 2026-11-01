@@ -1,7 +1,9 @@
 use super::*;
 use serde_json::json;
 
-use crate::test_support::sql_source::{batch as shared_batch, id, SqlSourceTarget};
+use crate::protocol_fixtures::sql_source::batch as shared_batch;
+use crate::protocol_fixtures::sql_source::id;
+use crate::protocol_fixtures::sql_source::SqlSourceTarget;
 
 /// The shared fixture at its second position, so cursor-advance checks apply.
 fn batch(cells: Vec<SqlSourceCell>) -> SqlSourceBatch {

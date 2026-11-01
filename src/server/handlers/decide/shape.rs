@@ -114,7 +114,7 @@ pub(crate) fn check_decision_shape(record: &DecisionRecord) -> Result<(), String
 mod tests {
     use super::*;
     use medulla_types::agent_component::AgentComponentKind;
-    use medulla_types::test_support::contract_wave::decision;
+    use medulla_types::decision_fixtures::contract_decision;
 
     fn solved() -> DecisionRecord {
         decision::record(

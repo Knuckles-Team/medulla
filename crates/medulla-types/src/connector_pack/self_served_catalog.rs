@@ -130,7 +130,7 @@ mod tests {
     fn request() -> McpSelfServedCatalogAttestRequest {
         let candidate = crate::connector_pack::catalog_authority::sample_authority_candidate();
         McpSelfServedCatalogAttestRequest {
-            context: crate::test_support::contract_wave::decision::mutation_context(),
+            context: crate::agent_fixtures::agent_library::mutation_context(),
             connector: ResourceId::new("graph-os").unwrap(),
             server_name: "graph-os".into(),
             server_entry_digest: candidate.component_digest,
@@ -252,7 +252,7 @@ mod tests {
     #[test]
     fn import_must_carry_the_current_binding_and_pinned_server_entry() {
         let row = attest(None, &candidate(&request(), 0)).unwrap();
-        let mut index = crate::test_support::contract_wave::pack::index();
+        let mut index = crate::catalog_fixtures::contract_pack::index();
         index.connector = ResourceId::new("graph-os").unwrap();
         index.catalog = row.binding.clone();
         index.server.body.sha256 = row.component_digest;

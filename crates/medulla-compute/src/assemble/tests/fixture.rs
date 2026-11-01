@@ -45,7 +45,7 @@ pub fn candidate(
 ) -> CandidateFacts {
     CandidateFacts {
         fact_premises: bounded(vec![claim(component_id)]),
-        ..medulla_types::test_support::decision::published_candidate(
+        ..medulla_types::decision_fixtures::decision::published_candidate(
             component_id,
             kind,
             &digest_of(component_id),

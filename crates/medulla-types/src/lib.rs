@@ -461,6 +461,16 @@ pub mod source_ingestion;
 #[cfg(feature = "statechart")]
 pub mod statechart;
 // EH-408 / EH-409 — the receipt of a served telemetry derivation.
+#[cfg(any(test, feature = "test-support"))]
+pub mod agent_fixtures;
+#[cfg(any(test, feature = "test-support"))]
+pub mod catalog_fixtures;
+#[cfg(any(test, feature = "test-support"))]
+pub mod decision_fixtures;
+#[cfg(any(test, feature = "test-support"))]
+pub mod identity_fixtures;
+#[cfg(any(test, feature = "test-support"))]
+pub mod protocol_fixtures;
 pub mod storage_wire;
 pub mod telemetry_derive;
 #[cfg(any(test, feature = "test-support"))]

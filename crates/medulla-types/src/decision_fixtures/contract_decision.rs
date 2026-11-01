@@ -5,8 +5,8 @@
 //! against a value that no longer has the shape it claims.
 
 use crate::agent_component::{AgentComponentFacts, AgentComponentKind, ComponentDependency};
-use crate::agent_library::{AgentLibraryLifecycle, AgentLibraryMutationContext};
-use crate::contract::Nonce;
+use crate::agent_fixtures::agent_library::mutation_context;
+use crate::agent_library::AgentLibraryLifecycle;
 use crate::decision::{
     AbstainReason, AssemblyConstraints, AssemblyRequest, AssemblyRequirements, CandidateFacts,
     CandidateSourceRecord, ColdStart, CoverageDerivation, DecideRequest, DecisionCommitRequest,
@@ -21,7 +21,8 @@ use crate::solve::Algorithm;
 use crate::solve::ObjectiveValue;
 use crate::solve_scalar::Scalar;
 
-use super::{bounded, digest_text, solver};
+use super::contract_solver as solver;
+use crate::test_support::wave::{bounded, digest_text};
 
 /// A pinned component reference.
 pub fn dependency(component_id: &str, kind: AgentComponentKind) -> ComponentDependency {
@@ -29,26 +30,6 @@ pub fn dependency(component_id: &str, kind: AgentComponentKind) -> ComponentDepe
         component_id: component_id.to_string(),
         kind,
         definition_digest: digest_text(0x11),
-    }
-}
-
-/// The mutation context every agent-library write carries.
-pub fn mutation_context() -> AgentLibraryMutationContext {
-    AgentLibraryMutationContext {
-        request_id: 1,
-        principal: "principal-a".to_string(),
-        caller_principal: "caller-a".to_string(),
-        attempt_nonce: Nonce::from_bytes([7; 32]),
-        tenant_id: "tenant-a".to_string(),
-        actor_scope: "scope-a".to_string(),
-        purpose_id: "purpose-a".to_string(),
-        policy_revision: "policy-1".to_string(),
-        policy_digest: digest_text(0x22),
-        policy_decision_id: "decision-1".to_string(),
-        idempotency_key: "idempotency-1".to_string(),
-        expected_revision: Some(1),
-        trace_id: Some("trace-1".to_string()),
-        created_at_ms: 1_700_000_000_000,
     }
 }
 
@@ -364,5 +345,5 @@ pub fn unit_rational(numerator: u64, denominator: u64) -> UnitRationalWire {
 
 /// One evaluate-only statistical question.
 pub fn decide_request() -> DecideRequest {
-    super::statistical::decide_request()
+    super::contract_statistical::decide_request()
 }

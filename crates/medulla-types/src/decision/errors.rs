@@ -3,7 +3,7 @@
 //! Each code is the `"CODE: detail"` prefix of an error response, so a caller
 //! branches on the code and reads the detail, rather than matching prose.
 
-use crate::contract::closed_error_codes;
+use crate::closed_error_codes;
 
 closed_error_codes! {
     /// Every typed refusal the assembly, commit and statistical decision

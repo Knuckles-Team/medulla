@@ -3,7 +3,7 @@ use crate::redb_store::work_item::test_shard::{open, with_nodes, GRAPH};
 use medulla_types::host_start::HostStartInterfaces;
 
 fn request() -> IssueHostStartGrantRequest {
-    let mut request = medulla_types::test_support::host_start::host_start_request("tenant-a");
+    let mut request = medulla_types::agent_fixtures::host_start::host_start_request("tenant-a");
     request.binding.interfaces = HostStartInterfaces::Terminal;
     request.binding.policy_revision = "revision-1".into();
     request

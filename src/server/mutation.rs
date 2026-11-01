@@ -2385,7 +2385,7 @@ mod tests {
     fn pack_and_agent_layer_write_methods_are_the_local_only_five() {
         // Only the mutating ops are LocalOnly: the capability policy is
         // runtime-conditional, so Status/Current reads classify ReadOnly.
-        let ctx = medulla_types::test_support::contract_wave::decision::mutation_context;
+        let ctx = medulla_types::agent_fixtures::agent_library::mutation_context;
         let methods: [(&str, Method); 5] = [
             (
                 "ConnectorPack",
@@ -2393,8 +2393,7 @@ mod tests {
                     op: Box::new(medulla_types::connector_pack::ConnectorPackOp::Unbind {
                         request: medulla_types::connector_pack::ConnectorPackUnbindRequest {
                             context: ctx(),
-                            connector: medulla_types::test_support::contract_wave::pack::connector(
-                            ),
+                            connector: medulla_types::catalog_fixtures::contract_pack::connector(),
                         },
                     }),
                 },

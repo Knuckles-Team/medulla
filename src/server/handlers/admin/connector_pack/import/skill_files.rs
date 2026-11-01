@@ -58,7 +58,7 @@ mod tests {
 
     fn entry(name: &str, uri: &str, references: Vec<PackRef>) -> PackEntry {
         let mut entry =
-            medulla_types::test_support::contract_wave::pack::entry(PackEntryKind::SkillFile, name);
+            medulla_types::catalog_fixtures::contract_pack::entry(PackEntryKind::SkillFile, name);
         entry.uri = uri.to_string();
         entry.references = medulla_types::contract::BoundedVec::new(references).unwrap();
         entry

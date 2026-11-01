@@ -2,7 +2,7 @@ use super::*;
 use crate::control_lease::ControlLeaseView;
 
 fn request() -> IssueHostStartGrantRequest {
-    crate::test_support::host_start::host_start_request("tenant-a")
+    crate::agent_fixtures::host_start::host_start_request("tenant-a")
 }
 
 // spec: MEDULLA-DURABLE-KERNEL-R030.1.1

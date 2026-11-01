@@ -418,7 +418,7 @@ fn contract_wave_rows_are_internal_with_no_consumer() {
 /// `server::access::requires_write` cannot disagree about an operation.
 #[test]
 fn contract_wave_op_policies_follow_their_ops() {
-    use medulla_types::test_support::contract_wave::contract_wave_samples;
+    use medulla_types::protocol_fixtures::contract_wave::contract_wave_samples;
 
     let reads = [
         "ConnectorPack.status",
@@ -459,7 +459,7 @@ fn contract_wave_op_policies_follow_their_ops() {
 /// connector's ordinary pack-control one.
 #[test]
 fn a_mass_withdrawal_import_needs_the_admin_action() {
-    use medulla_types::test_support::contract_wave::pack;
+    use medulla_types::catalog_fixtures::contract_pack;
 
     let ordinary = pack::ops()
         .into_iter()

@@ -2,7 +2,9 @@
 
 use super::*;
 use medulla_types::decision::statistical::declared::DeclaredOption;
-use medulla_types::decision::task_plan::{TaskPlanProposal, TaskPlanTask, TASK_PLAN_POLICY_REVISION};
+use medulla_types::decision::task_plan::{
+    TaskPlanProposal, TaskPlanTask, TASK_PLAN_POLICY_REVISION,
+};
 
 fn task_request(pin: &ComponentDependency) -> DecideRequest {
     let tasks: Vec<TaskPlanTask> = [

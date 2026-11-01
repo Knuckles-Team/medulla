@@ -20,7 +20,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::closed_error_codes;
+use crate::closed_error_codes;
 use crate::contract::BoundedVec;
 use crate::decision::statistical::{
     FeatureMatrixRef, QuestionKind, StatisticalDecisionRecord, StatisticalOutcome,

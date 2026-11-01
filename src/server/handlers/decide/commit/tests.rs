@@ -5,6 +5,10 @@ use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
 use medulla_compute::assemble::{assemble, inputs, replay_check, RecordIdentity};
+use medulla_types::agent_fixtures::topology::facts;
+use medulla_types::agent_fixtures::topology::requirements;
+use medulla_types::agent_fixtures::topology::FAN_OUT_JOIN;
+use medulla_types::agent_fixtures::topology::INDEPENDENT_SUBTASKS;
 use medulla_types::agent_topology::CapacityHeadroom;
 use medulla_types::agent_topology::SchemaAuthority;
 use medulla_types::agent_topology::TopologyAdmission;
@@ -18,9 +22,6 @@ use medulla_types::decision::TemplateFacts;
 use medulla_types::delegation::AgentGraphEntryRef;
 use medulla_types::native_control::{
     CapacityCellUpdateRequest, CapacityStatusRequest, NativeControlSchemaVersion,
-};
-use medulla_types::test_support::topology::{
-    facts, requirements, FAN_OUT_JOIN, INDEPENDENT_SUBTASKS,
 };
 use tokio::sync::RwLock;
 

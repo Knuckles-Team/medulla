@@ -20,15 +20,18 @@ use medulla_types::agent_component::{
     AGENT_COMPONENT_SCHEMA_VERSION,
 };
 use medulla_types::agent_library::{refuse_withdrawn, AgentLibraryLifecycle};
+use medulla_types::catalog_fixtures::contract_control;
+use medulla_types::catalog_fixtures::contract_pack;
 use medulla_types::connector_pack::digest as pack_digests;
 use medulla_types::decision::{
     DecisionErrorCode, DecisionPolicy, DecisionRecord, UnitRationalWire,
     MAX_UNIT_RATIONAL_DENOMINATOR,
 };
+use medulla_types::decision_fixtures::contract_decision;
+use medulla_types::decision_fixtures::contract_solver;
+use medulla_types::decision_fixtures::contract_statistical;
 use medulla_types::protocol::Method;
-use medulla_types::test_support::contract_wave::{
-    contract_wave_samples, control, decision, pack, solver, statistical,
-};
+use medulla_types::protocol_fixtures::contract_wave::contract_wave_samples;
 
 /// Every sample survives both codecs and keeps its wire tag.
 ///
@@ -141,7 +144,10 @@ fn a_newer_record_version_is_a_typed_refusal() {
         .next()
         .expect("the acted outcome is first");
     assert!(
-        matches!(acted, medulla_types::decision::StatisticalOutcome::Acted { .. }),
+        matches!(
+            acted,
+            medulla_types::decision::StatisticalOutcome::Acted { .. }
+        ),
         "the first statistical sample must be the acted one"
     );
 }
@@ -384,8 +390,10 @@ fn the_decision_digest_is_domain_separated_and_excludes_itself() {
     );
     assert!(first.starts_with(medulla_types::solve_scalar::DIGEST_TEXT_PREFIX));
 
-    let policy_under_record_domain =
-        medulla_types::solve_scalar::digest_text(digest::DECISION_RECORD_DIGEST_DOMAIN, &decision::policy());
+    let policy_under_record_domain = medulla_types::solve_scalar::digest_text(
+        digest::DECISION_RECORD_DIGEST_DOMAIN,
+        &decision::policy(),
+    );
     assert_ne!(
         policy_under_record_domain,
         digest::policy_digest(&decision::policy()),
@@ -454,7 +462,7 @@ fn sample_entry() -> AgentComponentEntry {
 }
 
 fn digest_text(seed: u8) -> String {
-    medulla_types::test_support::contract_wave::digest_text(seed)
+    medulla_types::test_support::wave::digest_text(seed)
 }
 
 /// Unused imports would be a compile error, so these keep the sample modules

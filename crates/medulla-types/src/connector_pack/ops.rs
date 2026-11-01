@@ -268,7 +268,7 @@ mod tests {
 
     #[test]
     fn source_approval_is_a_mutating_pack_control_operation() {
-        let (_, op) = crate::test_support::contract_wave::pack::ops()
+        let (_, op) = crate::catalog_fixtures::contract_pack::ops()
             .into_iter()
             .find(|(label, _)| *label == "ConnectorPack.approve_source")
             .expect("contract-wave samples carry source approval");

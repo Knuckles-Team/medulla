@@ -44,7 +44,7 @@ fn show_refusals() {
 
 /// The shared fixture request, as a first delta with no prior checkpoint.
 fn first_ingest() -> SourceIngestionRequest {
-    let mut batch = medulla_types::test_support::source_ingestion::request()
+    let mut batch = medulla_types::catalog_fixtures::source_ingestion::request()
         .as_batch()
         .clone();
     batch.expected_previous_checkpoint = None;

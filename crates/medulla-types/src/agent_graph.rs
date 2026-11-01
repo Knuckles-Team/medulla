@@ -2487,7 +2487,7 @@ mod tests {
             kind: AgentComponentKind::Ontology,
             definition_digest: digest('c'),
         });
-        rich.topology = Some(crate::test_support::topology::facts());
+        rich.topology = Some(crate::agent_fixtures::topology::facts());
         rich
     }
 }

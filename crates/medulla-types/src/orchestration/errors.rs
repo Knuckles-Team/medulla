@@ -10,7 +10,7 @@
 //! and the three R802 codes are the ones the spec rows name, the rest are the
 //! vocabulary's own additional refusals.
 
-use crate::contract::closed_error_codes;
+use crate::closed_error_codes;
 
 closed_error_codes! {
     /// Every refusal a harness-component write, an improvement-library write

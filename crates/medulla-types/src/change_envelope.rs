@@ -813,7 +813,7 @@ pub fn compare_cursor_positions(left: &CursorPosition, right: &CursorPosition) -
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::change_envelope::minimal_envelope;
+    use crate::protocol_fixtures::change_envelope::minimal_envelope;
 
     #[test]
     fn cursor_never_lexically_orders_opaque_values() {

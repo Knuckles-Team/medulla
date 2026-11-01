@@ -225,7 +225,7 @@ impl DebeziumChangeEvent {
             lineage: Vec::new(),
             // A policy proof is required for `ChangeEnvelope::validate` to
             // accept any material object (see
-            // `test_support::change_envelope::minimal_envelope`); the bridge
+            // `protocol_fixtures::change_envelope::minimal_envelope`); the bridge
             // tags every bridged row with its source table as a placeholder
             // classification until a real policy mapping (a later child)
             // replaces it.

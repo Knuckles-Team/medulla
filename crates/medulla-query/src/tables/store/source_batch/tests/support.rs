@@ -14,7 +14,7 @@ use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationOutboxIntent;
 use medulla_types::mutation_scope::MutationSurface;
 use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
-use medulla_types::test_support::sql_source;
+use medulla_types::protocol_fixtures::sql_source;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -95,7 +95,8 @@ fn schema() -> TableSchema {
     )
 }
 
-pub(super) use medulla_types::test_support::sql_source::{change, id};
+pub(super) use medulla_types::protocol_fixtures::sql_source::change;
+pub(super) use medulla_types::protocol_fixtures::sql_source::id;
 
 pub(super) fn request(schema: &TableSchema, cells: Vec<SqlSourceCell>) -> SqlSourceBatchRequest {
     let columns: Vec<&str> = schema

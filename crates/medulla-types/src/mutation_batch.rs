@@ -46,7 +46,7 @@ pub(crate) mod tests {
                 nonce: crate::contract::Nonce::from_bytes([request_id as u8; 32]),
                 now_ms: 10,
             },
-            crate::test_support::change_envelope::compiled_batch_operation(),
+            crate::protocol_fixtures::change_envelope::compiled_batch_operation(),
         )
         .unwrap()
     }

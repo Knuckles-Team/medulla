@@ -202,7 +202,7 @@ fn schema() -> FeatureSchemaBody {
     FeatureSchemaBody {
         schema_version: FEATURE_SCHEMA_VERSION,
         features: BoundedVec::new(vec![
-            medulla_types::test_support::decision::summary_text_feature(),
+            medulla_types::decision_fixtures::decision::summary_text_feature(),
             FeatureSpec {
                 name: "coverage".to_string(),
                 kind: FeatureKind::CoverageFraction {
@@ -1036,7 +1036,7 @@ async fn graph_candidates_are_read_through_acl_rls_and_a_select_only_plan() {
         schema_version: FEATURE_SCHEMA_VERSION,
         features: BoundedVec::new(vec![
             number_feature("score"),
-            medulla_types::test_support::decision::summary_text_feature(),
+            medulla_types::decision_fixtures::decision::summary_text_feature(),
         ])
         .unwrap(),
     };
@@ -1166,7 +1166,7 @@ async fn graph_log_record(h: &Harness) -> StatisticalDecisionRecord {
         schema_version: FEATURE_SCHEMA_VERSION,
         features: BoundedVec::new(vec![
             number_feature("score"),
-            medulla_types::test_support::decision::summary_text_feature(),
+            medulla_types::decision_fixtures::decision::summary_text_feature(),
         ])
         .unwrap(),
     };

@@ -23,7 +23,7 @@ pub fn typed_samples() -> Vec<(&'static str, Method)> {
     samples.push((
         "SourceIngest",
         Method::SourceIngest {
-            request: Box::new(super::source_ingestion::request()),
+            request: Box::new(crate::catalog_fixtures::source_ingestion::request()),
         },
     ));
     #[cfg(feature = "query")]
@@ -45,7 +45,7 @@ fn harness_config_sample() -> Method {
     use crate::contract::BoundedVec;
     use crate::decision::{QuestionKind, TypedParam, TypedValue};
 
-    let mut request = super::contract_wave::statistical::decide_request();
+    let mut request = crate::decision_fixtures::contract_statistical::decide_request();
     request.question.kind = QuestionKind::HarnessConfig;
     request.question.question_id = "harness.configuration".into();
     request.head = None;

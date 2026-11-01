@@ -12,8 +12,8 @@ use crate::connector_pack::{
 };
 use crate::contract::{Digest256, ResourceId};
 
-use super::decision::mutation_context;
-use super::{bounded, raw_digest};
+use crate::agent_fixtures::agent_library::mutation_context;
+use crate::test_support::wave::{bounded, raw_digest};
 
 /// The connector every sample names.
 pub fn connector() -> ResourceId {
@@ -111,7 +111,7 @@ pub fn index() -> ConnectorPackIndex {
         server: entry(PackEntryKind::McpServer, "server"),
         server_package_version: "2.3.1".to_string(),
         archive: PackArchiveRef {
-            blob_digest: super::digest_text(0xc4),
+            blob_digest: crate::test_support::wave::digest_text(0xc4),
             length: 4_096,
             sha256: raw_digest(0xc5),
         },

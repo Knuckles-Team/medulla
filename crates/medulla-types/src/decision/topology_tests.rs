@@ -1,8 +1,10 @@
+use crate::agent_fixtures::topology::facts;
+use crate::agent_fixtures::topology::requirements;
+use crate::agent_fixtures::topology::slot;
 use crate::agent_topology::*;
 use crate::contract::BoundedVec;
 use crate::decision::record::schema_version_for;
-use crate::test_support::contract_wave::decision as wave;
-use crate::test_support::topology::{facts, requirements, slot};
+use crate::decision_fixtures::contract_decision as wave;
 
 #[test]
 fn a_request_may_only_tighten_the_policy_caps() {
