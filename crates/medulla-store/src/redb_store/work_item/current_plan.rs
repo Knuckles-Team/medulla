@@ -131,7 +131,7 @@ fn validate_publication(
 
 /// Owner-only preflight, including before a historical receipt is disclosed.
 /// The write repeats this check atomically; the immutable binding cannot change.
-pub(crate) fn is_owner(
+pub fn is_owner(
     shard: &Shard,
     graph: &str,
     tenant: &str,
@@ -145,7 +145,7 @@ pub(crate) fn is_owner(
 }
 
 /// Owner, snapshot and lease are decoded from one authoritative MVCC row.
-pub(crate) fn read_current(
+pub fn read_current(
     shard: &Shard,
     graph: &str,
     tenant: &str,

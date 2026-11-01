@@ -60,7 +60,7 @@ fn identity_matches(graph: &str, tenant: &str, run: &str, id: &str) -> Result<bo
     Ok(run_owner::work_item_id(graph, tenant, run)? == id)
 }
 
-pub(crate) fn is_owner(
+pub fn is_owner(
     shard: &Shard,
     graph: &str,
     request: &GetRunCheckpointRequest,
@@ -296,7 +296,7 @@ pub(crate) fn publish(
     })
 }
 
-pub(crate) fn read_current(
+pub fn read_current(
     shard: &Shard,
     graph: &str,
     request: &GetRunCheckpointRequest,
