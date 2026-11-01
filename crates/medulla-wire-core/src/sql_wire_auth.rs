@@ -12,7 +12,7 @@ type HmacSha256 = Hmac<Sha256>;
 
 /// Resolve a fail-closed SQL-wire mode while preserving the adapter's public
 /// error wording and validation order.
-pub(crate) fn resolve_mode(
+pub fn resolve_mode(
     auth_secret: &str,
     env_var: &str,
     expected: &str,
@@ -36,7 +36,7 @@ pub(crate) fn resolve_mode(
 }
 
 /// Derive a fixed-size domain-separated credential digest.
-pub(crate) fn derive_hmac_digest(secret: &str, domain: &[u8], principal: &str) -> [u8; 32] {
+pub fn derive_hmac_digest(secret: &str, domain: &[u8], principal: &str) -> [u8; 32] {
     let mut mac =
         HmacSha256::new_from_slice(secret.as_bytes()).expect("HMAC accepts any key length");
     mac.update(domain);
@@ -48,6 +48,6 @@ pub(crate) fn derive_hmac_digest(secret: &str, domain: &[u8], principal: &str) -
 }
 
 /// Derive the public hex form used by the SQL-wire password conventions.
-pub(crate) fn derive_hmac_hex(secret: &str, domain: &[u8], principal: &str) -> String {
+pub fn derive_hmac_hex(secret: &str, domain: &[u8], principal: &str) -> String {
     hex::encode(derive_hmac_digest(secret, domain, principal))
 }

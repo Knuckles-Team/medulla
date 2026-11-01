@@ -56,8 +56,8 @@ use tokio::net::TcpListener;
 use tokio::sync::mpsc;
 use tokio::sync::RwLock;
 
-use crate::broker_wire;
-use crate::broker_wire::BrokerProtocol;
+use medulla_wire_core::broker_wire;
+use medulla_wire_core::broker_wire::BrokerProtocol;
 use medulla_server_blob::kv::KvStore;
 use medulla_server_api::state::ServerState;
 
@@ -222,7 +222,7 @@ const MAX_MULTI_COMMANDS: usize = 1_024;
 const MAX_MULTI_BYTES: usize = 64 * 1024 * 1024;
 const PUBSUB_MAILBOX_CAPACITY: usize = 1_024;
 
-fn invalid_data(message: &'static str) -> std::io::Error {
+pub fn invalid_data(message: &'static str) -> std::io::Error {
     std::io::Error::new(std::io::ErrorKind::InvalidData, message)
 }
 
@@ -1433,7 +1433,7 @@ struct ConnState {
 }
 
 impl ConnState {
-    fn new(proto: u8) -> Self {
+    pub fn new(proto: u8) -> Self {
         ConnState {
             proto,
             actor_scope: None,

@@ -60,7 +60,7 @@ impl PgWireAuthMode {
     /// Resolve the sole secure mode. Empty key material and every legacy or
     /// unknown value are startup errors rather than compatibility fallbacks.
     pub fn resolve(auth_secret: &str) -> std::io::Result<Self> {
-        super::super::sql_wire_auth::resolve_mode(
+        medulla_wire_core::sql_wire_auth::resolve_mode(
             auth_secret,
             PGWIRE_AUTH_ENV,
             "scram",
@@ -87,13 +87,13 @@ impl PgWireAuthMode {
 /// `derived_password(user) = hex(HMAC-SHA256(secret, "pgwire:" || user))` — the
 /// per-user pg password an authorized operator computes from the engine secret.
 pub fn derive_pg_password(secret: &str, user: &str) -> String {
-    super::super::sql_wire_auth::derive_hmac_hex(secret, b"pgwire:", user)
+    medulla_wire_core::sql_wire_auth::derive_hmac_hex(secret, b"pgwire:", user)
 }
 
 /// A deterministic 16-byte SCRAM salt derived from the secret + user, so the same
 /// login re-validates without a stored salt table.
 fn derive_salt(secret: &str, user: &str) -> Vec<u8> {
-    super::super::sql_wire_auth::derive_hmac_digest(secret, b"pgwire-salt:", user)[..16].to_vec()
+    medulla_wire_core::sql_wire_auth::derive_hmac_digest(secret, b"pgwire-salt:", user)[..16].to_vec()
 }
 
 /// `AuthSource` that yields the SCRAM-salted form of the derived per-user password

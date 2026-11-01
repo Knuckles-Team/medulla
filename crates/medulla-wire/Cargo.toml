@@ -34,6 +34,7 @@ medulla-result-types = { path = "../medulla-result-types" }
 medulla-server-api = { path = "../medulla-server-api" }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 medulla-types = { path = "../medulla-types" }
+medulla-wire-core = { path = "../medulla-wire-core" }
 parking_lot = "0.12"
 pgwire = { version = "0.40", optional = true, default-features = false, features = ["server-api", "_ring"] }
 rand = "0.8"
@@ -131,5 +132,6 @@ promql = ["dep:medulla-tsdb", "medulla-tsdb/promql"]
 sqlite-file = ["dep:rustix"]
 
 [dev-dependencies]
+medulla-wire-core = { path = "../medulla-wire-core", features = ["test-support"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
 tempfile = "3"

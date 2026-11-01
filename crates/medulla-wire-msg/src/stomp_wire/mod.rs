@@ -34,10 +34,10 @@
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::broker_wire;
-use crate::broker_wire::invalid_data;
-use crate::broker_wire::prelude::*;
-use crate::broker_wire::BrokerProtocol;
+use medulla_wire_core::broker_wire;
+use medulla_wire_core::broker_wire::invalid_data;
+use medulla_wire_core::broker_wire::prelude::*;
+use medulla_wire_core::broker_wire::BrokerProtocol;
 use medulla_server_api::state::ServerState;
 
 /// Env var: when set (and the binary is built `--features stomp-wire`), the STOMP wire
@@ -106,7 +106,7 @@ struct StompBroker<'a> {
 }
 
 impl<'a> StompBroker<'a> {
-    fn new(state: &'a Arc<RwLock<ServerState>>, graph: &'a str, actor: &'a str) -> Self {
+    pub fn new(state: &'a Arc<RwLock<ServerState>>, graph: &'a str, actor: &'a str) -> Self {
         Self {
             state,
             graph,
@@ -712,7 +712,7 @@ struct Frame {
 }
 
 impl Frame {
-    fn new(command: &str, headers: Vec<(String, String)>, body: Vec<u8>) -> Self {
+    pub fn new(command: &str, headers: Vec<(String, String)>, body: Vec<u8>) -> Self {
         Self {
             command: command.to_string(),
             headers,

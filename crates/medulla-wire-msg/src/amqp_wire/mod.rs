@@ -50,12 +50,12 @@ use std::sync::atomic::AtomicU64;
 
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::ResultPayload;
-use crate::broker_wire;
-use crate::broker_wire::invalid_data;
-use crate::broker_wire::prelude::*;
-use crate::broker_wire::BrokerProtocol;
-use crate::broker_wire::derive_password as derive_amqp_password_impl;
-use crate::broker_wire::verify_password as verify_amqp_password_impl;
+use medulla_wire_core::broker_wire;
+use medulla_wire_core::broker_wire::invalid_data;
+use medulla_wire_core::broker_wire::prelude::*;
+use medulla_wire_core::broker_wire::BrokerProtocol;
+use medulla_wire_core::broker_wire::derive_password as derive_amqp_password_impl;
+use medulla_wire_core::broker_wire::verify_password as verify_amqp_password_impl;
 use medulla_server_api::state::ServerState;
 
 /// Env var: when set (and the binary is built `--features amqp-wire`), the AMQP wire
@@ -212,7 +212,7 @@ const MAX_BROKER_RESULT_ITEMS: usize = 1_000_000;
 const BROKER_LEASE_MS: u64 = 5 * 60 * 1_000;
 const BROKER_PREFETCH: u32 = 32;
 
-fn decode_broker_result<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> Option<T> {
+pub fn decode_broker_result<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> Option<T> {
     broker_wire::decode_broker_result(bytes, MAX_AMQP_CONTENT_BYTES, MAX_BROKER_RESULT_ITEMS)
 }
 
