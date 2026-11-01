@@ -349,3 +349,4 @@ R085.4–R085.7 preserve their parent obligations as rollups. Their .1 children 
 - [ ] T911 MEDULLA-TYPED-PACKS-R701.3 Call the layer binding from the pack import.
 - [ ] T912 MEDULLA-TYPED-PACKS-R701.4 Refuse layer defects.
 - [ ] T913 MEDULLA-TYPED-PACKS-R701.5 Prove the layered import through the served method.
+- [ ] T914 MEDULLA-TYPED-PACKS-R700.9 Distill a source set into a skill-graph bundle.

@@ -618,3 +618,4 @@ consumption acceptance remain open. No atomic approval consumption is added.
 - `MEDULLA-TYPED-PACKS-R700.2`: `crates/medulla-core/tests/skill_graph.rs::single_pass_rules_and_violation_cap_on_10_1000_100000_entries`
 - `MEDULLA-TYPED-PACKS-R700.3`: `tests/packs/test_skill_graph_pack_served.py::test_bundle_validated_in_import_and_candidate_renders_on_demand`
 - `MEDULLA-TYPED-PACKS-R700.4`: `tests/packs/test_skill_graph_pack_served.py::test_hash_index_and_entry_refusals_leave_state_unchanged`
+- `MEDULLA-TYPED-PACKS-R700.9`: `tests/packs/test_skill_graph_distill_served.py::test_distilled_bundle_validates_and_is_not_published`.
