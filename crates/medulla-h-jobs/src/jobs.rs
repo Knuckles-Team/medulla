@@ -126,7 +126,7 @@ use program_validation::*;
 use publication::prepare_consensus_job_publication;
 use publication::publish_staged_result;
 #[cfg(feature = "raft")]
-pub(crate) use publication::{
+pub use publication::{
     apply_consensus_job_publication_commit, apply_consensus_job_publication_finalize,
     build_job_publication_commands, decode_prepared_job_publication,
     validate_job_publication_commit, PreparedJobPublication,
@@ -163,7 +163,7 @@ pub(crate) async fn outbox_job_store(
 /// Handle `Method::AnalyticsJob { op }` (CONCEPT:INT-P2-1). Self-contained: resolves
 /// its own `JobStore` + (for `Submit`/`Resume`) the target `GraphCore` off `state`,
 /// so the dispatch shell can call this directly with no per-graph routing.
-pub(crate) async fn handle(
+pub async fn handle(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     authority: &CarrierAuthority,

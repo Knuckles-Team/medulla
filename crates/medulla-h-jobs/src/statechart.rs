@@ -73,7 +73,7 @@ fn statechart_store(persist_dir: Option<&str>) -> Result<Arc<StatechartStore>, S
 /// Handle `Method::Statechart { op }` (CONCEPT:INT-P2-2). Self-contained: resolves its
 /// own `StatechartStore` off `state.persist_dir`, so the dispatch shell can call this
 /// directly with no per-graph routing.
-pub(crate) async fn handle(
+pub async fn handle(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     authority: &CarrierAuthority,

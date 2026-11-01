@@ -19,7 +19,7 @@ use medulla_server_api::auth::VerifiedRequestContext;
 mod lease_kind_policy;
 
 /// Already-authorized graph and placement context for one WorkItem transition.
-pub(crate) struct HandleContext<'a> {
+pub struct HandleContext<'a> {
     pub(crate) req_id: u64,
     pub(crate) graph_name: &'a str,
     pub(crate) caller: Option<&'a str>,
@@ -37,7 +37,7 @@ pub(crate) struct HandleContext<'a> {
 ///
 /// Submission and resource-reservation methods intentionally return `Err` and
 /// remain with their distinct admission/authority routes.
-pub(crate) async fn try_handle(ctx: HandleContext<'_>, method: Method) -> Result<Response, Method> {
+pub async fn try_handle(ctx: HandleContext<'_>, method: Method) -> Result<Response, Method> {
     let method = match method {
         // Enumerated, not `medulla_store::work_item_kernel_writes!()`: this is the dispatch
         // arm `check_contract_method_reachability.py` reads by name.

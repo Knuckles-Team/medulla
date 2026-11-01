@@ -27,7 +27,7 @@ use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::api::persistence::PersistenceBackend;
 
 /// One decoded WorkItem read.
-pub(crate) enum WorkItemRead {
+pub enum WorkItemRead {
     SessionUsage {
         tenant: String,
         context_id: String,
@@ -94,7 +94,7 @@ impl WorkItemRead {
 }
 
 /// Answer one WorkItem read for the verified carrier tenant.
-pub(crate) async fn answer(
+pub async fn answer(
     req_id: u64,
     graph_name: &str,
     verified_tenant: &str,

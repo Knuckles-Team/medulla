@@ -14,7 +14,7 @@ use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_protocol_types::result_contract::coordination;
 
 /// Already-authorized graph and placement context for one development-lane op.
-pub(crate) struct HandleContext<'a> {
+pub struct HandleContext<'a> {
     pub(crate) req_id: u64,
     pub(crate) graph_name: &'a str,
     pub(crate) persistence: &'a Option<Arc<dyn PersistenceBackend>>,
@@ -80,7 +80,7 @@ async fn prepare(ctx: &HandleContext<'_>) -> Result<PreparedOperation, Response>
 }
 
 /// Handle the complete native development-lane surface.
-pub(crate) async fn try_handle(ctx: HandleContext<'_>, method: Method) -> Result<Response, Method> {
+pub async fn try_handle(ctx: HandleContext<'_>, method: Method) -> Result<Response, Method> {
     let response = match method {
         Method::QueryDevelopmentLane { request } => query(&ctx, &request).await,
         Method::DevelopmentLaneStatus { request } => status(&ctx, &request).await,

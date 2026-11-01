@@ -32,7 +32,7 @@ use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
 /// Read one consumer's standing, its dead letters, or rewind its cursor.
-pub(crate) async fn handle_mutation_outbox(
+pub async fn handle_mutation_outbox(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,

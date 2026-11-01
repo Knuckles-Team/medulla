@@ -20,7 +20,7 @@
 use medulla_protocol_types::protocol::Method;
 
 /// The scope that may write `fleet.` broker streams.
-pub(crate) const FLEET_EVENT_ACTION: &str = "fleet:events";
+pub const FLEET_EVENT_ACTION: &str = "fleet:events";
 /// Broker streams under this prefix belong to the fleet event authority.
 const FLEET_STREAM_PREFIX: &str = "fleet.";
 
@@ -35,7 +35,7 @@ pub(crate) fn require_carrier_tenant(requested: &str, verified: &str) -> Result<
 
 /// Refuse a native write whose body names a tenant other than the verified
 /// carrier's, or that writes a fleet stream without the fleet authority.
-pub(crate) fn refuse_foreign_native_write(
+pub fn refuse_foreign_native_write(
     method: &Method,
     verified_tenant: &str,
     fleet_authority: FleetAuthority,
@@ -55,7 +55,7 @@ pub(crate) fn refuse_foreign_native_write(
 
 /// Whether the verified caller holds the fleet event authority.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum FleetAuthority {
+pub enum FleetAuthority {
     Held,
     Absent,
 }

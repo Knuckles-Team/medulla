@@ -56,7 +56,7 @@ mod admission;
 mod validation;
 
 #[cfg(feature = "redb")]
-pub(crate) use admission::*;
+pub use admission::*;
 #[cfg(all(test, feature = "redb"))]
 use validation::unprefixed_digest;
 #[cfg(feature = "redb")]
@@ -71,7 +71,7 @@ pub(crate) use validation::{
 /// This remains available in slim builds because the native WorkItem request
 /// boundary uses the same authenticated-authority comparison even when the
 /// redb-backed delegation adapter is not compiled.
-pub(crate) fn context_matches_verified_authority(
+pub fn context_matches_verified_authority(
     context: &RequestContext,
     verified_context: &VerifiedRequestContext,
 ) -> bool {

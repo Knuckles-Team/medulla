@@ -6,7 +6,7 @@ use medulla_persistence::agent_library::AgentLibraryStateExt;
 /// The library handle is the EG-owned retained-definition authority; the
 /// handler never accepts an entry supplied by a caller as the source of truth.
 #[cfg(feature = "redb")]
-pub(crate) struct HandleContext<'a> {
+pub struct HandleContext<'a> {
     pub(crate) state: &'a Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     pub(crate) req_id: u64,
     pub(crate) graph_name: &'a str,
@@ -50,7 +50,7 @@ impl BoundDelegation {
 /// placement is active.  Replays therefore come from the native WorkItem
 /// idempotency record rather than a delegation-specific replay ledger.
 #[cfg(feature = "redb")]
-pub(crate) async fn try_handle(ctx: HandleContext<'_>, method: Method) -> Result<Response, Method> {
+pub async fn try_handle(ctx: HandleContext<'_>, method: Method) -> Result<Response, Method> {
     let Method::KgDelegate { request } = method else {
         return Err(method);
     };

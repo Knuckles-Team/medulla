@@ -16,11 +16,11 @@ use medulla_raft::raft::RaftStateExt;
 #[cfg(feature = "raft")]
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct PreparedJobPublication {
+pub struct PreparedJobPublication {
     schema_version: u16,
-    pub(crate) coordinator_id: String,
-    pub(crate) target_graph: String,
-    pub(crate) target_graph_type: medulla_protocol_types::protocol::GraphType,
+    pub coordinator_id: String,
+    pub target_graph: String,
+    pub target_graph_type: medulla_protocol_types::protocol::GraphType,
     job_id: String,
     worker_ref: String,
     lease_epoch: u64,
@@ -214,7 +214,7 @@ pub(super) fn publication_result(
 /// committed mutation; this domain check proves that it is THIS job's graph
 /// batch and terminal publication result.
 #[cfg(feature = "raft")]
-pub(crate) fn validate_job_publication_commit(
+pub fn validate_job_publication_commit(
     prepared: &PreparedJobPublication,
     committed: &medulla_protocol_types::mutation_batch::MutationBatchCommit,
 ) -> Result<(), String> {
@@ -315,7 +315,7 @@ pub(super) async fn prepare_consensus_job_publication(
 }
 
 #[cfg(feature = "raft")]
-pub(crate) fn decode_prepared_job_publication(
+pub fn decode_prepared_job_publication(
     bytes: &[u8],
 ) -> Result<PreparedJobPublication, String> {
     if bytes.is_empty() || bytes.len() > MAX_JOB_PUBLICATION_PLAN_BYTES {
@@ -335,7 +335,7 @@ pub(crate) fn decode_prepared_job_publication(
 }
 
 #[cfg(feature = "raft")]
-pub(crate) fn build_job_publication_commands(
+pub fn build_job_publication_commands(
     prepared: PreparedJobPublication,
     group_id: medulla_raft::raft::GroupId,
     placement_epoch: u64,
@@ -408,7 +408,7 @@ pub(super) fn decode_finalize_job_publication(
 }
 
 #[cfg(feature = "raft")]
-pub(crate) async fn apply_consensus_job_publication_commit(
+pub async fn apply_consensus_job_publication_commit(
     state: &Arc<RwLock<ServerState>>,
     request_id: u64,
     authority: &medulla_server_api::api::persistence::RaftMutationContext,
@@ -480,7 +480,7 @@ pub(crate) async fn apply_consensus_job_publication_commit(
 }
 
 #[cfg(feature = "raft")]
-pub(crate) async fn apply_consensus_job_publication_finalize(
+pub async fn apply_consensus_job_publication_finalize(
     state: &Arc<RwLock<ServerState>>,
     committed_at_ms: u64,
     expected_coordinator_id: &str,
