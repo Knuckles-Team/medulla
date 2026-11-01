@@ -7,9 +7,10 @@ use crate::http1::HttpMessage;
 use crate::state::ServerState;
 use medulla_graph_core::graph::GraphCore;
 
+use crate::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT;
 use super::{
     choose_ct, parse_form, percent_decode, serialize_graph, signed_request, DEFAULT_GRAPH_ENV,
-    GRAPH_FORMS, SPARQL_HTTP_UPDATE_EVENT,
+    GRAPH_FORMS,
 };
 
 /// W3C SPARQL 1.1 Graph Store HTTP Protocol: route reads and signed writes for one graph.

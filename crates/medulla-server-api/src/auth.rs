@@ -3439,7 +3439,7 @@ mod tests {
                 carrier.is_some(),
                 "a bearer whose verified tenant matches this deployment must mint a carrier"
             );
-            assert!(!crate::access::unauthenticated_carrier_denied(
+            assert!(!crate::carrier::unauthenticated_carrier_denied(
                 carrier.as_ref()
             ));
         }
@@ -3455,7 +3455,7 @@ mod tests {
                 carrier.is_none(),
                 "a cross-tenant bearer must never mint a carrier"
             );
-            assert!(crate::access::unauthenticated_carrier_denied(
+            assert!(crate::carrier::unauthenticated_carrier_denied(
                 carrier.as_ref()
             ));
         }

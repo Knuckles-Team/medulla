@@ -1,6 +1,6 @@
 use std::sync::{Arc, OnceLock};
 
-use crate::routed_write_coalescer::{lock_stripe, striped_lock};
+use crate::routed_write_coalescer::{lock_graph, lock_stripe, striped_lock};
 
 use sha2::{Digest, Sha256};
 use tokio::sync::{Mutex, OwnedMutexGuard};

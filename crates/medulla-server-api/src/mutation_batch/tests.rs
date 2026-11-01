@@ -10,10 +10,10 @@ use medulla_protocol_types::protocol::ResultPayload;
 
 use super::commit::changed_work_item_ids;
 use crate::batch_compile::digest::work_item_batch_identity;
+use crate::batch_compile::{compile_methods, CompileBatch};
 use crate::routed_write_coalescer::lock_graph;
 use super::{
-    commit_work_item, compile_methods, publish_change_envelope_projection,
-    CompileBatch, WorkItemCommitRequest,
+    commit_work_item, publish_change_envelope_projection, WorkItemCommitRequest,
 };
 
 struct LockProbePersistence {
@@ -525,7 +525,7 @@ const CLASSIFICATION_GOLDEN: &[(&str, &str)] = &[
 /// in an arm contributes that family's own variants, read from `families.rs`, in
 /// declaration order.
 fn classification_map_from_source() -> Vec<(String, String)> {
-    let source = include_str!("canonical.rs");
+    let source = include_str!("../batch_compile/canonical.rs");
     let mut map: Vec<(String, String)> = Vec::new();
     // `graph_domain` (a bare `match surface { .. }` with no `Method::` arms) is
     // GONE: every variant is named explicitly now, so the default it used to
@@ -1417,7 +1417,7 @@ async fn the_authoritative_version_accounts_a_durable_write_the_projection_misse
         core.mark_dirty();
     }
     let ahead: Arc<dyn PersistenceBackend> = Arc::new(DurableVersion(7));
-    let version = super::authoritative_graph_version(&ahead, "g", &core)
+    let version = crate::batch_compile::authoritative_graph_version(&ahead, "g", &core)
         .await
         .expect("a durable version ahead of the projection is accounted");
     assert_eq!(version, 7);
@@ -1426,7 +1426,7 @@ async fn the_authoritative_version_accounts_a_durable_write_the_projection_misse
         7,
         "the serving projection now equals the authority"
     );
-    let agreed = super::authoritative_graph_version(&ahead, "g", &core)
+    let agreed = crate::batch_compile::authoritative_graph_version(&ahead, "g", &core)
         .await
         .expect("an agreeing version reads back");
     assert_eq!(agreed, 7);
@@ -1437,7 +1437,7 @@ async fn the_authoritative_version_accounts_a_durable_write_the_projection_misse
     );
 
     let behind: Arc<dyn PersistenceBackend> = Arc::new(DurableVersion(3));
-    let error = super::authoritative_graph_version(&behind, "g", &core)
+    let error = crate::batch_compile::authoritative_graph_version(&behind, "g", &core)
         .await
         .expect_err("a projection ahead of its authority is refused");
     assert!(
@@ -1458,7 +1458,7 @@ fn session_usage_keeps_the_existing_read_only_domain_classification() {
         run_id: "run".into(),
     };
     assert!(usage.write_family().is_none());
-    assert!(super::canonical::surface_for(&usage).is_none());
+    assert!(crate::batch_compile::canonical::surface_for(&usage).is_none());
     for surface in [
         MutationSurface::Graph,
         MutationSurface::Transaction,
@@ -1470,8 +1470,8 @@ fn session_usage_keeps_the_existing_read_only_domain_classification() {
         MutationSurface::Other,
     ] {
         assert_eq!(
-            super::domain_for(&usage, surface),
-            super::domain_for(&run, surface)
+            crate::batch_compile::domain_for(&usage, surface),
+            crate::batch_compile::domain_for(&run, surface)
         );
     }
 }

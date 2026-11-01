@@ -20,7 +20,6 @@
 //! `KvGet`/`KvPut`/`KvDelete`/`KvScan`/`KvCas` — the wire shape of each, and its
 //! response payload, is the `Method::Kv*` match in [`try_handle`].
 
-use crate::kv::KvStateExt;
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 use std::sync::Arc;

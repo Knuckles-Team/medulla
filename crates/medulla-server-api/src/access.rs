@@ -1,6 +1,6 @@
 //! Write/read classification + isolation-ACL enforcement for graph ops.
 
-use super::auth::VerifiedRequestContext;
+use super::authority_context::VerifiedRequestContext;
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
 #[cfg(feature = "security")]
@@ -8,6 +8,7 @@ use medulla_graph_core::rls::row_visibility;
 use medulla_isolation::isolation::AccessLevel;
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_types::contract::{Digest256, Nonce};
+use crate::carrier::{unauthenticated_carrier_denied, CarrierAuthority, GraphReadAuthority};
 use std::sync::Arc;
 
 #[cfg(all(any(test, feature = "test-support"), feature = "security"))]

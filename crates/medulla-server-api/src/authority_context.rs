@@ -6,15 +6,12 @@
 //! re-exported there so existing server call sites cannot construct a trusted
 //! context through an alternate path.
 
-use crate::authority_context::coarse_kg_admin_only;
-#[cfg(feature = "oidc")]
-use crate::authority_context::iceberg_bearer_scopes;
-use crate::authority_context::request_context_policy;
 use hmac::{Hmac, Mac};
 use medulla_types::acl::RequestContextClaims;
 use medulla_types::contract::{Digest256, Nonce};
 use sha2::Sha256;
 use std::collections::HashSet;
+use std::sync::OnceLock;
 
 type HmacSha256 = Hmac<Sha256>;
 

@@ -5,7 +5,8 @@ use std::sync::Arc;
 use crate::http1::HttpMessage;
 use crate::state::ServerState;
 
-use super::{parse_form, run_query, signed_request, DEFAULT_GRAPH_ENV, SPARQL_HTTP_UPDATE_EVENT};
+use super::{parse_form, run_query, signed_request, DEFAULT_GRAPH_ENV};
+use crate::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT;
 
 enum InputError {
     UnsupportedMediaType,

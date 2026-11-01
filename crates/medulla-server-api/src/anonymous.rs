@@ -6,6 +6,8 @@
 use super::authority_context::VerifiedRequestContext;
 use medulla_protocol_types::protocol::Request;
 use serde::Deserialize;
+#[cfg(test)]
+use crate::auth::RequestAuthorityExt;
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]

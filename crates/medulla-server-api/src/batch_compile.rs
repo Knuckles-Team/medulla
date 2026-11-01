@@ -3,7 +3,8 @@
 //! Public mutation surfaces lower their already-validated `Method` values here;
 //! persistence (see [`crate::mutation_batch`]) owns the atomic commit.
 
-mod canonical;
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod canonical;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod compile;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

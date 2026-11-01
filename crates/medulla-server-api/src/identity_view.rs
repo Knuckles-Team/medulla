@@ -17,7 +17,7 @@ use medulla_identity_types::{
     identity::IdentityActor, identity::IdentityStore, identity::UserKind,
 };
 
-use super::auth::VerifiedRequestContext;
+use super::authority_context::VerifiedRequestContext;
 
 /// The identity actor of a verified request: its principal, whether it is
 /// delegated, and its EXACT `identity:*` scopes (wildcards and aggregates
