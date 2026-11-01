@@ -49,6 +49,9 @@ tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sy
 tracing = "0.1"
 
 ureq = { version = "3.4.2", optional = true }
+fs4 = "1.1"
+medulla-storage = { path = "../medulla-storage", optional = true }
+uuid = { version = "1.28", features = ["v4"] }
 
 [features]
 alignment = ["dep:medulla-modality", "dep:medulla-alignment", ]
@@ -76,7 +79,7 @@ owl-plan = ["dep:medulla-plan", "medulla-plan/owl", "owl", "query"]
 query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "dep:medulla-query", "medulla-query/sql", "dep:medulla-plan", "medulla-plan/query", "redb"]
 raft = ["redb"]
 rdf = ["dep:medulla-rdf", "medulla-rdf/rdf", ]
-redb = ["dep:medulla-transaction", ]
+redb = ["dep:medulla-storage", "dep:medulla-transaction", ]
 result-cache = ["dep:medulla-query", "medulla-query?/result-cache", ]
 security = ["redb"]
 shacl = ["dep:medulla-shacl", "rdf"]
