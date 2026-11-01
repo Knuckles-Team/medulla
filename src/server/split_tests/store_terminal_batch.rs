@@ -2,6 +2,9 @@
 //! It lives with the facade because the terminal fixture method is shared with
 //! the transport retry tests in `crate::test_support`.
 
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_protocol_types::mutation_batch::VersionExpectation;
 use medulla_store::redb_store::mutation_fixtures::{
     batch, commit_at, commit_native_claim, open, ready_work_item_method,
 };
@@ -9,11 +12,8 @@ use medulla_store::redb_store::{
     decode_durable, fixture_operation_envelope, read_mutation_graph_version, read_one_node,
     DurableCrypto,
 };
-use medulla_protocol_types::mutation_batch::{
-    DurabilityDomain, MutationBatch, MutationOperation, MutationSurface,
-};
+use medulla_protocol_types::mutation_batch::{MutationBatch, MutationOperation};
 use medulla_protocol_types::protocol::Method;
-use medulla_types::VersionExpectation;
 
 fn temp_path(tag: &str) -> std::path::PathBuf {
     medulla_store::redb_store::temp_path("medulla-mutation-batch", tag)

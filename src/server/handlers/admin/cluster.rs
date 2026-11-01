@@ -1,6 +1,7 @@
 //! M3 cluster-admin routing and catalog/rebalance operations.
 
 #[cfg(feature = "redb")]
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;

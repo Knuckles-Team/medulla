@@ -1,3 +1,4 @@
+use medulla_mutation_types::mutation_scope::CommittedVersion;
 use std::path::Path;
 use std::sync::Arc;
 

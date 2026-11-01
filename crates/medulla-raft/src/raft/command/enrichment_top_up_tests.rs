@@ -1,3 +1,6 @@
+use medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION;
+use medulla_mutation_types::mutation_scope::CommittedVersion;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use medulla_compute::parser::enrichment_snapshot::EligibleUnit;
 use medulla_compute::parser::enrichment_snapshot::EnrichmentWorkStage;
 use medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision;
@@ -5,9 +8,7 @@ use medulla_store::redb_store::enrichment_top_up::EnrichmentTopUpTransition;
 use medulla_store::redb_store::enrichment_top_up::CONSUMER;
 use medulla_store::redb_store::enrichment_top_up::TOPIC;
 use medulla_protocol_types::mutation_batch::RepositoryEnrichmentTopUp;
-use medulla_protocol_types::mutation_batch::{CommittedVersion, COMPILED_BATCH_INCARNATION};
 use medulla_agent_types::native_control::{EnrichmentBudgetCheckpoint, EnrichmentBudgetPark};
-use medulla_types::MutationScopeIdentity;
 use medulla_types::{
     MutationBatch, MutationBatchRecord, MutationBatchStatus, MutationOutboxRecord,
 };

@@ -1,5 +1,6 @@
 //! Signed current-discovery and historical-content acceptance.
 
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use super::{
     bind, build_pack, context, head_of, import_uploaded_with, imported, ok, persistence_id, tool,
     Served, ADMIN, TENANT,

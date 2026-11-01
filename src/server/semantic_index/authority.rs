@@ -1,3 +1,6 @@
+use medulla_index_types::semantic_index::SemanticBinding;
+use medulla_index_types::semantic_index::SemanticIndexCommand;
+use medulla_index_types::semantic_index::SemanticIndexRequest;
 use super::*;
 
 impl SemanticIndexServerAdapter {

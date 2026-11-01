@@ -1,8 +1,10 @@
 //! Authenticated saga key and async scope isolation.
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::api::admin::saga::*;
 use medulla_server_api::auth::VerifiedRequestContext;
-use medulla_protocol_types::mutation_batch::{DurabilityDomain, MutationBatch, MutationSurface};
+use medulla_protocol_types::mutation_batch::{MutationBatch};
 use medulla_protocol_types::protocol::Method;
 use sha2::Digest;
 

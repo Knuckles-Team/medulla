@@ -63,6 +63,17 @@ pub fn observe_rf019_tenant_owner(
 }
 
 #[cfg(feature = "query")]
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
+use medulla_index_types::semantic_index::SemanticBinding;
+use medulla_index_types::semantic_index::SemanticDigest;
+use medulla_index_types::semantic_index::SemanticIndexError;
+use medulla_index_types::semantic_index::SemanticSourceDirtyIntent;
+use medulla_index_types::semantic_index::SemanticSqlSourceIdentity;
+use medulla_index_types::semantic_index::SemanticSqlSourceManifest;
+use medulla_index_types::semantic_index::SemanticStage;
+use medulla_index_types::semantic_index::SemanticStageIntent;
+use medulla_index_types::semantic_index::SemanticStageTransition;
 use std::path::PathBuf;
 use std::sync::Arc;
 

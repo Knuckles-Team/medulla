@@ -1,6 +1,12 @@
 //! Authenticated Agent Library operation handlers.
 
 #[cfg(feature = "redb")]
+use medulla_agent_types::agent_library::AgentLibraryEntryDraft;
+use medulla_agent_types::agent_library::AgentLibraryMutationContext;
+use medulla_agent_types::agent_library::AgentLibraryOp;
+use medulla_agent_types::agent_library::AgentLibraryPublishRequest;
+use medulla_agent_types::agent_library::AgentLibraryRetireRequest;
+use medulla_agent_types::agent_library::AgentLibraryStatusRequest;
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
@@ -19,7 +25,7 @@ fn bind_status_context(
     store: &medulla_persistence::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
-    context: medulla_types::AgentLibraryMutationContext,
+    context: medulla_agent_types::agent_library::AgentLibraryMutationContext,
     purpose_id: &str,
 ) -> Result<medulla_agent_types::agent_library::AgentLibraryMutationContext, Response> {
     bind_agent_library_context(store, req_id, verified, context, purpose_id, false)
@@ -28,10 +34,10 @@ fn bind_status_context(
 
 #[cfg(feature = "redb")]
 pub(crate) fn bind_agent_library_draft(
-    draft: medulla_types::AgentLibraryEntryDraft,
+    draft: medulla_agent_types::agent_library::AgentLibraryEntryDraft,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
-    _action_context: &medulla_types::AgentLibraryMutationContext,
-) -> Result<medulla_types::AgentLibraryEntryDraft, String> {
+    _action_context: &medulla_agent_types::agent_library::AgentLibraryMutationContext,
+) -> Result<medulla_agent_types::agent_library::AgentLibraryEntryDraft, String> {
     if draft.tenant_id != verified.tenant() {
         return Err(
             "ACCESS_DENIED: Agent Library definition tenant must match verified request tenant"
@@ -681,7 +687,7 @@ pub(crate) async fn handle_agent_library(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
-    op: medulla_types::AgentLibraryOp,
+    op: medulla_agent_types::agent_library::AgentLibraryOp,
 ) -> Response {
     let store = match ensure_agent_library(state, req_id).await {
         Ok(store) => store,
@@ -713,7 +719,7 @@ fn library_publish(
     store: &medulla_persistence::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
-    mut request: Box<medulla_types::AgentLibraryPublishRequest>,
+    mut request: Box<medulla_agent_types::agent_library::AgentLibraryPublishRequest>,
 ) -> Response {
     let context = match bind_agent_library_context(
         store,
@@ -747,7 +753,7 @@ fn library_retire(
     store: &medulla_persistence::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
-    mut request: medulla_types::AgentLibraryRetireRequest,
+    mut request: medulla_agent_types::agent_library::AgentLibraryRetireRequest,
 ) -> Response {
     let context = match bind_agent_library_context(
         store,
@@ -827,7 +833,7 @@ fn library_status(
     store: &medulla_persistence::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
-    mut request: medulla_types::AgentLibraryStatusRequest,
+    mut request: medulla_agent_types::agent_library::AgentLibraryStatusRequest,
 ) -> Response {
     let kind = request.kind;
     let purpose = match kind {

@@ -1,5 +1,7 @@
 //! Private implementation module for the analytics job handler.
 
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationSurface;
 use super::prelude_jobs::*;
 use super::prelude_server::*;
 use super::prelude_std::*;

@@ -1,3 +1,4 @@
+use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_store::redb_store::work_item::run_owner::*;
 use medulla_store::redb_store::work_item::test_shard::run_request as request;
 use medulla_store::redb_store::work_item::test_shard::{

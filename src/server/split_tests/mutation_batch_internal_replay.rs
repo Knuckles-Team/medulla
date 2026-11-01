@@ -3,6 +3,7 @@
 //! They sit in the top server crate because they need the concrete persistence backend that
 //! `medulla-server-api` cannot depend on (R056.8).
 
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use std::sync::Arc;
 
 use medulla_core::graph::GraphCore;
@@ -30,7 +31,7 @@ impl medulla_storage::ScopeGrantVerifier for PromotionJobScopeVerifier {
         &self,
         _physical: &medulla_storage::PhysicalStoreIdentity,
         layout: medulla_storage::OwnerLayout,
-        _identity: &medulla_types::MutationScopeIdentity,
+        _identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
         principal: &str,
         proof: &[u8],
     ) -> Result<(), String> {

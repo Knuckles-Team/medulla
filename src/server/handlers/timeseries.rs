@@ -48,11 +48,13 @@
 //! actual leak-equivalence-to-RLS behavior end to end against a real store,
 //! not just that the keys differ.
 
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationSurface;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::mutation_batch::{DurabilityDomain, MutationBatch, MutationSurface};
+use crate::mutation_batch::{MutationBatch};
 use crate::protocol::{Method, Response, ResultPayload};
 use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::compute::compute_off_lock;

@@ -6,6 +6,7 @@
 //! test can observe another's committed state.
 
 #[cfg(feature = "redb")]
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;

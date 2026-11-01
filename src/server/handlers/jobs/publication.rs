@@ -1,6 +1,8 @@
 //! Private implementation module for the analytics job handler.
 
 #[cfg(feature = "raft")]
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::MutationSurface;
 use super::core::job_result_payload;
 use super::prelude_jobs::*;
 use super::prelude_server::*;
@@ -222,7 +224,7 @@ pub(crate) fn validate_job_publication_commit(
     if batch.batch_id != prepared.batch_id || batch.idempotency_key() != prepared.batch_id {
         return Err("job publication receipt has the wrong batch identity".to_string());
     }
-    let expected_scope = medulla_types::MutationScopeIdentity::fixed_graph(
+    let expected_scope = medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_graph(
         &prepared.target_graph,
         &prepared.target_graph,
         medulla_server_api::mutation_batch::COMPILED_BATCH_INCARNATION,
@@ -742,7 +744,7 @@ mod publication_receipt_tests {
         );
         assert!(validate_job_publication_commit(&prepared, &wrong_result).is_err());
 
-        let wrong_tenant = medulla_types::MutationScopeIdentity::fixed_graph(
+        let wrong_tenant = medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_graph(
             "other-publication-tenant",
             &prepared.target_graph,
             medulla_server_api::mutation_batch::COMPILED_BATCH_INCARNATION,

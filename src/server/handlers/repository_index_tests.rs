@@ -1,5 +1,6 @@
 // EH-280 — the lowered write-set is deterministic and tombstones remove.
 
+use medulla_mutation_types::mutation_scope::MutationSurface;
 use std::collections::HashMap;
 
 use medulla_protocol_types::{change_envelope::ChangeEnvelope, change_envelope::MaterialClass};

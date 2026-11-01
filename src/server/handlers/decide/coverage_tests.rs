@@ -22,13 +22,8 @@ use medulla_decision_types::decision::coverage::{
 };
 use medulla_decision_types::decision::record::PremiseClass;
 use medulla_decision_types::{
-    decision::coverage::CapabilityCoverageOutcome, decision::coverage::CapabilityCoverageRequest,
-    decision::coverage::CapabilityCoverageResult,
-};
-use medulla_decision_types::{
     decision::AssemblyRequirements, decision::EvidenceClass, decision::LibraryCandidateScope,
 };
-use medulla_types::contract::BoundedVec;
 
 const TENANT: &str = "tenant-coverage";
 const FOREIGN: &str = "tenant-foreign";

@@ -1,3 +1,5 @@
+use medulla_protocol_types::protocol_fixtures::change;
+use medulla_protocol_types::protocol_fixtures::id;
 use super::*;
 use medulla_protocol_types::storage_wire::SqlSourceCell;
 use medulla_query::Cell;

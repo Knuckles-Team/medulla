@@ -26,6 +26,8 @@
 //! coercion unchanged (constraints are not mirrored — VALUES are). On EXPORT the inverse
 //! map picks a SQLite declared type per column so a re-import round-trips.
 
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_query::{Cell, Column, ColumnType, TableSchema, TableStore, TableTxn, TxnOp};
 use medulla_sqlite_format::{ColumnDef as SqliteColumnDef, Reader, Value as SqliteValue, Writer};
 use serde_json::Value as JsonValue;
@@ -40,7 +42,6 @@ use medulla_protocol_types::storage_wire::{
     SqliteExportDestination, SqliteExportReport, SqliteImportReport, SqliteImportSource,
     SqliteTableRows,
 };
-use medulla_types::contract::Nonce;
 
 mod transfer_fs;
 

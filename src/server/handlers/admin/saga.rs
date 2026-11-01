@@ -2,6 +2,7 @@
 //! admin saga ledger.
 
 #[cfg(feature = "redb")]
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_persistence::AsRedb;
 use std::sync::Arc;
 

@@ -901,7 +901,7 @@ mod coordinator_restart_tests {
         (kernel, mutations, owner)
     }
 
-    fn parent_batch(id: &str, digest: &str, event_type: &str) -> medulla_types::MutationBatch {
+    fn parent_batch(id: &str, digest: &str, event_type: &str) -> medulla_protocol_types::mutation_batch::MutationBatch {
         medulla_server_api::mutation_batch::compile_opaque_digest(
             medulla_server_api::mutation_batch::CompileBatch {
                 batch_id: id,

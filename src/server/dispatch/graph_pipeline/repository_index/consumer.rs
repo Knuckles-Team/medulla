@@ -28,7 +28,7 @@ use crate::parser::enrichment_admission::{
 use crate::parser::enrichment_snapshot::{
     EligibleSnapshot, EligibleUnit, EnrichmentBudgetCheckpoint, EnrichmentWorkStage,
 };
-use crate::server::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 #[cfg(feature = "blob")]
 use medulla_server_api::api::reentry::DrainOutcome;
 use medulla_server_api::api::persistence::PersistenceBackend;

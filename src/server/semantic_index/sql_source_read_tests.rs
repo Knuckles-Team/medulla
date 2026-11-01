@@ -1,3 +1,8 @@
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
+use medulla_index_types::semantic_index::SemanticBinding;
+use medulla_index_types::semantic_index::SemanticDigest;
+use medulla_index_types::semantic_index::SemanticSourceDirtyIntent;
+use medulla_index_types::semantic_index::SemanticStageTransition;
 use std::path::Path;
 
 use super::*;

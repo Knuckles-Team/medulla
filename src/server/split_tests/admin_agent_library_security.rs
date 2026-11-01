@@ -1,5 +1,6 @@
 //! Agent Library admin tests that drive the full method router.
 
+use medulla_agent_types::agent_library::AgentLibraryWriteResult;
 use crate::acl::RequestContextClaims;
 use crate::protocol::{Method, Request};
 use medulla_server_api::api::persistence::BundledStoreSource;
@@ -8,11 +9,10 @@ use crate::server::handlers::admin::{backup_bundle_name, bind_agent_library_draf
 use medulla_persistence::agent_library::context::bind_agent_library_context;
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 use medulla_types::contract::Nonce;
-use medulla_types::{
+use medulla_agent_types::agent_library::{
     AgentLibraryEntryDraft, AgentLibraryMutationContext, AgentLibraryMutationKind, AgentLibraryOp,
     AgentLibraryPublishRequest, AgentLibraryRetireRequest, AgentLibraryStatusRequest,
 };
-use medulla_types::contract::Nonce;
 use redb::{ReadableDatabase, ReadableTableMetadata, TableDefinition};
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
@@ -168,7 +168,7 @@ fn signed_agent_library_request(
 
 fn response_write_result(
     response: crate::protocol::Response,
-) -> medulla_types::AgentLibraryWriteResult {
+) -> medulla_agent_types::agent_library::AgentLibraryWriteResult {
     medulla_server_api::test_support::decode_raw_response("Agent Library route", response)
 }
 

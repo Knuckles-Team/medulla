@@ -1,3 +1,6 @@
+use medulla_protocol_types::storage_wire::SqlSourceJson;
+use medulla_protocol_types::protocol_fixtures::SqlSourceTarget;
+use medulla_protocol_types::storage_wire::SqlSourceText;
 use super::*;
 use medulla_server_api::sql_catalog_acl::create_owned_table;
 use medulla_server_api::sql_catalog_acl::grant;
@@ -87,7 +90,7 @@ impl Fixture {
             SqlSourceCell::Text(SqlSourceText::new(stamp.into()).unwrap()),
             SqlSourceCell::Json(SqlSourceJson::new(serde_json::Value::Null).unwrap()),
         ];
-        SqlSourceBatchRequest::new(sql_source::batch(&target, vec![row])).unwrap()
+        SqlSourceBatchRequest::new(medulla_protocol_types::protocol_fixtures::sql_source::batch(&target, vec![row])).unwrap()
     }
 }
 
