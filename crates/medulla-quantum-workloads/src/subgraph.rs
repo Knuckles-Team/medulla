@@ -16,9 +16,10 @@
 
 use std::collections::{BTreeMap, HashSet};
 
-use medulla_core::compute::semantic::SemanticStore;
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
 use medulla_plan::exec::PlanCtx;
+use medulla_semantic_index::semantic::SemanticStore;
 
 /// The induced subgraph over a UQL-selected candidate node set: node ids in
 /// selection order (order matters — it fixes the qubit index each node maps to
@@ -135,7 +136,7 @@ pub fn materialize_induced_subgraph(view: &GraphView, node_ids: Vec<String>) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use serde_json::json;
 
     fn blob(v: serde_json::Value) -> Vec<u8> {

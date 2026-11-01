@@ -4,7 +4,7 @@ use super::*;
 
 pub(super) const RECONCILE_LOOKUP_CONCURRENCY: usize = 32;
 
-type ReconcileLookup = (String, Arc<medulla_core::graph::GraphCore>, String, String);
+type ReconcileLookup = (String, Arc<medulla_graph_core::graph::GraphCore>, String, String);
 type ReconcileLookupResult =
     Option<Result<Option<medulla_protocol_types::mutation_batch::MutationBatchRecord>, String>>;
 
@@ -151,7 +151,7 @@ pub(super) struct ReconcileTxnCandidate<'a> {
     persistence: &'a Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     expected_principal: &'a str,
     graph: String,
-    core: Arc<medulla_core::graph::GraphCore>,
+    core: Arc<medulla_graph_core::graph::GraphCore>,
     fname: String,
     batch_id: String,
     lookup: Option<Result<Option<medulla_protocol_types::mutation_batch::MutationBatchRecord>, String>>,

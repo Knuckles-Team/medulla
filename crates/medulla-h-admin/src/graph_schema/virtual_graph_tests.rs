@@ -7,7 +7,7 @@
 //! key field and an undiscovered predicate-field-pair field -- is flagged.
 
 use super::test_support::conforms;
-use medulla_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::GraphSchemaSources;
 
 const VG_SOURCE: &str = "core:virtual-graph@1";
 const VG_SHAPES: &str = "core:virtual-graph-shapes@1";

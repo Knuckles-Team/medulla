@@ -1,9 +1,9 @@
 //! Bounded batch decoding, validation, preview, and application.
 
-use medulla_core::compute::semantic::MAX_EMBEDDING_DIMENSION;
+use medulla_semantic_index::semantic::MAX_EMBEDDING_DIMENSION;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 
 /// One validated operation in the public `BatchUpdate` wire contract.
 ///
@@ -289,7 +289,7 @@ fn prepare_add_embedding_op(
     // mixed-dimension OR non-finite-component batch (e.g. op[2] matches
     // the store, op[5] doesn't, or op[5] contains a NaN) is rejected as a
     // whole, before `batch_update` applies op[0]/op[1] to the live store.
-    medulla_core::compute::semantic::check_embedding_dimension(embedding, expected_embedding_dim)
+    medulla_semantic_index::semantic::check_embedding_dimension(embedding, expected_embedding_dim)
         .map_err(|error| format!("BatchUpdate op[{index}] {error}"))
 }
 
@@ -420,9 +420,9 @@ type BatchApplyContext<'state, 'graph> = (
     bool,
     &'state mut BTreeMap<String, Vec<u8>>,
     &'state mut BTreeSet<String>,
-    &'state mut medulla_core::index::ChangeSet,
+    &'state mut medulla_graph_core::index::ChangeSet,
     &'state mut Vec<SemanticAction>,
-    &'state mut medulla_core::graph::GraphTxn<'graph>,
+    &'state mut medulla_graph_core::graph::GraphTxn<'graph>,
 );
 
 fn apply_batch_operation(
@@ -486,7 +486,7 @@ pub fn batch_update(core: &GraphCore, operations_msgpack: &[u8]) -> Result<Vec<u
     let capture_content = core.wants_change_content();
     let mut node_upserts = BTreeMap::<String, Vec<u8>>::new();
     let mut node_removals = BTreeSet::<String>::new();
-    let mut change = medulla_core::index::ChangeSet::new();
+    let mut change = medulla_graph_core::index::ChangeSet::new();
     let mut semantic_actions = Vec::new();
 
     // ONE topology guard makes every structural operation atomic to graph readers.
@@ -548,7 +548,7 @@ pub fn batch_update(core: &GraphCore, operations_msgpack: &[u8]) -> Result<Vec<u
         if capture_content {
             change
                 .added_nodes
-                .push(medulla_core::index::NodeChange::with_properties(
+                .push(medulla_graph_core::index::NodeChange::with_properties(
                     id, properties,
                 ));
         } else {

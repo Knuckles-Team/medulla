@@ -22,7 +22,7 @@
 //! single source of truth for "already in flight": a redundant trigger costs an
 //! instant no-op, never a second multi-minute build.
 //!
-//! The durable tier is [`medulla_core::compute::semantic_ann_codes::SemanticCodeStore`]
+//! The durable tier is [`medulla_ann_codes::semantic_ann_codes::SemanticCodeStore`]
 //! (feature `ann-redb`): one index generation becomes durable as ONE admitted
 //! `Native(SemanticIndex)` maintenance mutation, and the binding's live pointer
 //! flips inside that same transaction, so a generation never becomes live
@@ -37,14 +37,14 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_core::compute::semantic_ann::ANN_BUILD_THRESHOLD;
-use medulla_core::graph::GraphCore;
+use medulla_semantic_index::semantic_ann::ANN_BUILD_THRESHOLD;
+use medulla_graph_core::graph::GraphCore;
 use medulla_server_api::state::ServerState;
 
 #[cfg(feature = "ann-redb")]
-use medulla_core::compute::semantic::SemanticStore;
+use medulla_semantic_index::semantic::SemanticStore;
 #[cfg(feature = "ann-redb")]
-use medulla_core::compute::semantic_ann_codes::SemanticCodeStore;
+use medulla_ann_codes::semantic_ann_codes::SemanticCodeStore;
 
 /// The one directory under the persist dir that holds every binding's
 /// semantic-index owner file. `SemanticCodeStore::open` derives the file name

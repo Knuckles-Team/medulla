@@ -22,10 +22,10 @@ pub(crate) async fn run_unified_overlaid_resolve_txn(
     txn_id: &str,
     read_authority: Option<&GraphReadAuthority>,
     caller: &str,
-    #[cfg(feature = "security")] rls: &Arc<medulla_core::isolation::IsolationLayer>,
+    #[cfg(feature = "security")] rls: &Arc<medulla_isolation::isolation::IsolationLayer>,
 ) -> Result<
     (
-        medulla_core::graph::GraphView,
+        medulla_graph_core::graph::GraphView,
         Vec<medulla_protocol_types::protocol::Method>,
         Vec<(String, Vec<f32>)>,
         Arc<GraphCore>,
@@ -118,7 +118,7 @@ pub(crate) async fn run_unified_overlaid<M>(
     plan: medulla_plan::Plan,
     read_authority: Option<&GraphReadAuthority>,
     caller: &str,
-    #[cfg(feature = "security")] rls: &Arc<medulla_core::isolation::IsolationLayer>,
+    #[cfg(feature = "security")] rls: &Arc<medulla_isolation::isolation::IsolationLayer>,
 ) -> Response
 where
     M: MethodResult<Body = Vec<(String, Option<f32>)>, Encoding = encoding::Raw>,
@@ -150,7 +150,7 @@ pub(crate) struct OverlaidTxn<'a> {
     pub(crate) read_authority: Option<&'a GraphReadAuthority>,
     pub(crate) caller: &'a str,
     #[cfg(feature = "security")]
-    pub(crate) rls: &'a Arc<medulla_core::isolation::IsolationLayer>,
+    pub(crate) rls: &'a Arc<medulla_isolation::isolation::IsolationLayer>,
 }
 
 /// [`run_unified_overlaid`] with a caller-chosen finisher over the fully bound, txn-
@@ -254,7 +254,7 @@ where
 #[cfg(feature = "query")]
 pub(crate) fn run_unified_with_staged_finish<T>(
     plan: medulla_plan::Plan,
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     core: &Arc<GraphCore>,
     staged: &[(String, Vec<f32>)],
     #[cfg(feature = "federation")] foreign: Option<
@@ -281,7 +281,7 @@ pub(crate) fn run_unified_with_staged_finish<T>(
         );
     }
     let committed = core.semantic_store.read().clone();
-    let semantic = medulla_core::compute::semantic::semantic_overlay(committed, staged);
+    let semantic = medulla_semantic_index::semantic::semantic_overlay(committed, staged);
     run_unified_with(
         plan,
         view,

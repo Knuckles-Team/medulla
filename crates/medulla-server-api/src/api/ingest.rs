@@ -4,11 +4,11 @@ pub mod embedder;
 pub mod graph;
 pub mod jobs;
 
-use medulla_mutation_types::mutation_scope::DurabilityDomain;
-use medulla_protocol_types::mutation_batch::MutationBatch;
-use medulla_mutation_types::mutation_scope::MutationSurface;
-use medulla_protocol_types::protocol::Method;
 use crate::access::CarrierAuthority;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::protocol::Method;
 use medulla_types::contract::Nonce;
 
 /// Largest ingest stream whose worst-case canonical `ApplyOutcome` response
@@ -29,7 +29,7 @@ pub trait GraphApi: Send + Sync {
         caller: Option<&str>,
         graph_name: &str,
         read_authority: &crate::access::GraphReadAuthority,
-        core: std::sync::Arc<medulla_core::graph::GraphCore>,
+        core: std::sync::Arc<medulla_graph_core::graph::GraphCore>,
         method: Method,
     ) -> medulla_protocol_types::protocol::Response;
 }
@@ -137,8 +137,7 @@ pub fn compile_blob_batch_at_with_nonce(
     attempt_nonce: Option<Nonce>,
 ) -> Result<(MutationBatch, u64), String> {
     let scope = authority.namespace("blob-cas", "control");
-    let batch_id =
-        crate::mutation_batch::opaque_request_key("blob", &scope, identity_id, method);
+    let batch_id = crate::mutation_batch::opaque_request_key("blob", &scope, identity_id, method);
     let batch = crate::mutation_batch::compile_opaque_method(
         crate::mutation_batch::CompileBatch {
             batch_id: &batch_id,

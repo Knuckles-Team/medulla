@@ -77,14 +77,14 @@ pub(super) async fn send(
 pub(super) fn state() -> Arc<RwLock<ServerState>> {
     Arc::new(RwLock::new(ServerState::new_for_test(
         "dispatch-test-secret",
-        medulla_core::isolation::IsolationLayer::new(),
+        medulla_isolation::isolation::IsolationLayer::new(),
     )))
 }
 
 /// An engine whose System identity already bootstrapped: the identity store
 /// may hold real principals (IDM ordering).
 pub(super) fn bootstrapped_state() -> Arc<RwLock<ServerState>> {
-    let mut layer = medulla_core::isolation::IsolationLayer::new();
+    let mut layer = medulla_isolation::isolation::IsolationLayer::new();
     layer
         .try_bootstrap_system_identity(medulla_types::acl::AgentIdentity {
             agent_id: "engine-root".to_string(),

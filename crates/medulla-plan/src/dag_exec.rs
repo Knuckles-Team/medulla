@@ -118,15 +118,15 @@ mod tests {
     use super::*;
     use crate::algebra::{Op, Plan};
     use crate::dag::PlanNode;
-    use medulla_core::compute::semantic::SemanticStore;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
+    use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 
     fn blob(v: serde_json::Value) -> Vec<u8> {
         rmp_serde::to_vec_named(&v).unwrap()
     }
 
-    fn fixture() -> (medulla_core::graph::GraphView, SemanticStore) {
+    fn fixture() -> (medulla_graph_core::graph::GraphView, SemanticStore) {
         let core = GraphCore::new();
         for (id, ty) in [("a", "Doc"), ("b", "Doc"), ("c", "Tool")] {
             core.add_node(id.into(), blob(json!({ "type": ty })));

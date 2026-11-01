@@ -144,8 +144,8 @@ pub(crate) fn apply_crossmodal_vectors(
         .map(|value| crypto.unseal(value.value()))
         .transpose()?;
     let mut store = match current {
-        Some(bytes) => decode_durable::<medulla_core::compute::semantic::SemanticStore>(&bytes)?,
-        None => medulla_core::compute::semantic::SemanticStore::default(),
+        Some(bytes) => decode_durable::<medulla_semantic_index::semantic::SemanticStore>(&bytes)?,
+        None => medulla_semantic_index::semantic::SemanticStore::default(),
     };
     for (node_id, embedding) in vectors {
         // CONCEPT:MEDULLA-KG.compute.rank-dim-mismatch-guard (BUG-007): a rejected write bails via `?`

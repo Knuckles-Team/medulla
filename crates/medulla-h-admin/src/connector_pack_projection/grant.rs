@@ -17,7 +17,7 @@
 //! An empty policy awaiting its signer-backed System bootstrap is never
 //! touched: registering an identity there would consume the bootstrap.
 
-use medulla_core::isolation::IsolationLayer;
+use medulla_isolation::isolation::IsolationLayer;
 use medulla_server_api::service_grant::ServiceGraphGrant;
 
 /// The fixed service principal the projection worker writes as.
@@ -38,7 +38,7 @@ pub(crate) fn ensure(isolation: &mut IsolationLayer, graph: &str) -> Result<(), 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_core::isolation::AccessLevel;
+    use medulla_isolation::isolation::AccessLevel;
     use medulla_protocol_types::protocol::GraphType;
 
     fn policy() -> IsolationLayer {

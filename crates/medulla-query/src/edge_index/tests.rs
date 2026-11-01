@@ -6,8 +6,12 @@
 //! write takes the bounded exact path; scope is enforced; the lifecycle is
 //! visible in the `IndexManager` and a drop is fenced; recall holds.
 
-use medulla_core::graph::{GraphCore, GraphView};
-use medulla_core::index::{ChangeSet, IndexBlockReason, ManagedIndexState, ManagedIndexTarget};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
+use medulla_graph_core::index::ChangeSet;
+use medulla_graph_core::index::IndexBlockReason;
+use medulla_graph_core::index::ManagedIndexState;
+use medulla_graph_core::index::ManagedIndexTarget;
 use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
 use serde_json::{json, Value};
 

@@ -40,7 +40,9 @@ fn store(
         ))
     })?;
     match payload.expect("a store always answers") {
-        medulla_protocol_types::protocol::ResultPayload::Raw(bytes) => Ok(rmp_serde::from_slice(&bytes).unwrap()),
+        medulla_protocol_types::protocol::ResultPayload::Raw(bytes) => {
+            Ok(rmp_serde::from_slice(&bytes).unwrap())
+        }
         other => panic!("policy record stores are raw, got {other:?}"),
     }
 }

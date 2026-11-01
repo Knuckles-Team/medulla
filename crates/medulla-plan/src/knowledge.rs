@@ -134,7 +134,7 @@ use std::collections::HashSet;
 #[cfg(feature = "epistemic")]
 use std::collections::HashMap;
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use medulla_modality::EvidenceLocus;
 use serde::{Deserialize, Serialize};
 
@@ -624,7 +624,7 @@ impl KnowledgeSet {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use serde_json::json;
 
     fn blob(v: serde_json::Value) -> Vec<u8> {

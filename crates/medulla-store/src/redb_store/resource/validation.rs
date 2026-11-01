@@ -507,12 +507,7 @@ pub(crate) struct ResourceWorkItemFence {
 }
 
 impl ResourceWorkItemFence {
-    pub fn new(
-        attempt: u64,
-        lease_epoch: u64,
-        fencing_token: u64,
-        superseded: bool,
-    ) -> Self {
+    pub fn new(attempt: u64, lease_epoch: u64, fencing_token: u64, superseded: bool) -> Self {
         Self {
             attempt,
             lease_epoch,

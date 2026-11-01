@@ -1,7 +1,7 @@
 use super::*;
+use crate::writer_reply::await_writer_reply;
 #[cfg(any(feature = "compute-dist", feature = "matview"))]
 use medulla_store::redb_store::MatViewScanResult;
-use crate::writer_reply::await_writer_reply;
 use tokio::sync::oneshot;
 
 // ── Durable materialized-view records ─────────────────────────────────────

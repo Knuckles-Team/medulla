@@ -35,7 +35,7 @@ pub fn edge_status_row() -> Vec<serde_json::Value> {
 /// the served graph (it is built on a detached core), so a read proves it
 /// installs the tenant's edge indexes itself.
 pub fn register_detached_edge_index(store: &medulla_query::TableStore, graph: &str, tenant: &str) {
-    let detached = medulla_core::graph::GraphCore::new();
+    let detached = medulla_graph_core::graph::GraphCore::new();
     medulla_query::edge_index::create_durable_edge_index(
         store,
         graph,
@@ -53,7 +53,8 @@ pub fn sql_rows(resp: &medulla_protocol_types::protocol::Response) -> Vec<Vec<se
             resp.result, resp.error
         );
     };
-    let result: medulla_protocol_types::protocol::QueryResult = rmp_serde::from_slice(bytes).expect("QueryResult");
+    let result: medulla_protocol_types::protocol::QueryResult =
+        rmp_serde::from_slice(bytes).expect("QueryResult");
     result
         .rows
         .iter()

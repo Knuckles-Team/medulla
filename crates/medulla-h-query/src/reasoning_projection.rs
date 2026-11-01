@@ -201,7 +201,7 @@ pub fn spawn(state: Arc<RwLock<ServerState>>) {
 struct ProjectionContext {
     persistence: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     persist_dir: Option<String>,
-    graphs: Vec<(String, Arc<medulla_core::graph::GraphCore>)>,
+    graphs: Vec<(String, Arc<medulla_graph_core::graph::GraphCore>)>,
     /// The worker's wall clock, injected so a sweep's lease arithmetic is
     /// testable exactly. Production passes `current_time_ms`.
     clock: fn() -> u64,
@@ -317,7 +317,7 @@ async fn ensure_subscription(
 async fn process_graph(
     context: &ProjectionContext,
     graph: &str,
-    core: &Arc<medulla_core::graph::GraphCore>,
+    core: &Arc<medulla_graph_core::graph::GraphCore>,
     budget: &mut OutboxClaimBudget,
 ) -> bool {
     let graph_fname = medulla_kernel::persist::sanitize(graph);
@@ -389,7 +389,7 @@ async fn reset_retired_projection(persist_dir: Option<String>, graph_fname: Stri
 async fn initialize_index(
     persist_dir: Option<String>,
     graph_fname: String,
-    core: Arc<medulla_core::graph::GraphCore>,
+    core: Arc<medulla_graph_core::graph::GraphCore>,
 ) -> bool {
     match run_projection_job(move || {
         match load_index(persist_dir.as_deref(), &graph_fname) {
@@ -419,7 +419,7 @@ async fn initialize_index(
 async fn process_leases(
     context: &ProjectionContext,
     graph_fname: &str,
-    core: Arc<medulla_core::graph::GraphCore>,
+    core: Arc<medulla_graph_core::graph::GraphCore>,
     leases: Vec<MutationOutboxLease>,
 ) -> bool {
     // The durable watermark is the restart/reconciliation boundary, and it is
@@ -461,7 +461,7 @@ async fn process_leases(
 async fn process_lease(
     context: &ProjectionContext,
     graph_fname: &str,
-    core: Arc<medulla_core::graph::GraphCore>,
+    core: Arc<medulla_graph_core::graph::GraphCore>,
     lease: &MutationOutboxLease,
     watermark: Option<&MutationProjectionCursor>,
 ) -> Option<MutationProjectionCursor> {
@@ -567,7 +567,7 @@ fn validate_projection_wakeup(
 async fn apply_lease_and_publish(
     persist_dir: Option<String>,
     graph_fname: String,
-    core: Arc<medulla_core::graph::GraphCore>,
+    core: Arc<medulla_graph_core::graph::GraphCore>,
     lease: MutationOutboxLease,
     wakeup: ReasoningProjectionWakeup,
     watermark: Option<MutationProjectionCursor>,
@@ -628,7 +628,7 @@ fn require_snapshot_not_behind_watermark(
 #[cfg(feature = "redb")]
 fn apply_lease(
     index: &mut IncrementalReasoningIndex,
-    core: &medulla_core::graph::GraphCore,
+    core: &medulla_graph_core::graph::GraphCore,
     lease: &MutationOutboxLease,
     wakeup: &ReasoningProjectionWakeup,
 ) -> Result<IncrementalDelta, String> {
@@ -832,7 +832,7 @@ pub async fn stale_materializations(
 pub async fn recompute_materialization(
     persist_dir: Option<&str>,
     graph_name: &str,
-    view: medulla_core::graph::GraphView,
+    view: medulla_graph_core::graph::GraphView,
     authoritative_graph_version: u64,
     node_id: &str,
     expected_source_graph_version: u64,
@@ -867,7 +867,7 @@ pub async fn recompute_materialization(
 }
 
 fn resolve_materialization_provenance(
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     node_id: &str,
 ) -> Option<(std::collections::BTreeSet<String>, Option<String>)> {
     let properties = view.node_properties.get(node_id)?;
@@ -1398,7 +1398,7 @@ mod tests {
         persist_index(Some(&root_str), "graph", &stale_index()).unwrap();
         let temporary = path.with_extension("msgpack.tmp");
         symlink(&outside, &temporary).unwrap();
-        let core = medulla_core::graph::GraphCore::new();
+        let core = medulla_graph_core::graph::GraphCore::new();
         core.add_node("derived".to_string(), derived_properties());
         let error = recompute_materialization(
             Some(&root_str),
@@ -1593,7 +1593,7 @@ mod tests {
         let root_str = root.to_string_lossy();
         persist_index(Some(&root_str), "graph", &stale_index()).unwrap();
 
-        let core = medulla_core::graph::GraphCore::new();
+        let core = medulla_graph_core::graph::GraphCore::new();
         core.add_node("derived".to_string(), derived_properties());
         let view = core.analysis_snapshot();
 
@@ -1703,7 +1703,7 @@ mod tests {
         let backend = Arc::new(DeferredProjectionBackend::new());
         let persistence: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> =
             backend.clone();
-        let core = Arc::new(medulla_core::graph::GraphCore::new());
+        let core = Arc::new(medulla_graph_core::graph::GraphCore::new());
         let context = ProjectionContext {
             persistence,
             persist_dir: Some(root_str.clone()),
@@ -1829,7 +1829,7 @@ mod tests {
         let backend = Arc::new(DeadLetteredProjectionBackend::new());
         let persistence: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> =
             backend.clone();
-        let core = Arc::new(medulla_core::graph::GraphCore::new());
+        let core = Arc::new(medulla_graph_core::graph::GraphCore::new());
         let context = ProjectionContext {
             persistence,
             persist_dir: Some(root_str.clone()),
@@ -1921,9 +1921,10 @@ mod tests {
                 properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({})).unwrap(),
             },
         };
-        let payload =
-            medulla_kernel::projection_wakeup::projection_payload_for_operations(std::slice::from_ref(&operation))
-                .expect("projection wake-up payload");
+        let payload = medulla_kernel::projection_wakeup::projection_payload_for_operations(
+            std::slice::from_ref(&operation),
+        )
+        .expect("projection wake-up payload");
         let schema_digest = Digest256::from_bytes([1_u8; 32]);
         let scope_sha256 = identity.identity_digest().to_hex();
         let mut batch = MutationBatch {
@@ -1995,7 +1996,7 @@ mod tests {
             .commit_mutation_batch(&graph_fname, &retired_batch, None, 1)
             .await
             .expect("commit retired-incarnation projection event");
-        let retired_core = Arc::new(medulla_core::graph::GraphCore::new());
+        let retired_core = Arc::new(medulla_graph_core::graph::GraphCore::new());
         retired_core.add_node("retired-derived".to_string(), derived_properties());
         let retired_context = ProjectionContext {
             persistence: persistence.clone(),
@@ -2048,7 +2049,7 @@ mod tests {
             .commit_mutation_batch(&graph_fname, &recreated_batch, None, 2)
             .await
             .expect("commit recreated-incarnation projection event");
-        let recreated_core = Arc::new(medulla_core::graph::GraphCore::new());
+        let recreated_core = Arc::new(medulla_graph_core::graph::GraphCore::new());
         recreated_core.add_node("fresh-derived".to_string(), derived_properties());
         let recreated_context = ProjectionContext {
             persistence: persistence.clone(),
@@ -2146,7 +2147,7 @@ mod tests {
             .map(|graph| {
                 (
                     graph.clone(),
-                    Arc::new(medulla_core::graph::GraphCore::new()),
+                    Arc::new(medulla_graph_core::graph::GraphCore::new()),
                 )
             })
             .collect();
@@ -2225,8 +2226,9 @@ mod bounded_wakeup_tests {
     #[test]
     fn a_large_batch_notice_is_bounded_and_the_consumer_gets_every_change() {
         let operations = operations(24_000);
-        let payload = medulla_kernel::projection_wakeup::projection_payload_for_operations(&operations)
-            .expect("projection notice");
+        let payload =
+            medulla_kernel::projection_wakeup::projection_payload_for_operations(&operations)
+                .expect("projection notice");
         assert!(
             payload.len() < 4 * 1024,
             "notice is {} bytes",

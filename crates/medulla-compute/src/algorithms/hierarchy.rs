@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use petgraph::visit::{EdgeRef, IntoEdgeReferences};
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 
 // ── VIZ-1: hierarchical Leiden clustering for graph visualization ──────────
 //

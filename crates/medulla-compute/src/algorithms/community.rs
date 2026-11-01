@@ -16,7 +16,7 @@ use std::time::Duration;
 
 use petgraph::visit::{EdgeRef, IntoEdgeReferences};
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use crate::graph_algos::{leiden, AdjacencyGraph, LeidenConfig, QualityFunction};
 
 /// Detect communities through the sole Leiden implementation in

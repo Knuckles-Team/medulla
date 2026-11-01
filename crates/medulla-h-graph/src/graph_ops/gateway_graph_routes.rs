@@ -657,7 +657,8 @@ async fn try_handle_policy(
             .await
         }
         #[cfg(feature = "shacl")]
-        Method::GraphSchema { op } => match medulla_server_api::api::admin::admin_seam(state).await {
+        Method::GraphSchema { op } => match medulla_server_api::api::admin::admin_seam(state).await
+        {
             Some(admin) => {
                 admin
                     .graph_schema_gateway(state, tenant_id, ctx, plan, method, op)

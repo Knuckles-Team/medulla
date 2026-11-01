@@ -25,7 +25,7 @@
 //! this crate; calling up would be a dependency cycle). Instead it routes onto the SAME
 //! LOWER primitives those wrappers are themselves built on:
 //!   * **in-txn read** (`unifiedQuery`) → `GraphView::overlay_*` (the exact overlay ops
-//!     the facade's `overlay_write_set` uses) + `medulla_core::compute::semantic::semantic_overlay`
+//!     the facade's `overlay_write_set` uses) + `medulla_semantic_index::semantic::semantic_overlay`
 //!     + `medulla_plan::StagedSeries`, then `medulla_plan::execute` over an `medulla_plan::uql`-parsed
 //!     plan — byte-for-byte the executor `run_unified` wraps. Read-your-own-writes off the
 //!     overlay; off-txn / another request reads the committed store (empty overlay).
@@ -39,7 +39,7 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use serde_json::{Map, Value};
 
 use crate::parser::{parse_operation, Field, GqlValue, Operation};
@@ -408,7 +408,7 @@ fn unified_query(
     let mut view = core.analysis_snapshot();
     overlay_txn(&mut view, txn);
     // Committed embeddings overlaid with the txn's staged vectors (RYOW for Rank/kNN).
-    let semantic = medulla_core::compute::semantic::semantic_overlay(
+    let semantic = medulla_semantic_index::semantic::semantic_overlay(
         core.semantic_store.read().clone(),
         &txn.vectors,
     );
@@ -426,7 +426,8 @@ fn unified_query(
     let ctx = medulla_plan::PlanCtx::new(&view, &semantic);
     #[cfg(feature = "crossmodal-tsdb")]
     let ctx = ctx.with_staged_series(&staged_series);
-    let result = medulla_plan::execute(&plan, &ctx).map_err(|e| format!("GraphQL unifiedQuery: {e}"))?;
+    let result =
+        medulla_plan::execute(&plan, &ctx).map_err(|e| format!("GraphQL unifiedQuery: {e}"))?;
 
     let rows: Vec<Value> = result
         .rows()
@@ -468,7 +469,7 @@ fn rollback_transaction(
 /// Overlay a txn's staged graph writes onto a cloned `GraphView` (CONCEPT:MEDULLA-KG.query.medulla-9), so an
 /// in-txn `unifiedQuery`'s scan/traverse legs observe the txn's own uncommitted graph
 /// writes. The SAME `GraphView::overlay_*` ops the facade's `overlay_write_set` uses.
-fn overlay_txn(view: &mut medulla_core::graph::GraphView, txn: &CrossModalTxn) {
+fn overlay_txn(view: &mut medulla_graph_core::graph::GraphView, txn: &CrossModalTxn) {
     for w in &txn.graph {
         match w {
             GraphWrite::Node { id, blob } => view.overlay_add_node(id.clone(), blob.clone()),

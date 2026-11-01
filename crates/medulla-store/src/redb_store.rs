@@ -938,7 +938,19 @@ pub fn temp_path(prefix: &str, tag: &str) -> std::path::PathBuf {
 
 #[cfg(test)]
 mod mutation_batch_tests {
+    use super::mutation_fixtures::{
+        batch, commit_at, commit_at_graph, commit_native_claim, node, open, ready_work_item_method,
+    };
     use super::*;
+    use medulla_kernel::test_rendezvous::{join_bounded, meet};
+    use medulla_mutation_types::mutation_scope::DurabilityDomain;
+    use medulla_mutation_types::mutation_scope::IncarnationId;
+    use medulla_mutation_types::mutation_scope::LogicalName;
+    use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+    use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+    use medulla_mutation_types::mutation_scope::MutationSurface;
+    use medulla_mutation_types::mutation_scope::ScopeTenantId;
+    use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
     use medulla_protocol_types::change_envelope::ChangeCursor;
     use medulla_protocol_types::change_envelope::ChangeEnvelope;
     use medulla_protocol_types::change_envelope::ContentVersion;
@@ -947,16 +959,7 @@ mod mutation_batch_tests {
     use medulla_protocol_types::change_envelope::PolicyRecord;
     use medulla_protocol_types::change_envelope::PrivacyAttestation;
     use medulla_protocol_types::change_envelope::CHANGE_ENVELOPE_VERSION;
-    use medulla_mutation_types::mutation_scope::DurabilityDomain;
-    use medulla_mutation_types::mutation_scope::IncarnationId;
-    use medulla_mutation_types::mutation_scope::LogicalName;
     use medulla_protocol_types::mutation_batch::MutationOperation;
-    use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
-    use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
-    use medulla_mutation_types::mutation_scope::MutationSurface;
-    use medulla_mutation_types::mutation_scope::ScopeTenantId;
-    use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
-    use medulla_kernel::test_rendezvous::{join_bounded, meet};
     use medulla_result_types::{
         outcome_bundle::CommitOutcomeBundle, outcome_bundle::OutcomeCompleteness,
         outcome_bundle::ReceiptNode, outcome_bundle::ReceiptNodeKind, outcome_bundle::RunEvent,
@@ -965,10 +968,6 @@ mod mutation_batch_tests {
     };
     use medulla_transaction::OutboxClaimBudget;
     use sha2::{Digest, Sha256};
-    use super::mutation_fixtures::{
-        batch, commit_at, commit_at_graph, commit_native_claim, node, open,
-        ready_work_item_method,
-    };
 
     fn temp_path(tag: &str) -> std::path::PathBuf {
         super::temp_path("medulla-mutation-batch", tag)
@@ -1936,7 +1935,7 @@ mod mutation_batch_tests {
                 .expect("upserted edge");
             let properties: serde_json::Value = rmp_serde::from_slice(properties).unwrap();
             assert_eq!(properties["kind"], "new");
-            let semantic: medulla_core::compute::semantic::SemanticStore =
+            let semantic: medulla_semantic_index::semantic::SemanticStore =
                 rmp_serde::from_slice(&dump.semantic).unwrap();
             assert_eq!(semantic.get_embedding("a"), Some(vec![0.25, 0.75]));
         }
@@ -1968,7 +1967,7 @@ mod mutation_batch_tests {
                 dump.edges.is_empty(),
                 "outgoing and incoming edges must tombstone"
             );
-            let semantic: medulla_core::compute::semantic::SemanticStore =
+            let semantic: medulla_semantic_index::semantic::SemanticStore =
                 rmp_serde::from_slice(&dump.semantic).unwrap();
             assert_eq!(semantic.get_embedding("a"), None);
         }
@@ -2346,7 +2345,9 @@ mod mutation_batch_tests {
                 graph_type: GraphType::Global,
                 incarnation_id: "incarnation:test:duplicate-checkpoint".to_string(),
                 source_snapshot_version: 1,
-                schema_sources: std::sync::Arc::new(medulla_core::graph::GraphSchemaSources::default()),
+                schema_sources: std::sync::Arc::new(
+                    medulla_graph_core::graph::GraphSchemaSources::default(),
+                ),
                 nodes: Vec::new(),
                 edges: Vec::new(),
                 ledger: Vec::new(),
@@ -2377,7 +2378,9 @@ mod mutation_batch_tests {
             graph_type: GraphType::Global,
             incarnation_id: "incarnation:test:native-authority-refusal".to_string(),
             source_snapshot_version: 1,
-            schema_sources: std::sync::Arc::new(medulla_core::graph::GraphSchemaSources::default()),
+            schema_sources: std::sync::Arc::new(
+                medulla_graph_core::graph::GraphSchemaSources::default(),
+            ),
             nodes: Vec::new(),
             edges: Vec::new(),
             ledger: Vec::new(),
@@ -4135,7 +4138,7 @@ mod mutation_batch_tests {
             let dump = read_graph_dump(&db, "graph-a", DurableCrypto::none())
                 .unwrap()
                 .unwrap();
-            let semantic: medulla_core::compute::semantic::SemanticStore =
+            let semantic: medulla_semantic_index::semantic::SemanticStore =
                 rmp_serde::from_slice(&dump.semantic).unwrap();
             assert_eq!(semantic.get_embedding("a"), Some(vec![0.25, 0.75]));
             assert!(
@@ -4340,7 +4343,7 @@ mod mutation_batch_tests {
 
         let path = temp_path("authoritative-state");
         let db = open(&path);
-        let staged = medulla_core::graph::GraphCore::new();
+        let staged = medulla_graph_core::graph::GraphCore::new();
         staged.add_node(
             "replacement".to_string(),
             rmp_serde::to_vec_named(&serde_json::json!({"value": 7})).unwrap(),
@@ -4356,12 +4359,14 @@ mod mutation_batch_tests {
                 query: "sha256:opaque".to_string(),
             },
         }];
-        mutation.authoritative_state = Some(medulla_protocol_types::mutation_batch::MutationStateDescriptor {
-            algorithm: "sha256".to_string(),
-            digest: hex::encode(Sha256::digest(&state)),
-            source_graph_version: 3,
-            target_graph_version: 4,
-        });
+        mutation.authoritative_state = Some(
+            medulla_protocol_types::mutation_batch::MutationStateDescriptor {
+                algorithm: "sha256".to_string(),
+                digest: hex::encode(Sha256::digest(&state)),
+                source_graph_version: 3,
+                target_graph_version: 4,
+            },
+        );
         mutation
             .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
             .unwrap();
@@ -4472,7 +4477,7 @@ mod mutation_batch_tests {
         let initial = batch("batch-row-delta-base", "idem-row-delta-base");
         commit_at(&db, &initial, None).unwrap();
 
-        let before = medulla_core::graph::GraphCore::new();
+        let before = medulla_graph_core::graph::GraphCore::new();
         before.add_node(
             "a".to_string(),
             rmp_serde::to_vec_named(&serde_json::json!({"value": 1})).unwrap(),
@@ -4483,7 +4488,8 @@ mod mutation_batch_tests {
         );
         before.clear_ledger();
         let before_snapshot = before.snapshot();
-        let after = medulla_core::graph::GraphCore::from_snapshot(before_snapshot.clone(), 0).unwrap();
+        let after = medulla_graph_core::graph::GraphCore::from_snapshot(before_snapshot.clone(), 0)
+            .unwrap();
         after.add_node(
             "a".to_string(),
             rmp_serde::to_vec_named(&serde_json::json!({"value": 9})).unwrap(),
@@ -4503,9 +4509,9 @@ mod mutation_batch_tests {
         let mut sources = (*after.schema_sources()).clone();
         sources
             .attach_dynamic(
-                medulla_core::graph::OPERATOR_SOURCE_ID.to_string(),
-                medulla_core::graph::GraphSchemaSource::new(
-                    medulla_core::graph::SchemaSourceOrigin::Operator,
+                medulla_graph_core::graph::OPERATOR_SOURCE_ID.to_string(),
+                medulla_graph_core::graph::GraphSchemaSource::new(
+                    medulla_graph_core::graph::SchemaSourceOrigin::Operator,
                     Some(std::sync::Arc::from(
                         "@prefix sh: <http://www.w3.org/ns/shacl#> .",
                     )),
@@ -4534,12 +4540,14 @@ mod mutation_batch_tests {
                 query: "sha256-row-delta-schema-sources:opaque".to_string(),
             },
         }];
-        mutation.authoritative_state = Some(medulla_protocol_types::mutation_batch::MutationStateDescriptor {
-            algorithm: medulla_kernel::graph_delta::ROW_DELTA_ALGORITHM.to_string(),
-            digest: hex::encode(Sha256::digest(&state)),
-            source_graph_version: 4,
-            target_graph_version: 5,
-        });
+        mutation.authoritative_state = Some(
+            medulla_protocol_types::mutation_batch::MutationStateDescriptor {
+                algorithm: medulla_kernel::graph_delta::ROW_DELTA_ALGORITHM.to_string(),
+                digest: hex::encode(Sha256::digest(&state)),
+                source_graph_version: 4,
+                target_graph_version: 5,
+            },
+        );
         mutation
             .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
             .expect("row delta fixture reseals its final body");
@@ -4580,7 +4588,7 @@ mod mutation_batch_tests {
             .unwrap();
         assert_eq!(dump.edges.len(), 1);
         assert_eq!(dump.ledger, after.snapshot().ledger);
-        let semantic: medulla_core::compute::semantic::SemanticStore =
+        let semantic: medulla_semantic_index::semantic::SemanticStore =
             decode_durable(&dump.semantic).unwrap();
         assert_eq!(
             semantic.embeddings_snapshot(),
@@ -4599,15 +4607,16 @@ mod mutation_batch_tests {
         let db = open(&path);
         commit_at(&db, &batch("batch-policy-base", "idem-policy-base"), None).unwrap();
 
-        let before = medulla_core::graph::GraphCore::new();
+        let before = medulla_graph_core::graph::GraphCore::new();
         let before_snapshot = before.snapshot();
-        let after = medulla_core::graph::GraphCore::from_snapshot(before_snapshot.clone(), 0).unwrap();
+        let after = medulla_graph_core::graph::GraphCore::from_snapshot(before_snapshot.clone(), 0)
+            .unwrap();
         let mut sources = (*after.schema_sources()).clone();
         sources
             .attach_dynamic(
-                medulla_core::graph::OPERATOR_SOURCE_ID.to_string(),
-                medulla_core::graph::GraphSchemaSource::new(
-                    medulla_core::graph::SchemaSourceOrigin::Operator,
+                medulla_graph_core::graph::OPERATOR_SOURCE_ID.to_string(),
+                medulla_graph_core::graph::GraphSchemaSource::new(
+                    medulla_graph_core::graph::SchemaSourceOrigin::Operator,
                     Some(std::sync::Arc::from(
                         "@prefix sh: <http://www.w3.org/ns/shacl#> .",
                     )),
@@ -4636,12 +4645,14 @@ mod mutation_batch_tests {
                 shapes: "sha256:policy-receipt".to_string(),
             },
         }];
-        mutation.authoritative_state = Some(medulla_protocol_types::mutation_batch::MutationStateDescriptor {
-            algorithm: medulla_kernel::graph_delta::ROW_DELTA_ALGORITHM.to_string(),
-            digest: hex::encode(Sha256::digest(&state)),
-            source_graph_version: 4,
-            target_graph_version: 5,
-        });
+        mutation.authoritative_state = Some(
+            medulla_protocol_types::mutation_batch::MutationStateDescriptor {
+                algorithm: medulla_kernel::graph_delta::ROW_DELTA_ALGORITHM.to_string(),
+                digest: hex::encode(Sha256::digest(&state)),
+                source_graph_version: 4,
+                target_graph_version: 5,
+            },
+        );
         // Without this the batch is refused at ADMISSION for an envelope that
         // no longer covers its body ("mutation batch content does not match its
         // envelope's canonical payload digest"), so the commit below errors
@@ -5701,10 +5712,10 @@ mod mutation_batch_tests {
     fn change_envelopes_oversized_batch_is_a_typed_error() {
         let path = temp_path("change-envelopes-oversized");
         let db = open(&path);
-        let too_many: Vec<ChangeEnvelope> =
-            (0..(medulla_protocol_types::change_envelope::MAX_ENVELOPES_PER_BATCH as u64 + 1))
-                .map(governed_envelope_seq)
-                .collect();
+        let too_many: Vec<ChangeEnvelope> = (0
+            ..(medulla_protocol_types::change_envelope::MAX_ENVELOPES_PER_BATCH as u64 + 1))
+            .map(governed_envelope_seq)
+            .collect();
 
         let error = commit_envelopes_at(&db, &too_many).unwrap_err();
         assert!(

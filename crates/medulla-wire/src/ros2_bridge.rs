@@ -252,7 +252,7 @@ pub async fn apply_inbound(
 /// publishing the unfiltered feed would leak rows a verified reader would never be
 /// authorized to see, so the bridge must fail closed instead of blasting every change.
 #[cfg(feature = "server")]
-fn ros2_cdc_denied(isolation: &medulla_core::isolation::IsolationLayer) -> bool {
+fn ros2_cdc_denied(isolation: &medulla_isolation::isolation::IsolationLayer) -> bool {
     isolation.has_rules() && medulla_server_api::access::unauthenticated_carrier_denied(None)
 }
 
@@ -525,7 +525,7 @@ mod tests {
     fn ros2_cdc_fails_closed_only_once_row_ownership_is_active() {
         use medulla_types::acl::AgentIdentity;
         use medulla_types::acl::AgentRole;
-        use medulla_core::isolation::IsolationLayer;
+        use medulla_isolation::isolation::IsolationLayer;
 
         // No identities registered yet: nothing to protect, so the unauthenticated
         // outbound leg is allowed to publish, same as before this fix.

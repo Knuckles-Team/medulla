@@ -1532,7 +1532,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
         tokio::spawn(async move {
             // Snapshot (name, core) under a brief read lock; the heavy build runs
             // OFF the async runtime on a blocking thread.
-            let cores: Vec<(String, std::sync::Arc<medulla_core::graph::GraphCore>)> = {
+            let cores: Vec<(String, std::sync::Arc<medulla_graph_core::graph::GraphCore>)> = {
                 let s = warm_state.read().await;
                 s.registry
                     .all_entries()

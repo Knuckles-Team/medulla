@@ -577,8 +577,8 @@ fn uql_decisions(h: &Harness, who: &str) -> Vec<String> {
     let verified = VerifiedRequestContext::verified_for_test_in_tenant(who, TENANT);
     let authority = medulla_server_api::access::CarrierAuthority::from_verified(&verified).unwrap();
     let views = DecisionViews::of(h.store.clone(), &authority);
-    let graph = medulla_core::graph::GraphCore::new().analysis_snapshot();
-    let semantic = medulla_core::compute::semantic::SemanticStore::new();
+    let graph = medulla_graph_core::graph::GraphCore::new().analysis_snapshot();
+    let semantic = medulla_semantic_index::semantic::SemanticStore::new();
     let plan = medulla_plan::uql::parse("DECISIONS WHERE outcome = 'abstained'").unwrap();
     let ctx = medulla_plan::PlanCtx::new(&graph, &semantic).with_decisions(&views);
     medulla_plan::execute(&plan, &ctx).unwrap().ids()

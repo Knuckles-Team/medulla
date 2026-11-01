@@ -22,7 +22,7 @@
 //! same-specificity `Deny` still wins. Without a grant a shared name resolves exactly
 //! like an unregistered name, so the refusal reveals nothing.
 
-use medulla_core::isolation::IsolationLayer;
+use medulla_isolation::isolation::IsolationLayer;
 
 /// The name a grantee uses for `owner_agent`'s source `name`.
 pub fn shared_name(owner_agent: &str, name: &str) -> String {

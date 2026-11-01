@@ -18,7 +18,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use medulla_types::wire::{Op, Plan, Pred};
 
 use super::{enforce_budget, NlPlanner, NlQueryBudget, NlQueryError};
@@ -577,8 +577,8 @@ impl SchemaContext {
                 // The snapshot schema records top-level keys, not document
                 // shapes. Check the root key; deeper path segments keep their
                 // existing JSONPath semantics and are never guessed.
-                if let Some(medulla_core::jsonpath::Segment::Key(key)) =
-                    medulla_core::jsonpath::parse_path(path)
+                if let Some(medulla_graph_core::jsonpath::Segment::Key(key)) =
+                    medulla_graph_core::jsonpath::parse_path(path)
                         .as_deref()
                         .and_then(|p| p.first())
                 {
@@ -702,7 +702,7 @@ impl SchemaContext {
 
 /// The labels a node carries, under the same keys the engine's label scan reads.
 fn node_labels(props: &serde_json::Map<String, serde_json::Value>) -> BTreeSet<String> {
-    let mut labels: BTreeSet<String> = medulla_core::graph::NODE_LABEL_KEYS
+    let mut labels: BTreeSet<String> = medulla_graph_core::graph::NODE_LABEL_KEYS
         .iter()
         .filter_map(|key| props.get(*key).and_then(|v| v.as_str()))
         .map(str::to_string)

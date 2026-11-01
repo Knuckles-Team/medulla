@@ -50,7 +50,7 @@ impl CommonsView {
 
 /// Every observation the viewer may see, in node-id order.
 fn visible_discoveries(
-    core: &medulla_core::graph::GraphCore,
+    core: &medulla_graph_core::graph::GraphCore,
     viewer: &Viewer<'_>,
 ) -> Vec<VisibleDiscovery> {
     core.get_nodes_by_label(DISCOVERY_NODE_TYPE, 0)
@@ -68,7 +68,7 @@ fn visible_discoveries(
 
 /// The tenant's live skill-type overrides, by component id.
 fn live_skill_overrides(
-    core: &medulla_core::graph::GraphCore,
+    core: &medulla_graph_core::graph::GraphCore,
     tenant_id: &str,
 ) -> BTreeMap<String, (SkillType, u64)> {
     core.get_nodes_by_label(OVERRIDE_NODE_TYPE, 0)

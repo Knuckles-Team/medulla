@@ -32,9 +32,9 @@ use serde_json::{Map, Value};
 use super::stat_log::{evaluations_of, visible_entries, LogReader, MAX_LOG_ROWS};
 use super::stat_retention::Retention;
 use super::SharedState;
-use medulla_server_api::access::CarrierAuthority;
 use medulla_persistence::agent_library::AgentLibraryStore;
 use medulla_persistence::decision_jobs::decode_artifact;
+use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::sql_catalog_acl::relations::ReadOnlyRelations;
 use medulla_server_api::sql_catalog_acl::relations::Relation;
 

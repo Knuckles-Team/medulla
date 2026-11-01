@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use medulla_protocol_types::protocol::Method;
 
 use super::{

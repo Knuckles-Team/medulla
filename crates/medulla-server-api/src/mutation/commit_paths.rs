@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use medulla_core::graph::GraphCore;
+use crate::api::persistence::PersistenceBackend;
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use crate::api::persistence::PersistenceBackend;
 
 use super::{
     commit_finalize, commit_mutation_body_commit_staged, commit_mutation_body_replay_response,
@@ -241,8 +241,7 @@ where
     // path). A rejection here discards the staged image before it is ever
     // diffed, snapshotted, or durably committed.
     #[cfg(feature = "shacl")]
-    if let Err(rejection) =
-        crate::icv_guard::check_native_write(ctx.graph_name, ctx.core, &staged)
+    if let Err(rejection) = crate::icv_guard::check_native_write(ctx.graph_name, ctx.core, &staged)
     {
         return Err(Response::err(
             ctx.req_id,
@@ -269,22 +268,20 @@ pub(super) async fn resolve_authoritative_base_snapshot(
     ctx: &MutationCtx<'_>,
     persistence: &Arc<dyn PersistenceBackend>,
     fname: &str,
-) -> Result<(medulla_core::graph::GraphSnapshot, u64), Response> {
+) -> Result<(medulla_graph_core::graph::GraphSnapshot, u64), Response> {
     match persistence.read_authoritative_graph_snapshot(fname).await {
         Ok(Some(snapshot)) => Ok(snapshot),
-        Ok(None) => match crate::mutation_batch::authoritative_graph_version(
-            persistence,
-            fname,
-            ctx.core,
-        )
-        .await
-        {
-            Ok(version) => Ok((ctx.core.snapshot(), version)),
-            Err(error) => Err(Response::err(
-                ctx.req_id,
-                format!("authoritative version read failed: {error}"),
-            )),
-        },
+        Ok(None) => {
+            match crate::mutation_batch::authoritative_graph_version(persistence, fname, ctx.core)
+                .await
+            {
+                Ok(version) => Ok((ctx.core.snapshot(), version)),
+                Err(error) => Err(Response::err(
+                    ctx.req_id,
+                    format!("authoritative version read failed: {error}"),
+                )),
+            }
+        }
         Err(error) => Err(Response::err(
             ctx.req_id,
             format!("authoritative graph staging read failed: {error}"),

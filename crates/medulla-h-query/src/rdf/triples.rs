@@ -3,7 +3,7 @@ use std::sync::Arc;
 #[cfg(feature = "shacl")]
 use tokio::sync::RwLock;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 #[cfg(feature = "shacl")]
@@ -33,7 +33,8 @@ pub(super) async fn handle_add_triples(
     // X5-enforce (CONCEPT:MEDULLA-KG.ontology.rdf-update-guard): reject BEFORE the write
     // lands. Missing feature, policy, or invalid policy all fail closed.
     #[cfg(feature = "shacl")]
-    if let Err(rej) = medulla_server_api::icv_guard::check_before_write(core, graph_name, &triples, &[])
+    if let Err(rej) =
+        medulla_server_api::icv_guard::check_before_write(core, graph_name, &triples, &[])
     {
         return Response::err(req_id, format!("AddTriples rejected: {rej}"));
     }

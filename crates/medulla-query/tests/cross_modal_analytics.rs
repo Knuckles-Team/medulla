@@ -17,7 +17,7 @@
 //! CONCEPT:MEDULLA-KG.query.surface-b-numeric-operators/335/336/344) over the joined columns. Only compiles under `numeric`.
 #![cfg(feature = "numeric")]
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_query::exec_sql;
 use serde_json::json;
 

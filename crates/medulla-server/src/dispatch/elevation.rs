@@ -132,7 +132,7 @@ fn respond(
     req_id: u64,
     op: &RbacElevationOp,
     actor: &ElevationActor,
-    outcome: Result<Result<ResultPayload, String>, medulla_core::isolation::ElevationError>,
+    outcome: Result<Result<ResultPayload, String>, medulla_isolation::isolation::ElevationError>,
 ) -> Response {
     let elevation_id = op.elevation_id().unwrap_or("");
     match outcome {

@@ -15,6 +15,7 @@ use super::results::{
 use super::types::{LaneDecision, ScopeCounter};
 use super::work_item::load_work_item;
 use super::{DurableLaneHold, DurableLanePolicy};
+use medulla_protocol_types::protocol::DevelopmentLaneWorkItemKind;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHoldState;
 use medulla_result_types::epistemic_operations::DevelopmentLaneIntent;
@@ -22,7 +23,6 @@ use medulla_result_types::epistemic_operations::DevelopmentLaneIntentHostTargetK
 use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
 use medulla_result_types::epistemic_operations::DevelopmentLaneReserveRequest;
 use medulla_result_types::epistemic_operations::ResourceReservationRecordState;
-use medulla_protocol_types::protocol::DevelopmentLaneWorkItemKind;
 use medulla_storage::ScopedOwnerTableMut;
 
 fn reserve_policy_refusal(
@@ -320,7 +320,8 @@ pub(super) fn apply_reserve(
         .ok_or_else(|| "development lane expiry overflow".to_string())?;
     let target_kind = hold_target_kind(request.intent.host_target_kind);
     let mut hold = DevelopmentLaneHold {
-        schema_version: medulla_result_types::epistemic_operations::DevelopmentLaneHoldSchemaVersion::V1,
+        schema_version:
+            medulla_result_types::epistemic_operations::DevelopmentLaneHoldSchemaVersion::V1,
         hold_id: derived_hold_id,
         lane_id: request.intent.lane_id.clone(),
         tenant_ref: request.tenant_ref.clone(),

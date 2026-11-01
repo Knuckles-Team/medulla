@@ -328,15 +328,15 @@ fn cursor_replay_is_idempotent_but_policy_replacement_is_denied() {
 #[cfg(all(feature = "security", feature = "redb"))]
 pub(super) struct DurableReadLease {
     pub(super) directory: std::path::PathBuf,
-    pub(super) policy: medulla_core::rbac::RbacPolicy,
+    pub(super) policy: medulla_isolation::rbac::RbacPolicy,
     pub(super) identities: std::collections::BTreeMap<String, medulla_types::acl::AgentIdentity>,
     pub(super) grant: medulla_types::acl::Grant,
-    pub(super) isolation: medulla_core::isolation::IsolationLayer,
+    pub(super) isolation: medulla_isolation::isolation::IsolationLayer,
     pub(super) claims: RequestContextClaims,
     pub(super) carrier: CarrierAuthority,
     pub(super) verified_context: medulla_server_api::auth::VerifiedRequestContext,
-    pub(super) lease: std::sync::Arc<medulla_core::isolation::PolicyDecisionLease>,
-    pub(super) policy_store: std::sync::Arc<dyn medulla_core::rbac_persist::RbacPolicyStore>,
+    pub(super) lease: std::sync::Arc<medulla_isolation::isolation::PolicyDecisionLease>,
+    pub(super) policy_store: std::sync::Arc<dyn medulla_isolation::rbac_persist::RbacPolicyStore>,
 }
 
 #[cfg(all(feature = "security", feature = "redb"))]
@@ -344,9 +344,9 @@ pub(super) fn durable_read_lease(graph: &str, agent: &str) -> DurableReadLease {
     use std::collections::BTreeMap;
     use std::sync::Arc;
 
-    use medulla_core::isolation::IsolationLayer;
-    use medulla_core::rbac::RbacPolicy;
-    use medulla_core::rbac_persist::{IdentityBootstrapState, RbacStore};
+    use medulla_isolation::isolation::IsolationLayer;
+    use medulla_isolation::rbac::RbacPolicy;
+    use medulla_isolation::rbac_persist::{IdentityBootstrapState, RbacStore};
     use medulla_types::acl::{
         AgentIdentity, AgentRole, Grant, GrantEffect, RbacAction, ResourceSelector, Role,
     };
@@ -424,12 +424,12 @@ pub(super) fn durable_read_lease(graph: &str, agent: &str) -> DurableReadLease {
     // `MintAuthorization`, obtained only by presenting the server secret plus
     // an HMAC over the exact claims (same secret `from_verified_with_lease`
     // below is bound with).
-    let mint_mac = medulla_core::isolation::MintAuthorization::compute_mac("server-secret", &claims)
+    let mint_mac = medulla_isolation::isolation::MintAuthorization::compute_mac("server-secret", &claims)
         .expect("compute mint authorization mac");
-    let mint_auth = medulla_core::isolation::MintAuthorization::new("server-secret", &claims, &mint_mac)
+    let mint_auth = medulla_isolation::isolation::MintAuthorization::new("server-secret", &claims, &mint_mac)
         .expect("construct mint authorization");
     let lease = isolation
-        .mint_policy_decision_lease(&mint_auth, graph, medulla_core::isolation::AccessLevel::Read)
+        .mint_policy_decision_lease(&mint_auth, graph, medulla_isolation::isolation::AccessLevel::Read)
         .expect("mint policy decision lease");
     let lease = Arc::new(lease);
     let policy_store = isolation
@@ -495,7 +495,7 @@ async fn knowledge_stream_sql_lists_the_request_graph_edge_indexes() {
             read_authority: Some(&read_authority),
             caller: "alice",
         },
-        std::sync::Arc::new(medulla_core::graph::GraphCore::new()),
+        std::sync::Arc::new(medulla_graph_core::graph::GraphCore::new()),
         PolicyAwareQuery::Sql {
             query: EDGE_STATUS_SQL.to_string(),
             params_msgpack: Vec::new(),
@@ -514,7 +514,7 @@ async fn knowledge_stream_sql_lists_the_request_graph_edge_indexes() {
 #[cfg(all(feature = "security", feature = "redb"))]
 #[test]
 fn durable_lease_revocation_rejects_resume_before_any_cursor_metadata() {
-    use medulla_core::rbac_persist::IdentityBootstrapState;
+    use medulla_isolation::rbac_persist::IdentityBootstrapState;
 
     let DurableReadLease {
         directory,
@@ -642,7 +642,7 @@ fn claims_only_authority_cannot_enter_the_served_path() {
 #[cfg(all(feature = "query", feature = "redb"))]
 fn query_state_with_services(
     auth_secret: &str,
-    isolation: medulla_core::isolation::IsolationLayer,
+    isolation: medulla_isolation::isolation::IsolationLayer,
     persistence_label: &str,
 ) -> std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>> {
     let mut state = medulla_server_api::state::ServerState::new_for_test(auth_secret.to_owned(), isolation);

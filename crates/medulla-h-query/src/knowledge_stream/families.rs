@@ -7,7 +7,7 @@ pub(super) struct FamilyExecutionCtx<'a> {
     pub(super) core: &'a Arc<GraphCore>,
     pub(super) stream: &'a KnowledgeStreamExecCtx<'a>,
     #[cfg(feature = "security")]
-    pub(super) rls: &'a Arc<medulla_core::isolation::IsolationLayer>,
+    pub(super) rls: &'a Arc<medulla_isolation::isolation::IsolationLayer>,
 }
 
 pub(super) async fn execute_family(
@@ -316,7 +316,7 @@ async fn execute_time_series(
                 },
             )
             .await
-        .map_err(|_| "time-series surface unavailable".to_string())?;
+            .map_err(|_| "time-series surface unavailable".to_string())?;
         let source_result = response_result(response)?;
         let raw = raw_payload(&source_result, "time-series")?;
         let points: Vec<(i64, Vec<f64>)> = decode_knowledge_result(raw)

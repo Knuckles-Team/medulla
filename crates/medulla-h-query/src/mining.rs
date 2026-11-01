@@ -14,7 +14,7 @@
 
 use std::sync::Arc;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::AnomalyAlgorithm;
 use medulla_protocol_types::protocol::ClassifyAlgorithm;
 use medulla_protocol_types::protocol::ClusterAlgorithm;
@@ -38,11 +38,11 @@ use medulla_protocol_types::protocol::VectorSource;
 
 mod association;
 mod classic;
+mod entity;
 #[cfg(feature = "mining")]
 pub(crate) mod gateway;
 #[cfg(feature = "mining")]
 mod gateway_derived;
-mod entity;
 mod impact;
 mod input;
 mod insight;
@@ -762,7 +762,7 @@ fn dispatch_insight_families_for_test(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use medulla_protocol_types::protocol::TransactionSource;
 
     fn node(props: serde_json::Value) -> Vec<u8> {

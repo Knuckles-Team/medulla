@@ -1,11 +1,11 @@
 //! Authenticated saga key and async scope isolation.
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::protocol::Method;
 use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::api::admin::saga::*;
 use medulla_server_api::auth::VerifiedRequestContext;
-use medulla_protocol_types::mutation_batch::{MutationBatch};
-use medulla_protocol_types::protocol::Method;
 use sha2::Digest;
 
 fn authority(actor: &str, tenant: &str, key: &str) -> CarrierAuthority {
@@ -76,7 +76,8 @@ fn saga_keys_separate_tenant_principal_and_authenticated_idempotency() {
 
 #[test]
 fn channel_departure_receipt_keeps_json_string_variant() {
-    let departure = medulla_protocol_types::protocol::ResultPayload::Json(serde_json::json!("left"));
+    let departure =
+        medulla_protocol_types::protocol::ResultPayload::Json(serde_json::json!("left"));
     let encoded =
         rmp_serde::to_vec_named(&DurableAdminResult::from_result(&departure).unwrap()).unwrap();
     let decoded = decode_admin_result(&encoded, AdminSagaResultContract::ChannelDeparture).unwrap();
@@ -168,10 +169,12 @@ fn channel_group_join_leave_rejoin_replays_each_tagged_result() {
         &leave,
         medulla_protocol_types::protocol::ResultPayload::of::<
             medulla_protocol_types::result_contract::messaging::LeaveChannel,
-        >(medulla_protocol_types::messaging_wire::ChannelDeparture::new(
-            None,
-            medulla_protocol_types::messaging_wire::ChannelDepartureStatus::Left,
-        ))
+        >(
+            medulla_protocol_types::messaging_wire::ChannelDeparture::new(
+                None,
+                medulla_protocol_types::messaging_wire::ChannelDepartureStatus::Left,
+            ),
+        )
         .unwrap(),
     );
     assert!(matches!(
@@ -435,7 +438,8 @@ fn recovery_rejects_unknown_prepared_and_committed_events_but_replays_known_priv
         medulla_transaction::SagaBegin::Execute
     ));
     let encoded =
-        rmp_serde::to_vec_named(&medulla_protocol_types::protocol::ResultPayload::Bool(true)).unwrap();
+        rmp_serde::to_vec_named(&medulla_protocol_types::protocol::ResultPayload::Bool(true))
+            .unwrap();
     backend.admin_saga_end(&committed, encoded, 91).unwrap();
     let Err(error) =
         resume_named_admin_saga(&backend, "unknown-committed", Some("contract-test-actor"))
@@ -506,7 +510,9 @@ fn sparql_recovery_rejects_untyped_results_while_prepared_and_replays_exact_outc
     )
     .unwrap();
     for invalid in [
-        medulla_protocol_types::protocol::ResultPayload::Json(serde_json::json!({"unrelated": true})),
+        medulla_protocol_types::protocol::ResultPayload::Json(
+            serde_json::json!({"unrelated": true}),
+        ),
         medulla_protocol_types::protocol::ResultPayload::Json(serde_json::json!({
             "operations": 1,
             "inserted": 2,
@@ -553,7 +559,8 @@ fn sparql_recovery_rejects_untyped_results_while_prepared_and_replays_exact_outc
     let replay = resume_named_admin_saga(&backend, "sparql-success", Some("contract-test-actor"))
         .unwrap()
         .unwrap();
-    let medulla_protocol_types::protocol::ResultPayload::Json(body) = replay.replayed.unwrap() else {
+    let medulla_protocol_types::protocol::ResultPayload::Json(body) = replay.replayed.unwrap()
+    else {
         panic!("typed SPARQL success replay lost its JSON result");
     };
     let medulla_protocol_types::protocol::ResultPayload::Json(expected) = sparql_result(1) else {
@@ -593,7 +600,8 @@ fn sparql_recovery_rejects_untyped_results_while_prepared_and_replays_exact_outc
         resume_named_admin_saga(&backend, "sparql-compensated", Some("contract-test-actor"))
             .unwrap()
             .unwrap();
-    let medulla_protocol_types::protocol::ResultPayload::Json(body) = replay.replayed.unwrap() else {
+    let medulla_protocol_types::protocol::ResultPayload::Json(body) = replay.replayed.unwrap()
+    else {
         panic!("typed SPARQL compensation replay lost its JSON result");
     };
     let medulla_protocol_types::protocol::ResultPayload::Json(expected) = outcome else {
@@ -686,7 +694,8 @@ fn method_bearing_retry_recovers_legacy_public_sagas_but_direct_resume_refuses()
         None,
     )
     .unwrap();
-    let medulla_protocol_types::protocol::ResultPayload::Json(body) = recovered.replayed.unwrap() else {
+    let medulla_protocol_types::protocol::ResultPayload::Json(body) = recovered.replayed.unwrap()
+    else {
         panic!("method-bearing legacy public recovery lost its typed result");
     };
     assert_eq!(
@@ -708,7 +717,8 @@ fn method_bearing_retry_recovers_legacy_public_sagas_but_direct_resume_refuses()
     )
     .unwrap();
     let encoded =
-        rmp_serde::to_vec_named(&medulla_protocol_types::protocol::ResultPayload::Bool(true)).unwrap();
+        rmp_serde::to_vec_named(&medulla_protocol_types::protocol::ResultPayload::Bool(true))
+            .unwrap();
     backend
         .admin_saga_end(&discriminated.batch, encoded, 106)
         .unwrap();
@@ -798,8 +808,9 @@ fn durable_reshard_saga_rejects_wrong_result_then_replays_typed_result() {
     .contains("requires a JSON body"));
 
     let report = reshard_report("contract-test");
-    let result =
-        medulla_protocol_types::protocol::ResultPayload::Json(serde_json::to_value(&report).unwrap());
+    let result = medulla_protocol_types::protocol::ResultPayload::Json(
+        serde_json::to_value(&report).unwrap(),
+    );
     let committed = finish_admin_saga(
         &backend,
         recovered.batch,
@@ -822,7 +833,8 @@ fn durable_reshard_saga_rejects_wrong_result_then_replays_typed_result() {
         None,
     )
     .unwrap();
-    let medulla_protocol_types::protocol::ResultPayload::Json(body) = replay.replayed.unwrap() else {
+    let medulla_protocol_types::protocol::ResultPayload::Json(body) = replay.replayed.unwrap()
+    else {
         panic!("reshard replay lost its typed JSON result");
     };
     assert_eq!(

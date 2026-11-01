@@ -92,7 +92,7 @@ pub struct PlanNode {
     /// (`EXPLAIN PROVENANCE`, E5 phase 4). `false` by default — a bare conversion from
     /// a linear `Plan` never opts in.
     pub provenance_pushdown: bool,
-    /// Whether the RLS/policy filter (`medulla_core::isolation::IsolationLayer`) should be
+    /// Whether the RLS/policy filter (`medulla_isolation::isolation::IsolationLayer`) should be
     /// pushed down and evaluated at this node when the plan is EXPLAINed (`EXPLAIN
     /// POLICY`). `false` by default.
     pub policy_pushdown: bool,

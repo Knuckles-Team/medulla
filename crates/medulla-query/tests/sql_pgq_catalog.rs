@@ -3,7 +3,7 @@
 //! public `TableStore` API — the same catalog transaction ordinary table and
 //! view DDL commits through.
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_query::sql::{
     classify, exec_graph_table_typed_with_tables, parse_property_graph_ddl, StatementKind,
 };
@@ -671,9 +671,12 @@ fn quoted_identifiers_in_a_persisted_graph_cannot_escape_the_emitted_sql() {
     // The proof that nothing escaped: the SQL parser reads this as EXACTLY ONE
     // statement (the lowerer rejects any other count), and re-renders the same
     // doubled identifier -- so `";drop` was one identifier, never a boundary.
-    let statement =
-        medulla_query::sql::lower_graph_table_to_datafusion(&query, &record.accepted_definition, TENANT)
-            .unwrap();
+    let statement = medulla_query::sql::lower_graph_table_to_datafusion(
+        &query,
+        &record.accepted_definition,
+        TENANT,
+    )
+    .unwrap();
     let rendered = statement.to_string();
     assert!(rendered.contains(r#""tab"";drop""#), "{rendered}");
     assert!(

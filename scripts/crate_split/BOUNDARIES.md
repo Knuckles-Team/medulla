@@ -54,7 +54,7 @@ L6  decision-records | decision-eval | decision-memory | competency | competency
 L5  uql | nlq | federation | exec | retrieval | plan | decision-plan | packs | catalog | vocab | ingest
 L4  sql | cypher | tables | table-store | virtual-graph | graph-algos | mining | compute
     | finance | decision-policy | decision-rank
-L3  graph-core | isolation | core | semantic-index | ann-codes | reasoner | decision-stats | finance-market
+L3  semantic-index < query-cache < graph-core < ann-codes < isolation < core (one chain, `[core_split]`) | reasoner | decision-stats | finance-market
 L2  storage | storage-owner | numeric | transaction | rdf | the 42 unchanged leaves (geo, tsdb, shacl, ...)
     | protocol-types (the type hub above every domain type crate)
 L1  identity-types < mutation-types < index-types < result-types < agent-types < catalog-types
@@ -211,14 +211,15 @@ the script.
 | `medulla-numeric` | L2 | Deterministic numeric kernels: series, random, stats, clustering and the Python bridge. | 7,440 | 9,040 | finance-primitives 14, federated-query-and-reasoning 2 |
 | `medulla-transaction` | L2 | Transaction graft, outbox and change capture. | 21,063 | 21,763 | durable-graph-kernel 6, finance-primitives 1 |
 | `medulla-rdf` | L2 | RDF model, SPARQL algebra and update, and the serialisations (JSON-LD, RDF/XML, GeoSPARQL). | 10,783 | 11,563 | federated-query-and-reasoning 5, cross-source-competency 3, source-authority 1 |
-| `medulla-graph-core` | L3 | In-memory property graph, its indexes, paths, projections and JSONPath. | 17,409 | 22,969 | connector-competency 74, durable-graph-kernel 3, typed-packs-and-catalog 3, cross-source-competency 2, decision-engine 2, federated-query-and-reasoning 1, placement-and-worker-policy 1 |
-| `medulla-isolation` | L3 | Tenant isolation, RBAC persistence and dependency scopes. | 9,316 | 12,116 | engine-identity-and-scope 26, decision-engine 2 |
-| `medulla-core` | L3 | Engine core services that remain: broker, registry, lifecycle, durable apply and result cache. | 9,447 | 11,347 | typed-packs-and-catalog 6, orchestration-vocabulary 5, orchestration-competency 4, development-lifecycle 2, durable-graph-kernel 2, unified-data-plane 2, ingest-worker 1, media-and-personal-vocabulary 1 |
-| `medulla-semantic-index` | L3 | Semantic ANN codes and the semantic index service. | 9,212 | 9,412 | federated-query-and-reasoning 1, repository-index-and-ingestion 1 |
+| `medulla-query-cache` | L3 | Dependency scopes, the version-keyed query-result cache and the projection catalog. | 2,167 | 2,367 |  |
+| `medulla-graph-core` | L3 | In-memory property graph, its indexes, paths, JSONPath, scenes, cold tier, read-through, row-visibility caches and the broker/RLS key vocabulary. | 18,614 | 24,174 | connector-competency 74, durable-graph-kernel 3, typed-packs-and-catalog 3, cross-source-competency 2, decision-engine 2, federated-query-and-reasoning 1, placement-and-worker-policy 1 |
+| `medulla-isolation` | L3 | Tenant isolation, RBAC and RBAC persistence. | 8,249 | 11,149 | engine-identity-and-scope 26, decision-engine 2 |
+| `medulla-core` | L3 | Engine core services that remain: broker, registry, lifecycle, durable apply and freshness. | 7,464 | 9,164 | typed-packs-and-catalog 6, orchestration-vocabulary 5, orchestration-competency 4, development-lifecycle 2, durable-graph-kernel 2, unified-data-plane 2, ingest-worker 1, media-and-personal-vocabulary 1 |
+| `medulla-semantic-index` | L3 | Semantic embedding store: brute-force, HNSW and ANN backends, regeneration and embedding batches. | 5,324 | 5,424 | federated-query-and-reasoning 1, repository-index-and-ingestion 1 |
 | `medulla-reasoner` | L3 | OWL, tableau and rule reasoning plus reasoning closure. | 13,060 | 14,360 | durable-graph-kernel 9, federated-query-and-reasoning 3, typed-packs-and-catalog 1 |
 | `medulla-decision-stats` | L3 | Statistical ranking for the decision ladder: fitted heads, calibration, conformal bounds, off-policy evaluation and scores. | 9,928 | 17,148 | decision-engine 60, finance-primitives 8, orchestration-vocabulary 2, placement-and-worker-policy 2, development-lifecycle 1 |
 | `medulla-finance-market` | L3 | Market data primitives: quotes, bars, books and their kernels. | 5,466 | 5,566 | finance-primitives 1 |
-| `medulla-ann-codes` | L3 | Semantic ANN code books: quantisation, encode and decode. | 16,021 | 16,021 |  |
+| `medulla-ann-codes` | L3 | Durable ANN code tier and the semantic index service. | 20,229 | 20,329 |  |
 | `medulla-sql` | L4 | SQL dialect: parse, classify, plan and execute over tables. | 21,862 | 22,862 | engine-parity 6, unified-data-plane 3, durable-graph-kernel 1 |
 | `medulla-cypher` | L4 | Cypher language, its executor, graph data science calls and the edge index. | 15,474 | 15,974 | engine-parity 4, unified-data-plane 1 |
 | `medulla-tables` | L4 | Table model: schema, property graph tables and ANN authority (everything but the table store). | 12,702 | 13,002 | engine-parity 2, federated-query-and-reasoning 1 |

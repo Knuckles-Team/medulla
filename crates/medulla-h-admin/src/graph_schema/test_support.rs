@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 
 use medulla_rdf::oxrdf::{NamedOrBlankNode, Term, Triple};
 
-use medulla_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_server_api::api::admin::compose::scope_blank_nodes;
 use medulla_server_api::api::admin::compose::validate_and_compose;
 
@@ -65,7 +65,7 @@ pub(super) fn assert_core_catalog(modules: &[&str]) -> medulla_rdf::owl::Classif
             "{module}"
         );
     }
-    assert!(sources.core.len() <= medulla_core::graph::MAX_CORE_SCHEMA_SOURCES);
+    assert!(sources.core.len() <= medulla_graph_core::graph::MAX_CORE_SCHEMA_SOURCES);
     let composed = validate_and_compose(&sources).unwrap();
     let classification = medulla_rdf::owl::Reasoner::from_triples(&composed.ontology).classify();
     assert!(classification.consistent);

@@ -163,7 +163,7 @@ async fn topology_commit_refuses_uncoordinated_owners() {
         .await
         .unwrap();
     let mut server =
-        ServerState::new_for_test("commit-guard", medulla_core::isolation::IsolationLayer::new());
+        ServerState::new_for_test("commit-guard", medulla_isolation::isolation::IsolationLayer::new());
     server.persist_dir = Some(path);
     server.persistence = Some(backend.clone());
     let state = Arc::new(RwLock::new(server));

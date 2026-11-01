@@ -1,9 +1,9 @@
 //! Served foreign-source leg resolution over the server's catalog (federation).
 
 use super::*;
-use medulla_server_api::api::query_txn::foreign_catalog::OwnedForeignRegistry;
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_server_api::api::query_txn::foreign_catalog::OwnedForeignRegistry;
 
 /// [`ForeignSourceCatalog::resolve_for_plan`] against the server's catalog for a served
 /// plan, with the caller's verified carrier taken from its read authority. `Err` is the

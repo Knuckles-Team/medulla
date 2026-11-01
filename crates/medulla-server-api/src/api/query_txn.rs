@@ -33,7 +33,7 @@ pub trait QueryApi: Send + Sync {
         persist_dir: &std::path::Path,
         tenant: &str,
         binding_id: &str,
-    ) -> Result<Arc<medulla_core::compute::semantic_index_service::SemanticIndexService>, String>;
+    ) -> Result<Arc<medulla_ann_codes::semantic_index_service::SemanticIndexService>, String>;
 
     /// Run `plan` over a staged (transaction-overlaid) view with the core indexes, committed
     /// and staged embeddings, and the caller's governed foreign and time-series legs bound,
@@ -42,8 +42,8 @@ pub trait QueryApi: Send + Sync {
     fn run_unified_staged_rows(
         &self,
         plan: medulla_plan::Plan,
-        view: &medulla_core::graph::GraphView,
-        core: &Arc<medulla_core::graph::GraphCore>,
+        view: &medulla_graph_core::graph::GraphView,
+        core: &Arc<medulla_graph_core::graph::GraphCore>,
         staged: &[(String, Vec<f32>)],
         #[cfg(feature = "federation")] foreign: Option<
             &medulla_plan::federation::ForeignSourceRegistry,

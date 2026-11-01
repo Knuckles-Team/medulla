@@ -79,9 +79,8 @@ use pyo3::types::{PyModule, PyType};
 static CLIENT_MODULE: OnceLock<Option<Py<PyModule>>> = OnceLock::new();
 
 fn client_module(py: Python<'_>) -> Option<Bound<'_, PyModule>> {
-    let cached: &Option<Py<PyModule>> = CLIENT_MODULE.get_or_init_py_attached(py, || {
-        py.import("medulla.client").ok().map(Bound::unbind)
-    });
+    let cached: &Option<Py<PyModule>> = CLIENT_MODULE
+        .get_or_init_py_attached(py, || py.import("medulla.client").ok().map(Bound::unbind));
     cached.as_ref().map(|module| module.bind(py).clone())
 }
 

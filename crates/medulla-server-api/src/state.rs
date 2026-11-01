@@ -6,7 +6,7 @@ use tokio::sync::Semaphore;
 
 use crate::txn::GraphTxnState;
 use crate::txn::TxnIdGen;
-use medulla_core::isolation::IsolationLayer;
+use medulla_isolation::isolation::IsolationLayer;
 use medulla_core::registry::GraphRegistry;
 use medulla_kernel::channels::ChannelManager;
 use parking_lot::Mutex;
@@ -575,7 +575,7 @@ impl ServerState {
 }
 
 impl medulla_kernel::kernel::persistence::ResidentProjectionHost for ServerState {
-    fn resident_graphs(&self) -> Vec<(String, Arc<medulla_core::graph::GraphCore>)> {
+    fn resident_graphs(&self) -> Vec<(String, Arc<medulla_graph_core::graph::GraphCore>)> {
         self.registry
             .all_entries()
             .iter()

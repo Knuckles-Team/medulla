@@ -57,7 +57,7 @@ pub(crate) fn nl_config_refusal(e: &medulla_plan::NlConfigError) -> String {
 #[cfg(feature = "nl-query")]
 pub(crate) fn handle_nl_query_plan(
     text: &str,
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     req_id: u64,
     foreign_sources: Option<&std::collections::BTreeSet<String>>,
 ) -> Result<(String, medulla_plan::Plan), Response> {
@@ -91,7 +91,7 @@ pub(crate) fn handle_nl_query_plan(
 /// the composed GraphSchema's ontology property names linked onto stored keys.
 #[cfg(feature = "nl-query")]
 pub(crate) fn nl_schema_context(
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     foreign_sources: Option<&std::collections::BTreeSet<String>>,
 ) -> medulla_plan::nl::context::SchemaContext {
     let mut context = medulla_plan::nl::context::SchemaContext::from_view(view);

@@ -10,7 +10,7 @@
 
 use medulla_types::acl::AgentIdentity;
 use medulla_types::acl::AgentRole;
-use medulla_core::isolation::IsolationLayer;
+use medulla_isolation::isolation::IsolationLayer;
 use medulla_types::acl::Grant;
 use medulla_types::acl::GrantEffect;
 use medulla_types::acl::RbacAction;

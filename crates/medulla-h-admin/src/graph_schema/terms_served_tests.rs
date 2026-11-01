@@ -8,9 +8,9 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_core::graph::GraphSchemaSource;
-use medulla_core::graph::GraphSchemaSources;
-use medulla_core::graph::SchemaSourceOrigin;
+use medulla_graph_core::graph::GraphSchemaSource;
+use medulla_graph_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::SchemaSourceOrigin;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;

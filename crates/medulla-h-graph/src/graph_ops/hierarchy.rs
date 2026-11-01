@@ -193,7 +193,8 @@ async fn handle_cluster_hierarchy_expand(
     core: &Arc<GraphCore>,
     cluster_id: String,
 ) -> Response {
-    let Some((level, local_idx)) = medulla_compute::algorithms::parse_cluster_id(&cluster_id) else {
+    let Some((level, local_idx)) = medulla_compute::algorithms::parse_cluster_id(&cluster_id)
+    else {
         return Response::err(req_id, format!("malformed cluster_id: {cluster_id}"));
     };
     let hierarchy = match load_cached_cluster_hierarchy(state, req_id, graph_name).await {
@@ -254,7 +255,9 @@ fn expand_leaf_cluster_to_nodes(
 /// edge shape. Split out so the nested pair/blob loop does not count against
 /// `expand_leaf_cluster_to_nodes`; byte-identical behaviour, including the `"_"`
 /// fallback for a blob with no decodable `relationship`.
-fn expand_subgraph_edges_to_wire(sub: &medulla_core::graph::GraphView) -> Vec<ClusterMemberEdge> {
+fn expand_subgraph_edges_to_wire(
+    sub: &medulla_graph_core::graph::GraphView,
+) -> Vec<ClusterMemberEdge> {
     decoded_edge_properties(sub)
         .into_iter()
         .map(|(src_id, dst_id, props)| {

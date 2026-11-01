@@ -444,7 +444,7 @@ struct NumericColumn {
 /// Visit decodable top-level properties; callers keep their statistic passes separate.
 #[cfg(feature = "query")]
 fn visit_top_level_properties(
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     mut visit: impl FnMut(&str, &serde_json::Value),
 ) {
     for blob in view.node_properties.values() {
@@ -475,7 +475,7 @@ impl ColumnStats {
     /// Per-column stats for `view`, MEMOIZED on the snapshot so repeated `optimize()` calls
     /// over the SAME snapshot pay the O(N) blob-decode pass ONCE (CONCEPT:MEDULLA-KG.query.column-range-stats).
     ///
-    /// Correctness invariant (never serves stale stats): a [`medulla_core::graph::GraphView`] is an
+    /// Correctness invariant (never serves stale stats): a [`medulla_graph_core::graph::GraphView`] is an
     /// IMMUTABLE point-in-time snapshot produced by `GraphCore::*_snapshot` at one OCC
     /// `version()`; its `node_properties` never change after construction. The memo is stored
     /// INSIDE that view (`GraphView::plan_stats_memo`, an interior-mutable [`std::sync::OnceLock`]),
@@ -487,7 +487,7 @@ impl ColumnStats {
     /// Any` so `medulla-core` need not depend on `medulla-plan`); we downcast and clone it (an O(#columns)
     /// copy — never the O(N) blob scan) to keep the returned `ColumnStats` byte-identical to the
     /// recompute path.
-    pub fn collect(view: &medulla_core::graph::GraphView) -> Self {
+    pub fn collect(view: &medulla_graph_core::graph::GraphView) -> Self {
         collect_memoized(&view.plan_stats_memo, || Self::compute(view))
     }
 
@@ -496,7 +496,7 @@ impl ColumnStats {
     /// TOP-LEVEL numeric property accumulates into its column's running min/max/count plus a
     /// capped value sample. After the pass each column's sample is bucketed into a
     /// [`HIST_BUCKETS`]-wide equi-width histogram over the exact `[min,max]`.
-    fn compute(view: &medulla_core::graph::GraphView) -> Self {
+    fn compute(view: &medulla_graph_core::graph::GraphView) -> Self {
         use std::collections::HashMap;
         struct Acc {
             min: f64,
@@ -607,7 +607,7 @@ impl DistinctStats {
     /// exactly like [`ColumnStats::collect`] — see that method's doc for the full
     /// staleness-impossible argument; it applies identically here (a `GraphView` never changes
     /// after construction, so the memo can never go stale).
-    pub fn collect(view: &medulla_core::graph::GraphView) -> Self {
+    pub fn collect(view: &medulla_graph_core::graph::GraphView) -> Self {
         collect_memoized(&view.distinct_stats_memo, || Self::compute(view))
     }
 
@@ -615,7 +615,7 @@ impl DistinctStats {
     /// hashed into its column's sketch. Arrays/objects/null are skipped (never an equality
     /// target in practice, and hashing a whole nested structure would defeat the sketch's O(1)
     /// memory point for no query-planning benefit).
-    fn compute(view: &medulla_core::graph::GraphView) -> Self {
+    fn compute(view: &medulla_graph_core::graph::GraphView) -> Self {
         use std::collections::HashMap;
         let mut sketches: HashMap<String, medulla_compute::sketch::HyperLogLog> = HashMap::new();
         visit_top_level_properties(view, |k, val| {
@@ -1240,8 +1240,8 @@ mod tests {
     #[cfg(feature = "query")]
     #[test]
     fn column_stats_memoized_and_snapshot_scoped() {
-        use medulla_core::compute::semantic::SemanticStore;
-        use medulla_core::graph::GraphCore;
+        use medulla_graph_core::graph::GraphCore;
+        use medulla_semantic_index::semantic::SemanticStore;
         fn blob(v: serde_json::Value) -> Vec<u8> {
             rmp_serde::to_vec_named(&v).unwrap()
         }

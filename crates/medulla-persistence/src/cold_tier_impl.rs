@@ -13,7 +13,7 @@
 //!     file (RF-RULING-004/005) — this module never opens a `redb::Database`.
 //!   * S3:   one object at `{prefix}/{sanitized_graph}` in the configured bucket.
 
-use medulla_core::cold_tier::ColdTier;
+use medulla_graph_core::cold_tier::ColdTier;
 use redb::TableDefinition;
 
 /// `graph_name → serialized graph blob`. One table; one row per offloaded graph.

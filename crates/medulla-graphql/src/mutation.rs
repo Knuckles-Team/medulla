@@ -20,7 +20,7 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use serde_json::{Map, Value};
 
 use crate::parser::{gql_to_json, parse_operation, Field, GqlValue, Operation};

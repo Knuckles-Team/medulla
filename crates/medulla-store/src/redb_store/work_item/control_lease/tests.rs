@@ -39,9 +39,13 @@ fn end(
     }
 }
 
-fn decode<T: serde::de::DeserializeOwned>(payload: Option<medulla_protocol_types::protocol::ResultPayload>) -> T {
+fn decode<T: serde::de::DeserializeOwned>(
+    payload: Option<medulla_protocol_types::protocol::ResultPayload>,
+) -> T {
     match payload.expect("a lease transition always answers") {
-        medulla_protocol_types::protocol::ResultPayload::Json(value) => serde_json::from_value(value).unwrap(),
+        medulla_protocol_types::protocol::ResultPayload::Json(value) => {
+            serde_json::from_value(value).unwrap()
+        }
         other => panic!("control-lease results are JSON, got {other:?}"),
     }
 }

@@ -664,7 +664,7 @@ mod tests {
     #[test]
     fn graph_topology_pages_central_blocks_in_first() {
         use medulla_compute::algorithms::pagerank;
-        use medulla_core::graph::GraphCore;
+        use medulla_graph_core::graph::GraphCore;
 
         // A star graph: every leaf cites the hub.
         let g = GraphCore::new();

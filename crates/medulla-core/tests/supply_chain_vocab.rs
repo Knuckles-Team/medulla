@@ -192,7 +192,8 @@ ex:cve20241234 a kg:Vulnerability ;
 ex:checkoutService a infra:Service ;
     kg:usesComponent ex:openssl111k ."
     );
-    let report = medulla_shacl::validate_turtle(SUPPLY_SHAPES, &valid).expect("valid fixture parses");
+    let report =
+        medulla_shacl::validate_turtle(SUPPLY_SHAPES, &valid).expect("valid fixture parses");
     assert!(
         report.conforms,
         "a well-formed version, vulnerability and service link: {:?}",
@@ -204,7 +205,8 @@ ex:checkoutService a infra:Service ;
 ex:orphanVersion a kg:ComponentVersion ;
     kg:versionString \"0.0.1\" ."
     );
-    let report = medulla_shacl::validate_turtle(SUPPLY_SHAPES, &versionless).expect("fixture parses");
+    let report =
+        medulla_shacl::validate_turtle(SUPPLY_SHAPES, &versionless).expect("fixture parses");
     assert!(
         !report.conforms,
         "a versionless component version must be refused: {:?}",
@@ -220,7 +222,8 @@ ex:apocalyptic a kg:Vulnerability ;
 
 ex:openssl111k a kg:ComponentVersion ."
     );
-    let report = medulla_shacl::validate_turtle(SUPPLY_SHAPES, &bad_severity).expect("fixture parses");
+    let report =
+        medulla_shacl::validate_turtle(SUPPLY_SHAPES, &bad_severity).expect("fixture parses");
     assert!(
         !report.conforms,
         "a severity outside {{low, medium, high, critical, unknown}} must be refused: {:?}",
@@ -247,7 +250,8 @@ ex:openssl111k a kg:ComponentVersion ;
 
 ex:openssl a kg:SoftwareComponent ."
     );
-    let report = medulla_shacl::validate_turtle(SUPPLY_SHAPES, &non_service).expect("fixture parses");
+    let report =
+        medulla_shacl::validate_turtle(SUPPLY_SHAPES, &non_service).expect("fixture parses");
     assert!(
         !report.conforms,
         "a usesComponent from a non-service must be refused: {:?}",
@@ -285,7 +289,8 @@ fn supplier_and_item_shapes_require_a_label() {
     let valid = format!(
         "{SUPPLY_SHAPE_DATA_PREFIX}\nex:namedSupplier a kg:Supplier ;\n    rdfs:label \"Acme Corp\" .\nex:namedItem a kg:SupplyChainItem ;\n    rdfs:label \"Power supply unit\" ."
     );
-    let report = medulla_shacl::validate_turtle(SUPPLY_SHAPES, &valid).expect("valid fixture parses");
+    let report =
+        medulla_shacl::validate_turtle(SUPPLY_SHAPES, &valid).expect("valid fixture parses");
     assert!(
         report.conforms,
         "named supplier and item: {:?}",
@@ -297,7 +302,8 @@ fn supplier_and_item_shapes_require_a_label() {
         ("kg:SupplyChainItem", "a nameless item"),
     ] {
         let nameless = format!("{SUPPLY_SHAPE_DATA_PREFIX}\nex:nameless a {class} .");
-        let report = medulla_shacl::validate_turtle(SUPPLY_SHAPES, &nameless).expect("fixture parses");
+        let report =
+            medulla_shacl::validate_turtle(SUPPLY_SHAPES, &nameless).expect("fixture parses");
         assert!(!report.conforms, "{message} must be refused");
         assert!(
             shape_violation_path(&report, "<http://www.w3.org/2000/01/rdf-schema#label>"),
@@ -427,7 +433,7 @@ fn supports_capability_declared_and_not_the_shared_supports() {
 }
 
 fn commercial_shapes() -> std::sync::Arc<str> {
-    let sources = medulla_core::graph::GraphSchemaSources::default();
+    let sources = medulla_graph_core::graph::GraphSchemaSources::default();
     sources
         .validate()
         .expect("the default core catalog validates");
@@ -529,7 +535,8 @@ ex:processDoc a kg:Document ;
 
 ex:orderManagement a kg:BusinessCapability ."
     );
-    let report = medulla_shacl::validate_turtle(&shapes, &non_service_link).expect("fixture parses");
+    let report =
+        medulla_shacl::validate_turtle(&shapes, &non_service_link).expect("fixture parses");
     assert!(
         !report.conforms,
         "a capability link from a non-service must be refused: {:?}",
@@ -725,7 +732,8 @@ ex:diskLimit a infra:HostLimit ;
 
 ex:rackHost a infra:Host ."
     );
-    let report = medulla_shacl::validate_turtle(INFRA_SHAPES, &valid).expect("valid fixture parses");
+    let report =
+        medulla_shacl::validate_turtle(INFRA_SHAPES, &valid).expect("valid fixture parses");
     assert!(
         report.conforms,
         "a complete HostLimit row: {:?}",
@@ -740,7 +748,8 @@ ex:diskLimit a infra:HostLimit ;
     infra:readingValue 1200000000000 .
 ex:rackHost a infra:Host ."
     );
-    let report = medulla_shacl::validate_turtle(INFRA_SHAPES, &missing_limit).expect("fixture parses");
+    let report =
+        medulla_shacl::validate_turtle(INFRA_SHAPES, &missing_limit).expect("fixture parses");
     assert!(
         !report.conforms,
         "a missing limit value must be refused: {:?}",
@@ -769,7 +778,8 @@ ex:diskLimit a infra:HostLimit ;
     infra:limitValue 2000000000000 .
 ex:rackHost a infra:Host ."
     );
-    let report = medulla_shacl::validate_turtle(INFRA_SHAPES, &unknown_kind).expect("fixture parses");
+    let report =
+        medulla_shacl::validate_turtle(INFRA_SHAPES, &unknown_kind).expect("fixture parses");
     assert!(
         !report.conforms,
         "an unknown limit kind must be refused: {:?}",
@@ -826,7 +836,8 @@ const VIRTUAL_SHAPES: &str = include_str!("../ontology/virtual_graph-v1.shapes.t
 #[test]
 fn erpnext_supplier_mapping_fixture_passes_the_virtual_shapes() {
     let fixture = include_str!("fixtures/vm_erpnext_supplier.ttl");
-    let report = medulla_shacl::validate_turtle(VIRTUAL_SHAPES, fixture).expect("the fixture parses");
+    let report =
+        medulla_shacl::validate_turtle(VIRTUAL_SHAPES, fixture).expect("the fixture parses");
     assert!(
         report.conforms,
         "the erpnext Supplier mapping fixture passes the virtual-graph shapes: {:?}",
@@ -902,7 +913,8 @@ fn erpnext_supplier_mapping_fixture_passes_the_virtual_shapes() {
 #[test]
 fn erpnext_item_and_po_mapping_declares_the_lines_child_fetch() {
     let fixture = include_str!("fixtures/vm_erpnext_item_po.ttl");
-    let report = medulla_shacl::validate_turtle(VIRTUAL_SHAPES, fixture).expect("the fixture parses");
+    let report =
+        medulla_shacl::validate_turtle(VIRTUAL_SHAPES, fixture).expect("the fixture parses");
     assert!(
         report.conforms,
         "the erpnext Item/Purchase Order fixture passes the virtual-graph shapes: {:?}",
@@ -965,7 +977,8 @@ fn erpnext_item_and_po_mapping_declares_the_lines_child_fetch() {
 #[test]
 fn leanix_provider_maps_to_supplier_rank_two_with_supports_capability() {
     let fixture = include_str!("fixtures/vm_leanix.ttl");
-    let report = medulla_shacl::validate_turtle(VIRTUAL_SHAPES, fixture).expect("the fixture parses");
+    let report =
+        medulla_shacl::validate_turtle(VIRTUAL_SHAPES, fixture).expect("the fixture parses");
     assert!(
         report.conforms,
         "the leanix Provider mapping fixture passes the virtual-graph shapes: {:?}",
@@ -1034,7 +1047,8 @@ const VM_SERVICE_NOW: &str = "http://knuckles.team/test/vm-servicenow#";
 #[test]
 fn servicenow_incident_change_ci_maps_to_affects_service() {
     let fixture = include_str!("fixtures/vm_servicenow.ttl");
-    let report = medulla_shacl::validate_turtle(VIRTUAL_SHAPES, fixture).expect("the fixture parses");
+    let report =
+        medulla_shacl::validate_turtle(VIRTUAL_SHAPES, fixture).expect("the fixture parses");
     assert!(
         report.conforms,
         "the servicenow fixture passes the virtual-graph shapes: {:?}",
@@ -1103,7 +1117,8 @@ const VM_SALESFORCE: &str = "http://knuckles.team/test/vm-salesforce#";
 #[test]
 fn salesforce_account_and_contract_map_via_soql() {
     let fixture = include_str!("fixtures/vm_salesforce.ttl");
-    let report = medulla_shacl::validate_turtle(VIRTUAL_SHAPES, fixture).expect("the fixture parses");
+    let report =
+        medulla_shacl::validate_turtle(VIRTUAL_SHAPES, fixture).expect("the fixture parses");
     assert!(
         report.conforms,
         "the salesforce mapping fixture passes the virtual-graph shapes: {:?}",
@@ -1171,7 +1186,8 @@ const VM_TWENTY: &str = "http://knuckles.team/test/vm-twenty#";
 #[test]
 fn twenty_company_maps_to_customer_rank_two_without_a_contract_mapping() {
     let fixture = include_str!("fixtures/vm_twenty.ttl");
-    let report = medulla_shacl::validate_turtle(VIRTUAL_SHAPES, fixture).expect("the fixture parses");
+    let report =
+        medulla_shacl::validate_turtle(VIRTUAL_SHAPES, fixture).expect("the fixture parses");
     assert!(
         report.conforms,
         "the twenty Company mapping fixture passes the virtual-graph shapes: {:?}",
@@ -1224,7 +1240,8 @@ const VM_CONTAINER_MANAGER: &str = "http://knuckles.team/test/vm-container-manag
 #[test]
 fn container_manager_workload_and_image_map_deployed_as_and_uses_image() {
     let fixture = include_str!("fixtures/vm_container_manager.ttl");
-    let report = medulla_shacl::validate_turtle(VIRTUAL_SHAPES, fixture).expect("the fixture parses");
+    let report =
+        medulla_shacl::validate_turtle(VIRTUAL_SHAPES, fixture).expect("the fixture parses");
     assert!(
         report.conforms,
         "the container-manager mapping fixture passes the virtual-graph shapes: {:?}",
@@ -1312,7 +1329,8 @@ const VM_UPTIME: &str = "http://knuckles.team/test/vm-uptime#";
 #[test]
 fn uptime_monitor_resolves_to_service_by_url_host_key() {
     let fixture = include_str!("fixtures/vm_uptime.ttl");
-    let report = medulla_shacl::validate_turtle(VIRTUAL_SHAPES, fixture).expect("the fixture parses");
+    let report =
+        medulla_shacl::validate_turtle(VIRTUAL_SHAPES, fixture).expect("the fixture parses");
     assert!(
         report.conforms,
         "the uptime mapping fixture passes the virtual-graph shapes: {:?}",
@@ -1375,7 +1393,8 @@ const VM_DOCKERHUB: &str = "http://knuckles.team/test/vm-dockerhub#";
 #[test]
 fn dockerhub_image_sbom_and_cves_map_components_and_vulnerabilities() {
     let fixture = include_str!("fixtures/vm_dockerhub.ttl");
-    let report = medulla_shacl::validate_turtle(VIRTUAL_SHAPES, fixture).expect("the fixture parses");
+    let report =
+        medulla_shacl::validate_turtle(VIRTUAL_SHAPES, fixture).expect("the fixture parses");
     assert!(
         report.conforms,
         "the dockerhub mapping fixture passes the virtual-graph shapes: {:?}",
@@ -1469,7 +1488,8 @@ const VM_HOST_LIMITS: &str = "http://knuckles.team/test/vm-host-limits#";
 #[test]
 fn fan_manager_and_systems_manager_assemble_host_limit_rows() {
     let fixture = include_str!("fixtures/vm_host_limits.ttl");
-    let report = medulla_shacl::validate_turtle(VIRTUAL_SHAPES, fixture).expect("the fixture parses");
+    let report =
+        medulla_shacl::validate_turtle(VIRTUAL_SHAPES, fixture).expect("the fixture parses");
     assert!(
         report.conforms,
         "the host-limits mapping fixture passes the virtual-graph shapes: {:?}",
@@ -1896,7 +1916,8 @@ const VM_GITLAB_GITHUB: &str = "http://knuckles.team/test/vm-gitlab-github#";
 #[test]
 fn gitlab_dependencies_and_github_dependabot_map_rank_two() {
     let fixture = include_str!("fixtures/vm_gitlab_github.ttl");
-    let report = medulla_shacl::validate_turtle(VIRTUAL_SHAPES, fixture).expect("the fixture parses");
+    let report =
+        medulla_shacl::validate_turtle(VIRTUAL_SHAPES, fixture).expect("the fixture parses");
     assert!(
         report.conforms,
         "the gitlab/github mapping fixture passes the virtual-graph shapes: {:?}",

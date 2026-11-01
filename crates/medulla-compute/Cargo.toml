@@ -252,6 +252,9 @@ medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-isolation = { path = "../medulla-isolation" }
 
 [dev-dependencies]
 medulla-result-types = { path = "../medulla-result-types" }

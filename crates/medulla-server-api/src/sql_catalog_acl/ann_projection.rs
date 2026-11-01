@@ -23,7 +23,7 @@ use super::{
     open_authorized_table, project_read_store, selectable_tables, AuthorizedReadStore,
     AuthorizedTable, SqlPrivilege, ACCESS_DENIED,
 };
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 
 /// The request graph of a served read: its edge indexes' statuses join the
 /// status relation beside the tenant's table indexes (EH-352).
@@ -250,7 +250,7 @@ mod tests {
     fn projected_rows(dir: &Path, who: &str, sql: &str) -> Vec<Vec<Value>> {
         let projection =
             authorized_read_store_for_query(&authority(who), dir, sql, None, &no_graph()).unwrap();
-        let view = medulla_core::graph::GraphView::default();
+        let view = medulla_graph_core::graph::GraphView::default();
         medulla_query::exec_sql_typed_with_tables(&view, projection.store(), sql)
             .unwrap()
             .rows

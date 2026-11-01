@@ -1,9 +1,9 @@
 //! Parent-only phases must authenticate the durable tenant even without a plan.
 
 use super::*;
-use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_persistence::backup::EnvVarGuard;
 use medulla_persistence::redb_backend::RedbBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 
 fn carrier(tenant: &str) -> CarrierAuthority {
     CarrierAuthority::from_verified(&VerifiedRequestContext::verified_for_test_in_tenant(
@@ -136,7 +136,7 @@ async fn parent_only_phases_reject_foreign_tenant_with_same_principal() {
     assert_eq!(owner.actor_scope(), foreign.actor_scope());
     for key in [None, Some("stable-key")] {
         let mut txn = GraphTxnState::new(
-            &medulla_core::graph::GraphCore::new(),
+            &medulla_graph_core::graph::GraphCore::new(),
             NewTxnArgs {
                 graph: "graph".into(),
                 tenant_scope: owner.tenant_scope().into(),
@@ -278,7 +278,9 @@ async fn check_delayed_abort_phases(
     }
     let (id, _) = participant_plan(parent, txn);
     assert!(backend.xshard_prepare_get(parent, id).unwrap().is_none());
-    assert!(!medulla_server_api::txn::consensus_graph_is_prepared(&txn.graph));
+    assert!(!medulla_server_api::txn::consensus_graph_is_prepared(
+        &txn.graph
+    ));
 }
 
 async fn store_committed_child(
@@ -289,7 +291,7 @@ async fn store_committed_child(
 ) {
     let (id, _) = participant_plan(parent, txn);
     let child_id = consensus_participant_child_id(parent, id, &txn.graph);
-    let core = Arc::new(medulla_core::graph::GraphCore::new());
+    let core = Arc::new(medulla_graph_core::graph::GraphCore::new());
     let persistence: Arc<dyn PersistenceBackend> = backend.clone();
     let result = medulla_server_api::mutation_batch::commit_internal_graph_methods_with_nonce(
         medulla_server_api::mutation_batch::InternalGraphCommitRequest::new(

@@ -9,7 +9,8 @@
 
 #![cfg(feature = "sql")]
 
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
 use medulla_query::{
     classify, exec_sql_typed_with_tables, AlterTableAction, Cell, Column, ColumnType, PgColType,
     StatementKind, TableSchema, TableStore, TypedQueryResult,
@@ -674,7 +675,10 @@ fn eg313_no_matching_index_falls_back_to_brute_force() {
     .unwrap();
     let want = brute_nearest_ids(q, 3, n, "<->");
     let got: Vec<Value> = no_index.rows.into_iter().map(|r| r[0].clone()).collect();
-    assert_eq!(got, want, "MEDULLA-313 no-index must fall back to brute force");
+    assert_eq!(
+        got, want,
+        "MEDULLA-313 no-index must fall back to brute force"
+    );
 
     // Register an L2-only index, then issue a COSINE query — metric not covered ⇒
     // fallback, still correct against the cosine brute-force reference.

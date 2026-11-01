@@ -13,7 +13,7 @@ use arrow::datatypes::{DataType, Field, Schema, SchemaRef};
 use arrow::record_batch::RecordBatch;
 use datafusion::datasource::MemTable;
 use datafusion::prelude::SessionContext;
-use medulla_core::index::ManagedIndexStatus;
+use medulla_graph_core::index::ManagedIndexStatus;
 
 use super::store_catalog::INDEX_STATUS_RELATION;
 

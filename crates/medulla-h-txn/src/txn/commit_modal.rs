@@ -152,7 +152,7 @@ pub(crate) async fn commit_graphql_cross_modal(
 /// to decode/re-encode a node's properties just leaves RAM momentarily behind
 /// the durable row rather than failing the whole commit that already succeeded.
 pub(super) fn mirror_blob_refs_into_ram(
-    core: &medulla_core::graph::GraphCore,
+    core: &medulla_graph_core::graph::GraphCore,
     blob_refs: &[(String, String)],
 ) {
     for (node_id, digest) in blob_refs {
@@ -196,7 +196,7 @@ async fn resolve_cross_modal_target(
     txn: &GraphTxnState,
 ) -> Result<
     (
-        Arc<medulla_core::graph::GraphCore>,
+        Arc<medulla_graph_core::graph::GraphCore>,
         Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     ),
     String,
@@ -295,7 +295,7 @@ pub(crate) async fn commit_cross_modal_txn_with_nonce(
 
 struct CrossModalDurableArgs<'a> {
     state: &'a Arc<RwLock<ServerState>>,
-    core: &'a Arc<medulla_core::graph::GraphCore>,
+    core: &'a Arc<medulla_graph_core::graph::GraphCore>,
     authority: &'a dyn medulla_server_api::api::persistence::PersistenceBackend,
     fname: &'a str,
     coordinator_id: &'a str,
@@ -361,16 +361,18 @@ async fn commit_cross_modal_durable(
     let (batch, result) = compile_cross_modal_batch(&args).await?;
     let committed = args
         .authority
-        .commit_mutation_batch_crossmodal(medulla_server_api::api::persistence::CrossModalCommitArgs {
-            graph_fname: args.fname,
-            batch: &batch,
-            methods: args.methods,
-            vectors: &args.txn.vectors,
-            blob_refs: &args.txn.blob_refs,
-            measurements: args.measurements,
-            result_msgpack: Some(&result),
-            committed_at_ms: now_ms(),
-        })
+        .commit_mutation_batch_crossmodal(
+            medulla_server_api::api::persistence::CrossModalCommitArgs {
+                graph_fname: args.fname,
+                batch: &batch,
+                methods: args.methods,
+                vectors: &args.txn.vectors,
+                blob_refs: &args.txn.blob_refs,
+                measurements: args.measurements,
+                result_msgpack: Some(&result),
+                committed_at_ms: now_ms(),
+            },
+        )
         .await
         .map_err(|error| format!("cross-modal MutationBatch commit failed: {error}"))?;
     if !committed.replayed {
@@ -446,7 +448,7 @@ pub(super) async fn project_committed_measurements(
 }
 #[cfg(feature = "graphql")]
 fn build_graphql_txn(
-    core: &medulla_core::graph::GraphCore,
+    core: &medulla_graph_core::graph::GraphCore,
     graph_name: &str,
     authority: &CarrierAuthority,
     staged: medulla_graphql::CrossModalTxn,

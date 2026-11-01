@@ -1,0 +1,20 @@
+[package]
+name = "medulla-query-cache"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Dependency scopes, the version-keyed query-result cache and the projection catalog"
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_query_cache"
+path = "src/lib.rs"
+
+[dependencies]
+parking_lot = "0.12"
+tracing = { version = "0.1" }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+
+[features]
+result-cache = []

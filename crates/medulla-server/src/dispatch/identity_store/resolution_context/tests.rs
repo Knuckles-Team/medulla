@@ -537,7 +537,7 @@ fn edit_fixture_identity(state: &mut ServerState, edit: impl FnOnce(&mut serde_j
             snapshot.bootstrap(),
         )
         .unwrap();
-    state.isolation = medulla_core::isolation::IsolationLayer::with_policy_store(adapter).unwrap();
+    state.isolation = medulla_isolation::isolation::IsolationLayer::with_policy_store(adapter).unwrap();
 }
 
 #[tokio::test]

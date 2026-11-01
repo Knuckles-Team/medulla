@@ -8,7 +8,7 @@ use medulla_rdf::update::GraphStore;
 use tokio::sync::RwLock;
 
 use crate::state::ServerState;
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 
 /// A snapshot of the caller-authorized graphs at plan time: each entry's
 /// `(type, core)` if the graph already exists live in the registry, or `None`

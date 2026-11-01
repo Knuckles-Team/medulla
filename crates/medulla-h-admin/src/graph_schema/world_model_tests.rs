@@ -13,7 +13,7 @@ use super::test_support::{
     assert_core_catalog, assert_shape_targets, kg, object_iri, parse_scoped, unmapped_classes,
     wired_with_fixture, KG, OWL_IMPORTS,
 };
-use medulla_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_server_api::api::admin::compose::validate_and_compose;
 
 const FOX: &str = "<http://example.org/world#fox>";

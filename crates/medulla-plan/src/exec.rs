@@ -19,8 +19,8 @@
 
 use std::collections::HashSet;
 
-use medulla_core::compute::semantic::SemanticStore;
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
+use medulla_semantic_index::semantic::SemanticStore;
 
 use crate::algebra::{Op, Plan, Pred};
 use crate::rowset::RowSet;
@@ -939,13 +939,13 @@ fn labelled_nodes<'a>(
 ) -> impl Iterator<Item = (&'a String, serde_json::Value)> + 'a {
     view.node_properties.iter().filter_map(move |(id, blob)| {
         let v = medulla_types::msgpack::decode_property_value(blob.as_slice()).ok()?;
-        medulla_core::graph::node_carries_label(&v, label).then_some((id, v))
+        medulla_graph_core::graph::node_carries_label(&v, label).then_some((id, v))
     })
 }
 
 /// SOURCE: all node ids that carry `label` — under `type`, `node_type` or
 /// `label`, or in the `labels` array — exactly the set the engine's label
-/// index files them under (`medulla_core::graph::node_carries_label`). Writers
+/// index files them under (`medulla_graph_core::graph::node_carries_label`). Writers
 /// store `node_type`, so matching `type` alone returned no rows for them.
 ///
 /// A scan is an unranked source, so the underlying `GraphView` map's discovery order
@@ -1604,7 +1604,7 @@ fn filter_op(ctx: &PlanCtx, preds: &[Pred], input: RowSet) -> Result<RowSet, Str
 
 // ── the document/JSON leg — medulla-core::jsonpath over the GraphView blobs (MEDULLA-084) ──
 
-/// Is `pred` a JSONPath predicate (evaluated per-row by `medulla_core::jsonpath`, NOT lowered
+/// Is `pred` a JSONPath predicate (evaluated per-row by `medulla_graph_core::jsonpath`, NOT lowered
 /// to SQL)? (CONCEPT:MEDULLA-KG.compute.json-deep-indexing.)
 fn is_jsonpath_pred(pred: &Pred) -> bool {
     matches!(pred, Pred::JsonPath { .. })
@@ -1612,7 +1612,7 @@ fn is_jsonpath_pred(pred: &Pred) -> bool {
 
 /// FILTER (document/JSON, CONCEPT:MEDULLA-KG.compute.json-deep-indexing): keep rows whose stored JSON satisfies the
 /// JSONPath predicate `pred`. Each row's blob is decoded to a `serde_json::Value` and the
-/// path/op is evaluated by `medulla_core::jsonpath` (existence / `->>`-equality / `@>`
+/// path/op is evaluated by `medulla_graph_core::jsonpath` (existence / `->>`-equality / `@>`
 /// containment). Rows with no/undecodable blob are dropped. Order- and score-preserving
 /// via [`RowSet::intersect_keep_order`] — the same shape as `spatial_filter`.
 fn jsonpath_filter(view: &GraphView, input: RowSet, pred: &Pred) -> Result<RowSet, String> {
@@ -1626,10 +1626,10 @@ fn jsonpath_filter(view: &GraphView, input: RowSet, pred: &Pred) -> Result<RowSe
         .iter()
         .filter(|r| {
             row_value(view, &r.id).is_some_and(|v| match op {
-                JsonPathOp::Exists => medulla_core::jsonpath::path_exists(&v, path),
-                JsonPathOp::Eq { value } => medulla_core::jsonpath::path_eq(&v, path, value),
+                JsonPathOp::Exists => medulla_graph_core::jsonpath::path_exists(&v, path),
+                JsonPathOp::Eq { value } => medulla_graph_core::jsonpath::path_eq(&v, path, value),
                 JsonPathOp::Contains { value } => {
-                    medulla_core::jsonpath::path_contains(&v, path, value)
+                    medulla_graph_core::jsonpath::path_contains(&v, path, value)
                 }
             })
         })
@@ -2693,7 +2693,7 @@ fn rel_matches(view: &GraphView, from: &str, to: &str, rel: &str) -> bool {
 mod scan_order_tests {
     use super::*;
     use crate::budget::{Budget, BUDGET_EXCEEDED};
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use serde_json::json;
 
     fn blob(value: serde_json::Value) -> Vec<u8> {

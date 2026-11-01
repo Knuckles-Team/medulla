@@ -35,15 +35,15 @@
 //! explicit OUT-OF-LOCK startup/recovery operation and is never reached from the
 //! in-lock commit path.
 
-use medulla_core::graph::GraphCore;
-use medulla_core::index::ChangeSet;
-use medulla_core::index::IndexColumns;
-use medulla_core::index::IndexDescriptor;
-use medulla_core::index::IndexError;
-use medulla_core::index::IndexKind;
-use medulla_core::index::IndexManifest;
-use medulla_core::index::SecondaryIndex;
-use medulla_core::index::SecondaryIndexFactory;
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::index::ChangeSet;
+use medulla_graph_core::index::IndexColumns;
+use medulla_graph_core::index::IndexDescriptor;
+use medulla_graph_core::index::IndexError;
+use medulla_graph_core::index::IndexKind;
+use medulla_graph_core::index::IndexManifest;
+use medulla_graph_core::index::SecondaryIndex;
+use medulla_graph_core::index::SecondaryIndexFactory;
 use medulla_kernel::lock_recovery::LockRecovery;
 
 /// Decode a captured `NodeChange.properties_msgpack` blob into a JSON value map. The
@@ -962,7 +962,7 @@ mod batch_update_tests {
 
     fn text_hits(core: &GraphCore, query: &str) -> Vec<String> {
         core.indexes()
-            .with_server_index(medulla_core::index::IndexKind::Text, |index| {
+            .with_server_index(medulla_graph_core::index::IndexKind::Text, |index| {
                 index
                     .as_any()
                     .downcast_ref::<GraphTextIndex>()

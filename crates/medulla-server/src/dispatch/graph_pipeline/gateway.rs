@@ -13,7 +13,7 @@ pub(super) struct GatewayRouteCtx<'a> {
     pub(super) attempt_nonce: Option<medulla_types::contract::Nonce>,
     pub(super) idempotency_key: &'a str,
     pub(super) tenant_scope: &'a str,
-    pub(super) core: Arc<medulla_core::graph::GraphCore>,
+    pub(super) core: Arc<medulla_graph_core::graph::GraphCore>,
     pub(super) persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
     pub(super) cdc: Option<Arc<medulla_server_api::cdc::CdcHub>>,
@@ -23,7 +23,7 @@ pub(super) struct GatewayRouteCtx<'a> {
     pub(super) read_authority: &'a Option<GraphReadAuthority>,
     pub(super) verified_actor: &'a str,
     #[cfg(feature = "security")]
-    pub(super) rls: std::sync::Arc<medulla_core::isolation::IsolationLayer>,
+    pub(super) rls: std::sync::Arc<medulla_isolation::isolation::IsolationLayer>,
 }
 
 #[cfg(any(

@@ -8,7 +8,7 @@ use super::{
     capabilities, collect_tombstones, delete, events, ingest, ingest_stream, lifecycle,
     native_predicate, native_query, query, response, stats, ModalityAuthority,
 };
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::api::ingest::MAX_INGEST_STREAM_ITEMS;
 

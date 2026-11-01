@@ -71,12 +71,7 @@ impl GraphTxnState {
     /// read-set capture + atomic-commit semantics as [`Self::stage_axiom`] /
     /// [`Self::stage_construct`] — copied verbatim, this is the well-precedented shape
     /// every staged-and-lowered modality shares.
-    pub fn stage_plan_writeback(
-        &mut self,
-        core: &GraphCore,
-        methods: Vec<Method>,
-        now_ms: u64,
-    ) {
+    pub fn stage_plan_writeback(&mut self, core: &GraphCore, methods: Vec<Method>, now_ms: u64) {
         for m in &methods {
             self.observe_method(core, m);
         }

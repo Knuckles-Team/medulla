@@ -272,7 +272,7 @@ $($variants)*
     /// (CONCEPT:MEDULLA-KG.mining.gspan-frequent-subgraph). The backtracking search is NP-hard with no bound
     /// otherwise, so it stops early once it collects `max_results` matches or spends
     /// `max_steps` candidate-pair attempts (whichever first). `0` for either ⇒ the
-    /// engine's conservative built-in default (`medulla_core::graph::DEFAULT_VF2_MAX_RESULTS`/
+    /// engine's conservative built-in default (`medulla_graph_core::graph::DEFAULT_VF2_MAX_RESULTS`/
     /// `DEFAULT_VF2_MAX_STEPS`) — a caller wanting more must ask for it explicitly.
     /// Returns a `Raw`-encoded [`Vf2MatchResult`].
     Vf2SubgraphMatch {

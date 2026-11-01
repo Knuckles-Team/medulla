@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use medulla_compute::graph_algos::impact::{noisy_or, ImpactGraph, Seed};
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use serde_json::json;
 use tokio::sync::RwLock;
 
@@ -65,13 +65,13 @@ fn populate(core: &GraphCore, queue_status: &str) {
     }
 }
 
-fn view(queue_status: &str) -> medulla_core::graph::GraphView {
+fn view(queue_status: &str) -> medulla_graph_core::graph::GraphView {
     let core = GraphCore::new();
     populate(&core, queue_status);
     core.analysis_snapshot()
 }
 
-fn watch(view: &medulla_core::graph::GraphView) -> ImpactWatchSpec {
+fn watch(view: &medulla_graph_core::graph::GraphView) -> ImpactWatchSpec {
     let watches = load_watches(view);
     assert_eq!(watches.len(), 1);
     watches[0].clone()

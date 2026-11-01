@@ -29,7 +29,7 @@ use datafusion::{
     error::Result as DfResult,
     logical_expr::{Expr, TableProviderFilterPushDown, TableType},
 };
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use petgraph::visit::{EdgeRef, IntoEdgeReferences};
 use petgraph::Direction;
 use serde_json::Value;
@@ -609,11 +609,11 @@ impl PushdownRegistry {
     }
 
     fn max_indexed() -> usize {
-        medulla_core::graph::GraphCore::max_indexed_properties()
+        medulla_graph_core::graph::GraphCore::max_indexed_properties()
     }
 
     fn seed_columns() -> Vec<String> {
-        medulla_core::graph::GraphCore::indexed_properties_from_env()
+        medulla_graph_core::graph::GraphCore::indexed_properties_from_env()
     }
 
     /// Canonical string form of an Arrow cell at `(col, row)`, or `None` for null /

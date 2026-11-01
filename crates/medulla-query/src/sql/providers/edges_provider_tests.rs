@@ -2,7 +2,7 @@ use super::*;
 use crate::sql::exec::exec_sql;
 use crate::sql::CancellationToken;
 use datafusion::logical_expr::{col, lit};
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use serde_json::json;
 
 /// n1 -> n2, n1 -> n3, n2 -> n3 (a tiny DAG so src/dst pushdown each narrow to

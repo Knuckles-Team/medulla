@@ -81,6 +81,8 @@ petgraph = { version = "0.8.3", features = ["serde-1"] }
 # already a workspace dep elsewhere; optional + gated by `hardening`, so it links only
 # into the GraphQL-bearing tiers (never Pi, which excludes `graphql`).
 sha2 = { version = "0.10", optional = true }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
+medulla-graph-core = { path = "../medulla-graph-core" }
 
 [dev-dependencies]
 # The equivalence test runs the SAME query through the engine's real Cypher executor

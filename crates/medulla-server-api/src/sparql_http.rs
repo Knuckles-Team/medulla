@@ -34,7 +34,7 @@ use crate::http1;
 use crate::http1::HttpMessage;
 use crate::http1::RequestLimits;
 use crate::state::ServerState;
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_rdf::sparql::{Binding, Dataset, Projection, QueryOutcome, SparqlResult};
 
 mod graph_store;
@@ -369,11 +369,11 @@ async fn run_query(
     let query = query.to_string();
     let outcome = tokio::task::spawn_blocking(move || {
         let default_view = default_core.analysis_snapshot();
-        let named_views: Vec<(String, medulla_core::graph::GraphView)> = named_cores
+        let named_views: Vec<(String, medulla_graph_core::graph::GraphView)> = named_cores
             .iter()
             .map(|(n, c)| (n.clone(), c.analysis_snapshot()))
             .collect();
-        let named_refs: Vec<(String, &medulla_core::graph::GraphView)> =
+        let named_refs: Vec<(String, &medulla_graph_core::graph::GraphView)> =
             named_views.iter().map(|(n, v)| (n.clone(), v)).collect();
         let ds = Dataset::new(&default_view, named_refs);
         run_dataset_query(&ds, &query)
@@ -858,7 +858,7 @@ mod tests {
     async fn run_query_pins_bearer_gate_negotiation_and_errors() {
         let state = Arc::new(RwLock::new(ServerState::new_for_test(
             "test",
-            medulla_core::isolation::IsolationLayer::new(),
+            medulla_isolation::isolation::IsolationLayer::new(),
         )));
         let bearer = crate::auth::BearerCredential::Static("s3cret".to_string());
         let select = "SELECT ?s WHERE { ?s ?p ?o }";

@@ -30,7 +30,7 @@ mod world_model_tests;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
@@ -318,8 +318,8 @@ pub(crate) fn apply_pack_source(
     }
     let shapes_ttl = compose_pack_documents("SHAPES", shapes)?;
     let ontology_ttl = compose_pack_documents("ONTOLOGY", ontologies)?;
-    let source = medulla_core::graph::GraphSchemaSource::new(
-        medulla_core::graph::SchemaSourceOrigin::Pack {
+    let source = medulla_graph_core::graph::GraphSchemaSource::new(
+        medulla_graph_core::graph::SchemaSourceOrigin::Pack {
             connector: connector.as_str().to_string(),
             record_id: record_id.to_string(),
         },
@@ -460,7 +460,7 @@ fn apply(
 
 /// The compare-and-set fence: the composed digest the caller last saw.
 fn check_expected_digest(
-    sources: &medulla_core::graph::GraphSchemaSources,
+    sources: &medulla_graph_core::graph::GraphSchemaSources,
     expected: Option<&str>,
 ) -> Result<(), String> {
     let Some(expected) = expected else {
@@ -479,7 +479,7 @@ fn check_expected_digest(
 /// The admin-origin source a validated generic `Attach` installs.
 fn admin_source(
     op: &medulla_catalog_types::graph_schema::GraphSchemaOp,
-) -> Result<medulla_core::graph::GraphSchemaSource, String> {
+) -> Result<medulla_graph_core::graph::GraphSchemaSource, String> {
     let medulla_catalog_types::graph_schema::GraphSchemaOp::Attach {
         source_id,
         shapes_ttl,
@@ -489,8 +489,8 @@ fn admin_source(
     else {
         return Err("admin schema source needs a generic attach".to_string());
     };
-    medulla_core::graph::GraphSchemaSource::new(
-        medulla_core::graph::SchemaSourceOrigin::Admin {
+    medulla_graph_core::graph::GraphSchemaSource::new(
+        medulla_graph_core::graph::SchemaSourceOrigin::Admin {
             name: source_id
                 .strip_prefix("admin:")
                 .expect("validated generic schema ids use the admin namespace")

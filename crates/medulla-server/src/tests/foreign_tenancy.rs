@@ -164,7 +164,8 @@ async fn foreign_source_resolves_only_for_the_registering_principal() {
 #[tokio::test]
 async fn foreign_column_read_is_owner_scoped_and_mapping_gated() {
     #[cfg(feature = "federation-sql")]
-    let _allow = medulla_server_api::test_support::FederationAllowGuard::acquire("127.0.0.1:5432").await;
+    let _allow =
+        medulla_server_api::test_support::FederationAllowGuard::acquire("127.0.0.1:5432").await;
     #[cfg(not(feature = "federation-sql"))]
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     let state = multi_tenant_state().await;
@@ -480,10 +481,9 @@ async fn shared_source_needs_an_explicit_grant() {
     assert_refused(&dispatch_as(&local, 941, OTHER_B, text()).await, "no grant");
 
     let mut granted = original.clone();
-    granted.push(medulla_server_api::api::query_txn::foreign_share::share_role(
-        OWNER_A,
-        "remote_docs",
-    ));
+    granted.push(
+        medulla_server_api::api::query_txn::foreign_share::share_role(OWNER_A, "remote_docs"),
+    );
     set_other_roles(granted).await;
     let used = dispatch_as(&local, 942, OTHER_B, text()).await;
     assert_ok(&used);

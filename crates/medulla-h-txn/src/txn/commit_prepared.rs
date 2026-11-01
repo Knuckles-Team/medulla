@@ -3,7 +3,7 @@
 use super::*;
 
 pub(super) type CommitPreparedAuthorized = (
-    Arc<medulla_core::graph::GraphCore>,
+    Arc<medulla_graph_core::graph::GraphCore>,
     Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     String,
 );
@@ -46,7 +46,7 @@ pub(super) fn commit_prepared_authorize(
 /// terminalize once that commit succeeds.
 pub(super) fn commit_prepared_validate(
     req_id: u64,
-    core: &medulla_core::graph::GraphCore,
+    core: &medulla_graph_core::graph::GraphCore,
     txn: &GraphTxnState,
     receipt: TxnReceipt,
 ) -> Result<(Vec<Method>, TxnReceipt), Response> {
@@ -221,7 +221,7 @@ pub(super) struct CommitPreparedDurableArgs<'a> {
     req_id: u64,
     caller: Option<&'a str>,
     receipt: TxnReceipt,
-    core: Arc<medulla_core::graph::GraphCore>,
+    core: Arc<medulla_graph_core::graph::GraphCore>,
     persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     graph_name: String,
     coordinator_id: String,
@@ -337,8 +337,11 @@ pub(super) async fn commit_prepared_durable(args: CommitPreparedDurableArgs<'_>)
         attempt_nonce,
     } = args;
     let committed_at_ms = now_ms();
-    let batch_id =
-        medulla_server_api::mutation_batch::opaque_coordinator_key("txn", &graph_name, &coordinator_id);
+    let batch_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
+        "txn",
+        &graph_name,
+        &coordinator_id,
+    );
     let Some(authority) = persistence.as_ref() else {
         return Response::err(
             req_id,
@@ -437,7 +440,7 @@ async fn commit_prepared_batch_durable(
 pub(super) async fn commit_prepared_replayed(
     req_id: u64,
     receipt: TxnReceipt,
-    core: &Arc<medulla_core::graph::GraphCore>,
+    core: &Arc<medulla_graph_core::graph::GraphCore>,
     authority: &dyn medulla_server_api::api::persistence::PersistenceBackend,
     graph_name: &str,
     committed: &medulla_protocol_types::mutation_batch::MutationBatchCommit,

@@ -355,13 +355,17 @@ async fn build_sparql_update_plan(
             "ACCESS_DENIED: SPARQL graph creation requires graph:admin",
         ));
     }
-    let (planned, counts) =
-        match medulla_server_api::sparql_http::plan_update(coord.state, query, default_graph, &graphs)
-            .await
-        {
-            Ok(planned) => planned,
-            Err(error) => return Err(Response::err(coord.req_id, error)),
-        };
+    let (planned, counts) = match medulla_server_api::sparql_http::plan_update(
+        coord.state,
+        query,
+        default_graph,
+        &graphs,
+    )
+    .await
+    {
+        Ok(planned) => planned,
+        Err(error) => return Err(Response::err(coord.req_id, error)),
+    };
     let plan = SparqlRecoveryPlan {
         schema_version: 1,
         graphs: planned,
@@ -513,8 +517,14 @@ fn finish_sparql_parent_saga(
             .filter(|graph| !graph.existed_before)
             .count() as u64,
     };
-    let result = ResultPayload::of::<medulla_protocol_types::result_contract::graph::ApplyMutation>(report)?;
-    medulla_server_api::api::admin::saga::finish_admin_saga(redb, saga.batch, saga.created_at_ms, result)
+    let result =
+        ResultPayload::of::<medulla_protocol_types::result_contract::graph::ApplyMutation>(report)?;
+    medulla_server_api::api::admin::saga::finish_admin_saga(
+        redb,
+        saga.batch,
+        saga.created_at_ms,
+        result,
+    )
 }
 
 /// What the roll-forward attempt decided.
@@ -901,7 +911,11 @@ mod coordinator_restart_tests {
         (kernel, mutations, owner)
     }
 
-    fn parent_batch(id: &str, digest: &str, event_type: &str) -> medulla_protocol_types::mutation_batch::MutationBatch {
+    fn parent_batch(
+        id: &str,
+        digest: &str,
+        event_type: &str,
+    ) -> medulla_protocol_types::mutation_batch::MutationBatch {
         medulla_server_api::mutation_batch::compile_opaque_digest(
             medulla_server_api::mutation_batch::CompileBatch {
                 batch_id: id,

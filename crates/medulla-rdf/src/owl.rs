@@ -2096,7 +2096,7 @@ pub fn class_namespace(iri: &str) -> Option<String> {
 /// the ontology signature. `class_base` (CONCEPT:MEDULLA-KG.ontology.string-type-iri-class) bridges a BARE string `type`
 /// into that mandatory namespace so a string-typed node participates in `REASON <iri>`.
 pub fn asserted_types_from_view(
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     class_base: &str,
 ) -> Result<HashMap<String, HashSet<String>>, String> {
     let mut out: HashMap<String, HashSet<String>> = HashMap::new();
@@ -2109,7 +2109,7 @@ pub fn asserted_types_from_view(
 /// IRI/local label into `class_base` per [`bridge_type_identity_or_class`]). Half of
 /// [`asserted_types_from_view`]'s two sources; see its docs.
 fn collect_node_types(
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     class_base: &str,
     out: &mut HashMap<String, HashSet<String>>,
 ) -> Result<(), String> {
@@ -2130,7 +2130,7 @@ fn collect_node_types(
 /// predicate is `rdf:type` assigns the subject `s` the class node `o`. The other half
 /// of [`asserted_types_from_view`]'s two sources.
 fn collect_edge_types(
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     out: &mut HashMap<String, HashSet<String>>,
 ) {
     let rdf_type_edge = iri(RDF_TYPE);
@@ -2156,7 +2156,7 @@ fn collect_edge_types(
 /// [`materialize_instances_weighted`] / [`instances_of_weighted`] consume. A node with
 /// no timestamp (age `0`) keeps its stored confidence unchanged.
 pub fn asserted_types_with_confidence_from_view(
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     now: u64,
     default_half_life: f64,
     class_base: &str,
@@ -2193,7 +2193,7 @@ fn fact_conf_of(v: &serde_json::Value, now: u64, default_half_life: f64) -> f64 
 /// Read the folded `type` property + its decayed confidence off every node blob into
 /// `out`. Half of [`asserted_types_with_confidence_from_view`]'s two sources.
 fn collect_node_type_facts(
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     now: u64,
     default_half_life: f64,
     class_base: &str,
@@ -2215,7 +2215,7 @@ fn collect_node_type_facts(
 /// Read explicit `rdf:type` edges + their own edge-blob decayed confidence into `out`.
 /// The other half of [`asserted_types_with_confidence_from_view`]'s two sources.
 fn collect_edge_type_facts(
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     now: u64,
     default_half_life: f64,
     out: &mut HashMap<String, Vec<(String, f64)>>,
@@ -2241,7 +2241,7 @@ fn collect_edge_type_facts(
 /// `(s, relationship, o)`; each node `type` cell becomes `(node, rdf:type, type)`. This
 /// is what a `Reason` Op classifies when no explicit ontology document is supplied —
 /// it reasons over the axioms already loaded into the graph via `AddTriples`.
-pub fn tbox_triples_from_view(view: &medulla_core::graph::GraphView) -> Vec<Triple> {
+pub fn tbox_triples_from_view(view: &medulla_graph_core::graph::GraphView) -> Vec<Triple> {
     let mut out = ontology_triples_from_view(view);
     let roles_by_native_label = ontology_roles_by_native_label(&out);
     push_edge_triples(view, &roles_by_native_label, &mut out);
@@ -2251,11 +2251,12 @@ pub fn tbox_triples_from_view(view: &medulla_core::graph::GraphView) -> Vec<Trip
     out
 }
 
-fn ontology_triples_from_view(view: &medulla_core::graph::GraphView) -> Vec<Triple> {
+fn ontology_triples_from_view(view: &medulla_graph_core::graph::GraphView) -> Vec<Triple> {
     let mut out = Vec::new();
     let mut seen_documents = BTreeSet::new();
     for (source_id, document) in view.schema_sources.ontologies() {
-        let document_digest = medulla_types::contract::Digest256::sha256(document.as_bytes()).to_hex();
+        let document_digest =
+            medulla_types::contract::Digest256::sha256(document.as_bytes()).to_hex();
         if !seen_documents.insert(document_digest) {
             continue;
         }
@@ -2313,7 +2314,7 @@ fn tbox_object(id: &str) -> Option<Term> {
 /// Edges → object triples (predicate is the edge `relationship`). Half of
 /// [`tbox_triples_from_view`]'s two sources.
 fn push_edge_triples(
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     roles_by_native_label: &BTreeMap<String, Vec<String>>,
     out: &mut Vec<Triple>,
 ) {
@@ -2371,7 +2372,7 @@ fn edge_predicates(
 
 /// Node `type` cells → folded rdf:type triples. The other half of
 /// [`tbox_triples_from_view`]'s two sources.
-fn push_node_type_triples(view: &medulla_core::graph::GraphView, out: &mut Vec<Triple>) {
+fn push_node_type_triples(view: &medulla_graph_core::graph::GraphView, out: &mut Vec<Triple>) {
     for (id, blob) in &view.node_properties {
         if let Ok(v) = medulla_types::msgpack::decode_property_value(blob.as_slice()) {
             if let Some(t) = v.get("type").and_then(|x| x.as_str()) {
@@ -2430,7 +2431,7 @@ pub struct PropertyEntailment {
 /// decay; `min_confidence` thresholds the returned instances. A single-element `views`
 /// slice is the ordinary single-graph path (the fast path stays a one-graph gather).
 pub fn reason_distributed_weighted(
-    views: &[&medulla_core::graph::GraphView],
+    views: &[&medulla_graph_core::graph::GraphView],
     extra_ontology_triples: &[Triple],
     now: u64,
     half_life: f64,
@@ -3001,7 +3002,7 @@ fn record_hybrid_subsumption(
 /// Step 1 of [`reason_distributed_weighted`]: union every shard's TBox triples with the
 /// caller's explicit ontology triples.
 fn gather_distributed_tbox(
-    views: &[&medulla_core::graph::GraphView],
+    views: &[&medulla_graph_core::graph::GraphView],
     extra_ontology_triples: &[Triple],
 ) -> Vec<Triple> {
     let mut triples: Vec<Triple> = Vec::new();
@@ -3016,7 +3017,7 @@ fn gather_distributed_tbox(
 /// asserted type facts. A fact for the same instance asserted on two shards keeps both
 /// (the strongest wins later, at the point each is consumed).
 fn gather_distributed_asserted_facts(
-    views: &[&medulla_core::graph::GraphView],
+    views: &[&medulla_graph_core::graph::GraphView],
     now: u64,
     half_life: f64,
     class_base: &str,
@@ -3218,7 +3219,7 @@ ex:c ex:contains ex:e .
 
     #[test]
     fn immutable_capability_source_is_present_in_normal_graph_reasoning() {
-        let core = medulla_core::graph::GraphCore::new();
+        let core = medulla_graph_core::graph::GraphCore::new();
         let classification =
             Reasoner::from_triples(&tbox_triples_from_view(&core.analysis_snapshot())).classify();
         assert!(classification.entails_subclass(
@@ -3229,7 +3230,7 @@ ex:c ex:contains ex:e .
 
     #[test]
     fn native_relationship_labels_resolve_through_the_committed_ontology() {
-        let core = medulla_core::graph::GraphCore::new();
+        let core = medulla_graph_core::graph::GraphCore::new();
         for id in ["<urn:test:a>", "<urn:test:b>", "<urn:test:c>"] {
             core.add_node(
                 id.to_string(),
@@ -3267,7 +3268,7 @@ ex:c ex:contains ex:e .
 
     #[test]
     fn attached_ontology_enters_tbox_union_and_detach_withdraws_it() {
-        let core = medulla_core::graph::GraphCore::new();
+        let core = medulla_graph_core::graph::GraphCore::new();
         let ontology = r#"
 @prefix ex: <http://example.org/> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -3277,8 +3278,8 @@ ex:AttachedChild rdfs:subClassOf ex:AttachedParent .
         sources
             .attach_dynamic(
                 "admin:owl-test".to_string(),
-                medulla_core::graph::GraphSchemaSource::new(
-                    medulla_core::graph::SchemaSourceOrigin::Admin {
+                medulla_graph_core::graph::GraphSchemaSource::new(
+                    medulla_graph_core::graph::SchemaSourceOrigin::Admin {
                         name: "owl-test".to_string(),
                     },
                     None,
@@ -3839,8 +3840,10 @@ ex:Mammal eg:confidence "0.9" .
     /// Build a `GraphView` holding the given individuals as typed nodes, each with a
     /// `confidence` + `last_access` so the decay path is exercised. (TBox is supplied
     /// separately as an ontology document, like a shared schema over sharded ABox.)
-    fn view_with_individuals(individuals: &[(&str, &str, f64, u64)]) -> medulla_core::graph::GraphView {
-        let core = medulla_core::graph::GraphCore::new();
+    fn view_with_individuals(
+        individuals: &[(&str, &str, f64, u64)],
+    ) -> medulla_graph_core::graph::GraphView {
+        let core = medulla_graph_core::graph::GraphCore::new();
         for (id, ty, conf, last_access) in individuals {
             let blob = rmp_serde::to_vec_named(&serde_json::json!({
                 "type": ty,

@@ -175,7 +175,7 @@ $($variants)*
     },
 
     /// `EXPLAIN POLICY` — run `plan` against BOTH the caller's RLS-filtered snapshot and
-    /// the UNFILTERED snapshot (reusing the SAME `medulla_core::isolation::IsolationLayer`
+    /// the UNFILTERED snapshot (reusing the SAME `medulla_isolation::isolation::IsolationLayer`
     /// `filter_view` every read path already applies), reporting which result rows the
     /// policy DENIED. With the `security` feature off (or no caller/RLS configured), no
     /// filtering applies and `policy_denied_ids` is always empty. Returns an

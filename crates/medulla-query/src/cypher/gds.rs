@@ -27,7 +27,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use petgraph::visit::{EdgeRef, IntoEdgeReferences};
 use serde_json::Value;
 
@@ -1423,7 +1423,7 @@ impl CypherProcedure for Node2Vec {
 /// `relationshipWeightProperty` (identical semantics to every other `gds.*` procedure's
 /// weighting). Yields ONE row: `graphName`, `nodeCount`, `relationshipCount`.
 ///
-/// Invalidation reuses the graph's `DepClock` (W1.6/P7 — see `medulla_core::projection_catalog`'s doc):
+/// Invalidation reuses the graph's `DepClock` (W1.6/P7 — see `medulla_query_cache::projection_catalog`'s doc):
 /// a write to the node or edge set retires this entry, so a subsequent algorithm call naming a
 /// now-stale `graphName` gets a clear error instead of silently serving stale structure.
 #[cfg(feature = "result-cache")]
@@ -1452,9 +1452,9 @@ impl CypherProcedure for GraphCatalogProject {
             name,
             Arc::new(g) as Arc<dyn std::any::Any + Send + Sync>,
             scope.version,
-            medulla_core::dep_scope::DepSet::new(vec![
-                medulla_core::dep_scope::Dim::AllNodes,
-                medulla_core::dep_scope::Dim::AllEdges,
+            medulla_query_cache::dep_scope::DepSet::new(vec![
+                medulla_query_cache::dep_scope::Dim::AllNodes,
+                medulla_query_cache::dep_scope::Dim::AllEdges,
             ]),
             node_count,
             edge_count,
@@ -1604,7 +1604,7 @@ impl CypherProcedure for GraphCatalogList {
 mod tests {
     use super::*;
     use crate::cypher::exec_cypher;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use medulla_protocol_types::protocol::QueryResult;
 
     fn pbytes(v: Value) -> Vec<u8> {
@@ -2747,9 +2747,9 @@ mod tests {
         // `mark_dirty` are what actually bump `version()` and record the write's footprint.
         let d_props = pbytes(serde_json::json!({"node_type": "N"}));
         core.add_node("d".into(), d_props.clone());
-        let mut cs = medulla_core::index::ChangeSet::new();
+        let mut cs = medulla_graph_core::index::ChangeSet::new();
         cs.added_nodes
-            .push(medulla_core::index::NodeChange::with_properties(
+            .push(medulla_graph_core::index::NodeChange::with_properties(
                 "d".to_string(),
                 d_props,
             ));

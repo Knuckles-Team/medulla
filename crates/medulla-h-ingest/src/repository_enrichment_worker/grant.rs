@@ -1,6 +1,6 @@
 //! Exact-graph RBAC grant for the in-process repository enrichment consumer.
 
-use medulla_core::isolation::IsolationLayer;
+use medulla_isolation::isolation::IsolationLayer;
 
 pub(super) const SERVICE_ACTOR: &str = "service:repository-enrichment-v1";
 
@@ -128,7 +128,7 @@ mod tests {
     use medulla_types::acl::RbacAction;
     use medulla_types::acl::ResourceSelector;
     use medulla_types::acl::Role;
-    use medulla_core::isolation::AccessLevel;
+    use medulla_isolation::isolation::AccessLevel;
     use medulla_types::acl::AgentIdentity;
     use medulla_types::acl::AgentRole;
     use medulla_protocol_types::protocol::GraphType;

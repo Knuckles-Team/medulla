@@ -2,11 +2,11 @@
 //! Every replica checks the immutable source and replacement intent before
 //! entering the graph-shard transaction.
 
-use medulla_compute::parser::enrichment_snapshot::EligibleSnapshot;
 use crate::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision;
 use medulla_agent_types::{
     native_control::EnrichmentBudgetCheckpoint, native_control::EnrichmentBudgetPark,
 };
+use medulla_compute::parser::enrichment_snapshot::EligibleSnapshot;
 use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
 use medulla_protocol_types::{
     mutation_batch::MutationBatch, mutation_batch::MutationBatchRecord,

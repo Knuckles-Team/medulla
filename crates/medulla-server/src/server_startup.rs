@@ -659,7 +659,7 @@ pub fn open_isolation_layer(
     auth_secret: &str,
     persist_dir: Option<&str>,
     anonymous: bool,
-) -> medulla_core::isolation::IsolationLayer {
+) -> medulla_isolation::isolation::IsolationLayer {
     info!("RLS default-deny ACTIVE: rows require explicit public visibility or an owner grant");
     let Some(dir) = persist_dir else {
         exit_with(
@@ -668,7 +668,7 @@ pub fn open_isolation_layer(
         );
     };
     let authority = medulla_kernel::store_authority::process_authority();
-    let mut isolation = medulla_core::isolation::IsolationLayer::with_persist_dir(
+    let mut isolation = medulla_isolation::isolation::IsolationLayer::with_persist_dir(
         dir,
         authority.as_ref(),
         authority.principal(),

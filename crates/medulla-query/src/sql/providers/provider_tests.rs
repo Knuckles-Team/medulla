@@ -1,5 +1,5 @@
 use super::*;
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use serde_json::json;
 
 fn provider() -> NodesTableProvider {

@@ -36,7 +36,7 @@ const TENANT: &str = "acme";
 const TEST_AGENT: &str = "unit-test-agent";
 const SECRET: &str = "placement-test";
 
-fn current_isolation() -> medulla_core::isolation::IsolationLayer {
+fn current_isolation() -> medulla_isolation::isolation::IsolationLayer {
     medulla_raft::raft::harness_support::current_isolation(TEST_AGENT)
 }
 
@@ -61,7 +61,10 @@ fn current_request(id: u64, method: Method) -> medulla_protocol_types::protocol:
 async fn bring_up(
     dir: &str,
     backend: fixture::Backend,
-) -> (Arc<MultiRaft>, Arc<RwLock<medulla_server_api::state::ServerState>>) {
+) -> (
+    Arc<MultiRaft>,
+    Arc<RwLock<medulla_server_api::state::ServerState>>,
+) {
     fixture::start_single_node_groups(
         dir,
         backend,
@@ -116,7 +119,9 @@ fn epoch_cas_request(
     );
     mutation.attempt_nonce = Some(medulla_types::contract::Nonce::from_bytes([nonce; 32]));
     let mut request = RaftRequest {
-        graph_fname: medulla_kernel::persist::sanitize(medulla_raft::raft::placement::PLACEMENT_GRAPH),
+        graph_fname: medulla_kernel::persist::sanitize(
+            medulla_raft::raft::placement::PLACEMENT_GRAPH,
+        ),
         graph_name: medulla_raft::raft::placement::PLACEMENT_GRAPH.to_string(),
         graph_type: GraphType::Commons,
         committed_at_ms: 0,
@@ -185,9 +190,9 @@ async fn placement_state_machine_binds_plan_identity_and_replay_nonce() {
             .registry
             .get(medulla_raft::raft::placement::PLACEMENT_GRAPH)
             .and_then(|entry| {
-                entry
-                    .core
-                    .get_node_properties(medulla_raft::raft::placement::PLACEMENT_EPOCH_COUNTER_NODE)
+                entry.core.get_node_properties(
+                    medulla_raft::raft::placement::PLACEMENT_EPOCH_COUNTER_NODE,
+                )
             })
             .expect("epoch counter must remain present");
         rmp_serde::from_slice::<serde_json::Value>(&bytes).expect("counter properties decode")
@@ -493,9 +498,12 @@ async fn pre_cutover_move_abort_restores_source_and_journals_terminal_state() {
         .into_iter()
         .find(|entry| entry.key.range_start == 0 && entry.key.range_end == u64::MAX)
         .unwrap();
-    let mut journal =
-        medulla_raft::raft::placement::PartitionMoveJournal::new(&entry, GROUP_B, vec![graph.clone()])
-            .unwrap();
+    let mut journal = medulla_raft::raft::placement::PartitionMoveJournal::new(
+        &entry,
+        GROUP_B,
+        vec![graph.clone()],
+    )
+    .unwrap();
     multi.persist_move_journal(&journal).await.unwrap();
     multi
         .placement_start_move(TENANT, range, GROUP_B)
@@ -515,7 +523,10 @@ async fn pre_cutover_move_abort_restores_source_and_journals_terminal_state() {
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(terminal.stage, medulla_raft::raft::placement::MoveStage::Aborted);
+    assert_eq!(
+        terminal.stage,
+        medulla_raft::raft::placement::MoveStage::Aborted
+    );
 
     multi.stop_listener();
     backend.shutdown();
@@ -578,7 +589,8 @@ async fn abort_intent_behind_committed_cutover_reconciles_forward() {
         .next()
         .unwrap();
     let mut journal =
-        medulla_raft::raft::placement::PartitionMoveJournal::new(&entry, GROUP_B, Vec::new()).unwrap();
+        medulla_raft::raft::placement::PartitionMoveJournal::new(&entry, GROUP_B, Vec::new())
+            .unwrap();
     multi.persist_move_journal(&journal).await.unwrap();
     multi
         .placement_start_move(TENANT, range, GROUP_B)
@@ -602,7 +614,10 @@ async fn abort_intent_behind_committed_cutover_reconciles_forward() {
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(terminal.stage, medulla_raft::raft::placement::MoveStage::Completed);
+    assert_eq!(
+        terminal.stage,
+        medulla_raft::raft::placement::MoveStage::Completed
+    );
 
     multi.stop_listener();
     backend.shutdown();
@@ -746,7 +761,10 @@ async fn wire_placement_route_resolves_through_dispatch() {
     );
     assert_eq!(val["authoritative"], serde_json::json!(true));
     assert_eq!(val["placed"], serde_json::json!(false));
-    assert_eq!(val["group"], serde_json::json!(medulla_raft::raft::DEFAULT_GROUP));
+    assert_eq!(
+        val["group"],
+        serde_json::json!(medulla_raft::raft::DEFAULT_GROUP)
+    );
     assert_eq!(val["epoch"], serde_json::json!(0));
     assert_eq!(
         val["fencing_token"],

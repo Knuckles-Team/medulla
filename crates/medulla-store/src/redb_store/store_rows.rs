@@ -488,11 +488,13 @@ pub(crate) fn apply_batch_add_node_row(
             .map(|stored| crypto.unseal(stored.value()))
             .transpose()?;
         if let Some(current) = current {
-            properties_msgpack =
-                medulla_compute::algorithms::merge_batch_node_properties(&current, &properties_msgpack)
-                    .map_err(|reason| {
-                        format!("BatchUpdate op[{index}] cannot upsert node '{id}': {reason}")
-                    })?;
+            properties_msgpack = medulla_compute::algorithms::merge_batch_node_properties(
+                &current,
+                &properties_msgpack,
+            )
+            .map_err(|reason| {
+                format!("BatchUpdate op[{index}] cannot upsert node '{id}': {reason}")
+            })?;
         }
     }
     let sealed = crypto.seal(&properties_msgpack);
@@ -565,7 +567,7 @@ pub(crate) fn apply_batch_add_embedding_row(
     id: String,
     embedding: Vec<f32>,
     nodes: &ScopedOwnerTableMut<'_, (&str, &str), &[u8]>,
-    semantic_store: &mut medulla_core::compute::semantic::SemanticStore,
+    semantic_store: &mut medulla_semantic_index::semantic::SemanticStore,
 ) -> Result<(), String> {
     if nodes
         .get((graph, id.as_str()))

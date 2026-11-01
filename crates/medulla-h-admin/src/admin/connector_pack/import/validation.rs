@@ -587,7 +587,7 @@ fn orphan_detail(orphans: &[String]) -> String {
 fn parent_classes() -> &'static BTreeSet<String> {
     static CLASSES: std::sync::OnceLock<BTreeSet<String>> = std::sync::OnceLock::new();
     CLASSES.get_or_init(|| {
-        medulla_core::graph::GraphSchemaSources::default()
+        medulla_graph_core::graph::GraphSchemaSources::default()
             .ontologies()
             .flat_map(|(_, text)| medulla_rdf::pack::declared_classes_and_ontologies(text).0)
             .collect()

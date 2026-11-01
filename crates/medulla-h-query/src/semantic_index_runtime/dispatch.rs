@@ -1,8 +1,8 @@
-use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+use super::*;
 use medulla_index_types::semantic_index::SemanticBinding;
 use medulla_index_types::semantic_index::SemanticIndexError;
 use medulla_index_types::semantic_index::SemanticStageIntent;
-use super::*;
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 
 impl SemanticIndexServerAdapter {
     /// Resolve a committed S1 from its durable lease and expected intent. The
@@ -16,7 +16,7 @@ impl SemanticIndexServerAdapter {
         lease: MutationOutboxLease,
         expected_intent: SemanticStageIntent,
         now_ms: u64,
-    ) -> Result<Option<medulla_core::compute::semantic_ann_codes::SemanticMutationReceipt>, Response>
+    ) -> Result<Option<medulla_ann_codes::semantic_ann_codes::SemanticMutationReceipt>, Response>
     {
         let binding_service = Arc::clone(&self.service);
         let binding = compute_off_lock(req_id, move || binding_service.binding())
@@ -129,7 +129,7 @@ impl SemanticIndexServerAdapter {
         binding: SemanticBinding,
         completion: SqlSourceStageCompletion,
         now_ms: u64,
-    ) -> Result<medulla_core::compute::semantic_ann_codes::SemanticMutationReceipt, Response> {
+    ) -> Result<medulla_ann_codes::semantic_ann_codes::SemanticMutationReceipt, Response> {
         let SqlSourceStageCompletion {
             lease,
             transition,

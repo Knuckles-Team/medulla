@@ -8,7 +8,7 @@
 //! property blobs) every other part of this engine reads (`medulla-plan`'s own
 //! `fixture.rs` uses the identical convention).
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_numeric::random::Generator;
 use serde_json::json;
 

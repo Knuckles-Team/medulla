@@ -28,9 +28,9 @@
 mod common;
 
 use common::*;
-use medulla_core::compute::semantic::SemanticStore;
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use medulla_plan::{execute, Op, Plan, PlanCtx, Pred, RowSet};
+use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::TimeAxis;
 
 /// Run one query through the UQL front-end AND the Rust builder, assert the two lower

@@ -27,7 +27,7 @@ use medulla_mutation_types::{
 };
 use tokio::sync::RwLock;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use medulla_server_api::state::ServerState;
 

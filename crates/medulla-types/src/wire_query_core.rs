@@ -328,7 +328,7 @@ pub enum UqlParam {
 /// DOCUMENT/JSON — the test applied by [`Pred::JsonPath`] against the value(s) a
 /// JSONPath resolves to (CONCEPT:MEDULLA-KG.query.json-wire-roundtrip). PURE serde (a small tag + an optional
 /// `serde_json::Value` literal); the actual walk/containment lives in
-/// `medulla_core::jsonpath` behind medulla-plan's FILTER leg — this is the wire variant.
+/// `medulla_graph_core::jsonpath` behind medulla-plan's FILTER leg — this is the wire variant.
 #[cfg(feature = "query")]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]

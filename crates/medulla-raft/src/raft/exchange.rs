@@ -398,9 +398,9 @@ mod tests {
     //! separate physical node per CONCEPT:MEDULLA-KG.txn.harness-crash's documented
     //! cross-NODE-participant remainder).
     use super::*;
-    use medulla_core::compute::semantic::SemanticStore;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use medulla_plan::{Op, PlanNode};
+    use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 
     fn blob(v: serde_json::Value) -> Vec<u8> {
@@ -442,7 +442,7 @@ mod tests {
         // process so the spawned task can hold a `'static` resolver — acceptable in a
         // short-lived test binary, mirroring how other in-process harnesses here keep
         // fixtures alive for the test's duration.
-        let view: &'static medulla_core::graph::GraphView = Box::leak(Box::new(view));
+        let view: &'static medulla_graph_core::graph::GraphView = Box::leak(Box::new(view));
         let semantic: &'static SemanticStore = Box::leak(Box::new(semantic));
         let resolver: Arc<dyn ExchangeGraphResolver + Send + Sync> = Arc::new(FixedGraphResolver {
             graph: graph.to_string(),

@@ -146,7 +146,7 @@
 
 use std::sync::Arc;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_core::registry::GraphRegistry;
 use parking_lot::RwLock;

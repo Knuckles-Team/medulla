@@ -479,7 +479,7 @@ mod tests {
     //! TCP socket (no mysql client crate) — proving SELECT / CREATE TABLE / INSERT
     //! end-to-end through the shared `WireSession` execution core (CONCEPT:MEDULLA-KG.query.kg-2).
     use super::*;
-    use medulla_core::isolation::IsolationLayer;
+    use medulla_isolation::isolation::IsolationLayer;
     use medulla_server_api::test_support::grant_commons_user;
     use medulla_server_api::test_support::register_commons_agent;
     use medulla_server_api::state::ServerState;

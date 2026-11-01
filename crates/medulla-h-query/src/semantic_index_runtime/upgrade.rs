@@ -853,7 +853,7 @@ fn require_single_regular_file(directory: &Path, expected: &Path) -> Result<(), 
 }
 
 fn legacy_store_file_name(tenant: &str, binding: &str) -> String {
-    medulla_core::compute::semantic_ann_codes::binding_owner_file_name(tenant, binding)
+    medulla_ann_codes::semantic_ann_codes::binding_owner_file_name(tenant, binding)
 }
 
 fn census_digest(tenant: &str, sources: &[InspectedBindingOwner]) -> [u8; 32] {
@@ -885,7 +885,7 @@ fn hash_field(hasher: &mut Sha256, bytes: &[u8]) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_core::compute::semantic_index_service::SemanticIndexService;
+    use medulla_ann_codes::semantic_index_service::SemanticIndexService;
     use std::sync::Arc;
 
     fn populated_binding(
@@ -950,7 +950,7 @@ mod tests {
     }
 
     fn create_empty_two_binding_owners(root: &Path, tenant: &str) -> Vec<PathBuf> {
-        use medulla_core::compute::semantic_index_service::SemanticIndexService;
+        use medulla_ann_codes::semantic_index_service::SemanticIndexService;
         use std::sync::Arc;
 
         let (proof, _) = *super::super::semantic_server_secrets();
@@ -978,7 +978,7 @@ mod tests {
 
     #[test]
     fn populated_two_binding_observation_is_exact_and_source_mutation_refused() {
-        use medulla_core::compute::semantic_index_service::SemanticIndexService;
+        use medulla_ann_codes::semantic_index_service::SemanticIndexService;
         use medulla_types::contract::Nonce;
         use std::io::Write;
         use std::sync::Arc;
@@ -1212,7 +1212,7 @@ mod tests {
 
     #[test]
     fn singleton_copy_preserves_source_and_can_be_rolled_back() {
-        use medulla_core::compute::semantic_index_service::SemanticIndexService;
+        use medulla_ann_codes::semantic_index_service::SemanticIndexService;
         use std::sync::Arc;
 
         let root = std::env::temp_dir().join(format!("semantic-upgrade-{}", uuid::Uuid::new_v4()));

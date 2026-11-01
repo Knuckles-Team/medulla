@@ -60,9 +60,9 @@ pub(super) struct KnowledgeStreamCtx<'a> {
     pub(super) verified_context: &'a VerifiedRequestContext,
     pub(super) read_authority: &'a Option<GraphReadAuthority>,
     pub(super) verified_actor: &'a str,
-    pub(super) core: Arc<medulla_core::graph::GraphCore>,
+    pub(super) core: Arc<medulla_graph_core::graph::GraphCore>,
     #[cfg(feature = "security")]
-    pub(super) rls: std::sync::Arc<medulla_core::isolation::IsolationLayer>,
+    pub(super) rls: std::sync::Arc<medulla_isolation::isolation::IsolationLayer>,
     #[cfg(feature = "raft")]
     pub(super) routed_raft: Option<medulla_raft::raft::multi::RoutedRaftHandle>,
     pub(super) knowledge_stream_authority:
@@ -187,7 +187,7 @@ pub(super) async fn dispatch_op_audit_read_event(
 pub(super) async fn dispatch_op_audit_append(
     req_id: u64,
     graph_name: &str,
-    core: Arc<medulla_core::graph::GraphCore>,
+    core: Arc<medulla_graph_core::graph::GraphCore>,
     persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     event: medulla_store::redb_store::OperationAuditEvent,
 ) -> Response {
@@ -295,7 +295,7 @@ pub(super) struct ServedModalityCtx<'a> {
     pub(super) verified_context: &'a VerifiedRequestContext,
     pub(super) tenant_scope: &'a str,
     pub(super) gateway_authz_ctx: &'a Option<medulla_server_api::mutation::GatewayAuthzCtx>,
-    pub(super) core: Arc<medulla_core::graph::GraphCore>,
+    pub(super) core: Arc<medulla_graph_core::graph::GraphCore>,
     pub(super) materialization_manifest:
         Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
     pub(super) persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
@@ -619,7 +619,7 @@ pub(super) async fn resolve_routed_raft(
 #[cfg(all(test, feature = "security", feature = "redb"))]
 mod tests {
     use super::*;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use medulla_protocol_types::protocol::Method;
     use medulla_store::redb_store::operation_audit::tests::event;
     use medulla_store::redb_store::operation_audit::tests::TENANT;

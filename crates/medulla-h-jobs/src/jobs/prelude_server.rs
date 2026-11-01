@@ -7,7 +7,7 @@ pub(super) use medulla_program::{
     NativeCompiler, OptimizationRequest, ProgramModality, ProgramRevisionIdentity,
 };
 
-pub(super) use medulla_core::isolation::AccessLevel;
+pub(super) use medulla_isolation::isolation::AccessLevel;
 pub(super) use medulla_protocol_types::protocol::Method;
 pub(super) use medulla_protocol_types::protocol::Response;
 pub(super) use medulla_protocol_types::protocol::ResultPayload;

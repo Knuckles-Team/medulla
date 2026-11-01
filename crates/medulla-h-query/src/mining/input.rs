@@ -222,12 +222,14 @@ pub(super) fn gather_plan_rows(
         ),
         #[cfg(feature = "tsdb")]
         match &tsdb_scope {
-            Some((tenant, graph)) => medulla_server_api::api::query_txn::query_support::TsdbLegBind {
-                tsdb: tsdb.tsdb_store.map(|store| store.as_ref()),
-                tsdb_tenant: Some(tenant.as_str()),
-                tsdb_graph: Some(graph.as_str()),
-                staged_series: None,
-            },
+            Some((tenant, graph)) => {
+                medulla_server_api::api::query_txn::query_support::TsdbLegBind {
+                    tsdb: tsdb.tsdb_store.map(|store| store.as_ref()),
+                    tsdb_tenant: Some(tenant.as_str()),
+                    tsdb_graph: Some(graph.as_str()),
+                    staged_series: None,
+                }
+            }
             None => medulla_server_api::api::query_txn::query_support::TsdbLegBind {
                 tsdb: None,
                 tsdb_tenant: None,

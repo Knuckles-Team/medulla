@@ -208,7 +208,7 @@ fn paged_lazy_open_advertises_spatial_only_after_final_page_backfill() {
         .server_manifests()
         .iter()
         .all(|(_, manifest)| {
-            manifest.validity == medulla_core::index::IndexValidity::Building
+            manifest.validity == medulla_graph_core::index::IndexValidity::Building
                 && !manifest.completeness.complete
         }));
     assert!(
@@ -231,7 +231,7 @@ fn paged_lazy_open_advertises_spatial_only_after_final_page_backfill() {
         .server_manifests()
         .iter()
         .all(|(_, manifest)| {
-            manifest.validity == medulla_core::index::IndexValidity::Valid
+            manifest.validity == medulla_graph_core::index::IndexValidity::Valid
                 && manifest.completeness.complete
                 && manifest.covers_source(
                     core.version(),

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 
@@ -248,8 +248,8 @@ mod graph_schema_shapes_tests {
     use std::sync::Arc;
 
     use super::*;
-    use medulla_core::graph::GraphSchemaSource;
-    use medulla_core::graph::SchemaSourceOrigin;
+    use medulla_graph_core::graph::GraphSchemaSource;
+    use medulla_graph_core::graph::SchemaSourceOrigin;
 
     #[test]
     fn omitted_and_empty_shapes_use_the_same_composed_graph_schema() {
@@ -338,8 +338,8 @@ mod served_shapes_tests {
     use medulla_types::wire::{Op, Plan, ShapeKeep};
 
     use super::*;
-    use medulla_core::graph::GraphSchemaSource;
-    use medulla_core::graph::SchemaSourceOrigin;
+    use medulla_graph_core::graph::GraphSchemaSource;
+    use medulla_graph_core::graph::SchemaSourceOrigin;
 
     const SHAPES: &str = "@prefix sh: <http://www.w3.org/ns/shacl#> .\n\
                           @prefix ex: <http://example/> .\n\
@@ -383,7 +383,7 @@ mod served_shapes_tests {
     fn a_stage_without_using_validates_against_the_graph_schema_shapes() {
         let core = people_with_schema();
         let view = core.analysis_snapshot();
-        let semantic = medulla_core::compute::semantic::SemanticStore::new();
+        let semantic = medulla_semantic_index::semantic::SemanticStore::new();
         let shapes = ServedShapes::new(&core);
         let ctx = medulla_plan::PlanCtx::new(&view, &semantic).with_shape_source(&shapes);
         let plan = Plan::new(vec![

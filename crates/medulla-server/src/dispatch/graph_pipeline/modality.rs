@@ -14,7 +14,7 @@ pub(super) struct ModalityReplication<'a> {
     attempt_nonce: Option<medulla_types::contract::Nonce>,
     tenant_scope: &'a str,
     principal_fingerprint: &'a str,
-    core: &'a Arc<medulla_core::graph::GraphCore>,
+    core: &'a Arc<medulla_graph_core::graph::GraphCore>,
     persistence: &'a Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
 }
 
@@ -46,7 +46,7 @@ pub(super) struct ModalityReplicationRequest<'a> {
     pub(super) idempotency_key: &'a str,
     pub(super) tenant_scope: &'a str,
     pub(super) principal_fingerprint: &'a str,
-    pub(super) core: &'a Arc<medulla_core::graph::GraphCore>,
+    pub(super) core: &'a Arc<medulla_graph_core::graph::GraphCore>,
     pub(super) persistence: &'a Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     pub(super) method: Method,
     pub(super) authority: &'a medulla_h_ingest::modality::ModalityAuthority,
@@ -84,7 +84,8 @@ pub(super) fn decode_modality_replication_inputs(
             "served modality replication received the wrong method",
         ));
     };
-    let Some((operation, modality)) = medulla_raft::raft::SanitizedModalityMutation::from_served(&op)
+    let Some((operation, modality)) =
+        medulla_raft::raft::SanitizedModalityMutation::from_served(&op)
     else {
         return Err(Response::err(
             req_id,
@@ -331,7 +332,7 @@ mod replicated_identity_tests {
 pub(super) async fn stage_modality_base_core(
     ctx: &ModalityReplication<'_>,
     graph_fname: &str,
-) -> Result<medulla_core::graph::GraphCore, Response> {
+) -> Result<medulla_graph_core::graph::GraphCore, Response> {
     let (base_snapshot, source_version) = match ctx
         .persistence
         .read_authoritative_graph_snapshot(graph_fname)
@@ -351,7 +352,7 @@ pub(super) async fn stage_modality_base_core(
         }
         Err(error) => return Err(Response::err(ctx.req_id, error)),
     };
-    medulla_core::graph::GraphCore::from_snapshot(base_snapshot, source_version)
+    medulla_graph_core::graph::GraphCore::from_snapshot(base_snapshot, source_version)
         .map_err(|error| Response::err(ctx.req_id, error))
 }
 
@@ -362,7 +363,7 @@ pub(super) async fn stage_modality_base_core(
 pub(super) async fn build_modality_raft_command(
     ctx: &ModalityReplication<'_>,
     inputs: &ModalityMutationInputs,
-    staged: &medulla_core::graph::GraphCore,
+    staged: &medulla_graph_core::graph::GraphCore,
     authority: &medulla_h_ingest::modality::ModalityAuthority,
     graph_fname: &str,
     payload: &ResultPayload,
@@ -408,22 +409,23 @@ pub(super) async fn submit_modality_replication(
     payload: ResultPayload,
 ) -> Response {
     let created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-    let mutation = match medulla_server_api::api::persistence::RaftMutationContext::from_verified_request(
-        batch_id,
-        ctx.req_id,
-        ctx.attempt_nonce,
-        ctx.tenant_scope,
-        ctx.principal_fingerprint.to_string(),
-        false,
-        medulla_server_api::api::persistence::RaftMutationTiming {
-            placement_epoch: ctx.placement_epoch,
-            fencing_token: ctx.fencing_token,
-            created_at_ms,
-        },
-    ) {
-        Ok(context) => context,
-        Err(error) => return Response::err(ctx.req_id, error),
-    };
+    let mutation =
+        match medulla_server_api::api::persistence::RaftMutationContext::from_verified_request(
+            batch_id,
+            ctx.req_id,
+            ctx.attempt_nonce,
+            ctx.tenant_scope,
+            ctx.principal_fingerprint.to_string(),
+            false,
+            medulla_server_api::api::persistence::RaftMutationTiming {
+                placement_epoch: ctx.placement_epoch,
+                fencing_token: ctx.fencing_token,
+                created_at_ms,
+            },
+        ) {
+            Ok(context) => context,
+            Err(error) => return Response::err(ctx.req_id, error),
+        };
     let request = medulla_raft::raft::RaftRequest {
         graph_fname,
         graph_name: ctx.graph_name.to_string(),

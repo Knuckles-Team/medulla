@@ -1,4 +1,4 @@
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 
 pub fn add_agent_n4(core: &GraphCore) {
     core.add_node(

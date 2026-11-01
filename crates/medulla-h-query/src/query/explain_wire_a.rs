@@ -11,8 +11,8 @@ use super::*;
 pub(crate) fn explain_snapshot(
     core: &Arc<GraphCore>,
     #[cfg(feature = "security")] caller: &str,
-    #[cfg(feature = "security")] rls: &Arc<medulla_core::isolation::IsolationLayer>,
-) -> medulla_core::graph::GraphView {
+    #[cfg(feature = "security")] rls: &Arc<medulla_isolation::isolation::IsolationLayer>,
+) -> medulla_graph_core::graph::GraphView {
     #[cfg_attr(not(feature = "security"), allow(unused_mut))]
     let mut snap = core.analysis_snapshot();
     #[cfg(feature = "security")]
@@ -36,8 +36,8 @@ pub(crate) fn explain_snapshot(
 #[cfg(feature = "query")]
 pub(crate) fn explain_plan(
     plan: medulla_plan::Plan,
-    view: &medulla_core::graph::GraphView,
-    semantic: &medulla_core::compute::semantic::SemanticStore,
+    view: &medulla_graph_core::graph::GraphView,
+    semantic: &medulla_semantic_index::semantic::SemanticStore,
 ) -> Result<medulla_protocol_types::protocol::ExplainPlanResult, String> {
     use medulla_protocol_types::protocol::ExplainNodeWire;
     use medulla_protocol_types::protocol::ExplainPlanResult;
@@ -273,8 +273,8 @@ fn evidence_address_wire_runtime(
 pub(crate) fn explain_provenance(
     request_id: u64,
     plan: medulla_plan::Plan,
-    view: &medulla_core::graph::GraphView,
-    semantic: &medulla_core::compute::semantic::SemanticStore,
+    view: &medulla_graph_core::graph::GraphView,
+    semantic: &medulla_semantic_index::semantic::SemanticStore,
 ) -> Result<medulla_result_types::epistemic_operations::EvidenceBundle, String> {
     use medulla_plan::PlanCtx;
 
@@ -295,8 +295,8 @@ pub(crate) fn explain_provenance(
 pub(crate) fn explain_provenance_by_ids(
     request_id: u64,
     ids: Vec<String>,
-    view: &medulla_core::graph::GraphView,
-    semantic: &medulla_core::compute::semantic::SemanticStore,
+    view: &medulla_graph_core::graph::GraphView,
+    semantic: &medulla_semantic_index::semantic::SemanticStore,
 ) -> Result<medulla_result_types::epistemic_operations::EvidenceBundle, String> {
     use medulla_plan::PlanCtx;
 
@@ -410,9 +410,9 @@ pub(crate) fn explain_provenance_result(
 #[cfg(feature = "query")]
 pub(crate) fn explain_policy(
     plan: medulla_plan::Plan,
-    full_view: &medulla_core::graph::GraphView,
-    filtered_view: &medulla_core::graph::GraphView,
-    semantic: &medulla_core::compute::semantic::SemanticStore,
+    full_view: &medulla_graph_core::graph::GraphView,
+    filtered_view: &medulla_graph_core::graph::GraphView,
+    semantic: &medulla_semantic_index::semantic::SemanticStore,
 ) -> Result<medulla_protocol_types::protocol::ExplainPolicyResult, String> {
     use medulla_protocol_types::protocol::ExplainPolicyResult;
     use medulla_plan::PlanCtx;
@@ -482,12 +482,12 @@ pub(crate) fn proof_node_wire(
 #[cfg(feature = "epistemic")]
 pub(crate) fn explain_belief(
     node_id: &str,
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
 ) -> medulla_protocol_types::protocol::ExplainBeliefResult {
     // A minimal semantic store: `explain_belief_tree` only reads `ctx.view` +
     // `ctx.belief_policy` (default, unbound on this path — no facade caller binds a
     // tenant-specific policy today, matching every other served epistemic op).
-    let semantic = medulla_core::compute::semantic::SemanticStore::new();
+    let semantic = medulla_semantic_index::semantic::SemanticStore::new();
     let ctx = medulla_plan::PlanCtx::new(view, &semantic);
     let tree = medulla_plan::explain_belief_tree(&ctx, node_id);
 
@@ -548,9 +548,9 @@ pub(crate) fn count_redacted_tree_rules(
 #[cfg(feature = "epistemic-redaction")]
 pub(crate) fn explain_belief_redacted_wire(
     node_id: &str,
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     cap: medulla_protocol_types::protocol::DisclosureLevelWire,
-    isolation: &medulla_core::isolation::IsolationLayer,
+    isolation: &medulla_isolation::isolation::IsolationLayer,
     actor_id: &str,
 ) -> medulla_protocol_types::protocol::ExplainBeliefRedactedResult {
     use medulla_protocol_types::protocol::ExplainBeliefRedactedResult;
@@ -728,7 +728,7 @@ pub(crate) fn minimal_flip_set_wire(
 #[cfg(feature = "epistemic-tms")]
 pub(crate) fn epistemic_status_wire(
     node_id: &str,
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
 ) -> medulla_protocol_types::protocol::EpistemicStatusResult {
     use medulla_protocol_types::protocol::AuthorityPolicyWire;
     use medulla_protocol_types::protocol::EpistemicStatusResult;

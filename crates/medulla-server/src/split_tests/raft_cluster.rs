@@ -58,7 +58,7 @@ async fn make_state_with_backend(
     medulla_raft::raft::harness_support::make_state_with_cdc(
         dir,
         backend,
-        medulla_core::isolation::IsolationLayer::new(),
+        medulla_isolation::isolation::IsolationLayer::new(),
         "raft-test",
     )
     .await
@@ -2983,7 +2983,7 @@ mod dist_compute {
         placement: &dyn Fn(&str) -> &'static str,
     ) -> (
         Arc<RwLock<ServerState>>,
-        std::sync::Arc<medulla_core::graph::GraphCore>,
+        std::sync::Arc<medulla_graph_core::graph::GraphCore>,
     ) {
         let dir = std::env::temp_dir().join(format!(
             "medulla-pregel-{}-{}",
@@ -3031,7 +3031,7 @@ mod dist_compute {
         }
 
         // The single-graph reference: the WHOLE union in ONE core.
-        let union = std::sync::Arc::new(medulla_core::graph::GraphCore::new());
+        let union = std::sync::Arc::new(medulla_graph_core::graph::GraphCore::new());
         for n in nodes {
             union.add_node(n.to_string(), props(n));
         }

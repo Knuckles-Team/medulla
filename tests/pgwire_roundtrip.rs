@@ -1433,7 +1433,7 @@ async fn wire_reason_iri_bridges_string_typed_node() {
     // never saw the axiom for the pgwire "tester" actor. `medulla_rdf::update::insert_triple`
     // (and `mapping::lower_triples` for bulk RDF load) now stamps BOTH endpoints of a
     // recognized RDFS/OWL schema predicate (`rdfs:subClassOf` here) with
-    // `medulla_core::isolation::RLS_SCHEMA_KEY`, and `can_see_row` treats a schema-marked row
+    // `medulla_graph_core::rls::RLS_SCHEMA_KEY`, and `can_see_row` treats a schema-marked row
     // as visible -- narrowly: ONLY rows the RDF/OWL lowering structurally identified as
     // schema, never merely because they are untagged. Graph-level ACL
     // (`check_graph_access`, exercised in the SECOND connection below) is completely

@@ -25,7 +25,7 @@ use medulla_result_types::{
     compute_result::graphlearn::LinkPredictorFit, compute_result::graphlearn::PredictedLink,
 };
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::GraphLearnParams;
 use medulla_protocol_types::protocol::GraphSource;
 use medulla_protocol_types::protocol::Method;
@@ -548,7 +548,7 @@ fn model_digest(model: &KanLinkModel) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
 
     fn node(props: serde_json::Value) -> Vec<u8> {
         rmp_serde::to_vec_named(&props).unwrap()

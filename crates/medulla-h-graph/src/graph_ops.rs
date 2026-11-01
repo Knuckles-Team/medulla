@@ -9,8 +9,8 @@ use std::ops::ControlFlow;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use medulla_core::graph::GraphCore;
-use medulla_core::isolation::AccessLevel;
+use medulla_graph_core::graph::GraphCore;
+use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::protocol::LedgerReadResult;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;

@@ -78,7 +78,7 @@ async fn state() -> test_support::SharedState {
 /// `System`-role and bypasses RBAC, but the `alice`/`bob` peers this file registers
 /// (plain `AgentRole::Agent`) do not, or every RPC they make is `ACCESS_DENIED` before
 /// row-level RLS is ever reached.
-fn commons_isolation() -> medulla_core::isolation::IsolationLayer {
+fn commons_isolation() -> medulla_isolation::isolation::IsolationLayer {
     let mut isolation = common::current_isolation();
     use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
     isolation.add_role(Role::new(COMMONS_USER_ROLE));

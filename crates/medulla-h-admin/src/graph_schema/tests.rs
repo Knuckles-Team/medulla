@@ -150,8 +150,8 @@ fn attach_refuses_an_abox_contradiction_the_terminology_scope_admits() {
     candidate
         .attach_dynamic(
             "admin:contradiction".to_string(),
-            medulla_core::graph::GraphSchemaSource::new(
-                medulla_core::graph::SchemaSourceOrigin::Admin {
+            medulla_graph_core::graph::GraphSchemaSource::new(
+                medulla_graph_core::graph::SchemaSourceOrigin::Admin {
                     name: "contradiction".to_string(),
                 },
                 None,
@@ -297,7 +297,7 @@ fn internal_pack_projection_owns_identity_and_rejects_regression() {
         .unwrap();
     assert_eq!(
         installed.origin,
-        medulla_core::graph::SchemaSourceOrigin::Pack {
+        medulla_graph_core::graph::SchemaSourceOrigin::Pack {
             connector: "graph-os".to_string(),
             record_id: "pack:graph-os:1:aaaa".to_string(),
         }

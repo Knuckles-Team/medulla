@@ -18,7 +18,7 @@
 //!       - a Cypher 25 quantified group `((…)){m,n}` → repeated whole-subpattern
 //!         expansion.
 //!
-//!     `medulla_core::graph::vf2_match_views` is not on this path; it remains only a
+//!     `medulla_graph_core::graph::vf2_match_views` is not on this path; it remains only a
 //!     cross-check oracle in the test suite.
 //!
 //! The result is the SAME `QueryResult { columns, rows }` carrier the SQL surface

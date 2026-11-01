@@ -16,7 +16,7 @@ default = []
 # broker_enqueue`. PURE-RUST — no new dep (only serde/serde_json/rmp already linked)
 # — so it is Pi-safe; the facade folds it into the durable serving tiers. Gates
 # `medulla-types/broker` so the broker `Method` variants appear in lock step.
-broker = ["medulla-types/broker", "medulla-protocol-types/broker"]
+broker = ["medulla-graph-core/broker", "medulla-types/broker", "medulla-protocol-types/broker"]
 # Use the native medulla-ann IVF-PQ+OPQ+SQ8-refine index (CONCEPT:KG-2.207) as the
 # SemanticStore ANN backend used by the in-process semantic index. The
 # persisted index reopens WITHOUT rebuilding from raw vectors. OFF by default;
@@ -25,13 +25,13 @@ broker = ["medulla-types/broker", "medulla-protocol-types/broker"]
 # subscriber, so zero cost in the default build). `rayon` (CONCEPT:MEDULLA-014) drives
 # the all-core parallel brute-force fallback — the path EVERY semantic_search hits
 # until the ANN index warms (and after every restart).
-ann = ["dep:rayon"]
+ann = ["medulla-graph-core/ann", "medulla-semantic-index/ann", "dep:rayon"]
 # Additionally persist the ANN codes into the engine's durable tier
 # (CONCEPT:KG-2.195) rather than only the mmap files. The codes live in the
 # `medulla_ann` owner table of `OwnerLayout::SemanticIndex`, written through the
 # mutation kernel (RF-RULING-007) -- so this pulls the two kernels, not a raw
 # `redb` handle for medulla-ann, which declares no storage dependency at all.
-ann-redb = ["ann", "dep:redb", "dep:sha2", "dep:medulla-storage", "dep:medulla-transaction"]
+ann-redb = ["medulla-ann-codes/ann-redb", "ann", "dep:redb", "dep:sha2", "dep:medulla-storage", "dep:medulla-transaction"]
 # GPU distance dispatch seam (CONCEPT:MEDULLA-326) / real CUDA backend (CONCEPT:MEDULLA-327) for
 # the medulla-ann index. `ann-gpu` opts into the seam; `ann-gpu-cuda` pulls the real cudarc
 # backend (dynamic-loading — no CUDA toolkit to build). OUT of pi/full (facade folds it
@@ -44,11 +44,11 @@ ann-gpu-cuda = ["ann-gpu", "medulla-ann/gpu-cuda"]
 # evaluators are pure-Rust; MEDULLA-303 links `redb` (same 4.1 as the durable tiers) to
 # persist the RbacPolicy + registered AgentIdentities across restarts. Gated so a
 # non-security build links neither. redb is Pi-safe; `pi` does NOT enable security.
-security = ["dep:redb", "dep:sha2", "dep:hmac", "dep:medulla-storage", "dep:medulla-transaction"]
+security = ["medulla-isolation/security", "medulla-graph-core/security", "dep:redb", "dep:sha2", "dep:hmac", "dep:medulla-storage", "dep:medulla-transaction"]
 # Version-keyed query-RESULT cache (CONCEPT:KG-2.233) on `GraphCore`. Pure-Rust
 # bounded LRU + 128-bit query hash — no new dep — so the facade folds it into the
 # lean Pi tier as well as node/cluster/full.
-result-cache = []
+result-cache = ["medulla-graph-core/result-cache", "medulla-query-cache/result-cache", ]
 # Durable JSONPath index persistence (CONCEPT:MEDULLA-308): the redb-backed
 # `RedbPathIndexStore` impl of the dep-free `PathIndexPersistence` seam, so the
 # demand-driven MEDULLA-084 JSONPath index (`path → value → ids` / `path → ids`) is
@@ -56,13 +56,13 @@ result-cache = []
 # skipping the full node rescan on the first JSON filter after a cold start. Links
 # `redb` (the SAME 4.1 the durable tiers + MEDULLA-303 link); OFF by default so a bare /
 # Pi medulla-core build stays fully in-memory (the seam + in-memory default are dep-free).
-path-persist = ["dep:redb", "dep:medulla-storage", "dep:medulla-transaction"]
+path-persist = ["medulla-graph-core/path-persist", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction"]
 # Cold object-store tier seam (CONCEPT:KG-2.233): a `ColdTier` trait (RAM→redb→
 # object-store) + an in-memory default impl, for offloading a cold graph's whole
 # serialized state and rehydrating on access. The trait + default are dep-free
 # (Pi-safe); the facade layers a redb/S3 impl on top. Folded into pi/node/cluster/
 # full alongside `result-cache`.
-cold-tier = []
+cold-tier = ["medulla-graph-core/cold-tier", ]
 # ModalityContract retrofit (CONCEPT:E4): `impl ModalityContract for
 # index::NodeChange` + the `modality_conformance_tests!` battery. OFF by default,
 # deliberately NOT folded into any tier aggregate (pi/node/full) — it is a
@@ -123,6 +123,11 @@ medulla-result-types = { path = "../medulla-result-types" }
 medulla-index-types = { path = "../medulla-index-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
+medulla-query-cache = { path = "../medulla-query-cache" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-isolation = { path = "../medulla-isolation" }
+medulla-ann-codes = { path = "../medulla-ann-codes" }
 
 [dev-dependencies]
 # The commercial-vocabulary contract tests (MEDULLA-SUPPLY-VOCAB-R003.13-.16) parse

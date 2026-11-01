@@ -41,10 +41,10 @@ pub(super) async fn sql(h: &Harness, who: &str, query: &str) -> Vec<Vec<Value>> 
     let authority = CarrierAuthority::from_verified(&verified).unwrap();
     let persist_dir = std::path::PathBuf::from(h.state.read().await.persist_dir.clone().unwrap());
     let views = super::super::stat_view::DecisionViews::of(h.store.clone(), &authority);
-    let graph = medulla_core::graph::GraphCore::new().analysis_snapshot();
+    let graph = medulla_graph_core::graph::GraphCore::new().analysis_snapshot();
     let request_graph = medulla_server_api::sql_catalog_acl::RequestGraph {
         name: "retrieval-sql-graph".to_string(),
-        core: std::sync::Arc::new(medulla_core::graph::GraphCore::new()),
+        core: std::sync::Arc::new(medulla_graph_core::graph::GraphCore::new()),
     };
     // The SQL leg drives its own runtime (as on the blocking pool in
     // production), so it runs on a plain thread outside the test's runtime.

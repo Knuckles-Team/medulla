@@ -8,7 +8,7 @@
 
 use std::sync::Arc;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_numeric::decision::adapter::AdapterKernel;
 
 use crate::state::ServerState;
@@ -82,9 +82,7 @@ pub fn salt(adapter: Option<&ServedAdapter>, payload: &mut Vec<u8>) {
 
 /// The verified carrier tenant of a read, the partition adapter state is
 /// served from (the same scope `DecisionLog.retrieval` activates under).
-pub fn carrier_tenant(
-    authority: Option<&crate::access::GraphReadAuthority>,
-) -> Option<&str> {
+pub fn carrier_tenant(authority: Option<&crate::access::GraphReadAuthority>) -> Option<&str> {
     authority
         .and_then(crate::access::GraphReadAuthority::carrier)
         .map(crate::access::CarrierAuthority::tenant_scope)

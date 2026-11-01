@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use medulla_core::isolation::IsolationLayer;
+use medulla_isolation::isolation::IsolationLayer;
 use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
 use medulla_core::registry::GraphRegistry;
 use medulla_server_api::api::persistence::PersistenceBackend;

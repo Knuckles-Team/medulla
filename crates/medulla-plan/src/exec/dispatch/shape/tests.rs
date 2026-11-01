@@ -1,6 +1,7 @@
-use medulla_core::compute::semantic::SemanticStore;
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
 use medulla_rdf::mapping::{load_triples, parse_turtle, IriStore};
+use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::ShapeKeep;
 
 use super::validate_shape;

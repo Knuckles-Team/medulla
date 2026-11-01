@@ -114,7 +114,7 @@ pub(super) async fn contrast_evidence_view(
     state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     agent_id: &str,
     request: &DecideRequest,
-) -> Result<medulla_core::graph::GraphView, String> {
+) -> Result<medulla_graph_core::graph::GraphView, String> {
     let graph = typed_param(request, PARAM_GRAPH, "text")?;
     filtered_view(state, agent_id, graph).await
 }
@@ -123,14 +123,17 @@ pub(super) async fn contrast_evidence_view(
 /// seal in place of the ordinary scored ladder.
 pub(super) fn contrast_executed(
     request: &DecideRequest,
-    graph_view: Option<&medulla_core::graph::GraphView>,
+    graph_view: Option<&medulla_graph_core::graph::GraphView>,
 ) -> Option<Result<Executed, String>> {
     (request.question.kind == QuestionKind::HarnessContrast).then(|| compute(request, graph_view))
 }
 
 /// The stored probe run behind one trace id, when the view holds a
 /// well-formed record there.
-fn probe_run(view: &medulla_core::graph::GraphView, trace_id: &str) -> Option<HarnessProbeRun> {
+fn probe_run(
+    view: &medulla_graph_core::graph::GraphView,
+    trace_id: &str,
+) -> Option<HarnessProbeRun> {
     view.node_row_object(&format!("harness-probe-run:{trace_id}"))
         .and_then(|props| decode_harness_probe_run_write(&props).ok())
 }
@@ -138,7 +141,7 @@ fn probe_run(view: &medulla_core::graph::GraphView, trace_id: &str) -> Option<Ha
 /// The stored contrast behind one node id, when the view holds a
 /// well-formed record there.
 fn stored_contrast(
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     node_id: &str,
 ) -> Option<HarnessContrast> {
     view.node_row_object(node_id)
@@ -180,7 +183,7 @@ fn refusal_text(
 /// Read the evidence out of the view and run the kernel.
 fn compute(
     request: &DecideRequest,
-    graph_view: Option<&medulla_core::graph::GraphView>,
+    graph_view: Option<&medulla_graph_core::graph::GraphView>,
 ) -> Result<Executed, String> {
     let view = graph_view.ok_or_else(|| {
         invalid_parameter("a harness_contrast question reads its evidence from a named graph")

@@ -5,9 +5,9 @@ use std::sync::{Arc, OnceLock};
 
 use medulla_rdf::oxrdf::{BlankNode, Graph, NamedOrBlankNode, Term, Triple};
 
-use medulla_core::graph::GraphSchemaSource;
-use medulla_core::graph::GraphSchemaSources;
-use medulla_core::graph::SchemaSourceOrigin;
+use medulla_graph_core::graph::GraphSchemaSource;
+use medulla_graph_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::SchemaSourceOrigin;
 
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 const SH_NODE_SHAPE: &str = "http://www.w3.org/ns/shacl#NodeShape";
@@ -153,11 +153,11 @@ fn compose_documents<'a>(
                     }
                 )
             })?;
-        if parsed.len() > medulla_core::graph::MAX_SCHEMA_DOCUMENT_TRIPLES {
+        if parsed.len() > medulla_graph_core::graph::MAX_SCHEMA_DOCUMENT_TRIPLES {
             return Err(format!(
                 "SCHEMA_SOURCES_TOO_LARGE: source '{source_id}' has {} triples; maximum is {}",
                 parsed.len(),
-                medulla_core::graph::MAX_SCHEMA_DOCUMENT_TRIPLES
+                medulla_graph_core::graph::MAX_SCHEMA_DOCUMENT_TRIPLES
             ));
         }
         validate_imports(source_id, &parsed, shapes)?;
@@ -206,7 +206,7 @@ fn validate_imports(source_id: &str, triples: &[Triple], shapes: bool) -> Result
     // import the engine foundation. Dynamic documents may only name their own
     // declared document IRI; imports are identity assertions and are never
     // dereferenced by composition.
-    if source_id.starts_with(medulla_core::graph::CORE_SOURCE_PREFIX) {
+    if source_id.starts_with(medulla_graph_core::graph::CORE_SOURCE_PREFIX) {
         return Ok(());
     }
     let document_iris: BTreeSet<&str> = triples
@@ -433,8 +433,8 @@ mod tests {
     use std::sync::Arc;
 
     use super::*;
-    use medulla_core::graph::GraphSchemaSource;
-    use medulla_core::graph::SchemaSourceOrigin;
+    use medulla_graph_core::graph::GraphSchemaSource;
+    use medulla_graph_core::graph::SchemaSourceOrigin;
 
     fn admin(name: &str, shapes: Option<&str>, ontology: Option<&str>) -> GraphSchemaSource {
         GraphSchemaSource::new(

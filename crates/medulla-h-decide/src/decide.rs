@@ -160,7 +160,7 @@ impl medulla_server_api::api::admin::DecideApi for DecideSeam {
         state: &SharedState,
         tenant: Option<&str>,
         graph: &str,
-        core: &medulla_core::graph::GraphCore,
+        core: &medulla_graph_core::graph::GraphCore,
     ) -> Option<std::sync::Arc<medulla_server_api::api::admin::served_adapter::ServedAdapter>> {
         served_adapter::served_for(state, tenant, graph, core).await
     }

@@ -167,9 +167,12 @@ pub(crate) async fn begin_txn_lifecycle_receipt(
     // refusal.  The real admission below still consumes the exact nonce and
     // therefore preserves the kernel's REPLAY_NONCE_CONSUMED / conflict
     // decisions for retries.
-    let prepared =
-        medulla_server_api::api::admin::saga::resume_named_admin_saga(redb, &batch_id, Some(caller))?
-            .is_some_and(|saga| saga.prepared);
+    let prepared = medulla_server_api::api::admin::saga::resume_named_admin_saga(
+        redb,
+        &batch_id,
+        Some(caller),
+    )?
+    .is_some_and(|saga| saga.prepared);
     let saga = medulla_server_api::api::admin::saga::begin_named_admin_saga_with_nonce(
         redb,
         req_id,

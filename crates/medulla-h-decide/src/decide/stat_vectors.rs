@@ -6,11 +6,11 @@
 
 use std::sync::Arc;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 
 use super::stat_support::readable_graph;
-use medulla_core::isolation::IsolationLayer;
+use medulla_isolation::isolation::IsolationLayer;
 
 /// Over-fetch factor of a visibility-filtered probe.
 const PROBE_OVERFETCH: usize = 4;
@@ -47,7 +47,7 @@ impl GraphVectors {
     fn visible(&self, id: &str) -> bool {
         self.core.get_node_properties(id).is_some_and(|blob| {
             self.isolation
-                .can_see_row(&self.caller, &medulla_core::isolation::row_visibility(&blob))
+                .can_see_row(&self.caller, &medulla_graph_core::rls::row_visibility(&blob))
         })
     }
 

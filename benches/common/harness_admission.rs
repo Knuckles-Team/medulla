@@ -3,7 +3,7 @@
 
 use std::time::Instant;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use medulla_h_graph::harness_admission::direct_add_node;
 

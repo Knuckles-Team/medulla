@@ -220,8 +220,8 @@ mod tests {
     // spec: MEDULLA-DURABLE-KERNEL-R039.3
     #[test]
     fn lease_write_alone_cannot_change_pending_work_item_state() {
-        use medulla_server_api::auth::VerifiedRequestContext;
         use medulla_agent_types::control_lease::PENDING_CALL_KIND;
+        use medulla_server_api::auth::VerifiedRequestContext;
         let lease_only = VerifiedRequestContext::verified_for_test_with_scopes(
             "worker-a",
             "tenant-a",
@@ -240,8 +240,8 @@ mod tests {
     // spec: MEDULLA-DURABLE-KERNEL-R039.3
     #[test]
     fn absent_lookup_returns_a_terminal_refusal_before_any_later_registration() {
-        use medulla_server_api::auth::VerifiedRequestContext;
         use medulla_agent_types::control_lease::{ControlLeaseKindPolicy, PENDING_CALL_KIND};
+        use medulla_server_api::auth::VerifiedRequestContext;
         let verified = VerifiedRequestContext::verified_for_test_with_scopes(
             "worker-a",
             "tenant-a",

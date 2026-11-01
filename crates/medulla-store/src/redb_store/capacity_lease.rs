@@ -48,12 +48,9 @@ mod throttle;
 /// One capacity table opened for writing on one graph's scope.
 type CapacityRows<'a> = ScopedOwnerTableMut<'a, (&'static str, &'static str), &'static [u8]>;
 
-pub const CELLS: TableDefinition<(&str, &str), &[u8]> =
-    TableDefinition::new("capacity_cells");
-pub const LEASES: TableDefinition<(&str, &str), &[u8]> =
-    TableDefinition::new("capacity_leases");
-pub const USAGE: TableDefinition<(&str, &str), &[u8]> =
-    TableDefinition::new("capacity_usage");
+pub const CELLS: TableDefinition<(&str, &str), &[u8]> = TableDefinition::new("capacity_cells");
+pub const LEASES: TableDefinition<(&str, &str), &[u8]> = TableDefinition::new("capacity_leases");
+pub const USAGE: TableDefinition<(&str, &str), &[u8]> = TableDefinition::new("capacity_usage");
 pub const IDEMPOTENCY: TableDefinition<(&str, &str, &str), &[u8]> =
     TableDefinition::new("capacity_idempotency");
 

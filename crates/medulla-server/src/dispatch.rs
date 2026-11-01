@@ -28,7 +28,7 @@ use medulla_server_api::compute::compute_off_lock;
 // unqualified. Gating the import broke every build without `redb`
 // (`--no-default-features --features server`) with E0405 while the default full build,
 // which enables `redb`, stayed green. See plans/complex/lane-reports/WD10-R-DISPATCH.md.
-use medulla_core::isolation::AccessLevel;
+use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::protocol::Response;
@@ -76,7 +76,7 @@ pub(crate) fn authorized_graph_read(
     graph: &str,
     verified: &VerifiedRequestContext,
     missing_error: &str,
-) -> Result<(Arc<medulla_core::graph::GraphCore>, GraphReadAuthority), String> {
+) -> Result<(Arc<medulla_graph_core::graph::GraphCore>, GraphReadAuthority), String> {
     let entry = state.registry.get(graph).ok_or(missing_error)?;
     check_graph_access(
         &state.isolation,

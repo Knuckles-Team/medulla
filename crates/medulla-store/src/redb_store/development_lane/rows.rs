@@ -4,9 +4,9 @@ use super::{
     DurableLaneHold, COUNTERS, HOLDS, INVOCATIONS, LANE_INDEX, POLICIES, PRESSURE_INDEX,
     REPOSITORY_BRANCH_INDEX, TENANT_INDEX, WORKTREE_INDEX, WORK_ITEM_INDEX,
 };
-use medulla_result_types::epistemic_operations::DevelopmentLaneHoldState;
 use crate::redb_store::shard::Shard;
 use crate::redb_store::shard::ShardWrite;
+use medulla_result_types::epistemic_operations::DevelopmentLaneHoldState;
 use medulla_storage::{
     GraphShardOwner, OwnerRowScope, OwnerRowScopeStart, PhysicalWriteCapability, ScopedOwnerTable,
     ScopedOwnerTableMut,

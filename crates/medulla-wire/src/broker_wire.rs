@@ -24,7 +24,7 @@ pub(crate) mod prelude {
 
 #[cfg(test)]
 pub(crate) fn register_broker_test_agent(
-    isolation: &mut medulla_core::isolation::IsolationLayer,
+    isolation: &mut medulla_isolation::isolation::IsolationLayer,
     agent_id: impl Into<String>,
 ) {
     isolation.register_agent(medulla_types::acl::AgentIdentity {
@@ -44,7 +44,7 @@ pub(crate) async fn test_state_with_broker_agents(
     prefix: &str,
     principals: &[&str],
 ) -> Arc<RwLock<ServerState>> {
-    use medulla_core::isolation::IsolationLayer;
+    use medulla_isolation::isolation::IsolationLayer;
 
     let mut isolation = IsolationLayer::new();
     #[cfg(feature = "security")]

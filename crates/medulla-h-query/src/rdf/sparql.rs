@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use medulla_core::graph::GraphCore;
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::compute::compute_off_lock;
@@ -36,7 +36,7 @@ pub(super) async fn handle_sparql(
     proj: medulla_rdf::sparql::Projection,
     mode: SparqlProofMode,
     #[cfg(feature = "security")] caller: &str,
-    #[cfg(feature = "security")] rls: &Arc<medulla_core::isolation::IsolationLayer>,
+    #[cfg(feature = "security")] rls: &Arc<medulla_isolation::isolation::IsolationLayer>,
 ) -> Response {
     #[cfg(feature = "result-cache")]
     let cache_key = format!(
@@ -88,10 +88,10 @@ fn sparql_cache_hash(cache_key: &str, #[cfg(feature = "security")] caller: &str)
     #[cfg(feature = "security")]
     {
         let kind = format!("rls:{caller}:sparql");
-        medulla_core::result_cache::ResultCache::hash_query(&kind, cache_key.as_bytes())
+        medulla_query_cache::result_cache::ResultCache::hash_query(&kind, cache_key.as_bytes())
     }
     #[cfg(not(feature = "security"))]
-    medulla_core::result_cache::ResultCache::hash_query("sparql", cache_key.as_bytes())
+    medulla_query_cache::result_cache::ResultCache::hash_query("sparql", cache_key.as_bytes())
 }
 
 #[cfg(feature = "result-cache")]
@@ -110,7 +110,7 @@ fn sparql_cache_hit(core: &GraphCore, req_id: u64, hash: u128) -> Option<Respons
 fn sparql_snapshot(
     core: &Arc<GraphCore>,
     #[cfg(feature = "security")] caller: &str,
-    #[cfg(feature = "security")] rls: &Arc<medulla_core::isolation::IsolationLayer>,
+    #[cfg(feature = "security")] rls: &Arc<medulla_isolation::isolation::IsolationLayer>,
 ) -> (Arc<GraphView>, u64) {
     #[cfg(feature = "security")]
     {
@@ -141,7 +141,7 @@ fn sparql_snapshot(
 fn sparql_snapshot_uncached(
     core: &Arc<GraphCore>,
     #[cfg(feature = "security")] caller: &str,
-    #[cfg(feature = "security")] rls: &Arc<medulla_core::isolation::IsolationLayer>,
+    #[cfg(feature = "security")] rls: &Arc<medulla_isolation::isolation::IsolationLayer>,
 ) -> Arc<GraphView> {
     #[cfg(feature = "security")]
     {
@@ -191,7 +191,7 @@ async fn evaluate_sparql(
             ) {
                 Ok(payload) => {
                     #[cfg(feature = "result-cache")]
-                    medulla_core::result_cache::cache_result(
+                    medulla_query_cache::result_cache::cache_result(
                         core.result_cache(),
                         hash,
                         version,

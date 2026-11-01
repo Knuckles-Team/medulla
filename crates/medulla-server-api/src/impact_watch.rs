@@ -197,7 +197,7 @@ impl ImpactWatchHub {
 /// The changed seeds of `watch`: every seed candidate when a declaration changed
 /// (a new or edited watch recomputes in full), else the changed seed-labelled nodes.
 fn watch_changes(
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     watch: &ImpactWatchSpec,
     pending: &Pending,
 ) -> Vec<String> {

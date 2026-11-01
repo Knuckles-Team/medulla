@@ -44,6 +44,9 @@ tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sy
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", optional = true }
 medulla-direct-state = { path = "../medulla-direct-state" }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-isolation = { path = "../medulla-isolation" }
 
 [features]
 test-support = ["dep:tempfile"]

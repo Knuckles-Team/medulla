@@ -1,7 +1,7 @@
-use medulla_core::graph::GraphCore;
+use crate::api::persistence::PersistenceBackend;
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::ResultPayload;
-use crate::api::persistence::PersistenceBackend;
 use medulla_types::contract::Nonce;
 
 #[cfg(feature = "program-optimization")]
@@ -44,10 +44,7 @@ impl<'a> ProgramPromotionRequest<'a> {
         }
     }
 
-    pub fn with_identity(
-        mut self,
-        identity: &'a medulla_program::ProgramRevisionIdentity,
-    ) -> Self {
+    pub fn with_identity(mut self, identity: &'a medulla_program::ProgramRevisionIdentity) -> Self {
         self.identity = Some(identity);
         self
     }

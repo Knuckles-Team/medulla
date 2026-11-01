@@ -3,9 +3,9 @@ use std::sync::Arc;
 #[cfg(feature = "owl")]
 use tokio::sync::RwLock;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 #[cfg(feature = "owl")]
-use medulla_core::isolation::AccessLevel;
+use medulla_isolation::isolation::AccessLevel;
 #[cfg(feature = "owl")]
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
@@ -36,7 +36,7 @@ pub(super) struct RunRulesRequest<'a> {
     #[cfg(feature = "security")]
     pub(super) caller: &'a str,
     #[cfg(feature = "security")]
-    pub(super) rls: &'a Arc<medulla_core::isolation::IsolationLayer>,
+    pub(super) rls: &'a Arc<medulla_isolation::isolation::IsolationLayer>,
 }
 
 #[cfg(feature = "rdf")]
@@ -62,7 +62,7 @@ pub(super) async fn handle_run_rules(request: RunRulesRequest<'_>) -> Response {
     // sibling: it never used `analysis_snapshot_versioned` even when
     // `result-cache` is on, so this wiring applies unconditionally here.
     #[cfg(feature = "security")]
-    let snap: Arc<medulla_core::graph::GraphView> = {
+    let snap: Arc<medulla_graph_core::graph::GraphView> = {
         let probe_version = core.version();
         match core.cached_filtered_view(caller, probe_version) {
             Some(cached) => cached,
@@ -253,14 +253,14 @@ pub(super) async fn handle_owl_reason_distributed(
         }
         cores
     };
-    let snaps: Vec<medulla_core::graph::GraphView> = cores
+    let snaps: Vec<medulla_graph_core::graph::GraphView> = cores
         .iter()
         .map(|core| read_authority.project_core(core).analysis_snapshot())
         .collect();
     let now = now_secs();
     let hl = decay_half_life_secs();
     let resp = match compute_off_lock(req_id, move || {
-        let views: Vec<&medulla_core::graph::GraphView> = snaps.iter().collect();
+        let views: Vec<&medulla_graph_core::graph::GraphView> = snaps.iter().collect();
         owl_reason(
             &views,
             &ontology,
@@ -290,7 +290,7 @@ pub(super) async fn handle_owl_reason_distributed(
 /// distributed cross-shard path. Both go through `medulla_rdf::owl::reason_distributed_weighted`.
 #[cfg(feature = "owl")]
 fn owl_reason(
-    views: &[&medulla_core::graph::GraphView],
+    views: &[&medulla_graph_core::graph::GraphView],
     ontology: &str,
     target_class: &str,
     class_base: &str,
@@ -386,7 +386,7 @@ fn owl_reason(
     })
 }
 
-fn validated_schema_digests(views: &[&medulla_core::graph::GraphView]) -> Result<Vec<String>, String> {
+fn validated_schema_digests(views: &[&medulla_graph_core::graph::GraphView]) -> Result<Vec<String>, String> {
     let mut schema_digests: Vec<String> = views
         .iter()
         .map(|view| view.schema_sources.composed_digest().to_hex())
@@ -454,7 +454,7 @@ pub(super) async fn handle_owl_explain(
 /// project [`medulla_rdf::owl::Classification::explain`]'s proof tree to the wire shape.
 #[cfg(feature = "owl")]
 fn owl_explain(
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     ontology: &str,
     sub: &str,
     sup: &str,

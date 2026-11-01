@@ -119,7 +119,7 @@ impl MedullaStore {
     pub(super) async fn try_apply_change_envelope(
         &self,
         req: &RaftRequest,
-        core: &Arc<medulla_core::graph::GraphCore>,
+        core: &Arc<medulla_graph_core::graph::GraphCore>,
         persistence: Option<&Arc<dyn PersistenceBackend>>,
         change_envelope: Option<&(
             medulla_protocol_types::change_envelope::ChangeEnvelope,
@@ -173,8 +173,9 @@ impl MedullaStore {
         let projection_pending = if committed.replayed {
             false
         } else {
-            match medulla_server_api::mutation_batch::publish_change_envelope_projection(core, envelope)
-            {
+            match medulla_server_api::mutation_batch::publish_change_envelope_projection(
+                core, envelope,
+            ) {
                 Ok(()) => false,
                 Err(error) => {
                     tracing::warn!(

@@ -221,10 +221,10 @@ mod tests {
         SNAPSHOT_WRITE_ERROR,
     };
     use super::*;
-    use medulla_server_api::blob::store::RedbChunkStore;
-    use medulla_server_api::http1::HttpMessage;
     use medulla_kernel::lock_recovery::LockRecovery;
     use medulla_kernel::test_rendezvous::{join_bounded, recv_within};
+    use medulla_server_api::blob::store::RedbChunkStore;
+    use medulla_server_api::http1::HttpMessage;
     use std::path::Path;
     use std::sync::atomic::Ordering;
     use tokio::io::AsyncReadExt as _;
@@ -1383,7 +1383,7 @@ mod tests {
     ) -> std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>> {
         let mut state = medulla_server_api::state::ServerState::new_for_test(
             "goc62-bug037-test-secret", // nosec B105 - test only  // sanitizer:ignore — synthetic in-process test fixture, never a live credential
-            medulla_core::isolation::IsolationLayer::new(),
+            medulla_isolation::isolation::IsolationLayer::new(),
         );
         // Preserve this fixture's prior omission of the optional CDC hub.
         #[cfg(feature = "streaming")]

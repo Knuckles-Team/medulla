@@ -347,7 +347,7 @@ use medulla_server_api::state::{txn_limits_from_env, ServerState};
 #[cfg(test)]
 pub(crate) fn test_state_with_services(
     auth_secret: &str,
-    isolation: medulla_core::isolation::IsolationLayer,
+    isolation: medulla_isolation::isolation::IsolationLayer,
     persistence_label: &str,
     tsdb_label: &str,
 ) -> std::sync::Arc<tokio::sync::RwLock<ServerState>> {
@@ -3694,7 +3694,7 @@ pub mod shex_served;
         // threshold, with no boot-time warm task ever having run for it (there is
         // none in this harness).
         let dim = 8;
-        let n = medulla_core::compute::semantic_ann::ANN_BUILD_THRESHOLD + 50;
+        let n = medulla_semantic_index::semantic_ann::ANN_BUILD_THRESHOLD + 50;
         let mut target = vec![0.0f32; dim];
         {
             let mut store = core.semantic_store.write();

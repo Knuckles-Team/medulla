@@ -46,7 +46,7 @@ impl MedullaStore {
     pub(super) async fn try_apply_idempotent_replay(
         &self,
         req: &RaftRequest,
-        core: &Arc<medulla_core::graph::GraphCore>,
+        core: &Arc<medulla_graph_core::graph::GraphCore>,
         persistence: &Arc<dyn PersistenceBackend>,
         durable_method: &Method,
         #[cfg(feature = "modality-serving")] modality_command: Option<
@@ -240,7 +240,7 @@ impl MedullaStore {
     pub(super) async fn install_authoritative_graph_snapshot(
         &self,
         req: &RaftRequest,
-        core: &Arc<medulla_core::graph::GraphCore>,
+        core: &Arc<medulla_graph_core::graph::GraphCore>,
         persistence: &Arc<dyn PersistenceBackend>,
     ) -> Result<(), String> {
         let (snapshot, version) = persistence

@@ -26,7 +26,7 @@ use super::*;
 pub(crate) fn plan_dependency_set(
     plan: &medulla_plan::Plan,
     embedding_generation: Option<u64>,
-) -> Option<medulla_core::dep_scope::DepSet> {
+) -> Option<medulla_query_cache::dep_scope::DepSet> {
     let mut walk = DepWalk {
         dims: Vec::new(),
         has_source: false,
@@ -37,7 +37,7 @@ pub(crate) fn plan_dependency_set(
     // A plan with no graph SOURCE op (e.g. a pure federation/tsdb seed) is not a bounded graph
     // read — fall back rather than claim a dependency set.
     walk.has_source
-        .then(|| medulla_core::dep_scope::DepSet::new(walk.dims))
+        .then(|| medulla_query_cache::dep_scope::DepSet::new(walk.dims))
 }
 
 #[cfg(all(test, feature = "result-cache", feature = "query"))]
@@ -46,7 +46,7 @@ mod plan_deps_tests;
 /// The accumulator [`plan_dependency_set`] threads through a plan (and each `FuseRrf` branch).
 #[cfg(feature = "result-cache")]
 struct DepWalk {
-    dims: Vec<medulla_core::dep_scope::Dim>,
+    dims: Vec<medulla_query_cache::dep_scope::Dim>,
     has_source: bool,
     /// The current rows may be nodes of ANY label (a traversal reached them).
     rows_unscoped: bool,
@@ -60,7 +60,7 @@ impl DepWalk {
     }
 
     fn op(&mut self, op: &medulla_plan::Op) -> Option<()> {
-        use medulla_core::dep_scope::Dim;
+        use medulla_query_cache::dep_scope::Dim;
         match op {
             medulla_plan::Op::Scan { label } => self.source(label),
             medulla_plan::Op::ScanAll {} => self.source(""),
@@ -92,7 +92,7 @@ impl DepWalk {
     }
 
     fn source(&mut self, label: &str) {
-        use medulla_core::dep_scope::Dim;
+        use medulla_query_cache::dep_scope::Dim;
         self.has_source = true;
         self.rows_unscoped = false;
         self.dims.push(if label.is_empty() {
@@ -188,7 +188,7 @@ fn is_reliability_stage(_op: &medulla_plan::Op) -> bool {
 /// error (the plan then degrades to no lexical hits — never errs), mirroring an absent index.
 #[cfg(all(feature = "query", feature = "text"))]
 pub(crate) fn build_text_index_from_view(
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
 ) -> Option<medulla_text::TextIndex> {
     /// Append every string leaf in `v` (recursing objects/arrays) to `out`, space-separated.
     fn collect_strings(v: &serde_json::Value, out: &mut String) {
@@ -271,7 +271,7 @@ pub(crate) struct CoreIndexes<'c> {
 }
 
 impl<'c> CoreIndexes<'c> {
-    pub(crate) fn open(core: &'c std::sync::Arc<medulla_core::graph::GraphCore>) -> Self {
+    pub(crate) fn open(core: &'c std::sync::Arc<medulla_graph_core::graph::GraphCore>) -> Self {
         #[cfg(not(any(
             feature = "text",
             feature = "geo",
@@ -319,8 +319,8 @@ impl<'c> CoreIndexes<'c> {
 #[cfg(feature = "query")]
 pub(crate) fn run_unified_with<T>(
     plan: medulla_plan::Plan,
-    view: &medulla_core::graph::GraphView,
-    semantic: &medulla_core::compute::semantic::SemanticStore,
+    view: &medulla_graph_core::graph::GraphView,
+    semantic: &medulla_semantic_index::semantic::SemanticStore,
     served: ServedIndexes<'_>,
     #[cfg(feature = "tsdb")] tsdb_ctx: TsdbLegBind<'_>,
     finish: impl FnOnce(&medulla_plan::Plan, &medulla_plan::PlanCtx) -> Result<T, String>,
@@ -868,7 +868,7 @@ pub(crate) async fn run_unified_off_lock(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     core: &Arc<GraphCore>,
-    snap: Arc<medulla_core::graph::GraphView>,
+    snap: Arc<medulla_graph_core::graph::GraphView>,
     plan: medulla_plan::Plan,
     legs: ServedPlanLegs,
 ) -> UnifiedRunOutcome {
@@ -881,7 +881,7 @@ pub(crate) async fn run_unified_off_lock_with<T, F>(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     core: &Arc<GraphCore>,
-    snap: Arc<medulla_core::graph::GraphView>,
+    snap: Arc<medulla_graph_core::graph::GraphView>,
     plan: medulla_plan::Plan,
     legs: ServedPlanLegs,
     finish: F,
@@ -982,8 +982,8 @@ mod federation_served_tests;
 #[cfg(all(test, feature = "tensor"))]
 mod tensor_served_round_trip_tests {
     use super::*;
-    use medulla_core::compute::semantic::SemanticStore;
-    use medulla_core::graph::GraphCore;
+    use medulla_semantic_index::semantic::SemanticStore;
+    use medulla_graph_core::graph::GraphCore;
     use medulla_tensor::{Buffer, Tensor};
     use medulla_types::wire::{TensorOpKind, TensorReduceKind};
 
@@ -994,7 +994,7 @@ mod tensor_served_round_trip_tests {
     /// A `Frame` layer of three nodes each holding the same dense 2×3 tensor in
     /// their conventional `tensor` property, mirroring
     /// `medulla_plan::tensor_tests::frames()`.
-    fn frames_view() -> medulla_core::graph::GraphView {
+    fn frames_view() -> medulla_graph_core::graph::GraphView {
         let core = GraphCore::new();
         let t = Tensor::new(vec![2, 3], Buffer::F32(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0])).unwrap();
         let tv = serde_json::to_value(&t).unwrap();

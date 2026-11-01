@@ -33,18 +33,17 @@ pub(crate) async fn serve(
             Ok(store) => store,
             Err(error) => return Response::err(req_id, error),
         };
-        let context =
-            match medulla_persistence::agent_library::context::bind_agent_library_context(
-                &store,
-                req_id,
-                verified,
-                request.context,
-                "connector-pack:source-approval",
-                true,
-            ) {
-                Ok(context) => context,
-                Err(error) => return Response::err(req_id, error),
-            };
+        let context = match medulla_persistence::agent_library::context::bind_agent_library_context(
+            &store,
+            req_id,
+            verified,
+            request.context,
+            "connector-pack:source-approval",
+            true,
+        ) {
+            Ok(context) => context,
+            Err(error) => return Response::err(req_id, error),
+        };
         let connector = request.connector;
         let contract_iri = request.contract_iri;
         let resource_uri = request.resource_uri;

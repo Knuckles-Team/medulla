@@ -6,12 +6,12 @@ use super::{
     prepublish_success, response_dedup_key, DurableBatchAttempt, DurableBatchTarget, MutationCtx,
     MutationPlan,
 };
-use medulla_core::graph::GraphCore;
-use medulla_core::isolation::AccessLevel;
+use crate::access::check_graph_access;
+use medulla_graph_core::graph::GraphCore;
+use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use crate::access::check_graph_access;
 
 /// Pre-apply state carried from [`commit_prepare`] to [`commit_finalize`], so the
 /// SAME steps-1-3 / steps-5-8 logic backs BOTH the sync-apply [`commit_mutation`]

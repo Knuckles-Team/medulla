@@ -5,11 +5,11 @@
 
 use super::*;
 use medulla_protocol_types::protocol::Method;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_store::redb_store::scrub::ScrubBudget;
 use medulla_store::redb_store::scrub::ScrubCursor;
 use medulla_store::redb_store::NodeUnreadable;
 use medulla_store::redb_store::UnsealFailure;
-use medulla_server_api::api::persistence::PersistenceBackend;
 
 const GRAPH: &str = "scrub_backend_graph";
 const CORRUPT: &str = "n2";

@@ -16,7 +16,7 @@ pub(super) struct DispatchPipelineCtx<'a> {
     pub(super) tenant_id: String,
     pub(super) tenant_scope: String,
     pub(super) gateway_authz_ctx: Option<medulla_server_api::mutation::GatewayAuthzCtx>,
-    pub(super) core: Arc<medulla_core::graph::GraphCore>,
+    pub(super) core: Arc<medulla_graph_core::graph::GraphCore>,
     pub(super) materialization_manifest:
         Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
     pub(super) persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
@@ -25,7 +25,7 @@ pub(super) struct DispatchPipelineCtx<'a> {
     pub(super) routed_write_coalescer:
         Arc<medulla_server_api::routed_write_coalescer::RoutedWriteCoalescerRegistry>,
     #[cfg(feature = "security")]
-    pub(super) rls: std::sync::Arc<medulla_core::isolation::IsolationLayer>,
+    pub(super) rls: std::sync::Arc<medulla_isolation::isolation::IsolationLayer>,
     #[cfg(all(feature = "mining", feature = "query", feature = "tsdb"))]
     pub(super) tsdb_store: Option<Arc<medulla_tsdb::store::SeriesStore>>,
 }

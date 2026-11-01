@@ -7,10 +7,10 @@ use std::time::Duration;
 
 use super::super::compose::{compose_validated_sources, ComposedSchema};
 use super::CompiledCache;
-use medulla_core::graph::GraphCore;
-use medulla_core::graph::GraphSchemaSource;
-use medulla_core::graph::GraphSchemaSources;
-use medulla_core::graph::SchemaSourceOrigin;
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphSchemaSource;
+use medulla_graph_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::SchemaSourceOrigin;
 use medulla_kernel::test_rendezvous::{join_bounded, meet};
 use medulla_types::contract::Digest256;
 

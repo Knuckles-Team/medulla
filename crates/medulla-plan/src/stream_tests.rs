@@ -9,9 +9,12 @@
 //! And a compose proof: `Op::Scan { label: "Event" }` seeds the stream, then `Op::Cep`
 //! narrows it — cross-modal graph→stream in ONE plan.
 
-use medulla_core::compute::semantic::SemanticStore;
-use medulla_core::graph::{GraphCore, GraphView};
-use medulla_types::wire::{CepAttrPredSpec, CepMatcherSpec, CepNodeSpec, CepPatternSpec, CepWindowSpec};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
+use medulla_semantic_index::semantic::SemanticStore;
+use medulla_types::wire::{
+    CepAttrPredSpec, CepMatcherSpec, CepNodeSpec, CepPatternSpec, CepWindowSpec,
+};
 use serde_json::json;
 
 use crate::algebra::{Op, Plan};

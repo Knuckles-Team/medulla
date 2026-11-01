@@ -33,7 +33,8 @@ pub(crate) fn apply_retire_sealed_record_row(
             )
             .map_err(|error| error.to_string())?;
     }
-    medulla_protocol_types::protocol::ResultPayload::of::<RetireSealedRecord>(resolution.result()).map(Some)
+    medulla_protocol_types::protocol::ResultPayload::of::<RetireSealedRecord>(resolution.result())
+        .map(Some)
 }
 
 #[cfg(test)]

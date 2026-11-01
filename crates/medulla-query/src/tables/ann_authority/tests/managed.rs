@@ -2,7 +2,8 @@
 //! create/status/drop, `requested -> backfilling -> active | blocked` with typed
 //! bounded diagnostics, a fenced drop, and the status as a SQL catalog relation.
 
-use medulla_core::index::{IndexBlockReason, ManagedIndexTarget};
+use medulla_graph_core::index::IndexBlockReason;
+use medulla_graph_core::index::ManagedIndexTarget;
 
 use super::*;
 use crate::tables::ann_authority::durable::{encode, Encoding};
@@ -139,7 +140,7 @@ fn a_blocked_index_carries_a_typed_bounded_diagnostic() {
         .unwrap()
         .iter()
         .all(|status| status.block.as_ref().unwrap().detail.len()
-            <= medulla_core::index::MAX_BLOCK_DETAIL_BYTES));
+            <= medulla_graph_core::index::MAX_BLOCK_DETAIL_BYTES));
     assert_eq!(status_relation(&store)[0][8], json!("build_bound"));
 }
 

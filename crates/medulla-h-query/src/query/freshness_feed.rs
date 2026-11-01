@@ -39,7 +39,7 @@ pub(crate) async fn handle_freshness_feed(
 #[cfg(feature = "security")]
 fn row_filter(ctx: &QueryHandlerCtx<'_>) -> impl Fn(&[u8]) -> bool + Send + 'static {
     let (rls, caller) = (Arc::clone(ctx.rls), ctx.caller.to_string());
-    move |blob: &[u8]| rls.can_see_row(&caller, &medulla_core::isolation::row_visibility(blob))
+    move |blob: &[u8]| rls.can_see_row(&caller, &medulla_graph_core::rls::row_visibility(blob))
 }
 
 #[cfg(not(feature = "security"))]
@@ -79,12 +79,12 @@ pub(crate) fn build_feed(
     }
 }
 
-fn wire_event(record: medulla_core::dep_scope::InvalidationRecord) -> InvalidationEvent {
+fn wire_event(record: medulla_query_cache::dep_scope::InvalidationRecord) -> InvalidationEvent {
     InvalidationEvent {
         version: record.version,
         scope: match record.scope {
-            medulla_core::dep_scope::InvalidationScope::Classes => InvalidationScope::Classes,
-            medulla_core::dep_scope::InvalidationScope::All => InvalidationScope::All,
+            medulla_query_cache::dep_scope::InvalidationScope::Classes => InvalidationScope::Classes,
+            medulla_query_cache::dep_scope::InvalidationScope::All => InvalidationScope::All,
         },
         classes: record.classes,
         edge_types: record.edge_types,
@@ -94,7 +94,7 @@ fn wire_event(record: medulla_core::dep_scope::InvalidationRecord) -> Invalidati
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_core::index::{ChangeSet, NodeChange};
+    use medulla_graph_core::index::{ChangeSet, NodeChange};
     use medulla_result_types::{freshness::VolatilityClass, freshness::VOLATILITY_CLASS_KEY};
 
     fn commit_node(core: &GraphCore, id: &str, props: serde_json::Value) {

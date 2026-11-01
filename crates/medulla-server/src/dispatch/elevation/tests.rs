@@ -4,7 +4,7 @@
 //! chokepoint at once.
 
 use super::*;
-use medulla_core::isolation::AccessLevel;
+use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Request;
 use medulla_identity_types::{

@@ -12,7 +12,7 @@ use super::test_support::{
     assert_core_catalog, assert_shape_targets, declared_classes, kg, object_iri, parse_scoped,
     subject_iri, unmapped_classes, wired_with_fixture, KG, OWL_CLASS, OWL_IMPORTS, RDF_TYPE,
 };
-use medulla_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_server_api::api::admin::compose::validate_and_compose;
 
 const FINANCE: &str = include_str!("../../../medulla-core/ontology/finance-v1.ttl");

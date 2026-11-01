@@ -1,11 +1,11 @@
 //! Private implementation module for the analytics job handler.
 
-use medulla_mutation_types::mutation_scope::DurabilityDomain;
-use medulla_mutation_types::mutation_scope::MutationSurface;
 use super::prelude_jobs::*;
 use super::prelude_server::*;
 use super::prelude_std::*;
 use super::*;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationSurface;
 
 /// Lazily-opened local projection of the consensus-owned analytics scheduler. A
 /// served process must have the configured persistence root; there is no process-temp
@@ -120,8 +120,12 @@ pub(super) fn compile_job_batch(
     let expected = store
         .mutation_version(authority.tenant_scope(), &scope)
         .map_err(|error| error.to_string())?;
-    let batch_id =
-        medulla_server_api::mutation_batch::opaque_request_key("analytics-job", &scope, req_id, method);
+    let batch_id = medulla_server_api::mutation_batch::opaque_request_key(
+        "analytics-job",
+        &scope,
+        req_id,
+        method,
+    );
     let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let batch = medulla_server_api::mutation_batch::compile_opaque_method_in_scope(
         medulla_server_api::mutation_batch::CompileBatch {

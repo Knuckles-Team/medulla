@@ -21,7 +21,8 @@ mod common;
 use std::collections::BTreeMap;
 
 use common::{assert_acceptance, has_iri, parse_all, AcceptanceQuestion};
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
 use medulla_rdf::mapping::{load_triples, parse_turtle, IriStore};
 use medulla_rdf::sparql::{execute, Dataset, Projection, QueryOutcome};
 

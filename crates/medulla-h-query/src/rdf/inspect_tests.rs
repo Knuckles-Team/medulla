@@ -198,7 +198,7 @@ fn inspection_rejects_document_count_and_bytes_before_parsing() {
 
 #[test]
 fn inspection_stops_at_the_first_triple_over_budget() {
-    let limit = medulla_core::graph::MAX_SCHEMA_DOCUMENT_TRIPLES;
+    let limit = medulla_graph_core::graph::MAX_SCHEMA_DOCUMENT_TRIPLES;
     let boundary = format!("@prefix : <x:> .\n{}", ":a :b :c .\n".repeat(limit));
     assert_eq!(inline(&[&boundary]).unwrap().triple_count, 1);
     // Stay below the byte bound and place invalid syntax after the over-limit

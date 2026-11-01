@@ -19,7 +19,7 @@ use medulla_plan::{
 use sha2::Sha256;
 use tokio::sync::RwLock;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 #[cfg(any(test, feature = "test-support"))]
 pub use medulla_types::knowledge_stream::KnowledgeStreamProjection;
 use medulla_types::knowledge_stream::KnowledgeResultFamily;
@@ -34,7 +34,7 @@ use medulla_protocol_types::protocol::ResultPayload;
 use medulla_types::acl::RequestContextClaims;
 
 #[cfg(feature = "security")]
-use medulla_core::rbac_persist::RbacPolicyStore;
+use medulla_isolation::rbac_persist::RbacPolicyStore;
 
 use medulla_server_api::access::{CarrierAuthority, GraphReadAuthority};
 use medulla_server_api::state::ServerState;
@@ -58,7 +58,7 @@ pub struct KnowledgeStreamAuthority {
     pub access_policy_ref: OpaqueRef,
     pub reference_key: [u8; 32],
     #[cfg(feature = "security")]
-    policy_lease: Option<Arc<medulla_core::isolation::PolicyDecisionLease>>,
+    policy_lease: Option<Arc<medulla_isolation::isolation::PolicyDecisionLease>>,
     #[cfg(feature = "security")]
     policy_store: Option<Arc<dyn RbacPolicyStore>>,
     #[cfg(feature = "security")]
@@ -134,7 +134,7 @@ impl KnowledgeStreamAuthority {
         claims: &RequestContextClaims,
         graph_name: &str,
         carrier: &CarrierAuthority,
-        lease: Arc<medulla_core::isolation::PolicyDecisionLease>,
+        lease: Arc<medulla_isolation::isolation::PolicyDecisionLease>,
         policy_store: Arc<dyn RbacPolicyStore>,
     ) -> Result<Self, String> {
         let mut authority = Self::from_verified(server_secret, claims)?;
@@ -188,14 +188,14 @@ impl KnowledgeStreamAuthority {
     /// this handle to policy-aware delegated readers; they must not mint,
     /// clone, or reconstruct a second graph capability.
     #[cfg(feature = "security")]
-    pub(super) fn policy_lease(&self) -> Option<&Arc<medulla_core::isolation::PolicyDecisionLease>> {
+    pub(super) fn policy_lease(&self) -> Option<&Arc<medulla_isolation::isolation::PolicyDecisionLease>> {
         self.policy_lease.as_ref()
     }
 
     /// Filter an owned graph snapshot with the same durable lease that binds
     /// this stream.  Graph/vector readers must not substitute a cloned
     /// `IsolationLayer` or a separately captured row-policy image.
-    pub(super) fn filter_view(&self, view: &mut medulla_core::graph::GraphView) -> Result<(), String> {
+    pub(super) fn filter_view(&self, view: &mut medulla_graph_core::graph::GraphView) -> Result<(), String> {
         #[cfg(feature = "security")]
         {
             let lease = self.policy_lease.as_ref().ok_or_else(|| {
@@ -307,7 +307,7 @@ impl KnowledgeStreamAuthority {
 
 #[cfg(feature = "security")]
 fn lease_matches_verified_context(
-    lease: &medulla_core::isolation::PolicyDecisionLease,
+    lease: &medulla_isolation::isolation::PolicyDecisionLease,
     claims: &RequestContextClaims,
     graph_name: &str,
     carrier: &CarrierAuthority,
@@ -315,7 +315,7 @@ fn lease_matches_verified_context(
     !graph_name.is_empty()
         && !carrier.actor_scope().is_empty()
         && carrier.agent_id() == claims.agent_id.as_str()
-        && lease.access() == medulla_core::isolation::AccessLevel::Read
+        && lease.access() == medulla_isolation::isolation::AccessLevel::Read
         && lease.originating_principal() == claims.principal.as_str()
         && lease.effective_actor() == claims.agent_id.as_str()
         && lease.tenant() == claims.tenant.as_str()
@@ -324,7 +324,7 @@ fn lease_matches_verified_context(
 
 #[cfg(feature = "security")]
 fn lease_matches_request(
-    lease: &medulla_core::isolation::PolicyDecisionLease,
+    lease: &medulla_isolation::isolation::PolicyDecisionLease,
     graph_name: &str,
     effective_actor: &str,
     bound_actor_scope: Option<&str>,
@@ -333,19 +333,19 @@ fn lease_matches_request(
     lease.effective_actor() == effective_actor
         && lease.resource() == graph_name
         && bound_actor_scope == Some(originating_actor_scope)
-        && lease.access() == medulla_core::isolation::AccessLevel::Read
+        && lease.access() == medulla_isolation::isolation::AccessLevel::Read
 }
 
 #[cfg(feature = "security")]
 fn policy_decision_binding(
     claims: &RequestContextClaims,
-    lease: &medulla_core::isolation::PolicyDecisionLease,
+    lease: &medulla_isolation::isolation::PolicyDecisionLease,
     originating_scope_ref: &OpaqueRef,
     effective_actor_ref: &OpaqueRef,
 ) -> Vec<(String, String)> {
     let decision_basis = match lease.decision_basis() {
-        medulla_core::isolation::PolicyDecisionBasis::System => "system",
-        medulla_core::isolation::PolicyDecisionBasis::RbacAllow => "rbac_allow",
+        medulla_isolation::isolation::PolicyDecisionBasis::System => "system",
+        medulla_isolation::isolation::PolicyDecisionBasis::RbacAllow => "rbac_allow",
     };
     let mut binding = vec![
         ("tenant".to_string(), lease.tenant().to_string()),
@@ -441,7 +441,7 @@ pub struct KnowledgeStreamHandlerCtx<'a> {
     pub fencing_token: Option<u64>,
     pub read_authority: &'a GraphReadAuthority,
     #[cfg(feature = "security")]
-    pub rls: &'a Arc<medulla_core::isolation::IsolationLayer>,
+    pub rls: &'a Arc<medulla_isolation::isolation::IsolationLayer>,
 }
 
 fn validate_stream_preflight(
@@ -543,9 +543,9 @@ pub async fn try_handle(
         Ok(batch) => match authority.validate_after() {
             Ok(()) => Response::ok(
                 req_id,
-                ResultPayload::of_ref::<medulla_protocol_types::result_contract::query::KnowledgeStream>(
-                    &batch,
-                ),
+                ResultPayload::of_ref::<
+                    medulla_protocol_types::result_contract::query::KnowledgeStream,
+                >(&batch),
             ),
             Err(error) => {
                 medulla_kernel::metrics::access_denied();

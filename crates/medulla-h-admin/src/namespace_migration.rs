@@ -360,7 +360,7 @@ async fn submit(
 
 #[cfg(feature = "security")]
 mod grant {
-    use medulla_core::isolation::IsolationLayer;
+    use medulla_isolation::isolation::IsolationLayer;
     use medulla_server_api::service_grant::ServiceGraphGrant;
 
     const GRANT: ServiceGraphGrant<'static> = ServiceGraphGrant {

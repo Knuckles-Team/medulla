@@ -63,7 +63,7 @@ pub(super) async fn lazy_open_graph(state: &Arc<RwLock<ServerState>>, graph_name
 pub(super) fn resolve_graph_read_authority(
     req_id: u64,
     verified_context: &VerifiedRequestContext,
-    isolation: &medulla_core::isolation::IsolationLayer,
+    isolation: &medulla_isolation::isolation::IsolationLayer,
 ) -> Result<(GraphReadAuthority, String), Response> {
     let authority = match GraphReadAuthority::from_verified(verified_context, isolation) {
         Ok(authority) => authority,
@@ -171,7 +171,7 @@ pub(super) fn graph_op_access_level(method: &Method) -> AccessLevel {
 pub(super) struct GraphEntryFacts {
     pub(super) graph_type: medulla_protocol_types::protocol::GraphType,
     pub(super) owner: Option<String>,
-    pub(super) core: Arc<medulla_core::graph::GraphCore>,
+    pub(super) core: Arc<medulla_graph_core::graph::GraphCore>,
     #[cfg(feature = "redb")]
     pub(super) incarnation_id: String,
 }
@@ -262,7 +262,7 @@ pub(super) fn ts_placement_fence(
 pub(super) async fn finalize_graph_op_response(
     state: &Arc<RwLock<ServerState>>,
     graph_name: &str,
-    core: &Arc<medulla_core::graph::GraphCore>,
+    core: &Arc<medulla_graph_core::graph::GraphCore>,
     access: AccessLevel,
     gateway_routed: bool,
     response: Response,
@@ -303,7 +303,7 @@ pub(super) async fn finalize_graph_op_response(
 }
 
 pub(super) fn check_known_caller(
-    isolation: &medulla_core::isolation::IsolationLayer,
+    isolation: &medulla_isolation::isolation::IsolationLayer,
     req_id: u64,
     caller: Option<&str>,
     graph_name: &str,

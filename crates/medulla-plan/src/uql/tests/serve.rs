@@ -2,8 +2,8 @@
 //! EXPLAIN/PROFILE/RETURN, EH-449), budgets.
 
 use super::blob;
-use medulla_core::compute::semantic::SemanticStore;
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
+use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::{UqlParam, UqlResult};
 use serde_json::json;
 
@@ -13,7 +13,7 @@ use crate::uql::serve::run_statement;
 use crate::uql::{parse_statement, Params};
 
 /// d1 → d2 → d3 (CITES), d4 isolated; d2 and d3 are cited once each.
-fn fixture() -> (medulla_core::graph::GraphView, SemanticStore) {
+fn fixture() -> (medulla_graph_core::graph::GraphView, SemanticStore) {
     let core = GraphCore::new();
     for (id, year) in [("d1", 2020), ("d2", 2021), ("d3", 2022), ("d4", 2023)] {
         core.add_node(id.into(), blob(json!({ "type": "Doc", "year": year })));

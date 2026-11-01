@@ -6,7 +6,7 @@
 //! `ShaclValidate` path) and each planted defect is flagged.
 
 use super::test_support::conforms;
-use medulla_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::GraphSchemaSources;
 
 const SWARM_SOURCE: &str = "core:swarm-topology@1";
 const SWARM_SHAPES: &str = "core:swarm-topology-shapes@1";

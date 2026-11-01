@@ -3,12 +3,12 @@ use std::sync::{Arc, OnceLock};
 use sha2::{Digest, Sha256};
 use tokio::sync::{Mutex, OwnedMutexGuard};
 
-use medulla_core::graph::GraphCore;
-use medulla_protocol_types::mutation_batch::MutationStateDescriptor;
+use crate::api::persistence::PersistenceBackend;
+use medulla_graph_core::graph::GraphCore;
 use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_protocol_types::mutation_batch::MutationStateDescriptor;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::ResultPayload;
-use crate::api::persistence::PersistenceBackend;
 use medulla_types::contract::Nonce;
 
 use super::super::compile::{authoritative_graph_version, compile_methods, CompileBatch};
@@ -272,7 +272,7 @@ fn validate_internal_replay_tenant(
 }
 
 fn stage_internal_graph(
-    base_snapshot: medulla_core::graph::GraphSnapshot,
+    base_snapshot: medulla_graph_core::graph::GraphSnapshot,
     source_version: u64,
     methods: Vec<Method>,
     strict_promotion: bool,
@@ -460,7 +460,9 @@ async fn commit_prepared_internal_graph(
 }
 /// A digest of everything a [`crate::graph::GraphSnapshot`] persists, in a
 /// CANONICAL order.
-fn canonical_graph_image_digest(snapshot: &medulla_core::graph::GraphSnapshot) -> Result<String, String> {
+fn canonical_graph_image_digest(
+    snapshot: &medulla_graph_core::graph::GraphSnapshot,
+) -> Result<String, String> {
     let mut nodes: Vec<(&str, &[u8])> = snapshot
         .nodes
         .iter()
@@ -494,7 +496,7 @@ fn canonical_graph_image_digest(snapshot: &medulla_core::graph::GraphSnapshot) -
 
 pub(super) fn install_validated_internal_replay_snapshot(
     core: &GraphCore,
-    snapshot: medulla_core::graph::GraphSnapshot,
+    snapshot: medulla_graph_core::graph::GraphSnapshot,
     version: u64,
     descriptor: &MutationStateDescriptor,
 ) -> Result<(), String> {
@@ -520,7 +522,7 @@ pub(super) fn install_validated_internal_replay_snapshot(
 
 fn install_replay_at_source(
     core: &GraphCore,
-    snapshot: medulla_core::graph::GraphSnapshot,
+    snapshot: medulla_graph_core::graph::GraphSnapshot,
     version: u64,
     descriptor: &MutationStateDescriptor,
 ) -> Result<(), String> {
@@ -534,7 +536,7 @@ fn install_replay_at_source(
 
 fn verify_current_replay(
     core: &GraphCore,
-    snapshot: medulla_core::graph::GraphSnapshot,
+    snapshot: medulla_graph_core::graph::GraphSnapshot,
 ) -> Result<(), String> {
     if canonical_graph_image_digest(&core.snapshot())? != canonical_graph_image_digest(&snapshot)? {
         return Err("serving graph image differs from its committed replay".to_string());
@@ -544,7 +546,7 @@ fn verify_current_replay(
 
 fn verify_newer_replay(
     core: &GraphCore,
-    snapshot: medulla_core::graph::GraphSnapshot,
+    snapshot: medulla_graph_core::graph::GraphSnapshot,
 ) -> Result<(), String> {
     if canonical_graph_image_digest(&core.snapshot())? != canonical_graph_image_digest(&snapshot)? {
         return Err("serving graph image differs from its newer authoritative state".to_string());

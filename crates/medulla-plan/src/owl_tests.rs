@@ -11,8 +11,9 @@
 
 use std::collections::HashSet;
 
-use medulla_core::compute::semantic::SemanticStore;
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
+use medulla_semantic_index::semantic::SemanticStore;
 
 use crate::exec::{execute, PlanCtx};
 use medulla_types::wire::{Op, Plan};
@@ -97,7 +98,8 @@ fn owl_inferred_set_then_rank_equals_separate() {
     let triples = medulla_rdf::owl::tbox_triples_from_view(&view);
     let mut reasoner = medulla_rdf::owl::Reasoner::from_triples(&triples);
     let cls = reasoner.classify();
-    let asserted = medulla_rdf::owl::asserted_types_from_view(&view, "http://example.org/").unwrap();
+    let asserted =
+        medulla_rdf::owl::asserted_types_from_view(&view, "http://example.org/").unwrap();
     let members: HashSet<String> = medulla_rdf::owl::instances_of(&cls, &asserted, target)
         .into_iter()
         .collect();

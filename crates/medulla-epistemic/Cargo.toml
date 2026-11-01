@@ -35,6 +35,8 @@ medulla-modality = { path = "../medulla-modality", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-result-types = { path = "../medulla-result-types" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-isolation = { path = "../medulla-isolation" }
 
 [dev-dependencies]
 tempfile = "3"
@@ -70,7 +72,7 @@ epistemic-causal = []
 # an evidence node inside an `explain_belief` proof tree the actor cannot see. Pulls
 # in `medulla-core/security` (where `RowVisibility`/`can_see_row` live); OFF by default so
 # a plain build links neither. See `src/redact.rs`.
-epistemic-redaction = ["medulla-core/security"]
+epistemic-redaction = ["medulla-core/security", "medulla-isolation/security", "medulla-graph-core/security"]
 # X-1 (CONCEPT:MEDULLA-X1) — the multimodal evidence-graph spine + citation resolver:
 # lets an `:Evidence` node (the SAME typed-node-by-convention `:Claim`/`:Evidence`
 # shape this crate's own module docs describe) carry one complete, governed

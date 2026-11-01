@@ -25,9 +25,9 @@ use medulla_catalog_types::{
 use medulla_types::contract::Digest256;
 use tokio::sync::RwLock;
 
-use medulla_protocol_types::protocol::Response;
 #[cfg(all(feature = "redb", feature = "blob"))]
 use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 #[cfg(all(feature = "redb", feature = "blob"))]
 use medulla_server_api::access::CarrierAuthority;
@@ -348,14 +348,9 @@ struct AdmittedRecords {
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 struct ResolvedIngestionMappings {
-    entities: BTreeMap<
-        String,
-        medulla_persistence::connector_pack::ResolvedConnectorSchemaMapping,
-    >,
-    relationships: BTreeMap<
-        String,
-        medulla_persistence::connector_pack::ResolvedConnectorRelationshipMapping,
-    >,
+    entities: BTreeMap<String, medulla_persistence::connector_pack::ResolvedConnectorSchemaMapping>,
+    relationships:
+        BTreeMap<String, medulla_persistence::connector_pack::ResolvedConnectorRelationshipMapping>,
     receipts: Vec<SourceMappingReceipt>,
     entry_revision: Option<u64>,
 }
@@ -2608,7 +2603,7 @@ mod tests {
             fn shutdown(&self) {}
         }
 
-        let core = medulla_core::graph::GraphCore::new();
+        let core = medulla_graph_core::graph::GraphCore::new();
         let source_node =
             source_node_id("tenant-shared", "demo-connector", "items", "source").unwrap();
         let target_node =
@@ -2725,11 +2720,14 @@ mod tests {
                 "tenant-shared",
                 &["source:ingest", "blob:write", "kg:read", "kg:write"],
             );
-        let authority = medulla_server_api::access::CarrierAuthority::from_verified(&verified).unwrap();
-        let state = Arc::new(RwLock::new(medulla_server_api::state::ServerState::new_for_test(
-            "source-ingest-r0092",
-            medulla_server_api::state::ServerState::test_isolation("source-ingest-r0092"),
-        )));
+        let authority =
+            medulla_server_api::access::CarrierAuthority::from_verified(&verified).unwrap();
+        let state = Arc::new(RwLock::new(
+            medulla_server_api::state::ServerState::new_for_test(
+                "source-ingest-r0092",
+                medulla_server_api::state::ServerState::test_isolation("source-ingest-r0092"),
+            ),
+        ));
         let context = PrepareContext {
             state: &state,
             request_id: 17,
@@ -2741,7 +2739,8 @@ mod tests {
             fencing_token: None,
         };
         let blob_dir = tempfile::tempdir().unwrap();
-        let blob = medulla_server_api::api::ingest::cursors_for_test(blob_dir.path().to_str().unwrap());
+        let blob =
+            medulla_server_api::api::ingest::cursors_for_test(blob_dir.path().to_str().unwrap());
         let persistence = NoReadPersistence;
         let mut admitted = AdmittedRecords {
             raw_admissions: Vec::new(),

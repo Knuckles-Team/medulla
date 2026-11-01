@@ -8,9 +8,10 @@
 
 #![allow(dead_code)] // each test binary uses a different subset of these helpers.
 
-use medulla_core::compute::semantic::SemanticStore;
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
 use medulla_plan::RowSet;
+use medulla_semantic_index::semantic::SemanticStore;
 use serde_json::json;
 
 pub fn blob(v: serde_json::Value) -> Vec<u8> {

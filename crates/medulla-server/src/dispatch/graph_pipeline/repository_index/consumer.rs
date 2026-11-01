@@ -381,7 +381,13 @@ pub(crate) struct PageCallbacks<A, S, P> {
 #[cfg(feature = "blob")]
 pub(crate) trait PageActions {
     type AuthorityFuture: Future<
-        Output = Result<(medulla_server_api::auth::VerifiedRequestContext, RequestContext), String>,
+        Output = Result<
+            (
+                medulla_server_api::auth::VerifiedRequestContext,
+                RequestContext,
+            ),
+            String,
+        >,
     >;
     type SubmitFuture: Future<Output = Result<(), String>>;
     type ParkFuture: Future<Output = Result<(), String>>;
@@ -409,7 +415,13 @@ impl<A, AF, S, F, P, PF> PageActions for PageCallbacks<A, S, P>
 where
     A: FnMut(String, String, String) -> AF,
     AF: Future<
-        Output = Result<(medulla_server_api::auth::VerifiedRequestContext, RequestContext), String>,
+        Output = Result<
+            (
+                medulla_server_api::auth::VerifiedRequestContext,
+                RequestContext,
+            ),
+            String,
+        >,
     >,
     S: FnMut(medulla_server_api::auth::VerifiedRequestContext, SubmitWorkItemsRequest) -> F,
     F: Future<Output = Result<(), String>>,
@@ -721,11 +733,11 @@ async fn submit_ready_page<C: PageActions>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[cfg(feature = "blob")]
-    use medulla_server_api::blob::store::ChunkStore;
     use medulla_result_types::epistemic_operations::{
         RequestContextAuthenticationMethod, RequestContextSchemaVersion,
     };
+    #[cfg(feature = "blob")]
+    use medulla_server_api::blob::store::ChunkStore;
 
     #[cfg(feature = "blob")]
     struct DeadLetterProbe {
@@ -883,16 +895,18 @@ mod tests {
     #[test]
     fn service_authority_minted_after_cas_uses_current_validation_clock() {
         let page_key = "repository-index:page-one";
-        let fixture = medulla_server_api::auth::VerifiedRequestContext::verified_for_test_with_scopes(
-            "repository-enrichment",
-            "tenant",
-            &["work:submit", "repository:enrichment:submit"],
-        );
-        let verified = medulla_server_api::auth::VerifiedRequestContext::from_verified_claims_with_nonce(
-            fixture.claims().clone(),
-            page_key.to_string(),
-            Some(medulla_types::contract::Nonce::minted()),
-        );
+        let fixture =
+            medulla_server_api::auth::VerifiedRequestContext::verified_for_test_with_scopes(
+                "repository-enrichment",
+                "tenant",
+                &["work:submit", "repository:enrichment:submit"],
+            );
+        let verified =
+            medulla_server_api::auth::VerifiedRequestContext::from_verified_claims_with_nonce(
+                fixture.claims().clone(),
+                page_key.to_string(),
+                Some(medulla_types::contract::Nonce::minted()),
+            );
         let mut wire = service_context("tenant", "code", page_key);
         wire.agent_id = verified.agent_id().to_string();
         wire.audience = verified.claims().audience.clone();

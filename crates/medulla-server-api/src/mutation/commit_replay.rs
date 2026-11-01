@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
+use crate::api::persistence::PersistenceBackend;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use crate::api::persistence::PersistenceBackend;
 
 use super::{idempotency_store, CommitPrep, MutationCtx, MutationPlan};
 
@@ -149,7 +149,13 @@ async fn staged_replay_descriptor(
     persistence: &Arc<dyn PersistenceBackend>,
     fname: &str,
     record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
-) -> Result<(medulla_protocol_types::mutation_batch::MutationStateDescriptor, u64), Response> {
+) -> Result<
+    (
+        medulla_protocol_types::mutation_batch::MutationStateDescriptor,
+        u64,
+    ),
+    Response,
+> {
     let mut descriptor = record.batch.authoritative_state.clone().ok_or_else(|| {
         Response::err(
             ctx.req_id,
@@ -374,7 +380,13 @@ pub(super) fn compile_batch_and_encode_result(
     compile: crate::mutation_batch::CompileBatch<'_>,
     methods: Vec<Method>,
     payload: &ResultPayload,
-) -> Result<(medulla_protocol_types::mutation_batch::MutationBatch, Vec<u8>), Response> {
+) -> Result<
+    (
+        medulla_protocol_types::mutation_batch::MutationBatch,
+        Vec<u8>,
+    ),
+    Response,
+> {
     let batch = match crate::mutation_batch::compile_methods(compile, methods) {
         Ok(batch) => batch,
         Err(error) => {

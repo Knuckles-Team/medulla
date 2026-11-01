@@ -74,7 +74,7 @@ impl medulla_server_api::api::ingest::GraphApi for GraphSeam {
         caller: Option<&str>,
         graph_name: &str,
         read_authority: &medulla_server_api::access::GraphReadAuthority,
-        core: std::sync::Arc<medulla_core::graph::GraphCore>,
+        core: std::sync::Arc<medulla_graph_core::graph::GraphCore>,
         method: medulla_protocol_types::protocol::Method,
     ) -> medulla_protocol_types::protocol::Response {
         medulla_h_graph::graph_ops::try_handle(

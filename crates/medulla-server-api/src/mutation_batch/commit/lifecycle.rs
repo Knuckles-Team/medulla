@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use crate::api::persistence::PersistenceBackend;
 use crate::mutation::LifecycleAttempt;
-use medulla_types::contract::Nonce;
 use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::ResultPayload;
+use medulla_types::contract::Nonce;
 
 use super::super::compile::{compile_methods, CompileBatch};
 use super::super::digest::{lifecycle_batch_id, principal_fingerprint};

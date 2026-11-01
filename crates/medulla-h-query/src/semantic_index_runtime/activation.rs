@@ -14,7 +14,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use medulla_core::compute::semantic_index_service::SemanticIndexService;
+use medulla_ann_codes::semantic_index_service::SemanticIndexService;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 
@@ -685,7 +685,7 @@ pub(super) fn open_service(
     let service = Arc::new(
         SemanticIndexService::open_tenant(
             &grant.owner_path,
-            medulla_core::compute::semantic_ann_codes::ExistingTenantOwnerOpen {
+            medulla_ann_codes::semantic_ann_codes::ExistingTenantOwnerOpen {
                 verifier: semantic_scope_verifier(tenant, proof),
                 principal: semantic_owner_principal(),
                 proof: &proof,

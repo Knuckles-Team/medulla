@@ -14,7 +14,7 @@
 //! Reading `GraphReadAuthority::filter_view`'s own body
 //! (`access.rs:269-274`) shows it does nothing beyond
 //! `self.isolation.filter_view(&self.actor, view)`, where `self.isolation` is
-//! an `Arc<medulla_core::isolation::IsolationLayer>` — i.e. the REAL filtering
+//! an `Arc<medulla_isolation::isolation::IsolationLayer>` — i.e. the REAL filtering
 //! decision is already an `medulla-core`-level primitive
 //! (`crates/medulla-core/src/isolation.rs:1117`,
 //! `IsolationLayer::filter_view`, itself built on `can_see_node` at
@@ -30,7 +30,7 @@
 //! ## Why a point check, not `filter_view`, for Wave 0's own methods
 //!
 //! `IsolationLayer::filter_view`/`can_see_node` operate on a whole
-//! `medulla_core::graph::GraphView` snapshot — the right shape for a
+//! `medulla_graph_core::graph::GraphView` snapshot — the right shape for a
 //! multi-row read (the future `graph_ops`/`query` lanes). The prototype's
 //! existing methods this Wave migrates (`get_node_properties`/`has_node`) are
 //! single-row point lookups that never materialize a view, exactly the
@@ -51,7 +51,7 @@
 
 use std::sync::Arc;
 
-use medulla_core::isolation::{AccessLevel, IsolationLayer};
+use medulla_isolation::isolation::{AccessLevel, IsolationLayer};
 use medulla_types::acl::{AgentIdentity, AgentRole};
 use medulla_protocol_types::protocol::GraphType;
 
@@ -209,7 +209,7 @@ impl EmbeddedAuthority {
             return true;
         };
         let vis = match blob {
-            Some(bytes) => medulla_core::isolation::row_visibility(bytes),
+            Some(bytes) => medulla_graph_core::rls::row_visibility(bytes),
             // `RowVisibility::default_public()` (`isolation.rs:386`) is the
             // exact value used here, but it is `pub(crate)` to medulla-core (not
             // reachable from this crate, same DAG constraint as the module
@@ -225,7 +225,7 @@ impl EmbeddedAuthority {
             // bypasses `can_see_row` entirely. See
             // `no_property_blob_at_all_is_denied_once_an_identity_is_asserted`
             // below for the verified behavior.
-            None => medulla_core::isolation::RowVisibility {
+            None => medulla_graph_core::rls::RowVisibility {
                 owner: None,
                 public: true,
                 grants: Vec::new(),
@@ -351,11 +351,11 @@ mod tests {
         let authority = EmbeddedAuthority::new(Some(owner_id.to_string()), None);
         let mut props = std::collections::BTreeMap::new();
         props.insert(
-            medulla_core::isolation::RLS_OWNER_KEY,
+            medulla_graph_core::rls::RLS_OWNER_KEY,
             serde_json::Value::String(owner_id.to_string()),
         );
         props.insert(
-            medulla_core::isolation::RLS_VISIBILITY_KEY,
+            medulla_graph_core::rls::RLS_VISIBILITY_KEY,
             serde_json::Value::String("private".to_string()),
         );
         let blob = rmp_serde::to_vec_named(&props).unwrap();

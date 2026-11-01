@@ -6,7 +6,7 @@
 
 use std::collections::BTreeSet;
 
-use medulla_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::{NamedNode, NamedOrBlankNode, Term, Triple};
 use medulla_rdf::pack::{declared_classes_and_ontologies, ontology_orphan_classes};

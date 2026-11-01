@@ -12,8 +12,8 @@ use medulla_types::ontology_inspection::{
     OntologyClassView, OntologyInspection, OntologyPropertyView, MAX_INSPECT_DOCUMENTS,
 };
 
-use medulla_core::graph::GraphCore;
-use medulla_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 
@@ -162,7 +162,7 @@ fn parsed(
         }
         let document_triples = medulla_rdf::mapping::parse_turtle_bounded(
             document,
-            medulla_core::graph::MAX_SCHEMA_DOCUMENT_TRIPLES,
+            medulla_graph_core::graph::MAX_SCHEMA_DOCUMENT_TRIPLES,
         )
         .map_err(|error| format!("{name} is not Turtle: {error}"))?;
         triples.extend(document_triples);

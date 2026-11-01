@@ -11,7 +11,7 @@ pub fn try_handle<'a>(
     ctx: TryHandleContext<'a>,
     core: Arc<GraphCore>,
     method: Method,
-    #[cfg(feature = "security")] rls: &'a Arc<medulla_core::isolation::IsolationLayer>,
+    #[cfg(feature = "security")] rls: &'a Arc<medulla_isolation::isolation::IsolationLayer>,
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Response, Method>> + Send + 'a>> {
     Box::pin(try_handle_inner(
         state,
@@ -28,7 +28,7 @@ async fn try_handle_inner(
     ctx: TryHandleContext<'_>,
     core: Arc<GraphCore>,
     method: Method,
-    #[cfg(feature = "security")] rls: &Arc<medulla_core::isolation::IsolationLayer>,
+    #[cfg(feature = "security")] rls: &Arc<medulla_isolation::isolation::IsolationLayer>,
 ) -> Result<Response, Method> {
     let TryHandleContext {
         req_id,
@@ -364,8 +364,8 @@ pub fn try_handle_with_policy<'a>(
     ctx: TryHandleContext<'a>,
     core: Arc<GraphCore>,
     query: PolicyAwareQuery,
-    policy_lease: &'a Arc<medulla_core::isolation::PolicyDecisionLease>,
-    rls: &'a Arc<medulla_core::isolation::IsolationLayer>,
+    policy_lease: &'a Arc<medulla_isolation::isolation::PolicyDecisionLease>,
+    rls: &'a Arc<medulla_isolation::isolation::IsolationLayer>,
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Response, String>> + Send + 'a>> {
     Box::pin(try_handle_with_policy_inner(
         state,
@@ -403,8 +403,8 @@ async fn try_handle_with_policy_inner(
     ctx: TryHandleContext<'_>,
     core: Arc<GraphCore>,
     query: PolicyAwareQuery,
-    policy_lease: &Arc<medulla_core::isolation::PolicyDecisionLease>,
-    rls: &Arc<medulla_core::isolation::IsolationLayer>,
+    policy_lease: &Arc<medulla_isolation::isolation::PolicyDecisionLease>,
+    rls: &Arc<medulla_isolation::isolation::IsolationLayer>,
 ) -> Result<Response, String> {
     let TryHandleContext {
         req_id,
@@ -454,8 +454,8 @@ struct LeaseQueryCtx<'a> {
     read_authority: Option<&'a GraphReadAuthority>,
     caller: &'a str,
     core: &'a Arc<GraphCore>,
-    policy_lease: &'a Arc<medulla_core::isolation::PolicyDecisionLease>,
-    store: &'a dyn medulla_core::rbac_persist::RbacPolicyStore,
+    policy_lease: &'a Arc<medulla_isolation::isolation::PolicyDecisionLease>,
+    store: &'a dyn medulla_isolation::rbac_persist::RbacPolicyStore,
 }
 
 /// Fresh, per-call row-visibility snapshot using the lease as the sole
@@ -473,9 +473,9 @@ struct LeaseQueryCtx<'a> {
 #[cfg(all(feature = "query", feature = "security"))]
 fn lease_filtered_snapshot(
     core: &Arc<GraphCore>,
-    lease: &Arc<medulla_core::isolation::PolicyDecisionLease>,
-    store: &dyn medulla_core::rbac_persist::RbacPolicyStore,
-) -> Result<(Arc<medulla_core::graph::GraphView>, u64), String> {
+    lease: &Arc<medulla_isolation::isolation::PolicyDecisionLease>,
+    store: &dyn medulla_isolation::rbac_persist::RbacPolicyStore,
+) -> Result<(Arc<medulla_graph_core::graph::GraphView>, u64), String> {
     // `version` is read before the snapshot, the same "safe LOWER BOUND"
     // idiom `rls_snapshot`'s `not(result-cache)` branch documents above — a
     // concurrent write racing the two reads can only make `view` reflect

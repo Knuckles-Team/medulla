@@ -106,7 +106,7 @@ pub(crate) fn cache_and_respond(
     version: u64,
     payload: ResultPayload,
 ) -> Response {
-    medulla_core::result_cache::cache_result(core.result_cache(), hash, version, &payload);
+    medulla_query_cache::result_cache::cache_result(core.result_cache(), hash, version, &payload);
     Response::ok(req_id, payload)
 }
 
@@ -177,5 +177,5 @@ pub(crate) struct QueryHandlerCtx<'a> {
     pub(crate) caller: &'a str,
     pub(crate) core: &'a Arc<GraphCore>,
     #[cfg(feature = "security")]
-    pub(crate) rls: &'a Arc<medulla_core::isolation::IsolationLayer>,
+    pub(crate) rls: &'a Arc<medulla_isolation::isolation::IsolationLayer>,
 }

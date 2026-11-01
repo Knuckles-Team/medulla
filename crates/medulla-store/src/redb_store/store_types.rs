@@ -282,8 +282,7 @@ pub(crate) fn resource_collect_disk_policy_rows(
 }
 
 pub const NODES: TableDefinition<(&str, &str), &[u8]> = TableDefinition::new("nodes");
-pub const EDGES: TableDefinition<(&str, &str, &str, u32), &[u8]> =
-    TableDefinition::new("edges");
+pub const EDGES: TableDefinition<(&str, &str, &str, u32), &[u8]> = TableDefinition::new("edges");
 pub const LEDGER: TableDefinition<(&str, u64), &str> = TableDefinition::new("ledger");
 pub const SEMANTIC: TableDefinition<&str, &[u8]> = TableDefinition::new("semantic_store");
 // Tamper-evident hash-chained audit log (CONCEPT:MEDULLA-KG.sharding.row-level-security, feature `security`). One
@@ -386,8 +385,7 @@ pub const XSHARD_PREPARE: TableDefinition<(&str, u64), &[u8]> =
 // recoverable attempt started before phase 1 but not yet decided. Writing a terminal
 // value is the ATOMIC COMMIT POINT: once it reads COMMIT every participant applies on
 // recovery; absent/pending/ABORT ⇒ no new participant applies (presumed-abort).
-pub const XSHARD_DECISION: TableDefinition<&str, u8> =
-    TableDefinition::new("xshard_decision");
+pub const XSHARD_DECISION: TableDefinition<&str, u8> = TableDefinition::new("xshard_decision");
 // Named distributed-compute MATERIALIZED VIEWS (CONCEPT:MEDULLA-KG.storage.feature). One row per matview
 // keyed by `name`, holding the MessagePack-serialized `MatView` (its definition +
 // current result rows). Durable so a matview survives restart; the handler reloads the
@@ -402,8 +400,7 @@ pub const MATVIEWS: TableDefinition<&str, &[u8]> = TableDefinition::new("matview
 // `matviews` table above (and from Lane D's secondary-index tables): a distinct redb
 // table name, so the two matview families and the index rows never collide. Reloaded into
 // the in-RAM plan-matview manager on boot.
-pub const PLAN_MATVIEWS: TableDefinition<&str, &[u8]> =
-    TableDefinition::new("plan_matviews");
+pub const PLAN_MATVIEWS: TableDefinition<&str, &[u8]> = TableDefinition::new("plan_matviews");
 
 // DBSP INCREMENTAL operator state (CONCEPT:MEDULLA-KG.storage.incremental-matview): the durable
 // snapshot of an incrementally-maintained plan-backed matview's circuit state (its

@@ -227,7 +227,7 @@ pub(super) fn visible_node_ids(
 pub(super) fn filtered_snapshot(
     core: &Arc<GraphCore>,
     authority: &KnowledgeStreamAuthority,
-) -> Result<medulla_core::graph::GraphView, String> {
+) -> Result<medulla_graph_core::graph::GraphView, String> {
     let mut view = core.analysis_snapshot();
     authority.filter_view(&mut view)?;
     Ok(view)

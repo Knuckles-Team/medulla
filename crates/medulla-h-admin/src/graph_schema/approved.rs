@@ -83,7 +83,7 @@ pub(super) async fn handle_validate(
 }
 
 fn validate(
-    core: &medulla_core::graph::GraphCore,
+    core: &medulla_graph_core::graph::GraphCore,
     graph_name: &str,
     op: &GraphSchemaOp,
 ) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
@@ -144,7 +144,7 @@ fn approval_store_unavailable() -> String {
 /// The `Approved`-origin source a repair op installs (or, for
 /// `ValidateRepair`, would install): EG renders the SHACL from the typed
 /// contract (AUD-27).
-pub(super) fn source(op: &GraphSchemaOp) -> Result<medulla_core::graph::GraphSchemaSource, String> {
+pub(super) fn source(op: &GraphSchemaOp) -> Result<medulla_graph_core::graph::GraphSchemaSource, String> {
     let (source_id, contract, approval) = match op {
         GraphSchemaOp::AttachApproved {
             source_id,
@@ -163,8 +163,8 @@ pub(super) fn source(op: &GraphSchemaOp) -> Result<medulla_core::graph::GraphSch
         .strip_prefix(medulla_catalog_types::graph_schema::approval::APPROVED_SOURCE_PREFIX)
         .ok_or_else(|| "approved schema source id lacks its namespace".to_string())?;
     let shapes = medulla_catalog_types::graph_schema::repair::render_repair_shapes(name, contract);
-    medulla_core::graph::GraphSchemaSource::new(
-        medulla_core::graph::SchemaSourceOrigin::Approved {
+    medulla_graph_core::graph::GraphSchemaSource::new(
+        medulla_graph_core::graph::SchemaSourceOrigin::Approved {
             name: name.to_string(),
             approval_lease_id: approval.to_string(),
         },

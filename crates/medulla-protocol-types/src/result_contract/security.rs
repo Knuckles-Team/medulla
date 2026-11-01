@@ -137,7 +137,7 @@ pub struct LedgerReadResult {
     pub entries: Vec<String>,
     /// BUG A1 follow-up (2026-08-12): the mutation ledger is a purely
     /// IN-MEMORY, capped ring (100k entries, drop-oldest-half — see
-    /// `GraphTxn::push_ledger` in `medulla_core::graph`) — NOT a durable change
+    /// `GraphTxn::push_ledger` in `medulla_graph_core::graph`) — NOT a durable change
     /// log. A cold-tenant idle
     /// offload/hibernate cycle, `MAX_RESIDENT_GRAPHS` eviction + lazy
     /// rehydrate, a process restart, or simply exceeding the cap can all

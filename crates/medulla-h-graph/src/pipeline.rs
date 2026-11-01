@@ -14,15 +14,15 @@ mod pipeline_model;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use medulla_core::graph::GraphCore;
-use medulla_protocol_types::protocol::GraphSource;
-use medulla_protocol_types::protocol::Method;
-use medulla_protocol_types::protocol::Response;
-use medulla_protocol_types::protocol::ResultPayload;
 use medulla_compute::datascience::estimators;
 use medulla_compute::graphlearn::edge_fn::Basis;
 use medulla_compute::graphlearn::link_predict::{self, FeatureCtx, KanLinkConfig, KanLinkModel};
 use medulla_compute::mining::classify;
+use medulla_graph_core::graph::GraphCore;
+use medulla_protocol_types::protocol::GraphSource;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_protocol_types::{
     result_contract::compute as results, result_contract::compute::MiningPipelinePredict,
 };
@@ -909,7 +909,7 @@ fn now_secs() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_core::isolation::IsolationLayer;
+    use medulla_isolation::isolation::IsolationLayer;
     use medulla_protocol_types::protocol::GraphSource;
     use medulla_server_api::access::GraphReadAuthority;
     use medulla_server_api::auth::VerifiedRequestContext;

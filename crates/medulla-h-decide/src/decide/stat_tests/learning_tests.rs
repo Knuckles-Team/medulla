@@ -54,7 +54,7 @@ fn activate(target: &str, receipt_digest: &str) -> PointerMovement {
 /// Nodes `p<i>` (what answers cite) are the unit axis 1 and `n<i>` (what the
 /// base query prefers) the unit axis 0; every judged run returned `n<i>` above
 /// `p<i>`.
-async fn embedded_graph(h: &Harness) -> Arc<medulla_core::graph::GraphCore> {
+async fn embedded_graph(h: &Harness) -> Arc<medulla_graph_core::graph::GraphCore> {
     let rows = (0..40).flat_map(|i| {
         [
             (format!("p{i}"), vec![0.0, 1.0, 0.0]),
@@ -80,7 +80,7 @@ async fn graph_with(
     revision: &str,
     dims: usize,
     rows: Vec<(String, Vec<f32>)>,
-) -> Arc<medulla_core::graph::GraphCore> {
+) -> Arc<medulla_graph_core::graph::GraphCore> {
     let mut guard = h.state.write().await;
     guard
         .registry
@@ -144,7 +144,7 @@ fn fit_request(space: &str) -> AdapterFitRequest {
     }
 }
 
-fn top(core: &medulla_core::graph::GraphCore, query: &[f32]) -> String {
+fn top(core: &medulla_graph_core::graph::GraphCore, query: &[f32]) -> String {
     core.semantic_store.read().semantic_search(query, 1)[0]
         .0
         .clone()
@@ -241,7 +241,8 @@ fn a_plan_rewrite_re_aims_every_vector_rank_only() {
     )
     .unwrap();
     let adapter =
-        medulla_server_api::api::admin::served_adapter::ServedAdapter::for_body("d", &body).unwrap();
+        medulla_server_api::api::admin::served_adapter::ServedAdapter::for_body("d", &body)
+            .unwrap();
     let plan = medulla_plan::Plan::new(vec![
         medulla_plan::Op::Scan {
             label: "Doc".to_string(),

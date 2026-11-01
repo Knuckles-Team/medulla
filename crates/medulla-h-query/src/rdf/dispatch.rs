@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::access::GraphReadAuthority;
@@ -16,7 +16,7 @@ pub async fn try_handle(
     ctx: TryHandleContext<'_>,
     core: Arc<GraphCore>,
     method: Method,
-    #[cfg(feature = "security")] rls: &Arc<medulla_core::isolation::IsolationLayer>,
+    #[cfg(feature = "security")] rls: &Arc<medulla_isolation::isolation::IsolationLayer>,
 ) -> Result<Response, Method> {
     let TryHandleContext {
         req_id,
@@ -124,7 +124,7 @@ async fn try_handle_sparql(
     core: Arc<GraphCore>,
     method: &Method,
     #[cfg(feature = "security")] caller: &str,
-    #[cfg(feature = "security")] rls: &Arc<medulla_core::isolation::IsolationLayer>,
+    #[cfg(feature = "security")] rls: &Arc<medulla_isolation::isolation::IsolationLayer>,
 ) -> Option<Response> {
     match method {
         Method::Sparql {
@@ -246,7 +246,7 @@ async fn try_handle_rules(
     core: &Arc<GraphCore>,
     method: &Method,
     #[cfg(feature = "security")] caller: &str,
-    #[cfg(feature = "security")] rls: &Arc<medulla_core::isolation::IsolationLayer>,
+    #[cfg(feature = "security")] rls: &Arc<medulla_isolation::isolation::IsolationLayer>,
 ) -> Option<Response> {
     let Method::RunRules {
         ontology_ttl,

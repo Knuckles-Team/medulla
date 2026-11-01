@@ -8,8 +8,9 @@
 //!
 //! And a compose proof: `SpatialScan` then a spatial `Filter` in ONE plan.
 
-use medulla_core::compute::semantic::SemanticStore;
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
+use medulla_semantic_index::semantic::SemanticStore;
 use serde_json::json;
 
 use crate::algebra::{Op, Plan, Pred};

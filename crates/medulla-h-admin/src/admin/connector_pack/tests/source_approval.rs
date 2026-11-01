@@ -523,7 +523,8 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
         tool: "list_suppliers".to_string(),
         capabilities: Default::default(),
     };
-    let catalog = medulla_server_api::api::query_txn::foreign_catalog::ForeignSourceCatalog::default();
+    let catalog =
+        medulla_server_api::api::query_txn::foreign_catalog::ForeignSourceCatalog::default();
     catalog
         .register(&caller, registration.source_id.clone(), spec.clone())
         .unwrap();
@@ -539,7 +540,7 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
         .bind_for(
             &caller,
             store.as_ref(),
-            &medulla_core::isolation::IsolationLayer::new(),
+            &medulla_isolation::isolation::IsolationLayer::new(),
             &approved,
             &descriptor,
             Arc::new(BoundRows),
@@ -576,7 +577,7 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
         let refusal = match wrong_catalog.bind_for(
             &caller,
             store.as_ref(),
-            &medulla_core::isolation::IsolationLayer::new(),
+            &medulla_isolation::isolation::IsolationLayer::new(),
             &approved,
             &wrong_descriptor,
             Arc::new(BoundRows),
@@ -600,7 +601,7 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
             .ensure_agent_library()
             .unwrap()
             .as_ref(),
-        &medulla_core::isolation::IsolationLayer::new(),
+        &medulla_isolation::isolation::IsolationLayer::new(),
         &held_receipt,
         &held_descriptor,
         Arc::new(BoundRows),
@@ -624,7 +625,7 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
             .ensure_agent_library()
             .unwrap()
             .as_ref(),
-        &medulla_core::isolation::IsolationLayer::new(),
+        &medulla_isolation::isolation::IsolationLayer::new(),
         &stale_receipt,
         &descriptor,
         Arc::new(BoundRows),
@@ -650,7 +651,7 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
             .ensure_agent_library()
             .unwrap()
             .as_ref(),
-        &medulla_core::isolation::IsolationLayer::new(),
+        &medulla_isolation::isolation::IsolationLayer::new(),
         &changed_body,
         &changed_descriptor,
         Arc::new(BoundRows),
@@ -677,7 +678,7 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
             .ensure_agent_library()
             .unwrap()
             .as_ref(),
-        &medulla_core::isolation::IsolationLayer::new(),
+        &medulla_isolation::isolation::IsolationLayer::new(),
         &approved,
         &changed_spec,
         Arc::new(BoundRows),
@@ -703,7 +704,7 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
             .ensure_agent_library()
             .unwrap()
             .as_ref(),
-        &medulla_core::isolation::IsolationLayer::new(),
+        &medulla_isolation::isolation::IsolationLayer::new(),
         &approved,
         &descriptor,
         Arc::new(BoundRows),
@@ -732,7 +733,7 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
             .ensure_agent_library()
             .unwrap()
             .as_ref(),
-        &medulla_core::isolation::IsolationLayer::new(),
+        &medulla_isolation::isolation::IsolationLayer::new(),
         &approved,
         &descriptor,
         Arc::new(BoundRows),

@@ -46,9 +46,10 @@
 //! Run: `cargo bench -p medulla-plan --features query --bench adaptive_reopt`.
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use medulla_core::compute::semantic::SemanticStore;
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
 use medulla_plan::{execute, Op, Plan, PlanCtx, Pred};
+use medulla_semantic_index::semantic::SemanticStore;
 use serde_json::json;
 use std::hint::black_box;
 

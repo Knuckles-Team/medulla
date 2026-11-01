@@ -9,7 +9,7 @@ use medulla_result_types::{
 };
 
 use super::super::{dispatch_for_test, replay};
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::ResultPayload;
 

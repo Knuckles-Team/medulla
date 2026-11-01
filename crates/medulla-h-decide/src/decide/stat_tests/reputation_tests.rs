@@ -79,13 +79,13 @@ fn reliability(h: &Harness, who: &str) -> (Option<f64>, Option<f64>, Option<f64>
     let verified = VerifiedRequestContext::verified_for_test_in_tenant(who, TENANT);
     let authority = medulla_server_api::access::CarrierAuthority::from_verified(&verified).unwrap();
     let views = super::super::stat_view::DecisionViews::of(h.store.clone(), &authority);
-    let core = medulla_core::graph::GraphCore::new();
+    let core = medulla_graph_core::graph::GraphCore::new();
     core.add_node(
         "d1".into(),
         rmp_serde::to_vec_named(&json!({"type": "Doc"})).unwrap(),
     );
     let graph = core.analysis_snapshot();
-    let semantic = medulla_core::compute::semantic::SemanticStore::new();
+    let semantic = medulla_semantic_index::semantic::SemanticStore::new();
     let ctx = medulla_plan::PlanCtx::new(&graph, &semantic).with_decisions(&views);
     let text = "MATCH () |> SOURCE RELIABILITY 'plan-hyde' |> RETURN belief, reliability_lo, reliability_hi";
     let stmt = medulla_plan::uql::parse_statement(text, &medulla_plan::uql::Params::new()).unwrap();

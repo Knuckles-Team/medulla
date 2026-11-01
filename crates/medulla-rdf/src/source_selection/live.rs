@@ -6,7 +6,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_core::graph::{GraphSchemaSources, SchemaSourceOrigin};
+use medulla_graph_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::SchemaSourceOrigin;
 use oxrdf::{Term, Triple};
 
 use super::{AuthorityOrigin, AuthorityRow, CoverageFixture, Materialisation, SourceRole};

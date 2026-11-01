@@ -16,8 +16,8 @@ use tokio::sync::RwLock;
 use super::{
     cost_state, forget_graph_incarnation, is_hibernated, note_hibernated, tenant_of, CostConfig,
 };
-use medulla_core::graph::GraphCore;
 use medulla_core::registry::GraphHandle;
+use medulla_graph_core::graph::GraphCore;
 use medulla_server_api::state::ServerState;
 
 /// Enforce the per-tenant memory budgets ONCE (CONCEPT:MEDULLA-KG.compute.lane-v). For every tenant over

@@ -17,7 +17,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_core::isolation::AccessLevel;
+use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
@@ -124,7 +124,7 @@ fn decode_txn_object(bytes: &[u8]) -> Result<serde_json::Map<String, serde_json:
 #[cfg(all(test, feature = "epistemic"))]
 mod materialize_belief_tests {
     use super::*;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
 
     fn node(props: serde_json::Value) -> Vec<u8> {
         rmp_serde::to_vec_named(&props).unwrap()
@@ -289,7 +289,7 @@ mod keyed_recovery_window_tests {
     ) -> (
         Arc<RwLock<ServerState>>,
         Arc<RedbBackend>,
-        Arc<medulla_core::graph::GraphCore>,
+        Arc<medulla_graph_core::graph::GraphCore>,
     ) {
         let backend = Arc::new(
             RedbBackend::open_with_shards(dir.to_string_lossy().into_owned(), 64, 1)
@@ -314,7 +314,7 @@ mod keyed_recovery_window_tests {
         (Arc::new(RwLock::new(server)), backend, core)
     }
 
-    fn staged_cross_modal_txn(core: &medulla_core::graph::GraphCore, graph: &str) -> GraphTxnState {
+    fn staged_cross_modal_txn(core: &medulla_graph_core::graph::GraphCore, graph: &str) -> GraphTxnState {
         let mut txn = GraphTxnState::new(
             core,
             NewTxnArgs {

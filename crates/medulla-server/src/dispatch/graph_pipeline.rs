@@ -1221,7 +1221,7 @@ mod admin_scope_tests {
     use medulla_types::acl::ResourceSelector;
     use medulla_types::acl::Role;
     use medulla_types::acl::AgentRole;
-    use medulla_core::isolation::IsolationLayer;
+    use medulla_isolation::isolation::IsolationLayer;
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;
     use medulla_server_api::auth::sign_current_test_request;
@@ -2050,7 +2050,7 @@ mod blob_dispatch_tests {
 mod placement_route_carrier_tests {
     use super::*;
     use medulla_types::acl::RequestContextClaims;
-    use medulla_core::isolation::IsolationLayer;
+    use medulla_isolation::isolation::IsolationLayer;
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;
     use medulla_server_api::auth::compute_verified_envelope_token;

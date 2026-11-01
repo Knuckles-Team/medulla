@@ -366,7 +366,7 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
     let directory = tempfile::tempdir().unwrap();
     let mut server_state = medulla_server_api::state::ServerState::new_for_test(
         secret,
-        medulla_core::isolation::IsolationLayer::new(),
+        medulla_isolation::isolation::IsolationLayer::new(),
     );
     server_state.persist_dir = Some(directory.path().to_string_lossy().into_owned());
     let state = Arc::new(RwLock::new(server_state));

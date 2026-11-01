@@ -3004,7 +3004,7 @@ mod tests {
     /// `AgentRole::System`, empty `roles` -- must still be admitted once
     /// `may_grant_system` is explicitly granted, through the SAME
     /// `authorize_grant` gate every other signer now goes through. This is
-    /// the auth-layer half of genesis; `crates::medulla_core::isolation`'s own
+    /// the auth-layer half of genesis; `crates::medulla_isolation::isolation`'s own
     /// `try_bootstrap_system_identity` enforces the "exactly once" half
     /// independently (see that module's tests).
     #[test]

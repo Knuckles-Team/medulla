@@ -4,9 +4,9 @@
 //! stage's own executor (`exec::dispatch::shape::tests`) or a parser-only check
 //! (`uql::parser::shape::tests`).
 
-use medulla_core::compute::semantic::SemanticStore;
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_rdf::mapping::{load_triples, parse_turtle, IriStore};
+use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::UqlResult;
 
 use crate::exec::PlanCtx;
@@ -20,7 +20,7 @@ ex:Named a sh:NodeShape ; sh:property [ sh:path ex:name ; sh:minCount 1 ] .
 "#;
 
 /// alice and carol have `ex:name`; bob does not.
-fn people() -> (medulla_core::graph::GraphView, SemanticStore) {
+fn people() -> (medulla_graph_core::graph::GraphView, SemanticStore) {
     let ttl = r#"
 @prefix ex: <http://ex/> .
 ex:alice a ex:Person ; ex:name "Alice" .
@@ -110,8 +110,8 @@ fn projected_taxon_shape_checks_native_fields_and_typed_relationships() {
     let view = core.analysis_snapshot();
     let semantic = SemanticStore::new();
     let ctx = PlanCtx::new(&view, &semantic);
-    let shapes =
-        include_str!("../../../../medulla-core/ontology/world_model-v1.shapes.ttl").replace('\'', "''");
+    let shapes = include_str!("../../../../medulla-core/ontology/world_model-v1.shapes.ttl")
+        .replace('\'', "''");
     let query = format!(
         r#"MATCH (:Taxon) |> VALIDATE SHAPE <http://knuckles.team/kg#TaxonShape> USING '{shapes}' PROJECT 'http://knuckles.team/kg#' KEEP VIOLATING"#
     );

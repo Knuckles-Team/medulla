@@ -16,7 +16,7 @@ use super::{allocation_bytes, timed, Observation, ProbeError};
 /// which is strictly worse than one that fails by name.
 const PROBE_RENDEZVOUS_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(120);
 use medulla_core::broker::{self, Binding, ExchangeKind, ReadFrom, StreamRetention};
-use medulla_core::graph::{ChangeEvent, ChangeNotifier, ChangeSink, GraphCore};
+use medulla_graph_core::graph::{ChangeEvent, ChangeNotifier, ChangeSink, GraphCore};
 
 /// Join a probe worker within [`PROBE_RENDEZVOUS_TIMEOUT`], or say which probe
 /// stalled.

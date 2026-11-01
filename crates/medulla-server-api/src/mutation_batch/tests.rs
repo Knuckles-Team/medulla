@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use crate::api::persistence::PersistenceBackend;
-use medulla_core::graph::GraphCore;
-use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_graph_core::graph::GraphCore;
 use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::mutation_batch::VersionExpectation;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::ResultPayload;
@@ -1155,8 +1155,10 @@ fn served_owner_store_batch_commits_and_its_actor_survives_in_the_ledger() {
         medulla_mutation_types::mutation_scope::ScopeTenantId::new("tenant-a".to_string()).unwrap(),
         medulla_mutation_types::mutation_scope::DurabilityDomain::KvStore,
         medulla_mutation_types::mutation_scope::LogicalName::new("kv-scope-a".to_string()).unwrap(),
-        medulla_mutation_types::mutation_scope::IncarnationId::new(crate::mutation_batch::COMPILED_BATCH_INCARNATION)
-            .unwrap(),
+        medulla_mutation_types::mutation_scope::IncarnationId::new(
+            crate::mutation_batch::COMPILED_BATCH_INCARNATION,
+        )
+        .unwrap(),
     )
     .unwrap();
     let grant = kernel
@@ -1346,9 +1348,8 @@ fn editing_a_compiled_batch_after_the_mint_is_refused() {
 
     // An outbox intent appended after the mint.
     let mut appended = compiled();
-    appended
-        .outbox
-        .push(medulla_mutation_types::mutation_scope::MutationOutboxIntent {
+    appended.outbox.push(
+        medulla_mutation_types::mutation_scope::MutationOutboxIntent {
             topic: "engine.crossmodal.committed".to_string(),
             key: "post-mint-edit".to_string(),
             payload: vec![7],

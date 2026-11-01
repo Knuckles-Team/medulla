@@ -3232,7 +3232,7 @@ fn sql_value_to_json(v: &SqlValue) -> Result<Value, String> {
 //
 // DataFusion has no JSONPath, so the deep JSON operators are decoded HERE into the
 // `Pred::JsonPath` wire predicate; `medulla-plan`'s FILTER leg then evaluates them per-row
-// (via `medulla_core::jsonpath`) and the planner consults medulla-core's inverted path-index for
+// (via `medulla_graph_core::jsonpath`) and the planner consults medulla-core's inverted path-index for
 // selectivity. All functions are pure decoders over the sqlparser `Expr` — no execution.
 
 /// CONCEPT:MEDULLA-KG.compute.json-deep-indexing — lower a Postgres JSON WHERE expression onto a [`Pred::JsonPath`].

@@ -329,11 +329,7 @@ pub fn scan_plan_matviews(shard: &Shard) -> Result<Vec<(String, Vec<u8>)>, Strin
 
 /// Durably upsert an incremental matview's operator-state snapshot.
 #[cfg(feature = "matview")]
-pub fn put_matview_operator_state(
-    shard: &Shard,
-    name: &str,
-    blob: &[u8],
-) -> Result<(), String> {
+pub fn put_matview_operator_state(shard: &Shard, name: &str, blob: &[u8]) -> Result<(), String> {
     let op_id = format!("matview-operator-state/put/{name}");
     control_write!(shard, &op_id, |control| {
         control

@@ -683,7 +683,8 @@ mod outbound_verification_tests {
 
     #[test]
     fn an_allowed_obda_destination_still_connects() {
-        let _allow = medulla_server_api::test_support::FederationAllowGuard::blocking("127.0.0.1:5432");
+        let _allow =
+            medulla_server_api::test_support::FederationAllowGuard::blocking("127.0.0.1:5432");
         // Same fixture `crates/medulla-plan/src/federation_ssrf.rs` already proves is
         // admitted: loopback with an explicit exact allowlist entry. `connect` only
         // validates and stores the DSN here; it dials lazily inside `run_select`.
@@ -694,7 +695,8 @@ mod outbound_verification_tests {
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R002.2
     #[test]
     fn a_refused_source_does_not_skip_later_allowed_registration() {
-        let _allow = medulla_server_api::test_support::FederationAllowGuard::blocking("127.0.0.1:5432");
+        let _allow =
+            medulla_server_api::test_support::FederationAllowGuard::blocking("127.0.0.1:5432");
         let mut registry = medulla_rdf::obda::ObdaSourceRegistry::new();
         let sources = vec![
             medulla_protocol_types::protocol::ObdaExternalSource {

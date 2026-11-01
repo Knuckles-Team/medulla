@@ -6,11 +6,11 @@
 //! `agent-utilities`' live authorization inventory (CA-33) measured **nine**
 //! independent mechanisms deciding what a caller may see or do against this
 //! engine and its neighbors. This module renders exactly **one** — **M1**,
-//! [`medulla_core::isolation::IsolationLayer::filter_view`]/`can_see_row`'s live
+//! [`medulla_isolation::isolation::IsolationLayer::filter_view`]/`can_see_row`'s live
 //! `_owner`/`_visibility`/`_grants` (or au's `_owner_id`/`_shared_scope`)
 //! row-visibility predicate, the same decision every native SQL/Cypher/RDF read
 //! already applies (`server::access::GraphReadAuthority::filter_view`). It is
-//! **never a second definition** — this module reads [`medulla_core::isolation`]'s
+//! **never a second definition** — this module reads [`medulla_isolation::isolation`]'s
 //! public API only and writes nothing back to it. M2 (owner-scoped SQL catalog
 //! files), M3 (`sql_catalog_acl`), M4 (au's tenant-predicate pushdown/post-
 //! filter/allowlist triad), M6 (au's `permissioning.enforce`, where Markings
@@ -121,7 +121,7 @@
 //! # Bundle scope: one bundle per tenant, `graphs: [...]` (DEC-CA-04 A3)
 //!
 //! `generate_bundle` takes a caller-supplied `tenant` + `graphs` list — it does
-//! **not** call [`medulla_core::isolation::IsolationLayer::accessible_graphs`], which
+//! **not** call [`medulla_isolation::isolation::IsolationLayer::accessible_graphs`], which
 //! is DEAD CODE with a naming scheme (`agent:<id>`, `team:<t>`) matching no
 //! live graph on this deployment (255 named graphs exist; that function's
 //! output matches none of them). Callers MUST source `graphs` from au's
@@ -1008,7 +1008,7 @@ mod tests {
     #[cfg(feature = "oidc")]
     mod live_token_proof {
         use super::super::*;
-        use medulla_core::isolation::IsolationLayer;
+        use medulla_isolation::isolation::IsolationLayer;
         use medulla_server_api::oidc::tests::now;
         use medulla_server_api::oidc::tests::sign;
 

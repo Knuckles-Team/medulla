@@ -11,7 +11,7 @@ struct SqlReadScope<'a> {
     authority: &'a medulla_server_api::access::CarrierAuthority,
     persist_dir: &'a std::path::Path,
     #[cfg(feature = "security")]
-    rls: &'a Arc<medulla_core::isolation::IsolationLayer>,
+    rls: &'a Arc<medulla_isolation::isolation::IsolationLayer>,
 }
 
 #[cfg(feature = "query")]
@@ -72,8 +72,8 @@ fn sql_tenant_store(
 pub(crate) fn sql_read_snapshot(
     core: &Arc<GraphCore>,
     #[cfg(feature = "security")] caller: &str,
-    #[cfg(feature = "security")] rls: &Arc<medulla_core::isolation::IsolationLayer>,
-) -> (Arc<medulla_core::graph::GraphView>, u64) {
+    #[cfg(feature = "security")] rls: &Arc<medulla_isolation::isolation::IsolationLayer>,
+) -> (Arc<medulla_graph_core::graph::GraphView>, u64) {
     #[cfg(feature = "result-cache")]
     {
         #[cfg(feature = "security")]
@@ -201,7 +201,7 @@ pub(crate) async fn handle_sql(
 #[cfg(all(feature = "query", feature = "result-cache"))]
 pub(crate) struct CacheSlot {
     pub(crate) hash: u128,
-    pub(crate) dep: Option<medulla_core::dep_scope::DepSet>,
+    pub(crate) dep: Option<medulla_query_cache::dep_scope::DepSet>,
     pub(crate) version: u64,
 }
 
@@ -210,7 +210,7 @@ impl CacheSlot {
     /// Store `payload` under this slot.
     pub(crate) fn store(&self, core: &GraphCore, payload: &ResultPayload) {
         match &self.dep {
-            Some(deps) => medulla_core::result_cache::cache_dep_result(
+            Some(deps) => medulla_query_cache::result_cache::cache_dep_result(
                 core.result_cache(),
                 self.hash,
                 0,
@@ -218,7 +218,7 @@ impl CacheSlot {
                 deps.clone(),
                 payload,
             ),
-            None => medulla_core::result_cache::cache_result(
+            None => medulla_query_cache::result_cache::cache_result(
                 core.result_cache(),
                 self.hash,
                 self.version,
@@ -258,7 +258,7 @@ pub(crate) fn served_cache_hash(
 pub(crate) fn cached_payload(
     core: &GraphCore,
     hash: u128,
-    dep: &Option<medulla_core::dep_scope::DepSet>,
+    dep: &Option<medulla_query_cache::dep_scope::DepSet>,
 ) -> Option<Vec<u8>> {
     match dep {
         Some(_) => core.result_cache().get_dep(hash, 0, core.dep_probe()),
@@ -422,7 +422,7 @@ pub(crate) async fn handle_unified_query(
 pub(super) async fn catalog_sql_response(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-    snap: Arc<medulla_core::graph::GraphView>,
+    snap: Arc<medulla_graph_core::graph::GraphView>,
     authority: medulla_server_api::access::CarrierAuthority,
     persist_dir: std::path::PathBuf,
     query: String,

@@ -231,7 +231,9 @@ pub fn excluded_store_reasons() -> BTreeMap<String, String> {
 /// grants or registered identities, so a restored engine came up default-deny with an
 /// already-`Consumed` bootstrap — unrecoverable through the normal admission path.
 #[cfg(feature = "security")]
-pub struct RbacBundledStore(pub std::sync::Arc<dyn medulla_core::rbac_persist::RbacPolicyStore>);
+pub struct RbacBundledStore(
+    pub std::sync::Arc<dyn medulla_isolation::rbac_persist::RbacPolicyStore>,
+);
 
 #[cfg(feature = "security")]
 impl BundledStoreSource for RbacBundledStore {

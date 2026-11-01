@@ -30,7 +30,8 @@ async fn every_graph_of_a_sweep_is_leased_from_the_moment_it_is_claimed() {
     let graph_names: Vec<String> = (0..3)
         .map(|index| format!("sweep-clock-{}-{index}", std::process::id()))
         .collect();
-    let persistence: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> = backend.clone();
+    let persistence: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> =
+        backend.clone();
     for graph in &graph_names {
         persistence
             .commit_mutation_batch(graph, &projection_budget_batch(graph, 0), None, 1)
@@ -46,7 +47,7 @@ async fn every_graph_of_a_sweep_is_leased_from_the_moment_it_is_claimed() {
             .map(|graph| {
                 (
                     graph.clone(),
-                    Arc::new(medulla_core::graph::GraphCore::new()),
+                    Arc::new(medulla_graph_core::graph::GraphCore::new()),
                 )
             })
             .collect(),

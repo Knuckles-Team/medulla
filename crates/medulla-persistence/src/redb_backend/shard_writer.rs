@@ -443,7 +443,10 @@ impl ShardWriter {
     ) -> Result<T, String>
     where
         T: Send + 'static,
-        F: for<'a> FnOnce(&'a Shard, medulla_store::redb_store::DurableCrypto<'a>) -> Result<T, String>
+        F: for<'a> FnOnce(
+                &'a Shard,
+                medulla_store::redb_store::DurableCrypto<'a>,
+            ) -> Result<T, String>
             + Send
             + 'static,
     {

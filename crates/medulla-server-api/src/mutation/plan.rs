@@ -1,7 +1,7 @@
-use medulla_core::isolation::IsolationLayer;
+use medulla_capabilities::DurabilityDomain;
+use medulla_isolation::isolation::IsolationLayer;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
-use medulla_capabilities::DurabilityDomain;
 
 /// The pre-authz identity/placement context a gateway call needs, captured by the
 /// caller (`dispatch_graph_op`) from the graph registry BEFORE its read lock is

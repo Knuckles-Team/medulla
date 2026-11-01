@@ -37,10 +37,10 @@ pub struct Harness {
 
 impl Harness {
     pub async fn new() -> Self {
-        Self::with_isolation(medulla_core::isolation::IsolationLayer::new()).await
+        Self::with_isolation(medulla_isolation::isolation::IsolationLayer::new()).await
     }
 
-    pub async fn with_isolation(isolation: medulla_core::isolation::IsolationLayer) -> Self {
+    pub async fn with_isolation(isolation: medulla_isolation::isolation::IsolationLayer) -> Self {
         let dir = tempfile::tempdir().unwrap();
         let mut server = ServerState::new_for_test("decide-stat-test-secret", isolation);
         server.persist_dir = Some(dir.path().to_string_lossy().into_owned());

@@ -55,7 +55,7 @@ use medulla_query::{
     WhereEq,
 };
 
-use medulla_core::isolation::AccessLevel;
+use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::protocol::Request;
 use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::state::ServerState;
@@ -1297,7 +1297,7 @@ impl TxnBeginVersion {
     /// legitimately reads `core.version()` now (there is nothing earlier to
     /// read); `Begin` always uses the already-captured value, whatever it is
     /// — never re-derived, never defaulted.
-    fn resolve(self, core: &medulla_core::graph::GraphCore) -> u64 {
+    fn resolve(self, core: &medulla_graph_core::graph::GraphCore) -> u64 {
         match self {
             TxnBeginVersion::Autocommit => core.version(),
             TxnBeginVersion::Begin(v) => v,
@@ -1537,7 +1537,7 @@ impl WireSession {
     #[cfg(feature = "security")]
     async fn filter_view_for_verified_actor(
         &self,
-        view: &mut medulla_core::graph::GraphView,
+        view: &mut medulla_graph_core::graph::GraphView,
     ) -> WireResult<()> {
         let actor = self.verified_actor()?;
         self.state.read().await.isolation.filter_view(&actor, view);
@@ -1774,7 +1774,7 @@ impl WireSession {
 
     /// Clone the target graph's `Arc<GraphCore>` out of the registry (read lock),
     /// or a clean error if it doesn't exist.
-    pub(crate) async fn graph_core(&self, graph: &str) -> WireResult<Arc<medulla_core::graph::GraphCore>> {
+    pub(crate) async fn graph_core(&self, graph: &str) -> WireResult<Arc<medulla_graph_core::graph::GraphCore>> {
         let s = self.state.read().await;
         match s.registry.get(graph) {
             Some(e) => Ok(e.core.clone()),
@@ -1794,13 +1794,13 @@ impl WireSession {
             // the not-found error surfaces instead of a misleading ACCESS_DENIED.
             None => return Ok(()),
         };
-        let query = medulla_core::isolation::AccessQuery {
+        let query = medulla_isolation::isolation::AccessQuery {
             agent_id: &actor,
             graph_name: graph,
             graph_type,
             graph_owner: owner.as_deref(),
             access,
-            now_ms: medulla_core::isolation::access_clock_ms(),
+            now_ms: medulla_isolation::isolation::access_clock_ms(),
         };
         if medulla_server_api::access::decide_graph_access(&s.isolation, &query) {
             Ok(())
@@ -1892,7 +1892,7 @@ impl WireSession {
     /// Replay this connection's buffered graph-node ops onto `view` (CONCEPT:MEDULLA-KG.compute.kg-transaction-is-pinned),
     /// in statement order, so a read over `view` reflects the open transaction's own
     /// writes. Never touches the live `GraphCore`.
-    fn apply_node_buffer(&self, view: &mut medulla_core::graph::GraphView) {
+    fn apply_node_buffer(&self, view: &mut medulla_graph_core::graph::GraphView) {
         for op in &self.graph_txn.lock().ops {
             match op {
                 NodeOp::Add { id, blob } => view.overlay_add_node(id.clone(), blob.clone()),
@@ -1912,7 +1912,7 @@ impl WireSession {
     /// transaction (CONCEPT:MEDULLA-KG.compute.kg-transaction-is-pinned) — the live snapshot plus every buffered node op.
     /// Used to resolve RETURNING rows / ON CONFLICT checks against the txn's own
     /// uncommitted state.
-    async fn overlaid_snapshot(&self, graph: &str) -> WireResult<medulla_core::graph::GraphView> {
+    async fn overlaid_snapshot(&self, graph: &str) -> WireResult<medulla_graph_core::graph::GraphView> {
         let core = self.graph_core(graph).await?;
         let mut view = core.analysis_snapshot();
         self.apply_node_buffer(&mut view);
@@ -3215,7 +3215,7 @@ impl WireSession {
         on_conflict: Option<&OnConflict>,
         returning: bool,
         id_pos: usize,
-        view: &mut medulla_core::graph::GraphView,
+        view: &mut medulla_graph_core::graph::GraphView,
         cond_blob: &[u8],
         empty: &serde_json::Map<String, serde_json::Value>,
     ) -> WireResult<
@@ -3727,7 +3727,7 @@ impl WireSession {
         on_conflict: Option<&OnConflict>,
         returning: bool,
         id_pos: usize,
-        view: &mut medulla_core::graph::GraphView,
+        view: &mut medulla_graph_core::graph::GraphView,
         empty: &serde_json::Map<String, serde_json::Value>,
     ) -> WireResult<Option<Option<(String, serde_json::Map<String, serde_json::Value>)>>> {
         let node_id = Self::cell_to_node_id(&row[id_pos])?;
@@ -5297,8 +5297,8 @@ impl WireProtocol for WireSession {
 }
 
 #[cfg(any(test, feature = "test-support"))]
-pub fn test_isolation(agents: &[&str]) -> medulla_core::isolation::IsolationLayer {
-    let mut isolation = medulla_core::isolation::IsolationLayer::new();
+pub fn test_isolation(agents: &[&str]) -> medulla_isolation::isolation::IsolationLayer {
+    let mut isolation = medulla_isolation::isolation::IsolationLayer::new();
     for agent in agents {
         isolation.register_agent(medulla_types::acl::AgentIdentity {
             agent_id: (*agent).into(),

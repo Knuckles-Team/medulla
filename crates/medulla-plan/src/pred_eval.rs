@@ -236,7 +236,8 @@ mod tests {
     mod sql_differential {
         use super::*;
         use crate::exec::where_clause;
-        use medulla_core::graph::{GraphCore, GraphView};
+        use medulla_graph_core::graph::GraphCore;
+        use medulla_graph_core::graph::GraphView;
 
         fn blob(v: Value) -> Vec<u8> {
             rmp_serde::to_vec_named(&v).unwrap()

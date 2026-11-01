@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use medulla_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::NamedNode;
 

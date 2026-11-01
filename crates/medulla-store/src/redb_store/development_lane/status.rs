@@ -9,14 +9,14 @@ use super::rows::LaneRows;
 use super::types::Scope;
 use super::validation::{decision_name, validate_method_bounds};
 use super::{COUNTERS, HOLDS, MAX_STATUS_LIMIT, MAX_STATUS_SCAN, POLICIES, TENANT_INDEX};
+use crate::redb_store::shard::Shard;
+use medulla_protocol_types::protocol::Method;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHoldHostTargetKind;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHoldState;
 use medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequest;
 use medulla_result_types::epistemic_operations::DevelopmentLaneStatusResult;
 use medulla_result_types::epistemic_operations::DevelopmentLaneStatusResultSchemaVersion;
-use medulla_protocol_types::protocol::Method;
-use crate::redb_store::shard::Shard;
 use medulla_storage::{GraphShardOwner, ScopedRead};
 
 /// One bounded page of the tenant status scan.
@@ -141,7 +141,8 @@ pub(super) fn read_lane_status(
         last,
     } = scan_status_page(graph, request, cursor, &holds, &tenant_index, crypto)?;
     let probe = DevelopmentLaneHold {
-        schema_version: medulla_result_types::epistemic_operations::DevelopmentLaneHoldSchemaVersion::V1,
+        schema_version:
+            medulla_result_types::epistemic_operations::DevelopmentLaneHoldSchemaVersion::V1,
         hold_id: "snapshot".to_string(),
         lane_id: "snapshot".to_string(),
         tenant_ref: request.tenant_ref.clone(),

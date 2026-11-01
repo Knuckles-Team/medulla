@@ -18,9 +18,9 @@ use std::sync::Arc;
 
 #[cfg(feature = "query")]
 use medulla_protocol_types::protocol::Response;
-use medulla_core::compute::semantic_index_service::SemanticIndexService;
+use medulla_ann_codes::semantic_index_service::SemanticIndexService;
 #[cfg(feature = "query")]
-use medulla_core::compute::semantic_index_service::{
+use medulla_ann_codes::semantic_index_service::{
     sql_source_deletion_proof, sql_source_revision_for_epoch, SemanticSqlSourceReadPage,
     SemanticSqlSourceReadPort, SemanticSqlSourceRecord, SemanticSqlSourceValue,
 };

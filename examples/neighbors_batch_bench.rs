@@ -6,7 +6,7 @@
 //!
 //! Run with: cargo run --release --example neighbors_batch_bench
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 
 fn props() -> Vec<u8> {
     rmp_serde::to_vec_named(&serde_json::json!({})).unwrap()

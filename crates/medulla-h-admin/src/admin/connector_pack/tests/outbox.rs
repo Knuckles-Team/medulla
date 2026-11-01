@@ -379,7 +379,7 @@ async fn every_native_store_is_reachable_through_its_scope_selector() {
 async fn projected_schema(
     served: &Served,
     connector: &str,
-) -> std::sync::Arc<medulla_core::graph::GraphSchemaSources> {
+) -> std::sync::Arc<medulla_graph_core::graph::GraphSchemaSources> {
     let graph = crate::graph_schema::pack_projection_graph_name(
         TENANT,
         &ResourceId::new(connector).unwrap(),

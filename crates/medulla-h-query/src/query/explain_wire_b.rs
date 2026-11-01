@@ -4,7 +4,7 @@ use super::*;
 pub(crate) fn resolve_conflict_wire(
     node_ids: &[String],
     semantics: &str,
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
 ) -> Result<medulla_protocol_types::protocol::ResolveConflictResult, String> {
     let bg = medulla_epistemic::BeliefGraph::from_graph_view(view);
     let bg = restrict_belief_graph_to_component(&bg, node_ids);
@@ -183,7 +183,7 @@ pub(crate) fn restrict_belief_graph_to_component(
 /// changed and why, over the WHOLE graph (`medulla_epistemic::what_changed`).
 #[cfg(feature = "epistemic-tms")]
 pub(crate) fn what_changed_wire(
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     tx_from: u64,
     tx_to: u64,
 ) -> medulla_protocol_types::protocol::WhatChangedResult {
@@ -315,7 +315,7 @@ pub(crate) fn evidence_citation_wire(
 #[cfg(all(feature = "evidence-graph", feature = "alignment"))]
 pub(crate) fn explain_evidence_wire(
     node_id: &str,
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     blob_store: Option<std::sync::Arc<dyn medulla_server_api::blob::ChunkStore>>,
 ) -> medulla_protocol_types::protocol::ExplainEvidenceResult {
     let bg = medulla_epistemic::BeliefGraph::from_graph_view(view);
@@ -369,7 +369,7 @@ pub(crate) fn explain_evidence_wire(
 #[cfg(all(feature = "evidence-graph", not(feature = "alignment")))]
 pub(crate) fn explain_evidence_wire(
     node_id: &str,
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
 ) -> medulla_protocol_types::protocol::ExplainEvidenceResult {
     let bg = medulla_epistemic::BeliefGraph::from_graph_view(view);
     let citations = medulla_epistemic::evidence_citations(&bg, node_id);

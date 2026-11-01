@@ -20,7 +20,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use crate::reasoning_closure::{active_closure_backend, infer_semi_naive};
 
 type PropertyEndpoints = (String, String);
@@ -223,7 +223,7 @@ fn extract_facts(core: &GraphCore) -> (Vec<(String, String)>, Vec<(String, Strin
 /// has — there is no opt-out, in keeping with this codebase's native-by-default convention: a
 /// safety property is not something a caller can forget to ask for.
 fn pair_already_connected(
-    txn: &medulla_core::graph::GraphTxn<'_>,
+    txn: &medulla_graph_core::graph::GraphTxn<'_>,
     core: &GraphCore,
     src: &str,
     tgt: &str,
@@ -605,7 +605,7 @@ fn materialize_property_chain_edges(
 
 fn materialize_property_chain_edge(
     core: &GraphCore,
-    txn: &mut medulla_core::graph::GraphTxn<'_>,
+    txn: &mut medulla_graph_core::graph::GraphTxn<'_>,
     inferred: &mut [HashMap<String, String>],
     (src, tgt, prop, premises, fact_index): &PropertyChainEdge,
 ) {
@@ -649,7 +649,7 @@ fn store_property_chain_provenance(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
 
     fn props(json: serde_json::Value) -> Vec<u8> {
         rmp_serde::to_vec_named(&json).unwrap()

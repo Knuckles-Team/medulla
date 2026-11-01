@@ -35,7 +35,7 @@ pub(super) async fn filtered_view(
     state: &Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     agent_id: &str,
     graph: &str,
-) -> Result<medulla_core::graph::GraphView, String> {
+) -> Result<medulla_graph_core::graph::GraphView, String> {
     let (core, isolation) = readable_graph(
         state,
         agent_id,
@@ -63,8 +63,8 @@ pub(super) async fn readable_graph(
     missing_code: StatisticalErrorCode,
 ) -> Result<
     (
-        Arc<medulla_core::graph::GraphCore>,
-        medulla_core::isolation::IsolationLayer,
+        Arc<medulla_graph_core::graph::GraphCore>,
+        medulla_isolation::isolation::IsolationLayer,
     ),
     String,
 > {
@@ -79,7 +79,7 @@ pub(super) async fn readable_graph(
         graph,
         entry.graph_type,
         entry.owner.as_deref(),
-        medulla_core::isolation::AccessLevel::Read,
+        medulla_isolation::isolation::AccessLevel::Read,
     )?;
     Ok((Arc::clone(&entry.core), guard.isolation.clone()))
 }

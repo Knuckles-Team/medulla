@@ -379,7 +379,7 @@ pub(crate) async fn handle_graphql(
         Ok(Ok(value)) => match ResultPayload::of_dynamic::<query_results::GraphQl, _>(&value) {
             Ok(payload) => {
                 #[cfg(feature = "result-cache")]
-                medulla_core::result_cache::cache_result(
+                medulla_query_cache::result_cache::cache_result(
                     core.result_cache(),
                     hash,
                     version,

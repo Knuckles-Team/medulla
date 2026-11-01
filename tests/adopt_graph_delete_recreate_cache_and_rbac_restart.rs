@@ -39,7 +39,7 @@
 #![cfg(feature = "security")]
 
 use medulla_types::acl::{AgentIdentity, AgentRole};
-use medulla_core::isolation::{AccessLevel, IsolationLayer};
+use medulla_isolation::isolation::{AccessLevel, IsolationLayer};
 use medulla_protocol_types::protocol::GraphType;
 use medulla_core::registry::GraphRegistry;
 

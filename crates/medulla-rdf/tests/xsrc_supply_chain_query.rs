@@ -10,7 +10,7 @@ mod common;
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::{NamedOrBlankNode, Term};
 use medulla_rdf::source_selection::{select_sources, CoverageFixture, CoverageResult, Premise};
@@ -19,7 +19,8 @@ use medulla_rdf::sparql::{execute, Dataset, Projection, QueryOutcome};
 const KG: &str = "http://knuckles.team/kg#";
 const INFRA: &str = "http://knuckles.team/kg/infrastructure#";
 const VG: &str = "http://knuckles.team/kg/virtual-graph#";
-const SEED: &str = include_str!("../../medulla-core/tests/fixtures/cross_source_authority_seed.ttl");
+const SEED: &str =
+    include_str!("../../medulla-core/tests/fixtures/cross_source_authority_seed.ttl");
 
 /// Every connector name that may not appear in a class-only question.
 const CONNECTOR_NAMES: &[&str] = &[

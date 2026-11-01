@@ -165,8 +165,8 @@ fn materialization_phase(
 }
 
 fn index_manifest_listing(
-    kind: medulla_core::index::IndexKind,
-    manifest: medulla_core::index::IndexManifest,
+    kind: medulla_graph_core::index::IndexKind,
+    manifest: medulla_graph_core::index::IndexManifest,
 ) -> medulla_protocol_types::result_contract::cluster::IndexManifestListing {
     medulla_protocol_types::result_contract::cluster::IndexManifestListing {
         kind: index_kind_label(kind).to_string(),

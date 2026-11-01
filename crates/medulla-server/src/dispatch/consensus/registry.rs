@@ -135,7 +135,7 @@ fn registration_state(value: &serde_json::Value) -> Option<(ServerTransport, Ser
 /// the SAME typed decode and lease filter `ListRegisteredServers` answers from,
 /// never a second reading of `:Server` rows.
 pub(super) fn live_desired_states<F>(
-    core: &medulla_core::graph::GraphCore,
+    core: &medulla_graph_core::graph::GraphCore,
     observed_at_ms: u64,
     visible: F,
 ) -> std::collections::BTreeMap<String, ServerDesiredState>
@@ -149,7 +149,7 @@ where
 }
 
 fn live_registered_servers<F>(
-    core: &medulla_core::graph::GraphCore,
+    core: &medulla_graph_core::graph::GraphCore,
     observed_at_ms: u64,
     mut visible: F,
 ) -> Vec<RegisteredServerView>
@@ -502,7 +502,7 @@ mod list_registered_servers_tests {
     }
 
     fn live(names: &[&str]) -> Vec<RegisteredServerView> {
-        let core = medulla_core::graph::GraphCore::new();
+        let core = medulla_graph_core::graph::GraphCore::new();
         for name in names {
             core.add_node(format!("srv:{name}"), row(name, 100_000));
         }
@@ -511,7 +511,7 @@ mod list_registered_servers_tests {
 
     #[test]
     fn typed_live_snapshot_is_name_sorted_and_filters_invalid_or_expired_rows() {
-        let core = medulla_core::graph::GraphCore::new();
+        let core = medulla_graph_core::graph::GraphCore::new();
         core.add_node("srv:zeta".to_string(), row("zeta", 100_000));
         core.add_node("srv:alpha".to_string(), row("alpha", 100_000));
         core.add_node("srv:expired".to_string(), row("expired", 50_000));
@@ -555,7 +555,7 @@ mod list_registered_servers_tests {
             registration_state(&serde_json::json!({"transport": "carrier-pigeon"})),
             None
         );
-        let core = medulla_core::graph::GraphCore::new();
+        let core = medulla_graph_core::graph::GraphCore::new();
         core.add_node("srv:alpha".to_string(), row("alpha", 100_000));
         let desired = live_desired_states(&core, 50_000, |_, _| true);
         assert_eq!(desired.get("alpha"), Some(&ServerDesiredState::Disabled));
@@ -658,7 +658,7 @@ mod list_registered_servers_tests {
     #[cfg(feature = "security")]
     #[test]
     fn hidden_server_row_is_absent_from_count_and_snapshot_digest() {
-        let core = medulla_core::graph::GraphCore::new();
+        let core = medulla_graph_core::graph::GraphCore::new();
         core.add_node(
             "srv:alice-server".to_string(),
             private_row("alice-server", "alice"),

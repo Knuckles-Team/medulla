@@ -206,7 +206,7 @@ async fn dispatch_check_access(
         &graph,
         entry.graph_type,
         owner,
-        medulla_core::isolation::AccessLevel::Read,
+        medulla_isolation::isolation::AccessLevel::Read,
     ) {
         return Response::err(req_id, denied);
     }
@@ -252,7 +252,7 @@ fn register_identity(
     }
     #[cfg(feature = "security")]
     {
-        let actor = medulla_core::isolation::AuditActor {
+        let actor = medulla_isolation::isolation::AuditActor {
             principal: mode.actor,
             now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
         };

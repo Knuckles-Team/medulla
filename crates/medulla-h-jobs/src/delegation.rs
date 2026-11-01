@@ -41,7 +41,7 @@ use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_server_api::api::persistence::PersistenceBackend;
 
 #[cfg(feature = "redb")]
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStore;
@@ -498,7 +498,9 @@ mod tests {
     /// Publish child + parent and return the RETAINED parent, resolved the way
     /// admission resolves it.
     #[cfg(feature = "redb")]
-    fn nested_graph(store: &AgentLibraryStore) -> medulla_agent_types::agent_graph::AgentGraphEntry {
+    fn nested_graph(
+        store: &AgentLibraryStore,
+    ) -> medulla_agent_types::agent_graph::AgentGraphEntry {
         use medulla_persistence::agent_graph::tests::child_shape;
         use medulla_persistence::agent_graph::tests::parent_shape;
         use medulla_persistence::agent_graph::tests::publish_shape;

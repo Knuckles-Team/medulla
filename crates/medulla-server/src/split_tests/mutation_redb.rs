@@ -5,13 +5,13 @@
 
 use std::sync::Arc;
 
-use medulla_persistence::redb_backend::RedbBackend;
 use medulla_capabilities::DurabilityDomain;
-use medulla_core::graph::GraphCore;
-use medulla_core::isolation::IsolationLayer;
+use medulla_graph_core::graph::GraphCore;
+use medulla_isolation::isolation::IsolationLayer;
+use medulla_persistence::redb_backend::RedbBackend;
+use medulla_protocol_types::protocol::{GraphType, Method, ResultPayload};
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::mutation::*;
-use medulla_protocol_types::protocol::{GraphType, Method, ResultPayload};
 
 /// W1c: `check_graph_access_with_policy` (`src/server/access.rs`, the L-RLS-1
 /// hardening) now mandates a provisioned identity for EVERY graph-scoped

@@ -1,6 +1,6 @@
 //! Registry-load coverage for the infrastructure ontology's SHACL companion.
 
-use medulla_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_rdf::mapping::parse_turtle;
 
 #[allow(non_snake_case)]

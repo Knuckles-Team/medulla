@@ -239,12 +239,8 @@ async fn create_declared_graph(
     {
         let cap = medulla_persistence::cold_offload::max_resident_graphs();
         let tracker = s.ensure_cold_tracker();
-        medulla_persistence::cold_offload::admit_capacity(
-            &mut s,
-            &tracker,
-            &graph_name,
-            cap,
-        ); // `s`: &mut ServerState via RwLockWriteGuard's DerefMut
+        medulla_persistence::cold_offload::admit_capacity(&mut s, &tracker, &graph_name, cap);
+        // `s`: &mut ServerState via RwLockWriteGuard's DerefMut
     }
     // The creator (when identified) becomes the graph owner, which is
     // what peer-deny / manager-access checks resolve against.
@@ -526,26 +522,26 @@ async fn teardown_deleted_graph_in_memory(
 
 /// Stable wire names for the server index manifest. Kept as their own
 /// mappings so the manifest projection below stays a single expression.
-pub(super) fn index_kind_label(kind: medulla_core::index::IndexKind) -> &'static str {
+pub(super) fn index_kind_label(kind: medulla_graph_core::index::IndexKind) -> &'static str {
     match kind {
-        medulla_core::index::IndexKind::Text => "text",
-        medulla_core::index::IndexKind::Temporal => "temporal",
-        medulla_core::index::IndexKind::DerivedOwl => "derived_owl",
-        medulla_core::index::IndexKind::Spatial => "spatial",
-        medulla_core::index::IndexKind::EdgeSearch => "edge_search",
-        medulla_core::index::IndexKind::Label => "label",
-        medulla_core::index::IndexKind::Property => "property",
-        medulla_core::index::IndexKind::Ontology => "ontology",
-        medulla_core::index::IndexKind::Vector => "vector",
+        medulla_graph_core::index::IndexKind::Text => "text",
+        medulla_graph_core::index::IndexKind::Temporal => "temporal",
+        medulla_graph_core::index::IndexKind::DerivedOwl => "derived_owl",
+        medulla_graph_core::index::IndexKind::Spatial => "spatial",
+        medulla_graph_core::index::IndexKind::EdgeSearch => "edge_search",
+        medulla_graph_core::index::IndexKind::Label => "label",
+        medulla_graph_core::index::IndexKind::Property => "property",
+        medulla_graph_core::index::IndexKind::Ontology => "ontology",
+        medulla_graph_core::index::IndexKind::Vector => "vector",
     }
 }
 
-pub(super) fn index_validity_label(validity: medulla_core::index::IndexValidity) -> &'static str {
+pub(super) fn index_validity_label(validity: medulla_graph_core::index::IndexValidity) -> &'static str {
     match validity {
-        medulla_core::index::IndexValidity::Building => "building",
-        medulla_core::index::IndexValidity::Valid => "valid",
-        medulla_core::index::IndexValidity::Stale => "stale",
-        medulla_core::index::IndexValidity::Failed => "failed",
+        medulla_graph_core::index::IndexValidity::Building => "building",
+        medulla_graph_core::index::IndexValidity::Valid => "valid",
+        medulla_graph_core::index::IndexValidity::Stale => "stale",
+        medulla_graph_core::index::IndexValidity::Failed => "failed",
     }
 }
 
@@ -606,7 +602,7 @@ pub(super) async fn apply_rbac_admin(
     actor: &str,
 ) -> Response {
     let mut s = timed_write(state).await;
-    let audit = medulla_core::isolation::AuditActor {
+    let audit = medulla_isolation::isolation::AuditActor {
         principal: actor,
         now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
     };
@@ -620,7 +616,7 @@ fn rbac_admin_response(
     s: &mut ServerState,
     req_id: u64,
     op: medulla_types::acl::RbacAdminOp,
-    audit: medulla_core::isolation::AuditActor<'_>,
+    audit: medulla_isolation::isolation::AuditActor<'_>,
 ) -> Response {
     use medulla_types::acl::RbacAdminOp;
     use medulla_protocol_types::result_contract::security as results;

@@ -9,7 +9,7 @@
 
 use std::collections::HashSet;
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use medulla_types::wire::{EdgeDir, Pred};
 use petgraph::stable_graph::NodeIndex;
 use petgraph::visit::EdgeRef;

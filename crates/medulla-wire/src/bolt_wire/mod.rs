@@ -36,8 +36,8 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 
-use medulla_core::graph::GraphCore;
-use medulla_core::graph::GraphSnapshot;
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphSnapshot;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::QueryResult;
 use medulla_protocol_types::protocol::Response;
@@ -373,7 +373,7 @@ struct BoltGraphContext {
         Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
     graph_type: medulla_protocol_types::protocol::GraphType,
     owner: Option<String>,
-    isolation: medulla_core::isolation::IsolationLayer,
+    isolation: medulla_isolation::isolation::IsolationLayer,
     persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
     cdc: Option<Arc<medulla_server_api::cdc::CdcHub>>,
@@ -432,9 +432,9 @@ fn authorize_cypher(
         ));
     }
     let level = if is_write {
-        medulla_core::isolation::AccessLevel::Write
+        medulla_isolation::isolation::AccessLevel::Write
     } else {
-        medulla_core::isolation::AccessLevel::Read
+        medulla_isolation::isolation::AccessLevel::Read
     };
     check_graph_access(
         &context.isolation,
@@ -915,7 +915,7 @@ mod tests {
     //! PULL → SUCCESS auto-commit round-trip against the Cypher engine, plus BEGIN/COMMIT
     //! and FAILURE/RESET flows — no external Neo4j driver.
     use super::*;
-    use medulla_core::isolation::IsolationLayer;
+    use medulla_isolation::isolation::IsolationLayer;
     use medulla_server_api::state::ServerState;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 

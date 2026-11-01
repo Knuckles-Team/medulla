@@ -1,6 +1,6 @@
 #![cfg(feature = "graph")]
 
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::{GraphCore, GraphView};
 use medulla_kvcache::{graph_importance, Block, Tier, TieredCache};
 
 fn payload(seed: u8) -> Block {

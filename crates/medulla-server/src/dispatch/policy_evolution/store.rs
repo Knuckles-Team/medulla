@@ -13,7 +13,7 @@ use medulla_decision_types::{
 };
 
 use super::gate::RecordLookup;
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 
 /// The `type` marker `StartTrajectory` stamps on a trajectory node.
 const TRAJECTORY_NODE_TYPE: &str = "Trajectory";

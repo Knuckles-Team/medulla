@@ -1,6 +1,6 @@
 #![cfg(feature = "sql")]
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_query::sql::{
     classify, exec_graph_table_typed_with_tables, lower_graph_table,
     lower_graph_table_to_datafusion, parse_graph_table, parse_graph_table_sql,

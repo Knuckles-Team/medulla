@@ -364,30 +364,31 @@ async fn try_replicate_change_envelope(
         .operation()
         .and_then(|operation| operation.nonce_replay_key().ok())
         .map(|key| key.nonce);
-    let mutation = match medulla_server_api::api::persistence::RaftMutationContext::from_verified_request(
-        envelope.mutation.batch_id.clone(),
-        // The dispatch request number the batch was compiled for, read back
-        // through the one encoder rather than from a second field.
-        medulla_protocol_types::mutation_batch::batch_request_number(&envelope.mutation)
-            .unwrap_or(req_id),
-        attempt_nonce,
-        tenant_scope,
-        // The CALLER, which under RF-RULING-004's application note is the outbox
-        // `actor` header -- never the serving principal, which is this engine's
-        // own and would compare equal for every caller.
-        medulla_server_api::mutation_batch::batch_actor(&envelope.mutation)
-            .unwrap_or_default()
-            .to_string(),
-        false,
-        medulla_server_api::api::persistence::RaftMutationTiming {
-            placement_epoch: envelope.mutation.placement_epoch,
-            fencing_token: envelope.mutation.fencing_token,
-            created_at_ms: envelope.mutation.created_at_ms,
-        },
-    ) {
-        Ok(context) => context,
-        Err(error) => return Some(Response::err(req_id, error)),
-    };
+    let mutation =
+        match medulla_server_api::api::persistence::RaftMutationContext::from_verified_request(
+            envelope.mutation.batch_id.clone(),
+            // The dispatch request number the batch was compiled for, read back
+            // through the one encoder rather than from a second field.
+            medulla_protocol_types::mutation_batch::batch_request_number(&envelope.mutation)
+                .unwrap_or(req_id),
+            attempt_nonce,
+            tenant_scope,
+            // The CALLER, which under RF-RULING-004's application note is the outbox
+            // `actor` header -- never the serving principal, which is this engine's
+            // own and would compare equal for every caller.
+            medulla_server_api::mutation_batch::batch_actor(&envelope.mutation)
+                .unwrap_or_default()
+                .to_string(),
+            false,
+            medulla_server_api::api::persistence::RaftMutationTiming {
+                placement_epoch: envelope.mutation.placement_epoch,
+                fencing_token: envelope.mutation.fencing_token,
+                created_at_ms: envelope.mutation.created_at_ms,
+            },
+        ) {
+            Ok(context) => context,
+            Err(error) => return Some(Response::err(req_id, error)),
+        };
     let server_secret = timed_read(state).await.auth_secret.clone();
     let command = match medulla_raft::raft::ReplicatedMutation::change_envelope_with_budget(
         envelope,
@@ -467,7 +468,7 @@ async fn try_replicate_new_change_envelope(
 /// shape either way, so callers never have to branch on which happened.
 async fn commit_change_envelope_batch_results(
     backend: &Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
-    core: &Arc<medulla_core::graph::GraphCore>,
+    core: &Arc<medulla_graph_core::graph::GraphCore>,
     fname: &str,
     envelopes: &[medulla_protocol_types::change_envelope::ChangeEnvelope],
     committed_at_ms: u64,
@@ -492,7 +493,7 @@ async fn commit_change_envelope_batch_results(
 /// a projection failure is surfaced as `projection_pending` rather than
 /// pretending the durable commit did not happen.
 fn change_envelope_applied_entry(
-    core: &Arc<medulla_core::graph::GraphCore>,
+    core: &Arc<medulla_graph_core::graph::GraphCore>,
     envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
     committed: &medulla_protocol_types::change_envelope::ChangeEnvelopeCommit,
 ) -> txn_results::ChangeEnvelopeOutcome {
@@ -566,7 +567,7 @@ pub(super) async fn route_change_envelope_ops(
 /// write lock, before the durable commit.
 fn harness_boundary_envelope(
     envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
-    core: &Arc<medulla_core::graph::GraphCore>,
+    core: &Arc<medulla_graph_core::graph::GraphCore>,
 ) -> Result<(), String> {
     let mut state = medulla_h_graph::harness_admission::HarnessBoundaryState::default();
     state.check_envelope(envelope, core)
@@ -726,7 +727,8 @@ async fn apply_one_change_envelope_inner(
     let projection_error = if committed.replayed {
         None
     } else {
-        medulla_server_api::mutation_batch::publish_change_envelope_projection(core, &envelope).err()
+        medulla_server_api::mutation_batch::publish_change_envelope_projection(core, &envelope)
+            .err()
     };
     let result = change_envelope_result(&committed, projection_error.is_some());
     Response::ok(

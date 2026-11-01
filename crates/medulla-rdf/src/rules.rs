@@ -228,12 +228,12 @@ pub fn run_rule_reasoning(req: &RuleReasonRequest) -> Result<RuleReasonResponse,
     Ok(project_response(result, req, registered))
 }
 
-/// Reason over a live [`medulla_core::graph::GraphView`] (its folded TBox axioms + asserted
+/// Reason over a live [`medulla_graph_core::graph::GraphView`] (its folded TBox axioms + asserted
 /// facts) plus runtime rules — the GraphView entry a `Reason`/`RunRules` op uses when no
 /// explicit ontology document is supplied (CONCEPT:MEDULLA-KG.ontology.medulla-runtime-swrl-datalog).
 #[cfg(feature = "rdf")]
 pub fn run_rule_reasoning_on_view(
-    view: &medulla_core::graph::GraphView,
+    view: &medulla_graph_core::graph::GraphView,
     req: &RuleReasonRequest,
 ) -> Result<RuleReasonResponse, String> {
     let mut triples = crate::owl::tbox_triples_from_view(view);

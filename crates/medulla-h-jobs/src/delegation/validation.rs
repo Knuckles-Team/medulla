@@ -70,7 +70,9 @@ pub(crate) async fn placement_authority(
     {
         let authority = ctx.state.read().await.placement_authority();
         match authority {
-            medulla_server_api::state::PlacementAuthorityKind::Local => return Ok((0, None, false)),
+            medulla_server_api::state::PlacementAuthorityKind::Local => {
+                return Ok((0, None, false))
+            }
             medulla_server_api::state::PlacementAuthorityKind::Missing => {
                 return Err(Response::err(
                     ctx.req_id,

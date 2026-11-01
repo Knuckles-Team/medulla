@@ -14,11 +14,12 @@
 //! caller-built `KnowledgeSet` record (projection, bitemporal window, epistemic
 //! neighbourhood) — which proves `KnowledgeSet` is reachable from UQL and faithful.
 
-use medulla_core::compute::semantic::SemanticStore;
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
 use medulla_plan::uql::serve::run_statement;
 use medulla_plan::uql::{parse_statement, Body, Params};
 use medulla_plan::{execute, KnowledgeSet, Op, Plan, PlanCtx, RowSet};
+use medulla_semantic_index::semantic::SemanticStore;
 use medulla_text::TextIndex;
 use medulla_types::wire::{TimeAxis, UqlResult, UqlRow};
 use serde_json::json;

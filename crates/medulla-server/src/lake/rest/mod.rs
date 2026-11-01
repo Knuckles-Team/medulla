@@ -51,6 +51,7 @@ use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::RwLock;
 
+use medulla_lake::schema::{LakeField, LakeSchema, LakeType};
 use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::blob::store::ChunkStore;
 use medulla_server_api::http1;
@@ -59,7 +60,6 @@ use medulla_server_api::http1::RequestLimits;
 use medulla_server_api::oidc::JwtValidator;
 use medulla_server_api::oidc::VerifiedTokenClaims;
 use medulla_server_api::state::ServerState;
-use medulla_lake::schema::{LakeField, LakeSchema, LakeType};
 
 use super::{LakeManager, LakeVisibility};
 
@@ -299,7 +299,9 @@ async fn serve_inner(
     store: Arc<dyn ChunkStore>,
     security_state: Option<Arc<RwLock<ServerState>>>,
 ) {
-    if let Err(error) = medulla_server_api::api::dispatch_support::require_loopback_listener(&listener) {
+    if let Err(error) =
+        medulla_server_api::api::dispatch_support::require_loopback_listener(&listener)
+    {
         tracing::error!("Iceberg listener refused: {error}");
         return;
     }
@@ -2010,12 +2012,16 @@ mod tests {
             let matching = sign("agent:reader", "tenant-shared", 300);
             let verified_matching =
                 verify_bearer(Some(&credential), &headers_with_bearer(&matching)).unwrap();
-            assert!(medulla_server_api::auth::mint_iceberg_carrier(Some(&verified_matching)).is_some());
+            assert!(
+                medulla_server_api::auth::mint_iceberg_carrier(Some(&verified_matching)).is_some()
+            );
 
             let other_tenant = sign("agent:reader", "tenant-other", 300);
             let verified_other =
                 verify_bearer(Some(&credential), &headers_with_bearer(&other_tenant)).unwrap();
-            assert!(medulla_server_api::auth::mint_iceberg_carrier(Some(&verified_other)).is_none());
+            assert!(
+                medulla_server_api::auth::mint_iceberg_carrier(Some(&verified_other)).is_none()
+            );
         }
 
         /// W03: `/v1/oauth/tokens` gives an already-verifying bearer the SAME

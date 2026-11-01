@@ -13,7 +13,7 @@ struct GraphDispatchCapture<'a> {
     verified_actor: String,
     tenant_scope: String,
     gateway_authz_ctx: Option<medulla_server_api::mutation::GatewayAuthzCtx>,
-    core: Arc<medulla_core::graph::GraphCore>,
+    core: Arc<medulla_graph_core::graph::GraphCore>,
     materialization_manifest:
         Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
     persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
@@ -32,7 +32,7 @@ struct GraphDispatchCapture<'a> {
     #[cfg(feature = "redb")]
     cold_tracker: Option<Arc<medulla_persistence::cold_offload::ColdTenantTracker>>,
     #[cfg(feature = "security")]
-    rls: std::sync::Arc<medulla_core::isolation::IsolationLayer>,
+    rls: std::sync::Arc<medulla_isolation::isolation::IsolationLayer>,
     #[cfg(all(feature = "mining", feature = "query", feature = "tsdb"))]
     tsdb_store: Option<Arc<medulla_tsdb::store::SeriesStore>>,
 }
@@ -252,7 +252,7 @@ pub(in crate::dispatch) struct GraphOpRouting<'a> {
     pub(super) verified_actor: &'a str,
     pub(in crate::dispatch) tenant_scope: &'a str,
     pub(super) gateway_authz_ctx: &'a Option<medulla_server_api::mutation::GatewayAuthzCtx>,
-    pub(in crate::dispatch) core: &'a Arc<medulla_core::graph::GraphCore>,
+    pub(in crate::dispatch) core: &'a Arc<medulla_graph_core::graph::GraphCore>,
     pub(super) materialization_manifest:
         &'a Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
     pub(in crate::dispatch) persistence:
@@ -260,7 +260,7 @@ pub(in crate::dispatch) struct GraphOpRouting<'a> {
     #[cfg(feature = "streaming")]
     pub(super) cdc: &'a Option<Arc<medulla_server_api::cdc::CdcHub>>,
     #[cfg(feature = "security")]
-    pub(super) rls: &'a std::sync::Arc<medulla_core::isolation::IsolationLayer>,
+    pub(super) rls: &'a std::sync::Arc<medulla_isolation::isolation::IsolationLayer>,
     #[cfg(feature = "raft")]
     pub(in crate::dispatch) routed_raft: &'a Option<medulla_raft::raft::multi::RoutedRaftHandle>,
     #[cfg(feature = "raft")]

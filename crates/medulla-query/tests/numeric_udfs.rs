@@ -3,7 +3,7 @@
 //! (compute-near-data) against hand-computed values. Only compiles under `numeric`.
 #![cfg(feature = "numeric")]
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_query::{exec_sql, CancellationToken};
 use serde_json::json;
 

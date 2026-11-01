@@ -120,7 +120,7 @@ pub fn terminal_method(lease_epoch: u64, fencing_token: u64) -> medulla_protocol
 /// Add the Commons RBAC grant shared by authenticated protocol fixtures.
 /// Keeping this beside the other shared fixtures lets query and wire tests reuse the
 /// exact policy shape without copying an agent-registration block.
-pub fn grant_commons_user(isolation: &mut medulla_core::isolation::IsolationLayer) {
+pub fn grant_commons_user(isolation: &mut medulla_isolation::isolation::IsolationLayer) {
     #[cfg(feature = "security")]
     {
         use medulla_types::acl::Grant;
@@ -145,7 +145,7 @@ pub fn grant_commons_user(isolation: &mut medulla_core::isolation::IsolationLaye
 /// Both query and protocol round-trip tests use this helper; the caller
 /// remains responsible for choosing the principal's identity and any
 /// additional roles required by its scenario.
-pub fn register_commons_agent(isolation: &mut medulla_core::isolation::IsolationLayer, agent_id: &str) {
+pub fn register_commons_agent(isolation: &mut medulla_isolation::isolation::IsolationLayer, agent_id: &str) {
     isolation.register_agent(medulla_types::acl::AgentIdentity {
         agent_id: agent_id.to_string(),
         role: medulla_types::acl::AgentRole::Agent,

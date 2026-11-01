@@ -20,7 +20,7 @@
 
 use std::collections::HashSet;
 
-use medulla_core::compute::semantic::SemanticStore;
+use medulla_semantic_index::semantic::SemanticStore;
 
 use crate::algebra::Op;
 use crate::exec::PlanCtx;

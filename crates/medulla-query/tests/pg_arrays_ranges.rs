@@ -6,7 +6,7 @@
 //! and the pragmatic range UDFs.
 #![cfg(feature = "sql")]
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_query::exec_sql;
 use serde_json::json;
 

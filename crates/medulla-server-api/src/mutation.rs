@@ -95,9 +95,9 @@
 use std::sync::Arc;
 
 #[cfg(test)]
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 #[cfg(test)]
-use medulla_core::isolation::IsolationLayer;
+use medulla_isolation::isolation::IsolationLayer;
 #[cfg(test)]
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::ResultPayload;
@@ -1000,7 +1000,6 @@ mod tests {
             open.len(),
         );
     }
-
 
     /// `cluster_mutation_route` must classify each `SELF_ROUTED_ADMIN_METHODS`
     /// entry as `SelfRoutedAdmin`, never `ConsensusNative` -- the exact bug

@@ -436,7 +436,7 @@ mod tests {
     fn test_state() -> Arc<RwLock<ServerState>> {
         Arc::new(RwLock::new(ServerState::new_for_test(
             "graph-tile-source-test-secret",
-            medulla_core::isolation::IsolationLayer::new(),
+            medulla_isolation::isolation::IsolationLayer::new(),
         )))
     }
 

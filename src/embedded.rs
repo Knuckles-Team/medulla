@@ -62,7 +62,7 @@ use std::sync::Arc;
 
 use parking_lot::{Mutex, RwLock};
 
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::{GraphCore, GraphView};
 use medulla_protocol_types::protocol::{GraphType, Method};
 use medulla_core::registry::GraphRegistry;
 
@@ -371,7 +371,7 @@ impl EmbeddedEngine {
             let validation = match self.core(graph, false) {
                 Ok(core) => core.semantic_store.read().validate_embedding(embedding),
                 Err(_) => {
-                    medulla_core::compute::semantic::SemanticStore::new().validate_embedding(embedding)
+                    medulla_semantic_index::semantic::SemanticStore::new().validate_embedding(embedding)
                 }
             };
             validation.map_err(|error| error.to_string())?;

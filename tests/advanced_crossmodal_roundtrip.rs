@@ -131,7 +131,7 @@ async fn state() -> test_support::SharedState {
 /// `"commons-user"` role (CONCEPT:MEDULLA-KG.compute.durable-rbac-identity-persistence): the role +
 /// grants live on the policy, `register_identity_req` threads the role NAME onto each
 /// registered peer's `AgentIdentity.roles`.
-fn commons_isolation() -> medulla_core::isolation::IsolationLayer {
+fn commons_isolation() -> medulla_isolation::isolation::IsolationLayer {
     let mut isolation = common::current_isolation();
     #[cfg(feature = "security")]
     {
@@ -239,7 +239,7 @@ async fn stage_rls_overlay(state: &Arc<RwLock<ServerState>>, first_id: u64, agen
         Method::TxnAddNode {
             txn_id: txn_id.clone(),
             node_id: "stg_pub".into(),
-            // Default-deny RLS (`medulla_core::isolation::row_visibility`) hides ANY
+            // Default-deny RLS (`medulla_graph_core::rls::row_visibility`) hides ANY
             // untagged row from a non-`System` actor -- an unowned row needs an
             // EXPLICIT `_visibility: "public"` tag to be seen by `agent_b` at all.
             // BUG-064: a bare `_visibility: "public"` tag on an unowned row with
@@ -1944,7 +1944,7 @@ async fn explain_belief_disclosure_level_returns_redacted_skeleton_over_rpc() {
     // Seed the claim/evidence/secret topology as the provisioned system identity.
     // `claim1`/`evidence1` are meant PUBLIC (visible to `stranger` too, so its earned
     // level is `Skeleton` rather than `ExistenceOnly`) -- default-deny RLS
-    // (`medulla_core::isolation::row_visibility`) hides an untagged, unowned row from a
+    // (`medulla_graph_core::rls::row_visibility`) hides an untagged, unowned row from a
     // non-`System` actor just like `filter_view` would, so they need an EXPLICIT
     // `_visibility: "public"` tag (see `medulla_epistemic::redact`'s own `untagged_hidden`).
     ok(

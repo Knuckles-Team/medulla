@@ -16,7 +16,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use petgraph::visit::EdgeRef;
 use serde_json::{Map, Value};
 

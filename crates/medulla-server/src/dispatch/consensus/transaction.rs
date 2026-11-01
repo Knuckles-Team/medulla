@@ -39,19 +39,20 @@ pub(super) async fn commit_carrier_native_command(
     proposal: CarrierNativeCommand<'_>,
 ) -> Result<medulla_raft::raft::RaftResponse, String> {
     let committed_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-    let mutation = medulla_server_api::api::persistence::RaftMutationContext::from_verified_request(
-        proposal.batch_id,
-        proposal.request_id,
-        proposal.attempt_nonce,
-        proposal.authority.tenant_scope(),
-        proposal.authority.actor_scope().to_string(),
-        false,
-        medulla_server_api::api::persistence::RaftMutationTiming {
-            placement_epoch: proposal.placement_epoch,
-            fencing_token: proposal.fencing_token,
-            created_at_ms: committed_at_ms,
-        },
-    )?;
+    let mutation =
+        medulla_server_api::api::persistence::RaftMutationContext::from_verified_request(
+            proposal.batch_id,
+            proposal.request_id,
+            proposal.attempt_nonce,
+            proposal.authority.tenant_scope(),
+            proposal.authority.actor_scope().to_string(),
+            false,
+            medulla_server_api::api::persistence::RaftMutationTiming {
+                placement_epoch: proposal.placement_epoch,
+                fencing_token: proposal.fencing_token,
+                created_at_ms: committed_at_ms,
+            },
+        )?;
     let request = medulla_raft::raft::RaftRequest {
         graph_fname: medulla_kernel::persist::sanitize(&proposal.graph_name),
         graph_name: proposal.graph_name,
@@ -135,7 +136,11 @@ impl TransactionConsensusPhase {
         }
     }
 
-    fn command(self, coordinator_id: &str, commit: bool) -> medulla_raft::raft::NativeMutationCommand {
+    fn command(
+        self,
+        coordinator_id: &str,
+        commit: bool,
+    ) -> medulla_raft::raft::NativeMutationCommand {
         match self {
             Self::Decision => medulla_raft::raft::NativeMutationCommand::TransactionDecision {
                 coordinator_id: coordinator_id.to_string(),

@@ -2,7 +2,7 @@
 //! `AddNode` + `GetNodeProperties` op (unified-binary program, workstream W-A;
 //! see `docs/architecture/unified-inprocess-engine.md`).
 //!
-//! Both arms call the IDENTICAL `medulla_core::graph::GraphCore` mutation —
+//! Both arms call the IDENTICAL `medulla_graph_core::graph::GraphCore` mutation —
 //! the only variable is the transport in between:
 //!
 //!   * `inprocess`  — calls `GraphCore::add_node` / `get_node_properties`
@@ -47,7 +47,7 @@ use std::cell::Cell;
 use std::sync::Arc;
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixListener, UnixStream};

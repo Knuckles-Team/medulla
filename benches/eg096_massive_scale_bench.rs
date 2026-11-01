@@ -29,7 +29,7 @@ use std::hint::black_box;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use medulla_ann::{FlatIndex, HnswIndex, IvfPq, IvfPqParams, Metric, SearchParams};
 use medulla_core::broker::{route, topic_matches, Binding, ExchangeKind};
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 
 // ── Deterministic, dependency-free PRNG ──────────────────────────────────
 // splitmix64: keeps the harness reproducible across runs and avoids pulling a

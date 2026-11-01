@@ -151,7 +151,7 @@ async fn handle_cypher_read(ctx: &QueryHandlerCtx<'_>, query: String) -> Respons
         // miss branch reuses `built_version` (what `analysis_snapshot_versioned`
         // itself captured), exactly as the pre-existing code did.
         #[cfg(feature = "security")]
-        let (snap, version): (Arc<medulla_core::graph::GraphView>, u64) =
+        let (snap, version): (Arc<medulla_graph_core::graph::GraphView>, u64) =
             versioned_rls_snapshot(&core, caller, rls);
         #[cfg(not(feature = "security"))]
         let (snap, version) = core.analysis_snapshot_versioned();

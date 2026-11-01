@@ -44,13 +44,15 @@ fn store_policy_record_row(
         let mut row = request.row()?;
         write_work_item_props(nodes, graph, &request.record_id, &mut row, crypto)?;
     }
-    medulla_protocol_types::protocol::ResultPayload::of::<PolicyEvolutionStore>(PolicyRecordStored {
-        created,
-        changed_work_item_ids: created
-            .then(|| request.record_id.clone())
-            .into_iter()
-            .collect(),
-    })
+    medulla_protocol_types::protocol::ResultPayload::of::<PolicyEvolutionStore>(
+        PolicyRecordStored {
+            created,
+            changed_work_item_ids: created
+                .then(|| request.record_id.clone())
+                .into_iter()
+                .collect(),
+        },
+    )
 }
 
 #[cfg(test)]

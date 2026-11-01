@@ -230,7 +230,7 @@ pub(crate) fn apply_insert_nodes_select_row(
 pub(crate) fn resolve_insert_nodes_select(
     core: &Arc<GraphCore>,
     visible: &Arc<GraphCore>,
-    snap: &medulla_core::graph::GraphView,
+    snap: &medulla_graph_core::graph::GraphView,
     store: &medulla_query::TableStore,
     ins: medulla_query::InsertNodesSelect,
 ) -> Result<usize, String> {

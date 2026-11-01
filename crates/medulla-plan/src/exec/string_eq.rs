@@ -19,7 +19,7 @@
 //! * every compared property occurs on at least one candidate. A property no node
 //!   carries is an unknown SQL column, and the SQL leg reports that as an error.
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use serde_json::Value;
 
 use crate::algebra::Pred;
@@ -84,7 +84,7 @@ fn row_matches(blob: &[u8], wanted: &[(&str, &str)], seen: &mut [bool]) -> Optio
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use serde_json::json;
 
     fn view(rows: &[(&str, serde_json::Value)]) -> GraphView {

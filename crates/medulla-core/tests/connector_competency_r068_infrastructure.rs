@@ -7,7 +7,8 @@
 //! valid fixture conforms to the SHACL companion while a violating fixture
 //! (a negative pull count) fails the shape.
 
-use medulla_core::graph::{GraphSchemaSources, SchemaSourceOrigin};
+use medulla_graph_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::SchemaSourceOrigin;
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::{NamedNode, Triple};
 

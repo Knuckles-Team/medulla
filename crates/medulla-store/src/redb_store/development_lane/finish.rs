@@ -13,11 +13,11 @@ use super::results::{finish_result, get_index, get_lane_index};
 use super::types::LaneDecision;
 use super::work_item::load_work_item;
 use super::DurableLaneHold;
+use medulla_protocol_types::protocol::DevelopmentLaneWorkItemKind;
 use medulla_result_types::epistemic_operations::DevelopmentLaneFinishRequest;
 use medulla_result_types::epistemic_operations::DevelopmentLaneFinishRequestTerminalState;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
 use medulla_result_types::epistemic_operations::DevelopmentLaneHoldState;
-use medulla_protocol_types::protocol::DevelopmentLaneWorkItemKind;
 use medulla_storage::ScopedOwnerTableMut;
 
 pub(super) fn finish_state_matches(

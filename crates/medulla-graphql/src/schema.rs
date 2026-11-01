@@ -15,7 +15,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphView;
 use serde_json::Value;
 
 /// One GraphQL object type derived from a node label.
@@ -292,7 +292,7 @@ pub(crate) fn validate_field_name(name: &str) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use serde_json::json;
 
     fn encoded(value: Value) -> Vec<u8> {

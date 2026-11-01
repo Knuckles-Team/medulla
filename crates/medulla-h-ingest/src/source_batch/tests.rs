@@ -1,6 +1,6 @@
+use super::*;
 use medulla_protocol_types::protocol_fixtures::sql_source::change;
 use medulla_protocol_types::protocol_fixtures::sql_source::id;
-use super::*;
 use medulla_protocol_types::storage_wire::SqlSourceCell;
 use medulla_query::Cell;
 
@@ -159,7 +159,7 @@ async fn terminal_response_uses_raw_typed_result_and_verified_nonce() {
         "terminal".into(),
         Some(Nonce::from_bytes([9; 32])),
     );
-    let mut state = ServerState::new("test", medulla_core::isolation::IsolationLayer::new());
+    let mut state = ServerState::new("test", medulla_isolation::isolation::IsolationLayer::new());
     state.persist_dir = Some(fixture.directory.to_str().unwrap().into());
     let state = Arc::new(RwLock::new(state));
     let request = fixture.request("bob");
@@ -228,8 +228,7 @@ fn active_raft_refuses_local_sql_source_authority_before_publication() {
     let carrier = authority("bob", "tenant-a", "raft", true);
     let request = fixture.request("bob");
     let _environment_lock = medulla_kernel::crypto::acquire_test_env_lock_blocking();
-    let _environment =
-        medulla_persistence::backup::EnvVarGuard::set("MEDULLA_RAFT_NODE_ID", "1");
+    let _environment = medulla_persistence::backup::EnvVarGuard::set("MEDULLA_RAFT_NODE_ID", "1");
     assert!(submit(&fixture, &carrier, request, 1)
         .unwrap_err()
         .contains("no replicated ordering"));
@@ -241,9 +240,9 @@ fn audit_line_carries_only_the_canonical_batch_digest() {
     let fixture = Fixture::new();
     let request = fixture.request("bob");
     let expected = request.canonical_digests().unwrap().batch_digest.to_hex();
-    let line = medulla_kernel::audit::audit_line(&medulla_protocol_types::protocol::Method::SqlSourceBatch {
-        batch: request,
-    })
+    let line = medulla_kernel::audit::audit_line(
+        &medulla_protocol_types::protocol::Method::SqlSourceBatch { batch: request },
+    )
     .unwrap();
     assert_eq!(line, format!("SQL_SOURCE_BATCH_MUTATION|sha256:{expected}"));
     for leaked in ["jira", "issues", "project-a", "issue_id", "deployment"] {

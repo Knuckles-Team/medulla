@@ -38,7 +38,7 @@ async fn harness() -> Harness {
     let dir = tempfile::tempdir().unwrap();
     let mut server = ServerState::new_for_test(
         "coverage-test-secret",
-        medulla_core::isolation::IsolationLayer::new(),
+        medulla_isolation::isolation::IsolationLayer::new(),
     );
     server.persist_dir = Some(dir.path().to_string_lossy().into_owned());
     let state = Arc::new(RwLock::new(server));

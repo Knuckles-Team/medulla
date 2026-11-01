@@ -1,7 +1,7 @@
+use super::*;
 use medulla_index_types::semantic_index::SemanticBinding;
 use medulla_index_types::semantic_index::SemanticIndexCommand;
 use medulla_index_types::semantic_index::SemanticIndexRequest;
-use super::*;
 
 impl SemanticIndexServerAdapter {
     pub fn new(service: Arc<SemanticIndexService>) -> Self {
@@ -81,7 +81,7 @@ impl SemanticIndexServerAdapter {
         request: &SemanticIndexRequest,
         authority: &CarrierAuthority,
         now_ms: u64,
-    ) -> Result<medulla_core::compute::semantic_ann_codes::SemanticMutationReceipt, String> {
+    ) -> Result<medulla_ann_codes::semantic_ann_codes::SemanticMutationReceipt, String> {
         self.authorize(request, authority, now_ms)?;
         let SemanticIndexCommand::CreateBinding { draft } = &request.command else {
             return Err(

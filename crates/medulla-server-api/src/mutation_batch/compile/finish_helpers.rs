@@ -4,10 +4,10 @@ use std::collections::BTreeMap;
 
 use medulla_mutation_types::mutation_scope::IncarnationId;
 use medulla_mutation_types::mutation_scope::LogicalName;
-use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use medulla_mutation_types::mutation_scope::ScopeTenantId;
+use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_protocol_types::mutation_batch::VersionExpectation;
 
 use super::{CompileBatch, CompiledOutbox, COMPILED_BATCH_INCARNATION};

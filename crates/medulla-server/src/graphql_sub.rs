@@ -32,12 +32,12 @@ use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{OwnedSemaphorePermit, RwLock, Semaphore};
 
-use medulla_core::graph::ChangeEvent;
-use medulla_core::graph::ChangeSink;
-use medulla_core::graph::GraphCore;
-use medulla_core::graph::GraphView;
-use medulla_core::isolation::AccessLevel;
-use medulla_core::isolation::IsolationLayer;
+use medulla_graph_core::graph::ChangeEvent;
+use medulla_graph_core::graph::ChangeSink;
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
+use medulla_isolation::isolation::AccessLevel;
+use medulla_isolation::isolation::IsolationLayer;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;

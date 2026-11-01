@@ -29,11 +29,14 @@ const GRAPH: &str = "tenant:acme";
 async fn bring_up(
     dir: &str,
     backend: fixture::Backend,
-) -> (Arc<MultiRaft>, Arc<RwLock<medulla_server_api::state::ServerState>>) {
+) -> (
+    Arc<MultiRaft>,
+    Arc<RwLock<medulla_server_api::state::ServerState>>,
+) {
     let (multi, state) = fixture::start_single_node_groups(
         dir,
         backend,
-        medulla_core::isolation::IsolationLayer::new(),
+        medulla_isolation::isolation::IsolationLayer::new(),
         "reshard-test",
         &[GROUP_A, GROUP_B],
     )
@@ -72,7 +75,10 @@ async fn write_via_owner(multi: &Arc<MultiRaft>, node_id: &str) -> Result<(), St
     group.client_write(req).await.map(|_| ())
 }
 
-async fn has_node(state: &Arc<RwLock<medulla_server_api::state::ServerState>>, node_id: &str) -> bool {
+async fn has_node(
+    state: &Arc<RwLock<medulla_server_api::state::ServerState>>,
+    node_id: &str,
+) -> bool {
     let s = state.read().await;
     s.registry
         .get(GRAPH)
@@ -183,7 +189,7 @@ async fn reshard_data_durable_across_restart() {
     let (multi2, state2) = fixture::start_recovered_single_node_groups(
         &dir,
         backend2.clone(),
-        medulla_core::isolation::IsolationLayer::new(),
+        medulla_isolation::isolation::IsolationLayer::new(),
         "reshard-test",
         &[GROUP_A, GROUP_B],
     )

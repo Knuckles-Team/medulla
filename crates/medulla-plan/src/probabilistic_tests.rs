@@ -10,8 +10,9 @@
 //!  * `Sample { seed }` — deterministic seeded draw (same seed ⇒ same score).
 
 use medulla_catalog_types::distribution::Distribution;
-use medulla_core::compute::semantic::SemanticStore;
-use medulla_core::graph::{GraphCore, GraphView};
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
+use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::{ProbEvidenceSpec, ProbQuery};
 use serde_json::json;
 

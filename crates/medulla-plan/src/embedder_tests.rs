@@ -11,8 +11,8 @@
 //!    stable unit-norm vector and a wrong-width result fails closed at the shared rank guard.
 
 use crate::exec::{execute, HashEmbedder, PlanCtx, TextEmbedder};
-use medulla_core::compute::semantic::SemanticStore;
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
+use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::{Op, Plan};
 use serde_json::json;
 
@@ -32,7 +32,7 @@ impl TextEmbedder for MapEmbedder {
 
 /// Three `Doc` nodes with distinct 2-D embeddings, so a query near `[1,0]` ranks `a`
 /// first, then `c`, then `b`.
-fn fixture() -> (medulla_core::graph::GraphView, SemanticStore) {
+fn fixture() -> (medulla_graph_core::graph::GraphView, SemanticStore) {
     let core = GraphCore::new();
     let blob = |v: serde_json::Value| rmp_serde::to_vec_named(&v).unwrap();
     for id in ["a", "b", "c"] {

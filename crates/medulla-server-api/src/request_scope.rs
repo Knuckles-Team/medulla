@@ -10,7 +10,7 @@
 //!
 //! * waits (a pack lock) race it and give up with [`CANCELLED`];
 //! * CPU-bound work runs through [`interruptible`], which installs it as the
-//!   `medulla_core::interrupt` probe the reasoning step loops poll, and discards the
+//!   `medulla_semantic_index::interrupt` probe the reasoning step loops poll, and discards the
 //!   result of an interrupted run.
 
 use std::future::Future;
@@ -65,12 +65,9 @@ pub fn current() -> RequestCancel {
 /// Run blocking `work` interruptibly on behalf of `cancel`'s request. An
 /// interrupted run's result is partial by construction, so once `cancel` has
 /// tripped the result is discarded and [`CANCELLED`] is returned instead.
-pub fn interruptible<T>(
-    cancel: &RequestCancel,
-    work: impl FnOnce() -> T,
-) -> Result<T, String> {
+pub fn interruptible<T>(cancel: &RequestCancel, work: impl FnOnce() -> T) -> Result<T, String> {
     let probe = cancel.clone();
-    let output = medulla_core::interrupt::scoped(move || probe.is_cancelled(), work);
+    let output = medulla_semantic_index::interrupt::scoped(move || probe.is_cancelled(), work);
     if cancel.is_cancelled() {
         return Err(CANCELLED.to_string());
     }
@@ -114,7 +111,7 @@ mod tests {
         let tripped = cancel.clone();
         let outcome = interruptible(&cancel, move || {
             tripped.cancel();
-            medulla_core::interrupt::requested()
+            medulla_semantic_index::interrupt::requested()
         });
         assert_eq!(outcome, Err(CANCELLED.to_string()));
     }

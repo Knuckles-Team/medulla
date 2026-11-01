@@ -51,7 +51,7 @@ const WORKER: &str = "semantic-dispatch-worker";
 fn dispatch_state(persist_dir: &std::path::Path) -> Arc<RwLock<medulla_server_api::state::ServerState>> {
     let mut state = medulla_server_api::state::ServerState::new_for_test(
         SECRET,
-        medulla_core::isolation::IsolationLayer::new(),
+        medulla_isolation::isolation::IsolationLayer::new(),
     );
     state.persist_dir = Some(persist_dir.to_string_lossy().into_owned());
     Arc::new(RwLock::new(state))
@@ -698,7 +698,7 @@ async fn dispatch_attributes_every_queue_class_to_the_one_verified_principal() {
     assert_eq!(fast.entries.len(), 1, "the admitted S1 is claimable");
     let fast_entry = fast.entries.into_iter().next().unwrap();
     let fast_parts =
-        medulla_core::compute::semantic_ann_codes::stage_consumer_parts(&fast_entry.lease.consumer)
+        medulla_ann_codes::semantic_ann_codes::stage_consumer_parts(&fast_entry.lease.consumer)
             .expect("a leased row's consumer is `<worker>#<class>`");
     assert_eq!(
         fast_parts.0, WORKER,
@@ -764,7 +764,7 @@ async fn dispatch_attributes_every_queue_class_to_the_one_verified_principal() {
         "completing S1 publishes its S2 successor onto the Medium queue"
     );
     let medium_entry = medium.entries.into_iter().next().unwrap();
-    let medium_parts = medulla_core::compute::semantic_ann_codes::stage_consumer_parts(
+    let medium_parts = medulla_ann_codes::semantic_ann_codes::stage_consumer_parts(
         &medium_entry.lease.consumer,
     )
     .expect("a leased row's consumer is `<worker>#<class>`");

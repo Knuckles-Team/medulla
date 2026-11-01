@@ -1,10 +1,10 @@
 //! Private transaction consensus implementation.
 
 use super::*;
-#[cfg(feature = "raft")]
-use medulla_raft::raft::RaftStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
+#[cfg(feature = "raft")]
+use medulla_raft::raft::RaftStateExt;
 
 #[path = "consensus/authority.rs"]
 mod authority;
@@ -319,7 +319,7 @@ pub(super) async fn validate_consensus_participant_placement(
     applying_group: medulla_raft::raft::GroupId,
     applying_epoch: u64,
     applying_fence: Option<u64>,
-) -> Result<Arc<medulla_core::graph::GraphCore>, String> {
+) -> Result<Arc<medulla_graph_core::graph::GraphCore>, String> {
     if plan.group_id != applying_group
         || plan.placement_epoch != applying_epoch
         || plan.fencing_token != applying_fence
@@ -351,7 +351,7 @@ pub(super) async fn validate_consensus_participant_placement(
 
 #[cfg(feature = "raft")]
 pub(super) fn extra_participant_is_valid(
-    core: &medulla_core::graph::GraphCore,
+    core: &medulla_graph_core::graph::GraphCore,
     methods: &[Method],
 ) -> bool {
     let inserts: std::collections::BTreeSet<&str> = methods
@@ -516,7 +516,7 @@ pub async fn apply_consensus_participant_prepare(
 fn participant_write_set_is_valid(
     txn: &GraphTxnState,
     graph_name: &str,
-    core: &medulla_core::graph::GraphCore,
+    core: &medulla_graph_core::graph::GraphCore,
 ) -> Result<bool, String> {
     let methods = participant_methods(txn, graph_name)
         .ok_or_else(|| "consensus participant has no graph slice".to_string())?;
@@ -531,7 +531,7 @@ fn participant_write_set_is_valid(
 pub(super) fn isolate_participant_transaction(
     mut txn: GraphTxnState,
     graph_name: &str,
-    core: &medulla_core::graph::GraphCore,
+    core: &medulla_graph_core::graph::GraphCore,
 ) -> Result<GraphTxnState, String> {
     if txn.graph == graph_name {
         txn.extra_writes.clear();
@@ -572,8 +572,9 @@ pub async fn apply_consensus_participant_commit(
         participant_id,
         plan_bytes,
     } = participant;
-    let principal =
-        medulla_server_api::mutation_batch::principal_fingerprint(&authority.principal_fingerprint)?;
+    let principal = medulla_server_api::mutation_batch::principal_fingerprint(
+        &authority.principal_fingerprint,
+    )?;
     let (plan, txn) = decode_consensus_participant(plan_bytes, coordinator_id, participant_id)?;
     let backend = state
         .read()

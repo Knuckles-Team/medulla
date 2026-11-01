@@ -25,7 +25,9 @@ fn retired(shard: &Shard, tag: &str, request: RetireSealedRecordRequest) -> Seal
     match with_nodes(shard, tag, |nodes| {
         apply_retire_sealed_record_row(GRAPH, &request, nodes, DurableCrypto::none())
     }) {
-        Some(medulla_protocol_types::protocol::ResultPayload::Json(value)) => serde_json::from_value(value).unwrap(),
+        Some(medulla_protocol_types::protocol::ResultPayload::Json(value)) => {
+            serde_json::from_value(value).unwrap()
+        }
         other => panic!("retirement answers JSON, got {other:?}"),
     }
 }

@@ -27,13 +27,13 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 #[cfg(any(feature = "query", feature = "cypher", feature = "graphql"))]
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 #[cfg(feature = "result-cache")]
-use medulla_core::result_cache::ResultCache;
+use medulla_query_cache::result_cache::ResultCache;
 #[cfg(feature = "graphql")]
 use medulla_graphql::parser::{Field, GqlValue};
 use medulla_server_api::access::GraphReadAuthority;
@@ -86,7 +86,7 @@ fn bind_served_statement(
 fn cached_served_response<M>(
     req_id: u64,
     core: &GraphCore,
-    key: &Option<(u128, Option<medulla_core::dep_scope::DepSet>)>,
+    key: &Option<(u128, Option<medulla_query_cache::dep_scope::DepSet>)>,
 ) -> Option<Response>
 where
     M: MethodResult<Encoding = encoding::Raw>,
@@ -201,7 +201,7 @@ mod uql_statement;
 pub mod current_auth_test_support {
     use medulla_types::acl::AgentIdentity;
     use medulla_types::acl::AgentRole;
-    use medulla_core::isolation::IsolationLayer;
+    use medulla_isolation::isolation::IsolationLayer;
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;
     use medulla_server_api::api::persistence::PersistenceBackend;
@@ -305,10 +305,10 @@ mod rls_no_exfiltrate_tests {
     //! Proof (CONCEPT:MEDULLA-KG.sharding.row-level-security): RLS filters the read/plan-path snapshot so neither
     //! SQL nor Cypher can exfiltrate a forbidden row. Agent A's query MUST exclude
     //! agent B's private node; a public node is visible to both.
-    use medulla_core::graph::GraphView;
+    use medulla_graph_core::graph::GraphView;
     use medulla_types::acl::AgentIdentity;
     use medulla_types::acl::AgentRole;
-    use medulla_core::isolation::IsolationLayer;
+    use medulla_isolation::isolation::IsolationLayer;
     use std::sync::Arc;
 
     fn node_blob(pairs: &[(&str, &str)]) -> Arc<Vec<u8>> {
@@ -487,11 +487,11 @@ mod result_cache_dispatch_tests {
 
     const Q: &str = "MATCH (n:Person) RETURN n";
 
-    fn cache_stats(core: &Arc<medulla_core::graph::GraphCore>) -> (u64, u64) {
+    fn cache_stats(core: &Arc<medulla_graph_core::graph::GraphCore>) -> (u64, u64) {
         core.result_cache().stats()
     }
 
-    async fn core_of(state: &Arc<RwLock<ServerState>>) -> Arc<medulla_core::graph::GraphCore> {
+    async fn core_of(state: &Arc<RwLock<ServerState>>) -> Arc<medulla_graph_core::graph::GraphCore> {
         state
             .read()
             .await
@@ -803,7 +803,7 @@ mod rls_aware_cache_no_cross_agent_leak {
         assert!(r.error.is_none(), "AddNode failed: {:?}", r.error);
     }
 
-    async fn core_of(state: &Arc<RwLock<ServerState>>) -> Arc<medulla_core::graph::GraphCore> {
+    async fn core_of(state: &Arc<RwLock<ServerState>>) -> Arc<medulla_graph_core::graph::GraphCore> {
         state
             .read()
             .await
@@ -1983,7 +1983,7 @@ mod txn_ryow_dispatch_tests {
 #[cfg(all(test, feature = "evidence-graph", feature = "alignment"))]
 mod evidence_resolver_wiring_tests {
     use super::explain_evidence_wire;
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use medulla_server_api::blob::stream::stream_blob_put;
     use medulla_server_api::blob::ChunkStore;
     use medulla_server_api::blob::RedbChunkStore;

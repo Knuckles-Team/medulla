@@ -9,7 +9,7 @@
 use medulla_persistence::AsRedb;
 use std::sync::Arc;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::api::persistence::PersistenceBackend;
@@ -191,9 +191,14 @@ fn publication_authority<'a>(
         .as_ref()
         .and_then(|backend| backend.as_redb())
         .ok_or_else(|| format!("{kind} publication requires native persistence"))?;
-    let actor =
-        medulla_server_api::mutation_batch::principal_fingerprint(ctx.verified_context.principal())?;
-    Ok((backend, medulla_kernel::persist::sanitize(ctx.graph_name), actor))
+    let actor = medulla_server_api::mutation_batch::principal_fingerprint(
+        ctx.verified_context.principal(),
+    )?;
+    Ok((
+        backend,
+        medulla_kernel::persist::sanitize(ctx.graph_name),
+        actor,
+    ))
 }
 
 /// Authorization precedes the ledger lookup even for an expired historical retry.

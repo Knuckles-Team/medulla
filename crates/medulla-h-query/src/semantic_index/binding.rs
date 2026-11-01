@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use medulla_core::compute::semantic_ann_codes::OperationAttribution;
-use medulla_core::compute::semantic_index_service::SemanticIndexService;
+use medulla_ann_codes::semantic_ann_codes::OperationAttribution;
+use medulla_ann_codes::semantic_index_service::SemanticIndexService;
 use medulla_index_types::{
     semantic_index::SemanticBinding, semantic_index::SemanticIndexOp,
     semantic_index::SemanticSqlSourceManifest,

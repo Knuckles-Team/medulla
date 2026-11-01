@@ -3,14 +3,14 @@
 //! The saga ledger is reached through [`AdminSagaLedger`], implemented by the durable backend.
 
 use crate::access::CarrierAuthority;
-use medulla_types::contract::Nonce;
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::mutation_batch::MutationBatchCommit;
 use medulla_protocol_types::mutation_batch::MutationBatchRecord;
-use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
-use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_protocol_types::protocol::Method;
+use medulla_types::contract::Nonce;
 
 /// The admin-mutations ledger operations an admin saga needs, implemented by the durable
 /// backend.
@@ -127,7 +127,9 @@ pub enum DurableAdminResult {
 
 #[cfg(feature = "redb")]
 impl DurableAdminResult {
-    pub fn from_result(result: &medulla_protocol_types::protocol::ResultPayload) -> Result<Self, String> {
+    pub fn from_result(
+        result: &medulla_protocol_types::protocol::ResultPayload,
+    ) -> Result<Self, String> {
         use medulla_protocol_types::protocol::ResultPayload;
         match result {
             ResultPayload::Bool(value) => Ok(Self::Bool(*value)),
@@ -264,7 +266,10 @@ impl AdminSagaResultContract {
         }
     }
 
-    pub fn validate(self, result: &medulla_protocol_types::protocol::ResultPayload) -> Result<(), String> {
+    pub fn validate(
+        self,
+        result: &medulla_protocol_types::protocol::ResultPayload,
+    ) -> Result<(), String> {
         use medulla_protocol_types::protocol::ResultPayload;
         match self {
             Self::Bool => matches!(result, ResultPayload::Bool(_))
@@ -444,7 +449,13 @@ fn resolve_admin_saga_step(
     batch: &mut MutationBatch,
     step: medulla_transaction::SagaBegin,
     expected_contract: AdminSagaResultContract,
-) -> Result<(Option<medulla_protocol_types::protocol::ResultPayload>, bool), String> {
+) -> Result<
+    (
+        Option<medulla_protocol_types::protocol::ResultPayload>,
+        bool,
+    ),
+    String,
+> {
     match step {
         medulla_transaction::SagaBegin::Committed(record) => {
             let (record, result) = decode_admin_commit(record, identity, true, expected_contract)?;
@@ -811,7 +822,13 @@ fn decode_admin_commit(
     expected_identity: &MutationScopeIdentity,
     replayed: bool,
     result_contract: AdminSagaResultContract,
-) -> Result<(MutationBatchRecord, medulla_protocol_types::protocol::ResultPayload), String> {
+) -> Result<
+    (
+        MutationBatchRecord,
+        medulla_protocol_types::protocol::ResultPayload,
+    ),
+    String,
+> {
     let commit = MutationBatchCommit {
         record,
         identity: expected_identity.clone(),
@@ -857,7 +874,9 @@ pub fn decode_admin_result(
                 (
                     AdminSagaResultContract::ChannelDeparture,
                     medulla_protocol_types::protocol::ResultPayload::String(value),
-                ) => medulla_protocol_types::protocol::ResultPayload::Json(serde_json::Value::String(value)),
+                ) => medulla_protocol_types::protocol::ResultPayload::Json(
+                    serde_json::Value::String(value),
+                ),
                 (_, result) => result,
             }
         }

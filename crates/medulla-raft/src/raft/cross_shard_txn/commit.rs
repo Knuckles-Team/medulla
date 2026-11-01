@@ -24,7 +24,7 @@ use super::{
 };
 #[cfg(any(feature = "nonblocking", test, feature = "harness"))]
 use super::{GraphType, MultiRaft, RaftRequest, XSHARD_DECISION_GRAPH};
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 
 impl CrossShardCoordinator {
     /// Validate every READ-ONLY participant's reads; on the first failure, record

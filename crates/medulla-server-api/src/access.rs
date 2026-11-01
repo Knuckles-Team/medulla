@@ -1,12 +1,12 @@
 //! Write/read classification + isolation-ACL enforcement for graph ops.
 
 use super::auth::VerifiedRequestContext;
-use medulla_core::graph::GraphCore;
-use medulla_core::graph::GraphView;
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphView;
 #[cfg(feature = "security")]
-use medulla_core::isolation::row_visibility;
-use medulla_core::isolation::AccessLevel;
-use medulla_core::isolation::IsolationLayer;
+use medulla_graph_core::rls::row_visibility;
+use medulla_isolation::isolation::AccessLevel;
+use medulla_isolation::isolation::IsolationLayer;
 use medulla_types::contract::{Digest256, Nonce};
 use std::sync::Arc;
 
@@ -499,7 +499,7 @@ impl GraphReadAuthority {
         #[cfg(feature = "security")]
         {
             self.isolation
-                .can_see_row(&self.actor, &medulla_core::isolation::row_visibility(blob))
+                .can_see_row(&self.actor, &medulla_graph_core::rls::row_visibility(blob))
         }
         #[cfg(not(feature = "security"))]
         {
@@ -647,7 +647,7 @@ impl GraphReadAuthority {
             // read surface that calls `rls.filter_view` a second time against
             // an already-projected core (SQL/UQL, `handlers/query.rs`) would
             // silently re-hide it, exactly reproducing BUG A3's symptom one
-            // layer downstream of the fix in `medulla_core::isolation`. Mirror the
+            // layer downstream of the fix in `medulla_isolation::isolation`. Mirror the
             // SOURCE core's TBox membership onto the projection for every node
             // that survived filtering; a single ref is enough (the projection
             // is a throwaway, read-only snapshot — never mutated further, so
@@ -777,13 +777,13 @@ fn check_graph_access_with_policy(
 ) -> Result<(), String> {
     let agent = require_verified_caller(caller)?;
     require_provisioned_policy(isolation)?;
-    let query = medulla_core::isolation::AccessQuery {
+    let query = medulla_isolation::isolation::AccessQuery {
         agent_id: agent,
         graph_name,
         graph_type,
         graph_owner,
         access,
-        now_ms: medulla_core::isolation::access_clock_ms(),
+        now_ms: medulla_isolation::isolation::access_clock_ms(),
     };
     if decide_graph_access(isolation, &query) {
         Ok(())
@@ -802,10 +802,10 @@ fn check_graph_access_with_policy(
 /// to the elevation audit target -- each use, not just the grant.
 pub fn decide_graph_access(
     isolation: &IsolationLayer,
-    query: &medulla_core::isolation::AccessQuery<'_>,
+    query: &medulla_isolation::isolation::AccessQuery<'_>,
 ) -> bool {
     let basis = isolation.access_basis(query);
-    if let medulla_core::isolation::AccessBasis::Elevation(elevation_id) = &basis {
+    if let medulla_isolation::isolation::AccessBasis::Elevation(elevation_id) = &basis {
         tracing::info!(
             target: "medulla::rbac::elevation::audit",
             elevation_id = %elevation_id,

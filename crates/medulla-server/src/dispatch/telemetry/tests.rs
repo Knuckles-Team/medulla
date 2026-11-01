@@ -4,7 +4,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 use medulla_stream::telemetry::{
     DeclaredHealth, EntityClass, FactEdge, FactGraph, FactNode, Measure, Outcome,
 };
@@ -16,9 +16,9 @@ use super::declarations::declarations_from;
 use super::materialize::{fact_batch, FactOwner};
 use medulla_compute::algorithms::decode_batch_operations;
 use medulla_compute::algorithms::BatchOperation;
-use medulla_core::graph::GraphSchemaSource;
-use medulla_core::graph::GraphSchemaSources;
-use medulla_core::graph::SchemaSourceOrigin;
+use medulla_graph_core::graph::GraphSchemaSource;
+use medulla_graph_core::graph::GraphSchemaSources;
+use medulla_graph_core::graph::SchemaSourceOrigin;
 use crate::obs::LogRecord;
 
 fn node(id: &str, properties: serde_json::Value) -> (String, Vec<u8>) {

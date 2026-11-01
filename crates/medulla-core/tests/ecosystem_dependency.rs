@@ -113,7 +113,7 @@ mod propagation {
         inherit_severity, propagate_package_risk, propagate_package_risk_with, PackageFinding,
         PackageImpact, PackageRefusal, Severity,
     };
-    use medulla_core::graph::GraphCore;
+    use medulla_graph_core::graph::GraphCore;
     use serde_json::json;
 
     /// app -> mid -> lib -> core, plus side -> core and an unrelated leaf.

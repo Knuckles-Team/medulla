@@ -8,7 +8,7 @@
 
 use std::collections::{BTreeMap, VecDeque};
 
-use crate::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
 
 /// The relation followed in reverse: `dependent -DEPENDS_ON-> dependency`.
 pub const DEPENDS_ON: &str = "DEPENDS_ON";

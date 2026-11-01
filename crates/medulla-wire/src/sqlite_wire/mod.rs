@@ -260,7 +260,7 @@ mod tests {
 
     use medulla_types::acl::AgentIdentity;
     use medulla_types::acl::AgentRole;
-    use medulla_core::isolation::IsolationLayer;
+    use medulla_isolation::isolation::IsolationLayer;
     use medulla_server_api::api::persistence::PersistenceBackend;
     #[cfg(feature = "redb")]
     use medulla_persistence::redb_backend::RedbBackend;

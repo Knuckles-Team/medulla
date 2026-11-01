@@ -114,10 +114,10 @@ use medulla_storage::RecoveryStoreCounts;
 use redb::ReadableTable;
 use sha2::{Digest, Sha256};
 
+use crate::shard_migrate;
 use medulla_store::redb_store::shard::Shard;
 use medulla_store::redb_store::XSHARD_DECISION;
 use medulla_store::redb_store::XSHARD_PREPARE;
-use crate::shard_migrate;
 
 /// The bundle manifest file name.
 pub const MANIFEST_FILE: &str = "MANIFEST.json";
@@ -725,7 +725,9 @@ fn restore_graph_shards(
     // a SCOPE cannot be created or destroyed by re-routing one, so this is the
     // completeness claim that survives a K change — and it is read back from the
     // rebuilt files rather than reported by the migration about itself.
-    let restored_counts = shard_census(&medulla_store::redb_layout::discover_current_shards(persist_dir)?)?;
+    let restored_counts = shard_census(&medulla_store::redb_layout::discover_current_shards(
+        persist_dir,
+    )?)?;
     if restored_counts.len() != target_shards
         || graph_scopes(&restored_counts) != manifest.graph_scopes()
     {
@@ -891,10 +893,6 @@ impl Drop for EnvVarGuard {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use medulla_protocol_types::protocol::GraphType;
-    use medulla_protocol_types::protocol::Method;
-    use medulla_store::redb_store::shard::SHARD_PHYSICAL_STORE;
-    use medulla_server_api::api::persistence::PersistenceBackend;
     use crate::redb_backend::seed_raw_row;
     use crate::redb_backend::RedbBackend;
     #[cfg(feature = "security")]
@@ -902,9 +900,13 @@ pub mod tests {
     use crate::shard_migrate::tests::assert_node_a_carries_graph_tag;
     use crate::shard_migrate::tests::props;
     use crate::shard_migrate::tests::seed_at_k as seed;
+    use medulla_protocol_types::protocol::GraphType;
+    use medulla_protocol_types::protocol::Method;
+    use medulla_server_api::api::persistence::PersistenceBackend;
     use medulla_storage::{
         GraphShardOwner, OwnerLayout, PhysicalStoreIdentity, StorageKernel, StrictRecoveryEvidence,
     };
+    use medulla_store::redb_store::shard::SHARD_PHYSICAL_STORE;
     #[cfg(feature = "security")]
     use redb::TableHandle;
     use redb::{Database, ReadableDatabase};
@@ -1138,7 +1140,7 @@ pub mod tests {
             roles: vec!["reader".to_string()],
         };
         let authority = medulla_kernel::store_authority::process_authority();
-        let rbac = medulla_core::rbac_persist::RbacStore::open(
+        let rbac = medulla_isolation::rbac_persist::RbacStore::open(
             &src,
             authority.as_ref(),
             authority.principal(),
@@ -1152,7 +1154,7 @@ pub mod tests {
             snapshot.revision(),
             snapshot.policy(),
             &identities,
-            medulla_core::rbac_persist::IdentityBootstrapState::Consumed,
+            medulla_isolation::rbac_persist::IdentityBootstrapState::Consumed,
         )
         .expect("persist identity");
 
@@ -1207,7 +1209,7 @@ pub mod tests {
             );
         }
         // The restored engine knows the identity again — the whole point of BUG-PE-054.
-        let restored_rbac = medulla_core::rbac_persist::RbacStore::open(
+        let restored_rbac = medulla_isolation::rbac_persist::RbacStore::open(
             &restored,
             authority.as_ref(),
             authority.principal(),
@@ -1222,13 +1224,14 @@ pub mod tests {
         );
         assert_eq!(
             bootstrap,
-            medulla_core::rbac_persist::IdentityBootstrapState::Consumed,
+            medulla_isolation::rbac_persist::IdentityBootstrapState::Consumed,
             "identity bootstrap lifecycle survived the round trip"
         );
         drop(restored_rbac);
         // The restored KV surface answers the write taken before the backup.
         let restored_s = restored.to_string_lossy().to_string();
-        let restored_kv = medulla_server_api::kv::KvStore::open(Some(&restored_s)).expect("open kv");
+        let restored_kv =
+            medulla_server_api::kv::KvStore::open(Some(&restored_s)).expect("open kv");
         assert_eq!(
             restored_kv.get("probe", "key").expect("kv get").as_deref(),
             Some(&b"value"[..]),
@@ -1261,7 +1264,8 @@ pub mod tests {
         seed(&src_s, 1, &["alpha"]).await;
         let backend = RedbBackend::open_with_shards(src_s.clone(), 256, 1).expect("reopen");
         let bogus = Bogus;
-        let extra: Vec<&dyn medulla_server_api::api::persistence::BundledStoreSource> = vec![&bogus];
+        let extra: Vec<&dyn medulla_server_api::api::persistence::BundledStoreSource> =
+            vec![&bogus];
         let error = backend
             .backup(&root.join("bundle"), "test-engine", 7, "", &extra)
             .expect_err("unregistered store must be refused");

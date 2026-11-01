@@ -6,11 +6,11 @@
 use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use std::sync::Arc;
 
-use medulla_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphCore;
+use medulla_protocol_types::protocol::{Method, ResultPayload};
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::mutation_batch::*;
 use medulla_types::contract::Nonce;
-use medulla_protocol_types::protocol::{Method, ResultPayload};
 use sha2::{Digest, Sha256};
 
 /// The opaque serving principal this test's job store is opened as.
@@ -1107,7 +1107,7 @@ async fn promotion_replay_and_failed_cas_preserve_authority_and_restart_identity
     assert!(restarted.has_node(second_identity.revision_ref.as_str()));
 
     fn assert_candidate_claim_tamper(
-        snapshot: &medulla_core::graph::GraphSnapshot,
+        snapshot: &medulla_graph_core::graph::GraphSnapshot,
         version: u64,
         claim_ref: &str,
         revision_ref: &medulla_modality::OpaqueRef,

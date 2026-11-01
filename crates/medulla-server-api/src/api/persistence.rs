@@ -7,11 +7,19 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
 use crate::state::ServerState;
+use medulla_agent_types::native_control::CapacityStatusResult;
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
+use medulla_mutation_types::mutation_scope::MutationProjectionCursor;
 use medulla_protocol_types::change_envelope::ChangeCursor;
 use medulla_protocol_types::change_envelope::ChangeEnvelope;
 use medulla_protocol_types::change_envelope::ChangeEnvelopeCommit;
 use medulla_protocol_types::change_envelope::ChangeEnvelopeRecord;
 use medulla_protocol_types::change_envelope::ContentVersion;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::mutation_batch::MutationBatchCommit;
+use medulla_protocol_types::mutation_batch::MutationBatchRecord;
+use medulla_protocol_types::protocol::Method;
 use medulla_result_types::epistemic_operations::DevelopmentLaneQueryRequest;
 use medulla_result_types::epistemic_operations::DevelopmentLaneQueryResult;
 use medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequest;
@@ -23,14 +31,6 @@ use medulla_result_types::epistemic_operations::ResourceReservationStatusResult;
 use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest;
 use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResult;
 use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest;
-use medulla_protocol_types::mutation_batch::MutationBatch;
-use medulla_protocol_types::mutation_batch::MutationBatchCommit;
-use medulla_protocol_types::mutation_batch::MutationBatchRecord;
-use medulla_mutation_types::mutation_scope::MutationOutboxLease;
-use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
-use medulla_mutation_types::mutation_scope::MutationProjectionCursor;
-use medulla_agent_types::native_control::CapacityStatusResult;
-use medulla_protocol_types::protocol::Method;
 // The sweep-scoped claim budget carrying DESIGN.md's per-tenant weighted round
 // robin between graphs. It is a kernel type, so the claim it parameterises is
 // gated on `redb` exactly like the two WorkItem-capability methods below: the
@@ -734,7 +734,7 @@ pub trait PersistenceBackend: Send + Sync {
     async fn read_authoritative_graph_snapshot(
         &self,
         _graph_fname: &str,
-    ) -> Result<Option<(medulla_core::graph::GraphSnapshot, u64)>, String> {
+    ) -> Result<Option<(medulla_graph_core::graph::GraphSnapshot, u64)>, String> {
         Err("persistence backend cannot stage an authoritative graph snapshot".to_string())
     }
 

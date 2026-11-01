@@ -15,7 +15,7 @@ impl medulla_server_api::api::query_txn::QueryApi for QuerySeam {
         persist_dir: &std::path::Path,
         tenant: &str,
         binding_id: &str,
-    ) -> Result<Arc<medulla_core::compute::semantic_index_service::SemanticIndexService>, String>
+    ) -> Result<Arc<medulla_ann_codes::semantic_index_service::SemanticIndexService>, String>
     {
         crate::semantic_index_runtime::existing_semantic_service(persist_dir, tenant, binding_id)
     }
@@ -24,8 +24,8 @@ impl medulla_server_api::api::query_txn::QueryApi for QuerySeam {
     fn run_unified_staged_rows(
         &self,
         plan: medulla_plan::Plan,
-        view: &medulla_core::graph::GraphView,
-        core: &Arc<medulla_core::graph::GraphCore>,
+        view: &medulla_graph_core::graph::GraphView,
+        core: &Arc<medulla_graph_core::graph::GraphCore>,
         staged: &[(String, Vec<f32>)],
         #[cfg(feature = "federation")] foreign: Option<
             &medulla_plan::federation::ForeignSourceRegistry,

@@ -25,9 +25,9 @@ use medulla_catalog_types::{
 use medulla_types::contract::Digest256;
 
 use super::foreign_catalog::{ForeignSourceCatalog, OwnedForeignRegistry};
-use medulla_core::isolation::IsolationLayer;
 use crate::access::CarrierAuthority;
 use crate::api::persistence::SourceApprovalStore;
+use medulla_isolation::isolation::IsolationLayer;
 
 /// Owner-controlled dependencies used to revalidate and bind completed reads.
 pub struct ForeignBindingContext<'a> {
@@ -765,13 +765,13 @@ fn now_ms() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::acl::RequestContextClaims;
     use crate::api::query_txn::query_support::canonical_plan_digest;
     use crate::auth::VerifiedRequestContext;
     use medulla_catalog_types::connector_pack::{
         PackHeadRef, PackSourceApproval, PackSourceKind, PackSourceRegistration,
         CONNECTOR_PACK_SCHEMA_VERSION,
     };
+    use medulla_types::acl::RequestContextClaims;
     use medulla_types::contract::ResourceId;
 
     fn limits() -> ForeignReadLimits {

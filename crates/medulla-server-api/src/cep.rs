@@ -74,10 +74,10 @@ use medulla_stream::live::{CepEngine, CepSubscription, DEFAULT_MATCH_BUFFER};
 use medulla_stream::{AttrPredicate, CepPattern, Event, EventMatcher, Match, Window};
 
 use super::state::ServerState;
+use crate::access::CarrierAuthority;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use crate::access::CarrierAuthority;
 use medulla_types::wire::CdcEvent;
 use medulla_types::wire::CdcKind;
 use medulla_types::wire::CepMatcherSpec;
@@ -348,10 +348,17 @@ fn parse_cep_broker_exchange(raw: Option<&str>) -> Option<String> {
 /// kind collision or an encode failure is logged and dropped — the forwarder never
 /// panics or blocks the match stream over a broker-side problem.
 #[cfg(feature = "broker")]
-fn publish_match_to_broker(core: &medulla_core::graph::GraphCore, exchange: &str, sub_id: u64, m: &Match) {
-    if let Err(error) =
-        medulla_core::broker::declare_exchange(core, exchange, medulla_core::broker::ExchangeKind::Topic)
-    {
+fn publish_match_to_broker(
+    core: &medulla_graph_core::graph::GraphCore,
+    exchange: &str,
+    sub_id: u64,
+    m: &Match,
+) {
+    if let Err(error) = medulla_core::broker::declare_exchange(
+        core,
+        exchange,
+        medulla_core::broker::ExchangeKind::Topic,
+    ) {
         tracing::warn!(exchange, sub_id, %error, "CEP broker forwarder: exchange declare failed");
         return;
     }
@@ -381,7 +388,7 @@ fn publish_match_to_broker(core: &medulla_core::graph::GraphCore, exchange: &str
 /// blocks CEP ingestion, matching the poll surface's own drop-oldest contract.
 #[cfg(feature = "broker")]
 fn spawn_cep_broker_forwarder(
-    core: Arc<medulla_core::graph::GraphCore>,
+    core: Arc<medulla_graph_core::graph::GraphCore>,
     exchange: String,
     sub_id: u64,
     mut rx: CepSubscription,
@@ -687,7 +694,7 @@ mod tests {
     fn shared_state() -> Arc<RwLock<ServerState>> {
         Arc::new(RwLock::new(ServerState::new_for_test(
             "test",
-            medulla_core::isolation::IsolationLayer::new(),
+            medulla_isolation::isolation::IsolationLayer::new(),
         )))
     }
 
@@ -835,10 +842,14 @@ mod tests {
     #[cfg(feature = "broker")]
     #[tokio::test]
     async fn cep_match_reaches_the_broker_queue_end_to_end() {
-        let core = medulla_core::graph::GraphCore::new();
+        let core = medulla_graph_core::graph::GraphCore::new();
         let exchange = "cep-test-exchange";
-        medulla_core::broker::declare_exchange(&core, exchange, medulla_core::broker::ExchangeKind::Topic)
-            .unwrap();
+        medulla_core::broker::declare_exchange(
+            &core,
+            exchange,
+            medulla_core::broker::ExchangeKind::Topic,
+        )
+        .unwrap();
         // A wildcard binding: one queue watching every subscription's matches.
         medulla_core::broker::bind_queue(&core, exchange, "watchers", "#");
 
@@ -866,7 +877,10 @@ mod tests {
             .as_object()
             .unwrap()
             .clone();
-        let got = core.claim_next_fields(&medulla_core::broker::queue_msg_label("watchers"), &claim);
+        let got = core.claim_next_fields(
+            &medulla_graph_core::broker_keys::queue_msg_label("watchers"),
+            &claim,
+        );
         assert!(got.is_some(), "the match must reach the bound broker queue");
         let (_, props) = got.unwrap();
         assert_eq!(
@@ -882,8 +896,11 @@ mod tests {
 
         // The non-matching Doc event never produced a Match, so nothing else is queued.
         assert!(
-            core.claim_next_fields(&medulla_core::broker::queue_msg_label("watchers"), &claim)
-                .is_none(),
+            core.claim_next_fields(
+                &medulla_graph_core::broker_keys::queue_msg_label("watchers"),
+                &claim
+            )
+            .is_none(),
             "a non-matching event must not push anything"
         );
     }
@@ -901,8 +918,12 @@ mod tests {
             let s = state.read().await;
             s.registry.get("__commons__").unwrap().core.clone()
         };
-        medulla_core::broker::declare_exchange(&core, exchange, medulla_core::broker::ExchangeKind::Topic)
-            .unwrap();
+        medulla_core::broker::declare_exchange(
+            &core,
+            exchange,
+            medulla_core::broker::ExchangeKind::Topic,
+        )
+        .unwrap();
         medulla_core::broker::bind_queue(&core, exchange, "live", "#");
 
         let surface = CepSurface::new();
@@ -919,7 +940,7 @@ mod tests {
             .as_object()
             .unwrap()
             .clone();
-        let label = medulla_core::broker::queue_msg_label("live");
+        let label = medulla_graph_core::broker_keys::queue_msg_label("live");
         // Bounded retry: the forwarder runs on its own tokio task, so delivery is
         // asynchronous — not a fixed sleep, so this is fast on a healthy box and never
         // hangs on a slow/contended one (a genuine miss still fails after the bound).

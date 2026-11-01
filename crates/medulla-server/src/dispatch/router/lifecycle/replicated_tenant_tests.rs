@@ -7,10 +7,10 @@ use std::sync::Arc;
 use medulla_identity_types::identity::*;
 use tokio::sync::RwLock;
 
-use medulla_core::isolation::AccessLevel;
+use medulla_isolation::isolation::AccessLevel;
 use medulla_types::acl::AgentIdentity;
 use medulla_types::acl::AgentRole;
-use medulla_core::isolation::IsolationLayer;
+use medulla_isolation::isolation::IsolationLayer;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 use medulla_raft::raft::NativeMutationCommand;
