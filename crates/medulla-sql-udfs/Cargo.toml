@@ -42,6 +42,9 @@ hex = { version = "0.4", optional = true }
 base64 = { version = "0.23", optional = true }
 ipnet = { version = "2.12", optional = true }
 medulla-tables = { path = "../medulla-tables" }
+medulla-finance-quant = { path = "../medulla-finance-quant" }
+medulla-graph-algos = { path = "../medulla-graph-algos" }
+medulla-graph-core = { path = "../medulla-graph-core" }
 
 [features]
 finance = ["sql"]
