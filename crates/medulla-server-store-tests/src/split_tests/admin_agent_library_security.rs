@@ -364,7 +364,7 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
     // this process and is never a live credential.
     let secret = "agent-library-public-dispatch-secret"; // sanitizer:ignore
     let directory = tempfile::tempdir().unwrap();
-    let mut server_state = medulla_server_api::state::ServerState::new_for_test(
+    let mut server_state = medulla_server::seams_install::new_state_for_test(
         secret,
         medulla_isolation::isolation::IsolationLayer::new(),
     );

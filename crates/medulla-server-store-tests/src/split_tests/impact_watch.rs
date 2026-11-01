@@ -182,7 +182,7 @@ fn persisted_state() -> Arc<RwLock<ServerState>> {
         .into_owned();
     std::fs::create_dir_all(&dir).expect("create test persist dir");
     let backend = RedbBackend::open(dir.clone(), 4096).expect("open test redb backend");
-    let mut state = ServerState::new_for_test(SECRET, ServerState::test_isolation("system"));
+    let mut state = medulla_server::seams_install::new_state_for_test(SECRET, ServerState::test_isolation("system"));
     state.persist_dir = Some(dir);
     state.persistence = Some(Arc::new(backend));
     Arc::new(RwLock::new(state))

@@ -1,6 +1,7 @@
 //! Served-chain tests: they drive the real dispatch through state builders from the crate root.
 
-    use super::*;
+    use medulla_server::*;
+    use medulla_server_api::state::ServerState;
     use medulla_types::acl::RequestContextClaims;
     use medulla_types::acl::AgentIdentity;
     use medulla_types::acl::AgentRole;
@@ -62,7 +63,7 @@
     }
 
     fn test_state() -> Arc<RwLock<ServerState>> {
-        crate::test_state_with_services(
+        medulla_server::test_state_with_services(
             SECRET,
             ServerState::test_isolation("system"),
             "medulla-server-test",
@@ -1324,7 +1325,7 @@
             // hang the second one. Each connection is served on its own task.
             while let Ok((stream, _)) = listener.accept().await {
                 let serve = remote_for_serve.clone();
-                tokio::spawn(async move { crate::transport::handle_connection(stream, serve).await });
+                tokio::spawn(async move { medulla_server::transport::handle_connection(stream, serve).await });
             }
         });
 
@@ -2402,7 +2403,7 @@ pub mod shex_served;
         // Start from the canonical feature-complete test composition.  This keeps
         // the backpressure fixture aligned with production field additions while
         // overriding only the capacities and durable backend this test exercises.
-        let mut state = ServerState::new_for_test(SECRET, ServerState::test_isolation("system"));
+        let mut state = medulla_server::seams_install::new_state_for_test(SECRET, ServerState::test_isolation("system"));
         #[cfg(feature = "redb")]
         {
             // AddNode is a durable, `GraphRedb`-domain GATEWAY_ROUTED method
@@ -2448,7 +2449,7 @@ pub mod shex_served;
 
         let (mut client, server) = tokio::io::duplex(64 * 1024);
         let st = state.clone();
-        let handle = tokio::spawn(async move { crate::transport::handle_connection(server, st).await });
+        let handle = tokio::spawn(async move { medulla_server::transport::handle_connection(server, st).await });
 
         // g_hot is saturated → its WRITE is shed BUSY at the per-graph cap.
         let r_hot = round_trip(&mut client, &request(1, "g_hot", None, add_node("h1"))).await;

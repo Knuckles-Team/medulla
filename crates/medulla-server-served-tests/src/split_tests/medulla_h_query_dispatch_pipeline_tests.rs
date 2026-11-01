@@ -49,7 +49,7 @@ const TENANT: &str = "tenant-shared";
 const WORKER: &str = "semantic-dispatch-worker";
 
 fn dispatch_state(persist_dir: &std::path::Path) -> Arc<RwLock<medulla_server_api::state::ServerState>> {
-    let mut state = medulla_server_api::state::ServerState::new_for_test(
+    let mut state = medulla_server::seams_install::new_state_for_test(
         SECRET,
         medulla_isolation::isolation::IsolationLayer::new(),
     );

@@ -57,7 +57,7 @@ fn props(v: serde_json::Value) -> Vec<u8> {
 }
 
 fn new_state(persist_dir: Option<String>) -> Arc<RwLock<ServerState>> {
-    let mut state = ServerState::new_for_test("test", ServerState::test_isolation(TEST_AGENT));
+    let mut state = medulla_server::seams_install::new_state_for_test("test", ServerState::test_isolation(TEST_AGENT));
     state.persist_dir = persist_dir;
     Arc::new(RwLock::new(state))
 }

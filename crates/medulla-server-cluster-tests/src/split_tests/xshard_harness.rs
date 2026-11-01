@@ -562,7 +562,7 @@ async fn txn_handle(
     // (idempotent) because this fixture builds its state without the server startup.
     {
         let guard = state.read().await;
-        crate::seams_install::install_seams(&guard);
+        medulla_server::seams_install::install_seams(&guard);
     }
     let txn = medulla_server_ops::api::query_txn::txn_seam(&state).await;
     let Some(txn) = txn else {

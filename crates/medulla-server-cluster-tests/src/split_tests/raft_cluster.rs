@@ -55,13 +55,15 @@ async fn make_state_with_backend(
         .register_graph("__commons__", "__commons__", GraphType::Commons)
         .await
         .expect("register mandatory commons graph");
-    medulla_raft_xshard::harness_support::make_state_with_cdc(
+    let state = medulla_raft_xshard::harness_support::make_state_with_cdc(
         dir,
         backend,
         medulla_isolation::isolation::IsolationLayer::new(),
         "raft-test",
     )
-    .await
+    .await;
+    medulla_server::seams_install::install_seams_on(&state).await;
+    state
 }
 
 async fn wait_for_expected_group_leader(
@@ -882,7 +884,7 @@ mod placement_admin_wire_rpc {
     use super::*;
     use medulla_types::acl::{AgentIdentity, AgentRole, RequestContextClaims};
     use medulla_protocol_types::protocol::{Response, ResultPayload};
-    use crate::dispatch;
+    use medulla_server_router::dispatch;
     use medulla_server_auth::auth::compute_verified_envelope_token;
     use medulla_server_auth::auth::VerifiedEnvelopeParams;
 
@@ -1031,10 +1033,10 @@ mod placement_admin_wire_rpc {
     // spec: MEDULLA-DURABLE-KERNEL-R012
     #[test]
     fn placement_admin_wire_rpcs_move_data_across_a_real_three_node_cluster() {
-        let driver = crate::spawn_engine_driver(|| {
+        let driver = medulla_server::spawn_engine_driver(|| {
             let runtime = tokio::runtime::Builder::new_multi_thread()
                 .worker_threads(4)
-                .thread_stack_size(crate::ENGINE_WORKER_STACK_BYTES)
+                .thread_stack_size(medulla_server::ENGINE_WORKER_STACK_BYTES)
                 .enable_all()
                 .build()
                 .expect("build engine-contract runtime");

@@ -39,11 +39,11 @@ medulla-transaction = { path = "../medulla-transaction", optional = true }
 
 medulla-storage = { path = "../medulla-storage", optional = true }
 
-async-trait = { version = "0.1", optional = true }
+async-trait = { version = "0.1" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 
 [features]
-test-support = ["medulla-server-graph/test-support", ]
+test-support = ["medulla-server-graph/test-support"]
 oidc = ["medulla-server-graph/oidc", "dep:jsonwebtoken"]
 redb = ["medulla-server-graph/redb", "dep:redb", "dep:medulla-transaction", "dep:medulla-storage"]
 security = ["medulla-server-graph/security", "dep:sha1", "dep:argon2", "redb", "oidc"]

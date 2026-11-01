@@ -34,7 +34,7 @@ use medulla_text::TextIndex;
 use serde_json::json;
 
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
-use medulla_server::dispatch::request_boundary::dispatch;
+use medulla_server_router::dispatch::request_boundary::dispatch;
 
 const SECRET: &str = "usecase-analytics-secret";
 

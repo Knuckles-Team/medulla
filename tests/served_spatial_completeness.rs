@@ -20,7 +20,7 @@ use serde_json::json;
 use medulla_exec::{algebra::Op, algebra::Plan};
 use medulla_protocol_types::protocol::{GraphType, Method};
 use medulla_core::registry::{GraphMaterial, GraphMaterializer, GraphRegistry};
-use medulla_server::dispatch::request_boundary::dispatch;
+use medulla_server_router::dispatch::request_boundary::dispatch;
 
 const SECRET: &str = "served-spatial-completeness-secret";
 

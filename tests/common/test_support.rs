@@ -225,7 +225,7 @@ fn make_state(
     persistence: Option<SharedPersistence>,
 ) -> ServerState {
     provision_request_context_policy();
-    let mut state = ServerState::new_for_test(auth_secret.to_owned(), isolation);
+    let mut state = medulla_server::seams_install::new_state_for_test(auth_secret.to_owned(), isolation);
     state.persist_dir = persist_dir;
     state.persistence = persistence;
     state
@@ -239,7 +239,7 @@ pub fn state_with_registry(
     persistence: Option<SharedPersistence>,
 ) -> SharedState {
     provision_request_context_policy();
-    let mut state = ServerState::new_for_test(auth_secret.to_owned(), isolation);
+    let mut state = medulla_server::seams_install::new_state_for_test(auth_secret.to_owned(), isolation);
     state.registry = registry;
     state.persist_dir = persist_dir;
     state.persistence = persistence;
@@ -421,7 +421,7 @@ pub fn seed_wire_nodes(registry: &GraphRegistry, user: &str) {
 }
 
 pub async fn dispatch(state: &SharedState, request: Request) -> medulla_protocol_types::protocol::Response {
-    Box::pin(medulla_server::dispatch::request_boundary::dispatch(state, request)).await
+    Box::pin(medulla_server_router::dispatch::request_boundary::dispatch(state, request)).await
 }
 
 pub async fn begin_txn(

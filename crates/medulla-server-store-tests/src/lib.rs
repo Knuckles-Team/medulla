@@ -6,3 +6,6 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 #![cfg(test)]
+
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod split_tests;

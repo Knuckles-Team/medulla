@@ -24,7 +24,7 @@ const TENANT: &str = "tenant-guardrail";
 
 fn state(path: &std::path::Path) -> Arc<RwLock<ServerState>> {
     let mut server =
-        ServerState::new_for_test("guardrail-secret", ServerState::test_isolation("asker"));
+        medulla_server::seams_install::new_state_for_test("guardrail-secret", ServerState::test_isolation("asker"));
     server.persist_dir = Some(path.to_string_lossy().into_owned());
     Arc::new(RwLock::new(server))
 }

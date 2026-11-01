@@ -35,8 +35,8 @@ use medulla_server_api::request_scope::{self, RequestCancel};
 mod framing;
 mod tls;
 
-#[cfg(all(test, feature = "jobs"))]
-pub(crate) use framing::decode_request_payload;
+#[cfg(all(any(test, feature = "test-support"), feature = "jobs"))]
+pub use framing::decode_request_payload;
 #[cfg(test)]
 use framing::{
     dispatch_deadline, max_request_frame_bytes, read_request_frame, recover_request_id,

@@ -51,7 +51,7 @@ mod admin_scope_tests {
                 roles: Vec::new(),
             });
         }
-        Arc::new(RwLock::new(ServerState::new_for_test(SECRET, isolation)))
+        Arc::new(RwLock::new(crate::dispatch::test_support::new_state_for_test(SECRET, isolation)))
     }
 
     fn req_as(id: u64, agent_id: Option<&str>, method: Method) -> Request {
@@ -462,7 +462,7 @@ mod blob_dispatch_tests {
         // Use the canonical fixture so feature-gated fields stay in one place.
         // `BlobRef` still gets the durable backend it requires, while the graph
         // state remains isolated from the chunk store's redb file.
-        let mut state = ServerState::new_for_test(SECRET, ServerState::test_isolation("system"));
+        let mut state = crate::dispatch::test_support::new_state_for_test(SECRET, ServerState::test_isolation("system"));
         state.persist_dir = Some(dir.to_string());
         #[cfg(feature = "redb")]
         {
@@ -874,7 +874,7 @@ use medulla_server_auth::auth::VerifiedEnvelopeParams;
     /// (JWT scope)-only for this method, never `IsolationLayer`-registration-only
     /// (the OLD, System-only gate this closes).
     fn state_min() -> Arc<RwLock<ServerState>> {
-        Arc::new(RwLock::new(ServerState::new_for_test(
+        Arc::new(RwLock::new(crate::dispatch::test_support::new_state_for_test(
             SECRET,
             IsolationLayer::new(),
         )))

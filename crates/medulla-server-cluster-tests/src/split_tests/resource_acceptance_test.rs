@@ -57,7 +57,7 @@ use medulla_raft_xshard::harness::cluster::Cluster;
 use medulla_raft_xshard::harness::cluster::GRAPH;
 use medulla_raft_xshard::harness::test_env::configure_auth_test_environment;
 use medulla_raft::raft::NodeId;
-use crate::dispatch;
+use medulla_server_router::dispatch;
 use medulla_server_auth::auth::compute_verified_envelope_token;
 use medulla_server_auth::auth::VerifiedEnvelopeParams;
 
@@ -1199,11 +1199,17 @@ async fn ensure_commons_graph(cluster: &Cluster) {
 }
 
 fn state_for(cluster: &Cluster, node_id: NodeId) -> Arc<RwLock<medulla_server_api::state::ServerState>> {
-    cluster
+    let state = cluster
         .members
         .get(&node_id)
         .and_then(|member| member.state.clone())
-        .expect("requested cluster member is running")
+        .expect("requested cluster member is running");
+    // The cluster fixture builds its state below the server crate: carry the dispatch seam the
+    // replicated apply path re-enters through.
+    if let Ok(guard) = state.try_read() {
+        medulla_server::seams_install::install_seams(&guard);
+    }
+    state
 }
 
 /// BUG-044-class: keep the full (`--features full`) dispatcher's state machine

@@ -65,14 +65,16 @@ async fn bring_up(
     Arc<MultiRaft>,
     Arc<RwLock<medulla_server_api::state::ServerState>>,
 ) {
-    fixture::start_single_node_groups(
+    let (multi, state) = fixture::start_single_node_groups(
         dir,
         backend,
         current_isolation(),
         "placement-test",
         &[GROUP_A, GROUP_B, medulla_raft::raft::DEFAULT_GROUP],
     )
-    .await
+    .await;
+    medulla_server::seams_install::install_seams_on(&state).await;
+    (multi, state)
 }
 
 /// Write `node_id` into `graph` through whichever group currently owns it.
@@ -710,7 +712,7 @@ async fn wire_placement_route_resolves_through_dispatch() {
     // opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     use medulla_protocol_types::protocol::ResultPayload;
-    use crate::dispatch;
+    use medulla_server_router::dispatch;
 
     let dir = fixture::fresh_dir("medulla-placement", "wire-route");
     let backend = fixture::open_backend(&dir).expect("open redb");

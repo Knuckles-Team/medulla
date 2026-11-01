@@ -76,7 +76,7 @@ pub async fn send(
 
 /// An engine with an empty authorization image.
 pub fn state() -> Arc<RwLock<ServerState>> {
-    Arc::new(RwLock::new(ServerState::new_for_test(
+    Arc::new(RwLock::new(new_state_for_test(
         "dispatch-test-secret",
         medulla_isolation::isolation::IsolationLayer::new(),
     )))
@@ -94,7 +94,7 @@ pub fn bootstrapped_state() -> Arc<RwLock<ServerState>> {
             roles: Vec::new(),
         })
         .expect("a fresh layer bootstraps its System identity");
-    Arc::new(RwLock::new(ServerState::new_for_test(
+    Arc::new(RwLock::new(new_state_for_test(
         "dispatch-test-secret",
         layer,
     )))
@@ -106,4 +106,14 @@ pub fn refused_with(response: &Response, code: &str) -> bool {
         .error
         .as_deref()
         .is_some_and(|error| error.contains(code))
+}
+
+/// A test state carrying the `DispatchSeam`, so lower-crate re-entry reaches the real router.
+pub fn new_state_for_test(
+    auth_secret: impl Into<String>,
+    isolation: medulla_isolation::isolation::IsolationLayer,
+) -> ServerState {
+    let state = ServerState::new_for_test(auth_secret, isolation);
+    let _ = state.seams.dispatch.set(Arc::new(super::seam::DispatchSeam));
+    state
 }

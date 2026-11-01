@@ -97,7 +97,7 @@ mod ne_004_ne_005_tests {
     /// elsewhere).
     fn test_state() -> Arc<RwLock<ServerState>> {
         ensure_env();
-        crate::test_state_with_services(
+        medulla_server::test_state_with_services(
             SECRET,
             test_isolation(&[AGENT]),
             "medulla-wire-txn-atomicity-test",
@@ -201,7 +201,7 @@ mod ne_004_ne_005_tests {
     /// no actor or transaction, snapshot isolation, and every flag/buffer cleared.
     #[test]
     fn new_session_starts_unbound_on_its_default_graph() {
-        let state = Arc::new(RwLock::new(ServerState::new_for_test(
+        let state = Arc::new(RwLock::new(medulla_server::seams_install::new_state_for_test(
             SECRET,
             test_isolation(&[AGENT]),
         )));
@@ -865,7 +865,7 @@ pub mod wired_catalog_tests {
     /// track wires on top, not a replacement for the engine ACL.
     pub(crate) fn test_state(agents: &[&str]) -> Arc<RwLock<ServerState>> {
         ensure_env();
-        crate::test_state_with_services(
+        medulla_server::test_state_with_services(
             SECRET,
             test_isolation(agents),
             "medulla-wired-catalog-test",

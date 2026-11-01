@@ -80,7 +80,7 @@ fn sorted_ids(resp: &medulla_protocol_types::protocol::Response) -> Vec<String> 
 
 /// [`sorted_ids`] of a `Method::Uql` response.
 fn sorted_uql_ids(resp: &medulla_protocol_types::protocol::Response) -> Vec<String> {
-    let mut ids = crate::decode_uql_ids(resp);
+    let mut ids = medulla_server::decode_uql_ids(resp);
     ids.sort();
     ids
 }

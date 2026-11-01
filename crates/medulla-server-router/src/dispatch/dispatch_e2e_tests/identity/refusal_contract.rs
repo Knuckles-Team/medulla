@@ -38,7 +38,7 @@ fn engine() -> Arc<RwLock<ServerState>> {
             &medulla_capabilities::scopes::ScopeRegistry,
         )
         .expect("the store initializes");
-    Arc::new(RwLock::new(ServerState::new_for_test(SECRET, isolation)))
+    Arc::new(RwLock::new(crate::dispatch::test_support::new_state_for_test(SECRET, isolation)))
 }
 
 /// `root` registers `agent_id` with `roles` through the signed dispatch.

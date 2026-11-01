@@ -102,7 +102,7 @@ fn durable_state(dir: &Path, principals: &[&str]) -> Arc<RwLock<ServerState>> {
     for (index, principal) in principals.iter().enumerate() {
         create_user(&mut layer, principal, index);
     }
-    let mut state = ServerState::new_for_test(SECRET, layer);
+    let mut state = crate::dispatch::test_support::new_state_for_test(SECRET, layer);
     state.persistence = Some(Arc::new(
         RedbBackend::open_with_shards(dir.to_string_lossy().into_owned(), 64, 1).unwrap(),
     ));

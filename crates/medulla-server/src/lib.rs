@@ -209,10 +209,6 @@ pub mod registry_reaper;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod sealed_retention;
 
-/// Tests that need the full server: the router, seam installation and the redb backend.
-#[cfg(test)]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod split_tests;
 
 // OBDA wire method + Python client seam (CA-13, feature `obda-wire`, off by default).
 // Reserved and EMPTY until CA-13 implements it; landed by CA-17's single feature-stub
@@ -251,15 +247,15 @@ use medulla_server_api::state::{txn_limits_from_env, ServerState};
 /// means a new `ServerState` field cannot silently disappear from one fixture.
 /// The helper is test-only and lives at the server seam so unconditional server
 /// tests do not depend on the optional `wire` feature being enabled.
-#[cfg(test)]
-pub(crate) fn test_state_with_services(
+#[cfg(any(test, feature = "test-support"))]
+pub fn test_state_with_services(
     auth_secret: &str,
     isolation: medulla_isolation::isolation::IsolationLayer,
     persistence_label: &str,
     tsdb_label: &str,
 ) -> std::sync::Arc<tokio::sync::RwLock<ServerState>> {
     let _ = (persistence_label, tsdb_label);
-    let state = ServerState::new_for_test(auth_secret.to_owned(), isolation);
+    let state = crate::seams_install::new_state_for_test(auth_secret.to_owned(), isolation);
     #[cfg(any(feature = "query", feature = "redb", feature = "tsdb"))]
     let mut state = state;
     #[cfg(feature = "query")]
@@ -445,5 +441,3 @@ mod ca17_feature_stub_contract {
     }
 }
 
-#[cfg(test)]
-mod tests;
