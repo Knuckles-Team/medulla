@@ -2,7 +2,9 @@
 
 use super::*;
 use crate::protocol::{GraphType, Method};
-use crate::redb_store::{CHANGE_CURSORS, CHANGE_ENVELOPES, CONTENT_VERSIONS};
+use medulla_store::redb_store::CHANGE_CURSORS;
+use medulla_store::redb_store::CHANGE_ENVELOPES;
+use medulla_store::redb_store::CONTENT_VERSIONS;
 use crate::server::api::persistence::PersistenceBackend;
 use crate::server::persistence::redb_backend::RedbBackend;
 use medulla_storage::{OwnerRowScope, OwnerRowScopeStart};
@@ -36,7 +38,7 @@ fn fresh_in_place_dir(tag: &str) -> (std::path::PathBuf, String) {
 
 /// The node `a` every seeded graph carries is tagged with its own graph name,
 /// which proves a read-back graph was not mixed with another.
-pub(crate) fn assert_node_a_carries_graph_tag(dump: &crate::redb_store::GraphDump, graph: &str) {
+pub(crate) fn assert_node_a_carries_graph_tag(dump: &medulla_store::redb_store::GraphDump, graph: &str) {
     let a = dump
         .nodes
         .iter()

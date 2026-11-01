@@ -652,7 +652,7 @@ fn probe_recovery_edge_ordinal(
     let path = probe_file(root, row_id, scale, seed, repetition);
     let _ = std::fs::remove_file(&path);
     let (result, latency) =
-        timed(|| medulla::redb_store::exact_performance_probe_edge_ordinal(&path, scale));
+        timed(|| medulla_store::redb_store::exact_performance_probe_edge_ordinal(&path, scale));
     let _ = std::fs::remove_file(path);
     let (cold, hot, reseeded) = result?;
     Ok(Observation {

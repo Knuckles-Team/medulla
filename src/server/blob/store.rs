@@ -316,7 +316,7 @@ pub(crate) const BLOB_PHYSICAL_STORE: &str = "epistemic-graph:blob";
 /// Authenticate and bind ONE logical serving scope on `blob.redb`. The proof bytes are
 /// the composition root's; this module supplies only the identity and the layout.
 fn bind_scope(kernel: &StorageKernel, scope: &MutationScopeIdentity) -> Result<BlobHandle, String> {
-    crate::redb_store::shard::bind_scope::<BlobOwner>(kernel, scope)
+    medulla_store::redb_store::shard::bind_scope::<BlobOwner>(kernel, scope)
 }
 
 /// The native blob-domain scope identity for one (tenant, resource) pair.

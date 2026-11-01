@@ -24,7 +24,7 @@ pub(super) fn ensure(isolation: &mut IsolationLayer, graph: &str) -> Result<(), 
 }
 
 fn retained_source_matches(
-    retained: &crate::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision,
+    retained: &medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision,
     proposal: &crate::parser::enrichment_reactivation::BudgetRevisionProposal,
 ) -> bool {
     retained.schema_version == 1
@@ -38,7 +38,7 @@ fn retained_source_matches(
 }
 
 fn retained_budget_allows(
-    retained: &crate::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision,
+    retained: &medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision,
     proposal: &crate::parser::enrichment_reactivation::BudgetRevisionProposal,
 ) -> bool {
     retained.max_total_units > 0
@@ -79,10 +79,10 @@ pub(super) fn bind_top_up_identity(
     isolation: &IsolationLayer,
     graph_type: crate::protocol::GraphType,
     graph_owner: Option<&str>,
-    retained: &crate::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision,
+    retained: &medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision,
     proposal: &crate::parser::enrichment_reactivation::BudgetRevisionProposal,
     replacement: &medulla_types::native_control::EnrichmentBudgetCheckpoint,
-) -> Result<crate::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision, String> {
+) -> Result<medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision, String> {
     use crate::parser::enrichment_reactivation::TOP_UP_ACTION;
     if !caller_has_authority(verified, isolation, graph_type, graph_owner, proposal)
         || proposal.next_policy_sequence
@@ -99,7 +99,7 @@ pub(super) fn bind_top_up_identity(
         return Err("ACCESS_DENIED: repository enrichment top-up caller is not verified".into());
     }
     Ok(
-        crate::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision {
+        medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision {
             schema_version: 1,
             tenant_id: proposal.tenant_id.clone(),
             graph: proposal.graph.clone(),
@@ -165,7 +165,7 @@ mod tests {
             total_budget_units: 14,
             last_page_key: String::new(),
         };
-        let retained = crate::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision {
+        let retained = medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision {
             schema_version: 1,
             tenant_id: proposal.tenant_id.clone(),
             graph: proposal.graph.clone(),
@@ -207,7 +207,7 @@ mod tests {
         let bind =
             |context: &VerifiedRequestContext,
              proposed: &BudgetRevisionProposal,
-             policy: &crate::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision,
+             policy: &medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision,
              rules: &IsolationLayer| {
                 bind_top_up_identity(
                     context,
@@ -280,7 +280,7 @@ mod tests {
         let mut legacy = serde_json::to_value(&retained).unwrap();
         legacy.as_object_mut().unwrap().remove("max_total_units");
         let legacy_bytes = rmp_serde::to_vec_named(&legacy).unwrap();
-        let legacy: crate::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision =
+        let legacy: medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision =
             rmp_serde::from_slice(&legacy_bytes).unwrap();
         assert_eq!(legacy.max_total_units, 0);
         assert!(bind(&verified, &proposal, &legacy, &isolation).is_err());

@@ -695,7 +695,7 @@ async fn route_graph_audit_and_modality(
                 Ok(authority) => authority,
                 Err(error) => return Ok(Response::err(ctx.req_id, error)),
             };
-            let event = crate::redb_store::OperationAuditEvent {
+            let event = medulla_store::redb_store::OperationAuditEvent {
                 tenant: authority.tenant_scope().to_string(),
                 principal: authority.actor_scope().to_string(),
                 op,

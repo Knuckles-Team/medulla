@@ -62,7 +62,7 @@ pub(crate) fn intent_for_snapshot(
 
 pub(super) struct PendingEnrichment {
     pub(super) intent: MutationOutboxIntent,
-    pub(super) budget: crate::redb_store::enrichment_budget::SourceBudgetAuthority,
+    pub(super) budget: medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -395,7 +395,7 @@ pub(super) async fn pending_intent(
         units,
     };
     let intent = intent_for_snapshot(snapshot.clone())?;
-    let budget = crate::redb_store::enrichment_budget::SourceBudgetAuthority {
+    let budget = medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority {
         tenant_id: snapshot.tenant_id.clone(),
         source_envelope: snapshot.source_envelope.clone(),
         snapshot_digest: snapshot

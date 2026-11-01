@@ -1,6 +1,7 @@
 use super::*;
 use crate::protocol::GraphType;
-use crate::redb_store::{read_all_dumps, read_all_graph_meta};
+use medulla_store::redb_store::read_all_dumps;
+use medulla_store::redb_store::read_all_graph_meta;
 use crate::server::ServerState;
 
 impl RedbBackend {
@@ -38,9 +39,9 @@ impl RedbBackend {
             let cipher = writer.cipher.clone();
             tasks.push(move || {
                 #[cfg(feature = "security")]
-                let crypto = crate::redb_store::DurableCrypto::new(cipher.as_ref());
+                let crypto = medulla_store::redb_store::DurableCrypto::new(cipher.as_ref());
                 #[cfg(not(feature = "security"))]
-                let crypto = crate::redb_store::DurableCrypto::none();
+                let crypto = medulla_store::redb_store::DurableCrypto::none();
                 read_all_dumps(&shard, crypto)
             });
         }
@@ -99,7 +100,7 @@ impl RedbBackend {
                 .shard
                 .upgrade()
                 .ok_or_else(|| "redb writer thread is gone".to_string())?;
-            upgrade_tasks.push(move || crate::redb_store::upgrade_legacy_graph_meta(&shard));
+            upgrade_tasks.push(move || medulla_store::redb_store::upgrade_legacy_graph_meta(&shard));
         }
         let upgraded: usize = join_blocking_in_order(upgrade_tasks)
             .await?
@@ -109,7 +110,7 @@ impl RedbBackend {
             tracing::info!(
                 "redb: migrated {upgraded} graph metadata row(s) from the pre-versioned \
                  format to schema v{}",
-                crate::redb_store::graph_meta_schema_version()
+                medulla_store::redb_store::graph_meta_schema_version()
             );
         }
 
@@ -190,7 +191,7 @@ impl RedbBackend {
     pub(super) async fn read_snapshot<T, F>(&self, graph_fname: &str, read: F) -> Result<T, String>
     where
         T: Send + 'static,
-        F: for<'a> FnOnce(&'a Shard, crate::redb_store::DurableCrypto<'a>) -> Result<T, String>
+        F: for<'a> FnOnce(&'a Shard, medulla_store::redb_store::DurableCrypto<'a>) -> Result<T, String>
             + Send
             + 'static,
     {
@@ -267,7 +268,7 @@ mod graph_schema_restart_tests {
             )
             .unwrap();
         let dump = GraphDump {
-            kind: crate::redb_store::GraphDumpKind::DurableReadOnlyMaterialization,
+            kind: medulla_store::redb_store::GraphDumpKind::DurableReadOnlyMaterialization,
             graph: "g".to_string(),
             name: "g".to_string(),
             graph_type: GraphType::Global,
@@ -278,7 +279,7 @@ mod graph_schema_restart_tests {
             edges: Vec::new(),
             ledger: Vec::new(),
             semantic: Vec::new(),
-            native: crate::redb_store::NativeOperationDumpRows::default(),
+            native: medulla_store::redb_store::NativeOperationDumpRows::default(),
         };
 
         let error = restore_graph_dump(&core, dump).unwrap_err();

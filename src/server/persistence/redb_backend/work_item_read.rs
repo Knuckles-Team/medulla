@@ -16,19 +16,19 @@ use super::RedbBackend;
 /// A snapshot read keyed by `(graph, tenant, id)` -- the shape of every typed
 /// tenant-bound point read below.
 type TenantPointRead<T> = for<'a> fn(
-    &'a crate::redb_store::Shard,
+    &'a medulla_store::redb_store::Shard,
     &str,
     &str,
     &str,
-    crate::redb_store::DurableCrypto<'a>,
+    medulla_store::redb_store::DurableCrypto<'a>,
 ) -> Result<T, String>;
 
 /// A snapshot listing keyed by `(graph, request)`.
 type TenantListRead<Q, T> = for<'a> fn(
-    &'a crate::redb_store::Shard,
+    &'a medulla_store::redb_store::Shard,
     &str,
     &Q,
-    crate::redb_store::DurableCrypto<'a>,
+    medulla_store::redb_store::DurableCrypto<'a>,
 ) -> Result<T, String>;
 
 impl RedbBackend {
@@ -56,7 +56,7 @@ impl RedbBackend {
         tenant: &str,
         work_item_id: &str,
     ) -> Result<Option<WorkItemView>, String> {
-        let read: TenantPointRead<_> = crate::redb_store::work_item::read_work_item;
+        let read: TenantPointRead<_> = medulla_store::redb_store::work_item::read_work_item;
         self.tenant_point_read(graph_fname, tenant, work_item_id, read)
             .await
     }
@@ -68,7 +68,7 @@ impl RedbBackend {
         tenant: &str,
         work_item_id: &str,
     ) -> Result<Option<WorkItemOutcomeView>, String> {
-        let read: TenantPointRead<_> = crate::redb_store::work_item::read_work_item_outcome;
+        let read: TenantPointRead<_> = medulla_store::redb_store::work_item::read_work_item_outcome;
         self.tenant_point_read(graph_fname, tenant, work_item_id, read)
             .await
     }
@@ -80,7 +80,7 @@ impl RedbBackend {
         tenant: &str,
         lease_id: &str,
     ) -> Result<Option<ControlLeaseView>, String> {
-        let read: TenantPointRead<_> = crate::redb_store::work_item::read_control_lease;
+        let read: TenantPointRead<_> = medulla_store::redb_store::work_item::read_control_lease;
         self.tenant_point_read(graph_fname, tenant, lease_id, read)
             .await
     }
@@ -91,7 +91,7 @@ impl RedbBackend {
         graph_fname: &str,
         request: ListControlLeasesRequest,
     ) -> Result<ControlLeasePage, String> {
-        let read: TenantListRead<_, _> = crate::redb_store::work_item::list_control_leases;
+        let read: TenantListRead<_, _> = medulla_store::redb_store::work_item::list_control_leases;
         self.tenant_list_read(graph_fname, request, read).await
     }
 
@@ -102,7 +102,7 @@ impl RedbBackend {
         tenant: &str,
         gap_id: &str,
     ) -> Result<Option<GapView>, String> {
-        let read: TenantPointRead<_> = crate::redb_store::work_item::read_gap;
+        let read: TenantPointRead<_> = medulla_store::redb_store::work_item::read_gap;
         self.tenant_point_read(graph_fname, tenant, gap_id, read)
             .await
     }
@@ -113,7 +113,7 @@ impl RedbBackend {
         graph_fname: &str,
         request: GapListRequest,
     ) -> Result<GapPage, String> {
-        let read: TenantListRead<_, _> = crate::redb_store::work_item::list_gaps;
+        let read: TenantListRead<_, _> = medulla_store::redb_store::work_item::list_gaps;
         self.tenant_list_read(graph_fname, request, read).await
     }
 
@@ -123,7 +123,7 @@ impl RedbBackend {
         graph_fname: &str,
         request: WorkItemListRequest,
     ) -> Result<WorkItemPage, String> {
-        let read: TenantListRead<_, _> = crate::redb_store::work_item::list_work_items;
+        let read: TenantListRead<_, _> = medulla_store::redb_store::work_item::list_work_items;
         self.tenant_list_read(graph_fname, request, read).await
     }
 
@@ -143,12 +143,12 @@ impl RedbBackend {
 
 /// An owner-bound point read over one authoritative graph snapshot.
 type OwnerPointRead<T> = for<'a> fn(
-    &'a crate::redb_store::Shard,
+    &'a medulla_store::redb_store::Shard,
     &str,
     &str,
     &str,
     &str,
-    crate::redb_store::DurableCrypto<'a>,
+    medulla_store::redb_store::DurableCrypto<'a>,
 ) -> Result<T, String>;
 
 impl RedbBackend {
@@ -184,7 +184,7 @@ impl RedbBackend {
             tenant,
             run_id,
             actor,
-            crate::redb_store::work_item::read_run_admission,
+            medulla_store::redb_store::work_item::read_run_admission,
         )
         .await
     }
@@ -201,7 +201,7 @@ impl RedbBackend {
             tenant,
             context_id,
             actor,
-            crate::redb_store::work_item::read_session_usage,
+            medulla_store::redb_store::work_item::read_session_usage,
         )
         .await
     }
@@ -218,7 +218,7 @@ impl RedbBackend {
             tenant,
             run_id,
             actor,
-            crate::redb_store::work_item::current_plan::is_owner,
+            medulla_store::redb_store::work_item::current_plan::is_owner,
         )
         .await
     }
@@ -236,7 +236,7 @@ impl RedbBackend {
             run_id,
             actor,
             |shard, graph, tenant, run_id, actor, crypto| {
-                crate::redb_store::work_item::current_plan::read_current(
+                medulla_store::redb_store::work_item::current_plan::read_current(
                     shard,
                     graph,
                     tenant,
@@ -260,7 +260,7 @@ impl RedbBackend {
     ) -> Result<bool, String> {
         let (graph, actor) = (graph_fname.to_owned(), actor.to_owned());
         self.read_snapshot(graph_fname, move |shard, crypto| {
-            crate::redb_store::work_item::checkpoint::is_owner(
+            medulla_store::redb_store::work_item::checkpoint::is_owner(
                 shard, &graph, &request, &actor, crypto,
             )
         })
@@ -274,7 +274,7 @@ impl RedbBackend {
     ) -> Result<Option<medulla_types::run_checkpoint::RunCheckpointRead>, String> {
         let (graph, actor) = (graph_fname.to_owned(), actor.to_owned());
         self.read_snapshot(graph_fname, move |shard, crypto| {
-            crate::redb_store::work_item::checkpoint::read_current(
+            medulla_store::redb_store::work_item::checkpoint::read_current(
                 shard,
                 &graph,
                 &request,

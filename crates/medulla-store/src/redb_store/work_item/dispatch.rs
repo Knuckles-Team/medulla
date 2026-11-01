@@ -1,0 +1,200 @@
+//! WorkItem dispatch.rs transitions.
+
+use super::*;
+
+pub(crate) struct WorkItemApplyRequest<'args, 'table, 'crypto> {
+    pub(crate) graph: &'args str,
+    pub(crate) batch_id: &'args str,
+    pub(crate) method: &'args Method,
+    pub(crate) nodes:
+        &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    pub(crate) holds:
+        &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    pub(crate) work_item_index:
+        &'args ScopedOwnerTableMut<'table, (&'static str, &'static str, u64), &'static str>,
+    pub(crate) counters:
+        &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    pub(crate) pressure_index: &'args mut ScopedOwnerTableMut<
+        'table,
+        (
+            &'static str,
+            &'static str,
+            &'static str,
+            &'static str,
+            u64,
+            &'static str,
+        ),
+        u8,
+    >,
+    pub(crate) policies:
+        &'args ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    pub(crate) native_work_items:
+        &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    /// Edge and command-sequence rows, and the batch's authoritative time:
+    /// what a `GapUpsert` needs to admit its WorkItem (EH-348).
+    pub(crate) edges: &'args mut NativeEdgeRows<'table>,
+    pub(crate) command_sequences: &'args mut NativeSequenceRows<'table>,
+    pub(crate) committed_at_ms: u64,
+    pub(crate) crypto: DurableCrypto<'crypto>,
+}
+
+pub(crate) fn apply_work_item_rows(
+    request: WorkItemApplyRequest<'_, '_, '_>,
+) -> Result<Option<medulla_types::protocol::ResultPayload>, String> {
+    let WorkItemApplyRequest {
+        graph,
+        batch_id,
+        method,
+        nodes,
+        holds,
+        work_item_index,
+        counters,
+        pressure_index,
+        policies,
+        native_work_items,
+        edges,
+        command_sequences,
+        committed_at_ms,
+        crypto,
+    } = request;
+    match method {
+        Method::ClaimWorkItem { request } => {
+            apply_claim_work_item_row(graph, request, nodes, native_work_items, crypto)
+        }
+        Method::RenewWorkItemLease {
+            tenant,
+            work_item_id,
+            worker_id,
+            lease_epoch,
+            fencing_token,
+            now_ms,
+            lease_ms,
+        } => apply_renew_work_item_lease_row(RenewWorkItemLeaseInput {
+            fence: WorkItemFenceKey {
+                graph,
+                tenant,
+                work_item_id,
+                worker_id,
+                lease_epoch: *lease_epoch,
+                fencing_token: *fencing_token,
+            },
+            now_ms: *now_ms,
+            lease_ms: *lease_ms,
+            nodes: &mut *nodes,
+            crypto,
+        }),
+        Method::CasWorkItemMetadata { request } => {
+            apply_cas_work_item_metadata_row(graph, request, committed_at_ms, nodes, crypto)
+        }
+        Method::CommitWorkItemResult {
+            tenant,
+            work_item_id,
+            worker_id,
+            lease_epoch,
+            fencing_token,
+            outcome,
+            result_ref,
+            error_ref,
+            retryable,
+            now_ms,
+            outcome_extension,
+            run_completion,
+            idempotency_key: _,
+        } => apply_commit_work_item_result_row(CommitWorkItemResultInput {
+            graph,
+            tenant,
+            work_item_id,
+            worker_id,
+            lease_epoch: *lease_epoch,
+            fencing_token: *fencing_token,
+            outcome,
+            result_ref,
+            error_ref,
+            retryable: *retryable,
+            // Ordinary completion binds both the live fence and terminal timestamp to
+            // the engine commit clock, never the caller's backdated wire value.
+            // Legacy and delegated commits retain their existing clock semantics.
+            now_ms: if run_completion.is_some() {
+                committed_at_ms
+            } else {
+                *now_ms
+            },
+            outcome_extension: outcome_extension.as_deref(),
+            run_completion: run_completion.as_deref(),
+            batch_id,
+            nodes: &mut *nodes,
+            holds: &mut *holds,
+            work_item_index,
+            counters: &mut *counters,
+            pressure_index: &mut *pressure_index,
+            policies,
+            crypto,
+        }),
+        Method::CancelWorkItem {
+            tenant,
+            work_item_id,
+            reason_ref,
+            now_ms,
+            ..
+        } => apply_cancel_work_item_row(CancelWorkItemInput {
+            graph,
+            tenant,
+            work_item_id,
+            reason_ref,
+            now_ms: *now_ms,
+            nodes: &mut *nodes,
+            holds: &mut *holds,
+            work_item_index,
+            counters: &mut *counters,
+            pressure_index: &mut *pressure_index,
+            policies,
+            crypto,
+        }),
+        Method::DeferWorkItem {
+            tenant,
+            work_item_id,
+            worker_id,
+            lease_epoch,
+            fencing_token,
+            next_retry_at_ms,
+            reason_ref,
+            now_ms,
+            ..
+        } => apply_defer_work_item_row(DeferWorkItemInput {
+            fence: WorkItemFenceKey {
+                graph,
+                tenant,
+                work_item_id,
+                worker_id,
+                lease_epoch: *lease_epoch,
+                fencing_token: *fencing_token,
+            },
+            next_retry_at_ms: *next_retry_at_ms,
+            reason_ref,
+            now_ms: *now_ms,
+            nodes: &mut *nodes,
+            crypto,
+        }),
+        // EH-558 sealed-record retirement shares this kernel.
+        Method::RetireSealedRecord { request } => {
+            apply_retire_sealed_record_row(graph, request, nodes, crypto)
+        }
+        // graph-os MEDULLA-2 control-lease and EH-348 work-market writes share this
+        // kernel; EH-346 policy-evolution records are its other row writer;
+        // anything else is not a WorkItem-family row transition and answers `None`.
+        other => match apply_policy_record_rows(graph, other, nodes, crypto)? {
+            Some(result) => Ok(Some(result)),
+            None => apply_native_record_rows(NativeRecordRequest {
+                graph,
+                batch_id,
+                method: other,
+                nodes,
+                native_work_items,
+                edges,
+                command_sequences,
+                committed_at_ms,
+                crypto,
+            }),
+        },
+    }
+}

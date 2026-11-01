@@ -104,7 +104,7 @@ pub struct TenantCatalog {
     /// Optional durable backing (`catalog.redb`), served through the composition-root
     /// kernels (`SidecarStore`) rather than a directly-opened `redb::Database`. `None`
     /// ⇒ in-memory only.
-    durable: Option<crate::sidecar_store::SidecarStore<medulla_storage::TenantCatalogOwner>>,
+    durable: Option<medulla_store::sidecar_store::SidecarStore<medulla_storage::TenantCatalogOwner>>,
 }
 
 impl TenantCatalog {
@@ -122,7 +122,7 @@ impl TenantCatalog {
     /// catalog ⇒ pure MEDULLA-026 routing until something is assigned.
     pub fn open(persist_dir: &str) -> Result<Self, String> {
         let path = std::path::Path::new(persist_dir).join("catalog.redb");
-        let durable = crate::sidecar_store::SidecarStore::open(
+        let durable = medulla_store::sidecar_store::SidecarStore::open(
             &path,
             CATALOG_PHYSICAL_STORE,
             CATALOG_SCOPE_RESOURCE,

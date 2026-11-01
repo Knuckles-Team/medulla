@@ -84,29 +84,8 @@ macro_rules! work_item_resource_writes {
     };
 }
 
-#[cfg(feature = "redb")]
-pub(crate) mod redb_layout;
-#[cfg(feature = "redb")]
-pub mod redb_store;
-// The one shape every small kernel-owned sidecar file in this binary takes.
-#[cfg(feature = "redb")]
-pub mod sidecar_store;
 
-// CONCEPT:INT-P2-2 -- the Loop statechart definition (W2.5 control-plane migration):
-// `LoopStatus`'s 16 values as a reusable `medulla_statechart::StatechartDef`, instantiated
-// via the EXISTING `Method::Statechart` surface. Pure data + tests; no wire/dispatch
-// change. See `loop_statechart.rs`'s module doc for the full derivation.
-#[cfg(feature = "statechart")]
-pub mod loop_statechart;
 
-// CONCEPT:INT-P2-2 / ADR-5 (W2.2) -- the WorkItem statechart definition: the durable
-// unit-of-work lifecycle (`submitted → ready → leased → running → {succeeded|failed|
-// cancelled|dead_letter}`) as ONE reusable `medulla_statechart::StatechartDef`, plus the
-// phase-1 dual-write mirror decision + divergence alarm the native `redb_store.rs`
-// WorkItem handlers drive. Pure data + tests; the CAS/fencing row stays the lease
-// authority. See `work_item_statechart.rs`'s module doc for the full derivation.
-#[cfg(feature = "statechart")]
-pub mod work_item_statechart;
 
 // CONCEPT:INT-P2-2 / ADR-6 (W2.3) -- the agent-instance lifecycle statechart: an agent
 // instance's own `dormant ⇄ active` (+ `terminated`) lifecycle as ONE reusable

@@ -270,7 +270,7 @@ impl EmbeddedEngine {
         #[cfg(feature = "redb")]
         if let Some(store) = &self.inner.store {
             if let Err(error) = store.register_graph(
-                &crate::redb_store::sanitize(name),
+                &medulla_store::redb_store::sanitize(name),
                 name,
                 graph_type,
                 &incarnation_id,
@@ -316,7 +316,7 @@ impl EmbeddedEngine {
         }
         #[cfg(feature = "redb")]
         if let Some(store) = &self.inner.store {
-            store.purge(&crate::redb_store::sanitize(name))?;
+            store.purge(&medulla_store::redb_store::sanitize(name))?;
         }
         self.inner.registry.write().delete_graph(name)
     }
@@ -390,7 +390,7 @@ impl EmbeddedEngine {
         // its authoritative Graph(version) while the kernel write is held.
         #[cfg(feature = "redb")]
         if let Some(store) = &self.inner.store {
-            store.commit(&crate::redb_store::sanitize(graph), &method)?;
+            store.commit(&medulla_store::redb_store::sanitize(graph), &method)?;
         }
         // 2) Publish only after the durable commit succeeds. This is the
         // canonical durable Method → GraphCore applier used by WAL replay and
@@ -671,9 +671,9 @@ impl EmbeddedEngine {
                 reg.all_entries()
                     .iter()
                     .map(|e| {
-                        crate::redb_store::GraphDump::in_place_core_checkpoint(
-                            crate::redb_store::InPlaceCoreCheckpoint {
-                                graph: crate::redb_store::sanitize(&e.name),
+                        medulla_store::redb_store::GraphDump::in_place_core_checkpoint(
+                            medulla_store::redb_store::InPlaceCoreCheckpoint {
+                                graph: medulla_store::redb_store::sanitize(&e.name),
                                 name: e.name.clone(),
                                 graph_type: e.graph_type,
                                 incarnation_id: e.incarnation_id.clone(),

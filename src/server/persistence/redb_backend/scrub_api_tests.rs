@@ -5,8 +5,10 @@
 
 use super::*;
 use crate::protocol::Method;
-use crate::redb_store::scrub::{ScrubBudget, ScrubCursor};
-use crate::redb_store::{NodeUnreadable, UnsealFailure};
+use medulla_store::redb_store::scrub::ScrubBudget;
+use medulla_store::redb_store::scrub::ScrubCursor;
+use medulla_store::redb_store::NodeUnreadable;
+use medulla_store::redb_store::UnsealFailure;
 use crate::server::api::persistence::PersistenceBackend;
 
 const GRAPH: &str = "scrub_backend_graph";

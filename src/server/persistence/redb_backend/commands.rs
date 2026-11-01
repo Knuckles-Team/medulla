@@ -8,8 +8,9 @@ use crate::mutation_batch::{
 };
 use crate::protocol::{GraphType, Method};
 #[cfg(any(feature = "compute-dist", feature = "matview"))]
-use crate::redb_store::MatViewScanResult;
-use crate::redb_store::{XshardDecisionScan, XshardPrepareScan};
+use medulla_store::redb_store::MatViewScanResult;
+use medulla_store::redb_store::XshardDecisionScan;
+use medulla_store::redb_store::XshardPrepareScan;
 
 /// Boxed payload of a [`Cmd::CrossModalCommit`] (CONCEPT:MEDULLA-KG.txn.reader-never-sees-node + MEDULLA-360). Holds ONE
 /// graph's full multi-modal write-set — graph methods (incl. lowered OWL-axiom /
@@ -59,7 +60,7 @@ pub(crate) struct ChangeEnvelopePayload {
     pub(crate) graph: String,
     pub(crate) envelope: ChangeEnvelope,
     pub(crate) committed_at_ms: u64,
-    pub(crate) source_budget: Option<crate::redb_store::enrichment_budget::SourceBudgetAuthority>,
+    pub(crate) source_budget: Option<medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,
 }
 
 /// Payload of a [`Cmd::ChangeEnvelopesCommit`] — a batch of governed envelopes that
@@ -139,7 +140,7 @@ pub(crate) enum Cmd {
         graph: String,
         query: Box<PageQuery>,
         reply:
-            std::sync::mpsc::SyncSender<Result<Option<crate::redb_store::GraphDumpPage>, String>>,
+            std::sync::mpsc::SyncSender<Result<Option<medulla_store::redb_store::GraphDumpPage>, String>>,
     },
     /// Export ONE graph's rows VERBATIM for an online shard move (CONCEPT:MEDULLA-KG.backend.catalog-shard-resolve). Runs
     /// on the SOURCE shard's writer: flush pending first (so the snapshot is complete),
@@ -177,7 +178,7 @@ pub(crate) enum Cmd {
     #[cfg(feature = "security")]
     AuditAppend {
         graph: String,
-        event: crate::redb_store::OperationAuditEvent,
+        event: medulla_store::redb_store::OperationAuditEvent,
         reply: std::sync::mpsc::SyncSender<Result<crate::protocol::AuditAppendReceipt, String>>,
     },
     /// TEST-ONLY tamper of one audit entry (see `test_tamper_audit_entry`).
@@ -240,7 +241,7 @@ pub(crate) enum Cmd {
     #[cfg(feature = "raft")]
     RepositoryEnrichmentTopUp {
         graph: String,
-        transition: Box<crate::redb_store::enrichment_top_up::EnrichmentTopUpTransition>,
+        transition: Box<medulla_store::redb_store::enrichment_top_up::EnrichmentTopUpTransition>,
         committed_at_ms: u64,
         done: oneshot::Sender<Result<MutationBatchCommit, String>>,
     },
@@ -250,7 +251,7 @@ pub(crate) enum Cmd {
     MintWorkItemClaimCapability {
         graph: String,
         request: crate::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest,
-        authority: crate::redb_store::work_item_capability::AuthenticatedAuthority,
+        authority: medulla_store::redb_store::work_item_capability::AuthenticatedAuthority,
         done: oneshot::Sender<
             Result<crate::epistemic_operations_ext::WorkItemClaimCapabilityResult, String>,
         >,
@@ -258,7 +259,7 @@ pub(crate) enum Cmd {
     VerifyWorkItemClaimCapability {
         graph: String,
         request: crate::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest,
-        authority: crate::redb_store::work_item_capability::AuthenticatedAuthority,
+        authority: medulla_store::redb_store::work_item_capability::AuthenticatedAuthority,
         done: oneshot::Sender<
             Result<crate::epistemic_operations_ext::WorkItemClaimCapabilityResult, String>,
         >,
@@ -505,7 +506,7 @@ pub(crate) enum Cmd {
     /// Durably record the background node-payload scrub's cursor (EH-384) in
     /// its own control-only maintenance write.
     ScrubCursorPut {
-        cursor: crate::redb_store::scrub::ScrubCursor,
+        cursor: medulla_store::redb_store::scrub::ScrubCursor,
         done: oneshot::Sender<Result<(), String>>,
     },
 }

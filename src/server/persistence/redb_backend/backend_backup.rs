@@ -1,5 +1,5 @@
 use super::*;
-use crate::redb_layout::shard_filename;
+use medulla_store::redb_layout::shard_filename;
 
 type BackupReport = super::super::backup::BackupReport;
 

@@ -1,5 +1,5 @@
 use super::*;
-use crate::redb_layout::shard_filename;
+use medulla_store::redb_layout::shard_filename;
 
 type ShardSpec = (usize, String, String);
 
@@ -231,8 +231,8 @@ impl RedbBackend {
         startup_lock
             .try_lock()
             .map_err(|error| format!("redb backend startup directory is locked: {error}"))?;
-        let requested_k = crate::redb_layout::validate_shard_count(requested_k)?;
-        let k = crate::redb_layout::reconcile_shard_layout(
+        let requested_k = medulla_store::redb_layout::validate_shard_count(requested_k)?;
+        let k = medulla_store::redb_layout::reconcile_shard_layout(
             std::path::Path::new(&persist_dir),
             requested_k,
         )?;

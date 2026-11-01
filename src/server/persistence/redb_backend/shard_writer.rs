@@ -94,7 +94,7 @@ pub(super) fn resolve_shard_count() -> usize {
     }
     if let Ok(v) = std::env::var("MEDULLA_REDB_SHARDS") {
         if let Ok(n) = v.trim().parse::<usize>() {
-            return n.clamp(1, crate::redb_layout::MAX_SHARD_COUNT);
+            return n.clamp(1, medulla_store::redb_layout::MAX_SHARD_COUNT);
         }
     }
     #[cfg(test)]
@@ -443,7 +443,7 @@ impl ShardWriter {
     ) -> Result<T, String>
     where
         T: Send + 'static,
-        F: for<'a> FnOnce(&'a Shard, crate::redb_store::DurableCrypto<'a>) -> Result<T, String>
+        F: for<'a> FnOnce(&'a Shard, medulla_store::redb_store::DurableCrypto<'a>) -> Result<T, String>
             + Send
             + 'static,
     {
@@ -456,9 +456,9 @@ impl ShardWriter {
         tokio::task::spawn_blocking(move || {
             let _hold = hold;
             #[cfg(feature = "security")]
-            let crypto = crate::redb_store::DurableCrypto::new(cipher.as_ref());
+            let crypto = medulla_store::redb_store::DurableCrypto::new(cipher.as_ref());
             #[cfg(not(feature = "security"))]
-            let crypto = crate::redb_store::DurableCrypto::none();
+            let crypto = medulla_store::redb_store::DurableCrypto::none();
             read(shard.as_ref(), crypto)
         })
         .await

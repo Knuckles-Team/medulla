@@ -1,6 +1,6 @@
 //! Digest-bound readiness manifests for immutable migration snapshots.
 
-use crate::redb_layout::shard_filename;
+use medulla_store::redb_layout::shard_filename;
 use sha2::{Digest, Sha256};
 use std::io::Read;
 use std::path::{Path, PathBuf};

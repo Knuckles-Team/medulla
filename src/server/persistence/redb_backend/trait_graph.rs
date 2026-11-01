@@ -121,9 +121,9 @@ macro_rules! persistence_graph {
                 .upgrade()
                 .ok_or_else(|| "redb writer thread is gone".to_string())?;
             #[cfg(feature = "security")]
-            let crypto = crate::redb_store::DurableCrypto::new(writer.cipher.as_ref());
+            let crypto = medulla_store::redb_store::DurableCrypto::new(writer.cipher.as_ref());
             #[cfg(not(feature = "security"))]
-            let crypto = crate::redb_store::DurableCrypto::none();
+            let crypto = medulla_store::redb_store::DurableCrypto::none();
             read_one_node(&shard, graph_fname, node_id, crypto)
         }
 

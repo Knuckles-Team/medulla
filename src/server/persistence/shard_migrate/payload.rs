@@ -1,16 +1,35 @@
 //! Graph-scoped payload replacement under the admitted graft reservation.
 
 use super::MigrationReport;
-use crate::redb_store::{capacity_lease, development_lane, work_item_capability};
-use crate::redb_store::{
-    AUDIT, CHANGE_BLOBS, CHANGE_CURSORS, CHANGE_ENVELOPES, CHANGE_EVIDENCE, CHANGE_FEATURES,
-    CHANGE_LINEAGE, CHANGE_POLICIES, CONTENT_VERSIONS, EDGES, LEDGER, NODES,
-    RESOURCE_ANTI_AFFINITY, RESOURCE_CONCURRENCY, RESOURCE_DISK_POLICIES, RESOURCE_EXCLUSIVITY,
-    RESOURCE_FAIRNESS, RESOURCE_HOSTS, RESOURCE_RESERVATIONS, RESOURCE_RESERVATION_ATTEMPTS,
-    RESOURCE_RESERVATION_TENANT_INDEX, SEMANTIC, WORK_ITEM_COMMAND_SEQUENCE,
-};
+use medulla_store::redb_store::capacity_lease;
+use medulla_store::redb_store::development_lane;
+use medulla_store::redb_store::work_item_capability;
+use medulla_store::redb_store::AUDIT;
+use medulla_store::redb_store::CHANGE_BLOBS;
+use medulla_store::redb_store::CHANGE_CURSORS;
+use medulla_store::redb_store::CHANGE_ENVELOPES;
+use medulla_store::redb_store::CHANGE_EVIDENCE;
+use medulla_store::redb_store::CHANGE_FEATURES;
+use medulla_store::redb_store::CHANGE_LINEAGE;
+use medulla_store::redb_store::CHANGE_POLICIES;
+use medulla_store::redb_store::CONTENT_VERSIONS;
+use medulla_store::redb_store::EDGES;
+use medulla_store::redb_store::LEDGER;
+use medulla_store::redb_store::NODES;
+use medulla_store::redb_store::RESOURCE_ANTI_AFFINITY;
+use medulla_store::redb_store::RESOURCE_CONCURRENCY;
+use medulla_store::redb_store::RESOURCE_DISK_POLICIES;
+use medulla_store::redb_store::RESOURCE_EXCLUSIVITY;
+use medulla_store::redb_store::RESOURCE_FAIRNESS;
+use medulla_store::redb_store::RESOURCE_HOSTS;
+use medulla_store::redb_store::RESOURCE_RESERVATIONS;
+use medulla_store::redb_store::RESOURCE_RESERVATION_ATTEMPTS;
+use medulla_store::redb_store::RESOURCE_RESERVATION_TENANT_INDEX;
+use medulla_store::redb_store::SEMANTIC;
+use medulla_store::redb_store::WORK_ITEM_COMMAND_SEQUENCE;
 #[cfg(feature = "security")]
-use crate::redb_store::{AUDIT_REQUESTS, PROVENANCE_ANCHOR_MEMBERS};
+use medulla_store::redb_store::AUDIT_REQUESTS;
+use medulla_store::redb_store::PROVENANCE_ANCHOR_MEMBERS;
 use medulla_storage::{GraphShardOwner, OwnerRowScope, OwnerRowScopeStart, ScopedRead};
 use medulla_transaction::{GraftOwnerWrite, OwnerPayloadTransfer, OwnerPayloadWrite};
 use redb::TableDefinition;

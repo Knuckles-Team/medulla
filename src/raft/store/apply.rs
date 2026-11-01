@@ -123,7 +123,7 @@ impl MedullaStore {
         persistence: Option<&Arc<dyn PersistenceBackend>>,
         change_envelope: Option<&(
             crate::change_envelope::ChangeEnvelope,
-            Option<crate::redb_store::enrichment_budget::SourceBudgetAuthority>,
+            Option<medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,
         )>,
     ) -> Result<Option<RaftResponse>, String> {
         let Some((envelope, source_budget)) = change_envelope else {

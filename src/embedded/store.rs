@@ -14,7 +14,9 @@
 //! reopens in the server.
 
 use crate::protocol::{GraphType, Method};
-use crate::redb_store::{self, shard::Shard, GraphDump};
+use medulla_store::redb_store;
+use medulla_store::redb_store::shard::Shard;
+use medulla_store::redb_store::GraphDump;
 
 #[cfg(test)]
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -60,13 +62,13 @@ impl EmbeddedRedbStore {
     /// table) — identical bootstrap to the server's `RedbBackend::open`.
     pub(super) fn open(persist_dir: &std::path::Path) -> Result<Self, String> {
         std::fs::create_dir_all(persist_dir).map_err(|e| e.to_string())?;
-        let shards = crate::redb_layout::reconcile_shard_layout(persist_dir, 1)?;
+        let shards = medulla_store::redb_layout::reconcile_shard_layout(persist_dir, 1)?;
         if shards != 1 {
             return Err(format!(
                 "embedded mode requires one canonical redb shard, found {shards}; run migrate-shards offline"
             ));
         }
-        let db_path = persist_dir.join(crate::redb_layout::shard_filename(0));
+        let db_path = persist_dir.join(medulla_store::redb_layout::shard_filename(0));
         let shard = Shard::open(&db_path)?;
         Ok(Self {
             shard,

@@ -1,6 +1,6 @@
 use super::*;
 #[cfg(feature = "security")]
-use crate::redb_store::audit_writer_unavailable;
+use medulla_store::redb_store::audit_writer_unavailable;
 use crate::server::persistence::writer_reply::await_writer_reply;
 
 impl RedbBackend {
@@ -14,7 +14,7 @@ impl RedbBackend {
         let graph = graph_fname.to_string();
         let tenant = verified_tenant.to_string();
         self.read_snapshot(graph_fname, move |shard, _| {
-            crate::redb_store::operation_audit_read(shard, &graph, &tenant, seq)
+            medulla_store::redb_store::operation_audit_read(shard, &graph, &tenant, seq)
         })
         .await
     }
@@ -30,7 +30,7 @@ impl RedbBackend {
     pub(crate) async fn audit_append(
         &self,
         graph_fname: &str,
-        event: crate::redb_store::OperationAuditEvent,
+        event: medulla_store::redb_store::OperationAuditEvent,
     ) -> Result<crate::protocol::AuditAppendReceipt, String> {
         let (reply, rx) = std::sync::mpsc::sync_channel(1);
         self.enqueue(
@@ -100,8 +100,8 @@ impl RedbBackend {
             .shard
             .upgrade()
             .ok_or_else(|| "redb writer thread is gone".to_string())?;
-        let crypto = crate::redb_store::DurableCrypto::new(writer.cipher.as_ref());
-        crate::redb_store::provenance_leaf_hashes(&shard, graph_fname, node_ids, crypto)
+        let crypto = medulla_store::redb_store::DurableCrypto::new(writer.cipher.as_ref());
+        medulla_store::redb_store::provenance_leaf_hashes(&shard, graph_fname, node_ids, crypto)
     }
 
     /// Durably anchor an already-hashed provenance window (CONCEPT:MEDULLA-KG.sharding.row-level-security,
@@ -179,7 +179,7 @@ impl RedbBackend {
         node_after: Option<String>,
         edge_after: Option<(String, String, u32)>,
         page_size: usize,
-    ) -> Result<Option<crate::redb_store::GraphDumpPage>, String> {
+    ) -> Result<Option<medulla_store::redb_store::GraphDumpPage>, String> {
         let (reply, rx) = std::sync::mpsc::sync_channel(1);
         self.shard_for(graph_fname)
             .tx

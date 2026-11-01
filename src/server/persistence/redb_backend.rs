@@ -44,10 +44,10 @@ use redb::{ReadableTable, TableDefinition};
 use tokio::sync::RwLock;
 
 use crate::graph::GraphCore;
-use crate::redb_store::GraphDump;
+use medulla_store::redb_store::GraphDump;
 
 #[cfg(test)]
-use crate::redb_layout::shard_filename;
+use medulla_store::redb_layout::shard_filename;
 #[cfg(test)]
 use crate::server::ServerState;
 #[cfg(test)]
@@ -64,7 +64,7 @@ use crate::server::api::persistence::PersistenceBackend;
 // durable format with no Tokio. This backend reuses them verbatim — ONE format,
 // never duplicated — and adds only the off-reactor group-commit writer thread +
 // the `PersistenceBackend` async trait wiring on top.
-use crate::redb_store::shard::Shard;
+use medulla_store::redb_store::shard::Shard;
 
 #[cfg(test)]
 use medulla_transaction::OutboxClaimBudget;
@@ -214,7 +214,7 @@ enum CanaryOutcome {
 #[cfg(feature = "security")]
 fn shard_holds_durable_rows(shard: &Shard) -> Result<bool, String> {
     let control = shard.control_read()?;
-    let catalog = control.open_owner_table(crate::redb_store::GRAPH_META)?;
+    let catalog = control.open_owner_table(medulla_store::redb_store::GRAPH_META)?;
     let has_rows = {
         let mut rows = catalog.iter().map_err(|e| e.to_string())?;
         match rows.next() {
@@ -712,7 +712,7 @@ pub(crate) type AdminScopedRead<'a> = medulla_storage::ScopedRead<'a, AdminOwner
 /// serving scope. It hands no database back out. Every row the file holds is the
 /// ledger's own bookkeeping, so `create_owner` materializes the whole declared census
 /// at creation and no "ensure the table exists" bootstrap of ours remains.
-type AdminMutationStore = crate::sidecar_store::SidecarStore<AdminOwner>;
+type AdminMutationStore = medulla_store::sidecar_store::SidecarStore<AdminOwner>;
 
 /// Open (creating if absent) the one admin-mutations owner file.
 fn open_admin_mutations(path: &std::path::Path) -> Result<AdminMutationStore, String> {
@@ -884,7 +884,7 @@ mod tests {
         let mut batch = MutationBatch {
             schema_version: MUTATION_BATCH_VERSION,
             batch_id: batch_id.to_string(),
-            envelope: crate::redb_store::fixture_operation_envelope(
+            envelope: medulla_store::redb_store::fixture_operation_envelope(
                 &identity, &actor, 17, batch_id,
             ),
             identity,
@@ -1137,13 +1137,13 @@ mod tests {
         let wtx = db.begin_write().expect("begin write");
         {
             let mut reservations = wtx
-                .open_table(crate::redb_store::RESOURCE_RESERVATIONS)
+                .open_table(medulla_store::redb_store::RESOURCE_RESERVATIONS)
                 .expect("open reservations table for raw seed");
             reservations
                 .insert((graph, reservation_id), bytes.as_slice())
                 .expect("insert reservation row");
             let mut tenant_index = wtx
-                .open_table(crate::redb_store::RESOURCE_RESERVATION_TENANT_INDEX)
+                .open_table(medulla_store::redb_store::RESOURCE_RESERVATION_TENANT_INDEX)
                 .expect("open tenant index table for raw seed");
             tenant_index
                 .insert((graph, tenant, reservation_id), reservation_id)
@@ -1298,7 +1298,7 @@ mod tests {
         let wtx = db.begin_write().expect("begin write");
         {
             let mut holds = wtx
-                .open_table(crate::redb_store::development_lane::HOLDS)
+                .open_table(medulla_store::redb_store::development_lane::HOLDS)
                 .expect("open holds table for raw seed");
             holds
                 .insert((graph, hold_id), bytes.as_slice())
@@ -5463,9 +5463,11 @@ mod tests {
         #[cfg(feature = "security")]
         let _enc_guard = EncryptionRequiredEnvGuard::set(None, "off");
         #[cfg(feature = "security")]
-        use crate::redb_store::PROVENANCE_ANCHOR_MEMBERS;
-        use crate::redb_store::{capacity_lease, development_lane};
-        use crate::redb_store::{RESOURCE_RESERVATIONS, WORK_ITEM_COMMAND_SEQUENCE};
+        use medulla_store::redb_store::PROVENANCE_ANCHOR_MEMBERS;
+        use medulla_store::redb_store::capacity_lease;
+        use medulla_store::redb_store::development_lane;
+        use medulla_store::redb_store::RESOURCE_RESERVATIONS;
+        use medulla_store::redb_store::WORK_ITEM_COMMAND_SEQUENCE;
         use crate::server::persistence::tenant_catalog::TenantCatalog;
         const K: usize = 4;
         let dir =

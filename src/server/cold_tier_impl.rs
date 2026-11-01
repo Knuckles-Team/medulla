@@ -28,7 +28,7 @@ const COLD_TIER_SCOPE_INCARNATION: &str = "cold-tier:v1";
 /// through the two kernels via the single `cold_graphs` owner table.
 #[derive(Debug)]
 pub struct RedbColdTier {
-    durable: crate::sidecar_store::SidecarStore<medulla_storage::ColdTierOwner>,
+    durable: medulla_store::sidecar_store::SidecarStore<medulla_storage::ColdTierOwner>,
 }
 
 impl RedbColdTier {
@@ -36,7 +36,7 @@ impl RedbColdTier {
     /// owner scope. `SidecarStore::open` creates `persist_dir` if needed.
     pub fn open(persist_dir: &str) -> Result<Self, String> {
         let path = std::path::Path::new(persist_dir).join("cold.redb");
-        let durable = crate::sidecar_store::SidecarStore::open(
+        let durable = medulla_store::sidecar_store::SidecarStore::open(
             &path,
             COLD_TIER_PHYSICAL_STORE,
             COLD_TIER_SCOPE_RESOURCE,

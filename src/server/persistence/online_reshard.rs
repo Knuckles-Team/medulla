@@ -79,27 +79,51 @@ use redb::TableDefinition;
 use super::redb_backend::Cmd;
 use super::tenant_catalog::TenantCatalog;
 use crate::protocol::GraphType;
-use crate::redb_store::shard::{
-    graph_scope_identity, recover_retired_graft, retiring_graft_destination, source_graft_marker,
-    Shard, ShardWrite, SourceGraftMarker, FOREIGN_GRAFT_MARKER,
-};
+use medulla_store::redb_store::shard::graph_scope_identity;
+use medulla_store::redb_store::shard::recover_retired_graft;
+use medulla_store::redb_store::shard::retiring_graft_destination;
+use medulla_store::redb_store::shard::source_graft_marker;
+use medulla_store::redb_store::shard::Shard;
+use medulla_store::redb_store::shard::ShardWrite;
+use medulla_store::redb_store::shard::SourceGraftMarker;
+use medulla_store::redb_store::shard::FOREIGN_GRAFT_MARKER;
 #[cfg(test)]
-use crate::redb_store::shard::{take_test_barrier, GRAFT_BEFORE_PROTOCOL_LOCK};
+use medulla_store::redb_store::shard::take_test_barrier;
+use medulla_store::redb_store::shard::GRAFT_BEFORE_PROTOCOL_LOCK;
 #[cfg(feature = "security")]
-use crate::redb_store::PROVENANCE_ANCHOR_MEMBERS;
-use crate::redb_store::{capacity_lease, development_lane};
-use crate::redb_store::{
-    clear_change_material_rows_in_wtx, clear_graph_rows, decode_graph_meta_identity, sanitize,
-    CHANGE_BLOBS, CHANGE_CURSORS, CHANGE_ENVELOPES, CHANGE_EVIDENCE, CHANGE_FEATURES,
-    CHANGE_LINEAGE, CHANGE_POLICIES, CONTENT_VERSIONS, EDGES, GRAPH_META, LEDGER, NODES, SEMANTIC,
-};
+use medulla_store::redb_store::PROVENANCE_ANCHOR_MEMBERS;
+use medulla_store::redb_store::capacity_lease;
+use medulla_store::redb_store::development_lane;
+use medulla_store::redb_store::clear_change_material_rows_in_wtx;
+use medulla_store::redb_store::clear_graph_rows;
+use medulla_store::redb_store::decode_graph_meta_identity;
+use medulla_store::redb_store::sanitize;
+use medulla_store::redb_store::CHANGE_BLOBS;
+use medulla_store::redb_store::CHANGE_CURSORS;
+use medulla_store::redb_store::CHANGE_ENVELOPES;
+use medulla_store::redb_store::CHANGE_EVIDENCE;
+use medulla_store::redb_store::CHANGE_FEATURES;
+use medulla_store::redb_store::CHANGE_LINEAGE;
+use medulla_store::redb_store::CHANGE_POLICIES;
+use medulla_store::redb_store::CONTENT_VERSIONS;
+use medulla_store::redb_store::EDGES;
+use medulla_store::redb_store::GRAPH_META;
+use medulla_store::redb_store::LEDGER;
+use medulla_store::redb_store::NODES;
+use medulla_store::redb_store::SEMANTIC;
 #[cfg(feature = "security")]
-use crate::redb_store::{AUDIT, AUDIT_REQUESTS};
-use crate::redb_store::{
-    RESOURCE_ANTI_AFFINITY, RESOURCE_CONCURRENCY, RESOURCE_DISK_POLICIES, RESOURCE_EXCLUSIVITY,
-    RESOURCE_FAIRNESS, RESOURCE_HOSTS, RESOURCE_RESERVATIONS, RESOURCE_RESERVATION_ATTEMPTS,
-    RESOURCE_RESERVATION_TENANT_INDEX, WORK_ITEM_COMMAND_SEQUENCE,
-};
+use medulla_store::redb_store::AUDIT;
+use medulla_store::redb_store::AUDIT_REQUESTS;
+use medulla_store::redb_store::RESOURCE_ANTI_AFFINITY;
+use medulla_store::redb_store::RESOURCE_CONCURRENCY;
+use medulla_store::redb_store::RESOURCE_DISK_POLICIES;
+use medulla_store::redb_store::RESOURCE_EXCLUSIVITY;
+use medulla_store::redb_store::RESOURCE_FAIRNESS;
+use medulla_store::redb_store::RESOURCE_HOSTS;
+use medulla_store::redb_store::RESOURCE_RESERVATIONS;
+use medulla_store::redb_store::RESOURCE_RESERVATION_ATTEMPTS;
+use medulla_store::redb_store::RESOURCE_RESERVATION_TENANT_INDEX;
+use medulla_store::redb_store::WORK_ITEM_COMMAND_SEQUENCE;
 use crate::server::persistence::writer_reply::await_writer_reply;
 
 /// One graph's scope-bounded read of the shard's scope-prefixed owner tables.
@@ -1370,7 +1394,7 @@ pub(crate) fn export_graph_raw(shard: &Shard, graph: &str) -> Result<RawGraphRow
 /// work-item authority is purged in this same transaction — otherwise a shard
 /// reuse/retry could make an old capability valid against a replacement image.
 fn clear_graph_scope(write: &impl OwnerPayloadWrite, graph: &str) -> Result<(), String> {
-    crate::redb_store::work_item_capability::clear_graph_rows_in_payload(write)?;
+    medulla_store::redb_store::work_item_capability::clear_graph_rows_in_payload(write)?;
     {
         // `redb` refuses a second open of a table whose first handle is alive, so
         // the three projection tables are opened once, cleared together by the
@@ -1513,7 +1537,7 @@ fn apply_graph_delta(
     // The destination's private work-item authority is invalidated on EVERY delta
     // import for the same reason as on a raw import: a retry into a reused shard
     // must not leave an old capability valid against copied WorkItem rows.
-    crate::redb_store::work_item_capability::clear_graph_rows_in_payload(write)?;
+    medulla_store::redb_store::work_item_capability::clear_graph_rows_in_payload(write)?;
     {
         let mut nodes = write.open_scoped_table(NODES)?;
         for (id, blob) in &delta.upsert_nodes {
@@ -1901,7 +1925,7 @@ pub(crate) fn graft_graph_from_with_payload(
         .ok_or_else(|| "graph shard graft requires an owner payload transfer".to_string())?;
     let grafted = dest_shard.mutations().graft_scope_with_payload(
         GraftSource::new(source.mutations(), source.kernel(), source_handle.as_ref())
-            .with_owner_payload(&crate::redb_store::GraphShardRetirement),
+            .with_owner_payload(&medulla_store::redb_store::GraphShardRetirement),
         &destination,
         payload,
     )?;
@@ -1912,10 +1936,10 @@ pub(crate) fn graft_graph_from_with_payload(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::redb_store::encode_meta_with_incarnation;
+    use medulla_store::redb_store::encode_meta_with_incarnation;
 
     fn temp_path(tag: &str) -> std::path::PathBuf {
-        crate::redb_store::temp_path("medulla-online-reshard", tag)
+        medulla_store::redb_store::temp_path("medulla-online-reshard", tag)
     }
 
     fn image(graph: &str, nodes: &[(&str, &[u8])]) -> RawGraphRows {
@@ -2060,7 +2084,7 @@ mod tests {
     fn same_authority_graft_refuses_without_retiring_the_source() {
         let path = temp_path("graft-same-authority");
         let shard = Shard::open(&path).unwrap();
-        let identity = crate::redb_store::shard::graph_scope_identity("graph-a").unwrap();
+        let identity = medulla_store::redb_store::shard::graph_scope_identity("graph-a").unwrap();
         let rows = image("graph-a", &[("n1", b"one")]);
         import_graph_raw(&shard, "graph-a", &rows).unwrap();
         let before_meta = read_graph_meta(&shard, "graph-a").unwrap();

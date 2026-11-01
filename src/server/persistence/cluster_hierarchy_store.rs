@@ -61,7 +61,7 @@ const MAX_BLOB_BYTES: usize = 512 * 1024 * 1024;
 /// (`RedbBackend`'s impl) are this store's only callers.
 pub struct ClusterHierarchyStore {
     entries: RwLock<HashMap<String, Vec<u8>>>,
-    durable: Option<crate::sidecar_store::SidecarStore<medulla_storage::ClusterHierarchyOwner>>,
+    durable: Option<medulla_store::sidecar_store::SidecarStore<medulla_storage::ClusterHierarchyOwner>>,
 }
 
 impl ClusterHierarchyStore {
@@ -80,7 +80,7 @@ impl ClusterHierarchyStore {
     /// hierarchy cached yet, call ClusterHierarchyRefresh first".
     pub fn open(persist_dir: &str) -> Result<Self, String> {
         let path = std::path::Path::new(persist_dir).join("cluster_hierarchy.redb");
-        let durable = crate::sidecar_store::SidecarStore::open(
+        let durable = medulla_store::sidecar_store::SidecarStore::open(
             &path,
             CLUSTER_HIERARCHY_PHYSICAL_STORE,
             CLUSTER_HIERARCHY_SCOPE_RESOURCE,

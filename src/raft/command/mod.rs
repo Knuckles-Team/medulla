@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::protocol::Method;
-use crate::redb_store::enrichment_top_up::EnrichmentTopUpTransition;
+use medulla_store::redb_store::enrichment_top_up::EnrichmentTopUpTransition;
 
 #[cfg(feature = "modality-serving")]
 use super::SanitizedModalityRaftCommand;
@@ -120,10 +120,10 @@ impl ReplicatedMutation {
 
     pub(crate) fn change_envelope_with_budget(
         envelope: &crate::change_envelope::ChangeEnvelope,
-        source_budget: Option<&crate::redb_store::enrichment_budget::SourceBudgetAuthority>,
+        source_budget: Option<&medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,
         server_secret: &str,
     ) -> Result<Self, String> {
-        crate::redb_store::enrichment_budget::validate_source_envelope(envelope, source_budget)?;
+        medulla_store::redb_store::enrichment_budget::validate_source_envelope(envelope, source_budget)?;
         Ok(Self::Native {
             command: NativeMutationCommand::ChangeEnvelope {
                 sealed_envelope: SealedNativeMethod::seal_value(server_secret, envelope)?,
@@ -140,7 +140,7 @@ impl ReplicatedMutation {
     ) -> Result<
         Option<(
             crate::change_envelope::ChangeEnvelope,
-            Option<crate::redb_store::enrichment_budget::SourceBudgetAuthority>,
+            Option<medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,
         )>,
         String,
     > {
@@ -157,7 +157,7 @@ impl ReplicatedMutation {
                     .as_ref()
                     .map(|sealed| sealed.open_value(server_secret))
                     .transpose()?;
-                crate::redb_store::enrichment_budget::validate_source_envelope(
+                medulla_store::redb_store::enrichment_budget::validate_source_envelope(
                     &envelope,
                     budget.as_ref(),
                 )?;

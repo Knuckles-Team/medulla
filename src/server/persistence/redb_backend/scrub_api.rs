@@ -8,7 +8,10 @@
 //! cause on the storage-scrub metrics.
 
 use super::*;
-use crate::redb_store::scrub::{load_scrub_cursor, scrub_pass, ScrubBudget, ScrubPass};
+use medulla_store::redb_store::scrub::load_scrub_cursor;
+use medulla_store::redb_store::scrub::scrub_pass;
+use medulla_store::redb_store::scrub::ScrubBudget;
+use medulla_store::redb_store::scrub::ScrubPass;
 use tokio::sync::oneshot;
 
 impl RedbBackend {

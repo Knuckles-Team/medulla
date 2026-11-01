@@ -9,8 +9,8 @@ use medulla_types::MutationOutboxRecord;
 use tokio::sync::RwLock;
 
 use crate::parser::enrichment_reactivation::{plan_reactivation, BudgetRevisionProposal};
-use crate::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision;
-use crate::redb_store::enrichment_top_up::EnrichmentTopUpTransition;
+use medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision;
+use medulla_store::redb_store::enrichment_top_up::EnrichmentTopUpTransition;
 use crate::server::api::persistence::PersistenceBackend;
 use crate::server::api::persistence::{RaftMutationContext, RaftMutationTiming};
 use crate::server::authority_context::VerifiedRequestContext;

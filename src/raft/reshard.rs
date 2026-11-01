@@ -516,7 +516,7 @@ impl TenantManager {
 
     /// Read ONE graph's durable dump via the redb backend (CONCEPT:MEDULLA-KG.storage.100m-tenant). Errors if
     /// the backend is not the redb tier (resharding/hibernation require it).
-    fn read_dump(&self, graph_fname: &str) -> Result<Option<crate::redb_store::GraphDump>, String> {
+    fn read_dump(&self, graph_fname: &str) -> Result<Option<medulla_store::redb_store::GraphDump>, String> {
         let redb = self.backend.as_redb().ok_or_else(|| {
             "resharding/hibernation require the redb persistence backend".to_string()
         })?;

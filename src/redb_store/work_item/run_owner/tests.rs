@@ -39,7 +39,7 @@ fn change(shard: &Shard, id: &str, tag: &str, update: impl FnOnce(&mut Row)) {
 // spec: MEDULLA-DURABLE-KERNEL-R028.4.1
 #[test]
 fn run_admission_recovery_preserves_original_request() {
-    let path = crate::redb_store::temp_path("medulla-run-recovery", "restart");
+    let path = medulla_store::redb_store::temp_path("medulla-run-recovery", "restart");
     let shard = Shard::open(&path).unwrap();
     let id = admit(&shard);
     let first = read(&shard, "tenant", "run", "owner").unwrap().unwrap();
@@ -144,7 +144,7 @@ async fn run_admission_unavailable_is_a_declared_wire_refusal() {
     use crate::server::persistence::redb_backend::RedbBackend;
     use std::sync::Arc;
     for (tag, evidence) in [("legacy", None), ("malformed", Some(serde_json::json!({})))] {
-        let dir = crate::redb_store::temp_path("medulla-run-wire-refusal", tag);
+        let dir = medulla_store::redb_store::temp_path("medulla-run-wire-refusal", tag);
         std::fs::create_dir_all(&dir).unwrap();
         let shard = Shard::open(&dir.join("graph-0.redb")).unwrap();
         let id = admit(&shard);
@@ -324,7 +324,7 @@ fn ordinary_completion_native_fence_and_terminal_noop_preserve_binding() {
         ClaimWorkItemRequest, ClaimWorkItemRequestSchemaVersion, ClaimWorkItemResult,
     };
     use medulla_types::run_completion::*;
-    let path = crate::redb_store::temp_path("medulla-completion", "native-fence");
+    let path = medulla_store::redb_store::temp_path("medulla-completion", "native-fence");
     let shard = Shard::open(&path).unwrap();
     let id = admit(&shard);
     let claim = Method::ClaimWorkItem {
@@ -458,7 +458,7 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
                 placement_epoch: 0,
                 idempotency_key: tag,
                 expected_graph_version: Some(
-                    crate::redb_store::read_mutation_graph_version(shard, GRAPH).unwrap(),
+                    medulla_store::redb_store::read_mutation_graph_version(shard, GRAPH).unwrap(),
                 ),
                 fencing_token: None,
                 created_at_ms: now,
@@ -470,14 +470,14 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
         .unwrap()
     };
     let commit = |shard: &Shard, batch: &MutationBatch| {
-        crate::redb_store::commit_mutation_batch(
+        medulla_store::redb_store::commit_mutation_batch(
             shard,
             GRAPH,
             batch,
             None,
             batch.created_at_ms,
             DurableCrypto::none(),
-            &mut crate::redb_store::AuditTailCache::new(),
+            &mut medulla_store::redb_store::AuditTailCache::new(),
         )
         .unwrap()
     };
@@ -502,7 +502,7 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
         let handle = shard.graph(GRAPH).unwrap();
         let snapshot = shard.read(&handle).unwrap();
         let table = snapshot
-            .scoped_owner_table(crate::redb_store::development_lane::COUNTERS)
+            .scoped_owner_table(medulla_store::redb_store::development_lane::COUNTERS)
             .unwrap();
         table
             .range_inclusive((GRAPH, ""), (GRAPH, "\u{10ffff}"))
@@ -556,7 +556,7 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
             },
         ),
     ] {
-        let path = crate::redb_store::temp_path("medulla-completion-ledger", tag);
+        let path = medulla_store::redb_store::temp_path("medulla-completion-ledger", tag);
         let shard = Shard::open(&path).unwrap();
         let mut original = request();
         original
@@ -625,21 +625,21 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
         assert_eq!(counters(&shard), counters_before);
         let batch = compile(&shard, "finish", finish(hold.fencing_token.unwrap()), 3000);
         // Failure after row staging must roll back row, receipt and outbox together.
-        let failed = crate::redb_store::commit_mutation_batch_inner(
+        let failed = medulla_store::redb_store::commit_mutation_batch_inner(
             &shard,
-            crate::redb_store::BatchCommitInput::compact(GRAPH, &batch, None, 3000)
+            medulla_store::redb_store::BatchCommitInput::compact(GRAPH, &batch, None, 3000)
                 .with_crashpoint(Some(
-                    crate::redb_store::MutationBatchCrashpoint::AfterRowsBeforeMetadata,
+                    medulla_store::redb_store::MutationBatchCrashpoint::AfterRowsBeforeMetadata,
                 )),
             DurableCrypto::none(),
-            &mut crate::redb_store::AuditTailCache::new(),
+            &mut medulla_store::redb_store::AuditTailCache::new(),
         );
         assert!(failed.is_err());
         assert_eq!(row(&shard, &id), before);
         assert_eq!(counters(&shard), counters_before);
         assert!(events(&shard).is_empty());
         assert!(
-            crate::redb_store::read_mutation_batch_for_graph(&shard, GRAPH, "finish")
+            medulla_store::redb_store::read_mutation_batch_for_graph(&shard, GRAPH, "finish")
                 .unwrap()
                 .is_none()
         );

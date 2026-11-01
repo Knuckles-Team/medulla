@@ -189,7 +189,7 @@ pub(super) async fn dispatch_op_audit_append(
     graph_name: &str,
     core: Arc<crate::graph::GraphCore>,
     persistence: Option<Arc<dyn crate::server::api::persistence::PersistenceBackend>>,
-    event: crate::redb_store::OperationAuditEvent,
+    event: medulla_store::redb_store::OperationAuditEvent,
 ) -> Response {
     let fname = medulla_kernel::persist::sanitize(graph_name);
     match persistence.as_ref().and_then(|p| p.as_redb()) {
@@ -225,7 +225,7 @@ pub(super) async fn dispatch_op_audit_append(
         },
         None => Response::err(
             req_id,
-            crate::redb_store::audit_writer_unavailable("this server has no durable audit store"),
+            medulla_store::redb_store::audit_writer_unavailable("this server has no durable audit store"),
         ),
     }
 }
@@ -619,7 +619,8 @@ mod tests {
     use super::*;
     use crate::graph::GraphCore;
     use crate::protocol::Method;
-    use crate::redb_store::operation_audit::tests::{event, TENANT};
+    use medulla_store::redb_store::operation_audit::tests::event;
+    use medulla_store::redb_store::operation_audit::tests::TENANT;
     use crate::server::api::persistence::PersistenceBackend;
     use crate::server::persistence::redb_backend::audit_append_tests::seeded;
 

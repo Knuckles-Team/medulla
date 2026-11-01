@@ -5,7 +5,7 @@ use super::readiness::{
 };
 use super::swap::swap_ready_shards;
 use super::{discover_source_shards, migrate_shards_inner, MigrationFault, MigrationReport};
-use crate::redb_layout::validate_shard_count;
+use medulla_store::redb_layout::validate_shard_count;
 use std::path::{Path, PathBuf};
 
 fn unique_backup_dir(base: &Path) -> Result<PathBuf, String> {

@@ -5,7 +5,7 @@ use crate::protocol::Method;
 #[test]
 fn sealed_repository_budget_is_bound_to_exact_source_intent() {
     use crate::parser::enrichment_snapshot::EligibleSnapshot;
-    use crate::redb_store::enrichment_budget::SourceBudgetAuthority;
+    use medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority;
     use medulla_types::ingestion_wire::{ExtractedNode, IndexResult};
 
     let result = IndexResult {

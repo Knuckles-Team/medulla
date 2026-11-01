@@ -4,9 +4,9 @@
 //! ever written.
 
 use super::*;
-use crate::redb_layout::shard_filename;
-use crate::redb_store::shard::SHARD_PHYSICAL_STORE;
-use crate::redb_store::NODES;
+use medulla_store::redb_layout::shard_filename;
+use medulla_store::redb_store::shard::SHARD_PHYSICAL_STORE;
+use medulla_store::redb_store::NODES;
 use crate::server::persistence::agent_library::{
     AgentLibraryStore, AGENT_LIBRARY_FILE, AGENT_LIBRARY_PHYSICAL_STORE,
 };

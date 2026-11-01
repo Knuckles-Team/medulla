@@ -10,7 +10,7 @@ use parking_lot::RwLock;
 
 use crate::compute::semantic::SemanticStore;
 use crate::graph::{GraphSnapshot, GRAPH_SNAPSHOT_SCHEMA_VERSION};
-use crate::redb_store::GraphDump;
+use medulla_store::redb_store::GraphDump;
 use crate::registry::GraphRegistry;
 
 const COMMONS: &str = "__commons__";

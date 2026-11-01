@@ -202,7 +202,7 @@ const REPLAY_SCOPE_INCARNATION: &str = "request-replay:v1";
 /// multi-node `cluster` rollout.
 #[cfg(feature = "security")]
 pub(crate) struct RedbReplayLedger {
-    durable: crate::sidecar_store::SidecarStore<medulla_storage::RequestReplayOwner>,
+    durable: medulla_store::sidecar_store::SidecarStore<medulla_storage::RequestReplayOwner>,
     /// Lock-free fast path: requests signed at or below it need no commit.
     high_water: std::sync::atomic::AtomicU64,
     /// Serializes the commits that ADVANCE the high-water.
@@ -214,7 +214,7 @@ pub(crate) struct RedbReplayLedger {
 impl RedbReplayLedger {
     pub(crate) fn open(dir: &std::path::Path) -> Result<Self, String> {
         let path = dir.join("request-replay.redb");
-        let durable = crate::sidecar_store::SidecarStore::open(
+        let durable = medulla_store::sidecar_store::SidecarStore::open(
             &path,
             REPLAY_PHYSICAL_STORE,
             REPLAY_SCOPE_RESOURCE,
@@ -285,7 +285,7 @@ impl RedbReplayLedger {
 /// maintenance write so a fresh file gets its table created.
 #[cfg(feature = "security")]
 fn restore(
-    durable: &crate::sidecar_store::SidecarStore<medulla_storage::RequestReplayOwner>,
+    durable: &medulla_store::sidecar_store::SidecarStore<medulla_storage::RequestReplayOwner>,
 ) -> Result<(u64, NonceWindow), String> {
     use redb::ReadableTable;
 

@@ -242,7 +242,7 @@ fn decode_node_info(bytes: &[u8]) -> Result<NodeInfo, String> {
 }
 
 fn load_node_info_entries(
-    durable: &crate::sidecar_store::SidecarStore<medulla_storage::NodeInfoOwner>,
+    durable: &medulla_store::sidecar_store::SidecarStore<medulla_storage::NodeInfoOwner>,
 ) -> Result<HashMap<u64, NodeInfo>, String> {
     let mut entries = HashMap::new();
     let read = durable.read()?;
@@ -267,7 +267,7 @@ fn load_node_info_entries(
 }
 
 fn load_node_info_metadata(
-    durable: &crate::sidecar_store::SidecarStore<medulla_storage::NodeInfoOwner>,
+    durable: &medulla_store::sidecar_store::SidecarStore<medulla_storage::NodeInfoOwner>,
     entry_count: usize,
 ) -> Result<(Option<String>, u64), String> {
     let read = durable.read()?;
@@ -310,7 +310,7 @@ fn load_node_info_metadata(
 /// group-commit writer's hot path.
 pub struct NodeInfoStore {
     entries: RwLock<HashMap<u64, NodeInfo>>,
-    durable: Option<crate::sidecar_store::SidecarStore<medulla_storage::NodeInfoOwner>>,
+    durable: Option<medulla_store::sidecar_store::SidecarStore<medulla_storage::NodeInfoOwner>>,
     cluster_id: RwLock<Option<String>>,
     /// Local monotonic generation counter, bumped on every successful `upsert`
     /// (CONCEPT:MEDULLA-KG.sharding.cluster-topology). Since an upsert replicates identically to every
@@ -339,7 +339,7 @@ impl NodeInfoStore {
     /// node self-reports.
     pub fn open(persist_dir: &str) -> Result<Self, String> {
         let path = std::path::Path::new(persist_dir).join("node_info.redb");
-        let durable = crate::sidecar_store::SidecarStore::open(
+        let durable = medulla_store::sidecar_store::SidecarStore::open(
             &path,
             NODE_INFO_PHYSICAL_STORE,
             NODE_INFO_SCOPE_RESOURCE,

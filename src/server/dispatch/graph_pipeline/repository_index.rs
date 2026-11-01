@@ -260,7 +260,7 @@ pub(super) async fn route_repository_index(
 #[cfg(all(feature = "ast", feature = "redb"))]
 fn pending_source_budget(
     pending: Option<&enrichment::PendingEnrichment>,
-) -> Option<crate::redb_store::enrichment_budget::SourceBudgetAuthority> {
+) -> Option<medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority> {
     pending.map(|entry| entry.budget.clone())
 }
 
@@ -336,7 +336,7 @@ mod tests {
                 payload: Vec::new(),
                 headers: Default::default(),
             },
-            budget: crate::redb_store::enrichment_budget::SourceBudgetAuthority {
+            budget: medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority {
                 tenant_id: "tenant".into(),
                 source_envelope: "source-envelope".into(),
                 snapshot_digest: "a".repeat(64),

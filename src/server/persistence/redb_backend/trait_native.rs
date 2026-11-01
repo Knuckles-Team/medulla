@@ -9,9 +9,9 @@ macro_rules! read_enrichment_shard {
             .upgrade()
             .ok_or_else(|| "redb writer thread is gone".to_string())?;
         #[cfg(feature = "security")]
-        let $crypto = crate::redb_store::DurableCrypto::new(writer.cipher.as_ref());
+        let $crypto = medulla_store::redb_store::DurableCrypto::new(writer.cipher.as_ref());
         #[cfg(not(feature = "security"))]
-        let $crypto = crate::redb_store::DurableCrypto::none();
+        let $crypto = medulla_store::redb_store::DurableCrypto::none();
         $read
     }};
 }
@@ -56,7 +56,7 @@ macro_rules! persistence_native {
         &self,
         graph_fname: &str,
         request: crate::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest,
-        authority: crate::redb_store::work_item_capability::AuthenticatedAuthority,
+        authority: medulla_store::redb_store::work_item_capability::AuthenticatedAuthority,
     ) -> Result<crate::epistemic_operations_ext::WorkItemClaimCapabilityResult, String> {
         let (done, rx) = oneshot::channel();
         let cmd = Cmd::MintWorkItemClaimCapability {
@@ -77,7 +77,7 @@ macro_rules! persistence_native {
         &self,
         graph_fname: &str,
         request: crate::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest,
-        authority: crate::redb_store::work_item_capability::AuthenticatedAuthority,
+        authority: medulla_store::redb_store::work_item_capability::AuthenticatedAuthority,
     ) -> Result<crate::epistemic_operations_ext::WorkItemClaimCapabilityResult, String> {
         let (done, rx) = oneshot::channel();
         let cmd = Cmd::VerifyWorkItemClaimCapability {
@@ -136,7 +136,7 @@ macro_rules! persistence_native {
         let graph = graph_fname.to_owned();
         let request = request.clone();
         self.read_snapshot(graph_fname, move |shard, crypto| {
-            crate::redb_store::capacity_lease::read(shard, &graph, &request, crypto)
+            medulla_store::redb_store::capacity_lease::read(shard, &graph, &request, crypto)
         })
         .await
     }
@@ -152,7 +152,7 @@ macro_rules! persistence_native {
         let graph = graph_fname.to_owned();
         let cells = cells.to_vec();
         self.read_snapshot(graph_fname, move |shard, crypto| {
-            crate::redb_store::capacity_lease::headroom(shard, &graph, &cells, priority, crypto)
+            medulla_store::redb_store::capacity_lease::headroom(shard, &graph, &cells, priority, crypto)
         })
         .await
     }
@@ -163,7 +163,7 @@ macro_rules! persistence_native {
         source_envelope: &str,
     ) -> Result<Option<medulla_types::native_control::EnrichmentBudgetCheckpoint>, String> {
         super::trait_native::read_enrichment_shard!(self, graph_fname, |shard, crypto| {
-            crate::redb_store::enrichment_budget::read(&shard, graph_fname, source_envelope, crypto)
+            medulla_store::redb_store::enrichment_budget::read(&shard, graph_fname, source_envelope, crypto)
         })
     }
 
@@ -171,9 +171,9 @@ macro_rules! persistence_native {
         &self,
         graph_fname: &str,
         source_envelope: &str,
-    ) -> Result<Option<crate::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision>, String> {
+    ) -> Result<Option<medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision>, String> {
         super::trait_native::read_enrichment_shard!(self, graph_fname, |shard, crypto| {
-            crate::redb_store::enrichment_budget::read_policy_revision(
+            medulla_store::redb_store::enrichment_budget::read_policy_revision(
                 &shard,
                 graph_fname,
                 source_envelope,
@@ -187,7 +187,7 @@ macro_rules! persistence_native {
         graph_fname: &str,
     ) -> Result<Option<medulla_types::native_control::EnrichmentBudgetPark>, String> {
         super::trait_native::read_enrichment_shard!(self, graph_fname, |shard, crypto| {
-            crate::redb_store::enrichment_budget::read_park(&shard, graph_fname, crypto)
+            medulla_store::redb_store::enrichment_budget::read_park(&shard, graph_fname, crypto)
         })
     }
 
@@ -198,7 +198,7 @@ macro_rules! persistence_native {
         snapshot_digest: &str,
     ) -> Result<bool, String> {
         super::trait_native::read_enrichment_shard!(self, graph_fname, |shard, crypto| {
-            crate::redb_store::enrichment_budget::is_superseded(
+            medulla_store::redb_store::enrichment_budget::is_superseded(
                 &shard,
                 graph_fname,
                 source_envelope,
@@ -238,7 +238,7 @@ macro_rules! persistence_native {
         let graph = graph_fname.to_owned();
         let request = request.clone();
         self.read_snapshot(graph_fname, move |shard, crypto| {
-            crate::redb_store::development_lane::read_development_lane(
+            medulla_store::redb_store::development_lane::read_development_lane(
                 shard, &graph, &request, now_ms, crypto,
             )
         })
@@ -256,7 +256,7 @@ macro_rules! persistence_native {
         let graph = graph_fname.to_owned();
         let request = request.clone();
         self.read_snapshot(graph_fname, move |shard, crypto| {
-            crate::redb_store::development_lane::read_development_lane_status(
+            medulla_store::redb_store::development_lane::read_development_lane_status(
                 shard, &graph, &request, now_ms, crypto,
             )
         })

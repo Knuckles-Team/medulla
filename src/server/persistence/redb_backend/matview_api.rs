@@ -1,6 +1,6 @@
 use super::*;
 #[cfg(any(feature = "compute-dist", feature = "matview"))]
-use crate::redb_store::MatViewScanResult;
+use medulla_store::redb_store::MatViewScanResult;
 use crate::server::persistence::writer_reply::await_writer_reply;
 use tokio::sync::oneshot;
 

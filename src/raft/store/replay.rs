@@ -359,7 +359,7 @@ mod tests {
         // The durable record is the shard-bound batch: `bind_caller_batch`
         // rebinds the scope identity to the physical, sanitized graph key.
         let mut batch = batch;
-        batch.identity = crate::redb_store::shard::graph_scope_identity(&graph_fname)
+        batch.identity = medulla_store::redb_store::shard::graph_scope_identity(&graph_fname)
             .expect("replay fixture physical graph scope must bind");
         let identity = batch.identity.clone();
         let record = crate::mutation_batch::MutationBatchRecord {

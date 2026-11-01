@@ -6,7 +6,7 @@ pub(super) async fn commit_one_envelope(
     graph_fname: &str,
     envelope: &crate::change_envelope::ChangeEnvelope,
     committed_at_ms: u64,
-    source_budget: Option<crate::redb_store::enrichment_budget::SourceBudgetAuthority>,
+    source_budget: Option<medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,
     label: &str,
     dropped: &str,
 ) -> Result<crate::change_envelope::ChangeEnvelopeCommit, String> {
@@ -50,7 +50,7 @@ macro_rules! persistence_envelopes {
             &self,
             graph_fname: &str,
             envelope: &ChangeEnvelope,
-            authority: crate::redb_store::enrichment_budget::SourceBudgetAuthority,
+            authority: medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority,
             committed_at_ms: u64,
         ) -> Result<ChangeEnvelopeCommit, String> {
             super::trait_envelopes::commit_one_envelope(
@@ -69,7 +69,7 @@ macro_rules! persistence_envelopes {
         async fn commit_repository_enrichment_top_up(
             &self,
             graph_fname: &str,
-            transition: crate::redb_store::enrichment_top_up::EnrichmentTopUpTransition,
+            transition: medulla_store::redb_store::enrichment_top_up::EnrichmentTopUpTransition,
             committed_at_ms: u64,
         ) -> Result<MutationBatchCommit, String> {
             let (done, rx) = oneshot::channel();

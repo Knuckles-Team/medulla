@@ -101,7 +101,7 @@ fn validate_key(key: &str) -> Result<(), String> {
 pub(crate) struct VizProvenanceStore {
     entries: RwLock<HashMap<String, VizProvenanceRecord>>,
     #[cfg(feature = "redb")]
-    durable: Option<crate::sidecar_store::SidecarStore<medulla_storage::VizProvenanceOwner>>,
+    durable: Option<medulla_store::sidecar_store::SidecarStore<medulla_storage::VizProvenanceOwner>>,
 }
 
 impl VizProvenanceStore {
@@ -123,7 +123,7 @@ impl VizProvenanceStore {
     #[cfg(feature = "redb")]
     pub(crate) fn open(persist_dir: &str) -> Result<Self, String> {
         let path = std::path::Path::new(persist_dir).join("viz_provenance.redb");
-        let durable = crate::sidecar_store::SidecarStore::open(
+        let durable = medulla_store::sidecar_store::SidecarStore::open(
             &path,
             PROVENANCE_PHYSICAL_STORE,
             PROVENANCE_SCOPE_RESOURCE,

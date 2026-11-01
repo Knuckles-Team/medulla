@@ -266,7 +266,7 @@ mod current_snapshot_schema_tests {
 
         let durable = crate::server::persistence::online_reshard::RawGraphRows {
             meta: Some(
-                crate::redb_store::encode_meta_with_incarnation(
+                medulla_store::redb_store::encode_meta_with_incarnation(
                     "graph",
                     GraphType::Global,
                     "incarnation:test:raft-snapshot",

@@ -114,8 +114,9 @@ use medulla_storage::RecoveryStoreCounts;
 use redb::ReadableTable;
 use sha2::{Digest, Sha256};
 
-use crate::redb_store::shard::Shard;
-use crate::redb_store::{XSHARD_DECISION, XSHARD_PREPARE};
+use medulla_store::redb_store::shard::Shard;
+use medulla_store::redb_store::XSHARD_DECISION;
+use medulla_store::redb_store::XSHARD_PREPARE;
 use crate::server::persistence::shard_migrate;
 
 /// The bundle manifest file name.
@@ -470,7 +471,7 @@ pub(crate) fn write_manifest(
     if final_path.exists() {
         return Err("backup manifest already exists (refusing to overwrite)".to_string());
     }
-    let shard_files = crate::redb_layout::discover_current_shards(dir)?;
+    let shard_files = medulla_store::redb_layout::discover_current_shards(dir)?;
     if shard_files.len() != report.shards || report.shard_counts.len() != report.shards {
         return Err("backup shard-file count changed before publication".to_string());
     }
@@ -588,7 +589,7 @@ fn validate_bundled_store_declarations(manifest: &BackupManifest) -> Result<(), 
 }
 
 fn validate_manifest_shards(dir: &Path, manifest: &BackupManifest) -> Result<Vec<PathBuf>, String> {
-    let shard_files = crate::redb_layout::discover_current_shards(dir)?;
+    let shard_files = medulla_store::redb_layout::discover_current_shards(dir)?;
     if shard_files.len() != manifest.shard_count
         || manifest.shard_counts.len() != manifest.shard_count
     {
@@ -724,7 +725,7 @@ fn restore_graph_shards(
     // a SCOPE cannot be created or destroyed by re-routing one, so this is the
     // completeness claim that survives a K change — and it is read back from the
     // rebuilt files rather than reported by the migration about itself.
-    let restored_counts = shard_census(&crate::redb_layout::discover_current_shards(persist_dir)?)?;
+    let restored_counts = shard_census(&medulla_store::redb_layout::discover_current_shards(persist_dir)?)?;
     if restored_counts.len() != target_shards
         || graph_scopes(&restored_counts) != manifest.graph_scopes()
     {
@@ -891,7 +892,7 @@ impl Drop for EnvVarGuard {
 mod tests {
     use super::*;
     use crate::protocol::{GraphType, Method};
-    use crate::redb_store::shard::SHARD_PHYSICAL_STORE;
+    use medulla_store::redb_store::shard::SHARD_PHYSICAL_STORE;
     use crate::server::api::persistence::PersistenceBackend;
     use crate::server::persistence::redb_backend::seed_raw_row;
     use crate::server::persistence::redb_backend::RedbBackend;
@@ -1338,11 +1339,14 @@ mod tests {
             medulla_kernel::crypto::ENCRYPTION_KEY_ENV,
             "backup-census-key-material",
         );
-        use crate::redb_layout::shard_filename;
-        use crate::redb_store::{
-            capacity_lease, development_lane, MATVIEW_OPERATOR_STATE, PLAN_MATVIEWS,
-            PROVENANCE_ANCHOR_MEMBERS, RESOURCE_RESERVATIONS, WORK_ITEM_COMMAND_SEQUENCE,
-        };
+        use medulla_store::redb_layout::shard_filename;
+        use medulla_store::redb_store::capacity_lease;
+        use medulla_store::redb_store::development_lane;
+        use medulla_store::redb_store::MATVIEW_OPERATOR_STATE;
+        use medulla_store::redb_store::PLAN_MATVIEWS;
+        use medulla_store::redb_store::PROVENANCE_ANCHOR_MEMBERS;
+        use medulla_store::redb_store::RESOURCE_RESERVATIONS;
+        use medulla_store::redb_store::WORK_ITEM_COMMAND_SEQUENCE;
 
         let root =
             std::env::temp_dir().join(format!("medulla-backup-census-{}", std::process::id()));

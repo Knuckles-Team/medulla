@@ -143,7 +143,7 @@ type KvHandle = Arc<OwnedStoreHandle<KvOwner>>;
 /// Authenticate and bind ONE logical serving scope on `kv.redb`. The proof bytes are
 /// the composition root's; this module supplies only the identity and the layout.
 fn bind_scope(kernel: &StorageKernel, scope: &MutationScopeIdentity) -> Result<KvHandle, String> {
-    crate::redb_store::shard::bind_scope::<KvOwner>(kernel, scope)
+    medulla_store::redb_store::shard::bind_scope::<KvOwner>(kernel, scope)
 }
 
 /// Compare-and-swap `(namespace, key)` INSIDE one admitted owner write: the current
@@ -228,7 +228,7 @@ impl RedbBackend {
     /// an accidental adoption of (for example) an S3 index as the main KV
     /// store fail at the storage manifest boundary before any scope is bound.
     fn open_named(path: &Path, physical_name: &str) -> Result<Self, String> {
-        let (kernel, mutations, bootstrap) = crate::redb_store::shard::open_kernel_owned_store::<
+        let (kernel, mutations, bootstrap) = medulla_store::redb_store::shard::open_kernel_owned_store::<
             KvOwner,
         >(
             path, physical_name, &kv_bootstrap_identity()?

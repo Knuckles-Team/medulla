@@ -5,14 +5,28 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use tokio::sync::oneshot;
 
 use crate::protocol::Method;
-use crate::redb_store::shard::{Shard, ShardWrite};
-use crate::redb_store::{
-    clear_xshard_decision, clear_xshard_prepare, commit_change_envelopes, commit_crossmodal,
-    commit_mutation_batch, commit_mutation_batch_crossmodal, commit_mutation_batch_state,
-    commit_ops, get_xshard_decision, get_xshard_decision_retain, get_xshard_prepare,
-    purge_graph_rows, put_xshard_decision, put_xshard_prepare, put_xshard_recoverable_pending,
-    read_graph_dump, scan_xshard_decisions, scan_xshard_prepares, write_graph_meta, RAFT_LOG,
-};
+use medulla_store::redb_store::shard::Shard;
+use medulla_store::redb_store::shard::ShardWrite;
+use medulla_store::redb_store::clear_xshard_decision;
+use medulla_store::redb_store::clear_xshard_prepare;
+use medulla_store::redb_store::commit_change_envelopes;
+use medulla_store::redb_store::commit_crossmodal;
+use medulla_store::redb_store::commit_mutation_batch;
+use medulla_store::redb_store::commit_mutation_batch_crossmodal;
+use medulla_store::redb_store::commit_mutation_batch_state;
+use medulla_store::redb_store::commit_ops;
+use medulla_store::redb_store::get_xshard_decision;
+use medulla_store::redb_store::get_xshard_decision_retain;
+use medulla_store::redb_store::get_xshard_prepare;
+use medulla_store::redb_store::purge_graph_rows;
+use medulla_store::redb_store::put_xshard_decision;
+use medulla_store::redb_store::put_xshard_prepare;
+use medulla_store::redb_store::put_xshard_recoverable_pending;
+use medulla_store::redb_store::read_graph_dump;
+use medulla_store::redb_store::scan_xshard_decisions;
+use medulla_store::redb_store::scan_xshard_prepares;
+use medulla_store::redb_store::write_graph_meta;
+use medulla_store::redb_store::RAFT_LOG;
 
 // ── off-reactor group-commit writer thread ───────────────────────────────
 
@@ -42,9 +56,9 @@ pub(super) fn run(
     // Build the durable-crypto handle ONCE (borrows the owned cipher for the thread's
     // lifetime). No-op handle when encryption is off / not compiled.
     #[cfg(feature = "security")]
-    let crypto = crate::redb_store::DurableCrypto::new(cipher.as_ref());
+    let crypto = medulla_store::redb_store::DurableCrypto::new(cipher.as_ref());
     #[cfg(not(feature = "security"))]
-    let crypto = crate::redb_store::DurableCrypto::none();
+    let crypto = medulla_store::redb_store::DurableCrypto::none();
     // Pending mutations folded into the NEXT group commit, each with its optional
     // commit-before-ack completion sender (CONCEPT:MEDULLA-KG.backend.authoritative-dispatch). After a commit, EVERY
     // sender in the batch is fired with the batch's result — one fsync, N notified.
@@ -83,7 +97,7 @@ struct WriterLoop<'a> {
     shard: &'a Shard,
     group_commit: &'a RedbGroupCommitConfig,
     flush_threshold: usize,
-    crypto: crate::redb_store::DurableCrypto<'a>,
+    crypto: medulla_store::redb_store::DurableCrypto<'a>,
     stats: &'a RedbCommitStats,
 }
 
@@ -118,7 +132,7 @@ fn process_command_batch(cmd: Cmd, writer: &WriterLoop<'_>, pending: &mut Pendin
 fn commit_pending(
     shard: &Shard,
     pending: &mut Pending,
-    crypto: crate::redb_store::DurableCrypto<'_>,
+    crypto: medulla_store::redb_store::DurableCrypto<'_>,
     stats: &RedbCommitStats,
     lingered: bool,
 ) {
@@ -133,7 +147,7 @@ fn drain_burst(
     shard: &Shard,
     pending: &mut Pending,
     flush_threshold: usize,
-    crypto: crate::redb_store::DurableCrypto<'_>,
+    crypto: medulla_store::redb_store::DurableCrypto<'_>,
     stats: &RedbCommitStats,
 ) -> bool {
     while let Ok(cmd) = rx.try_recv() {
@@ -191,7 +205,7 @@ fn finish_linger_command(
     shard: &Shard,
     pending: &mut Pending,
     flush_threshold: usize,
-    crypto: crate::redb_store::DurableCrypto<'_>,
+    crypto: medulla_store::redb_store::DurableCrypto<'_>,
     stats: &RedbCommitStats,
 ) -> LingerOutcome {
     if handle_cmd(cmd, shard, pending, flush_threshold, crypto, stats)
@@ -222,13 +236,13 @@ struct Pending {
     /// the in-memory tail is authoritative; it is seeded once per graph (incl. after a
     /// restart) from a single scan inside `append_audit_entry`.
     #[cfg(feature = "security")]
-    audit_tail: crate::redb_store::AuditTailCache,
+    audit_tail: medulla_store::redb_store::AuditTailCache,
     /// Per-graph provenance-anchor tail cache (CONCEPT:MEDULLA-KG.sharding.row-level-security), the
     /// `ProvenanceAnchorCommit` sibling of `audit_tail` above — lives on `Pending`
     /// for the same reason: the writer thread's LIFETIME, seeded once per graph
     /// from a single scan (`provenance_anchor_commit`), then kept hot in RAM.
     #[cfg(feature = "security")]
-    provenance_anchor_cache: crate::redb_store::ProvenanceAnchorCache,
+    provenance_anchor_cache: medulla_store::redb_store::ProvenanceAnchorCache,
 }
 
 impl Pending {
@@ -260,7 +274,7 @@ fn handle_cmd(
     pending: &mut Pending,
     // Auto-sized early-flush op threshold (CONCEPT:AU-KG.backend.b-auto-sizeb).
     flush_threshold: usize,
-    crypto: crate::redb_store::DurableCrypto<'_>,
+    crypto: medulla_store::redb_store::DurableCrypto<'_>,
     // Group-commit observability (CONCEPT:MEDULLA-KG.backend.adaptive-linger-coalesce). Every flush this
     // function performs — the early-flush bound below AND every "flush pending
     // mutations first" side effect of a read/purge/register/etc. command — is a REAL
@@ -314,7 +328,7 @@ fn handle_cmd(
 fn commit_and_notify(
     shard: &Shard,
     pending: &mut Pending,
-    crypto: crate::redb_store::DurableCrypto<'_>,
+    crypto: medulla_store::redb_store::DurableCrypto<'_>,
 ) {
     if pending.is_empty() {
         return;
@@ -413,7 +427,7 @@ fn read_raft_log_range(
     gid: u64,
     lo: u64,
     hi: u64,
-    crypto: crate::redb_store::DurableCrypto<'_>,
+    crypto: medulla_store::redb_store::DurableCrypto<'_>,
 ) -> Result<Vec<Vec<u8>>, String> {
     const MAX_RAFT_LOG_READ_ENTRIES: usize = 100_000;
     const MAX_RAFT_LOG_READ_BYTES: usize = 1024 * 1024 * 1024;

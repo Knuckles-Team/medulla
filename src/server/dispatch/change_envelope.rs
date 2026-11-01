@@ -345,7 +345,7 @@ struct ChangeEnvelopeReplicaCtx<'a> {
 async fn try_replicate_change_envelope(
     ctx: ChangeEnvelopeReplicaCtx<'_>,
     envelope: &medulla_types::change_envelope::ChangeEnvelope,
-    source_budget: Option<&crate::redb_store::enrichment_budget::SourceBudgetAuthority>,
+    source_budget: Option<&medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,
     committed_at_ms: u64,
 ) -> Option<Response> {
     let ChangeEnvelopeReplicaCtx {
@@ -446,7 +446,7 @@ async fn try_replicate_new_change_envelope(
     known_replay: bool,
     ctx: ChangeEnvelopeReplicaCtx<'_>,
     envelope: &medulla_types::change_envelope::ChangeEnvelope,
-    source_budget: Option<&crate::redb_store::enrichment_budget::SourceBudgetAuthority>,
+    source_budget: Option<&medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,
     committed_at_ms: u64,
 ) -> Option<Response> {
     if known_replay {
@@ -589,7 +589,7 @@ pub(super) async fn apply_one_change_envelope(
 pub(super) async fn apply_repository_change_envelope(
     ctx: GraphOpRouting<'_>,
     envelope: medulla_types::change_envelope::ChangeEnvelope,
-    source_budget: Option<crate::redb_store::enrichment_budget::SourceBudgetAuthority>,
+    source_budget: Option<medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,
 ) -> Response {
     apply_one_change_envelope_inner(ctx, envelope, source_budget).await
 }
@@ -598,12 +598,12 @@ async fn apply_one_change_envelope_inner(
     ctx: GraphOpRouting<'_>,
     envelope: medulla_types::change_envelope::ChangeEnvelope,
     #[cfg(feature = "redb")] source_budget: Option<
-        crate::redb_store::enrichment_budget::SourceBudgetAuthority,
+        medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority,
     >,
 ) -> Response {
     let req_id = ctx.req_id;
     #[cfg(feature = "redb")]
-    if let Err(error) = crate::redb_store::enrichment_budget::validate_source_envelope(
+    if let Err(error) = medulla_store::redb_store::enrichment_budget::validate_source_envelope(
         &envelope,
         source_budget.as_ref(),
     ) {

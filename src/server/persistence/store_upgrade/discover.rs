@@ -53,7 +53,7 @@ pub(super) fn discover(data_dir: &Path) -> Result<Vec<StoreFile>, String> {
 /// offline upgrade must expect exactly this identity of the file it admits.
 pub(super) fn served_identity(layout: OwnerLayout) -> Option<&'static str> {
     match layout {
-        OwnerLayout::GraphShard => Some(crate::redb_store::shard::SHARD_PHYSICAL_STORE),
+        OwnerLayout::GraphShard => Some(medulla_store::redb_store::shard::SHARD_PHYSICAL_STORE),
         #[cfg(feature = "query")]
         OwnerLayout::Sql => Some(SQL_PHYSICAL_STORE),
         _ => DURABLE_STORES
@@ -69,7 +69,7 @@ fn is_regular_file(path: &Path) -> bool {
 }
 
 fn shard_files(data_dir: &Path) -> Result<Vec<StoreFile>, String> {
-    Ok(crate::redb_layout::discover_indexed_shards(data_dir)?
+    Ok(medulla_store::redb_layout::discover_indexed_shards(data_dir)?
         .into_iter()
         .map(|path| StoreFile::new(data_dir, path, Some(OwnerLayout::GraphShard)))
         .collect())

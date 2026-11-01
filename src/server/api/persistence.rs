@@ -151,7 +151,7 @@ pub trait PersistenceBackend: Send + Sync {
         _graph_fname: &str,
         _source_envelope: &str,
     ) -> Result<
-        Option<crate::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision>,
+        Option<medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision>,
         String,
     > {
         Err("persistence backend does not support enrichment policy reads".to_string())
@@ -486,7 +486,7 @@ pub trait PersistenceBackend: Send + Sync {
         &self,
         _graph_fname: &str,
         _envelope: &ChangeEnvelope,
-        _authority: crate::redb_store::enrichment_budget::SourceBudgetAuthority,
+        _authority: medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority,
         _committed_at_ms: u64,
     ) -> Result<ChangeEnvelopeCommit, String> {
         Err("persistence backend does not support atomic repository budget seed".into())
@@ -498,7 +498,7 @@ pub trait PersistenceBackend: Send + Sync {
     async fn commit_repository_enrichment_top_up(
         &self,
         _graph_fname: &str,
-        _transition: crate::redb_store::enrichment_top_up::EnrichmentTopUpTransition,
+        _transition: medulla_store::redb_store::enrichment_top_up::EnrichmentTopUpTransition,
         _committed_at_ms: u64,
     ) -> Result<MutationBatchCommit, String> {
         Err("persistence backend does not support replicated enrichment top-up".into())
@@ -577,7 +577,7 @@ pub trait PersistenceBackend: Send + Sync {
         &self,
         _graph_fname: &str,
         _request: WorkItemClaimCapabilityMintRequest,
-        _authority: crate::redb_store::work_item_capability::AuthenticatedAuthority,
+        _authority: medulla_store::redb_store::work_item_capability::AuthenticatedAuthority,
     ) -> Result<WorkItemClaimCapabilityResult, String> {
         Err("persistence backend does not support native WorkItem claim capabilities".to_string())
     }
@@ -590,7 +590,7 @@ pub trait PersistenceBackend: Send + Sync {
         &self,
         _graph_fname: &str,
         _request: WorkItemClaimCapabilityVerifyRequest,
-        _authority: crate::redb_store::work_item_capability::AuthenticatedAuthority,
+        _authority: medulla_store::redb_store::work_item_capability::AuthenticatedAuthority,
     ) -> Result<WorkItemClaimCapabilityResult, String> {
         Err("persistence backend does not support native WorkItem claim capabilities".to_string())
     }
@@ -853,7 +853,7 @@ pub struct CrossModalCommitArgs<'a> {
 /// Pure (no env access) so it is unit tested directly without the process-global
 /// env-var races a `from_env` test would need.
 pub(crate) fn parse_groups(raw: Option<String>, default: u64) -> Result<u64, String> {
-    let ceiling = crate::redb_layout::MAX_SHARD_COUNT as u64;
+    let ceiling = medulla_store::redb_layout::MAX_SHARD_COUNT as u64;
     // Absent / empty / an explicit `0` all mean "unspecified" ⇒ the cores-derived
     // `default` (preserving the pre-ADR-2 "None/empty/0 collapse together" semantic,
     // only the collapse target changed from a hardcoded 1 to `default`). A positive
@@ -879,7 +879,7 @@ pub(crate) fn parse_groups(raw: Option<String>, default: u64) -> Result<u64, Str
 /// ONE default both `resolve_shard_count` and [`raft_group_count`] derive from.
 pub(crate) fn default_raft_group_count() -> u64 {
     let cpus = medulla_kernel::autosize::detect_capacity().reserved_cpus() as u64;
-    (cpus / 2).clamp(1, crate::redb_layout::MAX_SHARD_COUNT as u64)
+    (cpus / 2).clamp(1, medulla_store::redb_layout::MAX_SHARD_COUNT as u64)
 }
 
 /// The number of raft groups (== redb shards K, ADR-2 / W1.2) this node runs, resolved
@@ -922,7 +922,7 @@ mod raft_group_tests {
         // opening more shards than the durable layout allows.
         assert_eq!(
             parse_groups(Some("9999".into()), 1).unwrap(),
-            crate::redb_layout::MAX_SHARD_COUNT as u64
+            medulla_store::redb_layout::MAX_SHARD_COUNT as u64
         );
         assert!(parse_groups(Some("nope".into()), 1).is_err());
     }
@@ -931,7 +931,7 @@ mod raft_group_tests {
     fn default_raft_group_count_is_bounded() {
         // Cores-derived, always in 1..=MAX_SHARD_COUNT regardless of the host.
         let n = default_raft_group_count();
-        assert!((1..=crate::redb_layout::MAX_SHARD_COUNT as u64).contains(&n));
+        assert!((1..=medulla_store::redb_layout::MAX_SHARD_COUNT as u64).contains(&n));
     }
 }
 
