@@ -243,7 +243,7 @@ impl InternalGraphCommand {
 }
 
 impl BoundGraphCommand {
-    fn validate(&self, expected: &GraphCommandAuthority) -> Result<(), String> {
+    pub fn validate(&self, expected: &GraphCommandAuthority) -> Result<(), String> {
         if self.schema_version != GRAPH_COMMAND_SCHEMA_VERSION {
             return Err("unsupported sealed Raft graph command schema".to_string());
         }

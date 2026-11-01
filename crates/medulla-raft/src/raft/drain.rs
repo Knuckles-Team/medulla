@@ -109,7 +109,7 @@ impl ShardDrainPlan {
         Ok(plan)
     }
 
-    fn validate(&self) -> Result<(), DrainError> {
+    pub fn validate(&self) -> Result<(), DrainError> {
         if !self.voter_sets_are_nonempty()
             || !self.quorum_and_health_floor_valid()
             || !self.authoritative_writer_preserved()

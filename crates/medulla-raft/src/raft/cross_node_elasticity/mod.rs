@@ -239,7 +239,7 @@ impl NodeCapacity {
             .pressure_bp(self.limits)
     }
 
-    fn validate(&self) -> bool {
+    pub fn validate(&self) -> bool {
         self.limits.validate_limits() && self.network_bytes_per_sec > 0
     }
 }
@@ -552,7 +552,7 @@ impl Default for ElasticityPolicy {
 }
 
 impl ElasticityPolicy {
-    fn validate(&self) -> bool {
+    pub fn validate(&self) -> bool {
         self.scale_up_threshold_bp <= PRESSURE_SCALE_BP as u16
             && (self.scale_up_threshold_bp as u64 + self.hysteresis_bp as u64)
                 <= 2 * PRESSURE_SCALE_BP

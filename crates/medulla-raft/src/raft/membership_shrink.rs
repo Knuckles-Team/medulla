@@ -66,7 +66,7 @@ pub struct MembershipShrinkEvidence {
 }
 
 impl MembershipShrinkEvidence {
-    fn validate(&self) -> Result<(), String> {
+    pub fn validate(&self) -> Result<(), String> {
         validate_voters(&self.observed_voters)?;
         if self.evidence_ref.is_empty() || self.evidence_ref.len() > MAX_EVIDENCE_REF {
             return Err("membership shrink evidence reference is invalid".to_string());

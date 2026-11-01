@@ -119,7 +119,7 @@ impl CrossGraphReadRequest {
         }
     }
 
-    fn validate(&self) -> Result<(), CrossGraphReadError> {
+    pub fn validate(&self) -> Result<(), CrossGraphReadError> {
         let valid = checks::page_limits_are_valid(self)
             && checks::fanout_and_timeout_are_valid(self)
             && checks::graph_names_are_unique_and_valid(&self.graph_names)
@@ -148,7 +148,7 @@ pub struct ReadPageRequest {
 }
 
 impl ReadPageRequest {
-    pub(crate) fn validate(&self, group: GroupId) -> Result<(), ReadPageError> {
+    pub fn validate(&self, group: GroupId) -> Result<(), ReadPageError> {
         if !checks::identifier_is_valid(&self.graph_name)
             || self.route.group != group
             || self.limit == 0

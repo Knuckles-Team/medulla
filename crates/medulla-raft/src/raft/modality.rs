@@ -143,7 +143,7 @@ pub(crate) struct SanitizedModalityResult {
 
 #[cfg(feature = "modality-serving")]
 impl SanitizedModalityResult {
-    fn validate(&self) -> Result<(), String> {
+    pub fn validate(&self) -> Result<(), String> {
         if self.schema_version != SANITIZED_MODALITY_CODEC_VERSION {
             return Err("sanitized modality result schema version is unsupported".to_string());
         }
@@ -308,7 +308,7 @@ impl SanitizedModalityAuthorityBinding {
         }
     }
 
-    fn validate(&self) -> Result<(), String> {
+    pub fn validate(&self) -> Result<(), String> {
         if self.tenant_scope.trim().is_empty()
             || self.graph_name.trim().is_empty()
             || self.graph_fname.trim().is_empty()
@@ -402,7 +402,7 @@ impl SanitizedModalityRaftCommand {
         }
     }
 
-    fn validate(&self, server_secret: &str) -> Result<(), String> {
+    pub fn validate(&self, server_secret: &str) -> Result<(), String> {
         self.validate_schema(server_secret)?;
         self.authority.validate()?;
         let canonical_result = self.result.canonical_bytes()?;
@@ -436,7 +436,7 @@ impl SanitizedModalityRaftCommand {
         Ok(())
     }
 
-    fn validate_schema(&self, server_secret: &str) -> Result<(), String> {
+    pub fn validate_schema(&self, server_secret: &str) -> Result<(), String> {
         if server_secret.is_empty() || self.schema_version != SANITIZED_MODALITY_CODEC_VERSION {
             return Err(
                 "sanitized modality Raft command schema version is unsupported".to_string(),

@@ -282,7 +282,7 @@ pub struct RaftRequest {
 }
 
 impl RaftRequest {
-    pub(crate) fn validate(&self) -> Result<(), String> {
+    pub fn validate(&self) -> Result<(), String> {
         if self.graph_fname.trim().is_empty() || self.graph_name.trim().is_empty() {
             return Err("Raft request graph authority must not be empty".to_string());
         }
@@ -592,7 +592,7 @@ impl Default for RaftResponse {
 }
 
 impl RaftResponse {
-    pub(crate) fn validate(&self) -> Result<(), String> {
+    pub fn validate(&self) -> Result<(), String> {
         if self.schema_version != RAFT_RESPONSE_SCHEMA_VERSION {
             return Err(format!(
                 "unsupported Raft response schema {} (expected {})",
