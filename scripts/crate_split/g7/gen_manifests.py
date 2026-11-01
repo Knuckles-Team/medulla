@@ -1,5 +1,5 @@
 """Generate scripts/crate_split/g7/<crate>.toml from rules/c-*.py, cuts.json, notes.json and modgraph.py graphs.
-usage (repo root): gen_manifests.py <repo> cuts.json notes.json <g7 dir> <graph dir>"""
+usage (repo root): gen_manifests.py <repo> cuts.json notes.json <g7 dir> <graph dir> [source crate ...]"""
 import json,runpy,fnmatch,sys
 W=sys.argv[1]
 SRC={ # source crate -> (graph, config, expand, after_chain, level map, notes, cuts)
@@ -16,12 +16,18 @@ SRC={ # source crate -> (graph, config, expand, after_chain, level map, notes, c
 'medulla-persistence':('g-persistence','c-persistence',[],True),
 'medulla-raft':('g-raft','c-raft',['raft'],True),
 'medulla-server-api':('g-sa2','c-sa',['api'],True),
+'medulla-server':('g-server','c-server',['dispatch','dispatch::request_boundary','split_tests'],True),
+'medulla-h-query':('g-hquery','c-hquery',['query'],True),
+'medulla-sql':('g-sql','c-sql',['sql'],False),
+'medulla-wire':('g-wire','c-wire',[],True),
 }
+ONLY=set(sys.argv[6:])  # optional: generate only these source crates (the others' sources are already split)
 CUTS=json.load(open(sys.argv[2]))
 NOTES=json.load(open(sys.argv[3]))
 def q(s): return json.dumps(s)
 summary={}
 for src,(g,c,exp,after) in SRC.items():
+    if ONLY and src not in ONLY: continue
     G=json.load(open(f'{sys.argv[5]}/{g}.json')); cfg=runpy.run_path(f'{sys.argv[4]}/rules/{c}.py')
     L=G['lines']
     def tgt(u):
@@ -31,6 +37,7 @@ for src,(g,c,exp,after) in SRC.items():
     T={u:tgt(u) for u in L}
     for cut in CUTS.get(src,[]):
         if cut.get('unit') and cut['unit'] not in T: T[cut['unit']]=cut['to_crate']; L[cut['unit']]=0
+        if cut.get('lines'): L[cut['unit']]+=cut['lines']; L[cut['from_unit']]-=cut['lines']  # projected: the cut carries lines between units
     rank=cfg['RANK']; tot={}
     for u,t in T.items(): tot[t]=tot.get(t,0)+L[u]
     deps={t:set() for t in tot}
@@ -45,15 +52,19 @@ for src,(g,c,exp,after) in SRC.items():
     o.append('# Step 1: item cuts, in order (mapall.json style: old path -> new module inside the SOURCE crate, which then moves with its unit).')
     for cut in CUTS.get(src,[]):
         o.append('[[cut]]')
-        for k in ['kind','from','to_module','to_crate','items','covers','note']:
+        for k in ['kind','from','to_module','to_crate','items','covers','lines','note']:
             if k in cut: o.append(f'{k} = {q(cut[k])}')
         o.append('')
+        for f,spec in cut.get('fields',{}).items():
+            o.append(f'[cut.fields.{q(f)}]')
+            for k,v in spec.items(): o.append(f'{k} = {q(v)}')
+            o.append('')
     o.append('# Step 2: module moves, top-down (highest rank first). Each line: module unit -> target crate. Path is relative to the repo root.')
     order=sorted([u for u in T if T[u]!=src or src not in rank],key=lambda u:(-rank.get(T[u],0),u))
     n=0
     for u in order:
         if T[u]==src: continue
-        n+=1; p=f'crates/{src}/src/'+u.replace('::','/')
+        n+=1; p=f'crates/{src}/tests' if u=='@tests' else f'crates/{src}/src/'+u.replace('::','/')
         o+=['[[move]]',f'order = {n}',f'unit = {q(u)}',f'path = {q(p)}',f'to = {q(T[u])}',f'lines = {L[u]}','']
     o.append('[notes]'); o.append('items = '+json.dumps(NOTES.get('_all',[])+NOTES.get(src,[]),indent=1))
     open(f'{W}/scripts/crate_split/g7/{src}.toml','w').write('\n'.join(o)+'\n')

@@ -35,10 +35,12 @@ computed at HEAD with the pipelines spec generator. Today that is 2,395 leaf row
 
 ```
 F12 medulla-engine (executable)
-F11 medulla-server
-F10 server-graph | server-consensus | server-obs | server-lake | server-identity | server-router   (siblings)
-F9  h-query | h-sparql | h-retrieve | h-mining | h-admin | h-packs | h-decide | h-compute
-    | h-ingest | h-graph | h-jobs | h-txn | wire | wire-msg                                     (siblings, no edges)
+F11a server-served-tests | server-store-tests | server-cluster-tests                        (test crates, siblings)
+F11 medulla-server (composition root)
+F10 server-obs | server-lake < server-graph < server-consensus | server-identity < server-router
+F9  h-sparql | h-retrieve | h-admin | h-packs | h-decide | h-compute | h-ingest | h-graph
+    | h-jobs | h-txn | wire | wire-msg                                                      (siblings, no edges)
+    < h-query (F9a) < h-mining (F9b)
 F8  raft-xshard | wire-core
 F7  raft
 F6  persistence-records | persistence-ops
@@ -360,3 +362,61 @@ points). `medulla-numeric` keeps the shared risk bounds, calibration and evaluat
 
 `medulla-storage-owner` is dropped: owner, physical, recovery, kernel, capability and scoped
 form one cycle, so `direct_state` (no dependencies) moves out instead.
+
+### The last four crates over the limit (G7b)
+
+`medulla-server` (82,114 lines), `medulla-h-query` (38,209), `medulla-sql` (30,091 with its
+integration tests) and `medulla-wire` (29,901) split per `g7/medulla-{server,h-query,sql,wire}.toml`.
+Every target is at most 18,000 lines today. Ranks come from `g7/modgraph.py` on the real module
+tree: `#[path]` files, inline modules, `super::` chains at any depth, globs (only the names the
+importing code uses) and re-exports. `check.py` reports 0 violations on each manifest. "Today"
+is the manifest's projection after its cuts; "Projected" adds the open spec rows routed there.
+
+| Source | Target | Level | Responsibility | In-family deps | Today | Projected |
+|---|---|---|---|---|---:|---:|
+| `medulla-h-query` | `medulla-h-sparql` | F9 | SPARQL/RDF, SPARQL service and federated-search handlers, including foreign source registration. | - | 6,398 | 7,218 |
+| `medulla-h-query` | `medulla-h-retrieve` | F9 | Semantic, text, spatial and secondary index runtimes and the reasoning projection handlers. | - | 8,660 | 9,020 |
+| `medulla-h-query` | `medulla-h-query` | F9a | Query handlers: UnifiedQuery, SQL, Cypher, GraphQL, NL query, explain, request cancel, streaming and the knowledge stream. | `medulla-h-retrieve`, `medulla-h-sparql` | 14,001 | 14,001 |
+| `medulla-h-query` | `medulla-h-mining` | F9b | Mining handlers over the served query path. | `medulla-h-query` | 9,078 | 9,358 |
+| `medulla-h-query` | `medulla-server` | F11 | Server composition root: startup, seam installation, transport, issuer trust, replica, registry reaper, retention and CDC sink. | `medulla-h-mining`, `medulla-h-query`, `medulla-h-retrieve` | 72 | 72 |
+| `medulla-server` | `medulla-server-lake` | F10a | Lake serving, GraphQL subscriptions and policy export. | - | 7,721 | 8,421 |
+| `medulla-server` | `medulla-server-obs` | F10a | Observability serving: logs, metrics, PromQL, OTLP traces and QoS classes. | - | 8,205 | 8,205 |
+| `medulla-server` | `medulla-server-graph` | F10b | Graph-op dispatch pipeline: graph pipeline, change envelopes, SPARQL update, policy evolution, request payload preflight and the shared dispatch helpers. | - | 12,460 | 16,500 |
+| `medulla-server` | `medulla-server-consensus` | F10c | Consensus dispatch: replicated apply, native proposal routing, transactions, job publication, server registry and fleet catalog. | `medulla-server-graph` | 4,665 | 4,865 |
+| `medulla-server` | `medulla-server-identity` | F10c | Identity dispatch: identity stamping, signing secrets, resolution context, request elevation and governed actors. | `medulla-server-graph` | 1,439 | 1,539 |
+| `medulla-server` | `medulla-server-router` | F10d | Request entry and method router: request boundary, method tables, telemetry methods, the dispatch seam and the end-to-end dispatch tests. | `medulla-server-consensus`, `medulla-server-graph`, `medulla-server-identity`, `medulla-server-obs` | 11,175 | 12,975 |
+| `medulla-server` | `medulla-server` | F11 | Server composition root: startup, seam installation, transport, issuer trust, replica, registry reaper, retention and CDC sink. | `medulla-server-consensus`, `medulla-server-graph`, `medulla-server-lake`, `medulla-server-obs`, `medulla-server-router` | 6,240 | 6,240 |
+| `medulla-server` | `medulla-server-store-tests` | F11a | Served mutation, batch, saga, persistence and store run-owner tests across the server API and store crates. | `medulla-server-router` | 7,305 | 7,305 |
+| `medulla-server` | `medulla-server-cluster-tests` | F11a | Cluster tests: raft clusters and commands, cross-shard harness, placement and resource acceptance. | `medulla-server`, `medulla-server-router` | 10,031 | 10,031 |
+| `medulla-server` | `medulla-server-served-tests` | F11a | End-to-end served tests: the full dispatch chain, handler and wire protocol round trips through the assembled server. | `medulla-server`, `medulla-server-router` | 12,873 | 12,873 |
+| `medulla-sql` | `medulla-sql-lang` | L4c | SQL language front end: statement classification, SQL/PGQ graph tables, PL/pgSQL bodies, vector and hypertable DDL, function expansion and the typed result shapes. | - | 10,057 | 10,057 |
+| `medulla-sql` | `medulla-sql` | L4d | SQL execution: DataFusion context, table providers, catalogs, ANN pushdown, spill and Iceberg federation scans. | `medulla-sql-lang` | 10,764 | 11,864 |
+| `medulla-sql` | `medulla-sql-tests` | L4e | Integration tests of the SQL engine over tables, user tables, UDFs, PGQ and federation scans. | `medulla-sql`, `medulla-sql-lang` | 9,270 | 9,270 |
+| `medulla-wire` | `medulla-wire-core` | F8 | Shared wire listener framework: session and outcome traits, broker queue primitives and SQL wire authentication. | - | 5,919 | 6,919 |
+| `medulla-wire` | `medulla-wire` | F9 | SQL and graph wire listeners: pgwire, MySQL, MSSQL, SQLite and Bolt. | `medulla-wire-core` | 10,163 | 10,263 |
+| `medulla-wire` | `medulla-wire-msg` | F9 | Messaging and object listeners: AMQP, MQTT, STOMP, Redis, DDS/ROS 2, S3 and the KV cache endpoint. | `medulla-wire-core` | 13,819 | 14,019 |
+
+Server shape. `medulla-server` keeps only the composition root (startup, seam installation,
+transport, issuer trust, replica, registry reaper, retention, CDC sink). The dispatch tree splits
+by served domain: graph-op pipeline (`server-graph`), consensus and fleet registry
+(`server-consensus`), identity and elevation (`server-identity`), and the request entry plus
+method router on top (`server-router`). Observability and lake serving are leaves (F10a).
+The three production re-entries below the router (`consensus/replicated.rs`, two in
+`sparql_update.rs`) go through the server-api `DispatchApi` seam; that is the one
+behaviour-sensitive cut, and every test state that reaches them installs the `DispatchSeam`.
+The 30k lines of cross-crate tests (`split_tests/`, the lib.rs `mod tests`) leave the root for
+three test crates, and the dispatch tests that drive the full chain move up to `server-router`.
+
+Query handlers. `h-sparql` and `h-retrieve` stay F9 siblings; `h-query` (F9a) uses them, and
+`h-mining` (F9b) runs the served query path. `QuerySeam` moves to the composition root.
+
+SQL. The language front end (`sql-lang`: classify, PGQ, PL/pgSQL, DDL, typed results) sits
+under execution (`sql`); `crates/medulla-sql/tests` becomes `medulla-sql-tests`. Wire: the shared
+framework (`wire::`, broker primitives, SQL wire auth) moves to the existing `wire-core`
+scaffold; the messaging and object listeners fill `wire-msg`; `wire` keeps the SQL and Bolt
+listeners.
+
+Regenerate: `modgraph.py <crate> <expand...>` into `g-server`/`g-hquery`/`g-sql`/`g-wire`,
+then `gen_manifests.py ... <graph dir> medulla-server medulla-h-query medulla-sql medulla-wire`,
+`apply_boundaries.py medulla-server medulla-h-query medulla-sql medulla-wire` (scoped: earlier
+lanes' hand-applied deviations stay) and `route_rows.py --update --check`.

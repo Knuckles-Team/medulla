@@ -1,15 +1,24 @@
 #!/usr/bin/env python3
 """Fold the G7 manifests into boundaries.toml (MEDULLA-CONTRACT-R056.11): every manifest move
 becomes a `moves` prefix of its target crate, new crates get a block, levels are set. Idempotent.
-usage (repo root): python3 scripts/crate_split/g7/apply_boundaries.py"""
-import json, re, tomllib
+usage (repo root): python3 scripts/crate_split/g7/apply_boundaries.py [source crate ...]
+With source crates, only their manifests are folded in and only the crates those manifests
+name are touched (earlier lanes' hand-applied deviations stay as they are)."""
+import json, re, sys, tomllib
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 BT = HERE.parent / "boundaries.toml"
 NEW = json.loads((HERE / "new_crates.json").read_text())
 text = BT.read_text()
+ONLY = set(sys.argv[1:])
 mans = [tomllib.loads(p.read_text()) for p in sorted(HERE.glob("medulla-*.toml"))]
+if ONLY:
+    mans = [m for m in mans if m["source"]["crate"] in ONLY]
+    scope = ONLY | {t for m in mans for t in m["targets"]}
+    for k in ("crates", "levels", "responsibility", "extra_moves"):
+        NEW[k] = {c: v for c, v in NEW[k].items() if c in scope}
+    NEW["remove"] = [c for c in NEW["remove"] if c in scope]
 srcs = {m["source"]["crate"] for m in mans}
 add = {}
 for m in mans:
@@ -57,7 +66,8 @@ for name in set(add) | set(NEW["levels"]) | set(NEW["responsibility"]):
         blk = re.sub(r'^responsibility = .*$', "responsibility = " + json.dumps(NEW["responsibility"][name]), blk, flags=re.M)
     text = text[:sp[0]] + blk + text[sp[1]:]
 chain = NEW["chain"]
-text = re.sub(r"^chain = \[.*\]$", "chain = " + json.dumps(chain), text, flags=re.M)
+if not ONLY:
+    text = re.sub(r"^chain = \[.*\]$", "chain = " + json.dumps(chain), text, flags=re.M)
 BT.write_text(text)
 tomllib.loads(text)
 print("ok")

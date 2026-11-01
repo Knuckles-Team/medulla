@@ -89,6 +89,43 @@
    "kind": "api",
    "responsibility": "Served API seams: admin, ingest, query-transaction and re-entry seams and their registry.",
    "specs": []
+  },
+  "medulla-sql-lang": {
+   "after": "medulla-sql-udfs",
+   "level": "L4c",
+   "kind": "leaf",
+   "responsibility": "SQL language front end: statement classification, SQL/PGQ graph tables, PL/pgSQL bodies, vector and hypertable DDL, function expansion and the typed result shapes.",
+   "specs": [
+    "engine-parity (SQL syntax)"
+   ]
+  },
+  "medulla-sql-tests": {
+   "after": "medulla-sql",
+   "level": "L4e",
+   "kind": "tests",
+   "responsibility": "Integration tests of the SQL engine over tables, user tables, UDFs, PGQ and federation scans.",
+   "specs": []
+  },
+  "medulla-server-served-tests": {
+   "after": "medulla-server",
+   "level": "F11a",
+   "kind": "tests",
+   "responsibility": "End-to-end served tests: the full dispatch chain, handler and wire protocol round trips through the assembled server.",
+   "specs": []
+  },
+  "medulla-server-store-tests": {
+   "after": "medulla-server-served-tests",
+   "level": "F11a",
+   "kind": "tests",
+   "responsibility": "Served mutation, batch, saga, persistence and store run-owner tests across the server API and store crates.",
+   "specs": []
+  },
+  "medulla-server-cluster-tests": {
+   "after": "medulla-server-store-tests",
+   "level": "F11a",
+   "kind": "tests",
+   "responsibility": "Cluster tests: raft clusters and commands, cross-shard harness, placement and resource acceptance.",
+   "specs": []
   }
  },
  "levels": {
@@ -128,12 +165,27 @@
   "medulla-persistence-records": "F6a",
   "medulla-persistence-ops": "F6b",
   "medulla-raft": "F7",
-  "medulla-raft-xshard": "F8"
+  "medulla-raft-xshard": "F8",
+  "medulla-server-obs": "F10a",
+  "medulla-server-lake": "F10a",
+  "medulla-server-graph": "F10b",
+  "medulla-server-consensus": "F10c",
+  "medulla-server-identity": "F10c",
+  "medulla-server-router": "F10d",
+  "medulla-server": "F11",
+  "medulla-h-sparql": "F9",
+  "medulla-h-retrieve": "F9",
+  "medulla-h-query": "F9a",
+  "medulla-h-mining": "F9b",
+  "medulla-wire-core": "F8",
+  "medulla-wire": "F9",
+  "medulla-wire-msg": "F9",
+  "medulla-sql-lang": "L4c"
  },
  "responsibility": {
   "medulla-tables": "Table schema model: schema, secondary index and migration definitions.",
   "medulla-table-store": "Physical table store, property-graph tables, the ANN authority and plan types, embedding bindings and plan scopes.",
-  "medulla-sql": "SQL dialect: parse, classify, plan and execute over tables, including the table providers.",
+  "medulla-sql": "SQL execution: DataFusion context, table providers, catalogs, ANN pushdown, spill and Iceberg federation scans.",
   "medulla-query": "Removed after the split: every module moves out; leftovers go to medulla-table-store.",
   "medulla-finance-market": "Market data primitives: quotes, bars, books, calendars, corporate actions, indicators, finance signals, backtest validation and the special functions.",
   "medulla-finance": "Finance portfolio layer: lot accounting, exchange records, imports, forensics, strategies, attribution, banking and the served finance entry points.",
@@ -152,7 +204,21 @@
   "medulla-persistence": "Persistence backend: redb backend, cold offload and tiering, read-through, cost accounting, node info and durable stores.",
   "medulla-persistence-records": "Persisted agent, decision, connector pack, guardrail and write-back records.",
   "medulla-persistence-ops": "Backup, online reshard, shard migration and store upgrade.",
-  "medulla-raft-xshard": "Cross-shard transactions, elasticity, exchange, pregel, drain and the raft test harnesses."
+  "medulla-raft-xshard": "Cross-shard transactions, elasticity, exchange, pregel, drain and the raft test harnesses.",
+  "medulla-server-obs": "Observability serving: logs, metrics, PromQL, OTLP traces and QoS classes.",
+  "medulla-server-lake": "Lake serving, GraphQL subscriptions and policy export.",
+  "medulla-server-graph": "Graph-op dispatch pipeline: graph pipeline, change envelopes, SPARQL update, policy evolution, request payload preflight and the shared dispatch helpers.",
+  "medulla-server-consensus": "Consensus dispatch: replicated apply, native proposal routing, transactions, job publication, server registry and fleet catalog.",
+  "medulla-server-identity": "Identity dispatch: identity stamping, signing secrets, resolution context, request elevation and governed actors.",
+  "medulla-server-router": "Request entry and method router: request boundary, method tables, telemetry methods, the dispatch seam and the end-to-end dispatch tests.",
+  "medulla-server": "Server composition root: startup, seam installation, transport, issuer trust, replica, registry reaper, retention and CDC sink.",
+  "medulla-h-sparql": "SPARQL/RDF, SPARQL service and federated-search handlers, including foreign source registration.",
+  "medulla-h-retrieve": "Semantic, text, spatial and secondary index runtimes and the reasoning projection handlers.",
+  "medulla-h-query": "Query handlers: UnifiedQuery, SQL, Cypher, GraphQL, NL query, explain, request cancel, streaming and the knowledge stream.",
+  "medulla-h-mining": "Mining handlers over the served query path.",
+  "medulla-wire-core": "Shared wire listener framework: session and outcome traits, broker queue primitives and SQL wire authentication.",
+  "medulla-wire": "SQL and graph wire listeners: pgwire, MySQL, MSSQL, SQLite and Bolt.",
+  "medulla-wire-msg": "Messaging and object listeners: AMQP, MQTT, STOMP, Redis, DDS/ROS 2, S3 and the KV cache endpoint."
  },
  "extra_moves": {
   "medulla-work-types": [
@@ -185,6 +251,13 @@
   "medulla-plan": [
    "crates/medulla-plan/src/uql/serve",
    "crates/medulla-plan/src/uql/tests"
+  ],
+  "medulla-server-router": [
+   "src/server/dispatch/telemetry",
+   "src/server/dispatch/request_boundary"
+  ],
+  "medulla-server-graph": [
+   "src/server/dispatch/policy_evolution"
   ]
  },
  "drop_moves": [
@@ -209,6 +282,9 @@
   "crates/medulla-types/src/source_transcript",
   "crates/medulla-types/src/ingest_job",
   "crates/medulla-types/src/policy_evolution",
-  "crates/medulla-types/src/current_plan"
+  "crates/medulla-types/src/current_plan",
+  "src/server/dispatch/telemetry",
+  "src/server/dispatch/request_boundary",
+  "src/server/dispatch/policy_evolution"
  ]
 }
