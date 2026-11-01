@@ -40,6 +40,7 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-raft = { path = "../medulla-raft" }
+medulla-exec = { path = "../medulla-exec" }
 
 [features]
 calvin = ["nonblocking", "medulla-raft/calvin"]
