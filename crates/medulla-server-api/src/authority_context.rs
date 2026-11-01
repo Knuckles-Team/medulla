@@ -139,7 +139,7 @@ impl VerifiedRequestContext {
 
     /// The request's MAC-covered advisory QoS priority claim, if any (W2.4 —
     /// engine-native QoS lanes). Read by the transport's QoS admission gate and
-    /// mapped to an admission class by `server::qos::QosClass::from_priority_claim`.
+    /// mapped to an admission class by `medulla_server::qos::QosClass::from_priority_claim`.
     /// `None` for a client that predates the claim (treated as the orchestration
     /// default). Because it is bound into the verified envelope MAC, a principal
     /// cannot forge a higher class than it signed.
@@ -406,7 +406,7 @@ impl VerifiedRequestContext {
 
     /// Bind an Iceberg-REST OAuth2 bearer's own verified subject + tenant
     /// claim to the engine-owned request context (BUG-222,
-    /// `server::lake::rest`).
+    /// `medulla_server::lake::rest`).
     ///
     /// Unlike [`Self::authenticated_fixed_service_actor`] (used by S3 SigV4
     /// and the KV-cache/`/sparql` bearer-JWT legs — protocols whose own
@@ -437,7 +437,7 @@ impl VerifiedRequestContext {
     /// not project for this surface, both deny the bearer outright rather
     /// than falling back to the old always-both-scopes default or silently
     /// dropping the unrecognized token and granting whatever remainder is
-    /// left. `server::lake::rest::handle` maps each REST operation to the
+    /// left. `medulla_server::lake::rest::handle` maps each REST operation to the
     /// minimum of these two scopes it actually needs (reads ⇒ `kg:read`,
     /// mutations ⇒ `kg:write`) via `CarrierAuthority::can_read`/`can_write`.
     ///

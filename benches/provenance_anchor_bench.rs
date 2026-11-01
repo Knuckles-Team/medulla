@@ -72,7 +72,7 @@ async fn seed_anchor_window(backend: &Arc<RedbBackend>) -> Vec<String> {
 /// The aggressive anchor loop: every `interval`, mutate one anchored node (so
 /// the window's root always changes -- a REAL commit every tick, never the
 /// free unchanged-root skip path), hash the window off-thread, then commit the
-/// anchor. Mirrors `server::persistence::provenance_anchor::sweep`'s two-step
+/// anchor. Mirrors `medulla_server::persistence::provenance_anchor::sweep`'s two-step
 /// shape (off-writer-thread hash, then a small writer-thread commit) but
 /// against a fixed synthetic window instead of a live `GraphCore` label index,
 /// so this bench needs no `ServerState`/registry.

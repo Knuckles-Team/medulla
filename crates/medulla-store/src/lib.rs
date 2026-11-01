@@ -11,7 +11,7 @@
 /// as ONE pattern. The apply and classification sites match through it, so a
 /// new family member is added once and every exhaustive `match` using it
 /// still fails to compile until it is classified. The dispatch arm in
-/// `server::handlers::work_item` stays enumerated: the contract-reachability
+/// `medulla_server::handlers::work_item` stays enumerated: the contract-reachability
 /// gate reads dispatch arms by variant name.
 #[macro_export]
 macro_rules! work_item_kernel_writes {

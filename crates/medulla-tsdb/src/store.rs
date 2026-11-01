@@ -309,7 +309,7 @@ fn series_bootstrap_identity(
 
 /// Build the native time-series mutation-scope identity for one (tenant, resource)
 /// pair. `resource` must be EXACTLY the string a caller passes as
-/// `CompileBatch::graph` for the same append: `crate::server::mutation_batch::
+/// `CompileBatch::graph` for the same append: `medulla_server::mutation_batch::
 /// finish_batch` (top-level crate) builds the batch's authoritative `identity` from
 /// that identical (tenant, graph) pair, the SAME `DurabilityDomain::TimeSeries`
 /// domain (the one operation `compile_opaque_method` compiles for a `TsAppend`),

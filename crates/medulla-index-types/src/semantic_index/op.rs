@@ -58,7 +58,7 @@ pub const MAX_SEMANTIC_BINDING_PAGE_LIMIT: u32 = 256;
 /// The longest opaque cursor accepted on any paginated semantic read.
 ///
 /// Semantic cursors are engine-minted and MAC-bound to the tenant they were
-/// issued for (`server::sql_catalog_acl`'s `SemanticCursorMac`), so this bound
+/// issued for (`medulla_server::sql_catalog_acl`'s `SemanticCursorMac`), so this bound
 /// is about refusing an obviously-forged value cheaply, before the MAC check
 /// has to hash it.
 pub const MAX_SEMANTIC_CURSOR_CHARS: usize = 8192;
@@ -114,7 +114,7 @@ pub struct SemanticStageLeasePage {
 /// Shaped like [`crate::agent_component::AgentComponentOp`] and its three
 /// sibling layers: one `Method` carrying a closed op enum, with the read/write
 /// classification living on the op itself ([`Self::is_mutation`]) so the
-/// capability policy and `server::access::requires_write` cannot drift apart
+/// capability policy and `medulla_server::access::requires_write` cannot drift apart
 /// about which operations write.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
@@ -325,7 +325,7 @@ pub enum SemanticIndexOp {
 impl SemanticIndexOp {
     /// Whether this operation commits durable state.
     ///
-    /// The ONE classifier. `server::access::requires_write` delegates to it and
+    /// The ONE classifier. `medulla_server::access::requires_write` delegates to it and
     /// `medulla_capabilities::semantic_index_policy` derives from it, so the access
     /// decision and the capability ledger cannot disagree about an operation.
     ///

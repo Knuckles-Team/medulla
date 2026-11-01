@@ -3,27 +3,27 @@
 //! One RSA-signature-against-JWKS verifier (issuer/audience/expiry,
 //! Keycloak-compatible) reused by three independently-configured surfaces:
 //!
-//! * the ancillary KV-cache HTTP surface (`server::kvcache_http`,
+//! * the ancillary KV-cache HTTP surface (`medulla_server::kvcache_http`,
 //!   `MEDULLA_KVCACHE_JWT_*`) — [`JwtValidator::from_env`] +
 //!   [`JwtValidator::validate`] (a bare bool: does this bearer token belong to
 //!   a caller allowed to touch KV pages);
-//! * the `/sparql` SELECT/CONSTRUCT/ASK read leg (`server::sparql_http`, A18,
+//! * the `/sparql` SELECT/CONSTRUCT/ASK read leg (`medulla_server::sparql_http`, A18,
 //!   `MEDULLA_SPARQL_JWT_*`) — [`JwtValidator::from_env_sparql`] +
 //!   [`JwtValidator::validate`], the SAME bearer/JWT credential SHAPE as the
 //!   KV-cache surface (a caller entitled to KV pages is not automatically
 //!   entitled to run federated SPARQL reads, so it is independently
 //!   configured rather than sharing the KV-cache surface's issuer);
-//! * the Iceberg-REST catalog surface (`server::lake::rest`, BUG-222,
+//! * the Iceberg-REST catalog surface (`medulla_server::lake::rest`, BUG-222,
 //!   `MEDULLA_ICEBERG_JWT_*`) — [`JwtValidator::from_env_iceberg`] +
 //!   [`JwtValidator::validate_claims`] (the Iceberg REST spec's own native
 //!   mechanism is an OAuth2 bearer, and — unlike the two bare-boolean surfaces
 //!   above — the verified `tenant` claim is itself compared against this
 //!   deployment's configured tenant before a `CarrierAuthority` is minted, so
 //!   a validly-signed bearer for a different tenant is rejected);
-//! * the primary `eg2.` request envelope (`server::auth`,
+//! * the primary `eg2.` request envelope (`medulla_server::auth`,
 //!   `MEDULLA_OIDC_JWT_*`) — [`JwtValidator::from_env_primary`] +
 //!   [`JwtValidator::validate_claims`] (the verified subject/tenant/roles/
-//!   scopes, so `server::auth` can bind the envelope's SELF-ASSERTED
+//!   scopes, so `medulla_server::auth` can bind the envelope's SELF-ASSERTED
 //!   principal/tenant/roles/scopes to a REAL external identity and reject a
 //!   mismatch — closing the gap where a holder of the shared HMAC secret
 //!   could otherwise claim to be anyone).
@@ -253,7 +253,7 @@ impl JwtValidator {
     }
 
     /// Build the `/sparql` SELECT/CONSTRUCT/ASK read leg's validator from the
-    /// environment (A18, `server::sparql_http`). Independently configured
+    /// environment (A18, `medulla_server::sparql_http`). Independently configured
     /// from [`from_env`](Self::from_env)'s KV-cache surface and
     /// [`from_env_primary`](Self::from_env_primary)'s primary `eg2.` envelope
     /// — all three may point at different realms/audiences, though most
@@ -270,7 +270,7 @@ impl JwtValidator {
     }
 
     /// Build the Iceberg-REST catalog surface's OAuth2 bearer validator from
-    /// the environment (BUG-222, `server::lake::rest`). Independently
+    /// the environment (BUG-222, `medulla_server::lake::rest`). Independently
     /// configured from [`from_env`](Self::from_env)'s KV-cache surface and
     /// [`from_env_sparql`](Self::from_env_sparql)'s `/sparql` read leg — the
     /// Iceberg REST spec's own native mechanism is an OAuth2 bearer token

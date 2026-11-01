@@ -38,7 +38,7 @@ use medulla_server_api::state::ServerState;
 /// Default cap on how many `:ToolCall`/`:RunTrace` node ids a single anchor tick
 /// considers PER LABEL for one graph — bounds both the off-writer-thread hashing
 /// pass and the eventual `PROVENANCE_ANCHOR_MEMBERS` row. Mirrors the scale of
-/// `server::state::DEFAULT_MAX_RESPONSE_NODES`.
+/// `medulla_server::state::DEFAULT_MAX_RESPONSE_NODES`.
 pub const DEFAULT_MAX_WINDOW_NODES: usize = 50_000;
 
 /// The configured positive per-tick window cap, read from

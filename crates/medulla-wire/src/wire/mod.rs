@@ -2,7 +2,7 @@
 //!
 //! ## What this is
 //! This module extracts the WIRE-NEUTRAL half of a database wire protocol out of the
-//! Postgres shim (`crate::server::pgwire`) so that EVERY present and future wire
+//! Postgres shim (`medulla_server::pgwire`) so that EVERY present and future wire
 //! (Postgres today; SQLite/MySQL/MSSQL in Phase J — MEDULLA-075/076/077; an AMQP/broker
 //! wire in Phase Y) reuses ONE `classify → dispatch → exec` path against the engine.
 //!
@@ -18,7 +18,7 @@
 //!   * **wire-specific (each wire's own module):** the listener + framing, the
 //!     handshake/auth, parameter binding, and the encoding of a [`WireOutcome`] into
 //!     that protocol's bytes (OIDs, `DataRow`s, tags, error frames). For Postgres
-//!     that adapter is `crate::server::pgwire`, which is now a THIN shim over
+//!     that adapter is `medulla_server::pgwire`, which is now a THIN shim over
 //!     [`WireSession`].
 //!
 //! ## The [`WireProtocol`] trait — the seam
@@ -250,7 +250,7 @@ fn parse_begin_isolation_clause(
 /// Best-effort extraction of `<col> = '<value>'` equality filters on a
 /// label-shaped column (`type`/`label`/`labels`) from a read statement's raw
 /// SQL text (CONCEPT:MEDULLA-KG.txn.serializable-zero-cost — NE-005 auto predicate tracking). This mirrors the ONE
-/// predicate shape [`crate::server::txn::PredicateRead`] can express
+/// predicate shape [`medulla_server::txn::PredicateRead`] can express
 /// (`get_nodes_by_label`), so a SQL `SERIALIZABLE` transaction's own reads
 /// seed genuine phantom protection for exactly the reads the engine's
 /// commit-time predicate check can protect. A read outside this shape
@@ -1114,7 +1114,7 @@ pub enum NodeOp {
 /// holds the NON-graph-topology modalities a pgwire `SET EMBEDDING` / `INSERT INTO
 /// series` / `SPARQL UPDATE` / `SPARQL CONSTRUCT` statement stages while a `BEGIN` is
 /// open. At `COMMIT` they are handed to the SHARED RPC cross-modal commit
-/// ([`crate::server::handlers::txn::commit_cross_modal_txn`]) so graph + vector + OWL
+/// ([`medulla_server::handlers::txn::commit_cross_modal_txn`]) so graph + vector + OWL
 /// modalities land atomically in ONE redb `WriteTransaction` — the SAME seam the RPC
 /// `TxnAddEmbedding`/`TxnAxiom`/`TxnConstruct` path commits through (no logic duplicated).
 #[cfg(feature = "query")]
@@ -1234,7 +1234,7 @@ pub struct WireSession {
     pub pending_isolation: parking_lot::Mutex<Option<medulla_server_api::txn::IsolationLevel>>,
     /// Predicate reads this OPEN transaction's own reads performed (CONCEPT:MEDULLA-KG.txn.serializable-zero-cost — NE-005
     /// auto predicate tracking), fingerprinted AT READ TIME (never deferred to
-    /// commit — see [`crate::server::txn::GraphTxnState::add_predicate_read`]'s
+    /// commit — see [`medulla_server::txn::GraphTxnState::add_predicate_read`]'s
     /// doc for why the timing matters) and captured only while `txn_isolation`
     /// is `Serializable`. Merged directly into the freshly-built
     /// `GraphTxnState.predicate_reads` at commit (the wire session has no live
@@ -1562,10 +1562,10 @@ impl WireSession {
     /// served engine's configured persistence directory are both mandatory.
     ///
     /// This performs NO per-table authorization of its own — same contract
-    /// [`crate::server::sql_tables::tenant_table_store`] itself documents ("the
+    /// [`medulla_server::sql_tables::tenant_table_store`] itself documents ("the
     /// physical-open layer answers `which file`, never `is this caller
     /// allowed`"). Every wire call site that reads/writes actual table DATA now
-    /// routes through [`crate::server::sql_catalog_acl`]'s per-op authorize
+    /// routes through [`medulla_server::sql_catalog_acl`]'s per-op authorize
     /// functions instead of this accessor (see `commit_table_txn_with_op`,
     /// `run_read`, `start_copy`). The one remaining caller of this exact method
     /// is `src/server/pgwire/mod.rs`'s `on_copy_done`, which re-fetches a
@@ -2568,7 +2568,7 @@ impl WireSession {
     /// Commit a transaction that staged BOTH graph-node ops AND user-table ops
     /// (CONCEPT:MEDULLA-TXN.mixed-commit-intent — NE-004). Graph and user tables live in two INDEPENDENT redb
     /// databases — a separate redb file per owner for tables (see
-    /// `crate::server::sql_tables`'s module doc; that per-owner catalog
+    /// `medulla_server::sql_tables`'s module doc; that per-owner catalog
     /// layout is a file this track does not own, and folding the two stores
     /// under one shared redb environment would mean changing it) — so a
     /// single shared `WriteTransaction` (option (a)) is not available here.
@@ -2577,7 +2577,7 @@ impl WireSession {
     ///   1. Snapshots the CURRENT durable state of every node the graph side
     ///      touches into `compensating_methods` — the exact inverse write.
     ///   2. Writes a durable, fsynced commit-intent record BEFORE either side
-    ///      commits ([`crate::server::api::query_txn::txn_intent::write_intent`]).
+    ///      commits ([`medulla_server::api::query_txn::txn_intent::write_intent`]).
     ///   3. Commits the graph side, then the table side, both keyed by the
     ///      intent's own `operation_id` so either is idempotently replay-safe
     ///      (the SAME coordinator/idempotency keys `commit_cross_modal_txn` /
@@ -2923,7 +2923,7 @@ impl WireSession {
     /// stash the copy state, and return a copy-in outcome so the wire streams rows.
     ///
     /// CONCEPT:NE-046 (MEDULLA-WIRE-CATALOG) — a COPY loads rows, so it is authorized for
-    /// [`crate::server::sql_catalog_acl::SqlPrivilege::Insert`] on `plan.table`
+    /// [`medulla_server::sql_catalog_acl::SqlPrivilege::Insert`] on `plan.table`
     /// through the SAME authorized-open path `run_insert_table` uses, HERE (before
     /// copy-in mode even begins) rather than only at the eventual
     /// `commit_copy_rows` → `commit_table_txn_with_op` commit. A denied/nonexistent
@@ -4733,7 +4733,7 @@ impl WireSession {
         Ok(WireOutcome::Rows(uql_rows_to_result(rows)))
     }
 
-    /// Build a fresh single-statement [`crate::server::txn::GraphTxnState`] pinned to
+    /// Build a fresh single-statement [`medulla_server::txn::GraphTxnState`] pinned to
     /// `graph` for an off-txn cross-modal auto-commit (CONCEPT:MEDULLA-KG.txn.isolation-ryow-begin-set).
     ///
     /// `isolation` (CONCEPT:MEDULLA-KG.txn.serializable-zero-cost — NE-005): the OPEN wire transaction's resolved
@@ -4795,7 +4795,7 @@ impl WireSession {
         Ok(measurement)
     }
 
-    /// Commit an assembled [`crate::server::txn::GraphTxnState`] through the SHARED RPC
+    /// Commit an assembled [`medulla_server::txn::GraphTxnState`] through the SHARED RPC
     /// cross-modal commit (CONCEPT:MEDULLA-KG.txn.isolation-ryow-begin-set) — the SAME `commit_cross_modal_txn` the RPC
     /// `Method::Commit` drives, so graph + vector + OWL modalities land atomically in ONE
     /// authoritative redb transaction. Used by both
@@ -5108,7 +5108,7 @@ fn parse_set_embedding(sql: &str) -> WireResult<(String, Vec<f32>)> {
 }
 
 /// Parse `INSERT INTO series (cols) VALUES (vals)` (CONCEPT:MEDULLA-KG.txn.isolation-ryow-begin-set) into a
-/// [`crate::server::txn::StagedMeasurement`] — one point. Columns `id`/`series`,
+/// [`medulla_server::txn::StagedMeasurement`] — one point. Columns `id`/`series`,
 /// `ts`/`time`, `value`/`val` (any order); values may be quoted.
 #[cfg(feature = "query")]
 fn parse_insert_series(sql: &str) -> WireResult<medulla_server_api::txn::StagedMeasurement> {

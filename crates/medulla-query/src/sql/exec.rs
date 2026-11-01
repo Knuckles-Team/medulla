@@ -431,7 +431,7 @@ pub fn exec_sql_cached(
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct SqlContextEpoch {
     /// `TableStore` is one durable redb file PER (tenant, actor) (owner-scoped
-    /// catalogs — see `server::sql_tables::user_table_store`) — folding tenant into
+    /// catalogs — see `medulla_server::sql_tables::user_table_store`) — folding tenant into
     /// the key makes a same-shaped key from two DIFFERENT tenants' stores
     /// structurally impossible to collide on, rather than merely unlikely.
     tenant: String,
@@ -455,7 +455,7 @@ struct SqlContextEpoch {
     catalog_fingerprint: u64,
     /// The requesting agent id `IsolationLayer::filter_view` filtered `view`
     /// against BEFORE it ever reached this module (every served caller applies RLS
-    /// first — see `server::handlers::query`'s `Method::Sql` read arm).
+    /// first — see `medulla_server::handlers::query`'s `Method::Sql` read arm).
     /// `nodes`/`edges`/the planned views/the `pagerank`/`betweenness` UDTFs are ALL
     /// built from that already-filtered snapshot, so two different callers'
     /// contexts are NEVER interchangeable even at an otherwise-identical
@@ -486,7 +486,7 @@ struct SqlContextEpoch {
     /// `System` caller's filtered view is the SAME unfiltered graph. Exploiting even
     /// that narrow win would still require TWO further changes out of this field's
     /// reach: (1) the facade's owner-scoped registry
-    /// (`server::sql_tables::sql_context_cache`) instantiates a SEPARATE
+    /// (`medulla_server::sql_tables::sql_context_cache`) instantiates a SEPARATE
     /// `SqlContextCache` per (tenant, agent_id) for an UNRELATED, stronger reason —
     /// each instance's `BuiltCtx` also embeds that agent's OWN privately-owned
     /// `TableStore`-derived user tables, which must never be shared regardless of

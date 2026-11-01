@@ -330,7 +330,7 @@ fn parse_listener_addr(value: Option<&str>, default_addr: &str) -> Option<String
 /// other auxiliary listener.
 #[cfg(feature = "obs")]
 fn resolve_obs_listener_addr(value: Option<&str>) -> Option<String> {
-    if medulla::server::obs::writer_auth_configured() {
+    if medulla_server::obs::writer_auth_configured() {
         return parse_listener_addr(value, "127.0.0.1:5080");
     }
     resolve_listener_addr(value, "127.0.0.1:5080")
@@ -370,10 +370,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cores = medulla_kernel::autosize::detect_capacity().reserved_cpus();
     let worker_threads = cores.max(1);
     let max_blocking = cores.max(1);
-    let driver = server::spawn_engine_driver(move || {
+    let driver = medulla_server::spawn_engine_driver(move || {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(worker_threads)
-            .thread_stack_size(server::ENGINE_WORKER_STACK_BYTES)
+            .thread_stack_size(medulla_server::ENGINE_WORKER_STACK_BYTES)
             .max_blocking_threads(max_blocking)
             .enable_all()
             .build()
@@ -393,7 +393,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             })
         })
     })?;
-    match server::join_engine_driver(driver)? {
+    match medulla_server::join_engine_driver(driver)? {
         Ok(()) => Ok(()),
         Err(()) => Err(std::io::Error::other("engine runtime driver failed").into()),
     }
@@ -455,7 +455,7 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     // global signed receipts and each tenant claim before returning bounded
     // handoff facts. With no manifest, v2 startup continues and v3 stays closed.
     #[cfg(feature = "ann-redb")]
-    let rf019_pending = server::preflight_rf019_activation(std::path::Path::new(
+    let rf019_pending = medulla_server::preflight_rf019_activation(std::path::Path::new(
         args.persist_dir
             .as_deref()
             .expect("persist dir was required"),
@@ -474,7 +474,7 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     #[cfg(feature = "ann-redb")]
-    server::install_rf019_activation(
+    medulla_server::install_rf019_activation(
         rf019_pending,
         std::path::Path::new(
             args.persist_dir
@@ -545,7 +545,7 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     // BREAK and the main listener returns, so we fall through to the persistence
     // flush below. An acknowledged write is already committed; shutdown only
     // drains the writer's bounded in-flight tail.
-    let shutdown = server::ShutdownCoordinator::new();
+    let shutdown = medulla_server::ShutdownCoordinator::new();
     server_startup::spawn_shutdown_signal_handler(shutdown.clone());
     server_startup::spawn_idle_shutdown_watcher(&shutdown, args.idle_shutdown_secs);
 
@@ -603,7 +603,7 @@ async fn spawn_optional_service_listeners(
     medulla_h_query::reasoning_projection::spawn(state.clone());
     // Sampled authorization denials reach the identity audit trail.
     #[cfg(feature = "security")]
-    medulla::server::spawn_denial_sample_flusher(state.clone());
+    medulla_server::spawn_denial_sample_flusher(state.clone());
     Ok(())
 }
 
@@ -685,7 +685,7 @@ async fn spawn_policy_export_listener(
             policy_export_addr
         );
         tokio::spawn(async move {
-            medulla::server::policy_export::serve(listener).await;
+            medulla_server::policy_export::serve(listener).await;
         });
     }
     #[cfg(not(feature = "policy_export"))]
@@ -768,7 +768,7 @@ async fn spawn_graphql_listener(
     }
     #[cfg(feature = "graphql")]
     if let Some(ref graphql_addr) = graphql_addr {
-        let graphql_config = medulla::server::graphql_sub::GraphQlSubscriptionConfig::new(
+        let graphql_config = medulla_server::graphql_sub::GraphQlSubscriptionConfig::new(
             graphql_max_connections,
             graphql_max_session_secs,
         )
@@ -787,7 +787,7 @@ async fn spawn_graphql_listener(
         );
         let gql_state = state.clone();
         tokio::spawn(async move {
-            medulla::server::graphql_sub::serve(listener, gql_state, graphql_config).await;
+            medulla_server::graphql_sub::serve(listener, gql_state, graphql_config).await;
         });
     }
     #[cfg(not(feature = "graphql"))]
@@ -816,7 +816,7 @@ async fn spawn_obs_listener(
     let obs_addr = resolve_listener_addr(obs_addr_arg, "127.0.0.1:5080");
     #[cfg(feature = "obs")]
     if let Some(ref obs_addr) = obs_addr {
-        use medulla::server::obs::{ObsState, DEFAULT_FLUSH_RECORDS, OBS_FLUSH_RECORDS_ENV};
+        use medulla_server::obs::{ObsState, DEFAULT_FLUSH_RECORDS, OBS_FLUSH_RECORDS_ENV};
         let flush = std::env::var(OBS_FLUSH_RECORDS_ENV)
             .ok()
             .and_then(|v| v.parse().ok())
@@ -844,7 +844,7 @@ async fn spawn_obs_listener(
 
                 let obs_security_state = state.clone();
                 tokio::spawn(async move {
-                    medulla::server::obs::serve_with_security(
+                    medulla_server::obs::serve_with_security(
                         listener,
                         obs_state,
                         obs_security_state,
@@ -872,7 +872,7 @@ async fn wait_for_periodic_tick(ticker: &mut tokio::time::Interval) {
 /// EH-410: browser RUM series are kept 30 days; the sweep runs hourly whenever
 /// the observability listener is on (RUM is on by default, so its retention is too).
 #[cfg(feature = "obs")]
-fn spawn_obs_rum_retention_sweep(obs_state: &std::sync::Arc<medulla::server::obs::ObsState>) {
+fn spawn_obs_rum_retention_sweep(obs_state: &std::sync::Arc<medulla_server::obs::ObsState>) {
     let rum_obs_state = obs_state.clone();
     spawn_periodic_sweep(3600, "obs_rum_retention", move || {
         let obs = rum_obs_state.clone();
@@ -890,7 +890,7 @@ fn spawn_obs_rum_retention_sweep(obs_state: &std::sync::Arc<medulla::server::obs
 }
 
 #[cfg(feature = "traces")]
-async fn persist_traces_tick(traces_obs_state: std::sync::Arc<medulla::server::obs::ObsState>) {
+async fn persist_traces_tick(traces_obs_state: std::sync::Arc<medulla_server::obs::ObsState>) {
     if let Err(error) = traces_obs_state.persist_traces().await {
         tracing::warn!(
             %error,
@@ -920,7 +920,7 @@ where
 }
 
 #[cfg(feature = "traces")]
-fn spawn_obs_trace_persist_sweep(obs_state: &std::sync::Arc<medulla::server::obs::ObsState>) {
+fn spawn_obs_trace_persist_sweep(obs_state: &std::sync::Arc<medulla_server::obs::ObsState>) {
     // ── Trace durable-tier sweep (BUG-016, CONCEPT:MEDULLA-OS.observability.trace-assembly) ─────
     // Periodically snapshot the native span store to durable storage
     // (`ObsState::persist_traces`) so a restart does not silently drop
@@ -1019,7 +1019,7 @@ async fn spawn_iceberg_listener(
         // `lake-rest` implies `lake` implies `blob`, so the CAS is always configured
         // (`Some`) in any build reaching this arm — `blob` is never independently off.
         let (lake_handle, blob_store) = {
-            use medulla::server::lake::LakeStateExt;
+            use medulla_server::lake::LakeStateExt;
             let s = state.read().await;
             (s.lake(), s.blob.as_ref().map(|b| b.store.clone()))
         };
@@ -1032,7 +1032,7 @@ async fn spawn_iceberg_listener(
                 );
                 let lake_security_state = state.clone();
                 tokio::spawn(async move {
-                    medulla::server::lake::rest::serve_with_security(
+                    medulla_server::lake::rest::serve_with_security(
                         listener,
                         lake_handle,
                         store,
@@ -1068,7 +1068,7 @@ async fn spawn_lake_materialize_sweep(_state: &Arc<tokio::sync::RwLock<ServerSta
     #[cfg(feature = "lake")]
     {
         let interval_secs: u64 =
-            std::env::var(medulla::server::lake::LAKE_MATERIALIZE_INTERVAL_ENV)
+            std::env::var(medulla_server::lake::LAKE_MATERIALIZE_INTERVAL_ENV)
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(0);
@@ -1081,14 +1081,14 @@ async fn spawn_lake_materialize_sweep(_state: &Arc<tokio::sync::RwLock<ServerSta
                     // (`Some`) here — neither is ever independently off in this build.
                     // A18: this is engine-internal system maintenance, not a client
                     // request — no caller identity, no signed envelope to check, the
-                    // SAME precedent `server::registry_reaper`'s stale-lease reaper and
+                    // SAME precedent `medulla_server::registry_reaper`'s stale-lease reaper and
                     // the cold-offload sweep already establish for a periodic interval
                     // task that reads `ServerState` directly rather than minting a
                     // synthetic signed `Request` and re-entering `dispatch()`. The old
                     // client-carrier gate here was always the WRONG check for a task
                     // with no carrier at all, not a security boundary being relaxed.
                     let (lake_handle, tsdb, store) = {
-                        use medulla::server::lake::LakeStateExt;
+                        use medulla_server::lake::LakeStateExt;
                         let s = sweep_state.read().await;
                         (
                             s.lake(),
@@ -1650,7 +1650,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     // durable generation so subsequent restarts reopen it in milliseconds.
     // Feature-gated: a non-`ann` build is byte-for-byte unchanged.
     //
-    // This is trigger 1 of the three in `server::semantic_activation`, and it runs
+    // This is trigger 1 of the three in `medulla_server::semantic_activation`, and it runs
     // that module's `activate_one` rather than its own copy of the body: the boot
     // task, the dispatch write-path tail and the periodic sweep below must reopen,
     // build and activate identically or a graph's index depends on which trigger
@@ -1673,7 +1673,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
             let _ = tokio::task::spawn_blocking(move || {
                 let mut warmed = 0usize;
                 for (name, core) in cores {
-                    if medulla::server::semantic_activation::activate_one(
+                    if medulla_server::semantic_activation::activate_one(
                         &name,
                         &core,
                         warm_dir.as_deref(),
@@ -1710,7 +1710,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
                 ticker.tick().await;
                 let __loop_tick_started = std::time::Instant::now();
                 let n =
-                    medulla::server::semantic_activation::sweep_resident_graphs(&sweep_state).await;
+                    medulla_server::semantic_activation::sweep_resident_graphs(&sweep_state).await;
                 if n > 0 {
                     tracing::info!(
                         "Semantic ANN warm re-check: spawned {} warm(s) for resident graph(s)",
@@ -1898,7 +1898,7 @@ fn spawn_lifecycle_sweeps(state: &Arc<tokio::sync::RwLock<ServerState>>, txn_ttl
     // an unreaped dead registration is a correctness/staleness concern, not
     // a resource-usage opt-in) at a short default interval so even the
     // minimum 1s `ttl_secs` lease is reaped promptly.
-    let reap_interval = medulla::server::registry_reaper::reap_interval_secs();
+    let reap_interval = medulla_server::registry_reaper::reap_interval_secs();
     info!(
         "Server registry: reaping expired :Server leases every {}s (CONCEPT:MEDULLA-KG.sharding.server-registry)",
         reap_interval
@@ -1912,9 +1912,9 @@ fn spawn_lifecycle_sweeps(state: &Arc<tokio::sync::RwLock<ServerState>>, txn_ttl
     // Retires every sealed record past its class's configured retention through
     // the owning op, `RetireSealedRecord` -- an audited tombstone, never a generic
     // delete. Armed only when `MEDULLA_SEALED_RETENTION` names a policy.
-    let sealed_policy = medulla::server::sealed_retention::configured_policy();
+    let sealed_policy = medulla_server::sealed_retention::configured_policy();
     if !sealed_policy.is_empty() {
-        let interval = medulla::server::sealed_retention::sweep_interval_secs();
+        let interval = medulla_server::sealed_retention::sweep_interval_secs();
         info!(
             "Sealed records: expiring by retention policy every {}s (EH-558)",
             interval

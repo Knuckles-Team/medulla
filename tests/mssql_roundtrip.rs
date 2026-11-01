@@ -35,7 +35,7 @@ fn sql_test_persist_dir() -> String {
 }
 
 /// A real tempdir-backed `RedbBackend` (mirrors `common::tempdir_persistence()` /
-/// `server::mod::tests::test_state` / `bolt_wire::tests::durable_state` / the
+/// `medulla_server::mod::tests::test_state` / `bolt_wire::tests::durable_state` / the
 /// identical helper in `tests/pgwire_roundtrip.rs`): the authoritative-commit flip
 /// means every graph-node write now routes through the universal cross-modal
 /// MutationBatch kernel, which fails closed ("cross-modal mutation requires durable

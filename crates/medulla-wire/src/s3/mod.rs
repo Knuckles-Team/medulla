@@ -5,14 +5,14 @@
 //! ## What this is (and is NOT)
 //!
 //! An ADAPTER, not a re-implemented object store. Object BYTES land in the engine's
-//! content-addressed [`ChunkStore`](crate::server::blob::store::ChunkStore) BLOB
+//! content-addressed [`ChunkStore`](medulla_server::blob::store::ChunkStore) BLOB
 //! substrate (CONCEPT:MEDULLA-KG.storage.blob-namespace) — so identical objects dedup by sha256 — while the
 //! bucket / object index (the listing metadata) lives in the durable KV surface
 //! (CONCEPT:MEDULLA-KG.storage.namespaced-kv-surface), keyed for prefix-scan. Both are the engine's own durable
 //! stores; nothing new is invented here.
 //!
 //! It is a HAND-ROLLED HTTP/1.1 listener over `tokio::net` — the SAME
-//! dependency-free idiom as [`crate::server::obs`] / [`crate::server::sparql_http`]
+//! dependency-free idiom as [`medulla_server::obs`] / [`medulla_server::sparql_http`]
 //! / [`medulla_kernel::metrics`] (NO axum/hyper/warp, so the Pi contract holds) — but its
 //! own parser keeps the body as raw BYTES (S3 objects are binary) and captures the
 //! request headers (for the auth guard). XML responses are hand-built strings in
@@ -891,7 +891,7 @@ fn split_bucket_key(path: &str) -> (String, String) {
 fn handle(store: &S3Store, auth: &S3Auth, req: &S3Request) -> S3Response {
     // A18: SigV4 IS this surface's own carrier proof — mint the engine-owned
     // authority only after it succeeds, through the ONE shared helper every
-    // auxiliary surface uses (`server::auth::mint_fixed_service_carrier`,
+    // auxiliary surface uses (`medulla_server::auth::mint_fixed_service_carrier`,
     // shared with the KV-cache and `/sparql` bearer/JWT routes), then gate
     // through the SAME shared check (real now: denies iff no carrier was
     // minted). S3 carrier has no verified tenant/object ownership until SigV4

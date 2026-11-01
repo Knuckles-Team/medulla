@@ -1,6 +1,6 @@
 //! Plan-backed materialized views (CONCEPT:MEDULLA-KG.storage.plan-backed-matview).
 //!
-//! GENERALIZES the algo-only distributed-compute matview (`server::api::persistence::MatView`, a
+//! GENERALIZES the algo-only distributed-compute matview (`medulla_server::api::persistence::MatView`, a
 //! `DistAlgo`+result blob) into a NAMED, DURABLE `wire::Plan` over one graph. Defining a
 //! view executes its plan once through the medulla-plan runtime and caches the RESULT in the
 //! version-keyed, RLS-aware result cache on the graph's `GraphCore`; a committed write
@@ -11,7 +11,7 @@
 //!   * [`lifecycle`] — result materialization, the result cache-KEY derivation, and the
 //!     durable (de)serialize of a definition for the disjoint `plan_matviews` redb table.
 //!
-//! The handler (`server::handlers::dist_compute`) drives Define / Get / Refresh / Drop;
+//! The handler (`medulla_server::handlers::dist_compute`) drives Define / Get / Refresh / Drop;
 //! `reload_plan_matviews` re-hydrates the manager from redb on boot.
 
 pub mod incremental;

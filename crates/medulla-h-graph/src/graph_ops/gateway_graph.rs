@@ -17,7 +17,7 @@ pub(super) fn decode_json_object(blob: &[u8]) -> serde_json::Map<String, serde_j
 // MEDULLA-ORCH-VOCAB-R801.3 — the versioned harness-component write attaches to
 // the existing AddNode path at the pre-commit point in `try_handle_gateway`
 // (beside the owner-id stamp), through
-// `crate::server::harness_admission::direct_add_node`: the method is mutated
+// `medulla_server::harness_admission::direct_add_node`: the method is mutated
 // BEFORE both the durable commit and the `apply` closure clone it, so the
 // stamped record is exactly what gets persisted and what the RAM projection
 // applies. The ChangeEnvelope path runs the shared rules through

@@ -1,7 +1,7 @@
 //! WASM-sandboxed UDF handlers (CONCEPT:MEDULLA-KG.query.rowset-execution).
 //!
 //! `RegisterUdf` compiles + caches an agent-supplied WebAssembly module in the
-//! owner-scoped [`crate::server::udf_catalog::UdfCatalog`] on `ServerState`, under the
+//! owner-scoped [`medulla_server::udf_catalog::UdfCatalog`] on `ServerState`, under the
 //! caller's VERIFIED owner — tenant+principal (EH-374); `RunUdf` runs the caller's own
 //! cached UDF SANDBOXED (fuel + memory limits, NO host capabilities) over an opaque byte
 //! payload. Another principal's id resolves as unregistered and cannot be shadowed. The

@@ -309,7 +309,7 @@ where
 /// kernel:
 ///   * [`commit_mutation_inner`] — the ordinary path — acquires the lock, calls
 ///     this ONCE, releases it. One lock acquisition per op, as before.
-///   * the routed-write-coalescer worker (`server::routed_write_coalescer::
+///   * the routed-write-coalescer worker (`medulla_server::routed_write_coalescer::
 ///     run_worker`) — acquires the lock ONCE per flushed batch, then calls this
 ///     N times back-to-back (once per queued op, in FIFO order) before
 ///     releasing. One lock acquisition per BATCH, not per durable write: each

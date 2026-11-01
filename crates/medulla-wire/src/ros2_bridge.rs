@@ -244,7 +244,7 @@ pub async fn apply_inbound(
 ///
 /// The bridge streams a graph's raw CDC feed to an external rosbridge server with no
 /// per-subscriber identity: whoever is listening on the ROS2 topic is never asked to
-/// present a credential, so no [`crate::server::access::CarrierAuthority`] can ever be
+/// present a credential, so no [`medulla_server::access::CarrierAuthority`] can ever be
 /// minted for them (`unauthenticated_carrier_denied(None)` is always `true` for this
 /// leg). That is harmless while the target graph carries no row-ownership rules — there
 /// is nothing a verified reader could see that an unfiltered feed doesn't. But once
@@ -273,7 +273,7 @@ pub async fn run_ros2_bridge(
     // an operator explicitly configures + enables it (env var + `--features
     // ros2-bridge`), and it connects OUT to an already-trusted, operator-named
     // `rosbridge_url`; there is no inbound "carrier" presenting credentials on
-    // this leg at all (same precedent as `server::registry_reaper`'s internal
+    // this leg at all (same precedent as `medulla_server::registry_reaper`'s internal
     // sweep). The REAL per-message carrier check already lives where it
     // belongs: every inbound ROS2 publish must carry a genuine `eg2.`
     // `auth_token` (`publish_to_request`, below) that `apply_inbound` verifies

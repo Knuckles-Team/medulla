@@ -12,7 +12,7 @@
 //!
 //! This module is the CANONICAL value shape for that authority (GOC-10-W02): pure
 //! serde, no I/O, no dependency beyond this crate. It intentionally does not touch
-//! `medulla-lake::catalog`/`server::lake::rest`/`server::lake::mod` — the REST/durable
+//! `medulla-lake::catalog`/`medulla_server::lake::rest`/`medulla_server::lake::mod` — the REST/durable
 //! projection of these records is GOC-75's file-owned surface (see the GOC-10 lane
 //! doc's "conflicts/coordination" note); a durable authority STORE that persists and
 //! commits these records through a `MutationBatch` participant is GOC-10-W03/W04,
@@ -38,7 +38,7 @@
 //!    references (by digest — file bytes are immutable CAS/object refs, never
 //!    duplicated inline), commit sequence, quality, and a policy digest.
 //! 5. Carrier/barrier verification is NOT modeled here — it is enforced above this
-//!    pure-data layer (`server::lake::rest`, GOC-15/GOC-75 territory) before any of
+//!    pure-data layer (`medulla_server::lake::rest`, GOC-15/GOC-75 territory) before any of
 //!    these records are read or written.
 //! 6. [`TableChange::validate`] enforces: the declared [`SchemaCompatibility`]
 //!    must match [`classify_schema_change`]'s classification of the declared

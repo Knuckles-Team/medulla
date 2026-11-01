@@ -339,7 +339,7 @@ async fn dispatch_external_query_method(
 // ── Policy-lease-aware entry point (GRAPH-POLICY-LEASE-CONTRACT.md §6) ──────
 //
 // `KnowledgeStream`'s `execute_sql`/`execute_cross_modal` families
-// (`server::handlers::knowledge_stream::families`) delegate their read here
+// (`medulla_server::handlers::knowledge_stream::families`) delegate their read here
 // instead of the shared `try_handle` above, so that a lease-bearing call uses
 // `lease.filter_view` as the SOLE row-visibility authority — never
 // `rls.filter_view(caller, ..)` — exactly like `execute_graph`'s own

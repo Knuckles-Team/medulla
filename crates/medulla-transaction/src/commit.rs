@@ -368,7 +368,7 @@ fn reject_stale_fence<D: OwnerDomain>(
     // it is asserting. Comparing that absence against a real route makes the
     // route fence refuse the store's own bookkeeping: once ANY caller batch
     // commits with a placement route (which every compiled batch carries in a
-    // placed deployment, see `server::mutation_batch::compile`), the (0,0)
+    // placed deployment, see `medulla_server::mutation_batch::compile`), the (0,0)
     // maintenance proposal is "older" and every later `admit_maintenance` /
     // `admit_drain` on that scope fails closed with `STALE_FENCE`. The graft
     // barrier above still applies: a scope under graft cannot move, maintenance

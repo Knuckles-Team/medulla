@@ -261,7 +261,7 @@ pub mod current_auth_test_support {
         // RBAC (CONCEPT:MEDULLA-KG.compute.feature) is the mandatory current access
         // decision under `feature = "security"` (`isolation.rs::check_access`) —
         // there is no pre-RBAC "Commons is public" fall-through any more for a
-        // non-`System` identity (see `server::mod::tests::multi_tenant_state`'s doc
+        // non-`System` identity (see `medulla_server::mod::tests::multi_tenant_state`'s doc
         // comment for the same migration). Give every non-System test agent the
         // SAME "commons-user" R/W grant that fixture already establishes as the
         // replacement for the retired open-bus ACL semantics.
@@ -1456,7 +1456,7 @@ mod dispatch_write_tests {
     /// DIFFERENT, empty catalog -- so a storage fault installed there is never
     /// on the path the dispatch takes, and an assertion about that fault can
     /// never fire. The passing pgwire sibling
-    /// (`server::wire`'s `ordinary_create_retains_intent_until_owner_repair_
+    /// (`medulla_server::wire`'s `ordinary_create_retains_intent_until_owner_repair_
     /// completes`) gets this right by going through a real `CarrierAuthority`;
     /// this derives the same scope the same way production does.
     fn carrier_tenant_scope(tenant: &str) -> String {

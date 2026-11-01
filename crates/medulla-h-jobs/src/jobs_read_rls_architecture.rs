@@ -1,7 +1,7 @@
 //! Architecture test (W1b / L-RLS-2 follow-up): job-**KIND** read-path RLS
 //! coverage, plus a regression guard on the O(1) opaque-ref index.
 //!
-//! `server::access::read_rls_coverage_tests` (see that module) exhaustively
+//! `medulla_server::access::read_rls_coverage_tests` (see that module) exhaustively
 //! partitions every non-mutating **protocol `Method`** into
 //! `RLS_ROUTED`/`NON_ROW_SCOPED`/`NOT_YET_AUDITED`. `Method::AnalyticsJob`
 //! itself never appears on that read side at all: `medulla_capabilities`'s static
@@ -21,7 +21,7 @@
 //!
 //!  1. A live cross-check against an INDEPENDENTLY hand-maintained
 //!     classification table (mirrors `RLS_ROUTED`/`NON_ROW_SCOPED` in
-//!     `server::access`, and `RUNTIME_CONDITIONAL`/`ACCESS_RS_COVERAGE_GAP` in
+//!     `medulla_server::access`, and `RUNTIME_CONDITIONAL`/`ACCESS_RS_COVERAGE_GAP` in
 //!     `crates/medulla-capabilities/tests/consistency.rs`) — so a variant added to
 //!     `medulla_agent_types::jobs::JobKind` without a matching classification entry HERE
 //!     fails a `cargo test`, independent of whatever the exhaustive match
@@ -84,7 +84,7 @@ fn every_job_kind_is_classified_and_matches_the_live_guard() {
 
     // Every kind this build actually ships must be classified -- an
     // undocumented variant is the hard failure, mirroring
-    // `server::access::read_rls_coverage_tests`'s UNDOCUMENTED gate.
+    // `medulla_server::access::read_rls_coverage_tests`'s UNDOCUMENTED gate.
     let shipped: &[&str] = &[
         "MineAssociate",
         #[cfg(feature = "program-optimization")]

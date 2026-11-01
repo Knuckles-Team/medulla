@@ -65,11 +65,11 @@ pub const SPARQL_HTTP_UPDATE_EVENT: &str = "sparql_http_update_v1";
 pub const SERVICE_ALLOW_ENV: &str = "MEDULLA_SPARQL_SERVICE_ALLOW";
 /// Env var: the static bearer-token secret for the `/sparql` SELECT/CONSTRUCT/
 /// ASK read leg's carrier credential (A18) — the same credential SHAPE the
-/// KV-cache HTTP surface accepts (`server::auth::BearerCredential`),
+/// KV-cache HTTP surface accepts (`medulla_server::auth::BearerCredential`),
 /// independently configured (own env, own JWT issuer/audience/JWKS below) so a
 /// caller entitled to KV pages is not automatically entitled to run federated
 /// SPARQL reads. Ignored once a JWT issuer is configured (see
-/// `crate::server::oidc::JwtValidator::from_env_sparql`); unset with no JWT
+/// `medulla_server::oidc::JwtValidator::from_env_sparql`); unset with no JWT
 /// issuer ⇒ the read leg has no credential to check and stays denied.
 pub const SPARQL_BEARER_TOKEN_ENV: &str = "MEDULLA_SPARQL_BEARER_TOKEN";
 const HTTP_LIMITS: RequestLimits = RequestLimits {
@@ -341,10 +341,10 @@ async fn run_query(
     // envelope for a federated, HTTP-native query shape that has no matching
     // `Method`). This leg instead authenticates the SAME way the KV-cache HTTP
     // surface does — a configured bearer/JWT credential
-    // (`server::auth::BearerCredential`, resolved once at `serve()` startup)
+    // (`medulla_server::auth::BearerCredential`, resolved once at `serve()` startup)
     // — and mints the SAME fixed-service-identity `CarrierAuthority` through
     // the ONE shared helper every auxiliary HTTP surface uses
-    // (`server::auth::mint_fixed_service_carrier`, shared with the S3 SigV4
+    // (`medulla_server::auth::mint_fixed_service_carrier`, shared with the S3 SigV4
     // and KV-cache bearer/JWT routes: one implementation, three routes). No
     // configured credential, or an invalid one, still denies (fail closed) —
     // see AGENTS.md (A18) for the before/after across every auxiliary surface.
@@ -440,7 +440,7 @@ fn run_dataset_query(ds: &Dataset, query: &str) -> Result<QueryOutcome, String> 
 /// A `ureq`-backed [`medulla_rdf::sparql::RemoteSparql`] with an SSRF allowlist. Reuses the SAME
 /// pure-Rust rustls `ureq` stack `federation` already links (no new crate enters the tree).
 ///
-/// `pub(crate)` (CA-12, feature `sparql-fuseki`): `server::sparql_service`'s Fuseki startup
+/// `pub(crate)` (CA-12, feature `sparql-fuseki`): `medulla_server::sparql_service`'s Fuseki startup
 /// health-check and qualification-test harness reuse this EXACT guarded client rather than
 /// re-implementing the SSRF allowlist a second time — the type and `from_env` need
 /// crate-visibility for that reuse. No behavior changed; `select`'s dispatch is unchanged
@@ -460,7 +460,7 @@ impl ServiceClient {
     const MAX_RESPONSE_BYTES: u64 = 64 * 1024 * 1024;
 
     /// Build directly from an explicit allowlist, bypassing the process environment.
-    /// `pub(crate)` (CA-12): lets `server::sparql_service`'s qualification tests exercise
+    /// `pub(crate)` (CA-12): lets `medulla_server::sparql_service`'s qualification tests exercise
     /// the exact same guarded client production code uses WITHOUT mutating the shared,
     /// process-global `SERVICE_ALLOW_ENV` var — several of those tests run concurrently in
     /// the same test binary, and env-var mutation is not per-test-thread isolated in Rust,

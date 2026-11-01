@@ -143,7 +143,7 @@ pub fn required_test_modules() -> Vec<RequiredTestModule> {
         (
             Persistence,
             "medulla",
-            "server::persistence::",
+            "medulla_server::persistence::",
             &["full"][..],
         ),
     ]
@@ -251,7 +251,7 @@ mod tests {
             (
                 Persistence,
                 "medulla",
-                "server::persistence::",
+                "medulla_server::persistence::",
                 vec!["full"],
             ),
         ];

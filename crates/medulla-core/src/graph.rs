@@ -610,7 +610,7 @@ pub struct GraphCore {
     /// fields, unlike `ledger` (its closest analogue: also
     /// process-observability, also carried in full on every snapshot). The
     /// mutation gateway's staged-commit pipeline
-    /// (`server::mutation::commit_mutation_body`) executes a write against an
+    /// (`medulla_server::mutation::commit_mutation_body`) executes a write against an
     /// ISOLATED `GraphCore` built fresh via [`Self::from_snapshot`], then
     /// durably commits and publishes the result back to the LIVE core via
     /// [`Self::prepare_snapshot_publish`]/[`Self::replace_snapshot`] — a

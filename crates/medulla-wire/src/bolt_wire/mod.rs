@@ -983,7 +983,7 @@ mod tests {
             }
         }
         // A REAL per-test durable backend, same reasoning as
-        // `server::mod.rs`'s `test_state()` (redb takes an exclusive
+        // `medulla_server::mod.rs`'s `test_state()` (redb takes an exclusive
         // per-process file lock, so each call gets its own uniquely-named
         // dir): BEGIN/COMMIT session-control mutations and durable-domain
         // writes fail closed without one. `durable_state()` below

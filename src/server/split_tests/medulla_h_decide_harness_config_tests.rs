@@ -13,7 +13,7 @@ use medulla_server_api::state::ServerState;
 
 async fn dispatch(h: &Harness, method: Method) -> Response {
     let method = rmp_serde::from_slice(&rmp_serde::to_vec_named(&method).unwrap()).unwrap();
-    Box::pin(crate::server::dispatch::dispatch_verified_request(
+    Box::pin(medulla_server::dispatch::dispatch_verified_request(
         &h.state,
         Request {
             id: 128,

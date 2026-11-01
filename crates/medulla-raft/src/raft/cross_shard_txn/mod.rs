@@ -19,7 +19,7 @@
 //! **PHASE 1 — PREPARE.** For each participant group, in `GroupId` order (a stable
 //! lock order — no two coordinators deadlock prepare):
 //!   1. Validate the slice's OCC read-set against that group's live [`GraphCore`]
-//!      under its commit guard (the SAME [`crate::server::txn::GraphTxnState::validate`]
+//!      under its commit guard (the SAME [`medulla_server::txn::GraphTxnState::validate`]
 //!      check the single-graph path uses). A conflict ⇒ vote NO.
 //!   2. Durably PERSIST the slice as a PREPARE record in redb (`xshard_prepare`,
 //!      keyed by `(txn_id, group_id)`) and await the fsync — **commit-before-vote**.
@@ -110,7 +110,7 @@
 //! `stale_fenced_participant_is_rejected_current_epoch_accepted` scenario. The
 //! remaining transport gap has
 //! an established template already live elsewhere in this engine:
-//! [`crate::server::handlers::txn::execute_consensus_transaction`] (the separate
+//! [`medulla_server::handlers::txn::execute_consensus_transaction`] (the separate
 //! "consensus transaction" path `Method::Commit` uses when it stages through
 //! `NativeMutationCommand::Transaction`) issues each participant's prepare/commit
 //! through `MultiRaft::client_write_group(participant.group_id, ...)`, which
@@ -236,7 +236,7 @@ fn prepared_slices_exceed_limits(slices: &[GraphSlice]) -> bool {
 /// GOC-13 fencing (CONCEPT:MEDULLA-KG.txn.harness-crash): does a [`GraphSlice`]'s CAPTURED
 /// placement fencing still match `gid`'s CURRENT placement route? A pure function
 /// (no cluster/IO) so it is unit-testable in isolation — the same shape
-/// [`crate::server::handlers::txn::validate_consensus_participant_placement`]
+/// [`medulla_server::handlers::txn::validate_consensus_participant_placement`]
 /// checks for the separate consensus-transaction path, reused here rather than a
 /// second fencing vocabulary.
 ///
@@ -281,7 +281,7 @@ pub struct GraphSlice {
     pub methods: Vec<Method>,
     /// The [`super::placement::PlacementRoute`] epoch captured for this graph WHEN
     /// the slice was built (GOC-13 fencing — mirrors the same `(group, epoch,
-    /// fencing_token)` triple [`crate::server::handlers::txn::
+    /// fencing_token)` triple [`medulla_server::handlers::txn::
     /// validate_consensus_participant_placement`] already checks for the separate
     /// consensus-transaction path, reused here rather than inventing a second
     /// fencing vocabulary). `0` is the sentinel "no placement authority was

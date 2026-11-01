@@ -421,7 +421,7 @@ pub fn seed_wire_nodes(registry: &GraphRegistry, user: &str) {
 }
 
 pub async fn dispatch(state: &SharedState, request: Request) -> medulla::protocol::Response {
-    Box::pin(medulla::server::dispatch(state, request)).await
+    Box::pin(medulla_server::dispatch(state, request)).await
 }
 
 pub async fn begin_txn(
@@ -458,13 +458,13 @@ pub async fn assert_ok(state: &SharedState, auth_secret: &str, id: u64, method: 
 }
 
 pub fn unified_ids(response: &Response) -> Vec<String> {
-    medulla::server::decode_unified_ids(response)
+    medulla_server::decode_unified_ids(response)
 }
 
 /// The row ids of a `Method::Uql` response (EH-434).
 #[cfg(feature = "query")]
 pub fn uql_ids(response: &Response) -> Vec<String> {
-    medulla::server::decode_uql_ids(response)
+    medulla_server::decode_uql_ids(response)
 }
 
 /// A parameterless UQL statement.
@@ -577,17 +577,17 @@ pub fn edge_properties(tag: &str) -> Vec<u8> {
 /// at `ENGINE_WORKER_STACK_BYTES`), exactly as production serves a request,
 /// and propagate its failure.
 pub fn on_engine<F: std::future::Future<Output = ()> + 'static>(test: fn() -> F) {
-    let driver = medulla::server::spawn_engine_driver(move || {
+    let driver = medulla_server::spawn_engine_driver(move || {
         tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)
-            .thread_stack_size(medulla::server::ENGINE_WORKER_STACK_BYTES)
+            .thread_stack_size(medulla_server::ENGINE_WORKER_STACK_BYTES)
             .enable_all()
             .build()
             .expect("build engine runtime")
             .block_on(test());
     })
     .expect("spawn engine driver");
-    medulla::server::join_engine_driver(driver).expect("engine test body failed");
+    medulla_server::join_engine_driver(driver).expect("engine test body failed");
 }
 
 /// Dispatch `method` against `graph` and require that it succeeds.

@@ -6,7 +6,7 @@
 //! Like the pgwire shim, this is an ADAPTER, not a second SQL engine — and not even a
 //! second copy of the query orchestration. The wire-agnostic `classify → dispatch →
 //! exec` pipeline, the per-connection session state, and the mixed-store transaction
-//! logic all live in [`crate::server::wire`] ([`WireSession`], the one shared
+//! logic all live in [`medulla_server::wire`] ([`WireSession`], the one shared
 //! [`WireProtocol`] impl). THIS module is purely the MySQL-SPECIFIC adapter:
 //!   * the TCP listener + the length-prefixed packet framing over `tokio::net`,
 //!   * the Handshake v10 + `mysql_native_password` auth (see `auth.rs`), bridged to the

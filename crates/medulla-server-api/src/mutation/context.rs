@@ -47,7 +47,7 @@ pub struct MutationCtx<'a> {
     /// WHOLE prepare→durable-commit→RAM-publish sequence queued onto this
     /// graph's single worker, which runs a flushed batch's sequences
     /// back-to-back inside ONE `lock_graph` acquisition instead of one per op
-    /// — see `server::routed_write_coalescer` and
+    /// — see `medulla_server::routed_write_coalescer` and
     /// `commit_coalescable_mutation`'s doc for the invariant this preserves.
     /// `None` ⇒ [`commit_coalescable_mutation`] falls back to the ordinary
     /// [`commit_mutation`] single-call path, unchanged.

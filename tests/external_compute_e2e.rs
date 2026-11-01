@@ -98,10 +98,10 @@ fn stream(query: KnowledgeStreamQuery) -> Method {
 
 #[test]
 fn signed_knowledge_stream_and_native_analytics_publication_round_trip() {
-    let driver = medulla::server::spawn_engine_driver(|| {
+    let driver = medulla_server::spawn_engine_driver(|| {
         let runtime = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(2)
-            .thread_stack_size(medulla::server::ENGINE_WORKER_STACK_BYTES)
+            .thread_stack_size(medulla_server::ENGINE_WORKER_STACK_BYTES)
             .enable_all()
             .build()
             .expect("build engine-contract runtime");
@@ -252,5 +252,5 @@ fn signed_knowledge_stream_and_native_analytics_publication_round_trip() {
         });
     })
     .expect("start engine-contract driver");
-    medulla::server::join_engine_driver(driver).expect("engine-contract driver failed");
+    medulla_server::join_engine_driver(driver).expect("engine-contract driver failed");
 }

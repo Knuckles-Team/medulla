@@ -268,7 +268,7 @@ async fn adapt_query_vector(_ctx: &GraphOpsContext<'_>, method: Method) -> Metho
 /// — the resident generation. That IS the live generation: the only thing that
 /// makes an index resident and serving is
 /// `SemanticStore::adopt_generation(&image)`, and the only image
-/// `server::semantic_activation` ever adopts is the one
+/// `medulla_server::semantic_activation` ever adopts is the one
 /// `SemanticCodeStore::read_live()` returns, which serves the live generation
 /// and nothing else (a superseded or retired generation is unreachable through
 /// it). So there is no second read path to add: taking a query through

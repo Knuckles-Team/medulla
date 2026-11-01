@@ -31,7 +31,7 @@
 //! collide into another actor's series at all) but does not support explicit
 //! `_visibility:public`/`_grants` SHARING the way graph-row RLS does — series
 //! data has no such use case today. See
-//! `server::access::read_rls_coverage_tests::every_read_method_routes_through_rls_or_is_a_documented_exception`
+//! `medulla_server::access::read_rls_coverage_tests::every_read_method_routes_through_rls_or_is_a_documented_exception`
 //! for the machine-checked inventory this reasoning is pinned against (the
 //! `TsRange`/`TsAsofJoin`/`TsWindow`/`TsGapFill` entries there cite this exact
 //! comment) — a future method here that DOES read graph node/edge data must

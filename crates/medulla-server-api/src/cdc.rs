@@ -108,7 +108,7 @@ struct Trigger {
 /// External sink hook installed at startup by CA-11's Kafka bridge (feature
 /// `cdc-kafka`). A tiny in-crate trait — NOT `medulla_stream::sink::CdcSink`
 /// directly — so `cdc.rs` (read by every `streaming` consumer, not just
-/// `cdc-kafka` builds) takes on no new dependency; `crate::server::cdc_sink`
+/// `cdc-kafka` builds) takes on no new dependency; `medulla_server::cdc_sink`
 /// owns the real Kafka producer and the DEC-CA-03 envelope shape, and
 /// adapts itself onto this trait before calling [`CdcHub::install_sink`].
 #[cfg(feature = "cdc-kafka")]
@@ -791,7 +791,7 @@ pub fn capture_before(core: &GraphCore, method: &Method) -> CdcPre {
 
 /// [`emit_for_method`]'s per-`Method` dispatch, split out so this file's own
 /// hub/ring/continuous-query/trigger machinery has room under the KISS
-/// `lines_per_file` budget. Re-exported so `crate::server::cdc::emit_for_method`
+/// `lines_per_file` budget. Re-exported so `medulla_server::cdc::emit_for_method`
 /// (every call site) is unchanged.
 mod dispatch;
 pub use dispatch::emit_for_method;

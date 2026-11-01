@@ -70,7 +70,7 @@ impl RedbBackend {
 
     /// Stable transaction-recovery-plan cipher handle resolved when the durable backend
     /// opened (D-ORC-50). Private transaction staging (the parent plan, cross-shard
-    /// prepares, and coordinator recovery plans in `server::dispatch`) uses this exact
+    /// prepares, and coordinator recovery plans in `medulla_server::dispatch`) uses this exact
     /// cipher, not a second environment read, so every private-payload site in one
     /// process shares one configured recovery authority for its lifetime.
     ///

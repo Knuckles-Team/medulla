@@ -295,7 +295,7 @@ impl ReasoningCascade {
             .unwrap_or(0);
 
         // CPU-bound EL⁺/RL fixpoint work off the tokio reactor thread (matches
-        // `server::compute::compute_off_lock`'s convention for reasoning/
+        // `medulla_server::compute::compute_off_lock`'s convention for reasoning/
         // analysis passes — this sweep task must never stall other work).
         let (reasoner, classification, rebuilt) = tokio::task::spawn_blocking(move || {
             match full_for_rebuild {
@@ -381,7 +381,7 @@ mod tests {
 
     const SUBCLASS_OF: &str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
     // Same named-const convention every other server test module uses for its
-    // fake `auth_secret` (e.g. `server::mod::tests::SECRET`,
+    // fake `auth_secret` (e.g. `medulla_server::mod::tests::SECRET`,
     // `dispatch::tests::SECRET`) — never inlined directly into the struct
     // literal.
     const SECRET: &str = "reasoning-cascade-test-secret";
@@ -392,7 +392,7 @@ mod tests {
 
     /// A minimal `ServerState` (no redb/blob/raft/etc.) — the same
     /// bare-bones-literal convention every other server test file uses
-    /// locally (see e.g. `server::mod::tests::test_state`).
+    /// locally (see e.g. `medulla_server::mod::tests::test_state`).
     fn test_state() -> Arc<RwLock<ServerState>> {
         let isolation = ServerState::test_isolation("system");
         Arc::new(RwLock::new(ServerState::new_for_test(SECRET, isolation)))

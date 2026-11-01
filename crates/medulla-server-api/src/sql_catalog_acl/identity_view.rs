@@ -11,7 +11,7 @@
 //! reserved prefix [`IDENTITY_RELATION_PREFIX`], which no tenant table may use.
 //!
 //! The projection reads the snapshot the engine owning `persist_dir`
-//! published (`crate::server::identity_view`).
+//! published (`medulla_server::identity_view`).
 #![cfg(feature = "security")]
 
 use std::path::Path;

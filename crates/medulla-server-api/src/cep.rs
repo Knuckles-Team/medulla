@@ -15,7 +15,7 @@
 //!
 //! ## The CDC → Event adapter
 //! The engine's reactive substrate is the MEDULLA-064 / KG-2.229 CDC hub
-//! ([`crate::server::cdc::CdcHub`]): every durable single-row mutation emits an ordered
+//! ([`medulla_server::cdc::CdcHub`]): every durable single-row mutation emits an ordered
 //! [`crate::wire::CdcEvent`]. This [`CepSurface`] holds a `broadcast::Sender<Event>` the
 //! [`CepEngine`] drains; the CDC hub calls [`CepSurface::feed_change`] on each emit, mapping
 //! the `CdcEvent` to an [`Event`] whose `key` is the node/edge label (the useful CEP
@@ -53,7 +53,7 @@
 //! adapters' own poll-driven push pumps) is then pushed the match with no further client
 //! action, and any RPC client can equally `BrokerConsume` it. This is purely additive over
 //! `CepSubscribe`'s registration path (see [`forward_to_broker_if_configured`]) — it never
-//! touches [`CdcHub::emit`](crate::server::cdc::CdcHub::emit) or [`CepSurface::feed_change`],
+//! touches [`CdcHub::emit`](medulla_server::cdc::CdcHub::emit) or [`CepSurface::feed_change`],
 //! so the write-path cost of this extension, whether armed or not, is exactly zero: unset
 //! (the default) means the whole section below is inert and no forwarder task ever exists.
 

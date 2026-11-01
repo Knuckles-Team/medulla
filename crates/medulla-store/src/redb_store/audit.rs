@@ -251,7 +251,7 @@ pub fn verify_audit(
 
 // ── Provenance anchoring (CONCEPT:MEDULLA-KG.sharding.row-level-security) ───────────────────────────────
 //
-// A periodic engine job (`server::persistence::provenance_anchor`) Merkle-anchors a
+// A periodic engine job (`medulla_server::persistence::provenance_anchor`) Merkle-anchors a
 // graph's `:ToolCall`/`:RunTrace` provenance-node window into the SAME hash-chained
 // AUDIT table above, so a byte-level tamper of an anchored node's durable content —
 // invisible to `verify_audit` alone, which only proves the SEQUENCE of audit lines

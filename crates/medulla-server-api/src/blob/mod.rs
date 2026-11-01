@@ -69,7 +69,7 @@ pub fn now_ms() -> u64 {
     medulla_kernel::kernel::dispatch_support::authoritative_now_ms()
 }
 
-/// Server-side blob cursor state, held on [`ServerState`](crate::server::ServerState).
+/// Server-side blob cursor state, held on [`ServerState`](medulla_server::ServerState).
 /// Keyed by a server-issued u64 cursor id (NOT by connection — the protocol is
 /// stateless and threads the cursor in the request body, exactly like `txn_id`).
 ///

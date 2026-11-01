@@ -60,7 +60,7 @@ const SECRET: &str = "advanced-crossmodal-secret";
 /// authoritative mutation fail closed the instant `dispatch()` routed it: "authoritative
 /// MutationBatch commit requires a persistence backend". That error is CORRECT (the
 /// dispatch path deliberately fail-closes durable-domain methods against a backend-less
-/// state) -- the FIXTURE was wrong. Same fix shape as `server::mod::tests::test_state` /
+/// state) -- the FIXTURE was wrong. Same fix shape as `medulla_server::mod::tests::test_state` /
 /// `bolt_wire::tests::durable_state` / every other `tests/*.rs` fixture that calls
 /// `common::tempdir_persistence()` (its unique per-call tempdir doubles as the SQL
 /// adapter's owner-scoped catalog directory, so nothing is lost).
@@ -127,7 +127,7 @@ async fn state() -> test_support::SharedState {
 /// `common::TEST_AGENT` is registered `System`-role, so it always bypasses RBAC and never
 /// needed this; but the `agent_a`/`agent_b`/etc. peers this file registers through
 /// `register_identity_req` (plain `AgentRole::Agent`) do, or every RPC they make against
-/// `__commons__` is `ACCESS_DENIED`. Same fix shape as `server::mod::multi_tenant_state`'s
+/// `__commons__` is `ACCESS_DENIED`. Same fix shape as `medulla_server::mod::multi_tenant_state`'s
 /// `"commons-user"` role (CONCEPT:MEDULLA-KG.compute.durable-rbac-identity-persistence): the role +
 /// grants live on the policy, `register_identity_req` threads the role NAME onto each
 /// registered peer's `AgentIdentity.roles`.
@@ -151,7 +151,7 @@ fn commons_isolation() -> medulla::isolation::IsolationLayer {
         // `RbacAction::Admin` on the `"__admin__"` resource context
         // `IsolationLayer::has_admin_capability` checks -- exactly the capability
         // `Method::RegisterIdentity`/`RbacAdmin`/etc. require of their ACTOR
-        // (`server::access::require_admin_capability`), and nothing more: unlike
+        // (`medulla_server::access::require_admin_capability`), and nothing more: unlike
         // `System`, `root` still goes through ordinary RLS/ACL for every other
         // operation.
         isolation.add_role(Role::new(common::ROOT_ADMIN_ROLE));

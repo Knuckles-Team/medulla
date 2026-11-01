@@ -3,7 +3,7 @@
 //! Where [`medulla_kvcache::SharedKvIndex`] (MEDULLA-186) is an **in-process, ephemeral**
 //! content-addressed index, [`SharedKvStoreBackend`] is the same
 //! [`medulla_kvcache::SharedKvBackend`] seam over the engine's **durable, mutation-store-backed
-//! KV store** ([`crate::server::kv::KvStore`], the `kv.redb` the `Method::KvGet`/`KvPut`
+//! KV store** ([`medulla_server::kv::KvStore`], the `kv.redb` the `Method::KvGet`/`KvPut`
 //! wire surface owns). This is the documented follow-up the `medulla-kvcache` crate report and
 //! the HTTP surface both point at ("A follow-up networked backend would swap this for an
 //! RPC / object-store client implementing the SAME `SharedKvBackend` trait").

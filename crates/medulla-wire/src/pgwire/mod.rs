@@ -6,7 +6,7 @@
 //! This is a SHIM, not a second SQL engine, and — since MEDULLA-074 — not even a second
 //! copy of the query orchestration: the wire-agnostic `classify → dispatch → exec`
 //! pipeline, the per-connection session state, and the mixed-store transaction logic
-//! all live in [`crate::server::wire`] ([`WireSession`], the one shared
+//! all live in [`medulla_server::wire`] ([`WireSession`], the one shared
 //! [`WireProtocol`] impl). THIS module is now purely the Postgres-SPECIFIC adapter:
 //!   * the TCP listener + `process_socket` framing,
 //!   * mandatory SCRAM startup auth (see `auth.rs`),
@@ -35,7 +35,7 @@
 //!
 //! ## DML / transactions / connected graph / auth / OID mapping
 //! Unchanged from KG-2.189/KG-2.198/MEDULLA-020/MEDULLA-045..049/MEDULLA-072/MEDULLA-102/MEDULLA-115 — the
-//! behavior now lives in [`crate::server::wire`]; this adapter only frames it. See the
+//! behavior now lives in [`medulla_server::wire`]; this adapter only frames it. See the
 //! `wire` module header for the mixed-store transaction and durability semantics, and
 //! `auth.rs` for the SCRAM identity model (CONCEPT:MEDULLA-KG.query.concept-13).
 //!
@@ -2139,7 +2139,7 @@ mod tls_policy_tests {
             .expect("next startup function");
         let listener_source = &main_source[listener_start..listener_end];
         let preparation = listener_source
-            .find("let prepared_pgwire = medulla::server::pgwire::prepare_startup_policy(")
+            .find("let prepared_pgwire = medulla_server::pgwire::prepare_startup_policy(")
             .expect("production TLS preparation");
         let awaited = listener_source[preparation..]
             .find(".await?;")

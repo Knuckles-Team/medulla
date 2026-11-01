@@ -7,7 +7,7 @@
 //! Like the SQL wire shims (pgwire / mysql-wire, CONCEPT:MEDULLA-KG.compute.subsystems-reference) and the Bolt
 //! adapter (CONCEPT:MEDULLA-KG.query.bolt-wire-protocol), this is an ADAPTER — NOT a re-implemented Redis. The
 //! bytes are stored on the engine's own durable Key→Value substrate
-//! ([`crate::server::kv::KvStore`], CONCEPT:MEDULLA-KG.storage.namespaced-kv-surface): every Redis key lives as a
+//! ([`medulla_server::kv::KvStore`], CONCEPT:MEDULLA-KG.storage.namespaced-kv-surface): every Redis key lives as a
 //! single msgpack [`Entry`] envelope in one `redis` namespace, so a `SET` that
 //! returned `OK` survives a `kill -9` exactly like a `KvPut`. The five Redis data
 //! types (string / list / hash / set / zset) are modeled as variants of one

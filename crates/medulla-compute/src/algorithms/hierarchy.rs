@@ -19,7 +19,7 @@ use crate::graph::GraphView;
 /// One cluster at one level of a computed [`ClusterHierarchyResult`]
 /// (CONCEPT:MEDULLA-KG.compute.leiden-hierarchy, VIZ-1). `Serialize`/`Deserialize` so the whole
 /// result can be MessagePack-encoded directly into
-/// `server::persistence::cluster_hierarchy_store` — the wire/persisted shape
+/// `medulla_server::persistence::cluster_hierarchy_store` — the wire/persisted shape
 /// IS the compute shape, no separate DTO layer.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ClusterMeta {
@@ -71,7 +71,7 @@ pub struct ClusterHierarchyResult {
 /// `"L{level}-{local_index}"` shape, shared by every consumer (the
 /// `Method::ClusterHierarchy*` RPC handlers AND VIZ-2's `graph_tile_server`,
 /// which packs the same `(level, idx)` pair into its own `u64` cluster id --
-/// see `server::graph_tile_source`) so the format can never drift between them.
+/// see `medulla_server::graph_tile_source`) so the format can never drift between them.
 pub fn format_cluster_id(level: usize, idx: usize) -> String {
     format!("L{level}-{idx}")
 }

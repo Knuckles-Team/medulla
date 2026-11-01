@@ -205,14 +205,14 @@ async fn node_count(state: &Arc<RwLock<ServerState>>, graph: &str) -> usize {
 /// (`src/server/dispatch.rs`), one very large async fn whose generated future is
 /// enormous; awaiting it inline inside a `#[tokio::test]`'s default 2 MiB worker
 /// stack can exhaust it before the first request is even polled, SIGABRTing the
-/// whole test binary. Mirrors `server::mod::tests::dispatch_on_heap` (8e00e0b).
+/// whole test binary. Mirrors `medulla_server::mod::tests::dispatch_on_heap` (8e00e0b).
 /// (`placement_admin_wire_rpc`'s tests are exempt: they run on their own
 /// explicitly-sized `ENGINE_WORKER_STACK_BYTES` runtime instead, see its module doc.)
 fn dispatch_on_heap<'a>(
     state: &'a Arc<RwLock<ServerState>>,
     request: crate::protocol::Request,
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = crate::protocol::Response> + Send + 'a>> {
-    let dispatched = crate::server::dispatch(state, request);
+    let dispatched = medulla_server::dispatch(state, request);
     Box::pin(dispatched)
 }
 
@@ -882,7 +882,7 @@ mod placement_admin_wire_rpc {
     use super::*;
     use crate::acl::{AgentIdentity, AgentRole, RequestContextClaims};
     use crate::protocol::{Response, ResultPayload};
-    use crate::server::dispatch;
+    use medulla_server::dispatch;
     use medulla_server_api::auth::compute_verified_envelope_token;
     use medulla_server_api::auth::VerifiedEnvelopeParams;
 
@@ -1019,7 +1019,7 @@ mod placement_admin_wire_rpc {
     }
 
     /// A plain `#[test]` (not `#[tokio::test]`) driving its own runtime on an
-    /// explicitly sized worker stack via `crate::server::spawn_engine_driver` +
+    /// explicitly sized worker stack via `medulla_server::spawn_engine_driver` +
     /// `ENGINE_WORKER_STACK_BYTES` — the SAME established pattern
     /// `tests/external_compute_e2e.rs` uses for any test that calls the real served
     /// `dispatch()` entrypoint. `dispatch()`/`dispatch_graph_op_inner` are themselves
@@ -1031,10 +1031,10 @@ mod placement_admin_wire_rpc {
     // spec: MEDULLA-DURABLE-KERNEL-R012
     #[test]
     fn placement_admin_wire_rpcs_move_data_across_a_real_three_node_cluster() {
-        let driver = crate::server::spawn_engine_driver(|| {
+        let driver = medulla_server::spawn_engine_driver(|| {
             let runtime = tokio::runtime::Builder::new_multi_thread()
                 .worker_threads(4)
-                .thread_stack_size(crate::server::ENGINE_WORKER_STACK_BYTES)
+                .thread_stack_size(medulla_server::ENGINE_WORKER_STACK_BYTES)
                 .enable_all()
                 .build()
                 .expect("build engine-contract runtime");

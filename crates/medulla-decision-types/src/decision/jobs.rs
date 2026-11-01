@@ -508,7 +508,7 @@ macro_rules! decision_job_op {
 
         impl $name {
             /// Whether this operation commits durable state. The ONE
-            /// classifier: `server::access::requires_write` and the capability
+            /// classifier: `medulla_server::access::requires_write` and the capability
             /// policy both delegate here, so they cannot disagree.
             pub fn is_mutation(&self) -> bool {
                 matches!(self, Self::Submit { .. })

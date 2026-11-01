@@ -4,7 +4,7 @@
 //! NOT graph-scoped — a pair is keyed by `(namespace, key)` and lives off the node/edge
 //! graph — so, like the BLOB substrate and the TSDB series store, the `Kv*` methods
 //! self-route at the top of dispatch BEFORE the per-graph chain and read their store off
-//! [`ServerState`](crate::server::ServerState).
+//! [`ServerState`](medulla_server::ServerState).
 //!
 //! ## Durability
 //!
@@ -108,7 +108,7 @@ fn kv_bootstrap_identity() -> Result<MutationScopeIdentity, String> {
 
 /// Build the native KV mutation-scope identity for one (tenant, resource) pair.
 /// `resource` must be EXACTLY the string `compile_kv_batch` passes as
-/// `CompileBatch::graph` for the same write: `crate::server::mutation_batch::finish_batch`
+/// `CompileBatch::graph` for the same write: `medulla_server::mutation_batch::finish_batch`
 /// builds the batch's authoritative `identity` from that identical (tenant, graph) pair,
 /// the SAME `DurabilityDomain::KvStore` domain (also the only native domain
 /// `OwnerLayout::Kv` accepts) and the SAME `COMPILED_BATCH_INCARNATION`. The kernel's
@@ -584,7 +584,7 @@ fn decode_batch_result<T: serde::de::DeserializeOwned>(
 /// Route a `Method::Kv*` op through the KV store on `ServerState`. Mirrors the
 /// blob/tsdb self-routing handlers: `Err(method)` for a non-KV method (the caller then
 /// falls through), `Ok(Response)` otherwise. Classification (`requires_write`) lives in
-/// `server::access` alongside the graph-op classifier.
+/// `medulla_server::access` alongside the graph-op classifier.
 pub async fn try_handle(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,

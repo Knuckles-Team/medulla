@@ -216,7 +216,7 @@ impl ConformanceTestable for Symbol {
         Symbol {
             id: "sym:deadbeef".to_string(),
             name: "handle_request".to_string(),
-            qualified_name: "crate::server::handle_request".to_string(),
+            qualified_name: "medulla_server::handle_request".to_string(),
             symbol_type: crate::ast::symbol::SymbolType::Function,
             file_path: "src/server.rs".to_string(),
             line_start: 42,

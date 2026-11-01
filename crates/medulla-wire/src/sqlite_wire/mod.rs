@@ -1,6 +1,6 @@
 //! SQLite-compatible served surface (CONCEPT:MEDULLA-KG.query.concept-3) — Phase J of the Universal-DB
 //! multi-wire program. The SECOND consumer of the wire-agnostic execution core
-//! (CONCEPT:MEDULLA-KG.compute.subsystems-reference), after the Postgres shim (`crate::server::pgwire`).
+//! (CONCEPT:MEDULLA-KG.compute.subsystems-reference), after the Postgres shim (`medulla_server::pgwire`).
 //!
 //! ## Why this is not a "wire" like the others
 //! SQLite has **no client/server wire protocol** — it is an embedded library that

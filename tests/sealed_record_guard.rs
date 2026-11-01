@@ -16,7 +16,7 @@ mod test_support;
 use serde_json::json;
 
 use medulla::protocol::{Method, Response, ResultPayload};
-use medulla::server::dispatch;
+use medulla_server::dispatch;
 
 const SECRET: &str = "sealed-record-guard-secret";
 
@@ -256,7 +256,7 @@ async fn retirement_is_the_owning_op_and_leaves_an_audited_tombstone() {
 /// a second sweep has nothing left to do.
 #[tokio::test]
 async fn retention_policy_expires_records_through_the_owning_op() {
-    use medulla::server::sealed_retention::{expire_sealed_records, parse_policy, RETENTION_ACTOR};
+    use medulla_server::sealed_retention::{expire_sealed_records, parse_policy, RETENTION_ACTOR};
 
     let mut served = Served::new();
     let mut young = snapshot("{}");

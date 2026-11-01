@@ -42,7 +42,7 @@ use medulla_protocol_types::protocol::MethodWriteFamily;
 /// and is a different write: `compute::semantic_ann_codes::SemanticCodeStore`
 /// makes one ANN index GENERATION durable as one admitted maintenance mutation,
 /// triggered from the dispatch write tail by
-/// `server::semantic_activation::maybe_activate_after_write`. The embedding and
+/// `medulla_server::semantic_activation::maybe_activate_after_write`. The embedding and
 /// the index built from it are two writes with two authorities; only the second
 /// one is store-authoritative.
 pub fn domain_for(method: &Method, surface: MutationSurface) -> DurabilityDomain {

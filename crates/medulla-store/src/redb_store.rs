@@ -6,7 +6,7 @@
 //! dependency, so it compiles under `--features redb` ALONE (no `server`).
 //!
 //! Two callers share it — ONE durable format, never duplicated:
-//!   * the out-of-process server's `server::persistence::redb_backend::RedbBackend`
+//!   * the out-of-process server's `medulla_server::persistence::redb_backend::RedbBackend`
 //!     (gated on `server`), which wraps these in its off-reactor group-commit
 //!     writer thread + the `PersistenceBackend` async trait; and
 //!   * the in-process [`crate::embedded::EmbeddedEngine`] (gated on `embedded`),

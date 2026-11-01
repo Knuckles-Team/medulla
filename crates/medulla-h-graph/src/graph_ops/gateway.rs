@@ -1,6 +1,6 @@
 use super::*;
 
-/// Same boundary as [`commit_gateway`](crate::server::api::ingest::graph::commit_gateway), for the five coalescable structural
+/// Same boundary as [`commit_gateway`](medulla_server::api::ingest::graph::commit_gateway), for the five coalescable structural
 /// writes (`AddNode`/`RemoveNode`/`AddEdge`/`RemoveEdge`/CAS) — routed through
 /// `mutation::commit_coalescable_mutation` instead of `commit_mutation` so
 /// their prepare→durable-commit→RAM-publish sequence can be queued onto the

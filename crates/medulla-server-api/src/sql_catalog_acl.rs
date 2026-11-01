@@ -1,7 +1,7 @@
 //! Tenant-scoped SQL table ownership, grants, and row-level security
 //! (CONCEPT:NE-003 — "MEDULLA-ACCESS": intra-tenant SQL catalog sharing).
 //!
-//! [`crate::server::sql_tables`] moved the PHYSICAL catalog boundary from
+//! [`medulla_server::sql_tables`] moved the PHYSICAL catalog boundary from
 //! `(tenant, agent_id)` to `tenant` alone (`tenant_table_store` /
 //! `tenant_acl_table_store`): every actor in a tenant now CAN share one redb
 //! catalog file. Sharing a physical file is not the same thing as being allowed to
@@ -662,7 +662,7 @@ pub fn begin_provisional_create(
 }
 
 /// `true` only for the exact, deterministic message
-/// [`crate::server::sql_tables`]'s underlying `medulla_query::TableStore` raises when
+/// [`medulla_server::sql_tables`]'s underlying `medulla_query::TableStore` raises when
 /// an `INSERT` loses a UNIQUE-constraint race (`validate_uniqueness_in` in
 /// `medulla-query/src/tables/store.rs`) — never for any other failure. Used to
 /// narrowly distinguish "someone else's concurrent insert already won" (a

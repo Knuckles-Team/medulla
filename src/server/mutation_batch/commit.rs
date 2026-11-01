@@ -55,9 +55,10 @@ use crate::protocol::Method;
 #[cfg(all(test, feature = "redb"))]
 use crate::protocol::ResultPayload;
 #[cfg(all(test, feature = "redb"))]
-use crate::server::api::persistence::PersistenceBackend;
+use medulla_server::api::persistence::PersistenceBackend;
 #[cfg(test)]
-use crate::server::mutation_batch::compile::{compile_methods, CompileBatch};
+use medulla_server::mutation_batch::compile::compile_methods;
+use medulla_server::mutation_batch::compile::CompileBatch;
 #[cfg(test)]
 use medulla_mutation_types::mutation_scope::MutationSurface;
 #[cfg(test)]
@@ -114,7 +115,7 @@ mod internal_replay_tests {
             "terminal-result-conflict",
         );
         let persistence: Arc<dyn PersistenceBackend> = Arc::new(
-            crate::server::persistence::redb_backend::RedbBackend::open(
+            medulla_server::persistence::redb_backend::RedbBackend::open(
                 dir.to_string_lossy().into_owned(),
                 64,
             )
@@ -129,7 +130,7 @@ mod internal_replay_tests {
             InternalGraphCommitRequest::new(
                 Some(&persistence),
                 &core,
-                crate::server::mutation_batch::CommitOrigin {
+                medulla_server::mutation_batch::CommitOrigin {
                     request_id: 1,
                     principal: Some("internal-caller"),
                 },
@@ -148,7 +149,7 @@ mod internal_replay_tests {
             InternalGraphCommitRequest::new(
                 Some(&persistence),
                 &core,
-                crate::server::mutation_batch::CommitOrigin {
+                medulla_server::mutation_batch::CommitOrigin {
                     request_id: 2,
                     principal: Some("internal-caller"),
                 },
@@ -653,7 +654,7 @@ mod internal_replay_tests {
             "cas-replay",
         );
         let persistence: Arc<dyn PersistenceBackend> = Arc::new(
-            crate::server::persistence::redb_backend::RedbBackend::open(
+            medulla_server::persistence::redb_backend::RedbBackend::open(
                 dir.to_string_lossy().into_owned(),
                 64,
             )
@@ -670,7 +671,7 @@ mod internal_replay_tests {
         commit_internal_graph_methods(InternalGraphCommitRequest::new(
             Some(&persistence),
             &core,
-            crate::server::mutation_batch::CommitOrigin {
+            medulla_server::mutation_batch::CommitOrigin {
                 request_id: 900,
                 principal: Some("promotion-binding-seeder"),
             },
@@ -785,7 +786,7 @@ mod internal_replay_tests {
             ProgramPromotionRequest::new(
                 Some(&persistence),
                 &core,
-                crate::server::mutation_batch::CommitOrigin {
+                medulla_server::mutation_batch::CommitOrigin {
                     request_id: 1,
                     principal: Some("program-worker"),
                 },
@@ -805,7 +806,7 @@ mod internal_replay_tests {
             ProgramPromotionRequest::new(
                 Some(&persistence),
                 &core,
-                crate::server::mutation_batch::CommitOrigin {
+                medulla_server::mutation_batch::CommitOrigin {
                     request_id: 2,
                     principal: Some("program-worker"),
                 },
@@ -913,7 +914,7 @@ mod internal_replay_tests {
             ProgramPromotionRequest::new(
                 Some(&persistence),
                 &core,
-                crate::server::mutation_batch::CommitOrigin {
+                medulla_server::mutation_batch::CommitOrigin {
                     request_id: 3,
                     principal: Some("program-worker"),
                 },
@@ -975,7 +976,7 @@ mod internal_replay_tests {
             ProgramPromotionRequest::new(
                 Some(&persistence),
                 &core,
-                crate::server::mutation_batch::CommitOrigin {
+                medulla_server::mutation_batch::CommitOrigin {
                     request_id: 31,
                     principal: Some("program-worker"),
                 },
@@ -1018,7 +1019,7 @@ mod internal_replay_tests {
         commit_internal_graph_methods(InternalGraphCommitRequest::new(
             Some(&persistence),
             &core,
-            crate::server::mutation_batch::CommitOrigin {
+            medulla_server::mutation_batch::CommitOrigin {
                 request_id: 901,
                 principal: Some("promotion-binding-seeder"),
             },
@@ -1070,7 +1071,7 @@ mod internal_replay_tests {
             ProgramPromotionRequest::new(
                 Some(&persistence),
                 &core,
-                crate::server::mutation_batch::CommitOrigin {
+                medulla_server::mutation_batch::CommitOrigin {
                     request_id: 32,
                     principal: Some("program-worker"),
                 },
@@ -1109,7 +1110,7 @@ mod internal_replay_tests {
             ProgramPromotionRequest::new(
                 Some(&persistence),
                 &core,
-                crate::server::mutation_batch::CommitOrigin {
+                medulla_server::mutation_batch::CommitOrigin {
                     request_id: 4,
                     principal: Some("program-worker"),
                 },
@@ -1158,7 +1159,7 @@ mod internal_replay_tests {
             ProgramPromotionRequest::new(
                 Some(&persistence),
                 &core,
-                crate::server::mutation_batch::CommitOrigin {
+                medulla_server::mutation_batch::CommitOrigin {
                     request_id: 5,
                     principal: Some("program-worker"),
                 },
@@ -1215,7 +1216,7 @@ mod internal_replay_tests {
         persistence.shutdown();
         drop(persistence);
         let reopened_persistence: Arc<dyn PersistenceBackend> = Arc::new(
-            crate::server::persistence::redb_backend::RedbBackend::open(
+            medulla_server::persistence::redb_backend::RedbBackend::open(
                 dir.to_string_lossy().into_owned(),
                 64,
             )

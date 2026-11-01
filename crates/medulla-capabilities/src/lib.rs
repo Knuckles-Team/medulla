@@ -144,7 +144,7 @@ fn agent_component_policy(
 /// The semantic index takes the same runtime-conditional shape as the four agent
 /// layers above, but with SIX authz actions rather than two. `is_mutation` and
 /// `authz_action` both live on the op itself so this policy and
-/// `server::access::requires_write` cannot drift apart about an operation --
+/// `medulla_server::access::requires_write` cannot drift apart about an operation --
 /// and so the privilege split survives a new variant: curating what is indexed,
 /// feeding rows into an approved binding, taking work off the queue and
 /// declaring a stage durable are four different grants, and one action would

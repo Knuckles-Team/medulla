@@ -36,7 +36,7 @@
 //!
 //! `SERVICE <endpoint> { … }` federation is already fully implemented and was already
 //! reachable BEFORE this lane: `crates/medulla-rdf/src/sparql.rs::eval_service` dispatches to an
-//! injected `ctx.service: Option<&dyn RemoteSparql>`, and `server::sparql_http::ServiceClient`
+//! injected `ctx.service: Option<&dyn RemoteSparql>`, and `medulla_server::sparql_http::ServiceClient`
 //! (feature `sparql-service`) is a complete, SSRF-guarded `ureq` implementation of that
 //! trait, bound in `run_dataset_query` whenever the allowlist env var
 //! (`sparql_http::SERVICE_ALLOW_ENV`, `MEDULLA_SPARQL_SERVICE_ALLOW`) is non-empty.
@@ -189,7 +189,7 @@ mod tests {
     /// deliberately: `FUSEKI_HEALTH_CHECK_ENDPOINT_ENV` and `SERVICE_ALLOW_ENV` are
     /// process-global, and `cargo test` runs test functions concurrently on multiple
     /// threads by default, so two functions each mutating the SAME env vars would race.
-    /// `server::sparql_service::qualification`'s tests deliberately avoid touching either
+    /// `medulla_server::sparql_service::qualification`'s tests deliberately avoid touching either
     /// var (they build `ServiceClient` via the test-only `with_allow` constructor instead),
     /// so this remains the ONLY test in the crate touching these two names.
     #[test]

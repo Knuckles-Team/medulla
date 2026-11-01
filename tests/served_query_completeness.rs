@@ -25,7 +25,7 @@ use tokio::sync::RwLock;
 use medulla_plan::{Op, Plan};
 use medulla_types::wire::UqlResult;
 use medulla::protocol::{Method, Response, ResultPayload};
-use medulla::server::{dispatch};
+use medulla_server::{dispatch};
 use medulla_server_api::state::ServerState;
 
 const SECRET: &str = "served-query-completeness-secret";
@@ -177,7 +177,7 @@ async fn served_fuserrf_text_branch_contributes_lexical_hits() {
 ///
 /// Proven DIFFERENTIALLY rather than by inspection: the persistent index derives a node's
 /// indexable body from a FIXED canonical key list (`GraphTextIndex`'s `TEXT_KEYS` —
-/// text/content/body/description/summary/title/name, see `server::secondary_indexes`),
+/// text/content/body/description/summary/title/name, see `medulla_server::secondary_indexes`),
 /// while the snapshot-derived fallback (`build_text_index_from_view`) concatenates EVERY
 /// string leaf in a node's property blob regardless of key. So a node whose only textual
 /// field lives under a NON-canonical key matches the snapshot fallback but is INVISIBLE to

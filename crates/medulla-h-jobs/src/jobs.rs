@@ -421,7 +421,7 @@ mod jobs_read_rls_architecture;
 /// L-RLS-2 (§9 #10 next-level-analysis): does executing `kind` read graph
 /// node/edge property data server-side, and therefore need its `GraphCore`
 /// routed through [`GraphReadAuthority::project_core`]/`filter_view`
-/// (`crate::server::access`, backed by
+/// (`medulla_server::access`, backed by
 /// `crates/medulla-core/src/isolation.rs::can_see_row`) before anything downstream
 /// inspects a row?
 ///

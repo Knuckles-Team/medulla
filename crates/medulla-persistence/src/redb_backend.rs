@@ -755,12 +755,12 @@ pub struct RedbBackend {
     /// Always opened (like `admin_mutations` above) so the shape of `RedbBackend`
     /// doesn't vary with whether Raft happens to be configured; it is populated
     /// only when a clustered node self-reports at startup (`raft::node::start`).
-    /// See `server::persistence::node_info_store` for the replication story.
+    /// See `medulla_server::persistence::node_info_store` for the replication story.
     node_info: Arc<super::node_info_store::NodeInfoStore>,
     /// Durable cluster-hierarchy cache (CONCEPT:MEDULLA-KG.compute.leiden-hierarchy, VIZ-1). Own-file,
     /// like `node_info` above, but carries no replication story — a cache entry
     /// is node-local and always safely recomputable. See
-    /// `server::persistence::cluster_hierarchy_store` for why membership never
+    /// `medulla_server::persistence::cluster_hierarchy_store` for why membership never
     /// rides graph nodes/edges.
     cluster_hierarchy: Arc<super::cluster_hierarchy_store::ClusterHierarchyStore>,
 }
@@ -3224,7 +3224,7 @@ pub mod tests {
     /// `medulla_h_graph::graph_ops::try_handle` (`GraphReadAuthority::project_core`),
     /// whose detached copy is built via `add_node_no_ledger`/`add_edge_no_ledger`
     /// and therefore NEVER carries a ledger at all -- see `build_projection`'s own
-    /// doc in `server::access`. Because `security` (hence
+    /// doc in `medulla_server::access`. Because `security` (hence
     /// `GraphReadAuthority::is_active()`) is compiled into the DEFAULT `full`
     /// build, `GetLedger` returned `[]` on EVERY served request, regardless of
     /// how many mutations had actually committed -- indistinguishable from
@@ -3713,7 +3713,7 @@ pub mod tests {
         // `record_durable`/`read_node`/`shard_index` all take a graph FNAME -- the
         // sanitized storage spelling, as their parameter names and `shard_index`'s
         // own doc say, and as every production caller passes
-        // (`server::mutation::commit_finalize_durable` does
+        // (`medulla_server::mutation::commit_finalize_durable` does
         // `crate::persist::sanitize(ctx.graph_name)` first). This test is the only
         // one in the file that picked a name needing sanitization (`:` is outside
         // the storage alphabet) and then skipped the step, so its durable commit

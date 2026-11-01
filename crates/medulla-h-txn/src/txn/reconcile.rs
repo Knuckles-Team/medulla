@@ -291,7 +291,7 @@ pub(super) fn reconcile_candidate_mismatch(
 }
 
 /// The caller mutation scope a batch was compiled under, as
-/// `server::mutation_batch::compile` stamps it onto every batch's outbox
+/// `medulla_server::mutation_batch::compile` stamps it onto every batch's outbox
 /// attribution: `sha256(tenant || 0x00 || graph)`.
 pub(super) fn caller_scope_digest(tenant: &str, graph: &str) -> String {
     use sha2::{Digest, Sha256};

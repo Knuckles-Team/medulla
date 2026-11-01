@@ -415,7 +415,7 @@ fn contract_wave_rows_are_internal_with_no_consumer() {
 
 /// The runtime policy of every contract-wave OP follows its own
 /// `is_mutation()` and `authz_action()`, so the ledger and
-/// `server::access::requires_write` cannot disagree about an operation.
+/// `medulla_server::access::requires_write` cannot disagree about an operation.
 #[test]
 fn contract_wave_op_policies_follow_their_ops() {
     use medulla_protocol_types::protocol_fixtures::contract_wave::contract_wave_samples;

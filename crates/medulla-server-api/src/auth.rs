@@ -18,7 +18,7 @@
 //! prove the envelope's self-asserted `principal`/`tenant`/`roles`/`scopes`
 //! belong to whoever is actually calling. [`bind_verified_identity`] requires
 //! the envelope to carry an `oidc_token` that independently RSA/JWKS-verifies
-//! (reusing `crate::server::oidc`'s verifier, the same one the KV-cache HTTP
+//! (reusing `medulla_server::oidc`'s verifier, the same one the KV-cache HTTP
 //! surface uses) and rejects any mismatch between the envelope's claims and
 //! the token's verified subject/tenant/roles/scopes. The HMAC envelope
 //! remains channel integrity (replay/tamper/downgrade); the OIDC token is the
@@ -73,7 +73,7 @@ const ENVELOPE_V2_PREFIX: &str = "eg2.";
 /// distinguishable per-caller principal the way the primary `eg2.` envelope
 /// does (see [`VerifiedRequestContext::authenticated_fixed_service_actor`]).
 /// Returns `None` on a failed or absent credential (fail closed); the caller
-/// denies through [`crate::server::access::unauthenticated_carrier_denied`].
+/// denies through [`medulla_server::access::unauthenticated_carrier_denied`].
 pub fn mint_fixed_service_carrier(
     credential_verified: bool,
     service: &str,
@@ -134,13 +134,13 @@ pub(crate) fn iceberg_bearer_scopes(claimed: &HashSet<String>) -> Result<Vec<Str
 }
 
 /// Mint a `CarrierAuthority` for the Iceberg-REST catalog surface (BUG-222,
-/// `server::lake::rest`) from an OAuth2 bearer already verified by
+/// `medulla_server::lake::rest`) from an OAuth2 bearer already verified by
 /// `oidc::JwtValidator::validate_claims` (RSA/JWKS signature + issuer +
 /// audience + expiry). `None` on a missing/absent verification OR a verified
 /// tenant that does not match this deployment's configured tenant — both fail
 /// closed via [`VerifiedRequestContext::authenticated_iceberg_bearer`]. The
 /// caller denies through
-/// [`crate::server::access::unauthenticated_carrier_denied`], the SAME shared
+/// [`medulla_server::access::unauthenticated_carrier_denied`], the SAME shared
 /// gate every other auxiliary surface uses.
 #[cfg(feature = "oidc")]
 pub fn mint_iceberg_carrier(
@@ -155,11 +155,11 @@ pub fn mint_iceberg_carrier(
 /// A configured bearer credential for an auxiliary HTTP surface that
 /// authenticates via `Authorization: Bearer <token>` rather than a per-request
 /// `eg2.` envelope — currently the KV-cache HTTP surface
-/// (`server::kvcache_http`) and the `/sparql` SELECT/CONSTRUCT/ASK read leg
-/// (`server::sparql_http`), both federated/HTTP-native shapes with no
+/// (`medulla_server::kvcache_http`) and the `/sparql` SELECT/CONSTRUCT/ASK read leg
+/// (`medulla_server::sparql_http`), both federated/HTTP-native shapes with no
 /// single-graph envelope to bind. [`BearerCredential::Jwt`] is preferred
 /// (paired with the platform's configured OIDC provider, reusing
-/// [`crate::server::oidc::JwtValidator`] — the same verifier the primary
+/// [`medulla_server::oidc::JwtValidator`] — the same verifier the primary
 /// `eg2.` identity binding uses); [`BearerCredential::Static`] is a shared,
 /// deployment-configured secret (the documented OpenBao-sourced fallback),
 /// compared as fixed-size HMAC tags rather than raw secret-bearing bytes.
@@ -168,7 +168,7 @@ pub fn mint_iceberg_carrier(
 /// to another.
 ///
 /// Gated on feature `oidc` (not merely on the two surfaces above) because the
-/// `Jwt` variant names [`crate::server::oidc::JwtValidator`] directly, and
+/// `Jwt` variant names [`medulla_server::oidc::JwtValidator`] directly, and
 /// every feature that compiles a surface using this type (`kvcache-server`,
 /// `sparql-http` → `security`) already pulls `oidc` in transitively — see
 /// each feature's `Cargo.toml` entry.
@@ -834,7 +834,7 @@ fn env_flag_explicit(name: &str) -> Option<bool> {
 
 // ── OIDC identity binding (primary eg2. protocol, feature `oidc`) ─────────
 //
-// Extends `crate::server::oidc`'s existing RSA/JWKS verifier — the exact one
+// Extends `medulla_server::oidc`'s existing RSA/JWKS verifier — the exact one
 // the ancillary KV-cache HTTP surface already uses — to this primary
 // protocol. No new signature/JWKS code: `bind_verified_identity` only calls
 // `JwtValidator::validate_claims` and compares the result against the
@@ -3063,7 +3063,7 @@ mod tests {
 
     // ── OIDC identity binding (primary eg2. protocol, feature `oidc`) ─────
     //
-    // Mirrors `crate::server::oidc`'s own test suite (same fixture keypair,
+    // Mirrors `medulla_server::oidc`'s own test suite (same fixture keypair,
     // generated solely for tests via `openssl genrsa` — never used for
     // anything else): valid token binds; tampered/expired/wrong-audience
     // tokens fail closed; a token asserting a different principal/tenant/
@@ -3504,13 +3504,13 @@ mod tests {
         }
     }
 
-    // ── Iceberg-REST OAuth2 bearer carrier (BUG-222, `server::lake::rest`) ─
+    // ── Iceberg-REST OAuth2 bearer carrier (BUG-222, `medulla_server::lake::rest`) ─
     //
     // `authenticated_iceberg_bearer`/`mint_iceberg_carrier` consume an
     // ALREADY-verified `oidc::VerifiedTokenClaims` (the caller's own
     // `JwtValidator::validate_claims` already ran the RSA/JWKS/issuer/
     // audience/expiry check — exercised end-to-end by `oidc.rs`'s own test
-    // suite and by `server::lake::rest`'s live-listener test), so these tests
+    // suite and by `medulla_server::lake::rest`'s live-listener test), so these tests
     // exercise the identity-binding + tenant-match decision directly rather
     // than re-deriving a JWT signing harness.
     #[cfg(feature = "oidc")]

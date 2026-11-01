@@ -16,7 +16,7 @@
 //! batch_update` (`medulla-compute` depends on `medulla-core`, not the reverse); `AddTriples`/
 //! `RemoveTriples`/`DropNamedGraph` call `medulla_rdf::mapping`/`medulla_rdf::update` (same
 //! direction); the mining/graphlearn write-back replay arms call
-//! `crate::server::handlers::{mining,graphlearn}::replay` (`src/server` IS this
+//! `medulla_server::handlers::{mining,graphlearn}::replay` (`src/server` IS this
 //! facade). Their matching `is_durable_mutation` classifier blocks
 //! (`modality-serving`/`rdf`/`mining`×4/`graphlearn`) stay here too, since this
 //! crate's own Cargo features (not `medulla-core`'s) are what root `Cargo.toml` forwards
@@ -51,7 +51,7 @@ use medulla_protocol_types::protocol::Method;
 /// `modality-serving` feature; that arm keeps its cfg gate.
 ///
 /// `apply`, below, is different on purpose: its matching arms call INTO
-/// `medulla_rdf`/`crate::server::handlers::{mining,graphlearn}`, dependencies that
+/// `medulla_rdf`/`medulla_server::handlers::{mining,graphlearn}`, dependencies that
 /// truly do not link without this crate's own facade feature, so those arms
 /// correctly stay gated — a replay that cannot run without the dependency
 /// falls through to `medulla_core::durable_apply::apply`'s `_` catch-all rather

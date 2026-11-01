@@ -24,7 +24,7 @@
 //!   policy-lease text path, in-txn UQL, `NlQuery`, and the wire-protocol UQL path)
 //!   builds its registry through [`ForeignSourceCatalog::resolve_for_plan`].
 //!
-//! Sharing is explicit (EH-378, `server::foreign_share`): an administrator assigns the
+//! Sharing is explicit (EH-378, `medulla_server::foreign_share`): an administrator assigns the
 //! engine-provisioned `foreign-source-use:<owner agent>/<name>` role, and the grantee then
 //! addresses the source as `<owner agent>/<name>`. Without that exact grant, a plain or
 //! qualified name another owner registered resolves exactly like an entirely unknown name,
@@ -563,7 +563,7 @@ pub fn bound_registry(foreign: &Option<OwnedForeignRegistry>) -> Option<&Foreign
 mod tests {
     //! EH-373 catalog-level proofs: `(owner, name)` keying, per-owner resolution, and
     //! no cross-owner overwrite. The served-path proofs (UnifiedQuery, UQL text, NL)
-    //! live in `server::tests::foreign_tenancy`.
+    //! live in `medulla_server::tests::foreign_tenancy`.
     use super::*;
 
     /// A verified carrier for `agent` in the deployment's one tenant.

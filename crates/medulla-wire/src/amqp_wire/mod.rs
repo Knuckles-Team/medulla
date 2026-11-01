@@ -6,7 +6,7 @@
 //! Like the pgwire / mysql-wire shims, this is an ADAPTER, not a second broker. Every
 //! exchange/binding/queue/message lives as graph nodes on a control graph; this module
 //! only frames AMQP 0.9.1 on the wire and maps each method onto the broker primitives
-//! (`crate::broker`) THROUGH the engine dispatch (`crate::server::dispatch::dispatch`)
+//! (`crate::broker`) THROUGH the engine dispatch (`medulla_server::dispatch::dispatch`)
 //! — so an AMQP publish takes the SAME routing + atomic enqueue + WAL/CDC path a
 //! `Method::Publish` RPC does, and consumption uses the native
 //! `Method::BrokerConsume`/`BrokerAck` lifecycle. No parallel mechanism.

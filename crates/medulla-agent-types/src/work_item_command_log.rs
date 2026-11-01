@@ -22,7 +22,7 @@
 //! dependency edges, and appends the outbox record. The native
 //! `Method::SubmitWorkItem`/`SubmitWorkItems` protocol, capability policy,
 //! mutation-batch handling, and redb apply/outbox/index adapter now live in
-//! `native_control`, `server::mutation_batch`, and `redb_store`; this module
+//! `native_control`, `medulla_server::mutation_batch`, and `redb_store`; this module
 //! remains the reusable admission-decision reference core. What this module
 //! DOES deliver, with tests proving
 //! it against known-bad inputs:

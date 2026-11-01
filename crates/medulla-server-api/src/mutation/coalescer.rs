@@ -316,7 +316,7 @@ fn apply_coalescable_cas_fields(
 /// (`AddNode`/`RemoveNode`/`AddEdge`/`RemoveEdge`/`CompareAndSetNodeFields`) it batches the WHOLE
 /// prepare→durable→publish sequence — not just the RAM apply — with concurrent
 /// siblings on the SAME graph, via the per-graph
-/// `server::routed_write_coalescer` worker.
+/// `medulla_server::routed_write_coalescer` worker.
 ///
 /// ## Why the whole sequence, not just the RAM apply
 ///
@@ -341,7 +341,7 @@ fn apply_coalescable_cas_fields(
 ///
 /// The fix here closes that gap by construction: this function hands the
 /// ENTIRE sequence (as a boxed `'static` job — see
-/// `server::routed_write_coalescer`) to the per-graph worker, which acquires
+/// `medulla_server::routed_write_coalescer`) to the per-graph worker, which acquires
 /// `lock_graph` ONCE and runs every queued job's full sequence
 /// (`commit_mutation_body`) inside that ONE hold before releasing. There is no
 /// window in which a durable commit is visible to redb but not yet to `core`

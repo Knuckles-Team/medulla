@@ -39,7 +39,7 @@ macro_rules! persistence_capabilities {
     /// Populate the registry's CATALOG ONLY (CONCEPT:MEDULLA-KG.sharding.lazy-graph-catalog, DIST-P2-3) — every
     /// graph's `{name, graph_type}` identity row, with NO node/edge/ledger/semantic
     /// data read. Each graph's `GraphCore` then materializes lazily on first access
-    /// (`server::persistence::cold_offload::lazy_open`), via
+    /// (`medulla_server::persistence::cold_offload::lazy_open`), via
     /// `read_through::BackendGraphMaterializer` calling
     /// [`Self::read_graph_material_blocking`] below. Served startup selects this
     /// catalog-first path unconditionally.

@@ -1,6 +1,6 @@
 //! Owner-scoped durable SQL catalog registry, plus (CONCEPT:NE-003) the physical
 //! resolution layer for the TENANT-scoped shared catalog that
-//! [`crate::server::sql_catalog_acl`] layers ownership, grants, and row-level
+//! [`medulla_server::sql_catalog_acl`] layers ownership, grants, and row-level
 //! security on top of.
 //!
 //! ## Two physical layouts, both opaque
@@ -12,7 +12,7 @@
 //!   authority-gated layout below instead.
 //! * **Tenant-scoped shared layout** ([`tenant_table_store`] /
 //!   [`tenant_acl_table_store`]) — ONE physical redb database per TENANT, shared
-//!   by every actor in that tenant. [`crate::server::sql_catalog_acl`] is the ONLY
+//!   by every actor in that tenant. [`medulla_server::sql_catalog_acl`] is the ONLY
 //!   sanctioned caller: it gates every table access through ownership/grant checks
 //!   and an optional row-level predicate before handing back rows. Opening the raw
 //!   tenant store directly (bypassing that module) reintroduces the exact
@@ -130,7 +130,7 @@ fn tenant_table_path(tenant_scope: &str, persist_dir: &Path) -> PathBuf {
 }
 
 /// Physical path of the tenant-shared ACL catalog (ownership, grants, and RLS
-/// declarations — see [`crate::server::sql_catalog_acl`]).
+/// declarations — see [`medulla_server::sql_catalog_acl`]).
 fn tenant_acl_path(tenant_scope: &str, persist_dir: &Path) -> PathBuf {
     persist_dir
         .join(SQL_CATALOG_DIR)
@@ -239,7 +239,7 @@ pub(crate) fn user_table_store(
 /// Resolve the ONE durable SQL catalog shared by every actor in `tenant_scope`
 /// (CONCEPT:NE-003 — the physical half of item 1: "move the physical catalog
 /// boundary from (tenant, agent_id) to tenant alone"). Callers MUST gate access
-/// through [`crate::server::sql_catalog_acl`] — this function performs no
+/// through [`medulla_server::sql_catalog_acl`] — this function performs no
 /// authorization of its own, exactly like `user_table_store` performs none: the
 /// physical-open layer answers "which file", never "is this caller allowed".
 pub fn tenant_table_store(tenant_scope: &str, persist_dir: &Path) -> Result<TableStore, String> {

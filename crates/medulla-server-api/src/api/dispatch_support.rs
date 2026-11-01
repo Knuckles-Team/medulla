@@ -102,12 +102,12 @@ pub fn require_loopback_listener(listener: &tokio::net::TcpListener) -> std::io:
 /// `pid + nanos` is NOT sufficient: two threads can observe the same nanosecond,
 /// and redb takes an EXCLUSIVE per-file lock, so the loser fails with
 /// `Database already open. Cannot acquire lock.` That is exactly how
-/// `server::lake::rest::tests` began failing once the suite ran on a 64-core
+/// `medulla_server::lake::rest::tests` began failing once the suite ran on a 64-core
 /// host -- more tests in flight at once, so the collision window is actually
 /// hit. The monotonic counter removes the race rather than narrowing it.
 ///
 /// Gated on `redb` (not `blob`): every current caller (this module's
-/// `test_state`, `medulla_h_ingest::blob::store`, `server::lake::rest`) needs a durable
+/// `test_state`, `medulla_h_ingest::blob::store`, `medulla_server::lake::rest`) needs a durable
 /// redb-backed temp dir, and `blob`/`lake` both imply `redb` transitively, so
 /// this is the widest feature that still keeps the fn used (never dead code)
 /// in every build that calls it.

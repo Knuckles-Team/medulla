@@ -21,7 +21,7 @@ struct Args {
 
 pub(crate) fn run(argv: Vec<std::ffi::OsString>) {
     let args = Args::parse_from(argv);
-    let result = medulla::server::observe_rf019_tenant_owner(
+    let result = medulla_server::observe_rf019_tenant_owner(
         &args.persist_dir,
         &args.tenant,
         &args.bindings,

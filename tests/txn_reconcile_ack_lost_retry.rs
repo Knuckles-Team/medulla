@@ -35,7 +35,7 @@ use medulla_protocol_types::mutation_batch::MutationBatchStatus;
 use medulla::protocol::{GraphType, Method, Request, Response, ResultPayload};
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
-use medulla::server::{dispatch};
+use medulla_server::{dispatch};
 use medulla_server_api::auth::compute_verified_envelope_token;
 use medulla_server_api::auth::VerifiedEnvelopeParams;
 use std::process::Command;
@@ -75,7 +75,7 @@ fn pack(value: serde_json::Value) -> Vec<u8> {
 /// verified request produces.
 const TEST_TENANT_CLAIM: &str = "integration-test-tenant";
 
-/// Reproduce `server::mutation_batch::opaque_coordinator_key` (crate-private) so
+/// Reproduce `medulla_server::mutation_batch::opaque_coordinator_key` (crate-private) so
 /// this integration test can predict the exact `CarrierAuthority::tenant_scope()`
 /// a signed request resolves to: `opaque_coordinator_key("carrier-tenant",
 /// "verified", <tenant claim>)`. The single-graph OCC commit path stamps a

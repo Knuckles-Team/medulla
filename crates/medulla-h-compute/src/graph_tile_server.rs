@@ -27,7 +27,7 @@
 //! ## Data source
 //!
 //! VIZ-1's real `GraphCore`-backed hierarchical clustering
-//! (`Method::ClusterHierarchyRefresh`/`server::graph_tile_source::RealClusterSource`)
+//! (`Method::ClusterHierarchyRefresh`/`medulla_server::graph_tile_source::RealClusterSource`)
 //! is now the DEFAULT source: `?graph=` names which cached tenant graph to
 //! serve (default `__commons__`, matching `MedullaClient.connect`'s own
 //! default), and a route returns an honestly EMPTY tile — never an error page,

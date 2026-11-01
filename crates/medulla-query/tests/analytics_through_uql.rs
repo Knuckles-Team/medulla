@@ -6,7 +6,7 @@
 //!
 //! The load-bearing assertion is that the analytics resolve through
 //! [`exec_sql_typed_with_tables`] — the SAME read path the shared `WireSession`
-//! (`crate::server::wire`) drives for EVERY wire protocol (pgwire/mysql/sqlite/mssql).
+//! (`medulla_server::wire`) drives for EVERY wire protocol (pgwire/mysql/sqlite/mssql).
 //! So a DBeaver / `psql` / DBI client issuing `SELECT pca(...)` hits exactly this code,
 //! not just the native RPC `Method::Sql` path (`exec_sql`). We assert BOTH paths to prove
 //! parity: the wire read path and the RPC path expose the identical analytical surface,

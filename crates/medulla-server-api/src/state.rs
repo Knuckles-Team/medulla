@@ -248,7 +248,7 @@ pub struct ServerState {
     /// `dispatch::try_coalesce_write`'s pre-gateway fallback path, which is
     /// unreachable for these same five methods since the mutation gateway now
     /// intercepts them first, but is left in place rather than removed as part
-    /// of this fix). See `server::routed_write_coalescer`'s module docs for why
+    /// of this fix). See `medulla_server::routed_write_coalescer`'s module docs for why
     /// this is a SEPARATE registry from `write_coalescer`: its worker queues
     /// the WHOLE prepare→durable-commit→RAM-publish sequence, not just the RAM
     /// apply, and needs no `core` handle (each queued job carries its own).
@@ -346,7 +346,7 @@ pub struct ServerState {
     /// one tenant, so the principal is the working boundary). `RegisterForeignSource`
     /// records the caller's [`medulla_types::wire::ForeignSourceSpec`] under its owner, and every served
     /// plan path builds its executor `medulla_plan::federation::ForeignSourceRegistry` through
-    /// [`crate::server::api::query_txn::foreign_catalog::ForeignSourceCatalog::registry_for`], which copies
+    /// [`medulla_server::api::query_txn::foreign_catalog::ForeignSourceCatalog::registry_for`], which copies
     /// only the caller's own entries — so a `Named` `Op::ForeignScan` / an
     /// `Op::Foreign` marker resolves only the caller's own sources
     /// (CONCEPT:MEDULLA-KG.query.closure-backed-source). The inline-spec `Op::ForeignScan` path

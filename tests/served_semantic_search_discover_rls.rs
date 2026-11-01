@@ -57,7 +57,7 @@ use serde_json::json;
 
 use medulla::isolation::AgentRole;
 use medulla::protocol::{Method, Request, Response, ResultPayload};
-use medulla::server::dispatch;
+use medulla_server::dispatch;
 
 const SECRET: &str = "served-semantic-search-discover-rls-secret";
 

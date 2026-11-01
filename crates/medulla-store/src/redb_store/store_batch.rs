@@ -511,7 +511,7 @@ pub(crate) fn write_change_material_lineage(
 /// here by hand is gone from this function, not from the system: outbox rows
 /// are written by `commit::finish` from `batch.outbox`, so the event is
 /// compiled onto the batch as an intent (see
-/// `server::mutation_batch::compile`). One writer, one ordinal space, one
+/// `medulla_server::mutation_batch::compile`). One writer, one ordinal space, one
 /// order -- where before an ordinal counter was threaded through four writers
 /// and asserted at the end.
 pub(crate) fn apply_change_envelope_commit_rows(

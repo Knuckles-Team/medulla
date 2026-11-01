@@ -203,7 +203,7 @@ pub trait PersistenceBackend: Send + Sync {
     /// Populate the registry's CATALOG ONLY at boot (CONCEPT:MEDULLA-KG.sharding.lazy-graph-catalog, DIST-P2-3) —
     /// every graph's identity (name/type), with NO node/edge data read. Each
     /// graph's `GraphCore` then materializes lazily on first access (see
-    /// `server::persistence::cold_offload::lazy_open`) via
+    /// `medulla_server::persistence::cold_offload::lazy_open`) via
     /// [`Self::read_graph_material_blocking`]. The default falls back to the eager
     /// `load_all` — only the redb backend (the only one with a `graph_meta`-keyed
     /// durable catalog cheaper than a full dump) overrides it. Selected by

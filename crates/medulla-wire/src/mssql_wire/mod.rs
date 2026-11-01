@@ -1,15 +1,15 @@
 //! MSSQL **TDS** (Tabular Data Stream) wire-protocol listener (CONCEPT:MEDULLA-KG.query.hand-rolled-tds-server) — the
 //! MSSQL adapter in the multi-wire family (CONCEPT:MEDULLA-KG.compute.subsystems-reference), a sibling of the Postgres
-//! shim (`crate::server::pgwire`). It lets SQL Server clients / drivers connect over
+//! shim (`medulla_server::pgwire`). It lets SQL Server clients / drivers connect over
 //! the TDS protocol and run SQL against a graph, reusing the ONE shared
-//! `classify → dispatch → exec` core ([`crate::server::wire::WireSession`]) — this
+//! `classify → dispatch → exec` core ([`medulla_server::wire::WireSession`]) — this
 //! module adds ONLY the TDS-specific framing, handshake, auth, and token encoding.
 //!
 //! ## What this is (and is NOT)
 //! A HAND-ROLLED TDS server over `tokio::net::TcpListener` (the Pi-contract idiom — no
 //! `tiberius`/`tds` server crate). It does NOT re-implement any SQL semantics: a
-//! decoded `SQLBatch` is handed verbatim to [`crate::server::wire::WireProtocol::execute`]
-//! and the wire-neutral [`crate::server::wire::WireOutcome`] it returns is encoded into
+//! decoded `SQLBatch` is handed verbatim to [`medulla_server::wire::WireProtocol::execute`]
+//! and the wire-neutral [`medulla_server::wire::WireOutcome`] it returns is encoded into
 //! a TDS token stream. All framing/tokens live in [`protocol`].
 //!
 //! ## Flow

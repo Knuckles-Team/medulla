@@ -652,7 +652,7 @@ pub(super) async fn stage_materialize_belief(
 /// **Cross-shard routing (CONCEPT:MEDULLA-KG.storage.lane-n-increment + KG-2.226).** A txn whose staged ops all
 /// target ONE graph (or graphs that resolve to ONE Raft group) stays on this
 /// byte-for-byte-unchanged single-group FAST PATH. A MULTI-GRAPH txn whose staged
-/// write-set ([`crate::server::txn::GraphTxnState::extra_writes`]) spans graphs in ≥2
+/// write-set ([`medulla_server::txn::GraphTxnState::extra_writes`]) spans graphs in ≥2
 /// Raft groups (`GroupRouter::is_cross_shard`) is a CROSS-SHARD txn: `Commit` routes it
 /// through the 2PC [`crate::raft::cross_shard_txn::CrossShardCoordinator`]
 /// ([`commit_multi_graph`]). The coordinator, the span gate, the durable 2PC records,

@@ -58,7 +58,7 @@
 //! Audit-chain emission (the tamper-evident hash chain, `audit.rs` +
 //! `redb_store::append_audit_entry`) is stateful PER GRAPH (each entry chains off
 //! the previous one's hash) and already lives inside the durable-commit path
-//! ([`crate::server::api::persistence::PersistenceBackend::record_durable`] → the redb backend). Reimplementing
+//! ([`medulla_server::api::persistence::PersistenceBackend::record_durable`] → the redb backend). Reimplementing
 //! that chaining here would risk a second, diverging chain. Instead,
 //! Compact row commits and staged-state MutationBatch commits both append the audit
 //! entry inside their authoritative redb transaction. `plan.audited`
@@ -73,7 +73,7 @@
 //! [`commit_coalescable_mutation`] instead of [`commit_mutation`] (see
 //! `medulla_h_graph::graph_ops::try_handle_gateway`'s dedicated arms). That function
 //! hands the WHOLE prepare→durable-commit→RAM-publish sequence — not just the RAM
-//! apply — to the per-graph `server::routed_write_coalescer` worker, which runs a
+//! apply — to the per-graph `medulla_server::routed_write_coalescer` worker, which runs a
 //! flushed batch's sequences back-to-back inside ONE `mutation_batch::lock_graph`
 //! acquisition instead of one per op (`stats().batches() < stats().ops()` under
 //! concurrent load). [`commit_mutation_body`] is the single, shared implementation
@@ -973,7 +973,7 @@ mod tests {
             undocumented.is_empty(),
             "UNDOCUMENTED non-gateway entries (silently deferred, not allowed): {undocumented:?} -- \
              add each to NON_GATEWAY_COORDINATED (native coordinator) or OPEN_NOT_JUSTIFIED (honest \
-             remainder) in server::mutation::tests"
+             remainder) in medulla_server::mutation::tests"
         );
         assert_eq!(
             not_yet_migrated.len(),

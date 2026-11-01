@@ -72,7 +72,7 @@ const GRANT_ID_BYTES: usize = 16;
 /// `MutationBatch::validate` (`medulla-types` `validate_principal`) accepts ONLY that
 /// opaque-digest form: a readable principal string is unrepresentable in a batch,
 /// so a store bound under one could never commit a maintenance mutation. It is
-/// the same construction `server::mutation_batch::digest::principal_fingerprint`
+/// the same construction `medulla_server::mutation_batch::digest::principal_fingerprint`
 /// applies to a caller identity, over the engine's own name. The actual stable
 /// value lives in the server-independent durable-application facade so embedded
 /// and redb-only builds do not depend on `crate::server`.

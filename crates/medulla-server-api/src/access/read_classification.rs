@@ -1,6 +1,6 @@
 //! The read-method RLS coverage classification.
 //!
-//! Split out of `server::access` because it is one self-contained ratchet: a
+//! Split out of `medulla_server::access` because it is one self-contained ratchet: a
 //! partition of every non-mutating method into three documented buckets, plus
 //! the reason each non-row-scoped entry cites. `access.rs` keeps the
 //! authority types and the per-request checks; this file keeps the inventory
@@ -11,7 +11,7 @@
 
 /// Every non-mutating (`mutates == false`) protocol method falls into EXACTLY
 /// one documented bucket below — there is no silent fourth category. Mirrors
-/// `server::mutation::tests::gateway_routed_set_matches_mutating_policy_surface`'s
+/// `medulla_server::mutation::tests::gateway_routed_set_matches_mutating_policy_surface`'s
 /// exhaustive-partition idiom (mutation side) on the READ side.
 ///
 /// **[`RLS_ROUTED`]** — the method's serving handler filters its `GraphView`/

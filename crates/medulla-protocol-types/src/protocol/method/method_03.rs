@@ -11,7 +11,7 @@ $($variants)*
     // advertised_client_addr, tls_server_name}` via an internal typed Raft command; every node's
     // durable copy converges because the SAME committed log entry applies
     // deterministically on every replica (see
-    // `server::persistence::node_info_store` docs) -- the SAME replication story
+    // `medulla_server::persistence::node_info_store` docs) -- the SAME replication story
     // `CatalogAssign` uses for the M3 tenant catalog, NOT graph nodes (the
     // placement catalog's O(N) full-scan lesson). `ClusterMembers` cross-references
     // that durable store against every live `MultiRaft` group's membership/leader
@@ -228,7 +228,7 @@ $($variants)*
     Shutdown,
 
     /// Cooperatively cancel an IN-FLIGHT request by its `target_req_id` (CONCEPT:MEDULLA-KG.query.streaming-spillable-collect,
-    /// L36) — trips the `CancellationToken` the request-scoped registry (`server::request_cancel`)
+    /// L36) — trips the `CancellationToken` the request-scoped registry (`medulla_server::request_cancel`)
     /// registered for it, if one is still live. A REAL `Method::Sql` read currently threads a
     /// registered token down to `collect_streaming`, which observes it at the next batch
     /// boundary and stops the stream short (chunk-granular, never mid-batch). Returns

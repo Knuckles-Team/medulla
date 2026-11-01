@@ -83,7 +83,7 @@ pub use policy::{
 
 /// Default chunk size: 2 MiB (in the 1–4 MB band the streaming protocol targets;
 /// matches the spike). The pre-MEDULLA-071 FIXED stride; content-defined chunking
-/// ([`crate::server::blob::cdc`], CONCEPT:MEDULLA-KG.storage.backward-manifest-read) now targets this as its AVERAGE.
+/// ([`medulla_server::blob::cdc`], CONCEPT:MEDULLA-KG.storage.backward-manifest-read) now targets this as its AVERAGE.
 /// Still the default chunk size of the wire upload cursor (`BlobBegin`).
 pub const DEFAULT_CHUNK_SIZE: usize = 2 * 1024 * 1024;
 

@@ -5,7 +5,7 @@
 //! `medulla.connector-pack.import.v1`. The pack projection worker is the first
 //! consumer of that outbox (PB1); `Method::MutationOutbox` is how an operator
 //! reads and rewinds it (X10). Both go through the owner-generic
-//! [`crate::server::outbox_operator`] functions over this store's kernel and
+//! [`medulla_server::outbox_operator`] functions over this store's kernel and
 //! the tenant's scope handle.
 
 use medulla_mutation_types::mutation_scope::MutationOutboxLease;

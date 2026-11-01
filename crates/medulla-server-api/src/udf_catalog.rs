@@ -6,7 +6,7 @@
 //! baked into it) and could SHADOW it — re-registering the same id replaced the module,
 //! so the owner's next `RunUdf` silently executed the other principal's code.
 //!
-//! Same shape as the foreign-source fix (`server::foreign_catalog`, EH-373): entries are
+//! Same shape as the foreign-source fix (`medulla_server::foreign_catalog`, EH-373): entries are
 //! keyed by `(verified owner, id)`, where the owner is [`CarrierAuthority::owner_scope`]
 //! — tenant+principal, minted only from the verified envelope. One engine is bound to
 //! one tenant, so the principal is the working boundary; the tenant stays inside the

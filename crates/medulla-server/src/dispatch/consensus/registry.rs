@@ -1,0 +1,719 @@
+use super::*;
+
+use medulla_catalog_types::fleet_catalog::is_valid_server_name;
+use medulla_protocol_types::result_contract::cluster::RegisteredServerCursor;
+use medulla_protocol_types::result_contract::cluster::RegisteredServerListPage;
+use medulla_protocol_types::result_contract::cluster::RegisteredServerListRequest;
+use medulla_protocol_types::result_contract::cluster::RegisteredServerView;
+use medulla_protocol_types::result_contract::cluster::ServerDesiredState;
+use medulla_protocol_types::result_contract::cluster::ServerTransport;
+use medulla_protocol_types::result_contract::cluster::MAX_REGISTERED_SERVER_PAGE_ENTRIES;
+use medulla_protocol_types::result_contract::cluster::REGISTERED_SERVER_LIST_SCHEMA_VERSION;
+use medulla_types::contract::{BoundedVec, Digest256};
+
+pub(super) const REGISTRY_GRAPH: &str = "__commons__";
+const REGISTERED_SERVER_SNAPSHOT_DOMAIN: &[u8] = b"eg/registered-server-snapshot/v2";
+const REGISTRY_CURSOR_STALE: &str =
+    "REGISTRY_CURSOR_STALE: registered-server snapshot changed; restart from the first page";
+
+/// Civil (proleptic Gregorian) `(year, month, day)` from a days-since-1970-01-01
+/// count -- Howard Hinnant's `civil_from_days`, the SAME proven, dependency-free
+/// algorithm `medulla-rdf`'s `sparql::civil_from_days` already uses for XSD `dateTime`
+/// formatting (deliberately re-derived here rather than imported: the facade
+/// does not otherwise depend on `medulla-rdf` internals, and this is a small, fully
+/// self-contained pure function).
+fn civil_from_days(z: i64) -> (i64, u32, u32) {
+    let z = z + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+    let doe = z - era * 146_097; // [0, 146096]
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365; // [0, 399]
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100); // [0, 365]
+    let mp = (5 * doy + 2) / 153; // [0, 11]
+    let d = (doy - (153 * mp + 2) / 5 + 1) as u32; // [1, 31]
+    let m = (if mp < 10 { mp + 3 } else { mp - 9 }) as u32; // [1, 12]
+    (if m <= 2 { y + 1 } else { y }, m, d)
+}
+
+/// Render `unix_secs` as `%Y-%m-%dT%H:%M:%SZ` -- the SAME format au's
+/// `engine_ingestion.ingest_mcp_server`/`engine_mcp_discovery.check_server_freshness`
+/// already read/write for a `:Server` node's `timestamp` field, so an
+/// engine-registered server stays readable by the existing au freshness check.
+fn format_iso8601_seconds(unix_secs: u64) -> String {
+    let secs = unix_secs as i64;
+    let days = secs.div_euclid(86_400);
+    let rem = secs.rem_euclid(86_400);
+    let (y, m, d) = civil_from_days(days);
+    let (hh, mm, ss) = (rem / 3600, (rem % 3600) / 60, rem % 60);
+    format!("{y:04}-{m:02}-{d:02}T{hh:02}:{mm:02}:{ss:02}Z")
+}
+
+/// Recursively sort JSON object keys so semantically identical resource maps
+/// have one digest representation regardless of their original insertion order.
+fn canonical_json(value: serde_json::Value) -> serde_json::Value {
+    match value {
+        serde_json::Value::Array(values) => {
+            serde_json::Value::Array(values.into_iter().map(canonical_json).collect())
+        }
+        serde_json::Value::Object(values) => {
+            let sorted: std::collections::BTreeMap<_, _> = values.into_iter().collect();
+            serde_json::Value::Object(
+                sorted
+                    .into_iter()
+                    .map(|(key, value)| (key, canonical_json(value)))
+                    .collect(),
+            )
+        }
+        scalar => scalar,
+    }
+}
+
+/// Decode one graph row into the closed registry view. Malformed lookalikes are
+/// not registry authority: only the exact `srv:<name>` identity, exact
+/// `node_type=Server`, complete typed fields, and a live server-time lease pass.
+fn registered_server_view(
+    node_id: &str,
+    properties_msgpack: &[u8],
+    observed_at_ms: u64,
+) -> Option<RegisteredServerView> {
+    let value = medulla_types::msgpack::decode_property_value(properties_msgpack).ok()?;
+    if value.get("node_type").and_then(serde_json::Value::as_str) != Some("Server") {
+        return None;
+    }
+    let name = value.get("name")?.as_str()?;
+    if !is_valid_server_name(name) || node_id != format!("srv:{name}") {
+        return None;
+    }
+    let url = value.get("url")?.as_str()?;
+    let resources = value.get("resources")?.clone();
+    let ttl_secs = value.get("ttl_secs")?.as_u64()?;
+    let registered_at_ms = value.get("registered_at_ms")?.as_u64()?;
+    let last_heartbeat_ms = value.get("last_heartbeat_ms")?.as_u64()?;
+    let lease_expires_at_ms = value.get("lease_expires_at_ms")?.as_u64()?;
+    if url.is_empty()
+        || url.len() > MAX_REGISTER_SERVER_URL_BYTES
+        || !resources.is_object()
+        || !(MIN_REGISTER_SERVER_TTL_SECS..=MAX_REGISTER_SERVER_TTL_SECS).contains(&ttl_secs)
+        || lease_expires_at_ms <= observed_at_ms
+    {
+        return None;
+    }
+    let (transport, desired) = registration_state(&value)?;
+    Some(RegisteredServerView {
+        name: name.to_string(),
+        url: url.to_string(),
+        transport,
+        desired,
+        resources: canonical_json(resources),
+        ttl_secs,
+        registered_at_ms,
+        last_heartbeat_ms,
+        lease_expires_at_ms,
+    })
+}
+
+/// The typed registration claim of one `:Server` row.
+///
+/// An ABSENT field is the default a pre-typed registration implies (`unspecified`
+/// transport, `enabled`); a PRESENT field that is not one of the closed values is
+/// a malformed row and not registry authority.
+fn registration_state(value: &serde_json::Value) -> Option<(ServerTransport, ServerDesiredState)> {
+    let transport = match value.get("transport") {
+        Some(raw) => serde_json::from_value(raw.clone()).ok()?,
+        None => ServerTransport::default(),
+    };
+    let desired = match value.get("desired") {
+        Some(raw) => serde_json::from_value(raw.clone()).ok()?,
+        None => ServerDesiredState::default(),
+    };
+    Some((transport, desired))
+}
+
+/// The desired state of every live, caller-visible registered server, by name.
+///
+/// The fleet catalog projection reads a component's `enabled` through this --
+/// the SAME typed decode and lease filter `ListRegisteredServers` answers from,
+/// never a second reading of `:Server` rows.
+pub(super) fn live_desired_states<F>(
+    core: &medulla_core::graph::GraphCore,
+    observed_at_ms: u64,
+    visible: F,
+) -> std::collections::BTreeMap<String, ServerDesiredState>
+where
+    F: FnMut(&str, &[u8]) -> bool,
+{
+    live_registered_servers(core, observed_at_ms, visible)
+        .into_iter()
+        .map(|view| (view.name, view.desired))
+        .collect()
+}
+
+fn live_registered_servers<F>(
+    core: &medulla_core::graph::GraphCore,
+    observed_at_ms: u64,
+    mut visible: F,
+) -> Vec<RegisteredServerView>
+where
+    F: FnMut(&str, &[u8]) -> bool,
+{
+    let mut live = core
+        .get_nodes_by_label("Server", 0)
+        .into_iter()
+        .filter(|(node_id, properties)| visible(node_id, properties))
+        .filter_map(|(node_id, properties)| {
+            registered_server_view(&node_id, &properties, observed_at_ms)
+        })
+        .collect::<Vec<_>>();
+    live.sort_unstable_by(|left, right| left.name.cmp(&right.name));
+    live
+}
+
+/// Digest the complete live, RLS-visible typed snapshot, not merely the page.
+/// Named MessagePack is deterministic because struct field order is fixed and
+/// every nested JSON object was recursively canonicalized above.
+fn registered_server_snapshot_digest(live: &[RegisteredServerView]) -> Result<Digest256, String> {
+    let canonical = rmp_serde::to_vec_named(live)
+        .map_err(|error| format!("registered-server snapshot encoding failed: {error}"))?;
+    Digest256::framed(
+        REGISTERED_SERVER_SNAPSHOT_DOMAIN,
+        &[
+            &REGISTERED_SERVER_LIST_SCHEMA_VERSION.to_be_bytes(),
+            canonical.as_slice(),
+        ],
+    )
+}
+
+fn registered_server_page(
+    live: &[RegisteredServerView],
+    request: &RegisteredServerListRequest,
+    observed_at_ms: u64,
+    registry_revision: u64,
+) -> Result<RegisteredServerListPage, String> {
+    let limit = request
+        .limit
+        .map(usize::from)
+        .unwrap_or(MAX_REGISTERED_SERVER_PAGE_ENTRIES);
+    if !(1..=MAX_REGISTERED_SERVER_PAGE_ENTRIES).contains(&limit) {
+        return Err(format!(
+            "INVALID_ARGUMENT: ListRegisteredServers.limit must be between 1 and {MAX_REGISTERED_SERVER_PAGE_ENTRIES}"
+        ));
+    }
+    let registry_digest = registered_server_snapshot_digest(live)?;
+    let start = match request.cursor.as_ref() {
+        Some(cursor) => {
+            if !is_valid_server_name(&cursor.after_name) {
+                return Err(
+                    "INVALID_ARGUMENT: ListRegisteredServers cursor has an invalid after_name"
+                        .to_string(),
+                );
+            }
+            if cursor.registry_revision != registry_revision
+                || cursor.registry_digest != registry_digest
+            {
+                return Err(REGISTRY_CURSOR_STALE.to_string());
+            }
+            live.partition_point(|entry| entry.name.as_str() <= cursor.after_name.as_str())
+        }
+        None => 0,
+    };
+    let end = start.saturating_add(limit).min(live.len());
+    let entries = BoundedVec::new(live[start..end].to_vec())?;
+    let next_cursor = (end < live.len()).then(|| RegisteredServerCursor {
+        // A non-terminal page always contains at least one row because `limit`
+        // is positive and `start < end` whenever `end < live.len()`.
+        after_name: live[end - 1].name.clone(),
+        registry_revision,
+        registry_digest,
+    });
+    let total_live = u32::try_from(live.len())
+        .map_err(|_| "REGISTRY_LIMIT: live server count exceeds u32".to_string())?;
+    Ok(RegisteredServerListPage {
+        schema_version: REGISTERED_SERVER_LIST_SCHEMA_VERSION,
+        entries,
+        next_cursor,
+        observed_at_ms,
+        total_live,
+        registry_revision,
+        registry_digest,
+    })
+}
+
+/// Read the live server registry through the same ACL and row-level authority
+/// as every graph read. The graph mutex serializes snapshot construction with
+/// registration and expiry. This route intentionally reads the local committed
+/// `__commons__` image and does not claim a cluster read barrier that does not
+/// exist; the single-node/full deployment is the complete authority today.
+pub(in crate::dispatch) async fn handle_list_registered_servers(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    verified_context: &VerifiedRequestContext,
+    request: RegisteredServerListRequest,
+) -> Response {
+    crate::dispatch::ensure_graph_resident(state, REGISTRY_GRAPH).await;
+    let _registry_guard = medulla_server_api::mutation_batch::lock_graph(REGISTRY_GRAPH).await;
+    let (raw_core, read_authority) = {
+        let current = timed_read(state).await;
+        let Some(entry) = current.registry.get(REGISTRY_GRAPH) else {
+            return Response::err(req_id, "registered-server authority is unavailable");
+        };
+        if let Err(error) = check_graph_access(
+            &current.isolation,
+            Some(verified_context.agent_id()),
+            REGISTRY_GRAPH,
+            entry.graph_type,
+            entry.owner.as_deref(),
+            AccessLevel::Read,
+        ) {
+            return Response::err(req_id, error);
+        }
+        let read_authority =
+            match GraphReadAuthority::from_verified(verified_context, &current.isolation) {
+                Ok(authority) => authority,
+                Err(error) => return Response::err(req_id, error),
+            };
+        (entry.core.clone(), read_authority)
+    };
+
+    let registry_revision = raw_core.version();
+    let observed_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    let live = live_registered_servers(&raw_core, observed_at_ms, |node_id, properties| {
+        read_authority.can_see_node(properties, raw_core.is_schema_node(node_id))
+    });
+    crate::dispatch::typed_response::<
+        medulla_protocol_types::result_contract::cluster::ListRegisteredServers,
+    >(
+        req_id,
+        registered_server_page(&live, &request, observed_at_ms, registry_revision),
+    )
+}
+
+/// Read one live registration while the caller holds the registry graph lock.
+/// The lock must remain held through its dependent authority-row commit; the
+/// caller makes the registry resident (`ensure_graph_resident`) before taking
+/// it, since opening a cold graph takes that same lock.
+pub(crate) async fn verified_served_registration(
+    state: &Arc<RwLock<ServerState>>,
+    verified: &VerifiedRequestContext,
+    server_name: &str,
+) -> Result<(u64, Digest256, RegisteredServerView), String> {
+    let (core, authority) = {
+        let current = timed_read(state).await;
+        crate::dispatch::authorized_graph_read(
+            &current,
+            REGISTRY_GRAPH,
+            verified,
+            "registered-server authority is unavailable",
+        )?
+    };
+    let observed_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    if !is_valid_server_name(server_name) {
+        return Err("invalid registered server name".into());
+    }
+    let live = live_registered_servers(&core, observed_at_ms, |node_id, properties| {
+        authority.can_see_node(properties, core.is_schema_node(node_id))
+    });
+    let digest = registered_server_snapshot_digest(&live)?;
+    let view = live
+        .into_iter()
+        .find(|entry| entry.name == server_name)
+        .ok_or_else(|| "live registered server is unavailable".to_string())?;
+    Ok((core.version(), digest, view))
+}
+
+/// One `RegisterServer` call's typed inputs, as the router unpacked them.
+pub(in crate::dispatch) struct ServerRegistration {
+    pub(in crate::dispatch) name: String,
+    pub(in crate::dispatch) url: String,
+    pub(in crate::dispatch) resources_json: String,
+    pub(in crate::dispatch) ttl_secs: u64,
+    pub(in crate::dispatch) transport: ServerTransport,
+    pub(in crate::dispatch) desired: ServerDesiredState,
+}
+
+/// Validate a registration and parse its resource map. Every refusal names the
+/// field it refuses.
+fn validated_resources(registration: &ServerRegistration) -> Result<serde_json::Value, String> {
+    if !is_valid_server_name(&registration.name) {
+        return Err(
+            "RegisterServer.name must be a bounded logical name (^[A-Za-z0-9_.-]{1,128}$)".into(),
+        );
+    }
+    if registration.url.is_empty() || registration.url.len() > MAX_REGISTER_SERVER_URL_BYTES {
+        return Err("RegisterServer.url exceeds resource limits".into());
+    }
+    if registration.resources_json.len() > MAX_REGISTER_SERVER_RESOURCES_BYTES {
+        return Err("RegisterServer.resources_json exceeds resource limits".into());
+    }
+    if !(MIN_REGISTER_SERVER_TTL_SECS..=MAX_REGISTER_SERVER_TTL_SECS)
+        .contains(&registration.ttl_secs)
+    {
+        return Err(format!(
+            "RegisterServer.ttl_secs must be between {MIN_REGISTER_SERVER_TTL_SECS} and \
+             {MAX_REGISTER_SERVER_TTL_SECS}"
+        ));
+    }
+    if registration.resources_json.trim().is_empty() {
+        return Ok(serde_json::Value::Object(serde_json::Map::new()));
+    }
+    match serde_json::from_str::<serde_json::Value>(&registration.resources_json) {
+        Ok(value @ serde_json::Value::Object(_)) => Ok(value),
+        _ => Err("RegisterServer.resources_json must be a JSON object".into()),
+    }
+}
+
+/// `Method::RegisterServer`'s handler (CONCEPT:MEDULLA-KG.sharding.server-registry, W2.5):
+/// validate, compute the server-authoritative lease fields, build the `:Server`
+/// property blob (preserving `registered_at_ms` across a renewal -- a heartbeat
+/// is just a repeat call with the same `name`), and delegate to the ordinary
+/// graph gateway via a translated `Method::AddNode` against `__commons__` --
+/// see the `Method::RegisterServer` doc comment in `protocol.rs` and
+/// `server::mutation::NON_GATEWAY_COORDINATED`'s `RegisterServer` entry. Never
+/// trusts a caller-supplied timestamp: every lease field is derived from
+/// [`crate::kernel::dispatch_support::authoritative_now_ms`].
+pub(in crate::dispatch) async fn handle_register_server(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    caller: Option<&str>,
+    verified_context: &VerifiedRequestContext,
+    registration: ServerRegistration,
+) -> Response {
+    let resources = match validated_resources(&registration) {
+        Ok(resources) => resources,
+        Err(error) => return Response::err(req_id, error),
+    };
+    let node_id = format!("srv:{}", registration.name);
+    let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    let lease_expires_at_ms = now_ms.saturating_add(registration.ttl_secs.saturating_mul(1_000));
+
+    // Preserve `registered_at_ms` across a renewal by peeking at any existing row
+    // -- read-only, off the always-resident `__commons__` core, never a
+    // durability-relevant read (a race with a concurrent first-registration at
+    // worst repeats `now_ms`, never loses data).
+    let registered_at_ms = {
+        let s = timed_read(state).await;
+        s.registry
+            .get(REGISTRY_GRAPH)
+            .and_then(|entry| entry.core.get_node_properties(&node_id))
+            .and_then(|blob| medulla_types::msgpack::decode_property_value(&blob).ok())
+            .and_then(|value| value.get("registered_at_ms").and_then(|v| v.as_u64()))
+            .unwrap_or(now_ms)
+    };
+
+    let properties = serde_json::json!({
+        "node_type": "Server",
+        "name": registration.name,
+        "url": registration.url,
+        "transport": registration.transport,
+        "desired": registration.desired,
+        "resources": resources,
+        "timestamp": format_iso8601_seconds(now_ms / 1_000),
+        "ttl_secs": registration.ttl_secs,
+        "registered_at_ms": registered_at_ms,
+        "last_heartbeat_ms": now_ms,
+        "lease_expires_at_ms": lease_expires_at_ms,
+    });
+    let properties_msgpack = match rmp_serde::to_vec_named(&properties) {
+        Ok(bytes) => bytes,
+        Err(error) => {
+            return Response::err(
+                req_id,
+                format!("RegisterServer payload encode failed: {error}"),
+            )
+        }
+    };
+
+    register_server_response(
+        dispatch_graph_op(
+            state,
+            REGISTRY_GRAPH,
+            req_id,
+            caller,
+            verified_context,
+            Method::AddNode {
+                node_id,
+                properties_msgpack,
+            },
+        )
+        .await,
+    )
+}
+
+/// `RegisterServer` answers with the acknowledgement of the `AddNode` server-row
+/// write it performs, declared under its own marker.
+fn register_server_response(response: Response) -> Response {
+    match response {
+        Response {
+            id,
+            error: Some(error),
+            ..
+        } => Response::err(id, error),
+        Response {
+            id,
+            result: Some(ResultPayload::String(acknowledgement)),
+            ..
+        } => Response::ok(
+            id,
+            ResultPayload::scalar::<medulla_protocol_types::result_contract::cluster::RegisterServer>(
+                acknowledgement,
+            ),
+        ),
+        Response { id, .. } => Response::err(
+            id,
+            "RegisterServer: the server-row write answered no acknowledgement",
+        ),
+    }
+}
+
+#[cfg(test)]
+mod list_registered_servers_tests {
+    use super::*;
+
+    fn row(name: &str, lease_expires_at_ms: u64) -> Vec<u8> {
+        rmp_serde::to_vec_named(&serde_json::json!({
+            "node_type": "Server",
+            "name": name,
+            "url": format!("http://{name}"),
+            "transport": "streamable_http",
+            "desired": "disabled",
+            "resources": {"z": 1, "a": {"y": 2, "b": 3}},
+            "ttl_secs": 60,
+            "registered_at_ms": 1,
+            "last_heartbeat_ms": 2,
+            "lease_expires_at_ms": lease_expires_at_ms,
+        }))
+        .unwrap()
+    }
+
+    #[cfg(feature = "security")]
+    fn private_row(name: &str, owner: &str) -> Vec<u8> {
+        rmp_serde::to_vec_named(&serde_json::json!({
+            "node_type": "Server",
+            "name": name,
+            "url": format!("http://{name}"),
+            "resources": {},
+            "ttl_secs": 60,
+            "registered_at_ms": 1,
+            "last_heartbeat_ms": 2,
+            "lease_expires_at_ms": 100_000,
+            "_owner": owner,
+            "_visibility": "private",
+        }))
+        .unwrap()
+    }
+
+    fn live(names: &[&str]) -> Vec<RegisteredServerView> {
+        let core = medulla_core::graph::GraphCore::new();
+        for name in names {
+            core.add_node(format!("srv:{name}"), row(name, 100_000));
+        }
+        live_registered_servers(&core, 50_000, |_, _| true)
+    }
+
+    #[test]
+    fn typed_live_snapshot_is_name_sorted_and_filters_invalid_or_expired_rows() {
+        let core = medulla_core::graph::GraphCore::new();
+        core.add_node("srv:zeta".to_string(), row("zeta", 100_000));
+        core.add_node("srv:alpha".to_string(), row("alpha", 100_000));
+        core.add_node("srv:expired".to_string(), row("expired", 50_000));
+        core.add_node("wrong-id".to_string(), row("lookalike", 100_000));
+        core.add_node(
+            "srv:not-server".to_string(),
+            rmp_serde::to_vec_named(&serde_json::json!({
+                "node_type": "Other",
+                "name": "not-server",
+            }))
+            .unwrap(),
+        );
+
+        let snapshot = live_registered_servers(&core, 50_000, |_, _| true);
+        assert_eq!(
+            snapshot
+                .iter()
+                .map(|entry| entry.name.as_str())
+                .collect::<Vec<_>>(),
+            ["alpha", "zeta"]
+        );
+        assert_eq!(
+            snapshot[0].resources,
+            serde_json::json!({"a": {"b": 3, "y": 2}, "z": 1})
+        );
+        assert_eq!(snapshot[0].transport, ServerTransport::StreamableHttp);
+        assert_eq!(snapshot[0].desired, ServerDesiredState::Disabled);
+    }
+
+    #[test]
+    fn registration_state_defaults_when_absent_and_refuses_when_malformed() {
+        assert_eq!(
+            registration_state(&serde_json::json!({})),
+            Some((ServerTransport::Unspecified, ServerDesiredState::Enabled))
+        );
+        assert_eq!(
+            registration_state(&serde_json::json!({"transport": "stdio", "desired": "disabled"})),
+            Some((ServerTransport::Stdio, ServerDesiredState::Disabled))
+        );
+        assert_eq!(
+            registration_state(&serde_json::json!({"transport": "carrier-pigeon"})),
+            None
+        );
+        let core = medulla_core::graph::GraphCore::new();
+        core.add_node("srv:alpha".to_string(), row("alpha", 100_000));
+        let desired = live_desired_states(&core, 50_000, |_, _| true);
+        assert_eq!(desired.get("alpha"), Some(&ServerDesiredState::Disabled));
+    }
+
+    #[test]
+    fn registration_validation_names_the_refused_field() {
+        let registration = |name: &str, resources_json: &str, ttl_secs| ServerRegistration {
+            name: name.to_string(),
+            url: "mcp-ref://alpha".to_string(),
+            resources_json: resources_json.to_string(),
+            ttl_secs,
+            transport: ServerTransport::Stdio,
+            desired: ServerDesiredState::Enabled,
+        };
+        assert_eq!(
+            validated_resources(&registration("alpha", "", 60)).unwrap(),
+            serde_json::json!({})
+        );
+        for (candidate, field) in [
+            (registration("bad name", "", 60), "RegisterServer.name"),
+            (
+                registration("alpha", "[1]", 60),
+                "RegisterServer.resources_json",
+            ),
+            (registration("alpha", "", 0), "RegisterServer.ttl_secs"),
+        ] {
+            assert!(validated_resources(&candidate)
+                .unwrap_err()
+                .starts_with(field));
+        }
+    }
+
+    #[test]
+    fn cursor_is_exclusive_and_fenced_by_revision_and_full_snapshot_digest() {
+        let snapshot = live(&["charlie", "alpha", "bravo"]);
+        let first = registered_server_page(
+            &snapshot,
+            &RegisteredServerListRequest {
+                limit: Some(1),
+                cursor: None,
+            },
+            50_000,
+            7,
+        )
+        .unwrap();
+        assert_eq!(first.entries.as_slice()[0].name, "alpha");
+        let cursor = first.next_cursor.expect("the first page continues");
+
+        let second = registered_server_page(
+            &snapshot,
+            &RegisteredServerListRequest {
+                limit: Some(1),
+                cursor: Some(cursor.clone()),
+            },
+            50_001,
+            7,
+        )
+        .unwrap();
+        assert_eq!(second.entries.as_slice()[0].name, "bravo");
+
+        let wrong_revision = registered_server_page(
+            &snapshot,
+            &RegisteredServerListRequest {
+                limit: Some(1),
+                cursor: Some(cursor.clone()),
+            },
+            50_001,
+            8,
+        )
+        .unwrap_err();
+        assert_eq!(wrong_revision, REGISTRY_CURSOR_STALE);
+
+        let changed = live(&["charlie", "alpha", "bravo", "delta"]);
+        let wrong_digest = registered_server_page(
+            &changed,
+            &RegisteredServerListRequest {
+                limit: Some(1),
+                cursor: Some(cursor),
+            },
+            50_001,
+            7,
+        )
+        .unwrap_err();
+        assert_eq!(wrong_digest, REGISTRY_CURSOR_STALE);
+    }
+
+    #[test]
+    fn digest_is_independent_of_json_object_insertion_order() {
+        let mut left = live(&["alpha"]);
+        let mut right = left.clone();
+        left[0].resources = canonical_json(serde_json::json!({"z": 1, "a": 2}));
+        right[0].resources = canonical_json(serde_json::json!({"a": 2, "z": 1}));
+        assert_eq!(
+            registered_server_snapshot_digest(&left).unwrap(),
+            registered_server_snapshot_digest(&right).unwrap()
+        );
+    }
+
+    #[cfg(feature = "security")]
+    #[test]
+    fn hidden_server_row_is_absent_from_count_and_snapshot_digest() {
+        let core = medulla_core::graph::GraphCore::new();
+        core.add_node(
+            "srv:alice-server".to_string(),
+            private_row("alice-server", "alice"),
+        );
+        core.add_node(
+            "srv:bob-server".to_string(),
+            private_row("bob-server", "bob"),
+        );
+        let isolation = medulla_server_api::access::two_agent_isolation();
+        let context = VerifiedRequestContext::verified_for_test("alice");
+        let authority = GraphReadAuthority::from_verified(&context, &isolation).unwrap();
+        let visible = live_registered_servers(&core, 50_000, |node_id, properties| {
+            authority.can_see_node(properties, core.is_schema_node(node_id))
+        });
+        let unfiltered = live_registered_servers(&core, 50_000, |_, _| true);
+        assert_eq!(
+            visible
+                .iter()
+                .map(|entry| entry.name.as_str())
+                .collect::<Vec<_>>(),
+            ["alice-server"]
+        );
+        let page = registered_server_page(
+            &visible,
+            &RegisteredServerListRequest {
+                limit: None,
+                cursor: None,
+            },
+            50_000,
+            core.version(),
+        )
+        .unwrap();
+        assert_eq!(page.total_live, 1);
+        assert_ne!(
+            page.registry_digest,
+            registered_server_snapshot_digest(&unfiltered).unwrap(),
+            "a hidden row must not influence the caller-visible registry digest"
+        );
+    }
+
+    #[test]
+    fn page_limit_is_positive_and_bounded() {
+        let snapshot = live(&["alpha"]);
+        for limit in [Some(0), Some(257)] {
+            let error = registered_server_page(
+                &snapshot,
+                &RegisteredServerListRequest {
+                    limit,
+                    cursor: None,
+                },
+                50_000,
+                1,
+            )
+            .unwrap_err();
+            assert!(error.starts_with("INVALID_ARGUMENT:"));
+        }
+    }
+}

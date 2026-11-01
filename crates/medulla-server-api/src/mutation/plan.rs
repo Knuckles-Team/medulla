@@ -587,7 +587,7 @@ pub enum ClusterMutationRoute {
     /// handler that resolves `MultiRaft` and performs the leader check /
     /// `OPERATION_REDIRECTED` routing itself (`medulla_h_admin::raft_admin::try_handle`,
     /// the same shape `medulla_h_graph::placement::try_handle` uses for reads) — it
-    /// does NOT go through [`propose_native_mutation`](crate::server::dispatch)'s
+    /// does NOT go through [`propose_native_mutation`](medulla_server::dispatch)'s
     /// generic `NativeMutationCommand` proposal/replication path, so it must
     /// never be classified `ConsensusNative` (see [`SELF_ROUTED_ADMIN_METHODS`]).
     SelfRoutedAdmin,
@@ -616,7 +616,7 @@ pub const CONSENSUS_FANOUT_METHODS: &[&str] = &["MultiGraphBatchUpdate", "ApplyC
 /// list exists to prevent structurally, not by adding this file to the "please
 /// remember" list.
 ///
-/// `crate::server::mutation::tests::clustered_mutation_inventory_is_complete`
+/// `medulla_server::mutation::tests::clustered_mutation_inventory_is_complete`
 /// keeps this list, `GATEWAY_ROUTED`, `crate::raft::NATIVE_CONSENSUS_METHODS`,
 /// and `CONSENSUS_FANOUT_METHODS` an exhaustive, non-overlapping partition of
 /// every mutating method in `medulla_capabilities::method_policy_entries()` — a Method added to

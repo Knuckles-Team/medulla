@@ -1,6 +1,6 @@
 //! CA-12 qualification tests: a REAL `SERVICE` query against the LIVE Fuseki instance
 //! (`services/apache-jena`), through the exact code path production traffic uses
-//! (`server::sparql_http::ServiceClient` implementing `medulla_rdf::sparql::RemoteSparql`,
+//! (`medulla_server::sparql_http::ServiceClient` implementing `medulla_rdf::sparql::RemoteSparql`,
 //! dispatched by `medulla_rdf::sparql::execute`'s `SERVICE` evaluation).
 //!
 //! ## Fixture
@@ -39,14 +39,14 @@
 //! MEDULLA_FUSEKI_QUAL_ENDPOINT="http://<fuseki-host>/ca12qual/sparql" \
 //! MEDULLA_FUSEKI_QUAL_ALLOW_HOST="<fuseki-host>" \
 //!   cargo test --target-dir ./target-isolated -j 12 --features full,sparql-fuseki \
-//!   -p medulla-engine --lib server::sparql_service::qualification -- --ignored
+//!   -p medulla-engine --lib medulla_server::sparql_service::qualification -- --ignored
 //! ```
 //!
 //! (The other, non-live tests below build their `ServiceClient` directly via the test-only
 //! `ServiceClient::with_allow` constructor and a `.example` RFC 2606 placeholder host,
 //! rather than any real hostname or the `SERVICE_ALLOW_ENV`/`MEDULLA_FUSEKI_QUAL_*`
 //! process environment variables, so they run safely in parallel with each other and with
-//! `server::sparql_service`'s own env-based tests — no shared mutable global state, and
+//! `medulla_server::sparql_service`'s own env-based tests — no shared mutable global state, and
 //! nothing live-network-dependent about them.)
 
 use medulla_core::graph::GraphView;

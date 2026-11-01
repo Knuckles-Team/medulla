@@ -119,7 +119,7 @@ pub const RLS_SHARED_SCOPE_KEY: &str = "_shared_scope";
 /// error, and doing so made an entire graph's schema invisible to every
 /// non-`System` actor (see `tests/pgwire_roundtrip.rs::wire_reason_iri_bridges_string_typed_node`).
 /// Schema is already protected at the correct granularity by GRAPH-level ACL
-/// (`server::access::check_graph_access`, enforced upstream of every read
+/// (`medulla_server::access::check_graph_access`, enforced upstream of every read
 /// that reaches row filtering, UNCHANGED by this key's existence): if a
 /// caller may read the graph at all, it may see the graph's schema; if it may
 /// not, [`IsolationLayer::filter_view`] is never reached for that caller in

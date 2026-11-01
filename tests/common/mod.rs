@@ -95,7 +95,7 @@ fn configure_authority_once() {
     // identity for a third party), and having `root` self-register as `System`
     // cannot work either: `RegisterIdentity`'s own `authz_action` ("security:admin")
     // requires the ACTOR to already hold admin capability
-    // (`server::access::require_admin_capability`), which a freshly
+    // (`medulla_server::access::require_admin_capability`), which a freshly
     // self-registering identity never has -- the empty-RBAC-store bootstrap
     // exemption does not apply here because `TEST_AGENT` is already registered.
     //

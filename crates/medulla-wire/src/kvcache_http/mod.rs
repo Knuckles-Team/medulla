@@ -11,7 +11,7 @@
 //! warm worker already computed.
 //!
 //! It is a HAND-ROLLED HTTP/1.1 listener over `tokio::net` — the SAME dependency-free
-//! idiom as [`crate::server::s3`] / [`crate::server::obs`] / [`crate::server::sparql_http`]
+//! idiom as [`medulla_server::s3`] / [`medulla_server::obs`] / [`medulla_server::sparql_http`]
 //! (NO axum/hyper/warp, so the Pi contract holds). Its parser keeps the body as raw
 //! BYTES (KV pages are binary) and captures headers for the bearer-token guard.
 //!
@@ -396,16 +396,16 @@ impl KvCacheStore {
 // ── bearer-token auth guard (CONCEPT:MEDULLA-KG.backend.is-configured-so-co) ──────────────────────────────────────
 //
 // The credential type + its JWT/static verification core now live in
-// `crate::server::auth::BearerCredential` (A18) — extracted so the `/sparql`
-// SELECT/CONSTRUCT/ASK read leg (`server::sparql_http`) authenticates the
+// `medulla_server::auth::BearerCredential` (A18) — extracted so the `/sparql`
+// SELECT/CONSTRUCT/ASK read leg (`medulla_server::sparql_http`) authenticates the
 // SAME way instead of growing a third bespoke bearer/JWT implementation. The
-// JWT verifier itself still lives in `crate::server::oidc` (feature `oidc`),
+// JWT verifier itself still lives in `medulla_server::oidc` (feature `oidc`),
 // shared with the primary `eg2.` protocol's identity binding.
 use medulla_server_api::auth::BearerCredential as KvAuth;
 
 /// Require a valid `Authorization: Bearer <token>` — a static-secret match or a
 /// signature/issuer/audience/expiry-verified Keycloak JWT
-/// (`server::auth::BearerCredential::verify`, shared with `/sparql`).
+/// (`medulla_server::auth::BearerCredential::verify`, shared with `/sparql`).
 fn authorized(auth: &KvAuth, headers: &HashMap<String, String>) -> bool {
     headers
         .get("authorization")

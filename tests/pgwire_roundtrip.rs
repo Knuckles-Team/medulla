@@ -49,7 +49,7 @@ fn state_with_dir(
 
 /// The cache-only default state (no durable tier) the original round-trip tests use.
 /// A real tempdir-backed `RedbBackend` (mirrors `common::tempdir_persistence()`,
-/// `server::mod::tests::test_state`, `bolt_wire::tests::durable_state`, and every
+/// `medulla_server::mod::tests::test_state`, `bolt_wire::tests::durable_state`, and every
 /// other `tests/*.rs` fixture that needs one): the authoritative-commit flip means
 /// EVERY graph-node write now routes through the universal cross-modal MutationBatch
 /// kernel (`commit_cross_modal_txn`), which fails closed ("cross-modal mutation
@@ -793,7 +793,7 @@ fn scram_state(secret: &str) -> Arc<RwLock<ServerState>> {
     // `commons-user` role (there is no more pre-RBAC "Commons is open to all"
     // fall-through under `feature = "security"`).
     // Each agent additionally owns its own private `agent:*` graph — granted
-    // explicitly (mirrors `server::mod::tests::multi_tenant_state`'s `owner-{w}`
+    // explicitly (mirrors `medulla_server::mod::tests::multi_tenant_state`'s `owner-{w}`
     // pattern) so `scram_identity_drives_acl` can prove `worker` reaches its own
     // graph while still being denied `peer`'s.
     #[cfg(feature = "security")]

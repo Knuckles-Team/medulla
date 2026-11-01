@@ -69,7 +69,7 @@ pub(crate) fn handle_nl_query_plan(
                 "ENGINE_UNAVAILABLE: NlQuery: no NL planner configured — set an OpenAI-compatible \
                      endpoint in the Arbora config.json (or \
                      MEDULLA_NL_ENDPOINT), or inject one via \
-                     server::set_nl_planner"
+                     medulla_server::set_nl_planner"
                     .to_string(),
             )
         })?;
@@ -209,7 +209,7 @@ pub(crate) async fn handle_nl_query_plan_only(
                 "ENGINE_UNAVAILABLE: NlQuery: no NL planner configured — set an OpenAI-compatible \
                      endpoint in the Arbora config.json (or \
                      MEDULLA_NL_ENDPOINT), or inject one via \
-                     server::set_nl_planner"
+                     medulla_server::set_nl_planner"
                     .to_string(),
             ));
         }

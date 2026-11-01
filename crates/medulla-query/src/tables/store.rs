@@ -5982,7 +5982,7 @@ fn insert_on_conflict_in(
 /// helper needs: the target table's name and schema plus the resolved column
 /// geometry. Borrowed, built once from [`InsertOnConflictContext`] in
 /// [`insert_on_conflict_in`] and threaded down unchanged -- the same
-/// bundle-the-parameters shape as `server::mutation::MutationCtx`.
+/// bundle-the-parameters shape as `medulla_server::mutation::MutationCtx`.
 struct ConflictRowSpec<'a> {
     table: &'a str,
     col_order: &'a [String],

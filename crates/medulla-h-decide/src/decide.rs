@@ -149,7 +149,7 @@ async fn decision_source(
     Some(views as std::sync::Arc<dyn medulla_plan::exec::DecisionSource>)
 }
 
-/// The decide handler's implementation of [`DecideApi`](crate::server::api::admin::DecideApi).
+/// The decide handler's implementation of [`DecideApi`](medulla_server::api::admin::DecideApi).
 pub struct DecideSeam;
 
 #[async_trait::async_trait]

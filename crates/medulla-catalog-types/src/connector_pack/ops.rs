@@ -7,7 +7,7 @@
 //! (`reconcile_catalog` for a mounted child, `attest_self_served_catalog` for a
 //! producer serving its own catalog).
 //! The read/write split and the authorization action both live on the op, so
-//! the capability ledger and `server::access::requires_write` cannot drift
+//! the capability ledger and `medulla_server::access::requires_write` cannot drift
 //! apart about an operation.
 
 use serde::{Deserialize, Serialize};

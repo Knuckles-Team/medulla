@@ -1,7 +1,7 @@
 //! The signed-request replay ledger: one node's durable record of which
 //! envelope nonces it has already accepted.
 //!
-//! Split out of `server::auth` so the DURABLE adapter has a home its own tests
+//! Split out of `medulla_server::auth` so the DURABLE adapter has a home its own tests
 //! can reach. Inside `auth` the whole family was `#[cfg(test)]`-swapped for an
 //! in-memory cache, so [`RedbReplayLedger`] — the one that runs in production,
 //! on the hot path of every signed request — had zero test coverage.

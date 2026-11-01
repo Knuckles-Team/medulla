@@ -17,7 +17,7 @@
 //! cycle the workspace DAG); `AddTriples`/`RemoveTriples`/`DropNamedGraph` call
 //! `medulla_rdf::mapping`/`medulla_rdf::update` (same direction: `medulla-rdf` depends on
 //! `medulla-core`); the mining/graphlearn write-back replay arms call
-//! `crate::server::handlers::{mining,graphlearn}::replay` — `src/server` IS the
+//! `medulla_server::handlers::{mining,graphlearn}::replay` — `src/server` IS the
 //! facade, the top of the DAG. Their four matching `is_durable_mutation` classifier
 //! blocks (`modality-serving`/`rdf`/`mining`×4/`graphlearn`) stay in
 //! `src/mutation_apply.rs` too, for a second, narrower reason: this crate's own

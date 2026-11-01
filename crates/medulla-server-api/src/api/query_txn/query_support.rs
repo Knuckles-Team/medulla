@@ -166,7 +166,7 @@ pub fn overlay_write_set(view: &mut medulla_core::graph::GraphView, write_set: &
 /// inside an `Op::FuseRrf` branch (CONCEPT:MEDULLA-KG.query.closure-backed-source, mirroring
 /// `plan_needs_text`)? Drives whether a served path builds the caller's owner-scoped
 /// foreign-source registry at all
-/// (`crate::server::api::query_txn::foreign_catalog::ForeignSourceCatalog::resolve_for_plan`), so a
+/// (`medulla_server::api::query_txn::foreign_catalog::ForeignSourceCatalog::resolve_for_plan`), so a
 /// non-federated plan pays nothing. A self-describing (inline-spec)
 /// `Op::ForeignScan` resolves without a registry, so it does not need the binding.
 #[cfg(all(feature = "query", feature = "federation"))]

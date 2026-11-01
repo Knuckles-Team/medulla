@@ -73,7 +73,7 @@ pub mod run_checkpoint;
 // idempotency replay + per-authority fencing), built on GOC-03's
 // `commit_descriptor::CommitDescriptor` currency. Unconditional, pure
 // data/logic; the native protocol/storage adapter now lives in
-// `native_control`, `server::mutation_batch`, and `redb_store`. See
+// `native_control`, `medulla_server::mutation_batch`, and `redb_store`. See
 // `plans/graph-os-completion-program/lanes/GOC-19-atomic-workitem-command-log.md`.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod work_item_command_log;

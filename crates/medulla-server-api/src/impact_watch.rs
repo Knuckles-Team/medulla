@@ -8,7 +8,7 @@
 //!    ([`plan::ImpactWatchSpec`]): the seed labels (an incident, a conformance
 //!    violation, a CVE finding, an outage …), the dependency relationship impact
 //!    flows along, the model and the hop bound. No wire method registers it.
-//! 2. **Notice** — [`crate::server::cdc::CdcHub::emit`] calls [`ImpactWatchHub::note`]
+//! 2. **Notice** — [`medulla_server::cdc::CdcHub::emit`] calls [`ImpactWatchHub::note`]
 //!    for every committed change: one hashset lookup for an unwatched graph; for a
 //!    watched one it records the changed node when its label is a seed label (or a
 //!    watch declaration).

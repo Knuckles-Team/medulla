@@ -23,7 +23,7 @@
 //! Previously this handler built a FRESH, ephemeral, per-request `ColumnStore`
 //! from `VizRenderRequest::dataset` and discarded it after the response — no
 //! reuse, no cache, no provenance. It now holds a PERSISTENT engine state
-//! (`crate::server::viz_engine::VizEngineState`, lazily created on first use —
+//! (`medulla_server::viz_engine::VizEngineState`, lazily created on first use —
 //! see [`engine_state`]) across requests:
 //!
 //! - **Persistent, owner-scoped ColumnStore.** `VizRenderRequest::dataset` is
@@ -37,11 +37,11 @@
 //!   error, never a fabricated empty render (see [`render`]'s "no usable
 //!   data" path).
 //! - **Content-addressed render cache**, keyed by
-//!   `crate::server::viz_engine::render_cache_key` — see that function's own
+//!   `medulla_server::viz_engine::render_cache_key` — see that function's own
 //!   doc, and this handler's [`render`], for why it is keyed on the dataset's
 //!   CONTENT fingerprint rather than a version counter any unrelated write
 //!   would bump.
-//! - **Durable render provenance** (`crate::server::viz_provenance`),
+//! - **Durable render provenance** (`medulla_server::viz_provenance`),
 //!   queryable via `VizOp::RenderProvenance`.
 //!
 //! ## Scope — V6-lite graph marks, static-export only
@@ -53,7 +53,7 @@
 //! follows: `dataset_ref` names a one-column node dataset,
 //! `"{dataset_ref}:edges"` names the `src`/`dst` I64 edge dataset). This is
 //! static PNG/SVG/PDF export only — no WebGPU pan/zoom/picking (that surface is
-//! the interactive HTTP listener, `crate::server::viz_interactive`, lane V3b).
+//! the interactive HTTP listener, `medulla_server::viz_interactive`, lane V3b).
 //!
 //! ## Bounds
 //!
@@ -160,7 +160,7 @@ pub async fn handle(
 /// as-is — durable render provenance lives alongside the graph engine's own
 /// durable state, under the SAME operator-configured directory, in its own
 /// `viz_provenance.redb` file (see `viz_provenance::VizProvenanceStore::open`).
-/// `pub(crate)` so `server::viz_interactive` (lane V3b, feature
+/// `pub(crate)` so `medulla_server::viz_interactive` (lane V3b, feature
 /// `viz-interactive`) shares the SAME persistent engine (and therefore the
 /// SAME render cache + dataset store) the RPC path uses — one engine, two
 /// transports, never two independent ColumnStores drifting apart.

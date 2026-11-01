@@ -155,7 +155,7 @@ $($variants)*
     // nodes and drills in on demand instead of laying out every node/edge
     // client-side. Deliberately NOT `mutation::GATEWAY_ROUTED` and NOT a KG
     // write — the computed hierarchy is durably cached in its OWN store
-    // (`server::persistence::cluster_hierarchy_store`, `PersistenceBackend::
+    // (`medulla_server::persistence::cluster_hierarchy_store`, `PersistenceBackend::
     // save_cluster_hierarchy`/`load_cluster_hierarchy`), never as graph nodes
     // or edges: the engine holds at most one edge per ordered node pair and
     // `upsert_edge` REPLACES the relationship type, so representing cluster

@@ -29,7 +29,7 @@ mod ne_004_ne_005_tests {
     //!
     //! These construct a `WireSession` + `ServerState` directly (in-crate, so
     //! `pub(crate)`/private items are reachable) rather than driving a real
-    //! wire listener — the SAME lighter-weight approach `server::mod::tests`
+    //! wire listener — the SAME lighter-weight approach `medulla_server::mod::tests`
     //! uses for its own dispatch-level tests. `bind_authenticated_sql_actor`
     //! is the SAME native-SQL-identity seam `sqlite_wire`/`mysql_wire` use;
     //! it is not a test-only shortcut.
@@ -61,14 +61,14 @@ mod ne_004_ne_005_tests {
     }
 
     /// A real durable `ServerState` on its own uniquely-named temp dir (mirrors
-    /// `server::mod::tests::test_state`, trimmed to nothing this module's
+    /// `medulla_server::mod::tests::test_state`, trimmed to nothing this module's
     /// tests don't need). `AGENT` is registered `AgentRole::System` so every
     /// access check trivially passes regardless of the `security` feature —
     /// this module tests transaction ATOMICITY, not RBAC (that is covered
     /// elsewhere).
     fn test_state() -> Arc<RwLock<ServerState>> {
         ensure_env();
-        crate::server::test_state_with_services(
+        medulla_server::test_state_with_services(
             SECRET,
             test_isolation(&[AGENT]),
             "medulla-wire-txn-atomicity-test",
@@ -76,7 +76,7 @@ mod ne_004_ne_005_tests {
         )
     }
 
-    /// Build a signed `Request` exactly like `server::mod::tests::request` —
+    /// Build a signed `Request` exactly like `medulla_server::mod::tests::request` —
     /// only used here to drive the ONE real `Method::CreateGraph` RPC so a
     /// test graph is durably initialized the SAME way production does it
     /// (never by poking the registry directly).
@@ -112,7 +112,7 @@ mod ne_004_ne_005_tests {
     }
 
     async fn create_test_graph(state: &Arc<RwLock<ServerState>>, graph: &str, id: u64) {
-        let resp = crate::server::dispatch(
+        let resp = medulla_server::dispatch(
             state,
             request(
                 id,
@@ -836,7 +836,7 @@ pub mod wired_catalog_tests {
     /// track wires on top, not a replacement for the engine ACL.
     pub(crate) fn test_state(agents: &[&str]) -> Arc<RwLock<ServerState>> {
         ensure_env();
-        crate::server::test_state_with_services(
+        medulla_server::test_state_with_services(
             SECRET,
             test_isolation(agents),
             "medulla-wired-catalog-test",
@@ -883,7 +883,7 @@ pub mod wired_catalog_tests {
     /// needs this — only a `SELECT` does (`run_read` requires a real
     /// `GraphCore`).
     pub(crate) async fn create_test_graph(state: &Arc<RwLock<ServerState>>, graph: &str, id: u64) {
-        let resp = crate::server::dispatch(
+        let resp = medulla_server::dispatch(
             state,
             request(
                 id,

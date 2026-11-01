@@ -20,7 +20,7 @@ use serde_json::json;
 use medulla_plan::{Op, Plan};
 use medulla::protocol::{GraphType, Method};
 use medulla::registry::{GraphMaterial, GraphMaterializer, GraphRegistry};
-use medulla::server::dispatch;
+use medulla_server::dispatch;
 
 const SECRET: &str = "served-spatial-completeness-secret";
 
@@ -33,7 +33,7 @@ fn state() -> test_support::SharedState {
 ///
 /// Proven DIFFERENTIALLY: the persistent index derives a node's bbox from a FIXED
 /// canonical geometry key (`GraphSpatialIndex`'s `SPATIAL_GEOMETRY_KEY = "geometry"`,
-/// see `server::secondary_indexes`), while the snapshot-derived fallback
+/// see `medulla_server::secondary_indexes`), while the snapshot-derived fallback
 /// (`geometry_from_value` in `medulla-plan`) accepts EITHER `geometry` OR the `geom` alias.
 /// So a node whose geometry lives under the NON-canonical `geom` key matches the
 /// fallback but is INVISIBLE to the persistent index. A served `SpatialScan` returning

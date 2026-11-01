@@ -100,7 +100,7 @@ mod security_tests {
     }
 }
 
-/// The admin handler's implementation of [`AdminApi`](crate::server::api::admin::AdminApi).
+/// The admin handler's implementation of [`AdminApi`](medulla_server::api::admin::AdminApi).
 pub struct AdminSeam;
 
 #[async_trait::async_trait]

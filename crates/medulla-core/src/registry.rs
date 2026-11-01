@@ -20,7 +20,7 @@
 //     indexes). `open_lazy` promotes a catalog-only entry into this map on first
 //     access, replaying its durable material through the SAME `GraphMaterializer`
 //     seam `PersistenceBackend` implements over redb (mirrors `ReadThroughFactory`).
-//     The server layer (`server::persistence::cold_offload::admit_capacity`)
+//     The server layer (`medulla_server::persistence::cold_offload::admit_capacity`)
 //     bounds this map's size and evicts the coldest entry back to catalog-only
 //     before admitting a new one — durability-gated, so a graph is never lost,
 //     only evicted; `__commons__` is pinned and never evicted.
@@ -867,7 +867,7 @@ impl GraphRegistry {
     /// installed, its durable material (nodes/edges/semantic store) is replayed
     /// via the SAME `add_node`/`add_edge` calls the eager boot path uses, so a
     /// lazily-opened graph is byte-identical to an eagerly-loaded one. The
-    /// caller (`server::persistence::cold_offload::admit_capacity`) is
+    /// caller (`medulla_server::persistence::cold_offload::admit_capacity`) is
     /// responsible for bounded-cache admission BEFORE calling this.
     pub fn open_lazy(&mut self, name: &str) -> bool {
         if self.graphs.contains_key(name) {
@@ -1313,7 +1313,7 @@ impl GraphRegistry {
 
     /// Get a reference to a graph entry. Resident-only — a catalog-only (not yet
     /// materialized) graph is NOT returned here; callers that must transparently
-    /// lazily-open should go through `server::persistence::cold_offload::lazy_open`
+    /// lazily-open should go through `medulla_server::persistence::cold_offload::lazy_open`
     /// first (see `dispatch_graph_op`).
     pub fn get(&self, name: &str) -> Option<&GraphEntry> {
         self.graphs.get(name)

@@ -35,7 +35,7 @@
 //!    [`list_intents`] and reruns steps 2-5 — self-healing, no torn state.
 //!
 //! ## Privacy
-//! Like `crate::server::sql_tables`, this never writes tenant, principal, or
+//! Like `medulla_server::sql_tables`, this never writes tenant, principal, or
 //! filesystem detail into a filename or an error message: the owner
 //! directory and the intent filename are one-way SHA-256 digests, and the
 //! payload itself carries no tenant/principal string at all — recovery is

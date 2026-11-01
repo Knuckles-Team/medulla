@@ -2,8 +2,8 @@
 //! (CONCEPT:MEDULLA-KG.query.hand-rolled-tds-server). PURE bytes — no sockets, no async, no engine coupling — so every
 //! layout is unit-testable against the MS-TDS wire spec. `mod.rs` drives these over a
 //! `tokio` `TcpListener` and bridges the decoded `SQLBatch` into the shared
-//! [`crate::server::wire::WireSession`], then encodes the wire-neutral
-//! [`crate::server::wire::WireOutcome`] back into the token stream built here.
+//! [`medulla_server::wire::WireSession`], then encodes the wire-neutral
+//! [`medulla_server::wire::WireOutcome`] back into the token stream built here.
 //!
 //! ## TDS subset implemented (v1)
 //!   * **Packet framing** — the 8-byte header (type / status / length(BE) / SPID /

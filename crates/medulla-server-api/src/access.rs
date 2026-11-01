@@ -432,7 +432,7 @@ impl GraphReadAuthority {
     /// builds+filters exactly as before and publishes the result for the next
     /// caller. `version` is read BEFORE the snapshot is taken — a safe LOWER
     /// bound (an under-estimate only risks one extra rebuild, never a stale
-    /// serve — see `crate::server::handlers::query::rls_snapshot`'s doc for the
+    /// serve — see `medulla_server::handlers::query::rls_snapshot`'s doc for the
     /// full argument), since [`GraphReadAuthority`] does not hold the topology
     /// lock across both reads the way `GraphCore::analysis_snapshot_versioned`
     /// does.
@@ -2074,7 +2074,7 @@ mod read_rls_coverage_tests {
     /// the audited RLS primitive, or is a documented, named exception. `UNDOCUMENTED`
     /// (a method whose name matches none of `RLS_ROUTED`/`NON_ROW_SCOPED`/
     /// `NOT_YET_AUDITED`) is the only hard failure -- mirrors
-    /// `server::mutation::tests::gateway_routed_set_matches_mutating_policy_surface`'s
+    /// `medulla_server::mutation::tests::gateway_routed_set_matches_mutating_policy_surface`'s
     /// exhaustive-partition idiom on the read side.
     ///
     /// A handful of methods (e.g. `KnowledgeStream`, feature `knowledge-batch`)
@@ -2145,7 +2145,7 @@ mod read_rls_coverage_tests {
         assert!(
             undocumented.is_empty(),
             "UNDOCUMENTED read methods (silently unclassified, not allowed): {undocumented:?} -- \
-             add each to RLS_ROUTED, NON_ROW_SCOPED, or NOT_YET_AUDITED in server::access"
+             add each to RLS_ROUTED, NON_ROW_SCOPED, or NOT_YET_AUDITED in medulla_server::access"
         );
 
         let present_routed = all_read.intersection(&routed_set).count();

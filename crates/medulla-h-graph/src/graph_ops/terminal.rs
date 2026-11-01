@@ -53,7 +53,7 @@ pub async fn try_handle(
     req_id: u64,
     _caller: Option<&str>,
     // VIZ-1: `ClusterHierarchyRefresh`/`Clusters`/`Expand` key their durable
-    // side-cache (`server::persistence::cluster_hierarchy_store`) by graph
+    // side-cache (`medulla_server::persistence::cluster_hierarchy_store`) by graph
     // name — nothing else in this terminal handler previously needed it. Placed
     // BEFORE `read_authority` (not after) so every call site keeps
     // `read_authority,` immediately followed by `core.clone(),` — pinned

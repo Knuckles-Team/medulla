@@ -402,7 +402,7 @@ pub struct GraphDumpPage {
 
 /// A bounded page cursor for [`read_graph_dump_page`] — every argument except
 /// the routing `shard`/`graph`/`crypto`, borrowed so the caller's owned
-/// [`crate::server::persistence::redb_backend::PageQuery`] (or a test literal)
+/// [`medulla_server::persistence::redb_backend::PageQuery`] (or a test literal)
 /// need not be cloned just to make this call.
 pub struct PageCursorRef<'a> {
     pub node_offset: usize,

@@ -21,7 +21,7 @@
 //! itself, prove that a node's CURRENT durable bytes still match what a past
 //! mutation wrote (a raw byte-flip of a stored row — or an ordinary later
 //! overwrite — is invisible to [`verify_chain`] alone). A periodic engine job
-//! (`server::persistence::provenance_anchor`) closes that gap for the
+//! (`medulla_server::persistence::provenance_anchor`) closes that gap for the
 //! `:ToolCall`/`:RunTrace` provenance-node window: it Merkle-hashes the window
 //! (RFC 6962 §2.1 Merkle Tree Hash — [`mth_from_hashes`]) and folds the root into
 //! THIS SAME chain as one more entry ([`provenance_anchor_line`]). A later
