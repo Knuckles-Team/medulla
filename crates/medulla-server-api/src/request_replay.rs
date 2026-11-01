@@ -13,7 +13,7 @@
 //! answer different questions over different identities, so they are not two
 //! authorities over one decision (RF-RULING-004).
 
-#[cfg(any(test, feature = "security"))]
+#[cfg(any(test, feature = "security", feature = "test-support"))]
 use medulla_kernel::lock_recovery::LockRecovery;
 
 /// Replay ledger used after a request MAC, time window, and policy claims have
@@ -38,7 +38,7 @@ pub struct PresentedNonce<'a> {
 
 /// Hard cap on remembered nonces — bounds memory under a misconfigured
 /// (excessively large) skew window or a deliberate nonce-flood attempt.
-#[cfg(any(test, feature = "security"))]
+#[cfg(any(test, feature = "security", feature = "test-support"))]
 const MAX_REPLAY_ENTRIES: usize = 200_000;
 
 /// The in-memory half of the ledger: every nonce accepted inside the live
