@@ -1335,7 +1335,7 @@ where
 ///
 /// The graph's kernel LEDGER is deliberately absent: it moves by graft, not through
 /// this image — see the module doc.
-pub(crate) fn export_graph_raw(shard: &Shard, graph: &str) -> Result<RawGraphRows, String> {
+pub fn export_graph_raw(shard: &Shard, graph: &str) -> Result<RawGraphRows, String> {
     let handle = shard.graph(graph)?;
     let read = shard.read(&handle)?;
     Ok(RawGraphRows {
@@ -1454,7 +1454,7 @@ fn insert_graph_scope(
 /// destination shard's writer thread (via [`Cmd::ImportGraphRaw`]); the commit is the
 /// commit-before-ack point of the bulk pass. Idempotent — a re-run after an
 /// interrupted move replaces rather than duplicates.
-pub(crate) fn import_graph_raw(
+pub fn import_graph_raw(
     shard: &Shard,
     graph: &str,
     rows: &RawGraphRows,
@@ -1792,7 +1792,7 @@ pub(crate) fn delta_flip_purge(
 /// The source must already be bound; the destination reservation is the
 /// only authority allowed to admit the staged owner payload that follows.
 #[cfg(feature = "server")]
-pub(crate) fn reserve_graft_destination(
+pub fn reserve_graft_destination(
     dest_shard: &Shard,
     source: &Shard,
     graph_fname: &str,
@@ -1843,7 +1843,7 @@ pub(crate) fn reserve_graft_destination(
 /// the reservation/marker before entering the kernel copy, and uses
 /// marker-backed recovery when Phase C already retired the source.
 #[cfg(feature = "server")]
-pub(crate) fn graft_graph_from(
+pub fn graft_graph_from(
     dest_shard: &Shard,
     source: &Shard,
     graph_fname: &str,
@@ -1858,7 +1858,7 @@ pub(crate) fn graft_graph_from(
 /// maintenance batch, so the ledger remains at the reservation baseline
 /// until the kernel graft copies it.
 #[cfg(feature = "server")]
-pub(crate) fn graft_graph_from_with_payload(
+pub fn graft_graph_from_with_payload(
     dest_shard: &Shard,
     source: &Shard,
     graph_fname: &str,

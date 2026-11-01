@@ -3,7 +3,11 @@
 //! `reserve_graft_destination`, `export_graph_raw`, `import_graph_raw`).
 
 use medulla_persistence::online_reshard::*;
-use medulla_store::redb_store::shard::{graph_scope_identity, Shard};
+use medulla_store::redb_store::shard::{
+    graph_scope_identity, Shard, ShardWrite, GRAFT_BEFORE_PROTOCOL_LOCK,
+};
+use medulla_store::redb_store::{GRAPH_META, NODES};
+use medulla_transaction::GraftDestination;
 use medulla_kernel::test_rendezvous::{join_bounded, meet};
 use medulla_store::redb_store::shard::{
     ShardHandle, FAIL_AFTER_GRAFT_CATALOG_CLEANUP, IMPORT_AFTER_RESERVED_STAGE,
