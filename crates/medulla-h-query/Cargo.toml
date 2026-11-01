@@ -59,6 +59,8 @@ medulla-query-cache = { path = "../medulla-query-cache" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-reasoner = { path = "../medulla-reasoner" }
 medulla-virtual-graph = { path = "../medulla-virtual-graph" }
+medulla-graph-algos = { path = "../medulla-graph-algos" }
+medulla-mining = { path = "../medulla-mining" }
 
 [features]
 test-support = []
