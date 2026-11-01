@@ -50,7 +50,7 @@ pub struct CarrierAuthority {
 impl CarrierAuthority {
     /// A verified carrier for `agent` in the deployment's one tenant (the owner-scoped
     /// catalog test fixtures).
-    #[cfg(all(test, any(feature = "federation", feature = "wasm-udf")))]
+    #[cfg(all(any(test, feature = "test-support"), any(feature = "federation", feature = "wasm-udf")))]
     pub fn verified_for_test(agent: &str) -> Self {
         Self::from_verified(&VerifiedRequestContext::verified_for_test(agent))
             .expect("verified test carrier")
@@ -170,15 +170,15 @@ impl CarrierAuthority {
 
     /// The verified effective actor for a request. This is deliberately kept
     /// separate from `actor_scope`, which is the durable principal catalog key.
-    pub(crate) fn effective_actor_scope(&self) -> &str {
+    pub fn effective_actor_scope(&self) -> &str {
         &self.agent_id
     }
 
-    pub(crate) fn delegation_digest(&self) -> Digest256 {
+    pub fn delegation_digest(&self) -> Digest256 {
         self.delegation_digest
     }
 
-    pub(crate) fn authority_digest(&self) -> Digest256 {
+    pub fn authority_digest(&self) -> Digest256 {
         self.authority_digest
     }
 
