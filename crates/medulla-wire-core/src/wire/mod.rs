@@ -39,6 +39,7 @@
 //! NOTHING in the classify/dispatch/exec/txn/durability path is reimplemented — the
 //! new wire only adds framing + encoding. This is the MEDULLA-074 promise.
 
+#[cfg(feature = "federation")]
 use medulla_server_ops::api::query_txn::ForeignStateExt;
 use std::path::Path;
 use std::sync::Arc;

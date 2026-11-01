@@ -30,7 +30,7 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
 medulla-query-cache = { path = "../medulla-query-cache" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
-medulla-reasoner = { path = "../medulla-reasoner" }
+medulla-reasoner = { path = "../medulla-reasoner", features = ["owl"] }
 medulla-virtual-graph = { path = "../medulla-virtual-graph" }
 medulla-persistence-records = { path = "../medulla-persistence-records" }
 medulla-server-ops = { path = "../medulla-server-ops" }
