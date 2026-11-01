@@ -72,5 +72,6 @@ stomp-wire = ["server", "medulla-server-api/stomp-wire"]
 streaming = ["server", "medulla-protocol-types/streaming", "medulla-server-api/streaming", "medulla-types/streaming"]
 tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries", "server", "redb", "medulla-server-api/tsdb"]
 [dev-dependencies]
+medulla-server-blob = { path = "../medulla-server-blob", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }

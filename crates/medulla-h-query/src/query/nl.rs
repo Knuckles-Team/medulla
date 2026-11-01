@@ -1,3 +1,4 @@
+#[cfg(all(feature = "nl-query", feature = "federation"))]
 use medulla_server_ops::api::query_txn::ForeignStateExt;
 use super::*;
 

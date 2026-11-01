@@ -46,6 +46,7 @@ use medulla_server_ops::api::query_txn::query_support::overlay_write_set;
 #[cfg(all(feature = "query", feature = "tsdb"))]
 use medulla_server_ops::api::query_txn::query_support::plan_needs_tsdb;
 use medulla_server_ops::api::query_txn::query_support::uql_text_embedder;
+#[cfg(feature = "tsdb")]
 use medulla_server_ops::api::query_txn::query_support::TsdbLegBind;
 use medulla_server_api::compute::compute_off_lock;
 use medulla_server_api::state::ServerState;

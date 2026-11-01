@@ -77,3 +77,6 @@ owl-dl = ["dep:medulla-rdf", "medulla-rdf/owl-dl", "medulla-reasoner/owl-dl", "m
 promql = ["dep:medulla-tsdb", "medulla-tsdb/promql", "medulla-persistence/promql", "medulla-server-api/promql", "query", "redb", "server", "tsdb"]
 traces = ["dep:medulla-tsdb", "medulla-tsdb/traces", "medulla-persistence/traces", "medulla-server-api/traces", "query", "redb", "server", "tsdb"]
 server = ["dep:tokio", "medulla-kernel/server", "medulla-persistence-ops/server", "medulla-persistence/server", "medulla-raft/server", "medulla-server-api/server"]
+[dev-dependencies]
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "security"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }

@@ -401,6 +401,7 @@ pub fn run_unified_with<T>(
     #[cfg(feature = "federation")]
     let federated =
         medulla_federation::federation_opt::FederatedExec::new(served.foreign, federation.as_ref());
+    #[cfg(feature = "federation")]
     let ctx = run_unified_bind_foreign(ctx, &federated);
     // CONCEPT:MEDULLA-KG.query.bind-server-side-text — bind the server-side text→vector embedder so a UQL `RANK BY ~ "text"`
     // (`Op::RankEmbed`) resolves its query vector at exec time (the NL→vector seam,
