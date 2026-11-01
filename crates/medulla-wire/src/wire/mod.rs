@@ -5296,7 +5296,7 @@ impl WireProtocol for WireSession {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 fn test_isolation(agents: &[&str]) -> medulla_core::isolation::IsolationLayer {
     let mut isolation = medulla_core::isolation::IsolationLayer::new();
     for agent in agents {
