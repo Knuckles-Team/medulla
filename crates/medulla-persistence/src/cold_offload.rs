@@ -593,7 +593,7 @@ async fn page_in_remaining(
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) async fn test_state_with_backend(
     secret: &str,
     dir_s: &str,

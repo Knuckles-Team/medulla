@@ -492,7 +492,7 @@ pub(crate) fn test_tool_facts(
 /// Idempotent per store, and deterministic: a component's digest is a hash over
 /// its content alone -- no revision, no timestamp -- so seeding the same
 /// component into several stores yields byte-identical pins.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn seed_component_for_test(
     store: &AgentLibraryStore,
     tenant_id: &str,
