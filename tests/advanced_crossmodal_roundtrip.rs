@@ -975,7 +975,8 @@ async fn sparql_post(addr: &str, query: &str) -> String {
 #[cfg(all(feature = "pgwire", feature = "sparql-http"))]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn pgwire_sparql_native_consistent_snapshot_eg393() {
-    use medulla::server::{pgwire, sparql_http};
+    use medulla::server::pgwire;
+    use medulla_server_api::sparql_http;
 
     let state = state().await;
 
