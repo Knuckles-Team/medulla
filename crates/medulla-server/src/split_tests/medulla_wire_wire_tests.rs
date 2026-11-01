@@ -1173,7 +1173,7 @@ pub mod wired_catalog_tests {
 
     #[test]
     fn local_source_authority_is_checked_before_any_intent_state_effect() {
-        let source = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../medulla-wire/src/wire/mod.rs"));
+        let source = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../medulla-wire-core/src/wire/mod.rs"));
         for (function, effect) in [
             ("async fn commit_mixed_txn", "write_intent"),
             ("async fn commit_table_txn_dispatch", "write_intent"),
@@ -1194,7 +1194,7 @@ pub mod wired_catalog_tests {
 
     #[test]
     fn durable_table_replay_cannot_enter_dispatch_or_create_an_intent() {
-        let source = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../medulla-wire/src/wire/mod.rs"));
+        let source = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../medulla-wire-core/src/wire/mod.rs"));
         let replay_start = source
             .find("async fn replay_table_steps(")
             .expect("replay function must exist");

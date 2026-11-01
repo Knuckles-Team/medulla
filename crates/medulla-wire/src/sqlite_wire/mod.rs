@@ -67,10 +67,10 @@ use serde::Deserialize;
 
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
-use crate::wire::WireError;
-use crate::wire::WireOutcome;
-use crate::wire::WireProtocol;
-use crate::wire::WireSession;
+use medulla_wire_core::wire::WireError;
+use medulla_wire_core::wire::WireOutcome;
+use medulla_wire_core::wire::WireProtocol;
+use medulla_wire_core::wire::WireSession;
 use medulla_server_api::state::ServerState;
 
 pub mod dialect;

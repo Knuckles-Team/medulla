@@ -1113,14 +1113,14 @@ pub(crate) fn single_text_result(col: &str, val: &str) -> TypedQueryResult {
 /// the streamed bytes accumulated across copy frames, and the decode format. Lives in
 /// [`WireSession::copy`] between the copy-in response and the wire's copy-done hook.
 pub struct CopyState {
-    pub(crate) table: String,
+    pub table: String,
     /// The resolved insert column list (the COPY column list, or all schema columns).
-    pub(crate) columns: Vec<String>,
-    pub(crate) format: CopyFormat,
-    pub(crate) delimiter: Option<char>,
-    pub(crate) header: bool,
+    pub columns: Vec<String>,
+    pub format: CopyFormat,
+    pub delimiter: Option<char>,
+    pub header: bool,
     /// Accumulated raw bytes of the copy-in body.
-    pub(crate) buf: Vec<u8>,
+    pub buf: Vec<u8>,
 }
 
 impl CopyState {
@@ -1424,7 +1424,7 @@ impl WireSession {
     /// Verify and bind a current signed request for an auxiliary SQL carrier.
     /// The first request fixes the connection actor; later requests must carry
     /// the same verified actor and current graph.
-    pub(crate) async fn authenticate_request(&self, request: &Request) -> WireResult<()> {
+    pub async fn authenticate_request(&self, request: &Request) -> WireResult<()> {
         let (secret, persist_dir) = {
             let state = self.state.read().await;
             (state.auth_secret.clone(), state.persist_dir.clone())
@@ -1641,7 +1641,7 @@ impl WireSession {
     /// dispatch pgwire's own COPY statement runs through) already authorized
     /// `Insert` on that exact table for this connection, so no unauthorized
     /// existence/schema probe is newly possible through it.
-    pub(crate) async fn user_table_store(&self) -> WireResult<TableStore> {
+    pub async fn user_table_store(&self) -> WireResult<TableStore> {
         let (authority, persist_dir) = self.catalog_authority().await?;
         medulla_server_auth::sql_catalog_acl::require_source_authority().map_err(user_err)?;
         medulla_server_auth::sql_tables::tenant_table_store(authority.tenant_scope(), &persist_dir)
@@ -1650,7 +1650,7 @@ impl WireSession {
 
     /// Commit a decoded native-wire COPY batch through the same owner-scoped
     /// SQL MutationBatch kernel as ordinary table DML.
-    pub(crate) async fn commit_copy_rows(
+    pub async fn commit_copy_rows(
         &self,
         table: String,
         columns: Vec<String>,
@@ -1748,7 +1748,7 @@ impl WireSession {
     /// Append a copy-in data frame's bytes into the per-connection copy buffer
     /// (CONCEPT:MEDULLA-KG.query.register-each-user-table). The wire's copy-data hook calls this; a frame with no COPY in
     /// progress is a protocol error.
-    pub(crate) fn append_copy_data(&self, data: &[u8]) -> WireResult<()> {
+    pub fn append_copy_data(&self, data: &[u8]) -> WireResult<()> {
         if let Some(state) = self.copy.lock().as_mut() {
             state.buf.extend_from_slice(data);
             Ok(())
@@ -1758,7 +1758,7 @@ impl WireSession {
     }
 
     /// Take the in-flight copy state (CONCEPT:MEDULLA-KG.query.register-each-user-table) at copy-done, leaving `None`.
-    pub(crate) fn take_copy_state(&self) -> Option<CopyState> {
+    pub fn take_copy_state(&self) -> Option<CopyState> {
         self.copy.lock().take()
     }
 
@@ -3657,7 +3657,7 @@ impl WireSession {
     /// a `RETURNING` write's rows always match the described schema in both column
     /// NAMES and TYPES. Resolves `RETURNING *` against the known property columns
     /// (sorted for determinism).
-    pub(crate) async fn returning_cols(
+    pub async fn returning_cols(
         &self,
         graph: &str,
         sql: &str,
@@ -4416,7 +4416,7 @@ impl WireSession {
     /// to type a RETURNING result column, WITHOUT a DataFusion round-trip. Schema-
     /// on-read: the first non-null value seen for a column wins (matching the
     /// inference `exec_sql_typed` does). `id` is always TEXT.
-    pub(crate) async fn column_types(
+    pub async fn column_types(
         &self,
         graph: &str,
     ) -> WireResult<std::collections::HashMap<String, PgColType>> {

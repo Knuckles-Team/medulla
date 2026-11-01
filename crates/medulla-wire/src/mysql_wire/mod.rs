@@ -41,10 +41,10 @@ use tokio::sync::RwLock;
 
 use medulla_sql::sql::PgColType;
 
-use crate::wire::WireError;
-use crate::wire::WireOutcome;
-use crate::wire::WireProtocol;
-use crate::wire::WireSession;
+use medulla_wire_core::wire::WireError;
+use medulla_wire_core::wire::WireOutcome;
+use medulla_wire_core::wire::WireProtocol;
+use medulla_wire_core::wire::WireSession;
 use medulla_server_api::state::ServerState;
 
 mod auth;

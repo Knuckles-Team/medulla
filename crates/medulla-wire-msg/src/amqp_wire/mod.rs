@@ -212,7 +212,7 @@ const MAX_BROKER_RESULT_ITEMS: usize = 1_000_000;
 const BROKER_LEASE_MS: u64 = 5 * 60 * 1_000;
 const BROKER_PREFETCH: u32 = 32;
 
-fn decode_broker_result<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> Option<T> {
+pub fn decode_broker_result<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> Option<T> {
     broker_wire::decode_broker_result(bytes, MAX_AMQP_CONTENT_BYTES, MAX_BROKER_RESULT_ITEMS)
 }
 

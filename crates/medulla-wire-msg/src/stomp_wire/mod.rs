@@ -106,7 +106,7 @@ struct StompBroker<'a> {
 }
 
 impl<'a> StompBroker<'a> {
-    fn new(state: &'a Arc<RwLock<ServerState>>, graph: &'a str, actor: &'a str) -> Self {
+    pub fn new(state: &'a Arc<RwLock<ServerState>>, graph: &'a str, actor: &'a str) -> Self {
         Self {
             state,
             graph,
@@ -712,7 +712,7 @@ struct Frame {
 }
 
 impl Frame {
-    fn new(command: &str, headers: Vec<(String, String)>, body: Vec<u8>) -> Self {
+    pub fn new(command: &str, headers: Vec<(String, String)>, body: Vec<u8>) -> Self {
         Self {
             command: command.to_string(),
             headers,

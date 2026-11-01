@@ -1151,6 +1151,7 @@ macro_rules! define_authenticated_wire_listener {
     (
         $function:ident,
         $feature:literal,
+        $krate:ident,
         $module:ident,
         $addr_env:ident,
         $default_addr:literal,
@@ -1165,16 +1166,16 @@ macro_rules! define_authenticated_wire_listener {
                 spawn_authenticated_wire_listener(
                             _state,
                             resolve_listener_addr(
-                                std::env::var(medulla_wire::$module::$addr_env)
+                                std::env::var($krate::$module::$addr_env)
                                     .ok()
                                     .as_deref(),
                                 $default_addr,
                             ),
                             $service_name,
                             $enable_message,
-                            medulla_wire::$module::validate_startup_policy,
+                            $krate::$module::validate_startup_policy,
                             |addr, state| async move {
-                                medulla_wire::$module::serve(&addr, state).await
+                                $krate::$module::serve(&addr, state).await
                             },
                         )
                         .await?;
@@ -1194,6 +1195,7 @@ macro_rules! define_authenticated_wire_listener {
 define_authenticated_wire_listener!(
     spawn_mssql_listener,
     "mssql-wire",
+    medulla_wire,
     mssql_wire,
     MSSQL_ADDR_ENV,
     "127.0.0.1:1433",
@@ -1212,6 +1214,7 @@ define_authenticated_wire_listener!(
 define_authenticated_wire_listener!(
     spawn_amqp_listener,
     "amqp-wire",
+    medulla_wire_msg,
     amqp_wire,
     AMQP_ADDR_ENV,
     "127.0.0.1:5672",
@@ -1231,6 +1234,7 @@ define_authenticated_wire_listener!(
 define_authenticated_wire_listener!(
     spawn_bolt_listener,
     "bolt-wire",
+    medulla_wire,
     bolt_wire,
     BOLT_ADDR_ENV,
     "127.0.0.1:7687",
@@ -1280,6 +1284,7 @@ async fn spawn_redis_listener(
 define_authenticated_wire_listener!(
     spawn_mqtt_listener,
     "mqtt-wire",
+    medulla_wire_msg,
     mqtt_wire,
     MQTT_ADDR_ENV,
     "127.0.0.1:1883",
@@ -1300,6 +1305,7 @@ define_authenticated_wire_listener!(
 define_authenticated_wire_listener!(
     spawn_stomp_listener,
     "stomp-wire",
+    medulla_wire_msg,
     stomp_wire,
     STOMP_ADDR_ENV,
     "127.0.0.1:61613",

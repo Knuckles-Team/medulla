@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 use tokio::sync::RwLock;
 
 use medulla_protocol_types::protocol::Method;
@@ -14,16 +14,16 @@ use medulla_server_api::api::reentry::dispatch_authenticated_broker_actor;
 use medulla_server_api::state::ServerState;
 
 /// Common async/socket imports used by every native broker adapter.
-pub(crate) mod prelude {
-    pub(crate) use std::sync::Arc;
+pub mod prelude {
+    pub use std::sync::Arc;
 
-    pub(crate) use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    pub(crate) use tokio::net::{TcpListener, TcpStream};
-    pub(crate) use tokio::sync::RwLock;
+    pub use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    pub use tokio::net::{TcpListener, TcpStream};
+    pub use tokio::sync::RwLock;
 }
 
-#[cfg(test)]
-pub(crate) fn register_broker_test_agent(
+#[cfg(any(test, feature = "test-support"))]
+pub fn register_broker_test_agent(
     isolation: &mut medulla_isolation::isolation::IsolationLayer,
     agent_id: impl Into<String>,
 ) {
@@ -39,8 +39,8 @@ pub(crate) fn register_broker_test_agent(
     });
 }
 
-#[cfg(test)]
-pub(crate) async fn test_state_with_broker_agents(
+#[cfg(any(test, feature = "test-support"))]
+pub async fn test_state_with_broker_agents(
     prefix: &str,
     principals: &[&str],
 ) -> Arc<RwLock<ServerState>> {
@@ -112,8 +112,8 @@ pub(crate) async fn test_state_with_broker_agents(
 /// into a task that owns the accept loop for the rest of the test. Keeping that
 /// lifecycle here prevents a protocol test from accidentally returning an
 /// address before its listener or state has been moved into the detached task.
-#[cfg(test)]
-pub(crate) async fn spawn_broker_test_listener<F, Fut>(prefix: &str, serve: F) -> String
+#[cfg(any(test, feature = "test-support"))]
+pub async fn spawn_broker_test_listener<F, Fut>(prefix: &str, serve: F) -> String
 where
     F: FnOnce(tokio::net::TcpListener, Arc<RwLock<ServerState>>) -> Fut + Send + 'static,
     Fut: std::future::Future<Output = std::io::Result<()>> + Send + 'static,
@@ -134,7 +134,7 @@ where
 
 /// Selects the authentication domain for one broker adapter.
 #[derive(Clone, Copy)]
-pub(crate) enum BrokerProtocol {
+pub enum BrokerProtocol {
     Amqp,
     Mqtt,
     Stomp,
@@ -154,7 +154,7 @@ impl BrokerProtocol {
     }
 }
 
-pub(crate) fn decode_broker_result<T: serde::de::DeserializeOwned>(
+pub fn decode_broker_result<T: serde::de::DeserializeOwned>(
     bytes: &[u8],
     max_bytes: usize,
     max_items: usize,
@@ -170,7 +170,7 @@ pub(crate) fn decode_broker_result<T: serde::de::DeserializeOwned>(
     .ok()
 }
 
-pub(crate) fn derive_password(protocol: BrokerProtocol, secret: &str, principal: &str) -> String {
+pub fn derive_password(protocol: BrokerProtocol, secret: &str, principal: &str) -> String {
     let mut mac =
         Hmac::<Sha256>::new_from_slice(secret.as_bytes()).expect("HMAC accepts any key length");
     mac.update(protocol.auth_domain());
@@ -178,7 +178,7 @@ pub(crate) fn derive_password(protocol: BrokerProtocol, secret: &str, principal:
     hex::encode(mac.finalize().into_bytes())
 }
 
-pub(crate) fn verify_password(
+pub fn verify_password(
     protocol: BrokerProtocol,
     secret: &str,
     principal: &str,
@@ -202,32 +202,32 @@ pub(crate) fn verify_password(
     mac.verify_slice(&candidate).is_ok()
 }
 
-pub(crate) fn invalid_data(message: &'static str) -> std::io::Error {
+pub fn invalid_data(message: &'static str) -> std::io::Error {
     std::io::Error::new(std::io::ErrorKind::InvalidData, message)
 }
 
 /// Decoded broker delivery shared by the AMQP, MQTT, and STOMP adapters.
-pub(crate) struct BrokerClaim {
-    pub(crate) node_id: String,
-    pub(crate) routing_key: String,
-    pub(crate) exchange: String,
-    pub(crate) body: Vec<u8>,
+pub struct BrokerClaim {
+    pub node_id: String,
+    pub routing_key: String,
+    pub exchange: String,
+    pub body: Vec<u8>,
 }
 
 /// Per-adapter bounds for one broker consume request.
 #[derive(Clone, Copy)]
-pub(crate) struct BrokerClaimLimits {
-    pub(crate) group: &'static str,
-    pub(crate) lease_ms: u64,
-    pub(crate) prefetch: u32,
-    pub(crate) max_bytes: usize,
-    pub(crate) max_items: usize,
-    pub(crate) max_identifier_len: Option<usize>,
-    pub(crate) max_routing_key_len: Option<usize>,
+pub struct BrokerClaimLimits {
+    pub group: &'static str,
+    pub lease_ms: u64,
+    pub prefetch: u32,
+    pub max_bytes: usize,
+    pub max_items: usize,
+    pub max_identifier_len: Option<usize>,
+    pub max_routing_key_len: Option<usize>,
 }
 
 /// Decode one native broker claim and apply the adapter's size bounds.
-pub(crate) fn decode_claim(
+pub fn decode_claim(
     payload: ResultPayload,
     max_bytes: usize,
     max_items: usize,
@@ -268,7 +268,7 @@ pub(crate) fn decode_claim(
     })
 }
 
-pub(crate) async fn claim_message(
+pub async fn claim_message(
     state: &Arc<tokio::sync::RwLock<ServerState>>,
     graph: &str,
     actor: &str,
@@ -306,7 +306,7 @@ pub(crate) async fn claim_message(
 ///
 /// Request ids remain owned by each wire protocol, while request construction and
 /// the boxed dispatch boundary are shared so every adapter takes the same engine path.
-pub(crate) async fn engine_call(
+pub async fn engine_call(
     state: &Arc<tokio::sync::RwLock<ServerState>>,
     graph: &str,
     actor: &str,
@@ -325,7 +325,7 @@ pub(crate) async fn engine_call(
 }
 
 /// Return the wall-clock timestamp used by broker lease operations.
-pub(crate) fn current_time_ms() -> u64 {
+pub fn current_time_ms() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
@@ -338,7 +338,7 @@ pub(crate) fn current_time_ms() -> u64 {
 ///
 /// Each wire adapter owns its request-id sequence and dispatch wrapper; this shared
 /// helper owns the protocol-independent acknowledgement method construction.
-pub(crate) async fn ack_message(
+pub async fn ack_message(
     state: &Arc<tokio::sync::RwLock<ServerState>>,
     graph: &str,
     actor: &str,
@@ -360,14 +360,14 @@ pub(crate) async fn ack_message(
 }
 
 /// Common cursor state and primitive reads shared by the hand-rolled broker codecs.
-pub(crate) struct ByteCursor<'a> {
-    pub(crate) b: &'a [u8],
-    pub(crate) i: usize,
-    pub(crate) valid: bool,
+pub struct ByteCursor<'a> {
+    pub b: &'a [u8],
+    pub i: usize,
+    pub valid: bool,
 }
 
 impl<'a> ByteCursor<'a> {
-    pub(crate) fn new(b: &'a [u8]) -> Self {
+    pub fn new(b: &'a [u8]) -> Self {
         Self {
             b,
             i: 0,
@@ -375,7 +375,7 @@ impl<'a> ByteCursor<'a> {
         }
     }
 
-    pub(crate) fn u8(&mut self) -> u8 {
+    pub fn u8(&mut self) -> u8 {
         if self.i >= self.b.len() {
             self.valid = false;
             return 0;
@@ -385,15 +385,15 @@ impl<'a> ByteCursor<'a> {
         x
     }
 
-    pub(crate) fn u16(&mut self) -> u16 {
+    pub fn u16(&mut self) -> u16 {
         u16::from_be_bytes(self.fixed())
     }
 
-    pub(crate) fn u32(&mut self) -> u32 {
+    pub fn u32(&mut self) -> u32 {
         u32::from_be_bytes(self.fixed())
     }
 
-    pub(crate) fn u64(&mut self) -> u64 {
+    pub fn u64(&mut self) -> u64 {
         u64::from_be_bytes(self.fixed())
     }
 
@@ -407,7 +407,7 @@ impl<'a> ByteCursor<'a> {
         out
     }
 
-    pub(crate) fn take(&mut self, n: usize) -> &'a [u8] {
+    pub fn take(&mut self, n: usize) -> &'a [u8] {
         let Some(end) = self.i.checked_add(n).filter(|end| *end <= self.b.len()) else {
             self.valid = false;
             self.i = self.b.len();
@@ -418,7 +418,7 @@ impl<'a> ByteCursor<'a> {
         out
     }
 
-    pub(crate) fn remaining(&self) -> usize {
+    pub fn remaining(&self) -> usize {
         self.b.len().saturating_sub(self.i)
     }
 }

@@ -47,7 +47,7 @@ impl MysqlAuthMode {
     /// Resolve the sole secure mode. Empty key material and every legacy or
     /// unknown value are startup errors rather than compatibility fallbacks.
     pub fn resolve(auth_secret: &str) -> std::io::Result<Self> {
-        super::super::sql_wire_auth::resolve_mode(
+        medulla_wire_core::sql_wire_auth::resolve_mode(
             auth_secret,
             MYSQL_AUTH_ENV,
             "native",
@@ -75,7 +75,7 @@ impl MysqlAuthMode {
 /// MySQL password an authorized operator computes from the engine secret. Mirrors
 /// pgwire's `derive_pg_password` (different domain-separation prefix).
 pub fn derive_mysql_password(secret: &str, user: &str) -> String {
-    super::super::sql_wire_auth::derive_hmac_hex(secret, b"mysql:", user)
+    medulla_wire_core::sql_wire_auth::derive_hmac_hex(secret, b"mysql:", user)
 }
 
 fn sha1(bytes: &[u8]) -> [u8; 20] {
