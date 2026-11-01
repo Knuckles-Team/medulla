@@ -43,7 +43,7 @@ impl PackSourceKind {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct PackSourceRegistration {
-    pub connector: super::super::contract::ResourceId,
+    pub connector: medulla_types::contract::ResourceId,
     pub contract_iri: String,
     pub resource_uri: String,
     pub source_kind: PackSourceKind,
