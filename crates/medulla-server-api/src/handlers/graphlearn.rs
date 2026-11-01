@@ -16,9 +16,12 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use medulla_compute::graph_algos::AdjacencyGraph;
-use medulla_compute::graphlearn::edge_fn::Basis;
-use medulla_compute::graphlearn::link_predict::{self, FeatureCtx, KanLinkConfig, KanLinkModel};
+use medulla_graph_algos::graph_algos::AdjacencyGraph;
+use medulla_graph_algos::graphlearn::edge_fn::Basis;
+use medulla_graph_algos::{
+    graphlearn::link_predict, graphlearn::link_predict::FeatureCtx,
+    graphlearn::link_predict::KanLinkConfig, graphlearn::link_predict::KanLinkModel,
+};
 use medulla_protocol_types::result_contract::compute as results;
 use medulla_result_types::{
     compute_result::graphlearn::EdgeFunctionRow, compute_result::graphlearn::LinkPrediction,

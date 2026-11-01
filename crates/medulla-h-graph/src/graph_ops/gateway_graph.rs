@@ -224,7 +224,7 @@ fn apply_apply_mutation(
 /// byte-identical behaviour.
 ///
 /// Gated on `reasoning`: `crate::reasoning` (see `lib.rs`, `#[cfg(feature =
-/// "reasoning")] pub use medulla_compute::reasoning;`) exists only under that feature, and
+/// "reasoning")] pub use medulla_reasoner::reasoning;`) exists only under that feature, and
 /// this function's only caller is the `#[cfg(feature = "reasoning")]
 /// Method::RunDatalogReasoning` arm in `try_handle_gateway` below. Same shape as
 /// BUG-CX-104 / the `dispatch.rs` fix (commit `bc280437`): a function with no cfg of
@@ -329,7 +329,7 @@ fn collect_datalog_inferences(
         range_rules,
         property_chains,
     } = input;
-    let mut all_inferred = medulla_compute::reasoning::run_datalog_reasoning(
+    let mut all_inferred = medulla_reasoner::reasoning::run_datalog_reasoning(
         core,
         subclass_relations,
         subproperty_relations,
@@ -344,7 +344,7 @@ fn collect_datalog_inferences(
         range_rules,
         property_chains,
     );
-    medulla_compute::reasoning::bind_inference_schema_digests(
+    medulla_reasoner::reasoning::bind_inference_schema_digests(
         core,
         &mut all_inferred,
         &schema_digests,
@@ -361,14 +361,14 @@ fn append_optional_datalog_inferences(
     property_chains: Vec<(Vec<String>, String)>,
 ) {
     if !domain_rules.is_empty() || !range_rules.is_empty() {
-        all_inferred.extend(medulla_compute::reasoning::infer_domain_range(
+        all_inferred.extend(medulla_reasoner::reasoning::infer_domain_range(
             core,
             domain_rules,
             range_rules,
         ));
     }
     if !property_chains.is_empty() {
-        all_inferred.extend(medulla_compute::reasoning::infer_property_chain_axioms(
+        all_inferred.extend(medulla_reasoner::reasoning::infer_property_chain_axioms(
             core,
             property_chains,
         ));
@@ -619,7 +619,7 @@ fn apply_batch_update(
     core: &GraphCore,
     operations_msgpack: &[u8],
 ) -> Result<ResultPayload, String> {
-    let summary = medulla_compute::algorithms::batch_update(core, operations_msgpack)?;
+    let summary = medulla_graph_algos::algorithms::batch_update(core, operations_msgpack)?;
     medulla_protocol_types::result_contract::transactions::BatchUpdateReport::decode(&summary)
         .and_then(
             ResultPayload::of::<medulla_protocol_types::result_contract::transactions::BatchUpdate>,

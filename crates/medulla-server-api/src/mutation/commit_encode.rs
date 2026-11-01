@@ -323,7 +323,7 @@ pub(super) fn prepublish_success(core: &GraphCore, method: &Method) -> Option<Re
             // seconds per write instead of milliseconds. Swallowing the reason with
             // `.ok()?` made that cliff invisible — the write still succeeded, just
             // via the expensive path, so nothing surfaced and no metric moved.
-            let result = match medulla_compute::algorithms::batch_update_preview(core, operations_msgpack) {
+            let result = match medulla_graph_algos::algorithms::batch_update_preview(core, operations_msgpack) {
                 Ok(result) => result,
                 Err(error) => {
                     tracing::warn!(

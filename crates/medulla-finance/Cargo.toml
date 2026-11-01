@@ -12,3 +12,6 @@ name = "medulla_finance"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-types = { path = "../medulla-types" }
+serde = { version = "1.0", features = ["derive", "rc"] }
+medulla-result-types = { path = "../medulla-result-types" }

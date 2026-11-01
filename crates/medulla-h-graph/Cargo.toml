@@ -36,6 +36,8 @@ tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sy
 tracing = "0.1"
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
+medulla-graph-algos = { path = "../medulla-graph-algos" }
+medulla-mining = { path = "../medulla-mining" }
 medulla-reasoner = { path = "../medulla-reasoner" }
 
 [features]

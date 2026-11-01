@@ -1,10 +1,8 @@
 use super::*;
 use super::{association::*, writeback::*};
-use medulla_compute::mining::{
-    forecast,
-    sequence::{self, LabeledPattern},
-    subgraph::{self, HostGraph},
-    text,
+use medulla_mining::{
+    mining::forecast, mining::sequence, mining::sequence::LabeledPattern, mining::subgraph,
+    mining::subgraph::HostGraph, mining::text,
 };
 use medulla_protocol_types::result_contract::compute as results;
 use medulla_result_types::{

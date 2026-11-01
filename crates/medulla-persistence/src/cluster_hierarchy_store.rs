@@ -3,7 +3,7 @@
 //!
 //! ## Why this exists
 //!
-//! `Method::ClusterHierarchyRefresh` computes `medulla_compute::algorithms::
+//! `Method::ClusterHierarchyRefresh` computes `medulla_graph_algos::algorithms::
 //! cluster_hierarchy` (server-side clustering for million-node graph
 //! visualization) and needs to hand that result to `ClusterHierarchyClusters`/
 //! `ClusterHierarchyExpand` WITHOUT recomputing it per request — that's the whole

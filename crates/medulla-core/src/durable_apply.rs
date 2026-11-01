@@ -12,7 +12,7 @@
 //!
 //! **What did NOT move, and why (a real DAG constraint, not a style choice):** four
 //! `Method` families' *application* genuinely requires a crate that sits ABOVE
-//! `medulla-core` — `BatchUpdate` calls `medulla_compute::algorithms::batch_update`
+//! `medulla-core` — `BatchUpdate` calls `medulla_graph_algos::algorithms::batch_update`
 //! (`medulla-compute` depends on `medulla-core`, not the reverse: pulling it in here would
 //! cycle the workspace DAG); `AddTriples`/`RemoveTriples`/`DropNamedGraph` call
 //! `medulla_rdf::mapping`/`medulla_rdf::update` (same direction: `medulla-rdf` depends on

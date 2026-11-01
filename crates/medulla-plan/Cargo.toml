@@ -178,7 +178,7 @@ probabilistic = [
 # default/Pi build — and a `learned-cost` build that hasn't flipped the runtime flag —
 # are byte-for-byte the pre-existing static-estimate behavior.
 # FOLD: opt-in; deliberately NOT added to any facade tier aggregate (node/full/pi).
-learned-cost = ["query", "dep:medulla-compute", "medulla-compute/graphlearn"]
+learned-cost = ["query", "dep:medulla-compute", "medulla-compute/graphlearn", "medulla-graph-algos/graphlearn"]
 # Engine-native epistemic query surface (CONCEPT:MEDULLA-KG.epistemic.epistemic-substrate, E2): the
 # `Op::{EvidenceFor,Contradicts,SupportedBy,BeliefAsOf,SourceReliability,ConfidenceOp,
 # ExplainBelief}` ops — belief propagation + justification IN-PLAN, composing with the
@@ -439,6 +439,7 @@ medulla-result-types = { path = "../medulla-result-types", features = ["query"] 
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-reasoner = { path = "../medulla-reasoner" }
+medulla-graph-algos = { path = "../medulla-graph-algos" }
 
 [dev-dependencies]
 medulla-result-types = { path = "../medulla-result-types", features = ["query"] }

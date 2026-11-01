@@ -44,6 +44,7 @@ medulla-modality = { path = "../medulla-modality", optional = true }
 medulla-compute = { path = "../medulla-compute", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-graph-algos = { path = "../medulla-graph-algos" }
 
 [features]
 default = []

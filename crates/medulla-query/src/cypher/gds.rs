@@ -2,11 +2,11 @@
 //!
 //! This is the Cypher `CALL gds.<algo>(config) YIELD …` surface over the
 //! deterministic Neo4j-GDS-parity kernels shipped in
-//! [`medulla_compute::graph_algos`] (CONCEPT:MEDULLA-KG.compute.graph-data-science-algorithms). Each procedure:
+//! [`medulla_graph_algos::graph_algos`] (CONCEPT:MEDULLA-KG.compute.graph-data-science-algorithms). Each procedure:
 //!
 //!   1. **Projects** the current graph view (nodes + edges, with an optional
 //!      `relationshipWeightProperty`) into an
-//!      [`medulla_compute::graph_algos::AdjacencyGraph`] — the same generic,
+//!      [`medulla_graph_algos::graph_algos::AdjacencyGraph`] — the same generic,
 //!      unit-tested value the kernels operate on;
 //!   2. **Parses** the GDS-style config map (`dampingFactor`, `maxIterations`,
 //!      `relationshipWeightProperty`, `topK`, `similarityCutoff`,
@@ -31,15 +31,22 @@ use medulla_graph_core::graph::GraphView;
 use petgraph::visit::{EdgeRef, IntoEdgeReferences};
 use serde_json::Value;
 
-use medulla_compute::graph_algos::{
-    a_star, all_pairs_similarity, article_rank, betweenness_centrality, closeness_centrality,
-    degree_centrality, dijkstra, eigenvector_centrality, harmonic_centrality, haversine_km,
-    k1_coloring, k_core, knn_similarity, knn_similarity_approx, label_propagation, leiden,
-    local_clustering_coefficient, louvain, pagerank, random_walk, steiner_tree,
-    strongly_connected_components, triangle_count, weakly_connected_components,
-    yen_k_shortest_paths, AdjacencyGraph, ArticleRankConfig, ClosenessConfig, DegreeKind,
-    Direction, EigenvectorConfig, KnnSimilarityApproxConfig, LabelPropagationConfig, LeidenConfig,
-    LouvainConfig, Metric, PageRankConfig, QualityFunction, RandomWalkConfig,
+use medulla_graph_algos::{
+    graph_algos::a_star, graph_algos::all_pairs_similarity, graph_algos::article_rank,
+    graph_algos::betweenness_centrality, graph_algos::closeness_centrality,
+    graph_algos::degree_centrality, graph_algos::dijkstra, graph_algos::eigenvector_centrality,
+    graph_algos::harmonic_centrality, graph_algos::haversine_km, graph_algos::k1_coloring,
+    graph_algos::k_core, graph_algos::knn_similarity, graph_algos::knn_similarity_approx,
+    graph_algos::label_propagation, graph_algos::leiden, graph_algos::local_clustering_coefficient,
+    graph_algos::louvain, graph_algos::pagerank, graph_algos::random_walk,
+    graph_algos::steiner_tree, graph_algos::strongly_connected_components,
+    graph_algos::triangle_count, graph_algos::weakly_connected_components,
+    graph_algos::yen_k_shortest_paths, graph_algos::AdjacencyGraph, graph_algos::ArticleRankConfig,
+    graph_algos::ClosenessConfig, graph_algos::DegreeKind, graph_algos::Direction,
+    graph_algos::EigenvectorConfig, graph_algos::KnnSimilarityApproxConfig,
+    graph_algos::LabelPropagationConfig, graph_algos::LeidenConfig, graph_algos::LouvainConfig,
+    graph_algos::Metric, graph_algos::PageRankConfig, graph_algos::QualityFunction,
+    graph_algos::RandomWalkConfig,
 };
 
 use super::number_value;
@@ -94,7 +101,7 @@ pub fn gds_procedures() -> Vec<Box<dyn CypherProcedure>> {
     v.push(Box::new(LinkPrediction));
     // ── W4.2 structural embeddings (CONCEPT:MEDULLA-KG.graphlearn.structural-embeddings) ──
     // Appended at the END of the registration list to keep the merge-conflict surface
-    // minimal with concurrent gds.rs edits. Both route to the `medulla_compute::graphlearn::
+    // minimal with concurrent gds.rs edits. Both route to the `medulla_graph_algos::graphlearn::
     // embeddings` FastRP / Node2Vec kernels, so they share `cypher-graphlearn`.
     #[cfg(feature = "cypher-graphlearn")]
     v.push(Box::new(FastRp));
@@ -382,7 +389,7 @@ impl CypherProcedure for Degree {
 /// `gds.eigenvector(config)` — eigenvector centrality via power iteration
 /// (CONCEPT:MEDULLA-KG.query.gds-call-procedures). Config: `maxIterations` (20), `tolerance` (1e-7),
 /// `relationshipWeightProperty`. Yields `nodeId` / `node`, `score`. Routes to
-/// `medulla_compute::graph_algos::eigenvector_centrality` (CONCEPT:MEDULLA-KG.compute.eigenvector-centrality) —
+/// `medulla_graph_algos::graph_algos::eigenvector_centrality` (CONCEPT:MEDULLA-KG.compute.eigenvector-centrality) —
 /// see that kernel's doc for the two honest degenerate cases (pure DAG ⇒ zero;
 /// periodic structure ⇒ `converged` may be false).
 struct Eigenvector;
@@ -412,7 +419,7 @@ impl CypherProcedure for Eigenvector {
 /// low-out-degree sources (CONCEPT:MEDULLA-KG.query.gds-call-procedures). Config: `dampingFactor`
 /// (0.85), `maxIterations` (20), `tolerance` (1e-7), `relationshipWeightProperty`.
 /// Yields `nodeId` / `node`, `score`. Routes to
-/// `medulla_compute::graph_algos::article_rank` (CONCEPT:MEDULLA-KG.compute.article-rank) — see that
+/// `medulla_graph_algos::graph_algos::article_rank` (CONCEPT:MEDULLA-KG.compute.article-rank) — see that
 /// kernel's doc for why ArticleRank scores do not sum to 1 (documented, expected).
 struct ArticleRank;
 impl CypherProcedure for ArticleRank {
@@ -442,7 +449,7 @@ impl CypherProcedure for ArticleRank {
 /// Wasserman–Faust "improved" correction (CONCEPT:MEDULLA-KG.query.gds-call-procedures). Config:
 /// `useWassermanFaust` (false, mirrors legacy GDS's own flag name),
 /// `relationshipWeightProperty`. Yields `nodeId` / `node`, `score`. Routes to
-/// `medulla_compute::graph_algos::closeness_centrality` (CONCEPT:MEDULLA-KG.compute.closeness-centrality).
+/// `medulla_graph_algos::graph_algos::closeness_centrality` (CONCEPT:MEDULLA-KG.compute.closeness-centrality).
 struct Closeness;
 impl CypherProcedure for Closeness {
     fn name(&self) -> &'static str {
@@ -471,7 +478,7 @@ impl CypherProcedure for Closeness {
 /// `gds.harmonic(config)` — harmonic centrality (Marchiori & Latora)
 /// (CONCEPT:MEDULLA-KG.query.gds-call-procedures). Config: `relationshipWeightProperty`. Yields
 /// `nodeId` / `node`, `score`. Routes to
-/// `medulla_compute::graph_algos::harmonic_centrality` (CONCEPT:MEDULLA-KG.compute.harmonic-centrality).
+/// `medulla_graph_algos::graph_algos::harmonic_centrality` (CONCEPT:MEDULLA-KG.compute.harmonic-centrality).
 struct Harmonic;
 impl CypherProcedure for Harmonic {
     fn name(&self) -> &'static str {
@@ -540,7 +547,7 @@ impl CypherProcedure for Louvain {
 /// own key: `"modularity"` [default] or `"CPM"`, case-insensitive — EH-283),
 /// `maxLevels` (50), `maxIterations`/`maxSweeps` (100),
 /// `relationshipWeightProperty`. Yields `nodeId` / `node`, `communityId`.
-/// Routes to `medulla_compute::graph_algos::leiden`
+/// Routes to `medulla_graph_algos::graph_algos::leiden`
 /// (CONCEPT:MEDULLA-KG.compute.leiden-community-detection) — see that module's doc for the exact
 /// guarantee (every returned community's induced subgraph is connected, the
 /// defect Traag, Waltman & van Eck 2019 prove plain Louvain does not avoid).
@@ -584,7 +591,7 @@ impl CypherProcedure for Leiden {
 /// detection (CONCEPT:MEDULLA-KG.query.gds-procedure-routing). Config: `maxIterations` (10),
 /// `relationshipWeightProperty` (edge-weighted neighbour voting; unweighted votes
 /// when absent). Yields `nodeId` / `node`, `communityId`. Routes to
-/// `medulla_compute::graph_algos::label_propagation` (CONCEPT:MEDULLA-KG.compute.label-propagation) —
+/// `medulla_graph_algos::graph_algos::label_propagation` (CONCEPT:MEDULLA-KG.compute.label-propagation) —
 /// no algorithm reimplementation here.
 struct LabelPropagation;
 impl CypherProcedure for LabelPropagation {
@@ -669,7 +676,7 @@ impl CypherProcedure for Scc {
 /// symmetrisation (CONCEPT:MEDULLA-KG.query.gds-call-procedures). Config:
 /// `relationshipWeightProperty` (topology only — triangle count ignores
 /// weight/direction). Yields `nodeId` / `node`, `triangleCount`. Routes to
-/// `medulla_compute::graph_algos::triangle_count` (CONCEPT:MEDULLA-KG.compute.triangle-counting).
+/// `medulla_graph_algos::graph_algos::triangle_count` (CONCEPT:MEDULLA-KG.compute.triangle-counting).
 struct TriangleCount;
 impl CypherProcedure for TriangleCount {
     fn name(&self) -> &'static str {
@@ -688,7 +695,7 @@ impl CypherProcedure for TriangleCount {
 /// `gds.localClusteringCoefficient(config)` — per-node local clustering
 /// coefficient (CONCEPT:MEDULLA-KG.query.gds-call-procedures). Yields `nodeId` / `node`,
 /// `localClusteringCoefficient`. Routes to
-/// `medulla_compute::graph_algos::local_clustering_coefficient` (CONCEPT:MEDULLA-KG.compute.triangle-counting).
+/// `medulla_graph_algos::graph_algos::local_clustering_coefficient` (CONCEPT:MEDULLA-KG.compute.triangle-counting).
 struct LocalClusteringCoefficient;
 impl CypherProcedure for LocalClusteringCoefficient {
     fn name(&self) -> &'static str {
@@ -709,7 +716,7 @@ impl CypherProcedure for LocalClusteringCoefficient {
 
 /// `gds.kcore(config)` — k-core decomposition (degeneracy / coreness)
 /// (CONCEPT:MEDULLA-KG.query.gds-call-procedures). Yields `nodeId` / `node`, `coreValue`. Routes to
-/// `medulla_compute::graph_algos::k_core` (CONCEPT:MEDULLA-KG.compute.k-core-decomposition).
+/// `medulla_graph_algos::graph_algos::k_core` (CONCEPT:MEDULLA-KG.compute.k-core-decomposition).
 struct KCore;
 impl CypherProcedure for KCore {
     fn name(&self) -> &'static str {
@@ -727,7 +734,7 @@ impl CypherProcedure for KCore {
 
 /// `gds.k1coloring(config)` — greedy proper graph coloring (Welsh–Powell
 /// largest-degree-first) (CONCEPT:MEDULLA-KG.query.gds-call-procedures). Yields `nodeId` / `node`,
-/// `color`. Routes to `medulla_compute::graph_algos::k1_coloring` (CONCEPT:MEDULLA-KG.compute.k1-coloring).
+/// `color`. Routes to `medulla_graph_algos::graph_algos::k1_coloring` (CONCEPT:MEDULLA-KG.compute.k1-coloring).
 struct K1Coloring;
 impl CypherProcedure for K1Coloring {
     fn name(&self) -> &'static str {
@@ -801,7 +808,7 @@ impl CypherProcedure for Dijkstra {
 /// degrades toward plain Dijkstra for that node, never wrong, just less
 /// informed). Yields a SINGLE row (the same shape `gds.dijkstra` uses when a
 /// target is given): `nodeId` / `node` = target, `cost` = total path cost;
-/// empty when unreachable. Routes to `medulla_compute::graph_algos::a_star`
+/// empty when unreachable. Routes to `medulla_graph_algos::graph_algos::a_star`
 /// (CONCEPT:MEDULLA-KG.compute.astar-search).
 struct AStar;
 impl CypherProcedure for AStar {
@@ -867,7 +874,7 @@ impl CypherProcedure for AStar {
 /// cost), `nodeIds` (the path as a JSON array of node id strings — a scalar
 /// LIST column, like GDS's own `nodeIds`; not individually bindable node
 /// references), `cost`. Routes to
-/// `medulla_compute::graph_algos::yen_k_shortest_paths` (CONCEPT:MEDULLA-KG.compute.yens-k-shortest-paths).
+/// `medulla_graph_algos::graph_algos::yen_k_shortest_paths` (CONCEPT:MEDULLA-KG.compute.yens-k-shortest-paths).
 struct Yens;
 impl CypherProcedure for Yens {
     fn name(&self) -> &'static str {
@@ -929,7 +936,7 @@ impl CypherProcedure for Yens {
 /// (`null` for `root`, a scalar id reference like GDS's own — not an
 /// anchorable node), `weight` (the parent-edge weight, `null` for `root`). An
 /// unreachable terminal is silently omitted from the tree, never an error.
-/// Routes to `medulla_compute::graph_algos::steiner_tree` (CONCEPT:MEDULLA-KG.compute.steiner-tree) —
+/// Routes to `medulla_graph_algos::graph_algos::steiner_tree` (CONCEPT:MEDULLA-KG.compute.steiner-tree) —
 /// see that kernel's doc for the 2-approximation ratio and its one documented gap.
 struct SteinerTree;
 impl CypherProcedure for SteinerTree {
@@ -982,7 +989,7 @@ impl CypherProcedure for SteinerTree {
 /// (CONCEPT:MEDULLA-KG.query.gds-call-procedures). Config: `steps` (10), `restartProbability`
 /// (0.0), `seed` (0), `relationshipWeightProperty`. Yields `index` (0-based
 /// step position), `nodeId` / `node` (the node visited at that step). Routes
-/// to `medulla_compute::graph_algos::random_walk` (CONCEPT:MEDULLA-KG.compute.random-walk).
+/// to `medulla_graph_algos::graph_algos::random_walk` (CONCEPT:MEDULLA-KG.compute.random-walk).
 struct RandomWalk;
 impl CypherProcedure for RandomWalk {
     fn name(&self) -> &'static str {
@@ -1086,8 +1093,8 @@ impl CypherProcedure for NodeSimilarity {
 /// matches. Config: `similarityMetric` (`JACCARD` [default] / `COSINE`),
 /// `similarityCutoff` (0.0), `topK` (10), `relationshipWeightProperty`, and the
 /// mode selector `mode` (`exact` [default] / `approximate`). `exact` routes to
-/// `medulla_compute::graph_algos::knn_similarity` (a full `O(V²·d̄)` sweep); `approximate`
-/// routes to `medulla_compute::graph_algos::knn_similarity_approx` — Neo4j-style seeded
+/// `medulla_graph_algos::graph_algos::knn_similarity` (a full `O(V²·d̄)` sweep); `approximate`
+/// routes to `medulla_graph_algos::graph_algos::knn_similarity_approx` — Neo4j-style seeded
 /// NN-descent sampling that trades exactness for a sub-quadratic cost at large V,
 /// with the extra knobs `sampleRate` (0.5), `maxIterations` (100), `deltaThreshold`
 /// (0.001), and `randomSeed` (42). Both modes yield identical
@@ -1168,7 +1175,7 @@ impl CypherProcedure for Knn {
 /// `nodeProperty` is absent or non-numeric are skipped (not assigned a
 /// `clusterId` row) — GDS's own `gds.dbscan` likewise only scores nodes that
 /// carry the configured property. Yields `nodeId` / `node`, `clusterId` (`-1` =
-/// DBSCAN noise). Routes to `medulla_compute::mining::cluster::dbscan`
+/// DBSCAN noise). Routes to `medulla_mining::mining::cluster::dbscan`
 /// (CONCEPT:MEDULLA-KG.mining.dbscan-density) — no algorithm reimplementation; gated behind the
 /// `cypher-mining` feature (routes to the `mining` medulla-compute domain).
 #[cfg(feature = "cypher-mining")]
@@ -1191,7 +1198,7 @@ impl CypherProcedure for Dbscan {
 
         let mut ids: Vec<String> = view.node_map.keys().cloned().collect();
         ids.sort();
-        let mut points: Vec<medulla_compute::mining::cluster::Point> = Vec::new();
+        let mut points: Vec<medulla_mining::mining::cluster::Point> = Vec::new();
         let mut kept_ids: Vec<String> = Vec::new();
         for id in ids {
             if let Some(v) = node_feature_vector(view, &id, &prop) {
@@ -1202,7 +1209,7 @@ impl CypherProcedure for Dbscan {
         if points.is_empty() {
             return Ok(Vec::new());
         }
-        let labels = medulla_compute::mining::cluster::dbscan(&points, eps, min_pts);
+        let labels = medulla_mining::mining::cluster::dbscan(&points, eps, min_pts);
         Ok(kept_ids
             .into_iter()
             .zip(labels)
@@ -1244,7 +1251,7 @@ fn node_feature_vector(view: &GraphView, id: &str, prop: &str) -> Option<Vec<f64
 /// both folded into one `CALL`. Config: `topK` (50), `epochs` (200, KAN training
 /// rounds), `alpha` (0.5, 1-hop neighbour-aggregation self-retention). Yields
 /// `node1`, `node2`, `probability`. Routes to
-/// `medulla_compute::graphlearn::link_predict` (CONCEPT:MEDULLA-KG.graphlearn.link-predictor) — no
+/// `medulla_graph_algos::graphlearn::link_predict` (CONCEPT:MEDULLA-KG.graphlearn.link-predictor) — no
 /// model reimplementation; gated behind the `cypher-graphlearn` feature (implies
 /// `datascience` in medulla-compute for the shared Adam kernels).
 #[cfg(feature = "cypher-graphlearn")]
@@ -1258,8 +1265,10 @@ impl CypherProcedure for LinkPrediction {
         &["node1", "node2", "probability"]
     }
     fn call(&self, args: &[Value], view: &GraphView) -> Result<Vec<ProcRow>, String> {
-        use medulla_compute::graphlearn::link_predict::{
-            fit_link_predictor, predict_missing_links, FeatureCtx, KanLinkConfig,
+        use medulla_graph_algos::{
+            graphlearn::link_predict::fit_link_predictor,
+            graphlearn::link_predict::predict_missing_links, graphlearn::link_predict::FeatureCtx,
+            graphlearn::link_predict::KanLinkConfig,
         };
         use std::collections::HashSet;
 
@@ -1307,7 +1316,7 @@ impl CypherProcedure for LinkPrediction {
 
 // ── structural embeddings (CONCEPT:MEDULLA-KG.graphlearn.structural-embeddings, W4.2) ──────────────────
 //
-// Two stream procedures over `medulla_compute::graphlearn::embeddings` that turn graph
+// Two stream procedures over `medulla_graph_algos::graphlearn::embeddings` that turn graph
 // topology into per-node vectors (Neo4j `gds.fastRP.stream` / `gds.node2Vec.stream`
 // shape). Both project the current view, run the deterministic kernel, and YIELD
 // `(nodeId, embedding)` where `embedding` is a numeric list. Gated behind
@@ -1335,7 +1344,7 @@ fn embedding_rows(g: &AdjacencyGraph<String>, rows: Vec<Vec<f32>>) -> Vec<ProcRo
 /// (CONCEPT:MEDULLA-KG.graphlearn.fastrp). Config: `embeddingDimension` (128), `iterations`
 /// (3), `normalizationStrength` (0.5), `randomSeed` (42), `relationshipWeightProperty`.
 /// Yields `nodeId`, `embedding` (a numeric list). Routes to
-/// `medulla_compute::graphlearn::embeddings::fastrp` — deterministic given the seed.
+/// `medulla_graph_algos::graphlearn::embeddings::fastrp` — deterministic given the seed.
 #[cfg(feature = "cypher-graphlearn")]
 struct FastRp;
 #[cfg(feature = "cypher-graphlearn")]
@@ -1347,7 +1356,9 @@ impl CypherProcedure for FastRp {
         &["nodeId", "embedding"]
     }
     fn call(&self, args: &[Value], view: &GraphView) -> Result<Vec<ProcRow>, String> {
-        use medulla_compute::graphlearn::embeddings::{fastrp, FastRpConfig};
+        use medulla_graph_algos::{
+            graphlearn::embeddings::fastrp, graphlearn::embeddings::FastRpConfig,
+        };
         let cfg = Config::of(args);
         let g = project_named(
             view,
@@ -1371,7 +1382,7 @@ impl CypherProcedure for FastRp {
 /// (40), `walksPerNode` (10), `windowSize` (5), `returnFactor` p (1.0), `inOutFactor` q
 /// (1.0), `negativeSamplingRate` (5), `iterations` (training epochs, 10), `randomSeed`
 /// (42), `relationshipWeightProperty`. Yields `nodeId`, `embedding`. Routes to
-/// `medulla_compute::graphlearn::embeddings::node2vec` — deterministic given the seed.
+/// `medulla_graph_algos::graphlearn::embeddings::node2vec` — deterministic given the seed.
 #[cfg(feature = "cypher-graphlearn")]
 struct Node2Vec;
 #[cfg(feature = "cypher-graphlearn")]
@@ -1383,7 +1394,9 @@ impl CypherProcedure for Node2Vec {
         &["nodeId", "embedding"]
     }
     fn call(&self, args: &[Value], view: &GraphView) -> Result<Vec<ProcRow>, String> {
-        use medulla_compute::graphlearn::embeddings::{node2vec, Node2VecConfig};
+        use medulla_graph_algos::{
+            graphlearn::embeddings::node2vec, graphlearn::embeddings::Node2VecConfig,
+        };
         let cfg = Config::of(args);
         let g = project_named(
             view,
@@ -2260,7 +2273,7 @@ mod tests {
         // caller signals "this link is weak" to LPA's raw-majority-vote
         // criterion — an equal-weight bridge is a documented general LPA
         // ambiguity, not specific to this routing; see
-        // `medulla_compute::graph_algos::label_propagation`'s module doc).
+        // `medulla_graph_algos::graph_algos::label_propagation`'s module doc).
         let core = GraphCore::new();
         let clique1 = ["a", "b", "c", "d"];
         let clique2 = ["w", "x", "y", "z"];

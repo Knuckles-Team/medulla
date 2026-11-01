@@ -663,7 +663,7 @@ mod tests {
     /// one), NOT a peripheral leaf's.
     #[test]
     fn graph_topology_pages_central_blocks_in_first() {
-        use medulla_compute::algorithms::pagerank;
+        use medulla_graph_algos::algorithms::pagerank;
         use medulla_graph_core::graph::GraphCore;
 
         // A star graph: every leaf cites the hub.

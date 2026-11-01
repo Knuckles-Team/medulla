@@ -488,7 +488,7 @@ pub(crate) fn apply_batch_add_node_row(
             .map(|stored| crypto.unseal(stored.value()))
             .transpose()?;
         if let Some(current) = current {
-            properties_msgpack = medulla_compute::algorithms::merge_batch_node_properties(
+            properties_msgpack = medulla_graph_algos::algorithms::merge_batch_node_properties(
                 &current,
                 &properties_msgpack,
             )
@@ -595,13 +595,13 @@ pub(crate) fn apply_batch_rows(
     semantic: &mut ScopedOwnerTableMut<'_, &str, &[u8]>,
     crypto: DurableCrypto<'_>,
 ) -> Result<(), String> {
-    use medulla_compute::algorithms::BatchOperation;
+    use medulla_graph_algos::algorithms::BatchOperation;
 
     // The compute crate owns the public schema. Decode it here too instead of
     // maintaining a second set of field aliases at the durability boundary.
     // Any error aborts the enclosing redb transaction: never acknowledge an
     // opaque or partially applied batch.
-    let operations = medulla_compute::algorithms::decode_batch_operations(operations_msgpack)?;
+    let operations = medulla_graph_algos::algorithms::decode_batch_operations(operations_msgpack)?;
     let has_semantic_operations = operations.iter().any(|operation| {
         matches!(
             operation,

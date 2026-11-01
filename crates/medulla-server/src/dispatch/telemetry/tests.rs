@@ -14,8 +14,8 @@ use super::classes::{bindable_types, ontology_digest, BindableTypes, Classificat
 use super::collect::{log_signal, require_tenant_streams, stream_in_tenant, Window};
 use super::declarations::declarations_from;
 use super::materialize::{fact_batch, FactOwner};
-use medulla_compute::algorithms::decode_batch_operations;
-use medulla_compute::algorithms::BatchOperation;
+use medulla_graph_algos::algorithms::decode_batch_operations;
+use medulla_graph_algos::algorithms::BatchOperation;
 use medulla_graph_core::graph::GraphSchemaSource;
 use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_graph_core::graph::SchemaSourceOrigin;

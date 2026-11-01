@@ -31,10 +31,7 @@ fn validate_submit_context(
     // surface-specific and stay local to each caller. `context_matches_verified_authority`
     // is defined once, in `handlers::delegation` (its `pub(crate)` home), and called
     // from both boundaries.
-    if !medulla_h_jobs::delegation::context_matches_verified_authority(
-        context,
-        verified_context,
-    ) {
+    if !medulla_h_jobs::delegation::context_matches_verified_authority(context, verified_context) {
         return Err(
             "ACCESS_DENIED: SubmitWorkItem context does not match verified request authority"
                 .to_string(),

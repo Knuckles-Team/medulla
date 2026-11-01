@@ -43,6 +43,8 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-reasoner = { path = "../medulla-reasoner" }
+medulla-finance-market = { path = "../medulla-finance-market" }
+medulla-decision-policy = { path = "../medulla-decision-policy" }
 
 [features]
 ann = ["dep:medulla-ann", ]

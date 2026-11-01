@@ -1553,13 +1553,19 @@ mod universal_row_read_tests {
         );
         let topology = alice_core.topology_snapshot();
         assert_eq!(
-            medulla_compute::algorithms::get_shortest_path(&topology, "alice-private", "public"),
+            medulla_graph_algos::algorithms::get_shortest_path(
+                &topology,
+                "alice-private",
+                "public"
+            ),
             Some(vec!["alice-private".to_string(), "public".to_string()])
         );
-        assert!(
-            medulla_compute::algorithms::get_shortest_path(&topology, "bob-private", "public")
-                .is_none()
-        );
+        assert!(medulla_graph_algos::algorithms::get_shortest_path(
+            &topology,
+            "bob-private",
+            "public"
+        )
+        .is_none());
 
         // Semantic candidates are rebuilt from visible embeddings only; querying
         // exactly for Bob's hidden vector still cannot return Bob's id to Alice.
@@ -2376,10 +2382,12 @@ mod read_rls_coverage_tests {
             Ok(medulla_query::StatementKind::GraphTableReadRequiresCatalogAdmission(_))
         ));
         assert!(!sql_is_write(graph_table));
-        assert!(!requires_write(&medulla_protocol_types::protocol::Method::Sql {
-            query: graph_table.to_string(),
-            params_msgpack: Vec::new(),
-        }));
+        assert!(!requires_write(
+            &medulla_protocol_types::protocol::Method::Sql {
+                query: graph_table.to_string(),
+                params_msgpack: Vec::new(),
+            }
+        ));
 
         // Property-graph DDL stays a write on every route.
         let ddl = "CREATE PROPERTY GRAPH shop VERTEX TABLES (customers KEY (customer_id))";

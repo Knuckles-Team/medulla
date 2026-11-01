@@ -24,7 +24,7 @@ async fn handle_cluster_hierarchy_refresh(
 ) -> Response {
     let snap = { core.analysis_snapshot() };
     let computed = match compute_off_lock(req_id, move || {
-        medulla_compute::algorithms::cluster_hierarchy(&snap, label.as_deref(), resolution, seed)
+        medulla_graph_algos::algorithms::cluster_hierarchy(&snap, label.as_deref(), resolution, seed)
     })
     .await
     {
@@ -119,7 +119,7 @@ async fn load_cached_cluster_hierarchy(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     graph_name: &str,
-) -> Result<medulla_compute::algorithms::ClusterHierarchyResult, Response> {
+) -> Result<medulla_graph_algos::algorithms::ClusterHierarchyResult, Response> {
     let persistence = { state.read().await.persistence.clone() };
     let Some(p) = persistence.as_ref() else {
         return Err(Response::err(
@@ -158,7 +158,7 @@ async fn load_cached_cluster_hierarchy(
 /// `handle_cluster_hierarchy_clusters` so the filter loop's nesting does not
 /// count against the handler; byte-identical behaviour.
 fn project_level_clusters(
-    clusters: &[medulla_compute::algorithms::ClusterMeta],
+    clusters: &[medulla_graph_algos::algorithms::ClusterMeta],
     parent_cluster_id: Option<&str>,
 ) -> (Vec<ClusterSummary>, std::collections::HashMap<usize, u32>) {
     let mut remap: std::collections::HashMap<usize, u32> = std::collections::HashMap::new();
@@ -174,7 +174,7 @@ fn project_level_clusters(
 }
 
 /// One cached cluster's wire summary.
-fn cluster_summary(c: &medulla_compute::algorithms::ClusterMeta) -> ClusterSummary {
+fn cluster_summary(c: &medulla_graph_algos::algorithms::ClusterMeta) -> ClusterSummary {
     ClusterSummary {
         id: c.id.clone(),
         label: c.label.clone(),
@@ -193,7 +193,7 @@ async fn handle_cluster_hierarchy_expand(
     core: &Arc<GraphCore>,
     cluster_id: String,
 ) -> Response {
-    let Some((level, local_idx)) = medulla_compute::algorithms::parse_cluster_id(&cluster_id)
+    let Some((level, local_idx)) = medulla_graph_algos::algorithms::parse_cluster_id(&cluster_id)
     else {
         return Response::err(req_id, format!("malformed cluster_id: {cluster_id}"));
     };
@@ -217,7 +217,7 @@ async fn handle_cluster_hierarchy_expand(
 fn expand_leaf_cluster_to_nodes(
     req_id: u64,
     core: &Arc<GraphCore>,
-    hierarchy: &medulla_compute::algorithms::ClusterHierarchyResult,
+    hierarchy: &medulla_graph_algos::algorithms::ClusterHierarchyResult,
     local_idx: usize,
     cluster_id: &str,
 ) -> Response {
@@ -281,7 +281,7 @@ fn expand_subgraph_edges_to_wire(
 /// `handle_cluster_hierarchy_expand`'s `else` branch; byte-identical behaviour.
 fn expand_coarse_cluster_to_children(
     req_id: u64,
-    hierarchy: &medulla_compute::algorithms::ClusterHierarchyResult,
+    hierarchy: &medulla_graph_algos::algorithms::ClusterHierarchyResult,
     level: usize,
     cluster_id: &str,
 ) -> Response {

@@ -68,6 +68,7 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
 medulla-ann-codes = { path = "../medulla-ann-codes" }
 medulla-reasoner = { path = "../medulla-reasoner" }
+medulla-graph-algos = { path = "../medulla-graph-algos" }
 
 [features]
 test-support = []

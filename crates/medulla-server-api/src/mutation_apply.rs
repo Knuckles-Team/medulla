@@ -12,7 +12,7 @@
 //! that module, not this one.
 //!
 //! **What stayed here, and why:** four `Method` families genuinely cannot move
-//! below the facade — `BatchUpdate`'s application calls `medulla_compute::algorithms::
+//! below the facade — `BatchUpdate`'s application calls `medulla_graph_algos::algorithms::
 //! batch_update` (`medulla-compute` depends on `medulla-core`, not the reverse); `AddTriples`/
 //! `RemoveTriples`/`DropNamedGraph` call `medulla_rdf::mapping`/`medulla_rdf::update` (same
 //! direction); the mining/graphlearn write-back replay arms call
@@ -97,7 +97,7 @@ pub fn is_durable_mutation(m: &Method) -> bool {
 pub fn apply(core: &GraphCore, m: &Method) {
     match m {
         Method::BatchUpdate { operations_msgpack } => {
-            let _ = medulla_compute::algorithms::batch_update(core, operations_msgpack);
+            let _ = medulla_graph_algos::algorithms::batch_update(core, operations_msgpack);
         }
         // `AddTriples` (feature `rdf`): deterministic replay = re-parse the SAME
         // source text and re-apply the complete property-graph projection. The

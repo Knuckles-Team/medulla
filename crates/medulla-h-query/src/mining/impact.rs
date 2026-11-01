@@ -1,14 +1,16 @@
 //! The probabilistic impact models of `MineRiskPropagation` (EH-526): noisy-OR
-//! and independent cascade over `medulla_compute::graph_algos::impact`, with hop
+//! and independent cascade over `medulla_graph_algos::graph_algos::impact`, with hop
 //! depth, the strongest paths, per-seed Shapley attribution, a provenance
 //! digest, and `:ImpactAssessment` writeback that a WAL replay reproduces
 //! (the request carries the scope, the as-of time and the Monte Carlo seed).
 
 use super::*;
 use super::{process::edge_indices, vector::link_writeback_source, writeback::*};
-use medulla_compute::graph_algos::impact::{
-    independent_cascade, noisy_or, noisy_or_attribution, strongest_paths, CascadeSpec, ImpactGraph,
-    ImpactPath, Seed, Semantics,
+use medulla_graph_algos::{
+    graph_algos::impact::independent_cascade, graph_algos::impact::noisy_or,
+    graph_algos::impact::noisy_or_attribution, graph_algos::impact::strongest_paths,
+    graph_algos::impact::CascadeSpec, graph_algos::impact::ImpactGraph,
+    graph_algos::impact::ImpactPath, graph_algos::impact::Seed, graph_algos::impact::Semantics,
 };
 use medulla_protocol_types::result_contract::compute as results;
 use medulla_result_types::{
@@ -195,7 +197,7 @@ fn noisy_or_run(
             None => {
                 report.attribution_note = Some(format!(
                     "exact noisy-OR attribution is limited to {} seeds; use independent_cascade",
-                    medulla_compute::graph_algos::impact::MAX_EXACT_SEEDS
+                    medulla_graph_algos::graph_algos::impact::MAX_EXACT_SEEDS
                 ))
             }
         }
@@ -225,7 +227,7 @@ fn cascade_run(
         seed: options.rng_seed,
     };
     let out = independent_cascade(graph, seeds, attributed, &spec);
-    let depth = medulla_compute::graph_algos::impact::hop_depths(graph, seeds, options.hops);
+    let depth = medulla_graph_algos::graph_algos::impact::hop_depths(graph, seeds, options.hops);
     let rows = score_rows(
         inputs.nodes,
         &out.probability,

@@ -12,3 +12,11 @@ name = "medulla_mining"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-compute = { path = "../medulla-compute" }
+medulla-types = { path = "../medulla-types" }
+medulla-geo = { path = "../medulla-geo", default-features = false, optional = true }
+medulla-numeric = { path = "../medulla-numeric", optional = true }
+serde_json = "1.0"
+
+[features]
+mining = ["dep:medulla-geo", "dep:medulla-numeric", "medulla-compute/mining"]

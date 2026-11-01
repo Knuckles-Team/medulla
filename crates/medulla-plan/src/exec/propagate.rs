@@ -7,12 +7,12 @@
 //! with its `transmission` property (a number in `[0, 1]`), else the stage's default;
 //! each seed is hit with its node's `p_seed` property (a number in `[0, 1]`), else 1.
 //! The cone is then handed to the one impact kernel
-//! (`medulla_compute::graph_algos::impact`) that `MineRiskPropagation` also serves, so the
+//! (`medulla_graph_algos::graph_algos::impact`) that `MineRiskPropagation` also serves, so the
 //! query surface and the mining surface cannot disagree.
 
 use std::collections::HashMap;
 
-use medulla_compute::graph_algos::impact::{
+use medulla_graph_algos::graph_algos::impact::{
     independent_cascade, noisy_or, CascadeSpec, ImpactGraph, Seed, MAX_HOPS,
 };
 use medulla_graph_core::graph::GraphView;

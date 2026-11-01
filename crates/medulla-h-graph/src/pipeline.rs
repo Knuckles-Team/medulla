@@ -15,9 +15,9 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use medulla_compute::datascience::estimators;
-use medulla_compute::graphlearn::edge_fn::Basis;
-use medulla_compute::graphlearn::link_predict::{self, FeatureCtx, KanLinkConfig, KanLinkModel};
-use medulla_compute::mining::classify;
+use medulla_graph_algos::graphlearn::edge_fn::Basis;
+use medulla_graph_algos::graphlearn::link_predict::{self, FeatureCtx, KanLinkConfig, KanLinkModel};
+use medulla_mining::mining::classify;
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::GraphSource;
 use medulla_protocol_types::protocol::Method;

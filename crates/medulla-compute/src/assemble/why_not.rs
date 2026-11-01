@@ -18,7 +18,7 @@ use super::agent::slot_name;
 use super::conclude::slot_label;
 use super::model::var_name;
 use super::search::SolveContext;
-use crate::solve::{solve, Model};
+use medulla_decision_policy::{solve::solve, solve::Model};
 
 /// The slot order explanations are produced in.
 const SLOTS: [AgentComponentKind; 6] = [

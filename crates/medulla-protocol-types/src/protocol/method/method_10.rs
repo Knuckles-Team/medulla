@@ -6,7 +6,7 @@ $($variants)*
 
     /// Community detection as a mining family (CONCEPT:MEDULLA-KG.mining.community-writeback):
     /// wraps the EXISTING GDS Louvain / label-propagation kernels
-    /// (`medulla_compute::graph_algos`, already exposed on the Cypher `CALL gds.*`
+    /// (`medulla_graph_algos::graph_algos`, already exposed on the Cypher `CALL gds.*`
     /// surface) — adds NO new algorithm, only the epistemic writeback. Runs over
     /// the resident graph (optionally restricted to one node `label`, like
     /// `MineSubgraph`). With `writeback=true` materializes each community as a

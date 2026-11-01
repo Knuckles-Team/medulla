@@ -230,7 +230,7 @@ pub trait PersistenceBackend: Send + Sync {
     }
 
     /// Replace the cached hierarchy for `graph_fname` with `blob` (a MessagePack-
-    /// encoded `medulla_compute::algorithms::ClusterHierarchyResult`). Not a graph
+    /// encoded `medulla_graph_algos::algorithms::ClusterHierarchyResult`). Not a graph
     /// mutation — see the trait section doc above.
     async fn save_cluster_hierarchy(
         &self,

@@ -31,7 +31,7 @@ use medulla_types::solve_scalar::Scalar;
 
 use super::model::Built;
 use super::AssembleError;
-use crate::solve::{solve, Model};
+use medulla_decision_policy::{solve::solve, solve::Model};
 
 /// Every agent an answer assembles, and the graph that runs them.
 pub(super) type Drafts = (Vec<AgentLibraryEntryDraft>, AgentGraphDraft);
@@ -109,7 +109,7 @@ pub(super) struct Answer {
     pub drafts: Drafts,
 }
 
-pub(super) fn model_invalid(error: crate::solve::ModelError) -> AssembleError {
+pub(super) fn model_invalid(error: medulla_decision_policy::solve::ModelError) -> AssembleError {
     AssembleError::new(DecisionErrorCode::AssemblyModelInvalid, error.to_string())
 }
 

@@ -1,6 +1,6 @@
 //! EH-522 — the `eg_<func>` SQL window functions: per-partition, in `ORDER BY`, and
 //! bit-identical to the one series kernel behind UQL `DERIVE` (`medulla_tsdb::derive::Program`)
-//! and the finance entries (`medulla_compute::finance::signals`). Only compiles under `numeric`.
+//! and the finance entries (`medulla_finance_market::signals`). Only compiles under `numeric`.
 #![cfg(feature = "numeric")]
 
 use medulla_graph_core::graph::GraphCore;
@@ -69,7 +69,7 @@ fn window_functions_equal_the_derive_program_and_the_finance_entries() {
             program(SeriesFunc::Zscore, 5.0, xs),
             "SQL = DERIVE zscore ({series})"
         );
-        let finance = medulla_compute::finance::signals::rolling_zscore(xs, 5);
+        let finance = medulla_finance_market::signals::rolling_zscore(xs, 5);
         assert_eq!(
             z,
             nan_to_none(finance),
@@ -81,7 +81,7 @@ fn window_functions_equal_the_derive_program_and_the_finance_entries() {
             program(SeriesFunc::Ewma, 4.0, xs),
             "SQL = DERIVE ewma ({series})"
         );
-        let finance = medulla_compute::finance::signals::ewma_signal(xs, 4);
+        let finance = medulla_finance_market::signals::ewma_signal(xs, 4);
         assert_eq!(
             e,
             nan_to_none(finance),

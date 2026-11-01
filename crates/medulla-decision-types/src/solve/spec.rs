@@ -2,7 +2,7 @@
 //!
 //! These are plain data transfer types. They carry no invariants of their own:
 //! a [`ModelSpec`] becomes a usable solver model only through the validating
-//! constructor in `medulla_compute::solve`, which checks every field and lowers
+//! constructor in `medulla_decision_policy::solve`, which checks every field and lowers
 //! every typed constraint to one linear row.
 
 use serde::{Deserialize, Serialize};

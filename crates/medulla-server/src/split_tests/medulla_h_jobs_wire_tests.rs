@@ -38,7 +38,6 @@ mod mine_associate_wire_tests {
         }
     }
 
-
     // spec: MEDULLA-DURABLE-KERNEL-R082.2
     #[test]
     fn mine_associate_defaults_aliases_and_threshold_boundaries_are_accepted() {
@@ -113,5 +112,6 @@ mod mine_associate_wire_tests {
                 Some("invalid request encoding")
             );
             assert!(response.result.is_none());
-        }    }
+        }
+    }
 }

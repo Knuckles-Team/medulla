@@ -3,7 +3,7 @@ use super::*;
 use medulla_types::rdf_report::ProofNodeWire;
 
 /// Quality (objective) function `CommunityDetectEphemeral` optimizes (EH-314) —
-/// the wire mirror of `medulla_compute::graph_algos::QualityFunction`, kept as its
+/// the wire mirror of `medulla_graph_algos::graph_algos::QualityFunction`, kept as its
 /// own type here rather than reused directly so `medulla-types` never depends on
 /// `medulla-compute`; the server handler maps one to the other
 /// (`src/server/handlers/graph_ops/algorithms.rs`), the same split

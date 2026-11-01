@@ -4,7 +4,7 @@
 //! any `Unknown` coefficient, a first sublevel counts the selected
 //! unknown-cost variables (the unknown tier) and a second sums the known
 //! coefficients. The exact scalarisation that turns those sublevels into
-//! [`ObjectiveValue::scalar`] is an algorithm and lives in `medulla_compute::solve`;
+//! [`ObjectiveValue::scalar`] is an algorithm and lives in `medulla_decision_policy::solve`;
 //! only its result crosses the wire.
 
 use serde::{Deserialize, Serialize};

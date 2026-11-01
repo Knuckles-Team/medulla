@@ -8,7 +8,7 @@
 //
 // `ResultCache` caches the SERIALIZED OUTPUT of a whole query (rows/bytes) keyed by query
 // identity. A named projection is different in kind: it is an INPUT artifact — a materialized
-// `medulla_compute::graph_algos::AdjacencyGraph` — that MULTIPLE DIFFERENT algorithms (`gds.pageRank`,
+// `medulla_graph_algos::graph_algos::AdjacencyGraph` — that MULTIPLE DIFFERENT algorithms (`gds.pageRank`,
 // `gds.louvain`, `gds.betweenness`, …) each read as their starting structure. Caching only the
 // final rows of ONE algorithm call would not save the NEXT, DIFFERENT algorithm from re-scanning
 // the graph into its own adjacency structure — the win Neo4j GDS's `gds.graph.project` catalog
@@ -18,7 +18,7 @@
 // ## Type erasure across the crate DAG
 //
 // `medulla-core` sits BELOW `medulla-compute` in the workspace dependency DAG (`medulla-types → medulla-core →
-// medulla-compute → …`), so it cannot name `medulla_compute::graph_algos::AdjacencyGraph` directly — doing
+// medulla-compute → …`), so it cannot name `medulla_graph_algos::graph_algos::AdjacencyGraph` directly — doing
 // so would create a cycle. Exactly like `GraphView::plan_stats_memo` (which erases medulla-plan's
 // `ColumnStats` through `dyn Any`), a projection's materialized value is stored as `Arc<dyn Any +
 // Send + Sync>` and downcast by the PRODUCING crate (`medulla-query`'s `gds.rs`, which depends on
@@ -48,7 +48,7 @@ use crate::dep_scope::{DepClock, DepSet};
 
 /// One named, materialized projection.
 struct Entry {
-    /// The type-erased materialized value (an `medulla_compute::graph_algos::AdjacencyGraph<String>`
+    /// The type-erased materialized value (an `medulla_graph_algos::graph_algos::AdjacencyGraph<String>`
     /// in practice) — downcast by the producing crate.
     blob: Arc<dyn Any + Send + Sync>,
     /// The graph `version()` this projection reflects — the reference point `DepClock::is_valid`

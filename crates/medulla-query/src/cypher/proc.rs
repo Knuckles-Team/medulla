@@ -8,7 +8,7 @@
 //! second implementation. The core `gds.*` catalogue
 //! (pageRank/betweenness/degree/louvain/wcc/scc/dijkstra/nodeSimilarity) lives in
 //! the sibling [`super::gds`] module (CONCEPT:MEDULLA-KG.query.gds-call-procedures): it projects the current
-//! graph into `medulla_compute::graph_algos::AdjacencyGraph`, parses a GDS config map,
+//! graph into `medulla_graph_algos::graph_algos::AdjacencyGraph`, parses a GDS config map,
 //! and streams `nodeId`/`score`/`communityId`/… rows. This module keeps
 //! `personalized_pagerank` on the earlier live-view kernel plus a handful of
 //! APOC/`db.` metadata + list utilities.
@@ -22,7 +22,7 @@ use std::sync::OnceLock;
 use medulla_graph_core::graph::GraphView;
 use serde_json::Value;
 
-use medulla_compute::algorithms;
+use medulla_graph_algos::algorithms;
 
 use super::number_value;
 
@@ -63,7 +63,7 @@ fn build_registry() -> HashMap<String, Box<dyn CypherProcedure>> {
     // ── GDS graph-data-science kernels ────────────────────────────────────────
     // The core `gds.*` catalogue (pageRank/betweenness/degree/louvain/wcc/scc/
     // dijkstra/nodeSimilarity) is served by the MEDULLA-298 procedures, which project
-    // the current graph into `medulla_compute::graph_algos::AdjacencyGraph`, parse a GDS
+    // the current graph into `medulla_graph_algos::graph_algos::AdjacencyGraph`, parse a GDS
     // config map, and stream `nodeId`/`score`/`communityId`/… rows (CONCEPT:MEDULLA-KG.query.gds-call-procedures).
     for p in super::gds::gds_procedures() {
         add(p);

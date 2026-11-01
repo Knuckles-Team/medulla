@@ -1218,7 +1218,7 @@ pub(crate) fn range_contained_by_udf() -> ScalarUDF {
 // ── finance aggregate UDFs (CONCEPT:MEDULLA-KG.query.version-keyed-cache, feature `finance`) ────────────
 
 /// `var(returns) -> Float64` and `cvar(returns) -> Float64` aggregate UDFs over a
-/// Float64 returns column, delegating the kernel to `medulla_compute::finance::risk`.
+/// Float64 returns column, delegating the kernel to `medulla_finance_quant::risk`.
 /// Aggregates (not scalars) because VaR/CVaR are sample statistics over the whole
 /// column — a single accumulator buffers the returns and computes at `evaluate()`.
 /// Confidence is fixed at 0.95 (the engine's risk-metrics default). Gated behind
@@ -1333,12 +1333,12 @@ mod finance_udf {
 
     /// `var(returns)` — historical Value-at-Risk at 95%.
     pub(crate) fn var_udaf() -> AggregateUDF {
-        risk_udaf("var", medulla_compute::finance::risk::historical_var)
+        risk_udaf("var", medulla_finance_quant::risk::historical_var)
     }
 
     /// `cvar(returns)` — historical Conditional VaR (expected shortfall) at 95%.
     pub(crate) fn cvar_udaf() -> AggregateUDF {
-        risk_udaf("cvar", medulla_compute::finance::risk::historical_cvar)
+        risk_udaf("cvar", medulla_finance_quant::risk::historical_cvar)
     }
 }
 

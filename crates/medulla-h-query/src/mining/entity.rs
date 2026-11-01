@@ -1,6 +1,6 @@
 use super::*;
 use super::{input::*, writeback::*};
-use medulla_compute::mining::entity_resolution;
+use medulla_mining::mining::entity_resolution;
 use medulla_protocol_types::result_contract::compute as results;
 use medulla_result_types::{
     compute_result::mining::EntityMatchRow, compute_result::mining::EntityResolutionMiningResult,

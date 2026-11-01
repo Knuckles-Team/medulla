@@ -22,13 +22,13 @@
 
 use std::collections::HashMap;
 
-use medulla_compute::algorithms;
+use medulla_graph_algos::algorithms;
 use medulla_graph_core::graph::GraphView;
 
 /// Run PageRank over `core` and return `(node_id, score)` pairs shaped for
 /// [`crate::tiered::TieredCache::apply_importance_scores`] when the cache is keyed
 /// directly by node id (`TieredCache<String, V>`). Thin re-export of
-/// `medulla_compute::algorithms::pagerank` — the sparse power-iteration implementation
+/// `medulla_graph_algos::algorithms::pagerank` — the sparse power-iteration implementation
 /// already used elsewhere in the engine (CONCEPT:MEDULLA-KG.compute.sparse-pagerank), so
 /// graph-guided paging reuses the SAME centrality signal the rest of the engine reasons
 /// with rather than a second bespoke implementation.

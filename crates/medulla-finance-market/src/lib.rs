@@ -6,3 +6,8 @@
 
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
+
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod market;
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod signals;

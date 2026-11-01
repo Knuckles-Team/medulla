@@ -21,7 +21,7 @@
 //!
 //! The contract's `ClusterSummary.id`/`expand(cluster_id)` are `u64`, but this
 //! lane's own `Method::ClusterHierarchy*` RPC surface (`handlers::graph_ops.rs`,
-//! `medulla_compute::algorithms::ClusterMeta::id`) already has a stable STRING id,
+//! `medulla_graph_algos::algorithms::ClusterMeta::id`) already has a stable STRING id,
 //! `"L{level}-{local_index}"` (`crate::algorithms::format_cluster_id`/
 //! `parse_cluster_id` — the single source of truth for that shape). Rather
 //! than inventing a second identity scheme, this module packs the SAME
@@ -57,8 +57,8 @@ use medulla_viz_graph_tiles::contract::{
     TileEdge, TileNode,
 };
 
-use medulla_compute::algorithms::format_cluster_id;
-use medulla_compute::algorithms::ClusterHierarchyResult;
+use medulla_graph_algos::algorithms::format_cluster_id;
+use medulla_graph_algos::algorithms::ClusterHierarchyResult;
 use medulla_graph_core::graph::GraphCore;
 
 /// Cap on `top_node_types` handed to the wire encoder — the CONTRACT's own
@@ -303,7 +303,7 @@ impl GraphSource for RealClusterSource {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_compute::algorithms::cluster_hierarchy;
+    use medulla_graph_algos::algorithms::cluster_hierarchy;
     use medulla_graph_core::graph::GraphCore;
 
     fn p(node_type: &str) -> Vec<u8> {

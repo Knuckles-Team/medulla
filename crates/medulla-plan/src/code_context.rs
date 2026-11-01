@@ -7,7 +7,7 @@
 //! existing `medulla-compute` graph representation and orders hubs by directed
 //! betweenness centrality with a stable symbol tie-break.
 
-use medulla_compute::graph_algos::{betweenness_centrality, AdjacencyGraph};
+use medulla_graph_algos::{graph_algos::betweenness_centrality, graph_algos::AdjacencyGraph};
 
 /// A directed caller-to-callee edge in a resolved code subgraph.
 #[derive(Debug, Clone, PartialEq, Eq)]

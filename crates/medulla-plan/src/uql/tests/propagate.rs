@@ -2,7 +2,7 @@
 //! same kernel as `MineRiskPropagation`.
 
 use super::blob;
-use medulla_compute::graph_algos::impact::{noisy_or, ImpactGraph, Seed};
+use medulla_graph_algos::graph_algos::impact::{noisy_or, ImpactGraph, Seed};
 use medulla_graph_core::graph::GraphCore;
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::wire::UqlResult;

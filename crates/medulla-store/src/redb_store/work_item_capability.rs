@@ -662,10 +662,10 @@ pub(crate) enum NodeTouch {
 /// Decode a generic batch into its node touches, in operation order: the one
 /// reading both the native-authority check and the row guard share.
 pub(crate) fn batch_node_touches(operations_msgpack: &[u8]) -> Result<Vec<NodeTouch>, String> {
-    use medulla_compute::algorithms::BatchOperation;
+    use medulla_graph_algos::algorithms::BatchOperation;
 
     Ok(
-        medulla_compute::algorithms::decode_batch_operations(operations_msgpack)?
+        medulla_graph_algos::algorithms::decode_batch_operations(operations_msgpack)?
             .into_iter()
             .filter_map(|operation| match operation {
                 BatchOperation::AddNode {

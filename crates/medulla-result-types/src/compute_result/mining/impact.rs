@@ -1,5 +1,5 @@
 //! `MineRiskPropagation`: the mass-share model and the probabilistic impact
-//! models (EH-526, `medulla_compute::graph_algos::impact`).
+//! models (EH-526, `medulla_graph_algos::graph_algos::impact`).
 
 use serde::{Deserialize, Serialize};
 

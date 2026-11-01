@@ -24,7 +24,14 @@ medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 
+rand = "0.8"
+tracing = "0.1"
+rand_chacha = "0.3"
+cudarc = { version = "0.17", optional = true, default-features = false, features = ["driver", "nvrtc", "dynamic-loading", "cuda-12060"] }
+
 [features]
+gpu-cuda = ["dep:cudarc"]
+reasoning = []
 contract = ["owl", "dep:medulla-modality", "medulla-rdf/contract"]
 owl = ["rdf", "medulla-rdf/owl"]
 owl-dl = ["owl", "medulla-rdf/owl-dl"]

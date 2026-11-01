@@ -1,7 +1,7 @@
 //! Feature construction shared by the pipeline train, evaluate, and predict paths.
 
-use medulla_compute::graph_algos::AdjacencyGraph;
-use medulla_compute::graphlearn::embeddings::{
+use medulla_graph_algos::graph_algos::AdjacencyGraph;
+use medulla_graph_algos::graphlearn::embeddings::{
     fastrp, l2_normalize_rows, node2vec, to_f64_rows, FastRpConfig, Node2VecConfig,
 };
 use medulla_graph_core::graph::GraphCore;

@@ -6,3 +6,11 @@
 
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
+
+// CONCEPT:MEDULLA-KG.mining.frequent-itemset-mining — descriptive data-mining domain
+// (frequent itemsets + association rules). Pure-Rust, dependency-light, batch;
+// graph-agnostic (works over interned item ids), so it is unit-testable in
+// isolation. Feature-gated like finance/datascience so a slim build drops it.
+#[cfg(feature = "mining")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod mining;

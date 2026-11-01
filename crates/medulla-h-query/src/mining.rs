@@ -73,7 +73,7 @@ pub(crate) use vector::{
 pub use writeback::WritebackOptions;
 
 #[cfg(test)]
-use medulla_compute::mining::classify::FittedClassifier;
+use medulla_mining::mining::classify::FittedClassifier;
 
 /// Handle a `Mine*` method. `Err(method)` hands a non-mining method back to the
 /// dispatcher (routing fall-through). (CONCEPT:MEDULLA-KG.query.dispatch-convention.)
@@ -1206,10 +1206,10 @@ mod tests {
             vec![9.1, 8.8],
         ];
         let y = vec![0, 0, 1, 1];
-        let model = medulla_compute::mining::classify::fit(
+        let model = medulla_mining::mining::classify::fit(
             &x,
             &y,
-            medulla_compute::mining::classify::Algorithm::GaussianNb,
+            medulla_mining::mining::classify::Algorithm::GaussianNb,
         )
         .unwrap();
         for (id, e) in [("p0", [0.1f32, 0.0]), ("p1", [9.0, 9.1])] {
@@ -2329,10 +2329,10 @@ mod tests {
             vec![9.1, 8.8],
         ];
         let y = vec![0, 0, 1, 1];
-        let model = medulla_compute::mining::classify::fit(
+        let model = medulla_mining::mining::classify::fit(
             &x,
             &y,
-            medulla_compute::mining::classify::Algorithm::GaussianNb,
+            medulla_mining::mining::classify::Algorithm::GaussianNb,
         )
         .unwrap();
         let build = |core: &GraphCore| {

@@ -17,7 +17,7 @@ use medulla_decision_types::{
 
 use super::facts::{self, Declared};
 use super::AssembleError;
-use crate::solve::model::MAX_ABS_COEFFICIENT;
+use medulla_decision_policy::solve::model::MAX_ABS_COEFFICIENT;
 
 /// One level's value for one candidate.
 fn level_value(

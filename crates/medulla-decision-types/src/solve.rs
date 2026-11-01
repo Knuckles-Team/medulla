@@ -2,7 +2,7 @@
 //!
 //! These are data transfer types only. The search, the exact objective
 //! scalarisation and the certificate verifier are algorithms and live in
-//! `medulla_compute::solve`, which re-exports this module so there is exactly one
+//! `medulla_decision_policy::solve`, which re-exports this module so there is exactly one
 //! definition of every value that crosses the wire.
 //!
 //! Everything here is integer arithmetic: no clock, float or hash order

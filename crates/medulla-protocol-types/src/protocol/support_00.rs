@@ -365,7 +365,7 @@ pub enum AnomalyAlgorithm {
     Ocsvm,
     /// The matrix-profile discord score of a 1-D `values` series (EH-529, ANALYTICS-
     /// HARVEST AH-09): reuses `sample_size` as the subsequence length `m` and `seed` as
-    /// the profile's diagonal-order seed (`medulla_compute::mining::anomaly::Algorithm::
+    /// the profile's diagonal-order seed (`medulla_mining::mining::anomaly::Algorithm::
     /// MatrixProfileDiscord`) — no new request field, the same per-algorithm parameter
     /// reuse `IsolationForest`/`Lof`/`Ocsvm` already use.
     #[serde(rename = "matrix_profile_discord")]

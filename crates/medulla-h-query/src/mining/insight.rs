@@ -5,9 +5,10 @@ use super::{
     vector::link_writeback_source,
     writeback::*,
 };
-use medulla_compute::graph_algos::AdjacencyGraph;
-use medulla_compute::mining::{
-    community, ontology_gap, retrieval_quality, risk_propagation, root_cause,
+use medulla_graph_algos::community;
+use medulla_graph_algos::graph_algos::AdjacencyGraph;
+use medulla_mining::{
+    mining::ontology_gap, mining::retrieval_quality, mining::risk_propagation, mining::root_cause,
 };
 use medulla_protocol_types::result_contract::compute as results;
 use medulla_result_types::compute_result::mining::ImpactOptions;
@@ -639,7 +640,7 @@ pub(super) fn materialize_retrieval_quality_claim(
 /// Project the resident graph (optionally restricted to one `label`) into a
 /// dense `AdjacencyGraph<usize>` for [`community::detect`], mirroring
 /// `build_host_graph`'s node/edge projection but over dense usize indices
-/// (what `medulla_compute::graph_algos` operates on) instead of [`HostGraph`].
+/// (what `medulla_graph_algos::graph_algos` operates on) instead of [`HostGraph`].
 pub(super) fn build_id_graph(
     core: &GraphCore,
     label: &Option<String>,

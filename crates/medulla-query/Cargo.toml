@@ -35,8 +35,8 @@ cypher = ["dep:petgraph"]
 # heavy dep, `medulla-types/mining` only). `cypher-graphlearn` backs
 # `gds.linkPrediction` (`medulla-compute::graphlearn::link_predict` — implies
 # `datascience`, pulling `rand_chacha`; still no BLAS/GPU dep).
-cypher-mining = ["cypher", "medulla-compute/mining"]
-cypher-graphlearn = ["cypher", "medulla-compute/graphlearn"]
+cypher-mining = ["cypher", "medulla-compute/mining", "medulla-mining/mining"]
+cypher-graphlearn = ["cypher", "medulla-compute/graphlearn", "medulla-graph-algos/graphlearn"]
 # CONCEPT:MEDULLA-KG.query.named-graph-projection-catalog (W4.5/N5) — `gds.graph.project`/`.drop`/
 # `.exists`/`.list` plus named-projection reuse in the OTHER `gds.*` algorithm procedures (an
 # optional `graphName` config key that materializes/reuses a catalog entry instead of always
@@ -204,6 +204,9 @@ medulla-result-types = { path = "../medulla-result-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-query-cache = { path = "../medulla-query-cache" }
 medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-graph-algos = { path = "../medulla-graph-algos" }
+medulla-finance-quant = { path = "../medulla-finance-quant" }
+medulla-mining = { path = "../medulla-mining" }
 
 [dev-dependencies]
 medulla-result-types = { path = "../medulla-result-types" }
@@ -213,3 +216,4 @@ medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test
 tokio = { version = "1.53", features = ["rt", "rt-multi-thread", "macros"] }
 # Shared SQL source batch fixture (`medulla_types::test_support::sql_source`).
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-finance-market = { path = "../medulla-finance-market" }

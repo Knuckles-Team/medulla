@@ -1,8 +1,8 @@
 use super::*;
 use super::{association::*, classic::*, vector::*};
-use medulla_compute::mining::{
-    anomaly, association::LabeledRule, classify, cluster, reduce, sequence::LabeledPattern,
-    subgraph, text,
+use medulla_mining::{
+    mining::anomaly, mining::association::LabeledRule, mining::classify, mining::cluster,
+    mining::reduce, mining::sequence::LabeledPattern, mining::subgraph, mining::text,
 };
 
 #[derive(Clone, Copy)]
@@ -391,7 +391,7 @@ pub(super) fn subgraph_provenance(label: &Option<String>) -> String {
 // ratio; `lda`/`umap`/`tsne` have no such score — documented no-op, NOT fabricated).
 // MineText → claims, `lda`/`nmf` ONLY (principled: per-topic mean doc-membership
 // strength among its dominantly-assigned documents — both engines' `doc_topics`
-// are already [0,1] distributions summing to 1, see `medulla_compute::mining::text`
+// are already [0,1] distributions summing to 1, see `medulla_mining::mining::text`
 // module docs; `tfidf` has no topics — documented no-op, mirroring `writeback`).
 
 /// Each prediction → a claim. Quality = the row's OWN max class probability
@@ -428,7 +428,7 @@ pub(super) fn classify_provenance(source: &Option<VectorSource>) -> String {
 /// discriminant eigenvalues aren't returned by `reduce::reduce`; UMAP/t-SNE are
 /// approximate neighborhood LAYOUTS with no reconstruction-error analogue). Quality =
 /// the retained EXPLAINED-VARIANCE RATIO `Σ singular_values² / Σ ‖row‖²` — the SAME
-/// Frobenius-energy ratio `medulla_compute::mining::reduce`'s own
+/// Frobenius-energy ratio `medulla_mining::mining::reduce`'s own
 /// `truncated_svd_reconstructs_low_rank` test validates against, so it is principled
 /// and requires no extra normalization beyond the final `[0,1]` clamp (guards the
 /// pathological case where retained energy rounds slightly above total due to
@@ -476,7 +476,7 @@ pub(super) fn reduce_provenance(source: &Option<VectorSource>) -> String {
 /// (`mean(doc_topics[d][t])` over docs `d` whose argmax topic is `t`) — a topic-
 /// coherence proxy: both LDA's Dirichlet posterior and NMF's row-normalized `W` are
 /// already `[0,1]` distributions summing to 1 across topics (see
-/// `medulla_compute::mining::text` module docs), so this is principled and needs no extra
+/// `medulla_mining::mining::text` module docs), so this is principled and needs no extra
 /// normalization. A topic nobody is dominantly assigned to (can happen for `nmf`,
 /// whose factors are not a hard partition) has no coherence signal — skipped rather
 /// than fabricated.

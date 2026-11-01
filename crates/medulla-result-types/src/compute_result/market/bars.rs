@@ -142,7 +142,7 @@ pub struct PricedBar {
 }
 
 /// One time-series store point exactly as `TsAppend`/`TsRange` carry it: the
-/// bar's `open_time` and its fields in `medulla_compute::finance::market::codec`'s
+/// bar's `open_time` and its fields in `medulla_finance_market::market::codec`'s
 /// fixed layout.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

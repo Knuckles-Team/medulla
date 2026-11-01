@@ -160,7 +160,7 @@ $($variants)*
         /// documents DOMINANTLY assigned to it (`mean(doc_topics[d][t])` over docs `d`
         /// whose argmax topic is `t`) — a topic-coherence proxy: both LDA's Dirichlet
         /// posterior and NMF's row-normalized `W` are already `[0,1]` distributions that
-        /// sum to 1 across topics (see `medulla_compute::mining::text` module docs), so this
+        /// sum to 1 across topics (see `medulla_mining::mining::text` module docs), so this
         /// is a principled, already-bounded score requiring no extra normalization.
         /// Requires `writeback`.
         #[cfg(all(feature = "mining", feature = "epistemic"))]
@@ -440,7 +440,7 @@ $($variants)*
         writeback: bool,
         /// ADDITIONALLY materialize a `:Claim` (+ `:Evidence`) per gap (E6) — see
         /// [`Method::MineAssociate::as_claim`]. Confidence is seeded from the
-        /// gap kind's fixed documented severity (`medulla_compute::mining::ontology_gap::GapKind::severity`).
+        /// gap kind's fixed documented severity (`medulla_mining::mining::ontology_gap::GapKind::severity`).
         /// Requires `writeback`.
         #[cfg(all(feature = "mining", feature = "epistemic"))]
         #[serde(default)]

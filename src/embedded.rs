@@ -531,7 +531,7 @@ impl EmbeddedEngine {
 
     /// Topological sort (DAG order); `Err` on a cycle.
     pub fn topological_sort(&self, graph: &str) -> Result<Vec<String>, String> {
-        medulla_compute::algorithms::topological_sort(&self.topology_view(graph)?)
+        medulla_graph_algos::algorithms::topological_sort(&self.topology_view(graph)?)
     }
 
     /// PageRank over `graph`.
@@ -541,7 +541,7 @@ impl EmbeddedEngine {
         damping: f64,
         iterations: usize,
     ) -> Result<Vec<(String, f64)>, String> {
-        Ok(medulla_compute::algorithms::pagerank(
+        Ok(medulla_graph_algos::algorithms::pagerank(
             &self.topology_view(graph)?,
             damping,
             iterations,
@@ -550,7 +550,7 @@ impl EmbeddedEngine {
 
     /// Weakly-connected components of `graph`.
     pub fn connected_components(&self, graph: &str) -> Result<Vec<Vec<String>>, String> {
-        Ok(medulla_compute::algorithms::connected_components(
+        Ok(medulla_graph_algos::algorithms::connected_components(
             &self.topology_view(graph)?,
         ))
     }

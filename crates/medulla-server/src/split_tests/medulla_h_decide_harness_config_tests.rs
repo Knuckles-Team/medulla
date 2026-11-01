@@ -1,8 +1,10 @@
 //! The published harness kind must fail closed until its executor is served.
 
 use medulla_agent_types::agent_component::AgentComponentKind;
-use medulla_decision_types::decision::statistical::{DecideRequest, DecisionBatch, QuestionKind, QuestionSafety};
 use medulla_decision_types::decision::statistical::log::{DecisionLogCommitted, DecisionLogOp};
+use medulla_decision_types::decision::statistical::{
+    DecideRequest, DecisionBatch, QuestionKind, QuestionSafety,
+};
 use medulla_decision_types::decision::DecisionPolicyRef;
 use medulla_h_decide::decide::stat_test_support::{
     decode, publish_route_schema, request, Harness, TENANT,

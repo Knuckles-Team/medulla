@@ -215,7 +215,7 @@ pub(super) async fn try_handle_lifecycle_context(
             max_tokens,
         } => {
             let g = core.analysis_snapshot();
-            let view = medulla_compute::algorithms::get_context_view(&g, &agent_id, max_tokens);
+            let view = medulla_graph_algos::algorithms::get_context_view(&g, &agent_id, max_tokens);
             Response::ok(
                 req_id,
                 ResultPayload::of::<medulla_protocol_types::result_contract::query::GetContextView>(

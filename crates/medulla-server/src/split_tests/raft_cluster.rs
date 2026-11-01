@@ -3110,7 +3110,7 @@ mod dist_compute {
             panic!("expected scores")
         };
 
-        let single = medulla_compute::algorithms::pagerank(&union.topology_snapshot(), 0.85, 50);
+        let single = medulla_graph_algos::algorithms::pagerank(&union.topology_snapshot(), 0.85, 50);
         assert_eq!(
             score_map(&dist_scores),
             score_map(&single),
@@ -3137,7 +3137,7 @@ mod dist_compute {
 
         // Reference: single-graph CC partition. Compare as "same-component" equivalence
         // (the label VALUE differs by indexing, so compare which nodes share a label).
-        let single = medulla_compute::algorithms::connected_components(&union.topology_snapshot());
+        let single = medulla_graph_algos::algorithms::connected_components(&union.topology_snapshot());
         let mut single_comp: std::collections::HashMap<String, usize> =
             std::collections::HashMap::new();
         for (ci, comp) in single.iter().enumerate() {
