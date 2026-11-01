@@ -15,10 +15,6 @@ pub(crate) mod mining;
 // its execution (MEDULLA-039). Always declared; the real logic is `redb`-gated (the only build
 // where the catalog/reshard/planner exist), and a non-redb build returns "not available".
 pub(crate) mod admin;
-// RF-ADR-010 — the Decide layer's four served methods.
-pub(crate) mod decide;
-// The general bounded 0-1 integer programme.
-pub(crate) mod solve;
 // Read-only query surface: SQL (CONCEPT:MEDULLA-KG.query.read-only-sql-query, DataFusion behind `query`),
 // Cypher (CONCEPT:MEDULLA-KG.query.dep-free-behind, dep-free behind `cypher`), AND GraphQL (CONCEPT:MEDULLA-KG.query.sparql-completeness,
 // dep-free behind `graphql`). Present when ANY of those features is on — a cypher- or

@@ -63,7 +63,7 @@ async fn dispatch_decision_methods(
     ControlFlow::Break(match method {
         Method::AgentAssemble { request } => {
             dispatch_boxed(async {
-                handlers::decide::handle_agent_assemble(
+                medulla_h_decide::decide::handle_agent_assemble(
                     state,
                     req.id,
                     (&req.graph, verified_context),
@@ -75,7 +75,7 @@ async fn dispatch_decision_methods(
         }
         Method::CapabilityCoverage { request } => {
             dispatch_boxed(async {
-                handlers::decide::handle_capability_coverage(
+                medulla_h_decide::decide::handle_capability_coverage(
                     state,
                     req.id,
                     verified_context,
@@ -87,7 +87,7 @@ async fn dispatch_decision_methods(
         }
         Method::GuardrailEntailment { request } => {
             dispatch_boxed(async {
-                handlers::decide::handle_guardrail_entailment(
+                medulla_h_decide::decide::handle_guardrail_entailment(
                     state,
                     req.id,
                     verified_context,
@@ -99,37 +99,37 @@ async fn dispatch_decision_methods(
         }
         Method::DecisionCommit { request } => {
             dispatch_boxed(async {
-                handlers::decide::handle_decision_commit(state, req.id, verified_context, *request)
+                medulla_h_decide::decide::handle_decision_commit(state, req.id, verified_context, *request)
                     .await
             })
             .await
         }
         Method::Decide { request } => {
             dispatch_boxed(async {
-                handlers::decide::handle_decide(state, req.id, verified_context, *request).await
+                medulla_h_decide::decide::handle_decide(state, req.id, verified_context, *request).await
             })
             .await
         }
         Method::DecisionFit { op } => {
             dispatch_boxed(async {
-                handlers::decide::handle_decision_fit(state, req.id, verified_context, *op).await
+                medulla_h_decide::decide::handle_decision_fit(state, req.id, verified_context, *op).await
             })
             .await
         }
         Method::DecisionEval { op } => {
             dispatch_boxed(async {
-                handlers::decide::handle_decision_eval(state, req.id, verified_context, *op).await
+                medulla_h_decide::decide::handle_decision_eval(state, req.id, verified_context, *op).await
             })
             .await
         }
         Method::DecisionLog { op } => {
             dispatch_boxed(async {
-                handlers::decide::handle_decision_log(state, req.id, verified_context, *op).await
+                medulla_h_decide::decide::handle_decision_log(state, req.id, verified_context, *op).await
             })
             .await
         }
         Method::Solve { request } => {
-            dispatch_boxed(async { handlers::solve::handle_solve(req.id, *request).await }).await
+            dispatch_boxed(async { medulla_h_decide::solve::handle_solve(req.id, *request).await }).await
         }
         other => return ControlFlow::Continue(other),
     })

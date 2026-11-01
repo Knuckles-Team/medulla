@@ -62,7 +62,7 @@ fn authority_of(source_id: &str) -> SchemaAuthority {
 /// source exactly as the graph-view extractor scopes them, plus the weakest
 /// authority among the sources that mention the admissibility role.
 fn ontology(
-    sources: &crate::graph::GraphSchemaSources,
+    sources: &medulla_core::graph::GraphSchemaSources,
 ) -> Result<(Vec<medulla_rdf::oxrdf::Triple>, SchemaAuthority, String), String> {
     let mut triples = Vec::new();
     let mut authority = SchemaAuthority::Admin;
@@ -86,7 +86,7 @@ fn ontology(
 
 /// Entail every admissibility fact for `task_classes` × `template_classes`.
 pub(super) fn entail(
-    core: &crate::graph::GraphCore,
+    core: &medulla_core::graph::GraphCore,
     task_classes: &[String],
     template_classes: &[String],
 ) -> Result<Entailed, String> {
@@ -215,7 +215,7 @@ mod tests {
     // spec: MEDULLA-DECISION-ENGINE-R109.1
     #[test]
     fn varying_the_composed_schema_digest_changes_derived_topology_admissibility() {
-        let core = crate::graph::GraphCore::new();
+        let core = medulla_core::graph::GraphCore::new();
         let tasks = vec![format!("{S}IndependentSubtasks")];
         let classes = vec!["http://example/Spare".to_string()];
         let before = entail(&core, &tasks, &classes).expect("entails");
@@ -223,8 +223,8 @@ mod tests {
 
         let ontology = "@prefix owl: <http://www.w3.org/2002/07/owl#> . @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> . @prefix ex: <http://example/> . @prefix swarm: <http://knuckles.team/kg/swarm#> . ex:Spare a owl:Class ; rdfs:subClassOf swarm:FanOutJoin .";
         let mut sources = (*core.schema_sources()).clone();
-        let source = crate::graph::GraphSchemaSource::new(
-            crate::graph::SchemaSourceOrigin::Admin {
+        let source = medulla_core::graph::GraphSchemaSource::new(
+            medulla_core::graph::SchemaSourceOrigin::Admin {
                 name: "local".to_string(),
             },
             None,

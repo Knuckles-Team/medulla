@@ -8,7 +8,7 @@
 //! through `DecisionCommit`.
 
 use super::SharedState;
-use crate::protocol::Response;
+use medulla_protocol_types::protocol::Response;
 use medulla_server_api::auth::VerifiedRequestContext;
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
@@ -32,7 +32,7 @@ pub(crate) async fn handle_agent_assemble(
             audit_line("agent-assemble", &result.record, verified);
             Response::ok(
                 req_id,
-                crate::protocol::ResultPayload::of_ref::<
+                medulla_protocol_types::protocol::ResultPayload::of_ref::<
                     medulla_protocol_types::result_contract::storage::AgentAssemble,
                 >(&result),
             )

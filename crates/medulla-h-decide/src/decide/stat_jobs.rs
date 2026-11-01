@@ -46,7 +46,8 @@ use super::stat_log::{logged_dataset, LogReader};
 use super::stat_support::{pinned_body, refusal, resolve_policy, ResolvedPolicy};
 use super::telemetry;
 use super::SharedState;
-use crate::protocol::{Response, ResultPayload};
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_persistence::agent_library::AgentLibraryStore;
 use medulla_persistence::decision_jobs::decode_artifact;
@@ -814,7 +815,7 @@ fn respond(
     req_id: u64,
     method: &'static str,
     result: Result<ResultPayload, String>,
-) -> crate::protocol::Response {
+) -> medulla_protocol_types::protocol::Response {
     match result {
         Ok(payload) => Response::ok(req_id, payload),
         Err(error) => {
@@ -891,7 +892,7 @@ mod threshold_tests {
     use medulla_types::contract::BoundedVec;
 
     use super::threshold_assessment;
-    use crate::server::handlers::decide::stat_support::default_statistical_policy;
+    use crate::decide::stat_support::default_statistical_policy;
 
     fn ratio(numerator: u64, denominator: u64) -> UnitRationalWire {
         UnitRationalWire::new(numerator, denominator).unwrap()

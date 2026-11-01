@@ -1,3 +1,5 @@
+#[allow(unused_imports)]
+use medulla_h_decide::decide::*;
 //! MEDULLA-DECISION-ENGINE-R127.2.2: real dispatcher, persisted rules and typed results.
 
 #[cfg(feature = "redb")]
@@ -45,7 +47,7 @@ fn publish(store: &AgentLibraryStore, tenant: &str, id: &str, class: &str, nonce
         .unwrap();
 }
 
-async fn ask(state: &super::SharedState, tenant: &str, task: &str) -> Response {
+async fn ask(state: &medulla_h_decide::decide::SharedState, tenant: &str, task: &str) -> Response {
     let method = Method::GuardrailEntailment {
         request: Box::new(GuardrailEntailmentRequest {
             tenant_id: tenant.into(),

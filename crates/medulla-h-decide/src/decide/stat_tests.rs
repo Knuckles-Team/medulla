@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::protocol::ResultPayload;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_agent_types::{
     agent_component::AgentComponentKind, agent_component::AgentComponentPublishRequest,
     agent_component::ComponentDependency,
@@ -79,10 +79,10 @@ struct Harness {
 
 impl Harness {
     async fn new() -> Self {
-        Self::with_isolation(crate::isolation::IsolationLayer::new()).await
+        Self::with_isolation(medulla_core::isolation::IsolationLayer::new()).await
     }
 
-    async fn with_isolation(isolation: crate::isolation::IsolationLayer) -> Self {
+    async fn with_isolation(isolation: medulla_core::isolation::IsolationLayer) -> Self {
         let dir = tempfile::tempdir().unwrap();
         let mut server = ServerState::new_for_test("decide-stat-test-secret", isolation);
         server.persist_dir = Some(dir.path().to_string_lossy().into_owned());
@@ -176,7 +176,7 @@ fn verified() -> VerifiedRequestContext {
 }
 
 fn decode<T: serde::de::DeserializeOwned>(
-    response: crate::protocol::Response,
+    response: medulla_protocol_types::protocol::Response,
 ) -> Result<T, String> {
     if let Some(error) = response.error {
         return Err(error);
@@ -1038,7 +1038,7 @@ async fn graph_candidates_are_read_through_acl_rls_and_a_select_only_plan() {
         let mut guard = h.state.write().await;
         guard
             .registry
-            .create_graph("kg-decide", crate::protocol::GraphType::Team, None)
+            .create_graph("kg-decide", medulla_protocol_types::protocol::GraphType::Team, None)
             .unwrap();
         let core = guard.registry.get("kg-decide").unwrap().core.clone();
         for (id, score, summary) in [
@@ -1173,7 +1173,7 @@ async fn graph_log_record(h: &Harness) -> StatisticalDecisionRecord {
         let mut guard = h.state.write().await;
         guard
             .registry
-            .create_graph("kg-decide-log", crate::protocol::GraphType::Team, None)
+            .create_graph("kg-decide-log", medulla_protocol_types::protocol::GraphType::Team, None)
             .unwrap();
         let core = guard.registry.get("kg-decide-log").unwrap().core.clone();
         let props = serde_json::json!({"type": "Tool", "score": 0.9, "summary": "web search"});

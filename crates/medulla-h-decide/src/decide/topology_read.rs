@@ -18,7 +18,7 @@ async fn graph_core(
     state: &SharedState,
     graph: &str,
     verified: &VerifiedRequestContext,
-) -> Result<Arc<crate::graph::GraphCore>, String> {
+) -> Result<Arc<medulla_core::graph::GraphCore>, String> {
     let s = state.read().await;
     let entry = s
         .registry
@@ -30,7 +30,7 @@ async fn graph_core(
         graph,
         entry.graph_type,
         entry.owner.as_deref(),
-        crate::isolation::AccessLevel::Read,
+        medulla_core::isolation::AccessLevel::Read,
     )?;
     Ok(entry.core.clone())
 }

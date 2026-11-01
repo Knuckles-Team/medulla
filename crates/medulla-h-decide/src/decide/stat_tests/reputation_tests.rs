@@ -79,7 +79,7 @@ fn reliability(h: &Harness, who: &str) -> (Option<f64>, Option<f64>, Option<f64>
     let verified = VerifiedRequestContext::verified_for_test_in_tenant(who, TENANT);
     let authority = medulla_server_api::access::CarrierAuthority::from_verified(&verified).unwrap();
     let views = super::super::stat_view::DecisionViews::of(h.store.clone(), &authority);
-    let core = crate::graph::GraphCore::new();
+    let core = medulla_core::graph::GraphCore::new();
     core.add_node(
         "d1".into(),
         rmp_serde::to_vec_named(&json!({"type": "Doc"})).unwrap(),

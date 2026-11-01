@@ -5,7 +5,7 @@
 //! build without it answers a typed refusal naming the feature.
 
 use super::SharedState;
-use crate::protocol::Response;
+use medulla_protocol_types::protocol::Response;
 use medulla_server_api::auth::VerifiedRequestContext;
 
 /// Submit or read one head-fitting job.

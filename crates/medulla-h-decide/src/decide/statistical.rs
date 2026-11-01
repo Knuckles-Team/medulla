@@ -4,7 +4,7 @@
 //! build without it answers a typed refusal naming the feature.
 
 use super::SharedState;
-use crate::protocol::Response;
+use medulla_protocol_types::protocol::Response;
 use medulla_server_api::auth::VerifiedRequestContext;
 
 /// Answer a batch of statistical decision records; commit none.

@@ -13,8 +13,6 @@ pub(crate) mod coverage;
 #[cfg(all(test, feature = "decide"))]
 mod coverage_tests;
 pub(crate) mod guardrail;
-#[cfg(all(test, feature = "decide"))]
-mod guardrail_tests;
 pub(crate) mod jobs;
 pub(crate) mod log;
 #[cfg(feature = "decide")]
@@ -158,7 +156,7 @@ impl medulla_server_api::api::admin::DecideApi for DecideSeam {
         state: &SharedState,
         tenant: Option<&str>,
         graph: &str,
-        core: &crate::graph::GraphCore,
+        core: &medulla_core::graph::GraphCore,
     ) -> Option<std::sync::Arc<medulla_server_api::api::admin::served_adapter::ServedAdapter>> {
         served_adapter::served_for(state, tenant, graph, core).await
     }

@@ -12,3 +12,16 @@ name = "medulla_h_decide"
 path = "src/lib.rs"
 
 [dependencies]
+
+[features]
+ann = []
+blob = ["redb"]
+decide = ["solve", "redb"]
+epistemic = ["query"]
+finance = []
+owl = []
+query = ["redb"]
+raft = ["redb"]
+redb = []
+security = ["redb"]
+solve = []

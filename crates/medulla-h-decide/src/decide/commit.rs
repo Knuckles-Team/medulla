@@ -10,7 +10,7 @@
 //! same record is an idempotent replay.
 
 use super::SharedState;
-use crate::protocol::Response;
+use medulla_protocol_types::protocol::Response;
 use medulla_server_api::auth::VerifiedRequestContext;
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
@@ -27,7 +27,7 @@ pub(crate) async fn handle_decision_commit(
     match commit(state, req_id, verified, request).await {
         Ok(result) => Response::ok(
             req_id,
-            crate::protocol::ResultPayload::of_ref::<
+            medulla_protocol_types::protocol::ResultPayload::of_ref::<
                 medulla_protocol_types::result_contract::storage::DecisionCommit,
             >(&result),
         ),

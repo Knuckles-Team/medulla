@@ -138,7 +138,7 @@ fn release_inputs(retention: &Retention, pin: &InputsBlob, request_id: u64) -> R
     else {
         return Err(unavailable());
     };
-    let method = crate::protocol::Method::BlobUnref {
+    let method = medulla_protocol_types::protocol::Method::BlobUnref {
         digest: pin.manifest_digest.clone(),
     };
     let (batch, now) = medulla_server_api::api::ingest::compile_blob_batch(

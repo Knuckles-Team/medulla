@@ -84,7 +84,7 @@ async fn graph_with(
     let mut guard = h.state.write().await;
     guard
         .registry
-        .create_graph(name, crate::protocol::GraphType::Team, None)
+        .create_graph(name, medulla_protocol_types::protocol::GraphType::Team, None)
         .unwrap();
     let core = guard.registry.get(name).unwrap().core.clone();
     let space = medulla_index_types::embedding::EmbeddingSpaceRef::pinned(

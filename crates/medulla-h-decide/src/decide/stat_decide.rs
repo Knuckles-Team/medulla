@@ -48,7 +48,8 @@ use super::stat_support::{
 };
 use super::stat_tool_subset::tool_subset_outcome;
 use super::telemetry;
-use crate::protocol::{Response, ResultPayload};
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 

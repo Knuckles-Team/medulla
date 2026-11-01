@@ -26,7 +26,8 @@ use medulla_mutation_types::{capacity_lease::CapacityCell, capacity_lease::Capac
 use medulla_types::contract::BoundedVec;
 use tokio::sync::RwLock;
 
-use crate::protocol::{Method, ResultPayload};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_persistence::agent_library::AgentLibraryStore;
@@ -162,7 +163,7 @@ async fn topology_commit_refuses_uncoordinated_owners() {
         .await
         .unwrap();
     let mut server =
-        ServerState::new_for_test("commit-guard", crate::isolation::IsolationLayer::new());
+        ServerState::new_for_test("commit-guard", medulla_core::isolation::IsolationLayer::new());
     server.persist_dir = Some(path);
     server.persistence = Some(backend.clone());
     let state = Arc::new(RwLock::new(server));

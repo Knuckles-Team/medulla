@@ -64,7 +64,7 @@ pub(super) async fn readable_graph(
 ) -> Result<
     (
         Arc<medulla_core::graph::GraphCore>,
-        crate::isolation::IsolationLayer,
+        medulla_core::isolation::IsolationLayer,
     ),
     String,
 > {
@@ -79,7 +79,7 @@ pub(super) async fn readable_graph(
         graph,
         entry.graph_type,
         entry.owner.as_deref(),
-        crate::isolation::AccessLevel::Read,
+        medulla_core::isolation::AccessLevel::Read,
     )?;
     Ok((Arc::clone(&entry.core), guard.isolation.clone()))
 }

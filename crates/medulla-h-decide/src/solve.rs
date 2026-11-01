@@ -6,7 +6,7 @@
 //! `SOLVE_CERTIFICATE_REJECTED`. Pure compute: it reads no store, no clock and
 //! no float, so it takes neither the server state nor the verified context.
 
-use crate::protocol::Response;
+use medulla_protocol_types::protocol::Response;
 use medulla_decision_types::solve::SolveRequest;
 
 #[cfg(feature = "solve")]
@@ -21,7 +21,7 @@ fn refuse(
 /// Solve one model and answer its verified certificate.
 #[cfg(feature = "solve")]
 pub(crate) async fn handle_solve(req_id: u64, request: SolveRequest) -> Response {
-    use crate::protocol::ResultPayload;
+    use medulla_protocol_types::protocol::ResultPayload;
     use medulla_compute::solve::{solve, verify, Model, SolverConfig};
     use medulla_decision_types::{
         solve::SolveErrorCode, solve::SolveResult, solve::SOLVE_RESULT_SCHEMA_VERSION,
@@ -107,7 +107,7 @@ mod tests {
         )
         .await;
         assert!(response.error.is_none(), "{:?}", response.error);
-        let Some(crate::protocol::ResultPayload::Raw(bytes)) = response.result else {
+        let Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) = response.result else {
             panic!("Solve answers a raw typed result");
         };
         let result: SolveResult = rmp_serde::from_slice(&bytes).expect("a verified certificate");

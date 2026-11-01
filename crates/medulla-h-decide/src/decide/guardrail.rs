@@ -2,7 +2,7 @@
 //! The owning policy gate remains the authority for enforcement.
 
 use super::SharedState;
-use crate::protocol::Response;
+use medulla_protocol_types::protocol::Response;
 use medulla_server_api::auth::VerifiedRequestContext;
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
@@ -18,7 +18,7 @@ pub(crate) async fn handle_guardrail_entailment(
     match entailment_for(state, verified, &request).await {
         Ok(result) => Response::ok(
             req_id,
-            crate::protocol::ResultPayload::of_ref::<
+            medulla_protocol_types::protocol::ResultPayload::of_ref::<
                 medulla_protocol_types::result_contract::storage::GuardrailEntailment,
             >(&result),
         ),
