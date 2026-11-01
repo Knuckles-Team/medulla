@@ -12,9 +12,8 @@ name = "medulla_h_retrieve"
 path = "src/lib.rs"
 
 [dependencies]
-async-trait = { version = "0.1", optional = true }
+async-trait = "0.1"
 hex = "0.4"
-medulla-capabilities = { path = "../medulla-capabilities", optional = true }
 medulla-core = { path = "../medulla-core" }
 medulla-epistemic = { path = "../medulla-epistemic", optional = true }
 medulla-geo = { path = "../medulla-geo", optional = true }
@@ -53,5 +52,9 @@ geo = ["query", "dep:medulla-plan", "dep:medulla-geo"]
 owl = ["dep:medulla-rdf"]
 query = ["redb", "dep:medulla-tsdb", "dep:medulla-plan"]
 redb = ["dep:medulla-storage", "dep:medulla-transaction"]
-text = ["query", "dep:medulla-plan"]
+text = ["query", "dep:medulla-plan", "dep:medulla-text"]
 tsdb = ["redb", "dep:medulla-tsdb", "dep:medulla-plan"]
+
+[dev-dependencies]
+tempfile = "3"
+medulla-capabilities = { path = "../medulla-capabilities" }

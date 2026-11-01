@@ -232,9 +232,9 @@ pub(crate) fn build_text_index_from_view(
 #[derive(Default)]
 pub struct ServedIndexes<'a> {
     #[cfg(feature = "text")]
-    pub text: Option<&'a crate::secondary_indexes::ServedTextIndex>,
+    pub text: Option<&'a medulla_h_retrieve::secondary_indexes::ServedTextIndex>,
     #[cfg(feature = "geo")]
-    pub spatial: Option<&'a crate::secondary_indexes::ServedSpatialIndex>,
+    pub spatial: Option<&'a medulla_h_retrieve::secondary_indexes::ServedSpatialIndex>,
     /// CONCEPT:MEDULLA-KG.query.closure-backed-source — the CALLER'S owner-scoped foreign
     /// registry (EH-373), built by
     /// [`medulla_server_api::api::query_txn::foreign_catalog::ForeignSourceCatalog::registry_for`] from only the
@@ -262,9 +262,9 @@ pub struct ServedIndexes<'a> {
 /// overlay, wire UQL, mining-sourced plans).
 pub struct CoreIndexes<'c> {
     #[cfg(feature = "text")]
-    text: crate::secondary_indexes::ServedTextIndex,
+    text: medulla_h_retrieve::secondary_indexes::ServedTextIndex,
     #[cfg(feature = "geo")]
-    spatial: crate::secondary_indexes::ServedSpatialIndex,
+    spatial: medulla_h_retrieve::secondary_indexes::ServedSpatialIndex,
     #[cfg(all(feature = "shacl", feature = "owl-plan"))]
     shapes: medulla_h_sparql::rdf::ServedShapes<'c>,
     core: std::marker::PhantomData<&'c ()>,
@@ -280,9 +280,9 @@ impl<'c> CoreIndexes<'c> {
         let _ = core;
         Self {
             #[cfg(feature = "text")]
-            text: crate::secondary_indexes::ServedTextIndex::new(core.clone()),
+            text: medulla_h_retrieve::secondary_indexes::ServedTextIndex::new(core.clone()),
             #[cfg(feature = "geo")]
-            spatial: crate::secondary_indexes::ServedSpatialIndex::new(core.clone()),
+            spatial: medulla_h_retrieve::secondary_indexes::ServedSpatialIndex::new(core.clone()),
             #[cfg(all(feature = "shacl", feature = "owl-plan"))]
             shapes: medulla_h_sparql::rdf::ServedShapes::new(core),
             core: std::marker::PhantomData,
@@ -443,7 +443,7 @@ pub fn run_unified_with<T>(
 pub(crate) fn run_unified_bind_spatial<'a>(
     ctx: medulla_exec::exec::PlanCtx<'a>,
     ops: &[medulla_exec::algebra::Op],
-    served_spatial: Option<&'a crate::secondary_indexes::ServedSpatialIndex>,
+    served_spatial: Option<&'a medulla_h_retrieve::secondary_indexes::ServedSpatialIndex>,
 ) -> medulla_exec::exec::PlanCtx<'a> {
     if !plan_needs_spatial(ops) {
         return ctx;
