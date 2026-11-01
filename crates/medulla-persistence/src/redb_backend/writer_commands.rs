@@ -131,7 +131,7 @@ macro_rules! writer_command_arms {
             let _ = reply.send(result);
             false
         }
-        #[cfg(all(test, feature = "security"))]
+        #[cfg(all(any(test, feature = "test-support"), feature = "security"))]
         Cmd::TestTamperAudit { graph, seq, reply } => {
             flush(pending);
             let res = in_graph_write(shard, &graph, "test_tamper_audit", |write| {

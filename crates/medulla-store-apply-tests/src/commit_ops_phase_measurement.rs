@@ -10,7 +10,7 @@
 
 use medulla_store::{redb_store::DurableCrypto};
 
-use crate::redb_store::store_control::commit_ops;
+use medulla_store_apply::redb_store::store_control::commit_ops;
 use medulla_store::redb_store::shard::Shard;
 use std::time::Instant;
 

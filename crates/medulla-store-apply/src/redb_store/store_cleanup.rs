@@ -386,22 +386,22 @@ pub(crate) fn clear_resource_anti_affinity_table(
     clear_resource_three_part_table(table, graph, collect_resource_anti_affinity_clear_keys)
 }
 
-pub(crate) struct ResourceRowTables<'txn> {
-    pub(crate) reservations: ScopedOwnerTableMut<'txn, (&'static str, &'static str), &'static [u8]>,
-    pub(crate) tenant_index:
+pub struct ResourceRowTables<'txn> {
+    pub reservations: ScopedOwnerTableMut<'txn, (&'static str, &'static str), &'static [u8]>,
+    pub tenant_index:
         ScopedOwnerTableMut<'txn, (&'static str, &'static str, &'static str), &'static str>,
-    pub(crate) attempts: ScopedOwnerTableMut<'txn, (&'static str, &'static str, u64), &'static str>,
-    pub(crate) hosts: ScopedOwnerTableMut<'txn, (&'static str, &'static str), &'static [u8]>,
-    pub(crate) exclusivity: ScopedOwnerTableMut<'txn, (&'static str, &'static str), &'static str>,
-    pub(crate) fairness: ScopedOwnerTableMut<'txn, (&'static str, &'static str), &'static [u8]>,
-    pub(crate) concurrency: ScopedOwnerTableMut<'txn, (&'static str, &'static str), u64>,
-    pub(crate) anti_affinity:
+    pub attempts: ScopedOwnerTableMut<'txn, (&'static str, &'static str, u64), &'static str>,
+    pub hosts: ScopedOwnerTableMut<'txn, (&'static str, &'static str), &'static [u8]>,
+    pub exclusivity: ScopedOwnerTableMut<'txn, (&'static str, &'static str), &'static str>,
+    pub fairness: ScopedOwnerTableMut<'txn, (&'static str, &'static str), &'static [u8]>,
+    pub concurrency: ScopedOwnerTableMut<'txn, (&'static str, &'static str), u64>,
+    pub anti_affinity:
         ScopedOwnerTableMut<'txn, (&'static str, &'static str, &'static str), u64>,
-    pub(crate) disk_policies:
+    pub disk_policies:
         ScopedOwnerTableMut<'txn, (&'static str, &'static str), &'static [u8]>,
 }
 
-pub(crate) struct ResourceRowTablesRef<'a, 'txn> {
+pub struct ResourceRowTablesRef<'a, 'txn> {
     reservations: &'a mut ScopedOwnerTableMut<'txn, (&'static str, &'static str), &'static [u8]>,
     tenant_index:
         &'a mut ScopedOwnerTableMut<'txn, (&'static str, &'static str, &'static str), &'static str>,
@@ -524,7 +524,7 @@ fn clear_resource_rows_impl(
     Ok(())
 }
 
-pub(crate) fn clear_resource_rows_with_tables(
+pub fn clear_resource_rows_with_tables(
     graph: &str,
     tables: &mut ResourceRowTables<'_>,
     crypto: DurableCrypto<'_>,

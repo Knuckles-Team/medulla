@@ -100,12 +100,12 @@ use redb::{ReadableTable, TableDefinition};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
-mod inplace;
-mod payload;
-mod readiness;
-mod swap;
+pub mod inplace;
+pub mod payload;
+pub mod readiness;
+pub mod swap;
 pub use inplace::migrate_in_place;
-pub(crate) use payload::GraphShardPayloadTransfer;
+pub use payload::GraphShardPayloadTransfer;
 
 /// Outcome of a migration run (CONCEPT:MEDULLA-KG.sharding.atomic-shard-swap) — totals moved + the layout change.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -619,12 +619,10 @@ fn read_encryption_canary_rows(shard: &Shard) -> Result<EncryptionCanaryRows, St
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum MigrationFault {
+pub enum MigrationFault {
     AfterGraph(usize),
     BeforeSwap,
     AfterOldMove(usize),
     AfterInstall(usize),
 }
 
-#[cfg(test)]
-pub mod tests;

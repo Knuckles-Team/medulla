@@ -180,13 +180,13 @@ impl NativeLaneFixture {
         &self,
         batch: &MutationBatch,
         committed_at_ms: u64,
-        crashpoint: Option<crate::redb_store::store_mutation::MutationBatchCrashpoint>,
+        crashpoint: Option<medulla_store_apply::redb_store::store_mutation::MutationBatchCrashpoint>,
     ) -> Result<MutationBatchCommit, String> {
         #[cfg(feature = "security")]
         let mut audit = medulla_store::redb_store::audit::AuditTailCache::new();
-        crate::redb_store::store_mutation::commit_mutation_batch_inner(
+        medulla_store_apply::redb_store::store_mutation::commit_mutation_batch_inner(
             &self.shard,
-            crate::redb_store::store_mutation::BatchCommitInput::compact(
+            medulla_store_apply::redb_store::store_mutation::BatchCommitInput::compact(
                 TEST_GRAPH,
                 batch,
                 None,
@@ -213,7 +213,7 @@ impl NativeLaneFixture {
         method: Method,
         batch_suffix: &str,
         committed_at_ms: u64,
-        crashpoint: Option<crate::redb_store::store_mutation::MutationBatchCrashpoint>,
+        crashpoint: Option<medulla_store_apply::redb_store::store_mutation::MutationBatchCrashpoint>,
     ) -> Result<MutationBatchCommit, String> {
         // Graph-scoped: this batch is committed via `commit_mutation_batch_inner`
         // below, which every path in this module routes by `graph_fname` and
@@ -352,7 +352,7 @@ impl NativeLaneFixture {
         &self,
         batch_suffix: &str,
         committed_at_ms: u64,
-        crashpoint: Option<crate::redb_store::store_mutation::MutationBatchCrashpoint>,
+        crashpoint: Option<medulla_store_apply::redb_store::store_mutation::MutationBatchCrashpoint>,
     ) -> Result<MutationBatchCommit, String> {
         self.commit_work_item_with_crash(
             Method::CancelWorkItem {

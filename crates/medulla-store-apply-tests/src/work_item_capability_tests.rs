@@ -68,7 +68,7 @@ fn try_commit_method(shard: &Shard, method: Method) -> Result<(), String> {
     let mut raft_log_ops = Vec::new();
     #[cfg(feature = "security")]
     let mut audit_tail = medulla_store::redb_store::AuditTailCache::new();
-    crate::redb_store::store_control::commit_ops(
+    medulla_store_apply::redb_store::store_control::commit_ops(
         shard,
         &mut ops,
         &mut raft_log_ops,
@@ -113,9 +113,9 @@ fn sealed_work_item_batch(
 fn commit_work_item_batch(shard: &Shard, batch: &MutationBatch, now_ms: u64) -> bool {
     #[cfg(feature = "security")]
     let mut audit_tail = medulla_store::redb_store::AuditTailCache::new();
-    crate::redb_store::store_mutation::commit_mutation_batch_inner(
+    medulla_store_apply::redb_store::store_mutation::commit_mutation_batch_inner(
         shard,
-        crate::redb_store::store_mutation::BatchCommitInput::compact("graph-a", batch, None, now_ms),
+        medulla_store_apply::redb_store::store_mutation::BatchCommitInput::compact("graph-a", batch, None, now_ms),
         DurableCrypto::none(),
         #[cfg(feature = "security")]
         &mut audit_tail,
@@ -485,11 +485,11 @@ fn checkpoint_replacement_purges_private_capability_state_and_requires_new_claim
     // A checkpoint is an untrusted public graph image.  Convert the
     // leased image to a fresh ready submission before restoring it; the
     // restore path must never preserve an old lease or its private rows.
-    let dump = crate::redb_store::dump::read_graph_dump(&shard, "graph-a", DurableCrypto::none())
+    let dump = medulla_store_apply::redb_store::dump::read_graph_dump(&shard, "graph-a", DurableCrypto::none())
         .expect("read graph checkpoint")
         .expect("graph checkpoint identity");
-    let invalid = crate::redb_store::store_control::GraphDump::in_place_core_checkpoint(
-        crate::redb_store::store_control::InPlaceCoreCheckpoint {
+    let invalid = medulla_store_apply::redb_store::store_control::GraphDump::in_place_core_checkpoint(
+        medulla_store_apply::redb_store::store_control::InPlaceCoreCheckpoint {
             graph: dump.graph.clone(),
             name: dump.name.clone(),
             graph_type: dump.graph_type,
@@ -502,7 +502,7 @@ fn checkpoint_replacement_purges_private_capability_state_and_requires_new_claim
             semantic: dump.semantic.clone(),
         },
     );
-    let error = crate::redb_store::checkpoint::apply_checkpoint(
+    let error = medulla_store_apply::redb_store::checkpoint::apply_checkpoint(
         &shard,
         &mut Vec::new(),
         vec![invalid],
@@ -545,8 +545,8 @@ fn checkpoint_replacement_purges_private_capability_state_and_requires_new_claim
         })
         .collect();
     let restored_incarnation = "incarnation:checkpoint-replacement";
-    let restored = crate::redb_store::store_control::GraphDump::in_place_core_checkpoint(
-        crate::redb_store::store_control::InPlaceCoreCheckpoint {
+    let restored = medulla_store_apply::redb_store::store_control::GraphDump::in_place_core_checkpoint(
+        medulla_store_apply::redb_store::store_control::InPlaceCoreCheckpoint {
             graph: dump.graph,
             name: dump.name,
             graph_type: dump.graph_type,
@@ -559,7 +559,7 @@ fn checkpoint_replacement_purges_private_capability_state_and_requires_new_claim
             semantic: dump.semantic,
         },
     );
-    crate::redb_store::checkpoint::apply_checkpoint(
+    medulla_store_apply::redb_store::checkpoint::apply_checkpoint(
         &shard,
         &mut Vec::new(),
         vec![restored],
@@ -624,10 +624,10 @@ fn crossmodal_clear_and_delete_purge_private_capability_state_atomically() {
     let error = {
         #[cfg(feature = "security")]
         let mut audit_tail = medulla_store::redb_store::AuditTailCache::new();
-        crate::redb_store::crossmodal::commit_crossmodal(
+        medulla_store_apply::redb_store::crossmodal::commit_crossmodal(
             &shard,
             "graph-a",
-            crate::redb_store::crossmodal::CrossModalStaged {
+            medulla_store_apply::redb_store::crossmodal::CrossModalStaged {
                 blob_refs: &blob_refs,
                 ..Default::default()
             },
@@ -650,10 +650,10 @@ fn crossmodal_clear_and_delete_purge_private_capability_state_atomically() {
     assert!(!props.contains_key("__blob__"));
     #[cfg(feature = "security")]
     let mut audit_tail = medulla_store::redb_store::AuditTailCache::new();
-    crate::redb_store::crossmodal::commit_crossmodal(
+    medulla_store_apply::redb_store::crossmodal::commit_crossmodal(
         &shard,
         "graph-a",
-        crate::redb_store::crossmodal::CrossModalStaged {
+        medulla_store_apply::redb_store::crossmodal::CrossModalStaged {
             methods: &[Method::ClearGraph],
             ..Default::default()
         },
@@ -692,10 +692,10 @@ fn crossmodal_clear_and_delete_purge_private_capability_state_atomically() {
     );
     #[cfg(feature = "security")]
     let mut delete_audit_tail = medulla_store::redb_store::AuditTailCache::new();
-    crate::redb_store::crossmodal::commit_crossmodal(
+    medulla_store_apply::redb_store::crossmodal::commit_crossmodal(
         &shard,
         "graph-a",
-        crate::redb_store::crossmodal::CrossModalStaged {
+        medulla_store_apply::redb_store::crossmodal::CrossModalStaged {
             methods: &[Method::DeleteGraph {
                 graph_name: "graph-a".to_string(),
             }],

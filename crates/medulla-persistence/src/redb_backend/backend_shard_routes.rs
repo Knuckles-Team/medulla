@@ -9,7 +9,7 @@ impl RedbBackend {
     /// no catalog, or a graph the catalog has no entry for — this is the unchanged
     /// MEDULLA-026 `FNV-1a(graph_fname) % K`. `resolve_shard` folds both cases + clamps to
     /// the live shard count, so the override can never index out of range.
-    pub(super) fn shard_for(&self, graph_fname: &str) -> &ShardWriter {
+    pub fn shard_for(&self, graph_fname: &str) -> &ShardWriter {
         let idx = match &self.catalog {
             Some(cat) => cat.resolve_shard(graph_fname, self.shards.len()),
             None => shard_index(graph_fname, self.shards.len()),

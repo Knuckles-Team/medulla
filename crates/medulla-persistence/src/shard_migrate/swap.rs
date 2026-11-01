@@ -4,7 +4,7 @@ use super::readiness::{file_sha256, ReadyMigration, ReadyTarget};
 use super::MigrationFault;
 use std::path::Path;
 
-pub(super) fn swap_ready_shards(
+pub fn swap_ready_shards(
     base: &Path,
     tmp: &Path,
     ready: &ReadyMigration,

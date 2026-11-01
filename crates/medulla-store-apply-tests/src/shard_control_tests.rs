@@ -8,8 +8,8 @@ use super::control::{
 #[cfg(feature = "compute-dist")]
 use super::control::{put_matview, scan_matviews};
 use medulla_store::{redb_store::reject_reserved_graph, redb_store::sanitize, redb_store::write_graph_meta_with_incarnation, redb_store::DurableCrypto, redb_store::store_prelude::SHARD_CONTROL_GRAPH};
-use crate::redb_store::store_control::commit_ops;
-use crate::redb_store::store_cleanup::purge_graph_rows;
+use medulla_store_apply::redb_store::store_control::commit_ops;
+use medulla_store_apply::redb_store::store_cleanup::purge_graph_rows;
 use medulla_store::redb_store::shard::Shard;
 use medulla_store::redb_store::shard::ShardWrite;
 use medulla_protocol_types::protocol::GraphType;

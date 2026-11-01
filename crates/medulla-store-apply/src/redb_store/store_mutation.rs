@@ -89,7 +89,7 @@ pub fn commit_mutation_batch_state(
 }
 
 pub mod change_envelope;
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub use change_envelope::{commit_change_envelope, ChangeEnvelopesError};
 pub use change_envelope::{commit_change_envelope_with_budget, commit_change_envelopes};
 
@@ -149,27 +149,27 @@ pub fn commit_mutation_batch_crossmodal(
 }
 
 /// Common owner-row inputs for both the commit and row-staging phases.
-pub(crate) struct BatchRowInput<'a> {
-    pub(crate) graph_fname: &'a str,
-    pub(crate) batch: &'a MutationBatch,
-    pub(crate) change: Option<&'a ChangeEnvelope>,
-    pub(crate) source_budget:
+pub struct BatchRowInput<'a> {
+    pub graph_fname: &'a str,
+    pub batch: &'a MutationBatch,
+    pub change: Option<&'a ChangeEnvelope>,
+    pub source_budget:
         Option<&'a medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,
-    pub(crate) authoritative_state_msgpack: Option<&'a [u8]>,
-    pub(crate) committed_at_ms: u64,
+    pub authoritative_state_msgpack: Option<&'a [u8]>,
+    pub committed_at_ms: u64,
     /// Whether THIS commit appends tamper-evident audit-chain entries. Only
     /// consulted on the authoritative-state branches; see the note below on why
     /// it cannot be re-derived from `batch.operations`.
-    pub(crate) audited: bool,
-    pub(crate) crashpoint: Option<MutationBatchCrashpoint>,
+    pub audited: bool,
+    pub crashpoint: Option<MutationBatchCrashpoint>,
 }
 
 /// The inputs every batch-commit entry point shares, bundled so the phases
 /// below stay inside the argument cap without positional strings.
 pub struct BatchCommitInput<'a> {
-    pub(crate) rows: BatchRowInput<'a>,
-    pub(crate) crossmodal: Option<CrossModalBatchRows<'a>>,
-    pub(crate) result_msgpack: Option<&'a [u8]>,
+    pub rows: BatchRowInput<'a>,
+    pub crossmodal: Option<CrossModalBatchRows<'a>>,
+    pub result_msgpack: Option<&'a [u8]>,
 }
 
 impl<'a> BatchCommitInput<'a> {

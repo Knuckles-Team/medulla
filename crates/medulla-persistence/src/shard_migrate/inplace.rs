@@ -50,8 +50,8 @@ pub fn migrate_in_place(persist_dir: &str, new_k: usize) -> Result<MigrationRepo
     migrate_in_place_inner(persist_dir, new_k, None)
 }
 
-#[cfg(test)]
-pub(super) fn migrate_in_place_after_graph_for_test(
+#[cfg(any(test, feature = "test-support"))]
+pub fn migrate_in_place_after_graph_for_test(
     persist_dir: &str,
     new_k: usize,
     after_graphs: usize,
@@ -63,16 +63,16 @@ pub(super) fn migrate_in_place_after_graph_for_test(
     )
 }
 
-#[cfg(test)]
-pub(super) fn migrate_in_place_before_swap_for_test(
+#[cfg(any(test, feature = "test-support"))]
+pub fn migrate_in_place_before_swap_for_test(
     persist_dir: &str,
     new_k: usize,
 ) -> Result<MigrationReport, String> {
     migrate_in_place_inner(persist_dir, new_k, Some(MigrationFault::BeforeSwap))
 }
 
-#[cfg(test)]
-pub(super) fn migrate_in_place_after_old_move_for_test(
+#[cfg(any(test, feature = "test-support"))]
+pub fn migrate_in_place_after_old_move_for_test(
     persist_dir: &str,
     new_k: usize,
     after_files: usize,
@@ -84,8 +84,8 @@ pub(super) fn migrate_in_place_after_old_move_for_test(
     )
 }
 
-#[cfg(test)]
-pub(super) fn migrate_in_place_after_install_for_test(
+#[cfg(any(test, feature = "test-support"))]
+pub fn migrate_in_place_after_install_for_test(
     persist_dir: &str,
     new_k: usize,
     after_files: usize,

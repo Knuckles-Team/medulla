@@ -1,0 +1,54 @@
+[package]
+name = "medulla-store-apply-tests"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Store apply tests: whole-batch mutation, reservation, development-lane, capability, control, audit and security tests over the store apply composition."
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_store_apply_tests"
+path = "src/lib.rs"
+
+[dependencies]
+medulla-store-apply = { path = "../medulla-store-apply", features = ["test-support"] }
+medulla-store = { path = "../medulla-store", features = ["redb"] }
+medulla-result-types = { path = "../medulla-result-types" }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
+hex = "0.4"
+medulla-kernel = { path = "../medulla-kernel" }
+medulla-storage = { path = "../medulla-storage" }
+medulla-transaction = { path = "../medulla-transaction" }
+medulla-tsdb = { path = "../medulla-tsdb", optional = true }
+medulla-types = { path = "../medulla-types" }
+redb = { workspace = true }
+rand = "0.8"
+rmp-serde = "1.3"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+sha2 = "0.10"
+tracing = "0.1"
+medulla-semantic-index = { path = "../medulla-semantic-index" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-work-types = { path = "../medulla-work-types" }
+medulla-resource-store = { path = "../medulla-resource-store" }
+medulla-work-store = { path = "../medulla-work-store" }
+medulla-lane-store = { path = "../medulla-lane-store" }
+
+medulla-statechart = { path = "../medulla-statechart", optional = true }
+
+[features]
+compute-dist = ["raft", "medulla-store-apply/compute-dist"]
+matview = ["medulla-store-apply/matview"]
+metrics = ["medulla-store-apply/metrics"]
+raft = ["medulla-store-apply/raft"]
+security = ["medulla-store-apply/security"]
+statechart = ["dep:medulla-statechart", "medulla-store-apply/statechart"]
+tsdb = ["dep:medulla-tsdb", "medulla-store-apply/tsdb"]
+
+[dev-dependencies]
+tempfile = "3"
+medulla-resource-store = { path = "../medulla-resource-store", features = ["test-support"] }
+medulla-work-store = { path = "../medulla-work-store", features = ["test-support"] }

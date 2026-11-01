@@ -1,13 +1,61 @@
 //! Shared real-owner fixtures for migration layout, recovery and payload proofs.
 
-use super::*;
+#[allow(unused_imports)]
+use medulla_persistence::redb_backend::{shard_index, RAFT_META};
+#[cfg(feature = "security")]
+#[allow(unused_imports)]
+use medulla_persistence::redb_backend::{ENCRYPTION_CANARY, ENCRYPTION_KEY_BINDING_KEY};
+#[allow(unused_imports)]
+use medulla_store::redb_layout::discover_indexed_shards;
+#[allow(unused_imports)]
+use medulla_store::redb_layout::retired_single_shard;
+#[allow(unused_imports)]
+use medulla_store::redb_layout::shard_filename;
+#[allow(unused_imports)]
+use medulla_store::redb_layout::validate_shard_count;
+#[allow(unused_imports)]
+use medulla_store::redb_store::shard::Shard;
+#[allow(unused_imports)]
+use medulla_store::redb_store::shard::ShardWrite;
+#[cfg(feature = "compute-dist")]
+#[allow(unused_imports)]
+use medulla_store::redb_store::MATVIEWS;
+#[allow(unused_imports)]
+use medulla_store::redb_store::GRAPH_META;
+#[allow(unused_imports)]
+use medulla_store::redb_store::RAFT_LOG;
+#[allow(unused_imports)]
+use medulla_store::redb_store::XSHARD_DECISION;
+#[allow(unused_imports)]
+use medulla_store::redb_store::XSHARD_PREPARE;
+#[cfg(feature = "matview")]
+#[allow(unused_imports)]
+use medulla_store::redb_store::MATVIEW_OPERATOR_STATE;
+#[allow(unused_imports)]
+use medulla_store::redb_store::PLAN_MATVIEWS;
+#[allow(unused_imports)]
+use medulla_storage::{GraphShardOwner, ScopedRead};
+#[allow(unused_imports)]
+use medulla_transaction::OwnerPayloadWrite;
+#[allow(unused_imports)]
+use redb::{ReadableTable, TableDefinition};
+#[allow(unused_imports)]
+use std::collections::HashSet;
+#[allow(unused_imports)]
+use std::path::{Path, PathBuf};
+#[allow(unused_imports)]
+use medulla_persistence::shard_migrate::inplace::migrate_in_place;
+#[allow(unused_imports)]
+use medulla_persistence::shard_migrate::payload::GraphShardPayloadTransfer;
+#[allow(unused_imports)]
+use medulla_persistence::shard_migrate::*;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 use medulla_store::redb_store::CHANGE_CURSORS;
 use medulla_store::redb_store::CHANGE_ENVELOPES;
 use medulla_store::redb_store::CONTENT_VERSIONS;
 use medulla_server_api::api::persistence::PersistenceBackend;
-use crate::redb_backend::RedbBackend;
+use medulla_persistence::redb_backend::RedbBackend;
 use medulla_storage::{OwnerRowScope, OwnerRowScopeStart};
 
 pub(crate) fn props(v: serde_json::Value) -> Vec<u8> {

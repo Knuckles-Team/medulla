@@ -19,7 +19,7 @@ use medulla_store::redb_store::XshardPrepareScan;
 /// graph's full multi-modal write-set — graph methods (incl. lowered OWL-axiom /
 /// SPARQL-CONSTRUCT triples), vector upserts, blob-refs, and time-series measurement
 /// batches — all of which land in ONE `WriteTransaction`.
-pub(crate) struct CrossModalPayload {
+pub struct CrossModalPayload {
     pub(crate) graph: String,
     pub(crate) methods: Vec<Method>,
     pub(crate) vectors: Vec<(String, Vec<f32>)>,
@@ -30,7 +30,7 @@ pub(crate) struct CrossModalPayload {
 /// Boxed payload for one authoritative MutationBatch writer command.  Keeping
 /// the complete batch together is what prevents queue pressure from splitting a
 /// logical Commit into independently acknowledged records.
-pub(crate) struct MutationBatchPayload {
+pub struct MutationBatchPayload {
     pub(crate) graph: String,
     pub(crate) batch: MutationBatch,
     pub(crate) authoritative_state_msgpack: Option<Vec<u8>>,
@@ -48,7 +48,7 @@ pub(crate) struct MutationBatchPayload {
 /// One writer command for a cross-modal universal batch. It carries the coordinator
 /// record and result so modality rows and status/fence/idempotency/outbox share the
 /// exact same fsync point.
-pub(crate) struct CrossModalBatchPayload {
+pub struct CrossModalBatchPayload {
     pub(crate) graph: String,
     pub(crate) batch: MutationBatch,
     pub(crate) methods: Vec<Method>,
@@ -59,7 +59,7 @@ pub(crate) struct CrossModalBatchPayload {
     pub(crate) committed_at_ms: u64,
 }
 
-pub(crate) struct ChangeEnvelopePayload {
+pub struct ChangeEnvelopePayload {
     pub(crate) graph: String,
     pub(crate) envelope: ChangeEnvelope,
     pub(crate) committed_at_ms: u64,
@@ -69,7 +69,7 @@ pub(crate) struct ChangeEnvelopePayload {
 
 /// Payload of a [`Cmd::ChangeEnvelopesCommit`] — a batch of governed envelopes that
 /// all target `graph`, committed in ONE shard transaction.
-pub(crate) struct ChangeEnvelopesPayload {
+pub struct ChangeEnvelopesPayload {
     pub(crate) graph: String,
     pub(crate) envelopes: Vec<ChangeEnvelope>,
     pub(crate) committed_at_ms: u64,
@@ -85,7 +85,7 @@ pub(super) const SHARD_WRITER_JOIN_TIMEOUT: std::time::Duration =
 /// [`Cmd::ReadGraphDumpPage`] field except the routing `graph` name and the
 /// reply channel. Boxed inside the command so an unsent `Cmd` (returned whole
 /// inside a channel `SendError`) stays small.
-pub(crate) struct PageQuery {
+pub struct PageQuery {
     pub(crate) node_offset: usize,
     pub(crate) edge_offset: usize,
     pub(crate) node_after: Option<String>,
@@ -96,7 +96,7 @@ pub(crate) struct PageQuery {
 /// One write command handed to the off-reactor thread. A `Mutation` carries the
 /// graph file-name + the applied method; the thread translates it into row writes
 /// inside the current group-commit transaction.
-pub(crate) enum Cmd {
+pub enum Cmd {
     Mutation {
         graph: String,
         method: Box<Method>,
@@ -191,7 +191,7 @@ pub(crate) enum Cmd {
         >,
     },
     /// TEST-ONLY tamper of one audit entry (see `test_tamper_audit_entry`).
-    #[cfg(all(test, feature = "security"))]
+    #[cfg(all(any(test, feature = "test-support"), feature = "security"))]
     TestTamperAudit {
         graph: String,
         seq: u64,
