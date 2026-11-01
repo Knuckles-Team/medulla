@@ -525,7 +525,7 @@ const CLASSIFICATION_GOLDEN: &[(&str, &str)] = &[
 /// in an arm contributes that family's own variants, read from `families.rs`, in
 /// declaration order.
 fn classification_map_from_source() -> Vec<(String, String)> {
-    let source = include_str!("../batch_compile/canonical.rs");
+    let source = include_str!("../../../medulla-server-api/src/batch_compile/canonical.rs");
     let mut map: Vec<(String, String)> = Vec::new();
     // `graph_domain` (a bare `match surface { .. }` with no `Method::` arms) is
     // GONE: every variant is named explicitly now, so the default it used to
