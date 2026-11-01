@@ -17,7 +17,7 @@ use super::{
     IndicatorSpec, IndicatorValue, SeriesIdentity, SignalReplayRequest, Timeframe, TradingCalendar,
 };
 
-const GOLDEN: &str = include_str!("../../../tests/fixtures/finance_market/golden.json");
+const GOLDEN: &str = include_str!("../../tests/fixtures/finance_market/golden.json");
 /// Monday 2019-01-07 as days since the epoch.
 const START_DAY: i64 = 17_903;
 

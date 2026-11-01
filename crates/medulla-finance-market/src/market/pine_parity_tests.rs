@@ -17,7 +17,7 @@ use super::calendar::NS_PER_DAY;
 use super::indicators::compute;
 use super::{BarRecord, BarStatus, IndicatorKind, IndicatorSpec, IndicatorValue};
 
-const PINE: &str = include_str!("../../../tests/fixtures/finance_market/pine_parity.json");
+const PINE: &str = include_str!("../../tests/fixtures/finance_market/pine_parity.json");
 const MILLI: f64 = 1_000.0;
 
 fn fixture() -> Value {
