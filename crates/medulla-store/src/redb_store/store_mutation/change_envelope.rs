@@ -79,7 +79,7 @@ fn change_envelope_outbox_count(envelope: &ChangeEnvelope) -> Result<u32, String
 /// group — no envelope in it commits — and the caller reports the batch outcome per
 /// envelope honestly.
 #[derive(Debug, Clone)]
-pub(crate) struct ChangeEnvelopesError {
+pub struct ChangeEnvelopesError {
     pub index: usize,
     pub error: String,
 }

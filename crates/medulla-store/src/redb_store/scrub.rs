@@ -49,7 +49,7 @@ pub struct ScrubCursor {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ScrubBudget {
     /// Node payloads one pass may open.
-    pub(crate) rows: usize,
+    pub rows: usize,
 }
 
 /// What one pass did.
@@ -172,10 +172,7 @@ pub fn load_scrub_cursor(shard: &Shard) -> Result<ScrubCursor, String> {
 /// Write the cursor inside the caller's control write. The writer thread
 /// commits it as one control-only maintenance group, so it is durable at the
 /// same `Durability::Immediate` as every other row.
-pub fn put_scrub_cursor_in(
-    write: &ShardWrite<'_>,
-    cursor: &ScrubCursor,
-) -> Result<(), String> {
+pub fn put_scrub_cursor_in(write: &ShardWrite<'_>, cursor: &ScrubCursor) -> Result<(), String> {
     let encoded = rmp_serde::to_vec_named(cursor).map_err(|error| error.to_string())?;
     let mut table = write.control().open_table(STORAGE_SCRUB_CURSOR)?;
     table

@@ -32,7 +32,7 @@ fn stored_row(
 /// Open `graph`'s node table on an MVCC snapshot and read one decoded row of
 /// it. The table is returned so a caller can follow a reference the row holds
 /// within the SAME snapshot.
-pub(super) fn snapshot_row(
+pub fn snapshot_row(
     shard: &Shard,
     graph: &str,
     node_id: &str,

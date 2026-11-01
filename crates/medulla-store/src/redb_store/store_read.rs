@@ -62,7 +62,7 @@ pub(crate) fn property_string<'a>(
 /// `medulla_types::work_item_read::WORK_ITEM_ROW_REVISION` one past the revision it
 /// was read at (1 for a new row). `GetWorkItem`/`ListWorkItems` project it as
 /// the caller-visible `version`.
-pub(crate) fn write_work_item_props(
+pub fn write_work_item_props(
     nodes: &mut ScopedOwnerTableMut<'_, (&str, &str), &[u8]>,
     graph: &str,
     node_id: &str,

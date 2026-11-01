@@ -60,7 +60,7 @@ pub struct NodeUnreadable {
 }
 
 impl NodeUnreadable {
-    pub(crate) fn new(graph: &str, key: &str, cause: UnsealFailure) -> Self {
+    pub fn new(graph: &str, key: &str, cause: UnsealFailure) -> Self {
         Self {
             graph: graph.to_string(),
             key: key.to_string(),

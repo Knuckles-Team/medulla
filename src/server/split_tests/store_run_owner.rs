@@ -1,7 +1,11 @@
-use medulla_store::redb_store::work_item::test_shard::run_request as request;
-use medulla_store::redb_store::work_item::test_shard::{apply, open, with_nodes, with_write, GRAPH};
 use medulla_store::redb_store::work_item::run_owner::*;
+use medulla_store::redb_store::work_item::test_shard::run_request as request;
+use medulla_store::redb_store::work_item::test_shard::{
+    apply, open, with_nodes, with_write, GRAPH,
+};
+use medulla_store::redb_store::{decode_durable, write_work_item_props, DurableCrypto, Shard};
 use medulla_types::native_control::SubmitWorkItemRequest;
+use medulla_types::protocol::Method;
 
 type Row = serde_json::Map<String, serde_json::Value>;
 
@@ -11,8 +15,10 @@ fn admit(shard: &Shard) -> String {
 
 fn admit_request(shard: &Shard, request: &SubmitWorkItemRequest) -> String {
     with_write(shard, "admit", 1000, |admitted| {
-        medulla_store::redb_store::work_item::test_shard::submit_run_rows(admitted, request, "owner")
-            .map(|result| result.work_item_id)
+        medulla_store::redb_store::work_item::test_shard::submit_run_rows(
+            admitted, request, "owner",
+        )
+        .map(|result| result.work_item_id)
     })
     .unwrap()
 }
@@ -194,8 +200,13 @@ async fn run_admission_unavailable_is_a_declared_wire_refusal() {
 fn ordinary_completion_requires_original_run_owner() {
     let temp = open("completion-owner");
     let id = admit(&temp.shard);
-    let (_, row) =
-        super::super::read::snapshot_row(&temp.shard, GRAPH, &id, DurableCrypto::none()).unwrap();
+    let (_, row) = medulla_store::redb_store::work_item::read::snapshot_row(
+        &temp.shard,
+        GRAPH,
+        &id,
+        DurableCrypto::none(),
+    )
+    .unwrap();
     let row = row.unwrap();
     assert!(validate_completion_owner(&row, GRAPH, "tenant", "run", &id).is_ok());
     for (graph, tenant, run, item) in [
@@ -358,10 +369,15 @@ fn ordinary_completion_native_fence_and_terminal_noop_preserve_binding() {
     };
 
     let row = |shard: &Shard| {
-        super::super::read::snapshot_row(shard, GRAPH, &id, DurableCrypto::none())
-            .unwrap()
-            .1
-            .unwrap()
+        medulla_store::redb_store::work_item::read::snapshot_row(
+            shard,
+            GRAPH,
+            &id,
+            DurableCrypto::none(),
+        )
+        .unwrap()
+        .1
+        .unwrap()
     };
     let before = row(&shard);
     for tag in ["wrong-worker", "wrong-epoch", "expired"] {
@@ -519,10 +535,15 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
             .collect::<Vec<_>>()
     };
     let row = |shard: &Shard, id: &str| {
-        super::super::read::snapshot_row(shard, GRAPH, id, DurableCrypto::none())
-            .unwrap()
-            .1
-            .unwrap()
+        medulla_store::redb_store::work_item::read::snapshot_row(
+            shard,
+            GRAPH,
+            id,
+            DurableCrypto::none(),
+        )
+        .unwrap()
+        .1
+        .unwrap()
     };
     for (tag, outcome, usage) in [
         (
@@ -746,7 +767,14 @@ fn session_summary(
     actor: &str,
     context: &str,
 ) -> Result<medulla_types::run_usage::SessionUsage, String> {
-    super::super::read_session_usage(shard, GRAPH, tenant, context, actor, DurableCrypto::none())
+    medulla_store::redb_store::work_item::read_session_usage(
+        shard,
+        GRAPH,
+        tenant,
+        context,
+        actor,
+        DurableCrypto::none(),
+    )
 }
 
 fn assert_session_measurements(

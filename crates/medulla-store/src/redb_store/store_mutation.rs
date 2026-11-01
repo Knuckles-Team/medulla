@@ -52,12 +52,12 @@ pub fn commit_mutation_batch(
 /// coordinator-record inputs, bundled so the function stays under the clippy
 /// argument-count ceiling.
 pub struct StateCommitInput<'a> {
-    pub(crate) graph_fname: &'a str,
-    pub(crate) batch: &'a MutationBatch,
-    pub(crate) authoritative_state_msgpack: &'a [u8],
-    pub(crate) result_msgpack: Option<&'a [u8]>,
-    pub(crate) committed_at_ms: u64,
-    pub(crate) audited: bool,
+    pub graph_fname: &'a str,
+    pub batch: &'a MutationBatch,
+    pub authoritative_state_msgpack: &'a [u8],
+    pub result_msgpack: Option<&'a [u8]>,
+    pub committed_at_ms: u64,
+    pub audited: bool,
 }
 
 pub fn commit_mutation_batch_state(
@@ -90,7 +90,7 @@ pub fn commit_mutation_batch_state(
 
 mod change_envelope;
 #[cfg(test)]
-pub(crate) use change_envelope::{commit_change_envelope, ChangeEnvelopesError};
+pub use change_envelope::{commit_change_envelope, ChangeEnvelopesError};
 pub use change_envelope::{commit_change_envelope_with_budget, commit_change_envelopes};
 
 /// Non-graph rows that participate in an authoritative cross-modal
@@ -98,10 +98,10 @@ pub use change_envelope::{commit_change_envelope_with_budget, commit_change_enve
 /// projections, time-series batches, result and outbox are written by the same redb
 /// transaction; this borrowed carrier is never serialized as a second authority.
 pub struct CrossModalBatchRows<'a> {
-    pub(crate) methods: &'a [Method],
-    pub(crate) vectors: &'a [VectorUpsert],
-    pub(crate) blob_refs: &'a [BlobRefRow],
-    pub(crate) measurements: &'a [crate::MeasurementBatch],
+    pub methods: &'a [Method],
+    pub vectors: &'a [VectorUpsert],
+    pub blob_refs: &'a [BlobRefRow],
+    pub measurements: &'a [crate::MeasurementBatch],
 }
 
 /// Authenticated graph material supplied by a complex MutationBatch. Callers may
@@ -115,11 +115,11 @@ pub(crate) enum AuthoritativeGraphState {
 /// and coordinator-record inputs, bundled alongside the row material so the
 /// function itself stays under the clippy argument-count ceiling.
 pub struct CrossModalCommitInput<'a> {
-    pub(crate) graph_fname: &'a str,
-    pub(crate) batch: &'a MutationBatch,
-    pub(crate) rows: CrossModalBatchRows<'a>,
-    pub(crate) result_msgpack: Option<&'a [u8]>,
-    pub(crate) committed_at_ms: u64,
+    pub graph_fname: &'a str,
+    pub batch: &'a MutationBatch,
+    pub rows: CrossModalBatchRows<'a>,
+    pub result_msgpack: Option<&'a [u8]>,
+    pub committed_at_ms: u64,
 }
 
 /// Commit a canonical cross-modal batch through the universal status/fence/
@@ -175,7 +175,7 @@ pub struct BatchCommitInput<'a> {
 impl<'a> BatchCommitInput<'a> {
     /// Default fields for a batch without out-of-line authoritative state.
     /// Cross-modal callers replace the row effect; the audit bit is inert.
-    pub(crate) fn compact(
+    pub fn compact(
         graph_fname: &'a str,
         batch: &'a MutationBatch,
         result_msgpack: Option<&'a [u8]>,

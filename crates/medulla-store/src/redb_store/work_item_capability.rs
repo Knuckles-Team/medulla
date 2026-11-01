@@ -9,14 +9,14 @@
 //! live lease.
 
 use super::{decode_durable, property_string, DurableCrypto, NODES};
+use medulla_storage::{GraphShardOwner, PhysicalWriteCapability, ScopedOwnerTableMut};
+use medulla_transaction::{AdmittedOwnerWrite, OwnerPayloadWrite};
 use medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityDecision;
 use medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest;
 use medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityRequestSchemaVersion;
 use medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityResult;
 use medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityResultSchemaVersion;
 use medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest;
-use medulla_storage::{GraphShardOwner, PhysicalWriteCapability, ScopedOwnerTableMut};
-use medulla_transaction::{AdmittedOwnerWrite, OwnerPayloadWrite};
 use rand::RngCore;
 use redb::TableDefinition;
 use serde::{Deserialize, Serialize};
@@ -114,14 +114,14 @@ const MAX_NATIVE_WORK_ITEM_ROWS: usize = 65_536;
 /// Python/public callers cannot manufacture authority from an owner/lease tuple.
 #[derive(Clone, Debug)]
 pub struct AuthenticatedAuthority {
-    pub(crate) tenant: String,
-    pub(crate) audience: String,
-    pub(crate) principal: String,
-    pub(crate) agent_id: String,
-    pub(crate) session: String,
-    pub(crate) authority_epoch: u64,
-    pub(crate) incarnation_id: String,
-    pub(crate) now_ms: u64,
+    pub tenant: String,
+    pub audience: String,
+    pub principal: String,
+    pub agent_id: String,
+    pub session: String,
+    pub authority_epoch: u64,
+    pub incarnation_id: String,
+    pub now_ms: u64,
 }
 
 #[derive(Clone, Debug)]
@@ -1093,13 +1093,13 @@ fn verification_refusal_result() -> WorkItemClaimCapabilityResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::redb_store::shard::Shard;
     use medulla_types::mutation_batch::IncarnationId;
     use medulla_types::mutation_batch::LogicalName;
     use medulla_types::mutation_batch::MutationBatch;
     use medulla_types::mutation_batch::MutationScopeIdentity;
     use medulla_types::mutation_batch::ScopeTenantId;
     use medulla_types::protocol::Method;
-    use crate::redb_store::shard::Shard;
     use std::path::{Path, PathBuf};
 
     /// One process-unique admission id per ATTEMPT, exactly as the production

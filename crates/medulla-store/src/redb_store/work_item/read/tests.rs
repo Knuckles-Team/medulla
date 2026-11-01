@@ -7,7 +7,11 @@ use medulla_types::work_item_read::WorkItemStatus;
 
 use super::super::test_shard::{open, with_nodes, GRAPH};
 
-pub fn work_item(tenant: &str, kind: &str, status: &str) -> serde_json::Map<String, serde_json::Value> {
+pub fn work_item(
+    tenant: &str,
+    kind: &str,
+    status: &str,
+) -> serde_json::Map<String, serde_json::Value> {
     serde_json::json!({
         "status": status,
         "kind": kind,

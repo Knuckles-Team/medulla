@@ -42,11 +42,11 @@ const MAX_ELIGIBLE_UNITS: u32 = 4096;
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SourceBudgetAuthority {
-    pub(crate) tenant_id: String,
+    pub tenant_id: String,
     pub source_envelope: String,
-    pub(crate) snapshot_digest: String,
-    pub(crate) repository_id: String,
-    pub(crate) policy_digest: String,
+    pub snapshot_digest: String,
+    pub repository_id: String,
+    pub policy_digest: String,
     pub total_budget_units: u64,
     /// Source-committed ceiling. Zero on legacy rows denies reactivation.
     #[serde(default)]

@@ -2,7 +2,7 @@
 
 use super::*;
 
-pub(super) use medulla_types::work_item_read::RUN_ADMISSION_REQUEST as ADMISSION_REQUEST;
+pub use medulla_types::work_item_read::RUN_ADMISSION_REQUEST as ADMISSION_REQUEST;
 
 pub(super) fn work_item_id(graph: &str, tenant: &str, run_id: &str) -> Result<String, String> {
     use sha2::{Digest, Sha256};
@@ -117,9 +117,8 @@ pub fn read_admission(
     }))
 }
 
-
 /// A completion may only bind the original native admitted run.
-pub(super) fn validate_completion_owner(
+pub fn validate_completion_owner(
     row: &serde_json::Map<String, serde_json::Value>,
     graph: &str,
     tenant: &str,
@@ -151,7 +150,7 @@ pub(super) fn validate_completion_owner(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn project_completion(
+pub fn project_completion(
     scope: &medulla_types::MutationScopeIdentity,
     tenant: &str,
     run: &str,

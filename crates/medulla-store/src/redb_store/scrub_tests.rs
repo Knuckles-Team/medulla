@@ -2,11 +2,11 @@
 //! and named, a bounded walk skips nothing, and the cursor resumes.
 
 use super::*;
-use medulla_types::protocol::Method;
 use crate::redb_store::commit_ops;
 use crate::redb_store::read_one_node;
 use crate::redb_store::temp_path;
 use crate::redb_store::UnsealFailure;
+use medulla_types::protocol::Method;
 
 pub const GRAPH: &str = "scrub_graph";
 const NODE_IDS: [&str; 5] = ["n0", "n1", "n2", "n3", "n4"];

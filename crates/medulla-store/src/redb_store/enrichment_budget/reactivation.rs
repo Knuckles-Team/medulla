@@ -31,12 +31,12 @@ pub struct RepositoryEnrichmentPolicyRevision {
     #[serde(default)]
     pub max_total_units: u64,
     pub sequence: u64,
-    pub(crate) prior_source_envelope: Option<String>,
-    pub(crate) prior_snapshot_digest: Option<String>,
-    pub(crate) prior_policy_digest: Option<String>,
+    pub prior_source_envelope: Option<String>,
+    pub prior_snapshot_digest: Option<String>,
+    pub prior_policy_digest: Option<String>,
     pub caller_subject: Option<String>,
-    pub(crate) verified_action: Option<String>,
-    pub(crate) idempotency_key: Option<String>,
+    pub verified_action: Option<String>,
+    pub idempotency_key: Option<String>,
 }
 
 /// Read the committed source policy. Caller-supplied proposal bytes never
