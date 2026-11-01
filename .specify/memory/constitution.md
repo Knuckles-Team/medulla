@@ -1,8 +1,8 @@
 # Medulla constitution
 
-This repository inherits the [organization constitution](https://github.com/Knuckles-Team/pipelines/blob/main/.specify/memory/constitution.md) version 1.2.0. Every article of that constitution applies here. This file adds only the rules and limits of this repository.
+This repository inherits the [organization constitution](https://github.com/Knuckles-Team/pipelines/blob/main/.specify/memory/constitution.md) version 1.3.0. Every article of that constitution applies here. This file adds only the rules and limits of this repository.
 
-**Inherits**: organization constitution v1.2.0 | **Version**: 1.1.0 | **Ratified**: 2026-10-31 | **Last amended**: 2026-10-31
+**Inherits**: organization constitution v1.3.0 | **Version**: 1.1.0 | **Ratified**: 2026-10-31 | **Last amended**: 2026-10-31
 
 ## Organization standards
 
