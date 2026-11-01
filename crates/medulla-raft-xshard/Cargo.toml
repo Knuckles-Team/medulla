@@ -19,6 +19,8 @@ medulla-kernel = { path = "../medulla-kernel" }
 medulla-persistence = { path = "../medulla-persistence" }
 medulla-plan = { path = "../medulla-plan", optional = true }
 medulla-server-api = { path = "../medulla-server-api" }
+medulla-server-auth = { path = "../medulla-server-auth" }
+medulla-server-cdc = { path = "../medulla-server-cdc" }
 medulla-transaction = { path = "../medulla-transaction", optional = true }
 medulla-types = { path = "../medulla-types" }
 openraft = { version = "=0.10.0-alpha.26", features = ["serde"], optional = true }
