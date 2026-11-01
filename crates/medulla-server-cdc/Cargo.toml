@@ -55,7 +55,7 @@ query = ["dep:medulla-tsdb", "dep:medulla-plan", "medulla-server-api/query", "me
 reasoning = ["medulla-server-api/reasoning", "medulla-kernel/reasoning", "medulla-reasoner/reasoning"]
 result-cache = ["medulla-server-api/result-cache", "medulla-core/result-cache", "medulla-graph-core/result-cache", "medulla-kernel/result-cache", "medulla-query-cache/result-cache"]
 security = ["medulla-server-api/security", "medulla-core/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-protocol-types/security", "medulla-types/security"]
-shacl = ["dep:medulla-shacl", "medulla-server-api/shacl", "medulla-kernel/shacl"]
+shacl = ["dep:medulla-shacl", "medulla-server-api/shacl", "medulla-kernel/shacl", "owl"]
 stream = ["query", "dep:medulla-stream", "dep:medulla-plan", "medulla-server-api/stream", "medulla-exec/stream", "medulla-plan?/stream", "medulla-stream?/stream", "medulla-types/stream"]
 streaming = ["medulla-server-api/streaming", "medulla-protocol-types/streaming", "medulla-types/streaming"]
 [dev-dependencies]

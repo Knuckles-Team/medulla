@@ -62,7 +62,7 @@ cypher = ["medulla-server-api/cypher", "medulla-server-auth/cypher", "medulla-ke
 epistemic = ["query", "dep:medulla-plan", "dep:medulla-modality", "dep:medulla-epistemic", "medulla-server-api/epistemic", "medulla-server-auth/epistemic", "medulla-server-cdc/epistemic", "medulla-kernel/epistemic", "medulla-plan?/epistemic", "medulla-protocol-types/epistemic", "medulla-types/epistemic"]
 epistemic-tms = ["epistemic", "dep:medulla-epistemic", "medulla-server-api/epistemic-tms", "medulla-epistemic?/epistemic-tms", "medulla-kernel/epistemic-tms"]
 graphlearn = ["medulla-server-api/graphlearn", "medulla-graph-algos/graphlearn", "medulla-kernel/graphlearn", "medulla-protocol-types/graphlearn", "medulla-result-types/graphlearn", "medulla-types/graphlearn"]
-graphql = ["dep:medulla-graphql", "medulla-server-api/graphql", "medulla-server-auth/graphql", "medulla-kernel/graphql", "medulla-protocol-types/graphql", "medulla-types/graphql"]
+graphql = ["dep:medulla-graphql", "medulla-server-api/graphql", "medulla-server-auth/graphql", "medulla-kernel/graphql", "medulla-protocol-types/graphql", "medulla-types/graphql", "redb"]
 jobs = ["mining", "epistemic", "dep:medulla-jobs", "dep:medulla-capabilities", "medulla-server-api/jobs", "medulla-agent-types/jobs", "medulla-capabilities?/jobs", "medulla-protocol-types/jobs", "medulla-types/jobs", "medulla-work-types/jobs"]
 kv = ["redb", "medulla-server-api/kv", "medulla-kernel/kv", "medulla-protocol-types/kv", "medulla-types/kv"]
 metrics = ["medulla-server-api/metrics", "medulla-kernel/metrics", "medulla-protocol-types/metrics", "medulla-types/metrics"]
@@ -76,11 +76,10 @@ rdf = ["dep:medulla-rdf", "medulla-server-api/rdf", "medulla-kernel/rdf", "medul
 reasoning = ["medulla-server-api/reasoning", "medulla-server-cdc/reasoning", "medulla-kernel/reasoning"]
 redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-server-api/redb", "medulla-kernel/redb"]
 shacl = ["rdf", "dep:medulla-shacl", "medulla-server-api/shacl", "medulla-server-cdc/shacl", "medulla-kernel/shacl"]
-sparql-http = ["shacl", "medulla-server-api/sparql-http"]
+sparql-http = ["shacl", "medulla-server-api/sparql-http", "redb"]
 statechart = ["dep:medulla-capabilities", "medulla-server-api/statechart", "medulla-capabilities?/statechart", "medulla-protocol-types/statechart", "medulla-types/statechart"]
 streaming = ["medulla-server-api/streaming", "medulla-server-cdc/streaming", "medulla-protocol-types/streaming", "medulla-types/streaming"]
-test-support = ["medulla-server-api/test-support", "medulla-server-auth/test-support"]
-
+test-support = ["medulla-server-api/test-support", "medulla-server-auth/test-support", "medulla-kernel/test-support", "medulla-types/test-support", "medulla-agent-types/test-support", "medulla-catalog-types/test-support", "medulla-protocol-types/test-support", "medulla-work-types/test-support"]
 [dev-dependencies]
 medulla-table-store = { path = "../medulla-table-store", features = ["dev-scope-grant"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }

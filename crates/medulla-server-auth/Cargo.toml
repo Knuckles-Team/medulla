@@ -63,7 +63,7 @@ oidc = ["dep:ureq", "dep:jsonwebtoken", "medulla-server-api/oidc"]
 query = ["dep:medulla-tsdb", "dep:medulla-plan", "medulla-server-api/query", "medulla-exec/query", "medulla-kernel/query", "medulla-plan?/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-types/query"]
 raft = ["medulla-server-api/raft", "medulla-exec/raft", "medulla-kernel/raft"]
 security = ["oidc", "medulla-server-api/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-protocol-types/security", "medulla-types/security"]
-test-support = ["medulla-server-api/test-support"]
+test-support = ["medulla-server-api/test-support", "medulla-kernel/test-support", "medulla-types/test-support", "medulla-agent-types/test-support", "medulla-catalog-types/test-support", "medulla-identity-types/test-support", "medulla-protocol-types/test-support", "medulla-exec/test-support"]
 wasm-udf = ["dep:medulla-wasm", "dep:medulla-plan", "medulla-server-api/wasm-udf", "medulla-exec/wasm-udf", "medulla-plan?/wasm-udf", "medulla-protocol-types/wasm-udf", "medulla-types/wasm-udf", "medulla-wasm?/wasm-udf"]
 [dev-dependencies]
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }

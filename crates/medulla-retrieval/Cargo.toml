@@ -29,5 +29,5 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 epistemic = ["query", "dep:medulla-epistemic", "medulla-exec/epistemic", "medulla-types/epistemic"]
 knowledge-batch = ["query", "dep:arrow", "medulla-types/knowledge-batch"]
 query = ["medulla-exec/query", "medulla-result-types/query", "medulla-types/query"]
-decide = ["dep:medulla-ann", "medulla-ann?/drift"]
+decide = ["dep:medulla-ann", "medulla-ann?/drift", "epistemic", "query"]
 ann = ["dep:medulla-ann", "medulla-core/ann", "medulla-graph-core/ann"]

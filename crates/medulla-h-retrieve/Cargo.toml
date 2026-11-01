@@ -47,7 +47,7 @@ medulla-rdf = { path = "../medulla-rdf", optional = true }
 
 [features]
 ann-redb = ["redb", "medulla-ann-codes/ann-redb", "medulla-core/ann-redb", "medulla-server-api/ann-redb"]
-epistemic-tms = ["dep:medulla-epistemic", "medulla-epistemic?/epistemic-tms", "medulla-kernel/epistemic-tms", "medulla-server-api/epistemic-tms"]
+epistemic-tms = ["dep:medulla-epistemic", "medulla-epistemic?/epistemic-tms", "medulla-kernel/epistemic-tms", "medulla-server-api/epistemic-tms", "query", "redb"]
 geo = ["query", "dep:medulla-plan", "dep:medulla-geo", "medulla-exec/geo", "medulla-plan?/geo", "medulla-server-api/geo", "medulla-types/geo"]
 owl = ["dep:medulla-rdf", "medulla-exec/owl", "medulla-persistence/owl", "medulla-plan?/owl", "medulla-protocol-types/owl", "medulla-rdf?/owl", "medulla-server-api/owl", "medulla-types/owl"]
 query = ["redb", "dep:medulla-tsdb", "dep:medulla-plan", "medulla-exec/query", "medulla-kernel/query", "medulla-persistence/query", "medulla-plan?/query", "medulla-protocol-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-types/query"]

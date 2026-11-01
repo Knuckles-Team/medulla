@@ -42,7 +42,6 @@ tempfile = { version = "3", optional = true }
 [features]
 security = ["medulla-store/security", "medulla-lane-store/security", "medulla-kernel/security", "medulla-protocol-types/security", "medulla-types/security"]
 statechart = ["dep:medulla-statechart", "medulla-store/statechart", "medulla-protocol-types/statechart", "medulla-types/statechart"]
-test-support = ["dep:tempfile", "medulla-store/test-support"]
-
+test-support = ["dep:tempfile", "medulla-store/test-support", "medulla-protocol-types/test-support", "medulla-decision-types/test-support", "medulla-kernel/test-support", "medulla-types/test-support", "medulla-work-types/test-support", "medulla-decision-outcome-types/test-support"]
 [dev-dependencies]
 tempfile = "3"

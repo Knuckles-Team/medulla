@@ -86,7 +86,7 @@ blob = ["medulla-protocol-types/blob", "medulla-types/blob"]
 # of the 25 domain stubs calls yet -- not added on spec, per the crates.io-only /
 # "no dependency you cannot prove is needed" edict; the `jobs` Wave-1 lane appends
 # it as its own single feature line if its real implementation needs it).
-jobs = ["mining", "dep:medulla-jobs", "medulla-protocol-types/jobs", "medulla-types/jobs"]
+jobs = ["mining", "dep:medulla-jobs", "medulla-protocol-types/jobs", "medulla-types/jobs", "query"]
 statechart = ["dep:medulla-statechart", "medulla-protocol-types/statechart", "medulla-types/statechart"]
 [dependencies]
 # The engine core this binding embeds directly -- the SAME `GraphCore`/

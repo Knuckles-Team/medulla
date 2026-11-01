@@ -52,8 +52,7 @@ raft = ["redb", "dep:openraft", "dep:futures", "medulla-raft/raft", "medulla-exe
 redb = ["dep:medulla-transaction", "medulla-raft/redb", "medulla-kernel/redb", "medulla-persistence/redb", "medulla-server-api/redb"]
 security = ["redb", "medulla-raft/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-persistence/security", "medulla-protocol-types/security", "medulla-server-api/security", "medulla-server-auth/security", "medulla-server-cdc/security", "medulla-types/security"]
 streaming = ["medulla-raft/streaming", "medulla-protocol-types/streaming", "medulla-server-api/streaming", "medulla-server-cdc/streaming", "medulla-types/streaming"]
-test-support = ["harness", "dep:tracing-subscriber", "medulla-raft/test-support"]
-
+test-support = ["harness", "dep:tracing-subscriber", "medulla-raft/test-support", "medulla-protocol-types/test-support", "medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-server-api/test-support", "medulla-server-auth/test-support", "medulla-types/test-support", "medulla-work-types/test-support", "medulla-exec/test-support"]
 [dev-dependencies]
 medulla-raft = { path = "../medulla-raft", features = ["harness", "test-support"] }
 tracing-subscriber = "0.3"

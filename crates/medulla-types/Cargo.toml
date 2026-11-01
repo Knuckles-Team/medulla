@@ -40,14 +40,14 @@ mining = []
 # `GraphSource`/`GraphLearnParams` wire types. PURE serde (the model blob rides an
 # opaque `serde_json::Value`, so no KAN type leaks into the wire) — folds into the
 # serving tiers exactly like mining; a build without it drops the variants.
-graphlearn = []
+graphlearn = ["datascience"]
 # ML pipeline (CONCEPT:MEDULLA-KG.mining.ml-pipeline): gates the composable
 # `Method::MiningPipeline*` variants + their `PipelineSpec`/`FeatureStep`/`ModelSpec`/
 # `SplitSpec` wire DTOs. It embeds `GraphSource` (the node source), so it implies
 # `graphlearn`; the fitted-model blob rides an opaque `serde_json::Value`, so no
 # per-family type leaks into the wire. Folds into the serving tiers; a build without it
 # drops every variant (→ the dispatch "not available in this build" catch-all).
-ml-pipeline = ["graphlearn"]
+ml-pipeline = ["graphlearn", "datascience", "mining"]
 # Engine-native epistemic layer (CONCEPT:MEDULLA-KG.epistemic.epistemic-substrate, E6):
 # gates the additive epistemic fields and citation DTOs. Citations reuse the governed
 # `EvidenceLocusWire` query DTO, so `epistemic` must imply `query`; keeping the
@@ -63,7 +63,7 @@ query = []
 # added — only the Method variant. The resolver/parser live in the medulla-graphql crate
 # behind the facade `graphql` feature; a build without it drops the variant (→ the
 # dispatch "not available in this build" catch-all).
-graphql = []
+graphql = ["security"]
 # Message broker (CONCEPT:MEDULLA-275): gates the broker admin/data `Method` variants
 # (`DeclareExchange`/`DeleteExchange`/`BindQueue`/`UnbindQueue`/`Publish`). PURE serde
 # — no heavy dep — so it folds into the serving tiers; a build without it drops the
@@ -89,7 +89,7 @@ kv = []
 # .db file ──` Method variants (`ImportSqliteFile`/`ExportSqliteFile`). PURE serde — no
 # dep here (the pure-Rust `medulla-sqlite-format` reader/writer lives in the facade behind its
 # own `sqlite-file` gate); this only adds the two wire variants. A build without it drops them.
-sqlite-file = []
+sqlite-file = ["query"]
 # Streaming / CDC / subscriptions (CONCEPT:KG-2.229/230): gates the `// ── Streaming
 # ──` Method variants + the CDC/continuous-query/watch/trigger wire DTOs. PURE serde
 # — no heavy dep — so it folds into pi/node/cluster/full; a build without it drops
@@ -138,7 +138,7 @@ compute-dist = []
 # `PlanMatView*` Method variants (Define/Get/Refresh/Drop) whose `plan` field is the
 # `query`-gated `wire::Plan` AST, so `matview` IMPLIES `query`. Pure serde — the manager
 # + durable rows + CDC invalidation live in the facade behind the `matview` feature.
-matview = ["query"]
+matview = ["query", "streaming"]
 # Engine-level security (CONCEPT:KG-2.231): gates the `AuditVerify` Method variant +
 # the `AuditReport` wire DTO. Pure serde — no dep.
 security = []
@@ -196,7 +196,7 @@ probabilistic = ["query"]
 # durable state machine + redb store + claim-commit live in `medulla-jobs` (ABOVE this
 # crate in the DAG); the facade wires it through `jobs`, included in the main
 # `full` deployment while remaining absent from small leaf builds unless selected.
-jobs = []
+jobs = ["epistemic", "mining", "query"]
 # CONCEPT:INT-P2-2 — the native statechart engine: gates the `statechart` wire module
 # (`StatechartOp`) + the `Method::Statechart` variant. Pure serde/enum-variant gate,
 # same shape as `jobs`; the durable engine (typed model + redb store + pure transition
@@ -205,13 +205,13 @@ jobs = []
 statechart = []
 # Graph-native program optimization extends the jobs wire contract with its one
 # typed job kind. A jobs-only build does not expose a non-executable variant.
-program-optimization = ["jobs"]
+program-optimization = ["jobs", "epistemic", "mining", "query"]
 # Pure-serde request/cursor/response DTOs for the shared governed KnowledgeBatch
 # pull protocol. The Arrow runtime remains in medulla-plan/facade.
-knowledge-batch = []
+knowledge-batch = ["query"]
 # Governed document/image/audio/video serving. This adds only pure-serde wire
 # operations; concrete runtimes and persistence remain above `medulla-types`.
-modality-serving = []
+modality-serving = ["security", "streaming"]
 # CONCEPT:MEDULLA-KG.compute.quantum-agent-api (Q8, quantum-native.md / quantum-external-
 # providers.md §1.5): gates the `Method::Quantum { op: QuantumOp }` variant + its
 # `QuantumOp`/`QuantumRankCandidate`/`QuantumQaoaEdge` wire DTOs -- the ONE wire op

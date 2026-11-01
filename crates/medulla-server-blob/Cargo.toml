@@ -52,15 +52,14 @@ alignment = ["blob", "dep:medulla-modality", "dep:medulla-alignment", "medulla-s
 blob = ["redb", "medulla-server-api/blob", "medulla-protocol-types/blob", "medulla-types/blob"]
 blob-s3 = ["blob", "medulla-server-api/blob-s3", "dep:object_store"]
 kv = ["redb", "medulla-server-api/kv", "medulla-kernel/kv", "medulla-protocol-types/kv", "medulla-types/kv"]
-nl-query = ["dep:medulla-plan", "medulla-server-api/nl-query", "medulla-plan?/nl-query"]
+nl-query = ["dep:medulla-plan", "medulla-server-api/nl-query", "medulla-plan?/nl-query", "redb"]
 rdf-xml = ["dep:medulla-rdf", "medulla-server-api/rdf-xml", "medulla-rdf?/rdf-xml"]
 redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-server-api/redb", "medulla-kernel/redb", "medulla-store/redb"]
 security = ["redb", "medulla-server-api/security", "medulla-server-auth/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-protocol-types/security", "medulla-store/security", "medulla-types/security"]
 shacl = ["dep:medulla-shacl", "medulla-server-api/shacl", "medulla-kernel/shacl"]
 sparql-http = ["shacl", "security", "medulla-server-api/sparql-http"]
 sparql-service = ["sparql-http", "dep:ureq", "medulla-server-api/sparql-service", "medulla-federation/sparql-service"]
-test-support = ["medulla-server-api/test-support", "medulla-server-auth/test-support"]
-
+test-support = ["medulla-server-api/test-support", "medulla-server-auth/test-support", "medulla-kernel/test-support", "medulla-store/test-support", "medulla-types/test-support", "medulla-agent-types/test-support", "medulla-catalog-types/test-support", "medulla-protocol-types/test-support", "medulla-federation/test-support"]
 [dev-dependencies]
 medulla-server = { path = "../medulla-server", features = ["test-support"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }

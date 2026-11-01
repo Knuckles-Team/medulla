@@ -29,7 +29,7 @@ sparql = ["rdf", "dep:spargebra", "dep:regex", "medulla-types/sparql"]
 # Parses OWL axioms from the SAME oxttl-parsed RDF as `rdf`, so it adds NO dep beyond
 # the RDF stack: implies `rdf`, links ZERO native/C crate (pure Rust — no horned-owl,
 # no whelk-rs). Safe to fold into pi/node/full alongside rdf/sparql.
-owl = ["rdf", "medulla-types/owl"]
+owl = ["rdf", "medulla-types/owl", "sparql"]
 # W5 — OWL-DL tableau reasoner (CONCEPT:MEDULLA-059): a description-logic tableau
 # (ALCQO + role hierarchy) that DECIDES the constructs the EL⁺/RL `owl` path cannot —
 # full cardinality (≥n/≤n, qualified), complementOf/negation (NNF), oneOf/hasValue
@@ -37,7 +37,7 @@ owl = ["rdf", "medulla-types/owl"]
 # owl.rs's triple index + node-id convention). Pure Rust — adds NO dep beyond the RDF
 # stack. Pi contract: deliberately OUT of `pi` (a Pi node runs the tractable EL⁺/RL
 # fast path only); folded into node/full via the facade.
-owl-dl = ["owl"]
+owl-dl = ["owl", "sparql"]
 # W6c — SPARQL 1.1 hash builtins (CONCEPT:MEDULLA-127): MD5/SHA1/SHA256/SHA384/SHA512 via
 # pure-Rust RustCrypto (`md-5`/`sha1`/`sha2`). Implies `sparql`. Pi contract: OUT of
 # `pi` — a minimal Pi node ships the dep-free builtins (constructors/date-time/numeric/
@@ -131,5 +131,5 @@ medulla-source-types = { path = "../medulla-source-types" }
 # (dev-deps are not compiled for a check/lib build). This lets the ICV closed-world
 # behaviour be exercised from `cargo test -p medulla-rdf --features sparql`.
 medulla-shacl = { path = "../medulla-shacl" }
-medulla-reasoner = { path = "../medulla-reasoner", features = ["owl"] }
+medulla-reasoner = { path = "../medulla-reasoner", features = ["owl", "sparql-star"] }
 medulla-virtual-graph = { path = "../medulla-virtual-graph", features = ["rdf"] }

@@ -30,10 +30,10 @@ rand_chacha = "0.3"
 cudarc = { version = "0.17", optional = true, default-features = false, features = ["driver", "nvrtc", "dynamic-loading", "cuda-12060"] }
 
 [features]
-gpu-cuda = ["dep:cudarc"]
+gpu-cuda = ["dep:cudarc", "reasoning"]
 reasoning = []
 contract = ["owl", "dep:medulla-modality", "medulla-rdf/contract", "medulla-core/contract", "medulla-graph-core/contract"]
 owl = ["rdf", "medulla-rdf/owl", "medulla-types/owl"]
 owl-dl = ["owl", "medulla-rdf/owl-dl"]
 rdf = ["dep:oxrdf", "medulla-rdf/rdf", "medulla-types/rdf"]
-sparql-star = ["medulla-rdf/sparql-star"]
+sparql-star = ["medulla-rdf/sparql-star", "rdf"]

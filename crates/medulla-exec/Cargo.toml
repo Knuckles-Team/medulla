@@ -41,7 +41,7 @@ medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-sql = { path = "../medulla-sql" }
 
 [features]
-test-support = ["query"]
+test-support = ["query", "medulla-types/test-support", "medulla-compute?/test-support", "medulla-catalog-types/test-support"]
 epistemic = ["query", "medulla-types/epistemic", "dep:medulla-epistemic"]
 federation = ["query", "medulla-types/federation"]
 geo = ["query", "dep:medulla-geo", "medulla-types/geo"]

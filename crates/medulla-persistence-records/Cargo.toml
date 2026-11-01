@@ -36,10 +36,9 @@ serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 
 [features]
-decide = ["redb", "dep:medulla-capabilities", "medulla-capabilities?/decide", "medulla-compute/decide", "medulla-persistence/decide", "medulla-server-api/decide"]
+decide = ["redb", "dep:medulla-capabilities", "medulla-capabilities?/decide", "medulla-compute/decide", "medulla-persistence/decide", "medulla-server-api/decide", "rdf"]
 rdf = ["dep:medulla-rdf", "medulla-kernel/rdf", "medulla-persistence/rdf", "medulla-protocol-types/rdf", "medulla-rdf?/rdf", "medulla-server-api/rdf", "medulla-types/rdf"]
 redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-kernel/redb", "medulla-persistence/redb", "medulla-server-api/redb"]
-test-support = ["dep:tempfile"]
-
+test-support = ["dep:tempfile", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-identity-types/test-support", "medulla-decision-types/test-support", "medulla-catalog-types/test-support", "medulla-agent-types/test-support", "medulla-compute/test-support", "medulla-kernel/test-support", "medulla-server-api/test-support", "medulla-types/test-support"]
 [dev-dependencies]
 tempfile = "3"

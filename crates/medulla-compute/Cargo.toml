@@ -10,7 +10,7 @@ license = "MIT"
 name = "medulla_compute"
 
 [features]
-test-support = []
+test-support = ["medulla-types/test-support", "medulla-protocol-types/test-support", "medulla-decision-types/test-support", "medulla-catalog-types/test-support", "medulla-agent-types/test-support", "medulla-work-types/test-support", "medulla-source-types/test-support", "medulla-decision-outcome-types/test-support"]
 # `algorithms`, `ast`, and `parser` are always compiled (algorithms is used by
 # the always-on graph-op handlers); the heavy domains are gated so a slim build
 # links neither their code nor their deps. Mirrors the facade feature names 1:1.
@@ -47,7 +47,7 @@ solve = ["medulla-decision-policy/solve"]
 # RF-ADR-010 A2: `is_a` derivation, evidence classification and the task ->
 # capability closure the assembly layer reasons with. It builds and solves a
 # model, so it implies `solve`.
-decide = ["solve"]
+decide = ["solve", "mining"]
 # The statistical half of the Decide layer: heads, calibration and the
 # off-policy estimators, which are medulla-numeric kernels.
 decide-stats = ["decide", "dep:medulla-numeric", "medulla-numeric/decision", "medulla-decision-stats/decision"]
