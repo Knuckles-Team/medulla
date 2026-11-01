@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 
 pub use medulla_result_types::compute_result::signal_models::*;
 
-use super::market::{MarketError, MarketResult, INVALID_REQUEST};
+use medulla_compute::finance::market::{MarketError, MarketResult, INVALID_REQUEST};
 
 fn refuse(detail: impl Into<String>) -> MarketError {
     MarketError::new(INVALID_REQUEST, detail)

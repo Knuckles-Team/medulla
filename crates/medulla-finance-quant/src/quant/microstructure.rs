@@ -240,7 +240,7 @@ fn nelder_mead_iteration(
 }
 
 /// Nelder-Mead simplex minimiser for a 3-parameter objective.
-pub(in crate::finance) fn nelder_mead_3(
+pub(crate) fn nelder_mead_3(
     f: &dyn Fn([f64; 3]) -> f64,
     x0: [f64; 3],
     max_iter: usize,
