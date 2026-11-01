@@ -1,6 +1,7 @@
 //! Private operation-family dispatch for the finance handler.
 
-use crate::protocol::{Method, Response};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
 
 #[derive(Clone, Copy)]
 enum FinanceRoute {

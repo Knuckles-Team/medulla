@@ -981,7 +981,7 @@ async fn spawn_viz_interactive_listener(
                 );
                 let viz_state = state.clone();
                 tokio::spawn(async move {
-                    medulla::server::viz_interactive::serve(listener, engine, Some(viz_state))
+                    medulla_h_compute::viz_interactive::serve(listener, engine, Some(viz_state))
                         .await;
                 });
             }

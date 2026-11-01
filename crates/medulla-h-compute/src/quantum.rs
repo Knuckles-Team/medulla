@@ -91,7 +91,8 @@ use medulla_types::quantum::{
     QuantumRankResult, QuantumRankedCandidate, QuantumRunMetadata,
 };
 
-use crate::protocol::{Response, ResultPayload};
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 
 #[cfg(test)]
 #[path = "quantum/tests.rs"]

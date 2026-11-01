@@ -10,7 +10,8 @@ use medulla_compute::finance::signal_models::{
 use medulla_protocol_types::result_contract::compute as results;
 
 use super::market::answer;
-use crate::protocol::{Method, Response};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
 
 fn handle(req_id: u64, op: FinanceSignalModelsOp) -> Response {
     match op {

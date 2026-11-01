@@ -57,8 +57,9 @@ use medulla_viz_graph_tiles::contract::{
     TileEdge, TileNode,
 };
 
-use crate::algorithms::{format_cluster_id, ClusterHierarchyResult};
-use crate::graph::GraphCore;
+use medulla_compute::algorithms::format_cluster_id;
+use medulla_compute::algorithms::ClusterHierarchyResult;
+use medulla_core::graph::GraphCore;
 
 /// Cap on `top_node_types` handed to the wire encoder — the CONTRACT's own
 /// bound (`medulla_viz_graph_tiles::wire::MAX_TOP_TYPES_PER_CLUSTER`), enforced
@@ -302,8 +303,8 @@ impl GraphSource for RealClusterSource {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::algorithms::cluster_hierarchy;
-    use crate::graph::GraphCore;
+    use medulla_compute::algorithms::cluster_hierarchy;
+    use medulla_core::graph::GraphCore;
 
     fn p(node_type: &str) -> Vec<u8> {
         rmp_serde::to_vec_named(&serde_json::json!({"type": node_type})).unwrap()

@@ -142,8 +142,8 @@ pub async fn serve(
             // cannot express -- dispatch to it first, before falling back to
             // the synchronous single-buffer path every other route here uses.
             #[cfg(feature = "viz-graph-tiles")]
-            if crate::server::graph_tile_server::handles(&request.target) {
-                crate::server::graph_tile_server::serve(
+            if crate::graph_tile_server::handles(&request.target) {
+                crate::graph_tile_server::serve(
                     &mut stream,
                     &request.method,
                     &request.target,

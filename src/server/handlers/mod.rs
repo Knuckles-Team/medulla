@@ -3,14 +3,6 @@
 //! stay centralized in the shell. Each module exposes `try_handle(...) ->
 //! Result<Response, Method>`: `Ok` = handled, `Err(method)` = not mine, try next.
 
-// Feature-gated compute domains: a slim `--features server` build (no `compute`)
-// excludes these entirely; their Method::Finance*/Ds* variants then fall to the
-// graph_ops catch-all (a "not available in this build" error). Mirrors the `ast`
-// gating of ParseFile(s).
-#[cfg(feature = "datascience")]
-pub(crate) mod datascience;
-#[cfg(feature = "finance")]
-pub(crate) mod finance;
 pub(crate) mod graph_ops;
 // Engine-native WorkItem lifecycle transitions. The handler owns the six
 // result-producing transition Methods explicitly; their durable effect remains
@@ -93,11 +85,6 @@ pub(crate) mod streaming;
 // module and the variants fall to the graph_ops "not available" catch-all.
 #[cfg(feature = "rdf")]
 pub(crate) mod rdf;
-// WASM-sandboxed UDF surface (CONCEPT:MEDULLA-KG.query.rowset-execution, feature `wasm-udf`). RegisterUdf/RunUdf
-// drive the owner-scoped UdfCatalog on ServerState (EH-374); a build without `wasm-udf` omits
-// the module and the variants fall to the graph_ops not-available catch-all.
-#[cfg(feature = "wasm-udf")]
-pub(crate) mod wasm_udf;
 // Distributed graph compute (CONCEPT:MEDULLA-KG.storage.feature, feature `compute-dist`). The
 // DistributedCompute/*MatView methods drive the cross-shard Pregel engine + the
 // matview store on ServerState; a non-cluster build omits the module and the variants
@@ -158,19 +145,6 @@ pub(crate) mod jobs;
 // `GraphCore`.
 #[cfg(feature = "statechart")]
 pub(crate) mod statechart;
-// The agent-facing quantum control-plane surface (Q8, CONCEPT:MEDULLA-KG.compute.quantum-agent-api,
-// root feature `quantum-agent-api`, which turns on `medulla-types/quantum` -- the
-// `Method::Quantum` wire variant itself -- + `medulla-capabilities/quantum` + this
-// crate's own `quantum-sim` in lockstep; see the root Cargo.toml's `quantum-agent-api`
-// feature doc). The `Method::Quantum { op }` surface (quantum_rank/
-// optimize_with_qaoa/quantum_expectation) over a registered `medulla_quantum_core::
-// backend::QuantumBackend` (`medulla-quantum-sim`'s `sv-cpu`/`stabilizer`). NOT
-// graph-scoped (reads no persisted graph state, writes nothing durable -- every
-// result returns to the caller as a proposal) — self-routes in `dispatch.rs` before
-// the per-graph chain, exactly like `AnalyticsJob`/`Statechart`. Needs no `state` at
-// all (no persistence of its own).
-#[cfg(feature = "quantum-agent-api")]
-pub(crate) mod quantum;
 // Native ASR provider surface (GOC-33, `OWNER-VOICE-ASR`, feature `asr-whisper`).
 // `Method::Asr { op }` over the whisper-rs/whisper.cpp provider in `medulla-asr-whisper`
 // — a direct, non-durable batch-file transcription call. NOT graph-scoped (reads
@@ -179,18 +153,6 @@ pub(crate) mod quantum;
 // `state` at all (no persistence of its own).
 #[cfg(feature = "asr-whisper")]
 pub(crate) mod asr;
-// Native visualization render surface (D-VZ-1 lanes V4 "engine integration" / V6
-// "graph-native marks", feature `viz-static-export`). `Method::Viz { op }` —
-// resolve a caller-provided `medulla_viz_core::ViewSpec` against a dataset (inline
-// columns or deterministic engine-side synthetic data, including a
-// `MarkKind::Graph` node/edge dataset) and render it to static PNG/SVG/PDF bytes,
-// or fetch the mark x surface capability matrix. NOT graph-scoped (a render
-// builds a FRESH ephemeral per-request `ColumnStore`, never reads a live
-// `GraphCore`, like `AnalyticsJob`/`Statechart`) — self-routes in `dispatch.rs`
-// before the per-graph chain. V4-LITE only: no tile cache, no job-inherited
-// provenance, no resident-graph view — see the handler's own module doc.
-#[cfg(feature = "viz-static-export")]
-pub(crate) mod viz;
 // Governed document/image/audio/video serving. The wire carries an ephemeral
 // source body, while this handler persists only an encrypted, opaque runtime
 // snapshot through the graph mutation gateway.

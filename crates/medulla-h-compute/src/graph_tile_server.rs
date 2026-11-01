@@ -198,7 +198,7 @@ async fn resolve_source(
     };
     let hierarchy = match persistence.load_cluster_hierarchy(&graph_name).await {
         Ok(Some(blob)) => {
-            rmp_serde::from_slice::<crate::algorithms::ClusterHierarchyResult>(&blob).ok()
+            rmp_serde::from_slice::<medulla_compute::algorithms::ClusterHierarchyResult>(&blob).ok()
         }
         _ => None,
     };
@@ -436,7 +436,7 @@ mod tests {
     fn test_state() -> Arc<RwLock<ServerState>> {
         Arc::new(RwLock::new(ServerState::new_for_test(
             "graph-tile-source-test-secret",
-            crate::isolation::IsolationLayer::new(),
+            medulla_core::isolation::IsolationLayer::new(),
         )))
     }
 

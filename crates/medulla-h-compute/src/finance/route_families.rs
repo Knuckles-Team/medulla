@@ -3,7 +3,9 @@
 use medulla_protocol_types::result_contract::compute as results;
 use medulla_result_types::compute_result::finance::PosteriorCredibleInterval;
 
-use crate::protocol::{Method, Response, ResultPayload};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 
 pub(super) fn handle_portfolio(req_id: u64, method: Method) -> Result<Response, Method> {
     Ok(match method {
@@ -15,7 +17,7 @@ pub(super) fn handle_portfolio(req_id: u64, method: Method) -> Result<Response, 
             min_weight,
             max_weight,
         } => {
-            let result = crate::finance::optimizer::mean_variance_optimization(
+            let result = medulla_compute::finance::optimizer::mean_variance_optimization(
                 &expected_returns,
                 &cov_matrix,
                 risk_free_rate,
@@ -28,7 +30,7 @@ pub(super) fn handle_portfolio(req_id: u64, method: Method) -> Result<Response, 
             )
         }
         Method::FinanceRiskParity { cov_matrix } => {
-            let result = crate::finance::optimizer::risk_parity(&cov_matrix);
+            let result = medulla_compute::finance::optimizer::risk_parity(&cov_matrix);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceRiskParity>(result),
@@ -42,7 +44,7 @@ pub(super) fn handle_portfolio(req_id: u64, method: Method) -> Result<Response, 
             tau,
             risk_aversion,
         } => {
-            let result = crate::finance::optimizer::black_litterman(
+            let result = medulla_compute::finance::optimizer::black_litterman(
                 &market_weights,
                 &cov_matrix,
                 &views,
@@ -60,7 +62,7 @@ pub(super) fn handle_portfolio(req_id: u64, method: Method) -> Result<Response, 
             cov_matrix,
             target_return,
         } => {
-            let result = crate::finance::optimizer::efficient_frontier_target(
+            let result = medulla_compute::finance::optimizer::efficient_frontier_target(
                 &expected_returns,
                 &cov_matrix,
                 target_return,
@@ -81,32 +83,32 @@ pub(super) fn handle_risk(req_id: u64, method: Method) -> Result<Response, Metho
             returns,
             confidence,
         } => {
-            let v = crate::finance::risk::historical_var(&returns, confidence);
+            let v = medulla_compute::finance::risk::historical_var(&returns, confidence);
             Response::ok(req_id, ResultPayload::scalar::<results::FinanceVar>(v))
         }
         Method::FinanceCvar {
             returns,
             confidence,
         } => {
-            let v = crate::finance::risk::historical_cvar(&returns, confidence);
+            let v = medulla_compute::finance::risk::historical_cvar(&returns, confidence);
             Response::ok(req_id, ResultPayload::scalar::<results::FinanceCvar>(v))
         }
         Method::FinanceMaxDrawdown { returns } => {
-            let v = crate::finance::risk::max_drawdown(&returns);
+            let v = medulla_compute::finance::risk::max_drawdown(&returns);
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceMaxDrawdown>(v),
             )
         }
         Method::FinanceDrawdownSeries { returns } => {
-            let v = crate::finance::risk::drawdown_series(&returns);
+            let v = medulla_compute::finance::risk::drawdown_series(&returns);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceDrawdownSeries>(v),
             )
         }
         Method::FinanceDownsideDeviation { returns, target } => {
-            let v = crate::finance::risk::downside_deviation(&returns, target);
+            let v = medulla_compute::finance::risk::downside_deviation(&returns, target);
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceDownsideDeviation>(v),
@@ -116,7 +118,7 @@ pub(super) fn handle_risk(req_id: u64, method: Method) -> Result<Response, Metho
             returns,
             risk_free_rate,
         } => {
-            let result = crate::finance::risk::compute_risk_metrics(&returns, risk_free_rate);
+            let result = medulla_compute::finance::risk::compute_risk_metrics(&returns, risk_free_rate);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceRiskMetrics>(result),
@@ -128,7 +130,7 @@ pub(super) fn handle_risk(req_id: u64, method: Method) -> Result<Response, Metho
             n_simulations,
             confidence,
         } => {
-            let v = crate::finance::risk::monte_carlo_var(mean, std_dev, n_simulations, confidence);
+            let v = medulla_compute::finance::risk::monte_carlo_var(mean, std_dev, n_simulations, confidence);
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceMonteCarloVar>(v),
@@ -140,7 +142,7 @@ pub(super) fn handle_risk(req_id: u64, method: Method) -> Result<Response, Metho
             cov_matrix,
             shock_factors,
         } => {
-            let v = crate::finance::risk::stress_test(
+            let v = medulla_compute::finance::risk::stress_test(
                 &weights,
                 &expected_returns,
                 &cov_matrix,
@@ -162,7 +164,7 @@ pub(super) fn handle_regime(req_id: u64, method: Method) -> Result<Response, Met
             tol,
         } => {
             let result =
-                crate::finance::regime::detect_regimes(&observations, n_states, max_iter, tol);
+                medulla_compute::finance::regime::detect_regimes(&observations, n_states, max_iter, tol);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceDetectRegimes>(result),
@@ -176,29 +178,29 @@ pub(super) fn handle_signals(req_id: u64, method: Method) -> Result<Response, Me
     Ok(match method {
         // ── Extended Finance: Signals / alpha ─────────────────────────────────────────────────
         Method::FinanceSignalDecay { signal, half_life } => {
-            let v = crate::finance::signals::signal_decay(&signal, half_life);
+            let v = medulla_compute::finance::signals::signal_decay(&signal, half_life);
             Response::ok(req_id, ResultPayload::of::<results::FinanceSignalDecay>(v))
         }
         Method::FinanceCombineAlphas { signals, weights } => {
-            let v = crate::finance::signals::combine_alphas(&signals, &weights);
+            let v = medulla_compute::finance::signals::combine_alphas(&signals, &weights);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceCombineAlphas>(v),
             )
         }
         Method::FinanceCrossSectionalRank { cross_section } => {
-            let v = crate::finance::signals::cross_sectional_rank(&cross_section);
+            let v = medulla_compute::finance::signals::cross_sectional_rank(&cross_section);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceCrossSectionalRank>(v),
             )
         }
         Method::FinanceMomentum { prices, lookback } => {
-            let v = crate::finance::signals::momentum(&prices, lookback);
+            let v = medulla_compute::finance::signals::momentum(&prices, lookback);
             Response::ok(req_id, ResultPayload::of::<results::FinanceMomentum>(v))
         }
         Method::FinanceMeanReversion { values, window } => {
-            let v = crate::finance::signals::mean_reversion(&values, window);
+            let v = medulla_compute::finance::signals::mean_reversion(&values, window);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceMeanReversion>(v),
@@ -208,7 +210,7 @@ pub(super) fn handle_signals(req_id: u64, method: Method) -> Result<Response, Me
             signal,
             forward_returns,
         } => {
-            let v = crate::finance::signals::information_coefficient(&signal, &forward_returns);
+            let v = medulla_compute::finance::signals::information_coefficient(&signal, &forward_returns);
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceInformationCoefficient>(v),
@@ -227,7 +229,7 @@ pub(super) fn handle_execution(req_id: u64, method: Method) -> Result<Response, 
             start_time,
             interval_secs,
         } => {
-            let v = crate::finance::exchange::twap_schedule(
+            let v = medulla_compute::finance::exchange::twap_schedule(
                 total_quantity,
                 n_slices,
                 start_time,
@@ -241,7 +243,7 @@ pub(super) fn handle_execution(req_id: u64, method: Method) -> Result<Response, 
             start_time,
             interval_secs,
         } => {
-            let v = crate::finance::exchange::vwap_schedule(
+            let v = medulla_compute::finance::exchange::vwap_schedule(
                 total_quantity,
                 &volume_profile,
                 start_time,
@@ -255,7 +257,7 @@ pub(super) fn handle_execution(req_id: u64, method: Method) -> Result<Response, 
             average_daily_volume,
             impact_coefficient,
         } => {
-            let v = crate::finance::exchange::estimate_market_impact(
+            let v = medulla_compute::finance::exchange::estimate_market_impact(
                 daily_volatility,
                 order_quantity,
                 average_daily_volume,
@@ -271,11 +273,11 @@ pub(super) fn handle_execution(req_id: u64, method: Method) -> Result<Response, 
             prices_b,
             lookback,
         } => {
-            let v = crate::finance::exchange::pairs_trading_signal(&prices_a, &prices_b, lookback);
+            let v = medulla_compute::finance::exchange::pairs_trading_signal(&prices_a, &prices_b, lookback);
             Response::ok(req_id, ResultPayload::of::<results::FinancePairsTrading>(v))
         }
         Method::FinanceMatchOrders { orders } => {
-            let v = crate::finance::exchange::match_orders(&orders);
+            let v = medulla_compute::finance::exchange::match_orders(&orders);
             Response::ok(req_id, ResultPayload::of::<results::FinanceMatchOrders>(v))
         }
         other => return Err(other),
@@ -294,7 +296,7 @@ pub(super) fn handle_market_making(req_id: u64, method: Method) -> Result<Respon
             tau,
         } => {
             let v =
-                crate::finance::quant::avellaneda_stoikov(mid, inventory, sigma, gamma, kappa, tau);
+                medulla_compute::finance::quant::avellaneda_stoikov(mid, inventory, sigma, gamma, kappa, tau);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceAvellanedaStoikov>(v),
@@ -308,7 +310,7 @@ pub(super) fn handle_market_making(req_id: u64, method: Method) -> Result<Respon
             kappa,
             a,
         } => {
-            let v = crate::finance::quant::glt_quotes(mid, inventory, sigma, gamma, kappa, a);
+            let v = medulla_compute::finance::quant::glt_quotes(mid, inventory, sigma, gamma, kappa, a);
             Response::ok(req_id, ResultPayload::of::<results::FinanceGltQuotes>(v))
         }
         Method::FinanceLogitQuotes {
@@ -320,13 +322,13 @@ pub(super) fn handle_market_making(req_id: u64, method: Method) -> Result<Respon
             tau,
             boundary_m,
         } => {
-            let v = crate::finance::quant::logit_space_quotes(
+            let v = medulla_compute::finance::quant::logit_space_quotes(
                 p_mid, inventory, sigma, gamma, kappa, tau, boundary_m,
             );
             Response::ok(req_id, ResultPayload::of::<results::FinanceLogitQuotes>(v))
         }
         Method::FinanceGlostenMilgromSpread { alpha, p } => {
-            let v = crate::finance::quant::glosten_milgrom_spread(alpha, p);
+            let v = medulla_compute::finance::quant::glosten_milgrom_spread(alpha, p);
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceGlostenMilgromSpread>(v),
@@ -341,14 +343,14 @@ pub(super) fn handle_market_making(req_id: u64, method: Method) -> Result<Respon
             v_h,
             v_l,
         } => {
-            let v = crate::finance::quant::expected_pnl_rate(delta, a, kappa, alpha, p, v_h, v_l);
+            let v = medulla_compute::finance::quant::expected_pnl_rate(delta, a, kappa, alpha, p, v_h, v_l);
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceExpectedPnlRate>(v),
             )
         }
         Method::FinanceBreakevenAlpha { delta, p, v_h, v_l } => {
-            let v = crate::finance::quant::breakeven_alpha(delta, p, v_h, v_l);
+            let v = medulla_compute::finance::quant::breakeven_alpha(delta, p, v_h, v_l);
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceBreakevenAlpha>(v),
@@ -369,7 +371,7 @@ pub(super) fn handle_microstructure(req_id: u64, method: Method) -> Result<Respo
             ask_sz,
             window_secs,
         } => {
-            let v = crate::finance::quant::ofi_series(
+            let v = medulla_compute::finance::quant::ofi_series(
                 &ts,
                 &bid_px,
                 &bid_sz,
@@ -385,7 +387,7 @@ pub(super) fn handle_microstructure(req_id: u64, method: Method) -> Result<Respo
             ask_px,
             ask_sz,
         } => {
-            let v = crate::finance::quant::microprice_series(&bid_px, &bid_sz, &ask_px, &ask_sz);
+            let v = medulla_compute::finance::quant::microprice_series(&bid_px, &bid_sz, &ask_px, &ask_sz);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceMicropriceSeries>(v),
@@ -396,7 +398,7 @@ pub(super) fn handle_microstructure(req_id: u64, method: Method) -> Result<Respo
             sell_vol,
             p_mean,
         } => {
-            let v = crate::finance::quant::vpin_pm(&buy_vol, &sell_vol, &p_mean);
+            let v = medulla_compute::finance::quant::vpin_pm(&buy_vol, &sell_vol, &p_mean);
             Response::ok(req_id, ResultPayload::scalar::<results::FinanceVpinPm>(v))
         }
         Method::FinanceHawkesMle {
@@ -404,7 +406,7 @@ pub(super) fn handle_microstructure(req_id: u64, method: Method) -> Result<Respo
             t_horizon,
             max_iter,
         } => {
-            let v = crate::finance::quant::hawkes_mle(&times, t_horizon, max_iter);
+            let v = medulla_compute::finance::quant::hawkes_mle(&times, t_horizon, max_iter);
             Response::ok(req_id, ResultPayload::of::<results::FinanceHawkesMle>(v))
         }
         Method::FinanceHardimanBouchaud {
@@ -412,7 +414,7 @@ pub(super) fn handle_microstructure(req_id: u64, method: Method) -> Result<Respo
             t_horizon,
             n_windows,
         } => {
-            let v = crate::finance::quant::hardiman_bouchaud_branching_ratio(
+            let v = medulla_compute::finance::quant::hardiman_bouchaud_branching_ratio(
                 &times, t_horizon, n_windows,
             );
             Response::ok(
@@ -424,7 +426,7 @@ pub(super) fn handle_microstructure(req_id: u64, method: Method) -> Result<Respo
             price_changes,
             signed_order_flow,
         } => {
-            let v = crate::finance::quant::kyle_lambda(&price_changes, &signed_order_flow);
+            let v = medulla_compute::finance::quant::kyle_lambda(&price_changes, &signed_order_flow);
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceKyleLambda>(v),
@@ -438,7 +440,7 @@ pub(super) fn handle_microstructure(req_id: u64, method: Method) -> Result<Respo
             price_changes,
             baseline_sigma,
         } => {
-            let v = crate::finance::quant::surveillance_risk(
+            let v = medulla_compute::finance::quant::surveillance_risk(
                 &buy_vol,
                 &sell_vol,
                 &p_mean,
@@ -459,7 +461,7 @@ pub(super) fn handle_sizing(req_id: u64, method: Method) -> Result<Response, Met
     Ok(match method {
         // ── Position Sizing (CONCEPT:MEDULLA-KG.domains.market-microstructure-sizing-backtest) ────
         Method::FinanceKellyFraction { q, c, fraction } => {
-            let v = crate::finance::quant::kelly_fraction(q, c, fraction);
+            let v = medulla_compute::finance::quant::kelly_fraction(q, c, fraction);
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceKellyFraction>(v),
@@ -471,9 +473,10 @@ pub(super) fn handle_sizing(req_id: u64, method: Method) -> Result<Response, Met
             fraction,
             max_risk,
         } => {
-            use crate::finance::sizing::{
-                kelly_fraction, KellyInput, DEFAULT_KELLY_FRACTION, DEFAULT_MAX_RISK,
-            };
+            use medulla_compute::finance::sizing::kelly_fraction;
+            use medulla_compute::finance::sizing::KellyInput;
+            use medulla_compute::finance::sizing::DEFAULT_KELLY_FRACTION;
+            use medulla_compute::finance::sizing::DEFAULT_MAX_RISK;
             match KellyInput::new(
                 accuracy,
                 win_loss_ratio,
@@ -491,7 +494,7 @@ pub(super) fn handle_sizing(req_id: u64, method: Method) -> Result<Response, Met
             reference,
             current,
             threshold,
-        } => match crate::finance::sizing::distribution_shift(&reference, &current, threshold) {
+        } => match medulla_compute::finance::sizing::distribution_shift(&reference, &current, threshold) {
             Ok(shift) => Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceDistributionShift>(
@@ -510,7 +513,7 @@ pub(super) fn handle_sizing(req_id: u64, method: Method) -> Result<Response, Met
             c,
             n_quadrature,
         } => {
-            let v = crate::finance::quant::bayesian_kelly_fraction(alpha, beta, c, n_quadrature);
+            let v = medulla_compute::finance::quant::bayesian_kelly_fraction(alpha, beta, c, n_quadrature);
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceBayesianKelly>(v),
@@ -518,7 +521,7 @@ pub(super) fn handle_sizing(req_id: u64, method: Method) -> Result<Response, Met
         }
         Method::FinancePosteriorCredibleInterval { alpha, beta, level } => {
             let (lower, upper) =
-                crate::finance::quant::posterior_credible_interval(alpha, beta, level);
+                medulla_compute::finance::quant::posterior_credible_interval(alpha, beta, level);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinancePosteriorCredibleInterval>(
@@ -540,7 +543,7 @@ pub(super) fn handle_backtest(req_id: u64, method: Method) -> Result<Response, M
             purge_window,
             embargo,
         } => {
-            let v = crate::finance::quant::purged_cpcv_splits(
+            let v = medulla_compute::finance::quant::purged_cpcv_splits(
                 n_samples,
                 n_groups,
                 n_test_groups,
@@ -555,14 +558,14 @@ pub(super) fn handle_backtest(req_id: u64, method: Method) -> Result<Response, M
             sr_returns,
         } => {
             let v =
-                crate::finance::quant::deflated_sharpe_ratio(observed_sr, n_trials, &sr_returns);
+                medulla_compute::finance::quant::deflated_sharpe_ratio(observed_sr, n_trials, &sr_returns);
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceDeflatedSharpe>(v),
             )
         }
         Method::FinanceProbabilityBacktestOverfit { insample, oos } => {
-            let v = crate::finance::quant::probability_of_backtest_overfit(&insample, &oos);
+            let v = medulla_compute::finance::quant::probability_of_backtest_overfit(&insample, &oos);
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceProbabilityBacktestOverfit>(v),
@@ -573,7 +576,7 @@ pub(super) fn handle_backtest(req_id: u64, method: Method) -> Result<Response, M
             losses_b,
             h,
         } => {
-            let v = crate::finance::quant::diebold_mariano(&losses_a, &losses_b, h);
+            let v = medulla_compute::finance::quant::diebold_mariano(&losses_a, &losses_b, h);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceDieboldMariano>(v),
@@ -590,7 +593,7 @@ pub(super) fn handle_forensic(req_id: u64, method: Method) -> Result<Response, M
             this_year,
             prior_year,
         } => {
-            let v = crate::finance::forensic::forensic_report(&this_year, &prior_year);
+            let v = medulla_compute::finance::forensic::forensic_report(&this_year, &prior_year);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceForensicReport>(v),
@@ -612,7 +615,7 @@ pub(super) fn handle_state_space(req_id: u64, method: Method) -> Result<Response
             x0,
             p0,
         } => {
-            let v = crate::finance::statespace::kalman_filter_1d(&observations, f, q, h, r, x0, p0);
+            let v = medulla_compute::finance::statespace::kalman_filter_1d(&observations, f, q, h, r, x0, p0);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceKalmanFilter1d>(v),
@@ -626,7 +629,7 @@ pub(super) fn handle_state_space(req_id: u64, method: Method) -> Result<Response
             beta0,
             p0,
         } => {
-            let v = crate::finance::statespace::kalman_beta(
+            let v = medulla_compute::finance::statespace::kalman_beta(
                 &market_returns,
                 &asset_returns,
                 q,
@@ -644,7 +647,7 @@ pub(super) fn handle_state_space(req_id: u64, method: Method) -> Result<Response
             p0,
             annualization,
         } => {
-            let v = crate::finance::statespace::kalman_volatility(
+            let v = medulla_compute::finance::statespace::kalman_volatility(
                 &returns,
                 q,
                 r,
@@ -658,11 +661,11 @@ pub(super) fn handle_state_space(req_id: u64, method: Method) -> Result<Response
             )
         }
         Method::FinanceAdfTest { series, max_lag } => {
-            let v = crate::finance::statespace::adf_test(&series, max_lag);
+            let v = medulla_compute::finance::statespace::adf_test(&series, max_lag);
             Response::ok(req_id, ResultPayload::of::<results::FinanceAdfTest>(v))
         }
         Method::FinanceOuCalibrate { spread, dt } => {
-            let v = crate::finance::statespace::ou_calibrate(&spread, dt);
+            let v = medulla_compute::finance::statespace::ou_calibrate(&spread, dt);
             Response::ok(req_id, ResultPayload::of::<results::FinanceOuCalibrate>(v))
         }
         Method::FinanceOuOptimalThresholds {
@@ -672,7 +675,7 @@ pub(super) fn handle_state_space(req_id: u64, method: Method) -> Result<Response
             sigma_eq,
             cost,
         } => {
-            let params = crate::finance::statespace::OuParams {
+            let params = medulla_compute::finance::statespace::OuParams {
                 theta,
                 mu,
                 sigma,
@@ -683,14 +686,14 @@ pub(super) fn handle_state_space(req_id: u64, method: Method) -> Result<Response
                     f64::INFINITY
                 },
             };
-            let v = crate::finance::statespace::ou_optimal_thresholds(&params, cost);
+            let v = medulla_compute::finance::statespace::ou_optimal_thresholds(&params, cost);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceOuOptimalThresholds>(v),
             )
         }
         Method::FinanceMarkovTransitionMatrix { states, n_states } => {
-            let v = crate::finance::statespace::markov_transition_matrix(&states, n_states);
+            let v = medulla_compute::finance::statespace::markov_transition_matrix(&states, n_states);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceMarkovTransitionMatrix>(v),
@@ -735,7 +738,7 @@ fn handle_signal_market(req_id: u64, method: Method) -> Result<Response, Method>
     Ok(match method {
         // Signal combination and market microstructure
         Method::FinanceOrderBookImbalance { v_bid, v_ask } => {
-            let v = crate::finance::quant::order_book_imbalance(&v_bid, &v_ask);
+            let v = medulla_compute::finance::quant::order_book_imbalance(&v_bid, &v_ask);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceOrderBookImbalance>(v),
@@ -747,14 +750,14 @@ fn handle_signal_market(req_id: u64, method: Method) -> Result<Response, Method>
             bid_rate,
             ask_rate,
         } => {
-            let v = crate::finance::quant::queue_imbalance(&bid_q, &ask_q, &bid_rate, &ask_rate);
+            let v = medulla_compute::finance::quant::queue_imbalance(&bid_q, &ask_q, &bid_rate, &ask_rate);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceQueueImbalance>(v),
             )
         }
         Method::FinanceRealizedVolTick { mid, window } => {
-            let v = crate::finance::quant::realized_vol_tick(&mid, window);
+            let v = medulla_compute::finance::quant::realized_vol_tick(&mid, window);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceRealizedVolTick>(v),
@@ -765,7 +768,7 @@ fn handle_signal_market(req_id: u64, method: Method) -> Result<Response, Method>
             ask_px,
             window,
         } => {
-            let v = crate::finance::quant::spread_reversion(&bid_px, &ask_px, window);
+            let v = medulla_compute::finance::quant::spread_reversion(&bid_px, &ask_px, window);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceSpreadReversion>(v),
@@ -779,14 +782,14 @@ fn handle_signal_quality(req_id: u64, method: Method) -> Result<Response, Method
     Ok(match method {
         // Signal quality, validation, and sizing
         Method::FinanceInformationRatio { ic, n_independent } => {
-            let v = crate::finance::quant::information_ratio(ic, n_independent);
+            let v = medulla_compute::finance::quant::information_ratio(ic, n_independent);
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceInformationRatio>(v),
             )
         }
         Method::FinanceEffectiveIndependentN { returns_matrix } => {
-            let v = crate::finance::quant::effective_independent_n(&returns_matrix);
+            let v = medulla_compute::finance::quant::effective_independent_n(&returns_matrix);
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceEffectiveIndependentN>(v),
@@ -796,7 +799,7 @@ fn handle_signal_quality(req_id: u64, method: Method) -> Result<Response, Method
             returns_matrix,
             lookback,
         } => {
-            let v = crate::finance::quant::alpha_combination_engine(&returns_matrix, lookback);
+            let v = medulla_compute::finance::quant::alpha_combination_engine(&returns_matrix, lookback);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceAlphaCombinationEngine>(v),
@@ -806,7 +809,7 @@ fn handle_signal_quality(req_id: u64, method: Method) -> Result<Response, Method
             forecasts,
             outcomes,
         } => {
-            let v = crate::finance::quant::brier_score(&forecasts, &outcomes);
+            let v = medulla_compute::finance::quant::brier_score(&forecasts, &outcomes);
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceBrierScore>(v),
@@ -818,7 +821,7 @@ fn handle_signal_quality(req_id: u64, method: Method) -> Result<Response, Method
             min_agree,
         } => {
             let v =
-                crate::finance::quant::convergence_gate(&strengths, strong_threshold, min_agree);
+                medulla_compute::finance::quant::convergence_gate(&strengths, strong_threshold, min_agree);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceConvergenceGate>(v),
@@ -831,7 +834,7 @@ fn handle_signal_quality(req_id: u64, method: Method) -> Result<Response, Method
             n_simulations,
             seed,
         } => {
-            let v = crate::finance::quant::empirical_kelly(
+            let v = medulla_compute::finance::quant::empirical_kelly(
                 p,
                 b,
                 &historical_returns,
@@ -858,7 +861,7 @@ pub(super) fn handle_derivatives(req_id: u64, method: Method) -> Result<Response
             rho,
             nu,
         } => {
-            let v = crate::finance::derivatives::sabr_implied_vol(f, k, t, alpha, beta, rho, nu);
+            let v = medulla_compute::finance::derivatives::sabr_implied_vol(f, k, t, alpha, beta, rho, nu);
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceSabrImpliedVol>(v),
@@ -873,7 +876,7 @@ pub(super) fn handle_derivatives(req_id: u64, method: Method) -> Result<Response
             rho,
             nu,
         } => {
-            let v = crate::finance::derivatives::sabr_smile(f, &strikes, t, alpha, beta, rho, nu);
+            let v = medulla_compute::finance::derivatives::sabr_smile(f, &strikes, t, alpha, beta, rho, nu);
             Response::ok(req_id, ResultPayload::of::<results::FinanceSabrSmile>(v))
         }
         Method::FinanceSabrCalibrate {
@@ -883,7 +886,7 @@ pub(super) fn handle_derivatives(req_id: u64, method: Method) -> Result<Response
             market_vols,
             beta,
         } => {
-            let v = crate::finance::derivatives::sabr_calibrate(f, t, &strikes, &market_vols, beta);
+            let v = medulla_compute::finance::derivatives::sabr_calibrate(f, t, &strikes, &market_vols, beta);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceSabrCalibrate>(v),

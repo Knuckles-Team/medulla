@@ -83,7 +83,8 @@ use medulla_viz_core::{
 };
 use medulla_viz_export::ColumnStoreExportBackend;
 
-use crate::protocol::{Response, ResultPayload};
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 use medulla_server_api::viz_engine::render_cache_key;

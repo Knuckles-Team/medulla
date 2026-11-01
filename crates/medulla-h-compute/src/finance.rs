@@ -14,7 +14,8 @@ mod route_families;
 mod routes;
 mod signal_models;
 
-use crate::protocol::{Method, Response};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
 
 /// Handle a `Finance*` method. `Err(method)` hands a non-finance method back to the
 /// dispatcher (routing fall-through). (CONCEPT:MEDULLA-KG.query.dispatch-convention — server dispatch convention)

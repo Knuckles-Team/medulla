@@ -168,11 +168,11 @@ otel = ["medulla-kernel/otel",
     "dep:tracing-opentelemetry",
     "server",
 ]
-finance = ["medulla-compute/finance", "medulla-types/finance", "medulla-result-types/finance", "medulla-protocol-types/finance"]
+finance = ["medulla-h-compute/finance", "medulla-compute/finance", "medulla-types/finance", "medulla-result-types/finance", "medulla-protocol-types/finance"]
 ast = ["medulla-server-api/ast", "medulla-store/ast", "medulla-compute/ast"]
 # Extended-language grammar tier (CONCEPT:KG-2.106), folded into `full`.
 ast-extended = ["medulla-compute/ast-extended"]
-datascience = ["medulla-kernel/datascience", "medulla-compute/datascience", "medulla-types/datascience", "medulla-result-types/datascience", "medulla-protocol-types/datascience"]
+datascience = ["medulla-h-compute/datascience", "medulla-kernel/datascience", "medulla-compute/datascience", "medulla-types/datascience", "medulla-result-types/datascience", "medulla-protocol-types/datascience"]
 # Data-mining domain (CONCEPT:MEDULLA-KG.mining.frequent-itemset-mining): association-rule
 # mining (Apriori/FP-Growth/Eclat) + the `graph_mine` surface. Pure-Rust, no heavy
 # dep, folded into `full`. Gates medulla-compute/mining + medulla-types/mining + the
@@ -455,7 +455,7 @@ viz-columnstore = ["medulla-server-api/viz-columnstore", "viz", "dep:medulla-viz
 # `viz`) -- this is the ONLY tier that needs it, and pulling it here (rather than
 # relying on it merely being present in `full`) means `--features viz-static-export`
 # alone (no `--no-default-features`) is enough for `Method::Viz` to be reachable.
-viz-static-export = ["medulla-server-api/viz-static-export", "viz-columnstore", "dep:medulla-viz-export", "server"]
+viz-static-export = ["medulla-h-compute/viz-static-export", "medulla-server-api/viz-static-export", "viz-columnstore", "dep:medulla-viz-export", "server"]
 # D-VZ-1 lane V3b: the interactive rendering surface -- a loopback-only,
 # dependency-free HTTP/1.1 listener (`src/server/viz_interactive.rs`, the SAME
 # hand-rolled idiom `--metrics-addr`/`--obs-addr`/`lake/rest.rs` already use;
@@ -467,7 +467,7 @@ viz-static-export = ["medulla-server-api/viz-static-export", "viz-columnstore", 
 # cache) and pulls `medulla-viz-kernels` directly (this crate calls `lttb_reduce`
 # itself; `viz-static-export`/`medulla-viz-export` alone would only bring it in
 # transitively, not name it for THIS crate's own `use`).
-viz-interactive = ["viz-static-export", "dep:medulla-viz-kernels"]
+viz-interactive = ["medulla-h-compute/viz-interactive", "viz-static-export", "dep:medulla-viz-kernels"]
 # VIZ-2 (million-node graph visualization program, lane VIZ-2): the binary
 # tile/streaming protocol for GRAPH payloads (nodes + edges together, edges
 # referencing nodes by array index rather than repeating string ids), addressed
@@ -483,7 +483,7 @@ viz-interactive = ["viz-static-export", "dep:medulla-viz-kernels"]
 # implying `viz-interactive` rather than duplicating a second listener/port.
 # Pure Rust, zero new external crates.io dependencies beyond serde/serde_json
 # already resolved workspace-wide (see that crate's own Cargo.toml).
-viz-graph-tiles = ["viz-interactive", "dep:medulla-viz-graph-tiles"]
+viz-graph-tiles = ["medulla-h-compute/viz-graph-tiles", "viz-interactive", "dep:medulla-viz-graph-tiles"]
 # D-DE-0 (lane w6-de0-contracts, `plans/au-medulla-program/program/durable-execution-native.md`)
 # -- the durable-execution ROUTING contract. `durable` links `medulla-durable` alone (the
 # CallShape/WorkShape/DurableBackendKind routing table + the DurableExecutionUnitMirror
@@ -843,7 +843,7 @@ calvin = ["medulla-raft/calvin", "nonblocking"]
 # wasmtime with fuel-metering + a hard memory limit + NO host capabilities (pure
 # compute, no fs/net). Pulls medulla-wasm → wasmtime + cranelift and is included in the one
 # main build. The `Udf{id}` plan op + the RegisterUdf/RunUdf methods light up with it.
-wasm-udf = ["medulla-raft/wasm-udf", "medulla-server-api/wasm-udf", "dep:medulla-wasm", "medulla-wasm/wasm-udf", "server", "medulla-types/wasm-udf", "medulla-plan?/wasm-udf", "medulla-protocol-types/wasm-udf"]
+wasm-udf = ["medulla-h-compute/wasm-udf", "medulla-raft/wasm-udf", "medulla-server-api/wasm-udf", "dep:medulla-wasm", "medulla-wasm/wasm-udf", "server", "medulla-types/wasm-udf", "medulla-plan?/wasm-udf", "medulla-protocol-types/wasm-udf"]
 # Correctness + load harness (CONCEPT:KG-2.212 / KG-2.222) — the standing proof-engine
 # that gates every distributed/durability claim (multi-raft, M2 durability, distributed
 # txns, PITR/replication, the cross-shard 2PC atomicity + recovery proof). TEST/DEV-ONLY:
@@ -1451,7 +1451,7 @@ quantum-jobs-federation = ["quantum-jobs", "federation", "medulla-quantum-jobs/f
 # exactly like `jobs`/`statechart`). This is the ONE feature that makes the quantum
 # surface reachable from graph-os/agent-utilities at all -- `quantum`/`quantum-sim`
 # alone remain Rust-internal, no wire protocol Method, no KG concept mapping.
-quantum-agent-api = [
+quantum-agent-api = ["medulla-h-compute/quantum-agent-api", 
     "medulla-raft/quantum-agent-api", "medulla-persistence/quantum-agent-api", "medulla-server-api/quantum-agent-api", "quantum-sim", "server", "medulla-types/quantum", "medulla-capabilities/quantum", "medulla-protocol-types/quantum",
 ]
 
@@ -1855,6 +1855,8 @@ medulla-store = { path = "crates/medulla-store" }
 medulla-server-api = { path = "crates/medulla-server-api" }
 medulla-persistence = { path = "crates/medulla-persistence" }
 medulla-raft = { path = "crates/medulla-raft" }
+medulla-h-compute = { path = "crates/medulla-h-compute" }
+
 [dev-dependencies]
 medulla-raft = { path = "crates/medulla-raft", features = ["test-support"] }
 medulla-persistence = { path = "crates/medulla-persistence", features = ["test-support"] }

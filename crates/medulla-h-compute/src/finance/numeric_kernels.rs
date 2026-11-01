@@ -10,10 +10,18 @@ use medulla_protocol_types::result_contract::compute as results;
 use medulla_result_types::compute_result::finance as wire;
 use serde::Serialize;
 
-use crate::finance::banking::{self, AmlRule, CapitalInputs, CreditExposure};
-use crate::finance::execution::{self, AlmgrenChriss, Ident};
-use crate::finance::factor::{self, FactorInput};
-use crate::protocol::{Method, Response, ResultPayload};
+use medulla_compute::finance::banking;
+use medulla_compute::finance::banking::AmlRule;
+use medulla_compute::finance::banking::CapitalInputs;
+use medulla_compute::finance::banking::CreditExposure;
+use medulla_compute::finance::execution;
+use medulla_compute::finance::execution::AlmgrenChriss;
+use medulla_compute::finance::execution::Ident;
+use medulla_compute::finance::factor;
+use medulla_compute::finance::factor::FactorInput;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 
 fn refuse(req_id: u64, error: impl std::fmt::Display) -> Response {
     Response::err(req_id, format!("INVALID_ARGUMENT: {error}"))

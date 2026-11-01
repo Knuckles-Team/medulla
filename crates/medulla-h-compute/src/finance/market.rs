@@ -12,7 +12,9 @@ use medulla_compute::finance::market::{
 use medulla_protocol_types::result_contract::compute as results;
 use medulla_protocol_types::result_contract::MethodResult;
 
-use crate::protocol::{Method, Response, ResultPayload};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 
 pub(super) fn answer<M: MethodResult>(req_id: u64, result: MarketResult<M::Body>) -> Response {
     match result {

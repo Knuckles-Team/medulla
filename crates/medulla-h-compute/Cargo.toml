@@ -12,3 +12,12 @@ name = "medulla_h_compute"
 path = "src/lib.rs"
 
 [dependencies]
+
+[features]
+datascience = []
+finance = []
+quantum-agent-api = []
+viz-graph-tiles = ["viz-interactive"]
+viz-interactive = ["viz-static-export"]
+viz-static-export = []
+wasm-udf = []

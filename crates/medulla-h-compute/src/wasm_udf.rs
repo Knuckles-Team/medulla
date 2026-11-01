@@ -8,7 +8,9 @@
 //! compile/run is CPU-bound, so it runs on the blocking pool off the reactor (a
 //! fuel-killed infinite loop therefore never stalls the runtime).
 
-use crate::protocol::{Method, Response, ResultPayload};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::access::OwnerScopedCall;
 
 /// Try to handle a WASM-UDF method. `Ok(resp)` = handled; `Err(method)` = not mine.
