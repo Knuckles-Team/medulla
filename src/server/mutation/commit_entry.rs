@@ -189,7 +189,7 @@ pub(super) async fn commit_finalize_durable(
     if let Err(e) = persistence.record_durable(&fname, method).await {
         return Some(Response::err(
             ctx.req_id,
-            medulla_types::contract::classify_refusal(
+            medulla_types::error_registry::classify_refusal(
                 "INTERNAL",
                 "durable commit failed (write not acknowledged): ",
                 &e,

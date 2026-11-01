@@ -36,8 +36,8 @@ pub(super) fn validate_source_dirty_record(
     if record.identity.tenant().as_str() != binding.tenant_id
         || !matches!(
             record.identity.scope(),
-            medulla_types::mutation_batch::MutationScope::Native {
-                domain: medulla_types::mutation_batch::DurabilityDomain::SqlCatalog,
+            medulla_types::mutation_scope::MutationScope::Native {
+                domain: medulla_types::mutation_scope::DurabilityDomain::SqlCatalog,
                 ..
             }
         )
@@ -338,17 +338,17 @@ pub(super) fn source_reconciliation_wakeup_digest(
     hasher.update(record.batch_id.as_bytes());
     hasher.update(record.ordinal.to_be_bytes());
     match record.committed_version {
-        medulla_types::mutation_batch::CommittedVersion::Graph { source, target } => {
+        medulla_types::mutation_scope::CommittedVersion::Graph { source, target } => {
             hasher.update(*b"g");
             hasher.update(source.to_be_bytes());
             hasher.update(target.to_be_bytes());
         }
-        medulla_types::mutation_batch::CommittedVersion::Native { source, target } => {
+        medulla_types::mutation_scope::CommittedVersion::Native { source, target } => {
             hasher.update(*b"n");
             hasher.update(source.to_be_bytes());
             hasher.update(target.to_be_bytes());
         }
-        medulla_types::mutation_batch::CommittedVersion::None => hasher.update(*b"0"),
+        medulla_types::mutation_scope::CommittedVersion::None => hasher.update(*b"0"),
     }
     hasher.update(wakeup.source_scope_digest.as_bytes());
     hasher.update(wakeup.input_digest.as_bytes());

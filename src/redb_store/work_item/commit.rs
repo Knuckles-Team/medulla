@@ -181,7 +181,8 @@ pub(crate) struct CommitWorkItemResultInput<'args, 'table, 'crypto> {
     pub(crate) error_ref: &'args Option<String>,
     pub(crate) retryable: bool,
     pub(crate) now_ms: u64,
-    pub(crate) outcome_extension: Option<&'args medulla_types::outcome_bundle::TerminalOutcomeExtension>,
+    pub(crate) outcome_extension:
+        Option<&'args medulla_types::outcome_bundle::TerminalOutcomeExtension>,
     pub(crate) run_completion: Option<&'args medulla_types::run_completion::RunCompletionInput>,
     pub(crate) batch_id: &'args str,
     pub(crate) nodes:

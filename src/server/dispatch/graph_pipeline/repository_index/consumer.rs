@@ -9,9 +9,9 @@ use std::collections::BTreeMap;
 use std::{future::Future, sync::Arc};
 
 use medulla_types::epistemic_operations::RequestContext;
-use medulla_types::mutation_batch::MutationOutboxIntent;
+use medulla_types::mutation_scope::MutationOutboxIntent;
 #[cfg(feature = "blob")]
-use medulla_types::mutation_batch::MutationOutboxLease;
+use medulla_types::mutation_scope::MutationOutboxLease;
 #[cfg(feature = "blob")]
 use medulla_types::native_control::EnrichmentBudgetPark;
 use medulla_types::native_control::{
@@ -27,9 +27,9 @@ use crate::parser::enrichment_admission::{
 use crate::parser::enrichment_snapshot::{
     EligibleSnapshot, EligibleUnit, EnrichmentBudgetCheckpoint, EnrichmentWorkStage,
 };
+use crate::server::api::persistence::PersistenceBackend;
 #[cfg(feature = "blob")]
 use crate::server::api::reentry::DrainOutcome;
-use crate::server::api::persistence::PersistenceBackend;
 
 pub(super) const PENDING_TOPIC: &str = "repository.enrichment.pending";
 #[cfg(feature = "blob")]
@@ -763,7 +763,7 @@ mod tests {
         let identity = medulla_types::MutationScopeIdentity::fixed_graph(
             "tenant",
             "code",
-            medulla_types::mutation_batch::COMPILED_BATCH_INCARNATION,
+            medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION,
         )
         .unwrap();
         let row = medulla_types::MutationOutboxRecord {
@@ -809,7 +809,7 @@ mod tests {
                 identity: medulla_types::MutationScopeIdentity::fixed_graph(
                     "tenant",
                     "other-graph",
-                    medulla_types::mutation_batch::COMPILED_BATCH_INCARNATION,
+                    medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION,
                 )
                 .unwrap(),
                 ..live.row

@@ -206,7 +206,7 @@ pub struct TemplateFacts {
     pub shape: crate::agent_graph::AgentGraphShape,
     /// The template's published topology facts, when it declares them.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub topology: Option<super::topology::TopologyFacts>,
+    pub topology: Option<crate::agent_topology::TopologyFacts>,
 }
 
 impl TemplateFacts {
@@ -240,7 +240,7 @@ pub struct DecisionInputs {
     /// What a topology question read beside the library: the composed schema
     /// digest, the entailed admissibility facts and the capacity headroom.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub topology: Option<super::topology::TopologyInputs>,
+    pub topology: Option<crate::agent_topology::TopologyInputs>,
 }
 
 /// One assembly decision, in full.
@@ -286,7 +286,7 @@ impl DecisionRecord {
     }
 
     /// The topology plan a solved topology record carries.
-    pub fn topology_plan(&self) -> Option<&super::topology::TopologyPlan> {
+    pub fn topology_plan(&self) -> Option<&crate::agent_topology::TopologyPlan> {
         match &self.outcome {
             DecisionOutcome::Solved { topology, .. } => topology.as_deref(),
             DecisionOutcome::Abstained { .. } => None,

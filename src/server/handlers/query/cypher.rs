@@ -13,7 +13,11 @@ fn cypher_query_response(
         Ok(Ok(result)) => dynamic_response::<query_results::CypherQuery, _>(req_id, &result),
         Ok(Err(msg)) => Response::err(
             req_id,
-            medulla_types::contract::classify_refusal("INVALID_ARGUMENT", "Cypher error: ", &msg),
+            medulla_types::error_registry::classify_refusal(
+                "INVALID_ARGUMENT",
+                "Cypher error: ",
+                &msg,
+            ),
         ),
         Err(resp) => resp,
     }
@@ -32,8 +36,10 @@ pub(crate) async fn handle_cypher_write(
     query: String,
 ) -> Response {
     let core_w = core.clone();
-    let outcome =
-        compute_off_lock(req_id, move || medulla_query::exec_cypher_write(&core_w, &query)).await;
+    let outcome = compute_off_lock(req_id, move || {
+        medulla_query::exec_cypher_write(&core_w, &query)
+    })
+    .await;
     cypher_query_response(req_id, outcome)
 }
 
@@ -188,7 +194,11 @@ async fn handle_cypher_read(ctx: &QueryHandlerCtx<'_>, query: String) -> Respons
         },
         Ok(Err(msg)) => Response::err(
             req_id,
-            medulla_types::contract::classify_refusal("INVALID_ARGUMENT", "Cypher error: ", &msg),
+            medulla_types::error_registry::classify_refusal(
+                "INVALID_ARGUMENT",
+                "Cypher error: ",
+                &msg,
+            ),
         ),
         Err(resp) => resp,
     };

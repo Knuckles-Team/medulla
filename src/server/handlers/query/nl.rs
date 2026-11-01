@@ -128,7 +128,7 @@ pub(crate) fn nl_refusal(error: &medulla_plan::nl::NlQueryError) -> String {
     use medulla_plan::nl::NlQueryError as E;
     match error {
         E::Planner(message) => {
-            medulla_types::contract::classify_refusal("INVALID_ARGUMENT", "", message)
+            medulla_types::error_registry::classify_refusal("INVALID_ARGUMENT", "", message)
         }
         E::BudgetExceeded { .. } => format!(
             "{}: {error}",
@@ -307,7 +307,7 @@ async fn run_nl_query(
         Ok(rows) => Ok((uql, rows)),
         Err(msg) => Err(Response::err(
             req_id,
-            medulla_types::contract::classify_refusal("INVALID_ARGUMENT", "", &msg),
+            medulla_types::error_registry::classify_refusal("INVALID_ARGUMENT", "", &msg),
         )),
     }
 }

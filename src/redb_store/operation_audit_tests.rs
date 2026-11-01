@@ -86,7 +86,8 @@ impl Store {
         table: redb::TableDefinition<'static, K, &'static [u8]>,
     ) -> Vec<Vec<u8>>
     where
-        for<'k> K::SelfType<'k>: medulla_storage::OwnerRowScope + medulla_storage::OwnerRowScopeStart<'k>,
+        for<'k> K::SelfType<'k>:
+            medulla_storage::OwnerRowScope + medulla_storage::OwnerRowScopeStart<'k>,
     {
         let handle = self.shard.graph(GRAPH).unwrap();
         let read = self.shard.read(&handle).unwrap();

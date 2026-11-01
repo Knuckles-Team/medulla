@@ -465,7 +465,7 @@ fn reasoning_wakeup_payload(
 /// the type (`IncarnationId::new` rejects anything resource-shaped by construction
 /// elsewhere, but does not require per-generation freshness), not a security
 /// decision -- flagged in the migration report for follow-up.
-pub(crate) use medulla_types::mutation_batch::COMPILED_BATCH_INCARNATION;
+pub(crate) use medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION;
 
 /// Compile the universal `MutationScopeIdentity`/`VersionExpectation` pair shared
 /// by every batch this module builds.

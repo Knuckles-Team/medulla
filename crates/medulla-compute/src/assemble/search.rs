@@ -15,10 +15,18 @@ use medulla_types::decision::request::effective_solver_budget;
 use medulla_types::decision::{
     digest, AbstainReason, CandidateFacts, DecisionErrorCode, DecisionInputs, TemplateFacts,
 };
-use medulla_types::solve::{
-    Certificate, ConstraintBody, ConstraintSpec, ModelSpec, Relation, Scalar, SolveStatus,
-    SolverConfig, SolverConfigSpec, Term, VarId, DEFAULT_CERTIFICATE_LEAVES,
-};
+use medulla_types::solve::Certificate;
+use medulla_types::solve::ConstraintBody;
+use medulla_types::solve::ConstraintSpec;
+use medulla_types::solve::ModelSpec;
+use medulla_types::solve::Relation;
+use medulla_types::solve::SolveStatus;
+use medulla_types::solve::SolverConfig;
+use medulla_types::solve::SolverConfigSpec;
+use medulla_types::solve::Term;
+use medulla_types::solve::VarId;
+use medulla_types::solve::DEFAULT_CERTIFICATE_LEAVES;
+use medulla_types::solve_scalar::Scalar;
 
 use super::model::Built;
 use super::AssembleError;
@@ -211,7 +219,7 @@ fn budget_exhausted(context: &SolveContext<'_>, certificate: &Certificate) -> Ab
             .iter()
             .map(|(_, candidate)| candidate.component_id.as_str())
             .collect();
-        digest::digest_text("eg/decision-incumbent/v1", &ids)
+        medulla_types::solve_scalar::digest_text("eg/decision-incumbent/v1", &ids)
     });
     AbstainReason::BudgetExhausted {
         incumbent,

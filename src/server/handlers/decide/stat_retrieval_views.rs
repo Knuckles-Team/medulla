@@ -15,11 +15,11 @@
 
 use medulla_numeric::decision::retrieval::{class_usage, hard_negatives, proven_paths, Verdict};
 use medulla_query::ColumnType;
-use medulla_types::decision::digest::digest_text;
 use medulla_types::decision::statistical::retrieval::{
     ClassUsage, HardNegative, ProvenPath, RetrievalPathTemplate, ReturnedEvidence,
 };
 use medulla_types::decision::statistical::retrieval_pointer::PointerEvent;
+use medulla_types::solve_scalar::digest_text;
 use serde_json::Value;
 
 use super::stat_log::LogReader;

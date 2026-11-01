@@ -169,27 +169,5 @@ pub fn is_tenant_gap(row: &Map<String, Value>, tenant: &str) -> bool {
     is_gap_row(row) && row.get("tenant").and_then(Value::as_str) == Some(tenant)
 }
 
-/// The tenant and idempotency key a work-market write names in its body, or
-/// `None` for any other method. One owner for the kernel's tenant binding,
-/// batch identity and audit.
-pub fn market_write_scope(method: &crate::protocol::Method) -> Option<(&str, &str)> {
-    use crate::protocol::Method;
-    match method {
-        Method::GapUpsert { request } => {
-            Some((request.tenant.as_str(), request.idempotency_key.as_str()))
-        }
-        Method::GapTransition { request } => {
-            Some((request.tenant.as_str(), request.idempotency_key.as_str()))
-        }
-        Method::GapSettle { request } => {
-            Some((request.tenant.as_str(), request.idempotency_key.as_str()))
-        }
-        Method::WorkOfferPut { request } => {
-            Some((request.tenant.as_str(), request.idempotency_key.as_str()))
-        }
-        _ => None,
-    }
-}
-
 #[cfg(test)]
 mod tests;

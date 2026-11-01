@@ -330,11 +330,15 @@ pub use support_03::*;
 mod support_04;
 pub use support_04::*;
 
+mod domain_scope;
+pub use domain_scope::{market_write_scope, run_completion_payload};
 mod method;
 #[cfg(test)]
 pub(crate) use method::carrier_fixtures as method_carrier_fixtures;
 pub use method::{
     CarrierRefusal, Method, MethodWriteFamily, CARRIER_REFUSAL_CODE, ENGINE_INTERNAL_CODE,
 };
+#[cfg(test)]
+mod governed_wire_codes;
 #[cfg(test)]
 mod tests;

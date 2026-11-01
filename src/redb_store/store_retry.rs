@@ -240,9 +240,10 @@ pub(crate) fn fixture_operation_envelope(
     request_id: u64,
     idempotency_key: &str,
 ) -> medulla_types::mutation_batch::MutationEnvelope {
-    let method =
-        medulla_types::contract::MethodId::new(medulla_types::mutation_batch::BATCH_COMPILED_METHODS)
-            .expect("the reserved batch method id is canonical");
+    let method = medulla_types::contract::MethodId::new(
+        medulla_types::mutation_batch::BATCH_COMPILED_METHODS,
+    )
+    .expect("the reserved batch method id is canonical");
     medulla_types::mutation_batch::MutationEnvelope::for_scope(
         medulla_types::mutation_batch::CompiledScope {
             identity,

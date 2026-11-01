@@ -26,7 +26,9 @@ use crate::change_envelope::{
     ChangeCursor, ChangeEnvelopeDraft, ChangeMutationDraft, ContentVersion, ContentVersionPosition,
     CursorPosition, MaterialOperation, PolicyRecord, PrivacyAttestation, CHANGE_ENVELOPE_VERSION,
 };
-use crate::mutation_batch::{DurabilityDomain, MutationOperation, MutationSurface};
+use crate::mutation_batch::MutationOperation;
+use crate::mutation_scope::DurabilityDomain;
+use crate::mutation_scope::MutationSurface;
 use crate::protocol::Method;
 
 /// Debezium's `op` field: `c` (create), `u` (update), `d` (delete), `r` (read,

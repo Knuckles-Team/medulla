@@ -19,7 +19,9 @@ use redb::TableDefinition;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use medulla_storage::{GraphShardOwner, PhysicalWriteCapability, ScopedOwnerTable, ScopedOwnerTableMut};
+use medulla_storage::{
+    GraphShardOwner, PhysicalWriteCapability, ScopedOwnerTable, ScopedOwnerTableMut,
+};
 use medulla_types::capacity_lease::{CapacityCell, CapacityLease, LeaseState};
 use medulla_types::native_control::{
     CapacityAcquireRequest, CapacityAcquireResult, CapacityAvailability, CapacityCellUpdateRequest,

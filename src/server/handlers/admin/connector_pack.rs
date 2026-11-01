@@ -483,7 +483,7 @@ fn honour_self_served_pin(
     request: &medulla_types::connector_pack::ConnectorPackImportRequest,
 ) -> Result<(), String> {
     let server_name = request.index.server.name.as_str();
-    if !medulla_types::result_contract::cluster::is_valid_server_name(server_name) {
+    if !medulla_types::fleet_catalog::is_valid_server_name(server_name) {
         return Ok(());
     }
     let scope = verified.tenant_local_catalog_partition_digest(server_name)?;

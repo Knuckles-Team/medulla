@@ -14,8 +14,8 @@ use medulla_types::compute_result::mining::{
     ImpactOptions, ImpactPathRow, ImpactReport, ImpactSemantics, RiskPropagationMiningResult,
     RiskScoreRow, SeedAttributionRow,
 };
-use medulla_types::decision::digest::digest_text;
 use medulla_types::result_contract::compute as results;
+use medulla_types::solve_scalar::digest_text;
 
 /// Domain of an impact run's provenance digest.
 pub(crate) const IMPACT_DIGEST_DOMAIN: &str = "eg/impact-propagation/v1";

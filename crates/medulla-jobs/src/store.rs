@@ -39,11 +39,17 @@ use medulla_storage::{
     StorageKernel,
 };
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite, Begin, MutationKernel};
-use medulla_types::mutation_batch::{
-    DurabilityDomain, MutationBatch, MutationBatchRecord, MutationEnvelope, MutationOperation,
-    MutationOutboxIntent, MutationScope, MutationScopeIdentity, MutationSurface,
-    VersionExpectation, MUTATION_BATCH_VERSION,
-};
+use medulla_types::mutation_batch::MutationBatch;
+use medulla_types::mutation_batch::MutationBatchRecord;
+use medulla_types::mutation_batch::MutationEnvelope;
+use medulla_types::mutation_batch::MutationOperation;
+use medulla_types::mutation_batch::VersionExpectation;
+use medulla_types::mutation_batch::MUTATION_BATCH_VERSION;
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::MutationOutboxIntent;
+use medulla_types::mutation_scope::MutationScope;
+use medulla_types::mutation_scope::MutationScopeIdentity;
+use medulla_types::mutation_scope::MutationSurface;
 use medulla_types::protocol::Method;
 use redb::{ReadableTable, TableDefinition};
 

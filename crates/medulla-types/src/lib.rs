@@ -13,9 +13,11 @@ pub mod acl;
 // physical table and transaction adapter live above this pure-data crate.
 pub mod agent_component;
 pub mod agent_graph;
+pub mod agent_guardrail;
 pub mod agent_library;
 pub mod agent_ontology;
 pub mod agent_template;
+pub mod agent_topology;
 // MEDULLA-CQ-ORCH-R010.1 — pure data model for graph-derived architecture views.
 pub mod architecture_view;
 // MEDULLA-UNIFIED-DATA-PLANE-R012.1 — typed model for governed attached-source write-back.
@@ -384,8 +386,11 @@ pub mod managed_index;
 pub mod mutation_outbox;
 // RF-RULING-004 — untrusted serialized mutation request/evidence DTOs only.
 // Executable admitted plans/tokens are private to the future medulla-transaction kernel.
+pub mod error_registry;
+pub mod lease_vocab;
 pub mod mutation;
 pub mod mutation_batch;
+pub mod mutation_scope;
 // MEDULLA-ORCH-VOCAB-R801/R802 — the versioned harness-component vocabulary and the
 // improvement library beside it: typed model + pure rules. The durable write
 // (ChangeEnvelope/AddNode) and the served reads live upstream.
@@ -414,6 +419,7 @@ pub mod protocol;
 // certificate and exact scalars. The search and the verifier live in
 // `medulla-compute`, which re-exports these so there is one definition of each.
 pub mod solve;
+pub mod solve_scalar;
 // CONCEPT:MEDULLA-KG.compute.quantum-agent-api — the agent-facing quantum control-plane
 // wire op (`QuantumOp`), gated `quantum`. Lives here (not in `medulla-quantum-core`,
 // which sits ABOVE this crate in the DAG) for the SAME reason `jobs`/`statechart`
@@ -627,11 +633,13 @@ pub use modality::{
 // not re-exported: they have no v1 meaning, and keeping an alias would be exactly the
 // compatibility seam RF-ADR-001 forbids.
 pub use mutation_batch::{
-    CommittedVersion, IncarnationId, LogicalName, MutationBatch, MutationBatchCommit,
-    MutationBatchRecord, MutationBatchStatus, MutationEnvelope, MutationOperation,
-    MutationOutboxIntent, MutationOutboxLease, MutationOutboxRecord, MutationProjectionCursor,
-    MutationScope, MutationScopeIdentity, MutationStateDescriptor, MutationSurface, ScopeTenantId,
-    VersionExpectation, MUTATION_BATCH_VERSION,
+    MutationBatch, MutationBatchCommit, MutationBatchRecord, MutationBatchStatus, MutationEnvelope,
+    MutationOperation, MutationStateDescriptor, VersionExpectation, MUTATION_BATCH_VERSION,
+};
+pub use mutation_scope::{
+    CommittedVersion, IncarnationId, LogicalName, MutationOutboxIntent, MutationOutboxLease,
+    MutationOutboxRecord, MutationProjectionCursor, MutationScope, MutationScopeIdentity,
+    MutationSurface, ScopeTenantId,
 };
 
 /// The six native capacity writes. Keep admission, identity normalization and

@@ -683,7 +683,7 @@ fn is_terminal_topic(topic: &str) -> bool {
 }
 
 fn terminal_outbox_intent_applies(
-    intent: &medulla_types::mutation_batch::MutationOutboxIntent,
+    intent: &medulla_types::mutation_scope::MutationOutboxIntent,
     result_msgpack: Option<&[u8]>,
 ) -> Result<bool, String> {
     if !is_terminal_topic(&intent.topic) {

@@ -6,7 +6,7 @@ use crate::protocol::Response;
 use crate::server::auth::VerifiedRequestContext;
 #[cfg(feature = "redb")]
 use crate::server::persistence::agent_library::AgentLibraryStateExt;
-use medulla_types::decision::guardrail::GuardrailEntailmentRequest;
+use medulla_types::agent_guardrail::GuardrailEntailmentRequest;
 
 #[cfg(feature = "decide")]
 pub(crate) async fn handle_guardrail_entailment(
@@ -31,11 +31,10 @@ async fn entailment_for(
     state: &SharedState,
     verified: &VerifiedRequestContext,
     request: &GuardrailEntailmentRequest,
-) -> Result<medulla_types::decision::guardrail::GuardrailEntailmentResult, String> {
-    use medulla_types::decision::guardrail::{
-        guardrail_entailment_query, GuardrailEntailmentResult,
-        GUARDRAIL_ENTAILMENT_RESULT_SCHEMA_VERSION,
-    };
+) -> Result<medulla_types::agent_guardrail::GuardrailEntailmentResult, String> {
+    use medulla_types::agent_guardrail::guardrail_entailment_query;
+    use medulla_types::agent_guardrail::GuardrailEntailmentResult;
+    use medulla_types::agent_guardrail::GUARDRAIL_ENTAILMENT_RESULT_SCHEMA_VERSION;
 
     if request.tenant_id != verified.tenant() {
         return Err(

@@ -14,12 +14,12 @@ use crate::kernel::MutationKernel;
 use crate::outbox::{
     OutboxDelivery, OutboxPosition, OutboxRejectReason, OutboxRewindTarget, OutboxStatus,
 };
-use medulla_types::mutation_batch::MutationOutboxLease;
 use medulla_types::mutation_outbox::{
     MutationOutboxStatusView, OutboxConsumerStatus, OutboxDeadLetterPage, OutboxDeadLetterView,
     OutboxHeadView, OutboxPositionView, OutboxRewindReceipt, RewindTarget,
     MUTATION_OUTBOX_VIEW_SCHEMA_VERSION,
 };
+use medulla_types::mutation_scope::MutationOutboxLease;
 
 /// Most bounded rewind transactions one operator call runs before it answers
 /// `completed: false` and asks to be called again.

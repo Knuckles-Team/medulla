@@ -3,11 +3,17 @@
 use super::*;
 use crate::tables::store::dev_scope_grant;
 use medulla_types::contract::{BoundedVec, Digest256, MethodId, Nonce};
-use medulla_types::mutation_batch::{
-    method_schema_id, CompiledOperation, CompiledScope, DurabilityDomain, MutationEnvelope,
-    MutationOperation, MutationOutboxIntent, MutationSurface, VersionExpectation,
-    BATCH_COMPILED_METHODS, MUTATION_BATCH_VERSION,
-};
+use medulla_types::mutation_batch::method_schema_id;
+use medulla_types::mutation_batch::CompiledOperation;
+use medulla_types::mutation_batch::CompiledScope;
+use medulla_types::mutation_batch::MutationEnvelope;
+use medulla_types::mutation_batch::MutationOperation;
+use medulla_types::mutation_batch::VersionExpectation;
+use medulla_types::mutation_batch::BATCH_COMPILED_METHODS;
+use medulla_types::mutation_batch::MUTATION_BATCH_VERSION;
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::MutationOutboxIntent;
+use medulla_types::mutation_scope::MutationSurface;
 use medulla_types::test_support::sql_source;
 use std::collections::BTreeMap;
 use std::path::PathBuf;

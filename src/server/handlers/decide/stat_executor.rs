@@ -9,7 +9,9 @@
 
 use medulla_numeric::decision::candidate::CandidateView;
 use medulla_numeric::decision::exploration::permit;
-use medulla_numeric::decision::features::{feature_matrix, FeatureInputs, FeatureMatrix, MatrixOutcome};
+use medulla_numeric::decision::features::{
+    feature_matrix, FeatureInputs, FeatureMatrix, MatrixOutcome,
+};
 use medulla_numeric::decision::head_eval::{
     check_compatible, explanation, read_head, Evaluated, HeadReading,
 };
@@ -129,7 +131,7 @@ pub(super) fn state_digest(
     policy: &ResolvedPolicy,
     now_ms: u64,
 ) -> String {
-    medulla_types::decision::digest::digest_text(
+    medulla_types::solve_scalar::digest_text(
         "eg/decide-state/v1",
         &(
             question,

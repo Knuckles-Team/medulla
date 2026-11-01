@@ -662,10 +662,7 @@ mod tests {
             kind: QuestionKind::Route,
             safety: QuestionSafety::Ordinary,
         };
-        crate::decision::digest::digest_text(
-            "eg/decision-statistical-inputs/v1",
-            &(&question, inputs),
-        )
+        crate::solve_scalar::digest_text("eg/decision-statistical-inputs/v1", &(&question, inputs))
     }
 
     fn legacy_inputs() -> (&'static str, super::super::StatisticalInputs) {

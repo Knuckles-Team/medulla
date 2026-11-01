@@ -72,10 +72,11 @@ const RBAC_PHYSICAL_STORE: &str = "eg-core:rbac-security-control";
 /// construction (`ScopeTenantId`/`LogicalName`/`IncarnationId` validate their
 /// input), so failures are propagated rather than `.unwrap()`/`.expect()`'d
 /// away even though the fixed literals above are known-valid by inspection.
-fn native_security_control_identity() -> Result<medulla_types::MutationScopeIdentity, RbacPersistError> {
+fn native_security_control_identity(
+) -> Result<medulla_types::MutationScopeIdentity, RbacPersistError> {
     medulla_types::MutationScopeIdentity::fixed_native(
         RBAC_SCOPE_TENANT,
-        medulla_types::mutation_batch::DurabilityDomain::ControlPlane,
+        medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
         RBAC_SCOPE_RESOURCE,
         RBAC_SCOPE_INCARNATION,
     )

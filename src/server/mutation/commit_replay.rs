@@ -95,7 +95,7 @@ pub(super) async fn commit_staged_replay_probe(
         Ok(None) => None,
         Err(error) => Some(Response::err(
             ctx.req_id,
-            medulla_types::contract::classify_refusal(
+            medulla_types::error_registry::classify_refusal(
                 "INTERNAL",
                 "MutationBatch status lookup failed: ",
                 &error,
@@ -274,7 +274,7 @@ pub(super) async fn commit_row_replay_probe(
         Ok(None) => None,
         Err(error) => Some(Response::err(
             ctx.req_id,
-            medulla_types::contract::classify_refusal(
+            medulla_types::error_registry::classify_refusal(
                 "INTERNAL",
                 "MutationBatch status lookup failed: ",
                 &error,

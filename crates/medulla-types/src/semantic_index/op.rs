@@ -33,7 +33,8 @@ use super::{
     SemanticQueueClass, SemanticSqlSourceManifestDraft, SemanticStageArtifact, SemanticStageIntent,
     SemanticStageTransition,
 };
-use crate::mutation_batch::{MutationOutboxLease, MutationOutboxRecord};
+use crate::mutation_scope::MutationOutboxLease;
+use crate::mutation_scope::MutationOutboxRecord;
 
 /// The largest number of stage leases one claim may take.
 ///

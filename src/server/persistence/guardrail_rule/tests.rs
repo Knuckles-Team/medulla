@@ -3,7 +3,8 @@
 use medulla_types::agent_component::{
     AgentComponentDraft, AgentComponentKind, AgentComponentPublishRequest,
 };
-use medulla_types::decision::guardrail::{GuardrailRule, GUARDRAIL_APPLIES_TO_CLASS_ATTRIBUTE};
+use medulla_types::agent_guardrail::GuardrailRule;
+use medulla_types::agent_guardrail::GUARDRAIL_APPLIES_TO_CLASS_ATTRIBUTE;
 
 use super::super::agent_component::test_component_draft;
 use super::super::agent_fixtures::{mutation_context, open_agent_store};

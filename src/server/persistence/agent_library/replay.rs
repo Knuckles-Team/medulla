@@ -2,7 +2,8 @@ use std::collections::BTreeMap;
 
 use medulla_transaction::{MutationKernel, ReplayResolution};
 use medulla_types::mutation::{MutationReceipt, MutationResult};
-use medulla_types::mutation_batch::{MutationBatchStatus, MutationOutboxIntent};
+use medulla_types::mutation_batch::MutationBatchStatus;
+use medulla_types::mutation_scope::MutationOutboxIntent;
 use medulla_types::{
     AgentLibraryCommittedResult, AgentLibraryEntryDraft, AgentLibraryLifecycle,
     AgentLibraryMutationContext, AgentLibraryMutationKind, AgentLibraryOutboxEvent,

@@ -10,7 +10,7 @@ use super::{
     MAX_FLEET_LOOKUP_IDS, MAX_FLEET_PAGE_ROWS, MAX_FLEET_QUERY_BYTES,
 };
 use crate::contract::{BoundedVec, Digest256, ResourceId};
-use crate::result_contract::cluster::is_valid_server_name;
+use crate::fleet_catalog::is_valid_server_name;
 
 /// The component-id prefix every connector-pack member carries. Overrides and
 /// content lookups only ever address pack members.

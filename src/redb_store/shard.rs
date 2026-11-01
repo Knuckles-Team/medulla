@@ -55,7 +55,7 @@ use medulla_transaction::{
 };
 #[cfg(feature = "server")]
 use medulla_transaction::{GraftDestination, GraftedScope};
-use medulla_types::mutation_batch::COMPILED_BATCH_INCARNATION;
+use medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION;
 #[cfg(feature = "raft")]
 use medulla_types::MutationOutboxRecord;
 use medulla_types::{
@@ -1235,7 +1235,8 @@ impl<'g> ShardWrite<'g> {
 mod tests {
     use super::*;
     use crate::redb_store::{GRAPH_META, NODES, RAFT_LOG};
-    use medulla_types::mutation_batch::{authority_scope_for, DurabilityDomain};
+    use medulla_types::mutation_batch::authority_scope_for;
+    use medulla_types::mutation_scope::DurabilityDomain;
     use medulla_types::protocol::Method;
     use medulla_types::{
         MutationOperation, MutationSurface, VersionExpectation, MUTATION_BATCH_VERSION,

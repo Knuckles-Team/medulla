@@ -11,7 +11,8 @@ use serde::Serialize;
 
 use medulla_types::agent_library::AgentLibraryMutationContext;
 use medulla_types::mutation::{MutationReceipt, MutationResult};
-use medulla_types::mutation_batch::{MutationOperation, MutationOutboxIntent};
+use medulla_types::mutation_batch::MutationOperation;
+use medulla_types::mutation_scope::MutationOutboxIntent;
 
 use crate::server::persistence::agent_library::{
     admitted_context, agent_library_operation_identity, native_lifecycle_batch,

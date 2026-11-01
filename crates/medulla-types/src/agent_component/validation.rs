@@ -18,7 +18,7 @@ pub(super) fn validate_draft(draft: &AgentComponentDraft) -> Result<(), String> 
 /// (MEDULLA-DECISION-ENGINE-R127.2.1), never stored to fail a later query.
 fn validate_draft_kind_body(draft: &AgentComponentDraft) -> Result<(), String> {
     if draft.kind == AgentComponentKind::GuardrailRule {
-        crate::decision::guardrail::GuardrailRule::from_attributes(
+        crate::agent_guardrail::GuardrailRule::from_attributes(
             &draft.component_id,
             &draft.attributes,
         )?;

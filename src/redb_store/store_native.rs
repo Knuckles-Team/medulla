@@ -77,8 +77,9 @@ fn validate_terminal_outcome_extension(
         );
     }
     let event_intent = terminal_run_event_intent(batch)?;
-    let event: medulla_types::outcome_bundle::RunEvent = rmp_serde::from_slice(&event_intent.payload)
-        .map_err(|_| "terminal run-event outbox payload is not a valid RunEvent".to_string())?;
+    let event: medulla_types::outcome_bundle::RunEvent =
+        rmp_serde::from_slice(&event_intent.payload)
+            .map_err(|_| "terminal run-event outbox payload is not a valid RunEvent".to_string())?;
     event.validate_for_bundle(&extension.outcome_bundle)?;
     validate_terminal_event_headers(batch, extension, event_intent)
 }
@@ -758,9 +759,7 @@ fn validate_ordinary_completion_shape(batch: &MutationBatch) -> Result<(), Strin
     let ordinary = batch
         .operations
         .iter()
-        .map(|op| {
-            medulla_types::run_completion::RunCompletionPayload::from_method(&op.method, &batch.batch_id)
-        })
+        .map(|op| medulla_types::protocol::run_completion_payload(&op.method, &batch.batch_id))
         .collect::<Result<Vec<_>, _>>()?;
     let intents: Vec<_> = batch
         .outbox

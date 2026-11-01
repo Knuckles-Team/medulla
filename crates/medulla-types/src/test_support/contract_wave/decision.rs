@@ -17,7 +17,9 @@ use crate::decision::{
     UnknownCostRule, Violation, WhyNot, DECISION_POLICY_SCHEMA_VERSION,
     DECISION_RECORD_SCHEMA_VERSION,
 };
-use crate::solve::{Algorithm, ObjectiveValue, Scalar};
+use crate::solve::Algorithm;
+use crate::solve::ObjectiveValue;
+use crate::solve_scalar::Scalar;
 
 use super::{bounded, digest_text, solver};
 

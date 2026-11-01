@@ -39,7 +39,7 @@ mod imp {
     pub(in super::super) fn current_rules() -> Option<String> {
         let policy = policy();
         let names: Vec<&str> = DERIVATION_RULES.iter().map(|rule| rule.rule).collect();
-        Some(medulla_types::decision::digest::digest_text(
+        Some(medulla_types::solve_scalar::digest_text(
             RULES_DOMAIN,
             &(
                 names,

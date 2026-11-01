@@ -4,10 +4,12 @@ use std::sync::{Arc, Mutex};
 
 use medulla_transaction::OutboxClaimBudget;
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_batch::{
-    CommittedVersion, DurabilityDomain, MutationOutboxIntent, MutationOutboxRecord,
-    MutationScopeIdentity, MUTATION_BATCH_VERSION,
-};
+use medulla_types::mutation_batch::MUTATION_BATCH_VERSION;
+use medulla_types::mutation_scope::CommittedVersion;
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::MutationOutboxIntent;
+use medulla_types::mutation_scope::MutationOutboxRecord;
+use medulla_types::mutation_scope::MutationScopeIdentity;
 use medulla_types::semantic_index::{
     SemanticBinding, SemanticBindingState, SemanticDigest, SemanticIndexError,
     SemanticSourceDirtyIntent, SemanticSourceSelector, SemanticStageArtifact, SemanticStageOutcome,

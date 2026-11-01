@@ -13,7 +13,9 @@ use super::{
     BlobReference, ChangeCursor, ChangeEnvelope, ContentVersion, EvidenceRecord, FeatureRecord,
     LineageRecord, MaterialClass, PolicyRecord, PrivacyAttestation,
 };
-use crate::mutation_batch::{MutationBatch, MutationOperation, MutationOutboxIntent};
+use crate::mutation_batch::MutationBatch;
+use crate::mutation_batch::MutationOperation;
+use crate::mutation_scope::MutationOutboxIntent;
 
 /// What a caller may author of an envelope's mutation.
 #[derive(Debug, Clone, Serialize, Deserialize)]

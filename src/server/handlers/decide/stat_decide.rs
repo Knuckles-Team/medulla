@@ -14,7 +14,7 @@ use tokio::sync::RwLock;
 use tracing::Instrument;
 
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::digest::{digest_text, statistical_record_digest};
+use medulla_types::decision::digest::statistical_record_digest;
 use medulla_types::decision::statistical::keyed::seed_commitment;
 use medulla_types::decision::statistical::nl::{NlBinding, NlChoiceSource};
 use medulla_types::decision::statistical::{
@@ -26,6 +26,7 @@ use medulla_types::decision::{
     EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef, QuantScaleTag, ResolutionKind,
     TraceFidelity, STATISTICAL_DECISION_RECORD_SCHEMA_VERSION,
 };
+use medulla_types::solve_scalar::digest_text;
 
 use medulla_numeric::decision::ladder::LadderResult;
 

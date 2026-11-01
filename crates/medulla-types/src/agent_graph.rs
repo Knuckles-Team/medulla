@@ -541,7 +541,7 @@ pub struct AgentGraphDraft {
     /// decisions. Inside the definition digest; absent from every graph that
     /// declares none, so their digests do not move.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub topology: Option<crate::decision::topology::TopologyFacts>,
+    pub topology: Option<crate::agent_topology::TopologyFacts>,
 }
 
 impl AgentGraphDraft {
@@ -574,7 +574,7 @@ pub struct AgentGraphEntry {
     #[serde(default)]
     pub synthesis_evidence: Option<ComponentDependency>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub topology: Option<crate::decision::topology::TopologyFacts>,
+    pub topology: Option<crate::agent_topology::TopologyFacts>,
     /// The composed work ceiling ADMISSION derived for this revision --
     /// [`CompositionFacts::total_work`] from the publish that created it.
     ///
@@ -807,10 +807,7 @@ pub fn draft_definition_digest(draft: &AgentGraphDraft) -> String {
     // marker, so every graph without them keeps its digest.
     if let Some(topology) = &draft.topology {
         put_text(&mut hasher, "topology");
-        put_text(
-            &mut hasher,
-            &crate::decision::topology::facts_digest(topology),
-        );
+        put_text(&mut hasher, &crate::agent_topology::facts_digest(topology));
     }
     format!("{DIGEST_PREFIX}{}", hex::encode(hasher.finalize()))
 }

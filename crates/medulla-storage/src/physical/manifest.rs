@@ -3,7 +3,7 @@ use crate::owner::contract::expected_table_contracts;
 use crate::owner::identity::PhysicalStoreIdentity;
 use crate::owner::layout::{layout_domain_tag, OwnerLayout};
 use crate::physical::incarnation::{StoreIncarnation, STORAGE_KERNEL_SCHEMA_VERSION};
-use medulla_types::mutation_batch::DurabilityDomain;
+use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::IncarnationId;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};

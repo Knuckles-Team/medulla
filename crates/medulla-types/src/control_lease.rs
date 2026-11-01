@@ -30,6 +30,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use crate::keyset_page::{matches_pairs, validate_pair_filter, KeysetListing};
+use crate::lease_vocab::{MAX_CONTROL_LEASE_SPAN_MS, RBAC_ELEVATION_KIND};
 use crate::tenant_cursor::CursorFamily;
 use crate::work_item_read::WORK_ITEM_ROW_REVISION;
 
@@ -45,8 +46,6 @@ pub use pending_call::{
 pub const CONTROL_LEASE_NODE_TYPE: &str = "ControlLease";
 /// Largest encoded grant body.
 pub const MAX_CONTROL_LEASE_GRANT_BYTES: usize = 64 * 1024;
-/// Longest `hard_expires_at_ms - issued_at_ms` a lease may span (24 hours).
-pub const MAX_CONTROL_LEASE_SPAN_MS: u64 = 24 * 60 * 60 * 1000;
 /// The control-lease kind of a named decision evaluator's grant (EH-395). It is
 /// issued only by `DecisionLog.commit`, stored beside the record it grants,
 /// and never through `IssueControlLease`.
@@ -59,10 +58,6 @@ pub const CONTROL_LEASE_LIST_CURSOR: CursorFamily = CursorFamily {
     max_bytes: 16 * 1024,
     noun: "control lease list",
 };
-/// The reserved kind of a just-in-time RBAC elevation (EH-404,
-/// `crate::rbac_elevation`). Only the two-person `RbacElevation` flow issues
-/// one; `IssueControlLease` refuses it.
-pub const RBAC_ELEVATION_KIND: &str = "rbac.elevation";
 /// Bound on the tenant, lease id, kind and idempotency key.
 const MAX_CONTROL_LEASE_REF_BYTES: usize = 512;
 

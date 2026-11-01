@@ -534,7 +534,7 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
     let read = database.begin_read().unwrap();
     let identity = medulla_types::MutationScopeIdentity::fixed_native(
         "tenant-shared",
-        medulla_types::mutation_batch::DurabilityDomain::ControlPlane,
+        medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
         "agent-library",
         "agent-library:v1",
     )

@@ -8,7 +8,6 @@ use medulla_numeric::decision::scorer::fixed::{exp_non_positive, softmax, to_f64
 use medulla_numeric::decision::scorer::forward::{read, EncodedState, Scorer, EXCLUDED_LOGIT};
 use medulla_numeric::decision::scorer::legal::{shortlist, LegalSet};
 use medulla_numeric::decision::trajectory::{belief, Prefix};
-use medulla_types::decision::digest::digest_text;
 use medulla_types::decision::statistical::head::{
     DecisionHeadBody, FeatureStandardisation, FittedRegime, HeadKind, DECISION_HEAD_SCHEMA_VERSION,
 };
@@ -16,6 +15,7 @@ use medulla_types::decision::statistical::scorer::{
     OptionAttentionParams, MAX_SCORER_FEATURES, MAX_SCORER_SHORTLIST, MAX_SCORER_WIDTH,
 };
 use medulla_types::decision::{QuantScaleTag, QuantisedValue};
+use medulla_types::solve_scalar::digest_text;
 
 use super::common::{bounded, SCHEMA_DIGEST};
 

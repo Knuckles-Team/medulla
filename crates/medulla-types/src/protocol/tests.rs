@@ -679,7 +679,10 @@ fn eg318_memory_scene_trajectory_methods_roundtrip() {
         let back: Method = rmp_serde::from_slice(&wire).unwrap();
         // The tag+content framing survives; spot-check a representative field.
         let re = rmp_serde::to_vec_named(&back).unwrap();
-        assert_eq!(wire, re, "MEDULLA-318 method must msgpack-roundtrip identically");
+        assert_eq!(
+            wire, re,
+            "MEDULLA-318 method must msgpack-roundtrip identically"
+        );
     }
 }
 

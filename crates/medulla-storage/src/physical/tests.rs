@@ -25,7 +25,10 @@ use crate::recovery::evidence::{backup_strict_recovery_store_of, strict_evidence
 use crate::recovery::validate::{validate_live_recovery_store, validate_recovery_store_read_only};
 use crate::tables::{OWNER_MANIFEST, SCOPE_BINDINGS, STORE_ROOT, VERSIONS};
 use medulla_types::durability_class::{DurabilityClass, DurabilityWritePlan};
-use medulla_types::mutation_batch::{DurabilityDomain, IncarnationId, LogicalName, ScopeTenantId};
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::IncarnationId;
+use medulla_types::mutation_scope::LogicalName;
+use medulla_types::mutation_scope::ScopeTenantId;
 use medulla_types::MutationScopeIdentity;
 use redb::{
     Database, ReadableDatabase, ReadableTable, ReadableTableMetadata, TableDefinition, TableHandle,

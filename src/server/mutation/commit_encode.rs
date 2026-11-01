@@ -14,7 +14,7 @@ use super::{
 pub(super) fn staged_commit_error(req_id: u64, error: &str) -> Response {
     Response::err(
         req_id,
-        medulla_types::contract::classify_refusal(
+        medulla_types::error_registry::classify_refusal(
             "INTERNAL",
             "staged MutationBatch durable commit failed: ",
             error,

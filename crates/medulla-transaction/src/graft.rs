@@ -60,7 +60,9 @@ use medulla_storage::{
     OwnerDomain, OwnerPayloadRetirement, PhysicalWriteCapability, ScopeFence, ScopedOwnerTableMut,
     ScopedRead, StorageKernel,
 };
-use medulla_types::mutation_batch::{DurabilityDomain, MutationEnvelope, MutationScope};
+use medulla_types::mutation_batch::MutationEnvelope;
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::MutationScope;
 use medulla_types::protocol::Method;
 use medulla_types::{
     MutationBatch, MutationBatchStatus, MutationOperation, MutationScopeIdentity, MutationSurface,

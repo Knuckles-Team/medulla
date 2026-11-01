@@ -9,7 +9,7 @@
 //! the tenant's scope handle.
 
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
-use medulla_types::mutation_batch::MutationOutboxLease;
+use medulla_types::mutation_scope::MutationOutboxLease;
 
 use crate::server::outbox_operator::{
     operate, read_view, OutboxView, OutboxViewAnswer, OutboxWrite, OutboxWriteReply,

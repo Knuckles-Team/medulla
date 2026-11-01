@@ -1,10 +1,10 @@
 //! Native DTO, Method and pure-query checks. Served dispatcher tests live in
 //! the facade and remain a separate acceptance gate.
 
-
-use medulla_types::decision::guardrail::{
-    guardrail_entailment_query, EntailmentStep, GuardrailEntailmentRequest, GuardrailRule,
-};
+use medulla_types::agent_guardrail::guardrail_entailment_query;
+use medulla_types::agent_guardrail::EntailmentStep;
+use medulla_types::agent_guardrail::GuardrailEntailmentRequest;
+use medulla_types::agent_guardrail::GuardrailRule;
 use medulla_types::protocol::Method;
 
 #[test]

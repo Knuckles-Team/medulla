@@ -31,7 +31,7 @@ async fn reconcile_existing_graph_create(
         ),
         Err(e) => Response::err(
             req_id,
-            medulla_types::contract::classify_refusal(
+            medulla_types::error_registry::classify_refusal(
                 "INTERNAL",
                 "durable graph-create reconciliation failed: ",
                 &e,
@@ -217,7 +217,7 @@ async fn create_declared_graph(
     {
         return Response::err(
             req_id,
-            medulla_types::contract::classify_refusal(
+            medulla_types::error_registry::classify_refusal(
                 "INTERNAL",
                 "durable graph registration failed: ",
                 &e,
@@ -313,7 +313,7 @@ async fn reconcile_missing_graph_delete(
         ),
         Err(e) => Response::err(
             req_id,
-            medulla_types::contract::classify_refusal(
+            medulla_types::error_registry::classify_refusal(
                 "INTERNAL",
                 "durable graph-delete reconciliation failed: ",
                 &e,
@@ -437,7 +437,7 @@ async fn delete_declared_graph(
     {
         return Response::err(
             req_id,
-            medulla_types::contract::classify_refusal(
+            medulla_types::error_registry::classify_refusal(
                 "INTERNAL",
                 "durable graph purge failed: ",
                 &e,

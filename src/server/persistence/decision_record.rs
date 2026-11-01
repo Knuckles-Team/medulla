@@ -125,7 +125,7 @@ fn record_component(
 ) -> AgentComponentDraft {
     let hex = record
         .record_digest
-        .strip_prefix(digest::DIGEST_TEXT_PREFIX)
+        .strip_prefix(medulla_types::solve_scalar::DIGEST_TEXT_PREFIX)
         .unwrap_or(&record.record_digest);
     let subject = DraftSubject {
         component_id: &record.record_id,

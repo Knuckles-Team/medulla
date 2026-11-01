@@ -11,7 +11,8 @@ use super::{
 };
 use medulla_storage::{SemanticIndexOwner, SEMANTIC_SOURCE_PROGRESS};
 use medulla_transaction::{AdmittedMutation, OutboxClaimBudget, OutboxClaimOutcome};
-use medulla_types::mutation_batch::{MutationOutboxIntent, MutationOutboxLease};
+use medulla_types::mutation_scope::MutationOutboxIntent;
+use medulla_types::mutation_scope::MutationOutboxLease;
 use medulla_types::semantic_index::{
     SemanticBindingState, SemanticDigest, SemanticIndexMutation, SemanticQueueClass,
     SemanticSourceProgress, SemanticStage, SemanticStageIntent, SemanticStageIntentDraft,

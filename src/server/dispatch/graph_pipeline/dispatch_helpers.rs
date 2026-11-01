@@ -637,18 +637,18 @@ mod tests {
         envelope.envelope_id = format!("envelope-audit-skew-{node}");
         let mutation = &mut envelope.mutation;
         mutation.batch_id = format!("batch-audit-skew-{node}");
-        mutation.identity = medulla_types::mutation_batch::MutationScopeIdentity::graph(
-            medulla_types::mutation_batch::ScopeTenantId::new(TENANT).expect("tenant id"),
-            medulla_types::mutation_batch::LogicalName::new(graph).expect("graph name"),
-            medulla_types::mutation_batch::IncarnationId::new("incarnation:test:audit-skew")
+        mutation.identity = medulla_types::mutation_scope::MutationScopeIdentity::graph(
+            medulla_types::mutation_scope::ScopeTenantId::new(TENANT).expect("tenant id"),
+            medulla_types::mutation_scope::LogicalName::new(graph).expect("graph name"),
+            medulla_types::mutation_scope::IncarnationId::new("incarnation:test:audit-skew")
                 .expect("incarnation"),
         );
         mutation.version_expectation =
             medulla_types::mutation_batch::VersionExpectation::Graph(stamped);
         mutation.operations = vec![medulla_types::mutation_batch::MutationOperation {
             ordinal: 0,
-            surface: medulla_types::mutation_batch::MutationSurface::Graph,
-            domain: medulla_types::mutation_batch::DurabilityDomain::GraphRows,
+            surface: medulla_types::mutation_scope::MutationSurface::Graph,
+            domain: medulla_types::mutation_scope::DurabilityDomain::GraphRows,
             method: Method::AddNode {
                 node_id: node.into(),
                 properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({"value": "skew"}))

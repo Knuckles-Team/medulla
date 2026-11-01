@@ -13,10 +13,14 @@ use super::{
 use medulla_storage::{OwnedStoreHandle, SemanticIndexOwner};
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite};
 use medulla_types::contract::Digest256;
-use medulla_types::mutation_batch::{
-    BatchContent, CompiledOperation, CompiledScope, DurabilityDomain, MutationEnvelope,
-    MutationOutboxIntent, MutationOutboxLease, MutationSurface,
-};
+use medulla_types::mutation_batch::BatchContent;
+use medulla_types::mutation_batch::CompiledOperation;
+use medulla_types::mutation_batch::CompiledScope;
+use medulla_types::mutation_batch::MutationEnvelope;
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::MutationOutboxIntent;
+use medulla_types::mutation_scope::MutationOutboxLease;
+use medulla_types::mutation_scope::MutationSurface;
 use medulla_types::semantic_index::{SemanticDigest, SemanticIndexMutation};
 use medulla_types::{MutationBatch, MutationOperation};
 use sha2::{Digest, Sha256};

@@ -27,7 +27,9 @@ use medulla_types::decision::statistical::ingestion_lane::IngestionLaneRequest;
 use medulla_types::decision::statistical::log::RecordVisibility;
 use medulla_types::decision::statistical::retrieval_plan::RetrievalPlanKind;
 use medulla_types::decision::statistical::{CandidateSource, QuestionKind, StatisticalErrorCode};
-use medulla_types::decision::{CandidateSourceRecord, LibraryCandidateScope, MAX_ASSEMBLY_CANDIDATES};
+use medulla_types::decision::{
+    CandidateSourceRecord, LibraryCandidateScope, MAX_ASSEMBLY_CANDIDATES,
+};
 
 use super::stat_classes::{current_rules, derive, DerivedClasses};
 use super::stat_support::refusal;
@@ -246,7 +248,9 @@ pub(super) fn graph_candidates(
             let properties = view
                 .node_properties
                 .get(&id)
-                .and_then(|blob| medulla_types::msgpack::decode_property_value(blob.as_slice()).ok())
+                .and_then(|blob| {
+                    medulla_types::msgpack::decode_property_value(blob.as_slice()).ok()
+                })
                 .unwrap_or(serde_json::Value::Null);
             row_view(id, &properties)
         })
@@ -255,7 +259,7 @@ pub(super) fn graph_candidates(
         views,
         entries: Vec::new(),
         record: CandidateSourceRecord::Graph {
-            plan_digest: medulla_types::decision::digest::digest_text(
+            plan_digest: medulla_types::solve_scalar::digest_text(
                 "eg/decide-candidate-plan/v1",
                 &(graph, plan),
             ),
@@ -396,7 +400,7 @@ pub(super) fn declared_candidates(
         views,
         entries: Vec::new(),
         record: CandidateSourceRecord::Declared {
-            options_digest: medulla_types::decision::digest::digest_text(
+            options_digest: medulla_types::solve_scalar::digest_text(
                 DECLARED_OPTIONS_DOMAIN,
                 &options,
             ),

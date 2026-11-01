@@ -20,10 +20,10 @@ pub fn compiled_batch_operation() -> crate::mutation_batch::CompiledOperation {
 }
 
 fn minimal_mutation_envelope() -> crate::mutation_batch::MutationEnvelope {
-    let identity = crate::mutation_batch::MutationScopeIdentity::graph(
-        crate::mutation_batch::ScopeTenantId::new("tenant-a").unwrap(),
-        crate::mutation_batch::LogicalName::new("graph-a").unwrap(),
-        crate::mutation_batch::IncarnationId::new("incarnation:test:change-envelope").unwrap(),
+    let identity = crate::mutation_scope::MutationScopeIdentity::graph(
+        crate::mutation_scope::ScopeTenantId::new("tenant-a").unwrap(),
+        crate::mutation_scope::LogicalName::new("graph-a").unwrap(),
+        crate::mutation_scope::IncarnationId::new("incarnation:test:change-envelope").unwrap(),
     );
     crate::mutation_batch::MutationEnvelope::for_scope(
         crate::mutation_batch::CompiledScope {
@@ -45,10 +45,10 @@ pub fn minimal_envelope() -> ChangeEnvelope {
         schema_version: crate::mutation_batch::MUTATION_BATCH_VERSION,
         batch_id: "batch-1".into(),
         envelope: minimal_mutation_envelope(),
-        identity: crate::mutation_batch::MutationScopeIdentity::graph(
-            crate::mutation_batch::ScopeTenantId::new("tenant-a").unwrap(),
-            crate::mutation_batch::LogicalName::new("graph-a").unwrap(),
-            crate::mutation_batch::IncarnationId::new("incarnation:test:change-envelope").unwrap(),
+        identity: crate::mutation_scope::MutationScopeIdentity::graph(
+            crate::mutation_scope::ScopeTenantId::new("tenant-a").unwrap(),
+            crate::mutation_scope::LogicalName::new("graph-a").unwrap(),
+            crate::mutation_scope::IncarnationId::new("incarnation:test:change-envelope").unwrap(),
         ),
         placement_epoch: 0,
         version_expectation: crate::mutation_batch::VersionExpectation::Graph(0),
@@ -56,8 +56,8 @@ pub fn minimal_envelope() -> ChangeEnvelope {
         authoritative_state: None,
         operations: vec![crate::mutation_batch::MutationOperation {
             ordinal: 0,
-            surface: crate::mutation_batch::MutationSurface::Graph,
-            domain: crate::mutation_batch::DurabilityDomain::GraphRows,
+            surface: crate::mutation_scope::MutationSurface::Graph,
+            domain: crate::mutation_scope::DurabilityDomain::GraphRows,
             method: crate::protocol::Method::AddNode {
                 node_id: "n1".into(),
                 properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({"value": 1}))

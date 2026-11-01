@@ -23,7 +23,7 @@ pub fn bounded<T, const N: usize>(values: Vec<T>) -> BoundedVec<T, N> {
 
 /// A distinct, well-formed digest for `seed`.
 pub fn digest_of(seed: &str) -> String {
-    digest::digest_text("eg/test-fixture/v1", &seed)
+    medulla_types::solve_scalar::digest_text("eg/test-fixture/v1", &seed)
 }
 
 fn claim(component_id: &str) -> PremiseRef {

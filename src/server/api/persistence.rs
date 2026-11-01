@@ -128,7 +128,7 @@ pub trait PersistenceBackend: Send + Sync {
         _graph_fname: &str,
         _cells: &[String],
         _priority: medulla_types::capacity_lease::LeasePriority,
-    ) -> Result<Vec<medulla_types::decision::CapacityHeadroom>, String> {
+    ) -> Result<Vec<medulla_types::agent_topology::CapacityHeadroom>, String> {
         Err("persistence backend does not support native capacity headroom".to_string())
     }
 

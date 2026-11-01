@@ -10,7 +10,9 @@ use medulla_types::connector_pack::{
     CONNECTOR_PACK_SCHEMA_VERSION,
 };
 use medulla_types::contract::{Digest256, ResourceId};
-use medulla_types::mutation_batch::{DurabilityDomain, MutationOperation, MutationSurface};
+use medulla_types::mutation_batch::MutationOperation;
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::MutationSurface;
 use medulla_types::protocol::Method;
 use redb::ReadableTable;
 

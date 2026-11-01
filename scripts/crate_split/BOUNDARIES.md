@@ -56,8 +56,9 @@ L4  sql | cypher | tables | table-store | virtual-graph | graph-algos | mining |
     | finance | decision-policy | decision-rank
 L3  graph-core | isolation | core | semantic-index | ann-codes | reasoner | decision-stats | finance-market
 L2  storage | storage-owner | numeric | transaction | rdf | the 42 unchanged leaves (geo, tsdb, shacl, ...)
-L1  protocol-types | identity-types | agent-types | mutation-types | index-types | result-types
-    | catalog-types | decision-types
+    | protocol-types (the type hub above every domain type crate)
+L1  identity-types < mutation-types < index-types < result-types < agent-types < catalog-types
+    < decision-types   (one-way edges, left to right only)
 L0  medulla-types (thin)
 ```
 
@@ -120,24 +121,45 @@ meet.
 ## The medulla-types split
 
 `medulla-types` has the highest fan-in in the workspace (148k lines), so any edit to it
-rebuilds everything. It splits into eight crates:
+rebuilds everything. It splits into nine crates. Measured lines (2026-10-31):
 
-- **The thin `medulla-types` (L0, about 18k).** It keeps only ids, errors, scalar values,
-  test-support fixtures and about 300 small modules that have no domain prefix yet. It
-  takes no new rows: `route_rows.py` redirects any row whose path resolves there to the
-  spec's `types_home`.
-- **Seven L1 domain type crates.** Each depends only on L0, and leaf engines import only
-  the domains they use:
-  - `protocol-types`: the method registry, the wire-query envelopes and the contract
-    codes.
-  - `identity-types`: identity, RBAC, tenancy, ACL and authority.
-  - `agent-types`: agents, work items, jobs and runs.
-  - `mutation-types`: mutations, envelopes, outbox, leases and consensus.
-  - `index-types`: semantic index, embedding and entity resolution.
-  - `result-types`: answers, verdicts, epistemic nodes and predicates.
-  - `catalog-types`: packs, schema, catalog, ingest, lineage and release records.
-- **`decision-types`.** It takes `decision/` except `decision/statistical`, which goes to
-  `decision-stats`, plus `policy_evolution` and `solve`.
+| Crate | Level | Lines | Holds |
+|---|---|---|---|
+| `medulla-types` | L0 | 16.6k | contract ids and bounded collections, msgpack, wire scalars and query plans, `solve_scalar` (exact scalars, `Sha256Digest`, `digest_text`), `lease_vocab`, test-support fixtures and the small unprefixed modules |
+| `medulla-identity-types` | L1 | 17.3k | identity, RBAC, tenancy, ACL and authority |
+| `medulla-mutation-types` | L1 | 9.2k | `mutation_scope` (scope identity, durability domain, committed version, outbox rows), commit descriptor, governed change, capacity, consensus |
+| `medulla-index-types` | L1 | 10.6k | semantic index, embedding, managed index, entity resolution |
+| `medulla-result-types` | L1 | 11.6k | answers, verdicts, epistemic nodes and predicates |
+| `medulla-agent-types` | L1 | 22.3k | agents (incl. `agent_guardrail`, `agent_topology`), work items, jobs, runs, `native_control`, `control_lease`, `host_start` |
+| `medulla-catalog-types` | L1 | 16.5k | packs, schema, catalog, ingest, lineage, release records, attached-source readers |
+| `medulla-decision-types` | L1 | 17.0k | `decision/`, `policy_evolution`, `solve`, `current_plan` |
+| `medulla-protocol-types` | L2 | 22.2k | `Method`, its envelopes (`mutation_batch`, `change_envelope`, `debezium_bridge`, `result_contract`, `storage_wire`), wire-query types, `messaging_wire`, `error_registry` |
+
+Why the hub sits on top: `Method` embeds every domain's request types and
+`ChangeEnvelope` (which embeds `MutationBatch`, which embeds `Method`), so `Method`, the
+batch and the envelope are one recursive type family and live in one crate above the
+domains. Domain type crates never name `Method`: the two readers that matched on it
+(`market_write_scope`, `run_completion_payload`) are functions in `protocol`.
+
+Cycle cuts made at item level (MEDULLA-CONTRACT-R056.11):
+
+- `mutation_batch` → `mutation_scope`: the Method-free scope identity, durability
+  domain, committed version and outbox rows (index and agent types name them).
+- `decision::topology` → `agent_topology`, `decision::guardrail` → `agent_guardrail`
+  (agent graphs and components validate against them); their decision-record tests
+  stay in `decision`.
+- `solve::scalar` and `decision::digest::{digest_text, DIGEST_TEXT_PREFIX}` →
+  `solve_scalar` (L0).
+- `contract::{declared_error_code, classify_refusal}` → `error_registry` (hub), since the
+  registry names every domain's closed codes.
+- `control_lease::{MAX_CONTROL_LEASE_SPAN_MS, RBAC_ELEVATION_KIND}` → `lease_vocab` (L0).
+- `result_contract::cluster::{is_valid_server_name, MAX_REGISTERED_SERVER_NAME_BYTES}`
+  → `fleet_catalog`.
+- The governed-change wire-code test moved to `protocol`.
+
+Still open for the crate moves: `contract::closed_error_codes` is a `pub(crate)` macro
+used by domain crates and must become exported; `test_support` (L0) names domain
+modules and moves to a dev-only fixtures crate or splits per domain.
 
 The effect: a decision-type edit rebuilds only the decision family and h-decide, and no
 longer rebuilds SQL, raft or wire. The small residual modules should move to a domain

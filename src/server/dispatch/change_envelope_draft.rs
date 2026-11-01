@@ -182,7 +182,9 @@ pub(crate) mod tests {
     use medulla_types::change_envelope::{
         ChangeMutationDraft, ContentVersion, ContentVersionPosition, PrivacyAttestation,
     };
-    use medulla_types::mutation_batch::{DurabilityDomain, MutationOperation, MutationSurface};
+    use medulla_types::mutation_batch::MutationOperation;
+    use medulla_types::mutation_scope::DurabilityDomain;
+    use medulla_types::mutation_scope::MutationSurface;
 
     fn draft() -> ChangeEnvelopeDraft {
         draft_for("tenant-a", serde_json::json!({"type": "Document"}))

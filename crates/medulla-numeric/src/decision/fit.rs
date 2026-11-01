@@ -11,7 +11,6 @@
 //! bisection line search in [`crate::detkernel::optimise`]. No randomness, no
 //! parallelism, fixed sweep order: the same items produce the same bits.
 
-use medulla_types::decision::digest::digest_text;
 use medulla_types::decision::jobs::OptimiserSpec;
 use medulla_types::decision::statistical::body::content_digest_of;
 use medulla_types::decision::statistical::dataset::{LabelledDataset, LabelledItem};
@@ -21,6 +20,7 @@ use medulla_types::decision::statistical::head::{
 };
 use medulla_types::decision::statistical::StatisticalErrorCode;
 use medulla_types::decision::StatisticalPolicy;
+use medulla_types::solve_scalar::digest_text;
 
 use super::admission::Regime;
 use super::fit_calibrate::{calibrate, calibrate_scorer};

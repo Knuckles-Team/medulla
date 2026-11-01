@@ -8,9 +8,10 @@ use medulla_types::connector_pack::{
     PackImportRecord, PackImportResult, PackProjectionState, CONNECTOR_PACK_IMPORT_TOPIC,
     CONNECTOR_PACK_RESULT_SCHEMA_ID,
 };
-use medulla_types::mutation_batch::{
-    DurabilityDomain, MutationOperation, MutationOutboxIntent, MutationSurface,
-};
+use medulla_types::mutation_batch::MutationOperation;
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::MutationOutboxIntent;
+use medulla_types::mutation_scope::MutationSurface;
 use medulla_types::protocol::Method;
 use redb::ReadableTable;
 
@@ -371,7 +372,8 @@ fn apply_import_record(
     let tenant = plan.record.tenant_id.as_str();
     let connector = plan.record.connector.as_str();
     let mut imports = write.open_table(medulla_storage::CONNECTOR_PACK_IMPORTS)?;
-    let record_bytes = medulla_storage::encode_bounded(&plan.record, "connector pack import record")?;
+    let record_bytes =
+        medulla_storage::encode_bounded(&plan.record, "connector pack import record")?;
     if imports
         .get((tenant, connector, plan.record.binding_revision))
         .map_err(|error| error.to_string())?

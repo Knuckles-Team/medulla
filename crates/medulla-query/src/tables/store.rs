@@ -46,10 +46,13 @@ use std::sync::{Arc, RwLock};
 
 use medulla_storage::ScopeGrantVerifier;
 use medulla_transaction::Begin;
-use medulla_types::mutation_batch::{
-    DurabilityDomain, MutationBatch, MutationBatchCommit, MutationBatchRecord,
-    MutationOutboxRecord, MutationScope, MutationScopeIdentity,
-};
+use medulla_types::mutation_batch::MutationBatch;
+use medulla_types::mutation_batch::MutationBatchCommit;
+use medulla_types::mutation_batch::MutationBatchRecord;
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::MutationOutboxRecord;
+use medulla_types::mutation_scope::MutationScope;
+use medulla_types::mutation_scope::MutationScopeIdentity;
 use redb::{ReadableTable, TableDefinition};
 use serde_json::Value;
 
@@ -660,7 +663,7 @@ impl TableStore {
         // free of the path- and address-shaped text `medulla-types` refuses to
         // persist. Checked here so the failure names the argument rather than
         // surfacing from inside the storage kernel.
-        medulla_types::mutation_batch::ScopeTenantId::new(&tenant_scope)
+        medulla_types::mutation_scope::ScopeTenantId::new(&tenant_scope)
             .map_err(|error| format!("SQL table-store tenant scope is invalid: {error}"))?;
         let authority =
             SqlAuthority::open(path.as_ref(), &tenant_scope, verifier, principal, proof)?;
@@ -6871,11 +6874,17 @@ mod tests {
     use crate::tables::schema::{CmpOp, ColCheck, ColumnType};
     // The mutation ledger is the kernel's now, so the store itself no longer
     // imports these; the fixtures that build a `MutationBatch` still need them.
-    use medulla_types::mutation_batch::{
-        IncarnationId, LogicalName, MutationBatchStatus, MutationEnvelope, MutationOperation,
-        MutationOutboxIntent, MutationSurface, ScopeTenantId, VersionExpectation,
-        COMPILED_BATCH_INCARNATION, MUTATION_BATCH_VERSION,
-    };
+    use medulla_types::mutation_batch::MutationBatchStatus;
+    use medulla_types::mutation_batch::MutationEnvelope;
+    use medulla_types::mutation_batch::MutationOperation;
+    use medulla_types::mutation_batch::VersionExpectation;
+    use medulla_types::mutation_batch::MUTATION_BATCH_VERSION;
+    use medulla_types::mutation_scope::IncarnationId;
+    use medulla_types::mutation_scope::LogicalName;
+    use medulla_types::mutation_scope::MutationOutboxIntent;
+    use medulla_types::mutation_scope::MutationSurface;
+    use medulla_types::mutation_scope::ScopeTenantId;
+    use medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION;
 
     #[test]
     fn stored_sql_decoder_rejects_declared_allocation_bombs() {
@@ -7593,7 +7602,9 @@ mod tests {
                 method_schema_id: medulla_types::mutation_batch::method_schema_id(&method).unwrap(),
                 method,
                 method_schema_digest: medulla_types::contract::Digest256::from_bytes([0_u8; 32]),
-                canonical_payload_digest: medulla_types::contract::Digest256::from_bytes([0_u8; 32]),
+                canonical_payload_digest: medulla_types::contract::Digest256::from_bytes(
+                    [0_u8; 32],
+                ),
             },
         )
         .unwrap();
@@ -7621,7 +7632,9 @@ mod tests {
                 method_schema_id: medulla_types::mutation_batch::method_schema_id(&method).unwrap(),
                 method,
                 method_schema_digest: medulla_types::contract::Digest256::from_bytes([0_u8; 32]),
-                canonical_payload_digest: medulla_types::contract::Digest256::from_bytes([1_u8; 32]),
+                canonical_payload_digest: medulla_types::contract::Digest256::from_bytes(
+                    [1_u8; 32],
+                ),
             },
         )
         .unwrap()
@@ -7689,7 +7702,8 @@ mod tests {
             LogicalName::new("graph-a").unwrap(),
             IncarnationId::new(COMPILED_BATCH_INCARNATION).unwrap(),
         );
-        graph_scoped.version_expectation = medulla_types::mutation_batch::VersionExpectation::Graph(0);
+        graph_scoped.version_expectation =
+            medulla_types::mutation_batch::VersionExpectation::Graph(0);
         // The identity is part of the canonical payload, so re-mint the
         // envelope against it -- otherwise the envelope-coverage rule refuses
         // the batch before it can reach the native-scope check under test.
@@ -7856,12 +7870,13 @@ mod tests {
         // A SQL batch may not carry a graph state descriptor at all: it is
         // rejected by the batch's own validation, before admission.
         let mut changed = stored.clone();
-        changed.authoritative_state = Some(medulla_types::mutation_batch::MutationStateDescriptor {
-            algorithm: "sha256".to_string(),
-            digest: "0".repeat(64),
-            source_graph_version: 0,
-            target_graph_version: 1,
-        });
+        changed.authoritative_state =
+            Some(medulla_types::mutation_batch::MutationStateDescriptor {
+                algorithm: "sha256".to_string(),
+                digest: "0".repeat(64),
+                source_graph_version: 0,
+                target_graph_version: 1,
+            });
         assert!(store
             .commit_txn_batch(&create_metrics_txn(), &changed, 103)
             .is_err());
@@ -8248,11 +8263,11 @@ mod tests {
         // literal calling graph) must ALSO change the fingerprint: this is the
         // property `mutation_version(tenant, ONE_graph)` cannot offer on its own.
         let mut batch_b = sql_batch("fp-b");
-        batch_b.identity = medulla_types::mutation_batch::MutationScopeIdentity::native(
-            medulla_types::mutation_batch::ScopeTenantId::new("tenant-a").unwrap(),
+        batch_b.identity = medulla_types::mutation_scope::MutationScopeIdentity::native(
+            medulla_types::mutation_scope::ScopeTenantId::new("tenant-a").unwrap(),
             DurabilityDomain::SqlCatalog,
-            medulla_types::mutation_batch::LogicalName::new("graph-b").unwrap(),
-            medulla_types::mutation_batch::IncarnationId::new(COMPILED_BATCH_INCARNATION).unwrap(),
+            medulla_types::mutation_scope::LogicalName::new("graph-b").unwrap(),
+            medulla_types::mutation_scope::IncarnationId::new(COMPILED_BATCH_INCARNATION).unwrap(),
         )
         .unwrap();
         // Re-mint the envelope for the new scope: the retry key lives inside it,

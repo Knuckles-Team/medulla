@@ -714,7 +714,7 @@ async fn apply_one_change_envelope_inner(
             // detail, not as an unclassified refusal (spec: MEDULLA-DURABLE-KERNEL-R043.8).
             return Response::err(
                 req_id,
-                medulla_types::contract::classify_refusal(
+                medulla_types::error_registry::classify_refusal(
                     "INTERNAL",
                     "ApplyChangeEnvelope atomic commit failed: ",
                     &error,

@@ -24,7 +24,6 @@ use medulla_numeric::decision::replay::{
     ReplayOutcome, ReplayPolicy, ReplayStep, Uniform,
 };
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::digest::digest_text;
 use medulla_types::decision::replay::{
     EvaluationRun, OptionContribution, ReplayEnvironment, ReplayFoldView, ReplaySpec,
     ReplayValidation, TrialLog,
@@ -32,6 +31,7 @@ use medulla_types::decision::replay::{
 use medulla_types::decision::statistical::dataset::LabelledItem;
 use medulla_types::decision::statistical::StatisticalErrorCode;
 use medulla_types::decision::{DecisionEvalRequest, DecisionJobOutput, QuantisedValue};
+use medulla_types::solve_scalar::digest_text;
 
 use super::stat_jobs::{candidate_head, dataset_digest, EvalInputs, JobRun};
 use super::stat_support::refusal;

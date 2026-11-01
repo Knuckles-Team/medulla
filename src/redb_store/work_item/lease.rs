@@ -101,7 +101,9 @@ fn lease_renewed(
     fencing_token: u64,
     lease_expires_at_ms: u64,
 ) -> Result<crate::protocol::ResultPayload, String> {
-    crate::protocol::ResultPayload::of::<medulla_types::result_contract::coordination::RenewWorkItemLease>(
+    crate::protocol::ResultPayload::of::<
+        medulla_types::result_contract::coordination::RenewWorkItemLease,
+    >(
         medulla_types::result_contract::coordination::WorkItemLeaseRenewal {
             renewed: true,
             reason: None,
@@ -118,7 +120,9 @@ fn lease_renewed(
 fn lease_renewal_refused(
     reason: medulla_types::result_contract::coordination::LeaseRenewalRefusal,
 ) -> Result<crate::protocol::ResultPayload, String> {
-    crate::protocol::ResultPayload::of::<medulla_types::result_contract::coordination::RenewWorkItemLease>(
+    crate::protocol::ResultPayload::of::<
+        medulla_types::result_contract::coordination::RenewWorkItemLease,
+    >(
         medulla_types::result_contract::coordination::WorkItemLeaseRenewal {
             renewed: false,
             reason: Some(reason),
@@ -170,9 +174,13 @@ pub(super) fn declared_commit_status(
     status: &str,
 ) -> Result<medulla_types::result_contract::coordination::WorkItemCommitStatus, String> {
     match status {
-        "succeeded" => Ok(medulla_types::result_contract::coordination::WorkItemCommitStatus::Succeeded),
+        "succeeded" => {
+            Ok(medulla_types::result_contract::coordination::WorkItemCommitStatus::Succeeded)
+        }
         "failed" => Ok(medulla_types::result_contract::coordination::WorkItemCommitStatus::Failed),
-        "cancelled" => Ok(medulla_types::result_contract::coordination::WorkItemCommitStatus::Cancelled),
+        "cancelled" => {
+            Ok(medulla_types::result_contract::coordination::WorkItemCommitStatus::Cancelled)
+        }
         "dead_letter" => {
             Ok(medulla_types::result_contract::coordination::WorkItemCommitStatus::DeadLetter)
         }

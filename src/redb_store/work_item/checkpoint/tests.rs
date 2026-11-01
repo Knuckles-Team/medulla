@@ -304,7 +304,9 @@ fn checkpoint_read_never_crosses_native_graph_tenant_or_run() {
     assert_eq!(count(shard), 1);
 }
 
-fn typed_admission(metadata: serde_json::Value) -> medulla_types::native_control::SubmitWorkItemRequest {
+fn typed_admission(
+    metadata: serde_json::Value,
+) -> medulla_types::native_control::SubmitWorkItemRequest {
     let mut request = admission(metadata);
     request.conversation = Some(Box::new(
         medulla_types::native_control::ConversationTurnAdmission {

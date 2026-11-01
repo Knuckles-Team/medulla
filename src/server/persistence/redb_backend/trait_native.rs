@@ -148,7 +148,7 @@ macro_rules! persistence_native {
         graph_fname: &str,
         cells: &[String],
         priority: medulla_types::capacity_lease::LeasePriority,
-    ) -> Result<Vec<medulla_types::decision::CapacityHeadroom>, String> {
+    ) -> Result<Vec<medulla_types::agent_topology::CapacityHeadroom>, String> {
         let graph = graph_fname.to_owned();
         let cells = cells.to_vec();
         self.read_snapshot(graph_fname, move |shard, crypto| {

@@ -33,7 +33,6 @@ pub mod entry_trust;
 pub mod errors;
 pub mod evolution_round;
 pub mod execution_answer;
-pub mod guardrail;
 pub mod harness_contrast;
 pub mod ingestion_admission;
 pub mod ingestion_ladder;
@@ -55,7 +54,6 @@ pub mod request;
 pub mod skill_upgrade;
 pub mod statistical;
 pub mod task_plan;
-pub mod topology;
 pub mod usage_guidance;
 pub mod web_fetch_selection;
 
@@ -125,9 +123,6 @@ pub use statistical::{
     ScoredOption, ShortlistProvenance, StatisticalDecisionRecord, StatisticalInputs,
     StatisticalOutcome, StatisticalQuestion, TypedParam, TypedValue,
 };
-pub use topology::{
-    CapacityHeadroom, CapacityScope, CellLease, LeaseDemand, LeasePlan, SchemaAuthority, SlotPlan,
-    SlotRole, SlotTopology, StopRule, SubagentAllowance, SubagentFallback, TopologyAdmission,
-    TopologyCaps, TopologyFacts, TopologyInputs, TopologyPlan, TopologyPolicy,
-    TopologyRequirements,
-};
+
+#[cfg(test)]
+mod topology_tests;

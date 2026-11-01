@@ -19,10 +19,14 @@ use medulla_storage::{
 };
 use medulla_transaction::{AdmittedOwnerWrite, MutationKernel};
 use medulla_types::mutation::{MutationReceipt, MutationResult};
-use medulla_types::mutation_batch::{
-    BatchContent, CompiledEnvelope, CompiledOperation, CompiledScope, DurabilityDomain,
-    MutationEnvelope, MutationOperation, MutationOutboxIntent,
-};
+use medulla_types::mutation_batch::BatchContent;
+use medulla_types::mutation_batch::CompiledEnvelope;
+use medulla_types::mutation_batch::CompiledOperation;
+use medulla_types::mutation_batch::CompiledScope;
+use medulla_types::mutation_batch::MutationEnvelope;
+use medulla_types::mutation_batch::MutationOperation;
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::MutationOutboxIntent;
 use medulla_types::{
     AgentLibraryCommittedResult, AgentLibraryEntry, AgentLibraryEntryDraft,
     AgentLibraryMutationContext, AgentLibraryMutationKind, AgentLibraryOutboxEvent,

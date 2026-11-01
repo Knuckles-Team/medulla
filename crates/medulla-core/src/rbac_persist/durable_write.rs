@@ -94,7 +94,7 @@ fn authority_batch(
         operations: vec![medulla_types::MutationOperation {
             ordinal: 0,
             surface: medulla_types::MutationSurface::Other,
-            domain: medulla_types::mutation_batch::DurabilityDomain::ControlPlane,
+            domain: medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
             method: medulla_types::protocol::Method::ApplyMutation {
                 event_type: "security_state_snapshot".to_string(),
                 query: format!("sha256:{digest}"),

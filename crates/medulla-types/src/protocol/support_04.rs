@@ -140,10 +140,10 @@ impl Response {
     pub fn err(id: u64, error: impl Into<String>) -> Self {
         let text = error.into();
         let (error, error_detail) = match text.split_once(": ") {
-            Some((code, detail)) if crate::contract::declared_error_code(code) => {
+            Some((code, detail)) if crate::error_registry::declared_error_code(code) => {
                 (code.to_string(), Some(detail.to_string()))
             }
-            _ if crate::contract::declared_error_code(&text) => (text, None),
+            _ if crate::error_registry::declared_error_code(&text) => (text, None),
             _ => {
                 // The wire never carries uncoded text (it may name request values);
                 // keep it diagnosable for operators at debug level instead of

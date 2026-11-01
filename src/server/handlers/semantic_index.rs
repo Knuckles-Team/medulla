@@ -188,7 +188,7 @@ pub(super) fn stamp_draft_identity(
 /// A lease may only be presented by the worker whose class consumer it was
 /// issued to (`<worker>#<class>`).
 pub(crate) fn own_lease(
-    lease: &medulla_types::mutation_batch::MutationOutboxLease,
+    lease: &medulla_types::mutation_scope::MutationOutboxLease,
     authority: &CarrierAuthority,
 ) -> Result<(), String> {
     let owner = medulla_core::compute::semantic_ann_codes::stage_consumer_parts(&lease.consumer)

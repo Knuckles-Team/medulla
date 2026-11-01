@@ -12,7 +12,6 @@
 pub mod certificate;
 pub mod objective;
 pub mod request;
-pub mod scalar;
 pub mod spec;
 
 pub use certificate::{
@@ -23,7 +22,6 @@ pub use certificate::{
 };
 pub use objective::{LevelValue, ObjectiveValue};
 pub use request::{SolveErrorCode, SolveRequest, SolveResult, SOLVE_RESULT_SCHEMA_VERSION};
-pub use scalar::{Scalar, ScalarParseError, Sha256Digest};
 pub use spec::{
     Coefficient, ConstraintBody, ConstraintSpec, ModelSpec, ObjectiveLevelSpec, ObjectiveTerm,
     Relation, RowId, Term, VarId,

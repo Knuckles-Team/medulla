@@ -18,7 +18,7 @@ use medulla_storage::{
 };
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite};
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_batch::MutationOutboxIntent;
+use medulla_types::mutation_scope::MutationOutboxIntent;
 use medulla_types::semantic_index::{
     SemanticBinding, SemanticBindingState, SemanticBindingStateTransition, SemanticDigest,
     SemanticIndexMutation, SemanticTombstone, SemanticTombstoneDraft,

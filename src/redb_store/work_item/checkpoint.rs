@@ -18,9 +18,9 @@ fn admitted_context(row: &Row, graph: &str, tenant: &str, run_id: &str, context_
     let Some(value) = row.get(run_owner::ADMISSION_REQUEST) else {
         return false;
     };
-    let Ok(admission) =
-        serde_json::from_value::<medulla_types::native_control::SubmitWorkItemRequest>(value.clone())
-    else {
+    let Ok(admission) = serde_json::from_value::<
+        medulla_types::native_control::SubmitWorkItemRequest,
+    >(value.clone()) else {
         return false;
     };
     admission.run_id.as_deref() == Some(run_id)

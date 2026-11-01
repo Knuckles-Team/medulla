@@ -39,6 +39,22 @@ pub use vocabulary::{
     FleetVisibility, FleetWriteDisposition, ResourceKind, SkillType, SkillTypeSource, ToolMode,
 };
 
+/// Longest registered server name. Mirrors the agent-utilities config-sync
+/// bound, so one name is valid on both registration paths.
+pub const MAX_REGISTERED_SERVER_NAME_BYTES: usize = 128;
+
+/// Whether `name` is a bounded logical server name (`^[A-Za-z0-9_.-]{1,128}$`).
+///
+/// The one definition: the registry, its cursors and the fleet catalog's
+/// discovery records all validate server names here.
+pub fn is_valid_server_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= MAX_REGISTERED_SERVER_NAME_BYTES
+        && name
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.'))
+}
+
 /// Format identity (RF-ADR-006) of every fleet catalog page and record.
 pub const FLEET_CATALOG_SCHEMA_VERSION: u16 = 1;
 /// Most rows one [`FleetCatalogPage`] may carry, and the default page size.

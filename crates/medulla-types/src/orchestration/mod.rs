@@ -162,7 +162,7 @@ impl HarnessComponentVersion {
     /// The one digest scheme the vocabulary uses for content: the engine's
     /// canonical text digest over the content reference.
     pub fn content_digest(content_ref: &str) -> String {
-        crate::decision::digest::digest_text(
+        crate::solve_scalar::digest_text(
             "eg/harness-component-content/v1",
             &content_ref.to_string(),
         )

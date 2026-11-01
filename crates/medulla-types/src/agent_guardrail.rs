@@ -5,7 +5,7 @@
 //! class it governs (`applies_to_class`) by IRI. [`entailed_guardrails`]
 //! reuses the same subclass-entailment primitive
 //! [`crate::agent_ontology::broader_chain`] that
-//! [`super::derivation::coverage_chain`] already proves for capability
+//! `decision::derivation::coverage_chain` already proves for capability
 //! coverage, applied here to task-class subsumption instead: a rule applies
 //! to a task whenever the task IS the rule's class, or is subsumed by it, and
 //! each answer carries the exact chain of `narrower -> broader` steps that

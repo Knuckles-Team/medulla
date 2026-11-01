@@ -5,7 +5,7 @@ use crate::protocol::{GraphType, Method, ResultPayload};
 use crate::server::api::persistence::PersistenceBackend;
 use crate::server::persistence::redb_backend::RedbBackend;
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_batch::CommittedVersion;
+use medulla_types::mutation_scope::CommittedVersion;
 
 use super::commit::lifecycle_identity_matches;
 use super::{
@@ -245,7 +245,10 @@ async fn delete_lifecycle_replay_keeps_one_stable_receipt() {
 #[tokio::test(flavor = "multi_thread")]
 async fn delete_purges_receipts_of_a_prior_incarnation() {
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    let dir = medulla_kernel::kernel::persistence::temp_dir("medulla-lifecycle-replay", "purge-incarnation");
+    let dir = medulla_kernel::kernel::persistence::temp_dir(
+        "medulla-lifecycle-replay",
+        "purge-incarnation",
+    );
     let graph = "lifecycle-reincarnated";
     let principal = Some("principal:lifecycle-test");
     let create_method = || Method::CreateGraph {
@@ -412,7 +415,8 @@ async fn delete_purges_receipts_of_a_prior_incarnation() {
 #[tokio::test(flavor = "multi_thread")]
 async fn lifecycle_receipt_is_not_replayed_across_tenants() {
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    let dir = medulla_kernel::kernel::persistence::temp_dir("medulla-lifecycle-replay", "cross-tenant");
+    let dir =
+        medulla_kernel::kernel::persistence::temp_dir("medulla-lifecycle-replay", "cross-tenant");
     let persistence = open_backend(&dir);
     let graph = "lifecycle-shared-name";
     let method = || Method::CreateGraph {

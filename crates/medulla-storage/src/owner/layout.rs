@@ -1,6 +1,6 @@
 use crate::owner::contract::expected_table_contracts;
 use crate::physical::manifest::{hash_table_contract, TableContract};
-use medulla_types::mutation_batch::DurabilityDomain;
+use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::MutationScopeIdentity;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};

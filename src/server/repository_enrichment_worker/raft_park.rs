@@ -8,7 +8,7 @@
 use crate::raft::RaftStateExt;
 use std::sync::Arc;
 
-use medulla_types::mutation_batch::MutationOutboxLease;
+use medulla_types::mutation_scope::MutationOutboxLease;
 use medulla_types::native_control::EnrichmentBudgetPark;
 use tokio::sync::RwLock;
 

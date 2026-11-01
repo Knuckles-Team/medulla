@@ -762,9 +762,10 @@ async fn dispatch_attributes_every_queue_class_to_the_one_verified_principal() {
         "completing S1 publishes its S2 successor onto the Medium queue"
     );
     let medium_entry = medium.entries.into_iter().next().unwrap();
-    let medium_parts =
-        medulla_core::compute::semantic_ann_codes::stage_consumer_parts(&medium_entry.lease.consumer)
-            .expect("a leased row's consumer is `<worker>#<class>`");
+    let medium_parts = medulla_core::compute::semantic_ann_codes::stage_consumer_parts(
+        &medium_entry.lease.consumer,
+    )
+    .expect("a leased row's consumer is `<worker>#<class>`");
     assert_eq!(
         medium_parts.0, WORKER,
         "the Medium lease is attributed to the verified envelope principal, \

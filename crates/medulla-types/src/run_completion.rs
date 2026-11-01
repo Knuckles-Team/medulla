@@ -81,44 +81,6 @@ pub struct RunCompletionPayload {
     pub result_ref: Option<String>,
     pub error_ref: Option<String>,
 }
-impl RunCompletionPayload {
-    pub fn from_method(
-        method: &crate::protocol::Method,
-        batch_id: &str,
-    ) -> Result<Option<Self>, String> {
-        let crate::protocol::Method::CommitWorkItemResult {
-            tenant,
-            work_item_id,
-            outcome,
-            result_ref,
-            error_ref,
-            retryable,
-            outcome_extension,
-            run_completion: Some(completion),
-            ..
-        } = method
-        else {
-            return Ok(None);
-        };
-        completion.validate()?;
-        if outcome_extension.is_some()
-            || *retryable
-            || !matches!(outcome.as_str(), "succeeded" | "failed" | "cancelled")
-            || (outcome != "succeeded" && result_ref.is_some())
-        {
-            return Err("ordinary run completion requires an exclusive final result without failed answer artifacts".into());
-        }
-        Ok(Some(Self {
-            completion: (**completion).clone(),
-            tenant: tenant.clone(),
-            work_item_id: work_item_id.clone(),
-            batch_id: batch_id.into(),
-            outcome: outcome.clone(),
-            result_ref: result_ref.clone(),
-            error_ref: error_ref.clone(),
-        }))
-    }
-}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

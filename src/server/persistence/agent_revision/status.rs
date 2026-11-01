@@ -10,7 +10,10 @@ use super::super::agent_library::{batch_id, validate_context};
 use super::*;
 
 /// A committed ledger record and the tenant scope it was read under.
-type StatusRecord = (Arc<OwnedStoreHandle<Owner>>, medulla_types::MutationBatchRecord);
+type StatusRecord = (
+    Arc<OwnedStoreHandle<Owner>>,
+    medulla_types::MutationBatchRecord,
+);
 
 /// The ledger record one caller operation committed, with the tenant scope it
 /// was read under, or `None` when that operation never committed.

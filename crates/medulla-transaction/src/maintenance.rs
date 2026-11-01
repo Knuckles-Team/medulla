@@ -18,8 +18,8 @@
 //! the commit -- which is precisely when a replay is the right answer.
 
 use medulla_storage::{OwnedStoreHandle, OwnerDomain};
-use medulla_types::mutation_batch::DurabilityDomain;
 use medulla_types::mutation_batch::MutationEnvelope;
+use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::protocol::Method;
 use medulla_types::{
     MutationBatch, MutationOperation, MutationScope, MutationSurface, VersionExpectation,

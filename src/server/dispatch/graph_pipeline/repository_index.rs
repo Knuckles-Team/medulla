@@ -174,7 +174,10 @@ async fn already_committed(ctx: &GraphOpRouting<'_>, envelope_id: &str) -> Resul
         ));
     };
     persistence
-        .read_change_envelope(&medulla_kernel::persist::sanitize(ctx.graph_name), envelope_id)
+        .read_change_envelope(
+            &medulla_kernel::persist::sanitize(ctx.graph_name),
+            envelope_id,
+        )
         .await
         .map(|record| record.is_some())
         .map_err(|error| Response::err(ctx.req_id, error))
@@ -330,7 +333,7 @@ mod tests {
     #[test]
     fn repository_index_forwards_enrichment_budget_with_pending_intent() {
         let pending = super::enrichment::PendingEnrichment {
-            intent: medulla_types::mutation_batch::MutationOutboxIntent {
+            intent: medulla_types::mutation_scope::MutationOutboxIntent {
                 topic: "repository.enrichment.pending".into(),
                 key: "source-envelope".into(),
                 payload: Vec::new(),

@@ -17,8 +17,6 @@
 
 pub mod capacity_commit;
 pub mod plan;
-#[cfg(test)]
-mod tests;
 
 use serde::{Deserialize, Serialize};
 
@@ -256,7 +254,7 @@ pub const TOPOLOGY_FACTS_DIGEST_DOMAIN: &str = "eg/topology-facts/v1";
 
 /// `sha256:<hex>` of `facts` in the decision surface's one digest scheme.
 pub fn facts_digest(facts: &TopologyFacts) -> String {
-    let digest = String::from(crate::solve::Sha256Digest::of_json(
+    let digest = String::from(crate::solve_scalar::Sha256Digest::of_json(
         TOPOLOGY_FACTS_DIGEST_DOMAIN,
         facts,
     ));

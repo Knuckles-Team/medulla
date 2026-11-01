@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use super::numeric::{QuantisedValue, UnitRationalWire};
 use super::DecisionErrorCode;
 use crate::contract::BoundedVec;
-use crate::solve::Scalar;
+use crate::solve_scalar::Scalar;
 
 /// The engine default node budget when a policy does not name one.
 pub const DEFAULT_DECISION_NODE_BUDGET: u64 = 100_000;
@@ -161,10 +161,10 @@ pub struct DecisionPolicy {
     #[serde(default)]
     pub statistical: Option<StatisticalPolicy>,
     /// Topology caps and the per-harness sub-agent opt-in. Absent means the
-    /// engine default ([`super::topology::TopologyPolicy::engine_default`]),
+    /// engine default ([`crate::agent_topology::TopologyPolicy::engine_default`]),
     /// and keeps an existing policy's digest.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub topology: Option<super::topology::TopologyPolicy>,
+    pub topology: Option<crate::agent_topology::TopologyPolicy>,
 }
 
 /// The component attribute a published `DecisionPolicy` carries its body in:

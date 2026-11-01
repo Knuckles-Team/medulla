@@ -154,7 +154,8 @@ fn authenticated_binding_rejects_cross_tenant_and_different_actor() {
     // The principal the committing ledger requires is the envelope's, so a
     // batch naming another owner is refused by `owner_rows` -- exactly as it
     // was when the value lived in the deleted `context.principal`.
-    let medulla_types::mutation_batch::MutationEnvelope::Operation(envelope) = &mut wrong_actor.envelope
+    let medulla_types::mutation_batch::MutationEnvelope::Operation(envelope) =
+        &mut wrong_actor.envelope
     else {
         panic!("a fixture operation batch has an operation envelope");
     };
@@ -265,12 +266,14 @@ fn staged_adoption_reanchors_only_root_and_bindings() {
     let mut committed_batch = batch(identity.clone(), "staged-committed");
     committed_batch.placement_epoch = 7;
     committed_batch.fencing_token = Some(9);
-    committed_batch.outbox.push(medulla_types::MutationOutboxIntent {
-        topic: "staged.adoption".to_string(),
-        key: "staged-committed".to_string(),
-        payload: b"preserved".to_vec(),
-        headers: Default::default(),
-    });
+    committed_batch
+        .outbox
+        .push(medulla_types::MutationOutboxIntent {
+            topic: "staged.adoption".to_string(),
+            key: "staged-committed".to_string(),
+            payload: b"preserved".to_vec(),
+            headers: Default::default(),
+        });
     committed_batch
         .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
         .expect("the staged-adoption fixture reseals its final outbox");

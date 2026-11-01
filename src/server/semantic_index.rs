@@ -81,7 +81,8 @@ use medulla_core::compute::semantic_index_service::{
 };
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
 #[cfg(feature = "query")]
-use medulla_types::mutation_batch::{MutationOutboxLease, MutationOutboxRecord};
+use medulla_types::mutation_scope::MutationOutboxLease;
+use medulla_types::mutation_scope::MutationOutboxRecord;
 use medulla_types::semantic_index::{
     SemanticBinding, SemanticIndexCommand, SemanticIndexError, SemanticIndexRequest,
 };
@@ -775,8 +776,10 @@ mod dispatch_pipeline_tests;
 #[cfg(test)]
 #[test]
 fn semantic_owner_registry_is_scoped_to_persistence_root() {
-    let first_root = medulla_kernel::kernel::persistence::temp_dir("medulla-semantic-registry", "first");
-    let second_root = medulla_kernel::kernel::persistence::temp_dir("medulla-semantic-registry", "second");
+    let first_root =
+        medulla_kernel::kernel::persistence::temp_dir("medulla-semantic-registry", "first");
+    let second_root =
+        medulla_kernel::kernel::persistence::temp_dir("medulla-semantic-registry", "second");
     let tenant = "tenant-registry-isolation";
     let binding = "binding:registry-isolation";
     let first = open_semantic_service(&first_root, tenant, binding).unwrap();

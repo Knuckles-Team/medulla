@@ -51,7 +51,7 @@ use medulla_storage::{
     StorageKernel, TimeSeriesOwner,
 };
 use medulla_transaction::{AdmittedOwnerWrite, Begin, MutationKernel};
-use medulla_types::mutation_batch::COMPILED_BATCH_INCARNATION;
+use medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION;
 use medulla_types::MutationBatch;
 use redb::{
     ReadOnlyTable, ReadTransaction, ReadableTable, Table, TableDefinition, TableError,
@@ -314,14 +314,17 @@ fn series_bootstrap_identity() -> Result<medulla_types::MutationScopeIdentity> {
 /// domain (the one operation `compile_opaque_method` compiles for a `TsAppend`),
 /// and the SAME `COMPILED_BATCH_INCARNATION` constant. See that constant's doc for
 /// why a mismatch on any of the three fails every append on that scope closed.
-fn series_scope_identity(tenant: &str, resource: &str) -> Result<medulla_types::MutationScopeIdentity> {
+fn series_scope_identity(
+    tenant: &str,
+    resource: &str,
+) -> Result<medulla_types::MutationScopeIdentity> {
     let tenant = medulla_types::ScopeTenantId::new(tenant).map_err(codec_err)?;
     let resource = medulla_types::LogicalName::new(resource).map_err(codec_err)?;
     let incarnation_id =
         medulla_types::IncarnationId::new(COMPILED_BATCH_INCARNATION).map_err(codec_err)?;
     medulla_types::MutationScopeIdentity::native(
         tenant,
-        medulla_types::mutation_batch::DurabilityDomain::TimeSeries,
+        medulla_types::mutation_scope::DurabilityDomain::TimeSeries,
         resource,
         incarnation_id,
     )
@@ -370,7 +373,7 @@ fn maintenance_batch(
     let operation = medulla_types::MutationOperation {
         ordinal: 0,
         surface: medulla_types::MutationSurface::Other,
-        domain: medulla_types::mutation_batch::DurabilityDomain::TimeSeries,
+        domain: medulla_types::mutation_scope::DurabilityDomain::TimeSeries,
         method: medulla_types::protocol::Method::ApplyMutation {
             event_type: format!("timeseries_{kind}"),
             query: storage_key.to_string(),

@@ -79,7 +79,7 @@ pub(crate) fn validate_source_envelope(
 fn source_envelope_matches(
     envelope: &medulla_types::change_envelope::ChangeEnvelope,
     authority: &SourceBudgetAuthority,
-    intent: &medulla_types::mutation_batch::MutationOutboxIntent,
+    intent: &medulla_types::mutation_scope::MutationOutboxIntent,
 ) -> bool {
     authority.tenant_id == envelope.mutation.identity.tenant().as_str()
         && authority.source_envelope == envelope.envelope_id
@@ -96,7 +96,7 @@ fn source_envelope_matches(
 fn validate_source_intent(
     envelope: &medulla_types::change_envelope::ChangeEnvelope,
     authority: &SourceBudgetAuthority,
-    intent: &medulla_types::mutation_batch::MutationOutboxIntent,
+    intent: &medulla_types::mutation_scope::MutationOutboxIntent,
 ) -> Result<(), String> {
     #[derive(serde::Deserialize)]
     #[serde(deny_unknown_fields)]
@@ -146,7 +146,7 @@ fn validate_source_intent(
 fn validate_source_intent(
     _envelope: &medulla_types::change_envelope::ChangeEnvelope,
     _authority: &SourceBudgetAuthority,
-    _intent: &medulla_types::mutation_batch::MutationOutboxIntent,
+    _intent: &medulla_types::mutation_scope::MutationOutboxIntent,
 ) -> Result<(), String> {
     Err("CONFLICT: repository enrichment source requires AST authority".into())
 }

@@ -204,7 +204,7 @@ mod tests {
             MaterialClass::RepositorySnapshot.value_rule()(address).unwrap_err(),
         ] {
             let (code, detail) = err.split_once(": ").unwrap();
-            assert!(crate::contract::declared_error_code(code), "{err}");
+            assert!(crate::error_registry::declared_error_code(code), "{err}");
             assert!(!detail.contains(address), "{err}");
         }
     }

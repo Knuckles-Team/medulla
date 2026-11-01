@@ -1,7 +1,8 @@
 use medulla_storage::{OwnerLayout, PhysicalStoreIdentity, ScopeGrantVerifier};
 use medulla_transaction::OutboxClaimBudget;
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_batch::{MutationOutboxLease, MutationOutboxRecord};
+use medulla_types::mutation_scope::MutationOutboxLease;
+use medulla_types::mutation_scope::MutationOutboxRecord;
 use medulla_types::semantic_index::{
     SemanticBinding, SemanticBindingState, SemanticDigest, SemanticSqlSourceIdentity, SqlColumnRef,
 };

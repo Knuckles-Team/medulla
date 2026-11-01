@@ -9,7 +9,9 @@ use serde::{Deserialize, Serialize};
 use super::premise::Violation;
 use crate::agent_component::ComponentDependency;
 use crate::contract::BoundedVec;
-use crate::solve::{Certificate, ObjectiveValue, Scalar};
+use crate::solve::Certificate;
+use crate::solve::ObjectiveValue;
+use crate::solve_scalar::Scalar;
 
 /// One slot of the assembled graph and the component bound to it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -84,7 +86,7 @@ pub enum DecisionOutcome {
         /// The decided widths, rounds, stop rule, leases and allowances, when
         /// the request asked a topology question.
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        topology: Option<Box<crate::decision::topology::TopologyPlan>>,
+        topology: Option<Box<crate::agent_topology::TopologyPlan>>,
     },
     /// No assembly, and exactly why.
     Abstained {

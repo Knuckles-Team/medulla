@@ -27,7 +27,8 @@ use super::{
 };
 use medulla_storage::{SemanticIndexOwner, SEMANTIC_SOURCE_PROGRESS, SEMANTIC_STAGES};
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite};
-use medulla_types::mutation_batch::{MutationOutboxIntent, MutationOutboxLease};
+use medulla_types::mutation_scope::MutationOutboxIntent;
+use medulla_types::mutation_scope::MutationOutboxLease;
 use medulla_types::semantic_index::{
     SemanticDigest, SemanticIndexMutation, SemanticSourceProgress, SemanticSqlSourceManifest,
     SemanticStage, SemanticStageIntent, SemanticStageOutcome, SemanticStagePredecessor,

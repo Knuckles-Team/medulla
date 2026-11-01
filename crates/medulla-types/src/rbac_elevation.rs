@@ -43,9 +43,9 @@ pub use ledger::{
 };
 
 /// The reserved control-lease kind of an elevation.
-pub use crate::control_lease::RBAC_ELEVATION_KIND;
+use crate::lease_vocab::RBAC_ELEVATION_KIND;
 /// Longest window an approval can open: the control-lease span cap (24 h).
-pub const MAX_ELEVATION_SPAN_MS: u64 = crate::control_lease::MAX_CONTROL_LEASE_SPAN_MS;
+pub const MAX_ELEVATION_SPAN_MS: u64 = crate::lease_vocab::MAX_CONTROL_LEASE_SPAN_MS;
 /// Shortest window worth approving; anything shorter is a caller error.
 pub const MIN_ELEVATION_SPAN_MS: u64 = 1_000;
 /// How long a request waits for its approval before it expires unapproved.

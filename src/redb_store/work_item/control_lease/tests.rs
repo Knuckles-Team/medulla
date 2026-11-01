@@ -348,7 +348,9 @@ fn pending_fixture(shard: &Shard) -> IssueControlLeaseRequest {
 }
 
 fn pending_nodes_fixture(shard: &Shard) -> IssueControlLeaseRequest {
-    use medulla_types::control_lease::{PendingCallFence, PendingCallRegistration, PENDING_CALL_KIND};
+    use medulla_types::control_lease::{
+        PendingCallFence, PendingCallRegistration, PENDING_CALL_KIND,
+    };
     with_nodes(shard, "seed-pending-work", |nodes| {
         let mut work = serde_json::json!({
             "node_type": "WorkItem", "tenant": "tenant-a", "status": "running",

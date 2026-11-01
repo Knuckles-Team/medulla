@@ -29,7 +29,7 @@ pub(super) async fn handle(ctx: &SemanticIndexContext<'_>, op: SemanticIndexOp) 
 
 async fn admit_record(
     ctx: &SemanticIndexContext<'_>,
-    record: medulla_types::mutation_batch::MutationOutboxRecord,
+    record: medulla_types::mutation_scope::MutationOutboxRecord,
 ) -> Response {
     let port = read_port(ctx.persist_dir, ctx.authority);
     let service = Arc::clone(&ctx.service);
@@ -46,7 +46,7 @@ async fn admit_record(
 
 async fn admit_page(
     ctx: &SemanticIndexContext<'_>,
-    record: medulla_types::mutation_batch::MutationOutboxRecord,
+    record: medulla_types::mutation_scope::MutationOutboxRecord,
     cursor: Option<String>,
 ) -> Response {
     let cursor = match decode_cursor(cursor) {
@@ -68,7 +68,7 @@ async fn admit_page(
 
 async fn admit_reconcile(
     ctx: &SemanticIndexContext<'_>,
-    record: medulla_types::mutation_batch::MutationOutboxRecord,
+    record: medulla_types::mutation_scope::MutationOutboxRecord,
 ) -> Response {
     let port = read_port(ctx.persist_dir, ctx.authority);
     let service = Arc::clone(&ctx.service);
@@ -87,7 +87,7 @@ async fn admit_replacement(
     ctx: &SemanticIndexContext<'_>,
     draft: Box<medulla_types::semantic_index::SemanticBindingDraft>,
     source_manifest: medulla_types::semantic_index::SemanticSqlSourceManifestDraft,
-    record: medulla_types::mutation_batch::MutationOutboxRecord,
+    record: medulla_types::mutation_scope::MutationOutboxRecord,
 ) -> Response {
     let (replacement, manifest) = match checked_replacement(ctx, draft, source_manifest) {
         Ok(validated) => validated,

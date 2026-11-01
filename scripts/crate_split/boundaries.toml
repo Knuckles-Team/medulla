@@ -33,20 +33,20 @@ budget_lines = 25000
 [crates.medulla-types]
 level = "L0"
 kind = "leaf-types"
-responsibility = "Thin shared vocabulary: ids, errors, scalar values and the test-support fixtures; no domain types."
+responsibility = "Thin shared vocabulary: contract ids and bounded collections, msgpack limits, wire scalars and query plan types, solver scalars and text digests, lease bounds, and the test-support fixtures; no domain types."
 moves = []
 specs = []
-current_lines = 18355
-projected_lines = 18355
+current_lines = 16568
+projected_lines = 16568
 
 [crates.medulla-protocol-types]
-level = "L1"
+level = "L2"
 kind = "leaf-types"
-responsibility = "Method registry and wire-query envelope types shared by every listener and client."
-moves = ["crates/medulla-types/src/protocol", "crates/medulla-types/src/wire_query_*", "crates/medulla-types/src/wire", "crates/medulla-types/src/msgpack", "crates/medulla-types/src/storage_wire", "crates/medulla-types/src/native_control", "crates/medulla-types/src/contract"]
+responsibility = "Protocol hub: the Method registry, its request/response envelopes (mutation batch, change envelope, result contract), the wire-query types and the published refusal-code registry."
+moves = ["crates/medulla-types/src/protocol", "crates/medulla-types/src/wire_query_*", "crates/medulla-types/src/storage_wire", "crates/medulla-types/src/result_contract", "crates/medulla-types/src/mutation_batch", "crates/medulla-types/src/change_envelope", "crates/medulla-types/src/debezium_bridge", "crates/medulla-types/src/messaging_wire", "crates/medulla-types/src/error_registry"]
 specs = ["public-engine-contract-and-release (types)"]
-current_lines = 16899
-projected_lines = 17299
+current_lines = 22197
+projected_lines = 22197
 
 [crates.medulla-identity-types]
 level = "L1"
@@ -54,26 +54,26 @@ kind = "leaf-types"
 responsibility = "Issuer, principal, scope, tenancy, ACL and authority types."
 moves = ["crates/medulla-types/src/identity", "crates/medulla-types/src/rbac_*", "crates/medulla-types/src/tenancy", "crates/medulla-types/src/acl", "crates/medulla-types/src/authority", "crates/medulla-types/src/authority_audit", "crates/medulla-types/src/platform_admission"]
 specs = ["engine-identity-and-scope (types)"]
-current_lines = 17243
-projected_lines = 18143
+current_lines = 17295
+projected_lines = 17295
 
 [crates.medulla-agent-types]
 level = "L1"
 kind = "leaf-types"
 responsibility = "Agent components, graphs, libraries, templates, work items, jobs and run history types."
-moves = ["crates/medulla-types/src/agent_*", "crates/medulla-types/src/orchestration", "crates/medulla-types/src/delegation", "crates/medulla-types/src/work_*", "crates/medulla-types/src/worker_registry", "crates/medulla-types/src/jobs", "crates/medulla-types/src/run_*", "crates/medulla-types/src/search_task", "crates/medulla-types/src/action_spec", "crates/medulla-types/src/memory"]
+moves = ["crates/medulla-types/src/agent_*", "crates/medulla-types/src/orchestration", "crates/medulla-types/src/delegation", "crates/medulla-types/src/work_*", "crates/medulla-types/src/worker_registry", "crates/medulla-types/src/jobs", "crates/medulla-types/src/run_*", "crates/medulla-types/src/search_task", "crates/medulla-types/src/action_spec", "crates/medulla-types/src/memory", "crates/medulla-types/src/native_control", "crates/medulla-types/src/control_lease", "crates/medulla-types/src/host_start"]
 specs = ["orchestration-vocabulary (types)"]
-current_lines = 19552
-projected_lines = 23072
+current_lines = 22307
+projected_lines = 22307
 
 [crates.medulla-mutation-types]
 level = "L1"
 kind = "leaf-types"
-responsibility = "Mutation, batch, change envelope, commit descriptor, outbox, lease and consensus record types."
-moves = ["crates/medulla-types/src/mutation", "crates/medulla-types/src/mutation_*", "crates/medulla-types/src/change_envelope", "crates/medulla-types/src/commit_descriptor", "crates/medulla-types/src/governed_change", "crates/medulla-types/src/outbox", "crates/medulla-types/src/sealed_record", "crates/medulla-types/src/debezium_bridge", "crates/medulla-types/src/write_back", "crates/medulla-types/src/consensus", "crates/medulla-types/src/capacity_*", "crates/medulla-types/src/control_lease"]
+responsibility = "Mutation scope, commit descriptor, outbox, governed change, lease capacity and consensus record types (Method-free)."
+moves = ["crates/medulla-types/src/mutation", "crates/medulla-types/src/mutation_*", "crates/medulla-types/src/commit_descriptor", "crates/medulla-types/src/governed_change", "crates/medulla-types/src/outbox", "crates/medulla-types/src/sealed_record", "crates/medulla-types/src/write_back", "crates/medulla-types/src/consensus", "crates/medulla-types/src/capacity_*"]
 specs = ["durable-graph-kernel (types)"]
-current_lines = 14802
-projected_lines = 16762
+current_lines = 9224
+projected_lines = 9224
 
 [crates.medulla-index-types]
 level = "L1"
@@ -81,35 +81,35 @@ kind = "leaf-types"
 responsibility = "Semantic index, embedding, managed index and entity resolution types."
 moves = ["crates/medulla-types/src/semantic_index", "crates/medulla-types/src/embedding", "crates/medulla-types/src/managed_index", "crates/medulla-types/src/entity_resolution"]
 specs = ["federated-query-and-reasoning (index types)"]
-current_lines = 10596
-projected_lines = 10596
+current_lines = 10619
+projected_lines = 10619
 
 [crates.medulla-result-types]
 level = "L1"
 kind = "leaf-types"
 responsibility = "Answer, result contract, verdict, epistemic node, argument and query predicate types."
-moves = ["crates/medulla-types/src/result_contract", "crates/medulla-types/src/compute_result", "crates/medulla-types/src/epistemic_*", "crates/medulla-types/src/argument_map", "crates/medulla-types/src/outcome_bundle", "crates/medulla-types/src/retrieval_*", "crates/medulla-types/src/freshness", "crates/medulla-types/src/source_query", "crates/medulla-types/src/row_predicate", "crates/medulla-types/src/series_expr"]
+moves = ["crates/medulla-types/src/compute_result", "crates/medulla-types/src/epistemic_*", "crates/medulla-types/src/argument_map", "crates/medulla-types/src/outcome_bundle", "crates/medulla-types/src/retrieval_*", "crates/medulla-types/src/freshness", "crates/medulla-types/src/source_query", "crates/medulla-types/src/row_predicate", "crates/medulla-types/src/series_expr"]
 specs = ["federated-query-and-reasoning (result types)"]
-current_lines = 14725
-projected_lines = 18425
+current_lines = 11589
+projected_lines = 11589
 
 [crates.medulla-catalog-types]
 level = "L1"
 kind = "leaf-types"
 responsibility = "Connector pack, schema, catalog, source ingestion, lineage and release record types."
-moves = ["crates/medulla-types/src/connector_pack", "crates/medulla-types/src/graph_schema", "crates/medulla-types/src/domain_pack", "crates/medulla-types/src/*_catalog", "crates/medulla-types/src/source_ingestion", "crates/medulla-types/src/source_document", "crates/medulla-types/src/ingest_job", "crates/medulla-types/src/lineage", "crates/medulla-types/src/postgres_adapter", "crates/medulla-types/src/pg_compat_feature", "crates/medulla-types/src/supply_chain_report", "crates/medulla-types/src/standards_drift", "crates/medulla-types/src/distribution", "crates/medulla-types/src/changeset_review", "crates/medulla-types/src/pre_merge_test_module", "crates/medulla-types/src/live_artifact", "crates/medulla-types/src/lifecycle"]
+moves = ["crates/medulla-types/src/connector_pack", "crates/medulla-types/src/graph_schema", "crates/medulla-types/src/domain_pack", "crates/medulla-types/src/*_catalog", "crates/medulla-types/src/source_ingestion", "crates/medulla-types/src/source_document", "crates/medulla-types/src/ingest_job", "crates/medulla-types/src/lineage", "crates/medulla-types/src/postgres_adapter", "crates/medulla-types/src/pg_compat_feature", "crates/medulla-types/src/supply_chain_report", "crates/medulla-types/src/standards_drift", "crates/medulla-types/src/distribution", "crates/medulla-types/src/changeset_review", "crates/medulla-types/src/pre_merge_test_module", "crates/medulla-types/src/live_artifact", "crates/medulla-types/src/lifecycle", "crates/medulla-types/src/source_transcript", "crates/medulla-types/src/foreign_read", "crates/medulla-types/src/mssql_driver_connection", "crates/medulla-types/src/sqlite_live_attach"]
 specs = ["typed-packs-and-catalog (types)", "ingest-worker (types)"]
-current_lines = 15612
-projected_lines = 22952
+current_lines = 16525
+projected_lines = 16525
 
 [crates.medulla-decision-types]
 level = "L1"
 kind = "leaf-types"
 responsibility = "Decision ladder vocabulary: ResolutionKind, evidence classes, decision requests, answers and revision records."
-moves = ["crates/medulla-types/src/decision", "crates/medulla-types/src/policy_evolution", "crates/medulla-types/src/solve"]
+moves = ["crates/medulla-types/src/decision", "crates/medulla-types/src/policy_evolution", "crates/medulla-types/src/solve", "crates/medulla-types/src/current_plan"]
 specs = ["decision-engine (new or changed types)"]
-current_lines = 12362
-projected_lines = 22882
+current_lines = 16978
+projected_lines = 16978
 
 # ---------------------------------------------------------------- L2 primitives
 [crates.medulla-storage]

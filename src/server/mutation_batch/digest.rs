@@ -263,7 +263,7 @@ fn control_lease_idempotency_key(method: &Method) -> Result<String, String> {
             Ok(format!("policy-record:{}", request.record_id))
         }
         // EH-348 work-market writes share the terminal identity rule too.
-        other => medulla_types::work_market::market_write_scope(other)
+        other => medulla_types::protocol::market_write_scope(other)
             .map(|(_, key)| key.to_string())
             .ok_or_else(|| "WorkItem identity requires a WorkItem operation".to_string()),
     }

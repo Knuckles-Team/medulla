@@ -9,7 +9,7 @@ use medulla_storage::SemanticIndexOwner;
 use medulla_storage::{ANN_CODES, SEMANTIC_BINDINGS, SEMANTIC_POINTERS, SEMANTIC_STAGES};
 use medulla_transaction::OutboxClaimBudget;
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite};
-use medulla_types::mutation_batch::MutationOutboxLease;
+use medulla_types::mutation_scope::MutationOutboxLease;
 use medulla_types::semantic_index::{
     SemanticActivePointer, SemanticBinding, SemanticBindingState, SemanticDigest,
     SemanticIndexMutation,

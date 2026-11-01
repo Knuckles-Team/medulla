@@ -208,7 +208,9 @@ fn write_back_operation(op: &medulla_types::write_back::WriteBackOp) -> &'static
         medulla_types::write_back::WriteBackOp::Create { .. } => "create",
         medulla_types::write_back::WriteBackOp::Get { .. } => "get",
         medulla_types::write_back::WriteBackOp::RecordAttempt { .. } => "record_attempt",
-        medulla_types::write_back::WriteBackOp::RecordReconciliation { .. } => "record_reconciliation",
+        medulla_types::write_back::WriteBackOp::RecordReconciliation { .. } => {
+            "record_reconciliation"
+        }
         medulla_types::write_back::WriteBackOp::Receipts { .. } => "receipts",
     }
 }
@@ -486,7 +488,7 @@ fn work_market_audit_line(method: &Method) -> Option<String> {
         Method::WorkOfferPut { .. } => "WORK_OFFER_PUT",
         _ => return None,
     };
-    let (tenant, key) = medulla_types::work_market::market_write_scope(method)?;
+    let (tenant, key) = medulla_types::protocol::market_write_scope(method)?;
     Some(format!("{operation}|{tenant}|{key}"))
 }
 

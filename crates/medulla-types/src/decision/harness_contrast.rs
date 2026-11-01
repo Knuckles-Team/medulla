@@ -469,7 +469,7 @@ pub fn replay_record(record: &StatisticalDecisionRecord) -> Result<(), String> {
 mod tests {
     use super::*;
     use crate::contract::BoundedVec;
-    use crate::decision::digest::{digest_text, statistical_record_digest};
+    use crate::decision::digest::statistical_record_digest;
     use crate::decision::statistical::{
         ShortlistProvenance, StatisticalInputs, StatisticalQuestion,
     };
@@ -479,6 +479,7 @@ mod tests {
         TraceFidelity, UnitRationalWire, STATISTICAL_DECISION_RECORD_SCHEMA_VERSION,
     };
     use crate::orchestration::improvement::HarnessProbeRun;
+    use crate::solve_scalar::digest_text;
 
     /// The input-digest domain the server's `seal` uses for statistical
     /// records.

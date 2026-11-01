@@ -34,11 +34,19 @@ use medulla_query::{
     CancellationToken, Column, ColumnType, SqlContextCache, TableSchema, TableStore, TableTxn,
     TxnOp, TypedQueryResult,
 };
-use medulla_types::mutation_batch::{
-    DurabilityDomain, IncarnationId, LogicalName, MutationBatch, MutationEnvelope,
-    MutationOperation, MutationOutboxIntent, MutationScopeIdentity, MutationSurface, ScopeTenantId,
-    VersionExpectation, COMPILED_BATCH_INCARNATION, MUTATION_BATCH_VERSION,
-};
+use medulla_types::mutation_batch::MutationBatch;
+use medulla_types::mutation_batch::MutationEnvelope;
+use medulla_types::mutation_batch::MutationOperation;
+use medulla_types::mutation_batch::VersionExpectation;
+use medulla_types::mutation_batch::MUTATION_BATCH_VERSION;
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::IncarnationId;
+use medulla_types::mutation_scope::LogicalName;
+use medulla_types::mutation_scope::MutationOutboxIntent;
+use medulla_types::mutation_scope::MutationScopeIdentity;
+use medulla_types::mutation_scope::MutationSurface;
+use medulla_types::mutation_scope::ScopeTenantId;
+use medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION;
 use serde_json::json;
 
 const TENANT: &str = "tenant-cache-a";

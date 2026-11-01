@@ -105,7 +105,7 @@ fn control_lease_tenant(method: &Method) -> Result<String, String> {
         Method::RetireSealedRecord { request } => Ok(request.tenant.clone()),
         Method::PolicyEvolutionStore { request } => Ok(request.tenant_id.clone()),
         // EH-348 work-market writes ride the same kernel.
-        other => medulla_types::work_market::market_write_scope(other)
+        other => medulla_types::protocol::market_write_scope(other)
             .map(|(tenant, _)| tenant.to_string())
             .ok_or_else(|| "commit_work_item received a non-WorkItem operation".to_string()),
     }

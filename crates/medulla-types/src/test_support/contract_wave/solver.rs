@@ -5,12 +5,32 @@
 //! the point is that every field shape round-trips, not that the numbers mean
 //! anything.
 
-use crate::solve::{
-    Algorithm, BoundProof, Certificate, Coefficient, ConstraintBody, ConstraintSpec, DualEntry,
-    Incumbent, LagrangeDual, LeafProof, LevelValue, ModelSpec, ObjectiveLevelSpec, ObjectiveTerm,
-    ObjectiveValue, ProofNode, Relation, RowId, Scalar, Sha256Digest, SolveRequest, SolveStatus,
-    SolverConfig, SolverConfigSpec, Term, VarId,
-};
+use crate::solve::Algorithm;
+use crate::solve::BoundProof;
+use crate::solve::Certificate;
+use crate::solve::Coefficient;
+use crate::solve::ConstraintBody;
+use crate::solve::ConstraintSpec;
+use crate::solve::DualEntry;
+use crate::solve::Incumbent;
+use crate::solve::LagrangeDual;
+use crate::solve::LeafProof;
+use crate::solve::LevelValue;
+use crate::solve::ModelSpec;
+use crate::solve::ObjectiveLevelSpec;
+use crate::solve::ObjectiveTerm;
+use crate::solve::ObjectiveValue;
+use crate::solve::ProofNode;
+use crate::solve::Relation;
+use crate::solve::RowId;
+use crate::solve::SolveRequest;
+use crate::solve::SolveStatus;
+use crate::solve::SolverConfig;
+use crate::solve::SolverConfigSpec;
+use crate::solve::Term;
+use crate::solve::VarId;
+use crate::solve_scalar::Scalar;
+use crate::solve_scalar::Sha256Digest;
 
 /// A model with one of every constraint body shape.
 pub fn model() -> ModelSpec {

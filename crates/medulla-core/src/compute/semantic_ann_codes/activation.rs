@@ -24,7 +24,7 @@ use super::{
 use crate::compute::semantic::SemanticGenerationImage;
 use medulla_storage::{SemanticIndexOwner, ANN_CODES, SEMANTIC_POINTERS};
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite};
-use medulla_types::mutation_batch::MutationOutboxLease;
+use medulla_types::mutation_scope::MutationOutboxLease;
 use medulla_types::semantic_index::{
     SemanticActivePointer, SemanticBinding, SemanticBindingState, SemanticBindingStateTransition,
     SemanticGenerationArtifact, SemanticGenerationCheckpoint, SemanticIndexMutation, SemanticStage,

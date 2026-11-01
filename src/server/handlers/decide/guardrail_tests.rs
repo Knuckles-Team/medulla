@@ -14,9 +14,10 @@ use crate::server::state::ServerState;
 use medulla_types::agent_component::{
     AgentComponentKind, AgentComponentPublishRequest, AgentComponentRetireRequest,
 };
-use medulla_types::decision::guardrail::{
-    EntailmentStep, GuardrailEntailmentRequest, GuardrailEntailmentResult, GuardrailRule,
-};
+use medulla_types::agent_guardrail::EntailmentStep;
+use medulla_types::agent_guardrail::GuardrailEntailmentRequest;
+use medulla_types::agent_guardrail::GuardrailEntailmentResult;
+use medulla_types::agent_guardrail::GuardrailRule;
 
 const TENANT: &str = "tenant-guardrail";
 

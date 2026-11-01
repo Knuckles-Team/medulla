@@ -2,7 +2,8 @@
 //! this module only describes the assertions its authorized issuer persists.
 use serde::{Deserialize, Serialize};
 
-use crate::control_lease::{IssueControlLeaseRequest, MAX_CONTROL_LEASE_SPAN_MS};
+use crate::control_lease::IssueControlLeaseRequest;
+use crate::lease_vocab::MAX_CONTROL_LEASE_SPAN_MS;
 
 pub const HOST_START_KIND: &str = "host.start";
 pub const HOST_START_ISSUE_SCOPE: &str = "host:issue-start";

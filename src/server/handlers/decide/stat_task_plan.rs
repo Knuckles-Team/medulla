@@ -124,10 +124,7 @@ pub(super) fn premises(plan: &TaskPlan) -> Vec<PremiseRef> {
             fact: format!(
                 "task_plan_claim:dependencies={};prompt_digest={}",
                 task.depends_on.as_slice().join(","),
-                medulla_types::decision::digest::digest_text(
-                    "eg/task-plan-prompt/v1",
-                    &task.prompt
-                )
+                medulla_types::solve_scalar::digest_text("eg/task-plan-prompt/v1", &task.prompt)
             ),
             class: PremiseClass::Claim,
             provenance: PremiseProvenance::Request {

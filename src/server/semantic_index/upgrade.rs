@@ -888,7 +888,10 @@ mod tests {
     use medulla_core::compute::semantic_index_service::SemanticIndexService;
     use std::sync::Arc;
 
-    fn populated_binding(tenant: &str, binding: &str) -> medulla_types::semantic_index::SemanticBinding {
+    fn populated_binding(
+        tenant: &str,
+        binding: &str,
+    ) -> medulla_types::semantic_index::SemanticBinding {
         use medulla_types::semantic_index::{
             SemanticAnnIndexMethod, SemanticAnnIndexSpec, SemanticBinding, SemanticBindingDraft,
             SemanticLexicalIndexSpec, SemanticModelIdentity, SemanticPolicyComponents,

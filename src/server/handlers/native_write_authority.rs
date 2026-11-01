@@ -99,7 +99,7 @@ fn governance_body_tenants(method: &Method) -> Vec<&str> {
         // EH-558: sealed-record retirement names its tenant in the body too.
         Method::RetireSealedRecord { request } => vec![request.tenant.as_str()],
         // EH-348 work-market writes share the kernel and its tenant rule.
-        other => medulla_types::work_market::market_write_scope(other)
+        other => medulla_types::protocol::market_write_scope(other)
             .map(|(tenant, _)| vec![tenant])
             .unwrap_or_default(),
     }

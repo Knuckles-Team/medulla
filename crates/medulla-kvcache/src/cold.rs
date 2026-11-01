@@ -134,7 +134,7 @@ const COLD_SCOPE_INCARNATION: &str = "kvcache-cold:v1";
 fn cold_scope_identity() -> io::Result<medulla_types::MutationScopeIdentity> {
     medulla_types::MutationScopeIdentity::fixed_native(
         COLD_SCOPE_TENANT,
-        medulla_types::mutation_batch::DurabilityDomain::KvStore,
+        medulla_types::mutation_scope::DurabilityDomain::KvStore,
         COLD_SCOPE_RESOURCE,
         COLD_SCOPE_INCARNATION,
     )
@@ -177,7 +177,7 @@ fn cold_batch(
         operations: vec![medulla_types::MutationOperation {
             ordinal: 0,
             surface: medulla_types::MutationSurface::Other,
-            domain: medulla_types::mutation_batch::DurabilityDomain::KvStore,
+            domain: medulla_types::mutation_scope::DurabilityDomain::KvStore,
             method: medulla_types::protocol::Method::ApplyMutation {
                 event_type: format!("kvcache_cold_{kind}"),
                 query: batch_id,
@@ -211,9 +211,13 @@ impl RedbColdStore {
         // re-validates it on every open, so a first `get` before any `put`
         // succeeds without this crate opening a table itself.
         let kernel = if path.exists() {
-            medulla_storage::StorageKernel::open_owner::<medulla_storage::KvOwner>(path, physical, None)
+            medulla_storage::StorageKernel::open_owner::<medulla_storage::KvOwner>(
+                path, physical, None,
+            )
         } else {
-            medulla_storage::StorageKernel::create_owner::<medulla_storage::KvOwner>(path, physical, None)
+            medulla_storage::StorageKernel::create_owner::<medulla_storage::KvOwner>(
+                path, physical, None,
+            )
         }
         .map_err(io::Error::other)?;
         let (kernel, authority) = kernel
@@ -244,7 +248,9 @@ impl RedbColdStore {
     /// Apply one cold-tier row change as an admitted maintenance mutation.
     fn maintain<F>(&self, kind: &str, apply: F) -> io::Result<()>
     where
-        F: FnOnce(&medulla_transaction::AdmittedOwnerWrite<'_, medulla_storage::KvOwner>) -> io::Result<()>,
+        F: FnOnce(
+            &medulla_transaction::AdmittedOwnerWrite<'_, medulla_storage::KvOwner>,
+        ) -> io::Result<()>,
     {
         // Keep the version lookup and maintenance-envelope mint inside one
         // admitted write.  A snapshot read here would let concurrent demotions

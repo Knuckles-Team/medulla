@@ -13,7 +13,9 @@ use medulla_types::connector_pack::{
     McpCatalogAuthorityRow, McpCatalogSnapshotBinding, McpJoinedConfigurationRow,
 };
 use medulla_types::contract::Digest256;
-use medulla_types::mutation_batch::{DurabilityDomain, MutationOperation, MutationSurface};
+use medulla_types::mutation_batch::MutationOperation;
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::MutationSurface;
 use medulla_types::protocol::Method;
 use redb::ReadableTable;
 
@@ -205,7 +207,7 @@ impl AgentLibraryStore {
         scope_digest: Digest256,
     ) -> Result<Option<McpCatalogSnapshotBinding>, String> {
         if tenant_id.is_empty()
-            || !medulla_types::result_contract::cluster::is_valid_server_name(server_name)
+            || !medulla_types::fleet_catalog::is_valid_server_name(server_name)
             || scope_digest == Digest256::from_bytes([0; 32])
         {
             return Err("invalid scoped MCP catalog binding read".into());
@@ -242,7 +244,7 @@ impl AgentLibraryStore {
         attester_principal_id: &str,
     ) -> Result<Option<McpCatalogSnapshotBinding>, String> {
         if tenant_id.is_empty()
-            || !medulla_types::result_contract::cluster::is_valid_server_name(server_name)
+            || !medulla_types::fleet_catalog::is_valid_server_name(server_name)
             || attester_principal_id.is_empty()
         {
             return Err("invalid scoped MCP catalog authority read".into());
@@ -419,7 +421,8 @@ mod tests {
     use super::*;
 
     fn authority_row() -> McpCatalogAuthorityRow {
-        let candidate = medulla_types::connector_pack::catalog_authority::sample_authority_candidate();
+        let candidate =
+            medulla_types::connector_pack::catalog_authority::sample_authority_candidate();
         let config = reconcile_joined_configuration(None, &candidate).unwrap();
         reconcile_catalog_authority(None, &config, &candidate).unwrap()
     }
@@ -527,7 +530,8 @@ mod tests {
         let mut unpublished = self_served(Some(2), 5);
         unpublished.component_revision = 1;
         assert!(commit(5, unpublished).is_err());
-        let mut mounted = medulla_types::connector_pack::catalog_authority::sample_authority_candidate();
+        let mut mounted =
+            medulla_types::connector_pack::catalog_authority::sample_authority_candidate();
         mounted.expected_catalog_generation = Some(2);
         assert!(commit(6, mounted).is_err());
         let scope = changed.authorization_scope_digest;

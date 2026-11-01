@@ -11,7 +11,7 @@ use medulla_storage::{
     SEMANTIC_SQL_SOURCES, SEMANTIC_STAGES,
 };
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite, OutboxClaimBudget};
-use medulla_types::mutation_batch::MutationOutboxLease;
+use medulla_types::mutation_scope::MutationOutboxLease;
 use medulla_types::semantic_index::{
     SemanticBinding, SemanticDigest, SemanticGenerationCheckpoint, SemanticGenerationDependency,
     SemanticGenerationMember, SemanticIndexMutation, SemanticSourceProgress, SemanticStage,

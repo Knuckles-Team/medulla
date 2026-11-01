@@ -12,7 +12,7 @@ use super::policy::DecisionPolicy;
 use super::record::{CandidateFacts, DecisionInputs, DecisionRecord};
 use super::statistical::StatisticalDecisionRecord;
 use crate::agent_library::AgentLibraryLifecycle;
-use crate::solve::Sha256Digest;
+use crate::solve_scalar::{digest_text, Sha256Digest, DIGEST_TEXT_PREFIX};
 
 /// Domain of a v1 (assembly) decision record.
 pub const DECISION_RECORD_DIGEST_DOMAIN: &str = "eg/decision-record/v1";
@@ -25,21 +25,12 @@ pub const DECISION_CATALOG_DIGEST_DOMAIN: &str = "eg/decision-catalog/v1";
 /// Domain of a decision policy body.
 pub const DECISION_POLICY_DIGEST_DOMAIN: &str = "eg/decision-policy/v1";
 
-/// The textual prefix every decision digest carries.
-pub const DIGEST_TEXT_PREFIX: &str = "sha256:";
-
 /// One catalog member, as the catalog digest sees it.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 struct CatalogMember<'a> {
     component_id: &'a str,
     definition_digest: &'a str,
     lifecycle: AgentLibraryLifecycle,
-}
-
-/// Digest `value` under `domain`, in the wave's one text form.
-pub fn digest_text<T: Serialize>(domain: &str, value: &T) -> String {
-    let digest = String::from(Sha256Digest::of_json(domain, value));
-    format!("{DIGEST_TEXT_PREFIX}{digest}")
 }
 
 /// The digest of one assembly record.

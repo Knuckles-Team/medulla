@@ -309,7 +309,7 @@ impl AdoptedHarness {
             "adopted-harness:{}:{}:{}",
             self.agent_ref,
             self.task_class,
-            crate::decision::digest::digest_text(
+            crate::solve_scalar::digest_text(
                 "eg/adopted-harness-refs/v1",
                 &self.component_version_refs
             )
@@ -365,7 +365,7 @@ impl HarnessLesson {
             "harness-lesson:{}:{}:{}",
             self.task_class,
             self.deficiency,
-            crate::decision::digest::digest_text(
+            crate::solve_scalar::digest_text(
                 "eg/harness-lesson/v1",
                 &(
                     self.situation.clone(),

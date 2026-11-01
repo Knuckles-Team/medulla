@@ -7,7 +7,7 @@ use std::collections::BTreeSet;
 use medulla_types::agent_component::AgentComponentOutboxEvent;
 use medulla_types::connector_pack::{PackImportResult, CONNECTOR_PACK_IMPORT_TOPIC};
 use medulla_types::contract::ResourceId;
-use medulla_types::mutation_batch::MutationOutboxRecord;
+use medulla_types::mutation_scope::MutationOutboxRecord;
 
 use super::{
     bind, build_pack, head_of, import, import_uploaded, imported, ok, refused, tool, Served, ADMIN,

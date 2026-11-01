@@ -38,10 +38,11 @@ pub fn private_payload_digest(record: &MutationBatchRecord) -> Option<&str> {
 /// [`private_payload_digest`] instead.
 pub(crate) fn recovery_plan_digest(record: &MutationBatchRecord) -> Option<&str> {
     let operation = record.batch.operations.first()?;
-    let medulla_types::protocol::Method::ApplyMutation { event_type, .. } = &operation.method else {
+    let medulla_types::protocol::Method::ApplyMutation { event_type, .. } = &operation.method
+    else {
         return None;
     };
-    if !medulla_types::mutation_batch::PRIVATE_PAYLOAD_EVENT_TYPES
+    if !medulla_types::mutation_scope::PRIVATE_PAYLOAD_EVENT_TYPES
         .iter()
         .any(|known| known == event_type)
     {

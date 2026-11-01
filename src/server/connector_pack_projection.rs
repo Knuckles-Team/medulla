@@ -65,7 +65,7 @@ pub(crate) mod worker {
 
     use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome, OutboxRejectReason};
     use medulla_types::connector_pack::{PackImportRecord, CONNECTOR_PACK_IMPORT_TOPIC};
-    use medulla_types::mutation_batch::MutationOutboxLease;
+    use medulla_types::mutation_scope::MutationOutboxLease;
 
     use crate::server::auth::VerifiedRequestContext;
     use crate::server::outbox_operator::OutboxWrite;

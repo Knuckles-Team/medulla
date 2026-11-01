@@ -22,11 +22,16 @@ use medulla_storage::{
     SqlOwner, StorageKernel, SQL_SOURCE_AUTHORITY,
 };
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite, Begin, MutationKernel};
-use medulla_types::mutation_batch::{
-    DurabilityDomain, MutationBatch, MutationBatchRecord, MutationEnvelope, MutationOperation,
-    MutationScopeIdentity, MutationSurface, VersionExpectation, COMPILED_BATCH_INCARNATION,
-    MUTATION_BATCH_VERSION,
-};
+use medulla_types::mutation_batch::MutationBatch;
+use medulla_types::mutation_batch::MutationBatchRecord;
+use medulla_types::mutation_batch::MutationEnvelope;
+use medulla_types::mutation_batch::MutationOperation;
+use medulla_types::mutation_batch::VersionExpectation;
+use medulla_types::mutation_batch::MUTATION_BATCH_VERSION;
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::MutationScopeIdentity;
+use medulla_types::mutation_scope::MutationSurface;
+use medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION;
 use medulla_types::protocol::Method;
 use redb::ReadableTable;
 

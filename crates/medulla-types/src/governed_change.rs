@@ -49,7 +49,7 @@ pub const GOVERNED_KINDS: [(&str, &str, &str); 2] = [
 /// Read scope for `get`/`list`.
 pub const GOVERNANCE_READ_SCOPE: &str = "governance:read";
 /// Longest proposal and approval windows (the control-lease span cap).
-pub const MAX_GOVERNED_WINDOW_MS: u64 = crate::control_lease::MAX_CONTROL_LEASE_SPAN_MS;
+pub const MAX_GOVERNED_WINDOW_MS: u64 = crate::lease_vocab::MAX_CONTROL_LEASE_SPAN_MS;
 /// Most changes (live and recently ended) one ledger holds.
 pub const MAX_GOVERNED_CHANGES: usize = 1024;
 /// How long an ended change stays on record (its id cannot be reused).

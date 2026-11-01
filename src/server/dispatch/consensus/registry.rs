@@ -1,11 +1,15 @@
 use super::*;
 
 use medulla_types::contract::{BoundedVec, Digest256};
-use medulla_types::result_contract::cluster::{
-    is_valid_server_name, RegisteredServerCursor, RegisteredServerListPage,
-    RegisteredServerListRequest, RegisteredServerView, ServerDesiredState, ServerTransport,
-    MAX_REGISTERED_SERVER_PAGE_ENTRIES, REGISTERED_SERVER_LIST_SCHEMA_VERSION,
-};
+use medulla_types::fleet_catalog::is_valid_server_name;
+use medulla_types::result_contract::cluster::RegisteredServerCursor;
+use medulla_types::result_contract::cluster::RegisteredServerListPage;
+use medulla_types::result_contract::cluster::RegisteredServerListRequest;
+use medulla_types::result_contract::cluster::RegisteredServerView;
+use medulla_types::result_contract::cluster::ServerDesiredState;
+use medulla_types::result_contract::cluster::ServerTransport;
+use medulla_types::result_contract::cluster::MAX_REGISTERED_SERVER_PAGE_ENTRIES;
+use medulla_types::result_contract::cluster::REGISTERED_SERVER_LIST_SCHEMA_VERSION;
 
 pub(super) const REGISTRY_GRAPH: &str = "__commons__";
 const REGISTERED_SERVER_SNAPSHOT_DOMAIN: &[u8] = b"eg/registered-server-snapshot/v2";

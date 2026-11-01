@@ -14,7 +14,7 @@
 use std::sync::Arc;
 
 use medulla_storage::{OwnerLayout, PhysicalStoreIdentity, ScopeGrantVerifier};
-use medulla_types::mutation_batch::MutationScopeIdentity;
+use medulla_types::mutation_scope::MutationScopeIdentity;
 
 /// The principal a development SQL store serves its OWN scopes as. A SQL owner
 /// file is a tenant-shared catalog that also binds a scope per writing

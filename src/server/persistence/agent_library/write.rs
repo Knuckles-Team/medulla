@@ -239,8 +239,8 @@ fn prepare_publish_entry(
             .unwrap_or(0)
     };
     let mut write_context = replay_context.clone();
-    write_context.created_at_ms =
-        medulla_kernel::kernel::dispatch_support::authoritative_now_ms().max(previous_updated_at_ms);
+    write_context.created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms()
+        .max(previous_updated_at_ms);
     let entry = match store.entry_at_revision_in_write(
         txn,
         &request.context.tenant_id,
@@ -285,8 +285,8 @@ fn prepare_retire_entry(
         return Err("agent library entry is already retired".to_string());
     }
     let mut write_context = replay_context.clone();
-    write_context.created_at_ms =
-        medulla_kernel::kernel::dispatch_support::authoritative_now_ms().max(retained.updated_at_ms);
+    write_context.created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms()
+        .max(retained.updated_at_ms);
     let entry = match store.entry_at_revision_in_write(
         txn,
         &request.context.tenant_id,

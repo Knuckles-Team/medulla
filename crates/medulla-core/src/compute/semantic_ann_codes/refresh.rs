@@ -30,7 +30,7 @@ use medulla_storage::{
     SEMANTIC_STAGES,
 };
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite};
-use medulla_types::mutation_batch::MutationOutboxIntent;
+use medulla_types::mutation_scope::MutationOutboxIntent;
 use medulla_types::semantic_index::{
     SemanticBinding, SemanticBindingState, SemanticDigest, SemanticIndexMutation,
     SemanticSourceProgress, SemanticSqlSourceManifest, SemanticStage, SemanticStageIntent,

@@ -135,7 +135,7 @@ async fn harness_config_replay_refuses_a_relabelled_generic_record() {
         } else {
             relabelled.question.kind = QuestionKind::HarnessConfig;
         }
-        relabelled.inputs_digest = medulla_types::decision::digest::digest_text(
+        relabelled.inputs_digest = medulla_types::solve_scalar::digest_text(
             super::super::stat_decide::STATISTICAL_INPUTS_DOMAIN,
             &(&relabelled.question, &relabelled.inputs),
         );

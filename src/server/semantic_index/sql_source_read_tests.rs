@@ -15,7 +15,8 @@ use medulla_query::{Column, ColumnType, TableSchema, TableStore, TableTxn, TxnOp
 // kept this module's tests from compiling.
 use medulla_storage::{OwnerLayout, PhysicalStoreIdentity, ScopeGrantVerifier};
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_batch::{DurabilityDomain, MutationSurface};
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::MutationSurface;
 use medulla_types::semantic_index::{
     SemanticAnnIndexMethod, SemanticAnnIndexSpec, SemanticBindingDraft, SemanticDeadLetter,
     SemanticDeadLetterDraft, SemanticLexicalIndexSpec, SemanticModelIdentity,

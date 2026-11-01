@@ -39,7 +39,8 @@ use super::shard::{Shard, ShardWrite};
 /// every append. `apply_checkpoint`/`purge_graph_rows`/`ClearGraph` never delete AUDIT
 /// rows, so the cached tail is never invalidated by those paths.
 #[cfg(feature = "security")]
-pub(crate) type AuditTailCache = std::collections::HashMap<String, (u64, medulla_kernel::audit::Hash)>;
+pub(crate) type AuditTailCache =
+    std::collections::HashMap<String, (u64, medulla_kernel::audit::Hash)>;
 
 /// A maintenance admission id unique per ATTEMPT, shared by every caller on
 /// this writer thread that needs one. `admit_maintenance` resolves a repeated
@@ -307,7 +308,10 @@ pub(crate) fn provenance_leaf_hashes(
     for id in node_ids {
         if let Some(v) = nodes.get((graph, id.as_str()))? {
             let content = crypto.unseal_node(graph, id, v.value())?;
-            out.push((id.clone(), medulla_kernel::audit::merkle_leaf_hash(id, &content)));
+            out.push((
+                id.clone(),
+                medulla_kernel::audit::merkle_leaf_hash(id, &content),
+            ));
         }
     }
     Ok(out)
@@ -539,13 +543,19 @@ pub(crate) fn prove_inclusion(
         .transpose()?;
 
     let (current_leaf_hash, detail_if_missing) = match &current {
-        Some(content) => (medulla_kernel::audit::merkle_leaf_hash(node_id, content), None),
+        Some(content) => (
+            medulla_kernel::audit::merkle_leaf_hash(node_id, content),
+            None,
+        ),
         // No durable row anymore (removed since anchoring). There is nothing left
         // to re-hash; fold in a fixed domain-tagged sentinel so the proof walk
         // stays well-defined. It CANNOT reproduce the real anchor-time leaf hash,
         // so verification fails closed exactly like real content tampering would.
         None => (
-            medulla_kernel::audit::merkle_leaf_hash(node_id, medulla_kernel::audit::MISSING_NODE_SENTINEL),
+            medulla_kernel::audit::merkle_leaf_hash(
+                node_id,
+                medulla_kernel::audit::MISSING_NODE_SENTINEL,
+            ),
             Some("node has no durable row anymore (removed since anchoring)".to_string()),
         ),
     };

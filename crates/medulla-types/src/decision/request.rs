@@ -115,7 +115,7 @@ pub struct AssemblyRequirements {
     /// A swarm-topology question over the request's templates. Absent from a
     /// plain assembly, so a v1 request keeps its exact digest.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub topology: Option<super::topology::TopologyRequirements>,
+    pub topology: Option<crate::agent_topology::TopologyRequirements>,
 }
 
 /// Which slice of the agent library the candidates come from.

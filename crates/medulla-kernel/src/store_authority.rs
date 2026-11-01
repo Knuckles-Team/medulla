@@ -316,7 +316,7 @@ mod tests {
     fn scope() -> MutationScopeIdentity {
         MutationScopeIdentity::fixed_native(
             "native",
-            medulla_types::mutation_batch::DurabilityDomain::ControlPlane,
+            medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
             "a",
             "test:v1",
         )
@@ -334,7 +334,7 @@ mod tests {
     fn other_scope() -> MutationScopeIdentity {
         MutationScopeIdentity::fixed_native(
             "native",
-            medulla_types::mutation_batch::DurabilityDomain::ControlPlane,
+            medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
             "b",
             "test:v1",
         )

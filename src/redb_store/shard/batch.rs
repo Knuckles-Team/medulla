@@ -4,7 +4,9 @@
 //! caller-compiled batch is rebound onto the shard scope that commits it.
 
 use medulla_storage::{GraphShardOwner, OwnedStoreHandle, GRAPH_SHARD_TENANT};
-use medulla_types::mutation_batch::{authority_scope_for, DurabilityDomain, MutationScope};
+use medulla_types::mutation_batch::authority_scope_for;
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::MutationScope;
 use medulla_types::protocol::Method;
 use medulla_types::{
     MutationBatch, MutationEnvelope, MutationOperation, MutationOutboxIntent,

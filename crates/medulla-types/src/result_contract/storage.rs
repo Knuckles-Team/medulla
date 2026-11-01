@@ -7,6 +7,7 @@ use crate::agent_component::AgentComponentEntry;
 use crate::agent_component::AgentComponentSearchPage;
 use crate::agent_graph::AgentGraphCommittedResult;
 use crate::agent_graph::AgentGraphEntry;
+use crate::agent_guardrail::GuardrailEntailmentResult;
 use crate::agent_library::AgentLibraryEntry;
 use crate::agent_library::AgentLibraryEntryDraft;
 use crate::agent_library::AgentLibraryWriteResult;
@@ -18,7 +19,6 @@ use crate::connector_pack::{
     PackBodyReconcileReport, PackImportReceipt, PackImportResult, PackRetireResult,
 };
 use crate::decision::coverage::CapabilityCoverageResult;
-use crate::decision::guardrail::GuardrailEntailmentResult;
 use crate::decision::{AssemblyResult, DecisionCommitResult};
 use crate::series_expr::DerivedSeriesReceipt;
 #[cfg(feature = "query")]

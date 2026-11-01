@@ -21,7 +21,7 @@ pub(super) async fn begin_txn(
         Err(msg) => {
             return Response::err(
                 req_id,
-                medulla_types::contract::classify_refusal("INVALID_ARGUMENT", "", &msg),
+                medulla_types::error_registry::classify_refusal("INVALID_ARGUMENT", "", &msg),
             )
         }
     };

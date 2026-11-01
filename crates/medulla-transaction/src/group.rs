@@ -22,7 +22,8 @@
 use crate::admitted::AdmittedMutation;
 use crate::Begin;
 use medulla_storage::{OwnedStoreHandle, OwnerDomain};
-use medulla_types::mutation_batch::{MutationScope, VersionExpectation};
+use medulla_types::mutation_batch::VersionExpectation;
+use medulla_types::mutation_scope::MutationScope;
 use medulla_types::{MutationBatch, MutationScopeIdentity};
 
 /// One member of a scope group: the bound scope it is admitted for and the

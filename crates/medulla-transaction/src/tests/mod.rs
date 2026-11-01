@@ -30,12 +30,16 @@ use medulla_types::contract::{
     ResourceId, SchemaId, ScopeKind, TenantId, UtcUnixNanos,
 };
 use medulla_types::mutation::{MutationReceipt, MutationResult};
-use medulla_types::mutation_batch::{
-    DurabilityDomain, IncarnationId, LogicalName, MutationSurface, ScopeTenantId,
-    VersionExpectation,
-};
+use medulla_types::mutation_batch::VersionExpectation;
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::IncarnationId;
+use medulla_types::mutation_scope::LogicalName;
+use medulla_types::mutation_scope::MutationSurface;
+use medulla_types::mutation_scope::ScopeTenantId;
 use medulla_types::protocol::Method;
-use medulla_types::{MutationBatch, MutationOperation, MutationScopeIdentity, MUTATION_BATCH_VERSION};
+use medulla_types::{
+    MutationBatch, MutationOperation, MutationScopeIdentity, MUTATION_BATCH_VERSION,
+};
 use redb::{TableDefinition, TableHandle};
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -126,9 +130,10 @@ fn operation_envelope(
     identity: &MutationScopeIdentity,
     batch_id: &str,
 ) -> medulla_types::mutation_batch::MutationEnvelope {
-    let method =
-        medulla_types::contract::MethodId::new(medulla_types::mutation_batch::BATCH_COMPILED_METHODS)
-            .unwrap();
+    let method = medulla_types::contract::MethodId::new(
+        medulla_types::mutation_batch::BATCH_COMPILED_METHODS,
+    )
+    .unwrap();
     medulla_types::mutation_batch::MutationEnvelope::for_scope(
         medulla_types::mutation_batch::CompiledScope {
             identity,

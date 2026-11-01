@@ -717,7 +717,8 @@ fn aggregate_materialization_reservation_accepts_its_boundary_and_rejects_one_by
 /// if `MAX_SQL_SOURCE_BATCH_BYTES` is ever changed enough to put the fixture's
 /// estimate over the byte cap and silently invalidate this test's premise.
 const _: () = assert!(
-    1024 * (5 + 32 + 1023 * 8) < medulla_types::storage_wire::source_batch::MAX_SQL_SOURCE_BATCH_BYTES
+    1024 * (5 + 32 + 1023 * 8)
+        < medulla_types::storage_wire::source_batch::MAX_SQL_SOURCE_BATCH_BYTES
 );
 
 #[test]

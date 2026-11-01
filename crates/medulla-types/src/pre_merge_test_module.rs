@@ -134,7 +134,12 @@ pub fn required_test_modules() -> Vec<RequiredTestModule> {
     use RequiredTestModuleCategory::{Backup, Persistence, Raft};
     [
         (Raft, "medulla", "raft::", &["cluster"][..]),
-        (Backup, "medulla-transaction", "tests::backup_replay::", &[][..]),
+        (
+            Backup,
+            "medulla-transaction",
+            "tests::backup_replay::",
+            &[][..],
+        ),
         (
             Persistence,
             "medulla",
@@ -237,7 +242,12 @@ mod tests {
         assert_eq!(manifest.len(), 3);
         let expected = [
             (Raft, "medulla", "raft::", vec!["cluster"]),
-            (Backup, "medulla-transaction", "tests::backup_replay::", vec![]),
+            (
+                Backup,
+                "medulla-transaction",
+                "tests::backup_replay::",
+                vec![],
+            ),
             (
                 Persistence,
                 "medulla",
@@ -314,9 +324,8 @@ mod tests {
         for (source, declaration) in anchors {
             assert!(source.contains(declaration), "missing {declaration}");
         }
-        assert!(
-            include_str!("../../medulla-transaction/src/tests/mod.rs").contains("mod backup_replay;")
-        );
+        assert!(include_str!("../../medulla-transaction/src/tests/mod.rs")
+            .contains("mod backup_replay;"));
         assert!(include_str!("../../../Cargo.toml").contains("cluster = [\"full\", \"raft\""));
     }
 }

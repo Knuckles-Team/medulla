@@ -10,7 +10,7 @@ use medulla_types::decision::{
     QuantisedValue, RecordWindow, StatisticalPolicy, TraceFidelityLevel, UnitRationalWire,
     UnknownCostRule, DECISION_POLICY_SCHEMA_VERSION,
 };
-use medulla_types::solve::Scalar;
+use medulla_types::solve_scalar::Scalar;
 
 pub const OPTIONS: usize = 3;
 pub const FEATURES: [&str; 2] = ["quality", "noise"];

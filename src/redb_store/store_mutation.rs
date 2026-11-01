@@ -721,7 +721,7 @@ fn finish_replayed_batch(
 mod outbox_reactivation_tests {
     use super::*;
     use medulla_transaction::OutboxClaimBudget;
-    use medulla_types::mutation_batch::COMPILED_BATCH_INCARNATION;
+    use medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION;
     use medulla_types::{
         contract::Digest256, MutationOperation, MutationOutboxIntent, MutationScopeIdentity,
         MutationSurface, VersionExpectation, MUTATION_BATCH_VERSION,

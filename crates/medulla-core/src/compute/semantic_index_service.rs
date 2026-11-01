@@ -16,7 +16,8 @@ use std::sync::Arc;
 use medulla_storage::ScopeGrantVerifier;
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome, OutboxStatus};
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_batch::{MutationOutboxLease, MutationOutboxRecord};
+use medulla_types::mutation_scope::MutationOutboxLease;
+use medulla_types::mutation_scope::MutationOutboxRecord;
 use medulla_types::semantic_index::{
     SemanticAuthorizationReceipt, SemanticAuthorizationReceiptDraft, SemanticBinding,
     SemanticBindingState, SemanticDigest, SemanticGenerationArtifact, SemanticGenerationCheckpoint,

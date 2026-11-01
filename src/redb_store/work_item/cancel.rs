@@ -52,7 +52,9 @@ fn cancel_status_refusal(
         property_string(props, "status"),
         "submitted" | "ready" | "leased" | "running"
     ) {
-        return Some(medulla_types::result_contract::coordination::WorkItemCancelStatus::NotCancellable);
+        return Some(
+            medulla_types::result_contract::coordination::WorkItemCancelStatus::NotCancellable,
+        );
     }
     None
 }
@@ -308,16 +310,18 @@ pub(crate) fn apply_defer_work_item_row(
         Some("ready"),
     );
     write_work_item_props(nodes, graph, work_item_id, &mut props, crypto)?;
-    deferral_result(medulla_types::result_contract::coordination::WorkItemDeferral {
-        status: medulla_types::result_contract::coordination::WorkItemDeferStatus::Deferred,
-        work_item_id: Some(work_item_id.to_string()),
-        lease_epoch: Some(next_epoch),
-        fencing_token: Some(next_fencing_token),
-        next_retry_at_ms: Some(next_retry_at_ms),
-        attempt: Some(attempts),
-        defer_count: Some(defer_count),
-        changed_work_item_ids: vec![work_item_id.to_string()],
-    })
+    deferral_result(
+        medulla_types::result_contract::coordination::WorkItemDeferral {
+            status: medulla_types::result_contract::coordination::WorkItemDeferStatus::Deferred,
+            work_item_id: Some(work_item_id.to_string()),
+            lease_epoch: Some(next_epoch),
+            fencing_token: Some(next_fencing_token),
+            next_retry_at_ms: Some(next_retry_at_ms),
+            attempt: Some(attempts),
+            defer_count: Some(defer_count),
+            changed_work_item_ids: vec![work_item_id.to_string()],
+        },
+    )
     .map(Some)
 }
 

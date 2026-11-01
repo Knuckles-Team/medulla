@@ -49,6 +49,9 @@ impl CommitPhaseTimer {
     /// Stop timing and record the elapsed wall time against this phase's
     /// histogram series.
     pub(crate) fn finish(self) {
-        medulla_kernel::metrics::observe_commit_ops_phase(self.phase, self.started.elapsed().as_secs_f64());
+        medulla_kernel::metrics::observe_commit_ops_phase(
+            self.phase,
+            self.started.elapsed().as_secs_f64(),
+        );
     }
 }

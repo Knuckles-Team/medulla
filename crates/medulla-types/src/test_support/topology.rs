@@ -1,12 +1,16 @@
 //! Swarm-topology fixtures shared by medulla-types' own tests and medulla-compute's
 //! topology model tests.
 
+use crate::agent_topology::CapacityScope;
+use crate::agent_topology::LeaseDemand;
+use crate::agent_topology::SlotRole;
+use crate::agent_topology::SlotTopology;
+use crate::agent_topology::StopRule;
+use crate::agent_topology::TopologyCaps;
+use crate::agent_topology::TopologyFacts;
+use crate::agent_topology::TopologyRequirements;
 use crate::capacity_lease::{CapacityResourceClass, LeasePriority};
 use crate::contract::BoundedVec;
-use crate::decision::topology::{
-    CapacityScope, LeaseDemand, SlotRole, SlotTopology, StopRule, TopologyCaps, TopologyFacts,
-    TopologyRequirements,
-};
 
 /// The fan-out/join class IRI the fixtures use.
 pub const FAN_OUT_JOIN: &str = "http://knuckles.team/kg/swarm#FanOutJoin";

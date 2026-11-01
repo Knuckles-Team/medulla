@@ -39,7 +39,7 @@ impl AgentLibraryStore {
         let owner = self.scope_handle(tenant_id)?;
         let subject = ledger_scope_key(owner.identity());
         let write = MaintenanceBatch::new(
-            medulla_types::mutation_batch::DurabilityDomain::ControlPlane,
+            medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
             event,
             &subject,
         );

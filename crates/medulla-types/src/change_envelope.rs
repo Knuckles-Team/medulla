@@ -250,8 +250,9 @@ impl ChangeEnvelope {
     /// the served path never reduces it to an unclassified `INTERNAL`
     /// (spec: MEDULLA-DURABLE-KERNEL-R043.8).
     pub fn validate(&self) -> Result<(), String> {
-        validation::validate_change_envelope(self)
-            .map_err(|refusal| crate::contract::classify_refusal("INVALID_ARGUMENT", "", &refusal))
+        validation::validate_change_envelope(self).map_err(|refusal| {
+            crate::error_registry::classify_refusal("INVALID_ARGUMENT", "", &refusal)
+        })
     }
 }
 
@@ -571,7 +572,7 @@ mod validation {
     /// code must stay first so `Response::err` keeps it on the wire.
     fn at_operation(ordinal: impl std::fmt::Display, error: &str) -> String {
         match error.split_once(": ") {
-            Some((code, detail)) if crate::contract::declared_error_code(code) => {
+            Some((code, detail)) if crate::error_registry::declared_error_code(code) => {
                 format!("{code}: operation {ordinal}: {detail}")
             }
             _ => format!("operation {ordinal}: {error}"),
@@ -980,7 +981,7 @@ mod tests {
     // reject, so the assertion is true under v1 as written.
     #[test]
     fn unsafe_text_in_core_mutation_field_is_rejected() {
-        let err = crate::mutation_batch::ScopeTenantId::new("/home/person")
+        let err = crate::mutation_scope::ScopeTenantId::new("/home/person")
             .expect_err("tenant identity must reject unsafe machine-path text");
         assert!(err.contains("path semantics"), "got: {err}");
     }
@@ -1046,7 +1047,7 @@ mod tests {
         envelope
             .mutation
             .outbox
-            .push(crate::mutation_batch::MutationOutboxIntent {
+            .push(crate::mutation_scope::MutationOutboxIntent {
                 topic: "topic@bad".into(),
                 key: "key-1".into(),
                 payload: rmp_serde::to_vec_named(&serde_json::json!({"a": 1})).unwrap(),
@@ -1063,7 +1064,7 @@ mod tests {
         envelope
             .mutation
             .outbox
-            .push(crate::mutation_batch::MutationOutboxIntent {
+            .push(crate::mutation_scope::MutationOutboxIntent {
                 topic: "topic-1".into(),
                 key: "key-1".into(),
                 payload: rmp_serde::to_vec_named(&serde_json::json!({"path": "/home/person/x"}))

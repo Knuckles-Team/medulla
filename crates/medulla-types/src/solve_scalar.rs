@@ -1,4 +1,5 @@
-//! Exact wire scalars shared by the model, the certificate and the verifier.
+//! Exact wire scalars and the one sha256 text digest form shared by the solver,
+//! decision records and agent vocabulary.
 //!
 //! `i128` values cross the wire as decimal strings, so no JSON or MessagePack
 //! codec narrows them to 64 bits or to a float. Digests are lower-case hex.
@@ -101,4 +102,13 @@ impl TryFrom<String> for Sha256Digest {
             Err(ScalarParseError(text))
         }
     }
+}
+
+/// The textual prefix every decision digest carries.
+pub const DIGEST_TEXT_PREFIX: &str = "sha256:";
+
+/// Digest `value` under `domain`, in the wave's one text form.
+pub fn digest_text<T: Serialize>(domain: &str, value: &T) -> String {
+    let digest = String::from(Sha256Digest::of_json(domain, value));
+    format!("{DIGEST_TEXT_PREFIX}{digest}")
 }

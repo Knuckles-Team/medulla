@@ -108,7 +108,7 @@ pub(crate) type PageSubmitFn = Box<
 #[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
 pub(crate) type PageParkFn = Box<
     dyn FnMut(
-            medulla_types::mutation_batch::MutationOutboxLease,
+            medulla_types::mutation_scope::MutationOutboxLease,
             medulla_types::native_control::EnrichmentBudgetPark,
         ) -> SeamFuture<'static, Result<(), String>>
         + Send,
@@ -301,7 +301,7 @@ pub trait DispatchApi: Send + Sync {
         &'a self,
         persistence: &'a dyn crate::server::api::persistence::PersistenceBackend,
         graph_fname: &'a str,
-        lease: &'a medulla_types::mutation_batch::MutationOutboxLease,
+        lease: &'a medulla_types::mutation_scope::MutationOutboxLease,
         committed_at_ms: u64,
     ) -> SeamFuture<
         'a,
@@ -324,7 +324,7 @@ pub trait DispatchApi: Send + Sync {
     ))]
     fn decode_pending_enrichment_intent(
         &self,
-        intent: &medulla_types::mutation_batch::MutationOutboxIntent,
+        intent: &medulla_types::mutation_scope::MutationOutboxIntent,
     ) -> Result<crate::parser::enrichment_snapshot::EligibleSnapshot, String>;
 
     /// Encode one complete immutable source as the canonical pending enrichment intent.
@@ -338,7 +338,7 @@ pub trait DispatchApi: Send + Sync {
     fn enrichment_intent_for_snapshot(
         &self,
         snapshot: crate::parser::enrichment_snapshot::EligibleSnapshot,
-    ) -> Result<medulla_types::mutation_batch::MutationOutboxIntent, String>;
+    ) -> Result<medulla_types::mutation_scope::MutationOutboxIntent, String>;
 
     /// One bounded durable repository-enrichment outbox sweep.
     #[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
@@ -679,7 +679,7 @@ pub(crate) async fn plan_held_underfunded_park(
     state: &Arc<RwLock<ServerState>>,
     persistence: &dyn crate::server::api::persistence::PersistenceBackend,
     graph_fname: &str,
-    lease: &medulla_types::mutation_batch::MutationOutboxLease,
+    lease: &medulla_types::mutation_scope::MutationOutboxLease,
     committed_at_ms: u64,
 ) -> Result<
     (
@@ -704,7 +704,7 @@ pub(crate) async fn plan_held_underfunded_park(
 ))]
 pub(crate) async fn decode_pending_enrichment_intent(
     state: &Arc<RwLock<ServerState>>,
-    intent: &medulla_types::mutation_batch::MutationOutboxIntent,
+    intent: &medulla_types::mutation_scope::MutationOutboxIntent,
 ) -> Result<crate::parser::enrichment_snapshot::EligibleSnapshot, String> {
     dispatch_api(state)
         .await?
@@ -722,7 +722,7 @@ pub(crate) async fn decode_pending_enrichment_intent(
 pub(crate) async fn enrichment_intent_for_snapshot(
     state: &Arc<RwLock<ServerState>>,
     snapshot: crate::parser::enrichment_snapshot::EligibleSnapshot,
-) -> Result<medulla_types::mutation_batch::MutationOutboxIntent, String> {
+) -> Result<medulla_types::mutation_scope::MutationOutboxIntent, String> {
     dispatch_api(state)
         .await?
         .enrichment_intent_for_snapshot(snapshot)

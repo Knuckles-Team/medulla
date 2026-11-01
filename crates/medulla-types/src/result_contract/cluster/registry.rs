@@ -3,28 +3,13 @@
 use serde::{Deserialize, Serialize};
 
 use crate::contract::{BoundedVec, Digest256};
+use crate::fleet_catalog::is_valid_server_name;
 
 /// Current schema of a [`RegisteredServerListPage`].
 ///
 /// 2: every view carries the server's typed `transport` and `desired` state, so
 /// the snapshot digest covers a different shape and a v1 cursor cannot resume.
 pub const REGISTERED_SERVER_LIST_SCHEMA_VERSION: u16 = 2;
-
-/// Longest registered server name. Mirrors the agent-utilities config-sync
-/// bound, so one name is valid on both registration paths.
-pub const MAX_REGISTERED_SERVER_NAME_BYTES: usize = 128;
-
-/// Whether `name` is a bounded logical server name (`^[A-Za-z0-9_.-]{1,128}$`).
-///
-/// The one definition: the registry, its cursors and the fleet catalog's
-/// discovery records all validate server names here.
-pub fn is_valid_server_name(name: &str) -> bool {
-    !name.is_empty()
-        && name.len() <= MAX_REGISTERED_SERVER_NAME_BYTES
-        && name
-            .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.'))
-}
 
 /// How a registered server is reached. Closed on purpose: a transport the
 /// engine cannot name is `Unspecified`, never a free-form string.
@@ -155,14 +140,14 @@ mod tests {
     fn server_name_bound_matches_the_config_sync_alphabet() {
         assert!(is_valid_server_name("github-mcp_1.0"));
         assert!(is_valid_server_name(
-            &"a".repeat(MAX_REGISTERED_SERVER_NAME_BYTES)
+            &"a".repeat(crate::fleet_catalog::MAX_REGISTERED_SERVER_NAME_BYTES)
         ));
         for invalid in ["", "has space", "slash/name", "tilde~name", "\u{e9}"] {
             assert!(!is_valid_server_name(invalid), "{invalid:?}");
         }
-        assert!(!is_valid_server_name(
-            &"a".repeat(MAX_REGISTERED_SERVER_NAME_BYTES + 1)
-        ));
+        assert!(!is_valid_server_name(&"a".repeat(
+            crate::fleet_catalog::MAX_REGISTERED_SERVER_NAME_BYTES + 1
+        )));
     }
 
     #[test]

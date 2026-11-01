@@ -473,7 +473,8 @@ impl<'a> PlanCollector<'a> {
             self.server_pin
                 .ok_or_else(|| "MALFORMED_INDEX: pack has no server".to_string())?,
         )?;
-        let record_bytes = medulla_storage::encode_bounded(&record, "connector pack import record")?;
+        let record_bytes =
+            medulla_storage::encode_bounded(&record, "connector pack import record")?;
         if record_bytes.len() > medulla_types::connector_pack::MAX_PACK_RECORD_BYTES {
             return rejected(
                 self.request,

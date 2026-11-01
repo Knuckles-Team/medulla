@@ -138,7 +138,8 @@ fn lower_vector(vector: &SqlSourceVector, column: &Column) -> Result<Cell, Strin
 // RSS. The whole batch is admitted before DEFAULT coercion, typed-cell copies,
 // rowid allocation or publication. Encoded bytes and decoded structural nodes
 // are bounded by the reservation and existing kernel codec/collection limits.
-const MATERIALIZED_BYTES: usize = medulla_types::storage_wire::source_batch::MAX_SQL_SOURCE_BATCH_BYTES;
+const MATERIALIZED_BYTES: usize =
+    medulla_types::storage_wire::source_batch::MAX_SQL_SOURCE_BATCH_BYTES;
 const MATERIALIZED_ITEMS: usize = medulla_types::msgpack::MAX_PROPERTY_ITEMS;
 
 #[derive(Clone, Copy)]

@@ -20,7 +20,6 @@ use medulla_numeric::decision::evaluate::{evaluate, EvalSpec};
 use medulla_numeric::decision::fit::{fit, FitSpec};
 use medulla_types::agent_component::AgentComponentKind;
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::digest::digest_text;
 use medulla_types::decision::jobs::{
     DatasetSource, DecisionReceiptPage, DecisionReceiptTimelineEntry, DecisionReceiptTimelinePage,
     DecisionThresholdAssessment, LabelRegime,
@@ -36,6 +35,7 @@ use medulla_types::decision::{
     DecisionJobKind, DecisionJobOutput, DecisionJobRecord, DecisionJobState, EvalCandidate,
     StatisticalPolicy, DECISION_JOB_SCHEMA_VERSION,
 };
+use medulla_types::solve_scalar::digest_text;
 
 use super::stat_log::{logged_dataset, LogReader};
 use super::stat_support::{pinned_body, refusal, resolve_policy, ResolvedPolicy};

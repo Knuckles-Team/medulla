@@ -5739,7 +5739,7 @@ mod mutation_batch_tests {
         batch_id: &str,
         node_id: &str,
         event: &str,
-    ) -> Vec<medulla_types::mutation_batch::MutationOutboxRecord> {
+    ) -> Vec<medulla_types::mutation_scope::MutationOutboxRecord> {
         let receipt = read_mutation_batch_for_graph(shard, "graph-a", batch_id)
             .unwrap()
             .expect("the committed envelope must leave one durable kernel receipt");

@@ -566,7 +566,11 @@ async fn handle_cross_modal_with_lease(
         Ok(Ok(rows)) => result_response::<query_results::UnifiedQuery>(req_id, &rows),
         Ok(Err(msg)) => Response::err(
             req_id,
-            medulla_types::contract::classify_refusal("INVALID_ARGUMENT", "UnifiedQuery error: ", &msg),
+            medulla_types::error_registry::classify_refusal(
+                "INVALID_ARGUMENT",
+                "UnifiedQuery error: ",
+                &msg,
+            ),
         ),
         Err(resp) => resp,
     };

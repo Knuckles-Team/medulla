@@ -201,20 +201,23 @@ impl<'a> IndexValidator<'a> {
     }
 
     fn validate_sections(&mut self, entry: &PackEntry) {
-        let sections = [(&entry.body, medulla_types::connector_pack::MAX_PACK_BODY_BYTES)]
-            .into_iter()
-            .chain(entry.input_schema.iter().map(|section| {
-                (
-                    section,
-                    medulla_types::connector_pack::MAX_PACK_SCHEMA_SECTION_BYTES,
-                )
-            }))
-            .chain(entry.output_schema.iter().map(|section| {
-                (
-                    section,
-                    medulla_types::connector_pack::MAX_PACK_SCHEMA_SECTION_BYTES,
-                )
-            }));
+        let sections = [(
+            &entry.body,
+            medulla_types::connector_pack::MAX_PACK_BODY_BYTES,
+        )]
+        .into_iter()
+        .chain(entry.input_schema.iter().map(|section| {
+            (
+                section,
+                medulla_types::connector_pack::MAX_PACK_SCHEMA_SECTION_BYTES,
+            )
+        }))
+        .chain(entry.output_schema.iter().map(|section| {
+            (
+                section,
+                medulla_types::connector_pack::MAX_PACK_SCHEMA_SECTION_BYTES,
+            )
+        }));
         for (section, limit) in sections {
             self.validate_section(entry, section, limit);
         }

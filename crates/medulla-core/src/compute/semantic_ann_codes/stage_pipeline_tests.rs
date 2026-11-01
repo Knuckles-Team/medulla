@@ -13,8 +13,8 @@ use std::path::PathBuf;
 use medulla_storage::SEMANTIC_SOURCE_PROGRESS;
 use medulla_transaction::{OutboxClaimBudget, OutboxWrite, OutboxWriteReply};
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_batch::MutationOutboxLease;
 use medulla_types::mutation_outbox::RewindTarget;
+use medulla_types::mutation_scope::MutationOutboxLease;
 use medulla_types::semantic_index::{
     SemanticAnnIndexManifest, SemanticBinding, SemanticBindingState, SemanticDeadLetter,
     SemanticDeadLetterDraft, SemanticDigest, SemanticExpectedEntity, SemanticGenerationAggregate,

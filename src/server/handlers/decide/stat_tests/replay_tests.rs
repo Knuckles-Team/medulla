@@ -218,7 +218,7 @@ async fn a_replay_is_sealed_stored_and_supersedable() {
     let mut unsealed = run.clone();
     unsealed.run_digest = String::new();
     assert_eq!(
-        medulla_types::decision::digest::digest_text("eg/decision/evaluation-run/v1", &unsealed),
+        medulla_types::solve_scalar::digest_text("eg/decision/evaluation-run/v1", &unsealed),
         run.run_digest
     );
     assert!(h

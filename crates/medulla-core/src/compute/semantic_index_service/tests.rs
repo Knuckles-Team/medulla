@@ -12,10 +12,12 @@ use super::{
     SemanticSqlSourceValue,
 };
 use crate::test_scope_grant::{TEST_PRINCIPAL, TEST_PROOF};
-use medulla_types::mutation_batch::{
-    CommittedVersion, DurabilityDomain, MutationOutboxIntent, MutationOutboxRecord,
-    MutationScopeIdentity, MUTATION_BATCH_VERSION,
-};
+use medulla_types::mutation_batch::MUTATION_BATCH_VERSION;
+use medulla_types::mutation_scope::CommittedVersion;
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::MutationOutboxIntent;
+use medulla_types::mutation_scope::MutationOutboxRecord;
+use medulla_types::mutation_scope::MutationScopeIdentity;
 use medulla_types::semantic_index::{
     SemanticBinding, SemanticDigest, SemanticIndexError, SemanticSourceDirtyIntent,
     SemanticStageArtifact, SemanticStageIntent, SemanticStageOutcome, SemanticStageReceipt,

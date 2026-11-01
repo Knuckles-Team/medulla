@@ -127,7 +127,7 @@ fn path_index_batch(
     let operation = medulla_types::MutationOperation {
         ordinal: 0,
         surface: medulla_types::MutationSurface::Other,
-        domain: medulla_types::mutation_batch::DurabilityDomain::ControlPlane,
+        domain: medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
         method: medulla_types::protocol::Method::ApplyMutation {
             event_type: "path_index_snapshot".to_string(),
             query: batch_id.clone(),
@@ -193,7 +193,7 @@ mod redb_store {
     fn path_scope_identity() -> Result<medulla_types::MutationScopeIdentity, PathPersistError> {
         medulla_types::MutationScopeIdentity::fixed_native(
             PATH_SCOPE_TENANT,
-            medulla_types::mutation_batch::DurabilityDomain::ControlPlane,
+            medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
             PATH_SCOPE_RESOURCE,
             PATH_SCOPE_INCARNATION,
         )

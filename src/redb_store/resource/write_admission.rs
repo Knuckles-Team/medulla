@@ -36,8 +36,11 @@ pub(crate) struct ResourceReservationTables<'borrow, 'table, 'crypto> {
         (&'static str, &'static str),
         &'static [u8],
     >,
-    pub(crate) concurrency:
-        &'borrow mut medulla_storage::ScopedOwnerTableMut<'table, (&'static str, &'static str), u64>,
+    pub(crate) concurrency: &'borrow mut medulla_storage::ScopedOwnerTableMut<
+        'table,
+        (&'static str, &'static str),
+        u64,
+    >,
     pub(crate) anti_affinity: &'borrow mut medulla_storage::ScopedOwnerTableMut<
         'table,
         (&'static str, &'static str, &'static str),

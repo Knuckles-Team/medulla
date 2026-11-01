@@ -21,7 +21,7 @@ fn to_quality_function(quality: CommunityQualityFunction) -> QualityFunction {
 /// A graph-algorithm refusal names the caller's input (an unknown node id, a
 /// cyclic graph); keep any code the inner error already carries.
 fn invalid_argument(error: &str) -> String {
-    medulla_types::contract::classify_refusal("INVALID_ARGUMENT", "", error)
+    medulla_types::error_registry::classify_refusal("INVALID_ARGUMENT", "", error)
 }
 
 /// `InDegree`: pure extract-method from `try_handle`'s match arm, byte-identical
