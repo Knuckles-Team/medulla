@@ -517,7 +517,7 @@ impl PersistenceBackend for RecordingBackend {
         // else, so this mock does too rather than stubbing a default.
         let committed_version = match args.batch.version_expectation {
             medulla::mutation_batch::VersionExpectation::Graph(expected) => {
-                medulla::mutation_batch::CommittedVersion::checked_graph(expected)?
+                medulla_types::mutation_scope::CommittedVersion::checked_graph(expected)?
             }
             other => {
                 return Err(format!(

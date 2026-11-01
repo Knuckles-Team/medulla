@@ -33,7 +33,8 @@ impl SealedNativeMethod {
             return Err("native Raft command exceeds resource limits".to_string());
         }
         let key = native_method_key(server_secret);
-        let ciphertext = medulla_kernel::crypto::ValueCipher::from_key_material(&key).seal(&plaintext);
+        let ciphertext =
+            medulla_kernel::crypto::ValueCipher::from_key_material(&key).seal(&plaintext);
         let command = Self {
             ciphertext,
             plaintext_sha256: hex::encode(Sha256::digest(&plaintext)),

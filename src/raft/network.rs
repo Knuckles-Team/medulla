@@ -75,7 +75,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::sync::{oneshot, Notify};
 
-use super::{MedullaRaft, GroupId, NodeId, TypeConfig};
+use super::{GroupId, MedullaRaft, NodeId, TypeConfig};
 
 mod heartbeat_flush;
 mod membership;

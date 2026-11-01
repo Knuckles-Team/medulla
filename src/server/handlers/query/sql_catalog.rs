@@ -249,12 +249,12 @@ fn commit_sql_catalog_work(work: SqlCatalogWork<'_>) -> Result<usize, String> {
                 expected_graph_version: Some(expected_version),
                 fencing_token: None,
                 created_at_ms,
-                default_surface: crate::mutation_batch::MutationSurface::Query,
+                default_surface: medulla_types::mutation_scope::MutationSurface::Query,
                 authoritative_state: None,
             },
             sql_method,
-            crate::mutation_batch::MutationSurface::Query,
-            crate::mutation_batch::DurabilityDomain::SqlCatalog,
+            medulla_types::mutation_scope::MutationSurface::Query,
+            medulla_types::mutation_scope::DurabilityDomain::SqlCatalog,
             "sql_catalog_operation",
         )?;
         let committed_replay = wire

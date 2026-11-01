@@ -49,8 +49,10 @@ fn projection_is_current(
     let projection = tsdb_store
         .projection_health_by_storage_key(series_id)
         .map_err(|e| e.to_string())?;
-    Ok(projection.status == medulla_tsdb::store::ProjectionStatus::Ready
-        && projection.cursor.as_ref() == Some(source_cursor))
+    Ok(
+        projection.status == medulla_tsdb::store::ProjectionStatus::Ready
+            && projection.cursor.as_ref() == Some(source_cursor),
+    )
 }
 
 #[cfg(feature = "tsdb")]

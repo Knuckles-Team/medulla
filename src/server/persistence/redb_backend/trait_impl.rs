@@ -13,10 +13,9 @@ use tokio::sync::{oneshot, RwLock};
 use crate::change_envelope::{
     ChangeCursor, ChangeEnvelope, ChangeEnvelopeCommit, ChangeEnvelopeRecord, ContentVersion,
 };
-use crate::mutation_batch::{
-    MutationBatch, MutationBatchCommit, MutationBatchRecord, MutationOutboxLease,
-    MutationOutboxRecord, MutationProjectionCursor,
-};
+use crate::mutation_batch::MutationBatch;
+use crate::mutation_batch::MutationBatchCommit;
+use crate::mutation_batch::MutationBatchRecord;
 use crate::protocol::{GraphType, Method};
 use crate::redb_store::{
     durable_node_presence as read_durable_node_presence,
@@ -33,6 +32,9 @@ use crate::server::api::persistence::PersistenceBackend;
 use crate::server::persistence::writer_reply::await_writer_reply;
 use crate::server::ServerState;
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
+use medulla_types::mutation_scope::MutationOutboxLease;
+use medulla_types::mutation_scope::MutationOutboxRecord;
+use medulla_types::mutation_scope::MutationProjectionCursor;
 
 // `async_trait` must see the concrete methods when it expands. Invoking method
 // macros directly inside its annotated impl leaves those methods untransformed,

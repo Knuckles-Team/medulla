@@ -81,7 +81,7 @@ impl SqlOwnerMutation<'_> {
             expected_graph_version: Some(expected),
             fencing_token: None,
             created_at_ms: self.created_at_ms,
-            default_surface: crate::mutation_batch::MutationSurface::Query,
+            default_surface: medulla_types::mutation_scope::MutationSurface::Query,
             authoritative_state: None,
         })
     }
@@ -296,8 +296,9 @@ pub(crate) fn tenant_acl_path_for_test(tenant_scope: &str, persist_dir: &Path) -
 
 fn context_cache_registry(
 ) -> &'static Mutex<HashMap<String, std::sync::Arc<medulla_query::SqlContextCache>>> {
-    static CACHES: OnceLock<Mutex<HashMap<String, std::sync::Arc<medulla_query::SqlContextCache>>>> =
-        OnceLock::new();
+    static CACHES: OnceLock<
+        Mutex<HashMap<String, std::sync::Arc<medulla_query::SqlContextCache>>>,
+    > = OnceLock::new();
     CACHES.get_or_init(|| Mutex::new(HashMap::new()))
 }
 

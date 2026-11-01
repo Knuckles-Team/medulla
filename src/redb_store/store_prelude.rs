@@ -29,12 +29,20 @@ pub(super) use crate::epistemic_operations::{
     ResourceReservationSummary, ResourceReservationSummaryState, ResourceTargetSnapshot,
     ResourceTargetSnapshotKind,
 };
-#[cfg(test)]
-pub(super) use crate::mutation_batch::MUTATION_BATCH_VERSION;
-pub(super) use crate::mutation_batch::{
-    CommittedVersion, DurabilityDomain, LogicalName, MutationBatch, MutationBatchCommit,
-    MutationBatchRecord, MutationBatchStatus, MutationOperation, MutationOutboxIntent,
-    MutationOutboxRecord, MutationProjectionCursor, MutationScope, MutationSurface,
-    VersionExpectation,
-};
+pub(super) use crate::mutation_batch::MutationBatch;
+pub(super) use crate::mutation_batch::MutationBatchCommit;
+pub(super) use crate::mutation_batch::MutationBatchRecord;
+pub(super) use crate::mutation_batch::MutationBatchStatus;
+pub(super) use crate::mutation_batch::MutationOperation;
+pub(super) use crate::mutation_batch::VersionExpectation;
 pub(super) use crate::protocol::{GraphType, Method};
+pub(super) use medulla_types::mutation_scope::CommittedVersion;
+pub(super) use medulla_types::mutation_scope::DurabilityDomain;
+pub(super) use medulla_types::mutation_scope::LogicalName;
+pub(super) use medulla_types::mutation_scope::MutationOutboxIntent;
+pub(super) use medulla_types::mutation_scope::MutationOutboxRecord;
+pub(super) use medulla_types::mutation_scope::MutationProjectionCursor;
+pub(super) use medulla_types::mutation_scope::MutationScope;
+pub(super) use medulla_types::mutation_scope::MutationSurface;
+#[cfg(test)]
+pub(super) use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;

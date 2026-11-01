@@ -933,12 +933,17 @@ mod mutation_batch_tests {
         ChangeCursor, ChangeEnvelope, ContentVersion, ContentVersionPosition, CursorPosition,
         PolicyRecord, PrivacyAttestation, CHANGE_ENVELOPE_VERSION,
     };
-    use crate::mutation_batch::{
-        DurabilityDomain, IncarnationId, LogicalName, MutationOperation, MutationOutboxIntent,
-        MutationScopeIdentity, MutationSurface, ScopeTenantId, MUTATION_BATCH_VERSION,
-    };
+    use crate::mutation_batch::MutationOperation;
     use medulla_kernel::test_rendezvous::{join_bounded, meet};
     use medulla_transaction::OutboxClaimBudget;
+    use medulla_types::mutation_scope::DurabilityDomain;
+    use medulla_types::mutation_scope::IncarnationId;
+    use medulla_types::mutation_scope::LogicalName;
+    use medulla_types::mutation_scope::MutationOutboxIntent;
+    use medulla_types::mutation_scope::MutationScopeIdentity;
+    use medulla_types::mutation_scope::MutationSurface;
+    use medulla_types::mutation_scope::ScopeTenantId;
+    use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
     use medulla_types::outcome_bundle::{
         CommitOutcomeBundle, OutcomeCompleteness, ReceiptNode, ReceiptNodeKind, RunEvent,
         TerminalOutcomeExtension, OUTCOME_BUNDLE_VERSION, RUN_EVENT_OUTBOX_TOPIC,

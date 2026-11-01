@@ -96,7 +96,7 @@ pub(super) async fn commit_mutation_body_commit_staged(
         prep,
         staged,
         StagedReceipt {
-            surface: crate::mutation_batch::MutationSurface::Graph,
+            surface: medulla_types::mutation_scope::MutationSurface::Graph,
             methods: vec![durable_receipt_method(method)],
         },
     )
@@ -104,7 +104,7 @@ pub(super) async fn commit_mutation_body_commit_staged(
 }
 
 pub(super) struct StagedReceipt {
-    pub(super) surface: crate::mutation_batch::MutationSurface,
+    pub(super) surface: medulla_types::mutation_scope::MutationSurface,
     pub(super) methods: Vec<Method>,
 }
 

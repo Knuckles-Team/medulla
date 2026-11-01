@@ -4,10 +4,11 @@ use sha2::{Digest, Sha256};
 use tokio::sync::{Mutex, OwnedMutexGuard};
 
 use crate::graph::GraphCore;
-use crate::mutation_batch::{MutationStateDescriptor, MutationSurface};
+use crate::mutation_batch::MutationStateDescriptor;
 use crate::protocol::{Method, ResultPayload};
 use crate::server::api::persistence::PersistenceBackend;
 use medulla_types::contract::Nonce;
+use medulla_types::mutation_scope::MutationSurface;
 
 use super::super::compile::{authoritative_graph_version, compile_methods, CompileBatch};
 

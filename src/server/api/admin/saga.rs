@@ -2,13 +2,15 @@
 //!
 //! The saga ledger is reached through [`AdminSagaLedger`], implemented by the durable backend.
 
-use crate::mutation_batch::{
-    DurabilityDomain, MutationBatch, MutationBatchCommit, MutationBatchRecord,
-    MutationScopeIdentity, MutationSurface,
-};
+use crate::mutation_batch::MutationBatch;
+use crate::mutation_batch::MutationBatchCommit;
+use crate::mutation_batch::MutationBatchRecord;
 use crate::protocol::Method;
 use crate::server::access::CarrierAuthority;
 use medulla_types::contract::Nonce;
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::MutationScopeIdentity;
+use medulla_types::mutation_scope::MutationSurface;
 
 /// The admin-mutations ledger operations an admin saga needs, implemented by the durable
 /// backend.

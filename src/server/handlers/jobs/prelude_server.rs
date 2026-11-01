@@ -8,7 +8,8 @@ pub(super) use medulla_program::{
 };
 
 pub(super) use crate::isolation::AccessLevel;
-pub(super) use crate::mutation_batch::{DurabilityDomain, MutationSurface};
 pub(super) use crate::protocol::{Method, Response, ResultPayload};
 pub(super) use crate::server::access::check_graph_access;
 pub(super) use crate::server::state::ServerState;
+pub(super) use medulla_types::mutation_scope::DurabilityDomain;
+pub(super) use medulla_types::mutation_scope::MutationSurface;

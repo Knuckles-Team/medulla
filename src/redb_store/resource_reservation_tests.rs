@@ -5,11 +5,13 @@
 //! integration suites can layer on top without duplicating policy logic.
 
 use super::*;
-use crate::mutation_batch::{IncarnationId, MutationScopeIdentity, ScopeTenantId};
 use crate::redb_store::resource::*;
 use crate::redb_store::shard::{Shard, ShardWrite};
 use medulla_kernel::test_rendezvous::{join_bounded, meet};
 use medulla_storage::{GraphShardOwner, ScopedRead};
+use medulla_types::mutation_scope::IncarnationId;
+use medulla_types::mutation_scope::MutationScopeIdentity;
+use medulla_types::mutation_scope::ScopeTenantId;
 
 fn host() -> DurableResourceHost {
     DurableResourceHost {

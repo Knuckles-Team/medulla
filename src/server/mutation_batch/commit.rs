@@ -49,7 +49,7 @@ use std::sync::Arc;
 #[cfg(test)]
 use crate::graph::GraphCore;
 #[cfg(test)]
-use crate::mutation_batch::{MutationStateDescriptor, MutationSurface};
+use crate::mutation_batch::MutationStateDescriptor;
 #[cfg(test)]
 use crate::protocol::Method;
 #[cfg(all(test, feature = "redb"))]
@@ -60,6 +60,7 @@ use crate::server::api::persistence::PersistenceBackend;
 use crate::server::mutation_batch::compile::{compile_methods, CompileBatch};
 #[cfg(test)]
 use medulla_types::contract::Nonce;
+use medulla_types::mutation_scope::MutationSurface;
 #[cfg(test)]
 use sha2::{Digest, Sha256};
 
@@ -646,7 +647,10 @@ mod internal_replay_tests {
             ]
         }
 
-        let dir = medulla_kernel::kernel::persistence::temp_dir("medulla-program-promotion", "cas-replay");
+        let dir = medulla_kernel::kernel::persistence::temp_dir(
+            "medulla-program-promotion",
+            "cas-replay",
+        );
         let persistence: Arc<dyn PersistenceBackend> = Arc::new(
             crate::server::persistence::redb_backend::RedbBackend::open(
                 dir.to_string_lossy().into_owned(),

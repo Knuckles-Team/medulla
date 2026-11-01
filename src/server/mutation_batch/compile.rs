@@ -6,12 +6,16 @@ use std::sync::Arc;
 use sha2::{Digest, Sha256};
 
 use crate::graph::GraphCore;
-use crate::mutation_batch::{
-    DurabilityDomain, MutationBatch, MutationOperation, MutationOutboxIntent,
-    MutationScopeIdentity, MutationStateDescriptor, MutationSurface, MUTATION_BATCH_VERSION,
-};
+use crate::mutation_batch::MutationBatch;
+use crate::mutation_batch::MutationOperation;
+use crate::mutation_batch::MutationStateDescriptor;
 use crate::protocol::Method;
 use crate::server::api::persistence::PersistenceBackend;
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::MutationOutboxIntent;
+use medulla_types::mutation_scope::MutationScopeIdentity;
+use medulla_types::mutation_scope::MutationSurface;
+use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
 
 use super::canonical::{domain_for, lower_canonical_operation, surface_for};
 use super::digest::principal_fingerprint;

@@ -518,10 +518,12 @@ mod raft_authority_contract_tests {
                 "{logical_name}"
             );
 
-            let mismatched_name =
-                request_for_graph(&graph_name, medulla_kernel::persist::sanitize("different-graph"))
-                    .validate()
-                    .expect_err("a different sanitized graph must not be accepted");
+            let mismatched_name = request_for_graph(
+                &graph_name,
+                medulla_kernel::persist::sanitize("different-graph"),
+            )
+            .validate()
+            .expect_err("a different sanitized graph must not be accepted");
             assert!(
                 mismatched_name.contains("sanitized graph name"),
                 "{mismatched_name}"
@@ -670,7 +672,7 @@ mod raft_response_receipt_tests {
                 expected_graph_version: Some(0),
                 fencing_token: None,
                 created_at_ms: 11,
-                default_surface: crate::mutation_batch::MutationSurface::Graph,
+                default_surface: medulla_types::mutation_scope::MutationSurface::Graph,
                 authoritative_state: None,
             },
             vec![crate::protocol::Method::CompareAndSetNodeFields {
@@ -685,7 +687,7 @@ mod raft_response_receipt_tests {
             batch,
             identity: identity.clone(),
             status: crate::mutation_batch::MutationBatchStatus::Committed,
-            committed_version: crate::mutation_batch::CommittedVersion::Graph {
+            committed_version: medulla_types::mutation_scope::CommittedVersion::Graph {
                 source: 0,
                 target: 1,
             },

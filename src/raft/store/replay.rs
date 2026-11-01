@@ -130,7 +130,7 @@ impl MedullaStore {
                 expected_graph_version: Some(source_version),
                 fencing_token: authority.fencing_token,
                 created_at_ms: authority.created_at_ms,
-                default_surface: crate::mutation_batch::MutationSurface::Graph,
+                default_surface: medulla_types::mutation_scope::MutationSurface::Graph,
                 authoritative_state: Some(descriptor),
             },
             vec![durable_method.clone()],
@@ -350,7 +350,7 @@ mod tests {
                 expected_graph_version: Some(0),
                 fencing_token: None,
                 created_at_ms: 11,
-                default_surface: crate::mutation_batch::MutationSurface::Graph,
+                default_surface: medulla_types::mutation_scope::MutationSurface::Graph,
                 authoritative_state: None,
             },
             vec![method.clone()],
@@ -366,7 +366,7 @@ mod tests {
             batch,
             identity,
             status: crate::mutation_batch::MutationBatchStatus::Committed,
-            committed_version: crate::mutation_batch::CommittedVersion::Graph {
+            committed_version: medulla_types::mutation_scope::CommittedVersion::Graph {
                 source: 0,
                 target: 1,
             },

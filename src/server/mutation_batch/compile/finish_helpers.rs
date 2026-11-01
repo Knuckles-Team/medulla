@@ -2,10 +2,13 @@
 
 use std::collections::BTreeMap;
 
-use crate::mutation_batch::{
-    IncarnationId, LogicalName, MutationOperation, MutationOutboxIntent, MutationScopeIdentity,
-    ScopeTenantId, VersionExpectation,
-};
+use crate::mutation_batch::MutationOperation;
+use crate::mutation_batch::VersionExpectation;
+use medulla_types::mutation_scope::IncarnationId;
+use medulla_types::mutation_scope::LogicalName;
+use medulla_types::mutation_scope::MutationOutboxIntent;
+use medulla_types::mutation_scope::MutationScopeIdentity;
+use medulla_types::mutation_scope::ScopeTenantId;
 
 use super::{CompileBatch, CompiledOutbox, COMPILED_BATCH_INCARNATION};
 

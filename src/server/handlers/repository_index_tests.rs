@@ -8,9 +8,9 @@ use medulla_types::ingestion_wire::{ExtractedEdge, ExtractedNode, IndexResult};
 use super::{
     lower, seal, IndexWriteSet, BATCH_TOO_LARGE, REDACTED_HOST_IDENTITY, REPOSITORY_LABELS,
 };
-use crate::mutation_batch::MutationSurface;
 use crate::protocol::Method;
 use crate::server::mutation_batch::{compile_methods, CompileBatch};
+use medulla_types::mutation_scope::MutationSurface;
 
 fn node(id: &str, kind: &str, properties: &[(&str, &str)]) -> ExtractedNode {
     ExtractedNode {

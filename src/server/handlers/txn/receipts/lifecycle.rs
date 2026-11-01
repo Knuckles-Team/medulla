@@ -175,7 +175,7 @@ pub(in crate::server::handlers::txn) async fn begin_txn_lifecycle_receipt(
         req_id,
         Some(caller),
         method,
-        crate::mutation_batch::DurabilityDomain::ControlPlane,
+        medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
         &batch_id,
         authority.attempt_nonce(),
     )?;

@@ -46,14 +46,21 @@ use crate::epistemic_operations::{
     DevelopmentLaneQuotaUpdateResultDecision, DevelopmentLaneRenewResultDecision,
     DevelopmentLaneResultDecision,
 };
-use crate::mutation_batch::{
-    DurabilityDomain, IncarnationId, LogicalName, MutationBatch, MutationBatchCommit,
-    MutationOperation, MutationOutboxIntent, MutationScopeIdentity, MutationSurface, ScopeTenantId,
-    VersionExpectation, MUTATION_BATCH_VERSION,
-};
+use crate::mutation_batch::MutationBatch;
+use crate::mutation_batch::MutationBatchCommit;
+use crate::mutation_batch::MutationOperation;
+use crate::mutation_batch::VersionExpectation;
 use crate::protocol::Method;
 use crate::redb_store::shard::{Shard, ShardWrite};
 use medulla_storage::{GraphShardOwner, ScopedRead};
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::IncarnationId;
+use medulla_types::mutation_scope::LogicalName;
+use medulla_types::mutation_scope::MutationOutboxIntent;
+use medulla_types::mutation_scope::MutationScopeIdentity;
+use medulla_types::mutation_scope::MutationSurface;
+use medulla_types::mutation_scope::ScopeTenantId;
+use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
 use std::path::PathBuf;
 use std::sync::{Arc, Barrier};
 

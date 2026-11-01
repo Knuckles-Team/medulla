@@ -194,15 +194,16 @@ impl SanitizedModalityResult {
             }
         };
         let (kind, outcomes) = if matches!(operation, SanitizedModalityMutation::IngestStream) {
-            let outcomes: Vec<medulla_modality::ApplyOutcome> = medulla_types::msgpack::decode_bounded(
-                &outcome_bytes,
-                medulla_types::msgpack::MsgpackLimits::new(
-                    MAX_REPLICATED_MODALITY_RESULT_BYTES,
-                    MAX_REPLICATED_MODALITY_RESULT_VALUES,
-                    64,
-                ),
-            )
-            .map_err(|_| "sanitized modality Raft stream result is malformed".to_string())?;
+            let outcomes: Vec<medulla_modality::ApplyOutcome> =
+                medulla_types::msgpack::decode_bounded(
+                    &outcome_bytes,
+                    medulla_types::msgpack::MsgpackLimits::new(
+                        MAX_REPLICATED_MODALITY_RESULT_BYTES,
+                        MAX_REPLICATED_MODALITY_RESULT_VALUES,
+                        64,
+                    ),
+                )
+                .map_err(|_| "sanitized modality Raft stream result is malformed".to_string())?;
             (SanitizedModalityResultKind::Stream, outcomes)
         } else {
             let outcome: medulla_modality::ApplyOutcome = medulla_types::msgpack::decode_bounded(

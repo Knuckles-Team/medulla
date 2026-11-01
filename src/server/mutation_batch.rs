@@ -86,7 +86,7 @@ impl GraphWriteScope<'_> {
         &self,
         batch_id: &str,
         methods: Vec<crate::protocol::Method>,
-        outbox: Vec<crate::mutation_batch::MutationOutboxIntent>,
+        outbox: Vec<medulla_types::mutation_scope::MutationOutboxIntent>,
     ) -> Result<crate::mutation_batch::MutationBatch, String> {
         let principal = self.verified.principal_persistence_id();
         compile_methods_with_outbox(
@@ -102,7 +102,7 @@ impl GraphWriteScope<'_> {
                 expected_graph_version: Some(self.graph_version),
                 fencing_token: self.fencing_token,
                 created_at_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
-                default_surface: crate::mutation_batch::MutationSurface::Graph,
+                default_surface: medulla_types::mutation_scope::MutationSurface::Graph,
                 authoritative_state: None,
             },
             methods,

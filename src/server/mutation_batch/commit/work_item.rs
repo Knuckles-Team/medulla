@@ -3,10 +3,10 @@ use std::sync::Arc;
 use sha2::{Digest, Sha256};
 
 use crate::graph::GraphCore;
-use crate::mutation_batch::MutationSurface;
 use crate::protocol::{Method, ResultPayload};
 use crate::server::api::persistence::PersistenceBackend;
 use medulla_types::contract::Nonce;
+use medulla_types::mutation_scope::MutationSurface;
 
 use super::super::compile::{authoritative_graph_version, compile_methods, CompileBatch};
 use super::internal::lock_graph;

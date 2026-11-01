@@ -531,12 +531,12 @@ fn commit_source_acl_mutation(
             expected_graph_version: Some(expected_revision),
             fencing_token: None,
             created_at_ms,
-            default_surface: crate::mutation_batch::MutationSurface::Query,
+            default_surface: medulla_types::mutation_scope::MutationSurface::Query,
             authoritative_state: None,
         },
         &method,
-        crate::mutation_batch::MutationSurface::Query,
-        crate::mutation_batch::DurabilityDomain::SqlCatalog,
+        medulla_types::mutation_scope::MutationSurface::Query,
+        medulla_types::mutation_scope::DurabilityDomain::SqlCatalog,
         "sql_source_acl_operation",
     )?;
     let committed = acl.commit_txn_batch(txn, &batch, created_at_ms)?;
@@ -548,7 +548,7 @@ fn commit_source_acl_mutation(
         );
     }
     match committed.record.committed_version {
-        crate::mutation_batch::CommittedVersion::Native { target, .. } => Ok(target),
+        medulla_types::mutation_scope::CommittedVersion::Native { target, .. } => Ok(target),
         _ => Err("SQL source ACL committed without a native revision".to_string()),
     }
 }
@@ -2240,12 +2240,12 @@ mod tests {
                 expected_graph_version: Some(expected_version),
                 fencing_token: None,
                 created_at_ms: 17,
-                default_surface: crate::mutation_batch::MutationSurface::Query,
+                default_surface: medulla_types::mutation_scope::MutationSurface::Query,
                 authoritative_state: None,
             },
             &method,
-            crate::mutation_batch::MutationSurface::Query,
-            crate::mutation_batch::DurabilityDomain::SqlCatalog,
+            medulla_types::mutation_scope::MutationSurface::Query,
+            medulla_types::mutation_scope::DurabilityDomain::SqlCatalog,
             "sql_catalog_operation",
         )
         .unwrap()

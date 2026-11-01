@@ -4,10 +4,12 @@ pub mod embedder;
 pub mod graph;
 pub mod jobs;
 
-use crate::mutation_batch::{DurabilityDomain, MutationBatch, MutationSurface};
+use crate::mutation_batch::MutationBatch;
 use crate::protocol::Method;
 use crate::server::access::CarrierAuthority;
 use medulla_types::contract::Nonce;
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::MutationSurface;
 
 /// Largest ingest stream whose worst-case canonical `ApplyOutcome` response
 /// (including `u64::MAX` counters) fits the Raft codec's 4096-byte envelope.

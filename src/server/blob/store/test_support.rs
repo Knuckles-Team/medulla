@@ -47,15 +47,15 @@ impl Operation {
                 expected_graph_version: Some(self.expected),
                 fencing_token: None,
                 created_at_ms: 1,
-                default_surface: crate::mutation_batch::MutationSurface::Other,
+                default_surface: medulla_types::mutation_scope::MutationSurface::Other,
                 authoritative_state: None,
             },
             &crate::protocol::Method::ApplyMutation {
                 event_type: "blob_store_test".to_string(),
                 query: format!("sha256:{}", super::hex_digest(self.id.as_bytes())),
             },
-            crate::mutation_batch::MutationSurface::Other,
-            crate::mutation_batch::DurabilityDomain::BlobStore,
+            medulla_types::mutation_scope::MutationSurface::Other,
+            medulla_types::mutation_scope::DurabilityDomain::BlobStore,
             "blob_store_test",
         )
         .unwrap()

@@ -19,7 +19,7 @@ use openraft::BasicNode;
 
 use super::super::network::{self, GroupRpc, GroupRpcReply, MembershipChange, MembershipOutcome};
 use super::super::xread::ReadPageService;
-use super::{MedullaRaft, GroupId, MultiRaft, NodeId};
+use super::{GroupId, MedullaRaft, MultiRaft, NodeId};
 
 /// How long one membership change keeps following a moving leader.
 const FOLLOW_BUDGET: Duration = Duration::from_secs(60);

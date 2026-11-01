@@ -37,15 +37,18 @@
 //! `blob.redb` files of the layout before holder rows are refused by name before
 //! any writable open (see [`format`]); their data is not migrated.
 
-use crate::mutation_batch::{
-    DurabilityDomain, IncarnationId, LogicalName, MutationBatch, MutationCommitPhase,
-    MutationScopeIdentity, ScopeTenantId,
-};
+use crate::mutation_batch::MutationBatch;
+use crate::mutation_batch::MutationCommitPhase;
 use medulla_storage::{
     BlobOwner, BlobSharedRead, BlobSharedServiceHandle, BlobSharedWrite, CasChunkRows,
     OwnedStoreHandle, PhysicalStoreIdentity, ScopedRead, StorageKernel, StoreOpenOptions,
 };
 use medulla_transaction::{AdmittedOwnerWrite, Begin, MaintenanceBatch, MutationKernel};
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::IncarnationId;
+use medulla_types::mutation_scope::LogicalName;
+use medulla_types::mutation_scope::MutationScopeIdentity;
+use medulla_types::mutation_scope::ScopeTenantId;
 use redb::{ReadableTableMetadata, TableDefinition};
 use serde::de::DeserializeOwned;
 use sha2::{Digest, Sha256};
@@ -506,8 +509,10 @@ impl RedbChunkStore {
         self.flush_chunks()?;
         let digest = manifest::chunk_digest(bytes)?;
         self.commit_native_batch(batch, committed_at_ms, |wtx| {
-            let shared =
-                wtx.blob_shared_write(&self.shared, medulla_kernel::store_authority::ENGINE_PRINCIPAL)?;
+            let shared = wtx.blob_shared_write(
+                &self.shared,
+                medulla_kernel::store_authority::ENGINE_PRINCIPAL,
+            )?;
             let was_new = shared.insert_chunk_if_absent(&digest, bytes)?;
             let refcount =
                 adjust_counted_reference(wtx, &self.shared, &digest, 1, committed_at_ms)?;
@@ -539,8 +544,10 @@ impl RedbChunkStore {
     /// The independently authenticated read used for the physical shared CAS
     /// chunk and refcount tables.
     fn shared_read(&self) -> Result<BlobSharedRead, String> {
-        self.kernel
-            .read_blob_shared(&self.shared, medulla_kernel::store_authority::ENGINE_PRINCIPAL)
+        self.kernel.read_blob_shared(
+            &self.shared,
+            medulla_kernel::store_authority::ENGINE_PRINCIPAL,
+        )
     }
 
     /// One (tenant, graph) serving scope: bound on FIRST use, cached for every later

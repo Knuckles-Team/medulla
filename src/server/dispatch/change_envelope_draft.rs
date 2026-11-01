@@ -66,7 +66,7 @@ impl DraftAuthority<'_> {
                 ),
                 fencing_token: draft.mutation.fencing_token,
                 created_at_ms: self.created_at_ms,
-                default_surface: crate::mutation_batch::MutationSurface::Graph,
+                default_surface: medulla_types::mutation_scope::MutationSurface::Graph,
                 authoritative_state: None,
             },
             methods,
@@ -287,7 +287,7 @@ pub(crate) mod tests {
                 .identity
                 .scope()
                 .graph_name()
-                .map(crate::mutation_batch::LogicalName::as_str),
+                .map(medulla_types::mutation_scope::LogicalName::as_str),
             Some("graph-a")
         );
     }

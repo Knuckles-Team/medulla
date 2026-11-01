@@ -286,7 +286,7 @@ fn mutation_batch_audit_and_outbox_retain_only_the_safe_receipt() {
             expected_graph_version: Some(0),
             fencing_token: Some(1),
             created_at_ms: 1,
-            default_surface: crate::mutation_batch::MutationSurface::Graph,
+            default_surface: medulla_types::mutation_scope::MutationSurface::Graph,
             authoritative_state: Some(crate::mutation_batch::MutationStateDescriptor {
                 algorithm: "sha256".to_string(),
                 digest: "c".repeat(64),
@@ -301,6 +301,8 @@ fn mutation_batch_audit_and_outbox_retain_only_the_safe_receipt() {
     assert!(!encoded.windows(source.len()).any(|window| window == source));
     assert!(!encoded.windows(sealed.len()).any(|window| window == sealed));
     assert_eq!(batch.outbox.len(), 1);
-    assert!(medulla_kernel::audit::audit_line(&batch.operations[0].method)
-        .is_some_and(|line| line.starts_with("AUTHORITATIVE_STATE_MUTATION|sha256:")));
+    assert!(
+        medulla_kernel::audit::audit_line(&batch.operations[0].method)
+            .is_some_and(|line| line.starts_with("AUTHORITATIVE_STATE_MUTATION|sha256:"))
+    );
 }

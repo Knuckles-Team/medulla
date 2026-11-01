@@ -442,9 +442,10 @@ fn ordinary_completion_native_fence_and_terminal_noop_preserve_binding() {
 #[cfg(feature = "server")]
 #[test]
 fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
-    use crate::mutation_batch::{MutationBatch, MutationSurface};
+    use crate::mutation_batch::MutationBatch;
     use crate::server::mutation_batch::{compile_methods, principal_fingerprint, CompileBatch};
     use medulla_types::epistemic_operations::{ClaimWorkItemRequest, ClaimWorkItemResult};
+    use medulla_types::mutation_scope::MutationSurface;
     use medulla_types::run_completion::*;
     let compile = |shard: &Shard, tag: &str, method: Method, now| {
         compile_methods(

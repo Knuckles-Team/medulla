@@ -393,7 +393,7 @@ fn admit_txn_saga(
             caller,
             attempt_nonce,
             crate::server::api::admin::saga::AdminSagaPayload {
-                domain: crate::mutation_batch::DurabilityDomain::ControlPlane,
+                domain: medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
                 batch_id: &batch_id,
                 event_type: "transaction_recovery_plan",
                 payload_digest: &payload_digest,
@@ -442,7 +442,7 @@ fn retry_txn_receipt(
             Some(caller),
             Some(attempt_nonce),
             crate::server::api::admin::saga::AdminSagaPayload {
-                domain: crate::mutation_batch::DurabilityDomain::ControlPlane,
+                domain: medulla_types::mutation_scope::DurabilityDomain::ControlPlane,
                 batch_id: &saga.batch.batch_id,
                 event_type: "transaction_recovery_plan",
                 payload_digest: &payload_digest,
@@ -549,9 +549,7 @@ pub(super) fn resume_txn_receipt(
     else {
         return Ok(None);
     };
-    if saga.batch.identity
-        != crate::server::api::admin::saga::cluster_admin_scope_identity()?
-    {
+    if saga.batch.identity != crate::server::api::admin::saga::cluster_admin_scope_identity()? {
         return Err("transaction parent receipt has the wrong coordinator scope".to_string());
     }
     let _ = transaction_plan_digest(&saga.batch)?;
@@ -727,12 +725,7 @@ pub(crate) fn finish_saga_via_redb(
     let redb = backend
         .as_redb()
         .ok_or_else(|| lost_backend_message.to_string())?;
-    crate::server::api::admin::saga::finish_admin_saga(
-        redb,
-        saga.batch,
-        saga.created_at_ms,
-        result,
-    )
+    crate::server::api::admin::saga::finish_admin_saga(redb, saga.batch, saga.created_at_ms, result)
 }
 
 #[cfg(feature = "redb")]

@@ -54,9 +54,11 @@ use tokio::sync::RwLock;
 
 use super::super::compute::compute_off_lock;
 use super::super::state::ServerState;
-use crate::mutation_batch::{DurabilityDomain, MutationBatch, MutationSurface};
+use crate::mutation_batch::MutationBatch;
 use crate::protocol::{Method, Response, ResultPayload};
 use crate::server::access::CarrierAuthority;
+use medulla_types::mutation_scope::DurabilityDomain;
+use medulla_types::mutation_scope::MutationSurface;
 
 use medulla_tsdb::point::Point;
 use medulla_tsdb::query::{asof_join_backward, gap_fill_locf, time_bucket, Agg};

@@ -296,7 +296,7 @@ pub(super) async fn compile_prepared_batch(
             expected_graph_version: Some(authoritative_version),
             fencing_token: None,
             created_at_ms: committed_at_ms,
-            default_surface: crate::mutation_batch::MutationSurface::Transaction,
+            default_surface: medulla_types::mutation_scope::MutationSurface::Transaction,
             authoritative_state: None,
         },
         applied,

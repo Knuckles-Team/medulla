@@ -82,7 +82,7 @@ impl MedullaStore {
                 expected_graph_version: Some(source_version),
                 fencing_token: authority.fencing_token,
                 created_at_ms,
-                default_surface: crate::mutation_batch::MutationSurface::Graph,
+                default_surface: medulla_types::mutation_scope::MutationSurface::Graph,
                 authoritative_state: Some(descriptor),
             },
             vec![durable_method],

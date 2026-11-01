@@ -28,12 +28,13 @@ impl MedullaStore {
                 }
                 NativeMutationCommand::NodeInfo { .. } => {
                     let info = command.open_node_info(server_secret)?;
-                    let outcome = crate::server::persistence::node_info_store::apply_replicated_node_info(
-                        &self.ctx.state,
-                        req.mutation.request_id,
-                        info,
-                    )
-                    .await;
+                    let outcome =
+                        crate::server::persistence::node_info_store::apply_replicated_node_info(
+                            &self.ctx.state,
+                            req.mutation.request_id,
+                            info,
+                        )
+                        .await;
                     return Ok(Some(Self::native_bool_outcome_to_response(outcome)));
                 }
                 _ => {}

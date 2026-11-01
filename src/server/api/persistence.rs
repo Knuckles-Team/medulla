@@ -19,12 +19,14 @@ use crate::epistemic_operations_ext::{
     WorkItemClaimCapabilityMintRequest, WorkItemClaimCapabilityResult,
     WorkItemClaimCapabilityVerifyRequest,
 };
-use crate::mutation_batch::{
-    MutationBatch, MutationBatchCommit, MutationBatchRecord, MutationOutboxLease,
-    MutationOutboxRecord, MutationProjectionCursor,
-};
+use crate::mutation_batch::MutationBatch;
+use crate::mutation_batch::MutationBatchCommit;
+use crate::mutation_batch::MutationBatchRecord;
 use crate::protocol::Method;
 use crate::server::ServerState;
+use medulla_types::mutation_scope::MutationOutboxLease;
+use medulla_types::mutation_scope::MutationOutboxRecord;
+use medulla_types::mutation_scope::MutationProjectionCursor;
 use medulla_types::native_control::CapacityStatusResult;
 // The sweep-scoped claim budget carrying DESIGN.md's per-tenant weighted round
 // robin between graphs. It is a kernel type, so the claim it parameterises is

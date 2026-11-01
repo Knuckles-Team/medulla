@@ -280,7 +280,7 @@ pub(super) async fn dispatch_change_envelope_methods_arm_0(
                         .identity
                         .scope()
                         .graph_name()
-                        .map(crate::mutation_batch::LogicalName::as_str)
+                        .map(medulla_types::mutation_scope::LogicalName::as_str)
                         != Some(req_graph.as_str())
                         || envelope.mutation.identity.tenant().as_str() != claims.tenant
                         || medulla_types::mutation_batch::batch_request_number(&envelope.mutation)

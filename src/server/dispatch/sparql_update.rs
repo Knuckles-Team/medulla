@@ -323,7 +323,7 @@ fn begin_sealed_sparql_saga(
         Some(coord.verified_actor),
         coord.verified_context.attempt_nonce(),
         crate::server::api::admin::saga::AdminSagaPayload {
-            domain: crate::mutation_batch::DurabilityDomain::MultiGraph,
+            domain: medulla_types::mutation_scope::DurabilityDomain::MultiGraph,
             batch_id,
             event_type,
             payload_digest: &digest,
@@ -801,8 +801,10 @@ pub(super) async fn coordinated_sparql_http_update(
 #[cfg(all(test, feature = "redb", feature = "security", feature = "sparql-http"))]
 mod coordinator_restart_tests {
     use super::*;
-    use crate::mutation_batch::{DurabilityDomain, MutationBatchStatus, MutationSurface};
+    use crate::mutation_batch::MutationBatchStatus;
     use medulla_transaction::{read_ledger, read_private_payload};
+    use medulla_types::mutation_scope::DurabilityDomain;
+    use medulla_types::mutation_scope::MutationSurface;
 
     /// The coordinator owner file is ledger-only: receipts and sealed payloads.
     type Owner = medulla_storage::LedgerOnlyOwner;

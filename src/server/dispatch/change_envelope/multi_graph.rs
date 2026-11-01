@@ -126,7 +126,7 @@ fn begin_multi_graph_authorized_saga(
         req_id,
         &authority,
         method,
-        crate::mutation_batch::DurabilityDomain::MultiGraph,
+        medulla_types::mutation_scope::DurabilityDomain::MultiGraph,
         authority.attempt_nonce(),
     )
     .map_err(|error| Response::err(req_id, error))

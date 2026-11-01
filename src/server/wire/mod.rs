@@ -916,12 +916,12 @@ fn commit_table_txn_under_source(
             expected_graph_version: Some(expected_version),
             fencing_token: None,
             created_at_ms,
-            default_surface: crate::mutation_batch::MutationSurface::Query,
+            default_surface: medulla_types::mutation_scope::MutationSurface::Query,
             authoritative_state: None,
         },
         operation,
-        crate::mutation_batch::MutationSurface::Query,
-        crate::mutation_batch::DurabilityDomain::SqlCatalog,
+        medulla_types::mutation_scope::MutationSurface::Query,
+        medulla_types::mutation_scope::DurabilityDomain::SqlCatalog,
         "sql_catalog_operation",
     )?;
     let committed_replay =
@@ -6567,12 +6567,12 @@ pub(crate) mod wired_catalog_tests {
                 expected_graph_version: Some(expected_version),
                 fencing_token: None,
                 created_at_ms,
-                default_surface: crate::mutation_batch::MutationSurface::Query,
+                default_surface: medulla_types::mutation_scope::MutationSurface::Query,
                 authoritative_state: None,
             },
             &operation,
-            crate::mutation_batch::MutationSurface::Query,
-            crate::mutation_batch::DurabilityDomain::SqlCatalog,
+            medulla_types::mutation_scope::MutationSurface::Query,
+            medulla_types::mutation_scope::DurabilityDomain::SqlCatalog,
             "sql_catalog_operation",
         )
         .expect("compile the exact durable SQL receipt");
@@ -6707,12 +6707,12 @@ pub(crate) mod wired_catalog_tests {
                 expected_graph_version: Some(expected_version),
                 fencing_token: None,
                 created_at_ms,
-                default_surface: crate::mutation_batch::MutationSurface::Query,
+                default_surface: medulla_types::mutation_scope::MutationSurface::Query,
                 authoritative_state: None,
             },
             &operation,
-            crate::mutation_batch::MutationSurface::Query,
-            crate::mutation_batch::DurabilityDomain::SqlCatalog,
+            medulla_types::mutation_scope::MutationSurface::Query,
+            medulla_types::mutation_scope::DurabilityDomain::SqlCatalog,
             "sql_catalog_operation",
         )
         .expect("compile the SQL receipt");

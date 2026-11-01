@@ -47,11 +47,13 @@ use crate::graph::GraphCore;
 use crate::redb_store::GraphDump;
 
 #[cfg(test)]
+use crate::mutation_batch::*;
+use crate::protocol::*;
+#[cfg(test)]
 use crate::redb_layout::shard_filename;
 #[cfg(test)]
 use crate::server::ServerState;
-#[cfg(test)]
-use crate::{mutation_batch::*, protocol::*};
+use medulla_types::mutation_scope::*;
 #[cfg(test)]
 use tokio::sync::oneshot;
 
@@ -810,23 +812,29 @@ pub(crate) fn seed_raw_row<'k, 'v, K, V>(
 
 #[cfg(test)]
 mod tests {
-    use crate::server::persistence::AsRedb;
     use super::*;
+    use crate::server::persistence::AsRedb;
     // A raw `redb::Database` survives HERE and nowhere else: these fixtures plant
     // rows the production paths deliberately refuse to write, so they must reach
     // the file underneath the kernel's admission. Each opens the file only after
     // the backend that owns it shut down (redb's lock admits one holder).
     use redb::{Database, ReadableDatabase};
 
-    use crate::mutation_batch::{
-        DurabilityDomain, IncarnationId, LogicalName, MutationOperation, MutationOutboxIntent,
-        MutationScopeIdentity, MutationSurface, ScopeTenantId, VersionExpectation,
-        MUTATION_ACTOR_HEADER, MUTATION_BATCH_VERSION,
-    };
+    use crate::mutation_batch::MutationOperation;
+    use crate::mutation_batch::VersionExpectation;
+    use crate::mutation_batch::MUTATION_ACTOR_HEADER;
     use crate::protocol::Request;
     use crate::server::auth::{
         build_shared_test_request, dispatch_test_on_heap as dispatch_on_heap,
     };
+    use medulla_types::mutation_scope::DurabilityDomain;
+    use medulla_types::mutation_scope::IncarnationId;
+    use medulla_types::mutation_scope::LogicalName;
+    use medulla_types::mutation_scope::MutationOutboxIntent;
+    use medulla_types::mutation_scope::MutationScopeIdentity;
+    use medulla_types::mutation_scope::MutationSurface;
+    use medulla_types::mutation_scope::ScopeTenantId;
+    use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
     #[cfg(feature = "tsdb")]
     use sha2::Digest;
 

@@ -3,13 +3,14 @@ use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
 use tokio::sync::oneshot;
 
 use crate::change_envelope::{ChangeEnvelope, ChangeEnvelopeCommit};
-use crate::mutation_batch::{
-    MutationBatch, MutationBatchCommit, MutationOutboxLease, MutationProjectionCursor,
-};
+use crate::mutation_batch::MutationBatch;
+use crate::mutation_batch::MutationBatchCommit;
 use crate::protocol::{GraphType, Method};
 #[cfg(any(feature = "compute-dist", feature = "matview"))]
 use crate::redb_store::MatViewScanResult;
 use crate::redb_store::{XshardDecisionScan, XshardPrepareScan};
+use medulla_types::mutation_scope::MutationOutboxLease;
+use medulla_types::mutation_scope::MutationProjectionCursor;
 
 /// Boxed payload of a [`Cmd::CrossModalCommit`] (CONCEPT:MEDULLA-KG.txn.reader-never-sees-node + MEDULLA-360). Holds ONE
 /// graph's full multi-modal write-set — graph methods (incl. lowered OWL-axiom /

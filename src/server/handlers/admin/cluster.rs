@@ -8,13 +8,13 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::mutation_batch::DurabilityDomain;
 use crate::protocol::{Method, Response, ResultPayload};
 use crate::server::persistence::rebalance::{
     plan_rebalance, shard_loads_from_catalog, shard_loads_from_graph_loads,
 };
 use crate::server::state::ServerState;
 use medulla_types::contract::Nonce;
+use medulla_types::mutation_scope::DurabilityDomain;
 
 use super::backup::{
     cleanup_backup_stage, cleanup_restore_retry_stage, create_private_directory, now_secs,

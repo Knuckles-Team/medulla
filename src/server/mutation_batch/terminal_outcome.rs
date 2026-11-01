@@ -7,8 +7,8 @@
 
 use std::collections::BTreeMap;
 
-use crate::mutation_batch::MutationOutboxIntent;
 use crate::protocol::Method;
+use medulla_types::mutation_scope::MutationOutboxIntent;
 
 /// Lower the optional GOC-20/RF-020 terminal extension into the existing native
 /// terminal shape. The first operation remains `CommitWorkItemResult`; receipt
