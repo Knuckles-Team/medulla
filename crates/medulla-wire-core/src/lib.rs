@@ -8,6 +8,13 @@
 #![deny(missing_docs)]
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(any(
+    feature = "amqp-wire",
+    feature = "mqtt-wire",
+    feature = "stomp-wire",
+    feature = "mssql-wire",
+    feature = "redis-wire",
+))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod broker_wire;
 /// Moved from the facade (MEDULLA-CONTRACT-R056).

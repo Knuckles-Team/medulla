@@ -49,6 +49,12 @@ futures = { version = "0.3", optional = true }
 pgwire = { version = "0.40", optional = true, default-features = false, features = ["server-api", "_ring"] }
 
 [features]
+broker = ["medulla-core/broker", "medulla-server-api/broker"]
+amqp-wire = ["broker", "medulla-server-api/amqp-wire"]
+mqtt-wire = ["broker", "medulla-server-api/mqtt-wire"]
+stomp-wire = ["broker", "medulla-server-api/stomp-wire"]
+mssql-wire = ["query", "medulla-server-api/mssql-wire"]
+redis-wire = ["medulla-server-api/redis-wire"]
 federation = ["query", "dep:medulla-plan", "medulla-plan/federation", "medulla-exec/federation", "medulla-protocol-types/federation", "medulla-server-api/federation", "medulla-server-auth/federation", "medulla-server-ops/federation", "medulla-types/federation", "medulla-uql/federation"]
 mysql-wire = ["query", "dep:sha1"]
 pgwire = ["query", "dep:rustix", "dep:pgwire", "dep:futures"]

@@ -55,7 +55,7 @@ medulla-stream = { path = "../medulla-stream", optional = true }
 medulla-wasm = { path = "../medulla-wasm", optional = true }
 redb = { workspace = true, optional = true }
 ureq = { version = "3.4.2", optional = true }
-medulla-server-blob = { path = "../medulla-server-blob" }
+medulla-server-blob = { path = "../medulla-server-blob", features = ["blob"] }
 medulla-server-mutation = { path = "../medulla-server-mutation" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-exec = { path = "../medulla-exec" }
