@@ -21,21 +21,21 @@ use crate::agent_library::AgentLibraryStore;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PackProjectionBody {
-    pub(crate) uri: String,
-    pub(crate) kind: medulla_types::connector_pack::PackEntryKind,
-    pub(crate) body_sha256: Digest256,
-    pub(crate) engine_manifest_digest: String,
-    pub(crate) length: u64,
+    pub uri: String,
+    pub kind: medulla_types::connector_pack::PackEntryKind,
+    pub body_sha256: Digest256,
+    pub engine_manifest_digest: String,
+    pub length: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConnectorPackProjectionPlan {
-    pub(crate) tenant_id: String,
-    pub(crate) connector: ResourceId,
+    pub tenant_id: String,
+    pub connector: ResourceId,
     pub(crate) head: PackHeadRef,
     pub(crate) catalog: McpCatalogSnapshotBinding,
     pub record_id: String,
-    pub(crate) bodies: Vec<PackProjectionBody>,
+    pub bodies: Vec<PackProjectionBody>,
     /// Held declarations pinned to the current tenant/head, never executable bindings.
     pub source_registrations: Vec<medulla_types::connector_pack::PackSourceRegistration>,
 }
