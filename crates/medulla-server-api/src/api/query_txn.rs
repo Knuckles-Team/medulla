@@ -141,7 +141,7 @@ pub trait WireApi: Send + Sync {
     /// may be committed; returns the schemas of the tables the batch creates. The error is
     /// the caller-facing message.
     #[cfg(feature = "query")]
-    pub fn authorize_table_txn(
+    fn authorize_table_txn(
         &self,
         source: &crate::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
         table_store: &medulla_query::TableStore,
