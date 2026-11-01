@@ -81,7 +81,7 @@ fn token(value: &str, max: usize) -> bool {
 }
 
 impl OperationAuditEvent {
-    pub(crate) fn validate(&self) -> Result<(), String> {
+    pub fn validate(&self) -> Result<(), String> {
         self.validate_class()?;
         if !token(&self.tenant, 128)
             || !token(&self.principal, 256)

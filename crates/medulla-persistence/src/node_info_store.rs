@@ -50,7 +50,7 @@ const NODE_INFO_SCOPE_INCARNATION: &str = "node-info:v1";
 /// Stable identity for a member. Endpoint and certificate rotation metadata
 /// are intentionally absent: those values are mutable observations, while
 /// this digest remains the member's immutable cluster-scoped identity.
-pub(crate) fn member_identity_for(cluster_id: &str, node_id: u64) -> String {
+pub fn member_identity_for(cluster_id: &str, node_id: u64) -> String {
     let mut digest = Sha256::new();
     digest.update(b"medulla/member-identity/v1\0");
     digest.update((cluster_id.len() as u64).to_be_bytes());
@@ -553,7 +553,7 @@ impl medulla_server_api::api::persistence::BundledStoreSource for NodeInfoStore 
 
 #[cfg(feature = "raft")]
 /// Apply a replicated typed node self-report to the durable node-info store.
-pub(crate) async fn apply_replicated_node_info(
+pub async fn apply_replicated_node_info(
     state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     req_id: u64,
     info: NodeInfo,

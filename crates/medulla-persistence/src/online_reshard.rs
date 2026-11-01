@@ -229,7 +229,7 @@ pub(crate) const RAW_GRAPH_ROWS_SCHEMA_VERSION: u16 = 3;
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(crate) struct RawGraphRows {
+pub struct RawGraphRows {
     /// Exact current raw-row contract. Missing or unsupported versions are
     /// rejected before an import transaction starts.
     pub schema_version: u16,
@@ -300,7 +300,7 @@ impl Default for RawGraphRows {
 }
 
 impl RawGraphRows {
-    pub(crate) fn validate_schema(&self) -> Result<(), String> {
+    pub fn validate_schema(&self) -> Result<(), String> {
         if self.schema_version != RAW_GRAPH_ROWS_SCHEMA_VERSION {
             return Err(format!(
                 "unsupported raw graph rows schema {} (expected {})",
@@ -352,7 +352,7 @@ impl RawGraphRows {
     ///
     /// A raw image may be completely empty during a route-only reshard, but it may
     /// never carry graph-scoped authority without the identity that owns it.
-    pub(crate) fn durable_identity(
+    pub fn durable_identity(
         &self,
         graph: &str,
     ) -> Result<Option<(String, GraphType, String)>, String> {

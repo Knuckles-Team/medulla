@@ -20,7 +20,7 @@ impl RedbBackend {
     /// Flush and export one graph's complete durable authority for a Raft
     /// snapshot. The catalog read guard keeps routing stable from shard resolve
     /// through the writer-thread snapshot.
-    pub(crate) async fn export_graph_raw_for_snapshot(
+    pub async fn export_graph_raw_for_snapshot(
         &self,
         graph_fname: &str,
     ) -> Result<super::super::online_reshard::RawGraphRows, String> {
@@ -45,7 +45,7 @@ impl RedbBackend {
     /// Atomically replace one graph's complete durable authority while installing
     /// a Raft snapshot. The imported rows include MutationBatch replay/outbox and
     /// governed ChangeEnvelope material, not just the graph projection.
-    pub(crate) async fn import_graph_raw_from_snapshot(
+    pub async fn import_graph_raw_from_snapshot(
         &self,
         graph_fname: &str,
         rows: super::super::online_reshard::RawGraphRows,

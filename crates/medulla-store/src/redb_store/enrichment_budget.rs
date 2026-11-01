@@ -60,7 +60,7 @@ pub fn validate_source_envelope(
     envelope: &medulla_types::change_envelope::ChangeEnvelope,
     authority: Option<&SourceBudgetAuthority>,
 ) -> Result<(), String> {
-    const TOPIC: &str = "repository.enrichment.pending";
+    pub const TOPIC: &str = "repository.enrichment.pending";
     let pending: Vec<_> = envelope
         .mutation
         .outbox

@@ -332,7 +332,7 @@ impl RevisionLayer for ComponentLayer {
     const RECORD: &'static str = "graph";
     const SLUG: &'static str = "agent-component";
     const OPERATION: &'static str = "component";
-    const TOPIC: &'static str = AGENT_COMPONENT_OUTBOX_TOPIC;
+    pub const TOPIC: &'static str = AGENT_COMPONENT_OUTBOX_TOPIC;
     const RESULT_SCHEMA_ID: &'static str = AGENT_COMPONENT_RESULT_SCHEMA_ID;
     const SCHEMA_VERSION: u16 = AGENT_COMPONENT_SCHEMA_VERSION;
     const ID_HEADER: &'static str = "component_id";

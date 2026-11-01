@@ -11,8 +11,8 @@ use medulla_types::{
 };
 use serde::{Deserialize, Serialize};
 
-pub(crate) const TOPIC: &str = "repository.enrichment.pending";
-pub(crate) const CONSUMER: &str = "repository-enrichment-v1";
+pub const TOPIC: &str = "repository.enrichment.pending";
+pub const CONSUMER: &str = "repository-enrichment-v1";
 const MAX_INTENT_BYTES: usize = 4 * 1024 * 1024;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -20,11 +20,11 @@ const MAX_INTENT_BYTES: usize = 4 * 1024 * 1024;
 pub struct EnrichmentTopUpTransition {
     pub(crate) old_delivery: MutationOutboxRecord,
     pub(crate) consumer: String,
-    pub(crate) replacement_batch: MutationBatch,
+    pub replacement_batch: MutationBatch,
     pub(crate) expected_budget: EnrichmentBudgetCheckpoint,
     pub(crate) expected_park: EnrichmentBudgetPark,
     pub(crate) replacement_budget: EnrichmentBudgetCheckpoint,
-    pub(crate) revision: RepositoryEnrichmentPolicyRevision,
+    pub revision: RepositoryEnrichmentPolicyRevision,
 }
 
 #[derive(Deserialize)]
@@ -211,7 +211,7 @@ impl EnrichmentTopUpTransition {
     /// A retry may carry a newer Raft route fence only when the original
     /// parent and full transition receipt are already committed on this
     /// replica. Fresh writes must match their sealed parent fence exactly.
-    pub(crate) fn validate_parent_fence(
+    pub fn validate_parent_fence(
         &self,
         route_epoch: u64,
         route_token: Option<u64>,
@@ -313,7 +313,7 @@ impl EnrichmentTopUpTransition {
             || next.digest().ok().as_deref() != Some(self.revision.snapshot_digest.as_str())
     }
 
-    pub(crate) fn validate(&self, graph: &str, committed_at_ms: u64) -> Result<(), String> {
+    pub fn validate(&self, graph: &str, committed_at_ms: u64) -> Result<(), String> {
         BudgetValidation(self).validate_budget()?;
         AuthorityValidation(self).validate_authority(graph, committed_at_ms)?;
         self.validate_parent_batch(committed_at_ms)?;

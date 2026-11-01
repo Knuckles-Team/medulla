@@ -161,7 +161,7 @@ pub(super) trait RevisionLayer {
     const SLUG: &'static str;
     /// The operation-identity prefix: `<operation>-publish`.
     const OPERATION: &'static str;
-    const TOPIC: &'static str;
+    pub const TOPIC: &'static str;
     const RESULT_SCHEMA_ID: &'static str;
     const SCHEMA_VERSION: u16;
     /// The outbox header that carries the record id.

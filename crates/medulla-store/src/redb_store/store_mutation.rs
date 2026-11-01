@@ -727,8 +727,8 @@ mod outbox_reactivation_tests {
         MutationSurface, VersionExpectation, MUTATION_BATCH_VERSION,
     };
     pub const GRAPH: &str = "graph-a";
-    const CONSUMER: &str = "reactivation-worker";
-    const TOPIC: &str = "repository.enrichment.pending";
+    pub const CONSUMER: &str = "reactivation-worker";
+    pub const TOPIC: &str = "repository.enrichment.pending";
     const CALLBACK_SOURCE: &str = "callback-source";
 
     fn batch(id: &str, key: &str, version: u64, node: &str) -> MutationBatch {

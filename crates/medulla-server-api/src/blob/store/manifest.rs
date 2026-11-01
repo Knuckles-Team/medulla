@@ -129,7 +129,7 @@ pub struct BlobManifest {
 }
 
 impl BlobManifest {
-    pub(crate) fn validate(&self) -> Result<(), String> {
+    pub fn validate(&self) -> Result<(), String> {
         self.validate_shape()?;
         if self.chunks.is_empty() {
             return if self.len == 0 && self.chunk_lens.is_empty() {

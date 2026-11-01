@@ -285,7 +285,7 @@ impl ResourceStatsRequest {
         }
     }
 
-    fn validate(self) -> Result<Self, String> {
+    pub fn validate(self) -> Result<Self, String> {
         if self.limit == 0 || self.limit > MAX_RESOURCE_STATS_LIMIT {
             return Err(format!(
                 "ResourceStats limit must be between 1 and {MAX_RESOURCE_STATS_LIMIT}"

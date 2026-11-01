@@ -68,7 +68,7 @@ impl DurableUpload {
         self.chunk_digests
     }
 
-    fn validate(&self) -> Result<(), String> {
+    pub fn validate(&self) -> Result<(), String> {
         if self.chunk_size == 0
             || self.chunk_size as usize > MAX_BLOB_CHUNK_BYTES
             || self.applied_batches.len() > MAX_BLOB_CHUNKS
