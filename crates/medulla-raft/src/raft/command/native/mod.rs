@@ -5,7 +5,8 @@ use medulla_server_api::api::reentry::TransactionParticipantPhase;
 
 #[cfg(feature = "modality-serving")]
 use super::super::SanitizedModalityRaftCommand;
-use super::super::{deserialize_required_option, opaque_scope_is_valid};
+use super::super::deserialize_required_option;
+use medulla_server_api::api::persistence::opaque_scope_is_valid;
 
 mod catalog;
 mod sealed;

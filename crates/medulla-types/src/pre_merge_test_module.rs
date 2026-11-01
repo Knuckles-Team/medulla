@@ -299,7 +299,7 @@ mod tests {
         // success are deliberately left to the R011.3 gate.
         let anchors = [
             (
-                include_str!("../../../src/raft/tests.rs"),
+                include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../src/server/split_tests/raft_cluster.rs")),
                 "fn durable_log_replays_from_redb_after_restart(",
             ),
             (
