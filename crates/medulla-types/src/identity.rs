@@ -163,7 +163,7 @@ pub const MAX_ONE_TIME_TOKEN_LIFETIME_MS: u64 = 24 * 60 * 60 * 1000;
 /// one-time tokens, API-key secrets): 32 characters of a URL-safe alphabet.
 pub const MIN_TOKEN_CHARS: usize = 32;
 
-crate::contract::closed_error_codes! {
+crate::closed_error_codes! {
     /// Why an identity operation was refused. Every refusal is typed; none is a
     /// fail-open fallback. Authentication failures are deliberately NOT refusals:
     /// they are an [`AuthenticateOutcome`], uniform for unknown and known users.
