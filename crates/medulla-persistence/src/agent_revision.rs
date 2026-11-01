@@ -63,9 +63,9 @@ mod status;
 pub mod tests;
 mod write;
 
-pub(super) use status::{committed_status, ledger_status_record, status_result_bytes};
-#[cfg(test)]
-pub(super) use status::{decode_status_result, validate_status_record};
+pub(crate) use status::{committed_status, ledger_status_record, status_result_bytes};
+#[cfg(any(test, feature = "test-support"))]
+pub(crate) use status::{decode_status_result, validate_status_record};
 pub(super) use write::{
     apply_owner_rows, finish_committed_ledger, finish_replayed, policy_admitted_context,
     require_context_tenant, retire_revision, revision_scope, stage_batch, within_write,

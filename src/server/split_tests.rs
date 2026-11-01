@@ -27,3 +27,5 @@ mod mutation_batch_internal_replay;
 mod mutation_batch_lifecycle;
 #[cfg(all(test, feature = "redb"))]
 mod mutation_redb;
+#[cfg(all(test, feature = "redb"))]
+mod persistence_txn;

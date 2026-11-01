@@ -779,7 +779,7 @@ mod shared_open_tests {
 /// same agent into several stores yields byte-identical pins. The components it
 /// is assembled from are seeded first, because L2 -> L1 resolution requires
 /// them to exist.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn seed_agent_for_test(
     store: &AgentLibraryStore,
     tenant_id: &str,
@@ -827,7 +827,7 @@ pub(crate) fn seed_agent_for_test(
 /// The agent draft [`seed_agent_for_test`] publishes, with its component pins
 /// still carrying placeholder digests for `seed_draft_components_for_test` to
 /// rewrite.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn seed_agent_draft_for_test(
     tenant_id: &str,
     agent_id: &str,

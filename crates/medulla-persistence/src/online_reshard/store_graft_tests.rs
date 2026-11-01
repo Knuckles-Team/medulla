@@ -44,12 +44,8 @@ fn graft_marker_for_another_destination_refuses_before_binding() {
         .graft_begin(source_handle.as_ref(), &first)
         .unwrap();
 
-    let error = medulla_persistence::online_reshard::graft_graph_from(
-        &second_destination,
-        &source,
-        "graph-a",
-    )
-    .unwrap_err();
+    let error = crate::online_reshard::graft_graph_from(&second_destination, &source, "graph-a")
+        .unwrap_err();
     assert!(
         error.contains("different authority or destination"),
         "got: {error}"
@@ -104,12 +100,7 @@ fn unrelated_reservation_preserves_catalog_payload_and_fence() {
     // D is reserved by S2, and has owner rows staged under that exact
     // reservation.  The catalog row is deliberately committed in the
     // separate control transaction used by the importer.
-    medulla_persistence::online_reshard::reserve_graft_destination(
-        &destination,
-        &other_source,
-        graph,
-    )
-    .unwrap();
+    crate::online_reshard::reserve_graft_destination(&destination, &other_source, graph).unwrap();
     destination
         .stage_reserved_graft_owner_payload(graph, |write| {
             write
@@ -152,15 +143,12 @@ fn unrelated_reservation_preserves_catalog_payload_and_fence() {
     // S1 has a durable marker for W.  There is no S1->D reservation, so D
     // must refuse without deleting S2's catalog, payload, or recovery
     // fence.
-    medulla_persistence::online_reshard::reserve_graft_destination(&winner, &source, graph)
-        .unwrap();
+    crate::online_reshard::reserve_graft_destination(&winner, &source, graph).unwrap();
     source
         .mutations()
         .graft_begin(source_handle.as_ref(), &winner_target)
         .unwrap();
-    let error =
-        medulla_persistence::online_reshard::graft_graph_from(&destination, &source, graph)
-            .unwrap_err();
+    let error = crate::online_reshard::graft_graph_from(&destination, &source, graph).unwrap_err();
     assert!(
         error.contains("different authority or destination"),
         "got: {error}"
@@ -233,10 +221,7 @@ fn losing_graph_reservation_retires_staged_owner_rows_before_reopening() {
     // Reserve and stage through the authenticated destination path before
     // the source marker chooses the winner. This is the case a
     // LedgerOnly-only cancellation test cannot distinguish.
-    medulla_persistence::online_reshard::reserve_graft_destination(
-        &loser, &source, "graph-a",
-    )
-    .unwrap();
+    crate::online_reshard::reserve_graft_destination(&loser, &source, "graph-a").unwrap();
     loser
         .stage_reserved_graft_owner_payload("graph-a", |write| {
             write
@@ -273,18 +258,14 @@ fn losing_graph_reservation_retires_staged_owner_rows_before_reopening() {
     )
     .unwrap();
 
-    medulla_persistence::online_reshard::reserve_graft_destination(
-        &winner, &source, "graph-a",
-    )
-    .unwrap();
+    crate::online_reshard::reserve_graft_destination(&winner, &source, "graph-a").unwrap();
     source
         .mutations()
         .graft_begin(source_handle.as_ref(), &winner_target)
         .unwrap();
     *FAIL_AFTER_GRAFT_CATALOG_CLEANUP.lock().unwrap() = Some("graph-a".to_string());
     let retry_error =
-        medulla_persistence::online_reshard::graft_graph_from(&loser, &source, "graph-a")
-            .unwrap_err();
+        crate::online_reshard::graft_graph_from(&loser, &source, "graph-a").unwrap_err();
     assert!(
         retry_error.contains("injected failure after durable graft catalog cleanup"),
         "{retry_error}"
@@ -314,9 +295,7 @@ fn losing_graph_reservation_retires_staged_owner_rows_before_reopening() {
     assert_eq!(fence.fencing_token, u64::MAX);
     drop(retained);
 
-    let error =
-        medulla_persistence::online_reshard::graft_graph_from(&loser, &source, "graph-a")
-            .unwrap_err();
+    let error = crate::online_reshard::graft_graph_from(&loser, &source, "graph-a").unwrap_err();
     assert!(
         error.contains("different authority or destination"),
         "{error}"
@@ -393,12 +372,8 @@ fn reserved_import_and_loser_cleanup_are_one_graph_protocol() {
     let winner_target =
         GraftDestination::new(winner.mutations(), winner.kernel(), winner_handle.as_ref());
 
-    medulla_persistence::online_reshard::reserve_graft_destination(
-        &loser,
-        source.as_ref(),
-        "graph-protocol",
-    )
-    .unwrap();
+    crate::online_reshard::reserve_graft_destination(&loser, source.as_ref(), "graph-protocol")
+        .unwrap();
     loser
         .stage_reserved_graft_owner_payload("graph-protocol", |write| {
             write
@@ -434,20 +409,13 @@ fn reserved_import_and_loser_cleanup_are_one_graph_protocol() {
         medulla_types::protocol::GraphType::Global,
     )
     .unwrap();
-    let mut rows = medulla_persistence::online_reshard::export_graph_raw(
-        loser.as_ref(),
-        "graph-protocol",
-    )
-    .unwrap();
+    let mut rows =
+        crate::online_reshard::export_graph_raw(loser.as_ref(), "graph-protocol").unwrap();
     rows.requires_graft_reservation = true;
     let stale_rows = rows.clone();
 
-    medulla_persistence::online_reshard::reserve_graft_destination(
-        &winner,
-        source.as_ref(),
-        "graph-protocol",
-    )
-    .unwrap();
+    crate::online_reshard::reserve_graft_destination(&winner, source.as_ref(), "graph-protocol")
+        .unwrap();
     source
         .mutations()
         .graft_begin(source_handle.as_ref(), &winner_target)
@@ -469,11 +437,7 @@ fn reserved_import_and_loser_cleanup_are_one_graph_protocol() {
         .is_ok());
     let import_loser = Arc::clone(&loser);
     let import = std::thread::spawn(move || {
-        medulla_persistence::online_reshard::import_graph_raw(
-            import_loser.as_ref(),
-            "graph-protocol",
-            &rows,
-        )
+        crate::online_reshard::import_graph_raw(import_loser.as_ref(), "graph-protocol", &rows)
     });
     // The import owns the protocol guard and is paused after its scoped
     // owner transaction, before its separate catalog transaction.
@@ -482,7 +446,7 @@ fn reserved_import_and_loser_cleanup_are_one_graph_protocol() {
     let cleanup_loser = Arc::clone(&loser);
     let cleanup_source = Arc::clone(&source);
     let cleanup = std::thread::spawn(move || {
-        medulla_persistence::online_reshard::graft_graph_from(
+        crate::online_reshard::graft_graph_from(
             &cleanup_loser,
             cleanup_source.as_ref(),
             "graph-protocol",
@@ -519,12 +483,9 @@ fn reserved_import_and_loser_cleanup_are_one_graph_protocol() {
             .unwrap()
             .is_some()
     );
-    let stale_import = medulla_persistence::online_reshard::import_graph_raw(
-        loser.as_ref(),
-        "graph-protocol",
-        &stale_rows,
-    )
-    .unwrap_err();
+    let stale_import =
+        crate::online_reshard::import_graph_raw(loser.as_ref(), "graph-protocol", &stale_rows)
+            .unwrap_err();
     assert!(stale_import.contains("lost its destination reservation"));
     let read = loser.read(&loser_handle).unwrap();
     assert!(read

@@ -56,7 +56,7 @@ pub mod durable_stores;
 #[cfg(feature = "redb")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod agent_component;
-#[cfg(all(test, feature = "redb"))]
+#[cfg(all(any(test, feature = "test-support"), feature = "redb"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod agent_fixtures;
 #[cfg(feature = "redb")]
