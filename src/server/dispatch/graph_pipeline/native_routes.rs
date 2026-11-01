@@ -88,8 +88,8 @@ async fn route_native_lifecycle_ops(
     // Native development-lane hold/quota authority. The domain handler itself
     // enumerates all six writes and both reads, so dispatch owns no parallel
     // classifier and a future Method cannot fall into a wildcard commit.
-    let method = match handlers::development_lane::try_handle(
-        handlers::development_lane::HandleContext {
+    let method = match medulla_h_jobs::development_lane::try_handle(
+        medulla_h_jobs::development_lane::HandleContext {
             req_id,
             graph_name,
             persistence,
@@ -110,8 +110,8 @@ async fn route_native_lifecycle_ops(
     // admission transaction. The retained Agent Library owner is resolved
     // before lowering to the existing consensus/local WorkItem authority.
     #[cfg(feature = "redb")]
-    let method = match handlers::delegation::try_handle(
-        handlers::delegation::HandleContext {
+    let method = match medulla_h_jobs::delegation::try_handle(
+        medulla_h_jobs::delegation::HandleContext {
             state: ctx.state,
             req_id,
             graph_name,
@@ -141,8 +141,8 @@ async fn route_native_lifecycle_ops(
     // The WorkItem handler owns its six lifecycle Methods explicitly and keeps
     // their authoritative MutationBatch effect. Submission and reservation
     // operations deliberately fall through to their existing native route.
-    let method = match handlers::work_item::try_handle(
-        handlers::work_item::HandleContext {
+    let method = match medulla_h_jobs::work_item::try_handle(
+        medulla_h_jobs::work_item::HandleContext {
             req_id,
             graph_name,
             caller,
@@ -193,7 +193,7 @@ pub(super) async fn route_native_store_ops(
     ) || medulla_server_api::mutation_batch::is_resource_reservation_method(&method)
     {
         return Ok(dispatch_op_workitem_submission_or_resources(
-            handlers::work_item::HandleContext {
+            medulla_h_jobs::work_item::HandleContext {
                 req_id,
                 graph_name,
                 caller,
@@ -246,7 +246,7 @@ async fn route_work_item_reads(
         Method::GetWorkItem {
             tenant,
             work_item_id,
-        } => handlers::work_item_read::WorkItemRead::Get {
+        } => medulla_h_jobs::work_item_read::WorkItemRead::Get {
             tenant,
             work_item_id,
         },
@@ -256,7 +256,7 @@ async fn route_work_item_reads(
             limit,
             kind,
             metadata_match,
-        } => handlers::work_item_read::WorkItemRead::List(
+        } => medulla_h_jobs::work_item_read::WorkItemRead::List(
             medulla_agent_types::work_item_read::WorkItemListRequest {
                 tenant,
                 cursor,
@@ -268,18 +268,18 @@ async fn route_work_item_reads(
         Method::GetWorkItemOutcome {
             tenant,
             work_item_id,
-        } => handlers::work_item_read::WorkItemRead::Outcome {
+        } => medulla_h_jobs::work_item_read::WorkItemRead::Outcome {
             tenant,
             work_item_id,
         },
         Method::ListControlLeases { request } => {
-            handlers::work_item_read::WorkItemRead::ControlLeases(request)
+            medulla_h_jobs::work_item_read::WorkItemRead::ControlLeases(request)
         }
         Method::GetControlLease { tenant, lease_id } => {
-            handlers::work_item_read::WorkItemRead::ControlLease { tenant, lease_id }
+            medulla_h_jobs::work_item_read::WorkItemRead::ControlLease { tenant, lease_id }
         }
         Method::GetRunCheckpoint { request } => {
-            handlers::work_item_read::WorkItemRead::Checkpoint {
+            medulla_h_jobs::work_item_read::WorkItemRead::Checkpoint {
                 request,
                 actor: ctx.verified_context.principal().to_string(),
             }
@@ -293,9 +293,9 @@ async fn route_work_item_reads(
 async fn route_gap_reads(ctx: GraphOpRouting<'_>, method: Method) -> Result<Response, Method> {
     let read = match method {
         Method::GapGet { tenant, gap_id } => {
-            handlers::work_item_read::WorkItemRead::Gap { tenant, gap_id }
+            medulla_h_jobs::work_item_read::WorkItemRead::Gap { tenant, gap_id }
         }
-        Method::GapList { request } => handlers::work_item_read::WorkItemRead::Gaps(request),
+        Method::GapList { request } => medulla_h_jobs::work_item_read::WorkItemRead::Gaps(request),
         other => return Err(other),
     };
     Ok(answer_work_item_read(ctx, read).await)
@@ -309,21 +309,21 @@ async fn route_owner_bound_work_item_reads(
     let actor = ctx.verified_context.principal().to_string();
     let read = match method {
         Method::GetRunWorkItem { tenant, run_id } => {
-            handlers::work_item_read::WorkItemRead::RunAdmission {
+            medulla_h_jobs::work_item_read::WorkItemRead::RunAdmission {
                 tenant,
                 run_id,
                 actor,
             }
         }
         Method::GetSessionUsage { tenant, context_id } => {
-            handlers::work_item_read::WorkItemRead::SessionUsage {
+            medulla_h_jobs::work_item_read::WorkItemRead::SessionUsage {
                 tenant,
                 context_id,
                 actor,
             }
         }
         Method::GetCurrentPlan { tenant, run_id } => {
-            handlers::work_item_read::WorkItemRead::CurrentPlan {
+            medulla_h_jobs::work_item_read::WorkItemRead::CurrentPlan {
                 tenant,
                 run_id,
                 actor,
@@ -337,7 +337,7 @@ async fn route_owner_bound_work_item_reads(
 #[cfg(feature = "redb")]
 async fn answer_work_item_read(
     ctx: GraphOpRouting<'_>,
-    read: handlers::work_item_read::WorkItemRead,
+    read: medulla_h_jobs::work_item_read::WorkItemRead,
 ) -> Response {
     #[cfg(feature = "raft")]
     if let Err(response) = enforce_native_read_leadership(
@@ -352,7 +352,7 @@ async fn answer_work_item_read(
     {
         return response;
     }
-    handlers::work_item_read::answer(
+    medulla_h_jobs::work_item_read::answer(
         ctx.req_id,
         ctx.graph_name,
         ctx.verified_context.tenant(),
@@ -368,7 +368,7 @@ async fn answer_work_item_read(
 /// applies were checked when proposed. A permitted write falls through
 /// (`None`).
 fn refuse_foreign_native_writes(ctx: GraphOpRouting<'_>, method: &Method) -> Option<Response> {
-    use handlers::native_write_authority::{
+    use medulla_h_jobs::native_write_authority::{
         refuse_foreign_native_write, FleetAuthority, FLEET_EVENT_ACTION,
     };
     if ctx.state_machine_authorized {

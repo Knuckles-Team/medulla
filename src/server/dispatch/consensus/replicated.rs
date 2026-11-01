@@ -278,7 +278,7 @@ pub(crate) async fn apply_replicated_job_publication_commit(
 ) -> Result<crate::mutation_batch::MutationBatchCommit, String> {
     REPLICATED_APPLY
         .scope(replicated_apply_scope(committed_at_ms, authority), async {
-            handlers::jobs::apply_consensus_job_publication_commit(
+            medulla_h_jobs::jobs::apply_consensus_job_publication_commit(
                 state,
                 request_id,
                 authority,
@@ -301,7 +301,7 @@ pub(crate) async fn apply_replicated_job_publication_finalize(
 ) -> Result<ResultPayload, String> {
     REPLICATED_APPLY
         .scope(replicated_apply_scope(committed_at_ms, authority), async {
-            handlers::jobs::apply_consensus_job_publication_finalize(
+            medulla_h_jobs::jobs::apply_consensus_job_publication_finalize(
                 state,
                 committed_at_ms,
                 coordinator_id,

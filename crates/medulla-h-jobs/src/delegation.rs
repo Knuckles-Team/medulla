@@ -41,7 +41,7 @@ use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_server_api::api::persistence::PersistenceBackend;
 
 #[cfg(feature = "redb")]
-use crate::graph::GraphCore;
+use medulla_core::graph::GraphCore;
 
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStore;
@@ -76,7 +76,7 @@ pub(crate) fn context_matches_verified_authority(
     verified_context: &VerifiedRequestContext,
 ) -> bool {
     let anonymous = context.authentication_method
-        == crate::epistemic_operations::RequestContextAuthenticationMethod::Anonymous;
+        == medulla_result_types::epistemic_operations::RequestContextAuthenticationMethod::Anonymous;
     anonymous != verified_context.is_authenticated()
         && (!anonymous || context.subject_id == verified_context.principal())
         && context.tenant_id == verified_context.tenant()

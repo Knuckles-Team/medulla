@@ -58,8 +58,8 @@ use medulla_modality::{OpaqueRef, PolicyEnvelope};
 #[cfg(feature = "program-optimization")]
 use medulla_program::ProgramRevisionIdentity;
 
-use crate::mutation_batch::MutationBatch;
-use crate::protocol::Response;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::protocol::Response;
 use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 
@@ -81,8 +81,6 @@ mod core;
 mod executor_claim;
 mod executor_loop;
 mod executor_program;
-#[cfg(test)]
-mod graph_tests;
 mod helpers;
 mod native_validation;
 mod prelude_jobs;
@@ -336,7 +334,7 @@ async fn resolve_core(state: &Arc<RwLock<ServerState>>, graph: &str) -> Option<A
 async fn resolve_core_ref(
     state: &Arc<RwLock<ServerState>>,
     graph_ref: &str,
-) -> Option<(String, crate::protocol::GraphType, Arc<GraphCore>)> {
+) -> Option<(String, medulla_protocol_types::protocol::GraphType, Arc<GraphCore>)> {
     let s = state.read().await;
     resolve_opaque_graph_ref(&s.registry, graph_ref)
 }
@@ -379,9 +377,9 @@ fn opaque_graph_ref_index() -> &'static std::sync::RwLock<HashMap<String, String
 /// `resolve_core_ref_tests::a_poisoned_cache_entry_can_only_waste_a_rescan_never_resolve_the_wrong_graph`
 /// and `..._a_deleted_graphs_stale_cache_entry_resolves_to_none_not_a_wrong_graph`).
 fn resolve_opaque_graph_ref(
-    registry: &crate::registry::GraphRegistry,
+    registry: &medulla_core::registry::GraphRegistry,
     graph_ref: &str,
-) -> Option<(String, crate::protocol::GraphType, Arc<GraphCore>)> {
+) -> Option<(String, medulla_protocol_types::protocol::GraphType, Arc<GraphCore>)> {
     let index = opaque_graph_ref_index();
 
     let cached_name = index

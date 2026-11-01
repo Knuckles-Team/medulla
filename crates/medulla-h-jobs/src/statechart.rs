@@ -35,7 +35,9 @@ use tokio::sync::RwLock;
 use medulla_statechart::{Context, EventInput, StatechartDef, StatechartError, StatechartStore};
 use medulla_types::statechart::StatechartOp;
 
-use crate::protocol::{Method, Response, ResultPayload};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 

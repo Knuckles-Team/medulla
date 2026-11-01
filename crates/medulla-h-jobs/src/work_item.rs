@@ -9,8 +9,9 @@
 use medulla_persistence::AsRedb;
 use std::sync::Arc;
 
-use crate::graph::GraphCore;
-use crate::protocol::{Method, Response};
+use medulla_core::graph::GraphCore;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::auth::VerifiedRequestContext;
 
@@ -105,7 +106,7 @@ pub(crate) async fn commit_verified_work_item(
     placement_epoch: u64,
     placement_fence: Option<u64>,
     method: Method,
-) -> Result<crate::protocol::ResultPayload, String> {
+) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
     let is_plan = matches!(
         &method,
         Method::PublishCurrentPlan { .. } | Method::PublishRunCheckpoint { .. }

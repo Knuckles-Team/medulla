@@ -232,7 +232,7 @@ pub(super) async fn resolve_submit_graph_core(
     req_id: u64,
     authority: &CarrierAuthority,
     graph: &str,
-) -> Result<Arc<crate::graph::GraphCore>, Response> {
+) -> Result<Arc<medulla_core::graph::GraphCore>, Response> {
     let s = state.read().await;
     let Some(entry) = s.registry.get(graph) else {
         return Err(Response::err(req_id, format!("unknown graph '{graph}'")));

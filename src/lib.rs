@@ -48,17 +48,6 @@ pub use medulla_compute::{algorithms, ast, parser, screen};
 
 
 
-// CONCEPT:INT-P2-2 / ADR-6 (W2.3) -- the agent-instance lifecycle statechart: an agent
-// instance's own `dormant ⇄ active` (+ `terminated`) lifecycle as ONE reusable
-// `medulla_statechart::StatechartDef`, the canonical "statechart template" the agents-as-data
-// activation layer instantiates per dormant instance. Distinct from (and composed with)
-// the WorkItem chart above — this owns "is the instance dormant or active", the WorkItem
-// owns "is an activation submitted/leased/running/done". Pure data + tests; instantiated
-// via the EXISTING `Method::Statechart` surface, mirrored as a Python dict in
-// `agent_utilities.orchestration.agent_activation`. See the module doc for the full
-// derivation.
-#[cfg(feature = "statechart")]
-pub mod agent_lifecycle_statechart;
 
 
 // In-process embedded library API (CONCEPT:MEDULLA-KG.backend.engine-modes) — SQLite/DuckDB-style. Drives

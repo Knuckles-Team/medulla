@@ -20,7 +20,7 @@ pub(crate) struct PreparedJobPublication {
     schema_version: u16,
     pub(crate) coordinator_id: String,
     pub(crate) target_graph: String,
-    pub(crate) target_graph_type: crate::protocol::GraphType,
+    pub(crate) target_graph_type: medulla_protocol_types::protocol::GraphType,
     job_id: String,
     worker_ref: String,
     lease_epoch: u64,
@@ -216,7 +216,7 @@ pub(super) fn publication_result(
 #[cfg(feature = "raft")]
 pub(crate) fn validate_job_publication_commit(
     prepared: &PreparedJobPublication,
-    committed: &crate::mutation_batch::MutationBatchCommit,
+    committed: &medulla_protocol_types::mutation_batch::MutationBatchCommit,
 ) -> Result<(), String> {
     prepared.validate()?;
     committed.validate()?;
@@ -415,7 +415,7 @@ pub(crate) async fn apply_consensus_job_publication_commit(
     applying_group: medulla_raft::raft::GroupId,
     expected_coordinator_id: &str,
     plan_bytes: &[u8],
-) -> Result<crate::mutation_batch::MutationBatchCommit, String> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {
     let plan = decode_routed_job_publication(plan_bytes)?;
     if plan.prepared.coordinator_id != expected_coordinator_id
         || plan.group_id != applying_group
@@ -512,7 +512,7 @@ pub(crate) async fn apply_consensus_job_publication_finalize(
 /// is attributed to, the claimed methods and the result they record.
 struct PublicationWrite<'a> {
     persistence: Option<&'a Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
-    core: &'a Arc<crate::graph::GraphCore>,
+    core: &'a Arc<medulla_core::graph::GraphCore>,
     origin: medulla_server_api::mutation_batch::CommitOrigin<'a>,
     target_graph: &'a str,
     batch_id: &'a str,
@@ -528,7 +528,7 @@ struct PublicationWrite<'a> {
 /// consensus apply and the local staged publication commit through here.
 async fn commit_publication_write(
     write: PublicationWrite<'_>,
-) -> Result<crate::mutation_batch::MutationBatchCommit, String> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {
     #[cfg(feature = "program-optimization")]
     if let Some(identity) = write.promotion {
         return medulla_server_api::mutation_batch::commit_program_promotion(
@@ -649,7 +649,7 @@ mod publication_receipt_tests {
             schema_version: JOB_PUBLICATION_PLAN_VERSION,
             coordinator_id,
             target_graph: target_graph.to_string(),
-            target_graph_type: crate::protocol::GraphType::Agent,
+            target_graph_type: medulla_protocol_types::protocol::GraphType::Agent,
             job_id: job_id.to_string(),
             worker_ref,
             lease_epoch,
@@ -673,7 +673,7 @@ mod publication_receipt_tests {
 
     fn receipt_for(
         prepared: &PreparedJobPublication,
-    ) -> crate::mutation_batch::MutationBatchCommit {
+    ) -> medulla_protocol_types::mutation_batch::MutationBatchCommit {
         let batch = medulla_server_api::mutation_batch::compile_methods(
             medulla_server_api::mutation_batch::CompileBatch {
                 batch_id: &prepared.batch_id,
@@ -702,11 +702,11 @@ mod publication_receipt_tests {
             #[cfg(not(feature = "program-optimization"))]
             None,
         );
-        crate::mutation_batch::MutationBatchCommit {
-            record: crate::mutation_batch::MutationBatchRecord {
+        medulla_protocol_types::mutation_batch::MutationBatchCommit {
+            record: medulla_protocol_types::mutation_batch::MutationBatchRecord {
                 batch,
                 identity: identity.clone(),
-                status: crate::mutation_batch::MutationBatchStatus::Committed,
+                status: medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed,
                 committed_version:
                     medulla_mutation_types::mutation_scope::CommittedVersion::Graph {
                         source: 0,

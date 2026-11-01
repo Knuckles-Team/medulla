@@ -42,8 +42,8 @@ async fn call(
 fn decode(response: Response) -> ControlLeaseIssued {
     assert!(response.error.is_none(), "{:?}", response.error);
     match response.result.unwrap() {
-        crate::protocol::ResultPayload::Json(value) => serde_json::from_value(value).unwrap(),
-        crate::protocol::ResultPayload::Raw(bytes) => rmp_serde::from_slice(&bytes).unwrap(),
+        medulla_protocol_types::protocol::ResultPayload::Json(value) => serde_json::from_value(value).unwrap(),
+        medulla_protocol_types::protocol::ResultPayload::Raw(bytes) => rmp_serde::from_slice(&bytes).unwrap(),
         other => panic!("unexpected host-start payload {other:?}"),
     }
 }
@@ -68,7 +68,7 @@ async fn fixture() -> (
         "__commons__",
         Method::CreateGraph {
             graph_name: GRAPH.into(),
-            graph_type: crate::protocol::GraphType::Global,
+            graph_type: medulla_protocol_types::protocol::GraphType::Global,
         },
         ScopedTestCaller {
             principal: ISSUER,

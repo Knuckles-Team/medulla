@@ -3,23 +3,6 @@
 //! stay centralized in the shell. Each module exposes `try_handle(...) ->
 //! Result<Response, Method>`: `Ok` = handled, `Err(method)` = not mine, try next.
 
-// Engine-native WorkItem lifecycle transitions. The handler owns the six
-// result-producing transition Methods explicitly; their durable effect remains
-// the one MutationBatch commit in `mutation_batch::commit_work_item`.
-// RF-020 — authenticated Agent Library delegation lowers through native WorkItem admission.
-pub(crate) mod delegation;
-pub(crate) mod work_item;
-// EH-219 typed WorkItem reads (`GetWorkItem`/`ListWorkItems`): the verified
-// carrier tenant rule plus the native redb snapshot read.
-#[cfg(feature = "redb")]
-pub(crate) mod work_item_read;
-// Body-tenant binding for every WorkItem-kernel write and the fleet event
-// stream authority (graph-os MEDULLA-5 security ruling).
-pub(crate) mod native_write_authority;
-// Native development-lane hold/quota authority. All six writes and both reads
-// are enumerated in the handler; dispatch does not classify this domain or use
-// a wildcard commit arm.
-pub(crate) mod development_lane;
 // Data-mining domain (CONCEPT:MEDULLA-KG.mining.frequent-itemset-mining, feature `mining`).
 // Association-rule mining. GRAPH-SCOPED (unlike finance/datascience): the
 // graph-derived source + write-back need the live graph core, so the handler takes
@@ -34,8 +17,6 @@ pub(crate) mod mining;
 pub(crate) mod admin;
 // RF-ADR-010 — the Decide layer's four served methods.
 pub(crate) mod decide;
-// X10 — the mutation-outbox operator surface.
-pub(crate) mod mutation_outbox;
 // The general bounded 0-1 integer programme.
 pub(crate) mod solve;
 // Read-only query surface: SQL (CONCEPT:MEDULLA-KG.query.read-only-sql-query, DataFusion behind `query`),
@@ -94,26 +75,6 @@ pub(crate) mod federation;
 // the module and the variants aren't in the enum (so the dispatch chain never routes them).
 #[cfg(feature = "sqlite-file")]
 pub(crate) mod sqlite_file;
-// Durable analytics-job plane (CONCEPT:INT-P2-1, feature `jobs`). The
-// `Method::AnalyticsJob { op }` surface (submit/status/cancel/resume) over
-// `medulla-jobs`'s redb-backed `AnalyticsJob` state machine; a submitted job runs
-// asynchronously (spawned off the request) and its success commits a provenance'd
-// `:Claim`/`:Evidence` pair via `medulla_jobs::claim::commit_result_claim`. NOT
-// graph-scoped (own `jobs.redb`, like `TsAppend`/`Kv*`) — self-routes in
-// `dispatch.rs` before the per-graph chain, so it needs `state` directly rather
-// than a resolved `GraphCore`.
-#[cfg(feature = "jobs")]
-pub(crate) mod jobs;
-// Native finite-state-machine / statechart engine (CONCEPT:INT-P2-2, feature
-// `statechart`). The `Method::Statechart { op }` surface (define/instantiate/
-// send_event/get_state/list) over `medulla-statechart`'s redb-backed `StatechartDef` +
-// `MachineInstance` store; a durable machine instance is just a `(state, context)`
-// row, rehydrated on the next event. NOT graph-scoped (own `statecharts.redb`, like
-// `AnalyticsJob`/`TsAppend`/`Kv*`) — self-routes in `dispatch.rs` before the per-graph
-// chain, so it needs `state` directly (only for `persist_dir`) rather than a resolved
-// `GraphCore`.
-#[cfg(feature = "statechart")]
-pub(crate) mod statechart;
 // RF-019's S1-S6 tiered semantic ingestion queue. Always declared: the module
 // carries its own `#![cfg(all(ann-redb, query))]`, the durable semantic owner
 // plus the authorized SQL source read port it needs, and the router refuses

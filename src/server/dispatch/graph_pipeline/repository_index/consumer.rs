@@ -642,7 +642,7 @@ fn verify_page_service_authority(
     if verified.idempotency_key() != page_key
         || !verified.allows_action("work:submit")
         || !verified.allows_action("repository:enrichment:submit")
-        || !crate::server::handlers::delegation::context_matches_verified_authority(wire, verified)
+        || !medulla_h_jobs::delegation::context_matches_verified_authority(wire, verified)
         || wire.subject_id.trim().is_empty()
         || wire.trace_id.trim().is_empty()
         || wire

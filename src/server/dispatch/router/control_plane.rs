@@ -549,7 +549,7 @@ async fn dispatch_compute_and_media_methods_arm_0(
                         Ok(authority) => authority,
                         Err(denied) => return Response::err(req_id, denied),
                     };
-                    handlers::jobs::handle(
+                    medulla_h_jobs::jobs::handle(
                         state,
                         req_id,
                         &carrier,
@@ -590,7 +590,7 @@ async fn dispatch_compute_and_media_methods_arm_1(
                         Ok(authority) => authority,
                         Err(denied) => return Response::err(req_id, denied),
                     };
-                    handlers::statechart::handle(state, req_id, &carrier, op).await
+                    medulla_h_jobs::statechart::handle(state, req_id, &carrier, op).await
                 }
             })
             .await

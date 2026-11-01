@@ -60,7 +60,7 @@
 /// says yes) but "does THIS SUBMISSION's `JobKind` read a graph row
 /// server-side" — a question this method-granularity table cannot express.
 /// That finer axis is ratcheted separately, at job-KIND granularity, by
-/// `handlers::jobs::reads_graph_rows_server_side` (an exhaustive, no-wildcard
+/// `medulla_h_jobs::jobs::reads_graph_rows_server_side` (an exhaustive, no-wildcard
 /// match a new `JobKind` variant cannot silently skip) plus the architecture
 /// test in `handlers::jobs_read_rls_architecture` (declared from
 /// `handlers::jobs`'s own test module), which independently cross-checks that
@@ -273,7 +273,7 @@ pub(super) const REASON_NATIVE_RESERVATION_READ: &str =
 pub(super) const REASON_NATIVE_CAPABILITY_LEDGER: &str =
     "dispatch.rs's dedicated WorkItem-claim-capability block routes VerifyWorkItemClaimCapability to redb_store::work_item_capability::verify_work_item_claim_capability against its own private ledger, keyed by an AuthenticatedAuthority derived from the verified request context -- never enters MutationBatch/result/outbox/CDC projections or a GraphView, same posture as MintWorkItemClaimCapability's write-side native ledger";
 // RMDD-28 dispatch wiring (fix/medulla-devlane-dispatch): `DevelopmentLaneStatus`/
-// `QueryDevelopmentLane` now route through `handlers::development_lane::try_handle` to
+// `QueryDevelopmentLane` now route through `medulla_h_jobs::development_lane::try_handle` to
 // `PersistenceBackend::read_development_lane[_status]`, which call
 // `redb_store::development_lane::read_development_lane[_status]` directly against the native
 // `development_lane_*` redb tables -- never a `GraphView`/`core.analysis_snapshot()`. Gated by
@@ -282,7 +282,7 @@ pub(super) const REASON_NATIVE_CAPABILITY_LEDGER: &str =
 // redacts `worktree_locator`/`host_ref`/`host_target_alias` on every row returned, so no
 // additional per-caller redaction is needed here the way `ResourceReservationStatus` needs one.
 pub(super) const REASON_NATIVE_DEVELOPMENT_LANE_READ: &str =
-    "handlers::development_lane::try_handle routes DevelopmentLaneStatus/QueryDevelopmentLane directly to PersistenceBackend::read_development_lane/read_development_lane_status, which call redb_store::development_lane::read_development_lane/read_development_lane_status against the native development_lane_* redb tables (redb_store/development_lane.rs), gated by the current placement leader under raft -- never a GraphView/core.analysis_snapshot() row read; the kernel's own public_hold projection already redacts worktree_locator/host_ref/host_target_alias on every row, so no dispatch-layer redaction is needed";
+    "medulla_h_jobs::development_lane::try_handle routes DevelopmentLaneStatus/QueryDevelopmentLane directly to PersistenceBackend::read_development_lane/read_development_lane_status, which call redb_store::development_lane::read_development_lane/read_development_lane_status against the native development_lane_* redb tables (redb_store/development_lane.rs), gated by the current placement leader under raft -- never a GraphView/core.analysis_snapshot() row read; the kernel's own public_hold projection already redacts worktree_locator/host_ref/host_target_alias on every row, so no dispatch-layer redaction is needed";
 
 // RF-ADR-010 A1: an assembly reads ONE tenant-bound agent_library.redb snapshot
 // through the same tenant-scoped accessors the four agent layers use. The

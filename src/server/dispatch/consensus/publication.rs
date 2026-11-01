@@ -175,19 +175,19 @@ pub(super) async fn execute_consensus_job_publication(
 fn decode_job_publication(
     request_id: u64,
     prepared_bytes: &[u8],
-) -> Result<handlers::jobs::PreparedJobPublication, Response> {
-    handlers::jobs::decode_prepared_job_publication(prepared_bytes)
+) -> Result<medulla_h_jobs::jobs::PreparedJobPublication, Response> {
+    medulla_h_jobs::jobs::decode_prepared_job_publication(prepared_bytes)
         .map_err(|error| Response::err(request_id, error))
 }
 
 #[cfg(all(feature = "raft", feature = "jobs"))]
 fn build_job_publication_plans(
     request_id: u64,
-    prepared: handlers::jobs::PreparedJobPublication,
+    prepared: medulla_h_jobs::jobs::PreparedJobPublication,
     target_route: medulla_raft::raft::placement::PlacementRoute,
 ) -> Result<(Vec<u8>, Vec<u8>), Response> {
     let target_fence = target_route.placed.then_some(target_route.fencing_token());
-    handlers::jobs::build_job_publication_commands(
+    medulla_h_jobs::jobs::build_job_publication_commands(
         prepared,
         target_route.group,
         target_route.epoch,
@@ -199,7 +199,7 @@ fn build_job_publication_plans(
 #[cfg(all(feature = "raft", feature = "jobs"))]
 fn build_job_publication_commit(
     request_id: u64,
-    prepared: &handlers::jobs::PreparedJobPublication,
+    prepared: &medulla_h_jobs::jobs::PreparedJobPublication,
     commit_plan: &[u8],
     server_secret: &str,
 ) -> Result<medulla_raft::raft::NativeMutationCommand, Response> {
@@ -214,7 +214,7 @@ fn build_job_publication_commit(
 #[cfg(all(feature = "raft", feature = "jobs"))]
 async fn submit_target_job_publication_commit(
     execution: &JobPublicationExecution<'_>,
-    prepared: &handlers::jobs::PreparedJobPublication,
+    prepared: &medulla_h_jobs::jobs::PreparedJobPublication,
     target_route: medulla_raft::raft::placement::PlacementRoute,
     commit_plan: Vec<u8>,
 ) -> Result<crate::mutation_batch::MutationBatchCommit, Response> {
@@ -248,7 +248,7 @@ async fn submit_target_job_publication_commit(
 #[cfg(all(feature = "raft", feature = "jobs"))]
 fn build_job_publication_finalize(
     request_id: u64,
-    prepared: &handlers::jobs::PreparedJobPublication,
+    prepared: &medulla_h_jobs::jobs::PreparedJobPublication,
     finalize_receipt: &[u8],
     server_secret: &str,
 ) -> Result<medulla_raft::raft::NativeMutationCommand, Response> {
@@ -276,13 +276,13 @@ struct JobPublicationControl<'a> {
 #[cfg(all(feature = "raft", feature = "jobs"))]
 async fn finalize_consensus_job_publication(
     control: &JobPublicationControl<'_>,
-    prepared: &handlers::jobs::PreparedJobPublication,
+    prepared: &medulla_h_jobs::jobs::PreparedJobPublication,
     committed: &crate::mutation_batch::MutationBatchCommit,
     coordinator_id: &str,
     finalize: medulla_raft::raft::NativeMutationCommand,
 ) -> Response {
     let request_id = control.request_id;
-    if let Err(error) = handlers::jobs::validate_job_publication_commit(prepared, committed) {
+    if let Err(error) = medulla_h_jobs::jobs::validate_job_publication_commit(prepared, committed) {
         return Response::err(
             request_id,
             format!("job publication finalization lost its target receipt: {error}"),

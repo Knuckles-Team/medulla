@@ -25,13 +25,13 @@ fn validate_submit_context(
     // The tenant/agent/audience/policy_version identity check is the one comparison
     // every request boundary shares -- both this native `SubmitWorkItem` command
     // binding and the `kg-delegate` context validation
-    // (`server::handlers::delegation::validate_request_context`) run the exact same
+    // (`medulla_h_jobs::delegation::validate_request_context`) run the exact same
     // four-field comparison over the same verified-authority carrier before going on
     // to check their own request's time window / scope bounds, which ARE
     // surface-specific and stay local to each caller. `context_matches_verified_authority`
     // is defined once, in `handlers::delegation` (its `pub(crate)` home), and called
     // from both boundaries.
-    if !crate::server::handlers::delegation::context_matches_verified_authority(
+    if !medulla_h_jobs::delegation::context_matches_verified_authority(
         context,
         verified_context,
     ) {

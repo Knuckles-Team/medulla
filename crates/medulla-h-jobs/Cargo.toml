@@ -12,3 +12,13 @@ name = "medulla_h_jobs"
 path = "src/lib.rs"
 
 [dependencies]
+
+[features]
+ann-redb = ["redb"]
+jobs = []
+knowledge-batch = ["query"]
+program-optimization = ["jobs"]
+query = ["redb"]
+raft = ["redb"]
+redb = []
+statechart = []

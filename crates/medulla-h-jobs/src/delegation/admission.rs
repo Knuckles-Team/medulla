@@ -256,7 +256,7 @@ pub(crate) async fn submit_native(
             )
         });
     }
-    let work_item_ctx = crate::server::handlers::work_item::HandleContext {
+    let work_item_ctx = crate::work_item::HandleContext {
         req_id: ctx.req_id,
         graph_name: ctx.graph_name,
         caller: ctx.caller,
@@ -266,7 +266,7 @@ pub(crate) async fn submit_native(
         #[cfg(feature = "raft")]
         routed_raft: ctx.routed_raft,
     };
-    crate::server::handlers::work_item::commit_verified_work_item(
+    crate::work_item::commit_verified_work_item(
         &work_item_ctx,
         placement_epoch,
         placement_fence,

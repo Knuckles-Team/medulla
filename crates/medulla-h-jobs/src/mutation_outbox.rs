@@ -27,7 +27,7 @@ use medulla_mutation_types::{
     mutation_outbox::OutboxTarget,
 };
 
-use crate::protocol::Response;
+use medulla_protocol_types::protocol::Response;
 use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
@@ -73,7 +73,7 @@ enum Answer {
 #[cfg(feature = "redb")]
 impl Answer {
     fn into_response(self, req_id: u64) -> Response {
-        use crate::protocol::ResultPayload;
+        use medulla_protocol_types::protocol::ResultPayload;
         use medulla_protocol_types::result_contract::transactions as results;
 
         match self {
@@ -290,7 +290,7 @@ async fn sql_owner(
 #[cfg(all(feature = "redb", feature = "jobs"))]
 async fn jobs_owner(state: &Arc<RwLock<ServerState>>) -> Result<Owner, String> {
     Ok(Owner::Jobs {
-        store: crate::server::handlers::jobs::outbox_job_store(state).await?,
+        store: crate::jobs::outbox_job_store(state).await?,
     })
 }
 

@@ -6,7 +6,7 @@ use std::collections::BTreeSet;
 
 fn fixture_authority() -> CarrierAuthority {
     CarrierAuthority::from_verified(&VerifiedRequestContext::from_verified_claims(
-        crate::acl::RequestContextClaims {
+        medulla_types::acl::RequestContextClaims {
             principal: "association-hash-test".into(),
             agent_id: "association-hash-test".into(),
             tenant: "association-hash-tenant".into(),

@@ -17,7 +17,7 @@
 //! Replicated state-machine applies are exempt (the proposing request was
 //! checked); the caller skips this module for them.
 
-use crate::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 
 /// The scope that may write `fleet.` broker streams.
 pub(crate) const FLEET_EVENT_ACTION: &str = "fleet:events";

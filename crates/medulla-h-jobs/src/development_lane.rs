@@ -7,7 +7,9 @@
 
 use std::sync::Arc;
 
-use crate::protocol::{Method, Response, ResultPayload};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_protocol_types::result_contract::coordination;
 
@@ -114,7 +116,7 @@ pub(crate) async fn try_handle(ctx: HandleContext<'_>, method: Method) -> Result
 /// Serve one authority read of a lane.
 async fn query(
     ctx: &HandleContext<'_>,
-    request: &crate::epistemic_operations::DevelopmentLaneQueryRequest,
+    request: &medulla_result_types::epistemic_operations::DevelopmentLaneQueryRequest,
 ) -> Response {
     let operation = match prepare(ctx).await {
         Ok(operation) => operation,
@@ -141,7 +143,7 @@ async fn query(
 /// Serve one lane-status authority read.
 async fn status(
     ctx: &HandleContext<'_>,
-    request: &crate::epistemic_operations::DevelopmentLaneStatusRequest,
+    request: &medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequest,
 ) -> Response {
     let operation = match prepare(ctx).await {
         Ok(operation) => operation,

@@ -7,7 +7,9 @@ pub(super) use medulla_program::{
     NativeCompiler, OptimizationRequest, ProgramModality, ProgramRevisionIdentity,
 };
 
-pub(super) use crate::isolation::AccessLevel;
-pub(super) use crate::protocol::{Method, Response, ResultPayload};
+pub(super) use medulla_core::isolation::AccessLevel;
+pub(super) use medulla_protocol_types::protocol::Method;
+pub(super) use medulla_protocol_types::protocol::Response;
+pub(super) use medulla_protocol_types::protocol::ResultPayload;
 pub(super) use medulla_server_api::access::check_graph_access;
 pub(super) use medulla_server_api::state::ServerState;

@@ -156,7 +156,7 @@ async fn dispatch_catalog_admin_methods(
         }
         Method::MutationOutbox { op } => {
             dispatch_boxed(async {
-                handlers::mutation_outbox::handle_mutation_outbox(
+                medulla_h_jobs::mutation_outbox::handle_mutation_outbox(
                     state,
                     req.id,
                     verified_context,

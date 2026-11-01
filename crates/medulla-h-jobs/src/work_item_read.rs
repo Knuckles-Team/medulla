@@ -22,7 +22,8 @@ use std::sync::Arc;
 
 use medulla_agent_types::work_item_read::WorkItemListRequest;
 
-use crate::protocol::{Response, ResultPayload};
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::api::persistence::PersistenceBackend;
 
 /// One decoded WorkItem read.

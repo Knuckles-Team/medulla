@@ -22,7 +22,8 @@ use std::sync::OnceLock;
 use medulla_agent_types::control_lease::ControlLeaseKindPolicy;
 
 use super::HandleContext;
-use crate::protocol::{Method, Response};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
 
 const POLICY_ENV: &str = "MEDULLA_CONTROL_LEASE_KIND_POLICY_JSON";
 
@@ -258,7 +259,7 @@ mod tests {
     // spec: MEDULLA-DURABLE-KERNEL-R039.4, MEDULLA-DURABLE-KERNEL-R039.4.1
     #[test]
     fn paired_storage_is_unavailable_on_both_served_writes() {
-        use crate::protocol::Method;
+        use medulla_protocol_types::protocol::Method;
         use serde_json::json;
         let plan = json!({"lease_id":"plan-a", "expected_revision":1,
             "expected_kind":"configured.plan", "expected_grant":{}});

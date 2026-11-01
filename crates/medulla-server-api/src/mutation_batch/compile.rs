@@ -515,7 +515,7 @@ pub(crate) struct CompiledOutbox {
 /// process-wide native store -- `medulla_jobs::JobStore` is the one such caller --
 /// whose owner scope is bound once at `open()` to `analytics_job_scope_identity()`
 /// and whose `PhysicalWriteCapability::verify_scope` refuses any batch naming a
-/// different identity. See `handlers::jobs::compile_job_batch`.
+/// different identity. See `medulla_h_jobs::jobs::compile_job_batch`.
 fn finish_batch(
     ctx: CompileBatch<'_>,
     operations: Vec<MutationOperation>,

@@ -421,10 +421,10 @@ fn require_enrichment_budget_service_scope(
 }
 
 pub(super) async fn dispatch_op_workitem_submission_or_resources(
-    ctx: crate::server::handlers::work_item::HandleContext<'_>,
+    ctx: medulla_h_jobs::work_item::HandleContext<'_>,
     method: Method,
 ) -> Response {
-    let crate::server::handlers::work_item::HandleContext {
+    let medulla_h_jobs::work_item::HandleContext {
         req_id,
         graph_name,
         caller,

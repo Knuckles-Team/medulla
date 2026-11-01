@@ -1,11 +1,13 @@
+#[allow(unused_imports)]
+use medulla_h_jobs::jobs::*;
 //! Private graph-ref cache tests for the analytics job handler.
 
 use medulla_kernel::lock_recovery::{LockRecovery, WriteRecovery};
-use super::*;
+use medulla_h_jobs::jobs::*;
 
 #[cfg(test)]
 mod resolve_core_ref_tests {
-    use super::*;
+    use medulla_h_jobs::jobs::*;
     use crate::protocol::GraphType;
     use crate::registry::GraphRegistry;
 
@@ -112,7 +114,7 @@ mod resolve_core_ref_tests {
 // MEDULLA-DURABLE-KERNEL-R082.2: exercise the same typed governor used by Submit.
 #[cfg(test)]
 mod mine_associate_submission_tests {
-    use super::*;
+    use medulla_h_jobs::jobs::*;
     use medulla_server_api::auth::VerifiedRequestContext;
 
     fn authority() -> CarrierAuthority {
