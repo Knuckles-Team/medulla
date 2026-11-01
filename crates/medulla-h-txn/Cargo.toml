@@ -12,18 +12,84 @@ name = "medulla_h_txn"
 path = "src/lib.rs"
 
 [dependencies]
+async-trait = { version = "0.1", optional = true }
+dashmap = "6.2"
+hex = "0.4"
+medulla-core = { path = "../medulla-core" }
+medulla-epistemic = { path = "../medulla-epistemic", optional = true }
+medulla-graphql = { path = "../medulla-graphql", optional = true }
+medulla-kernel = { path = "../medulla-kernel" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-persistence = { path = "../medulla-persistence" }
+medulla-plan = { path = "../medulla-plan", optional = true }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-query = { path = "../medulla-query", optional = true }
+medulla-raft = { path = "../medulla-raft" }
+medulla-rdf = { path = "../medulla-rdf", optional = true }
+medulla-server-api = { path = "../medulla-server-api" }
+medulla-sqlite-format = { path = "../medulla-sqlite-format", optional = true }
+medulla-store = { path = "../medulla-store" }
+medulla-transaction = { path = "../medulla-transaction", optional = true }
+medulla-tsdb = { path = "../medulla-tsdb", optional = true }
+medulla-types = { path = "../medulla-types" }
+parking_lot = "0.12"
+rmp-serde = "1.3"
+rustix = { version = "1.1.5", optional = true, features = ["fs"] }
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+sha2 = "0.10"
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
+tracing = "0.1"
+uuid = { version = "1.28", features = ["v4"] }
 
 [features]
 compute-dist = ["raft"]
-epistemic = ["query"]
-graphql = ["security"]
+epistemic = ["dep:medulla-plan", "medulla-plan/epistemic", "dep:medulla-epistemic", "query"]
+graphql = ["dep:medulla-graphql", "medulla-graphql/hardening", "security"]
 matview = ["query"]
 metrics = []
-owl = ["sparql"]
-query = ["redb"]
+owl = ["dep:medulla-rdf", "medulla-rdf/owl", "sparql"]
+query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "dep:medulla-query", "medulla-query/sql", "dep:medulla-plan", "medulla-plan/query", "redb"]
 raft = ["redb"]
-redb = []
+redb = ["dep:medulla-transaction", ]
 security = ["redb"]
-sparql = []
-sqlite-file = ["query"]
-tsdb = ["redb"]
+sparql = ["dep:medulla-rdf", "medulla-rdf/sparql", ]
+sqlite-file = ["dep:rustix", "dep:medulla-sqlite-format", "query"]
+tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries", "redb"]
+server = ["dep:tokio", "dep:async-trait"]
+epistemic-redaction = ["dep:medulla-epistemic", "medulla-epistemic/epistemic-redaction"]
+epistemic-tms = ["dep:medulla-epistemic", "medulla-epistemic/epistemic-tms"]
+evidence-graph = ["dep:medulla-epistemic", "medulla-epistemic/evidence-graph"]
+epistemic-causal = ["dep:medulla-epistemic", "medulla-epistemic/epistemic-causal"]
+full = ["dep:medulla-graphql", "medulla-graphql/crossmodal-tsdb"]
+numeric = ["dep:medulla-query", "medulla-query?/numeric", "dep:medulla-plan", "medulla-plan?/numeric"]
+knowledge-batch = ["dep:medulla-plan", "medulla-plan/knowledge-batch"]
+cost-opt = ["dep:medulla-plan", "medulla-plan/cost-opt"]
+par-runtime = ["dep:medulla-plan", "medulla-plan/par-runtime"]
+text = ["dep:medulla-plan", "medulla-plan/text"]
+federation = ["dep:medulla-plan", "medulla-plan/federation"]
+federation-sql = ["dep:medulla-plan", "medulla-plan/federation-sql"]
+geo = ["dep:medulla-plan", "medulla-plan/geo"]
+tensor = ["dep:medulla-plan", "medulla-plan/tensor"]
+stream = ["dep:medulla-plan", "medulla-plan/stream"]
+nl-query = ["dep:medulla-plan", "medulla-plan/nl-query"]
+wasm-udf = ["dep:medulla-plan", "medulla-plan?/wasm-udf"]
+gpu = ["dep:medulla-plan", "medulla-plan/tensor-gpu"]
+gpu-cuda = ["dep:medulla-plan", "medulla-plan/tensor-gpu-cuda"]
+owl-plan = ["dep:medulla-plan", "medulla-plan/owl"]
+cypher = ["dep:medulla-query", "medulla-query/cypher"]
+cypher-plan = ["dep:medulla-query", "medulla-query/cypher-plan"]
+result-cache = ["dep:medulla-query", "medulla-query?/result-cache"]
+rdf = ["dep:medulla-rdf", "medulla-rdf/rdf"]
+sparql-hash = ["dep:medulla-rdf", "medulla-rdf/sparql-hash"]
+rdf-xml = ["dep:medulla-rdf", "medulla-rdf/rdf-xml"]
+json-ld = ["dep:medulla-rdf", "medulla-rdf/json-ld"]
+sparql-star = ["dep:medulla-rdf", "medulla-rdf/sparql-star"]
+geosparql = ["dep:medulla-rdf", "medulla-rdf/geosparql"]
+owl-dl = ["dep:medulla-rdf", "medulla-rdf/owl-dl"]
+promql = ["dep:medulla-tsdb", "medulla-tsdb/promql"]
+traces = ["dep:medulla-tsdb", "medulla-tsdb/traces"]
+pgwire = ["dep:rustix"]
+
+[dev-dependencies]
+tempfile = "3"
