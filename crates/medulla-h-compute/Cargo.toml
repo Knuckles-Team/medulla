@@ -31,6 +31,7 @@ tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sy
 medulla-numeric = { path = "../medulla-numeric" }
 medulla-finance = { path = "../medulla-finance" }
 medulla-graph-algos = { path = "../medulla-graph-algos" }
+medulla-finance-quant = { path = "../medulla-finance-quant" }
 
 [features]
 datascience = []

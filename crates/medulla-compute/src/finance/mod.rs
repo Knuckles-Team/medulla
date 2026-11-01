@@ -10,14 +10,5 @@
 // rewrites. Scope the lint to this compute module rather than contorting the math.
 #![allow(clippy::needless_range_loop)]
 
-pub mod derivatives;
-pub mod factor;
-pub mod leverage;
 pub mod market;
-pub mod optimizer;
-pub mod quant;
-pub mod regime;
-pub mod risk;
-pub mod signal_models;
 pub mod signals;
-pub mod statespace;

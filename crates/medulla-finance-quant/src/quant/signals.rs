@@ -267,7 +267,7 @@ pub fn empirical_kelly(
     if n == 0 || n_simulations == 0 {
         return f_kelly.clamp(0.0, 1.0);
     }
-    let mut rng = crate::SplitMix64::new(seed);
+    let mut rng = medulla_compute::SplitMix64::new(seed);
     let mut edges = Vec::with_capacity(n_simulations);
     for _ in 0..n_simulations {
         let mut acc = 0.0;

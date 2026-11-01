@@ -1333,12 +1333,12 @@ mod finance_udf {
 
     /// `var(returns)` — historical Value-at-Risk at 95%.
     pub(crate) fn var_udaf() -> AggregateUDF {
-        risk_udaf("var", medulla_compute::finance::risk::historical_var)
+        risk_udaf("var", medulla_finance_quant::risk::historical_var)
     }
 
     /// `cvar(returns)` — historical Conditional VaR (expected shortfall) at 95%.
     pub(crate) fn cvar_udaf() -> AggregateUDF {
-        risk_udaf("cvar", medulla_compute::finance::risk::historical_cvar)
+        risk_udaf("cvar", medulla_finance_quant::risk::historical_cvar)
     }
 }
 

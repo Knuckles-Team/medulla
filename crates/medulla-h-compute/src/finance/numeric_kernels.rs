@@ -10,8 +10,8 @@ use medulla_protocol_types::result_contract::compute as results;
 use medulla_result_types::compute_result::finance as wire;
 use serde::Serialize;
 
-use medulla_compute::finance::factor;
-use medulla_compute::finance::factor::FactorInput;
+use medulla_finance_quant::factor;
+use medulla_finance_quant::factor::FactorInput;
 use medulla_numeric::banking;
 use medulla_numeric::banking::AmlRule;
 use medulla_numeric::banking::CapitalInputs;
