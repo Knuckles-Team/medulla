@@ -28,7 +28,7 @@ pub fn install_seams(state: &ServerState) {
     let _ = state
         .seams
         .admin
-        .set(std::sync::Arc::new(super::handlers::admin::AdminSeam));
+        .set(std::sync::Arc::new(medulla_h_admin::admin::AdminSeam));
     let _ = state
         .seams
         .decide
