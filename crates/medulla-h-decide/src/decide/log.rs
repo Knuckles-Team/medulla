@@ -8,7 +8,7 @@ use medulla_protocol_types::protocol::Response;
 use medulla_server_api::auth::VerifiedRequestContext;
 
 /// Commit, evaluate or read the decision log.
-pub(crate) async fn handle_decision_log(
+pub async fn handle_decision_log(
     state: &SharedState,
     req_id: u64,
     verified: &VerifiedRequestContext,

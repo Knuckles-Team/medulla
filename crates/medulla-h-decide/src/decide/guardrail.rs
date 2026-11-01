@@ -9,7 +9,7 @@ use medulla_persistence::agent_library::AgentLibraryStateExt;
 use medulla_agent_types::agent_guardrail::GuardrailEntailmentRequest;
 
 #[cfg(feature = "decide")]
-pub(crate) async fn handle_guardrail_entailment(
+pub async fn handle_guardrail_entailment(
     state: &SharedState,
     req_id: u64,
     verified: &VerifiedRequestContext,
@@ -54,7 +54,7 @@ async fn entailment_for(
 }
 
 #[cfg(not(feature = "decide"))]
-pub(crate) async fn handle_guardrail_entailment(
+pub async fn handle_guardrail_entailment(
     _state: &SharedState,
     req_id: u64,
     _verified: &VerifiedRequestContext,

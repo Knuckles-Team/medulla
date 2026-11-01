@@ -21,7 +21,7 @@ pub(crate) const DECIDE_AUDIT_TARGET: &str = "eg::decide::audit";
 /// Read the candidate scope, solve, and answer a record plus -- only when the
 /// outcome is `Solved` -- the graph draft it proves.
 #[cfg(feature = "decide")]
-pub(crate) async fn handle_agent_assemble(
+pub async fn handle_agent_assemble(
     state: &SharedState,
     req_id: u64,
     (graph, verified): (&str, &VerifiedRequestContext),
@@ -132,7 +132,7 @@ pub(crate) fn audit_line(
 /// A build without the Decide layer still serves the method: it refuses by
 /// name.
 #[cfg(not(feature = "decide"))]
-pub(crate) async fn handle_agent_assemble(
+pub async fn handle_agent_assemble(
     _state: &SharedState,
     req_id: u64,
     _caller: (&str, &VerifiedRequestContext),

@@ -5,7 +5,7 @@
 //! contract wave; the package that lands a handler replaces only its body.
 
 /// The server state every Decide entry point is handed.
-type SharedState = std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>;
+pub type SharedState = std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>;
 
 pub(crate) mod assemble;
 pub(crate) mod commit;
@@ -104,13 +104,13 @@ mod topology_read;
 #[cfg(feature = "decide")]
 mod topology_schema;
 
-pub(crate) use assemble::handle_agent_assemble;
-pub(crate) use commit::handle_decision_commit;
-pub(crate) use coverage::handle_capability_coverage;
-pub(crate) use guardrail::handle_guardrail_entailment;
-pub(crate) use jobs::{handle_decision_eval, handle_decision_fit};
-pub(crate) use log::handle_decision_log;
-pub(crate) use statistical::handle_decide;
+pub use assemble::handle_agent_assemble;
+pub use commit::handle_decision_commit;
+pub use coverage::handle_capability_coverage;
+pub use guardrail::handle_guardrail_entailment;
+pub use jobs::{handle_decision_eval, handle_decision_fit};
+pub use log::handle_decision_log;
+pub use statistical::handle_decide;
 
 /// The caller's read-only SQL relations — the decision record views (EH-066) — when
 /// `query` can see them; `None` otherwise, or in a build without the Decide layer.

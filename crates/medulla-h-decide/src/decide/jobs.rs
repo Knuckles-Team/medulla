@@ -9,7 +9,7 @@ use medulla_protocol_types::protocol::Response;
 use medulla_server_api::auth::VerifiedRequestContext;
 
 /// Submit or read one head-fitting job.
-pub(crate) async fn handle_decision_fit(
+pub async fn handle_decision_fit(
     state: &SharedState,
     req_id: u64,
     verified: &VerifiedRequestContext,
@@ -27,7 +27,7 @@ pub(crate) async fn handle_decision_fit(
 }
 
 /// Submit or read one head-evaluation job.
-pub(crate) async fn handle_decision_eval(
+pub async fn handle_decision_eval(
     state: &SharedState,
     req_id: u64,
     verified: &VerifiedRequestContext,

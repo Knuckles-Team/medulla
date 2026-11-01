@@ -20,7 +20,7 @@ fn refuse(
 
 /// Solve one model and answer its verified certificate.
 #[cfg(feature = "solve")]
-pub(crate) async fn handle_solve(req_id: u64, request: SolveRequest) -> Response {
+pub async fn handle_solve(req_id: u64, request: SolveRequest) -> Response {
     use medulla_protocol_types::protocol::ResultPayload;
     use medulla_compute::solve::{solve, verify, Model, SolverConfig};
     use medulla_decision_types::{
@@ -62,7 +62,7 @@ pub(crate) async fn handle_solve(req_id: u64, request: SolveRequest) -> Response
 
 /// A build without the solver still serves the method: it refuses by name.
 #[cfg(not(feature = "solve"))]
-pub(crate) async fn handle_solve(req_id: u64, _request: SolveRequest) -> Response {
+pub async fn handle_solve(req_id: u64, _request: SolveRequest) -> Response {
     Response::err(req_id, "Solve requires the `solve` feature")
 }
 

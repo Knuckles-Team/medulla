@@ -8,7 +8,7 @@ use medulla_protocol_types::protocol::Response;
 use medulla_server_api::auth::VerifiedRequestContext;
 
 /// Answer a batch of statistical decision records; commit none.
-pub(crate) async fn handle_decide(
+pub async fn handle_decide(
     state: &SharedState,
     req_id: u64,
     verified: &VerifiedRequestContext,

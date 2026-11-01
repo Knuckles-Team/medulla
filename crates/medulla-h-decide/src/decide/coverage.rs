@@ -17,7 +17,7 @@ use medulla_decision_types::decision::coverage::CapabilityCoverageRequest;
 /// Resolve the tenant's visible candidates and A2A cards and answer their
 /// per-capability coverage of the request's closure.
 #[cfg(feature = "decide")]
-pub(crate) async fn handle_capability_coverage(
+pub async fn handle_capability_coverage(
     state: &SharedState,
     req_id: u64,
     verified: &VerifiedRequestContext,
@@ -89,7 +89,7 @@ async fn coverage_for(
 /// A build without the Decide layer still serves the method: it refuses by
 /// name.
 #[cfg(not(feature = "decide"))]
-pub(crate) async fn handle_capability_coverage(
+pub async fn handle_capability_coverage(
     _state: &SharedState,
     req_id: u64,
     _verified: &VerifiedRequestContext,

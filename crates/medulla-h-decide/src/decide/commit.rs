@@ -18,7 +18,7 @@ use medulla_decision_types::decision::DecisionCommitRequest;
 
 /// Commit one `DecisionRecord` as a component revision, idempotently.
 #[cfg(feature = "decide")]
-pub(crate) async fn handle_decision_commit(
+pub async fn handle_decision_commit(
     state: &SharedState,
     req_id: u64,
     verified: &VerifiedRequestContext,
@@ -105,7 +105,7 @@ async fn commit(
 /// A build without the Decide layer still serves the method: it refuses by
 /// name.
 #[cfg(not(feature = "decide"))]
-pub(crate) async fn handle_decision_commit(
+pub async fn handle_decision_commit(
     _state: &SharedState,
     req_id: u64,
     _verified: &VerifiedRequestContext,

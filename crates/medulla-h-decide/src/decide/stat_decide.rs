@@ -57,7 +57,7 @@ use medulla_server_api::state::ServerState;
 pub(super) const STATISTICAL_INPUTS_DOMAIN: &str = "eg/decision-statistical-inputs/v1";
 
 /// Answer one statistical decision; commit nothing.
-pub(super) async fn handle_decide(
+pub async fn handle_decide(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
