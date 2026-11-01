@@ -81,6 +81,267 @@
    "note": "inline `mod sf` in quant.rs becomes file finance/market/special.rs, `pub mod special`; quant and validation use it as ..market::special"
   }
  ],
+ "medulla-server": [
+  {
+   "kind": "item",
+   "from": "dispatch",
+   "items": [
+    "timed_read",
+    "ensure_graph_resident",
+    "authorized_graph_read",
+    "typed_response",
+    "validate_get_identity_graph",
+    "validate_graph_create_type",
+    "redact_resource_status_result",
+    "UNSUPPORTED_GRAPH_TYPE",
+    "IDENTITY_GRAPH",
+    "IDENTITY_GRAPH_SCOPE_ERROR",
+    "MAX_NESTED_MSGPACK_BYTES",
+    "MAX_NESTED_MSGPACK_ITEMS",
+    "MAX_SCREEN_OBSERVATION_BYTES",
+    "MAX_SCREEN_OBSERVATION_ITEMS",
+    "MAX_SCREEN_PNG_BYTES",
+    "MAX_SCREEN_ELEMENTS",
+    "MAX_SCREEN_SESSION_ID_BYTES",
+    "MAX_SCREEN_PREVIOUS_ID_BYTES",
+    "MAX_SCREEN_ROLE_BYTES",
+    "MAX_SCREEN_ELEMENT_NAME_BYTES",
+    "MAX_SCREEN_TOTAL_TEXT_BYTES",
+    "MAX_SCREEN_DIMENSION",
+    "MAX_SCREEN_PIXELS",
+    "MAX_SCREEN_COORDINATE_ABS",
+    "MAX_REGISTER_SERVER_URL_BYTES",
+    "MAX_REGISTER_SERVER_RESOURCES_BYTES",
+    "MAX_REGISTER_SERVER_TTL_SECS",
+    "MIN_REGISTER_SERVER_TTL_SECS",
+    "mod identity_graph_scope_tests",
+    "mod graph_create_type_validation_tests",
+    "mod resource_status_privacy_tests"
+   ],
+   "to_module": "dispatch::shared",
+   "to_crate": "medulla-server-graph",
+   "unit": "dispatch::shared",
+   "from_unit": "dispatch",
+   "lines": 426,
+   "covers": [
+    "dispatch::*",
+    "dispatch::timed_read",
+    "dispatch::ensure_graph_resident",
+    "dispatch::authorized_graph_read",
+    "dispatch::typed_response",
+    "dispatch::validate_get_identity_graph",
+    "dispatch::validate_graph_create_type",
+    "dispatch::redact_resource_status_result",
+    "dispatch::UNSUPPORTED_GRAPH_TYPE",
+    "dispatch::IDENTITY_GRAPH",
+    "dispatch::IDENTITY_GRAPH_SCOPE_ERROR",
+    "dispatch::MAX_NESTED_MSGPACK_BYTES",
+    "dispatch::MAX_NESTED_MSGPACK_ITEMS",
+    "dispatch::MAX_SCREEN_OBSERVATION_BYTES",
+    "dispatch::MAX_SCREEN_OBSERVATION_ITEMS",
+    "dispatch::MAX_SCREEN_PNG_BYTES",
+    "dispatch::MAX_SCREEN_ELEMENTS",
+    "dispatch::MAX_SCREEN_SESSION_ID_BYTES",
+    "dispatch::MAX_SCREEN_PREVIOUS_ID_BYTES",
+    "dispatch::MAX_SCREEN_ROLE_BYTES",
+    "dispatch::MAX_SCREEN_ELEMENT_NAME_BYTES",
+    "dispatch::MAX_SCREEN_TOTAL_TEXT_BYTES",
+    "dispatch::MAX_SCREEN_DIMENSION",
+    "dispatch::MAX_SCREEN_PIXELS",
+    "dispatch::MAX_SCREEN_COORDINATE_ABS",
+    "dispatch::MAX_REGISTER_SERVER_URL_BYTES",
+    "dispatch::MAX_REGISTER_SERVER_RESOURCES_BYTES",
+    "dispatch::MAX_REGISTER_SERVER_TTL_SECS",
+    "dispatch::MIN_REGISTER_SERVER_TTL_SECS"
+   ],
+   "note": "New file src/dispatch/shared.rs (`pub mod shared;` in dispatch.rs): every item dispatch.rs defines above `mod change_envelope;` (dispatch.rs:1-426: the use block, the graph-type/identity-graph checks, ensure_graph_resident, authorized_graph_read, typed_response, timed_read, redact_resource_status_result, the MAX_*/MIN_* limits) and the three inline test modules that test them. Widen each to pub. Rewrite `super::X`/`super::super::X`/`crate::dispatch::X` for these names to `crate::dispatch::shared::X` (then `medulla_server_graph::dispatch::shared::X`)."
+  },
+  {
+   "kind": "item",
+   "from": "dispatch",
+   "items": [
+    "submit_repository_enrichment_page",
+    "ensure_internal_global_graph"
+   ],
+   "to_module": "dispatch::seam",
+   "to_crate": "medulla-server-router",
+   "covers": [
+    "dispatch::submit_repository_enrichment_page",
+    "dispatch::ensure_internal_global_graph"
+   ],
+   "note": "Both call the request entry and the router; they become pub fns of dispatch/seam.rs (their only callers are seam.rs and the router)."
+  },
+  {
+   "kind": "path",
+   "from": "dispatch::propose_native_mutation",
+   "to_module": "dispatch::consensus",
+   "covers": [
+    "dispatch::propose_native_mutation"
+   ],
+   "note": "Delete the dispatch.rs wrapper (it only forwards); callers (request_boundary, seam, consensus) call consensus::propose_native_mutation directly. Delete every `pub use`/`pub(crate) use` re-export in dispatch.rs; dispatch.rs keeps only `mod` lines and then moves away empty."
+  },
+  {
+   "kind": "item",
+   "from": "transport::framing",
+   "items": [
+    "validate_nested_msgpack"
+   ],
+   "to_module": "dispatch::request_boundary::preflight",
+   "to_crate": "medulla-server-graph",
+   "covers": [
+    "transport::validate_nested_msgpack"
+   ],
+   "note": "21 lines (transport/framing.rs:136); transport keeps calling it as dispatch::request_boundary::preflight::validate_nested_msgpack."
+  },
+  {
+   "kind": "port",
+   "from": "dispatch::consensus, dispatch::sparql_update -> dispatch::request_boundary",
+   "items": [
+    "dispatch/consensus/replicated.rs:76 dispatch_with_context(state, request, Some(context))",
+    "dispatch/sparql_update.rs:434 Box::pin(dispatch_with_context(..))",
+    "dispatch/sparql_update.rs:644 Box::pin(dispatch_with_context(..))"
+   ],
+   "to_module": "medulla_server_api::api::reentry",
+   "covers": [
+    "dispatch::request_boundary::*",
+    "dispatch::request_boundary::dispatch",
+    "dispatch::request_boundary::dispatch_with_context",
+    "dispatch::request_boundary::dispatch_verified_request"
+   ],
+   "note": "The only production re-entries below the router. `dispatch_with_context(s, r, Some(c))` -> `medulla_server_api::api::reentry::dispatch_verified_request(s, r, c)`, `(s, r, None)` -> `reentry::dispatch(s, r)`, an Option variable -> a match on it. Same behaviour once the DispatchSeam is installed: test_support::bootstrapped_state/state and the served-tests state builders install `dispatch::seam::DispatchSeam` on `state.seams.dispatch` (startup already does). Drop the `use super::request_boundary::dispatch_with_context` lines in consensus.rs and sparql_update.rs; graph_pipeline.rs `use super::request_boundary::{.., dispatch, ..}` keeps only the preflight/screen names (pointing at request_boundary::preflight/screen) because its only `dispatch(` callers are the test modules the next cut moves."
+  },
+  {
+   "kind": "file",
+   "from": "dispatch/graph_pipeline.rs inline mod admin_scope_tests (1214-1626), blob_dispatch_tests (1634-2009), placement_route_carrier_tests (2050-2251)",
+   "to_module": "dispatch::dispatch_e2e_tests::graph",
+   "to_crate": "medulla-server-router",
+   "unit": "dispatch::dispatch_e2e_tests",
+   "from_unit": "dispatch::graph_pipeline",
+   "lines": 991,
+   "covers": [
+    "dispatch::request_boundary::dispatch"
+   ],
+   "note": "They drive the whole served chain through request_boundary::dispatch. New src/dispatch/dispatch_e2e_tests.rs (`#[cfg(test)] mod dispatch_e2e_tests;` in dispatch.rs, moves with the router) with `mod graph;` holding the three modules verbatim; `super::` paths to graph_pipeline items become `crate::dispatch::graph_pipeline::` (pub as needed)."
+  },
+  {
+   "kind": "file",
+   "from": "dispatch/identity_store/tests.rs + identity_store/tests/ + identity_store/resolution_context/tests.rs",
+   "to_module": "dispatch::dispatch_e2e_tests::identity",
+   "to_crate": "medulla-server-router",
+   "unit": "dispatch::dispatch_e2e_tests",
+   "from_unit": "dispatch::identity_store",
+   "lines": 1934,
+   "covers": [
+    "dispatch::test_support::*",
+    "dispatch::test_support::bootstrapped_state",
+    "dispatch::test_support::send",
+    "dispatch::test_support::state",
+    "dispatch::test_support::verified",
+    "dispatch::request_boundary::dispatch"
+   ],
+   "note": "git mv to src/dispatch/dispatch_e2e_tests/identity.rs (+ identity/ for the tests/ children) and identity/resolution_context.rs; drop the `#[cfg(test)] mod tests;` lines in identity_store.rs and resolution_context.rs; `super::*` becomes `crate::dispatch::identity_store::*` (+ `::resolution_context::*`) with the items they name widened to pub."
+  },
+  {
+   "kind": "file",
+   "from": "dispatch/elevation/tests.rs",
+   "to_module": "dispatch::dispatch_e2e_tests::elevation",
+   "to_crate": "medulla-server-router",
+   "unit": "dispatch::dispatch_e2e_tests",
+   "from_unit": "dispatch::elevation",
+   "lines": 254,
+   "covers": [
+    "dispatch::test_support::verified_as",
+    "dispatch::request_boundary::dispatch_with_context"
+   ],
+   "note": "as above; `super::*` -> `crate::dispatch::elevation::*`."
+  },
+  {
+   "kind": "file",
+   "from": "dispatch/governed/tests.rs",
+   "to_module": "dispatch::dispatch_e2e_tests::governed",
+   "to_crate": "medulla-server-router",
+   "unit": "dispatch::dispatch_e2e_tests",
+   "from_unit": "dispatch::governed",
+   "lines": 132,
+   "covers": [
+    "dispatch::test_support::refused_with"
+   ],
+   "note": "as above; `super::*` -> `crate::dispatch::governed::*`."
+  },
+  {
+   "kind": "file",
+   "from": "lib.rs inline `#[cfg(test)] mod tests { .. }` (lib.rs:538-6929)",
+   "to_module": "tests",
+   "to_crate": "medulla-server-served-tests",
+   "unit": "tests",
+   "from_unit": "@root",
+   "lines": 6391,
+   "covers": [
+    "tests::udf_tenancy::IDENTITY_WAT"
+   ],
+   "note": "Body becomes src/tests.rs (its `pub mod foreign_tenancy;` etc. already resolve to src/tests/*.rs); lib.rs keeps `#[cfg(test)] mod tests;` until the move. Its `super::*` names lib.rs root items (test_state_with_services, decode_uql_ids, ...): they are pub/doc(hidden) already and become `medulla_server::..` in the tests crate."
+  }
+ ],
+ "medulla-h-query": [
+  {
+   "kind": "path",
+   "from": "query::QuerySeam",
+   "to_module": "query::seam",
+   "covers": [
+    "query::seam::QuerySeam"
+   ],
+   "note": "Drop `pub use seam::QuerySeam` in query.rs; seams_install names medulla_server's moved query::seam::QuerySeam. QuerySeam uses query::overlay::run_unified_with_staged_finish, semantic_index_runtime::existing_semantic_service and mining::gateway::try_handle: widen them to pub."
+  }
+ ],
+ "medulla-sql": [
+  {
+   "kind": "item",
+   "from": "sql::exec",
+   "items": [
+    "PgColType",
+    "TypedColumn",
+    "TypedQueryResult"
+   ],
+   "to_module": "sql::typed_result",
+   "to_crate": "medulla-sql-lang",
+   "unit": "sql::typed_result",
+   "from_unit": "sql::exec",
+   "lines": 36,
+   "covers": [
+    "sql::exec::*",
+    "sql::exec::PgColType",
+    "sql::exec::TypedColumn",
+    "sql::exec::TypedQueryResult"
+   ],
+   "note": "New file sql/typed_result.rs (`pub mod typed_result;` in sql/mod.rs) with the three types and their derives (exec.rs:223-258); exec.rs and plpgsql.rs import them from there."
+  },
+  {
+   "kind": "item",
+   "from": "sql::embed_udf",
+   "items": [
+    "MEDULLA_EMBED_FN"
+   ],
+   "to_module": "sql::pgfamily",
+   "to_crate": "medulla-sql-lang",
+   "covers": [
+    "sql::embed_udf::MEDULLA_EMBED_FN"
+   ],
+   "note": "the UDF name const; embed_udf, ann_pushdown and pgfamily name it as sql::pgfamily::MEDULLA_EMBED_FN."
+  },
+  {
+   "kind": "file",
+   "from": "sql/pgfamily.rs inline `#[cfg(test)] mod tests` (pgfamily.rs:506-697)",
+   "to_module": "sql::pgfamily_tests",
+   "to_crate": "medulla-sql",
+   "unit": "sql::pgfamily_tests",
+   "from_unit": "sql::pgfamily",
+   "lines": 192,
+   "covers": [
+    "sql::exec::exec_sql_over_tables"
+   ],
+   "note": "two of its tests run SQL through exec_sql_over_tables; new file sql/pgfamily_tests.rs (`#[cfg(test)] mod pgfamily_tests;` in sql/mod.rs), `use super::*` -> `use crate::sql::pgfamily::*` (then medulla_sql_lang::sql::pgfamily)."
+  }
+ ],
  "medulla-plan": [
   {
    "kind": "item",

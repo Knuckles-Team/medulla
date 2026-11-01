@@ -275,11 +275,20 @@ projected_lines = 20229
 [crates.medulla-sql]
 level = "L4d"
 kind = "leaf"
-responsibility = "SQL dialect: parse, classify, plan and execute over tables, including the table providers."
+responsibility = "SQL execution: DataFusion context, table providers, catalogs, ANN pushdown, spill and Iceberg federation scans."
 moves = ["crates/medulla-query/src/sql", "crates/medulla-query/src/provider"]
 specs = ["engine-parity (SQL)", "federated-query-and-reasoning (SQL)"]
-current_lines = 20821
-projected_lines = 21921
+current_lines = 10608
+projected_lines = 11708
+
+[crates.medulla-sql-tests]
+level = "L4e"
+kind = "tests"
+responsibility = "Integration tests of the SQL engine over tables, user tables, UDFs, PGQ and federation scans."
+moves = ["crates/medulla-sql/tests"]
+specs = []
+current_lines = 0
+projected_lines = 0
 
 [crates.medulla-cypher]
 level = "L4d"
@@ -316,6 +325,15 @@ moves = ["crates/medulla-query/src/numeric", "crates/medulla-query/src/series_ud
 specs = []
 current_lines = 3254
 projected_lines = 3254
+
+[crates.medulla-sql-lang]
+level = "L4c"
+kind = "leaf"
+responsibility = "SQL language front end: statement classification, SQL/PGQ graph tables, PL/pgSQL bodies, vector and hypertable DDL, function expansion and the typed result shapes."
+moves = ["crates/medulla-sql/src/sql/classify", "crates/medulla-sql/src/sql/funcs", "crates/medulla-sql/src/sql/pgfamily", "crates/medulla-sql/src/sql/pgq", "crates/medulla-sql/src/sql/pgvector_ddl", "crates/medulla-sql/src/sql/plpgsql", "crates/medulla-sql/src/sql/typed_result"]
+specs = ["engine-parity (SQL syntax)"]
+current_lines = 10213
+projected_lines = 10213
 
 [crates.medulla-query]
 level = "L4"
@@ -728,11 +746,11 @@ projected_lines = 11749
 [crates.medulla-wire-core]
 level = "F8"
 kind = "wire"
-responsibility = "Shared wire listener framework."
-moves = ["src/server/wire"]
+responsibility = "Shared wire listener framework: session and outcome traits, broker queue primitives and SQL wire authentication."
+moves = ["src/server/wire", "crates/medulla-wire/src/broker_wire", "crates/medulla-wire/src/sql_wire_auth", "crates/medulla-wire/src/wire"]
 specs = []
-current_lines = 8
-projected_lines = 1008
+current_lines = 5916
+projected_lines = 6916
 
 [crates.medulla-wire]
 level = "F9"
@@ -740,53 +758,53 @@ kind = "wire"
 responsibility = "SQL and graph wire listeners: pgwire, MySQL, MSSQL, SQLite and Bolt."
 moves = []
 specs = ["engine-parity (wire)"]
-current_lines = 29892
-projected_lines = 29992
+current_lines = 10164
+projected_lines = 10264
 
 [crates.medulla-wire-msg]
 level = "F9"
 kind = "wire"
-responsibility = "Messaging and object listeners: AMQP, MQTT, STOMP, Redis, DDS, S3 and the KV cache endpoint."
-moves = ["src/server/amqp_wire", "src/server/mqtt_wire", "src/server/stomp_wire", "src/server/redis_wire", "src/server/dds", "src/server/s3", "src/server/kvcache_http"]
+responsibility = "Messaging and object listeners: AMQP, MQTT, STOMP, Redis, DDS/ROS 2, S3 and the KV cache endpoint."
+moves = ["src/server/amqp_wire", "src/server/mqtt_wire", "src/server/stomp_wire", "src/server/redis_wire", "src/server/dds", "src/server/s3", "src/server/kvcache_http", "crates/medulla-wire/src/amqp_wire", "crates/medulla-wire/src/dds", "crates/medulla-wire/src/kvcache_http", "crates/medulla-wire/src/mqtt_wire", "crates/medulla-wire/src/redis_wire", "crates/medulla-wire/src/ros2_bridge", "crates/medulla-wire/src/s3", "crates/medulla-wire/src/stomp_wire"]
 specs = ["engine-parity (messaging wire)", "object-storage-backend (S3)"]
-current_lines = 8
-projected_lines = 208
+current_lines = 13828
+projected_lines = 14028
 
 [crates.medulla-h-query]
-level = "F9"
+level = "F9a"
 kind = "handler"
-responsibility = "UnifiedQuery and knowledge stream handlers."
+responsibility = "Query handlers: UnifiedQuery, SQL, Cypher, GraphQL, NL query, explain, request cancel, streaming and the knowledge stream."
 moves = []
 specs = []
-current_lines = 38199
-projected_lines = 38199
+current_lines = 13992
+projected_lines = 13992
 
 [crates.medulla-h-sparql]
 level = "F9"
 kind = "handler"
-responsibility = "SPARQL/RDF and federation handlers."
-moves = ["src/server/handlers/rdf", "src/server/federation"]
+responsibility = "SPARQL/RDF, SPARQL service and federated-search handlers, including foreign source registration."
+moves = ["src/server/handlers/rdf", "src/server/federation", "crates/medulla-h-query/src/federation", "crates/medulla-h-query/src/foreign_source_handlers", "crates/medulla-h-query/src/rdf", "crates/medulla-h-query/src/sparql_service"]
 specs = []
-current_lines = 8
-projected_lines = 828
+current_lines = 6407
+projected_lines = 7227
 
 [crates.medulla-h-retrieve]
 level = "F9"
 kind = "handler"
-responsibility = "Discover, semantic index and reasoning projection handlers."
-moves = ["src/server/semantic_index", "src/server/handlers/semantic_index", "src/server/reasoning_projection"]
+responsibility = "Semantic, text, spatial and secondary index runtimes and the reasoning projection handlers."
+moves = ["src/server/semantic_index", "src/server/handlers/semantic_index", "src/server/reasoning_projection", "crates/medulla-h-query/src/reasoning_projection", "crates/medulla-h-query/src/secondary_indexes", "crates/medulla-h-query/src/semantic_index", "crates/medulla-h-query/src/semantic_index_runtime"]
 specs = []
-current_lines = 8
-projected_lines = 368
+current_lines = 8666
+projected_lines = 9026
 
 [crates.medulla-h-mining]
-level = "F9"
+level = "F9b"
 kind = "handler"
-responsibility = "Mining handlers."
-moves = ["src/server/handlers/mining"]
+responsibility = "Mining handlers over the served query path."
+moves = ["src/server/handlers/mining", "crates/medulla-h-query/src/mining"]
 specs = []
-current_lines = 8
-projected_lines = 288
+current_lines = 9086
+projected_lines = 9366
 
 [crates.medulla-h-admin]
 level = "F9"
@@ -861,67 +879,94 @@ current_lines = 10730
 projected_lines = 10730
 
 [crates.medulla-server-graph]
-level = "F10"
+level = "F10b"
 kind = "server-part"
-responsibility = "Graph pipeline dispatch, SPARQL update dispatch and change envelopes."
-moves = ["src/server/dispatch/graph_pipeline", "src/server/dispatch/sparql_update", "src/server/dispatch/change_envelope"]
+responsibility = "Graph-op dispatch pipeline: graph pipeline, change envelopes, SPARQL update, policy evolution, request payload preflight and the shared dispatch helpers."
+moves = ["src/server/dispatch/graph_pipeline", "src/server/dispatch/sparql_update", "src/server/dispatch/change_envelope", "crates/medulla-server/src/dispatch/change_envelope", "crates/medulla-server/src/dispatch/change_envelope_draft", "crates/medulla-server/src/dispatch/graph_pipeline", "crates/medulla-server/src/dispatch/policy_evolution", "crates/medulla-server/src/dispatch/request_boundary/preflight", "crates/medulla-server/src/dispatch/request_boundary/screen", "crates/medulla-server/src/dispatch/shared", "crates/medulla-server/src/dispatch/sparql_update", "crates/medulla-server/src/handlers", "crates/medulla-server/src/semantic_activation", "src/server/dispatch/policy_evolution"]
 specs = []
-current_lines = 8
-projected_lines = 3948
+current_lines = 13037
+projected_lines = 17077
 
 [crates.medulla-server-consensus]
-level = "F10"
+level = "F10c"
 kind = "server-part"
-responsibility = "Consensus dispatch."
-moves = ["src/server/dispatch/consensus"]
+responsibility = "Consensus dispatch: replicated apply, native proposal routing, transactions, job publication, server registry and fleet catalog."
+moves = ["src/server/dispatch/consensus", "crates/medulla-server/src/dispatch/consensus"]
 specs = []
-current_lines = 8
-projected_lines = 208
+current_lines = 4673
+projected_lines = 4873
 
 [crates.medulla-server-obs]
-level = "F10"
+level = "F10a"
 kind = "server-part"
-responsibility = "Observability, traces, telemetry and QoS."
-moves = ["src/server/obs", "src/server/traces", "src/server/dispatch/telemetry", "src/server/qos"]
+responsibility = "Observability serving: logs, metrics, PromQL, OTLP traces and QoS classes."
+moves = ["src/server/obs", "src/server/traces", "src/server/qos", "crates/medulla-server/src/obs", "crates/medulla-server/src/promql", "crates/medulla-server/src/qos", "crates/medulla-server/src/traces"]
 specs = []
-current_lines = 8
-projected_lines = 8
+current_lines = 8214
+projected_lines = 8214
 
 [crates.medulla-server-lake]
-level = "F10"
+level = "F10a"
 kind = "server-part"
 responsibility = "Lake serving, GraphQL subscriptions and policy export."
-moves = ["src/server/lake", "src/server/graphql_sub", "src/server/policy_export"]
+moves = ["src/server/lake", "src/server/graphql_sub", "src/server/policy_export", "crates/medulla-server/src/graphql_sub", "crates/medulla-server/src/lake", "crates/medulla-server/src/policy_export"]
 specs = []
-current_lines = 8
-projected_lines = 708
+current_lines = 7729
+projected_lines = 8429
 
 [crates.medulla-server-identity]
-level = "F10"
+level = "F10c"
 kind = "server-part"
-responsibility = "Identity store dispatch, request boundary and policy evolution dispatch."
-moves = ["src/server/dispatch/identity_store", "src/server/dispatch/request_boundary", "src/server/dispatch/policy_evolution"]
+responsibility = "Identity dispatch: identity stamping, signing secrets, resolution context, request elevation and governed actors."
+moves = ["src/server/dispatch/identity_store", "crates/medulla-server/src/dispatch/elevation", "crates/medulla-server/src/dispatch/governed", "crates/medulla-server/src/dispatch/identity_store"]
 specs = []
-current_lines = 8
-projected_lines = 308
+current_lines = 3767
+projected_lines = 3867
 
 [crates.medulla-server-router]
-level = "F10"
+level = "F10d"
 kind = "server-part"
-responsibility = "Method router dispatch table."
-moves = ["src/server/dispatch/router"]
+responsibility = "Request entry and method router: request boundary, method tables, telemetry methods, the dispatch seam and the end-to-end dispatch tests."
+moves = ["src/server/dispatch/router", "crates/medulla-server/src/dispatch/dispatch_e2e_tests", "crates/medulla-server/src/dispatch/request_boundary", "crates/medulla-server/src/dispatch/request_boundary/authorization", "crates/medulla-server/src/dispatch/request_boundary/consensus", "crates/medulla-server/src/dispatch/request_boundary/method_errors", "crates/medulla-server/src/dispatch/request_boundary/saga", "crates/medulla-server/src/dispatch/router", "crates/medulla-server/src/dispatch/seam", "crates/medulla-server/src/dispatch/telemetry", "crates/medulla-server/src/dispatch/test_support", "src/server/dispatch/telemetry", "src/server/dispatch/request_boundary"]
 specs = []
-current_lines = 8
-projected_lines = 1708
+current_lines = 7881
+projected_lines = 9681
 
 [crates.medulla-server]
 level = "F11"
 kind = "server"
-responsibility = "Server assembly: router, startup, transport and the remaining dispatch."
-moves = []
+responsibility = "Server composition root: startup, seam installation, transport, issuer trust, replica, registry reaper, retention and CDC sink."
+moves = ["crates/medulla-h-query/src/query/seam"]
 specs = []
-current_lines = 82135
-projected_lines = 82135
+current_lines = 13138
+projected_lines = 13138
+
+[crates.medulla-server-served-tests]
+level = "F11a"
+kind = "tests"
+responsibility = "End-to-end served tests: the full dispatch chain, handler and wire protocol round trips through the assembled server."
+moves = ["crates/medulla-server/src/split_tests/medulla_h_admin_boot_regression", "crates/medulla-server/src/split_tests/medulla_h_decide_decide_guardrail_tests", "crates/medulla-server/src/split_tests/medulla_h_decide_harness_config_tests", "crates/medulla-server/src/split_tests/medulla_h_ingest_repository_index_tests", "crates/medulla-server/src/split_tests/medulla_h_ingest_web_ingest_tests", "crates/medulla-server/src/split_tests/medulla_h_jobs_wire_tests", "crates/medulla-server/src/split_tests/medulla_h_query_dispatch_pipeline_tests", "crates/medulla-server/src/split_tests/medulla_h_query_sql_source_read_tests", "crates/medulla-server/src/split_tests/medulla_wire_wire_tests", "crates/medulla-server/src/split_tests/wired_edge_index", "crates/medulla-server/src/tests"]
+specs = []
+current_lines = 6481
+projected_lines = 6481
+
+[crates.medulla-server-store-tests]
+level = "F11a"
+kind = "tests"
+responsibility = "Served mutation, batch, saga, persistence and store run-owner tests across the server API and store crates."
+moves = ["crates/medulla-server/src/split_tests/admin_agent_library_security", "crates/medulla-server/src/split_tests/impact_watch", "crates/medulla-server/src/split_tests/mutation_batch_internal_replay", "crates/medulla-server/src/split_tests/mutation_batch_lifecycle", "crates/medulla-server/src/split_tests/mutation_redb", "crates/medulla-server/src/split_tests/persistence_txn", "crates/medulla-server/src/split_tests/server_api_mutation_inventory", "crates/medulla-server/src/split_tests/server_api_saga", "crates/medulla-server/src/split_tests/store_run_owner", "crates/medulla-server/src/split_tests/store_terminal_batch"]
+specs = []
+current_lines = 7304
+projected_lines = 7304
+
+[crates.medulla-server-cluster-tests]
+level = "F11a"
+kind = "tests"
+responsibility = "Cluster tests: raft clusters and commands, cross-shard harness, placement and resource acceptance."
+moves = ["crates/medulla-server/src/split_tests/placement_harness", "crates/medulla-server/src/split_tests/raft_cluster", "crates/medulla-server/src/split_tests/raft_command", "crates/medulla-server/src/split_tests/resource_acceptance_test", "crates/medulla-server/src/split_tests/xshard_harness"]
+specs = []
+current_lines = 10031
+projected_lines = 10031
 
 [crates.medulla-engine]
 level = "F12"
