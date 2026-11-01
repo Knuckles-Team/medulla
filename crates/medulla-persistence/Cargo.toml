@@ -12,23 +12,68 @@ name = "medulla_persistence"
 path = "src/lib.rs"
 
 [dependencies]
+async-trait = { version = "0.1", optional = true }
+hex = "0.4"
+medulla-capabilities = { path = "../medulla-capabilities", optional = true }
+medulla-compute = { path = "../medulla-compute" }
+medulla-core = { path = "../medulla-core" }
+medulla-kernel = { path = "../medulla-kernel" }
+medulla-query = { path = "../medulla-query", optional = true }
+medulla-rdf = { path = "../medulla-rdf", optional = true }
+medulla-server-api = { path = "../medulla-server-api" }
+medulla-storage = { path = "../medulla-storage", optional = true }
+medulla-store = { path = "../medulla-store" }
+medulla-transaction = { path = "../medulla-transaction", optional = true }
+medulla-tsdb = { path = "../medulla-tsdb", optional = true }
+medulla-types = { path = "../medulla-types" }
+parking_lot = "0.12"
+redb = { workspace = true, optional = true }
+rmp-serde = "1.3"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+sha2 = "0.10"
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", optional = true }
 
 [features]
 cold-tier = []
 cold-tier-s3 = ["cold-tier"]
 compute-dist = ["raft"]
 cost = ["server"]
-cypher = []
-decide = ["redb", "shacl"]
+cypher = ["dep:medulla-query", "medulla-query/cypher", ]
+decide = ["dep:medulla-capabilities", "medulla-capabilities?/decide", "redb", "shacl"]
 kv = ["server", "redb"]
 matview = ["query"]
 metrics = []
-query = ["redb"]
+query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "dep:medulla-query", "medulla-query/sql", "redb"]
 raft = ["server", "redb"]
-rdf = ["server"]
-redb = []
+rdf = ["dep:medulla-rdf", "medulla-rdf/rdf", "server"]
+redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", ]
 security = ["redb"]
-server = []
+server = ["dep:tracing-subscriber", "dep:tokio", "dep:medulla-capabilities", "dep:async-trait", ]
 shacl = ["rdf"]
-sparql = ["rdf"]
-tsdb = ["server", "redb"]
+sparql = ["dep:medulla-rdf", "medulla-rdf/sparql", "rdf"]
+tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store", "server", "redb"]
+jobs = ["dep:medulla-capabilities", "medulla-capabilities/jobs"]
+statechart = ["dep:medulla-capabilities", "medulla-capabilities/statechart"]
+viz = ["dep:medulla-capabilities", "medulla-capabilities?/viz"]
+modality-serving = ["dep:medulla-capabilities", "medulla-capabilities/modality-serving"]
+asr-whisper = ["dep:medulla-capabilities", "medulla-capabilities/asr-native"]
+knowledge-batch = ["dep:medulla-capabilities", "medulla-capabilities/knowledge-batch"]
+quantum-agent-api = ["dep:medulla-capabilities", "medulla-capabilities/quantum"]
+numeric = ["dep:medulla-query", "medulla-query?/numeric"]
+cypher-plan = ["dep:medulla-query", "medulla-query/cypher-plan"]
+result-cache = ["dep:medulla-query", "medulla-query?/result-cache"]
+sparql-hash = ["dep:medulla-rdf", "medulla-rdf/sparql-hash"]
+rdf-xml = ["dep:medulla-rdf", "medulla-rdf/rdf-xml"]
+json-ld = ["dep:medulla-rdf", "medulla-rdf/json-ld"]
+sparql-star = ["dep:medulla-rdf", "medulla-rdf/sparql-star"]
+geosparql = ["dep:medulla-rdf", "medulla-rdf/geosparql"]
+owl = ["dep:medulla-rdf", "medulla-rdf/owl"]
+owl-dl = ["dep:medulla-rdf", "medulla-rdf/owl-dl"]
+promql = ["dep:medulla-tsdb", "medulla-tsdb/promql"]
+traces = ["dep:medulla-tsdb", "medulla-tsdb/traces"]
+
+[dev-dependencies]
+tempfile = "3"
