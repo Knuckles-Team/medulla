@@ -511,7 +511,7 @@ fn handle(store: &KvCacheStore, auth: &KvAuth, req: &HttpMessage) -> KvResponse 
         "kvcache-client",
         &["kg:read", "kg:write"],
     );
-    if medulla_server_api::access::unauthenticated_carrier_denied(carrier.as_ref()) {
+    if medulla_server_api::carrier::unauthenticated_carrier_denied(carrier.as_ref()) {
         return KvResponse::error(
             "403 Forbidden",
             "AccessDenied",

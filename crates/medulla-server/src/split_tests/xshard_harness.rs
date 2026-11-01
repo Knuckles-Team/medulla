@@ -560,11 +560,11 @@ async fn txn_handle(
         );
     // The harness drives the real handler through the transaction seam; install the seams
     // (idempotent) because this fixture builds its state without the server startup.
-    let txn = {
+    {
         let guard = state.read().await;
         crate::seams_install::install_seams(&guard);
-        guard.seams.txn.get().cloned()
-    };
+    }
+    let txn = medulla_server_api::api::query_txn::txn_seam(&state).await;
     let Some(txn) = txn else {
         return Ok(Response::err(
             req_id,

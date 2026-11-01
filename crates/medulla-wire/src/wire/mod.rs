@@ -4677,26 +4677,14 @@ impl WireSession {
 
     /// The installed transaction seam, or an internal error when none is installed.
     async fn txn_api(&self) -> WireResult<Arc<dyn medulla_server_api::api::query_txn::TxnApi>> {
-        self.state
-            .read()
-            .await
-            .seams
-            .txn
-            .get()
-            .cloned()
+        medulla_server_api::api::query_txn::txn_seam(&self.state).await
             .ok_or_else(|| user_err("INTERNAL: transaction seam is not installed"))
     }
 
     /// The installed query seam, or an internal error when none is installed.
     #[cfg(feature = "query")]
     async fn query_api(&self) -> WireResult<Arc<dyn medulla_server_api::api::query_txn::QueryApi>> {
-        self.state
-            .read()
-            .await
-            .seams
-            .query
-            .get()
-            .cloned()
+        medulla_server_api::api::query_txn::query_seam(&self.state).await
             .ok_or_else(|| user_err("INTERNAL: query seam is not installed"))
     }
 

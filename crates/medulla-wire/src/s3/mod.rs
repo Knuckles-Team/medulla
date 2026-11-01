@@ -905,7 +905,7 @@ fn handle(store: &S3Store, auth: &S3Auth, req: &S3Request) -> S3Response {
         "s3-api-client",
         &["kg:read", "kg:write"],
     );
-    if medulla_server_api::access::unauthenticated_carrier_denied(carrier.as_ref()) {
+    if medulla_server_api::carrier::unauthenticated_carrier_denied(carrier.as_ref()) {
         return S3Response::error("403 Forbidden", "AccessDenied", "Access Denied");
     }
     handle_authorized(store, req)

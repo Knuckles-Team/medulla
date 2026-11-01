@@ -149,7 +149,7 @@ pub(crate) async fn handle_sql(
         Err(error) => return Ok(Response::err(req_id, error)),
     };
     let persist_path = persist_dir.as_path();
-    let wire = ctx.state.read().await.seams.wire.get().cloned();
+    let wire = medulla_server_api::api::query_txn::wire_seam(&ctx.state).await;
     let store = match sql_tenant_store(authority, persist_path, req_id) {
         Ok(store) => store,
         Err(response) => return Ok(response),

@@ -23,7 +23,6 @@
 
 #![allow(clippy::result_large_err)]
 
-use medulla_server_api::cdc::CdcStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -445,6 +444,7 @@ mod rls_no_exfiltrate_tests {
     feature = "redb"
 ))]
 mod result_cache_dispatch_tests {
+    use medulla_server_api::cdc::CdcStateExt;
     use super::current_auth_test_support::prelude::*;
 
     const SECRET: &str = "result-cache-test-secret";

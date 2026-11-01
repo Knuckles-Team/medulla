@@ -582,7 +582,7 @@ async fn handle(
     // reports/issue-register.md, A18), so no `CarrierAuthority` can ever be
     // minted here today; this always denies, honestly (via the real check)
     // rather than via the old unconditional stub.
-    if medulla_server_api::access::unauthenticated_carrier_denied(None) {
+    if medulla_server_api::carrier::unauthenticated_carrier_denied(None) {
         return (
             "403 Forbidden",
             "application/json",

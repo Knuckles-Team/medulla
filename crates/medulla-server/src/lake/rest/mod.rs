@@ -167,7 +167,7 @@ fn resolve_carrier(
     }
     let verified = verify_bearer(credential, headers);
     let carrier = medulla_server_api::auth::mint_iceberg_carrier(verified.as_ref());
-    if medulla_server_api::access::unauthenticated_carrier_denied(carrier.as_ref()) {
+    if medulla_server_api::carrier::unauthenticated_carrier_denied(carrier.as_ref()) {
         Err(())
     } else {
         Ok(carrier)

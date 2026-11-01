@@ -239,13 +239,7 @@ async fn semantic_owner(
 ) -> Result<Owner, String> {
     let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(verified)?;
     let persist_dir = persist_dir(state).await?;
-    let query = state
-        .read()
-        .await
-        .seams
-        .query
-        .get()
-        .cloned()
+    let query = medulla_server_api::api::query_txn::query_seam(&state).await
         .ok_or_else(|| "INTERNAL: query seam is not installed".to_string())?;
     let service =
         query.existing_semantic_service(&persist_dir, authority.tenant_scope(), binding_id)?;

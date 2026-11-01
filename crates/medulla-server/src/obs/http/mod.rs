@@ -194,7 +194,7 @@ fn admit(
     let operation = classify_observability_operation(path);
     let writer = match operation {
         // No carrier on this surface can prove tenant ownership of a read.
-        ObsOperation::Read if medulla_server_api::access::unauthenticated_carrier_denied(None) => {
+        ObsOperation::Read if medulla_server_api::carrier::unauthenticated_carrier_denied(None) => {
             None
         }
         ObsOperation::Read => return Ok(None),

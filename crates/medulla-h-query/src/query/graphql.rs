@@ -7,13 +7,7 @@ use medulla_server_api::api::query_txn::TxnApi;
 /// The installed transaction seam, or the internal error text when none is installed.
 #[cfg(feature = "graphql")]
 async fn txn_seam(state: &Arc<RwLock<ServerState>>) -> Result<Arc<dyn TxnApi>, String> {
-    state
-        .read()
-        .await
-        .seams
-        .txn
-        .get()
-        .cloned()
+    medulla_server_api::api::query_txn::txn_seam(&state).await
         .ok_or_else(|| "INTERNAL: transaction seam is not installed".to_string())
 }
 

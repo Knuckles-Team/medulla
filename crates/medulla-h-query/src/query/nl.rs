@@ -1,3 +1,4 @@
+use medulla_server_api::api::query_txn::ForeignStateExt;
 use super::*;
 
 /// `Method::TxnUql`: a UQL statement over the txn-overlaid snapshot (read your own
@@ -117,7 +118,7 @@ async fn nl_foreign_sources(
     let carrier = read_authority.and_then(GraphReadAuthority::carrier)?;
     let state = state.read().await;
     let registry = state
-        .foreign_sources
+        .foreign_sources()
         .registry_for(carrier, &state.isolation);
     Some(registry.registry().names().into_iter().collect())
 }
