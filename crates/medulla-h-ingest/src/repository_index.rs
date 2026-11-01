@@ -51,7 +51,7 @@ const RECORD_ITEMS_PER_OPERATION: usize = 10;
 pub struct IndexWriteSet {
     pub envelope_id: String,
     digest: Digest256,
-    methods: Vec<Method>,
+    pub methods: Vec<Method>,
 }
 
 /// What a property value holding host identity is stored as.
@@ -133,7 +133,7 @@ pub fn lower(result: &IndexResult) -> Result<IndexWriteSet, String> {
 
 impl IndexWriteSet {
     /// The lowered methods, in commit order.
-    pub(crate) fn methods(&self) -> &[Method] {
+    pub fn methods(&self) -> &[Method] {
         &self.methods
     }
 
