@@ -19,7 +19,20 @@ pub const MAX_INGEST_STREAM_ITEMS: usize = 49;
 pub trait IngestApi: Send + Sync {}
 
 /// Graph handler behaviour reachable from crates below `medulla-h-graph`.
-pub trait GraphApi: Send + Sync {}
+#[async_trait::async_trait]
+pub trait GraphApi: Send + Sync {
+    /// Run a read-only graph method (the terminal graph-ops handler) over `core`.
+    async fn graph_ops_try_handle(
+        &self,
+        state: &std::sync::Arc<tokio::sync::RwLock<crate::state::ServerState>>,
+        req_id: u64,
+        caller: Option<&str>,
+        graph_name: &str,
+        read_authority: &crate::access::GraphReadAuthority,
+        core: std::sync::Arc<medulla_core::graph::GraphCore>,
+        method: Method,
+    ) -> medulla_protocol_types::protocol::Response;
+}
 
 /// Jobs handler behaviour reachable from crates below `medulla-h-jobs`.
 pub trait JobsApi: Send + Sync {

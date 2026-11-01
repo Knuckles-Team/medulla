@@ -43,7 +43,7 @@ use self::features::{build_features, compute_embedding_rows, first_embedding};
 /// Handles read-only Evaluate/Compare and returns other methods to dispatch.
 /// BUG-034: both read paths scan graph labels or model nodes, so the caller's
 /// RLS-projected core must be used before any feature or metric computation.
-pub(crate) fn try_handle(
+pub fn try_handle(
     req_id: u64,
     core: Arc<GraphCore>,
     read_authority: Option<&medulla_server_api::access::GraphReadAuthority>,

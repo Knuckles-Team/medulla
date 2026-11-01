@@ -400,7 +400,7 @@ async fn handle_cluster_members(
 }
 
 #[cfg(feature = "raft")]
-pub(crate) async fn try_handle(
+pub async fn try_handle(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     method: Method,
@@ -413,7 +413,7 @@ pub(crate) async fn try_handle(
 }
 
 #[cfg(not(feature = "raft"))]
-pub(crate) async fn try_handle(
+pub async fn try_handle(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     method: Method,

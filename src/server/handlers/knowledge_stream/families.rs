@@ -234,21 +234,24 @@ async fn execute_vector(
     let caller = ctx.stream.caller;
     let read_authority = ctx.stream.read_authority;
     let authority = ctx.stream.authority;
-    let response = super::super::graph_ops::try_handle(
-        state,
-        req_id,
-        Some(caller),
-        graph_name,
-        read_authority,
-        core.clone(),
-        Method::Discover {
-            keywords: keywords.to_vec(),
-            query_embedding: query_embedding.to_vec(),
-            k: *k,
-            quality_policy_ref: None,
-        },
-    )
-    .await;
+    let graph = state.read().await.seams.graph.get().cloned();
+    let response = graph
+        .ok_or_else(|| "INTERNAL: graph surface unavailable".to_string())?
+        .graph_ops_try_handle(
+            state,
+            req_id,
+            Some(caller),
+            graph_name,
+            read_authority,
+            core.clone(),
+            Method::Discover {
+                keywords: keywords.to_vec(),
+                query_embedding: query_embedding.to_vec(),
+                k: *k,
+                quality_policy_ref: None,
+            },
+        )
+        .await;
     let mut source_result = response_result(response)?;
     let visible = visible_node_ids(core, authority)?;
     let values = match &mut source_result {

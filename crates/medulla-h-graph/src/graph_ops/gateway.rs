@@ -33,7 +33,7 @@ where
 /// GraphLearn*/MiningPipeline* families (same `commit_conditional_mutation` shape,
 /// gated on different features). Not itself `mining`-gated since
 /// GraphLearn*/MiningPipeline* need it under their own, different features.
-pub(crate) fn mining_response_to_gateway_result(resp: Response) -> Result<ResultPayload, String> {
+pub fn mining_response_to_gateway_result(resp: Response) -> Result<ResultPayload, String> {
     mutation::response_to_gateway_result(resp)
 }
 
@@ -46,7 +46,7 @@ pub(crate) fn mining_response_to_gateway_result(resp: Response) -> Result<Result
 /// straight back (`Err(method)`), unchanged, exactly like every other domain
 /// router in `dispatch.rs`'s routing chain.
 #[allow(clippy::too_many_arguments)]
-pub(crate) async fn try_handle_gateway(
+pub async fn try_handle_gateway(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     caller: Option<&str>,

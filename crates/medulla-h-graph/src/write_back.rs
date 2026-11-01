@@ -17,7 +17,7 @@ use medulla_persistence::agent_library::AgentLibraryStore;
 use medulla_server_api::state::ServerState;
 use medulla_mutation_types::write_back::{SourceChangeSet, WriteBackOp};
 
-pub(crate) async fn handle_write_back(
+pub async fn handle_write_back(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,

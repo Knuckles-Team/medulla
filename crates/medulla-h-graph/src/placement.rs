@@ -363,7 +363,7 @@ async fn handle_abort_move(
 }
 
 #[cfg(feature = "raft")]
-pub(crate) async fn try_handle(
+pub async fn try_handle(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     method: Method,
@@ -376,7 +376,7 @@ pub(crate) async fn try_handle(
 }
 
 #[cfg(not(feature = "raft"))]
-pub(crate) async fn try_handle(
+pub async fn try_handle(
     _state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     method: Method,

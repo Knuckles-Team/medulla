@@ -48,7 +48,7 @@ pub(super) async fn try_handle_graph_domains(
         "METHOD_NOT_YET_SERVED: Method not available in this server build (unknown method, or a feature — finance/datascience/reasoning/query — not enabled)",
     ))
 }
-pub(crate) async fn try_handle(
+pub async fn try_handle(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     _caller: Option<&str>,
