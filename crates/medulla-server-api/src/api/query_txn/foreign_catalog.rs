@@ -69,7 +69,7 @@ use medulla_types::wire::ForeignSourceSpec;
 use super::foreign_share::{may_use_shared, share_resource, shared_name};
 use crate::access::CarrierAuthority;
 use crate::api::persistence::SourceApprovalStore;
-use medulla_core::isolation::IsolationLayer;
+use medulla_isolation::isolation::IsolationLayer;
 
 /// `(verified owner scope, source name)` — the catalog key.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

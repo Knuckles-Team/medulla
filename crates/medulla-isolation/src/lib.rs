@@ -6,3 +6,17 @@
 
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
+
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod isolation;
+#[cfg(feature = "security")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod rbac;
+/// CONCEPT:MEDULLA-KG.compute.durable-rbac-identity-persistence — durable RBAC/identity persistence (redb-backed, feature `security`).
+#[cfg(feature = "security")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod rbac_persist;
+#[cfg(all(test, feature = "security"))]
+pub(crate) mod test_scope_grant;
+#[cfg(test)]
+pub(crate) mod test_threads;

@@ -46,7 +46,7 @@ pub(super) fn decode_json_object(blob: &[u8]) -> serde_json::Map<String, serde_j
 pub(super) fn stamp_owner_id_if_applicable(
     method: Method,
     caller: Option<&str>,
-    isolation: &medulla_core::isolation::IsolationLayer,
+    isolation: &medulla_isolation::isolation::IsolationLayer,
 ) -> Method {
     // Flat guard clauses rather than nested `if`s: each exemption below returns
     // `method` untouched, which is byte-for-byte what the nested form did by
@@ -77,7 +77,8 @@ pub(super) fn stamp_owner_id_if_applicable(
         _ => unreachable!("matched above"),
     };
     // Already owned (or unstampable) => leave the blob exactly as the caller sent it.
-    let Some(stamped) = medulla_core::isolation::stamp_owner_id_if_absent(blob, caller_id) else {
+    let Some(stamped) = medulla_isolation::isolation::stamp_owner_id_if_absent(blob, caller_id)
+    else {
         return method;
     };
     let mut method = method;

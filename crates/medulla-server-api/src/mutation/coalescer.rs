@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use medulla_core::isolation::IsolationLayer;
 use medulla_graph_core::graph::GraphCore;
+use medulla_isolation::isolation::IsolationLayer;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;

@@ -64,6 +64,7 @@ medulla-result-types = { path = "../medulla-result-types" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-query-cache = { path = "../medulla-query-cache" }
 medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-isolation = { path = "../medulla-isolation" }
 
 [features]
 test-support = []

@@ -858,7 +858,7 @@ mod tests {
     async fn run_query_pins_bearer_gate_negotiation_and_errors() {
         let state = Arc::new(RwLock::new(ServerState::new_for_test(
             "test",
-            medulla_core::isolation::IsolationLayer::new(),
+            medulla_isolation::isolation::IsolationLayer::new(),
         )));
         let bearer = crate::auth::BearerCredential::Static("s3cret".to_string());
         let select = "SELECT ?s WHERE { ?s ?p ?o }";

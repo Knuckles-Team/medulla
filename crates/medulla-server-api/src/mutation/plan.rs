@@ -1,5 +1,5 @@
 use medulla_capabilities::DurabilityDomain;
-use medulla_core::isolation::IsolationLayer;
+use medulla_isolation::isolation::IsolationLayer;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 

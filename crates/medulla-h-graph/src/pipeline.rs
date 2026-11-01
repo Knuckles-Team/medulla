@@ -909,7 +909,7 @@ fn now_secs() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_core::isolation::IsolationLayer;
+    use medulla_isolation::isolation::IsolationLayer;
     use medulla_protocol_types::protocol::GraphSource;
     use medulla_server_api::access::GraphReadAuthority;
     use medulla_server_api::auth::VerifiedRequestContext;

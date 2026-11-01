@@ -66,7 +66,7 @@ mod tests {
     fn default_state_rejects_unsigned_correlation() {
         let state = crate::state::ServerState::new(
             "synthetic-test-secret",
-            medulla_core::isolation::IsolationLayer::new(),
+            medulla_isolation::isolation::IsolationLayer::new(),
         );
         assert!(state
             .request_authority(&request("anon1.{\"idempotency_key\":\"one-operation\"}"))

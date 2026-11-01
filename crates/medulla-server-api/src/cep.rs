@@ -694,7 +694,7 @@ mod tests {
     fn shared_state() -> Arc<RwLock<ServerState>> {
         Arc::new(RwLock::new(ServerState::new_for_test(
             "test",
-            medulla_core::isolation::IsolationLayer::new(),
+            medulla_isolation::isolation::IsolationLayer::new(),
         )))
     }
 

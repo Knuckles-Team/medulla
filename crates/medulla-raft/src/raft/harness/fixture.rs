@@ -8,9 +8,9 @@ use std::time::Duration;
 use openraft::BasicNode;
 use tokio::sync::RwLock;
 
-use medulla_core::isolation::IsolationLayer;
-use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_isolation::isolation::IsolationLayer;
 use medulla_persistence::redb_backend::RedbBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::state::ServerState;
 
 /// The concrete backend shape shared by the Raft harness fixtures.

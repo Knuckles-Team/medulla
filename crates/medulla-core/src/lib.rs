@@ -19,8 +19,6 @@ pub use medulla_types::{acl, types, wire};
 /// leaves no state behind to distrust, and std's poison would carry no information.
 
 /// Bounded thread fan-out and start gates for this crate's concurrency tests.
-#[cfg(test)]
-pub(crate) mod test_threads;
 
 // CONCEPT:MEDULLA-KG.compute.message-broker-exchanges — message-broker exchanges/routing on top of the KG-2.303 queue.
 #[cfg(feature = "broker")]
@@ -47,7 +45,6 @@ pub mod freshness;
 /// A small, dependency-free filesystem primitive shared by the query spill
 /// owner and the server's durable commit-intent writer.
 pub mod fs;
-pub mod isolation;
 // MEDULLA-SDLC — derived lifecycle edges, defect intake, requirement state and trace.
 pub mod lifecycle;
 /// CONCEPT:MEDULLA-KG.ontology.codegen-from-rust-vocabulary — deterministic ontology/SHACL-shape
@@ -64,11 +61,6 @@ pub mod ontology_codegen;
 /// MEDULLA-PYENGINE-PLAN.md` §9.2 Gate A / BUG-PE-003) that makes an unconfigured silent
 /// fallback path structurally unrepresentable.
 pub mod persist_lock;
-#[cfg(feature = "security")]
-pub mod rbac;
-/// CONCEPT:MEDULLA-KG.compute.durable-rbac-identity-persistence — durable RBAC/identity persistence (redb-backed, feature `security`).
-#[cfg(feature = "security")]
-pub mod rbac_persist;
 pub mod registry;
 #[cfg(all(test, any(feature = "security", feature = "path-persist")))]
 pub(crate) mod test_scope_grant;

@@ -22,7 +22,7 @@
 //! same-specificity `Deny` still wins. Without a grant a shared name resolves exactly
 //! like an unregistered name, so the refusal reveals nothing.
 
-use medulla_core::isolation::IsolationLayer;
+use medulla_isolation::isolation::IsolationLayer;
 
 /// The name a grantee uses for `owner_agent`'s source `name`.
 pub fn shared_name(owner_agent: &str, name: &str) -> String {
@@ -125,8 +125,8 @@ mod tests {
     use super::*;
     use crate::access::CarrierAuthority;
     use crate::api::query_txn::foreign_catalog::ForeignSourceCatalog;
-    use medulla_core::isolation::AgentIdentity;
-    use medulla_core::isolation::AgentRole;
+    use medulla_isolation::isolation::AgentIdentity;
+    use medulla_isolation::isolation::AgentRole;
     use medulla_types::wire::ForeignSourceSpec;
 
     fn carrier(agent: &str) -> CarrierAuthority {

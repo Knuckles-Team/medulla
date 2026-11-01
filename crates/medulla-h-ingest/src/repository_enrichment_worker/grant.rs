@@ -1,6 +1,6 @@
 //! Exact-graph RBAC grant for the in-process repository enrichment consumer.
 
-use medulla_core::isolation::IsolationLayer;
+use medulla_isolation::isolation::IsolationLayer;
 
 pub(super) const SERVICE_ACTOR: &str = "service:repository-enrichment-v1";
 
@@ -82,7 +82,8 @@ pub(super) fn bind_top_up_identity(
     retained: &medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision,
     proposal: &medulla_compute::parser::enrichment_reactivation::BudgetRevisionProposal,
     replacement: &medulla_agent_types::native_control::EnrichmentBudgetCheckpoint,
-) -> Result<medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision, String> {
+) -> Result<medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision, String>
+{
     use medulla_compute::parser::enrichment_reactivation::TOP_UP_ACTION;
     if !caller_has_authority(verified, isolation, graph_type, graph_owner, proposal)
         || proposal.next_policy_sequence
@@ -123,15 +124,15 @@ pub(super) fn bind_top_up_identity(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_isolation::isolation::AccessLevel;
+    use medulla_isolation::isolation::AgentIdentity;
+    use medulla_isolation::isolation::AgentRole;
+    use medulla_protocol_types::protocol::GraphType;
     use medulla_types::acl::Grant;
     use medulla_types::acl::GrantEffect;
     use medulla_types::acl::RbacAction;
     use medulla_types::acl::ResourceSelector;
     use medulla_types::acl::Role;
-    use medulla_core::isolation::AccessLevel;
-    use medulla_core::isolation::AgentIdentity;
-    use medulla_core::isolation::AgentRole;
-    use medulla_protocol_types::protocol::GraphType;
 
     #[test]
     fn top_up_identity_requires_exact_verified_scope_subject_and_key() {
@@ -172,24 +173,25 @@ mod tests {
             total_budget_units: 14,
             last_page_key: String::new(),
         };
-        let retained = medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision {
-            schema_version: 1,
-            tenant_id: proposal.tenant_id.clone(),
-            graph: proposal.graph.clone(),
-            repository_id: proposal.repository_id.clone(),
-            source_envelope: proposal.source_envelope.clone(),
-            snapshot_digest: proposal.source_snapshot_digest.clone(),
-            policy_digest: proposal.prior_policy_digest.clone(),
-            total_budget_units: 10,
-            max_total_units: 14,
-            sequence: 0,
-            prior_source_envelope: None,
-            prior_snapshot_digest: None,
-            prior_policy_digest: None,
-            caller_subject: None,
-            verified_action: None,
-            idempotency_key: None,
-        };
+        let retained =
+            medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision {
+                schema_version: 1,
+                tenant_id: proposal.tenant_id.clone(),
+                graph: proposal.graph.clone(),
+                repository_id: proposal.repository_id.clone(),
+                source_envelope: proposal.source_envelope.clone(),
+                snapshot_digest: proposal.source_snapshot_digest.clone(),
+                policy_digest: proposal.prior_policy_digest.clone(),
+                total_budget_units: 10,
+                max_total_units: 14,
+                sequence: 0,
+                prior_source_envelope: None,
+                prior_snapshot_digest: None,
+                prior_policy_digest: None,
+                caller_subject: None,
+                verified_action: None,
+                idempotency_key: None,
+            };
         let mut isolation = IsolationLayer::new();
         isolation
             .try_register_agent(AgentIdentity {

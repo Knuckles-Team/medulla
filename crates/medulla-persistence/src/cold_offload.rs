@@ -598,7 +598,7 @@ pub(crate) async fn test_state_with_backend(
     secret: &str,
     dir_s: &str,
     backend: Arc<dyn PersistenceBackend>,
-    isolation: medulla_core::isolation::IsolationLayer,
+    isolation: medulla_isolation::isolation::IsolationLayer,
 ) -> Arc<RwLock<ServerState>> {
     use crate::read_through::BackendGraphMaterializer;
     use crate::read_through::BackendReadThroughFactory;
@@ -624,7 +624,7 @@ pub(crate) async fn test_state_with_backend(
 pub async fn test_redb_state(
     secret: &str,
     dir_s: &str,
-    isolation: medulla_core::isolation::IsolationLayer,
+    isolation: medulla_isolation::isolation::IsolationLayer,
     page_size: usize,
 ) -> Arc<RwLock<ServerState>> {
     use crate::redb_backend::RedbBackend;
@@ -752,7 +752,7 @@ mod admission_tests {
     use crate::read_through::BackendGraphMaterializer;
     use crate::read_through::BackendReadThroughFactory;
     use crate::redb_backend::RedbBackend;
-    use medulla_core::isolation::IsolationLayer;
+    use medulla_isolation::isolation::IsolationLayer;
     use medulla_protocol_types::protocol::GraphType;
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;

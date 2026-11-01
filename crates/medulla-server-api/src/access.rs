@@ -1,19 +1,19 @@
 //! Write/read classification + isolation-ACL enforcement for graph ops.
 
 use super::auth::VerifiedRequestContext;
-use medulla_core::isolation::AccessLevel;
-use medulla_core::isolation::IsolationLayer;
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
 #[cfg(feature = "security")]
 use medulla_graph_core::rls::row_visibility;
+use medulla_isolation::isolation::AccessLevel;
+use medulla_isolation::isolation::IsolationLayer;
 use medulla_types::contract::{Digest256, Nonce};
 use std::sync::Arc;
 
 #[cfg(all(any(test, feature = "test-support"), feature = "security"))]
 pub fn two_agent_isolation() -> IsolationLayer {
-    use medulla_core::isolation::AgentIdentity;
-    use medulla_core::isolation::AgentRole;
+    use medulla_isolation::isolation::AgentIdentity;
+    use medulla_isolation::isolation::AgentRole;
 
     let mut isolation = IsolationLayer::new();
     for agent_id in ["alice", "bob"] {
@@ -777,13 +777,13 @@ fn check_graph_access_with_policy(
 ) -> Result<(), String> {
     let agent = require_verified_caller(caller)?;
     require_provisioned_policy(isolation)?;
-    let query = medulla_core::isolation::AccessQuery {
+    let query = medulla_isolation::isolation::AccessQuery {
         agent_id: agent,
         graph_name,
         graph_type,
         graph_owner,
         access,
-        now_ms: medulla_core::isolation::access_clock_ms(),
+        now_ms: medulla_isolation::isolation::access_clock_ms(),
     };
     if decide_graph_access(isolation, &query) {
         Ok(())
@@ -802,10 +802,10 @@ fn check_graph_access_with_policy(
 /// to the elevation audit target -- each use, not just the grant.
 pub fn decide_graph_access(
     isolation: &IsolationLayer,
-    query: &medulla_core::isolation::AccessQuery<'_>,
+    query: &medulla_isolation::isolation::AccessQuery<'_>,
 ) -> bool {
     let basis = isolation.access_basis(query);
-    if let medulla_core::isolation::AccessBasis::Elevation(elevation_id) = &basis {
+    if let medulla_isolation::isolation::AccessBasis::Elevation(elevation_id) = &basis {
         tracing::info!(
             target: "medulla::rbac::elevation::audit",
             elevation_id = %elevation_id,
@@ -1126,8 +1126,8 @@ mod secure_empty_policy_tests {
     #[cfg(feature = "security")]
     #[test]
     fn served_graph_access_refuses_a_system_identity_demoted_by_another_clone() {
-        use medulla_core::isolation::AgentIdentity;
-        use medulla_core::isolation::AgentRole;
+        use medulla_isolation::isolation::AgentIdentity;
+        use medulla_isolation::isolation::AgentRole;
         let mut writer = IsolationLayer::new();
         let mut identity = AgentIdentity {
             agent_id: "revoked-system".into(),
@@ -1388,8 +1388,8 @@ mod durability_closure_tests {
 #[cfg(all(test, feature = "security"))]
 mod universal_row_read_tests {
     use super::*;
-    use medulla_core::isolation::AgentIdentity;
-    use medulla_core::isolation::AgentRole;
+    use medulla_isolation::isolation::AgentIdentity;
+    use medulla_isolation::isolation::AgentRole;
 
     fn properties(values: &[(&str, &str)]) -> Vec<u8> {
         let map: std::collections::BTreeMap<String, String> = values

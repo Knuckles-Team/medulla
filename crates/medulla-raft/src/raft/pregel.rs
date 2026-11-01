@@ -49,7 +49,7 @@ use std::sync::Arc;
 use petgraph::visit::{EdgeRef, IntoEdgeReferences};
 use tokio::sync::RwLock;
 
-use medulla_core::isolation::AccessLevel;
+use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::protocol::DistAlgo;
 use medulla_server_api::access::check_graph_access;
 use medulla_server_api::access::GraphReadAuthority;

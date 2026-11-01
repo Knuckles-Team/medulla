@@ -102,20 +102,20 @@ impl IsolationLayer {
         query: &AccessQuery<'_>,
     ) -> AccessBasis {
         // Mandatory RBAC means no pre-RBAC ACL fall-through on empty/no-match.
-        let context = crate::acl::ResourceContext::graph(query.graph_name);
+        let context = medulla_types::acl::ResourceContext::graph(query.graph_name);
         let (action, elevation_action) = match query.access {
             AccessLevel::Read => (
-                crate::acl::RbacAction::Read,
+                medulla_types::acl::RbacAction::Read,
                 medulla_identity_types::rbac_elevation::ElevationAction::Read,
             ),
             AccessLevel::Write => (
-                crate::acl::RbacAction::Write,
+                medulla_types::acl::RbacAction::Write,
                 medulla_identity_types::rbac_elevation::ElevationAction::Write,
             ),
         };
         match policy.evaluate(&identity.roles, &context, action) {
-            Some(crate::acl::GrantEffect::Allow) => AccessBasis::Standing,
-            Some(crate::acl::GrantEffect::Deny) => AccessBasis::Denied,
+            Some(medulla_types::acl::GrantEffect::Allow) => AccessBasis::Standing,
+            Some(medulla_types::acl::GrantEffect::Deny) => AccessBasis::Denied,
             None => policy
                 .elevations()
                 .permitting(
@@ -248,14 +248,14 @@ impl IsolationLayer {
             if identity.role == AgentRole::System {
                 return true;
             }
-            let context = crate::acl::ResourceContext::graph("__admin__");
+            let context = medulla_types::acl::ResourceContext::graph("__admin__");
             matches!(
                 authority.policy().evaluate(
                     &identity.roles,
                     &context,
-                    crate::acl::RbacAction::Admin,
+                    medulla_types::acl::RbacAction::Admin,
                 ),
-                Some(crate::acl::GrantEffect::Allow)
+                Some(medulla_types::acl::GrantEffect::Allow)
             )
         }
         #[cfg(not(feature = "security"))]

@@ -328,7 +328,7 @@ fn cursor_replay_is_idempotent_but_policy_replacement_is_denied() {
 #[cfg(all(feature = "security", feature = "redb"))]
 pub(super) struct DurableReadLease {
     pub(super) directory: std::path::PathBuf,
-    pub(super) policy: medulla_core::rbac::RbacPolicy,
+    pub(super) policy: medulla_isolation::rbac::RbacPolicy,
     pub(super) identities: std::collections::BTreeMap<String, medulla_types::acl::AgentIdentity>,
     pub(super) grant: medulla_types::acl::Grant,
     pub(super) isolation: crate::isolation::IsolationLayer,
@@ -336,7 +336,7 @@ pub(super) struct DurableReadLease {
     pub(super) carrier: CarrierAuthority,
     pub(super) verified_context: medulla_server_api::auth::VerifiedRequestContext,
     pub(super) lease: std::sync::Arc<crate::isolation::PolicyDecisionLease>,
-    pub(super) policy_store: std::sync::Arc<dyn medulla_core::rbac_persist::RbacPolicyStore>,
+    pub(super) policy_store: std::sync::Arc<dyn medulla_isolation::rbac_persist::RbacPolicyStore>,
 }
 
 #[cfg(all(feature = "security", feature = "redb"))]
@@ -345,8 +345,9 @@ pub(super) fn durable_read_lease(graph: &str, agent: &str) -> DurableReadLease {
     use std::sync::Arc;
 
     use crate::isolation::IsolationLayer;
-    use medulla_core::rbac::RbacPolicy;
-    use medulla_core::rbac_persist::{IdentityBootstrapState, RbacStore};
+    use medulla_isolation::rbac::RbacPolicy;
+    use medulla_isolation::rbac_persist::IdentityBootstrapState;
+    use medulla_isolation::rbac_persist::RbacStore;
     use medulla_types::acl::{
         AgentIdentity, AgentRole, Grant, GrantEffect, RbacAction, ResourceSelector, Role,
     };
@@ -516,7 +517,7 @@ async fn knowledge_stream_sql_lists_the_request_graph_edge_indexes() {
 #[cfg(all(feature = "security", feature = "redb"))]
 #[test]
 fn durable_lease_revocation_rejects_resume_before_any_cursor_metadata() {
-    use medulla_core::rbac_persist::IdentityBootstrapState;
+    use medulla_isolation::rbac_persist::IdentityBootstrapState;
 
     let DurableReadLease {
         directory,

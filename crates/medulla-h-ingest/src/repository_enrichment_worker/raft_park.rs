@@ -116,7 +116,7 @@ async fn propose_park(
                 graph,
                 graph_type,
                 owner.as_deref(),
-                medulla_core::isolation::AccessLevel::Write,
+                medulla_isolation::isolation::AccessLevel::Write,
             )
         {
             return Err("ACCESS_DENIED: repository enrichment park graph grant is absent".into());
@@ -136,8 +136,10 @@ async fn propose_park(
     );
     mutation.placement_epoch = routed.epoch;
     mutation.fencing_token = routed.placed.then_some(routed.group_id);
-    let command =
-        medulla_raft::raft::ReplicatedMutation::enrichment_park(&park, &state.read().await.auth_secret)?;
+    let command = medulla_raft::raft::ReplicatedMutation::enrichment_park(
+        &park,
+        &state.read().await.auth_secret,
+    )?;
     let response = routed
         .handle
         .client_write(medulla_raft::raft::RaftRequest {

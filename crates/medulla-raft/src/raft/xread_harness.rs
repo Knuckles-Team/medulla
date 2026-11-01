@@ -43,11 +43,14 @@ const TENANT: &str = "xread-acme";
 async fn bring_up(
     dir: &str,
     backend: fixture::Backend,
-) -> (Arc<MultiRaft>, Arc<RwLock<medulla_server_api::state::ServerState>>) {
+) -> (
+    Arc<MultiRaft>,
+    Arc<RwLock<medulla_server_api::state::ServerState>>,
+) {
     fixture::start_single_node_groups(
         dir,
         backend,
-        medulla_core::isolation::IsolationLayer::new(),
+        medulla_isolation::isolation::IsolationLayer::new(),
         "xread-test",
         &[GROUP_A, GROUP_B, super::DEFAULT_GROUP],
     )
@@ -59,7 +62,10 @@ async fn bring_up(
 /// test; only the identical storage/cluster lifecycle belongs here.
 async fn start_read_scenario(
     scenario: &str,
-) -> (Arc<MultiRaft>, Arc<RwLock<medulla_server_api::state::ServerState>>) {
+) -> (
+    Arc<MultiRaft>,
+    Arc<RwLock<medulla_server_api::state::ServerState>>,
+) {
     let dir = fixture::fresh_dir("medulla-xread", scenario);
     let backend = fixture::open_backend(&dir).expect("open redb");
     bring_up(&dir, backend.clone()).await

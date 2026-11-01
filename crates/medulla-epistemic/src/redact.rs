@@ -45,8 +45,8 @@
 //!   uncertain), never the raw posterior float (a leak of structural detail in its
 //!   own right at this tier).
 
-use medulla_core::isolation::IsolationLayer;
 use medulla_graph_core::rls::RowVisibility;
+use medulla_isolation::isolation::IsolationLayer;
 use serde::{Deserialize, Serialize};
 
 use crate::adapter::BeliefGraph;
@@ -309,7 +309,8 @@ pub fn explain_belief_redacted_capped(
 mod tests {
     use super::*;
     use crate::model::EdgeKind;
-    use medulla_core::isolation::{AgentIdentity, AgentRole};
+    use medulla_isolation::isolation::AgentIdentity;
+    use medulla_isolation::isolation::AgentRole;
 
     fn owned_private(owner: &str) -> RowVisibility {
         RowVisibility {

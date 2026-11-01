@@ -25,7 +25,7 @@ fn sampler() -> &'static Mutex<DenialSampler> {
 /// denial it describes.
 pub fn offer(principal: &str, action: &str, reason: &str) {
     let sample = DenialSample {
-        at_ms: medulla_core::isolation::access_clock_ms(),
+        at_ms: medulla_isolation::isolation::access_clock_ms(),
         principal: principal.to_string(),
         action: action.to_string(),
         reason: reason.to_string(),

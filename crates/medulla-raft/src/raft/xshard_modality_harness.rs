@@ -99,7 +99,7 @@ async fn bring_up(
     let (multi, state) = fixture::start_routed_groups(
         dir,
         backend.clone(),
-        medulla_core::isolation::IsolationLayer::new(),
+        medulla_isolation::isolation::IsolationLayer::new(),
         "test-xshard-modality-secret",
         &[GROUP_A, GROUP_B],
         &[(GRAPH_A, GROUP_A), (GRAPH_B, GROUP_B)],
@@ -112,7 +112,10 @@ async fn bring_up(
 /// Count nodes in a named graph on a state (the read-back probe for BOTH modalities:
 /// the property-graph node count for `modalA`, and the projected-triple node count for
 /// `modalB`).
-async fn graph_node_count(state: &Arc<RwLock<medulla_server_api::state::ServerState>>, graph: &str) -> usize {
+async fn graph_node_count(
+    state: &Arc<RwLock<medulla_server_api::state::ServerState>>,
+    graph: &str,
+) -> usize {
     fixture::node_count(state, graph).await
 }
 

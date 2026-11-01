@@ -25,10 +25,10 @@
 // `crate::graph::` / `crate::registry::` reference resolves unchanged.
 pub use medulla_core::compute;
 pub use medulla_core::decay;
-pub use medulla_core::isolation;
 pub use medulla_core::registry;
 pub use medulla_graph_core::graph;
 pub use medulla_graph_core::index;
+pub use medulla_isolation::isolation;
 // CONCEPT:MEDULLA-KG.compute.message-broker-exchanges — message-broker primitives, re-exported under `crate::broker`.
 #[cfg(feature = "broker")]
 pub use medulla_core::broker;

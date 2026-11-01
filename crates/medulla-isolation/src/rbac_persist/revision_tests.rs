@@ -1,8 +1,10 @@
 //! Whole-image optimistic concurrency under the existing RBAC owner.
 use super::*;
-use crate::acl::{AgentRole, Role};
 use crate::isolation::IsolationLayer;
-use crate::test_threads::{BoundedThreads, StartGate};
+use crate::test_threads::BoundedThreads;
+use crate::test_threads::StartGate;
+use medulla_types::acl::AgentRole;
+use medulla_types::acl::Role;
 use std::sync::{mpsc, Arc};
 use std::time::Duration;
 
@@ -303,9 +305,12 @@ fn legacy_adapter_cannot_fall_back_to_unchecked_save() {
 }
 
 fn exercise_access_refresh(store: Arc<dyn RbacPolicyStore>, admin: bool) {
-    use crate::acl::{Grant, GrantEffect, RbacAction, ResourceSelector};
     use crate::isolation::AccessLevel;
-    use crate::protocol::GraphType;
+    use medulla_protocol_types::protocol::GraphType;
+    use medulla_types::acl::Grant;
+    use medulla_types::acl::GrantEffect;
+    use medulla_types::acl::RbacAction;
+    use medulla_types::acl::ResourceSelector;
 
     let initial = store.authority_snapshot().unwrap();
     let mut policy = initial.policy().clone();
@@ -439,7 +444,7 @@ fn graph_access_refreshes_revoked_grants_and_identities_in_memory_and_redb() {
     assert!(!reopened.check_access(
         "reader",
         "graph",
-        crate::protocol::GraphType::Agent,
+        medulla_protocol_types::protocol::GraphType::Agent,
         None,
         crate::isolation::AccessLevel::Read
     ));

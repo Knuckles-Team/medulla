@@ -61,12 +61,6 @@ mod worker {
     use super::*;
     use std::time::Duration;
 
-    use medulla_server_api::api::persistence::PersistenceBackend;
-    use medulla_server_api::auth::VerifiedRequestContext;
-    use medulla_server_api::blob::store::ChunkStore;
-    #[cfg(not(feature = "raft"))]
-    use medulla_server_api::mutation_batch::CommitOrigin;
-    use medulla_server_api::mutation_batch::WorkItemCommitRequest;
     #[cfg(feature = "security")]
     use crate::repository_enrichment_worker::grant;
     use medulla_agent_types::native_control::SubmitWorkItemsRequest;
@@ -77,6 +71,12 @@ mod worker {
         epistemic_operations::RequestContextAuthenticationMethod,
         epistemic_operations::RequestContextSchemaVersion,
     };
+    use medulla_server_api::api::persistence::PersistenceBackend;
+    use medulla_server_api::auth::VerifiedRequestContext;
+    use medulla_server_api::blob::store::ChunkStore;
+    #[cfg(not(feature = "raft"))]
+    use medulla_server_api::mutation_batch::CommitOrigin;
+    use medulla_server_api::mutation_batch::WorkItemCommitRequest;
 
     const IDLE: Duration = Duration::from_millis(500);
     const MAX_GRAPHS_PER_SWEEP: usize = 16;
@@ -227,8 +227,7 @@ mod worker {
         // polling must not materialize every cold graph into the resident cap.
         let cap = medulla_persistence::cold_offload::max_resident_graphs();
         let page_size = medulla_persistence::cold_offload::lazy_open_page_size();
-        if !medulla_persistence::cold_offload::lazy_open(state, graph, cap, page_size).await
-        {
+        if !medulla_persistence::cold_offload::lazy_open(state, graph, cap, page_size).await {
             return Err("CONFLICT: repository enrichment graph could not be opened".into());
         }
         let anonymous = state.read().await.local_anonymous;
@@ -247,7 +246,7 @@ mod worker {
                 graph,
                 graph_type,
                 owner.as_deref(),
-                medulla_core::isolation::AccessLevel::Write,
+                medulla_isolation::isolation::AccessLevel::Write,
             ) {
                 return Err("ACCESS_DENIED: repository enrichment graph grant is absent".into());
             }

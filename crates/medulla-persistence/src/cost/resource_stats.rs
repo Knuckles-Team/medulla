@@ -303,7 +303,7 @@ pub(super) async fn scan_registry(
 }
 
 fn visible_to_authority(
-    isolation: &medulla_core::isolation::IsolationLayer,
+    isolation: &medulla_isolation::isolation::IsolationLayer,
     actor: Option<&str>,
     tenant_matcher: Option<&TenantMatcher>,
     admin: bool,
@@ -322,7 +322,7 @@ fn visible_to_authority(
             &entry.name,
             entry.graph_type,
             entry.owner.as_deref(),
-            medulla_core::isolation::AccessLevel::Read,
+            medulla_isolation::isolation::AccessLevel::Read,
         )
         .is_ok()
 }

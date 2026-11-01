@@ -271,7 +271,7 @@ impl std::error::Error for MintAuthorizationError {}
 /// hashing `RequestContextClaims` itself, whose derive/field order is a
 /// source-code detail, not a contract this MAC should be brittle to.
 #[cfg(feature = "security")]
-fn mint_authorization_claims_bytes(claims: &crate::acl::RequestContextClaims) -> Vec<u8> {
+fn mint_authorization_claims_bytes(claims: &medulla_types::acl::RequestContextClaims) -> Vec<u8> {
     #[derive(serde::Serialize)]
     struct CanonicalClaims<'a> {
         principal: &'a str,
@@ -303,7 +303,7 @@ fn mint_authorization_claims_bytes(claims: &crate::acl::RequestContextClaims) ->
 #[cfg(feature = "security")]
 fn mint_authorization_mac(
     auth_secret: &str,
-    claims: &crate::acl::RequestContextClaims,
+    claims: &medulla_types::acl::RequestContextClaims,
 ) -> Result<MintAuthorizationMac, MintAuthorizationError> {
     let mut mac = MintAuthorizationMac::new_from_slice(auth_secret.as_bytes())
         .map_err(|_| MintAuthorizationError::InvalidSecret)?;
@@ -322,7 +322,7 @@ fn mint_authorization_mac(
 /// exactly what this control does and does not prevent.
 #[cfg(feature = "security")]
 pub struct MintAuthorization {
-    claims: crate::acl::RequestContextClaims,
+    claims: medulla_types::acl::RequestContextClaims,
 }
 
 #[cfg(feature = "security")]
@@ -334,7 +334,7 @@ impl MintAuthorization {
     /// presented bytes as ground truth.
     pub fn compute_mac(
         auth_secret: &str,
-        claims: &crate::acl::RequestContextClaims,
+        claims: &medulla_types::acl::RequestContextClaims,
     ) -> Result<Vec<u8>, MintAuthorizationError> {
         if auth_secret.is_empty() {
             return Err(MintAuthorizationError::EmptySecret);
@@ -354,7 +354,7 @@ impl MintAuthorization {
     /// always passes through this cryptographic check.
     pub fn new(
         auth_secret: &str,
-        claims: &crate::acl::RequestContextClaims,
+        claims: &medulla_types::acl::RequestContextClaims,
         mac: &[u8],
     ) -> Result<Self, MintAuthorizationError> {
         if auth_secret.is_empty() {
@@ -369,7 +369,7 @@ impl MintAuthorization {
     }
 
     /// The verified claims this token carries.
-    pub fn claims(&self) -> &crate::acl::RequestContextClaims {
+    pub fn claims(&self) -> &medulla_types::acl::RequestContextClaims {
         &self.claims
     }
 }
@@ -589,12 +589,14 @@ impl IsolationLayer {
         let decision_basis = if identity.role == AgentRole::System {
             PolicyDecisionBasis::System
         } else {
-            let ctx = crate::acl::ResourceContext::graph(resource);
+            let ctx = medulla_types::acl::ResourceContext::graph(resource);
             let allowed = matches!(
-                authority
-                    .policy()
-                    .evaluate(&identity.roles, &ctx, crate::acl::RbacAction::Read),
-                Some(crate::acl::GrantEffect::Allow)
+                authority.policy().evaluate(
+                    &identity.roles,
+                    &ctx,
+                    medulla_types::acl::RbacAction::Read
+                ),
+                Some(medulla_types::acl::GrantEffect::Allow)
             );
             if !allowed {
                 return Err(MintLeaseError::AccessDenied);

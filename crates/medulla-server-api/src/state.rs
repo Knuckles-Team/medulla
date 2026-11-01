@@ -6,8 +6,8 @@ use tokio::sync::Semaphore;
 
 use crate::txn::GraphTxnState;
 use crate::txn::TxnIdGen;
-use medulla_core::isolation::IsolationLayer;
 use medulla_core::registry::GraphRegistry;
+use medulla_isolation::isolation::IsolationLayer;
 use medulla_kernel::channels::ChannelManager;
 use parking_lot::Mutex;
 
@@ -547,9 +547,9 @@ impl ServerState {
     #[doc(hidden)]
     pub fn test_isolation(agent_id: impl Into<String>) -> IsolationLayer {
         let mut isolation = IsolationLayer::new();
-        isolation.register_agent(medulla_core::isolation::AgentIdentity {
+        isolation.register_agent(medulla_isolation::isolation::AgentIdentity {
             agent_id: agent_id.into(),
-            role: medulla_core::isolation::AgentRole::System,
+            role: medulla_isolation::isolation::AgentRole::System,
             teams: Vec::new(),
             roles: Vec::new(),
         });

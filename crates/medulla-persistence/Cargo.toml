@@ -45,6 +45,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", optional = true }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-isolation = { path = "../medulla-isolation" }
 
 [features]
 test-support = ["dep:tempfile"]

@@ -455,7 +455,7 @@ struct LeaseQueryCtx<'a> {
     caller: &'a str,
     core: &'a Arc<GraphCore>,
     policy_lease: &'a Arc<crate::isolation::PolicyDecisionLease>,
-    store: &'a dyn medulla_core::rbac_persist::RbacPolicyStore,
+    store: &'a dyn medulla_isolation::rbac_persist::RbacPolicyStore,
 }
 
 /// Fresh, per-call row-visibility snapshot using the lease as the sole
@@ -474,7 +474,7 @@ struct LeaseQueryCtx<'a> {
 fn lease_filtered_snapshot(
     core: &Arc<GraphCore>,
     lease: &Arc<crate::isolation::PolicyDecisionLease>,
-    store: &dyn medulla_core::rbac_persist::RbacPolicyStore,
+    store: &dyn medulla_isolation::rbac_persist::RbacPolicyStore,
 ) -> Result<(Arc<crate::graph::GraphView>, u64), String> {
     // `version` is read before the snapshot, the same "safe LOWER BOUND"
     // idiom `rls_snapshot`'s `not(result-cache)` branch documents above — a

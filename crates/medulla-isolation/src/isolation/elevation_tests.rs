@@ -4,8 +4,6 @@ use super::{
     access_clock_ms, AccessBasis, AccessLevel, AccessQuery, AgentIdentity, AgentRole,
     ElevationError, IsolationLayer,
 };
-use crate::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
-use crate::protocol::GraphType;
 use medulla_identity_types::{
     rbac_elevation::ElevationAction, rbac_elevation::ElevationActor,
     rbac_elevation::ElevationApproval, rbac_elevation::ElevationDelegation,
@@ -13,6 +11,12 @@ use medulla_identity_types::{
     rbac_elevation::ElevationRevoke, rbac_elevation::ElevationScope,
     rbac_elevation::ElevationStanding,
 };
+use medulla_protocol_types::protocol::GraphType;
+use medulla_types::acl::Grant;
+use medulla_types::acl::GrantEffect;
+use medulla_types::acl::RbacAction;
+use medulla_types::acl::ResourceSelector;
+use medulla_types::acl::Role;
 
 const GRAPH: &str = "tenant__acme__default";
 const MINUTE: u64 = 60 * 1000;
@@ -195,7 +199,9 @@ fn an_elevation_never_confers_admin_capability() {
 // spec: MEDULLA-DURABLE-KERNEL-R022
 #[test]
 fn an_elevation_survives_a_restart_of_the_durable_store() {
-    use crate::test_scope_grant::{TestScopeVerifier, TEST_PRINCIPAL, TEST_PROOF};
+    use crate::test_scope_grant::TestScopeVerifier;
+    use crate::test_scope_grant::TEST_PRINCIPAL;
+    use crate::test_scope_grant::TEST_PROOF;
     let now = access_clock_ms();
     let dir = std::env::temp_dir().join(format!("medulla-elevation-{}-{now}", std::process::id()));
     let open = || {

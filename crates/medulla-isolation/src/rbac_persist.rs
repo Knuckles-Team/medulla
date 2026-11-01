@@ -31,8 +31,8 @@ use medulla_transaction::MutationKernel;
 use redb::TableDefinition;
 use sha2::{Digest, Sha256};
 
-use crate::acl::AgentIdentity;
 use crate::rbac::RbacPolicy;
+use medulla_types::acl::AgentIdentity;
 
 /// `key → serde_json bytes`. One table, three well-known keys (`policy`,
 /// `identities`, `bootstrap`) written in a single durable transaction
@@ -203,8 +203,8 @@ impl RbacAuthoritySnapshot {
 fn authority_policy_digest(policy: &RbacPolicy) -> Result<String, RbacPersistError> {
     #[derive(serde::Serialize)]
     struct CanonicalPolicy<'a> {
-        roles: BTreeMap<&'a str, &'a crate::acl::Role>,
-        grants: &'a [crate::acl::Grant],
+        roles: BTreeMap<&'a str, &'a medulla_types::acl::Role>,
+        grants: &'a [medulla_types::acl::Grant],
         // EH-404: an elevation transition (above all a revocation) moves the
         // digest, so a policy decision lease minted before it fails closed.
         // Omitted while empty, so an image without elevations keeps its digest.
@@ -374,7 +374,9 @@ pub use memory_store::MemoryRbacStore;
 #[cfg(test)]
 pub(crate) mod test_support {
     use super::*;
-    use crate::test_scope_grant::{TestScopeVerifier, TEST_PRINCIPAL, TEST_PROOF};
+    use crate::test_scope_grant::TestScopeVerifier;
+    use crate::test_scope_grant::TEST_PRINCIPAL;
+    use crate::test_scope_grant::TEST_PROOF;
     use medulla_storage::OwnerLayout;
 
     /// Open the durable RBAC store the way the composition root would.
@@ -669,11 +671,15 @@ mod tests {
     use super::{
         IdentityBootstrapState, MemoryRbacStore, RbacPersistError, RbacPolicyStore, IDENTITIES_KEY,
     };
-    use crate::acl::{
-        AgentIdentity, AgentRole, Grant, GrantEffect, RbacAction, ResourceContext,
-        ResourceSelector, Role,
-    };
     use crate::rbac::RbacPolicy;
+    use medulla_types::acl::AgentIdentity;
+    use medulla_types::acl::AgentRole;
+    use medulla_types::acl::Grant;
+    use medulla_types::acl::GrantEffect;
+    use medulla_types::acl::RbacAction;
+    use medulla_types::acl::ResourceContext;
+    use medulla_types::acl::ResourceSelector;
+    use medulla_types::acl::Role;
 
     /// A unique temp dir per test invocation (no external dev-dep needed).
     fn tmp_dir(tag: &str) -> std::path::PathBuf {

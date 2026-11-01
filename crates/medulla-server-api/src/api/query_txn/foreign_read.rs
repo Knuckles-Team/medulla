@@ -27,7 +27,7 @@ use medulla_types::contract::Digest256;
 use super::foreign_catalog::{ForeignSourceCatalog, OwnedForeignRegistry};
 use crate::access::CarrierAuthority;
 use crate::api::persistence::SourceApprovalStore;
-use medulla_core::isolation::IsolationLayer;
+use medulla_isolation::isolation::IsolationLayer;
 
 /// Owner-controlled dependencies used to revalidate and bind completed reads.
 pub struct ForeignBindingContext<'a> {

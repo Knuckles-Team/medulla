@@ -30,7 +30,7 @@ use crate::protocol::{Method, Response, ResultPayload};
 use medulla_types::acl::RequestContextClaims;
 
 #[cfg(feature = "security")]
-use medulla_core::rbac_persist::RbacPolicyStore;
+use medulla_isolation::rbac_persist::RbacPolicyStore;
 
 use medulla_server_api::access::{CarrierAuthority, GraphReadAuthority};
 use medulla_server_api::state::ServerState;

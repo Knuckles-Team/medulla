@@ -95,9 +95,9 @@
 use std::sync::Arc;
 
 #[cfg(test)]
-use medulla_core::isolation::IsolationLayer;
-#[cfg(test)]
 use medulla_graph_core::graph::GraphCore;
+#[cfg(test)]
+use medulla_isolation::isolation::IsolationLayer;
 #[cfg(test)]
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::ResultPayload;

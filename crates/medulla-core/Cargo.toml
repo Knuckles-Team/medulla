@@ -44,7 +44,7 @@ ann-gpu-cuda = ["ann-gpu", "medulla-ann/gpu-cuda"]
 # evaluators are pure-Rust; MEDULLA-303 links `redb` (same 4.1 as the durable tiers) to
 # persist the RbacPolicy + registered AgentIdentities across restarts. Gated so a
 # non-security build links neither. redb is Pi-safe; `pi` does NOT enable security.
-security = ["medulla-graph-core/security", "dep:redb", "dep:sha2", "dep:hmac", "dep:medulla-storage", "dep:medulla-transaction"]
+security = ["medulla-isolation/security", "medulla-graph-core/security", "dep:redb", "dep:sha2", "dep:hmac", "dep:medulla-storage", "dep:medulla-transaction"]
 # Version-keyed query-RESULT cache (CONCEPT:KG-2.233) on `GraphCore`. Pure-Rust
 # bounded LRU + 128-bit query hash — no new dep — so the facade folds it into the
 # lean Pi tier as well as node/cluster/full.
@@ -126,6 +126,7 @@ medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-query-cache = { path = "../medulla-query-cache" }
 medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-isolation = { path = "../medulla-isolation" }
 
 [dev-dependencies]
 # The commercial-vocabulary contract tests (MEDULLA-SUPPLY-VOCAB-R003.13-.16) parse

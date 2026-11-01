@@ -7,8 +7,8 @@ use super::{
     MutationPlan,
 };
 use crate::access::check_graph_access;
-use medulla_core::isolation::AccessLevel;
 use medulla_graph_core::graph::GraphCore;
+use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;

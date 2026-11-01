@@ -10,13 +10,13 @@ use tokio::sync::RwLock;
 
 use medulla_compute::parser::enrichment_reactivation::plan_reactivation;
 use medulla_compute::parser::enrichment_reactivation::BudgetRevisionProposal;
-use medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision;
-use medulla_store::redb_store::enrichment_top_up::EnrichmentTopUpTransition;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::api::persistence::RaftMutationContext;
 use medulla_server_api::api::persistence::RaftMutationTiming;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
+use medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision;
+use medulla_store::redb_store::enrichment_top_up::EnrichmentTopUpTransition;
 
 pub struct PreparedTopUp {
     transition: EnrichmentTopUpTransition,
@@ -255,9 +255,11 @@ async fn prepare_fresh(
         &proposal.source_envelope,
     )
     .await?;
-    let snapshot =
-        medulla_server_api::api::reentry::decode_pending_enrichment_intent(state, &old_delivery.intent)
-            .await?;
+    let snapshot = medulla_server_api::api::reentry::decode_pending_enrichment_intent(
+        state,
+        &old_delivery.intent,
+    )
+    .await?;
     let plan = plan_reactivation(
         &snapshot,
         &budget,
@@ -274,7 +276,8 @@ async fn prepare_fresh(
         .ok_or("CONFLICT: repository enrichment graph version is absent")?;
     let committed_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let replacement_intent =
-        medulla_server_api::api::reentry::enrichment_intent_for_snapshot(state, plan.snapshot).await?;
+        medulla_server_api::api::reentry::enrichment_intent_for_snapshot(state, plan.snapshot)
+            .await?;
     let replacement_batch =
         medulla_protocol_types::mutation_batch::MutationBatch::repository_enrichment_top_up(
             RepositoryEnrichmentTopUp {

@@ -34,7 +34,7 @@ python = ["dep:pyo3"]
 # "security"))]` behavior). Independent of `python` -- a pure-Rust `cargo test
 # --features security` exercises authority.rs's own RLS unit tests with no pyo3 at
 # all. NOT folded into `pyo3-engine` below yet; see that root feature's own comment.
-security = ["medulla-core/security", "medulla-graph-core/security"]
+security = ["medulla-core/security", "medulla-isolation/security", "medulla-graph-core/security"]
 
 # ---------------------------------------------------------------------------
 # Wave-1 domain features (MEDULLA-PYENGINE-PLAN.md §4.5), pre-added here in ONE Wave-0
@@ -123,6 +123,7 @@ medulla-jobs = { path = "../medulla-jobs", optional = true }
 medulla-statechart = { path = "../medulla-statechart", optional = true }
 medulla-wasm = { path = "../medulla-wasm", optional = true }
 medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-isolation = { path = "../medulla-isolation" }
 
 [dev-dependencies]
 # Test-only: `authority.rs`'s `per_call_override_lets_two_principals_share_one_authority`

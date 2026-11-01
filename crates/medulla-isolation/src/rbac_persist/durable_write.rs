@@ -5,8 +5,8 @@ use medulla_transaction::{AdmittedOwnerWrite, Begin};
 use redb::ReadableTable;
 use sha2::{Digest, Sha256};
 
-use crate::acl::AgentIdentity;
 use crate::rbac::RbacPolicy;
+use medulla_types::acl::AgentIdentity;
 
 use super::{
     IdentityBootstrapState, RbacPersistError, RbacStore, BOOTSTRAP_KEY, IDENTITIES_KEY, POLICY_KEY,
