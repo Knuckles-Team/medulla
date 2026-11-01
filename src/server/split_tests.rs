@@ -13,3 +13,5 @@ mod resource_acceptance_test;
 mod wired_edge_index;
 #[cfg(all(test, feature = "raft", feature = "harness"))]
 mod xshard_harness;
+#[cfg(test)]
+mod store_run_owner;

@@ -1,6 +1,6 @@
-use super::super::test_shard::run_request as request;
-use super::super::test_shard::{apply, open, with_nodes, with_write, GRAPH};
-use super::*;
+use medulla_store::redb_store::work_item::test_shard::run_request as request;
+use medulla_store::redb_store::work_item::test_shard::{apply, open, with_nodes, with_write, GRAPH};
+use medulla_store::redb_store::work_item::run_owner::*;
 use medulla_types::native_control::SubmitWorkItemRequest;
 
 type Row = serde_json::Map<String, serde_json::Value>;
@@ -11,7 +11,7 @@ fn admit(shard: &Shard) -> String {
 
 fn admit_request(shard: &Shard, request: &SubmitWorkItemRequest) -> String {
     with_write(shard, "admit", 1000, |admitted| {
-        super::super::test_shard::submit_run_rows(admitted, request, "owner")
+        medulla_store::redb_store::work_item::test_shard::submit_run_rows(admitted, request, "owner")
             .map(|result| result.work_item_id)
     })
     .unwrap()

@@ -431,9 +431,9 @@ pub(crate) struct StagedMeasurement {
 }
 
 impl StagedMeasurement {
-    /// Flatten into the persistence-layer [`crate::MeasurementBatch`] tuple threaded
+    /// Flatten into the persistence-layer [`medulla_store::MeasurementBatch`] tuple threaded
     /// through `commit_crossmodal`.
-    pub(crate) fn to_batch(&self) -> crate::MeasurementBatch {
+    pub(crate) fn to_batch(&self) -> medulla_store::MeasurementBatch {
         (
             self.series.clone(),
             self.n_fields,

@@ -21,7 +21,7 @@ pub(crate) struct CrossModalPayload {
     pub(crate) methods: Vec<Method>,
     pub(crate) vectors: Vec<(String, Vec<f32>)>,
     pub(crate) blob_refs: Vec<(String, String)>,
-    pub(crate) measurements: Vec<crate::MeasurementBatch>,
+    pub(crate) measurements: Vec<medulla_store::MeasurementBatch>,
 }
 
 /// Boxed payload for one authoritative MutationBatch writer command.  Keeping
@@ -51,7 +51,7 @@ pub(crate) struct CrossModalBatchPayload {
     pub(crate) methods: Vec<Method>,
     pub(crate) vectors: Vec<(String, Vec<f32>)>,
     pub(crate) blob_refs: Vec<(String, String)>,
-    pub(crate) measurements: Vec<crate::MeasurementBatch>,
+    pub(crate) measurements: Vec<medulla_store::MeasurementBatch>,
     pub(crate) result_msgpack: Option<Vec<u8>>,
     pub(crate) committed_at_ms: u64,
 }

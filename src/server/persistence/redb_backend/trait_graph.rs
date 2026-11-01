@@ -8,7 +8,7 @@ macro_rules! persistence_graph {
             methods: &[Method],
             vectors: &[(String, Vec<f32>)],
             blob_refs: &[(String, String)],
-            measurements: &[crate::MeasurementBatch],
+            measurements: &[medulla_store::MeasurementBatch],
         ) -> Result<(), String> {
             let (done, rx) = oneshot::channel();
             let cmd = Cmd::CrossModalCommit {

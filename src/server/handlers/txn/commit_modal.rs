@@ -304,7 +304,7 @@ struct CrossModalDurableArgs<'a> {
     attempt_nonce: Option<Nonce>,
     txn: &'a GraphTxnState,
     methods: &'a [Method],
-    measurements: &'a [crate::MeasurementBatch],
+    measurements: &'a [medulla_store::MeasurementBatch],
 }
 
 async fn compile_cross_modal_batch(
@@ -410,7 +410,7 @@ async fn commit_cross_modal_durable(
 #[cfg(feature = "tsdb")]
 pub(super) async fn project_committed_measurements(
     state: &Arc<RwLock<ServerState>>,
-    measurements: &[crate::MeasurementBatch],
+    measurements: &[medulla_store::MeasurementBatch],
 ) -> Result<(), String> {
     if measurements.is_empty() {
         return Ok(());
@@ -500,7 +500,7 @@ fn build_graphql_txn(
 }
 fn build_cross_modal_plan(
     txn: &GraphTxnState,
-) -> Result<(Vec<Method>, Vec<crate::MeasurementBatch>), String> {
+) -> Result<(Vec<Method>, Vec<medulla_store::MeasurementBatch>), String> {
     let mut methods: Vec<Method> = txn.write_set.clone();
     methods.extend(txn.axioms.iter().cloned());
     methods.extend(txn.constructs.iter().cloned());

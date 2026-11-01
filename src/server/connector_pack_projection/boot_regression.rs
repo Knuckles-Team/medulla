@@ -423,7 +423,7 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
     ];
     // The series is durable in the AUTHORITATIVE shard only (the crash-window
     // seed): the served store stays empty until the startup reconciliation.
-    let measurement: crate::MeasurementBatch = (
+    let measurement: medulla_store::MeasurementBatch = (
         scoped_series_key(GRAPH, SERIES, ADMIN),
         1,
         BUCKET_NS,

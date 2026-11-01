@@ -44,45 +44,7 @@ pub use medulla_compute::finance;
 pub use medulla_compute::reasoning;
 pub use medulla_compute::{algorithms, ast, parser, screen};
 
-/// The native WorkItem-kernel lease and lifecycle writes (claim, renew,
-/// cancel, defer, metadata CAS, the graph-os MEDULLA-2 control-lease writes and the
-/// EH-558 sealed-record retirement),
-/// as ONE pattern. The apply and classification sites match through it, so a
-/// new family member is added once and every exhaustive `match` using it
-/// still fails to compile until it is classified. The dispatch arm in
-/// `server::handlers::work_item` stays enumerated: the contract-reachability
-/// gate reads dispatch arms by variant name.
-macro_rules! work_item_kernel_writes {
-    () => {
-        $crate::protocol::Method::ClaimWorkItem { .. }
-            | $crate::protocol::Method::RenewWorkItemLease { .. }
-            | $crate::protocol::Method::CancelWorkItem { .. }
-            | $crate::protocol::Method::DeferWorkItem { .. }
-            | $crate::protocol::Method::CasWorkItemMetadata { .. }
-            | $crate::protocol::Method::PublishCurrentPlan { .. }
-            | $crate::protocol::Method::IssueHostStartGrant { .. }
-            | $crate::protocol::Method::PublishRunCheckpoint { .. }
-            | $crate::protocol::Method::IssueControlLease { .. }
-            | $crate::protocol::Method::TransitionControlLease { .. }
-            | $crate::protocol::Method::PolicyEvolutionStore { .. }
-            | $crate::protocol::Method::GapUpsert { .. }
-            | $crate::protocol::Method::GapTransition { .. }
-            | $crate::protocol::Method::GapSettle { .. }
-            | $crate::protocol::Method::WorkOfferPut { .. }
-            | $crate::protocol::Method::RetireSealedRecord { .. }
-    };
-}
 
-/// The WorkItem resource-reservation writes, as one pattern (see
-/// `work_item_kernel_writes`).
-macro_rules! work_item_resource_writes {
-    () => {
-        $crate::protocol::Method::ReserveWorkItemResources { .. }
-            | $crate::protocol::Method::ReleaseWorkItemResources { .. }
-            | $crate::protocol::Method::ReclaimWorkItemResources { .. }
-            | $crate::protocol::Method::UpdateResourceHost { .. }
-    };
-}
 
 
 
@@ -99,14 +61,6 @@ macro_rules! work_item_resource_writes {
 #[cfg(feature = "statechart")]
 pub mod agent_lifecycle_statechart;
 
-/// One staged time-series measurement batch for a cross-modal ACID commit
-/// (CONCEPT:MEDULLA-KG.backend.cross-modal-atomic-commit): `(series_id, n_fields, bucket_ns, field_names, points)` where each
-/// point is `(ts_nanos, field_values)`. Carried as PLAIN data (no `medulla-tsdb` type) so it
-/// threads through the `PersistenceBackend` trait + the server-independent `redb_store`
-/// without pulling the `tsdb` feature into either — the redb backend converts it to
-/// `medulla_tsdb::point::Point` only where the SERIES tables are actually written. Kept as a
-/// named alias so the `&[MeasurementBatch]` params don't trip the `type_complexity` lint.
-pub type MeasurementBatch = (String, usize, u64, Vec<String>, Vec<(i64, Vec<f64>)>);
 
 // In-process embedded library API (CONCEPT:MEDULLA-KG.backend.engine-modes) — SQLite/DuckDB-style. Drives
 // the SAME GraphCore + redb durable rows the socket dispatch does, with NO Tokio

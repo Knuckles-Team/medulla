@@ -784,7 +784,7 @@ pub trait PersistenceBackend: Send + Sync {
         methods: &[Method],
         vectors: &[(String, Vec<f32>)],
         blob_refs: &[(String, String)],
-        measurements: &[crate::MeasurementBatch],
+        measurements: &[medulla_store::MeasurementBatch],
     ) -> Result<(), String> {
         if !vectors.is_empty() || !blob_refs.is_empty() || !measurements.is_empty() {
             return Err(
@@ -839,7 +839,7 @@ pub struct CrossModalCommitArgs<'a> {
     pub methods: &'a [Method],
     pub vectors: &'a [(String, Vec<f32>)],
     pub blob_refs: &'a [(String, String)],
-    pub measurements: &'a [crate::MeasurementBatch],
+    pub measurements: &'a [medulla_store::MeasurementBatch],
     pub result_msgpack: Option<&'a [u8]>,
     pub committed_at_ms: u64,
 }

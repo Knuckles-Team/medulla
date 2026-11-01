@@ -723,9 +723,9 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::SubmitWorkItem { .. }
         | Method::SubmitWorkItems { .. }
         | medulla_types::capacity_lease_writes!()
-        | work_item_kernel_writes!()
+        | medulla_store::work_item_kernel_writes!()
         | Method::CommitWorkItemResult { .. }
-        | work_item_resource_writes!()
+        | medulla_store::work_item_resource_writes!()
         | Method::Sql { .. }
         | Method::AddTriples { .. }
         | Method::RemoveTriples { .. }

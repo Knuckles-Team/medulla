@@ -3410,7 +3410,7 @@ mod tests {
             _m: &[Method],
             _v: &[(String, Vec<f32>)],
             _b: &[(String, String)],
-            _meas: &[crate::MeasurementBatch],
+            _meas: &[medulla_store::MeasurementBatch],
         ) -> Result<(), String> {
             // Simulate a mid-way durable failure: NOTHING is written to redb.
             Err("injected durable commit failure".to_string())
@@ -4077,7 +4077,7 @@ mod tests {
         // ── Simulate the crash window: land the measurement ONLY in the authoritative
         // shard, via the
         // atomic barrier alone, bypassing the txn-handler replay step entirely. ──
-        let measurement: crate::MeasurementBatch = (
+        let measurement: medulla_store::MeasurementBatch = (
             envelope_test_series_key("media", SERIES),
             1,
             BUCKET_NS,

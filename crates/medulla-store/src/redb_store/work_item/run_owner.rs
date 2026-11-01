@@ -117,8 +117,6 @@ pub(crate) fn read_admission(
     }))
 }
 
-#[cfg(test)]
-mod tests;
 
 /// A completion may only bind the original native admitted run.
 pub(super) fn validate_completion_owner(
