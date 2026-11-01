@@ -226,7 +226,10 @@ async fn gather_shards(
     Ok(builder.finish())
 }
 
-pub use medulla_types::compute_result::distributed::{DistResult, LabelRows, ScoreRows};
+pub use medulla_result_types::{
+    compute_result::distributed::DistResult, compute_result::distributed::LabelRows,
+    compute_result::distributed::ScoreRows,
+};
 
 /// Run a distributed graph algorithm across `graphs` (each a shard), returning the
 /// per-vertex result over the UNION. The cross-shard superstep coordinator: gather the

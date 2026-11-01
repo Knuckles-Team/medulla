@@ -7,7 +7,7 @@
 //! kernel's stable code first in the detail.
 
 use medulla_protocol_types::result_contract::compute as results;
-use medulla_types::compute_result::finance as wire;
+use medulla_result_types::compute_result::finance as wire;
 use serde::Serialize;
 
 use crate::finance::banking::{self, AmlRule, CapitalInputs, CreditExposure};

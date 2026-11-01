@@ -70,7 +70,7 @@ pub(super) fn compiled_outbox(
     let terminal_outcome = outbox_plan
         .extra
         .iter()
-        .any(|intent| intent.topic == medulla_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC);
+        .any(|intent| intent.topic == medulla_result_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC);
     let mut outbox = if terminal_outcome {
         // A terminal receipt's conditional RunEvent is the batch's one outbox
         // currency. The generic projection wake-up would publish a second row
@@ -98,7 +98,7 @@ pub(super) fn compiled_outbox(
     };
     if terminal_outcome {
         for intent in &mut outbox {
-            if intent.topic == medulla_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC {
+            if intent.topic == medulla_result_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC {
                 // The conditional terminal event replaces the generic
                 // projection row, so carry the same universal attribution and
                 // scope binding on the sole row that remains.

@@ -2,9 +2,10 @@ use super::writeback::*;
 use super::*;
 use medulla_compute::mining::{causal_impact, process_mining, root_cause};
 use medulla_protocol_types::result_contract::compute as results;
-use medulla_types::compute_result::mining::{
-    CausalImpactMiningResult, CausalRelationRow, DirectlyFollowsRow, ParallelRelationRow,
-    ProcessMiningResult,
+use medulla_result_types::{
+    compute_result::mining::CausalImpactMiningResult, compute_result::mining::CausalRelationRow,
+    compute_result::mining::DirectlyFollowsRow, compute_result::mining::ParallelRelationRow,
+    compute_result::mining::ProcessMiningResult,
 };
 
 // ─────────────────────────── Causal impact (ITS / DiD) ───────────────────────────

@@ -20,8 +20,9 @@ use medulla_agent_types::{
     work_market::GapView,
 };
 use medulla_protocol_types::result_contract::coordination::GapUpsert;
-use medulla_types::epistemic_operations::{
-    RequestContext, RequestContextAuthenticationMethod, RequestContextSchemaVersion,
+use medulla_result_types::{
+    epistemic_operations::RequestContext, epistemic_operations::RequestContextAuthenticationMethod,
+    epistemic_operations::RequestContextSchemaVersion,
 };
 
 use super::*;

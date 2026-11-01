@@ -3,7 +3,7 @@
 // Value-at-Risk, CVaR/Expected Shortfall, stress testing, and drawdown computation.
 // Replaces Python scipy.stats-based risk calculations.
 
-pub use medulla_types::compute_result::finance::RiskMetrics;
+pub use medulla_result_types::compute_result::finance::RiskMetrics;
 
 /// Compute parametric VaR assuming normal distribution.
 ///

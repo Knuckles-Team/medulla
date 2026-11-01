@@ -321,8 +321,10 @@ fn ordinary_completion_projection_requires_exact_committed_payload() {
 #[test]
 fn ordinary_completion_native_fence_and_terminal_noop_preserve_binding() {
     use medulla_agent_types::run_completion::*;
-    use medulla_types::epistemic_operations::{
-        ClaimWorkItemRequest, ClaimWorkItemRequestSchemaVersion, ClaimWorkItemResult,
+    use medulla_result_types::{
+        epistemic_operations::ClaimWorkItemRequest,
+        epistemic_operations::ClaimWorkItemRequestSchemaVersion,
+        epistemic_operations::ClaimWorkItemResult,
     };
     let path = crate::redb_store::temp_path("medulla-completion", "native-fence");
     let shard = Shard::open(&path).unwrap();
@@ -445,7 +447,9 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
     use crate::mutation_batch::MutationBatch;
     use crate::server::mutation_batch::{compile_methods, principal_fingerprint, CompileBatch};
     use medulla_agent_types::run_completion::*;
-    use medulla_types::epistemic_operations::{ClaimWorkItemRequest, ClaimWorkItemResult};
+    use medulla_result_types::{
+        epistemic_operations::ClaimWorkItemRequest, epistemic_operations::ClaimWorkItemResult,
+    };
     use medulla_types::mutation_scope::MutationSurface;
     let compile = |shard: &Shard, tag: &str, method: Method, now| {
         compile_methods(

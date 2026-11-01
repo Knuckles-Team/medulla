@@ -1,10 +1,16 @@
 use std::collections::BTreeMap;
 
-use medulla_types::retrieval_verdict::{
-    ChunkScorePair, DescentPolicy, DescentStage, FallbackPolicy, HierarchyCommunity, RepairStep,
-    ScoreNormalization, ScoreRegion, SelectionPolicy, Verdict, RETRIEVAL_BUDGET_EXCEEDED,
-    RETRIEVAL_HIERARCHY_INVALID, RETRIEVAL_NORMALIZATION_INVALID, RETRIEVAL_POLICY_UNVERIFIED,
-    RETRIEVAL_ROUND_LIMIT_REQUIRED, RETRIEVAL_SCORE_PAIR_REQUIRED,
+use medulla_result_types::{
+    retrieval_verdict::ChunkScorePair, retrieval_verdict::DescentPolicy,
+    retrieval_verdict::DescentStage, retrieval_verdict::FallbackPolicy,
+    retrieval_verdict::HierarchyCommunity, retrieval_verdict::RepairStep,
+    retrieval_verdict::ScoreNormalization, retrieval_verdict::ScoreRegion,
+    retrieval_verdict::SelectionPolicy, retrieval_verdict::Verdict,
+    retrieval_verdict::RETRIEVAL_BUDGET_EXCEEDED, retrieval_verdict::RETRIEVAL_HIERARCHY_INVALID,
+    retrieval_verdict::RETRIEVAL_NORMALIZATION_INVALID,
+    retrieval_verdict::RETRIEVAL_POLICY_UNVERIFIED,
+    retrieval_verdict::RETRIEVAL_ROUND_LIMIT_REQUIRED,
+    retrieval_verdict::RETRIEVAL_SCORE_PAIR_REQUIRED,
 };
 
 use super::*;

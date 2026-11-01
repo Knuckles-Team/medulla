@@ -327,11 +327,11 @@ pub enum TxnOp {
     Update {
         table: String,
         set: serde_json::Map<String, Value>,
-        selector: medulla_types::RowPredicate,
+        selector: medulla_result_types::row_predicate::RowPredicate,
     },
     Delete {
         table: String,
-        selector: medulla_types::RowPredicate,
+        selector: medulla_result_types::row_predicate::RowPredicate,
     },
     CreateView {
         name: String,
@@ -870,7 +870,7 @@ impl TableStore {
         &self,
         table: &str,
         after_row_id: Option<u64>,
-        visibility: Option<&medulla_types::RowPredicate>,
+        visibility: Option<&medulla_result_types::row_predicate::RowPredicate>,
     ) -> Result<TableRowSnapshot, String> {
         let rtx = self.authority.read()?;
         self.row_snapshot_in(&rtx, table, after_row_id, visibility)
@@ -881,7 +881,7 @@ impl TableStore {
         rtx: &SqlRead<'_>,
         table: &str,
         after_row_id: Option<u64>,
-        visibility: Option<&medulla_types::RowPredicate>,
+        visibility: Option<&medulla_result_types::row_predicate::RowPredicate>,
     ) -> Result<TableRowSnapshot, String> {
         let (schema, snapshot) = self
             .schema_and_snapshot_in(rtx, table)?
@@ -1526,7 +1526,7 @@ impl TableStore {
         &self,
         table: &str,
         set: &serde_json::Map<String, Value>,
-        selector: &medulla_types::RowPredicate,
+        selector: &medulla_result_types::row_predicate::RowPredicate,
     ) -> Result<usize, String> {
         Ok(self.update_where_returning(table, set, selector)?.len())
     }
@@ -1536,7 +1536,7 @@ impl TableStore {
         &self,
         table: &str,
         set: &serde_json::Map<String, Value>,
-        selector: &medulla_types::RowPredicate,
+        selector: &medulla_result_types::row_predicate::RowPredicate,
     ) -> Result<Vec<Vec<Cell>>, String> {
         self.authority.maintain("update-rows", table, |wtx| {
             update_in(wtx, self.index_scope(), table, set, selector)
@@ -1547,7 +1547,7 @@ impl TableStore {
     pub fn delete_where(
         &self,
         table: &str,
-        selector: &medulla_types::RowPredicate,
+        selector: &medulla_result_types::row_predicate::RowPredicate,
     ) -> Result<usize, String> {
         Ok(self.delete_where_returning(table, selector)?.len())
     }
@@ -1557,7 +1557,7 @@ impl TableStore {
     pub fn delete_where_returning(
         &self,
         table: &str,
-        selector: &medulla_types::RowPredicate,
+        selector: &medulla_result_types::row_predicate::RowPredicate,
     ) -> Result<Vec<Vec<Cell>>, String> {
         self.authority.maintain("delete-rows", table, |wtx| {
             delete_in(wtx, self.index_scope(), table, selector)
@@ -6492,7 +6492,7 @@ fn read_snapshot_rows(
     table: &str,
     schema: &TableSchema,
     first_row_id: u64,
-    visibility: Option<&medulla_types::RowPredicate>,
+    visibility: Option<&medulla_result_types::row_predicate::RowPredicate>,
 ) -> Result<SnapshotRows, String> {
     let width = schema.columns().len();
     let mut page = Vec::new();
@@ -6640,7 +6640,7 @@ fn update_in(
     tenant_scope: &str,
     table: &str,
     set: &serde_json::Map<String, Value>,
-    selector: &medulla_types::RowPredicate,
+    selector: &medulla_result_types::row_predicate::RowPredicate,
 ) -> Result<Vec<Vec<Cell>>, String> {
     let schema =
         get_schema_in(wtx, table)?.ok_or_else(|| format!("table `{table}` does not exist"))?;
@@ -6696,7 +6696,7 @@ fn delete_in(
     wtx: &SqlWrite<'_>,
     tenant_scope: &str,
     table: &str,
-    selector: &medulla_types::RowPredicate,
+    selector: &medulla_result_types::row_predicate::RowPredicate,
 ) -> Result<Vec<Vec<Cell>>, String> {
     let schema =
         get_schema_in(wtx, table)?.ok_or_else(|| format!("table `{table}` does not exist"))?;
@@ -7001,9 +7001,9 @@ mod tests {
             .update_where(
                 "metrics",
                 &set,
-                &medulla_types::RowPredicate::Cmp {
+                &medulla_result_types::row_predicate::RowPredicate::Cmp {
                     col: "name".into(),
-                    op: medulla_types::CmpOp::Eq,
+                    op: medulla_result_types::row_predicate::CmpOp::Eq,
                     value: "cpu".into(),
                 },
             )
@@ -7012,9 +7012,9 @@ mod tests {
         let del = store
             .delete_where(
                 "metrics",
-                &medulla_types::RowPredicate::Cmp {
+                &medulla_result_types::row_predicate::RowPredicate::Cmp {
                     col: "name".into(),
-                    op: medulla_types::CmpOp::Eq,
+                    op: medulla_result_types::row_predicate::CmpOp::Eq,
                     value: "mem".into(),
                 },
             )
@@ -7028,7 +7028,7 @@ mod tests {
     #[test]
     fn compound_predicate_update_and_delete() {
         // CONCEPT:MEDULLA-KG.query.compound-predicate-decode — AND / range / IN predicates select rows in the store.
-        use medulla_types::{CmpOp, RowPredicate};
+        use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
         let (store, _p) = TableStore::open_temp().unwrap();
         store.create_table(&metrics_schema(), false).unwrap();
         let cols = vec!["ts".to_string(), "name".to_string(), "value".to_string()];
@@ -7390,9 +7390,9 @@ mod tests {
             .update_where_returning(
                 "metrics",
                 &set,
-                &medulla_types::RowPredicate::Cmp {
+                &medulla_result_types::row_predicate::RowPredicate::Cmp {
                     col: "name".into(),
-                    op: medulla_types::CmpOp::Eq,
+                    op: medulla_result_types::row_predicate::CmpOp::Eq,
                     value: "cpu".into(),
                 },
             )
@@ -7407,9 +7407,9 @@ mod tests {
         let del = store
             .delete_where_returning(
                 "metrics",
-                &medulla_types::RowPredicate::Cmp {
+                &medulla_result_types::row_predicate::RowPredicate::Cmp {
                     col: "name".into(),
-                    op: medulla_types::CmpOp::Eq,
+                    op: medulla_result_types::row_predicate::CmpOp::Eq,
                     value: "cpu".into(),
                 },
             )
@@ -8490,9 +8490,9 @@ mod tests {
                 ],
             )
             .unwrap();
-        let visible = medulla_types::RowPredicate::Cmp {
+        let visible = medulla_result_types::row_predicate::RowPredicate::Cmp {
             col: "owner".to_string(),
-            op: medulla_types::CmpOp::Eq,
+            op: medulla_result_types::row_predicate::CmpOp::Eq,
             value: Value::from("alice"),
         };
         let page = store

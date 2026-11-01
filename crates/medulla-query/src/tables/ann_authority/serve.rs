@@ -13,7 +13,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use medulla_ann::Metric;
-use medulla_types::RowPredicate;
+use medulla_result_types::row_predicate::RowPredicate;
 
 use super::generation::AnnGeneration;
 use super::{AnnFallbackReason, AnnLimits, AnnServeReceipt, AnnServingPath};

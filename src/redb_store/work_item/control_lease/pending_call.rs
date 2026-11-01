@@ -1,7 +1,7 @@
 //! Paired pending-envelope storage. No approval or execution authority.
 use super::*;
 use medulla_agent_types::{control_lease::PendingCallFence, control_lease::PENDING_CALL_KIND};
-use medulla_types::epistemic_operations_ext::CasWorkItemMetadataLeaseFence;
+use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataLeaseFence;
 
 const PENDING_REF: &str = "pending_call_lease_ref";
 const REGISTERED_WORK: &str = "pending_call_work_item";

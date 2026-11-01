@@ -154,7 +154,7 @@ fn claim_nodes(
     provenance: &str,
     evidence_id: &str,
 ) -> Option<(serde_json::Value, serde_json::Value)> {
-    use medulla_types::epistemic_node::{Claim, Evidence};
+    use medulla_result_types::{epistemic_node::Claim, epistemic_node::Evidence};
 
     let claim = Claim::new(family, mined_node_id, confidence, CLAIM_VALIDATION_STATE)
         .with_invalidation_deps([mined_node_id, evidence_id])

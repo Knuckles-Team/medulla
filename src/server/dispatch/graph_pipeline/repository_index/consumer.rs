@@ -15,7 +15,7 @@ use medulla_agent_types::{
     native_control::EnrichmentBudgetReservation, native_control::NativeControlSchemaVersion,
     native_control::SubmitWorkItemsRequest, native_control::MAX_SUBMIT_BATCH,
 };
-use medulla_types::epistemic_operations::RequestContext;
+use medulla_result_types::epistemic_operations::RequestContext;
 use medulla_types::mutation_scope::MutationOutboxIntent;
 #[cfg(feature = "blob")]
 use medulla_types::mutation_scope::MutationOutboxLease;
@@ -720,8 +720,9 @@ mod tests {
     use super::*;
     #[cfg(feature = "blob")]
     use crate::server::blob::store::ChunkStore;
-    use medulla_types::epistemic_operations::{
-        RequestContextAuthenticationMethod, RequestContextSchemaVersion,
+    use medulla_result_types::{
+        epistemic_operations::RequestContextAuthenticationMethod,
+        epistemic_operations::RequestContextSchemaVersion,
     };
 
     #[cfg(feature = "blob")]

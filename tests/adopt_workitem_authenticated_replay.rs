@@ -1336,8 +1336,9 @@ async fn change_and_cancel_admission(
     original: &SubmitWorkItemRequest,
     admitted: &SubmitWorkItemResult,
 ) {
-    use medulla_types::epistemic_operations_ext::{
-        CasWorkItemMetadataRequest, CasWorkItemMetadataRequestSchemaVersion,
+    use medulla_result_types::{
+        epistemic_operations_ext::CasWorkItemMetadataRequest,
+        epistemic_operations_ext::CasWorkItemMetadataRequestSchemaVersion,
     };
     let changed = test_support::dispatch(
         state,

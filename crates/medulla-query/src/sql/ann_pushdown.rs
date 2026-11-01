@@ -22,7 +22,7 @@ use arrow::array::Array;
 use arrow::datatypes::{DataType, Field, SchemaRef};
 use datafusion::logical_expr::{ColumnarValue, ScalarFunctionArgs, ScalarUDF};
 use datafusion::scalar::ScalarValue;
-use medulla_types::RowPredicate;
+use medulla_result_types::row_predicate::RowPredicate;
 
 use super::ann_filter::{admissible_prefilter, ann_query_shape, AnnDeclineReason, AnnQueryShape};
 use super::pgfamily::{plan_ann_search, AnnIndexPlan, AnnMethod, AnnSearchPlan};

@@ -9,7 +9,10 @@
 use std::collections::BTreeMap;
 
 use medulla_core::graph::GraphView;
-use medulla_types::epistemic_node::{Claim, EpistemicNode, EpistemicNodeError, Evidence};
+use medulla_result_types::{
+    epistemic_node::Claim, epistemic_node::EpistemicNode, epistemic_node::EpistemicNodeError,
+    epistemic_node::Evidence,
+};
 
 use crate::adapter::BeliefGraph;
 use crate::model::EdgeKind;

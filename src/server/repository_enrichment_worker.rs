@@ -71,8 +71,10 @@ mod worker {
     use medulla_agent_types::native_control::SubmitWorkItemsRequest;
     #[cfg(not(feature = "raft"))]
     use medulla_protocol_types::protocol::Method;
-    use medulla_types::epistemic_operations::{
-        RequestContext, RequestContextAuthenticationMethod, RequestContextSchemaVersion,
+    use medulla_result_types::{
+        epistemic_operations::RequestContext,
+        epistemic_operations::RequestContextAuthenticationMethod,
+        epistemic_operations::RequestContextSchemaVersion,
     };
 
     const IDLE: Duration = Duration::from_millis(500);

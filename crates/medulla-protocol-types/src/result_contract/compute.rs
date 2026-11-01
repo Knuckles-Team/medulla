@@ -2,23 +2,23 @@
 
 use super::Dynamic;
 use medulla_decision_types::solve::SolveResult;
-use medulla_types::compute_result::algorithms;
+use medulla_result_types::compute_result::algorithms;
 #[cfg(feature = "datascience")]
-use medulla_types::compute_result::datascience;
+use medulla_result_types::compute_result::datascience;
 #[cfg(feature = "compute-dist")]
-use medulla_types::compute_result::distributed;
+use medulla_result_types::compute_result::distributed;
 #[cfg(feature = "finance")]
-use medulla_types::compute_result::finance;
+use medulla_result_types::compute_result::finance;
 #[cfg(feature = "graphlearn")]
-use medulla_types::compute_result::graphlearn;
+use medulla_result_types::compute_result::graphlearn;
 #[cfg(feature = "finance")]
-use medulla_types::compute_result::market;
+use medulla_result_types::compute_result::market;
 #[cfg(feature = "mining")]
-use medulla_types::compute_result::mining;
+use medulla_result_types::compute_result::mining;
 #[cfg(feature = "ml-pipeline")]
-use medulla_types::compute_result::pipeline;
+use medulla_result_types::compute_result::pipeline;
 #[cfg(feature = "finance")]
-use medulla_types::compute_result::signal_models;
+use medulla_result_types::compute_result::signal_models;
 #[cfg(feature = "datascience")]
 use medulla_types::wire::FittedModel;
 use serde::{Deserialize, Serialize};

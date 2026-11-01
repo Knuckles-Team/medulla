@@ -23,11 +23,14 @@ use medulla_compute::mining::classify;
 use medulla_protocol_types::{
     result_contract::compute as results, result_contract::compute::MiningPipelinePredict,
 };
-use medulla_types::compute_result::graphlearn::PredictedLink;
-use medulla_types::compute_result::pipeline::{
-    ClassifyPrediction, EstimatorPrediction, GraphlearnPrediction, PipelineClassifiedRow,
-    PipelineComparison, PipelineEvaluation, PipelinePrediction, PipelineServeResult,
-    PipelineTrainResult, PipelineValueRow,
+use medulla_result_types::compute_result::graphlearn::PredictedLink;
+use medulla_result_types::{
+    compute_result::pipeline::ClassifyPrediction, compute_result::pipeline::EstimatorPrediction,
+    compute_result::pipeline::GraphlearnPrediction,
+    compute_result::pipeline::PipelineClassifiedRow, compute_result::pipeline::PipelineComparison,
+    compute_result::pipeline::PipelineEvaluation, compute_result::pipeline::PipelinePrediction,
+    compute_result::pipeline::PipelineServeResult, compute_result::pipeline::PipelineTrainResult,
+    compute_result::pipeline::PipelineValueRow,
 };
 use medulla_types::wire::{FeatureStep, ModelSpec, PipelineSpec};
 use serde_json::{json, Value};

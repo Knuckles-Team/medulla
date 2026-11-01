@@ -14,7 +14,9 @@ use std::collections::BTreeSet;
 
 use medulla_core::graph::GraphView;
 use medulla_plan::{impact_cone, ImpactEdges};
-use medulla_types::compute_result::mining::{ImpactOptions, RiskModel};
+use medulla_result_types::{
+    compute_result::mining::ImpactOptions, compute_result::mining::RiskModel,
+};
 use medulla_types::wire::EdgeDir;
 use serde::Deserialize;
 use serde_json::{Map, Value};

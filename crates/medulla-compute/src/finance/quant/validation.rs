@@ -72,7 +72,9 @@ pub fn posterior_credible_interval(alpha: f64, beta: f64, level: f64) -> (f64, f
 pub use medulla_numeric::evaluation::backtest::{
     deflated_sharpe_ratio, probability_of_backtest_overfit,
 };
-pub use medulla_types::compute_result::finance::{CvSplit, DieboldMariano};
+pub use medulla_result_types::{
+    compute_result::finance::CvSplit, compute_result::finance::DieboldMariano,
+};
 
 use medulla_numeric::evaluation::backtest as eval;
 

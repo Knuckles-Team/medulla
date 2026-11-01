@@ -309,7 +309,7 @@ pub enum AlterTableAction {
 /// the redb store INSIDE the open write transaction (serializable for free).
 #[derive(Debug, Clone, PartialEq)]
 pub struct TableWhereEq {
-    pub pred: medulla_types::RowPredicate,
+    pub pred: medulla_result_types::row_predicate::RowPredicate,
 }
 
 /// A decoded literal `INSERT INTO <user_table> … VALUES …` (CONCEPT:MEDULLA-KG.query.register-user-tables-alongside), with an
@@ -449,7 +449,7 @@ pub enum WhereEq {
     /// the engine re-checks under the write guard for serializable semantics.
     Predicate {
         where_sql: String,
-        pred: medulla_types::RowPredicate,
+        pred: medulla_result_types::row_predicate::RowPredicate,
     },
 }
 
@@ -1448,7 +1448,8 @@ fn classify_update(
 fn classify_delete(delete: &Delete) -> Result<DeleteNodes, String> {
     if delete.using.is_some() {
         return Err(
-            "DELETE … USING is not supported (CONCEPT:MEDULLA-KG.query.follow-up follow-up)".to_string(),
+            "DELETE … USING is not supported (CONCEPT:MEDULLA-KG.query.follow-up follow-up)"
+                .to_string(),
         );
     }
     let tables = match &delete.from {
@@ -2340,8 +2341,9 @@ fn is_drop_function(sql: &str) -> bool {
 /// `Err`.
 fn parse_create_function(sql: &str) -> Result<CreateFunctionPlan, String> {
     let s = sql.trim();
-    let rest = strip_leading_kw(s, "CREATE")
-        .ok_or("CREATE FUNCTION: expected `CREATE` (CONCEPT:MEDULLA-KG.query.create-drop-function)")?;
+    let rest = strip_leading_kw(s, "CREATE").ok_or(
+        "CREATE FUNCTION: expected `CREATE` (CONCEPT:MEDULLA-KG.query.create-drop-function)",
+    )?;
     let (or_replace, rest) = match strip_leading_kw(rest, "OR") {
         Some(r) => (
             true,
@@ -2945,9 +2947,11 @@ fn decode_where(selection: Option<&Expr>, verb: &str) -> Result<WhereEq, String>
 /// `BETWEEN`, `IS [NOT] NULL`, and parenthesised nesting. The left operand of a
 /// comparison/`IN`/`BETWEEN`/`IS NULL` must be a (possibly qualified) column; the
 /// right operands must be literals (reusing `ident_column` + `expr_to_json`).
-pub(crate) fn decode_predicate(expr: &Expr) -> Result<medulla_types::RowPredicate, String> {
+pub(crate) fn decode_predicate(
+    expr: &Expr,
+) -> Result<medulla_result_types::row_predicate::RowPredicate, String> {
     use datafusion::sql::sqlparser::ast::UnaryOperator;
-    use medulla_types::RowPredicate;
+    use medulla_result_types::row_predicate::RowPredicate;
     match expr {
         Expr::Nested(inner) => decode_predicate(inner),
         Expr::BinaryOp { left, op, right } => decode_binary_predicate(left, op, right),
@@ -3008,8 +3012,8 @@ fn decode_binary_predicate(
     left: &Expr,
     op: &BinaryOperator,
     right: &Expr,
-) -> Result<medulla_types::RowPredicate, String> {
-    use medulla_types::{CmpOp, RowPredicate};
+) -> Result<medulla_result_types::row_predicate::RowPredicate, String> {
+    use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
     match op {
         BinaryOperator::And => Ok(RowPredicate::And(vec![
             decode_predicate(left)?,
@@ -3651,9 +3655,9 @@ mod tests {
         };
         assert_eq!(
             pred,
-            medulla_types::RowPredicate::Cmp {
+            medulla_result_types::row_predicate::RowPredicate::Cmp {
                 col: "type".to_string(),
-                op: medulla_types::CmpOp::Eq,
+                op: medulla_result_types::row_predicate::CmpOp::Eq,
                 value: Value::String("Tool".to_string()),
             }
         );
@@ -3676,15 +3680,15 @@ mod tests {
         );
         assert_eq!(
             pred,
-            medulla_types::RowPredicate::And(vec![
-                medulla_types::RowPredicate::Cmp {
+            medulla_result_types::row_predicate::RowPredicate::And(vec![
+                medulla_result_types::row_predicate::RowPredicate::Cmp {
                     col: "rank".to_string(),
-                    op: medulla_types::CmpOp::Gt,
+                    op: medulla_result_types::row_predicate::CmpOp::Gt,
                     value: Value::Number(2.into()),
                 },
-                medulla_types::RowPredicate::Cmp {
+                medulla_result_types::row_predicate::RowPredicate::Cmp {
                     col: "type".to_string(),
-                    op: medulla_types::CmpOp::Eq,
+                    op: medulla_result_types::row_predicate::CmpOp::Eq,
                     value: Value::String("Agent".to_string()),
                 },
             ])
@@ -3693,7 +3697,7 @@ mod tests {
 
     #[test]
     fn decode_predicate_in_between_or_not() {
-        use medulla_types::{CmpOp, RowPredicate};
+        use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
         let StatementKind::DeleteNodes(d) =
             classify("DELETE FROM nodes WHERE type IN ('Tool', 'Skill')").unwrap()
         else {
@@ -3822,9 +3826,9 @@ mod tests {
         };
         assert_eq!(
             pred,
-            medulla_types::RowPredicate::Cmp {
+            medulla_result_types::row_predicate::RowPredicate::Cmp {
                 col: "type".to_string(),
-                op: medulla_types::CmpOp::Eq,
+                op: medulla_result_types::row_predicate::CmpOp::Eq,
                 value: Value::String("Tool".to_string()),
             }
         );
@@ -4029,9 +4033,9 @@ mod tests {
         // CONCEPT:MEDULLA-KG.query.compound-predicate-decode — the user-table selector is now a RowPredicate.
         assert_eq!(
             u.selector.pred,
-            medulla_types::RowPredicate::Cmp {
+            medulla_result_types::row_predicate::RowPredicate::Cmp {
                 col: "symbol".to_string(),
-                op: medulla_types::CmpOp::Eq,
+                op: medulla_result_types::row_predicate::CmpOp::Eq,
                 value: Value::String("AAPL".into()),
             }
         );
@@ -4044,9 +4048,9 @@ mod tests {
         };
         assert_eq!(
             d.selector.pred,
-            medulla_types::RowPredicate::Cmp {
+            medulla_result_types::row_predicate::RowPredicate::Cmp {
                 col: "symbol".to_string(),
-                op: medulla_types::CmpOp::Eq,
+                op: medulla_result_types::row_predicate::CmpOp::Eq,
                 value: Value::String("MSFT".into()),
             }
         );

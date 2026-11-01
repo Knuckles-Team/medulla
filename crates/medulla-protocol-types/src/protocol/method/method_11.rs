@@ -183,7 +183,7 @@ $($variants)*
     /// authorises an order. See [`crate::compute_result::market`].
     #[cfg(feature = "finance")]
     FinanceMarket {
-        op: Box<medulla_types::compute_result::market::FinanceMarketOp>,
+        op: Box<medulla_result_types::compute_result::market::FinanceMarketOp>,
     },
 
     // ── Signal fusion and the strategic-insider model (EH-423 / AUD-30) ─────
@@ -194,7 +194,7 @@ $($variants)*
     /// [`crate::compute_result::signal_models`].
     #[cfg(feature = "finance")]
     FinanceSignalModels {
-        op: Box<medulla_types::compute_result::signal_models::FinanceSignalModelsOp>,
+        op: Box<medulla_result_types::compute_result::signal_models::FinanceSignalModelsOp>,
     },
 
     // ── Sealed records (EH-558) ─────────────────────────────────────────────

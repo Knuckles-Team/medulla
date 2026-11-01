@@ -3,11 +3,13 @@
 //! the foreign sources it reads. The wire shapes and the pure parsing live in
 //! [`medulla_types::freshness`]; this module only finds the nodes.
 
-use medulla_types::freshness::{
-    declaration_from_props, foreign_freshness_from_props, foreign_watermark_node_id,
-    resolve_volatility, ForeignSourceFreshness, ResolvedVolatility, FOREIGN_SOURCE_KEY,
-    FOREIGN_WATERMARK_LABEL, MAX_STALENESS_IRI, MAX_STALENESS_KEY, VOLATILITY_CLASS_IRI,
-    VOLATILITY_CLASS_KEY,
+use medulla_result_types::{
+    freshness::declaration_from_props, freshness::foreign_freshness_from_props,
+    freshness::foreign_watermark_node_id, freshness::resolve_volatility,
+    freshness::ForeignSourceFreshness, freshness::ResolvedVolatility,
+    freshness::FOREIGN_SOURCE_KEY, freshness::FOREIGN_WATERMARK_LABEL,
+    freshness::MAX_STALENESS_IRI, freshness::MAX_STALENESS_KEY, freshness::VOLATILITY_CLASS_IRI,
+    freshness::VOLATILITY_CLASS_KEY,
 };
 
 use crate::dep_scope::Dim;
@@ -92,7 +94,9 @@ fn contains(haystack: &[u8], needle: &[u8]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::freshness::{VolatilityClass, WATERMARK_AT_KEY, WATERMARK_KEY};
+    use medulla_result_types::{
+        freshness::VolatilityClass, freshness::WATERMARK_AT_KEY, freshness::WATERMARK_KEY,
+    };
     use serde_json::json;
 
     fn blob(value: serde_json::Value) -> Vec<u8> {

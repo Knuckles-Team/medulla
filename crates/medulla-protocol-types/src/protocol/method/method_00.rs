@@ -230,7 +230,7 @@ macro_rules! __eg_method_chunk_0 {
     /// ordered. A negative result is authoritative and must not trigger another
     /// claim path.
     ClaimWorkItem {
-        request: medulla_types::epistemic_operations::ClaimWorkItemRequest,
+        request: medulla_result_types::epistemic_operations::ClaimWorkItemRequest,
     },
 
     /// Atomically acquire one bounded multi-dimensional capacity lease set.
@@ -362,13 +362,13 @@ macro_rules! __eg_method_chunk_0 {
     /// WorkItem lease.  All authority bindings are derived in the engine from
     /// the verified request context and the authoritative WorkItem row.
     MintWorkItemClaimCapability {
-        request: medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest,
+        request: medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest,
     },
 
     /// Verify an opaque native WorkItem capability against the current live
     /// lease before any private payload/body lookup.
     VerifyWorkItemClaimCapability {
-        request: medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest,
+        request: medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest,
     },
 
     /// Renew an existing WorkItem lease. Both epoch and fencing token must match
@@ -405,7 +405,7 @@ macro_rules! __eg_method_chunk_0 {
         /// identically, so the wire form -- and the frozen contract -- are
         /// unchanged; only the in-memory layout moves.
         #[serde(default)]
-        outcome_extension: Option<Box<medulla_types::outcome_bundle::TerminalOutcomeExtension>>,
+        outcome_extension: Option<Box<medulla_result_types::outcome_bundle::TerminalOutcomeExtension>>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         run_completion: Option<Box<medulla_agent_types::run_completion::RunCompletionInput>>,
         #[serde(default)]
@@ -457,7 +457,7 @@ macro_rules! __eg_method_chunk_0 {
     /// carries no such field — so it can never manufacture or extend native
     /// lease authority.
     CasWorkItemMetadata {
-        request: medulla_types::epistemic_operations_ext::CasWorkItemMetadataRequest,
+        request: medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataRequest,
     },
 
     /// Atomically reserve the immutable shared-host resources for the exact
@@ -465,36 +465,36 @@ macro_rules! __eg_method_chunk_0 {
     /// extension and host records; request fields are assertions, never a
     /// caller-owned reservation ledger.
     ReserveWorkItemResources {
-        request: medulla_types::epistemic_operations::ResourceReservationRequest,
+        request: medulla_result_types::epistemic_operations::ResourceReservationRequest,
     },
 
     /// Atomically release the exact current/terminal WorkItem reservation while
     /// retaining its lifecycle tombstone for exact idempotent replay.
     ReleaseWorkItemResources {
-        request: medulla_types::epistemic_operations::ResourceReservationRequest,
+        request: medulla_result_types::epistemic_operations::ResourceReservationRequest,
     },
 
     /// Atomically reclaim an expired or superseded reservation.  A stale worker
     /// cannot use this operation to release a newer attempt's capacity.
     ReclaimWorkItemResources {
-        request: medulla_types::epistemic_operations::ResourceReservationRequest,
+        request: medulla_result_types::epistemic_operations::ResourceReservationRequest,
     },
 
     /// Exact bounded read of a native reservation or retained lifecycle tombstone.
     QueryWorkItemReservation {
-        request: medulla_types::epistemic_operations::ResourceReservationStatusRequest,
+        request: medulla_result_types::epistemic_operations::ResourceReservationStatusRequest,
     },
 
     /// Bounded native reservation reconciliation/status read.  No local mirror
     /// is sufficient to answer this operation.
     ResourceReservationStatus {
-        request: medulla_types::epistemic_operations::ResourceReservationStatusRequest,
+        request: medulla_result_types::epistemic_operations::ResourceReservationStatusRequest,
     },
 
     /// Monotonic host capacity/heartbeat/policy update.  Held accounting remains
     /// native and cannot be overwritten by telemetry.
     UpdateResourceHost {
-        request: medulla_types::epistemic_operations::ResourceHostUpdateRequest,
+        request: medulla_result_types::epistemic_operations::ResourceHostUpdateRequest,
     },
 
     /// Atomically allocate the typed development-lane hold for the exact
@@ -502,14 +502,14 @@ macro_rules! __eg_method_chunk_0 {
     /// uniqueness plus every configured quota scope are charged together.
     /// `request.now_ms` is overwritten from the authoritative engine clock.
     ReserveDevelopmentLane {
-        request: medulla_types::epistemic_operations::DevelopmentLaneReserveRequest,
+        request: medulla_result_types::epistemic_operations::DevelopmentLaneReserveRequest,
     },
 
     /// Renew one existing lane hold in place. This never appends a WorkItem or
     /// history row and requires the current WorkItem lease/fence.
     /// `request.now_ms` is overwritten from the authoritative engine clock.
     RenewDevelopmentLane {
-        request: medulla_types::epistemic_operations::DevelopmentLaneRenewRequest,
+        request: medulla_result_types::epistemic_operations::DevelopmentLaneRenewRequest,
     },
         ]);
     };

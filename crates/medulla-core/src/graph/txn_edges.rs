@@ -190,7 +190,7 @@ impl<'a> GraphTxn<'a> {
     pub fn compare_and_set_fields_if(
         &mut self,
         node_id: &str,
-        predicate: &medulla_types::RowPredicate,
+        predicate: &medulla_result_types::row_predicate::RowPredicate,
         conditions: &serde_json::Map<String, serde_json::Value>,
         updates: &serde_json::Map<String, serde_json::Value>,
     ) -> bool {

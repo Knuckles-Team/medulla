@@ -597,7 +597,8 @@ fn named_domain(line: &str) -> Option<String> {
 /// The variants of one `MethodWriteFamily`, read from the family declaration
 /// next to the enum, so a family edit is visible to this golden too.
 fn family_variants(family: &str) -> Vec<String> {
-    let source = include_str!("../../../crates/medulla-protocol-types/src/protocol/method/families.rs");
+    let source =
+        include_str!("../../../crates/medulla-protocol-types/src/protocol/method/families.rs");
     let mut pending: Vec<String> = Vec::new();
     for line in code_lines(function_body(source, "fn write_family")) {
         for token in line.match_indices("Self::") {

@@ -45,7 +45,7 @@ fn ols_with_se(x: &[Vec<f64>], y: &[f64]) -> Option<(Vec<f64>, Vec<f64>, f64)> {
 //  Kalman filters
 // ════════════════════════════════════════════════════════════════════════
 
-pub use medulla_types::compute_result::finance::KalmanState;
+pub use medulla_result_types::compute_result::finance::KalmanState;
 // The scalar filter is the series kernel's (EH-530): one recurrence for the finance
 // Methods and UQL `DERIVE kalman(…)` / `kbeta(…)`.
 use medulla_numeric::series::kalman::Kalman;
@@ -126,7 +126,7 @@ pub fn kalman_volatility(
 //  Cointegration: Augmented Dickey-Fuller
 // ════════════════════════════════════════════════════════════════════════
 
-pub use medulla_types::compute_result::finance::AdfResult;
+pub use medulla_result_types::compute_result::finance::AdfResult;
 
 /// Finite-sample MacKinnon critical value for the ADF "constant, no trend" case:
 /// CV(T) = β∞ + β1/T + β2/T² (MacKinnon 1991 response-surface coefficients).
@@ -226,7 +226,7 @@ pub fn adf_test(series: &[f64], max_lag: usize) -> AdfResult {
 //  Ornstein-Uhlenbeck: calibration + MFPT-optimal thresholds
 // ════════════════════════════════════════════════════════════════════════
 
-pub use medulla_types::compute_result::finance::OuParams;
+pub use medulla_result_types::compute_result::finance::OuParams;
 
 /// Calibrate an OU process dS = θ(μ−S)dt + σ dW from a discretely-sampled spread
 /// via the exact AR(1) discretisation S_t = a + b·S_{t-1} + ε (Euler-Maruyama /
@@ -279,7 +279,7 @@ pub fn ou_calibrate(spread: &[f64], dt: f64) -> OuParams {
     }
 }
 
-pub use medulla_types::compute_result::finance::OuThresholds;
+pub use medulla_result_types::compute_result::finance::OuThresholds;
 
 /// Expected first-passage time (in σ_eq units) of a normalised OU from deviation
 /// `b` back to the mean (0), solved from the backward-Kolmogorov MFPT ODE

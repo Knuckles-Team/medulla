@@ -784,8 +784,8 @@ async fn retire_delegation_library(
 #[cfg(feature = "redb")]
 fn delegation_method(entry: &medulla_agent_types::agent_library::AgentLibraryEntry) -> Method {
     let now_ms = unix_ms();
-    let context = medulla_types::epistemic_operations::RequestContext {
-        schema_version: medulla_types::epistemic_operations::RequestContextSchemaVersion::V2,
+    let context = medulla_result_types::epistemic_operations::RequestContext {
+        schema_version: medulla_result_types::epistemic_operations::RequestContextSchemaVersion::V2,
         request_id: "rmdd27-delegate-context-request".to_string(),
         subject_id: AUTH_AGENT.to_string(),
         tenant_id: TENANT.to_string(),
@@ -793,7 +793,7 @@ fn delegation_method(entry: &medulla_agent_types::agent_library::AgentLibraryEnt
         scopes: vec!["work:delegate".to_string()],
         audience: "medulla-test".to_string(),
         authentication_method:
-            medulla_types::epistemic_operations::RequestContextAuthenticationMethod::LocalProcess,
+            medulla_result_types::epistemic_operations::RequestContextAuthenticationMethod::LocalProcess,
         policy_version: "policy-test".to_string(),
         graph: GRAPH.to_string(),
         placement_epoch: None,
@@ -974,8 +974,8 @@ fn restart_delegate_method(
     Method::KgDelegate {
         request: Box::new(medulla_agent_types::delegation::KgDelegateRequest {
             schema_version: medulla_agent_types::delegation::KgDelegateSchemaVersion::V2,
-            context: medulla_types::epistemic_operations::RequestContext {
-                schema_version: medulla_types::epistemic_operations::RequestContextSchemaVersion::V2,
+            context: medulla_result_types::epistemic_operations::RequestContext {
+                schema_version: medulla_result_types::epistemic_operations::RequestContextSchemaVersion::V2,
                 request_id: "rmdd27-restart-delegate-request".to_string(),
                 subject_id: "rmdd27-restart-delegate-subject".to_string(),
                 tenant_id: TENANT.to_string(),
@@ -983,7 +983,7 @@ fn restart_delegate_method(
                 scopes: vec!["work:delegate".to_string()],
                 audience: "medulla-test".to_string(),
                 authentication_method:
-                    medulla_types::epistemic_operations::RequestContextAuthenticationMethod::LocalProcess,
+                    medulla_result_types::epistemic_operations::RequestContextAuthenticationMethod::LocalProcess,
                 policy_version: "policy-test".to_string(),
                 graph: GRAPH.to_string(),
                 placement_epoch: None,
@@ -1022,8 +1022,8 @@ fn missing_authority_delegate_method() -> Method {
     Method::KgDelegate {
         request: Box::new(medulla_agent_types::delegation::KgDelegateRequest {
             schema_version: medulla_agent_types::delegation::KgDelegateSchemaVersion::V2,
-            context: medulla_types::epistemic_operations::RequestContext {
-                schema_version: medulla_types::epistemic_operations::RequestContextSchemaVersion::V2,
+            context: medulla_result_types::epistemic_operations::RequestContext {
+                schema_version: medulla_result_types::epistemic_operations::RequestContextSchemaVersion::V2,
                 request_id: "rmdd27-missing-authority-request".to_string(),
                 subject_id: "rmdd27-missing-authority-subject".to_string(),
                 tenant_id: TENANT.to_string(),
@@ -1031,7 +1031,7 @@ fn missing_authority_delegate_method() -> Method {
                 scopes: vec!["work:delegate".to_string()],
                 audience: "medulla-test".to_string(),
                 authentication_method:
-                    medulla_types::epistemic_operations::RequestContextAuthenticationMethod::LocalProcess,
+                    medulla_result_types::epistemic_operations::RequestContextAuthenticationMethod::LocalProcess,
                 policy_version: "policy-test".to_string(),
                 graph: GRAPH.to_string(),
                 placement_epoch: None,

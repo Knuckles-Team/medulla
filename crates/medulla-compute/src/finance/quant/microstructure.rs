@@ -92,7 +92,7 @@ pub fn vpin_pm(buy_vol: &[f64], sell_vol: &[f64], p_mean: &[f64]) -> f64 {
 //  Hawkes process: MLE (exponential kernel) + Hardiman-Bouchaud
 // ════════════════════════════════════════════════════════════════════════
 
-pub use medulla_types::compute_result::finance::HawkesFit;
+pub use medulla_result_types::compute_result::finance::HawkesFit;
 
 /// Negative log-likelihood for an exponential-kernel Hawkes process with the
 /// stationarity constraint α/β < 1 (returns +∞-ish penalty when violated).

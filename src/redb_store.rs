@@ -935,6 +935,12 @@ mod mutation_batch_tests {
     };
     use crate::mutation_batch::MutationOperation;
     use medulla_kernel::test_rendezvous::{join_bounded, meet};
+    use medulla_result_types::{
+        outcome_bundle::CommitOutcomeBundle, outcome_bundle::OutcomeCompleteness,
+        outcome_bundle::ReceiptNode, outcome_bundle::ReceiptNodeKind, outcome_bundle::RunEvent,
+        outcome_bundle::TerminalOutcomeExtension, outcome_bundle::OUTCOME_BUNDLE_VERSION,
+        outcome_bundle::RUN_EVENT_OUTBOX_TOPIC,
+    };
     use medulla_transaction::OutboxClaimBudget;
     use medulla_types::mutation_scope::DurabilityDomain;
     use medulla_types::mutation_scope::IncarnationId;
@@ -944,10 +950,6 @@ mod mutation_batch_tests {
     use medulla_types::mutation_scope::MutationSurface;
     use medulla_types::mutation_scope::ScopeTenantId;
     use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
-    use medulla_types::outcome_bundle::{
-        CommitOutcomeBundle, OutcomeCompleteness, ReceiptNode, ReceiptNodeKind, RunEvent,
-        TerminalOutcomeExtension, OUTCOME_BUNDLE_VERSION, RUN_EVENT_OUTBOX_TOPIC,
-    };
     use sha2::{Digest, Sha256};
 
     fn temp_path(tag: &str) -> std::path::PathBuf {

@@ -41,8 +41,7 @@ use medulla_decision_types::{
     decision::statistical::log::OutcomeAggregate, decision::statistical::log::StoredEvaluation,
     decision::statistical::log::StoredResolution,
 };
-use medulla_types::sealed_record::SealedRecordRetirement;
-use medulla_types::{
+use medulla_result_types::{
     epistemic_operations::ClaimWorkItemResult,
     epistemic_operations::DevelopmentLaneCleanupCompleteResult,
     epistemic_operations::DevelopmentLaneFinishResult,
@@ -55,10 +54,11 @@ use medulla_types::{
     epistemic_operations::ResourceReservationResult,
     epistemic_operations::ResourceReservationStatusResult,
 };
-use medulla_types::{
+use medulla_result_types::{
     epistemic_operations_ext::CasWorkItemMetadataResult,
     epistemic_operations_ext::WorkItemClaimCapabilityResult,
 };
+use medulla_types::sealed_record::SealedRecordRetirement;
 
 method_results! {
     visit_coordination;

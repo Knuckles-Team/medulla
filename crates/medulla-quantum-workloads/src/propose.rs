@@ -66,7 +66,7 @@ use std::collections::BTreeMap;
 use medulla_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use medulla_quantum_core::result::{Formalism, Proposal, QuantumResult};
-use medulla_types::epistemic_node::{Claim, Evidence};
+use medulla_result_types::{epistemic_node::Claim, epistemic_node::Evidence};
 
 use crate::run::MaxCutRun;
 use crate::subgraph::CandidateSubgraph;
@@ -158,7 +158,7 @@ pub enum ProposeError {
     Serialize(String),
     /// The typed `:Claim`/`:Evidence` node refused the proposal's values (EH-194).
     #[error("proposal claim is not a valid epistemic node: {0}")]
-    InvalidClaim(#[from] medulla_types::epistemic_node::EpistemicNodeError),
+    InvalidClaim(#[from] medulla_result_types::epistemic_node::EpistemicNodeError),
 }
 
 /// The ids and score one Max-Cut proposal's claim + evidence are written under.

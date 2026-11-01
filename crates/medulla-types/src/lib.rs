@@ -213,9 +213,6 @@ pub mod pipeline_batch;
 // `row_predicate`, since `medulla-core` needs it on both sides of its backend `#[cfg]`
 // split.
 pub mod embedding;
-// MEDULLA-FEDERATED-QUERY-R083.1 — typed prior/retrieved candidates and the closed
-// arbitration verdict value; support classification and policy live above.
-pub mod retrieval_arbitration;
 // MEDULLA-DURABLE-KERNEL-R038 — the declared durability class (ephemeral/async/sync)
 // a KV namespace or table carries. Pure serde, no dep.
 pub mod durability_class;
@@ -247,20 +244,8 @@ pub mod plan_cache_key;
 pub mod benchmark_claim;
 // MEDULLA-DURABLE-KERNEL-R036 — the mirror-sink side: sink kind (fan-out/postgres)
 // and durable per-mirror cursor with a non-empty-position guard. Pure serde, no dep.
-pub mod mirror_sink;
-// CONCEPT:MEDULLA-KG.compute.epistemic-operations-protocol — strict shared DTOs for
-// RequestContext, mutation/ingestion, work, artifact, query, job, and trace outcomes.
-pub mod epistemic_operations;
-// GOC-46 — hand-written wire DTOs (WorkItemClaimCapability*, CasWorkItemMetadata*)
-// that the AU protocol catalog does not yet declare (needs generator support for a
-// binary payload type). Kept OUT of `epistemic_operations` so that module can stay
-// exactly generator-clean; see the module doc comment for the full finding.
-pub mod epistemic_operations_ext;
-pub mod epistemic_operations_manifest;
-// EH-194 — typed `Claim`/`Evidence` graph nodes: the one owner of the shape every
-// epistemic writer stores and every reader decodes. Pure serde, unconditional.
-pub mod epistemic_node;
 pub mod ingestion_wire;
+pub mod mirror_sink;
 // CONCEPT:INT-P2-2 — the native statechart engine's wire op (`StatechartOp`), gated
 // `statechart`. Lives here (not in `medulla-statechart`, which sits ABOVE this crate in the
 // DAG) for the SAME reason `jobs` does: `protocol::Method::Statechart` carries it over
@@ -278,14 +263,6 @@ pub mod lease_vocab;
 pub mod mutation;
 pub mod mutation_outbox;
 pub mod mutation_scope;
-// GOC-20 — the atomic WorkItem outcome/provenance bundle and durable run-event
-// wire contract (BUG-015). Deliberately a NEW module (not folded into
-// `mutation_batch`), same rationale as `commit_descriptor` above: the native
-// fusion of this bundle into `Method::CommitWorkItemResult`'s transaction is
-// `mutation_batch.rs` work, currently blocked on the FO-001 five-lane
-// (GOC-03/04/19/20/35) file-ownership collision. See
-// `plans/graph-os-completion-program/decisions/GOC-20-atomic-outcome-provenance.md`.
-pub mod outcome_bundle;
 // RF-RULING-004 — mutation-kernel-owned outbox intent, delivery, and cursor DTOs.
 pub mod outbox;
 // MEDULLA-FINANCE-PRIMITIVES-R011.1 — the typed finance alert envelope staged for
@@ -306,10 +283,6 @@ pub mod quantum;
 pub mod ontology_inspection;
 // F3: RDF load/update/rule/shape-validation report bodies (medulla-rdf/medulla-shacl/medulla-shex results).
 pub mod rdf_report;
-pub mod row_predicate;
-// MEDULLA-FEDERATED-QUERY-R082.1 — typed calibration, bounded limits and closed
-// stop-verdict vocabulary; decision precedence lives in medulla-plan.
-pub mod retrieval_stop;
 pub mod runtime_limit;
 // EH-558 — sealed record classes: content-addressed rows generic writes may not change.
 pub mod sealed_record;
@@ -331,9 +304,6 @@ pub mod telemetry_derive;
 #[cfg(any(test, feature = "test-support"))]
 pub mod test_support;
 pub mod types;
-// Result bodies of the `compute` contract domain, declared by
-// `result_contract::compute`; gated per compute family like `wire`.
-pub mod compute_result;
 // MEDULLA-IDENTITY-R610 — tenant parent chains, secured reads and ownership claims.
 pub mod tenancy;
 // The opaque tenant-bound keyset cursor shared by every paged read
@@ -344,9 +314,6 @@ pub mod keyset_page;
 // The engine-owned identity store: principals, credentials,
 // sessions, roles/groups/IdPs, the auth-mode singleton and scope classes.
 pub mod identity;
-// EH-400 — declared freshness: `eg:volatilityClass`, per-class invalidation events and
-// foreign-source watermarks (the `FreshnessFeed` wire shapes).
-pub mod freshness;
 // MEDULLA-TYPED-PACKS-R802.1/R805.1 — governance record models: stewardship and
 // data products. Pure data and field validation; served wiring lands in later children.
 pub mod data_product;
@@ -380,18 +347,9 @@ pub mod wire;
 // RF-ADR-009 D18 — EG-owned versioned source change sets and append-only
 // write-back/reconciliation receipts. Connector transports remain in the SDK.
 pub mod write_back;
-// MEDULLA-FEDERATED-QUERY-R700 — AIF argument maps and their Dung projection.
-pub mod argument_map;
-// MEDULLA-FEDERATED-QUERY-R081 — retrieval sufficiency, selection, feedback and
-// hierarchy contracts (incl. the R081.9.7.1 section hierarchy policy); the deciding functions live in `medulla_plan::retrieval_verdict`.
-pub mod retrieval_verdict;
-// MEDULLA-FEDERATED-QUERY-R085.1 — approved, read-only source query records.
-pub mod source_query;
 
 // CONCEPT:MEDULLA-KG.query.compound-predicate-decode — the serializable compound-WHERE predicate AST lives at the
 // bottom of the DAG so `medulla-core` can evaluate it; `medulla-query` decodes SQL into it.
-pub use row_predicate::{CmpOp, RowPredicate};
-
 // CONCEPT:MEDULLA-KG.compute.uncertainty-values — surface the distribution VALUE at the crate root for callers.
 pub use embedding::{
     EmbeddingSpaceRef, StampedVector, MAX_EMBEDDING_DIMENSIONS, MAX_MAINTAINED_ANN_DIMENSIONS,

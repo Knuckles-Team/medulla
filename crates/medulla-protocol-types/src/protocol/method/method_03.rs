@@ -119,7 +119,7 @@ $($variants)*
     /// resolved). Returns the schema-generated `PlacementRoute`. A placed route
     /// always has a non-zero epoch; an authoritative unplaced route uses epoch zero.
     PlacementRoute {
-        request: medulla_types::epistemic_operations::PlacementRouteRequest,
+        request: medulla_result_types::epistemic_operations::PlacementRouteRequest,
     },
 
 

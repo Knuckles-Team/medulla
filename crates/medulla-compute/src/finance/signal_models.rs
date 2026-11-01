@@ -9,7 +9,7 @@
 
 use std::collections::BTreeMap;
 
-pub use medulla_types::compute_result::signal_models::*;
+pub use medulla_result_types::compute_result::signal_models::*;
 
 use super::market::{MarketError, MarketResult, INVALID_REQUEST};
 

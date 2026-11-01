@@ -383,11 +383,12 @@ fn pending_nodes_fixture(shard: &Shard) -> IssueControlLeaseRequest {
                 .unwrap()
                 .clone(),
         },
-        expected_lease: medulla_types::epistemic_operations_ext::CasWorkItemMetadataLeaseFence {
-            worker_ref: "worker-a".into(),
-            lease_epoch: 2,
-            fencing_token: 3,
-        },
+        expected_lease:
+            medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataLeaseFence {
+                worker_ref: "worker-a".into(),
+                lease_epoch: 2,
+                fencing_token: 3,
+            },
     });
     request
 }

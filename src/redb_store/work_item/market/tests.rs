@@ -14,8 +14,10 @@ use medulla_agent_types::{
     work_market::WorkOffer, work_market::WorkOfferPutOutcome, work_market::WorkOfferPutRequest,
     work_market::WorkOfferRecorded,
 };
-use medulla_types::epistemic_operations::{
-    ClaimWorkItemRequest, ClaimWorkItemRequestSchemaVersion, ClaimWorkItemResult,
+use medulla_result_types::{
+    epistemic_operations::ClaimWorkItemRequest,
+    epistemic_operations::ClaimWorkItemRequestSchemaVersion,
+    epistemic_operations::ClaimWorkItemResult,
 };
 
 use super::super::test_shard::{apply, open, GRAPH};

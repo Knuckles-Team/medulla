@@ -12,7 +12,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use medulla_types::epistemic_operations::RequestContext;
+use medulla_result_types::epistemic_operations::RequestContext;
 use medulla_types::{
     capacity_lease::CapacityCell, capacity_lease::CapacityLease,
     capacity_lease::CapacityResourceClass, capacity_lease::LeasePriority,

@@ -172,7 +172,7 @@ impl<'a> GraphTxn<'a> {
     pub fn remove_node_if(
         &mut self,
         node_id: &str,
-        predicate: &medulla_types::RowPredicate,
+        predicate: &medulla_result_types::row_predicate::RowPredicate,
     ) -> bool {
         let map = match self.node_row_map(node_id) {
             Some(m) => m,

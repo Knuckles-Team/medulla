@@ -28,9 +28,10 @@ pub use medulla_core::{compute, decay, graph, index, isolation, registry};
 #[cfg(feature = "broker")]
 pub use medulla_core::broker;
 pub use medulla_protocol_types::{change_envelope, mutation_batch, protocol};
+pub use medulla_result_types::{epistemic_operations, epistemic_operations_ext};
 #[cfg(feature = "knowledge-batch")]
 pub use medulla_types::knowledge_stream;
-pub use medulla_types::{acl, epistemic_operations, epistemic_operations_ext, types, wire};
+pub use medulla_types::{acl, types, wire};
 // Compute domains live in `medulla-compute`; re-export under the historical `crate::`
 // paths. algorithms/ast/parser are always present; the feature-gated domains are
 // re-exported only when their facade feature (→ medulla-compute feature) is on.

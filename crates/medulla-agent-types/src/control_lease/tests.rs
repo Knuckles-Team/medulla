@@ -199,11 +199,12 @@ fn pending_registration_requires_reserved_kind_and_bounded_preimage() {
             expected_revision: 1,
             expected_metadata: Map::new(),
         },
-        expected_lease: medulla_types::epistemic_operations_ext::CasWorkItemMetadataLeaseFence {
-            worker_ref: "worker-a".into(),
-            lease_epoch: 1,
-            fencing_token: 1,
-        },
+        expected_lease:
+            medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataLeaseFence {
+                worker_ref: "worker-a".into(),
+                lease_epoch: 1,
+                fencing_token: 1,
+            },
     };
     request.kind = PENDING_CALL_KIND.into();
     assert!(request.validate().is_err());

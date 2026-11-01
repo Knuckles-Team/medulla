@@ -80,7 +80,7 @@ method_results! {
     ListTriggers(ListTriggers) => Raw<Vec<TriggerInfo>>;
     // EH-400: per-class invalidation events, the class volatility policy and foreign-source
     // watermark freshness of the request graph.
-    FreshnessFeed(FreshnessFeed) => Raw<medulla_types::freshness::FreshnessFeed>;
+    FreshnessFeed(FreshnessFeed) => Raw<medulla_result_types::freshness::FreshnessFeed>;
     #[cfg(feature = "streaming")]
     FiredTriggers(FiredTriggers) => Raw<FiredTriggersResult>;
     #[cfg(feature = "streaming")]

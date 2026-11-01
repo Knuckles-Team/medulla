@@ -931,7 +931,7 @@ mod tests {
             },
         };
         let terminal_event = MutationOutboxIntent {
-            topic: medulla_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC.into(),
+            topic: medulla_result_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC.into(),
             key: "terminal-batch".into(),
             payload: vec![1],
             headers: BTreeMap::new(),
@@ -967,7 +967,7 @@ mod tests {
         assert_eq!(batch.outbox.len(), 1);
         assert_eq!(
             batch.outbox[0].topic,
-            medulla_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC
+            medulla_result_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC
         );
         let expected_actor = principal_fingerprint("agent:terminal-test").unwrap();
         assert_eq!(batch.outbox[0].headers.get("actor"), Some(&expected_actor));

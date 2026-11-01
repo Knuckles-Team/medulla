@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use medulla_types::epistemic_operations::PlacementRouteSchemaVersion;
+use medulla_result_types::epistemic_operations::PlacementRouteSchemaVersion;
 
 /// The `PlacementRoute` wire response: the schema-locked route fields plus
 /// `endpoints`, the client-reachable members of the resolved group, leader first

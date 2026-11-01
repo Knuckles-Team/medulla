@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::wire::FittedClassifier;
+use medulla_types::wire::FittedClassifier;
 
 /// A row of a vector-mining input: its node id when the rows came from a node
 /// source, else its index in the explicit input matrix.

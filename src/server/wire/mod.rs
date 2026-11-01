@@ -742,7 +742,7 @@ fn authorize_update_op(
     authority: &CarrierAuthority,
     table: &str,
     set: &mut serde_json::Map<String, serde_json::Value>,
-    selector: &mut medulla_types::RowPredicate,
+    selector: &mut medulla_result_types::row_predicate::RowPredicate,
     provisional_creates: &std::collections::HashMap<
         String,
         crate::server::sql_catalog_acl::ProvisionalCreateAuthority,
@@ -766,7 +766,7 @@ fn authorize_delete_op(
     source: &crate::server::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
     authority: &CarrierAuthority,
     table: &str,
-    selector: &mut medulla_types::RowPredicate,
+    selector: &mut medulla_result_types::row_predicate::RowPredicate,
     provisional_creates: &std::collections::HashMap<
         String,
         crate::server::sql_catalog_acl::ProvisionalCreateAuthority,

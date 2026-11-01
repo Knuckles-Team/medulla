@@ -31,7 +31,7 @@ use medulla_protocol_types::mutation_batch::MutationBatchStatus;
 use medulla_protocol_types::protocol::Method;
 #[cfg(feature = "redb")]
 use medulla_protocol_types::{protocol::Response, protocol::ResultPayload};
-use medulla_types::epistemic_operations::RequestContext;
+use medulla_result_types::epistemic_operations::RequestContext;
 #[cfg(feature = "redb")]
 use serde_json::json;
 
@@ -96,8 +96,10 @@ mod tests {
     use medulla_agent_types::{
         delegation::KgDelegateSchemaVersion, delegation::MAX_DELEGATION_IN_FLIGHT,
     };
-    use medulla_types::epistemic_operations::{
-        RequestContext, RequestContextAuthenticationMethod, RequestContextSchemaVersion,
+    use medulla_result_types::{
+        epistemic_operations::RequestContext,
+        epistemic_operations::RequestContextAuthenticationMethod,
+        epistemic_operations::RequestContextSchemaVersion,
     };
 
     fn digest(byte: char) -> String {

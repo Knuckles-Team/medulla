@@ -31,7 +31,7 @@ use std::collections::BTreeSet;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::commit_descriptor::CommitParticipantDomain;
+use medulla_types::commit_descriptor::CommitParticipantDomain;
 
 mod engine_fields;
 mod validation;

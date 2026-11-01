@@ -21,11 +21,12 @@ rmp-serde = "1.3"
 sha2 = "0.10"
 hex = "0.4"
 schemars = { version = "1.2.3", optional = true }
+medulla-result-types = { path = "../medulla-result-types" }
 
 [features]
-wire-contract = ["medulla-types/wire-contract"]
-wire-complete = ["wire-contract", "jobs", "program-optimization", "medulla-types/wire-complete"]
-contract-schema = ["dep:schemars", "medulla-types/contract-schema"]
+wire-contract = ["medulla-types/wire-contract", "medulla-result-types/wire-contract"]
+wire-complete = ["wire-contract", "jobs", "program-optimization", "medulla-types/wire-complete", "medulla-result-types/wire-complete"]
+contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-result-types/contract-schema"]
 jobs = ["medulla-types/jobs"]
 program-optimization = ["jobs", "medulla-types/program-optimization"]
 test-support = ["medulla-types/test-support"]

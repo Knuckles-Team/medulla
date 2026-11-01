@@ -2,7 +2,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use medulla_types::epistemic_operations_ext::CasWorkItemMetadataLeaseFence;
+use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataLeaseFence;
 
 pub const PENDING_CALL_KIND: &str = "work_item.pending_call";
 

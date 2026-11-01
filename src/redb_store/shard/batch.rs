@@ -186,7 +186,7 @@ fn ensure_caller_batch_targets_graph(
 }
 
 fn is_run_event(intent: &MutationOutboxIntent) -> bool {
-    intent.topic == medulla_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC
+    intent.topic == medulla_result_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC
 }
 
 /// `sha256(tenant || 0x00 || graph)` of a graph-scoped identity: the value a

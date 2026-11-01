@@ -47,7 +47,6 @@ macro_rules! keyset_tenant_limit_methods {
     };
 }
 
-
 /// One page: at most `limit` items and the cursor that resumes the scan.
 #[derive(Debug, Clone, PartialEq)]
 pub struct KeysetPage<T> {

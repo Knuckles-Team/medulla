@@ -12,7 +12,7 @@ use crate::protocol::{
 #[cfg(feature = "query")]
 use crate::protocol::{ExplainPlanResult, ExplainPolicyResult};
 use medulla_decision_types::decision::DecisionBatch;
-use medulla_types::epistemic_operations::EvidenceBundle;
+use medulla_result_types::epistemic_operations::EvidenceBundle;
 #[cfg(feature = "knowledge-batch")]
 use medulla_types::knowledge_stream::KnowledgeStreamBatch;
 use medulla_types::types::ContextView;

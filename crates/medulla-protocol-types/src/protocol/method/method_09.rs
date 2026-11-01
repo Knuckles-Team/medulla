@@ -409,7 +409,7 @@ $($variants)*
         /// The propagation model (default `share`; `damping`/`tolerance`/
         /// `max_iterations` apply to `share` only).
         #[serde(default)]
-        model: medulla_types::compute_result::mining::RiskModel,
+        model: medulla_result_types::compute_result::mining::RiskModel,
         /// Materialize each node's propagated score as a typed `:RiskScore` node.
         #[serde(default)]
         writeback: bool,

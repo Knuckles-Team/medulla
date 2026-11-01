@@ -11,7 +11,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use medulla_core::graph::GraphView;
-use medulla_types::{CmpOp, RowPredicate};
+use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
 use serde_json::{json, Value};
 
 use super::generation::AnnGeneration;

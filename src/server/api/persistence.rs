@@ -1122,7 +1122,7 @@ pub struct MatView {
     pub name: String,
     pub graphs: Vec<String>,
     pub algo: crate::protocol::DistAlgo,
-    pub result: medulla_types::compute_result::distributed::DistResult,
+    pub result: medulla_result_types::compute_result::distributed::DistResult,
 }
 
 /// A flat map of named materialized views the engine maintains (CONCEPT:MEDULLA-KG.storage.feature). The

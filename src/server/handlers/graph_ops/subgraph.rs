@@ -176,10 +176,12 @@ pub(super) async fn handle_vf2_subgraph_match(
                 req_id,
                 ResultPayload::of::<
                     medulla_protocol_types::result_contract::compute::Vf2SubgraphMatch,
-                >(medulla_types::compute_result::algorithms::Vf2MatchResult {
-                    matches,
-                    truncated,
-                }),
+                >(
+                    medulla_result_types::compute_result::algorithms::Vf2MatchResult {
+                        matches,
+                        truncated,
+                    },
+                ),
             ),
             Err(resp) => resp,
         }

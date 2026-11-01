@@ -10,11 +10,13 @@ use medulla_compute::mining::{
     community, ontology_gap, retrieval_quality, risk_propagation, root_cause,
 };
 use medulla_protocol_types::result_contract::compute as results;
-use medulla_types::compute_result::mining::ImpactOptions;
-use medulla_types::compute_result::mining::{
-    CommunityMiningResult, CommunityRow, OntologyGapMiningResult, OntologyGapRow,
-    RetrievalQualityMiningResult, RiskModel, RiskPropagationMiningResult, RiskScoreRow,
-    RootCauseCandidateRow, RootCauseMiningResult,
+use medulla_result_types::compute_result::mining::ImpactOptions;
+use medulla_result_types::{
+    compute_result::mining::CommunityMiningResult, compute_result::mining::CommunityRow,
+    compute_result::mining::OntologyGapMiningResult, compute_result::mining::OntologyGapRow,
+    compute_result::mining::RetrievalQualityMiningResult, compute_result::mining::RiskModel,
+    compute_result::mining::RiskPropagationMiningResult, compute_result::mining::RiskScoreRow,
+    compute_result::mining::RootCauseCandidateRow, compute_result::mining::RootCauseMiningResult,
 };
 
 use super::impact::{handle_impact, ImpactInputs, ImpactKind};

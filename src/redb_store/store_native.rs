@@ -68,7 +68,7 @@ fn validate_terminal_provenance_shape(batch: &MutationBatch) -> Result<(), Strin
 
 fn validate_terminal_outcome_extension(
     batch: &MutationBatch,
-    extension: &medulla_types::outcome_bundle::TerminalOutcomeExtension,
+    extension: &medulla_result_types::outcome_bundle::TerminalOutcomeExtension,
 ) -> Result<(), String> {
     if batch.operations.len() != 1 {
         return Err(
@@ -77,7 +77,7 @@ fn validate_terminal_outcome_extension(
         );
     }
     let event_intent = terminal_run_event_intent(batch)?;
-    let event: medulla_types::outcome_bundle::RunEvent =
+    let event: medulla_result_types::outcome_bundle::RunEvent =
         rmp_serde::from_slice(&event_intent.payload)
             .map_err(|_| "terminal run-event outbox payload is not a valid RunEvent".to_string())?;
     event.validate_for_bundle(&extension.outcome_bundle)?;
@@ -88,7 +88,9 @@ fn terminal_run_event_intent(batch: &MutationBatch) -> Result<&MutationOutboxInt
     let event_intents: Vec<_> = batch
         .outbox
         .iter()
-        .filter(|intent| intent.topic == medulla_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC)
+        .filter(|intent| {
+            intent.topic == medulla_result_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC
+        })
         .collect();
     if event_intents.len() != 1 {
         return Err(
@@ -105,7 +107,7 @@ fn terminal_run_event_intent(batch: &MutationBatch) -> Result<&MutationOutboxInt
 
 fn validate_terminal_event_headers(
     batch: &MutationBatch,
-    extension: &medulla_types::outcome_bundle::TerminalOutcomeExtension,
+    extension: &medulla_result_types::outcome_bundle::TerminalOutcomeExtension,
     event_intent: &MutationOutboxIntent,
 ) -> Result<(), String> {
     let fence_token = extension.outcome_bundle.fence_token.to_string();
@@ -774,7 +776,7 @@ fn validate_ordinary_completion_shape(batch: &MutationBatch) -> Result<(), Strin
             || batch
                 .outbox
                 .iter()
-                .any(|i| i.topic == medulla_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC)
+                .any(|i| i.topic == medulla_result_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC)
         {
             return Err(
                 "ordinary completion requires one operation and one exclusive receipt".into(),

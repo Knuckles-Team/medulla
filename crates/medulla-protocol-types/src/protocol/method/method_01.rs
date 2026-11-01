@@ -6,39 +6,39 @@ $($variants)*
     /// Replace the monotonic observed retained footprint on one exact hold.
     /// `request.now_ms` is overwritten from the authoritative engine clock.
     ObserveDevelopmentLane {
-        request: medulla_types::epistemic_operations::DevelopmentLaneObserveRequest,
+        request: medulla_result_types::epistemic_operations::DevelopmentLaneObserveRequest,
     },
 
     /// Release active-count charge after the exact lifecycle WorkItem reaches a
     /// terminal state while retaining disk/exclusivity until cleanup.
     /// `request.now_ms` is overwritten from the authoritative engine clock.
     FinishDevelopmentLane {
-        request: medulla_types::epistemic_operations::DevelopmentLaneFinishRequest,
+        request: medulla_result_types::epistemic_operations::DevelopmentLaneFinishRequest,
     },
 
     /// Release retained disk and identity indexes after a distinct current
     /// `lane.cleanup` WorkItem proves the guarded filesystem effect complete.
     /// `request.now_ms` is overwritten from the authoritative engine clock.
     CleanupDevelopmentLane {
-        request: medulla_types::epistemic_operations::DevelopmentLaneCleanupCompleteRequest,
+        request: medulla_result_types::epistemic_operations::DevelopmentLaneCleanupCompleteRequest,
     },
 
     /// Exact authenticated read of one lane hold or tombstone.
     /// `request.now_ms` is overwritten from the authoritative engine clock.
     QueryDevelopmentLane {
-        request: medulla_types::epistemic_operations::DevelopmentLaneQueryRequest,
+        request: medulla_result_types::epistemic_operations::DevelopmentLaneQueryRequest,
     },
 
     /// Bounded authenticated status page with maintained native counters.
     /// `request.now_ms` is overwritten from the authoritative engine clock.
     DevelopmentLaneStatus {
-        request: medulla_types::epistemic_operations::DevelopmentLaneStatusRequest,
+        request: medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequest,
     },
 
     /// Controller/admin-only monotonic quota-policy update.
     /// `request.now_ms` is overwritten from the authoritative engine clock.
     UpdateDevelopmentLaneQuota {
-        request: medulla_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequest,
+        request: medulla_result_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequest,
     },
 
     /// Reaper sweep (CONCEPT:MEDULLA-KG.compute.message-ttl-expiry): dead-letter/drop messages whose `expires_at`

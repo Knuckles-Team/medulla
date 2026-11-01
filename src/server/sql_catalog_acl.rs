@@ -51,7 +51,7 @@ use std::path::Path;
 
 use hmac::{Hmac, Mac};
 use medulla_query::{Cell, Column, ColumnType, TableSchema, TableStore, TableTxn, TxnOp};
-use medulla_types::{CmpOp, RowPredicate};
+use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 

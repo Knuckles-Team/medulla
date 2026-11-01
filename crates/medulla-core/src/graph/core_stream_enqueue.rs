@@ -56,7 +56,11 @@ impl GraphCore {
     /// One-shot serializable gated remove (CONCEPT:MEDULLA-KG.txn.serializable-mutation-gate). See
     /// [`GraphTxn::remove_node_if`]; the decode → predicate re-check → remove runs
     /// under ONE topology write guard.
-    pub fn remove_node_if(&self, node_id: &str, predicate: &medulla_types::RowPredicate) -> bool {
+    pub fn remove_node_if(
+        &self,
+        node_id: &str,
+        predicate: &medulla_result_types::row_predicate::RowPredicate,
+    ) -> bool {
         let removed = self.txn().remove_node_if(node_id, predicate);
         if removed {
             self.semantic_store.write().remove_embedding(node_id);
@@ -83,7 +87,7 @@ impl GraphCore {
     pub fn compare_and_set_fields_if(
         &self,
         node_id: &str,
-        predicate: &medulla_types::RowPredicate,
+        predicate: &medulla_result_types::row_predicate::RowPredicate,
         conditions: &serde_json::Map<String, serde_json::Value>,
         updates: &serde_json::Map<String, serde_json::Value>,
     ) -> bool {

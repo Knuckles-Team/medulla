@@ -19,7 +19,7 @@ fn d(a: f64, b: f64) -> f64 {
     }
 }
 
-pub use medulla_types::compute_result::finance::ForensicReport;
+pub use medulla_result_types::compute_result::finance::ForensicReport;
 
 /// Beneish M-Score (8 components). Above ≈ −1.78 (classic cutoff −2.22) flags
 /// possible earnings manipulation. `t` = this year, `p` = prior year.

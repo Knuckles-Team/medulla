@@ -191,7 +191,7 @@ impl Response {
         leader: Option<u64>,
         _reason: impl Into<String>,
     ) -> Self {
-        use medulla_types::{
+        use medulla_result_types::{
             epistemic_operations::OperationRedirect, epistemic_operations::OperationRedirectKind,
             epistemic_operations::OperationResult,
             epistemic_operations::OperationResultSchemaVersion,

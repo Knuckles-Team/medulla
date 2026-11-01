@@ -9,7 +9,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
-use crate::contract::BoundedVec;
+use medulla_types::contract::BoundedVec;
 
 /// The maximum number of round-specific calibration rows carried by one table.
 pub const MAX_CALIBRATION_ROWS: usize = 256;

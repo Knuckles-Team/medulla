@@ -49,7 +49,7 @@
 
 use medulla_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
-use medulla_types::epistemic_node::{Claim, Evidence};
+use medulla_result_types::{epistemic_node::Claim, epistemic_node::Evidence};
 
 use crate::model::AnalyticsJob;
 
@@ -110,7 +110,7 @@ pub fn dataset_node_id(result_ref: &str) -> String {
 /// stored claim's typed calibration ([`medulla_types::epistemic_node::ClaimCalibration`],
 /// EH-194) — one owner for the shape — so a caller holding a real
 /// `medulla_epistemic::Calibration` converts it field-for-field at the call site.
-pub type CalibrationInput = medulla_types::epistemic_node::ClaimCalibration;
+pub type CalibrationInput = medulla_result_types::epistemic_node::ClaimCalibration;
 
 /// Deterministic graph write-set for one succeeded job result.  The server uses
 /// this representation to commit the claim, evidence and activity through its
@@ -408,7 +408,8 @@ fn row_claim_nodes(row: RowClaim<'_>) -> Result<(serde_json::Value, serde_json::
         "source_refs": refs("source_refs"),
     }))
     .and_then(|evidence| evidence.to_properties());
-    let to_text = |error: medulla_types::epistemic_node::EpistemicNodeError| error.to_string();
+    let to_text =
+        |error: medulla_result_types::epistemic_node::EpistemicNodeError| error.to_string();
     Ok((claim.map_err(to_text)?, evidence.map_err(to_text)?))
 }
 
@@ -683,7 +684,7 @@ mod tests {
     // struct, so a reader never has to probe the convention key by key.
     #[test]
     fn committed_claim_and_evidence_decode_as_typed_nodes() {
-        use medulla_types::epistemic_node::{Claim, Evidence};
+        use medulla_result_types::{epistemic_node::Claim, epistemic_node::Evidence};
 
         let core = GraphCore::new();
         let job = succeeded_job("job-0000000000000003", "g1", 5);

@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::agent_graph::AgentGraphEntry;
 use crate::agent_library::AgentLibraryEntry;
-use medulla_types::epistemic_operations::RequestContext;
+use medulla_result_types::epistemic_operations::RequestContext;
 
 /// Current RF-020 delegation contract version.
 ///
@@ -522,7 +522,7 @@ fn validate_prefixed_digest(field: &str, digest: &str) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::{
+    use medulla_result_types::{
         epistemic_operations::RequestContext,
         epistemic_operations::RequestContextAuthenticationMethod,
         epistemic_operations::RequestContextSchemaVersion,

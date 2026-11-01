@@ -4,7 +4,9 @@
 //! sources the caller can see. An out-of-process cache (AU, EH-401) invalidates by class from the
 //! events and derives its TTLs from the policy.
 
-use medulla_types::freshness::{FreshnessFeed, InvalidationEvent, InvalidationScope};
+use medulla_result_types::{
+    freshness::FreshnessFeed, freshness::InvalidationEvent, freshness::InvalidationScope,
+};
 
 use super::*;
 
@@ -93,7 +95,7 @@ fn wire_event(record: medulla_core::dep_scope::InvalidationRecord) -> Invalidati
 mod tests {
     use super::*;
     use medulla_core::index::{ChangeSet, NodeChange};
-    use medulla_types::freshness::{VolatilityClass, VOLATILITY_CLASS_KEY};
+    use medulla_result_types::{freshness::VolatilityClass, freshness::VOLATILITY_CLASS_KEY};
 
     fn commit_node(core: &GraphCore, id: &str, props: serde_json::Value) {
         let blob = rmp_serde::to_vec_named(&props).unwrap();

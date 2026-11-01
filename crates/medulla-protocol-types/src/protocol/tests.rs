@@ -170,7 +170,7 @@ fn test_request_roundtrip_add_node() {
 
 #[test]
 fn development_lane_protocol_matches_cross_language_golden_vector() {
-    use medulla_types::{
+    use medulla_result_types::{
         epistemic_operations::DevelopmentLaneCleanupIntent,
         epistemic_operations::DevelopmentLaneCleanupIntentSchemaVersion,
         epistemic_operations::DevelopmentLaneIntent,
@@ -343,7 +343,8 @@ fn development_lane_protocol_matches_cross_language_golden_vector() {
 #[test]
 fn stale_route_is_structured_and_carries_fencing_epoch() {
     let response = Response::stale_route(9, "opaque:graph", 3, 17, Some(2), "not leader");
-    let detail: medulla_types::epistemic_operations::OperationResult = match response.result {
+    let detail: medulla_result_types::epistemic_operations::OperationResult = match response.result
+    {
         Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(&bytes).unwrap(),
         other => panic!("expected structured redirect, got {other:?}"),
     };

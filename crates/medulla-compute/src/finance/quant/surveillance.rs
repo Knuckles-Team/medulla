@@ -35,7 +35,7 @@ pub fn kyle_lambda(price_changes: &[f64], signed_order_flow: &[f64]) -> f64 {
     }
 }
 
-pub use medulla_types::compute_result::finance::SurveillanceRisk;
+pub use medulla_result_types::compute_result::finance::SurveillanceRisk;
 
 /// Continuous-time-Kyle surveillance estimator over a trailing book/flow
 /// window. Reuses the existing microstructure primitives and combines:

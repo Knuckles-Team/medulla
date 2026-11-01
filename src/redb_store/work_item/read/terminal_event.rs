@@ -5,7 +5,7 @@ use medulla_agent_types::{
 use medulla_protocol_types::{
     mutation_batch::MutationBatchRecord, mutation_batch::MutationBatchStatus,
 };
-use medulla_types::outcome_bundle::{RunEvent, RUN_EVENT_OUTBOX_TOPIC};
+use medulla_result_types::{outcome_bundle::RunEvent, outcome_bundle::RUN_EVENT_OUTBOX_TOPIC};
 use medulla_types::{MutationOutboxRecord, MutationScopeIdentity};
 use sha2::{Digest, Sha256};
 

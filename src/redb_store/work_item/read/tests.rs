@@ -262,7 +262,7 @@ fn present_event_payload_corruption_is_refused() {
     let read = temp.shard.read(&handle).unwrap();
     let mut receipt = medulla_transaction::read_batches(&read).unwrap().remove(0);
     let intent = MutationOutboxIntent {
-        topic: medulla_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC.into(),
+        topic: medulla_result_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC.into(),
         key: "wi".into(),
         payload: vec![0xc1], // Reserved MessagePack byte: cannot encode a RunEvent.
         headers: Default::default(),

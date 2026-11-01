@@ -54,9 +54,9 @@ fn commit_txn_applies_a_mixed_batch_of_ops_in_one_transaction() {
     txn.push(TxnOp::Update {
         table: "widgets".into(),
         set,
-        selector: medulla_types::RowPredicate::Cmp {
+        selector: medulla_result_types::row_predicate::RowPredicate::Cmp {
             col: "id".into(),
-            op: medulla_types::CmpOp::Eq,
+            op: medulla_result_types::row_predicate::CmpOp::Eq,
             value: 1i64.into(),
         },
     });
@@ -79,9 +79,9 @@ fn commit_txn_applies_a_mixed_batch_of_ops_in_one_transaction() {
     });
     txn.push(TxnOp::Delete {
         table: "widgets".into(),
-        selector: medulla_types::RowPredicate::Cmp {
+        selector: medulla_result_types::row_predicate::RowPredicate::Cmp {
             col: "id".into(),
-            op: medulla_types::CmpOp::Eq,
+            op: medulla_result_types::row_predicate::CmpOp::Eq,
             value: 2i64.into(),
         },
     });

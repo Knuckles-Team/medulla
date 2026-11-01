@@ -16,10 +16,10 @@ use medulla_query::edge_index::{
     EdgeSearchRequest,
 };
 use medulla_query::VectorMetric;
+use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
 use medulla_types::managed_index::{
     self as wire, EdgeIndexOp, EdgeIndexStatusView, EdgeSearchHit, EdgeSearchView,
 };
-use medulla_types::{CmpOp, RowPredicate};
 
 use super::*;
 

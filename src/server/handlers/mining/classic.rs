@@ -7,10 +7,14 @@ use medulla_compute::mining::{
     text,
 };
 use medulla_protocol_types::result_contract::compute as results;
-use medulla_types::compute_result::mining::{
-    DocTerms, ForecastMiningResult, GspanMiningResult, MotifCountsRow, MotifMiningResult,
-    PatternEdge, SequenceMiningResult, SequentialPatternRow, SubgraphMiningResult,
-    SubgraphPatternRow, TermWeight, TextMiningResult, TopicTerms,
+use medulla_result_types::{
+    compute_result::mining::DocTerms, compute_result::mining::ForecastMiningResult,
+    compute_result::mining::GspanMiningResult, compute_result::mining::MotifCountsRow,
+    compute_result::mining::MotifMiningResult, compute_result::mining::PatternEdge,
+    compute_result::mining::SequenceMiningResult, compute_result::mining::SequentialPatternRow,
+    compute_result::mining::SubgraphMiningResult, compute_result::mining::SubgraphPatternRow,
+    compute_result::mining::TermWeight, compute_result::mining::TextMiningResult,
+    compute_result::mining::TopicTerms,
 };
 
 // ─────────────────────────── Sequential-pattern mining ───────────────────────────

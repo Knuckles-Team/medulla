@@ -278,9 +278,9 @@ fn secondary_index_catalog_and_scalar_lookup_contract() {
         .update_where(
             "events",
             &set,
-            &medulla_types::RowPredicate::Cmp {
+            &medulla_result_types::row_predicate::RowPredicate::Cmp {
                 col: "id".into(),
-                op: medulla_types::CmpOp::Eq,
+                op: medulla_result_types::row_predicate::CmpOp::Eq,
                 value: 1i64.into(),
             },
         )
@@ -291,9 +291,9 @@ fn secondary_index_catalog_and_scalar_lookup_contract() {
     store
         .delete_where(
             "events",
-            &medulla_types::RowPredicate::Cmp {
+            &medulla_result_types::row_predicate::RowPredicate::Cmp {
                 col: "id".into(),
-                op: medulla_types::CmpOp::Eq,
+                op: medulla_result_types::row_predicate::CmpOp::Eq,
                 value: 3i64.into(),
             },
         )
@@ -331,7 +331,9 @@ fn secondary_index_catalog_and_scalar_lookup_contract() {
 /// before any catalog row is written.
 #[test]
 fn secondary_index_rejects_vector_columns_without_touching_ann_catalog() {
-    use medulla_query::tables::{Column, ColumnType, SecondaryIndexColumn, TableSchema, TableStore};
+    use medulla_query::tables::{
+        Column, ColumnType, SecondaryIndexColumn, TableSchema, TableStore,
+    };
     let (store, _path) = TableStore::open_temp().unwrap();
     let schema = TableSchema::new(
         "embeddings",

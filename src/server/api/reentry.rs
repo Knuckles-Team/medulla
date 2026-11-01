@@ -87,7 +87,7 @@ pub(crate) type PageAuthorityFn = Box<
             Result<
                 (
                     VerifiedRequestContext,
-                    medulla_types::epistemic_operations::RequestContext,
+                    medulla_result_types::epistemic_operations::RequestContext,
                 ),
                 String,
             >,

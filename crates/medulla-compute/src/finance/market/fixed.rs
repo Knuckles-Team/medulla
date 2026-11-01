@@ -7,7 +7,7 @@
 use super::{MarketError, MarketResult, OVERFLOW};
 
 /// Milli-ticks per tick.
-pub const MILLI: i64 = medulla_types::compute_result::market::MILLI_TICKS_PER_TICK;
+pub const MILLI: i64 = medulla_result_types::compute_result::market::MILLI_TICKS_PER_TICK;
 
 /// `numerator / denominator` rounded half away from zero; `denominator > 0`.
 pub fn div_round(numerator: i128, denominator: i128) -> i128 {

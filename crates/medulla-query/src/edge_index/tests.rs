@@ -8,7 +8,7 @@
 
 use medulla_core::graph::{GraphCore, GraphView};
 use medulla_core::index::{ChangeSet, IndexBlockReason, ManagedIndexState, ManagedIndexTarget};
-use medulla_types::{CmpOp, RowPredicate};
+use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
 use serde_json::{json, Value};
 
 use super::*;

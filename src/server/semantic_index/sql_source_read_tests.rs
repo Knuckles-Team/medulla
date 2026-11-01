@@ -13,6 +13,8 @@ use medulla_query::{Column, ColumnType, TableSchema, TableStore, TableTxn, TxnOp
 // `TxnOp::Update`'s selector is an `medulla_types::RowPredicate`, so this is the
 // one that belongs here; importing medulla_query's next to it is the mistake that
 // kept this module's tests from compiling.
+use medulla_result_types::row_predicate::CmpOp;
+use medulla_result_types::row_predicate::RowPredicate;
 use medulla_storage::{OwnerLayout, PhysicalStoreIdentity, ScopeGrantVerifier};
 use medulla_types::contract::Nonce;
 use medulla_types::mutation_scope::DurabilityDomain;
@@ -24,8 +26,6 @@ use medulla_types::semantic_index::{
     SemanticStageOutcome, SemanticStagePredecessor, SemanticStageReceipt, SemanticVectorMetric,
     SqlColumnRef, SEMANTIC_SOURCE_DIRTY_TOPIC, SEMANTIC_SQL_CATALOG_ID, SEMANTIC_SQL_SCHEMA_ID,
 };
-use medulla_types::CmpOp;
-use medulla_types::RowPredicate;
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 

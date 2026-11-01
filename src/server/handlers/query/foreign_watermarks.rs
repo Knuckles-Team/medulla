@@ -134,9 +134,10 @@ fn watermark_salt(core: &GraphCore, sources: &BTreeSet<String>) -> Option<Vec<u8
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::freshness::{
-        foreign_watermark_node_id, FOREIGN_SOURCE_KEY, FOREIGN_WATERMARK_LABEL, MAX_STALENESS_KEY,
-        WATERMARK_AT_KEY, WATERMARK_KEY,
+    use medulla_result_types::{
+        freshness::foreign_watermark_node_id, freshness::FOREIGN_SOURCE_KEY,
+        freshness::FOREIGN_WATERMARK_LABEL, freshness::MAX_STALENESS_KEY,
+        freshness::WATERMARK_AT_KEY, freshness::WATERMARK_KEY,
     };
 
     fn foreign(name: &str) -> medulla_plan::Op {

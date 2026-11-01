@@ -182,7 +182,7 @@ pub(crate) struct CommitWorkItemResultInput<'args, 'table, 'crypto> {
     pub(crate) retryable: bool,
     pub(crate) now_ms: u64,
     pub(crate) outcome_extension:
-        Option<&'args medulla_types::outcome_bundle::TerminalOutcomeExtension>,
+        Option<&'args medulla_result_types::outcome_bundle::TerminalOutcomeExtension>,
     pub(crate) run_completion:
         Option<&'args medulla_agent_types::run_completion::RunCompletionInput>,
     pub(crate) batch_id: &'args str,
@@ -411,7 +411,7 @@ struct TerminalCommitClaim<'a> {
 
 fn validate_terminal_extension_binding(
     props: &serde_json::Map<String, serde_json::Value>,
-    extension: &medulla_types::outcome_bundle::TerminalOutcomeExtension,
+    extension: &medulla_result_types::outcome_bundle::TerminalOutcomeExtension,
     claim: TerminalCommitClaim<'_>,
 ) -> Result<(), String> {
     let TerminalCommitClaim {
@@ -518,7 +518,7 @@ fn require_digest_binding(
 
 fn ensure_receipt_rows_absent(
     graph: &str,
-    receipt_nodes: &[medulla_types::outcome_bundle::ReceiptNode],
+    receipt_nodes: &[medulla_result_types::outcome_bundle::ReceiptNode],
     nodes: &mut ScopedOwnerTableMut<'_, (&str, &str), &[u8]>,
 ) -> Result<(), String> {
     for receipt in receipt_nodes {
@@ -540,7 +540,7 @@ fn ensure_receipt_rows_absent(
 fn record_outcome_refs(
     props: &mut serde_json::Map<String, serde_json::Value>,
     committed_status: &str,
-    extension: Option<&medulla_types::outcome_bundle::TerminalOutcomeExtension>,
+    extension: Option<&medulla_result_types::outcome_bundle::TerminalOutcomeExtension>,
 ) -> Result<(), String> {
     use medulla_agent_types::{
         work_item_read::WORK_ITEM_OUTCOME_DIGEST, work_item_read::WORK_ITEM_OUTCOME_REF,
@@ -584,7 +584,7 @@ fn record_outcome_refs(
 
 fn apply_receipt_rows(
     graph: &str,
-    receipt_nodes: &[medulla_types::outcome_bundle::ReceiptNode],
+    receipt_nodes: &[medulla_result_types::outcome_bundle::ReceiptNode],
     nodes: &mut ScopedOwnerTableMut<'_, (&str, &str), &[u8]>,
     crypto: DurableCrypto<'_>,
 ) -> Result<(), String> {

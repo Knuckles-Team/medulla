@@ -73,7 +73,7 @@ pub struct RebalancePlanReport {
 // Preserve the F3d public path while keeping the F3b compute-result body as the
 // single owner shared by `DistributedCompute` and `GetMatView`.
 #[cfg(feature = "compute-dist")]
-pub use medulla_types::{
+pub use medulla_result_types::{
     compute_result::distributed::DistResult, compute_result::distributed::LabelRows,
     compute_result::distributed::ScoreRows,
 };
