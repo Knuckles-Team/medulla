@@ -80,8 +80,8 @@ fn change_envelope_outbox_count(envelope: &ChangeEnvelope) -> Result<u32, String
 /// envelope honestly.
 #[derive(Debug, Clone)]
 pub(crate) struct ChangeEnvelopesError {
-    pub(crate) index: usize,
-    pub(crate) error: String,
+    pub index: usize,
+    pub error: String,
 }
 
 /// Engine-native BATCH ChangeEnvelope commit: apply EVERY envelope in `envelopes`
