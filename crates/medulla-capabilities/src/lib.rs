@@ -84,11 +84,11 @@ fn native_owner_policy(
     }
 }
 
-fn agent_library_policy(op: &medulla_types::agent_library::AgentLibraryOp) -> MethodPolicy {
+fn agent_library_policy(op: &medulla_agent_types::agent_library::AgentLibraryOp) -> MethodPolicy {
     let mutates = matches!(
         op,
-        medulla_types::agent_library::AgentLibraryOp::Publish { .. }
-            | medulla_types::agent_library::AgentLibraryOp::Retire { .. }
+        medulla_agent_types::agent_library::AgentLibraryOp::Publish { .. }
+            | medulla_agent_types::agent_library::AgentLibraryOp::Retire { .. }
     );
     native_owner_policy(
         mutates,
@@ -107,7 +107,7 @@ fn agent_library_policy(op: &medulla_types::agent_library::AgentLibraryOp) -> Me
 /// the authz action: composing agents into a runnable graph is a distinct
 /// privilege from publishing one agent, and collapsing them would mean anyone
 /// who can publish an agent can also wire arbitrary agents together.
-fn agent_graph_policy(op: &medulla_types::agent_graph::AgentGraphOp) -> MethodPolicy {
+fn agent_graph_policy(op: &medulla_agent_types::agent_graph::AgentGraphOp) -> MethodPolicy {
     let mutates = op.is_mutation();
     native_owner_policy(
         mutates,
@@ -126,7 +126,9 @@ fn agent_graph_policy(op: &medulla_types::agent_graph::AgentGraphOp) -> MethodPo
 /// from assembling an agent out of already-approved parts. Collapsing them
 /// would mean anyone who can publish an agent can also introduce a new
 /// side-effecting tool for it to use.
-fn agent_component_policy(op: &medulla_types::agent_component::AgentComponentOp) -> MethodPolicy {
+fn agent_component_policy(
+    op: &medulla_agent_types::agent_component::AgentComponentOp,
+) -> MethodPolicy {
     // The op owns the action mapping, because publishing a decision policy,
     // head, feature schema, rubric or NL template is administrative while
     // publishing a tool is not -- and that distinction is a property of the
@@ -416,7 +418,9 @@ fn served_modality_policy(op: &medulla_types::modality::ServedModalityOp) -> Met
 /// a draft. The separate `AgentLibrary::Publish` that stores the result is
 /// where the write privilege is spent, so nothing is admitted without a
 /// library write.
-fn agent_template_policy(op: &medulla_types::agent_template::AgentTemplateOp) -> MethodPolicy {
+fn agent_template_policy(
+    op: &medulla_agent_types::agent_template::AgentTemplateOp,
+) -> MethodPolicy {
     let mutates = op.is_mutation();
     native_owner_policy(
         mutates,

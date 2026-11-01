@@ -7,13 +7,14 @@ use super::{
 use crate::protocol::Method;
 #[cfg(feature = "redb")]
 use crate::server::persistence::agent_library::AgentLibraryStateExt;
-use medulla_catalog_types::{connector_pack::PackImportResult, connector_pack::PackViolationCode};
-use medulla_types::agent_component::{
-    AgentComponentContentRequest, AgentComponentContentResult, AgentComponentKind,
-    AgentComponentOp, AgentComponentPublishRequest, AgentComponentSearchPage,
-    AgentComponentSearchRequest, ComponentDependency,
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
+use medulla_agent_types::{
+    agent_component::AgentComponentContentRequest, agent_component::AgentComponentContentResult,
+    agent_component::AgentComponentKind, agent_component::AgentComponentOp,
+    agent_component::AgentComponentPublishRequest, agent_component::AgentComponentSearchPage,
+    agent_component::AgentComponentSearchRequest, agent_component::ComponentDependency,
 };
-use medulla_types::agent_library::AgentLibraryLifecycle;
+use medulla_catalog_types::{connector_pack::PackImportResult, connector_pack::PackViolationCode};
 
 async fn search(served: &Served) -> Vec<String> {
     let page: AgentComponentSearchPage = ok(

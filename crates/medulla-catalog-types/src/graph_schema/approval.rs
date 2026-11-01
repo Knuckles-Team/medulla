@@ -23,8 +23,8 @@ use serde_json::Value;
 
 use super::repair::RecordContract;
 use super::GraphSchemaErrorCode;
+use medulla_agent_types::{control_lease::ControlLeaseStatus, control_lease::ControlLeaseView};
 use medulla_types::contract::Digest256;
-use medulla_types::{control_lease::ControlLeaseStatus, control_lease::ControlLeaseView};
 
 /// Key prefix of a governed, approval-bound schema source.
 pub const APPROVED_SOURCE_PREFIX: &str = "approved:";

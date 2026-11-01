@@ -4,6 +4,11 @@
 //! verify every source before calling this method. An owner row alone is not
 //! authorization.
 
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
+use medulla_agent_types::agent_library::AgentLibraryMutationContext;
+use medulla_agent_types::{
+    agent_component::AgentComponentEntry, agent_component::AgentComponentKind,
+};
 use medulla_catalog_types::{
     connector_pack::catalog_authority::joined_configuration_digest,
     connector_pack::reconcile_catalog_authority, connector_pack::reconcile_joined_configuration,
@@ -13,9 +18,6 @@ use medulla_catalog_types::{
 };
 use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_protocol_types::protocol::Method;
-use medulla_types::agent_component::{AgentComponentEntry, AgentComponentKind};
-use medulla_types::agent_library::AgentLibraryLifecycle;
-use medulla_types::agent_library::AgentLibraryMutationContext;
 use medulla_types::contract::Digest256;
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationSurface;

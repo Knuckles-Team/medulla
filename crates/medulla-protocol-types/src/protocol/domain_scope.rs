@@ -3,7 +3,7 @@
 //! the method registry so domain type crates never name `Method`.
 
 use super::Method;
-use medulla_types::run_completion::RunCompletionPayload;
+use medulla_agent_types::run_completion::RunCompletionPayload;
 
 /// The ordinary run completion a `CommitWorkItemResult` carries, validated, or
 /// `None` for any other method.

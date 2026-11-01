@@ -287,7 +287,7 @@ pub(crate) enum Cmd {
     /// unpaid outbox lease. The writer flushes prior mutations first.
     ParkEnrichmentBudget {
         graph: String,
-        park: Box<medulla_types::native_control::EnrichmentBudgetPark>,
+        park: Box<medulla_agent_types::native_control::EnrichmentBudgetPark>,
         done: oneshot::Sender<Result<(), String>>,
     },
     /// Engine-native governed ingest commit. This is deliberately one writer

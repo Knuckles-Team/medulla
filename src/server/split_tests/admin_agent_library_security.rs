@@ -7,11 +7,13 @@ use crate::server::authority_context::VerifiedRequestContext;
 use crate::server::handlers::admin::{backup_bundle_name, bind_agent_library_draft};
 use crate::server::persistence::agent_library::context::bind_agent_library_context;
 use crate::server::persistence::agent_library::AgentLibraryStateExt;
-use medulla_types::contract::Nonce;
-use medulla_types::{
-    AgentLibraryEntryDraft, AgentLibraryMutationContext, AgentLibraryMutationKind, AgentLibraryOp,
-    AgentLibraryPublishRequest, AgentLibraryRetireRequest, AgentLibraryStatusRequest,
+use medulla_agent_types::{
+    agent_library::AgentLibraryEntryDraft, agent_library::AgentLibraryMutationContext,
+    agent_library::AgentLibraryMutationKind, agent_library::AgentLibraryOp,
+    agent_library::AgentLibraryPublishRequest, agent_library::AgentLibraryRetireRequest,
+    agent_library::AgentLibraryStatusRequest,
 };
+use medulla_types::contract::Nonce;
 use redb::{ReadableDatabase, ReadableTableMetadata, TableDefinition};
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
@@ -79,30 +81,30 @@ fn definition(tenant_id: &str) -> AgentLibraryEntryDraft {
         version: "1.0.0".to_string(),
         role: "researcher".to_string(),
         role_digest: digest('1'),
-        system_prompt: medulla_types::agent_component::ComponentDependency {
+        system_prompt: medulla_agent_types::agent_component::ComponentDependency {
             component_id: "prompt:a".to_string(),
-            kind: medulla_types::agent_component::AgentComponentKind::SystemPrompt,
+            kind: medulla_agent_types::agent_component::AgentComponentKind::SystemPrompt,
             definition_digest: digest('2'),
         },
-        tools: vec![medulla_types::agent_component::ComponentDependency {
+        tools: vec![medulla_agent_types::agent_component::ComponentDependency {
             component_id: "tool:search".to_string(),
-            kind: medulla_types::agent_component::AgentComponentKind::Tool,
+            kind: medulla_agent_types::agent_component::AgentComponentKind::Tool,
             definition_digest: digest('3'),
         }],
-        skills: vec![medulla_types::agent_component::ComponentDependency {
+        skills: vec![medulla_agent_types::agent_component::ComponentDependency {
             component_id: "skill:research".to_string(),
-            kind: medulla_types::agent_component::AgentComponentKind::Skill,
+            kind: medulla_agent_types::agent_component::AgentComponentKind::Skill,
             definition_digest: digest('4'),
         }],
-        model_profile: medulla_types::agent_component::ComponentDependency {
+        model_profile: medulla_agent_types::agent_component::ComponentDependency {
             component_id: "model:default".to_string(),
-            kind: medulla_types::agent_component::AgentComponentKind::ModelProfile,
+            kind: medulla_agent_types::agent_component::AgentComponentKind::ModelProfile,
             definition_digest: digest('5'),
         },
         model_identity: "model:default".to_string(),
-        ontologies: vec![medulla_types::agent_component::ComponentDependency {
+        ontologies: vec![medulla_agent_types::agent_component::ComponentDependency {
             component_id: "ontology:core".to_string(),
-            kind: medulla_types::agent_component::AgentComponentKind::Ontology,
+            kind: medulla_agent_types::agent_component::AgentComponentKind::Ontology,
             definition_digest: digest('6'),
         }],
         tenant_id: tenant_id.to_string(),
@@ -167,7 +169,7 @@ fn signed_agent_library_request(
 
 fn response_write_result(
     response: crate::protocol::Response,
-) -> medulla_types::AgentLibraryWriteResult {
+) -> medulla_agent_types::agent_library::AgentLibraryWriteResult {
     crate::test_support::decode_raw_response("Agent Library route", response)
 }
 
@@ -597,7 +599,9 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
         publish_outbox.intent.headers.get("actor"),
         Some(&expected_publish_actor)
     );
-    let event = medulla_types::msgpack::decode_bounded::<medulla_types::AgentLibraryOutboxEvent>(
+    let event = medulla_types::msgpack::decode_bounded::<
+        medulla_agent_types::agent_library::AgentLibraryOutboxEvent,
+    >(
         &publish_outbox.intent.payload,
         medulla_types::msgpack::MsgpackLimits::new(
             16 * 1024 * 1024,
@@ -649,16 +653,17 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
         retire_outbox.intent.headers.get("actor"),
         Some(&expected_retire_actor)
     );
-    let retire_event =
-        medulla_types::msgpack::decode_bounded::<medulla_types::AgentLibraryOutboxEvent>(
-            &retire_outbox.intent.payload,
-            medulla_types::msgpack::MsgpackLimits::new(
-                16 * 1024 * 1024,
-                200_000,
-                medulla_types::msgpack::DEFAULT_MAX_DEPTH,
-            ),
-        )
-        .unwrap();
+    let retire_event = medulla_types::msgpack::decode_bounded::<
+        medulla_agent_types::agent_library::AgentLibraryOutboxEvent,
+    >(
+        &retire_outbox.intent.payload,
+        medulla_types::msgpack::MsgpackLimits::new(
+            16 * 1024 * 1024,
+            200_000,
+            medulla_types::msgpack::DEFAULT_MAX_DEPTH,
+        ),
+    )
+    .unwrap();
     assert_eq!(retire_event.performing_actor, expected_retire_actor);
     assert_eq!(retire_event.entry.actor_scope, "definition:builder-a");
     assert!(retire_event.entry.is_retired());

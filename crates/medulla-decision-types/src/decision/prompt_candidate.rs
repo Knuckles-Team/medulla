@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
-use medulla_types::orchestration::HarnessComponentKind;
+use medulla_agent_types::orchestration::HarnessComponentKind;
 
 /// The packaged prompt role that determines its harness-component kind.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

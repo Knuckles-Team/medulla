@@ -15,6 +15,7 @@ use std::time::Instant;
 
 use tracing::Instrument;
 
+use medulla_agent_types::agent_component::AgentComponentKind;
 use medulla_decision_types::decision::statistical::dataset::LabelledDataset;
 use medulla_decision_types::decision::statistical::features::FeatureSchemaBody;
 use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
@@ -38,7 +39,6 @@ use medulla_decision_types::{
 use medulla_numeric::decision::admission::{admit, AdmissionRules, Admitted, Regime};
 use medulla_numeric::decision::evaluate::{evaluate, EvalSpec};
 use medulla_numeric::decision::fit::{fit, FitSpec};
-use medulla_types::agent_component::AgentComponentKind;
 use medulla_types::contract::BoundedVec;
 use medulla_types::solve_scalar::digest_text;
 

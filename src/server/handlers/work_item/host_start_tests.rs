@@ -4,9 +4,10 @@ use super::*;
 use crate::server::auth::{dispatch_test_on_heap, scoped_test_request_on, ScopedTestCaller};
 use crate::server::persistence::redb_backend::RedbBackend;
 use crate::server::state::ServerState;
-use medulla_types::control_lease::ControlLeaseIssued;
-use medulla_types::host_start::{
-    HostStartBinding, HostStartInterfaces, IssueHostStartGrantRequest,
+use medulla_agent_types::control_lease::ControlLeaseIssued;
+use medulla_agent_types::{
+    host_start::HostStartBinding, host_start::HostStartInterfaces,
+    host_start::IssueHostStartGrantRequest,
 };
 use tokio::sync::RwLock;
 
@@ -227,7 +228,7 @@ async fn signed_wrong_tenant_and_forged_provenance_refuse_without_mutation() {
     );
     assert_eq!(
         issued.outcome,
-        medulla_types::control_lease::ControlLeaseIssueOutcome::Issued
+        medulla_agent_types::control_lease::ControlLeaseIssueOutcome::Issued
     );
     assert_eq!(
         issued

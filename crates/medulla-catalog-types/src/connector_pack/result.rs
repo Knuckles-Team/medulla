@@ -258,7 +258,7 @@ pub struct PackRetireResult {
     pub tenant_id: String,
     pub connector: ResourceId,
     pub retired: BoundedVec<
-        medulla_types::agent_component::ComponentDependency,
+        medulla_agent_types::agent_component::ComponentDependency,
         { super::MAX_PACK_ENTRIES },
     >,
     pub batch_id: String,

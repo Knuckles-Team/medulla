@@ -80,7 +80,7 @@ pub(super) async fn reconcile_if_due(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    context: &medulla_types::agent_library::AgentLibraryMutationContext,
+    context: &medulla_agent_types::agent_library::AgentLibraryMutationContext,
 ) {
     use std::sync::atomic::{AtomicU64, Ordering};
 

@@ -1,11 +1,11 @@
 //! Native DTO, Method and pure-query checks. Served dispatcher tests live in
 //! the facade and remain a separate acceptance gate.
 
+use medulla_agent_types::agent_guardrail::guardrail_entailment_query;
+use medulla_agent_types::agent_guardrail::EntailmentStep;
+use medulla_agent_types::agent_guardrail::GuardrailEntailmentRequest;
+use medulla_agent_types::agent_guardrail::GuardrailRule;
 use medulla_protocol_types::protocol::Method;
-use medulla_types::agent_guardrail::guardrail_entailment_query;
-use medulla_types::agent_guardrail::EntailmentStep;
-use medulla_types::agent_guardrail::GuardrailEntailmentRequest;
-use medulla_types::agent_guardrail::GuardrailRule;
 
 #[test]
 fn guardrail_wire_roundtrip_retains_tenant_and_task() {
@@ -86,8 +86,9 @@ fn native_guardrail_query_proves_exact_and_subclass_rules_only() {
 
 #[test]
 fn malformed_guardrail_publish_preserves_its_declared_error_code() {
-    use medulla_types::agent_component::{
-        AgentComponentDraft, AgentComponentKind, DraftPublication, DraftSubject,
+    use medulla_agent_types::{
+        agent_component::AgentComponentDraft, agent_component::AgentComponentKind,
+        agent_component::DraftPublication, agent_component::DraftSubject,
     };
     let digest = format!("sha256:{}", "1".repeat(64));
     let draft = AgentComponentDraft::bare(

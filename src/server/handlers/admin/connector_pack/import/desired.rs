@@ -3,16 +3,17 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
+use medulla_agent_types::{
+    agent_component::AgentComponentDraft, agent_component::AgentComponentEntry,
+    agent_component::AgentComponentFacts, agent_component::AgentComponentKind,
+    agent_component::ComponentDependency, agent_component::ComponentProvenance,
+};
 use medulla_catalog_types::{
     connector_pack::ConnectorPackImportRequest, connector_pack::PackEntry,
     connector_pack::PackEntryKind, connector_pack::PackViolation,
     connector_pack::PackViolationCode,
 };
-use medulla_types::agent_component::{
-    AgentComponentDraft, AgentComponentEntry, AgentComponentFacts, AgentComponentKind,
-    ComponentDependency, ComponentProvenance,
-};
-use medulla_types::agent_library::AgentLibraryLifecycle;
 use medulla_types::contract::Digest256;
 
 use crate::server::persistence::agent_library::AgentLibraryStore;

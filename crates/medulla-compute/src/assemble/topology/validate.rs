@@ -2,12 +2,12 @@
 //! policy's caps, and what the topology question read is recorded exactly
 //! once, consistently with the request (so replay reads the same facts).
 
+use medulla_agent_types::agent_topology::TopologyInputs;
+use medulla_agent_types::agent_topology::TopologyPolicy;
+use medulla_agent_types::agent_topology::TopologyRequirements;
 use medulla_decision_types::decision::DecisionErrorCode;
 use medulla_decision_types::decision::DecisionInputs;
 use medulla_decision_types::decision::TemplateFacts;
-use medulla_types::agent_topology::TopologyInputs;
-use medulla_types::agent_topology::TopologyPolicy;
-use medulla_types::agent_topology::TopologyRequirements;
 
 use super::super::AssembleError;
 

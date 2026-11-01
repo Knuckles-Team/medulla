@@ -6,7 +6,7 @@
 //! visibility/liveness authority; these Blob holders prevent GC between the
 //! earlier body batch and the later atomic catalog commit.
 
-use medulla_types::agent_component::MAX_COMPONENT_BODY_BYTES;
+use medulla_agent_types::agent_component::MAX_COMPONENT_BODY_BYTES;
 use medulla_types::contract::Digest256;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -75,7 +75,7 @@ fn plan_bodies<'a>(
     purpose: BodyPurpose<'_>,
     bodies: &'a [EngineBody],
 ) -> Result<Vec<PlannedEngineBody<'a>>, String> {
-    medulla_types::agent_library::validate_key(tenant_id, "connector-pack")?;
+    medulla_agent_types::agent_library::validate_key(tenant_id, "connector-pack")?;
     let (namespace, owner_scope, max_count, max_bytes) = match purpose {
         BodyPurpose::ConnectorPack => (
             format!("pack:{tenant_id}"),

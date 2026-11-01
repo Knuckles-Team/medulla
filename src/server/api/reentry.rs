@@ -99,7 +99,7 @@ pub(crate) type PageAuthorityFn = Box<
 pub(crate) type PageSubmitFn = Box<
     dyn FnMut(
             VerifiedRequestContext,
-            medulla_types::native_control::SubmitWorkItemsRequest,
+            medulla_agent_types::native_control::SubmitWorkItemsRequest,
         ) -> SeamFuture<'static, Result<(), String>>
         + Send,
 >;
@@ -109,7 +109,7 @@ pub(crate) type PageSubmitFn = Box<
 pub(crate) type PageParkFn = Box<
     dyn FnMut(
             medulla_types::mutation_scope::MutationOutboxLease,
-            medulla_types::native_control::EnrichmentBudgetPark,
+            medulla_agent_types::native_control::EnrichmentBudgetPark,
         ) -> SeamFuture<'static, Result<(), String>>
         + Send,
 >;
@@ -292,7 +292,7 @@ pub trait DispatchApi: Send + Sync {
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         verified: VerifiedRequestContext,
-        request: medulla_types::native_control::SubmitWorkItemsRequest,
+        request: medulla_agent_types::native_control::SubmitWorkItemsRequest,
     ) -> SeamFuture<'a, Result<(), String>>;
 
     /// Bind an internal park proposal to one held event and the latest durable budget row.
@@ -308,7 +308,7 @@ pub trait DispatchApi: Send + Sync {
         Result<
             (
                 crate::parser::enrichment_snapshot::EligibleSnapshot,
-                medulla_types::native_control::EnrichmentBudgetPark,
+                medulla_agent_types::native_control::EnrichmentBudgetPark,
             ),
             String,
         >,
@@ -665,7 +665,7 @@ pub(crate) async fn apply_replicated_job_publication_finalize(
 pub(crate) async fn submit_repository_enrichment_page(
     state: &Arc<RwLock<ServerState>>,
     verified: VerifiedRequestContext,
-    request: medulla_types::native_control::SubmitWorkItemsRequest,
+    request: medulla_agent_types::native_control::SubmitWorkItemsRequest,
 ) -> Result<(), String> {
     dispatch_api(state)
         .await?
@@ -684,7 +684,7 @@ pub(crate) async fn plan_held_underfunded_park(
 ) -> Result<
     (
         crate::parser::enrichment_snapshot::EligibleSnapshot,
-        medulla_types::native_control::EnrichmentBudgetPark,
+        medulla_agent_types::native_control::EnrichmentBudgetPark,
     ),
     String,
 > {

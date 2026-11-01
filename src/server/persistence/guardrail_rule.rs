@@ -9,9 +9,9 @@
 //! decoded back into [`GuardrailRule`]s for guardrail entailment
 //! (MEDULLA-DECISION-ENGINE-R127) to reason over. It adds no served query.
 
-use medulla_types::agent_component::AgentComponentKind;
-use medulla_types::agent_guardrail::GuardrailRule;
-use medulla_types::agent_library::AgentLibraryLifecycle;
+use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_agent_types::agent_guardrail::GuardrailRule;
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 
 use super::agent_component::ComponentLayer;
 use super::agent_library::AgentLibraryStore;

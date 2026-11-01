@@ -16,12 +16,13 @@
 //!   also holds (self-evaluation is never independent);
 //! * every evaluation admitted through a grant is audited.
 
+use medulla_agent_types::{
+    control_lease::ControlLeaseStatus, control_lease::ControlLeaseView,
+    control_lease::IssueControlLeaseRequest, control_lease::DECISION_EVALUATION_LEASE_KIND,
+};
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::{
     decision::statistical::log::DecisionLogEntry, decision::statistical::log::NamedEvaluator,
-};
-use medulla_types::control_lease::{
-    ControlLeaseStatus, ControlLeaseView, IssueControlLeaseRequest, DECISION_EVALUATION_LEASE_KIND,
 };
 use serde_json::{Map, Value};
 

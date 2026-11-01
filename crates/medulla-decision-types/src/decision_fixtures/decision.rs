@@ -2,15 +2,15 @@
 //! medulla-compute's assembly tests.
 
 use crate::decision::CandidateFacts;
-use medulla_types::agent_library::AgentLibraryLifecycle;
-use medulla_types::contract::BoundedVec;
-use medulla_types::{
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
+use medulla_agent_types::{
     agent_component::AgentComponentEntry, agent_component::AgentComponentFacts,
     agent_component::AgentComponentKind, agent_component::ComponentProvenance,
     agent_component::CostFacts, agent_component::DeclaredCost, agent_component::DeclaredLatency,
     agent_component::FactQuality, agent_component::PriceSource, agent_component::ToolEffect,
     agent_component::AGENT_COMPONENT_SCHEMA_VERSION,
 };
+use medulla_types::contract::BoundedVec;
 
 /// A published candidate with opaque facts, classified under
 /// `classification`, requiring and declaring nothing, and resting on no
@@ -147,7 +147,7 @@ mod tests {
             facts.classification.as_slice(),
             ["eg:capability/retrieval".to_string()]
         );
-        let medulla_types::agent_component::AgentComponentFacts::Tool {
+        let medulla_agent_types::agent_component::AgentComponentFacts::Tool {
             cost,
             latency_declared,
             ..

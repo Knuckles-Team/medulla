@@ -105,7 +105,7 @@ pub(super) fn apply(
 }
 
 /// Shared native run-admission fixture, with no conversation by default.
-pub(super) fn run_request() -> medulla_types::native_control::SubmitWorkItemRequest {
+pub(super) fn run_request() -> medulla_agent_types::native_control::SubmitWorkItemRequest {
     serde_json::from_value(serde_json::json!({
         "schema_version":"1", "run_id":"run", "work_item_id":null,
         "context": {"schema_version":"2", "request_id":"request", "subject_id":"owner",
@@ -125,9 +125,9 @@ pub(super) fn run_request() -> medulla_types::native_control::SubmitWorkItemRequ
 /// Submit fixture rows within the caller's existing admitted transaction.
 pub(super) fn submit_run_rows(
     admitted: &ShardWrite<'_>,
-    request: &medulla_types::native_control::SubmitWorkItemRequest,
+    request: &medulla_agent_types::native_control::SubmitWorkItemRequest,
     owner: &str,
-) -> Result<medulla_types::native_control::SubmitWorkItemResult, String> {
+) -> Result<medulla_agent_types::native_control::SubmitWorkItemResult, String> {
     let member = admitted.graph(GRAPH)?;
     let mut rows = crate::redb_store::store_rows::GraphRowTables::open(member)?;
     super::apply_submit_work_item_rows(

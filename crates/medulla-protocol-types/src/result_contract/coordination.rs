@@ -14,6 +14,24 @@ pub use resources::*;
 pub use statechart::*;
 pub use work_items::*;
 
+use medulla_agent_types::delegation::KgDelegateResult;
+use medulla_agent_types::{
+    control_lease::ControlLeaseIssued, control_lease::ControlLeasePage,
+    control_lease::ControlLeaseTransition, control_lease::ControlLeaseView,
+};
+use medulla_agent_types::{
+    native_control::CapacityAcquireResult, native_control::CapacityCellUpdateResult,
+    native_control::CapacityMutationResult, native_control::CapacityReclaimResult,
+    native_control::CapacityStatusResult, native_control::SubmitWorkItemResult,
+    native_control::SubmitWorkItemsResult,
+};
+use medulla_agent_types::{
+    work_item_read::WorkItemOutcomeView, work_item_read::WorkItemPage, work_item_read::WorkItemView,
+};
+use medulla_agent_types::{
+    work_market::GapPage, work_market::GapSettled, work_market::GapTransitioned,
+    work_market::GapUpserted, work_market::GapView, work_market::WorkOfferRecorded,
+};
 use medulla_decision_types::decision::statistical::retrieval::LearningRecorded;
 use medulla_decision_types::decision::DecisionJobRecord;
 use medulla_decision_types::{
@@ -23,12 +41,7 @@ use medulla_decision_types::{
     decision::statistical::log::OutcomeAggregate, decision::statistical::log::StoredEvaluation,
     decision::statistical::log::StoredResolution,
 };
-use medulla_types::delegation::KgDelegateResult;
 use medulla_types::sealed_record::SealedRecordRetirement;
-use medulla_types::{
-    control_lease::ControlLeaseIssued, control_lease::ControlLeasePage,
-    control_lease::ControlLeaseTransition, control_lease::ControlLeaseView,
-};
 use medulla_types::{
     epistemic_operations::ClaimWorkItemResult,
     epistemic_operations::DevelopmentLaneCleanupCompleteResult,
@@ -46,19 +59,6 @@ use medulla_types::{
     epistemic_operations_ext::CasWorkItemMetadataResult,
     epistemic_operations_ext::WorkItemClaimCapabilityResult,
 };
-use medulla_types::{
-    native_control::CapacityAcquireResult, native_control::CapacityCellUpdateResult,
-    native_control::CapacityMutationResult, native_control::CapacityReclaimResult,
-    native_control::CapacityStatusResult, native_control::SubmitWorkItemResult,
-    native_control::SubmitWorkItemsResult,
-};
-use medulla_types::{
-    work_item_read::WorkItemOutcomeView, work_item_read::WorkItemPage, work_item_read::WorkItemView,
-};
-use medulla_types::{
-    work_market::GapPage, work_market::GapSettled, work_market::GapTransitioned,
-    work_market::GapUpserted, work_market::GapView, work_market::WorkOfferRecorded,
-};
 
 method_results! {
     visit_coordination;
@@ -72,7 +72,7 @@ method_results! {
     ReconcileCapacity(ReconcileCapacity) => Raw<CapacityStatusResult>;
     CapacityStatus(CapacityStatus) => Raw<CapacityStatusResult>;
     UpdateCapacityCell(UpdateCapacityCell) => Raw<CapacityCellUpdateResult>;
-    ThrottleCapacityCell(ThrottleCapacityCell) => Raw<medulla_types::native_control::CapacityThrottleResult>;
+    ThrottleCapacityCell(ThrottleCapacityCell) => Raw<medulla_agent_types::native_control::CapacityThrottleResult>;
     KgDelegate(KgDelegate) => Raw<KgDelegateResult>;
     SubmitWorkItem(SubmitWorkItem) => Raw<SubmitWorkItemResult>;
     SubmitWorkItems(SubmitWorkItems) => Raw<SubmitWorkItemsResult>;
@@ -86,11 +86,11 @@ method_results! {
     // EH-219 typed WorkItem reads. `null` when no WorkItem with this id is
     // visible to the verified tenant.
     PublishCurrentPlan(PublishCurrentPlan) => Raw<medulla_decision_types::current_plan::CurrentPlanPublished>;
-    PublishRunCheckpoint(PublishRunCheckpoint) => Raw<medulla_types::run_checkpoint::RunCheckpointPublished>;
-    GetRunCheckpoint(GetRunCheckpoint) => Raw<Option<medulla_types::run_checkpoint::RunCheckpointRead>>;
+    PublishRunCheckpoint(PublishRunCheckpoint) => Raw<medulla_agent_types::run_checkpoint::RunCheckpointPublished>;
+    GetRunCheckpoint(GetRunCheckpoint) => Raw<Option<medulla_agent_types::run_checkpoint::RunCheckpointRead>>;
     GetCurrentPlan(GetCurrentPlan) => Raw<Option<medulla_decision_types::current_plan::CurrentPlanSnapshot>>;
-    GetSessionUsage(GetSessionUsage) => Raw<medulla_types::run_usage::SessionUsage>;
-    GetRunWorkItem(GetRunWorkItem) => Raw<Option<medulla_types::work_item_read::RunWorkItemView>>;
+    GetSessionUsage(GetSessionUsage) => Raw<medulla_agent_types::run_usage::SessionUsage>;
+    GetRunWorkItem(GetRunWorkItem) => Raw<Option<medulla_agent_types::work_item_read::RunWorkItemView>>;
     GetWorkItem(GetWorkItem) => Raw<Option<WorkItemView>>;
     ListWorkItems(ListWorkItems) => Raw<WorkItemPage>;
     // graph-os MEDULLA-3: `null` when the WorkItem is not visible or has no bundle.

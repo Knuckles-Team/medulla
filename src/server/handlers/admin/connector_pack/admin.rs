@@ -154,7 +154,7 @@ struct AdminWrite<'a> {
     state: &'a Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &'a VerifiedRequestContext,
-    context: medulla_types::agent_library::AgentLibraryMutationContext,
+    context: medulla_agent_types::agent_library::AgentLibraryMutationContext,
     purpose: &'static str,
 }
 
@@ -168,7 +168,7 @@ where
     M::Body: Send + 'static,
     F: FnOnce(
             &AgentLibraryStore,
-            medulla_types::agent_library::AgentLibraryMutationContext,
+            medulla_agent_types::agent_library::AgentLibraryMutationContext,
         ) -> Result<M::Body, String>
         + Send
         + 'static,
@@ -187,7 +187,7 @@ where
     M::Body: Send + 'static,
     F: FnOnce(
             &AgentLibraryStore,
-            medulla_types::agent_library::AgentLibraryMutationContext,
+            medulla_agent_types::agent_library::AgentLibraryMutationContext,
         ) -> Result<M::Body, String>
         + Send
         + 'static,

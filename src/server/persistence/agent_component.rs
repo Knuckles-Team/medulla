@@ -23,12 +23,15 @@ use std::sync::Arc;
 
 use medulla_storage::ScopedRead;
 
-use medulla_types::agent_component::{
-    AgentComponentCommittedResult, AgentComponentEntry, AgentComponentMutationKind,
-    AgentComponentOutboxEvent, AgentComponentPublishRequest, AgentComponentRetireRequest,
-    AgentComponentStatusRequest, AGENT_COMPONENT_SCHEMA_VERSION,
+use medulla_agent_types::{
+    agent_component::AgentComponentCommittedResult, agent_component::AgentComponentEntry,
+    agent_component::AgentComponentMutationKind, agent_component::AgentComponentOutboxEvent,
+    agent_component::AgentComponentPublishRequest, agent_component::AgentComponentRetireRequest,
+    agent_component::AgentComponentStatusRequest, agent_component::AGENT_COMPONENT_SCHEMA_VERSION,
 };
-use medulla_types::agent_library::{AgentLibraryLifecycle, AgentLibraryMutationContext};
+use medulla_agent_types::{
+    agent_library::AgentLibraryLifecycle, agent_library::AgentLibraryMutationContext,
+};
 
 use super::agent_library::AgentLibraryStore;
 use super::agent_revision::{
@@ -168,14 +171,17 @@ impl AgentLibraryStore {
     /// `next_cursor` is `None`.
     pub fn search_components(
         &self,
-        request: &medulla_types::agent_component::AgentComponentSearchRequest,
-    ) -> Result<medulla_types::agent_component::AgentComponentSearchPage, String> {
+        request: &medulla_agent_types::agent_component::AgentComponentSearchRequest,
+    ) -> Result<medulla_agent_types::agent_component::AgentComponentSearchPage, String> {
         request.validate()?;
         let resume_after = request
             .cursor
             .as_deref()
             .map(|cursor| {
-                medulla_types::agent_component::decode_search_cursor(&request.tenant_id, cursor)
+                medulla_agent_types::agent_component::decode_search_cursor(
+                    &request.tenant_id,
+                    cursor,
+                )
             })
             .transpose()?;
         let read = self.read()?;
@@ -185,9 +191,9 @@ impl AgentLibraryStore {
 
 fn scan_component_search_page(
     read: &ScopedRead<'_, medulla_storage::AgentLibraryOwner>,
-    request: &medulla_types::agent_component::AgentComponentSearchRequest,
+    request: &medulla_agent_types::agent_component::AgentComponentSearchRequest,
     resume_after: Option<&str>,
-) -> Result<medulla_types::agent_component::AgentComponentSearchPage, String> {
+) -> Result<medulla_agent_types::agent_component::AgentComponentSearchPage, String> {
     let limit = request.page_limit();
     let heads = read.open_owner_table(medulla_storage::AGENT_COMPONENT_HEADS)?;
     let revisions = read.open_owner_table(medulla_storage::AGENT_COMPONENT_REVISIONS)?;
@@ -243,16 +249,20 @@ fn scan_component_search_page(
         },
     )?;
     let next_cursor = match (truncated, last_consumed) {
-        (true, Some(component_id)) => Some(medulla_types::agent_component::encode_search_cursor(
-            &request.tenant_id,
-            &component_id,
-        )),
+        (true, Some(component_id)) => {
+            Some(medulla_agent_types::agent_component::encode_search_cursor(
+                &request.tenant_id,
+                &component_id,
+            ))
+        }
         _ => None,
     };
-    Ok(medulla_types::agent_component::AgentComponentSearchPage {
-        entries: matched,
-        next_cursor,
-    })
+    Ok(
+        medulla_agent_types::agent_component::AgentComponentSearchPage {
+            entries: matched,
+            next_cursor,
+        },
+    )
 }
 
 /// Visit one tenant's component heads from `start` (inclusive), in key order,
@@ -431,9 +441,10 @@ pub type AgentComponentStoreRef = Arc<AgentLibraryStore>;
 pub(crate) fn test_component_draft(
     tenant_id: &str,
     component_id: &str,
-) -> medulla_types::agent_component::AgentComponentDraft {
-    use medulla_types::agent_component::{
-        AgentComponentDraft, AgentComponentKind, DraftPublication, DraftSubject,
+) -> medulla_agent_types::agent_component::AgentComponentDraft {
+    use medulla_agent_types::{
+        agent_component::AgentComponentDraft, agent_component::AgentComponentKind,
+        agent_component::DraftPublication, agent_component::DraftSubject,
     };
     AgentComponentDraft::bare(
         DraftSubject {
@@ -461,9 +472,9 @@ pub(crate) fn test_component_draft(
 /// `test_component_draft` exists.
 #[cfg(test)]
 pub(crate) fn test_tool_facts(
-    effect: medulla_types::agent_component::ToolEffect,
-) -> medulla_types::agent_component::AgentComponentFacts {
-    medulla_types::agent_component::AgentComponentFacts::Tool {
+    effect: medulla_agent_types::agent_component::ToolEffect,
+) -> medulla_agent_types::agent_component::AgentComponentFacts {
+    medulla_agent_types::agent_component::AgentComponentFacts::Tool {
         effect,
         required_scopes: Vec::new(),
         input_schema_digest: None,
@@ -497,11 +508,13 @@ pub(crate) fn seed_component_for_test(
     store: &AgentLibraryStore,
     tenant_id: &str,
     component_id: &str,
-    kind: medulla_types::agent_component::AgentComponentKind,
+    kind: medulla_agent_types::agent_component::AgentComponentKind,
     nonce_index: u8,
-) -> medulla_types::agent_component::ComponentDependency {
-    use medulla_types::agent_component::{
-        AgentComponentDraft, AgentComponentFacts, AgentComponentKind, PromptMode, ToolEffect,
+) -> medulla_agent_types::agent_component::ComponentDependency {
+    use medulla_agent_types::{
+        agent_component::AgentComponentDraft, agent_component::AgentComponentFacts,
+        agent_component::AgentComponentKind, agent_component::PromptMode,
+        agent_component::ToolEffect,
     };
     let definition_digest = match store
         .current_component(tenant_id, component_id)
@@ -517,7 +530,7 @@ pub(crate) fn seed_component_for_test(
                 },
                 AgentComponentKind::Tool => test_tool_facts(ToolEffect::Read),
                 AgentComponentKind::Toolset => AgentComponentFacts::Toolset {
-                    transport: medulla_types::agent_component::ToolsetTransport::Function,
+                    transport: medulla_agent_types::agent_component::ToolsetTransport::Function,
                 },
                 AgentComponentKind::ModelProfile => AgentComponentFacts::ModelProfile {
                     provider: "seed-provider".to_string(),
@@ -578,7 +591,7 @@ pub(crate) fn seed_component_for_test(
                 .definition_digest
         }
     };
-    medulla_types::agent_component::ComponentDependency {
+    medulla_agent_types::agent_component::ComponentDependency {
         component_id: component_id.to_string(),
         kind,
         definition_digest,
@@ -590,11 +603,11 @@ pub(crate) fn seed_component_for_test(
 #[cfg(test)]
 pub(crate) fn seed_draft_components_for_test(
     store: &AgentLibraryStore,
-    draft: &mut medulla_types::agent_library::AgentLibraryEntryDraft,
+    draft: &mut medulla_agent_types::agent_library::AgentLibraryEntryDraft,
     nonce_base: u8,
 ) {
     let tenant_id = draft.tenant_id.clone();
-    let mut pins: Vec<&mut medulla_types::agent_component::ComponentDependency> =
+    let mut pins: Vec<&mut medulla_agent_types::agent_component::ComponentDependency> =
         vec![&mut draft.system_prompt, &mut draft.model_profile];
     pins.extend(draft.tools.iter_mut());
     pins.extend(draft.skills.iter_mut());
@@ -628,9 +641,10 @@ pub(crate) fn seed_draft_components_for_test(
 mod tests {
     use super::super::agent_fixtures::mutation_context;
     use super::*;
-    use medulla_types::agent_component::{
-        AgentComponentDraft, AgentComponentKind, AgentComponentSearchRequest, ComponentDependency,
-        ComponentProvenance, ToolEffect,
+    use medulla_agent_types::{
+        agent_component::AgentComponentDraft, agent_component::AgentComponentKind,
+        agent_component::AgentComponentSearchRequest, agent_component::ComponentDependency,
+        agent_component::ComponentProvenance, agent_component::ToolEffect,
     };
 
     fn digest(byte: char) -> String {
@@ -887,7 +901,7 @@ mod tests {
     fn model_input_capabilities_survive_owner_restart_and_tenant_reads() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().to_str().unwrap();
-        let expected_facts: medulla_types::agent_component::AgentComponentFacts =
+        let expected_facts: medulla_agent_types::agent_component::AgentComponentFacts =
             serde_json::from_value(serde_json::json!({
                 "facts":"model_profile", "provider":"fixture", "model_identity":"fixture/model",
                 "context_window_tokens":8192, "max_output_tokens":1024,
@@ -1447,7 +1461,7 @@ mod tests {
         let (_dir, store) = open_store();
         for limit in [
             0,
-            medulla_types::agent_component::MAX_AGENT_COMPONENT_SEARCH_LIMIT + 1,
+            medulla_agent_types::agent_component::MAX_AGENT_COMPONENT_SEARCH_LIMIT + 1,
         ] {
             let error = store
                 .search_components(&paged("tenant-a", Some("eg:task/research"), limit, None))

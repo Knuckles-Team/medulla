@@ -164,7 +164,7 @@ pub struct DecisionPolicy {
     /// engine default ([`crate::agent_topology::TopologyPolicy::engine_default`]),
     /// and keeps an existing policy's digest.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub topology: Option<medulla_types::agent_topology::TopologyPolicy>,
+    pub topology: Option<medulla_agent_types::agent_topology::TopologyPolicy>,
 }
 
 /// The component attribute a published `DecisionPolicy` carries its body in:

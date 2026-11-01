@@ -68,12 +68,12 @@ mod worker {
     use crate::server::mutation_batch::{CommitOrigin, WorkItemCommitRequest};
     #[cfg(feature = "security")]
     use crate::server::repository_enrichment_worker::grant;
+    use medulla_agent_types::native_control::SubmitWorkItemsRequest;
     #[cfg(not(feature = "raft"))]
     use medulla_protocol_types::protocol::Method;
     use medulla_types::epistemic_operations::{
         RequestContext, RequestContextAuthenticationMethod, RequestContextSchemaVersion,
     };
-    use medulla_types::native_control::SubmitWorkItemsRequest;
 
     const IDLE: Duration = Duration::from_millis(500);
     const MAX_GRAPHS_PER_SWEEP: usize = 16;

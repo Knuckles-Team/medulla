@@ -1,10 +1,11 @@
 //! `GuardrailRule` publish + read-back (MEDULLA-DECISION-ENGINE-R127.2.1).
 
-use medulla_types::agent_component::{
-    AgentComponentDraft, AgentComponentKind, AgentComponentPublishRequest,
+use medulla_agent_types::agent_guardrail::GuardrailRule;
+use medulla_agent_types::agent_guardrail::GUARDRAIL_APPLIES_TO_CLASS_ATTRIBUTE;
+use medulla_agent_types::{
+    agent_component::AgentComponentDraft, agent_component::AgentComponentKind,
+    agent_component::AgentComponentPublishRequest,
 };
-use medulla_types::agent_guardrail::GuardrailRule;
-use medulla_types::agent_guardrail::GUARDRAIL_APPLIES_TO_CLASS_ATTRIBUTE;
 
 use super::super::agent_component::test_component_draft;
 use super::super::agent_fixtures::{mutation_context, open_agent_store};

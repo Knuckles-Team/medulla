@@ -2,9 +2,10 @@
 //! serde shape of one version, the supersession behavior, the typed
 //! refusals and the version-history evidence.
 
-use medulla_types::orchestration::{
-    current_harness_component, register_version, version_history, HarnessComponentKind,
-    HarnessComponentRefusal, HarnessComponentVersion,
+use medulla_agent_types::{
+    orchestration::current_harness_component, orchestration::register_version,
+    orchestration::version_history, orchestration::HarnessComponentKind,
+    orchestration::HarnessComponentRefusal, orchestration::HarnessComponentVersion,
 };
 
 /// One valid version of the given component, with the content reference and

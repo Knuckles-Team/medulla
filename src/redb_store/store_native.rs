@@ -766,7 +766,7 @@ fn validate_ordinary_completion_shape(batch: &MutationBatch) -> Result<(), Strin
     let intents: Vec<_> = batch
         .outbox
         .iter()
-        .filter(|i| i.topic == medulla_types::run_completion::RUN_COMPLETION_TOPIC)
+        .filter(|i| i.topic == medulla_agent_types::run_completion::RUN_COMPLETION_TOPIC)
         .collect();
     if let Some(payload) = ordinary.into_iter().flatten().next() {
         if batch.operations.len() != 1

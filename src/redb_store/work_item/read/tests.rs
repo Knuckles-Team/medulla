@@ -3,7 +3,7 @@
 //! revision the read projects is the one the writer maintains.
 
 use super::*;
-use medulla_types::work_item_read::WorkItemStatus;
+use medulla_agent_types::work_item_read::WorkItemStatus;
 
 use super::super::test_shard::{open, with_nodes, GRAPH};
 
@@ -160,7 +160,7 @@ fn an_outcome_read_returns_only_digest_verified_provenance_of_the_tenants_item()
         .expect("committed outcome is visible");
     assert_eq!(
         outcome.terminal_event,
-        medulla_types::work_item_read::TerminalEventRead::default()
+        medulla_agent_types::work_item_read::TerminalEventRead::default()
     );
     assert_eq!(outcome.work_item.work_item_id, "wi-o");
     assert_eq!(
@@ -182,7 +182,9 @@ fn an_outcome_read_returns_only_digest_verified_provenance_of_the_tenants_item()
 // spec: MEDULLA-DURABLE-KERNEL-R028.2
 #[test]
 fn event_bindings_cannot_be_forged_and_missing_bound_event_is_not_legacy() {
-    use medulla_types::work_item_read::{WORK_ITEM_EVENT_BATCH, WORK_ITEM_EVENT_DIGEST};
+    use medulla_agent_types::{
+        work_item_read::WORK_ITEM_EVENT_BATCH, work_item_read::WORK_ITEM_EVENT_DIGEST,
+    };
     let temp = open("terminal-binding-refusal");
     let mut item = work_item("tenant-a", "au.task", "succeeded");
     item.insert("outcome_ref".into(), "oe".into());
@@ -200,7 +202,7 @@ fn event_bindings_cannot_be_forged_and_missing_bound_event_is_not_legacy() {
             .unwrap()
             .unwrap()
             .terminal_event,
-        medulla_types::work_item_read::TerminalEventRead::default()
+        medulla_agent_types::work_item_read::TerminalEventRead::default()
     );
     item.insert(WORK_ITEM_EVENT_BATCH.into(), "missing-batch".into());
     write_rows(&temp.shard, "partial", vec![("wi", item.clone())]);
@@ -221,7 +223,9 @@ fn event_bindings_cannot_be_forged_and_missing_bound_event_is_not_legacy() {
 // spec: MEDULLA-DURABLE-KERNEL-R028.2
 #[test]
 fn a_bound_event_read_refuses_a_committed_batch_without_its_event() {
-    use medulla_types::work_item_read::{WORK_ITEM_EVENT_BATCH, WORK_ITEM_EVENT_DIGEST};
+    use medulla_agent_types::{
+        work_item_read::WORK_ITEM_EVENT_BATCH, work_item_read::WORK_ITEM_EVENT_DIGEST,
+    };
     let temp = open("empty-terminal-event");
     let mut item = work_item("tenant-a", "au.task", "succeeded");
     item.insert("outcome_ref".into(), "oe".into());

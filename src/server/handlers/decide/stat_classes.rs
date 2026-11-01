@@ -11,7 +11,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_types::agent_component::AgentComponentEntry;
+use medulla_agent_types::agent_component::AgentComponentEntry;
 
 /// The classes each candidate was derived to belong to, as `(class, rule)`.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -45,7 +45,7 @@ mod imp {
                 names,
                 policy.long_context_tokens,
                 policy.low_latency_p95_ms,
-                medulla_types::agent_ontology::ontology_digest(),
+                medulla_agent_types::agent_ontology::ontology_digest(),
             ),
         ))
     }

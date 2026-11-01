@@ -434,8 +434,10 @@ arrow = { version = "58.4", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["query"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["query"] }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-agent-types = { path = "../medulla-agent-types" }
 
 [dev-dependencies]
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support", "query"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support", "query"] }

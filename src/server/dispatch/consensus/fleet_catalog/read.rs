@@ -5,6 +5,7 @@
 use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::collections::BTreeMap;
 
+use medulla_agent_types::agent_component::AgentComponentEntry;
 use medulla_catalog_types::{
     fleet_catalog::FleetCatalogKind, fleet_catalog::FleetCatalogListRequest,
     fleet_catalog::FleetCatalogLookup, fleet_catalog::FleetCatalogLookupRequest,
@@ -15,7 +16,6 @@ use medulla_protocol_types::{
     result_contract::cluster::FleetCatalogList, result_contract::cluster::FleetCatalogLookupRows,
     result_contract::cluster::ServerDesiredState,
 };
-use medulla_types::agent_component::AgentComponentEntry;
 use medulla_types::contract::{BoundedVec, Digest256};
 
 use super::super::registry::{live_desired_states, REGISTRY_GRAPH};

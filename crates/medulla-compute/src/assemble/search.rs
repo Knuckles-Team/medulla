@@ -7,6 +7,9 @@
 //! decision abstains, naming each refusal. The final model, cuts included, is
 //! the one the record's certificate covers, so replay reproduces it exactly.
 
+use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_agent_types::agent_graph::AgentGraphDraft;
+use medulla_agent_types::agent_library::AgentLibraryEntryDraft;
 use medulla_decision_types::decision::request::effective_solver_budget;
 use medulla_decision_types::solve::Certificate;
 use medulla_decision_types::solve::ConstraintBody;
@@ -23,9 +26,6 @@ use medulla_decision_types::{
     decision::digest, decision::AbstainReason, decision::CandidateFacts,
     decision::DecisionErrorCode, decision::DecisionInputs, decision::TemplateFacts,
 };
-use medulla_types::agent_component::AgentComponentKind;
-use medulla_types::agent_graph::AgentGraphDraft;
-use medulla_types::agent_library::AgentLibraryEntryDraft;
 use medulla_types::contract::BoundedVec;
 use medulla_types::solve_scalar::Scalar;
 

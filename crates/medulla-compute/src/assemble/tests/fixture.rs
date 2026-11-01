@@ -3,15 +3,17 @@
 //! candidate, which is the structural reason prompt-injection text in a
 //! component's description cannot reach the decision.
 
+use medulla_agent_types::{
+    agent_component::AgentComponentFacts, agent_component::AgentComponentKind,
+    agent_component::CostFacts, agent_component::DeclaredCost, agent_component::DeclaredLatency,
+    agent_component::FactQuality, agent_component::ModalityFacts, agent_component::PriceSource,
+    agent_component::PromptMode, agent_component::ToolEffect,
+};
 use medulla_decision_types::{
     decision::AssemblyRequest, decision::AssemblyRequirements, decision::CandidateFacts,
     decision::DecisionInputs, decision::DecisionPolicy, decision::DecisionPolicyRef,
     decision::LibraryCandidateScope, decision::PremiseClass, decision::PremiseProvenance,
     decision::PremiseRef,
-};
-use medulla_types::agent_component::{
-    AgentComponentFacts, AgentComponentKind, CostFacts, DeclaredCost, DeclaredLatency, FactQuality,
-    ModalityFacts, PriceSource, PromptMode, ToolEffect,
 };
 use medulla_types::contract::BoundedVec;
 

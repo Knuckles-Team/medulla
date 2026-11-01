@@ -2,6 +2,9 @@
 
 use std::collections::BTreeMap;
 
+use medulla_agent_types::{
+    agent_component::AgentComponentEntry, agent_component::AgentComponentMutationKind,
+};
 use medulla_catalog_types::{
     connector_pack::PackDisposition, connector_pack::PackDispositionCounts,
     connector_pack::PackHeadRef, connector_pack::PackHeadView, connector_pack::PackImportReceipt,
@@ -11,7 +14,6 @@ use medulla_catalog_types::{
 };
 use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_protocol_types::protocol::Method;
-use medulla_types::agent_component::{AgentComponentEntry, AgentComponentMutationKind};
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationOutboxIntent;
 use medulla_types::mutation_scope::MutationSurface;
@@ -39,7 +41,7 @@ pub(crate) struct ConnectorPackHolderCommit {
 }
 
 pub(crate) struct ConnectorPackCommitPlan {
-    pub context: medulla_types::agent_library::AgentLibraryMutationContext,
+    pub context: medulla_agent_types::agent_library::AgentLibraryMutationContext,
     pub expected_head: Option<PackHeadRef>,
     pub record: PackImportRecord,
     pub components: Vec<ConnectorPackComponentCommit>,
@@ -146,7 +148,7 @@ fn validate_plan(store: &AgentLibraryStore, plan: &ConnectorPackCommitPlan) -> R
                     && holder.entry_revision == component.entry.entry_revision
                     && holder.body_sha256.to_hex() == body
                     && holder.row.length
-                        <= medulla_types::agent_component::MAX_COMPONENT_BODY_BYTES as u64
+                        <= medulla_agent_types::agent_component::MAX_COMPONENT_BODY_BYTES as u64
             })
             .count();
         if matching_holders != 1 {
@@ -160,7 +162,7 @@ fn validate_plan(store: &AgentLibraryStore, plan: &ConnectorPackCommitPlan) -> R
 
 fn pack_effects(
     plan: &ConnectorPackCommitPlan,
-    context: &medulla_types::agent_library::AgentLibraryMutationContext,
+    context: &medulla_agent_types::agent_library::AgentLibraryMutationContext,
 ) -> Result<PackWriteEffects, String> {
     let PackWriteEffects {
         mut operations,
@@ -207,7 +209,7 @@ fn pack_effects(
 /// publish of each revision would have emitted.
 pub(super) fn component_effects(
     components: &[ConnectorPackComponentCommit],
-    context: &medulla_types::agent_library::AgentLibraryMutationContext,
+    context: &medulla_agent_types::agent_library::AgentLibraryMutationContext,
 ) -> Result<PackWriteEffects, String> {
     let mut operations = Vec::with_capacity(components.len() + 1);
     let mut outbox = Vec::with_capacity(components.len() + 1);
@@ -292,7 +294,7 @@ fn apply_pack_rows(
 /// The catalog rows one pack write names: component revisions, member rows
 /// and the body holders that keep each written revision's body alive.
 pub(super) struct PackCatalogRows<'a> {
-    pub(super) context: &'a medulla_types::agent_library::AgentLibraryMutationContext,
+    pub(super) context: &'a medulla_agent_types::agent_library::AgentLibraryMutationContext,
     pub(super) connector: &'a str,
     pub(super) components: &'a [ConnectorPackComponentCommit],
     pub(super) members: &'a [ConnectorPackMemberRow],

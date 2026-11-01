@@ -44,12 +44,14 @@ use std::collections::BTreeMap;
 
 use redb::ReadableTable;
 
+use medulla_agent_types::{
+    agent_library::AgentLibraryLifecycle, agent_library::AgentLibraryMutationContext,
+};
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_protocol_types::protocol::Method;
 use medulla_storage::{RecordedOperation, ScopedRead};
 use medulla_transaction::{AdmittedOwnerWrite, ReplayResolution};
-use medulla_types::agent_library::{AgentLibraryLifecycle, AgentLibraryMutationContext};
 use medulla_types::mutation::{MutationReceipt, MutationResult};
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationOutboxIntent;
@@ -399,7 +401,7 @@ pub(super) fn revision_history<L: RevisionLayer>(
     tenant_id: &str,
     record_id: &str,
 ) -> Result<Vec<L::Entry>, String> {
-    medulla_types::agent_library::validate_key(tenant_id, record_id)?;
+    medulla_agent_types::agent_library::validate_key(tenant_id, record_id)?;
     let read = store.read()?;
     Ok(read_revision_history::<L>(&read, tables, tenant_id, record_id)?.1)
 }

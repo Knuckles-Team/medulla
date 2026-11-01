@@ -8,12 +8,13 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_agent_types::{
+    native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemRequest,
+    native_control::SubmitWorkItemsRequest, native_control::MAX_SUBMIT_BATCH,
+};
 use medulla_types::epistemic_operations::RequestContext;
 use medulla_types::ingestion_wire::{
     ExtractedEdge, IndexFileOutcome, IndexFileStatus, NativeRungEvidence, ParseResult,
-};
-use medulla_types::native_control::{
-    NativeControlSchemaVersion, SubmitWorkItemRequest, SubmitWorkItemsRequest, MAX_SUBMIT_BATCH,
 };
 use sha2::{Digest, Sha256};
 

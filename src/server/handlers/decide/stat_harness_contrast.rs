@@ -14,6 +14,12 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_agent_types::orchestration::is_harness_component_write;
+use medulla_agent_types::{
+    orchestration::improvement::decode_harness_contrast_write,
+    orchestration::improvement::decode_harness_probe_run_write,
+    orchestration::improvement::HarnessContrast, orchestration::improvement::HarnessProbeRun,
+};
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::{
     decision::harness_contrast::decide_contrast, decision::harness_contrast::matrix_values,
@@ -31,10 +37,6 @@ use medulla_decision_types::{
 use medulla_decision_types::{decision::AbstainReason, decision::UnitRationalWire};
 use medulla_numeric::decision::features::FeatureMatrix;
 use medulla_numeric::decision::ladder::LadderResult;
-use medulla_types::orchestration::improvement::{
-    decode_harness_contrast_write, decode_harness_probe_run_write, HarnessContrast, HarnessProbeRun,
-};
-use medulla_types::orchestration::is_harness_component_write;
 
 use super::stat_executor::Executed;
 use super::stat_support::{filtered_view, invalid_parameter};

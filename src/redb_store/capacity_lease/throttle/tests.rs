@@ -2,13 +2,14 @@
 //! ceiling, leaves the operator's declared capacity alone, and counts each
 //! window once.
 
+use medulla_agent_types::{
+    native_control::CapacityCellUpdateRequest, native_control::CapacityStatusRequest,
+    native_control::CapacityThrottleRequest, native_control::CapacityThrottleResult,
+    native_control::NativeControlSchemaVersion,
+};
 use medulla_types::capacity_lease::{CapacityCell, CapacityResourceClass};
 use medulla_types::capacity_throttle::{
     CapacityThrottle, CapacityThrottlePolicy, ErrorBudgetSample, ThrottleAction,
-};
-use medulla_types::native_control::{
-    CapacityCellUpdateRequest, CapacityStatusRequest, CapacityThrottleRequest,
-    CapacityThrottleResult, NativeControlSchemaVersion,
 };
 
 use super::super::super::shard::Shard;

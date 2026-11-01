@@ -11,7 +11,7 @@ use serde::Serialize;
 use super::policy::DecisionPolicy;
 use super::record::{CandidateFacts, DecisionInputs, DecisionRecord};
 use super::statistical::StatisticalDecisionRecord;
-use medulla_types::agent_library::AgentLibraryLifecycle;
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_types::{solve_scalar::digest_text, solve_scalar::DIGEST_TEXT_PREFIX};
 
 /// Domain of a v1 (assembly) decision record.

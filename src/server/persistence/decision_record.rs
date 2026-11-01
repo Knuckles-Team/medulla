@@ -28,16 +28,20 @@
 
 use std::collections::BTreeMap;
 
+use medulla_agent_types::agent_ontology::satisfies;
+use medulla_agent_types::{
+    agent_component::AgentComponentDraft, agent_component::AgentComponentEntry,
+    agent_component::AgentComponentKind, agent_component::AgentComponentMutationKind,
+    agent_component::DraftPublication, agent_component::DraftSubject,
+    agent_component::COMPONENT_MEDIA_TYPE_ATTRIBUTE,
+};
+use medulla_agent_types::{
+    agent_library::AgentLibraryLifecycle, agent_library::AgentLibraryMutationContext,
+};
 use medulla_decision_types::{
     decision::digest, decision::CandidateFacts, decision::DecisionErrorCode,
     decision::DecisionRecord, decision::LibraryCandidateScope, decision::MAX_ASSEMBLY_CANDIDATES,
 };
-use medulla_types::agent_component::{
-    AgentComponentDraft, AgentComponentEntry, AgentComponentKind, AgentComponentMutationKind,
-    DraftPublication, DraftSubject, COMPONENT_MEDIA_TYPE_ATTRIBUTE,
-};
-use medulla_types::agent_library::{AgentLibraryLifecycle, AgentLibraryMutationContext};
-use medulla_types::agent_ontology::satisfies;
 
 use super::agent_component::{component_tables, AgentComponentWriteResult, ComponentLayer};
 use super::agent_library::{validate_context, AgentLibraryStore};
@@ -217,7 +221,7 @@ impl AgentLibraryStore {
         &self,
         tenant_id: &str,
         component_id: &str,
-    ) -> Result<medulla_types::agent_component::AgentComponentContentResult, String> {
+    ) -> Result<medulla_agent_types::agent_component::AgentComponentContentResult, String> {
         let entry = self
             .current_component(tenant_id, component_id)?
             .ok_or_else(|| "agent component does not exist".to_string())?;
@@ -232,8 +236,9 @@ impl AgentLibraryStore {
             );
         }
         Ok(
-            medulla_types::agent_component::AgentComponentContentResult {
-                schema_version: medulla_types::agent_component::COMPONENT_CONTENT_SCHEMA_VERSION,
+            medulla_agent_types::agent_component::AgentComponentContentResult {
+                schema_version:
+                    medulla_agent_types::agent_component::COMPONENT_CONTENT_SCHEMA_VERSION,
                 component_id: entry.component_id,
                 entry_revision: entry.entry_revision,
                 definition_digest: entry.definition_digest,
@@ -321,8 +326,8 @@ fn committed_replay(
         );
     }
     Ok(AgentComponentWriteResult {
-        result: medulla_types::agent_component::AgentComponentCommittedResult {
-            schema_version: medulla_types::agent_component::AGENT_COMPONENT_SCHEMA_VERSION,
+        result: medulla_agent_types::agent_component::AgentComponentCommittedResult {
+            schema_version: medulla_agent_types::agent_component::AGENT_COMPONENT_SCHEMA_VERSION,
             component: existing,
             batch_id: String::new(),
             committed_version: 0,

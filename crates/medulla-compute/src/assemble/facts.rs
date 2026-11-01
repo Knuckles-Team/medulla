@@ -7,8 +7,11 @@
 //! definition -- that is [`Declared::None`], which is NOT the same as a
 //! selectable kind that simply did not declare the fact ([`Declared::Unknown`]).
 
+use medulla_agent_types::{
+    agent_component::AgentComponentFacts, agent_component::CostFacts,
+    agent_component::DeclaredLatency,
+};
 use medulla_decision_types::decision::CandidateFacts;
-use medulla_types::agent_component::{AgentComponentFacts, CostFacts, DeclaredLatency};
 
 use crate::solve::model::MAX_ABS_COEFFICIENT;
 

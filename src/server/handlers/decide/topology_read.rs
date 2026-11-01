@@ -5,9 +5,9 @@
 
 use std::sync::Arc;
 
+use medulla_agent_types::agent_topology::TopologyInputs;
 use medulla_decision_types::decision::AssemblyRequest;
 use medulla_decision_types::decision::TemplateFacts;
-use medulla_types::agent_topology::TopologyInputs;
 use medulla_types::contract::BoundedVec;
 
 use super::{capacity_premise, topology_schema, SharedState};

@@ -20,7 +20,7 @@
 use crate::server::persistence::AsRedb;
 use std::sync::Arc;
 
-use medulla_types::work_item_read::WorkItemListRequest;
+use medulla_agent_types::work_item_read::WorkItemListRequest;
 
 use crate::protocol::{Response, ResultPayload};
 use crate::server::api::persistence::PersistenceBackend;
@@ -33,7 +33,7 @@ pub(crate) enum WorkItemRead {
         actor: String,
     },
     Checkpoint {
-        request: medulla_types::run_checkpoint::GetRunCheckpointRequest,
+        request: medulla_agent_types::run_checkpoint::GetRunCheckpointRequest,
         actor: String,
     },
     RunAdmission {
@@ -57,7 +57,7 @@ pub(crate) enum WorkItemRead {
         work_item_id: String,
     },
     /// graph-os MEDULLA-5: one page of control leases.
-    ControlLeases(medulla_types::control_lease::ListControlLeasesRequest),
+    ControlLeases(medulla_agent_types::control_lease::ListControlLeasesRequest),
     /// graph-os MEDULLA-2: one native control lease.
     ControlLease {
         tenant: String,
@@ -69,14 +69,14 @@ pub(crate) enum WorkItemRead {
         gap_id: String,
     },
     /// EH-348: one page of Gaps.
-    Gaps(medulla_types::work_market::GapListRequest),
+    Gaps(medulla_agent_types::work_market::GapListRequest),
 }
 
 impl WorkItemRead {
     fn tenant(&self) -> &str {
         match self {
             Self::Checkpoint {
-                request: medulla_types::run_checkpoint::GetRunCheckpointRequest { tenant, .. },
+                request: medulla_agent_types::run_checkpoint::GetRunCheckpointRequest { tenant, .. },
                 ..
             }
             | Self::Get { tenant, .. }

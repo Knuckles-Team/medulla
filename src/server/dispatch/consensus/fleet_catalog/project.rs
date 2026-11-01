@@ -7,6 +7,11 @@
 
 use std::collections::BTreeMap;
 
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
+use medulla_agent_types::{
+    agent_component::AgentComponentEntry, agent_component::AgentComponentFacts,
+    agent_component::AgentComponentKind, agent_component::ComponentProvenance,
+};
 use medulla_catalog_types::connector_pack::digest::entry_kind_token;
 use medulla_catalog_types::connector_pack::ids::PACK_COMPONENT_ID_PREFIX;
 use medulla_catalog_types::connector_pack::index::PackEntryKind;
@@ -22,10 +27,6 @@ use medulla_catalog_types::{
     fleet_catalog::MAX_FLEET_SNAPSHOT_ROWS,
 };
 use medulla_protocol_types::result_contract::cluster::ServerDesiredState;
-use medulla_types::agent_component::{
-    AgentComponentEntry, AgentComponentFacts, AgentComponentKind, ComponentProvenance,
-};
-use medulla_types::agent_library::AgentLibraryLifecycle;
 use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
 
 use super::records::{discovery_record_id, DiscoveryBody, StoredRecord};

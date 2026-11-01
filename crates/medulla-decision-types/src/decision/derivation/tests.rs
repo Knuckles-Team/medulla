@@ -1,6 +1,6 @@
 use super::*;
 use crate::decision::request::{ClaimProvenance, ClaimedTaskMapping};
-use medulla_types::agent_component::AgentComponentKind;
+use medulla_agent_types::agent_component::AgentComponentKind;
 
 const ONTOLOGY: &str = "sha256:0000000000000000000000000000000000000000000000000000000000000000";
 

@@ -25,11 +25,14 @@
 
 use std::sync::Arc;
 
-use medulla_types::agent_library::{AgentLibraryLifecycle, AgentLibraryMutationContext};
-use medulla_types::agent_template::{
-    AgentTemplateCommittedResult, AgentTemplateEntry, AgentTemplateMutationKind,
-    AgentTemplateOutboxEvent, AgentTemplatePublishRequest, AgentTemplateRetireRequest,
-    AgentTemplateStatusRequest, AGENT_TEMPLATE_SCHEMA_VERSION,
+use medulla_agent_types::{
+    agent_library::AgentLibraryLifecycle, agent_library::AgentLibraryMutationContext,
+};
+use medulla_agent_types::{
+    agent_template::AgentTemplateCommittedResult, agent_template::AgentTemplateEntry,
+    agent_template::AgentTemplateMutationKind, agent_template::AgentTemplateOutboxEvent,
+    agent_template::AgentTemplatePublishRequest, agent_template::AgentTemplateRetireRequest,
+    agent_template::AgentTemplateStatusRequest, agent_template::AGENT_TEMPLATE_SCHEMA_VERSION,
 };
 
 use super::agent_library::AgentLibraryStore;
@@ -219,10 +222,10 @@ impl AgentLibraryStore {
     /// the row it was called on; this one is the gate that matters.
     pub fn instantiate_template(
         &self,
-        request: &medulla_types::agent_template::AgentTemplateInstantiateRequest,
-    ) -> Result<medulla_types::agent_library::AgentLibraryEntryDraft, String> {
+        request: &medulla_agent_types::agent_template::AgentTemplateInstantiateRequest,
+    ) -> Result<medulla_agent_types::agent_library::AgentLibraryEntryDraft, String> {
         request.validate()?;
-        medulla_types::agent_library::validate_key(&request.tenant_id, &request.template_id)?;
+        medulla_agent_types::agent_library::validate_key(&request.tenant_id, &request.template_id)?;
         let read = self.read()?;
         let heads = read.open_owner_table(medulla_storage::AGENT_TEMPLATE_HEADS)?;
         let head_revision = heads

@@ -56,6 +56,7 @@ path = "../medulla-protocol-types"
 features = ["metrics", "wire-contract"]
 
 [dev-dependencies]
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
@@ -116,12 +117,12 @@ canonical-ledger = [
     # feature set.
     "medulla-types/timeseries",
     "medulla-types/probabilistic",
-    "medulla-types/program-optimization",
+    "medulla-types/program-optimization", "medulla-agent-types/program-optimization",
 ]
 # CONCEPT:INT-P2-1 -- see the module doc above. Mirrors `medulla-types/jobs` 1:1: NEVER
 # enable one without the other (this feature enables `medulla-types/jobs` itself, so a
 # caller only ever needs to request THIS one).
-jobs = ["medulla-types/jobs", "medulla-protocol-types/jobs"]
+jobs = ["medulla-types/jobs", "medulla-agent-types/jobs", "medulla-protocol-types/jobs"]
 # CONCEPT:INT-P2-2 -- see the module doc above. Mirrors `medulla-types/statechart` 1:1 (same
 # lockstep contract as `jobs`): this feature enables `medulla-types/statechart` AND cfg-gates
 # `policy()`'s one `Method::Statechart` arm together, so the two can never drift.
@@ -159,3 +160,4 @@ viz = ["medulla-types/viz", "medulla-protocol-types/viz"]
 [dependencies]
 medulla-decision-types = { path = "../medulla-decision-types", features = ["wire-contract"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["wire-contract"] }
+medulla-agent-types = { path = "../medulla-agent-types", features = ["wire-contract"] }

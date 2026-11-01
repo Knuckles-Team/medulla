@@ -1,6 +1,6 @@
 //! Jobs-handler helpers shared by crates below `medulla-h-jobs`.
 
-use medulla_types::delegation::KgDelegateRequest;
+use medulla_agent_types::delegation::KgDelegateRequest;
 
 /// The provenance references a delegation work item retains.
 pub(crate) fn provenance_refs(request: &KgDelegateRequest) -> Vec<String> {

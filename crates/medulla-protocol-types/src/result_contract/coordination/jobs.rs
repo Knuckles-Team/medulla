@@ -9,7 +9,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use medulla_types::jobs::JobResult;
+use medulla_agent_types::jobs::JobResult;
 
 /// The graph snapshot a job reads.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

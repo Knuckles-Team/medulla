@@ -14,6 +14,14 @@
 //! * the framed digest layout depends on the rules it claims to, which is
 //!   proved by planting a violation of each rule and watching the digest move.
 
+use medulla_agent_types::{
+    agent_component::is_reserved_component_id, agent_component::AgentComponentEntry,
+    agent_component::AgentComponentKind, agent_component::AgentComponentOp,
+    agent_component::AGENT_COMPONENT_DIGEST_DOMAIN,
+    agent_component::AGENT_COMPONENT_DIGEST_DOMAIN_V3,
+    agent_component::AGENT_COMPONENT_SCHEMA_VERSION,
+};
+use medulla_agent_types::{agent_library::refuse_withdrawn, agent_library::AgentLibraryLifecycle};
 use medulla_catalog_types::catalog_fixtures::contract_control as control;
 use medulla_catalog_types::catalog_fixtures::contract_pack as pack;
 use medulla_catalog_types::connector_pack::digest as pack_digests;
@@ -26,12 +34,6 @@ use medulla_decision_types::{
 };
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol_fixtures::contract_wave::contract_wave_samples;
-use medulla_types::agent_component::{
-    is_reserved_component_id, AgentComponentEntry, AgentComponentKind, AgentComponentOp,
-    AGENT_COMPONENT_DIGEST_DOMAIN, AGENT_COMPONENT_DIGEST_DOMAIN_V3,
-    AGENT_COMPONENT_SCHEMA_VERSION,
-};
-use medulla_types::agent_library::{refuse_withdrawn, AgentLibraryLifecycle};
 
 /// Every sample survives both codecs and keeps its wire tag.
 ///
@@ -268,7 +270,7 @@ fn the_method_enum_did_not_grow() {
         "a contract-wave variant is unboxed and has grown every Method value"
     );
     assert!(
-        std::mem::size_of::<medulla_types::agent_template::AgentTemplateOp>()
+        std::mem::size_of::<medulla_agent_types::agent_template::AgentTemplateOp>()
             <= std::mem::size_of::<AgentComponentOp>(),
         "AgentTemplateOp must stay no larger than AgentComponentOp"
     );
@@ -433,8 +435,9 @@ fn the_certificate_digest_covers_the_whole_certificate() {
 
 /// One published component entry in the wave's shape.
 fn sample_entry() -> AgentComponentEntry {
-    use medulla_types::agent_component::{
-        AgentComponentDraft, AgentComponentFacts, ComponentProvenance,
+    use medulla_agent_types::{
+        agent_component::AgentComponentDraft, agent_component::AgentComponentFacts,
+        agent_component::ComponentProvenance,
     };
 
     let draft = AgentComponentDraft {

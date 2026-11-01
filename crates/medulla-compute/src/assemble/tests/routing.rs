@@ -221,7 +221,7 @@ fn a_solved_record_carries_premises_derivations_and_a_claim_class() {
         graph.shape.pinned_agents(),
         vec![(
             agent.agent_id.as_str(),
-            medulla_types::agent_library::draft_definition_digest(&agent).as_str()
+            medulla_agent_types::agent_library::draft_definition_digest(&agent).as_str()
         )]
     );
     assert!(!record.why_not.is_empty(), "excluded options are explained");

@@ -9,8 +9,8 @@
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
+use medulla_agent_types::agent_library::AgentLibraryMutationContext;
 use medulla_protocol_types::mutation_batch::MutationOperation;
-use medulla_types::agent_library::AgentLibraryMutationContext;
 use medulla_types::mutation::{MutationReceipt, MutationResult};
 use medulla_types::mutation_scope::MutationOutboxIntent;
 

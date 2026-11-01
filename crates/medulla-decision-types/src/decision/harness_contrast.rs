@@ -24,11 +24,11 @@ use crate::decision::statistical::{
     FeatureMatrixRef, QuestionKind, StatisticalDecisionRecord, StatisticalOutcome,
 };
 use crate::decision::QuantScaleTag;
-use medulla_types::closed_error_codes;
-use medulla_types::contract::BoundedVec;
-use medulla_types::{
+use medulla_agent_types::{
     orchestration::improvement::AdoptedHarness, orchestration::improvement::HarnessContrast,
 };
+use medulla_types::closed_error_codes;
+use medulla_types::contract::BoundedVec;
 
 /// The fewest candidate component versions one contrast decides over.
 pub const MIN_CONTRAST_CANDIDATES: usize = 2;
@@ -188,7 +188,7 @@ pub struct ContrastEvidence<'a> {
     pub held_versions: &'a BTreeSet<String>,
     /// The stored probe runs, by trace id.
     pub probe_runs:
-        &'a BTreeMap<String, medulla_types::orchestration::improvement::HarnessProbeRun>,
+        &'a BTreeMap<String, medulla_agent_types::orchestration::improvement::HarnessProbeRun>,
     /// The stored contrasts, by node id.
     pub stored_contrasts: &'a BTreeMap<String, HarnessContrast>,
 }
@@ -480,8 +480,8 @@ mod tests {
         DecisionPolicyRef, EvidenceClass, PremiseRef, ResolutionKind, StatisticalOutcome,
         TraceFidelity, UnitRationalWire, STATISTICAL_DECISION_RECORD_SCHEMA_VERSION,
     };
+    use medulla_agent_types::orchestration::improvement::HarnessProbeRun;
     use medulla_types::contract::BoundedVec;
-    use medulla_types::orchestration::improvement::HarnessProbeRun;
     use medulla_types::solve_scalar::digest_text;
 
     /// The input-digest domain the server's `seal` uses for statistical
@@ -868,9 +868,9 @@ mod tests {
         };
         let inputs = StatisticalInputs {
             harness_evaluation: None,
-            feature_schema: medulla_types::agent_component::ComponentDependency {
+            feature_schema: medulla_agent_types::agent_component::ComponentDependency {
                 component_id: "schema:contrast".into(),
-                kind: medulla_types::agent_component::AgentComponentKind::FeatureSchema,
+                kind: medulla_agent_types::agent_component::AgentComponentKind::FeatureSchema,
                 definition_digest: "sha256:schema".into(),
             },
             head: None,

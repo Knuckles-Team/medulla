@@ -5,6 +5,7 @@
 use super::consumer_tests::evaluate_assembly;
 use super::*;
 use crate::server::persistence::decision_record::tests as v1;
+use medulla_agent_types::agent_component::ComponentDependency;
 use medulla_decision_types::decision::record::SlotAssignment;
 use medulla_decision_types::{
     decision::statistical::log::SlateAttribution,
@@ -12,7 +13,6 @@ use medulla_decision_types::{
     decision::statistical::log::SlateAttributionRequest,
 };
 use medulla_decision_types::{decision::DecisionOutcome, decision::DecisionRecord};
-use medulla_types::agent_component::ComponentDependency;
 
 /// `record` re-slotted to `components` under graph digest `graph`, committed.
 fn commit_slate(

@@ -13,11 +13,14 @@
 //! Every value is a claim; this rule only refuses claims that cannot mean
 //! anything.
 
+use medulla_agent_types::{
+    agent_ontology::is_a, agent_ontology::is_native, agent_ontology::CAPABILITY_ROOT,
+    agent_ontology::MODALITY_ROOT,
+};
 use medulla_catalog_types::{
     connector_pack::PackAnnotations, connector_pack::PackEntryKind,
     connector_pack::PackViolationCode, connector_pack::PackWarningCode,
 };
-use medulla_types::agent_ontology::{is_a, is_native, CAPABILITY_ROOT, MODALITY_ROOT};
 
 /// Largest declared price, in micros.
 const MAX_DECLARED_MICROS: u64 = 1_000_000_000_000_000;
@@ -191,7 +194,7 @@ fn iso_4217(code: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::agent_component::{DeclaredCost, DeclaredLatency};
+    use medulla_agent_types::{agent_component::DeclaredCost, agent_component::DeclaredLatency};
 
     fn codes(annotations: &PackAnnotations) -> Vec<PackViolationCode> {
         check_annotations(PackEntryKind::Tool, annotations)
@@ -211,7 +214,7 @@ mod tests {
     // spec: MEDULLA-TYPED-PACKS-R013
     #[test]
     fn the_split_rule_rejects_eg_typos_and_keeps_foreign_claims() {
-        let native = medulla_types::agent_ontology::descendants(CAPABILITY_ROOT)
+        let native = medulla_agent_types::agent_ontology::descendants(CAPABILITY_ROOT)
             .into_iter()
             .find(|term| *term != CAPABILITY_ROOT)
             .unwrap();

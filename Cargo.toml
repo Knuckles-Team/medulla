@@ -364,7 +364,7 @@ alignment = ["blob", "dep:medulla-alignment", "dep:medulla-modality"]
 # unconditionally by `medulla-capabilities`). Included in the one main `full` build.
 jobs = [
     "server", "mining", "epistemic",
-    "dep:medulla-jobs", "medulla-types/jobs", "medulla-protocol-types/jobs", "medulla-capabilities/jobs",
+    "dep:medulla-jobs", "medulla-types/jobs", "medulla-agent-types/jobs", "medulla-protocol-types/jobs", "medulla-capabilities/jobs",
 ]
 # CONCEPT:INT-P2-2 -- the native finite-state-machine / statechart engine:
 # `Method::Statechart` (define/instantiate/send_event/get_state/list over a durable,
@@ -382,7 +382,7 @@ statechart = [
 # Graph-native, provider-neutral LM programs and governed self-improvement. This
 # extends the one analytics-job authority; it does not introduce another network,
 # cache, provider, or graph-mutation path.
-program-optimization = ["jobs", "dep:medulla-program", "medulla-types/program-optimization"]
+program-optimization = ["jobs", "dep:medulla-program", "medulla-types/program-optimization", "medulla-agent-types/program-optimization"]
 # D-VZ-1 (lane V0, `plans/au-medulla-program/deferred/lane-viz-native.md`) -- native
 # visualization contracts. `viz` links `medulla-viz-core` alone (ViewSpec IR, ViewResult
 # metadata, capability matrix, tier-selection rules, trait boundaries only -- no
@@ -1846,8 +1846,10 @@ serde_bytes = "0.11.19"
 medulla-protocol-types = { path = "crates/medulla-protocol-types" }
 medulla-decision-types = { path = "crates/medulla-decision-types" }
 medulla-catalog-types = { path = "crates/medulla-catalog-types" }
+medulla-agent-types = { path = "crates/medulla-agent-types" }
 
 [dev-dependencies]
+medulla-agent-types = { path = "crates/medulla-agent-types", features = ["test-support"] }
 medulla-catalog-types = { path = "crates/medulla-catalog-types", features = ["test-support"] }
 medulla-decision-types = { path = "crates/medulla-decision-types", features = ["test-support"] }
 medulla-protocol-types = { path = "crates/medulla-protocol-types", features = ["test-support"] }

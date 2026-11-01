@@ -18,15 +18,15 @@
 //! deadline (or tokens under a token cap) abstains `UnknownFact`, never zero.
 //! Two objective levels go FIRST: declared makespan, then total lease amount.
 
+use medulla_agent_types::agent_topology::SlotRole;
+use medulla_agent_types::agent_topology::SlotTopology;
+use medulla_agent_types::agent_topology::TopologyFacts;
 use medulla_decision_types::decision::AbstainReason;
 use medulla_decision_types::decision::DecisionErrorCode;
 use medulla_decision_types::{
     solve::Coefficient, solve::ConstraintBody, solve::ConstraintSpec, solve::ObjectiveLevelSpec,
     solve::ObjectiveTerm, solve::Relation, solve::Term, solve::VarId,
 };
-use medulla_types::agent_topology::SlotRole;
-use medulla_types::agent_topology::SlotTopology;
-use medulla_types::agent_topology::TopologyFacts;
 use medulla_types::capacity_lease::CapacityResourceClass;
 
 use super::super::model::Built;

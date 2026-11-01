@@ -8,7 +8,7 @@ use crate::decision::{
     QuestionKind, QuestionSafety, RecordWindow, RiskMethod, RiskStatement, ScoredOption,
     ShortlistProvenance, StatisticalOutcome, StatisticalQuestion, TypedParam, TypedValue,
 };
-use medulla_types::agent_component::AgentComponentKind;
+use medulla_agent_types::agent_component::AgentComponentKind;
 
 use crate::decision::jobs::DatasetSource;
 use crate::decision::replay::{

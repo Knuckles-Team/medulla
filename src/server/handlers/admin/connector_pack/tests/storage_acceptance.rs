@@ -4,10 +4,10 @@
 use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::collections::BTreeSet;
 
+use medulla_agent_types::agent_component::AgentComponentOutboxEvent;
 use medulla_catalog_types::{
     connector_pack::PackImportResult, connector_pack::CONNECTOR_PACK_IMPORT_TOPIC,
 };
-use medulla_types::agent_component::AgentComponentOutboxEvent;
 use medulla_types::contract::ResourceId;
 use medulla_types::mutation_scope::MutationOutboxRecord;
 

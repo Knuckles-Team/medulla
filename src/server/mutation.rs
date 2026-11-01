@@ -2385,7 +2385,7 @@ mod tests {
     fn pack_and_agent_layer_write_methods_are_the_local_only_five() {
         // Only the mutating ops are LocalOnly: the capability policy is
         // runtime-conditional, so Status/Current reads classify ReadOnly.
-        let ctx = medulla_types::agent_fixtures::agent_library::mutation_context;
+        let ctx = medulla_agent_types::agent_fixtures::agent_library::mutation_context;
         let methods: [(&str, Method); 5] = [
             (
                 "ConnectorPack",
@@ -2401,8 +2401,8 @@ mod tests {
             (
                 "AgentComponent",
                 Method::AgentComponent {
-                    op: medulla_types::agent_component::AgentComponentOp::Retire {
-                        request: medulla_types::agent_component::AgentComponentRetireRequest {
+                    op: medulla_agent_types::agent_component::AgentComponentOp::Retire {
+                        request: medulla_agent_types::agent_component::AgentComponentRetireRequest {
                             context: ctx(),
                             component_id: "component-a".to_string(),
                         },
@@ -2412,8 +2412,8 @@ mod tests {
             (
                 "AgentGraph",
                 Method::AgentGraph {
-                    op: medulla_types::agent_graph::AgentGraphOp::Retire {
-                        request: medulla_types::agent_graph::AgentGraphRetireRequest {
+                    op: medulla_agent_types::agent_graph::AgentGraphOp::Retire {
+                        request: medulla_agent_types::agent_graph::AgentGraphRetireRequest {
                             context: ctx(),
                             graph_id: "graph-a".to_string(),
                         },
@@ -2423,8 +2423,8 @@ mod tests {
             (
                 "AgentLibrary",
                 Method::AgentLibrary {
-                    op: medulla_types::agent_library::AgentLibraryOp::Retire {
-                        request: medulla_types::agent_library::AgentLibraryRetireRequest {
+                    op: medulla_agent_types::agent_library::AgentLibraryOp::Retire {
+                        request: medulla_agent_types::agent_library::AgentLibraryRetireRequest {
                             context: ctx(),
                             agent_id: "agent-a".to_string(),
                         },
@@ -2434,8 +2434,8 @@ mod tests {
             (
                 "AgentTemplate",
                 Method::AgentTemplate {
-                    op: medulla_types::agent_template::AgentTemplateOp::Retire {
-                        request: medulla_types::agent_template::AgentTemplateRetireRequest {
+                    op: medulla_agent_types::agent_template::AgentTemplateOp::Retire {
+                        request: medulla_agent_types::agent_template::AgentTemplateRetireRequest {
                             context: ctx(),
                             template_id: "template-a".to_string(),
                         },

@@ -23,7 +23,7 @@ pub(in crate::server::persistence) fn ledger_status_record(
     record_id: &str,
 ) -> Result<Option<StatusRecord>, String> {
     validate_context(store, context)?;
-    medulla_types::agent_library::validate_key(&context.tenant_id, record_id)?;
+    medulla_agent_types::agent_library::validate_key(&context.tenant_id, record_id)?;
     let owner = store.scope_handle(&context.tenant_id)?;
     let batch_id = batch_id(&context.idempotency_key)?;
     let record = {

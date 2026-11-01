@@ -24,10 +24,10 @@ use crate::mutation_batch::MutationBatchCommit;
 use crate::mutation_batch::MutationBatchRecord;
 use crate::protocol::Method;
 use crate::server::ServerState;
+use medulla_agent_types::native_control::CapacityStatusResult;
 use medulla_types::mutation_scope::MutationOutboxLease;
 use medulla_types::mutation_scope::MutationOutboxRecord;
 use medulla_types::mutation_scope::MutationProjectionCursor;
-use medulla_types::native_control::CapacityStatusResult;
 // The sweep-scoped claim budget carrying DESIGN.md's per-tenant weighted round
 // robin between graphs. It is a kernel type, so the claim it parameterises is
 // gated on `redb` exactly like the two WorkItem-capability methods below: the
@@ -117,7 +117,7 @@ pub trait PersistenceBackend: Send + Sync {
     async fn read_capacity_status(
         &self,
         _graph_fname: &str,
-        _request: &medulla_types::native_control::CapacityStatusRequest,
+        _request: &medulla_agent_types::native_control::CapacityStatusRequest,
     ) -> Result<CapacityStatusResult, String> {
         Err("persistence backend does not support native capacity status".to_string())
     }
@@ -130,7 +130,7 @@ pub trait PersistenceBackend: Send + Sync {
         _graph_fname: &str,
         _cells: &[String],
         _priority: medulla_types::capacity_lease::LeasePriority,
-    ) -> Result<Vec<medulla_types::agent_topology::CapacityHeadroom>, String> {
+    ) -> Result<Vec<medulla_agent_types::agent_topology::CapacityHeadroom>, String> {
         Err("persistence backend does not support native capacity headroom".to_string())
     }
 
@@ -141,7 +141,8 @@ pub trait PersistenceBackend: Send + Sync {
         &self,
         _graph_fname: &str,
         _source_envelope: &str,
-    ) -> Result<Option<medulla_types::native_control::EnrichmentBudgetCheckpoint>, String> {
+    ) -> Result<Option<medulla_agent_types::native_control::EnrichmentBudgetCheckpoint>, String>
+    {
         Err("persistence backend does not support enrichment budget reads".to_string())
     }
 
@@ -163,7 +164,7 @@ pub trait PersistenceBackend: Send + Sync {
     async fn read_enrichment_budget_park(
         &self,
         _graph_fname: &str,
-    ) -> Result<Option<medulla_types::native_control::EnrichmentBudgetPark>, String> {
+    ) -> Result<Option<medulla_agent_types::native_control::EnrichmentBudgetPark>, String> {
         Err("persistence backend does not support enrichment park reads".to_string())
     }
 
@@ -185,7 +186,7 @@ pub trait PersistenceBackend: Send + Sync {
     async fn park_enrichment_budget(
         &self,
         _graph_fname: &str,
-        _park: medulla_types::native_control::EnrichmentBudgetPark,
+        _park: medulla_agent_types::native_control::EnrichmentBudgetPark,
     ) -> Result<(), String> {
         Err("persistence backend does not support enrichment budget parking".to_string())
     }

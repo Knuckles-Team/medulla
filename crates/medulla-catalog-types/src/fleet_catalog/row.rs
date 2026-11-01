@@ -13,7 +13,7 @@ use super::vocabulary::{
     ResourceKind, SkillType, SkillTypeSource, ToolMode,
 };
 use super::{MAX_FLEET_LOOKUP_IDS, MAX_FLEET_PAGE_ROWS};
-use medulla_types::agent_component::ToolEffect;
+use medulla_agent_types::agent_component::ToolEffect;
 use medulla_types::{contract::BoundedVec, contract::Digest256, contract::ResourceId};
 
 /// Who may see a row, and who published what it shows.

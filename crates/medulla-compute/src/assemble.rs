@@ -39,13 +39,13 @@ mod topology;
 mod validate;
 mod why_not;
 
+use medulla_agent_types::agent_graph::AgentGraphDraft;
+use medulla_agent_types::agent_library::AgentLibraryEntryDraft;
 use medulla_decision_types::solve::ModelSpec;
 use medulla_decision_types::{
     decision::DecisionErrorCode, decision::DecisionInputs, decision::DecisionOutcome,
     decision::DecisionRecord,
 };
-use medulla_types::agent_graph::AgentGraphDraft;
-use medulla_types::agent_library::AgentLibraryEntryDraft;
 
 pub use seal::{encoded_len, RecordIdentity};
 
@@ -104,7 +104,7 @@ pub fn inputs(
         candidates: medulla_types::contract::BoundedVec::new(candidates).map_err(|error| {
             AssembleError::new(DecisionErrorCode::CandidateScopeTooLarge, error)
         })?,
-        ontology_digest: medulla_types::agent_ontology::ontology_digest(),
+        ontology_digest: medulla_agent_types::agent_ontology::ontology_digest(),
         policy_digest: digest::policy_digest(&policy),
         policy,
         solver: SolverIdentity {

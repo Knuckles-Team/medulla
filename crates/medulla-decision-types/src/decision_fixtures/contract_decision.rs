@@ -16,13 +16,13 @@ use crate::decision::{
 };
 use crate::solve::Algorithm;
 use crate::solve::ObjectiveValue;
-use medulla_types::agent_fixtures::agent_library::mutation_context;
-use medulla_types::agent_library::AgentLibraryLifecycle;
-use medulla_types::solve_scalar::Scalar;
-use medulla_types::{
+use medulla_agent_types::agent_fixtures::agent_library::mutation_context;
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
+use medulla_agent_types::{
     agent_component::AgentComponentFacts, agent_component::AgentComponentKind,
     agent_component::ComponentDependency,
 };
+use medulla_types::solve_scalar::Scalar;
 
 use super::contract_solver as solver;
 use medulla_types::{test_support::wave::bounded, test_support::wave::digest_text};

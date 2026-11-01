@@ -10,7 +10,9 @@
 //! What each write DOES to a Gap is decided by [`medulla_types::work_market`]; this
 //! module only reads and writes rows.
 
-use medulla_types::work_market::{gap_row_key, is_tenant_gap, GapView};
+use medulla_agent_types::{
+    work_market::gap_row_key, work_market::is_tenant_gap, work_market::GapView,
+};
 
 use super::*;
 
@@ -115,7 +117,7 @@ fn store_gap(
     let key = gap_row_key(tenant, &gap.gap_id);
     let mut row = NodeRow::new();
     row.insert(
-        medulla_types::work_item_read::WORK_ITEM_ROW_REVISION.into(),
+        medulla_agent_types::work_item_read::WORK_ITEM_ROW_REVISION.into(),
         gap.revision.into(),
     );
     gap.to_row(tenant, &mut row)?;

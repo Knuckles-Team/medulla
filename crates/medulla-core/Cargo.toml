@@ -139,3 +139,4 @@ medulla-rdf = { path = "../medulla-rdf", features = ["rdf", "owl", "sparql"] }
 # medulla-core -> dev medulla-shacl), which Cargo permits and which affects only the
 # medulla-core test build.
 medulla-shacl = { path = "../medulla-shacl" }
+medulla-agent-types = { path = "../medulla-agent-types" }

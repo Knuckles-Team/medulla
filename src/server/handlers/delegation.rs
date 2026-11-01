@@ -13,22 +13,25 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 #[cfg(feature = "redb")]
+use medulla_agent_types::agent_library::AgentLibraryEntry;
+#[cfg(feature = "redb")]
+use medulla_agent_types::delegation::AgentLibraryEntryRef;
+#[cfg(feature = "redb")]
+use medulla_agent_types::{
+    delegation::KgDelegateDecision, delegation::KgDelegateRequest, delegation::KgDelegateResult,
+};
+#[cfg(feature = "redb")]
+use medulla_agent_types::{
+    native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemRequest,
+    native_control::SubmitWorkItemResult,
+};
+#[cfg(feature = "redb")]
 use medulla_protocol_types::mutation_batch::MutationBatchStatus;
 #[cfg(feature = "redb")]
 use medulla_protocol_types::protocol::Method;
 #[cfg(feature = "redb")]
 use medulla_protocol_types::{protocol::Response, protocol::ResultPayload};
-#[cfg(feature = "redb")]
-use medulla_types::agent_library::AgentLibraryEntry;
-#[cfg(feature = "redb")]
-use medulla_types::delegation::AgentLibraryEntryRef;
-#[cfg(feature = "redb")]
-use medulla_types::delegation::{KgDelegateDecision, KgDelegateRequest, KgDelegateResult};
 use medulla_types::epistemic_operations::RequestContext;
-#[cfg(feature = "redb")]
-use medulla_types::native_control::{
-    NativeControlSchemaVersion, SubmitWorkItemRequest, SubmitWorkItemResult,
-};
 #[cfg(feature = "redb")]
 use serde_json::json;
 
@@ -87,8 +90,12 @@ pub(crate) fn context_matches_verified_authority(
 #[cfg(all(test, feature = "redb"))]
 mod tests {
     use super::*;
-    use medulla_types::agent_library::{AgentLibraryEntryDraft, AgentLibraryLifecycle};
-    use medulla_types::delegation::{KgDelegateSchemaVersion, MAX_DELEGATION_IN_FLIGHT};
+    use medulla_agent_types::{
+        agent_library::AgentLibraryEntryDraft, agent_library::AgentLibraryLifecycle,
+    };
+    use medulla_agent_types::{
+        delegation::KgDelegateSchemaVersion, delegation::MAX_DELEGATION_IN_FLIGHT,
+    };
     use medulla_types::epistemic_operations::{
         RequestContext, RequestContextAuthenticationMethod, RequestContextSchemaVersion,
     };
@@ -144,30 +151,30 @@ mod tests {
                 version: "1.0.0".into(),
                 role: "worker".into(),
                 role_digest: prefixed_digest('a'),
-                system_prompt: medulla_types::agent_component::ComponentDependency {
+                system_prompt: medulla_agent_types::agent_component::ComponentDependency {
                     component_id: "prompt:1".into(),
-                    kind: medulla_types::agent_component::AgentComponentKind::SystemPrompt,
+                    kind: medulla_agent_types::agent_component::AgentComponentKind::SystemPrompt,
                     definition_digest: prefixed_digest('b'),
                 },
-                tools: vec![medulla_types::agent_component::ComponentDependency {
+                tools: vec![medulla_agent_types::agent_component::ComponentDependency {
                     component_id: "tool:1".into(),
-                    kind: medulla_types::agent_component::AgentComponentKind::Tool,
+                    kind: medulla_agent_types::agent_component::AgentComponentKind::Tool,
                     definition_digest: prefixed_digest('c'),
                 }],
-                skills: vec![medulla_types::agent_component::ComponentDependency {
+                skills: vec![medulla_agent_types::agent_component::ComponentDependency {
                     component_id: "skill:1".into(),
-                    kind: medulla_types::agent_component::AgentComponentKind::Skill,
+                    kind: medulla_agent_types::agent_component::AgentComponentKind::Skill,
                     definition_digest: prefixed_digest('d'),
                 }],
-                model_profile: medulla_types::agent_component::ComponentDependency {
+                model_profile: medulla_agent_types::agent_component::ComponentDependency {
                     component_id: "model-profile:1".into(),
-                    kind: medulla_types::agent_component::AgentComponentKind::ModelProfile,
+                    kind: medulla_agent_types::agent_component::AgentComponentKind::ModelProfile,
                     definition_digest: prefixed_digest('e'),
                 },
                 model_identity: "model:1".into(),
-                ontologies: vec![medulla_types::agent_component::ComponentDependency {
+                ontologies: vec![medulla_agent_types::agent_component::ComponentDependency {
                     component_id: "ontology:1".into(),
-                    kind: medulla_types::agent_component::AgentComponentKind::Ontology,
+                    kind: medulla_agent_types::agent_component::AgentComponentKind::Ontology,
                     definition_digest: prefixed_digest('f'),
                 }],
                 tenant_id: "tenant:1".into(),
@@ -201,7 +208,7 @@ mod tests {
             delegation_id: "delegation:1".into(),
             run_id: "run:1".into(),
             trace_id: "trace:run:1".into(),
-            target: medulla_types::delegation::DelegationTarget::Agent {
+            target: medulla_agent_types::delegation::DelegationTarget::Agent {
                 entry: AgentLibraryEntryRef::from_entry(entry),
             },
             input_ref: "cas:input:1".into(),
@@ -489,7 +496,9 @@ mod tests {
     /// Publish child + parent and return the RETAINED parent, resolved the way
     /// admission resolves it.
     #[cfg(feature = "redb")]
-    fn nested_graph(store: &AgentLibraryStore) -> medulla_types::agent_graph::AgentGraphEntry {
+    fn nested_graph(
+        store: &AgentLibraryStore,
+    ) -> medulla_agent_types::agent_graph::AgentGraphEntry {
         use crate::server::persistence::agent_graph::tests::{
             child_shape, parent_shape, publish_shape,
         };
@@ -514,17 +523,19 @@ mod tests {
     }
 
     #[cfg(feature = "redb")]
-    fn graph_request(graph: &medulla_types::agent_graph::AgentGraphEntry) -> KgDelegateRequest {
+    fn graph_request(
+        graph: &medulla_agent_types::agent_graph::AgentGraphEntry,
+    ) -> KgDelegateRequest {
         KgDelegateRequest {
             schema_version: KgDelegateSchemaVersion::V2,
             context: context("tenant-a"),
             delegation_id: "delegation:1".into(),
             run_id: "run:1".into(),
             trace_id: "trace:run:1".into(),
-            target: medulla_types::delegation::DelegationTarget::Graph {
-                graph: Box::new(medulla_types::delegation::AgentGraphEntryRef::from_entry(
-                    graph,
-                )),
+            target: medulla_agent_types::delegation::DelegationTarget::Graph {
+                graph: Box::new(
+                    medulla_agent_types::delegation::AgentGraphEntryRef::from_entry(graph),
+                ),
             },
             input_ref: "cas:input:1".into(),
             command_digest: digest('2'),
@@ -604,7 +615,7 @@ mod tests {
         let (_dir, store) = crate::server::persistence::agent_fixtures::open_agent_store();
         let graph = nested_graph(&store);
         let mut request = graph_request(&graph);
-        let medulla_types::delegation::DelegationTarget::Graph { graph: reference } =
+        let medulla_agent_types::delegation::DelegationTarget::Graph { graph: reference } =
             &mut request.target
         else {
             panic!("the fixture builds a graph target");
@@ -633,7 +644,7 @@ mod tests {
         let graph = nested_graph(&store);
 
         let mut wrong_digest = graph_request(&graph);
-        if let medulla_types::delegation::DelegationTarget::Graph { graph: reference } =
+        if let medulla_agent_types::delegation::DelegationTarget::Graph { graph: reference } =
             &mut wrong_digest.target
         {
             reference.definition_digest = prefixed_digest('9');
@@ -692,7 +703,7 @@ mod tests {
         let (_dir, store) = crate::server::persistence::agent_fixtures::open_agent_store();
         let graph = nested_graph(&store);
         let mut unprefixed = graph_request(&graph);
-        if let medulla_types::delegation::DelegationTarget::Graph { graph: reference } =
+        if let medulla_agent_types::delegation::DelegationTarget::Graph { graph: reference } =
             &mut unprefixed.target
         {
             reference.definition_digest = graph

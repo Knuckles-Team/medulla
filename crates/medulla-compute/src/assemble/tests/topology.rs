@@ -2,6 +2,19 @@
 //! §13): the plan, the planted refusals, and a brute-force oracle over every
 //! (width, rounds) choice.
 
+use medulla_agent_types::agent_fixtures::topology::facts;
+use medulla_agent_types::agent_fixtures::topology::requirements;
+use medulla_agent_types::agent_fixtures::topology::FAN_OUT_JOIN;
+use medulla_agent_types::agent_fixtures::topology::INDEPENDENT_SUBTASKS;
+use medulla_agent_types::agent_topology::CapacityHeadroom;
+use medulla_agent_types::agent_topology::SchemaAuthority;
+use medulla_agent_types::agent_topology::SubagentFallback;
+use medulla_agent_types::agent_topology::TopologyAdmission;
+use medulla_agent_types::agent_topology::TopologyFacts;
+use medulla_agent_types::agent_topology::TopologyInputs;
+use medulla_agent_types::agent_topology::TopologyPlan;
+use medulla_agent_types::agent_topology::TopologyPolicy;
+use medulla_agent_types::agent_topology::TopologyRequirements;
 use medulla_decision_types::decision::AbstainReason;
 use medulla_decision_types::decision::DecisionErrorCode;
 use medulla_decision_types::decision::DecisionOutcome;
@@ -9,19 +22,6 @@ use medulla_decision_types::decision::DecisionPolicy;
 use medulla_decision_types::decision::EvidenceClass;
 use medulla_decision_types::decision::TemplateFacts;
 use medulla_decision_types::decision::TOPOLOGY_DECISION_RECORD_SCHEMA_VERSION;
-use medulla_types::agent_fixtures::topology::facts;
-use medulla_types::agent_fixtures::topology::requirements;
-use medulla_types::agent_fixtures::topology::FAN_OUT_JOIN;
-use medulla_types::agent_fixtures::topology::INDEPENDENT_SUBTASKS;
-use medulla_types::agent_topology::CapacityHeadroom;
-use medulla_types::agent_topology::SchemaAuthority;
-use medulla_types::agent_topology::SubagentFallback;
-use medulla_types::agent_topology::TopologyAdmission;
-use medulla_types::agent_topology::TopologyFacts;
-use medulla_types::agent_topology::TopologyInputs;
-use medulla_types::agent_topology::TopologyPlan;
-use medulla_types::agent_topology::TopologyPolicy;
-use medulla_types::agent_topology::TopologyRequirements;
 use medulla_types::capacity_lease::CapacityResourceClass;
 
 use super::super::{assemble, inputs as build_inputs, replay_check, AssembleError, Assembly};

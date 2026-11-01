@@ -32,7 +32,7 @@ pub(super) fn lower_terminal_outcome_extensions(
             return Err("ordinary completion must be the only operation".into());
         }
         let intent = MutationOutboxIntent {
-            topic: medulla_types::run_completion::RUN_COMPLETION_TOPIC.into(),
+            topic: medulla_agent_types::run_completion::RUN_COMPLETION_TOPIC.into(),
             key: batch_id.into(),
             payload: rmp_serde::to_vec_named(&payload).map_err(|e| e.to_string())?,
             headers: BTreeMap::new(),

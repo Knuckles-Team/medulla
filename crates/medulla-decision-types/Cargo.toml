@@ -20,10 +20,11 @@ sha2 = "0.10"
 hex = "0.4"
 schemars = { version = "1.2.3", optional = true }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-agent-types = { path = "../medulla-agent-types" }
 
 [features]
-wire-contract = ["query", "medulla-types/wire-contract", "medulla-catalog-types/wire-contract"]
-wire-complete = ["wire-contract", "medulla-types/wire-complete", "medulla-catalog-types/wire-complete"]
-contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-catalog-types/contract-schema"]
+wire-contract = ["query", "medulla-types/wire-contract", "medulla-agent-types/wire-contract", "medulla-catalog-types/wire-contract"]
+wire-complete = ["wire-contract", "medulla-types/wire-complete", "medulla-agent-types/wire-complete", "medulla-catalog-types/wire-complete"]
+contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-agent-types/contract-schema", "medulla-catalog-types/contract-schema"]
 query = ["medulla-types/query"]
-test-support = ["medulla-types/test-support", "medulla-catalog-types/test-support"]
+test-support = ["medulla-types/test-support", "medulla-agent-types/test-support", "medulla-catalog-types/test-support"]

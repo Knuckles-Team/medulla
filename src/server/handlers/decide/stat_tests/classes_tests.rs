@@ -7,7 +7,7 @@ fn model_profile(h: &Harness, id: &str, supports_tools: bool) {
     let mut draft = test_component_draft(TENANT, id);
     draft.kind = AgentComponentKind::ModelProfile;
     draft.summary = format!("model {id}");
-    draft.facts = medulla_types::agent_component::AgentComponentFacts::ModelProfile {
+    draft.facts = medulla_agent_types::agent_component::AgentComponentFacts::ModelProfile {
         provider: "provider".to_string(),
         model_identity: format!("model:{id}"),
         context_window_tokens: 8_192,

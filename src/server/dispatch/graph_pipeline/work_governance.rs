@@ -233,7 +233,8 @@ pub(super) async fn dispatch_op_capacity_ops(
 /// The declared result a capacity status read answers `method` with.
 fn capacity_status_result(
     method: &Method,
-) -> fn(medulla_types::native_control::CapacityStatusResult) -> Result<ResultPayload, String> {
+) -> fn(medulla_agent_types::native_control::CapacityStatusResult) -> Result<ResultPayload, String>
+{
     match method {
         Method::ReconcileCapacity { .. } => {
             ResultPayload::of::<
@@ -249,9 +250,9 @@ fn capacity_status_result(
 async fn capacity_status_response(
     backend: &Arc<dyn crate::server::api::persistence::PersistenceBackend>,
     fname: &str,
-    request: &medulla_types::native_control::CapacityStatusRequest,
+    request: &medulla_agent_types::native_control::CapacityStatusRequest,
     declared: fn(
-        medulla_types::native_control::CapacityStatusResult,
+        medulla_agent_types::native_control::CapacityStatusResult,
     ) -> Result<ResultPayload, String>,
     req_id: u64,
 ) -> Response {

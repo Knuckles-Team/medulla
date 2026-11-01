@@ -4,12 +4,12 @@
 use serde::{Deserialize, Serialize};
 
 use crate::decision::numeric::UnitRationalWire;
-use medulla_types::capacity_lease::LeasePriority;
-use medulla_types::contract::BoundedVec;
-use medulla_types::{
+use medulla_agent_types::{
     agent_component::MeasuredFact, agent_component::ObservationRef,
     agent_component::ShellProficiency, agent_component::StoppingBehaviour,
 };
+use medulla_types::capacity_lease::LeasePriority;
+use medulla_types::contract::BoundedVec;
 
 mod context_policy;
 pub use context_policy::{decide_context_policy, ContextPolicyDecision, HarnessDefaults};
@@ -114,7 +114,7 @@ pub enum ActionSpace {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct HarnessConfigEvaluationEvidence {
-    pub model_profile: medulla_types::agent_component::ComponentDependency,
+    pub model_profile: medulla_agent_types::agent_component::ComponentDependency,
     pub request: HarnessConfigRequestBody,
     pub answer: HarnessConfigAnswer,
 }
@@ -290,7 +290,7 @@ pub fn decide_action_space(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::agent_component::ObservationRef;
+    use medulla_agent_types::agent_component::ObservationRef;
 
     fn measured<T>(value: T, evaluation_id: &str) -> MeasuredFact<T> {
         MeasuredFact {
@@ -697,7 +697,7 @@ mod tests {
     // spec: MEDULLA-DECISION-ENGINE-R128.13.1
     #[test]
     fn harness_evidence_roundtrips_and_changes_input_digest() {
-        use medulla_types::{
+        use medulla_agent_types::{
             agent_component::AgentComponentKind, agent_component::ComponentDependency,
         };
         let (_, mut inputs) = legacy_inputs();

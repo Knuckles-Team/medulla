@@ -14,6 +14,15 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 use redb::{ReadableTable, ReadableTableMetadata};
 
+use medulla_agent_types::{
+    agent_library::AgentLibraryCommittedResult, agent_library::AgentLibraryEntry,
+    agent_library::AgentLibraryEntryDraft, agent_library::AgentLibraryMutationContext,
+    agent_library::AgentLibraryMutationKind, agent_library::AgentLibraryOutboxEvent,
+    agent_library::AgentLibraryPublishRequest, agent_library::AgentLibraryRetireRequest,
+    agent_library::AgentLibraryStatusRequest, agent_library::AgentLibraryWriteResult,
+    agent_library::AGENT_LIBRARY_OUTBOX_SCHEMA_VERSION,
+    agent_library::AGENT_LIBRARY_RESULT_SCHEMA_ID,
+};
 use medulla_protocol_types::mutation_batch::BatchContent;
 use medulla_protocol_types::mutation_batch::CompiledEnvelope;
 use medulla_protocol_types::mutation_batch::CompiledOperation;
@@ -28,12 +37,6 @@ use medulla_transaction::{AdmittedOwnerWrite, MutationKernel};
 use medulla_types::mutation::{MutationReceipt, MutationResult};
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationOutboxIntent;
-use medulla_types::{
-    AgentLibraryCommittedResult, AgentLibraryEntry, AgentLibraryEntryDraft,
-    AgentLibraryMutationContext, AgentLibraryMutationKind, AgentLibraryOutboxEvent,
-    AgentLibraryPublishRequest, AgentLibraryRetireRequest, AgentLibraryStatusRequest,
-    AgentLibraryWriteResult, AGENT_LIBRARY_OUTBOX_SCHEMA_VERSION, AGENT_LIBRARY_RESULT_SCHEMA_ID,
-};
 
 use crate::server::api::persistence::BundledStoreSource;
 
@@ -128,7 +131,7 @@ impl AgentLibraryStore {
         &self,
         tenant_id: &str,
     ) -> Result<Arc<OwnedStoreHandle<medulla_storage::AgentLibraryOwner>>, String> {
-        medulla_types::agent_library::validate_key(tenant_id, "agent-library")?;
+        medulla_agent_types::agent_library::validate_key(tenant_id, "agent-library")?;
         if let Some(handle) = self.scopes.lock().get(tenant_id) {
             return Ok(Arc::clone(handle));
         }
@@ -163,7 +166,7 @@ impl AgentLibraryStore {
         tenant_id: &str,
         agent_id: &str,
     ) -> Result<Option<AgentLibraryEntry>, String> {
-        medulla_types::agent_library::validate_key(tenant_id, agent_id)?;
+        medulla_agent_types::agent_library::validate_key(tenant_id, agent_id)?;
         let read = self.read()?;
         let (_, entries) = read_history(&read, tenant_id, agent_id)?;
         Ok(entries.into_iter().last())
@@ -176,7 +179,7 @@ impl AgentLibraryStore {
         tenant_id: &str,
         agent_id: &str,
     ) -> Result<Vec<AgentLibraryEntry>, String> {
-        medulla_types::agent_library::validate_key(tenant_id, agent_id)?;
+        medulla_agent_types::agent_library::validate_key(tenant_id, agent_id)?;
         let read = self.read()?;
         let (_, entries) = read_history(&read, tenant_id, agent_id)?;
         Ok(entries)
@@ -204,7 +207,10 @@ impl AgentLibraryStore {
         request: AgentLibraryStatusRequest,
     ) -> Result<Option<AgentLibraryWriteResult>, String> {
         validate_context(self, &request.context)?;
-        medulla_types::agent_library::validate_key(&request.context.tenant_id, &request.agent_id)?;
+        medulla_agent_types::agent_library::validate_key(
+            &request.context.tenant_id,
+            &request.agent_id,
+        )?;
         let owner = self.scope_handle(&request.context.tenant_id)?;
         let batch_id = batch_id(&request.context.idempotency_key)?;
         let Some(evidence) = read_status_evidence(self, &owner, &request.context, &batch_id)?
@@ -838,7 +844,9 @@ pub(crate) fn seed_agent_draft_for_test(
     agent_id: &str,
     nonce_index: u8,
 ) -> AgentLibraryEntryDraft {
-    use medulla_types::agent_component::{AgentComponentKind, ComponentDependency};
+    use medulla_agent_types::{
+        agent_component::AgentComponentKind, agent_component::ComponentDependency,
+    };
     let placeholder = format!("sha256:{}", "0".repeat(64));
     let pin = |component_id: &str, kind: AgentComponentKind| ComponentDependency {
         component_id: component_id.to_string(),
@@ -899,9 +907,9 @@ mod tests {
         store: &AgentLibraryStore,
         tenant_id: &str,
         component_id: &str,
-        kind: medulla_types::agent_component::AgentComponentKind,
+        kind: medulla_agent_types::agent_component::AgentComponentKind,
         seed: u8,
-    ) -> medulla_types::agent_component::ComponentDependency {
+    ) -> medulla_agent_types::agent_component::ComponentDependency {
         super::super::agent_component::seed_component_for_test(
             store,
             tenant_id,
@@ -1653,9 +1661,9 @@ mod tests {
         let store = AgentLibraryStore::open(dir.path().to_str().unwrap()).unwrap();
         let mut entry = draft(&store, "tenant-a", "agent-a");
         let prompt = entry.system_prompt.clone();
-        entry.tools[0] = medulla_types::agent_component::ComponentDependency {
+        entry.tools[0] = medulla_agent_types::agent_component::ComponentDependency {
             component_id: prompt.component_id.clone(),
-            kind: medulla_types::agent_component::AgentComponentKind::Tool,
+            kind: medulla_agent_types::agent_component::AgentComponentKind::Tool,
             definition_digest: prompt.definition_digest.clone(),
         };
         let error = publish_draft(&store, entry, "key-1", 1)
@@ -1674,7 +1682,7 @@ mod tests {
             &store,
             "tenant-b",
             "tool:theirs",
-            medulla_types::agent_component::AgentComponentKind::Tool,
+            medulla_agent_types::agent_component::AgentComponentKind::Tool,
             9,
         );
         let mut entry = draft(&store, "tenant-a", "agent-a");
@@ -1715,7 +1723,7 @@ mod tests {
         };
         store
             .retire_component(
-                medulla_types::agent_component::AgentComponentRetireRequest {
+                medulla_agent_types::agent_component::AgentComponentRetireRequest {
                     context: retire_context,
                     component_id: "tool:search".to_string(),
                 },
@@ -1755,22 +1763,23 @@ mod tests {
         };
         let error = store
             .publish_component(
-                medulla_types::agent_component::AgentComponentPublishRequest {
+                medulla_agent_types::agent_component::AgentComponentPublishRequest {
                     context,
                     evaluation_receipt_digest: None,
-                    component: medulla_types::agent_component::AgentComponentDraft {
+                    component: medulla_agent_types::agent_component::AgentComponentDraft {
                         component_id: "skill:depends".to_string(),
-                        kind: medulla_types::agent_component::AgentComponentKind::Skill,
+                        kind: medulla_agent_types::agent_component::AgentComponentKind::Skill,
                         version: "1.0.0".to_string(),
                         content_digest: digest('1'),
                         content_ref: None,
-                        facts: medulla_types::agent_component::AgentComponentFacts::Opaque,
-                        provenance: medulla_types::agent_component::ComponentProvenance::Native,
+                        facts: medulla_agent_types::agent_component::AgentComponentFacts::Opaque,
+                        provenance:
+                            medulla_agent_types::agent_component::ComponentProvenance::Native,
                         summary: "a skill with a dependency".to_string(),
                         classification: Vec::new(),
-                        requires: vec![medulla_types::agent_component::ComponentDependency {
+                        requires: vec![medulla_agent_types::agent_component::ComponentDependency {
                             component_id: "tool:never-published".to_string(),
-                            kind: medulla_types::agent_component::AgentComponentKind::Tool,
+                            kind: medulla_agent_types::agent_component::AgentComponentKind::Tool,
                             definition_digest: digest('9'),
                         }],
                         declared_capabilities: Vec::new(),

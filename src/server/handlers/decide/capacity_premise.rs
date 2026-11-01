@@ -10,8 +10,8 @@
 //!
 //! A headroom the plan exceeds is named `lease:<cell>:<class>` by the model.
 
-use medulla_types::agent_topology::CapacityHeadroom;
-use medulla_types::agent_topology::CapacityScope;
+use medulla_agent_types::agent_topology::CapacityHeadroom;
+use medulla_agent_types::agent_topology::CapacityScope;
 
 use super::SharedState;
 

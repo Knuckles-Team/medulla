@@ -65,7 +65,7 @@ $($variants)*
     /// Agent Library rules (MEDULLA-DECISION-ENGINE-R127.2.2). Returns subclass
     /// paths and source generations; commits nothing and grants no authority.
     GuardrailEntailment {
-        request: Box<medulla_types::agent_guardrail::GuardrailEntailmentRequest>,
+        request: Box<medulla_agent_types::agent_guardrail::GuardrailEntailmentRequest>,
     },
     /// Snapshot-checked commit of one assembly `DecisionRecord` as a
     /// `DecisionRecord` component. Re-derives the record and compares the

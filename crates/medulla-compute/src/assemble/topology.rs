@@ -15,15 +15,15 @@ mod plan;
 pub(crate) mod tables;
 pub(super) mod validate;
 
+use medulla_agent_types::agent_topology::SlotRole;
+use medulla_agent_types::agent_topology::TopologyCaps;
+use medulla_agent_types::agent_topology::TopologyFacts;
+use medulla_agent_types::agent_topology::TopologyInputs;
+use medulla_agent_types::agent_topology::TopologyPolicy;
+use medulla_agent_types::agent_topology::TopologyRequirements;
 use medulla_decision_types::decision::AbstainReason;
 use medulla_decision_types::decision::DecisionInputs;
 use medulla_decision_types::decision::TemplateFacts;
-use medulla_types::agent_topology::SlotRole;
-use medulla_types::agent_topology::TopologyCaps;
-use medulla_types::agent_topology::TopologyFacts;
-use medulla_types::agent_topology::TopologyInputs;
-use medulla_types::agent_topology::TopologyPolicy;
-use medulla_types::agent_topology::TopologyRequirements;
 use medulla_types::contract::BoundedVec;
 
 pub(super) use tables::Choice;

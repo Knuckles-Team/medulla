@@ -8,16 +8,16 @@ use serde::{Deserialize, Serialize};
 
 use super::policy::DecisionPolicy;
 use super::record::DecisionRecord;
-use medulla_types::agent_graph::AgentGraphDraft;
-use medulla_types::contract::BoundedVec;
-use medulla_types::delegation::AgentGraphEntryRef;
-use medulla_types::{
+use medulla_agent_types::agent_graph::AgentGraphDraft;
+use medulla_agent_types::delegation::AgentGraphEntryRef;
+use medulla_agent_types::{
     agent_component::AgentComponentCommittedResult, agent_component::AgentComponentKind,
     agent_component::ComponentDependency,
 };
-use medulla_types::{
+use medulla_agent_types::{
     agent_library::AgentLibraryEntryDraft, agent_library::AgentLibraryMutationContext,
 };
+use medulla_types::contract::BoundedVec;
 
 /// Which policy decides this request.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -118,7 +118,7 @@ pub struct AssemblyRequirements {
     /// A swarm-topology question over the request's templates. Absent from a
     /// plain assembly, so a v1 request keeps its exact digest.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub topology: Option<medulla_types::agent_topology::TopologyRequirements>,
+    pub topology: Option<medulla_agent_types::agent_topology::TopologyRequirements>,
 }
 
 /// Which slice of the agent library the candidates come from.

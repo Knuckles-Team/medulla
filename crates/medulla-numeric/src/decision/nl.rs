@@ -9,6 +9,7 @@
 //! Nothing is generated; a slot that does not match stays unfilled and is
 //! reported as such.
 
+use medulla_agent_types::{agent_ontology::descendants, agent_ontology::term};
 use medulla_decision_types::{
     decision::statistical::nl::NlSlot, decision::statistical::nl::NlSlotType,
     decision::statistical::nl::NlTemplateBody,
@@ -16,7 +17,6 @@ use medulla_decision_types::{
 use medulla_decision_types::{
     decision::statistical::TypedParam, decision::statistical::TypedValue,
 };
-use medulla_types::agent_ontology::{descendants, term};
 
 use super::bm25::tokens;
 

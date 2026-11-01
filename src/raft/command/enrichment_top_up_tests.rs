@@ -1,6 +1,9 @@
 use crate::parser::enrichment_snapshot::{EligibleUnit, EnrichmentWorkStage};
 use crate::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevision;
 use crate::redb_store::enrichment_top_up::{EnrichmentTopUpTransition, CONSUMER, TOPIC};
+use medulla_agent_types::{
+    native_control::EnrichmentBudgetCheckpoint, native_control::EnrichmentBudgetPark,
+};
 use medulla_protocol_types::mutation_batch::RepositoryEnrichmentTopUp;
 use medulla_protocol_types::{
     mutation_batch::MutationBatch, mutation_batch::MutationBatchRecord,
@@ -8,7 +11,6 @@ use medulla_protocol_types::{
 };
 use medulla_types::mutation_scope::CommittedVersion;
 use medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION;
-use medulla_types::native_control::{EnrichmentBudgetCheckpoint, EnrichmentBudgetPark};
 use medulla_types::MutationOutboxRecord;
 use medulla_types::MutationScopeIdentity;
 

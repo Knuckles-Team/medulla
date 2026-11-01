@@ -11,7 +11,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::{StatisticalQuestion, TypedParam};
-use medulla_types::agent_component::ComponentDependency;
+use medulla_agent_types::agent_component::ComponentDependency;
 use medulla_types::contract::BoundedVec;
 
 /// Format identity of an NL template body.

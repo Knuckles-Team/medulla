@@ -9,15 +9,6 @@
 //! the data lives at the bottom of the DAG, the logic stays where it belongs.
 
 pub mod acl;
-// RF-020 — durable Agent Library identity and mutation-context contracts. The
-// physical table and transaction adapter live above this pure-data crate.
-pub mod agent_component;
-pub mod agent_graph;
-pub mod agent_guardrail;
-pub mod agent_library;
-pub mod agent_ontology;
-pub mod agent_template;
-pub mod agent_topology;
 // MEDULLA-CQ-ORCH-R010.1 — pure data model for graph-derived architecture views.
 pub mod architecture_view;
 // MEDULLA-UNIFIED-DATA-PLANE-R012.1 — typed model for governed attached-source write-back.
@@ -30,8 +21,6 @@ pub mod attached_source_dialect;
 // path that needs no live database. Binlog/GTID capture and the per-engine
 // conformance entries are R014.2.2+.
 pub mod mysql_mariadb_connection;
-// RF-020 — typed Agent Library delegation admission/result currency.
-pub mod delegation;
 // CONCEPT:MEDULLA-KG.compute.native-asr-whisper-provider — the native-ASR agent-facing wire op
 // (`AsrOp`), gated `asr-native`. Lives here (not in `medulla-asr-whisper`), for the
 // SAME reason `quantum.rs` lives here rather than in `medulla-quantum-core`: `medulla-types`
@@ -161,14 +150,9 @@ pub mod quality;
 pub mod asset_usage;
 // MEDULLA-ENGINE-PARITY-R020.1 — relational engine capability report.
 pub mod engine_capabilities;
-// MEDULLA-UNIFIED-DATA-PLANE-R700 — governed action specs and runs.
-pub mod action_spec;
 // MEDULLA-UNIFIED-DATA-PLANE-R030.2/.3/.700 — blocking, Fellegi-Sunter scoring,
 // approval and identity evidence over entity link proposals.
 pub mod entity_resolution;
-// MEDULLA-UNIFIED-DATA-PLANE-R750.750-752 — run audit rows, tool calls and the
-// scoped conversation-history step store.
-pub mod run_history;
 // MEDULLA-UNIFIED-DATA-PLANE-R028.1 — typed Postgres-equivalence differential
 // deviation baseline, refusing a baseline update that drops a deviation
 // without an explicit resolution record (no self-updating baseline). Pure
@@ -244,25 +228,14 @@ pub use write_conflict::{MergeStrategy, WriteConflict};
 // every wire listener routes an operation by. Pure, no dep.
 pub mod workload_class;
 
-// MEDULLA-DURABLE-KERNEL-R074.1 — pure worker registry, registration validation,
-// and deterministic aggregate capabilities. No RPC or persistence ownership.
-pub mod worker_registry;
-
 // MEDULLA-DURABLE-KERNEL-R089.1 — per-step verification verdict. Pure, no dep.
 pub mod step_verdict;
 // MEDULLA-DURABLE-KERNEL-R088.1 — rule-output correction with two-principal approval.
 pub mod rule_correction;
-// MEDULLA-DURABLE-KERNEL-R851.1 — the A2A peer record. Pure serde.
-pub mod agent_peer;
 // MEDULLA-DURABLE-KERNEL-R852.1/.2/.4 — health anomalies and correlated incidents.
 pub mod health_incident;
 // MEDULLA-DURABLE-KERNEL-R700.1 — the retention-cleanup policy shape.
 pub mod retention_policy;
-// MEDULLA-DECISION-ENGINE-R617.1 — the engine-held memory records: the conversation
-// record a chat log parses into, the layered project rules, the memory
-// retention policy and the context budget. Pure data; parsing, pruning and
-// the covering-set optimizer are later children.
-pub mod memory;
 // MEDULLA-DURABLE-KERNEL-R094.1 — hierarchical concept-ID grammar and path claims.
 pub mod concept_id;
 
@@ -288,12 +261,6 @@ pub mod epistemic_operations_manifest;
 // epistemic writer stores and every reader decodes. Pure serde, unconditional.
 pub mod epistemic_node;
 pub mod ingestion_wire;
-// CONCEPT:INT-P2-1 — the durable analytics-job plane's wire op (`JobOp`), gated
-// `jobs`. Lives here (not in `medulla-jobs`, which sits ABOVE medulla-core in the DAG) for the
-// SAME reason `acl::RbacAdminOp` does: `protocol::Method::AnalyticsJob` carries it
-// over the wire, and `protocol` is bottom-of-DAG. Pure serde — no dep.
-#[cfg(feature = "jobs")]
-pub mod jobs;
 // CONCEPT:INT-P2-2 — the native statechart engine's wire op (`StatechartOp`), gated
 // `statechart`. Lives here (not in `medulla-statechart`, which sits ABOVE this crate in the
 // DAG) for the SAME reason `jobs` does: `protocol::Method::Statechart` carries it over
@@ -311,14 +278,6 @@ pub mod lease_vocab;
 pub mod mutation;
 pub mod mutation_outbox;
 pub mod mutation_scope;
-// MEDULLA-ORCH-VOCAB-R801/R802 — the versioned harness-component vocabulary and the
-// improvement library beside it: typed model + pure rules. The durable write
-// (ChangeEnvelope/AddNode) and the served reads live upstream.
-pub mod orchestration;
-// AU wire-first native control-plane operations: bounded capacity leases and
-// WorkItem admission/submission.  This module is hand-written until the AU
-// protocol catalog generator can express the bounded maps and native enums.
-pub mod native_control;
 // GOC-20 — the atomic WorkItem outcome/provenance bundle and durable run-event
 // wire contract (BUG-015). Deliberately a NEW module (not folded into
 // `mutation_batch`), same rationale as `commit_descriptor` above: the native
@@ -363,14 +322,11 @@ pub mod semantic_index;
 // MEDULLA-SCM-R002 — the source changeset record and its structured trailers.
 pub mod source_changeset;
 // MEDULLA-SCM-R013 — graph-native symbol edits.
+#[cfg(any(test, feature = "test-support"))]
+pub mod identity_fixtures;
 pub mod source_symbol_edit;
 #[cfg(feature = "statechart")]
 pub mod statechart;
-// EH-408 / EH-409 — the receipt of a served telemetry derivation.
-#[cfg(any(test, feature = "test-support"))]
-pub mod agent_fixtures;
-#[cfg(any(test, feature = "test-support"))]
-pub mod identity_fixtures;
 pub mod telemetry_derive;
 #[cfg(any(test, feature = "test-support"))]
 pub mod test_support;
@@ -378,18 +334,6 @@ pub mod types;
 // Result bodies of the `compute` contract domain, declared by
 // `result_contract::compute`; gated per compute family like `wire`.
 pub mod compute_result;
-pub mod run_checkpoint;
-// GOC-19 — the WorkItem submission command-log admission core (tenant-scoped
-// idempotency replay + per-authority fencing), built on GOC-03's
-// `commit_descriptor::CommitDescriptor` currency. Unconditional, pure
-// data/logic; the native protocol/storage adapter now lives in
-// `native_control`, `server::mutation_batch`, and `redb_store`. See
-// `plans/graph-os-completion-program/lanes/GOC-19-atomic-workitem-command-log.md`.
-pub mod work_item_command_log;
-// EH-219 — typed, tenant-bound WorkItem reads (`GetWorkItem`/`ListWorkItems`):
-// the caller's row view, its three-bound page scan, and its cursor family.
-pub mod run_completion;
-pub mod work_item_read;
 // MEDULLA-IDENTITY-R610 — tenant parent chains, secured reads and ownership claims.
 pub mod tenancy;
 // The opaque tenant-bound keyset cursor shared by every paged read
@@ -397,10 +341,6 @@ pub mod tenancy;
 pub mod tenant_cursor;
 // The three-bound keyset page shared by the tenant-bound native listings.
 pub mod keyset_page;
-// graph-os MEDULLA-2 — native control leases: a tenant-bound, time-boxed grant with
-// a one-way active -> revoked|expired lifecycle (not a capacity admission).
-pub mod control_lease;
-pub mod host_start;
 // The engine-owned identity store: principals, credentials,
 // sessions, roles/groups/IdPs, the auth-mode singleton and scope classes.
 pub mod identity;
@@ -411,10 +351,6 @@ pub mod freshness;
 // data products. Pure data and field validation; served wiring lands in later children.
 pub mod data_product;
 pub mod stewardship;
-// EH-348 — the graph-driven work market: the canonical `:Gap` paired with its
-// one native WorkItem, the versioned derived `WorkOffer`, and the deterministic
-// legal-offer ranking stage the `Decide` layer runs.
-pub mod work_market;
 // EH-404 -- just-in-time RBAC elevation: an `rbac.elevation` control lease the
 // graph-access chokepoint consults (two-person, exact-scope, hard expiry).
 pub mod rbac_elevation;
@@ -437,16 +373,6 @@ pub mod consolidation_isolation;
 // of an un-exited earlier phase. Pure data; running each phase is a later
 // child.
 pub mod immich_pilot_phase;
-// D-VZ-1 (lanes V4 "engine integration" / V6 "graph-native marks") — the native
-// visualization engine's wire op (`VizOp`), gated `viz`. Lives here (not in
-// `medulla-viz-core`, which sits in a separate small leaf DAG, not below medulla-types) for
-// the SAME reason `jobs`/`statechart` do: `protocol::Method::Viz` carries it over
-// the wire, and `protocol` is bottom-of-DAG. Pure serde — no dep on
-// medulla-viz-core/medulla-viz-columnstore/medulla-viz-export; the handler
-// (`src/server/handlers/viz.rs`, facade feature `viz-static-export`) is the one
-// place that parses `VizRenderRequest::spec_json` into a real
-// `medulla_viz_core::ViewSpec` and resolves it.
-pub mod run_usage;
 pub mod usage;
 #[cfg(feature = "viz")]
 pub mod viz;
@@ -456,8 +382,6 @@ pub mod wire;
 pub mod write_back;
 // MEDULLA-FEDERATED-QUERY-R700 — AIF argument maps and their Dung projection.
 pub mod argument_map;
-// MEDULLA-FEDERATED-QUERY-R702 — search-task records and shortcut-risk reports.
-pub mod search_task;
 // MEDULLA-FEDERATED-QUERY-R081 — retrieval sufficiency, selection, feedback and
 // hierarchy contracts (incl. the R081.9.7.1 section hierarchy policy); the deciding functions live in `medulla_plan::retrieval_verdict`.
 pub mod retrieval_verdict;
@@ -469,18 +393,6 @@ pub mod source_query;
 pub use row_predicate::{CmpOp, RowPredicate};
 
 // CONCEPT:MEDULLA-KG.compute.uncertainty-values — surface the distribution VALUE at the crate root for callers.
-pub use agent_library::{
-    AgentLibraryCommittedResult, AgentLibraryEntry, AgentLibraryEntryDraft, AgentLibraryLifecycle,
-    AgentLibraryMutationContext, AgentLibraryMutationKind, AgentLibraryOp, AgentLibraryOutboxEvent,
-    AgentLibraryPublishRequest, AgentLibraryRetireRequest, AgentLibraryStatusRequest,
-    AgentLibraryWriteResult, AGENT_LIBRARY_DEFINITION_DIGEST_DOMAIN,
-    AGENT_LIBRARY_ENTRY_SCHEMA_VERSION, AGENT_LIBRARY_OUTBOX_SCHEMA_VERSION,
-    AGENT_LIBRARY_RESULT_SCHEMA_ID, AGENT_LIBRARY_RESULT_SCHEMA_VERSION,
-};
-pub use delegation::{
-    AgentLibraryEntryRef, KgDelegateDecision, KgDelegateRequest, KgDelegateResult,
-    KgDelegateSchemaVersion,
-};
 pub use embedding::{
     EmbeddingSpaceRef, StampedVector, MAX_EMBEDDING_DIMENSIONS, MAX_MAINTAINED_ANN_DIMENSIONS,
 };

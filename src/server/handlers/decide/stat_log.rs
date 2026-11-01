@@ -12,6 +12,7 @@ use std::time::Instant;
 
 use tracing::Instrument;
 
+use medulla_agent_types::agent_component::AgentComponentKind;
 use medulla_decision_types::{
     decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelledDataset,
     decision::statistical::dataset::LabelledItem, decision::statistical::dataset::LoggedOutcome,
@@ -42,7 +43,6 @@ use medulla_decision_types::{
 use medulla_numeric::decision::aggregate::{aggregate, AggregateRules, JoinedRecord};
 use medulla_numeric::decision::candidate::CandidateView;
 use medulla_numeric::decision::features::outcome_rate_key;
-use medulla_types::agent_component::AgentComponentKind;
 use medulla_types::contract::BoundedVec;
 
 use super::stat_executor::ExecutionContext;

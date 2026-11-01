@@ -25,7 +25,7 @@ fn prepare_graph_entry(
         request.graph.clone(),
         composition.total_work,
         next_revision,
-        medulla_types::agent_library::AgentLibraryLifecycle::Published,
+        medulla_agent_types::agent_library::AgentLibraryLifecycle::Published,
         replay_context.created_at_ms,
         replay_context.created_at_ms,
     )
@@ -42,7 +42,8 @@ impl AgentLibraryStore {
         require_context_tenant::<GraphLayer>(&request.context, &request.graph.tenant_id)?;
         let (expected_revision, owner) = revision_scope(self, &request.context, GraphLayer::NOUN)?;
         let txn = self.mutations.open_write(&owner)?;
-        let draft_digest = medulla_types::agent_graph::draft_definition_digest(&request.graph);
+        let draft_digest =
+            medulla_agent_types::agent_graph::draft_definition_digest(&request.graph);
         write_revision::<GraphLayer>(
             self,
             txn,

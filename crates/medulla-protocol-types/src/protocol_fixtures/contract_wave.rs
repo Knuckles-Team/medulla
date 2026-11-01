@@ -7,7 +7,7 @@
 //! proving something about a value nothing else ever sends.
 
 use crate::protocol::Method;
-use medulla_types::agent_component::AgentComponentOp;
+use medulla_agent_types::agent_component::AgentComponentOp;
 
 /// One valid `Method` per new variant and per op, labelled by the surface the
 /// contract-wave stub refuses it under.

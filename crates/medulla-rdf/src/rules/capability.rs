@@ -22,8 +22,11 @@
 
 use std::collections::BTreeMap;
 
-use medulla_types::agent_component::{AgentComponentFacts, ModalityFacts, ToolEffect};
-use medulla_types::agent_ontology::AGENT_ONTOLOGY;
+use medulla_agent_types::agent_ontology::AGENT_ONTOLOGY;
+use medulla_agent_types::{
+    agent_component::AgentComponentFacts, agent_component::ModalityFacts,
+    agent_component::ToolEffect,
+};
 
 use super::proof::RuleProofNode;
 use super::{reason_facts, Atom, RTerm, Rule, RuleSet};

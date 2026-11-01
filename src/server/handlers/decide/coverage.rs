@@ -40,6 +40,7 @@ async fn coverage_for(
     verified: &VerifiedRequestContext,
     request: &CapabilityCoverageRequest,
 ) -> Result<medulla_decision_types::decision::coverage::CapabilityCoverageResult, String> {
+    use medulla_agent_types::agent_component::AgentComponentKind;
     use medulla_decision_types::decision::derivation::capability_coverage_query;
     use medulla_decision_types::decision::LibraryCandidateScope;
     use medulla_decision_types::{
@@ -47,7 +48,6 @@ async fn coverage_for(
         decision::coverage::CapabilityCoverageResult,
         decision::coverage::CAPABILITY_COVERAGE_RESULT_SCHEMA_VERSION,
     };
-    use medulla_types::agent_component::AgentComponentKind;
 
     if request.tenant_id != verified.tenant() {
         return Err("ACCESS_DENIED: coverage tenant must match the verified request tenant".into());
@@ -69,7 +69,7 @@ async fn coverage_for(
         .into_iter()
         .map(|entry| (entry.component_id, entry.declared_capabilities))
         .collect();
-    let ontology_digest = medulla_types::agent_ontology::ontology_digest();
+    let ontology_digest = medulla_agent_types::agent_ontology::ontology_digest();
     let coverage = match capability_coverage_query(
         &request.requirements,
         &ontology_digest,

@@ -15,9 +15,10 @@
 use medulla_storage::{GraphShardOwner, PhysicalWriteCapability, ScopedOwnerTableMut};
 use redb::TableDefinition;
 
-use medulla_types::native_control::{
-    EnrichmentBudgetCheckpoint as BudgetCheckpoint, EnrichmentBudgetPark,
-    EnrichmentBudgetReservation, NativeControlSchemaVersion, SubmitWorkItemsRequest,
+use medulla_agent_types::{
+    native_control::EnrichmentBudgetCheckpoint as BudgetCheckpoint,
+    native_control::EnrichmentBudgetPark, native_control::EnrichmentBudgetReservation,
+    native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemsRequest,
 };
 
 use super::shard::{Shard, ShardWrite};

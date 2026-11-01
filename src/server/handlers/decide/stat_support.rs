@@ -11,6 +11,10 @@ use medulla_numeric::decision::features::FeatureMatrix;
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
 
+use medulla_agent_types::{
+    agent_component::AgentComponentEntry, agent_component::AgentComponentKind,
+    agent_component::ComponentDependency,
+};
 use medulla_decision_types::decision::digest::policy_digest;
 use medulla_decision_types::decision::policy::policy_from_attributes;
 use medulla_decision_types::decision::statistical::body::decode_body;
@@ -21,9 +25,6 @@ use medulla_decision_types::{
     decision::DecisionPolicy, decision::DecisionPolicyRef, decision::QuantScaleTag,
     decision::QuantisedValue, decision::StatisticalPolicy, decision::TraceFidelityLevel,
     decision::UnitRationalWire,
-};
-use medulla_types::agent_component::{
-    AgentComponentEntry, AgentComponentKind, ComponentDependency,
 };
 
 use crate::server::persistence::agent_library::AgentLibraryStore;

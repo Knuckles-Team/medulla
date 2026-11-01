@@ -1,10 +1,11 @@
 //! Stable AgentComponent facts derived from ConnectorPack annotations.
 
-use medulla_catalog_types::{connector_pack::PackEntry, connector_pack::PackEntryKind};
-use medulla_types::agent_component::{
-    AgentComponentFacts, AgentComponentKind, CostFacts, FactQuality, ModalityFacts, PriceSource,
-    ToolEffect,
+use medulla_agent_types::{
+    agent_component::AgentComponentFacts, agent_component::AgentComponentKind,
+    agent_component::CostFacts, agent_component::FactQuality, agent_component::ModalityFacts,
+    agent_component::PriceSource, agent_component::ToolEffect,
 };
+use medulla_catalog_types::{connector_pack::PackEntry, connector_pack::PackEntryKind};
 use medulla_types::contract::Digest256;
 
 pub(super) fn facts(entry: &PackEntry, digest: &Digest256) -> Result<AgentComponentFacts, String> {
@@ -228,7 +229,9 @@ mod tests {
     // spec: MEDULLA-TYPED-PACKS-R045.5
     #[test]
     fn mcp_hint_read_only_is_unproven() {
-        use medulla_types::agent_component::{ToolFactDeclarer, ToolSideEffects};
+        use medulla_agent_types::{
+            agent_component::ToolFactDeclarer, agent_component::ToolSideEffects,
+        };
         let hinted = PackAnnotations {
             read_only_hint: Some(true),
             side_effects: Some(ToolSideEffects::None),

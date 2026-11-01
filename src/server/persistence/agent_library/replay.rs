@@ -1,14 +1,15 @@
 use std::collections::BTreeMap;
 
+use medulla_agent_types::{
+    agent_library::AgentLibraryCommittedResult, agent_library::AgentLibraryEntryDraft,
+    agent_library::AgentLibraryLifecycle, agent_library::AgentLibraryMutationContext,
+    agent_library::AgentLibraryMutationKind, agent_library::AgentLibraryOutboxEvent,
+    agent_library::AgentLibraryWriteResult,
+};
 use medulla_protocol_types::mutation_batch::MutationBatchStatus;
 use medulla_transaction::{MutationKernel, ReplayResolution};
 use medulla_types::mutation::{MutationReceipt, MutationResult};
 use medulla_types::mutation_scope::MutationOutboxIntent;
-use medulla_types::{
-    AgentLibraryCommittedResult, AgentLibraryEntryDraft, AgentLibraryLifecycle,
-    AgentLibraryMutationContext, AgentLibraryMutationKind, AgentLibraryOutboxEvent,
-    AgentLibraryWriteResult,
-};
 
 use super::receipt::agent_library_effect_digest;
 use super::{

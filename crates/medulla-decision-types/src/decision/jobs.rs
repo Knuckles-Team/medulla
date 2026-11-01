@@ -17,7 +17,7 @@ use super::statistical::head::DecisionHeadBody;
 use super::statistical::CalibrationStatement;
 
 pub use super::statistical::head::HeadKind;
-use medulla_types::agent_component::ComponentDependency;
+use medulla_agent_types::agent_component::ComponentDependency;
 use medulla_types::contract::BoundedVec;
 
 /// What kind of labels the training records carry.
@@ -584,7 +584,7 @@ impl DecisionEvalOp {
 mod tests {
     use super::*;
     use crate::decision::numeric::QuantScaleTag;
-    use medulla_types::agent_component::AgentComponentKind;
+    use medulla_agent_types::agent_component::AgentComponentKind;
 
     fn feature_schema() -> ComponentDependency {
         ComponentDependency {

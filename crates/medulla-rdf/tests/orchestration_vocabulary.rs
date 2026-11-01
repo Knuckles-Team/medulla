@@ -262,13 +262,13 @@ mod run_trace {
 #[cfg(feature = "sparql")]
 mod vocabulary {
     use super::*;
+    use medulla_agent_types::agent_guardrail::entailed_guardrails;
+    use medulla_agent_types::agent_guardrail::GuardrailRule;
     use medulla_core::graph::{GraphCore, GraphView};
     use medulla_rdf::mapping::{load_triples, IriStore};
     use medulla_rdf::owl::saturate_object_properties;
     use medulla_rdf::sparql::{execute, Dataset, Projection, QueryOutcome};
     use medulla_shacl::validate_turtle;
-    use medulla_types::agent_guardrail::entailed_guardrails;
-    use medulla_types::agent_guardrail::GuardrailRule;
 
     const A2A: &str = include_str!("../../medulla-core/ontology/a2a-v1.ttl");
     const SDD: &str = include_str!("../../medulla-core/ontology/sdd-v1.ttl");

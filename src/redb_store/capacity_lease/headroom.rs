@@ -2,7 +2,7 @@
 //! ST-8): what each named cell still admits for one priority, from one MVCC
 //! snapshot, priced by exactly the rule `AcquireCapacity` uses.
 
-use medulla_types::agent_topology::CapacityHeadroom;
+use medulla_agent_types::agent_topology::CapacityHeadroom;
 use medulla_types::capacity_lease::{CapacityCell, LeasePriority};
 
 use super::super::shard::Shard;

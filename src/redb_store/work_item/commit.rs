@@ -183,7 +183,8 @@ pub(crate) struct CommitWorkItemResultInput<'args, 'table, 'crypto> {
     pub(crate) now_ms: u64,
     pub(crate) outcome_extension:
         Option<&'args medulla_types::outcome_bundle::TerminalOutcomeExtension>,
-    pub(crate) run_completion: Option<&'args medulla_types::run_completion::RunCompletionInput>,
+    pub(crate) run_completion:
+        Option<&'args medulla_agent_types::run_completion::RunCompletionInput>,
     pub(crate) batch_id: &'args str,
     pub(crate) nodes:
         &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
@@ -326,7 +327,7 @@ pub(crate) fn apply_commit_work_item_result_row(
     record_outcome_refs(&mut props, committed_status, input.outcome_extension)?;
     if let Some(completion) = input.run_completion {
         use sha2::{Digest, Sha256};
-        let payload = medulla_types::run_completion::RunCompletionPayload {
+        let payload = medulla_agent_types::run_completion::RunCompletionPayload {
             completion: completion.clone(),
             tenant: input.tenant.into(),
             work_item_id: input.work_item_id.into(),
@@ -337,11 +338,11 @@ pub(crate) fn apply_commit_work_item_result_row(
         };
         let bytes = rmp_serde::to_vec_named(&payload).map_err(|e| e.to_string())?;
         props.insert(
-            medulla_types::run_completion::RUN_COMPLETION_BATCH.into(),
+            medulla_agent_types::run_completion::RUN_COMPLETION_BATCH.into(),
             input.batch_id.into(),
         );
         props.insert(
-            medulla_types::run_completion::RUN_COMPLETION_DIGEST.into(),
+            medulla_agent_types::run_completion::RUN_COMPLETION_DIGEST.into(),
             hex::encode(Sha256::digest(&bytes)).into(),
         );
     }
@@ -541,14 +542,16 @@ fn record_outcome_refs(
     committed_status: &str,
     extension: Option<&medulla_types::outcome_bundle::TerminalOutcomeExtension>,
 ) -> Result<(), String> {
-    use medulla_types::work_item_read::{
-        WORK_ITEM_OUTCOME_DIGEST, WORK_ITEM_OUTCOME_REF, WORK_ITEM_TOOL_CALL_REFS,
-        WORK_ITEM_TRACE_REF,
+    use medulla_agent_types::{
+        work_item_read::WORK_ITEM_OUTCOME_DIGEST, work_item_read::WORK_ITEM_OUTCOME_REF,
+        work_item_read::WORK_ITEM_TOOL_CALL_REFS, work_item_read::WORK_ITEM_TRACE_REF,
     };
     let Some(extension) = extension.filter(|_| committed_status != "retry_scheduled") else {
         return Ok(());
     };
-    use medulla_types::work_item_read::{WORK_ITEM_EVENT_BATCH, WORK_ITEM_EVENT_DIGEST};
+    use medulla_agent_types::{
+        work_item_read::WORK_ITEM_EVENT_BATCH, work_item_read::WORK_ITEM_EVENT_DIGEST,
+    };
     use sha2::{Digest, Sha256};
     let bundle = &extension.outcome_bundle;
     let event_bytes = rmp_serde::to_vec_named(&extension.run_event)

@@ -255,7 +255,7 @@ pub(super) struct ObservedRegistration<'a> {
     pub(super) registry_revision: u64,
     pub(super) registry_digest: medulla_types::contract::Digest256,
     pub(super) registration_config_digest: medulla_types::contract::Digest256,
-    pub(super) context: medulla_types::agent_library::AgentLibraryMutationContext,
+    pub(super) context: medulla_agent_types::agent_library::AgentLibraryMutationContext,
 }
 
 /// What an admitted catalog-authority write holds until its rows commit.
@@ -263,7 +263,7 @@ pub(super) struct ObservedRegistration<'a> {
 pub(super) type CatalogWriteAdmission = (
     tokio::sync::OwnedMutexGuard<()>,
     Arc<crate::server::persistence::agent_library::AgentLibraryStore>,
-    medulla_types::agent_library::AgentLibraryMutationContext,
+    medulla_agent_types::agent_library::AgentLibraryMutationContext,
 );
 
 /// Take the registry graph lock, verify the observed registration under it and
@@ -345,8 +345,8 @@ async fn reconcile(
     verified: &VerifiedRequestContext,
     request: medulla_catalog_types::connector_pack::McpCatalogReconcileRequest,
 ) -> Result<medulla_catalog_types::connector_pack::McpCatalogSnapshotBinding, String> {
-    use medulla_types::agent_component::AgentComponentKind;
-    use medulla_types::agent_library::AgentLibraryLifecycle;
+    use medulla_agent_types::agent_component::AgentComponentKind;
+    use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 
     require_catalog_attester(verified, &request.context.tenant_id, true)?;
     validate_mounted_attestation(verified, &request)?;

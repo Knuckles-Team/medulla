@@ -11,10 +11,10 @@
 
 use std::collections::BTreeSet;
 
-use medulla_types::agent_graph::{AgentGraphDraft, AgentGraphNodeKind};
-use medulla_types::agent_topology::SlotRole;
-use medulla_types::agent_topology::StopRule;
-use medulla_types::agent_topology::TopologyFacts;
+use medulla_agent_types::agent_topology::SlotRole;
+use medulla_agent_types::agent_topology::StopRule;
+use medulla_agent_types::agent_topology::TopologyFacts;
+use medulla_agent_types::{agent_graph::AgentGraphDraft, agent_graph::AgentGraphNodeKind};
 
 /// The refusal prefix a caller branches on.
 pub(crate) const TOPOLOGY_SHAPE_INVALID: &str = "TOPOLOGY_SHAPE_INVALID";

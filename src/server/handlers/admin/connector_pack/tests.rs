@@ -221,8 +221,10 @@ pub(super) fn refused(label: &str, response: Response) -> String {
 }
 
 /// A request-body context shell; the engine re-binds every field of it.
-pub(super) fn context(key: &str) -> medulla_types::agent_library::AgentLibraryMutationContext {
-    medulla_types::agent_library::AgentLibraryMutationContext {
+pub(super) fn context(
+    key: &str,
+) -> medulla_agent_types::agent_library::AgentLibraryMutationContext {
+    medulla_agent_types::agent_library::AgentLibraryMutationContext {
         request_id: 1,
         principal: "bound-by-engine".to_string(),
         caller_principal: "bound-by-engine".to_string(),
@@ -546,16 +548,17 @@ pub(super) async fn seed_server_only_import(
         ConnectorPackCommitPlan, ConnectorPackComponentCommit, ConnectorPackHolderCommit,
     };
     use crate::server::persistence::connector_pack::ConnectorPackBodyHolderRow;
+    use medulla_agent_types::agent_library::AgentLibraryLifecycle;
+    use medulla_agent_types::{
+        agent_component::AgentComponentEntry, agent_component::AgentComponentMutationKind,
+        agent_component::ComponentDependency,
+    };
     use medulla_catalog_types::{
         connector_pack::PackArchiveFacts, connector_pack::PackDisposition,
         connector_pack::PackEntryRecord, connector_pack::PackImportRecord,
         connector_pack::PackImportResult, connector_pack::PackProjectionState,
         connector_pack::PackServerRecord, connector_pack::PACK_IMPORT_RECORD_SCHEMA_VERSION,
     };
-    use medulla_types::agent_component::{
-        AgentComponentEntry, AgentComponentMutationKind, ComponentDependency,
-    };
-    use medulla_types::agent_library::AgentLibraryLifecycle;
 
     let index = &pack.0;
     let donor = Served::new();

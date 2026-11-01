@@ -529,7 +529,10 @@ impl AgentLibraryStore {
         request: AgentLibraryRetireRequest,
     ) -> Result<AgentLibraryWriteResult, String> {
         validate_context(self, &request.context)?;
-        medulla_types::agent_library::validate_key(&request.context.tenant_id, &request.agent_id)?;
+        medulla_agent_types::agent_library::validate_key(
+            &request.context.tenant_id,
+            &request.agent_id,
+        )?;
         write_library_entry(self, LibraryRequest::Retire(&request))
     }
 }

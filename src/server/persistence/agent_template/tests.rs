@@ -5,12 +5,15 @@ use super::super::agent_fixtures::{
 };
 use super::super::agent_revision::{decode_status_result, validate_status_record};
 use super::*;
-use medulla_protocol_types::mutation_batch::MutationBatchStatus;
-use medulla_types::agent_component::{AgentComponentKind, ComponentDependency};
-use medulla_types::agent_library::AgentLibraryEntryDraft;
-use medulla_types::agent_template::{
-    AgentTemplateDraft, AgentTemplateInstantiateRequest, TemplateParam,
+use medulla_agent_types::agent_library::AgentLibraryEntryDraft;
+use medulla_agent_types::{
+    agent_component::AgentComponentKind, agent_component::ComponentDependency,
 };
+use medulla_agent_types::{
+    agent_template::AgentTemplateDraft, agent_template::AgentTemplateInstantiateRequest,
+    agent_template::TemplateParam,
+};
+use medulla_protocol_types::mutation_batch::MutationBatchStatus;
 use std::collections::BTreeMap;
 
 fn digest(byte: char) -> String {
@@ -472,17 +475,19 @@ fn an_instance_is_an_ordinary_library_entry_and_publishes_like_one() {
 
     // And it publishes through the ordinary library path, unchanged.
     let published = store
-        .publish(medulla_types::agent_library::AgentLibraryPublishRequest {
-            context: context(
-                &store,
-                "tenant-a",
-                "key-2",
-                2,
-                0,
-                "agent-library:definition",
-            ),
-            entry: draft,
-        })
+        .publish(
+            medulla_agent_types::agent_library::AgentLibraryPublishRequest {
+                context: context(
+                    &store,
+                    "tenant-a",
+                    "key-2",
+                    2,
+                    0,
+                    "agent-library:definition",
+                ),
+                entry: draft,
+            },
+        )
         .expect("an instance publishes like any other agent");
     let stored = store
         .current("tenant-a", "agent:researcher-cheap")

@@ -246,10 +246,12 @@ pub fn encode_artifact<T: serde::Serialize>(value: &T) -> Result<Vec<u8>, String
 /// publish it guards.
 pub fn require_head_receipt(
     store: &AgentLibraryStore,
-    request: &medulla_types::agent_component::AgentComponentPublishRequest,
+    request: &medulla_agent_types::agent_component::AgentComponentPublishRequest,
 ) -> Result<(), String> {
     use medulla_decision_types::decision::statistical::StatisticalErrorCode::EvaluationReceiptMismatch;
-    if request.component.kind != medulla_types::agent_component::AgentComponentKind::DecisionHead {
+    if request.component.kind
+        != medulla_agent_types::agent_component::AgentComponentKind::DecisionHead
+    {
         return Ok(());
     }
     let Some(digest) = request.evaluation_receipt_digest.as_deref() else {

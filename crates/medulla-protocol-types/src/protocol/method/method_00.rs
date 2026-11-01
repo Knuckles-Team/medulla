@@ -237,37 +237,37 @@ macro_rules! __eg_method_chunk_0 {
     /// The native engine owns the cell epoch, fence, expiry, and idempotency
     /// rows; the request's owner digest is only an authenticated assertion.
     AcquireCapacity {
-        request: medulla_types::native_control::CapacityAcquireRequest,
+        request: medulla_agent_types::native_control::CapacityAcquireRequest,
     },
 
     /// Renew every named capacity lease in one all-or-nothing transaction.
     RenewCapacity {
-        request: medulla_types::native_control::CapacityLeaseMutationRequest,
+        request: medulla_agent_types::native_control::CapacityLeaseMutationRequest,
     },
 
     /// Release every named capacity lease in one all-or-nothing transaction.
     ReleaseCapacity {
-        request: medulla_types::native_control::CapacityLeaseMutationRequest,
+        request: medulla_agent_types::native_control::CapacityLeaseMutationRequest,
     },
 
     /// Reclaim a bounded page of expired capacity leases.
     ReclaimExpiredCapacity {
-        request: medulla_types::native_control::CapacityReclaimRequest,
+        request: medulla_agent_types::native_control::CapacityReclaimRequest,
     },
 
     /// Return bounded native cells/leases for reconciliation and status.
     ReconcileCapacity {
-        request: medulla_types::native_control::CapacityStatusRequest,
+        request: medulla_agent_types::native_control::CapacityStatusRequest,
     },
 
     /// Exact bounded native capacity read.
     CapacityStatus {
-        request: medulla_types::native_control::CapacityStatusRequest,
+        request: medulla_agent_types::native_control::CapacityStatusRequest,
     },
 
     /// Controller/admin CAS for a capacity cell epoch and resource dimension.
     UpdateCapacityCell {
-        request: medulla_types::native_control::CapacityCellUpdateRequest,
+        request: medulla_agent_types::native_control::CapacityCellUpdateRequest,
     },
 
     /// Error-budget adaptive throttling (EH-406): report one observation
@@ -275,18 +275,18 @@ macro_rules! __eg_method_chunk_0 {
     /// burst and gives it back only on recovery evidence, never above the
     /// declared capacity; the policy and the capacity stay operator-owned.
     ThrottleCapacityCell {
-        request: medulla_types::native_control::CapacityThrottleRequest,
+        request: medulla_agent_types::native_control::CapacityThrottleRequest,
     },
 
     /// Idempotent WorkItem admission and command-log append.
     SubmitWorkItem {
-        request: medulla_types::native_control::SubmitWorkItemRequest,
+        request: medulla_agent_types::native_control::SubmitWorkItemRequest,
     },
 
     /// Publish, retire, inspect, or reconcile one durable EG Agent Library
     /// definition through the authenticated ControlPlane owner.
     AgentLibrary {
-        op: medulla_types::agent_library::AgentLibraryOp,
+        op: medulla_agent_types::agent_library::AgentLibraryOp,
     },
 
     /// Publish, retire, or inspect one durable agent GRAPH -- a composition of
@@ -294,7 +294,7 @@ macro_rules! __eg_method_chunk_0 {
     /// owner (RF-ADR-008). `AgentLibrary` records what one agent IS; this
     /// records how several of them are composed to do a task.
     AgentGraph {
-        op: medulla_types::agent_graph::AgentGraphOp,
+        op: medulla_agent_types::agent_graph::AgentGraphOp,
     },
 
     /// Publish, retire, inspect, or SEARCH one durable agent component --
@@ -303,7 +303,7 @@ macro_rules! __eg_method_chunk_0 {
     /// agents are assembled from. `Search` is the capability query this layer
     /// exists for: "what does an agent trying to do XYZ need?"
     AgentComponent {
-        op: medulla_types::agent_component::AgentComponentOp,
+        op: medulla_agent_types::agent_component::AgentComponentOp,
     },
 
     /// Publish, retire, inspect or INSTANTIATE one durable agent template --
@@ -319,7 +319,7 @@ macro_rules! __eg_method_chunk_0 {
     /// larger than `AgentComponent` next to it (asserted by
     /// `the_publish_request_is_boxed_so_a_template_op_stays_small`).
     AgentTemplate {
-        op: medulla_types::agent_template::AgentTemplateOp,
+        op: medulla_agent_types::agent_template::AgentTemplateOp,
     },
 
     /// Drive one durable semantic binding and its S1-S6 tiered ingestion
@@ -350,12 +350,12 @@ macro_rules! __eg_method_chunk_0 {
         /// Boxed: a pinned delegation request carries the whole Agent Library
         /// entry reference and would otherwise set the size of EVERY `Method`.
         /// `Box` is transparent to serde, so the wire form is unchanged.
-        request: Box<medulla_types::delegation::KgDelegateRequest>,
+        request: Box<medulla_agent_types::delegation::KgDelegateRequest>,
     },
 
     /// Bounded all-or-nothing WorkItem admission batch.
     SubmitWorkItems {
-        request: medulla_types::native_control::SubmitWorkItemsRequest,
+        request: medulla_agent_types::native_control::SubmitWorkItemsRequest,
     },
 
     /// Mint an opaque native capability for the caller's currently-live
@@ -407,7 +407,7 @@ macro_rules! __eg_method_chunk_0 {
         #[serde(default)]
         outcome_extension: Option<Box<medulla_types::outcome_bundle::TerminalOutcomeExtension>>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        run_completion: Option<Box<medulla_types::run_completion::RunCompletionInput>>,
+        run_completion: Option<Box<medulla_agent_types::run_completion::RunCompletionInput>>,
         #[serde(default)]
         error_ref: Option<String>,
         #[serde(default)]

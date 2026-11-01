@@ -6,10 +6,11 @@
 use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::sync::atomic::AtomicBool;
 
-use medulla_catalog_types::{connector_pack::PackAnnotations, connector_pack::PackEntryKind};
-use medulla_types::agent_component::{
-    AgentComponentKind, AgentComponentOp, AgentComponentSearchPage, AgentComponentSearchRequest,
+use medulla_agent_types::{
+    agent_component::AgentComponentKind, agent_component::AgentComponentOp,
+    agent_component::AgentComponentSearchPage, agent_component::AgentComponentSearchRequest,
 };
+use medulla_catalog_types::{connector_pack::PackAnnotations, connector_pack::PackEntryKind};
 use medulla_types::contract::ResourceId;
 use medulla_types::mutation_outbox::{
     MutationOutboxOp, MutationOutboxStatusView, NativeOutboxScope, NativeOutboxStore,

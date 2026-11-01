@@ -69,7 +69,7 @@ pub(crate) fn write_work_item_props(
     props: &mut serde_json::Map<String, serde_json::Value>,
     crypto: DurableCrypto<'_>,
 ) -> Result<(), String> {
-    use medulla_types::work_item_read::WORK_ITEM_ROW_REVISION;
+    use medulla_agent_types::work_item_read::WORK_ITEM_ROW_REVISION;
     let revision = property_u64(props, WORK_ITEM_ROW_REVISION).saturating_add(1);
     props.insert(
         WORK_ITEM_ROW_REVISION.into(),

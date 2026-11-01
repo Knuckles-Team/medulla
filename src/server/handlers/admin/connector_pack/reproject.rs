@@ -74,7 +74,7 @@ pub(crate) async fn project_head(
     req_id: u64,
     verified: &VerifiedRequestContext,
     store: &crate::server::persistence::agent_library::AgentLibraryStore,
-    context: medulla_types::agent_library::AgentLibraryMutationContext,
+    context: medulla_agent_types::agent_library::AgentLibraryMutationContext,
     plan: &ConnectorPackProjectionPlan,
 ) -> Result<medulla_catalog_types::connector_pack::PackImportReceipt, String> {
     let documents = match materialize_current_projection(state, plan).await {
@@ -97,7 +97,7 @@ async fn prepare_projection_request(
 ) -> Result<
     (
         Arc<crate::server::persistence::agent_library::AgentLibraryStore>,
-        medulla_types::agent_library::AgentLibraryMutationContext,
+        medulla_agent_types::agent_library::AgentLibraryMutationContext,
         ConnectorPackProjectionPlan,
     ),
     String,
@@ -159,7 +159,7 @@ async fn commit_schema_projection(
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
 fn finish_projection(
     store: &crate::server::persistence::agent_library::AgentLibraryStore,
-    context: medulla_types::agent_library::AgentLibraryMutationContext,
+    context: medulla_agent_types::agent_library::AgentLibraryMutationContext,
     plan: &ConnectorPackProjectionPlan,
     committed: medulla_catalog_types::graph_schema::GraphSchemaCommitted,
 ) -> Result<medulla_catalog_types::connector_pack::PackImportReceipt, String> {
@@ -190,7 +190,7 @@ fn finish_projection(
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
 fn record_projection_failure(
     store: &crate::server::persistence::agent_library::AgentLibraryStore,
-    context: &medulla_types::agent_library::AgentLibraryMutationContext,
+    context: &medulla_agent_types::agent_library::AgentLibraryMutationContext,
     plan: &ConnectorPackProjectionPlan,
     error: &str,
 ) -> String {

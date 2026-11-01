@@ -5,7 +5,7 @@
 //! temporary store and read the same ledger record. One definition keeps the
 //! four test modules from drifting apart on what a well-formed attempt is.
 
-use medulla_types::agent_library::AgentLibraryMutationContext;
+use medulla_agent_types::agent_library::AgentLibraryMutationContext;
 
 use super::agent_library::{batch_id, current_agent_library_policy_digest, AgentLibraryStore};
 

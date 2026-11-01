@@ -1,9 +1,9 @@
 //! Independent bounded topology oracle for R110.1. No solver, row evaluator or
 //! production choice-table helper is used to compute the expected answer.
 
+use medulla_agent_types::agent_topology::LeaseDemand;
+use medulla_agent_types::agent_topology::StopRule;
 use medulla_decision_types::decision::SolverBudget;
-use medulla_types::agent_topology::LeaseDemand;
-use medulla_types::agent_topology::StopRule;
 
 use super::*;
 use crate::SplitMix64;

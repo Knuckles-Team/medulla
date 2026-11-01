@@ -203,7 +203,7 @@ impl ReplicatedMutation {
     /// determined that the next immutable unit is underfunded. No public
     /// Method variant can construct this command.
     pub(crate) fn enrichment_park(
-        park: &medulla_types::native_control::EnrichmentBudgetPark,
+        park: &medulla_agent_types::native_control::EnrichmentBudgetPark,
         server_secret: &str,
     ) -> Result<Self, String> {
         Self::validate_enrichment_park(park)?;
@@ -217,7 +217,7 @@ impl ReplicatedMutation {
     pub(crate) fn open_enrichment_park(
         &self,
         server_secret: &str,
-    ) -> Result<Option<medulla_types::native_control::EnrichmentBudgetPark>, String> {
+    ) -> Result<Option<medulla_agent_types::native_control::EnrichmentBudgetPark>, String> {
         match self {
             Self::Native {
                 command: NativeMutationCommand::EnrichmentPark { sealed_park },
@@ -231,7 +231,7 @@ impl ReplicatedMutation {
     }
 
     fn validate_enrichment_park(
-        park: &medulla_types::native_control::EnrichmentBudgetPark,
+        park: &medulla_agent_types::native_control::EnrichmentBudgetPark,
     ) -> Result<(), String> {
         fn digest(value: &str) -> bool {
             medulla_types::contract::Digest256::parse(value).is_ok()

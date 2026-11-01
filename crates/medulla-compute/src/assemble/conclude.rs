@@ -1,5 +1,8 @@
 //! Running the ladder and turning its result into a record's conclusion.
 
+use medulla_agent_types::agent_component::ComponentDependency;
+use medulla_agent_types::agent_graph::AgentGraphDraft;
+use medulla_agent_types::agent_library::AgentLibraryEntryDraft;
 use medulla_decision_types::decision::request::effective_solver_budget;
 use medulla_decision_types::solve::ModelSpec;
 use medulla_decision_types::{
@@ -13,9 +16,6 @@ use medulla_decision_types::{
     decision::SlotAssignment, decision::TemplateFacts, decision::Violation, decision::WhyNot,
     decision::MAX_ASSEMBLY_REQUIRED_CAPABILITIES,
 };
-use medulla_types::agent_component::ComponentDependency;
-use medulla_types::agent_graph::AgentGraphDraft;
-use medulla_types::agent_library::AgentLibraryEntryDraft;
 use medulla_types::contract::BoundedVec;
 
 use super::eliminate::Screened;
@@ -267,7 +267,7 @@ fn solved(
         eliminated,
         derivations,
         outcome: DecisionOutcome::Solved {
-            graph_digest: medulla_types::agent_graph::draft_definition_digest(&graph),
+            graph_digest: medulla_agent_types::agent_graph::draft_definition_digest(&graph),
             slots: BoundedVec::new(slots).expect("a selection fits the slot bound"),
             certificate: Box::new(answer.certificate),
             topology,

@@ -370,7 +370,7 @@ fn native_catalog_is_complete_unique_and_has_domain_representatives() {
     #[cfg(feature = "jobs")]
     assert_native_round_trip(
         Method::AnalyticsJob {
-            op: medulla_types::jobs::JobOp::Status {
+            op: medulla_agent_types::jobs::JobOp::Status {
                 job_id: "job".to_string(),
             },
         },

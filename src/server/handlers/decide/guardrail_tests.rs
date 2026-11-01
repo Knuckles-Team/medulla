@@ -11,13 +11,14 @@ use crate::server::persistence::agent_component::test_component_draft;
 use crate::server::persistence::agent_fixtures::mutation_context;
 use crate::server::persistence::agent_library::AgentLibraryStore;
 use crate::server::state::ServerState;
-use medulla_types::agent_component::{
-    AgentComponentKind, AgentComponentPublishRequest, AgentComponentRetireRequest,
+use medulla_agent_types::agent_guardrail::EntailmentStep;
+use medulla_agent_types::agent_guardrail::GuardrailEntailmentRequest;
+use medulla_agent_types::agent_guardrail::GuardrailEntailmentResult;
+use medulla_agent_types::agent_guardrail::GuardrailRule;
+use medulla_agent_types::{
+    agent_component::AgentComponentKind, agent_component::AgentComponentPublishRequest,
+    agent_component::AgentComponentRetireRequest,
 };
-use medulla_types::agent_guardrail::EntailmentStep;
-use medulla_types::agent_guardrail::GuardrailEntailmentRequest;
-use medulla_types::agent_guardrail::GuardrailEntailmentResult;
-use medulla_types::agent_guardrail::GuardrailRule;
 
 const TENANT: &str = "tenant-guardrail";
 
@@ -99,7 +100,7 @@ async fn guardrail_dispatch_proves_subclass_visibility_and_restart_stability() {
     assert_eq!(result.schema_version, 1);
     assert_eq!(
         result.ontology_digest,
-        medulla_types::agent_ontology::ontology_digest()
+        medulla_agent_types::agent_ontology::ontology_digest()
     );
     assert_eq!(result.task_iri, "eg:task/research");
     assert_eq!(

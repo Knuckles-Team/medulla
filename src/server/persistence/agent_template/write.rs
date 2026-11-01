@@ -47,7 +47,7 @@ impl AgentLibraryStore {
             revision_scope(self, &request.context, TemplateLayer::NOUN)?;
         let txn = self.mutations.open_write(&owner)?;
         let definition_digest =
-            medulla_types::agent_template::draft_definition_digest(&request.template);
+            medulla_agent_types::agent_template::draft_definition_digest(&request.template);
         write_revision::<TemplateLayer>(
             self,
             txn,

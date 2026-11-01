@@ -13,6 +13,10 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::protocol::ResultPayload;
+use medulla_agent_types::{
+    agent_component::AgentComponentKind, agent_component::AgentComponentPublishRequest,
+    agent_component::ComponentDependency,
+};
 use medulla_decision_types::decision::statistical::body::encode_body;
 use medulla_decision_types::decision::statistical::dataset::OutcomeFidelity;
 use medulla_decision_types::decision::statistical::FeatureMatrixRef;
@@ -55,9 +59,6 @@ use medulla_decision_types::{
     decision::DecisionPolicyRef, decision::ExplorationBudget, decision::HeadKind,
     decision::LibraryCandidateScope, decision::QuantScaleTag, decision::QuantisedValue,
     decision::UnitRationalWire,
-};
-use medulla_types::agent_component::{
-    AgentComponentKind, AgentComponentPublishRequest, ComponentDependency,
 };
 use medulla_types::contract::BoundedVec;
 
@@ -106,7 +107,7 @@ impl Harness {
 
     fn commit(
         &self,
-        draft: medulla_types::agent_component::AgentComponentDraft,
+        draft: medulla_agent_types::agent_component::AgentComponentDraft,
         receipt: Option<String>,
     ) -> Result<ComponentDependency, String> {
         let nonce = self.nonce.get();

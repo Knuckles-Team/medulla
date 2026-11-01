@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use super::index::{McpCatalogSnapshotBinding, PackEntryKind, PackProducer};
 use super::result::{PackProjectionState, PackWarning};
-use medulla_types::agent_component::ComponentDependency;
+use medulla_agent_types::agent_component::ComponentDependency;
 use medulla_types::{contract::BoundedVec, contract::Digest256, contract::ResourceId};
 
 /// What an import did to one entry.

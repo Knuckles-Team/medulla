@@ -15,12 +15,12 @@ use super::errors::DecisionErrorCode;
 use super::policy::DecisionPolicy;
 use super::request::AssemblyRequest;
 use crate::solve::Algorithm;
-use medulla_types::agent_library::AgentLibraryLifecycle;
-use medulla_types::contract::BoundedVec;
-use medulla_types::{
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
+use medulla_agent_types::{
     agent_component::AgentComponentEntry, agent_component::AgentComponentFacts,
     agent_component::AgentComponentKind, agent_component::ComponentDependency,
 };
+use medulla_types::contract::BoundedVec;
 
 pub use outcome::{AbstainReason, DecisionOutcome, SlotAssignment, WhyNot};
 pub use premise::{
@@ -159,7 +159,7 @@ impl CandidateFacts {
     pub fn classified_under(&self, iri: &str) -> bool {
         self.classification
             .iter()
-            .any(|term| medulla_types::agent_ontology::satisfies(term, iri))
+            .any(|term| medulla_agent_types::agent_ontology::satisfies(term, iri))
     }
 }
 
@@ -204,15 +204,15 @@ pub struct TemplateFacts {
     pub graph_id: String,
     pub entry_revision: u64,
     pub definition_digest: String,
-    pub shape: medulla_types::agent_graph::AgentGraphShape,
+    pub shape: medulla_agent_types::agent_graph::AgentGraphShape,
     /// The template's published topology facts, when it declares them.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub topology: Option<medulla_types::agent_topology::TopologyFacts>,
+    pub topology: Option<medulla_agent_types::agent_topology::TopologyFacts>,
 }
 
 impl TemplateFacts {
     /// The slot nodes: every `Agent` node, in shape order.
-    pub fn slot_nodes(&self) -> Vec<&medulla_types::agent_graph::AgentGraphNode> {
+    pub fn slot_nodes(&self) -> Vec<&medulla_agent_types::agent_graph::AgentGraphNode> {
         self.shape
             .nodes
             .iter()
@@ -241,7 +241,7 @@ pub struct DecisionInputs {
     /// What a topology question read beside the library: the composed schema
     /// digest, the entailed admissibility facts and the capacity headroom.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub topology: Option<medulla_types::agent_topology::TopologyInputs>,
+    pub topology: Option<medulla_agent_types::agent_topology::TopologyInputs>,
 }
 
 /// One assembly decision, in full.
@@ -287,7 +287,7 @@ impl DecisionRecord {
     }
 
     /// The topology plan a solved topology record carries.
-    pub fn topology_plan(&self) -> Option<&medulla_types::agent_topology::TopologyPlan> {
+    pub fn topology_plan(&self) -> Option<&medulla_agent_types::agent_topology::TopologyPlan> {
         match &self.outcome {
             DecisionOutcome::Solved { topology, .. } => topology.as_deref(),
             DecisionOutcome::Abstained { .. } => None,

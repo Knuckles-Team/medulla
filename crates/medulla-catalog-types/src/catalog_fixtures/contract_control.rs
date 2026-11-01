@@ -2,7 +2,7 @@
 //! surfaces.
 
 use crate::graph_schema::GraphSchemaOp;
-use medulla_types::agent_component::AgentComponentContentRequest;
+use medulla_agent_types::agent_component::AgentComponentContentRequest;
 use medulla_types::{
     mutation_outbox::MutationOutboxOp, mutation_outbox::NativeOutboxScope,
     mutation_outbox::NativeOutboxStore, mutation_outbox::OutboxPositionView,

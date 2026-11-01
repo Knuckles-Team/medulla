@@ -10,10 +10,10 @@ pub fn bind_agent_library_context(
     store: &super::AgentLibraryStore,
     req_id: u64,
     verified: &crate::server::auth::VerifiedRequestContext,
-    mut context: medulla_types::AgentLibraryMutationContext,
+    mut context: medulla_agent_types::agent_library::AgentLibraryMutationContext,
     purpose_id: &str,
     requires_nonce: bool,
-) -> Result<medulla_types::AgentLibraryMutationContext, String> {
+) -> Result<medulla_agent_types::agent_library::AgentLibraryMutationContext, String> {
     if context.tenant_id != verified.tenant() {
         return Err(
             "ACCESS_DENIED: Agent Library tenant must match verified request tenant".to_string(),

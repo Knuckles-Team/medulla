@@ -1,8 +1,9 @@
 //! Caller-context aggregation from the existing ordinary completion ledger.
 use super::*;
-use medulla_types::native_control::SubmitWorkItemRequest;
-use medulla_types::run_usage::{
-    aggregate_session_usage, SessionUsage, SessionUsageRecord, MAX_SESSION_USAGE_RUNS,
+use medulla_agent_types::native_control::SubmitWorkItemRequest;
+use medulla_agent_types::{
+    run_usage::aggregate_session_usage, run_usage::SessionUsage, run_usage::SessionUsageRecord,
+    run_usage::MAX_SESSION_USAGE_RUNS,
 };
 
 /// One graph snapshot supplies inventory, immutable admission, ledger and outbox.
@@ -15,7 +16,7 @@ pub(crate) fn read_session_usage(
     principal: &str,
     crypto: DurableCrypto<'_>,
 ) -> Result<SessionUsage, String> {
-    medulla_types::work_item_read::validate_work_item_get(tenant, context_id)?;
+    medulla_agent_types::work_item_read::validate_work_item_get(tenant, context_id)?;
     if principal.is_empty() {
         return Err("ACCESS_DENIED: usage owner required".into());
     }
@@ -139,7 +140,7 @@ fn validate_session_admission(
 }
 
 fn usage_counts(
-    usage: medulla_types::run_completion::RunUsage,
+    usage: medulla_agent_types::run_completion::RunUsage,
 ) -> std::collections::BTreeMap<String, u64> {
     [
         ("requests", usage.requests),

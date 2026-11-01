@@ -7,6 +7,9 @@
 //! features over exactly those options → the head's advisory reading → the
 //! act/abstain rule and any budgeted exploration inside the legal set.
 
+use medulla_agent_types::{
+    agent_component::AgentComponentKind, agent_component::ComponentDependency,
+};
 use medulla_decision_types::decision::statistical::features::FeatureSchemaBody;
 use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
 use medulla_decision_types::decision::AbstainReason;
@@ -27,7 +30,6 @@ use medulla_numeric::decision::head_eval::{
     check_compatible, explanation, read_head, Evaluated, HeadReading,
 };
 use medulla_numeric::decision::ladder::{decide, LadderInputs, LadderResult};
-use medulla_types::agent_component::{AgentComponentKind, ComponentDependency};
 use medulla_types::contract::BoundedVec;
 
 use super::stat_support::{pinned_body, refusal, ResolvedPolicy};

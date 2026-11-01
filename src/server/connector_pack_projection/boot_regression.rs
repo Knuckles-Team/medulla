@@ -123,8 +123,8 @@ fn ok<T: DeserializeOwned>(label: &str, response: Response) -> T {
 }
 
 /// A request-body context shell; the engine re-binds every field of it.
-fn context(key: &str) -> medulla_types::agent_library::AgentLibraryMutationContext {
-    medulla_types::agent_library::AgentLibraryMutationContext {
+fn context(key: &str) -> medulla_agent_types::agent_library::AgentLibraryMutationContext {
+    medulla_agent_types::agent_library::AgentLibraryMutationContext {
         request_id: 1,
         principal: "bound-by-engine".to_string(),
         caller_principal: "bound-by-engine".to_string(),

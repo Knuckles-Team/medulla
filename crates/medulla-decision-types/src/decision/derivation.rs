@@ -29,7 +29,7 @@ use super::record::{
     EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef,
 };
 use super::request::AssemblyRequirements;
-use medulla_types::agent_ontology;
+use medulla_agent_types::agent_ontology;
 use medulla_types::contract::BoundedVec;
 
 /// Most edges one stored coverage chain may carry.

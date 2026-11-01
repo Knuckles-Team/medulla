@@ -113,8 +113,8 @@ pub(crate) fn check_decision_shape(record: &DecisionRecord) -> Result<(), String
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_agent_types::agent_component::AgentComponentKind;
     use medulla_decision_types::decision_fixtures::contract_decision as decision;
-    use medulla_types::agent_component::AgentComponentKind;
 
     fn solved() -> DecisionRecord {
         decision::record(

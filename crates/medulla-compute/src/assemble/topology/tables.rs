@@ -13,10 +13,10 @@
 //!
 //! An undeclared p95 or token count is `None`, never zero.
 
-use medulla_types::agent_topology::SlotRole;
-use medulla_types::agent_topology::SlotTopology;
-use medulla_types::agent_topology::TopologyCaps;
-use medulla_types::agent_topology::TopologyFacts;
+use medulla_agent_types::agent_topology::SlotRole;
+use medulla_agent_types::agent_topology::SlotTopology;
+use medulla_agent_types::agent_topology::TopologyCaps;
+use medulla_agent_types::agent_topology::TopologyFacts;
 
 /// One (width, rounds) choice of one slot.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -477,7 +477,7 @@ fn a_mass_withdrawal_import_needs_the_admin_action() {
 /// publishing an ordinary component is not.
 #[test]
 fn decide_governance_kinds_publish_under_admin_actions() {
-    use medulla_types::agent_component::AgentComponentKind;
+    use medulla_agent_types::agent_component::AgentComponentKind;
 
     let expected = [
         (AgentComponentKind::DecisionPolicy, "admin:decision-policy"),

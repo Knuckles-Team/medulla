@@ -9,10 +9,10 @@ use crate::connector_pack::{
     PackEntry, PackEntryKind, PackHeadRef, PackModelFacts, PackProducer, PackRef, PackSection,
     PackToolMode, PackViolationCode, PackWarningCode, CONNECTOR_PACK_SCHEMA_VERSION,
 };
-use medulla_types::agent_component::DeclaredLatency;
+use medulla_agent_types::agent_component::DeclaredLatency;
 use medulla_types::{contract::Digest256, contract::ResourceId};
 
-use medulla_types::agent_fixtures::agent_library::mutation_context;
+use medulla_agent_types::agent_fixtures::agent_library::mutation_context;
 use medulla_types::{test_support::wave::bounded, test_support::wave::raw_digest};
 
 /// The connector every sample names.

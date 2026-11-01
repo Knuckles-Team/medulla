@@ -372,8 +372,10 @@ pub(crate) mod worker {
 
     /// A context shell `bind_agent_library_context` fills in completely from
     /// the verified service identity.
-    fn unbound_context(tenant: &str) -> medulla_types::agent_library::AgentLibraryMutationContext {
-        medulla_types::agent_library::AgentLibraryMutationContext {
+    fn unbound_context(
+        tenant: &str,
+    ) -> medulla_agent_types::agent_library::AgentLibraryMutationContext {
+        medulla_agent_types::agent_library::AgentLibraryMutationContext {
             request_id: 0,
             principal: String::new(),
             caller_principal: String::new(),

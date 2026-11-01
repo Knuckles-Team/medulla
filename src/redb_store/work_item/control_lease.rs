@@ -7,15 +7,17 @@
 //! The lifecycle rules and the row shape are owned by
 //! [`medulla_types::control_lease`]; this module only reads and writes rows.
 
+use medulla_agent_types::{
+    control_lease::is_tenant_control_lease, control_lease::validate_control_lease_get,
+    control_lease::ControlLeaseIssueOutcome, control_lease::ControlLeaseIssued,
+    control_lease::ControlLeasePage, control_lease::ControlLeaseTarget,
+    control_lease::ControlLeaseTransition, control_lease::ControlLeaseTransitionOutcome,
+    control_lease::ControlLeaseView, control_lease::IssueControlLeaseRequest,
+    control_lease::ListControlLeasesRequest, control_lease::TransitionControlLeaseRequest,
+};
 use medulla_protocol_types::{
     result_contract::coordination::IssueControlLease,
     result_contract::coordination::TransitionControlLease,
-};
-use medulla_types::control_lease::{
-    is_tenant_control_lease, validate_control_lease_get, ControlLeaseIssueOutcome,
-    ControlLeaseIssued, ControlLeasePage, ControlLeaseTarget, ControlLeaseTransition,
-    ControlLeaseTransitionOutcome, ControlLeaseView, IssueControlLeaseRequest,
-    ListControlLeasesRequest, TransitionControlLeaseRequest,
 };
 
 use super::*;
@@ -111,7 +113,7 @@ pub(crate) fn apply_transition_control_lease_row(
         return transition_result(ControlLeaseTransitionOutcome::NotFound, None, false);
     };
     let current = ControlLeaseView::from_row(&request.lease_id, &row)?;
-    if current.kind == medulla_types::host_start::HOST_START_KIND
+    if current.kind == medulla_agent_types::host_start::HOST_START_KIND
         && request.to == ControlLeaseTarget::Consumed
     {
         return Err(

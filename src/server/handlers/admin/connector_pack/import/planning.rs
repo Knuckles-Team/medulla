@@ -2,6 +2,11 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
+use medulla_agent_types::{
+    agent_component::AgentComponentEntry, agent_component::AgentComponentMutationKind,
+    agent_component::ComponentDependency,
+};
 use medulla_catalog_types::{
     connector_pack::ConnectorPackImportRequest, connector_pack::PackArchiveFacts,
     connector_pack::PackDisposition, connector_pack::PackEntry, connector_pack::PackEntryKind,
@@ -11,10 +16,6 @@ use medulla_catalog_types::{
     connector_pack::PackViolationCode, connector_pack::PackWarning,
     connector_pack::PACK_IMPORT_RECORD_SCHEMA_VERSION,
 };
-use medulla_types::agent_component::{
-    AgentComponentEntry, AgentComponentMutationKind, ComponentDependency,
-};
-use medulla_types::agent_library::AgentLibraryLifecycle;
 use medulla_types::contract::{BoundedVec, Digest256};
 
 use crate::server::persistence::agent_library::AgentLibraryStore;
@@ -510,7 +511,7 @@ fn preserve_source_approvals(
     body_sha256: Digest256,
 ) {
     let Some(prior) = prior else { return };
-    if prior.lifecycle != medulla_types::agent_library::AgentLibraryLifecycle::Published
+    if prior.lifecycle != medulla_agent_types::agent_library::AgentLibraryLifecycle::Published
         || prior.body_sha256 != body_sha256
     {
         return;

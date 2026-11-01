@@ -2,13 +2,13 @@
 
 #[cfg(feature = "redb")]
 use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_agent_types::agent_component::AgentComponentEntry;
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_catalog_types::{
     connector_pack::PackAnnotations, connector_pack::PackDispositionCounts,
     connector_pack::PackEntryKind, connector_pack::PackImportResult, connector_pack::PackRef,
     connector_pack::PackViolationCode, connector_pack::PackWarningCode,
 };
-use medulla_types::agent_component::AgentComponentEntry;
-use medulla_types::agent_library::AgentLibraryLifecycle;
 
 use super::{
     bind, build_pack, build_pack_with_server, head_of, import, imported, ok,
@@ -687,22 +687,24 @@ async fn supporting_files_are_never_stored_as_skill_body_content() {
     )
     .await;
     // The skill's stored body content is exactly its SKILL.md.
-    let skill_body: medulla_types::agent_component::AgentComponentContentResult = ok(
+    let skill_body: medulla_agent_types::agent_component::AgentComponentContentResult = ok(
         "skill content",
         served
             .call(
                 "content:content-model:skill:deploy",
                 crate::protocol::Method::AgentComponent {
-                    op: medulla_types::agent_component::AgentComponentOp::Content {
-                        request: medulla_types::agent_component::AgentComponentContentRequest {
-                            tenant_id: TENANT.to_string(),
-                            component_id: medulla_catalog_types::connector_pack::pack_component_id(
-                                CONNECTOR,
-                                PackEntryKind::Skill,
-                                "deploy",
-                            ),
-                            entry_revision: None,
-                        },
+                    op: medulla_agent_types::agent_component::AgentComponentOp::Content {
+                        request:
+                            medulla_agent_types::agent_component::AgentComponentContentRequest {
+                                tenant_id: TENANT.to_string(),
+                                component_id:
+                                    medulla_catalog_types::connector_pack::pack_component_id(
+                                        CONNECTOR,
+                                        PackEntryKind::Skill,
+                                        "deploy",
+                                    ),
+                                entry_revision: None,
+                            },
                     },
                 },
             )
@@ -714,22 +716,24 @@ async fn supporting_files_are_never_stored_as_skill_body_content() {
     );
     // The supporting file's bytes are not stored as the skill's body content:
     // they exist only under the file's own bounded component.
-    let file_body: medulla_types::agent_component::AgentComponentContentResult = ok(
+    let file_body: medulla_agent_types::agent_component::AgentComponentContentResult = ok(
         "skill file content",
         served
             .call(
                 "content:content-model:skill-file:deploy",
                 crate::protocol::Method::AgentComponent {
-                    op: medulla_types::agent_component::AgentComponentOp::Content {
-                        request: medulla_types::agent_component::AgentComponentContentRequest {
-                            tenant_id: TENANT.to_string(),
-                            component_id: medulla_catalog_types::connector_pack::pack_component_id(
-                                CONNECTOR,
-                                PackEntryKind::SkillFile,
-                                "deploy/scripts/run.sh",
-                            ),
-                            entry_revision: None,
-                        },
+                    op: medulla_agent_types::agent_component::AgentComponentOp::Content {
+                        request:
+                            medulla_agent_types::agent_component::AgentComponentContentRequest {
+                                tenant_id: TENANT.to_string(),
+                                component_id:
+                                    medulla_catalog_types::connector_pack::pack_component_id(
+                                        CONNECTOR,
+                                        PackEntryKind::SkillFile,
+                                        "deploy/scripts/run.sh",
+                                    ),
+                                entry_revision: None,
+                            },
                     },
                 },
             )

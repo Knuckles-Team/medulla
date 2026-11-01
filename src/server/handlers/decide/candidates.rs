@@ -17,6 +17,9 @@
 #[cfg(feature = "query")]
 use std::collections::BTreeMap;
 
+use medulla_agent_types::{
+    agent_component::AgentComponentEntry, agent_component::AgentComponentSearchRequest,
+};
 use medulla_decision_types::decision::statistical::ingestion_lane::IngestionLaneRequest;
 use medulla_decision_types::decision::statistical::log::RecordVisibility;
 use medulla_decision_types::decision::statistical::retrieval_plan::RetrievalPlanKind;
@@ -39,7 +42,6 @@ use medulla_decision_types::{
     decision::MAX_ASSEMBLY_CANDIDATES,
 };
 use medulla_numeric::decision::candidate::CandidateView;
-use medulla_types::agent_component::{AgentComponentEntry, AgentComponentSearchRequest};
 
 use super::stat_classes::{current_rules, derive, DerivedClasses};
 use super::stat_support::refusal;
@@ -106,7 +108,7 @@ fn under_root(entry: &AgentComponentEntry, derived: &DerivedClasses, root: Optio
         .classification
         .iter()
         .chain(derived_classes)
-        .any(|class| medulla_types::agent_ontology::satisfies(class, root))
+        .any(|class| medulla_agent_types::agent_ontology::satisfies(class, root))
 }
 
 fn read_library(

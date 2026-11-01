@@ -4,14 +4,16 @@
 //! record whose facts differ from the published revision, a component from
 //! another tenant) need the store and live with `DecisionCommit`'s tests.
 
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
+use medulla_agent_types::{
+    agent_component::AgentComponentKind, agent_component::ComponentDependency,
+};
 use medulla_decision_types::decision::derivation::verify_record;
 use medulla_decision_types::{
     decision::AbstainReason, decision::CostBudget, decision::DecisionErrorCode,
     decision::DecisionOutcome, decision::EvidenceClass, decision::PremiseClass,
     decision::SolverBudget, decision::Violation,
 };
-use medulla_types::agent_component::{AgentComponentKind, ComponentDependency};
-use medulla_types::agent_library::AgentLibraryLifecycle;
 
 use super::super::model::{build, Building};
 use super::super::search::{search, SolveContext};

@@ -17,8 +17,8 @@
 
 use std::collections::BTreeSet;
 
-use medulla_types::agent_topology::SchemaAuthority;
-use medulla_types::agent_topology::TopologyAdmission;
+use medulla_agent_types::agent_topology::SchemaAuthority;
+use medulla_agent_types::agent_topology::TopologyAdmission;
 use medulla_types::contract::BoundedVec;
 
 /// The engine's admissibility role.

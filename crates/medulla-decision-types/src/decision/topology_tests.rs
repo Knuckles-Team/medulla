@@ -1,9 +1,9 @@
 use crate::decision::record::schema_version_for;
 use crate::decision_fixtures::contract_decision as wave;
-use medulla_types::agent_fixtures::topology::facts;
-use medulla_types::agent_fixtures::topology::requirements;
-use medulla_types::agent_fixtures::topology::slot;
-use medulla_types::agent_topology::*;
+use medulla_agent_types::agent_fixtures::topology::facts;
+use medulla_agent_types::agent_fixtures::topology::requirements;
+use medulla_agent_types::agent_fixtures::topology::slot;
+use medulla_agent_types::agent_topology::*;
 use medulla_types::contract::BoundedVec;
 
 #[test]

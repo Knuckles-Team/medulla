@@ -4,6 +4,9 @@
 //! caller-supplied LLM proposal (`llm_proposal_template`, `llm_producer`,
 //! `llm_prompt_digest` parameters) is bound as a CLAIM, never as the decision.
 
+use medulla_agent_types::{
+    agent_component::AgentComponentEntry, agent_component::ComponentDependency,
+};
 use medulla_decision_types::decision::statistical::body::decode_body;
 use medulla_decision_types::{
     decision::statistical::nl::NlBinding, decision::statistical::nl::NlChoiceSource,
@@ -15,7 +18,6 @@ use medulla_decision_types::{
     decision::statistical::TypedValue,
 };
 use medulla_numeric::decision::nl::fill_slots;
-use medulla_types::agent_component::{AgentComponentEntry, ComponentDependency};
 use medulla_types::contract::BoundedVec;
 
 use super::stat_support::refusal;

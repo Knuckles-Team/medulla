@@ -51,8 +51,8 @@ fn requires_write_agent_surface(method: &Method) -> Option<bool> {
     if let Method::AgentLibrary { op } = method {
         return Some(matches!(
             op,
-            medulla_types::AgentLibraryOp::Publish { .. }
-                | medulla_types::AgentLibraryOp::Retire { .. }
+            medulla_agent_types::agent_library::AgentLibraryOp::Publish { .. }
+                | medulla_agent_types::agent_library::AgentLibraryOp::Retire { .. }
         ));
     }
     // Agent graphs are the same runtime-conditional shape. `is_mutation` lives

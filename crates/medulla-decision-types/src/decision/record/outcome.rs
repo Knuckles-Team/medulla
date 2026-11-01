@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use super::premise::Violation;
 use crate::solve::Certificate;
 use crate::solve::ObjectiveValue;
-use medulla_types::agent_component::ComponentDependency;
+use medulla_agent_types::agent_component::ComponentDependency;
 use medulla_types::contract::BoundedVec;
 use medulla_types::solve_scalar::Scalar;
 
@@ -86,7 +86,7 @@ pub enum DecisionOutcome {
         /// The decided widths, rounds, stop rule, leases and allowances, when
         /// the request asked a topology question.
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        topology: Option<Box<medulla_types::agent_topology::TopologyPlan>>,
+        topology: Option<Box<medulla_agent_types::agent_topology::TopologyPlan>>,
     },
     /// No assembly, and exactly why.
     Abstained {

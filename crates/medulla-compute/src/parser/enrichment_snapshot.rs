@@ -198,7 +198,7 @@ impl EnrichmentBudgetCheckpoint {
     /// Project the native authority row into the parser's validated page cursor.
     /// Callers check snapshot ownership and then run `validate` on this value.
     pub fn from_durable(
-        durable: &medulla_types::native_control::EnrichmentBudgetCheckpoint,
+        durable: &medulla_agent_types::native_control::EnrichmentBudgetCheckpoint,
     ) -> Self {
         Self {
             schema_version: durable.schema_version,

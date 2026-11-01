@@ -38,7 +38,7 @@ use super::record::{
     CandidateSourceRecord, EvidenceClass, PremiseRef, ResolutionKind, TraceFidelity,
 };
 use super::request::{DecisionPolicyRef, LibraryCandidateScope};
-use medulla_types::agent_component::ComponentDependency;
+use medulla_agent_types::agent_component::ComponentDependency;
 use medulla_types::contract::BoundedVec;
 
 pub use errors::StatisticalErrorCode;

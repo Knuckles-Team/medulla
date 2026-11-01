@@ -7,13 +7,13 @@
 
 use serde::{Deserialize, Serialize};
 
-use medulla_types::contract::BoundedVec;
-use medulla_types::{
+use medulla_agent_types::{
     agent_component::DeclaredCost, agent_component::DeclaredLatency, agent_component::MeasuredFact,
     agent_component::ModelInputCapabilities, agent_component::ShellProficiency,
     agent_component::StoppingBehaviour, agent_component::ToolFactDeclarer,
     agent_component::ToolSideEffects,
 };
+use medulla_types::contract::BoundedVec;
 
 /// Declared per-invocation prices, in integer micros — the same shape an
 /// [`crate::agent_component::CostFacts`] carries once the engine has recorded

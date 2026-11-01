@@ -296,7 +296,7 @@ pub(crate) enum RetainedTarget {
     /// above: ~370 bytes against a boxed sibling, and no wire or durable
     /// representation to disturb. Boxing only one arm just moves the cost to
     /// the other, so both are indirect and the enum is now two words.
-    Graph(Box<medulla_types::agent_graph::AgentGraphEntry>),
+    Graph(Box<medulla_agent_types::agent_graph::AgentGraphEntry>),
 }
 
 #[cfg(feature = "redb")]

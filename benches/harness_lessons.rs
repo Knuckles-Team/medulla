@@ -20,11 +20,13 @@
 #[path = "common/harness_admission.rs"]
 mod harness_bench;
 
-use medulla_types::contract::BoundedVec;
-use medulla_types::orchestration::improvement::{HarnessLesson, HarnessProbeRun};
-use medulla_types::orchestration::HarnessComponentKind;
 use medulla::graph::GraphCore;
 use medulla::protocol::Method;
+use medulla_agent_types::orchestration::HarnessComponentKind;
+use medulla_agent_types::{
+    orchestration::improvement::HarnessLesson, orchestration::improvement::HarnessProbeRun,
+};
+use medulla_types::contract::BoundedVec;
 
 const TASK_CLASSES: usize = 100;
 const DEFICIENCIES: usize = 100;

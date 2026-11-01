@@ -5,6 +5,9 @@
 //! changes the retained record, receipt, and visibility pointer in one admitted
 //! owner transaction guarded by an exact-head CAS.
 
+use medulla_agent_types::{
+    agent_library::AgentLibraryLifecycle, agent_library::AgentLibraryMutationContext,
+};
 use medulla_catalog_types::{
     connector_pack::McpCatalogSnapshotBinding, connector_pack::PackHeadRef,
     connector_pack::PackImportReceipt, connector_pack::PackImportRecord,
@@ -13,7 +16,6 @@ use medulla_catalog_types::{
 };
 use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_protocol_types::protocol::Method;
-use medulla_types::agent_library::{AgentLibraryLifecycle, AgentLibraryMutationContext};
 use medulla_types::contract::{Digest256, ResourceId};
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationSurface;
@@ -51,7 +53,7 @@ impl AgentLibraryStore {
         tenant_id: &str,
         connector: &ResourceId,
     ) -> Result<ConnectorPackProjectionPlan, String> {
-        medulla_types::agent_library::validate_key(tenant_id, connector.as_str())?;
+        medulla_agent_types::agent_library::validate_key(tenant_id, connector.as_str())?;
         let read = self.read()?;
         let heads = read.open_owner_table(medulla_storage::CONNECTOR_PACK_HEADS)?;
         let imports = read.open_owner_table(medulla_storage::CONNECTOR_PACK_IMPORTS)?;
@@ -370,11 +372,13 @@ fn apply_projection_rows(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_agent_types::{
+        agent_component::AgentComponentKind, agent_component::ComponentDependency,
+    };
     use medulla_catalog_types::{
         connector_pack::PackArchiveFacts, connector_pack::PackProducer,
         connector_pack::PackServerRecord, connector_pack::PACK_IMPORT_RECORD_SCHEMA_VERSION,
     };
-    use medulla_types::agent_component::{AgentComponentKind, ComponentDependency};
     use medulla_types::contract::BoundedVec;
 
     use crate::server::persistence::connector_pack::commit::ConnectorPackCommitPlan;
