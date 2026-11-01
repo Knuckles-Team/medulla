@@ -63,7 +63,7 @@ impl<'a> ServedShapes<'a> {
 }
 
 #[cfg(all(feature = "shacl", feature = "owl-plan"))]
-impl medulla_plan::exec::ShapeSource for ServedShapes<'_> {
+impl medulla_exec::exec::ShapeSource for ServedShapes<'_> {
     fn shapes(&self) -> Result<medulla_shacl::Graph, String> {
         load_shacl_shapes(self.core, None).map(|loaded| loaded.graph)
     }
@@ -385,7 +385,7 @@ mod served_shapes_tests {
         let view = core.analysis_snapshot();
         let semantic = medulla_semantic_index::semantic::SemanticStore::new();
         let shapes = ServedShapes::new(&core);
-        let ctx = medulla_plan::PlanCtx::new(&view, &semantic).with_shape_source(&shapes);
+        let ctx = medulla_exec::exec::PlanCtx::new(&view, &semantic).with_shape_source(&shapes);
         let plan = Plan::new(vec![
             Op::SparqlBgp {
                 query: "SELECT ?p WHERE { ?p a <http://example/Person> }".into(),
@@ -398,7 +398,7 @@ mod served_shapes_tests {
                 keep: ShapeKeep::Violating,
             },
         ]);
-        let rows = medulla_plan::execute(&plan, &ctx).unwrap();
+        let rows = medulla_exec::exec::execute(&plan, &ctx).unwrap();
         let ids: Vec<&str> = rows.rows().iter().map(|row| row.id.as_str()).collect();
         assert_eq!(ids, vec!["<http://example/bob>"]);
     }

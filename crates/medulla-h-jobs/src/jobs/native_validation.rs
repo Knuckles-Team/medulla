@@ -8,7 +8,7 @@ pub(super) fn validate_native_job_result(
     job: &medulla_jobs::AnalyticsJob,
     result: &TypedJobResult,
 ) -> Result<(), String> {
-    use medulla_plan::job_result_stream;
+    use medulla_retrieval::result_stream::job_result_stream;
 
     let rows = result
         .rows
@@ -41,14 +41,14 @@ fn native_opaque(namespace: &str, value: &str) -> Result<medulla_modality::Opaqu
 fn native_knowledge_row(
     job: &medulla_jobs::AnalyticsJob,
     row: &BTreeMap<String, serde_json::Value>,
-) -> Result<medulla_plan::KnowledgeBatchRow, String> {
+) -> Result<medulla_retrieval::knowledge_batch::KnowledgeBatchRow, String> {
     let id = row
         .get("id")
         .and_then(serde_json::Value::as_str)
         .unwrap_or_default()
         .to_string();
     let locus = native_evidence_locus(job, &id)?;
-    Ok(medulla_plan::KnowledgeBatchRow {
+    Ok(medulla_retrieval::knowledge_batch::KnowledgeBatchRow {
         id: id.clone(),
         kind: row
             .get("kind")
@@ -77,7 +77,7 @@ fn native_knowledge_row(
         source_refs: vec![job.input_snapshot.dataset_ref.clone()],
         proof_ids: json_string_list(row.get("proof_ids")),
         contradiction_ids: json_string_list(row.get("contradiction_ids")),
-        ..medulla_plan::KnowledgeBatchRow::default()
+        ..medulla_retrieval::knowledge_batch::KnowledgeBatchRow::default()
     })
 }
 
@@ -111,8 +111,8 @@ fn native_evidence_locus(
 fn native_stream_context(
     job: &medulla_jobs::AnalyticsJob,
     result: &TypedJobResult,
-) -> Result<medulla_plan::KnowledgeStreamContext, String> {
-    Ok(medulla_plan::KnowledgeStreamContext {
+) -> Result<medulla_retrieval::result_stream::KnowledgeStreamContext, String> {
+    Ok(medulla_retrieval::result_stream::KnowledgeStreamContext {
         tenant_ref: native_opaque("tenant", &job.policy.tenant)?,
         access_policy_ref: native_opaque("policy", &job.policy.policy_fingerprint)?,
         placement_ref: native_opaque("placement", &job.input_snapshot.graph)?,

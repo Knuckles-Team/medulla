@@ -1,7 +1,7 @@
 //! EH-393 — which dependency set each unified plan shape gets (or why it gets none).
 
 use super::plan_dependency_set;
-use medulla_plan::{Op, Plan, Pred};
+use medulla_exec::{algebra::Op, algebra::Plan, algebra::Pred};
 use medulla_query_cache::dep_scope::Dim;
 
 fn deps(ops: Vec<Op>, generation: Option<u64>) -> Option<Vec<Dim>> {

@@ -165,7 +165,7 @@ def load_chain(root: Path) -> list[str]:
     return cfg["types_split"]["chain"]
 
 
-def plan(root: Path, frm: str, to: str, chain: list[str] | None = None):
+def plan(root: Path, frm: str, to: str, chain: list[str] | None = None, bottom_up: bool = False):
     pats = load_patterns(root, frm)
     src = root / "crates" / frm / "src"
     mods = list_mods(src)
@@ -175,7 +175,7 @@ def plan(root: Path, frm: str, to: str, chain: list[str] | None = None):
     for m in mods:
         assign[m] = desired(m, pats) or frm
     # modules already moved to other types crates
-    for crate, _p in {(c, 0) for c, _ in pats}:
+    for crate, _p in {(c, 0) for c, _ in pats if c != frm}:
         for m in list_mods(root / "crates" / crate / "src"):
             if m not in mods:  # a name the source crate also holds (a split parent module) keeps staying
                 assign[m] = crate
@@ -201,6 +201,14 @@ def plan(root: Path, frm: str, to: str, chain: list[str] | None = None):
     pinned: dict[str, str] = {}
     for m, ds in deps.items():
         for d in ds:
+            if bottom_up:
+                # lowest crate first: a moving module may use only crates already moved out
+                # (below it); modules staying in <from> may use the moved ones freely.
+                if m in moving and phys[d] == frm:
+                    pinned[d] = f"VIOLATION: moving {m} needs {d}, which stays in {frm} (target {assign[d]})"
+                elif m in moving and phys[d] not in (frm, to) and rank.get(phys[d], 99) > rank_to:
+                    pinned[d] = f"VIOLATION: moving {m} needs {d} in higher {phys[d]}"
+                continue
             if m in moving and phys[d] not in (frm, to) and rank.get(phys[d], 99) > rank_to:
                 pinned[d] = f"VIOLATION: moving {m} needs {d} in higher {phys[d]}"
             if m in mods and m not in moving and d in moving and rank.get(target[m], 10**6) < rank_to:
@@ -450,10 +458,11 @@ def main() -> int:
     ap.add_argument("--to", required=True)
     ap.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
     ap.add_argument("--plan", action="store_true")
-    ap.add_argument("--chain", help="comma-separated crate order, lowest first (default: [types_split].chain)")
+    ap.add_argument("--bottom-up", action="store_true", help="move the lowest crate first: the moved modules may not use modules still in <from>")
+    ap.add_argument("--chain", default="", help="comma list of crates, lowest first (default: [types_split].chain)")
     a = ap.parse_args()
     root, frm, to = a.root, a.frm, a.to
-    assign, pinned, deps, rn, mods, lib_text = plan(root, frm, to, a.chain.split(",") if a.chain else None)
+    assign, pinned, deps, rn, mods, lib_text = plan(root, frm, to, [c for c in a.chain.split(',') if c], a.bottom_up)
     per: dict[str, int] = {}
     for m, c in assign.items():
         paths = mods.get(m) or list_mods(root / "crates" / c / "src").get(m, [])

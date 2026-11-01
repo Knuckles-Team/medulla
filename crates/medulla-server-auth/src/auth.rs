@@ -1865,7 +1865,7 @@ mod tests {
                 foreign_execution: None,
             },
             Method::UnifiedQuery {
-                plan: medulla_plan::Plan::new(vec![]),
+                plan: medulla_exec::algebra::Plan::new(vec![]),
                 foreign_execution: None,
                 foreign_executions: Default::default(),
             },

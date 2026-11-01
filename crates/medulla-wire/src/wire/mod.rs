@@ -4699,7 +4699,7 @@ impl WireSession {
     /// committed series only.
     #[cfg(feature = "query")]
     async fn exec_uql(&self, graph: &str, text: &str, in_txn: bool) -> WireResult<WireOutcome> {
-        let plan = medulla_plan::uql::parse(text).map_err(|e| user_err(e.render(text)))?;
+        let plan = medulla_uql::parse(text).map_err(|e| user_err(e.render(text)))?;
         #[cfg(feature = "tsdb")]
         let tsdb_scope = if medulla_server_ops::api::query_txn::query_support::plan_needs_tsdb(&plan.ops)
         {
@@ -4725,7 +4725,7 @@ impl WireSession {
         // staged, uncommitted measurements (empty off-txn ⇒ committed series only).
         #[cfg(feature = "tsdb")]
         let staged_series = {
-            let mut staged = medulla_plan::StagedSeries::new();
+            let mut staged = medulla_exec::exec::StagedSeries::new();
             if in_txn {
                 for m in &self.xmodal.lock().measurements {
                     staged.push_points(&m.series, m.points.iter().cloned());

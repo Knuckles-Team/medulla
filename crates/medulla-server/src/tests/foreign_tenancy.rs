@@ -19,7 +19,7 @@ const OTHER_B: &str = "worker2";
 /// own foreign binding with a deterministic plan.
 struct EchoPlanner;
 
-impl medulla_plan::NlPlanner for EchoPlanner {
+impl medulla_nlq::nl::NlPlanner for EchoPlanner {
     fn plan(&self, nl: &str, _schema_hint: &str) -> Result<String, String> {
         Ok(nl.to_string())
     }
@@ -54,17 +54,17 @@ async fn registered_by_owner_a(id: u64) -> (Arc<RwLock<ServerState>>, Arc<RwLock
 
 fn named_scan_plan() -> Method {
     Method::UnifiedQuery {
-        plan: medulla_plan::Plan::new(vec![
-            medulla_plan::Op::Scan {
+        plan: medulla_exec::algebra::Plan::new(vec![
+            medulla_exec::algebra::Op::Scan {
                 label: "Doc".into(),
             },
-            medulla_plan::Op::ForeignScan {
+            medulla_exec::algebra::Op::ForeignScan {
                 source: Box::new(medulla_types::wire::ForeignSourceSpec::Named {
                     name: "remote_docs".into(),
                 }),
                 join: true,
             },
-            medulla_plan::Op::Limit { k: 10 },
+            medulla_exec::algebra::Op::Limit { k: 10 },
         ]),
         foreign_execution: None,
 
@@ -252,7 +252,7 @@ async fn foreign_column_http_read_returns_projected_filtered_rows() {
     struct RestoreAllow(Option<std::ffi::OsString>);
     impl Drop for RestoreAllow {
         fn drop(&mut self) {
-            let key = medulla_plan::federation::HTTP_JSON_FEDERATION_ALLOW_ENV;
+            let key = medulla_federation::federation::HTTP_JSON_FEDERATION_ALLOW_ENV;
             if let Some(previous) = self.0.take() {
                 std::env::set_var(key, previous);
             } else {
@@ -275,7 +275,7 @@ async fn foreign_column_http_read_returns_projected_filtered_rows() {
         );
         socket.write_all(response.as_bytes()).await.unwrap();
     });
-    let key = medulla_plan::federation::HTTP_JSON_FEDERATION_ALLOW_ENV;
+    let key = medulla_federation::federation::HTTP_JSON_FEDERATION_ALLOW_ENV;
     let _restore = RestoreAllow(std::env::var_os(key));
     std::env::set_var(key, &origin);
 

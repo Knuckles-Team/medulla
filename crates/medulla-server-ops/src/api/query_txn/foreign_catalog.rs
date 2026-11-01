@@ -62,7 +62,7 @@ use medulla_catalog_types::{
     connector_pack::ConnectorPackSourceApprovalResult, connector_pack::PackSourceApproval,
     connector_pack::PackSourceRegistration,
 };
-use medulla_plan::federation::{ForeignSourceRegistry, SharedForeignSource};
+use medulla_federation::{federation::ForeignSourceRegistry, federation::SharedForeignSource};
 use medulla_types::contract::Digest256;
 use medulla_types::wire::ForeignSourceSpec;
 
@@ -120,10 +120,10 @@ impl OwnedForeignRegistry {
     #[cfg(feature = "result-cache")]
     pub fn install_fragment_cache(
         &mut self,
-        sources: std::collections::HashMap<String, medulla_plan::federation_opt::SourceWatermark>,
+        sources: std::collections::HashMap<String, medulla_federation::federation_opt::SourceWatermark>,
     ) {
         self.registry.set_cache_scope(std::sync::Arc::new(
-            medulla_plan::federation_opt::FragmentCacheScope::new(self.cache_salt.clone(), sources),
+            medulla_federation::federation_opt::FragmentCacheScope::new(self.cache_salt.clone(), sources),
         ));
     }
     /// The verified owner (tenant+principal) scope this registry was built for.
@@ -394,7 +394,7 @@ impl ForeignSourceCatalog {
     /// without a verified carrier is refused rather than run with no scope.
     pub fn resolve_for_plan(
         &self,
-        ops: &[medulla_plan::Op],
+        ops: &[medulla_exec::algebra::Op],
         caller: Option<&CarrierAuthority>,
         isolation: &IsolationLayer,
     ) -> Result<Option<OwnedForeignRegistry>, String> {
@@ -424,22 +424,22 @@ impl ForeignSourceCatalog {
     /// grant, known and unknown names both remain the executor's typed not-found response.
     fn plan_names_another_owners_source(
         &self,
-        ops: &[medulla_plan::Op],
+        ops: &[medulla_exec::algebra::Op],
         caller: &CarrierAuthority,
         isolation: &IsolationLayer,
     ) -> bool {
         ops.iter().any(|op| match op {
-            medulla_plan::Op::Foreign { name } => {
+            medulla_exec::algebra::Op::Foreign { name } => {
                 self.name_belongs_to_another_owner(name, caller, isolation)
             }
-            medulla_plan::Op::ForeignScan { source, .. } => match source.as_ref() {
+            medulla_exec::algebra::Op::ForeignScan { source, .. } => match source.as_ref() {
                 medulla_types::wire::ForeignSourceSpec::Named { name } => {
                     self.name_belongs_to_another_owner(name, caller, isolation)
                 }
                 _ => false,
             },
             #[cfg(feature = "text")]
-            medulla_plan::Op::FuseRrf { branches, .. } => branches
+            medulla_exec::algebra::Op::FuseRrf { branches, .. } => branches
                 .iter()
                 .any(|branch| self.plan_names_another_owners_source(branch, caller, isolation)),
             _ => false,
@@ -494,7 +494,7 @@ impl ForeignSourceCatalog {
 fn verify_outbound_before_register(spec: &ForeignSourceSpec) -> Result<(), String> {
     #[cfg(feature = "federation-sql")]
     if let ForeignSourceSpec::Sql { dsn, .. } = spec {
-        return medulla_plan::federation_ssrf::check_sql_dsn(dsn);
+        return medulla_federation::federation_ssrf::check_sql_dsn(dsn);
     }
     let _ = spec;
     Ok(())
@@ -583,8 +583,8 @@ mod tests {
         }
     }
 
-    fn foreign_plan(name: &str) -> Vec<medulla_plan::Op> {
-        vec![medulla_plan::Op::Foreign { name: name.into() }]
+    fn foreign_plan(name: &str) -> Vec<medulla_exec::algebra::Op> {
+        vec![medulla_exec::algebra::Op::Foreign { name: name.into() }]
     }
 
     #[test]
@@ -664,7 +664,7 @@ mod tests {
         let catalog = ForeignSourceCatalog::default();
         let refused = catalog.resolve_for_plan(&foreign_plan("src"), None, &IsolationLayer::new());
         assert!(matches!(refused, Err(ref e) if e.starts_with("ACCESS_DENIED")));
-        let local = vec![medulla_plan::Op::Scan {
+        let local = vec![medulla_exec::algebra::Op::Scan {
             label: "Doc".into(),
         }];
         assert!(matches!(

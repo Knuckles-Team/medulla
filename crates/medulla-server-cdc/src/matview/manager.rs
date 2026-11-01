@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-use medulla_plan::incremental::Circuit;
+use medulla_exec::incremental::Circuit;
 use parking_lot::Mutex;
 
 /// The durable DEFINITION of a plan-backed materialized view (CONCEPT:MEDULLA-KG.storage.plan-backed-matview):

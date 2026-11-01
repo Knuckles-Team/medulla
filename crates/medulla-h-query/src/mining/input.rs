@@ -262,7 +262,7 @@ pub(super) fn gather_plan_rows(
         // `window_aggregate`'s own fix note describes. A row id that merely LOOKS numeric
         // but isn't a real timestamp is indistinguishable from a genuine one at this layer,
         // exactly as `window_aggregate` accepts the same ambiguity.
-        if let (Some(_), Some(value)) = (medulla_plan::rowset::parse_series_row_id(&row_id), score)
+        if let (Some(_), Some(value)) = (medulla_exec::rowset::parse_series_row_id(&row_id), score)
         {
             feats.push(vec![value as f64]);
             ids.push(row_id);

@@ -25,7 +25,7 @@ mod test_support;
 
 use std::sync::Arc;
 
-use medulla_plan::{Op, Plan};
+use medulla_exec::{algebra::Op, algebra::Plan};
 use medulla_tsdb::store::SeriesStore;
 use medulla_protocol_types::protocol::{AnomalyAlgorithm, Method, Response, ResultPayload, SvmKernel};
 

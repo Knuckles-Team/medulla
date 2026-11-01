@@ -1,16 +1,16 @@
 //! Statement row annotations, computed after the statement ran and from the SAME
 //! snapshot: `WITH KNOWLEDGE` (EH-450) re-materializes each row as a
-//! [`crate::knowledge::KnowledgeSet`] record, `WITH PROOF` (EH-448) attaches why the row
+//! [`medulla_retrieval::knowledge::KnowledgeSet`] record, `WITH PROOF` (EH-448) attaches why the row
 //! is in the result ([`super::proof`]). `EXPLAIN` executes nothing, so it has no rows to
 //! annotate.
 
 use medulla_types::wire::{UqlKnowledge, UqlResult, UqlRow};
 
 use super::{binding_plan, proof};
-use crate::exec::PlanCtx;
-use crate::knowledge::{KnowledgeRow, KnowledgeSet, ProvenanceFrame};
-use crate::rowset::RowSet;
-use crate::uql::Statement;
+use medulla_exec::exec::PlanCtx;
+use medulla_retrieval::knowledge::{KnowledgeRow, KnowledgeSet, ProvenanceFrame};
+use medulla_exec::rowset::RowSet;
+use medulla_uql::Statement;
 
 /// Attach the statement's requested annotations to `result`'s rows.
 pub(super) fn annotate(

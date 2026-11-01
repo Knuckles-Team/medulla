@@ -12,3 +12,43 @@ name = "medulla_exec"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-types = { path = "../medulla-types", features = ["query", "geo"] }
+medulla-core = { path = "../medulla-core" }
+tracing = { version = "0.1", optional = true }
+medulla-query = { path = "../medulla-query", optional = true }
+medulla-wasm = { path = "../medulla-wasm", optional = true }
+medulla-text = { path = "../medulla-text", optional = true }
+medulla-rdf = { path = "../medulla-rdf", optional = true }
+medulla-shacl = { path = "../medulla-shacl", optional = true }
+medulla-geo = { path = "../medulla-geo", optional = true }
+medulla-tensor = { path = "../medulla-tensor", optional = true }
+medulla-compute = { path = "../medulla-compute", optional = true }
+medulla-epistemic = { path = "../medulla-epistemic", optional = true }
+medulla-numeric = { path = "../medulla-numeric", optional = true }
+medulla-stream = { path = "../medulla-stream", optional = true }
+medulla-tsdb = { path = "../medulla-tsdb", optional = true }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["float_roundtrip"] }
+rmp-serde = "1.3"
+petgraph = { version = "0.8.3", features = ["serde-1"] }
+rayon = { version = "1.12", optional = true }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-result-types = { path = "../medulla-result-types", features = ["query"] }
+
+[features]
+test-support = ["query"]
+epistemic = ["query", "medulla-types/epistemic", "dep:medulla-epistemic"]
+federation = ["query", "medulla-types/federation"]
+geo = ["query", "dep:medulla-geo"]
+learned-cost = ["query", "dep:medulla-compute", "medulla-compute/graphlearn"]
+numeric = ["query", "dep:medulla-numeric"]
+owl = ["query", "dep:medulla-rdf", "medulla-rdf/owl", "medulla-rdf/sparql", "dep:medulla-shacl", "medulla-types/owl-plan"]
+par-runtime = ["query", "dep:rayon"]
+probabilistic = ["query", "medulla-types/probabilistic", "dep:medulla-compute", "medulla-compute/reasoning"]
+query = ["dep:medulla-query", "medulla-query/sql", "dep:medulla-compute", "dep:tracing"]
+raft = []
+stream = ["query", "dep:medulla-stream", "medulla-stream/stream", "medulla-types/stream"]
+tensor = ["query", "dep:medulla-tensor", "medulla-types/tensor"]
+text = ["query", "dep:medulla-text", "medulla-text/tantivy", "medulla-types/text"]
+timeseries = ["query", "dep:medulla-tsdb", "medulla-tsdb/redb-store", "medulla-tsdb/derive", "medulla-types/timeseries", "dep:medulla-tensor", "dep:medulla-numeric", "medulla-numeric/motif"]
+wasm-udf = ["query", "dep:medulla-wasm", "medulla-wasm/wasm-udf", "medulla-types/wasm-udf"]

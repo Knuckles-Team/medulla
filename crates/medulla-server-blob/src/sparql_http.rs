@@ -490,9 +490,7 @@ impl ServiceClient {
 #[cfg(feature = "sparql-service")]
 impl medulla_rdf::sparql::RemoteSparql for ServiceClient {
     fn select(&self, endpoint: &str, query: &str) -> Result<SparqlResult, String> {
-        use medulla_plan::federation_ssrf::{
-            pinned_agent, validate_outbound_http_target, OutboundAllowPolicy,
-        };
+        use medulla_federation::{federation_ssrf::pinned_agent, federation_ssrf::validate_outbound_http_target, federation_ssrf::OutboundAllowPolicy};
         use std::io::Read;
         let target = validate_outbound_http_target(
             endpoint,
@@ -1241,7 +1239,7 @@ mod tests {
     #[cfg(feature = "sparql-service")]
     #[test]
     fn service_destination_uses_single_federation_gate() {
-        use medulla_plan::federation_ssrf::{validate_outbound_http_target, OutboundAllowPolicy};
+        use medulla_federation::{federation_ssrf::validate_outbound_http_target, federation_ssrf::OutboundAllowPolicy};
         let allow = vec!["127.0.0.1".to_string()];
         let accepted = validate_outbound_http_target(
             "http://127.0.0.1:8080/sparql",

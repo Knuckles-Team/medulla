@@ -467,7 +467,7 @@ async fn assert_reputation_origin(
     real: Option<&StatisticalDecisionRecord>,
     support: u64,
 ) {
-    use medulla_plan::exec::DecisionSource;
+    use medulla_exec::exec::DecisionSource;
     use serde_json::json;
     let metrics = super::retrieval_tests::sql(
         h,

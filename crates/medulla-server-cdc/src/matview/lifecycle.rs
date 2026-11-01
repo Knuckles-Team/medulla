@@ -41,8 +41,8 @@ pub fn materialize(
     view: &GraphView,
     semantic: &SemanticStore,
 ) -> Result<Vec<(String, Option<f32>)>, String> {
-    let ctx = medulla_plan::PlanCtx::new(view, semantic);
-    let out = medulla_plan::execute(&def.plan, &ctx)?;
+    let ctx = medulla_exec::exec::PlanCtx::new(view, semantic);
+    let out = medulla_exec::exec::execute(&def.plan, &ctx)?;
     Ok(out.rows().iter().map(|r| (r.id.clone(), r.score)).collect())
 }
 

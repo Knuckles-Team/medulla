@@ -11,11 +11,7 @@ use std::sync::Arc;
 
 use hmac::{Hmac, Mac};
 use medulla_modality::{OpaqueRef, ProtocolError};
-use medulla_plan::{
-    cross_modal_result_stream, graph_result_stream, job_result_stream, rdf_result_stream,
-    sql_result_stream, time_series_result_stream, vector_result_stream, KnowledgeBatch,
-    KnowledgeBatchRow, KnowledgeStreamContext, ResultStreamCursor, ServedResultFamily,
-};
+use medulla_retrieval::{result_stream::cross_modal_result_stream, result_stream::graph_result_stream, result_stream::job_result_stream, result_stream::rdf_result_stream, result_stream::sql_result_stream, result_stream::time_series_result_stream, result_stream::vector_result_stream, knowledge_batch::KnowledgeBatch, knowledge_batch::KnowledgeBatchRow, result_stream::KnowledgeStreamContext, result_stream::ResultStreamCursor, result_stream::ServedResultFamily};
 use sha2::Sha256;
 use tokio::sync::RwLock;
 

@@ -5,8 +5,8 @@
 
 use super::{run_unified_with, ServedIndexes};
 use medulla_graph_core::graph::GraphCore;
-use medulla_plan::federation::ForeignSourceRegistry;
-use medulla_plan::Op;
+use medulla_federation::federation::ForeignSourceRegistry;
+use medulla_exec::algebra::Op;
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_server_ops::api::query_txn::query_support::execute_rows;
 #[cfg(feature = "tsdb")]
@@ -32,7 +32,7 @@ fn run(
         ..ServedIndexes::default()
     };
     run_unified_with(
-        medulla_plan::Plan::new(ops),
+        medulla_exec::algebra::Plan::new(ops),
         &view,
         &semantic,
         served,
@@ -70,7 +70,7 @@ fn a_served_scan_of_a_key_only_source_is_refused_by_the_optimizer() {
     )
     .unwrap_err();
     assert!(
-        err.starts_with(medulla_plan::federation_opt::REQUIRES_KEYS),
+        err.starts_with(medulla_federation::federation_opt::REQUIRES_KEYS),
         "the served path must plan with source capabilities: {err}"
     );
 }

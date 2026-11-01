@@ -98,8 +98,8 @@ impl EmbedderConfig {
                 .collect::<Result<Vec<_>, _>>()
                 .map(|batches| batches.into_iter().flatten().collect()),
             None => {
-                use medulla_plan::TextEmbedder;
-                let hash = medulla_plan::HashEmbedder::new(self.dims);
+                use medulla_exec::exec::TextEmbedder;
+                let hash = medulla_exec::exec::HashEmbedder::new(self.dims);
                 texts.iter().map(|text| hash.embed(text)).collect()
             }
         }
@@ -148,7 +148,7 @@ impl EmbedderConfig {
     }
 }
 
-impl medulla_plan::TextEmbedder for EmbedderConfig {
+impl medulla_exec::exec::TextEmbedder for EmbedderConfig {
     fn embed(&self, text: &str) -> Result<Vec<f32>, String> {
         let mut vectors = EmbedderConfig::embed(self, &[text])?;
         vectors

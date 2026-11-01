@@ -240,8 +240,8 @@ impl PeerAllowlist {
     fn check_target(
         &self,
         peer_url: &str,
-    ) -> Result<medulla_plan::federation_ssrf::ValidatedHttpJsonTarget, String> {
-        use medulla_plan::federation_ssrf::{validate_outbound_http_target, OutboundAllowPolicy};
+    ) -> Result<medulla_federation::federation_ssrf::ValidatedHttpJsonTarget, String> {
+        use medulla_federation::{federation_ssrf::validate_outbound_http_target, federation_ssrf::OutboundAllowPolicy};
         validate_outbound_http_target(peer_url, &self.allow, OutboundAllowPolicy::PublicHttps)
     }
 }
@@ -258,7 +258,7 @@ fn fetch_one_peer(
     query: &str,
     lang: &str,
 ) -> Result<Vec<FedRow>, String> {
-    use medulla_plan::federation_ssrf::pinned_agent;
+    use medulla_federation::federation_ssrf::pinned_agent;
     use std::io::Read;
     let target = allow.check_target(peer)?;
     let endpoint = format!("{peer}/federated?local=1");

@@ -1,6 +1,6 @@
 //! libFuzzer target for the UQL parser (CONCEPT:MEDULLA-KG.query.uql-libfuzzer-parse-target).
 //!
-//! Feeds ARBITRARY BYTES to `medulla_plan::uql::parse` and asserts the parser never panics
+//! Feeds ARBITRARY BYTES to `medulla_uql::parse` and asserts the parser never panics
 //! or hangs — it must always return `Ok(Plan)` or `Err(UqlError)` for ANY input. The
 //! proptest harness (`crates/medulla-plan/tests/fuzz_pipelines.rs`,
 //! CONCEPT:MEDULLA-KG.query.pipeline-fuzz) already fuzzes RANDOM but VALID pipelines on
@@ -28,13 +28,13 @@ fuzz_target!(|data: &[u8]| {
     if let Ok(src) = std::str::from_utf8(data) {
         // The parser must total: Ok(Plan) or Err(UqlError), never a panic/hang. The
         // result is intentionally dropped — we assert only that `parse` returns.
-        let params = medulla_plan::uql::Params::new();
-        let Ok(stmt) = medulla_plan::uql::parse_statement(src, &params) else {
+        let params = medulla_uql::Params::new();
+        let Ok(stmt) = medulla_uql::parse_statement(src, &params) else {
             return;
         };
-        if let medulla_plan::uql::Body::Pipeline(plan) = &stmt.body {
+        if let medulla_uql::Body::Pipeline(plan) = &stmt.body {
             let text = plan.to_uql().expect("a parsed plan always prints");
-            let back = medulla_plan::uql::parse(&text).expect("printed UQL re-parses");
+            let back = medulla_uql::parse(&text).expect("printed UQL re-parses");
             assert_eq!(&back, plan, "print/parse round trip diverged for `{text}`");
         }
     }

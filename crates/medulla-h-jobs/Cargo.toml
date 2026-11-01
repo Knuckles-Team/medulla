@@ -47,13 +47,14 @@ medulla-persistence-records = { path = "../medulla-persistence-records" }
 medulla-server-ops = { path = "../medulla-server-ops" }
 medulla-server-mutation = { path = "../medulla-server-mutation" }
 medulla-server-auth = { path = "../medulla-server-auth" }
+medulla-retrieval = { path = "../medulla-retrieval" }
 
 [features]
 ann-redb = ["redb"]
 jobs = ["dep:medulla-jobs", "dep:medulla-capabilities", "medulla-capabilities/jobs", ]
-knowledge-batch = ["dep:medulla-plan", "medulla-plan/knowledge-batch", "dep:medulla-modality", "dep:medulla-capabilities", "medulla-capabilities/knowledge-batch", "query"]
+knowledge-batch = ["dep:medulla-plan", "medulla-plan/knowledge-batch", "medulla-retrieval/knowledge-batch", "dep:medulla-modality", "dep:medulla-capabilities", "medulla-capabilities/knowledge-batch", "query"]
 program-optimization = ["dep:medulla-program", "jobs"]
-query = ["medulla-table-store/sql", "dep:medulla-plan", "medulla-plan/query", "redb"]
+query = ["medulla-table-store/sql", "dep:medulla-plan", "medulla-plan/query", "redb", "dep:medulla-query", "medulla-query/sql", "medulla-retrieval/query"]
 raft = ["redb"]
 redb = []
 statechart = ["dep:medulla-statechart", "dep:medulla-capabilities", "medulla-capabilities/statechart", ]
@@ -63,7 +64,7 @@ viz = ["dep:medulla-capabilities", "medulla-capabilities?/viz"]
 modality-serving = ["dep:medulla-modality", "dep:medulla-capabilities", "medulla-capabilities/modality-serving"]
 asr-whisper = ["dep:medulla-capabilities", "medulla-capabilities/asr-native"]
 quantum-agent-api = ["dep:medulla-capabilities", "medulla-capabilities/quantum"]
-epistemic = ["dep:medulla-plan", "medulla-plan/epistemic", "dep:medulla-modality"]
+epistemic = ["dep:medulla-plan", "medulla-plan/epistemic", "medulla-retrieval/epistemic", "dep:medulla-modality"]
 alignment = ["dep:medulla-modality"]
 numeric = ["dep:medulla-plan", "medulla-plan?/numeric"]
 cost-opt = ["dep:medulla-plan", "medulla-plan/cost-opt"]

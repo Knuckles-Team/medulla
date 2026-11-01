@@ -396,7 +396,7 @@ fn unified_query(
 ) -> Result<Value, String> {
     let txn_id = arg_str(field, "txnId")?;
     let uql = arg_str(field, "uql")?;
-    let plan = medulla_plan::uql::parse(&uql).map_err(|e| e.render(&uql))?;
+    let plan = medulla_uql::parse(&uql).map_err(|e| e.render(&uql))?;
 
     let guard = registry.txns.lock().unwrap();
     let txn = guard
@@ -416,18 +416,18 @@ fn unified_query(
     // before the committed store (CONCEPT:MEDULLA-KG.query.txn-tsdb-read-your parity). Absent without tsdb.
     #[cfg(feature = "crossmodal-tsdb")]
     let staged_series = {
-        let mut s = medulla_plan::StagedSeries::new();
+        let mut s = medulla_exec::exec::StagedSeries::new();
         for (series, points) in &txn.measurements {
             s.push_points(series, points.iter().cloned());
         }
         s
     };
 
-    let ctx = medulla_plan::PlanCtx::new(&view, &semantic);
+    let ctx = medulla_exec::exec::PlanCtx::new(&view, &semantic);
     #[cfg(feature = "crossmodal-tsdb")]
     let ctx = ctx.with_staged_series(&staged_series);
-    let result =
-        medulla_plan::execute(&plan, &ctx).map_err(|e| format!("GraphQL unifiedQuery: {e}"))?;
+    let result = medulla_exec::exec::execute(&plan, &ctx)
+        .map_err(|e| format!("GraphQL unifiedQuery: {e}"))?;
 
     let rows: Vec<Value> = result
         .rows()
@@ -780,7 +780,7 @@ mod tests {
     #[cfg(feature = "crossmodal-tsdb")]
     #[test]
     fn cross_modal_txn_measurement_staged_series_ryow() {
-        use medulla_plan::{Op, Plan};
+        use medulla_exec::{algebra::Op, algebra::Plan};
 
         let core = core_fixture();
         let reg = CrossModalTxnRegistry::new();
@@ -807,7 +807,7 @@ mod tests {
         // `unified_query` does, and confirm a TsScan reads the staged point (RYOW).
         let guard = reg.txns.lock().unwrap();
         let txn = guard.get(&(OWNER.to_string(), txn_id.clone())).unwrap();
-        let mut staged = medulla_plan::StagedSeries::new();
+        let mut staged = medulla_exec::exec::StagedSeries::new();
         for (series, points) in &txn.measurements {
             staged.push_points(series, points.iter().cloned());
         }
@@ -815,13 +815,13 @@ mod tests {
 
         let view = core.analysis_snapshot();
         let semantic = core.semantic_store.read().clone();
-        let ctx = medulla_plan::PlanCtx::new(&view, &semantic).with_staged_series(&staged);
+        let ctx = medulla_exec::exec::PlanCtx::new(&view, &semantic).with_staged_series(&staged);
         let plan = Plan::new(vec![Op::TsScan {
             series: vec!["temp".to_string()],
             from: 0.0,
             to: 1000.0,
         }]);
-        let rows = medulla_plan::execute(&plan, &ctx).unwrap();
+        let rows = medulla_exec::exec::execute(&plan, &ctx).unwrap();
         assert!(
             rows.rows().iter().any(|r| r.id == "temp@100"),
             "TsScan must read the txn's own staged measurement point (RYOW)"

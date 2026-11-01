@@ -446,7 +446,7 @@ async fn define_plan_matview(
 /// path, unchanged), NEVER a silently-wrong incremental result.
 #[cfg(feature = "matview")]
 async fn index_matview(state: &Arc<RwLock<ServerState>>, def: PlanMatView) {
-    let mut circuit = match medulla_plan::incremental::Circuit::compile(&def.plan) {
+    let mut circuit = match medulla_exec::incremental::Circuit::compile(&def.plan) {
         Ok(circuit) => circuit,
         Err(unsupported) => {
             // First-class, queryable fallback (CONCEPT:MEDULLA-KG.storage.incremental-matview):

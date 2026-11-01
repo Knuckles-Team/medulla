@@ -10,9 +10,9 @@ mod served {
     use medulla_types::wire::{UqlResult, UqlRow};
     use serde_json::json;
 
-    use crate::exec::PlanCtx;
+    use medulla_exec::exec::PlanCtx;
     use crate::uql::serve::run_statement;
-    use crate::uql::{parse_statement, Params};
+    use medulla_uql::{parse_statement, Params};
 
     /// Five services on two pods, each with a p95 latency; `s5` has no latency.
     fn fixture() -> (medulla_graph_core::graph::GraphView, SemanticStore) {
@@ -114,7 +114,7 @@ mod served {
 #[cfg(not(feature = "numeric"))]
 #[test]
 fn a_build_without_numeric_refuses_the_stage_by_feature() {
-    use crate::uql::{parse_statement, Params, UqlCode};
+    use medulla_uql::{parse_statement, Params, UqlCode};
     let error = parse_statement(
         "MATCH (:Service) |> ATTRIBUTE SUM OF latency_ms LINEAR",
         &Params::new(),

@@ -5,7 +5,7 @@
 use medulla_types::wire::{CmpOp, EdgeDir, JsonPathOp, Op, Plan, Pred, PredLiteral, TimeAxis};
 use proptest::prelude::*;
 
-use crate::uql::{canonicalize, parse};
+use medulla_uql::{canonicalize, parse};
 
 fn text() -> impl Strategy<Value = String> {
     prop_oneof![

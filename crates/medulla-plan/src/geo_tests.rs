@@ -13,9 +13,9 @@ use medulla_graph_core::graph::GraphView;
 use medulla_semantic_index::semantic::SemanticStore;
 use serde_json::json;
 
-use crate::algebra::{Op, Plan, Pred};
-use crate::exec::PlanCtx;
-use crate::PlanExt;
+use medulla_exec::algebra::{Op, Plan, Pred};
+use medulla_exec::exec::PlanCtx;
+use medulla_exec::exec::PlanExt;
 
 fn blob(v: serde_json::Value) -> Vec<u8> {
     rmp_serde::to_vec_named(&v).unwrap()
@@ -73,13 +73,13 @@ fn spatial_scan_tight_bbox() {
     assert_eq!(run(&plan, &view), vec!["A", "B"]);
 }
 
-/// A stub [`crate::exec::SpatialSource`] that returns a FIXED, made-up id set unrelated
+/// A stub [`medulla_exec::exec::SpatialSource`] that returns a FIXED, made-up id set unrelated
 /// to `cities()`'s real geometries — used to prove `Op::SpatialScan` genuinely consults a
 /// bound `PlanCtx::spatial` INSTEAD of falling back to the per-call ephemeral R-tree
 /// (CONCEPT:MEDULLA-KG.storage.incremental-spatial, L37).
 struct StubSpatial(Vec<String>);
 
-impl crate::exec::SpatialSource for StubSpatial {
+impl medulla_exec::exec::SpatialSource for StubSpatial {
     fn query_bbox(&self, _layer: &str, _bbox: [f64; 4]) -> Vec<String> {
         self.0.clone()
     }
@@ -338,7 +338,7 @@ fn reproject_keeps_tagged_rows_drops_untagged() {
 
 #[test]
 fn spatial_op_buffer_and_intersection() {
-    use crate::algebra::Op;
+    use medulla_exec::algebra::Op;
     use medulla_types::wire::SpatialOpKind;
     let view = parcels();
     // Buffer succeeds for every parcel (derived geometry always exists).

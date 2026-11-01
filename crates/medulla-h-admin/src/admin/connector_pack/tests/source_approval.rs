@@ -328,7 +328,7 @@ async fn foreign_read_four_phase_uses_authenticated_dispatch() {
         chunk_bytes: 512,
         deadline_ms: 10_000,
     };
-    let plan = medulla_plan::Plan::new(vec![medulla_plan::Op::ForeignScan {
+    let plan = medulla_exec::algebra::Plan::new(vec![medulla_exec::algebra::Op::ForeignScan {
         source: Box::new(medulla_types::wire::ForeignSourceSpec::Named {
             name: source_name.clone(),
         }),
@@ -471,9 +471,9 @@ async fn foreign_read_four_phase_uses_authenticated_dispatch() {
 
 struct BoundRows;
 
-impl medulla_plan::federation::ForeignSource for BoundRows {
-    fn fetch(&self) -> Result<medulla_plan::RowSet, String> {
-        Ok(medulla_plan::RowSet::from_ids(["bound-row".to_string()]))
+impl medulla_federation::federation::ForeignSource for BoundRows {
+    fn fetch(&self) -> Result<medulla_exec::rowset::RowSet, String> {
+        Ok(medulla_exec::rowset::RowSet::from_ids(["bound-row".to_string()]))
     }
 }
 
@@ -782,11 +782,11 @@ async fn two_approved_sources_join_once_and_duplicate_refuses_atomically() {
         .iter()
         .map(|item| item.source_id.clone())
         .collect();
-    let plan = medulla_plan::Plan::new(
+    let plan = medulla_exec::algebra::Plan::new(
         names
             .iter()
             .enumerate()
-            .map(|(index, name)| medulla_plan::Op::ForeignScan {
+            .map(|(index, name)| medulla_exec::algebra::Op::ForeignScan {
                 source: Box::new(medulla_types::wire::ForeignSourceSpec::Named {
                     name: name.clone(),
                 }),

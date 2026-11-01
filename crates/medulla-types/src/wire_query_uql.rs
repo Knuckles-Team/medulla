@@ -1,6 +1,6 @@
 //! UQL PRINTER (UQL-06) — `Plan` → canonical UQL text.
 //!
-//! The inverse of `medulla_plan::uql::parse`: for every plan the printer accepts,
+//! The inverse of `medulla_uql::parse`: for every plan the printer accepts,
 //! `parse(print(plan)) == canonicalize(plan)` (proved by medulla-plan's round-trip property
 //! test and its every-variant walk). It lives HERE, beside the wire types, rather than in
 //! medulla-plan, because only this crate sees the exact feature set each `Op`/`Pred` variant is

@@ -256,14 +256,14 @@ impl ReadOnlyRelations for DecisionViews {
     }
 }
 
-impl medulla_plan::exec::DecisionSource for DecisionViews {
+impl medulla_exec::exec::DecisionSource for DecisionViews {
     /// EH-525: `SOURCE RELIABILITY` reads the subject's learned reputation.
     fn learned_reliability(
         &self,
         subject: &str,
         prior_mean: f64,
         prior_strength: f64,
-    ) -> Result<Option<medulla_plan::exec::LearnedReliability>, String> {
+    ) -> Result<Option<medulla_exec::exec::LearnedReliability>, String> {
         super::stat_reputation::learned_reliability(
             &self.store,
             &self.reader,

@@ -56,7 +56,7 @@ use medulla_semantic_index::semantic::SemanticStore;
 use serde_json::json;
 
 #[cfg(any(feature = "federation", feature = "geo"))]
-use crate::algebra::Pred;
+use medulla_exec::algebra::Pred;
 #[cfg(any(
     feature = "owl",
     feature = "federation",
@@ -64,7 +64,7 @@ use crate::algebra::Pred;
     feature = "tensor",
     all(feature = "stream", feature = "timeseries"),
 ))]
-use crate::algebra::{Op, Plan};
+use medulla_exec::algebra::{Op, Plan};
 #[cfg(any(
     feature = "owl",
     feature = "federation",
@@ -72,7 +72,7 @@ use crate::algebra::{Op, Plan};
     feature = "tensor",
     all(feature = "stream", feature = "timeseries"),
 ))]
-use crate::exec::{execute, PlanCtx};
+use medulla_exec::exec::{execute, PlanCtx};
 
 #[cfg(any(
     feature = "owl",
@@ -230,7 +230,7 @@ fn bitemporal_reason_vector_traverse_asof_eg384() {
 /// `validate_http_json_target`/`HTTP_JSON_FEDERATION_ALLOW_ENV` (this SAME crate, called
 /// from this SAME `HttpJsonSource` execution path), which unconditionally rejects an
 /// unallowlisted loopback/private destination. The caller below now opts its own mock
-/// server's exact origin in via `federation_tests::MockHttpAllowGuard`, the same
+/// server's exact origin in via `test_guard::MockHttpAllowGuard`, the same
 /// production allowlist mechanism (not a bypass), matching what every OTHER mock-HTTP
 /// federation test in this crate (`federation_tests.rs`) already does.
 #[cfg(feature = "federation")]
@@ -258,21 +258,21 @@ fn spawn_mock_json(body: &'static str) -> String {
 /// `Scan(Doc)` (graph) → `Filter(year>2023)` (real DataFusion / relational SQL) →
 /// `ForeignScan(join)` (a foreign JSON/SQL source, foreign∩local) → `Rank(q)` (vector) —
 /// and equals the hand-wired join (local-filtered ∩ foreign, vector-ranked). Reuses the
-/// canonical `crate::fixture` (Docs d1..d5 with years + embeddings).
+/// canonical `medulla_exec::fixture` (Docs d1..d5 with years + embeddings).
 #[cfg(feature = "federation")]
 #[test]
 fn federation_sparql_local_vector_foreign_sql_one_plan_eg385() {
     use medulla_types::wire::{ForeignSourceSpec, HttpFieldMap};
     use std::collections::HashSet;
 
-    let fx = crate::fixture::build();
-    let query = crate::fixture::query_vec();
+    let fx = medulla_exec::fixture::build();
+    let query = medulla_exec::fixture::query_vec();
 
     // The foreign source returns {d2, d4} — the "SPARQL SERVICE / foreign SQL" result set.
     let addr = spawn_mock_json(r#"[{"k":"d2"},{"k":"d4"}]"#);
     // Opt this test's own loopback mock server into the production SSRF allowlist —
     // see the `spawn_mock_json` doc comment above for why this is required now.
-    let _allow = crate::federation_tests::MockHttpAllowGuard::new(&addr);
+    let _allow = medulla_federation::test_guard::MockHttpAllowGuard::new(&addr);
     let foreign = ForeignSourceSpec::HttpJson {
         url: addr,
         json_path: "".into(),
@@ -331,7 +331,7 @@ fn federation_sparql_local_vector_foreign_sql_one_plan_eg385() {
 #[test]
 fn federation_named_source_fails_closed_eg385() {
     use medulla_types::wire::ForeignSourceSpec;
-    let fx = crate::fixture::build();
+    let fx = medulla_exec::fixture::build();
     let plan = Plan::new(vec![Op::ForeignScan {
         source: Box::new(ForeignSourceSpec::Named {
             name: "untrusted-peer".into(),

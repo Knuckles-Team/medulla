@@ -106,7 +106,7 @@ $($variants)*
 
     // ── UQL — the one query-TEXT surface (UQL-07/08/09, EH-434) ─────────────────
     // The human/agent-writable counterpart of `UnifiedQuery`: a UQL statement whose
-    // pipelines parse (`medulla_plan::uql::parse_statement`) into the SAME `wire::Plan` ops
+    // pipelines parse (`medulla_uql::parse_statement`) into the SAME `wire::Plan` ops
     // `UnifiedQuery` carries. Typed `$name` `params` bind as VALUES (never spliced into
     // the text); `EXPLAIN` (plan, per-stage estimated rows, incremental-maintainability —
     // no execution) and `PROFILE` (execute, per-stage rows + time); `LET … FROM/JOIN`
@@ -399,7 +399,7 @@ $($variants)*
     /// graph rides the method; over the wire an empty `graph` falls back to the request
     /// envelope's graph). The handler resolves a configured/injected `NlPlanner`, turns
     /// the NL into a UQL query string, and runs it through the IDENTICAL deterministic
-    /// UQL pipeline (`medulla_plan::uql::parse` → the fused executor) — NO new
+    /// UQL pipeline (`medulla_uql::parse` → the fused executor) — NO new
     /// execution path, and no LLM in the engine core. Result via `ResultPayload::raw` —
     /// the SAME `[id, score|nil]` rows as `UnifiedQuery`.
     ///
