@@ -41,7 +41,7 @@ fn seed_admission(shard: &Shard, admitted: medulla_types::native_control::Submit
     });
 }
 
-fn apply(
+pub fn apply(
     shard: &Shard,
     tag: &str,
     req: &PublishRunCheckpointRequest,

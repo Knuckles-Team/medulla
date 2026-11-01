@@ -1230,7 +1230,7 @@ mod graph_meta_migration_tests {
         .unwrap()
     }
 
-    fn open(dir: &std::path::Path) -> Shard {
+    pub fn open(dir: &std::path::Path) -> Shard {
         Shard::open(&dir.join("graph-0.redb")).unwrap()
     }
 

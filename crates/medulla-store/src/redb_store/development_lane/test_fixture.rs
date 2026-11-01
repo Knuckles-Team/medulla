@@ -115,7 +115,7 @@ impl NativeLaneFixture {
     }
 
     /// One admitted maintenance write over the fixture's graph.
-    pub(super) fn with_write<R>(
+    pub fn with_write<R>(
         &self,
         tag: &str,
         write: impl FnOnce(&ShardWrite<'_>) -> Result<R, String>,

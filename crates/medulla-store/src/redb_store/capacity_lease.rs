@@ -305,7 +305,7 @@ fn lease_matches_status_request(lease: &CapacityLease, request: &CapacityStatusR
             .is_none_or(|wanted| wanted == lease.lease_id)
 }
 
-fn apply(
+pub fn apply(
     write: &ShardWrite<'_>,
     graph: &str,
     method: &Method,

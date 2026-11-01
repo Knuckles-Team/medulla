@@ -26,7 +26,7 @@ fn seed(shard: &Shard) {
     seed_claim(shard, |_| {});
 }
 
-fn apply(
+pub fn apply(
     shard: &Shard,
     tag: &str,
     req: &PublishCurrentPlanRequest,

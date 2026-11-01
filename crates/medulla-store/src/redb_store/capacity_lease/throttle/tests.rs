@@ -15,7 +15,7 @@ use super::super::super::shard::Shard;
 use super::super::super::{decode_durable, DurableCrypto};
 use medulla_types::protocol::Method;
 
-const GRAPH: &str = "graph-throttle";
+pub const GRAPH: &str = "graph-throttle";
 
 struct Harness {
     path: std::path::PathBuf,
@@ -31,7 +31,7 @@ impl Drop for Harness {
 }
 
 impl Harness {
-    fn open(tag: &str) -> Self {
+    pub fn open(tag: &str) -> Self {
         let path = crate::redb_store::temp_path("medulla-capacity-throttle", tag);
         let shard = Shard::open(&path).expect("temp shard opens");
         Self {

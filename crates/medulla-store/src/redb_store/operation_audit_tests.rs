@@ -7,10 +7,10 @@ use medulla_types::protocol::Method;
 use crate::redb_store::commit_ops;
 use crate::redb_store::DurableCrypto;
 
-const GRAPH: &str = "g";
-pub(crate) const TENANT: &str = "tenant-a";
+pub const GRAPH: &str = "g";
+pub const TENANT: &str = "tenant-a";
 
-fn open(dir: &std::path::Path) -> Shard {
+pub fn open(dir: &std::path::Path) -> Shard {
     Shard::open(&dir.join("graph-0.redb")).unwrap()
 }
 
@@ -38,7 +38,7 @@ fn seeded(dir: &std::path::Path) -> (Shard, AuditTailCache) {
 
 /// A valid event of [`TENANT`] with the `event` audit class, shared by every
 /// operation-audit test in the crate.
-pub(crate) fn event(request_id: &str, status: &str) -> OperationAuditEvent {
+pub fn event(request_id: &str, status: &str) -> OperationAuditEvent {
     OperationAuditEvent {
         tenant: TENANT.into(),
         principal: "svc:caller".into(),

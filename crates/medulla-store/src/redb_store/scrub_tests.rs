@@ -8,7 +8,7 @@ use crate::redb_store::read_one_node;
 use crate::redb_store::temp_path;
 use crate::redb_store::UnsealFailure;
 
-const GRAPH: &str = "scrub_graph";
+pub const GRAPH: &str = "scrub_graph";
 const NODE_IDS: [&str; 5] = ["n0", "n1", "n2", "n3", "n4"];
 const CORRUPT: &str = "n2";
 

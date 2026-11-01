@@ -569,7 +569,7 @@ impl<'a> DurableCrypto<'a> {
 
     /// The typed form every unseal goes through: the closed reason a stored
     /// blob cannot be opened, or its plaintext.
-    pub(crate) fn open(&self, stored: &[u8]) -> Result<Vec<u8>, UnsealFailure> {
+    pub fn open(&self, stored: &[u8]) -> Result<Vec<u8>, UnsealFailure> {
         if stored.len() > MAX_DURABLE_STORED_BYTES {
             return Err(UnsealFailure::Oversize);
         }

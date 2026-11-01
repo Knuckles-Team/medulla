@@ -416,7 +416,7 @@ pub(crate) struct ResourceRowTablesRef<'a, 'txn> {
 }
 
 impl<'txn> ResourceRowTables<'txn> {
-    pub(crate) fn open<'borrow>(
+    pub fn open<'borrow>(
         write: &'borrow ShardWrite<'txn>,
         graph: &str,
     ) -> Result<ResourceRowTables<'borrow>, String> {

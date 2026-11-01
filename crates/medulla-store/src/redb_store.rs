@@ -125,7 +125,7 @@ pub(crate) use store_batch::*;
 pub use store_cleanup::*;
 pub use store_control::*;
 pub use store_mutation::*;
-pub(crate) use store_native::*;
+pub use store_native::*;
 pub use store_read::*;
 pub(crate) use store_retry::*;
 // The exact performance harness is a separate binary crate and must reach the

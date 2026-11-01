@@ -6,7 +6,7 @@ use super::*;
 
 pub(crate) mod run_fixture;
 
-pub(super) const GRAPH: &str = "graph-a";
+pub const GRAPH: &str = "graph-a";
 
 pub(super) struct TempShard {
     path: std::path::PathBuf,
@@ -19,13 +19,13 @@ impl Drop for TempShard {
     }
 }
 
-pub(super) fn open(tag: &str) -> TempShard {
+pub fn open(tag: &str) -> TempShard {
     let path = crate::redb_store::temp_path("medulla-work-item-rows", tag);
     let shard = Shard::open(&path).expect("temp shard opens");
     TempShard { path, shard }
 }
 
-pub(super) fn with_write<R>(
+pub fn with_write<R>(
     shard: &Shard,
     op_id: &str,
     now_ms: u64,
@@ -41,7 +41,7 @@ pub(super) fn with_write<R>(
 }
 
 /// Run `write` against `GRAPH`'s node table in one committed transaction.
-pub(super) fn with_nodes<R>(
+pub fn with_nodes<R>(
     shard: &Shard,
     tag: &str,
     write: impl FnOnce(
@@ -69,7 +69,7 @@ pub(super) fn check_guard(shard: &Shard, tag: &str, method: Method) -> Result<()
 }
 
 /// Apply a native WorkItem method atomically through the production row dispatch.
-pub(super) fn apply(
+pub fn apply(
     shard: &Shard,
     tag: &str,
     method: Method,
@@ -105,7 +105,7 @@ pub(super) fn apply(
 }
 
 /// Shared native run-admission fixture, with no conversation by default.
-pub(super) fn run_request() -> medulla_types::native_control::SubmitWorkItemRequest {
+pub fn run_request() -> medulla_types::native_control::SubmitWorkItemRequest {
     serde_json::from_value(serde_json::json!({
         "schema_version":"1", "run_id":"run", "work_item_id":null,
         "context": {"schema_version":"2", "request_id":"request", "subject_id":"owner",
@@ -123,7 +123,7 @@ pub(super) fn run_request() -> medulla_types::native_control::SubmitWorkItemRequ
 }
 
 /// Submit fixture rows within the caller's existing admitted transaction.
-pub(super) fn submit_run_rows(
+pub fn submit_run_rows(
     admitted: &ShardWrite<'_>,
     request: &medulla_types::native_control::SubmitWorkItemRequest,
     owner: &str,

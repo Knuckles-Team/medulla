@@ -289,7 +289,7 @@ pub(crate) struct NativeOperationTables<'txn> {
 }
 
 impl<'txn> NativeOperationTables<'txn> {
-    fn open(write: &'txn ShardWrite<'txn>, graph_fname: &str) -> Result<Self, String> {
+    pub fn open(write: &'txn ShardWrite<'txn>, graph_fname: &str) -> Result<Self, String> {
         let graph = GraphRowTables::open(write.graph(graph_fname)?)?;
         let resources = ResourceRowTables::open(write, graph_fname)?;
         let (lane_holds, lane_work_item_index, lane_counters, lane_pressure_index, lane_policies) =

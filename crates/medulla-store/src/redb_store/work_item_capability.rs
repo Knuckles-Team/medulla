@@ -1126,7 +1126,7 @@ mod tests {
 
     /// `create_owner` materializes the whole declared shard census, so there is
     /// no hand-written table bootstrap to run here any more.
-    fn open(path: &Path) -> Shard {
+    pub fn open(path: &Path) -> Shard {
         Shard::open(path).expect("open capability test shard")
     }
 

@@ -123,7 +123,7 @@ where
 
 impl<'g> GraphRowTables<'g> {
     /// Open one member's graph-row tables, bounded to that member's own scope.
-    pub(crate) fn open<'txn>(
+    pub fn open<'txn>(
         member: &'g AdmittedOwnerWrite<'txn, GraphShardOwner>,
     ) -> Result<Self, String> {
         Ok(Self {
