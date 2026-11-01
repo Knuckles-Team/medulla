@@ -40,9 +40,9 @@ struct Member {
     id: NodeId,
     dir: String,
     /// `Some` while running; `None` after a kill (until restart).
-    started: Option<StartedNode>,
+    pub started: Option<StartedNode>,
     /// Held so a restart re-opens the SAME persist dir + ports.
-    state: Option<Arc<RwLock<ServerState>>>,
+    pub state: Option<Arc<RwLock<ServerState>>>,
     /// A cleanup failure makes the cluster unsafe to remove. Keep it attached to
     /// the slot so `teardown` cannot accidentally miss a failed `kill` after the
     /// running handle has already been taken.
