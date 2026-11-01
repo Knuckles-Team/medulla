@@ -38,6 +38,7 @@ use transaction::{execute_consensus_transaction, TransactionExecution};
 
 #[cfg(feature = "raft")]
 use medulla_kernel::kernel::dispatch_support::ReplicatedApplyScope;
+#[cfg(feature = "raft")]
 use medulla_kernel::kernel::dispatch_support::REPLICATED_APPLY;
 
 #[cfg(all(feature = "raft", feature = "jobs"))]
