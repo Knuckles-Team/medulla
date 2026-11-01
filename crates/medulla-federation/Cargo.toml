@@ -49,4 +49,6 @@ test-support = ["medulla-exec/test-support", "medulla-protocol-types/test-suppor
 federation-sql = ["federation", "dep:sqlx", "dep:tokio", "dep:futures-util", "dep:sqlparser", "dep:url", "server"]
 text = ["medulla-exec/text", "medulla-types/text", "medulla-uql/text"]
 [dev-dependencies]
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-exec = { path = "../medulla-exec", features = ["test-support"] }

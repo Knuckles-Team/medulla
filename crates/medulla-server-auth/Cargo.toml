@@ -66,4 +66,11 @@ security = ["oidc", "medulla-server-api/security", "medulla-graph-core/security"
 test-support = ["medulla-server-api/test-support", "medulla-kernel/test-support", "medulla-types/test-support", "medulla-agent-types/test-support", "medulla-catalog-types/test-support", "medulla-identity-types/test-support", "medulla-protocol-types/test-support", "medulla-exec/test-support"]
 wasm-udf = ["dep:medulla-wasm", "dep:medulla-plan", "medulla-server-api/wasm-udf", "medulla-exec/wasm-udf", "medulla-plan?/wasm-udf", "medulla-protocol-types/wasm-udf", "medulla-types/wasm-udf", "medulla-wasm?/wasm-udf"]
 [dev-dependencies]
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }

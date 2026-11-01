@@ -24,3 +24,6 @@ medulla-index-types = { path = "../medulla-index-types" }
 
 [features]
 ann = ["dep:rayon"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }

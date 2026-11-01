@@ -30,3 +30,8 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 
 [features]
 security = ["medulla-graph-core/security", "dep:redb", "dep:sha2", "dep:hmac", "dep:medulla-storage", "dep:medulla-transaction", "medulla-protocol-types/security", "medulla-types/security"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }

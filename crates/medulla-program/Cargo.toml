@@ -19,4 +19,6 @@ hex = "0.4"
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 
 [dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 rmp-serde = "1.3"

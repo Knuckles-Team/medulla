@@ -51,3 +51,10 @@ wasm-udf = ["dep:medulla-wasm", "medulla-wasm/wasm-udf", "medulla-protocol-types
 viz-columnstore = ["dep:medulla-viz-columnstore", "medulla-server-api/viz-columnstore", "viz"]
 viz = ["dep:medulla-viz-core", "medulla-protocol-types/viz", "medulla-server-api/viz", "medulla-types/viz", "medulla-viz-core?/viz", "medulla-viz-graph-tiles?/viz", "medulla-viz-kernels?/viz"]
 server = ["dep:tokio", "medulla-server-api/server"]
+
+[dev-dependencies]
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }

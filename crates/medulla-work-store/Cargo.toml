@@ -44,4 +44,11 @@ security = ["medulla-store/security", "medulla-lane-store/security", "medulla-ke
 statechart = ["dep:medulla-statechart", "medulla-store/statechart", "medulla-protocol-types/statechart", "medulla-types/statechart"]
 test-support = ["dep:tempfile", "medulla-store/test-support", "medulla-protocol-types/test-support", "medulla-decision-types/test-support", "medulla-kernel/test-support", "medulla-types/test-support", "medulla-work-types/test-support", "medulla-decision-outcome-types/test-support"]
 [dev-dependencies]
+medulla-store = { path = "../medulla-store", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
+medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types", features = ["test-support"] }
 tempfile = "3"

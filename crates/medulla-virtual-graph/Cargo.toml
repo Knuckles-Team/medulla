@@ -27,3 +27,9 @@ medulla-source-types = { path = "../medulla-source-types" }
 [features]
 rdf = ["dep:oxrdf", "medulla-rdf/rdf", "medulla-types/rdf"]
 sparql = ["rdf", "dep:spargebra", "medulla-rdf/sparql", "medulla-types/sparql"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
+medulla-source-types = { path = "../medulla-source-types", features = ["test-support"] }

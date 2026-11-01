@@ -121,6 +121,29 @@ test-support = ["medulla-server-graph/test-support", "medulla-wire-core/test-sup
 tsdb = ["medulla-server-router/tsdb", "medulla-server-graph/tsdb", "medulla-server/tsdb", "redb", "dep:medulla-tsdb", "dep:medulla-plan", "medulla-tsdb/redb-store", "medulla-plan/timeseries", "server", "medulla-h-retrieve/tsdb", "medulla-wire-core/tsdb", "medulla-h-admin/tsdb", "medulla-h-decide/tsdb", "medulla-h-jobs/tsdb", "medulla-h-query/tsdb", "medulla-persistence/tsdb", "medulla-server-api/tsdb", "medulla-store/tsdb", "medulla-wire/tsdb", "medulla-server-ops/tsdb"]
 wasm-udf = ["medulla-server-router/wasm-udf", "medulla-server-graph/wasm-udf", "medulla-server/wasm-udf", "dep:medulla-plan", "medulla-plan?/wasm-udf", "server", "medulla-h-admin/wasm-udf", "medulla-h-decide/wasm-udf", "medulla-h-jobs/wasm-udf", "medulla-h-query/wasm-udf", "medulla-protocol-types/wasm-udf", "medulla-server-api/wasm-udf", "medulla-types/wasm-udf", "medulla-wire/wasm-udf", "medulla-server-ops/wasm-udf", "medulla-server-auth/wasm-udf", "medulla-exec/wasm-udf", "medulla-nlq/wasm-udf", "medulla-uql/wasm-udf"]
 [dev-dependencies]
+medulla-wire-core = { path = "../medulla-wire-core", features = ["test-support"] }
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
+medulla-h-admin = { path = "../medulla-h-admin", features = ["test-support"] }
+medulla-h-decide = { path = "../medulla-h-decide", features = ["test-support"] }
+medulla-h-ingest = { path = "../medulla-h-ingest", features = ["test-support"] }
+medulla-h-query = { path = "../medulla-h-query", features = ["test-support"] }
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-store = { path = "../medulla-store", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-wire = { path = "../medulla-wire", features = ["test-support"] }
+medulla-source-types = { path = "../medulla-source-types", features = ["test-support"] }
+medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
+medulla-persistence-records = { path = "../medulla-persistence-records", features = ["test-support"] }
+medulla-server-blob = { path = "../medulla-server-blob", features = ["test-support"] }
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
+medulla-federation = { path = "../medulla-federation", features = ["test-support"] }
+medulla-server-graph = { path = "../medulla-server-graph", features = ["test-support"] }
+medulla-server = { path = "../medulla-server", features = ["test-support"] }
 medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 tempfile = "3"

@@ -25,3 +25,7 @@ schemars = { version = "1.2.3", optional = true }
 [features]
 contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-catalog-types/contract-schema"]
 test-support = ["medulla-types/test-support", "medulla-catalog-types/test-support"]
+
+[dev-dependencies]
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }

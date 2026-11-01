@@ -49,6 +49,7 @@ medulla-graph-algos = { path = "../medulla-graph-algos" }
 medulla-table-store = { path = "../medulla-table-store" }
 
 [dev-dependencies]
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
 medulla-table-store = { path = "../medulla-table-store", features = ["dev-scope-grant"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }

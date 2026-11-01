@@ -100,6 +100,24 @@ owl-dl = ["dep:medulla-rdf", "medulla-rdf/owl-dl", "medulla-persistence/owl-dl",
 promql = ["dep:medulla-tsdb", "medulla-tsdb/promql", "medulla-persistence/promql", "medulla-server-api/promql", "medulla-store/promql", "blob", "query", "redb", "server", "text", "tsdb"]
 traces = ["dep:medulla-tsdb", "medulla-tsdb/traces", "medulla-persistence/traces", "medulla-server-api/traces", "medulla-store/traces", "blob", "query", "redb", "server", "text", "tsdb"]
 [dev-dependencies]
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-raft = { path = "../medulla-raft", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-store = { path = "../medulla-store", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-source-types = { path = "../medulla-source-types", features = ["test-support"] }
+medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
+medulla-persistence-records = { path = "../medulla-persistence-records", features = ["test-support"] }
+medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
+medulla-server-blob = { path = "../medulla-server-blob", features = ["test-support"] }
+medulla-server-mutation = { path = "../medulla-server-mutation", features = ["test-support"] }
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
+medulla-federation = { path = "../medulla-federation", features = ["test-support"] }
 medulla-server = { path = "../medulla-server", features = ["blob", "compute-dist", "cost-opt", "epistemic", "federation", "federation-sql", "full", "geo", "geosparql", "gpu", "gpu-cuda", "jobs", "json-ld", "knowledge-batch", "kv", "matview", "nl-query", "numeric", "owl", "owl-dl", "owl-plan", "par-runtime", "promql", "query", "raft", "rdf", "rdf-xml", "redb", "security", "server", "server-tls", "shacl", "sparql", "sparql-hash", "sparql-star", "stream", "streaming", "tensor", "test-support", "text", "traces", "tsdb", "wasm-udf"] }
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 tempfile = "3"

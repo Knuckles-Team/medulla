@@ -26,3 +26,7 @@ medulla-identity-types = { path = "../medulla-identity-types" }
 wire-contract = ["medulla-types/wire-contract", "medulla-identity-types/wire-contract"]
 wire-complete = ["wire-contract", "medulla-types/wire-complete", "medulla-identity-types/wire-complete"]
 contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-identity-types/contract-schema"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }

@@ -81,5 +81,12 @@ statechart = ["medulla-server-api/statechart", "medulla-capabilities/statechart"
 streaming = ["medulla-server-api/streaming", "medulla-server-cdc/streaming", "medulla-protocol-types/streaming", "medulla-types/streaming"]
 test-support = ["medulla-server-api/test-support", "medulla-server-auth/test-support", "medulla-kernel/test-support", "medulla-types/test-support", "medulla-agent-types/test-support", "medulla-catalog-types/test-support", "medulla-protocol-types/test-support", "medulla-work-types/test-support"]
 [dev-dependencies]
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 medulla-table-store = { path = "../medulla-table-store", features = ["dev-scope-grant"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }

@@ -128,6 +128,7 @@ medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 
 [dev-dependencies]
+medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types", features = ["test-support"] }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }

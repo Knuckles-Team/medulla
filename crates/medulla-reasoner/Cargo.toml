@@ -37,3 +37,7 @@ owl = ["rdf", "medulla-rdf/owl", "medulla-types/owl"]
 owl-dl = ["owl", "medulla-rdf/owl-dl"]
 rdf = ["dep:oxrdf", "medulla-rdf/rdf", "medulla-types/rdf"]
 sparql-star = ["medulla-rdf/sparql-star", "rdf"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }

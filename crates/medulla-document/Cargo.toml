@@ -36,6 +36,9 @@ contract = ["dep:medulla-modality"]
 # Dependency-light: this reuses medulla-modality + serde only.
 serving = ["contract"]
 [dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-source-types = { path = "../medulla-source-types", features = ["test-support"] }
 serde_json = "1.0"
 
 [[bench]]

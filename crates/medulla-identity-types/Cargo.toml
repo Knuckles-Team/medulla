@@ -25,3 +25,6 @@ wire-contract = ["medulla-types/wire-contract"]
 wire-complete = ["wire-contract", "medulla-types/wire-complete"]
 contract-schema = ["dep:schemars", "medulla-types/contract-schema"]
 test-support = ["medulla-types/test-support"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }

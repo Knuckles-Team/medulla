@@ -93,4 +93,6 @@ iceberg-storage-opendal = { version = "0.10", optional = true, default-features 
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 
 [dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 tempfile = "3"

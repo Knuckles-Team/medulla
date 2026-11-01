@@ -24,3 +24,6 @@ ndarray = "0.17"
 
 [features]
 analytics = ["medulla-numeric/analytics"]
+
+[dev-dependencies]
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }

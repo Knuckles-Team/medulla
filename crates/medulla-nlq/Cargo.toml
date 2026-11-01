@@ -42,4 +42,8 @@ text = ["medulla-exec/text", "medulla-uql/text", "medulla-federation/text", "med
 timeseries = ["medulla-exec/timeseries", "medulla-uql/timeseries", "medulla-types/timeseries"]
 wasm-udf = ["medulla-exec/wasm-udf", "medulla-uql/wasm-udf", "medulla-types/wasm-udf"]
 [dev-dependencies]
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
+medulla-federation = { path = "../medulla-federation", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-exec = { path = "../medulla-exec", features = ["test-support"] }

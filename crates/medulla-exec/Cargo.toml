@@ -57,3 +57,8 @@ tensor = ["query", "dep:medulla-tensor", "medulla-types/tensor"]
 text = ["query", "dep:medulla-text", "medulla-text/tantivy", "medulla-types/text"]
 timeseries = ["query", "dep:medulla-tsdb", "medulla-tsdb/redb-store", "medulla-tsdb/derive", "medulla-types/timeseries", "dep:medulla-tensor", "dep:medulla-numeric", "medulla-numeric/motif"]
 wasm-udf = ["query", "dep:medulla-wasm", "medulla-wasm/wasm-udf", "medulla-types/wasm-udf"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }

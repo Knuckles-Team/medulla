@@ -31,3 +31,10 @@ wire-complete = ["wire-contract", "medulla-types/wire-complete", "medulla-mutati
 contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-mutation-types/contract-schema", "medulla-agent-types/contract-schema", "medulla-work-types/contract-schema", "medulla-catalog-types/contract-schema", "medulla-source-types/contract-schema"]
 query = ["medulla-types/query"]
 test-support = ["medulla-types/test-support", "medulla-agent-types/test-support", "medulla-work-types/test-support", "medulla-catalog-types/test-support", "medulla-source-types/test-support"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
+medulla-source-types = { path = "../medulla-source-types", features = ["test-support"] }

@@ -24,3 +24,6 @@ medulla-mutation-types = { path = "../medulla-mutation-types" }
 wire-contract = ["medulla-types/wire-contract", "medulla-mutation-types/wire-contract"]
 wire-complete = ["wire-contract", "medulla-types/wire-complete", "medulla-mutation-types/wire-complete"]
 contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-mutation-types/contract-schema"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }

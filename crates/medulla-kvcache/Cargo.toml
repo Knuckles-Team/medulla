@@ -74,5 +74,8 @@ contract = ["dep:medulla-modality", "dep:serde", "medulla-compute?/contract", "m
 graph = ["dep:medulla-compute", "dep:medulla-graph-core"]
 
 [dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 # Only the `durable` redb cold-tier test touches the filesystem.
 tempfile = "3.27"

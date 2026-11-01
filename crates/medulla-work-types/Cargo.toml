@@ -28,3 +28,6 @@ contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-mut
 jobs = ["medulla-types/jobs"]
 program-optimization = ["jobs", "medulla-types/program-optimization"]
 test-support = ["medulla-types/test-support"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }

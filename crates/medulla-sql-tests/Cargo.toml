@@ -37,4 +37,6 @@ finance = ["medulla-sql/finance", "medulla-result-types/finance", "medulla-proto
 numeric = ["medulla-sql/numeric", "dep:medulla-tsdb", "medulla-sql-udfs/numeric"]
 sql = ["medulla-sql/sql", "medulla-table-store/sql", "medulla-tables/sql", "medulla-sql-udfs/sql", "medulla-cypher/sql"]
 [dev-dependencies]
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-sql-lang = { path = "../medulla-sql-lang" }

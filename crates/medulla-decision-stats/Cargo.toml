@@ -23,3 +23,9 @@ medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 
 [features]
 decision = ["dep:medulla-types", "medulla-numeric/decision"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types", features = ["test-support"] }

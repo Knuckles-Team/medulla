@@ -49,6 +49,9 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-exec = { path = "../medulla-exec" }
 
 [dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 # Only for tests/end_to_end.rs's step 6 -- proving the committed :Claim is
 # queryable/reasonable alongside classical graph data via the SAME BeliefGraph/
 # propagate_confidence surface every other claim in this engine uses. Not a runtime

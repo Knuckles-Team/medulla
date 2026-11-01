@@ -59,4 +59,9 @@ shacl = ["dep:medulla-shacl", "medulla-server-api/shacl", "medulla-kernel/shacl"
 stream = ["query", "dep:medulla-stream", "dep:medulla-plan", "medulla-server-api/stream", "medulla-exec/stream", "medulla-plan?/stream", "medulla-stream?/stream", "medulla-types/stream"]
 streaming = ["medulla-server-api/streaming", "medulla-protocol-types/streaming", "medulla-types/streaming"]
 [dev-dependencies]
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }

@@ -414,6 +414,7 @@ medulla-finance = { path = "../medulla-finance" }
 medulla-sql = { path = "../medulla-sql" }
 
 [dev-dependencies]
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
 medulla-federation = { path = "../medulla-federation", features = ["test-support"] }
 medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 medulla-result-types = { path = "../medulla-result-types", features = ["query"] }

@@ -67,3 +67,21 @@ raft = ["medulla-server-router/raft", "medulla-server/raft", "redb", "dep:openra
 redb = ["medulla-server-router/redb", "medulla-server/redb", "dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-h-ingest/redb", "medulla-kernel/redb", "medulla-persistence/redb", "medulla-raft/redb", "medulla-raft-xshard/redb", "medulla-server-api/redb", "medulla-store/redb", "medulla-persistence-records/redb", "medulla-server-ops/redb"]
 security = ["medulla-server-router/security", "medulla-server/security", "redb", "dep:sha1", "dep:argon2", "oidc", "medulla-h-ingest/security", "medulla-kernel/security", "medulla-persistence/security", "medulla-protocol-types/security", "medulla-raft/security", "medulla-raft-xshard/security", "medulla-server-api/security", "medulla-store/security", "medulla-types/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-server-ops/security", "medulla-server-auth/security"]
 server = ["medulla-server-router/server", "medulla-server/server", "medulla-h-ingest/server", "medulla-kernel/server", "medulla-persistence/server", "medulla-raft/server", "medulla-server-api/server", "medulla-store/server"]
+
+[dev-dependencies]
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-h-ingest = { path = "../medulla-h-ingest", features = ["test-support"] }
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-raft = { path = "../medulla-raft", features = ["test-support"] }
+medulla-raft-xshard = { path = "../medulla-raft-xshard", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-store = { path = "../medulla-store", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
+medulla-persistence-records = { path = "../medulla-persistence-records", features = ["test-support"] }
+medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-server = { path = "../medulla-server", features = ["test-support"] }

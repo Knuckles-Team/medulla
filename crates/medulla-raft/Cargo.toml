@@ -112,3 +112,22 @@ nl-query = ["dep:medulla-plan", "medulla-plan/nl-query", "medulla-server-api/nl-
 gpu = ["dep:medulla-plan", "medulla-plan/tensor-gpu", "medulla-compute/gpu", "medulla-server-api/gpu", "query", "reasoning", "redb", "tensor"]
 gpu-cuda = ["dep:medulla-plan", "medulla-plan/tensor-gpu-cuda", "medulla-compute/gpu-cuda", "medulla-server-api/gpu-cuda", "gpu", "query", "reasoning", "redb", "tensor"]
 owl-plan = ["dep:medulla-plan", "medulla-plan/owl", "medulla-exec/owl", "medulla-server-api/owl-plan", "medulla-types/owl-plan", "owl", "query", "redb", "server", "sparql"]
+
+[dev-dependencies]
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-store = { path = "../medulla-store", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-direct-state = { path = "../medulla-direct-state", features = ["test-support"] }
+medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
+medulla-store-apply = { path = "../medulla-store-apply", features = ["test-support"] }
+medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
+medulla-server-mutation = { path = "../medulla-server-mutation", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }

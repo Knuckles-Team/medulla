@@ -27,3 +27,7 @@ medulla-semantic-index = { path = "../medulla-semantic-index" }
 
 [features]
 ann-redb = ["medulla-semantic-index/ann", "dep:redb", "dep:sha2", "dep:medulla-storage", "dep:medulla-transaction"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }

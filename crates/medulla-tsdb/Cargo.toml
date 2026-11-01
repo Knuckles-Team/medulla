@@ -99,4 +99,7 @@ medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-finance-market = { path = "../medulla-finance-market" }
 
 [dev-dependencies]
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 tempfile = "3"

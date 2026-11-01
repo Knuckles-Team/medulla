@@ -125,6 +125,9 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
 
 [dev-dependencies]
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
 # Test-only: `authority.rs`'s `per_call_override_lets_two_principals_share_one_authority`
 # test builds a real msgpack RLS-tagged property blob (`_owner`/`_visibility`) to
 # exercise `IsolationLayer::can_see_row` end to end, mirroring the exact encoding

@@ -24,3 +24,6 @@ medulla-tables = { path = "../medulla-tables" }
 
 [features]
 sql = ["dep:datafusion", "medulla-tables/sql", "medulla-table-store/sql"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }

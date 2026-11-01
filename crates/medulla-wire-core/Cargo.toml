@@ -65,4 +65,12 @@ sparql = ["medulla-kernel/sparql", "medulla-persistence/sparql", "medulla-protoc
 test-support = ["medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-server-api/test-support", "medulla-types/test-support", "medulla-server-ops/test-support", "medulla-server-auth/test-support", "medulla-exec/test-support"]
 tsdb = ["redb", "dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries", "medulla-persistence/tsdb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb"]
 [dev-dependencies]
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 medulla-server = { path = "../medulla-server", features = ["amqp-wire", "federation", "full", "mqtt-wire", "mssql-wire", "mysql-wire", "query", "redb", "redis-wire", "security", "sparql", "stomp-wire", "test-support", "tsdb"] }

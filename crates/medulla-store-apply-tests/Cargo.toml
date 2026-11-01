@@ -48,6 +48,12 @@ security = ["medulla-store-apply/security", "medulla-store/security", "medulla-p
 statechart = ["dep:medulla-statechart", "medulla-store-apply/statechart", "medulla-store/statechart", "medulla-protocol-types/statechart", "medulla-types/statechart", "medulla-work-store/statechart"]
 tsdb = ["dep:medulla-tsdb", "medulla-store-apply/tsdb", "medulla-store/tsdb"]
 [dev-dependencies]
+medulla-store-apply = { path = "../medulla-store-apply", features = ["test-support"] }
+medulla-store = { path = "../medulla-store", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
 tempfile = "3"
 medulla-resource-store = { path = "../medulla-resource-store", features = ["test-support"] }
 medulla-work-store = { path = "../medulla-work-store", features = ["test-support"] }

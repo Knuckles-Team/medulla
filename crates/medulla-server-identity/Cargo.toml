@@ -47,3 +47,12 @@ test-support = ["medulla-server-graph/test-support", "medulla-identity-types/tes
 oidc = ["medulla-server-graph/oidc", "dep:jsonwebtoken", "medulla-server-api/oidc", "medulla-server-auth/oidc"]
 redb = ["medulla-server-graph/redb", "dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-kernel/redb", "medulla-server-api/redb"]
 security = ["medulla-server-graph/security", "dep:sha1", "dep:argon2", "redb", "oidc", "medulla-isolation/security", "medulla-kernel/security", "medulla-protocol-types/security", "medulla-server-api/security", "medulla-server-auth/security", "medulla-types/security"]
+
+[dev-dependencies]
+medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-server-graph = { path = "../medulla-server-graph", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }

@@ -28,6 +28,9 @@ medulla-mutation-types = { path = "../medulla-mutation-types" }
 rustix = { version = "1.1.5", features = ["fs", "process"] }
 
 [dev-dependencies]
+medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-direct-state = { path = "../medulla-direct-state", features = ["test-support"] }
 tempfile = "3"
 tokio = { version = "1.53", features = ["macros", "rt", "sync", "time"] }

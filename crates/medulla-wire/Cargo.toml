@@ -131,6 +131,15 @@ result-cache = ["medulla-cypher/result-cache", "medulla-core/result-cache", "med
 promql = ["dep:medulla-tsdb", "medulla-tsdb/promql", "medulla-persistence/promql", "medulla-server-api/promql", "obs", "query", "redb", "server", "text", "tsdb"]
 sqlite-file = ["dep:rustix", "medulla-kernel/sqlite-file", "medulla-protocol-types/sqlite-file", "medulla-types/sqlite-file", "query", "redb", "server"]
 [dev-dependencies]
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
+medulla-server-blob = { path = "../medulla-server-blob", features = ["test-support"] }
+medulla-server-mutation = { path = "../medulla-server-mutation", features = ["test-support"] }
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 medulla-server = { path = "../medulla-server", features = ["amqp-wire", "ann", "ann-redb", "asr-whisper", "cost", "cost-opt", "cypher", "cypher-plan", "decide", "epistemic", "epistemic-tms", "federation", "federation-search", "federation-sql", "full", "geo", "gpu", "gpu-cuda", "graphql", "jobs", "knowledge-batch", "kv", "kvcache-server", "lake", "lake-rest", "metrics", "mining", "modality-serving", "mqtt-wire", "mssql-wire", "mysql-wire", "nl-query", "numeric", "obs", "owl", "owl-plan", "par-runtime", "policy_export", "promql", "quantum-agent-api", "query", "raft", "redb", "redis-wire", "result-cache", "s3-api", "security", "server", "sparql", "sparql-http", "sqlite-file", "statechart", "stomp-wire", "stream", "streaming", "tensor", "test-support", "text", "traces", "tsdb", "viz", "viz-interactive", "wasm-udf"] }
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 medulla-wire-core = { path = "../medulla-wire-core", features = ["test-support"] }

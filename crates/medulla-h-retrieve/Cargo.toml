@@ -55,6 +55,12 @@ redb = ["dep:medulla-storage", "dep:medulla-transaction", "medulla-kernel/redb",
 text = ["query", "dep:medulla-plan", "dep:medulla-text", "medulla-exec/text", "medulla-plan?/text", "medulla-server-api/text", "medulla-types/text"]
 tsdb = ["redb", "dep:medulla-tsdb", "dep:medulla-plan", "medulla-persistence/tsdb", "medulla-server-api/tsdb"]
 [dev-dependencies]
+medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support", "security"] }
 tempfile = "3"
 medulla-capabilities = { path = "../medulla-capabilities" }

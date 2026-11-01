@@ -18,3 +18,6 @@ medulla-protocol-types = { path = "../medulla-protocol-types" }
 
 [features]
 result-cache = []
+
+[dev-dependencies]
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }

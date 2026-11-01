@@ -59,6 +59,11 @@ server = ["dep:tokio", "dep:async-trait", "medulla-kernel/server", "medulla-serv
 stomp-wire = ["server", "medulla-server-api/stomp-wire", "medulla-wire-core/stomp-wire"]
 streaming = ["server", "medulla-protocol-types/streaming", "medulla-server-api/streaming", "medulla-server-cdc/streaming", "medulla-types/streaming"]
 [dev-dependencies]
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-server-blob = { path = "../medulla-server-blob", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 medulla-wire-core = { path = "../medulla-wire-core", features = ["test-support"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
 tempfile = "3"

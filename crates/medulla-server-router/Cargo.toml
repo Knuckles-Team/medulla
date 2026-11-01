@@ -136,6 +136,25 @@ tsdb = ["medulla-server-graph/tsdb", "medulla-server-obs/tsdb", "redb", "dep:med
 viz-static-export = ["medulla-server-obs/viz-static-export", "server", "medulla-h-compute/viz-static-export", "medulla-server-api/viz-static-export"]
 wasm-udf = ["medulla-server-graph/wasm-udf", "dep:medulla-plan", "medulla-plan?/wasm-udf", "server", "medulla-h-admin/wasm-udf", "medulla-h-compute/wasm-udf", "medulla-h-decide/wasm-udf", "medulla-h-jobs/wasm-udf", "medulla-h-query/wasm-udf", "medulla-h-txn/wasm-udf", "medulla-protocol-types/wasm-udf", "medulla-raft/wasm-udf", "medulla-server-api/wasm-udf", "medulla-server-auth/wasm-udf", "medulla-server-ops/wasm-udf", "medulla-types/wasm-udf"]
 [dev-dependencies]
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-h-admin = { path = "../medulla-h-admin", features = ["test-support"] }
+medulla-h-decide = { path = "../medulla-h-decide", features = ["test-support"] }
+medulla-h-ingest = { path = "../medulla-h-ingest", features = ["test-support"] }
+medulla-h-query = { path = "../medulla-h-query", features = ["test-support"] }
+medulla-h-txn = { path = "../medulla-h-txn", features = ["test-support"] }
+medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-raft = { path = "../medulla-raft", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-direct-state = { path = "../medulla-direct-state", features = ["test-support"] }
+medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
+medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
+medulla-server-blob = { path = "../medulla-server-blob", features = ["test-support"] }
+medulla-server-mutation = { path = "../medulla-server-mutation", features = ["test-support"] }
+medulla-server-graph = { path = "../medulla-server-graph", features = ["test-support"] }
 medulla-server = { path = "../medulla-server", features = ["amqp-wire", "ann", "ann-redb", "asr-whisper", "ast", "blob", "cost", "epistemic", "federation", "federation-search", "full", "jobs", "knowledge-batch", "kv", "metrics", "mining", "modality-serving", "mqtt-wire", "mssql-wire", "nl-query", "obs", "oidc", "owl", "promql", "quantum-agent-api", "query", "raft", "rdf", "redb", "redis-wire", "security", "server", "shacl", "sparql", "sparql-http", "sqlite-file", "statechart", "stomp-wire", "stream", "streaming", "test-support", "traces", "tsdb", "viz-static-export", "wasm-udf"] }
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 tempfile = "3"

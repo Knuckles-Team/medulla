@@ -78,5 +78,16 @@ promql = ["dep:medulla-tsdb", "medulla-tsdb/promql", "medulla-persistence/promql
 traces = ["dep:medulla-tsdb", "medulla-tsdb/traces", "medulla-persistence/traces", "medulla-server-api/traces", "query", "redb", "server", "tsdb"]
 server = ["dep:tokio", "medulla-kernel/server", "medulla-persistence-ops/server", "medulla-persistence/server", "medulla-raft/server", "medulla-server-api/server"]
 [dev-dependencies]
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-raft = { path = "../medulla-raft", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
+medulla-persistence-records = { path = "../medulla-persistence-records", features = ["test-support"] }
+medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
+medulla-server-mutation = { path = "../medulla-server-mutation", features = ["test-support"] }
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support", "security"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }

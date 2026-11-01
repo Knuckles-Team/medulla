@@ -29,3 +29,7 @@ tensor = ["query", "medulla-exec/tensor", "medulla-types/tensor"]
 text = ["query", "medulla-exec/text", "medulla-types/text"]
 timeseries = ["query", "medulla-exec/timeseries", "medulla-types/timeseries"]
 wasm-udf = ["query", "medulla-exec/wasm-udf", "medulla-types/wasm-udf"]
+
+[dev-dependencies]
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }

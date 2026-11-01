@@ -54,5 +54,13 @@ security = ["redb", "medulla-raft/security", "medulla-graph-core/security", "med
 streaming = ["medulla-raft/streaming", "medulla-protocol-types/streaming", "medulla-server-api/streaming", "medulla-server-cdc/streaming", "medulla-types/streaming"]
 test-support = ["harness", "dep:tracing-subscriber", "medulla-raft/test-support", "medulla-protocol-types/test-support", "medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-server-api/test-support", "medulla-server-auth/test-support", "medulla-types/test-support", "medulla-work-types/test-support", "medulla-exec/test-support"]
 [dev-dependencies]
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 medulla-raft = { path = "../medulla-raft", features = ["harness", "test-support"] }
 tracing-subscriber = "0.3"

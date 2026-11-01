@@ -40,3 +40,12 @@ federation = ["query", "dep:medulla-plan", "medulla-h-query/federation", "medull
 mining = ["medulla-h-query/mining", "medulla-mining/mining", "medulla-protocol-types/mining", "medulla-result-types/mining", "medulla-server-api/mining", "medulla-server-mutation/mining", "medulla-server-ops/mining", "medulla-types/mining"]
 query = ["dep:medulla-tsdb", "dep:medulla-plan", "medulla-h-query/query", "medulla-exec/query", "medulla-plan?/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-server-api/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-types/query"]
 tsdb = ["dep:medulla-tsdb", "dep:medulla-plan", "medulla-h-query/tsdb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb"]
+
+[dev-dependencies]
+medulla-h-query = { path = "../medulla-h-query", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
+medulla-server-mutation = { path = "../medulla-server-mutation", features = ["test-support"] }
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }

@@ -126,6 +126,11 @@ medulla-ann-codes = { path = "../medulla-ann-codes" }
 medulla-source-types = { path = "../medulla-source-types" }
 
 [dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
+medulla-source-types = { path = "../medulla-source-types", features = ["test-support"] }
 # The commercial-vocabulary contract tests (MEDULLA-SUPPLY-VOCAB-R003.13-.16) parse
 # the registered core documents with the native RDF stack. Dev-only: a default
 # build links nothing extra (the medulla-plan test-target precedent). `owl` gates the

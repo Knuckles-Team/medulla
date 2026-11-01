@@ -91,5 +91,23 @@ streaming = ["medulla-server-router/streaming", "medulla-server/streaming", "ser
 tsdb = ["medulla-server-router/tsdb", "medulla-server/tsdb", "server", "redb", "dep:medulla-tsdb", "dep:medulla-plan", "medulla-tsdb/redb-store", "medulla-plan/timeseries", "medulla-h-mining/tsdb", "medulla-h-admin/tsdb", "medulla-h-jobs/tsdb", "medulla-h-query/tsdb", "medulla-h-txn/tsdb", "medulla-persistence/tsdb", "medulla-raft/tsdb", "medulla-server-api/tsdb", "medulla-store/tsdb", "medulla-store-apply/tsdb", "medulla-server-ops/tsdb"]
 jobs = ["dep:medulla-jobs", "medulla-agent-types/jobs", "medulla-capabilities/jobs", "medulla-h-admin/jobs", "medulla-h-jobs/jobs", "medulla-h-query/jobs", "medulla-persistence/jobs", "medulla-protocol-types/jobs", "medulla-raft/jobs", "medulla-server-api/jobs", "medulla-types/jobs", "medulla-work-types/jobs", "medulla-server-ops/jobs", "medulla-server-mutation/jobs", "medulla-server-router/jobs", "medulla-server/jobs", "epistemic", "mining", "query", "redb", "server"]
 [dev-dependencies]
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-h-admin = { path = "../medulla-h-admin", features = ["test-support"] }
+medulla-h-query = { path = "../medulla-h-query", features = ["test-support"] }
+medulla-h-txn = { path = "../medulla-h-txn", features = ["test-support"] }
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-raft = { path = "../medulla-raft", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-store = { path = "../medulla-store", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
+medulla-store-apply = { path = "../medulla-store-apply", features = ["test-support"] }
+medulla-work-store = { path = "../medulla-work-store", features = ["test-support"] }
+medulla-persistence-records = { path = "../medulla-persistence-records", features = ["test-support"] }
+medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
+medulla-server-mutation = { path = "../medulla-server-mutation", features = ["test-support"] }
+medulla-server = { path = "../medulla-server", features = ["test-support"] }
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 tempfile = "3"

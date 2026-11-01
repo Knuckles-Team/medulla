@@ -56,6 +56,7 @@ path = "../medulla-protocol-types"
 features = ["metrics", "wire-contract"]
 
 [dev-dependencies]
+medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
 medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }

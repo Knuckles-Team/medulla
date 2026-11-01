@@ -69,3 +69,13 @@ streaming = ["medulla-types/streaming"]
 test-support = ["medulla-types/test-support", "medulla-identity-types/test-support", "medulla-agent-types/test-support", "medulla-work-types/test-support", "medulla-catalog-types/test-support", "medulla-source-types/test-support", "medulla-decision-types/test-support", "medulla-decision-outcome-types/test-support"]
 viz = ["medulla-types/viz"]
 wasm-udf = ["query", "medulla-types/wasm-udf"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
+medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
+medulla-source-types = { path = "../medulla-source-types", features = ["test-support"] }
+medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types", features = ["test-support"] }

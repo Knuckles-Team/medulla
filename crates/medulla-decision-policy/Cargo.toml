@@ -21,6 +21,8 @@ medulla-decision-types = { path = "../medulla-decision-types" }
 solve = []
 
 [dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
 criterion = "0.8"
 rand = "0.8"
 rand_chacha = "0.3"

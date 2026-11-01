@@ -42,3 +42,8 @@ contract = ["dep:medulla-modality"]
 path-persist = ["dep:redb", "dep:medulla-storage", "dep:medulla-transaction"]
 result-cache = ["medulla-query-cache/result-cache"]
 security = ["dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "medulla-protocol-types/security", "medulla-types/security"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }

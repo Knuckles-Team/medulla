@@ -165,5 +165,20 @@ traces = ["dep:medulla-tsdb", "medulla-tsdb/traces", "medulla-store/traces", "bl
 viz-columnstore = ["dep:medulla-viz-columnstore", "viz"]
 
 [dev-dependencies]
+medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
+medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
+medulla-federation = { path = "../medulla-federation", features = ["test-support"] }
+medulla-store = { path = "../medulla-store", features = ["test-support"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
+medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-direct-state = { path = "../medulla-direct-state", features = ["test-support"] }
+medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
+medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types", features = ["test-support"] }
+medulla-work-store = { path = "../medulla-work-store", features = ["test-support"] }
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 tempfile = "3"
 wat = "1"

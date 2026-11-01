@@ -46,6 +46,9 @@ thiserror = "2.0"
 medulla-exec = { path = "../medulla-exec" }
 
 [dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-federation = { path = "../medulla-federation", features = ["test-support"] }
+medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 # The fixtures open a real `JobStore`, which under RF-RULING-004 needs the
 # composition root's `ScopeGrantVerifier`. medulla-jobs ships one for exactly this
 # behind its off-by-default `dev-scope-grant` feature; naming it here turns it on

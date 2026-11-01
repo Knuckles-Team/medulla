@@ -35,3 +35,6 @@ graphlearn = ["datascience", "medulla-types/graphlearn"]
 mining = ["medulla-types/mining"]
 ml-pipeline = ["mining", "datascience", "graphlearn", "medulla-types/ml-pipeline"]
 query = ["medulla-types/query"]
+
+[dev-dependencies]
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
