@@ -17,7 +17,7 @@ impl medulla_server_ops::api::query_txn::QueryApi for QuerySeam {
         binding_id: &str,
     ) -> Result<Arc<medulla_ann_codes::semantic_index_service::SemanticIndexService>, String>
     {
-        crate::semantic_index_runtime::existing_semantic_service(persist_dir, tenant, binding_id)
+        medulla_h_query::semantic_index_runtime::existing_semantic_service(persist_dir, tenant, binding_id)
     }
 
     #[cfg(feature = "query")]
@@ -33,7 +33,7 @@ impl medulla_server_ops::api::query_txn::QueryApi for QuerySeam {
         #[cfg(feature = "tsdb")]
         tsdb_ctx: medulla_server_ops::api::query_txn::query_support::TsdbLegBind<'_>,
     ) -> Result<Vec<(String, Option<f32>)>, String> {
-        super::overlay::run_unified_with_staged_finish(
+        medulla_h_query::query::overlay::run_unified_with_staged_finish(
             plan,
             view,
             core,
@@ -58,7 +58,7 @@ impl medulla_server_ops::api::query_txn::QueryApi for QuerySeam {
             &Arc<medulla_tsdb::store::SeriesStore>,
         >,
     ) -> Option<medulla_protocol_types::protocol::Response> {
-        crate::mining::gateway::try_handle(
+        medulla_h_query::mining::gateway::try_handle(
             ctx,
             plan,
             method,

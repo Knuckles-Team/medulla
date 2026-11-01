@@ -138,8 +138,6 @@ where
 
 mod base;
 pub use base::*;
-mod seam;
-pub use seam::QuerySeam;
 #[cfg(feature = "federation")]
 mod foreign_leg;
 #[cfg(feature = "federation")]
@@ -186,7 +184,7 @@ mod explain_wire_b;
     feature = "epistemic-causal"
 ))]
 pub(crate) use explain_wire_b::*;
-mod overlay;
+pub mod overlay;
 pub(crate) use overlay::*;
 mod sql_write;
 pub(crate) use sql_write::*;

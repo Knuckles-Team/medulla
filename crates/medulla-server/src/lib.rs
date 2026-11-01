@@ -25,6 +25,9 @@
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod server_startup;
 
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+mod query_seam;
+
 
 // ---- merged from the moved module root (src/server/mod.rs) ----
 use medulla_server_ops::api::query_txn::ForeignStateExt;

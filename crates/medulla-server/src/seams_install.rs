@@ -48,7 +48,7 @@ pub fn install_seams(state: &ServerState) {
     let _ = medulla_server_ops::api::query_txn::install_query_seam(
         &state.seams,
         std::sync::Arc::new(
-        medulla_h_query::query::QuerySeam,
+        crate::query_seam::QuerySeam,
     ));
     let _ = medulla_server_ops::api::query_txn::install_txn_seam(
         &state.seams,
