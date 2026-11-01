@@ -515,7 +515,7 @@ impl NodeInfoStore {
 /// the store (it is a `RedbBackend` field) but never copied it, so a restored engine
 /// answered `Method::ClusterMembers` from an EMPTY topology and every peer had to
 /// re-self-report before routing worked again.
-impl super::durable_stores::BundledStoreSource for NodeInfoStore {
+impl crate::server::api::persistence::BundledStoreSource for NodeInfoStore {
     fn file_name(&self) -> &'static str {
         "node_info.redb"
     }
@@ -702,8 +702,10 @@ mod tests {
 
     #[test]
     fn durable_generation_advances_across_repeated_updates_and_restart() {
-        let dir =
-            std::env::temp_dir().join(format!("medulla-node-info-generation-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!(
+            "medulla-node-info-generation-{}",
+            std::process::id()
+        ));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
         {

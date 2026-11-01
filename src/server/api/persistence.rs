@@ -33,6 +33,42 @@ use medulla_types::native_control::CapacityStatusResult;
 #[cfg(feature = "redb")]
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
 
+/// A durable store that can copy its own committed image into a fresh bundle file.
+///
+/// Implemented next to each store's own identity, because the copy is the STORAGE
+/// KERNEL's whole-image backup (`medulla_storage::backup_recovery_store`): it carries the
+/// ledger and every declared owner table, and it derives a fresh destination root and
+/// rebinds each scope to it, which is what makes the bundled file adoptable at
+/// restore. The hand-rolled table-by-table stream this replaced produced a plain redb
+/// file with no physical root or owner manifest, which a restore could not adopt.
+pub trait BundledStoreSource: Send + Sync {
+    /// Bundle-local file name — MUST be a `BackupScope::Bundled` entry in
+    /// `DURABLE_STORES`.
+    fn file_name(&self) -> &'static str;
+
+    /// Copy the store's latest committed state verbatim into a FRESH file at
+    /// `destination`, returning the number of rows copied. Must refuse to overwrite.
+    fn copy_into(&self, destination: &std::path::Path) -> Result<u64, String>;
+
+    /// `false` when this store has no on-disk file (an in-memory/test adapter). A
+    /// non-durable store is skipped by the backup rather than failing it — there is
+    /// nothing to lose and nothing to restore.
+    fn is_durable(&self) -> bool {
+        true
+    }
+}
+
+/// Durable verification of a connector-pack source-approval receipt against
+/// the stored member, head, body and registration. Implemented by the Agent
+/// Library store (MEDULLA-CONTRACT-R056.8); federation reads see only this view.
+pub trait SourceApprovalStore {
+    /// Verify that `receipt` names exactly the durably approved registration.
+    fn verify_connector_pack_source_approval(
+        &self,
+        receipt: &medulla_types::connector_pack::ConnectorPackSourceApprovalResult,
+    ) -> Result<(), String>;
+}
+
 /// A durable persistence tier for the graph registry.
 ///
 /// Recovery and mutation APIs are asynchronous because every acknowledged
@@ -781,6 +817,16 @@ pub trait PersistenceBackend: Send + Sync {
     /// `AsRedb::as_redb` extension can downcast to the concrete `RedbBackend`.
     fn as_any(&self) -> Option<&dyn std::any::Any> {
         None
+    }
+
+    /// Walk one graph's tamper-evident audit chain on the owner thread. Only a
+    /// backend that stores an audit chain implements it.
+    #[cfg(feature = "security")]
+    fn audit_verify_blocking(
+        &self,
+        _graph_fname: &str,
+    ) -> Result<crate::protocol::AuditReport, String> {
+        Err("audit verification is not supported by this backend".to_string())
     }
 }
 

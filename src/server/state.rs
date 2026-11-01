@@ -10,6 +10,12 @@ use crate::registry::GraphRegistry;
 use crate::server::txn::{GraphTxnState, TxnIdGen};
 use parking_lot::Mutex;
 
+/// A type-erased handle to a state-held service owned by an upper crate
+/// (raft, agent library, cold tracker, observability, lakehouse). The owning
+/// module exposes a typed accessor through an extension trait on `ServerState`
+/// (MEDULLA-CONTRACT-R056.8).
+pub type ErasedHandle = Arc<dyn std::any::Any + Send + Sync>;
+
 /// Upper bound on ids/edges accepted by a single batch read op. Oversize batches
 /// are rejected (not truncated) so a runaway request can't allocate a multi-GB
 /// response and OOM the shared process.
@@ -182,12 +188,11 @@ pub struct ServerState {
     /// startup has supplied `persist_dir`, then retained so backup/restore and
     /// every typed route use the same kernel authority.
     #[cfg(feature = "redb")]
-    pub agent_library: Option<Arc<crate::server::persistence::agent_library::AgentLibraryStore>>,
+    pub agent_library: Option<ErasedHandle>,
     /// Serializes physical opens while permitting the projection worker to open
     /// outside the global state lock. The slot retains the shared winning handle.
     #[cfg(feature = "redb")]
-    pub(crate) agent_library_open:
-        Arc<Mutex<Option<Arc<crate::server::persistence::agent_library::AgentLibraryStore>>>>,
+    pub(crate) agent_library_open: Arc<Mutex<Option<ErasedHandle>>>,
     /// Cold-tenant access tracker (CONCEPT:MEDULLA-KG.sharding.medulla-r6/MEDULLA-040, R6), feature `redb`. The
     /// dispatch read+write path calls `touch(graph)` on every graph access so the
     /// periodic cold-offload sweep (`offload_cold_tenants`) can hibernate graphs idle
@@ -195,7 +200,7 @@ pub struct ServerState {
     /// stay resident, idle ones offload (durably-gated, loss-free). A `touch` is one
     /// map upsert off the hot path; an empty tracker is a no-op.
     #[cfg(feature = "redb")]
-    pub cold_tracker: Arc<crate::server::persistence::cold_offload::ColdTenantTracker>,
+    pub cold_tracker: Option<ErasedHandle>,
     /// Persistent native-visualization engine state (D-VZ-1 lane V4: persistent
     /// ColumnStore + content-addressed render cache + durable provenance),
     /// feature `viz-static-export`. `None` until the first `Method::Viz`
@@ -287,7 +292,7 @@ pub struct ServerState {
     /// `client_write`) BEFORE they are applied+acked — the replication barrier.
     /// Only ever populated when built `--features raft` AND configured at startup.
     #[cfg(feature = "raft")]
-    pub raft: Option<crate::raft::RaftHandle>,
+    pub raft: Option<ErasedHandle>,
     /// The per-node [`MultiRaft`] manager (CONCEPT:MEDULLA-KG.sharding.raft-resharding/2.222/2.224), cluster tier
     /// only. `Some` when a cluster is active. Held here (rather than leaked) so the
     /// USER-FACING surfaces that need cross-group routing reach it: the multi-graph
@@ -296,7 +301,7 @@ pub struct ServerState {
     /// `None` ⇒ single-node: a multi-graph txn falls back to applying each graph's
     /// slice locally (no consensus), and the commit path is otherwise unchanged.
     #[cfg(feature = "raft")]
-    pub multi_raft: Option<std::sync::Arc<crate::raft::multi::MultiRaft>>,
+    pub multi_raft: Option<ErasedHandle>,
     /// Native time-series store (CONCEPT:AU-KG.retrieval.god-nodes-communities, feature `tsdb`). `Some` when the
     /// engine booted with a series store: a durable `series.redb` beside the graph shards
     /// when a persist dir is set, else a process-temp file (in-memory deployments).
@@ -311,7 +316,7 @@ pub struct ServerState {
     /// listener; `TelemetryDerive` (EH-408/EH-409) reads stored telemetry
     /// through this handle, never through the HTTP listener.
     #[cfg(feature = "obs")]
-    pub obs: Option<Arc<crate::server::obs::ObsState>>,
+    pub obs: Option<ErasedHandle>,
     /// Change-Data-Capture hub (CONCEPT:MEDULLA-KG.query.streaming-cdc-subscriptions/230, feature `streaming`). `Some` on
     /// any `streaming` build (constructed unconditionally — it needs no persist dir,
     /// the in-memory ring IS the cursor surface). The dispatch write-side-effect block
@@ -372,7 +377,7 @@ pub struct ServerState {
     /// drain sweep (`MEDULLA_LAKE_MATERIALIZE_INTERVAL_SECS`) and the
     /// `lake-rest` Iceberg-REST listener both share this ONE handle.
     #[cfg(feature = "lake")]
-    pub lake: Arc<crate::server::lake::LakeManager>,
+    pub lake: Option<ErasedHandle>,
     /// Installed crate-split seam implementations (MEDULLA-CONTRACT-R056.8).
     pub seams: crate::server::api::registry::SeamRegistry,
 }
@@ -387,29 +392,6 @@ impl ServerState {
     /// composition instead of accidentally looking like a local server.
     pub fn install_local_placement_authority(&mut self) {
         self.raft = None;
-        self.multi_raft = None;
-    }
-
-    /// Compose a state backed by the durable `MultiRaft` placement catalog.
-    ///
-    /// `raft` is optional for the in-process harnesses, which exercise the
-    /// catalog directly without a default-group routing handle.  Production
-    /// startup passes both handles together through this seam.
-    pub(crate) fn install_multi_raft_placement_authority(
-        &mut self,
-        raft: Option<crate::raft::RaftHandle>,
-        multi_raft: std::sync::Arc<crate::raft::multi::MultiRaft>,
-    ) {
-        self.raft = raft;
-        self.multi_raft = Some(multi_raft);
-    }
-
-    /// Compose the deliberately incomplete cluster state used by a negative
-    /// configuration test.  It is never a local fallback: `placement_authority`
-    /// resolves it to `Missing` and the dispatch seam returns the typed denial.
-    #[cfg(test)]
-    pub(crate) fn install_missing_placement_authority(&mut self, raft: crate::raft::RaftHandle) {
-        self.raft = Some(raft);
         self.multi_raft = None;
     }
 
@@ -494,7 +476,7 @@ impl ServerState {
             #[cfg(feature = "redb")]
             agent_library_open: Arc::default(),
             #[cfg(feature = "redb")]
-            cold_tracker: Arc::default(),
+            cold_tracker: None,
             #[cfg(feature = "viz-static-export")]
             viz_engine: None,
             max_in_flight: Arc::new(Semaphore::new(16)),
@@ -535,7 +517,7 @@ impl ServerState {
             #[cfg(feature = "kv")]
             kv: None,
             #[cfg(feature = "lake")]
-            lake: Arc::default(),
+            lake: None,
         }
     }
 
@@ -559,22 +541,6 @@ impl ServerState {
         state
     }
 
-    #[cfg(feature = "redb")]
-    pub fn ensure_agent_library(
-        &mut self,
-    ) -> Result<Arc<crate::server::persistence::agent_library::AgentLibraryStore>, String> {
-        if let Some(store) = self.agent_library.as_ref() {
-            return Ok(Arc::clone(store));
-        }
-        let persist_dir = self
-            .persist_dir
-            .as_deref()
-            .ok_or_else(|| "Agent Library requires a configured persist directory".to_string())?;
-        let store = open_shared_agent_library(&self.agent_library_open, persist_dir)?;
-        self.agent_library = Some(Arc::clone(&store));
-        Ok(store)
-    }
-
     /// Build the standard single-system-agent isolation used by wire-level
     /// fixtures. The helper is public for integration tests, whose library
     /// dependency is compiled without `cfg(test)`.
@@ -589,22 +555,6 @@ impl ServerState {
         });
         isolation
     }
-}
-
-/// Open one physical Agent Library handle across request and background paths.
-#[cfg(feature = "redb")]
-pub(crate) fn open_shared_agent_library(
-    slot: &Mutex<Option<Arc<crate::server::persistence::agent_library::AgentLibraryStore>>>,
-    persist_dir: &str,
-) -> Result<Arc<crate::server::persistence::agent_library::AgentLibraryStore>, String> {
-    let mut guard = slot.lock();
-    if let Some(store) = guard.as_ref() {
-        return Ok(Arc::clone(store));
-    }
-    let store =
-        Arc::new(crate::server::persistence::agent_library::AgentLibraryStore::open(persist_dir)?);
-    *guard = Some(Arc::clone(&store));
-    Ok(store)
 }
 
 impl ServerState {
@@ -644,46 +594,6 @@ impl crate::kernel::persistence::ResidentProjectionHost for ServerState {
 #[cfg(test)]
 mod construction_tests {
     use super::{IsolationLayer, ServerState};
-
-    #[cfg(feature = "redb")]
-    #[test]
-    fn concurrent_agent_library_opens_share_one_handle() {
-        let directory = tempfile::tempdir().unwrap();
-        let path = directory.path().to_str().unwrap().to_owned();
-        let slot = std::sync::Arc::new(parking_lot::Mutex::new(None));
-        let barrier = std::sync::Arc::new(std::sync::Barrier::new(8));
-        let threads: Vec<_> = (0..8)
-            .map(|_| {
-                let (slot, barrier, path) = (slot.clone(), barrier.clone(), path.clone());
-                std::thread::spawn(move || {
-                    medulla_kernel::test_rendezvous::meet(&barrier, "agent library open");
-                    super::open_shared_agent_library(&slot, &path).unwrap()
-                })
-            })
-            .collect();
-        let handles: Vec<_> = threads
-            .into_iter()
-            .map(|thread| {
-                medulla_kernel::test_rendezvous::join_bounded(thread, "agent library open")
-            })
-            .collect();
-        assert!(handles
-            .iter()
-            .all(|handle| std::sync::Arc::ptr_eq(&handles[0], handle)));
-    }
-
-    #[cfg(feature = "redb")]
-    #[test]
-    fn failed_agent_library_open_does_not_poison_slot() {
-        let directory = tempfile::tempdir().unwrap();
-        let file = directory.path().join("not-a-directory");
-        std::fs::write(&file, b"fixture").unwrap();
-        let slot = parking_lot::Mutex::new(None);
-        assert!(super::open_shared_agent_library(&slot, file.to_str().unwrap()).is_err());
-        assert!(
-            super::open_shared_agent_library(&slot, directory.path().to_str().unwrap()).is_ok()
-        );
-    }
 
     /// Pins the baseline `ServerState::new` composes: the admission limits and
     /// transaction bounds, empty registries, and a CDC hub under `streaming`.

@@ -31,7 +31,7 @@ use medulla_types::{
     AGENT_LIBRARY_RESULT_SCHEMA_ID,
 };
 
-use super::durable_stores::BundledStoreSource;
+use crate::server::api::persistence::BundledStoreSource;
 
 mod batch;
 pub mod context;
@@ -672,6 +672,101 @@ impl BundledStoreSource for AgentLibraryStore {
     }
 }
 
+/// Typed access to the type-erased Agent Library handle held by `ServerState`
+/// (MEDULLA-CONTRACT-R056.8).
+pub trait AgentLibraryStateExt {
+    /// The retained Agent Library handle, when one has been opened.
+    fn agent_library(&self) -> Option<Arc<AgentLibraryStore>>;
+    /// Retain (or clear) the Agent Library handle.
+    fn set_agent_library(&mut self, store: Option<Arc<AgentLibraryStore>>);
+    /// Open (once) and return the shared Agent Library handle under the
+    /// configured persist directory.
+    fn ensure_agent_library(&mut self) -> Result<Arc<AgentLibraryStore>, String>;
+}
+
+impl AgentLibraryStateExt for crate::server::ServerState {
+    fn agent_library(&self) -> Option<Arc<AgentLibraryStore>> {
+        self.agent_library
+            .as_ref()
+            .and_then(|h| Arc::clone(h).downcast::<AgentLibraryStore>().ok())
+    }
+
+    fn set_agent_library(&mut self, store: Option<Arc<AgentLibraryStore>>) {
+        self.agent_library = store.map(|s| s as crate::server::state::ErasedHandle);
+    }
+
+    fn ensure_agent_library(&mut self) -> Result<Arc<AgentLibraryStore>, String> {
+        if let Some(store) = self.agent_library() {
+            return Ok(store);
+        }
+        let persist_dir = self
+            .persist_dir
+            .as_deref()
+            .ok_or_else(|| "Agent Library requires a configured persist directory".to_string())?;
+        let store = open_shared_agent_library(&self.agent_library_open, persist_dir)?;
+        self.set_agent_library(Some(Arc::clone(&store)));
+        Ok(store)
+    }
+}
+
+/// Open one physical Agent Library handle across request and background paths.
+pub(crate) fn open_shared_agent_library(
+    slot: &Mutex<Option<crate::server::state::ErasedHandle>>,
+    persist_dir: &str,
+) -> Result<Arc<AgentLibraryStore>, String> {
+    let mut guard = slot.lock();
+    if let Some(store) = guard
+        .as_ref()
+        .and_then(|h| Arc::clone(h).downcast::<AgentLibraryStore>().ok())
+    {
+        return Ok(store);
+    }
+    let store = Arc::new(AgentLibraryStore::open(persist_dir)?);
+    *guard = Some(Arc::clone(&store) as crate::server::state::ErasedHandle);
+    Ok(store)
+}
+
+#[cfg(test)]
+mod shared_open_tests {
+    #[test]
+    fn concurrent_agent_library_opens_share_one_handle() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().to_str().unwrap().to_owned();
+        let slot = std::sync::Arc::new(parking_lot::Mutex::new(None));
+        let barrier = std::sync::Arc::new(std::sync::Barrier::new(8));
+        let threads: Vec<_> = (0..8)
+            .map(|_| {
+                let (slot, barrier, path) = (slot.clone(), barrier.clone(), path.clone());
+                std::thread::spawn(move || {
+                    medulla_kernel::test_rendezvous::meet(&barrier, "agent library open");
+                    super::open_shared_agent_library(&slot, &path).unwrap()
+                })
+            })
+            .collect();
+        let handles: Vec<_> = threads
+            .into_iter()
+            .map(|thread| {
+                medulla_kernel::test_rendezvous::join_bounded(thread, "agent library open")
+            })
+            .collect();
+        assert!(handles
+            .iter()
+            .all(|handle| std::sync::Arc::ptr_eq(&handles[0], handle)));
+    }
+
+    #[test]
+    fn failed_agent_library_open_does_not_poison_slot() {
+        let directory = tempfile::tempdir().unwrap();
+        let file = directory.path().join("not-a-directory");
+        std::fs::write(&file, b"fixture").unwrap();
+        let slot = parking_lot::Mutex::new(None);
+        assert!(super::open_shared_agent_library(&slot, file.to_str().unwrap()).is_err());
+        assert!(
+            super::open_shared_agent_library(&slot, directory.path().to_str().unwrap()).is_ok()
+        );
+    }
+}
+
 /// Publish one L2 agent and return the `definition_digest` that resolves it.
 ///
 /// Shared by the graph and template test modules: publishing a graph now
@@ -774,7 +869,7 @@ pub(crate) fn seed_agent_draft_for_test(
 mod tests {
     use super::replay::record_event;
     use super::*;
-    use crate::server::persistence::durable_stores::BundledStoreSource;
+    use crate::server::api::persistence::BundledStoreSource;
     use medulla_types::contract::Nonce;
     use medulla_types::mutation_batch::MutationBatchStatus;
 

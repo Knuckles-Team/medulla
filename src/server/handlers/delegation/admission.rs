@@ -1,4 +1,6 @@
 use super::*;
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 
 /// Already-authorized graph and placement context for one RF-020 admission.
 /// The library handle is the EG-owned retained-definition authority; the

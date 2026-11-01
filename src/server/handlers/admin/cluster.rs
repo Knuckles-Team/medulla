@@ -1,6 +1,8 @@
 //! M3 cluster-admin routing and catalog/rebalance operations.
 
 #[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
+#[cfg(feature = "redb")]
 use crate::server::persistence::AsRedb;
 use std::sync::Arc;
 
@@ -310,7 +312,7 @@ async fn handle_backup(
             Err(error) => return Ok(Response::err(req_id, error)),
         }
     };
-    let mut extra_stores: Vec<&dyn crate::server::persistence::durable_stores::BundledStoreSource> =
+    let mut extra_stores: Vec<&dyn crate::server::api::persistence::BundledStoreSource> =
         Vec::new();
     #[cfg(feature = "security")]
     if let Some(rbac_store) = rbac_store.as_ref() {

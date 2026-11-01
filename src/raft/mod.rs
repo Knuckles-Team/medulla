@@ -135,8 +135,6 @@ mod tests;
 // harness proving NO PARTIAL COMMIT under participant-kill + partition. Gated behind
 // the `harness` feature so the default `raft` test set is unchanged; run it with
 // `cargo test --features "raft harness"`.
-#[cfg(all(test, feature = "harness"))]
-mod xshard_harness;
 
 // The online-resharding + tenant-hibernation gauntlet (CONCEPT:MEDULLA-KG.storage.100m-tenant) — proves a
 // graph reshareded A→B keeps all data + serves correctly, and a hibernated graph
@@ -148,8 +146,6 @@ mod reshard_harness;
 // assign→route, a stale-epoch redirect, persistence-across-restart, an online move
 // (snapshot→catch-up→fenced cutover) preserving data, and a tenant split spanning two
 // groups. Gated behind `harness` so a normal `raft` build links nothing.
-#[cfg(all(test, feature = "harness"))]
-mod placement_harness;
 
 // The cross-shard READ gauntlet (CONCEPT:MEDULLA-KG.sharding.placement-catalog, DIST-P2-2) — proves a
 // read spanning two groups gathers + union-merges both, each leg routes via the
@@ -171,6 +167,72 @@ pub mod xshard_modality_harness;
 
 /// Raft node id — a small integer assigned per cluster member.
 pub type NodeId = u64;
+
+/// Typed access to the type-erased raft handles held by `ServerState`
+/// (MEDULLA-CONTRACT-R056.8): the state lives in a lower crate, the handle
+/// types live here.
+pub trait RaftStateExt {
+    /// The default-group routing handle, when clustered.
+    fn raft_handle(&self) -> Option<&RaftHandle>;
+    /// The per-node multi-raft manager, when a cluster is active.
+    fn multi_raft(&self) -> Option<Arc<multi::MultiRaft>>;
+    /// Publish (or clear) the default-group routing handle.
+    fn set_raft(&mut self, raft: Option<RaftHandle>);
+    /// Publish (or clear) the multi-raft manager.
+    fn set_multi_raft(&mut self, multi_raft: Option<Arc<multi::MultiRaft>>);
+    /// Compose a state backed by the durable `MultiRaft` placement catalog.
+    ///
+    /// `raft` is optional for the in-process harnesses, which exercise the
+    /// catalog directly without a default-group routing handle.  Production
+    /// startup passes both handles together through this seam.
+    fn install_multi_raft_placement_authority(
+        &mut self,
+        raft: Option<RaftHandle>,
+        multi_raft: Arc<multi::MultiRaft>,
+    );
+    /// Compose the deliberately incomplete cluster state used by a negative
+    /// configuration test.  It is never a local fallback: `placement_authority`
+    /// resolves it to `Missing` and the dispatch seam returns the typed denial.
+    #[cfg(test)]
+    fn install_missing_placement_authority(&mut self, raft: RaftHandle);
+}
+
+impl RaftStateExt for ServerState {
+    fn raft_handle(&self) -> Option<&RaftHandle> {
+        self.raft
+            .as_deref()
+            .and_then(|h| h.downcast_ref::<RaftHandle>())
+    }
+
+    fn multi_raft(&self) -> Option<Arc<multi::MultiRaft>> {
+        self.multi_raft
+            .as_ref()
+            .and_then(|h| Arc::clone(h).downcast::<multi::MultiRaft>().ok())
+    }
+
+    fn set_raft(&mut self, raft: Option<RaftHandle>) {
+        self.raft = raft.map(|h| Arc::new(h) as crate::server::state::ErasedHandle);
+    }
+
+    fn set_multi_raft(&mut self, multi_raft: Option<Arc<multi::MultiRaft>>) {
+        self.multi_raft = multi_raft.map(|m| m as crate::server::state::ErasedHandle);
+    }
+
+    fn install_multi_raft_placement_authority(
+        &mut self,
+        raft: Option<RaftHandle>,
+        multi_raft: Arc<multi::MultiRaft>,
+    ) {
+        self.set_raft(raft);
+        self.set_multi_raft(Some(multi_raft));
+    }
+
+    #[cfg(test)]
+    fn install_missing_placement_authority(&mut self, raft: RaftHandle) {
+        self.set_raft(Some(raft));
+        self.set_multi_raft(None);
+    }
+}
 
 /// A Raft GROUP id (CONCEPT:MEDULLA-KG.sharding.raft-resharding). One consensus group per keyspace; today one
 /// graph maps to one group via the [`multi::GroupRouter`]. It is the composite-key

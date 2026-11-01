@@ -73,7 +73,7 @@ fn copy_shards(
 fn copy_owned_stores(
     backend: &RedbBackend,
     dst_dir: &std::path::Path,
-    extra_stores: &[&dyn super::super::durable_stores::BundledStoreSource],
+    extra_stores: &[&dyn crate::server::api::persistence::BundledStoreSource],
     report: &mut BackupReport,
 ) -> Result<(), String> {
     report.admin_mutations = medulla_storage::backup_recovery_store(
@@ -82,7 +82,7 @@ fn copy_owned_stores(
     )?;
     let node_info = backend.node_info();
     let catalog = backend.catalog.clone();
-    let mut owned: Vec<&dyn super::super::durable_stores::BundledStoreSource> =
+    let mut owned: Vec<&dyn crate::server::api::persistence::BundledStoreSource> =
         vec![node_info.as_ref()];
     if let Some(catalog) = catalog.as_deref() {
         owned.push(catalog);
@@ -94,7 +94,7 @@ fn copy_owned_stores(
 }
 
 fn copy_store(
-    store: &dyn super::super::durable_stores::BundledStoreSource,
+    store: &dyn crate::server::api::persistence::BundledStoreSource,
     dst_dir: &std::path::Path,
     report: &mut BackupReport,
 ) -> Result<(), String> {
@@ -120,7 +120,8 @@ fn copy_store(
 }
 
 fn ensure_backup_stable(backend: &RedbBackend, before: &BackupBoundaries) -> Result<(), String> {
-    let admin_after = medulla_storage::recovery_store_fingerprint(backend.admin_mutations.kernel())?;
+    let admin_after =
+        medulla_storage::recovery_store_fingerprint(backend.admin_mutations.kernel())?;
     let xshard_after = super::super::backup::xshard_recovery_fingerprint(&before.shard0)?;
     if before.admin != admin_after || before.xshard != xshard_after {
         return Err(
@@ -157,7 +158,7 @@ impl RedbBackend {
         engine_version: &str,
         timestamp_secs: u64,
         label: &str,
-        extra_stores: &[&dyn super::super::durable_stores::BundledStoreSource],
+        extra_stores: &[&dyn crate::server::api::persistence::BundledStoreSource],
     ) -> Result<super::super::backup::BackupReport, String> {
         std::fs::create_dir_all(dst_dir).map_err(|e| e.to_string())?;
         let boundaries_before = backup_boundaries(self)?;

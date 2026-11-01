@@ -1,6 +1,8 @@
 //! Private transaction commit_multi_graph implementation.
 
 use super::*;
+#[cfg(feature = "raft")]
+use crate::raft::RaftStateExt;
 #[cfg(feature = "redb")]
 use crate::server::persistence::AsRedb;
 
@@ -155,7 +157,7 @@ pub(super) async fn commit_recoverable_slices(
     {
         let (multi, backend) = {
             let s = state.read().await;
-            (s.multi_raft.clone(), s.persistence.clone())
+            (s.multi_raft(), s.persistence.clone())
         };
         let recoverable_in_flight = backend
             .as_ref()

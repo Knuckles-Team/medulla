@@ -1,6 +1,8 @@
 //! Graph lifecycle and identity helpers for router dispatch.
 
 use super::*;
+#[cfg(feature = "redb")]
+use crate::server::persistence::cold_offload::ColdTrackerStateExt;
 
 /// A `CreateGraph` that finds the graph already resident is either a retry of a
 /// durably-committed create (idempotent success) or a genuine collision.
@@ -236,7 +238,7 @@ async fn create_declared_graph(
     #[cfg(feature = "redb")]
     {
         let cap = crate::server::persistence::cold_offload::max_resident_graphs();
-        let tracker = s.cold_tracker.clone();
+        let tracker = s.ensure_cold_tracker();
         crate::server::persistence::cold_offload::admit_capacity(
             &mut s,
             &tracker,
@@ -513,7 +515,9 @@ async fn teardown_deleted_graph_in_memory(
             // Cold-tenant tracker (CONCEPT:MEDULLA-KG.backend.r6-feature, R6): forget this graph's access
             // timestamp + offload mark so they don't leak across a same-name recreate.
             #[cfg(feature = "redb")]
-            s.cold_tracker.forget(graph_name);
+            if let Some(tracker) = s.cold_tracker() {
+                tracker.forget(graph_name);
+            }
             Response::ok(req_id, deleted_result)
         }
         Err(e) => Response::err(req_id, e),

@@ -4,10 +4,10 @@
 //! reads (the KnowledgeStream read is proven in `handlers::knowledge_stream`'s
 //! tests) through the one shared projection builder.
 
-use super::*;
 use crate::server::api::query_txn::edge_test_support::{
     edge_status_row, register_detached_edge_index, sql_rows, EDGE_STATUS_SQL,
 };
+use crate::server::wire::wired_catalog_tests::*;
 
 const TENANT: &str = "tenant-shared";
 

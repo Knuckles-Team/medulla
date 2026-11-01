@@ -1,6 +1,10 @@
 //! Model media declarations cross the real signed pack-import boundary as facts.
 
-use medulla_types::agent_component::{AgentComponentFacts, ModelInputCapabilities, ModelInputMediaType};
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_types::agent_component::{
+    AgentComponentFacts, ModelInputCapabilities, ModelInputMediaType,
+};
 use medulla_types::connector_pack::{
     PackAnnotations, PackEntryKind, PackImportResult, PackViolationCode,
 };

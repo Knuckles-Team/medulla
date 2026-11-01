@@ -336,3 +336,12 @@ fn current_member(
         "SOURCE_REGISTRATION_NOT_FOUND: resource {resource_uri} is not current"
     ))
 }
+
+impl crate::server::api::persistence::SourceApprovalStore for AgentLibraryStore {
+    fn verify_connector_pack_source_approval(
+        &self,
+        receipt: &ConnectorPackSourceApprovalResult,
+    ) -> Result<(), String> {
+        AgentLibraryStore::verify_connector_pack_source_approval(self, receipt)
+    }
+}

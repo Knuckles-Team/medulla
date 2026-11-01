@@ -29,6 +29,9 @@ pub fn install_seams(state: &ServerState) {
         .set(std::sync::Arc::new(super::handlers::decide::DecideSeam));
 
     // L5 query, txn, wire.
+    #[cfg(all(feature = "mining", feature = "server"))]
+    crate::kernel::persistence::install_mining_replay(crate::server::handlers::mining::replay);
+
     #[cfg(any(feature = "query", feature = "cypher", feature = "graphql"))]
     let _ = state.seams.query.set(std::sync::Arc::new(
         crate::server::handlers::query::QuerySeam,

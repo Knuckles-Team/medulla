@@ -9,6 +9,8 @@
 //! `placement`); the real answer is `raft`-gated (the only build where `MultiRaft`
 //! exists), and a non-raft build answers a clean typed error.
 
+#[cfg(feature = "raft")]
+use crate::raft::RaftStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -48,7 +50,7 @@ pub(crate) async fn try_handle(
 
     let (multi, standalone_raft) = {
         let current = state.read().await;
-        (current.multi_raft.clone(), current.raft.is_some())
+        (current.multi_raft(), current.raft.is_some())
     };
     let Some(multi) = multi else {
         return Ok(Response::err(

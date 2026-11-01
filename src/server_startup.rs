@@ -464,6 +464,18 @@ pub(super) fn compose_server_state(
         // after pure state composition and before any listener can serve.
         server::cdc_sink::install_from_env(hub);
     }
+    #[cfg(feature = "redb")]
+    {
+        // Upper-crate service handles are type-erased on `ServerState`; the
+        // composition root installs the always-present ones (R056.8).
+        use medulla::server::persistence::cold_offload::ColdTrackerStateExt;
+        let _ = state.ensure_cold_tracker();
+    }
+    #[cfg(feature = "lake")]
+    {
+        use medulla::server::lake::LakeStateExt;
+        state.set_lake(Arc::default());
+    }
     state.persist_dir = persist_dir;
     state.persistence = stores.persistence;
     state.max_in_flight = Arc::new(tokio::sync::Semaphore::new(limits.max_in_flight));

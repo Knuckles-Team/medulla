@@ -49,12 +49,12 @@ use medulla_storage::{
     GraphShardOwner, OwnedStoreHandle, OwnerDomain, PhysicalStoreIdentity, ScopedRead,
     StorageKernel, GRAPH_SHARD_CONTROL_GRAPH, GRAPH_SHARD_TENANT,
 };
+#[cfg(feature = "server")]
+use medulla_transaction::GraftDestination;
 use medulla_transaction::{
     AdmittedGroup, AdmittedOwnerWrite, Begin, CurrentIntent, MutationKernel, OutboxClaimBudget,
     OutboxClaimOutcome, OutboxStatus, ScopedIntent,
 };
-#[cfg(feature = "server")]
-use medulla_transaction::{GraftDestination, GraftSource, GraftedScope, OwnerPayloadTransfer};
 use medulla_types::mutation_batch::COMPILED_BATCH_INCARNATION;
 #[cfg(feature = "raft")]
 use medulla_types::MutationOutboxRecord;
@@ -136,10 +136,13 @@ static IMPORT_AFTER_RESERVED_STAGE: NamedBarrierSlot = OnceLock::new();
 /// the interleave regression prove that the competing cleanup has entered the
 /// protocol before the staged import is released.
 #[cfg(all(test, feature = "server"))]
-static GRAFT_BEFORE_PROTOCOL_LOCK: NamedBarrierSlot = OnceLock::new();
+pub(crate) static GRAFT_BEFORE_PROTOCOL_LOCK: NamedBarrierSlot = OnceLock::new();
 
 #[cfg(all(test, feature = "server"))]
-fn take_test_barrier(slot: &NamedBarrierSlot, graph_fname: &str) -> Option<Arc<Barrier>> {
+pub(crate) fn take_test_barrier(
+    slot: &NamedBarrierSlot,
+    graph_fname: &str,
+) -> Option<Arc<Barrier>> {
     let mut barrier = slot.get()?.lock().ok()?;
     if barrier
         .as_ref()
@@ -688,43 +691,6 @@ impl Shard {
         medulla_transaction::outbox_status(&self.read(&handle)?, consumer, now_ms)
     }
 
-    /// Reserve a graph's destination before an online move copies owner rows.
-    /// The source must already be bound; the destination reservation is the
-    /// only authority allowed to admit the staged owner payload that follows.
-    #[cfg(feature = "server")]
-    pub(crate) fn reserve_graft_destination(
-        &self,
-        source: &Shard,
-        graph_fname: &str,
-    ) -> Result<(), String> {
-        let identity = graph_scope_identity(graph_fname)?;
-        if source.kernel().owner_authority_digest()? == self.kernel.owner_authority_digest()? {
-            return Err("graft source and destination use the same authority".to_string());
-        }
-        if !source.kernel().scope_binding_exists(&identity)? {
-            return Err("graft source scope is not bound".to_string());
-        }
-        let source_handle = source.graph(graph_fname)?;
-        if source_graft_marker(self, source, &source_handle)?
-            == SourceGraftMarker::ForAnotherDestination
-        {
-            return Err(FOREIGN_GRAFT_MARKER.to_string());
-        }
-        let destination_handle = self.graph(graph_fname)?;
-        if !self.graft_destination_reserved(graph_fname)? {
-            let existing =
-                crate::server::persistence::online_reshard::export_graph_raw(self, graph_fname)?;
-            if !existing.empty_owner_payload() {
-                return Err("graft destination scope already carries owner payload".to_string());
-            }
-        }
-        let destination =
-            GraftDestination::new(self.mutations(), self.kernel(), destination_handle.as_ref());
-        source
-            .mutations()
-            .graft_reserve_destination(source_handle.as_ref(), &destination)
-    }
-
     /// Run one owner-only staging transaction under the destination's exact
     /// graft reservation. The source authority digest binds the staged rows to
     /// the source that will later provide Phase B's ledger copy.
@@ -760,12 +726,14 @@ impl Shard {
     pub(crate) fn graft_destination_reserved(&self, graph_fname: &str) -> Result<bool, String> {
         let handle = self.graph(graph_fname)?;
         let read = self.read(&handle)?;
-        Ok(medulla_transaction::read_batches(&read)?.iter().any(|record| {
-            record
-                .batch
-                .batch_id
-                .starts_with("kernel.graft/reservation/")
-        }))
+        Ok(medulla_transaction::read_batches(&read)?
+            .iter()
+            .any(|record| {
+                record
+                    .batch
+                    .batch_id
+                    .starts_with("kernel.graft/reservation/")
+            }))
     }
 
     /// Re-enter the authenticated graft path for a destination that already
@@ -778,7 +746,7 @@ impl Shard {
     /// retained reservation is left fenced as the recovery handle; this helper
     /// never clears it by observation alone.
     #[cfg(feature = "server")]
-    fn cleanup_wrong_target_reservation(
+    pub(crate) fn cleanup_wrong_target_reservation(
         &self,
         source: &Shard,
         graph_fname: &str,
@@ -888,113 +856,6 @@ impl Shard {
         result
     }
 
-    /// Move one graph's whole ledger out of `source` into this shard.
-    ///
-    /// The kernel's, not the mover's: under one mutation authority a domain
-    /// crate cannot write a ledger row, and re-admitting each moved batch is
-    /// not equivalent to moving it -- re-admission re-executes effects,
-    /// re-emits outbox rows, stamps new receipts, and resets the version an
-    /// in-flight OCC expectation depends on. The graft copies every ledger row
-    /// verbatim, retires the source binding and the source's owner rows, and
-    /// preserves the version, which is what makes an online move survivable.
-    ///
-    /// The owner rows are transferred through the graft's reservation-authenticated
-    /// payload callback in the same Phase-B destination transaction; the graft
-    /// retires the source's payload as part of the move. This wrapper establishes
-    /// the reservation/marker before entering the kernel copy, and uses
-    /// marker-backed recovery when Phase C already retired the source.
-    #[cfg(feature = "server")]
-    pub(crate) fn graft_graph_from(
-        &self,
-        source: &Shard,
-        graph_fname: &str,
-    ) -> Result<GraftedScope, String> {
-        let mut transfer =
-            crate::server::persistence::shard_migrate::GraphShardPayloadTransfer::without_report();
-        self.graft_graph_from_with_payload(source, graph_fname, Some(&mut transfer))
-    }
-
-    /// Move one graph and, when requested, stage its owner payload through the
-    /// exact destination reservation.  Owner rows never arrive as an ordinary
-    /// maintenance batch, so the ledger remains at the reservation baseline
-    /// until the kernel graft copies it.
-    #[cfg(feature = "server")]
-    pub(crate) fn graft_graph_from_with_payload(
-        &self,
-        source: &Shard,
-        graph_fname: &str,
-        payload: Option<&mut dyn OwnerPayloadTransfer<GraphShardOwner, GraphShardOwner>>,
-    ) -> Result<GraftedScope, String> {
-        #[cfg(all(test, feature = "server"))]
-        if let Some(barrier) = take_test_barrier(&GRAFT_BEFORE_PROTOCOL_LOCK, graph_fname) {
-            medulla_kernel::test_rendezvous::meet(&barrier, "graft before-protocol-lock rendezvous");
-        }
-        let protocol_guard = self.graft_protocol_guard(graph_fname)?;
-        let _protocol_guard = protocol_guard
-            .lock()
-            .map_err(|_| "graph graft protocol guard is poisoned".to_string())?;
-        let source_identity = graph_scope_identity(graph_fname)?;
-        // Refusal preflight must be side-effect free.  Binding the destination
-        // before proving a source/recovery state would leave a live scope after
-        // a same-authority or absent-source refusal.
-        if source.kernel().owner_authority_digest()? == self.kernel.owner_authority_digest()? {
-            return Err("graft source and destination use the same authority".to_string());
-        }
-        let source_bound = source.kernel().scope_binding_exists(&source_identity)?;
-        if !source_bound && !self.kernel.scope_binding_exists(&source_identity)? {
-            return Err(
-                "graft source scope is not bound and destination has no recovery binding"
-                    .to_string(),
-            );
-        }
-        // A completed Phase C retires the source binding.  Do not call
-        // `graph()` in that state: binding the old name again would resurrect
-        // the retired scope and defeat the destination marker's recovery
-        // proof.  The recovery API authenticates the destination marker and
-        // proves source binding absence directly from the source kernel.
-        if !source_bound {
-            return recover_retired_graft(self, source, graph_fname, &source_identity);
-        }
-        let source_handle = source.graph(graph_fname)?;
-        // Prove that the source can be opened before creating or rebinding a
-        // destination handle.  A corrupt/missing source must fail without
-        // leaving a newly bound destination behind for a later retry.
-        let source_marker = source_graft_marker(self, source, &source_handle)?;
-        if source_marker == SourceGraftMarker::ForAnotherDestination {
-            self.cleanup_wrong_target_reservation(
-                source,
-                graph_fname,
-                &source_handle,
-                &source_identity,
-            )?;
-            return Err(FOREIGN_GRAFT_MARKER.to_string());
-        }
-        let destination_handle = self.graph(graph_fname)?;
-        let destination = retiring_graft_destination(self, &destination_handle);
-        if source_marker == SourceGraftMarker::Absent {
-            self.reserve_graft_destination(source, graph_fname)?;
-        }
-        // Phase A is part of the storage move's cutover contract.  Establish
-        // the destination reservation and source maximum fence before phase B
-        // asks the transaction kernel to copy the ledger.  Calling graft_scope
-        // directly leaves the source without the durable marker it is required
-        // to prove, which makes every backup/reshard/migration caller fail at
-        // the same precondition.
-        source
-            .mutations()
-            .graft_begin(source_handle.as_ref(), &destination)?;
-        let payload = payload
-            .ok_or_else(|| "graph shard graft requires an owner payload transfer".to_string())?;
-        let grafted = self.mutations.graft_scope_with_payload(
-            GraftSource::new(source.mutations(), source.kernel(), source_handle.as_ref())
-                .with_owner_payload(&crate::redb_store::GraphShardRetirement),
-            &destination,
-            payload,
-        )?;
-        source.forget_graph(graph_fname, &source_identity)?;
-        Ok(grafted)
-    }
-
     /// Seal and commit a group whose ONE graph member carries a caller batch,
     /// handing that member's receipt back.
     ///
@@ -1086,13 +947,13 @@ impl Shard {
 }
 
 #[cfg(feature = "server")]
-const FOREIGN_GRAFT_MARKER: &str =
+pub(crate) const FOREIGN_GRAFT_MARKER: &str =
     "graft source carries a marker for a different authority or destination";
 
 /// What the source's durable graft marker says about this destination.
 #[cfg(feature = "server")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum SourceGraftMarker {
+pub(crate) enum SourceGraftMarker {
     /// No graft has begun from the source.
     Absent,
     /// A graft to exactly this (source authority, destination authority) began.
@@ -1106,7 +967,7 @@ enum SourceGraftMarker {
 /// The destination's mutation and storage kernels must first prove one
 /// authority, since the marker binds the destination by that digest.
 #[cfg(feature = "server")]
-fn source_graft_marker(
+pub(crate) fn source_graft_marker(
     destination: &Shard,
     source: &Shard,
     source_handle: &ShardHandle,
@@ -1137,7 +998,7 @@ fn source_graft_marker(
 
 /// The graft destination over `handle` that may retire staged owner rows.
 #[cfg(feature = "server")]
-fn retiring_graft_destination<'a>(
+pub(crate) fn retiring_graft_destination<'a>(
     shard: &'a Shard,
     handle: &'a ShardHandle,
 ) -> GraftDestination<'a, GraphShardOwner> {
@@ -1152,7 +1013,7 @@ fn retiring_graft_destination<'a>(
 /// destination marker and proves the source binding absent from the source
 /// kernel directly.
 #[cfg(feature = "server")]
-fn recover_retired_graft(
+pub(crate) fn recover_retired_graft(
     destination: &Shard,
     source: &Shard,
     graph_fname: &str,
@@ -1687,9 +1548,12 @@ mod tests {
             .graft_begin(source_handle.as_ref(), &first)
             .unwrap();
 
-        let error = second_destination
-            .graft_graph_from(&source, "graph-a")
-            .unwrap_err();
+        let error = crate::server::persistence::online_reshard::graft_graph_from(
+            &second_destination,
+            &source,
+            "graph-a",
+        )
+        .unwrap_err();
         assert!(
             error.contains("different authority or destination"),
             "got: {error}"
@@ -1744,9 +1608,12 @@ mod tests {
         // D is reserved by S2, and has owner rows staged under that exact
         // reservation.  The catalog row is deliberately committed in the
         // separate control transaction used by the importer.
-        destination
-            .reserve_graft_destination(&other_source, graph)
-            .unwrap();
+        crate::server::persistence::online_reshard::reserve_graft_destination(
+            &destination,
+            &other_source,
+            graph,
+        )
+        .unwrap();
         destination
             .stage_reserved_graft_owner_payload(graph, |write| {
                 write
@@ -1789,12 +1656,20 @@ mod tests {
         // S1 has a durable marker for W.  There is no S1->D reservation, so D
         // must refuse without deleting S2's catalog, payload, or recovery
         // fence.
-        winner.reserve_graft_destination(&source, graph).unwrap();
+        crate::server::persistence::online_reshard::reserve_graft_destination(
+            &winner, &source, graph,
+        )
+        .unwrap();
         source
             .mutations()
             .graft_begin(source_handle.as_ref(), &winner_target)
             .unwrap();
-        let error = destination.graft_graph_from(&source, graph).unwrap_err();
+        let error = crate::server::persistence::online_reshard::graft_graph_from(
+            &destination,
+            &source,
+            graph,
+        )
+        .unwrap_err();
         assert!(
             error.contains("different authority or destination"),
             "got: {error}"
@@ -1867,7 +1742,10 @@ mod tests {
         // Reserve and stage through the authenticated destination path before
         // the source marker chooses the winner. This is the case a
         // LedgerOnly-only cancellation test cannot distinguish.
-        loser.reserve_graft_destination(&source, "graph-a").unwrap();
+        crate::server::persistence::online_reshard::reserve_graft_destination(
+            &loser, &source, "graph-a",
+        )
+        .unwrap();
         loser
             .stage_reserved_graft_owner_payload("graph-a", |write| {
                 write
@@ -1904,15 +1782,19 @@ mod tests {
         )
         .unwrap();
 
-        winner
-            .reserve_graft_destination(&source, "graph-a")
-            .unwrap();
+        crate::server::persistence::online_reshard::reserve_graft_destination(
+            &winner, &source, "graph-a",
+        )
+        .unwrap();
         source
             .mutations()
             .graft_begin(source_handle.as_ref(), &winner_target)
             .unwrap();
         *FAIL_AFTER_GRAFT_CATALOG_CLEANUP.lock().unwrap() = Some("graph-a".to_string());
-        let retry_error = loser.graft_graph_from(&source, "graph-a").unwrap_err();
+        let retry_error = crate::server::persistence::online_reshard::graft_graph_from(
+            &loser, &source, "graph-a",
+        )
+        .unwrap_err();
         assert!(
             retry_error.contains("injected failure after durable graft catalog cleanup"),
             "{retry_error}"
@@ -1942,7 +1824,10 @@ mod tests {
         assert_eq!(fence.fencing_token, u64::MAX);
         drop(retained);
 
-        let error = loser.graft_graph_from(&source, "graph-a").unwrap_err();
+        let error = crate::server::persistence::online_reshard::graft_graph_from(
+            &loser, &source, "graph-a",
+        )
+        .unwrap_err();
         assert!(
             error.contains("different authority or destination"),
             "{error}"
@@ -2021,9 +1906,12 @@ mod tests {
         let winner_target =
             GraftDestination::new(winner.mutations(), winner.kernel(), winner_handle.as_ref());
 
-        loser
-            .reserve_graft_destination(source.as_ref(), "graph-protocol")
-            .unwrap();
+        crate::server::persistence::online_reshard::reserve_graft_destination(
+            &loser,
+            source.as_ref(),
+            "graph-protocol",
+        )
+        .unwrap();
         loser
             .stage_reserved_graft_owner_payload("graph-protocol", |write| {
                 write
@@ -2067,9 +1955,12 @@ mod tests {
         rows.requires_graft_reservation = true;
         let stale_rows = rows.clone();
 
-        winner
-            .reserve_graft_destination(source.as_ref(), "graph-protocol")
-            .unwrap();
+        crate::server::persistence::online_reshard::reserve_graft_destination(
+            &winner,
+            source.as_ref(),
+            "graph-protocol",
+        )
+        .unwrap();
         source
             .mutations()
             .graft_begin(source_handle.as_ref(), &winner_target)
@@ -2104,7 +1995,11 @@ mod tests {
         let cleanup_loser = Arc::clone(&loser);
         let cleanup_source = Arc::clone(&source);
         let cleanup = std::thread::spawn(move || {
-            cleanup_loser.graft_graph_from(cleanup_source.as_ref(), "graph-protocol")
+            crate::server::persistence::online_reshard::graft_graph_from(
+                &cleanup_loser,
+                cleanup_source.as_ref(),
+                "graph-protocol",
+            )
         });
         // Ensure the competing cleanup has entered the graft operation before
         // probing the actual per-graph mutex held by the paused import.  The
@@ -2189,7 +2084,8 @@ mod tests {
             let shard = Shard::open(&path).unwrap();
             let members = members(&shard, &[physical.as_str()]);
             let (group, batches) = shard.admit_drain(&members, "drain-escaped").unwrap();
-            let medulla_types::MutationEnvelope::Maintenance(maintenance) = &batches[1].envelope else {
+            let medulla_types::MutationEnvelope::Maintenance(maintenance) = &batches[1].envelope
+            else {
                 panic!("shard drain must use a maintenance envelope");
             };
             assert_eq!(

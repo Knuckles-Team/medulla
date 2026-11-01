@@ -1,4 +1,6 @@
 use super::*;
+#[cfg(feature = "redb")]
+use crate::server::persistence::cold_offload::ColdTrackerStateExt;
 struct GraphDispatchCapture<'a> {
     state: &'a Arc<RwLock<ServerState>>,
     graph_name: &'a str,
@@ -28,7 +30,7 @@ struct GraphDispatchCapture<'a> {
     #[cfg(feature = "redb")]
     graph_incarnation_id: String,
     #[cfg(feature = "redb")]
-    cold_tracker: Arc<crate::server::persistence::cold_offload::ColdTenantTracker>,
+    cold_tracker: Option<Arc<crate::server::persistence::cold_offload::ColdTenantTracker>>,
     #[cfg(feature = "security")]
     rls: std::sync::Arc<crate::isolation::IsolationLayer>,
     #[cfg(all(feature = "mining", feature = "query", feature = "tsdb"))]
@@ -112,7 +114,7 @@ async fn capture_graph_dispatch<'a>(
         #[cfg(feature = "raft")]
         graph_type: entry.graph_type,
         #[cfg(feature = "redb")]
-        cold_tracker: s.cold_tracker.clone(),
+        cold_tracker: s.cold_tracker(),
         #[cfg(feature = "security")]
         rls: std::sync::Arc::new(s.isolation.clone()),
         #[cfg(all(feature = "mining", feature = "query", feature = "tsdb"))]
@@ -142,9 +144,9 @@ pub(super) async fn dispatch_graph_op_inner(
         return Response::err(capture.req_id, error);
     }
     #[cfg(feature = "redb")]
-    capture
-        .cold_tracker
-        .touch_with_incarnation(capture.graph_name, &capture.graph_incarnation_id);
+    if let Some(tracker) = capture.cold_tracker.as_ref() {
+        tracker.touch_with_incarnation(capture.graph_name, &capture.graph_incarnation_id);
+    }
     #[cfg(feature = "raft")]
     let routed_raft = match resolve_routed_raft(
         capture.req_id,

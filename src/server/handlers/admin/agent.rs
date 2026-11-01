@@ -1,5 +1,7 @@
 //! Authenticated Agent Library operation handlers.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;

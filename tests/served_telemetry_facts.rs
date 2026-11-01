@@ -32,6 +32,8 @@ mod test_support;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use medulla::protocol::{Method, Response, ResultPayload};
+use medulla::server::obs::{LogRecord, ObsState, ObsStateExt};
 use medulla_stream::telemetry::{
     AnomalyRule, IncidentRule, MetricRole, ResolutionPolicy, RollupPolicy, TelemetryPolicy,
 };
@@ -39,8 +41,6 @@ use medulla_stream::{CepPattern, EventMatcher, Window};
 use medulla_tsdb::point::Point;
 use medulla_tsdb::traces::Span;
 use medulla_types::telemetry_derive::TelemetryDeriveReceipt;
-use medulla::protocol::{Method, Response, ResultPayload};
-use medulla::server::obs::{LogRecord, ObsState};
 use serde_json::json;
 
 const SECRET: &str = "served-telemetry-facts-secret";
@@ -202,7 +202,7 @@ async fn served_state() -> (test_support::SharedState, Arc<ObsState>) {
     let state = test_support::durable_state(SECRET, common::current_isolation());
     let obs = Arc::new(ObsState::in_memory(1024).unwrap());
     seed_telemetry(&obs);
-    state.write().await.obs = Some(obs.clone());
+    state.write().await.set_obs(Some(obs.clone()));
     declare_services(&state).await;
     (state, obs)
 }

@@ -10,6 +10,8 @@
 use super::SharedState;
 use crate::protocol::Response;
 use crate::server::auth::VerifiedRequestContext;
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use medulla_types::decision::AssemblyRequest;
 
 /// The audit target every Decide-layer decision line is written under.

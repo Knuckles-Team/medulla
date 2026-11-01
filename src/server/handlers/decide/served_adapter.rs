@@ -13,6 +13,8 @@
 //! rows and can never admit one. A space with no active adapter -- or an
 //! adapter state that cannot be read -- serves the base query unchanged.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::collections::BTreeMap;
 use std::sync::{Arc, OnceLock};
 
@@ -94,7 +96,7 @@ pub(crate) async fn served_for(
     core: &GraphCore,
 ) -> Option<Arc<ServedAdapter>> {
     let (tenant, graph) = (tenant?.to_string(), graph.to_string());
-    let store = state.read().await.agent_library.clone()?;
+    let store = state.read().await.agent_library()?;
     let loaded = tokio::task::spawn_blocking(move || load(&store, &tenant, &graph)).await;
     let declared = core.semantic_store.read().space().map(|s| s.digest.clone());
     let in_space = |a: &Arc<ServedAdapter>| declared.as_ref().is_none_or(|d| d == a.space_digest());

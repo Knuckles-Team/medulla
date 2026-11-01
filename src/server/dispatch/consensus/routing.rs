@@ -1,4 +1,6 @@
 use super::*;
+#[cfg(feature = "raft")]
+use crate::raft::RaftStateExt;
 
 /// Per-tenant opaque coordinator key for a command that owns its OWN store
 /// (keyed by blob/kv/series/job/statechart/catalog id) and is therefore not
@@ -362,7 +364,7 @@ async fn resolve_native_proposal_route(
             .map(|entry| entry.graph_type)
             .unwrap_or(crate::protocol::GraphType::Global),
     };
-    let multi = current.multi_raft.clone();
+    let multi = current.multi_raft();
     drop(current);
     (graph_name, multi, graph_type)
 }

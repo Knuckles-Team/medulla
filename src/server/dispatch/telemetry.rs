@@ -30,6 +30,8 @@ mod materialize;
 #[cfg(test)]
 mod tests;
 
+#[cfg(feature = "obs")]
+use crate::server::obs::ObsStateExt;
 use std::sync::Arc;
 
 use medulla_stream::telemetry::{derive_facts, fact_graph, TelemetryFacts, TelemetryPolicy};
@@ -123,7 +125,7 @@ fn decode_policy(policy_msgpack: &[u8]) -> Result<TelemetryPolicy, String> {
 /// The in-process observability store, or a typed refusal when this engine
 /// was started without one.
 async fn observability_store(state: &Arc<RwLock<ServerState>>) -> Result<Arc<ObsState>, String> {
-    timed_read(state).await.obs.clone().ok_or_else(|| {
+    timed_read(state).await.obs().ok_or_else(|| {
         "TELEMETRY_UNAVAILABLE: this engine has no observability store configured".to_string()
     })
 }

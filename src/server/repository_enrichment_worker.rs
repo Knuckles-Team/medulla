@@ -6,6 +6,8 @@
 //! native submission route is composed here. The fixed service actor belongs
 //! to the deployment tenant; snapshots from another tenant fail closed.
 
+#[cfg(feature = "raft")]
+use crate::raft::RaftStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -133,8 +135,7 @@ mod worker {
             let multi = state
                 .read()
                 .await
-                .multi_raft
-                .clone()
+                .multi_raft()
                 .ok_or("CONFLICT: repository enrichment placement is unavailable")?;
             let routed = multi
                 .handle_for_graph(graph)
@@ -272,8 +273,7 @@ mod worker {
             let multi = state
                 .read()
                 .await
-                .multi_raft
-                .clone()
+                .multi_raft()
                 .ok_or("CONFLICT: repository enrichment placement is unavailable")?;
             multi.route_graph(graph).await.epoch
         };

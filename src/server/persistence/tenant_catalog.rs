@@ -56,7 +56,11 @@ const CATALOG_SCOPE_INCARNATION: &str = "tenant-catalog:v1";
 fn decode_assignment(bytes: &[u8]) -> Result<ShardAssignment, String> {
     medulla_types::msgpack::decode_bounded(
         bytes,
-        medulla_types::msgpack::MsgpackLimits::new(1024, 32, medulla_types::msgpack::DEFAULT_MAX_DEPTH),
+        medulla_types::msgpack::MsgpackLimits::new(
+            1024,
+            32,
+            medulla_types::msgpack::DEFAULT_MAX_DEPTH,
+        ),
     )
     .map_err(|_| "tenant catalog row is invalid or exceeds resource limits".to_string())
 }
@@ -240,7 +244,7 @@ impl TenantCatalog {
 /// When a catalog is attached its explicit placements OVERRIDE MEDULLA-026 hash routing, so a
 /// restore that dropped `catalog.redb` would silently re-route every explicitly-placed
 /// graph back to its hash shard.
-impl super::durable_stores::BundledStoreSource for TenantCatalog {
+impl crate::server::api::persistence::BundledStoreSource for TenantCatalog {
     fn file_name(&self) -> &'static str {
         "catalog.redb"
     }

@@ -26,6 +26,8 @@
 //! participant commit/abort, and finalization commands; every participant command is
 //! replicated by the group that owns that graph.
 
+#[cfg(feature = "raft")]
+use crate::raft::RaftStateExt;
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};

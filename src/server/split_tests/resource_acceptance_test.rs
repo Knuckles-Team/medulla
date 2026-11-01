@@ -12,6 +12,9 @@
 //! exact-query/status dispatch is the externally visible evidence.  The direct-redb
 //! last-slot race remains a separate lower-level proof.
 
+use crate::raft::RaftStateExt;
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::future::Future;
 use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -20,8 +23,6 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use tokio::sync::{Barrier, RwLock};
 
-use super::super::test_env::configure_auth_test_environment;
-use super::{Cluster, GRAPH};
 use crate::acl::RequestContextClaims;
 use crate::epistemic_operations::{
     ClaimWorkItemRequest, ClaimWorkItemRequestSchemaVersion, ClaimWorkItemResult,
@@ -36,6 +37,8 @@ use crate::epistemic_operations::{
 };
 use crate::isolation::{AgentIdentity, AgentRole};
 use crate::protocol::{GraphType, Method, Request, ResultPayload};
+use crate::raft::harness::cluster::{Cluster, GRAPH};
+use crate::raft::harness::test_env::configure_auth_test_environment;
 use crate::raft::NodeId;
 use crate::server::{compute_verified_envelope_token, dispatch, VerifiedEnvelopeParams};
 
@@ -1089,7 +1092,7 @@ async fn attach_multi_raft(cluster: &Cluster) {
         .collect();
     for (state, multi) in nodes {
         let mut guard = state.write().await;
-        let raft = guard.raft.clone();
+        let raft = guard.raft_handle().cloned();
         guard.install_multi_raft_placement_authority(raft, multi);
     }
 }
@@ -1321,8 +1324,7 @@ async fn transfer_graph_leader(cluster: &Cluster, from: NodeId, target: NodeId) 
     let multi = state
         .read()
         .await
-        .multi_raft
-        .clone()
+        .multi_raft()
         .expect("reopened member has MultiRaft authority");
     let routed = multi
         .handle_for_graph(GRAPH)
@@ -2707,8 +2709,8 @@ async fn kg_delegate_public_dispatch_rejects_missing_cluster_authority_scenario(
     let raft = state
         .read()
         .await
-        .raft
-        .clone()
+        .raft_handle()
+        .cloned()
         .expect("clustered fixture has a configured Raft handle");
     state
         .write()

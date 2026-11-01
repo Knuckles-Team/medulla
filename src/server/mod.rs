@@ -3,7 +3,6 @@
 // Long-running Tokio server that holds the GraphRegistry in memory
 // and serves requests over UDS or TCP with HMAC-SHA256 authentication.
 
-
 pub(crate) mod access;
 pub(crate) mod denial_sample;
 pub(crate) mod identity_view;
@@ -364,6 +363,10 @@ pub(crate) mod outbox_operator;
 #[cfg(feature = "shacl")]
 pub(crate) mod graph_schema;
 pub mod persistence;
+
+/// Tests that need the full server: the router, seam installation and the redb backend.
+#[cfg(test)]
+pub(crate) mod split_tests;
 // Shared request/auth/codec support for native wire adapters. Each adapter keeps
 // its own protocol limits and wire state on top of this seam.
 #[cfg(any(

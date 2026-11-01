@@ -5,6 +5,8 @@
 //! sealed record. It commits nothing, so the exploration seed's reveal is
 //! left to the commit that makes the record durable.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 use std::time::Instant;
 

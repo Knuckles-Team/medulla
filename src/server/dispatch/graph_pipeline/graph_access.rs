@@ -1,4 +1,6 @@
 use super::*;
+#[cfg(feature = "raft")]
+use crate::raft::RaftStateExt;
 pub(super) fn stamp_resource_reservation_timestamp(method: &mut Method) {
     if !crate::server::mutation_batch::is_resource_reservation_method(method) {
         return;
@@ -241,7 +243,7 @@ pub(super) fn resolve_multi_raft(
     ) {
         return None;
     }
-    s.multi_raft.clone()
+    s.multi_raft()
 }
 
 #[cfg(all(feature = "raft", feature = "tsdb"))]

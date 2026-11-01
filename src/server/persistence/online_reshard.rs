@@ -26,7 +26,7 @@
 //! all. Re-admitting the moved batches would not be equivalent to moving them: it would
 //! re-execute effects, re-emit outbox rows, stamp new receipts, and RESET the version an
 //! in-flight OCC expectation depends on. So the ledger moves by
-//! [`Shard::graft_graph_from`], which copies all fifteen ledger tables verbatim, commits
+//! [`graft_graph_from`], which copies all fifteen ledger tables verbatim, commits
 //! the destination, and retires the source binding together with its owner payload.
 //! [`medulla_transaction::GraftedScope::version`] is the SOURCE's marker-inclusive version,
 //! preserved by the copy — the Phase-A marker is the one intentional maintenance
@@ -71,13 +71,20 @@ use std::sync::mpsc::SyncSender;
 use medulla_storage::{
     GraphShardOwner, OwnerRowScope, OwnerRowScopeStart, ScopedOwnerTableMut, ScopedRead,
 };
-use medulla_transaction::{GraftedScope, OwnerPayloadWrite};
+use medulla_transaction::{
+    GraftDestination, GraftSource, GraftedScope, OwnerPayloadTransfer, OwnerPayloadWrite,
+};
 use redb::TableDefinition;
 
 use super::redb_backend::Cmd;
 use super::tenant_catalog::TenantCatalog;
 use crate::protocol::GraphType;
-use crate::redb_store::shard::{Shard, ShardWrite};
+use crate::redb_store::shard::{
+    graph_scope_identity, recover_retired_graft, retiring_graft_destination, source_graft_marker,
+    Shard, ShardWrite, SourceGraftMarker, FOREIGN_GRAFT_MARKER,
+};
+#[cfg(test)]
+use crate::redb_store::shard::{take_test_barrier, GRAFT_BEFORE_PROTOCOL_LOCK};
 #[cfg(feature = "security")]
 use crate::redb_store::PROVENANCE_ANCHOR_MEMBERS;
 use crate::redb_store::{capacity_lease, development_lane};
@@ -1625,7 +1632,7 @@ pub(crate) fn graft_and_retire(
     destination: &Shard,
     graph: &str,
 ) -> Result<GraftedScope, String> {
-    let grafted = destination.graft_graph_from(source, graph)?;
+    let grafted = graft_graph_from(&destination, source, graph)?;
     drop_from_catalog(source, graph)?;
     Ok(grafted)
 }
@@ -1678,9 +1685,7 @@ pub(crate) fn bulk_copy(
     graph: &str,
 ) -> Result<RawGraphRows, String> {
     let mut rows = export_from(endpoints.source_tx, graph)?;
-    endpoints
-        .destination
-        .reserve_graft_destination(endpoints.source, graph)?;
+    reserve_graft_destination(endpoints.destination, endpoints.source, graph)?;
     rows.requires_graft_reservation = true;
     let (reply, receive) = std::sync::mpsc::sync_channel(1);
     endpoints
@@ -1757,6 +1762,151 @@ pub(crate) fn delta_flip_purge(
     report.grafted_version = grafted.version;
 
     Ok(report)
+}
+
+/// Reserve a graph's destination before an online move copies owner rows.
+/// The source must already be bound; the destination reservation is the
+/// only authority allowed to admit the staged owner payload that follows.
+#[cfg(feature = "server")]
+pub(crate) fn reserve_graft_destination(
+    dest_shard: &Shard,
+    source: &Shard,
+    graph_fname: &str,
+) -> Result<(), String> {
+    let identity = graph_scope_identity(graph_fname)?;
+    if source.kernel().owner_authority_digest()? == dest_shard.kernel().owner_authority_digest()? {
+        return Err("graft source and destination use the same authority".to_string());
+    }
+    if !source.kernel().scope_binding_exists(&identity)? {
+        return Err("graft source scope is not bound".to_string());
+    }
+    let source_handle = source.graph(graph_fname)?;
+    if source_graft_marker(dest_shard, source, &source_handle)?
+        == SourceGraftMarker::ForAnotherDestination
+    {
+        return Err(FOREIGN_GRAFT_MARKER.to_string());
+    }
+    let destination_handle = dest_shard.graph(graph_fname)?;
+    if !dest_shard.graft_destination_reserved(graph_fname)? {
+        let existing = export_graph_raw(dest_shard, graph_fname)?;
+        if !existing.empty_owner_payload() {
+            return Err("graft destination scope already carries owner payload".to_string());
+        }
+    }
+    let destination = GraftDestination::new(
+        dest_shard.mutations(),
+        dest_shard.kernel(),
+        destination_handle.as_ref(),
+    );
+    source
+        .mutations()
+        .graft_reserve_destination(source_handle.as_ref(), &destination)
+}
+
+/// Move one graph's whole ledger out of `source` into this shard.
+///
+/// The kernel's, not the mover's: under one mutation authority a domain
+/// crate cannot write a ledger row, and re-admitting each moved batch is
+/// not equivalent to moving it -- re-admission re-executes effects,
+/// re-emits outbox rows, stamps new receipts, and resets the version an
+/// in-flight OCC expectation depends on. The graft copies every ledger row
+/// verbatim, retires the source binding and the source's owner rows, and
+/// preserves the version, which is what makes an online move survivable.
+///
+/// The owner rows are transferred through the graft's reservation-authenticated
+/// payload callback in the same Phase-B destination transaction; the graft
+/// retires the source's payload as part of the move. This wrapper establishes
+/// the reservation/marker before entering the kernel copy, and uses
+/// marker-backed recovery when Phase C already retired the source.
+#[cfg(feature = "server")]
+pub(crate) fn graft_graph_from(
+    dest_shard: &Shard,
+    source: &Shard,
+    graph_fname: &str,
+) -> Result<GraftedScope, String> {
+    let mut transfer =
+        crate::server::persistence::shard_migrate::GraphShardPayloadTransfer::without_report();
+    graft_graph_from_with_payload(dest_shard, source, graph_fname, Some(&mut transfer))
+}
+
+/// Move one graph and, when requested, stage its owner payload through the
+/// exact destination reservation.  Owner rows never arrive as an ordinary
+/// maintenance batch, so the ledger remains at the reservation baseline
+/// until the kernel graft copies it.
+#[cfg(feature = "server")]
+pub(crate) fn graft_graph_from_with_payload(
+    dest_shard: &Shard,
+    source: &Shard,
+    graph_fname: &str,
+    payload: Option<&mut dyn OwnerPayloadTransfer<GraphShardOwner, GraphShardOwner>>,
+) -> Result<GraftedScope, String> {
+    #[cfg(all(test, feature = "server"))]
+    if let Some(barrier) = take_test_barrier(&GRAFT_BEFORE_PROTOCOL_LOCK, graph_fname) {
+        medulla_kernel::test_rendezvous::meet(&barrier, "graft before-protocol-lock rendezvous");
+    }
+    let protocol_guard = dest_shard.graft_protocol_guard(graph_fname)?;
+    let _protocol_guard = protocol_guard
+        .lock()
+        .map_err(|_| "graph graft protocol guard is poisoned".to_string())?;
+    let source_identity = graph_scope_identity(graph_fname)?;
+    // Refusal preflight must be side-effect free.  Binding the destination
+    // before proving a source/recovery state would leave a live scope after
+    // a same-authority or absent-source refusal.
+    if source.kernel().owner_authority_digest()? == dest_shard.kernel().owner_authority_digest()? {
+        return Err("graft source and destination use the same authority".to_string());
+    }
+    let source_bound = source.kernel().scope_binding_exists(&source_identity)?;
+    if !source_bound && !dest_shard.kernel().scope_binding_exists(&source_identity)? {
+        return Err(
+            "graft source scope is not bound and destination has no recovery binding".to_string(),
+        );
+    }
+    // A completed Phase C retires the source binding.  Do not call
+    // `graph()` in that state: binding the old name again would resurrect
+    // the retired scope and defeat the destination marker's recovery
+    // proof.  The recovery API authenticates the destination marker and
+    // proves source binding absence directly from the source kernel.
+    if !source_bound {
+        return recover_retired_graft(dest_shard, source, graph_fname, &source_identity);
+    }
+    let source_handle = source.graph(graph_fname)?;
+    // Prove that the source can be opened before creating or rebinding a
+    // destination handle.  A corrupt/missing source must fail without
+    // leaving a newly bound destination behind for a later retry.
+    let source_marker = source_graft_marker(dest_shard, source, &source_handle)?;
+    if source_marker == SourceGraftMarker::ForAnotherDestination {
+        dest_shard.cleanup_wrong_target_reservation(
+            source,
+            graph_fname,
+            &source_handle,
+            &source_identity,
+        )?;
+        return Err(FOREIGN_GRAFT_MARKER.to_string());
+    }
+    let destination_handle = dest_shard.graph(graph_fname)?;
+    let destination = retiring_graft_destination(dest_shard, &destination_handle);
+    if source_marker == SourceGraftMarker::Absent {
+        reserve_graft_destination(dest_shard, source, graph_fname)?;
+    }
+    // Phase A is part of the storage move's cutover contract.  Establish
+    // the destination reservation and source maximum fence before phase B
+    // asks the transaction kernel to copy the ledger.  Calling graft_scope
+    // directly leaves the source without the durable marker it is required
+    // to prove, which makes every backup/reshard/migration caller fail at
+    // the same precondition.
+    source
+        .mutations()
+        .graft_begin(source_handle.as_ref(), &destination)?;
+    let payload = payload
+        .ok_or_else(|| "graph shard graft requires an owner payload transfer".to_string())?;
+    let grafted = dest_shard.mutations().graft_scope_with_payload(
+        GraftSource::new(source.mutations(), source.kernel(), source_handle.as_ref())
+            .with_owner_payload(&crate::redb_store::GraphShardRetirement),
+        &destination,
+        payload,
+    )?;
+    source.forget_graph(graph_fname, &source_identity)?;
+    Ok(grafted)
 }
 
 #[cfg(test)]
@@ -1869,9 +2019,7 @@ mod tests {
         // Reserve the destination before staging owner rows. The graft then
         // authenticates the reservation and copies the source ledger without
         // a pre-graft maintenance receipt in the destination.
-        destination
-            .reserve_graft_destination(&source, "graph-a")
-            .unwrap();
+        reserve_graft_destination(&destination, &source, "graph-a").unwrap();
         import_graph_raw(&destination, "graph-a", &rows).unwrap();
         let grafted = graft_and_retire(&source, &destination, "graph-a").unwrap();
 

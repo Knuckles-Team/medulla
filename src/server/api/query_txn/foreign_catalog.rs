@@ -68,7 +68,7 @@ use medulla_types::wire::ForeignSourceSpec;
 use super::foreign_share::{may_use_shared, share_resource, shared_name};
 use crate::isolation::IsolationLayer;
 use crate::server::access::CarrierAuthority;
-use crate::server::persistence::agent_library::AgentLibraryStore;
+use crate::server::api::persistence::SourceApprovalStore;
 
 /// `(verified owner scope, source name)` — the catalog key.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -214,7 +214,7 @@ impl ForeignSourceCatalog {
     pub fn bind_for(
         &self,
         caller: &CarrierAuthority,
-        store: &AgentLibraryStore,
+        store: &dyn SourceApprovalStore,
         isolation: &IsolationLayer,
         receipt: &ConnectorPackSourceApprovalResult,
         descriptor: &ForeignSourceBindingDescriptor,
@@ -238,7 +238,7 @@ impl ForeignSourceCatalog {
     pub fn verify_registered_for(
         &self,
         caller: &CarrierAuthority,
-        store: &AgentLibraryStore,
+        store: &dyn SourceApprovalStore,
         receipt: &ConnectorPackSourceApprovalResult,
         name: &str,
     ) -> Result<(), String> {
@@ -249,7 +249,7 @@ impl ForeignSourceCatalog {
     fn verify_binding(
         &self,
         caller: &CarrierAuthority,
-        store: &AgentLibraryStore,
+        store: &dyn SourceApprovalStore,
         receipt: &ConnectorPackSourceApprovalResult,
         descriptor: &ForeignSourceBindingDescriptor,
     ) -> Result<(), String> {
@@ -316,7 +316,7 @@ impl ForeignSourceCatalog {
     pub fn bind_registered_for(
         &self,
         caller: &CarrierAuthority,
-        store: &AgentLibraryStore,
+        store: &dyn SourceApprovalStore,
         isolation: &IsolationLayer,
         receipt: &ConnectorPackSourceApprovalResult,
         name: &str,
@@ -332,7 +332,7 @@ impl ForeignSourceCatalog {
     pub fn bind_registered_many(
         &self,
         caller: &CarrierAuthority,
-        store: &AgentLibraryStore,
+        store: &dyn SourceApprovalStore,
         isolation: &IsolationLayer,
         sources: &[(
             ConnectorPackSourceApprovalResult,

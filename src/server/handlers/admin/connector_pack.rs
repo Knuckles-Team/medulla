@@ -6,6 +6,8 @@
 //! inheriting one. Each arm's target is owned by a different package after S1,
 //! which is why they are separate functions rather than one body.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 #[cfg(feature = "redb")]
 use std::{hash::Hash, sync::OnceLock};
@@ -126,9 +128,9 @@ async fn serve_status(
                 }
                 Response::ok(
                     req_id,
-                    ResultPayload::of_ref::<medulla_types::result_contract::storage::ConnectorPackStatus>(
-                        &status,
-                    ),
+                    ResultPayload::of_ref::<
+                        medulla_types::result_contract::storage::ConnectorPackStatus,
+                    >(&status),
                 )
             }
             Err(error) => Response::err(req_id, error),
@@ -352,7 +354,8 @@ fn validate_import_identity(
     if computed != request.index.pack_digest {
         return Err("PACK_DIGEST_MISMATCH: connector pack digest is not canonical".to_string());
     }
-    if request.index.schema_version != medulla_types::connector_pack::CONNECTOR_PACK_SCHEMA_VERSION {
+    if request.index.schema_version != medulla_types::connector_pack::CONNECTOR_PACK_SCHEMA_VERSION
+    {
         return Err("MALFORMED_INDEX: unsupported connector pack schema version".to_string());
     }
     if request.index.archive.length > medulla_types::connector_pack::MAX_PACK_ARCHIVE_BYTES {
@@ -390,9 +393,11 @@ fn replay_or_unchanged(
             if expected.binding_revision.checked_add(1) == Some(head.binding_revision)
                 && receipt.pack_digest == request.index.pack_digest
             {
-                return Ok(Some(medulla_types::connector_pack::PackImportResult::Imported {
-                    receipt: Box::new(receipt),
-                }));
+                return Ok(Some(
+                    medulla_types::connector_pack::PackImportResult::Imported {
+                        receipt: Box::new(receipt),
+                    },
+                ));
             }
         }
         if actual_head == request.expected_head {

@@ -701,7 +701,7 @@ pub(crate) fn dispatch_test_on_heap<'a>(
     state: &'a std::sync::Arc<tokio::sync::RwLock<crate::server::state::ServerState>>,
     request: Request,
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = crate::protocol::Response> + Send + 'a>> {
-    Box::pin(crate::server::dispatch(state, request))
+    Box::pin(crate::server::api::reentry::dispatch(state, request))
 }
 
 #[cfg(test)]

@@ -2,6 +2,8 @@
 //! (MEDULLA-TYPED-PACKS-R101.9), and a one-tool-per-operation pack of 5000 entries
 //! imports and resolves (#656).
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::time::Instant;
 
 use medulla_types::connector_pack::{PackAnnotations, PackEntryKind};

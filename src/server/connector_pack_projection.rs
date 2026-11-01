@@ -18,6 +18,8 @@
 //! The worker runs under a fixed engine service identity; it is started once,
 //! after catalog recovery, and polls the deployment tenant's outbox.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -164,7 +166,7 @@ pub(crate) mod worker {
     async fn open_agent_library(
         state: &Arc<RwLock<ServerState>>,
     ) -> Result<Arc<AgentLibraryStore>, String> {
-        if let Some(store) = state.read().await.agent_library.clone() {
+        if let Some(store) = state.read().await.agent_library() {
             return Ok(store);
         }
         let (persist_dir, slot) = {
@@ -174,12 +176,15 @@ pub(crate) mod worker {
             })?;
             (persist_dir, Arc::clone(&guard.agent_library_open))
         };
-        let opened = crate::server::state::open_shared_agent_library(&slot, &persist_dir)?;
+        let opened = crate::server::persistence::agent_library::open_shared_agent_library(
+            &slot,
+            &persist_dir,
+        )?;
         let mut guard = state.write().await;
-        if let Some(existing) = guard.agent_library.as_ref() {
-            return Ok(Arc::clone(existing));
+        if let Some(existing) = guard.agent_library() {
+            return Ok(existing);
         }
-        guard.agent_library = Some(Arc::clone(&opened));
+        guard.set_agent_library(Some(Arc::clone(&opened)));
         tracing::info!("connector pack projection: opened the Agent Library store");
         Ok(opened)
     }

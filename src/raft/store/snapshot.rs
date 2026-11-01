@@ -1,4 +1,6 @@
 use super::*;
+#[cfg(feature = "redb")]
+use crate::server::persistence::cold_offload::ColdTrackerStateExt;
 
 impl MedullaStore {
     /// Dump THIS group's graphs for a snapshot (CONCEPT:AU-KG.ingest.staged). When the store runs
@@ -162,7 +164,9 @@ impl MedullaStore {
         s.routed_write_coalescer.remove(name);
         s.per_graph_inflight.remove(name);
         #[cfg(feature = "redb")]
-        s.cold_tracker.forget(name);
+        if let Some(tracker) = s.cold_tracker() {
+            tracker.forget(name);
+        }
         medulla_kernel::metrics::set_graph_size(
             name,
             i64::try_from(core.node_count()).unwrap_or(i64::MAX),
@@ -187,7 +191,9 @@ impl MedullaStore {
         s.routed_write_coalescer.remove(name);
         s.per_graph_inflight.remove(name);
         #[cfg(feature = "redb")]
-        s.cold_tracker.forget(name);
+        if let Some(tracker) = s.cold_tracker() {
+            tracker.forget(name);
+        }
         medulla_kernel::metrics::drop_graph(name);
         Ok(())
     }

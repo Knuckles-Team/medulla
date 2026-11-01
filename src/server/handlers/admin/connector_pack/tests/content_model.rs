@@ -1,5 +1,7 @@
 //! The content model (pack design §3.5, review B3): identity follows content.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use medulla_types::agent_component::AgentComponentEntry;
 use medulla_types::agent_library::AgentLibraryLifecycle;
 use medulla_types::connector_pack::{

@@ -2,6 +2,8 @@
 //! consumer, a pack is dark until its projection applies, and the operator
 //! surface reads and rewinds the worker's stream.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::sync::atomic::AtomicBool;
 
 use medulla_types::agent_component::{
@@ -242,7 +244,8 @@ async fn an_admin_forced_reproject_redrives_a_stale_projection_without_losing_la
     // Read the durable backend, not a helper composition or the resident cache.
     let sources = projected_schema(&served, schema).await;
     let source = sources.dynamic.get(&format!("pack:{schema}")).unwrap();
-    let triples = medulla_rdf::mapping::parse_turtle(source.ontology_ttl.as_deref().unwrap()).unwrap();
+    let triples =
+        medulla_rdf::mapping::parse_turtle(source.ontology_ttl.as_deref().unwrap()).unwrap();
     assert_eq!(triples.len(), 2);
     let identities: std::collections::BTreeSet<_> = triples
         .iter()

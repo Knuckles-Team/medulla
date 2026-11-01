@@ -11,6 +11,8 @@
 //! 5. EVERY committed write survives on the new leader (no data loss, no
 //!    split-brain — the survivors form a quorum of 2/3).
 
+#[cfg(feature = "raft")]
+use crate::raft::RaftStateExt;
 #[cfg(feature = "redb")]
 use crate::server::persistence::AsRedb;
 use std::collections::{BTreeMap, BTreeSet};

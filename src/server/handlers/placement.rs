@@ -18,6 +18,8 @@
 //! `MultiRaft`/`TenantManager` API the harness tests exercise directly, so no new
 //! placement logic is introduced here — only its external RPC surface.
 
+#[cfg(feature = "raft")]
+use crate::raft::RaftStateExt;
 #[cfg(feature = "redb")]
 use crate::server::persistence::AsRedb;
 use std::sync::Arc;
@@ -151,7 +153,7 @@ async fn handle_route(
 
     let (multi, placement) = {
         let current = state.read().await;
-        (current.multi_raft.clone(), current.placement_authority())
+        (current.multi_raft(), current.placement_authority())
     };
     let Some(multi) = multi else {
         if let Some(error) = placement.missing_error() {
@@ -225,7 +227,7 @@ async fn resolve_admin_authority(
     String,
 > {
     let current = state.read().await;
-    let multi = current.multi_raft.clone().ok_or_else(|| {
+    let multi = current.multi_raft().ok_or_else(|| {
         "CLUSTER_CONFIGURATION_INVALID: MultiRaft placement authority is required for placement \
          admin mutations"
             .to_string()
