@@ -1521,7 +1521,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     // durable generation so subsequent restarts reopen it in milliseconds.
     // Feature-gated: a non-`ann` build is byte-for-byte unchanged.
     //
-    // This is trigger 1 of the three in `medulla_server::semantic_activation`, and it runs
+    // This is trigger 1 of the three in `medulla_server_graph::semantic_activation`, and it runs
     // that module's `activate_one` rather than its own copy of the body: the boot
     // task, the dispatch write-path tail and the periodic sweep below must reopen,
     // build and activate identically or a graph's index depends on which trigger
@@ -1544,7 +1544,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
             let _ = tokio::task::spawn_blocking(move || {
                 let mut warmed = 0usize;
                 for (name, core) in cores {
-                    if medulla_server::semantic_activation::activate_one(
+                    if medulla_server_graph::semantic_activation::activate_one(
                         &name,
                         &core,
                         warm_dir.as_deref(),
@@ -1581,7 +1581,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
                 ticker.tick().await;
                 let __loop_tick_started = std::time::Instant::now();
                 let n =
-                    medulla_server::semantic_activation::sweep_resident_graphs(&sweep_state).await;
+                    medulla_server_graph::semantic_activation::sweep_resident_graphs(&sweep_state).await;
                 if n > 0 {
                     tracing::info!(
                         "Semantic ANN warm re-check: spawned {} warm(s) for resident graph(s)",
