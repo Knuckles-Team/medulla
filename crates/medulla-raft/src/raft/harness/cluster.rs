@@ -36,7 +36,7 @@ static HARNESS_ROOT_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 
 /// One member of the managed cluster — running OR killed (slot kept so it can be
 /// restarted over the same files).
-struct Member {
+pub struct Member {
     id: NodeId,
     dir: String,
     /// `Some` while running; `None` after a kill (until restart).
