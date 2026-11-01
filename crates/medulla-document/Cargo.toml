@@ -21,6 +21,7 @@ sha2 = "0.10"
 # build links none of it and `DocumentData` carries no new required trait. See
 # `src/contract.rs`.
 medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
 
 [features]
 default = []

@@ -96,11 +96,11 @@ $($variants)*
         plan: medulla_types::wire::Plan,
         /// Optional host-driven foreign-read execution bound to this exact plan.
         #[serde(default)]
-        foreign_execution: Option<medulla_types::foreign_read::ForeignReadExecutionRef>,
+        foreign_execution: Option<medulla_catalog_types::foreign_read::ForeignReadExecutionRef>,
         /// Alternative bounded set of completed sources for a multi-source plan.
         /// The single and multi-source forms are mutually exclusive.
         #[serde(default, skip_serializing_if = "medulla_types::contract::BoundedVec::is_empty")]
-        foreign_executions: medulla_types::contract::BoundedVec<medulla_types::foreign_read::ForeignReadExecutionRef, 16>,
+        foreign_executions: medulla_types::contract::BoundedVec<medulla_catalog_types::foreign_read::ForeignReadExecutionRef, 16>,
     },
 
 
@@ -128,7 +128,7 @@ $($variants)*
         /// Optional host-driven foreign-read execution bound to this exact text
         /// and parameter map.
         #[serde(default)]
-        foreign_execution: Option<medulla_types::foreign_read::ForeignReadExecutionRef>,
+        foreign_execution: Option<medulla_catalog_types::foreign_read::ForeignReadExecutionRef>,
     },
 
 
@@ -465,25 +465,25 @@ $($variants)*
     /// stays in the authenticated host; the server rechecks this receipt.
     #[cfg(feature = "federation")]
     ForeignReadOpen {
-        request: medulla_types::foreign_read::ForeignReadOpenRequest,
+        request: medulla_catalog_types::foreign_read::ForeignReadOpenRequest,
     },
 
     /// Append one bounded page to a previously opened foreign read.
     #[cfg(feature = "federation")]
     ForeignReadChunk {
-        request: medulla_types::foreign_read::ForeignReadChunkRequest,
+        request: medulla_catalog_types::foreign_read::ForeignReadChunkRequest,
     },
 
     /// Close a foreign read successfully before its correlated query runs.
     #[cfg(feature = "federation")]
     ForeignReadComplete {
-        request: medulla_types::foreign_read::ForeignReadCompleteRequest,
+        request: medulla_catalog_types::foreign_read::ForeignReadCompleteRequest,
     },
 
     /// Close a foreign read without making its rows queryable.
     #[cfg(feature = "federation")]
     ForeignReadAbort {
-        request: medulla_types::foreign_read::ForeignReadAbortRequest,
+        request: medulla_catalog_types::foreign_read::ForeignReadAbortRequest,
     },
 
 

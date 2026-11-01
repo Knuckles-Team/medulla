@@ -11,8 +11,8 @@
 
 use std::collections::BTreeMap;
 
-use medulla_types::connector_pack::digest::tool_mode_token;
-use medulla_types::connector_pack::{PackEntry, PackEntryKind};
+use medulla_catalog_types::connector_pack::digest::tool_mode_token;
+use medulla_catalog_types::{connector_pack::PackEntry, connector_pack::PackEntryKind};
 
 use super::front_matter::declared_skill_type;
 

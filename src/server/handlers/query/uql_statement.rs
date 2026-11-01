@@ -19,7 +19,7 @@ pub(crate) async fn handle_uql(
     text: String,
     params: UqlParams,
     prepare: bool,
-    foreign_execution: Option<medulla_types::foreign_read::ForeignReadExecutionRef>,
+    foreign_execution: Option<medulla_catalog_types::foreign_read::ForeignReadExecutionRef>,
 ) -> Result<Response, Method> {
     let req_id = ctx.req_id;
     if prepare && foreign_execution.is_some() {

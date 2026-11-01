@@ -600,8 +600,8 @@ impl ServedPlanLegs {
         graph_name: &str,
         read_authority: Option<&GraphReadAuthority>,
         plan: &medulla_plan::Plan,
-        foreign_execution: Option<&medulla_types::foreign_read::ForeignReadExecutionRef>,
-        foreign_executions: &[medulla_types::foreign_read::ForeignReadExecutionRef],
+        foreign_execution: Option<&medulla_catalog_types::foreign_read::ForeignReadExecutionRef>,
+        foreign_executions: &[medulla_catalog_types::foreign_read::ForeignReadExecutionRef],
     ) -> Result<Self, String> {
         #[cfg(not(feature = "tsdb"))]
         let _ = graph_name;
@@ -816,7 +816,7 @@ impl QueryHandlerCtx<'_> {
     pub(crate) async fn served_legs_with_foreign_execution(
         &self,
         plan: &medulla_plan::Plan,
-        foreign_execution: Option<&medulla_types::foreign_read::ForeignReadExecutionRef>,
+        foreign_execution: Option<&medulla_catalog_types::foreign_read::ForeignReadExecutionRef>,
     ) -> Result<ServedPlanLegs, Response> {
         self.served_legs_with_foreign_executions(plan, foreign_execution, &[])
             .await
@@ -825,8 +825,8 @@ impl QueryHandlerCtx<'_> {
     pub(crate) async fn served_legs_with_foreign_executions(
         &self,
         plan: &medulla_plan::Plan,
-        foreign_execution: Option<&medulla_types::foreign_read::ForeignReadExecutionRef>,
-        foreign_executions: &[medulla_types::foreign_read::ForeignReadExecutionRef],
+        foreign_execution: Option<&medulla_catalog_types::foreign_read::ForeignReadExecutionRef>,
+        foreign_executions: &[medulla_catalog_types::foreign_read::ForeignReadExecutionRef],
     ) -> Result<ServedPlanLegs, Response> {
         ServedPlanLegs::resolve(
             self.state,

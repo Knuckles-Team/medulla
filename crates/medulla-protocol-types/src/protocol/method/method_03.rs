@@ -106,7 +106,7 @@ $($variants)*
     /// against `__commons__`; reads never take a request graph. Tenant and
     /// principal come only from the verified request context.
     FleetCatalog {
-        op: Box<medulla_types::fleet_catalog::FleetCatalogOp>,
+        op: Box<medulla_catalog_types::fleet_catalog::FleetCatalogOp>,
     },
 
 

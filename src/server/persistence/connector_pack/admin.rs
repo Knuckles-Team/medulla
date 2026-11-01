@@ -8,11 +8,13 @@
 
 use std::collections::BTreeSet;
 
+use medulla_catalog_types::{
+    connector_pack::ConnectorPackBindingResult, connector_pack::PackRetireResult,
+};
 use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_protocol_types::protocol::Method;
 use medulla_types::agent_component::{AgentComponentEntry, AgentComponentMutationKind};
 use medulla_types::agent_library::{AgentLibraryLifecycle, AgentLibraryMutationContext};
-use medulla_types::connector_pack::{ConnectorPackBindingResult, PackRetireResult};
 use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationSurface;
@@ -68,7 +70,7 @@ impl AgentLibraryStore {
         change: BindingChange<'_>,
     ) -> Result<ConnectorPackBindingResult, String> {
         medulla_types::agent_library::validate_key(&context.tenant_id, connector.as_str())?;
-        medulla_types::connector_pack::validate_connector(connector)?;
+        medulla_catalog_types::connector_pack::validate_connector(connector)?;
         let importer = match change {
             BindingChange::Bind { importer } => {
                 validate_importer(importer)?;
@@ -94,7 +96,8 @@ impl AgentLibraryStore {
         self.commit_pack_write(&context, identity, effects, |write, staged| {
             apply_binding(write, &context, connector, importer)?;
             Ok(ConnectorPackBindingResult {
-                schema_version: medulla_types::connector_pack::CONNECTOR_PACK_SCHEMA_VERSION,
+                schema_version:
+                    medulla_catalog_types::connector_pack::CONNECTOR_PACK_SCHEMA_VERSION,
                 tenant_id: context.tenant_id.clone(),
                 connector: connector.clone(),
                 importer: importer.map(str::to_string),
@@ -155,7 +158,8 @@ impl AgentLibraryStore {
                 },
             )?;
             Ok(PackRetireResult {
-                schema_version: medulla_types::connector_pack::CONNECTOR_PACK_SCHEMA_VERSION,
+                schema_version:
+                    medulla_catalog_types::connector_pack::CONNECTOR_PACK_SCHEMA_VERSION,
                 tenant_id: context.tenant_id.clone(),
                 connector: connector.clone(),
                 retired: BoundedVec::new(retired)?,

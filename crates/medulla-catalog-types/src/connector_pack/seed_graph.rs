@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::{Digest256, ResourceId};
+use medulla_types::{contract::Digest256, contract::ResourceId};
 
 /// The three seed parts a connector may publish.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

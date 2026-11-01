@@ -12,8 +12,8 @@ pub(crate) async fn served_foreign_leg(
     state: &Arc<RwLock<ServerState>>,
     plan: &medulla_plan::Plan,
     read_authority: Option<&GraphReadAuthority>,
-    execution: Option<&medulla_types::foreign_read::ForeignReadExecutionRef>,
-    executions: &[medulla_types::foreign_read::ForeignReadExecutionRef],
+    execution: Option<&medulla_catalog_types::foreign_read::ForeignReadExecutionRef>,
+    executions: &[medulla_catalog_types::foreign_read::ForeignReadExecutionRef],
 ) -> Result<Option<OwnedForeignRegistry>, String> {
     let s = state.read().await;
     let caller = read_authority.and_then(GraphReadAuthority::carrier);

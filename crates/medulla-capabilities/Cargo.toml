@@ -56,6 +56,7 @@ path = "../medulla-protocol-types"
 features = ["metrics", "wire-contract"]
 
 [dev-dependencies]
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 tempfile = "3"
@@ -157,3 +158,4 @@ viz = ["medulla-types/viz", "medulla-protocol-types/viz"]
 
 [dependencies]
 medulla-decision-types = { path = "../medulla-decision-types", features = ["wire-contract"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["wire-contract"] }

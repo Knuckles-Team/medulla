@@ -18,9 +18,10 @@ use crate::protocol::{Method, Response, ResultPayload};
 use crate::server::access::OwnerScopedCall;
 #[cfg(feature = "redb")]
 use crate::server::persistence::agent_library::AgentLibraryStateExt;
-use medulla_types::foreign_read::{
-    ForeignReadAbortRequest, ForeignReadChunkRequest, ForeignReadCompleteRequest,
-    ForeignReadOpenRequest, FOREIGN_READ_SCHEMA_VERSION,
+use medulla_catalog_types::{
+    foreign_read::ForeignReadAbortRequest, foreign_read::ForeignReadChunkRequest,
+    foreign_read::ForeignReadCompleteRequest, foreign_read::ForeignReadOpenRequest,
+    foreign_read::FOREIGN_READ_SCHEMA_VERSION,
 };
 
 /// Try to handle a federation method. `Ok(resp)` = handled; `Err(method)` = not mine.
@@ -145,7 +146,7 @@ async fn open_foreign_read(call: OwnerScopedCall<'_>, request: ForeignReadOpenRe
         state.foreign_reads.remove(execution.execution_id);
         return Response::err(req_id, error);
     }
-    let result = medulla_types::foreign_read::ForeignReadOpenResult {
+    let result = medulla_catalog_types::foreign_read::ForeignReadOpenResult {
         schema_version: FOREIGN_READ_SCHEMA_VERSION,
         execution,
         expires_at_ms,

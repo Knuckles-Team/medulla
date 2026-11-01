@@ -303,17 +303,19 @@ mod tests {
     #[test]
     fn graph_schema_changes_emit_the_reserved_control_marker() {
         let detach = Method::GraphSchema {
-            op: Box::new(medulla_types::graph_schema::GraphSchemaOp::Detach {
+            op: Box::new(medulla_catalog_types::graph_schema::GraphSchemaOp::Detach {
                 source_id: "admin:policy".to_string(),
                 if_composed_digest: None,
             }),
         };
         assert_eq!(marker_event_id(&detach), Some("__graph_schema"));
         let attach_pack = Method::GraphSchema {
-            op: Box::new(medulla_types::graph_schema::GraphSchemaOp::AttachPack {
-                connector: medulla_types::contract::ResourceId::new("graph-os").unwrap(),
-                if_composed_digest: None,
-            }),
+            op: Box::new(
+                medulla_catalog_types::graph_schema::GraphSchemaOp::AttachPack {
+                    connector: medulla_types::contract::ResourceId::new("graph-os").unwrap(),
+                    if_composed_digest: None,
+                },
+            ),
         };
         assert_eq!(marker_event_id(&attach_pack), Some("__graph_schema"));
     }

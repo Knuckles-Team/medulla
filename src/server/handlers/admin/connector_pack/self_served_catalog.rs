@@ -17,7 +17,7 @@ pub(super) async fn serve(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: medulla_types::connector_pack::McpSelfServedCatalogAttestRequest,
+    request: medulla_catalog_types::connector_pack::McpSelfServedCatalogAttestRequest,
 ) -> Response {
     #[cfg(not(feature = "redb"))]
     {
@@ -43,15 +43,16 @@ async fn attest(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: medulla_types::connector_pack::McpSelfServedCatalogAttestRequest,
-) -> Result<medulla_types::connector_pack::McpCatalogSnapshotBinding, String> {
+    request: medulla_catalog_types::connector_pack::McpSelfServedCatalogAttestRequest,
+) -> Result<medulla_catalog_types::connector_pack::McpCatalogSnapshotBinding, String> {
     use super::catalog_authority::{
         admit_catalog_write, observed_registration, require_catalog_attester, ObservedRegistration,
     };
     use crate::server::persistence::connector_pack::catalog_authority::published_server_content;
-    use medulla_types::connector_pack::{
-        pack_component_id, self_served_candidate, self_served_component_revision,
-        validate_connector, PackEntryKind, SelfServedAttester,
+    use medulla_catalog_types::{
+        connector_pack::pack_component_id, connector_pack::self_served_candidate,
+        connector_pack::self_served_component_revision, connector_pack::validate_connector,
+        connector_pack::PackEntryKind, connector_pack::SelfServedAttester,
     };
 
     require_catalog_attester(verified, &request.context.tenant_id, true)?;

@@ -2390,10 +2390,10 @@ mod tests {
             (
                 "ConnectorPack",
                 Method::ConnectorPack {
-                    op: Box::new(medulla_types::connector_pack::ConnectorPackOp::Unbind {
-                        request: medulla_types::connector_pack::ConnectorPackUnbindRequest {
+                    op: Box::new(medulla_catalog_types::connector_pack::ConnectorPackOp::Unbind {
+                        request: medulla_catalog_types::connector_pack::ConnectorPackUnbindRequest {
                             context: ctx(),
-                            connector: medulla_types::catalog_fixtures::contract_pack::connector(),
+                            connector: medulla_catalog_types::catalog_fixtures::contract_pack::connector(),
                         },
                     }),
                 },

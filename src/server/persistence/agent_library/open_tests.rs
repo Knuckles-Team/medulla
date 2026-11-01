@@ -40,7 +40,7 @@ fn fresh_open_initializes_all_pack_tables_and_reopens_empty() {
         assert!(status.importer.is_none());
         assert_eq!(
             status.members,
-            medulla_types::connector_pack::PackMemberCounts::default()
+            medulla_catalog_types::connector_pack::PackMemberCounts::default()
         );
         assert!(path.exists());
     }

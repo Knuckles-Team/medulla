@@ -38,7 +38,7 @@ pub fn escape_pack_name(name: &str) -> String {
 /// connector cannot itself contain the separator. A grant-scoped probe that
 /// sees a different tool set is its own connector
 /// (`<server>@grant-<16 hex of the grant digest>`).
-pub fn validate_connector(connector: &crate::contract::ResourceId) -> Result<(), String> {
+pub fn validate_connector(connector: &medulla_types::contract::ResourceId) -> Result<(), String> {
     if connector.as_str().contains('/') {
         return Err("MALFORMED_INDEX: a connector id must not contain '/'".to_string());
     }
@@ -57,7 +57,7 @@ pub fn pack_component_id(connector: &str, kind: PackEntryKind, name: &str) -> St
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::contract::ResourceId;
+    use medulla_types::contract::ResourceId;
 
     #[test]
     fn a_connector_id_never_contains_the_component_separator() {

@@ -20,8 +20,8 @@ use super::annotations::{PackAnnotations, PackCost, PackModelFacts};
 use super::index::{
     ConnectorPackIndex, McpCatalogSnapshotBinding, PackEntry, PackEntryKind, PackRef,
 };
-use crate::agent_component::{DeclaredLatency, ModelInputCapabilities};
-use crate::contract::Digest256;
+use medulla_types::contract::Digest256;
+use medulla_types::{agent_component::DeclaredLatency, agent_component::ModelInputCapabilities};
 
 /// Framing domain of one pack entry.
 pub const ENTRY_DIGEST_DOMAIN: &[u8] = b"eg/connector-pack-entry/v1";
@@ -444,7 +444,7 @@ mod contract_pin_tests {
 #[cfg(test)]
 mod harness_tool_fact_tests {
     use super::*;
-    use crate::agent_component::{ToolFactDeclarer, ToolSideEffects};
+    use medulla_types::{agent_component::ToolFactDeclarer, agent_component::ToolSideEffects};
 
     // spec: MEDULLA-TYPED-PACKS-R045.3
     #[test]

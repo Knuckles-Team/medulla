@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::Digest256;
+use medulla_types::contract::Digest256;
 
 /// Under whose authority a discovery observation was made.
 ///

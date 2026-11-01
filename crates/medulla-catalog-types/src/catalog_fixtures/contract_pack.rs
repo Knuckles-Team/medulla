@@ -1,6 +1,5 @@
 //! Valid sample values for the connector pack surface.
 
-use crate::agent_component::DeclaredLatency;
 use crate::connector_pack::{
     ConnectorPackBindRequest, ConnectorPackImportRequest, ConnectorPackIndex, ConnectorPackOp,
     ConnectorPackReconcileRequest, ConnectorPackReprojectRequest, ConnectorPackRetireRequest,
@@ -10,10 +9,11 @@ use crate::connector_pack::{
     PackEntry, PackEntryKind, PackHeadRef, PackModelFacts, PackProducer, PackRef, PackSection,
     PackToolMode, PackViolationCode, PackWarningCode, CONNECTOR_PACK_SCHEMA_VERSION,
 };
-use crate::contract::{Digest256, ResourceId};
+use medulla_types::agent_component::DeclaredLatency;
+use medulla_types::{contract::Digest256, contract::ResourceId};
 
-use crate::agent_fixtures::agent_library::mutation_context;
-use crate::test_support::wave::{bounded, raw_digest};
+use medulla_types::agent_fixtures::agent_library::mutation_context;
+use medulla_types::{test_support::wave::bounded, test_support::wave::raw_digest};
 
 /// The connector every sample names.
 pub fn connector() -> ResourceId {
@@ -111,7 +111,7 @@ pub fn index() -> ConnectorPackIndex {
         server: entry(PackEntryKind::McpServer, "server"),
         server_package_version: "2.3.1".to_string(),
         archive: PackArchiveRef {
-            blob_digest: crate::test_support::wave::digest_text(0xc4),
+            blob_digest: medulla_types::test_support::wave::digest_text(0xc4),
             length: 4_096,
             sha256: raw_digest(0xc5),
         },

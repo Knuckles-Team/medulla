@@ -2009,7 +2009,7 @@ mod tests {
             );
             verify_envelope_v2_with(SECRET, &req, &verified_policy(), &memory_replay()).unwrap();
 
-            let execution = medulla_types::foreign_read::ForeignReadExecutionRef {
+            let execution = medulla_catalog_types::foreign_read::ForeignReadExecutionRef {
                 execution_id: 42,
                 query_digest: medulla_types::contract::Digest256::sha256(b"legacy-query"),
             };

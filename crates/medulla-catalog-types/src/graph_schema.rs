@@ -14,8 +14,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::closed_error_codes;
-use crate::contract::{BoundedVec, Digest256, ResourceId};
+use medulla_types::closed_error_codes;
+use medulla_types::{contract::BoundedVec, contract::Digest256, contract::ResourceId};
 
 pub mod approval;
 pub mod drift;
@@ -189,7 +189,7 @@ fn validate_expected_composed_digest(operation: &GraphSchemaOp) -> Result<(), St
     let Some(expected) = operation.expected_composed_digest() else {
         return Ok(());
     };
-    crate::contract::Digest256::parse(expected)
+    medulla_types::contract::Digest256::parse(expected)
         .map(|_| ())
         .map_err(|error| format!("invalid if_composed_digest: {error}"))
 }

@@ -7,8 +7,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::ResourceId;
 use crate::source_ingestion::SourceIngestionRequest;
+use medulla_types::contract::ResourceId;
 
 /// Maximum messages one thread may reference.
 pub const MAX_THREAD_MESSAGES: usize = 16_384;
@@ -133,11 +133,11 @@ mod tests {
     use serde_json::json;
 
     use super::*;
-    use crate::contract::{BoundedVec, Digest256};
     use crate::source_ingestion::{
         SourceCheckpoint, SourceIngestionBatch, SourceIngestionMode, SourceJson, SourceRecord,
         SourceRecordProvenance,
     };
+    use medulla_types::{contract::BoundedVec, contract::Digest256};
 
     fn rid(value: &str) -> ResourceId {
         ResourceId::new(value).unwrap()

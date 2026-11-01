@@ -1845,8 +1845,10 @@ fs4 = "1.1"
 serde_bytes = "0.11.19"
 medulla-protocol-types = { path = "crates/medulla-protocol-types" }
 medulla-decision-types = { path = "crates/medulla-decision-types" }
+medulla-catalog-types = { path = "crates/medulla-catalog-types" }
 
 [dev-dependencies]
+medulla-catalog-types = { path = "crates/medulla-catalog-types", features = ["test-support"] }
 medulla-decision-types = { path = "crates/medulla-decision-types", features = ["test-support"] }
 medulla-protocol-types = { path = "crates/medulla-protocol-types", features = ["test-support"] }
 tokio = { version = "1.53", features = ["full", "test-util"] }

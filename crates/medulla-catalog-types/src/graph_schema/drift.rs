@@ -48,7 +48,7 @@ use super::repair::{
     render_repair_shapes, FieldContract, JsonType, RecordContract, MAX_CONTRACT_FIELD_BYTES,
 };
 use super::shadow_branch::{SchemaRepairActivation, SchemaRepairStep};
-use crate::contract::Digest256;
+use medulla_types::contract::Digest256;
 
 /// Digest domain of the per-delivery inferred shape.
 pub const SHAPE_DIGEST_DOMAIN: &str = "eg/schema-drift-shape/v1";

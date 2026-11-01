@@ -151,7 +151,7 @@ impl FleetCatalogOp {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::contract::{BoundedVec, ResourceId};
+    use medulla_types::{contract::BoundedVec, contract::ResourceId};
 
     fn list() -> FleetCatalogOp {
         FleetCatalogOp::List {

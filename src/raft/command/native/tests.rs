@@ -332,7 +332,7 @@ fn native_catalog_is_complete_unique_and_has_domain_representatives() {
     #[cfg(feature = "shacl")]
     assert_native_round_trip(
         Method::GraphSchema {
-            op: Box::new(medulla_types::graph_schema::GraphSchemaOp::Detach {
+            op: Box::new(medulla_catalog_types::graph_schema::GraphSchemaOp::Detach {
                 source_id: "admin:policy".to_string(),
                 if_composed_digest: None,
             }),

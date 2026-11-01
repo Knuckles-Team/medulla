@@ -14,8 +14,8 @@ use super::catalog_authority::{
     McpCatalogAttestation, McpCatalogAuthorityCandidate, McpCatalogAuthorityRow,
 };
 use super::index::ConnectorPackIndex;
-use crate::agent_library::AgentLibraryMutationContext;
-use crate::contract::{Digest256, ResourceId};
+use medulla_types::agent_library::AgentLibraryMutationContext;
+use medulla_types::{contract::Digest256, contract::ResourceId};
 
 /// A verified producer asks EG to issue the binding for the catalog it serves
 /// itself. Tenant, attester principal and authorization scope come from the
@@ -130,7 +130,7 @@ mod tests {
     fn request() -> McpSelfServedCatalogAttestRequest {
         let candidate = crate::connector_pack::catalog_authority::sample_authority_candidate();
         McpSelfServedCatalogAttestRequest {
-            context: crate::agent_fixtures::agent_library::mutation_context(),
+            context: medulla_types::agent_fixtures::agent_library::mutation_context(),
             connector: ResourceId::new("graph-os").unwrap(),
             server_name: "graph-os".into(),
             server_entry_digest: candidate.component_digest,

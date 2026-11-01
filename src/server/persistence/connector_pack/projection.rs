@@ -5,13 +5,15 @@
 //! changes the retained record, receipt, and visibility pointer in one admitted
 //! owner transaction guarded by an exact-head CAS.
 
+use medulla_catalog_types::{
+    connector_pack::McpCatalogSnapshotBinding, connector_pack::PackHeadRef,
+    connector_pack::PackImportReceipt, connector_pack::PackImportRecord,
+    connector_pack::PackImportResult, connector_pack::PackProjectionState,
+    connector_pack::CONNECTOR_PACK_RESULT_SCHEMA_ID,
+};
 use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_protocol_types::protocol::Method;
 use medulla_types::agent_library::{AgentLibraryLifecycle, AgentLibraryMutationContext};
-use medulla_types::connector_pack::{
-    McpCatalogSnapshotBinding, PackHeadRef, PackImportReceipt, PackImportRecord, PackImportResult,
-    PackProjectionState, CONNECTOR_PACK_RESULT_SCHEMA_ID,
-};
 use medulla_types::contract::{Digest256, ResourceId};
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationSurface;
@@ -24,7 +26,7 @@ use crate::server::persistence::agent_library::AgentLibraryStore;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct PackProjectionBody {
     pub(crate) uri: String,
-    pub(crate) kind: medulla_types::connector_pack::PackEntryKind,
+    pub(crate) kind: medulla_catalog_types::connector_pack::PackEntryKind,
     pub(crate) body_sha256: Digest256,
     pub(crate) engine_manifest_digest: String,
     pub(crate) length: u64,
@@ -39,7 +41,8 @@ pub(crate) struct ConnectorPackProjectionPlan {
     pub(crate) record_id: String,
     pub(crate) bodies: Vec<PackProjectionBody>,
     /// Held declarations pinned to the current tenant/head, never executable bindings.
-    pub(crate) source_registrations: Vec<medulla_types::connector_pack::PackSourceRegistration>,
+    pub(crate) source_registrations:
+        Vec<medulla_catalog_types::connector_pack::PackSourceRegistration>,
 }
 
 impl AgentLibraryStore {
@@ -91,8 +94,8 @@ impl AgentLibraryStore {
             )?;
             if !matches!(
                 member.kind,
-                medulla_types::connector_pack::PackEntryKind::Ontology
-                    | medulla_types::connector_pack::PackEntryKind::Shapes
+                medulla_catalog_types::connector_pack::PackEntryKind::Ontology
+                    | medulla_catalog_types::connector_pack::PackEntryKind::Shapes
             ) || member.lifecycle != AgentLibraryLifecycle::Published
             {
                 continue;
@@ -278,7 +281,7 @@ fn valid_projection_code(code: &str) -> bool {
 }
 
 fn valid_failure_detail(detail: &str) -> bool {
-    detail.len() <= medulla_types::connector_pack::MAX_PROJECTION_FAILURE_DETAIL_BYTES
+    detail.len() <= medulla_catalog_types::connector_pack::MAX_PROJECTION_FAILURE_DETAIL_BYTES
         && !detail.chars().any(char::is_control)
 }
 
@@ -367,10 +370,11 @@ fn apply_projection_rows(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::agent_component::{AgentComponentKind, ComponentDependency};
-    use medulla_types::connector_pack::{
-        PackArchiveFacts, PackProducer, PackServerRecord, PACK_IMPORT_RECORD_SCHEMA_VERSION,
+    use medulla_catalog_types::{
+        connector_pack::PackArchiveFacts, connector_pack::PackProducer,
+        connector_pack::PackServerRecord, connector_pack::PACK_IMPORT_RECORD_SCHEMA_VERSION,
     };
+    use medulla_types::agent_component::{AgentComponentKind, ComponentDependency};
     use medulla_types::contract::BoundedVec;
 
     use crate::server::persistence::connector_pack::commit::ConnectorPackCommitPlan;

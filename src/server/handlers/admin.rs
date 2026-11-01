@@ -112,7 +112,7 @@ impl crate::server::api::admin::AdminApi for AdminSeam {
         ctx: &crate::server::mutation::MutationCtx<'_>,
         plan: &crate::server::mutation::MutationPlan,
         method: &crate::protocol::Method,
-        op: &medulla_types::graph_schema::GraphSchemaOp,
+        op: &medulla_catalog_types::graph_schema::GraphSchemaOp,
     ) -> crate::protocol::Response {
         crate::server::graph_schema::handle_gateway(state, tenant_id, ctx, plan, method, op).await
     }

@@ -5,8 +5,9 @@
 
 #[cfg(feature = "redb")]
 use crate::server::persistence::agent_library::AgentLibraryStateExt;
-use medulla_types::connector_pack::{
-    PackAnnotations, PackEntryKind, PackImportResult, PackViolationCode,
+use medulla_catalog_types::{
+    connector_pack::PackAnnotations, connector_pack::PackEntryKind,
+    connector_pack::PackImportResult, connector_pack::PackViolationCode,
 };
 
 use super::{bind, build_pack, import, ok, tool, Content, Served, ADMIN};
@@ -146,7 +147,9 @@ fn orphan_warnings(result: &PackImportResult) -> Vec<String> {
         PackImportResult::Imported { receipt } => receipt
             .warnings
             .iter()
-            .filter(|w| w.code == medulla_types::connector_pack::PackWarningCode::OntologyOrphan)
+            .filter(|w| {
+                w.code == medulla_catalog_types::connector_pack::PackWarningCode::OntologyOrphan
+            })
             .map(|w| w.detail.clone())
             .collect(),
         other => panic!("the ontology must import: {other:?}"),
@@ -178,7 +181,7 @@ async fn an_orphan_class_is_imported_and_flagged_by_name() {
 #[tokio::test]
 async fn source_claims_persist_held_and_old_or_other_tenant_members_stay_unbound() {
     use super::{head_of, imported, TENANT};
-    use medulla_types::connector_pack::PackSourceApproval;
+    use medulla_catalog_types::connector_pack::PackSourceApproval;
     use medulla_types::contract::ResourceId;
     let connector = "held-source";
     let served = Served::new();

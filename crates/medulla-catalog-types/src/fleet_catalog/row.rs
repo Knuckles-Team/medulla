@@ -13,8 +13,8 @@ use super::vocabulary::{
     ResourceKind, SkillType, SkillTypeSource, ToolMode,
 };
 use super::{MAX_FLEET_LOOKUP_IDS, MAX_FLEET_PAGE_ROWS};
-use crate::agent_component::ToolEffect;
-use crate::contract::{BoundedVec, Digest256, ResourceId};
+use medulla_types::agent_component::ToolEffect;
+use medulla_types::{contract::BoundedVec, contract::Digest256, contract::ResourceId};
 
 /// Who may see a row, and who published what it shows.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -8,7 +8,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::annotations::PackAnnotations;
-use crate::contract::{BoundedVec, Digest256, ResourceId};
+use medulla_types::{contract::BoundedVec, contract::Digest256, contract::ResourceId};
 
 /// What one pack entry is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

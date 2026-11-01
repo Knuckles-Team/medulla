@@ -36,10 +36,13 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use medulla_types::connector_pack::{
-    ConnectorPackImportRequest, ConnectorPackIndex, ConnectorPackOp, McpCatalogSnapshotBinding,
-    PackAnnotations, PackArchiveRef, PackEntry, PackEntryKind, PackHeadRef, PackImportResult,
-    PackProducer, PackSection, CONNECTOR_PACK_SCHEMA_VERSION,
+use medulla_catalog_types::{
+    connector_pack::ConnectorPackImportRequest, connector_pack::ConnectorPackIndex,
+    connector_pack::ConnectorPackOp, connector_pack::McpCatalogSnapshotBinding,
+    connector_pack::PackAnnotations, connector_pack::PackArchiveRef, connector_pack::PackEntry,
+    connector_pack::PackEntryKind, connector_pack::PackHeadRef, connector_pack::PackImportResult,
+    connector_pack::PackProducer, connector_pack::PackSection,
+    connector_pack::CONNECTOR_PACK_SCHEMA_VERSION,
 };
 use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
 use medulla_types::mutation_outbox::{
@@ -221,7 +224,7 @@ fn build_pack(connector: &str, row: usize, ontology: &[u8]) -> (ConnectorPackInd
         },
         pack_digest: Digest256::from_bytes([0; 32]),
     };
-    index.pack_digest = medulla_types::connector_pack::digest::pack_digest(&index).unwrap();
+    index.pack_digest = medulla_catalog_types::connector_pack::digest::pack_digest(&index).unwrap();
     (index, archive)
 }
 
@@ -273,7 +276,7 @@ async fn bind(state: &Arc<RwLock<ServerState>>) {
             &key,
             Method::ConnectorPack {
                 op: Box::new(ConnectorPackOp::Bind {
-                    request: medulla_types::connector_pack::ConnectorPackBindRequest {
+                    request: medulla_catalog_types::connector_pack::ConnectorPackBindRequest {
                         context: context(&key),
                         connector: ResourceId::new(CONNECTOR).unwrap(),
                         importer: format!(

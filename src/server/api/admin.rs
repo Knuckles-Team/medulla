@@ -32,7 +32,7 @@ pub trait AdminApi: Send + Sync {
         ctx: &crate::server::mutation::MutationCtx<'_>,
         plan: &crate::server::mutation::MutationPlan,
         method: &crate::protocol::Method,
-        op: &medulla_types::graph_schema::GraphSchemaOp,
+        op: &medulla_catalog_types::graph_schema::GraphSchemaOp,
     ) -> crate::protocol::Response;
 }
 

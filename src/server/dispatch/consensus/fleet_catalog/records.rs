@@ -4,11 +4,12 @@
 //! Pure: node identity, encoding, decoding, the compare-and-set decision and
 //! the visibility predicate. Nothing here touches a lock, a store or a clock.
 
-use medulla_types::contract::{Digest256, ResourceId};
-use medulla_types::fleet_catalog::{
-    DiscoveryCounts, DiscoveryOutcome, DiscoveryScope, FleetOverride, FleetOverrideField,
-    FleetVisibility, SkillType,
+use medulla_catalog_types::{
+    fleet_catalog::DiscoveryCounts, fleet_catalog::DiscoveryOutcome, fleet_catalog::DiscoveryScope,
+    fleet_catalog::FleetOverride, fleet_catalog::FleetOverrideField,
+    fleet_catalog::FleetVisibility, fleet_catalog::SkillType,
 };
+use medulla_types::contract::{Digest256, ResourceId};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 

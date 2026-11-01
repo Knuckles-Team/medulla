@@ -10,9 +10,9 @@ use std::collections::BTreeSet;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::contract::{
-    BoundedVec, BoundedWriter, Digest256, RecordBytes, ResourceId, MAX_MUTATION_ENVELOPE_BYTES,
-    MAX_RECORD_BYTES,
+use medulla_types::{
+    contract::BoundedVec, contract::BoundedWriter, contract::Digest256, contract::RecordBytes,
+    contract::ResourceId, contract::MAX_MUTATION_ENVELOPE_BYTES, contract::MAX_RECORD_BYTES,
 };
 
 #[cfg(test)]
@@ -102,7 +102,7 @@ impl Serialize for SourceJson {
 
 impl<'de> Deserialize<'de> for SourceJson {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = crate::msgpack::UniqueJsonValue::deserialize(deserializer)?.0;
+        let value = medulla_types::msgpack::UniqueJsonValue::deserialize(deserializer)?.0;
         Self::new(value).map_err(serde::de::Error::custom)
     }
 }
@@ -761,7 +761,7 @@ fn validate_cursor(cursor: &SourceCheckpoint, field: &str) -> Result<(), String>
 }
 
 fn validate_json_depth(value: &serde_json::Value, depth: usize) -> Result<(), String> {
-    if depth > crate::msgpack::DEFAULT_MAX_DEPTH {
+    if depth > medulla_types::msgpack::DEFAULT_MAX_DEPTH {
         return Err("source JSON nesting limit exceeded".into());
     }
     match value {

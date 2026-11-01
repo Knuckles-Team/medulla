@@ -137,20 +137,20 @@ mod tests {
 
     #[test]
     fn server_name_bound_matches_the_config_sync_alphabet() {
-        assert!(medulla_types::fleet_catalog::is_valid_server_name(
+        assert!(medulla_catalog_types::fleet_catalog::is_valid_server_name(
             "github-mcp_1.0"
         ));
-        assert!(medulla_types::fleet_catalog::is_valid_server_name(
-            &"a".repeat(medulla_types::fleet_catalog::MAX_REGISTERED_SERVER_NAME_BYTES)
+        assert!(medulla_catalog_types::fleet_catalog::is_valid_server_name(
+            &"a".repeat(medulla_catalog_types::fleet_catalog::MAX_REGISTERED_SERVER_NAME_BYTES)
         ));
         for invalid in ["", "has space", "slash/name", "tilde~name", "\u{e9}"] {
             assert!(
-                !medulla_types::fleet_catalog::is_valid_server_name(invalid),
+                !medulla_catalog_types::fleet_catalog::is_valid_server_name(invalid),
                 "{invalid:?}"
             );
         }
-        assert!(!medulla_types::fleet_catalog::is_valid_server_name(
-            &"a".repeat(medulla_types::fleet_catalog::MAX_REGISTERED_SERVER_NAME_BYTES + 1)
+        assert!(!medulla_catalog_types::fleet_catalog::is_valid_server_name(
+            &"a".repeat(medulla_catalog_types::fleet_catalog::MAX_REGISTERED_SERVER_NAME_BYTES + 1)
         ));
     }
 

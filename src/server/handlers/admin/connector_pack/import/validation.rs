@@ -2,9 +2,11 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_types::connector_pack::{
-    ConnectorPackImportRequest, PackEntry, PackEntryKind, PackViolation, PackViolationCode,
-    PackWarning, PackWarningCode,
+use medulla_catalog_types::{
+    connector_pack::ConnectorPackImportRequest, connector_pack::PackEntry,
+    connector_pack::PackEntryKind, connector_pack::PackViolation,
+    connector_pack::PackViolationCode, connector_pack::PackWarning,
+    connector_pack::PackWarningCode,
 };
 use medulla_types::contract::Digest256;
 use sha2::{Digest, Sha256};
@@ -45,10 +47,14 @@ fn check_duplicate_component_ids(
     let ids: Vec<String> = all
         .iter()
         .map(|entry| {
-            medulla_types::connector_pack::pack_component_id(connector, entry.kind, &entry.name)
+            medulla_catalog_types::connector_pack::pack_component_id(
+                connector,
+                entry.kind,
+                &entry.name,
+            )
         })
         .collect();
-    if medulla_types::connector_pack::rapid_r075::check_unique_component_ids(
+    if medulla_catalog_types::connector_pack::rapid_r075::check_unique_component_ids(
         ids.iter().map(String::as_str),
     )
     .is_err()
@@ -186,7 +192,7 @@ impl<'a> IndexValidator<'a> {
                 "server URI must name the pack connector exactly",
             );
         }
-        let id = medulla_types::connector_pack::pack_component_id(
+        let id = medulla_catalog_types::connector_pack::pack_component_id(
             self.request.index.connector.as_str(),
             entry.kind,
             &entry.name,
@@ -203,19 +209,19 @@ impl<'a> IndexValidator<'a> {
     fn validate_sections(&mut self, entry: &PackEntry) {
         let sections = [(
             &entry.body,
-            medulla_types::connector_pack::MAX_PACK_BODY_BYTES,
+            medulla_catalog_types::connector_pack::MAX_PACK_BODY_BYTES,
         )]
         .into_iter()
         .chain(entry.input_schema.iter().map(|section| {
             (
                 section,
-                medulla_types::connector_pack::MAX_PACK_SCHEMA_SECTION_BYTES,
+                medulla_catalog_types::connector_pack::MAX_PACK_SCHEMA_SECTION_BYTES,
             )
         }))
         .chain(entry.output_schema.iter().map(|section| {
             (
                 section,
-                medulla_types::connector_pack::MAX_PACK_SCHEMA_SECTION_BYTES,
+                medulla_catalog_types::connector_pack::MAX_PACK_SCHEMA_SECTION_BYTES,
             )
         }));
         for (section, limit) in sections {
@@ -226,7 +232,7 @@ impl<'a> IndexValidator<'a> {
     fn validate_section(
         &mut self,
         entry: &PackEntry,
-        section: &medulla_types::connector_pack::PackSection,
+        section: &medulla_catalog_types::connector_pack::PackSection,
         limit: u64,
     ) {
         let Ok(bytes) = section_bytes(self.archive, section) else {
@@ -394,7 +400,7 @@ impl<'a> IndexValidator<'a> {
     fn validate_schema(
         &mut self,
         entry: &PackEntry,
-        section: &medulla_types::connector_pack::PackSection,
+        section: &medulla_catalog_types::connector_pack::PackSection,
     ) {
         let Ok(bytes) = section_bytes(self.archive, section) else {
             return;
@@ -889,7 +895,7 @@ pub(super) fn valid_skill_frontmatter(body: &[u8], expected_name: &str) -> bool 
 }
 pub(super) fn section_bytes<'a>(
     archive: &'a [u8],
-    section: &medulla_types::connector_pack::PackSection,
+    section: &medulla_catalog_types::connector_pack::PackSection,
 ) -> Result<&'a [u8], String> {
     let start =
         usize::try_from(section.offset).map_err(|_| "section offset overflow".to_string())?;
@@ -935,7 +941,7 @@ mod mcp_resource_uri_tests {
 #[cfg(test)]
 mod duplicate_component_id_wiring_tests {
     use super::{check_duplicate_component_ids, PackEntry, PackEntryKind, PackViolationCode};
-    use medulla_types::connector_pack::{PackAnnotations, PackSection};
+    use medulla_catalog_types::{connector_pack::PackAnnotations, connector_pack::PackSection};
     use medulla_types::contract::Digest256;
 
     fn entry(name: &str, uri: &str) -> PackEntry {

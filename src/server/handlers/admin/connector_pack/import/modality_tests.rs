@@ -1,7 +1,7 @@
 //! R043 modality regressions. Full served acceptance remains open in the owning spec.
 
 use super::*;
-use medulla_types::connector_pack::digest::annotations_digest;
+use medulla_catalog_types::connector_pack::digest::annotations_digest;
 
 fn annotated(field: &str, terms: &[&str]) -> PackAnnotations {
     serde_json::from_value(serde_json::json!({field: terms})).unwrap()
@@ -88,7 +88,7 @@ fn modality_lists_enforce_wire_types_and_both_size_edges() {
 // spec: MEDULLA-TYPED-PACKS-R043
 #[test]
 fn modality_digest_replay_is_canonical_and_direction_sensitive() {
-    let annotations = medulla_types::catalog_fixtures::contract_pack::annotations();
+    let annotations = medulla_catalog_types::catalog_fixtures::contract_pack::annotations();
     assert_eq!(
         annotations_digest(&annotations).unwrap().to_hex(),
         // The golden digest Python's connector-pack client must also produce.

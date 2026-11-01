@@ -103,14 +103,14 @@ $($variants)*
     // ── Connector MCP pack import (RF-ADR-009) ─────────────────────────────
     /// Atomic connector MCP pack import and its admin surface.
     ConnectorPack {
-        op: Box<medulla_types::connector_pack::ConnectorPackOp>,
+        op: Box<medulla_catalog_types::connector_pack::ConnectorPackOp>,
     },
 
     /// RF-ADR-009 native ingestion authority. Resolves the exact Connector
     /// Manifest mapping under the verified tenant, admits raw records to CAS,
     /// maps them and atomically commits graph material, provenance and cursor.
     SourceIngest {
-        request: Box<medulla_types::source_ingestion::SourceIngestionRequest>,
+        request: Box<medulla_catalog_types::source_ingestion::SourceIngestionRequest>,
     },
 
     /// Latest authoritative SourceIngest checkpoint for restart/failover CAS
@@ -128,7 +128,7 @@ $($variants)*
     // ── Graph schema sources and the mutation outbox (X9, X10) ─────────────
     /// Attach, replace or detach one keyed schema source on the request graph.
     GraphSchema {
-        op: Box<medulla_types::graph_schema::GraphSchemaOp>,
+        op: Box<medulla_catalog_types::graph_schema::GraphSchemaOp>,
     },
     /// List the request graph's schema sources and its composed digest.
     GraphSchemaList,
@@ -138,7 +138,7 @@ $($variants)*
     /// 1..=`MAX_GRAPH_SCHEMA_TERMS_PAGE`.
     GraphSchemaClasses {
         #[serde(default)]
-        kind: Option<medulla_types::graph_schema::GraphSchemaTermKind>,
+        kind: Option<medulla_catalog_types::graph_schema::GraphSchemaTermKind>,
         #[serde(default)]
         cursor: Option<String>,
         limit: u32,

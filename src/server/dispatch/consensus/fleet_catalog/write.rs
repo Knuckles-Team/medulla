@@ -9,15 +9,16 @@
 //! protection is keyed by the request, so a second write inside the same
 //! request would be answered as a replay of the first.
 
+use medulla_catalog_types::{
+    fleet_catalog::FleetDiscoveryRecordRequest, fleet_catalog::FleetOverrideClearRequest,
+    fleet_catalog::FleetOverrideSetRequest, fleet_catalog::FleetWriteDisposition,
+    fleet_catalog::FleetWriteReceipt,
+};
 use medulla_protocol_types::result_contract::MethodResult;
 use medulla_protocol_types::{
     result_contract::cluster::FleetCatalogClearOverride,
     result_contract::cluster::FleetCatalogRecordDiscovery,
     result_contract::cluster::FleetCatalogSetOverride,
-};
-use medulla_types::fleet_catalog::{
-    FleetDiscoveryRecordRequest, FleetOverrideClearRequest, FleetOverrideSetRequest,
-    FleetWriteDisposition, FleetWriteReceipt,
 };
 use serde::Serialize;
 
@@ -275,7 +276,7 @@ pub(super) async fn clear_override(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::fleet_catalog::DiscoveryScope;
+    use medulla_catalog_types::fleet_catalog::DiscoveryScope;
 
     fn write() -> RecordWrite {
         let body = DiscoveryBody::reachable_for_tests(

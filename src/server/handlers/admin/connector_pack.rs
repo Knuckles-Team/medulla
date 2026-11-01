@@ -42,9 +42,9 @@ pub(crate) async fn handle_connector_pack(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    op: medulla_types::connector_pack::ConnectorPackOp,
+    op: medulla_catalog_types::connector_pack::ConnectorPackOp,
 ) -> Response {
-    use medulla_types::connector_pack::ConnectorPackOp;
+    use medulla_catalog_types::connector_pack::ConnectorPackOp;
 
     match op {
         ConnectorPackOp::Status { request } => serve_status(state, req_id, verified, request).await,
@@ -100,7 +100,7 @@ async fn serve_status(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: medulla_types::connector_pack::ConnectorPackStatusRequest,
+    request: medulla_catalog_types::connector_pack::ConnectorPackStatusRequest,
 ) -> Response {
     #[cfg(not(feature = "redb"))]
     {
@@ -145,7 +145,7 @@ async fn serve_import(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: Box<medulla_types::connector_pack::ConnectorPackImportRequest>,
+    request: Box<medulla_catalog_types::connector_pack::ConnectorPackImportRequest>,
 ) -> Response {
     #[cfg(not(all(feature = "redb", feature = "blob")))]
     {
@@ -208,23 +208,25 @@ async fn serve_import(
 fn rejection_for(
     pack_digest: medulla_types::contract::Digest256,
     error: String,
-) -> Result<medulla_types::connector_pack::PackImportResult, String> {
+) -> Result<medulla_catalog_types::connector_pack::PackImportResult, String> {
     let (code, detail) = error.split_once(':').unwrap_or((error.as_str(), ""));
-    let Ok(code) = serde_json::from_value::<medulla_types::connector_pack::PackViolationCode>(
+    let Ok(code) = serde_json::from_value::<medulla_catalog_types::connector_pack::PackViolationCode>(
         serde_json::Value::String(code.trim().to_string()),
     ) else {
         return Err(error);
     };
-    let violation = medulla_types::connector_pack::PackViolation {
+    let violation = medulla_catalog_types::connector_pack::PackViolation {
         code,
         uri: None,
         detail: detail.trim().chars().take(1024).collect(),
     };
-    Ok(medulla_types::connector_pack::PackImportResult::Rejected {
-        pack_digest: Some(pack_digest),
-        violations: medulla_types::contract::BoundedVec::new(vec![violation])?,
-        budget_exhausted: false,
-    })
+    Ok(
+        medulla_catalog_types::connector_pack::PackImportResult::Rejected {
+            pack_digest: Some(pack_digest),
+            violations: medulla_types::contract::BoundedVec::new(vec![violation])?,
+            budget_exhausted: false,
+        },
+    )
 }
 
 /// A bounded striped lock table serializes one tenant's head-read/body-copy/
@@ -275,8 +277,8 @@ async fn bind_import_context(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    mut request: Box<medulla_types::connector_pack::ConnectorPackImportRequest>,
-) -> Result<Box<medulla_types::connector_pack::ConnectorPackImportRequest>, String> {
+    mut request: Box<medulla_catalog_types::connector_pack::ConnectorPackImportRequest>,
+) -> Result<Box<medulla_catalog_types::connector_pack::ConnectorPackImportRequest>, String> {
     let store = agent_library_store(state).await?;
     request.context =
         crate::server::persistence::agent_library::context::bind_agent_library_context(
@@ -292,7 +294,7 @@ async fn bind_import_context(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 enum Preflight {
-    Unchanged(medulla_types::connector_pack::PackImportResult),
+    Unchanged(medulla_catalog_types::connector_pack::PackImportResult),
     Ready {
         store: Arc<crate::server::persistence::agent_library::AgentLibraryStore>,
         blob: Arc<crate::server::blob::BlobCursors>,
@@ -304,7 +306,7 @@ enum Preflight {
 async fn preflight_import(
     state: &Arc<RwLock<ServerState>>,
     verified: &VerifiedRequestContext,
-    request: &medulla_types::connector_pack::ConnectorPackImportRequest,
+    request: &medulla_catalog_types::connector_pack::ConnectorPackImportRequest,
 ) -> Result<Preflight, String> {
     validate_import_identity(verified, request)?;
     let store = agent_library_store(state).await?;
@@ -327,7 +329,7 @@ async fn preflight_import(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn validate_import_identity(
     verified: &VerifiedRequestContext,
-    request: &medulla_types::connector_pack::ConnectorPackImportRequest,
+    request: &medulla_catalog_types::connector_pack::ConnectorPackImportRequest,
 ) -> Result<(), String> {
     if request.context.tenant_id != verified.tenant() {
         return Err(
@@ -349,20 +351,22 @@ fn validate_import_identity(
                 .to_string(),
         );
     }
-    medulla_types::connector_pack::validate_connector(&request.index.connector)?;
-    let computed = medulla_types::connector_pack::digest::pack_digest(&request.index)?;
+    medulla_catalog_types::connector_pack::validate_connector(&request.index.connector)?;
+    let computed = medulla_catalog_types::connector_pack::digest::pack_digest(&request.index)?;
     if computed != request.index.pack_digest {
         return Err("PACK_DIGEST_MISMATCH: connector pack digest is not canonical".to_string());
     }
-    if request.index.schema_version != medulla_types::connector_pack::CONNECTOR_PACK_SCHEMA_VERSION
+    if request.index.schema_version
+        != medulla_catalog_types::connector_pack::CONNECTOR_PACK_SCHEMA_VERSION
     {
         return Err("MALFORMED_INDEX: unsupported connector pack schema version".to_string());
     }
-    if request.index.archive.length > medulla_types::connector_pack::MAX_PACK_ARCHIVE_BYTES {
+    if request.index.archive.length > medulla_catalog_types::connector_pack::MAX_PACK_ARCHIVE_BYTES
+    {
         return Err("PACK_TOO_LARGE: connector pack archive exceeds the served bound".to_string());
     }
     let encoded = medulla_storage::encode_bounded(&request.index, "connector pack index")?;
-    if encoded.len() > medulla_types::connector_pack::MAX_PACK_INDEX_BYTES {
+    if encoded.len() > medulla_catalog_types::connector_pack::MAX_PACK_INDEX_BYTES {
         return Err("PACK_TOO_LARGE: connector pack index exceeds the served bound".to_string());
     }
     Ok(())
@@ -370,16 +374,17 @@ fn validate_import_identity(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn replay_or_unchanged(
-    request: &medulla_types::connector_pack::ConnectorPackImportRequest,
-    status: &medulla_types::connector_pack::ConnectorPackStatus,
-) -> Result<Option<medulla_types::connector_pack::PackImportResult>, String> {
-    let actual_head = status
-        .head
-        .as_ref()
-        .map(|head| medulla_types::connector_pack::PackHeadRef {
-            binding_revision: head.binding_revision,
-            pack_digest: head.pack_digest,
-        });
+    request: &medulla_catalog_types::connector_pack::ConnectorPackImportRequest,
+    status: &medulla_catalog_types::connector_pack::ConnectorPackStatus,
+) -> Result<Option<medulla_catalog_types::connector_pack::PackImportResult>, String> {
+    let actual_head =
+        status
+            .head
+            .as_ref()
+            .map(|head| medulla_catalog_types::connector_pack::PackHeadRef {
+                binding_revision: head.binding_revision,
+                pack_digest: head.pack_digest,
+            });
     if status
         .head
         .as_ref()
@@ -394,7 +399,7 @@ fn replay_or_unchanged(
                 && receipt.pack_digest == request.index.pack_digest
             {
                 return Ok(Some(
-                    medulla_types::connector_pack::PackImportResult::Imported {
+                    medulla_catalog_types::connector_pack::PackImportResult::Imported {
                         receipt: Box::new(receipt),
                     },
                 ));
@@ -402,7 +407,7 @@ fn replay_or_unchanged(
         }
         if actual_head == request.expected_head {
             return Ok(Some(
-                medulla_types::connector_pack::PackImportResult::Unchanged {
+                medulla_catalog_types::connector_pack::PackImportResult::Unchanged {
                     pack_digest: request.index.pack_digest,
                     binding_revision: status.head.as_ref().unwrap().binding_revision,
                 },
@@ -418,7 +423,7 @@ fn replay_or_unchanged(
 #[cfg(all(feature = "redb", feature = "blob"))]
 async fn import_blob_store(
     state: &Arc<RwLock<ServerState>>,
-    _request: &medulla_types::connector_pack::ConnectorPackImportRequest,
+    _request: &medulla_catalog_types::connector_pack::ConnectorPackImportRequest,
 ) -> Result<Arc<crate::server::blob::BlobCursors>, String> {
     state
         .read()
@@ -432,7 +437,7 @@ async fn import_blob_store(
 async fn read_import_archive(
     blob: &Arc<crate::server::blob::BlobCursors>,
     verified: &VerifiedRequestContext,
-    request: &medulla_types::connector_pack::ConnectorPackImportRequest,
+    request: &medulla_catalog_types::connector_pack::ConnectorPackImportRequest,
 ) -> Result<Vec<u8>, String> {
     use sha2::{Digest, Sha256};
 
@@ -480,15 +485,17 @@ async fn read_import_archive(
 fn honour_self_served_pin(
     store: &crate::server::persistence::agent_library::AgentLibraryStore,
     verified: &VerifiedRequestContext,
-    request: &medulla_types::connector_pack::ConnectorPackImportRequest,
+    request: &medulla_catalog_types::connector_pack::ConnectorPackImportRequest,
 ) -> Result<(), String> {
     let server_name = request.index.server.name.as_str();
-    if !medulla_types::fleet_catalog::is_valid_server_name(server_name) {
+    if !medulla_catalog_types::fleet_catalog::is_valid_server_name(server_name) {
         return Ok(());
     }
     let scope = verified.tenant_local_catalog_partition_digest(server_name)?;
     match store.mcp_self_served_catalog_row(verified.tenant(), server_name, scope)? {
-        Some(row) => medulla_types::connector_pack::check_self_served_import(&row, &request.index),
+        Some(row) => {
+            medulla_catalog_types::connector_pack::check_self_served_import(&row, &request.index)
+        }
         None => Ok(()),
     }
 }

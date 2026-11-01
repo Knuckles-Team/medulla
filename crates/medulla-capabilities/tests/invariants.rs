@@ -459,7 +459,7 @@ fn contract_wave_op_policies_follow_their_ops() {
 /// connector's ordinary pack-control one.
 #[test]
 fn a_mass_withdrawal_import_needs_the_admin_action() {
-    use medulla_types::catalog_fixtures::contract_pack as pack;
+    use medulla_catalog_types::catalog_fixtures::contract_pack as pack;
 
     let ordinary = pack::ops()
         .into_iter()

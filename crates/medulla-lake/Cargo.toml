@@ -90,6 +90,7 @@ apache-avro = { version = "0.22", default-features = false, optional = true }
 # need it once a real writer lands.
 iceberg = { version = "0.10", optional = true }
 iceberg-storage-opendal = { version = "0.10", optional = true, default-features = false, features = ["opendal-s3"] }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
 
 [dev-dependencies]
 tempfile = "3"

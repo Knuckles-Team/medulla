@@ -398,7 +398,10 @@ async fn route_source_ingestion_or_resources(
     let source_method = match method {
         Method::SourceIngest { request } => SourceIngestionRoute::Ingest(request),
         Method::SourceIngestStatus { connector, stream } => SourceIngestionRoute::Status(
-            medulla_types::source_ingestion::SourceIngestStatusRequest { connector, stream },
+            medulla_catalog_types::source_ingestion::SourceIngestStatusRequest {
+                connector,
+                stream,
+            },
         ),
         Method::IndexRepository {
             files_msgpack,
@@ -445,7 +448,7 @@ async fn route_source_ingestion_dispatch(
 
 async fn route_source_ingestion_status(
     ctx: GraphOpRouting<'_>,
-    request: medulla_types::source_ingestion::SourceIngestStatusRequest,
+    request: medulla_catalog_types::source_ingestion::SourceIngestStatusRequest,
 ) -> Response {
     let Some(persistence) = ctx.persistence.as_ref() else {
         return Response::err(
@@ -466,7 +469,7 @@ async fn route_source_ingestion_status(
 
 async fn route_source_ingestion_request(
     ctx: GraphOpRouting<'_>,
-    request: medulla_types::source_ingestion::SourceIngestionRequest,
+    request: medulla_catalog_types::source_ingestion::SourceIngestionRequest,
     placement_epoch: u64,
     fencing_token: Option<u64>,
 ) -> Response {
@@ -512,8 +515,8 @@ async fn route_source_ingestion_request(
 }
 
 enum SourceIngestionRoute {
-    Ingest(Box<medulla_types::source_ingestion::SourceIngestionRequest>),
-    Status(medulla_types::source_ingestion::SourceIngestStatusRequest),
+    Ingest(Box<medulla_catalog_types::source_ingestion::SourceIngestionRequest>),
+    Status(medulla_catalog_types::source_ingestion::SourceIngestStatusRequest),
     /// EH-280 — a branch-aware batch commits its projection through the
     /// same placement fence and ChangeEnvelope authority as source ingestion.
     IndexRepository {

@@ -13,10 +13,11 @@
 //! Every value is a claim; this rule only refuses claims that cannot mean
 //! anything.
 
-use medulla_types::agent_ontology::{is_a, is_native, CAPABILITY_ROOT, MODALITY_ROOT};
-use medulla_types::connector_pack::{
-    PackAnnotations, PackEntryKind, PackViolationCode, PackWarningCode,
+use medulla_catalog_types::{
+    connector_pack::PackAnnotations, connector_pack::PackEntryKind,
+    connector_pack::PackViolationCode, connector_pack::PackWarningCode,
 };
+use medulla_types::agent_ontology::{is_a, is_native, CAPABILITY_ROOT, MODALITY_ROOT};
 
 /// Largest declared price, in micros.
 const MAX_DECLARED_MICROS: u64 = 1_000_000_000_000_000;
@@ -300,7 +301,7 @@ mod tests {
     #[test]
     fn a_tool_mode_belongs_to_tools_only() {
         let declared = PackAnnotations {
-            tool_mode: Some(medulla_types::connector_pack::PackToolMode::Condensed),
+            tool_mode: Some(medulla_catalog_types::connector_pack::PackToolMode::Condensed),
             ..PackAnnotations::default()
         };
         assert!(check_annotations(PackEntryKind::Tool, &declared)
@@ -344,7 +345,7 @@ mod tests {
     #[test]
     fn context_window_zero_is_refused_by_the_pack_validator() {
         let model = |window: u64, output: u64| PackAnnotations {
-            model: Some(medulla_types::connector_pack::PackModelFacts {
+            model: Some(medulla_catalog_types::connector_pack::PackModelFacts {
                 provider: "vendor".into(),
                 model_identity: "vendor/m".into(),
                 context_window_tokens: window,

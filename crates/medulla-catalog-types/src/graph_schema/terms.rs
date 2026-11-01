@@ -13,7 +13,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::GraphSchemaErrorCode;
-use crate::contract::BoundedVec;
+use medulla_types::contract::BoundedVec;
 
 /// Largest page one `GraphSchemaClasses` read returns.
 pub const MAX_GRAPH_SCHEMA_TERMS_PAGE: usize = 1000;

@@ -26,12 +26,12 @@ enum CatalogRead {
 async fn read_catalog(
     state: &Arc<RwLock<ServerState>>,
     verified: &VerifiedRequestContext,
-    request: &medulla_types::connector_pack::McpCatalogAuthorityStatusRequest,
+    request: &medulla_catalog_types::connector_pack::McpCatalogAuthorityStatusRequest,
     access: CatalogRead,
 ) -> Result<
     (
         Arc<crate::server::persistence::agent_library::AgentLibraryStore>,
-        Option<medulla_types::connector_pack::McpCatalogSnapshotBinding>,
+        Option<medulla_catalog_types::connector_pack::McpCatalogSnapshotBinding>,
     ),
     String,
 > {
@@ -116,7 +116,7 @@ async fn serve_catalog_read(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: medulla_types::connector_pack::McpCatalogAuthorityStatusRequest,
+    request: medulla_catalog_types::connector_pack::McpCatalogAuthorityStatusRequest,
     access: CatalogRead,
 ) -> Response {
     #[cfg(not(feature = "redb"))]
@@ -169,7 +169,7 @@ macro_rules! catalog_read_handler {
             state: &Arc<RwLock<ServerState>>,
             req_id: u64,
             verified: &VerifiedRequestContext,
-            request: medulla_types::connector_pack::McpCatalogAuthorityStatusRequest,
+            request: medulla_catalog_types::connector_pack::McpCatalogAuthorityStatusRequest,
         ) -> Response {
             serve_catalog_read(state, req_id, verified, request, CatalogRead::$access).await
         }
@@ -197,7 +197,7 @@ pub(super) async fn serve(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: medulla_types::connector_pack::McpCatalogReconcileRequest,
+    request: medulla_catalog_types::connector_pack::McpCatalogReconcileRequest,
 ) -> Response {
     #[cfg(not(feature = "redb"))]
     {
@@ -220,7 +220,7 @@ pub(super) async fn serve(
 #[cfg(feature = "redb")]
 fn validate_mounted_attestation(
     verified: &VerifiedRequestContext,
-    request: &medulla_types::connector_pack::McpCatalogReconcileRequest,
+    request: &medulla_catalog_types::connector_pack::McpCatalogReconcileRequest,
 ) -> Result<(), String> {
     if request.discovery_tenant != verified.tenant()
         || request.child_id.is_empty()
@@ -343,8 +343,8 @@ async fn reconcile(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: medulla_types::connector_pack::McpCatalogReconcileRequest,
-) -> Result<medulla_types::connector_pack::McpCatalogSnapshotBinding, String> {
+    request: medulla_catalog_types::connector_pack::McpCatalogReconcileRequest,
+) -> Result<medulla_catalog_types::connector_pack::McpCatalogSnapshotBinding, String> {
     use medulla_types::agent_component::AgentComponentKind;
     use medulla_types::agent_library::AgentLibraryLifecycle;
 
@@ -374,7 +374,7 @@ async fn reconcile(
     }
     let authorization_scope_digest =
         verified.tenant_local_catalog_partition_digest(&request.server_name)?;
-    let candidate = medulla_types::connector_pack::McpCatalogAuthorityCandidate {
+    let candidate = medulla_catalog_types::connector_pack::McpCatalogAuthorityCandidate {
         tenant_id: verified.tenant().to_string(),
         server_name: request.server_name,
         attester_principal_id: verified.principal_persistence_id(),
@@ -390,7 +390,7 @@ async fn reconcile(
         child_connection_generation: request.child_connection_generation,
         authorization_scope_digest,
         expected_catalog_generation: request.expected_catalog_generation,
-        attestation: medulla_types::connector_pack::McpCatalogAttestation::MountedChild,
+        attestation: medulla_catalog_types::connector_pack::McpCatalogAttestation::MountedChild,
     };
     store.reconcile_mcp_catalog_authority(context, request.component_id, candidate)
 }

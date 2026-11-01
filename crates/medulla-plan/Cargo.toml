@@ -433,8 +433,10 @@ rayon = { version = "1.12", optional = true }
 arrow = { version = "58.4", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["query"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["query"] }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
 
 [dev-dependencies]
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support", "query"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support", "query"] }
 # The oracle/algebra tests build a fixture GraphCore + SemanticStore and run the

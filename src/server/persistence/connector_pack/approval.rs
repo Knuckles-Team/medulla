@@ -4,13 +4,13 @@
 //! module only flips its admission state under the existing Agent Library
 //! mutation kernel after an exact current-head and body-digest CAS.
 
+use medulla_catalog_types::{
+    connector_pack::ConnectorPackSourceApprovalResult, connector_pack::PackHeadRef,
+    connector_pack::PackSourceApproval, connector_pack::CONNECTOR_PACK_SCHEMA_VERSION,
+};
 use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_protocol_types::protocol::Method;
 use medulla_types::agent_library::AgentLibraryMutationContext;
-use medulla_types::connector_pack::{
-    ConnectorPackSourceApprovalResult, PackHeadRef, PackSourceApproval,
-    CONNECTOR_PACK_SCHEMA_VERSION,
-};
 use medulla_types::contract::{Digest256, ResourceId};
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationSurface;
@@ -37,7 +37,7 @@ impl AgentLibraryStore {
         contract_digest: Digest256,
     ) -> Result<ConnectorPackSourceApprovalResult, String> {
         medulla_types::agent_library::validate_key(&context.tenant_id, connector.as_str())?;
-        medulla_types::connector_pack::validate_connector(connector)?;
+        medulla_catalog_types::connector_pack::validate_connector(connector)?;
         if contract_iri.is_empty() || resource_uri.is_empty() {
             return Err("SOURCE_REGISTRATION_NOT_FOUND: source selector is empty".to_string());
         }
@@ -96,7 +96,7 @@ impl AgentLibraryStore {
             ));
         }
         medulla_types::agent_library::validate_key(&receipt.tenant_id, receipt.connector.as_str())?;
-        medulla_types::connector_pack::validate_connector(&receipt.connector)?;
+        medulla_catalog_types::connector_pack::validate_connector(&receipt.connector)?;
         if receipt.registration.approval != PackSourceApproval::Approved {
             return Err("SOURCE_APPROVAL_NOT_ADMITTED: registration is not approved".to_string());
         }

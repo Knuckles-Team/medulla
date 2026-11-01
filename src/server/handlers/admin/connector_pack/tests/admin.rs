@@ -3,10 +3,11 @@
 
 #[cfg(feature = "redb")]
 use crate::server::persistence::agent_library::AgentLibraryStateExt;
-use medulla_types::connector_pack::{
-    ConnectorPackOp, ConnectorPackReconcileRequest, ConnectorPackRetireRequest,
-    ConnectorPackUnbindRequest, PackBodyReconcileReport, PackImportResult, PackRetireResult,
-    PackViolationCode,
+use medulla_catalog_types::{
+    connector_pack::ConnectorPackOp, connector_pack::ConnectorPackReconcileRequest,
+    connector_pack::ConnectorPackRetireRequest, connector_pack::ConnectorPackUnbindRequest,
+    connector_pack::PackBodyReconcileReport, connector_pack::PackImportResult,
+    connector_pack::PackRetireResult, connector_pack::PackViolationCode,
 };
 use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
 use sha2::{Digest, Sha256};
@@ -21,7 +22,7 @@ const CONNECTOR: &str = "pack-admin";
 async fn catalog_status(
     served: &Served,
     connector: &str,
-) -> medulla_types::connector_pack::ConnectorPackStatus {
+) -> medulla_catalog_types::connector_pack::ConnectorPackStatus {
     served
         .state
         .write()
@@ -335,7 +336,7 @@ async fn bind_unbind_and_retire_require_admin_connector_pack_and_the_head_surviv
             &key,
             crate::protocol::Method::ConnectorPack {
                 op: Box::new(ConnectorPackOp::Bind {
-                    request: medulla_types::connector_pack::ConnectorPackBindRequest {
+                    request: medulla_catalog_types::connector_pack::ConnectorPackBindRequest {
                         context: context(&key),
                         connector: ResourceId::new(connector).unwrap(),
                         importer: persistence_id(ADMIN),
@@ -472,12 +473,14 @@ async fn a_rejected_import_mutates_nothing_in_the_catalog() {
         .pack(
             key,
             ConnectorPackOp::Import {
-                request: Box::new(medulla_types::connector_pack::ConnectorPackImportRequest {
-                    context: context(key),
-                    index: index.clone(),
-                    expected_head: Some(head_of(&first)),
-                    allow_mass_withdrawal: false,
-                }),
+                request: Box::new(
+                    medulla_catalog_types::connector_pack::ConnectorPackImportRequest {
+                        context: context(key),
+                        index: index.clone(),
+                        expected_head: Some(head_of(&first)),
+                        allow_mass_withdrawal: false,
+                    },
+                ),
             },
         )
         .await;

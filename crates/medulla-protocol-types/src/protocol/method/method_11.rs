@@ -216,7 +216,7 @@ $($variants)*
     /// Document's content digest; a new digest supersedes the earlier chunks.
     /// See [`crate::source_ingestion::web_document`].
     EnrichDocument {
-        request: Box<medulla_types::source_ingestion::web_document::EnrichDocumentRequest>,
+        request: Box<medulla_catalog_types::source_ingestion::web_document::EnrichDocumentRequest>,
     },
     /// Choose which web search candidates to fetch: canonical-URL and digest
     /// dedupe against each other and the request graph's held Documents,

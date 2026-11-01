@@ -67,8 +67,8 @@ pub(super) async fn resolve(
                 )
             })?;
             let documents = match body.kind {
-                medulla_types::connector_pack::PackEntryKind::Shapes => &mut shapes,
-                medulla_types::connector_pack::PackEntryKind::Ontology => &mut ontologies,
+                medulla_catalog_types::connector_pack::PackEntryKind::Shapes => &mut shapes,
+                medulla_catalog_types::connector_pack::PackEntryKind::Ontology => &mut ontologies,
                 _ => unreachable!("resolver selected only semantic pack members"),
             };
             documents.push(super::PackSchemaDocument {

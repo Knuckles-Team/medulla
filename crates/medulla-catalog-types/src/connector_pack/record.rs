@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 
 use super::index::{McpCatalogSnapshotBinding, PackEntryKind, PackProducer};
 use super::result::{PackProjectionState, PackWarning};
-use crate::agent_component::ComponentDependency;
-use crate::contract::{BoundedVec, Digest256, ResourceId};
+use medulla_types::agent_component::ComponentDependency;
+use medulla_types::{contract::BoundedVec, contract::Digest256, contract::ResourceId};
 
 /// What an import did to one entry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

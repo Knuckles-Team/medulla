@@ -9,8 +9,8 @@ use super::{
     MAX_DISCOVERY_ERROR_BYTES, MAX_FLEET_COMPONENT_ID_BYTES, MAX_FLEET_GRANT_DIGESTS,
     MAX_FLEET_LOOKUP_IDS, MAX_FLEET_PAGE_ROWS, MAX_FLEET_QUERY_BYTES,
 };
-use crate::contract::{BoundedVec, Digest256, ResourceId};
 use crate::fleet_catalog::is_valid_server_name;
+use medulla_types::{contract::BoundedVec, contract::Digest256, contract::ResourceId};
 
 /// The component-id prefix every connector-pack member carries. Overrides and
 /// content lookups only ever address pack members.

@@ -128,11 +128,11 @@ impl GraphSchemaSource {
             ("ontology", self.ontology_ttl.as_deref()),
         ] {
             if document.is_some_and(|value| {
-                value.len() > medulla_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES
+                value.len() > medulla_catalog_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES
             }) {
                 return Err(format!(
                     "schema source {label} exceeds {} bytes",
-                    medulla_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES
+                    medulla_catalog_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES
                 ));
             }
         }
@@ -370,7 +370,7 @@ fn validate_core_source<'a>(
 }
 
 fn validate_dynamic_sources(dynamic: &BTreeMap<String, GraphSchemaSource>) -> Result<(), String> {
-    if dynamic.len() > medulla_types::graph_schema::MAX_GRAPH_SCHEMA_SOURCES {
+    if dynamic.len() > medulla_catalog_types::graph_schema::MAX_GRAPH_SCHEMA_SOURCES {
         return Err("dynamic schema source count exceeds 32".to_string());
     }
     let mut total = 0usize;
@@ -536,12 +536,12 @@ fn is_truthy_approval_literal(term: &str) -> bool {
 
 fn validate_dynamic_identity(source_id: &str, origin: &SchemaSourceOrigin) -> Result<(), String> {
     if source_id.is_empty()
-        || source_id.len() > medulla_types::graph_schema::MAX_SCHEMA_SOURCE_ID_BYTES
+        || source_id.len() > medulla_catalog_types::graph_schema::MAX_SCHEMA_SOURCE_ID_BYTES
         || source_id.chars().any(char::is_control)
     {
         return Err(format!(
             "schema source id must be printable and 1..={} bytes",
-            medulla_types::graph_schema::MAX_SCHEMA_SOURCE_ID_BYTES
+            medulla_catalog_types::graph_schema::MAX_SCHEMA_SOURCE_ID_BYTES
         ));
     }
     if origin_owns_key(source_id, origin) {
@@ -1185,7 +1185,8 @@ mod tests {
 
     #[test]
     fn low_level_source_seam_enforces_the_document_bound() {
-        let oversized = "x".repeat(medulla_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES + 1);
+        let oversized =
+            "x".repeat(medulla_catalog_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES + 1);
         let source = GraphSchemaSource::new(
             SchemaSourceOrigin::Admin {
                 name: "oversized".to_string(),
@@ -1206,7 +1207,7 @@ mod tests {
     #[test]
     fn dynamic_quota_excludes_the_immutable_core_catalog() {
         let mut sources = GraphSchemaSources::default();
-        for index in 0..medulla_types::graph_schema::MAX_GRAPH_SCHEMA_SOURCES {
+        for index in 0..medulla_catalog_types::graph_schema::MAX_GRAPH_SCHEMA_SOURCES {
             sources
                 .attach_dynamic(
                     format!("admin:admin-{index:02}"),
@@ -1216,7 +1217,7 @@ mod tests {
         }
         assert_eq!(
             sources.all().count(),
-            sources.core.len() + medulla_types::graph_schema::MAX_GRAPH_SCHEMA_SOURCES
+            sources.core.len() + medulla_catalog_types::graph_schema::MAX_GRAPH_SCHEMA_SOURCES
         );
         let error = sources
             .attach_dynamic("admin:overflow".to_string(), admin_source("overflow", 0))

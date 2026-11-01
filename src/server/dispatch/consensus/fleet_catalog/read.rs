@@ -5,17 +5,18 @@
 use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::collections::BTreeMap;
 
+use medulla_catalog_types::{
+    fleet_catalog::FleetCatalogKind, fleet_catalog::FleetCatalogListRequest,
+    fleet_catalog::FleetCatalogLookup, fleet_catalog::FleetCatalogLookupRequest,
+    fleet_catalog::FleetCatalogPage, fleet_catalog::FleetCatalogRow, fleet_catalog::SkillType,
+    fleet_catalog::FLEET_CATALOG_SCHEMA_VERSION, fleet_catalog::MAX_FLEET_SNAPSHOT_ROWS,
+};
 use medulla_protocol_types::{
     result_contract::cluster::FleetCatalogList, result_contract::cluster::FleetCatalogLookupRows,
     result_contract::cluster::ServerDesiredState,
 };
 use medulla_types::agent_component::AgentComponentEntry;
 use medulla_types::contract::{BoundedVec, Digest256};
-use medulla_types::fleet_catalog::{
-    FleetCatalogKind, FleetCatalogListRequest, FleetCatalogLookup, FleetCatalogLookupRequest,
-    FleetCatalogPage, FleetCatalogRow, SkillType, FLEET_CATALOG_SCHEMA_VERSION,
-    MAX_FLEET_SNAPSHOT_ROWS,
-};
 
 use super::super::registry::{live_desired_states, REGISTRY_GRAPH};
 use super::project::{

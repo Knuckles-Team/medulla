@@ -9,8 +9,8 @@
 use serde::{Deserialize, Serialize};
 
 use super::McpCatalogSnapshotBinding;
-use crate::agent_library::AgentLibraryMutationContext;
-use crate::contract::Digest256;
+use medulla_types::agent_library::AgentLibraryMutationContext;
+use medulla_types::contract::Digest256;
 
 const CONFIG_DOMAIN: &[u8] = b"eg/mcp-served-joined-config/v1";
 const SNAPSHOT_DOMAIN: &[u8] = b"eg/mcp-served-catalog-snapshot/v1";

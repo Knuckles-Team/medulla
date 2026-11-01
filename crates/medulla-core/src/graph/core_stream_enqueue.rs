@@ -15,7 +15,7 @@ impl GraphCore {
         &self,
         node_id: &str,
         key: &str,
-    ) -> Option<medulla_types::Distribution> {
+    ) -> Option<medulla_catalog_types::distribution::Distribution> {
         let bytes = self.get_node_properties(node_id)?;
         let val = decode_property_value(&bytes).ok()?;
         let field = val.as_object()?.get(key)?.clone();
@@ -30,7 +30,7 @@ impl GraphCore {
         &self,
         node_id: &str,
         key: &str,
-        dist: &medulla_types::Distribution,
+        dist: &medulla_catalog_types::distribution::Distribution,
     ) -> bool {
         let dist_val = match serde_json::to_value(dist) {
             Ok(v) => v,

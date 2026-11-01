@@ -118,6 +118,7 @@ oxjsonld = { version = "0.2", optional = true }
 # OFF) — a default/node/full build links none of it and `owl::ProofNode` carries no
 # new required trait. See `src/contract.rs`.
 medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
 
 [dev-dependencies]
 # ICV integration test (CONCEPT:MEDULLA-146). medulla-shacl sits ABOVE medulla-rdf in the DAG (it

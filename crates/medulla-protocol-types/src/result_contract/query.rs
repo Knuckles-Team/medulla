@@ -37,13 +37,13 @@ method_results! {
     #[cfg(feature = "federation")]
     QueryForeignColumns(QueryForeignColumns) => Raw<Vec<medulla_types::wire::ForeignColumnRow>>;
     #[cfg(feature = "federation")]
-    ForeignReadOpen(ForeignReadOpen) => Raw<medulla_types::foreign_read::ForeignReadOpenResult>;
+    ForeignReadOpen(ForeignReadOpen) => Raw<medulla_catalog_types::foreign_read::ForeignReadOpenResult>;
     #[cfg(feature = "federation")]
-    ForeignReadChunk(ForeignReadChunk) => Raw<medulla_types::foreign_read::ForeignReadChunkResult>;
+    ForeignReadChunk(ForeignReadChunk) => Raw<medulla_catalog_types::foreign_read::ForeignReadChunkResult>;
     #[cfg(feature = "federation")]
-    ForeignReadComplete(ForeignReadComplete) => Raw<medulla_types::foreign_read::ForeignReadCompleteResult>;
+    ForeignReadComplete(ForeignReadComplete) => Raw<medulla_catalog_types::foreign_read::ForeignReadCompleteResult>;
     #[cfg(feature = "federation")]
-    ForeignReadAbort(ForeignReadAbort) => Raw<medulla_types::foreign_read::ForeignReadAbortResult>;
+    ForeignReadAbort(ForeignReadAbort) => Raw<medulla_catalog_types::foreign_read::ForeignReadAbortResult>;
     // A UQL statement's rows (with named score channels), EXPLAIN report or PROFILE.
     #[cfg(feature = "query")]
     Uql(Uql) => Raw<medulla_types::wire::UqlResult>;

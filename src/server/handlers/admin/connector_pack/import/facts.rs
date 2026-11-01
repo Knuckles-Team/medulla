@@ -1,10 +1,10 @@
 //! Stable AgentComponent facts derived from ConnectorPack annotations.
 
+use medulla_catalog_types::{connector_pack::PackEntry, connector_pack::PackEntryKind};
 use medulla_types::agent_component::{
     AgentComponentFacts, AgentComponentKind, CostFacts, FactQuality, ModalityFacts, PriceSource,
     ToolEffect,
 };
-use medulla_types::connector_pack::{PackEntry, PackEntryKind};
 use medulla_types::contract::Digest256;
 
 pub(super) fn facts(entry: &PackEntry, digest: &Digest256) -> Result<AgentComponentFacts, String> {
@@ -167,7 +167,7 @@ fn kind_semantics(kind: PackEntryKind) -> KindSemantics {
 
 #[cfg(test)]
 mod tests {
-    use medulla_types::connector_pack::{PackAnnotations, PackSection};
+    use medulla_catalog_types::{connector_pack::PackAnnotations, connector_pack::PackSection};
     use medulla_types::contract::BoundedVec;
 
     use super::*;

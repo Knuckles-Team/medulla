@@ -159,7 +159,8 @@ mod schema_migration_tests {
         let legacy = LegacyGraphSnapshot {
             schema_version: 2,
             integrity_policy: Some(LegacyIntegrityPolicy {
-                shapes_ttl: "x".repeat(medulla_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES + 1),
+                shapes_ttl: "x"
+                    .repeat(medulla_catalog_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES + 1),
             }),
             nodes: Vec::new(),
             edges: Vec::new(),

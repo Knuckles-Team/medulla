@@ -902,7 +902,7 @@ mod tests {
             "m1".into(),
             props(serde_json::json!({"type": "Measurement"})),
         );
-        let dist = medulla_types::Distribution::Gaussian {
+        let dist = medulla_catalog_types::distribution::Distribution::Gaussian {
             mean: 3.5,
             std: 0.75,
         };
@@ -928,7 +928,7 @@ mod tests {
         core.add_node("m2".into(), props(serde_json::json!({"x": 1})));
         assert!(core.get_distribution("m2", "reading").is_none());
         // set on a not-yet-existing node creates it.
-        let d = medulla_types::Distribution::Beta {
+        let d = medulla_catalog_types::distribution::Distribution::Beta {
             alpha: 2.0,
             beta: 5.0,
         };

@@ -14,8 +14,11 @@
 use crate::server::persistence::AsRedb;
 use std::sync::Arc;
 
-use medulla_types::graph_schema::approval::{approved_candidate_digest, verify_schema_approval};
-use medulla_types::graph_schema::GraphSchemaOp;
+use medulla_catalog_types::graph_schema::GraphSchemaOp;
+use medulla_catalog_types::{
+    graph_schema::approval::approved_candidate_digest,
+    graph_schema::approval::verify_schema_approval,
+};
 
 use crate::protocol::{Method, Response};
 use crate::server::mutation::{MutationCtx, MutationPlan};
@@ -90,8 +93,8 @@ fn validate(
     let current = core.schema_sources().composed_digest().to_hex();
     crate::protocol::ResultPayload::of::<
         medulla_protocol_types::result_contract::reasoning::GraphSchema,
-    >(medulla_types::graph_schema::GraphSchemaCommitted {
-        schema_version: medulla_types::graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
+    >(medulla_catalog_types::graph_schema::GraphSchemaCommitted {
+        schema_version: medulla_catalog_types::graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
         graph: graph_name.to_string(),
         composed_digest: current,
         graph_version: core.version(),
@@ -132,7 +135,7 @@ async fn read_lease(
 fn approval_store_unavailable() -> String {
     format!(
         "{}: this engine build holds no native approval leases",
-        medulla_types::graph_schema::GraphSchemaErrorCode::ApprovalRequired.as_str()
+        medulla_catalog_types::graph_schema::GraphSchemaErrorCode::ApprovalRequired.as_str()
     )
 }
 
@@ -155,9 +158,9 @@ pub(super) fn source(op: &GraphSchemaOp) -> Result<crate::graph::GraphSchemaSour
         _ => return Err("approved schema source needs a repair operation".to_string()),
     };
     let name = source_id
-        .strip_prefix(medulla_types::graph_schema::approval::APPROVED_SOURCE_PREFIX)
+        .strip_prefix(medulla_catalog_types::graph_schema::approval::APPROVED_SOURCE_PREFIX)
         .ok_or_else(|| "approved schema source id lacks its namespace".to_string())?;
-    let shapes = medulla_types::graph_schema::repair::render_repair_shapes(name, contract);
+    let shapes = medulla_catalog_types::graph_schema::repair::render_repair_shapes(name, contract);
     crate::graph::GraphSchemaSource::new(
         crate::graph::SchemaSourceOrigin::Approved {
             name: name.to_string(),

@@ -20,7 +20,7 @@ pub async fn handle_list(req_id: u64, graph_name: &str, core: &Arc<GraphCore>) -
 
 fn list_response(
     req_id: u64,
-    result: Result<medulla_types::graph_schema::GraphSchemaSourcesView, String>,
+    result: Result<medulla_catalog_types::graph_schema::GraphSchemaSourcesView, String>,
 ) -> Response {
     match result {
         Ok(body) => Response::ok(
@@ -37,9 +37,10 @@ fn list_response(
 pub fn list(
     graph_name: &str,
     core: &GraphCore,
-) -> Result<medulla_types::graph_schema::GraphSchemaSourcesView, String> {
-    use medulla_types::graph_schema::{
-        GraphSchemaSourceView, GraphSchemaSourcesView, GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
+) -> Result<medulla_catalog_types::graph_schema::GraphSchemaSourcesView, String> {
+    use medulla_catalog_types::{
+        graph_schema::GraphSchemaSourceView, graph_schema::GraphSchemaSourcesView,
+        graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
     };
     let sources = disclosed_sources(core);
     let project =
@@ -77,9 +78,9 @@ pub fn list(
 /// The wire view of one source's authority origin.
 fn origin_view(
     origin: &crate::graph::SchemaSourceOrigin,
-) -> medulla_types::graph_schema::SchemaSourceOriginView {
+) -> medulla_catalog_types::graph_schema::SchemaSourceOriginView {
     use crate::graph::SchemaSourceOrigin as Origin;
-    use medulla_types::graph_schema::SchemaSourceOriginView as View;
+    use medulla_catalog_types::graph_schema::SchemaSourceOriginView as View;
     match origin {
         Origin::Core {
             module,

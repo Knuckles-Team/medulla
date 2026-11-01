@@ -2,12 +2,13 @@
 
 #[cfg(feature = "redb")]
 use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_catalog_types::{
+    connector_pack::PackAnnotations, connector_pack::PackDispositionCounts,
+    connector_pack::PackEntryKind, connector_pack::PackImportResult, connector_pack::PackRef,
+    connector_pack::PackViolationCode, connector_pack::PackWarningCode,
+};
 use medulla_types::agent_component::AgentComponentEntry;
 use medulla_types::agent_library::AgentLibraryLifecycle;
-use medulla_types::connector_pack::{
-    PackAnnotations, PackDispositionCounts, PackEntryKind, PackImportResult, PackRef,
-    PackViolationCode, PackWarningCode,
-};
 
 use super::{
     bind, build_pack, build_pack_with_server, head_of, import, imported, ok,
@@ -31,9 +32,9 @@ async fn current_component(served: &Served, id: &str) -> AgentComponentEntry {
 }
 
 async fn current_server(served: &Served) -> AgentComponentEntry {
-    let id = medulla_types::connector_pack::pack_component_id(
+    let id = medulla_catalog_types::connector_pack::pack_component_id(
         CONNECTOR,
-        medulla_types::connector_pack::PackEntryKind::McpServer,
+        medulla_catalog_types::connector_pack::PackEntryKind::McpServer,
         CONNECTOR,
     );
     current_component(served, &id).await
@@ -285,7 +286,7 @@ fn reference_chain() -> Vec<Content> {
     let leaf = tool(CONNECTOR, "leaf", "Original leaf.");
     let middle = skill(CONNECTOR, "z-middle", &[&leaf]);
     let mut top = skill(CONNECTOR, "a-top", &[&middle]);
-    top.references[0].kind = medulla_types::connector_pack::PackEntryKind::Skill;
+    top.references[0].kind = medulla_catalog_types::connector_pack::PackEntryKind::Skill;
     vec![leaf, middle, top]
 }
 
@@ -332,8 +333,11 @@ async fn pack_snapshot(served: &Served) -> PackSnapshot {
 
 async fn assert_repeat_is_unchanged(
     served: &Served,
-    pack: &(medulla_types::connector_pack::ConnectorPackIndex, Vec<u8>),
-    receipt: &medulla_types::connector_pack::PackImportReceipt,
+    pack: &(
+        medulla_catalog_types::connector_pack::ConnectorPackIndex,
+        Vec<u8>,
+    ),
+    receipt: &medulla_catalog_types::connector_pack::PackImportReceipt,
 ) {
     let before = pack_snapshot(served).await;
     match ok("Import", import(served, pack, Some(head_of(receipt))).await) {
@@ -416,7 +420,7 @@ async fn a_shared_descendant_diamond_revises_each_component_once() {
     let right = skill(CONNECTOR, "right", &[&leaf]);
     let mut top = skill(CONNECTOR, "a-top", &[&left, &right]);
     for reference in &mut top.references {
-        reference.kind = medulla_types::connector_pack::PackEntryKind::Skill;
+        reference.kind = medulla_catalog_types::connector_pack::PackEntryKind::Skill;
     }
     let mut entries = vec![leaf, left, right, top];
     let first = imported(&served, &build_pack(CONNECTOR, &entries), None).await;
@@ -460,7 +464,7 @@ async fn stale_chain_imported() -> (
     Served,
     Vec<Content>,
     Content,
-    medulla_types::connector_pack::PackImportReceipt,
+    medulla_catalog_types::connector_pack::PackImportReceipt,
 ) {
     let served = Served::new();
     bind(&served, CONNECTOR, ADMIN).await;
@@ -536,7 +540,7 @@ async fn a_changed_pack_repairs_already_stale_server_and_reference_pins() {
 async fn four_tools_imported() -> (
     Served,
     Vec<Content>,
-    medulla_types::connector_pack::PackImportReceipt,
+    medulla_catalog_types::connector_pack::PackImportReceipt,
 ) {
     let served = Served::new();
     bind(&served, CONNECTOR, ADMIN).await;
@@ -692,7 +696,7 @@ async fn supporting_files_are_never_stored_as_skill_body_content() {
                     op: medulla_types::agent_component::AgentComponentOp::Content {
                         request: medulla_types::agent_component::AgentComponentContentRequest {
                             tenant_id: TENANT.to_string(),
-                            component_id: medulla_types::connector_pack::pack_component_id(
+                            component_id: medulla_catalog_types::connector_pack::pack_component_id(
                                 CONNECTOR,
                                 PackEntryKind::Skill,
                                 "deploy",
@@ -719,7 +723,7 @@ async fn supporting_files_are_never_stored_as_skill_body_content() {
                     op: medulla_types::agent_component::AgentComponentOp::Content {
                         request: medulla_types::agent_component::AgentComponentContentRequest {
                             tenant_id: TENANT.to_string(),
-                            component_id: medulla_types::connector_pack::pack_component_id(
+                            component_id: medulla_catalog_types::connector_pack::pack_component_id(
                                 CONNECTOR,
                                 PackEntryKind::SkillFile,
                                 "deploy/scripts/run.sh",

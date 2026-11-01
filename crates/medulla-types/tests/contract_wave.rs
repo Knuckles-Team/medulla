@@ -14,6 +14,9 @@
 //! * the framed digest layout depends on the rules it claims to, which is
 //!   proved by planting a violation of each rule and watching the digest move.
 
+use medulla_catalog_types::catalog_fixtures::contract_control as control;
+use medulla_catalog_types::catalog_fixtures::contract_pack as pack;
+use medulla_catalog_types::connector_pack::digest as pack_digests;
 use medulla_decision_types::decision_fixtures::contract_decision as decision;
 use medulla_decision_types::decision_fixtures::contract_solver as solver;
 use medulla_decision_types::decision_fixtures::contract_statistical as statistical;
@@ -29,9 +32,6 @@ use medulla_types::agent_component::{
     AGENT_COMPONENT_SCHEMA_VERSION,
 };
 use medulla_types::agent_library::{refuse_withdrawn, AgentLibraryLifecycle};
-use medulla_types::catalog_fixtures::contract_control as control;
-use medulla_types::catalog_fixtures::contract_pack as pack;
-use medulla_types::connector_pack::digest as pack_digests;
 
 /// Every sample survives both codecs and keeps its wire tag.
 ///
@@ -356,9 +356,9 @@ fn the_pack_digest_layout_depends_on_every_rule_it_states() {
 /// The component id escape set is exactly the one the contract documents.
 #[test]
 fn a_pack_component_id_escapes_every_byte_outside_its_unreserved_set() {
-    let escaped = medulla_types::connector_pack::pack_component_id(
+    let escaped = medulla_catalog_types::connector_pack::pack_component_id(
         "connector-a",
-        medulla_types::connector_pack::PackEntryKind::Tool,
+        medulla_catalog_types::connector_pack::PackEntryKind::Tool,
         "search files/~ 100%",
     );
     assert_eq!(
@@ -366,7 +366,7 @@ fn a_pack_component_id_escapes_every_byte_outside_its_unreserved_set() {
         "the escape set must cover the separator, tilde, space and percent"
     );
     assert_eq!(
-        medulla_types::connector_pack::escape_pack_name("model-1.0_x"),
+        medulla_catalog_types::connector_pack::escape_pack_name("model-1.0_x"),
         "model-1.0_x",
         "an unreserved name must survive unchanged"
     );

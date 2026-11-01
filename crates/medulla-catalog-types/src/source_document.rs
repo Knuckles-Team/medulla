@@ -9,10 +9,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::Digest256;
 use crate::source_ingestion::{
     SourceCheckpoint, SourceEntityRef, SourceIngestionReceipt, SourceIngestionRequest,
 };
+use medulla_types::contract::Digest256;
 
 /// Maximum atom or concept references one normalized document may name.
 pub const MAX_DOCUMENT_REFS: usize = 4_096;
@@ -139,11 +139,11 @@ mod tests {
     use serde_json::json;
 
     use super::*;
-    use crate::contract::{BoundedVec, ResourceId};
     use crate::source_ingestion::{
         SourceIngestionBatch, SourceIngestionDisposition, SourceIngestionMode, SourceJson,
         SourceRecord, SourceRecordProvenance,
     };
+    use medulla_types::{contract::BoundedVec, contract::ResourceId};
 
     fn digest(byte: u8) -> Digest256 {
         Digest256::from_bytes([byte; 32])

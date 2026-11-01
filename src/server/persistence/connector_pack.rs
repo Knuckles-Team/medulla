@@ -10,12 +10,13 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use medulla_types::agent_library::AgentLibraryLifecycle;
-use medulla_types::connector_pack::{
-    ConnectorPackStatus, ConnectorRelationshipMapping, ConnectorSchemaMapping,
-    McpCatalogSnapshotBinding, PackEntryKind, PackHeadView, PackImportReceipt, PackMemberCounts,
-    PackProjectionState,
+use medulla_catalog_types::{
+    connector_pack::ConnectorPackStatus, connector_pack::ConnectorRelationshipMapping,
+    connector_pack::ConnectorSchemaMapping, connector_pack::McpCatalogSnapshotBinding,
+    connector_pack::PackEntryKind, connector_pack::PackHeadView, connector_pack::PackImportReceipt,
+    connector_pack::PackMemberCounts, connector_pack::PackProjectionState,
 };
+use medulla_types::agent_library::AgentLibraryLifecycle;
 use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
 
 use super::agent_library::AgentLibraryStore;
@@ -70,7 +71,7 @@ pub(crate) struct ConnectorPackMemberRow {
     pub relationship_mappings: Option<BTreeMap<String, ConnectorRelationshipMapping>>,
     /// Authoritative live-read claims; old rows contain none and stay unbound.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub source_registrations: Vec<medulla_types::connector_pack::PackSourceRegistration>,
+    pub source_registrations: Vec<medulla_catalog_types::connector_pack::PackSourceRegistration>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -509,7 +510,7 @@ fn status_from_rows(
             .unwrap_or_default(),
     )?;
     Ok(ConnectorPackStatus {
-        schema_version: medulla_types::connector_pack::CONNECTOR_PACK_SCHEMA_VERSION,
+        schema_version: medulla_catalog_types::connector_pack::CONNECTOR_PACK_SCHEMA_VERSION,
         tenant_id: tenant_id.to_string(),
         connector: connector.clone(),
         head: head.as_ref().map(|row| row.head.clone()),

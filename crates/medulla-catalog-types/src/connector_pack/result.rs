@@ -8,9 +8,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::closed_error_codes;
 use crate::connector_pack::{McpCatalogSnapshotBinding, PackHeadRef, PackSourceRegistration};
-use crate::contract::{BoundedVec, Digest256, ResourceId};
+use medulla_types::closed_error_codes;
+use medulla_types::{contract::BoundedVec, contract::Digest256, contract::ResourceId};
 
 /// Why a pack was rejected. Screaming-snake on the wire, so the code a caller
 /// reads is the code the design documents.
@@ -257,8 +257,10 @@ pub struct PackRetireResult {
     pub schema_version: u16,
     pub tenant_id: String,
     pub connector: ResourceId,
-    pub retired:
-        BoundedVec<crate::agent_component::ComponentDependency, { super::MAX_PACK_ENTRIES }>,
+    pub retired: BoundedVec<
+        medulla_types::agent_component::ComponentDependency,
+        { super::MAX_PACK_ENTRIES },
+    >,
     pub batch_id: String,
     pub committed_version: u64,
 }

@@ -5,14 +5,19 @@ use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use medulla_types::connector_pack::{PackAnnotations, PackEntryKind, PackSourceApproval};
-use medulla_types::contract::Digest256;
-use medulla_types::foreign_read::{
-    ForeignReadAbortRequest, ForeignReadAbortResult, ForeignReadChunkRequest,
-    ForeignReadChunkResult, ForeignReadCompleteRequest, ForeignReadCompleteResult,
-    ForeignReadLimits, ForeignReadOpenRequest, ForeignReadOpenResult, ForeignReadRow,
-    FOREIGN_READ_SCHEMA_VERSION,
+use medulla_catalog_types::{
+    connector_pack::PackAnnotations, connector_pack::PackEntryKind,
+    connector_pack::PackSourceApproval,
 };
+use medulla_catalog_types::{
+    foreign_read::ForeignReadAbortRequest, foreign_read::ForeignReadAbortResult,
+    foreign_read::ForeignReadChunkRequest, foreign_read::ForeignReadChunkResult,
+    foreign_read::ForeignReadCompleteRequest, foreign_read::ForeignReadCompleteResult,
+    foreign_read::ForeignReadLimits, foreign_read::ForeignReadOpenRequest,
+    foreign_read::ForeignReadOpenResult, foreign_read::ForeignReadRow,
+    foreign_read::FOREIGN_READ_SCHEMA_VERSION,
+};
+use medulla_types::contract::Digest256;
 
 use super::{
     approve_source, bind, build_pack, context, head_of, imported, ok, refused, tool, Content,
@@ -90,9 +95,9 @@ async fn approve_source_requires_current_head_and_contract_digest() {
                 wrong_key,
                 crate::protocol::Method::ConnectorPack {
                     op: Box::new(
-                        medulla_types::connector_pack::ConnectorPackOp::ApproveSource {
+                        medulla_catalog_types::connector_pack::ConnectorPackOp::ApproveSource {
                             request:
-                                medulla_types::connector_pack::ConnectorPackSourceApprovalRequest {
+                                medulla_catalog_types::connector_pack::ConnectorPackSourceApprovalRequest {
                                     context: wrong_context,
                                     connector: connector_id.clone(),
                                     contract_iri: contract_iri.clone(),
@@ -108,7 +113,7 @@ async fn approve_source_requires_current_head_and_contract_digest() {
     );
     assert!(wrong_tenant.contains("ACCESS_DENIED"), "{wrong_tenant}");
 
-    let approved: medulla_types::connector_pack::ConnectorPackSourceApprovalResult = ok(
+    let approved: medulla_catalog_types::connector_pack::ConnectorPackSourceApprovalResult = ok(
         "approve source",
         approve_source(
             &served,
@@ -123,7 +128,7 @@ async fn approve_source_requires_current_head_and_contract_digest() {
     assert_eq!(approved.registration.approval, PackSourceApproval::Approved);
     assert_eq!(
         approved.schema_version,
-        medulla_types::connector_pack::CONNECTOR_PACK_SCHEMA_VERSION
+        medulla_catalog_types::connector_pack::CONNECTOR_PACK_SCHEMA_VERSION
     );
     assert_eq!(approved.tenant_id, TENANT);
     assert_eq!(approved.connector, connector_id);
@@ -141,7 +146,7 @@ async fn approve_source_requires_current_head_and_contract_digest() {
         .expect_err("a receipt with a changed body digest must not bind");
     assert!(refusal.contains("SOURCE_CONTRACT_MISMATCH"), "{refusal}");
     drop(store);
-    let replay: medulla_types::connector_pack::ConnectorPackSourceApprovalResult = ok(
+    let replay: medulla_catalog_types::connector_pack::ConnectorPackSourceApprovalResult = ok(
         "replay approved source",
         approve_source(
             &served,
@@ -284,7 +289,7 @@ async fn foreign_read_four_phase_uses_authenticated_dispatch() {
     let contract_digest = member.body_sha256;
     drop(store);
 
-    let approved: medulla_types::connector_pack::ConnectorPackSourceApprovalResult = ok(
+    let approved: medulla_catalog_types::connector_pack::ConnectorPackSourceApprovalResult = ok(
         "approve source for four-phase route",
         approve_source(
             &served,
@@ -496,7 +501,7 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
     let registration = member.source_registrations[0].clone();
     let digest = member.body_sha256;
     drop(store);
-    let approved: medulla_types::connector_pack::ConnectorPackSourceApprovalResult = ok(
+    let approved: medulla_catalog_types::connector_pack::ConnectorPackSourceApprovalResult = ok(
         "approve source for binding",
         approve_source(
             &served,
@@ -791,7 +796,7 @@ async fn two_approved_sources_join_once_and_duplicate_refuses_atomically() {
     let digest = Digest256::sha256(&rmp_serde::to_vec_named(&plan).unwrap());
     let mut executions = Vec::new();
     for registration in &registrations {
-        let approved: medulla_types::connector_pack::ConnectorPackSourceApprovalResult = ok(
+        let approved: medulla_catalog_types::connector_pack::ConnectorPackSourceApprovalResult = ok(
             "approve source",
             approve_source(
                 &served,

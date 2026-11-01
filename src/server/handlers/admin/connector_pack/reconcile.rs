@@ -31,7 +31,7 @@ pub(crate) async fn serve(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: medulla_types::connector_pack::ConnectorPackReconcileRequest,
+    request: medulla_catalog_types::connector_pack::ConnectorPackReconcileRequest,
 ) -> Response {
     #[cfg(not(all(feature = "redb", feature = "blob")))]
     {
@@ -55,7 +55,7 @@ pub(crate) async fn serve(
         };
         let method = medulla_protocol_types::protocol::Method::ConnectorPack {
             op: Box::new(
-                medulla_types::connector_pack::ConnectorPackOp::ReconcileBodies { request },
+                medulla_catalog_types::connector_pack::ConnectorPackOp::ReconcileBodies { request },
             ),
         };
         match reconcile_locked(state, req_id, verified, &method).await {
@@ -93,8 +93,8 @@ pub(super) async fn reconcile_if_due(
     }
     let method = medulla_protocol_types::protocol::Method::ConnectorPack {
         op: Box::new(
-            medulla_types::connector_pack::ConnectorPackOp::ReconcileBodies {
-                request: medulla_types::connector_pack::ConnectorPackReconcileRequest {
+            medulla_catalog_types::connector_pack::ConnectorPackOp::ReconcileBodies {
+                request: medulla_catalog_types::connector_pack::ConnectorPackReconcileRequest {
                     context: context.clone(),
                 },
             },
@@ -118,7 +118,7 @@ pub(super) async fn reconcile_locked(
     req_id: u64,
     verified: &VerifiedRequestContext,
     method: &medulla_protocol_types::protocol::Method,
-) -> Result<medulla_types::connector_pack::PackBodyReconcileReport, String> {
+) -> Result<medulla_catalog_types::connector_pack::PackBodyReconcileReport, String> {
     let store = super::agent_library_store(state).await?;
     let blob = state
         .read()
@@ -140,14 +140,17 @@ pub(super) async fn reconcile_locked(
         let stats = blob
             .store
             .reconcile_holders_batch(&request, &batch, now_ms)?;
-        Ok(medulla_types::connector_pack::PackBodyReconcileReport {
-            schema_version: medulla_types::connector_pack::CONNECTOR_PACK_SCHEMA_VERSION,
-            tenant_id,
-            scanned: held.len() as u64,
-            orphaned: stats.holders_released,
-            released: stats.references_released,
-            next_run_after_ms: now_ms.saturating_add(RECONCILE_INTERVAL_MS),
-        })
+        Ok(
+            medulla_catalog_types::connector_pack::PackBodyReconcileReport {
+                schema_version:
+                    medulla_catalog_types::connector_pack::CONNECTOR_PACK_SCHEMA_VERSION,
+                tenant_id,
+                scanned: held.len() as u64,
+                orphaned: stats.holders_released,
+                released: stats.references_released,
+                next_run_after_ms: now_ms.saturating_add(RECONCILE_INTERVAL_MS),
+            },
+        )
     })
     .await
     .map_err(|error| format!("connector pack reconcile task failed: {error}"))?

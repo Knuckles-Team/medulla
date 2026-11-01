@@ -77,7 +77,7 @@ pub fn contract_wave_samples() -> Vec<(&'static str, Method)> {
             Method::AgentComponent {
                 op: AgentComponentOp::Content {
                     request:
-                        medulla_types::catalog_fixtures::contract_control::component_content_request(
+                        medulla_catalog_types::catalog_fixtures::contract_control::component_content_request(
                         ),
                 },
             },
@@ -99,17 +99,17 @@ pub fn contract_wave_samples() -> Vec<(&'static str, Method)> {
             .map(|(label, op)| (label, Method::DecisionLog { op: Box::new(op) })),
     );
     samples.extend(
-        medulla_types::catalog_fixtures::contract_pack::ops()
+        medulla_catalog_types::catalog_fixtures::contract_pack::ops()
             .into_iter()
             .map(|(label, op)| (label, Method::ConnectorPack { op: Box::new(op) })),
     );
     samples.extend(
-        medulla_types::catalog_fixtures::contract_control::graph_schema_ops()
+        medulla_catalog_types::catalog_fixtures::contract_control::graph_schema_ops()
             .into_iter()
             .map(|(label, op)| (label, Method::GraphSchema { op: Box::new(op) })),
     );
     samples.extend(
-        medulla_types::catalog_fixtures::contract_control::outbox_ops()
+        medulla_catalog_types::catalog_fixtures::contract_control::outbox_ops()
             .into_iter()
             .map(|(label, op)| (label, Method::MutationOutbox { op: Box::new(op) })),
     );

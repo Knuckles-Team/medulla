@@ -15,8 +15,8 @@ use serde::{Deserialize, Serialize};
 use super::catalog_authority::{McpCatalogAuthorityStatusRequest, McpCatalogReconcileRequest};
 use super::index::ConnectorPackIndex;
 use super::self_served_catalog::McpSelfServedCatalogAttestRequest;
-use crate::agent_library::AgentLibraryMutationContext;
-use crate::contract::{BoundedVec, Digest256, ResourceId};
+use medulla_types::agent_library::AgentLibraryMutationContext;
+use medulla_types::{contract::BoundedVec, contract::Digest256, contract::ResourceId};
 
 /// The head a caller believes is current, for a compare-and-set import.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

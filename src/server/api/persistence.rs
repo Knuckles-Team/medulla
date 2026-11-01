@@ -67,7 +67,7 @@ pub trait SourceApprovalStore {
     /// Verify that `receipt` names exactly the durably approved registration.
     fn verify_connector_pack_source_approval(
         &self,
-        receipt: &medulla_types::connector_pack::ConnectorPackSourceApprovalResult,
+        receipt: &medulla_catalog_types::connector_pack::ConnectorPackSourceApprovalResult,
     ) -> Result<(), String>;
 }
 

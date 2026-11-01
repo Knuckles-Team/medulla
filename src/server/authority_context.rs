@@ -164,7 +164,7 @@ impl VerifiedRequestContext {
         server_name: &str,
     ) -> Result<Digest256, String> {
         if self.tenant().is_empty()
-            || !medulla_types::fleet_catalog::is_valid_server_name(server_name)
+            || !medulla_catalog_types::fleet_catalog::is_valid_server_name(server_name)
         {
             return Err("invalid tenant-local catalog partition".into());
         }

@@ -16,7 +16,7 @@ pub(crate) async fn serve(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: medulla_types::connector_pack::ConnectorPackSourceApprovalRequest,
+    request: medulla_catalog_types::connector_pack::ConnectorPackSourceApprovalRequest,
 ) -> Response {
     #[cfg(not(feature = "redb"))]
     {

@@ -433,7 +433,9 @@ fn agent_template_policy(op: &medulla_types::agent_template::AgentTemplateOp) ->
 /// The connector pack's policy. Runtime-conditional in both axes: `status` is
 /// a read, and the authz action separates reading a connector's surface from
 /// publishing to it from administering what it may publish.
-fn connector_pack_policy(op: &medulla_types::connector_pack::ConnectorPackOp) -> MethodPolicy {
+fn connector_pack_policy(
+    op: &medulla_catalog_types::connector_pack::ConnectorPackOp,
+) -> MethodPolicy {
     native_owner_policy(
         op.is_mutation(),
         DurabilityDomain::ControlRedb,
@@ -506,7 +508,7 @@ fn connector_family_policy(method: &Method) -> Option<MethodPolicy> {
 /// self-translate into `CreateNodeIfAbsent`/`CompareAndSetNodeFields` against
 /// `__commons__`, so they are graph-durable, audited and CDC-emitted exactly as
 /// `RegisterServer` is. Its reads are snapshot reads with no state transition.
-fn fleet_catalog_policy(op: &medulla_types::fleet_catalog::FleetCatalogOp) -> MethodPolicy {
+fn fleet_catalog_policy(op: &medulla_catalog_types::fleet_catalog::FleetCatalogOp) -> MethodPolicy {
     graph_translated_policy(op.is_mutation(), op.authz_action())
 }
 

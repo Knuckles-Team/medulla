@@ -4,7 +4,9 @@
 
 use std::collections::BTreeMap;
 
-use medulla_types::lifecycle::{release_range, sha256_hex, LifecycleEdgeKind};
+use medulla_catalog_types::{
+    lifecycle::release_range, lifecycle::sha256_hex, lifecycle::LifecycleEdgeKind,
+};
 use medulla_types::source_changeset::Changeset;
 use serde::{Deserialize, Serialize};
 

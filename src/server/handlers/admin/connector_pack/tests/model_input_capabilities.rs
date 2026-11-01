@@ -2,11 +2,12 @@
 
 #[cfg(feature = "redb")]
 use crate::server::persistence::agent_library::AgentLibraryStateExt;
+use medulla_catalog_types::{
+    connector_pack::PackAnnotations, connector_pack::PackEntryKind,
+    connector_pack::PackImportResult, connector_pack::PackViolationCode,
+};
 use medulla_types::agent_component::{
     AgentComponentFacts, ModelInputCapabilities, ModelInputMediaType,
-};
-use medulla_types::connector_pack::{
-    PackAnnotations, PackEntryKind, PackImportResult, PackViolationCode,
 };
 
 use super::{

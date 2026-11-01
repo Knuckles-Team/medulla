@@ -2,6 +2,10 @@
 
 #[cfg(feature = "modality-serving")]
 use super::Dynamic;
+use medulla_catalog_types::{
+    source_ingestion::SourceIngestStatus as SourceIngestStatusBody,
+    source_ingestion::SourceIngestionReceipt,
+};
 #[cfg(feature = "asr-native")]
 use medulla_types::asr_wire::AsrTranscription;
 use medulla_types::telemetry_derive::TelemetryDeriveReceipt;
@@ -18,10 +22,6 @@ use medulla_types::{
     semantic_index::SemanticIndexResponse, semantic_index::SemanticSqlSourceManifest,
     semantic_index::SemanticStageIntent, semantic_index::SemanticStageLeasePage,
     semantic_index::SemanticStageTransition,
-};
-use medulla_types::{
-    source_ingestion::SourceIngestStatus as SourceIngestStatusBody,
-    source_ingestion::SourceIngestionReceipt,
 };
 #[cfg(feature = "modality-serving")]
 mod modality;
@@ -58,7 +58,7 @@ method_results! {
     SourceIngest(SourceIngest) => Raw<SourceIngestionReceipt>;
     SourceIngestStatus(SourceIngestStatus) => Raw<SourceIngestStatusBody>;
     // MEDULLA-UNIFIED-DATA-PLANE-R651.7: chunk, vector and provenance counts.
-    EnrichDocument(EnrichDocument) => Raw<medulla_types::source_ingestion::web_document::EnrichDocumentReceipt>;
+    EnrichDocument(EnrichDocument) => Raw<medulla_catalog_types::source_ingestion::web_document::EnrichDocumentReceipt>;
     // EH-408 / EH-409: counts plus the id of every fact node written.
     TelemetryDerive(TelemetryDerive) => Raw<TelemetryDeriveReceipt>;
     // `(node_id, weighted_similarity)` pairs, best first.

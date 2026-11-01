@@ -45,20 +45,20 @@ macro_rules! connector_pack_admin_entry {
 
 connector_pack_admin_entry! {
     /// Bind a connector to the importer allowed to publish its packs.
-    serve_bind(medulla_types::connector_pack::ConnectorPackBindRequest) => bind
+    serve_bind(medulla_catalog_types::connector_pack::ConnectorPackBindRequest) => bind
 }
 
 connector_pack_admin_entry! {
     /// Remove a connector's importer binding; the configured bootstrap importer
     /// applies to it again.
-    serve_unbind(medulla_types::connector_pack::ConnectorPackUnbindRequest) => unbind
+    serve_unbind(medulla_catalog_types::connector_pack::ConnectorPackUnbindRequest) => unbind
 }
 
 connector_pack_admin_entry! {
     /// Permanently retire named entries. Unlike withdrawal this cannot be undone
     /// by a later import: a retired entry that reappears is
     /// `RETIRED_ENTRY_RETURNED`.
-    serve_retire(medulla_types::connector_pack::ConnectorPackRetireRequest) => retire
+    serve_retire(medulla_catalog_types::connector_pack::ConnectorPackRetireRequest) => retire
 }
 
 #[cfg(feature = "redb")]
@@ -66,9 +66,9 @@ async fn bind(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: medulla_types::connector_pack::ConnectorPackBindRequest,
+    request: medulla_catalog_types::connector_pack::ConnectorPackBindRequest,
 ) -> Response {
-    let medulla_types::connector_pack::ConnectorPackBindRequest {
+    let medulla_catalog_types::connector_pack::ConnectorPackBindRequest {
         context,
         connector,
         importer,
@@ -99,9 +99,10 @@ async fn unbind(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: medulla_types::connector_pack::ConnectorPackUnbindRequest,
+    request: medulla_catalog_types::connector_pack::ConnectorPackUnbindRequest,
 ) -> Response {
-    let medulla_types::connector_pack::ConnectorPackUnbindRequest { context, connector } = request;
+    let medulla_catalog_types::connector_pack::ConnectorPackUnbindRequest { context, connector } =
+        request;
     admin_write::<medulla_protocol_types::result_contract::storage::ConnectorPackUnbind, _>(
         AdminWrite {
             state,
@@ -122,9 +123,9 @@ async fn retire(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: medulla_types::connector_pack::ConnectorPackRetireRequest,
+    request: medulla_catalog_types::connector_pack::ConnectorPackRetireRequest,
 ) -> Response {
-    let medulla_types::connector_pack::ConnectorPackRetireRequest {
+    let medulla_catalog_types::connector_pack::ConnectorPackRetireRequest {
         context,
         connector,
         uris,

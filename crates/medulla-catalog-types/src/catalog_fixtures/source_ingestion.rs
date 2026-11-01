@@ -1,11 +1,11 @@
 //! One valid `SourceIngest` request, shared by the digest vector and the
 //! method-body vectors so both pin the value connectors actually send.
 
-use crate::contract::{BoundedVec, Digest256, ResourceId};
 use crate::source_ingestion::{
     SourceCheckpoint, SourceIngestionBatch, SourceIngestionMode, SourceIngestionRequest,
     SourceJson, SourceRecord, SourceRecordProvenance,
 };
+use medulla_types::{contract::BoundedVec, contract::Digest256, contract::ResourceId};
 
 /// A delta batch with one record and a previous checkpoint.
 pub fn request() -> SourceIngestionRequest {

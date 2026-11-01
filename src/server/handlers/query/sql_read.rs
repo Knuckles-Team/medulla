@@ -307,9 +307,9 @@ where
 pub(crate) async fn handle_unified_query(
     ctx: &QueryHandlerCtx<'_>,
     plan: medulla_plan::Plan,
-    foreign_execution: Option<medulla_types::foreign_read::ForeignReadExecutionRef>,
+    foreign_execution: Option<medulla_catalog_types::foreign_read::ForeignReadExecutionRef>,
     foreign_executions: medulla_types::contract::BoundedVec<
-        medulla_types::foreign_read::ForeignReadExecutionRef,
+        medulla_catalog_types::foreign_read::ForeignReadExecutionRef,
         16,
     >,
 ) -> Result<Response, Method> {

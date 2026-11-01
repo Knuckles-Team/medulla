@@ -27,10 +27,10 @@ pub fn declared_error_code(code: &str) -> bool {
         medulla_decision_types::decision::harness_contrast::HarnessContrastErrorCode::ALL
             .iter()
             .any(|item| item.as_str() == code),
-        medulla_types::graph_schema::GraphSchemaErrorCode::ALL
+        medulla_catalog_types::graph_schema::GraphSchemaErrorCode::ALL
             .iter()
             .any(|item| item.as_str() == code),
-        medulla_types::connector_pack::result::PackWriteErrorCode::ALL
+        medulla_catalog_types::connector_pack::result::PackWriteErrorCode::ALL
             .iter()
             .any(|item| item.as_str() == code),
         medulla_decision_types::solve::SolveErrorCode::ALL

@@ -31,11 +31,11 @@ method_results! {
     // The acknowledgement of the `__commons__` server-row write it performs.
     RegisterServer(RegisterServer) => Text<String>;
     ListRegisteredServers(ListRegisteredServers) => Raw<RegisteredServerListPage>;
-    FleetCatalogRecordDiscovery(FleetCatalog / "record_discovery") => Raw<medulla_types::fleet_catalog::FleetWriteReceipt>;
-    FleetCatalogSetOverride(FleetCatalog / "set_override") => Raw<medulla_types::fleet_catalog::FleetWriteReceipt>;
-    FleetCatalogClearOverride(FleetCatalog / "clear_override") => Raw<medulla_types::fleet_catalog::FleetWriteReceipt>;
-    FleetCatalogList(FleetCatalog / "list") => Raw<medulla_types::fleet_catalog::FleetCatalogPage>;
-    FleetCatalogLookupRows(FleetCatalog / "lookup") => Raw<medulla_types::fleet_catalog::FleetCatalogLookup>;
+    FleetCatalogRecordDiscovery(FleetCatalog / "record_discovery") => Raw<medulla_catalog_types::fleet_catalog::FleetWriteReceipt>;
+    FleetCatalogSetOverride(FleetCatalog / "set_override") => Raw<medulla_catalog_types::fleet_catalog::FleetWriteReceipt>;
+    FleetCatalogClearOverride(FleetCatalog / "clear_override") => Raw<medulla_catalog_types::fleet_catalog::FleetWriteReceipt>;
+    FleetCatalogList(FleetCatalog / "list") => Raw<medulla_catalog_types::fleet_catalog::FleetCatalogPage>;
+    FleetCatalogLookupRows(FleetCatalog / "lookup") => Raw<medulla_catalog_types::fleet_catalog::FleetCatalogLookup>;
     PlacementAssign(PlacementAdmin / "assign") => Json<PlacementEpoch>;
     PlacementMove(PlacementAdmin / "move") => Json<PlacementMoveResult>;
     PlacementAbortMove(PlacementAdmin / "abort_move") => Bool<bool>;

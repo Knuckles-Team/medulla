@@ -7,21 +7,26 @@
 
 use std::collections::BTreeMap;
 
+use medulla_catalog_types::connector_pack::digest::entry_kind_token;
+use medulla_catalog_types::connector_pack::ids::PACK_COMPONENT_ID_PREFIX;
+use medulla_catalog_types::connector_pack::index::PackEntryKind;
+use medulla_catalog_types::{
+    fleet_catalog::FleetCatalogCursor, fleet_catalog::FleetCatalogKind,
+    fleet_catalog::FleetCatalogListRequest, fleet_catalog::FleetCatalogPage,
+    fleet_catalog::FleetCatalogRow, fleet_catalog::FleetComponentRef,
+    fleet_catalog::FleetDiscoveryRow, fleet_catalog::FleetPromptRow,
+    fleet_catalog::FleetResourceRow, fleet_catalog::FleetRowAcl, fleet_catalog::FleetRowSubject,
+    fleet_catalog::FleetSkillRow, fleet_catalog::FleetToolRow, fleet_catalog::FleetVisibility,
+    fleet_catalog::ResourceKind, fleet_catalog::SkillType, fleet_catalog::SkillTypeSource,
+    fleet_catalog::ToolMode, fleet_catalog::FLEET_CATALOG_SCHEMA_VERSION,
+    fleet_catalog::MAX_FLEET_SNAPSHOT_ROWS,
+};
 use medulla_protocol_types::result_contract::cluster::ServerDesiredState;
 use medulla_types::agent_component::{
     AgentComponentEntry, AgentComponentFacts, AgentComponentKind, ComponentProvenance,
 };
 use medulla_types::agent_library::AgentLibraryLifecycle;
-use medulla_types::connector_pack::digest::entry_kind_token;
-use medulla_types::connector_pack::ids::PACK_COMPONENT_ID_PREFIX;
-use medulla_types::connector_pack::index::PackEntryKind;
 use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
-use medulla_types::fleet_catalog::{
-    FleetCatalogCursor, FleetCatalogKind, FleetCatalogListRequest, FleetCatalogPage,
-    FleetCatalogRow, FleetComponentRef, FleetDiscoveryRow, FleetPromptRow, FleetResourceRow,
-    FleetRowAcl, FleetRowSubject, FleetSkillRow, FleetToolRow, FleetVisibility, ResourceKind,
-    SkillType, SkillTypeSource, ToolMode, FLEET_CATALOG_SCHEMA_VERSION, MAX_FLEET_SNAPSHOT_ROWS,
-};
 
 use super::records::{discovery_record_id, DiscoveryBody, StoredRecord};
 

@@ -202,7 +202,7 @@ impl QualityReportRef {
 /// Validates a value is a lowercase hex-encoded 256-bit digest, the same shape
 /// `mutation_batch::MutationStateDescriptor::digest` already requires.
 fn is_sha256_hex(value: &str) -> bool {
-    crate::contract::Digest256::parse(value).is_ok()
+    medulla_types::contract::Digest256::parse(value).is_ok()
 }
 
 /// Schema evolution shape (GOC-10 invariant 6: "explicit — additive/rename/drop/
@@ -626,7 +626,7 @@ pub enum ProjectionAccess {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::msgpack::{decode_bounded, MsgpackLimits};
+    use medulla_types::{msgpack::decode_bounded, msgpack::MsgpackLimits};
 
     fn limits() -> MsgpackLimits {
         MsgpackLimits::new(1024 * 1024, 10_000, 32)

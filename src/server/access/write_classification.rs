@@ -469,9 +469,11 @@ mod eh316_eh319_slim_profile_tests {
 
     #[test]
     fn fleet_catalog_reads_and_writes_split_on_the_op() {
-        use medulla_types::fleet_catalog::{
-            DiscoveryCounts, DiscoveryOutcome, DiscoveryScope, FleetCatalogKind,
-            FleetCatalogListRequest, FleetCatalogOp, FleetDiscoveryRecordRequest,
+        use medulla_catalog_types::{
+            fleet_catalog::DiscoveryCounts, fleet_catalog::DiscoveryOutcome,
+            fleet_catalog::DiscoveryScope, fleet_catalog::FleetCatalogKind,
+            fleet_catalog::FleetCatalogListRequest, fleet_catalog::FleetCatalogOp,
+            fleet_catalog::FleetDiscoveryRecordRequest,
         };
         let list = Method::FleetCatalog {
             op: Box::new(FleetCatalogOp::List {

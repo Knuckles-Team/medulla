@@ -1,5 +1,6 @@
 use super::*;
 
+use medulla_catalog_types::fleet_catalog::is_valid_server_name;
 use medulla_protocol_types::result_contract::cluster::RegisteredServerCursor;
 use medulla_protocol_types::result_contract::cluster::RegisteredServerListPage;
 use medulla_protocol_types::result_contract::cluster::RegisteredServerListRequest;
@@ -9,7 +10,6 @@ use medulla_protocol_types::result_contract::cluster::ServerTransport;
 use medulla_protocol_types::result_contract::cluster::MAX_REGISTERED_SERVER_PAGE_ENTRIES;
 use medulla_protocol_types::result_contract::cluster::REGISTERED_SERVER_LIST_SCHEMA_VERSION;
 use medulla_types::contract::{BoundedVec, Digest256};
-use medulla_types::fleet_catalog::is_valid_server_name;
 
 pub(super) const REGISTRY_GRAPH: &str = "__commons__";
 const REGISTERED_SERVER_SNAPSHOT_DOMAIN: &[u8] = b"eg/registered-server-snapshot/v2";

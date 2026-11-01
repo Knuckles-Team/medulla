@@ -63,8 +63,10 @@ pub(crate) mod worker {
 
     use tokio::sync::RwLock;
 
+    use medulla_catalog_types::{
+        connector_pack::PackImportRecord, connector_pack::CONNECTOR_PACK_IMPORT_TOPIC,
+    };
     use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome, OutboxRejectReason};
-    use medulla_types::connector_pack::{PackImportRecord, CONNECTOR_PACK_IMPORT_TOPIC};
     use medulla_types::mutation_scope::MutationOutboxLease;
 
     use crate::server::auth::VerifiedRequestContext;

@@ -9,11 +9,13 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use medulla_rdf::oxrdf::{NamedOrBlankNode, Term, Triple};
-use medulla_types::graph_schema::{
-    term_local_name, validate_term_page_limit, GraphSchemaClassesView, GraphSchemaTermKind,
-    GraphSchemaTermPosition, GraphSchemaTermView, GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
+use medulla_catalog_types::{
+    graph_schema::term_local_name, graph_schema::validate_term_page_limit,
+    graph_schema::GraphSchemaClassesView, graph_schema::GraphSchemaTermKind,
+    graph_schema::GraphSchemaTermPosition, graph_schema::GraphSchemaTermView,
+    graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
 };
+use medulla_rdf::oxrdf::{NamedOrBlankNode, Term, Triple};
 
 use crate::graph::{GraphCore, GraphSchemaSources};
 use crate::protocol::{Response, ResultPayload};
