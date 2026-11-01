@@ -7,6 +7,8 @@ use crate::storage_wire::{
     BackupReceipt, KvCasOutcome, KvEntry, KvScanPage, KvWriteReceipt, RestoreReceipt,
     SqliteExportReport, SqliteImportReport,
 };
+use medulla_decision_types::decision::coverage::CapabilityCoverageResult;
+use medulla_decision_types::{decision::AssemblyResult, decision::DecisionCommitResult};
 use medulla_types::agent_component::AgentComponentCommittedResult;
 use medulla_types::agent_component::AgentComponentContentResult;
 use medulla_types::agent_component::AgentComponentEntry;
@@ -20,7 +22,6 @@ use medulla_types::agent_library::AgentLibraryWriteResult;
 use medulla_types::agent_template::AgentTemplateCommittedResult;
 use medulla_types::agent_template::AgentTemplateEntry;
 use medulla_types::connector_pack::ConnectorPackStatus as ConnectorPackStatusBody;
-use medulla_types::decision::coverage::CapabilityCoverageResult;
 use medulla_types::series_expr::DerivedSeriesReceipt;
 use medulla_types::{
     connector_pack::ConnectorPackBindingResult, connector_pack::ConnectorPackSourceApprovalResult,
@@ -28,7 +29,6 @@ use medulla_types::{
     connector_pack::PackImportReceipt, connector_pack::PackImportResult,
     connector_pack::PackRetireResult,
 };
-use medulla_types::{decision::AssemblyResult, decision::DecisionCommitResult};
 use medulla_types::{
     write_back::ReconciliationReceipt, write_back::SourceChangeSet, write_back::WriteBackReceipt,
     write_back::WriteBackReceiptPage,

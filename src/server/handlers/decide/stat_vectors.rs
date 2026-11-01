@@ -7,7 +7,7 @@
 use std::sync::Arc;
 
 use medulla_core::graph::GraphCore;
-use medulla_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 
 use super::stat_support::readable_graph;
 use crate::isolation::IsolationLayer;

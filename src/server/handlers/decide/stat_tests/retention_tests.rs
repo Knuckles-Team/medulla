@@ -41,7 +41,7 @@ async fn compact_at(
     h: &Harness,
     policy: &ComponentDependency,
     now_ms: u64,
-) -> medulla_types::decision::statistical::log::DecisionLogCompacted {
+) -> medulla_decision_types::decision::statistical::log::DecisionLogCompacted {
     let state = h.state.read().await;
     let retention = super::super::stat_retention::Retention::of(&state, &verified());
     let ctx = super::super::stat_executor::ExecutionContext {
@@ -69,7 +69,7 @@ async fn library_records_survive_every_retention_window() {
     let record = library_record(&h).await;
     assert!(matches!(
         record.candidate_source,
-        medulla_types::decision::CandidateSourceRecord::AgentLibrary { .. }
+        medulla_decision_types::decision::CandidateSourceRecord::AgentLibrary { .. }
     ));
     let entry = commit_record(&h, record).await;
     let before = serde_json::to_vec(&entry).unwrap();
@@ -86,7 +86,7 @@ async fn library_records_survive_every_retention_window() {
         log_tests::verify_log(&h, &entry.record.record_id)
             .await
             .unwrap(),
-        medulla_types::decision::statistical::log::DecisionLogVerification::Verified { .. }
+        medulla_decision_types::decision::statistical::log::DecisionLogVerification::Verified { .. }
     ));
 }
 
@@ -122,7 +122,7 @@ async fn graph_inputs_expire_at_the_configured_boundaries() {
         log_tests::verify_log(&h, &entry.record.record_id)
             .await
             .unwrap(),
-        medulla_types::decision::statistical::log::DecisionLogVerification::InputsRetired { .. }
+        medulla_decision_types::decision::statistical::log::DecisionLogVerification::InputsRetired { .. }
     ));
 }
 

@@ -15,26 +15,31 @@ use std::time::Instant;
 
 use tracing::Instrument;
 
+use medulla_decision_types::decision::statistical::dataset::LabelledDataset;
+use medulla_decision_types::decision::statistical::features::FeatureSchemaBody;
+use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_types::{
+    decision::jobs::DatasetSource, decision::jobs::DecisionReceiptPage,
+    decision::jobs::DecisionReceiptTimelineEntry, decision::jobs::DecisionReceiptTimelinePage,
+    decision::jobs::DecisionThresholdAssessment, decision::jobs::LabelRegime,
+};
+use medulla_decision_types::{decision::replay::EvalMode, decision::replay::ReplaySpec};
+use medulla_decision_types::{
+    decision::statistical::body::canonical_body_bytes,
+    decision::statistical::body::content_digest_of,
+};
+use medulla_decision_types::{
+    decision::DecisionEvalOp, decision::DecisionEvalReceipt, decision::DecisionEvalRequest,
+    decision::DecisionFitOp, decision::DecisionFitRequest, decision::DecisionJobKind,
+    decision::DecisionJobOutput, decision::DecisionJobRecord, decision::DecisionJobState,
+    decision::EvalCandidate, decision::StatisticalPolicy, decision::DECISION_JOB_SCHEMA_VERSION,
+};
 use medulla_numeric::decision::admission::{admit, AdmissionRules, Admitted, Regime};
 use medulla_numeric::decision::evaluate::{evaluate, EvalSpec};
 use medulla_numeric::decision::fit::{fit, FitSpec};
 use medulla_types::agent_component::AgentComponentKind;
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::jobs::{
-    DatasetSource, DecisionReceiptPage, DecisionReceiptTimelineEntry, DecisionReceiptTimelinePage,
-    DecisionThresholdAssessment, LabelRegime,
-};
-use medulla_types::decision::replay::{EvalMode, ReplaySpec};
-use medulla_types::decision::statistical::body::{canonical_body_bytes, content_digest_of};
-use medulla_types::decision::statistical::dataset::LabelledDataset;
-use medulla_types::decision::statistical::features::FeatureSchemaBody;
-use medulla_types::decision::statistical::head::DecisionHeadBody;
-use medulla_types::decision::statistical::StatisticalErrorCode;
-use medulla_types::decision::{
-    DecisionEvalOp, DecisionEvalReceipt, DecisionEvalRequest, DecisionFitOp, DecisionFitRequest,
-    DecisionJobKind, DecisionJobOutput, DecisionJobRecord, DecisionJobState, EvalCandidate,
-    StatisticalPolicy, DECISION_JOB_SCHEMA_VERSION,
-};
 use medulla_types::solve_scalar::digest_text;
 
 use super::stat_log::{logged_dataset, LogReader};
@@ -142,7 +147,7 @@ fn checked_dataset(
 
 fn rules<'a>(
     regime: Regime,
-    window: medulla_types::decision::RecordWindow,
+    window: medulla_decision_types::decision::RecordWindow,
     policy: &ResolvedPolicy,
     approved: &'a [String],
 ) -> AdmissionRules<'a> {
@@ -309,7 +314,10 @@ pub(super) struct EvalInputs {
 
 impl EvalInputs {
     /// The dataset's items admitted under this job's window and policy.
-    pub(super) fn admitted(&self, window: medulla_types::decision::RecordWindow) -> Admitted<'_> {
+    pub(super) fn admitted(
+        &self,
+        window: medulla_decision_types::decision::RecordWindow,
+    ) -> Admitted<'_> {
         let approved = self
             .policy
             .statistical
@@ -357,7 +365,8 @@ pub(super) fn threshold_assessment(
     if receipt.synthetic
         || !receipt.calibration.as_ref().is_some_and(|calibration| {
             !calibration.synthetic
-                && calibration.method == medulla_types::decision::CalibrationMethod::Conformal
+                && calibration.method
+                    == medulla_decision_types::decision::CalibrationMethod::Conformal
         })
     {
         return None;
@@ -629,7 +638,7 @@ async fn serve_eval(
 
 fn serve_eval_receipt(
     store: &AgentLibraryStore,
-    request: &medulla_types::decision::DecisionReceiptGetRequest,
+    request: &medulla_decision_types::decision::DecisionReceiptGetRequest,
 ) -> Result<ResultPayload, String> {
     use medulla_protocol_types::result_contract::coordination::DecisionEvalReceiptGet;
 
@@ -640,12 +649,11 @@ fn serve_eval_receipt(
         .decision_artifact(&request.tenant_id, &receipt_key(&request.receipt_digest))?
         .map(|bytes| decode_artifact(&bytes, "evaluation receipt"))
         .transpose()?;
-    if receipt
-        .as_ref()
-        .is_some_and(|stored: &medulla_types::decision::DecisionEvalReceipt| {
+    if receipt.as_ref().is_some_and(
+        |stored: &medulla_decision_types::decision::DecisionEvalReceipt| {
             stored.receipt_digest != request.receipt_digest
-        })
-    {
+        },
+    ) {
         return Err("CORRUPT_DECISION_ARTIFACT: receipt digest disagrees with key".into());
     }
     ResultPayload::of::<DecisionEvalReceiptGet>(receipt)
@@ -653,7 +661,7 @@ fn serve_eval_receipt(
 
 fn serve_eval_receipts(
     store: &AgentLibraryStore,
-    request: &medulla_types::decision::DecisionReceiptListRequest,
+    request: &medulla_decision_types::decision::DecisionReceiptListRequest,
 ) -> Result<ResultPayload, String> {
     use medulla_protocol_types::result_contract::coordination::DecisionEvalReceipts;
 
@@ -678,7 +686,7 @@ fn serve_eval_receipts(
     let page_rows = rows.into_iter().take(usize::from(request.limit));
     let mut receipts = Vec::new();
     for (key, bytes) in page_rows {
-        let receipt: medulla_types::decision::DecisionEvalReceipt =
+        let receipt: medulla_decision_types::decision::DecisionEvalReceipt =
             decode_artifact(&bytes, "evaluation receipt")?;
         if receipt_key(&receipt.receipt_digest) != key {
             return Err("CORRUPT_DECISION_ARTIFACT: receipt digest disagrees with key".into());
@@ -686,11 +694,11 @@ fn serve_eval_receipts(
         receipts.push(receipt);
     }
     let next_after = if has_more {
-        receipts
-            .last()
-            .map(|receipt: &medulla_types::decision::DecisionEvalReceipt| {
+        receipts.last().map(
+            |receipt: &medulla_decision_types::decision::DecisionEvalReceipt| {
                 receipt.receipt_digest.clone()
-            })
+            },
+        )
     } else {
         None
     };
@@ -702,7 +710,7 @@ fn serve_eval_receipts(
 
 fn serve_eval_timeline(
     store: &AgentLibraryStore,
-    request: &medulla_types::decision::DecisionReceiptTimelineRequest,
+    request: &medulla_decision_types::decision::DecisionReceiptTimelineRequest,
 ) -> Result<ResultPayload, String> {
     use medulla_protocol_types::result_contract::coordination::DecisionEvalTimeline;
 
@@ -758,7 +766,7 @@ fn timeline_entry(
     let bytes = store
         .decision_artifact(tenant_id, &receipt_key(digest))?
         .ok_or("CORRUPT_DECISION_ARTIFACT: timeline receipt absent")?;
-    let receipt: medulla_types::decision::DecisionEvalReceipt =
+    let receipt: medulla_decision_types::decision::DecisionEvalReceipt =
         decode_artifact(&bytes, "evaluation receipt")?;
     if receipt.receipt_digest != digest || receipt.synthetic || receipt.metrics.is_none() {
         return Err("CORRUPT_DECISION_ARTIFACT: invalid timeline receipt".into());
@@ -870,12 +878,14 @@ pub(super) async fn handle_eval(
 
 #[cfg(test)]
 mod threshold_tests {
-    use medulla_types::contract::BoundedVec;
-    use medulla_types::decision::jobs::{FullLabelMetrics, LabelExclusions};
-    use medulla_types::decision::{
-        CalibrationMethod, CalibrationStatement, DecisionEvalReceipt, QuantScaleTag,
-        QuantisedValue, UnitRationalWire,
+    use medulla_decision_types::{
+        decision::jobs::FullLabelMetrics, decision::jobs::LabelExclusions,
     };
+    use medulla_decision_types::{
+        decision::CalibrationMethod, decision::CalibrationStatement, decision::DecisionEvalReceipt,
+        decision::QuantScaleTag, decision::QuantisedValue, decision::UnitRationalWire,
+    };
+    use medulla_types::contract::BoundedVec;
 
     use super::threshold_assessment;
     use crate::server::handlers::decide::stat_support::default_statistical_policy;

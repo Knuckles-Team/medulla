@@ -15,16 +15,16 @@ pub fn declared_error_code(code: &str) -> bool {
         medulla_types::contract::UqlCode::ALL
             .iter()
             .any(|item| item.as_str() == code),
-        medulla_types::decision::DecisionErrorCode::ALL
+        medulla_decision_types::decision::DecisionErrorCode::ALL
             .iter()
             .any(|item| item.as_str() == code),
-        medulla_types::decision::statistical::StatisticalErrorCode::ALL
+        medulla_decision_types::decision::statistical::StatisticalErrorCode::ALL
             .iter()
             .any(|item| item.as_str() == code),
         medulla_types::orchestration::HarnessVocabularyErrorCode::ALL
             .iter()
             .any(|item| item.as_str() == code),
-        medulla_types::decision::harness_contrast::HarnessContrastErrorCode::ALL
+        medulla_decision_types::decision::harness_contrast::HarnessContrastErrorCode::ALL
             .iter()
             .any(|item| item.as_str() == code),
         medulla_types::graph_schema::GraphSchemaErrorCode::ALL
@@ -33,7 +33,7 @@ pub fn declared_error_code(code: &str) -> bool {
         medulla_types::connector_pack::result::PackWriteErrorCode::ALL
             .iter()
             .any(|item| item.as_str() == code),
-        medulla_types::solve::SolveErrorCode::ALL
+        medulla_decision_types::solve::SolveErrorCode::ALL
             .iter()
             .any(|item| item.as_str() == code),
     ]

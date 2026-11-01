@@ -22,7 +22,7 @@ pub(crate) async fn handle_component_content(
     // the Agent Library transaction that committed it, not in the Blob CAS.
     if request
         .component_id
-        .starts_with(medulla_types::decision::DECISION_COMPONENT_ID_PREFIX)
+        .starts_with(medulla_decision_types::decision::DECISION_COMPONENT_ID_PREFIX)
     {
         return serve_decision_record(store, req_id, verified, &request);
     }

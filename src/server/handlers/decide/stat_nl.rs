@@ -4,14 +4,19 @@
 //! caller-supplied LLM proposal (`llm_proposal_template`, `llm_producer`,
 //! `llm_prompt_digest` parameters) is bound as a CLAIM, never as the decision.
 
+use medulla_decision_types::decision::statistical::body::decode_body;
+use medulla_decision_types::{
+    decision::statistical::nl::NlBinding, decision::statistical::nl::NlChoiceSource,
+    decision::statistical::nl::NlTemplateBody,
+};
+use medulla_decision_types::{
+    decision::statistical::DecideRequest, decision::statistical::QuestionKind,
+    decision::statistical::StatisticalErrorCode, decision::statistical::StatisticalOutcome,
+    decision::statistical::TypedValue,
+};
 use medulla_numeric::decision::nl::fill_slots;
 use medulla_types::agent_component::{AgentComponentEntry, ComponentDependency};
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::statistical::body::decode_body;
-use medulla_types::decision::statistical::nl::{NlBinding, NlChoiceSource, NlTemplateBody};
-use medulla_types::decision::statistical::{
-    DecideRequest, QuestionKind, StatisticalErrorCode, StatisticalOutcome, TypedValue,
-};
 
 use super::stat_support::refusal;
 
@@ -37,7 +42,7 @@ fn chosen(outcome: &StatisticalOutcome) -> Option<&str> {
             .iter()
             .fold(
                 None,
-                |best: Option<&medulla_types::decision::statistical::ScoredOption>, s| {
+                |best: Option<&medulla_decision_types::decision::statistical::ScoredOption>, s| {
                     if best.is_none_or(|b| s.score.value > b.score.value) {
                         Some(s)
                     } else {

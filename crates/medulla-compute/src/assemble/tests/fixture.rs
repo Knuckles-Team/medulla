@@ -3,15 +3,17 @@
 //! candidate, which is the structural reason prompt-injection text in a
 //! component's description cannot reach the decision.
 
+use medulla_decision_types::{
+    decision::AssemblyRequest, decision::AssemblyRequirements, decision::CandidateFacts,
+    decision::DecisionInputs, decision::DecisionPolicy, decision::DecisionPolicyRef,
+    decision::LibraryCandidateScope, decision::PremiseClass, decision::PremiseProvenance,
+    decision::PremiseRef,
+};
 use medulla_types::agent_component::{
     AgentComponentFacts, AgentComponentKind, CostFacts, DeclaredCost, DeclaredLatency, FactQuality,
     ModalityFacts, PriceSource, PromptMode, ToolEffect,
 };
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::{
-    AssemblyRequest, AssemblyRequirements, CandidateFacts, DecisionInputs, DecisionPolicy,
-    DecisionPolicyRef, LibraryCandidateScope, PremiseClass, PremiseProvenance, PremiseRef,
-};
 
 use super::super::RecordIdentity;
 
@@ -45,7 +47,7 @@ pub fn candidate(
 ) -> CandidateFacts {
     CandidateFacts {
         fact_premises: bounded(vec![claim(component_id)]),
-        ..medulla_types::decision_fixtures::decision::published_candidate(
+        ..medulla_decision_types::decision_fixtures::decision::published_candidate(
             component_id,
             kind,
             &digest_of(component_id),

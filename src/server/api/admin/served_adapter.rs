@@ -24,7 +24,7 @@ impl ServedAdapter {
     /// Decode a checked body for serving under its content `digest`.
     pub fn for_body(
         digest: &str,
-        body: &medulla_types::decision::statistical::retrieval_adapter::QueryAdapterBody,
+        body: &medulla_decision_types::decision::statistical::retrieval_adapter::QueryAdapterBody,
     ) -> Result<Self, String> {
         Ok(Self {
             digest: digest.to_string(),

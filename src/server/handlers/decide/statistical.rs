@@ -12,7 +12,7 @@ pub(crate) async fn handle_decide(
     state: &SharedState,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: medulla_types::decision::DecideRequest,
+    request: medulla_decision_types::decision::DecideRequest,
 ) -> Response {
     #[cfg(feature = "decide")]
     {

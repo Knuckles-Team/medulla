@@ -50,7 +50,7 @@ $($variants)*
     /// nothing. Boxed like `SemanticIndex`/`KgDelegate` so one request cannot
     /// set the size of every `Method`.
     AgentAssemble {
-        request: Box<medulla_types::decision::AssemblyRequest>,
+        request: Box<medulla_decision_types::decision::AssemblyRequest>,
     },
     /// Read-only capability coverage (MEDULLA-DECISION-ENGINE-R126.2.1): for each
     /// capability in the closure of native task/capability IRIs, the visible
@@ -59,7 +59,7 @@ $($variants)*
     /// (always claims). Reads one tenant-bound agent-library snapshot; ranks
     /// nothing, commits nothing.
     CapabilityCoverage {
-        request: Box<medulla_types::decision::coverage::CapabilityCoverageRequest>,
+        request: Box<medulla_decision_types::decision::coverage::CapabilityCoverageRequest>,
     },
     /// Advisory guardrail entailment over the verified tenant's published
     /// Agent Library rules (MEDULLA-DECISION-ENGINE-R127.2.2). Returns subclass
@@ -72,32 +72,32 @@ $($variants)*
     /// catalog digest before writing, so a stale decision is refused rather
     /// than stored.
     DecisionCommit {
-        request: Box<medulla_types::decision::DecisionCommitRequest>,
+        request: Box<medulla_decision_types::decision::DecisionCommitRequest>,
     },
     /// Statistical decision over library or RLS-filtered graph candidates.
     /// EVALUATE-ONLY: it answers records and commits none of them.
     Decide {
-        request: Box<medulla_types::decision::DecideRequest>,
+        request: Box<medulla_decision_types::decision::DecideRequest>,
     },
     /// Admin job: fit a decision head into a Blob CAS draft artifact.
     DecisionFit {
-        op: Box<medulla_types::decision::DecisionFitOp>,
+        op: Box<medulla_decision_types::decision::DecisionFitOp>,
     },
     /// Admin job: off-policy and calibration evaluation producing the
     /// promotion receipt a head must carry before it may be published.
     DecisionEval {
-        op: Box<medulla_types::decision::DecisionEvalOp>,
+        op: Box<medulla_decision_types::decision::DecisionEvalOp>,
     },
     /// The statistical decision log: commit an acted-on record after
     /// verify-replay, join independent outcome evaluations, and read the
     /// outcome aggregate the log answers.
     DecisionLog {
-        op: Box<medulla_types::decision::statistical::log::DecisionLogOp>,
+        op: Box<medulla_decision_types::decision::statistical::log::DecisionLogOp>,
     },
     /// General bounded 0-1 integer programme with an independently verifiable
     /// certificate. Pure compute: no store, no clock, no float.
     Solve {
-        request: Box<medulla_types::solve::SolveRequest>,
+        request: Box<medulla_decision_types::solve::SolveRequest>,
     },
 
     // ── Connector MCP pack import (RF-ADR-009) ─────────────────────────────

@@ -144,7 +144,7 @@ async fn harness_config_replay_refuses_a_relabelled_generic_record() {
             relabelled.inputs_digest.trim_start_matches("sha256:"),
         );
         relabelled.record_digest =
-            medulla_types::decision::digest::statistical_record_digest(&relabelled);
+            medulla_decision_types::decision::digest::statistical_record_digest(&relabelled);
         assert_unsupported(
             dispatch(
                 &h,
@@ -169,7 +169,8 @@ async fn harness_config_replay_refuses_a_relabelled_generic_record() {
 }
 
 fn unverified_harness_evidence(
-) -> medulla_types::decision::statistical::harness_config::HarnessConfigEvaluationEvidence {
+) -> medulla_decision_types::decision::statistical::harness_config::HarnessConfigEvaluationEvidence
+{
     let missing = |value: serde_json::Value| {
         serde_json::json!({
             "status": "abstained", "missing_fact": ["unverified"],

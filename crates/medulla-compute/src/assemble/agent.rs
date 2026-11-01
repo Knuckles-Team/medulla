@@ -12,12 +12,14 @@
 //! policy digest is the decision policy's, and its actor scope names the
 //! engine's decision function rather than whoever asked.
 
+use medulla_decision_types::{
+    decision::CandidateFacts, decision::DecisionInputs, decision::TemplateFacts,
+};
 use medulla_types::agent_component::{AgentComponentKind, ComponentDependency};
 use medulla_types::agent_graph::{
     AgentGraphDraft, AgentGraphEdge, AgentGraphNode, AgentGraphNodeKind, AgentGraphShape,
 };
 use medulla_types::agent_library::{AgentLibraryEntryDraft, AgentRuntimeContract};
-use medulla_types::decision::{CandidateFacts, DecisionInputs, TemplateFacts};
 
 use super::facts;
 

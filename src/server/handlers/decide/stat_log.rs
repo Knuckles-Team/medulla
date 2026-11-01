@@ -12,25 +12,38 @@ use std::time::Instant;
 
 use tracing::Instrument;
 
+use medulla_decision_types::{
+    decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelledDataset,
+    decision::statistical::dataset::LabelledItem, decision::statistical::dataset::LoggedOutcome,
+    decision::statistical::dataset::OutcomeEvaluation,
+    decision::statistical::dataset::PropensitySource,
+    decision::statistical::dataset::LABELLED_DATASET_SCHEMA_VERSION,
+};
+use medulla_decision_types::{
+    decision::statistical::features::FeatureKind,
+    decision::statistical::features::FeatureSchemaBody,
+};
+use medulla_decision_types::{
+    decision::statistical::log::DecisionLogCommitted, decision::statistical::log::DecisionLogEntry,
+    decision::statistical::log::DecisionLogOp,
+    decision::statistical::log::DecisionOutcomeEvaluation, decision::statistical::log::EntryInputs,
+    decision::statistical::log::OutcomeAggregate,
+    decision::statistical::log::OutcomeAggregateRequest,
+    decision::statistical::log::RecordVisibility, decision::statistical::log::StoredEvaluation,
+    decision::statistical::log::DECISION_LOG_SCHEMA_VERSION,
+};
+use medulla_decision_types::{
+    decision::statistical::FeatureMatrixRef, decision::statistical::StatisticalDecisionRecord,
+    decision::statistical::StatisticalErrorCode, decision::statistical::StatisticalOutcome,
+};
+use medulla_decision_types::{
+    decision::CandidateSourceRecord, decision::QuantScaleTag, decision::RecordWindow,
+};
 use medulla_numeric::decision::aggregate::{aggregate, AggregateRules, JoinedRecord};
 use medulla_numeric::decision::candidate::CandidateView;
 use medulla_numeric::decision::features::outcome_rate_key;
 use medulla_types::agent_component::AgentComponentKind;
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::statistical::dataset::{
-    ItemLabel, LabelledDataset, LabelledItem, LoggedOutcome, OutcomeEvaluation, PropensitySource,
-    LABELLED_DATASET_SCHEMA_VERSION,
-};
-use medulla_types::decision::statistical::features::{FeatureKind, FeatureSchemaBody};
-use medulla_types::decision::statistical::log::{
-    DecisionLogCommitted, DecisionLogEntry, DecisionLogOp, DecisionOutcomeEvaluation, EntryInputs,
-    OutcomeAggregate, OutcomeAggregateRequest, RecordVisibility, StoredEvaluation,
-    DECISION_LOG_SCHEMA_VERSION,
-};
-use medulla_types::decision::statistical::{
-    FeatureMatrixRef, StatisticalDecisionRecord, StatisticalErrorCode, StatisticalOutcome,
-};
-use medulla_types::decision::{CandidateSourceRecord, QuantScaleTag, RecordWindow};
 
 use super::stat_executor::ExecutionContext;
 use super::stat_replay::replay;
@@ -154,7 +167,7 @@ fn commit(
     ctx: &ExecutionContext,
     reader: &LogReader,
     record: &StatisticalDecisionRecord,
-    evaluator: Option<&medulla_types::decision::statistical::log::NamedEvaluator>,
+    evaluator: Option<&medulla_decision_types::decision::statistical::log::NamedEvaluator>,
 ) -> Result<DecisionLogCommitted, String> {
     if record.caller_principal != reader.principal {
         return Err(

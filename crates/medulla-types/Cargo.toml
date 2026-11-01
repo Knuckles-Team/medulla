@@ -284,3 +284,4 @@ schemars = { version = "1.2.3", optional = true }
 
 [dev-dependencies]
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-decision-types = { path = "../medulla-decision-types" }

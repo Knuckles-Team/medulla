@@ -432,8 +432,10 @@ rayon = { version = "1.12", optional = true }
 # none of it.
 arrow = { version = "58.4", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["query"] }
+medulla-decision-types = { path = "../medulla-decision-types", features = ["query"] }
 
 [dev-dependencies]
+medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support", "query"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support", "query"] }
 # The oracle/algebra tests build a fixture GraphCore + SemanticStore and run the
 # DataFusion FILTER leg, so the test target needs the `query` feature on.

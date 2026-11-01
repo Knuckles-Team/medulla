@@ -247,8 +247,10 @@ tree-sitter-dm = { version = "=0.25.4", optional = true }
 # Criterion harness for the AST parse-throughput baseline bench (CONCEPT:MEDULLA-012).
 # DEV-only — never linked into the engine binary.
 medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-decision-types = { path = "../medulla-decision-types" }
 
 [dev-dependencies]
+medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 criterion = "0.8"
 # Shared Decide-layer fixtures (`medulla_types::test_support::decision`), also used

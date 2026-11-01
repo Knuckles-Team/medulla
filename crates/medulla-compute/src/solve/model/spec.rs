@@ -2,7 +2,8 @@
 //! lowers. The definitions live in `medulla_types::solve::spec` -- see that
 //! module's own doc for why there is exactly one copy.
 
-pub use medulla_types::solve::spec::{
-    Coefficient, ConstraintBody, ConstraintSpec, ModelSpec, ObjectiveLevelSpec, ObjectiveTerm,
-    Relation, RowId, Term, VarId,
+pub use medulla_decision_types::{
+    solve::spec::Coefficient, solve::spec::ConstraintBody, solve::spec::ConstraintSpec,
+    solve::spec::ModelSpec, solve::spec::ObjectiveLevelSpec, solve::spec::ObjectiveTerm,
+    solve::spec::Relation, solve::spec::RowId, solve::spec::Term, solve::spec::VarId,
 };

@@ -4,7 +4,9 @@
 //! option for a successful bandit item, weighted by its clipped inverse
 //! propensity. The linear fit and the scorer's fit both read targets here.
 
-use medulla_types::decision::statistical::dataset::{ItemLabel, LabelledItem};
+use medulla_decision_types::{
+    decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelledItem,
+};
 
 /// Largest inverse-propensity weight a bandit item contributes.
 pub const IPW_CLIP: f64 = 20.0;
@@ -55,9 +57,9 @@ pub(crate) fn targets(item: &LabelledItem) -> Option<(Vec<f64>, f64)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_decision_types::decision::statistical::dataset::LabelSource;
+    use medulla_decision_types::decision::UnitRationalWire;
     use medulla_types::contract::BoundedVec;
-    use medulla_types::decision::statistical::dataset::LabelSource;
-    use medulla_types::decision::UnitRationalWire;
 
     fn rational(n: u64, d: u64) -> UnitRationalWire {
         UnitRationalWire::new(n, d).expect("test rational")

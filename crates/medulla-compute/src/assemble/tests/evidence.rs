@@ -1,6 +1,9 @@
 //! Assembly evidence depends on typed premises, never on suggestive labels.
 
-use medulla_types::decision::{DecisionOutcome, EvidenceClass, PremiseClass, PremiseProvenance};
+use medulla_decision_types::{
+    decision::DecisionOutcome, decision::EvidenceClass, decision::PremiseClass,
+    decision::PremiseProvenance,
+};
 
 use super::super::{assemble, replay_check};
 use super::fixture::*;

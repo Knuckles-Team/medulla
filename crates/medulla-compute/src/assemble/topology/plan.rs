@@ -1,6 +1,9 @@
 //! Reading the decided plan back from the certificate's selection, and the
 //! premises a topology answer rests on.
 
+use medulla_decision_types::decision::PremiseClass;
+use medulla_decision_types::decision::PremiseProvenance;
+use medulla_decision_types::decision::PremiseRef;
 use medulla_types::agent_topology::CellLease;
 use medulla_types::agent_topology::LeasePlan;
 use medulla_types::agent_topology::SlotPlan;
@@ -8,9 +11,6 @@ use medulla_types::agent_topology::SubagentAllowance;
 use medulla_types::agent_topology::SubagentFallback;
 use medulla_types::agent_topology::TopologyPlan;
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::PremiseClass;
-use medulla_types::decision::PremiseProvenance;
-use medulla_types::decision::PremiseRef;
 
 use super::model::concurrent_amount;
 use super::tables::Choice;

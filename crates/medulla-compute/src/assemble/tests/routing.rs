@@ -5,8 +5,9 @@
 
 use std::collections::BTreeSet;
 
-use medulla_types::decision::{
-    AbstainReason, CostBudget, DecisionOutcome, EvidenceClass, ResolutionKind,
+use medulla_decision_types::{
+    decision::AbstainReason, decision::CostBudget, decision::DecisionOutcome,
+    decision::EvidenceClass, decision::ResolutionKind,
 };
 
 use super::super::{assemble, replay_check, Assembly};
@@ -22,8 +23,8 @@ enum Accept {
 
 struct Item {
     name: &'static str,
-    request: medulla_types::decision::AssemblyRequest,
-    library: Vec<medulla_types::decision::CandidateFacts>,
+    request: medulla_decision_types::decision::AssemblyRequest,
+    library: Vec<medulla_decision_types::decision::CandidateFacts>,
     accept: Accept,
 }
 
@@ -200,11 +201,12 @@ fn a_solved_record_carries_premises_derivations_and_a_claim_class() {
         3,
         "one derivation per required capability"
     );
-    medulla_types::decision::derivation::verify_record(record).expect("derivations re-check");
+    medulla_decision_types::decision::derivation::verify_record(record)
+        .expect("derivations re-check");
     assert!(record.record_id.starts_with("decision:"));
     assert_eq!(
         record.record_digest,
-        medulla_types::decision::digest::record_digest(record)
+        medulla_decision_types::decision::digest::record_digest(record)
     );
     let graph = assembly.graph.expect("solved answers a graph");
     graph

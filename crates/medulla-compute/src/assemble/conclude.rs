@@ -1,19 +1,22 @@
 //! Running the ladder and turning its result into a record's conclusion.
 
+use medulla_decision_types::decision::request::effective_solver_budget;
+use medulla_decision_types::solve::ModelSpec;
+use medulla_decision_types::{
+    decision::derivation::coverage_derivation, decision::derivation::required_capabilities,
+    decision::derivation::weakest, decision::derivation::RequiredCapability,
+};
+use medulla_decision_types::{
+    decision::AbstainReason, decision::CandidateFacts, decision::CoverageDerivation,
+    decision::DecisionErrorCode, decision::DecisionInputs, decision::DecisionOutcome,
+    decision::Elimination, decision::EvidenceClass, decision::PremiseRef, decision::ResolutionKind,
+    decision::SlotAssignment, decision::TemplateFacts, decision::Violation, decision::WhyNot,
+    decision::MAX_ASSEMBLY_REQUIRED_CAPABILITIES,
+};
 use medulla_types::agent_component::ComponentDependency;
 use medulla_types::agent_graph::AgentGraphDraft;
 use medulla_types::agent_library::AgentLibraryEntryDraft;
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::derivation::{
-    coverage_derivation, required_capabilities, weakest, RequiredCapability,
-};
-use medulla_types::decision::request::effective_solver_budget;
-use medulla_types::decision::{
-    AbstainReason, CandidateFacts, CoverageDerivation, DecisionErrorCode, DecisionInputs,
-    DecisionOutcome, Elimination, EvidenceClass, PremiseRef, ResolutionKind, SlotAssignment,
-    TemplateFacts, Violation, WhyNot, MAX_ASSEMBLY_REQUIRED_CAPABILITIES,
-};
-use medulla_types::solve::ModelSpec;
 
 use super::eliminate::Screened;
 use super::model::Building;

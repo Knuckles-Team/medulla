@@ -14,17 +14,23 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_types::{
+    decision::harness_contrast::decide_contrast, decision::harness_contrast::matrix_values,
+    decision::harness_contrast::ContrastCandidate, decision::harness_contrast::ContrastEvidence,
+    decision::harness_contrast::HarnessContrastRefusal,
+    decision::harness_contrast::CONTRAST_FEATURE_NAMES,
+    decision::harness_contrast::MAX_CONTRAST_CANDIDATES,
+    decision::harness_contrast::MIN_CONTRAST_CANDIDATES,
+};
+use medulla_decision_types::{
+    decision::statistical::CandidateSource, decision::statistical::DecideRequest,
+    decision::statistical::QuestionKind, decision::statistical::StatisticalOutcome,
+    decision::statistical::TypedValue,
+};
+use medulla_decision_types::{decision::AbstainReason, decision::UnitRationalWire};
 use medulla_numeric::decision::features::FeatureMatrix;
 use medulla_numeric::decision::ladder::LadderResult;
-use medulla_types::decision::harness_contrast::{
-    decide_contrast, matrix_values, ContrastCandidate, ContrastEvidence, HarnessContrastRefusal,
-    CONTRAST_FEATURE_NAMES, MAX_CONTRAST_CANDIDATES, MIN_CONTRAST_CANDIDATES,
-};
-use medulla_types::decision::statistical::declared::DeclaredOption;
-use medulla_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionKind, StatisticalOutcome, TypedValue,
-};
-use medulla_types::decision::{AbstainReason, UnitRationalWire};
 use medulla_types::orchestration::improvement::{
     decode_harness_contrast_write, decode_harness_probe_run_write, HarnessContrast, HarnessProbeRun,
 };

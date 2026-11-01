@@ -1,16 +1,21 @@
 //! EH-027 / EH-062 / EH-005 / EH-006: a deterministic fit, its calibration,
 //! and the evaluation receipt that gates promotion.
 
+use medulla_decision_types::decision::statistical::CalibrationMethod;
+use medulla_decision_types::{decision::jobs::OpeEstimatorKind, decision::jobs::OptimiserSpec};
+use medulla_decision_types::{
+    decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelSource,
+    decision::statistical::dataset::LabelledDataset, decision::statistical::dataset::LabelledItem,
+};
+use medulla_decision_types::{
+    decision::statistical::head::DecisionHeadBody, decision::statistical::head::HeadKind,
+};
+use medulla_decision_types::{
+    decision::QuantScaleTag, decision::QuantisedValue, decision::TraceFidelityLevel,
+};
 use medulla_numeric::decision::admission::{admit, AdmissionRules, Regime};
 use medulla_numeric::decision::evaluate::{evaluate, EvalSpec};
 use medulla_numeric::decision::fit::{fit, FitSpec};
-use medulla_types::decision::jobs::{OpeEstimatorKind, OptimiserSpec};
-use medulla_types::decision::statistical::dataset::{
-    ItemLabel, LabelSource, LabelledDataset, LabelledItem,
-};
-use medulla_types::decision::statistical::head::{DecisionHeadBody, HeadKind};
-use medulla_types::decision::statistical::CalibrationMethod;
-use medulla_types::decision::{QuantScaleTag, QuantisedValue, TraceFidelityLevel};
 
 use super::common::{
     approved, dataset, gold_dataset, gold_item, logged, logged_item, statistical, window,
@@ -60,7 +65,10 @@ fn a_fit_is_bit_for_bit_reproducible_and_certifies_an_act_threshold() {
         fitted(HeadKind::ListwiseLogistic, &data),
         "same items, same bits"
     );
-    assert!(medulla_types::decision::statistical::head::HeadKind::ListwiseLogistic == head.kind);
+    assert!(
+        medulla_decision_types::decision::statistical::head::HeadKind::ListwiseLogistic
+            == head.kind
+    );
     let calibration = head
         .calibration
         .as_ref()
@@ -164,7 +172,8 @@ fn an_off_policy_estimate_on_unsupported_actions_blocks_promotion() {
     let items: Vec<_> = (0..60)
         .map(|i| {
             let mut item = logged_item(i);
-            if let medulla_types::decision::statistical::dataset::ItemLabel::Logged(l) = &mut item.label
+            if let medulla_decision_types::decision::statistical::dataset::ItemLabel::Logged(l) =
+                &mut item.label
             {
                 let executed = (i / 3) % 3;
                 let mut p = vec![super::common::rational(0, 1); 3];

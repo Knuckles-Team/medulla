@@ -9,15 +9,20 @@
 //! identical, and the recomputed keyed seed must match the record's
 //! commitment; only then is the seed revealed in the logged copy.
 
-use medulla_numeric::decision::features::FeatureMatrix;
-use medulla_types::decision::digest::statistical_record_digest;
-use medulla_types::decision::harness_contrast::{replay_record, CONTRAST_FEATURE_NAMES};
-use medulla_types::decision::statistical::keyed::{seed_commitment, seed_text};
-use medulla_types::decision::statistical::{
-    FeatureMatrixRef, QuestionKind, StatisticalDecisionRecord, StatisticalErrorCode,
-    StatisticalOutcome,
+use medulla_decision_types::decision::digest::statistical_record_digest;
+use medulla_decision_types::decision::DecisionErrorCode;
+use medulla_decision_types::{
+    decision::harness_contrast::replay_record, decision::harness_contrast::CONTRAST_FEATURE_NAMES,
 };
-use medulla_types::decision::DecisionErrorCode;
+use medulla_decision_types::{
+    decision::statistical::keyed::seed_commitment, decision::statistical::keyed::seed_text,
+};
+use medulla_decision_types::{
+    decision::statistical::FeatureMatrixRef, decision::statistical::QuestionKind,
+    decision::statistical::StatisticalDecisionRecord, decision::statistical::StatisticalErrorCode,
+    decision::statistical::StatisticalOutcome,
+};
+use medulla_numeric::decision::features::FeatureMatrix;
 
 use super::stat_belief::points;
 use super::stat_classes::current_rules;
@@ -83,7 +88,7 @@ fn same_answer(record: &StatisticalDecisionRecord, replayed: &Executed, derived:
 fn require_supported_replay(record: &StatisticalDecisionRecord) -> Result<(), String> {
     require_supported_question_kind(record.question.kind)?;
     if record.task_plan.is_some()
-        || record.question.kind == medulla_types::decision::QuestionKind::TaskPlan
+        || record.question.kind == medulla_decision_types::decision::QuestionKind::TaskPlan
     {
         return Err(refusal(
             StatisticalErrorCode::ParameterInvalid,

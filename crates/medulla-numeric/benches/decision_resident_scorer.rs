@@ -8,17 +8,24 @@ mod common;
 mod fit_eval;
 
 use common::{bounded, SCHEMA_DIGEST};
+use medulla_decision_types::{
+    decision::statistical::head::DecisionHeadBody,
+    decision::statistical::head::FeatureStandardisation, decision::statistical::head::FittedRegime,
+    decision::statistical::head::HeadKind,
+    decision::statistical::head::DECISION_HEAD_SCHEMA_VERSION,
+};
+use medulla_decision_types::{
+    decision::statistical::scorer::OptionAttentionParams,
+    decision::statistical::scorer::ResidentScorerBudget,
+    decision::statistical::scorer::MAX_SCORER_FEATURES,
+    decision::statistical::scorer::MAX_SCORER_SHORTLIST,
+    decision::statistical::scorer::MAX_SCORER_WIDTH,
+    decision::statistical::scorer::RESIDENT_SCORER_CEILING,
+};
+use medulla_decision_types::{decision::QuantScaleTag, decision::QuantisedValue};
 use medulla_numeric::decision::scorer::fixed::ONE;
 use medulla_numeric::decision::scorer::forward::read;
 use medulla_numeric::decision::scorer::legal::LegalSet;
-use medulla_types::decision::statistical::head::{
-    DecisionHeadBody, FeatureStandardisation, FittedRegime, HeadKind, DECISION_HEAD_SCHEMA_VERSION,
-};
-use medulla_types::decision::statistical::scorer::{
-    OptionAttentionParams, ResidentScorerBudget, MAX_SCORER_FEATURES, MAX_SCORER_SHORTLIST,
-    MAX_SCORER_WIDTH, RESIDENT_SCORER_CEILING,
-};
-use medulla_types::decision::{QuantScaleTag, QuantisedValue};
 use serde_json::{json, Value};
 use std::hint::black_box;
 

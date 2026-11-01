@@ -14,6 +14,13 @@
 //! * the framed digest layout depends on the rules it claims to, which is
 //!   proved by planting a violation of each rule and watching the digest move.
 
+use medulla_decision_types::decision_fixtures::contract_decision as decision;
+use medulla_decision_types::decision_fixtures::contract_solver as solver;
+use medulla_decision_types::decision_fixtures::contract_statistical as statistical;
+use medulla_decision_types::{
+    decision::DecisionErrorCode, decision::DecisionPolicy, decision::DecisionRecord,
+    decision::UnitRationalWire, decision::MAX_UNIT_RATIONAL_DENOMINATOR,
+};
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol_fixtures::contract_wave::contract_wave_samples;
 use medulla_types::agent_component::{
@@ -25,13 +32,6 @@ use medulla_types::agent_library::{refuse_withdrawn, AgentLibraryLifecycle};
 use medulla_types::catalog_fixtures::contract_control as control;
 use medulla_types::catalog_fixtures::contract_pack as pack;
 use medulla_types::connector_pack::digest as pack_digests;
-use medulla_types::decision::{
-    DecisionErrorCode, DecisionPolicy, DecisionRecord, UnitRationalWire,
-    MAX_UNIT_RATIONAL_DENOMINATOR,
-};
-use medulla_types::decision_fixtures::contract_decision as decision;
-use medulla_types::decision_fixtures::contract_solver as solver;
-use medulla_types::decision_fixtures::contract_statistical as statistical;
 
 /// Every sample survives both codecs and keeps its wire tag.
 ///
@@ -146,7 +146,7 @@ fn a_newer_record_version_is_a_typed_refusal() {
     assert!(
         matches!(
             acted,
-            medulla_types::decision::StatisticalOutcome::Acted { .. }
+            medulla_decision_types::decision::StatisticalOutcome::Acted { .. }
         ),
         "the first statistical sample must be the acted one"
     );
@@ -198,7 +198,8 @@ fn a_bounded_collection_refuses_one_item_past_its_maximum() {
         .expect("tasks is an array")
         .push(serde_json::Value::String("eg:task/overflow".to_string()));
     assert!(
-        serde_json::from_value::<medulla_types::decision::AssemblyRequest>(encoded).is_err(),
+        serde_json::from_value::<medulla_decision_types::decision::AssemblyRequest>(encoded)
+            .is_err(),
         "the wire decoder must refuse a collection past its bound"
     );
 }
@@ -374,7 +375,7 @@ fn a_pack_component_id_escapes_every_byte_outside_its_unreserved_set() {
 /// The decision digest scheme is domain-separated and self-excluding.
 #[test]
 fn the_decision_digest_is_domain_separated_and_excludes_itself() {
-    use medulla_types::decision::digest;
+    use medulla_decision_types::decision::digest;
 
     let solved = decision::every_decision_outcome()
         .into_iter()
@@ -404,7 +405,7 @@ fn the_decision_digest_is_domain_separated_and_excludes_itself() {
 /// The catalog digest is independent of the order the store yielded rows in.
 #[test]
 fn the_catalog_digest_does_not_depend_on_read_order() {
-    use medulla_types::decision::digest::catalog_digest;
+    use medulla_decision_types::decision::digest::catalog_digest;
 
     let forward = [
         ("component-a", "sha256:aa", AgentLibraryLifecycle::Published),

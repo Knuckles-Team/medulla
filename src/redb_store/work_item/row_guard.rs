@@ -19,7 +19,9 @@
 //! the generic row applier, so every generic node write -- single, batched or
 //! create-if-absent -- is checked in the same durable transaction it commits in.
 
-use medulla_types::policy_evolution::{is_policy_evolution_row, PolicyRefusal};
+use medulla_decision_types::{
+    policy_evolution::is_policy_evolution_row, policy_evolution::PolicyRefusal,
+};
 use medulla_types::work_item_read::NATIVE_WORK_ITEM_ROW_KEYS;
 
 use super::*;

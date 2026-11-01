@@ -14,8 +14,8 @@
 
 use std::collections::BTreeMap;
 
-use medulla_types::decision::statistical::log::StoredEvaluation;
-use medulla_types::decision::{DecisionOutcome, DecisionRecord};
+use medulla_decision_types::decision::statistical::log::StoredEvaluation;
+use medulla_decision_types::{decision::DecisionOutcome, decision::DecisionRecord};
 
 use crate::server::persistence::agent_library::AgentLibraryStore;
 use crate::server::persistence::decision_jobs::{decode_artifact, record_key};

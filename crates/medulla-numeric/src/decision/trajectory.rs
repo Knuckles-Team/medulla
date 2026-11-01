@@ -7,8 +7,8 @@
 //! [`read_rows`], so the belief trajectory is as reproducible as each single
 //! reading. A slice never adds an option: it re-reads the ones it is given.
 
-use medulla_types::decision::statistical::head::DecisionHeadBody;
-use medulla_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 
 use super::head_eval::{read_rows, RowsReading};
 use super::refusal::{Refusal, RefusalResult};

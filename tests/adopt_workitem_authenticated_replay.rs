@@ -609,8 +609,9 @@ async fn claim_admitted_run(
 // spec: MEDULLA-DURABLE-KERNEL-R028.5.3
 #[tokio::test]
 async fn current_plan_native_publish_read_and_receipt_replay() {
-    use medulla_types::current_plan::{
-        CurrentPlanPublished, CurrentPlanSnapshot, PlanItem, PlanStatus, PublishCurrentPlanRequest,
+    use medulla_decision_types::{
+        current_plan::CurrentPlanPublished, current_plan::CurrentPlanSnapshot,
+        current_plan::PlanItem, current_plan::PlanStatus, current_plan::PublishCurrentPlanRequest,
     };
     let dir = temp_dir("medulla-current-plan-native");
     let concrete = Arc::new(RedbBackend::open(dir.clone(), 8192).unwrap());
@@ -652,7 +653,7 @@ async fn current_plan_native_publish_read_and_receipt_replay() {
     );
     let mut updated = initial.clone();
     updated.snapshot.revision = 2;
-    let attachment = medulla_types::current_plan::sample_task_plan_publish_request();
+    let attachment = medulla_decision_types::current_plan::sample_task_plan_publish_request();
     updated.snapshot.task_plan = attachment.snapshot.task_plan;
     updated.task_plan_proposal = attachment.task_plan_proposal;
     updated.snapshot.items = vec![
@@ -736,7 +737,7 @@ async fn current_plan_native_publish_read_and_receipt_replay() {
     let mut changed = updated.clone();
     changed.task_plan_proposal.as_mut().unwrap().max_concurrency = 1;
     changed.snapshot.task_plan = Some(
-        medulla_types::decision::task_plan::plan_explicit_tasks(
+        medulla_decision_types::decision::task_plan::plan_explicit_tasks(
             changed.task_plan_proposal.as_ref().unwrap(),
         )
         .unwrap(),
@@ -852,10 +853,12 @@ async fn current_plan_expired_replay(
     state: &test_support::SharedState,
     backend: &RedbBackend,
     work_item_id: &str,
-    published: medulla_types::current_plan::PublishCurrentPlanRequest,
-    receipt: medulla_types::current_plan::CurrentPlanPublished,
+    published: medulla_decision_types::current_plan::PublishCurrentPlanRequest,
+    receipt: medulla_decision_types::current_plan::CurrentPlanPublished,
 ) {
-    use medulla_types::current_plan::{CurrentPlanPublished, CurrentPlanSnapshot};
+    use medulla_decision_types::{
+        current_plan::CurrentPlanPublished, current_plan::CurrentPlanSnapshot,
+    };
     let renew = Method::RenewWorkItemLease {
         tenant: TENANT.into(),
         work_item_id: work_item_id.into(),

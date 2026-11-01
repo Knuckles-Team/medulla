@@ -7,14 +7,22 @@ use super::retrieval_tests::{
     attest, clone_executed, evaluate_by, executed_template, learn, outcome, sql,
 };
 use super::*;
-use medulla_types::decision::statistical::retrieval::{
-    LearningRecorded, LearningWrite, PointerMovement, PointerRef, QueryVector,
+use medulla_decision_types::decision::statistical::retrieval_pointer::PointerState;
+use medulla_decision_types::{
+    decision::statistical::retrieval::LearningRecorded,
+    decision::statistical::retrieval::LearningWrite,
+    decision::statistical::retrieval::PointerMovement,
+    decision::statistical::retrieval::PointerRef, decision::statistical::retrieval::QueryVector,
 };
-use medulla_types::decision::statistical::retrieval_adapter::{AdapterFitRequest, AdapterFitted};
-use medulla_types::decision::statistical::retrieval_generation::{
-    GenerationEvalItem, GenerationEvalRequest, GenerationEvaluated,
+use medulla_decision_types::{
+    decision::statistical::retrieval_adapter::AdapterFitRequest,
+    decision::statistical::retrieval_adapter::AdapterFitted,
 };
-use medulla_types::decision::statistical::retrieval_pointer::PointerState;
+use medulla_decision_types::{
+    decision::statistical::retrieval_generation::GenerationEvalItem,
+    decision::statistical::retrieval_generation::GenerationEvalRequest,
+    decision::statistical::retrieval_generation::GenerationEvaluated,
+};
 use serde_json::json;
 
 const GRAPH: &str = "kg-retrieval";

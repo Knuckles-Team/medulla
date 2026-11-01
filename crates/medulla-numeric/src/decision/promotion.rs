@@ -14,10 +14,13 @@
 
 use std::collections::BTreeMap;
 
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_types::{
+    decision::jobs::ClassCoverage, decision::jobs::ClassLabelMetrics,
+    decision::jobs::PromotionMetrics,
+};
+use medulla_decision_types::{decision::StatisticalPolicy, decision::UnitRationalWire};
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::jobs::{ClassCoverage, ClassLabelMetrics, PromotionMetrics};
-use medulla_types::decision::statistical::StatisticalErrorCode;
-use medulla_types::decision::{StatisticalPolicy, UnitRationalWire};
 
 use super::head_eval::top_index;
 use super::quant::{exact_wire, level, q32, unit_wire};
@@ -263,10 +266,11 @@ impl Protocol {
 
 #[cfg(test)]
 mod class_metric_tests {
-    use medulla_types::contract::BoundedVec;
-    use medulla_types::decision::{
-        QuantScaleTag, QuantisedValue, StatisticalPolicy, TraceFidelityLevel, UnitRationalWire,
+    use medulla_decision_types::{
+        decision::QuantScaleTag, decision::QuantisedValue, decision::StatisticalPolicy,
+        decision::TraceFidelityLevel, decision::UnitRationalWire,
     };
+    use medulla_types::contract::BoundedVec;
 
     use super::{Observation, Protocol};
 

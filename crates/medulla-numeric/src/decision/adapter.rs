@@ -11,10 +11,13 @@
 //! gets gain zero. Everything is serial over the caller's item order with
 //! correctly rounded IEEE arithmetic only, so a fit replays bit-identically.
 
-use medulla_types::contract::BoundedVec;
-use medulla_types::decision::statistical::retrieval_adapter::{
-    AdapterDirection, QueryAdapterBody, QUERY_ADAPTER_SCHEMA_VERSION, UNIT_SCALE_BITS,
+use medulla_decision_types::{
+    decision::statistical::retrieval_adapter::AdapterDirection,
+    decision::statistical::retrieval_adapter::QueryAdapterBody,
+    decision::statistical::retrieval_adapter::QUERY_ADAPTER_SCHEMA_VERSION,
+    decision::statistical::retrieval_adapter::UNIT_SCALE_BITS,
 };
+use medulla_types::contract::BoundedVec;
 
 /// Power-iteration steps per direction.
 const POWER_STEPS: usize = 64;

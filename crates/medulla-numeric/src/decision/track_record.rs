@@ -6,7 +6,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_types::decision::statistical::head::DecisionHeadBody;
+use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
 
 use super::features::FeatureMatrix;
 use super::head_eval::{read_head, HeadReading};

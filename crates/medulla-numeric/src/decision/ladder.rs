@@ -11,15 +11,20 @@
 //! only when the policy's cold-start mode allows advisory output at all.
 //! Propensities are the executed policy's, never the head's mass.
 
+use medulla_decision_types::{
+    decision::statistical::head::DecisionHeadBody, decision::statistical::head::FittedRegime,
+    decision::statistical::head::HeadCalibration,
+};
+use medulla_decision_types::{
+    decision::statistical::AuditDraw, decision::statistical::CalibrationStatement,
+    decision::statistical::RiskStatement, decision::statistical::ScoredOption,
+    decision::statistical::StatisticalErrorCode, decision::statistical::StatisticalOutcome,
+};
+use medulla_decision_types::{
+    decision::AbstainReason, decision::ColdStart, decision::DecisionPolicy,
+    decision::StatisticalPolicy, decision::UnitRationalWire,
+};
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::statistical::head::{DecisionHeadBody, FittedRegime, HeadCalibration};
-use medulla_types::decision::statistical::{
-    AuditDraw, CalibrationStatement, RiskStatement, ScoredOption, StatisticalErrorCode,
-    StatisticalOutcome,
-};
-use medulla_types::decision::{
-    AbstainReason, ColdStart, DecisionPolicy, StatisticalPolicy, UnitRationalWire,
-};
 
 use super::exploration::{audit, logging_vector, plan, ExplorationPermit, ExplorationPlan};
 use super::head_eval::{act_rule, calibration_statement, top_index, Evaluated};

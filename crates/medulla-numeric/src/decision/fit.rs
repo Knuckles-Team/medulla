@@ -11,15 +11,19 @@
 //! bisection line search in [`crate::detkernel::optimise`]. No randomness, no
 //! parallelism, fixed sweep order: the same items produce the same bits.
 
-use medulla_types::decision::jobs::OptimiserSpec;
-use medulla_types::decision::statistical::body::content_digest_of;
-use medulla_types::decision::statistical::dataset::{LabelledDataset, LabelledItem};
-use medulla_types::decision::statistical::head::{
-    DecisionHeadBody, FeatureStandardisation, FittedRegime, HeadCalibration, HeadKind,
-    DECISION_HEAD_SCHEMA_VERSION,
+use medulla_decision_types::decision::jobs::OptimiserSpec;
+use medulla_decision_types::decision::statistical::body::content_digest_of;
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_types::decision::StatisticalPolicy;
+use medulla_decision_types::{
+    decision::statistical::dataset::LabelledDataset, decision::statistical::dataset::LabelledItem,
 };
-use medulla_types::decision::statistical::StatisticalErrorCode;
-use medulla_types::decision::StatisticalPolicy;
+use medulla_decision_types::{
+    decision::statistical::head::DecisionHeadBody,
+    decision::statistical::head::FeatureStandardisation, decision::statistical::head::FittedRegime,
+    decision::statistical::head::HeadCalibration, decision::statistical::head::HeadKind,
+    decision::statistical::head::DECISION_HEAD_SCHEMA_VERSION,
+};
 use medulla_types::solve_scalar::digest_text;
 
 use super::admission::Regime;

@@ -22,21 +22,25 @@
 //! a certificate that fails either check refuses the question.
 
 use medulla_compute::solve::{solve, verify, Model, SolveStatus, SolverConfig};
+use medulla_decision_types::decision::rapid_r056::StatisticalSolverCertificate;
+use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_types::{
+    decision::statistical::tool_subset::ToolCoverageCandidate,
+    decision::statistical::tool_subset::ToolSubsetRefusal,
+    decision::statistical::tool_subset::ToolSubsetRequestBody,
+};
+use medulla_decision_types::{
+    decision::statistical::CandidateSource, decision::statistical::DecideRequest,
+    decision::statistical::QuestionKind, decision::statistical::ScoredOption,
+    decision::statistical::StatisticalErrorCode, decision::statistical::StatisticalOutcome,
+    decision::statistical::TypedValue,
+};
+use medulla_decision_types::{decision::QuantScaleTag, decision::QuantisedValue};
+use medulla_decision_types::{
+    solve::Coefficient, solve::ConstraintBody, solve::ConstraintSpec, solve::ModelSpec,
+    solve::ObjectiveLevelSpec, solve::ObjectiveTerm, solve::Relation, solve::Term, solve::VarId,
+};
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::rapid_r056::StatisticalSolverCertificate;
-use medulla_types::decision::statistical::declared::DeclaredOption;
-use medulla_types::decision::statistical::tool_subset::{
-    ToolCoverageCandidate, ToolSubsetRefusal, ToolSubsetRequestBody,
-};
-use medulla_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionKind, ScoredOption, StatisticalErrorCode,
-    StatisticalOutcome, TypedValue,
-};
-use medulla_types::decision::{QuantScaleTag, QuantisedValue};
-use medulla_types::solve::{
-    Coefficient, ConstraintBody, ConstraintSpec, ModelSpec, ObjectiveLevelSpec, ObjectiveTerm,
-    Relation, Term, VarId,
-};
 
 use super::stat_support::refusal;
 

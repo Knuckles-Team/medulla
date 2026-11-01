@@ -21,10 +21,11 @@
 use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
-use medulla_query::{Column, ColumnType, TableSchema};
-use medulla_types::decision::statistical::log::{
-    DecisionLogEntry, StoredEvaluation, StoredResolution,
+use medulla_decision_types::{
+    decision::statistical::log::DecisionLogEntry, decision::statistical::log::StoredEvaluation,
+    decision::statistical::log::StoredResolution,
 };
+use medulla_query::{Column, ColumnType, TableSchema};
 use serde::Serialize;
 use serde_json::{Map, Value};
 

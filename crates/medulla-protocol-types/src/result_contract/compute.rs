@@ -1,6 +1,7 @@
 //! Declared results of the `compute` contract domain.
 
 use super::Dynamic;
+use medulla_decision_types::solve::SolveResult;
 use medulla_types::compute_result::algorithms;
 #[cfg(feature = "datascience")]
 use medulla_types::compute_result::datascience;
@@ -18,7 +19,6 @@ use medulla_types::compute_result::mining;
 use medulla_types::compute_result::pipeline;
 #[cfg(feature = "finance")]
 use medulla_types::compute_result::signal_models;
-use medulla_types::solve::SolveResult;
 #[cfg(feature = "datascience")]
 use medulla_types::wire::FittedModel;
 use serde::{Deserialize, Serialize};

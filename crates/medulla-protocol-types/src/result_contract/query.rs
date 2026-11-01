@@ -11,7 +11,7 @@ use crate::protocol::{
 };
 #[cfg(feature = "query")]
 use crate::protocol::{ExplainPlanResult, ExplainPolicyResult};
-use medulla_types::decision::DecisionBatch;
+use medulla_decision_types::decision::DecisionBatch;
 use medulla_types::epistemic_operations::EvidenceBundle;
 #[cfg(feature = "knowledge-batch")]
 use medulla_types::knowledge_stream::KnowledgeStreamBatch;
@@ -86,7 +86,7 @@ method_results! {
     TxnUql(TxnUql) => Raw<medulla_types::wire::UqlResult>;
     Decide(Decide) => Raw<DecisionBatch>;
     // MEDULLA-DECISION-ENGINE-R802: ordered selection with reasons, and the skips.
-    SelectWebPages(SelectWebPages) => Raw<medulla_types::decision::web_fetch_selection::SelectWebPagesAnswer>;
+    SelectWebPages(SelectWebPages) => Raw<medulla_decision_types::decision::web_fetch_selection::SelectWebPagesAnswer>;
     // Every op answers the request graph's edge indexes after it.
     EdgeIndex(EdgeIndex) => Raw<EdgeIndexStatusView>;
     EdgeSearch(EdgeSearch) => Raw<EdgeSearchView>;

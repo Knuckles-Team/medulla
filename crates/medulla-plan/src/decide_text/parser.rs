@@ -2,16 +2,18 @@
 
 use std::collections::BTreeMap;
 
+use medulla_decision_types::{
+    decision::statistical::CandidateSource, decision::statistical::DecideRequest,
+    decision::statistical::QuestionKind, decision::statistical::QuestionSafety,
+    decision::statistical::StatisticalQuestion, decision::statistical::TypedParam,
+    decision::statistical::TypedValue,
+};
+use medulla_decision_types::{
+    decision::AssemblyConstraints, decision::AssemblyRequest, decision::AssemblyRequirements,
+    decision::DecisionPolicyRef, decision::LibraryCandidateScope,
+};
 use medulla_types::agent_component::{AgentComponentKind, ComponentDependency};
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionKind, QuestionSafety, StatisticalQuestion, TypedParam,
-    TypedValue,
-};
-use medulla_types::decision::{
-    AssemblyConstraints, AssemblyRequest, AssemblyRequirements, DecisionPolicyRef,
-    LibraryCandidateScope,
-};
 
 use super::lexer::{Spanned, Tok};
 use super::{DecideTextError, DecideTextErrorKind, DecideTextRequest};

@@ -234,10 +234,6 @@ pub mod connector_pack;
 // the pack import boundary above `connector_pack`. Pure data; validation lives
 // here, import wiring lands in a later child requirement.
 pub mod domain_pack;
-// RF-ADR-010 — the Decide layer's wire contract: assembly requests and records,
-// the decision policy, the statistical surface and the two admin jobs. Pure
-// data; every algorithm lives above this crate.
-pub mod decision;
 // EH-345 — the fleet catalog: discovery observations and operator overrides
 // beside the server registry, and the typed projection that joins them with
 // connector-pack `AgentComponent`s. Pure serde; the handler lives in the server.
@@ -268,10 +264,6 @@ pub mod atomic_primitive;
 // one admission maps to exactly one commit with order-preserving replies.
 // Pure serde, no dep.
 pub mod pipeline_batch;
-// EH-346/EH-347 — capture-first open-weight policy evolution: the capability,
-// capture, model-policy version, training-run and evaluation records EG owns.
-// Pure serde; EG records and relates, it never trains.
-pub mod policy_evolution;
 // MEDULLA-UNIFIED-DATA-PLANE-R013.1 — Postgres attached-source adapter config and
 // type-mapping typed model (connect/catalog/capture wiring is a later slice).
 pub mod postgres_adapter;
@@ -403,10 +395,6 @@ pub mod outbox;
 // refusal tests only, no outbox-append wiring yet).
 #[cfg(feature = "finance")]
 pub mod finance_event_envelope;
-// The general bounded 0-1 integer programme (`Method::Solve`): model, config,
-// certificate and exact scalars. The search and the verifier live in
-// `medulla-compute`, which re-exports these so there is one definition of each.
-pub mod solve;
 pub mod solve_scalar;
 // CONCEPT:MEDULLA-KG.compute.quantum-agent-api — the agent-facing quantum control-plane
 // wire op (`QuantumOp`), gated `quantum`. Lives here (not in `medulla-quantum-core`,
@@ -451,8 +439,6 @@ pub mod agent_fixtures;
 #[cfg(any(test, feature = "test-support"))]
 pub mod catalog_fixtures;
 #[cfg(any(test, feature = "test-support"))]
-pub mod decision_fixtures;
-#[cfg(any(test, feature = "test-support"))]
 pub mod identity_fixtures;
 pub mod telemetry_derive;
 #[cfg(any(test, feature = "test-support"))]
@@ -461,7 +447,6 @@ pub mod types;
 // Result bodies of the `compute` contract domain, declared by
 // `result_contract::compute`; gated per compute family like `wire`.
 pub mod compute_result;
-pub mod current_plan;
 pub mod run_checkpoint;
 // GOC-19 — the WorkItem submission command-log admission core (tenant-scoped
 // idempotency replay + per-authority fencing), built on GOC-03's

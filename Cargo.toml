@@ -525,7 +525,7 @@ asr-whisper = ["server", "dep:medulla-asr-whisper", "medulla-audio/asr", "medull
 # when `dep:medulla-storage` is linked, which is what the `redb` feature does. A
 # `--features query` build without it cannot name the composition root's
 # verifier, so the edge is stated here rather than left to fail at link time.
-query = ["medulla-kernel/query", "redb", "dep:medulla-query", "medulla-query/sql", "dep:medulla-plan", "medulla-plan/query", "medulla-types/query", "medulla-protocol-types/query", "medulla-tsdb?/arrow-seg"]
+query = ["medulla-kernel/query", "redb", "dep:medulla-query", "medulla-query/sql", "dep:medulla-plan", "medulla-plan/query", "medulla-types/query", "medulla-decision-types/query", "medulla-protocol-types/query", "medulla-tsdb?/arrow-seg"]
 # The one native streaming query/job result currency. Every served family adapts to
 # governed, bounded KnowledgeBatch envelopes with stable Arrow schemas.
 knowledge-batch = ["medulla-kernel/knowledge-batch",
@@ -1844,8 +1844,10 @@ rand = "0.8"
 fs4 = "1.1"
 serde_bytes = "0.11.19"
 medulla-protocol-types = { path = "crates/medulla-protocol-types" }
+medulla-decision-types = { path = "crates/medulla-decision-types" }
 
 [dev-dependencies]
+medulla-decision-types = { path = "crates/medulla-decision-types", features = ["test-support"] }
 medulla-protocol-types = { path = "crates/medulla-protocol-types", features = ["test-support"] }
 tokio = { version = "1.53", features = ["full", "test-util"] }
 tempfile = "3"

@@ -5,9 +5,12 @@
 
 use super::consumer_tests::declared_abstention;
 use super::*;
-use medulla_types::decision::statistical::retrieval::{
-    LearningRecorded, LearningWrite, PathEdge, PathRank, RetrievalOutcome, RetrievalPathTemplate,
-    ReturnedEvidence,
+use medulla_decision_types::{
+    decision::statistical::retrieval::LearningRecorded,
+    decision::statistical::retrieval::LearningWrite, decision::statistical::retrieval::PathEdge,
+    decision::statistical::retrieval::PathRank, decision::statistical::retrieval::RetrievalOutcome,
+    decision::statistical::retrieval::RetrievalPathTemplate,
+    decision::statistical::retrieval::ReturnedEvidence,
 };
 use serde_json::{json, Value};
 
@@ -102,7 +105,7 @@ pub(super) fn grant(h: &Harness, record_id: &str, evaluator: &str, span: (u64, u
         now_ms: span.0,
         server_secret: b"",
     };
-    let named = medulla_types::decision::statistical::log::NamedEvaluator {
+    let named = medulla_decision_types::decision::statistical::log::NamedEvaluator {
         principal: Some(principal_of(evaluator)),
         role: None,
         expires_at_ms: span.1,

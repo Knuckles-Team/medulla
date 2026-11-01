@@ -12,9 +12,12 @@
 //! rungs, or ranked out by the shortlist -- reports [`EXCLUDED_LOGIT`] and
 //! probability zero. It was never a token.
 
-use medulla_types::decision::statistical::head::{DecisionHeadBody, FeatureStandardisation};
-use medulla_types::decision::statistical::scorer::OptionAttentionParams;
-use medulla_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_types::decision::statistical::scorer::OptionAttentionParams;
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_types::{
+    decision::statistical::head::DecisionHeadBody,
+    decision::statistical::head::FeatureStandardisation,
+};
 
 use super::fixed::{add, dot, mul, saturate, softmax, to_q32, FRAC_BITS, ONE};
 use super::legal::{shortlist, LegalSet};

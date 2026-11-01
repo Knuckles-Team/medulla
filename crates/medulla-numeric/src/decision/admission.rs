@@ -9,12 +9,16 @@
 //! not pinned, and its commit principal is approved. A full-label item is
 //! admitted unless an LLM resolved it. The two regimes never mix.
 
-use medulla_types::decision::jobs::LabelExclusions;
-use medulla_types::decision::statistical::dataset::{
-    ItemLabel, LabelSource, LabelledDataset, LabelledItem, LoggedOutcome, OutcomeFidelity,
-    PropensitySource,
+use medulla_decision_types::decision::jobs::LabelExclusions;
+use medulla_decision_types::{
+    decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelSource,
+    decision::statistical::dataset::LabelledDataset, decision::statistical::dataset::LabelledItem,
+    decision::statistical::dataset::LoggedOutcome, decision::statistical::dataset::OutcomeFidelity,
+    decision::statistical::dataset::PropensitySource,
 };
-use medulla_types::decision::{EvidenceClass, RecordWindow, TraceFidelityLevel};
+use medulla_decision_types::{
+    decision::EvidenceClass, decision::RecordWindow, decision::TraceFidelityLevel,
+};
 
 /// Which regime a job reads.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

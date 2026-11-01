@@ -8,12 +8,17 @@
 //! logging support only ([`super::evaluate_bandit`]). Every promotion gate that
 //! fails is named in the receipt; the receipt passes exactly when none did.
 
-use medulla_types::decision::jobs::{
-    DecisionEvalReceipt, FullLabelMetrics, LabelExclusions, OpeEstimatorKind, PromotionMetrics,
+use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
+use medulla_decision_types::decision::StatisticalPolicy;
+use medulla_decision_types::{
+    decision::jobs::DecisionEvalReceipt, decision::jobs::FullLabelMetrics,
+    decision::jobs::LabelExclusions, decision::jobs::OpeEstimatorKind,
+    decision::jobs::PromotionMetrics,
 };
-use medulla_types::decision::statistical::dataset::{ItemLabel, LabelledDataset, LabelledItem};
-use medulla_types::decision::statistical::head::DecisionHeadBody;
-use medulla_types::decision::StatisticalPolicy;
+use medulla_decision_types::{
+    decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelledDataset,
+    decision::statistical::dataset::LabelledItem,
+};
 use medulla_types::solve_scalar::digest_text;
 
 use super::admission::Regime;

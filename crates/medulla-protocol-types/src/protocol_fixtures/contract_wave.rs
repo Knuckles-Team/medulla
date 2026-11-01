@@ -20,7 +20,8 @@ pub fn contract_wave_samples() -> Vec<(&'static str, Method)> {
             "AgentAssemble",
             Method::AgentAssemble {
                 request: Box::new(
-                    medulla_types::decision_fixtures::contract_decision::assembly_request(),
+                    medulla_decision_types::decision_fixtures::contract_decision::assembly_request(
+                    ),
                 ),
             },
         ),
@@ -28,7 +29,7 @@ pub fn contract_wave_samples() -> Vec<(&'static str, Method)> {
             "DecisionCommit",
             Method::DecisionCommit {
                 request: Box::new(
-                    medulla_types::decision_fixtures::contract_decision::commit_request(),
+                    medulla_decision_types::decision_fixtures::contract_decision::commit_request(),
                 ),
             },
         ),
@@ -36,14 +37,17 @@ pub fn contract_wave_samples() -> Vec<(&'static str, Method)> {
             "Decide",
             Method::Decide {
                 request: Box::new(
-                    medulla_types::decision_fixtures::contract_statistical::decide_request(),
+                    medulla_decision_types::decision_fixtures::contract_statistical::decide_request(
+                    ),
                 ),
             },
         ),
         (
             "Solve",
             Method::Solve {
-                request: Box::new(medulla_types::decision_fixtures::contract_solver::request()),
+                request: Box::new(
+                    medulla_decision_types::decision_fixtures::contract_solver::request(),
+                ),
             },
         ),
         ("GraphSchemaList", Method::GraphSchemaList),
@@ -80,17 +84,17 @@ pub fn contract_wave_samples() -> Vec<(&'static str, Method)> {
         ),
     ];
     samples.extend(
-        medulla_types::decision_fixtures::contract_statistical::fit_ops()
+        medulla_decision_types::decision_fixtures::contract_statistical::fit_ops()
             .into_iter()
             .map(|(label, op)| (label, Method::DecisionFit { op: Box::new(op) })),
     );
     samples.extend(
-        medulla_types::decision_fixtures::contract_statistical::eval_ops()
+        medulla_decision_types::decision_fixtures::contract_statistical::eval_ops()
             .into_iter()
             .map(|(label, op)| (label, Method::DecisionEval { op: Box::new(op) })),
     );
     samples.extend(
-        medulla_types::decision_fixtures::contract_statistical::log_ops()
+        medulla_decision_types::decision_fixtures::contract_statistical::log_ops()
             .into_iter()
             .map(|(label, op)| (label, Method::DecisionLog { op: Box::new(op) })),
     );

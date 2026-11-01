@@ -9,13 +9,15 @@
 //! must be one the record already held, so an escalation can never add an
 //! option the decision's legal set did not have.
 
-use medulla_types::decision::statistical::log::{
-    AbstentionResolution, AbstentionResolver, StoredResolution,
+use medulla_decision_types::decision::EvidenceClass;
+use medulla_decision_types::{
+    decision::statistical::log::AbstentionResolution,
+    decision::statistical::log::AbstentionResolver, decision::statistical::log::StoredResolution,
 };
-use medulla_types::decision::statistical::{
-    FeatureMatrixRef, StatisticalDecisionRecord, StatisticalErrorCode, StatisticalOutcome,
+use medulla_decision_types::{
+    decision::statistical::FeatureMatrixRef, decision::statistical::StatisticalDecisionRecord,
+    decision::statistical::StatisticalErrorCode, decision::statistical::StatisticalOutcome,
 };
-use medulla_types::decision::EvidenceClass;
 
 use super::stat_executor::ExecutionContext;
 use super::stat_log::{store_once, visible_entry, LogReader};

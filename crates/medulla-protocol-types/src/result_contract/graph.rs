@@ -2,11 +2,11 @@
 
 use super::transactions::SparqlUpdateReport;
 use super::Dynamic;
-use medulla_types::rdf_report::LoadReport;
-use medulla_types::{
+use medulla_decision_types::{
     policy_evolution::PolicyRecordReceipt, policy_evolution::PolicyRecordStored,
     policy_evolution::PolicyRecordView,
 };
+use medulla_types::rdf_report::LoadReport;
 use medulla_types::{
     types::CompactNodesResult, types::DecayStats, types::GraphDiff, types::GraphMetrics,
     types::PropertyBlob, types::PruneStats, types::ScenePose, types::SubgraphResult,

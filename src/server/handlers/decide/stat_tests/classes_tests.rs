@@ -72,9 +72,12 @@ async fn derived_classes_select_candidates_as_claims_under_a_pinned_rule_set() {
         .iter()
         .find(|p| p.fact.starts_with("derived:eg:profile/tool-calling"))
         .expect("the derived class is a named premise");
-    assert_eq!(derived.class, medulla_types::decision::PremiseClass::Claim);
+    assert_eq!(
+        derived.class,
+        medulla_decision_types::decision::PremiseClass::Claim
+    );
     assert_eq!(
         record.evidence_class,
-        medulla_types::decision::EvidenceClass::Claim
+        medulla_decision_types::decision::EvidenceClass::Claim
     );
 }

@@ -14,20 +14,20 @@ pub use resources::*;
 pub use statechart::*;
 pub use work_items::*;
 
-use medulla_types::decision::statistical::retrieval::LearningRecorded;
-use medulla_types::decision::DecisionJobRecord;
-use medulla_types::delegation::KgDelegateResult;
-use medulla_types::sealed_record::SealedRecordRetirement;
-use medulla_types::{
-    control_lease::ControlLeaseIssued, control_lease::ControlLeasePage,
-    control_lease::ControlLeaseTransition, control_lease::ControlLeaseView,
-};
-use medulla_types::{
+use medulla_decision_types::decision::statistical::retrieval::LearningRecorded;
+use medulla_decision_types::decision::DecisionJobRecord;
+use medulla_decision_types::{
     decision::statistical::log::DecisionLogCommitted,
     decision::statistical::log::DecisionLogCompacted, decision::statistical::log::DecisionLogEntry,
     decision::statistical::log::DecisionLogVerification,
     decision::statistical::log::OutcomeAggregate, decision::statistical::log::StoredEvaluation,
     decision::statistical::log::StoredResolution,
+};
+use medulla_types::delegation::KgDelegateResult;
+use medulla_types::sealed_record::SealedRecordRetirement;
+use medulla_types::{
+    control_lease::ControlLeaseIssued, control_lease::ControlLeasePage,
+    control_lease::ControlLeaseTransition, control_lease::ControlLeaseView,
 };
 use medulla_types::{
     epistemic_operations::ClaimWorkItemResult,
@@ -85,10 +85,10 @@ method_results! {
     CasWorkItemMetadata(CasWorkItemMetadata) => Raw<CasWorkItemMetadataResult>;
     // EH-219 typed WorkItem reads. `null` when no WorkItem with this id is
     // visible to the verified tenant.
-    PublishCurrentPlan(PublishCurrentPlan) => Raw<medulla_types::current_plan::CurrentPlanPublished>;
+    PublishCurrentPlan(PublishCurrentPlan) => Raw<medulla_decision_types::current_plan::CurrentPlanPublished>;
     PublishRunCheckpoint(PublishRunCheckpoint) => Raw<medulla_types::run_checkpoint::RunCheckpointPublished>;
     GetRunCheckpoint(GetRunCheckpoint) => Raw<Option<medulla_types::run_checkpoint::RunCheckpointRead>>;
-    GetCurrentPlan(GetCurrentPlan) => Raw<Option<medulla_types::current_plan::CurrentPlanSnapshot>>;
+    GetCurrentPlan(GetCurrentPlan) => Raw<Option<medulla_decision_types::current_plan::CurrentPlanSnapshot>>;
     GetSessionUsage(GetSessionUsage) => Raw<medulla_types::run_usage::SessionUsage>;
     GetRunWorkItem(GetRunWorkItem) => Raw<Option<medulla_types::work_item_read::RunWorkItemView>>;
     GetWorkItem(GetWorkItem) => Raw<Option<WorkItemView>>;
@@ -164,9 +164,9 @@ method_results! {
     DecisionFitStatus(DecisionFit / "status") => Raw<Option<DecisionJobRecord>>;
     DecisionEvalSubmit(DecisionEval / "submit") => Raw<DecisionJobRecord>;
     DecisionEvalStatus(DecisionEval / "status") => Raw<Option<DecisionJobRecord>>;
-    DecisionEvalReceiptGet(DecisionEval / "receipt") => Raw<Option<medulla_types::decision::DecisionEvalReceipt>>;
-    DecisionEvalReceipts(DecisionEval / "receipts") => Raw<medulla_types::decision::DecisionReceiptPage>;
-    DecisionEvalTimeline(DecisionEval / "timeline") => Raw<medulla_types::decision::DecisionReceiptTimelinePage>;
+    DecisionEvalReceiptGet(DecisionEval / "receipt") => Raw<Option<medulla_decision_types::decision::DecisionEvalReceipt>>;
+    DecisionEvalReceipts(DecisionEval / "receipts") => Raw<medulla_decision_types::decision::DecisionReceiptPage>;
+    DecisionEvalTimeline(DecisionEval / "timeline") => Raw<medulla_decision_types::decision::DecisionReceiptTimelinePage>;
     DecisionLogCommit(DecisionLog / "commit") => Raw<DecisionLogCommitted>;
     DecisionLogEvaluate(DecisionLog / "evaluate") => Raw<StoredEvaluation>;
     DecisionLogGet(DecisionLog / "get") => Raw<Option<DecisionLogEntry>>;

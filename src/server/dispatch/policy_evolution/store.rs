@@ -6,9 +6,10 @@
 //! defence in depth: a row whose body no longer hashes to its id is refused as
 //! tampered.
 
-use medulla_types::policy_evolution::{
-    is_policy_evolution_row, PolicyEvolutionRecord, PolicyRecordView, PolicyRefusal,
-    StoredPolicyRecord,
+use medulla_decision_types::{
+    policy_evolution::is_policy_evolution_row, policy_evolution::PolicyEvolutionRecord,
+    policy_evolution::PolicyRecordView, policy_evolution::PolicyRefusal,
+    policy_evolution::StoredPolicyRecord,
 };
 
 use super::gate::RecordLookup;
@@ -87,7 +88,7 @@ impl RecordLookup for GraphRecords<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::policy_evolution::ModelPolicyVersion;
+    use medulla_decision_types::policy_evolution::ModelPolicyVersion;
 
     fn version() -> PolicyEvolutionRecord {
         let record: ModelPolicyVersion = serde_json::from_value(serde_json::json!({

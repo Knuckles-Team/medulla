@@ -7,7 +7,7 @@ $($variants)*
     GetRunCheckpoint { request: medulla_types::run_checkpoint::GetRunCheckpointRequest },
 
 
-    PublishCurrentPlan { request: medulla_types::current_plan::PublishCurrentPlanRequest },
+    PublishCurrentPlan { request: medulla_decision_types::current_plan::PublishCurrentPlanRequest },
     GetCurrentPlan { tenant: String, run_id: String },
     /// Caller-owned committed measurements from one bounded snapshot.
     GetSessionUsage { tenant: String, context_id: String },
@@ -100,14 +100,14 @@ $($variants)*
     /// self-translates into exactly one `CreateNodeIfAbsent`. EG records and
     /// relates -- it never trains. See [`crate::policy_evolution`].
     PolicyEvolution {
-        op: Box<medulla_types::policy_evolution::PolicyEvolutionOp>,
+        op: Box<medulla_decision_types::policy_evolution::PolicyEvolutionOp>,
     },
     /// ENGINE-INTERNAL: the durable WorkItem-kernel write that stores one
     /// record `PolicyEvolution` already admitted. Refused from the wire; the
     /// only way a policy-evolution row can be created (generic graph writes to
     /// such rows are refused by the row guard).
     PolicyEvolutionStore {
-        request: Box<medulla_types::policy_evolution::StoredPolicyRecord>,
+        request: Box<medulla_decision_types::policy_evolution::StoredPolicyRecord>,
     },
     /// One bounded page of `request.tenant`'s control leases, filtered by
     /// kind, status and exact grant pairs (graph-os MEDULLA-5: the pending
@@ -224,7 +224,7 @@ $($variants)*
     /// fetch budget. Reads only; no model runs. See
     /// [`crate::decision::web_fetch_selection`].
     SelectWebPages {
-        request: Box<medulla_types::decision::web_fetch_selection::SelectWebPagesRequest>,
+        request: Box<medulla_decision_types::decision::web_fetch_selection::SelectWebPagesRequest>,
     },
         ]);
     };

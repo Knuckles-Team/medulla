@@ -8,7 +8,7 @@
 //! it carries can only ever inform a caller's own authorization step --
 //! `Decide` offers no further "apply this score" mechanism at all.
 
-use medulla_types::decision::record::ResolutionKind;
+use medulla_decision_types::decision::record::ResolutionKind;
 
 use super::*;
 

@@ -1,15 +1,22 @@
 //! Fixtures shared by the decision tests.
 
+use medulla_decision_types::{
+    decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelSource,
+    decision::statistical::dataset::LabelledDataset, decision::statistical::dataset::LabelledItem,
+    decision::statistical::dataset::LoggedOutcome,
+    decision::statistical::dataset::OutcomeEvaluation,
+    decision::statistical::dataset::OutcomeFidelity,
+    decision::statistical::dataset::PropensitySource,
+    decision::statistical::dataset::LABELLED_DATASET_SCHEMA_VERSION,
+};
+use medulla_decision_types::{
+    decision::ColdStart, decision::DecisionPolicy, decision::EvidenceClass,
+    decision::ObjectiveLevelKind, decision::ObjectiveOrder, decision::QuantScaleTag,
+    decision::QuantisedValue, decision::RecordWindow, decision::StatisticalPolicy,
+    decision::TraceFidelityLevel, decision::UnitRationalWire, decision::UnknownCostRule,
+    decision::DECISION_POLICY_SCHEMA_VERSION,
+};
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::statistical::dataset::{
-    ItemLabel, LabelSource, LabelledDataset, LabelledItem, LoggedOutcome, OutcomeEvaluation,
-    OutcomeFidelity, PropensitySource, LABELLED_DATASET_SCHEMA_VERSION,
-};
-use medulla_types::decision::{
-    ColdStart, DecisionPolicy, EvidenceClass, ObjectiveLevelKind, ObjectiveOrder, QuantScaleTag,
-    QuantisedValue, RecordWindow, StatisticalPolicy, TraceFidelityLevel, UnitRationalWire,
-    UnknownCostRule, DECISION_POLICY_SCHEMA_VERSION,
-};
 use medulla_types::solve_scalar::Scalar;
 
 pub const OPTIONS: usize = 3;

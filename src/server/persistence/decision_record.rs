@@ -28,16 +28,16 @@
 
 use std::collections::BTreeMap;
 
+use medulla_decision_types::{
+    decision::digest, decision::CandidateFacts, decision::DecisionErrorCode,
+    decision::DecisionRecord, decision::LibraryCandidateScope, decision::MAX_ASSEMBLY_CANDIDATES,
+};
 use medulla_types::agent_component::{
     AgentComponentDraft, AgentComponentEntry, AgentComponentKind, AgentComponentMutationKind,
     DraftPublication, DraftSubject, COMPONENT_MEDIA_TYPE_ATTRIBUTE,
 };
 use medulla_types::agent_library::{AgentLibraryLifecycle, AgentLibraryMutationContext};
 use medulla_types::agent_ontology::satisfies;
-use medulla_types::decision::{
-    digest, CandidateFacts, DecisionErrorCode, DecisionRecord, LibraryCandidateScope,
-    MAX_ASSEMBLY_CANDIDATES,
-};
 
 use super::agent_component::{component_tables, AgentComponentWriteResult, ComponentLayer};
 use super::agent_library::{validate_context, AgentLibraryStore};
@@ -160,7 +160,7 @@ pub(crate) fn verify_policy_component(draft: &AgentComponentDraft) -> Result<(),
     if draft.kind != AgentComponentKind::DecisionPolicy {
         return Ok(());
     }
-    medulla_types::decision::policy::policy_from_attributes(
+    medulla_decision_types::decision::policy::policy_from_attributes(
         &draft.attributes,
         &draft.content_digest,
     )

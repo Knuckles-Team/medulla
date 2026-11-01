@@ -10,15 +10,20 @@
 //! is still the attested one, but nothing can be re-derived. Summaries (the
 //! record minus its matrix) are kept for ever.
 
-use medulla_types::decision::statistical::body::{canonical_body_bytes, content_digest_of};
-use medulla_types::decision::statistical::log::{
-    DecisionLogCompacted, DecisionLogEntry, DecisionLogVerification, EntryInputs, InputsBlob,
-    MAX_COMPACT_PER_CALL,
+use medulla_decision_types::{
+    decision::statistical::body::canonical_body_bytes,
+    decision::statistical::body::content_digest_of,
 };
-use medulla_types::decision::statistical::{
-    FeatureMatrixRef, StatisticalDecisionRecord, StatisticalErrorCode,
+use medulla_decision_types::{
+    decision::statistical::log::DecisionLogCompacted, decision::statistical::log::DecisionLogEntry,
+    decision::statistical::log::DecisionLogVerification, decision::statistical::log::EntryInputs,
+    decision::statistical::log::InputsBlob, decision::statistical::log::MAX_COMPACT_PER_CALL,
 };
-use medulla_types::decision::{DecisionPolicyRef, StatisticalPolicy};
+use medulla_decision_types::{
+    decision::statistical::FeatureMatrixRef, decision::statistical::StatisticalDecisionRecord,
+    decision::statistical::StatisticalErrorCode,
+};
+use medulla_decision_types::{decision::DecisionPolicyRef, decision::StatisticalPolicy};
 
 use super::stat_executor::ExecutionContext;
 use super::stat_log::{visible_entry, LogReader, MAX_LOG_ROWS};
@@ -170,7 +175,7 @@ fn due(entry: &DecisionLogEntry, policy: &StatisticalPolicy, now_ms: u64) -> Opt
     // Library evidence remains reproducible indefinitely, regardless of policy.
     if matches!(
         entry.record.candidate_source,
-        medulla_types::decision::CandidateSourceRecord::AgentLibrary { .. }
+        medulla_decision_types::decision::CandidateSourceRecord::AgentLibrary { .. }
     ) {
         return None;
     }

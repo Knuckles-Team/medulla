@@ -17,19 +17,29 @@
 #[cfg(feature = "query")]
 use std::collections::BTreeMap;
 
+use medulla_decision_types::decision::statistical::ingestion_lane::IngestionLaneRequest;
+use medulla_decision_types::decision::statistical::log::RecordVisibility;
+use medulla_decision_types::decision::statistical::retrieval_plan::RetrievalPlanKind;
+use medulla_decision_types::{
+    decision::statistical::declared::check_declared,
+    decision::statistical::declared::DeclaredOption,
+};
+use medulla_decision_types::{
+    decision::statistical::enrichment_schedule::EnrichmentCandidate,
+    decision::statistical::enrichment_schedule::EnrichmentScheduleRequest,
+    decision::statistical::enrichment_schedule::COST_KEY,
+    decision::statistical::enrichment_schedule::EXPECTED_VALUE_KEY,
+};
+use medulla_decision_types::{
+    decision::statistical::CandidateSource, decision::statistical::QuestionKind,
+    decision::statistical::StatisticalErrorCode,
+};
+use medulla_decision_types::{
+    decision::CandidateSourceRecord, decision::LibraryCandidateScope,
+    decision::MAX_ASSEMBLY_CANDIDATES,
+};
 use medulla_numeric::decision::candidate::CandidateView;
 use medulla_types::agent_component::{AgentComponentEntry, AgentComponentSearchRequest};
-use medulla_types::decision::statistical::declared::{check_declared, DeclaredOption};
-use medulla_types::decision::statistical::enrichment_schedule::{
-    EnrichmentCandidate, EnrichmentScheduleRequest, COST_KEY, EXPECTED_VALUE_KEY,
-};
-use medulla_types::decision::statistical::ingestion_lane::IngestionLaneRequest;
-use medulla_types::decision::statistical::log::RecordVisibility;
-use medulla_types::decision::statistical::retrieval_plan::RetrievalPlanKind;
-use medulla_types::decision::statistical::{CandidateSource, QuestionKind, StatisticalErrorCode};
-use medulla_types::decision::{
-    CandidateSourceRecord, LibraryCandidateScope, MAX_ASSEMBLY_CANDIDATES,
-};
 
 use super::stat_classes::{current_rules, derive, DerivedClasses};
 use super::stat_support::refusal;

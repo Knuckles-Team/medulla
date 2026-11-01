@@ -2,10 +2,10 @@
 //! templates are filled slot by slot, the best topology wins, and each losing
 //! template is explained with its own optimum.
 
+use medulla_decision_types::{decision::DecisionOutcome, decision::TemplateFacts};
 use medulla_types::agent_graph::{
     AgentGraphEdge, AgentGraphNode, AgentGraphNodeKind, AgentGraphShape,
 };
-use medulla_types::decision::{DecisionOutcome, TemplateFacts};
 use medulla_types::delegation::AgentGraphEntryRef;
 
 use super::super::{assemble, inputs as build_inputs, replay_check};
@@ -79,7 +79,7 @@ fn decide_over(templates: Vec<TemplateFacts>) -> super::super::Assembly {
         asked,
         research_library(),
         templates,
-        medulla_types::decision::DecisionPolicy::engine_default(),
+        medulla_decision_types::decision::DecisionPolicy::engine_default(),
     )
     .expect("inputs");
     let assembly = assemble(inputs, identity()).expect("assembles");
@@ -145,12 +145,12 @@ fn a_template_that_is_not_the_named_revision_is_refused() {
         asked,
         research_library(),
         vec![solo],
-        medulla_types::decision::DecisionPolicy::engine_default(),
+        medulla_decision_types::decision::DecisionPolicy::engine_default(),
     )
     .expect("inputs");
     let error = assemble(inputs, identity()).expect_err("refused");
     assert_eq!(
         error.code,
-        medulla_types::decision::DecisionErrorCode::AssemblyInputsInvalid
+        medulla_decision_types::decision::DecisionErrorCode::AssemblyInputsInvalid
     );
 }

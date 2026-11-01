@@ -5,10 +5,10 @@
 
 use std::sync::Arc;
 
+use medulla_decision_types::decision::AssemblyRequest;
+use medulla_decision_types::decision::TemplateFacts;
 use medulla_types::agent_topology::TopologyInputs;
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::AssemblyRequest;
-use medulla_types::decision::TemplateFacts;
 
 use super::{capacity_premise, topology_schema, SharedState};
 use crate::server::auth::VerifiedRequestContext;

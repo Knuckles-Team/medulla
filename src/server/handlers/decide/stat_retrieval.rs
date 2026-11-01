@@ -7,11 +7,16 @@
 //! THROUGH that record: a reader that cannot see the record sees neither the
 //! outcome nor anything learned from it.
 
+use medulla_decision_types::decision::statistical::log::DecisionLogEntry;
+use medulla_decision_types::decision::RecordWindow;
+use medulla_decision_types::{
+    decision::statistical::retrieval::RetrievalOutcome,
+    decision::statistical::retrieval::StoredRetrievalOutcome,
+};
+use medulla_decision_types::{
+    decision::statistical::QuestionKind, decision::statistical::StatisticalErrorCode,
+};
 use medulla_numeric::decision::retrieval::{verdict, Verdict};
-use medulla_types::decision::statistical::log::DecisionLogEntry;
-use medulla_types::decision::statistical::retrieval::{RetrievalOutcome, StoredRetrievalOutcome};
-use medulla_types::decision::statistical::{QuestionKind, StatisticalErrorCode};
-use medulla_types::decision::RecordWindow;
 
 use super::stat_executor::ExecutionContext;
 use super::stat_log::{
