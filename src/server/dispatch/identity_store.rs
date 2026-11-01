@@ -99,7 +99,7 @@ pub(crate) async fn dispatch_identity(
     if authority == ElevationStampAuthority::External && stamp.actor != identity_actor(context) {
         return Response::err(req_id, FORGED);
     }
-    let mut guard = super::timed_write(state).await;
+    let mut guard = medulla_server_api::state::timed_write(state).await;
     // Credential expiry and session touches use time at apply, not before contention.
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let outcome =

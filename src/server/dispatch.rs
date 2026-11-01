@@ -344,15 +344,6 @@ mod resource_status_privacy_tests {
     }
 }
 
-/// Acquire the process-wide `ServerState` write lock, recording the wait (D-EIMG-2).
-pub(crate) async fn timed_write(
-    state: &Arc<RwLock<ServerState>>,
-) -> tokio::sync::RwLockWriteGuard<'_, ServerState> {
-    let started = DispatchLockInstant::now();
-    let guard = state.write().await;
-    medulla_kernel::metrics::observe_dispatch_lock_wait("write", started.elapsed().as_secs_f64());
-    guard
-}
 
 // Nested MessagePack values ride inside outer `bin` fields, which are opaque to
 // the transport's top-level grammar scan. Keep a second, tighter budget here so

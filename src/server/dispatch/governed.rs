@@ -73,7 +73,7 @@ pub(crate) async fn dispatch_governed_change(
         }
     };
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-    let mut guard = super::timed_write(state).await;
+    let mut guard = medulla_server_api::state::timed_write(state).await;
     let isolation = &mut guard.isolation;
     let outcome = match &op {
         GovernedChangeOp::Propose { request } => isolation
