@@ -230,7 +230,7 @@ epistemic = ["medulla-server-api/epistemic", "medulla-kernel/epistemic",
 # expensive recompute, reuses the always-linked RLS check). The formerly
 # opt-in TMS/causal siblings are also in the one main build as of P2 closure.
 # `--all-features` still enables it (redundantly, once `full` already does).
-epistemic-redaction = ["epistemic", "security", "medulla-epistemic/epistemic-redaction"]
+epistemic-redaction = ["medulla-server-api/epistemic-redaction", "epistemic", "security", "medulla-epistemic/epistemic-redaction"]
 # L53 + L46 — the bitemporal/paraconsistent-TMS query family
 # (`why`/`why_not`/`what_changed`/`what_evidence_would_change_this`/`is_believed`/the
 # `epistemic_status` acceptance capstone) wired onto the facade as
@@ -258,7 +258,7 @@ epistemic-tms = ["medulla-server-api/epistemic-tms", "medulla-kernel/epistemic-t
 # in the one main `full` build — LIGHT,
 # same posture as `epistemic-redaction` above. `--all-features` still enables it
 # (redundantly, once `full` already does).
-evidence-graph = ["epistemic", "medulla-epistemic/evidence-graph"]
+evidence-graph = ["medulla-server-api/evidence-graph", "epistemic", "medulla-epistemic/evidence-graph"]
 # EPI-P3-3 — calibrated causal reasoning + provenance-aware retrieval ranking
 # wired onto the facade as `Method::CausalEstimate` (do-calculus intervention
 # over a request-carried linear-Gaussian structural causal model) and
@@ -268,7 +268,7 @@ evidence-graph = ["epistemic", "medulla-epistemic/evidence-graph"]
 # crate's `Cargo.toml`); implies `epistemic` (the wire `Method` variants +
 # facade `medulla-epistemic` dep). HEAVY (genuine Pearl do-calculus intervention/
 # counterfactual computation). It is included in the one main `full` build.
-epistemic-causal = ["epistemic", "medulla-epistemic/epistemic-causal"]
+epistemic-causal = ["medulla-server-api/epistemic-causal", "epistemic", "medulla-epistemic/epistemic-causal"]
 # CONCEPT:MEDULLA-321 — the Analytics-Program numeric kernel (medulla-numeric: nalgebra + ndarray,
 # BLAS/LAPACK-free). Links the PURE Rust kernel (rlib) for Surface B in-database
 # analytics — the Python-extension FFI layer is behind medulla-numeric's OWN `python`
@@ -285,7 +285,7 @@ epistemic-causal = ["epistemic", "medulla-epistemic/epistemic-causal"]
 # for targeted crate checks; it does not define another supported product build. The
 # weak `medulla-plan?/numeric` edge turns on the UQL `ATTRIBUTE` executor (EH-523) whenever
 # the query planner is built.
-numeric = ["medulla-kernel/numeric", "dep:medulla-numeric", "medulla-query?/numeric", "medulla-plan?/numeric"]
+numeric = ["medulla-server-api/numeric", "medulla-kernel/numeric", "dep:medulla-numeric", "medulla-query?/numeric", "medulla-plan?/numeric"]
 # The general bounded 0-1 integer programme (`Method::Solve`). Wire DTOs are
 # unconditional in medulla-types; this gates the medulla-compute search and verifier.
 solve = ["medulla-compute/solve"]
@@ -437,7 +437,7 @@ tts-piper = [
 # `ColumnStoreIngest` trait. Pure Rust; adds zero new external crates.io
 # dependencies beyond what `medulla-viz-core` itself already resolves (serde/sha2/hex)
 # plus `bitvec`, already resolved elsewhere in this lockfile at the same version.
-viz-columnstore = ["viz", "dep:medulla-viz-columnstore"]
+viz-columnstore = ["medulla-server-api/viz-columnstore", "viz", "dep:medulla-viz-columnstore"]
 # D-VZ-1 lane V3a: static PNG/SVG/PDF export -- "the matplotlib replacement" --
 # resolved from a ViewSpec against a viz-columnstore ColumnStore, honoring
 # (never re-deriving) the tier `select_tier` chose. Hand-rolled PNG/PDF encoders
@@ -541,13 +541,13 @@ knowledge-batch = ["medulla-server-api/knowledge-batch", "medulla-kernel/knowled
 # body already runs whenever `query` is linked (its runtime kill-switch is
 # `MEDULLA_COST_OPT=0` → identity), so this feature simply makes the optimizer an
 # explicit part of the one main `full` build. Cheap (no extra deps — cost-opt = query).
-cost-opt = ["query", "dep:medulla-plan", "medulla-plan/cost-opt"]
+cost-opt = ["medulla-server-api/cost-opt", "query", "dep:medulla-plan", "medulla-plan/cost-opt"]
 # Physical parallel runtime (CONCEPT:MEDULLA-KG.query.parallel-runtime, handoff-1 Lane B): the
 # opt-in rayon-morsel `ParallelDriver` behind the Lane-0 `Driver` seam (pool width /
 # spill budget from `MEDULLA_EXEC_THREADS` / `_SPILL_MB`). Pulls rayon via
 # `medulla-plan/par-runtime`. It is an explicit source feature outside the supported product
 # bundles; the one main build routes through the byte-identical `SerialDriver`.
-par-runtime = ["query", "dep:medulla-plan", "medulla-plan/par-runtime"]
+par-runtime = ["medulla-server-api/par-runtime", "query", "dep:medulla-plan", "medulla-plan/par-runtime"]
 # Embedded BM25 full-text search + the lexical `RankText` op + the RRF `FuseRrf`
 # hybrid (CONCEPT:KG-2.215). Pulls medulla-text's Tantivy index (the Rust Lucene —
 # zstd-sys etc.) via medulla-plan's `text`, which IMPLIES `query`. HEAVY (≈140 transitive
@@ -577,7 +577,7 @@ federation-sql = ["medulla-server-api/federation-sql", "dep:medulla-plan", "medu
 # predicates + a packed Hilbert R-tree — only serde, NO GEOS/PROJ/C dep), which IMPLIES
 # `query` (the ops live inside the `query`-gated `Op`/`Pred` enums). It is pure Rust and
 # included in the one main build.
-geo = ["query", "dep:medulla-plan", "medulla-plan/geo", "medulla-types/geo", "dep:medulla-geo"]
+geo = ["medulla-server-api/geo", "query", "dep:medulla-plan", "medulla-plan/geo", "medulla-types/geo", "dep:medulla-geo"]
 # Array / tensor modality (CONCEPT:MEDULLA-085): the `Op::TensorScan { layer }` SOURCE op +
 # the `Op::TensorOp { kind }` TRANSFORM op (slice/reduce/elementwise), so an array
 # modality composes with Traverse/Rank/Filter in ONE UnifiedQuery plan. Pulls medulla-plan's
@@ -588,7 +588,7 @@ geo = ["query", "dep:medulla-plan", "medulla-plan/geo", "medulla-types/geo", "de
 # `TensorStore` write-back sink itself (`src/server/handlers/query.rs`), so the facade
 # needs the leaf crate's type, not just medulla-plan's internal use of it. It is pure Rust
 # and included in the one main build.
-tensor = ["query", "dep:medulla-plan", "medulla-plan/tensor", "medulla-types/tensor", "dep:medulla-tensor"]
+tensor = ["medulla-server-api/tensor", "query", "dep:medulla-plan", "medulla-plan/tensor", "medulla-types/tensor", "dep:medulla-tensor"]
 # Event-stream + complex-event-processing (CEP) modality (CONCEPT:MEDULLA-088): the
 # `Op::Cep { pattern }` TRANSFORM op — interpret a RowSet as a time-ordered event stream
 # and run a bounded NFA (Sequence/Within/Absence over sliding/tumbling windows) — so a
@@ -617,7 +617,7 @@ cypher = ["medulla-server-api/cypher", "medulla-kernel/cypher", "dep:medulla-que
 # CONCEPT:MEDULLA-KG.query.cypher-engine-shadow — the `MEDULLA_CYPHER_ENGINE`
 # rollout surface (legacy | plan | shadow) + its shadow-differential divergence log.
 # In the one main `full` build; a lean `cypher`-only build stays legacy-only.
-cypher-plan = ["medulla-kernel/cypher-plan", "cypher", "medulla-query/cypher-plan"]
+cypher-plan = ["medulla-server-api/cypher-plan", "medulla-kernel/cypher-plan", "cypher", "medulla-query/cypher-plan"]
 # Native GraphQL READ surface (CONCEPT:KG-2.235): a GraphQL query compiled to scans +
 # BFS over the GraphView via the medulla-graphql crate (schema-from-graph + a hand-written
 # parser + resolver). PURE-RUST — NO async-graphql (evaluated: ~80+ transitive crates +
@@ -664,14 +664,14 @@ obs = ["medulla-server-api/obs",
 # parser + evaluator (`medulla-tsdb/promql`) + the facade glue in `src/server/promql`; NO
 # new heavy dep. Implies `obs` (needs the listener + the durable SeriesStore + tsdb)
 # and is included in the one main build.
-promql = ["medulla-store/promql", "obs", "medulla-tsdb/promql"]
+promql = ["medulla-server-api/promql", "medulla-store/promql", "obs", "medulla-tsdb/promql"]
 # CONCEPT:MEDULLA-163 — distributed traces: OTLP-JSON span ingest + a Jaeger/OpenObserve
 # trace-search / assembly / service-dependency-graph HTTP API served on the obs
 # listener, over the pure-Rust `medulla-tsdb/traces` span store + the facade glue in
 # `src/server/traces`. Completes the observability trilogy (logs + metrics + traces).
 # NO new heavy dep. Implies `obs` (needs the listener + ObsState) and is included in
 # the one main build.
-traces = ["medulla-store/traces", "obs", "medulla-tsdb/traces"]
+traces = ["medulla-server-api/traces", "medulla-store/traces", "obs", "medulla-tsdb/traces"]
 # CONCEPT:MEDULLA-316 — the OBSERVABILITY EGRESS half + a Prometheus push receiver. Two
 # additive, feature-gated capabilities that close the obs loop the engine already
 # INGESTS (logs MEDULLA-160, metrics/PromQL MEDULLA-172, traces MEDULLA-163):
@@ -1085,9 +1085,9 @@ sparql-fuseki = ["sparql"]
 # SPARQL standards completeness (CONCEPT:MEDULLA-127/130/131) forwarded from medulla-rdf. All
 # pure-Rust (RustCrypto hashes; quick-xml/oxjsonld; oxrdf/oxttl/spargebra rdf-12 flags)
 # and included in the one main build.
-sparql-hash = ["sparql", "medulla-rdf/sparql-hash"]     # MD5/SHA1/SHA2 SPARQL hash builtins
+sparql-hash = ["medulla-server-api/sparql-hash", "sparql", "medulla-rdf/sparql-hash"]     # MD5/SHA1/SHA2 SPARQL hash builtins
 rdf-xml = ["medulla-server-api/rdf-xml", "rdf", "medulla-rdf/rdf-xml"]                 # RDF/XML reader+writer
-json-ld = ["rdf", "medulla-rdf/json-ld"]                 # JSON-LD 1.1 (expansion form)
+json-ld = ["medulla-server-api/json-ld", "rdf", "medulla-rdf/json-ld"]                 # JSON-LD 1.1 (expansion form)
 sparql-star = ["medulla-server-api/sparql-star", "sparql", "medulla-rdf/sparql-star"]      # RDF-star / SPARQL-star quoted triples
 # OGC GeoSPARQL baseline (CONCEPT:MEDULLA-261): the `geo:`/`geof:` vocabulary, `geo:wktLiteral`
 # parsing, and the core `geof:` spatial FILTER functions (sfWithin/sfIntersects/sfContains/
@@ -1095,7 +1095,7 @@ sparql-star = ["medulla-server-api/sparql-star", "sparql", "medulla-rdf/sparql-s
 # Composes the RDF/SPARQL surface with the existing spatial modality: IMPLIES both `sparql`
 # and `geo` (CONCEPT:MEDULLA-083 — the medulla-geo executor/leaf crate), reusing medulla-geo for ALL
 # geometry math (NO new external dep). Included in the one main build.
-geosparql = ["sparql", "geo", "medulla-rdf/geosparql"]
+geosparql = ["medulla-server-api/geosparql", "sparql", "geo", "medulla-rdf/geosparql"]
 # W3C SPARQL 1.1 Protocol HTTP endpoint (CONCEPT:MEDULLA-017): a minimal hand-rolled
 # HTTP/1.1 listener (the SAME dep-free idiom as the Prometheus `--metrics-addr`
 # exposition — NO axum/hyper/warp) so existing Stardog/Jena/rdflib SPARQL clients can
@@ -1164,8 +1164,8 @@ ros2-rmw = ["server", "streaming", "dep:cyclonedds", "dep:futures"]
 # back to CPU. The real CUDA backends are included only in the source-built
 # `full-extras` layer; the main and `cluster` builds link no cudarc (asserted by
 # `cargo tree`).
-gpu = ["ann", "medulla-core/ann-gpu", "tensor", "medulla-plan/tensor-gpu", "reasoning", "medulla-compute/gpu"]
-gpu-cuda = ["gpu", "medulla-core/ann-gpu-cuda", "medulla-plan/tensor-gpu-cuda", "medulla-compute/gpu-cuda"]
+gpu = ["medulla-server-api/gpu", "ann", "medulla-core/ann-gpu", "tensor", "medulla-plan/tensor-gpu", "reasoning", "medulla-compute/gpu"]
+gpu-cuda = ["medulla-server-api/gpu-cuda", "gpu", "medulla-core/ann-gpu-cuda", "medulla-plan/tensor-gpu-cuda", "medulla-compute/gpu-cuda"]
 # Opt-in umbrella (CONCEPT:MEDULLA-371) = the ONE main build (`full`) PLUS the heavy extras that
 # require an external toolchain/GPU to actually RUN (but build clean everywhere via
 # dynamic-loading, or a vendored cmake C build for `ros2-rmw`): the real CUDA backends +
@@ -1184,12 +1184,12 @@ owl = ["medulla-server-api/owl", "sparql", "medulla-rdf/owl", "medulla-types/owl
 # path (full cardinality/negation/nominals/reasoning-by-cases) that the tractable `owl`
 # EL⁺/RL path cannot decide. Pure Rust, no new dep, IMPLIES `owl`, and is included in
 # the one main build.
-owl-dl = ["owl", "medulla-rdf/owl-dl"]
+owl-dl = ["medulla-server-api/owl-dl", "owl", "medulla-rdf/owl-dl"]
 # The OWL/SPARQL cross-modal plan SOURCE ops `Op::Reason` / `Op::SparqlBgp`
 # (CONCEPT:KG-2.220) inside a UnifiedQuery plan. The unified-plan executor needs
 # DataFusion, so this IMPLIES `query` and is included in the one main build. Pulls
 # medulla-plan's `owl` (the op exec).
-owl-plan = ["owl", "query", "medulla-plan/owl", "medulla-types/owl-plan"]
+owl-plan = ["medulla-server-api/owl-plan", "owl", "query", "medulla-plan/owl", "medulla-types/owl-plan"]
 # OBDA / R2RML virtual graphs (CONCEPT:MEDULLA-KG.query.r2rml-virtual-graph / MEDULLA-KG.query.obda-query-rewrite,
 # Track J): expose the engine's OWN SQL user-tables (`medulla_query::TableStore`, behind
 # `query`) as a virtual RDF graph via an R2RML-style mapping (`medulla_rdf::obda`, behind
@@ -1255,7 +1255,7 @@ policy_export = ["security"]
 # `eg2.` protocol identity binding and `kvcache-server`'s KV-cache HTTP bearer auth —
 # rather than each surface vendoring its own copy.
 oidc = ["medulla-server-api/oidc", "dep:jsonwebtoken", "dep:ureq"]
-full = ["compute", "decide", "server", "server-tls", "query", "knowledge-batch", "cypher", "cypher-plan", "graphql", "medulla-graphql/crossmodal-tsdb", "redb", "ann", "ann-redb", "tsdb", "blob", "kv", "text", "sparql", "sparql-http", "sparql-hash", "rdf-xml", "json-ld", "sparql-star", "sparql-service", "shacl", "owl", "owl-dl", "owl-plan", "obda", "streaming", "wasm-udf", "security", "oidc", "federation", "federation-sql", "pgwire", "mysql-wire", "mssql-wire", "sqlite-wire", "bolt-wire", "redis-wire", "broker", "amqp-wire", "mqtt-wire", "stomp-wire", "geo", "tensor", "stream", "result-cache", "cold-tier", "cost", "cost-opt", "otel", "otel-export", "shex", "obs", "geosparql", "nl-query", "promql", "traces", "s3-api", "federation-search", "kvcache-server", "kvcache-compression", "numeric", "sqlite-file", "epistemic", "epistemic-redaction", "evidence-graph", "epistemic-tms", "epistemic-causal", "alignment", "jobs", "program-optimization", "statechart", "modality-serving", "embedded", "matview", "lake", "lake-rest", "viz", "viz-columnstore", "viz-static-export", "viz-interactive", "viz-graph-tiles"]
+full = ["medulla-server-api/full", "compute", "decide", "server", "server-tls", "query", "knowledge-batch", "cypher", "cypher-plan", "graphql", "medulla-graphql/crossmodal-tsdb", "redb", "ann", "ann-redb", "tsdb", "blob", "kv", "text", "sparql", "sparql-http", "sparql-hash", "rdf-xml", "json-ld", "sparql-star", "sparql-service", "shacl", "owl", "owl-dl", "owl-plan", "obda", "streaming", "wasm-udf", "security", "oidc", "federation", "federation-sql", "pgwire", "mysql-wire", "mssql-wire", "sqlite-wire", "bolt-wire", "redis-wire", "broker", "amqp-wire", "mqtt-wire", "stomp-wire", "geo", "tensor", "stream", "result-cache", "cold-tier", "cost", "cost-opt", "otel", "otel-export", "shex", "obs", "geosparql", "nl-query", "promql", "traces", "s3-api", "federation-search", "kvcache-server", "kvcache-compression", "numeric", "sqlite-file", "epistemic", "epistemic-redaction", "evidence-graph", "epistemic-tms", "epistemic-causal", "alignment", "jobs", "program-optimization", "statechart", "modality-serving", "embedded", "matview", "lake", "lake-rest", "viz", "viz-columnstore", "viz-static-export", "viz-interactive", "viz-graph-tiles"]
 all = ["full"]
 # D4 (CONCEPT:MEDULLA-KG.epistemic.epistemic-substrate): `epistemic` (the medulla-epistemic
 # claims/evidence/belief-state layer, E6/E2/D3/D5) is folded into `full` above so a
