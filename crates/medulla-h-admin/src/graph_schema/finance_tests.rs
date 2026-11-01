@@ -15,9 +15,9 @@ use super::test_support::{
 use medulla_core::graph::GraphSchemaSources;
 use medulla_server_api::api::admin::compose::validate_and_compose;
 
-const FINANCE: &str = include_str!("../../../crates/medulla-core/ontology/finance-v1.ttl");
+const FINANCE: &str = include_str!("../../../medulla-core/ontology/finance-v1.ttl");
 const FINANCE_SHAPES: &str =
-    include_str!("../../../crates/medulla-core/ontology/finance-v1.shapes.ttl");
+    include_str!("../../../medulla-core/ontology/finance-v1.shapes.ttl");
 const WIRED_MODULES: &[&str] = &[
     "core:foundation@1",
     "core:energy_geopolitics@1",
@@ -145,7 +145,7 @@ fn a_trend_flip_is_never_an_instrument() {
 #[test]
 fn the_trading_classes_are_folded_out_of_company_infra() {
     const COMPANY_INFRA: &str =
-        include_str!("../../../crates/medulla-core/ontology/company_infra-v1.ttl");
+        include_str!("../../../medulla-core/ontology/company_infra-v1.ttl");
     const FOLDED: &[&str] = &[
         "TradingStrategy",
         "TradingSignal",

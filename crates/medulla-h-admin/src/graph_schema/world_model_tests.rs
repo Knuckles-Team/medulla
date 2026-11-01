@@ -35,17 +35,17 @@ const LIFE_IRI: &str = "http://knuckles.team/kg/life";
 const WORLD_MODEL_MODULES: &[(&str, &str, &[&str])] = &[
     (
         "life",
-        include_str!("../../../crates/medulla-core/ontology/life-v1.ttl"),
+        include_str!("../../../medulla-core/ontology/life-v1.ttl"),
         &[CORE_IRI],
     ),
     (
         "environment",
-        include_str!("../../../crates/medulla-core/ontology/environment-v1.ttl"),
+        include_str!("../../../medulla-core/ontology/environment-v1.ttl"),
         &[CORE_IRI, LIFE_IRI],
     ),
     (
         "nutrition",
-        include_str!("../../../crates/medulla-core/ontology/nutrition-v1.ttl"),
+        include_str!("../../../medulla-core/ontology/nutrition-v1.ttl"),
         &[CORE_IRI, LIFE_IRI],
     ),
 ];
@@ -273,7 +273,7 @@ fn every_world_model_class_is_mapped_and_nothing_external_is_imported() {
 /// record kind connectors ingest.
 #[test]
 fn world_model_shapes_are_their_own_document() {
-    let document = include_str!("../../../crates/medulla-core/ontology/world_model-v1.shapes.ttl");
+    let document = include_str!("../../../medulla-core/ontology/world_model-v1.shapes.ttl");
     let triples = medulla_rdf::mapping::parse_turtle(document).unwrap();
     assert_eq!(triples.len(), 123);
     assert_shape_targets(
