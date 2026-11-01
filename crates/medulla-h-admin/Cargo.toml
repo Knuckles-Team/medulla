@@ -42,6 +42,8 @@ tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sy
 tokio-rustls = { version = "0.26", optional = true }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", optional = true }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-isolation = { path = "../medulla-isolation" }
 
 [features]
 test-support = []
