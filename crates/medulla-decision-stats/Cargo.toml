@@ -19,6 +19,7 @@ medulla-types = { path = "../medulla-types", optional = true }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 serde_json = "1.0"
+medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 
 [features]
 decision = ["dep:medulla-types", "medulla-numeric/decision"]
