@@ -284,7 +284,7 @@ struct TopUpSourceEffect<'a> {
 /// replacement parent, old source receipt and policy/budget/park rows commit in
 /// one admitted graph transaction on every replica.
 #[cfg(feature = "raft")]
-pub(crate) fn commit_repository_enrichment_top_up(
+pub fn commit_repository_enrichment_top_up(
     shard: &Shard,
     graph: &str,
     transition: &crate::redb_store::enrichment_top_up::EnrichmentTopUpTransition,

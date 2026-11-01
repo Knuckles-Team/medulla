@@ -189,7 +189,7 @@ pub use control::{
     put_plan_matview, scan_matview_operator_state, scan_plan_matviews,
 };
 #[cfg(feature = "compute-dist")]
-pub(crate) use control::{put_matview, scan_matviews};
+pub use control::{put_matview, scan_matviews};
 pub(crate) use crossmodal::apply_crossmodal_projection_rows;
 #[cfg(any(test, feature = "server"))]
 pub use crossmodal::{commit_crossmodal, CrossModalStaged};

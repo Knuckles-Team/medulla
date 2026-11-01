@@ -255,7 +255,7 @@ pub fn scan_xshard_decisions(shard: &Shard) -> XshardDecisionScan {
 
 /// Durably upsert a named materialized view's serialized blob.
 #[cfg(feature = "compute-dist")]
-pub(crate) fn put_matview(shard: &Shard, name: &str, blob: &[u8]) -> Result<(), String> {
+pub fn put_matview(shard: &Shard, name: &str, blob: &[u8]) -> Result<(), String> {
     let op_id = format!("matview/put/{name}");
     control_write!(shard, &op_id, |control| {
         control
@@ -269,7 +269,7 @@ pub(crate) fn put_matview(shard: &Shard, name: &str, blob: &[u8]) -> Result<(), 
 
 /// Scan every persisted materialized view `(name, blob)` for reload on boot.
 #[cfg(feature = "compute-dist")]
-pub(crate) fn scan_matviews(shard: &Shard) -> MatViewScanResult {
+pub fn scan_matviews(shard: &Shard) -> MatViewScanResult {
     let read = shard.control_read()?;
     let table = match read.open_owner_table(MATVIEWS) {
         Ok(table) => table,

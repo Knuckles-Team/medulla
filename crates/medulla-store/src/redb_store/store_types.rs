@@ -393,7 +393,7 @@ pub const XSHARD_DECISION: TableDefinition<&str, u8> =
 // current result rows). Durable so a matview survives restart; the handler reloads the
 // in-RAM `MatViewStore` from this table on boot and refreshes incrementally on a delta.
 // Lives in the authoritative shard for the same-file reason as the Raft log + xshard rows.
-pub(crate) const MATVIEWS: TableDefinition<&str, &[u8]> = TableDefinition::new("matviews");
+pub const MATVIEWS: TableDefinition<&str, &[u8]> = TableDefinition::new("matviews");
 
 // Named PLAN-BACKED materialized views (CONCEPT:MEDULLA-KG.storage.plan-backed-matview). One
 // row per matview keyed by `name`, holding the MessagePack-serialized plan-backed
