@@ -7,7 +7,7 @@
 mod admin_agent_library_security;
 #[cfg(all(test, feature = "raft", feature = "harness"))]
 mod placement_harness;
-#[cfg(all(test, feature = "raft"))]
+#[cfg(all(test, feature = "raft", feature = "harness"))]
 mod resource_acceptance_test;
 #[cfg(all(test, feature = "redb"))]
 mod server_api_saga;
@@ -31,9 +31,9 @@ mod mutation_redb;
 mod persistence_txn;
 #[cfg(test)]
 mod server_api_mutation_inventory;
-#[cfg(all(test, feature = "raft"))]
+#[cfg(all(test, feature = "raft", feature = "harness"))]
 mod raft_cluster;
-#[cfg(all(test, feature = "raft"))]
+#[cfg(all(test, feature = "raft", feature = "harness"))]
 mod raft_command;
 #[cfg(test)]
 mod medulla_h_ingest_repository_index_tests;
