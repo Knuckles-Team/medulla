@@ -30,8 +30,10 @@ mod query_seam;
 
 
 // ---- merged from the moved module root (src/server/mod.rs) ----
+#[cfg(feature = "federation")]
 use medulla_server_ops::api::query_txn::ForeignStateExt;
 use medulla_server_cdc::cdc::CdcStateExt;
+#[cfg(feature = "ann-redb")]
 use medulla_h_retrieve::semantic_index_runtime::PendingRf019Activation;
 // CONCEPT:MEDULLA-KG.query.tokio-service-server — Tokio Service Server
 //
