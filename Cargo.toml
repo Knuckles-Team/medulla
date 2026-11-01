@@ -168,7 +168,7 @@ otel = ["medulla-kernel/otel",
     "dep:tracing-opentelemetry",
     "server",
 ]
-finance = ["medulla-h-decide/finance", "medulla-h-compute/finance", "medulla-compute/finance", "medulla-types/finance", "medulla-result-types/finance", "medulla-protocol-types/finance"]
+finance = ["medulla-h-decide/finance", "medulla-h-compute/finance", "medulla-compute/finance", "medulla-finance-quant/analytics", "medulla-types/finance", "medulla-result-types/finance", "medulla-protocol-types/finance"]
 ast = ["medulla-h-ingest/ast", "medulla-server-api/ast", "medulla-store/ast", "medulla-compute/ast"]
 # Extended-language grammar tier (CONCEPT:KG-2.106), folded into `full`.
 ast-extended = ["medulla-compute/ast-extended"]

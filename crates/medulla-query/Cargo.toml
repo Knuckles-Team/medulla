@@ -57,7 +57,7 @@ cypher-plan = ["cypher", "dep:tracing"]
 # Finance aggregate UDFs (`var`, `cvar`) — forward to medulla-compute's finance kernels.
 # Gated (and implies `sql`) so a no-finance build skips them AND keeps nalgebra out
 # of the default tree (CONCEPT:KG-2.184).
-finance = ["sql", "medulla-compute/finance"]
+finance = ["sql", "medulla-compute/finance", "medulla-finance-quant/analytics"]
 # CONCEPT:MEDULLA-329 — Analytics-Program Surface-B numeric SQL operators. Registers the
 # medulla-numeric-backed DataFusion UDFs/UDAFs (`cosine_sim`, `l2_normalize`, `zscore`,
 # `covariance`) so analytics run in-engine over resident columns (compute-near-data,
