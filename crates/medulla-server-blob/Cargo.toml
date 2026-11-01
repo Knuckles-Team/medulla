@@ -43,6 +43,7 @@ medulla-isolation = { path = "../medulla-isolation" }
 
 medulla-shacl = { path = "../medulla-shacl", optional = true }
 medulla-server-auth = { path = "../medulla-server-auth" }
+medulla-federation = { path = "../medulla-federation" }
 
 [features]
 alignment = ["blob", "dep:medulla-modality", "dep:medulla-alignment", "medulla-server-api/alignment"]

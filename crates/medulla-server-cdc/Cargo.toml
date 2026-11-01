@@ -41,6 +41,7 @@ medulla-epistemic = { path = "../medulla-epistemic", optional = true }
 medulla-modality = { path = "../medulla-modality", optional = true }
 medulla-shacl = { path = "../medulla-shacl", optional = true }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
+medulla-exec = { path = "../medulla-exec" }
 
 [features]
 broker = ["medulla-server-api/broker"]
