@@ -1,8 +1,8 @@
 # [Repository] constitution
 
-This repository inherits the [organization constitution](https://github.com/Knuckles-Team/pipelines/blob/main/.specify/memory/constitution.md) version 1.4.0. Every article of that constitution applies here. Copy this file to `.specify/memory/constitution.md` and keep it to one page. `.specify/templates/` is vended by pipelines; do not edit it.
+This repository inherits the [organization constitution](https://github.com/Knuckles-Team/pipelines/blob/main/.specify/memory/constitution.md) version 1.5.0. Every article of that constitution applies here. Copy this file to `.specify/memory/constitution.md` and keep it to one page. `.specify/templates/` is vended by pipelines; do not edit it.
 
-**Inherits**: organization constitution v1.4.0 | **Version**: 1.0.0 | **Ratified**: [date] | **Last amended**: [date]
+**Inherits**: organization constitution v1.5.0 | **Version**: 1.0.0 | **Ratified**: [date] | **Last amended**: [date]
 
 ## Organization standards
 
