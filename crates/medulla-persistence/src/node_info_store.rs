@@ -21,6 +21,8 @@
 //! dedicated, own-file redb table — at most one row per cluster node, never
 //! per-tenant/per-graph data.
 
+#[cfg(feature = "raft")]
+use crate::AsRedb as _;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::RwLock;
