@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use super::MutationScopeIdentity;
+use super::{DurabilityDomain, MutationScope, MutationScopeIdentity};
 
 /// A projection/index/CDC/audit/lineage notification to publish after commit.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -111,5 +111,114 @@ impl MutationOutboxRecord {
 impl MutationProjectionCursor {
     pub fn validate_identity(&self) -> Result<(), String> {
         self.identity.validate_digest()
+    }
+}
+
+/// First product on-disk/wire schema of every mutation batch and record. Any
+/// other schema is incompatible and is rejected by current-only readers.
+pub const MUTATION_BATCH_VERSION: u16 = 1;
+/// Most headers one outbox intent may carry.
+pub const MAX_MUTATION_OUTBOX_HEADERS: usize = 100_000;
+/// Largest byte total one mutation write may account.
+pub const MAX_MUTATION_WRITE_BYTES: usize = 64 * 1024 * 1024;
+
+/// Add `added` bytes to a write's running `total`, refusing past the budget.
+pub fn account_write_bytes(total: &mut usize, added: usize) -> Result<(), String> {
+    *total = total
+        .checked_add(added)
+        .filter(|count| *count <= MAX_MUTATION_WRITE_BYTES)
+        .ok_or_else(|| "mutation write exceeds its byte budget".to_string())?;
+    Ok(())
+}
+
+/// Refuse an empty, padded or control-character mutation text field.
+pub fn validate_required(value: &str, label: &str) -> Result<(), String> {
+    if value.is_empty() || value.trim() != value || value.chars().any(char::is_control) {
+        return Err(format!("{label} is invalid"));
+    }
+    Ok(())
+}
+
+/// Refuse a record whose schema is not [`MUTATION_BATCH_VERSION`].
+pub fn validate_record_schema(version: u16, record_name: &str) -> Result<(), String> {
+    if version != MUTATION_BATCH_VERSION {
+        return Err(format!(
+            "unsupported mutation {record_name} version {version} (expected {MUTATION_BATCH_VERSION})"
+        ));
+    }
+    Ok(())
+}
+
+/// Refuse a committed version that does not match its typed scope.
+pub fn validate_committed_scope(
+    scope: &MutationScope,
+    committed: CommittedVersion,
+    record_name: &str,
+) -> Result<(), String> {
+    let valid = match (scope, committed) {
+        (MutationScope::Graph { .. }, CommittedVersion::Graph { source, target }) => {
+            source.checked_add(1) == Some(target)
+        }
+        (MutationScope::Native { .. }, CommittedVersion::Native { source, target }) => {
+            source.checked_add(1) == Some(target)
+        }
+        (MutationScope::Native { domain, .. }, CommittedVersion::None) => matches!(
+            domain,
+            DurabilityDomain::ControlPlane | DurabilityDomain::Lifecycle
+        ),
+        _ => false,
+    };
+    if valid {
+        Ok(())
+    } else {
+        Err(format!(
+            "mutation {record_name} committed version does not match its typed scope"
+        ))
+    }
+}
+
+impl MutationOutboxRecord {
+    pub fn validate(&self) -> Result<(), String> {
+        validate_record_schema(self.schema_version, "outbox")?;
+        self.validate_identity()?;
+        validate_required(&self.batch_id, "mutation outbox batch_id")?;
+        validate_required(&self.intent.topic, "mutation outbox topic")?;
+        validate_required(&self.intent.key, "mutation outbox key")?;
+        validate_committed_scope(self.identity.scope(), self.committed_version, "outbox")
+    }
+
+    pub fn validate_write_budget(&self) -> Result<(), String> {
+        self.validate()?;
+        let mut bytes = 0usize;
+        for size in [
+            self.batch_id.len(),
+            self.intent.topic.len(),
+            self.intent.key.len(),
+            self.intent.payload.len(),
+        ] {
+            account_write_bytes(&mut bytes, size)?;
+        }
+        if self.intent.headers.len() > MAX_MUTATION_OUTBOX_HEADERS {
+            return Err("mutation write exceeds its header budget".to_string());
+        }
+        for (key, value) in &self.intent.headers {
+            account_write_bytes(&mut bytes, key.len())?;
+            account_write_bytes(&mut bytes, value.len())?;
+        }
+        Ok(())
+    }
+}
+
+impl MutationProjectionCursor {
+    pub fn validate(&self) -> Result<(), String> {
+        validate_record_schema(self.schema_version, "projection cursor")?;
+        self.validate_identity()?;
+        validate_required(&self.projection, "mutation projection")?;
+        validate_required(&self.batch_id, "mutation projection batch_id")?;
+        validate_committed_scope(
+            self.identity.scope(),
+            self.committed_version,
+            "projection cursor",
+        )
     }
 }

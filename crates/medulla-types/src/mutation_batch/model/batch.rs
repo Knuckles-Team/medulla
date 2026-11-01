@@ -1,10 +1,8 @@
-use std::collections::BTreeMap;
-
 use serde::{Deserialize, Serialize};
 
 use super::{
-    MutationCapability, MutationEnvelope, MutationOperation, MutationOutboxRecord, MutationScope,
-    MutationScopeIdentity,
+    MutationCapability, MutationEnvelope, MutationOperation, MutationOutboxIntent,
+    MutationOutboxRecord, MutationScope, MutationScopeIdentity,
 };
 use crate::contract::Digest256;
 
@@ -124,7 +122,7 @@ impl MutationBatch {
             input.revision_idempotency_key,
         )?;
         let batch = Self {
-            schema_version: crate::mutation_batch::MUTATION_BATCH_VERSION,
+            schema_version: crate::mutation_scope::MUTATION_BATCH_VERSION,
             batch_id: input.replacement_batch_id.to_string(),
             envelope,
             identity,
@@ -180,7 +178,7 @@ impl MutationBatch {
     ) -> Self {
         let (operations, outbox) = content;
         Self {
-            schema_version: crate::mutation_batch::MUTATION_BATCH_VERSION,
+            schema_version: crate::mutation_scope::MUTATION_BATCH_VERSION,
             batch_id: batch_id.to_string(),
             envelope,
             identity,

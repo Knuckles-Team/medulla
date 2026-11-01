@@ -11,8 +11,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::contract::BoundedVec;
 
-use super::digest::digest_text;
 use super::{PremiseClass, PremiseProvenance, PremiseRef};
+use crate::solve_scalar::digest_text;
 
 pub const ANSWER_RANKING_SCHEMA: &str = "answer-candidate-ranking/v1";
 pub const MAX_ANSWER_CANDIDATES: usize = 16;

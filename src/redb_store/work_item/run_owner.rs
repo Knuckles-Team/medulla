@@ -226,7 +226,7 @@ fn validate_completion_event(
     event: &medulla_types::MutationOutboxRecord,
 ) -> Result<(), String> {
     use sha2::{Digest, Sha256};
-    if event.schema_version != medulla_types::mutation_batch::MUTATION_BATCH_VERSION
+    if event.schema_version != medulla_types::mutation_scope::MUTATION_BATCH_VERSION
         || &event.identity != scope
         || event.batch_id != batch
         || event.intent.key != batch

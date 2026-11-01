@@ -1539,7 +1539,7 @@ mod tests {
     fn an_image_behind_its_durable_cursor_refuses_to_advance() {
         fn watermark(target: u64) -> MutationProjectionCursor {
             MutationProjectionCursor {
-                schema_version: medulla_types::mutation_batch::MUTATION_BATCH_VERSION,
+                schema_version: medulla_types::mutation_scope::MUTATION_BATCH_VERSION,
                 projection: CONSUMER.to_string(),
                 identity: medulla_types::mutation_scope::MutationScopeIdentity::fixed_graph(
                     "graph-shard",
@@ -1878,10 +1878,10 @@ mod tests {
         use medulla_types::mutation_batch::MutationOperation;
         use medulla_types::mutation_batch::VersionExpectation;
         use medulla_types::mutation_batch::BATCH_COMPILED_METHODS;
-        use medulla_types::mutation_batch::MUTATION_BATCH_VERSION;
         use medulla_types::mutation_scope::DurabilityDomain;
         use medulla_types::mutation_scope::MutationOutboxIntent;
         use medulla_types::mutation_scope::MutationSurface;
+        use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
 
         // A CALLER identity. `shard::graph_scope_identity` builds the
         // POST-binding shard scope `(GRAPH_SHARD_TENANT, graph, incarnation)`,

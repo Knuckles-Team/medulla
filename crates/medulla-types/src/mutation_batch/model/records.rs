@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::{CommittedVersion, MutationBatch, MutationOutboxIntent, MutationScopeIdentity};
+use super::{CommittedVersion, MutationBatch, MutationScopeIdentity};
 
 /// Durable terminal state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

@@ -1,7 +1,7 @@
 //! Scope identity tests that reach the batch envelope helpers.
 
 mod tests {
-    use super::*;
+    use super::super::*;
     use crate::mutation_scope::*;
 
     fn incarnation(value: &str) -> IncarnationId {

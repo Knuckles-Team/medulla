@@ -6,9 +6,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::digest::digest_text;
 use super::record::{AbstainReason, EvidenceClass, PremiseRef};
 use crate::contract::BoundedVec;
+use crate::solve_scalar::digest_text;
 
 /// Format identity of the composed orchestration answer envelope.
 pub const EXECUTION_ANSWER_SCHEMA_VERSION: u16 = 1;

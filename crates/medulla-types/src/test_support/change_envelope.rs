@@ -42,7 +42,7 @@ fn minimal_mutation_envelope() -> crate::mutation_batch::MutationEnvelope {
 
 pub fn minimal_envelope() -> ChangeEnvelope {
     let mut mutation = crate::mutation_batch::MutationBatch {
-        schema_version: crate::mutation_batch::MUTATION_BATCH_VERSION,
+        schema_version: crate::mutation_scope::MUTATION_BATCH_VERSION,
         batch_id: "batch-1".into(),
         envelope: minimal_mutation_envelope(),
         identity: crate::mutation_scope::MutationScopeIdentity::graph(

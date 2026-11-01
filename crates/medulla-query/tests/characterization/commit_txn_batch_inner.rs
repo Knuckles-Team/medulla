@@ -27,7 +27,6 @@ use medulla_types::mutation_batch::MutationBatch;
 use medulla_types::mutation_batch::MutationEnvelope;
 use medulla_types::mutation_batch::MutationOperation;
 use medulla_types::mutation_batch::VersionExpectation;
-use medulla_types::mutation_batch::MUTATION_BATCH_VERSION;
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::IncarnationId;
 use medulla_types::mutation_scope::LogicalName;
@@ -36,6 +35,7 @@ use medulla_types::mutation_scope::MutationScopeIdentity;
 use medulla_types::mutation_scope::MutationSurface;
 use medulla_types::mutation_scope::ScopeTenantId;
 use medulla_types::mutation_scope::COMPILED_BATCH_INCARNATION;
+use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
 
 const TENANT: &str = "tenant-commit-txn-batch";
 const GRAPH: &str = "graph-commit-txn-batch";

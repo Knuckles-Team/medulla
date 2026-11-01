@@ -14,9 +14,7 @@ pub use fanout::{ShardFanoutOutcome, ShardFanoutReport, MAX_FANOUT_SUB_BATCHES};
 pub use fault::apply_certification_fault;
 pub use model::*;
 
-/// First product on-disk/wire schema. Any other schema is incompatible and is
-/// rejected by current-only readers.
-pub const MUTATION_BATCH_VERSION: u16 = 1;
+use crate::mutation_scope::*;
 
 #[cfg(test)]
 pub(crate) mod tests {

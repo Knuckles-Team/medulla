@@ -12,7 +12,7 @@ use super::policy::DecisionPolicy;
 use super::record::{CandidateFacts, DecisionInputs, DecisionRecord};
 use super::statistical::StatisticalDecisionRecord;
 use crate::agent_library::AgentLibraryLifecycle;
-use crate::solve_scalar::{digest_text, Sha256Digest, DIGEST_TEXT_PREFIX};
+use crate::solve_scalar::{digest_text, DIGEST_TEXT_PREFIX};
 
 /// Domain of a v1 (assembly) decision record.
 pub const DECISION_RECORD_DIGEST_DOMAIN: &str = "eg/decision-record/v1";

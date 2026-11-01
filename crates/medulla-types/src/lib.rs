@@ -632,10 +632,15 @@ pub use modality::{
 // representable. `MutationVersionScope` and `NON_GRAPH_SOURCE_VERSION` are therefore
 // not re-exported: they have no v1 meaning, and keeping an alias would be exactly the
 // compatibility seam RF-ADR-001 forbids.
-pub use mutation_batch::{
-    MutationBatch, MutationBatchCommit, MutationBatchRecord, MutationBatchStatus, MutationEnvelope,
-    MutationOperation, MutationStateDescriptor, VersionExpectation, MUTATION_BATCH_VERSION,
-};
+pub use mutation_batch::MutationBatch;
+pub use mutation_batch::MutationBatchCommit;
+pub use mutation_batch::MutationBatchRecord;
+pub use mutation_batch::MutationBatchStatus;
+pub use mutation_batch::MutationEnvelope;
+pub use mutation_batch::MutationOperation;
+pub use mutation_batch::MutationStateDescriptor;
+pub use mutation_batch::VersionExpectation;
+pub use mutation_scope::MUTATION_BATCH_VERSION;
 pub use mutation_scope::{
     CommittedVersion, IncarnationId, LogicalName, MutationOutboxIntent, MutationOutboxLease,
     MutationOutboxRecord, MutationProjectionCursor, MutationScope, MutationScopeIdentity,

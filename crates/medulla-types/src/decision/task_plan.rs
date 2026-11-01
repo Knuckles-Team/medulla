@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::contract::BoundedVec;
 
-use super::digest::digest_text;
+use crate::solve_scalar::digest_text;
 
 mod call;
 pub use call::{

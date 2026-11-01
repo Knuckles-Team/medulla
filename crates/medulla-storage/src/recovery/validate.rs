@@ -760,7 +760,7 @@ mod replacement_parent_tests {
             IncarnationId::new("incarnation:replacement-parent").unwrap(),
         );
         let old = MutationOutboxRecord {
-            schema_version: medulla_types::mutation_batch::MUTATION_BATCH_VERSION,
+            schema_version: medulla_types::mutation_scope::MUTATION_BATCH_VERSION,
             batch_id: "old-source".into(),
             ordinal: 0,
             identity: identity.clone(),
@@ -810,7 +810,7 @@ mod replacement_parent_tests {
         };
         parent.validate().unwrap();
         let row = MutationOutboxRecord {
-            schema_version: medulla_types::mutation_batch::MUTATION_BATCH_VERSION,
+            schema_version: medulla_types::mutation_scope::MUTATION_BATCH_VERSION,
             batch_id: "new-source".into(),
             ordinal: 0,
             identity: parent.identity.clone(),
