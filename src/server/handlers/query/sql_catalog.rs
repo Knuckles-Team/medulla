@@ -372,7 +372,7 @@ pub(crate) fn matched_node_ids(core: &GraphCore, selector: &medulla_sql::sql::Wh
 /// local name because `sql_write` imports this module's helpers, while the
 /// implementation itself has one canonical owner for every SQL transport.
 #[cfg(feature = "query")]
-pub(crate) use medulla_query::columns_from_defs as to_store_columns;
+pub(crate) use medulla_sql::columns_from_defs as to_store_columns;
 
 /// Lower a decoded `ALTER TABLE` action into the shared transactional table-store
 /// operation. The SQL native coordinator can then apply the catalog change and its

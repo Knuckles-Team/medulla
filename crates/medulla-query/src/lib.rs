@@ -126,27 +126,6 @@ pub use tables::TxnOp;
 #[cfg(feature = "sql")]
 pub use tables::UserAnnAuthority;
 
-#[cfg(feature = "sql")]
-/// Resolve parsed SQL column declarations into the durable table-schema columns
-/// consumed by every SQL transport. Keeping this conversion beside the two
-/// types it joins prevents the embedded, native, and wire paths from drifting.
-pub fn columns_from_defs(cols: &[ColumnDef]) -> Result<Vec<Column>, String> {
-    cols.iter()
-        .map(|column| {
-            let ty = ColumnType::parse(&column.type_name)?;
-            Ok(Column {
-                name: column.name.clone(),
-                ty,
-                nullable: column.nullable,
-                primary_key: column.primary_key,
-                unique: column.unique,
-                serial: column.serial,
-                default: column.default.clone(),
-                check: column.check.clone(),
-            })
-        })
-        .collect()
-}
 
 
 #[cfg(feature = "sql")]
@@ -159,25 +138,7 @@ pub mod index;
 pub mod migration;
 
 
-/// CONCEPT:MEDULLA-KG.query.surface-b-numeric-operators — Analytics-Program Surface-B numeric SQL operators (`cosine_sim`,
-/// `l2_normalize`, `zscore`, `covariance`) backed by the `medulla-numeric` kernel. Feature
-/// `numeric` (out of `pi`); no pyo3 in the engine build.
-#[cfg(feature = "numeric")]
-pub mod numeric;
 
-/// EH-522 — `eg_<func>(…) OVER (…)` window functions over the series kernels.
-#[cfg(feature = "numeric")]
-pub mod series_udwf;
 
-/// Sketch-backed SQL aggregate UDFs (CONCEPT:MEDULLA-KG.query.approx-distinct-cardinality, W4.5/N5):
-/// `approx_distinct`/`approx_frequency`/`minhash_signature` + the `minhash_similarity` scalar.
-/// Always-on under base `sql` — the underlying sketches (`medulla_compute::sketch`) are pure-Rust
-/// with zero heavy deps, already-linked `medulla-compute` unconditionally carries them.
-#[cfg(feature = "sql")]
-pub mod sketch_udfs;
 
-#[cfg(feature = "sql")]
-pub mod tablefuncs;
 
-#[cfg(feature = "sql")]
-pub mod udfs;

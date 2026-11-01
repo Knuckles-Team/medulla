@@ -340,7 +340,7 @@ mod tests {
         let ctx = SessionContext::new();
         ctx.register_table("items", items_table(&embed))
             .expect("register");
-        ctx.register_udf(medulla_query::udfs::vector_cosine_udf());
+        ctx.register_udf(medulla_sql_udfs::udfs::vector_cosine_udf());
         ctx.register_udf(medulla_embed_udf_with(Some(embed)));
 
         let user_sql = "SELECT id FROM items ORDER BY emb <=> medulla_embed('leaky pump') LIMIT 1";

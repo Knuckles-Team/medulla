@@ -331,7 +331,7 @@ fn extract_quoted_value(
 
 /// Resolve a classify `ColumnDef` (raw SQL type spelling) into a store [`Column`].
 pub(crate) fn to_store_columns(cols: &[medulla_sql::sql::ColumnDef]) -> WireResult<Vec<Column>> {
-    medulla_query::columns_from_defs(cols).map_err(user_err)
+    medulla_sql::columns_from_defs(cols).map_err(user_err)
 }
 
 /// Lower a decoded `ALTER TABLE` plan into the matching buffered [`TxnOp`] (CONCEPT:MEDULLA-KG.query.register-user-tables-alongside

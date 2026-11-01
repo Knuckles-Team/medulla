@@ -29,8 +29,8 @@ use medulla_query::tables::ann_plan::AnnIndexPlan;
 use super::providers::{infer_nodes, EdgesTableProvider, NodesTableProvider, SqlCache};
 use super::spill::CancellationToken;
 use super::store_catalog::{reads_index_status, StoreCatalog};
-use medulla_query::{tablefuncs::BetweennessFunc, tablefuncs::GenerateSeriesFunc, tablefuncs::PagerankFunc};
-use medulla_query::{udfs::base64_decode_udf, udfs::base64_encode_udf, udfs::bm25_match_udf, udfs::bm25_score_udf, udfs::bm25_snippet_udf, udfs::epistemic_decay_udf, udfs::greatest_udf, udfs::int4range_udf, udfs::ipcontains_udf, udfs::ipfamily_udf, udfs::iphost_udf, udfs::ipmasklen_udf, udfs::json_get_f64_udf, udfs::json_get_i64_udf, udfs::json_get_udf, udfs::least_udf, udfs::md5_udf, udfs::range_contained_by_udf, udfs::range_contains_range_udf, udfs::range_contains_udf, udfs::range_overlaps_udf, udfs::sha1_udf, udfs::sha256_udf, udfs::time_bucket_udf, udfs::tsrange_udf, udfs::vector_cosine_udf, udfs::vector_ip_udf, udfs::vector_l2_udf};
+use medulla_sql_udfs::{tablefuncs::BetweennessFunc, tablefuncs::GenerateSeriesFunc, tablefuncs::PagerankFunc};
+use medulla_sql_udfs::{udfs::base64_decode_udf, udfs::base64_encode_udf, udfs::bm25_match_udf, udfs::bm25_score_udf, udfs::bm25_snippet_udf, udfs::epistemic_decay_udf, udfs::greatest_udf, udfs::int4range_udf, udfs::ipcontains_udf, udfs::ipfamily_udf, udfs::iphost_udf, udfs::ipmasklen_udf, udfs::json_get_f64_udf, udfs::json_get_i64_udf, udfs::json_get_udf, udfs::least_udf, udfs::md5_udf, udfs::range_contained_by_udf, udfs::range_contains_range_udf, udfs::range_contains_udf, udfs::range_overlaps_udf, udfs::sha1_udf, udfs::sha256_udf, udfs::time_bucket_udf, udfs::tsrange_udf, udfs::vector_cosine_udf, udfs::vector_ip_udf, udfs::vector_l2_udf};
 use medulla_query::schema::StoredFunction;
 use medulla_query::schema::TableSchema;
 use medulla_query::tables::TableStore;
@@ -93,7 +93,7 @@ fn register_pg_common(ctx: &SessionContext) {
 /// tables-only obs path so both expose the identical operator set.
 #[cfg(feature = "numeric")]
 fn register_numeric(ctx: &SessionContext) {
-    use medulla_query::{numeric::cosine_sim_udf, numeric::covariance_udaf, numeric::kmeans_udaf, numeric::l2_normalize_udf, numeric::pca_udaf, numeric::svd_udaf, numeric::zscore_udf};
+    use medulla_sql_udfs::{numeric::cosine_sim_udf, numeric::covariance_udaf, numeric::kmeans_udaf, numeric::l2_normalize_udf, numeric::pca_udaf, numeric::svd_udaf, numeric::zscore_udf};
     ctx.register_udf(cosine_sim_udf());
     ctx.register_udf(l2_normalize_udf());
     ctx.register_udf(zscore_udf());
@@ -106,7 +106,7 @@ fn register_numeric(ctx: &SessionContext) {
     ctx.register_udaf(kmeans_udaf());
     // EH-522 — `medulla_zscore(v, 60) OVER (PARTITION BY series ORDER BY ts)` and the rest of
     // the `DERIVE` table, on the same kernels as UQL `DERIVE`.
-    for udwf in medulla_query::series_udwf::series_window_udfs() {
+    for udwf in medulla_sql_udfs::series_udwf::series_window_udfs() {
         ctx.register_udwf(udwf);
     }
 }
@@ -189,10 +189,10 @@ pub fn exec_sql_over_tables(
         register_pg_common(&ctx);
         // CONCEPT:MEDULLA-KG.query.approx-distinct-cardinality (W4.5/N5) — sketch-backed aggregates over the obs
         // Arrow tables too (e.g. `SELECT approx_distinct(trace_id) FROM logs`).
-        ctx.register_udaf(medulla_query::sketch_udfs::approx_distinct_udaf());
-        ctx.register_udaf(medulla_query::sketch_udfs::approx_frequency_udaf());
-        ctx.register_udaf(medulla_query::sketch_udfs::minhash_signature_udaf());
-        ctx.register_udf(medulla_query::sketch_udfs::minhash_similarity_udf());
+        ctx.register_udaf(medulla_sql_udfs::sketch_udfs::approx_distinct_udaf());
+        ctx.register_udaf(medulla_sql_udfs::sketch_udfs::approx_frequency_udaf());
+        ctx.register_udaf(medulla_sql_udfs::sketch_udfs::minhash_signature_udaf());
+        ctx.register_udf(medulla_sql_udfs::sketch_udfs::minhash_similarity_udf());
         // CONCEPT:MEDULLA-KG.query.surface-b-numeric-operators — Surface-B numeric operators over the obs Arrow tables too.
         #[cfg(feature = "numeric")]
         register_numeric(&ctx);
@@ -912,17 +912,17 @@ fn build_ctx(
     // CONCEPT:MEDULLA-KG.query.approx-distinct-cardinality (W4.5/N5) — sketch-backed aggregates
     // (HyperLogLog/Count-Min-Sketch/MinHash). Always-on: pure-Rust, no heavy dep beyond what
     // `sql` already links.
-    ctx.register_udaf(medulla_query::sketch_udfs::approx_distinct_udaf());
-    ctx.register_udaf(medulla_query::sketch_udfs::approx_frequency_udaf());
-    ctx.register_udaf(medulla_query::sketch_udfs::minhash_signature_udaf());
-    ctx.register_udf(medulla_query::sketch_udfs::minhash_similarity_udf());
+    ctx.register_udaf(medulla_sql_udfs::sketch_udfs::approx_distinct_udaf());
+    ctx.register_udaf(medulla_sql_udfs::sketch_udfs::approx_frequency_udaf());
+    ctx.register_udaf(medulla_sql_udfs::sketch_udfs::minhash_signature_udaf());
+    ctx.register_udf(medulla_sql_udfs::sketch_udfs::minhash_similarity_udf());
     // CONCEPT:MEDULLA-KG.query.surface-b-numeric-operators — Surface-B numeric operators over the graph's resident columns.
     #[cfg(feature = "numeric")]
     register_numeric(&ctx);
     #[cfg(feature = "finance")]
     {
-        ctx.register_udaf(medulla_query::udfs::var_udaf());
-        ctx.register_udaf(medulla_query::udfs::cvar_udaf());
+        ctx.register_udaf(medulla_sql_udfs::udfs::var_udaf());
+        ctx.register_udaf(medulla_sql_udfs::udfs::cvar_udaf());
     }
     // CONCEPT:MEDULLA-KG.query.route-create-view-create: the `pg_catalog` + `information_schema` system views are registered
     // by the caller via `register_system_catalogs` AFTER `register_views`, so views are

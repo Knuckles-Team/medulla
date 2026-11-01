@@ -622,7 +622,7 @@ impl EmbeddedEngine {
                 medulla_sql::sql::exec_sql_typed_with_tables(&snap, store, sql)
             }
             StatementKind::CreateTable(plan) => {
-                let columns = medulla_query::columns_from_defs(&plan.columns)?;
+                let columns = medulla_sql::columns_from_defs(&plan.columns)?;
                 let schema = medulla_query::TableSchema::new(plan.name, columns);
                 store.create_table(&schema, plan.if_not_exists)?;
                 Ok(status_result("CREATE TABLE"))
@@ -726,7 +726,7 @@ fn apply_alter_table(
     use medulla_sql::sql::AlterTableAction as A;
     match plan.action {
         A::AddColumn(col) => {
-            let columns = medulla_query::columns_from_defs(std::slice::from_ref(&col))?;
+            let columns = medulla_sql::columns_from_defs(std::slice::from_ref(&col))?;
             let column = columns.into_iter().next().expect("one column");
             store.add_column(&plan.name, column)
         }
