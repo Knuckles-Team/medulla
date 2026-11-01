@@ -2,7 +2,7 @@
 //! the Train 4 owner lineage.
 
 use super::*;
-use crate::direct_state::private_local_tempdir;
+use medulla_direct_state::direct_state::private_local_tempdir;
 use crate::owner::persisted_layout::create_predecessor_owner_file;
 use crate::recovery::evidence::strict_recovery_evidence;
 use redb::{ReadableDatabase, TableDefinition};

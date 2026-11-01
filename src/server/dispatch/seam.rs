@@ -158,7 +158,7 @@ impl DispatchApi for DispatchSeam {
         request_id: u64,
         committed_at_ms: u64,
         authority: &'a medulla_server_api::api::persistence::RaftMutationContext,
-        applying_group: medulla_storage::direct_state::GroupId,
+        applying_group: medulla_direct_state::direct_state::GroupId,
         phase: medulla_server_api::api::reentry::TransactionParticipantPhase,
         participant: medulla_server_api::api::reentry::ReplicatedParticipantRef<'a>,
     ) -> SeamFuture<'a, Result<bool, String>> {
@@ -238,7 +238,7 @@ impl DispatchApi for DispatchSeam {
         request_id: u64,
         committed_at_ms: u64,
         authority: &'a medulla_server_api::api::persistence::RaftMutationContext,
-        applying_group: medulla_storage::direct_state::GroupId,
+        applying_group: medulla_direct_state::direct_state::GroupId,
         coordinator_id: &'a str,
         plan: &'a [u8],
     ) -> SeamFuture<'a, Result<crate::mutation_batch::MutationBatchCommit, String>> {

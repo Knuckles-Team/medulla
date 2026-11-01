@@ -14,7 +14,6 @@
 mod backend_spec;
 mod capability;
 mod codec;
-pub mod direct_state;
 mod kernel;
 mod owner;
 mod payload;

@@ -1,5 +1,5 @@
 use super::*;
-use crate::direct_state::private_local_tempdir;
+use medulla_direct_state::direct_state::private_local_tempdir;
 use crate::owner::graph_shard::{AUDIT_CHAIN, AUDIT_REQUESTS, NODES};
 use crate::owner::lineage_fixtures::{
     recorded_identity, RecordedLayout, BEFORE_AUDIT_REQUESTS, BEFORE_ENRICHMENT,

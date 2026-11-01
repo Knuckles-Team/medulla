@@ -188,7 +188,7 @@ pub trait DispatchApi: Send + Sync {
         request_id: u64,
         committed_at_ms: u64,
         authority: &'a crate::api::persistence::RaftMutationContext,
-        applying_group: medulla_storage::direct_state::GroupId,
+        applying_group: medulla_direct_state::direct_state::GroupId,
         phase: TransactionParticipantPhase,
         participant: ReplicatedParticipantRef<'a>,
     ) -> SeamFuture<'a, Result<bool, String>>;
@@ -236,7 +236,7 @@ pub trait DispatchApi: Send + Sync {
         request_id: u64,
         committed_at_ms: u64,
         authority: &'a crate::api::persistence::RaftMutationContext,
-        applying_group: medulla_storage::direct_state::GroupId,
+        applying_group: medulla_direct_state::direct_state::GroupId,
         coordinator_id: &'a str,
         plan: &'a [u8],
     ) -> SeamFuture<'a, Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String>>;
@@ -527,7 +527,7 @@ pub async fn apply_replicated_transaction_participant(
     request_id: u64,
     committed_at_ms: u64,
     authority: &crate::api::persistence::RaftMutationContext,
-    applying_group: medulla_storage::direct_state::GroupId,
+    applying_group: medulla_direct_state::direct_state::GroupId,
     phase: TransactionParticipantPhase,
     participant: ReplicatedParticipantRef<'_>,
 ) -> Result<bool, String> {
@@ -622,7 +622,7 @@ pub async fn apply_replicated_job_publication_commit(
     request_id: u64,
     committed_at_ms: u64,
     authority: &crate::api::persistence::RaftMutationContext,
-    applying_group: medulla_storage::direct_state::GroupId,
+    applying_group: medulla_direct_state::direct_state::GroupId,
     coordinator_id: &str,
     plan: &[u8],
 ) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {

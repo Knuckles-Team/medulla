@@ -5,7 +5,7 @@
 //! upgrade's own tests.
 
 use super::*;
-use crate::direct_state::private_local_tempdir;
+use medulla_direct_state::direct_state::private_local_tempdir;
 use crate::owner::domain::KvOwner;
 use crate::owner::lineage::BLOB_BEFORE_HOLDERS;
 use crate::owner::persisted_layout::create_predecessor_owner_file;
