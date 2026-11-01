@@ -36,9 +36,9 @@ use medulla_decision_types::{
     decision::DecisionJobOutput, decision::DecisionJobRecord, decision::DecisionJobState,
     decision::EvalCandidate, decision::StatisticalPolicy, decision::DECISION_JOB_SCHEMA_VERSION,
 };
-use medulla_numeric::decision::admission::{admit, AdmissionRules, Admitted, Regime};
-use medulla_numeric::decision::evaluate::{evaluate, EvalSpec};
-use medulla_numeric::decision::fit::{fit, FitSpec};
+use medulla_decision_stats::{decision::admission::admit, decision::admission::AdmissionRules, decision::admission::Admitted, decision::admission::Regime};
+use medulla_decision_stats::{decision::evaluate::evaluate, decision::evaluate::EvalSpec};
+use medulla_decision_stats::{decision::fit::fit, decision::fit::FitSpec};
 use medulla_types::contract::BoundedVec;
 use medulla_types::solve_scalar::digest_text;
 

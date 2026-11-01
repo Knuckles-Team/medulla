@@ -9,8 +9,8 @@
 //! guarantee for any single step.
 
 use super::quantile::{threshold_at_rank, Threshold};
-use crate::detkernel::reduce::sorted_ascending;
-use crate::detkernel::{validate, Level, StatResult};
+use medulla_numeric::detkernel::reduce::sorted_ascending;
+use medulla_numeric::{detkernel::validate, detkernel::Level, detkernel::StatResult};
 
 /// The running state of adaptive conformal inference.
 #[derive(Debug, Clone, Copy, PartialEq)]

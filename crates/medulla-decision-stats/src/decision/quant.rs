@@ -13,8 +13,8 @@ use medulla_decision_types::{
 };
 
 use super::refusal::{Refusal, RefusalResult};
-use crate::detkernel::quantise::{dequantise, quantise, QuantScale};
-use crate::detkernel::{Level, StatError, UnitRational};
+use medulla_numeric::{detkernel::quantise::dequantise, detkernel::quantise::quantise, detkernel::quantise::QuantScale};
+use medulla_numeric::{detkernel::Level, detkernel::StatError, detkernel::UnitRational};
 
 /// The denominator probabilities are rounded onto when recorded.
 pub const PROBABILITY_DENOMINATOR: u64 = 1_000_000_000_000;

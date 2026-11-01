@@ -5,10 +5,7 @@
 
 use crate::common::{assert_close, categorical, rng};
 use medulla_numeric::detkernel::{Propensity, StatError};
-use medulla_numeric::ope::{
-    clipped_ips, doubly_robust, effective_sample_size, ips, require_support, snips, support_report,
-    switch, EssGate, LoggedDecision,
-};
+use medulla_decision_stats::{ope::clipped_ips, ope::doubly_robust, ope::effective_sample_size, ope::ips, ope::require_support, ope::snips, ope::support_report, ope::switch, ope::EssGate, ope::LoggedDecision};
 
 /// Fixed logging policy `mu = [1/2, 1/4, 1/4]`, target `pi = [1/4, 1/4, 1/2]`
 /// and a deterministic (noiseless) reward `r(a) = [1, 2, 3][a]`, replayed over

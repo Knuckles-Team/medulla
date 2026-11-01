@@ -23,9 +23,7 @@ use medulla_types::contract::BoundedVec;
 use super::admission::{fidelity_rank, floor_rank};
 use super::quant::q32;
 use super::refusal::{Refusal, RefusalResult};
-use crate::risk::{
-    pool_hierarchy, BetaDistribution, ConcentrationBounds, GroupCounts, PoolTree, PooledNode,
-};
+use medulla_numeric::{risk::pool_hierarchy, risk::BetaDistribution, risk::ConcentrationBounds, risk::GroupCounts, risk::PoolTree, risk::PooledNode};
 
 /// One committed record joined with its evaluations.
 #[derive(Debug, Clone, Copy)]

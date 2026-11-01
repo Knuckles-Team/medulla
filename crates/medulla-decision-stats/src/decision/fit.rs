@@ -32,8 +32,8 @@ use super::quant::{q32, raw_value, value_of};
 use super::refusal::{bounded, Refusal, RefusalResult};
 use super::scorer::train::train;
 use super::targets::{audit_weight, targets};
-use crate::detkernel::kernels::softmax;
-use crate::detkernel::optimise::minimise_convex_unbounded;
+use medulla_numeric::detkernel::kernels::softmax;
+use medulla_numeric::detkernel::optimise::minimise_convex_unbounded;
 
 /// Most coordinate-descent sweeps a fit may run, whatever it asks for.
 pub const MAX_SWEEPS: u32 = 200;

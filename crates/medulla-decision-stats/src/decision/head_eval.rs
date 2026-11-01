@@ -29,7 +29,7 @@ use super::refusal::{Refusal, RefusalResult};
 use super::scorer::fixed::to_f64;
 use super::scorer::forward::{macs, read as read_scorer, Scoring};
 use super::scorer::legal::LegalSet;
-use crate::detkernel::kernels::softmax;
+use medulla_numeric::detkernel::kernels::softmax;
 
 /// A head read over every candidate.
 #[derive(Debug, Clone, PartialEq)]

@@ -26,9 +26,9 @@ use super::evaluate::{read_item, EvalSpec};
 use super::head_eval::top_index;
 use super::quant::{q32, unit_wire, value_of};
 use super::refusal::RefusalResult;
-use crate::detkernel::Propensity;
-use crate::ope::{clipped_ips, doubly_robust, ips, snips, switch, LoggedDecision, OpeEstimate};
-use crate::risk::{pool_hierarchy, BetaDistribution, ConcentrationBounds, GroupCounts, PoolTree};
+use medulla_numeric::detkernel::Propensity;
+use crate::{ope::clipped_ips, ope::doubly_robust, ope::ips, ope::snips, ope::switch, ope::LoggedDecision, ope::OpeEstimate};
+use medulla_numeric::{risk::pool_hierarchy, risk::BetaDistribution, risk::ConcentrationBounds, risk::GroupCounts, risk::PoolTree};
 
 /// Weight cap of clipped IPS.
 pub const CLIP_CAP: f64 = 10.0;

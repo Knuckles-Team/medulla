@@ -8,8 +8,8 @@
 //! positive probability but logging propensity 0 is refused, and
 //! [`support_report`] states how much target mass lies outside.
 
-use crate::detkernel::rational::sums_to_one;
-use crate::detkernel::{validate, Propensity, StatError, StatResult};
+use medulla_numeric::detkernel::rational::sums_to_one;
+use medulla_numeric::{detkernel::validate, detkernel::Propensity, detkernel::StatError, detkernel::StatResult};
 
 /// One logged decision.
 #[derive(Debug, Clone, PartialEq)]

@@ -12,7 +12,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_numeric::conformal::{binary_conformal, BinarySet};
+use medulla_decision_stats::{conformal::binary_conformal, conformal::BinarySet};
 use medulla_numeric::detkernel::{Level, StatError};
 use medulla_numeric::risk::{clopper_pearson, BinomialCounts, IntervalSide, SampleGate};
 

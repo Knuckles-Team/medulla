@@ -13,8 +13,8 @@
 //! the weights it used; promotion gates compare that with a minimum.
 
 use super::logged::{require_support, LoggedDecision};
-use crate::detkernel::reduce::{serial_mean, serial_sum};
-use crate::detkernel::{validate, StatError, StatResult};
+use medulla_numeric::{detkernel::reduce::serial_mean, detkernel::reduce::serial_sum};
+use medulla_numeric::{detkernel::validate, detkernel::StatError, detkernel::StatResult};
 
 /// The estimator behind an estimate.
 #[derive(Debug, Clone, Copy, PartialEq)]

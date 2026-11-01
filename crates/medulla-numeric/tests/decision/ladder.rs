@@ -19,9 +19,9 @@ use medulla_decision_types::{
     decision::ColdStart, decision::ExplorationBudget, decision::QuantScaleTag,
     decision::QuantisedValue,
 };
-use medulla_numeric::decision::exploration::{audit, permit, plan, ExplorationPermit};
-use medulla_numeric::decision::head_eval::Evaluated;
-use medulla_numeric::decision::ladder::{decide, LadderInputs};
+use medulla_decision_stats::{decision::exploration::audit, decision::exploration::permit, decision::exploration::plan, decision::exploration::ExplorationPermit};
+use medulla_decision_stats::decision::head_eval::Evaluated;
+use medulla_decision_stats::{decision::ladder::decide, decision::ladder::LadderInputs};
 
 use super::common::{bounded, option_ids, policy, rational, statistical};
 use super::scorer_promotion::{human_scorer, outcome};

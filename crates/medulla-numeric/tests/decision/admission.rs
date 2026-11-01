@@ -10,7 +10,7 @@ use medulla_decision_types::{
 use medulla_decision_types::{
     decision::EvidenceClass, decision::RecordWindow, decision::TraceFidelityLevel,
 };
-use medulla_numeric::decision::admission::{admit, exclusion, AdmissionRules, Exclusion, Regime};
+use medulla_decision_stats::{decision::admission::admit, decision::admission::exclusion, decision::admission::AdmissionRules, decision::admission::Exclusion, decision::admission::Regime};
 
 use super::common::{gold_item, logged_item, rational};
 

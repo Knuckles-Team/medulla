@@ -8,7 +8,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::detkernel::math;
+use medulla_numeric::detkernel::math;
 
 /// Term-frequency saturation.
 pub const K1: f64 = 1.2;

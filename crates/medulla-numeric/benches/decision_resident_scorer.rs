@@ -23,9 +23,9 @@ use medulla_decision_types::{
     decision::statistical::scorer::RESIDENT_SCORER_CEILING,
 };
 use medulla_decision_types::{decision::QuantScaleTag, decision::QuantisedValue};
-use medulla_numeric::decision::scorer::fixed::ONE;
-use medulla_numeric::decision::scorer::forward::read;
-use medulla_numeric::decision::scorer::legal::LegalSet;
+use medulla_decision_stats::decision::scorer::fixed::ONE;
+use medulla_decision_stats::decision::scorer::forward::read;
+use medulla_decision_stats::decision::scorer::legal::LegalSet;
 use serde_json::{json, Value};
 use std::hint::black_box;
 

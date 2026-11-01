@@ -11,8 +11,8 @@ use medulla_decision_types::{
 use medulla_decision_types::{
     decision::statistical::TypedParam, decision::statistical::TypedValue,
 };
-use medulla_numeric::decision::candidate::CandidateView;
-use medulla_numeric::decision::features::{feature_matrix, FeatureInputs, MatrixOutcome};
+use medulla_decision_stats::decision::candidate::CandidateView;
+use medulla_decision_stats::{decision::features::feature_matrix, decision::features::FeatureInputs, decision::features::MatrixOutcome};
 
 use super::common::bounded;
 
@@ -173,7 +173,7 @@ fn a_missing_or_mistyped_parameter_is_a_typed_refusal() {
 // spec: MEDULLA-DECISION-ENGINE-R083.2
 #[test]
 fn scoring_width_is_bounded_by_cardinality_not_text_length() {
-    use medulla_numeric::decision::rapid_r083::MAX_OPTION_CAPABILITIES;
+    use medulla_decision_stats::decision::rapid_r083::MAX_OPTION_CAPABILITIES;
     let long_label = format!("eg:capability/retrieval/{}", "segment-".repeat(40));
     let long_summary = "web search ".repeat(2_000);
     let classes: Vec<&str> = (0..MAX_OPTION_CAPABILITIES)

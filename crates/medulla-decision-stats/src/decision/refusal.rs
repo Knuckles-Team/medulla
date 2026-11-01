@@ -4,7 +4,7 @@ use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::decision::DecisionErrorCode;
 use medulla_types::contract::BoundedVec;
 
-use crate::detkernel::StatError;
+use medulla_numeric::detkernel::StatError;
 
 /// A typed refusal. Rendered as `"CODE: detail"` by the served surface. The
 /// code is always the token of a closed code enum: either this surface's own

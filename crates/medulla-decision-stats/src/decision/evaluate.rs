@@ -29,9 +29,9 @@ use super::head_eval::{
 use super::promotion::{Observation, Protocol};
 use super::quant::{item_rows, q32, unit_wire, value_of};
 use super::refusal::{bounded, RefusalResult};
-use crate::calibration::metrics::{reliability, BinCount};
-use crate::detkernel::math;
-use crate::risk::{clopper_pearson, BinomialCounts, IntervalSide};
+use medulla_numeric::{calibration::metrics::reliability, calibration::metrics::BinCount};
+use medulla_numeric::detkernel::math;
+use medulla_numeric::{risk::clopper_pearson, risk::BinomialCounts, risk::IntervalSide};
 
 /// Domain of an evaluation receipt digest.
 pub const EVAL_RECEIPT_DOMAIN: &str = "eg/decision-eval-receipt/v1";

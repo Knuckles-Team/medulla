@@ -26,10 +26,10 @@ use super::fixed::{dot, to_f64, to_q32};
 use super::forward::standardise;
 use super::legal::shortlist;
 use crate::decision::quant::item_rows;
-use crate::decision::refusal::{Refusal, RefusalResult};
-use crate::decision::targets::{audit_weight, targets};
-use crate::detkernel::kernels::softmax;
-use crate::detkernel::quantise::{quantise, QuantScale};
+use crate::{decision::refusal::Refusal, decision::refusal::RefusalResult};
+use crate::{decision::targets::audit_weight, decision::targets::targets};
+use medulla_numeric::detkernel::kernels::softmax;
+use medulla_numeric::{detkernel::quantise::quantise, detkernel::quantise::QuantScale};
 
 /// Embedding width of a fitted scorer.
 pub const SCORER_WIDTH: usize = 8;

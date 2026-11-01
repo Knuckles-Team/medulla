@@ -6,3 +6,11 @@
 
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
+
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod conformal;
+#[cfg(feature = "decision")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod decision;
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod ope;

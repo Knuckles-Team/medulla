@@ -13,9 +13,9 @@
 //!   options, so the guarantee is `P(C ∩ A != ∅) >= 1 - alpha`.
 
 use super::quantile::Threshold;
-use crate::calibration::ProbabilityMatrix;
-use crate::detkernel::reduce::order_descending;
-use crate::detkernel::{validate, StatResult};
+use medulla_numeric::calibration::ProbabilityMatrix;
+use medulla_numeric::detkernel::reduce::order_descending;
+use medulla_numeric::{detkernel::validate, detkernel::StatResult};
 
 /// The options admitted by a conformal set, in ascending option order.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]

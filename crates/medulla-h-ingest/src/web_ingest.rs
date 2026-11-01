@@ -365,10 +365,10 @@ pub fn retrieved_at_ms(value: &Value) -> Option<u64> {
 pub fn held_pages(
     documents: Vec<(String, Vec<u8>)>,
 ) -> (
-    BTreeMap<String, medulla_numeric::decision::web_fetch_selection::HeldPage>,
+    BTreeMap<String, medulla_decision_stats::decision::web_fetch_selection::HeldPage>,
     BTreeSet<String>,
 ) {
-    use medulla_numeric::decision::web_fetch_selection::{canonical_url, HeldPage};
+    use medulla_decision_stats::{decision::web_fetch_selection::canonical_url, decision::web_fetch_selection::HeldPage};
     let mut held = BTreeMap::new();
     let mut digests = BTreeSet::new();
     for (_, bytes) in documents {

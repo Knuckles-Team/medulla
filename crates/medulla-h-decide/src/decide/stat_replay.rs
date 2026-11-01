@@ -22,7 +22,7 @@ use medulla_decision_types::{
     decision::statistical::StatisticalDecisionRecord, decision::statistical::StatisticalErrorCode,
     decision::statistical::StatisticalOutcome,
 };
-use medulla_numeric::decision::features::FeatureMatrix;
+use medulla_decision_stats::decision::features::FeatureMatrix;
 
 use super::stat_belief::points;
 use super::stat_classes::current_rules;

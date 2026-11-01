@@ -34,11 +34,7 @@ pub mod reductions;
 // (`detkernel`), calibration, risk control, conformal prediction and off-policy
 // evaluation. Always built: they add only the pinned pure-Rust `libm`.
 pub mod calibration;
-pub mod conformal;
-#[cfg(feature = "decision")]
-pub mod decision;
 pub mod detkernel;
-pub mod ope;
 pub mod risk;
 // Incremental series kernels (EH-522): the one implementation behind UQL `DERIVE`, the SQL
 // `eg_*` window functions, the coinciding PromQL functions and the finance signals.

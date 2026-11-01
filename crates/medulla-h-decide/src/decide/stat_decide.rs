@@ -34,7 +34,7 @@ use medulla_decision_types::{
 use medulla_types::contract::BoundedVec;
 use medulla_types::solve_scalar::digest_text;
 
-use medulla_numeric::decision::ladder::LadderResult;
+use medulla_decision_stats::decision::ladder::LadderResult;
 
 use super::candidates::{read_candidates, ReadCandidates};
 use super::stat_belief::{live_slices, Slices};
@@ -226,7 +226,7 @@ fn bounded<T, const N: usize>(values: Vec<T>) -> Result<BoundedVec<T, N>, String
 }
 
 fn feature_matrix(
-    views: &[medulla_numeric::decision::candidate::CandidateView],
+    views: &[medulla_decision_stats::decision::candidate::CandidateView],
     pinned: &Pinned,
     executed: &Executed,
 ) -> Result<FeatureMatrixRef, String> {

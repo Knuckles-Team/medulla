@@ -5,7 +5,7 @@ use std::ops::Range;
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::{decision::replay::WalkForward, decision::replay::MAX_REPLAY_FOLDS};
 
-use crate::decision::refusal::{Refusal, RefusalResult};
+use crate::{decision::refusal::Refusal, decision::refusal::RefusalResult};
 
 /// One fold: the step indices it trains on and the window it tests.
 #[derive(Debug, Clone, PartialEq, Eq)]

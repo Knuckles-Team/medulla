@@ -42,11 +42,12 @@ tempfile = { version = "3", optional = true }
 medulla-finance-market = { path = "../medulla-finance-market" }
 medulla-decision-policy = { path = "../medulla-decision-policy" }
 medulla-finance = { path = "../medulla-finance" }
+medulla-decision-stats = { path = "../medulla-decision-stats" }
 
 [features]
 ann = ["dep:medulla-ann", ]
 blob = ["redb"]
-decide = ["dep:medulla-numeric", "medulla-numeric/decision", "dep:medulla-ann", "medulla-ann?/drift", "solve", "redb"]
+decide = ["dep:medulla-numeric", "medulla-numeric/decision", "medulla-decision-stats/decision", "dep:medulla-ann", "medulla-ann?/drift", "solve", "redb"]
 epistemic = ["dep:medulla-plan", "medulla-plan/epistemic", "query"]
 finance = []
 owl = ["dep:medulla-rdf", "medulla-rdf/owl", ]

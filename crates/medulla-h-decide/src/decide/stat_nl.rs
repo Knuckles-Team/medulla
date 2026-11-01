@@ -17,7 +17,7 @@ use medulla_decision_types::{
     decision::statistical::StatisticalErrorCode, decision::statistical::StatisticalOutcome,
     decision::statistical::TypedValue,
 };
-use medulla_numeric::decision::nl::fill_slots;
+use medulla_decision_stats::decision::nl::fill_slots;
 use medulla_types::contract::BoundedVec;
 
 use super::stat_support::refusal;

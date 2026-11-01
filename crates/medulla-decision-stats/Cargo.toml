@@ -12,3 +12,12 @@ name = "medulla_decision_stats"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-numeric = { path = "../medulla-numeric" }
+rand_chacha = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+medulla-types = { path = "../medulla-types", optional = true }
+medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-agent-types = { path = "../medulla-agent-types" }
+
+[features]
+decision = ["dep:medulla-types", "medulla-numeric/decision"]

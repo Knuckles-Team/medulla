@@ -17,10 +17,10 @@ use medulla_decision_types::{
     decision::statistical::scorer::MAX_SCORER_WIDTH,
 };
 use medulla_decision_types::{decision::QuantScaleTag, decision::QuantisedValue};
-use medulla_numeric::decision::scorer::fixed::{exp_non_positive, softmax, to_f64, ONE};
-use medulla_numeric::decision::scorer::forward::{read, EncodedState, Scorer, EXCLUDED_LOGIT};
-use medulla_numeric::decision::scorer::legal::{shortlist, LegalSet};
-use medulla_numeric::decision::trajectory::{belief, Prefix};
+use medulla_decision_stats::{decision::scorer::fixed::exp_non_positive, decision::scorer::fixed::softmax, decision::scorer::fixed::to_f64, decision::scorer::fixed::ONE};
+use medulla_decision_stats::{decision::scorer::forward::read, decision::scorer::forward::EncodedState, decision::scorer::forward::Scorer, decision::scorer::forward::EXCLUDED_LOGIT};
+use medulla_decision_stats::{decision::scorer::legal::shortlist, decision::scorer::legal::LegalSet};
+use medulla_decision_stats::{decision::trajectory::belief, decision::trajectory::Prefix};
 use medulla_types::solve_scalar::digest_text;
 
 use super::common::{bounded, SCHEMA_DIGEST};

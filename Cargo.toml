@@ -292,7 +292,7 @@ solve = ["medulla-decision-policy/solve", "medulla-h-decide/solve", "medulla-com
 # RF-ADR-010: the Decide layer's handlers. The wire contract is unconditional
 # (the capability rows are, following the `SemanticIndex` precedent), so this
 # gates only the server-side implementation and the crates it needs.
-decide = ["medulla-h-decide/decide", "medulla-h-jobs/decide", "medulla-h-ingest/decide", "medulla-h-graph/decide", "medulla-raft/decide", "medulla-persistence/decide", "medulla-server-api/decide", "solve", "medulla-capabilities?/decide", "medulla-compute/decide", "medulla-compute/decide-stats", "numeric", "medulla-numeric/decision", "medulla-ann?/drift", "jobs", "redb", "shacl"]
+decide = ["medulla-h-decide/decide", "medulla-h-jobs/decide", "medulla-h-ingest/decide", "medulla-h-graph/decide", "medulla-raft/decide", "medulla-persistence/decide", "medulla-server-api/decide", "solve", "medulla-capabilities?/decide", "medulla-compute/decide", "medulla-compute/decide-stats", "numeric", "medulla-numeric/decision", "medulla-decision-stats/decision", "medulla-ann?/drift", "jobs", "redb", "shacl"]
 # Native medulla-ann IVF-PQ + OPQ + SQ8-refine vector index (CONCEPT:KG-2.207) as the
 # SemanticStore compression backend alongside the in-tree native HNSW index. Pure-Rust,
 # CPU integer-table serving (no GPU/native-ML/faiss in the tree). It is included in
@@ -1867,6 +1867,7 @@ medulla-mining = { path = "crates/medulla-mining" }
 medulla-finance-market = { path = "crates/medulla-finance-market" }
 medulla-reasoner = { path = "crates/medulla-reasoner" }
 medulla-decision-policy = { path = "crates/medulla-decision-policy" }
+medulla-decision-stats = { path = "crates/medulla-decision-stats" }
 
 [dev-dependencies]
 medulla-h-ingest = { path = "crates/medulla-h-ingest", features = ["test-support"] }

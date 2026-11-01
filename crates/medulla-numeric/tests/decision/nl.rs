@@ -6,7 +6,7 @@ use medulla_decision_types::{
     decision::statistical::nl::NlTarget, decision::statistical::nl::NlTemplateBody,
     decision::statistical::nl::NL_TEMPLATE_SCHEMA_VERSION,
 };
-use medulla_numeric::decision::nl::fill_slots;
+use medulla_decision_stats::decision::nl::fill_slots;
 
 use super::common::bounded;
 
