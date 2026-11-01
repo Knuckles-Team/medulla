@@ -74,7 +74,7 @@ use super::CommitPhaseTimer;
 /// One identity for all K shards: it names the *kind* of store, and the kernel
 /// binds it to a specific file through that file's own store incarnation, so two
 /// shards never share an authority despite sharing this name.
-pub(crate) const SHARD_PHYSICAL_STORE: &str = "epistemic-graph:graph-shard";
+pub const SHARD_PHYSICAL_STORE: &str = "epistemic-graph:graph-shard";
 
 /// Distinct graphs one admitted group may carry.
 ///
@@ -163,7 +163,7 @@ pub fn take_test_barrier(
 /// `load_all` recovery -- replay durable entries and have no request carrier.
 /// Tenant isolation on a shard is by graph, as it has always been: the shard's
 /// OCC counter and every shard table key lead with the graph name.
-pub(crate) fn graph_scope_identity(graph_fname: &str) -> Result<MutationScopeIdentity, String> {
+pub fn graph_scope_identity(graph_fname: &str) -> Result<MutationScopeIdentity, String> {
     MutationScopeIdentity::fixed_graph(GRAPH_SHARD_TENANT, graph_fname, COMPILED_BATCH_INCARNATION)
 }
 
@@ -931,7 +931,7 @@ impl Shard {
     }
 
     /// One kernel-issued scoped read bounded to one graph's rows.
-    pub(crate) fn read(
+    pub fn read(
         &self,
         owner: &OwnedStoreHandle<GraphShardOwner>,
     ) -> Result<ScopedRead<'_, GraphShardOwner>, String> {
@@ -947,13 +947,13 @@ impl Shard {
 }
 
 #[cfg(feature = "server")]
-pub(crate) const FOREIGN_GRAFT_MARKER: &str =
+pub const FOREIGN_GRAFT_MARKER: &str =
     "graft source carries a marker for a different authority or destination";
 
 /// What the source's durable graft marker says about this destination.
 #[cfg(feature = "server")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum SourceGraftMarker {
+pub enum SourceGraftMarker {
     /// No graft has begun from the source.
     Absent,
     /// A graft to exactly this (source authority, destination authority) began.
@@ -967,7 +967,7 @@ pub(crate) enum SourceGraftMarker {
 /// The destination's mutation and storage kernels must first prove one
 /// authority, since the marker binds the destination by that digest.
 #[cfg(feature = "server")]
-pub(crate) fn source_graft_marker(
+pub fn source_graft_marker(
     destination: &Shard,
     source: &Shard,
     source_handle: &ShardHandle,
@@ -998,7 +998,7 @@ pub(crate) fn source_graft_marker(
 
 /// The graft destination over `handle` that may retire staged owner rows.
 #[cfg(feature = "server")]
-pub(crate) fn retiring_graft_destination<'a>(
+pub fn retiring_graft_destination<'a>(
     shard: &'a Shard,
     handle: &'a ShardHandle,
 ) -> GraftDestination<'a, GraphShardOwner> {
@@ -1013,7 +1013,7 @@ pub(crate) fn retiring_graft_destination<'a>(
 /// destination marker and proves the source binding absent from the source
 /// kernel directly.
 #[cfg(feature = "server")]
-pub(crate) fn recover_retired_graft(
+pub fn recover_retired_graft(
     destination: &Shard,
     source: &Shard,
     graph_fname: &str,
@@ -1041,7 +1041,7 @@ pub(crate) fn recover_retired_graft(
 /// shard's control/graph scopes here, the KV store's per-namespace scopes, and
 /// the blob store's per-(tenant, resource) scopes -- which differ only in
 /// which [`OwnerDomain`] they authenticate against.
-pub(crate) fn bind_scope<D: OwnerDomain>(
+pub fn bind_scope<D: OwnerDomain>(
     kernel: &StorageKernel,
     scope: &MutationScopeIdentity,
 ) -> Result<Arc<OwnedStoreHandle<D>>, String> {
@@ -1077,7 +1077,7 @@ pub(crate) fn admit_backend_setting(setting: Option<&str>) -> Result<(), String>
 /// scope; and run that scope's ledger bootstrap. A graph shard's file control
 /// scope and the KV store's cross-namespace bootstrap scope both start this
 /// way, diverging only afterward in what else the caller's struct holds.
-pub(crate) fn open_kernel_owned_store<D: OwnerDomain>(
+pub fn open_kernel_owned_store<D: OwnerDomain>(
     path: &Path,
     physical_name: &str,
     scope_identity: &MutationScopeIdentity,
@@ -1165,7 +1165,7 @@ pub(crate) struct CommittedBatch {
 /// members writing `nodes` must therefore open it in turn: finish one graph's
 /// row work, drop its tables, then start the next. The per-graph loop the
 /// coalesced write path uses does exactly that.
-pub(crate) struct ShardWrite<'g> {
+pub struct ShardWrite<'g> {
     control: AdmittedOwnerWrite<'g, GraphShardOwner>,
     graphs: BTreeMap<String, AdmittedOwnerWrite<'g, GraphShardOwner>>,
 }

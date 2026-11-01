@@ -149,7 +149,7 @@ pub mod shard;
 pub mod work_item_capability;
 
 pub(crate) mod audit;
-pub(crate) mod checkpoint;
+pub mod checkpoint;
 pub(crate) mod control;
 pub(crate) mod crossmodal;
 pub(crate) mod dump;

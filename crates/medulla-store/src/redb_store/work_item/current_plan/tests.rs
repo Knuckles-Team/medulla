@@ -37,7 +37,7 @@ fn apply(
         publish(GRAPH, req, Some(actor), rows, DurableCrypto::none(), now)
     })
 }
-fn read(shard: &Shard, actor: &str, now: u64) -> Option<CurrentPlanSnapshot> {
+pub fn read(shard: &Shard, actor: &str, now: u64) -> Option<CurrentPlanSnapshot> {
     read_current(
         shard,
         GRAPH,

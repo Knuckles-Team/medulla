@@ -10,7 +10,7 @@ use super::*;
 /// `GapGet`: the caller's view of one Gap, `None` when `tenant` has no Gap
 /// with this id. Another tenant's Gap lives under another key, so it is never
 /// even addressed.
-pub(crate) fn read_gap(
+pub fn read_gap(
     shard: &Shard,
     graph: &str,
     tenant: &str,
@@ -26,7 +26,7 @@ pub(crate) fn read_gap(
 }
 
 /// `GapList`: one bounded page of `request.tenant`'s Gaps in row-key order.
-pub(crate) fn list_gaps(
+pub fn list_gaps(
     shard: &Shard,
     graph: &str,
     request: &GapListRequest,

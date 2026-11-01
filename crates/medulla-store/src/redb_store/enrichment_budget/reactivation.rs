@@ -41,7 +41,7 @@ pub struct RepositoryEnrichmentPolicyRevision {
 
 /// Read the committed source policy. Caller-supplied proposal bytes never
 /// stand in for this row at the producer boundary.
-pub(crate) fn read_policy_revision(
+pub fn read_policy_revision(
     shard: &Shard,
     graph: &str,
     source_envelope: &str,
@@ -105,7 +105,7 @@ pub(super) fn seed_policy_revision(
 /// A node may have an old local outbox delivery after a Raft leader changed.
 /// The graph's replicated owner rows prove that source was replaced; its local
 /// consumer may then acknowledge the stale event without spending or parking.
-pub(crate) fn is_superseded(
+pub fn is_superseded(
     shard: &Shard,
     graph: &str,
     source_envelope: &str,

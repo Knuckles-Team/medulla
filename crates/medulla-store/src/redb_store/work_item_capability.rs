@@ -29,16 +29,16 @@ use lease::{read_live_lease, record_matches_live};
 
 /// Private tables are intentionally disjoint from WorkItem/status/list
 /// projections, MutationBatch/outbox rows, and CDC/audit records.
-pub(crate) const CAPABILITIES: TableDefinition<(&str, &str), &[u8]> =
+pub const CAPABILITIES: TableDefinition<(&str, &str), &[u8]> =
     TableDefinition::new("work_item_claim_capabilities");
-pub(crate) const INVOCATIONS: TableDefinition<(&str, &str), &[u8]> =
+pub const INVOCATIONS: TableDefinition<(&str, &str), &[u8]> =
     TableDefinition::new("work_item_claim_capability_invocations");
 /// Native provenance is the only durable proof that a WorkItem has crossed the
 /// engine's claim authority.  It is intentionally separate from the public
 /// WorkItem row: a caller may submit a ready/submitted row, but it cannot turn a
 /// generic row into an active lease or replace a claimed row through AddNode,
 /// CAS, row-delta, or cross-modal projection.
-pub(crate) const NATIVE_WORK_ITEMS: TableDefinition<(&str, &str), &[u8]> =
+pub const NATIVE_WORK_ITEMS: TableDefinition<(&str, &str), &[u8]> =
     TableDefinition::new("native_work_item_authority");
 
 /// Stable privacy-safe refusal used when a capability operation reaches a
@@ -314,7 +314,7 @@ pub(crate) fn clear_graph_rows_in_wtx(
 /// used by a graft reservation.  It intentionally has no graph-name argument:
 /// the capability's scope is the authority, and unlike an admitted member it
 /// cannot reach mutation-ledger tables or another graph.
-pub(crate) fn clear_graph_rows_in_payload<W: OwnerPayloadWrite>(write: &W) -> Result<(), String> {
+pub fn clear_graph_rows_in_payload<W: OwnerPayloadWrite>(write: &W) -> Result<(), String> {
     let mut native_work_items = write.open_scoped_table(NATIVE_WORK_ITEMS)?;
     purge_private_rows(write)?;
     purge_within_retention(
@@ -774,7 +774,7 @@ pub(crate) fn validate_snapshot_nodes(nodes: &[(String, Vec<u8>)]) -> Result<(),
 
 /// Atomically mint or replay the capability while the caller's write
 /// transaction is held.  The request contains no mutable authority fields.
-pub(crate) fn mint_claim_capability(
+pub fn mint_claim_capability(
     write: &ShardWrite<'_>,
     graph: &str,
     request: &WorkItemClaimCapabilityMintRequest,
@@ -905,7 +905,7 @@ pub(crate) fn mint_claim_capability(
 
 /// Verify the opaque capability after the authoritative WorkItem control row
 /// has been checked.  No private payload/blob row is touched by this function.
-pub(crate) fn verify_claim_capability(
+pub fn verify_claim_capability(
     write: &ShardWrite<'_>,
     graph: &str,
     request: &WorkItemClaimCapabilityVerifyRequest,

@@ -166,7 +166,7 @@ fn transition_result(
 
 /// `GetControlLease`: the caller's view of one lease, `None` when no control
 /// lease with this id belongs to `tenant`. An MVCC snapshot read.
-pub(crate) fn read_control_lease(
+pub fn read_control_lease(
     shard: &Shard,
     graph: &str,
     tenant: &str,
@@ -181,7 +181,7 @@ pub(crate) fn read_control_lease(
 }
 
 /// `ListControlLeases`: one bounded page of `request.tenant`'s control leases.
-pub(crate) fn list_control_leases(
+pub fn list_control_leases(
     shard: &Shard,
     graph: &str,
     request: &ListControlLeasesRequest,

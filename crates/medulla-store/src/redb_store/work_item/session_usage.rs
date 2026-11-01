@@ -7,7 +7,7 @@ use medulla_types::run_usage::{
 
 /// One graph snapshot supplies inventory, immutable admission, ledger and outbox.
 /// Bounds apply to examined node rows, not just matching or measured runs.
-pub(crate) fn read_session_usage(
+pub fn read_session_usage(
     shard: &Shard,
     graph: &str,
     tenant: &str,

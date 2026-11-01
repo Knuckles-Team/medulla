@@ -39,16 +39,16 @@ mod throttle;
 /// One capacity table opened for writing on one graph's scope.
 type CapacityRows<'a> = ScopedOwnerTableMut<'a, (&'static str, &'static str), &'static [u8]>;
 
-pub(crate) const CELLS: TableDefinition<(&str, &str), &[u8]> =
+pub const CELLS: TableDefinition<(&str, &str), &[u8]> =
     TableDefinition::new("capacity_cells");
-pub(crate) const LEASES: TableDefinition<(&str, &str), &[u8]> =
+pub const LEASES: TableDefinition<(&str, &str), &[u8]> =
     TableDefinition::new("capacity_leases");
-pub(crate) const USAGE: TableDefinition<(&str, &str), &[u8]> =
+pub const USAGE: TableDefinition<(&str, &str), &[u8]> =
     TableDefinition::new("capacity_usage");
-pub(crate) const IDEMPOTENCY: TableDefinition<(&str, &str, &str), &[u8]> =
+pub const IDEMPOTENCY: TableDefinition<(&str, &str, &str), &[u8]> =
     TableDefinition::new("capacity_idempotency");
 
-mod headroom;
+pub mod headroom;
 pub(crate) use headroom::headroom;
 
 const MAX_SCAN: usize = 4096;
@@ -156,7 +156,7 @@ fn method_now_ms(method: &Method) -> Result<u64, String> {
 /// principal, and the caller's replay identity lives in this module's
 /// `capacity_idempotency` row instead, which is exactly what puts the write
 /// outside operation-replay conflict semantics (RF-RULING-005).
-pub(crate) fn commit(
+pub fn commit(
     shard: &Shard,
     graph: &str,
     method: &Method,
@@ -204,7 +204,7 @@ fn result_is_replay(method: &Method, bytes: &[u8]) -> Result<bool, String> {
 }
 
 /// Page one graph's cells and leases from a kernel-issued scoped read.
-pub(crate) fn read(
+pub fn read(
     shard: &Shard,
     graph: &str,
     request: &CapacityStatusRequest,

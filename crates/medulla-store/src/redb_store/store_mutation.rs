@@ -768,7 +768,7 @@ mod outbox_reactivation_tests {
         batch
     }
 
-    fn commit(
+    pub fn commit(
         shard: &Shard,
         batch: &MutationBatch,
         lease: Option<&medulla_types::MutationOutboxLease>,

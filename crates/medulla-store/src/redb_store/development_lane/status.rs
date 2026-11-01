@@ -218,7 +218,7 @@ pub(super) fn read_lane_status(
 }
 
 /// Return a bounded tenant status page from maintained indexes/counters.
-pub(crate) fn read_development_lane_status(
+pub fn read_development_lane_status(
     shard: &Shard,
     graph: &str,
     request: &DevelopmentLaneStatusRequest,

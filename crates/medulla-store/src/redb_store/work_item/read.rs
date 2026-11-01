@@ -47,7 +47,7 @@ pub(super) fn snapshot_row(
 
 /// The caller's view of one WorkItem, `None` when no row with this id is a
 /// WorkItem of `tenant`.
-pub(crate) fn read_work_item(
+pub fn read_work_item(
     shard: &Shard,
     graph: &str,
     tenant: &str,
@@ -64,7 +64,7 @@ pub(crate) fn read_work_item(
 /// `GetWorkItemOutcome` (graph-os MEDULLA-3): a WorkItem of `tenant` and the
 /// provenance its native terminal commit bound. `None` when the item is not
 /// visible to `tenant` or carries no committed outcome bundle.
-pub(crate) fn read_work_item_outcome(
+pub fn read_work_item_outcome(
     shard: &Shard,
     graph: &str,
     tenant: &str,
@@ -148,7 +148,7 @@ fn verified_outcome(
 
 /// One page of `tenant`'s WorkItems in node-id order, resumed strictly after
 /// the request cursor's row.
-pub(crate) fn list_work_items(
+pub fn list_work_items(
     shard: &Shard,
     graph: &str,
     request: &WorkItemListRequest,

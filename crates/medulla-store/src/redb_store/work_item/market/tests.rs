@@ -99,7 +99,7 @@ fn settle(shard: &Shard, tag: &str, tenant: &str, now_ms: u64) -> GapSettled {
     )
 }
 
-fn read(shard: &Shard, tenant: &str) -> Option<medulla_types::work_market::GapView> {
+pub fn read(shard: &Shard, tenant: &str) -> Option<medulla_types::work_market::GapView> {
     read_gap(shard, GRAPH, tenant, GAP, DurableCrypto::none()).unwrap()
 }
 
@@ -267,7 +267,7 @@ fn an_offer_is_versioned_derived_state_citing_only_held_evidence() {
     );
 }
 
-fn commit(shard: &Shard, work_item_id: &str, hold: &ClaimWorkItemResult, outcome: &str) {
+pub fn commit(shard: &Shard, work_item_id: &str, hold: &ClaimWorkItemResult, outcome: &str) {
     let method = Method::CommitWorkItemResult {
         tenant: "tenant-a".into(),
         work_item_id: work_item_id.into(),

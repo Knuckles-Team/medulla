@@ -36,7 +36,7 @@ const NODE_PAYLOAD_CURSOR_KEY: &str = "node_payload";
 
 /// Where the next pass starts. `graph == None` is the start of a cycle.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct ScrubCursor {
+pub struct ScrubCursor {
     /// The graph the walk is inside, or `None` at a cycle boundary.
     pub(crate) graph: Option<String>,
     /// The last node id already opened in `graph`; the pass resumes after it.
@@ -47,14 +47,14 @@ pub(crate) struct ScrubCursor {
 
 /// How much one pass may do.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct ScrubBudget {
+pub struct ScrubBudget {
     /// Node payloads one pass may open.
     pub(crate) rows: usize,
 }
 
 /// What one pass did.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub(crate) struct ScrubPass {
+pub struct ScrubPass {
     /// Node payloads opened by this pass.
     pub(crate) scanned: u64,
     /// Every unreadable row the pass reached, in walk order.
@@ -76,7 +76,7 @@ struct GraphWalk {
 /// that no longer exists is simply passed over: the walk resumes at the next
 /// graph in order. When the last graph is exhausted the cursor wraps to the
 /// start of the next cycle.
-pub(crate) fn scrub_pass(
+pub fn scrub_pass(
     shard: &Shard,
     crypto: DurableCrypto<'_>,
     start: &ScrubCursor,
@@ -156,7 +156,7 @@ fn scrub_graph(
 }
 
 /// The persisted cursor, or the start of the first cycle when none exists.
-pub(crate) fn load_scrub_cursor(shard: &Shard) -> Result<ScrubCursor, String> {
+pub fn load_scrub_cursor(shard: &Shard) -> Result<ScrubCursor, String> {
     let control = shard.control_read()?;
     let table = control.open_owner_table(STORAGE_SCRUB_CURSOR)?;
     let row = table
@@ -172,7 +172,7 @@ pub(crate) fn load_scrub_cursor(shard: &Shard) -> Result<ScrubCursor, String> {
 /// Write the cursor inside the caller's control write. The writer thread
 /// commits it as one control-only maintenance group, so it is durable at the
 /// same `Durability::Immediate` as every other row.
-pub(crate) fn put_scrub_cursor_in(
+pub fn put_scrub_cursor_in(
     write: &ShardWrite<'_>,
     cursor: &ScrubCursor,
 ) -> Result<(), String> {

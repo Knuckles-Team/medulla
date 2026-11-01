@@ -210,7 +210,7 @@ pub(super) fn apply_lane_mutation(
 /// result bytes.  `authoritative_now_ms` is supplied by the eventual dispatch
 /// seam; the caller's serialized `now_ms` is overwritten before validation,
 /// idempotency hashing, or persistence.
-pub(crate) fn commit_development_lane(
+pub fn commit_development_lane(
     shard: &Shard,
     graph: &str,
     method: &Method,
@@ -280,7 +280,7 @@ pub(super) fn read_lane_query(
 /// Exact authenticated lane-hold/tombstone read.  The read is an MVCC snapshot;
 /// clustered ReadIndex/leader routing is intentionally added by the later server
 /// seam, not hidden in this redb-only checkpoint.
-pub(crate) fn read_development_lane(
+pub fn read_development_lane(
     shard: &Shard,
     graph: &str,
     request: &DevelopmentLaneQueryRequest,

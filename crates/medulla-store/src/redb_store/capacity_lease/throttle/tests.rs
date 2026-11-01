@@ -42,7 +42,7 @@ impl Harness {
         }
     }
 
-    fn commit(&mut self, method: &Method) -> Result<Vec<u8>, String> {
+    pub fn commit(&mut self, method: &Method) -> Result<Vec<u8>, String> {
         #[cfg(feature = "security")]
         return super::super::commit(
             &self.shard,

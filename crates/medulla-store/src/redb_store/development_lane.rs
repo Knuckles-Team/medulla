@@ -32,43 +32,43 @@ const LANE_CLEANUP_EXTENSION_KEY: &str = "development_lane_cleanup";
 // administrator; ordinary tenant updates cannot mutate graph-wide controls.
 
 /// Durable hold identity, keyed `(graph, hold_id)`.
-pub(crate) const HOLDS: TableDefinition<(&str, &str), &[u8]> =
+pub const HOLDS: TableDefinition<(&str, &str), &[u8]> =
     TableDefinition::new("development_lane_holds");
 /// Tenant keyset used only for bounded status pagination.  It remains after
 /// cleanup so a terminal hold is still discoverable without a full-table scan.
-pub(crate) const TENANT_INDEX: TableDefinition<(&str, &str, &str), &str> =
+pub const TENANT_INDEX: TableDefinition<(&str, &str, &str), &str> =
     TableDefinition::new("development_lane_tenant_index");
 /// Immutable lane identity `(graph, tenant, lane_id) -> hold_id`.
 ///
 /// The tenant is part of the key, not merely a value checked after lookup:
 /// two tenants may intentionally use the same opaque lane id without
 /// contending for one another's hold.
-pub(crate) const LANE_INDEX: TableDefinition<(&str, &str, &str), &str> =
+pub const LANE_INDEX: TableDefinition<(&str, &str, &str), &str> =
     TableDefinition::new("development_lane_lane_index");
 /// Repository/branch exclusivity `(tenant, repository, branch) -> hold_id`.
-pub(crate) const REPOSITORY_BRANCH_INDEX: TableDefinition<(&str, &str, &str), &str> =
+pub const REPOSITORY_BRANCH_INDEX: TableDefinition<(&str, &str, &str), &str> =
     TableDefinition::new("development_lane_repository_branch_index");
 /// Managed worktree locator exclusivity `(host, workspace, locator) -> hold_id`.
 /// The key is graph-wide so two tenants cannot claim the same host path.
-pub(crate) const WORKTREE_INDEX: TableDefinition<(&str, &str), &str> =
+pub const WORKTREE_INDEX: TableDefinition<(&str, &str), &str> =
     TableDefinition::new("development_lane_worktree_index");
 /// One allocation winner per WorkItem attempt.
-pub(crate) const WORK_ITEM_INDEX: TableDefinition<(&str, &str, u64), &str> =
+pub const WORK_ITEM_INDEX: TableDefinition<(&str, &str, u64), &str> =
     TableDefinition::new("development_lane_work_item_index");
 /// Exact maintained count/predicted/retained counters by scope.
-pub(crate) const COUNTERS: TableDefinition<(&str, &str), &[u8]> =
+pub const COUNTERS: TableDefinition<(&str, &str), &[u8]> =
     TableDefinition::new("development_lane_counters");
 /// Sorted pressure index `(graph, tenant, scope, metric, value, counter_key)`.
 /// The final counter key makes equal values unique; reading the last row for a
 /// scope/metric is an O(1) exact maximum, so quota-policy CAS never scans live
 /// holds or counter rows.
-pub(crate) const PRESSURE_INDEX: TableDefinition<(&str, &str, &str, &str, u64, &str), u8> =
+pub const PRESSURE_INDEX: TableDefinition<(&str, &str, &str, &str, u64, &str), u8> =
     TableDefinition::new("development_lane_pressure_index");
 /// Server-owned policy and its monotonic numeric revision, keyed by tenant.
-pub(crate) const POLICIES: TableDefinition<(&str, &str), &[u8]> =
+pub const POLICIES: TableDefinition<(&str, &str), &[u8]> =
     TableDefinition::new("development_lane_policies");
 /// Mutation invocation replay/input-conflict rows `(graph, tenant, key)`.
-pub(crate) const INVOCATIONS: TableDefinition<(&str, &str, &str), &[u8]> =
+pub const INVOCATIONS: TableDefinition<(&str, &str, &str), &[u8]> =
     TableDefinition::new("development_lane_invocations");
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

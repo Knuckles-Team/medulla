@@ -30,7 +30,7 @@ pub(super) fn cell_headroom(
 /// ([`CapacityCell::available_for`] over the cell's durable usage row): a
 /// planner reading this can never plan into a reserved floor its priority may
 /// not spend (SWARM-TOPOLOGY-DECIDE-DESIGN §5 stage 1b, ST-8).
-pub(crate) fn headroom(
+pub fn headroom(
     shard: &Shard,
     graph: &str,
     cells: &[String],

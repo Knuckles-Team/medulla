@@ -521,7 +521,7 @@ impl ResourceWorkItemFence {
         }
     }
 
-    pub(crate) fn is_superseded(&self) -> bool {
+    pub fn is_superseded(&self) -> bool {
         self.superseded
     }
 }

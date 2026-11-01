@@ -15,7 +15,7 @@ use medulla_types::work_market::{gap_row_key, is_tenant_gap, GapView};
 use super::*;
 
 mod lifecycle;
-mod read;
+pub mod read;
 mod upsert;
 
 pub(crate) use read::{list_gaps, read_gap};

@@ -56,7 +56,7 @@ pub struct SourceBudgetAuthority {
 /// A budget seed may accompany only the engine-attested source intent in its
 /// own ChangeEnvelope. The same check runs before proposal and on every Raft
 /// apply, so a sealed authority cannot be attached to a different source.
-pub(crate) fn validate_source_envelope(
+pub fn validate_source_envelope(
     envelope: &medulla_types::change_envelope::ChangeEnvelope,
     authority: Option<&SourceBudgetAuthority>,
 ) -> Result<(), String> {
@@ -430,7 +430,7 @@ fn ensure_active_source(
     Ok(())
 }
 
-pub(crate) fn read(
+pub fn read(
     shard: &Shard,
     graph: &str,
     source_envelope: &str,
@@ -478,7 +478,7 @@ fn park_requires_more_budget(park: &EnrichmentBudgetPark, budget: &BudgetCheckpo
 /// Park before releasing a held outbox lease. A later claim loop must read
 /// this marker first and refuse to claim any enrichment event on this graph.
 /// No reactivation method is provided without a verified policy revision.
-pub(crate) fn park_underfunded(
+pub fn park_underfunded(
     write: &ShardWrite<'_>,
     graph: &str,
     park: &EnrichmentBudgetPark,
@@ -523,7 +523,7 @@ pub(crate) use reactivation::verify_reactivation_replay;
 pub(crate) use reactivation::RepositoryEnrichmentPolicyRevision;
 
 /// Read before each outbox claim, including the first claim after restart.
-pub(crate) fn read_park(
+pub fn read_park(
     shard: &Shard,
     graph: &str,
     crypto: DurableCrypto<'_>,

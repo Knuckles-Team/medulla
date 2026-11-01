@@ -90,7 +90,7 @@ impl NativeLaneFixture {
         path
     }
 
-    pub(super) fn commit(&self, method: Method, now_ms: u64) -> Vec<u8> {
+    pub fn commit(&self, method: Method, now_ms: u64) -> Vec<u8> {
         commit_development_lane(
             &self.shard,
             TEST_GRAPH,
