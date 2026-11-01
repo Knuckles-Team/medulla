@@ -197,10 +197,10 @@ pub async fn try_handle(
 /// under the right graph but a stale epoch is exactly the split-brain write the
 /// pair exists to stop, so no caller gets to supply one without the other two.
 pub struct SeriesPlacement<'a> {
-    pub(crate) graph: &'a str,
-    pub(crate) placement_epoch: u64,
+    pub graph: &'a str,
+    pub placement_epoch: u64,
     /// `None` when the route carries no fencing token (single-node / non-raft).
-    pub(crate) fencing_token: Option<u64>,
+    pub fencing_token: Option<u64>,
 }
 
 struct TsRequestContext<'a> {

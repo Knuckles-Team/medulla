@@ -419,9 +419,9 @@ pub(super) fn consensus_participant_receipt_id(
 /// one value through both the PREPARE and the decided COMMIT apply.
 #[cfg(feature = "raft")]
 pub struct ConsensusParticipantRef<'a> {
-    pub(crate) coordinator_id: &'a str,
-    pub(crate) participant_id: u64,
-    pub(crate) plan_bytes: &'a [u8],
+    pub coordinator_id: &'a str,
+    pub participant_id: u64,
+    pub plan_bytes: &'a [u8],
 }
 
 /// Apply a participant PREPARE after its command is committed in the participant's

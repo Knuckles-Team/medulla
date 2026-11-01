@@ -667,8 +667,8 @@ pub(super) async fn stage_materialize_belief(
 /// VERIFY contract's "without the key the behaviour is unchanged". An error
 /// response passes through unchanged; any other outcome is a broken receipt.
 pub struct CommitResponseOptions {
-    pub(crate) replayed: bool,
-    pub(crate) keyed: bool,
+    pub replayed: bool,
+    pub keyed: bool,
 }
 
 pub fn tag_commit_response(response: Response, options: CommitResponseOptions) -> Response {
