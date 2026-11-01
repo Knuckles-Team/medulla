@@ -50,7 +50,7 @@ pub fn mutation_context(
 }
 
 /// The committed ledger record one idempotency key filed in a tenant's scope.
-pub(crate) fn ledger_record(
+pub fn ledger_record(
     store: &AgentLibraryStore,
     tenant_id: &str,
     idempotency_key: &str,
