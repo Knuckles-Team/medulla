@@ -354,7 +354,7 @@ impl NativeMutationCommand {
     }
 
     pub fn node_info(
-        info: &medulla_persistence_ops::node_info_store::NodeInfo,
+        info: &medulla_persistence::node_info_store::NodeInfo,
         server_secret: &str,
     ) -> Result<Self, String> {
         let command = Self::NodeInfo {
@@ -367,7 +367,7 @@ impl NativeMutationCommand {
     pub(crate) fn open_node_info(
         &self,
         server_secret: &str,
-    ) -> Result<medulla_persistence_ops::node_info_store::NodeInfo, String> {
+    ) -> Result<medulla_persistence::node_info_store::NodeInfo, String> {
         match self {
             Self::NodeInfo { sealed_info } => sealed_info.open_value(server_secret),
             _ => Err("command is not a cluster node-info self-report".to_string()),

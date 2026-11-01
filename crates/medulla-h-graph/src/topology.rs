@@ -140,7 +140,7 @@ fn member_role(
 
 #[cfg(feature = "raft")]
 fn certificate_value(
-    info: &medulla_persistence_ops::node_info_store::NodeInfo,
+    info: &medulla_persistence::node_info_store::NodeInfo,
 ) -> medulla_protocol_types::result_contract::cluster::ClusterMemberCertificate {
     medulla_protocol_types::result_contract::cluster::ClusterMemberCertificate {
         id: info.certificate_id.clone(),
@@ -179,7 +179,7 @@ struct MemberProjection {
 
 #[cfg(feature = "raft")]
 fn project_group_members(
-    store: &medulla_persistence_ops::node_info_store::NodeInfoStore,
+    store: &medulla_persistence::node_info_store::NodeInfoStore,
     cluster_id: &str,
     ids: &[medulla_raft::raft::NodeId],
     voters: &[medulla_raft::raft::NodeId],
@@ -194,7 +194,7 @@ fn project_group_members(
         })?;
         if info.cluster_id != cluster_id
             || info.member_identity
-                != medulla_persistence_ops::node_info_store::member_identity_for(
+                != medulla_persistence::node_info_store::member_identity_for(
                     cluster_id, node_id,
                 )
         {
@@ -237,7 +237,7 @@ fn project_group_members(
 #[cfg(feature = "raft")]
 async fn collect_group_projection(
     multi: &medulla_raft::raft::multi::MultiRaft,
-    store: &medulla_persistence_ops::node_info_store::NodeInfoStore,
+    store: &medulla_persistence::node_info_store::NodeInfoStore,
     cluster_id: &str,
     group_id: medulla_raft::raft::NodeId,
     member_count: usize,

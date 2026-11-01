@@ -22,7 +22,7 @@
 //! per-tenant/per-graph data.
 
 #[cfg(feature = "raft")]
-use medulla_persistence::AsRedb as _;
+use crate::AsRedb as _;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::RwLock;

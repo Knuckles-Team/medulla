@@ -28,7 +28,7 @@ impl MedullaStore {
                 }
                 NativeMutationCommand::NodeInfo { .. } => {
                     let info = command.open_node_info(server_secret)?;
-                    let outcome = medulla_persistence_ops::node_info_store::apply_replicated_node_info(
+                    let outcome = medulla_persistence::node_info_store::apply_replicated_node_info(
                         &self.ctx.state,
                         req.mutation.request_id,
                         info,
