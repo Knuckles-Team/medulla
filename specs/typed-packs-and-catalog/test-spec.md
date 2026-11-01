@@ -607,3 +607,14 @@ consumption acceptance remain open. No atomic approval consumption is added.
 - `MEDULLA-TYPED-PACKS-R105.7`: `crates/medulla-rdf/tests/domain_modules_classes.rs::dataplatform_classes_exist_with_their_parents`, `crates/medulla-rdf/tests/domain_modules_classes.rs::dataplatform_edges_declare_domain_and_range`.
 - `MEDULLA-TYPED-PACKS-R105.8`: `crates/medulla-rdf/tests/domain_modules_classes.rs::media_classes_exist_with_their_parents`, `crates/medulla-rdf/tests/domain_modules_classes.rs::media_edges_declare_domain_and_range`.
 - `MEDULLA-TYPED-PACKS-R105.9`: `crates/medulla-rdf/tests/domain_modules_classes.rs::retrieval_classes_exist_with_their_parents`, `crates/medulla-rdf/tests/domain_modules_classes.rs::retrieval_edges_declare_domain_and_range`.
+- `MEDULLA-TYPED-PACKS-R700.7`: `crates/medulla-h-admin/src/admin/connector_pack/import/front_matter.rs::the_skill_type_is_closed`
+- `MEDULLA-TYPED-PACKS-R700.8`: `tests/packs/test_skill_graph_pack_served.py::test_graph_files_import_and_non_graph_file_refuses`
+- `MEDULLA-TYPED-PACKS-R701.1`: `crates/medulla-catalog-types/tests/skill_graph.rs::layer_round_trip_and_reject_foreign_iri`
+- `MEDULLA-TYPED-PACKS-R701.2`: `crates/medulla-h-admin/tests/skill_graph_layer.rs::layer_iri_and_rollup_checked_in_one_pass`
+- `MEDULLA-TYPED-PACKS-R701.3`: `tests/packs/test_skill_graph_pack_served.py::test_layer_classes_read_through_core_class`
+- `MEDULLA-TYPED-PACKS-R701.4`: `tests/packs/test_skill_graph_pack_served.py::test_layer_refusals_leave_state_unchanged`
+- `MEDULLA-TYPED-PACKS-R701.5`: `tests/packs/test_skill_graph_pack_served.py::test_layered_graph_imports_and_orphan_layer_refuses`
+- `MEDULLA-TYPED-PACKS-R700.1`: `crates/medulla-types/tests/skill_graph.rs::manifest_report_candidate_round_trip_and_reject_bad_digest`
+- `MEDULLA-TYPED-PACKS-R700.2`: `crates/medulla-core/tests/skill_graph.rs::single_pass_rules_and_violation_cap_on_10_1000_100000_entries`
+- `MEDULLA-TYPED-PACKS-R700.3`: `tests/packs/test_skill_graph_pack_served.py::test_bundle_validated_in_import_and_candidate_renders_on_demand`
+- `MEDULLA-TYPED-PACKS-R700.4`: `tests/packs/test_skill_graph_pack_served.py::test_hash_index_and_entry_refusals_leave_state_unchanged`
