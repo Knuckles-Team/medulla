@@ -50,8 +50,8 @@ mod run_rules_dispatch_tests {
     use medulla_protocol_types::protocol::Request;
     use medulla_protocol_types::protocol::Response;
     use medulla_protocol_types::protocol::ResultPayload;
-    use medulla_server_api::auth::build_shared_test_request;
-    use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
+    use medulla_server_auth::auth::build_shared_test_request;
+    use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
     use medulla_server_api::state::ServerState;
     use std::sync::Arc;
     use tokio::sync::RwLock;
@@ -62,7 +62,7 @@ mod run_rules_dispatch_tests {
     fn state() -> Arc<RwLock<ServerState>> {
         let mut state = ServerState::new_for_test(SECRET, ServerState::test_isolation(TEST_AGENT));
         state.persist_dir = Some(
-            medulla_server_api::sql_tables::test_persist_dir()
+            medulla_server_auth::sql_tables::test_persist_dir()
                 .to_string_lossy()
                 .into_owned(),
         );

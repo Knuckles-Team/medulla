@@ -152,10 +152,10 @@ fn signed_agent_library_request(
         agent_id: Some(claims.agent_id.clone()),
         method: Method::AgentLibrary { op },
     };
-    request.auth_token = medulla_server_api::auth::compute_verified_envelope_token(
+    request.auth_token = medulla_server_auth::auth::compute_verified_envelope_token(
         secret,
         &request,
-        &medulla_server_api::auth::VerifiedEnvelopeParams {
+        &medulla_server_auth::auth::VerifiedEnvelopeParams {
             context: claims,
             timestamp: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -315,10 +315,10 @@ fn agent_library_signed_route_uses_wire_nonce_and_idempotency() {
             },
         },
     };
-    request.auth_token = medulla_server_api::auth::compute_verified_envelope_token(
+    request.auth_token = medulla_server_auth::auth::compute_verified_envelope_token(
         "agent-library-test-secret",
         &request,
-        &medulla_server_api::auth::VerifiedEnvelopeParams {
+        &medulla_server_auth::auth::VerifiedEnvelopeParams {
             context: &claims,
             timestamp: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -329,7 +329,7 @@ fn agent_library_signed_route_uses_wire_nonce_and_idempotency() {
         },
     );
     let verified =
-        medulla_server_api::auth::verify_request("agent-library-test-secret", &request).unwrap();
+        medulla_server_auth::auth::verify_request("agent-library-test-secret", &request).unwrap();
     let context = match request.method {
         medulla_protocol_types::protocol::Method::AgentLibrary {
             op: AgentLibraryOp::Publish { request },

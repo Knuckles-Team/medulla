@@ -4,9 +4,6 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod access;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
@@ -16,9 +13,6 @@ pub mod anonymous;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod api;
 
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod auth;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
@@ -100,15 +94,7 @@ pub mod routed_write_coalescer;
 pub mod service_grant;
 
 
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[cfg(feature = "query")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod sql_catalog_acl;
 
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[cfg(feature = "query")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod sql_tables;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

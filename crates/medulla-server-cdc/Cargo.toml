@@ -57,3 +57,6 @@ security = ["medulla-server-api/security"]
 shacl = ["dep:medulla-shacl", "medulla-server-api/shacl"]
 stream = ["query", "dep:medulla-stream", "dep:medulla-plan", "medulla-server-api/stream"]
 streaming = ["medulla-server-api/streaming"]
+
+[dev-dependencies]
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }

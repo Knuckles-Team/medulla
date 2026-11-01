@@ -42,6 +42,7 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
 
 medulla-shacl = { path = "../medulla-shacl", optional = true }
+medulla-server-auth = { path = "../medulla-server-auth" }
 
 [features]
 alignment = ["blob", "dep:medulla-modality", "dep:medulla-alignment", "medulla-server-api/alignment"]
@@ -51,11 +52,12 @@ kv = ["redb", "medulla-server-api/kv"]
 nl-query = ["dep:medulla-plan", "medulla-server-api/nl-query"]
 rdf-xml = ["dep:medulla-rdf", "medulla-server-api/rdf-xml"]
 redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-server-api/redb"]
-security = ["redb", "medulla-server-api/security"]
+security = ["redb", "medulla-server-api/security", "medulla-server-auth/security"]
 shacl = ["dep:medulla-shacl", "medulla-server-api/shacl"]
 sparql-http = ["shacl", "security", "medulla-server-api/sparql-http"]
 sparql-service = ["sparql-http", "dep:ureq", "medulla-server-api/sparql-service"]
-test-support = ["medulla-server-api/test-support"]
+test-support = ["medulla-server-api/test-support", "medulla-server-auth/test-support"]
 
 [dev-dependencies]
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
 tempfile = "3"

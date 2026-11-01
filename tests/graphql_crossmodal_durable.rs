@@ -25,8 +25,8 @@ mod test_support;
 
 use medulla_types::acl::RequestContextClaims;
 use medulla_protocol_types::protocol::{GraphType, Method, Request, Response, ResultPayload};
-use medulla_server_api::auth::compute_verified_envelope_token;
-use medulla_server_api::auth::VerifiedEnvelopeParams;
+use medulla_server_auth::auth::compute_verified_envelope_token;
+use medulla_server_auth::auth::VerifiedEnvelopeParams;
 
 const SECRET: &str = "gql-crossmodal-durable-secret";
 const GRAPH: &str = "gqlxmdurable"; // lowercase-alnum ⇒ sanitize() is identity ⇒ fname == GRAPH

@@ -688,13 +688,27 @@ impl RequestContextPolicy {
     }
 }
 
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "request-policy-fixture")))]
 pub fn request_context_policy() -> Result<&'static RequestContextPolicy, String> {
     static POLICY: OnceLock<Result<RequestContextPolicy, String>> = OnceLock::new();
     match POLICY.get_or_init(RequestContextPolicy::from_env) {
         Ok(policy) => Ok(policy),
         Err(message) => Err(message.clone()),
     }
+}
+
+/// Test builds of the crates that moved out of this one run under the fixed triple unless the
+/// environment provisions a policy (the feature is enabled only through their dev-dependencies).
+#[cfg(all(not(test), feature = "request-policy-fixture"))]
+pub fn request_context_policy() -> Result<&'static RequestContextPolicy, String> {
+    static POLICY: OnceLock<RequestContextPolicy> = OnceLock::new();
+    Ok(POLICY.get_or_init(|| {
+        RequestContextPolicy::from_env().unwrap_or_else(|_| RequestContextPolicy {
+            expected_audience: "medulla-test".to_string(),
+            expected_tenant: "tenant-shared".to_string(),
+            expected_policy_version: "policy-test".to_string(),
+        })
+    }))
 }
 
 #[cfg(test)]

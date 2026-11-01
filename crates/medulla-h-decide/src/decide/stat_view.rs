@@ -35,8 +35,8 @@ use super::SharedState;
 use medulla_persistence::agent_library::AgentLibraryStore;
 use medulla_persistence::decision_jobs::decode_artifact;
 use medulla_server_api::carrier::CarrierAuthority;
-use medulla_server_api::sql_catalog_acl::relations::ReadOnlyRelations;
-use medulla_server_api::sql_catalog_acl::relations::Relation;
+use medulla_server_auth::sql_catalog_acl::relations::ReadOnlyRelations;
+use medulla_server_auth::sql_catalog_acl::relations::Relation;
 
 /// One column: name, SQL type, and its cell for an item.
 pub(super) type Col<T> = (&'static str, ColumnType, fn(&T) -> Value);

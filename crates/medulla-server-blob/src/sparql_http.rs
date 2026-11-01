@@ -87,10 +87,10 @@ const HTTP_READ_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15
 /// configuration (an issuer selected without its mandatory audience/JWKS
 /// URL) — logged, then also treated as unconfigured so a startup typo cannot
 /// crash the listener that also serves SPARQL UPDATE / Graph Store traffic.
-fn resolve_bearer_credential() -> Result<Option<medulla_server_api::auth::BearerCredential>, String> {
+fn resolve_bearer_credential() -> Result<Option<medulla_server_auth::auth::BearerCredential>, String> {
     match medulla_server_api::oidc::JwtValidator::from_env_sparql() {
         Ok(Some(validator)) => {
-            return Ok(Some(medulla_server_api::auth::BearerCredential::Jwt(
+            return Ok(Some(medulla_server_auth::auth::BearerCredential::Jwt(
                 std::sync::Arc::new(validator),
             )))
         }
@@ -100,7 +100,7 @@ fn resolve_bearer_credential() -> Result<Option<medulla_server_api::auth::Bearer
     Ok(std::env::var(SPARQL_BEARER_TOKEN_ENV)
         .ok()
         .filter(|s| !s.is_empty())
-        .map(medulla_server_api::auth::BearerCredential::Static))
+        .map(medulla_server_auth::auth::BearerCredential::Static))
 }
 
 /// Serve the SPARQL 1.1 HTTP protocol on `listener`, backed by the engine `state`.
@@ -192,7 +192,7 @@ fn signed_request(
 /// Route + execute a request → `(status, content_type, body)`.
 pub async fn handle(
     state: &Arc<RwLock<ServerState>>,
-    bearer: &Option<medulla_server_api::auth::BearerCredential>,
+    bearer: &Option<medulla_server_auth::auth::BearerCredential>,
     req: HttpMessage,
 ) -> (&'static str, &'static str, String) {
     if !req.header("origin").is_empty() {
@@ -329,7 +329,7 @@ async fn run_query(
     default_graph: &str,
     accept: &str,
     fmt_override: Option<&str>,
-    bearer: Option<&medulla_server_api::auth::BearerCredential>,
+    bearer: Option<&medulla_server_auth::auth::BearerCredential>,
     authorization_header: &str,
 ) -> (&'static str, &'static str, String) {
     // A18: a SPARQL SELECT/CONSTRUCT/ASK read can span multiple named graphs in
@@ -346,7 +346,7 @@ async fn run_query(
     // and KV-cache bearer/JWT routes: one implementation, three routes). No
     // configured credential, or an invalid one, still denies (fail closed) —
     // see AGENTS.md (A18) for the before/after across every auxiliary surface.
-    let carrier = medulla_server_api::auth::mint_fixed_service_carrier(
+    let carrier = medulla_server_auth::auth::mint_fixed_service_carrier(
         bearer.is_some_and(|credential| credential.verify(authorization_header)),
         "sparql-http-client",
         &["kg:read"],
@@ -836,7 +836,7 @@ mod tests {
         accept: &str,
         fmt_override: Option<&str>,
     ) -> (&'static str, &'static str, String) {
-        let bearer = medulla_server_api::auth::BearerCredential::Static("s3cret".to_string());
+        let bearer = medulla_server_auth::auth::BearerCredential::Static("s3cret".to_string());
         let header = "Bearer s3cret";
         run_query(
             state,
@@ -858,7 +858,7 @@ mod tests {
             "test",
             medulla_isolation::isolation::IsolationLayer::new(),
         )));
-        let bearer = medulla_server_api::auth::BearerCredential::Static("s3cret".to_string());
+        let bearer = medulla_server_auth::auth::BearerCredential::Static("s3cret".to_string());
         let select = "SELECT ?s WHERE { ?s ?p ?o }";
         let ask = "ASK { ?s ?p ?o }";
         for (credential, header) in [(None, "Bearer s3cret"), (Some(&bearer), "Bearer nope")] {

@@ -34,10 +34,10 @@
 //! which restores the pre-2026-07-22 HMAC-only-permitted posture. Nothing
 //! defaults into that downgrade; an operator must type it.
 
-use crate::authority_context::{request_context_policy, RequestContextPolicy, VerifiedRequestContext};
-use crate::request_replay::durable_replay_ledger;
-use crate::request_replay::PresentedNonce;
-use crate::request_replay::ReplayLedger;
+use medulla_server_api::{authority_context::request_context_policy, authority_context::RequestContextPolicy, authority_context::VerifiedRequestContext};
+use medulla_server_api::request_replay::durable_replay_ledger;
+use medulla_server_api::request_replay::PresentedNonce;
+use medulla_server_api::request_replay::ReplayLedger;
 use hmac::{Hmac, Mac};
 use medulla_kernel::lock_recovery::{LockRecovery, WriteRecovery};
 use medulla_types::acl::AgentRole;
@@ -78,13 +78,13 @@ pub fn mint_fixed_service_carrier(
     credential_verified: bool,
     service: &str,
     scopes: &[&str],
-) -> Option<crate::carrier::CarrierAuthority> {
+) -> Option<medulla_server_api::carrier::CarrierAuthority> {
     if !credential_verified {
         return None;
     }
     VerifiedRequestContext::authenticated_fixed_service_actor(service, scopes)
         .ok()
-        .and_then(|context| crate::carrier::CarrierAuthority::from_verified(&context).ok())
+        .and_then(|context| medulla_server_api::carrier::CarrierAuthority::from_verified(&context).ok())
 }
 
 /// Mint a `CarrierAuthority` for the Iceberg-REST catalog surface (BUG-222,
@@ -98,12 +98,12 @@ pub fn mint_fixed_service_carrier(
 /// gate every other auxiliary surface uses.
 #[cfg(feature = "oidc")]
 pub fn mint_iceberg_carrier(
-    verified: Option<&crate::oidc::VerifiedTokenClaims>,
-) -> Option<crate::carrier::CarrierAuthority> {
+    verified: Option<&medulla_server_api::oidc::VerifiedTokenClaims>,
+) -> Option<medulla_server_api::carrier::CarrierAuthority> {
     let verified = verified?;
     VerifiedRequestContext::authenticated_iceberg_bearer(verified)
         .ok()
-        .and_then(|context| crate::carrier::CarrierAuthority::from_verified(&context).ok())
+        .and_then(|context| medulla_server_api::carrier::CarrierAuthority::from_verified(&context).ok())
 }
 
 /// A configured bearer credential for an auxiliary HTTP surface that
@@ -130,7 +130,7 @@ pub fn mint_iceberg_carrier(
 #[cfg(feature = "oidc")]
 pub enum BearerCredential {
     Static(String),
-    Jwt(std::sync::Arc<crate::oidc::JwtValidator>),
+    Jwt(std::sync::Arc<medulla_server_api::oidc::JwtValidator>),
 }
 
 #[cfg(feature = "oidc")]
@@ -594,12 +594,12 @@ pub fn build_shared_test_request(
 /// in another test future before polling.
 #[cfg(any(test, feature = "test-support"))]
 pub fn dispatch_test_on_heap<'a>(
-    state: &'a std::sync::Arc<tokio::sync::RwLock<crate::state::ServerState>>,
+    state: &'a std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     request: Request,
 ) -> std::pin::Pin<
     Box<dyn std::future::Future<Output = medulla_protocol_types::protocol::Response> + Send + 'a>,
 > {
-    Box::pin(crate::api::reentry::dispatch(state, request))
+    Box::pin(medulla_server_api::api::reentry::dispatch(state, request))
 }
 
 #[cfg(any(test, feature = "test-support"))]
@@ -738,7 +738,7 @@ fn env_flag_explicit(name: &str) -> Option<bool> {
 // test; `OidcTestGuard`'s `Drop` also resets it defensively.
 #[cfg(all(feature = "oidc", test))]
 thread_local! {
-    static TEST_OIDC_VALIDATOR: std::cell::Cell<Option<&'static crate::oidc::JwtValidator>> =
+    static TEST_OIDC_VALIDATOR: std::cell::Cell<Option<&'static medulla_server_api::oidc::JwtValidator>> =
         const { std::cell::Cell::new(None) };
 }
 
@@ -749,14 +749,14 @@ thread_local! {
 /// `Err` ⇒ an issuer is set but audience/JWKS URL are missing (fails closed,
 /// also surfaced eagerly by `validate_verified_context_startup`).
 #[cfg(all(feature = "oidc", test))]
-fn primary_oidc_validator() -> Result<Option<&'static crate::oidc::JwtValidator>, String> {
+fn primary_oidc_validator() -> Result<Option<&'static medulla_server_api::oidc::JwtValidator>, String> {
     Ok(TEST_OIDC_VALIDATOR.with(|cell| cell.get()))
 }
 
 #[cfg(all(feature = "oidc", not(test)))]
-fn primary_oidc_validator() -> Result<Option<&'static crate::oidc::JwtValidator>, String> {
-    static VALIDATOR: OnceLock<Result<Option<crate::oidc::JwtValidator>, String>> = OnceLock::new();
-    match VALIDATOR.get_or_init(crate::oidc::JwtValidator::from_env_primary) {
+fn primary_oidc_validator() -> Result<Option<&'static medulla_server_api::oidc::JwtValidator>, String> {
+    static VALIDATOR: OnceLock<Result<Option<medulla_server_api::oidc::JwtValidator>, String>> = OnceLock::new();
+    match VALIDATOR.get_or_init(medulla_server_api::oidc::JwtValidator::from_env_primary) {
         Ok(Some(v)) => Ok(Some(v)),
         Ok(None) => Ok(None),
         Err(message) => Err(message.clone()),
@@ -1829,8 +1829,8 @@ mod tests {
         }
     }
 
-    fn memory_replay() -> crate::request_replay::ReplayCache {
-        crate::request_replay::ReplayCache::new()
+    fn memory_replay() -> medulla_server_api::request_replay::ReplayCache {
+        medulla_server_api::request_replay::ReplayCache::new()
     }
 
     fn signed_v2_with_claims(id: u64, nonce: &str, claims: RequestContextClaims) -> Request {
@@ -2993,8 +2993,8 @@ mod tests {
                 OIDC_KID.to_string(),
                 jsonwebtoken::DecodingKey::from_rsa_raw_components(&n, &e),
             );
-            let validator: &'static crate::oidc::JwtValidator = Box::leak(Box::new(
-                crate::oidc::JwtValidator::from_parts(OIDC_ISSUER, OIDC_AUDIENCE, keys),
+            let validator: &'static medulla_server_api::oidc::JwtValidator = Box::leak(Box::new(
+                medulla_server_api::oidc::JwtValidator::from_parts(OIDC_ISSUER, OIDC_AUDIENCE, keys),
             ));
             TEST_OIDC_VALIDATOR.with(|cell| cell.set(Some(validator)));
             OidcTestGuard
@@ -3408,7 +3408,7 @@ mod tests {
     #[cfg(feature = "oidc")]
     mod iceberg_bearer_carrier {
         use super::*;
-        use crate::oidc::VerifiedTokenClaims;
+        use medulla_server_api::oidc::VerifiedTokenClaims;
 
         /// `scopes` is the bearer's own verified `scope`/`scp` claim (NE-048):
         /// unlike before this fix, this is no longer discarded in favor of a
@@ -3439,7 +3439,7 @@ mod tests {
                 carrier.is_some(),
                 "a bearer whose verified tenant matches this deployment must mint a carrier"
             );
-            assert!(!crate::carrier::unauthenticated_carrier_denied(
+            assert!(!medulla_server_api::carrier::unauthenticated_carrier_denied(
                 carrier.as_ref()
             ));
         }
@@ -3455,7 +3455,7 @@ mod tests {
                 carrier.is_none(),
                 "a cross-tenant bearer must never mint a carrier"
             );
-            assert!(crate::carrier::unauthenticated_carrier_denied(
+            assert!(medulla_server_api::carrier::unauthenticated_carrier_denied(
                 carrier.as_ref()
             ));
         }
@@ -3610,7 +3610,7 @@ mod tests {
                 ICEBERG_TEST_KID.to_string(),
                 DecodingKey::from_rsa_raw_components(&n, &e),
             );
-            let validator = crate::oidc::JwtValidator::from_parts(
+            let validator = medulla_server_api::oidc::JwtValidator::from_parts(
                 ICEBERG_TEST_ISSUER,
                 ICEBERG_TEST_AUDIENCE,
                 keys,
@@ -3663,13 +3663,13 @@ pub trait RequestAuthorityExt {
     ) -> Result<VerifiedRequestContext, String>;
 }
 
-impl RequestAuthorityExt for crate::state::ServerState {
+impl RequestAuthorityExt for medulla_server_api::state::ServerState {
     fn request_authority(
         &self,
         request: &medulla_protocol_types::protocol::Request,
     ) -> Result<VerifiedRequestContext, String> {
         if self.local_anonymous {
-            crate::anonymous::request_authority(request)
+            medulla_server_api::anonymous::request_authority(request)
         } else {
             verify_request_with_security_dir(
                 &self.auth_secret,
@@ -3687,7 +3687,7 @@ mod default_state_authority_tests {
 
     #[test]
     fn default_state_rejects_unsigned_correlation() {
-        let state = crate::state::ServerState::new(
+        let state = medulla_server_api::state::ServerState::new(
             "synthetic-test-secret",
             medulla_isolation::isolation::IsolationLayer::new(),
         );

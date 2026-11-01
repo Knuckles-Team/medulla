@@ -402,7 +402,7 @@ impl KvCacheStore {
 // SAME way instead of growing a third bespoke bearer/JWT implementation. The
 // JWT verifier itself still lives in `medulla_server::oidc` (feature `oidc`),
 // shared with the primary `eg2.` protocol's identity binding.
-use medulla_server_api::auth::BearerCredential as KvAuth;
+use medulla_server_auth::auth::BearerCredential as KvAuth;
 
 /// Require a valid `Authorization: Bearer <token>` — a static-secret match or a
 /// signature/issuer/audience/expiry-verified Keycloak JWT
@@ -506,7 +506,7 @@ fn handle(store: &KvCacheStore, auth: &KvAuth, req: &HttpMessage) -> KvResponse 
     // leg, ...), then gate through the SAME shared check (real now: denies
     // iff no carrier was minted; here it can only be minted once `authorized`
     // passed).
-    let carrier = medulla_server_api::auth::mint_fixed_service_carrier(
+    let carrier = medulla_server_auth::auth::mint_fixed_service_carrier(
         credential_verified,
         "kvcache-client",
         &["kg:read", "kg:write"],

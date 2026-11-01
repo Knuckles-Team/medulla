@@ -5,9 +5,9 @@ use medulla_protocol_types::storage_wire::SqlSourceText;
 use medulla_tables::schema::Column;
 use medulla_tables::schema::ColumnType;
 use medulla_tables::schema::TableSchema;
-use medulla_server_api::sql_catalog_acl::create_owned_table;
-use medulla_server_api::sql_catalog_acl::grant;
-use medulla_server_api::sql_catalog_acl::SqlPrivilege;
+use medulla_server_auth::sql_catalog_acl::create_owned_table;
+use medulla_server_auth::sql_catalog_acl::grant;
+use medulla_server_auth::sql_catalog_acl::SqlPrivilege;
 use medulla_types::acl::RequestContextClaims;
 
 pub(super) struct Fixture {
@@ -26,7 +26,7 @@ impl Fixture {
     /// claim, so an end-to-end test must build the catalog under the tenant the
     /// deployment's request-context policy expects, not the direct-call default.
     pub(super) fn for_tenant(tenant: &str) -> Self {
-        let directory = medulla_server_api::sql_tables::test_persist_dir();
+        let directory = medulla_server_auth::sql_tables::test_persist_dir();
         let owner = authority("alice", tenant, "owner", true);
         let schema = TableSchema::new(
             "issues",
@@ -45,7 +45,7 @@ impl Fixture {
     }
 
     pub(super) fn store(&self) -> TableStore {
-        medulla_server_api::sql_tables::tenant_table_store(
+        medulla_server_auth::sql_tables::tenant_table_store(
             self.owner.tenant_scope(),
             &self.directory,
         )
@@ -65,15 +65,15 @@ impl Fixture {
     }
 
     pub(super) fn evict_tenant(&self, tenant: &str) {
-        use medulla_server_api::sql_tables::evict_for_test;
-        use medulla_server_api::sql_tables::tenant_acl_path_for_test;
-        use medulla_server_api::sql_tables::tenant_table_path_for_test;
+        use medulla_server_auth::sql_tables::evict_for_test;
+        use medulla_server_auth::sql_tables::tenant_acl_path_for_test;
+        use medulla_server_auth::sql_tables::tenant_table_path_for_test;
         evict_for_test(&tenant_table_path_for_test(tenant, &self.directory));
         evict_for_test(&tenant_acl_path_for_test(tenant, &self.directory));
     }
 
     pub(super) fn enable_rls(&self) {
-        medulla_server_api::sql_catalog_acl::set_row_level_column(
+        medulla_server_auth::sql_catalog_acl::set_row_level_column(
             &self.directory,
             &self.owner,
             "issues",
@@ -104,9 +104,9 @@ impl Fixture {
 
 impl Drop for Fixture {
     fn drop(&mut self) {
-        use medulla_server_api::sql_tables::evict_for_test;
-        use medulla_server_api::sql_tables::tenant_acl_path_for_test;
-        use medulla_server_api::sql_tables::tenant_table_path_for_test;
+        use medulla_server_auth::sql_tables::evict_for_test;
+        use medulla_server_auth::sql_tables::tenant_acl_path_for_test;
+        use medulla_server_auth::sql_tables::tenant_table_path_for_test;
         evict_for_test(&tenant_table_path_for_test(
             self.owner.tenant_scope(),
             &self.directory,

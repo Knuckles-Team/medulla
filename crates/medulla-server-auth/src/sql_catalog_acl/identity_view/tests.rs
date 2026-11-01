@@ -3,7 +3,7 @@
 //! never projected, the namespace reserved.
 
 use super::*;
-use crate::authority_context::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use crate::sql_tables::test_persist_dir;
 use medulla_identity_types::identity::*;
 
@@ -70,7 +70,7 @@ fn query_as(
 fn an_identity_reader_selects_users_and_nobody_else_sees_the_relations() {
     let dir = test_persist_dir();
     std::fs::create_dir_all(&dir).unwrap();
-    crate::identity_view::publish(dir.to_str(), &store());
+    medulla_server_api::identity_view::publish(dir.to_str(), &store());
     let sql = "SELECT principal_id, username, has_password FROM __identity__users";
     let rows = query(&dir, &["identity:read"], sql).unwrap();
     assert_eq!(
@@ -118,7 +118,7 @@ fn a_reader_the_store_no_longer_backs_sees_no_identity_relations() {
     let dir = test_persist_dir();
     std::fs::create_dir_all(&dir).unwrap();
     let mut store = store_with_ann();
-    crate::identity_view::publish(dir.to_str(), &store);
+    medulla_server_api::identity_view::publish(dir.to_str(), &store);
     let sql = "SELECT principal_id FROM __identity__users";
     let ann = authority_of("ann", &["identity:read"]);
     assert_eq!(query_as(&dir, &ann, sql).unwrap().len(), 2);
@@ -134,7 +134,7 @@ fn a_reader_the_store_no_longer_backs_sees_no_identity_relations() {
         },
     });
     apply(&mut store, &disable, &admin);
-    crate::identity_view::publish(dir.to_str(), &store);
+    medulla_server_api::identity_view::publish(dir.to_str(), &store);
     assert!(
         query_as(&dir, &ann, sql).is_err(),
         "a disabled reader's previous token still reads the identity relations"
@@ -145,7 +145,7 @@ fn a_reader_the_store_no_longer_backs_sees_no_identity_relations() {
 fn no_relation_projects_a_secret() {
     let dir = test_persist_dir();
     std::fs::create_dir_all(&dir).unwrap();
-    crate::identity_view::publish(dir.to_str(), &store());
+    medulla_server_api::identity_view::publish(dir.to_str(), &store());
     for relation in store().sql_relations() {
         let sql = format!("SELECT * FROM {IDENTITY_RELATION_PREFIX}{}", relation.name);
         let rows = query(&dir, &["identity:admin"], &sql).unwrap();

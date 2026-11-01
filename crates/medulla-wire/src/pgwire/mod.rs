@@ -1950,7 +1950,7 @@ pub async fn serve_prepared(
     // on loopback. The safe plaintext exception is only the explicit no-TLS
     // loopback default.
     let require_tls = tls_material.is_some();
-    medulla_server_api::sql_tables::validate_served_configuration(
+    medulla_server_auth::sql_tables::validate_served_configuration(
         persist_dir.as_deref().map(std::path::Path::new),
     )?;
     let listener = TcpListener::bind(&addr).await?;

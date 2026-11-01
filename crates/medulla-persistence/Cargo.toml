@@ -51,6 +51,7 @@ medulla-work-types = { path = "../medulla-work-types" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 medulla-server-ops = { path = "../medulla-server-ops" }
 medulla-server-blob = { path = "../medulla-server-blob" }
+medulla-server-auth = { path = "../medulla-server-auth" }
 
 [features]
 test-support = ["dep:tempfile"]

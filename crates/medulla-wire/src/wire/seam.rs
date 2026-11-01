@@ -10,7 +10,7 @@ pub struct WireSeam;
 impl medulla_server_ops::api::query_txn::WireApi for WireSeam {
     fn authorize_table_txn(
         &self,
-        source: &medulla_server_api::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
+        source: &medulla_server_auth::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
         table_store: &TableStore,
         txn: &mut TableTxn,
         committed_replay: bool,

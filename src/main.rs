@@ -1605,7 +1605,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     spawn_periodic_sweep(
         30,
         "sql_ann_generation_sweep",
-        medulla_server_api::sql_tables::sweep_ann_generations,
+        medulla_server_auth::sql_tables::sweep_ann_generations,
     );
 
     // Periodic Ebbinghaus decay sweep (CONCEPT:MEDULLA-KG.compute.graph-compute-engine) — opt-in. Confidence on

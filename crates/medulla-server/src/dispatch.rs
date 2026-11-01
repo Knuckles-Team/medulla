@@ -10,15 +10,15 @@ use std::time::Instant as DispatchLockInstant;
 use tokio::sync::RwLock;
 use tracing::info;
 
-use medulla_server_api::access::check_caller_is_known;
-use medulla_server_api::access::check_graph_access;
-use medulla_server_api::access::is_admin_authz_action;
-use medulla_server_api::access::require_admin_capability;
-use medulla_server_api::access::requires_write;
+use medulla_server_auth::access::check_caller_is_known;
+use medulla_server_auth::access::check_graph_access;
+use medulla_server_auth::access::is_admin_authz_action;
+use medulla_server_auth::access::require_admin_capability;
+use medulla_server_auth::access::requires_write;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::carrier::GraphReadAuthority;
-use medulla_server_api::auth::verify_multisig_mutation_signatures;
-use medulla_server_api::auth::verify_register_identity_signature;
+use medulla_server_auth::auth::verify_multisig_mutation_signatures;
+use medulla_server_auth::auth::verify_register_identity_signature;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 // Only the ast-gated ParseFiles handler offloads to the blocking pool here; the
 // graph-op off-lock sites live in handlers/graph_ops.rs.

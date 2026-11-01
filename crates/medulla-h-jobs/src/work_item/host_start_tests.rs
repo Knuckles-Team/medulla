@@ -6,9 +6,9 @@ use medulla_work_types::host_start::{
     HostStartBinding, HostStartInterfaces, IssueHostStartGrantRequest,
 };
 use medulla_persistence::redb_backend::RedbBackend;
-use medulla_server_api::auth::dispatch_test_on_heap;
-use medulla_server_api::auth::scoped_test_request_on;
-use medulla_server_api::auth::ScopedTestCaller;
+use medulla_server_auth::auth::dispatch_test_on_heap;
+use medulla_server_auth::auth::scoped_test_request_on;
+use medulla_server_auth::auth::ScopedTestCaller;
 use medulla_server_api::state::ServerState;
 use tokio::sync::RwLock;
 

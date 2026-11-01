@@ -20,12 +20,12 @@ use medulla_identity_types::identity::SqlType;
 use medulla_tables::{schema::Column, schema::ColumnType, schema::TableSchema};
 
 use super::AuthorizedReadStore;
-use crate::carrier::CarrierAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
 
 /// The reserved relation-name prefix (`__identity__users`, …).
 pub(crate) const IDENTITY_RELATION_PREFIX: &str = "__identity__";
 
-use crate::identity_view::published;
+use medulla_server_api::identity_view::published;
 
 /// Refuse a tenant table name in the reserved identity namespace.
 pub(crate) fn refuse_reserved_name(name: &str) -> Result<(), String> {

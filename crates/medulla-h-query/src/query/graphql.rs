@@ -283,7 +283,7 @@ pub(crate) async fn handle_graphql(
     // `execute_mutation` (which bumps the OCC version / `mark_dirty` once it
     // lands). NOT cached (it is a write) and NOT RLS pre-filtered (writes are
     // graph-ACL-gated in `dispatch_graph_op` — this method classified Write).
-    if medulla_server_api::access::graphql_is_mutation(&query) {
+    if medulla_server_auth::access::graphql_is_mutation(&query) {
         return handle_graphql_mutation(
             state,
             req_id,

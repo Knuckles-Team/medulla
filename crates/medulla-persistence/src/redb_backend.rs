@@ -831,8 +831,8 @@ pub mod tests {
     use medulla_protocol_types::mutation_batch::VersionExpectation;
     use medulla_protocol_types::mutation_batch::MUTATION_ACTOR_HEADER;
     use medulla_protocol_types::protocol::Request;
-    use medulla_server_api::auth::build_shared_test_request;
-    use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
+    use medulla_server_auth::auth::build_shared_test_request;
+    use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
     #[cfg(feature = "tsdb")]
     use sha2::Digest;
 

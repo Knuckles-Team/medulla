@@ -58,8 +58,8 @@ use medulla_raft::raft::harness::cluster::GRAPH;
 use medulla_raft::raft::harness::test_env::configure_auth_test_environment;
 use medulla_raft::raft::NodeId;
 use crate::dispatch;
-use medulla_server_api::auth::compute_verified_envelope_token;
-use medulla_server_api::auth::VerifiedEnvelopeParams;
+use medulla_server_auth::auth::compute_verified_envelope_token;
+use medulla_server_auth::auth::VerifiedEnvelopeParams;
 
 const SECRET: &str = "harness";
 // `cfg(test)` request-context verification deliberately pins the shared harness

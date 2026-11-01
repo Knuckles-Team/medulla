@@ -57,35 +57,36 @@ redb = { workspace = true, optional = true }
 ureq = { version = "3.4.2", optional = true }
 medulla-server-blob = { path = "../medulla-server-blob" }
 medulla-server-mutation = { path = "../medulla-server-mutation" }
+medulla-server-auth = { path = "../medulla-server-auth" }
 
 [features]
 ann-redb = ["redb", "medulla-server-api/ann-redb"]
 compute-dist = ["medulla-server-api/compute-dist"]
 decide = ["jobs", "redb", "shacl", "dep:medulla-numeric", "dep:medulla-capabilities", "medulla-server-api/decide"]
-epistemic = ["query", "dep:medulla-plan", "dep:medulla-modality", "dep:medulla-epistemic", "medulla-server-api/epistemic", "medulla-server-mutation/epistemic"]
-federation = ["query", "dep:medulla-plan", "medulla-server-api/federation"]
+epistemic = ["query", "dep:medulla-plan", "dep:medulla-modality", "dep:medulla-epistemic", "medulla-server-api/epistemic", "medulla-server-auth/epistemic", "medulla-server-mutation/epistemic"]
+federation = ["query", "dep:medulla-plan", "medulla-server-api/federation", "medulla-server-auth/federation"]
 federation-search = ["federation", "dep:ureq", "medulla-server-api/federation-search"]
 federation-sql = ["federation", "dep:medulla-plan", "medulla-server-api/federation-sql"]
-graphql = ["security", "dep:medulla-graphql", "medulla-server-api/graphql", "medulla-server-mutation/graphql"]
+graphql = ["security", "dep:medulla-graphql", "medulla-server-api/graphql", "medulla-server-auth/graphql", "medulla-server-mutation/graphql"]
 jobs = ["mining", "epistemic", "dep:medulla-jobs", "dep:medulla-capabilities", "medulla-server-api/jobs", "medulla-server-mutation/jobs"]
 knowledge-batch = ["query", "dep:medulla-plan", "dep:medulla-modality", "dep:medulla-capabilities", "medulla-server-api/knowledge-batch"]
 matview = ["query", "result-cache", "streaming", "medulla-server-api/matview"]
-mining = ["medulla-server-api/mining", "medulla-server-mutation/mining"]
-modality-serving = ["redb", "security", "streaming", "dep:medulla-modality", "dep:medulla-capabilities", "medulla-server-api/modality-serving", "medulla-server-mutation/modality-serving"]
+mining = ["medulla-server-api/mining", "medulla-server-auth/mining", "medulla-server-mutation/mining"]
+modality-serving = ["redb", "security", "streaming", "dep:medulla-modality", "dep:medulla-capabilities", "medulla-server-api/modality-serving", "medulla-server-auth/modality-serving", "medulla-server-mutation/modality-serving"]
 owl = ["sparql", "dep:medulla-rdf", "medulla-server-api/owl"]
-query = ["redb", "dep:medulla-tsdb", "dep:medulla-plan", "medulla-server-api/query", "medulla-server-mutation/query"]
+query = ["redb", "dep:medulla-tsdb", "dep:medulla-plan", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-mutation/query"]
 redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-server-api/redb", "medulla-server-mutation/redb", "medulla-server-blob/redb"]
 result-cache = ["medulla-server-api/result-cache"]
-security = ["redb", "medulla-server-api/security", "medulla-server-blob/security"]
+security = ["redb", "medulla-server-api/security", "medulla-server-auth/security", "medulla-server-blob/security"]
 shacl = ["dep:medulla-shacl", "medulla-server-api/shacl", "medulla-server-mutation/shacl", "medulla-server-blob/shacl"]
 sparql = ["dep:medulla-rdf", "medulla-server-api/sparql"]
 stream = ["query", "dep:medulla-stream", "dep:medulla-plan", "medulla-server-api/stream"]
 streaming = ["medulla-server-api/streaming", "medulla-server-mutation/streaming"]
-test-support = ["medulla-server-api/test-support", "medulla-server-mutation/test-support", "medulla-server-blob/test-support"]
+test-support = ["medulla-server-api/test-support", "medulla-server-auth/test-support", "medulla-server-mutation/test-support", "medulla-server-blob/test-support"]
 text = ["query", "dep:medulla-plan", "medulla-server-api/text"]
 tsdb = ["redb", "dep:medulla-tsdb", "dep:medulla-plan", "medulla-server-api/tsdb"]
-wasm-udf = ["dep:medulla-wasm", "dep:medulla-plan", "medulla-server-api/wasm-udf"]
+wasm-udf = ["dep:medulla-wasm", "dep:medulla-plan", "medulla-server-api/wasm-udf", "medulla-server-auth/wasm-udf"]
 
 [dev-dependencies]
-medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
 tempfile = "3"

@@ -39,7 +39,7 @@ async fn outcome(session: &WireSession, sql: &str) -> Result<String, String> {
 async fn registered_store(state: &Arc<RwLock<ServerState>>, agent: &str) -> (String, TableStore) {
     let tenant = authority(agent, TENANT).tenant_scope().to_string();
     let persist_dir = test_persist_dir_of(state).await;
-    let store = medulla_server_api::sql_tables::tenant_table_store(&tenant, &persist_dir).unwrap();
+    let store = medulla_server_auth::sql_tables::tenant_table_store(&tenant, &persist_dir).unwrap();
     (tenant, store)
 }
 

@@ -269,10 +269,10 @@ fn import_sqlite_lifecycle_with_nonce(
     persist_dir: &Path,
     now: u64,
 ) -> Result<SqliteImportReport, String> {
-    medulla_server_api::sql_catalog_acl::require_source_authority()?;
-    medulla_server_api::sql_catalog_acl::with_source_authority_write(persist_dir, authority, |source| {
+    medulla_server_auth::sql_catalog_acl::require_source_authority()?;
+    medulla_server_auth::sql_catalog_acl::with_source_authority_write(persist_dir, authority, |source| {
         let store =
-            medulla_server_api::sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)?;
+            medulla_server_auth::sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)?;
         let batch =
             compile_import_batch_with_nonce(&store, req_id, authority, method, now, attempt_nonce)?;
         if let Some(committed_report) =
@@ -297,9 +297,9 @@ fn export_sqlite_lifecycle(
     tables: &[String],
     persist_dir: &Path,
 ) -> Result<SqliteExportReport, String> {
-    medulla_server_api::sql_catalog_acl::require_source_authority()?;
+    medulla_server_auth::sql_catalog_acl::require_source_authority()?;
     export_sqlite_file(
-        &medulla_server_api::sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)?,
+        &medulla_server_auth::sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)?,
         &transfer_fs::export_destination(logical_path)?,
         tables,
     )
@@ -340,7 +340,7 @@ fn compile_import_batch_with_nonce(
     attempt_nonce: Option<Nonce>,
 ) -> Result<MutationBatch, String> {
     let scope = authority.namespace("sqlite-import", "global-user-tables");
-    medulla_server_api::sql_tables::SqlOwnerMutation {
+    medulla_server_auth::sql_tables::SqlOwnerMutation {
         authority,
         kind: "sqlite-import",
         scope: &scope,
@@ -363,15 +363,15 @@ fn compile_import_batch_with_nonce(
 /// paths. Registration is idempotent, so a retry repairs a crash or failure that
 /// happened after the table transaction committed but before ACL registration.
 fn register_import_owners(
-    source: &medulla_server_api::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
+    source: &medulla_server_auth::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
     parent_operation: &str,
     report: &SqliteImportReport,
 ) -> Result<(), String> {
     for table in validated_import_tables(report)? {
-        medulla_server_api::sql_catalog_acl::register_owner_after_create_in(
+        medulla_server_auth::sql_catalog_acl::register_owner_after_create_in(
             source,
             table,
-            medulla_server_api::sql_catalog_acl::stable_source_operation_id(parent_operation),
+            medulla_server_auth::sql_catalog_acl::stable_source_operation_id(parent_operation),
         )?;
     }
     Ok(())
@@ -1027,10 +1027,10 @@ mod tests {
 
     #[test]
     fn export_version_fence_rejects_deterministic_interleaved_commit() {
-        let persist_dir = medulla_server_api::sql_tables::test_persist_dir();
+        let persist_dir = medulla_server_auth::sql_tables::test_persist_dir();
         let authority = authority("sqlite-exporter", "sqlite-export-fence");
         let store =
-            medulla_server_api::sql_tables::tenant_table_store(authority.tenant_scope(), &persist_dir)
+            medulla_server_auth::sql_tables::tenant_table_store(authority.tenant_scope(), &persist_dir)
                 .unwrap();
         let schema = TableSchema::new(
             "events",
@@ -1077,8 +1077,8 @@ mod tests {
     #[cfg(target_os = "linux")]
     #[test]
     fn missing_source_replay_repairs_simulated_post_commit_process_loss() {
-        use medulla_server_api::sql_catalog_acl::open_authorized_table;
-        use medulla_server_api::sql_catalog_acl::SqlPrivilege;
+        use medulla_server_auth::sql_catalog_acl::open_authorized_table;
+        use medulla_server_auth::sql_catalog_acl::SqlPrivilege;
         use std::os::unix::fs::PermissionsExt;
 
         let _env_lock = medulla_kernel::crypto::acquire_test_env_lock_blocking();
@@ -1089,10 +1089,10 @@ mod tests {
             "MEDULLA_SQLITE_TRANSFER_ROOT",
             transfer_root.path().to_str().unwrap(),
         );
-        let persist_dir = medulla_server_api::sql_tables::test_persist_dir();
+        let persist_dir = medulla_server_auth::sql_tables::test_persist_dir();
         let authority = authority("sqlite-owner", "sqlite-owner-repair");
         let store =
-            medulla_server_api::sql_tables::tenant_table_store(authority.tenant_scope(), &persist_dir)
+            medulla_server_auth::sql_tables::tenant_table_store(authority.tenant_scope(), &persist_dir)
                 .unwrap();
         let method = Method::ImportSqliteFile {
             path: "missing-after-commit.db".to_string(),

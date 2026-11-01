@@ -41,9 +41,9 @@ use medulla_isolation::isolation::IsolationLayer;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
-use medulla_server_api::access::check_graph_access;
+use medulla_server_auth::access::check_graph_access;
 use medulla_server_api::carrier::GraphReadAuthority;
-use medulla_server_api::auth::verify_request_with_security_dir;
+use medulla_server_auth::auth::verify_request_with_security_dir;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::http1;
 use medulla_server_api::http1::HttpMessage;
@@ -747,8 +747,8 @@ mod tests {
     use medulla_types::acl::AgentIdentity;
     use medulla_types::acl::AgentRole;
     use medulla_types::acl::RequestContextClaims;
-    use medulla_server_api::auth::compute_verified_envelope_token;
-    use medulla_server_api::auth::VerifiedEnvelopeParams;
+    use medulla_server_auth::auth::compute_verified_envelope_token;
+    use medulla_server_auth::auth::VerifiedEnvelopeParams;
     use serde_json::json;
     use std::time::{SystemTime, UNIX_EPOCH};
 

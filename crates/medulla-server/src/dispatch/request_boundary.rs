@@ -1,4 +1,4 @@
-use medulla_server_api::auth::RequestAuthorityExt;
+use medulla_server_auth::auth::RequestAuthorityExt;
 #[cfg(feature = "raft")]
 use super::change_envelope::multi_graph_batch_update;
 #[cfg(feature = "raft")]
@@ -453,7 +453,7 @@ async fn dispatch_inner(
                     medulla_kernel::metrics::auth_failure();
                     return Response::err(
                         req.id,
-                        medulla_server_api::auth::authentication_refusal(&error),
+                        medulla_server_auth::auth::authentication_refusal(&error),
                     );
                 }
             }

@@ -28,7 +28,7 @@ use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::auth::dispatch_test_on_heap;
+use medulla_server_auth::auth::dispatch_test_on_heap;
 use medulla_server_api::state::ServerState;
 
 mod admin;
@@ -120,12 +120,12 @@ impl Served {
         method: Method,
     ) -> Response {
         let id = next_id();
-        let request = medulla_server_api::auth::scoped_test_request_on(
+        let request = medulla_server_auth::auth::scoped_test_request_on(
             SECRET,
             id,
             graph,
             method,
-            medulla_server_api::auth::ScopedTestCaller {
+            medulla_server_auth::auth::ScopedTestCaller {
                 principal,
                 tenant: TENANT,
                 scopes,

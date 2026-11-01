@@ -60,9 +60,9 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla_server_api::auth::dispatch_test_on_heap;
-use medulla_server_api::auth::scoped_test_request_on;
-use medulla_server_api::auth::ScopedTestCaller;
+use medulla_server_auth::auth::dispatch_test_on_heap;
+use medulla_server_auth::auth::scoped_test_request_on;
+use medulla_server_auth::auth::ScopedTestCaller;
 use medulla_server_api::state::ServerState;
 
 const SECRET: &str = "g9-boot-critical-fixture-secret"; // sanitizer:ignore

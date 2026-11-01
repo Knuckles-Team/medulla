@@ -757,8 +757,8 @@ mod admission_tests {
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;
     use medulla_server_api::api::persistence::PersistenceBackend;
-    use medulla_server_api::auth::build_current_test_request;
-    use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
+    use medulla_server_auth::auth::build_current_test_request;
+    use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
     use medulla_server_api::state::ServerState;
     #[cfg(feature = "security")]
     use medulla_types::acl::AgentIdentity;

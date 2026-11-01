@@ -166,7 +166,7 @@ fn resolve_carrier(
         return Ok(None);
     }
     let verified = verify_bearer(credential, headers);
-    let carrier = medulla_server_api::auth::mint_iceberg_carrier(verified.as_ref());
+    let carrier = medulla_server_auth::auth::mint_iceberg_carrier(verified.as_ref());
     if medulla_server_api::carrier::unauthenticated_carrier_denied(carrier.as_ref()) {
         Err(())
     } else {
@@ -674,7 +674,7 @@ fn handle_oauth_token(
     let verified = credential.validator.validate_claims(&token);
     match verified
         .as_ref()
-        .and_then(|v| medulla_server_api::auth::mint_iceberg_carrier(Some(v)))
+        .and_then(|v| medulla_server_auth::auth::mint_iceberg_carrier(Some(v)))
     {
         Some(_carrier) => (
             "200 OK",
@@ -1940,7 +1940,7 @@ mod tests {
             let verified = verify_bearer(Some(&credential), &headers_with_bearer(&token));
             let minted = verified
                 .as_ref()
-                .and_then(|v| medulla_server_api::auth::mint_iceberg_carrier(Some(v)));
+                .and_then(|v| medulla_server_auth::auth::mint_iceberg_carrier(Some(v)));
             assert!(
                 minted.is_none(),
                 "a bearer with an empty scope claim must not mint a carrier"
@@ -2013,14 +2013,14 @@ mod tests {
             let verified_matching =
                 verify_bearer(Some(&credential), &headers_with_bearer(&matching)).unwrap();
             assert!(
-                medulla_server_api::auth::mint_iceberg_carrier(Some(&verified_matching)).is_some()
+                medulla_server_auth::auth::mint_iceberg_carrier(Some(&verified_matching)).is_some()
             );
 
             let other_tenant = sign("agent:reader", "tenant-other", 300);
             let verified_other =
                 verify_bearer(Some(&credential), &headers_with_bearer(&other_tenant)).unwrap();
             assert!(
-                medulla_server_api::auth::mint_iceberg_carrier(Some(&verified_other)).is_none()
+                medulla_server_auth::auth::mint_iceberg_carrier(Some(&verified_other)).is_none()
             );
         }
 

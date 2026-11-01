@@ -667,7 +667,7 @@ mod list_registered_servers_tests {
             "srv:bob-server".to_string(),
             private_row("bob-server", "bob"),
         );
-        let isolation = medulla_server_api::access::two_agent_isolation();
+        let isolation = medulla_server_auth::access::two_agent_isolation();
         let context = VerifiedRequestContext::verified_for_test("alice");
         let authority = GraphReadAuthority::from_verified(&context, &isolation).unwrap();
         let visible = live_registered_servers(&core, 50_000, |node_id, properties| {

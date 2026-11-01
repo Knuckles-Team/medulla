@@ -156,7 +156,7 @@ pub fn validate_verified_request_context_startup(
     secret: &str,
     state_dir: Option<&str>,
 ) -> Result<(), String> {
-    medulla_server_api::auth::validate_verified_context_startup(secret, state_dir)
+    medulla_server_auth::auth::validate_verified_context_startup(secret, state_dir)
 }
 // CDC -> Kafka sink (CA-11, feature `cdc-kafka`, off by default). Reserved and EMPTY
 // until CA-11 implements it; landed by CA-17's single feature-stub commit so CA-11 never
@@ -360,7 +360,7 @@ pub(crate) fn test_state_with_services(
     #[cfg(feature = "query")]
     {
         state.persist_dir = Some(
-            medulla_server_api::sql_tables::test_persist_dir()
+            medulla_server_auth::sql_tables::test_persist_dir()
                 .to_string_lossy()
                 .into_owned(),
         );
@@ -872,10 +872,10 @@ mod tests {
             std::process::id(),
             NONCE.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         );
-        request.auth_token = medulla_server_api::auth::compute_verified_envelope_token(
+        request.auth_token = medulla_server_auth::auth::compute_verified_envelope_token(
             SECRET,
             &request,
-            &medulla_server_api::auth::VerifiedEnvelopeParams {
+            &medulla_server_auth::auth::VerifiedEnvelopeParams {
                 context: &claims,
                 timestamp: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)

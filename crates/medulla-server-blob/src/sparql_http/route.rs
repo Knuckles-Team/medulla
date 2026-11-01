@@ -16,7 +16,7 @@ enum InputError {
 /// Execute a request already classified as the `/sparql` route.
 pub(super) async fn handle_sparql(
     state: &Arc<tokio::sync::RwLock<ServerState>>,
-    bearer: &Option<medulla_server_api::auth::BearerCredential>,
+    bearer: &Option<medulla_server_auth::auth::BearerCredential>,
     req: &HttpMessage,
     query_string: &str,
     content_type: &str,

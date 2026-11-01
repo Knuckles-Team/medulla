@@ -1,10 +1,10 @@
 //! Wire-level tests: the `Method::Kv*` ops through the real `dispatch`.
 
 use crate::kv::KvStateExt;
-use medulla_server_api::auth::build_shared_test_request;
-use medulla_server_api::auth::compute_verified_envelope_token;
-use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
-use medulla_server_api::auth::VerifiedEnvelopeParams;
+use medulla_server_auth::auth::build_shared_test_request;
+use medulla_server_auth::auth::compute_verified_envelope_token;
+use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
+use medulla_server_auth::auth::VerifiedEnvelopeParams;
 use medulla_server_api::state::ServerState;
 use medulla_types::acl::RequestContextClaims;
 use medulla_protocol_types::protocol::Method;
@@ -446,7 +446,7 @@ async fn kv_shared_namespace_spans_principals_and_needs_kv_shared_write() {
     let dir = std::env::temp_dir().join(format!("medulla-kv-shared-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let kv = Arc::new(super::KvStore::open(Some(&dir.to_string_lossy())).unwrap());
-    let mut state = ServerState::new_for_test(SECRET, medulla_server_api::access::two_agent_isolation());
+    let mut state = ServerState::new_for_test(SECRET, medulla_server_auth::access::two_agent_isolation());
     state.persist_dir = Some(dir.to_string_lossy().to_string());
     state.set_kv_store(Some(kv));
     let state = Arc::new(RwLock::new(state));

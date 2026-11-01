@@ -24,7 +24,7 @@ async fn graph_core(
         .registry
         .get(graph)
         .ok_or_else(|| format!("Graph '{graph}' not found"))?;
-    medulla_server_api::access::check_graph_access(
+    medulla_server_auth::access::check_graph_access(
         &s.isolation,
         Some(verified.agent_id()),
         graph,

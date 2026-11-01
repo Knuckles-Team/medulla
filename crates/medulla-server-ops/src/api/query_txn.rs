@@ -143,7 +143,7 @@ pub trait WireApi: Send + Sync {
     #[cfg(feature = "query")]
     fn authorize_table_txn(
         &self,
-        source: &medulla_server_api::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
+        source: &medulla_server_auth::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
         table_store: &medulla_table_store::tables::TableStore,
         txn: &mut medulla_table_store::tables::TableTxn,
         committed_replay: bool,

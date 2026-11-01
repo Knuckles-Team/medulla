@@ -31,7 +31,7 @@ use super::stat_retrieval::{judged_outcomes, JudgedOutcome, Scope};
 use super::stat_support::default_statistical_policy;
 use super::stat_view::{millis, producer, relation, text, wire_name, Col};
 use medulla_persistence::agent_library::AgentLibraryStore;
-use medulla_server_api::sql_catalog_acl::relations::Relation;
+use medulla_server_auth::sql_catalog_acl::relations::Relation;
 
 /// Digest domain of a path template.
 const PATH_DOMAIN: &str = "eg/retrieval-path/v1";

@@ -110,7 +110,7 @@ pub async fn prepare(
             .registry
             .get(graph)
             .ok_or("ACCESS_DENIED: repository enrichment graph is unavailable")?;
-        if !medulla_server_api::access::principal_may_access(
+        if !medulla_server_auth::access::principal_may_access(
             &current.isolation,
             verified.agent_id(),
             graph,

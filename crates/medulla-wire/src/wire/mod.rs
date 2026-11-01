@@ -481,7 +481,7 @@ pub(crate) fn alter_txn_op(plan: AlterTablePlan) -> WireResult<TxnOp> {
 ///     all. A real per-object ownership model for these is a follow-up, not a
 ///     silent gap.
 pub fn authorize_table_txn(
-    source: &medulla_server_api::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
+    source: &medulla_server_auth::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
     table_store: &TableStore,
     txn: &mut TableTxn,
     committed_replay: bool,
@@ -508,14 +508,14 @@ pub fn authorize_table_txn(
 /// Insert/Update/Delete) and/or `provisional_creates`/`created_tables` (CreateTable/
 /// DropTable's batch-local capability bookkeeping).
 fn authorize_table_txn_op(
-    source: &medulla_server_api::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
+    source: &medulla_server_auth::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
     authority: &CarrierAuthority,
     table_store: &TableStore,
     op: &mut TxnOp,
     committed_replay: bool,
     provisional_creates: &mut std::collections::HashMap<
         String,
-        medulla_server_api::sql_catalog_acl::ProvisionalCreateAuthority,
+        medulla_server_auth::sql_catalog_acl::ProvisionalCreateAuthority,
     >,
     created_tables: &mut Vec<TableSchema>,
 ) -> WireResult<()> {
@@ -612,17 +612,17 @@ fn authorize_property_graph_op(
             ..
         } => {
             if tenant_scope != authority.tenant_scope() {
-                return Err(user_err(medulla_server_api::sql_catalog_acl::ACCESS_DENIED));
+                return Err(user_err(medulla_server_auth::sql_catalog_acl::ACCESS_DENIED));
             }
             let record = table_store
                 .property_graph(tenant_scope, name)
                 .map_err(user_err)?
                 .filter(|record| &record.object_id == expected_object_id)
-                .ok_or_else(|| user_err(medulla_server_api::sql_catalog_acl::ACCESS_DENIED))?;
+                .ok_or_else(|| user_err(medulla_server_auth::sql_catalog_acl::ACCESS_DENIED))?;
             if authority.is_admin() || record.owner.value() == authority.agent_id() {
                 Ok(())
             } else {
-                Err(user_err(medulla_server_api::sql_catalog_acl::ACCESS_DENIED))
+                Err(user_err(medulla_server_auth::sql_catalog_acl::ACCESS_DENIED))
             }
         }
     }
@@ -634,16 +634,16 @@ fn authorize_property_graph_op(
 /// change to a named table -- both unchanged from before the family was grouped.
 #[cfg(feature = "query")]
 fn authorize_index_catalog_op(
-    source: &medulla_server_api::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
+    source: &medulla_server_auth::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
     authority: &CarrierAuthority,
     op: &IndexCatalogTxnOp,
     provisional_creates: &std::collections::HashMap<
         String,
-        medulla_server_api::sql_catalog_acl::ProvisionalCreateAuthority,
+        medulla_server_auth::sql_catalog_acl::ProvisionalCreateAuthority,
     >,
 ) -> WireResult<()> {
-    use medulla_server_api::sql_catalog_acl;
-    use medulla_server_api::sql_catalog_acl::SqlPrivilege;
+    use medulla_server_auth::sql_catalog_acl;
+    use medulla_server_auth::sql_catalog_acl::SqlPrivilege;
     match op {
         IndexCatalogTxnOp::PutAnnIndex { plan } => {
             sql_catalog_acl::authorize_ddl(source, &plan.table, SqlPrivilege::Alter)
@@ -667,7 +667,7 @@ fn authorize_index_catalog_op(
 fn is_provisionally_permitted(
     provisional_creates: &std::collections::HashMap<
         String,
-        medulla_server_api::sql_catalog_acl::ProvisionalCreateAuthority,
+        medulla_server_auth::sql_catalog_acl::ProvisionalCreateAuthority,
     >,
     authority: &CarrierAuthority,
     table: &str,
@@ -680,18 +680,18 @@ fn is_provisionally_permitted(
 /// The `CreateTable` arm of [`authorize_table_txn_op`].
 #[allow(clippy::too_many_arguments)]
 fn authorize_create_table(
-    source: &medulla_server_api::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
+    source: &medulla_server_auth::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
     table_store: &TableStore,
     schema: &TableSchema,
     if_not_exists: bool,
     committed_replay: bool,
     provisional_creates: &mut std::collections::HashMap<
         String,
-        medulla_server_api::sql_catalog_acl::ProvisionalCreateAuthority,
+        medulla_server_auth::sql_catalog_acl::ProvisionalCreateAuthority,
     >,
     created_tables: &mut Vec<TableSchema>,
 ) -> WireResult<()> {
-    use medulla_server_api::sql_catalog_acl;
+    use medulla_server_auth::sql_catalog_acl;
     // A later DML op may use this exact batch-local capability only when this
     // non-idempotent create targets a physically absent table. Concurrent creators
     // are still serialized by redb's atomic `create_in`; one loser aborts the whole
@@ -723,16 +723,16 @@ fn authorize_create_table(
 
 /// The `DropTable` arm of [`authorize_table_txn_op`].
 fn authorize_drop_table(
-    source: &medulla_server_api::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
+    source: &medulla_server_auth::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
     name: &str,
     provisional_creates: &mut std::collections::HashMap<
         String,
-        medulla_server_api::sql_catalog_acl::ProvisionalCreateAuthority,
+        medulla_server_auth::sql_catalog_acl::ProvisionalCreateAuthority,
     >,
     created_tables: &mut Vec<TableSchema>,
 ) -> WireResult<()> {
-    use medulla_server_api::sql_catalog_acl;
-    use medulla_server_api::sql_catalog_acl::SqlPrivilege;
+    use medulla_server_auth::sql_catalog_acl;
+    use medulla_server_auth::sql_catalog_acl::SqlPrivilege;
     if provisional_creates.remove(name).is_some() {
         // CREATE then DROP leaves no table and therefore must not register
         // ownership after the batch commits.
@@ -746,16 +746,16 @@ fn authorize_drop_table(
 /// `DropConstraint`/`AddConstraint`/`DropAnnIndexesForColumn` arm of
 /// [`authorize_table_txn_op`]: every plain per-table ALTER-shaped op.
 fn authorize_alter_like(
-    source: &medulla_server_api::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
+    source: &medulla_server_auth::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
     authority: &CarrierAuthority,
     table: &str,
     provisional_creates: &std::collections::HashMap<
         String,
-        medulla_server_api::sql_catalog_acl::ProvisionalCreateAuthority,
+        medulla_server_auth::sql_catalog_acl::ProvisionalCreateAuthority,
     >,
 ) -> WireResult<()> {
-    use medulla_server_api::sql_catalog_acl;
-    use medulla_server_api::sql_catalog_acl::SqlPrivilege;
+    use medulla_server_auth::sql_catalog_acl;
+    use medulla_server_auth::sql_catalog_acl::SqlPrivilege;
     if is_provisionally_permitted(provisional_creates, authority, table) {
         return Ok(());
     }
@@ -767,15 +767,15 @@ fn authorize_alter_like(
 /// record; keep that complex shape fail-closed rather than silently granting the
 /// new name.
 fn authorize_rename_table(
-    source: &medulla_server_api::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
+    source: &medulla_server_auth::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
     table: &str,
     provisional_creates: &std::collections::HashMap<
         String,
-        medulla_server_api::sql_catalog_acl::ProvisionalCreateAuthority,
+        medulla_server_auth::sql_catalog_acl::ProvisionalCreateAuthority,
     >,
 ) -> WireResult<()> {
-    use medulla_server_api::sql_catalog_acl;
-    use medulla_server_api::sql_catalog_acl::SqlPrivilege;
+    use medulla_server_auth::sql_catalog_acl;
+    use medulla_server_auth::sql_catalog_acl::SqlPrivilege;
     if provisional_creates.contains_key(table) {
         return Err(user_err(sql_catalog_acl::ACCESS_DENIED));
     }
@@ -785,17 +785,17 @@ fn authorize_rename_table(
 /// The `Insert` arm of [`authorize_table_txn_op`]: RLS-stamp `col_order`/`rows` in
 /// place unless this batch's own provisional CREATE already covers `table`.
 fn authorize_insert_op(
-    source: &medulla_server_api::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
+    source: &medulla_server_auth::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
     authority: &CarrierAuthority,
     table: &str,
     col_order: &mut Vec<String>,
     rows: &mut Vec<Vec<serde_json::Value>>,
     provisional_creates: &std::collections::HashMap<
         String,
-        medulla_server_api::sql_catalog_acl::ProvisionalCreateAuthority,
+        medulla_server_auth::sql_catalog_acl::ProvisionalCreateAuthority,
     >,
 ) -> WireResult<()> {
-    use medulla_server_api::sql_catalog_acl;
+    use medulla_server_auth::sql_catalog_acl;
     if is_provisionally_permitted(provisional_creates, authority, table) {
         return Ok(());
     }
@@ -809,17 +809,17 @@ fn authorize_insert_op(
 /// The `Update` arm of [`authorize_table_txn_op`]: RLS-rewrite `set`/`selector` in
 /// place unless this batch's own provisional CREATE already covers `table`.
 fn authorize_update_op(
-    source: &medulla_server_api::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
+    source: &medulla_server_auth::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
     authority: &CarrierAuthority,
     table: &str,
     set: &mut serde_json::Map<String, serde_json::Value>,
     selector: &mut medulla_result_types::row_predicate::RowPredicate,
     provisional_creates: &std::collections::HashMap<
         String,
-        medulla_server_api::sql_catalog_acl::ProvisionalCreateAuthority,
+        medulla_server_auth::sql_catalog_acl::ProvisionalCreateAuthority,
     >,
 ) -> WireResult<()> {
-    use medulla_server_api::sql_catalog_acl;
+    use medulla_server_auth::sql_catalog_acl;
     if is_provisionally_permitted(provisional_creates, authority, table) {
         return Ok(());
     }
@@ -834,16 +834,16 @@ fn authorize_update_op(
 /// The `Delete` arm of [`authorize_table_txn_op`]: RLS-scope `selector` in place
 /// unless this batch's own provisional CREATE already covers `table`.
 fn authorize_delete_op(
-    source: &medulla_server_api::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
+    source: &medulla_server_auth::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
     authority: &CarrierAuthority,
     table: &str,
     selector: &mut medulla_result_types::row_predicate::RowPredicate,
     provisional_creates: &std::collections::HashMap<
         String,
-        medulla_server_api::sql_catalog_acl::ProvisionalCreateAuthority,
+        medulla_server_auth::sql_catalog_acl::ProvisionalCreateAuthority,
     >,
 ) -> WireResult<()> {
-    use medulla_server_api::sql_catalog_acl;
+    use medulla_server_auth::sql_catalog_acl;
     if is_provisionally_permitted(provisional_creates, authority, table) {
         return Ok(());
     }
@@ -943,7 +943,7 @@ fn commit_table_txn_blocking(
     commit: SqlTableCommit,
 ) -> Result<usize, String> {
     let (store, mut txn, identity) = commit;
-    medulla_server_api::sql_catalog_acl::with_source_authority_write(
+    medulla_server_auth::sql_catalog_acl::with_source_authority_write(
         &persist_dir,
         &authority,
         |source| commit_table_txn_under_source(source, &store, &mut txn, &identity),
@@ -951,7 +951,7 @@ fn commit_table_txn_blocking(
 }
 
 fn commit_table_txn_under_source(
-    source: &medulla_server_api::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
+    source: &medulla_server_auth::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
     store: &TableStore,
     txn: &mut TableTxn,
     identity: &SqlTableCommitIdentity,
@@ -1007,7 +1007,7 @@ fn commit_table_txn_under_source(
         Err(message) => return Err(message),
     };
     for schema in &created_tables {
-        medulla_server_api::sql_catalog_acl::register_owner_after_create_in(
+        medulla_server_auth::sql_catalog_acl::register_owner_after_create_in(
             source,
             &schema.name,
             *operation_id,
@@ -1429,7 +1429,7 @@ impl WireSession {
             let state = self.state.read().await;
             (state.auth_secret.clone(), state.persist_dir.clone())
         };
-        let context = medulla_server_api::auth::verify_request_with_security_dir(
+        let context = medulla_server_auth::auth::verify_request_with_security_dir(
             &secret,
             request,
             persist_dir.as_deref(),
@@ -1643,8 +1643,8 @@ impl WireSession {
     /// existence/schema probe is newly possible through it.
     pub(crate) async fn user_table_store(&self) -> WireResult<TableStore> {
         let (authority, persist_dir) = self.catalog_authority().await?;
-        medulla_server_api::sql_catalog_acl::require_source_authority().map_err(user_err)?;
-        medulla_server_api::sql_tables::tenant_table_store(authority.tenant_scope(), &persist_dir)
+        medulla_server_auth::sql_catalog_acl::require_source_authority().map_err(user_err)?;
+        medulla_server_auth::sql_tables::tenant_table_store(authority.tenant_scope(), &persist_dir)
             .map_err(user_err)
     }
 
@@ -1869,7 +1869,7 @@ impl WireSession {
             access,
             now_ms: medulla_isolation::isolation::access_clock_ms(),
         };
-        if medulla_server_api::access::decide_graph_access(&s.isolation, &query) {
+        if medulla_server_auth::access::decide_graph_access(&s.isolation, &query) {
             Ok(())
         } else {
             medulla_kernel::metrics::access_denied();
@@ -1919,12 +1919,12 @@ impl WireSession {
             None => None,
         };
         let statement = sql.clone();
-        let request_graph = medulla_server_api::sql_catalog_acl::RequestGraph {
+        let request_graph = medulla_server_auth::sql_catalog_acl::RequestGraph {
             name: graph.to_string(),
             core: Arc::clone(&core),
         };
         let projection = tokio::task::spawn_blocking(move || {
-            medulla_server_api::sql_catalog_acl::authorized_read_store_for_query(
+            medulla_server_auth::sql_catalog_acl::authorized_read_store_for_query(
                 &authority,
                 &persist_dir,
                 &statement,
@@ -2325,7 +2325,7 @@ impl WireSession {
         let record = store
             .property_graph(&tenant, &statement.name)
             .map_err(user_err)?
-            .ok_or_else(|| user_err(medulla_server_api::sql_catalog_acl::ACCESS_DENIED))?;
+            .ok_or_else(|| user_err(medulla_server_auth::sql_catalog_acl::ACCESS_DENIED))?;
         let (op, tag) =
             PropertyGraphTxnOp::from_privilege_statement(statement, tenant, record.object_id);
         let mut txn = TableTxn::new();
@@ -2349,7 +2349,7 @@ impl WireSession {
         let (authority, persist_dir) = self.catalog_authority().await?;
         let query = query.clone();
         tokio::task::spawn_blocking(move || {
-            medulla_server_api::sql_catalog_acl::authorized_graph_table_sql(
+            medulla_server_auth::sql_catalog_acl::authorized_graph_table_sql(
                 &authority,
                 &persist_dir,
                 &query,
@@ -2669,7 +2669,7 @@ impl WireSession {
         node_ops: Vec<NodeOp>,
         table_txn: TableTxn,
     ) -> WireResult<WireOutcome> {
-        medulla_server_api::sql_catalog_acl::require_source_authority().map_err(user_err)?;
+        medulla_server_auth::sql_catalog_acl::require_source_authority().map_err(user_err)?;
         let methods = Self::node_ops_to_methods(&node_ops)?;
         let isolation = *self.txn_isolation.lock();
         // A real open transaction (mixed graph+table) — require the captured
@@ -2931,7 +2931,7 @@ impl WireSession {
     /// most once per connection (cheap after the first call: a
     /// directory-listing miss when there is nothing to recover).
     async fn recover_owner_intents_once(&self) -> WireResult<()> {
-        medulla_server_api::sql_catalog_acl::require_source_authority().map_err(user_err)?;
+        medulla_server_auth::sql_catalog_acl::require_source_authority().map_err(user_err)?;
         if self
             .recovered_intents
             .swap(true, std::sync::atomic::Ordering::AcqRel)
@@ -3003,11 +3003,11 @@ impl WireSession {
         let (authority, persist_dir) = self.catalog_authority().await?;
         let table = plan.table.clone();
         let schema = tokio::task::spawn_blocking(move || {
-            medulla_server_api::sql_catalog_acl::open_authorized_table(
+            medulla_server_auth::sql_catalog_acl::open_authorized_table(
                 &authority,
                 &persist_dir,
                 &table,
-                medulla_server_api::sql_catalog_acl::SqlPrivilege::Insert,
+                medulla_server_auth::sql_catalog_acl::SqlPrivilege::Insert,
             )
             .and_then(|authorized| authorized.schema())
         })
@@ -3200,7 +3200,7 @@ impl WireSession {
         if_exists: bool,
     ) -> WireResult<WireOutcome> {
         let (authority, persist_dir) = self.catalog_authority().await?;
-        let visible = medulla_server_api::sql_catalog_acl::alterable_ann_index_table(
+        let visible = medulla_server_auth::sql_catalog_acl::alterable_ann_index_table(
             &authority,
             &persist_dir,
             &name,
@@ -4283,7 +4283,7 @@ impl WireSession {
                 )
                 .await;
         }
-        medulla_server_api::sql_catalog_acl::require_source_authority().map_err(user_err)?;
+        medulla_server_auth::sql_catalog_acl::require_source_authority().map_err(user_err)?;
 
         let table_steps = if operation == "transaction" {
             std::mem::take(&mut *self.txn_replay_log.lock())
@@ -4348,7 +4348,7 @@ impl WireSession {
             return Ok(0);
         }
         let (authority, persist_dir) = self.catalog_authority().await?;
-        medulla_server_api::sql_catalog_acl::require_source_authority().map_err(user_err)?;
+        medulla_server_auth::sql_catalog_acl::require_source_authority().map_err(user_err)?;
         let request_id = u64::from_be_bytes(
             operation_id.as_bytes()[..8]
                 .try_into()
@@ -4385,7 +4385,7 @@ impl WireSession {
             query: operation.to_string(),
             params_msgpack: Vec::new(),
         };
-        let store = medulla_server_api::sql_tables::tenant_table_store(&tenant, &persist_dir)
+        let store = medulla_server_auth::sql_tables::tenant_table_store(&tenant, &persist_dir)
             .map_err(user_err)?;
         let commit = (
             store,

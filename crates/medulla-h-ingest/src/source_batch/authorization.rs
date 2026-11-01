@@ -3,9 +3,9 @@
 //! grants access.
 
 use medulla_server_api::carrier::CarrierAuthority;
-use medulla_server_api::sql_catalog_acl::SqlPrivilege;
-use medulla_server_api::sql_catalog_acl::SqlSourceAuthorityWrite;
-use medulla_server_api::sql_catalog_acl::ACCESS_DENIED;
+use medulla_server_auth::sql_catalog_acl::SqlPrivilege;
+use medulla_server_auth::sql_catalog_acl::SqlSourceAuthorityWrite;
+use medulla_server_auth::sql_catalog_acl::ACCESS_DENIED;
 use medulla_protocol_types::storage_wire::{SqlSourceBatchRequest, SqlSourceCell};
 
 /// Authorize exact typed source cells under the existing INSERT grant and RLS

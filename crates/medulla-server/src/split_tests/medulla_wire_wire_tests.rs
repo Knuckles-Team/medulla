@@ -124,10 +124,10 @@ mod ne_004_ne_005_tests {
             std::process::id(),
             NONCE.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         );
-        req.auth_token = medulla_server_api::auth::compute_verified_envelope_token(
+        req.auth_token = medulla_server_auth::auth::compute_verified_envelope_token(
             SECRET,
             &req,
-            &medulla_server_api::auth::VerifiedEnvelopeParams {
+            &medulla_server_auth::auth::VerifiedEnvelopeParams {
                 context: &claims,
                 timestamp: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
@@ -830,8 +830,8 @@ pub mod wired_catalog_tests {
     use medulla_protocol_types::protocol::GraphType;
     use medulla_protocol_types::protocol::Method;
     use medulla_server_api::authority_context::VerifiedRequestContext;
-    use medulla_server_api::sql_catalog_acl;
-    use medulla_server_api::sql_catalog_acl::SqlPrivilege;
+    use medulla_server_auth::sql_catalog_acl;
+    use medulla_server_auth::sql_catalog_acl::SqlPrivilege;
 
     const SECRET: &str = "medulla-wired-catalog-test-secret";
     pub(crate) const CREATOR: &str = "wired-catalog-graph-creator";
@@ -888,10 +888,10 @@ pub mod wired_catalog_tests {
             std::process::id(),
             NONCE.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         );
-        req.auth_token = medulla_server_api::auth::compute_verified_envelope_token(
+        req.auth_token = medulla_server_auth::auth::compute_verified_envelope_token(
             SECRET,
             &req,
-            &medulla_server_api::auth::VerifiedEnvelopeParams {
+            &medulla_server_auth::auth::VerifiedEnvelopeParams {
                 context: &claims,
                 timestamp: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
@@ -968,7 +968,7 @@ pub mod wired_catalog_tests {
         txn: &mut TableTxn,
         committed_replay: bool,
     ) -> WireResult<Vec<TableSchema>> {
-        medulla_server_api::sql_catalog_acl::with_source_authority_write(
+        medulla_server_auth::sql_catalog_acl::with_source_authority_write(
             persist_dir,
             authority,
             |source| {
@@ -1019,7 +1019,7 @@ pub mod wired_catalog_tests {
         let persist_dir = test_persist_dir_of(&state).await;
         let alice = authority("alice-provisional", tenant);
         let bob = authority("bob-provisional", tenant);
-        let store = medulla_server_api::sql_tables::tenant_table_store(tenant, &persist_dir)
+        let store = medulla_server_auth::sql_tables::tenant_table_store(tenant, &persist_dir)
             .expect("open tenant table store");
 
         let schema = TableSchema::new(
@@ -1120,7 +1120,7 @@ pub mod wired_catalog_tests {
         // owner registration fail. This is a deterministic storage fault at
         // the exact cross-redb boundary ordinary autocommit must recover.
         let acl =
-            medulla_server_api::sql_tables::tenant_acl_table_store(owner.tenant_scope(), &persist_dir)
+            medulla_server_auth::sql_tables::tenant_acl_table_store(owner.tenant_scope(), &persist_dir)
                 .expect("open tenant ACL store");
         acl.create_table(
             &TableSchema::new(
@@ -1138,7 +1138,7 @@ pub mod wired_catalog_tests {
             .expect_err("owner registration fault must surface");
         assert!(error.message.starts_with(SQL_OWNER_REPAIR_PENDING));
         let store =
-            medulla_server_api::sql_tables::tenant_table_store(owner.tenant_scope(), &persist_dir)
+            medulla_server_auth::sql_tables::tenant_table_store(owner.tenant_scope(), &persist_dir)
                 .expect("open tenant table store");
         assert!(store
             .get_schema("ordinary_repair")
@@ -1293,7 +1293,7 @@ pub mod wired_catalog_tests {
             params_msgpack: Vec::new(),
         };
         let store =
-            medulla_server_api::sql_tables::tenant_table_store(owner.tenant_scope(), &persist_dir)
+            medulla_server_auth::sql_tables::tenant_table_store(owner.tenant_scope(), &persist_dir)
                 .expect("open tenant table store");
         // Fabricate the recoverable crash shape directly: the durable table
         // batch landed while owner registration did not. Current production
@@ -1426,7 +1426,7 @@ pub mod wired_catalog_tests {
         // The receipt is looked up under the same one, so the fixture has to
         // use it too or it commits into a scope nothing reads.
         let tenant_scope = owner.tenant_scope().to_string();
-        let store = medulla_server_api::sql_tables::tenant_table_store(&tenant_scope, &persist_dir)
+        let store = medulla_server_auth::sql_tables::tenant_table_store(&tenant_scope, &persist_dir)
             .expect("open tenant table store");
 
         let operation = medulla_protocol_types::protocol::Method::Sql {
@@ -1977,7 +1977,7 @@ pub mod wired_catalog_tests {
             .tenant_scope()
             .to_string();
         let store =
-            medulla_server_api::sql_tables::tenant_table_store(&canonical_tenant, &persist_dir).unwrap();
+            medulla_server_auth::sql_tables::tenant_table_store(&canonical_tenant, &persist_dir).unwrap();
         assert!(store.get_schema("people").unwrap().is_some());
         assert!(store
             .property_graph(

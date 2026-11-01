@@ -64,7 +64,7 @@ fn sql_tenant_store(
     persist_dir: &std::path::Path,
     req_id: u64,
 ) -> Result<medulla_table_store::tables::TableStore, Response> {
-    medulla_server_api::sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)
+    medulla_server_auth::sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)
         .map_err(|error| Response::err(req_id, sql_refusal(error)))
 }
 
@@ -116,7 +116,7 @@ async fn handle_sql_read(scope: SqlReadScope<'_>, query: String) -> Response {
         #[cfg(feature = "security")]
         rls,
     );
-    let graph = medulla_server_api::sql_catalog_acl::RequestGraph {
+    let graph = medulla_server_auth::sql_catalog_acl::RequestGraph {
         name: graph_name.to_string(),
         core: Arc::clone(core),
     };
@@ -426,7 +426,7 @@ pub(super) async fn catalog_sql_response(
     authority: medulla_server_api::carrier::CarrierAuthority,
     persist_dir: std::path::PathBuf,
     query: String,
-    graph: medulla_server_api::sql_catalog_acl::RequestGraph,
+    graph: medulla_server_auth::sql_catalog_acl::RequestGraph,
 ) -> Response {
     let read_only = match medulla_server_ops::api::admin::decide_seam(state).await {
         Some(decide) => decide.read_only_relations(state, &authority, &query).await,
@@ -437,7 +437,7 @@ pub(super) async fn catalog_sql_response(
     let timeout_task = crate::request_cancel::spawn_timeout(cancel.clone());
     let cancel_for_task = cancel.clone();
     let resp = match compute_off_lock(req_id, move || {
-        let authorized = medulla_server_api::sql_catalog_acl::authorized_read_store_for_query(
+        let authorized = medulla_server_auth::sql_catalog_acl::authorized_read_store_for_query(
             &authority,
             &persist_dir,
             &query,

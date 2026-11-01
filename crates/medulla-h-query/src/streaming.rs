@@ -26,7 +26,7 @@ use medulla_types::wire::CdcEvent;
 use medulla_types::wire::ContinuousAgg;
 use medulla_types::wire::ContinuousQuerySpec;
 use medulla_types::wire::WatchBatch;
-use medulla_server_api::access::check_graph_access;
+use medulla_server_auth::access::check_graph_access;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::state::ServerState;

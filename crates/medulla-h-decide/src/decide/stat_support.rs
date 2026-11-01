@@ -73,7 +73,7 @@ pub(super) async fn readable_graph(
         .registry
         .get(graph)
         .ok_or_else(|| refusal(missing_code, format!("unknown graph {graph}")))?;
-    medulla_server_api::access::check_graph_access(
+    medulla_server_auth::access::check_graph_access(
         &guard.isolation,
         Some(agent_id),
         graph,

@@ -15,8 +15,8 @@ use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::auth::build_current_test_request;
-use medulla_server_api::auth::dispatch_test_on_heap;
+use medulla_server_auth::auth::build_current_test_request;
+use medulla_server_auth::auth::dispatch_test_on_heap;
 use medulla_server_api::state::ServerState;
 use medulla_catalog_types::graph_schema::{GraphSchemaClassesView, GraphSchemaSourcesView};
 

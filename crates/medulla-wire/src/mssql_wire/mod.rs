@@ -314,7 +314,7 @@ pub async fn serve(addr: &str, state: Arc<RwLock<ServerState>>) -> std::io::Resu
         (state.auth_secret.clone(), state.persist_dir.clone())
     };
     validate_startup_policy(addr, &auth_secret)?;
-    medulla_server_api::sql_tables::validate_served_configuration(
+    medulla_server_auth::sql_tables::validate_served_configuration(
         persist_dir.as_deref().map(std::path::Path::new),
     )?;
     let listener = TcpListener::bind(addr).await?;

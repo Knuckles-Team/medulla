@@ -108,7 +108,7 @@ async fn execute_sql(
     let policy_lease = authority
         .policy_lease()
         .ok_or_else(|| "KnowledgeStream requires a durable policy decision lease".to_string())?;
-    if medulla_server_api::access::sql_is_write(query) {
+    if medulla_server_auth::access::sql_is_write(query) {
         return Err("KnowledgeStream SQL accepts read-only statements".to_string());
     }
     let response = super::super::query::try_handle_with_policy(

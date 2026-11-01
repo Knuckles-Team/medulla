@@ -11,7 +11,7 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 #[cfg(feature = "owl")]
-use medulla_server_api::access::check_graph_access;
+use medulla_server_auth::access::check_graph_access;
 use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::compute::compute_off_lock;
 #[cfg(feature = "owl")]

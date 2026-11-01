@@ -8,7 +8,7 @@ use tokio::sync::RwLock;
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_persistence::AsRedb;
 use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
+use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
 use medulla_server_api::state::ServerState;
 use medulla_store::redb_layout::shard_filename;
 use medulla_store::redb_store::shard::Shard;
@@ -63,7 +63,7 @@ fn new_state(persist_dir: Option<String>) -> Arc<RwLock<ServerState>> {
 }
 
 fn current_request(secret: &str, id: u64, graph: &str, method: Method) -> Request {
-    medulla_server_api::auth::build_shared_test_request(secret, id, graph, TEST_AGENT, method)
+    medulla_server_auth::auth::build_shared_test_request(secret, id, graph, TEST_AGENT, method)
 }
 
 use medulla_h_txn::txn::try_handle as txn_try_handle;

@@ -123,14 +123,14 @@ async fn read_only_relations(
     state: &SharedState,
     authority: &medulla_server_api::carrier::CarrierAuthority,
     query: &str,
-) -> Option<medulla_server_api::sql_catalog_acl::SharedRelations> {
+) -> Option<medulla_server_auth::sql_catalog_acl::SharedRelations> {
     #[cfg(feature = "decide")]
     {
-        if !medulla_server_api::sql_catalog_acl::wants_read_only_relations(query) {
+        if !medulla_server_auth::sql_catalog_acl::wants_read_only_relations(query) {
             return None;
         }
         let views = stat_view::DecisionViews::served(state, authority).await?;
-        Some(views as medulla_server_api::sql_catalog_acl::SharedRelations)
+        Some(views as medulla_server_auth::sql_catalog_acl::SharedRelations)
     }
     #[cfg(not(feature = "decide"))]
     {
@@ -171,7 +171,7 @@ impl medulla_server_ops::api::admin::DecideApi for DecideSeam {
         state: &SharedState,
         authority: &medulla_server_api::carrier::CarrierAuthority,
         query: &str,
-    ) -> Option<medulla_server_api::sql_catalog_acl::SharedRelations> {
+    ) -> Option<medulla_server_auth::sql_catalog_acl::SharedRelations> {
         read_only_relations(state, authority, query).await
     }
 

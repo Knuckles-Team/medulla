@@ -478,7 +478,7 @@ async fn knowledge_stream_sql_lists_the_request_graph_edge_indexes() {
     );
     let persist_dir = std::path::PathBuf::from(state.read().await.persist_dir.clone().unwrap());
     let tenant = fixture.carrier.tenant_scope();
-    let store = medulla_server_api::sql_tables::tenant_table_store(tenant, &persist_dir).unwrap();
+    let store = medulla_server_auth::sql_tables::tenant_table_store(tenant, &persist_dir).unwrap();
     register_detached_edge_index(&store, "tenant-graph", tenant);
     let read_authority = medulla_server_api::carrier::GraphReadAuthority::from_verified(
         &fixture.verified_context,
@@ -647,7 +647,7 @@ fn query_state_with_services(
 ) -> std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>> {
     let mut state = medulla_server_api::state::ServerState::new_for_test(auth_secret.to_owned(), isolation);
     state.persist_dir = Some(
-        medulla_server_api::sql_tables::test_persist_dir()
+        medulla_server_auth::sql_tables::test_persist_dir()
             .to_string_lossy()
             .into_owned(),
     );

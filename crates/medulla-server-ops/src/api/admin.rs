@@ -54,7 +54,7 @@ pub trait DecideApi: Send + Sync {
         state: &Arc<RwLock<ServerState>>,
         authority: &medulla_server_api::carrier::CarrierAuthority,
         query: &str,
-    ) -> Option<medulla_server_api::sql_catalog_acl::SharedRelations>;
+    ) -> Option<medulla_server_auth::sql_catalog_acl::SharedRelations>;
 
     /// The caller's visible decision log as a UQL `DECISIONS` source.
     #[cfg(all(feature = "decide", feature = "query"))]

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use medulla_capabilities::DurabilityDomain;
 
-use medulla_server_api::access::check_graph_access;
+use medulla_server_auth::access::check_graph_access;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_graph_core::graph::GraphCore;
 use medulla_isolation::isolation::AccessLevel;

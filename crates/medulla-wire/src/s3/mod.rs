@@ -900,7 +900,7 @@ fn handle(store: &S3Store, auth: &S3Auth, req: &S3Request) -> S3Response {
     // Denied" (an S3 client expects the standard error code/message, not
     // custom prose — unlike the KV-cache/observability surfaces, which own
     // their own wire protocol).
-    let carrier = medulla_server_api::auth::mint_fixed_service_carrier(
+    let carrier = medulla_server_auth::auth::mint_fixed_service_carrier(
         authorized(auth, req),
         "s3-api-client",
         &["kg:read", "kg:write"],

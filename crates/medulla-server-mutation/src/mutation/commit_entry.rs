@@ -6,7 +6,7 @@ use super::{
     prepublish_success, response_dedup_key, DurableBatchAttempt, DurableBatchTarget, MutationCtx,
     MutationPlan,
 };
-use medulla_server_api::access::check_graph_access;
+use medulla_server_auth::access::check_graph_access;
 use medulla_graph_core::graph::GraphCore;
 use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::protocol::Method;

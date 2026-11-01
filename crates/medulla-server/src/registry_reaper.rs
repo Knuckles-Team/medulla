@@ -168,8 +168,8 @@ pub async fn reap_expired_servers(state: &Arc<RwLock<ServerState>>, now_ms: u64)
 mod tests {
     use super::*;
     use medulla_protocol_types::protocol::Request;
-    use medulla_server_api::auth::build_shared_test_request;
-    use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
+    use medulla_server_auth::auth::build_shared_test_request;
+    use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
 
     const SECRET: &str = "registry-reaper-test";
     const TEST_AGENT: &str = "unit-test-agent";

@@ -24,7 +24,7 @@ use medulla_catalog_types::{
 
 use super::*;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::auth::dispatch_test_on_heap;
+use medulla_server_auth::auth::dispatch_test_on_heap;
 use medulla_server_api::state::ServerState;
 
 const SECRET: &str = "schema-approval-served-secret"; // sanitizer:ignore
@@ -94,12 +94,12 @@ impl Served {
 
     async fn call(&self, graph: &str, key: &str, method: Method) -> Response {
         let id = next_id();
-        let request = medulla_server_api::auth::scoped_test_request_on(
+        let request = medulla_server_auth::auth::scoped_test_request_on(
             SECRET,
             id,
             graph,
             method,
-            medulla_server_api::auth::ScopedTestCaller {
+            medulla_server_auth::auth::ScopedTestCaller {
                 principal: ADMIN,
                 tenant: TENANT,
                 scopes: &["*"],

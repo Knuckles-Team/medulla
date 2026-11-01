@@ -43,10 +43,10 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::QueryResult;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::access::check_graph_access;
+use medulla_server_auth::access::check_graph_access;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::carrier::GraphReadAuthority;
-use medulla_server_api::auth::verify_request_with_security_dir;
+use medulla_server_auth::auth::verify_request_with_security_dir;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_mutation::mutation::MutationCtx;
 use medulla_server_mutation::mutation::MutationPlan;
@@ -1049,7 +1049,7 @@ mod tests {
     }
 
     fn signed_session_request(graph: &str) -> medulla_protocol_types::protocol::Request {
-        medulla_server_api::auth::sign_current_test_request(
+        medulla_server_auth::auth::sign_current_test_request(
             "test",
             medulla_protocol_types::protocol::Request {
                 id: next_conn_id(),
@@ -1114,8 +1114,8 @@ mod tests {
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
         use medulla_types::acl::RequestContextClaims;
-        use medulla_server_api::auth::compute_verified_envelope_token;
-        use medulla_server_api::auth::VerifiedEnvelopeParams;
+        use medulla_server_auth::auth::compute_verified_envelope_token;
+        use medulla_server_auth::auth::VerifiedEnvelopeParams;
 
         let mut request = medulla_protocol_types::protocol::Request {
             id: next_conn_id(),

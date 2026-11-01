@@ -205,7 +205,7 @@ pub mod current_auth_test_support {
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;
     use medulla_server_api::api::persistence::PersistenceBackend;
-    use medulla_server_api::auth::build_shared_test_request;
+    use medulla_server_auth::auth::build_shared_test_request;
     use medulla_server_api::state::ServerState;
     use std::sync::Arc;
     use tokio::sync::RwLock;
@@ -273,7 +273,7 @@ pub mod current_auth_test_support {
         secret: &str,
         isolation: IsolationLayer,
     ) -> Arc<RwLock<ServerState>> {
-        let dir = medulla_server_api::sql_tables::test_persist_dir()
+        let dir = medulla_server_auth::sql_tables::test_persist_dir()
             .to_string_lossy()
             .into_owned();
         std::fs::create_dir_all(&dir).expect("create test persist dir");
@@ -293,7 +293,7 @@ pub mod current_auth_test_support {
         pub(in super::super) use medulla_protocol_types::protocol::Request;
         pub(in super::super) use medulla_protocol_types::protocol::Response;
         pub(in super::super) use medulla_protocol_types::protocol::ResultPayload;
-        pub(in super::super) use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
+        pub(in super::super) use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
         pub(in super::super) use medulla_server_api::state::ServerState;
         pub(in super::super) use std::sync::Arc;
         pub(in super::super) use tokio::sync::RwLock;
@@ -1099,10 +1099,10 @@ mod dispatch_write_tests {
             .duration_since(std::time::UNIX_EPOCH)
             .expect("test clock after epoch")
             .as_secs();
-        request.auth_token = medulla_server_api::auth::compute_verified_envelope_token(
+        request.auth_token = medulla_server_auth::auth::compute_verified_envelope_token(
             SECRET,
             &request,
-            &medulla_server_api::auth::VerifiedEnvelopeParams {
+            &medulla_server_auth::auth::VerifiedEnvelopeParams {
                 context: &context,
                 timestamp,
                 nonce,
@@ -1454,7 +1454,7 @@ mod dispatch_write_tests {
         // Install the same deterministic cross-redb fault used by pgwire's
         // recovery proof: physical CREATE can commit, while owner registration
         // fails against the malformed source-authority catalog.
-        let acl = medulla_server_api::sql_tables::tenant_acl_table_store(
+        let acl = medulla_server_auth::sql_tables::tenant_acl_table_store(
             &carrier_tenant_scope("tenant-shared"),
             std::path::Path::new(&persist_dir),
         )
@@ -1497,7 +1497,7 @@ mod dispatch_write_tests {
             "owner catalog fault must surface after physical commit: {:?}",
             first.error
         );
-        let store = medulla_server_api::sql_tables::tenant_table_store(
+        let store = medulla_server_auth::sql_tables::tenant_table_store(
             &carrier_tenant_scope("tenant-shared"),
             std::path::Path::new(&persist_dir),
         )
@@ -1568,7 +1568,7 @@ mod dispatch_write_tests {
                 guest_alter.error.as_deref(),
                 guest_alter.error_detail.as_deref()
             ),
-            medulla_server_api::sql_catalog_acl::ACCESS_DENIED
+            medulla_server_auth::sql_catalog_acl::ACCESS_DENIED
                 .split_once(": ")
                 .map(|(code, detail)| (Some(code), Some(detail)))
                 .unwrap(),

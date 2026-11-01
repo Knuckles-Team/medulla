@@ -18,7 +18,7 @@ use medulla_server_ops::api::query_txn::ForeignStateExt;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::access::OwnerScopedCall;
+use medulla_server_auth::access::OwnerScopedCall;
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 use medulla_catalog_types::foreign_read::{

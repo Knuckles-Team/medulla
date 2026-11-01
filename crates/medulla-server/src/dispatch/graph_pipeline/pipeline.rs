@@ -306,7 +306,7 @@ pub(super) async fn route_process_global_domains(
     // The verified carrier whose owner (tenant+principal) the process-global UDF +
     // foreign-source catalogs key their entries by (EH-373/EH-374) — never a request field.
     #[cfg(any(feature = "wasm-udf", feature = "federation"))]
-    let owner_call = medulla_server_api::access::OwnerScopedCall {
+    let owner_call = medulla_server_auth::access::OwnerScopedCall {
         state,
         req_id,
         carrier: read_authority

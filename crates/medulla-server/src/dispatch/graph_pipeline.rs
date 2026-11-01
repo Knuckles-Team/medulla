@@ -450,9 +450,9 @@ mod eg318_dispatch_tests {
     use medulla_protocol_types::protocol::Request;
     use medulla_server_api::api::persistence::PersistenceBackend;
     #[cfg(feature = "tsdb")]
-    use medulla_server_api::auth::sign_current_test_request;
-    use medulla_server_api::auth::build_shared_test_request;
-    use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
+    use medulla_server_auth::auth::sign_current_test_request;
+    use medulla_server_auth::auth::build_shared_test_request;
+    use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
     use medulla_persistence::redb_backend::RedbBackend;
     use std::ops::Deref;
     use std::path::PathBuf;
@@ -1225,7 +1225,7 @@ mod admin_scope_tests {
     use medulla_isolation::isolation::IsolationLayer;
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;
-    use medulla_server_api::auth::sign_current_test_request;
+    use medulla_server_auth::auth::sign_current_test_request;
     use std::sync::Arc;
 
     const SECRET: &str = "admin-scope-test-secret";
@@ -1636,7 +1636,7 @@ mod blob_dispatch_tests {
     use super::*;
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;
-    use medulla_server_api::auth::sign_current_test_request;
+    use medulla_server_auth::auth::sign_current_test_request;
     use medulla_server_blob::blob::store::DEFAULT_UPLOAD_TTL_MS;
     use medulla_server_blob::blob::BlobCursors;
     use medulla_server_blob::blob::BlobRetentionPolicy;
@@ -2054,8 +2054,8 @@ mod placement_route_carrier_tests {
     use medulla_isolation::isolation::IsolationLayer;
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;
-    use medulla_server_api::auth::compute_verified_envelope_token;
-use medulla_server_api::auth::VerifiedEnvelopeParams;
+    use medulla_server_auth::auth::compute_verified_envelope_token;
+use medulla_server_auth::auth::VerifiedEnvelopeParams;
     use std::sync::Arc;
     use std::time::{SystemTime, UNIX_EPOCH};
 

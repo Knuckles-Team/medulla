@@ -32,7 +32,7 @@ use std::sync::{Arc, Mutex, OnceLock, RwLock};
 use medulla_table_store::tables::TableStore;
 use sha2::{Digest, Sha256};
 
-use crate::carrier::CarrierAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
 
 // RF-019: the one maintenance worker of every open catalog's ANN authority.
 mod ann_maintenance;
@@ -58,18 +58,18 @@ impl SqlOwnerMutation<'_> {
     pub fn compile<T>(
         &self,
         store: &TableStore,
-        compile: impl FnOnce(crate::batch_compile::CompileBatch<'_>) -> Result<T, String>,
+        compile: impl FnOnce(medulla_server_api::batch_compile::CompileBatch<'_>) -> Result<T, String>,
     ) -> Result<T, String> {
         let authority = self.authority;
         let expected = store.mutation_version(authority.tenant_scope(), self.scope)?;
-        let batch_id = crate::batch_compile::opaque_idempotency_key_for_context(
+        let batch_id = medulla_server_api::batch_compile::opaque_idempotency_key_for_context(
             self.kind,
             authority.tenant_scope(),
             self.scope,
             Some(authority.actor_scope()),
             authority.idempotency_key(),
         );
-        compile(crate::batch_compile::CompileBatch {
+        compile(medulla_server_api::batch_compile::CompileBatch {
             batch_id: &batch_id,
             request_id: self.request_id,
             attempt_nonce: self.attempt_nonce,
@@ -337,7 +337,7 @@ pub fn test_persist_dir() -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::authority_context::VerifiedRequestContext;
+    use medulla_server_api::authority_context::VerifiedRequestContext;
 
     fn authority(actor: &str, tenant: &str) -> CarrierAuthority {
         CarrierAuthority::from_verified(&VerifiedRequestContext::verified_for_test_in_tenant(

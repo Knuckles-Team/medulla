@@ -110,10 +110,10 @@ fn publish(
         return Err("ACCESS_DENIED: SQL source publication requires kg:write".into());
     }
     // LocalOnly is refused before opening or mutating a SQL owner in active Raft.
-    medulla_server_api::sql_catalog_acl::with_source_authority_write(persist_dir, authority, |source| {
+    medulla_server_auth::sql_catalog_acl::with_source_authority_write(persist_dir, authority, |source| {
         authorization::authorize_source_insert(source, authority, &request)?;
         let store =
-            medulla_server_api::sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)?;
+            medulla_server_auth::sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)?;
         let batch = compile_batch(&store, req_id, authority, attempt_nonce, request, now_ms)?;
         let committed = store.commit_source_batch(&batch, now_ms)?;
         let bytes = committed
@@ -134,7 +134,7 @@ fn compile_batch(
     now_ms: u64,
 ) -> Result<MutationBatch, String> {
     let scope = publication_scope(authority, &request)?;
-    medulla_server_api::sql_tables::SqlOwnerMutation {
+    medulla_server_auth::sql_tables::SqlOwnerMutation {
         authority,
         kind: "sql-source",
         scope: &scope,

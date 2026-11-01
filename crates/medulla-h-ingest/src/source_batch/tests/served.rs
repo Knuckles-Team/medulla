@@ -7,7 +7,7 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::protocol_fixtures::sql_source::change;
 use medulla_protocol_types::protocol_fixtures::sql_source::id;
-use medulla_server_api::auth::dispatch_test_on_heap;
+use medulla_server_auth::auth::dispatch_test_on_heap;
 use medulla_types::contract::RecordBytes;
 
 const SECRET: &str = "sql-source-served-secret";
@@ -34,11 +34,11 @@ impl Served {
     }
 
     fn signed(&self, attempt: Attempt<'_>, batch: SqlSourceBatchRequest) -> Request {
-        medulla_server_api::auth::scoped_test_request(
+        medulla_server_auth::auth::scoped_test_request(
             SECRET,
             attempt.id,
             Method::SqlSourceBatch { batch },
-            medulla_server_api::auth::ScopedTestCaller {
+            medulla_server_auth::auth::ScopedTestCaller {
                 principal: WRITER,
                 tenant: TENANT,
                 scopes: attempt.scopes,

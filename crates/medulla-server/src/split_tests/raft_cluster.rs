@@ -389,8 +389,8 @@ async fn cluster_members_reports_topology_and_tracks_leader_failover() {
 
     use medulla_types::acl::{AgentIdentity, AgentRole, RequestContextClaims};
     use medulla_protocol_types::protocol::{Request, ResultPayload};
-    use medulla_server_api::auth::compute_verified_envelope_token;
-    use medulla_server_api::auth::VerifiedEnvelopeParams;
+    use medulla_server_auth::auth::compute_verified_envelope_token;
+    use medulla_server_auth::auth::VerifiedEnvelopeParams;
 
     const TEST_AGENT: &str = "cluster-members-wire-test-agent";
     const SECRET: &str = "raft-test"; // matches make_state's ServerState.auth_secret
@@ -883,8 +883,8 @@ mod placement_admin_wire_rpc {
     use medulla_types::acl::{AgentIdentity, AgentRole, RequestContextClaims};
     use medulla_protocol_types::protocol::{Response, ResultPayload};
     use crate::dispatch;
-    use medulla_server_api::auth::compute_verified_envelope_token;
-    use medulla_server_api::auth::VerifiedEnvelopeParams;
+    use medulla_server_auth::auth::compute_verified_envelope_token;
+    use medulla_server_auth::auth::VerifiedEnvelopeParams;
 
     const TEST_AGENT: &str = "placement-admin-wire-test-agent";
     const SECRET: &str = "raft-test"; // matches `make_state`'s `auth_secret`.

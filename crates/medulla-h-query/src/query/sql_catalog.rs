@@ -52,7 +52,7 @@ pub(crate) async fn exec_sql_property_graph_privilege(
         Ok(None) => {
             return Response::err(
                 req_id,
-                sql_refusal(medulla_server_api::sql_catalog_acl::ACCESS_DENIED),
+                sql_refusal(medulla_server_auth::sql_catalog_acl::ACCESS_DENIED),
             );
         }
         Err(error) => return Response::err(req_id, sql_refusal(error)),
@@ -234,7 +234,7 @@ fn commit_sql_catalog_work(work: SqlCatalogWork<'_>) -> Result<usize, String> {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|duration| duration.as_millis() as u64)
         .unwrap_or(0);
-    medulla_server_api::sql_catalog_acl::with_source_authority_write(
+    medulla_server_auth::sql_catalog_acl::with_source_authority_write(
         persist_dir,
         authority,
         |source| {
@@ -272,9 +272,9 @@ fn commit_sql_catalog_work(work: SqlCatalogWork<'_>) -> Result<usize, String> {
                 Err(message) => return Err(message),
             };
             let owner_operation_id =
-                medulla_server_api::sql_catalog_acl::stable_source_operation_id(&batch_id);
+                medulla_server_auth::sql_catalog_acl::stable_source_operation_id(&batch_id);
             for schema in &created_tables {
-                medulla_server_api::sql_catalog_acl::register_owner_after_create_in(
+                medulla_server_auth::sql_catalog_acl::register_owner_after_create_in(
                     source,
                     &schema.name,
                     owner_operation_id,

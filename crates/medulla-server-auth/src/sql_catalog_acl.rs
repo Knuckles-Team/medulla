@@ -56,7 +56,7 @@ use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
-use crate::carrier::CarrierAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
 use crate::sql_tables;
 
 // RF-019: the served projection's maintained-ANN narrowing, with this caller's
@@ -506,9 +506,9 @@ fn commit_source_acl_mutation(
     let child_identity = format!(
         "{}:{kind}:{operation_digest}:{}",
         operation_id.simple(),
-        crate::batch_compile::principal_fingerprint(authority.actor_scope())?,
+        medulla_server_api::batch_compile::principal_fingerprint(authority.actor_scope())?,
     );
-    let batch_id = crate::batch_compile::opaque_coordinator_key(
+    let batch_id = medulla_server_api::batch_compile::opaque_coordinator_key(
         "sql-source-acl",
         authority.tenant_scope(),
         &child_identity,
@@ -517,10 +517,10 @@ fn commit_source_acl_mutation(
         event_type: kind.to_string(),
         query: format!("sha256:{operation_digest}"),
     };
-    let created_at_ms = crate::txn::now_ms();
+    let created_at_ms = medulla_server_api::txn::now_ms();
     let expected_revision = acl.mutation_version(authority.tenant_scope(), SOURCE_ACL_RESOURCE)?;
-    let batch = crate::batch_compile::compile_opaque_method(
-        crate::batch_compile::CompileBatch {
+    let batch = medulla_server_api::batch_compile::compile_opaque_method(
+        medulla_server_api::batch_compile::CompileBatch {
             batch_id: &batch_id,
             request_id,
             attempt_nonce: authority.attempt_nonce(),
@@ -541,7 +541,7 @@ fn commit_source_acl_mutation(
         "sql_source_acl_operation",
     )?;
     let committed = acl.commit_txn_batch(txn, &batch, created_at_ms)?;
-    let expected_actor = crate::batch_compile::principal_fingerprint(authority.actor_scope())?;
+    let expected_actor = medulla_server_api::batch_compile::principal_fingerprint(authority.actor_scope())?;
     if committed.record.committing_actor()? != expected_actor {
         return Err(
             "IDEMPOTENCY_CONFLICT: SQL source ACL receipt is owned by another actor".to_string(),
@@ -1771,7 +1771,7 @@ impl AuthorizedTable {
                 )
             })
             .transpose()?;
-        let decision_at_ms = crate::txn::now_ms();
+        let decision_at_ms = medulla_server_api::txn::now_ms();
         Ok(SemanticTextSnapshot {
             tenant_scope: self.authority.tenant_scope().to_string(),
             table: selector.table_id.clone(),
@@ -2177,7 +2177,7 @@ pub(crate) fn selectable_tables(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::authority_context::VerifiedRequestContext;
+    use medulla_server_api::authority_context::VerifiedRequestContext;
     use crate::sql_tables::test_persist_dir;
     use medulla_kernel::test_rendezvous::{join_bounded, recv_within};
 
@@ -2227,8 +2227,8 @@ mod tests {
                     .to_string(),
             params_msgpack: Vec::new(),
         };
-        crate::batch_compile::compile_opaque_method(
-            crate::batch_compile::CompileBatch {
+        medulla_server_api::batch_compile::compile_opaque_method(
+            medulla_server_api::batch_compile::CompileBatch {
                 batch_id,
                 request_id: 17,
                 attempt_nonce: authority.attempt_nonce(),
