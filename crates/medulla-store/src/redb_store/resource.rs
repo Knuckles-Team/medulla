@@ -56,9 +56,9 @@ mod write_lifecycle;
 pub(crate) use codec::*;
 pub(crate) use extension::*;
 pub(crate) use fingerprint::*;
-pub(crate) use query::*;
+pub use query::*;
 #[cfg(any(test, feature = "server"))]
-pub(crate) use status::*;
+pub use status::*;
 pub(crate) use validation::*;
 pub(crate) use write_admission::*;
 pub(crate) use write_admit::*;
