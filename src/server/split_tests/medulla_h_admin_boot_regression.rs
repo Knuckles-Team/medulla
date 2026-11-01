@@ -356,7 +356,7 @@ async fn outbox_status(state: &Arc<RwLock<ServerState>>) -> Option<MutationOutbo
             tenant_id: TENANT.to_string(),
             scope: NativeOutboxScope::Tenant,
         },
-        consumer: crate::connector_pack_projection::worker::CONSUMER.to_string(),
+        consumer: medulla_h_admin::connector_pack_projection::worker::CONSUMER.to_string(),
     };
     let response = call(
         state,
@@ -466,7 +466,7 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
 
     // ── Boot the real wiring: the worker first (as `run_inner` does), then
     // the UDS listener, then the post-bind maintenance after the bind. ──
-    crate::connector_pack_projection::spawn(state.clone());
+    medulla_h_admin::connector_pack_projection::spawn(state.clone());
     let socket_path = dir
         .path()
         .join("engine-g9-boot.sock")
@@ -494,7 +494,7 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
 
     // (b) The post-bind maintenance — exactly the hook `run_inner` now places
     // after the transport bind.
-    crate::boot_maintenance::spawn_post_bind_maintenance(state.clone()).await;
+    medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(state.clone()).await;
 
     // (c) The drain completes in the background within the budget — and the
     // listener was already up while it did.
@@ -532,7 +532,7 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
     // head's ontology is committed into the projection graph's durable schema
     // sources — read straight from the authoritative snapshot, not a helper.
     {
-        let graph = crate::graph_schema::pack_projection_graph_name(
+        let graph = medulla_h_admin::graph_schema::pack_projection_graph_name(
             TENANT,
             &ResourceId::new(CONNECTOR).unwrap(),
         )

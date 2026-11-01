@@ -41,22 +41,9 @@ pub fn spawn(state: Arc<RwLock<ServerState>>) {
 ))]
 mod grant;
 
-// G9 boot regression (MEDULLA-DURABLE-KERNEL-R006.4/.5): listener bound before the
-// projection drain completes, post-bind reconcile/reload, cursor fast path.
-#[cfg(all(
-    test,
-    unix,
-    feature = "redb",
-    feature = "tsdb",
-    feature = "blob",
-    feature = "shacl",
-    feature = "security",
-    feature = "matview"
-))]
-mod boot_regression;
 
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
-pub(crate) mod worker {
+pub mod worker {
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
     use std::time::Duration;

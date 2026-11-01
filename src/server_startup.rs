@@ -648,7 +648,7 @@ pub(super) async fn serve_transports(
             .tcp_addr
             .ok_or("TCP-only mode requires --tcp-addr")?;
         let listener = server::bind_tcp(&addr, &transports.tcp_tls).await?;
-        server::spawn_post_bind_maintenance(state.clone()).await;
+        medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(state.clone()).await;
         server::serve_tcp_listener(
             listener,
             state.clone(),
@@ -669,7 +669,7 @@ pub(super) async fn serve_transports(
         });
     }
     let listener = server::bind_uds(&transports.socket_path, transports.socket_mode).await?;
-    server::spawn_post_bind_maintenance(state.clone()).await;
+    medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(state.clone()).await;
     server::serve_uds_listener(listener, state.clone(), shutdown.clone()).await?;
     Ok(())
 }
@@ -693,7 +693,7 @@ pub(super) async fn serve_transports(
         .unwrap_or_else(|| "127.0.0.1:8765".to_string());
     info!("AF_UNIX unavailable; using the configured native TCP transport");
     let listener = server::bind_tcp(&addr, &transports.tcp_tls).await?;
-    server::spawn_post_bind_maintenance(state.clone()).await;
+    medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(state.clone()).await;
     server::serve_tcp_listener(
         listener,
         state.clone(),

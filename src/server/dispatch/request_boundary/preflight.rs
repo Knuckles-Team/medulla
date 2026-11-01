@@ -1,7 +1,7 @@
 use super::*;
 
 fn preflight_nested_msgpack(bytes: &[u8]) -> Result<(), &'static str> {
-    medulla_h_admin::transport::validate_nested_msgpack(
+    crate::server::transport::validate_nested_msgpack(
         bytes,
         MAX_NESTED_MSGPACK_BYTES,
         MAX_NESTED_MSGPACK_ITEMS,

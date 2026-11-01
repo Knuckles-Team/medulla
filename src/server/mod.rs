@@ -1,7 +1,3 @@
-use medulla_h_admin::transport::parse_unix_socket_mode;
-use medulla_h_admin::transport::serve_uds;
-use medulla_h_admin::transport::serve_tcp;
-use medulla_h_admin::transport::handle_connection;
 use medulla_h_query::semantic_index_runtime::PendingRf019Activation;
 // CONCEPT:MEDULLA-KG.query.tokio-service-server — Tokio Service Server
 //
@@ -449,6 +445,15 @@ pub(crate) fn test_state_with_services(
     }
     std::sync::Arc::new(tokio::sync::RwLock::new(state))
 }
+
+mod transport;
+pub use transport::{
+    bind_tcp, handle_connection, prepare_tcp_tls, run_idle_watcher, serve_tcp, serve_tcp_listener,
+    PreparedTcpTls, ShutdownCoordinator, TcpTlsConfig,
+};
+#[cfg(unix)]
+pub use transport::{bind_uds, serve_uds, serve_uds_listener};
+pub use transport::parse_unix_socket_mode;
 
 pub use medulla_server_api::request_replay::seal_request_replay_ledger;
 // serve_uds is Unix-only (UnixListener); on Windows the server uses serve_tcp,

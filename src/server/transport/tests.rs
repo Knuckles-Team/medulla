@@ -1,6 +1,4 @@
-#[allow(unused_imports)]
-use medulla_h_admin::transport::*;
-use medulla_h_admin::transport::*;
+use super::*;
 
 fn frame_test_limits() -> ConnectionLimits {
     ConnectionLimits {
@@ -123,8 +121,8 @@ async fn response_writer_drains_last_sender_and_preserves_frame_order() {
 
 #[tokio::test]
 async fn qos_verification_rejects_unsigned_agent_before_admission() {
-    let scheduler = Arc::new(medulla_h_admin::transport::medulla_h_admin::transport::qos::QosScheduler::new(
-        medulla_h_admin::transport::medulla_h_admin::transport::qos::QosConfig::auto(8),
+    let scheduler = Arc::new(super::super::qos::QosScheduler::new(
+        super::super::qos::QosConfig::auto(8),
     ));
     let state = RwLock::new(ServerState::new_for_test(
         "transport-test-secret",
@@ -149,8 +147,8 @@ async fn qos_verification_rejects_unsigned_agent_before_admission() {
 async fn qos_verification_names_the_audience_mismatch_cause() {
     use crate::acl::RequestContextClaims;
     use medulla_server_api::auth::{compute_verified_envelope_token, VerifiedEnvelopeParams};
-    let scheduler = Arc::new(medulla_h_admin::transport::medulla_h_admin::transport::qos::QosScheduler::new(
-        medulla_h_admin::transport::medulla_h_admin::transport::qos::QosConfig::auto(8),
+    let scheduler = Arc::new(super::super::qos::QosScheduler::new(
+        super::super::qos::QosConfig::auto(8),
     ));
     let state = RwLock::new(ServerState::new_for_test(
         "transport-test-secret",

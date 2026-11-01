@@ -1,7 +1,6 @@
 //! Framed ingress and the single response-writer loop for one native connection.
 
-use medulla_protocol_types::protocol::Request;
-use medulla_protocol_types::protocol::Response;
+use crate::protocol::{Request, Response};
 
 const DEFAULT_MAX_REQUEST_FRAME_BYTES: usize = 64 * 1024 * 1024;
 pub(super) const HARD_MAX_REQUEST_FRAME_BYTES: usize = 384 * 1024 * 1024;

@@ -26,9 +26,7 @@ use tracing::{error, info};
 
 use super::dispatch::dispatch_verified_request;
 use super::{dispatch, ServerState};
-use medulla_protocol_types::protocol::Method;
-use medulla_protocol_types::protocol::Request;
-use medulla_protocol_types::protocol::Response;
+use crate::protocol::{Method, Request, Response};
 use medulla_server_api::request_scope::{self, RequestCancel};
 
 mod framing;
@@ -800,3 +798,5 @@ pub async fn serve_tcp_listener(
     Ok(())
 }
 
+#[cfg(test)]
+mod tests;
