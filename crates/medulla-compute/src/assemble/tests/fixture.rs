@@ -9,7 +9,7 @@ use medulla_types::agent_component::{
 };
 use medulla_types::contract::BoundedVec;
 use medulla_types::decision::{
-    digest, AssemblyRequest, AssemblyRequirements, CandidateFacts, DecisionInputs, DecisionPolicy,
+    AssemblyRequest, AssemblyRequirements, CandidateFacts, DecisionInputs, DecisionPolicy,
     DecisionPolicyRef, LibraryCandidateScope, PremiseClass, PremiseProvenance, PremiseRef,
 };
 

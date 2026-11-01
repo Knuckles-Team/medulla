@@ -60,7 +60,6 @@ use crate::server::api::persistence::PersistenceBackend;
 use crate::server::mutation_batch::compile::{compile_methods, CompileBatch};
 #[cfg(test)]
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_scope::MutationSurface;
 #[cfg(test)]
 use sha2::{Digest, Sha256};
 
