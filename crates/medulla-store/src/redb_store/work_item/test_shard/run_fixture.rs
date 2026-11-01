@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::redb_store::store_rows::GraphRowTables;
-use medulla_agent_types::native_control::SubmitWorkItemRequest;
+use medulla_work_types::native_control::SubmitWorkItemRequest;
 
 type Row = serde_json::Map<String, serde_json::Value>;
 

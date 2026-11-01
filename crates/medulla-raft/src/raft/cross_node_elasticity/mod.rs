@@ -349,7 +349,7 @@ impl MoveIdentity {
         let source_bytes = source.to_be_bytes();
         let target_bytes = target.to_be_bytes();
         let epoch_bytes = placement_epoch.to_be_bytes();
-        let move_id = medulla_agent_types::work_market::scoped_digest_parts(
+        let move_id = medulla_work_types::work_market::scoped_digest_parts(
             b"medulla/cross-node-move/v1\0",
             [
                 graph.as_bytes(),
@@ -360,15 +360,15 @@ impl MoveIdentity {
                 kind.as_bytes(),
             ],
         );
-        let snapshot_id = medulla_agent_types::work_market::scoped_digest_parts(
+        let snapshot_id = medulla_work_types::work_market::scoped_digest_parts(
             b"medulla/cross-node-snapshot/v1\0",
             [move_id.as_bytes()],
         );
-        let delta_stream_id = medulla_agent_types::work_market::scoped_digest_parts(
+        let delta_stream_id = medulla_work_types::work_market::scoped_digest_parts(
             b"medulla/cross-node-delta/v1\0",
             [move_id.as_bytes(), snapshot_id.as_bytes()],
         );
-        let fence_id = medulla_agent_types::work_market::scoped_digest_parts(
+        let fence_id = medulla_work_types::work_market::scoped_digest_parts(
             b"medulla/cross-node-fence/v1\0",
             [move_id.as_bytes(), delta_stream_id.as_bytes()],
         );
@@ -774,7 +774,7 @@ impl CrossNodeElasticityPlanner {
         input.validate()?;
         let encoded = serde_json::to_vec(input)
             .map_err(|error| PlannerError::Fingerprint(error.to_string()))?;
-        let input_digest = medulla_agent_types::work_market::scoped_digest_parts(
+        let input_digest = medulla_work_types::work_market::scoped_digest_parts(
             b"medulla/cross-node-input/v1\0",
             [encoded.as_slice()],
         );
@@ -977,7 +977,7 @@ impl CrossNodeElasticityPlanner {
     ) -> MoveProposal {
         let planning_epoch = input.planning_epoch.to_be_bytes();
         let topology_epoch = input.topology_epoch.to_be_bytes();
-        let proposal_id = medulla_agent_types::work_market::scoped_digest_parts(
+        let proposal_id = medulla_work_types::work_market::scoped_digest_parts(
             b"medulla/cross-node-proposal/v1\0",
             [
                 checkpoint.identity.move_id.as_bytes(),

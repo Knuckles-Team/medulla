@@ -7,10 +7,7 @@
 //! the operator's (`UpdateCapacityCell`) and are written back unchanged, and a
 //! narrowed ceiling never touches a lease already held.
 
-use medulla_agent_types::{
-    native_control::CapacityThrottleRequest, native_control::CapacityThrottleResult,
-    native_control::NativeControlSchemaVersion,
-};
+use medulla_work_types::{native_control::CapacityThrottleRequest, native_control::CapacityThrottleResult, native_control::NativeControlSchemaVersion};
 use medulla_mutation_types::capacity_lease::CapacityCell;
 use medulla_mutation_types::capacity_throttle::apply_error_budget;
 

@@ -3,8 +3,8 @@ macro_rules! __eg_method_chunk_11 {
         __eg_method_finish!(@acc [
 $($variants)*
 
-    PublishRunCheckpoint { request: medulla_agent_types::run_checkpoint::PublishRunCheckpointRequest },
-    GetRunCheckpoint { request: medulla_agent_types::run_checkpoint::GetRunCheckpointRequest },
+    PublishRunCheckpoint { request: medulla_work_types::run_checkpoint::PublishRunCheckpointRequest },
+    GetRunCheckpoint { request: medulla_work_types::run_checkpoint::GetRunCheckpointRequest },
 
 
     PublishCurrentPlan { request: medulla_decision_types::current_plan::PublishCurrentPlanRequest },
@@ -59,15 +59,15 @@ $($variants)*
     /// `request.tenant` must equal the verified request tenant. See
     /// [`crate::control_lease`].
     /// Persist a grant from an explicitly authorized host-start issuer.
-    IssueHostStartGrant { request: medulla_agent_types::host_start::IssueHostStartGrantRequest },
+    IssueHostStartGrant { request: medulla_work_types::host_start::IssueHostStartGrantRequest },
     IssueControlLease {
-        request: medulla_agent_types::control_lease::IssueControlLeaseRequest,
+        request: medulla_work_types::control_lease::IssueControlLeaseRequest,
     },
     /// Move one control lease along a legal edge (`active -> consumed |
     /// revoked | expired`, `consumed -> revoked | expired`), compare-and-set
     /// on the revision the caller read. A lease never returns to `active`.
     TransitionControlLease {
-        request: medulla_agent_types::control_lease::TransitionControlLeaseRequest,
+        request: medulla_work_types::control_lease::TransitionControlLeaseRequest,
     },
     /// The caller's view of one control lease, or `null` when no lease with
     /// this id is visible to `tenant` (which must equal the verified tenant).
@@ -114,7 +114,7 @@ $($variants)*
     /// `action.approval` queue). `null`-free: an empty page may still carry a
     /// cursor.
     ListControlLeases {
-        request: medulla_agent_types::control_lease::ListControlLeasesRequest,
+        request: medulla_work_types::control_lease::ListControlLeasesRequest,
     },
 
     // ── Work market (EH-348) ───────────────────────────────────────────────
@@ -124,24 +124,24 @@ $($variants)*
     /// Gap as a new generation with a new WorkItem; evidence it has seen
     /// changes nothing. See [`crate::work_market`].
     GapUpsert {
-        request: medulla_agent_types::work_market::GapUpsertRequest,
+        request: medulla_work_types::work_market::GapUpsertRequest,
     },
     /// Move a Gap along a legal lifecycle edge, compare-and-set on the
     /// revision the caller read.
     GapTransition {
-        request: medulla_agent_types::work_market::GapTransitionRequest,
+        request: medulla_work_types::work_market::GapTransitionRequest,
     },
     /// Record the Gap's current WorkItem outcome, read by the engine from the
     /// WorkItem row, as evidence on the Gap; a terminal outcome closes a live
     /// Gap (succeeded -> resolved, otherwise deferred).
     GapSettle {
-        request: medulla_agent_types::work_market::GapSettleRequest,
+        request: medulla_work_types::work_market::GapSettleRequest,
     },
     /// Record the versioned, derived pricing of a live Gap's current
     /// WorkItem, compare-and-set on the offer version the caller read. The
     /// engine computes the deterministic utility rate.
     WorkOfferPut {
-        request: medulla_agent_types::work_market::WorkOfferPutRequest,
+        request: medulla_work_types::work_market::WorkOfferPutRequest,
     },
     /// The caller's view of one Gap, or `null` when no Gap with this id is
     /// visible to `tenant` (which must equal the verified tenant).
@@ -152,7 +152,7 @@ $($variants)*
     /// One bounded page of `request.tenant`'s Gaps in row-key order,
     /// optionally of one status and source. A listing, never a ranking.
     GapList {
-        request: medulla_agent_types::work_market::GapListRequest,
+        request: medulla_work_types::work_market::GapListRequest,
     },
 
     // ── Telemetry facts (EH-408 / EH-409) ──────────────────────────────────

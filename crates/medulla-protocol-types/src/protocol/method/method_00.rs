@@ -237,37 +237,37 @@ macro_rules! __eg_method_chunk_0 {
     /// The native engine owns the cell epoch, fence, expiry, and idempotency
     /// rows; the request's owner digest is only an authenticated assertion.
     AcquireCapacity {
-        request: medulla_agent_types::native_control::CapacityAcquireRequest,
+        request: medulla_work_types::native_control::CapacityAcquireRequest,
     },
 
     /// Renew every named capacity lease in one all-or-nothing transaction.
     RenewCapacity {
-        request: medulla_agent_types::native_control::CapacityLeaseMutationRequest,
+        request: medulla_work_types::native_control::CapacityLeaseMutationRequest,
     },
 
     /// Release every named capacity lease in one all-or-nothing transaction.
     ReleaseCapacity {
-        request: medulla_agent_types::native_control::CapacityLeaseMutationRequest,
+        request: medulla_work_types::native_control::CapacityLeaseMutationRequest,
     },
 
     /// Reclaim a bounded page of expired capacity leases.
     ReclaimExpiredCapacity {
-        request: medulla_agent_types::native_control::CapacityReclaimRequest,
+        request: medulla_work_types::native_control::CapacityReclaimRequest,
     },
 
     /// Return bounded native cells/leases for reconciliation and status.
     ReconcileCapacity {
-        request: medulla_agent_types::native_control::CapacityStatusRequest,
+        request: medulla_work_types::native_control::CapacityStatusRequest,
     },
 
     /// Exact bounded native capacity read.
     CapacityStatus {
-        request: medulla_agent_types::native_control::CapacityStatusRequest,
+        request: medulla_work_types::native_control::CapacityStatusRequest,
     },
 
     /// Controller/admin CAS for a capacity cell epoch and resource dimension.
     UpdateCapacityCell {
-        request: medulla_agent_types::native_control::CapacityCellUpdateRequest,
+        request: medulla_work_types::native_control::CapacityCellUpdateRequest,
     },
 
     /// Error-budget adaptive throttling (EH-406): report one observation
@@ -275,12 +275,12 @@ macro_rules! __eg_method_chunk_0 {
     /// burst and gives it back only on recovery evidence, never above the
     /// declared capacity; the policy and the capacity stay operator-owned.
     ThrottleCapacityCell {
-        request: medulla_agent_types::native_control::CapacityThrottleRequest,
+        request: medulla_work_types::native_control::CapacityThrottleRequest,
     },
 
     /// Idempotent WorkItem admission and command-log append.
     SubmitWorkItem {
-        request: medulla_agent_types::native_control::SubmitWorkItemRequest,
+        request: medulla_work_types::native_control::SubmitWorkItemRequest,
     },
 
     /// Publish, retire, inspect, or reconcile one durable EG Agent Library
@@ -355,7 +355,7 @@ macro_rules! __eg_method_chunk_0 {
 
     /// Bounded all-or-nothing WorkItem admission batch.
     SubmitWorkItems {
-        request: medulla_agent_types::native_control::SubmitWorkItemsRequest,
+        request: medulla_work_types::native_control::SubmitWorkItemsRequest,
     },
 
     /// Mint an opaque native capability for the caller's currently-live
@@ -407,7 +407,7 @@ macro_rules! __eg_method_chunk_0 {
         #[serde(default)]
         outcome_extension: Option<Box<medulla_result_types::outcome_bundle::TerminalOutcomeExtension>>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        run_completion: Option<Box<medulla_agent_types::run_completion::RunCompletionInput>>,
+        run_completion: Option<Box<medulla_work_types::run_completion::RunCompletionInput>>,
         #[serde(default)]
         error_ref: Option<String>,
         #[serde(default)]

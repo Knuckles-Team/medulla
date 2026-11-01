@@ -439,7 +439,7 @@ mod policy_evolution;
 pub(crate) async fn submit_repository_enrichment_page(
     state: &Arc<RwLock<ServerState>>,
     verified: VerifiedRequestContext,
-    request: medulla_agent_types::native_control::SubmitWorkItemsRequest,
+    request: medulla_work_types::native_control::SubmitWorkItemsRequest,
 ) -> Result<(), String> {
     let debit = request
         .enrichment_budget

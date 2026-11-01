@@ -7,9 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::hint::black_box;
 use std::time::Instant;
 
-use medulla_agent_types::{
-    orchestration::improvement::HarnessContrast, orchestration::improvement::HarnessProbeRun,
-};
+use medulla_work_types::{orchestration::improvement::HarnessContrast, orchestration::improvement::HarnessProbeRun};
 use medulla_decision_types::{
     decision::harness_contrast::decide_contrast, decision::harness_contrast::ContrastCandidate,
     decision::harness_contrast::ContrastEvidence,

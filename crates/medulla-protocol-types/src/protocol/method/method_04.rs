@@ -583,7 +583,7 @@ $($variants)*
     /// `job_id` in their own `jobs.redb`, not a graph — like `TsAppend`/`Kv*`).
     #[cfg(feature = "jobs")]
     AnalyticsJob {
-        op: medulla_agent_types::jobs::JobOp,
+        op: medulla_work_types::jobs::JobOp,
     },
 
 

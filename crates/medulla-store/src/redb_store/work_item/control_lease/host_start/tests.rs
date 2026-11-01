@@ -2,11 +2,11 @@ use super::*;
 use crate::redb_store::work_item::test_shard::open;
 use crate::redb_store::work_item::test_shard::with_nodes;
 use crate::redb_store::work_item::test_shard::GRAPH;
-use medulla_agent_types::host_start::HostStartInterfaces;
+use medulla_work_types::host_start::HostStartInterfaces;
 
 fn request() -> IssueHostStartGrantRequest {
     let mut request =
-        medulla_agent_types::host_start::fixtures::host_start_request("tenant-a");
+        medulla_work_types::host_start::fixtures::host_start_request("tenant-a");
     request.binding.interfaces = HostStartInterfaces::Terminal;
     request.binding.policy_revision = "revision-1".into();
     request
@@ -59,10 +59,7 @@ fn native_writer_requires_issuer_and_stamps_immutable_top_level_provenance() {
 
 #[test]
 fn generic_transition_can_revoke_but_cannot_consume_host_grants() {
-    use medulla_agent_types::{
-        control_lease::ControlLeaseStatus, control_lease::ControlLeaseTarget,
-        control_lease::TransitionControlLeaseRequest,
-    };
+    use medulla_work_types::{control_lease::ControlLeaseStatus, control_lease::ControlLeaseTarget, control_lease::TransitionControlLeaseRequest};
     let temp = open("host-start-transitions");
     with_nodes(&temp.shard, "host-transitions", |nodes| {
         issue(

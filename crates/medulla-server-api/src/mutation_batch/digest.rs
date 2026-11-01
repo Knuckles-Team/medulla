@@ -471,9 +471,7 @@ mod current_plan_identity_tests {
 #[cfg(test)]
 mod checkpoint_identity_tests {
     use super::*;
-    use medulla_agent_types::{
-        run_checkpoint::CheckpointContent, run_checkpoint::PublishRunCheckpointRequest,
-    };
+    use medulla_work_types::{run_checkpoint::CheckpointContent, run_checkpoint::PublishRunCheckpointRequest};
 
     // spec: MEDULLA-DURABLE-KERNEL-R028.1.1
     #[test]

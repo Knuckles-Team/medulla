@@ -1,7 +1,5 @@
 //! Resolve only an exact native terminal binding; never mint an event.
-use medulla_agent_types::{
-    work_item_read::CommittedTerminalEvent, work_item_read::TerminalEventRead,
-};
+use medulla_work_types::{work_item_read::CommittedTerminalEvent, work_item_read::TerminalEventRead};
 use medulla_mutation_types::{
     mutation_scope::MutationOutboxRecord, mutation_scope::MutationScopeIdentity,
 };

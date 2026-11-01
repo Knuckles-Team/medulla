@@ -108,7 +108,7 @@ async fn read_lease(
     ctx: &MutationCtx<'_>,
     tenant_id: &str,
     lease_id: &str,
-) -> Result<Option<medulla_agent_types::control_lease::ControlLeaseView>, String> {
+) -> Result<Option<medulla_work_types::control_lease::ControlLeaseView>, String> {
     let backend = ctx
         .persistence
         .and_then(|backend| backend.as_redb())
@@ -129,7 +129,7 @@ async fn read_lease(
     _ctx: &MutationCtx<'_>,
     _tenant_id: &str,
     _lease_id: &str,
-) -> Result<Option<medulla_agent_types::control_lease::ControlLeaseView>, String> {
+) -> Result<Option<medulla_work_types::control_lease::ControlLeaseView>, String> {
     Err(approval_store_unavailable())
 }
 

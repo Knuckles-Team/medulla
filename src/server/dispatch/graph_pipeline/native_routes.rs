@@ -257,7 +257,7 @@ async fn route_work_item_reads(
             kind,
             metadata_match,
         } => medulla_h_jobs::work_item_read::WorkItemRead::List(
-            medulla_agent_types::work_item_read::WorkItemListRequest {
+            medulla_work_types::work_item_read::WorkItemListRequest {
                 tenant,
                 cursor,
                 limit,

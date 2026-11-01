@@ -71,7 +71,7 @@ async fn bind_retained_top_up_identity(
     verified: &VerifiedRequestContext,
     retained: &RepositoryEnrichmentPolicyRevision,
     proposal: &BudgetRevisionProposal,
-    replacement: &medulla_agent_types::native_control::EnrichmentBudgetCheckpoint,
+    replacement: &medulla_work_types::native_control::EnrichmentBudgetCheckpoint,
 ) -> Result<RepositoryEnrichmentPolicyRevision, String> {
     let current = state.read().await;
     let entry = current

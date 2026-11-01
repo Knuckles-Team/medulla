@@ -1,7 +1,7 @@
 //! Wire-decode tests for the analytics job governor. They drive the native transport
 //! decoder, which lives in a sibling handler crate, so they run from the facade.
 
-use medulla_agent_types::jobs::{JobKind, JobOp};
+use medulla_work_types::{jobs::JobKind, jobs::JobOp};
 use medulla_h_jobs::jobs::govern_job_kind;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::access::CarrierAuthority;

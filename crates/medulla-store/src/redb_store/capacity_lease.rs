@@ -19,19 +19,7 @@ use redb::TableDefinition;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use medulla_agent_types::{
-    native_control::CapacityAcquireRequest, native_control::CapacityAcquireResult,
-    native_control::CapacityAvailability, native_control::CapacityCellUpdateRequest,
-    native_control::CapacityCellUpdateResult, native_control::CapacityDecision,
-    native_control::CapacityDemand, native_control::CapacityLeaseMutationRequest,
-    native_control::CapacityMutationResult, native_control::CapacityReclaimRequest,
-    native_control::CapacityReclaimResult, native_control::CapacityStatusRequest,
-    native_control::CapacityStatusResult, native_control::NativeControlSchemaVersion,
-    native_control::MAX_CAPACITY_AMOUNT, native_control::MAX_CAPACITY_BUDGET,
-    native_control::MAX_CAPACITY_DEMANDS, native_control::MAX_CAPACITY_ID_BYTES,
-    native_control::MAX_CAPACITY_MUTATION_BATCH, native_control::MAX_CAPACITY_RECLAIM_BATCH,
-    native_control::MAX_CAPACITY_STATUS_ROWS, native_control::MAX_CAPACITY_TTL_MS,
-};
+use medulla_work_types::{native_control::CapacityAcquireRequest, native_control::CapacityAcquireResult, native_control::CapacityAvailability, native_control::CapacityCellUpdateRequest, native_control::CapacityCellUpdateResult, native_control::CapacityDecision, native_control::CapacityDemand, native_control::CapacityLeaseMutationRequest, native_control::CapacityMutationResult, native_control::CapacityReclaimRequest, native_control::CapacityReclaimResult, native_control::CapacityStatusRequest, native_control::CapacityStatusResult, native_control::NativeControlSchemaVersion, native_control::MAX_CAPACITY_AMOUNT, native_control::MAX_CAPACITY_BUDGET, native_control::MAX_CAPACITY_DEMANDS, native_control::MAX_CAPACITY_ID_BYTES, native_control::MAX_CAPACITY_MUTATION_BATCH, native_control::MAX_CAPACITY_RECLAIM_BATCH, native_control::MAX_CAPACITY_STATUS_ROWS, native_control::MAX_CAPACITY_TTL_MS};
 use medulla_mutation_types::{
     capacity_lease::CapacityCell, capacity_lease::CapacityLease, capacity_lease::LeaseState,
 };
@@ -687,7 +675,7 @@ fn check_lease_fence(
     cells_table: &CapacityRows<'_>,
     graph: &str,
     request: &CapacityLeaseMutationRequest,
-    fence: &medulla_agent_types::native_control::CapacityLeaseFence,
+    fence: &medulla_work_types::native_control::CapacityLeaseFence,
     crypto: DurableCrypto<'_>,
 ) -> Result<FenceCheck, String> {
     let current = leases_table
@@ -1133,7 +1121,7 @@ fn validate_mutation_request(
 /// A mutation-batch lease fence must carry a nonzero epoch/fence token and
 /// name each `lease_id` at most once within the batch.
 fn validate_lease_fence_unique(
-    lease: &medulla_agent_types::native_control::CapacityLeaseFence,
+    lease: &medulla_work_types::native_control::CapacityLeaseFence,
     ids: &mut BTreeSet<String>,
 ) -> Result<(), String> {
     if lease.lease_epoch == 0 || lease.fence_token == 0 || !ids.insert(lease.lease_id.clone()) {

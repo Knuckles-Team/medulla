@@ -100,7 +100,7 @@ pub type PageAuthorityFn = Box<
 pub type PageSubmitFn = Box<
     dyn FnMut(
             VerifiedRequestContext,
-            medulla_agent_types::native_control::SubmitWorkItemsRequest,
+            medulla_work_types::native_control::SubmitWorkItemsRequest,
         ) -> SeamFuture<'static, Result<(), String>>
         + Send,
 >;
@@ -110,7 +110,7 @@ pub type PageSubmitFn = Box<
 pub type PageParkFn = Box<
     dyn FnMut(
             medulla_mutation_types::mutation_scope::MutationOutboxLease,
-            medulla_agent_types::native_control::EnrichmentBudgetPark,
+            medulla_work_types::native_control::EnrichmentBudgetPark,
         ) -> SeamFuture<'static, Result<(), String>>
         + Send,
 >;
@@ -293,7 +293,7 @@ pub trait DispatchApi: Send + Sync {
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         verified: VerifiedRequestContext,
-        request: medulla_agent_types::native_control::SubmitWorkItemsRequest,
+        request: medulla_work_types::native_control::SubmitWorkItemsRequest,
     ) -> SeamFuture<'a, Result<(), String>>;
 
     /// Bind an internal park proposal to one held event and the latest durable budget row.
@@ -309,7 +309,7 @@ pub trait DispatchApi: Send + Sync {
         Result<
             (
                 medulla_compute::parser::enrichment_snapshot::EligibleSnapshot,
-                medulla_agent_types::native_control::EnrichmentBudgetPark,
+                medulla_work_types::native_control::EnrichmentBudgetPark,
             ),
             String,
         >,
@@ -666,7 +666,7 @@ pub async fn apply_replicated_job_publication_finalize(
 pub async fn submit_repository_enrichment_page(
     state: &Arc<RwLock<ServerState>>,
     verified: VerifiedRequestContext,
-    request: medulla_agent_types::native_control::SubmitWorkItemsRequest,
+    request: medulla_work_types::native_control::SubmitWorkItemsRequest,
 ) -> Result<(), String> {
     dispatch_api(state)
         .await?
@@ -685,7 +685,7 @@ pub async fn plan_held_underfunded_park(
 ) -> Result<
     (
         medulla_compute::parser::enrichment_snapshot::EligibleSnapshot,
-        medulla_agent_types::native_control::EnrichmentBudgetPark,
+        medulla_work_types::native_control::EnrichmentBudgetPark,
     ),
     String,
 > {

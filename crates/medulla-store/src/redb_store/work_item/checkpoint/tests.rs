@@ -31,7 +31,7 @@ fn seed(shard: &Shard) {
 
 fn seed_admission(
     shard: &Shard,
-    admitted: medulla_agent_types::native_control::SubmitWorkItemRequest,
+    admitted: medulla_work_types::native_control::SubmitWorkItemRequest,
 ) {
     seed_claim(shard, |row| {
         let metadata = serde_json::to_value(&admitted.metadata).unwrap();
@@ -309,11 +309,11 @@ fn checkpoint_read_never_crosses_native_graph_tenant_or_run() {
 
 fn typed_admission(
     metadata: serde_json::Value,
-) -> medulla_agent_types::native_control::SubmitWorkItemRequest {
+) -> medulla_work_types::native_control::SubmitWorkItemRequest {
     let mut request = admission(metadata);
     request.conversation = Some(Box::new(
-        medulla_agent_types::native_control::ConversationTurnAdmission {
-            schema_version: medulla_agent_types::native_control::NativeControlSchemaVersion::V1,
+        medulla_work_types::native_control::ConversationTurnAdmission {
+            schema_version: medulla_work_types::native_control::NativeControlSchemaVersion::V1,
             context_id: "context".into(),
             expected_revision: 0,
             predecessor_run_id: None,

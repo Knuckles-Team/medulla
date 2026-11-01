@@ -22,10 +22,8 @@ mod harness_bench;
 
 use medulla::graph::GraphCore;
 use medulla::protocol::Method;
-use medulla_agent_types::orchestration::HarnessComponentKind;
-use medulla_agent_types::{
-    orchestration::improvement::HarnessLesson, orchestration::improvement::HarnessProbeRun,
-};
+use medulla_work_types::orchestration::HarnessComponentKind;
+use medulla_work_types::{orchestration::improvement::HarnessLesson, orchestration::improvement::HarnessProbeRun};
 use medulla_types::contract::BoundedVec;
 
 const TASK_CLASSES: usize = 100;

@@ -7,10 +7,7 @@ use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 use tokio::sync::RwLock;
 
-use medulla_agent_types::{
-    control_lease::ControlLeaseTarget, control_lease::IssueControlLeaseRequest,
-    control_lease::TransitionControlLeaseRequest,
-};
+use medulla_work_types::{control_lease::ControlLeaseTarget, control_lease::IssueControlLeaseRequest, control_lease::TransitionControlLeaseRequest};
 use medulla_catalog_types::{
     graph_schema::approval::approved_candidate_digest,
     graph_schema::approval::SCHEMA_APPROVAL_ACTION,

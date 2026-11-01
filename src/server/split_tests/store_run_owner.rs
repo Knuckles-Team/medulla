@@ -5,7 +5,7 @@ use medulla_store::redb_store::work_item::test_shard::{
     apply, open, with_nodes, with_write, GRAPH,
 };
 use medulla_store::redb_store::{decode_durable, write_work_item_props, DurableCrypto, Shard};
-use medulla_agent_types::native_control::SubmitWorkItemRequest;
+use medulla_work_types::native_control::SubmitWorkItemRequest;
 use medulla_protocol_types::protocol::Method;
 
 type Row = serde_json::Map<String, serde_json::Value>;
@@ -29,7 +29,7 @@ fn read(
     tenant: &str,
     run: &str,
     actor: &str,
-) -> Result<Option<medulla_agent_types::work_item_read::RunWorkItemView>, String> {
+) -> Result<Option<medulla_work_types::work_item_read::RunWorkItemView>, String> {
     read_admission(shard, GRAPH, tenant, run, actor, DurableCrypto::none())
 }
 
@@ -239,7 +239,7 @@ fn ordinary_completion_binding_corruption_is_not_legacy_unavailability() {
         .is_none());
     change(&temp.shard, &id, "corrupt", |row| {
         row.insert(
-            medulla_agent_types::run_completion::RUN_COMPLETION_BATCH.into(),
+            medulla_work_types::run_completion::RUN_COMPLETION_BATCH.into(),
             "missing".into(),
         );
     });
@@ -254,7 +254,7 @@ fn ordinary_completion_binding_corruption_is_not_legacy_unavailability() {
 // spec: MEDULLA-DURABLE-KERNEL-R028.6
 #[test]
 fn ordinary_completion_projection_requires_exact_committed_payload() {
-    use medulla_agent_types::run_completion::*;
+    use medulla_work_types::run_completion::*;
     use sha2::{Digest, Sha256};
     let temp = open("completion-project");
     let id = admit(&temp.shard);
@@ -334,13 +334,13 @@ fn ordinary_completion_projection_requires_exact_committed_payload() {
 // Row-authority regression; this does not qualify ledger/outbox integration.
 #[test]
 fn ordinary_completion_native_fence_and_terminal_noop_preserve_binding() {
-    use medulla_agent_types::run_completion::*;
+    use medulla_work_types::run_completion::*;
     use medulla_result_types::{
         epistemic_operations::ClaimWorkItemRequest,
         epistemic_operations::ClaimWorkItemRequestSchemaVersion,
         epistemic_operations::ClaimWorkItemResult,
     };
-    use medulla_agent_types::run_completion::*;
+    use medulla_work_types::run_completion::*;
     let path = medulla_store::redb_store::temp_path("medulla-completion", "native-fence");
     let shard = Shard::open(&path).unwrap();
     let id = admit(&shard);
@@ -470,7 +470,7 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
     use medulla_server_api::mutation_batch::principal_fingerprint;
     use medulla_server_api::mutation_batch::CompileBatch;
     use medulla_result_types::epistemic_operations::{ClaimWorkItemRequest, ClaimWorkItemResult};
-    use medulla_agent_types::run_completion::*;
+    use medulla_work_types::run_completion::*;
     let compile = |shard: &Shard, tag: &str, method: Method, now| {
         compile_methods(
             CompileBatch {
@@ -745,7 +745,7 @@ fn completion_method(
     fencing_token: u64,
     outcome: &str,
     result_ref: Option<String>,
-    usage: Option<medulla_agent_types::run_completion::RunUsage>,
+    usage: Option<medulla_work_types::run_completion::RunUsage>,
 ) -> Method {
     Method::CommitWorkItemResult {
         tenant: "tenant".into(),
@@ -761,7 +761,7 @@ fn completion_method(
         now_ms: 3000,
         outcome_extension: None,
         run_completion: Some(Box::new(
-            medulla_agent_types::run_completion::RunCompletionInput {
+            medulla_work_types::run_completion::RunCompletionInput {
                 schema_version: 1,
                 run_id: "run".into(),
                 usage,
@@ -775,7 +775,7 @@ fn session_summary(
     tenant: &str,
     actor: &str,
     context: &str,
-) -> Result<medulla_agent_types::run_usage::SessionUsage, String> {
+) -> Result<medulla_work_types::run_usage::SessionUsage, String> {
     medulla_store::redb_store::work_item::read_session_usage(
         shard,
         GRAPH,
@@ -789,8 +789,8 @@ fn session_summary(
 fn assert_session_measurements(
     shard: &Shard,
     owner: &str,
-    usage: &medulla_agent_types::run_completion::RunUsage,
-) -> medulla_agent_types::run_usage::SessionUsage {
+    usage: &medulla_work_types::run_completion::RunUsage,
+) -> medulla_work_types::run_usage::SessionUsage {
     let result = session_summary(shard, "tenant", owner, "context").unwrap();
     let expected: std::collections::BTreeMap<String, u64> =
         serde_json::from_value(serde_json::to_value(usage).unwrap()).unwrap();
@@ -847,11 +847,11 @@ fn session_inventory_uses_original_context_and_marks_missing_admission_partial()
     );
     change(&temp.shard, &id, "corrupt-completion", |row| {
         row.insert(
-            medulla_agent_types::run_completion::RUN_COMPLETION_BATCH.into(),
+            medulla_work_types::run_completion::RUN_COMPLETION_BATCH.into(),
             "absent".into(),
         );
         row.insert(
-            medulla_agent_types::run_completion::RUN_COMPLETION_DIGEST.into(),
+            medulla_work_types::run_completion::RUN_COMPLETION_DIGEST.into(),
             "forged".into(),
         );
     });
@@ -868,7 +868,7 @@ fn session_inventory_uses_original_context_and_marks_missing_admission_partial()
 fn session_inventory_bound_counts_unrelated_rows() {
     let temp = open("session-bound");
     with_nodes(&temp.shard, "inventory", |nodes| {
-        for n in 0..=medulla_agent_types::run_usage::MAX_SESSION_USAGE_RUNS {
+        for n in 0..=medulla_work_types::run_usage::MAX_SESSION_USAGE_RUNS {
             let id = format!("unrelated:{n:05}");
             let mut row = serde_json::json!({"node_type":"Other","tenant":"tenant"})
                 .as_object()

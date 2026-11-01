@@ -1,9 +1,6 @@
 //! Conversation order is reserved with native run admission, not a second store.
 use super::*;
-use medulla_agent_types::{
-    native_control::ConversationTurnAdmission, native_control::NativeControlSchemaVersion,
-    native_control::SubmitWorkItemRequest,
-};
+use medulla_work_types::{native_control::ConversationTurnAdmission, native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemRequest};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 

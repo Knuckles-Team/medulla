@@ -327,7 +327,7 @@ fn native_coordination_for(method: &Method) -> NativeCoordination {
     if matches!(
         method,
         Method::AnalyticsJob {
-            op: medulla_agent_types::jobs::JobOp::WorkerPublish { .. }
+            op: medulla_work_types::jobs::JobOp::WorkerPublish { .. }
         }
     ) {
         return NativeCoordination::JobPublication;

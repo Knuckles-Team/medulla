@@ -30,9 +30,7 @@ use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_server_api::auth::compute_verified_envelope_token;
 use medulla_server_api::auth::VerifiedEnvelopeParams;
-use medulla_agent_types::native_control::{
-    NativeControlSchemaVersion, SubmitWorkItemRequest, SubmitWorkItemResult,
-};
+use medulla_work_types::{native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemRequest, native_control::SubmitWorkItemResult};
 
 const SECRET: &str = "adopt-workitem-authenticated-replay-secret";
 const GRAPH: &str = "adoptworkitemauthreplay";
@@ -935,11 +933,7 @@ async fn current_plan_expired_replay(
 // spec: MEDULLA-DURABLE-KERNEL-R028.1.1
 #[tokio::test]
 async fn checkpoint_native_authenticated_cas_replay_and_owner_isolation() {
-    use medulla_agent_types::{
-        run_checkpoint::CheckpointContent, run_checkpoint::GetRunCheckpointRequest,
-        run_checkpoint::PublishRunCheckpointRequest, run_checkpoint::RunCheckpointPublished,
-        run_checkpoint::RunCheckpointRead,
-    };
+    use medulla_work_types::{run_checkpoint::CheckpointContent, run_checkpoint::GetRunCheckpointRequest, run_checkpoint::PublishRunCheckpointRequest, run_checkpoint::RunCheckpointPublished, run_checkpoint::RunCheckpointRead};
     use sha2::{Digest, Sha256};
     let dir = temp_dir("medulla-checkpoint-native");
     let concrete = Arc::new(RedbBackend::open(dir.clone(), 8192).unwrap());
@@ -947,7 +941,7 @@ async fn checkpoint_native_authenticated_cas_replay_and_owner_isolation() {
     let mut submission = run_submit_method();
     if let Method::SubmitWorkItem { request } = &mut submission {
         request.conversation = Some(Box::new(
-            medulla_agent_types::native_control::ConversationTurnAdmission {
+            medulla_work_types::native_control::ConversationTurnAdmission {
                 schema_version: NativeControlSchemaVersion::V1,
                 context_id: "checkpoint-context".into(),
                 expected_revision: 0,
@@ -1052,7 +1046,7 @@ async fn checkpoint_native_authenticated_cas_replay_and_owner_isolation() {
                 changed.snapshot.payload_digest = hex::encode(Sha256::digest(b"{}"));
             }
             "refs" => changed.snapshot.short_term.push(
-                medulla_agent_types::run_checkpoint::CheckpointMemoryRef {
+                medulla_work_types::run_checkpoint::CheckpointMemoryRef {
                     document_id: "private-memory".into(),
                     revision: 1,
                     digest: "a".repeat(64),
@@ -1139,7 +1133,7 @@ async fn checkpoint_native_authenticated_cas_replay_and_owner_isolation() {
     else {
         unreachable!("checkpoint read fixture")
     };
-    claimed_read.current_claim = Some(medulla_agent_types::run_checkpoint::CheckpointClaim {
+    claimed_read.current_claim = Some(medulla_work_types::run_checkpoint::CheckpointClaim {
         worker_id: request.worker_id.clone(),
         lease_epoch: request.lease_epoch,
         fencing_token: request.fencing_token,
@@ -1205,7 +1199,7 @@ async fn checkpoint_native_authenticated_cas_replay_and_owner_isolation() {
 // spec: MEDULLA-DURABLE-KERNEL-R028.4.1
 #[tokio::test]
 async fn run_admission_owner_read_survives_native_changes_and_restart() {
-    use medulla_agent_types::work_item_read::RunWorkItemView;
+    use medulla_work_types::work_item_read::RunWorkItemView;
     let (dir, concrete, state) = fresh_run_state("medulla-run-admission-read").await;
     let Method::SubmitWorkItem { request: original } = run_submit_method() else {
         unreachable!()
@@ -1256,7 +1250,7 @@ async fn assert_original_admission_reads(
     admitted: &SubmitWorkItemResult,
     backend: &RedbBackend,
 ) {
-    use medulla_agent_types::work_item_read::RunWorkItemView;
+    use medulla_work_types::work_item_read::RunWorkItemView;
     let get = || Method::GetRunWorkItem {
         tenant: TENANT.into(),
         run_id: original.run_id.clone().unwrap(),
@@ -1390,7 +1384,7 @@ async fn change_and_cancel_admission(
 // spec: MEDULLA-DURABLE-KERNEL-R028.4.1
 #[tokio::test]
 async fn run_admission_concurrent_retry_recovers_exact_winner() {
-    use medulla_agent_types::work_item_read::RunWorkItemView;
+    use medulla_work_types::work_item_read::RunWorkItemView;
     let (dir, concrete, state) = fresh_run_state("medulla-run-admission-race").await;
     let Method::SubmitWorkItem { request: original } = run_submit_method() else {
         unreachable!()
@@ -1563,7 +1557,7 @@ async fn assert_strict_admission_recovery(
             "{case} must not mutate receipt, outbox, version or row"
         );
     }
-    let found: Option<medulla_agent_types::work_item_read::RunWorkItemView> = decode_raw(
+    let found: Option<medulla_work_types::work_item_read::RunWorkItemView> = decode_raw(
         &test_support::dispatch(
             state,
             signed_run_request(

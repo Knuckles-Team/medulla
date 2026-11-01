@@ -10,15 +10,9 @@
 
 use std::collections::BTreeMap;
 
-use medulla_agent_types::work_market::gap::GapMerge;
-use medulla_agent_types::{
-    native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemRequest,
-};
-use medulla_agent_types::{
-    work_market::gap_row_key, work_market::gap_work_item_id, work_market::scoped_digest,
-    work_market::GapUpsertOutcome, work_market::GapUpsertRequest, work_market::GapUpserted,
-    work_market::GapView,
-};
+use medulla_work_types::work_market::gap::GapMerge;
+use medulla_work_types::{native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemRequest};
+use medulla_work_types::{work_market::gap_row_key, work_market::gap_work_item_id, work_market::scoped_digest, work_market::GapUpsertOutcome, work_market::GapUpsertRequest, work_market::GapUpserted, work_market::GapView};
 use medulla_protocol_types::result_contract::coordination::GapUpsert;
 use medulla_result_types::{
     epistemic_operations::RequestContext, epistemic_operations::RequestContextAuthenticationMethod,

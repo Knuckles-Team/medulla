@@ -6,8 +6,8 @@ use medulla_server_api::auth::scoped_test_request_on;
 use medulla_server_api::auth::ScopedTestCaller;
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_server_api::state::ServerState;
-use medulla_agent_types::control_lease::ControlLeaseIssued;
-use medulla_agent_types::host_start::{HostStartBinding, HostStartInterfaces, IssueHostStartGrantRequest};
+use medulla_work_types::control_lease::ControlLeaseIssued;
+use medulla_work_types::{host_start::HostStartBinding, host_start::HostStartInterfaces, host_start::IssueHostStartGrantRequest};
 use tokio::sync::RwLock;
 
 // spec: MEDULLA-DURABLE-KERNEL-R030.1.3
@@ -227,7 +227,7 @@ async fn signed_wrong_tenant_and_forged_provenance_refuse_without_mutation() {
     );
     assert_eq!(
         issued.outcome,
-        medulla_agent_types::control_lease::ControlLeaseIssueOutcome::Issued
+        medulla_work_types::control_lease::ControlLeaseIssueOutcome::Issued
     );
     assert_eq!(
         issued

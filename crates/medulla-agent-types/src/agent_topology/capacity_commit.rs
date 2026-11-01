@@ -11,7 +11,7 @@
 //! no published evidence, with the denial carrying exactly one further
 //! decision's retry allowance.
 
-use crate::native_control::CapacityDecision;
+use medulla_work_types::native_control::CapacityDecision;
 
 #[path = "retry_allowance.rs"]
 mod retry_allowance;

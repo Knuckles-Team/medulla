@@ -3,8 +3,8 @@
 mod plan_consumption;
 
 use super::*;
-use medulla_agent_types::control_lease::ControlLeaseStatus;
-use medulla_agent_types::control_lease::ControlLeaseTarget;
+use medulla_work_types::control_lease::ControlLeaseStatus;
+use medulla_work_types::control_lease::ControlLeaseTarget;
 
 use super::super::test_shard::{open, with_nodes, GRAPH};
 
@@ -193,7 +193,7 @@ fn a_single_use_lease_is_consumed_once_and_can_still_be_revoked() {
 
 #[test]
 fn the_pending_approval_queue_lists_only_the_tenants_active_approvals() {
-    use medulla_agent_types::control_lease::ListControlLeasesRequest;
+    use medulla_work_types::control_lease::ListControlLeasesRequest;
     let temp = open("lease-list");
     let mut approval = issue("action_approval:1", "tenant-a");
     approval.kind = "action.approval".into();
@@ -348,10 +348,7 @@ fn pending_fixture(shard: &Shard) -> IssueControlLeaseRequest {
 }
 
 fn pending_nodes_fixture(shard: &Shard) -> IssueControlLeaseRequest {
-    use medulla_agent_types::{
-        control_lease::PendingCallFence, control_lease::PendingCallRegistration,
-        control_lease::PENDING_CALL_KIND,
-    };
+    use medulla_work_types::{control_lease::PendingCallFence, control_lease::PendingCallRegistration, control_lease::PENDING_CALL_KIND};
     with_nodes(shard, "seed-pending-work", |nodes| {
         let mut work = serde_json::json!({
             "node_type": "WorkItem", "tenant": "tenant-a", "status": "running",
@@ -403,7 +400,7 @@ fn pending_consume(issue: &IssueControlLeaseRequest) -> TransitionControlLeaseRe
         .clone();
     work_item.expected_revision = 2;
     request.pending_call_consumption =
-        Some(medulla_agent_types::control_lease::PendingCallConsumption {
+        Some(medulla_work_types::control_lease::PendingCallConsumption {
             plan: issue
                 .pending_call_registration
                 .as_ref()

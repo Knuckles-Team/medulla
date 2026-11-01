@@ -47,7 +47,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
 
-use medulla_agent_types::{jobs::JobKind, jobs::JobOp, jobs::SubmitJobSpec};
+use medulla_work_types::{jobs::JobKind, jobs::JobOp, jobs::SubmitJobSpec};
 use medulla_core::graph::GraphCore;
 use medulla_jobs::model::InputSnapshotHandle;
 use medulla_jobs::store::{JobStore, SubmitSpec};

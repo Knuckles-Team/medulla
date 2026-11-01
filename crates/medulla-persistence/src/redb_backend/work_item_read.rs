@@ -5,17 +5,9 @@
 //! the redb authority holds native WorkItem rows, and the handler reaches it
 //! through `PersistenceBackend::as_redb`, failing closed on any other backend.
 
-use medulla_agent_types::{
-    control_lease::ControlLeasePage, control_lease::ControlLeaseView,
-    control_lease::ListControlLeasesRequest,
-};
-use medulla_agent_types::{
-    work_item_read::WorkItemListRequest, work_item_read::WorkItemOutcomeView,
-    work_item_read::WorkItemPage, work_item_read::WorkItemView,
-};
-use medulla_agent_types::{
-    work_market::GapListRequest, work_market::GapPage, work_market::GapView,
-};
+use medulla_work_types::{control_lease::ControlLeasePage, control_lease::ControlLeaseView, control_lease::ListControlLeasesRequest};
+use medulla_work_types::{work_item_read::WorkItemListRequest, work_item_read::WorkItemOutcomeView, work_item_read::WorkItemPage, work_item_read::WorkItemView};
+use medulla_work_types::{work_market::GapListRequest, work_market::GapPage, work_market::GapView};
 
 use super::RedbBackend;
 
@@ -184,7 +176,7 @@ impl RedbBackend {
         tenant: &str,
         run_id: &str,
         actor: &str,
-    ) -> Result<Option<medulla_agent_types::work_item_read::RunWorkItemView>, String> {
+    ) -> Result<Option<medulla_work_types::work_item_read::RunWorkItemView>, String> {
         self.owner_point_read(
             graph_fname,
             tenant,
@@ -201,7 +193,7 @@ impl RedbBackend {
         tenant: &str,
         context_id: &str,
         actor: &str,
-    ) -> Result<medulla_agent_types::run_usage::SessionUsage, String> {
+    ) -> Result<medulla_work_types::run_usage::SessionUsage, String> {
         self.owner_point_read(
             graph_fname,
             tenant,
@@ -261,7 +253,7 @@ impl RedbBackend {
     pub async fn checkpoint_owner(
         &self,
         graph_fname: &str,
-        request: medulla_agent_types::run_checkpoint::GetRunCheckpointRequest,
+        request: medulla_work_types::run_checkpoint::GetRunCheckpointRequest,
         actor: &str,
     ) -> Result<bool, String> {
         let (graph, actor) = (graph_fname.to_owned(), actor.to_owned());
@@ -275,9 +267,9 @@ impl RedbBackend {
     pub async fn read_run_checkpoint(
         &self,
         graph_fname: &str,
-        request: medulla_agent_types::run_checkpoint::GetRunCheckpointRequest,
+        request: medulla_work_types::run_checkpoint::GetRunCheckpointRequest,
         actor: &str,
-    ) -> Result<Option<medulla_agent_types::run_checkpoint::RunCheckpointRead>, String> {
+    ) -> Result<Option<medulla_work_types::run_checkpoint::RunCheckpointRead>, String> {
         let (graph, actor) = (graph_fname.to_owned(), actor.to_owned());
         self.read_snapshot(graph_fname, move |shard, crypto| {
             medulla_store::redb_store::work_item::checkpoint::read_current(

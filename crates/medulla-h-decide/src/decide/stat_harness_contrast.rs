@@ -14,12 +14,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_agent_types::orchestration::is_harness_component_write;
-use medulla_agent_types::{
-    orchestration::improvement::decode_harness_contrast_write,
-    orchestration::improvement::decode_harness_probe_run_write,
-    orchestration::improvement::HarnessContrast, orchestration::improvement::HarnessProbeRun,
-};
+use medulla_work_types::orchestration::is_harness_component_write;
+use medulla_work_types::{orchestration::improvement::decode_harness_contrast_write, orchestration::improvement::decode_harness_probe_run_write, orchestration::improvement::HarnessContrast, orchestration::improvement::HarnessProbeRun};
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::{
     decision::harness_contrast::decide_contrast, decision::harness_contrast::matrix_values,

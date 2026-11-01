@@ -8,7 +8,7 @@
 use medulla_raft::raft::RaftStateExt;
 use std::sync::Arc;
 
-use medulla_agent_types::native_control::EnrichmentBudgetPark;
+use medulla_work_types::native_control::EnrichmentBudgetPark;
 use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use tokio::sync::RwLock;
 

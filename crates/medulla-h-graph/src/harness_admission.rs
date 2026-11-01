@@ -41,21 +41,8 @@ use std::collections::BTreeMap;
 
 use medulla_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
-use medulla_agent_types::{
-    orchestration::decode_component_write, orchestration::is_harness_component_write,
-    orchestration::HarnessComponentRefusal,
-};
-use medulla_agent_types::{
-    orchestration::improvement::decode_adopted_harness_write,
-    orchestration::improvement::decode_harness_contrast_write,
-    orchestration::improvement::decode_harness_probe_run_write,
-    orchestration::improvement::decode_lesson_write,
-    orchestration::improvement::is_adopted_harness_write,
-    orchestration::improvement::is_harness_contrast_write,
-    orchestration::improvement::is_harness_lesson_write,
-    orchestration::improvement::is_harness_probe_run_write,
-    orchestration::improvement::ImprovementLibraryRefusal,
-};
+use medulla_work_types::{orchestration::decode_component_write, orchestration::is_harness_component_write, orchestration::HarnessComponentRefusal};
+use medulla_work_types::{orchestration::improvement::decode_adopted_harness_write, orchestration::improvement::decode_harness_contrast_write, orchestration::improvement::decode_harness_probe_run_write, orchestration::improvement::decode_lesson_write, orchestration::improvement::is_adopted_harness_write, orchestration::improvement::is_harness_contrast_write, orchestration::improvement::is_harness_lesson_write, orchestration::improvement::is_harness_probe_run_write, orchestration::improvement::ImprovementLibraryRefusal};
 use medulla_protocol_types::change_envelope::ChangeEnvelope;
 
 type Props = serde_json::Map<String, serde_json::Value>;
@@ -205,7 +192,7 @@ impl<'a> HarnessView<'a> {
     fn probe_run(
         &self,
         trace_id: &str,
-    ) -> Option<medulla_agent_types::orchestration::improvement::HarnessProbeRun> {
+    ) -> Option<medulla_work_types::orchestration::improvement::HarnessProbeRun> {
         let node_id = format!("harness-probe-run:{trace_id}");
         self.props(&node_id)
             .and_then(|props| decode_harness_probe_run_write(&props).ok())
