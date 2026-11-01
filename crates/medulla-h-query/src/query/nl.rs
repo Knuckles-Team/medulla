@@ -97,7 +97,7 @@ pub(crate) fn nl_schema_context(
 ) -> medulla_nlq::nl::context::SchemaContext {
     let mut context = medulla_nlq::nl::context::SchemaContext::from_view(view);
     #[cfg(all(feature = "rdf", feature = "shacl"))]
-    context.link_ontology(&crate::rdf::composed_ontology_properties(
+    context.link_ontology(&medulla_h_sparql::rdf::composed_ontology_properties(
         &view.schema_sources,
     ));
     if let Some(sources) = foreign_sources {

@@ -498,8 +498,8 @@ mod ca17_feature_stub_contract {
                 "pub mod cdc_sink;",
             ),
             (
-                "crates/medulla-h-query/src/lib.rs",
-                include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../medulla-h-query/src/lib.rs")),
+                "crates/medulla-h-sparql/src/lib.rs",
+                include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../medulla-h-sparql/src/lib.rs")),
                 "sparql-fuseki",
                 "pub mod sparql_service;",
             ),
@@ -519,7 +519,7 @@ mod ca17_feature_stub_contract {
                 "src/server/federation/mod.rs",
                 include_str!(concat!(
                     env!("CARGO_MANIFEST_DIR"),
-                    "/../medulla-h-query/src/federation/mod.rs"
+                    "/../medulla-h-sparql/src/federation/mod.rs"
                 )),
                 "federation-opensearch",
                 "pub mod opensearch;",

@@ -173,7 +173,7 @@ async fn execute_rdf(
     let rls = ctx.rls;
     #[cfg(feature = "sparql")]
     {
-        let response = super::super::rdf::try_handle(
+        let response = medulla_h_sparql::rdf::try_handle(
             state,
             medulla_server_api::api::reentry::TryHandleContext {
                 req_id,

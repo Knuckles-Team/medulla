@@ -266,7 +266,7 @@ pub struct CoreIndexes<'c> {
     #[cfg(feature = "geo")]
     spatial: crate::secondary_indexes::ServedSpatialIndex,
     #[cfg(all(feature = "shacl", feature = "owl-plan"))]
-    shapes: crate::rdf::ServedShapes<'c>,
+    shapes: medulla_h_sparql::rdf::ServedShapes<'c>,
     core: std::marker::PhantomData<&'c ()>,
 }
 
@@ -284,7 +284,7 @@ impl<'c> CoreIndexes<'c> {
             #[cfg(feature = "geo")]
             spatial: crate::secondary_indexes::ServedSpatialIndex::new(core.clone()),
             #[cfg(all(feature = "shacl", feature = "owl-plan"))]
-            shapes: crate::rdf::ServedShapes::new(core),
+            shapes: medulla_h_sparql::rdf::ServedShapes::new(core),
             core: std::marker::PhantomData,
         }
     }

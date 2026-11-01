@@ -83,7 +83,7 @@ fn inspect(
 /// documents and vocabulary view `OntologyInspect` serves; an unreadable
 /// composition links nothing.
 #[cfg(feature = "nl-query")]
-pub(crate) fn composed_ontology_properties(
+pub fn composed_ontology_properties(
     sources: &GraphSchemaSources,
 ) -> Vec<medulla_nlq::nl::context::OntologyProperty> {
     let Ok(inspected) = composed_documents(sources, &[]) else {
