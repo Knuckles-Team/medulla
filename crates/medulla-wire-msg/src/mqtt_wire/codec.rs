@@ -7,8 +7,8 @@
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
-use crate::broker_wire;
-use crate::broker_wire::invalid_data;
+use medulla_wire_core::broker_wire;
+use medulla_wire_core::broker_wire::invalid_data;
 
 pub(super) const MAX_MQTT_PACKET_BYTES: usize = 64 * 1024 * 1024;
 pub(super) const MAX_MQTT_CONTROL_PACKET_BYTES: usize = 2 * 1024 * 1024;

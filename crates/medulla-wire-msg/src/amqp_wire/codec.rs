@@ -7,8 +7,8 @@
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
-use crate::broker_wire;
-use crate::broker_wire::invalid_data;
+use medulla_wire_core::broker_wire;
+use medulla_wire_core::broker_wire::invalid_data;
 
 // ── Frame types + class/method ids (AMQP 0.9.1) ──────────────────────────
 pub(super) const FRAME_METHOD: u8 = 1;

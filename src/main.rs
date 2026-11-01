@@ -1252,7 +1252,7 @@ async fn spawn_redis_listener(
     // gateway. Each verified principal receives a pseudonymous isolated keyspace.
     #[cfg(feature = "redis-wire")]
     if let Some(addr) = resolve_listener_addr(
-        std::env::var(medulla_wire::redis_wire::REDIS_ADDR_ENV)
+        std::env::var(medulla_wire_msg::redis_wire::REDIS_ADDR_ENV)
             .ok()
             .as_deref(),
         "127.0.0.1:6379",
@@ -1260,7 +1260,7 @@ async fn spawn_redis_listener(
         let redis_state = state.clone();
         info!("redis-wire: serving Redis RESP protocol on {}", addr);
         tokio::spawn(async move {
-            if let Err(e) = medulla_wire::redis_wire::serve(&addr, redis_state).await {
+            if let Err(e) = medulla_wire_msg::redis_wire::serve(&addr, redis_state).await {
                 tracing::error!("redis-wire server error: {}", e);
             }
         });
@@ -1322,7 +1322,7 @@ async fn spawn_s3_listener(
     // closed unless both access and secret credentials are runtime-injected.
     #[cfg(feature = "s3-api")]
     if let Some(addr) = resolve_listener_addr(
-        std::env::var(medulla_wire::s3::S3_ADDR_ENV)
+        std::env::var(medulla_wire_msg::s3::S3_ADDR_ENV)
             .ok()
             .as_deref(),
         "127.0.0.1:9000",
@@ -1338,7 +1338,7 @@ async fn spawn_s3_listener(
         info!("s3-api: serving S3-compatible REST surface on {}", addr);
         tokio::spawn(async move {
             if let Err(e) =
-                medulla_wire::s3::serve_with_blob_store(&addr, s3_state, selected_blob).await
+                medulla_wire_msg::s3::serve_with_blob_store(&addr, s3_state, selected_blob).await
             {
                 tracing::error!("s3-api server error: {}", e);
             }
@@ -1361,7 +1361,7 @@ async fn spawn_kvcache_listener(
     // validation or a runtime-injected bearer secret is configured.
     #[cfg(feature = "kvcache-server")]
     if let Some(addr) = resolve_listener_addr(
-        std::env::var(medulla_wire::kvcache_http::KVCACHE_ADDR_ENV)
+        std::env::var(medulla_wire_msg::kvcache_http::KVCACHE_ADDR_ENV)
             .ok()
             .as_deref(),
         "127.0.0.1:9130",
@@ -1373,7 +1373,7 @@ async fn spawn_kvcache_listener(
         );
         tokio::spawn(async move {
             if let Err(e) =
-                medulla_wire::kvcache_http::serve_with_security(&addr, kvcache_state).await
+                medulla_wire_msg::kvcache_http::serve_with_security(&addr, kvcache_state).await
             {
                 tracing::error!("kvcache-server error: {}", e);
             }
