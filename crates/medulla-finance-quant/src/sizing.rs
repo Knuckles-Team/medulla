@@ -141,7 +141,7 @@ pub fn distribution_shift(
     if reference.iter().chain(current).any(|v| !v.is_finite()) {
         return Err(SizingError::InputInvalid { field: "sample" });
     }
-    let (statistic, p_value) = crate::stats::ks_2samp(
+    let (statistic, p_value) = medulla_numeric::stats::ks_2samp(
         ndarray::ArrayView1::from(reference),
         ndarray::ArrayView1::from(current),
     )

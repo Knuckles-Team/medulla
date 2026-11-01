@@ -27,3 +27,8 @@ pub mod risk;
 pub mod signal_models;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod statespace;
+
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod execution;
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod sizing;

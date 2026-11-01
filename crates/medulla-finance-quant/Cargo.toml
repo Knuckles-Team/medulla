@@ -20,3 +20,7 @@ rand = "0.8"
 nalgebra = { version = "0.35", features = ["serde"] }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-finance-market = { path = "../medulla-finance-market" }
+ndarray = "0.17"
+
+[features]
+analytics = ["dep:statrs", "medulla-numeric/analytics"]

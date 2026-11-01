@@ -45,8 +45,6 @@ pub mod risk;
 pub mod series;
 // Evaluation kernels (EH-530): special functions, backtest validation, predictive skill.
 pub mod evaluation;
-pub mod execution;
-pub mod sizing;
 // ModalityContract retrofit (CONCEPT:E4): `impl ModalityContract for
 // cluster::KMeansResult` + the `modality_conformance_tests!` battery. Behind the
 // crate's own opt-in `contract` feature (default OFF). See `src/contract.rs`.

@@ -12,7 +12,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use crate::detkernel::math;
+use medulla_numeric::detkernel::math;
 
 /// The stable code of a refused execution parameter.
 pub const EXEC_PARAM_INVALID: &str = "EXEC_PARAM_INVALID";
