@@ -237,7 +237,7 @@ pub(crate) struct ServedIndexes<'a> {
     pub spatial: Option<&'a crate::secondary_indexes::ServedSpatialIndex>,
     /// CONCEPT:MEDULLA-KG.query.closure-backed-source — the CALLER'S owner-scoped foreign
     /// registry (EH-373), built by
-    /// [`crate::server::api::query_txn::foreign_catalog::ForeignSourceCatalog::registry_for`] from only the
+    /// [`medulla_server_api::api::query_txn::foreign_catalog::ForeignSourceCatalog::registry_for`] from only the
     /// caller's own (tenant+principal) `RegisterForeignSource` entries. An `Op::Foreign`
     /// (the UQL `FOREIGN "<name>"` marker) / a `Named` `Op::ForeignScan` resolves through
     /// it, so another principal's source name resolves as not-registered. `None` ⇒ no registry is

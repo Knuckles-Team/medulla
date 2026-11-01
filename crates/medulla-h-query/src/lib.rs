@@ -5,9 +5,14 @@
 #![deny(missing_docs)]
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[cfg(feature = "federation")]
+#[cfg(feature = "federation-search")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod federation;
+
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(feature = "federation")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod foreign_source_handlers;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "knowledge-batch")]

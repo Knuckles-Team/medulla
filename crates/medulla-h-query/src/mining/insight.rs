@@ -21,17 +21,17 @@ use medulla_result_types::{
 
 use super::impact::{handle_impact, ImpactInputs, ImpactKind};
 
-pub(in crate::server::handlers) struct RootCauseRequest {
-    pub(in crate::server::handlers) nodes: Vec<String>,
-    pub(in crate::server::handlers) scores: Vec<f64>,
-    pub(in crate::server::handlers) edges: Vec<(String, String, f64)>,
-    pub(in crate::server::handlers) symptom: String,
-    pub(in crate::server::handlers) max_hops: usize,
-    pub(in crate::server::handlers) decay: f64,
-    pub(in crate::server::handlers) writeback: WritebackOptions,
+pub(crate) struct RootCauseRequest {
+    pub(crate) nodes: Vec<String>,
+    pub(crate) scores: Vec<f64>,
+    pub(crate) edges: Vec<(String, String, f64)>,
+    pub(crate) symptom: String,
+    pub(crate) max_hops: usize,
+    pub(crate) decay: f64,
+    pub(crate) writeback: WritebackOptions,
 }
 
-pub(in crate::server::handlers) fn handle_root_cause(
+pub(crate) fn handle_root_cause(
     req_id: u64,
     core: &GraphCore,
     request: RootCauseRequest,
@@ -181,15 +181,15 @@ pub(super) fn run_risk_propagation(
     risk_propagation::propagate(nodes.len(), &idx_edges, seed, &config)
 }
 
-pub(in crate::server::handlers) struct RiskPropagationRequest {
-    pub(in crate::server::handlers) nodes: Vec<String>,
-    pub(in crate::server::handlers) seed: Vec<f64>,
-    pub(in crate::server::handlers) edges: Vec<(String, String, f64)>,
-    pub(in crate::server::handlers) damping: f64,
-    pub(in crate::server::handlers) tolerance: f64,
-    pub(in crate::server::handlers) max_iterations: usize,
-    pub(in crate::server::handlers) model: RiskModel,
-    pub(in crate::server::handlers) writeback: WritebackOptions,
+pub(crate) struct RiskPropagationRequest {
+    pub(crate) nodes: Vec<String>,
+    pub(crate) seed: Vec<f64>,
+    pub(crate) edges: Vec<(String, String, f64)>,
+    pub(crate) damping: f64,
+    pub(crate) tolerance: f64,
+    pub(crate) max_iterations: usize,
+    pub(crate) model: RiskModel,
+    pub(crate) writeback: WritebackOptions,
 }
 
 /// The impact model a non-`share` [`RiskModel`] names, with its options.
@@ -201,7 +201,7 @@ pub(super) fn impact_model(model: &RiskModel) -> Option<(ImpactKind, &ImpactOpti
     }
 }
 
-pub(in crate::server::handlers) fn handle_risk_propagation(
+pub(crate) fn handle_risk_propagation(
     req_id: u64,
     core: &GraphCore,
     request: RiskPropagationRequest,
@@ -524,7 +524,7 @@ pub(super) fn to_retrieval_trace(spec: &RetrievalTraceSpec) -> retrieval_quality
     }
 }
 
-pub(in crate::server::handlers) fn handle_retrieval_quality(
+pub(crate) fn handle_retrieval_quality(
     req_id: u64,
     core: &GraphCore,
     traces: Vec<RetrievalTraceSpec>,
@@ -676,17 +676,17 @@ pub(super) fn to_community_algo(a: CommunityAlgorithm) -> community::Algorithm {
     }
 }
 
-pub(in crate::server::handlers) struct CommunityRequest {
-    pub(in crate::server::handlers) label: Option<String>,
-    pub(in crate::server::handlers) algorithm: CommunityAlgorithm,
-    pub(in crate::server::handlers) resolution: f64,
-    pub(in crate::server::handlers) max_iterations: usize,
-    pub(in crate::server::handlers) seed: u64,
-    pub(in crate::server::handlers) weighted: bool,
-    pub(in crate::server::handlers) writeback: WritebackOptions,
+pub(crate) struct CommunityRequest {
+    pub(crate) label: Option<String>,
+    pub(crate) algorithm: CommunityAlgorithm,
+    pub(crate) resolution: f64,
+    pub(crate) max_iterations: usize,
+    pub(crate) seed: u64,
+    pub(crate) weighted: bool,
+    pub(crate) writeback: WritebackOptions,
 }
 
-pub(in crate::server::handlers) fn handle_community(
+pub(crate) fn handle_community(
     req_id: u64,
     core: &GraphCore,
     request: CommunityRequest,

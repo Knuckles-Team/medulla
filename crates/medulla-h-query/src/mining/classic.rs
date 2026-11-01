@@ -23,7 +23,7 @@ use medulla_result_types::{
 /// ordered sequences (explicit or graph-derived), run the chosen engine
 /// (PrefixSpan/GSP — both agree), return `{patterns, ...}`, and optionally write
 /// `:SequentialPattern` nodes back.
-pub(in crate::server::handlers) fn handle_sequence(
+pub(crate) fn handle_sequence(
     req_id: u64,
     core: &GraphCore,
     sequences: Vec<Vec<String>>,
@@ -165,23 +165,23 @@ pub(super) fn pattern_node_id(items: &[String]) -> String {
 /// by the caller — the same client-supplied cut `MineAnomaly` took in Phase 2)
 /// via ARIMA/Holt-Winters/STL, return `{forecast, lower, upper, ...}`, and
 /// optionally write a `:Forecast` node back.
-pub(in crate::server::handlers) struct ForecastRequest {
-    pub(in crate::server::handlers) values: Vec<f64>,
-    pub(in crate::server::handlers) algorithm: ForecastAlgorithm,
-    pub(in crate::server::handlers) horizon: usize,
-    pub(in crate::server::handlers) p: usize,
-    pub(in crate::server::handlers) d: usize,
-    pub(in crate::server::handlers) q: usize,
-    pub(in crate::server::handlers) period: usize,
-    pub(in crate::server::handlers) alpha: f64,
-    pub(in crate::server::handlers) beta: f64,
-    pub(in crate::server::handlers) gamma: f64,
-    pub(in crate::server::handlers) confidence: f64,
-    pub(in crate::server::handlers) series_id: String,
-    pub(in crate::server::handlers) writeback: WritebackOptions,
+pub(crate) struct ForecastRequest {
+    pub(crate) values: Vec<f64>,
+    pub(crate) algorithm: ForecastAlgorithm,
+    pub(crate) horizon: usize,
+    pub(crate) p: usize,
+    pub(crate) d: usize,
+    pub(crate) q: usize,
+    pub(crate) period: usize,
+    pub(crate) alpha: f64,
+    pub(crate) beta: f64,
+    pub(crate) gamma: f64,
+    pub(crate) confidence: f64,
+    pub(crate) series_id: String,
+    pub(crate) writeback: WritebackOptions,
 }
 
-pub(in crate::server::handlers) fn handle_forecast(
+pub(crate) fn handle_forecast(
     req_id: u64,
     core: &GraphCore,
     request: ForecastRequest,
@@ -336,20 +336,20 @@ pub(super) fn forecast_node_id(algo: &str, series_id: &str, values: &[f64]) -> S
 /// corpus (explicit or graph-derived), run the chosen engine, return
 /// `{doc_terms}` (tfidf) or `{topics, doc_topics}` (lda/nmf), and optionally
 /// write `:Topic` nodes back (lda/nmf only).
-pub(in crate::server::handlers) struct TextRequest {
-    pub(in crate::server::handlers) docs: Vec<Vec<String>>,
-    pub(in crate::server::handlers) source: Option<TextSource>,
-    pub(in crate::server::handlers) algorithm: TextAlgorithm,
-    pub(in crate::server::handlers) k: usize,
-    pub(in crate::server::handlers) alpha: f64,
-    pub(in crate::server::handlers) beta: f64,
-    pub(in crate::server::handlers) iterations: usize,
-    pub(in crate::server::handlers) seed: u64,
-    pub(in crate::server::handlers) top_n: usize,
-    pub(in crate::server::handlers) writeback: WritebackOptions,
+pub(crate) struct TextRequest {
+    pub(crate) docs: Vec<Vec<String>>,
+    pub(crate) source: Option<TextSource>,
+    pub(crate) algorithm: TextAlgorithm,
+    pub(crate) k: usize,
+    pub(crate) alpha: f64,
+    pub(crate) beta: f64,
+    pub(crate) iterations: usize,
+    pub(crate) seed: u64,
+    pub(crate) top_n: usize,
+    pub(crate) writeback: WritebackOptions,
 }
 
-pub(in crate::server::handlers) fn handle_text(
+pub(crate) fn handle_text(
     req_id: u64,
     core: &GraphCore,
     request: TextRequest,
@@ -573,7 +573,7 @@ pub(super) fn topic_node_id(algo: &str, terms: &[&str]) -> String {
 /// RESIDENT graph itself (no rows/vectors handed in), run gSpan-style
 /// frequent-subgraph mining or a motif census, and optionally write
 /// `:FrequentSubgraph` nodes back (`gspan` only).
-pub(in crate::server::handlers) fn handle_subgraph(
+pub(crate) fn handle_subgraph(
     req_id: u64,
     core: &GraphCore,
     label: Option<String>,

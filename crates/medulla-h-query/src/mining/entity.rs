@@ -8,18 +8,18 @@ use medulla_result_types::{
 
 // Entity resolution + record linkage follows the shared explicit-or-derived
 // input → compute → optional typed-node/claim write-back contract.
-pub(in crate::server::handlers) struct EntityResolutionRequest {
-    pub(in crate::server::handlers) records: Vec<Vec<String>>,
-    pub(in crate::server::handlers) block_keys: Vec<String>,
-    pub(in crate::server::handlers) vectors: Vec<Vec<f64>>,
-    pub(in crate::server::handlers) source: Option<VectorSource>,
-    pub(in crate::server::handlers) ids: Vec<String>,
-    pub(in crate::server::handlers) bucket_precision: i32,
-    pub(in crate::server::handlers) threshold: f64,
-    pub(in crate::server::handlers) writeback: WritebackOptions,
+pub(crate) struct EntityResolutionRequest {
+    pub(crate) records: Vec<Vec<String>>,
+    pub(crate) block_keys: Vec<String>,
+    pub(crate) vectors: Vec<Vec<f64>>,
+    pub(crate) source: Option<VectorSource>,
+    pub(crate) ids: Vec<String>,
+    pub(crate) bucket_precision: i32,
+    pub(crate) threshold: f64,
+    pub(crate) writeback: WritebackOptions,
 }
 
-pub(in crate::server::handlers) fn handle_entity_resolve(
+pub(crate) fn handle_entity_resolve(
     req_id: u64,
     core: &GraphCore,
     request: EntityResolutionRequest,

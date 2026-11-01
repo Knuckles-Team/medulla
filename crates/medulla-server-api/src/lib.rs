@@ -30,6 +30,11 @@ pub mod authority_context;
 pub mod blob;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(all(feature = "result-cache", feature = "streaming"))]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod cache_coherence;
+
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "streaming")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod cdc;

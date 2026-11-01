@@ -4,7 +4,7 @@ use medulla_protocol_types::protocol::ResultPayload;
 /// OBDA / R2RML virtual-graph query (CONCEPT:MEDULLA-KG.query.r2rml-virtual-graph /
 /// CONCEPT:MEDULLA-KG.query.obda-query-rewrite). Registers each of `tables` as a foreign
 /// [`medulla_rdf::obda::ObdaSource`] backed by the engine's own SQL user-table store
-/// ([`crate::server::sql_tables::user_table_store`]), parses `mapping` (auto-detecting
+/// ([`medulla_server_api::sql_tables::user_table_store`]), parses `mapping` (auto-detecting
 /// standard R2RML Turtle vs. the compact MEDULLA-101 textual form), and runs `query` through
 /// the OBDA query-rewrite path: only the query-relevant columns are scanned from the
 /// table(s), only the query-relevant triples are materialized into a TRANSIENT view —

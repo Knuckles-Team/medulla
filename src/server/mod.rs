@@ -137,11 +137,6 @@ pub mod namespace_migration;
 // edits this shared module list.
 #[cfg(feature = "cdc-kafka")]
 pub mod cdc_sink;
-// Distributed result-cache coherence over the CDC feed (CONCEPT:MEDULLA-KG.coordination.distributed-cache-coherence): a replica
-// tailing CDC invalidates its local version-keyed result cache on a remote write.
-// Needs BOTH the cache (`result-cache`) and the CDC feed (`streaming`).
-#[cfg(all(feature = "result-cache", feature = "streaming"))]
-pub mod cache_coherence;
 // Semantic ANN index activation (W0.4, CONCEPT:MEDULLA-KG.storage.semantic-index-directory): the ONE
 // reopen-else-build-else-activate body plus the two triggers the boot-time task
 // cannot supply — the post-write hook and the periodic backstop — for a graph

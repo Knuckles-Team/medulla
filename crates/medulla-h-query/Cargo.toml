@@ -48,6 +48,8 @@ sha2 = "0.10"
 tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
 tracing = "0.1"
 
+ureq = { version = "3.4.2", optional = true }
+
 [features]
 alignment = ["dep:medulla-modality", "dep:medulla-alignment", ]
 ann-redb = ["redb"]
@@ -59,7 +61,8 @@ epistemic-redaction = ["dep:medulla-epistemic", "medulla-epistemic/epistemic-red
 epistemic-tms = ["dep:medulla-epistemic", "medulla-epistemic/epistemic-tms", "epistemic"]
 evidence-graph = ["dep:medulla-epistemic", "medulla-epistemic/evidence-graph", "epistemic"]
 federation = ["dep:medulla-plan", "medulla-plan/federation", "query"]
-federation-opensearch = []
+federation-search = ["federation", "dep:ureq"]
+federation-opensearch = ["federation-search"]
 federation-sql = ["dep:medulla-plan", "medulla-plan/federation-sql", "federation"]
 geo = ["dep:medulla-plan", "medulla-plan/geo", "dep:medulla-geo", "query"]
 graphql = ["dep:medulla-graphql", "medulla-graphql/hardening", "security"]

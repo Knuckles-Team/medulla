@@ -693,7 +693,7 @@ mod result_cache_dispatch_tests {
         // graph (bumps B's version). This is the cross-replica invalidation signal.
         let v_b_before = core_b.version();
         let next =
-            crate::server::cache_coherence::drain_and_invalidate(&b, &hub_a, "__commons__", 0, 0)
+            medulla_server_api::cache_coherence::drain_and_invalidate(&b, &hub_a, "__commons__", 0, 0)
                 .await
                 .unwrap();
         assert!(next > 0, "drained at least one event");
@@ -1768,6 +1768,20 @@ mod dispatch_write_tests {
 #[cfg(all(test, feature = "query", feature = "redb", feature = "security"))]
 mod txn_ryow_dispatch_tests {
     use super::current_auth_test_support::prelude::*;
+
+    /// Row ids of a successful `Method::Uql` response (`Rows` or `Profile`).
+    fn decode_uql_ids(response: &Response) -> Vec<String> {
+        use medulla_types::wire::UqlResult;
+        assert!(response.error.is_none(), "query error: {:?}", response.error);
+        let Some(ResultPayload::Raw(bytes)) = response.result.as_ref() else {
+            panic!("expected Raw result, got {:?}", response.result);
+        };
+        let rows = match rmp_serde::from_slice(bytes).unwrap() {
+            UqlResult::Rows { rows, .. } | UqlResult::Profile { rows, .. } => rows,
+            UqlResult::Explain { .. } => panic!("an EXPLAIN result has no rows"),
+        };
+        rows.into_iter().map(|row| row.id).collect()
+    }
     use serde_json::json;
 
     const SECRET: &str = "txn-ryow-test-secret";
@@ -1911,7 +1925,7 @@ mod txn_ryow_dispatch_tests {
         let vec_q = "MATCH (:Widget) |> RANK BY ~[1.0,0.0] |> LIMIT 5";
         let in_txn = dispatch_on_heap(&state, req(6, txn_uql(&txn, vec_q))).await;
         assert_eq!(
-            crate::server::decode_uql_ids(&in_txn),
+            decode_uql_ids(&in_txn),
             vec!["sn".to_string()],
             "staged node + embedding must be visible to the in-txn cross-modal query"
         );
@@ -1920,14 +1934,14 @@ mod txn_ryow_dispatch_tests {
         let trav_q = "MATCH (:Widget) |> TRAVERSE -[:LINKS]->{1,1} |> LIMIT 5";
         let trav = dispatch_on_heap(&state, req(7, txn_uql(&txn, trav_q))).await;
         assert!(
-            crate::server::decode_uql_ids(&trav).contains(&"tn".to_string()),
+            decode_uql_ids(&trav).contains(&"tn".to_string()),
             "staged edge must make tn BFS-reachable in-txn"
         );
 
         // OFF-TXN identical query: empty — staged writes are invisible before commit.
         let off = dispatch_on_heap(&state, req(8, uql(vec_q))).await;
         assert!(
-            crate::server::decode_uql_ids(&off).is_empty(),
+            decode_uql_ids(&off).is_empty(),
             "off-txn query must see none of the txn's uncommitted writes"
         );
     }
@@ -1956,12 +1970,12 @@ mod txn_ryow_dispatch_tests {
         // Before commit: off-txn empty, in-txn sees it (RYOW).
         let before = dispatch_on_heap(&state, req(3, uql(q))).await;
         assert!(
-            crate::server::decode_uql_ids(&before).is_empty(),
+            decode_uql_ids(&before).is_empty(),
             "off-txn empty before commit"
         );
         let in_txn = dispatch_on_heap(&state, req(4, txn_uql(&txn, q))).await;
         assert_eq!(
-            crate::server::decode_uql_ids(&in_txn),
+            decode_uql_ids(&in_txn),
             vec!["cn".to_string()],
             "RYOW in-txn"
         );
@@ -1988,7 +2002,7 @@ mod txn_ryow_dispatch_tests {
         );
         let after = dispatch_on_heap(&state, req(6, uql(q))).await;
         assert_eq!(
-            crate::server::decode_uql_ids(&after),
+            decode_uql_ids(&after),
             vec!["cn".to_string()],
             "committed node must be visible off-txn after commit"
         );

@@ -23,8 +23,8 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_server_api::state::ServerState;
-use crate::wire::CdcEvent;
+use crate::state::ServerState;
+use medulla_types::wire::CdcEvent;
 
 /// Apply one remote [`CdcEvent`] as a cache-coherence invalidation against the local
 /// registry. Looks up the event's graph; if it exists locally, retires its cached
@@ -55,7 +55,7 @@ pub async fn apply_remote_change(state: &Arc<RwLock<ServerState>>, event: &CdcEv
 /// hub default.
 pub async fn drain_and_invalidate(
     state: &Arc<RwLock<ServerState>>,
-    peer_feed: &medulla_server_api::cdc::CdcHub,
+    peer_feed: &crate::cdc::CdcHub,
     graph: &str,
     from_seq: u64,
     limit: u32,

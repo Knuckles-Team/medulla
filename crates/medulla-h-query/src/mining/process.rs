@@ -10,7 +10,7 @@ use medulla_result_types::{
 
 // ─────────────────────────── Causal impact (ITS / DiD) ───────────────────────────
 
-pub(in crate::server::handlers) fn handle_causal_impact(
+pub(crate) fn handle_causal_impact(
     req_id: u64,
     core: &GraphCore,
     series: Vec<f64>,
@@ -146,7 +146,7 @@ pub(super) fn materialize_causal_effect_claim(
 
 // ─────────────────────────── Process mining ───────────────────────────
 
-pub(in crate::server::handlers) fn handle_process(
+pub(crate) fn handle_process(
     req_id: u64,
     core: &GraphCore,
     traces: Vec<Vec<String>>,
