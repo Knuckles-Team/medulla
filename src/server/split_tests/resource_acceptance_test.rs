@@ -12,7 +12,7 @@
 //! exact-query/status dispatch is the externally visible evidence.  The direct-redb
 //! last-slot race remains a separate lower-level proof.
 
-use crate::raft::RaftStateExt;
+use medulla_raft::raft::RaftStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::future::Future;
@@ -37,9 +37,10 @@ use crate::epistemic_operations::{
 };
 use crate::isolation::{AgentIdentity, AgentRole};
 use crate::protocol::{GraphType, Method, Request, ResultPayload};
-use crate::raft::harness::cluster::{Cluster, GRAPH};
-use crate::raft::harness::test_env::configure_auth_test_environment;
-use crate::raft::NodeId;
+use medulla_raft::raft::harness::cluster::Cluster;
+use medulla_raft::raft::harness::cluster::GRAPH;
+use medulla_raft::raft::harness::test_env::configure_auth_test_environment;
+use medulla_raft::raft::NodeId;
 use crate::server::{dispatch};
 use medulla_server_api::auth::compute_verified_envelope_token;
 use medulla_server_api::auth::VerifiedEnvelopeParams;
@@ -2020,7 +2021,7 @@ fn native_resource_public_dispatch_concurrent_attempt_race_has_one_winner() {
 
 async fn native_resource_public_dispatch_concurrent_attempt_race_scenario() {
     let _auth_env_guard = configure_auth_test_environment(TENANT, "rmdd27-resource-public-auth");
-    let _partition_guard = crate::raft::network::partition::test_guard();
+    let _partition_guard = medulla_raft::raft::network::partition::test_guard();
 
     let cluster = ClusterGuard::new(
         Cluster::start(3, "rmdd27-resource-public-race")
@@ -2136,7 +2137,7 @@ fn native_resource_public_dispatch_readindex_and_failover() {
 
 async fn native_resource_public_dispatch_readindex_and_failover_scenario() {
     let _auth_env_guard = configure_auth_test_environment(TENANT, "rmdd27-resource-public-auth");
-    let _partition_guard = crate::raft::network::partition::test_guard();
+    let _partition_guard = medulla_raft::raft::network::partition::test_guard();
 
     let mut cluster = ClusterGuard::new(
         Cluster::start(5, "rmdd27-resource-public")
@@ -2195,7 +2196,7 @@ async fn native_resource_public_dispatch_readindex_and_failover_scenario() {
     // survivor available, so the release still has a quorum to commit.
     wait_for_backend_active_reservation(&cluster, stale_follower, 1).await;
     wait_for_node_leader(&cluster, stale_follower, new_leader).await;
-    crate::raft::network::partition::isolate(stale_follower);
+    medulla_raft::raft::network::partition::isolate(stale_follower);
 
     let released = drive_public_release_after_failover(
         &cluster,
@@ -2210,7 +2211,7 @@ async fn native_resource_public_dispatch_readindex_and_failover_scenario() {
     // public exact query is rejected with a leader redirect rather than being
     // allowed to authorize from that stale local state. Heal before issuing the
     // next committed mutation so the follower can catch up.
-    crate::raft::network::partition::heal();
+    medulla_raft::raft::network::partition::heal();
 
     // The new leader accepts a fresh result-producing native mutation and returns
     // its typed result; the surviving second follower applies the same row. The
@@ -2315,7 +2316,7 @@ fn kg_delegate_public_dispatch_replicates_and_replays_after_failover() {
 #[cfg(feature = "redb")]
 async fn kg_delegate_public_dispatch_replicates_and_replays_after_failover_scenario() {
     let _auth_env_guard = configure_auth_test_environment(TENANT, "rmdd27-kg-delegate-public-auth");
-    let _partition_guard = crate::raft::network::partition::test_guard();
+    let _partition_guard = medulla_raft::raft::network::partition::test_guard();
     let mut cluster = ClusterGuard::new(
         Cluster::start(3, "rmdd27-kg-delegate-public")
             .await
@@ -2604,7 +2605,7 @@ fn kg_delegate_public_dispatch_first_request_after_restart() {
 async fn kg_delegate_public_dispatch_first_request_after_restart_scenario() {
     let _auth_env_guard =
         configure_auth_test_environment(TENANT, "rmdd27-kg-delegate-public-restart-auth");
-    let _partition_guard = crate::raft::network::partition::test_guard();
+    let _partition_guard = medulla_raft::raft::network::partition::test_guard();
     let mut cluster = ClusterGuard::new(
         Cluster::start(1, "rmdd27-kg-delegate-public-first-after-restart")
             .await
@@ -2695,7 +2696,7 @@ fn kg_delegate_public_dispatch_rejects_missing_cluster_authority() {
 async fn kg_delegate_public_dispatch_rejects_missing_cluster_authority_scenario() {
     let _auth_env_guard =
         configure_auth_test_environment(TENANT, "rmdd27-kg-delegate-public-missing-authority-auth");
-    let _partition_guard = crate::raft::network::partition::test_guard();
+    let _partition_guard = medulla_raft::raft::network::partition::test_guard();
     let cluster = ClusterGuard::new(
         Cluster::start(3, "rmdd27-kg-delegate-public-missing-authority")
             .await

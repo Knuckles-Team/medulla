@@ -5,7 +5,7 @@
 //! it cannot be invoked by a public Method or a caller-supplied snapshot.
 
 #[cfg(feature = "raft")]
-use crate::raft::RaftStateExt;
+use medulla_raft::raft::RaftStateExt;
 use std::sync::Arc;
 
 use medulla_types::mutation_batch::MutationOutboxLease;
@@ -137,10 +137,10 @@ async fn propose_park(
     mutation.placement_epoch = routed.epoch;
     mutation.fencing_token = routed.placed.then_some(routed.group_id);
     let command =
-        crate::raft::ReplicatedMutation::enrichment_park(&park, &state.read().await.auth_secret)?;
+        medulla_raft::raft::ReplicatedMutation::enrichment_park(&park, &state.read().await.auth_secret)?;
     let response = routed
         .handle
-        .client_write(crate::raft::RaftRequest {
+        .client_write(medulla_raft::raft::RaftRequest {
             graph_fname: medulla_kernel::persist::sanitize(graph),
             graph_name: graph.to_string(),
             graph_type,

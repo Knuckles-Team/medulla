@@ -2,7 +2,7 @@ use super::*;
 
 #[cfg(all(feature = "raft", feature = "jobs"))]
 struct JobPublicationSubmission<'a> {
-    multi: &'a Arc<crate::raft::multi::MultiRaft>,
+    multi: &'a Arc<medulla_raft::raft::multi::MultiRaft>,
     authority: &'a CarrierAuthority,
     request_id: u64,
     attempt_nonce: Option<medulla_types::contract::Nonce>,
@@ -10,10 +10,10 @@ struct JobPublicationSubmission<'a> {
     operation: &'a str,
     graph_name: &'a str,
     graph_type: crate::protocol::GraphType,
-    group_id: crate::raft::GroupId,
+    group_id: medulla_raft::raft::GroupId,
     placement_epoch: u64,
     fencing_token: Option<u64>,
-    command: crate::raft::NativeMutationCommand,
+    command: medulla_raft::raft::NativeMutationCommand,
 }
 
 #[cfg(all(feature = "raft", feature = "jobs"))]
@@ -21,8 +21,8 @@ pub(super) struct JobPublicationExecution<'a> {
     pub(super) request_id: u64,
     pub(super) authority: &'a CarrierAuthority,
     pub(super) server_secret: &'a str,
-    pub(super) multi: Arc<crate::raft::multi::MultiRaft>,
-    pub(super) control: crate::raft::multi::RoutedRaftHandle,
+    pub(super) multi: Arc<medulla_raft::raft::multi::MultiRaft>,
+    pub(super) control: medulla_raft::raft::multi::RoutedRaftHandle,
     pub(super) control_graph: &'a str,
     pub(super) control_graph_type: crate::protocol::GraphType,
     pub(super) prepared_bytes: &'a [u8],
@@ -31,7 +31,7 @@ pub(super) struct JobPublicationExecution<'a> {
 #[cfg(all(feature = "raft", feature = "jobs"))]
 async fn submit_consensus_job_publication_response(
     submission: JobPublicationSubmission<'_>,
-) -> Result<crate::raft::RaftResponse, String> {
+) -> Result<medulla_raft::raft::RaftResponse, String> {
     let JobPublicationSubmission {
         multi,
         authority,
@@ -184,7 +184,7 @@ fn decode_job_publication(
 fn build_job_publication_plans(
     request_id: u64,
     prepared: handlers::jobs::PreparedJobPublication,
-    target_route: crate::raft::placement::PlacementRoute,
+    target_route: medulla_raft::raft::placement::PlacementRoute,
 ) -> Result<(Vec<u8>, Vec<u8>), Response> {
     let target_fence = target_route.placed.then_some(target_route.fencing_token());
     handlers::jobs::build_job_publication_commands(
@@ -202,8 +202,8 @@ fn build_job_publication_commit(
     prepared: &handlers::jobs::PreparedJobPublication,
     commit_plan: &[u8],
     server_secret: &str,
-) -> Result<crate::raft::NativeMutationCommand, Response> {
-    crate::raft::NativeMutationCommand::job_publication_commit(
+) -> Result<medulla_raft::raft::NativeMutationCommand, Response> {
+    medulla_raft::raft::NativeMutationCommand::job_publication_commit(
         prepared.coordinator_id.clone(),
         commit_plan,
         server_secret,
@@ -215,7 +215,7 @@ fn build_job_publication_commit(
 async fn submit_target_job_publication_commit(
     execution: &JobPublicationExecution<'_>,
     prepared: &handlers::jobs::PreparedJobPublication,
-    target_route: crate::raft::placement::PlacementRoute,
+    target_route: medulla_raft::raft::placement::PlacementRoute,
     commit_plan: Vec<u8>,
 ) -> Result<crate::mutation_batch::MutationBatchCommit, Response> {
     let target_fence = target_route.placed.then_some(target_route.fencing_token());
@@ -251,8 +251,8 @@ fn build_job_publication_finalize(
     prepared: &handlers::jobs::PreparedJobPublication,
     finalize_receipt: &[u8],
     server_secret: &str,
-) -> Result<crate::raft::NativeMutationCommand, Response> {
-    crate::raft::NativeMutationCommand::job_publication_finalize(
+) -> Result<medulla_raft::raft::NativeMutationCommand, Response> {
+    medulla_raft::raft::NativeMutationCommand::job_publication_finalize(
         prepared.coordinator_id.clone(),
         finalize_receipt,
         server_secret,
@@ -263,10 +263,10 @@ fn build_job_publication_finalize(
 /// The scheduler's control-group route for a job publication's finalize record.
 #[cfg(all(feature = "raft", feature = "jobs"))]
 struct JobPublicationControl<'a> {
-    multi: &'a Arc<crate::raft::multi::MultiRaft>,
+    multi: &'a Arc<medulla_raft::raft::multi::MultiRaft>,
     authority: &'a CarrierAuthority,
     request_id: u64,
-    control: &'a crate::raft::multi::RoutedRaftHandle,
+    control: &'a medulla_raft::raft::multi::RoutedRaftHandle,
     control_graph: &'a str,
     control_graph_type: crate::protocol::GraphType,
 }
@@ -279,7 +279,7 @@ async fn finalize_consensus_job_publication(
     prepared: &handlers::jobs::PreparedJobPublication,
     committed: &crate::mutation_batch::MutationBatchCommit,
     coordinator_id: &str,
-    finalize: crate::raft::NativeMutationCommand,
+    finalize: medulla_raft::raft::NativeMutationCommand,
 ) -> Response {
     let request_id = control.request_id;
     if let Err(error) = handlers::jobs::validate_job_publication_commit(prepared, committed) {

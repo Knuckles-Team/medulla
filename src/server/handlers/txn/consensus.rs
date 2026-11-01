@@ -2,7 +2,7 @@
 
 use super::*;
 #[cfg(feature = "raft")]
-use crate::raft::RaftStateExt;
+use medulla_raft::raft::RaftStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 
@@ -32,7 +32,7 @@ pub(crate) struct ConsensusTransactionParticipant {
     pub(crate) participant_id: u64,
     pub(crate) graph_name: String,
     pub(crate) graph_type: crate::protocol::GraphType,
-    pub(crate) group_id: crate::raft::GroupId,
+    pub(crate) group_id: medulla_raft::raft::GroupId,
     pub(crate) placement_epoch: u64,
     pub(crate) fencing_token: Option<u64>,
     pub(crate) sealed_plan_source: Vec<u8>,
@@ -55,7 +55,7 @@ pub(super) struct ConsensusParticipantPlan {
     participant_id: u64,
     graph_name: String,
     graph_type: crate::protocol::GraphType,
-    group_id: crate::raft::GroupId,
+    group_id: medulla_raft::raft::GroupId,
     placement_epoch: u64,
     fencing_token: Option<u64>,
     #[serde(with = "serde_bytes")]
@@ -316,7 +316,7 @@ pub(super) fn decode_consensus_participant(
 pub(super) async fn validate_consensus_participant_placement(
     state: &Arc<RwLock<ServerState>>,
     plan: &ConsensusParticipantPlan,
-    applying_group: crate::raft::GroupId,
+    applying_group: medulla_raft::raft::GroupId,
     applying_epoch: u64,
     applying_fence: Option<u64>,
 ) -> Result<Arc<crate::graph::GraphCore>, String> {
@@ -430,7 +430,7 @@ pub(crate) struct ConsensusParticipantRef<'a> {
 #[cfg(feature = "raft")]
 pub(crate) async fn apply_consensus_participant_prepare(
     state: &Arc<RwLock<ServerState>>,
-    applying_group: crate::raft::GroupId,
+    applying_group: medulla_raft::raft::GroupId,
     applying_epoch: u64,
     applying_fence: Option<u64>,
     authority: &medulla_server_api::api::persistence::RaftMutationContext,
@@ -563,7 +563,7 @@ pub(super) fn isolate_participant_transaction(
 pub(crate) async fn apply_consensus_participant_commit(
     state: &Arc<RwLock<ServerState>>,
     request_id: u64,
-    applying_group: crate::raft::GroupId,
+    applying_group: medulla_raft::raft::GroupId,
     authority: &medulla_server_api::api::persistence::RaftMutationContext,
     participant: ConsensusParticipantRef<'_>,
 ) -> Result<bool, String> {

@@ -19,7 +19,7 @@
 //! placement logic is introduced here — only its external RPC surface.
 
 #[cfg(feature = "raft")]
-use crate::raft::RaftStateExt;
+use medulla_raft::raft::RaftStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 use std::sync::Arc;
@@ -99,7 +99,7 @@ fn route_response(
 #[cfg(feature = "raft")]
 async fn resolve_group_endpoints(
     state: &Arc<RwLock<ServerState>>,
-    multi: &crate::raft::multi::MultiRaft,
+    multi: &medulla_raft::raft::multi::MultiRaft,
     group: u64,
 ) -> Vec<String> {
     let backend = { state.read().await.persistence.clone() };
@@ -161,7 +161,7 @@ async fn handle_route(
         }
         return route_response(
             req_id,
-            crate::raft::DEFAULT_GROUP,
+            medulla_raft::raft::DEFAULT_GROUP,
             0,
             false,
             client_epoch,
@@ -171,13 +171,13 @@ async fn handle_route(
         );
     };
 
-    let control = match multi.group(crate::raft::DEFAULT_GROUP).await {
+    let control = match multi.group(medulla_raft::raft::DEFAULT_GROUP).await {
         Some(group) => group,
         None => {
             return Response::stale_route(
                 req_id,
                 "__placement_catalog__",
-                crate::raft::DEFAULT_GROUP,
+                medulla_raft::raft::DEFAULT_GROUP,
                 0,
                 None,
                 "placement control group is unavailable",
@@ -189,7 +189,7 @@ async fn handle_route(
         return Response::stale_route(
             req_id,
             "__placement_catalog__",
-            crate::raft::DEFAULT_GROUP,
+            medulla_raft::raft::DEFAULT_GROUP,
             0,
             leader,
             "placement routes require the current control-group leader",
@@ -221,7 +221,7 @@ async fn resolve_admin_authority(
     state: &Arc<RwLock<ServerState>>,
 ) -> Result<
     (
-        std::sync::Arc<crate::raft::multi::MultiRaft>,
+        std::sync::Arc<medulla_raft::raft::multi::MultiRaft>,
         std::sync::Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
     ),
     String,
@@ -285,7 +285,7 @@ async fn handle_placement_admin_op(
 
 #[cfg(feature = "raft")]
 fn placement_move_result(
-    report: &crate::raft::reshard::PlacementMoveReport,
+    report: &medulla_raft::raft::reshard::PlacementMoveReport,
 ) -> medulla_types::result_contract::cluster::PlacementMoveResult {
     medulla_types::result_contract::cluster::PlacementMoveResult {
         tenant: report.tenant.clone(),
@@ -323,7 +323,7 @@ async fn handle_move(
         Ok(authority) => authority,
         Err(error) => return Response::err(req_id, error),
     };
-    let tenants = crate::raft::reshard::TenantManager::new(multi, backend);
+    let tenants = medulla_raft::raft::reshard::TenantManager::new(multi, backend);
     match tenants
         .move_partition(&tenant, (range_start, range_end), target)
         .await
@@ -348,7 +348,7 @@ async fn handle_abort_move(
         Ok(authority) => authority,
         Err(error) => return Response::err(req_id, error),
     };
-    let tenants = crate::raft::reshard::TenantManager::new(multi, backend);
+    let tenants = medulla_raft::raft::reshard::TenantManager::new(multi, backend);
     match tenants.abort_move(&move_id).await {
         Ok(()) => Response::ok(
             req_id,

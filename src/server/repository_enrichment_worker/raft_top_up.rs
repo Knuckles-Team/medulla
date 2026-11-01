@@ -1,7 +1,7 @@
 //! Private EH-557 top-up producer. No public Method routes here yet.
 
 #[cfg(feature = "raft")]
-use crate::raft::RaftStateExt;
+use medulla_raft::raft::RaftStateExt;
 use std::sync::Arc;
 
 use medulla_types::mutation_batch::RepositoryEnrichmentTopUp;
@@ -19,7 +19,7 @@ use medulla_server_api::state::ServerState;
 
 struct PreparedTopUp {
     transition: EnrichmentTopUpTransition,
-    routed: crate::raft::multi::RoutedRaftHandle,
+    routed: medulla_raft::raft::multi::RoutedRaftHandle,
     graph_type: crate::protocol::GraphType,
     committed_at_ms: u64,
 }
@@ -31,7 +31,7 @@ struct PreparedTopUp {
 async fn require_current_local_leader(
     state: &Arc<RwLock<ServerState>>,
     graph: &str,
-    prepared: &crate::raft::multi::RoutedRaftHandle,
+    prepared: &medulla_raft::raft::multi::RoutedRaftHandle,
 ) -> Result<(), String> {
     let multi = state
         .read()
@@ -51,8 +51,8 @@ async fn require_current_local_leader(
 }
 
 fn route_fence_matches(
-    prepared: &crate::raft::multi::RoutedRaftHandle,
-    current: &crate::raft::multi::RoutedRaftHandle,
+    prepared: &medulla_raft::raft::multi::RoutedRaftHandle,
+    current: &medulla_raft::raft::multi::RoutedRaftHandle,
 ) -> bool {
     same_placement(
         (prepared.placed, prepared.group_id, prepared.epoch),
@@ -181,7 +181,7 @@ async fn prepare_replay(
     verified: &VerifiedRequestContext,
     proposal: &BudgetRevisionProposal,
     retained: &RepositoryEnrichmentPolicyRevision,
-    routed: &crate::raft::multi::RoutedRaftHandle,
+    routed: &medulla_raft::raft::multi::RoutedRaftHandle,
     record: medulla_types::mutation_batch::MutationBatchRecord,
 ) -> Result<(EnrichmentTopUpTransition, u64), String> {
     let graph = proposal.graph.as_str();
@@ -223,7 +223,7 @@ async fn prepare_fresh(
     verified: &VerifiedRequestContext,
     proposal: &BudgetRevisionProposal,
     retained: &RepositoryEnrichmentPolicyRevision,
-    routed: &crate::raft::multi::RoutedRaftHandle,
+    routed: &medulla_raft::raft::multi::RoutedRaftHandle,
     backend: &dyn PersistenceBackend,
     graph_fname: &str,
 ) -> Result<(EnrichmentTopUpTransition, u64), String> {
@@ -356,7 +356,7 @@ pub(crate) async fn propose_top_up(
         },
     )?;
     let graph = proposal.graph.as_str();
-    let command = crate::raft::ReplicatedMutation::enrichment_top_up(
+    let command = medulla_raft::raft::ReplicatedMutation::enrichment_top_up(
         &prepared.transition,
         graph,
         prepared.committed_at_ms,
@@ -366,7 +366,7 @@ pub(crate) async fn propose_top_up(
     let response = prepared
         .routed
         .handle
-        .client_write(crate::raft::RaftRequest {
+        .client_write(medulla_raft::raft::RaftRequest {
             graph_fname: medulla_kernel::persist::sanitize(graph),
             graph_name: graph.to_string(),
             graph_type: prepared.graph_type,

@@ -26,7 +26,7 @@ pub(crate) struct HandleContext<'a> {
     pub(crate) core: &'a Arc<GraphCore>,
     pub(crate) persistence: &'a Option<Arc<dyn PersistenceBackend>>,
     #[cfg(feature = "raft")]
-    pub(crate) routed_raft: &'a Option<crate::raft::multi::RoutedRaftHandle>,
+    pub(crate) routed_raft: &'a Option<medulla_raft::raft::multi::RoutedRaftHandle>,
 }
 
 /// Handle exactly the six result-producing WorkItem lifecycle transitions, the

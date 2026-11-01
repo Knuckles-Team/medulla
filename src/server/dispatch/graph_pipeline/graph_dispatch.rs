@@ -24,7 +24,7 @@ struct GraphDispatchCapture<'a> {
     #[cfg(feature = "raft")]
     placement_authority: medulla_server_api::state::PlacementAuthorityKind,
     #[cfg(feature = "raft")]
-    multi_raft: Option<Arc<crate::raft::multi::MultiRaft>>,
+    multi_raft: Option<Arc<medulla_raft::raft::multi::MultiRaft>>,
     #[cfg(feature = "raft")]
     graph_type: crate::protocol::GraphType,
     #[cfg(feature = "redb")]
@@ -262,11 +262,11 @@ pub(in crate::server::dispatch) struct GraphOpRouting<'a> {
     #[cfg(feature = "security")]
     pub(super) rls: &'a std::sync::Arc<crate::isolation::IsolationLayer>,
     #[cfg(feature = "raft")]
-    pub(in crate::server::dispatch) routed_raft: &'a Option<crate::raft::multi::RoutedRaftHandle>,
+    pub(in crate::server::dispatch) routed_raft: &'a Option<medulla_raft::raft::multi::RoutedRaftHandle>,
     #[cfg(feature = "raft")]
     pub(in crate::server::dispatch) graph_type: crate::protocol::GraphType,
     #[cfg(feature = "raft")]
-    pub(super) multi_raft: &'a Option<Arc<crate::raft::multi::MultiRaft>>,
+    pub(super) multi_raft: &'a Option<Arc<medulla_raft::raft::multi::MultiRaft>>,
     #[cfg(feature = "redb")]
     pub(super) graph_incarnation_id: &'a String,
     #[cfg(feature = "modality-serving")]

@@ -718,7 +718,7 @@ mod tests {
             "tenant:1",
         )
         .unwrap();
-        let command = crate::raft::NativeMutationCommand::from_public_method(
+        let command = medulla_raft::raft::NativeMutationCommand::from_public_method(
             bound.method(),
             "delegation-native-route-test",
         )
@@ -726,9 +726,9 @@ mod tests {
 
         assert!(matches!(
             command,
-            crate::raft::NativeMutationCommand::WorkItem { .. }
+            medulla_raft::raft::NativeMutationCommand::WorkItem { .. }
         ));
-        assert!(crate::raft::NATIVE_CONSENSUS_METHODS.contains(&"SubmitWorkItem"));
+        assert!(medulla_raft::raft::NATIVE_CONSENSUS_METHODS.contains(&"SubmitWorkItem"));
         let reopened = command
             .open_public_method("delegation-native-route-test")
             .expect("native command authenticates its sealed method")

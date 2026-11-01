@@ -16,17 +16,18 @@
 //!   * **Split spans two groups.** One tenant's two workspaces resolve to two
 //!     DIFFERENT groups after `placement_split`.
 
-use crate::raft::RaftStateExt;
+use medulla_raft::raft::RaftStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
 use crate::protocol::{GraphType, Method};
-use crate::raft::harness::cluster::fixture;
-use crate::raft::multi::MultiRaft;
-use crate::raft::placement::split_tenant_key;
-use crate::raft::reshard::TenantManager;
-use crate::raft::{GroupId, RaftRequest};
+use medulla_raft::raft::harness::cluster::fixture;
+use medulla_raft::raft::multi::MultiRaft;
+use medulla_raft::raft::placement::split_tenant_key;
+use medulla_raft::raft::reshard::TenantManager;
+use medulla_raft::raft::GroupId;
+use medulla_raft::raft::RaftRequest;
 
 const GROUP_A: GroupId = 300;
 const GROUP_B: GroupId = 400;
@@ -35,16 +36,16 @@ const TEST_AGENT: &str = "unit-test-agent";
 const SECRET: &str = "placement-test";
 
 fn current_isolation() -> crate::isolation::IsolationLayer {
-    crate::raft::harness_support::current_isolation(TEST_AGENT)
+    medulla_raft::raft::harness_support::current_isolation(TEST_AGENT)
 }
 
 fn current_request(id: u64, method: Method) -> crate::protocol::Request {
-    crate::raft::harness_support::signed_request(
+    medulla_raft::raft::harness_support::signed_request(
         id,
         "__commons__",
         method,
         SECRET,
-        crate::raft::harness_support::HarnessLabels {
+        medulla_raft::raft::harness_support::HarnessLabels {
             agent_id: TEST_AGENT,
             nonce: "placement",
             idempotency: "placement-request",
@@ -65,7 +66,7 @@ async fn bring_up(
         backend,
         current_isolation(),
         "placement-test",
-        &[GROUP_A, GROUP_B, crate::raft::DEFAULT_GROUP],
+        &[GROUP_A, GROUP_B, medulla_raft::raft::DEFAULT_GROUP],
     )
     .await
 }
@@ -88,7 +89,7 @@ async fn write_via_owner(multi: &Arc<MultiRaft>, graph: &str, node_id: &str) -> 
             0,
             0,
         ),
-        command: crate::raft::ReplicatedMutation::graph(
+        command: medulla_raft::raft::ReplicatedMutation::graph(
             Method::AddNode {
                 node_id: node_id.to_string(),
                 properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({"id": node_id}))
@@ -107,30 +108,30 @@ fn epoch_cas_request(
 ) -> Result<RaftRequest, String> {
     let mut mutation = medulla_server_api::api::persistence::RaftMutationContext::internal(
         "raft-placement-contention",
-        crate::raft::placement::PLACEMENT_GRAPH,
+        medulla_raft::raft::placement::PLACEMENT_GRAPH,
         coordinator_id,
         0,
         0,
     );
     mutation.attempt_nonce = Some(medulla_types::contract::Nonce::from_bytes([nonce; 32]));
     let mut request = RaftRequest {
-        graph_fname: medulla_kernel::persist::sanitize(crate::raft::placement::PLACEMENT_GRAPH),
-        graph_name: crate::raft::placement::PLACEMENT_GRAPH.to_string(),
+        graph_fname: medulla_kernel::persist::sanitize(medulla_raft::raft::placement::PLACEMENT_GRAPH),
+        graph_name: medulla_raft::raft::placement::PLACEMENT_GRAPH.to_string(),
         graph_type: GraphType::Commons,
         committed_at_ms: 0,
         mutation,
-        command: crate::raft::ReplicatedMutation::caller_graph(method, SECRET)?,
+        command: medulla_raft::raft::ReplicatedMutation::caller_graph(method, SECRET)?,
     };
     // A caller nonce makes this caller authority, not engine-internal authority:
     // the state machine accepts its graph command only when it is sealed and bound
     // to this exact authority and destination group, as the dispatch boundary
     // binds every caller write. The internal `ReplicatedMutation::graph` form is
     // valid only without a nonce.
-    request.bind_graph_command(SECRET, crate::raft::DEFAULT_GROUP)?;
+    request.bind_graph_command(SECRET, medulla_raft::raft::DEFAULT_GROUP)?;
     Ok(request)
 }
 
-fn bool_response(response: Result<crate::raft::RaftResponse, String>) -> bool {
+fn bool_response(response: Result<medulla_raft::raft::RaftResponse, String>) -> bool {
     let response = response.expect("placement CAS request should reach the state machine");
     assert!(
         response.native_error.is_none(),
@@ -162,7 +163,7 @@ async fn placement_state_machine_binds_plan_identity_and_replay_nonce() {
         .await
         .expect("seed placement epoch");
 
-    let method = crate::raft::placement::PlacementCatalog::epoch_cas_method(1, 2);
+    let method = medulla_raft::raft::placement::PlacementCatalog::epoch_cas_method(1, 2);
     let request_a = epoch_cas_request("plan-a", 11, method.clone()).expect("request a");
     let request_b = epoch_cas_request("plan-b", 12, method.clone()).expect("request b");
     assert_ne!(
@@ -170,8 +171,8 @@ async fn placement_state_machine_binds_plan_identity_and_replay_nonce() {
         "distinct plans must not share a durable replay key"
     );
     let (response_a, response_b) = tokio::join!(
-        multi.client_write_group(crate::raft::DEFAULT_GROUP, request_a.clone()),
-        multi.client_write_group(crate::raft::DEFAULT_GROUP, request_b.clone()),
+        multi.client_write_group(medulla_raft::raft::DEFAULT_GROUP, request_a.clone()),
+        multi.client_write_group(medulla_raft::raft::DEFAULT_GROUP, request_b.clone()),
     );
     let applied_a = bool_response(response_a);
     let applied_b = bool_response(response_b);
@@ -181,17 +182,17 @@ async fn placement_state_machine_binds_plan_identity_and_replay_nonce() {
         let guard = state.read().await;
         let bytes = guard
             .registry
-            .get(crate::raft::placement::PLACEMENT_GRAPH)
+            .get(medulla_raft::raft::placement::PLACEMENT_GRAPH)
             .and_then(|entry| {
                 entry
                     .core
-                    .get_node_properties(crate::raft::placement::PLACEMENT_EPOCH_COUNTER_NODE)
+                    .get_node_properties(medulla_raft::raft::placement::PLACEMENT_EPOCH_COUNTER_NODE)
             })
             .expect("epoch counter must remain present");
         rmp_serde::from_slice::<serde_json::Value>(&bytes).expect("counter properties decode")
     };
     assert_eq!(
-        counter[crate::raft::placement::PLACEMENT_EPOCH_FIELD],
+        counter[medulla_raft::raft::placement::PLACEMENT_EPOCH_FIELD],
         serde_json::json!(2)
     );
 
@@ -206,19 +207,19 @@ async fn placement_state_machine_binds_plan_identity_and_replay_nonce() {
     let loser_retry = epoch_cas_request(loser_plan, 14, method.clone()).expect("loser retry");
     assert!(!bool_response(
         multi
-            .client_write_group(crate::raft::DEFAULT_GROUP, loser_retry)
+            .client_write_group(medulla_raft::raft::DEFAULT_GROUP, loser_retry)
             .await
     ));
 
     let fresh = epoch_cas_request(winner_plan, 13, method).expect("fresh winner retry");
     assert!(bool_response(
         multi
-            .client_write_group(crate::raft::DEFAULT_GROUP, fresh)
+            .client_write_group(medulla_raft::raft::DEFAULT_GROUP, fresh)
             .await
     ));
 
     let reused = multi
-        .client_write_group(crate::raft::DEFAULT_GROUP, winner)
+        .client_write_group(medulla_raft::raft::DEFAULT_GROUP, winner)
         .await
         .expect_err("the exact caller nonce must be consumed by the replay probe");
     assert!(reused.contains("REPLAY_NONCE_CONSUMED"), "{reused}");
@@ -440,7 +441,7 @@ async fn online_move_preserves_data_and_lands_new_epoch() {
     assert_eq!(journals.len(), 1, "one durable move journal retained");
     assert_eq!(
         journals[0].stage,
-        crate::raft::placement::MoveStage::Completed
+        medulla_raft::raft::placement::MoveStage::Completed
     );
     assert_eq!(journals[0].completed_graphs, vec![graph.clone()]);
 
@@ -492,7 +493,7 @@ async fn pre_cutover_move_abort_restores_source_and_journals_terminal_state() {
         .find(|entry| entry.key.range_start == 0 && entry.key.range_end == u64::MAX)
         .unwrap();
     let mut journal =
-        crate::raft::placement::PartitionMoveJournal::new(&entry, GROUP_B, vec![graph.clone()])
+        medulla_raft::raft::placement::PartitionMoveJournal::new(&entry, GROUP_B, vec![graph.clone()])
             .unwrap();
     multi.persist_move_journal(&journal).await.unwrap();
     multi
@@ -500,7 +501,7 @@ async fn pre_cutover_move_abort_restores_source_and_journals_terminal_state() {
         .await
         .unwrap();
     multi.router().assign(&graph, GROUP_B);
-    journal.stage = crate::raft::placement::MoveStage::Transferring;
+    journal.stage = medulla_raft::raft::placement::MoveStage::Transferring;
     multi.persist_move_journal(&journal).await.unwrap();
 
     tenants.abort_move(&journal.move_id).await.unwrap();
@@ -513,7 +514,7 @@ async fn pre_cutover_move_abort_restores_source_and_journals_terminal_state() {
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(terminal.stage, crate::raft::placement::MoveStage::Aborted);
+    assert_eq!(terminal.stage, medulla_raft::raft::placement::MoveStage::Aborted);
 
     multi.stop_listener();
     backend.shutdown();
@@ -576,13 +577,13 @@ async fn abort_intent_behind_committed_cutover_reconciles_forward() {
         .next()
         .unwrap();
     let mut journal =
-        crate::raft::placement::PartitionMoveJournal::new(&entry, GROUP_B, Vec::new()).unwrap();
+        medulla_raft::raft::placement::PartitionMoveJournal::new(&entry, GROUP_B, Vec::new()).unwrap();
     multi.persist_move_journal(&journal).await.unwrap();
     multi
         .placement_start_move(TENANT, range, GROUP_B)
         .await
         .unwrap();
-    journal.stage = crate::raft::placement::MoveStage::Aborting;
+    journal.stage = medulla_raft::raft::placement::MoveStage::Aborting;
     multi.persist_move_journal(&journal).await.unwrap();
 
     // Model the one unavoidable ordering race: the epoch fence committed just
@@ -600,7 +601,7 @@ async fn abort_intent_behind_committed_cutover_reconciles_forward() {
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(terminal.stage, crate::raft::placement::MoveStage::Completed);
+    assert_eq!(terminal.stage, medulla_raft::raft::placement::MoveStage::Completed);
 
     multi.stop_listener();
     backend.shutdown();
@@ -627,8 +628,8 @@ async fn split_lets_one_tenant_span_two_groups() {
     let graph_hi = format!("{TENANT}:ws-hi");
     let (_, sub_lo) = split_tenant_key(&graph_lo);
     let (_, sub_hi) = split_tenant_key(&graph_hi);
-    let h_lo = crate::raft::multi::fnv1a(sub_lo);
-    let h_hi = crate::raft::multi::fnv1a(sub_hi);
+    let h_lo = medulla_raft::raft::multi::fnv1a(sub_lo);
+    let h_hi = medulla_raft::raft::multi::fnv1a(sub_hi);
     let (lo_key, lo_hash, hi_key, hi_hash) = if h_lo < h_hi {
         (sub_lo, h_lo, sub_hi, h_hi)
     } else {
@@ -744,11 +745,11 @@ async fn wire_placement_route_resolves_through_dispatch() {
     );
     assert_eq!(val["authoritative"], serde_json::json!(true));
     assert_eq!(val["placed"], serde_json::json!(false));
-    assert_eq!(val["group"], serde_json::json!(crate::raft::DEFAULT_GROUP));
+    assert_eq!(val["group"], serde_json::json!(medulla_raft::raft::DEFAULT_GROUP));
     assert_eq!(val["epoch"], serde_json::json!(0));
     assert_eq!(
         val["fencing_token"],
-        serde_json::json!(crate::raft::DEFAULT_GROUP)
+        serde_json::json!(medulla_raft::raft::DEFAULT_GROUP)
     );
 
     // After an assignment, the SAME wire RPC resolves the new group/epoch; a caller

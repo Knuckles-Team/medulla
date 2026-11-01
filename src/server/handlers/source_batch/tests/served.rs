@@ -187,11 +187,11 @@ async fn clustered_placement_refuses_source_batch_before_publication() {
         .local_addr()
         .unwrap()
         .port();
-    let multi = crate::raft::multi::MultiRaft::start(
+    let multi = medulla_raft::raft::multi::MultiRaft::start(
         1,
         format!("127.0.0.1:{port}"),
         backend,
-        crate::raft::AppCtx {
+        medulla_raft::raft::AppCtx {
             state: served.state.clone(),
             router: None,
         },

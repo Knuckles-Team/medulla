@@ -9,7 +9,9 @@ use tokio::sync::RwLock;
 
 use crate::isolation::{AccessLevel, AgentIdentity, AgentRole, IsolationLayer};
 use crate::protocol::{GraphType, Method};
-use crate::raft::{NativeMutationCommand, RaftRequest, ReplicatedMutation};
+use medulla_raft::raft::NativeMutationCommand;
+use medulla_raft::raft::RaftRequest;
+use medulla_raft::raft::ReplicatedMutation;
 use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::api::persistence::RaftMutationContext;
 use medulla_server_api::api::persistence::RaftMutationTiming;

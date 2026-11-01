@@ -1999,7 +1999,7 @@ async fn start_raft(
     // (the redb store) — refuse to start a half-configured cluster loudly.
     #[cfg(feature = "raft")]
     {
-        match medulla::raft::config::RaftClusterConfig::from_env() {
+        match medulla_raft::raft::config::RaftClusterConfig::from_env() {
             Ok(Some(cluster_cfg)) => {
                 let persist_dir = match state.read().await.persist_dir.clone() {
                     Some(d) => d,
@@ -2020,7 +2020,7 @@ async fn start_raft(
                 // persist_dir is validated above (Raft requires the redb store); the
                 // MultiRaft opens its durable log over the SAME backend in ServerState.
                 let _ = &persist_dir;
-                match medulla::raft::node::start(cluster_cfg, state.clone()).await {
+                match medulla_raft::raft::node::start(cluster_cfg, state.clone()).await {
                     Ok(started) => {
                         // `raft::node::start` atomically installed the routing handle
                         // and durable MultiRaft placement authority into ServerState.
@@ -2035,7 +2035,7 @@ async fn start_raft(
                             let backend = state.read().await.persistence.clone();
                             if let Some(backend) = backend {
                                 let coord =
-                                    medulla::raft::cross_shard_txn::CrossShardCoordinator::new(
+                                    medulla_raft::raft::cross_shard_txn::CrossShardCoordinator::new(
                                         started.multi.clone(),
                                         backend,
                                     );

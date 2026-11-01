@@ -17,9 +17,9 @@ pub(crate) struct HandleContext<'a> {
     pub(crate) graph_name: &'a str,
     pub(crate) persistence: &'a Option<Arc<dyn PersistenceBackend>>,
     #[cfg(feature = "raft")]
-    pub(crate) multi_raft: &'a Option<Arc<crate::raft::multi::MultiRaft>>,
+    pub(crate) multi_raft: &'a Option<Arc<medulla_raft::raft::multi::MultiRaft>>,
     #[cfg(feature = "raft")]
-    pub(crate) routed_raft: &'a Option<crate::raft::multi::RoutedRaftHandle>,
+    pub(crate) routed_raft: &'a Option<medulla_raft::raft::multi::RoutedRaftHandle>,
 }
 
 #[cfg(feature = "raft")]

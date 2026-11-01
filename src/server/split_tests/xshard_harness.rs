@@ -18,7 +18,7 @@
 //! crash AFTER the COMMIT decision but BEFORE phase-2 apply. Each asserts the
 //! invariant on the durable state, not on timing.
 
-use crate::raft::RaftStateExt;
+use medulla_raft::raft::RaftStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 use std::collections::BTreeMap;
@@ -29,13 +29,16 @@ use openraft::async_runtime::watch::WatchReceiver;
 use tokio::sync::RwLock;
 
 use crate::protocol::{GraphType, Method};
-use crate::raft::cross_shard_txn::{
-    CrossShardCoordinator, CrossShardTxn, GraphSlice, LockTicket, OrderedLockManager, RecordKey,
-    TxnOutcome,
-};
-use crate::raft::harness::cluster::fixture;
-use crate::raft::harness::cluster::fixture::node_count;
-use crate::raft::multi::MultiRaft;
+use medulla_raft::raft::cross_shard_txn::CrossShardCoordinator;
+use medulla_raft::raft::cross_shard_txn::CrossShardTxn;
+use medulla_raft::raft::cross_shard_txn::GraphSlice;
+use medulla_raft::raft::cross_shard_txn::LockTicket;
+use medulla_raft::raft::cross_shard_txn::OrderedLockManager;
+use medulla_raft::raft::cross_shard_txn::RecordKey;
+use medulla_raft::raft::cross_shard_txn::TxnOutcome;
+use medulla_raft::raft::harness::cluster::fixture;
+use medulla_raft::raft::harness::cluster::fixture::node_count;
+use medulla_raft::raft::multi::MultiRaft;
 
 const GROUP_A: u64 = 100;
 const GROUP_B: u64 = 200;
@@ -52,7 +55,7 @@ type Harness = (Arc<MultiRaft>, CrossShardCoordinator, HarnessState);
 /// `current_isolation` fixture the `redb_backend` cross-modal ACID test module uses to drive
 /// the same handler; the coordinator-path tests never touch the ACL, so they are unaffected.
 fn harness_isolation() -> crate::isolation::IsolationLayer {
-    crate::raft::harness_support::current_isolation(XSHARD_HARNESS_TEST_AGENT)
+    medulla_raft::raft::harness_support::current_isolation(XSHARD_HARNESS_TEST_AGENT)
 }
 
 /// Provision the shared test at-rest key, then hold the ambient encryption env still
@@ -1004,10 +1007,10 @@ async fn bring_up_calvin_commit(
     String,
     fixture::Backend,
     Harness,
-    crate::raft::cross_shard_txn::CalvinSequencer,
+    medulla_raft::raft::cross_shard_txn::CalvinSequencer,
 ) {
     let (dir, backend, harness) = bring_up_nonblocking(tag).await;
-    let seq = crate::raft::cross_shard_txn::CalvinSequencer::new();
+    let seq = medulla_raft::raft::cross_shard_txn::CalvinSequencer::new();
     (dir, backend, harness, seq)
 }
 
@@ -1224,7 +1227,7 @@ async fn calvin_deterministic_commit_is_atomic_and_vote_free() {
     // Opens a durable store, so the ambient encryption env must hold still for
     // this whole body. See `env_read_guard`'s doc.
     let _env_read_lock = env_read_guard().await;
-    use crate::raft::cross_shard_txn::GlobalSeq;
+    use medulla_raft::raft::cross_shard_txn::GlobalSeq;
     let (dir, backend, (multi, coord, state), seq) = bring_up_calvin_commit("calvinhappy").await;
 
     let txn = two_shard_txn("t-calvin-happy", "ca1", "cb1");
@@ -1334,7 +1337,7 @@ async fn write_node(
     props: serde_json::Value,
 ) {
     let g = multi.group(gid).await.expect("group exists");
-    let req = crate::raft::RaftRequest {
+    let req = medulla_raft::raft::RaftRequest {
         graph_fname: medulla_kernel::persist::sanitize(graph),
         graph_name: graph.to_string(),
         graph_type: GraphType::Global,
@@ -1346,7 +1349,7 @@ async fn write_node(
             0,
             0,
         ),
-        command: crate::raft::ReplicatedMutation::graph(
+        command: medulla_raft::raft::ReplicatedMutation::graph(
             Method::AddNode {
                 node_id: node.to_string(),
                 properties_msgpack: rmp_serde::to_vec_named(&props).unwrap(),
@@ -1429,7 +1432,10 @@ async fn calvin_ollp_ordered_readlock_serializes_conflicting_txns() {
     // Opens a durable store, so the ambient encryption env must hold still for
     // this whole body. See `env_read_guard`'s doc.
     let _env_read_lock = env_read_guard().await;
-    use crate::raft::cross_shard_txn::{CalvinSequencer, OrderedLockManager, RecordKey, RwSet};
+    use medulla_raft::raft::cross_shard_txn::CalvinSequencer;
+    use medulla_raft::raft::cross_shard_txn::OrderedLockManager;
+    use medulla_raft::raft::cross_shard_txn::RecordKey;
+    use medulla_raft::raft::cross_shard_txn::RwSet;
     use std::collections::BTreeSet;
 
     let (dir, _backend, multi, coord) = bring_up_calvin("calvinollp").await;
@@ -1586,7 +1592,10 @@ async fn calvin_ollp_stale_recon_is_restarted_and_commits_serializably() {
     // Opens a durable store, so the ambient encryption env must hold still for
     // this whole body. See `env_read_guard`'s doc.
     let _env_read_lock = env_read_guard().await;
-    use crate::raft::cross_shard_txn::{CalvinSequencer, OrderedLockManager, RecordKey, RwSet};
+    use medulla_raft::raft::cross_shard_txn::CalvinSequencer;
+    use medulla_raft::raft::cross_shard_txn::OrderedLockManager;
+    use medulla_raft::raft::cross_shard_txn::RecordKey;
+    use medulla_raft::raft::cross_shard_txn::RwSet;
     use std::collections::BTreeSet;
 
     let (dir, _backend, multi, coord) = bring_up_calvin("calvinrestart").await;
@@ -1667,7 +1676,7 @@ async fn calvin_ollp_stale_recon_is_restarted_and_commits_serializably() {
     );
     assert_eq!(
         acquired.seq,
-        crate::raft::cross_shard_txn::GlobalSeq(3),
+        medulla_raft::raft::cross_shard_txn::GlobalSeq(3),
         "the restart re-sequenced the txn at a fresh, higher GlobalSeq (1=writer, 2=stale, 3=valid)"
     );
     // The restart re-discovered the NEW target `k2` (not the stale `k1`).
@@ -1732,7 +1741,9 @@ async fn calvin_two_node_epoch_fan_in_derives_identical_order() {
     // Opens a durable store, so the ambient encryption env must hold still for
     // this whole body. See `env_read_guard`'s doc.
     let _env_read_lock = env_read_guard().await;
-    use crate::raft::cross_shard_txn::{epoch_fan_in, GlobalSeq, NodeInput};
+    use medulla_raft::raft::cross_shard_txn::epoch_fan_in;
+    use medulla_raft::raft::cross_shard_txn::GlobalSeq;
+    use medulla_raft::raft::cross_shard_txn::NodeInput;
 
     // Node 1 and node 2 each locally sequenced two txns for epoch 9. Both nodes exchange
     // these batches (gossip/replicate) and independently run the fan-in.
@@ -1787,9 +1798,11 @@ async fn calvin_ollp_epoch_routing_restart_agrees_across_nodes() {
     // Opens a durable store, so the ambient encryption env must hold still for
     // this whole body. See `env_read_guard`'s doc.
     let _env_read_lock = env_read_guard().await;
-    use crate::raft::cross_shard_txn::{
-        epoch_fan_in, EpochFanInRegistry, OrderedLockManager, RecordKey, RwSet,
-    };
+    use medulla_raft::raft::cross_shard_txn::epoch_fan_in;
+    use medulla_raft::raft::cross_shard_txn::EpochFanInRegistry;
+    use medulla_raft::raft::cross_shard_txn::OrderedLockManager;
+    use medulla_raft::raft::cross_shard_txn::RecordKey;
+    use medulla_raft::raft::cross_shard_txn::RwSet;
     use std::collections::BTreeSet;
 
     const NODE_1: u64 = 1; // home of the writer + the restarting OLLP txn

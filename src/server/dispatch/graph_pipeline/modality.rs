@@ -4,8 +4,8 @@ use super::*;
 #[cfg(all(feature = "raft", feature = "modality-serving"))]
 pub(super) struct ModalityReplication<'a> {
     state: &'a Arc<RwLock<ServerState>>,
-    handle: &'a crate::raft::RaftHandle,
-    group_id: crate::raft::GroupId,
+    handle: &'a medulla_raft::raft::RaftHandle,
+    group_id: medulla_raft::raft::GroupId,
     placement_epoch: u64,
     fencing_token: Option<u64>,
     graph_name: &'a str,
@@ -23,7 +23,7 @@ pub(super) struct ModalityReplication<'a> {
 /// handed to the modality handler once and never reaches `RaftRequest`.
 #[cfg(all(feature = "raft", feature = "modality-serving"))]
 pub(super) struct ModalityMutationInputs {
-    operation: crate::raft::SanitizedModalityMutation,
+    operation: medulla_raft::raft::SanitizedModalityMutation,
     modality: medulla_types::ServedModalityKind,
     receipt_query: String,
     safe_method: Method,
@@ -35,8 +35,8 @@ pub(super) struct ModalityMutationInputs {
 #[cfg(all(feature = "raft", feature = "modality-serving"))]
 pub(super) struct ModalityReplicationRequest<'a> {
     pub(super) state: &'a Arc<RwLock<ServerState>>,
-    pub(super) handle: crate::raft::RaftHandle,
-    pub(super) group_id: crate::raft::GroupId,
+    pub(super) handle: medulla_raft::raft::RaftHandle,
+    pub(super) group_id: medulla_raft::raft::GroupId,
     pub(super) placement_epoch: u64,
     pub(super) fencing_token: Option<u64>,
     pub(super) graph_name: &'a str,
@@ -84,7 +84,7 @@ pub(super) fn decode_modality_replication_inputs(
             "served modality replication received the wrong method",
         ));
     };
-    let Some((operation, modality)) = crate::raft::SanitizedModalityMutation::from_served(&op)
+    let Some((operation, modality)) = medulla_raft::raft::SanitizedModalityMutation::from_served(&op)
     else {
         return Err(Response::err(
             req_id,
@@ -180,7 +180,7 @@ pub(super) fn decode_modality_replay_result(
             "replicated modality receipt has no terminal result",
         ));
     };
-    crate::raft::decode_sanitized_modality_result(inputs.modality, inputs.operation, encoded)
+    medulla_raft::raft::decode_sanitized_modality_result(inputs.modality, inputs.operation, encoded)
         .map_err(|_| Response::err(req_id, "replicated modality receipt has an invalid result"))
 }
 
@@ -366,7 +366,7 @@ pub(super) async fn build_modality_raft_command(
     authority: &handlers::modality::ModalityAuthority,
     graph_fname: &str,
     payload: &ResultPayload,
-) -> Result<crate::raft::SanitizedModalityRaftCommand, Response> {
+) -> Result<medulla_raft::raft::SanitizedModalityRaftCommand, Response> {
     let node_id = authority.node_id(inputs.modality);
     let Some(sealed_runtime_state) = staged.get_node_properties(&node_id) else {
         return Err(Response::err(
@@ -385,7 +385,7 @@ pub(super) async fn build_modality_raft_command(
         Err(error) => return Err(Response::err(ctx.req_id, error.to_string())),
     };
     let server_secret = timed_read(ctx.state).await.auth_secret.clone();
-    crate::raft::SanitizedModalityRaftCommand::new(
+    medulla_raft::raft::SanitizedModalityRaftCommand::new(
         &server_secret,
         (ctx.tenant_scope, ctx.graph_name, graph_fname),
         (inputs.modality, inputs.operation),
@@ -404,7 +404,7 @@ pub(super) async fn submit_modality_replication(
     ctx: &ModalityReplication<'_>,
     batch_id: String,
     graph_fname: String,
-    command: crate::raft::SanitizedModalityRaftCommand,
+    command: medulla_raft::raft::SanitizedModalityRaftCommand,
     payload: ResultPayload,
 ) -> Response {
     let created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
@@ -424,11 +424,11 @@ pub(super) async fn submit_modality_replication(
         Ok(context) => context,
         Err(error) => return Response::err(ctx.req_id, error),
     };
-    let request = crate::raft::RaftRequest {
+    let request = medulla_raft::raft::RaftRequest {
         graph_fname,
         graph_name: ctx.graph_name.to_string(),
         graph_type: ctx.graph_type,
-        command: crate::raft::ReplicatedMutation::served_modality(command),
+        command: medulla_raft::raft::ReplicatedMutation::served_modality(command),
         committed_at_ms: created_at_ms,
         mutation,
     };

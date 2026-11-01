@@ -7,7 +7,7 @@
 //! to the deployment tenant; snapshots from another tenant fail closed.
 
 #[cfg(feature = "raft")]
-use crate::raft::RaftStateExt;
+use medulla_raft::raft::RaftStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;

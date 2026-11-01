@@ -1,6 +1,6 @@
 use super::*;
 #[cfg(feature = "raft")]
-use crate::raft::RaftStateExt;
+use medulla_raft::raft::RaftStateExt;
 
 /// Per-tenant opaque coordinator key for a command that owns its OWN store
 /// (keyed by blob/kv/series/job/statechart/catalog id) and is therefore not
@@ -86,12 +86,12 @@ const TRANSACTION_LEDGER_ROUTE: &str = "TransactionLedger";
 /// the shared `Transaction` domain label `command.domain()` reports.
 #[cfg(feature = "raft")]
 fn native_route_ledger_override(
-    command: &crate::raft::NativeMutationCommand,
+    command: &medulla_raft::raft::NativeMutationCommand,
     domain: Option<String>,
 ) -> Option<String> {
     if matches!(
         command,
-        crate::raft::NativeMutationCommand::Transaction { .. }
+        medulla_raft::raft::NativeMutationCommand::Transaction { .. }
     ) {
         return Some(TRANSACTION_LEDGER_ROUTE.to_string());
     }
@@ -109,7 +109,7 @@ fn native_route_target(
     request_graph: &str,
     tenant_scope: &str,
     method: &Method,
-    command: &crate::raft::NativeMutationCommand,
+    command: &medulla_raft::raft::NativeMutationCommand,
 ) -> String {
     // Publication coordination commands share the AnalyticsJob domain for
     // validation, but their target is the named request graph. The sealed
@@ -117,8 +117,8 @@ fn native_route_target(
     #[cfg(feature = "jobs")]
     if matches!(
         command,
-        crate::raft::NativeMutationCommand::JobPublicationCommit { .. }
-            | crate::raft::NativeMutationCommand::JobPublicationFinalize { .. }
+        medulla_raft::raft::NativeMutationCommand::JobPublicationCommit { .. }
+            | medulla_raft::raft::NativeMutationCommand::JobPublicationFinalize { .. }
     ) {
         return request_graph.to_string();
     }
@@ -133,7 +133,7 @@ fn native_route_target(
         }
         Some("GraphLifecycle") => native_route_lifecycle_target(request_graph, method),
         Some("ClusterAdmin") | Some("SessionControl") | Some(TRANSACTION_LEDGER_ROUTE) => {
-            crate::raft::placement::PLACEMENT_GRAPH.to_string()
+            medulla_raft::raft::placement::PLACEMENT_GRAPH.to_string()
         }
         // Identity/RBAC state is process-global authority. Every such command must
         // therefore share one Raft order; tenant-hashed groups could apply
@@ -168,14 +168,14 @@ mod consensus_admin_route_tests {
                 initial_members: Vec::new(),
             },
         ] {
-            let command = crate::raft::NativeMutationCommand::from_public_method(
+            let command = medulla_raft::raft::NativeMutationCommand::from_public_method(
                 method.clone(),
                 auth_material,
             )
             .expect("method has a typed consensus command");
             assert_eq!(
                 native_route_target("caller-graph", "tenant-scope", &method, &command),
-                crate::raft::placement::PLACEMENT_GRAPH
+                medulla_raft::raft::placement::PLACEMENT_GRAPH
             );
         }
     }
@@ -185,7 +185,7 @@ mod consensus_admin_route_tests {
         let method = Method::RbacAdmin {
             op: crate::acl::RbacAdminOp::List,
         };
-        let command = crate::raft::NativeMutationCommand::from_public_method(
+        let command = medulla_raft::raft::NativeMutationCommand::from_public_method(
             method.clone(),
             "consensus-identity-route-test",
         )
@@ -209,7 +209,7 @@ mod consensus_admin_route_tests {
             ),
             stamp: None,
         };
-        let command = crate::raft::NativeMutationCommand::from_public_method(
+        let command = medulla_raft::raft::NativeMutationCommand::from_public_method(
             method.clone(),
             "consensus-identity-mutation-route-test",
         )
@@ -348,10 +348,10 @@ async fn resolve_native_proposal_route(
     request_graph: &str,
     authority: &CarrierAuthority,
     method: &Method,
-    command: &crate::raft::NativeMutationCommand,
+    command: &medulla_raft::raft::NativeMutationCommand,
 ) -> (
     String,
-    Option<Arc<crate::raft::multi::MultiRaft>>,
+    Option<Arc<medulla_raft::raft::multi::MultiRaft>>,
     crate::protocol::GraphType,
 ) {
     let graph_name = native_route_target(request_graph, authority.tenant_scope(), method, command);
@@ -372,10 +372,10 @@ async fn resolve_native_proposal_route(
 #[cfg(feature = "raft")]
 fn build_native_raft_request(
     proposal: &NativeProposal<'_>,
-    routed: &crate::raft::multi::RoutedRaftHandle,
-    command: crate::raft::NativeMutationCommand,
+    routed: &medulla_raft::raft::multi::RoutedRaftHandle,
+    command: medulla_raft::raft::NativeMutationCommand,
     identity_bootstrap: bool,
-) -> Result<crate::raft::RaftRequest, Response> {
+) -> Result<medulla_raft::raft::RaftRequest, Response> {
     let committed_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let graph_fname = medulla_kernel::persist::sanitize(proposal.graph_name);
     let graph_scope = medulla_server_api::mutation_batch::opaque_idempotency_key_for_context(
@@ -408,11 +408,11 @@ fn build_native_raft_request(
         Ok(mutation) => mutation,
         Err(error) => return Err(Response::err(proposal.request_id, error)),
     };
-    Ok(crate::raft::RaftRequest {
+    Ok(medulla_raft::raft::RaftRequest {
         graph_fname,
         graph_name: proposal.graph_name.to_string(),
         graph_type: proposal.graph_type,
-        command: crate::raft::ReplicatedMutation::Native { command },
+        command: medulla_raft::raft::ReplicatedMutation::Native { command },
         committed_at_ms,
         mutation,
     })
@@ -426,8 +426,8 @@ fn build_native_raft_request(
 async fn coordinate_native_result(
     proposal: &NativeProposal<'_>,
     coordination: NativeCoordination,
-    multi: Arc<crate::raft::multi::MultiRaft>,
-    routed: crate::raft::multi::RoutedRaftHandle,
+    multi: Arc<medulla_raft::raft::multi::MultiRaft>,
+    routed: medulla_raft::raft::multi::RoutedRaftHandle,
     result: ResultPayload,
 ) -> Response {
     match (coordination, result) {
@@ -518,9 +518,9 @@ fn terminal_native_response(
 async fn dispatch_native_raft_write(
     proposal: &NativeProposal<'_>,
     coordination: NativeCoordination,
-    multi: Arc<crate::raft::multi::MultiRaft>,
-    routed: crate::raft::multi::RoutedRaftHandle,
-    request: crate::raft::RaftRequest,
+    multi: Arc<medulla_raft::raft::multi::MultiRaft>,
+    routed: medulla_raft::raft::multi::RoutedRaftHandle,
+    request: medulla_raft::raft::RaftRequest,
 ) -> Response {
     let request_id = proposal.request_id;
     let response = match routed.handle.client_write(request).await {
@@ -585,7 +585,7 @@ pub(in crate::server::dispatch) async fn propose_native_mutation(
         }
     );
     let server_secret = timed_read(state).await.auth_secret.clone();
-    let command = match crate::raft::NativeMutationCommand::from_public_method(
+    let command = match medulla_raft::raft::NativeMutationCommand::from_public_method(
         method.clone(),
         &server_secret,
     ) {

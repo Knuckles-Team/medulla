@@ -2,16 +2,16 @@ use super::*;
 
 #[cfg(feature = "raft")]
 struct TransactionSubmission<'a> {
-    multi: &'a Arc<crate::raft::multi::MultiRaft>,
+    multi: &'a Arc<medulla_raft::raft::multi::MultiRaft>,
     authority: &'a CarrierAuthority,
     request_id: u64,
     coordinator_id: &'a str,
     operation: &'a str,
-    group_id: crate::raft::GroupId,
+    group_id: medulla_raft::raft::GroupId,
     placement_epoch: u64,
     fencing_token: Option<u64>,
     graph_type: crate::protocol::GraphType,
-    command: crate::raft::NativeMutationCommand,
+    command: medulla_raft::raft::NativeMutationCommand,
 }
 
 /// One engine-native consensus command proposed under a verified carrier's
@@ -19,17 +19,17 @@ struct TransactionSubmission<'a> {
 /// the placement fence of the group that must commit it.
 #[cfg(feature = "raft")]
 pub(super) struct CarrierNativeCommand<'a> {
-    pub(super) multi: &'a Arc<crate::raft::multi::MultiRaft>,
+    pub(super) multi: &'a Arc<medulla_raft::raft::multi::MultiRaft>,
     pub(super) authority: &'a CarrierAuthority,
     pub(super) request_id: u64,
     pub(super) attempt_nonce: Option<medulla_types::contract::Nonce>,
     pub(super) batch_id: String,
     pub(super) graph_name: String,
     pub(super) graph_type: crate::protocol::GraphType,
-    pub(super) group_id: crate::raft::GroupId,
+    pub(super) group_id: medulla_raft::raft::GroupId,
     pub(super) placement_epoch: u64,
     pub(super) fencing_token: Option<u64>,
-    pub(super) command: crate::raft::NativeMutationCommand,
+    pub(super) command: medulla_raft::raft::NativeMutationCommand,
 }
 
 /// Commit `proposal` through its group, stamped now, under the carrier's
@@ -37,7 +37,7 @@ pub(super) struct CarrierNativeCommand<'a> {
 #[cfg(feature = "raft")]
 pub(super) async fn commit_carrier_native_command(
     proposal: CarrierNativeCommand<'_>,
-) -> Result<crate::raft::RaftResponse, String> {
+) -> Result<medulla_raft::raft::RaftResponse, String> {
     let committed_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let mutation = medulla_server_api::api::persistence::RaftMutationContext::from_verified_request(
         proposal.batch_id,
@@ -52,11 +52,11 @@ pub(super) async fn commit_carrier_native_command(
             created_at_ms: committed_at_ms,
         },
     )?;
-    let request = crate::raft::RaftRequest {
+    let request = medulla_raft::raft::RaftRequest {
         graph_fname: medulla_kernel::persist::sanitize(&proposal.graph_name),
         graph_name: proposal.graph_name,
         graph_type: proposal.graph_type,
-        command: crate::raft::ReplicatedMutation::Native {
+        command: medulla_raft::raft::ReplicatedMutation::Native {
             command: proposal.command,
         },
         committed_at_ms,
@@ -135,13 +135,13 @@ impl TransactionConsensusPhase {
         }
     }
 
-    fn command(self, coordinator_id: &str, commit: bool) -> crate::raft::NativeMutationCommand {
+    fn command(self, coordinator_id: &str, commit: bool) -> medulla_raft::raft::NativeMutationCommand {
         match self {
-            Self::Decision => crate::raft::NativeMutationCommand::TransactionDecision {
+            Self::Decision => medulla_raft::raft::NativeMutationCommand::TransactionDecision {
                 coordinator_id: coordinator_id.to_string(),
                 commit,
             },
-            Self::Finalize => crate::raft::NativeMutationCommand::TransactionFinalize {
+            Self::Finalize => medulla_raft::raft::NativeMutationCommand::TransactionFinalize {
                 coordinator_id: coordinator_id.to_string(),
                 commit,
             },
@@ -152,11 +152,11 @@ impl TransactionConsensusPhase {
 #[cfg(feature = "raft")]
 struct TransactionPhaseSubmission<'a> {
     phase: TransactionConsensusPhase,
-    multi: &'a Arc<crate::raft::multi::MultiRaft>,
+    multi: &'a Arc<medulla_raft::raft::multi::MultiRaft>,
     authority: &'a CarrierAuthority,
     request_id: u64,
     coordinator_id: &'a str,
-    control_group: crate::raft::GroupId,
+    control_group: medulla_raft::raft::GroupId,
     control_epoch: u64,
     control_fence: Option<u64>,
     graph_type: crate::protocol::GraphType,
@@ -220,7 +220,7 @@ async fn abort_consensus_transaction(
     // PREPARE reply was lost after its command committed. The abort command is
     // idempotent when no durable intent exists.
     for participant in participants {
-        let command = crate::raft::NativeMutationCommand::transaction_participant(
+        let command = medulla_raft::raft::NativeMutationCommand::transaction_participant(
             medulla_server_api::api::reentry::TransactionParticipantPhase::Abort,
             coordinator_id.to_string(),
             participant.participant_id,
@@ -266,11 +266,11 @@ async fn abort_consensus_transaction(
 /// cap while still seeing the whole coordination context.
 #[cfg(feature = "raft")]
 struct TransactionCoordination<'a> {
-    multi: &'a Arc<crate::raft::multi::MultiRaft>,
+    multi: &'a Arc<medulla_raft::raft::multi::MultiRaft>,
     authority: &'a CarrierAuthority,
     request_id: u64,
     server_secret: &'a str,
-    control_group: crate::raft::GroupId,
+    control_group: medulla_raft::raft::GroupId,
     control_epoch: u64,
     control_fence: Option<u64>,
     control_graph_type: crate::protocol::GraphType,
@@ -321,7 +321,7 @@ async fn prepare_consensus_participants(
 ) -> Result<(), Response> {
     let request_id = coordination.request_id;
     for participant in &fanout.participants {
-        let command = match crate::raft::NativeMutationCommand::transaction_participant(
+        let command = match medulla_raft::raft::NativeMutationCommand::transaction_participant(
             medulla_server_api::api::reentry::TransactionParticipantPhase::Prepare,
             fanout.coordinator_id.clone(),
             participant.participant_id,
@@ -418,7 +418,7 @@ async fn commit_consensus_participants(
 ) -> Result<(), Response> {
     let request_id = coordination.request_id;
     for participant in &fanout.participants {
-        let command = match crate::raft::NativeMutationCommand::transaction_participant(
+        let command = match medulla_raft::raft::NativeMutationCommand::transaction_participant(
             medulla_server_api::api::reentry::TransactionParticipantPhase::Commit,
             fanout.coordinator_id.clone(),
             participant.participant_id,
@@ -467,8 +467,8 @@ pub(super) struct TransactionExecution<'a> {
     pub(super) request_id: u64,
     pub(super) authority: &'a CarrierAuthority,
     pub(super) server_secret: &'a str,
-    pub(super) multi: Arc<crate::raft::multi::MultiRaft>,
-    pub(super) control: crate::raft::multi::RoutedRaftHandle,
+    pub(super) multi: Arc<medulla_raft::raft::multi::MultiRaft>,
+    pub(super) control: medulla_raft::raft::multi::RoutedRaftHandle,
     pub(super) control_graph_type: crate::protocol::GraphType,
     pub(super) prepared_bytes: &'a [u8],
 }

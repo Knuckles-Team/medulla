@@ -1,6 +1,6 @@
 use super::*;
 #[cfg(feature = "raft")]
-use crate::raft::RaftStateExt;
+use medulla_raft::raft::RaftStateExt;
 pub(super) fn stamp_resource_reservation_timestamp(method: &mut Method) {
     if !medulla_server_api::mutation_batch::is_resource_reservation_method(method) {
         return;
@@ -233,7 +233,7 @@ pub(super) fn check_graph_op_access(
 pub(super) fn resolve_multi_raft(
     s: &ServerState,
     placement_authority: &medulla_server_api::state::PlacementAuthorityKind,
-) -> Option<Arc<crate::raft::multi::MultiRaft>> {
+) -> Option<Arc<medulla_raft::raft::multi::MultiRaft>> {
     if medulla_kernel::kernel::dispatch_support::is_replicated_apply() {
         return None;
     }
@@ -248,7 +248,7 @@ pub(super) fn resolve_multi_raft(
 
 #[cfg(all(feature = "raft", feature = "tsdb"))]
 pub(super) fn ts_placement_fence(
-    routed: Option<&crate::raft::multi::RoutedRaftHandle>,
+    routed: Option<&medulla_raft::raft::multi::RoutedRaftHandle>,
 ) -> (u64, Option<u64>) {
     match routed {
         Some(routed) => (routed.epoch, Some(routed.group_id)),

@@ -72,12 +72,6 @@ pub mod embedded;
 // preserving each caller's existing path prefix and cleanup contract.
 #[cfg(feature = "server")]
 pub mod server;
-// In-engine Raft replication (CONCEPT:AU-KG.ingest.source-sync-canonical) — cluster tier only, behind the
-// `raft` feature. A default/pi/full build links no openraft. The module is
-// self-`#![cfg(feature = "raft")]`-gated; this `mod` line is also gated so it does
-// not even appear in a non-raft build.
-#[cfg(feature = "raft")]
-pub mod raft;
 
 // Unified single binary — the opt-in in-process pyo3-engine (unified-binary program,
 // workstream W-A; docs/architecture/unified-inprocess-engine.md). Re-exported ONLY

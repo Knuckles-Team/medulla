@@ -18,7 +18,7 @@ use medulla_server_api::state::ServerState;
 // supersteps over multi-Raft groups). The plan-backed matview path below shares this
 // module but touches NONE of it.
 #[cfg(feature = "compute-dist")]
-use crate::raft::pregel;
+use medulla_raft::raft::pregel;
 use medulla_server_api::api::persistence::MatView;
 #[cfg(feature = "matview")]
 use medulla_server_api::matview;

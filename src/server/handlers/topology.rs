@@ -13,7 +13,7 @@
 //! endpoint authority.
 
 #[cfg(feature = "raft")]
-use crate::raft::RaftStateExt;
+use medulla_raft::raft::RaftStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 use std::sync::Arc;
@@ -123,9 +123,9 @@ fn signed_snapshot(
 
 #[cfg(feature = "raft")]
 fn member_role(
-    node_id: crate::raft::NodeId,
-    leader: Option<crate::raft::NodeId>,
-    voters: &[crate::raft::NodeId],
+    node_id: medulla_raft::raft::NodeId,
+    leader: Option<medulla_raft::raft::NodeId>,
+    voters: &[medulla_raft::raft::NodeId],
 ) -> &'static str {
     if Some(node_id) == leader {
         "leader"
@@ -149,7 +149,7 @@ fn certificate_value(
 }
 
 #[cfg(feature = "raft")]
-fn member_health(leader_id: Option<crate::raft::NodeId>) -> &'static str {
+fn member_health(leader_id: Option<medulla_raft::raft::NodeId>) -> &'static str {
     // Membership is the only health authority available on this RPC.  Do not
     // imply a transport heartbeat: an elected group is "healthy" from the
     // membership authority's perspective, while a leaderless group is
@@ -179,9 +179,9 @@ struct MemberProjection {
 fn project_group_members(
     store: &medulla_persistence::node_info_store::NodeInfoStore,
     cluster_id: &str,
-    ids: &[crate::raft::NodeId],
-    voters: &[crate::raft::NodeId],
-    leader_id: Option<crate::raft::NodeId>,
+    ids: &[medulla_raft::raft::NodeId],
+    voters: &[medulla_raft::raft::NodeId],
+    leader_id: Option<medulla_raft::raft::NodeId>,
     health: &str,
 ) -> Result<MemberProjection, String> {
     let mut members = Vec::with_capacity(ids.len());
@@ -232,10 +232,10 @@ fn project_group_members(
 
 #[cfg(feature = "raft")]
 async fn collect_group_projection(
-    multi: &crate::raft::multi::MultiRaft,
+    multi: &medulla_raft::raft::multi::MultiRaft,
     store: &medulla_persistence::node_info_store::NodeInfoStore,
     cluster_id: &str,
-    group_id: crate::raft::NodeId,
+    group_id: medulla_raft::raft::NodeId,
     member_count: usize,
 ) -> Result<GroupProjection, String> {
     let voters = multi.group_membership(group_id).await.ok_or_else(|| {

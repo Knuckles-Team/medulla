@@ -179,9 +179,9 @@ mod modality_replay_receipt_tests {
 
     #[test]
     fn replay_decoder_accepts_single_receipt() {
-        let payload = crate::raft::decode_sanitized_modality_result(
+        let payload = medulla_raft::raft::decode_sanitized_modality_result(
             medulla_types::ServedModalityKind::Document,
-            crate::raft::SanitizedModalityMutation::Ingest,
+            medulla_raft::raft::SanitizedModalityMutation::Ingest,
             &single_wire(),
         )
         .unwrap();
@@ -195,9 +195,9 @@ mod modality_replay_receipt_tests {
 
     #[test]
     fn replay_decoder_accepts_bounded_stream_receipt() {
-        let payload = crate::raft::decode_sanitized_modality_result(
+        let payload = medulla_raft::raft::decode_sanitized_modality_result(
             medulla_types::ServedModalityKind::Document,
-            crate::raft::SanitizedModalityMutation::IngestStream,
+            medulla_raft::raft::SanitizedModalityMutation::IngestStream,
             &stream_wire(),
         )
         .unwrap();
@@ -215,18 +215,18 @@ mod modality_replay_receipt_tests {
     #[test]
     fn replay_decoder_rejects_wrong_shape_and_oversized_receipts() {
         let wrong_payload = rmp_serde::to_vec_named(&ResultPayload::Bool(true)).unwrap();
-        assert!(crate::raft::decode_sanitized_modality_result(
+        assert!(medulla_raft::raft::decode_sanitized_modality_result(
             medulla_types::ServedModalityKind::Document,
-            crate::raft::SanitizedModalityMutation::Ingest,
+            medulla_raft::raft::SanitizedModalityMutation::Ingest,
             &wrong_payload,
         )
         .is_err());
 
         // A stream operation requires the typed stream result; a single outcome
         // must not be silently reinterpreted as a one-item stream.
-        assert!(crate::raft::decode_sanitized_modality_result(
+        assert!(medulla_raft::raft::decode_sanitized_modality_result(
             medulla_types::ServedModalityKind::Document,
-            crate::raft::SanitizedModalityMutation::IngestStream,
+            medulla_raft::raft::SanitizedModalityMutation::IngestStream,
             &single_wire(),
         )
         .is_err());
@@ -238,9 +238,9 @@ mod modality_replay_receipt_tests {
         };
         let oversized = vec![outcome; 65];
         let oversized_wire = encode_modality_replay_wire(&oversized);
-        assert!(crate::raft::decode_sanitized_modality_result(
+        assert!(medulla_raft::raft::decode_sanitized_modality_result(
             medulla_types::ServedModalityKind::Document,
-            crate::raft::SanitizedModalityMutation::IngestStream,
+            medulla_raft::raft::SanitizedModalityMutation::IngestStream,
             &oversized_wire,
         )
         .is_err());

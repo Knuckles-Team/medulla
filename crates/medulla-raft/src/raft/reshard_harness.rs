@@ -1,0 +1,268 @@
+//! Online-resharding + tenant-hibernation gauntlet (CONCEPT:MEDULLA-KG.storage.100m-tenant).
+//!
+//! Spins a live one-node, two-group cluster over a shared authoritative shard (the SAME
+//! machinery the cross-shard harness uses) and proves the two elastic-tenant
+//! invariants:
+//!
+//!   * **Reshard keeps data + serves correctly.** A graph written on group A,
+//!     reshareded A→B, retains EVERY pre-reshard node (readable) AND a post-reshard
+//!     write routes through B and lands. No downtime, no data loss.
+//!   * **Hibernate → rehydrate is intact.** A graph forced durable then hibernated
+//!     (in-RAM state dropped) rehydrates from redb with every node restored.
+
+use std::sync::Arc;
+
+use tokio::sync::RwLock;
+
+use super::harness::cluster::fixture;
+use super::multi::MultiRaft;
+use super::reshard::TenantManager;
+use super::{GroupId, RaftRequest};
+use medulla_types::protocol::GraphType;
+use medulla_types::protocol::Method;
+
+const GROUP_A: GroupId = 100;
+const GROUP_B: GroupId = 200;
+const GRAPH: &str = "tenant:acme";
+
+/// Bring up a one-node, two-group cluster with `GRAPH` initially assigned to group A.
+async fn bring_up(
+    dir: &str,
+    backend: fixture::Backend,
+) -> (Arc<MultiRaft>, Arc<RwLock<medulla_server_api::state::ServerState>>) {
+    let (multi, state) = fixture::start_single_node_groups(
+        dir,
+        backend,
+        medulla_core::isolation::IsolationLayer::new(),
+        "reshard-test",
+        &[GROUP_A, GROUP_B],
+    )
+    .await;
+    multi.router().assign(GRAPH, GROUP_A);
+    (multi, state)
+}
+
+/// Write `node_id` into `GRAPH` through whichever group currently owns it.
+async fn write_via_owner(multi: &Arc<MultiRaft>, node_id: &str) -> Result<(), String> {
+    let group = multi
+        .group_for_graph(GRAPH)
+        .await
+        .ok_or_else(|| "owner group not running".to_string())?;
+    let req = RaftRequest {
+        graph_fname: medulla_kernel::persist::sanitize(GRAPH),
+        graph_name: GRAPH.to_string(),
+        graph_type: GraphType::Global,
+        committed_at_ms: 0,
+        mutation: medulla_server_api::api::persistence::RaftMutationContext::internal(
+            "raft-reshard-harness",
+            GRAPH,
+            node_id,
+            0,
+            0,
+        ),
+        command: super::ReplicatedMutation::graph(
+            Method::AddNode {
+                node_id: node_id.to_string(),
+                properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({"id": node_id}))
+                    .unwrap(),
+            },
+            "reshard-test",
+        )?,
+    };
+    group.client_write(req).await.map(|_| ())
+}
+
+async fn has_node(state: &Arc<RwLock<medulla_server_api::state::ServerState>>, node_id: &str) -> bool {
+    let s = state.read().await;
+    s.registry
+        .get(GRAPH)
+        .map(|e| e.core.has_node(node_id))
+        .unwrap_or(false)
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// 1. Online reshard A→B keeps all data AND serves a post-reshard write.
+// ─────────────────────────────────────────────────────────────────────────
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn reshard_keeps_data_and_serves_after() {
+    // Opens a durable store, so the ambient encryption env must hold still for
+    // this whole body. READ guard: it excludes only a key MUTATOR, never another
+    // opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let (dir, backend) = fixture::fresh_backend("medulla-reshard", "keep");
+    let (multi, state) = bring_up(&dir, backend.clone()).await;
+    let tenants = TenantManager::new(multi.clone(), backend.clone());
+
+    // Write 5 nodes through group A (the initial owner).
+    assert_eq!(multi.router().group_of(GRAPH), GROUP_A);
+    for i in 0..5 {
+        write_via_owner(&multi, &format!("a{i}")).await.unwrap();
+    }
+    assert_eq!(fixture::node_count(&state, GRAPH).await, 5, "5 nodes on A");
+
+    // ── RESHARD A→B (online, no downtime) ──
+    let report = tenants
+        .reshard_graph(GRAPH, GROUP_B)
+        .await
+        .expect("reshard A→B");
+    assert_eq!(report.from_group, GROUP_A);
+    assert_eq!(report.to_group, GROUP_B);
+    assert_eq!(report.nodes_transferred, 5, "5 nodes durable at barrier");
+    // The router now points the graph at group B.
+    assert_eq!(multi.router().group_of(GRAPH), GROUP_B);
+
+    // (a) EVERY pre-reshard node is still present + readable — no data loss.
+    for i in 0..5 {
+        assert!(has_node(&state, &format!("a{i}")).await, "a{i} preserved");
+    }
+
+    // (b) A post-reshard write routes through B and lands — serves correctly.
+    write_via_owner(&multi, "b0").await.expect("write via B");
+    assert!(has_node(&state, "b0").await, "post-reshard write landed");
+    assert_eq!(fixture::node_count(&state, GRAPH).await, 6, "5 old + 1 new");
+
+    multi.stop_listener();
+    backend.shutdown();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// 2. Reshard data survives a process restart (durable transfer barrier).
+// ─────────────────────────────────────────────────────────────────────────
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn reshard_data_durable_across_restart() {
+    // Held for the whole test: opens the backend TWICE (initial + a restart reopen
+    // of the SAME dir) and both opens must resolve the same encryption-at-rest
+    // cipher, or the reopen's read fails with "encrypted durable value is missing
+    // sealed framing". `fresh_dir`'s `Once`-guarded key provisioning only fires the
+    // FIRST time it's called process-wide, so it does not by itself protect this
+    // test's two opens against an unrelated test's concurrent env mutation between
+    // them. See `medulla_kernel::crypto::acquire_test_env_lock`'s doc.
+    #[cfg(feature = "security")]
+    let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
+    let dir = fixture::fresh_dir("medulla-reshard", "durable");
+    let backend = fixture::open_backend(&dir).expect("open redb");
+    {
+        let (multi, _state) = bring_up(&dir, backend.clone()).await;
+        let tenants = TenantManager::new(multi.clone(), backend.clone());
+        for i in 0..4 {
+            write_via_owner(&multi, &format!("d{i}")).await.unwrap();
+        }
+        let report = tenants
+            .reshard_graph(GRAPH, GROUP_B)
+            .await
+            .expect("reshard");
+        // Pin the durable barrier the restart assertion below depends on, the way
+        // the sibling `reshard_keeps_data_and_serves_after` already does. Without
+        // it, "d0 durable across restart" could not distinguish "the restart lost
+        // it" from "the reshard never observed it durable in the first place".
+        assert_eq!(
+            report.nodes_transferred, 4,
+            "4 nodes must be durable at the transfer barrier"
+        );
+        // Node TEARDOWN, not group close: see the same fix in
+        // `placement_harness::catalog_persists_and_reloads_with_epoch`.
+        // `close_group` leaves the control-plane tasks and the owning
+        // `ServerState::multi_raft` publication alive, and that publication plus
+        // the manager's own `ctx.state` handle are a reference cycle, so the
+        // backend Arc never fell back to one and `reopen_backend` timed out
+        // naming the leak. `shutdown()` breaks the cycle.
+        multi.shutdown().await;
+    }
+    // Restart over the SAME files: every reshareded node is durable.
+    //
+    // Recovery order matters and this fixture had it backwards: `MedullaStore::open`'s
+    // own doc states that "the graph DATA is recovered separately by the M2
+    // `load_all` path BEFORE Raft starts, so on boot the applied pointers and the
+    // on-disk graph data agree". Calling `bring_up` (which creates the groups) and
+    // only THEN `load_all` inverts that contract, so this was not simulating the
+    // restart it claims to.
+    let backend2 = fixture::reopen_backend(backend, &dir).expect("reopen");
+    let (multi2, state2) = fixture::start_recovered_single_node_groups(
+        &dir,
+        backend2.clone(),
+        medulla_core::isolation::IsolationLayer::new(),
+        "reshard-test",
+        &[GROUP_A, GROUP_B],
+    )
+    .await;
+    multi2.router().assign(GRAPH, GROUP_B);
+    // Name WHICH half failed. `has_node` answers `false` both when the graph is
+    // absent from the recovered registry and when the graph is there but the row
+    // is not -- two completely different defects that a bare "d0 durable across
+    // restart" cannot tell apart.
+    {
+        let s = state2.read().await;
+        let names: Vec<String> = s
+            .registry
+            .list()
+            .into_iter()
+            .map(|(name, _)| name)
+            .collect();
+        assert!(
+            s.registry.exists(GRAPH),
+            "the recovered registry must hold {GRAPH}; it holds {names:?}"
+        );
+    }
+    for i in 0..4 {
+        assert!(
+            has_node(&state2, &format!("d{i}")).await,
+            "d{i} durable across restart"
+        );
+    }
+    multi2.stop_listener();
+    backend2.shutdown();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// 3. Hibernate drops RAM; rehydrate restores every node intact.
+// ─────────────────────────────────────────────────────────────────────────
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn hibernate_then_rehydrate_intact() {
+    // Opens a durable store, so the ambient encryption env must hold still for
+    // this whole body. READ guard: it excludes only a key MUTATOR, never another
+    // opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let dir = fixture::fresh_dir("medulla-reshard", "hib");
+    let backend = fixture::open_backend(&dir).expect("open redb");
+    let (multi, state) = bring_up(&dir, backend.clone()).await;
+    let tenants = TenantManager::new(multi.clone(), backend.clone());
+
+    for i in 0..7 {
+        write_via_owner(&multi, &format!("h{i}")).await.unwrap();
+    }
+    assert_eq!(
+        fixture::node_count(&state, GRAPH).await,
+        7,
+        "7 nodes resident"
+    );
+
+    // ── HIBERNATE: force durable, drop in-RAM state ──
+    let freed = tenants.hibernate_graph(GRAPH).await.expect("hibernate");
+    assert_eq!(freed, 7, "7 nodes evicted from RAM");
+    assert_eq!(
+        fixture::node_count(&state, GRAPH).await,
+        0,
+        "core is now empty in RAM"
+    );
+
+    // ── REHYDRATE on next access: every node restored from redb ──
+    let restored = tenants.rehydrate_graph(GRAPH).await.expect("rehydrate");
+    assert_eq!(restored, 7, "7 nodes restored");
+    assert_eq!(
+        fixture::node_count(&state, GRAPH).await,
+        7,
+        "core repopulated"
+    );
+    for i in 0..7 {
+        assert!(has_node(&state, &format!("h{i}")).await, "h{i} rehydrated");
+    }
+
+    multi.stop_listener();
+    backend.shutdown();
+    let _ = std::fs::remove_dir_all(&dir);
+}

@@ -16,7 +16,7 @@ pub(crate) struct HandleContext<'a> {
     pub(crate) persistence: &'a Option<Arc<dyn PersistenceBackend>>,
     pub(crate) agent_library: &'a Option<Arc<AgentLibraryStore>>,
     #[cfg(feature = "raft")]
-    pub(crate) routed_raft: &'a Option<crate::raft::multi::RoutedRaftHandle>,
+    pub(crate) routed_raft: &'a Option<medulla_raft::raft::multi::RoutedRaftHandle>,
 }
 
 /// The validated delegation plus its native WorkItem lowering.  The original

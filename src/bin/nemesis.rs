@@ -16,9 +16,9 @@
 
 use std::time::Duration;
 
-use medulla::raft::harness::loadgen::LoadConfig;
-use medulla::raft::harness::nemesis::Nemesis;
-use medulla::raft::harness::run_gauntlet;
+use medulla_raft::raft::harness::loadgen::LoadConfig;
+use medulla_raft::raft::harness::nemesis::Nemesis;
+use medulla_raft::raft::harness::run_gauntlet;
 
 struct Opts {
     nodes: usize,

@@ -146,8 +146,8 @@ fn native_command_excludes_plaintext_environment_values() {
     assert!(graph.open_graph("different-key").is_err());
 }
 
-fn graph_request(graph_name: &str, group_id: crate::raft::GroupId) -> crate::raft::RaftRequest {
-    crate::raft::RaftRequest {
+fn graph_request(graph_name: &str, group_id: medulla_raft::raft::GroupId) -> medulla_raft::raft::RaftRequest {
+    medulla_raft::raft::RaftRequest {
         graph_fname: medulla_kernel::persist::sanitize(graph_name),
         graph_name: graph_name.to_string(),
         graph_type: crate::protocol::GraphType::Global,

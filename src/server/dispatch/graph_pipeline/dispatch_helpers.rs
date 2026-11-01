@@ -21,7 +21,7 @@ pub(super) struct GraphOpContext<'a> {
 pub(super) async fn dispatch_op_tsdb_write_fence(
     req_id: u64,
     graph_name: &str,
-    routed_raft: Option<&crate::raft::multi::RoutedRaftHandle>,
+    routed_raft: Option<&medulla_raft::raft::multi::RoutedRaftHandle>,
     method: &Method,
 ) -> Option<Response> {
     if !matches!(
@@ -64,7 +64,7 @@ pub(super) struct KnowledgeStreamCtx<'a> {
     #[cfg(feature = "security")]
     pub(super) rls: std::sync::Arc<crate::isolation::IsolationLayer>,
     #[cfg(feature = "raft")]
-    pub(super) routed_raft: Option<crate::raft::multi::RoutedRaftHandle>,
+    pub(super) routed_raft: Option<medulla_raft::raft::multi::RoutedRaftHandle>,
     pub(super) knowledge_stream_authority:
         Option<handlers::knowledge_stream::KnowledgeStreamAuthority>,
 }
@@ -300,7 +300,7 @@ pub(super) struct ServedModalityCtx<'a> {
     #[cfg(feature = "streaming")]
     pub(super) cdc: Option<Arc<medulla_server_api::cdc::CdcHub>>,
     #[cfg(feature = "raft")]
-    pub(super) routed_raft: Option<crate::raft::multi::RoutedRaftHandle>,
+    pub(super) routed_raft: Option<medulla_raft::raft::multi::RoutedRaftHandle>,
     pub(super) modality_authority: Option<handlers::modality::ModalityAuthority>,
 }
 
@@ -485,7 +485,7 @@ pub(super) fn replicated_graph_batch_id(
 #[cfg(feature = "raft")]
 pub(super) async fn dispatch_op_raft_write_routing_barrier(
     ctx: RaftWriteBarrierCtx<'_>,
-    routed: crate::raft::multi::RoutedRaftHandle,
+    routed: medulla_raft::raft::multi::RoutedRaftHandle,
     method: Method,
 ) -> Response {
     let RaftWriteBarrierCtx {
@@ -569,15 +569,15 @@ struct BoundGraphRequest<'a> {
     mutation: medulla_server_api::api::persistence::RaftMutationContext,
     method: Method,
     server_secret: &'a str,
-    group_id: crate::raft::GroupId,
+    group_id: medulla_raft::raft::GroupId,
 }
 
 #[cfg(feature = "raft")]
 fn build_bound_graph_request(
     input: BoundGraphRequest<'_>,
-) -> Result<crate::raft::RaftRequest, String> {
-    let command = crate::raft::ReplicatedMutation::caller_graph(input.method, input.server_secret)?;
-    let mut request = crate::raft::RaftRequest {
+) -> Result<medulla_raft::raft::RaftRequest, String> {
+    let command = medulla_raft::raft::ReplicatedMutation::caller_graph(input.method, input.server_secret)?;
+    let mut request = medulla_raft::raft::RaftRequest {
         graph_fname: input.graph_fname,
         graph_name: input.graph_name.to_string(),
         graph_type: input.graph_type,
@@ -593,8 +593,8 @@ fn build_bound_graph_request(
 pub(super) async fn resolve_routed_raft(
     req_id: u64,
     graph_name: &str,
-    multi_raft: Option<&std::sync::Arc<crate::raft::multi::MultiRaft>>,
-) -> Result<Option<crate::raft::multi::RoutedRaftHandle>, Response> {
+    multi_raft: Option<&std::sync::Arc<medulla_raft::raft::multi::MultiRaft>>,
+) -> Result<Option<medulla_raft::raft::multi::RoutedRaftHandle>, Response> {
     let Some(multi) = multi_raft else {
         return Ok(None);
     };

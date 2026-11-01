@@ -12,7 +12,7 @@
 //!    split-brain — the survivors form a quorum of 2/3).
 
 #[cfg(feature = "raft")]
-use crate::raft::RaftStateExt;
+use medulla_raft::raft::RaftStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 use std::collections::{BTreeMap, BTreeSet};
@@ -146,7 +146,7 @@ async fn start_multi(
 /// EH-287 proof, not assertion: drives the SAME direct-construction primitive
 /// (`start_multi` / `MultiRaft::start`) that `multi_node_group_join_then_leader_rebalance`
 /// uses, then checks trace capture actually turned on for it. `MultiRaft::start`
-/// itself logs at `medulla::raft::multi` during startup (e.g. "Raft
+/// itself logs at `medulla_raft::raft::multi` during startup (e.g. "Raft
 /// multi-group RPC listener started"), so that target's presence in the GLOBAL
 /// dump is direct evidence `start_multi` reached `trace_capture::init()` on this
 /// path -- not the `node::start`/`cluster_cfg_with_groups` one.
@@ -169,7 +169,7 @@ async fn direct_multi_raft_construction_reaches_trace_capture() {
 
     let dump = super::harness::trace_capture::render_dump();
     assert!(
-        dump.contains("medulla::raft::multi"),
+        dump.contains("medulla_raft::raft::multi"),
         "trace capture must be initialized by the direct MultiRaft::start path \
          (start_multi), the same primitive multi_node_group_join_then_leader_rebalance \
          uses: {dump}"
@@ -2937,7 +2937,7 @@ mod dist_compute {
     use super::*;
     use crate::isolation::{AgentIdentity, AgentRole};
     use crate::protocol::{DistAlgo, GraphType};
-    use crate::raft::pregel;
+    use medulla_raft::raft::pregel;
     use medulla_server_api::access::GraphReadAuthority;
     use medulla_types::result_contract::cluster::DistResult;
 

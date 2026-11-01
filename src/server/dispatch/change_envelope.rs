@@ -276,7 +276,7 @@ async fn check_change_envelope_placement_fence(
     req_id: u64,
     #[cfg(feature = "raft")] graph_name: &str,
     envelope: &medulla_types::change_envelope::ChangeEnvelope,
-    #[cfg(feature = "raft")] routed_raft: Option<&crate::raft::multi::RoutedRaftHandle>,
+    #[cfg(feature = "raft")] routed_raft: Option<&medulla_raft::raft::multi::RoutedRaftHandle>,
 ) -> Result<(), Response> {
     #[cfg(feature = "raft")]
     if let Some(routed) = routed_raft {
@@ -332,7 +332,7 @@ struct ChangeEnvelopeReplicaCtx<'a> {
     graph_type: crate::protocol::GraphType,
     tenant_scope: &'a str,
     fname: &'a str,
-    routed_raft: Option<&'a crate::raft::multi::RoutedRaftHandle>,
+    routed_raft: Option<&'a medulla_raft::raft::multi::RoutedRaftHandle>,
 }
 
 /// Attempt the clustered replication path for `ApplyChangeEnvelope`: one log
@@ -388,7 +388,7 @@ async fn try_replicate_change_envelope(
         Err(error) => return Some(Response::err(req_id, error)),
     };
     let server_secret = timed_read(state).await.auth_secret.clone();
-    let command = match crate::raft::ReplicatedMutation::change_envelope_with_budget(
+    let command = match medulla_raft::raft::ReplicatedMutation::change_envelope_with_budget(
         envelope,
         source_budget,
         &server_secret,
@@ -396,7 +396,7 @@ async fn try_replicate_change_envelope(
         Ok(command) => command,
         Err(error) => return Some(Response::err(req_id, error)),
     };
-    let request = crate::raft::RaftRequest {
+    let request = medulla_raft::raft::RaftRequest {
         graph_fname: fname.to_string(),
         graph_name: graph_name.to_string(),
         graph_type,

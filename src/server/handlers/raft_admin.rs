@@ -10,7 +10,7 @@
 //! exists), and a non-raft build answers a clean typed error.
 
 #[cfg(feature = "raft")]
-use crate::raft::RaftStateExt;
+use medulla_raft::raft::RaftStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -38,11 +38,11 @@ pub(crate) async fn try_handle(
             node_id,
             addr,
         } => (
-            group.unwrap_or(crate::raft::DEFAULT_GROUP),
+            group.unwrap_or(medulla_raft::raft::DEFAULT_GROUP),
             RaftAdminOp::AddLearner { node_id, addr },
         ),
         Method::RaftChangeMembership { group, voters } => (
-            group.unwrap_or(crate::raft::DEFAULT_GROUP),
+            group.unwrap_or(medulla_raft::raft::DEFAULT_GROUP),
             RaftAdminOp::ChangeMembership { voters },
         ),
         other => return Err(other),

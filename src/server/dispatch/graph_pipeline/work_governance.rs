@@ -10,8 +10,8 @@ use medulla_persistence::AsRedb;
 pub(super) async fn enforce_native_read_leadership(
     req_id: u64,
     graph_name: &str,
-    multi_raft: Option<&std::sync::Arc<crate::raft::multi::MultiRaft>>,
-    routed_raft: Option<&crate::raft::multi::RoutedRaftHandle>,
+    multi_raft: Option<&std::sync::Arc<medulla_raft::raft::multi::MultiRaft>>,
+    routed_raft: Option<&medulla_raft::raft::multi::RoutedRaftHandle>,
     stale_hint: &str,
     barrier_failure: &str,
 ) -> Result<(), Response> {
@@ -46,8 +46,8 @@ pub(super) async fn dispatch_op_resource_reservation_query(
     graph_name: &str,
     verified_context: &VerifiedRequestContext,
     persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
-    #[cfg(feature = "raft")] multi_raft: Option<std::sync::Arc<crate::raft::multi::MultiRaft>>,
-    #[cfg(feature = "raft")] routed_raft: Option<crate::raft::multi::RoutedRaftHandle>,
+    #[cfg(feature = "raft")] multi_raft: Option<std::sync::Arc<medulla_raft::raft::multi::MultiRaft>>,
+    #[cfg(feature = "raft")] routed_raft: Option<medulla_raft::raft::multi::RoutedRaftHandle>,
     method: Method,
 ) -> Response {
     #[cfg(feature = "raft")]
@@ -113,9 +113,9 @@ pub(super) struct NativeOpCtx<'a> {
     pub(super) verified_context: &'a VerifiedRequestContext,
     pub(super) persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "raft")]
-    pub(super) multi_raft: Option<std::sync::Arc<crate::raft::multi::MultiRaft>>,
+    pub(super) multi_raft: Option<std::sync::Arc<medulla_raft::raft::multi::MultiRaft>>,
     #[cfg(feature = "raft")]
-    pub(super) routed_raft: Option<crate::raft::multi::RoutedRaftHandle>,
+    pub(super) routed_raft: Option<medulla_raft::raft::multi::RoutedRaftHandle>,
 }
 
 /// A capacity lease may only be taken, renewed or released by the principal

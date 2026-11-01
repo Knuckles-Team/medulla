@@ -7,7 +7,7 @@ use super::prelude_server::*;
 use super::prelude_std::*;
 use super::*;
 #[cfg(feature = "raft")]
-use crate::raft::RaftStateExt;
+use medulla_raft::raft::RaftStateExt;
 
 /// Transient scheduler-group PREPARE result. It is returned only to the trusted
 /// coordinator; every subsequent Raft command carries it AEAD-sealed.
@@ -40,7 +40,7 @@ pub(crate) struct PreparedJobPublication {
 pub(super) struct RoutedJobPublication {
     schema_version: u16,
     prepared: PreparedJobPublication,
-    group_id: crate::raft::GroupId,
+    group_id: medulla_raft::raft::GroupId,
     placement_epoch: u64,
     fencing_token: Option<u64>,
 }
@@ -335,7 +335,7 @@ pub(crate) fn decode_prepared_job_publication(
 #[cfg(feature = "raft")]
 pub(crate) fn build_job_publication_commands(
     prepared: PreparedJobPublication,
-    group_id: crate::raft::GroupId,
+    group_id: medulla_raft::raft::GroupId,
     placement_epoch: u64,
     fencing_token: Option<u64>,
 ) -> Result<(Vec<u8>, Vec<u8>), String> {
@@ -410,7 +410,7 @@ pub(crate) async fn apply_consensus_job_publication_commit(
     state: &Arc<RwLock<ServerState>>,
     request_id: u64,
     authority: &medulla_server_api::api::persistence::RaftMutationContext,
-    applying_group: crate::raft::GroupId,
+    applying_group: medulla_raft::raft::GroupId,
     expected_coordinator_id: &str,
     plan_bytes: &[u8],
 ) -> Result<crate::mutation_batch::MutationBatchCommit, String> {

@@ -2,7 +2,7 @@
 
 use super::*;
 #[cfg(feature = "raft")]
-use crate::raft::RaftStateExt;
+use medulla_raft::raft::RaftStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 
@@ -212,12 +212,13 @@ pub(super) async fn commit_cross_shard(
     req_id: u64,
     _caller: Option<&str>,
     coordinator_id: &str,
-    multi: std::sync::Arc<crate::raft::multi::MultiRaft>,
+    multi: std::sync::Arc<medulla_raft::raft::multi::MultiRaft>,
     slices: Vec<CommitSlice>,
 ) -> Response {
-    use crate::raft::cross_shard_txn::{
-        CrossShardCoordinator, CrossShardTxn, GraphSlice, TxnOutcome,
-    };
+    use medulla_raft::raft::cross_shard_txn::CrossShardCoordinator;
+    use medulla_raft::raft::cross_shard_txn::CrossShardTxn;
+    use medulla_raft::raft::cross_shard_txn::GraphSlice;
+    use medulla_raft::raft::cross_shard_txn::TxnOutcome;
 
     let backend = {
         let s = state.read().await;
