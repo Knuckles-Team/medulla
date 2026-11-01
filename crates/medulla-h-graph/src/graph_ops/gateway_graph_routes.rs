@@ -127,7 +127,7 @@ type RouteMatcher = fn(&Method) -> bool;
 
 const ROUTE_MATCHERS: &[(RouteMatcher, Route)] = &[
     (
-        medulla_server_api::mutation::is_coalescable_structural_write,
+        medulla_server_mutation::mutation::is_coalescable_structural_write,
         Route::Coalescable,
     ),
     (is_node_state, Route::NodeState),

@@ -473,11 +473,11 @@ pub(super) async fn dispatch_op_workitem_submission_or_resources(
         }
         _ => caller,
     };
-    return match medulla_server_api::mutation_batch::commit_work_item(
-        medulla_server_api::mutation_batch::WorkItemCommitRequest::new(
+    return match medulla_server_mutation::mutation_batch::commit_work_item(
+        medulla_server_mutation::mutation_batch::WorkItemCommitRequest::new(
             persistence.as_ref(),
             core,
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: req_id,
                 principal,
             },

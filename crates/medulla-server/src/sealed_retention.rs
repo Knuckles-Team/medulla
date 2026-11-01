@@ -172,11 +172,11 @@ async fn retire(
 ) -> bool {
     let key = request.idempotency_key.clone();
     let node_id = request.node_id.clone();
-    let commit = medulla_server_api::mutation_batch::commit_work_item(
-        medulla_server_api::mutation_batch::WorkItemCommitRequest::new(
+    let commit = medulla_server_mutation::mutation_batch::commit_work_item(
+        medulla_server_mutation::mutation_batch::WorkItemCommitRequest::new(
             persistence,
             core,
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 0,
                 principal: Some(RETENTION_ACTOR),
             },

@@ -110,8 +110,8 @@ impl medulla_server_ops::api::admin::AdminApi for AdminSeam {
         &self,
         state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
         tenant_id: &str,
-        ctx: &medulla_server_api::mutation::MutationCtx<'_>,
-        plan: &medulla_server_api::mutation::MutationPlan,
+        ctx: &medulla_server_mutation::mutation::MutationCtx<'_>,
+        plan: &medulla_server_mutation::mutation::MutationPlan,
         method: &medulla_protocol_types::protocol::Method,
         op: &medulla_catalog_types::graph_schema::GraphSchemaOp,
     ) -> medulla_protocol_types::protocol::Response {

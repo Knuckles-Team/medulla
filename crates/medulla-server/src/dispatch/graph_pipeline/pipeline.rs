@@ -15,7 +15,7 @@ pub(super) struct DispatchPipelineCtx<'a> {
     pub(super) verified_actor: &'a str,
     pub(super) tenant_id: String,
     pub(super) tenant_scope: String,
-    pub(super) gateway_authz_ctx: Option<medulla_server_api::mutation::GatewayAuthzCtx>,
+    pub(super) gateway_authz_ctx: Option<medulla_server_mutation::mutation::GatewayAuthzCtx>,
     pub(super) core: Arc<medulla_graph_core::graph::GraphCore>,
     pub(super) materialization_manifest:
         Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,

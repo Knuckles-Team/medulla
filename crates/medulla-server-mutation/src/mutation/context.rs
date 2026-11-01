@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use medulla_capabilities::DurabilityDomain;
 
-use crate::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_graph_core::graph::GraphCore;
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_protocol_types::protocol::GraphType;
@@ -34,7 +34,7 @@ pub struct MutationCtx<'a> {
     pub core: &'a Arc<GraphCore>,
     pub persistence: Option<&'a Arc<dyn PersistenceBackend>>,
     #[cfg(feature = "streaming")]
-    pub cdc: Option<&'a Arc<crate::cdc::CdcHub>>,
+    pub cdc: Option<&'a Arc<medulla_server_api::cdc::CdcHub>>,
     /// Generation-owned completeness/freshness watermark for this resident core.
     /// The registry replaces or invalidates this handle on lifecycle transitions,
     /// so a stale gateway completion cannot publish into a same-name recreation.
@@ -52,7 +52,7 @@ pub struct MutationCtx<'a> {
     /// `None` ⇒ [`commit_coalescable_mutation`] falls back to the ordinary
     /// [`commit_mutation`] single-call path, unchanged.
     pub write_coalescer:
-        Option<&'a Arc<crate::routed_write_coalescer::RoutedWriteCoalescerRegistry>>,
+        Option<&'a Arc<medulla_server_api::routed_write_coalescer::RoutedWriteCoalescerRegistry>>,
 }
 
 /// Which graph-lifecycle request this is — the `CreateGraph`/`DeleteGraph`
@@ -172,7 +172,7 @@ pub(super) fn idempotency_store() -> &'static IdempotencyStore {
 /// Length-prefixed hashing via `opaque_idempotency_key_for_context`, the same
 /// derivation the durable `MutationBatch` ids use.
 pub(super) fn response_dedup_key(ctx: &MutationCtx<'_>, method: &Method) -> String {
-    crate::batch_compile::opaque_idempotency_key_for_context(
+    medulla_server_api::batch_compile::opaque_idempotency_key_for_context(
         "response-dedup",
         ctx.tenant_scope,
         ctx.graph_name,

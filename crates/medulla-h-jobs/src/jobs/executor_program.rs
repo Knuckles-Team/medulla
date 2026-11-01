@@ -262,6 +262,6 @@ pub(super) async fn current_program_active_revision_ref(
     if revision_ref.namespace() != "program_revision" {
         return Err("program active pointer revision identity has the wrong namespace".to_string());
     }
-    medulla_server_api::mutation_batch::resolve_program_promotion_identity(&core, &revision_ref)?;
+    medulla_server_mutation::mutation_batch::resolve_program_promotion_identity(&core, &revision_ref)?;
     Ok(Some(revision_ref))
 }

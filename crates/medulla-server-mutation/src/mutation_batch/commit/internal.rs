@@ -1,11 +1,11 @@
 use std::sync::{Arc, OnceLock};
 
-use crate::routed_write_coalescer::{lock_graph, lock_stripe, striped_lock};
+use medulla_server_api::{routed_write_coalescer::lock_graph, routed_write_coalescer::lock_stripe, routed_write_coalescer::striped_lock};
 
 use sha2::{Digest, Sha256};
 use tokio::sync::{Mutex, OwnedMutexGuard};
 
-use crate::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_graph_core::graph::GraphCore;
 use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_protocol_types::mutation_batch::MutationStateDescriptor;
@@ -13,7 +13,7 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_types::contract::Nonce;
 
-use crate::batch_compile::compile::{authoritative_graph_version, compile_methods, CompileBatch};
+use medulla_server_api::{batch_compile::compile::authoritative_graph_version, batch_compile::compile::compile_methods, batch_compile::compile::CompileBatch};
 
 /// The serialization lane for one transaction coordinator (a Commit parent
 /// receipt id). It is a SEPARATE stripe table from [`lock_graph`], and that is
@@ -579,7 +579,7 @@ pub(super) fn apply_projectable_method(core: &GraphCore, method: &Method) -> Res
 #[cfg(test)]
 mod lane_tests {
     use super::lock_txn_coordinator;
-    use crate::routed_write_coalescer::{lock_graph, lock_stripe};
+    use medulla_server_api::{routed_write_coalescer::lock_graph, routed_write_coalescer::lock_stripe};
 
     /// A Commit holds its coordinator lane and then its graph lane. A parent id
     /// that shares the graph's stripe must not wait on that graph lane.

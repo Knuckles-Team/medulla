@@ -163,8 +163,8 @@ fn source_batch_is_a_local_only_cluster_route() {
         batch: fixture.request(WRITER),
     };
     assert_eq!(
-        medulla_server_api::mutation::cluster_mutation_route(&method),
-        medulla_server_api::mutation::ClusterMutationRoute::LocalOnly
+        medulla_server_mutation::mutation::cluster_mutation_route(&method),
+        medulla_server_mutation::mutation::ClusterMutationRoute::LocalOnly
     );
 }
 
@@ -215,7 +215,7 @@ async fn clustered_placement_refuses_source_batch_before_publication() {
         .await;
     assert_eq!(
         refusal(&response),
-        medulla_server_api::mutation::LOCAL_ONLY_CLUSTER_REFUSAL
+        medulla_server_mutation::mutation::LOCAL_ONLY_CLUSTER_REFUSAL
     );
     assert_eq!(served.rows(), 0);
     multi.shutdown().await;

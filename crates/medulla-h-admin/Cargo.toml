@@ -49,6 +49,7 @@ medulla-source-types = { path = "../medulla-source-types" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-server-ops = { path = "../medulla-server-ops" }
 medulla-server-blob = { path = "../medulla-server-blob" }
+medulla-server-mutation = { path = "../medulla-server-mutation" }
 
 [features]
 test-support = []

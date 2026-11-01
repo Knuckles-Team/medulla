@@ -294,7 +294,7 @@ pub(super) struct ServedModalityCtx<'a> {
     pub(super) caller: Option<&'a str>,
     pub(super) verified_context: &'a VerifiedRequestContext,
     pub(super) tenant_scope: &'a str,
-    pub(super) gateway_authz_ctx: &'a Option<medulla_server_api::mutation::GatewayAuthzCtx>,
+    pub(super) gateway_authz_ctx: &'a Option<medulla_server_mutation::mutation::GatewayAuthzCtx>,
     pub(super) core: Arc<medulla_graph_core::graph::GraphCore>,
     pub(super) materialization_manifest:
         Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
@@ -401,8 +401,8 @@ async fn commit_served_modality(
     let (isolation, graph_type, owner) = gateway_authz_ctx
         .as_ref()
         .expect("ServedModality must be registered in the mutation gateway");
-    let plan = medulla_server_api::mutation::MutationPlan::for_method(&method);
-    let mutation_ctx = medulla_server_api::mutation::MutationCtx {
+    let plan = medulla_server_mutation::mutation::MutationPlan::for_method(&method);
+    let mutation_ctx = medulla_server_mutation::mutation::MutationCtx {
         anonymous: !verified_context.is_authenticated(),
         req_id,
         caller,
@@ -420,7 +420,7 @@ async fn commit_served_modality(
         materialization_manifest: materialization_manifest.as_ref(),
         write_coalescer: None,
     };
-    medulla_server_api::mutation::commit_conditional_mutation(
+    medulla_server_mutation::mutation::commit_conditional_mutation(
         &mutation_ctx,
         &plan,
         &method,

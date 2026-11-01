@@ -87,8 +87,8 @@ pub(super) fn graph_op_gateway_authz_ctx(
     s: &ServerState,
     method: &Method,
     entry: &GraphEntryFacts,
-) -> Option<medulla_server_api::mutation::GatewayAuthzCtx> {
-    if !medulla_server_api::mutation::is_gateway_routed(method) {
+) -> Option<medulla_server_mutation::mutation::GatewayAuthzCtx> {
+    if !medulla_server_mutation::mutation::is_gateway_routed(method) {
         return None;
     }
     Some((s.isolation.clone(), entry.graph_type, entry.owner.clone()))
@@ -100,7 +100,7 @@ pub(super) struct GraphOpGate {
     pub(super) read_authority: GraphReadAuthority,
     pub(super) tenant_scope: String,
     pub(super) verified_actor: String,
-    pub(super) gateway_authz_ctx: Option<medulla_server_api::mutation::GatewayAuthzCtx>,
+    pub(super) gateway_authz_ctx: Option<medulla_server_mutation::mutation::GatewayAuthzCtx>,
 }
 
 /// Gate and resolve one graph operation under the registry lock, in the ORIGINAL

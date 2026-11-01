@@ -88,7 +88,7 @@ pub(super) async fn commit_with_owner(
     // plan and try to resume its remaining children.
     let parent_id = commit_receipt_id(txn_id, idempotency_key, tenant_scope);
     let _coordinator_guard =
-        medulla_server_api::mutation_batch::lock_txn_coordinator(&parent_id).await;
+        medulla_server_mutation::mutation_batch::lock_txn_coordinator(&parent_id).await;
 
     let (open, persistence, open_map) = {
         let s = state.read().await;

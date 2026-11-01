@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_graph_core::graph::GraphCore;
 use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_protocol_types::mutation_batch::MutationBatch;
@@ -9,9 +9,9 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::ResultPayload;
 
 use super::commit::changed_work_item_ids;
-use crate::batch_compile::digest::work_item_batch_identity;
-use crate::batch_compile::{compile_methods, CompileBatch};
-use crate::routed_write_coalescer::lock_graph;
+use medulla_server_api::batch_compile::digest::work_item_batch_identity;
+use medulla_server_api::{batch_compile::compile_methods, batch_compile::CompileBatch};
+use medulla_server_api::routed_write_coalescer::lock_graph;
 use super::{
     commit_work_item, publish_change_envelope_projection, WorkItemCommitRequest,
 };
@@ -229,7 +229,7 @@ fn resource_host_result_requires_no_work_item_projection_ids() {
 
 #[test]
 fn terminal_work_item_retry_identity_is_transport_independent_and_scope_bound() {
-    let method = crate::test_support::terminal_method(2, 9);
+    let method = medulla_server_api::test_support::terminal_method(2, 9);
 
     let first = work_item_batch_identity("graph-a", "tenant-a", 10, &method).unwrap();
     let retry = work_item_batch_identity("graph-a", "tenant-a", 11, &method).unwrap();
@@ -646,7 +646,7 @@ fn durability_domain_classification_matches_the_golden() {
 
 #[test]
 fn classifier_source_map_agrees_with_domain_for() {
-    use crate::batch_compile::domain_for;
+    use medulla_server_api::batch_compile::domain_for;
     use medulla_mutation_types::mutation_scope::DurabilityDomain;
 
     let map = classification_map_from_source();
@@ -721,7 +721,7 @@ fn classifier_source_map_agrees_with_domain_for() {
 /// this match).
 #[test]
 fn owner_domain_classifies_wire_unconditional_methods_regardless_of_this_crates_own_feature() {
-    use crate::batch_compile::domain_for;
+    use medulla_server_api::batch_compile::domain_for;
     use medulla_mutation_types::mutation_scope::DurabilityDomain;
 
     assert_eq!(
@@ -823,7 +823,7 @@ fn a_graph_batch_names_the_serving_principal_and_carries_the_caller_actor() {
         }],
     )
     .unwrap();
-    let actor = crate::batch_compile::principal_fingerprint("agent:a").unwrap();
+    let actor = medulla_server_api::batch_compile::principal_fingerprint("agent:a").unwrap();
     assert_eq!(
         batch.serving_principal(),
         medulla_kernel::kernel::persistence::ENGINE_LEDGER_PRINCIPAL,
@@ -856,7 +856,7 @@ fn a_graph_batch_names_the_serving_principal_and_carries_the_caller_actor() {
 /// the two arms that happened to be exercised above.
 #[test]
 fn no_compiled_batch_on_any_domain_carries_the_caller_as_its_context_principal() {
-    let actor = crate::batch_compile::principal_fingerprint("agent:a").unwrap();
+    let actor = medulla_server_api::batch_compile::principal_fingerprint("agent:a").unwrap();
     let compile = |batch_id: &str, methods: Vec<Method>| {
         compile_methods(
             CompileBatch {
@@ -905,7 +905,7 @@ fn no_compiled_batch_on_any_domain_carries_the_caller_as_its_context_principal()
 #[cfg(feature = "kv")]
 #[test]
 fn owner_store_batch_names_the_serving_principal_and_carries_the_caller_actor() {
-    let batch = crate::batch_compile::compile_opaque_method(
+    let batch = medulla_server_api::batch_compile::compile_opaque_method(
         CompileBatch {
             batch_id: "kv-principal",
             request_id: 1,
@@ -939,7 +939,7 @@ fn owner_store_batch_names_the_serving_principal_and_carries_the_caller_actor() 
     );
     assert_eq!(
         batch.outbox[0].headers.get("actor"),
-        Some(&crate::batch_compile::principal_fingerprint("agent:a").unwrap()),
+        Some(&medulla_server_api::batch_compile::principal_fingerprint("agent:a").unwrap()),
         "the verified caller is not lost: it is the outbox row's actor"
     );
 }
@@ -954,7 +954,7 @@ fn compile_sql_source_dirty_batch(
         query: "CREATE TABLE semantic_dirty_rows (id BIGINT PRIMARY KEY)".into(),
         params_msgpack: Vec::new(),
     };
-    let batch = crate::batch_compile::compile_opaque_method(
+    let batch = medulla_server_api::batch_compile::compile_opaque_method(
         CompileBatch {
             batch_id: "sql-source-dirty-stable-batch",
             request_id,
@@ -1029,7 +1029,7 @@ fn sql_catalog_compile_declares_one_retry_stable_typed_source_dirty_intent() {
     );
     assert_eq!(retry_source_dirty.key, source_dirty[0].key);
 
-    let non_sql = crate::batch_compile::compile_opaque_method(
+    let non_sql = medulla_server_api::batch_compile::compile_opaque_method(
         CompileBatch {
             batch_id: "non-sql-opaque",
             request_id: 13,
@@ -1157,7 +1157,7 @@ fn served_owner_store_batch_commits_and_its_actor_survives_in_the_ledger() {
         medulla_mutation_types::mutation_scope::DurabilityDomain::KvStore,
         medulla_mutation_types::mutation_scope::LogicalName::new("kv-scope-a".to_string()).unwrap(),
         medulla_mutation_types::mutation_scope::IncarnationId::new(
-            crate::batch_compile::COMPILED_BATCH_INCARNATION,
+            medulla_server_api::batch_compile::COMPILED_BATCH_INCARNATION,
         )
         .unwrap(),
     )
@@ -1173,7 +1173,7 @@ fn served_owner_store_batch_commits_and_its_actor_survives_in_the_ledger() {
     let owner = kernel.bind_serving_scope(grant, 0).unwrap();
     mutations.bootstrap_ledger(&owner).unwrap();
 
-    let batch = crate::batch_compile::compile_opaque_method(
+    let batch = medulla_server_api::batch_compile::compile_opaque_method(
         CompileBatch {
             batch_id: "kv-served",
             request_id: 7,
@@ -1229,7 +1229,7 @@ fn served_owner_store_batch_commits_and_its_actor_survives_in_the_ledger() {
     );
     assert_eq!(
         record.batch.outbox[0].headers.get("actor"),
-        Some(&crate::batch_compile::principal_fingerprint("agent:a").unwrap()),
+        Some(&medulla_server_api::batch_compile::principal_fingerprint("agent:a").unwrap()),
         "the verified caller must be recoverable from the durable record"
     );
     let _ = std::fs::remove_dir_all(&dir);
@@ -1417,7 +1417,7 @@ async fn the_authoritative_version_accounts_a_durable_write_the_projection_misse
         core.mark_dirty();
     }
     let ahead: Arc<dyn PersistenceBackend> = Arc::new(DurableVersion(7));
-    let version = crate::batch_compile::authoritative_graph_version(&ahead, "g", &core)
+    let version = medulla_server_api::batch_compile::authoritative_graph_version(&ahead, "g", &core)
         .await
         .expect("a durable version ahead of the projection is accounted");
     assert_eq!(version, 7);
@@ -1426,7 +1426,7 @@ async fn the_authoritative_version_accounts_a_durable_write_the_projection_misse
         7,
         "the serving projection now equals the authority"
     );
-    let agreed = crate::batch_compile::authoritative_graph_version(&ahead, "g", &core)
+    let agreed = medulla_server_api::batch_compile::authoritative_graph_version(&ahead, "g", &core)
         .await
         .expect("an agreeing version reads back");
     assert_eq!(agreed, 7);
@@ -1437,7 +1437,7 @@ async fn the_authoritative_version_accounts_a_durable_write_the_projection_misse
     );
 
     let behind: Arc<dyn PersistenceBackend> = Arc::new(DurableVersion(3));
-    let error = crate::batch_compile::authoritative_graph_version(&behind, "g", &core)
+    let error = medulla_server_api::batch_compile::authoritative_graph_version(&behind, "g", &core)
         .await
         .expect_err("a projection ahead of its authority is refused");
     assert!(
@@ -1458,7 +1458,7 @@ fn session_usage_keeps_the_existing_read_only_domain_classification() {
         run_id: "run".into(),
     };
     assert!(usage.write_family().is_none());
-    assert!(crate::batch_compile::canonical::surface_for(&usage).is_none());
+    assert!(medulla_server_api::batch_compile::canonical::surface_for(&usage).is_none());
     for surface in [
         MutationSurface::Graph,
         MutationSurface::Transaction,
@@ -1470,8 +1470,8 @@ fn session_usage_keeps_the_existing_read_only_domain_classification() {
         MutationSurface::Other,
     ] {
         assert_eq!(
-            crate::batch_compile::domain_for(&usage, surface),
-            crate::batch_compile::domain_for(&run, surface)
+            medulla_server_api::batch_compile::domain_for(&usage, surface),
+            medulla_server_api::batch_compile::domain_for(&run, surface)
         );
     }
 }

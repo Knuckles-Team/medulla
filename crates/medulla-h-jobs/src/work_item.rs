@@ -117,11 +117,11 @@ pub(crate) async fn commit_verified_work_item(
     } else {
         ctx.caller
     };
-    medulla_server_api::mutation_batch::commit_work_item(
-        medulla_server_api::mutation_batch::WorkItemCommitRequest::new(
+    medulla_server_mutation::mutation_batch::commit_work_item(
+        medulla_server_mutation::mutation_batch::WorkItemCommitRequest::new(
             ctx.persistence.as_ref(),
             ctx.core,
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: ctx.req_id,
                 principal,
             },

@@ -25,8 +25,8 @@ pub trait AdminApi: Send + Sync {
         &self,
         state: &Arc<RwLock<ServerState>>,
         tenant_id: &str,
-        ctx: &medulla_server_api::mutation::MutationCtx<'_>,
-        plan: &medulla_server_api::mutation::MutationPlan,
+        ctx: &medulla_server_mutation::mutation::MutationCtx<'_>,
+        plan: &medulla_server_mutation::mutation::MutationPlan,
         method: &medulla_protocol_types::protocol::Method,
         op: &medulla_catalog_types::graph_schema::GraphSchemaOp,
     ) -> medulla_protocol_types::protocol::Response;

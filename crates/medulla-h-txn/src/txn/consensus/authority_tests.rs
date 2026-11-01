@@ -293,11 +293,11 @@ async fn store_committed_child(
     let child_id = consensus_participant_child_id(parent, id, &txn.graph);
     let core = Arc::new(medulla_graph_core::graph::GraphCore::new());
     let persistence: Arc<dyn PersistenceBackend> = backend.clone();
-    let result = medulla_server_api::mutation_batch::commit_internal_graph_methods_with_nonce(
-        medulla_server_api::mutation_batch::InternalGraphCommitRequest::new(
+    let result = medulla_server_mutation::mutation_batch::commit_internal_graph_methods_with_nonce(
+        medulla_server_mutation::mutation_batch::InternalGraphCommitRequest::new(
             Some(&persistence),
             &core,
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 3,
                 principal: Some(actor),
             },
@@ -311,11 +311,11 @@ async fn store_committed_child(
     .await
     .unwrap();
     assert_eq!(result.record.committing_tenant().unwrap(), txn.tenant_scope);
-    let foreign = medulla_server_api::mutation_batch::commit_internal_graph_methods_with_nonce(
-        medulla_server_api::mutation_batch::InternalGraphCommitRequest::new(
+    let foreign = medulla_server_mutation::mutation_batch::commit_internal_graph_methods_with_nonce(
+        medulla_server_mutation::mutation_batch::InternalGraphCommitRequest::new(
             Some(&persistence),
             &core,
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 4,
                 principal: Some(actor),
             },

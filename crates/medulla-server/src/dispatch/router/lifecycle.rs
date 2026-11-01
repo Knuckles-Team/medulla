@@ -8,13 +8,13 @@ use medulla_persistence::cold_offload::ColdTrackerStateExt;
 /// durably-committed create (idempotent success) or a genuine collision.
 async fn reconcile_existing_graph_create(
     backend: &Arc<dyn PersistenceBackend>,
-    attempt: medulla_server_api::mutation::LifecycleAttempt<'_>,
+    attempt: medulla_server_mutation::mutation::LifecycleAttempt<'_>,
     graph_type: medulla_protocol_types::protocol::GraphType,
     created_result: ResultPayload,
 ) -> Response {
     let req_id = attempt.request_id;
     let graph_name = attempt.graph;
-    match medulla_server_api::mutation_batch::lifecycle_was_committed(
+    match medulla_server_mutation::mutation_batch::lifecycle_was_committed(
         backend,
         attempt,
         Method::CreateGraph {
@@ -180,7 +180,7 @@ async fn create_declared_graph(
     if already_exists {
         return reconcile_existing_graph_create(
             &backend,
-            medulla_server_api::mutation::LifecycleAttempt {
+            medulla_server_mutation::mutation::LifecycleAttempt {
                 action: "create",
                 tenant_scope: &tenant_scope,
                 graph: &graph_name,
@@ -194,11 +194,11 @@ async fn create_declared_graph(
         )
         .await;
     }
-    if let Err(e) = medulla_server_api::mutation_batch::commit_lifecycle(
-        medulla_server_api::mutation_batch::LifecycleCommitRequest::new(
+    if let Err(e) = medulla_server_mutation::mutation_batch::commit_lifecycle(
+        medulla_server_mutation::mutation_batch::LifecycleCommitRequest::new(
             &backend,
             "create",
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: req_id,
                 principal: req_agent_id.as_deref(),
             },
@@ -288,12 +288,12 @@ async fn create_declared_graph(
 /// durably-committed delete (idempotent success) or a genuine miss.
 async fn reconcile_missing_graph_delete(
     backend: &Arc<dyn PersistenceBackend>,
-    attempt: medulla_server_api::mutation::LifecycleAttempt<'_>,
+    attempt: medulla_server_mutation::mutation::LifecycleAttempt<'_>,
     deleted_result: ResultPayload,
 ) -> Response {
     let req_id = attempt.request_id;
     let graph_name = attempt.graph;
-    match medulla_server_api::mutation_batch::lifecycle_was_committed(
+    match medulla_server_mutation::mutation_batch::lifecycle_was_committed(
         backend,
         attempt,
         Method::DeleteGraph {
@@ -398,7 +398,7 @@ async fn delete_declared_graph(
     if !exists {
         return reconcile_missing_graph_delete(
             &backend,
-            medulla_server_api::mutation::LifecycleAttempt {
+            medulla_server_mutation::mutation::LifecycleAttempt {
                 action: "delete",
                 tenant_scope: &tenant_scope,
                 graph: graph_name,
@@ -411,11 +411,11 @@ async fn delete_declared_graph(
         )
         .await;
     }
-    if let Err(e) = medulla_server_api::mutation_batch::commit_lifecycle(
-        medulla_server_api::mutation_batch::LifecycleCommitRequest::new(
+    if let Err(e) = medulla_server_mutation::mutation_batch::commit_lifecycle(
+        medulla_server_mutation::mutation_batch::LifecycleCommitRequest::new(
             &backend,
             "delete",
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: req_id,
                 principal: req_agent_id.as_deref(),
             },

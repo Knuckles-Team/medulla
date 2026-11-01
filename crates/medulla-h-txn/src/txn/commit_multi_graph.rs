@@ -321,11 +321,11 @@ async fn apply_authorized_slices(
             coordinator_id,
         );
         if let Err(error) =
-            medulla_server_api::mutation_batch::commit_internal_graph_methods_with_nonce(
-                medulla_server_api::mutation_batch::InternalGraphCommitRequest::new(
+            medulla_server_mutation::mutation_batch::commit_internal_graph_methods_with_nonce(
+                medulla_server_mutation::mutation_batch::InternalGraphCommitRequest::new(
                     Some(&backend),
                     &core,
-                    medulla_server_api::mutation_batch::CommitOrigin {
+                    medulla_server_mutation::mutation_batch::CommitOrigin {
                         request_id: req_id,
                         principal: Some(principal),
                     },

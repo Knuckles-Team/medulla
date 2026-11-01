@@ -395,9 +395,9 @@ struct OwnedMutationCtx {
     owner: Option<String>,
     isolation: IsolationLayer,
     core: Arc<GraphCore>,
-    persistence: Option<Arc<dyn crate::api::persistence::PersistenceBackend>>,
+    persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
-    cdc: Option<Arc<crate::cdc::CdcHub>>,
+    cdc: Option<Arc<medulla_server_api::cdc::CdcHub>>,
     materialization_manifest:
         Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
 }
@@ -455,7 +455,7 @@ async fn commit_via_coalescer<F>(
     plan: &MutationPlan,
     method: &Method,
     apply: F,
-    coalescer: &Arc<crate::routed_write_coalescer::RoutedWriteCoalescerRegistry>,
+    coalescer: &Arc<medulla_server_api::routed_write_coalescer::RoutedWriteCoalescerRegistry>,
 ) -> Response
 where
     F: FnOnce(&GraphCore) -> Result<ResultPayload, String> + Send + 'static,
@@ -484,7 +484,7 @@ where
     let (reply, reply_rx) = tokio::sync::oneshot::channel();
     let writer = coalescer.writer_for(ctx.graph_name);
     let job =
-        crate::routed_write_coalescer::RoutedCommitJob::new(run, reply).with_request_id(req_id);
+        medulla_server_api::routed_write_coalescer::RoutedCommitJob::new(run, reply).with_request_id(req_id);
     match writer.try_enqueue(job) {
         Ok(()) => reply_rx.await.unwrap_or_else(|_| {
             Response::err(

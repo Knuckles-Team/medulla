@@ -36,8 +36,8 @@ use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::mutation::MutationCtx;
-use medulla_server_api::mutation::MutationPlan;
+use medulla_server_mutation::mutation::MutationCtx;
+use medulla_server_mutation::mutation::MutationPlan;
 use medulla_server_api::state::ServerState;
 
 const PACK_PROJECTION_GRAPH_DOMAIN: &[u8] = b"eg/connector-pack-projection-graph/v1";

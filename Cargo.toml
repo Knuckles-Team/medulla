@@ -152,7 +152,7 @@ algorithms = []
 # Prometheus observability: request/latency/in-flight counters, per-graph
 # gauges and a /metrics HTTP listener (--metrics-addr). ON by default; opt out
 # with --no-default-features for a leaner lib-only build.
-metrics = ["medulla-server/metrics", "medulla-wire/metrics", "medulla-h-txn/metrics", "medulla-persistence/metrics", "medulla-server-api/metrics", "medulla-store/metrics", "medulla-kernel/metrics", "dep:prometheus", "medulla-types/metrics", "medulla-protocol-types/metrics"]
+metrics = ["medulla-server/metrics", "medulla-wire/metrics", "medulla-h-txn/metrics", "medulla-persistence/metrics", "medulla-server-api/metrics", "medulla-server-mutation/metrics", "medulla-store/metrics", "medulla-kernel/metrics", "dep:prometheus", "medulla-types/metrics", "medulla-protocol-types/metrics"]
 # OpenTelemetry OTLP span export (CONCEPT:MEDULLA-091). Layers a `tracing-opentelemetry`
 # batch OTLP exporter ON TOP of the existing `tracing` subscriber, additively: it
 # installs ONLY when built with this feature AND `MEDULLA_OTLP_ENDPOINT` is
@@ -177,22 +177,22 @@ datascience = ["medulla-server/datascience", "medulla-h-compute/datascience", "m
 # mining (Apriori/FP-Growth/Eclat) + the `graph_mine` surface. Pure-Rust, no heavy
 # dep, folded into `full`. Gates medulla-compute/mining + medulla-types/mining + the
 # handlers/mining.rs dispatch arm.
-mining = ["medulla-server/mining", "medulla-wire/mining", "medulla-h-query/mining", "medulla-h-graph/mining", "medulla-server-api/mining", "medulla-server-ops/mining", "medulla-kernel/mining", "medulla-compute/mining", "medulla-types/mining", "medulla-result-types/mining", "medulla-protocol-types/mining", "medulla-mining/mining"]
+mining = ["medulla-server/mining", "medulla-wire/mining", "medulla-h-query/mining", "medulla-h-graph/mining", "medulla-server-api/mining", "medulla-server-mutation/mining", "medulla-server-ops/mining", "medulla-kernel/mining", "medulla-compute/mining", "medulla-types/mining", "medulla-result-types/mining", "medulla-protocol-types/mining", "medulla-mining/mining"]
 # Graph-learning / neuro-symbolic domain (CONCEPT:MEDULLA-KG.graphlearn.link-predictor): a
 # pure-Rust KAN link-predictor over the resident graph + the `graph_learn` surface,
 # whose learned per-feature edge functions are queryable `:EdgeFunction` KG nodes.
 # Pure-Rust (no torch — heavy training is delegated to data-science-mcp), folded into
 # `full` via `compute`. Gates medulla-compute/graphlearn + medulla-types/graphlearn + the
 # handlers/graphlearn.rs dispatch arm. Implies datascience (shared Adam kernels).
-graphlearn = ["medulla-server/graphlearn", "medulla-h-graph/graphlearn", "medulla-server-api/graphlearn", "medulla-kernel/graphlearn", "datascience", "medulla-compute/graphlearn", "medulla-types/graphlearn", "medulla-result-types/graphlearn", "medulla-protocol-types/graphlearn", "medulla-graph-algos/graphlearn"]
+graphlearn = ["medulla-server/graphlearn", "medulla-h-graph/graphlearn", "medulla-server-api/graphlearn", "medulla-server-mutation/graphlearn", "medulla-kernel/graphlearn", "datascience", "medulla-compute/graphlearn", "medulla-types/graphlearn", "medulla-result-types/graphlearn", "medulla-protocol-types/graphlearn", "medulla-graph-algos/graphlearn"]
 # ML pipeline (CONCEPT:MEDULLA-KG.mining.ml-pipeline): the composable train→eval→serve→
 # predict surface over a versioned `:Model` artifact, generalizing the KAN one-off. It
 # COMPOSES existing medulla-compute primitives — classify (mining), regression estimators
 # (datascience), the KAN link-predictor (graphlearn), structural embeddings + metrics —
 # so it pulls all three domains + medulla-types/ml-pipeline. Gates the handlers/pipeline.rs
 # dispatch arm. Pure-Rust, folded into `full` via `compute`.
-ml-pipeline = ["medulla-server/ml-pipeline", "medulla-h-graph/ml-pipeline", "medulla-server-api/ml-pipeline", "medulla-kernel/ml-pipeline", "mining", "datascience", "graphlearn", "medulla-types/ml-pipeline", "medulla-result-types/ml-pipeline", "medulla-protocol-types/ml-pipeline"]
-reasoning = ["medulla-server/reasoning", "medulla-h-graph/reasoning", "medulla-raft/reasoning", "medulla-server-api/reasoning", "medulla-kernel/reasoning", "medulla-compute/reasoning", "medulla-reasoner/reasoning"]
+ml-pipeline = ["medulla-server/ml-pipeline", "medulla-h-graph/ml-pipeline", "medulla-server-api/ml-pipeline", "medulla-server-mutation/ml-pipeline", "medulla-kernel/ml-pipeline", "mining", "datascience", "graphlearn", "medulla-types/ml-pipeline", "medulla-result-types/ml-pipeline", "medulla-protocol-types/ml-pipeline"]
+reasoning = ["medulla-server/reasoning", "medulla-h-graph/reasoning", "medulla-raft/reasoning", "medulla-server-api/reasoning", "medulla-server-mutation/reasoning", "medulla-kernel/reasoning", "medulla-compute/reasoning", "medulla-reasoner/reasoning"]
 # Engine-native epistemic layer (CONCEPT:MEDULLA-KG.epistemic.epistemic-substrate, E6+E2): the
 # medulla-epistemic leaf crate (claims/evidence/belief-state + confidence propagation) over
 # the EXISTING NodeData/EdgeData fields (no new persistence). Pulls medulla-epistemic (pure
@@ -208,7 +208,7 @@ reasoning = ["medulla-server/reasoning", "medulla-h-graph/reasoning", "medulla-r
 # `as_claim` unset the write-back is byte-identical, and a build without `query` simply lacks
 # the E2 plan ops (the E6 mining write-back is unaffected either way). The default
 # `full` artifact enables this feature.
-epistemic = ["medulla-server/epistemic", "medulla-wire/epistemic", "medulla-h-admin/epistemic", "medulla-h-txn/epistemic", "medulla-h-query/epistemic", "medulla-h-decide/epistemic", "medulla-h-jobs/epistemic", "medulla-h-ingest/epistemic", "medulla-h-graph/epistemic", "medulla-raft/epistemic", "medulla-server-api/epistemic", "medulla-server-ops/epistemic", "medulla-kernel/epistemic",
+epistemic = ["medulla-server/epistemic", "medulla-wire/epistemic", "medulla-h-admin/epistemic", "medulla-h-txn/epistemic", "medulla-h-query/epistemic", "medulla-h-decide/epistemic", "medulla-h-jobs/epistemic", "medulla-h-ingest/epistemic", "medulla-h-graph/epistemic", "medulla-raft/epistemic", "medulla-server-api/epistemic", "medulla-server-mutation/epistemic", "medulla-server-ops/epistemic", "medulla-kernel/epistemic",
     "query",
     "dep:medulla-epistemic",
     "medulla-types/epistemic", "medulla-protocol-types/epistemic",
@@ -245,7 +245,7 @@ epistemic-redaction = ["medulla-h-txn/epistemic-redaction", "medulla-h-query/epi
 # stable extension search is NP-hard in the worst case). It is included in the
 # one main `full` build; expensive searches remain request-bounded and the
 # incremental projection worker avoids full-graph steady-state recomputation.
-epistemic-tms = ["medulla-server/epistemic-tms", "medulla-wire/epistemic-tms", "medulla-h-txn/epistemic-tms", "medulla-h-query/epistemic-tms", "medulla-server-api/epistemic-tms", "medulla-kernel/epistemic-tms", "epistemic", "medulla-epistemic/epistemic-tms"]
+epistemic-tms = ["medulla-server/epistemic-tms", "medulla-wire/epistemic-tms", "medulla-h-txn/epistemic-tms", "medulla-h-query/epistemic-tms", "medulla-server-api/epistemic-tms", "medulla-server-mutation/epistemic-tms", "medulla-kernel/epistemic-tms", "epistemic", "medulla-epistemic/epistemic-tms"]
 # X-1 (CONCEPT:MEDULLA-X1) — the multimodal-evidence citation resolver wired onto the
 # facade as `Method::ExplainEvidence`: given a claim/evidence node id, walk the
 # SAME support/contradiction/attack `BeliefGraph` topology `ExplainBelief` walks
@@ -315,7 +315,7 @@ server-tls = ["medulla-server/server-tls", "medulla-h-admin/server-tls", "server
 # is layered ON TOP and is itself gated on `server` (it talks to `ServerState`
 # + the Tokio dispatch). So `redb` alone (no `server`) compiles a usable durable
 # store — exactly what the EMBEDDED API drives on an edge host with no Tokio.
-redb = ["medulla-server/redb", "medulla-wire/redb", "medulla-h-admin/redb", "medulla-h-txn/redb", "medulla-h-query/redb", "medulla-h-decide/redb", "medulla-h-jobs/redb", "medulla-h-ingest/redb", "medulla-h-graph/redb", "medulla-raft/redb", "medulla-persistence/redb", "medulla-server-api/redb", "medulla-server-blob/redb", "medulla-server-ops/redb", "medulla-store/redb", "medulla-kernel/redb", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction"]
+redb = ["medulla-server/redb", "medulla-wire/redb", "medulla-h-admin/redb", "medulla-h-txn/redb", "medulla-h-query/redb", "medulla-h-decide/redb", "medulla-h-jobs/redb", "medulla-h-ingest/redb", "medulla-h-graph/redb", "medulla-raft/redb", "medulla-persistence/redb", "medulla-server-api/redb", "medulla-server-mutation/redb", "medulla-server-blob/redb", "medulla-server-ops/redb", "medulla-store/redb", "medulla-kernel/redb", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction"]
 # Streamed content-addressed BLOB substrate (CONCEPT:KG-2.206): the bytes tier
 # under multimodal `:Media`/`:Blob`. Pulls `redb` (the native CAS lives in
 # `blob.redb`) + `server` (the streaming protocol rides the Tokio transport). The
@@ -328,7 +328,7 @@ blob = ["medulla-server/blob", "medulla-h-admin/blob", "medulla-h-decide/blob", 
 # `kv.redb` substrate; no persist dir ⇒ in-memory scratch). It adds no dependency
 # beyond redb and is included in the one main build. A targeted feature build without
 # it drops the Kv* arm.
-kv = ["medulla-server/kv", "medulla-wire/kv", "medulla-h-admin/kv", "medulla-raft/kv", "medulla-persistence/kv", "medulla-server-api/kv", "medulla-server-blob/kv", "medulla-kernel/kv", "server", "redb", "medulla-types/kv", "medulla-protocol-types/kv"]
+kv = ["medulla-server/kv", "medulla-wire/kv", "medulla-h-admin/kv", "medulla-raft/kv", "medulla-persistence/kv", "medulla-server-api/kv", "medulla-server-mutation/kv", "medulla-server-blob/kv", "medulla-kernel/kv", "server", "redb", "medulla-types/kv", "medulla-protocol-types/kv"]
 # S3/MinIO object-store chunk backend behind the SAME `ChunkStore` trait
 # (CONCEPT:KG-2.206). It is separate from `blob` and absent from the main, `cluster`,
 # and `full-extras` bundles, so only an explicit source build selecting `blob-s3`
@@ -362,7 +362,7 @@ alignment = ["medulla-server/alignment", "medulla-h-query/alignment", "medulla-h
 # `medulla-types/jobs` and `medulla-capabilities/jobs` wire/policy features (kept in LOCKSTEP —
 # see both crates' own docs on why `medulla-types/jobs` can never be forced on
 # unconditionally by `medulla-capabilities`). Included in the one main `full` build.
-jobs = ["medulla-server/jobs", "medulla-wire/jobs", "medulla-h-admin/jobs", "medulla-h-query/jobs", "medulla-h-jobs/jobs", "medulla-raft/jobs", "medulla-persistence/jobs", "medulla-server-api/jobs", "medulla-server-ops/jobs", 
+jobs = ["medulla-server/jobs", "medulla-wire/jobs", "medulla-h-admin/jobs", "medulla-h-query/jobs", "medulla-h-jobs/jobs", "medulla-raft/jobs", "medulla-persistence/jobs", "medulla-server-api/jobs", "medulla-server-mutation/jobs", "medulla-server-ops/jobs", 
     "server", "mining", "epistemic",
     "dep:medulla-jobs", "medulla-types/jobs", "medulla-agent-types/jobs", "medulla-work-types/jobs", "medulla-protocol-types/jobs", "medulla-capabilities/jobs",
 ]
@@ -375,14 +375,14 @@ jobs = ["medulla-server/jobs", "medulla-wire/jobs", "medulla-h-admin/jobs", "med
 # LOCKSTEP, exactly like `jobs`). Unlike `jobs` it needs neither `mining` nor `epistemic`
 # -- phase-1 does not reuse a compute kernel or write claims. Included in the main `full`
 # build.
-statechart = ["medulla-server/statechart", "medulla-wire/statechart", "medulla-h-query/statechart", "medulla-h-jobs/statechart", "medulla-raft/statechart", "medulla-persistence/statechart", "medulla-server-api/statechart", "medulla-store/statechart", 
+statechart = ["medulla-server/statechart", "medulla-wire/statechart", "medulla-h-query/statechart", "medulla-h-jobs/statechart", "medulla-raft/statechart", "medulla-persistence/statechart", "medulla-server-api/statechart", "medulla-server-mutation/statechart", "medulla-store/statechart", 
     "server",
     "dep:medulla-statechart", "medulla-types/statechart", "medulla-protocol-types/statechart", "medulla-capabilities/statechart",
 ]
 # Graph-native, provider-neutral LM programs and governed self-improvement. This
 # extends the one analytics-job authority; it does not introduce another network,
 # cache, provider, or graph-mutation path.
-program-optimization = ["medulla-h-jobs/program-optimization", "medulla-server-api/program-optimization", "jobs", "dep:medulla-program", "medulla-types/program-optimization", "medulla-agent-types/program-optimization", "medulla-work-types/program-optimization"]
+program-optimization = ["medulla-h-jobs/program-optimization", "medulla-server-api/program-optimization", "medulla-server-mutation/program-optimization", "jobs", "dep:medulla-program", "medulla-types/program-optimization", "medulla-agent-types/program-optimization", "medulla-work-types/program-optimization"]
 # D-VZ-1 (lane V0, `plans/au-medulla-program/deferred/lane-viz-native.md`) -- native
 # visualization contracts. `viz` links `medulla-viz-core` alone (ViewSpec IR, ViewResult
 # metadata, capability matrix, tier-selection rules, trait boundaries only -- no
@@ -498,7 +498,7 @@ durable = ["dep:medulla-durable"]
 # Concrete governed document/image/audio/video service. The dependency-light native
 # decoders feed the shared ServedModalityRuntime; graph snapshots and the universal
 # MutationBatch gateway provide the authoritative restart/idempotency boundary.
-modality-serving = ["medulla-server/modality-serving", "medulla-wire/modality-serving", "medulla-h-query/modality-serving", "medulla-h-jobs/modality-serving", "medulla-h-ingest/modality-serving", "medulla-raft/modality-serving", "medulla-persistence/modality-serving", "medulla-server-api/modality-serving", "medulla-server-ops/modality-serving", "medulla-kernel/modality-serving",
+modality-serving = ["medulla-server/modality-serving", "medulla-wire/modality-serving", "medulla-h-query/modality-serving", "medulla-h-jobs/modality-serving", "medulla-h-ingest/modality-serving", "medulla-raft/modality-serving", "medulla-persistence/modality-serving", "medulla-server-api/modality-serving", "medulla-server-mutation/modality-serving", "medulla-server-ops/modality-serving", "medulla-kernel/modality-serving",
     "server", "redb", "security", "streaming",
     "dep:medulla-modality",
     "dep:medulla-document", "medulla-document/serving",
@@ -525,7 +525,7 @@ asr-whisper = ["medulla-server/asr-whisper", "medulla-wire/asr-whisper", "medull
 # when `dep:medulla-storage` is linked, which is what the `redb` feature does. A
 # `--features query` build without it cannot name the composition root's
 # verifier, so the edge is stated here rather than left to fail at link time.
-query = ["medulla-server/query", "medulla-wire/query", "medulla-h-admin/query", "medulla-h-txn/query", "medulla-h-query/query", "medulla-h-decide/query", "medulla-h-jobs/query", "medulla-h-ingest/query", "medulla-h-graph/query", "medulla-raft/query", "medulla-persistence/query", "medulla-server-api/query", "medulla-server-ops/query", "medulla-store/query", "medulla-kernel/query", "redb", "medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "medulla-cypher/sql", "dep:medulla-plan", "medulla-plan/query", "medulla-types/query", "medulla-tsdb?/arrow-seg", "medulla-result-types/query", "medulla-decision-types/query", "medulla-protocol-types/query"]
+query = ["medulla-server/query", "medulla-wire/query", "medulla-h-admin/query", "medulla-h-txn/query", "medulla-h-query/query", "medulla-h-decide/query", "medulla-h-jobs/query", "medulla-h-ingest/query", "medulla-h-graph/query", "medulla-raft/query", "medulla-persistence/query", "medulla-server-api/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-store/query", "medulla-kernel/query", "redb", "medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "medulla-cypher/sql", "dep:medulla-plan", "medulla-plan/query", "medulla-types/query", "medulla-tsdb?/arrow-seg", "medulla-result-types/query", "medulla-decision-types/query", "medulla-protocol-types/query"]
 # The one native streaming query/job result currency. Every served family adapts to
 # governed, bounded KnowledgeBatch envelopes with stable Arrow schemas.
 knowledge-batch = ["medulla-server/knowledge-batch", "medulla-wire/knowledge-batch", "medulla-h-admin/knowledge-batch", "medulla-h-txn/knowledge-batch", "medulla-h-query/knowledge-batch", "medulla-h-decide/knowledge-batch", "medulla-h-jobs/knowledge-batch", "medulla-h-ingest/knowledge-batch", "medulla-raft/knowledge-batch", "medulla-persistence/knowledge-batch", "medulla-server-api/knowledge-batch", "medulla-server-ops/knowledge-batch", "medulla-kernel/knowledge-batch",
@@ -613,7 +613,7 @@ nl-query = ["medulla-server/nl-query", "medulla-wire/nl-query", "medulla-h-admin
 # Dep-free Cypher query surface (CONCEPT:KG-2.179): `MATCH … RETURN …` compiled to
 # the engine's own primitives (label index / VF2 / BFS). It is included in the one main
 # build; a targeted `cypher`-only feature check links no DataFusion.
-cypher = ["medulla-server/cypher", "medulla-wire/cypher", "medulla-h-txn/cypher", "medulla-h-query/cypher", "medulla-h-decide/cypher", "medulla-h-jobs/cypher", "medulla-h-ingest/cypher", "medulla-h-graph/cypher", "medulla-persistence/cypher", "medulla-server-api/cypher", "medulla-kernel/cypher", "medulla-cypher/cypher"]
+cypher = ["medulla-server/cypher", "medulla-wire/cypher", "medulla-h-txn/cypher", "medulla-h-query/cypher", "medulla-h-decide/cypher", "medulla-h-jobs/cypher", "medulla-h-ingest/cypher", "medulla-h-graph/cypher", "medulla-persistence/cypher", "medulla-server-api/cypher", "medulla-server-mutation/cypher", "medulla-kernel/cypher", "medulla-cypher/cypher"]
 # CONCEPT:MEDULLA-KG.query.cypher-engine-shadow — the `MEDULLA_CYPHER_ENGINE`
 # rollout surface (legacy | plan | shadow) + its shadow-differential divergence log.
 # In the one main `full` build; a lean `cypher`-only build stays legacy-only.
@@ -626,7 +626,7 @@ cypher-plan = ["medulla-server/cypher-plan", "medulla-wire/cypher-plan", "medull
 # handler routes through dispatch) and `security`: both the RPC surface and the SSE
 # carrier require the current verified request context, graph ACL, and default-deny
 # row projection. There is no unfiltered GraphQL build or listener fallback.
-graphql = ["medulla-server/graphql", "medulla-wire/graphql", "medulla-h-txn/graphql", "medulla-h-query/graphql", "medulla-h-graph/graphql", "medulla-raft/graphql", "medulla-server-api/graphql", "medulla-server-ops/graphql", "medulla-kernel/graphql", "dep:medulla-graphql", "medulla-graphql/hardening", "medulla-types/graphql", "server", "security", "medulla-protocol-types/graphql"]
+graphql = ["medulla-server/graphql", "medulla-wire/graphql", "medulla-h-txn/graphql", "medulla-h-query/graphql", "medulla-h-graph/graphql", "medulla-raft/graphql", "medulla-server-api/graphql", "medulla-server-mutation/graphql", "medulla-server-ops/graphql", "medulla-kernel/graphql", "dep:medulla-graphql", "medulla-graphql/hardening", "medulla-types/graphql", "server", "security", "medulla-protocol-types/graphql"]
 # Native time-series store + TS primitives (CONCEPT:KG-2.210/211). Pulls medulla-tsdb's
 # redb chunk store + the native ASOF/gap-fill/time_bucket/OHLC/decay primitives.
 # A targeted `tsdb`-only feature check links no DataFusion.
@@ -696,7 +696,7 @@ otel-export = ["medulla-server/otel-export", "medulla-server-api/otel-export", "
 # core is a bounded VecDeque ring + a tokio Notify: PURE-RUST, NO heavy dep, and is
 # included in the one main build. Needs `server` (the handler routes
 # through dispatch); `medulla-types/streaming` carries the Method variants + wire DTOs.
-streaming = ["medulla-server/streaming", "medulla-wire/streaming", "medulla-h-admin/streaming", "medulla-h-query/streaming", "medulla-h-graph/streaming", "medulla-raft/streaming", "medulla-server-api/streaming", "medulla-server-ops/streaming", "server", "medulla-types/streaming", "medulla-protocol-types/streaming"]
+streaming = ["medulla-server/streaming", "medulla-wire/streaming", "medulla-h-admin/streaming", "medulla-h-query/streaming", "medulla-h-graph/streaming", "medulla-raft/streaming", "medulla-server-api/streaming", "medulla-server-mutation/streaming", "medulla-server-ops/streaming", "server", "medulla-types/streaming", "medulla-protocol-types/streaming"]
 # CDC -> Kafka sink (CA-11, DEC-CA-03), off by default. Originally declared as
 # `["streaming"]` by CA-17's single feature-stub commit; CA-11 widened the parent
 # list to `dep:medulla-stream, medulla-stream/cdc-kafka` -- flagged in CA-11's report per the
@@ -771,7 +771,7 @@ cost = ["medulla-server/cost", "medulla-wire/cost", "medulla-persistence/cost", 
 # committed log entry applies through the same PersistenceBackend/GraphCore path.
 # Activates only when built `--features raft` AND configured at runtime
 # (MEDULLA_RAFT_NODE_ID + MEDULLA_RAFT_PEERS); off → single-node.
-raft = ["medulla-server/raft", "medulla-wire/raft", "medulla-h-admin/raft", "medulla-h-txn/raft", "medulla-h-query/raft", "medulla-h-decide/raft", "medulla-h-jobs/raft", "medulla-h-ingest/raft", "medulla-h-graph/raft", "medulla-raft/raft", "medulla-persistence/raft", "medulla-server-api/raft", "medulla-store/raft", "medulla-kernel/raft",
+raft = ["medulla-server/raft", "medulla-wire/raft", "medulla-h-admin/raft", "medulla-h-txn/raft", "medulla-h-query/raft", "medulla-h-decide/raft", "medulla-h-jobs/raft", "medulla-h-ingest/raft", "medulla-h-graph/raft", "medulla-raft/raft", "medulla-persistence/raft", "medulla-server-api/raft", "medulla-server-mutation/raft", "medulla-store/raft", "medulla-kernel/raft",
     "server",
     "redb",
     "dep:openraft",
@@ -919,7 +919,7 @@ mysql-wire = ["medulla-server/mysql-wire", "medulla-wire/mysql-wire", "dep:sha1"
 # + `GraphCore::broker_enqueue`) + `medulla-types/broker` (the broker `Method` variants).
 # PURE-RUST — NO new dependency (only serde/serde_json/rmp already linked) — and
 # included in the one main build.
-broker = ["medulla-h-graph/broker", "medulla-server-api/broker", "medulla-kernel/broker", "medulla-core/broker", "medulla-graph-core/broker", "medulla-types/broker", "medulla-protocol-types/broker"]
+broker = ["medulla-h-graph/broker", "medulla-server-api/broker", "medulla-server-mutation/broker", "medulla-kernel/broker", "medulla-core/broker", "medulla-graph-core/broker", "medulla-types/broker", "medulla-protocol-types/broker"]
 # AMQP 0.9.1 wire listener (CONCEPT:MEDULLA-275): a HAND-ROLLED AMQP 0.9.1 server with no
 # third-party AMQP crate that maps connection/channel/exchange/queue/basic.*
 # frames onto the `broker` primitives via the engine dispatch. Needs `broker` + `server`
@@ -1072,7 +1072,7 @@ embedded = ["medulla-store/embedded", "redb"]
 # medulla-rdf crate). PURE-RUST — links NO C/native dep (proven by cargo tree) — and is
 # included in the one main build. Needs `server` (the handler routes through dispatch)
 # + `medulla-types/rdf` (the Method variants).
-rdf = ["medulla-server/rdf", "medulla-h-admin/rdf", "medulla-h-txn/rdf", "medulla-h-query/rdf", "medulla-h-decide/rdf", "medulla-h-graph/rdf", "medulla-persistence/rdf", "medulla-server-api/rdf", "medulla-kernel/rdf", "server", "dep:medulla-rdf", "medulla-rdf/rdf", "medulla-types/rdf", "medulla-protocol-types/rdf", "medulla-virtual-graph/rdf", "medulla-reasoner/rdf"]
+rdf = ["medulla-server/rdf", "medulla-h-admin/rdf", "medulla-h-txn/rdf", "medulla-h-query/rdf", "medulla-h-decide/rdf", "medulla-h-graph/rdf", "medulla-persistence/rdf", "medulla-server-api/rdf", "medulla-server-mutation/rdf", "medulla-kernel/rdf", "server", "dep:medulla-rdf", "medulla-rdf/rdf", "medulla-types/rdf", "medulla-protocol-types/rdf", "medulla-virtual-graph/rdf", "medulla-reasoner/rdf"]
 sparql = ["medulla-server/sparql", "medulla-wire/sparql", "medulla-h-admin/sparql", "medulla-h-txn/sparql", "medulla-h-query/sparql", "medulla-h-decide/sparql", "medulla-h-graph/sparql", "medulla-raft/sparql", "medulla-persistence/sparql", "medulla-server-api/sparql", "medulla-server-ops/sparql", "medulla-kernel/sparql", "rdf", "medulla-rdf/sparql", "medulla-types/sparql", "medulla-protocol-types/sparql", "medulla-virtual-graph/sparql"]
 # Native SPARQL 1.1 surface (CONCEPT:KG-2.218): compiles spargebra's algebra to
 # GraphView scans (medulla-rdf). IMPLIES `rdf`; pure-Rust (spargebra), no native dep.
@@ -1101,7 +1101,7 @@ geosparql = ["medulla-server/geosparql", "medulla-h-admin/geosparql", "medulla-h
 # exposition — NO axum/hyper/warp) so existing Stardog/Jena/rdflib SPARQL clients can
 # query + update the engine unchanged via `--sparql-addr`. IMPLIES `sparql` (+ `server`
 # for the Tokio listener). Pure-Rust, no new native dep, and included in the main build.
-sparql-http = ["medulla-server/sparql-http", "medulla-wire/sparql-http", "medulla-server-api/sparql-http", "medulla-server-blob/sparql-http", "sparql", "server", "shacl", "security"]
+sparql-http = ["medulla-server/sparql-http", "medulla-wire/sparql-http", "medulla-server-api/sparql-http", "medulla-server-mutation/sparql-http", "medulla-server-blob/sparql-http", "sparql", "server", "shacl", "security"]
 # SPARQL SERVICE federation (CONCEPT:MEDULLA-052): the `/sparql` endpoint's SELECT path binds a
 # `ureq`-backed `RemoteSparql` client so a `SERVICE <ep> { … }` clause evaluates against a
 # remote endpoint (SILENT semantics, SSRF allowlist `MEDULLA_SPARQL_SERVICE_ALLOW`,
@@ -1209,7 +1209,7 @@ obda-wire = ["medulla-server/obda-wire", "obda"]
 # cannot accept a schema while silently dropping its DL restrictions. The
 # `Method::ShaclValidate` handler is gated on this feature. Pure Rust — links NO
 # C/native dep — and is included in the one main build alongside rdf/sparql.
-shacl = ["medulla-server/shacl", "medulla-h-admin/shacl", "medulla-h-query/shacl", "medulla-h-decide/shacl", "medulla-h-graph/shacl", "medulla-raft/shacl", "medulla-persistence/shacl", "medulla-server-api/shacl", "medulla-server-blob/shacl", "medulla-server-ops/shacl", "medulla-kernel/shacl", "rdf", "owl-dl", "dep:medulla-shacl"]
+shacl = ["medulla-server/shacl", "medulla-h-admin/shacl", "medulla-h-query/shacl", "medulla-h-decide/shacl", "medulla-h-graph/shacl", "medulla-raft/shacl", "medulla-persistence/shacl", "medulla-server-api/shacl", "medulla-server-mutation/shacl", "medulla-server-blob/shacl", "medulla-server-ops/shacl", "medulla-kernel/shacl", "rdf", "owl-dl", "dep:medulla-shacl"]
 # ShEx (Shape Expressions) Core validation (CONCEPT:MEDULLA-133) — the pure-Rust medulla-shex
 # engine, the complement to `shacl`. IMPLIES `rdf` (it validates focus nodes of an RDF
 # data graph against a ShExJ schema); the `Method::ShexValidate` handler is gated on this

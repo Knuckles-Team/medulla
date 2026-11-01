@@ -360,11 +360,11 @@ pub(crate) async fn handle_recompute_materialization(
             req_id,
             &method,
         );
-        if let Err(error) = medulla_server_api::mutation_batch::commit_internal_graph_methods(
-            medulla_server_api::mutation_batch::InternalGraphCommitRequest::new(
+        if let Err(error) = medulla_server_mutation::mutation_batch::commit_internal_graph_methods(
+            medulla_server_mutation::mutation_batch::InternalGraphCommitRequest::new(
                 Some(&persistence),
                 &core,
-                medulla_server_api::mutation_batch::CommitOrigin {
+                medulla_server_mutation::mutation_batch::CommitOrigin {
                     request_id: req_id,
                     principal: Some(caller),
                 },

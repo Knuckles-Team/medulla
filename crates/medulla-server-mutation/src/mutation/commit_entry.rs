@@ -6,7 +6,7 @@ use super::{
     prepublish_success, response_dedup_key, DurableBatchAttempt, DurableBatchTarget, MutationCtx,
     MutationPlan,
 };
-use crate::access::check_graph_access;
+use medulla_server_api::access::check_graph_access;
 use medulla_graph_core::graph::GraphCore;
 use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::protocol::Method;
@@ -24,7 +24,7 @@ pub(super) struct CommitPrep {
     pub(super) dedup_key: Option<String>,
     /// CDC pre-image captured before apply (Skip when policy `emits_cdc == false`).
     #[cfg(feature = "streaming")]
-    pub(super) cdc_pre: crate::cdc::CdcPre,
+    pub(super) cdc_pre: medulla_server_api::cdc::CdcPre,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -100,9 +100,9 @@ pub(super) fn commit_prepare(
     // POLICY's `emits_cdc`.
     #[cfg(feature = "streaming")]
     let cdc_pre = if plan.emits_cdc {
-        crate::cdc::capture_before(ctx.core, method)
+        medulla_server_api::cdc::capture_before(ctx.core, method)
     } else {
-        crate::cdc::CdcPre::Skip
+        medulla_server_api::cdc::CdcPre::Skip
     };
 
     Ok(CommitPrep {
@@ -244,13 +244,13 @@ pub(super) fn commit_finalize_emit_cdc(
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
     method: &Method,
-    cdc_pre: crate::cdc::CdcPre,
+    cdc_pre: medulla_server_api::cdc::CdcPre,
 ) {
     if !plan.emits_cdc {
         return;
     }
     let Some(hub) = ctx.cdc else { return };
-    crate::cdc::emit_for_method(hub, ctx.core, ctx.graph_name, method, cdc_pre);
+    medulla_server_api::cdc::emit_for_method(hub, ctx.core, ctx.graph_name, method, cdc_pre);
 }
 
 /// The single commit gateway (CONCEPT:MEDULLA-P0-2): authz, apply, durable commit,
@@ -293,7 +293,7 @@ where
     // lock ONCE PER BATCH in the routed-write-coalescer worker and calls
     // [`commit_mutation_body`] once per queued op inside that one hold — see its
     // doc comment for the invariant this preserves and why it must.
-    let _mutation_guard = crate::routed_write_coalescer::lock_graph(ctx.graph_name).await;
+    let _mutation_guard = medulla_server_api::routed_write_coalescer::lock_graph(ctx.graph_name).await;
     commit_mutation_body(ctx, plan, method, apply).await
 }
 
@@ -363,7 +363,7 @@ where
     };
 
     let fname = medulla_kernel::persist::sanitize(ctx.graph_name);
-    let batch_id = crate::batch_compile::opaque_idempotency_key_for_context(
+    let batch_id = medulla_server_api::batch_compile::opaque_idempotency_key_for_context(
         "rpc",
         ctx.tenant_scope,
         ctx.graph_name,

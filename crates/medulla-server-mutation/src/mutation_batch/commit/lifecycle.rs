@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
-use crate::api::persistence::PersistenceBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use crate::mutation::LifecycleAttempt;
 use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_types::contract::Nonce;
 
-use crate::batch_compile::compile::{compile_methods, CompileBatch};
-use crate::batch_compile::digest::{lifecycle_batch_id, principal_fingerprint};
+use medulla_server_api::{batch_compile::compile::compile_methods, batch_compile::compile::CompileBatch};
+use medulla_server_api::{batch_compile::digest::lifecycle_batch_id, batch_compile::digest::principal_fingerprint};
 
 pub struct LifecycleCommitRequest<'a> {
     pub(crate) persistence: &'a Arc<dyn PersistenceBackend>,

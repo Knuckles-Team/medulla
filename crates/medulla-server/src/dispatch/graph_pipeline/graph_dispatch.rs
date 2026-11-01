@@ -13,7 +13,7 @@ struct GraphDispatchCapture<'a> {
     read_authority: Option<GraphReadAuthority>,
     verified_actor: String,
     tenant_scope: String,
-    gateway_authz_ctx: Option<medulla_server_api::mutation::GatewayAuthzCtx>,
+    gateway_authz_ctx: Option<medulla_server_mutation::mutation::GatewayAuthzCtx>,
     core: Arc<medulla_graph_core::graph::GraphCore>,
     materialization_manifest:
         Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
@@ -252,7 +252,7 @@ pub(in crate::dispatch) struct GraphOpRouting<'a> {
     pub(super) read_authority: &'a Option<GraphReadAuthority>,
     pub(super) verified_actor: &'a str,
     pub(in crate::dispatch) tenant_scope: &'a str,
-    pub(super) gateway_authz_ctx: &'a Option<medulla_server_api::mutation::GatewayAuthzCtx>,
+    pub(super) gateway_authz_ctx: &'a Option<medulla_server_mutation::mutation::GatewayAuthzCtx>,
     pub(in crate::dispatch) core: &'a Arc<medulla_graph_core::graph::GraphCore>,
     pub(super) materialization_manifest:
         &'a Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,

@@ -84,18 +84,12 @@ pub mod impact_watch;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod matview;
 
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod mutation;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(any(feature = "server", feature = "redb"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod mutation_apply;
 
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod mutation_batch;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "oidc")]

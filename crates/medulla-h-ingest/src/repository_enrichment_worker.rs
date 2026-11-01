@@ -76,8 +76,8 @@ mod worker {
     use medulla_server_api::authority_context::VerifiedRequestContext;
     use medulla_server_blob::blob::store::ChunkStore;
     #[cfg(not(feature = "raft"))]
-    use medulla_server_api::mutation_batch::CommitOrigin;
-    use medulla_server_api::mutation_batch::WorkItemCommitRequest;
+    use medulla_server_mutation::mutation_batch::CommitOrigin;
+    use medulla_server_mutation::mutation_batch::WorkItemCommitRequest;
 
     const IDLE: Duration = Duration::from_millis(500);
     const MAX_GRAPHS_PER_SWEEP: usize = 16;
@@ -336,7 +336,7 @@ mod worker {
                 .core
                 .clone();
             let backend = Some(persistence);
-            medulla_server_api::mutation_batch::commit_work_item(
+            medulla_server_mutation::mutation_batch::commit_work_item(
                 WorkItemCommitRequest::new(
                     backend.as_ref(),
                     &core,

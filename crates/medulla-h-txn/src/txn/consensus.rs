@@ -77,7 +77,7 @@ pub async fn prepare_consensus_commit(
     expected_tenant: Option<&str>,
     attempt_nonce: Option<Nonce>,
 ) -> Response {
-    let _coordinator_guard = medulla_server_api::mutation_batch::lock_txn_coordinator(
+    let _coordinator_guard = medulla_server_mutation::mutation_batch::lock_txn_coordinator(
         &commit_receipt_id(txn_id, idempotency_key, expected_tenant),
     )
     .await;
@@ -627,11 +627,11 @@ pub async fn apply_consensus_participant_commit(
     } else if participant.write_set.is_empty() {
         true
     } else {
-        medulla_server_api::mutation_batch::commit_internal_graph_methods_with_nonce(
-            medulla_server_api::mutation_batch::InternalGraphCommitRequest::new(
+        medulla_server_mutation::mutation_batch::commit_internal_graph_methods_with_nonce(
+            medulla_server_mutation::mutation_batch::InternalGraphCommitRequest::new(
                 Some(&backend),
                 &core,
-                medulla_server_api::mutation_batch::CommitOrigin {
+                medulla_server_mutation::mutation_batch::CommitOrigin {
                     request_id,
                     principal: Some(&principal),
                 },

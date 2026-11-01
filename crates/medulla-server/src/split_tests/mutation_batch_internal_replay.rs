@@ -9,7 +9,7 @@ use std::sync::Arc;
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::{Method, ResultPayload};
 use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla_server_api::mutation_batch::*;
+use medulla_server_mutation::mutation_batch::*;
 use medulla_server_api::batch_compile::*;
 use medulla_server_api::routed_write_coalescer::*;
 use medulla_types::contract::Nonce;
@@ -75,7 +75,7 @@ async fn internal_replay_rejects_a_conflicting_terminal_result_after_kernel_admi
         InternalGraphCommitRequest::new(
             Some(&persistence),
             &core,
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 1,
                 principal: Some("internal-caller"),
             },
@@ -94,7 +94,7 @@ async fn internal_replay_rejects_a_conflicting_terminal_result_after_kernel_admi
         InternalGraphCommitRequest::new(
             Some(&persistence),
             &core,
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 2,
                 principal: Some("internal-caller"),
             },
@@ -482,7 +482,7 @@ async fn promotion_replay_and_failed_cas_preserve_authority_and_restart_identity
     commit_internal_graph_methods(InternalGraphCommitRequest::new(
         Some(&persistence),
         &core,
-        medulla_server_api::mutation_batch::CommitOrigin {
+        medulla_server_mutation::mutation_batch::CommitOrigin {
             request_id: 900,
             principal: Some("promotion-binding-seeder"),
         },
@@ -597,7 +597,7 @@ async fn promotion_replay_and_failed_cas_preserve_authority_and_restart_identity
         ProgramPromotionRequest::new(
             Some(&persistence),
             &core,
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 1,
                 principal: Some("program-worker"),
             },
@@ -617,7 +617,7 @@ async fn promotion_replay_and_failed_cas_preserve_authority_and_restart_identity
         ProgramPromotionRequest::new(
             Some(&persistence),
             &core,
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 2,
                 principal: Some("program-worker"),
             },
@@ -723,7 +723,7 @@ async fn promotion_replay_and_failed_cas_preserve_authority_and_restart_identity
         ProgramPromotionRequest::new(
             Some(&persistence),
             &core,
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 3,
                 principal: Some("program-worker"),
             },
@@ -785,7 +785,7 @@ async fn promotion_replay_and_failed_cas_preserve_authority_and_restart_identity
         ProgramPromotionRequest::new(
             Some(&persistence),
             &core,
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 31,
                 principal: Some("program-worker"),
             },
@@ -828,7 +828,7 @@ async fn promotion_replay_and_failed_cas_preserve_authority_and_restart_identity
     commit_internal_graph_methods(InternalGraphCommitRequest::new(
         Some(&persistence),
         &core,
-        medulla_server_api::mutation_batch::CommitOrigin {
+        medulla_server_mutation::mutation_batch::CommitOrigin {
             request_id: 901,
             principal: Some("promotion-binding-seeder"),
         },
@@ -880,7 +880,7 @@ async fn promotion_replay_and_failed_cas_preserve_authority_and_restart_identity
         ProgramPromotionRequest::new(
             Some(&persistence),
             &core,
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 32,
                 principal: Some("program-worker"),
             },
@@ -919,7 +919,7 @@ async fn promotion_replay_and_failed_cas_preserve_authority_and_restart_identity
         ProgramPromotionRequest::new(
             Some(&persistence),
             &core,
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 4,
                 principal: Some("program-worker"),
             },
@@ -968,7 +968,7 @@ async fn promotion_replay_and_failed_cas_preserve_authority_and_restart_identity
         ProgramPromotionRequest::new(
             Some(&persistence),
             &core,
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 5,
                 principal: Some("program-worker"),
             },

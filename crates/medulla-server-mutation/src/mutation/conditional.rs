@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use medulla_capabilities::DurabilityDomain;
 
-use crate::access::check_graph_access;
-use crate::api::persistence::PersistenceBackend;
+use medulla_server_api::access::check_graph_access;
+use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_graph_core::graph::GraphCore;
 use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::protocol::Method;
@@ -127,7 +127,7 @@ where
     // Mutating path: stage against a complete authoritative image. Query/RDF
     // handlers never receive the live serving core, so an execution or durable
     // commit failure cannot leak a partial mutation into RAM.
-    let _mutation_guard = crate::routed_write_coalescer::lock_graph(ctx.graph_name).await;
+    let _mutation_guard = medulla_server_api::routed_write_coalescer::lock_graph(ctx.graph_name).await;
     let prep = match commit_prepare(ctx, plan, method) {
         Ok(p) => p,
         Err(short_circuit) => return short_circuit,
@@ -158,7 +158,7 @@ where
     };
 
     let fname = medulla_kernel::persist::sanitize(ctx.graph_name);
-    let batch_id = crate::batch_compile::opaque_idempotency_key_for_context(
+    let batch_id = medulla_server_api::batch_compile::opaque_idempotency_key_for_context(
         "rpc-async",
         ctx.tenant_scope,
         ctx.graph_name,
@@ -296,7 +296,7 @@ where
     // mutation lands, so this call is a fast no-op for those (no diff to find);
     // for a native Cypher write it is the ONLY enforcement point.
     #[cfg(feature = "shacl")]
-    if let Err(rejection) = crate::icv_guard::check_native_write(ctx.graph_name, ctx.core, &staged)
+    if let Err(rejection) = medulla_server_api::icv_guard::check_native_write(ctx.graph_name, ctx.core, &staged)
     {
         return Err(Response::err(
             ctx.req_id,

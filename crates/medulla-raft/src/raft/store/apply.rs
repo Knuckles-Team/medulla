@@ -173,7 +173,7 @@ impl MedullaStore {
         let projection_pending = if committed.replayed {
             false
         } else {
-            match medulla_server_api::mutation_batch::publish_change_envelope_projection(
+            match medulla_server_mutation::mutation_batch::publish_change_envelope_projection(
                 core, envelope,
             ) {
                 Ok(()) => false,

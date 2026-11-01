@@ -1052,7 +1052,7 @@ mod tests {
         #[cfg(feature = "sparql-http")]
         assert_eq!(
             cluster_mutation_route(&Method::ApplyMutation {
-                event_type: crate::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT.to_string(),
+                event_type: medulla_server_api::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT.to_string(),
                 query: "CLEAR DEFAULT".to_string(),
             }),
             ClusterMutationRoute::ConsensusFanout,

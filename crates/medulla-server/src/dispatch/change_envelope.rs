@@ -500,7 +500,7 @@ fn change_envelope_applied_entry(
     let projection_error = if committed.replayed {
         None
     } else {
-        medulla_server_api::mutation_batch::publish_change_envelope_projection(core, envelope).err()
+        medulla_server_mutation::mutation_batch::publish_change_envelope_projection(core, envelope).err()
     };
     let entry = change_envelope_result(committed, projection_error.is_some());
     if committed.replayed {
@@ -727,7 +727,7 @@ async fn apply_one_change_envelope_inner(
     let projection_error = if committed.replayed {
         None
     } else {
-        medulla_server_api::mutation_batch::publish_change_envelope_projection(core, &envelope)
+        medulla_server_mutation::mutation_batch::publish_change_envelope_projection(core, &envelope)
             .err()
     };
     let result = change_envelope_result(&committed, projection_error.is_some());

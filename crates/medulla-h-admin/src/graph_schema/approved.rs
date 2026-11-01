@@ -22,8 +22,8 @@ use medulla_catalog_types::{
 
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
-use medulla_server_api::mutation::MutationCtx;
-use medulla_server_api::mutation::MutationPlan;
+use medulla_server_mutation::mutation::MutationCtx;
+use medulla_server_mutation::mutation::MutationPlan;
 
 /// Verify the approval, then commit the attach through the gateway.
 pub(super) async fn handle_gateway(

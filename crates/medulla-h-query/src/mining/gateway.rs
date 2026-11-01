@@ -6,7 +6,7 @@ use std::sync::Arc;
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_server_api::carrier::GraphReadAuthority;
-use medulla_server_api::mutation::{self, MutationCtx, MutationPlan};
+use medulla_server_mutation::{mutation, mutation::MutationCtx, mutation::MutationPlan};
 
 use super::gateway_derived::{
     apply_mine_associate, apply_mine_causal_impact, apply_mine_community,
@@ -65,7 +65,7 @@ fn apply_mine_cluster(
         #[cfg(all(feature = "query", feature = "tsdb"))]
         tsdb_bind,
     );
-    medulla_server_api::mutation::response_to_gateway_result(resp)
+    medulla_server_mutation::mutation::response_to_gateway_result(resp)
 }
 
 #[cfg(feature = "mining")]
@@ -124,7 +124,7 @@ fn apply_mine_anomaly(
         #[cfg(all(feature = "query", feature = "tsdb"))]
         tsdb_bind,
     );
-    medulla_server_api::mutation::response_to_gateway_result(resp)
+    medulla_server_mutation::mutation::response_to_gateway_result(resp)
 }
 
 #[cfg(feature = "mining")]
@@ -165,7 +165,7 @@ fn apply_mine_classify_predict(
         #[cfg(all(feature = "query", feature = "tsdb"))]
         tsdb_bind,
     );
-    medulla_server_api::mutation::response_to_gateway_result(resp)
+    medulla_server_mutation::mutation::response_to_gateway_result(resp)
 }
 
 #[cfg(feature = "mining")]
@@ -222,7 +222,7 @@ fn apply_mine_reduce(
         #[cfg(all(feature = "query", feature = "tsdb"))]
         tsdb_bind,
     );
-    medulla_server_api::mutation::response_to_gateway_result(resp)
+    medulla_server_mutation::mutation::response_to_gateway_result(resp)
 }
 
 #[cfg(feature = "mining")]
@@ -250,7 +250,7 @@ fn apply_mine_ontology_gap(
             as_claim,
         },
     );
-    medulla_server_api::mutation::response_to_gateway_result(resp)
+    medulla_server_mutation::mutation::response_to_gateway_result(resp)
 }
 
 /// Dispatch one of the mining methods whose `apply` needs only the graph core (no

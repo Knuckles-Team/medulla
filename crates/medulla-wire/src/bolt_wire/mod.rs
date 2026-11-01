@@ -48,8 +48,8 @@ use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::auth::verify_request_with_security_dir;
 use medulla_server_api::authority_context::VerifiedRequestContext;
-use medulla_server_api::mutation::MutationCtx;
-use medulla_server_api::mutation::MutationPlan;
+use medulla_server_mutation::mutation::MutationCtx;
+use medulla_server_mutation::mutation::MutationPlan;
 use medulla_server_api::state::ServerState;
 
 mod auth;
@@ -599,7 +599,7 @@ async fn commit_writes(
         materialization_manifest: graph_context.materialization_manifest.as_ref(),
         write_coalescer: None,
     };
-    let response = medulla_server_api::mutation::commit_conditional_mutation_async(
+    let response = medulla_server_mutation::mutation::commit_conditional_mutation_async(
         &ctx,
         &plan,
         &method,

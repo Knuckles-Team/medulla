@@ -41,6 +41,7 @@ medulla-mining = { path = "../medulla-mining" }
 medulla-reasoner = { path = "../medulla-reasoner" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-server-ops = { path = "../medulla-server-ops" }
+medulla-server-mutation = { path = "../medulla-server-mutation" }
 
 [features]
 broker = []

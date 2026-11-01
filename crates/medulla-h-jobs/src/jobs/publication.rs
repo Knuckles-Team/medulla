@@ -464,7 +464,7 @@ pub async fn apply_consensus_job_publication_commit(
     let committed = commit_publication_write(PublicationWrite {
         persistence: persistence.as_ref(),
         core: &core,
-        origin: medulla_server_api::mutation_batch::CommitOrigin {
+        origin: medulla_server_mutation::mutation_batch::CommitOrigin {
             request_id,
             principal: Some(&plan.prepared.principal_ref),
         },
@@ -514,7 +514,7 @@ pub async fn apply_consensus_job_publication_finalize(
 struct PublicationWrite<'a> {
     persistence: Option<&'a Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     core: &'a Arc<medulla_graph_core::graph::GraphCore>,
-    origin: medulla_server_api::mutation_batch::CommitOrigin<'a>,
+    origin: medulla_server_mutation::mutation_batch::CommitOrigin<'a>,
     target_graph: &'a str,
     batch_id: &'a str,
     methods: Vec<Method>,
@@ -532,8 +532,8 @@ async fn commit_publication_write(
 ) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {
     #[cfg(feature = "program-optimization")]
     if let Some(identity) = write.promotion {
-        return medulla_server_api::mutation_batch::commit_program_promotion(
-            medulla_server_api::mutation_batch::ProgramPromotionRequest::new(
+        return medulla_server_mutation::mutation_batch::commit_program_promotion(
+            medulla_server_mutation::mutation_batch::ProgramPromotionRequest::new(
                 write.persistence,
                 write.core,
                 write.origin,
@@ -547,8 +547,8 @@ async fn commit_publication_write(
         )
         .await;
     }
-    medulla_server_api::mutation_batch::commit_internal_graph_methods(
-        medulla_server_api::mutation_batch::InternalGraphCommitRequest::new(
+    medulla_server_mutation::mutation_batch::commit_internal_graph_methods(
+        medulla_server_mutation::mutation_batch::InternalGraphCommitRequest::new(
             write.persistence,
             write.core,
             write.origin,
@@ -606,7 +606,7 @@ pub(super) async fn publish_staged_result(
     commit_publication_write(PublicationWrite {
         persistence: persistence.as_ref(),
         core: &core,
-        origin: medulla_server_api::mutation_batch::CommitOrigin {
+        origin: medulla_server_mutation::mutation_batch::CommitOrigin {
             request_id: 0,
             principal: Some(&job.policy.actor),
         },

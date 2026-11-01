@@ -7,11 +7,11 @@ use medulla_persistence::redb_backend::RedbBackend;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_types::contract::Nonce;
 
-use medulla_server_api::mutation_batch::commit_lifecycle;
+use medulla_server_mutation::mutation_batch::commit_lifecycle;
 use medulla_server_api::batch_compile::lifecycle_batch_id;
-use medulla_server_api::mutation_batch::lifecycle_identity_matches;
-use medulla_server_api::mutation_batch::lifecycle_was_committed;
-use medulla_server_api::mutation_batch::LifecycleCommitRequest;
+use medulla_server_mutation::mutation_batch::lifecycle_identity_matches;
+use medulla_server_mutation::mutation_batch::lifecycle_was_committed;
+use medulla_server_mutation::mutation_batch::LifecycleCommitRequest;
 
 /// The verified tenant scope every single-tenant lifecycle test commits under.
 const TENANT: &str = "carrier-tenant:lifecycle-test";
@@ -40,7 +40,7 @@ async fn assert_stable_lifecycle_replay(
             LifecycleCommitRequest::new(
                 &persistence,
                 action,
-                medulla_server_api::mutation_batch::CommitOrigin {
+                medulla_server_mutation::mutation_batch::CommitOrigin {
                     request_id: 101,
                     principal,
                 },
@@ -77,7 +77,7 @@ async fn assert_stable_lifecycle_replay(
         LifecycleCommitRequest::new(
             &persistence,
             action,
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 202,
                 principal,
             },
@@ -105,7 +105,7 @@ async fn assert_stable_lifecycle_replay(
         LifecycleCommitRequest::new(
             &persistence,
             action,
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 303,
                 principal,
             },
@@ -126,7 +126,7 @@ async fn assert_stable_lifecycle_replay(
         LifecycleCommitRequest::new(
             &persistence,
             action,
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 304,
                 principal,
             },
@@ -199,7 +199,7 @@ async fn delete_lifecycle_replay_keeps_one_stable_receipt() {
             LifecycleCommitRequest::new(
                 &persistence,
                 "create",
-                medulla_server_api::mutation_batch::CommitOrigin {
+                medulla_server_mutation::mutation_batch::CommitOrigin {
                     request_id: 1,
                     principal: Some("principal:lifecycle-test"),
                 },
@@ -263,7 +263,7 @@ async fn delete_purges_receipts_of_a_prior_incarnation() {
         LifecycleCommitRequest::new(
             &persistence,
             "create",
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 1,
                 principal,
             },
@@ -284,7 +284,7 @@ async fn delete_purges_receipts_of_a_prior_incarnation() {
         LifecycleCommitRequest::new(
             &persistence,
             "delete",
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 2,
                 principal,
             },
@@ -323,7 +323,7 @@ async fn delete_purges_receipts_of_a_prior_incarnation() {
         LifecycleCommitRequest::new(
             &persistence,
             "create",
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 3,
                 principal,
             },
@@ -378,7 +378,7 @@ async fn delete_purges_receipts_of_a_prior_incarnation() {
         LifecycleCommitRequest::new(
             &persistence,
             "create",
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 4,
                 principal,
             },
@@ -430,7 +430,7 @@ async fn lifecycle_receipt_is_not_replayed_across_tenants() {
         LifecycleCommitRequest::new(
             &persistence,
             "create",
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 1,
                 principal,
             },
@@ -452,7 +452,7 @@ async fn lifecycle_receipt_is_not_replayed_across_tenants() {
     let probe = |tenant_scope: &'static str, _attempt: u8| {
         lifecycle_was_committed(
             &persistence,
-            medulla_server_api::mutation::LifecycleAttempt {
+            medulla_server_mutation::mutation::LifecycleAttempt {
                 action: "create",
                 tenant_scope,
                 graph,
@@ -499,7 +499,7 @@ async fn lifecycle_replay_compares_identity_not_recompiled_bytes() {
         LifecycleCommitRequest::new(
             &persistence,
             "create",
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 1,
                 principal,
             },
@@ -572,7 +572,7 @@ async fn lifecycle_replay_compares_identity_not_recompiled_bytes() {
     let probe = |graph_type| {
         lifecycle_was_committed(
             &persistence,
-            medulla_server_api::mutation::LifecycleAttempt {
+            medulla_server_mutation::mutation::LifecycleAttempt {
                 action: "create",
                 tenant_scope: TENANT,
                 graph,
@@ -592,7 +592,7 @@ async fn lifecycle_replay_compares_identity_not_recompiled_bytes() {
     let nonce_probe = |nonce: u8| {
         lifecycle_was_committed(
             &persistence,
-            medulla_server_api::mutation::LifecycleAttempt {
+            medulla_server_mutation::mutation::LifecycleAttempt {
                 action: "create",
                 tenant_scope: TENANT,
                 graph,

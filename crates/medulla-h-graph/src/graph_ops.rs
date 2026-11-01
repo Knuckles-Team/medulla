@@ -20,7 +20,7 @@ use medulla_server_api::access::requires_write;
 use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::compute::{compute_off_lock, weight_semantic_results};
-use medulla_server_api::mutation::{self, GatewayAuthzCtx, MutationCtx, MutationPlan};
+use medulla_server_mutation::{mutation, mutation::GatewayAuthzCtx, mutation::MutationCtx, mutation::MutationPlan};
 use medulla_server_api::state::{
     max_response_edges, max_response_nodes, ServerState, MAX_BATCH_IDS,
 };

@@ -56,8 +56,8 @@ pub trait QueryApi: Send + Sync {
     #[cfg(feature = "mining")]
     async fn mining_gateway_try_handle(
         &self,
-        ctx: &medulla_server_api::mutation::MutationCtx<'_>,
-        plan: &medulla_server_api::mutation::MutationPlan,
+        ctx: &medulla_server_mutation::mutation::MutationCtx<'_>,
+        plan: &medulla_server_mutation::mutation::MutationPlan,
         method: &medulla_protocol_types::protocol::Method,
         graph_name: &str,
         read_authority: Option<&medulla_server_api::carrier::GraphReadAuthority>,
