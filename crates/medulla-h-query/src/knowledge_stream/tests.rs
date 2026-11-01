@@ -466,8 +466,8 @@ async fn knowledge_stream_sql_lists_the_request_graph_edge_indexes() {
     use medulla_server_api::api::query_txn::edge_test_support::sql_rows;
     use medulla_server_api::api::query_txn::edge_test_support::EDGE_STATUS_SQL;
     use medulla_server_api::api::reentry::TryHandleContext;
-    use medulla_h_query::query::try_handle_with_policy;
-    use medulla_h_query::query::PolicyAwareQuery;
+    use crate::query::try_handle_with_policy;
+    use crate::query::PolicyAwareQuery;
 
     let _env_read_lock = medulla_kernel::crypto::provisioned_test_env_read_lock().await;
     let fixture = durable_read_lease("tenant-graph", "alice");
