@@ -1,6 +1,6 @@
 // Existing Agent Graph lifecycle, replay, and admission tests.
 
-pub(super) use super::super::agent_fixtures::{
+pub use super::super::agent_fixtures::{
     ledger_record, mutation_context as context, open_agent_store as open_store,
 };
 use super::super::agent_revision::{decode_status_result, validate_status_record};
@@ -178,7 +178,7 @@ fn single_step_shape(
 }
 
 /// The child: one agent, then end, producing `contract:report`.
-pub(crate) fn child_shape(
+pub fn child_shape(
     store: &AgentLibraryStore,
     tenant_id: &str,
     max_iterations: u32,
@@ -188,7 +188,7 @@ pub(crate) fn child_shape(
 }
 
 /// A parent whose single step runs the named child graph, pinned by shape.
-pub(crate) fn parent_shape(
+pub fn parent_shape(
     store: &AgentLibraryStore,
     tenant_id: &str,
     child: (&str, &str),
@@ -203,7 +203,7 @@ pub(crate) fn parent_shape(
 }
 
 /// Publish `shape` as `graph_id` in `tenant-a` and return the committed revision.
-pub(crate) fn publish_shape(
+pub fn publish_shape(
     store: &AgentLibraryStore,
     graph_id: &str,
     shape: AgentGraphShape,

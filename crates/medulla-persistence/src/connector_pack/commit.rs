@@ -26,20 +26,20 @@ use crate::agent_revision::revision_operations;
 use crate::agent_revision::revision_outbox_headers;
 use crate::agent_revision::RevisionLayer;
 
-pub(crate) struct ConnectorPackComponentCommit {
+pub struct ConnectorPackComponentCommit {
     pub expected_revision: u64,
     pub kind: AgentComponentMutationKind,
     pub entry: AgentComponentEntry,
 }
 
-pub(crate) struct ConnectorPackHolderCommit {
+pub struct ConnectorPackHolderCommit {
     pub body_sha256: medulla_types::contract::Digest256,
     pub component_id: String,
     pub entry_revision: u64,
     pub row: ConnectorPackBodyHolderRow,
 }
 
-pub(crate) struct ConnectorPackCommitPlan {
+pub struct ConnectorPackCommitPlan {
     pub context: medulla_types::agent_library::AgentLibraryMutationContext,
     pub expected_head: Option<PackHeadRef>,
     pub record: PackImportRecord,

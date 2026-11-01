@@ -81,7 +81,7 @@ fn catalog_scope_mismatch(
 }
 
 /// The content digest a component publishes, as a bare SHA-256.
-pub(crate) fn component_content_digest(
+pub fn component_content_digest(
     component: &AgentComponentEntry,
 ) -> Result<Digest256, String> {
     Digest256::parse(
@@ -94,7 +94,7 @@ pub(crate) fn component_content_digest(
 
 /// The published revision and content of an MCP server component, the only
 /// shape a self-served pin can name. Any other kind under the id is refused.
-pub(crate) fn published_server_content(
+pub fn published_server_content(
     component: Option<&AgentComponentEntry>,
 ) -> Result<Option<(u64, Digest256)>, String> {
     let Some(component) = component else {

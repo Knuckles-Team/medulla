@@ -34,7 +34,7 @@ pub(crate) type PackOwnerWrite<'w> =
 
 /// Who one pack write is, for replay: the same identity replays the stored
 /// result, a different body under the same key is `IDEMPOTENCY_CONFLICT`.
-pub(crate) struct PackWriteIdentity<'a> {
+pub struct PackWriteIdentity<'a> {
     /// The purpose the admitted context is stamped with.
     pub(crate) purpose: &'static str,
     /// The operation kind folded into the replay identity.
@@ -54,7 +54,7 @@ pub(crate) struct PackWriteIdentity<'a> {
 }
 
 /// The kernel-visible effects of one pack write.
-pub(crate) struct PackWriteEffects {
+pub struct PackWriteEffects {
     pub(crate) operations: Vec<MutationOperation>,
     pub(crate) outbox: Vec<MutationOutboxIntent>,
 }

@@ -20,7 +20,7 @@ use super::{ConnectorPackBodyHolderRow, ConnectorPackHeadRow, ConnectorPackMembe
 use crate::agent_library::AgentLibraryStore;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct PackProjectionBody {
+pub struct PackProjectionBody {
     pub(crate) uri: String,
     pub(crate) kind: medulla_types::connector_pack::PackEntryKind,
     pub(crate) body_sha256: Digest256,
@@ -29,15 +29,15 @@ pub(crate) struct PackProjectionBody {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct ConnectorPackProjectionPlan {
+pub struct ConnectorPackProjectionPlan {
     pub(crate) tenant_id: String,
     pub(crate) connector: ResourceId,
     pub(crate) head: PackHeadRef,
     pub(crate) catalog: McpCatalogSnapshotBinding,
-    pub(crate) record_id: String,
+    pub record_id: String,
     pub(crate) bodies: Vec<PackProjectionBody>,
     /// Held declarations pinned to the current tenant/head, never executable bindings.
-    pub(crate) source_registrations: Vec<medulla_types::connector_pack::PackSourceRegistration>,
+    pub source_registrations: Vec<medulla_types::connector_pack::PackSourceRegistration>,
 }
 
 impl AgentLibraryStore {

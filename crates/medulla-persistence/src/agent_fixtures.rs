@@ -10,7 +10,7 @@ use medulla_types::agent_library::AgentLibraryMutationContext;
 use super::agent_library::{batch_id, current_agent_library_policy_digest, AgentLibraryStore};
 
 /// A fresh Agent Library owner in its own temporary directory.
-pub(crate) fn open_agent_store() -> (tempfile::TempDir, AgentLibraryStore) {
+pub fn open_agent_store() -> (tempfile::TempDir, AgentLibraryStore) {
     let dir = tempfile::tempdir().unwrap();
     let store = AgentLibraryStore::open(dir.path().to_str().unwrap()).unwrap();
     (dir, store)
@@ -22,7 +22,7 @@ pub(crate) fn open_agent_store() -> (tempfile::TempDir, AgentLibraryStore) {
 /// attempt is traceable by it. The policy decision id is named after the layer
 /// the purpose belongs to: `agent-graph:publish` decides under
 /// `agent-graph:decision:policy-v1`.
-pub(crate) fn mutation_context(
+pub fn mutation_context(
     store: &AgentLibraryStore,
     tenant_id: &str,
     key: &str,

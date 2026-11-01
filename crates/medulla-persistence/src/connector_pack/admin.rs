@@ -30,7 +30,7 @@ pub(crate) const CONNECTOR_PACK_RETIRE_RESULT_SCHEMA_ID: &str = "connector-pack-
 
 /// What a binding write does.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum BindingChange<'a> {
+pub enum BindingChange<'a> {
     /// Bind the connector to exactly this importer principal.
     Bind { importer: &'a str },
     /// Remove the connector's binding; the bootstrap importer applies again.
