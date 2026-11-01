@@ -20,6 +20,17 @@ each surface is a thin parser/router onto it, never a re-implementation.
 This is the discipline that keeps the "one unified engine" claim honest: the union of
 modalities is only real if it is reachable, uniformly, from every door into the engine.
 
+## Delivery order
+
+"Smooth" is the end state. It is delivered in falsifiable phases, and each phase must pass its own scenario before the next one starts:
+
+1. **P1.** A single-node agent writes a claim, retrieves it under policy and uses it, all through the public boundary. The scenario also shows that the retrieved claim changes the agent's next action against a control run, and that the run trace names the claim that caused the action.
+2. **P2 and P3.** The loop becomes reliable and inspectable, then holds its ownership boundaries with several agents.
+3. **P4.** The cross-modal planner expansion starts only after the P4 gate passes: the falsification gate of the unified plan (`MEDULLA-FEDERATED-QUERY-R730`, `MEDULLA-FEDERATED-QUERY-R731`) and the durable kernel check (`MEDULLA-DURABLE-KERNEL-R871`). If the gate fails, the planner stops expanding and cross-modal work runs through contracts.
+4. **P5.** Multi-node operation and items that depend on external infrastructure come last. They are not prerequisites for P1 to P4.
+
+The phase scenarios and their rows are defined in the [acceptance requirements](https://github.com/Knuckles-Team/arbora/blob/main/specs/acceptance-evidence-freeze/requirements.md). No later phase is marked delivered before the P1 scenario and its child rows are verified.
+
 ## Verified seam inventory
 
 The canonical in-transaction cross-modal seam — *stage graph + vector + OWL + Build
