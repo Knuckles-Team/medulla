@@ -558,7 +558,7 @@ impl ServerState {
 }
 
 impl ServerState {
-    pub(crate) fn request_authority(
+    pub fn request_authority(
         &self,
         request: &medulla_types::protocol::Request,
     ) -> Result<crate::authority_context::VerifiedRequestContext, String> {

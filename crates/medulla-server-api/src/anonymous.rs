@@ -13,7 +13,7 @@ struct AnonymousOperation {
     idempotency_key: String,
 }
 
-pub(super) fn request_authority(request: &Request) -> Result<VerifiedRequestContext, String> {
+pub fn request_authority(request: &Request) -> Result<VerifiedRequestContext, String> {
     if request.agent_id.is_some() {
         return Err("anonymous mode refuses caller identity claims".into());
     }
