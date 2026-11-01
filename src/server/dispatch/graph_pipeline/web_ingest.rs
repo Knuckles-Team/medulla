@@ -33,7 +33,7 @@ fn visible(ctx: &GraphOpRouting<'_>, node_id: &str) -> bool {
 #[cfg(all(feature = "query", feature = "modality-serving"))]
 async fn enrich(
     ctx: GraphOpRouting<'_>,
-    request: medulla_catalog_types::source_ingestion::web_document::EnrichDocumentRequest,
+    request: medulla_source_types::source_ingestion::web_document::EnrichDocumentRequest,
 ) -> Response {
     use medulla_h_ingest::web_ingest as web;
     let req_id = ctx.req_id;
@@ -93,7 +93,7 @@ async fn enrich(
 async fn commit(
     ctx: GraphOpRouting<'_>,
     write_set: medulla_h_ingest::repository_index::IndexWriteSet,
-    receipt: medulla_catalog_types::source_ingestion::web_document::EnrichDocumentReceipt,
+    receipt: medulla_source_types::source_ingestion::web_document::EnrichDocumentReceipt,
 ) -> Response {
     let (placement_epoch, fencing_token) = match source_ingestion_route_fence(&ctx).await {
         Ok(fence) => fence,
@@ -119,7 +119,7 @@ async fn commit(
 #[cfg(all(feature = "query", feature = "modality-serving"))]
 fn respond(
     req_id: u64,
-    receipt: medulla_catalog_types::source_ingestion::web_document::EnrichDocumentReceipt,
+    receipt: medulla_source_types::source_ingestion::web_document::EnrichDocumentReceipt,
 ) -> Response {
     Response::ok(
         req_id,
@@ -132,7 +132,7 @@ fn respond(
 #[cfg(not(all(feature = "query", feature = "modality-serving")))]
 async fn enrich(
     ctx: GraphOpRouting<'_>,
-    _request: medulla_catalog_types::source_ingestion::web_document::EnrichDocumentRequest,
+    _request: medulla_source_types::source_ingestion::web_document::EnrichDocumentRequest,
 ) -> Response {
     Response::err(
         ctx.req_id,

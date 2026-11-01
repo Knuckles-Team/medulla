@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_catalog_types::lifecycle::sha256_hex;
+use medulla_source_types::lifecycle::sha256_hex;
 use medulla_compute::source_symbol_edit::{
     project_symbol_edit, BlobAccess, ProjectionRefusal, ResolvedSymbol, SymbolResolver,
 };

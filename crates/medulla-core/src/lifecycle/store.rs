@@ -4,9 +4,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_catalog_types::{
-    lifecycle::LifecycleEdgeKind, lifecycle::LifecycleKind, lifecycle::LifecycleRefusal,
-};
+use medulla_source_types::{lifecycle::LifecycleEdgeKind, lifecycle::LifecycleKind, lifecycle::LifecycleRefusal};
 use medulla_types::source_changeset::Changeset;
 
 use super::derive::{derive_lifecycle_edges, CodeGraphView, DerivedEdge};

@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_catalog_types::{lifecycle::LifecycleEdgeKind as E, lifecycle::LifecycleKind as K};
+use medulla_source_types::{lifecycle::LifecycleEdgeKind as E, lifecycle::LifecycleKind as K};
 use medulla_core::lifecycle::derive::{
     derive_lifecycle_edges, CodeGraphView, Culprit, ReleaseHead, Span, SymbolFact, TestBinding,
     TestCall, RULE_VERSION,

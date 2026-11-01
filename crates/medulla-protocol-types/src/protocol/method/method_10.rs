@@ -110,7 +110,7 @@ $($variants)*
     /// Manifest mapping under the verified tenant, admits raw records to CAS,
     /// maps them and atomically commits graph material, provenance and cursor.
     SourceIngest {
-        request: Box<medulla_catalog_types::source_ingestion::SourceIngestionRequest>,
+        request: Box<medulla_source_types::source_ingestion::SourceIngestionRequest>,
     },
 
     /// Latest authoritative SourceIngest checkpoint for restart/failover CAS

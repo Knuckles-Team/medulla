@@ -19,11 +19,7 @@ mod common;
 mod test_support;
 
 use medulla::protocol::{Method, Response, ResultPayload};
-use medulla_catalog_types::{
-    source_ingestion::web_document::EnrichDocumentReceipt,
-    source_ingestion::web_document::EnrichDocumentRequest,
-    source_ingestion::web_document::FetchBackend,
-};
+use medulla_source_types::{source_ingestion::web_document::EnrichDocumentReceipt, source_ingestion::web_document::EnrichDocumentRequest, source_ingestion::web_document::FetchBackend};
 use medulla_decision_types::{
     decision::web_fetch_selection::SelectWebPagesAnswer,
     decision::web_fetch_selection::SelectWebPagesRequest,

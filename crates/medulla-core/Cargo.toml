@@ -123,6 +123,7 @@ medulla-result-types = { path = "../medulla-result-types" }
 medulla-index-types = { path = "../medulla-index-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-source-types = { path = "../medulla-source-types" }
 
 [dev-dependencies]
 # The commercial-vocabulary contract tests (MEDULLA-SUPPLY-VOCAB-R003.13-.16) parse

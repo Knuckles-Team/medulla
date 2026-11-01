@@ -168,7 +168,7 @@ pub struct TranscriptPrefixDelta {
 //
 // spec: MEDULLA-REPO-INGEST-R800.2
 pub fn transcript_file_matches_checkpoint(
-    checkpoint: &medulla_catalog_types::source_ingestion::SourceCheckpoint,
+    checkpoint: &medulla_source_types::source_ingestion::SourceCheckpoint,
     bytes: &[u8],
 ) -> bool {
     checkpoint.content_hash == Some(Digest256::sha256(bytes))

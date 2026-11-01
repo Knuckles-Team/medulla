@@ -30,6 +30,7 @@ medulla-index-types = { path = "../medulla-index-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-work-types = { path = "../medulla-work-types" }
+medulla-source-types = { path = "../medulla-source-types" }
 
 [features]
 wire-contract = ["finance", "datascience", "mining", "graphlearn", "ml-pipeline", "epistemic", "query", "graphql", "broker", "blob", "kv", "sqlite-file", "streaming", "cost", "rdf", "sparql", "owl", "obda", "wasm-udf", "compute-dist", "matview", "security", "federation", "medulla-types/wire-contract", "medulla-identity-types/wire-contract", "medulla-mutation-types/wire-contract", "medulla-index-types/wire-contract", "medulla-result-types/wire-contract", "medulla-agent-types/wire-contract", "medulla-catalog-types/wire-contract", "medulla-decision-types/wire-contract"]
@@ -38,7 +39,7 @@ asr-native = ["medulla-types/asr-native"]
 blob = ["medulla-types/blob"]
 broker = ["medulla-types/broker"]
 compute-dist = ["medulla-types/compute-dist", "medulla-result-types/compute-dist"]
-contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-identity-types/contract-schema", "medulla-mutation-types/contract-schema", "medulla-index-types/contract-schema", "medulla-result-types/contract-schema", "medulla-agent-types/contract-schema", "medulla-work-types/contract-schema", "medulla-catalog-types/contract-schema", "medulla-decision-types/contract-schema"]
+contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-identity-types/contract-schema", "medulla-mutation-types/contract-schema", "medulla-index-types/contract-schema", "medulla-result-types/contract-schema", "medulla-agent-types/contract-schema", "medulla-work-types/contract-schema", "medulla-catalog-types/contract-schema", "medulla-source-types/contract-schema", "medulla-decision-types/contract-schema"]
 cost = ["medulla-types/cost"]
 datascience = ["medulla-types/datascience", "medulla-result-types/datascience"]
 epistemic = ["query", "medulla-types/epistemic"]
@@ -64,6 +65,6 @@ sparql = ["rdf", "medulla-types/sparql"]
 sqlite-file = ["query", "medulla-types/sqlite-file"]
 statechart = ["medulla-types/statechart"]
 streaming = ["medulla-types/streaming"]
-test-support = ["medulla-types/test-support", "medulla-identity-types/test-support", "medulla-agent-types/test-support", "medulla-work-types/test-support", "medulla-catalog-types/test-support", "medulla-decision-types/test-support"]
+test-support = ["medulla-types/test-support", "medulla-identity-types/test-support", "medulla-agent-types/test-support", "medulla-work-types/test-support", "medulla-catalog-types/test-support", "medulla-source-types/test-support", "medulla-decision-types/test-support"]
 viz = ["medulla-types/viz"]
 wasm-udf = ["query", "medulla-types/wasm-udf"]

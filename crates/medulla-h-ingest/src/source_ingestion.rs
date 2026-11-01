@@ -10,18 +10,9 @@ use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
-use medulla_catalog_types::{
-    source_ingestion::RawAdmissionReceipt, source_ingestion::RawRelationshipAdmissionReceipt,
-    source_ingestion::SourceIngestionMode, source_ingestion::SourceIngestionRequest,
-    source_ingestion::SourceMappingReceipt, source_ingestion::SourceRelationshipTombstoneReceipt,
-    source_ingestion::SourceTombstoneReceipt,
-};
+use medulla_source_types::{source_ingestion::RawAdmissionReceipt, source_ingestion::RawRelationshipAdmissionReceipt, source_ingestion::SourceIngestionMode, source_ingestion::SourceIngestionRequest, source_ingestion::SourceMappingReceipt, source_ingestion::SourceRelationshipTombstoneReceipt, source_ingestion::SourceTombstoneReceipt};
 #[cfg(all(feature = "redb", feature = "blob"))]
-use medulla_catalog_types::{
-    source_ingestion::SourceEntityRef, source_ingestion::SourceIngestionDisposition,
-    source_ingestion::SourceIngestionReceipt, source_ingestion::SourceMappingKind,
-    source_ingestion::SourceWithdrawal,
-};
+use medulla_source_types::{source_ingestion::SourceEntityRef, source_ingestion::SourceIngestionDisposition, source_ingestion::SourceIngestionReceipt, source_ingestion::SourceMappingKind, source_ingestion::SourceWithdrawal};
 use medulla_types::contract::Digest256;
 use tokio::sync::RwLock;
 
@@ -54,7 +45,7 @@ pub struct PreparedSourceIngestion {
     relationship_raw_admissions: Vec<RawRelationshipAdmissionReceipt>,
     tombstones: Vec<SourceTombstoneReceipt>,
     relationship_tombstones: Vec<SourceRelationshipTombstoneReceipt>,
-    accepted_checkpoint: medulla_catalog_types::source_ingestion::SourceCheckpoint,
+    accepted_checkpoint: medulla_source_types::source_ingestion::SourceCheckpoint,
     live_set_digest: Option<Digest256>,
     relationship_live_set_digest: Option<Digest256>,
     affected_count: u64,
@@ -71,7 +62,7 @@ pub async fn status(
     tenant_scope: &str,
     verified: &VerifiedRequestContext,
     persistence: &Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
-    request: medulla_catalog_types::source_ingestion::SourceIngestStatusRequest,
+    request: medulla_source_types::source_ingestion::SourceIngestStatusRequest,
 ) -> Response {
     if !verified.allows_method("source:ingest", false) {
         return Response::err(
@@ -98,7 +89,7 @@ pub async fn status(
         Err(error) => return Response::err(request_id, error),
     };
     let body = if let Some(marker) = marker {
-        medulla_catalog_types::source_ingestion::SourceIngestStatus {
+        medulla_source_types::source_ingestion::SourceIngestStatus {
             connector: request.connector,
             stream: request.stream,
             content_hash: marker.checkpoint.content_hash,
@@ -111,7 +102,7 @@ pub async fn status(
             committed_graph_version: Some(marker.committed_graph_version),
         }
     } else {
-        medulla_catalog_types::source_ingestion::SourceIngestStatus {
+        medulla_source_types::source_ingestion::SourceIngestStatus {
             connector: request.connector.clone(),
             stream: request.stream.clone(),
             accepted_checkpoint: None,
@@ -139,7 +130,7 @@ pub async fn status(
     _tenant_scope: &str,
     _verified: &VerifiedRequestContext,
     _persistence: &Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
-    _request: medulla_catalog_types::source_ingestion::SourceIngestStatusRequest,
+    _request: medulla_source_types::source_ingestion::SourceIngestStatusRequest,
 ) -> Response {
     Response::err(
         request_id,
@@ -309,7 +300,7 @@ fn authorize_ingestion(ctx: &PrepareContext<'_>) -> Result<(), String> {
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn authorize_empty_reconciliation(
     ctx: &PrepareContext<'_>,
-    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
 ) -> Result<(), String> {
     let empty_live_set = batch
         .authoritative_live_ids
@@ -398,7 +389,7 @@ async fn load_resources(ctx: &PrepareContext<'_>) -> Result<IngestionResources, 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn resolve_mappings(
     ctx: &PrepareContext<'_>,
-    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     resources: &IngestionResources,
 ) -> Result<ResolvedIngestionMappings, String> {
     // The request has no tenant or mapping body. Both are resolved exclusively
@@ -486,7 +477,7 @@ struct SourceLiveSetMarker {
     live_relationships: Vec<SourceLiveRelationship>,
     live_set_digest: Option<Digest256>,
     relationship_live_set_digest: Option<Digest256>,
-    checkpoint: medulla_catalog_types::source_ingestion::SourceCheckpoint,
+    checkpoint: medulla_source_types::source_ingestion::SourceCheckpoint,
     checkpoint_digest: Digest256,
     batch_digest: Digest256,
     receipt_id: String,
@@ -539,7 +530,7 @@ struct SourceRelationshipMarker {
 #[cfg(all(feature = "redb", feature = "blob"))]
 async fn reconcile_batch(
     ctx: &PrepareContext<'_>,
-    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     batch_digest: Digest256,
     receipt_id: &str,
     persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
@@ -641,7 +632,7 @@ async fn stream_content_digest(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn reconcile_entities(
-    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     prior_live: &BTreeSet<SourceEntityRef>,
     prior: Option<&SourceLiveSetMarker>,
 ) -> Result<EntityReconciliation, String> {
@@ -687,7 +678,7 @@ fn reconcile_entities(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn reconcile_authoritative_entities(
-    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     prior_live: &BTreeSet<SourceEntityRef>,
 ) -> Result<EntityReconciliation, String> {
     let current: BTreeSet<_> = batch
@@ -715,7 +706,7 @@ fn reconcile_authoritative_entities(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn reconcile_relationships(
     tenant: &str,
-    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     prior: Option<&SourceLiveSetMarker>,
     entity_tombstones: &[SourceWithdrawal],
 ) -> Result<RelationshipReconciliation, String> {
@@ -766,7 +757,7 @@ fn relationship_state_by_id(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn submitted_relationship_state(
     tenant: &str,
-    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
 ) -> Result<BTreeMap<String, SourceLiveRelationship>, String> {
     batch
         .relationships
@@ -830,7 +821,7 @@ fn planned_relationship_tombstones(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn is_authoritative_empty_full(
-    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
 ) -> bool {
     batch.mode == SourceIngestionMode::Full
         && batch.records.is_empty()
@@ -841,7 +832,7 @@ fn is_authoritative_empty_full(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn validate_tombstone_targets(
     ctx: &PrepareContext<'_>,
-    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     withdrawals: &[SourceWithdrawal],
     persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
     graph_fname: &str,
@@ -869,7 +860,7 @@ fn validate_tombstone_targets(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn validate_authoritative_live_targets(
     ctx: &PrepareContext<'_>,
-    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
     graph_fname: &str,
 ) -> Result<(), String> {
@@ -935,7 +926,7 @@ fn digest_relationship_live_set(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn source_marker_id(
     tenant: &str,
-    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
 ) -> Result<String, String> {
     source_marker_id_for(tenant, &batch.connector, &batch.provider_checkpoint.stream)
 }
@@ -972,7 +963,7 @@ fn policy_subject(tenant: &str) -> Result<String, String> {
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn admit_records(
     ctx: &PrepareContext<'_>,
-    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     authority: &CarrierAuthority,
     blob: &Arc<medulla_server_api::blob::BlobCursors>,
     resolved: &ResolvedIngestionMappings,
@@ -1022,7 +1013,7 @@ fn admit_records(
 #[cfg(all(feature = "redb", feature = "blob"))]
 struct RelationshipAdmissionContext<'a, 'ctx> {
     ctx: &'a PrepareContext<'ctx>,
-    batch: &'a medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    batch: &'a medulla_source_types::source_ingestion::SourceIngestionBatch,
     authority: &'a CarrierAuthority,
     blob: &'a Arc<medulla_server_api::blob::BlobCursors>,
     resolved: &'a ResolvedIngestionMappings,
@@ -1230,7 +1221,7 @@ fn source_relationship_edge_method(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn validate_relationship_endpoint(
     ctx: &PrepareContext<'_>,
-    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     submitted: &BTreeMap<SourceEntityRef, String>,
     entity: &SourceEntityRef,
     expected_type: &str,
@@ -1287,7 +1278,7 @@ fn validate_relationship_endpoint_type(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn relationship_properties(
-    relationship: &medulla_catalog_types::source_ingestion::SourceRelationship,
+    relationship: &medulla_source_types::source_ingestion::SourceRelationship,
     relationship_id: &str,
     resolved: &medulla_persistence::connector_pack::ResolvedConnectorRelationshipMapping,
     raw_digest: &str,
@@ -1331,7 +1322,7 @@ fn relationship_properties(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn admit_tombstones(
     ctx: &PrepareContext<'_>,
-    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     tombstones: &[SourceWithdrawal],
     policy_subject: &str,
     mapping_revision: u64,
@@ -1371,7 +1362,7 @@ fn admit_tombstones(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn admit_relationship_tombstones(
     ctx: &PrepareContext<'_>,
-    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     tombstones: &[PlannedRelationshipTombstone],
     policy_subject: &str,
     mapping_revision: u64,
@@ -1424,7 +1415,7 @@ fn admit_relationship_tombstones(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn tombstone_receipts(
     ctx: &PrepareContext<'_>,
-    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     tombstones: &[SourceWithdrawal],
 ) -> Result<Vec<SourceTombstoneReceipt>, String> {
     tombstones
@@ -1472,8 +1463,8 @@ struct AdmittedRecord {
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn admit_record(
     ctx: &PrepareContext<'_>,
-    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
-    record: &medulla_catalog_types::source_ingestion::SourceRecord,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
+    record: &medulla_source_types::source_ingestion::SourceRecord,
     authority: &CarrierAuthority,
     blob: &Arc<medulla_server_api::blob::BlobCursors>,
     resolved: &ResolvedIngestionMappings,
@@ -1583,7 +1574,7 @@ fn raw_blob_reference(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn receipt_method(
-    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     batch_id: &str,
     resolved: &ResolvedIngestionMappings,
     reconciliation: &ReconciliationPlan,
@@ -1651,7 +1642,7 @@ struct EnvelopeContents {
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn build_envelope(
-    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     batch_id: &str,
     contents: EnvelopeContents,
 ) -> Result<medulla_protocol_types::change_envelope::ChangeEnvelope, String> {
@@ -1853,7 +1844,7 @@ fn receipt_bytes(value: &impl serde::Serialize) -> Result<Vec<u8>, String> {
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn prepared_replay(
     ctx: PrepareContext<'_>,
-    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     batch_digest: Digest256,
     envelope: medulla_protocol_types::change_envelope::ChangeEnvelope,
 ) -> Result<PreparedSourceIngestion, String> {
@@ -1960,7 +1951,7 @@ fn replay_receipt(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn validate_replay_metadata(
-    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     receipt: &serde_json::Value,
 ) -> Result<(), String> {
     let checkpoint_digest = batch.provider_checkpoint.digest()?;
@@ -2036,7 +2027,7 @@ fn relationship_mapping_digest(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn mapped_properties(
-    record: &medulla_catalog_types::source_ingestion::SourceRecord,
+    record: &medulla_source_types::source_ingestion::SourceRecord,
     ontology_class: &str,
     fields: &BTreeMap<String, String>,
     datatypes: &BTreeMap<String, String>,
@@ -2280,7 +2271,7 @@ fn validate_xsd_value(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn insert_source_metadata(
     mapped: &mut serde_json::Map<String, serde_json::Value>,
-    record: &medulla_catalog_types::source_ingestion::SourceRecord,
+    record: &medulla_source_types::source_ingestion::SourceRecord,
     mapping_reference: &str,
     raw_digest: &str,
 ) -> Result<(), String> {
@@ -2316,8 +2307,8 @@ fn source_node_id(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn canonical_relationship_id(
     tenant: &str,
-    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
-    relationship: &medulla_catalog_types::source_ingestion::SourceRelationship,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
+    relationship: &medulla_source_types::source_ingestion::SourceRelationship,
 ) -> Result<String, String> {
     Ok(format!(
         "source-relation:{}",
@@ -2412,10 +2403,7 @@ fn policy_with_operation(
 mod tests {
     use super::*;
     use medulla_catalog_types::connector_pack::McpCatalogSnapshotBinding;
-    use medulla_catalog_types::{
-        source_ingestion::SourceJson, source_ingestion::SourceRecord,
-        source_ingestion::SourceRecordProvenance,
-    };
+    use medulla_source_types::{source_ingestion::SourceJson, source_ingestion::SourceRecord, source_ingestion::SourceRecordProvenance};
     use medulla_types::contract::ResourceId;
 
     fn record() -> SourceRecord {
@@ -2598,10 +2586,7 @@ mod tests {
         use medulla_catalog_types::{
             connector_pack::ConnectorRelationshipMapping, connector_pack::ConnectorSchemaMapping,
         };
-        use medulla_catalog_types::{
-            source_ingestion::SourceEntityRef, source_ingestion::SourceIngestionRequest,
-            source_ingestion::SourceRelationship,
-        };
+        use medulla_source_types::{source_ingestion::SourceEntityRef, source_ingestion::SourceIngestionRequest, source_ingestion::SourceRelationship};
 
         struct NoReadPersistence;
         impl medulla_server_api::api::persistence::PersistenceBackend for NoReadPersistence {
@@ -2621,7 +2606,7 @@ mod tests {
             target_node.clone(),
             rmp_serde::to_vec_named(&serde_json::json!({"type":"Document"})).unwrap(),
         );
-        let mut batch = medulla_catalog_types::source_ingestion::fixtures::request()
+        let mut batch = medulla_source_types::source_ingestion::fixtures::request()
             .as_batch()
             .clone();
         batch.expected_previous_checkpoint = None;
@@ -2664,7 +2649,7 @@ mod tests {
             })
             .collect();
         batch.relationships =
-            medulla_catalog_types::source_ingestion::SourceRelationships::new(relationships)
+            medulla_source_types::source_ingestion::SourceRelationships::new(relationships)
                 .unwrap();
         let request = SourceIngestionRequest::new(batch).unwrap();
         let batch = request.as_batch();

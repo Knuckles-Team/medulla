@@ -7,7 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use medulla_catalog_types::lifecycle::Severity;
+use medulla_source_types::lifecycle::Severity;
 
 /// Why a triage abstained.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

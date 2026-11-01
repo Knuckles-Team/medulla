@@ -45,6 +45,7 @@ tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sy
 tracing = "0.1"
 uuid = { version = "1.28", features = ["v4"] }
 medulla-work-types = { path = "../medulla-work-types" }
+medulla-source-types = { path = "../medulla-source-types" }
 
 [features]
 test-support = []

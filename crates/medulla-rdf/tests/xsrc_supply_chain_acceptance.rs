@@ -11,7 +11,7 @@ mod common;
 
 use std::collections::BTreeSet;
 
-use medulla_catalog_types::{supply_chain_report::ImpactKind, supply_chain_report::ImpactRow};
+use medulla_source_types::{supply_chain_report::ImpactKind, supply_chain_report::ImpactRow};
 use medulla_core::graph::{GraphCore, GraphView};
 use medulla_rdf::mapping::{load_triples, parse_turtle, IriStore};
 use medulla_rdf::source_selection::CoverageFixture;

@@ -345,7 +345,7 @@ pub struct SourceMappingReceipt {
     pub mapping_reference: String,
     pub mapping_digest: Digest256,
     pub connector_pack_digest: Digest256,
-    pub catalog: crate::connector_pack::McpCatalogSnapshotBinding,
+    pub catalog: medulla_catalog_types::connector_pack::McpCatalogSnapshotBinding,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

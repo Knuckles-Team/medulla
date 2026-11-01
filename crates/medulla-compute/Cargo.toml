@@ -253,6 +253,7 @@ medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-work-types = { path = "../medulla-work-types" }
+medulla-source-types = { path = "../medulla-source-types" }
 
 [dev-dependencies]
 medulla-result-types = { path = "../medulla-result-types" }
