@@ -22,6 +22,8 @@ petgraph = { version = "0.8.3", features = ["serde-1"] }
 rayon = "1.12"
 tracing = "0.1"
 medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
 
 [features]
 contract = ["dep:medulla-modality", "medulla-compute/contract"]
