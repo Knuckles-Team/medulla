@@ -78,6 +78,7 @@ uuid = { version = "1.28", features = ["v4"] }
 medulla-document = { path = "../medulla-document", optional = true }
 medulla-index-types = { path = "../medulla-index-types" }
 openraft = { version = "=0.10.0-alpha.26", features = ["serde"], optional = true }
+medulla-direct-state = { path = "../medulla-direct-state" }
 
 [features]
 amqp-wire = ["server"]
