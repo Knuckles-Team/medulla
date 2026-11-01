@@ -3,8 +3,8 @@
 
 use super::*;
 #[cfg(target_os = "linux")]
-use crate::direct_state::MAX_DIRECT_STATE_CHUNK_BYTES;
-use crate::direct_state::{PinnedPrivateDirectory, HARD_MAX_DIRECT_STATE_BYTES};
+use medulla_direct_state::direct_state::MAX_DIRECT_STATE_CHUNK_BYTES;
+use medulla_direct_state::direct_state::{PinnedPrivateDirectory, HARD_MAX_DIRECT_STATE_BYTES};
 use redb::backends::FileBackend;
 use redb::StorageBackend;
 #[cfg(target_os = "linux")]

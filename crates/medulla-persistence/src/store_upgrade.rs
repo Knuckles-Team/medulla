@@ -220,7 +220,7 @@ fn default_budget(store: &Path) -> Result<u64, String> {
     Ok(size
         .saturating_add(size / 4)
         .saturating_add(STAGING_HEADROOM_BYTES)
-        .min(medulla_storage::direct_state::HARD_MAX_DIRECT_STATE_BYTES))
+        .min(medulla_direct_state::direct_state::HARD_MAX_DIRECT_STATE_BYTES))
 }
 
 /// What running the candidate upgrades of one store came to.

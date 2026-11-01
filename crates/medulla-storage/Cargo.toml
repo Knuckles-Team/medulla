@@ -10,6 +10,7 @@ license = "MIT"
 name = "medulla_storage"
 
 [dependencies]
+medulla-direct-state = { path = "../medulla-direct-state" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-types = { path = "../medulla-types" }
 redb = { workspace = true }
