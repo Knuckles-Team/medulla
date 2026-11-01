@@ -17,7 +17,7 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use medulla_compute::algorithms::community_detection;
-use medulla_compute::graph::GraphCore;
+use medulla_core::graph::GraphCore;
 
 fn props(json: serde_json::Value) -> Vec<u8> {
     rmp_serde::to_vec_named(&json).unwrap()
