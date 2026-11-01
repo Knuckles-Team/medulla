@@ -89,6 +89,7 @@ use medulla_store::redb_store::shard::SourceGraftMarker;
 use medulla_store::redb_store::shard::FOREIGN_GRAFT_MARKER;
 #[cfg(test)]
 use medulla_store::redb_store::shard::take_test_barrier;
+#[cfg(all(test, feature = "server"))]
 use medulla_store::redb_store::shard::GRAFT_BEFORE_PROTOCOL_LOCK;
 #[cfg(feature = "security")]
 use medulla_store::redb_store::PROVENANCE_ANCHOR_MEMBERS;
