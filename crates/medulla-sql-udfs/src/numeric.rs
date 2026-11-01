@@ -118,7 +118,7 @@ impl ScalarUDFImpl for CosineSimUdf {
     }
 }
 
-pub(crate) fn cosine_sim_udf() -> ScalarUDF {
+pub fn cosine_sim_udf() -> ScalarUDF {
     ScalarUDF::new_from_impl(CosineSimUdf {
         signature: Signature::any(2, Volatility::Immutable),
     })
@@ -183,7 +183,7 @@ impl ScalarUDFImpl for L2NormalizeUdf {
     }
 }
 
-pub(crate) fn l2_normalize_udf() -> ScalarUDF {
+pub fn l2_normalize_udf() -> ScalarUDF {
     ScalarUDF::new_from_impl(L2NormalizeUdf {
         signature: Signature::any(1, Volatility::Immutable),
     })
@@ -244,7 +244,7 @@ impl ScalarUDFImpl for ZScoreUdf {
     }
 }
 
-pub(crate) fn zscore_udf() -> ScalarUDF {
+pub fn zscore_udf() -> ScalarUDF {
     ScalarUDF::new_from_impl(ZScoreUdf {
         signature: Signature::any(1, Volatility::Immutable),
     })
@@ -367,7 +367,7 @@ impl Accumulator for CovAcc {
     }
 }
 
-pub(crate) fn covariance_udaf() -> AggregateUDF {
+pub fn covariance_udaf() -> AggregateUDF {
     create_udaf(
         "covariance",
         vec![DataType::Float64, DataType::Float64],
@@ -698,7 +698,7 @@ impl AggregateUDFImpl for MatrixAggUdf {
 
 /// `svd(vec_col) -> List<Float64>` — singular values of the aggregated matrix
 /// (CONCEPT:MEDULLA-KG.query.svd-medulla-pca-column).
-pub(crate) fn svd_udaf() -> AggregateUDF {
+pub fn svd_udaf() -> AggregateUDF {
     AggregateUDF::new_from_impl(MatrixAggUdf {
         op: MatrixOp::Svd,
         name: "svd",
@@ -708,7 +708,7 @@ pub(crate) fn svd_udaf() -> AggregateUDF {
 
 /// `pca(vec_col, k) -> List<List<Float64>>` — top-`k` principal-component directions
 /// (CONCEPT:MEDULLA-KG.query.concept-6).
-pub(crate) fn pca_udaf() -> AggregateUDF {
+pub fn pca_udaf() -> AggregateUDF {
     AggregateUDF::new_from_impl(MatrixAggUdf {
         op: MatrixOp::Pca,
         name: "pca",
@@ -720,7 +720,7 @@ pub(crate) fn pca_udaf() -> AggregateUDF {
 /// ingestion order (CONCEPT:MEDULLA-KG.query.kmeans-clustering-half-one). The clustering half of the cross-modal analytics
 /// differentiator (CONCEPT:MEDULLA-KG.query.medulla-3): the vector column is marshalled into an `n×d` matrix
 /// and clustered IN-ENGINE by the pure-Rust `medulla_numeric::cluster` kernel.
-pub(crate) fn kmeans_udaf() -> AggregateUDF {
+pub fn kmeans_udaf() -> AggregateUDF {
     AggregateUDF::new_from_impl(MatrixAggUdf {
         op: MatrixOp::Kmeans,
         name: "kmeans",

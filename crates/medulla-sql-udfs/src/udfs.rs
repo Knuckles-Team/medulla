@@ -48,7 +48,7 @@ fn as_inputs(args: &[ColumnarValue]) -> datafusion::error::Result<(BinaryArray, 
 }
 
 /// json_get(props, key) -> Utf8
-pub(crate) fn json_get_udf() -> ScalarUDF {
+pub fn json_get_udf() -> ScalarUDF {
     let fun = Arc::new(|args: &[ColumnarValue]| {
         let (props, keys) = as_inputs(args)?;
         let out: StringArray = (0..props.len())
@@ -75,7 +75,7 @@ pub(crate) fn json_get_udf() -> ScalarUDF {
 }
 
 /// json_get_f64(props, key) -> Float64
-pub(crate) fn json_get_f64_udf() -> ScalarUDF {
+pub fn json_get_f64_udf() -> ScalarUDF {
     let fun = Arc::new(|args: &[ColumnarValue]| {
         let (props, keys) = as_inputs(args)?;
         let out: Float64Array = (0..props.len())
@@ -102,7 +102,7 @@ pub(crate) fn json_get_f64_udf() -> ScalarUDF {
 }
 
 /// json_get_i64(props, key) -> Int64
-pub(crate) fn json_get_i64_udf() -> ScalarUDF {
+pub fn json_get_i64_udf() -> ScalarUDF {
     let fun = Arc::new(|args: &[ColumnarValue]| {
         let (props, keys) = as_inputs(args)?;
         let out: Int64Array = (0..props.len())
@@ -138,7 +138,7 @@ pub(crate) fn json_get_i64_udf() -> ScalarUDF {
 ///   confidence                                    when now <= valid_from
 ///   confidence * exp(-ln2/30 * age_days)          when now  > valid_from
 /// and null if any argument is null. Pure / immutable scalar.
-pub(crate) fn epistemic_decay_udf() -> ScalarUDF {
+pub fn epistemic_decay_udf() -> ScalarUDF {
     let fun = Arc::new(|args: &[ColumnarValue]| {
         let arrays = ColumnarValue::values_to_arrays(args)?;
         let want = |i: usize| -> datafusion::error::Result<Float64Array> {
@@ -356,17 +356,17 @@ fn vector_distance_udf(name: &'static str, kernel: fn(&[f32], &[f32]) -> Option<
 }
 
 /// `vector_l2(a, b)` — L2 distance, the `<->` operator (CONCEPT:MEDULLA-KG.query.pgvector-binary-wire).
-pub(crate) fn vector_l2_udf() -> ScalarUDF {
+pub fn vector_l2_udf() -> ScalarUDF {
     vector_distance_udf("vector_l2", dist_l2)
 }
 
 /// `vector_cosine(a, b)` — cosine distance, the `<=>` operator (CONCEPT:MEDULLA-KG.query.pgvector-binary-wire).
-pub(crate) fn vector_cosine_udf() -> ScalarUDF {
+pub fn vector_cosine_udf() -> ScalarUDF {
     vector_distance_udf("vector_cosine", dist_cosine)
 }
 
 /// `vector_ip(a, b)` — negative inner product, the `<#>` operator (CONCEPT:MEDULLA-KG.query.pgvector-binary-wire).
-pub(crate) fn vector_ip_udf() -> ScalarUDF {
+pub fn vector_ip_udf() -> ScalarUDF {
     vector_distance_udf("vector_ip", dist_neg_ip)
 }
 
@@ -481,7 +481,7 @@ fn row_to_string(array: &dyn Array, row: usize) -> Option<String> {
 /// Int64/Float64 epoch or a Timestamp. NULL on an un-parseable width or a NULL ts —
 /// the same "never error" discipline as the other UDFs. This is the exact bucket
 /// labelling the medulla-tsdb `Op::Window` (MEDULLA-067) aggregation uses; gap-fill is a follow-up.
-pub(crate) fn time_bucket_udf() -> ScalarUDF {
+pub fn time_bucket_udf() -> ScalarUDF {
     use datafusion::logical_expr::{ScalarUDFImpl, Signature};
     #[derive(Debug, PartialEq, Eq, Hash)]
     struct TimeBucketUdf {
@@ -538,7 +538,7 @@ pub(crate) fn time_bucket_udf() -> ScalarUDF {
 /// whitespace tokens) so a `WHERE col @@@ 'q'` query runs directly through DataFusion;
 /// the full BM25-ranked pushdown onto medulla-text's Tantivy index is the server-side
 /// lowering (see `plan_bm25_search`). NULL/absent operands ⇒ false.
-pub(crate) fn bm25_match_udf() -> ScalarUDF {
+pub fn bm25_match_udf() -> ScalarUDF {
     use arrow::array::BooleanArray;
     use datafusion::logical_expr::{ScalarUDFImpl, Signature};
     #[derive(Debug, PartialEq, Eq, Hash)]
@@ -598,7 +598,7 @@ pub(crate) fn bm25_match_udf() -> ScalarUDF {
 ///     lowering of [`crate::Bm25SearchPlan`] onto `medulla_text::TextIndex::search(query, k)`
 ///     — the ONLY place both the query and the whole corpus/index co-exist (as MEDULLA-119
 ///     noted). See the module docs on the two-path design.
-pub(crate) fn bm25_score_udf() -> ScalarUDF {
+pub fn bm25_score_udf() -> ScalarUDF {
     use datafusion::logical_expr::{ScalarUDFImpl, Signature, TypeSignature};
     #[derive(Debug, PartialEq, Eq, Hash)]
     struct Bm25ScoreUdf {
@@ -665,7 +665,7 @@ pub(crate) fn bm25_score_udf() -> ScalarUDF {
 ///     echoes the text unchanged, because the `@@@` query needed to pick + highlight a
 ///     fragment is not threaded to a per-row UDF (the server-side lowering is the
 ///     query-aware path — see `bm25_score_udf` docs).
-pub(crate) fn bm25_snippet_udf() -> ScalarUDF {
+pub fn bm25_snippet_udf() -> ScalarUDF {
     use datafusion::logical_expr::{ScalarUDFImpl, Signature, TypeSignature};
     /// Default snippet width (chars) when `paradedb.snippet` is called without an
     /// explicit max length — a readable one-line fragment.
@@ -877,12 +877,12 @@ fn minmax_udf(name: &'static str, is_greatest: bool) -> ScalarUDF {
 }
 
 /// `greatest(...)` — the row-wise maximum, ignoring NULLs (CONCEPT:MEDULLA-KG.query.greatest-least-int4range-tsrange).
-pub(crate) fn greatest_udf() -> ScalarUDF {
+pub fn greatest_udf() -> ScalarUDF {
     minmax_udf("greatest", true)
 }
 
 /// `least(...)` — the row-wise minimum, ignoring NULLs (CONCEPT:MEDULLA-KG.query.greatest-least-int4range-tsrange).
-pub(crate) fn least_udf() -> ScalarUDF {
+pub fn least_udf() -> ScalarUDF {
     minmax_udf("least", false)
 }
 
@@ -1004,7 +1004,7 @@ fn row_to_i64(array: &dyn Array, row: usize) -> Option<i64> {
 /// constructor. Emits the canonical text `[lo,hi)` (2-arg default `'[)'`); the optional
 /// 3rd argument is a bounds spelling (`'[]'`, `'[)'`, `'(]'`, `'()'`). An omitted/NULL
 /// bound is rendered as unbounded (`[lo,)`). NULL when both bounds are NULL.
-pub(crate) fn int4range_udf() -> ScalarUDF {
+pub fn int4range_udf() -> ScalarUDF {
     range_ctor_udf("int4range")
 }
 
@@ -1012,7 +1012,7 @@ pub(crate) fn int4range_udf() -> ScalarUDF {
 /// constructor. Bounds are coerced to whole epoch-seconds (see [`HalfOpen`] limitation)
 /// and rendered as the canonical text `[lo,hi)`, so `tsrange` and `int4range` share the
 /// same predicate UDFs.
-pub(crate) fn tsrange_udf() -> ScalarUDF {
+pub fn tsrange_udf() -> ScalarUDF {
     range_ctor_udf("tsrange")
 }
 
@@ -1085,7 +1085,7 @@ fn range_ctor_udf(name: &'static str) -> ScalarUDF {
 
 /// `range_contains(range, value) -> Boolean` (CONCEPT:MEDULLA-KG.query.greatest-least-int4range-tsrange) — the range `@>` element
 /// test: is the point `value` inside the range text `range`? NULL operands ⇒ NULL.
-pub(crate) fn range_contains_udf() -> ScalarUDF {
+pub fn range_contains_udf() -> ScalarUDF {
     use arrow::array::BooleanArray;
     use datafusion::logical_expr::{ScalarUDFImpl, Signature};
     #[derive(Debug, PartialEq, Eq, Hash)]
@@ -1199,19 +1199,19 @@ fn range_pred_udf(name: &'static str, kernel: fn(&HalfOpen, &HalfOpen) -> bool) 
 }
 
 /// `range_overlaps(a, b) -> Boolean` (CONCEPT:MEDULLA-KG.query.greatest-least-int4range-tsrange) — the range `&&` overlap test.
-pub(crate) fn range_overlaps_udf() -> ScalarUDF {
+pub fn range_overlaps_udf() -> ScalarUDF {
     range_pred_udf("range_overlaps", |a, b| a.overlaps(b))
 }
 
 /// `range_contains_range(a, b) -> Boolean` (CONCEPT:MEDULLA-KG.query.greatest-least-int4range-tsrange) — the range `@>` test
 /// (`a` covers all of `b`).
-pub(crate) fn range_contains_range_udf() -> ScalarUDF {
+pub fn range_contains_range_udf() -> ScalarUDF {
     range_pred_udf("range_contains_range", |a, b| a.contains_range(b))
 }
 
 /// `range_contained_by(a, b) -> Boolean` (CONCEPT:MEDULLA-KG.query.greatest-least-int4range-tsrange) — the range `<@` test
 /// (`a` is covered by `b`).
-pub(crate) fn range_contained_by_udf() -> ScalarUDF {
+pub fn range_contained_by_udf() -> ScalarUDF {
     range_pred_udf("range_contained_by", |a, b| b.contains_range(a))
 }
 
@@ -1332,18 +1332,18 @@ mod finance_udf {
     }
 
     /// `var(returns)` — historical Value-at-Risk at 95%.
-    pub(crate) fn var_udaf() -> AggregateUDF {
+    pub fn var_udaf() -> AggregateUDF {
         risk_udaf("var", medulla_compute::finance::risk::historical_var)
     }
 
     /// `cvar(returns)` — historical Conditional VaR (expected shortfall) at 95%.
-    pub(crate) fn cvar_udaf() -> AggregateUDF {
+    pub fn cvar_udaf() -> AggregateUDF {
         risk_udaf("cvar", medulla_compute::finance::risk::historical_cvar)
     }
 }
 
 #[cfg(feature = "finance")]
-pub(crate) use finance_udf::{cvar_udaf, var_udaf};
+pub use finance_udf::{cvar_udaf, var_udaf};
 
 // ── SQLite-extension-style scalar functions (CONCEPT:MEDULLA-KG.query.sqlite-compat-scalar-udfs,
 // turso-assimilation rank 14) — crypto hash + ipaddr helpers turso ships as loadable
@@ -1424,7 +1424,7 @@ fn text_to_bool_udf(
 }
 
 /// `md5(text) -> Utf8` — lower-hex MD5 digest of the UTF-8 bytes (turso's `crypto_md5`).
-pub(crate) fn md5_udf() -> ScalarUDF {
+pub fn md5_udf() -> ScalarUDF {
     text_to_text_udf("md5", |s| {
         use md5::Digest;
         Some(hex::encode(md5::Md5::digest(s.as_bytes())))
@@ -1432,7 +1432,7 @@ pub(crate) fn md5_udf() -> ScalarUDF {
 }
 
 /// `sha1(text) -> Utf8` — lower-hex SHA-1 digest (turso's `crypto_sha1`).
-pub(crate) fn sha1_udf() -> ScalarUDF {
+pub fn sha1_udf() -> ScalarUDF {
     text_to_text_udf("sha1", |s| {
         use sha1::Digest;
         Some(hex::encode(sha1::Sha1::digest(s.as_bytes())))
@@ -1440,7 +1440,7 @@ pub(crate) fn sha1_udf() -> ScalarUDF {
 }
 
 /// `sha256(text) -> Utf8` — lower-hex SHA-256 digest (turso's `crypto_sha256`).
-pub(crate) fn sha256_udf() -> ScalarUDF {
+pub fn sha256_udf() -> ScalarUDF {
     text_to_text_udf("sha256", |s| {
         use sha2::Digest;
         Some(hex::encode(sha2::Sha256::digest(s.as_bytes())))
@@ -1448,7 +1448,7 @@ pub(crate) fn sha256_udf() -> ScalarUDF {
 }
 
 /// `base64_encode(text) -> Utf8` — standard (non-URL) base64 of the UTF-8 bytes.
-pub(crate) fn base64_encode_udf() -> ScalarUDF {
+pub fn base64_encode_udf() -> ScalarUDF {
     text_to_text_udf("base64_encode", |s| {
         use base64::Engine;
         Some(base64::engine::general_purpose::STANDARD.encode(s.as_bytes()))
@@ -1457,7 +1457,7 @@ pub(crate) fn base64_encode_udf() -> ScalarUDF {
 
 /// `base64_decode(text) -> Utf8` — inverse of `base64_encode`; `NULL` on invalid
 /// base64 or non-UTF-8 decoded bytes rather than erroring the query.
-pub(crate) fn base64_decode_udf() -> ScalarUDF {
+pub fn base64_decode_udf() -> ScalarUDF {
     text_to_text_udf("base64_decode", |s| {
         use base64::Engine;
         let bytes = base64::engine::general_purpose::STANDARD.decode(s).ok()?;
@@ -1467,7 +1467,7 @@ pub(crate) fn base64_decode_udf() -> ScalarUDF {
 
 /// `ipfamily(text) -> Utf8` — `'4'`/`'6'` for a bare IP or CIDR literal, `NULL` if
 /// unparseable (turso's `ipfamily`).
-pub(crate) fn ipfamily_udf() -> ScalarUDF {
+pub fn ipfamily_udf() -> ScalarUDF {
     text_to_text_udf("ipfamily", |s| {
         parse_ip_or_net(s).map(|(addr, _)| match addr {
             std::net::IpAddr::V4(_) => "4".to_string(),
@@ -1478,7 +1478,7 @@ pub(crate) fn ipfamily_udf() -> ScalarUDF {
 
 /// `ipmasklen(text) -> Utf8` — the CIDR prefix length as text (`"32"`/`"128"` for a
 /// bare address), `NULL` if unparseable (turso's `ipmasklen`).
-pub(crate) fn ipmasklen_udf() -> ScalarUDF {
+pub fn ipmasklen_udf() -> ScalarUDF {
     text_to_text_udf("ipmasklen", |s| {
         parse_ip_or_net(s).map(|(_, prefix)| prefix.to_string())
     })
@@ -1503,7 +1503,7 @@ fn parse_ip_or_net(s: &str) -> Option<(std::net::IpAddr, u8)> {
 /// `ipcontains(network, addr) -> Boolean` — is `addr` inside `network` (a CIDR
 /// literal, e.g. `"10.0.0.0/24"`)? `NULL` if either argument fails to parse
 /// (turso's `ipcontains`).
-pub(crate) fn ipcontains_udf() -> ScalarUDF {
+pub fn ipcontains_udf() -> ScalarUDF {
     let fun = Arc::new(|args: &[ColumnarValue]| {
         let arrays = ColumnarValue::values_to_arrays(args)?;
         let nets = arrays[0]
@@ -1545,7 +1545,7 @@ pub(crate) fn ipcontains_udf() -> ScalarUDF {
 
 /// `iphost(text) -> Boolean` — is this a host address (prefix == full width, i.e.
 /// no `/n` suffix or `/32`\`/128`) rather than a network literal? (turso's `iphost`).
-pub(crate) fn iphost_udf() -> ScalarUDF {
+pub fn iphost_udf() -> ScalarUDF {
     text_to_bool_udf("iphost", |s| {
         parse_ip_or_net(s).map(|(addr, prefix)| {
             let full = if addr.is_ipv4() { 32 } else { 128 };

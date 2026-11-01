@@ -391,7 +391,7 @@ impl PropertyGraphStatement {
 
 /// The fields every property-graph element table carries, and the word a diagnostic calls
 /// that kind of element.
-pub(crate) trait ElementTable {
+pub trait ElementTable {
     const KIND: &'static str;
     fn labels(&self) -> &[LabelDefinition];
 }

@@ -2040,7 +2040,7 @@ fn normalize_uuid(s: &str) -> Result<String, String> {
 /// Decode a UUID into its canonical sixteen-byte representation. This helper is
 /// deliberately dependency-free so the schema module keeps compiling in the
 /// non-DataFusion feature set as well.
-pub(crate) fn uuid_bytes(s: &str) -> Result<Vec<u8>, String> {
+pub fn uuid_bytes(s: &str) -> Result<Vec<u8>, String> {
     let canonical = normalize_uuid(s)?;
     let compact: String = canonical.chars().filter(|c| *c != '-').collect();
     let mut bytes = Vec::with_capacity(16);

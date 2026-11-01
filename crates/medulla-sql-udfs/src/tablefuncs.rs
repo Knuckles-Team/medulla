@@ -56,7 +56,7 @@ fn scores_table(rows: Vec<(String, f64)>) -> DfResult<Arc<dyn TableProvider>> {
 
 /// `pagerank()` table function over an owned snapshot.
 #[derive(Debug)]
-pub(crate) struct PagerankFunc {
+pub struct PagerankFunc {
     view: Arc<GraphView>,
 }
 
@@ -96,7 +96,7 @@ impl TableFunctionImpl for PagerankFunc {
 
 /// `betweenness()` table function over an owned snapshot.
 #[derive(Debug)]
-pub(crate) struct BetweennessFunc {
+pub struct BetweennessFunc {
     view: Arc<GraphView>,
 }
 
@@ -127,7 +127,7 @@ const GENERATE_SERIES_MAX_ROWS: usize = 10_000_000;
 /// integer literals (the ordinary `SELECT * FROM generate_series(1, 5)` shape). Column is
 /// named `value`.
 #[derive(Debug)]
-pub(crate) struct GenerateSeriesFunc;
+pub struct GenerateSeriesFunc;
 
 /// Pull an i64 out of a literal `Expr` argument (Int64/Int32/UInt64/Float64), else error.
 fn literal_i64(e: &Expr, ctx: &str) -> DfResult<i64> {

@@ -23,7 +23,7 @@ use medulla_tsdb::derive::Program;
 use medulla_types::series_expr::{SeriesExpr, SeriesFunc, SIGNATURES};
 
 /// Every `eg_<func>` window function.
-pub(super) fn series_window_udfs() -> Vec<WindowUDF> {
+pub fn series_window_udfs() -> Vec<WindowUDF> {
     SIGNATURES
         .iter()
         .map(|sig| WindowUDF::from(SeriesWindow::new(sig.func)))

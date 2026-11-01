@@ -134,7 +134,7 @@ impl Accumulator for ApproxDistinctAcc {
 }
 
 /// `approx_distinct(expr) -> Float64` (CONCEPT:MEDULLA-KG.query.approx-distinct-cardinality, W4.5/N5).
-pub(crate) fn approx_distinct_udaf() -> AggregateUDF {
+pub fn approx_distinct_udaf() -> AggregateUDF {
     create_udaf(
         "approx_distinct",
         vec![DataType::Utf8],
@@ -284,7 +284,7 @@ impl Accumulator for ApproxFrequencyAcc {
 /// W4.5/N5) — the estimated occurrence count of the literal `probe` among `expr`'s values.
 /// NEVER an underestimate (the Count-Min Sketch's core guarantee — see
 /// `medulla_compute::sketch::CountMinSketch`'s doc).
-pub(crate) fn approx_frequency_udaf() -> AggregateUDF {
+pub fn approx_frequency_udaf() -> AggregateUDF {
     create_udaf(
         "approx_frequency",
         vec![DataType::Utf8, DataType::Utf8],
@@ -372,7 +372,7 @@ impl Accumulator for MinHashAcc {
 /// W4.5/N5) — a fixed-size MinHash signature summarizing the SET of `expr`'s distinct values
 /// aggregated over. Compare two groups' signatures with [`minhash_similarity_udf`] to estimate
 /// Jaccard similarity without ever joining their underlying rows.
-pub(crate) fn minhash_signature_udaf() -> AggregateUDF {
+pub fn minhash_signature_udaf() -> AggregateUDF {
     create_udaf(
         "minhash_signature",
         vec![DataType::Utf8],
@@ -389,7 +389,7 @@ pub(crate) fn minhash_signature_udaf() -> AggregateUDF {
 /// (not an error) if the two signatures have mismatched lengths (a caller comparing
 /// differently-sized `minhash_signature` calls — mirrors `MinHashSketch::jaccard`'s own
 /// defensive posture).
-pub(crate) fn minhash_similarity_udf() -> ScalarUDF {
+pub fn minhash_similarity_udf() -> ScalarUDF {
     let fun = Arc::new(|args: &[ColumnarValue]| {
         let arrays = ColumnarValue::values_to_arrays(args)?;
         let a = arrays[0]
