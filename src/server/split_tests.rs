@@ -29,3 +29,5 @@ mod mutation_batch_lifecycle;
 mod mutation_redb;
 #[cfg(all(test, feature = "redb"))]
 mod persistence_txn;
+#[cfg(test)]
+mod server_api_mutation_inventory;

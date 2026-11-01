@@ -40,13 +40,13 @@ pub fn authoritative_now_secs() -> u64 {
 
 /// True while applying a committed replicated command.
 #[cfg(feature = "raft")]
-pub(crate) fn is_replicated_apply() -> bool {
+pub fn is_replicated_apply() -> bool {
     REPLICATED_APPLY.try_with(|_| ()).is_ok()
 }
 
 /// Placement epoch and fencing token of the command being applied, if any.
 #[cfg(feature = "raft")]
-pub(crate) fn replicated_placement_authority() -> Option<(u64, Option<u64>)> {
+pub fn replicated_placement_authority() -> Option<(u64, Option<u64>)> {
     REPLICATED_APPLY
         .try_with(|scope| (scope.placement_epoch, scope.fencing_token))
         .ok()
@@ -54,12 +54,12 @@ pub(crate) fn replicated_placement_authority() -> Option<(u64, Option<u64>)> {
 
 /// Without raft there is never a replicated apply.
 #[cfg(not(feature = "raft"))]
-pub(crate) fn is_replicated_apply() -> bool {
+pub fn is_replicated_apply() -> bool {
     false
 }
 
 /// Without raft there is never a placement authority.
 #[cfg(not(feature = "raft"))]
-pub(crate) fn replicated_placement_authority() -> Option<(u64, Option<u64>)> {
+pub fn replicated_placement_authority() -> Option<(u64, Option<u64>)> {
     None
 }

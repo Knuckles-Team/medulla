@@ -24,7 +24,7 @@
 //!   * `semantic_store` `graph                  -> semantic store blob (msgpack)`
 //!   * `graph_meta`     `graph                  -> identity + keyed schema authority`
 
-pub(crate) mod enrichment_top_up;
+pub mod enrichment_top_up;
 mod store_prelude;
 use store_prelude::*;
 
