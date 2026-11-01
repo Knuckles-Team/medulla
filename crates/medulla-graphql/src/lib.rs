@@ -266,7 +266,7 @@ mod tests {
             .collect();
         gql_names.sort();
 
-        let cy = medulla_query::exec_cypher(&view, "MATCH (p:Person) RETURN p.name").unwrap();
+        let cy = medulla_cypher::cypher::exec_cypher(&view, "MATCH (p:Person) RETURN p.name").unwrap();
         let mut cy_names: Vec<String> = cy
             .rows
             .iter()
@@ -293,7 +293,7 @@ mod tests {
             .map(|n| n["name"].as_str().unwrap().to_string())
             .collect();
 
-        let cy2 = medulla_query::exec_cypher(
+        let cy2 = medulla_cypher::cypher::exec_cypher(
             &view,
             "MATCH (a:Person)-[:KNOWS]->(b:Person) WHERE a.name = 'Alice' RETURN b.name",
         )

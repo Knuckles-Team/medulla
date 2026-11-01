@@ -22,8 +22,8 @@ use super::{
     create_edge_index, edge_index, snapshot, EdgeIndex, EdgeIndexSpec, EdgeKey, EdgeRefreshOutcome,
     POISONED,
 };
-use crate::tables::store::StoredGeneration;
-use crate::tables::TableStore;
+use medulla_query::tables::store::StoredGeneration;
+use medulla_query::tables::TableStore;
 
 /// Endpoint pair -> `(ordinal, content hash)` of every edge carrying a value.
 type PairContent = BTreeMap<(String, String), Vec<(u32, u64)>>;

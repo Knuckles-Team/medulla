@@ -74,7 +74,7 @@ fn adopt_edge_index_status(
     graph: &RequestGraph,
     projection: &TableStore,
 ) -> Result<(), String> {
-    medulla_query::edge_index::install_edge_indexes(tenant, &graph.name, &graph.core)?;
+    medulla_cypher::edge_index::install_edge_indexes(tenant, &graph.name, &graph.core)?;
     projection
         .ann_authority()
         .adopt_statuses(graph.core.indexes().managed_statuses());

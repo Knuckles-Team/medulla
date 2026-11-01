@@ -14,11 +14,7 @@ use medulla_index_types::{
     managed_index as wire, managed_index::EdgeIndexOp, managed_index::EdgeIndexStatusView,
     managed_index::EdgeSearchHit, managed_index::EdgeSearchView,
 };
-use medulla_query::edge_index::{
-    create_durable_edge_index, drop_durable_edge_index, edge_index, install_edge_indexes,
-    refresh_durable_edge_index, EdgeIndexKind, EdgeIndexSpec, EdgeQuery, EdgeScope,
-    EdgeSearchRequest,
-};
+use medulla_cypher::{edge_index::create_durable_edge_index, edge_index::drop_durable_edge_index, edge_index::edge_index, edge_index::install_edge_indexes, edge_index::refresh_durable_edge_index, edge_index::EdgeIndexKind, edge_index::EdgeIndexSpec, edge_index::EdgeQuery, edge_index::EdgeScope, edge_index::EdgeSearchRequest};
 use medulla_query::VectorMetric;
 use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
 

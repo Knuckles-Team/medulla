@@ -440,7 +440,7 @@ mod rls_no_exfiltrate_tests {
         let layer = isolation();
         let mut va = seeded_view();
         layer.filter_view("alice", &mut va);
-        let r = medulla_query::exec_cypher(&va, "MATCH (n) RETURN n").expect("cypher");
+        let r = medulla_cypher::cypher::exec_cypher(&va, "MATCH (n) RETURN n").expect("cypher");
         // The cypher result must not reference the hidden node id anywhere.
         let any_secret = r
             .rows

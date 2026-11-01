@@ -576,7 +576,7 @@ impl EmbeddedEngine {
         cypher: &str,
     ) -> Result<crate::protocol::QueryResult, String> {
         let snap = self.core(graph, false)?.analysis_snapshot();
-        medulla_query::exec_cypher(&snap, cypher)
+        medulla_cypher::cypher::exec_cypher(&snap, cypher)
     }
 
     /// Build or refresh the maintained ANN generation of every registered pgvector

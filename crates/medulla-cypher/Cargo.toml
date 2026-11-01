@@ -12,3 +12,25 @@ name = "medulla_cypher"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-query = { path = "../medulla-query" }
+medulla-types = { path = "../medulla-types" }
+medulla-core = { path = "../medulla-core" }
+medulla-compute = { path = "../medulla-compute" }
+medulla-text = { path = "../medulla-text", optional = true }
+medulla-ann = { path = "../medulla-ann", optional = true }
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+rmp-serde = "1.3"
+petgraph = { version = "0.8.3", features = ["serde-1"], optional = true }
+tracing = { version = "0.1", optional = true }
+sha2 = { version = "0.10", optional = true }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-result-types = { path = "../medulla-result-types" }
+
+[features]
+cypher = ["dep:petgraph", "medulla-query/cypher"]
+cypher-graphlearn = ["cypher", "medulla-query/cypher-graphlearn"]
+cypher-mining = ["cypher", "medulla-query/cypher-mining"]
+cypher-plan = ["cypher", "dep:tracing", "medulla-query/cypher-plan"]
+result-cache = ["cypher", "medulla-query/result-cache"]
+sql = ["dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petgraph", "dep:tracing", "dep:async-trait", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-query/sql"]

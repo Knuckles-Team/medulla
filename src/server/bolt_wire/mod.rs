@@ -117,7 +117,7 @@ struct PendingResult {
 #[derive(Clone)]
 struct BufferedCypher {
     query: String,
-    params: medulla_query::Params,
+    params: medulla_cypher::cypher::Params,
 }
 
 struct BoltTransaction {
@@ -546,7 +546,7 @@ fn commit_cypher_writes(
     }
     let mut last = None;
     for write in writes {
-        last = Some(medulla_query::exec_cypher_write_params(
+        last = Some(medulla_cypher::cypher::exec_cypher_write_params(
             &staged,
             &write.query,
             &write.params,
@@ -614,7 +614,7 @@ async fn commit_writes(
 async fn run_read(
     session: &BoltSession,
     query: String,
-    params: medulla_query::Params,
+    params: medulla_cypher::cypher::Params,
 ) -> Result<QueryResult, BoltFailure> {
     let verified = session.authority.as_ref().ok_or_else(|| {
         BoltFailure::client(
@@ -637,7 +637,7 @@ async fn run_read(
         read_authority.filter_view(&mut view);
         view
     };
-    tokio::task::spawn_blocking(move || medulla_query::exec_cypher_params(&view, &query, &params))
+    tokio::task::spawn_blocking(move || medulla_cypher::cypher::exec_cypher_params(&view, &query, &params))
         .await
         .map_err(|_| {
             BoltFailure::client(
@@ -674,14 +674,14 @@ async fn run_transaction_statement(
     let result = tokio::task::spawn_blocking(move || {
         let staged = GraphCore::from_snapshot(snapshot, version)?;
         for write in prior {
-            medulla_query::exec_cypher_write_params(&staged, &write.query, &write.params)?;
+            medulla_cypher::cypher::exec_cypher_write_params(&staged, &write.query, &write.params)?;
         }
         if is_write {
-            medulla_query::exec_cypher_write_params(&staged, &current.query, &current.params)
+            medulla_cypher::cypher::exec_cypher_write_params(&staged, &current.query, &current.params)
         } else {
             let mut view = staged.analysis_snapshot();
             read_authority.filter_view(&mut view);
-            medulla_query::exec_cypher_params(&view, &current.query, &current.params)
+            medulla_cypher::cypher::exec_cypher_params(&view, &current.query, &current.params)
         }
     })
     .await
@@ -726,9 +726,9 @@ async fn run_cypher(
     cypher: &str,
     params: &HashMap<String, PackValue>,
 ) -> Result<PendingResult, BoltFailure> {
-    let is_write = match medulla_query::classify_cypher(cypher) {
-        Ok(medulla_query::CypherStatementKind::Read) => false,
-        Ok(medulla_query::CypherStatementKind::Write) => true,
+    let is_write = match medulla_cypher::cypher::classify_cypher(cypher) {
+        Ok(medulla_cypher::cypher::CypherStatementKind::Read) => false,
+        Ok(medulla_cypher::cypher::CypherStatementKind::Write) => true,
         Err(message) => {
             return Err(BoltFailure::client(
                 "Neo.ClientError.Statement.SyntaxError",

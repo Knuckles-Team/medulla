@@ -6,3 +6,13 @@
 
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
+
+/// Edge-native vector and text search under the user-managed index lifecycle
+/// (EH-351 / EH-352). Behind `sql` (it reuses medulla-ann, medulla-text and the SQL
+/// vector metrics).
+#[cfg(feature = "sql")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod edge_index;
+#[cfg(feature = "cypher")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod cypher;

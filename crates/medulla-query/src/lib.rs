@@ -32,11 +32,6 @@ pub mod sql;
 #[cfg(feature = "sql")]
 pub mod tables;
 
-/// Edge-native vector and text search under the user-managed index lifecycle
-/// (EH-351 / EH-352). Behind `sql` (it reuses medulla-ann, medulla-text and the SQL
-/// vector metrics).
-#[cfg(feature = "sql")]
-pub mod edge_index;
 
 #[cfg(feature = "sql")]
 pub use sql::{
@@ -173,17 +168,6 @@ pub fn columns_from_defs(cols: &[ColumnDef]) -> Result<Vec<Column>, String> {
         .collect()
 }
 
-#[cfg(feature = "cypher")]
-pub mod cypher;
-
-#[cfg(feature = "cypher")]
-pub use cypher::{
-    classify_cypher, exec_cypher, exec_cypher_params, exec_cypher_write, exec_cypher_write_params,
-    CypherProcedure, CypherStatementKind, Params, ProcRow, YieldValue,
-};
-
-#[cfg(all(feature = "cypher", feature = "result-cache"))]
-pub use cypher::{exec_cypher_params_indexed, IndexSource};
 
 #[cfg(feature = "sql")]
 pub mod schema;

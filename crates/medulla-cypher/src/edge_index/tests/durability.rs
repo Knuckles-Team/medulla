@@ -4,7 +4,7 @@
 //! registration and every generation.
 
 use super::*;
-use crate::tables::TableStore;
+use medulla_query::tables::TableStore;
 
 // spec: MEDULLA-FEDERATED-QUERY-R009
 // spec: MEDULLA-FEDERATED-QUERY-R059

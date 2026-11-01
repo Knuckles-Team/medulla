@@ -6,14 +6,14 @@ pub const EDGE_STATUS_SQL: &str = "SELECT index_name, target_kind, state \
     FROM information_schema.medulla_index_status WHERE target_kind = 'graph_edges'";
 
 /// The edge index those tests register for `tenant`.
-pub fn edge_status_spec(tenant: &str) -> medulla_query::edge_index::EdgeIndexSpec {
-    medulla_query::edge_index::EdgeIndexSpec {
+pub fn edge_status_spec(tenant: &str) -> medulla_cypher::edge_index::EdgeIndexSpec {
+    medulla_cypher::edge_index::EdgeIndexSpec {
         name: "rel_emb".to_string(),
         property: "emb".to_string(),
-        kind: medulla_query::edge_index::EdgeIndexKind::Vector {
+        kind: medulla_cypher::edge_index::EdgeIndexKind::Vector {
             metric: medulla_query::VectorMetric::L2,
         },
-        scope: medulla_query::edge_index::EdgeScope {
+        scope: medulla_cypher::edge_index::EdgeScope {
             tenant: tenant.to_string(),
             purpose: "retrieval".to_string(),
         },
@@ -36,7 +36,7 @@ pub fn edge_status_row() -> Vec<serde_json::Value> {
 /// installs the tenant's edge indexes itself.
 pub fn register_detached_edge_index(store: &medulla_query::TableStore, graph: &str, tenant: &str) {
     let detached = medulla_core::graph::GraphCore::new();
-    medulla_query::edge_index::create_durable_edge_index(
+    medulla_cypher::edge_index::create_durable_edge_index(
         store,
         graph,
         &detached,
