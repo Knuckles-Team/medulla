@@ -129,3 +129,4 @@ medulla-identity-types = { path = "../medulla-identity-types" }
 # (dev-deps are not compiled for a check/lib build). This lets the ICV closed-world
 # behaviour be exercised from `cargo test -p medulla-rdf --features sparql`.
 medulla-shacl = { path = "../medulla-shacl" }
+medulla-reasoner = { path = "../medulla-reasoner" }

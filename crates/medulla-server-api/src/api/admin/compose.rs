@@ -68,8 +68,8 @@ pub fn validate_and_compose(sources: &GraphSchemaSources) -> Result<Arc<Composed
 const SCHEMA_ENTRY_ABOX_STEPS: u64 = 10_000_000;
 
 /// [`SCHEMA_ENTRY_ABOX_STEPS`] as a budget; beyond it the attach fails closed.
-const SCHEMA_ENTRY_ABOX_BUDGET: medulla_rdf::owl::DerivationBudget =
-    medulla_rdf::owl::DerivationBudget::new(SCHEMA_ENTRY_ABOX_STEPS);
+const SCHEMA_ENTRY_ABOX_BUDGET: medulla_reasoner::owl::DerivationBudget =
+    medulla_reasoner::owl::DerivationBudget::new(SCHEMA_ENTRY_ABOX_STEPS);
 
 /// [`validate_and_compose`] plus the full-ABox tableau consistency check (EH-355
 /// operator ruling, option (c)): run where schema ENTERS a graph — `GraphSchema`
@@ -94,7 +94,7 @@ pub(super) fn compose_validated_sources(
     validate_named_shape_ownership(&shapes)?;
     validate_core_declaration_ownership(sources)?;
     let ontology_triples: Vec<Triple> = ontology.iter().map(|(_, triple)| triple.clone()).collect();
-    medulla_rdf::owl::validate_supported_profile(&ontology_triples)?;
+    medulla_reasoner::owl::validate_supported_profile(&ontology_triples)?;
 
     let mut shape_graph = Graph::new();
     for (_, triple) in &shapes {
@@ -107,7 +107,7 @@ pub(super) fn compose_validated_sources(
     // triple, but it classifies classes, not individuals; the individual assertions are
     // decided by the full-ABox tableau where schema enters a graph
     // ([`validate_entering_schema`]), not again on each restore.
-    let classification = medulla_rdf::tableau::reason_dl_terminology(&ontology);
+    let classification = medulla_reasoner::tableau::reason_dl_terminology(&ontology);
     if !classification.consistent {
         let nothing = "<http://www.w3.org/2002/07/owl#Nothing>";
         let unsatisfiable: Vec<&str> = classification
@@ -1036,7 +1036,7 @@ ex:parent a owl:AsymmetricProperty .
     fn shipped_core_corpus_is_coherent_under_the_el_rl_reasoner() {
         let composed = validate_and_compose(&GraphSchemaSources::default()).unwrap();
         let classification =
-            medulla_rdf::owl::Reasoner::from_triples(&composed.ontology).classify();
+            medulla_reasoner::owl::Reasoner::from_triples(&composed.ontology).classify();
         assert!(
             classification.unsatisfiable.is_empty(),
             "unsatisfiable named classes: {:?}",

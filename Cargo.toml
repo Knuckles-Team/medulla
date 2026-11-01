@@ -1072,7 +1072,7 @@ embedded = ["medulla-store/embedded", "redb"]
 # medulla-rdf crate). PURE-RUST — links NO C/native dep (proven by cargo tree) — and is
 # included in the one main build. Needs `server` (the handler routes through dispatch)
 # + `medulla-types/rdf` (the Method variants).
-rdf = ["medulla-h-decide/rdf", "medulla-h-graph/rdf", "medulla-persistence/rdf", "medulla-server-api/rdf", "medulla-kernel/rdf", "server", "dep:medulla-rdf", "medulla-rdf/rdf", "medulla-types/rdf", "medulla-protocol-types/rdf"]
+rdf = ["medulla-h-decide/rdf", "medulla-h-graph/rdf", "medulla-persistence/rdf", "medulla-server-api/rdf", "medulla-kernel/rdf", "server", "dep:medulla-rdf", "medulla-rdf/rdf", "medulla-reasoner/rdf", "medulla-types/rdf", "medulla-protocol-types/rdf"]
 sparql = ["medulla-h-decide/sparql", "medulla-h-graph/sparql", "medulla-raft/sparql", "medulla-persistence/sparql", "medulla-server-api/sparql", "medulla-kernel/sparql", "rdf", "medulla-rdf/sparql", "medulla-types/sparql", "medulla-protocol-types/sparql"]
 # Native SPARQL 1.1 surface (CONCEPT:KG-2.218): compiles spargebra's algebra to
 # GraphView scans (medulla-rdf). IMPLIES `rdf`; pure-Rust (spargebra), no native dep.
@@ -1088,7 +1088,7 @@ sparql-fuseki = ["sparql"]
 sparql-hash = ["medulla-h-decide/sparql-hash", "medulla-h-graph/sparql-hash", "medulla-persistence/sparql-hash", "medulla-server-api/sparql-hash", "sparql", "medulla-rdf/sparql-hash"]     # MD5/SHA1/SHA2 SPARQL hash builtins
 rdf-xml = ["medulla-h-decide/rdf-xml", "medulla-h-graph/rdf-xml", "medulla-persistence/rdf-xml", "medulla-server-api/rdf-xml", "rdf", "medulla-rdf/rdf-xml"]                 # RDF/XML reader+writer
 json-ld = ["medulla-h-decide/json-ld", "medulla-h-graph/json-ld", "medulla-persistence/json-ld", "medulla-server-api/json-ld", "rdf", "medulla-rdf/json-ld"]                 # JSON-LD 1.1 (expansion form)
-sparql-star = ["medulla-h-decide/sparql-star", "medulla-h-graph/sparql-star", "medulla-persistence/sparql-star", "medulla-server-api/sparql-star", "sparql", "medulla-rdf/sparql-star"]      # RDF-star / SPARQL-star quoted triples
+sparql-star = ["medulla-h-decide/sparql-star", "medulla-h-graph/sparql-star", "medulla-persistence/sparql-star", "medulla-server-api/sparql-star", "sparql", "medulla-rdf/sparql-star", "medulla-reasoner/sparql-star"]      # RDF-star / SPARQL-star quoted triples
 # OGC GeoSPARQL baseline (CONCEPT:MEDULLA-261): the `geo:`/`geof:` vocabulary, `geo:wktLiteral`
 # parsing, and the core `geof:` spatial FILTER functions (sfWithin/sfIntersects/sfContains/
 # sfEquals/distance/buffer) over the SPARQL surface, forwarded from medulla-rdf's `geosparql`.
@@ -1179,12 +1179,12 @@ full-extras = ["full", "gpu-cuda", "ros2-bridge", "ros2-dds", "ros2-rmw"]
 # `OwlReason` Method surface. PURE-RUST — it parses OWL from the SAME oxttl as `rdf`,
 # links NO C/native crate (no horned-owl/whelk-rs), IMPLIES `sparql`, and is included
 # in the one main build.
-owl = ["medulla-h-decide/owl", "medulla-h-graph/owl", "medulla-raft/owl", "medulla-persistence/owl", "medulla-server-api/owl", "sparql", "medulla-rdf/owl", "medulla-types/owl", "medulla-protocol-types/owl"]
+owl = ["medulla-h-decide/owl", "medulla-h-graph/owl", "medulla-raft/owl", "medulla-persistence/owl", "medulla-server-api/owl", "sparql", "medulla-rdf/owl", "medulla-reasoner/owl", "medulla-types/owl", "medulla-protocol-types/owl"]
 # OWL-DL tableau reasoner (CONCEPT:MEDULLA-059) — the complete-but-worst-case-harder DL
 # path (full cardinality/negation/nominals/reasoning-by-cases) that the tractable `owl`
 # EL⁺/RL path cannot decide. Pure Rust, no new dep, IMPLIES `owl`, and is included in
 # the one main build.
-owl-dl = ["medulla-h-decide/owl-dl", "medulla-h-graph/owl-dl", "medulla-persistence/owl-dl", "medulla-server-api/owl-dl", "owl", "medulla-rdf/owl-dl"]
+owl-dl = ["medulla-h-decide/owl-dl", "medulla-h-graph/owl-dl", "medulla-persistence/owl-dl", "medulla-server-api/owl-dl", "owl", "medulla-rdf/owl-dl", "medulla-reasoner/owl-dl"]
 # The OWL/SPARQL cross-modal plan SOURCE ops `Op::Reason` / `Op::SparqlBgp`
 # (CONCEPT:KG-2.220) inside a UnifiedQuery plan. The unified-plan executor needs
 # DataFusion, so this IMPLIES `query` and is included in the one main build. Pulls
@@ -1860,6 +1860,7 @@ medulla-h-graph = { path = "crates/medulla-h-graph" }
 medulla-h-ingest = { path = "crates/medulla-h-ingest" }
 medulla-h-jobs = { path = "crates/medulla-h-jobs" }
 medulla-h-decide = { path = "crates/medulla-h-decide" }
+medulla-reasoner = { path = "crates/medulla-reasoner" }
 
 [dev-dependencies]
 medulla-h-ingest = { path = "crates/medulla-h-ingest", features = ["test-support"] }

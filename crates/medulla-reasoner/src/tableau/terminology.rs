@@ -52,7 +52,7 @@ fn terminology_only(ont: DlOntology) -> DlOntology {
 mod tests {
     use super::super::reason_dl;
     use super::*;
-    use crate::mapping::parse_turtle;
+    use medulla_rdf::mapping::parse_turtle;
 
     const DOCUMENT: &str = r#"
 @prefix ex:  <http://example.org/> .

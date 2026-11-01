@@ -39,6 +39,7 @@ sha2 = "0.10"
 tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
 tracing = "0.1"
 tempfile = { version = "3", optional = true }
+medulla-reasoner = { path = "../medulla-reasoner" }
 
 [features]
 ann = ["dep:medulla-ann", ]
@@ -46,7 +47,7 @@ blob = ["redb"]
 decide = ["dep:medulla-numeric", "medulla-numeric/decision", "dep:medulla-ann", "medulla-ann?/drift", "solve", "redb"]
 epistemic = ["dep:medulla-plan", "medulla-plan/epistemic", "query"]
 finance = []
-owl = ["dep:medulla-rdf", "medulla-rdf/owl", ]
+owl = ["dep:medulla-rdf", "medulla-rdf/owl", "medulla-reasoner/owl", ]
 query = ["dep:medulla-query", "medulla-query/sql", "dep:medulla-plan", "medulla-plan/query", "redb"]
 raft = ["redb"]
 redb = []
@@ -72,14 +73,14 @@ owl-plan = ["dep:medulla-plan", "medulla-plan/owl"]
 cypher = ["dep:medulla-query", "medulla-query/cypher"]
 cypher-plan = ["dep:medulla-query", "medulla-query/cypher-plan"]
 result-cache = ["dep:medulla-query", "medulla-query?/result-cache"]
-rdf = ["dep:medulla-rdf", "medulla-rdf/rdf"]
+rdf = ["dep:medulla-rdf", "medulla-rdf/rdf", "medulla-reasoner/rdf"]
 sparql = ["dep:medulla-rdf", "medulla-rdf/sparql"]
 sparql-hash = ["dep:medulla-rdf", "medulla-rdf/sparql-hash"]
 rdf-xml = ["dep:medulla-rdf", "medulla-rdf/rdf-xml"]
 json-ld = ["dep:medulla-rdf", "medulla-rdf/json-ld"]
-sparql-star = ["dep:medulla-rdf", "medulla-rdf/sparql-star"]
+sparql-star = ["dep:medulla-rdf", "medulla-rdf/sparql-star", "medulla-reasoner/sparql-star"]
 geosparql = ["dep:medulla-rdf", "medulla-rdf/geosparql"]
-owl-dl = ["dep:medulla-rdf", "medulla-rdf/owl-dl"]
+owl-dl = ["dep:medulla-rdf", "medulla-rdf/owl-dl", "medulla-reasoner/owl-dl"]
 shacl = ["dep:medulla-shacl"]
 test-support = ["dep:tempfile", "redb"]
 

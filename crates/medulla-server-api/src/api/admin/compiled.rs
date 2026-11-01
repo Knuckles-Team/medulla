@@ -118,13 +118,13 @@ impl ComposedSchema {
     /// The lock makes concurrent attaches of one identity single-flight.
     pub(crate) fn require_abox_consistency(
         &self,
-        budget: medulla_rdf::owl::DerivationBudget,
+        budget: medulla_reasoner::owl::DerivationBudget,
     ) -> Result<(), String> {
         let mut accepted = self.abox_consistent.lock();
         if *accepted {
             return Ok(());
         }
-        match medulla_rdf::tableau::abox_consistency_within(&self.ontology, budget) {
+        match medulla_reasoner::tableau::abox_consistency_within(&self.ontology, budget) {
             Ok(true) => {
                 *accepted = true;
                 Ok(())

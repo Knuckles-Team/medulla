@@ -34,6 +34,7 @@ serde_json = "1.0"
 sha2 = "0.10"
 tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
 tracing = "0.1"
+medulla-reasoner = { path = "../medulla-reasoner" }
 
 [features]
 broker = []
@@ -45,10 +46,10 @@ graphql = ["security"]
 mining = []
 ml-pipeline = ["mining", "graphlearn"]
 numeric = ["dep:medulla-numeric", ]
-owl = ["dep:medulla-rdf", "medulla-rdf/owl", "sparql"]
+owl = ["dep:medulla-rdf", "medulla-rdf/owl", "medulla-reasoner/owl", "sparql"]
 query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "redb"]
 raft = ["redb"]
-rdf = ["dep:medulla-rdf", "medulla-rdf/rdf", ]
+rdf = ["dep:medulla-rdf", "medulla-rdf/rdf", "medulla-reasoner/rdf", ]
 reasoning = []
 redb = []
 security = ["redb"]
@@ -59,9 +60,9 @@ tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store", "redb"]
 sparql-hash = ["dep:medulla-rdf", "medulla-rdf/sparql-hash"]
 rdf-xml = ["dep:medulla-rdf", "medulla-rdf/rdf-xml"]
 json-ld = ["dep:medulla-rdf", "medulla-rdf/json-ld"]
-sparql-star = ["dep:medulla-rdf", "medulla-rdf/sparql-star"]
+sparql-star = ["dep:medulla-rdf", "medulla-rdf/sparql-star", "medulla-reasoner/sparql-star"]
 geosparql = ["dep:medulla-rdf", "medulla-rdf/geosparql"]
-owl-dl = ["dep:medulla-rdf", "medulla-rdf/owl-dl"]
+owl-dl = ["dep:medulla-rdf", "medulla-rdf/owl-dl", "medulla-reasoner/owl-dl"]
 promql = ["dep:medulla-tsdb", "medulla-tsdb/promql"]
 traces = ["dep:medulla-tsdb", "medulla-tsdb/traces"]
 server = ["dep:tokio"]

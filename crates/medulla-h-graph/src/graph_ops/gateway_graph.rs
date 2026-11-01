@@ -384,7 +384,7 @@ fn datalog_input_from_graph_schema(core: &GraphCore) -> Result<DatalogReasoningI
     // independently would let their local blank-node labels alias one another
     // and would bypass the conflict/import checks used at commit time.
     let composed = medulla_server_api::api::admin::compose::validate_and_compose(&sources)?;
-    let ontology = medulla_rdf::owl::parse_ontology(&composed.ontology);
+    let ontology = medulla_reasoner::owl::parse_ontology(&composed.ontology);
     Ok(datalog_input_from_ontology(
         ontology,
         sources.composed_digest().to_hex(),
@@ -393,14 +393,14 @@ fn datalog_input_from_graph_schema(core: &GraphCore) -> Result<DatalogReasoningI
 
 #[cfg(all(feature = "reasoning", feature = "owl", feature = "shacl"))]
 fn datalog_input_from_ontology(
-    ontology: medulla_rdf::owl::Ontology,
+    ontology: medulla_reasoner::owl::Ontology,
     composed_digest: String,
 ) -> DatalogReasoningInput {
     // The native property graph stores relationship labels in UPPER_SNAKE,
     // while the RDF authority uses camelCase IRI local names. The canonical
     // projection lives with the native OWL parser and is shared by read-side
     // fact saturation and write-side materialization.
-    let relationship = medulla_rdf::owl::native_relationship_label;
+    let relationship = medulla_reasoner::owl::native_relationship_label;
     let subclass_relations = datalog_subclass_relations(&ontology);
     let (transitive_properties, property_chains) = datalog_property_chains(&ontology, relationship);
     DatalogReasoningInput {
@@ -450,10 +450,10 @@ fn datalog_input_from_ontology(
 }
 
 #[cfg(all(feature = "reasoning", feature = "owl", feature = "shacl"))]
-fn datalog_subclass_relations(ontology: &medulla_rdf::owl::Ontology) -> Vec<(String, String)> {
+fn datalog_subclass_relations(ontology: &medulla_reasoner::owl::Ontology) -> Vec<(String, String)> {
     let mut relations = Vec::new();
     for gci in &ontology.gcis {
-        if let ([medulla_rdf::owl::Concept::Named(sub)], medulla_rdf::owl::Concept::Named(sup)) =
+        if let ([medulla_reasoner::owl::Concept::Named(sub)], medulla_reasoner::owl::Concept::Named(sup)) =
             (gci.lhs.as_slice(), &gci.rhs)
         {
             if let (Some(sub), Some(sup)) = (datalog_class(sub), datalog_class(sup)) {
@@ -466,7 +466,7 @@ fn datalog_subclass_relations(ontology: &medulla_rdf::owl::Ontology) -> Vec<(Str
 
 #[cfg(all(feature = "reasoning", feature = "owl", feature = "shacl"))]
 fn datalog_property_chains(
-    ontology: &medulla_rdf::owl::Ontology,
+    ontology: &medulla_reasoner::owl::Ontology,
     relationship: fn(&str) -> String,
 ) -> (Vec<String>, Vec<(Vec<String>, String)>) {
     let mut transitive_properties = Vec::new();

@@ -97,10 +97,10 @@ fn fixture_triples() -> Vec<Triple> {
 
 /// OWL 2 RL materialization (subclass, sub-property, domain/range, inverse, chains) of
 /// the wired modules plus the fixture.
-fn materialized() -> medulla_rdf::rules::RuleReasonResult {
+fn materialized() -> medulla_reasoner::rules::RuleReasonResult {
     let triples = fixture_triples();
-    let ontology = medulla_rdf::owl::parse_ontology(&triples);
-    medulla_rdf::rules::reason_triples(&triples, &ontology, &Default::default())
+    let ontology = medulla_reasoner::owl::parse_ontology(&triples);
+    medulla_reasoner::rules::reason_triples(&triples, &ontology, &Default::default())
 }
 
 // spec: MEDULLA-TYPED-PACKS-R073
@@ -119,12 +119,12 @@ fn world_model_modules_are_core_modules_within_the_catalog_bound() {
 fn full_corpus_stays_within_the_recorded_reasoning_budgets() {
     let composed = validate_and_compose(&GraphSchemaSources::default()).unwrap();
     let started = Instant::now();
-    let terminology = medulla_rdf::tableau::reason_dl_terminology(&composed.ontology);
+    let terminology = medulla_reasoner::tableau::reason_dl_terminology(&composed.ontology);
     let terminology_elapsed = started.elapsed();
     assert!(terminology.consistent);
     let started = Instant::now();
-    let budget = medulla_rdf::owl::DerivationBudget::new(CORPUS_ABOX_STEPS);
-    let abox = medulla_rdf::tableau::abox_consistency_within(&composed.ontology, budget);
+    let budget = medulla_reasoner::owl::DerivationBudget::new(CORPUS_ABOX_STEPS);
+    let abox = medulla_reasoner::tableau::abox_consistency_within(&composed.ontology, budget);
     let abox_elapsed = started.elapsed();
     assert_eq!(abox, Ok(true));
     eprintln!(
@@ -137,7 +137,7 @@ fn full_corpus_stays_within_the_recorded_reasoning_budgets() {
 #[test]
 fn world_model_classes_sit_under_the_bfo_categories() {
     let composed = validate_and_compose(&GraphSchemaSources::default()).unwrap();
-    let classification = medulla_rdf::owl::Reasoner::from_triples(&composed.ontology).classify();
+    let classification = medulla_reasoner::owl::Reasoner::from_triples(&composed.ontology).classify();
     let bfo = |id: &str| format!("<http://purl.obolibrary.org/obo/BFO_{id}>");
     let placed = [
         ("Organism", "0000030"),
@@ -193,10 +193,10 @@ fn a_nutritional_requirement_is_borne_by_an_organism_that_requires_its_nutrient(
 
     // A requirement (or a clinical condition) nobody named a bearer for is still
     // borne by SOME organism.
-    let dl = medulla_rdf::tableau::parse_dl_ontology(&fixture_triples());
+    let dl = medulla_reasoner::tableau::parse_dl_ontology(&fixture_triples());
     for unbound in ["bareNeed", "flu"] {
         let individual = format!("<http://example.org/world#{unbound}>");
-        assert!(medulla_rdf::tableau::is_instance(
+        assert!(medulla_reasoner::tableau::is_instance(
             &dl,
             &individual,
             BORNE_BY_ORGANISM
@@ -206,13 +206,13 @@ fn a_nutritional_requirement_is_borne_by_an_organism_that_requires_its_nutrient(
 
 #[test]
 fn a_weather_event_occurs_in_a_weather_system_and_its_region() {
-    let dl = medulla_rdf::tableau::parse_dl_ontology(&fixture_triples());
-    assert!(medulla_rdf::tableau::is_instance(
+    let dl = medulla_reasoner::tableau::parse_dl_ontology(&fixture_triples());
+    assert!(medulla_reasoner::tableau::is_instance(
         &dl,
         STORM,
         IN_WEATHER_SYSTEM
     ));
-    assert!(medulla_rdf::tableau::is_instance(&dl, STORM, BFO_PROCESS));
+    assert!(medulla_reasoner::tableau::is_instance(&dl, STORM, BFO_PROCESS));
     assert!(materialized().holds(&kg("occursIn"), &[STORM, BAVARIA]));
 }
 
@@ -228,8 +228,8 @@ fn a_taxon_is_never_an_organism() {
         "@prefix : <http://knuckles.team/kg#> . <http://example.org/world#vulpes> a :Organism .",
         "clash",
     ));
-    let dl = medulla_rdf::tableau::parse_dl_ontology(&triples);
-    assert!(!medulla_rdf::tableau::is_consistent(&dl));
+    let dl = medulla_reasoner::tableau::parse_dl_ontology(&triples);
+    assert!(!medulla_reasoner::tableau::is_consistent(&dl));
 
     let mut triples = fixture_triples();
     triples.extend(parse_scoped(
@@ -238,7 +238,7 @@ fn a_taxon_is_never_an_organism() {
          <http://example.org/world#TaxonOrganism> rdfs:subClassOf :Taxon, :Organism .",
         "clash",
     ));
-    let classification = medulla_rdf::owl::Reasoner::from_triples(&triples).classify();
+    let classification = medulla_reasoner::owl::Reasoner::from_triples(&triples).classify();
     assert!(classification
         .unsatisfiable
         .contains("<http://example.org/world#TaxonOrganism>"));
@@ -353,16 +353,16 @@ fn foundation_with(documents: &[&str]) -> Vec<Triple> {
 #[test]
 fn a_sub_process_is_accepted_and_a_participating_process_is_refused() {
     let composed = foundation_with(&[PROCESS_COMPOSITION]);
-    let classification = medulla_rdf::owl::Reasoner::from_triples(&composed).classify();
+    let classification = medulla_reasoner::owl::Reasoner::from_triples(&composed).classify();
     let stage = "<http://example.org/world#Stage>";
     assert!(!classification.unsatisfiable.contains(stage));
     let participating = "<http://example.org/world#ParticipatingProcess>";
     assert!(classification.unsatisfiable.contains(participating));
 
-    let dl = medulla_rdf::tableau::parse_dl_ontology(&composed);
-    assert!(medulla_rdf::tableau::is_consistent(&dl));
+    let dl = medulla_reasoner::tableau::parse_dl_ontology(&composed);
+    assert!(medulla_reasoner::tableau::is_consistent(&dl));
 
     let refused = foundation_with(&[PROCESS_COMPOSITION, PROCESS_AS_PARTICIPANT]);
-    let dl = medulla_rdf::tableau::parse_dl_ontology(&refused);
-    assert!(!medulla_rdf::tableau::is_consistent(&dl));
+    let dl = medulla_reasoner::tableau::parse_dl_ontology(&refused);
+    assert!(!medulla_reasoner::tableau::is_consistent(&dl));
 }

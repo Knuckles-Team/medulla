@@ -118,7 +118,7 @@ impl Reasoner {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mapping::parse_turtle;
+    use medulla_rdf::mapping::parse_turtle;
 
     fn chain(length: usize) -> Vec<oxrdf::Triple> {
         let mut ttl = String::from(

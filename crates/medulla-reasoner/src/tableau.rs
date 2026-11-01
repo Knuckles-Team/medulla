@@ -1588,7 +1588,7 @@ fn reason_el_rl_ontology(triples: &[Triple]) -> DlReasoningResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mapping::parse_turtle;
+    use medulla_rdf::mapping::parse_turtle;
 
     const PRE: &str = r#"
 @prefix ex:  <http://example.org/> .

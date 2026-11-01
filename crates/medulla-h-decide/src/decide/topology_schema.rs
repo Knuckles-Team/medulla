@@ -93,7 +93,7 @@ pub(super) fn entail(
     let sources = core.schema_sources();
     medulla_server_api::api::admin::compose::validate_and_compose(&sources)?;
     let (triples, authority, source_key) = ontology(&sources)?;
-    let classification = medulla_rdf::owl::classify_hybrid_weighted(&triples);
+    let classification = medulla_reasoner::owl::classify_hybrid_weighted(&triples);
     let reach = Reach {
         classification: &classification,
         authority,
@@ -122,7 +122,7 @@ pub(super) fn entail(
 }
 
 struct Reach<'c> {
-    classification: &'c medulla_rdf::owl::Classification,
+    classification: &'c medulla_reasoner::owl::Classification,
     authority: SchemaAuthority,
     source_key: String,
 }
@@ -161,7 +161,7 @@ impl Reach<'_> {
     }
 }
 
-fn collect_axioms(node: &medulla_rdf::owl::ProofNode, out: &mut Vec<String>) {
+fn collect_axioms(node: &medulla_reasoner::owl::ProofNode, out: &mut Vec<String>) {
     out.extend(node.axioms.iter().cloned());
     for premise in &node.premises {
         collect_axioms(premise, out);
@@ -178,7 +178,7 @@ mod tests {
 
     const S: &str = "http://knuckles.team/kg/swarm#";
 
-    fn reach(classification: &medulla_rdf::owl::Classification) -> Reach<'_> {
+    fn reach(classification: &medulla_reasoner::owl::Classification) -> Reach<'_> {
         Reach {
             classification,
             authority: SchemaAuthority::Admin,
@@ -189,7 +189,7 @@ mod tests {
     #[test]
     fn a_task_admits_its_stated_class_and_that_class_s_subclasses_only() {
         let triples = medulla_rdf::mapping::parse_turtle(TBOX).expect("parses");
-        let classification = medulla_rdf::owl::classify_hybrid_weighted(&triples);
+        let classification = medulla_reasoner::owl::classify_hybrid_weighted(&triples);
         let reach = reach(&classification);
         let iri = |local: &str| format!("{S}{local}");
         assert!(reach

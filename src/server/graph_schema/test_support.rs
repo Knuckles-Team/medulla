@@ -57,7 +57,7 @@ pub(super) fn object_iri(triple: &Triple) -> Option<&str> {
     }
 }
 
-pub(super) fn assert_core_catalog(modules: &[&str]) -> medulla_rdf::owl::Classification {
+pub(super) fn assert_core_catalog(modules: &[&str]) -> medulla_reasoner::owl::Classification {
     let sources = GraphSchemaSources::default();
     for module in modules {
         assert!(
@@ -67,7 +67,7 @@ pub(super) fn assert_core_catalog(modules: &[&str]) -> medulla_rdf::owl::Classif
     }
     assert!(sources.core.len() <= crate::graph::MAX_CORE_SCHEMA_SOURCES);
     let composed = validate_and_compose(&sources).unwrap();
-    let classification = medulla_rdf::owl::Reasoner::from_triples(&composed.ontology).classify();
+    let classification = medulla_reasoner::owl::Reasoner::from_triples(&composed.ontology).classify();
     assert!(classification.consistent);
     assert!(
         classification.unsatisfiable.is_empty(),

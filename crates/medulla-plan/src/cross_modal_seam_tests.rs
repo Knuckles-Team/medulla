@@ -145,11 +145,11 @@ fn reason_then_traverse_then_rank_equals_separate() {
     let fused_ids: Vec<String> = execute(&plan, &ctx).unwrap().ids();
 
     // ── Separate oracle: reasoner ∘ BFS ∘ kNN, wired by hand. ──
-    let triples = medulla_rdf::owl::tbox_triples_from_view(&view);
-    let mut reasoner = medulla_rdf::owl::Reasoner::from_triples(&triples);
+    let triples = medulla_reasoner::owl::tbox_triples_from_view(&view);
+    let mut reasoner = medulla_reasoner::owl::Reasoner::from_triples(&triples);
     let cls = reasoner.classify();
-    let asserted = medulla_rdf::owl::asserted_types_from_view(&view, "http://example.org/").unwrap();
-    let members: Vec<String> = medulla_rdf::owl::instances_of(&cls, &asserted, target);
+    let asserted = medulla_reasoner::owl::asserted_types_from_view(&view, "http://example.org/").unwrap();
+    let members: Vec<String> = medulla_reasoner::owl::instances_of(&cls, &asserted, target);
     let reached = crate::exec::bfs_reached(&view, &members, "CITES", 1, 1);
     let reached_set: HashSet<&str> = reached.iter().map(String::as_str).collect();
     let ranked = semantic.semantic_search(&q, 64);

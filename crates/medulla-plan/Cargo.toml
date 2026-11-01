@@ -35,7 +35,7 @@ text = ["query", "dep:medulla-text", "medulla-text/tantivy", "medulla-types/text
 # medulla-rdf's pure-Rust `owl` (EL⁺ reasoner) + `sparql` evaluator. IMPLIES `query` (the
 # ops live inside the `query`-gated `Op` enum, beside the DataFusion FILTER leg). A
 # default/Pi build sets neither feature → no medulla-rdf reasoner/evaluator linked here.
-owl = ["query", "dep:medulla-rdf", "medulla-rdf/owl", "medulla-rdf/sparql", "dep:medulla-shacl", "medulla-types/owl-plan"]
+owl = ["query", "dep:medulla-rdf", "medulla-rdf/owl", "medulla-reasoner/owl", "medulla-rdf/sparql", "dep:medulla-shacl", "medulla-types/owl-plan"]
 # The WASM `Udf` TRANSFORM op (CONCEPT:KG-2.228): run a registered, sandboxed
 # WebAssembly UDF over the current RowSet inside a UnifiedQuery plan. Pulls medulla-wasm's
 # wasmtime runtime + turns on the `wasm-udf` wire variant in medulla-types. IMPLIES `query`
@@ -436,6 +436,7 @@ medulla-decision-types = { path = "../medulla-decision-types", features = ["quer
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-result-types = { path = "../medulla-result-types", features = ["query"] }
+medulla-reasoner = { path = "../medulla-reasoner" }
 
 [dev-dependencies]
 medulla-result-types = { path = "../medulla-result-types", features = ["query"] }

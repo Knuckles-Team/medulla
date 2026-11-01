@@ -82,7 +82,7 @@ pub(super) async fn handle_run_rules(request: RunRulesRequest<'_>) -> Response {
     };
     #[cfg(not(feature = "security"))]
     let snap = Arc::new(core.analysis_snapshot());
-    let req = medulla_rdf::rules::RuleReasonRequest {
+    let req = medulla_reasoner::rules::RuleReasonRequest {
         ontology_ttl,
         rules,
         query_predicate,
@@ -91,7 +91,7 @@ pub(super) async fn handle_run_rules(request: RunRulesRequest<'_>) -> Response {
         explain,
     };
     match compute_off_lock(req_id, move || {
-        medulla_rdf::rules::run_rule_reasoning_on_view(&snap, &req)
+        medulla_reasoner::rules::run_rule_reasoning_on_view(&snap, &req)
     })
     .await
     {
@@ -303,11 +303,11 @@ fn owl_reason(
     } else {
         medulla_rdf::mapping::parse_turtle(ontology)?
     };
-    medulla_rdf::owl::validate_supported_profile(&caller_extra)?;
+    medulla_reasoner::owl::validate_supported_profile(&caller_extra)?;
     let extra = caller_extra;
     let mut direct_subclasses: Vec<(String, String)> = views
         .iter()
-        .flat_map(|view| medulla_rdf::owl::tbox_triples_from_view(view))
+        .flat_map(|view| medulla_reasoner::owl::tbox_triples_from_view(view))
         .chain(extra.iter().cloned())
         .filter_map(direct_subclass_fact)
         .collect();
@@ -332,11 +332,11 @@ fn owl_reason(
     let class_base = if base_source.trim().is_empty() {
         String::new()
     } else {
-        medulla_rdf::owl::class_namespace(base_source).ok_or_else(|| {
+        medulla_reasoner::owl::class_namespace(base_source).ok_or_else(|| {
             "OwlReason requires an absolute class_base (or target_class) with a current class namespace".to_string()
         })?
     };
-    let res = medulla_rdf::owl::reason_distributed_weighted(
+    let res = medulla_reasoner::owl::reason_distributed_weighted(
         views,
         &extra,
         now,
@@ -463,13 +463,13 @@ fn owl_explain(
     } else {
         medulla_rdf::mapping::parse_turtle(ontology)?
     };
-    medulla_rdf::owl::validate_supported_profile(&caller_extra)?;
+    medulla_reasoner::owl::validate_supported_profile(&caller_extra)?;
     #[cfg(feature = "shacl")]
     medulla_server_api::api::admin::compose::validate_and_compose(&view.schema_sources)?;
-    let mut triples = medulla_rdf::owl::tbox_triples_from_view(view);
+    let mut triples = medulla_reasoner::owl::tbox_triples_from_view(view);
     triples.extend(caller_extra);
 
-    let cls = medulla_rdf::owl::classify_hybrid_weighted(&triples);
+    let cls = medulla_reasoner::owl::classify_hybrid_weighted(&triples);
 
     let canon = |s: &str| -> String {
         if s.starts_with('<') {
@@ -483,7 +483,7 @@ fn owl_explain(
 
     let tree = cls
         .explain(&sub, &sup)
-        .map(medulla_rdf::owl_wire::proof_node_to_wire);
+        .map(medulla_reasoner::owl_wire::proof_node_to_wire);
     Ok(crate::protocol::OwlExplainResult {
         schema_digests: vec![view.schema_sources.composed_digest().to_hex()],
         found: tree.is_some(),

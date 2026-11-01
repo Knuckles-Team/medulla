@@ -24,9 +24,7 @@ pub(super) struct DerivedClasses {
 #[cfg(feature = "owl")]
 mod imp {
     use super::*;
-    use medulla_rdf::rules::capability::{
-        classify_components, ClassificationPolicy, ProfiledComponent, DERIVATION_RULES,
-    };
+    use medulla_reasoner::{rules::capability::classify_components, rules::capability::ClassificationPolicy, rules::capability::ProfiledComponent, rules::capability::DERIVATION_RULES};
 
     /// Domain of the classification rule-set identity.
     const RULES_DOMAIN: &str = "eg/decide-classification-rules/v1";
@@ -62,8 +60,8 @@ mod imp {
         let derived = classify_components(
             &components,
             &policy(),
-            &medulla_rdf::owl::Ontology::default(),
-            &medulla_rdf::rules::RuleSet::default(),
+            &medulla_reasoner::owl::Ontology::default(),
+            &medulla_reasoner::rules::RuleSet::default(),
         );
         let by_component = derived
             .components

@@ -54,7 +54,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use dashmap::DashMap;
-use medulla_rdf::owl::{parse_ontology, tbox_triples_from_view, Classification, Reasoner};
+use medulla_reasoner::{owl::parse_ontology, owl::tbox_triples_from_view, owl::Classification, owl::Reasoner};
 use medulla_rdf::oxrdf::Triple;
 use tokio::sync::RwLock;
 

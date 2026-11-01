@@ -94,11 +94,11 @@ fn owl_inferred_set_then_rank_equals_separate() {
     let fused_ids: Vec<String> = fused.ids();
 
     // ── Separate: reason for the member set, THEN an independent kNN over it. ──
-    let triples = medulla_rdf::owl::tbox_triples_from_view(&view);
-    let mut reasoner = medulla_rdf::owl::Reasoner::from_triples(&triples);
+    let triples = medulla_reasoner::owl::tbox_triples_from_view(&view);
+    let mut reasoner = medulla_reasoner::owl::Reasoner::from_triples(&triples);
     let cls = reasoner.classify();
-    let asserted = medulla_rdf::owl::asserted_types_from_view(&view, "http://example.org/").unwrap();
-    let members: HashSet<String> = medulla_rdf::owl::instances_of(&cls, &asserted, target)
+    let asserted = medulla_reasoner::owl::asserted_types_from_view(&view, "http://example.org/").unwrap();
+    let members: HashSet<String> = medulla_reasoner::owl::instances_of(&cls, &asserted, target)
         .into_iter()
         .collect();
     // Independent kNN over the whole store, keep only members, top-2.

@@ -159,7 +159,9 @@ def mod_refs(files: list[Path], mods: set[str], rn: dict[str, str]) -> set[str]:
 
 def load_chain(root: Path) -> list[str]:
     cfg = tomllib.loads((root / "scripts/crate_split/boundaries.toml").read_text())
-    return cfg["types_split"]["chain"]
+    import os
+    extra = [c for c in os.environ.get("MOVE_CHAIN_EXTRA", "").split(",") if c]
+    return cfg["types_split"]["chain"] + extra
 
 
 def plan(root: Path, frm: str, to: str):
