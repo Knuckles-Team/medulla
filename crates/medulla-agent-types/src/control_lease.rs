@@ -486,7 +486,7 @@ impl KeysetListing for ListControlLeasesRequest {
     type Item = ControlLeaseView;
     const CURSOR: CursorFamily = CONTROL_LEASE_LIST_CURSOR;
 
-    medulla_types::keyset_page::keyset_tenant_limit_methods!(self);
+    medulla_types::keyset_tenant_limit_methods!(self);
 
     fn select(
         &self,

@@ -79,7 +79,7 @@ impl KeysetListing for GapListRequest {
     type Item = GapView;
     const CURSOR: CursorFamily = GAP_LIST_CURSOR;
 
-    medulla_types::keyset_page::keyset_tenant_limit_methods!(self);
+    medulla_types::keyset_tenant_limit_methods!(self);
 
     fn select(&self, _row_id: &str, row: &Map<String, Value>) -> Result<Option<GapView>, String> {
         if !is_tenant_gap(row, &self.tenant) {

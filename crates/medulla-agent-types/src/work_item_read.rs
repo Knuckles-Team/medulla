@@ -383,7 +383,7 @@ impl KeysetListing for WorkItemListRequest {
     type Item = WorkItemView;
     const CURSOR: CursorFamily = WORK_ITEM_LIST_CURSOR;
 
-    medulla_types::keyset_page::keyset_tenant_limit_methods!(self);
+    medulla_types::keyset_tenant_limit_methods!(self);
 
     fn select(
         &self,
