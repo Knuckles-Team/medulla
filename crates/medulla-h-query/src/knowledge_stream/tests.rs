@@ -645,7 +645,7 @@ fn query_state_with_services(
     isolation: medulla_isolation::isolation::IsolationLayer,
     persistence_label: &str,
 ) -> std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>> {
-    let mut state = medulla_server_api::state::ServerState::new_for_test(auth_secret.to_owned(), isolation);
+    let mut state = medulla_server::seams_install::new_state_for_test(auth_secret.to_owned(), isolation);
     state.persist_dir = Some(
         medulla_server_auth::sql_tables::test_persist_dir()
             .to_string_lossy()

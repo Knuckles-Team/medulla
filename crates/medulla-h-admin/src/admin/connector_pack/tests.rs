@@ -68,7 +68,7 @@ fn next_id() -> u64 {
 impl Served {
     pub(super) fn new() -> Self {
         let dir = tempfile::tempdir().unwrap();
-        let mut state = ServerState::new_for_test(SECRET, ServerState::test_isolation(ADMIN));
+        let mut state = medulla_server::seams_install::new_state_for_test(SECRET, ServerState::test_isolation(ADMIN));
         state.persist_dir = Some(dir.path().to_string_lossy().into_owned());
         let blob_dir = dir.path().join("blob");
         std::fs::create_dir_all(&blob_dir).unwrap();

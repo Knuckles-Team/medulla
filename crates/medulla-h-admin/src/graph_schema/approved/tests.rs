@@ -65,7 +65,7 @@ impl Served {
     async fn new() -> Self {
         let env = medulla_kernel::crypto::acquire_test_env_read_lock().await;
         let dir = tempfile::tempdir().unwrap();
-        let mut state = ServerState::new_for_test(SECRET, ServerState::test_isolation(ADMIN));
+        let mut state = medulla_server::seams_install::new_state_for_test(SECRET, ServerState::test_isolation(ADMIN));
         state.persist_dir = Some(dir.path().to_string_lossy().into_owned());
         let backend = medulla_persistence::redb_backend::RedbBackend::open(
             dir.path().join("graphs").to_string_lossy().into_owned(),

@@ -282,7 +282,7 @@ mod tests {
             teams: Vec::new(),
             roles: Vec::new(),
         });
-        let mut state = ServerState::new_for_test("test-sqlite-wire-secret", isolation);
+        let mut state = medulla_server::seams_install::new_state_for_test("test-sqlite-wire-secret", isolation);
         state.persist_dir = Some(
             medulla_server_auth::sql_tables::test_persist_dir()
                 .to_string_lossy()

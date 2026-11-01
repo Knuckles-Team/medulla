@@ -302,7 +302,8 @@ fn federation_sparql_local_vector_foreign_sql_one_plan_eg385() {
         },
         Op::Limit { k: 10 },
     ]);
-    let ctx = PlanCtx::new(&fx.view, &fx.semantic);
+    let federated = medulla_federation::federation_opt::FederatedExec::default();
+    let ctx = PlanCtx::new(&fx.view, &fx.semantic).with_foreign_executor(&federated);
     let fused = execute(&plan, &ctx).unwrap().ids();
 
     // Oracle: local(year>2023)={d1,d2,d4,d5} ∩ foreign{d2,d4} = {d2,d4}; ranked d2 > d4.

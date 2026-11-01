@@ -113,7 +113,5 @@ pub fn new_state_for_test(
     auth_secret: impl Into<String>,
     isolation: medulla_isolation::isolation::IsolationLayer,
 ) -> ServerState {
-    let state = ServerState::new_for_test(auth_secret, isolation);
-    let _ = state.seams.dispatch.set(Arc::new(super::seam::DispatchSeam));
-    state
+    medulla_server::seams_install::new_state_for_test(auth_secret, isolation)
 }

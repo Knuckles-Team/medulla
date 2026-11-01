@@ -260,7 +260,7 @@ pub mod current_auth_test_support {
         dir: String,
         backend: Arc<dyn PersistenceBackend>,
     ) -> Arc<RwLock<ServerState>> {
-        let mut state = ServerState::new_for_test(secret, isolation);
+        let mut state = medulla_server::seams_install::new_state_for_test(secret, isolation);
         state.persist_dir = Some(dir);
         state.persistence = Some(backend);
         Arc::new(RwLock::new(state))

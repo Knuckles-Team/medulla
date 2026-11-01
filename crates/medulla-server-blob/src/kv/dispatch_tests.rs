@@ -19,7 +19,7 @@ const TEST_AGENT: &str = "unit-test-agent";
 
 fn state_with_kv(dir: &str) -> Arc<RwLock<ServerState>> {
     let kv = Arc::new(super::KvStore::open(Some(dir)).unwrap());
-    let mut state = ServerState::new_for_test(SECRET, ServerState::test_isolation(TEST_AGENT));
+    let mut state = medulla_server::seams_install::new_state_for_test(SECRET, ServerState::test_isolation(TEST_AGENT));
     state.persist_dir = Some(dir.to_string());
     #[cfg(feature = "kv")]
     {
@@ -446,7 +446,7 @@ async fn kv_shared_namespace_spans_principals_and_needs_kv_shared_write() {
     let dir = std::env::temp_dir().join(format!("medulla-kv-shared-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let kv = Arc::new(super::KvStore::open(Some(&dir.to_string_lossy())).unwrap());
-    let mut state = ServerState::new_for_test(SECRET, medulla_server_auth::access::two_agent_isolation());
+    let mut state = medulla_server::seams_install::new_state_for_test(SECRET, medulla_server_auth::access::two_agent_isolation());
     state.persist_dir = Some(dir.to_string_lossy().to_string());
     state.set_kv_store(Some(kv));
     let state = Arc::new(RwLock::new(state));

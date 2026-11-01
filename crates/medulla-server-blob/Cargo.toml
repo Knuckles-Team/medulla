@@ -62,5 +62,6 @@ sparql-service = ["sparql-http", "dep:ureq", "medulla-server-api/sparql-service"
 test-support = ["medulla-server-api/test-support", "medulla-server-auth/test-support"]
 
 [dev-dependencies]
+medulla-server = { path = "../medulla-server", features = ["test-support"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
 tempfile = "3"

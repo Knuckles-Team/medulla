@@ -323,7 +323,8 @@ fn a_key_only_source_refuses_a_scan_without_keys() {
     let api = MockApi::spawn(catalog(10), 10);
     let _allow = MockHttpAllowGuard::new(&api.base);
     let fx = medulla_exec::fixture::build();
-    let ctx = PlanCtx::new(&fx.view, &fx.semantic);
+    let federated = crate::federation_opt::FederatedExec::default();
+    let ctx = PlanCtx::new(&fx.view, &fx.semantic).with_foreign_executor(&federated);
     let plan = Plan::new(vec![Op::ForeignScan {
         source: Box::new(api.spec("?ids={keys}")),
         join: false,
@@ -356,7 +357,8 @@ fn the_request_budget_refuses_instead_of_returning_partial_rows() {
 #[test]
 fn placeholders_outside_the_query_string_never_template_the_destination() {
     let fx = medulla_exec::fixture::build();
-    let ctx = PlanCtx::new(&fx.view, &fx.semantic);
+    let federated = crate::federation_opt::FederatedExec::default();
+    let ctx = PlanCtx::new(&fx.view, &fx.semantic).with_foreign_executor(&federated);
     let spec = ForeignSourceSpec::HttpJson {
         url: "http://{keys}.example.invalid/items".into(),
         json_path: String::new(),

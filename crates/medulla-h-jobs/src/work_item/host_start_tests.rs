@@ -57,7 +57,7 @@ async fn fixture() -> (
     IssueHostStartGrantRequest,
 ) {
     let dir = tempfile::tempdir().unwrap();
-    let mut state = ServerState::new_for_test(SECRET, ServerState::test_isolation(ISSUER));
+    let mut state = medulla_server::seams_install::new_state_for_test(SECRET, ServerState::test_isolation(ISSUER));
     state.persist_dir = Some(dir.path().to_string_lossy().into_owned());
     let backend =
         RedbBackend::open(dir.path().join("graphs").to_string_lossy().into_owned(), 64).unwrap();

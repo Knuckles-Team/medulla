@@ -535,7 +535,7 @@ mod tests {
         // session's ACL actor is bound to that literal username (see
         // `bind_authenticated_sql_actor`'s `agent_id` param).
         register_commons_agent(&mut isolation, "tester");
-        let mut state = ServerState::new_for_test("test", isolation);
+        let mut state = medulla_server::seams_install::new_state_for_test("test", isolation);
         state.persist_dir = Some(
             medulla_server_auth::sql_tables::test_persist_dir()
                 .to_string_lossy()

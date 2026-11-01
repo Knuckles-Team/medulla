@@ -297,7 +297,7 @@ mod keyed_recovery_window_tests {
             RedbBackend::open_with_shards(dir.to_string_lossy().into_owned(), 64, 1)
                 .expect("open transaction recovery backend"),
         );
-        let mut server = ServerState::new_for_test(
+        let mut server = medulla_server::seams_install::new_state_for_test(
             "txn-recovery-test-secret",
             ServerState::test_isolation(CALLER),
         );
@@ -499,7 +499,7 @@ mod keyed_recovery_window_tests {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn terminal_lifecycle_replay_refuses_missing_volatile_handle() {
-        let state = Arc::new(RwLock::new(ServerState::new_for_test(
+        let state = Arc::new(RwLock::new(medulla_server::seams_install::new_state_for_test(
             "txn-lifecycle-replay-test-secret",
             ServerState::test_isolation(CALLER),
         )));

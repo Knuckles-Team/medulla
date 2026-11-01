@@ -40,7 +40,7 @@ fn admin_sources(name: &str, class_iri: &str) -> Arc<GraphSchemaSources> {
 }
 
 async fn state_with_two_graphs() -> Arc<RwLock<ServerState>> {
-    let state = ServerState::new_for_test(SECRET, ServerState::test_isolation(AGENT));
+    let state = medulla_server::seams_install::new_state_for_test(SECRET, ServerState::test_isolation(AGENT));
     let state = Arc::new(RwLock::new(state));
     {
         let mut guard = state.write().await;

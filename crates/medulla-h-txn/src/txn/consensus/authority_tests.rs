@@ -121,7 +121,7 @@ async fn parent_only_phases_reject_foreign_tenant_with_same_principal() {
     let backend = Arc::new(
         RedbBackend::open_with_shards(directory.to_string_lossy().into_owned(), 64, 1).unwrap(),
     );
-    let mut server = ServerState::new_for_test(
+    let mut server = medulla_server::seams_install::new_state_for_test(
         "parent-tenant-test",
         ServerState::test_isolation("same-principal"),
     );

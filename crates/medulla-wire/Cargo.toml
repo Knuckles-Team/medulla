@@ -131,6 +131,7 @@ result-cache = ["medulla-cypher/result-cache", "medulla-core/result-cache", "med
 promql = ["dep:medulla-tsdb", "medulla-tsdb/promql", "medulla-persistence/promql", "medulla-server-api/promql"]
 sqlite-file = ["dep:rustix", "medulla-kernel/sqlite-file", "medulla-protocol-types/sqlite-file", "medulla-types/sqlite-file"]
 [dev-dependencies]
+medulla-server = { path = "../medulla-server", features = ["test-support"] }
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 medulla-wire-core = { path = "../medulla-wire-core", features = ["test-support"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }

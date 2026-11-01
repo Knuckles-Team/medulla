@@ -85,5 +85,6 @@ cypher = ["medulla-kernel/cypher", "medulla-persistence/cypher", "medulla-server
 cypher-plan = ["medulla-kernel/cypher-plan", "medulla-persistence/cypher-plan", "medulla-server-api/cypher-plan"]
 result-cache = ["medulla-core/result-cache", "medulla-graph-core/result-cache", "medulla-kernel/result-cache", "medulla-persistence/result-cache", "medulla-server-api/result-cache", "medulla-server-ops/result-cache"]
 [dev-dependencies]
+medulla-server = { path = "../medulla-server", features = ["test-support"] }
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 tempfile = "3"

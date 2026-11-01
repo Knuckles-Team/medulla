@@ -60,7 +60,7 @@ mod run_rules_dispatch_tests {
     const TEST_AGENT: &str = "unit-test-agent";
 
     fn state() -> Arc<RwLock<ServerState>> {
-        let mut state = ServerState::new_for_test(SECRET, ServerState::test_isolation(TEST_AGENT));
+        let mut state = medulla_server::seams_install::new_state_for_test(SECRET, ServerState::test_isolation(TEST_AGENT));
         state.persist_dir = Some(
             medulla_server_auth::sql_tables::test_persist_dir()
                 .to_string_lossy()

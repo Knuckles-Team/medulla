@@ -168,7 +168,8 @@ fn foreign_join_with_local_equals_manual_join() {
         },
         Op::Limit { k: 10 },
     ]);
-    let ctx = PlanCtx::new(&fx.view, &fx.semantic);
+    let federated = crate::federation_opt::FederatedExec::default();
+    let ctx = PlanCtx::new(&fx.view, &fx.semantic).with_foreign_executor(&federated);
     let fused = execute(&plan, &ctx).unwrap();
 
     // ── the manual join (the oracle) ──
@@ -228,7 +229,8 @@ fn foreign_scan_as_a_pure_source_replaces_the_input() {
         },
         Op::Limit { k: 10 },
     ]);
-    let ctx = PlanCtx::new(&fx.view, &fx.semantic);
+    let federated = crate::federation_opt::FederatedExec::default();
+    let ctx = PlanCtx::new(&fx.view, &fx.semantic).with_foreign_executor(&federated);
     let out: RowSet = execute(&plan, &ctx).unwrap();
     let mut ids = out.ids();
     ids.sort();

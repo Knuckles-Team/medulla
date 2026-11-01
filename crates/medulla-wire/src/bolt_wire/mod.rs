@@ -970,7 +970,7 @@ mod tests {
     }
 
     fn test_state(seed_public_nodes: bool) -> Arc<RwLock<ServerState>> {
-        let mut state = ServerState::new_for_test("test", bolt_test_isolation());
+        let mut state = medulla_server::seams_install::new_state_for_test("test", bolt_test_isolation());
         if seed_public_nodes {
             let core = state.registry.get("__commons__").unwrap().core.clone();
             for (id, ty) in [("n1", "Agent"), ("n2", "Agent"), ("n3", "Tool")] {

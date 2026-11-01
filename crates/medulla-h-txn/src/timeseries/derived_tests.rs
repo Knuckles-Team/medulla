@@ -43,7 +43,7 @@ impl Fixture {
                 .unwrap()
                 .as_nanos()
         ));
-        let mut state = ServerState::new_for_test(SECRET, ServerState::test_isolation("system"));
+        let mut state = medulla_server::seams_install::new_state_for_test(SECRET, ServerState::test_isolation("system"));
         state.tsdb_store = Some(super::open_test_series_store(&path));
         Self {
             state: Arc::new(RwLock::new(state)),

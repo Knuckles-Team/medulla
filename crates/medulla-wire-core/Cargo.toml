@@ -58,3 +58,5 @@ security = ["redb", "dep:sha1", "medulla-core/security", "medulla-graph-core/sec
 sparql = ["medulla-kernel/sparql", "medulla-persistence/sparql", "medulla-protocol-types/sparql", "medulla-server-api/sparql", "medulla-server-ops/sparql", "medulla-types/sparql"]
 test-support = []
 tsdb = ["redb", "dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries", "medulla-persistence/tsdb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb"]
+[dev-dependencies]
+medulla-server = { path = "../medulla-server", features = ["test-support"] }

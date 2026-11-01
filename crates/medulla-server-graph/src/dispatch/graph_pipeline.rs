@@ -489,7 +489,7 @@ mod eg318_dispatch_tests {
         let persistence: Arc<dyn PersistenceBackend> = Arc::new(
             RedbBackend::open(dir_string.clone(), 64).expect("open authoritative test backend"),
         );
-        let mut state = ServerState::new_for_test(SECRET, ServerState::test_isolation("system"));
+        let mut state = medulla_server::seams_install::new_state_for_test(SECRET, ServerState::test_isolation("system"));
         state.persist_dir = Some(dir_string);
         state.persistence = Some(persistence);
         let state = Arc::new(RwLock::new(state));
