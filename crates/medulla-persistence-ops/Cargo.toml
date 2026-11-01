@@ -20,6 +20,7 @@ tempfile = { version = "3", optional = true }
 hex = "0.4"
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-server-api = { path = "../medulla-server-api" }
+medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-storage = { path = "../medulla-storage", optional = true }
 medulla-store = { path = "../medulla-store" }
 medulla-store-apply = { path = "../medulla-store-apply" }
