@@ -137,8 +137,9 @@ def build(root: Path, frm: str, to: str, chain: list[str]):
 
 
 class Mapper:
-    def __init__(self, frm: str, to: str, units):
+    def __init__(self, frm: str, to: str, units, aliases=None):
         self.frm, self.to, self.units = frm, to, units
+        self.aliases = aliases or {}
         self.frm_s, self.to_s = snake(frm), snake(to)
 
     def new(self, segs: list[str], base: list[str], ctx: str):
@@ -147,11 +148,20 @@ class Mapper:
         if not r:
             return None
         kind, absp = r
+        expanded = False
+        for k in range(len(absp)):
+            hit = self.aliases.get(tuple(absp[: k + 1]))
+            if hit:
+                absp = list(hit) + absp[k + 1:]
+                expanded = True
+                break
         mv = under(absp, self.units)
         if ctx == "moving":
             if kind == "ext":
                 return [self.to_s] + absp if mv else None
-            return None if mv else [self.frm_s] + absp
+            if mv:
+                return ["crate"] + absp if expanded else None
+            return [self.frm_s] + absp
         if ctx == "staying":
             return [self.to_s] + absp if (mv and kind != "ext") else None
         return [self.to_s] + absp if (mv and kind == "ext") else None
@@ -206,6 +216,39 @@ class Mapper:
         return text
 
 
+def strip_aliases(root: Path, frm: str, units) -> dict[tuple[str, ...], tuple[str, ...]]:
+    """`pub use <moved child>::{A, B}` in a staying parent module re-exports moved items under the old path.
+
+    Hard cutover: the statement is removed and each alias becomes an expansion rule for callers."""
+    src = root / "crates" / frm / "src"
+    out: dict[tuple[str, ...], tuple[str, ...]] = {}
+    for parent in sorted({u[:-1] for u in units}):
+        pf = src / "lib.rs" if not parent else next(
+            p for p in (src / Path(*parent).with_suffix(".rs"), src / Path(*parent) / "mod.rs") if p.exists()
+        )
+        text = pf.read_text()
+        code = blank_non_code(text)
+        cuts = []
+        for s, e, indent, body in find_use_statements(code):
+            leaves = parse_use_tree(body)
+            heads = [tuple(parent) + (l[0][0],) for l in leaves if l[0]]
+            if leaves and all(h in units for h in heads) and text[s:e].lstrip().startswith("pub"):
+                for segs, _l, alias in leaves:
+                    out[tuple(parent) + ((alias or segs[-1]),)] = tuple(parent) + tuple(segs)
+                a0 = s
+                while True:  # preceding single-line attributes
+                    prev = text.rfind("\n", 0, a0 - 1) + 1
+                    if text[prev:a0].strip().startswith("#[") and text[prev:a0].strip().endswith("]"):
+                        a0 = prev
+                    else:
+                        break
+                cuts.append((a0, e))
+        for a0, e in sorted(cuts, reverse=True):
+            text = text[:a0] + text[e:].lstrip("\n")
+        pf.write_text(text)
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--from", dest="frm", required=True)
@@ -226,6 +269,7 @@ def main() -> int:
         return 3
     src, src_to = root / "crates" / frm / "src", root / "crates" / to / "src"
     src_to.mkdir(parents=True, exist_ok=True)
+    aliases = strip_aliases(root, frm, units)
     # 1. git mv each unit (file and dir) and fix the parent module declarations
     moved_decl: dict[tuple[str, ...], list[str]] = {}
     for u in units:
@@ -267,7 +311,7 @@ def main() -> int:
             if f"mod {parent[0]};" not in lib.read_text():
                 lib.write_text(lib.read_text().rstrip("\n") + f"\n\n{ALLOW}\npub mod {parent[0]};\n")
     # 3. rewrite every Rust file
-    mp = Mapper(frm, to, units)
+    mp = Mapper(frm, to, units, aliases)
     changed_users: dict[Path, str] = {}
     for f in all_files(root) + [p for p in src_to.rglob("*.rs")]:
         if not f.exists():
