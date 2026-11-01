@@ -69,7 +69,8 @@ where
 ///     group↔shard alignment is exact). An existing K=1 store on disk stays K=1 until the
 ///     offline `migrate-shards` tool rewrites its layout (the detected layout wins at open).
 ///   * `MEDULLA_REDB_SHARDS` overrides the non-raft count (clamped 1..=64).
-///   * In `cfg(test)` default to 1 so the existing single-writer durability/audit/
+///   * In `cfg(test)` or with the `test-support` feature (the moved persistence tests
+///     live in another crate, where `cfg(test)` is false) default to 1 so the existing single-writer durability/audit/
 ///     group-commit tests run the byte-for-byte K=1 path unless they opt in via the env.
 ///   * Otherwise K = clamp(effective-cgroup-cpu/2, 1, 8) — mirrors the shared
 ///     `medulla_kernel::autosize::detect_capacity()` seam.
@@ -97,11 +98,11 @@ pub fn resolve_shard_count() -> usize {
             return n.clamp(1, medulla_store::redb_layout::MAX_SHARD_COUNT);
         }
     }
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     {
         1
     }
-    #[cfg(not(test))]
+    #[cfg(not(any(test, feature = "test-support")))]
     {
         let cpus = medulla_kernel::autosize::detect_capacity().reserved_cpus();
         (cpus / 2).clamp(1, 8)
