@@ -17,7 +17,7 @@ use crate::kernel::persistence::ResidentProjectionHost;
 /// The previous character-replacement scheme was lossy (`a:b` and `a/b` shared
 /// a key). Byte escaping is reversible for ordinary names; very long names use a
 /// domain-separated SHA-256 key to respect filesystem component limits.
-pub(crate) fn sanitize(name: &str) -> String {
+pub fn sanitize(name: &str) -> String {
     let mut key = String::with_capacity(name.len());
     for &byte in name.as_bytes() {
         use std::fmt::Write as _;

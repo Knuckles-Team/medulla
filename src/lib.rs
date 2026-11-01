@@ -84,21 +84,8 @@ macro_rules! work_item_resource_writes {
     };
 }
 
-#[cfg(feature = "server")]
-pub mod channels;
-#[cfg(feature = "server")]
-pub mod kernel;
-// CONCEPT:MEDULLA-OS.observability.slow-query-descriptor — slow-query log. Server-only (only the server dispatch/pgwire
-// paths execute queries).
-#[cfg(feature = "server")]
-pub mod persist;
 #[cfg(feature = "redb")]
 pub(crate) mod redb_layout;
-// The composition root's ONE scope-grant authority. `medulla-storage` opens every
-// durable file; only this binary decides which principal may serve which scope
-// on which of them (RF-RULING-004).
-#[cfg(feature = "redb")]
-pub mod store_authority;
 #[cfg(feature = "redb")]
 pub mod redb_store;
 // The one shape every small kernel-owned sidecar file in this binary takes.

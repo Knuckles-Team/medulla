@@ -22,7 +22,7 @@ tokio::task_local! {
 
 /// One authoritative clock for a replicated native command. Followers must not
 /// sample their local wall clocks while applying the same committed entry.
-pub(crate) fn authoritative_now_ms() -> u64 {
+pub fn authoritative_now_ms() -> u64 {
     #[cfg(feature = "raft")]
     if let Ok(value) = REPLICATED_APPLY.try_with(|scope| scope.committed_at_ms) {
         return value;
@@ -34,7 +34,7 @@ pub(crate) fn authoritative_now_ms() -> u64 {
 }
 
 /// [`authoritative_now_ms`] in whole seconds.
-pub(crate) fn authoritative_now_secs() -> u64 {
+pub fn authoritative_now_secs() -> u64 {
     authoritative_now_ms() / 1_000
 }
 

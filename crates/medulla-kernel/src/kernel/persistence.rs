@@ -5,7 +5,7 @@
 /// This identity is shared by the server, embedded, and Raft/redb-only builds;
 /// keeping it in the kernel prevents a standalone embedded build from acquiring a
 /// dependency on crate::server.
-pub(crate) const ENGINE_LEDGER_PRINCIPAL: &str =
+pub const ENGINE_LEDGER_PRINCIPAL: &str =
     "principal:sha256:41290b0e412ac542f312d4312a7a299e771eec66e3ffbbf7edb6369576875fb2";
 
 /// Replay entry of the data-mining write-back arms (MEDULLA-CONTRACT-R056.8).
@@ -34,8 +34,8 @@ pub fn replay_mining(core: &medulla_core::graph::GraphCore, method: &medulla_typ
 ///
 /// The process-local sequence prevents collisions even when concurrent calls
 /// observe the same system-clock tick. Callers retain their prefix and tag.
-#[cfg(test)]
-pub(crate) fn temp_dir(prefix: &str, tag: &str) -> std::path::PathBuf {
+#[cfg(any(test, feature = "test-support"))]
+pub fn temp_dir(prefix: &str, tag: &str) -> std::path::PathBuf {
     static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let dir = std::env::temp_dir().join(format!(
         "{prefix}-{tag}-{}-{}-{}",

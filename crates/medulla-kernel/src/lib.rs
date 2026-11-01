@@ -82,17 +82,21 @@ pub mod write_coalescer;
 pub mod autosize;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(feature = "server")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod channels;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(feature = "server")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod kernel;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(feature = "server")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod persist;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(feature = "redb")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod store_authority;
