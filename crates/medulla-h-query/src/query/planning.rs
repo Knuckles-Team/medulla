@@ -230,7 +230,7 @@ pub(crate) fn build_text_index_from_view(
 /// spatial), exactly as if this bundle were never passed.
 #[cfg(feature = "query")]
 #[derive(Default)]
-pub(crate) struct ServedIndexes<'a> {
+pub struct ServedIndexes<'a> {
     #[cfg(feature = "text")]
     pub text: Option<&'a crate::secondary_indexes::ServedTextIndex>,
     #[cfg(feature = "geo")]
@@ -260,7 +260,7 @@ pub(crate) struct ServedIndexes<'a> {
 /// the off-lock closure) and lent to `run_unified` as [`ServedIndexes`]: the
 /// one construction every served plan path shares (UnifiedQuery, NL, in-txn
 /// overlay, wire UQL, mining-sourced plans).
-pub(crate) struct CoreIndexes<'c> {
+pub struct CoreIndexes<'c> {
     #[cfg(feature = "text")]
     text: crate::secondary_indexes::ServedTextIndex,
     #[cfg(feature = "geo")]
@@ -271,7 +271,7 @@ pub(crate) struct CoreIndexes<'c> {
 }
 
 impl<'c> CoreIndexes<'c> {
-    pub(crate) fn open(core: &'c std::sync::Arc<medulla_graph_core::graph::GraphCore>) -> Self {
+    pub fn open(core: &'c std::sync::Arc<medulla_graph_core::graph::GraphCore>) -> Self {
         #[cfg(not(any(
             feature = "text",
             feature = "geo",
@@ -291,7 +291,7 @@ impl<'c> CoreIndexes<'c> {
 
     /// These indexes as `run_unified` takes them, with the caller's owner-scoped
     /// foreign registry (EH-373) when the plan names a foreign source.
-    pub(crate) fn served<'a>(
+    pub fn served<'a>(
         &'a self,
         #[cfg(feature = "federation")] foreign: Option<
             &'a medulla_federation::federation::ForeignSourceRegistry,
@@ -317,7 +317,7 @@ impl<'c> CoreIndexes<'c> {
 /// statement (EXPLAIN/PROFILE/channels/DAG) over the SAME bindings (UQL-07/08/09).
 /// `plan` decides which legs are bound (every op of the statement).
 #[cfg(feature = "query")]
-pub(crate) fn run_unified_with<T>(
+pub fn run_unified_with<T>(
     plan: medulla_exec::algebra::Plan,
     view: &medulla_graph_core::graph::GraphView,
     semantic: &medulla_semantic_index::semantic::SemanticStore,

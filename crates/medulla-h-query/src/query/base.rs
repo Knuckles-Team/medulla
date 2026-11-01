@@ -142,7 +142,7 @@ pub(crate) fn graphql_lifecycle_replay_is_live(
 /// `TsScan` leg reuses (CONCEPT:MEDULLA-KG.mining.tsdb-typed-absent) rather than
 /// re-deriving the same tenant/namespace scope a second time.
 #[cfg(all(feature = "query", feature = "tsdb"))]
-pub(crate) fn served_tsdb_scope(
+pub fn served_tsdb_scope(
     plan: &medulla_exec::algebra::Plan,
     graph: &str,
     read_authority: Option<&GraphReadAuthority>,

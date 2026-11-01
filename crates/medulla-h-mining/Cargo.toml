@@ -31,6 +31,9 @@ medulla-server-ops = { path = "../medulla-server-ops" }
 medulla-server-mutation = { path = "../medulla-server-mutation" }
 medulla-exec = { path = "../medulla-exec" }
 
+medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-plan = { path = "../medulla-plan", optional = true }
+
 [features]
 epistemic = ["query", "dep:medulla-plan", "dep:medulla-modality", "dep:medulla-epistemic", "medulla-h-query/epistemic"]
 federation = ["query", "dep:medulla-plan", "medulla-h-query/federation"]
