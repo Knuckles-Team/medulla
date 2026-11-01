@@ -68,7 +68,7 @@ cold-tier = ["medulla-graph-core/cold-tier", ]
 # deliberately NOT folded into any tier aggregate (pi/node/full) — it is a
 # capability-discovery/testing seam, not a serving feature. `cargo test -p medulla-core
 # --features contract` runs the suite.
-contract = ["dep:medulla-modality"]
+contract = ["medulla-graph-core/contract"]
 
 [dependencies]
 medulla-types = { path = "../medulla-types" }
@@ -113,10 +113,6 @@ sha2 = { version = "0.10", optional = true }
 # `hmac = { version = "0.12", optional = true }`). Only linked under `security`
 # (same gate as `sha2` above).
 hmac = { version = "0.12", optional = true }
-# ModalityContract retrofit (CONCEPT:E4). Optional, only under `contract` (default
-# OFF) — a default/pi/node/full build links none of it and `index::NodeChange`
-# carries no new required trait. See `src/contract.rs`.
-medulla-modality = { path = "../medulla-modality", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-result-types = { path = "../medulla-result-types" }

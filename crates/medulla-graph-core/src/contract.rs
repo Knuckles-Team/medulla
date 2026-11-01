@@ -13,7 +13,7 @@ use medulla_modality::{
     RowSetShape, StagedWrite, StorageStats, TckPoint,
 };
 
-use medulla_graph_core::index::NodeChange;
+use crate::index::NodeChange;
 
 impl ModalityContract for NodeChange {
     fn storage_kind(&self) -> &'static str {

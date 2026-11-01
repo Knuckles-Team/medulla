@@ -92,4 +92,5 @@ tsdb = ["medulla-server-router/tsdb", "medulla-server/tsdb", "server", "redb", "
 jobs = ["dep:medulla-jobs"]
 
 [dev-dependencies]
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 tempfile = "3"

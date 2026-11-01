@@ -102,7 +102,7 @@ impl TenantManager {
     /// [`MultiRaft::create_group`] / a higher-level `ensure_group` first). The router
     /// is re-pointed only AFTER the durability barrier, so a crash mid-reshard leaves
     /// the graph owned by its ORIGINAL group with all data durable — re-runnable.
-    pub(crate) async fn reshard_graph(
+    pub async fn reshard_graph(
         &self,
         graph_name: &str,
         to_group: GroupId,

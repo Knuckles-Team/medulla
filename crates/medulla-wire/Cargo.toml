@@ -132,6 +132,7 @@ promql = ["dep:medulla-tsdb", "medulla-tsdb/promql"]
 sqlite-file = ["dep:rustix"]
 
 [dev-dependencies]
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 medulla-wire-core = { path = "../medulla-wire-core", features = ["test-support"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
 tempfile = "3"

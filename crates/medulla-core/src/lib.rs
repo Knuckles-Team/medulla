@@ -17,11 +17,6 @@
 // CONCEPT:MEDULLA-KG.compute.message-broker-exchanges — message-broker exchanges/routing on top of the KG-2.303 queue.
 #[cfg(feature = "broker")]
 pub mod broker;
-/// ModalityContract retrofit (CONCEPT:E4): `impl ModalityContract for
-/// index::NodeChange` + the `modality_conformance_tests!` battery. Behind the
-/// crate's own opt-in `contract` feature (default OFF). See `src/contract.rs`.
-#[cfg(feature = "contract")]
-mod contract;
 pub mod decay;
 /// Canonical durable-mutation classification/application, hoisted down from the
 /// facade's `src/mutation_apply.rs` (`plans/pyengine/MEDULLA-PYENGINE-PLAN.md` §4.2) so a

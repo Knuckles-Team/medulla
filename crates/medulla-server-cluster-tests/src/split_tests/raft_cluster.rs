@@ -2959,7 +2959,7 @@ mod dist_compute {
     use super::*;
     use medulla_types::acl::{AgentIdentity, AgentRole};
     use medulla_protocol_types::protocol::{DistAlgo, GraphType};
-    use medulla_raft::raft::pregel;
+    use medulla_raft_xshard::pregel;
     use medulla_server_api::carrier::GraphReadAuthority;
     use medulla_protocol_types::result_contract::cluster::DistResult;
 

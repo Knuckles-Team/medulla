@@ -107,4 +107,5 @@ traces = ["dep:medulla-tsdb", "medulla-tsdb/traces"]
 pgwire = ["dep:rustix"]
 
 [dev-dependencies]
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 tempfile = "3"

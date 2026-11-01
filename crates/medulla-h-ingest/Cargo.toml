@@ -78,4 +78,5 @@ result-cache = []
 server = ["dep:tokio"]
 
 [dev-dependencies]
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 tempfile = "3"

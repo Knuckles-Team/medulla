@@ -64,3 +64,6 @@ shex = ["rdf", "dep:medulla-shex"]
 sparql = ["rdf", "dep:medulla-rdf"]
 sparql-fuseki = ["sparql"]
 sparql-service = ["federation"]
+
+[dev-dependencies]
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }

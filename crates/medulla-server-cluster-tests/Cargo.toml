@@ -61,7 +61,7 @@ jsonwebtoken = { version = "11.1", optional = true, default-features = false, fe
 [features]
 ast = ["medulla-server-router/ast", "medulla-server/ast"]
 compute-dist = ["medulla-server/compute-dist", "raft"]
-harness = ["medulla-server/harness", "raft", "medulla-raft/harness", "medulla-raft-xshard/harness"]
+harness = ["medulla-server/harness", "raft", "medulla-raft/harness", "medulla-raft-xshard/harness", "medulla-raft-xshard/test-support"]
 oidc = ["medulla-server-router/oidc", "medulla-server/oidc", "dep:jsonwebtoken"]
 raft = ["medulla-server-router/raft", "medulla-server/raft", "redb", "dep:openraft", "server"]
 redb = ["medulla-server-router/redb", "medulla-server/redb", "dep:redb", "dep:medulla-transaction", "dep:medulla-storage"]

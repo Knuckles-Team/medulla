@@ -137,5 +137,6 @@ viz-static-export = ["medulla-server-obs/viz-static-export", "server"]
 wasm-udf = ["medulla-server-graph/wasm-udf", "dep:medulla-plan", "medulla-plan?/wasm-udf", "server"]
 
 [dev-dependencies]
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 tempfile = "3"
 medulla-server-identity = { path = "../medulla-server-identity", features = ["test-support"] }

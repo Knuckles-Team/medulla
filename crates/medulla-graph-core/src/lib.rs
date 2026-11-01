@@ -7,6 +7,9 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
+#[cfg(feature = "contract")]
+mod contract;
+
 /// CONCEPT:MEDULLA-KG.storage.bloom-negative-lookup-guard — lock-free per-graph Bloom
 /// filter guarding the durable read-through negative-lookup path. Pure-Rust,
 /// always compiled (no feature gate — the default/Pi build already links it).

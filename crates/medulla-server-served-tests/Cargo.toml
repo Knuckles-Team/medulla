@@ -122,5 +122,6 @@ tsdb = ["medulla-server-router/tsdb", "medulla-server-graph/tsdb", "medulla-serv
 wasm-udf = ["medulla-server-router/wasm-udf", "medulla-server-graph/wasm-udf", "medulla-server/wasm-udf", "dep:medulla-plan", "medulla-plan?/wasm-udf", "server"]
 
 [dev-dependencies]
+medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 tempfile = "3"
 wat = "1"
