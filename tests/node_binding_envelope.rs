@@ -21,7 +21,7 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use medulla::protocol::{GraphType, Method};
+use medulla_protocol_types::protocol::{GraphType, Method};
 
 const SECRET: &str = "node-binding-envelope-secret";
 

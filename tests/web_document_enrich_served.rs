@@ -18,7 +18,7 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use medulla::protocol::{Method, Response, ResultPayload};
+use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_catalog_types::{
     source_ingestion::web_document::EnrichDocumentReceipt,
     source_ingestion::web_document::EnrichDocumentRequest,

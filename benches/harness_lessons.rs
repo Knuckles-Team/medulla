@@ -20,8 +20,8 @@
 #[path = "common/harness_admission.rs"]
 mod harness_bench;
 
-use medulla::graph::GraphCore;
-use medulla::protocol::Method;
+use medulla_core::graph::GraphCore;
+use medulla_protocol_types::protocol::Method;
 use medulla_agent_types::orchestration::HarnessComponentKind;
 use medulla_agent_types::{
     orchestration::improvement::HarnessLesson, orchestration::improvement::HarnessProbeRun,

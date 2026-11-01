@@ -19,13 +19,13 @@ use std::sync::{
 };
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use medulla::acl::RequestContextClaims;
-use medulla::epistemic_operations::{
+use medulla_types::acl::RequestContextClaims;
+use medulla_result_types::epistemic_operations::{
     ClaimWorkItemRequest, ClaimWorkItemRequestSchemaVersion, ClaimWorkItemResult, RequestContext,
     RequestContextAuthenticationMethod, RequestContextSchemaVersion,
 };
-use medulla::protocol::{Method, Request, Response, ResultPayload};
-use medulla::registry::GraphRegistry;
+use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
+use medulla_core::registry::GraphRegistry;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_server_api::auth::compute_verified_envelope_token;
@@ -45,7 +45,7 @@ const POLICY_VERSION: &str = "integration-test-policy-v1";
 fn state_with(backend: Arc<dyn PersistenceBackend>, dir: String) -> test_support::SharedState {
     let mut registry = GraphRegistry::new();
     registry
-        .create_graph(GRAPH, medulla::protocol::GraphType::Commons, None)
+        .create_graph(GRAPH, medulla_protocol_types::protocol::GraphType::Commons, None)
         .expect("create graph");
     test_support::state_with_registry(
         SECRET,
@@ -393,7 +393,7 @@ async fn run_state_with(
     backend: Arc<dyn PersistenceBackend>,
     dir: String,
 ) -> test_support::SharedState {
-    use medulla::acl::{Grant, GrantEffect, RbacAction, ResourceSelector};
+    use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector};
 
     let state = state_with(backend, dir);
     let mut isolation = test_support::wire_isolation(&[

@@ -24,7 +24,7 @@ use serde_json::json;
 use medulla_plan::{Op, Plan};
 use medulla_tensor::{Buffer, Tensor};
 use medulla_types::wire::{TensorElementwiseOp, TensorOpKind, TensorReduceKind};
-use medulla::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 use medulla_server::dispatch;
 
 const SECRET: &str = "served-tensor-writeback-secret";

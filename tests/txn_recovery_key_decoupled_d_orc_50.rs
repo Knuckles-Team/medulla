@@ -46,7 +46,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla::protocol::{GraphType, Method, Request, Response, ResultPayload};
+use medulla_protocol_types::protocol::{GraphType, Method, Request, Response, ResultPayload};
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_server_api::state::ServerState;

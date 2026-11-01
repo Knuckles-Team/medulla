@@ -8,7 +8,7 @@ mod common;
 mod test_support;
 
 use medulla_types::wire::UqlResult;
-use medulla::protocol::{Method, Response, ResultPayload};
+use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 
 const SECRET: &str = "uql-dag-served-test-secret";
 

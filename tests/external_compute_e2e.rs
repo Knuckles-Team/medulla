@@ -23,7 +23,7 @@ use medulla_types::knowledge_stream::{
     KnowledgeResultFamily, KnowledgeStreamBatch, KnowledgeStreamProjection, KnowledgeStreamQuery,
     KnowledgeStreamRequest, KNOWLEDGE_STREAM_SCHEMA_VERSION,
 };
-use medulla::protocol::{Method, Request, Response, ResultPayload};
+use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_agent_types::jobs::{JobKind, JobOp, SubmitJobSpec};
@@ -43,7 +43,7 @@ fn state(persist_dir: String) -> test_support::SharedState {
     )
 }
 
-fn request(id: u64, method: Method) -> medulla::protocol::Request {
+fn request(id: u64, method: Method) -> medulla_protocol_types::protocol::Request {
     test_support::request(SECRET, id, GRAPH, method)
 }
 

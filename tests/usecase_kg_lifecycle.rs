@@ -33,7 +33,7 @@ mod test_support;
 
 use serde_json::json;
 
-use medulla::protocol::{Method, Response, ResultPayload};
+use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 
 const SECRET: &str = "usecase-lifecycle-secret";
 

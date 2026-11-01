@@ -62,9 +62,9 @@ use std::sync::Arc;
 
 use parking_lot::{Mutex, RwLock};
 
-use crate::graph::{GraphCore, GraphView};
-use crate::protocol::{GraphType, Method};
-use crate::registry::GraphRegistry;
+use medulla_core::graph::{GraphCore, GraphView};
+use medulla_protocol_types::protocol::{GraphType, Method};
+use medulla_core::registry::GraphRegistry;
 
 #[cfg(feature = "redb")]
 mod replay;
@@ -371,7 +371,7 @@ impl EmbeddedEngine {
             let validation = match self.core(graph, false) {
                 Ok(core) => core.semantic_store.read().validate_embedding(embedding),
                 Err(_) => {
-                    crate::compute::semantic::SemanticStore::new().validate_embedding(embedding)
+                    medulla_core::compute::semantic::SemanticStore::new().validate_embedding(embedding)
                 }
             };
             validation.map_err(|error| error.to_string())?;
@@ -531,7 +531,7 @@ impl EmbeddedEngine {
 
     /// Topological sort (DAG order); `Err` on a cycle.
     pub fn topological_sort(&self, graph: &str) -> Result<Vec<String>, String> {
-        crate::algorithms::topological_sort(&self.topology_view(graph)?)
+        medulla_compute::algorithms::topological_sort(&self.topology_view(graph)?)
     }
 
     /// PageRank over `graph`.
@@ -541,7 +541,7 @@ impl EmbeddedEngine {
         damping: f64,
         iterations: usize,
     ) -> Result<Vec<(String, f64)>, String> {
-        Ok(crate::algorithms::pagerank(
+        Ok(medulla_compute::algorithms::pagerank(
             &self.topology_view(graph)?,
             damping,
             iterations,
@@ -550,7 +550,7 @@ impl EmbeddedEngine {
 
     /// Weakly-connected components of `graph`.
     pub fn connected_components(&self, graph: &str) -> Result<Vec<Vec<String>>, String> {
-        Ok(crate::algorithms::connected_components(
+        Ok(medulla_compute::algorithms::connected_components(
             &self.topology_view(graph)?,
         ))
     }
@@ -561,7 +561,7 @@ impl EmbeddedEngine {
     /// DataFusion path the server's `Sql` handler uses (`medulla_query::exec_sql` over an
     /// off-lock `analysis_snapshot`). Available with the `query` feature.
     #[cfg(feature = "query")]
-    pub fn sql(&self, graph: &str, sql: &str) -> Result<crate::protocol::QueryResult, String> {
+    pub fn sql(&self, graph: &str, sql: &str) -> Result<medulla_protocol_types::protocol::QueryResult, String> {
         let snap = self.core(graph, false)?.analysis_snapshot();
         medulla_query::exec_sql(&snap, sql, &medulla_query::CancellationToken::new())
     }
@@ -574,7 +574,7 @@ impl EmbeddedEngine {
         &self,
         graph: &str,
         cypher: &str,
-    ) -> Result<crate::protocol::QueryResult, String> {
+    ) -> Result<medulla_protocol_types::protocol::QueryResult, String> {
         let snap = self.core(graph, false)?.analysis_snapshot();
         medulla_query::exec_cypher(&snap, cypher)
     }

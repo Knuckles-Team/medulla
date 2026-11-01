@@ -13,7 +13,7 @@
 //! server writes — so it adds no duplicate durable logic and a graph written here
 //! reopens in the server.
 
-use crate::protocol::{GraphType, Method};
+use medulla_protocol_types::protocol::{GraphType, Method};
 use medulla_store::redb_store;
 use medulla_store::redb_store::shard::Shard;
 use medulla_store::redb_store::GraphDump;

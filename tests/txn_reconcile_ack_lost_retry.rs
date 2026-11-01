@@ -30,12 +30,12 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use medulla::acl::RequestContextClaims;
+use medulla_types::acl::RequestContextClaims;
 use medulla_protocol_types::mutation_batch::MutationBatchStatus;
-use medulla::protocol::{GraphType, Method, Request, Response, ResultPayload};
+use medulla_protocol_types::protocol::{GraphType, Method, Request, Response, ResultPayload};
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
-use medulla_server::{dispatch};
+use medulla_server::dispatch::dispatch;
 use medulla_server_api::auth::compute_verified_envelope_token;
 use medulla_server_api::auth::VerifiedEnvelopeParams;
 use std::process::Command;

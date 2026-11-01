@@ -64,7 +64,7 @@ async fn ask(state: &medulla_h_decide::decide::SharedState, tenant: &str, task: 
         method,
     };
     let verified = VerifiedRequestContext::verified_for_test_in_tenant("asker", TENANT);
-    Box::pin(medulla_server::dispatch::dispatch_verified_request(
+    Box::pin(crate::dispatch::dispatch_verified_request(
         state, request, verified,
     ))
     .await

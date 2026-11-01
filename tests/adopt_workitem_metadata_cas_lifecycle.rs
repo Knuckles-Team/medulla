@@ -55,16 +55,16 @@ mod test_support;
 
 use std::sync::Arc;
 
-use medulla::epistemic_operations::{
+use medulla_result_types::epistemic_operations::{
     ClaimWorkItemRequest, ClaimWorkItemRequestSchemaVersion, ClaimWorkItemResult,
     ClaimWorkItemResultReason,
 };
-use medulla::epistemic_operations_ext::{
+use medulla_result_types::epistemic_operations_ext::{
     CasWorkItemMetadataLeaseFence, CasWorkItemMetadataOutcome, CasWorkItemMetadataRequest,
     CasWorkItemMetadataRequestSchemaVersion, CasWorkItemMetadataResult,
 };
-use medulla::protocol::{GraphType, Method, Request, Response, ResultPayload};
-use medulla::registry::GraphRegistry;
+use medulla_protocol_types::protocol::{GraphType, Method, Request, Response, ResultPayload};
+use medulla_core::registry::GraphRegistry;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_persistence::redb_backend::RedbBackend;
 

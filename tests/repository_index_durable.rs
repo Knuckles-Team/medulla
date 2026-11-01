@@ -21,7 +21,7 @@ mod test_support;
 
 use medulla_types::contract::BoundedVec;
 use medulla_types::ingestion_wire::{IndexFileVersion, IndexRepositoryScope, IndexTombstone};
-use medulla::protocol::{GraphType, Method, Response, ResultPayload};
+use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload};
 use sha2::{Digest, Sha256};
 
 const SECRET: &str = "repository-index-durable-secret";

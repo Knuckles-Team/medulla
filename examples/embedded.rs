@@ -8,7 +8,7 @@
 //!   cargo run --example embedded --no-default-features --features "embedded pi"
 
 use medulla::embedded::{EmbeddedEngine, EmbeddedOptions};
-use medulla::protocol::GraphType;
+use medulla_protocol_types::protocol::GraphType;
 
 fn props(v: serde_json::Value) -> Vec<u8> {
     rmp_serde::to_vec_named(&v).unwrap()

@@ -24,7 +24,7 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use medulla::protocol::{CypherMode, GraphType, Method, Response, ResultPayload};
+use medulla_protocol_types::protocol::{CypherMode, GraphType, Method, Response, ResultPayload};
 
 const SECRET: &str = "cx-medulla-06-dispatch-graph-op-inner-secret";
 

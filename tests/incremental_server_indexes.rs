@@ -14,8 +14,8 @@
 
 use std::sync::Arc;
 
-use medulla::graph::GraphCore;
-use medulla::index::{ChangeSet, NodeChange, SecondaryIndex};
+use medulla_core::graph::GraphCore;
+use medulla_core::index::{ChangeSet, NodeChange, SecondaryIndex};
 use medulla_h_query::secondary_indexes::{
     DerivedOwlIndex, GraphTemporalIndex, GraphTextIndex,
 };
@@ -298,23 +298,23 @@ async fn text_hybrid_read_never_torn_under_concurrent_write() {
     // Register the SAME index onto core so the coalescer's maintain_indexes drives it.
     // (register consumes a Box; wrap the shared Arc in a thin forwarding adapter.)
     struct Fwd(Arc<GraphTextIndex>);
-    impl medulla::index::SecondaryIndex for Fwd {
-        fn kind(&self) -> medulla::index::IndexKind {
+    impl medulla_core::index::SecondaryIndex for Fwd {
+        fn kind(&self) -> medulla_core::index::IndexKind {
             self.0.kind()
         }
         fn as_any(&self) -> &dyn std::any::Any {
             self
         }
-        fn descriptor(&self) -> medulla::index::IndexDescriptor {
+        fn descriptor(&self) -> medulla_core::index::IndexDescriptor {
             self.0.descriptor()
         }
-        fn covers(&self, p: &medulla::index::Predicate) -> bool {
+        fn covers(&self, p: &medulla_core::index::Predicate) -> bool {
             self.0.covers(p)
         }
         fn lookup(
             &self,
             c: &GraphCore,
-            p: &medulla::index::Predicate,
+            p: &medulla_core::index::Predicate,
         ) -> Option<Vec<String>> {
             self.0.lookup(c, p)
         }
@@ -325,7 +325,7 @@ async fn text_hybrid_read_never_torn_under_concurrent_write() {
             &self,
             c: &GraphCore,
             ch: &ChangeSet,
-        ) -> Result<(), medulla::index::IndexError> {
+        ) -> Result<(), medulla_core::index::IndexError> {
             self.0.apply_delta(c, ch)
         }
     }

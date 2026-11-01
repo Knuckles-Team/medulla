@@ -30,7 +30,7 @@ mod test_support;
 
 use medulla_types::viz::{VizColumnValues, VizDatasetSource, VizFormat, VizOp, VizRenderRequest};
 use medulla_viz_core::{EncodingSpec, Encodings, MarkKind, MarkSpec, ViewSpec};
-use medulla::protocol::{Method, Response, ResultPayload};
+use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_server::dispatch;
 
 const SECRET: &str = "served-viz-dispatch-secret";

@@ -19,7 +19,6 @@ use tokio::sync::RwLock;
 // narrowly than its uses).
 use tracing::info;
 
-use medulla::server;
 use medulla_server_api::state::ServerState;
 mod offline_tools;
 
@@ -27,8 +26,7 @@ mod offline_tools;
 mod operator_command;
 #[cfg(feature = "full")]
 mod performance_probe;
-mod server_startup;
-use server_startup::run_fuseki_startup_health_check;
+use medulla_server::server_startup::{self, native_tcp_addr_is_loopback, run_fuseki_startup_health_check};
 
 #[derive(Parser, Debug)]
 #[command(name = "medulla-server")]
@@ -52,151 +50,16 @@ struct Args {
     )]
     exact_performance_probe_root: Option<std::path::PathBuf>,
 
-    /// Unix Domain Socket path.
-    /// Falls back to $GRAPH_SERVICE_SOCKET, then $XDG_RUNTIME_DIR/medulla.sock,
-    /// then /tmp/medulla.sock.
-    #[arg(long, env = "GRAPH_SERVICE_SOCKET")]
-    socket_path: Option<String>,
+    /// Service configuration shared with the startup steps.
+    #[command(flatten)]
+    server: server_startup::ServerArgs,
+}
 
-    /// Octal file-mode applied to the UDS socket right after bind (e.g. `0600`,
-    /// `0660`). **Default `0600`** (owner-only) — byte-for-byte today's
-    /// hardcoded behavior; set this instead of relying on an external `chmod`
-    /// watcher when a non-root client container needs group access (e.g. a
-    /// `fsGroup`-owned socket directory under `readOnlyRootFilesystem`).
-    /// Validated at startup and REFUSED if it would be world-writable or
-    /// world-readable — this can loosen who may `connect()`, never who may
-    /// read the graph over that connection (`eg2.` auth still applies), but a
-    /// world-open UDS is refused outright rather than accepted and footgunned.
-    #[arg(long, default_value = "0600", env = "GRAPH_SERVICE_SOCKET_MODE")]
-    socket_mode: String,
-
-    /// Serve only native TCP instead of also binding a Unix socket.
-    #[arg(long, env = "GRAPH_SERVICE_TCP_ONLY", requires = "tcp_addr")]
-    tcp_only: bool,
-
-    /// Optional TCP address (e.g., 0.0.0.0:9100). If set, TCP listener is started.
-    #[arg(long, env = "GRAPH_SERVICE_TCP_ADDR")]
-    tcp_addr: Option<String>,
-
-    /// PEM certificate chain for native TCP TLS.
-    #[arg(long, env = "GRAPH_SERVICE_TLS_CERT")]
-    tcp_tls_cert: Option<String>,
-
-    /// PEM private key for native TCP TLS.
-    #[arg(long, env = "GRAPH_SERVICE_TLS_KEY")]
-    tcp_tls_key: Option<String>,
-
-    /// Optional PEM CA bundle for required client-certificate authentication.
-    #[arg(long, env = "GRAPH_SERVICE_TLS_CLIENT_CA")]
-    tcp_tls_client_ca: Option<String>,
-
-    /// Explicit isolated local anonymous mode. Defaults to authenticated.
-    #[arg(long, env = "GRAPH_SERVICE_AUTH_MODE", default_value = "authenticated", value_parser = ["authenticated", "none"])]
-    auth_mode: String,
-
-    /// HMAC-SHA256 shared secret for authentication.
-    #[arg(long, env = "GRAPH_SERVICE_AUTH_SECRET", default_value = "")]
-    auth_secret: String,
-
-    /// Directory for the authoritative durable store.
-    #[arg(long, env = "GRAPH_SERVICE_PERSIST_DIR")]
-    persist_dir: Option<String>,
-
-    /// Ebbinghaus decay sweep interval in seconds (0 = disabled).
-    #[arg(long, default_value = "0", env = "GRAPH_SERVICE_DECAY_INTERVAL")]
-    decay_interval: u64,
-
-    /// Half-life (seconds) for the periodic decay sweep. Default: 7 days.
-    #[arg(long, default_value = "604800", env = "GRAPH_SERVICE_DECAY_HALF_LIFE")]
-    decay_half_life: f64,
-
-    /// Prune nodes/edges whose decayed confidence falls below this floor
-    /// (0 = decay only, never prune).
-    #[arg(long, default_value = "0.0", env = "GRAPH_SERVICE_DECAY_FLOOR")]
-    decay_floor: f64,
-
-    /// Prometheus /metrics HTTP listener address (e.g. 127.0.0.1:9101).
-    /// Disabled when unset. Separate from the MessagePack RPC transports.
-    #[arg(long, env = "GRAPH_SERVICE_METRICS_ADDR")]
-    metrics_addr: Option<String>,
-
-    /// W3C SPARQL 1.1 Protocol HTTP listener address (e.g. 127.0.0.1:7878), feature
-    /// `sparql-http`. Disabled when unset. Lets existing Stardog/Jena/rdflib SPARQL
-    /// clients query + update the engine unchanged. Separate from the RPC transports.
-    #[arg(long, env = "MEDULLA_SPARQL_ADDR")]
-    sparql_addr: Option<String>,
-
-    /// CA-16 (DEC-CA-04) `/policy/export` HTTP listener address (e.g.
-    /// 127.0.0.1:7879), feature `policy_export`. Disabled when unset. Serves the
-    /// M1 row-visibility policy bundle as JSON; admin-gated by an OIDC bearer
-    /// token (`kg:admin`/`policy:export`) via the SAME primary-protocol OIDC
-    /// validator as the `eg2.` RPC surface (`oidc::JwtValidator::from_env_primary`)
-    /// -- no separate credential shape. Separate from the RPC transports.
-    #[arg(long, env = "MEDULLA_POLICY_EXPORT_ADDR")]
-    policy_export_addr: Option<String>,
-
-    /// Loopback address for the authenticated GraphQL subscription SSE carrier
-    /// (e.g. 127.0.0.1:7879), feature `graphql`. Non-loopback binds are refused;
-    /// remote access must use a same-host TLS reverse proxy. Every subscription
-    /// requires a current eg2 envelope, graph ACL, and RLS projection.
-    #[arg(long, env = "MEDULLA_GRAPHQL_ADDR")]
-    graphql_addr: Option<String>,
-
-    /// Maximum concurrent GraphQL SSE handshakes and sessions.
-    #[arg(long, env = "MEDULLA_GRAPHQL_MAX_CONNECTIONS", default_value_t = 128)]
-    graphql_max_connections: usize,
-
-    /// Maximum GraphQL SSE session lifetime before a fresh eg2 envelope is required.
-    #[arg(long, env = "MEDULLA_GRAPHQL_MAX_SESSION_SECS", default_value_t = 300)]
-    graphql_max_session_secs: u64,
-
-    /// Observability log-ingestion HTTP listener address (e.g. 127.0.0.1:5080),
-    /// feature `obs` (CONCEPT:AU-KG.ingest.self-ingest/161). Disabled when unset. Accepts OTLP/HTTP
-    /// (`/v1/logs`), Elasticsearch `_bulk`/`_doc`, and JSON-lines log records, landing
-    /// them in medulla-tsdb series + medulla-text full-text indices and rolling Parquet segments
-    /// into the blob CAS. Separate from the RPC transports.
-    #[arg(long, env = "MEDULLA_OBS_ADDR")]
-    obs_addr: Option<String>,
-
-    /// Interactive native-visualization HTTP listener address (e.g.
-    /// 127.0.0.1:5090), feature `viz-interactive` (D-VZ-1 lane V3b). Disabled
-    /// when unset. Serves the reference WebGPU/WebGL2 client (`GET /`) and the
-    /// binary viewport-tile protocol (`GET /tile`) a browser cannot reach over
-    /// the length-prefixed MessagePack RPC transports — separate from those and
-    /// from every other auxiliary HTTP surface. Loopback-only, like every
-    /// auxiliary listener; a remote client goes through a same-host reverse
-    /// proxy (this fleet's `edge-ingress`), never a direct non-loopback bind.
-    #[arg(long, env = "MEDULLA_VIZ_INTERACTIVE_ADDR")]
-    viz_interactive_addr: Option<String>,
-
-    /// Iceberg-REST catalog HTTP listener address (e.g. 127.0.0.1:8181), feature
-    /// `lake-rest` (INT-P2-3, `iceberg.apache.org/rest-catalog-spec`). Disabled when
-    /// unset. Serves list/load (+ a compaction-bridged commit) over the tables the
-    /// `lake` materialization tier writes, so a standard Iceberg REST client (PyIceberg/
-    /// Spark/Trino) can list + load them. Separate from the RPC transports and the
-    /// `/sparql`/`/obs` surfaces.
-    #[arg(long, env = "MEDULLA_ICEBERG_ADDR")]
-    iceberg_addr: Option<String>,
-
-    /// Super-cluster federated-search HTTP listener address (e.g. 127.0.0.1:7900),
-    /// feature `federation-search` (CONCEPT:MEDULLA-KG.ontology.federation-client). Disabled when unset. Serves a
-    /// `/federated` POST (`{query, lang}`) that fans the read query across the peers in
-    /// `MEDULLA_FEDERATION_PEERS` AND the local store, then unions/de-dups +
-    /// RRF-re-ranks the partials (a slow/dead peer degrades to `partial: true`). Separate
-    /// from the RPC transports and the `/sparql` surface.
-    #[arg(long, env = "MEDULLA_FEDERATED_ADDR")]
-    federated_addr: Option<String>,
-
-    /// Self-terminate after N seconds with ZERO active connections (reference-
-    /// counted idle shutdown). 0 or absent ⇒ NEVER self-terminate on idle: the
-    /// engine is long-living/persistent and runs forever like a normal server.
-    /// N>0 ⇒ a shared tiny daemon shuts itself down (checkpointing cleanly) N
-    /// seconds after its last client disconnects; a new connection during the
-    /// grace period cancels the timer. SIGTERM/SIGINT graceful shutdown works in
-    /// BOTH modes. agent-utilities' EngineResolver passes this to its autostarted
-    /// tiny daemon.
-    #[arg(long, default_value = "0", env = "MEDULLA_IDLE_SHUTDOWN_SECS")]
-    idle_shutdown_secs: u64,
+impl std::ops::Deref for Args {
+    type Target = server_startup::ServerArgs;
+    fn deref(&self) -> &Self::Target {
+        &self.server
+    }
 }
 
 /// Resolve the default UDS path per-platform. Explicit > $GRAPH_SERVICE_SOCKET
@@ -210,6 +73,21 @@ struct Args {
 ///   Windows, so this path is only a stable *identifier* / lock anchor — the
 ///   actual default transport on Windows is TCP loopback (see the transport
 ///   section). Keeping the value defined preserves parity for config/logging.
+/// Run one bounded, stdin-driven exact performance probe and return.
+fn run_exact_performance_probe(root: Option<&std::path::Path>) -> Result<(), BoxError> {
+    let root = root.ok_or("exact performance probe root is required")?;
+    #[cfg(feature = "full")]
+    {
+        performance_probe::run_stdio(root)?;
+        Ok(())
+    }
+    #[cfg(not(feature = "full"))]
+    {
+        let _ = root;
+        Err("exact performance probes require the full server binary".into())
+    }
+}
+
 fn resolve_socket_path(explicit: Option<String>) -> (String, Option<std::path::PathBuf>) {
     if let Some(p) = explicit {
         return (p, None);
@@ -286,20 +164,6 @@ async fn prepare_socket_directory(parent: Option<std::path::PathBuf>) -> std::io
         })
 }
 
-fn native_tcp_addr_is_loopback(addr: &str) -> bool {
-    addr.parse::<SocketAddr>()
-        .map(|value| value.ip().is_loopback())
-        .unwrap_or_else(|_| {
-            addr.rsplit_once(':')
-                .map(|(host, port)| {
-                    host.trim_matches(|character| character == '[' || character == ']')
-                        .eq_ignore_ascii_case("localhost")
-                        && !port.is_empty()
-                        && port.chars().all(|character| character.is_ascii_digit())
-                })
-                .unwrap_or(false)
-        })
-}
 
 /// Resolve an optional listener bind address from a deploy-supplied value
 /// (CONCEPT:MEDULLA-OS.config.configurable-listeners — deploy-configurable listeners). The auxiliary HTTP listeners
@@ -423,7 +287,7 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = Args::parse();
 
     if args.exact_performance_probe {
-        return server_startup::run_exact_performance_probe(
+        return run_exact_performance_probe(
             args.exact_performance_probe_root.as_deref(),
         );
     }
@@ -545,7 +409,7 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     // BREAK and the main listener returns, so we fall through to the persistence
     // flush below. An acknowledged write is already committed; shutdown only
     // drains the writer's bounded in-flight tail.
-    let shutdown = medulla_server::ShutdownCoordinator::new();
+    let shutdown = medulla_server::transport::ShutdownCoordinator::new();
     server_startup::spawn_shutdown_signal_handler(shutdown.clone());
     server_startup::spawn_idle_shutdown_watcher(&shutdown, args.idle_shutdown_secs);
 
@@ -603,7 +467,7 @@ async fn spawn_optional_service_listeners(
     medulla_h_query::reasoning_projection::spawn(state.clone());
     // Sampled authorization denials reach the identity audit trail.
     #[cfg(feature = "security")]
-    medulla_server::spawn_denial_sample_flusher(state.clone());
+    medulla_server_api::denial_sample::spawn_flusher(state.clone());
     Ok(())
 }
 
@@ -1530,7 +1394,7 @@ async fn recover_durable_catalog(
         p.register_graph(
             "__commons__",
             "__commons__",
-            medulla::protocol::GraphType::Commons,
+            medulla_protocol_types::protocol::GraphType::Commons,
         )
         .await
         .map_err(|error| format!("failed to register the mandatory commons graph: {error}"))?;
@@ -1662,7 +1526,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
         tokio::spawn(async move {
             // Snapshot (name, core) under a brief read lock; the heavy build runs
             // OFF the async runtime on a blocking thread.
-            let cores: Vec<(String, std::sync::Arc<medulla::graph::GraphCore>)> = {
+            let cores: Vec<(String, std::sync::Arc<medulla_core::graph::GraphCore>)> = {
                 let s = warm_state.read().await;
                 s.registry
                     .all_entries()

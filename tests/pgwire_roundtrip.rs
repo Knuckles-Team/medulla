@@ -24,8 +24,8 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla::isolation::{AgentIdentity, AgentRole};
-use medulla::registry::GraphRegistry;
+use medulla_core::isolation::{AgentIdentity, AgentRole};
+use medulla_core::registry::GraphRegistry;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_wire::pgwire;
 use medulla_server_api::state::ServerState;
@@ -471,11 +471,11 @@ impl PersistenceBackend for RecordingBackend {
     async fn record_durable(
         &self,
         graph_fname: &str,
-        method: &medulla::protocol::Method,
+        method: &medulla_protocol_types::protocol::Method,
     ) -> Result<(), String> {
         self.durable
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        if let medulla::protocol::Method::AddNode { node_id, .. } = method {
+        if let medulla_protocol_types::protocol::Method::AddNode { node_id, .. } = method {
             self.recorded
                 .lock()
                 .unwrap()
@@ -499,7 +499,7 @@ impl PersistenceBackend for RecordingBackend {
         self.durable
             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
         for method in args.methods {
-            if let medulla::protocol::Method::AddNode { node_id, .. } = method {
+            if let medulla_protocol_types::protocol::Method::AddNode { node_id, .. } = method {
                 self.recorded
                     .lock()
                     .unwrap()
@@ -776,14 +776,14 @@ fn scram_state(secret: &str) -> Arc<RwLock<ServerState>> {
     registry
         .create_graph(
             "agent:worker",
-            medulla::protocol::GraphType::Agent,
+            medulla_protocol_types::protocol::GraphType::Agent,
             Some("worker".to_string()),
         )
         .unwrap();
     registry
         .create_graph(
             "agent:peer",
-            medulla::protocol::GraphType::Agent,
+            medulla_protocol_types::protocol::GraphType::Agent,
             Some("peer".to_string()),
         )
         .unwrap();
@@ -798,7 +798,7 @@ fn scram_state(secret: &str) -> Arc<RwLock<ServerState>> {
     // graph while still being denied `peer`'s.
     #[cfg(feature = "security")]
     {
-        use medulla::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+        use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
         for (owner, graph) in [("worker", "agent:worker"), ("peer", "agent:peer")] {
             let role = format!("owner-{owner}");
             isolation.add_role(Role::new(role.clone()));

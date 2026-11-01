@@ -25,10 +25,6 @@
 pub mod server_startup;
 
 
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod tests;
-
 // ---- merged from the moved module root (src/server/mod.rs) ----
 use medulla_h_query::semantic_index_runtime::PendingRf019Activation;
 // CONCEPT:MEDULLA-KG.query.tokio-service-server — Tokio Service Server
@@ -36,11 +32,8 @@ use medulla_h_query::semantic_index_runtime::PendingRf019Activation;
 // Long-running Tokio server that holds the GraphRegistry in memory
 // and serves requests over UDS or TCP with HMAC-SHA256 authentication.
 
-#[cfg(feature = "security")]
-pub use medulla_server_api::denial_sample::spawn_flusher as spawn_denial_sample_flusher;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod seams_install;
-pub use seams_install::install_seams;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod issuer_trust;
 
@@ -336,12 +329,9 @@ pub mod qos;
 // External path surface — `server::ServerState`, `server::MAX_BATCH_IDS`,
 // `server::dispatch`, and
 // `server::{handle_connection,serve_uds,serve_tcp}` — used by main.rs/persist.rs/tests.
-pub use dispatch::dispatch;
 // NL planner injection (CONCEPT:MEDULLA-KG.query.fence-stripper): an embedder opts into engine-driven NL→query.
 // Distributed-compute materialized-view boot reload (CONCEPT:MEDULLA-KG.storage.feature): the binary
 // calls this on startup to repopulate the in-RAM matview index from redb.
-#[cfg(any(feature = "compute-dist", feature = "matview"))]
-pub use medulla_h_txn::dist_compute::reload_matviews;
 // Post-bind maintenance hook (MEDULLA-DURABLE-KERNEL-R006.4): the binary calls this
 // from `serve_transports` right after the listeners bind.
 use medulla_server_api::state::{txn_limits_from_env, ServerState};
@@ -399,15 +389,7 @@ pub(crate) fn test_state_with_services(
 
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod transport;
-pub use transport::{
-    bind_tcp, handle_connection, prepare_tcp_tls, run_idle_watcher, serve_tcp, serve_tcp_listener,
-    PreparedTcpTls, ShutdownCoordinator, TcpTlsConfig,
-};
-#[cfg(unix)]
-pub use transport::{bind_uds, serve_uds, serve_uds_listener};
-pub use transport::parse_unix_socket_mode;
 
-pub use medulla_server_api::request_replay::seal_request_replay_ledger;
 // serve_uds is Unix-only (UnixListener); on Windows the server uses serve_tcp,
 // so gate the re-export to keep the windows-msvc wheel building (main.rs already
 // guards its serve_uds call with #[cfg(unix)]).

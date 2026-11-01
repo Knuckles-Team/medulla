@@ -27,7 +27,7 @@ use std::sync::Arc;
 
 use medulla_plan::{Op, Plan};
 use medulla_tsdb::store::SeriesStore;
-use medulla::protocol::{AnomalyAlgorithm, Method, Response, ResultPayload, SvmKernel};
+use medulla_protocol_types::protocol::{AnomalyAlgorithm, Method, Response, ResultPayload, SvmKernel};
 
 const SECRET: &str = "served-mining-tsdb-scan-secret";
 
@@ -51,13 +51,13 @@ fn pack_points(points: &[(i64, Vec<f64>)]) -> Vec<u8> {
     rmp_serde::to_vec_named(&points.to_vec()).unwrap()
 }
 
-fn req(id: u64, method: Method) -> medulla::protocol::Request {
+fn req(id: u64, method: Method) -> medulla_protocol_types::protocol::Request {
     test_support::commons_request(SECRET, id, method)
 }
 
 async fn dispatch(
     state: &test_support::SharedState,
-    request: medulla::protocol::Request,
+    request: medulla_protocol_types::protocol::Request,
 ) -> Response {
     test_support::dispatch(state, request).await
 }

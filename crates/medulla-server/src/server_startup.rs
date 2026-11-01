@@ -10,8 +10,172 @@ use std::sync::Arc;
 
 use tracing::info;
 
-use medulla::server::{self};
 use medulla_server_api::state::ServerState;
+
+/// Service configuration read by the startup steps (the binary flattens this into its CLI).
+#[derive(clap::Args, Debug)]
+pub struct ServerArgs {
+    /// Unix Domain Socket path.
+    /// Falls back to $GRAPH_SERVICE_SOCKET, then $XDG_RUNTIME_DIR/medulla.sock,
+    /// then /tmp/medulla.sock.
+    #[arg(long, env = "GRAPH_SERVICE_SOCKET")]
+    pub socket_path: Option<String>,
+
+    /// Octal file-mode applied to the UDS socket right after bind (e.g. `0600`,
+    /// `0660`). **Default `0600`** (owner-only) — byte-for-byte today's
+    /// hardcoded behavior; set this instead of relying on an external `chmod`
+    /// watcher when a non-root client container needs group access (e.g. a
+    /// `fsGroup`-owned socket directory under `readOnlyRootFilesystem`).
+    /// Validated at startup and REFUSED if it would be world-writable or
+    /// world-readable — this can loosen who may `connect()`, never who may
+    /// read the graph over that connection (`eg2.` auth still applies), but a
+    /// world-open UDS is refused outright rather than accepted and footgunned.
+    #[arg(long, default_value = "0600", env = "GRAPH_SERVICE_SOCKET_MODE")]
+    pub socket_mode: String,
+
+    /// Serve only native TCP instead of also binding a Unix socket.
+    #[arg(long, env = "GRAPH_SERVICE_TCP_ONLY", requires = "tcp_addr")]
+    pub tcp_only: bool,
+
+    /// Optional TCP address (e.g., 0.0.0.0:9100). If set, TCP listener is started.
+    #[arg(long, env = "GRAPH_SERVICE_TCP_ADDR")]
+    pub tcp_addr: Option<String>,
+
+    /// PEM certificate chain for native TCP TLS.
+    #[arg(long, env = "GRAPH_SERVICE_TLS_CERT")]
+    pub tcp_tls_cert: Option<String>,
+
+    /// PEM private key for native TCP TLS.
+    #[arg(long, env = "GRAPH_SERVICE_TLS_KEY")]
+    pub tcp_tls_key: Option<String>,
+
+    /// Optional PEM CA bundle for required client-certificate authentication.
+    #[arg(long, env = "GRAPH_SERVICE_TLS_CLIENT_CA")]
+    pub tcp_tls_client_ca: Option<String>,
+
+    /// Explicit isolated local anonymous mode. Defaults to authenticated.
+    #[arg(long, env = "GRAPH_SERVICE_AUTH_MODE", default_value = "authenticated", value_parser = ["authenticated", "none"])]
+    pub auth_mode: String,
+
+    /// HMAC-SHA256 shared secret for authentication.
+    #[arg(long, env = "GRAPH_SERVICE_AUTH_SECRET", default_value = "")]
+    pub auth_secret: String,
+
+    /// Directory for the authoritative durable store.
+    #[arg(long, env = "GRAPH_SERVICE_PERSIST_DIR")]
+    pub persist_dir: Option<String>,
+
+    /// Ebbinghaus decay sweep interval in seconds (0 = disabled).
+    #[arg(long, default_value = "0", env = "GRAPH_SERVICE_DECAY_INTERVAL")]
+    pub decay_interval: u64,
+
+    /// Half-life (seconds) for the periodic decay sweep. Default: 7 days.
+    #[arg(long, default_value = "604800", env = "GRAPH_SERVICE_DECAY_HALF_LIFE")]
+    pub decay_half_life: f64,
+
+    /// Prune nodes/edges whose decayed confidence falls below this floor
+    /// (0 = decay only, never prune).
+    #[arg(long, default_value = "0.0", env = "GRAPH_SERVICE_DECAY_FLOOR")]
+    pub decay_floor: f64,
+
+    /// Prometheus /metrics HTTP listener address (e.g. 127.0.0.1:9101).
+    /// Disabled when unset. Separate from the MessagePack RPC transports.
+    #[arg(long, env = "GRAPH_SERVICE_METRICS_ADDR")]
+    pub metrics_addr: Option<String>,
+
+    /// W3C SPARQL 1.1 Protocol HTTP listener address (e.g. 127.0.0.1:7878), feature
+    /// `sparql-http`. Disabled when unset. Lets existing Stardog/Jena/rdflib SPARQL
+    /// clients query + update the engine unchanged. Separate from the RPC transports.
+    #[arg(long, env = "MEDULLA_SPARQL_ADDR")]
+    pub sparql_addr: Option<String>,
+
+    /// CA-16 (DEC-CA-04) `/policy/export` HTTP listener address (e.g.
+    /// 127.0.0.1:7879), feature `policy_export`. Disabled when unset. Serves the
+    /// M1 row-visibility policy bundle as JSON; admin-gated by an OIDC bearer
+    /// token (`kg:admin`/`policy:export`) via the SAME primary-protocol OIDC
+    /// validator as the `eg2.` RPC surface (`oidc::JwtValidator::from_env_primary`)
+    /// -- no separate credential shape. Separate from the RPC transports.
+    #[arg(long, env = "MEDULLA_POLICY_EXPORT_ADDR")]
+    pub policy_export_addr: Option<String>,
+
+    /// Loopback address for the authenticated GraphQL subscription SSE carrier
+    /// (e.g. 127.0.0.1:7879), feature `graphql`. Non-loopback binds are refused;
+    /// remote access must use a same-host TLS reverse proxy. Every subscription
+    /// requires a current eg2 envelope, graph ACL, and RLS projection.
+    #[arg(long, env = "MEDULLA_GRAPHQL_ADDR")]
+    pub graphql_addr: Option<String>,
+
+    /// Maximum concurrent GraphQL SSE handshakes and sessions.
+    #[arg(long, env = "MEDULLA_GRAPHQL_MAX_CONNECTIONS", default_value_t = 128)]
+    pub graphql_max_connections: usize,
+
+    /// Maximum GraphQL SSE session lifetime before a fresh eg2 envelope is required.
+    #[arg(long, env = "MEDULLA_GRAPHQL_MAX_SESSION_SECS", default_value_t = 300)]
+    pub graphql_max_session_secs: u64,
+
+    /// Observability log-ingestion HTTP listener address (e.g. 127.0.0.1:5080),
+    /// feature `obs` (CONCEPT:AU-KG.ingest.self-ingest/161). Disabled when unset. Accepts OTLP/HTTP
+    /// (`/v1/logs`), Elasticsearch `_bulk`/`_doc`, and JSON-lines log records, landing
+    /// them in medulla-tsdb series + medulla-text full-text indices and rolling Parquet segments
+    /// into the blob CAS. Separate from the RPC transports.
+    #[arg(long, env = "MEDULLA_OBS_ADDR")]
+    pub obs_addr: Option<String>,
+
+    /// Interactive native-visualization HTTP listener address (e.g.
+    /// 127.0.0.1:5090), feature `viz-interactive` (D-VZ-1 lane V3b). Disabled
+    /// when unset. Serves the reference WebGPU/WebGL2 client (`GET /`) and the
+    /// binary viewport-tile protocol (`GET /tile`) a browser cannot reach over
+    /// the length-prefixed MessagePack RPC transports — separate from those and
+    /// from every other auxiliary HTTP surface. Loopback-only, like every
+    /// auxiliary listener; a remote client goes through a same-host reverse
+    /// proxy (this fleet's `edge-ingress`), never a direct non-loopback bind.
+    #[arg(long, env = "MEDULLA_VIZ_INTERACTIVE_ADDR")]
+    pub viz_interactive_addr: Option<String>,
+
+    /// Iceberg-REST catalog HTTP listener address (e.g. 127.0.0.1:8181), feature
+    /// `lake-rest` (INT-P2-3, `iceberg.apache.org/rest-catalog-spec`). Disabled when
+    /// unset. Serves list/load (+ a compaction-bridged commit) over the tables the
+    /// `lake` materialization tier writes, so a standard Iceberg REST client (PyIceberg/
+    /// Spark/Trino) can list + load them. Separate from the RPC transports and the
+    /// `/sparql`/`/obs` surfaces.
+    #[arg(long, env = "MEDULLA_ICEBERG_ADDR")]
+    pub iceberg_addr: Option<String>,
+
+    /// Super-cluster federated-search HTTP listener address (e.g. 127.0.0.1:7900),
+    /// feature `federation-search` (CONCEPT:MEDULLA-KG.ontology.federation-client). Disabled when unset. Serves a
+    /// `/federated` POST (`{query, lang}`) that fans the read query across the peers in
+    /// `MEDULLA_FEDERATION_PEERS` AND the local store, then unions/de-dups +
+    /// RRF-re-ranks the partials (a slow/dead peer degrades to `partial: true`). Separate
+    /// from the RPC transports and the `/sparql` surface.
+    #[arg(long, env = "MEDULLA_FEDERATED_ADDR")]
+    pub federated_addr: Option<String>,
+
+    /// Self-terminate after N seconds with ZERO active connections (reference-
+    /// counted idle shutdown). 0 or absent ⇒ NEVER self-terminate on idle: the
+    /// engine is long-living/persistent and runs forever like a normal server.
+    /// N>0 ⇒ a shared tiny daemon shuts itself down (checkpointing cleanly) N
+    /// seconds after its last client disconnects; a new connection during the
+    /// grace period cancels the timer. SIGTERM/SIGINT graceful shutdown works in
+    /// BOTH modes. agent-utilities' EngineResolver passes this to its autostarted
+    /// tiny daemon.
+    #[arg(long, default_value = "0", env = "MEDULLA_IDLE_SHUTDOWN_SECS")]
+    pub idle_shutdown_secs: u64,
+}
+
+pub fn native_tcp_addr_is_loopback(addr: &str) -> bool {
+    addr.parse::<SocketAddr>()
+        .map(|value| value.ip().is_loopback())
+        .unwrap_or_else(|_| {
+            addr.rsplit_once(':')
+                .map(|(host, port)| {
+                    host.trim_matches(|character| character == '[' || character == ']')
+                        .eq_ignore_ascii_case("localhost")
+                        && !port.is_empty()
+                        && port.chars().all(|character| character.is_ascii_digit())
+                })
+                .unwrap_or(false)
+        })
+}
 
 type SharedState = Arc<tokio::sync::RwLock<ServerState>>;
 type BoxError = Box<dyn std::error::Error>;
@@ -21,23 +185,9 @@ fn exit_with(message: impl std::fmt::Display, code: i32) -> ! {
     std::process::exit(code);
 }
 
-/// Run one bounded, stdin-driven exact performance probe and return.
-pub(super) fn run_exact_performance_probe(root: Option<&std::path::Path>) -> Result<(), BoxError> {
-    let root = root.ok_or("exact performance probe root is required")?;
-    #[cfg(feature = "full")]
-    {
-        super::performance_probe::run_stdio(root)?;
-        Ok(())
-    }
-    #[cfg(not(feature = "full"))]
-    {
-        let _ = root;
-        Err("exact performance probes require the full server binary".into())
-    }
-}
 
-pub(super) fn socket_mode_or_exit(raw: &str) -> u32 {
-    server::parse_unix_socket_mode(raw).unwrap_or_else(|reason| {
+pub fn socket_mode_or_exit(raw: &str) -> u32 {
+    crate::transport::parse_unix_socket_mode(raw).unwrap_or_else(|reason| {
         exit_with(
             format_args!("invalid --socket-mode/GRAPH_SERVICE_SOCKET_MODE {raw:?}: {reason}"),
             2,
@@ -46,7 +196,7 @@ pub(super) fn socket_mode_or_exit(raw: &str) -> u32 {
 }
 
 /// Security gate: an auth secret and a durable-state directory are mandatory.
-pub(super) fn require_secret_and_persist_dir(auth_secret: &str, persist_dir: Option<&str>) {
+pub fn require_secret_and_persist_dir(auth_secret: &str, persist_dir: Option<&str>) {
     if auth_secret.is_empty() {
         exit_with(
             "no auth secret configured — refusing to start.\n\
@@ -65,11 +215,11 @@ pub(super) fn require_secret_and_persist_dir(auth_secret: &str, persist_dir: Opt
 
 /// Validate the TCP TLS configuration (both halves or neither; TLS for any
 /// non-loopback address) and prepare it.
-pub(super) async fn prepare_tcp_tls(
-    args: &super::Args,
-) -> Result<Option<server::PreparedTcpTls>, BoxError> {
+pub async fn prepare_tcp_tls(
+    args: &ServerArgs,
+) -> Result<Option<crate::transport::PreparedTcpTls>, BoxError> {
     let config = match (&args.tcp_tls_cert, &args.tcp_tls_key) {
-        (Some(cert_path), Some(key_path)) => Some(server::TcpTlsConfig {
+        (Some(cert_path), Some(key_path)) => Some(crate::transport::TcpTlsConfig {
             cert_path: cert_path.clone(),
             key_path: key_path.clone(),
             client_ca_path: args.tcp_tls_client_ca.clone(),
@@ -81,20 +231,20 @@ pub(super) async fn prepare_tcp_tls(
         ),
     };
     let insecure_remote =
-        |addr: &str| !super::native_tcp_addr_is_loopback(addr) && config.is_none();
+        |addr: &str| !native_tcp_addr_is_loopback(addr) && config.is_none();
     if args.tcp_addr.as_deref().is_some_and(insecure_remote) {
         exit_with("non-loopback native TCP requires TLS", 2);
     }
     Ok(match config {
-        Some(tls) => Some(server::prepare_tcp_tls(tls).await?),
+        Some(tls) => Some(crate::transport::prepare_tcp_tls(tls).await?),
         None => None,
     })
 }
 
 /// Detect the host capacity and log the startup banner, including the native
 /// TCP listener's TLS posture when one is configured.
-pub(super) fn detect_capacity_and_log_startup(
-    args: &super::Args,
+pub fn detect_capacity_and_log_startup(
+    args: &ServerArgs,
     tcp_tls: bool,
 ) -> medulla_kernel::autosize::Capacity {
     info!("Starting medulla-server");
@@ -131,9 +281,9 @@ pub(super) fn detect_capacity_and_log_startup(
 
 /// Flush any bounded writer work that had not yet crossed its acknowledgement
 /// barrier once the accept loop has exited.
-pub(super) fn flush_durable_state(persistence: Persistence) {
+pub fn flush_durable_state(persistence: Persistence) {
     info!("Accept loop stopped — flushing durable state");
-    match server::seal_request_replay_ledger() {
+    match medulla_server_api::request_replay::seal_request_replay_ledger() {
         Ok(handed_off) => info!("Request replay window handed off ({handed_off} nonces)"),
         Err(error) => tracing::warn!(
             "Request replay handoff failed; the next start refuses the last accepted second: {error}"
@@ -147,7 +297,7 @@ pub(super) fn flush_durable_state(persistence: Persistence) {
 
 /// Refuse to start if another engine already owns this persist dir; the lock is
 /// held for the whole process lifetime by the caller.
-pub(super) fn acquire_persist_lock(
+pub fn acquire_persist_lock(
     persist_dir: Option<&str>,
 ) -> Option<medulla_kernel::persist_lock::PersistDirLock> {
     let dir = persist_dir?;
@@ -208,15 +358,15 @@ fn clamp_to_automatic(variable: &str, requested: usize, automatic: usize) -> usi
 }
 
 /// In-flight admission sizing (CONCEPT:AU-KG.backend.b-auto-size).
-pub(super) struct AdmissionLimits {
-    pub(super) max_in_flight: usize,
-    pub(super) per_graph_inflight_limit: usize,
-    pub(super) read_reserved: usize,
+pub struct AdmissionLimits {
+    pub max_in_flight: usize,
+    pub per_graph_inflight_limit: usize,
+    pub read_reserved: usize,
 }
 
 /// Size the admission pools from effective CPU capacity. A positive env
 /// override can only lower each cgroup-aware default.
-pub(super) fn admission_limits(capacity: &medulla_kernel::autosize::Capacity) -> AdmissionLimits {
+pub fn admission_limits(capacity: &medulla_kernel::autosize::Capacity) -> AdmissionLimits {
     let automatic_max_in_flight = capacity.max_inflight();
     let max_in_flight = std::env::var("MEDULLA_MAX_INFLIGHT")
         .ok()
@@ -261,7 +411,7 @@ type Persistence = Option<Arc<dyn medulla_server_api::api::persistence::Persiste
 /// Every acknowledged mutation crosses the commit barrier, and bounded writer
 /// queues apply backpressure rather than dropping work.
 #[cfg(feature = "redb")]
-pub(super) fn open_persistence(
+pub fn open_persistence(
     persist_dir: Option<&str>,
     capacity: &medulla_kernel::autosize::Capacity,
 ) -> Persistence {
@@ -289,7 +439,7 @@ pub(super) fn open_persistence(
 /// A no-op unless both `MEDULLA_FUSEKI_HEALTH_CHECK_ENDPOINT` (the
 /// endpoint to probe) and `MEDULLA_SPARQL_SERVICE_ALLOW` (the
 /// fail-closed allowlist) are set.
-pub(super) fn run_fuseki_startup_health_check() {
+pub fn run_fuseki_startup_health_check() {
     #[cfg(feature = "sparql-fuseki")]
     {
         let outcome = medulla_h_query::sparql_service::startup_health_check();
@@ -322,7 +472,7 @@ fn refuse_upgradable_stores(dir: &str) {
 /// loudly at boot on an attempted `--persist-dir` rather than silently
 /// downgrading to in-memory.
 #[cfg(not(feature = "redb"))]
-pub(super) fn open_persistence(
+pub fn open_persistence(
     persist_dir: Option<&str>,
     _capacity: &medulla_kernel::autosize::Capacity,
 ) -> Persistence {
@@ -338,7 +488,7 @@ pub(super) fn open_persistence(
 /// Native time-series store (feature `tsdb`): a durable `series.redb` beside the
 /// graph shards when a persist dir is set, else a process-temp file.
 #[cfg(feature = "tsdb")]
-pub(super) fn open_tsdb_store(
+pub fn open_tsdb_store(
     persist_dir: Option<&str>,
 ) -> Option<Arc<medulla_tsdb::store::SeriesStore>> {
     let path = match persist_dir {
@@ -371,7 +521,7 @@ type BlobSubstrate = (Option<Arc<medulla_server_api::blob::BlobCursors>>, u64);
 /// With no persist dir there is no durable place for the bytes, so the substrate
 /// is disabled and the Blob* methods report "not available".
 #[cfg(feature = "blob")]
-pub(super) fn open_blob_substrate(persist_dir: Option<&str>) -> BlobSubstrate {
+pub fn open_blob_substrate(persist_dir: Option<&str>) -> BlobSubstrate {
     let ttl = std::env::var("MEDULLA_BLOB_CURSOR_TTL_SECS")
         .ok()
         .and_then(|v| v.parse().ok())
@@ -405,7 +555,7 @@ fn open_blob_chunk_store(dir: &str) -> Arc<dyn medulla_server_api::blob::ChunkSt
 /// Generic Key→Value store (feature `kv`): a durable `{persist_dir}/kv.redb` when
 /// a persist dir is set, else an in-memory scratch map.
 #[cfg(feature = "kv")]
-pub(super) fn open_kv_store(persist_dir: Option<&str>) -> Option<Arc<medulla_server_api::kv::KvStore>> {
+pub fn open_kv_store(persist_dir: Option<&str>) -> Option<Arc<medulla_server_api::kv::KvStore>> {
     let store = medulla_server_api::kv::KvStore::open(persist_dir)
         .unwrap_or_else(|e| exit_with(format_args!("failed to open kv store: {e}"), 1));
     if store.is_durable() {
@@ -419,8 +569,8 @@ pub(super) fn open_kv_store(persist_dir: Option<&str>) -> Option<Arc<medulla_ser
 }
 
 /// Every durable store the served state owns, opened at boot.
-pub(super) struct DurableStores {
-    pub(super) persistence: Persistence,
+pub struct DurableStores {
+    pub persistence: Persistence,
     #[cfg(feature = "tsdb")]
     tsdb_store: Option<Arc<medulla_tsdb::store::SeriesStore>>,
     #[cfg(feature = "blob")]
@@ -431,7 +581,7 @@ pub(super) struct DurableStores {
 
 /// Open the persistence backend and the feature-gated tsdb/blob/kv stores, in
 /// that order.
-pub(super) fn open_durable_stores(
+pub fn open_durable_stores(
     persist_dir: Option<&str>,
     capacity: &medulla_kernel::autosize::Capacity,
 ) -> DurableStores {
@@ -451,19 +601,19 @@ pub(super) fn open_durable_stores(
 /// The complete feature-gated field composition stays in `ServerState::new`;
 /// startup overrides only these values, so the orchestration path cannot drift
 /// from other state users.
-pub(super) fn compose_server_state(
+pub fn compose_server_state(
     mut state: ServerState,
     persist_dir: Option<String>,
     stores: DurableStores,
     limits: &AdmissionLimits,
     (txn_ttl_secs, txn_max_per_graph, txn_max_per_agent): (u64, usize, usize),
 ) -> ServerState {
-    server::install_seams(&state);
+    crate::seams_install::install_seams(&state);
     #[cfg(all(feature = "streaming", feature = "cdc-kafka"))]
     if let Some(hub) = &state.cdc {
         // CA-11 (DEC-CA-03): install the optional Kafka sink exactly once,
         // after pure state composition and before any listener can serve.
-        server::cdc_sink::install_from_env(hub);
+        crate::cdc_sink::install_from_env(hub);
     }
     #[cfg(feature = "redb")]
     {
@@ -474,7 +624,7 @@ pub(super) fn compose_server_state(
     }
     #[cfg(feature = "lake")]
     {
-        use medulla::server::lake::LakeStateExt;
+        use crate::lake::LakeStateExt;
         state.set_lake(Arc::default());
     }
     state.persist_dir = persist_dir;
@@ -504,11 +654,11 @@ pub(super) fn compose_server_state(
 /// tenant context and resolves through provisioned durable identity/RBAC policy
 /// before any row is exposed.
 #[cfg(feature = "security")]
-pub(super) fn open_isolation_layer(
+pub fn open_isolation_layer(
     auth_secret: &str,
     persist_dir: Option<&str>,
     anonymous: bool,
-) -> medulla::isolation::IsolationLayer {
+) -> medulla_core::isolation::IsolationLayer {
     info!("RLS default-deny ACTIVE: rows require explicit public visibility or an owner grant");
     let Some(dir) = persist_dir else {
         exit_with(
@@ -517,7 +667,7 @@ pub(super) fn open_isolation_layer(
         );
     };
     let authority = medulla_kernel::store_authority::process_authority();
-    let mut isolation = medulla::isolation::IsolationLayer::with_persist_dir(
+    let mut isolation = medulla_core::isolation::IsolationLayer::with_persist_dir(
         dir,
         authority.as_ref(),
         authority.principal(),
@@ -531,9 +681,9 @@ pub(super) fn open_isolation_layer(
     });
     if anonymous {
         isolation
-            .try_register_agent(medulla::acl::AgentIdentity {
+            .try_register_agent(medulla_types::acl::AgentIdentity {
                 agent_id: "anonymous".into(),
-                role: medulla::acl::AgentRole::System,
+                role: medulla_types::acl::AgentRole::System,
                 teams: Vec::new(),
                 roles: Vec::new(),
             })
@@ -541,7 +691,7 @@ pub(super) fn open_isolation_layer(
         info!("Explicit anonymous local-owner authority ACTIVE; no authentication credentials accepted");
         return isolation;
     }
-    if let Err(error) = server::validate_verified_request_context_startup(auth_secret, persist_dir)
+    if let Err(error) = crate::validate_verified_request_context_startup(auth_secret, persist_dir)
     {
         exit_with(
             format_args!("invalid verified request-context configuration: {error}"),
@@ -559,7 +709,7 @@ pub(super) fn open_isolation_layer(
 /// SIGTERM (a supervisor / `kill` / agent-utilities stopping the daemon) and
 /// SIGINT (Ctrl-C) both fire the same graceful signal. On non-unix only Ctrl-C
 /// is available.
-pub(super) fn spawn_shutdown_signal_handler(coordinator: Arc<server::ShutdownCoordinator>) {
+pub fn spawn_shutdown_signal_handler(coordinator: Arc<crate::transport::ShutdownCoordinator>) {
     tokio::spawn(async move {
         if wait_for_shutdown_signal().await {
             coordinator.trigger();
@@ -603,8 +753,8 @@ async fn wait_for_shutdown_signal() -> bool {
 
 /// Optional reference-counted idle shutdown (CONCEPT:MEDULLA-KG.backend.tiny-shared).
 /// `0` means no watcher: the engine is long-living and never self-terminates.
-pub(super) fn spawn_idle_shutdown_watcher(
-    coordinator: &Arc<server::ShutdownCoordinator>,
+pub fn spawn_idle_shutdown_watcher(
+    coordinator: &Arc<crate::transport::ShutdownCoordinator>,
     secs: u64,
 ) {
     if secs == 0 {
@@ -617,17 +767,17 @@ pub(super) fn spawn_idle_shutdown_watcher(
     );
     let idle_coord = coordinator.clone();
     tokio::spawn(async move {
-        server::run_idle_watcher(idle_coord, secs).await;
+        crate::transport::run_idle_watcher(idle_coord, secs).await;
     });
 }
 
 /// Where and how the engine listens.
-pub(super) struct Transports {
-    pub(super) tcp_only: bool,
-    pub(super) socket_path: String,
-    pub(super) socket_mode: u32,
-    pub(super) tcp_addr: Option<String>,
-    pub(super) tcp_tls: Option<server::PreparedTcpTls>,
+pub struct Transports {
+    pub tcp_only: bool,
+    pub socket_path: String,
+    pub socket_mode: u32,
+    pub tcp_addr: Option<String>,
+    pub tcp_tls: Option<crate::transport::PreparedTcpTls>,
 }
 
 /// UDS is the primary transport on unix, with an optional secondary TCP
@@ -638,18 +788,18 @@ pub(super) struct Transports {
 /// MEDULLA-DURABLE-KERNEL-R006.4) starts only once the listener is up: it must
 /// run in the background AFTER serving begins, never before it.
 #[cfg(unix)]
-pub(super) async fn serve_transports(
+pub async fn serve_transports(
     transports: Transports,
     state: &SharedState,
-    shutdown: &Arc<server::ShutdownCoordinator>,
+    shutdown: &Arc<crate::transport::ShutdownCoordinator>,
 ) -> Result<(), BoxError> {
     if transports.tcp_only {
         let addr = transports
             .tcp_addr
             .ok_or("TCP-only mode requires --tcp-addr")?;
-        let listener = server::bind_tcp(&addr, &transports.tcp_tls).await?;
+        let listener = crate::transport::bind_tcp(&addr, &transports.tcp_tls).await?;
         medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(state.clone()).await;
-        server::serve_tcp_listener(
+        crate::transport::serve_tcp_listener(
             listener,
             state.clone(),
             shutdown.clone(),
@@ -663,14 +813,14 @@ pub(super) async fn serve_transports(
         let tcp_shutdown = shutdown.clone();
         let tls = transports.tcp_tls;
         tokio::spawn(async move {
-            if let Err(e) = server::serve_tcp(&addr, tcp_state, tcp_shutdown, tls).await {
+            if let Err(e) = crate::transport::serve_tcp(&addr, tcp_state, tcp_shutdown, tls).await {
                 tracing::error!("TCP server error ({:?})", e.kind());
             }
         });
     }
-    let listener = server::bind_uds(&transports.socket_path, transports.socket_mode).await?;
+    let listener = crate::transport::bind_uds(&transports.socket_path, transports.socket_mode).await?;
     medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(state.clone()).await;
-    server::serve_uds_listener(listener, state.clone(), shutdown.clone()).await?;
+    crate::transport::serve_uds_listener(listener, state.clone(), shutdown.clone()).await?;
     Ok(())
 }
 
@@ -678,10 +828,10 @@ pub(super) async fn serve_transports(
 /// per-platform DEFAULT transport — an explicit --tcp-addr wins. The socket
 /// path/mode are still resolved+validated for config/lock parity & logging.
 #[cfg(not(unix))]
-pub(super) async fn serve_transports(
+pub async fn serve_transports(
     transports: Transports,
     state: &SharedState,
-    shutdown: &Arc<server::ShutdownCoordinator>,
+    shutdown: &Arc<crate::transport::ShutdownCoordinator>,
 ) -> Result<(), BoxError> {
     let _ = (
         &transports.socket_path,
@@ -692,9 +842,9 @@ pub(super) async fn serve_transports(
         .tcp_addr
         .unwrap_or_else(|| "127.0.0.1:8765".to_string());
     info!("AF_UNIX unavailable; using the configured native TCP transport");
-    let listener = server::bind_tcp(&addr, &transports.tcp_tls).await?;
+    let listener = crate::transport::bind_tcp(&addr, &transports.tcp_tls).await?;
     medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(state.clone()).await;
-    server::serve_tcp_listener(
+    crate::transport::serve_tcp_listener(
         listener,
         state.clone(),
         shutdown.clone(),
@@ -706,7 +856,7 @@ pub(super) async fn serve_transports(
 
 /// Read `variable`: absent means `default`; a present value must satisfy
 /// `parse` (after trimming) or startup exits with `invalid`.
-pub(super) fn env_or_exit<T>(
+pub fn env_or_exit<T>(
     variable: &str,
     default: T,
     parse: impl FnOnce(&str) -> Option<T>,
@@ -723,7 +873,7 @@ pub(super) fn env_or_exit<T>(
 
 /// The per-graph resident node cap: auto-sized from effective RAM; an explicit
 /// override must be positive and may only lower it.
-pub(super) fn max_nodes_per_graph(capacity: &medulla_kernel::autosize::Capacity) -> usize {
+pub fn max_nodes_per_graph(capacity: &medulla_kernel::autosize::Capacity) -> usize {
     const VARIABLE: &str = "MEDULLA_MAX_NODES_PER_GRAPH";
     let automatic = capacity.node_cap();
     env_or_exit(
@@ -741,14 +891,14 @@ pub(super) fn max_nodes_per_graph(capacity: &medulla_kernel::autosize::Capacity)
 }
 
 /// Seconds from `variable`, when set to a positive integer; otherwise off (`0`).
-pub(super) fn optional_sweep_secs(variable: &str) -> u64 {
+pub fn optional_sweep_secs(variable: &str) -> u64 {
     std::env::var(variable)
         .ok()
         .and_then(|s| s.trim().parse::<u64>().ok())
         .unwrap_or(0)
 }
 
-pub(super) async fn memcap_tick(state: SharedState, max_nodes_per_graph: usize) {
+pub async fn memcap_tick(state: SharedState, max_nodes_per_graph: usize) {
     let evicted = medulla_kernel::persist::evict_oversized_all(&state, max_nodes_per_graph).await;
     if evicted > 0 {
         tracing::info!("Memory cap: evicted {} LRU node(s) over cap", evicted);
@@ -756,7 +906,7 @@ pub(super) async fn memcap_tick(state: SharedState, max_nodes_per_graph: usize) 
 }
 
 #[cfg(feature = "cost")]
-pub(super) async fn budget_tick(state: SharedState, config: medulla_persistence::cost::CostConfig) {
+pub async fn budget_tick(state: SharedState, config: medulla_persistence::cost::CostConfig) {
     let (evicted, hibernated) = medulla_persistence::cost::enforce_memory_budgets(&state, config).await;
     if evicted > 0 || hibernated > 0 {
         tracing::info!(
@@ -768,27 +918,27 @@ pub(super) async fn budget_tick(state: SharedState, config: medulla_persistence:
     }
 }
 
-pub(super) async fn sealed_expiry_tick(
+pub async fn sealed_expiry_tick(
     state: SharedState,
-    policy: Vec<server::sealed_retention::Retention>,
+    policy: Vec<crate::sealed_retention::Retention>,
 ) {
     let now_ms = medulla_server_api::txn::now_ms();
-    let n = server::sealed_retention::expire_sealed_records(&state, &policy, now_ms).await;
+    let n = crate::sealed_retention::expire_sealed_records(&state, &policy, now_ms).await;
     if n > 0 {
         tracing::info!("Sealed records: retired {} expired record(s) (EH-558)", n);
     }
 }
 
-pub(super) async fn registry_reap_tick(state: SharedState) {
+pub async fn registry_reap_tick(state: SharedState) {
     let now_ms = medulla_server_api::txn::now_ms();
-    let n = server::registry_reaper::reap_expired_servers(&state, now_ms).await;
+    let n = crate::registry_reaper::reap_expired_servers(&state, now_ms).await;
     if n > 0 {
         tracing::info!("Server registry: reaped {} expired :Server lease(s)", n);
     }
 }
 
 #[cfg(feature = "security")]
-pub(super) async fn provenance_anchor_tick(state: SharedState) {
+pub async fn provenance_anchor_tick(state: SharedState) {
     let anchored = medulla_persistence::provenance_anchor::sweep(&state).await;
     if anchored > 0 {
         tracing::info!(
@@ -799,7 +949,7 @@ pub(super) async fn provenance_anchor_tick(state: SharedState) {
 }
 
 #[cfg(feature = "redb")]
-pub(super) async fn storage_scrub_tick(state: SharedState) {
+pub async fn storage_scrub_tick(state: SharedState) {
     let Some(persistence) = state.read().await.persistence.clone() else {
         return;
     };
@@ -813,7 +963,7 @@ pub(super) async fn storage_scrub_tick(state: SharedState) {
     }
 }
 
-pub(super) async fn txn_ttl_tick(state: SharedState, ttl: u64) {
+pub async fn txn_ttl_tick(state: SharedState, ttl: u64) {
     let now = medulla_server_api::txn::now_ms();
     let reclaimed = medulla_server_api::txn::sweep_expired_txns(&state, ttl, now);
     if reclaimed > 0 {
@@ -826,7 +976,7 @@ pub(super) async fn txn_ttl_tick(state: SharedState, ttl: u64) {
 
 /// Narrow opt-in consumed from Arbora's local admission mode (MEDULLA-IDENTITY-R003.1).
 /// Never infer anonymous authority from an absent secret.
-pub(super) fn validate_auth_mode(args: &super::Args, socket_mode: u32) -> Result<(), BoxError> {
+pub fn validate_auth_mode(args: &ServerArgs, socket_mode: u32) -> Result<(), BoxError> {
     if args.auth_mode != "none" {
         require_secret_and_persist_dir(&args.auth_secret, args.persist_dir.as_deref());
         return Ok(());
@@ -887,7 +1037,7 @@ fn anonymous_env_conflicts(name: &str, value: &str) -> bool {
 /// Called while holding the existing engine.lock and before opening any stores.
 /// A mode marker is not an authentication credential. It prevents accidental
 /// reuse of protected data under anonymous authority. No implicit conversions.
-pub(super) fn prepare_auth_store(mode: &str, dir: &str) -> Result<(), BoxError> {
+pub fn prepare_auth_store(mode: &str, dir: &str) -> Result<(), BoxError> {
     use std::io::Write;
     let root = std::path::Path::new(dir);
     let marker = root.join("anonymous-store-v1");

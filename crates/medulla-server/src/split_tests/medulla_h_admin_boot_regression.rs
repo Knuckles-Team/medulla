@@ -472,11 +472,11 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
         .join("engine-g9-boot.sock")
         .to_string_lossy()
         .into_owned();
-    let shutdown = medulla_server::ShutdownCoordinator::new();
+    let shutdown = crate::transport::ShutdownCoordinator::new();
     let serve_state = state.clone();
     let serve_path = socket_path.clone();
     tokio::spawn(async move {
-        let _ = medulla_server::serve_uds(&serve_path, 0o600, serve_state, shutdown).await;
+        let _ = crate::transport::serve_uds(&serve_path, 0o600, serve_state, shutdown).await;
     });
 
     // (a) The listener is bound within the budget.

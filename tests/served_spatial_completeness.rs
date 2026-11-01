@@ -18,8 +18,8 @@ use std::sync::Arc;
 use serde_json::json;
 
 use medulla_plan::{Op, Plan};
-use medulla::protocol::{GraphType, Method};
-use medulla::registry::{GraphMaterial, GraphMaterializer, GraphRegistry};
+use medulla_protocol_types::protocol::{GraphType, Method};
+use medulla_core::registry::{GraphMaterial, GraphMaterializer, GraphRegistry};
 use medulla_server::dispatch;
 
 const SECRET: &str = "served-spatial-completeness-secret";
@@ -208,7 +208,7 @@ fn paged_lazy_open_advertises_spatial_only_after_final_page_backfill() {
         .server_manifests()
         .iter()
         .all(|(_, manifest)| {
-            manifest.validity == medulla::index::IndexValidity::Building
+            manifest.validity == medulla_core::index::IndexValidity::Building
                 && !manifest.completeness.complete
         }));
     assert!(
@@ -231,7 +231,7 @@ fn paged_lazy_open_advertises_spatial_only_after_final_page_backfill() {
         .server_manifests()
         .iter()
         .all(|(_, manifest)| {
-            manifest.validity == medulla::index::IndexValidity::Valid
+            manifest.validity == medulla_core::index::IndexValidity::Valid
                 && manifest.completeness.complete
                 && manifest.covers_source(
                     core.version(),

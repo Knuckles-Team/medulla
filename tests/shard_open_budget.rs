@@ -19,7 +19,7 @@
 
 use medulla_kernel::test_rendezvous;
 
-use medulla::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_persistence::redb_backend::RedbBackend;
 use std::sync::atomic::{AtomicBool, Ordering};

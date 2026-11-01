@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use medulla::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_persistence::redb_backend::RedbBackend;
 

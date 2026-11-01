@@ -49,7 +49,7 @@ use std::sync::Arc;
 use serde_json::json;
 use tokio::sync::RwLock;
 
-use medulla::protocol::{Method, Request, Response, ResultPayload};
+use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
 use medulla_server_api::state::ServerState;
 
 const SECRET: &str = "advanced-crossmodal-secret";
@@ -131,11 +131,11 @@ async fn state() -> test_support::SharedState {
 /// `"commons-user"` role (CONCEPT:MEDULLA-KG.compute.durable-rbac-identity-persistence): the role +
 /// grants live on the policy, `register_identity_req` threads the role NAME onto each
 /// registered peer's `AgentIdentity.roles`.
-fn commons_isolation() -> medulla::isolation::IsolationLayer {
+fn commons_isolation() -> medulla_core::isolation::IsolationLayer {
     let mut isolation = common::current_isolation();
     #[cfg(feature = "security")]
     {
-        use medulla::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+        use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
         isolation.add_role(Role::new("commons-user"));
         let grant = |action: RbacAction| Grant {
             role: "commons-user".to_string(),
@@ -719,7 +719,7 @@ fn register_identity_req(
     id: u64,
     actor: &str,
     agent_id: &str,
-    role: medulla::acl::AgentRole,
+    role: medulla_types::acl::AgentRole,
 ) -> Request {
     common::signed_register_identity_request(common::SignedRegisterIdentity {
         secret: SECRET,
@@ -756,7 +756,7 @@ fn register_root_req(id: u64, actor: &str) -> Request {
         graph: "__commons__",
         actor,
         registered_agent: "root",
-        role: medulla::acl::AgentRole::Agent,
+        role: medulla_types::acl::AgentRole::Agent,
         teams: Vec::new(),
         // `root` never itself reads/writes `__commons__` in these fixtures -- it only
         // signs `RegisterIdentity` for the ordinary peers below, which needs admin
@@ -788,7 +788,7 @@ fn register_root_req(id: u64, actor: &str) -> Request {
 #[cfg(feature = "security")]
 #[tokio::test]
 async fn rls_per_agent_fused_reason_rank_overlay_eg391() {
-    use medulla::isolation::AgentRole;
+    use medulla_core::isolation::AgentRole;
 
     let state = state().await;
 
@@ -1049,9 +1049,9 @@ async fn pgwire_sparql_native_consistent_snapshot_eg393() {
     {
         let mut s = state.write().await;
         s.isolation
-            .register_agent(medulla::isolation::AgentIdentity {
+            .register_agent(medulla_core::isolation::AgentIdentity {
                 agent_id: "tester".to_string(),
-                role: medulla::isolation::AgentRole::Agent,
+                role: medulla_core::isolation::AgentRole::Agent,
                 teams: Vec::new(),
                 roles: vec!["commons-user".to_string()],
             });
@@ -1677,7 +1677,7 @@ async fn explain_plan_surfaces_the_optimizer_rewrite() {
         Some(ResultPayload::Raw(b)) => b.clone(),
         other => panic!("expected Raw result, got {other:?}"),
     };
-    let result: medulla::protocol::ExplainPlanResult =
+    let result: medulla_protocol_types::protocol::ExplainPlanResult =
         rmp_serde::from_slice(&bytes).expect("ExplainPlanResult decodes");
     assert_eq!(
         result.plan_digest,
@@ -1758,7 +1758,7 @@ async fn explain_plan_surfaces_the_optimizer_rewrite() {
 #[cfg(feature = "security")]
 #[tokio::test]
 async fn explain_plan_cost_estimate_respects_rls_eg_goc12() {
-    use medulla::isolation::AgentRole;
+    use medulla_core::isolation::AgentRole;
 
     let state = state().await;
 
@@ -1837,7 +1837,7 @@ async fn explain_plan_cost_estimate_respects_rls_eg_goc12() {
                 Some(ResultPayload::Raw(b)) => b.clone(),
                 other => panic!("expected Raw result for {agent}, got {other:?}"),
             };
-            let result: medulla::protocol::ExplainPlanResult =
+            let result: medulla_protocol_types::protocol::ExplainPlanResult =
                 rmp_serde::from_slice(&bytes).expect("ExplainPlanResult decodes");
             result
                 .before
@@ -1917,7 +1917,7 @@ async fn explain_belief_returns_full_justification_tree() {
         Some(ResultPayload::Raw(b)) => b.clone(),
         other => panic!("expected Raw result, got {other:?}"),
     };
-    let result: medulla::protocol::ExplainBeliefResult =
+    let result: medulla_protocol_types::protocol::ExplainBeliefResult =
         rmp_serde::from_slice(&bytes).expect("ExplainBeliefResult decodes");
     assert_eq!(result.root.claim, "claim1");
     assert!(
@@ -1936,8 +1936,8 @@ async fn explain_belief_returns_full_justification_tree() {
 #[cfg(feature = "epistemic-redaction")]
 #[tokio::test]
 async fn explain_belief_disclosure_level_returns_redacted_skeleton_over_rpc() {
-    use medulla::isolation::AgentRole;
-    use medulla::protocol::{DisclosureLevelWire, ExplainBeliefRedactedResult};
+    use medulla_core::isolation::AgentRole;
+    use medulla_protocol_types::protocol::{DisclosureLevelWire, ExplainBeliefRedactedResult};
 
     let state = state().await;
 
@@ -2106,7 +2106,7 @@ async fn explain_belief_disclosure_level_returns_redacted_skeleton_over_rpc() {
 #[cfg(feature = "epistemic-tms")]
 #[tokio::test]
 async fn epistemic_status_returns_every_facet_over_rpc() {
-    use medulla::protocol::EpistemicStatusResult;
+    use medulla_protocol_types::protocol::EpistemicStatusResult;
 
     let state = state().await;
     ok(
@@ -2191,7 +2191,7 @@ async fn epistemic_status_returns_every_facet_over_rpc() {
 #[cfg(feature = "evidence-graph")]
 #[tokio::test]
 async fn explain_evidence_resolves_a_located_citation_over_rpc() {
-    use medulla::protocol::{
+    use medulla_protocol_types::protocol::{
         EvidenceAddressWire, EvidenceLocusWire, EvidenceResourceWire, ExplainEvidenceResult,
     };
 
@@ -2303,8 +2303,8 @@ async fn explain_evidence_resolves_a_located_citation_over_rpc() {
 #[cfg(all(feature = "evidence-graph", feature = "security"))]
 #[tokio::test]
 async fn explain_evidence_hides_other_agents_private_evidence_over_rpc() {
-    use medulla::isolation::AgentRole;
-    use medulla::protocol::ExplainEvidenceResult;
+    use medulla_core::isolation::AgentRole;
+    use medulla_protocol_types::protocol::ExplainEvidenceResult;
 
     let state = state().await;
     let locus = json!({
@@ -2479,7 +2479,7 @@ async fn explain_evidence_hides_other_agents_private_evidence_over_rpc() {
 #[cfg(feature = "epistemic-causal")]
 #[tokio::test]
 async fn causal_estimate_do_calculus_matches_hand_derivation_over_rpc() {
-    use medulla::protocol::{CausalEstimateResult, CausalQueryModeWire, StructuralEquationWire};
+    use medulla_protocol_types::protocol::{CausalEstimateResult, CausalQueryModeWire, StructuralEquationWire};
     use std::collections::BTreeMap;
 
     let state = state().await;
@@ -2564,7 +2564,7 @@ async fn causal_estimate_do_calculus_matches_hand_derivation_over_rpc() {
 #[cfg(feature = "epistemic-causal")]
 #[tokio::test]
 async fn rank_by_provenance_favors_corroborated_evidence_over_raw_similarity_over_rpc() {
-    use medulla::protocol::{CalibrationWire, RankByProvenanceResult, RetrievalCandidateWire};
+    use medulla_protocol_types::protocol::{CalibrationWire, RankByProvenanceResult, RetrievalCandidateWire};
 
     let state = state().await;
 
@@ -2634,7 +2634,7 @@ async fn rank_by_provenance_favors_corroborated_evidence_over_raw_similarity_ove
 #[cfg(feature = "epistemic-tms")]
 #[tokio::test]
 async fn resolve_conflict_matches_tms_crate_semantics_over_rpc() {
-    use medulla::protocol::ResolveConflictResult;
+    use medulla_protocol_types::protocol::ResolveConflictResult;
 
     let state = state().await;
     let mut setup_id = 0u64;
@@ -2779,8 +2779,8 @@ async fn resolve_conflict_matches_tms_crate_semantics_over_rpc() {
 #[cfg(all(feature = "epistemic-tms", feature = "security"))]
 #[tokio::test]
 async fn resolve_conflict_hides_other_agents_private_argument_over_rpc() {
-    use medulla::isolation::AgentRole;
-    use medulla::protocol::ResolveConflictResult;
+    use medulla_core::isolation::AgentRole;
+    use medulla_protocol_types::protocol::ResolveConflictResult;
 
     let state = state().await;
     // `a`/`c` are meant PUBLIC (this test's own doc comment: the SAME textbook AF

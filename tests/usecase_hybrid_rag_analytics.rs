@@ -32,7 +32,7 @@ use medulla_plan::{execute, Op, Plan, PlanCtx};
 use medulla_text::TextIndex;
 use serde_json::json;
 
-use medulla::protocol::{Method, Response, ResultPayload};
+use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_server::dispatch;
 
 const SECRET: &str = "usecase-analytics-secret";

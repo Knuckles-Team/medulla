@@ -3,8 +3,8 @@
 
 use std::time::Instant;
 
-use medulla::graph::GraphCore;
-use medulla::protocol::Method;
+use medulla_core::graph::GraphCore;
+use medulla_protocol_types::protocol::Method;
 use medulla_h_graph::harness_admission::direct_add_node;
 
 /// Admit write `index` through the direct AddNode path at `tx_now`, project

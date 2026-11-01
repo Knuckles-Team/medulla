@@ -8,7 +8,7 @@
 //!
 //! So none of these tests call `SemanticIndexService` or the adapter. Every one
 //! of them builds a signed `Request`, hands it to the real
-//! `medulla_server::dispatch::dispatch`, and asserts on the `Response` -- the
+//! `crate::dispatch::dispatch`, and asserts on the `Response` -- the
 //! exact path an external connector takes, through envelope verification,
 //! `requires_write`, the capability policy, the router arm, and the handler.
 //! A test that reached past any of those would prove nothing about whether the
@@ -149,7 +149,7 @@ async fn dispatch_drives_a_source_through_s1_and_publishes_s2() {
     // ---- admit the binding -------------------------------------------
     let _: serde_json::Value = ok(
         "AdmitBinding",
-        medulla_server::dispatch::dispatch(
+        crate::dispatch::dispatch(
             &state,
             signed(
                 901,
@@ -181,7 +181,7 @@ async fn dispatch_drives_a_source_through_s1_and_publishes_s2() {
     };
     let public: SemanticIndexResponse = ok(
         "semantic_binding_get",
-        medulla_server::dispatch::dispatch(
+        crate::dispatch::dispatch(
             &state,
             signed(
                 9011,
@@ -215,7 +215,7 @@ async fn dispatch_drives_a_source_through_s1_and_publishes_s2() {
     };
     let hidden: SemanticIndexResponse = ok(
         "semantic_binding_get under another policy",
-        medulla_server::dispatch::dispatch(
+        crate::dispatch::dispatch(
             &state,
             signed(
                 9013,
@@ -239,7 +239,7 @@ async fn dispatch_drives_a_source_through_s1_and_publishes_s2() {
         },
         ..public_request
     };
-    let denied = medulla_server::dispatch::dispatch(
+    let denied = crate::dispatch::dispatch(
         &state,
         signed(
             9012,
@@ -255,7 +255,7 @@ async fn dispatch_drives_a_source_through_s1_and_publishes_s2() {
     // ---- S1 admission from the authoritative SQL wakeup ---------------
     let _: serde_json::Value = ok(
         "AdmitSourceRecord",
-        medulla_server::dispatch::dispatch(
+        crate::dispatch::dispatch(
             &state,
             signed(
                 902,
@@ -273,7 +273,7 @@ async fn dispatch_drives_a_source_through_s1_and_publishes_s2() {
     // machine has to move through the wire too.
     let _: serde_json::Value = ok(
         "TransitionBinding",
-        medulla_server::dispatch::dispatch(
+        crate::dispatch::dispatch(
             &state,
             signed(
                 903,
@@ -291,7 +291,7 @@ async fn dispatch_drives_a_source_through_s1_and_publishes_s2() {
 
     let _: serde_json::Value = ok(
         "SubscribeStageConsumer",
-        medulla_server::dispatch::dispatch(
+        crate::dispatch::dispatch(
             &state,
             signed(
                 904,
@@ -308,7 +308,7 @@ async fn dispatch_drives_a_source_through_s1_and_publishes_s2() {
     // ---- queue class, leg one: a Medium worker must not get the Fast S1
     let medium_first: SemanticStageLeasePage = ok(
         "ClaimStageLeases(Medium)",
-        medulla_server::dispatch::dispatch(
+        crate::dispatch::dispatch(
             &state,
             signed(
                 905,
@@ -334,7 +334,7 @@ async fn dispatch_drives_a_source_through_s1_and_publishes_s2() {
     // ---- queue class, leg two: the Fast worker gets exactly the S1 -----
     let fast: SemanticStageLeasePage = ok(
         "ClaimStageLeases(Fast)",
-        medulla_server::dispatch::dispatch(
+        crate::dispatch::dispatch(
             &state,
             signed(
                 906,
@@ -399,7 +399,7 @@ async fn dispatch_drives_a_source_through_s1_and_publishes_s2() {
     };
     let error = refused(
         "an S2 transition against the S1 lease",
-        medulla_server::dispatch::dispatch(
+        crate::dispatch::dispatch(
             &state,
             signed(
                 907,
@@ -436,7 +436,7 @@ async fn dispatch_drives_a_source_through_s1_and_publishes_s2() {
     };
     let _: serde_json::Value = ok(
         "CompleteSqlSourceStage",
-        medulla_server::dispatch::dispatch(
+        crate::dispatch::dispatch(
             &state,
             signed(
                 908,
@@ -465,7 +465,7 @@ async fn dispatch_drives_a_source_through_s1_and_publishes_s2() {
     //      is handed it ------------------------------------------------
     let medium: SemanticStageLeasePage = ok(
         "ClaimStageLeases(Medium) after S1",
-        medulla_server::dispatch::dispatch(
+        crate::dispatch::dispatch(
             &state,
             signed(
                 909,
@@ -500,7 +500,7 @@ async fn dispatch_refuses_a_cross_tenant_semantic_operation() {
     let fixture = dispatch_table_fixture(&worker, TENANT);
     let state = dispatch_state(&fixture.persist_dir);
 
-    let denied = medulla_server::dispatch::dispatch(
+    let denied = crate::dispatch::dispatch(
         &state,
         signed(
             920,
@@ -538,7 +538,7 @@ async fn dispatch_refuses_a_cross_tenant_semantic_operation() {
         },
         approval: None,
     };
-    let denied = medulla_server::dispatch::dispatch(
+    let denied = crate::dispatch::dispatch(
         &state,
         signed(
             921,
@@ -563,7 +563,7 @@ async fn dispatch_refuses_an_unbounded_stage_claim_by_name() {
 
     let error = refused(
         "an over-limit claim",
-        medulla_server::dispatch::dispatch(
+        crate::dispatch::dispatch(
             &state,
             signed(
                 930,
@@ -610,7 +610,7 @@ async fn dispatch_attributes_every_queue_class_to_the_one_verified_principal() {
 
     let _: serde_json::Value = ok(
         "AdmitBinding",
-        medulla_server::dispatch::dispatch(
+        crate::dispatch::dispatch(
             &state,
             signed(
                 940,
@@ -626,7 +626,7 @@ async fn dispatch_attributes_every_queue_class_to_the_one_verified_principal() {
     );
     let _: serde_json::Value = ok(
         "AdmitSourceRecord",
-        medulla_server::dispatch::dispatch(
+        crate::dispatch::dispatch(
             &state,
             signed(
                 941,
@@ -641,7 +641,7 @@ async fn dispatch_attributes_every_queue_class_to_the_one_verified_principal() {
     );
     let _: serde_json::Value = ok(
         "TransitionBinding",
-        medulla_server::dispatch::dispatch(
+        crate::dispatch::dispatch(
             &state,
             signed(
                 942,
@@ -662,7 +662,7 @@ async fn dispatch_attributes_every_queue_class_to_the_one_verified_principal() {
     // defect would let through.
     let _: serde_json::Value = ok(
         "SubscribeStageConsumer",
-        medulla_server::dispatch::dispatch(
+        crate::dispatch::dispatch(
             &state,
             signed(
                 943,
@@ -679,7 +679,7 @@ async fn dispatch_attributes_every_queue_class_to_the_one_verified_principal() {
     // ---- Fast leg: claim S1 under a spoofed `consumer` field -----------
     let fast: SemanticStageLeasePage = ok(
         "ClaimStageLeases(Fast)",
-        medulla_server::dispatch::dispatch(
+        crate::dispatch::dispatch(
             &state,
             signed(
                 944,
@@ -722,7 +722,7 @@ async fn dispatch_attributes_every_queue_class_to_the_one_verified_principal() {
     };
     let _: serde_json::Value = ok(
         "CompleteSqlSourceStage",
-        medulla_server::dispatch::dispatch(
+        crate::dispatch::dispatch(
             &state,
             signed(
                 945,
@@ -742,7 +742,7 @@ async fn dispatch_attributes_every_queue_class_to_the_one_verified_principal() {
     // ---- Medium leg: claim S2 under a DIFFERENT spoofed `consumer` -----
     let medium: SemanticStageLeasePage = ok(
         "ClaimStageLeases(Medium)",
-        medulla_server::dispatch::dispatch(
+        crate::dispatch::dispatch(
             &state,
             signed(
                 946,

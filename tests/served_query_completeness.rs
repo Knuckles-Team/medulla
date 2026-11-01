@@ -24,8 +24,8 @@ use tokio::sync::RwLock;
 
 use medulla_plan::{Op, Plan};
 use medulla_types::wire::UqlResult;
-use medulla::protocol::{Method, Response, ResultPayload};
-use medulla_server::{dispatch};
+use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
+use medulla_server::dispatch::dispatch;
 use medulla_server_api::state::ServerState;
 
 const SECRET: &str = "served-query-completeness-secret";

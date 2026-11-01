@@ -4,9 +4,9 @@
 
 use std::sync::Arc;
 
-use medulla::isolation::IsolationLayer;
-use medulla::protocol::{Method, Request, Response, ResultPayload};
-use medulla::registry::GraphRegistry;
+use medulla_core::isolation::IsolationLayer;
+use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
+use medulla_core::registry::GraphRegistry;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::state::ServerState;
 use tokio::sync::RwLock;
@@ -355,8 +355,8 @@ pub fn sql_test_persist_dir(label: &str) -> String {
 
 #[cfg(feature = "security")]
 pub fn wire_isolation(users: &[&str]) -> IsolationLayer {
-    use medulla::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
-    use medulla::isolation::{AgentIdentity, AgentRole};
+    use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+    use medulla_core::isolation::{AgentIdentity, AgentRole};
 
     let mut isolation = IsolationLayer::new();
     isolation.add_role(Role::new("commons-user"));
@@ -420,8 +420,8 @@ pub fn seed_wire_nodes(registry: &GraphRegistry, user: &str) {
     }
 }
 
-pub async fn dispatch(state: &SharedState, request: Request) -> medulla::protocol::Response {
-    Box::pin(medulla_server::dispatch(state, request)).await
+pub async fn dispatch(state: &SharedState, request: Request) -> medulla_protocol_types::protocol::Response {
+    Box::pin(medulla_server::dispatch::dispatch(state, request)).await
 }
 
 pub async fn begin_txn(
@@ -483,13 +483,13 @@ pub async fn unified_query(
     auth_secret: &str,
     id: u64,
     plan: medulla_plan::Plan,
-) -> medulla::protocol::Response {
+) -> medulla_protocol_types::protocol::Response {
     dispatch(
         state,
         commons_request(
             auth_secret,
             id,
-            medulla::protocol::Method::UnifiedQuery {
+            medulla_protocol_types::protocol::Method::UnifiedQuery {
                 plan,
                 foreign_execution: None,
 
@@ -555,14 +555,14 @@ pub fn json_bytes(value: serde_json::Value) -> Vec<u8> {
     rmp_serde::to_vec_named(&value).expect("encode JSON test value")
 }
 
-pub fn raw_rows(response: &medulla::protocol::Response) -> Vec<(String, Option<f32>)> {
+pub fn raw_rows(response: &medulla_protocol_types::protocol::Response) -> Vec<(String, Option<f32>)> {
     assert!(
         response.error.is_none(),
         "dispatch error: {:?}",
         response.error
     );
     match &response.result {
-        Some(medulla::protocol::ResultPayload::Raw(bytes)) => {
+        Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) => {
             rmp_serde::from_slice(bytes).expect("row decode")
         }
         other => panic!("expected Raw result, got {other:?}"),
@@ -627,7 +627,7 @@ pub async fn durable_graph_state(
         graph,
         Method::CreateGraph {
             graph_name: graph.to_string(),
-            graph_type: medulla::protocol::GraphType::Global,
+            graph_type: medulla_protocol_types::protocol::GraphType::Global,
         },
     )
     .await;

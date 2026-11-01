@@ -8,7 +8,7 @@ use medulla_core::result_cache::ResultCache;
 use medulla_epistemic::{ChangeEvent as TmsEvent, TruthMaintenance};
 use medulla_jobs::store::{JobStore, SubmitSpec, TenantJobQuota};
 use medulla_jobs::{AlgoVersion, InputSnapshotHandle, JobPolicy};
-use medulla::graph::GraphCore;
+use medulla_core::graph::GraphCore;
 use medulla_server::qos::{plan_admissions, QosClass, QosRequest};
 
 fn job_spec(index: usize) -> SubmitSpec {
