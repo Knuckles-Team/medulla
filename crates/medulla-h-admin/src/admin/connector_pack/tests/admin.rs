@@ -7,7 +7,7 @@ use medulla_catalog_types::connector_pack::{
     PackViolationCode,
 };
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
 use sha2::{Digest, Sha256};
 

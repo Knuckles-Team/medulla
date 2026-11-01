@@ -14,9 +14,9 @@ use tokio::sync::RwLock;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::auth::VerifiedRequestContext;
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStore;
+use medulla_persistence_records::agent_library::AgentLibraryStore;
 #[cfg(feature = "redb")]
-use medulla_persistence::connector_pack::admin as binding;
+use medulla_persistence_records::connector_pack::admin as binding;
 use medulla_server_api::state::ServerState;
 
 /// One served admin entry point: the dispatch signature, the named refusal in
@@ -194,7 +194,7 @@ where
 {
     let tenant_pack_guard = super::tenant_pack_lock(request.verified.tenant()).await?;
     let store = super::agent_library_store(request.state).await?;
-    let context = medulla_persistence::agent_library::context::bind_agent_library_context(
+    let context = medulla_persistence_records::agent_library::context::bind_agent_library_context(
         &store,
         request.req_id,
         request.verified,

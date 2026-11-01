@@ -55,6 +55,9 @@ pub struct DurableStore {
     pub scope: BackupScope,
 }
 
+/// Stable physical identity of the Agent Library store, used by staged backup adoption.
+pub const AGENT_LIBRARY_PHYSICAL_STORE: &str = "epistemic-graph:agent-library";
+
 const fn bundled(file_name: &'static str) -> DurableStore {
     DurableStore {
         file_name,
@@ -169,7 +172,7 @@ pub const DURABLE_STORES: &[DurableStore] = &[
 /// drifting is `backup.rs`'s `backup_restore_carries_non_shard_durable_stores`,
 /// which reopens the restored `rbac.redb` through `RbacStore::open` — a
 /// mismatched identity fails that adoption closed.
-pub(crate) fn bundled_store_authority(
+pub fn bundled_store_authority(
     file_name: &str,
 ) -> Option<(&'static str, medulla_storage::OwnerLayout)> {
     match file_name {
@@ -191,7 +194,7 @@ pub(crate) fn bundled_store_authority(
             medulla_storage::OwnerLayout::NodeInfo,
         )),
         "agent_library.redb" => Some((
-            super::agent_library::AGENT_LIBRARY_PHYSICAL_STORE,
+            AGENT_LIBRARY_PHYSICAL_STORE,
             medulla_storage::OwnerLayout::AgentLibrary,
         )),
         "rbac.redb" => Some((

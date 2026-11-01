@@ -55,6 +55,7 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-store-apply = { path = "../medulla-store-apply" }
+medulla-persistence-ops = { path = "../medulla-persistence-ops" }
 
 [features]
 blob = ["redb"]

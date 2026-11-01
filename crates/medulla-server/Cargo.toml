@@ -97,6 +97,8 @@ medulla-work-types = { path = "../medulla-work-types" }
 medulla-store-apply = { path = "../medulla-store-apply" }
 medulla-work-store = { path = "../medulla-work-store" }
 medulla-lane-store = { path = "../medulla-lane-store" }
+medulla-persistence-records = { path = "../medulla-persistence-records" }
+medulla-persistence-ops = { path = "../medulla-persistence-ops" }
 
 [features]
 amqp-wire = ["server"]

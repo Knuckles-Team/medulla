@@ -1,6 +1,6 @@
 use super::*;
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 async fn route_native_resource_ops(
     ctx: GraphOpRouting<'_>,
     method: Method,

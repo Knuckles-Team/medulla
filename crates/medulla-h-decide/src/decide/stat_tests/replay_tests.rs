@@ -7,7 +7,7 @@ use medulla_decision_types::decision::replay::{
     AllocationRule, EvalMode, EvaluationRun, RefitSpec, ReplayEnvironment, ReplaySpec, SharedCap,
     TrialLog, WalkForward,
 };
-use medulla_persistence::decision_jobs::evaluation_run_key;
+use medulla_persistence_records::decision_jobs::evaluation_run_key;
 
 const Q32_ONE: i64 = 1 << 32;
 

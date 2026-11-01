@@ -2,7 +2,7 @@
 //! the connector-pack components those records make visible.
 
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use std::collections::BTreeMap;
 
 use medulla_agent_types::agent_component::AgentComponentEntry;
@@ -120,7 +120,7 @@ async fn load_commons(
 /// Where connector-pack components are read from. The owner is `redb`-backed;
 /// a build without it serves observations only and says so by name.
 #[cfg(feature = "redb")]
-type ComponentStore = Arc<medulla_persistence::agent_library::AgentLibraryStore>;
+type ComponentStore = Arc<medulla_persistence_records::agent_library::AgentLibraryStore>;
 /// Uninhabited without `redb`: `component_store` refuses first, so the member
 /// reads below can never be reached with one.
 #[cfg(not(feature = "redb"))]

@@ -8,7 +8,7 @@ use medulla_catalog_types::{
     connector_pack::PackImportResult, connector_pack::PackViolationCode,
 };
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 
 use super::{
     bind, build_pack, head_of, import_uploaded, imported, ok, Content, Served, ADMIN, TENANT,

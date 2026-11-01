@@ -1,6 +1,6 @@
 use super::*;
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 
 /// Already-authorized graph and placement context for one RF-020 admission.
 /// The library handle is the EG-owned retained-definition authority; the

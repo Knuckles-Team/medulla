@@ -7,7 +7,7 @@ use medulla_agent_types::agent_library::AgentLibraryOp;
 use medulla_agent_types::agent_library::AgentLibraryPublishRequest;
 use medulla_agent_types::agent_library::AgentLibraryRetireRequest;
 use medulla_agent_types::agent_library::AgentLibraryStatusRequest;
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -15,7 +15,7 @@ use tokio::sync::RwLock;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::context::bind_agent_library_context;
+use medulla_persistence_records::agent_library::context::bind_agent_library_context;
 use medulla_server_api::state::ServerState;
 
 /// Bind the context of a read-only Agent Library status query. Status never
@@ -23,7 +23,7 @@ use medulla_server_api::state::ServerState;
 /// failure is answered as this request's error response.
 #[cfg(feature = "redb")]
 fn bind_status_context(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
     context: medulla_agent_types::agent_library::AgentLibraryMutationContext,
@@ -58,7 +58,7 @@ pub fn bind_agent_library_draft(
 async fn ensure_agent_library(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-) -> Result<Arc<medulla_persistence::agent_library::AgentLibraryStore>, Response> {
+) -> Result<Arc<medulla_persistence_records::agent_library::AgentLibraryStore>, Response> {
     let mut guard = state.write().await;
     guard
         .ensure_agent_library()
@@ -144,7 +144,7 @@ pub async fn handle_agent_component(
 
 #[cfg(feature = "redb")]
 fn component_publish(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: Box<medulla_agent_types::agent_component::AgentComponentPublishRequest>,
@@ -178,7 +178,7 @@ fn component_publish(
 
 #[cfg(feature = "redb")]
 fn component_retire(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: medulla_agent_types::agent_component::AgentComponentRetireRequest,
@@ -208,7 +208,7 @@ fn component_retire(
 
 #[cfg(feature = "redb")]
 fn component_current(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     tenant_id: String,
     component_id: String,
@@ -226,7 +226,7 @@ fn component_current(
 
 #[cfg(feature = "redb")]
 fn component_history(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     tenant_id: String,
     component_id: String,
@@ -273,7 +273,7 @@ fn component_status_purpose(
 
 #[cfg(feature = "redb")]
 fn component_status(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: medulla_agent_types::agent_component::AgentComponentStatusRequest,
@@ -296,7 +296,7 @@ fn component_status(
 
 #[cfg(feature = "redb")]
 fn component_search(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     request: medulla_agent_types::agent_component::AgentComponentSearchRequest,
 ) -> Response {
@@ -353,7 +353,7 @@ pub async fn handle_agent_template(
 
 #[cfg(feature = "redb")]
 fn template_publish(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: Box<medulla_agent_types::agent_template::AgentTemplatePublishRequest>,
@@ -392,7 +392,7 @@ fn template_publish(
 
 #[cfg(feature = "redb")]
 fn template_retire(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: medulla_agent_types::agent_template::AgentTemplateRetireRequest,
@@ -422,7 +422,7 @@ fn template_retire(
 
 #[cfg(feature = "redb")]
 fn template_current(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     tenant_id: String,
     template_id: String,
@@ -440,7 +440,7 @@ fn template_current(
 
 #[cfg(feature = "redb")]
 fn template_history(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     tenant_id: String,
     template_id: String,
@@ -458,7 +458,7 @@ fn template_history(
 
 #[cfg(feature = "redb")]
 fn template_status(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: medulla_agent_types::agent_template::AgentTemplateStatusRequest,
@@ -488,7 +488,7 @@ fn template_status(
 
 #[cfg(feature = "redb")]
 fn template_instantiate(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     request: medulla_agent_types::agent_template::AgentTemplateInstantiateRequest,
 ) -> Response {
@@ -540,7 +540,7 @@ pub async fn handle_agent_graph(
 
 #[cfg(feature = "redb")]
 fn graph_publish(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: Box<medulla_agent_types::agent_graph::AgentGraphPublishRequest>,
@@ -580,7 +580,7 @@ fn graph_publish(
 
 #[cfg(feature = "redb")]
 fn graph_retire(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: medulla_agent_types::agent_graph::AgentGraphRetireRequest,
@@ -610,7 +610,7 @@ fn graph_retire(
 
 #[cfg(feature = "redb")]
 fn graph_current(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
     tenant_id: String,
@@ -635,7 +635,7 @@ fn graph_current(
 
 #[cfg(feature = "redb")]
 fn graph_history(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
     tenant_id: String,
@@ -660,7 +660,7 @@ fn graph_history(
 
 #[cfg(feature = "redb")]
 fn graph_status(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: medulla_agent_types::agent_graph::AgentGraphStatusRequest,
@@ -717,7 +717,7 @@ pub async fn handle_agent_library(
 
 #[cfg(feature = "redb")]
 fn library_publish(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: Box<medulla_agent_types::agent_library::AgentLibraryPublishRequest>,
@@ -751,7 +751,7 @@ fn library_publish(
 
 #[cfg(feature = "redb")]
 fn library_retire(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: medulla_agent_types::agent_library::AgentLibraryRetireRequest,
@@ -781,7 +781,7 @@ fn library_retire(
 
 #[cfg(feature = "redb")]
 fn library_current(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
     tenant_id: String,
@@ -806,7 +806,7 @@ fn library_current(
 
 #[cfg(feature = "redb")]
 fn library_history(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
     tenant_id: String,
@@ -831,7 +831,7 @@ fn library_history(
 
 #[cfg(feature = "redb")]
 fn library_status(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
     mut request: medulla_agent_types::agent_library::AgentLibraryStatusRequest,

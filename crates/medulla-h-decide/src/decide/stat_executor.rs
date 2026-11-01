@@ -29,7 +29,7 @@ use medulla_decision_stats::{decision::ladder::decide, decision::ladder::LadderI
 use medulla_types::contract::BoundedVec;
 
 use super::stat_support::{pinned_body, refusal, ResolvedPolicy};
-use medulla_persistence::agent_library::AgentLibraryStore;
+use medulla_persistence_records::agent_library::AgentLibraryStore;
 
 /// What the executor needs besides the request.
 pub(super) struct ExecutionContext<'a> {

@@ -3,7 +3,7 @@
 //! imports and resolves (#656).
 
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use std::time::Instant;
 
 use medulla_catalog_types::{connector_pack::PackAnnotations, connector_pack::PackEntryKind};

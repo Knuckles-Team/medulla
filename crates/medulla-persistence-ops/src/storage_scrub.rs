@@ -15,7 +15,7 @@
 use medulla_store_apply::redb_store::scrub::ScrubBudget;
 use medulla_server_api::api::persistence::PersistenceBackend;
 #[cfg(feature = "redb")]
-use crate::AsRedb;
+use medulla_persistence::AsRedb;
 
 /// Default seconds between scrub steps.
 pub const DEFAULT_INTERVAL_SECS: u64 = 300;

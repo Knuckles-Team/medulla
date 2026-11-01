@@ -5,8 +5,8 @@ use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::auth::VerifiedRequestContext;
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
-use medulla_persistence::connector_pack::projection::ConnectorPackProjectionPlan;
-use medulla_persistence::connector_pack::projection::PackProjectionBody;
+use medulla_persistence_records::connector_pack::projection::ConnectorPackProjectionPlan;
+use medulla_persistence_records::connector_pack::projection::PackProjectionBody;
 use medulla_server_api::state::ServerState;
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
 use medulla_catalog_types::{connector_pack::PackEntryKind, connector_pack::PackProjectionState};
@@ -72,7 +72,7 @@ pub(crate) async fn project_head(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     context: medulla_agent_types::agent_library::AgentLibraryMutationContext,
     plan: &ConnectorPackProjectionPlan,
 ) -> Result<medulla_catalog_types::connector_pack::PackImportReceipt, String> {
@@ -95,7 +95,7 @@ async fn prepare_projection_request(
     request: medulla_catalog_types::connector_pack::ConnectorPackReprojectRequest,
 ) -> Result<
     (
-        Arc<medulla_persistence::agent_library::AgentLibraryStore>,
+        Arc<medulla_persistence_records::agent_library::AgentLibraryStore>,
         medulla_agent_types::agent_library::AgentLibraryMutationContext,
         ConnectorPackProjectionPlan,
     ),
@@ -109,7 +109,7 @@ async fn prepare_projection_request(
     let store = super::agent_library_store(state).await?;
     let plan =
         store.prepare_connector_pack_projection(&request.context.tenant_id, &request.connector)?;
-    let context = medulla_persistence::agent_library::context::bind_agent_library_context(
+    let context = medulla_persistence_records::agent_library::context::bind_agent_library_context(
         &store,
         req_id,
         verified,
@@ -157,7 +157,7 @@ async fn commit_schema_projection(
 
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
 fn finish_projection(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     context: medulla_agent_types::agent_library::AgentLibraryMutationContext,
     plan: &ConnectorPackProjectionPlan,
     committed: medulla_catalog_types::graph_schema::GraphSchemaCommitted,
@@ -188,7 +188,7 @@ fn finish_projection(
 
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
 fn record_projection_failure(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     context: &medulla_agent_types::agent_library::AgentLibraryMutationContext,
     plan: &ConnectorPackProjectionPlan,
     error: &str,

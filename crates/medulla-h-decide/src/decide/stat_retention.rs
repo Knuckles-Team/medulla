@@ -29,8 +29,8 @@ use super::stat_executor::ExecutionContext;
 use super::stat_log::{visible_entry, LogReader, MAX_LOG_ROWS};
 use super::stat_replay::replay;
 use super::stat_support::{refusal, resolve_policy};
-use medulla_persistence::decision_jobs::decode_artifact;
-use medulla_persistence::decision_jobs::encode_artifact;
+use medulla_persistence_records::decision_jobs::decode_artifact;
+use medulla_persistence_records::decision_jobs::encode_artifact;
 
 /// The blob store and the authority its holder changes are made under.
 pub(super) struct Retention {

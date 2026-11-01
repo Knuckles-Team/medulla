@@ -1830,7 +1830,7 @@ fn spawn_lifecycle_sweeps(state: &Arc<tokio::sync::RwLock<ServerState>>, txn_ttl
     {
         let scrub_state = state.clone();
         spawn_periodic_sweep(
-            medulla_persistence::storage_scrub::interval_secs(),
+            medulla_persistence_ops::storage_scrub::interval_secs(),
             "storage_scrub",
             move || server_startup::storage_scrub_tick(scrub_state.clone()),
         );

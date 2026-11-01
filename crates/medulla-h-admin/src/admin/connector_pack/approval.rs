@@ -33,7 +33,7 @@ pub(crate) async fn serve(
             Ok(store) => store,
             Err(error) => return Response::err(req_id, error),
         };
-        let context = match medulla_persistence::agent_library::context::bind_agent_library_context(
+        let context = match medulla_persistence_records::agent_library::context::bind_agent_library_context(
             &store,
             req_id,
             verified,

@@ -14,9 +14,9 @@ use medulla_decision_types::{
 use medulla_types::contract::BoundedVec;
 
 use super::stat_support::refusal;
-use medulla_persistence::agent_library::AgentLibraryStore;
-use medulla_persistence::decision_jobs::decode_artifact;
-use medulla_persistence::decision_jobs::encode_artifact;
+use medulla_persistence_records::agent_library::AgentLibraryStore;
+use medulla_persistence_records::decision_jobs::decode_artifact;
+use medulla_persistence_records::decision_jobs::encode_artifact;
 
 /// Who moves which pointer, and when.
 pub(super) struct PointerMove<'a> {

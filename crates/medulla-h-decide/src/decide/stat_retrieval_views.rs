@@ -30,7 +30,7 @@ use super::stat_pointer::pointer_events;
 use super::stat_retrieval::{judged_outcomes, JudgedOutcome, Scope};
 use super::stat_support::default_statistical_policy;
 use super::stat_view::{millis, producer, relation, text, wire_name, Col};
-use medulla_persistence::agent_library::AgentLibraryStore;
+use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_server_api::sql_catalog_acl::relations::Relation;
 
 /// Digest domain of a path template.

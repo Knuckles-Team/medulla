@@ -8,14 +8,14 @@ use medulla_catalog_types::connector_pack::{
 use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 use medulla_mutation_types::{mutation::MutationReceipt, mutation::MutationResult};
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_protocol_types::mutation_batch::MutationBatchRecord;
 use medulla_protocol_types::mutation_batch::MutationBatchStatus;
 use medulla_types::contract::{Digest256, Nonce};
 
-use medulla_persistence::agent_library::AgentLibraryStore;
-use medulla_persistence::connector_pack::admitted::PackWriteEffects;
-use medulla_persistence::connector_pack::admitted::PackWriteIdentity;
+use medulla_persistence_records::agent_library::AgentLibraryStore;
+use medulla_persistence_records::connector_pack::admitted::PackWriteEffects;
+use medulla_persistence_records::connector_pack::admitted::PackWriteIdentity;
 
 use super::{
     bind, build_pack, head_of, imported, snapshot, tool, Served, ADMIN, CONNECTOR, TENANT,
