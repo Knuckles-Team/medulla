@@ -7,7 +7,7 @@ use super::reconciliation::{
     SEMANTIC_RECONCILIATION_MAX_ENTITY_BYTES, SEMANTIC_RECONCILIATION_MAX_REVISION_BYTES,
 };
 use super::{corrupt, ensure, refused, SemanticCodeError};
-use medulla_types::semantic_index::SemanticDigest;
+use medulla_index_types::semantic_index::SemanticDigest;
 
 /// Largest encoded checkpoint accepted in either direction.
 const MAX_ENCODED_BYTES: usize = 16 * 1024;

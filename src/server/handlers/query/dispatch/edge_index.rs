@@ -10,6 +10,10 @@
 //! may not see is absent from that view, and the edge's own visibility metadata
 //! is checked inside the walk with the same rule the graph applies.
 
+use medulla_index_types::{
+    managed_index as wire, managed_index::EdgeIndexOp, managed_index::EdgeIndexStatusView,
+    managed_index::EdgeSearchHit, managed_index::EdgeSearchView,
+};
 use medulla_query::edge_index::{
     create_durable_edge_index, drop_durable_edge_index, edge_index, install_edge_indexes,
     refresh_durable_edge_index, EdgeIndexKind, EdgeIndexSpec, EdgeQuery, EdgeScope,
@@ -17,9 +21,6 @@ use medulla_query::edge_index::{
 };
 use medulla_query::VectorMetric;
 use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
-use medulla_types::managed_index::{
-    self as wire, EdgeIndexOp, EdgeIndexStatusView, EdgeSearchHit, EdgeSearchView,
-};
 
 use super::*;
 
@@ -81,7 +82,7 @@ fn apply_edge_index_op(
     tenant: &str,
     op: EdgeIndexOp,
 ) -> Result<(), String> {
-    let block_error = |block: medulla_types::managed_index::IndexBlock| {
+    let block_error = |block: medulla_index_types::managed_index::IndexBlock| {
         format!("{}: {}", block.reason.as_str(), block.detail)
     };
     match op {

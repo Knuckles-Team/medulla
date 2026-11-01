@@ -23,6 +23,32 @@ use super::stage::stage_intent_outbox;
 use super::{ExistingTenantOwnerOpen, OperationAttribution, SemanticCodeStore};
 use crate::compute::semantic::SemanticStore;
 use crate::test_scope_grant::{TestScopeVerifier, TEST_PRINCIPAL, TEST_PROOF};
+use medulla_index_types::embedding::EmbeddingSpaceRef;
+use medulla_index_types::{
+    semantic_index::SemanticActivationTarget, semantic_index::SemanticActivePointer,
+    semantic_index::SemanticAnnIndexManifest, semantic_index::SemanticAnnIndexMethod,
+    semantic_index::SemanticAnnIndexSpec, semantic_index::SemanticAuthorizationReceipt,
+    semantic_index::SemanticAuthorizationReceiptDraft, semantic_index::SemanticBinding,
+    semantic_index::SemanticBindingDraft, semantic_index::SemanticBindingState,
+    semantic_index::SemanticBindingStateTransition, semantic_index::SemanticDeadLetter,
+    semantic_index::SemanticDeadLetterDraft, semantic_index::SemanticDigest,
+    semantic_index::SemanticExpectedEntity, semantic_index::SemanticGenerationAggregate,
+    semantic_index::SemanticGenerationArtifact, semantic_index::SemanticGenerationCheckpoint,
+    semantic_index::SemanticGenerationCheckpointDraft,
+    semantic_index::SemanticGenerationCheckpointUpdate,
+    semantic_index::SemanticGenerationDependency, semantic_index::SemanticGenerationMember,
+    semantic_index::SemanticIndexMutation, semantic_index::SemanticLexicalIndexManifest,
+    semantic_index::SemanticLexicalIndexSpec, semantic_index::SemanticModelIdentity,
+    semantic_index::SemanticPolicyComponents, semantic_index::SemanticSourceProgress,
+    semantic_index::SemanticSourceSelector, semantic_index::SemanticSqlSourceIdentity,
+    semantic_index::SemanticSqlSourceManifest, semantic_index::SemanticSqlSourceManifestDraft,
+    semantic_index::SemanticStage, semantic_index::SemanticStageArtifact,
+    semantic_index::SemanticStageIntent, semantic_index::SemanticStageIntentDraft,
+    semantic_index::SemanticStageOutcome, semantic_index::SemanticStagePredecessor,
+    semantic_index::SemanticStageReceipt, semantic_index::SemanticStageScope,
+    semantic_index::SemanticStageTransition, semantic_index::SemanticVectorMetric,
+    semantic_index::SqlColumnRef, semantic_index::SEMANTIC_SQL_CATALOG_ID,
+};
 use medulla_storage::{
     OwnerLayout, PhysicalStoreIdentity, ScopeGrantVerifier, ANN_CODES, SEMANTIC_ANN,
     SEMANTIC_BINDINGS, SEMANTIC_CHECKPOINTS, SEMANTIC_CHECKPOINT_HEADS, SEMANTIC_DEAD_LETTERS,
@@ -31,23 +57,6 @@ use medulla_storage::{
 };
 use medulla_types::contract::Nonce;
 use medulla_types::mutation_scope::MutationOutboxIntent;
-use medulla_types::semantic_index::{
-    SemanticActivationTarget, SemanticActivePointer, SemanticAnnIndexManifest,
-    SemanticAnnIndexMethod, SemanticAnnIndexSpec, SemanticAuthorizationReceipt,
-    SemanticAuthorizationReceiptDraft, SemanticBinding, SemanticBindingDraft, SemanticBindingState,
-    SemanticBindingStateTransition, SemanticDeadLetter, SemanticDeadLetterDraft, SemanticDigest,
-    SemanticExpectedEntity, SemanticGenerationAggregate, SemanticGenerationArtifact,
-    SemanticGenerationCheckpoint, SemanticGenerationCheckpointDraft,
-    SemanticGenerationCheckpointUpdate, SemanticGenerationDependency, SemanticGenerationMember,
-    SemanticIndexMutation, SemanticLexicalIndexManifest, SemanticLexicalIndexSpec,
-    SemanticModelIdentity, SemanticPolicyComponents, SemanticSourceProgress,
-    SemanticSourceSelector, SemanticSqlSourceIdentity, SemanticSqlSourceManifest,
-    SemanticSqlSourceManifestDraft, SemanticStage, SemanticStageArtifact, SemanticStageIntent,
-    SemanticStageIntentDraft, SemanticStageOutcome, SemanticStagePredecessor, SemanticStageReceipt,
-    SemanticStageScope, SemanticStageTransition, SemanticVectorMetric, SqlColumnRef,
-    SEMANTIC_SQL_CATALOG_ID,
-};
-use medulla_types::EmbeddingSpaceRef;
 // `ReadableTable` only: it is the trait that puts `.get()` on the kernel's own
 // returned table handles, and `semantic_arch_gate` deliberately excludes
 // `redb::Table`/`redb::ReadOnlyTable` from its forbidden set for exactly that
@@ -311,7 +320,7 @@ fn generation_checkpoint_fixture(stage: SemanticStage) -> GenerationCheckpointFi
 
 /// A first-stage (`SourceCommit`) intent for one entity of `binding`.
 pub(super) fn source_commit_intent(
-    binding: &medulla_types::semantic_index::SemanticBinding,
+    binding: &medulla_index_types::semantic_index::SemanticBinding,
     entity: &str,
     input_digest: SemanticDigest,
 ) -> SemanticStageIntent {

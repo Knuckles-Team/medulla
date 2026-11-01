@@ -30,7 +30,7 @@ impl SemanticIndexService {
     pub fn claim_stage_class(
         &self,
         worker: &str,
-        class: medulla_types::semantic_index::SemanticQueueClass,
+        class: medulla_index_types::semantic_index::SemanticQueueClass,
         budget: &mut OutboxClaimBudget,
     ) -> Result<OutboxClaimOutcome, SemanticCodeError> {
         self.store.claim_stage_class(worker, class, budget)

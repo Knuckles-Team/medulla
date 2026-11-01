@@ -150,9 +150,6 @@ pub mod quality;
 pub mod asset_usage;
 // MEDULLA-ENGINE-PARITY-R020.1 — relational engine capability report.
 pub mod engine_capabilities;
-// MEDULLA-UNIFIED-DATA-PLANE-R030.2/.3/.700 — blocking, Fellegi-Sunter scoring,
-// approval and identity evidence over entity link proposals.
-pub mod entity_resolution;
 // MEDULLA-UNIFIED-DATA-PLANE-R028.1 — typed Postgres-equivalence differential
 // deviation baseline, refusing a baseline update that drops a deviation
 // without an explicit resolution record (no self-updating baseline). Pure
@@ -206,13 +203,6 @@ pub mod atomic_primitive;
 // one admission maps to exactly one commit with order-preserving replies.
 // Pure serde, no dep.
 pub mod pipeline_batch;
-// CONCEPT:MEDULLA-KG.sharding.semantic-embedding-store-backed — the pinned embedding-space
-// identity (`EmbeddingSpaceRef`) + stamped-vector (`StampedVector`) currency shared
-// by BOTH `medulla-core::compute::semantic` backends, plus their two dimensionality
-// ceilings. Pure serde, no dep — unconditional like `commit_descriptor`/
-// `row_predicate`, since `medulla-core` needs it on both sides of its backend `#[cfg]`
-// split.
-pub mod embedding;
 // MEDULLA-DURABLE-KERNEL-R038 — the declared durability class (ephemeral/async/sync)
 // a KV namespace or table carries. Pure serde, no dep.
 pub mod durability_class;
@@ -252,8 +242,6 @@ pub mod mirror_sink;
 // the wire, and `protocol` is bottom-of-DAG. Pure serde — no dep.
 #[cfg(feature = "knowledge-batch")]
 pub mod knowledge_stream;
-/// User-managed indexes and edge-native search on the wire (EH-351 / EH-352).
-pub mod managed_index;
 #[cfg(feature = "modality-serving")]
 pub mod modality;
 pub mod msgpack;
@@ -288,10 +276,6 @@ pub mod runtime_limit;
 pub mod sealed_record;
 // EH-522 — the series-expression algebra (`DERIVE` columns, derived series). Pure serde.
 pub mod series_expr;
-// RF-019 — the sole transport-neutral semantic-index contract.  Runtime
-// storage, queues, handlers, and surface projections live in crates above this
-// bottom-of-DAG owner and must consume these exact operation and identity DTOs.
-pub mod semantic_index;
 // MEDULLA-SCM-R002 — the source changeset record and its structured trailers.
 pub mod source_changeset;
 // MEDULLA-SCM-R013 — graph-native symbol edits.
@@ -351,9 +335,6 @@ pub mod write_back;
 // CONCEPT:MEDULLA-KG.query.compound-predicate-decode — the serializable compound-WHERE predicate AST lives at the
 // bottom of the DAG so `medulla-core` can evaluate it; `medulla-query` decodes SQL into it.
 // CONCEPT:MEDULLA-KG.compute.uncertainty-values — surface the distribution VALUE at the crate root for callers.
-pub use embedding::{
-    EmbeddingSpaceRef, StampedVector, MAX_EMBEDDING_DIMENSIONS, MAX_MAINTAINED_ANN_DIMENSIONS,
-};
 #[cfg(feature = "knowledge-batch")]
 pub use knowledge_stream::{
     KnowledgeResultFamily, KnowledgeStreamBatch, KnowledgeStreamCursor, KnowledgeStreamProjection,

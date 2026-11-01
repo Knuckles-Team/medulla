@@ -151,11 +151,11 @@ $($variants)*
     // ── User-managed edge-native indexes (EH-351 / EH-352) ─────────────────
     /// Create, refresh, drop or list the edge indexes of the request graph.
     EdgeIndex {
-        op: Box<medulla_types::managed_index::EdgeIndexOp>,
+        op: Box<medulla_index_types::managed_index::EdgeIndexOp>,
     },
     /// Search one edge index of the request graph; edges come back as edges.
     EdgeSearch {
-        request: Box<medulla_types::managed_index::EdgeSearchRequest>,
+        request: Box<medulla_index_types::managed_index::EdgeSearchRequest>,
     },
         ]);
     };

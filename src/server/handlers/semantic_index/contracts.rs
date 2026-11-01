@@ -7,6 +7,7 @@ use medulla_core::compute::semantic_index_service::{
     SemanticSqlSourcePageAdmission as RuntimePageAdmission,
     SemanticSqlSourceReconciliationAdmission as RuntimeReconciliationAdmission,
 };
+use medulla_index_types::semantic_index::SemanticStageTransition;
 use medulla_protocol_types::{
     result_contract::ingestion::SemanticMutationReceipt,
     result_contract::ingestion::SemanticOutboxStatus,
@@ -14,7 +15,6 @@ use medulla_protocol_types::{
     result_contract::ingestion::SemanticSqlSourceReconciliationAdmission,
 };
 use medulla_transaction::OutboxStatus;
-use medulla_types::semantic_index::SemanticStageTransition;
 
 pub(super) fn receipt(value: RuntimeReceipt) -> SemanticMutationReceipt {
     SemanticMutationReceipt {

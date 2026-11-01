@@ -20,7 +20,7 @@ pub(super) fn validate_source_dirty_record(
             field: "outbox_record".to_string(),
             reason,
         })?;
-    if record.intent.topic != medulla_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC {
+    if record.intent.topic != medulla_index_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC {
         return Err(SemanticIndexError::InvalidField {
             field: "outbox_topic".to_string(),
             reason: "semantic source dirty consumer received another topic".to_string(),
@@ -172,7 +172,7 @@ pub(super) fn source_dirty_intent(
         },
         source_revision: source_revision.to_string(),
         stage: SemanticStage::SourceCommit,
-        predecessor: medulla_types::semantic_index::SemanticStagePredecessor::None,
+        predecessor: medulla_index_types::semantic_index::SemanticStagePredecessor::None,
         input_digest,
     })
 }

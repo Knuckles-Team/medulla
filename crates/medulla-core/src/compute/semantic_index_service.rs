@@ -13,18 +13,23 @@ use std::collections::BTreeSet;
 use std::path::Path;
 use std::sync::Arc;
 
+use medulla_index_types::{
+    semantic_index::SemanticAuthorizationReceipt,
+    semantic_index::SemanticAuthorizationReceiptDraft, semantic_index::SemanticBinding,
+    semantic_index::SemanticBindingState, semantic_index::SemanticDigest,
+    semantic_index::SemanticGenerationArtifact, semantic_index::SemanticGenerationCheckpoint,
+    semantic_index::SemanticIndexError, semantic_index::SemanticIndexFilter,
+    semantic_index::SemanticSourceDirtyIntent, semantic_index::SemanticSqlSourceManifest,
+    semantic_index::SemanticSqlSourceManifestDraft, semantic_index::SemanticStage,
+    semantic_index::SemanticStageArtifact, semantic_index::SemanticStageIntent,
+    semantic_index::SemanticStageIntentDraft, semantic_index::SemanticStageScope,
+    semantic_index::SemanticStageTransition,
+};
 use medulla_storage::ScopeGrantVerifier;
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome, OutboxStatus};
 use medulla_types::contract::Nonce;
 use medulla_types::mutation_scope::MutationOutboxLease;
 use medulla_types::mutation_scope::MutationOutboxRecord;
-use medulla_types::semantic_index::{
-    SemanticAuthorizationReceipt, SemanticAuthorizationReceiptDraft, SemanticBinding,
-    SemanticBindingState, SemanticDigest, SemanticGenerationArtifact, SemanticGenerationCheckpoint,
-    SemanticIndexError, SemanticIndexFilter, SemanticSourceDirtyIntent, SemanticSqlSourceManifest,
-    SemanticSqlSourceManifestDraft, SemanticStage, SemanticStageArtifact, SemanticStageIntent,
-    SemanticStageIntentDraft, SemanticStageScope, SemanticStageTransition,
-};
 use sha2::{Digest, Sha256};
 
 use super::semantic::SemanticGenerationImage;
@@ -79,7 +84,7 @@ pub enum SemanticSqlSourceValue {
 /// One authorized row observation returned by the SQL source owner.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SemanticSqlSourceRecord {
-    pub source_identity: medulla_types::semantic_index::SemanticSqlSourceIdentity,
+    pub source_identity: medulla_index_types::semantic_index::SemanticSqlSourceIdentity,
     pub source_revision: String,
     pub value: SemanticSqlSourceValue,
     pub source_schema_revision: u64,
@@ -774,10 +779,12 @@ pub(super) fn semantic_binding_test_fixture(
     source_field_set_digest: &str,
     created_at: &str,
 ) -> SemanticBinding {
-    use medulla_types::semantic_index::{
-        SemanticAnnIndexMethod, SemanticAnnIndexSpec, SemanticBindingDraft,
-        SemanticLexicalIndexSpec, SemanticModelIdentity, SemanticPolicyComponents,
-        SemanticSourceSelector, SemanticVectorMetric, SqlColumnRef, SEMANTIC_SQL_CATALOG_ID,
+    use medulla_index_types::{
+        semantic_index::SemanticAnnIndexMethod, semantic_index::SemanticAnnIndexSpec,
+        semantic_index::SemanticBindingDraft, semantic_index::SemanticLexicalIndexSpec,
+        semantic_index::SemanticModelIdentity, semantic_index::SemanticPolicyComponents,
+        semantic_index::SemanticSourceSelector, semantic_index::SemanticVectorMetric,
+        semantic_index::SqlColumnRef, semantic_index::SEMANTIC_SQL_CATALOG_ID,
     };
 
     SemanticBinding::create(SemanticBindingDraft {

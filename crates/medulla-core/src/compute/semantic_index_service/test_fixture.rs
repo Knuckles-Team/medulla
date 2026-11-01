@@ -1,12 +1,16 @@
+use medulla_index_types::{
+    semantic_index::SemanticBinding, semantic_index::SemanticBindingState,
+    semantic_index::SemanticDigest, semantic_index::SemanticSqlSourceIdentity,
+    semantic_index::SqlColumnRef,
+};
+use medulla_index_types::{
+    semantic_index::SemanticIndexError, semantic_index::SemanticSourceDirtyIntent,
+};
 use medulla_storage::{OwnerLayout, PhysicalStoreIdentity, ScopeGrantVerifier};
 use medulla_transaction::OutboxClaimBudget;
 use medulla_types::contract::Nonce;
 use medulla_types::mutation_scope::MutationOutboxLease;
 use medulla_types::mutation_scope::MutationOutboxRecord;
-use medulla_types::semantic_index::{
-    SemanticBinding, SemanticBindingState, SemanticDigest, SemanticSqlSourceIdentity, SqlColumnRef,
-};
-use medulla_types::semantic_index::{SemanticIndexError, SemanticSourceDirtyIntent};
 use medulla_types::MutationScopeIdentity;
 use std::sync::{Arc, Mutex};
 

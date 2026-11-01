@@ -79,19 +79,22 @@ use medulla_core::compute::semantic_index_service::{
     sql_source_deletion_proof, sql_source_revision_for_epoch, SemanticSqlSourceReadPage,
     SemanticSqlSourceReadPort, SemanticSqlSourceRecord, SemanticSqlSourceValue,
 };
+use medulla_index_types::{
+    semantic_index::SemanticBinding, semantic_index::SemanticIndexCommand,
+    semantic_index::SemanticIndexError, semantic_index::SemanticIndexRequest,
+};
+#[cfg(feature = "query")]
+use medulla_index_types::{
+    semantic_index::SemanticDigest, semantic_index::SemanticSourceDirtyIntent,
+    semantic_index::SemanticSqlSourceIdentity, semantic_index::SemanticSqlSourceManifest,
+    semantic_index::SemanticStage, semantic_index::SemanticStageIntent,
+    semantic_index::SemanticStageTransition,
+};
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
 #[cfg(feature = "query")]
 use medulla_types::mutation_scope::MutationOutboxLease;
 #[cfg(feature = "query")]
 use medulla_types::mutation_scope::MutationOutboxRecord;
-use medulla_types::semantic_index::{
-    SemanticBinding, SemanticIndexCommand, SemanticIndexError, SemanticIndexRequest,
-};
-#[cfg(feature = "query")]
-use medulla_types::semantic_index::{
-    SemanticDigest, SemanticSourceDirtyIntent, SemanticSqlSourceIdentity,
-    SemanticSqlSourceManifest, SemanticStage, SemanticStageIntent, SemanticStageTransition,
-};
 
 fn request_validation_refusal(error: &SemanticIndexError) -> &'static str {
     match error {
@@ -527,7 +530,7 @@ impl SemanticSqlSourceReadPort for AuthorizedSqlSourceReadPort {
 #[cfg(feature = "query")]
 fn map_semantic_text_snapshot_with_decision(
     binding: &SemanticBinding,
-    selector: &medulla_types::semantic_index::SqlColumnRef,
+    selector: &medulla_index_types::semantic_index::SqlColumnRef,
     snapshot: SemanticTextSnapshot,
 ) -> Result<AuthorizedSqlSourcePage, SemanticIndexError> {
     if snapshot.tenant_scope != binding.tenant_id

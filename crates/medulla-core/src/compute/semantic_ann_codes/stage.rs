@@ -9,15 +9,18 @@ use super::{
     stage_consumer_parts, stage_intent_topic, SemanticCodeError, SemanticCodeStore,
     SemanticMutationReceipt, SEMANTIC_QUEUE_CLASSES, SEMANTIC_STAGE_RECEIPT_TOPIC,
 };
+use medulla_index_types::{
+    semantic_index::SemanticBindingState, semantic_index::SemanticDigest,
+    semantic_index::SemanticIndexMutation, semantic_index::SemanticQueueClass,
+    semantic_index::SemanticSourceProgress, semantic_index::SemanticStage,
+    semantic_index::SemanticStageIntent, semantic_index::SemanticStageIntentDraft,
+    semantic_index::SemanticStageOutcome, semantic_index::SemanticStagePredecessor,
+    semantic_index::SemanticStageScope, semantic_index::SemanticStageTransition,
+};
 use medulla_storage::{SemanticIndexOwner, SEMANTIC_SOURCE_PROGRESS};
 use medulla_transaction::{AdmittedMutation, OutboxClaimBudget, OutboxClaimOutcome};
 use medulla_types::mutation_scope::MutationOutboxIntent;
 use medulla_types::mutation_scope::MutationOutboxLease;
-use medulla_types::semantic_index::{
-    SemanticBindingState, SemanticDigest, SemanticIndexMutation, SemanticQueueClass,
-    SemanticSourceProgress, SemanticStage, SemanticStageIntent, SemanticStageIntentDraft,
-    SemanticStageOutcome, SemanticStagePredecessor, SemanticStageScope, SemanticStageTransition,
-};
 use medulla_types::MutationScopeIdentity;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
@@ -482,7 +485,7 @@ fn intent_headers(intent: &SemanticStageIntent) -> [(&'static str, String); 8] {
     [
         (
             "schema",
-            medulla_types::semantic_index::SEMANTIC_STAGE_INTENT_SCHEMA.to_string(),
+            medulla_index_types::semantic_index::SEMANTIC_STAGE_INTENT_SCHEMA.to_string(),
         ),
         ("binding_id", intent.binding_id.clone()),
         ("binding_digest", intent.binding_digest.to_string()),
@@ -515,7 +518,7 @@ pub(super) fn stage_receipt_headers(
     BTreeMap::from([
         (
             "schema".to_string(),
-            medulla_types::semantic_index::SEMANTIC_STAGE_TRANSITION_SCHEMA.to_string(),
+            medulla_index_types::semantic_index::SEMANTIC_STAGE_TRANSITION_SCHEMA.to_string(),
         ),
         ("binding_id".to_string(), intent.binding_id.clone()),
         (

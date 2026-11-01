@@ -11,7 +11,7 @@
 //! Each class now has its own topic and each worker one consumer per class,
 //! `<worker>#<class>`: a class can neither block nor dead-letter another's rows.
 
-use medulla_types::semantic_index::SemanticQueueClass;
+use medulla_index_types::semantic_index::SemanticQueueClass;
 
 /// Every queue class, in scheduling order.
 pub const SEMANTIC_QUEUE_CLASSES: [SemanticQueueClass; 3] = [

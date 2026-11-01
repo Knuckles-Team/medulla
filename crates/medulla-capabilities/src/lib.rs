@@ -149,7 +149,9 @@ fn agent_component_policy(
 /// feeding rows into an approved binding, taking work off the queue and
 /// declaring a stage durable are four different grants, and one action would
 /// hand every holder the union.
-fn semantic_index_policy(op: &medulla_types::semantic_index::SemanticIndexOp) -> MethodPolicy {
+fn semantic_index_policy(
+    op: &medulla_index_types::semantic_index::SemanticIndexOp,
+) -> MethodPolicy {
     native_owner_policy(
         op.is_mutation(),
         DurabilityDomain::SemanticIndexRedb,

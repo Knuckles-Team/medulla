@@ -112,15 +112,15 @@ pub(super) fn compiled_outbox(
         }
     }
     if let Some(input_digest) = outbox_plan.semantic_source_dirty_input {
-        let source_scope_digest = medulla_types::semantic_index::SemanticDigest::from_bytes(
+        let source_scope_digest = medulla_index_types::semantic_index::SemanticDigest::from_bytes(
             *identity.binding_digest().as_bytes(),
         );
-        let intent = medulla_types::semantic_index::SemanticSourceDirtyIntent::new(
+        let intent = medulla_index_types::semantic_index::SemanticSourceDirtyIntent::new(
             source_scope_digest,
             input_digest,
         );
         outbox.push(MutationOutboxIntent {
-            topic: medulla_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC.to_string(),
+            topic: medulla_index_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC.to_string(),
             key: batch_id.to_string(),
             payload: intent.to_canonical_cbor().map_err(|error| {
                 format!("semantic source-dirty intent encoding rejected: {error:?}")

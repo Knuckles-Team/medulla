@@ -6,7 +6,7 @@
 //! refusal, and both arms of the refresh revision rule (a SQL-sourced live
 //! head and a non-SQL one).
 
-use medulla_types::semantic_index::SemanticDigest;
+use medulla_index_types::semantic_index::SemanticDigest;
 use std::cmp::Ordering;
 
 use super::reconciliation::{

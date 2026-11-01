@@ -14,7 +14,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::contract::BoundedVec;
+use medulla_types::contract::BoundedVec;
 
 /// Longest diagnostic detail a status row carries, in bytes.
 pub const MAX_BLOCK_DETAIL_BYTES: usize = 256;

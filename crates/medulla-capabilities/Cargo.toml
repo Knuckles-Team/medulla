@@ -161,3 +161,4 @@ viz = ["medulla-types/viz", "medulla-protocol-types/viz"]
 medulla-decision-types = { path = "../medulla-decision-types", features = ["wire-contract"] }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["wire-contract"] }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["wire-contract"] }
+medulla-index-types = { path = "../medulla-index-types", features = ["wire-contract"] }

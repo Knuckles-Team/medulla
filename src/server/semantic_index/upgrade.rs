@@ -891,11 +891,14 @@ mod tests {
     fn populated_binding(
         tenant: &str,
         binding: &str,
-    ) -> medulla_types::semantic_index::SemanticBinding {
-        use medulla_types::semantic_index::{
-            SemanticAnnIndexMethod, SemanticAnnIndexSpec, SemanticBinding, SemanticBindingDraft,
-            SemanticLexicalIndexSpec, SemanticModelIdentity, SemanticPolicyComponents,
-            SemanticSourceSelector, SemanticVectorMetric, SqlColumnRef, SEMANTIC_SQL_CATALOG_ID,
+    ) -> medulla_index_types::semantic_index::SemanticBinding {
+        use medulla_index_types::{
+            semantic_index::SemanticAnnIndexMethod, semantic_index::SemanticAnnIndexSpec,
+            semantic_index::SemanticBinding, semantic_index::SemanticBindingDraft,
+            semantic_index::SemanticLexicalIndexSpec, semantic_index::SemanticModelIdentity,
+            semantic_index::SemanticPolicyComponents, semantic_index::SemanticSourceSelector,
+            semantic_index::SemanticVectorMetric, semantic_index::SqlColumnRef,
+            semantic_index::SEMANTIC_SQL_CATALOG_ID,
         };
         // The two legacy owners intentionally carry different policy, source,
         // and model identities so the merge proves heterogeneous rows survive.

@@ -25,15 +25,17 @@ use super::{
     corrupt, ensure, kernel_error, refused, semantic_contract_error, SemanticCodeError,
     SemanticCodeStore, SemanticMutationReceipt,
 };
+use medulla_index_types::{
+    semantic_index::SemanticDigest, semantic_index::SemanticIndexMutation,
+    semantic_index::SemanticSourceProgress, semantic_index::SemanticSqlSourceManifest,
+    semantic_index::SemanticStage, semantic_index::SemanticStageIntent,
+    semantic_index::SemanticStageOutcome, semantic_index::SemanticStagePredecessor,
+    semantic_index::SemanticStageTransition,
+};
 use medulla_storage::{SemanticIndexOwner, SEMANTIC_SOURCE_PROGRESS, SEMANTIC_STAGES};
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite};
 use medulla_types::mutation_scope::MutationOutboxIntent;
 use medulla_types::mutation_scope::MutationOutboxLease;
-use medulla_types::semantic_index::{
-    SemanticDigest, SemanticIndexMutation, SemanticSourceProgress, SemanticSqlSourceManifest,
-    SemanticStage, SemanticStageIntent, SemanticStageOutcome, SemanticStagePredecessor,
-    SemanticStageTransition,
-};
 use sha2::{Digest, Sha256};
 use std::cmp::Ordering;
 

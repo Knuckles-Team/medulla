@@ -11,6 +11,7 @@
 //! the parent module's per-generation-scope non-goal.
 
 use super::{corrupt, kernel_error, SemanticCodeError, SemanticMutationReceipt};
+use medulla_index_types::semantic_index::SemanticDigest;
 use medulla_protocol_types::mutation_batch::CompiledOperation;
 use medulla_protocol_types::mutation_batch::CompiledScope;
 use medulla_protocol_types::mutation_batch::MutationBatch;
@@ -28,7 +29,6 @@ use medulla_types::contract::Nonce;
 use medulla_types::mutation_scope::CommittedVersion;
 use medulla_types::mutation_scope::MutationOutboxLease;
 use medulla_types::mutation_scope::MutationProjectionCursor;
-use medulla_types::semantic_index::SemanticDigest;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};

@@ -6,18 +6,22 @@
 //! the rows it must refuse are seeded through the store's own serving-scope
 //! door, and each refusal is identified by the rule's own message.
 
+use medulla_index_types::{
+    semantic_index::SemanticBinding, semantic_index::SemanticDigest,
+    semantic_index::SemanticGenerationCheckpoint, semantic_index::SemanticGenerationDependency,
+    semantic_index::SemanticGenerationMember, semantic_index::SemanticIndexMutation,
+    semantic_index::SemanticSourceProgress, semantic_index::SemanticStage,
+    semantic_index::SemanticStageArtifact, semantic_index::SemanticStageIntent,
+    semantic_index::SemanticStageIntentDraft, semantic_index::SemanticStageOutcome,
+    semantic_index::SemanticStagePredecessor, semantic_index::SemanticStageReceipt,
+    semantic_index::SemanticStageScope,
+};
 use medulla_storage::{
     SemanticIndexOwner, SEMANTIC_AUTH_RECEIPTS, SEMANTIC_CHECKPOINTS, SEMANTIC_SOURCE_PROGRESS,
     SEMANTIC_SQL_SOURCES, SEMANTIC_STAGES,
 };
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite, OutboxClaimBudget};
 use medulla_types::mutation_scope::MutationOutboxLease;
-use medulla_types::semantic_index::{
-    SemanticBinding, SemanticDigest, SemanticGenerationCheckpoint, SemanticGenerationDependency,
-    SemanticGenerationMember, SemanticIndexMutation, SemanticSourceProgress, SemanticStage,
-    SemanticStageArtifact, SemanticStageIntent, SemanticStageIntentDraft, SemanticStageOutcome,
-    SemanticStagePredecessor, SemanticStageReceipt, SemanticStageScope,
-};
 
 use super::batch::{semantic_digest, MetadataMutation};
 use super::persist::{advance_checkpoint_head, put_bytes_once, store_checkpoint};

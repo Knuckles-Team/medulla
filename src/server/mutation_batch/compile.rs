@@ -281,7 +281,7 @@ pub(crate) fn compile_opaque_method_in_scope(
         CompiledOutbox {
             extra: Vec::new(),
             semantic_source_dirty_input: (domain == DurabilityDomain::SqlCatalog).then_some(
-                medulla_types::semantic_index::SemanticDigest::from_bytes(input_digest),
+                medulla_index_types::semantic_index::SemanticDigest::from_bytes(input_digest),
             ),
             #[cfg(feature = "epistemic-tms")]
             reasoning_events: vec![medulla_epistemic::IncrementalReasoningEvent::InvalidateAll],
@@ -315,7 +315,9 @@ pub(crate) fn compile_sql_source_batch(
         CompiledOutbox {
             extra: Vec::new(),
             semantic_source_dirty_input: Some(
-                medulla_types::semantic_index::SemanticDigest::from_bytes(*batch_digest.as_bytes()),
+                medulla_index_types::semantic_index::SemanticDigest::from_bytes(
+                    *batch_digest.as_bytes(),
+                ),
             ),
             #[cfg(feature = "epistemic-tms")]
             reasoning_events: vec![medulla_epistemic::IncrementalReasoningEvent::InvalidateAll],
@@ -496,7 +498,7 @@ pub(crate) struct CompiledOutbox {
     pub extra: Vec<MutationOutboxIntent>,
     /// Stable SQL operation input used to build a typed source-dirty intent
     /// after [`finish_batch`] has constructed the canonical native identity.
-    pub semantic_source_dirty_input: Option<medulla_types::semantic_index::SemanticDigest>,
+    pub semantic_source_dirty_input: Option<medulla_index_types::semantic_index::SemanticDigest>,
     /// The reasoning wake-up events the projection intent's payload encodes.
     /// Empty means the plain digest-only summary.
     #[cfg(feature = "epistemic-tms")]

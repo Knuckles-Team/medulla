@@ -14,16 +14,18 @@ use super::record::{decode_valid, row, row_bytes, ValidatedRow};
 use super::{
     ensure, kernel_error, refused, semantic_contract_error, SemanticCodeError, SemanticCodeStore,
 };
+use medulla_index_types::{
+    semantic_index::SemanticAnnIndexManifest, semantic_index::SemanticBinding,
+    semantic_index::SemanticDigest, semantic_index::SemanticGenerationCheckpoint,
+    semantic_index::SemanticLexicalIndexManifest, semantic_index::SemanticSourceProgress,
+    semantic_index::SemanticStage, semantic_index::SemanticStageIntent,
+    semantic_index::SemanticStagePredecessor,
+};
 use medulla_storage::{
     ScopedRead, SemanticIndexOwner, SEMANTIC_ANN, SEMANTIC_CHECKPOINTS, SEMANTIC_CHECKPOINT_HEADS,
     SEMANTIC_LEXICAL, SEMANTIC_SOURCE_PROGRESS, SEMANTIC_STAGES,
 };
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite};
-use medulla_types::semantic_index::{
-    SemanticAnnIndexManifest, SemanticBinding, SemanticDigest, SemanticGenerationCheckpoint,
-    SemanticLexicalIndexManifest, SemanticSourceProgress, SemanticStage, SemanticStageIntent,
-    SemanticStagePredecessor,
-};
 
 /// The refusal wording one proof site reports.
 struct PredecessorWording {

@@ -156,19 +156,24 @@ fn outbox_contains_only_bound_digests_and_generic_invalidation() {
     let dirty = compiled
         .outbox
         .iter()
-        .find(|intent| intent.topic == medulla_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC)
+        .find(|intent| {
+            intent.topic == medulla_index_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC
+        })
         .unwrap();
-    let intent = medulla_types::semantic_index::SemanticSourceDirtyIntent::from_canonical_cbor(
-        &dirty.payload,
-    )
-    .unwrap();
+    let intent =
+        medulla_index_types::semantic_index::SemanticSourceDirtyIntent::from_canonical_cbor(
+            &dirty.payload,
+        )
+        .unwrap();
     assert_eq!(
         intent.input_digest,
-        medulla_types::semantic_index::SemanticDigest::from_bytes(*digests.batch_digest.as_bytes())
+        medulla_index_types::semantic_index::SemanticDigest::from_bytes(
+            *digests.batch_digest.as_bytes()
+        )
     );
     assert_eq!(
         intent.source_scope_digest,
-        medulla_types::semantic_index::SemanticDigest::from_bytes(
+        medulla_index_types::semantic_index::SemanticDigest::from_bytes(
             *compiled.identity.binding_digest().as_bytes()
         )
     );
@@ -253,7 +258,7 @@ fn generic_opaque_compiler_keeps_original_applymutation_bytes() {
         CompiledOutbox {
             extra: Vec::new(),
             semantic_source_dirty_input: Some(
-                medulla_types::semantic_index::SemanticDigest::from_bytes(input_digest),
+                medulla_index_types::semantic_index::SemanticDigest::from_bytes(input_digest),
             ),
             #[cfg(feature = "epistemic-tms")]
             reasoning_events: vec![medulla_epistemic::IncrementalReasoningEvent::InvalidateAll],

@@ -10,22 +10,30 @@
 use std::cell::Cell;
 use std::path::PathBuf;
 
+use medulla_index_types::{
+    semantic_index::SemanticAnnIndexManifest, semantic_index::SemanticBinding,
+    semantic_index::SemanticBindingState, semantic_index::SemanticDeadLetter,
+    semantic_index::SemanticDeadLetterDraft, semantic_index::SemanticDigest,
+    semantic_index::SemanticExpectedEntity, semantic_index::SemanticGenerationAggregate,
+    semantic_index::SemanticGenerationArtifact, semantic_index::SemanticGenerationCheckpoint,
+    semantic_index::SemanticGenerationCheckpointDraft,
+    semantic_index::SemanticGenerationCheckpointUpdate,
+    semantic_index::SemanticGenerationDependency, semantic_index::SemanticGenerationMember,
+    semantic_index::SemanticGraphProjectionManifest,
+    semantic_index::SemanticGraphProjectionManifestDraft, semantic_index::SemanticIndexFilter,
+    semantic_index::SemanticLexicalIndexManifest, semantic_index::SemanticQueueClass,
+    semantic_index::SemanticSourceProgress, semantic_index::SemanticSqlSourceIdentity,
+    semantic_index::SemanticStage, semantic_index::SemanticStageArtifact,
+    semantic_index::SemanticStageIntent, semantic_index::SemanticStageIntentDraft,
+    semantic_index::SemanticStageOutcome, semantic_index::SemanticStagePredecessor,
+    semantic_index::SemanticStageReceipt, semantic_index::SemanticStageScope,
+    semantic_index::SemanticStageTransition, semantic_index::SemanticVector,
+};
 use medulla_storage::SEMANTIC_SOURCE_PROGRESS;
 use medulla_transaction::{OutboxClaimBudget, OutboxWrite, OutboxWriteReply};
 use medulla_types::contract::Nonce;
 use medulla_types::mutation_outbox::RewindTarget;
 use medulla_types::mutation_scope::MutationOutboxLease;
-use medulla_types::semantic_index::{
-    SemanticAnnIndexManifest, SemanticBinding, SemanticBindingState, SemanticDeadLetter,
-    SemanticDeadLetterDraft, SemanticDigest, SemanticExpectedEntity, SemanticGenerationAggregate,
-    SemanticGenerationArtifact, SemanticGenerationCheckpoint, SemanticGenerationCheckpointDraft,
-    SemanticGenerationCheckpointUpdate, SemanticGenerationDependency, SemanticGenerationMember,
-    SemanticGraphProjectionManifest, SemanticGraphProjectionManifestDraft, SemanticIndexFilter,
-    SemanticLexicalIndexManifest, SemanticQueueClass, SemanticSourceProgress,
-    SemanticSqlSourceIdentity, SemanticStage, SemanticStageArtifact, SemanticStageIntent,
-    SemanticStageIntentDraft, SemanticStageOutcome, SemanticStagePredecessor, SemanticStageReceipt,
-    SemanticStageScope, SemanticStageTransition, SemanticVector,
-};
 
 use super::tests::{
     completed_sql_source_artifact, open_store, pending_binding, source_commit_intent,

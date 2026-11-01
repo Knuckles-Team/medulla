@@ -22,14 +22,17 @@ use super::{
     SemanticCodeStore, SemanticMutationReceipt,
 };
 use crate::compute::semantic::SemanticGenerationImage;
+use medulla_index_types::{
+    semantic_index::SemanticActivePointer, semantic_index::SemanticBinding,
+    semantic_index::SemanticBindingState, semantic_index::SemanticBindingStateTransition,
+    semantic_index::SemanticGenerationArtifact, semantic_index::SemanticGenerationCheckpoint,
+    semantic_index::SemanticIndexMutation, semantic_index::SemanticStage,
+    semantic_index::SemanticStageIntent, semantic_index::SemanticStageOutcome,
+    semantic_index::SemanticStageScope, semantic_index::SemanticStageTransition,
+};
 use medulla_storage::{SemanticIndexOwner, ANN_CODES, SEMANTIC_POINTERS};
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite};
 use medulla_types::mutation_scope::MutationOutboxLease;
-use medulla_types::semantic_index::{
-    SemanticActivePointer, SemanticBinding, SemanticBindingState, SemanticBindingStateTransition,
-    SemanticGenerationArtifact, SemanticGenerationCheckpoint, SemanticIndexMutation, SemanticStage,
-    SemanticStageIntent, SemanticStageOutcome, SemanticStageScope, SemanticStageTransition,
-};
 use sha2::{Digest, Sha256};
 
 /// The dimension and model digest an ANN image describes itself with.

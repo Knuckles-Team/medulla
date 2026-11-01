@@ -33,7 +33,10 @@ use std::sync::Arc;
 
 use medulla_core::compute::semantic_ann_codes::SemanticCodeError;
 use medulla_core::compute::semantic_index_service::SemanticIndexService;
-use medulla_types::semantic_index::{SemanticBinding, SemanticIndexError, SemanticIndexOp};
+use medulla_index_types::{
+    semantic_index::SemanticBinding, semantic_index::SemanticIndexError,
+    semantic_index::SemanticIndexOp,
+};
 use tokio::sync::RwLock;
 
 use crate::protocol::{Response, ResultPayload};
@@ -177,7 +180,7 @@ async fn open_service(
 /// no path on which a draft reaches admission carrying an identity the carrier
 /// did not prove.
 pub(super) fn stamp_draft_identity(
-    draft: &mut medulla_types::semantic_index::SemanticBindingDraft,
+    draft: &mut medulla_index_types::semantic_index::SemanticBindingDraft,
     authority: &CarrierAuthority,
 ) {
     draft.tenant_id = authority.tenant_scope().to_string();

@@ -5,10 +5,12 @@ use super::reconciliation::SEMANTIC_RECONCILIATION_CHECKPOINT_ENTITY;
 use super::record::{decode, row_bytes};
 use super::stage::{is_stage_receipt_index_key, is_terminal};
 use super::{corrupt, ensure, kernel_error, refused, semantic_contract_error, SemanticCodeError};
-use medulla_types::semantic_index::{
-    SemanticDigest, SemanticExpectedEntity, SemanticGenerationAggregate,
-    SemanticGenerationCheckpoint, SemanticGenerationDependency, SemanticGenerationMember,
-    SemanticIndexMutation, SemanticSourceProgress, SemanticStage, SemanticStageIntent,
+use medulla_index_types::{
+    semantic_index::SemanticDigest, semantic_index::SemanticExpectedEntity,
+    semantic_index::SemanticGenerationAggregate, semantic_index::SemanticGenerationCheckpoint,
+    semantic_index::SemanticGenerationDependency, semantic_index::SemanticGenerationMember,
+    semantic_index::SemanticIndexMutation, semantic_index::SemanticSourceProgress,
+    semantic_index::SemanticStage, semantic_index::SemanticStageIntent,
 };
 use std::collections::BTreeMap;
 

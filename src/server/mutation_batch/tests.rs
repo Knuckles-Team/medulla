@@ -986,23 +986,26 @@ fn sql_catalog_compile_declares_one_retry_stable_typed_source_dirty_intent() {
     let source_dirty = first
         .outbox
         .iter()
-        .filter(|intent| intent.topic == medulla_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC)
+        .filter(|intent| {
+            intent.topic == medulla_index_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC
+        })
         .collect::<Vec<_>>();
     assert_eq!(source_dirty.len(), 1);
-    let decoded = medulla_types::semantic_index::SemanticSourceDirtyIntent::from_canonical_cbor(
-        &source_dirty[0].payload,
-    )
-    .unwrap();
+    let decoded =
+        medulla_index_types::semantic_index::SemanticSourceDirtyIntent::from_canonical_cbor(
+            &source_dirty[0].payload,
+        )
+        .unwrap();
     assert_eq!(
         decoded.source_scope_digest,
-        medulla_types::semantic_index::SemanticDigest::from_bytes(
+        medulla_index_types::semantic_index::SemanticDigest::from_bytes(
             *first.identity.binding_digest().as_bytes()
         )
     );
     let encoded_method = rmp_serde::to_vec_named(&method).unwrap();
     assert_eq!(
         decoded.input_digest,
-        medulla_types::semantic_index::SemanticDigest::from_bytes(
+        medulla_index_types::semantic_index::SemanticDigest::from_bytes(
             sha2::Sha256::digest(encoded_method).into()
         )
     );
@@ -1011,7 +1014,9 @@ fn sql_catalog_compile_declares_one_retry_stable_typed_source_dirty_intent() {
     let retry_source_dirty = retry
         .outbox
         .iter()
-        .find(|intent| intent.topic == medulla_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC)
+        .find(|intent| {
+            intent.topic == medulla_index_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC
+        })
         .unwrap();
     assert_eq!(
         retry_source_dirty.payload, source_dirty[0].payload,
@@ -1044,7 +1049,7 @@ fn sql_catalog_compile_declares_one_retry_stable_typed_source_dirty_intent() {
     )
     .unwrap();
     assert!(non_sql.outbox.iter().all(|intent| {
-        intent.topic != medulla_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC
+        intent.topic != medulla_index_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC
     }));
 }
 
@@ -1087,7 +1092,7 @@ fn sql_source_rows_receipt_version_and_dirty_intent_commit_and_replay_atomically
     let dirty = durable_outbox
         .iter()
         .find(|record| {
-            record.intent.topic == medulla_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC
+            record.intent.topic == medulla_index_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC
         })
         .expect("the SQL owner transaction persists its typed source-dirty intent");
     assert_eq!(dirty.committed_version, committed.record.committed_version);

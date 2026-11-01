@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
+use medulla_index_types::semantic_index::SemanticIndexOp;
 use medulla_protocol_types::result_contract::ingestion as ingestion_results;
-use medulla_types::semantic_index::SemanticIndexOp;
 
 use crate::protocol::Response;
 
@@ -85,8 +85,8 @@ async fn admit_reconcile(
 
 async fn admit_replacement(
     ctx: &SemanticIndexContext<'_>,
-    draft: Box<medulla_types::semantic_index::SemanticBindingDraft>,
-    source_manifest: medulla_types::semantic_index::SemanticSqlSourceManifestDraft,
+    draft: Box<medulla_index_types::semantic_index::SemanticBindingDraft>,
+    source_manifest: medulla_index_types::semantic_index::SemanticSqlSourceManifestDraft,
     record: medulla_types::mutation_scope::MutationOutboxRecord,
 ) -> Response {
     let (replacement, manifest) = match checked_replacement(ctx, draft, source_manifest) {

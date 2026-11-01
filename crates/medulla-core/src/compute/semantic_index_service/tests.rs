@@ -12,17 +12,20 @@ use super::{
     SemanticSqlSourceValue,
 };
 use crate::test_scope_grant::{TEST_PRINCIPAL, TEST_PROOF};
+use medulla_index_types::{
+    semantic_index::SemanticBinding, semantic_index::SemanticDigest,
+    semantic_index::SemanticIndexError, semantic_index::SemanticSourceDirtyIntent,
+    semantic_index::SemanticStageArtifact, semantic_index::SemanticStageIntent,
+    semantic_index::SemanticStageOutcome, semantic_index::SemanticStageReceipt,
+    semantic_index::SemanticStageTransition, semantic_index::SqlColumnRef,
+    semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC, semantic_index::SEMANTIC_SQL_CATALOG_ID,
+};
 use medulla_types::mutation_scope::CommittedVersion;
 use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationOutboxIntent;
 use medulla_types::mutation_scope::MutationOutboxRecord;
 use medulla_types::mutation_scope::MutationScopeIdentity;
 use medulla_types::mutation_scope::MUTATION_BATCH_VERSION;
-use medulla_types::semantic_index::{
-    SemanticBinding, SemanticDigest, SemanticIndexError, SemanticSourceDirtyIntent,
-    SemanticStageArtifact, SemanticStageIntent, SemanticStageOutcome, SemanticStageReceipt,
-    SemanticStageTransition, SqlColumnRef, SEMANTIC_SOURCE_DIRTY_TOPIC, SEMANTIC_SQL_CATALOG_ID,
-};
 
 fn digest(byte: u8) -> SemanticDigest {
     SemanticDigest::from_bytes([byte; 32])

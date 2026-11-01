@@ -2,8 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use medulla_index_types::semantic_index::SemanticDigest;
 use medulla_types::mutation_outbox::OutboxConsumerStatus;
-use medulla_types::semantic_index::SemanticDigest;
 
 /// Durable receipt returned by the semantic-index owner for a committed mutation.
 /// The runtime type lives above `medulla-types`; this wire mirror keeps the contract at

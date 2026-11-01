@@ -6,3 +6,24 @@
 
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
+
+// MEDULLA-UNIFIED-DATA-PLANE-R030.2/.3/.700 — blocking, Fellegi-Sunter scoring,
+// approval and identity evidence over entity link proposals.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod entity_resolution;
+// CONCEPT:MEDULLA-KG.sharding.semantic-embedding-store-backed — the pinned embedding-space
+// identity (`EmbeddingSpaceRef`) + stamped-vector (`StampedVector`) currency shared
+// by BOTH `medulla-core::compute::semantic` backends, plus their two dimensionality
+// ceilings. Pure serde, no dep — unconditional like `commit_descriptor`/
+// `row_predicate`, since `medulla-core` needs it on both sides of its backend `#[cfg]`
+// split.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod embedding;
+/// User-managed indexes and edge-native search on the wire (EH-351 / EH-352).
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod managed_index;
+// RF-019 — the sole transport-neutral semantic-index contract.  Runtime
+// storage, queues, handlers, and surface projections live in crates above this
+// bottom-of-DAG owner and must consume these exact operation and identity DTOs.
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod semantic_index;

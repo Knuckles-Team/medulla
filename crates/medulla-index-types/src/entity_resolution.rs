@@ -14,7 +14,10 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::entity_link_proposal::{EntityLinkProposal, EntityRef, MatchClass};
+use medulla_types::{
+    entity_link_proposal::EntityLinkProposal, entity_link_proposal::EntityRef,
+    entity_link_proposal::MatchClass,
+};
 
 /// One record offered for resolution.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -313,7 +316,9 @@ pub fn decide_merge(evidence: &[IdentityEvidence]) -> MergeDecision {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::entity_link_proposal::{AttachedApplication, CannotAssert};
+    use medulla_types::{
+        entity_link_proposal::AttachedApplication, entity_link_proposal::CannotAssert,
+    };
 
     fn record(app: AttachedApplication, id: &str, name: &str, birth: &str) -> ResolutionRecord {
         ResolutionRecord {

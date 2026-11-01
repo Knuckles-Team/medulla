@@ -10,6 +10,7 @@ use super::{
     corrupt, refused, OperationAttribution, SemanticCodeError, SemanticCodeStore,
     SemanticMutationReceipt,
 };
+use medulla_index_types::{semantic_index::SemanticDigest, semantic_index::SemanticIndexMutation};
 use medulla_protocol_types::mutation_batch::BatchContent;
 use medulla_protocol_types::mutation_batch::CompiledOperation;
 use medulla_protocol_types::mutation_batch::CompiledScope;
@@ -22,7 +23,6 @@ use medulla_types::mutation_scope::DurabilityDomain;
 use medulla_types::mutation_scope::MutationOutboxIntent;
 use medulla_types::mutation_scope::MutationOutboxLease;
 use medulla_types::mutation_scope::MutationSurface;
-use medulla_types::semantic_index::{SemanticDigest, SemanticIndexMutation};
 use sha2::{Digest, Sha256};
 
 /// What one semantic metadata mutation records.

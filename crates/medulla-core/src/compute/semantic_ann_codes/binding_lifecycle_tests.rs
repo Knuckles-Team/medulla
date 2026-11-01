@@ -6,12 +6,13 @@
 //! against and one binding-state write, so these tests pin every refusal and
 //! effect of both paths, including their idempotent replays.
 
+use medulla_index_types::{
+    semantic_index::SemanticActivePointer, semantic_index::SemanticBinding,
+    semantic_index::SemanticBindingState, semantic_index::SemanticBindingStateTransition,
+    semantic_index::SemanticDigest, semantic_index::SemanticTombstone,
+};
 use medulla_storage::{SEMANTIC_BINDINGS, SEMANTIC_HEADS, SEMANTIC_POINTERS, SEMANTIC_TOMBSTONES};
 use medulla_types::contract::Nonce;
-use medulla_types::semantic_index::{
-    SemanticActivePointer, SemanticBinding, SemanticBindingState, SemanticBindingStateTransition,
-    SemanticDigest, SemanticTombstone,
-};
 
 use super::batch::MetadataMutation;
 use super::tests::{binding_for_generation, open_store, tmp_dir, BINDING, TENANT};

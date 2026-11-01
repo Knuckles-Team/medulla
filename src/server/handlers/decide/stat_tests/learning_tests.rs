@@ -66,7 +66,7 @@ async fn embedded_graph(h: &Harness) -> Arc<medulla_core::graph::GraphCore> {
 
 /// The digest of the test model's space at `revision`.
 fn space_of(revision: &str, dims: usize) -> String {
-    medulla_types::embedding::EmbeddingSpaceRef::pinned(
+    medulla_index_types::embedding::EmbeddingSpaceRef::pinned(
         "m", revision, "sha256:w", "sha256:p", dims, false,
     )
     .unwrap()
@@ -87,7 +87,7 @@ async fn graph_with(
         .create_graph(name, crate::protocol::GraphType::Team, None)
         .unwrap();
     let core = guard.registry.get(name).unwrap().core.clone();
-    let space = medulla_types::embedding::EmbeddingSpaceRef::pinned(
+    let space = medulla_index_types::embedding::EmbeddingSpaceRef::pinned(
         "m", revision, "sha256:w", "sha256:p", dims, false,
     )
     .unwrap();

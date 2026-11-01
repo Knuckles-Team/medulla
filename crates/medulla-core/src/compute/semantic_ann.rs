@@ -21,7 +21,8 @@ use std::collections::HashMap;
 /// Train + switch to the IVF-PQ index once the store holds at least this many
 /// embeddings. Below it, brute-force cosine is both faster and exact.
 pub const ANN_BUILD_THRESHOLD: usize = 4096;
-const MAX_MAINTAINED_DIMENSION: usize = medulla_types::MAX_MAINTAINED_ANN_DIMENSIONS;
+const MAX_MAINTAINED_DIMENSION: usize =
+    medulla_index_types::embedding::MAX_MAINTAINED_ANN_DIMENSIONS;
 const MAX_INDEX_ROWS: usize = 5_000_000;
 const ID_MAP_MAGIC: &[u8] = b"EGIDS\x01\0";
 const MAX_ID_MAP_BYTES: u64 = 64 * 1024 * 1024;

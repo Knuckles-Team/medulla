@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
+use medulla_index_types::{
+    semantic_index::SemanticIndexOp, semantic_index::SemanticStageLeaseEntry,
+    semantic_index::SemanticStageLeasePage,
+};
 use medulla_protocol_types::result_contract::ingestion as ingestion_results;
 use medulla_transaction::OutboxClaimBudget;
-use medulla_types::semantic_index::{
-    SemanticIndexOp, SemanticStageLeaseEntry, SemanticStageLeasePage,
-};
 
 use crate::protocol::Response;
 use crate::server::semantic_index::{
@@ -80,7 +81,7 @@ async fn subscribe(ctx: &SemanticIndexContext<'_>) -> Response {
 
 async fn claim(
     ctx: &SemanticIndexContext<'_>,
-    queue_class: medulla_types::semantic_index::SemanticQueueClass,
+    queue_class: medulla_index_types::semantic_index::SemanticQueueClass,
     limit: u32,
     lease_ms: u64,
 ) -> Response {
@@ -146,7 +147,7 @@ async fn validate(
 
 async fn status(
     ctx: &SemanticIndexContext<'_>,
-    queue_class: medulla_types::semantic_index::SemanticQueueClass,
+    queue_class: medulla_index_types::semantic_index::SemanticQueueClass,
 ) -> Response {
     let consumer = medulla_core::compute::semantic_ann_codes::stage_consumer(
         ctx.authority.agent_id(),
@@ -163,9 +164,9 @@ async fn status(
 async fn complete_stage(
     ctx: &SemanticIndexContext<'_>,
     lease: medulla_types::mutation_scope::MutationOutboxLease,
-    transition: medulla_types::semantic_index::SemanticStageTransition,
-    artifact: medulla_types::semantic_index::SemanticStageArtifact,
-    successor: Option<medulla_types::semantic_index::SemanticStageIntent>,
+    transition: medulla_index_types::semantic_index::SemanticStageTransition,
+    artifact: medulla_index_types::semantic_index::SemanticStageArtifact,
+    successor: Option<medulla_index_types::semantic_index::SemanticStageIntent>,
 ) -> Response {
     let completed = on_own_lease(ctx, lease, move |service, lease, now_ms| {
         service.complete_stage(lease, &transition, &artifact, successor.as_ref(), now_ms)
@@ -179,9 +180,9 @@ async fn complete_stage(
 async fn complete_generation_stage(
     ctx: &SemanticIndexContext<'_>,
     lease: medulla_types::mutation_scope::MutationOutboxLease,
-    transition: medulla_types::semantic_index::SemanticStageTransition,
-    artifact: medulla_types::semantic_index::SemanticGenerationArtifact,
-    successor: Option<medulla_types::semantic_index::SemanticStageIntent>,
+    transition: medulla_index_types::semantic_index::SemanticStageTransition,
+    artifact: medulla_index_types::semantic_index::SemanticGenerationArtifact,
+    successor: Option<medulla_index_types::semantic_index::SemanticStageIntent>,
 ) -> Response {
     let generation = on_own_lease(ctx, lease, move |service, lease, now_ms| {
         service.complete_generation_stage(lease, &transition, &artifact, successor.as_ref(), now_ms)
@@ -195,8 +196,8 @@ async fn complete_generation_stage(
 async fn complete_sql_source_stage(
     ctx: &SemanticIndexContext<'_>,
     lease: medulla_types::mutation_scope::MutationOutboxLease,
-    transition: medulla_types::semantic_index::SemanticStageTransition,
-    successor: Option<medulla_types::semantic_index::SemanticStageIntent>,
+    transition: medulla_index_types::semantic_index::SemanticStageTransition,
+    successor: Option<medulla_index_types::semantic_index::SemanticStageIntent>,
     page_cursor: Option<String>,
 ) -> Response {
     if let Err(error) = own_lease(&lease, ctx.authority) {
@@ -237,11 +238,11 @@ async fn complete_sql_source_stage(
 
 async fn claim_sql_source(
     ctx: &SemanticIndexContext<'_>,
-    intent: medulla_types::semantic_index::SemanticStageIntent,
+    intent: medulla_index_types::semantic_index::SemanticStageIntent,
     page_cursor: Option<Vec<u8>>,
 ) -> Result<
     (
-        medulla_types::semantic_index::SemanticBinding,
+        medulla_index_types::semantic_index::SemanticBinding,
         AuthorizedSqlSourceClaim,
     ),
     Response,
@@ -266,7 +267,7 @@ async fn claim_sql_source(
 async fn replay(
     ctx: &SemanticIndexContext<'_>,
     lease: medulla_types::mutation_scope::MutationOutboxLease,
-    expected_intent: medulla_types::semantic_index::SemanticStageIntent,
+    expected_intent: medulla_index_types::semantic_index::SemanticStageIntent,
 ) -> Response {
     authorize_and_replay(ctx, lease, expected_intent).await
 }
@@ -274,7 +275,7 @@ async fn replay(
 async fn authorize_and_replay(
     ctx: &SemanticIndexContext<'_>,
     lease: medulla_types::mutation_scope::MutationOutboxLease,
-    expected_intent: medulla_types::semantic_index::SemanticStageIntent,
+    expected_intent: medulla_index_types::semantic_index::SemanticStageIntent,
 ) -> Response {
     let service = match authorize_replay(ctx, &lease).await {
         Ok(service) => service,

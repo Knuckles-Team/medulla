@@ -4,11 +4,12 @@
 //! commits -- so the ledger tables a skipped re-bootstrap would have created
 //! are there.
 
+use medulla_index_types::{
+    semantic_index::SemanticBindingState, semantic_index::SemanticDigest,
+    semantic_index::SemanticQueueClass, semantic_index::SemanticStageIntent,
+};
 use medulla_transaction::{OutboxClaimBudget, OutboxView, OutboxViewAnswer};
 use medulla_types::contract::Nonce;
-use medulla_types::semantic_index::{
-    SemanticBindingState, SemanticDigest, SemanticQueueClass, SemanticStageIntent,
-};
 
 use super::tests::{open_store, pending_binding, source_commit_intent, tmp_dir};
 use super::{stage_consumer, SemanticCodeStore};
@@ -17,7 +18,7 @@ const WORKER: &str = "operator-reopen";
 const NOW: u64 = 1_000;
 
 fn intent(
-    binding: &medulla_types::semantic_index::SemanticBinding,
+    binding: &medulla_index_types::semantic_index::SemanticBinding,
     entity: &str,
     seed: u8,
 ) -> SemanticStageIntent {

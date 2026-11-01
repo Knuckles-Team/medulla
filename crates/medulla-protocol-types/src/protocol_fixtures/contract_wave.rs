@@ -54,16 +54,16 @@ pub fn contract_wave_samples() -> Vec<(&'static str, Method)> {
         (
             "EdgeIndex.status",
             Method::EdgeIndex {
-                op: Box::new(medulla_types::managed_index::EdgeIndexOp::Status),
+                op: Box::new(medulla_index_types::managed_index::EdgeIndexOp::Status),
             },
         ),
         (
             "EdgeSearch",
             Method::EdgeSearch {
-                request: Box::new(medulla_types::managed_index::EdgeSearchRequest {
+                request: Box::new(medulla_index_types::managed_index::EdgeSearchRequest {
                     index: "rel_text".to_string(),
                     purpose: "retrieval".to_string(),
-                    query: medulla_types::managed_index::EdgeSearchQuery::Text {
+                    query: medulla_index_types::managed_index::EdgeSearchQuery::Text {
                         text: "graph".to_string(),
                     },
                     k: 5,

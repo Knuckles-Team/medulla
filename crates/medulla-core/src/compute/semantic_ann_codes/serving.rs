@@ -5,10 +5,13 @@ use super::record::{decode_valid, row_bytes};
 use super::rows::{read_part, PARTS};
 use super::{corrupt, kernel_error, refused, SemanticCodeError, SemanticCodeStore};
 use crate::compute::semantic::SemanticGenerationImage;
+use medulla_index_types::{
+    semantic_index::SemanticActivePointer, semantic_index::SemanticBinding,
+    semantic_index::SemanticBindingState,
+};
 use medulla_storage::{
     ScopedRead, SemanticIndexOwner, ANN_CODES, SEMANTIC_HEADS, SEMANTIC_POINTERS,
 };
-use medulla_types::semantic_index::{SemanticActivePointer, SemanticBinding, SemanticBindingState};
 use std::collections::BTreeMap;
 
 impl SemanticCodeStore {

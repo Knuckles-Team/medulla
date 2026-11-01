@@ -340,7 +340,7 @@ macro_rules! __eg_method_chunk_0 {
     /// so the dispatch arm refuses by name in a build without it -- exactly
     /// how the four agent layers refuse in a build without `redb`.
     SemanticIndex {
-        op: Box<medulla_types::semantic_index::SemanticIndexOp>,
+        op: Box<medulla_index_types::semantic_index::SemanticIndexOp>,
     },
 
     /// Authenticate and lower an Agent Library delegation through the native
