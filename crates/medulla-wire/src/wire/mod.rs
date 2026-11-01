@@ -1158,7 +1158,7 @@ pub struct WireSession {
     /// startup metadata (priority 1). The session is built before startup, so this
     /// latches the graph once metadata is available (unless an explicit `SET graph`
     /// already chose one).
-    startup_resolved: std::sync::atomic::AtomicBool,
+    pub startup_resolved: std::sync::atomic::AtomicBool,
     /// The authenticated actor (engine `agent_id`) for this connection
     /// (CONCEPT:MEDULLA-KG.query.concept-13). `None` means no authenticated wire identity
     /// has been mapped. Latched only from a verified request or the server-owned
@@ -1166,15 +1166,15 @@ pub struct WireSession {
     actor: parking_lot::Mutex<Option<String>>,
     /// Opaque tenant/principal authority derived from a current signed request or
     /// from a server-owned native SQL proxy context after cryptographic login.
-    authority: parking_lot::Mutex<Option<CarrierAuthority>>,
+    pub authority: parking_lot::Mutex<Option<CarrierAuthority>>,
     /// The current request's authenticated transport nonce. Native SQL login
     /// has no envelope nonce and leaves this empty; signed mutation requests
     /// replace it before their statement is dispatched.
-    attempt_nonce: parking_lot::Mutex<Option<medulla_types::contract::Nonce>>,
+    pub attempt_nonce: parking_lot::Mutex<Option<medulla_types::contract::Nonce>>,
     /// The OPEN multi-statement transaction's buffered user-table ops (CONCEPT:MEDULLA-KG.query.register-each-user-table),
     /// or `None` when no `BEGIN` is active. `COMMIT` applies the buffer in ONE redb
     /// write txn; `ROLLBACK` drops it. Scoped per connection.
-    txn: parking_lot::Mutex<Option<TableTxn>>,
+    pub txn: parking_lot::Mutex<Option<TableTxn>>,
     /// The OPEN transaction's buffered GRAPH-NODE ops (CONCEPT:MEDULLA-KG.compute.kg-transaction-is-pinned), committed as
     /// one authoritative MutationBatch before RAM publication. Empty when no
     /// `BEGIN` is active or the txn touched no nodes.
@@ -1182,15 +1182,15 @@ pub struct WireSession {
     /// The graph a mixed-store transaction is pinned to, captured at `BEGIN`
     /// (CONCEPT:MEDULLA-KG.compute.kg-transaction-is-pinned / KG-2.207): a txn stays within ONE graph / redb shard, so
     /// `SET graph` is rejected while a txn is open. `None` when no txn is active.
-    txn_graph: parking_lot::Mutex<Option<String>>,
+    pub txn_graph: parking_lot::Mutex<Option<String>>,
     /// Whether the OPEN transaction has entered the ABORTED state (CONCEPT:MEDULLA-KG.compute.kg-transaction-is-pinned):
     /// a statement inside the txn errored, so every subsequent statement except
     /// `COMMIT`/`ROLLBACK` is rejected with SQLSTATE 25P02 until the block ends.
     /// Cleared on `BEGIN`/`COMMIT`/`ROLLBACK`.
-    txn_failed: parking_lot::Mutex<bool>,
+    pub txn_failed: parking_lot::Mutex<bool>,
     /// In-flight `COPY … FROM STDIN` state (CONCEPT:MEDULLA-KG.query.register-each-user-table), set between the copy-in
     /// response and the wire's copy-done/copy-fail hook.
-    copy: parking_lot::Mutex<Option<CopyState>>,
+    pub copy: parking_lot::Mutex<Option<CopyState>>,
     /// The OPEN transaction's staged CROSS-MODAL write-set (CONCEPT:MEDULLA-KG.txn.isolation-ryow-begin-set) — vectors,
     /// measurements, and lowered OWL/CONSTRUCT methods from the pgwire cross-modal
     /// statements. Empty when no `BEGIN` is active or the txn touched no cross-modal
@@ -1207,7 +1207,7 @@ pub struct WireSession {
     /// `begin_txn()` resets it (nothing off-txn ever reads it: a lone
     /// autocommit statement always commits under `Snapshot`, which is already
     /// exactly as strong as a single statement needs).
-    txn_isolation: parking_lot::Mutex<medulla_server_api::txn::IsolationLevel>,
+    pub txn_isolation: parking_lot::Mutex<medulla_server_api::txn::IsolationLevel>,
     /// The pinned graph's `core.version()` as of this transaction's ACTUAL
     /// `BEGIN` (CONCEPT:MEDULLA-KG.txn.serializable-zero-cost — NE-005 correctness). `GraphTxnState`'s OCC coarse guard
     /// (`validate()`: "if `core.version()` is unchanged since begin, skip
@@ -1222,16 +1222,16 @@ pub struct WireSession {
     /// re-derive it. `None` off-txn (a lone autocommit statement has no
     /// earlier "begin" to protect — `core.version()` at its own commit time
     /// is correct there). Reset by `begin_txn()`.
-    txn_begin_version: parking_lot::Mutex<Option<u64>>,
+    pub txn_begin_version: parking_lot::Mutex<Option<u64>>,
     /// Session-level isolation default from `SET SESSION CHARACTERISTICS AS
     /// TRANSACTION ISOLATION LEVEL …` (CONCEPT:MEDULLA-KG.txn.serializable-zero-cost — NE-005). Applied to every
     /// subsequent `BEGIN` that does not name a level explicitly. `None` means
     /// the engine default (`Snapshot`).
-    session_isolation_default: parking_lot::Mutex<Option<medulla_server_api::txn::IsolationLevel>>,
+    pub session_isolation_default: parking_lot::Mutex<Option<medulla_server_api::txn::IsolationLevel>>,
     /// A bare `SET TRANSACTION ISOLATION LEVEL …` issued OUTSIDE an open
     /// transaction (CONCEPT:MEDULLA-KG.txn.serializable-zero-cost — NE-005, matching Postgres: it applies to the
     /// NEXT transaction only). Consumed (and cleared) by the next `BEGIN`.
-    pending_isolation: parking_lot::Mutex<Option<medulla_server_api::txn::IsolationLevel>>,
+    pub pending_isolation: parking_lot::Mutex<Option<medulla_server_api::txn::IsolationLevel>>,
     /// Predicate reads this OPEN transaction's own reads performed (CONCEPT:MEDULLA-KG.txn.serializable-zero-cost — NE-005
     /// auto predicate tracking), fingerprinted AT READ TIME (never deferred to
     /// commit — see [`crate::server::txn::GraphTxnState::add_predicate_read`]'s
@@ -1242,19 +1242,19 @@ pub struct WireSession {
     /// so a SQL `SERIALIZABLE` transaction gets GENUINE phantom protection for
     /// the read shape the engine's predicate machinery can express, instead of
     /// silently behaving like `Snapshot`. Reset by `begin_txn()`.
-    serializable_predicate_reads: parking_lot::Mutex<Vec<(medulla_server_api::txn::PredicateRead, u64)>>,
+    pub serializable_predicate_reads: parking_lot::Mutex<Vec<(medulla_server_api::txn::PredicateRead, u64)>>,
     /// The OPEN transaction's table-store statement replay log (CONCEPT:MEDULLA-TXN.mixed-commit-intent — NE-004):
     /// one entry per buffered table DML/DDL statement (or decoded `COPY`
     /// batch), in order. Used ONLY when a transaction mixes graph-node ops
     /// with table ops, to durably record how to rebuild the table-side
     /// `TableTxn` on crash recovery (`medulla_query::TxnOp` is not `Serialize`).
     /// Reset by `begin_txn()`.
-    txn_replay_log: parking_lot::Mutex<Vec<medulla_server_api::api::query_txn::txn_intent::ReplayStep>>,
+    pub txn_replay_log: parking_lot::Mutex<Vec<medulla_server_api::api::query_txn::txn_intent::ReplayStep>>,
     /// Set once this connection has swept its owner's leftover commit-intent
     /// files (CONCEPT:MEDULLA-TXN.mixed-commit-intent — NE-004 crash recovery). Checked lazily on first use rather
     /// than at connection setup so it costs nothing on a connection that never
     /// touches a mixed transaction.
-    recovered_intents: std::sync::atomic::AtomicBool,
+    pub recovered_intents: std::sync::atomic::AtomicBool,
 }
 
 /// Explicit, self-documenting choice of the version [`WireSession::commit_graph_methods_with_op`]
@@ -1316,7 +1316,7 @@ impl WireSession {
     /// would silently reopen the exact P0 this track closes, for a genuine
     /// multi-statement transaction whose predicate/read-set state may span
     /// real client think-time. Surface a clear, typed error now instead.
-    fn require_txn_begin_version(&self) -> WireResult<TxnBeginVersion> {
+    pub fn require_txn_begin_version(&self) -> WireResult<TxnBeginVersion> {
         match *self.txn_begin_version.lock() {
             Some(v) => Ok(TxnBeginVersion::Begin(v)),
             None => Err(user_err(
@@ -1408,7 +1408,7 @@ impl WireSession {
 
     /// Bind the server-owned carrier for a native SQL connection after its
     /// protocol adapter has verified the mandatory SCRAM/HMAC password proof.
-    pub(crate) async fn bind_authenticated_sql_actor(
+    pub async fn bind_authenticated_sql_actor(
         &self,
         protocol: &str,
         actor: &str,
@@ -1434,7 +1434,7 @@ impl WireSession {
         Ok(())
     }
 
-    fn bind_authority(
+    pub fn bind_authority(
         &self,
         verified_authority: CarrierAuthority,
         verified_actor: &str,
@@ -1511,7 +1511,7 @@ impl WireSession {
         Ok(uuid::Uuid::from_bytes(bytes))
     }
 
-    fn carrier_authority(&self) -> WireResult<CarrierAuthority> {
+    pub fn carrier_authority(&self) -> WireResult<CarrierAuthority> {
         self.authority.lock().clone().ok_or_else(|| WireError {
             code: "28000".to_string(),
             message: "current signed tenant authority is required".to_string(),
@@ -1670,7 +1670,7 @@ impl WireSession {
     /// graph, and the aborted flag. Shared by COMMIT and ROLLBACK. Returns the
     /// user-table `TableTxn` (if any) and the buffered node ops, so COMMIT can
     /// apply them.
-    fn take_txn(&self) -> (Option<TableTxn>, Vec<NodeOp>) {
+    pub fn take_txn(&self) -> (Option<TableTxn>, Vec<NodeOp>) {
         let table = self.txn.lock().take();
         let nodes = std::mem::take(&mut self.graph_txn.lock().ops);
         *self.txn_graph.lock() = None;
@@ -1818,7 +1818,7 @@ impl WireSession {
     /// DataFusion path `Method::Sql` uses: take the owned off-lock
     /// `analysis_snapshot()` and run the served, context-cached SQL exec on the
     /// blocking pool (DataFusion's executor must not run on a reactor worker).
-    pub(crate) async fn run_read(&self, graph: &str, sql: String) -> WireResult<TypedQueryResult> {
+    pub async fn run_read(&self, graph: &str, sql: String) -> WireResult<TypedQueryResult> {
         let core = self.graph_core(graph).await?;
         let mut snap = core.analysis_snapshot();
         let in_txn = self.in_txn();
@@ -2537,7 +2537,7 @@ impl WireSession {
     /// becomes a `RemoveNode`). Only the FIRST (pre-txn) state per distinct
     /// node id is kept — a node touched by more than one buffered op in this
     /// txn only needs ONE restore step, order-independent across ids.
-    async fn compensating_methods(
+    pub async fn compensating_methods(
         &self,
         graph: &str,
         methods: &[medulla_protocol_types::protocol::Method],
@@ -2787,7 +2787,7 @@ impl WireSession {
     /// `take_txn()` before building the intent, and a recovering session
     /// never opened a txn of its own) — then commits it under the intent's
     /// `operation_id`.
-    async fn replay_table_steps_and_commit(
+    pub async fn replay_table_steps_and_commit(
         &self,
         intent: &medulla_server_api::api::query_txn::txn_intent::CommitIntent,
     ) -> WireResult<usize> {
@@ -2817,7 +2817,7 @@ impl WireSession {
     /// (re-deriving the exact same `TxnOp` without entering dispatch or creating
     /// another intent); a `CopyRows` step re-applies the decoded batch directly
     /// (a `COPY` has no equivalent SQL text to re-parse).
-    async fn replay_table_steps(
+    pub async fn replay_table_steps(
         &self,
         graph: &str,
         steps: &[medulla_server_api::api::query_txn::txn_intent::ReplayStep],
@@ -4084,7 +4084,7 @@ impl WireSession {
     /// lone autocommit statement (which has no earlier "begin" to protect,
     /// so the current version is the correct baseline). No bare `Option`
     /// any more — see [`TxnBeginVersion`]'s doc for why.
-    async fn commit_graph_methods_with_op(
+    pub async fn commit_graph_methods_with_op(
         &self,
         graph: &str,
         methods: Vec<medulla_protocol_types::protocol::Method>,
@@ -4386,7 +4386,7 @@ impl WireSession {
     /// the in-txn UQL overlay and the cross-modal COMMIT consume, so the NodeOp→Method
     /// mapping is never re-derived.
     #[cfg(feature = "query")]
-    fn node_ops_to_methods(node_ops: &[NodeOp]) -> WireResult<Vec<medulla_protocol_types::protocol::Method>> {
+    pub fn node_ops_to_methods(node_ops: &[NodeOp]) -> WireResult<Vec<medulla_protocol_types::protocol::Method>> {
         let mut methods = Vec::with_capacity(node_ops.len());
         for op in node_ops {
             match op {
