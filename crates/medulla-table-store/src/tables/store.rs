@@ -67,7 +67,7 @@ mod row_insert;
 mod source_batch;
 
 use ann_durable::{drop_ann_index_in, drop_ann_indexes_for_column_in, put_ann_index_in};
-pub(crate) use ann_durable::{GenerationWrite, StoredGeneration};
+pub use ann_durable::{GenerationWrite, StoredGeneration};
 pub(crate) use ann_source::{AnnChangedRows, AnnRowReader, AnnSourceRows, ScanExtent};
 use authority::{sql_scope_identity, SqlAuthority, SqlMutation};
 pub(crate) use authority::{SqlRead, SqlWrite};

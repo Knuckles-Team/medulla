@@ -118,7 +118,7 @@ def test_incomplete_diff_runs_code(data: bytes) -> None:
     ("paths", "selected"),
     [
         (["src/lib.rs"], set()),
-        (["crates/medulla-query/src/lib.rs"], set()),
+        (["crates/medulla-sql/src/lib.rs"], set()),
         (["clients/js/index.mjs"], {"clients"}),
         (["crates/medulla-types/src/lib.rs"], {"clients"}),
         (["crates/medulla-asr-whisper/src/lib.rs"], {"whisper"}),

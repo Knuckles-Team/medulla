@@ -22,8 +22,8 @@ STRUCTURAL_READERS = (
     "crates/medulla-core/src/graph.rs",
     "crates/medulla-graphql/src/schema.rs",
     "crates/medulla-graphql/src/resolver.rs",
-    "crates/medulla-query/src/cypher/exec.rs",
-    "crates/medulla-query/src/cypher/proc.rs",
+    "crates/medulla-cypher/src/cypher/exec.rs",
+    "crates/medulla-cypher/src/cypher/proc.rs",
     "crates/medulla-plan/src/exec.rs",
     "crates/medulla-rdf/src/mapping.rs",
     "crates/medulla-rdf/src/update.rs",
@@ -42,8 +42,8 @@ STRUCTURAL_READERS = (
 )
 KNOWLEDGE_READER = "crates/medulla-plan/src/knowledge.rs"
 CYPHER_READERS = (
-    "crates/medulla-query/src/cypher/exec.rs",
-    "crates/medulla-query/src/cypher/proc.rs",
+    "crates/medulla-cypher/src/cypher/exec.rs",
+    "crates/medulla-cypher/src/cypher/proc.rs",
 )
 
 EDGE_TYPE_FALLBACKS = (
@@ -110,7 +110,7 @@ def _cypher_label_failures() -> list[str]:
                 f"{path}: Cypher structural label readers must use only "
                 f"`node_type`/`labels`"
             )
-    cypher_exec = text("crates/medulla-query/src/cypher/exec.rs")
+    cypher_exec = text("crates/medulla-cypher/src/cypher/exec.rs")
     for required in (
         "materialize_node(view, id)",
         'obj.insert("id".to_string(), Value::String(node_id.to_string()));',
@@ -119,7 +119,7 @@ def _cypher_label_failures() -> list[str]:
     ):
         if required not in cypher_exec:
             failures.append(
-                "crates/medulla-query/src/cypher/exec.rs: missing canonical Cypher "
+                "crates/medulla-cypher/src/cypher/exec.rs: missing canonical Cypher "
                 "node "
                 f"projection/write marker `{required}`"
             )

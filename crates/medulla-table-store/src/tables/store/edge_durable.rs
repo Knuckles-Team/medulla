@@ -26,7 +26,7 @@ pub(crate) fn edge_generation_key(graph: &str, name: &str) -> String {
 impl TableStore {
     /// Register edge index `name` on `graph` with its encoded spec. `Ok(false)`
     /// when that name is already registered on the graph (nothing changes).
-    pub(crate) fn put_edge_index_record(
+    pub fn put_edge_index_record(
         &self,
         graph: &str,
         name: &str,
@@ -43,7 +43,7 @@ impl TableStore {
     }
 
     /// Every registered edge index of `graph`, by name.
-    pub(crate) fn edge_index_records(&self, graph: &str) -> Result<Vec<EdgeIndexRecord>, String> {
+    pub fn edge_index_records(&self, graph: &str) -> Result<Vec<EdgeIndexRecord>, String> {
         let rtx = self.authority.read()?;
         let indexes = rtx.open_owner_table(SQL_EDGE_INDEXES)?;
         let mut records = Vec::new();
@@ -60,7 +60,7 @@ impl TableStore {
 
     /// Drop edge index `name` of `graph` with every generation it owns, in one
     /// write. `Ok(false)` when no such index is registered.
-    pub(crate) fn drop_edge_index_record(&self, graph: &str, name: &str) -> Result<bool, String> {
+    pub fn drop_edge_index_record(&self, graph: &str, name: &str) -> Result<bool, String> {
         self.authority.maintain("drop-edge-index", graph, |wtx| {
             let removed = wtx
                 .open_table(SQL_EDGE_INDEXES)?
@@ -75,7 +75,7 @@ impl TableStore {
     /// Persist the activated generation of edge index `name` on `graph`,
     /// replacing any earlier one. Fenced: an index dropped meanwhile never
     /// gains a generation.
-    pub(crate) fn persist_edge_generation(
+    pub fn persist_edge_generation(
         &self,
         graph: &str,
         name: &str,
@@ -97,7 +97,7 @@ impl TableStore {
     }
 
     /// The persisted generation of edge index `name` on `graph`, if any.
-    pub(crate) fn edge_generation(
+    pub fn edge_generation(
         &self,
         graph: &str,
         name: &str,

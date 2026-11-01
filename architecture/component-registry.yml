@@ -2728,9 +2728,9 @@ components:
       - "medulla-plan"
       - "medulla-wasm"
     owned_source_roots:
-      - "crates/medulla-query/src/cypher"
-      - "crates/medulla-query/src/sql"
-      - "crates/medulla-query/src/tables"
+      - "crates/medulla-cypher/src/cypher"
+      - "crates/medulla-sql/src/sql"
+      - "crates/medulla-table-store/src/tables"
       - "crates/medulla-plan/src/advanced_crossmodal_tests.rs"
       - "crates/medulla-plan/src/algebra.rs"
       - "crates/medulla-plan/src/cost.rs"
@@ -2770,7 +2770,7 @@ components:
       - "crates/medulla-plan/src/vector_reasoning_tests.rs"
 
     public_contract_roots:
-      - "crates/medulla-query/src/lib.rs"
+      - "crates/medulla-sql/src/lib.rs"
       - "crates/medulla-plan/src/lib.rs"
       - "crates/medulla-wasm/src/lib.rs"
     test_roots:
@@ -2824,10 +2824,10 @@ components:
       measured_at_head: "3243c3e222b133396010cb573b803d9298a717aa"
       top_files:
         - "crates/medulla-plan/src/tsdb_scan_tests.rs (6)"
-        - "crates/medulla-query/src/sql/spill.rs (5)"
+        - "crates/medulla-sql/src/sql/spill.rs (5)"
         - "crates/medulla-plan/benches/hybrid_queries.rs (2)"
-        - "crates/medulla-query/src/sql/iceberg_federation.rs (2)"
-        - "crates/medulla-query/src/tables/property_graph/model.rs (2)"
+        - "crates/medulla-sql/src/sql/iceberg_federation.rs (2)"
+        - "crates/medulla-table-store/src/tables/property_graph/model.rs (2)"
         - "crates/medulla-plan/src/nl.rs (1)"
       measurement_note: >-
         RE-MEASURED 2026-09-12 (F5/F6 follow-up) with `arch-lint check --format json`

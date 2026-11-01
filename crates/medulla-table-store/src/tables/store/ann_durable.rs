@@ -43,7 +43,7 @@ fn registration_prefix(table: &str) -> String {
 
 /// One activated generation, as the authority encoded it.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct StoredGeneration {
+pub struct StoredGeneration {
     pub(crate) generation: u64,
     pub(crate) manifest: Vec<u8>,
     pub(crate) payload: Vec<u8>,

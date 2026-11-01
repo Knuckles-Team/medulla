@@ -329,7 +329,7 @@ def _check_store_contract() -> list[str]:
     # source family the compiler assembles so a child omission cannot make the
     # graph mutation contract look satisfied by an unrelated facade comment.
     graph_store = _read_rust_module("src/redb_store.rs")
-    sql_store = _read("crates/medulla-query/src/tables/store.rs")
+    sql_store = _read("crates/medulla-table-store/src/tables/store.rs")
     native_store = "\n".join(_read(path) for path in _NATIVE_STORE_COMMIT_SOURCES)
     phase_variants = {
         "MutationCommitPhase::BeforeRows",
