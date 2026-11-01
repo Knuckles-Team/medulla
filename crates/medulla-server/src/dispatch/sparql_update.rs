@@ -206,10 +206,10 @@ async fn replay_sparql_update(
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 async fn resume_sparql_update_plan(
     coord: &SparqlUpdateCoordination<'_>,
-    saga: medulla_server_api::api::admin::saga::AdminSaga,
+    saga: medulla_server_ops::api::admin::saga::AdminSaga,
 ) -> Result<
     (
-        medulla_server_api::api::admin::saga::AdminSaga,
+        medulla_server_ops::api::admin::saga::AdminSaga,
         SparqlRecoveryPlan,
     ),
     Response,
@@ -312,17 +312,17 @@ fn begin_sealed_sparql_saga(
     plan: &SparqlRecoveryPlan,
     batch_id: &str,
     event_type: &str,
-) -> Result<medulla_server_api::api::admin::saga::AdminSaga, Response> {
+) -> Result<medulla_server_ops::api::admin::saga::AdminSaga, Response> {
     let (digest, encrypted) = match seal_private_coordinator_plan(coord.redb, plan) {
         Ok(value) => value,
         Err(error) => return Err(Response::err(coord.req_id, error)),
     };
-    medulla_server_api::api::admin::saga::begin_named_admin_saga_with_private_payload_and_nonce(
+    medulla_server_ops::api::admin::saga::begin_named_admin_saga_with_private_payload_and_nonce(
         coord.redb,
         coord.req_id,
         Some(coord.verified_actor),
         coord.verified_context.attempt_nonce(),
-        medulla_server_api::api::admin::saga::AdminSagaPayload {
+        medulla_server_ops::api::admin::saga::AdminSagaPayload {
             domain: medulla_mutation_types::mutation_scope::DurabilityDomain::MultiGraph,
             batch_id,
             event_type,
@@ -342,7 +342,7 @@ async fn build_sparql_update_plan(
     default_graph: &str,
 ) -> Result<
     (
-        medulla_server_api::api::admin::saga::AdminSaga,
+        medulla_server_ops::api::admin::saga::AdminSaga,
         SparqlRecoveryPlan,
     ),
     Response,
@@ -384,12 +384,12 @@ async fn stage_sparql_update(
     default_graph: &str,
 ) -> Result<
     (
-        medulla_server_api::api::admin::saga::AdminSaga,
+        medulla_server_ops::api::admin::saga::AdminSaga,
         SparqlRecoveryPlan,
     ),
     Response,
 > {
-    let resumed = match medulla_server_api::api::admin::saga::resume_named_admin_saga(
+    let resumed = match medulla_server_ops::api::admin::saga::resume_named_admin_saga(
         coord.redb,
         coord.parent_id,
         Some(coord.verified_actor),
@@ -486,7 +486,7 @@ fn sparql_rollback_methods(
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 async fn finish_sparql_commit(
     coord: &SparqlUpdateCoordination<'_>,
-    saga: medulla_server_api::api::admin::saga::AdminSaga,
+    saga: medulla_server_ops::api::admin::saga::AdminSaga,
     plan: &SparqlRecoveryPlan,
 ) -> Response {
     let committed = match finish_sparql_parent_saga(coord.redb, saga, plan) {
@@ -503,7 +503,7 @@ async fn finish_sparql_commit(
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 fn finish_sparql_parent_saga(
     redb: &medulla_persistence::redb_backend::RedbBackend,
-    saga: medulla_server_api::api::admin::saga::AdminSaga,
+    saga: medulla_server_ops::api::admin::saga::AdminSaga,
     plan: &SparqlRecoveryPlan,
 ) -> Result<ResultPayload, String> {
     let report = medulla_protocol_types::result_contract::transactions::SparqlUpdateReport {
@@ -519,7 +519,7 @@ fn finish_sparql_parent_saga(
     };
     let result =
         ResultPayload::of::<medulla_protocol_types::result_contract::graph::ApplyMutation>(report)?;
-    medulla_server_api::api::admin::saga::finish_admin_saga(
+    medulla_server_ops::api::admin::saga::finish_admin_saga(
         redb,
         saga.batch,
         saga.created_at_ms,
@@ -536,8 +536,8 @@ enum SparqlForwardOutcome {
     /// and the durable compensation marker that pins the direction.
     Compensate(
         Box<(
-            medulla_server_api::api::admin::saga::AdminSaga,
-            medulla_server_api::api::admin::saga::AdminSaga,
+            medulla_server_ops::api::admin::saga::AdminSaga,
+            medulla_server_ops::api::admin::saga::AdminSaga,
         )>,
     ),
 }
@@ -548,7 +548,7 @@ enum SparqlForwardOutcome {
 async fn try_sparql_forward_commit(
     coord: &SparqlUpdateCoordination<'_>,
     plan: &SparqlRecoveryPlan,
-    saga: medulla_server_api::api::admin::saga::AdminSaga,
+    saga: medulla_server_ops::api::admin::saga::AdminSaga,
 ) -> SparqlForwardOutcome {
     if let Err(response) = create_missing_sparql_graphs(coord, plan).await {
         return SparqlForwardOutcome::Settled(Box::new(response));
@@ -662,11 +662,11 @@ async fn delete_created_sparql_graphs(
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 async fn finish_sparql_compensation(
     coord: &SparqlUpdateCoordination<'_>,
-    saga: medulla_server_api::api::admin::saga::AdminSaga,
-    compensation_saga: Option<medulla_server_api::api::admin::saga::AdminSaga>,
+    saga: medulla_server_ops::api::admin::saga::AdminSaga,
+    compensation_saga: Option<medulla_server_ops::api::admin::saga::AdminSaga>,
 ) -> Response {
     if let Some(marker) = compensation_saga {
-        if let Err(error) = medulla_server_api::api::admin::saga::finish_admin_saga(
+        if let Err(error) = medulla_server_ops::api::admin::saga::finish_admin_saga(
             coord.redb,
             marker.batch,
             marker.created_at_ms,
@@ -680,7 +680,7 @@ async fn finish_sparql_compensation(
         "updated_graphs": 0,
         "created_graphs": 0,
     }));
-    if let Err(error) = medulla_server_api::api::admin::saga::finish_admin_saga(
+    if let Err(error) = medulla_server_ops::api::admin::saga::finish_admin_saga(
         coord.redb,
         saga.batch,
         saga.created_at_ms,
@@ -710,7 +710,7 @@ async fn run_coordinated_sparql_http_update(
         Ok(value) => value,
         Err(response) => return response,
     };
-    let existing_marker = match medulla_server_api::api::admin::saga::resume_named_admin_saga(
+    let existing_marker = match medulla_server_ops::api::admin::saga::resume_named_admin_saga(
         coord.redb,
         coord.compensation_id,
         Some(coord.verified_actor),

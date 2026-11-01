@@ -1541,7 +1541,7 @@ fn admit_raw(
     let blob_method = Method::BlobRef {
         digest: raw_digest_hex.clone(),
     };
-    let (holder_batch, admitted_at_ms) = medulla_server_api::api::ingest::compile_blob_batch(
+    let (holder_batch, admitted_at_ms) = medulla_server_ops::api::ingest::compile_blob_batch(
         blob.store.as_ref(),
         ctx.request_id,
         authority,
@@ -2726,7 +2726,7 @@ mod tests {
         };
         let blob_dir = tempfile::tempdir().unwrap();
         let blob =
-            medulla_server_api::api::ingest::cursors_for_test(blob_dir.path().to_str().unwrap());
+            medulla_server_ops::api::ingest::cursors_for_test(blob_dir.path().to_str().unwrap());
         let persistence = NoReadPersistence;
         let mut admitted = AdmittedRecords {
             raw_admissions: Vec::new(),

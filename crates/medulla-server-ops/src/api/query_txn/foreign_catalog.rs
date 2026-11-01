@@ -67,8 +67,8 @@ use medulla_types::contract::Digest256;
 use medulla_types::wire::ForeignSourceSpec;
 
 use super::foreign_share::{may_use_shared, share_resource, shared_name};
-use crate::carrier::CarrierAuthority;
-use crate::api::persistence::SourceApprovalStore;
+use medulla_server_api::carrier::CarrierAuthority;
+use medulla_server_api::api::persistence::SourceApprovalStore;
 use medulla_isolation::isolation::IsolationLayer;
 
 /// `(verified owner scope, source name)` — the catalog key.
@@ -694,7 +694,7 @@ mod tests {
         // spec: MEDULLA-UNIFIED-DATA-PLANE-R002.1
         #[test]
         fn a_disallowed_sql_destination_is_refused_and_never_persisted() {
-            let _allow = crate::test_support::FederationAllowGuard::blocking("");
+            let _allow = medulla_server_api::test_support::FederationAllowGuard::blocking("");
             let a = carrier("agent-a");
             let catalog = ForeignSourceCatalog::default();
             // Same fixture `crates/medulla-plan/src/federation_ssrf.rs` already proves is
@@ -718,7 +718,7 @@ mod tests {
         // spec: MEDULLA-UNIFIED-DATA-PLANE-R002.1
         #[test]
         fn an_allowed_sql_destination_still_registers() {
-            let _allow = crate::test_support::FederationAllowGuard::blocking("127.0.0.1:5432");
+            let _allow = medulla_server_api::test_support::FederationAllowGuard::blocking("127.0.0.1:5432");
             let a = carrier("agent-a");
             let catalog = ForeignSourceCatalog::default();
             // Same fixture `crates/medulla-plan/src/federation_ssrf.rs` already proves is

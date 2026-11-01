@@ -461,10 +461,10 @@ pub(super) fn durable_read_lease(graph: &str, agent: &str) -> DurableReadLease {
 ))]
 #[tokio::test]
 async fn knowledge_stream_sql_lists_the_request_graph_edge_indexes() {
-    use medulla_server_api::api::query_txn::edge_test_support::edge_status_row;
-    use medulla_server_api::api::query_txn::edge_test_support::register_detached_edge_index;
-    use medulla_server_api::api::query_txn::edge_test_support::sql_rows;
-    use medulla_server_api::api::query_txn::edge_test_support::EDGE_STATUS_SQL;
+    use medulla_server_ops::api::query_txn::edge_test_support::edge_status_row;
+    use medulla_server_ops::api::query_txn::edge_test_support::register_detached_edge_index;
+    use medulla_server_ops::api::query_txn::edge_test_support::sql_rows;
+    use medulla_server_ops::api::query_txn::edge_test_support::EDGE_STATUS_SQL;
     use medulla_server_api::api::reentry::TryHandleContext;
     use crate::query::try_handle_with_policy;
     use crate::query::PolicyAwareQuery;

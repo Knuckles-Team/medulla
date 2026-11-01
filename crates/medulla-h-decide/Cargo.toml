@@ -52,6 +52,7 @@ medulla-sql = { path = "../medulla-sql" }
 medulla-tables = { path = "../medulla-tables" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
+medulla-server-ops = { path = "../medulla-server-ops" }
 
 [features]
 ann = ["dep:medulla-ann", ]

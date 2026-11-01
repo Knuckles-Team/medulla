@@ -169,7 +169,7 @@ fn prepare_begin_upload(
         &authority.namespace("blob-cas", "control"),
     )?;
     let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-    let (batch, now) = medulla_server_api::api::ingest::compile_blob_batch_at_with_nonce(
+    let (batch, now) = medulla_server_ops::api::ingest::compile_blob_batch_at_with_nonce(
         cursors.store.as_ref(),
         proposed,
         authority,
@@ -231,7 +231,7 @@ async fn handle_blob_chunk_put(
     if let Err(error) = ensure_upload_owner(cursors, cursor, authority.owner_scope()) {
         return Ok(Response::err(req_id, error));
     }
-    let (batch, now) = match medulla_server_api::api::ingest::compile_blob_batch_with_nonce(
+    let (batch, now) = match medulla_server_ops::api::ingest::compile_blob_batch_with_nonce(
         cursors.store.as_ref(),
         req_id,
         authority,
@@ -265,7 +265,7 @@ async fn handle_blob_commit(
     if let Err(error) = ensure_upload_owner(cursors, cursor, authority.owner_scope()) {
         return Ok(Response::err(req_id, error));
     }
-    let (batch, now) = match medulla_server_api::api::ingest::compile_blob_batch_with_nonce(
+    let (batch, now) = match medulla_server_ops::api::ingest::compile_blob_batch_with_nonce(
         cursors.store.as_ref(),
         req_id,
         authority,
@@ -423,7 +423,7 @@ fn prepare_blob_ref_op(
 ) -> Result<(store::HolderChange, MutationBatch, u64), String> {
     ensure_blob_owner(cursors, digest, authority.owner_scope())?;
     let change = change(digest, authority.owner_scope())?;
-    let (batch, now) = medulla_server_api::api::ingest::compile_blob_batch_with_nonce(
+    let (batch, now) = medulla_server_ops::api::ingest::compile_blob_batch_with_nonce(
         cursors.store.as_ref(),
         req_id,
         authority,
@@ -477,7 +477,7 @@ async fn handle_blob_gc(
     if let Err(error) = authority.require_admin("blob garbage collection") {
         return Ok(Response::err(req_id, error));
     }
-    let (batch, now) = match medulla_server_api::api::ingest::compile_blob_batch_with_nonce(
+    let (batch, now) = match medulla_server_ops::api::ingest::compile_blob_batch_with_nonce(
         cursors.store.as_ref(),
         req_id,
         authority,

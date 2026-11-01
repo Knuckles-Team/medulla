@@ -24,7 +24,7 @@ pub(crate) struct SqlWriteScope<'a> {
     pub(crate) authority: &'a medulla_server_api::carrier::CarrierAuthority,
     pub(crate) persist_dir: &'a std::path::Path,
     /// The installed wire seam that authorizes and replays the SQL catalog batch.
-    pub(crate) wire: Option<&'a Arc<dyn medulla_server_api::api::query_txn::WireApi>>,
+    pub(crate) wire: Option<&'a Arc<dyn medulla_server_ops::api::query_txn::WireApi>>,
 }
 
 /// Execute `Method::Sql`'s `INSERT INTO nodes …` DML — pure extract-method out of

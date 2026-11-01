@@ -20,7 +20,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::state::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// Query handler behaviour reachable from crates below `medulla-h-query`.
 #[async_trait::async_trait]
@@ -56,11 +56,11 @@ pub trait QueryApi: Send + Sync {
     #[cfg(feature = "mining")]
     async fn mining_gateway_try_handle(
         &self,
-        ctx: &crate::mutation::MutationCtx<'_>,
-        plan: &crate::mutation::MutationPlan,
+        ctx: &medulla_server_api::mutation::MutationCtx<'_>,
+        plan: &medulla_server_api::mutation::MutationPlan,
         method: &medulla_protocol_types::protocol::Method,
         graph_name: &str,
-        read_authority: Option<&crate::carrier::GraphReadAuthority>,
+        read_authority: Option<&medulla_server_api::carrier::GraphReadAuthority>,
         #[cfg(all(feature = "query", feature = "tsdb"))] tsdb_store: Option<
             &Arc<medulla_tsdb::store::SeriesStore>,
         >,
@@ -76,7 +76,7 @@ pub trait TxnApi: Send + Sync {
         state: &Arc<RwLock<ServerState>>,
         req_id: u64,
         caller: &str,
-        verified_context: &crate::authority_context::VerifiedRequestContext,
+        verified_context: &medulla_server_api::authority_context::VerifiedRequestContext,
         method: medulla_protocol_types::protocol::Method,
     ) -> Result<medulla_protocol_types::protocol::Response, medulla_protocol_types::protocol::Method>;
 
@@ -86,7 +86,7 @@ pub trait TxnApi: Send + Sync {
         &self,
         state: &Arc<RwLock<ServerState>>,
         req_id: u64,
-        authority: &crate::carrier::CarrierAuthority,
+        authority: &medulla_server_api::carrier::CarrierAuthority,
         graph: &str,
         placement_epoch: u64,
         fencing_token: Option<u64>,
@@ -100,7 +100,7 @@ pub trait TxnApi: Send + Sync {
         request_id: u64,
         caller: Option<&str>,
         coordinator_id: &str,
-        txn: crate::txn::GraphTxnState,
+        txn: medulla_server_api::txn::GraphTxnState,
         attempt_nonce: Option<medulla_types::contract::Nonce>,
     ) -> Result<bool, String>;
 
@@ -118,7 +118,7 @@ pub trait TxnApi: Send + Sync {
         state: &Arc<RwLock<ServerState>>,
         req_id: u64,
         caller: &str,
-        authority: &crate::carrier::CarrierAuthority,
+        authority: &medulla_server_api::carrier::CarrierAuthority,
         method: &medulla_protocol_types::protocol::Method,
     ) -> Result<txn_support::GraphQlLifecycleAdmission, String>;
 
@@ -143,7 +143,7 @@ pub trait WireApi: Send + Sync {
     #[cfg(feature = "query")]
     fn authorize_table_txn(
         &self,
-        source: &crate::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
+        source: &medulla_server_api::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
         table_store: &medulla_table_store::tables::TableStore,
         txn: &mut medulla_table_store::tables::TableTxn,
         committed_replay: bool,
@@ -154,7 +154,7 @@ pub trait WireApi: Send + Sync {
     fn committed_sql_replay_receipt(
         &self,
         store: &medulla_table_store::tables::TableStore,
-        authority: &crate::carrier::CarrierAuthority,
+        authority: &medulla_server_api::carrier::CarrierAuthority,
         batch: &medulla_protocol_types::mutation_batch::MutationBatch,
     ) -> Result<Option<medulla_protocol_types::mutation_batch::MutationBatchRecord>, String>;
 }
@@ -172,8 +172,8 @@ pub async fn query_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn Quer
 }
 
 /// Install the query seam; `false` when it was already installed.
-pub fn install_query_seam(reg: &crate::api::registry::SeamRegistry, api: Arc<dyn QueryApi>) -> bool {
-    reg.query.set(Arc::new(api) as crate::state::ErasedHandle).is_ok()
+pub fn install_query_seam(reg: &medulla_server_api::api::registry::SeamRegistry, api: Arc<dyn QueryApi>) -> bool {
+    reg.query.set(Arc::new(api) as medulla_server_api::state::ErasedHandle).is_ok()
 }
 
 /// The installed txn seam of `state`, or `None` before installation.
@@ -189,8 +189,8 @@ pub async fn txn_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn TxnApi
 }
 
 /// Install the txn seam; `false` when it was already installed.
-pub fn install_txn_seam(reg: &crate::api::registry::SeamRegistry, api: Arc<dyn TxnApi>) -> bool {
-    reg.txn.set(Arc::new(api) as crate::state::ErasedHandle).is_ok()
+pub fn install_txn_seam(reg: &medulla_server_api::api::registry::SeamRegistry, api: Arc<dyn TxnApi>) -> bool {
+    reg.txn.set(Arc::new(api) as medulla_server_api::state::ErasedHandle).is_ok()
 }
 
 /// The installed wire seam of `state`, or `None` before installation.
@@ -206,8 +206,8 @@ pub async fn wire_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn WireA
 }
 
 /// Install the wire seam; `false` when it was already installed.
-pub fn install_wire_seam(reg: &crate::api::registry::SeamRegistry, api: Arc<dyn WireApi>) -> bool {
-    reg.wire.set(Arc::new(api) as crate::state::ErasedHandle).is_ok()
+pub fn install_wire_seam(reg: &medulla_server_api::api::registry::SeamRegistry, api: Arc<dyn WireApi>) -> bool {
+    reg.wire.set(Arc::new(api) as medulla_server_api::state::ErasedHandle).is_ok()
 }
 
 /// Typed access to the foreign-source catalog and read sessions `ServerState`
@@ -226,7 +226,7 @@ impl ForeignStateExt for ServerState {
     fn foreign_sources(&self) -> Arc<foreign_catalog::ForeignSourceCatalog> {
         Arc::clone(self.foreign_sources.get_or_init(|| {
             Arc::new(foreign_catalog::ForeignSourceCatalog::default())
-                as crate::state::ErasedHandle
+                as medulla_server_api::state::ErasedHandle
         }))
         .downcast::<foreign_catalog::ForeignSourceCatalog>()
         .expect("foreign_sources slot holds ForeignSourceCatalog")
@@ -234,7 +234,7 @@ impl ForeignStateExt for ServerState {
 
     fn foreign_reads(&self) -> Arc<foreign_read::ForeignReadSessions> {
         Arc::clone(self.foreign_reads.get_or_init(|| {
-            Arc::new(foreign_read::ForeignReadSessions::default()) as crate::state::ErasedHandle
+            Arc::new(foreign_read::ForeignReadSessions::default()) as medulla_server_api::state::ErasedHandle
         }))
         .downcast::<foreign_read::ForeignReadSessions>()
         .expect("foreign_reads slot holds ForeignReadSessions")
@@ -244,7 +244,7 @@ impl ForeignStateExt for ServerState {
 #[cfg(all(test, feature = "federation"))]
 mod foreign_state_tests {
     use super::ForeignStateExt;
-    use crate::state::ServerState;
+    use medulla_server_api::state::ServerState;
     use medulla_isolation::isolation::IsolationLayer;
 
     #[test]

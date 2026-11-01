@@ -205,7 +205,7 @@ struct SqlCatalogWork<'a> {
     store: &'a medulla_table_store::tables::TableStore,
     txn: &'a mut medulla_table_store::tables::TableTxn,
     sql_method: &'a Method,
-    wire: Option<&'a Arc<dyn medulla_server_api::api::query_txn::WireApi>>,
+    wire: Option<&'a Arc<dyn medulla_server_ops::api::query_txn::WireApi>>,
 }
 
 #[cfg(feature = "query")]

@@ -128,7 +128,7 @@ pub(super) async fn reconcile_locked(
         .cloned()
         .ok_or_else(|| "BODY_MISSING: Blob substrate disabled".to_string())?;
     let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(verified)?;
-    let (batch, now_ms) = medulla_server_api::api::ingest::compile_blob_batch(
+    let (batch, now_ms) = medulla_server_ops::api::ingest::compile_blob_batch(
         blob.store.as_ref(),
         req_id,
         &authority,

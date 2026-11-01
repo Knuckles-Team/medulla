@@ -38,7 +38,7 @@ fn plan_for<'a>(
         config: chunking(&request()).unwrap(),
         spans,
         vectors: spans.iter().map(|_| vec![0.5, 0.5]).collect(),
-        embedder: medulla_server_api::api::ingest::embedder::HASH,
+        embedder: medulla_server_ops::api::ingest::embedder::HASH,
         embedding_model: None,
         dimensions: 2,
         prior,

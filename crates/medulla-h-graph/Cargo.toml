@@ -40,6 +40,7 @@ medulla-graph-algos = { path = "../medulla-graph-algos" }
 medulla-mining = { path = "../medulla-mining" }
 medulla-reasoner = { path = "../medulla-reasoner" }
 medulla-work-types = { path = "../medulla-work-types" }
+medulla-server-ops = { path = "../medulla-server-ops" }
 
 [features]
 broker = []

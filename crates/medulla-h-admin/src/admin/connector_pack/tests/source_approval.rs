@@ -524,12 +524,12 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
         capabilities: Default::default(),
     };
     let catalog =
-        medulla_server_api::api::query_txn::foreign_catalog::ForeignSourceCatalog::default();
+        medulla_server_ops::api::query_txn::foreign_catalog::ForeignSourceCatalog::default();
     catalog
         .register(&caller, registration.source_id.clone(), spec.clone())
         .unwrap();
     let descriptor =
-        medulla_server_api::api::query_txn::foreign_catalog::ForeignSourceBindingDescriptor {
+        medulla_server_ops::api::query_txn::foreign_catalog::ForeignSourceBindingDescriptor {
             name: registration.source_id.clone(),
             spec,
             registration: approved.registration.clone(),
@@ -567,7 +567,7 @@ async fn bind_for_requires_owner_catalog_and_rechecks_approval() {
         },
     ] {
         let wrong_catalog =
-            medulla_server_api::api::query_txn::foreign_catalog::ForeignSourceCatalog::default();
+            medulla_server_ops::api::query_txn::foreign_catalog::ForeignSourceCatalog::default();
         wrong_catalog
             .register(&caller, registration.source_id.clone(), wrong_spec.clone())
             .unwrap();

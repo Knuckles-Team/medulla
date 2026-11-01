@@ -424,7 +424,7 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
     state.persist_dir = Some(persist.clone());
     state.persistence = Some(backend.clone());
     state.tsdb_store = Some(series_store.clone());
-    state.set_blob_cursors(Some(medulla_server_api::api::ingest::cursors_for_test(
+    state.set_blob_cursors(Some(medulla_server_ops::api::ingest::cursors_for_test(
         blob_dir.to_str().unwrap(),
     )));
     let _ = state.registry.create_graph(GRAPH, GraphType::Global, None);

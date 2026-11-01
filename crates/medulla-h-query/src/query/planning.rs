@@ -578,7 +578,7 @@ pub(crate) struct ServedPlanLegs {
     pub(crate) tsdb_scope: Option<(String, String)>,
     #[cfg(feature = "federation")]
     pub(crate) foreign:
-        Option<medulla_server_api::api::query_txn::foreign_catalog::OwnedForeignRegistry>,
+        Option<medulla_server_ops::api::query_txn::foreign_catalog::OwnedForeignRegistry>,
     /// EH-066 — the caller's visible decision log, bound when the plan reads it.
     #[cfg(feature = "decide")]
     pub(crate) decisions: Option<Arc<dyn medulla_plan::exec::DecisionSource>>,
@@ -589,7 +589,7 @@ pub(crate) struct ServedPlanLegs {
     /// EH-396 — the tenant's active query adapter for this graph, bound when the plan
     /// ranks by vector.
     #[cfg(feature = "decide")]
-    pub(crate) adapter: Option<Arc<medulla_server_api::api::admin::served_adapter::ServedAdapter>>,
+    pub(crate) adapter: Option<Arc<medulla_server_ops::api::admin::served_adapter::ServedAdapter>>,
 }
 
 #[cfg(feature = "query")]
@@ -626,7 +626,7 @@ impl ServedPlanLegs {
             #[cfg(feature = "result-cache")]
             watermarks: ForeignWatermarks::NotRead,
             #[cfg(feature = "decide")]
-            adapter: medulla_server_api::api::admin::served_adapter::served_plan_adapter(
+            adapter: medulla_server_ops::api::admin::served_adapter::served_plan_adapter(
                 state,
                 graph_name,
                 read_authority,
@@ -696,7 +696,7 @@ impl ServedPlanLegs {
         }
         // EH-396: the active adapter re-aims vector ranks, so it keys the answer.
         #[cfg(feature = "decide")]
-        medulla_server_api::api::admin::served_adapter::salt(self.adapter.as_deref(), payload);
+        medulla_server_ops::api::admin::served_adapter::salt(self.adapter.as_deref(), payload);
         #[cfg(not(any(feature = "tsdb", feature = "federation", feature = "decide")))]
         let _ = payload;
     }
@@ -724,7 +724,7 @@ async fn served_decision_leg(
         medulla_kernel::metrics::access_denied();
         return Err("ACCESS_DENIED: DECISIONS requires a verified tenant carrier".to_string());
     };
-    let source = match medulla_server_api::api::admin::decide_seam(state).await {
+    let source = match medulla_server_ops::api::admin::decide_seam(state).await {
         Some(decide) => decide.decision_source(state, carrier).await,
         None => None,
     };
@@ -761,7 +761,7 @@ pub fn foreign_uql_query_digest(
 #[cfg(all(test, feature = "query"))]
 mod foreign_query_digest_tests {
     use super::foreign_uql_query_digest;
-    use medulla_server_api::api::query_txn::query_support::canonical_plan_digest;
+    use medulla_server_ops::api::query_txn::query_support::canonical_plan_digest;
     use std::collections::BTreeMap;
 
     #[test]
@@ -911,7 +911,7 @@ where
         let finish = with_decision_log(decisions, finish);
         // EH-396: the tenant's adapter re-aims every vector rank of the plan.
         #[cfg(feature = "decide")]
-        let plan = medulla_server_api::api::admin::served_adapter::adapt_plan(
+        let plan = medulla_server_ops::api::admin::served_adapter::adapt_plan(
             plan,
             adapter,
             uql_text_embedder(),

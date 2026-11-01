@@ -1,13 +1,13 @@
 use super::*;
 #[cfg(feature = "graphql")]
-use medulla_server_api::api::query_txn::txn_support;
+use medulla_server_ops::api::query_txn::txn_support;
 #[cfg(feature = "graphql")]
-use medulla_server_api::api::query_txn::TxnApi;
+use medulla_server_ops::api::query_txn::TxnApi;
 
 /// The installed transaction seam, or the internal error text when none is installed.
 #[cfg(feature = "graphql")]
 async fn txn_seam(state: &Arc<RwLock<ServerState>>) -> Result<Arc<dyn TxnApi>, String> {
-    medulla_server_api::api::query_txn::txn_seam(&state).await
+    medulla_server_ops::api::query_txn::txn_seam(&state).await
         .ok_or_else(|| "INTERNAL: transaction seam is not installed".to_string())
 }
 

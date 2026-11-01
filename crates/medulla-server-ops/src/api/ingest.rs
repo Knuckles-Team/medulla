@@ -6,8 +6,8 @@ pub mod jobs;
 
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use crate::state::ServerState;
-use crate::carrier::CarrierAuthority;
+use medulla_server_api::state::ServerState;
+use medulla_server_api::carrier::CarrierAuthority;
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_protocol_types::mutation_batch::MutationBatch;
@@ -27,11 +27,11 @@ pub trait GraphApi: Send + Sync {
     /// Run a read-only graph method (the terminal graph-ops handler) over `core`.
     async fn graph_ops_try_handle(
         &self,
-        state: &std::sync::Arc<tokio::sync::RwLock<crate::state::ServerState>>,
+        state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
         req_id: u64,
         caller: Option<&str>,
         graph_name: &str,
-        read_authority: &crate::carrier::GraphReadAuthority,
+        read_authority: &medulla_server_api::carrier::GraphReadAuthority,
         core: std::sync::Arc<medulla_graph_core::graph::GraphCore>,
         method: Method,
     ) -> medulla_protocol_types::protocol::Response;
@@ -55,7 +55,7 @@ pub trait ComputeApi: Send + Sync {}
 
 /// Compile a blob mutation batch at the authoritative clock and the current native version.
 pub fn compile_blob_batch(
-    store: &dyn crate::blob::store::ChunkStore,
+    store: &dyn medulla_server_api::blob::store::ChunkStore,
     req_id: u64,
     authority: &CarrierAuthority,
     method: &Method,
@@ -65,7 +65,7 @@ pub fn compile_blob_batch(
 
 /// [`compile_blob_batch`] with an explicit attempt nonce.
 pub fn compile_blob_batch_with_nonce(
-    store: &dyn crate::blob::store::ChunkStore,
+    store: &dyn medulla_server_api::blob::store::ChunkStore,
     req_id: u64,
     authority: &CarrierAuthority,
     method: &Method,
@@ -119,7 +119,7 @@ pub fn compile_blob_batch_with_nonce(
 /// fix (allocate the cursor id BEFORE compiling the batch, then pass it here
 /// as `identity_id`).
 pub(crate) fn compile_blob_batch_at(
-    _store: &dyn crate::blob::store::ChunkStore,
+    _store: &dyn medulla_server_api::blob::store::ChunkStore,
     identity_id: u64,
     authority: &CarrierAuthority,
     method: &Method,
@@ -131,7 +131,7 @@ pub(crate) fn compile_blob_batch_at(
 
 /// [`compile_blob_batch_at`] with an explicit attempt nonce.
 pub fn compile_blob_batch_at_with_nonce(
-    _store: &dyn crate::blob::store::ChunkStore,
+    _store: &dyn medulla_server_api::blob::store::ChunkStore,
     identity_id: u64,
     authority: &CarrierAuthority,
     method: &Method,
@@ -140,9 +140,9 @@ pub fn compile_blob_batch_at_with_nonce(
     attempt_nonce: Option<Nonce>,
 ) -> Result<(MutationBatch, u64), String> {
     let scope = authority.namespace("blob-cas", "control");
-    let batch_id = crate::batch_compile::opaque_request_key("blob", &scope, identity_id, method);
-    let batch = crate::batch_compile::compile_opaque_method(
-        crate::batch_compile::CompileBatch {
+    let batch_id = medulla_server_api::batch_compile::opaque_request_key("blob", &scope, identity_id, method);
+    let batch = medulla_server_api::batch_compile::compile_opaque_method(
+        medulla_server_api::batch_compile::CompileBatch {
             batch_id: &batch_id,
             request_id: identity_id,
             attempt_nonce,
@@ -168,9 +168,9 @@ pub fn compile_blob_batch_at_with_nonce(
 /// Convenience: build a `BlobCursors` over a fresh native CAS in `dir` (used by
 /// integration tests to drive the handler end to end).
 #[cfg(any(test, feature = "test-support"))]
-pub fn cursors_for_test(dir: &str) -> std::sync::Arc<crate::blob::BlobCursors> {
-    let store = std::sync::Arc::new(crate::blob::store::RedbChunkStore::open(dir).unwrap());
-    std::sync::Arc::new(crate::blob::BlobCursors::new(store))
+pub fn cursors_for_test(dir: &str) -> std::sync::Arc<medulla_server_api::blob::BlobCursors> {
+    let store = std::sync::Arc::new(medulla_server_api::blob::store::RedbChunkStore::open(dir).unwrap());
+    std::sync::Arc::new(medulla_server_api::blob::BlobCursors::new(store))
 }
 
 /// The installed ingest seam of `state`, or `None` before installation.
@@ -186,8 +186,8 @@ pub async fn ingest_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn Ing
 }
 
 /// Install the ingest seam; `false` when it was already installed.
-pub fn install_ingest_seam(reg: &crate::api::registry::SeamRegistry, api: Arc<dyn IngestApi>) -> bool {
-    reg.ingest.set(Arc::new(api) as crate::state::ErasedHandle).is_ok()
+pub fn install_ingest_seam(reg: &medulla_server_api::api::registry::SeamRegistry, api: Arc<dyn IngestApi>) -> bool {
+    reg.ingest.set(Arc::new(api) as medulla_server_api::state::ErasedHandle).is_ok()
 }
 
 /// The installed graph seam of `state`, or `None` before installation.
@@ -203,8 +203,8 @@ pub async fn graph_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn Grap
 }
 
 /// Install the graph seam; `false` when it was already installed.
-pub fn install_graph_seam(reg: &crate::api::registry::SeamRegistry, api: Arc<dyn GraphApi>) -> bool {
-    reg.graph.set(Arc::new(api) as crate::state::ErasedHandle).is_ok()
+pub fn install_graph_seam(reg: &medulla_server_api::api::registry::SeamRegistry, api: Arc<dyn GraphApi>) -> bool {
+    reg.graph.set(Arc::new(api) as medulla_server_api::state::ErasedHandle).is_ok()
 }
 
 /// The installed jobs seam of `state`, or `None` before installation.
@@ -220,8 +220,8 @@ pub async fn jobs_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn JobsA
 }
 
 /// Install the jobs seam; `false` when it was already installed.
-pub fn install_jobs_seam(reg: &crate::api::registry::SeamRegistry, api: Arc<dyn JobsApi>) -> bool {
-    reg.jobs.set(Arc::new(api) as crate::state::ErasedHandle).is_ok()
+pub fn install_jobs_seam(reg: &medulla_server_api::api::registry::SeamRegistry, api: Arc<dyn JobsApi>) -> bool {
+    reg.jobs.set(Arc::new(api) as medulla_server_api::state::ErasedHandle).is_ok()
 }
 
 /// The installed compute seam of `state`, or `None` before installation.
@@ -237,6 +237,6 @@ pub async fn compute_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn Co
 }
 
 /// Install the compute seam; `false` when it was already installed.
-pub fn install_compute_seam(reg: &crate::api::registry::SeamRegistry, api: Arc<dyn ComputeApi>) -> bool {
-    reg.compute.set(Arc::new(api) as crate::state::ErasedHandle).is_ok()
+pub fn install_compute_seam(reg: &medulla_server_api::api::registry::SeamRegistry, api: Arc<dyn ComputeApi>) -> bool {
+    reg.compute.set(Arc::new(api) as medulla_server_api::state::ErasedHandle).is_ok()
 }

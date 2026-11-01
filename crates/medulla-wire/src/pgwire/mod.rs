@@ -803,7 +803,7 @@ impl EngineBackend {
     /// through to its typed "no server-side text embedder is bound" error even with
     /// `MEDULLA_UQL_TEXT_EMBEDDER` configured. Idempotent/cheap (`Once`-guarded internally).
     async fn bind_startup_from_client<C: ClientInfo>(&self, client: &C) -> PgWireResult<()> {
-        medulla_server_api::api::query_txn::query_support::bind_sql_text_embedder();
+        medulla_server_ops::api::query_txn::query_support::bind_sql_text_embedder();
         let meta = client.metadata();
         let user = meta.get(pgwire::api::METADATA_USER).cloned();
         let db = meta.get(pgwire::api::METADATA_DATABASE).cloned();

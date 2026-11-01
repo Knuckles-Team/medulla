@@ -1,7 +1,7 @@
 use super::*;
 
 use super::gateway::commit_gateway_coalescable;
-use medulla_server_api::api::ingest::graph::commit_gateway;
+use medulla_server_ops::api::ingest::graph::commit_gateway;
 
 #[derive(Clone, Copy)]
 enum Route {
@@ -657,7 +657,7 @@ async fn try_handle_policy(
             .await
         }
         #[cfg(feature = "shacl")]
-        Method::GraphSchema { op } => match medulla_server_api::api::admin::admin_seam(state).await
+        Method::GraphSchema { op } => match medulla_server_ops::api::admin::admin_seam(state).await
         {
             Some(admin) => {
                 admin

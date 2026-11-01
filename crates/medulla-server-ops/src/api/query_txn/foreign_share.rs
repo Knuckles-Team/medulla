@@ -125,7 +125,7 @@ mod tests {
     use super::*;
     use medulla_types::acl::AgentIdentity;
     use medulla_types::acl::AgentRole;
-    use crate::carrier::CarrierAuthority;
+    use medulla_server_api::carrier::CarrierAuthority;
     use crate::api::query_txn::foreign_catalog::ForeignSourceCatalog;
     use medulla_types::wire::ForeignSourceSpec;
 
@@ -171,7 +171,7 @@ mod tests {
     // spec: MEDULLA-FEDERATED-QUERY-R014
     #[test]
     fn a_shared_source_needs_an_exact_grant_and_revocation_stops_use() {
-        let mut isolation = crate::state::ServerState::test_isolation("share-admin");
+        let mut isolation = medulla_server_api::state::ServerState::test_isolation("share-admin");
         let catalog = ForeignSourceCatalog::default();
         catalog
             .register(&carrier("agent-a"), "src".into(), spec())

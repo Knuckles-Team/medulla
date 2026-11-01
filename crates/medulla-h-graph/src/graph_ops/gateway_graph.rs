@@ -1,6 +1,6 @@
 use super::*;
 
-use medulla_server_api::api::ingest::graph::commit_gateway;
+use medulla_server_ops::api::ingest::graph::commit_gateway;
 
 #[path = "gateway_graph_routes.rs"]
 mod gateway_graph_routes;

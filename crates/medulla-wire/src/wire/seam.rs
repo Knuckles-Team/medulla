@@ -7,7 +7,7 @@ use medulla_table_store::{tables::TableStore, tables::TableTxn};
 /// Wire behaviour installed on the seam registry's `wire` slot.
 pub struct WireSeam;
 
-impl medulla_server_api::api::query_txn::WireApi for WireSeam {
+impl medulla_server_ops::api::query_txn::WireApi for WireSeam {
     fn authorize_table_txn(
         &self,
         source: &medulla_server_api::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,

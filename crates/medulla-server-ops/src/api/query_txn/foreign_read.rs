@@ -25,8 +25,8 @@ use medulla_catalog_types::{
 use medulla_types::contract::Digest256;
 
 use super::foreign_catalog::{ForeignSourceCatalog, OwnedForeignRegistry};
-use crate::carrier::CarrierAuthority;
-use crate::api::persistence::SourceApprovalStore;
+use medulla_server_api::carrier::CarrierAuthority;
+use medulla_server_api::api::persistence::SourceApprovalStore;
 use medulla_isolation::isolation::IsolationLayer;
 
 /// Owner-controlled dependencies used to revalidate and bind completed reads.
@@ -766,7 +766,7 @@ fn now_ms() -> u64 {
 mod tests {
     use super::*;
     use crate::api::query_txn::query_support::canonical_plan_digest;
-    use crate::authority_context::VerifiedRequestContext;
+    use medulla_server_api::authority_context::VerifiedRequestContext;
     use medulla_catalog_types::connector_pack::{
         PackHeadRef, PackSourceApproval, PackSourceKind, PackSourceRegistration,
         CONNECTOR_PACK_SCHEMA_VERSION,

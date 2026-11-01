@@ -2,7 +2,7 @@
 
 use super::*;
 #[cfg(feature = "graphql")]
-use medulla_server_api::api::query_txn::txn_support::GraphQlCrossModalCommit;
+use medulla_server_ops::api::query_txn::txn_support::GraphQlCrossModalCommit;
 
 pub(super) async fn commit_cross_modal(
     state: &Arc<RwLock<ServerState>>,

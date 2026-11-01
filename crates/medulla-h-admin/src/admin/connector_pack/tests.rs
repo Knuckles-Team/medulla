@@ -72,7 +72,7 @@ impl Served {
         state.persist_dir = Some(dir.path().to_string_lossy().into_owned());
         let blob_dir = dir.path().join("blob");
         std::fs::create_dir_all(&blob_dir).unwrap();
-        state.set_blob_cursors(Some(medulla_server_api::api::ingest::cursors_for_test(
+        state.set_blob_cursors(Some(medulla_server_ops::api::ingest::cursors_for_test(
             blob_dir.to_str().unwrap(),
         )));
         Self {

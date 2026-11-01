@@ -2,7 +2,7 @@
 //!
 //! The saga ledger is reached through [`AdminSagaLedger`], implemented by the durable backend.
 
-use crate::carrier::CarrierAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use medulla_mutation_types::mutation_scope::MutationSurface;
@@ -59,7 +59,7 @@ pub fn cluster_admin_scope_identity(
     medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_graph(
         "native",
         "cluster-admin",
-        crate::batch_compile::COMPILED_BATCH_INCARNATION,
+        medulla_server_api::batch_compile::COMPILED_BATCH_INCARNATION,
     )
 }
 
@@ -586,8 +586,8 @@ pub fn begin_named_admin_saga_with_nonce(
     let expected = medulla_transaction::version(&read)?;
     let existing = medulla_transaction::read_ledger(&read, batch_id)?;
     let event_type = public_admin_event_type(existing.as_ref(), result_contract);
-    let mut batch = crate::batch_compile::compile_opaque_method(
-        crate::batch_compile::CompileBatch {
+    let mut batch = medulla_server_api::batch_compile::compile_opaque_method(
+        medulla_server_api::batch_compile::CompileBatch {
             batch_id,
             request_id: req_id,
             attempt_nonce,
@@ -656,8 +656,8 @@ pub fn begin_named_admin_saga_with_private_payload_and_nonce(
     let identity = cluster_admin_scope_identity()?;
     let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let expected = medulla_transaction::version(&backend.admin_mutations_read()?)?;
-    let mut batch = crate::batch_compile::compile_opaque_digest(
-        crate::batch_compile::CompileBatch {
+    let mut batch = medulla_server_api::batch_compile::compile_opaque_digest(
+        medulla_server_api::batch_compile::CompileBatch {
             batch_id,
             request_id: req_id,
             attempt_nonce,
@@ -698,7 +698,7 @@ pub fn resume_named_admin_saga(
     batch_id: &str,
     caller: Option<&str>,
 ) -> Result<Option<AdminSaga>, String> {
-    let expected_principal = crate::batch_compile::principal_fingerprint(
+    let expected_principal = medulla_server_api::batch_compile::principal_fingerprint(
         caller.ok_or_else(|| "coordinator recovery requires a verified principal".to_string())?,
     )?;
     let identity = cluster_admin_scope_identity()?;

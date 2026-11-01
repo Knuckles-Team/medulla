@@ -59,7 +59,7 @@ async fn enrich(
         let receipt = web::replay_receipt(&doc_id, &document.digest_hex, &record);
         return respond(req_id, receipt);
     }
-    let embedder = medulla_server_api::api::ingest::embedder::EmbedderConfig::from_env();
+    let embedder = medulla_server_ops::api::ingest::embedder::EmbedderConfig::from_env();
     let embedded = medulla_server_api::compute::compute_off_lock(req_id, move || {
         let spans = web::chunks(&document, &config)?;
         let texts: Vec<&str> = spans.iter().map(|span| span.text(&document.text)).collect();

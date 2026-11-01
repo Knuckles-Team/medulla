@@ -105,7 +105,7 @@ pub(crate) use core::knowledge_stream_result;
 /// Jobs handler behaviour installed on the seam registry's `jobs` slot.
 pub struct JobsSeam;
 
-impl medulla_server_api::api::ingest::JobsApi for JobsSeam {
+impl medulla_server_ops::api::ingest::JobsApi for JobsSeam {
     #[cfg(all(feature = "jobs", feature = "knowledge-batch"))]
     fn knowledge_stream_result(
         &self,

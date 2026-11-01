@@ -720,7 +720,7 @@ fn open_admin_mutations(path: &std::path::Path) -> Result<AdminMutationStore, St
     AdminMutationStore::open_with(
         path,
         ADMIN_MUTATIONS_STORE,
-        medulla_server_api::api::admin::saga::cluster_admin_scope_identity()?,
+        medulla_server_ops::api::admin::saga::cluster_admin_scope_identity()?,
         admin_mutations_private_integrity(),
         medulla_kernel::store_authority::process_authority(),
     )

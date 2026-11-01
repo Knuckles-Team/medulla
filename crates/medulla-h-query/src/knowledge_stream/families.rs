@@ -234,7 +234,7 @@ async fn execute_vector(
     let caller = ctx.stream.caller;
     let read_authority = ctx.stream.read_authority;
     let authority = ctx.stream.authority;
-    let graph = medulla_server_api::api::ingest::graph_seam(&state).await;
+    let graph = medulla_server_ops::api::ingest::graph_seam(&state).await;
     let response = graph
         .ok_or_else(|| "INTERNAL: graph surface unavailable".to_string())?
         .graph_ops_try_handle(
@@ -299,7 +299,7 @@ async fn execute_time_series(
     let authority = ctx.stream.authority;
     #[cfg(feature = "tsdb")]
     {
-        let txn = medulla_server_api::api::query_txn::txn_seam(&state).await;
+        let txn = medulla_server_ops::api::query_txn::txn_seam(&state).await;
         let response = txn
             .ok_or_else(|| "time-series surface unavailable".to_string())?
             .timeseries_try_handle(
@@ -373,7 +373,7 @@ async fn execute_job(
     #[cfg(feature = "jobs")]
     {
         let persist_dir = state.read().await.persist_dir.clone();
-        let jobs = medulla_server_api::api::ingest::jobs_seam(&state).await;
+        let jobs = medulla_server_ops::api::ingest::jobs_seam(&state).await;
         let result = jobs
             .ok_or_else(|| "INTERNAL: jobs surface unavailable".to_string())?
             .knowledge_stream_result(&persist_dir, graph_name, job_id)?;

@@ -17,19 +17,19 @@ pub fn install_seams(state: &ServerState) {
         .set(std::sync::Arc::new(super::dispatch::DispatchSeam));
 
     // L3 ingest, graph, jobs, compute.
-    let _ = medulla_server_api::api::ingest::install_graph_seam(
+    let _ = medulla_server_ops::api::ingest::install_graph_seam(
         &state.seams,
         std::sync::Arc::new(GraphSeam));
     #[cfg(feature = "jobs")]
-    let _ = medulla_server_api::api::ingest::install_jobs_seam(
+    let _ = medulla_server_ops::api::ingest::install_jobs_seam(
         &state.seams,
         std::sync::Arc::new(medulla_h_jobs::jobs::JobsSeam));
 
     // L4 admin, decide.
-    let _ = medulla_server_api::api::admin::install_admin_seam(
+    let _ = medulla_server_ops::api::admin::install_admin_seam(
         &state.seams,
         std::sync::Arc::new(medulla_h_admin::admin::AdminSeam));
-    let _ = medulla_server_api::api::admin::install_decide_seam(
+    let _ = medulla_server_ops::api::admin::install_decide_seam(
         &state.seams,
         std::sync::Arc::new(medulla_h_decide::decide::DecideSeam));
 
@@ -45,16 +45,16 @@ pub fn install_seams(state: &ServerState) {
         feature = "graphql",
         feature = "mining"
     ))]
-    let _ = medulla_server_api::api::query_txn::install_query_seam(
+    let _ = medulla_server_ops::api::query_txn::install_query_seam(
         &state.seams,
         std::sync::Arc::new(
         medulla_h_query::query::QuerySeam,
     ));
-    let _ = medulla_server_api::api::query_txn::install_txn_seam(
+    let _ = medulla_server_ops::api::query_txn::install_txn_seam(
         &state.seams,
         std::sync::Arc::new(medulla_h_txn::txn::TxnSeam));
     #[cfg(feature = "query")]
-    let _ = medulla_server_api::api::query_txn::install_wire_seam(
+    let _ = medulla_server_ops::api::query_txn::install_wire_seam(
         &state.seams,
         std::sync::Arc::new(medulla_wire::wire::WireSeam));
 
@@ -65,7 +65,7 @@ pub fn install_seams(state: &ServerState) {
 struct GraphSeam;
 
 #[async_trait::async_trait]
-impl medulla_server_api::api::ingest::GraphApi for GraphSeam {
+impl medulla_server_ops::api::ingest::GraphApi for GraphSeam {
     async fn graph_ops_try_handle(
         &self,
         state: &std::sync::Arc<tokio::sync::RwLock<ServerState>>,

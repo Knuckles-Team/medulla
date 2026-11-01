@@ -27,8 +27,8 @@ use super::saga::{
     catalog_saga, live_graph_loads, no_catalog, rebalance_opts, rebalance_plan_report,
     reshard_report,
 };
-use medulla_server_api::api::admin::saga::begin_admin_saga_with_nonce;
-use medulla_server_api::api::admin::saga::finish_admin_saga;
+use medulla_server_ops::api::admin::saga::begin_admin_saga_with_nonce;
+use medulla_server_ops::api::admin::saga::finish_admin_saga;
 
 /// Route an M3 admin method (CONCEPT:MEDULLA-KG.backend.m3-admin-dispatch). `Ok(resp)` = handled; `Err(method)` = not an
 /// admin method (unreachable — the dispatch arm only routes admin variants here).
@@ -212,7 +212,7 @@ impl AdminSagaCall<'_> {
     fn begin_saga(
         &self,
         domain: DurabilityDomain,
-    ) -> Result<medulla_server_api::api::admin::saga::AdminSaga, Response> {
+    ) -> Result<medulla_server_ops::api::admin::saga::AdminSaga, Response> {
         let mut saga = begin_admin_saga_with_nonce(
             self.backend,
             self.req_id,

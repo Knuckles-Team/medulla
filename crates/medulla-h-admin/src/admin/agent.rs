@@ -564,7 +564,7 @@ fn graph_publish(
     request.graph.purpose_id = context.purpose_id.clone();
     request.graph.policy_digest = context.policy_digest.clone();
     request.context = context;
-    if let Some(refusal) = medulla_server_api::api::admin::topology_shape::refusal(&request.graph) {
+    if let Some(refusal) = medulla_server_ops::api::admin::topology_shape::refusal(&request.graph) {
         return Response::err(req_id, refusal);
     }
     match store.publish_graph(*request) {

@@ -2,7 +2,7 @@ use super::*;
 
 #[cfg(feature = "broker")]
 use medulla_protocol_types::result_contract::messaging as results;
-use medulla_server_api::api::ingest::graph::commit_gateway;
+use medulla_server_ops::api::ingest::graph::commit_gateway;
 
 /// `DeclareExchange`: pure extract-method from `try_handle_gateway`'s closure,
 /// byte-identical behaviour, no signature change.

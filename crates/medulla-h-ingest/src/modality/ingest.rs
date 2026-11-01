@@ -19,7 +19,7 @@ use super::{
     validate_content_binding, validate_request_sizes, ModalityAuthority,
 };
 use medulla_graph_core::graph::GraphCore;
-use medulla_server_api::api::ingest::MAX_INGEST_STREAM_ITEMS;
+use medulla_server_ops::api::ingest::MAX_INGEST_STREAM_ITEMS;
 
 struct ResourceClosure {
     resources: BTreeSet<String>,

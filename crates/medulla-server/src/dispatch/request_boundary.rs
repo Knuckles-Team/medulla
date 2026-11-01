@@ -531,7 +531,7 @@ async fn dispatch_admitted_request(
         finalize_dispatch_response(req_id, response, &method_for_finalize, session_control)
     };
     #[cfg(feature = "redb")]
-    return medulla_server_api::api::admin::saga::scope_admin_saga_authority(
+    return medulla_server_ops::api::admin::saga::scope_admin_saga_authority(
         saga_authority,
         operation,
     )

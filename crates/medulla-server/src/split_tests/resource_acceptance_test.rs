@@ -2612,7 +2612,7 @@ async fn kg_delegate_public_dispatch_replicates_and_replays_after_failover_scena
     };
     assert_eq!(
         native.provenance_refs,
-        medulla_server_api::api::ingest::jobs::provenance_refs(&request),
+        medulla_server_ops::api::ingest::jobs::provenance_refs(&request),
         "reopened receipt must retain the exact delegation provenance"
     );
 

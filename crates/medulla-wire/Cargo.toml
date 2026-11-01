@@ -49,6 +49,7 @@ uuid = { version = "1.28", features = ["v4"] }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
 medulla-graph-algos = { path = "../medulla-graph-algos" }
+medulla-server-ops = { path = "../medulla-server-ops" }
 
 [features]
 test-support = []

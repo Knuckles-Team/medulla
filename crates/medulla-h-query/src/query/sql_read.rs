@@ -149,7 +149,7 @@ pub(crate) async fn handle_sql(
         Err(error) => return Ok(Response::err(req_id, error)),
     };
     let persist_path = persist_dir.as_path();
-    let wire = medulla_server_api::api::query_txn::wire_seam(&ctx.state).await;
+    let wire = medulla_server_ops::api::query_txn::wire_seam(&ctx.state).await;
     let store = match sql_tenant_store(authority, persist_path, req_id) {
         Ok(store) => store,
         Err(response) => return Ok(response),
@@ -428,7 +428,7 @@ pub(super) async fn catalog_sql_response(
     query: String,
     graph: medulla_server_api::sql_catalog_acl::RequestGraph,
 ) -> Response {
-    let read_only = match medulla_server_api::api::admin::decide_seam(state).await {
+    let read_only = match medulla_server_ops::api::admin::decide_seam(state).await {
         Some(decide) => decide.read_only_relations(state, &authority, &query).await,
         None => None,
     };

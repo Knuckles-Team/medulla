@@ -53,7 +53,7 @@ use std::path::{Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 
-use crate::carrier::CarrierAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
 use medulla_protocol_types::protocol::Method;
 
 const TXN_INTENT_DIR: &str = "txn-intent";
@@ -402,7 +402,7 @@ mod tests {
 
     fn authority() -> CarrierAuthority {
         CarrierAuthority::from_verified(
-            &crate::authority_context::VerifiedRequestContext::verified_for_test_in_tenant(
+            &medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_in_tenant(
                 "intent-test-agent",
                 "intent-test-tenant",
             ),

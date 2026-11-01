@@ -230,8 +230,8 @@ async fn handle_semantic_search(
 /// adapted probe still searches only rows the caller may see.
 #[cfg(feature = "decide")]
 async fn adapt_query_vector(ctx: &GraphOpsContext<'_>, method: Method) -> Method {
-    use medulla_server_api::api::admin::served_adapter::adapted_query;
-    use medulla_server_api::api::admin::served_adapter::carrier_tenant;
+    use medulla_server_ops::api::admin::served_adapter::adapted_query;
+    use medulla_server_ops::api::admin::served_adapter::carrier_tenant;
     let tenant = carrier_tenant(Some(ctx.read_authority));
     let served = (ctx.graph_name, &**ctx.core);
     match method {

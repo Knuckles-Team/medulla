@@ -241,7 +241,7 @@ fn a_plan_rewrite_re_aims_every_vector_rank_only() {
     )
     .unwrap();
     let adapter =
-        medulla_server_api::api::admin::served_adapter::ServedAdapter::for_body("d", &body)
+        medulla_server_ops::api::admin::served_adapter::ServedAdapter::for_body("d", &body)
             .unwrap();
     let plan = medulla_plan::Plan::new(vec![
         medulla_plan::Op::Scan {
@@ -257,10 +257,10 @@ fn a_plan_rewrite_re_aims_every_vector_rank_only() {
             query: vec![1.0, 1.0],
         },
     ]);
-    let rewritten = medulla_server_api::api::admin::served_adapter::adapt_plan(
+    let rewritten = medulla_server_ops::api::admin::served_adapter::adapt_plan(
         plan,
         Some(Arc::new(adapter)),
-        medulla_server_api::api::query_txn::query_support::uql_text_embedder(),
+        medulla_server_ops::api::query_txn::query_support::uql_text_embedder(),
     );
     let expected = medulla_plan::Op::Rank {
         query: vec![1.0, 1.5],

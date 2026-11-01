@@ -38,7 +38,7 @@ pub(super) async fn handle_gateway(
     }
     let op = op.clone();
     let graph_name = ctx.graph_name.to_string();
-    medulla_server_api::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
+    medulla_server_ops::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
         super::apply(core, &graph_name, &op)
     })
     .await
@@ -76,7 +76,7 @@ pub(super) async fn handle_validate(
 ) -> Response {
     let op = op.clone();
     let graph_name = ctx.graph_name.to_string();
-    medulla_server_api::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
+    medulla_server_ops::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
         validate(core, &graph_name, &op)
     })
     .await

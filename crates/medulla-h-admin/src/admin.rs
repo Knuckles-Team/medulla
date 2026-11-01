@@ -104,7 +104,7 @@ mod security_tests {
 pub struct AdminSeam;
 
 #[async_trait::async_trait]
-impl medulla_server_api::api::admin::AdminApi for AdminSeam {
+impl medulla_server_ops::api::admin::AdminApi for AdminSeam {
     #[cfg(feature = "shacl")]
     async fn graph_schema_gateway(
         &self,

@@ -39,7 +39,7 @@
 //! NOTHING in the classify/dispatch/exec/txn/durability path is reimplemented — the
 //! new wire only adds framing + encoding. This is the MEDULLA-074 promise.
 
-use medulla_server_api::api::query_txn::ForeignStateExt;
+use medulla_server_ops::api::query_txn::ForeignStateExt;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -1316,7 +1316,7 @@ pub struct WireSession {
     /// with table ops, to durably record how to rebuild the table-side
     /// `TableTxn` on crash recovery (`medulla_table_store::tables::TxnOp` is not `Serialize`).
     /// Reset by `begin_txn()`.
-    pub txn_replay_log: parking_lot::Mutex<Vec<medulla_server_api::api::query_txn::txn_intent::ReplayStep>>,
+    pub txn_replay_log: parking_lot::Mutex<Vec<medulla_server_ops::api::query_txn::txn_intent::ReplayStep>>,
     /// Set once this connection has swept its owner's leftover commit-intent
     /// files (CONCEPT:MEDULLA-TXN.mixed-commit-intent — NE-004 crash recovery). Checked lazily on first use rather
     /// than at connection setup so it costs nothing on a connection that never
@@ -1664,7 +1664,7 @@ impl WireSession {
             // ordinary buffered statement is — record its decoded shape
             // directly instead (see `ReplayStep::CopyRows`'s doc).
             self.txn_replay_log.lock().push(
-                medulla_server_api::api::query_txn::txn_intent::ReplayStep::CopyRows {
+                medulla_server_ops::api::query_txn::txn_intent::ReplayStep::CopyRows {
                     table: table.clone(),
                     columns: columns.clone(),
                     rows: rows.clone(),
@@ -1910,7 +1910,7 @@ impl WireSession {
         // row-level security applied inside the probe.
         let (authority, persist_dir) = self.catalog_authority().await?;
         // EH-066: the caller's decision record views, when the statement can see them.
-        let read_only = match medulla_server_api::api::admin::decide_seam(&self.state).await {
+        let read_only = match medulla_server_ops::api::admin::decide_seam(&self.state).await {
             Some(decide) => {
                 decide
                     .read_only_relations(&self.state, &authority, &sql)
@@ -2680,7 +2680,7 @@ impl WireSession {
         let compensating = self.compensating_methods(graph, &methods).await?;
         let table_steps = std::mem::take(&mut *self.txn_replay_log.lock());
         let operation_id = self.request_operation_id()?;
-        let intent = medulla_server_api::api::query_txn::txn_intent::CommitIntent::new(
+        let intent = medulla_server_ops::api::query_txn::txn_intent::CommitIntent::new(
             graph.to_string(),
             operation_id,
             methods,
@@ -2694,7 +2694,7 @@ impl WireSession {
             user_err("mixed graph+table transactions require the configured persistence directory")
         })?;
         let persist_dir = std::path::Path::new(&persist_dir_buf);
-        medulla_server_api::api::query_txn::txn_intent::write_intent(&authority, persist_dir, &intent)
+        medulla_server_ops::api::query_txn::txn_intent::write_intent(&authority, persist_dir, &intent)
             .map_err(user_err)?;
         // The live path already HAS the real, already-buffered `TableTxn` —
         // commit it directly rather than re-deriving it from the replay log
@@ -2727,7 +2727,7 @@ impl WireSession {
         &self,
         authority: &CarrierAuthority,
         persist_dir: &Path,
-        intent: medulla_server_api::api::query_txn::txn_intent::CommitIntent,
+        intent: medulla_server_ops::api::query_txn::txn_intent::CommitIntent,
         isolation: medulla_server_api::txn::IsolationLevel,
         begin_version: TxnBeginVersion,
         live_table_txn: Option<TableTxn>,
@@ -2754,7 +2754,7 @@ impl WireSession {
             // next sweep and retry the exact recipe instead of losing repair
             // state after an uncertain access/transient failure.
             if !recovering {
-                let _ = medulla_server_api::api::query_txn::txn_intent::delete_intent(
+                let _ = medulla_server_ops::api::query_txn::txn_intent::delete_intent(
                     authority,
                     persist_dir,
                     operation_id,
@@ -2781,7 +2781,7 @@ impl WireSession {
         };
         match table_result {
             Ok(_) => {
-                let _ = medulla_server_api::api::query_txn::txn_intent::delete_intent(
+                let _ = medulla_server_ops::api::query_txn::txn_intent::delete_intent(
                     authority,
                     persist_dir,
                     operation_id,
@@ -2796,7 +2796,7 @@ impl WireSession {
                     // compensating graph write: it would undo the already
                     // successful original mixed commit. This newly-created
                     // conflicting intent has no repair work of its own.
-                    let _ = medulla_server_api::api::query_txn::txn_intent::delete_intent(
+                    let _ = medulla_server_ops::api::query_txn::txn_intent::delete_intent(
                         authority,
                         persist_dir,
                         operation_id,
@@ -2837,7 +2837,7 @@ impl WireSession {
                          retried"
                     )));
                 }
-                let _ = medulla_server_api::api::query_txn::txn_intent::delete_intent(
+                let _ = medulla_server_ops::api::query_txn::txn_intent::delete_intent(
                     authority,
                     persist_dir,
                     operation_id,
@@ -2856,7 +2856,7 @@ impl WireSession {
     /// `operation_id`.
     pub async fn replay_table_steps_and_commit(
         &self,
-        intent: &medulla_server_api::api::query_txn::txn_intent::CommitIntent,
+        intent: &medulla_server_ops::api::query_txn::txn_intent::CommitIntent,
     ) -> WireResult<usize> {
         let saved = self.txn.lock().take();
         *self.txn.lock() = Some(TableTxn::new());
@@ -2887,7 +2887,7 @@ impl WireSession {
     pub async fn replay_table_steps(
         &self,
         graph: &str,
-        steps: &[medulla_server_api::api::query_txn::txn_intent::ReplayStep],
+        steps: &[medulla_server_ops::api::query_txn::txn_intent::ReplayStep],
     ) -> WireResult<()> {
         for step in steps {
             self.replay_table_step(graph, step).await?;
@@ -2898,10 +2898,10 @@ impl WireSession {
     async fn replay_table_step(
         &self,
         graph: &str,
-        step: &medulla_server_api::api::query_txn::txn_intent::ReplayStep,
+        step: &medulla_server_ops::api::query_txn::txn_intent::ReplayStep,
     ) -> WireResult<()> {
         match step {
-            medulla_server_api::api::query_txn::txn_intent::ReplayStep::Sql(sql) => {
+            medulla_server_ops::api::query_txn::txn_intent::ReplayStep::Sql(sql) => {
                 let kind = medulla_sql::sql::classify(sql).map_err(user_err)?;
                 self.try_buffer_transaction_table_statement(graph, sql, &kind)
                     .await?
@@ -2910,7 +2910,7 @@ impl WireSession {
                         user_err("durable SQL replay step is not a table transaction operation")
                     })
             }
-            medulla_server_api::api::query_txn::txn_intent::ReplayStep::CopyRows {
+            medulla_server_ops::api::query_txn::txn_intent::ReplayStep::CopyRows {
                 table,
                 columns,
                 rows,
@@ -2957,7 +2957,7 @@ impl WireSession {
         };
         let persist_dir = std::path::Path::new(&persist_dir_buf);
         for intent in
-            medulla_server_api::api::query_txn::txn_intent::list_intents(&authority, persist_dir)
+            medulla_server_ops::api::query_txn::txn_intent::list_intents(&authority, persist_dir)
         {
             // Recovery is completing (or undoing) an ALREADY-decided
             // transaction, not evaluating a fresh one — there is no NEW read
@@ -4288,7 +4288,7 @@ impl WireSession {
         let table_steps = if operation == "transaction" {
             std::mem::take(&mut *self.txn_replay_log.lock())
         } else {
-            vec![medulla_server_api::api::query_txn::txn_intent::ReplayStep::Sql(
+            vec![medulla_server_ops::api::query_txn::txn_intent::ReplayStep::Sql(
                 operation.to_string(),
             )]
         };
@@ -4296,7 +4296,7 @@ impl WireSession {
             return Err(user_err("CREATE TABLE commit has no durable replay recipe"));
         }
         let operation_id = self.request_operation_id()?;
-        let intent = medulla_server_api::api::query_txn::txn_intent::CommitIntent::new(
+        let intent = medulla_server_ops::api::query_txn::txn_intent::CommitIntent::new(
             graph.to_string(),
             operation_id,
             Vec::new(),
@@ -4313,7 +4313,7 @@ impl WireSession {
             .clone()
             .ok_or_else(|| user_err("CREATE TABLE recovery requires configured persistence"))?;
         let persist_dir = std::path::Path::new(&persist_dir);
-        medulla_server_api::api::query_txn::txn_intent::write_intent(&authority, persist_dir, &intent)
+        medulla_server_ops::api::query_txn::txn_intent::write_intent(&authority, persist_dir, &intent)
             .map_err(user_err)?;
         self.resolve_commit_intent(
             &authority,
@@ -4596,7 +4596,7 @@ impl WireSession {
             #[cfg(feature = "sparql")]
             XmodalStmt::SparqlUpdate(update) => {
                 let (methods, schema_refs) =
-                    medulla_server_api::api::query_txn::txn_support::sparql_update_to_methods(&update)
+                    medulla_server_ops::api::query_txn::txn_support::sparql_update_to_methods(&update)
                         .map_err(user_err)?;
                 self.stage_or_commit_owl(graph, methods, schema_refs, in_txn)
                     .await
@@ -4617,7 +4617,7 @@ impl WireSession {
                         .filter_view(&actor, &mut view);
                 }
                 let (methods, schema_refs) =
-                    medulla_server_api::api::query_txn::txn_support::construct_view_to_methods(
+                    medulla_server_ops::api::query_txn::txn_support::construct_view_to_methods(
                         &view, &query,
                     )
                     .map_err(user_err)?;
@@ -4676,15 +4676,15 @@ impl WireSession {
     }
 
     /// The installed transaction seam, or an internal error when none is installed.
-    async fn txn_api(&self) -> WireResult<Arc<dyn medulla_server_api::api::query_txn::TxnApi>> {
-        medulla_server_api::api::query_txn::txn_seam(&self.state).await
+    async fn txn_api(&self) -> WireResult<Arc<dyn medulla_server_ops::api::query_txn::TxnApi>> {
+        medulla_server_ops::api::query_txn::txn_seam(&self.state).await
             .ok_or_else(|| user_err("INTERNAL: transaction seam is not installed"))
     }
 
     /// The installed query seam, or an internal error when none is installed.
     #[cfg(feature = "query")]
-    async fn query_api(&self) -> WireResult<Arc<dyn medulla_server_api::api::query_txn::QueryApi>> {
-        medulla_server_api::api::query_txn::query_seam(&self.state).await
+    async fn query_api(&self) -> WireResult<Arc<dyn medulla_server_ops::api::query_txn::QueryApi>> {
+        medulla_server_ops::api::query_txn::query_seam(&self.state).await
             .ok_or_else(|| user_err("INTERNAL: query seam is not installed"))
     }
 
@@ -4701,7 +4701,7 @@ impl WireSession {
     async fn exec_uql(&self, graph: &str, text: &str, in_txn: bool) -> WireResult<WireOutcome> {
         let plan = medulla_plan::uql::parse(text).map_err(|e| user_err(e.render(text)))?;
         #[cfg(feature = "tsdb")]
-        let tsdb_scope = if medulla_server_api::api::query_txn::query_support::plan_needs_tsdb(&plan.ops)
+        let tsdb_scope = if medulla_server_ops::api::query_txn::query_support::plan_needs_tsdb(&plan.ops)
         {
             let authority = self.carrier_authority()?;
             Some((
@@ -4733,7 +4733,7 @@ impl WireSession {
             }
             staged
         };
-        medulla_server_api::api::query_txn::query_support::overlay_write_set(
+        medulla_server_ops::api::query_txn::query_support::overlay_write_set(
             &mut view,
             &overlay_methods,
         );
@@ -4772,9 +4772,9 @@ impl WireSession {
                 &core_for_ctx,
                 &vectors,
                 #[cfg(feature = "federation")]
-                medulla_server_api::api::query_txn::foreign_catalog::bound_registry(&foreign),
+                medulla_server_ops::api::query_txn::foreign_catalog::bound_registry(&foreign),
                 #[cfg(feature = "tsdb")]
-                medulla_server_api::api::query_txn::query_support::TsdbLegBind {
+                medulla_server_ops::api::query_txn::query_support::TsdbLegBind {
                     tsdb: tsdb.as_deref(),
                     tsdb_tenant: tsdb_tenant.as_deref(),
                     tsdb_graph: tsdb_graph.as_deref(),
@@ -5045,7 +5045,7 @@ impl WireSession {
             let table_ops_after = self.txn.lock().as_ref().map(|t| t.ops.len()).unwrap_or(0);
             if table_ops_after > table_ops_before {
                 self.txn_replay_log.lock().push(
-                    medulla_server_api::api::query_txn::txn_intent::ReplayStep::Sql(sql.to_string()),
+                    medulla_server_ops::api::query_txn::txn_intent::ReplayStep::Sql(sql.to_string()),
                 );
             }
         }

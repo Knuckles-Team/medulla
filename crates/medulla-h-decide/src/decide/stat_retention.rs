@@ -143,7 +143,7 @@ fn release_inputs(retention: &Retention, pin: &InputsBlob, request_id: u64) -> R
     let method = medulla_protocol_types::protocol::Method::BlobUnref {
         digest: pin.manifest_digest.clone(),
     };
-    let (batch, now) = medulla_server_api::api::ingest::compile_blob_batch(
+    let (batch, now) = medulla_server_ops::api::ingest::compile_blob_batch(
         blob.store.as_ref(),
         request_id,
         authority,

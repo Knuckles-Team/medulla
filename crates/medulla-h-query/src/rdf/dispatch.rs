@@ -323,7 +323,7 @@ async fn try_handle_validation(
         )),
         #[cfg(feature = "shacl")]
         Method::GraphSchemaList => Some(
-            medulla_server_api::api::admin::schema_read::handle_list(req_id, graph_name, core).await,
+            medulla_server_ops::api::admin::schema_read::handle_list(req_id, graph_name, core).await,
         ),
         #[cfg(feature = "shacl")]
         Method::GraphSchemaClasses {
@@ -331,11 +331,11 @@ async fn try_handle_validation(
             cursor,
             limit,
         } => Some(
-            medulla_server_api::api::admin::terms::handle_classes(
+            medulla_server_ops::api::admin::terms::handle_classes(
                 req_id,
                 graph_name,
                 core,
-                medulla_server_api::api::admin::terms::TermPageRequest {
+                medulla_server_ops::api::admin::terms::TermPageRequest {
                     kind: *kind,
                     cursor: cursor.as_deref(),
                     limit: *limit,

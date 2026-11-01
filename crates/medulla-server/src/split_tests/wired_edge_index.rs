@@ -4,10 +4,10 @@
 //! reads (the KnowledgeStream read is proven in `handlers::knowledge_stream`'s
 //! tests) through the one shared projection builder.
 
-use medulla_server_api::api::query_txn::edge_test_support::edge_status_row;
-use medulla_server_api::api::query_txn::edge_test_support::register_detached_edge_index;
-use medulla_server_api::api::query_txn::edge_test_support::sql_rows;
-use medulla_server_api::api::query_txn::edge_test_support::EDGE_STATUS_SQL;
+use medulla_server_ops::api::query_txn::edge_test_support::edge_status_row;
+use medulla_server_ops::api::query_txn::edge_test_support::register_detached_edge_index;
+use medulla_server_ops::api::query_txn::edge_test_support::sql_rows;
+use medulla_server_ops::api::query_txn::edge_test_support::EDGE_STATUS_SQL;
 use std::sync::Arc;
 
 use medulla_table_store::tables::TableStore;

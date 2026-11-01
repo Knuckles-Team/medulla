@@ -674,8 +674,8 @@ projected_lines = 10393
 [crates.medulla-server-ops]
 level = "F4e"
 kind = "api"
-responsibility = "Served API seams: admin, ingest, query-transaction and re-entry seams and their registry."
-moves = ["crates/medulla-server-api/src/api/admin", "crates/medulla-server-api/src/api/ingest", "crates/medulla-server-api/src/api/query_txn", "crates/medulla-server-api/src/api/reentry", "crates/medulla-server-api/src/api/registry"]
+responsibility = "Served API handler seams: the admin, decide, ingest, graph, jobs, compute, query, transaction and wire seam traits, their typed accessors and their support modules."
+moves = ["crates/medulla-server-api/src/api/admin", "crates/medulla-server-api/src/api/ingest", "crates/medulla-server-api/src/api/query_txn"]
 specs = []
 current_lines = 7821
 projected_lines = 7821

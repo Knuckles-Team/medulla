@@ -38,15 +38,15 @@ use medulla_query_cache::result_cache::ResultCache;
 use medulla_graphql::parser::{Field, GqlValue};
 use medulla_server_api::carrier::GraphReadAuthority;
 #[cfg(feature = "federation")]
-use medulla_server_api::api::query_txn::foreign_catalog::bound_registry;
+use medulla_server_ops::api::query_txn::foreign_catalog::bound_registry;
 #[cfg(feature = "query")]
-use medulla_server_api::api::query_txn::query_support::bind_sql_text_embedder;
-use medulla_server_api::api::query_txn::query_support::execute_rows;
-use medulla_server_api::api::query_txn::query_support::overlay_write_set;
+use medulla_server_ops::api::query_txn::query_support::bind_sql_text_embedder;
+use medulla_server_ops::api::query_txn::query_support::execute_rows;
+use medulla_server_ops::api::query_txn::query_support::overlay_write_set;
 #[cfg(all(feature = "query", feature = "tsdb"))]
-use medulla_server_api::api::query_txn::query_support::plan_needs_tsdb;
-use medulla_server_api::api::query_txn::query_support::uql_text_embedder;
-use medulla_server_api::api::query_txn::query_support::TsdbLegBind;
+use medulla_server_ops::api::query_txn::query_support::plan_needs_tsdb;
+use medulla_server_ops::api::query_txn::query_support::uql_text_embedder;
+use medulla_server_ops::api::query_txn::query_support::TsdbLegBind;
 use medulla_server_api::compute::compute_off_lock;
 use medulla_server_api::state::ServerState;
 

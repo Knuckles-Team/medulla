@@ -47,7 +47,7 @@ pub(crate) fn explain_plan(
     // host can obtain the authoritative digest from ExplainPlan without
     // implementing or guessing the Rust planner's serialization.
     let plan_digest =
-        medulla_server_api::api::query_txn::query_support::canonical_plan_digest(&plan)?;
+        medulla_server_ops::api::query_txn::query_support::canonical_plan_digest(&plan)?;
 
     /// Annotate every node of `dag` with its plan-time cost/cardinality estimate, walked
     /// in topological order so a node's `estimated_rows_in` is always derived from its

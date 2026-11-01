@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::state::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// Admin handler behaviour reachable from crates below `medulla-h-admin`.
 #[async_trait::async_trait]
@@ -25,8 +25,8 @@ pub trait AdminApi: Send + Sync {
         &self,
         state: &Arc<RwLock<ServerState>>,
         tenant_id: &str,
-        ctx: &crate::mutation::MutationCtx<'_>,
-        plan: &crate::mutation::MutationPlan,
+        ctx: &medulla_server_api::mutation::MutationCtx<'_>,
+        plan: &medulla_server_api::mutation::MutationPlan,
         method: &medulla_protocol_types::protocol::Method,
         op: &medulla_catalog_types::graph_schema::GraphSchemaOp,
     ) -> medulla_protocol_types::protocol::Response;
@@ -52,16 +52,16 @@ pub trait DecideApi: Send + Sync {
     async fn read_only_relations(
         &self,
         state: &Arc<RwLock<ServerState>>,
-        authority: &crate::carrier::CarrierAuthority,
+        authority: &medulla_server_api::carrier::CarrierAuthority,
         query: &str,
-    ) -> Option<crate::sql_catalog_acl::SharedRelations>;
+    ) -> Option<medulla_server_api::sql_catalog_acl::SharedRelations>;
 
     /// The caller's visible decision log as a UQL `DECISIONS` source.
     #[cfg(all(feature = "decide", feature = "query"))]
     async fn decision_source(
         &self,
         state: &Arc<RwLock<ServerState>>,
-        authority: &crate::carrier::CarrierAuthority,
+        authority: &medulla_server_api::carrier::CarrierAuthority,
     ) -> Option<Arc<dyn medulla_plan::exec::DecisionSource>>;
 }
 
@@ -78,8 +78,8 @@ pub async fn decide_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn Dec
 }
 
 /// Install the decide seam; `false` when it was already installed.
-pub fn install_decide_seam(reg: &crate::api::registry::SeamRegistry, api: Arc<dyn DecideApi>) -> bool {
-    reg.decide.set(Arc::new(api) as crate::state::ErasedHandle).is_ok()
+pub fn install_decide_seam(reg: &medulla_server_api::api::registry::SeamRegistry, api: Arc<dyn DecideApi>) -> bool {
+    reg.decide.set(Arc::new(api) as medulla_server_api::state::ErasedHandle).is_ok()
 }
 
 /// The installed admin seam of `state`, or `None` before installation.
@@ -95,6 +95,6 @@ pub async fn admin_seam(state: &Arc<RwLock<ServerState>>) -> Option<Arc<dyn Admi
 }
 
 /// Install the admin seam; `false` when it was already installed.
-pub fn install_admin_seam(reg: &crate::api::registry::SeamRegistry, api: Arc<dyn AdminApi>) -> bool {
-    reg.admin.set(Arc::new(api) as crate::state::ErasedHandle).is_ok()
+pub fn install_admin_seam(reg: &medulla_server_api::api::registry::SeamRegistry, api: Arc<dyn AdminApi>) -> bool {
+    reg.admin.set(Arc::new(api) as medulla_server_api::state::ErasedHandle).is_ok()
 }

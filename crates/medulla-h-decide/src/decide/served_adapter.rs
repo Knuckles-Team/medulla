@@ -23,7 +23,7 @@ use medulla_graph_core::graph::GraphCore;
 
 use medulla_persistence::agent_library::AgentLibraryStore;
 use medulla_persistence::decision_jobs::decode_artifact;
-use medulla_server_api::api::admin::served_adapter::ServedAdapter;
+use medulla_server_ops::api::admin::served_adapter::ServedAdapter;
 use medulla_server_api::state::ServerState;
 
 /// Bodies kept decoded; the cache is cleared when it would grow past this.

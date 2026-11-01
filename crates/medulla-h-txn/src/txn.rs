@@ -106,7 +106,7 @@ fn decode_txn_result(bytes: &[u8]) -> Result<ResultPayload, String> {
     // durable encoding; reading them as the untagged wire enum would turn
     // `Bool(true)` into `Json({"kind":"Bool","value":true})`.
     #[cfg(feature = "redb")]
-    if let Some(result) = medulla_server_api::api::admin::saga::decode_durable_saga_result(
+    if let Some(result) = medulla_server_ops::api::admin::saga::decode_durable_saga_result(
         bytes,
         medulla_types::msgpack::MsgpackLimits::new(
             MAX_TXN_RESULT_BYTES,

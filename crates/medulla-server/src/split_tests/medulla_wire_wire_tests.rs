@@ -356,7 +356,7 @@ mod ne_004_ne_005_tests {
             .expect("snapshot pre-txn state");
         let table_steps = std::mem::take(&mut *session.txn_replay_log.lock());
         let operation_id = uuid::Uuid::new_v4();
-        let intent = medulla_server_api::api::query_txn::txn_intent::CommitIntent::new(
+        let intent = medulla_server_ops::api::query_txn::txn_intent::CommitIntent::new(
             graph.to_string(),
             operation_id,
             methods.clone(),
@@ -372,7 +372,7 @@ mod ne_004_ne_005_tests {
             .clone()
             .expect("persist dir configured");
         let persist_dir = std::path::Path::new(&persist_dir_buf);
-        medulla_server_api::api::query_txn::txn_intent::write_intent(&authority, persist_dir, &intent)
+        medulla_server_ops::api::query_txn::txn_intent::write_intent(&authority, persist_dir, &intent)
             .expect("write durable intent");
         let begin_version = session
             .require_txn_begin_version()
@@ -396,7 +396,7 @@ mod ne_004_ne_005_tests {
         // The torn state is real: the graph write is durable, the table
         // write is not, and the intent survives on disk.
         assert_eq!(
-            medulla_server_api::api::query_txn::txn_intent::list_intents(&authority, persist_dir).len(),
+            medulla_server_ops::api::query_txn::txn_intent::list_intents(&authority, persist_dir).len(),
             1,
             "the crashed intent must still be on disk"
         );
@@ -417,7 +417,7 @@ mod ne_004_ne_005_tests {
             .expect("a trivial read triggers recovery as a side effect");
 
         assert!(
-            medulla_server_api::api::query_txn::txn_intent::list_intents(&authority, persist_dir)
+            medulla_server_ops::api::query_txn::txn_intent::list_intents(&authority, persist_dir)
                 .is_empty(),
             "recovery must clear the resolved intent"
         );
@@ -457,7 +457,7 @@ mod ne_004_ne_005_tests {
             .expect("persist dir configured");
         let persist_dir = std::path::Path::new(&persist_dir_buf);
         let operation_id = uuid::Uuid::new_v4();
-        let intent = medulla_server_api::api::query_txn::txn_intent::CommitIntent::new(
+        let intent = medulla_server_ops::api::query_txn::txn_intent::CommitIntent::new(
             graph.to_string(),
             operation_id,
             vec![Method::AddNode {
@@ -470,12 +470,12 @@ mod ne_004_ne_005_tests {
             vec![Method::RemoveNode {
                 node_id: "recovery-after-graph-fault".to_string(),
             }],
-            vec![medulla_server_api::api::query_txn::txn_intent::ReplayStep::Sql(
+            vec![medulla_server_ops::api::query_txn::txn_intent::ReplayStep::Sql(
                 format!("CREATE TABLE {table} (id INT)"),
             )],
             medulla_server_api::txn::now_ms(),
         );
-        medulla_server_api::api::query_txn::txn_intent::write_intent(&authority, persist_dir, &intent)
+        medulla_server_ops::api::query_txn::txn_intent::write_intent(&authority, persist_dir, &intent)
             .expect("persist phase-1 recovery intent");
 
         // The first recovery attempt fails at graph lookup because the graph
@@ -487,7 +487,7 @@ mod ne_004_ne_005_tests {
             .expect_err("missing graph must fail the first recovery attempt");
         assert!(first.message.contains("graph"), "{first}");
         assert_eq!(
-            medulla_server_api::api::query_txn::txn_intent::list_intents(&authority, persist_dir).len(),
+            medulla_server_ops::api::query_txn::txn_intent::list_intents(&authority, persist_dir).len(),
             1,
             "an uncertain recovery graph error must retain its intent"
         );
@@ -500,7 +500,7 @@ mod ne_004_ne_005_tests {
             .await
             .expect("the same connection retries retained recovery");
         assert!(
-            medulla_server_api::api::query_txn::txn_intent::list_intents(&authority, persist_dir)
+            medulla_server_ops::api::query_txn::txn_intent::list_intents(&authority, persist_dir)
                 .is_empty(),
             "successful retry must retire the recovered intent"
         );
@@ -1145,7 +1145,7 @@ pub mod wired_catalog_tests {
             .expect("read physical create")
             .is_some());
         assert_eq!(
-            medulla_server_api::api::query_txn::txn_intent::list_intents(&owner, &persist_dir).len(),
+            medulla_server_ops::api::query_txn::txn_intent::list_intents(&owner, &persist_dir).len(),
             1,
             "ordinary CREATE keeps its durable recipe while owner repair is pending"
         );
@@ -1157,7 +1157,7 @@ pub mod wired_catalog_tests {
             .await
             .expect("the next authenticated connection repairs before serving");
         assert!(
-            medulla_server_api::api::query_txn::txn_intent::list_intents(&owner, &persist_dir)
+            medulla_server_ops::api::query_txn::txn_intent::list_intents(&owner, &persist_dir)
                 .is_empty()
         );
         sql_catalog_acl::grant(
@@ -1246,14 +1246,14 @@ pub mod wired_catalog_tests {
         let operation_id = uuid::Uuid::new_v4();
         let table = "owner_replay_target";
         let steps = vec![
-            medulla_server_api::api::query_txn::txn_intent::ReplayStep::Sql(format!(
+            medulla_server_ops::api::query_txn::txn_intent::ReplayStep::Sql(format!(
                 "CREATE TABLE {table} (id TEXT PRIMARY KEY)"
             )),
-            medulla_server_api::api::query_txn::txn_intent::ReplayStep::Sql(format!(
+            medulla_server_ops::api::query_txn::txn_intent::ReplayStep::Sql(format!(
                 "INSERT INTO {table} (id) VALUES ('one')"
             )),
         ];
-        let intent = medulla_server_api::api::query_txn::txn_intent::CommitIntent::new(
+        let intent = medulla_server_ops::api::query_txn::txn_intent::CommitIntent::new(
             graph.to_string(),
             operation_id,
             Vec::new(),
@@ -1359,12 +1359,12 @@ pub mod wired_catalog_tests {
         )
         .expect("owner repair is durable before recovery closes");
 
-        let altered = medulla_server_api::api::query_txn::txn_intent::CommitIntent::new(
+        let altered = medulla_server_ops::api::query_txn::txn_intent::CommitIntent::new(
             graph.to_string(),
             operation_id,
             Vec::new(),
             Vec::new(),
-            vec![medulla_server_api::api::query_txn::txn_intent::ReplayStep::Sql(
+            vec![medulla_server_ops::api::query_txn::txn_intent::ReplayStep::Sql(
                 "CREATE TABLE altered_replay_target (id TEXT PRIMARY KEY)".to_string(),
             )],
             medulla_server_api::txn::now_ms(),

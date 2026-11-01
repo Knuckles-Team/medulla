@@ -153,7 +153,7 @@ async fn decision_source(
 pub struct DecideSeam;
 
 #[async_trait::async_trait]
-impl medulla_server_api::api::admin::DecideApi for DecideSeam {
+impl medulla_server_ops::api::admin::DecideApi for DecideSeam {
     #[cfg(feature = "decide")]
     async fn served_adapter(
         &self,
@@ -161,7 +161,7 @@ impl medulla_server_api::api::admin::DecideApi for DecideSeam {
         tenant: Option<&str>,
         graph: &str,
         core: &medulla_graph_core::graph::GraphCore,
-    ) -> Option<std::sync::Arc<medulla_server_api::api::admin::served_adapter::ServedAdapter>> {
+    ) -> Option<std::sync::Arc<medulla_server_ops::api::admin::served_adapter::ServedAdapter>> {
         served_adapter::served_for(state, tenant, graph, core).await
     }
 

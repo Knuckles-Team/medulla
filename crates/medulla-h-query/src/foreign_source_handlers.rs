@@ -14,7 +14,7 @@
 //! source returns are not RLS-filtered. A lightweight, non-blocking insert — no
 //! off-reactor work needed.
 
-use medulla_server_api::api::query_txn::ForeignStateExt;
+use medulla_server_ops::api::query_txn::ForeignStateExt;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
@@ -44,7 +44,7 @@ pub async fn try_handle(
             // EH-378: provision the source's share role (assigned to nobody) under the
             // same write lock as the registration, so a registered source always has one.
             let mut s = call.state.write().await;
-            if let Err(error) = medulla_server_api::api::query_txn::foreign_share::provision_share_role(
+            if let Err(error) = medulla_server_ops::api::query_txn::foreign_share::provision_share_role(
                 &mut s.isolation,
                 owner.agent_id(),
                 &name,

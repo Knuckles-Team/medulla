@@ -453,7 +453,7 @@ async fn check_delegated_recovery(state: &Arc<RwLock<ServerState>>, backend: &Ar
         properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({"type":"Record"})).unwrap(),
     });
     let parent =
-        medulla_server_api::api::admin::saga::scope_admin_saga_authority(owner.clone(), async {
+        medulla_server_ops::api::admin::saga::scope_admin_saga_authority(owner.clone(), async {
             let (receipt, _) = begin_txn_receipt(
                 Some(backend.clone()),
                 10,
@@ -494,7 +494,7 @@ async fn check_delegated_recovery(state: &Arc<RwLock<ServerState>>, backend: &Ar
         record.committing_actor().unwrap(),
         medulla_server_api::batch_compile::principal_fingerprint("same-principal").unwrap()
     );
-    let denied = medulla_server_api::api::admin::saga::scope_admin_saga_authority(foreign, async {
+    let denied = medulla_server_ops::api::admin::saga::scope_admin_saga_authority(foreign, async {
         reconcile_committed_txn(
             state,
             12,
@@ -511,7 +511,7 @@ async fn check_delegated_recovery(state: &Arc<RwLock<ServerState>>, backend: &Ar
     assert!(denied.contains("principal"), "{denied}");
     let version = core.version();
     let replay =
-        medulla_server_api::api::admin::saga::scope_admin_saga_authority(owner.clone(), async {
+        medulla_server_ops::api::admin::saga::scope_admin_saga_authority(owner.clone(), async {
             reconcile_committed_txn(
                 state,
                 13,

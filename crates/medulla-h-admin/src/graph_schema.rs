@@ -164,7 +164,7 @@ pub(crate) async fn commit_pack_projection(
     let connector = connector.clone();
     let record_id = record_id.to_string();
     let response =
-        medulla_server_api::api::ingest::graph::commit_gateway(&ctx, &plan, &method, move |core| {
+        medulla_server_ops::api::ingest::graph::commit_gateway(&ctx, &plan, &method, move |core| {
             apply_pack_source(
                 core,
                 &result_graph_name,
@@ -206,7 +206,7 @@ pub(crate) async fn handle_gateway(
         GraphSchemaOp::Attach { .. } | GraphSchemaOp::Detach { .. } => {
             let op = op.clone();
             let graph_name = ctx.graph_name.to_string();
-            medulla_server_api::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
+            medulla_server_ops::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
                 apply(core, &graph_name, &op)
             })
             .await
@@ -265,7 +265,7 @@ async fn handle_attach_pack_gateway(
     let connector = connector.clone();
     let expected_digest = expected_digest.map(str::to_owned);
     let graph_name = ctx.graph_name.to_string();
-    medulla_server_api::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
+    medulla_server_ops::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
         apply_pack_source(
             core,
             &graph_name,
