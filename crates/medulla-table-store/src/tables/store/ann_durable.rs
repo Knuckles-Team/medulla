@@ -51,7 +51,7 @@ pub struct StoredGeneration {
 
 /// What one activation writes: the generation, the one other generation it
 /// still depends on, and how far the changed-row log may be pruned.
-pub(crate) struct GenerationWrite<'a> {
+pub struct GenerationWrite<'a> {
     pub(crate) index: &'a str,
     pub(crate) table: &'a str,
     pub(crate) stored: &'a StoredGeneration,

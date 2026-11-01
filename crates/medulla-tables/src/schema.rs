@@ -1988,7 +1988,7 @@ fn parse_vector_value(value: &Value) -> Result<Vec<f32>, String> {
 
 /// Parse a pgvector text literal `[1,2,3]` (brackets optional, comma/whitespace
 /// separated) into a `Vec<f32>` (CONCEPT:MEDULLA-KG.query.vector-json-array-render).
-pub(crate) fn parse_vector_text(s: &str) -> Result<Vec<f32>, String> {
+pub fn parse_vector_text(s: &str) -> Result<Vec<f32>, String> {
     let inner = s
         .trim()
         .trim_start_matches('[')
