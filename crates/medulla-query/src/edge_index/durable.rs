@@ -42,7 +42,7 @@ struct Stored {
     graph: EdgeGraph,
 }
 
-fn encode(generation: &EdgeGeneration) -> Result<StoredGeneration, String> {
+pub fn encode(generation: &EdgeGeneration) -> Result<StoredGeneration, String> {
     let payload = rmp_serde::to_vec_named(&StoredRef {
         keys: &generation.keys,
         hashes: &generation.hashes,

@@ -65,7 +65,7 @@ pub(super) struct EdgeGeneration {
 
 impl EdgeGeneration {
     /// Build generation `generation` from `view`, taken at graph `version`.
-    pub(super) fn build(
+    pub fn build(
         generation: u64,
         spec: &EdgeIndexSpec,
         view: &GraphView,

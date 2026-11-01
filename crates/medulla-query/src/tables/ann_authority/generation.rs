@@ -53,7 +53,7 @@ pub(crate) struct AnnGeneration {
     /// Rows this generation indexes.
     pub(super) rows: usize,
     /// The full generation this one extends; `None` for a full generation.
-    pub(super) base: Option<u64>,
+    pub base: Option<u64>,
     /// Row ids folded in on top of `base`, ascending.
     pub(super) delta: Vec<u64>,
     pub(super) graph: AnnGraph,
@@ -83,7 +83,7 @@ pub(super) enum IvfSpace {
 
 impl AnnGeneration {
     /// Build generation number `generation` from one source snapshot.
-    pub(super) fn build(
+    pub fn build(
         generation: u64,
         method: AnnMethod,
         metric: VectorMetric,
@@ -102,7 +102,7 @@ impl AnnGeneration {
             built_epoch: source.epoch,
             max_rowid: source.max_rowid,
             rows: source.rows.len(),
-            base: None,
+            pub base: None,
             delta: Vec::new(),
             graph,
         }
@@ -134,14 +134,14 @@ impl AnnGeneration {
             built_epoch: changed.epoch,
             max_rowid: self.max_rowid.max(changed_ids.last().copied()),
             rows: self.rows + admitted.len(),
-            base: Some(self.base.unwrap_or(self.generation)),
+            pub base: Some(self.base.unwrap_or(self.generation)),
             delta: delta.into_iter().collect(),
             graph,
         })
     }
 
     /// Row ids folded in since the base, counting repeats as one.
-    pub(super) fn delta_len(&self) -> usize {
+    pub fn delta_len(&self) -> usize {
         self.delta.len()
     }
 

@@ -284,7 +284,7 @@ impl AnnSlot {
             .map(|generation| generation.generation)
     }
 
-    pub(super) fn begin_build(
+    pub fn begin_build(
         &self,
         policy: AnnRefreshPolicy,
         interval: Duration,
@@ -324,7 +324,7 @@ impl AnnSlot {
 
     /// Make `generation` live unless a generation built from a NEWER snapshot
     /// already is: activation never moves an index backwards in source time.
-    pub(super) fn activate(&self, generation: AnnGeneration, index: String) -> AnnRefreshOutcome {
+    pub fn activate(&self, generation: AnnGeneration, index: String) -> AnnRefreshOutcome {
         let built_epoch = generation.built_epoch;
         let outcome = AnnRefreshOutcome::Activated {
             index: index.clone(),

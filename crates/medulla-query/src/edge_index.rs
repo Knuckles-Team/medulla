@@ -241,7 +241,7 @@ impl EdgeIndex {
     }
 
     /// The next generation number, unless a build runs or the index is retired.
-    fn begin_build(&self) -> Option<u64> {
+    pub fn begin_build(&self) -> Option<u64> {
         let mut state = self.lock_maintenance();
         if state.building || state.retired {
             return None;
@@ -261,7 +261,7 @@ impl EdgeIndex {
     /// Make `generation` live unless the index was retired meanwhile or a
     /// generation from a newer snapshot already serves; forget the changes it
     /// covers and publish its source coverage.
-    fn activate(&self, generation: EdgeGeneration) -> EdgeRefreshOutcome {
+    pub fn activate(&self, generation: EdgeGeneration) -> EdgeRefreshOutcome {
         if self.lock_maintenance().retired {
             return EdgeRefreshOutcome::Retired;
         }

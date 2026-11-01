@@ -26,7 +26,7 @@ const MAX_PAYLOAD_BYTES: u64 = 16 * 1024 * 1024 * 1024;
 
 /// How one generation is stored.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub(super) enum Encoding {
+pub enum Encoding {
     /// The whole graph.
     Full,
     /// Only the rows folded in on top of the full base, which is still stored.
@@ -61,7 +61,7 @@ pub(super) struct Manifest {
 }
 
 /// Encode `generation` for the durable generation table.
-pub(super) fn encode(
+pub fn encode(
     generation: &AnnGeneration,
     encoding: Encoding,
 ) -> Result<StoredGeneration, String> {
@@ -119,7 +119,7 @@ fn encode_rmp<T: Serialize + ?Sized>(value: &T) -> Result<Vec<u8>, String> {
 
 /// The verified manifest of `stored`: decodable, of `plan`'s method, and
 /// pinning exactly `stored`'s payload.
-pub(super) fn verified_manifest(
+pub fn verified_manifest(
     stored: &StoredGeneration,
     plan: &AnnIndexPlan,
 ) -> Result<Manifest, String> {

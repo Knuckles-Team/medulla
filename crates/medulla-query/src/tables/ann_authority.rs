@@ -207,7 +207,7 @@ struct DurableMark {
 
 impl AnnSlot {
     /// The live generation when it matches `method`.
-    fn live_for(&self, method: AnnMethod) -> Option<Arc<AnnGeneration>> {
+    pub fn live_for(&self, method: AnnMethod) -> Option<Arc<AnnGeneration>> {
         read(&self.live)
             .as_ref()
             .filter(|generation| generation.method == method)
