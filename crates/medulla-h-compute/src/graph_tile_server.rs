@@ -57,7 +57,7 @@ use medulla_viz_graph_tiles::{
 
 use super::graph_tile_source::RealClusterSource;
 use super::viz_interactive::{parse_param, parse_query};
-use super::ServerState;
+use medulla_server_api::state::ServerState;
 
 const GRAPH_TILE_CONTENT_TYPE: &str = "application/octet-stream";
 /// Bound on `top_k` for `/graph_tile/stream` — a request-forgeable knob, so it
