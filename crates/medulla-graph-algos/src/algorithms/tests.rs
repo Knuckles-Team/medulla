@@ -5,7 +5,7 @@ use petgraph::visit::EdgeRef;
 use std::collections::HashMap;
 
 use super::*;
-use medulla_core::{graph::GraphCore, graph::GraphView};
+use medulla_graph_core::graph::{GraphCore, GraphView};
 
 #[cfg(test)]
 mod community_tests {

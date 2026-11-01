@@ -4,7 +4,7 @@ use petgraph::stable_graph::NodeIndex;
 use petgraph::visit::EdgeRef;
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use medulla_core::{graph::GraphCore, graph::GraphView};
+use medulla_graph_core::graph::{GraphCore, GraphView};
 
 /// Lifecycle-aware pruning: remove nodes past max_age or below min_score.
 ///

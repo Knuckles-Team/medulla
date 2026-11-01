@@ -27,10 +27,7 @@ use std::fmt::Display;
 use std::hash::Hash;
 
 use crate::graph_algos::AdjacencyGraph;
-use medulla_core::{
-    compute::semantic::check_embedding_dimension, compute::semantic::EmbeddingDimensionError,
-    compute::semantic::SemanticStore,
-};
+use medulla_semantic_index::semantic::{check_embedding_dimension, EmbeddingDimensionError, SemanticStore};
 
 /// A batch of structural embeddings tied to their string node ids — the boundary
 /// object between the pure index-ordered algorithm output and the id-keyed
