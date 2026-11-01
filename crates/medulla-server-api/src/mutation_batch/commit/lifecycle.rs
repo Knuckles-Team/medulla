@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use medulla_types::mutation_batch::MutationSurface;
-use medulla_types::protocol::Method;
-use medulla_types::protocol::ResultPayload;
 use crate::api::persistence::PersistenceBackend;
 use crate::mutation::LifecycleAttempt;
 use medulla_types::contract::Nonce;
+use medulla_types::mutation_batch::MutationSurface;
+use medulla_types::protocol::Method;
+use medulla_types::protocol::ResultPayload;
 
 use super::super::compile::{compile_methods, CompileBatch};
 use super::super::digest::{lifecycle_batch_id, principal_fingerprint};
@@ -201,7 +201,7 @@ pub(crate) fn refuse_consumed_nonce(
 
 /// Refuse a stored lifecycle receipt whose retained identity differs from the
 /// request. Build-dependent envelope bytes are deliberately not compared.
-pub(crate) fn lifecycle_identity_matches(
+pub fn lifecycle_identity_matches(
     record: &medulla_types::mutation_batch::MutationBatchRecord,
     batch_id: &str,
     principal: Option<&str>,

@@ -19,3 +19,11 @@ mod store_terminal_batch;
 mod wired_edge_index;
 #[cfg(all(test, feature = "raft", feature = "harness"))]
 mod xshard_harness;
+#[cfg(test)]
+mod impact_watch;
+#[cfg(all(test, feature = "redb"))]
+mod mutation_batch_internal_replay;
+#[cfg(all(test, feature = "redb"))]
+mod mutation_batch_lifecycle;
+#[cfg(all(test, feature = "redb"))]
+mod mutation_redb;

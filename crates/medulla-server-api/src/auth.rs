@@ -34,19 +34,19 @@
 //! which restores the pre-2026-07-22 HMAC-only-permitted posture. Nothing
 //! defaults into that downgrade; an operator must type it.
 
-use medulla_types::acl::AgentRole;
-use medulla_types::acl::RequestContextClaims;
-use medulla_types::protocol::build_context_operation_signature_bytes;
-use medulla_types::protocol::build_envelope_v2_bytes;
-use medulla_types::protocol::Method;
-use medulla_types::protocol::Request;
 pub use crate::authority_context::VerifiedRequestContext;
 use crate::request_replay::durable_replay_ledger;
 use crate::request_replay::PresentedNonce;
 use crate::request_replay::ReplayLedger;
 use hmac::{Hmac, Mac};
 use medulla_kernel::lock_recovery::{LockRecovery, WriteRecovery};
+use medulla_types::acl::AgentRole;
+use medulla_types::acl::RequestContextClaims;
 use medulla_types::contract::Nonce;
+use medulla_types::protocol::build_context_operation_signature_bytes;
+use medulla_types::protocol::build_envelope_v2_bytes;
+use medulla_types::protocol::Method;
+use medulla_types::protocol::Request;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, HashSet};
@@ -577,13 +577,13 @@ pub fn compute_verified_envelope_token(
 }
 
 /// Who a scoped test request is signed as, and under which nonce and key.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub struct ScopedTestCaller<'a> {
-    pub(crate) principal: &'a str,
-    pub(crate) tenant: &'a str,
-    pub(crate) scopes: &'a [&'a str],
-    pub(crate) nonce: &'a str,
-    pub(crate) idempotency_key: &'a str,
+    pub principal: &'a str,
+    pub tenant: &'a str,
+    pub scopes: &'a [&'a str],
+    pub nonce: &'a str,
+    pub idempotency_key: &'a str,
 }
 
 /// A `__commons__` request carrying `method`, signed for `caller` under the
@@ -704,11 +704,13 @@ pub fn build_shared_test_request(
 pub fn dispatch_test_on_heap<'a>(
     state: &'a std::sync::Arc<tokio::sync::RwLock<crate::state::ServerState>>,
     request: Request,
-) -> std::pin::Pin<Box<dyn std::future::Future<Output = medulla_types::protocol::Response> + Send + 'a>> {
+) -> std::pin::Pin<
+    Box<dyn std::future::Future<Output = medulla_types::protocol::Response> + Send + 'a>,
+> {
     Box::pin(crate::api::reentry::dispatch(state, request))
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 fn sign_test_request_with_context(
     secret: &str,
     mut request: Request,
@@ -861,8 +863,7 @@ fn primary_oidc_validator() -> Result<Option<&'static crate::oidc::JwtValidator>
 
 #[cfg(all(feature = "oidc", not(test)))]
 fn primary_oidc_validator() -> Result<Option<&'static crate::oidc::JwtValidator>, String> {
-    static VALIDATOR: OnceLock<Result<Option<crate::oidc::JwtValidator>, String>> =
-        OnceLock::new();
+    static VALIDATOR: OnceLock<Result<Option<crate::oidc::JwtValidator>, String>> = OnceLock::new();
     match VALIDATOR.get_or_init(crate::oidc::JwtValidator::from_env_primary) {
         Ok(Some(v)) => Ok(Some(v)),
         Ok(None) => Ok(None),
@@ -1225,10 +1226,7 @@ pub(crate) fn authentication_refusal(error: &str) -> String {
 
 /// Top-level authentication gate. Only the current verified context envelope
 /// is accepted.
-pub fn verify_request(
-    secret: &str,
-    req: &Request,
-) -> Result<VerifiedRequestContext, String> {
+pub fn verify_request(secret: &str, req: &Request) -> Result<VerifiedRequestContext, String> {
     verify_request_with_security_dir(secret, req, None)
 }
 
@@ -2243,8 +2241,10 @@ mod tests {
             authentication_refusal("NODE_MISMATCH: bound to node 'n7'"),
         );
         assert_eq!(node.error_detail.as_deref(), Some("Authentication failed"));
-        let replay =
-            medulla_types::protocol::Response::err(1, authentication_refusal("nonce 'abc' already used"));
+        let replay = medulla_types::protocol::Response::err(
+            1,
+            authentication_refusal("nonce 'abc' already used"),
+        );
         assert_eq!(
             replay.error_detail.as_deref(),
             Some("Authentication failed")
@@ -3600,10 +3600,8 @@ mod tests {
             // bearers must not collapse onto the identical carrier identity.
             let a = verified("agent:alice", Some("tenant-shared"), full_scopes());
             let b = verified("agent:bob", Some("tenant-shared"), full_scopes());
-            let carrier_a =
-                crate::auth::mint_iceberg_carrier(Some(&a)).expect("alice carrier");
-            let carrier_b =
-                crate::auth::mint_iceberg_carrier(Some(&b)).expect("bob carrier");
+            let carrier_a = crate::auth::mint_iceberg_carrier(Some(&a)).expect("alice carrier");
+            let carrier_b = crate::auth::mint_iceberg_carrier(Some(&b)).expect("bob carrier");
             assert_ne!(carrier_a.actor_scope(), carrier_b.actor_scope());
             assert!(!carrier_a.is_admin());
             assert!(!carrier_b.is_admin());
@@ -3648,8 +3646,8 @@ mod tests {
             // The one case that matches today's pre-fix behavior byte for
             // byte: a bearer actually issued both scopes keeps both.
             let claims = verified("agent:full", Some("tenant-shared"), full_scopes());
-            let carrier = crate::auth::mint_iceberg_carrier(Some(&claims))
-                .expect("both scopes present");
+            let carrier =
+                crate::auth::mint_iceberg_carrier(Some(&claims)).expect("both scopes present");
             assert!(carrier.can_read());
             assert!(carrier.can_write());
         }

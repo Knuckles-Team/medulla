@@ -352,8 +352,8 @@ impl JwtValidator {
     /// issuer/audience/expiry checks a live JWKS fetch would produce, without
     /// a real HTTP server. `jwks_url` is left empty, so a `kid` miss fails
     /// closed (no network fetch is attempted) rather than refreshing.
-    #[cfg(test)]
-    pub(crate) fn from_parts(
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn from_parts(
         issuer: impl Into<String>,
         audience: impl Into<String>,
         keys: HashMap<String, DecodingKey>,

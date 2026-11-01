@@ -34,8 +34,6 @@ use crate::state::ServerState;
 #[cfg(feature = "security")]
 pub mod grant;
 pub mod plan;
-#[cfg(test)]
-mod tests;
 
 pub use plan::{load_watches, plan_watch, ImpactWatchSpec, WATCH_LABEL};
 
@@ -258,8 +256,7 @@ async fn submit(
         agent_id: Some(context.agent_id().to_string()),
         method,
     };
-    let response =
-        crate::api::reentry::dispatch_verified_request(state, request, context).await;
+    let response = crate::api::reentry::dispatch_verified_request(state, request, context).await;
     match response.refusal_text() {
         None => Ok(()),
         Some(refusal) => Err(format!("writeback refused: {refusal}")),

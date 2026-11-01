@@ -12,14 +12,14 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-#[cfg(feature = "raft")]
-use medulla_types::protocol::Method;
-#[cfg(all(feature = "raft", feature = "jobs"))]
-use medulla_types::protocol::ResultPayload;
-use medulla_types::protocol::Request;
-use medulla_types::protocol::Response;
 use crate::auth::VerifiedRequestContext;
 use crate::state::ServerState;
+#[cfg(feature = "raft")]
+use medulla_types::protocol::Method;
+use medulla_types::protocol::Request;
+use medulla_types::protocol::Response;
+#[cfg(all(feature = "raft", feature = "jobs"))]
+use medulla_types::protocol::ResultPayload;
 
 /// Boxed, sendable future returned by every [`DispatchApi`] method.
 pub type SeamFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
@@ -126,7 +126,7 @@ pub trait DispatchApi: Send + Sync {
     ) -> SeamFuture<'a, Response>;
 
     /// Dispatch a request under an already verified request context.
-    pub fn dispatch_verified_request<'a>(
+    fn dispatch_verified_request<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         req: Request,
@@ -135,7 +135,7 @@ pub trait DispatchApi: Send + Sync {
 
     /// Dispatch an engine-owned local query under its fixed read-only service identity.
     #[cfg(any(feature = "federation-search", feature = "nl-query"))]
-    pub fn dispatch_authenticated_local_query<'a>(
+    fn dispatch_authenticated_local_query<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         req: Request,
@@ -149,7 +149,7 @@ pub trait DispatchApi: Send + Sync {
         feature = "mssql-wire",
         feature = "redis-wire",
     ))]
-    pub fn dispatch_authenticated_broker_actor<'a>(
+    fn dispatch_authenticated_broker_actor<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         req: Request,
@@ -253,14 +253,14 @@ pub trait DispatchApi: Send + Sync {
     ) -> SeamFuture<'a, Result<ResultPayload, String>>;
 
     /// Make a cold graph resident before an operation that needs its registry.
-    pub fn ensure_graph_resident<'a>(
+    fn ensure_graph_resident<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         graph: &'a str,
     ) -> SeamFuture<'a, ()>;
 
     /// Create an internal global graph through the authoritative lifecycle path.
-    pub fn ensure_internal_global_graph<'a>(
+    fn ensure_internal_global_graph<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         req_id: u64,
@@ -270,7 +270,7 @@ pub trait DispatchApi: Send + Sync {
     ) -> SeamFuture<'a, Result<(), String>>;
 
     /// Read one registered MCP server under the verified caller's authority.
-    pub fn verified_served_registration<'a>(
+    fn verified_served_registration<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         verified: &'a VerifiedRequestContext,
@@ -343,7 +343,7 @@ pub trait DispatchApi: Send + Sync {
 
     /// One bounded durable repository-enrichment outbox sweep.
     #[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
-    pub fn drain_repository_enrichment_once<'a>(
+    fn drain_repository_enrichment_once<'a>(
         &'a self,
         persistence: &'a dyn crate::api::persistence::PersistenceBackend,
         graph_fname: &'a str,

@@ -741,7 +741,10 @@ ex:parent a owl:AsymmetricProperty .
 
     #[test]
     fn capability_fixture_retains_the_required_mixed_profile_axioms() {
-        let capability = include_str!("../../../../crates/medulla-core/ontology/capability-v1.ttl");
+        let capability = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../medulla-core/ontology/capability-v1.ttl"
+        ));
         for required in [
             "owl:minCardinality",
             "owl:inverseOf",
@@ -755,8 +758,10 @@ ex:parent a owl:AsymmetricProperty .
 
     #[test]
     fn core_foundation_contains_the_complete_migrated_root_axiom_body() {
-        let foundation =
-            include_str!("../../../../crates/medulla-core/ontology/core-foundation-v1.ttl");
+        let foundation = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../medulla-core/ontology/core-foundation-v1.ttl"
+        ));
         let triples = medulla_rdf::mapping::parse_turtle(foundation).unwrap();
         // 880 migrated triples less the two list-cell triples of `:Incident`, which
         // was removed from the Person/Organization/Server/Event disjointness because
@@ -1091,8 +1096,10 @@ ex:parent a owl:AsymmetricProperty .
 
     #[test]
     fn governance_core_slice_is_exactly_four_shapes_and_57_triples() {
-        let document =
-            include_str!("../../../../crates/medulla-core/ontology/governance-core-v1.shapes.ttl");
+        let document = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../medulla-core/ontology/governance-core-v1.shapes.ttl"
+        ));
         let triples = medulla_rdf::mapping::parse_turtle(document).unwrap();
         assert_eq!(triples.len(), 57);
         let roots: BTreeSet<String> = triples

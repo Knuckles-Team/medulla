@@ -22,29 +22,30 @@ pub use canonical::{
 pub use commit::commit_internal_graph_methods;
 pub use commit::{
     commit_internal_graph_methods_with_nonce, commit_lifecycle, commit_work_item,
-    lifecycle_was_committed, lock_graph, lock_txn_coordinator, publish_change_envelope_projection,
-    CommitOrigin, InternalGraphCommitRequest, LifecycleCommitRequest, WorkItemCommitRequest,
+    lifecycle_identity_matches, lifecycle_was_committed, lock_graph, lock_txn_coordinator,
+    publish_change_envelope_projection, CommitOrigin, InternalGraphCommitRequest,
+    LifecycleCommitRequest, WorkItemCommitRequest,
 };
 #[cfg(feature = "program-optimization")]
 pub use commit::{
     commit_program_promotion, resolve_program_promotion_identity, ProgramPromotionRequest,
 };
+#[cfg(feature = "redb")]
+pub use compile::compile_opaque_digest;
+#[cfg(feature = "redb")]
+pub use compile::compile_opaque_method;
 #[cfg(feature = "jobs")]
 pub use compile::compile_opaque_method_in_scope;
 #[cfg(feature = "query")]
 pub use compile::compile_sql_source_batch;
+#[cfg(feature = "redb")]
+pub use compile::effective_policy_digest;
+#[cfg(feature = "redb")]
+pub(crate) use compile::COMPILED_BATCH_INCARNATION;
 pub use compile::{
     authoritative_graph_version, compile_crossmodal, compile_methods, compile_methods_with_outbox,
     CompileBatch,
 };
-#[cfg(feature = "redb")]
-pub use compile::compile_opaque_digest;
-#[cfg(feature = "redb")]
-pub(crate) use compile::COMPILED_BATCH_INCARNATION;
-#[cfg(feature = "redb")]
-pub use compile::compile_opaque_method;
-#[cfg(feature = "redb")]
-pub use compile::effective_policy_digest;
 #[cfg(any(
     feature = "raft",
     feature = "blob",
@@ -117,6 +118,3 @@ impl GraphWriteScope<'_> {
 
 #[cfg(test)]
 mod tests;
-
-#[cfg(all(test, feature = "redb"))]
-mod lifecycle_tests;

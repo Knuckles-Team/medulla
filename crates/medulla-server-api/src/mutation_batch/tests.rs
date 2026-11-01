@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
+use crate::api::persistence::PersistenceBackend;
 use medulla_core::graph::GraphCore;
 use medulla_types::mutation_batch::MutationBatch;
 use medulla_types::mutation_batch::MutationSurface;
 use medulla_types::mutation_batch::VersionExpectation;
 use medulla_types::protocol::Method;
 use medulla_types::protocol::ResultPayload;
-use crate::api::persistence::PersistenceBackend;
 
 use super::commit::changed_work_item_ids;
 use super::digest::work_item_batch_identity;
@@ -599,7 +599,10 @@ fn named_domain(line: &str) -> Option<String> {
 /// The variants of one `MethodWriteFamily`, read from the family declaration
 /// next to the enum, so a family edit is visible to this golden too.
 fn family_variants(family: &str) -> Vec<String> {
-    let source = include_str!("../../../crates/medulla-types/src/protocol/method/families.rs");
+    let source = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../medulla-types/src/protocol/method/families.rs"
+    ));
     let mut pending: Vec<String> = Vec::new();
     for line in code_lines(function_body(source, "fn write_family")) {
         for token in line.match_indices("Self::") {
@@ -642,8 +645,8 @@ fn durability_domain_classification_matches_the_golden() {
 
 #[test]
 fn classifier_source_map_agrees_with_domain_for() {
-    use medulla_types::mutation_batch::DurabilityDomain;
     use crate::mutation_batch::domain_for;
+    use medulla_types::mutation_batch::DurabilityDomain;
 
     let map = classification_map_from_source();
     let lookup = |name: &str| {
@@ -717,8 +720,8 @@ fn classifier_source_map_agrees_with_domain_for() {
 /// this match).
 #[test]
 fn owner_domain_classifies_wire_unconditional_methods_regardless_of_this_crates_own_feature() {
-    use medulla_types::mutation_batch::DurabilityDomain;
     use crate::mutation_batch::domain_for;
+    use medulla_types::mutation_batch::DurabilityDomain;
 
     assert_eq!(
         domain_for(
@@ -1147,10 +1150,8 @@ fn served_owner_store_batch_commits_and_its_actor_survives_in_the_ledger() {
         medulla_types::ScopeTenantId::new("tenant-a".to_string()).unwrap(),
         medulla_types::mutation_batch::DurabilityDomain::KvStore,
         medulla_types::LogicalName::new("kv-scope-a".to_string()).unwrap(),
-        medulla_types::IncarnationId::new(
-            crate::mutation_batch::COMPILED_BATCH_INCARNATION,
-        )
-        .unwrap(),
+        medulla_types::IncarnationId::new(crate::mutation_batch::COMPILED_BATCH_INCARNATION)
+            .unwrap(),
     )
     .unwrap();
     let grant = kernel

@@ -10,8 +10,8 @@ use medulla_core::graph::GraphCore;
 use serde_json::json;
 use tokio::sync::RwLock;
 
-use super::*;
 use crate::protocol::{GraphType, Method};
+use medulla_server_api::impact_watch::*;
 use medulla_server_api::state::ServerState;
 
 fn blob(v: serde_json::Value) -> Vec<u8> {
@@ -208,8 +208,9 @@ async fn populate_served(state: &Arc<RwLock<ServerState>>, queue_status: &str) {
         });
     }
     for (id, method) in (1_u64..).zip(writes) {
-        let request =
-            medulla_server_api::auth::build_shared_test_request(SECRET, id, "ops", "system", method);
+        let request = medulla_server_api::auth::build_shared_test_request(
+            SECRET, id, "ops", "system", method,
+        );
         let response = medulla_server_api::auth::dispatch_test_on_heap(state, request).await;
         assert!(
             response.error.is_none(),
