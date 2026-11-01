@@ -19,10 +19,6 @@ pub mod foreign_source_handlers;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod knowledge_stream;
 
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[cfg(feature = "mining")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod mining;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "nl-query")]

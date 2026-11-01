@@ -176,7 +176,7 @@ datascience = ["medulla-server/datascience", "medulla-h-compute/datascience", "m
 # mining (Apriori/FP-Growth/Eclat) + the `graph_mine` surface. Pure-Rust, no heavy
 # dep, folded into `full`. Gates medulla-compute/mining + medulla-types/mining + the
 # handlers/mining.rs dispatch arm.
-mining = ["medulla-server/mining", "medulla-wire/mining", "medulla-h-query/mining", "medulla-h-graph/mining", "medulla-server-api/mining", "medulla-server-auth/mining", "medulla-server-cdc/mining", "medulla-server-mutation/mining", "medulla-server-ops/mining", "medulla-kernel/mining", "medulla-compute/mining", "medulla-types/mining", "medulla-result-types/mining", "medulla-protocol-types/mining", "medulla-mining/mining"]
+mining = ["medulla-h-mining/mining", "medulla-server/mining", "medulla-wire/mining", "medulla-h-query/mining", "medulla-h-graph/mining", "medulla-server-api/mining", "medulla-server-auth/mining", "medulla-server-cdc/mining", "medulla-server-mutation/mining", "medulla-server-ops/mining", "medulla-kernel/mining", "medulla-compute/mining", "medulla-types/mining", "medulla-result-types/mining", "medulla-protocol-types/mining", "medulla-mining/mining"]
 # Graph-learning / neuro-symbolic domain (CONCEPT:MEDULLA-KG.graphlearn.link-predictor): a
 # pure-Rust KAN link-predictor over the resident graph + the `graph_learn` surface,
 # whose learned per-feature edge functions are queryable `:EdgeFunction` KG nodes.
@@ -207,7 +207,7 @@ reasoning = ["medulla-server/reasoning", "medulla-h-graph/reasoning", "medulla-r
 # `as_claim` unset the write-back is byte-identical, and a build without `query` simply lacks
 # the E2 plan ops (the E6 mining write-back is unaffected either way). The default
 # `full` artifact enables this feature.
-epistemic = ["medulla-server/epistemic", "medulla-wire/epistemic", "medulla-h-admin/epistemic", "medulla-h-txn/epistemic", "medulla-h-query/epistemic", "medulla-h-decide/epistemic", "medulla-h-jobs/epistemic", "medulla-h-ingest/epistemic", "medulla-h-graph/epistemic", "medulla-raft/epistemic", "medulla-server-api/epistemic", "medulla-server-auth/epistemic", "medulla-server-cdc/epistemic", "medulla-server-mutation/epistemic", "medulla-server-ops/epistemic", "medulla-kernel/epistemic",
+epistemic = ["medulla-h-mining/epistemic", "medulla-server/epistemic", "medulla-wire/epistemic", "medulla-h-admin/epistemic", "medulla-h-txn/epistemic", "medulla-h-query/epistemic", "medulla-h-decide/epistemic", "medulla-h-jobs/epistemic", "medulla-h-ingest/epistemic", "medulla-h-graph/epistemic", "medulla-raft/epistemic", "medulla-server-api/epistemic", "medulla-server-auth/epistemic", "medulla-server-cdc/epistemic", "medulla-server-mutation/epistemic", "medulla-server-ops/epistemic", "medulla-kernel/epistemic",
     "query",
     "dep:medulla-epistemic",
     "medulla-types/epistemic", "medulla-protocol-types/epistemic",
@@ -519,7 +519,7 @@ asr-whisper = ["medulla-server/asr-whisper", "medulla-wire/asr-whisper", "medull
 # when `dep:medulla-storage` is linked, which is what the `redb` feature does. A
 # `--features query` build without it cannot name the composition root's
 # verifier, so the edge is stated here rather than left to fail at link time.
-query = ["medulla-raft-xshard/query", "medulla-server/query", "medulla-wire/query", "medulla-h-admin/query", "medulla-h-txn/query", "medulla-h-query/query", "medulla-h-decide/query", "medulla-h-jobs/query", "medulla-h-ingest/query", "medulla-h-graph/query", "medulla-raft/query", "medulla-persistence/query", "medulla-server-api/query", "medulla-store/query", "medulla-kernel/query", "redb", "medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "medulla-cypher/sql", "dep:medulla-plan", "medulla-plan/query", "medulla-types/query", "medulla-tsdb?/arrow-seg", "medulla-result-types/query", "medulla-decision-types/query", "medulla-protocol-types/query", "medulla-persistence-ops/query", "medulla-server-auth/query", "medulla-server-cdc/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-uql/query", "medulla-retrieval/query", "medulla-exec/query"]
+query = ["medulla-h-mining/query", "medulla-raft-xshard/query", "medulla-server/query", "medulla-wire/query", "medulla-h-admin/query", "medulla-h-txn/query", "medulla-h-query/query", "medulla-h-decide/query", "medulla-h-jobs/query", "medulla-h-ingest/query", "medulla-h-graph/query", "medulla-raft/query", "medulla-persistence/query", "medulla-server-api/query", "medulla-store/query", "medulla-kernel/query", "redb", "medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "medulla-cypher/sql", "dep:medulla-plan", "medulla-plan/query", "medulla-types/query", "medulla-tsdb?/arrow-seg", "medulla-result-types/query", "medulla-decision-types/query", "medulla-protocol-types/query", "medulla-persistence-ops/query", "medulla-server-auth/query", "medulla-server-cdc/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-uql/query", "medulla-retrieval/query", "medulla-exec/query"]
 # The one native streaming query/job result currency. Every served family adapts to
 # governed, bounded KnowledgeBatch envelopes with stable Arrow schemas.
 knowledge-batch = ["medulla-server/knowledge-batch", "medulla-wire/knowledge-batch", "medulla-h-admin/knowledge-batch", "medulla-h-txn/knowledge-batch", "medulla-h-query/knowledge-batch", "medulla-h-decide/knowledge-batch", "medulla-h-jobs/knowledge-batch", "medulla-h-ingest/knowledge-batch", "medulla-raft/knowledge-batch", "medulla-persistence/knowledge-batch", "medulla-server-api/knowledge-batch", "medulla-server-ops/knowledge-batch", "medulla-kernel/knowledge-batch",
@@ -554,7 +554,7 @@ text = ["medulla-server/text", "medulla-wire/text", "medulla-h-admin/text", "med
 # plan. Pulls medulla-plan's `federation` (the `ForeignSource` trait + the rustls HTTP client
 # `ureq` + hmac/sha2/hex), which IMPLIES `query`. The rustls/ring TLS stack is included
 # in the one main build.
-federation = ["medulla-server/federation", "medulla-wire/federation", "medulla-h-admin/federation", "medulla-h-txn/federation", "medulla-h-query/federation", "medulla-h-decide/federation", "medulla-h-jobs/federation", "medulla-raft/federation", "medulla-server-api/federation", "medulla-server-auth/federation", "medulla-server-ops/federation", "dep:medulla-plan", "medulla-plan/federation", "medulla-types/federation", "query", "server", "medulla-protocol-types/federation", "medulla-nlq/federation", "medulla-federation/federation", "medulla-uql/federation", "medulla-exec/federation"]
+federation = ["medulla-h-mining/federation", "medulla-server/federation", "medulla-wire/federation", "medulla-h-admin/federation", "medulla-h-txn/federation", "medulla-h-query/federation", "medulla-h-decide/federation", "medulla-h-jobs/federation", "medulla-raft/federation", "medulla-server-api/federation", "medulla-server-auth/federation", "medulla-server-ops/federation", "dep:medulla-plan", "medulla-plan/federation", "medulla-types/federation", "query", "server", "medulla-protocol-types/federation", "medulla-nlq/federation", "medulla-federation/federation", "medulla-uql/federation", "medulla-exec/federation"]
 # External relational-SQL federation (CONCEPT:KG-2.239): the THIRD `ForeignSource` kind
 # — `ForeignSourceSpec::Sql` — so a federated UnifiedQuery JOINS an external Postgres/MySQL
 # table with the LOCAL graph/vector in ONE plan (the "engine federates external SQL" half
@@ -627,7 +627,7 @@ graphql = ["medulla-server/graphql", "medulla-wire/graphql", "medulla-h-txn/grap
 # series handler routes through dispatch) and is included in the one main build. With
 # `query`, medulla-tsdb's `arrow-seg` lights up the
 # DataFusion `time_bucket = GROUP BY (ts/w)*w` leg (see the `query` feature below).
-tsdb = ["medulla-store-apply/tsdb", "medulla-server/tsdb", "medulla-wire/tsdb", "medulla-h-admin/tsdb", "medulla-h-txn/tsdb", "medulla-h-query/tsdb", "medulla-h-decide/tsdb", "medulla-h-jobs/tsdb", "medulla-h-graph/tsdb", "medulla-raft/tsdb", "medulla-persistence/tsdb", "medulla-server-api/tsdb", "medulla-store/tsdb", "server", "redb", "dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries", "medulla-server-ops/tsdb", "medulla-exec/timeseries"]
+tsdb = ["medulla-h-mining/tsdb", "medulla-store-apply/tsdb", "medulla-server/tsdb", "medulla-wire/tsdb", "medulla-h-admin/tsdb", "medulla-h-txn/tsdb", "medulla-h-query/tsdb", "medulla-h-decide/tsdb", "medulla-h-jobs/tsdb", "medulla-h-graph/tsdb", "medulla-raft/tsdb", "medulla-persistence/tsdb", "medulla-server-api/tsdb", "medulla-store/tsdb", "server", "redb", "dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries", "medulla-server-ops/tsdb", "medulla-exec/timeseries"]
 # Observability log ingestion front door + Parquet-on-blob-CAS segments
 # (CONCEPT:MEDULLA-160/161) — the first slice of Phase T ("surpass OpenObserve"). A
 # hand-rolled HTTP listener (the SAME dep-free idiom as `metrics`/`sparql-http` — NO
@@ -1887,6 +1887,7 @@ medulla-retrieval = { path = "crates/medulla-retrieval" }
 medulla-uql = { path = "crates/medulla-uql" }
 medulla-federation = { path = "crates/medulla-federation" }
 medulla-nlq = { path = "crates/medulla-nlq" }
+medulla-h-mining = { path = "crates/medulla-h-mining" }
 
 [dev-dependencies]
 medulla-direct-state = { path = "crates/medulla-direct-state", features = ["test-support"] }

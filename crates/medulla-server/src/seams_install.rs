@@ -36,7 +36,7 @@ pub fn install_seams(state: &ServerState) {
     // L5 query, txn, wire.
     #[cfg(all(feature = "mining", feature = "server"))]
     medulla_kernel::kernel::persistence::install_mining_replay(
-        medulla_h_query::mining::replay,
+        medulla_h_mining::mining::replay,
     );
 
     #[cfg(any(

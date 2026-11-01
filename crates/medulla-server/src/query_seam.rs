@@ -58,7 +58,7 @@ impl medulla_server_ops::api::query_txn::QueryApi for QuerySeam {
             &Arc<medulla_tsdb::store::SeriesStore>,
         >,
     ) -> Option<medulla_protocol_types::protocol::Response> {
-        medulla_h_query::mining::gateway::try_handle(
+        medulla_h_mining::mining::gateway::try_handle(
             ctx,
             plan,
             method,
