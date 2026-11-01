@@ -38,7 +38,7 @@ const NODE_PAYLOAD_CURSOR_KEY: &str = "node_payload";
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ScrubCursor {
     /// The graph the walk is inside, or `None` at a cycle boundary.
-    pub(crate) graph: Option<String>,
+    pub graph: Option<String>,
     /// The last node id already opened in `graph`; the pass resumes after it.
     pub(crate) after: Option<String>,
     /// Completed full walks of this file.

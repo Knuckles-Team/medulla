@@ -54,9 +54,9 @@ impl UnsealFailure {
 /// One node row whose stored payload cannot be opened.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NodeUnreadable {
-    pub(crate) graph: String,
-    pub(crate) key: String,
-    pub(crate) cause: UnsealFailure,
+    pub graph: String,
+    pub key: String,
+    pub cause: UnsealFailure,
 }
 
 impl NodeUnreadable {
