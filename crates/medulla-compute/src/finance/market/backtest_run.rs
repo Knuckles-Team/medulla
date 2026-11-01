@@ -14,8 +14,10 @@ use super::{
     BacktestRun, BacktestRunDraft, BacktestValidation, MarketError, MarketResult, TradeFill,
     UniverseMember, INVALID_REQUEST, LOOK_AHEAD,
 };
-use crate::finance::quant::{
-    deflated_sharpe_ratio, probability_of_backtest_overfit, purged_cpcv_splits, CvSplit,
+use crate::{
+    finance::market::validation::deflated_sharpe_ratio,
+    finance::market::validation::probability_of_backtest_overfit,
+    finance::market::validation::purged_cpcv_splits, finance::market::validation::CvSplit,
 };
 
 const RUN_DOMAIN: &str = "eg/finance/backtest-run/v1";

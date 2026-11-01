@@ -38,8 +38,10 @@ pub mod rollup;
 pub mod scan;
 pub mod signal;
 pub mod snapshot;
+pub mod special;
 pub mod strategy_backtest;
 pub mod supertrend;
+pub mod validation;
 
 #[cfg(test)]
 mod golden_tests;

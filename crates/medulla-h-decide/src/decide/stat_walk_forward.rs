@@ -12,8 +12,10 @@
 //! policy-dependent environment, bandit labels, an understated trial count, a
 //! look-ahead.
 
-use medulla_compute::finance::quant::{
-    deflated_sharpe_ratio, diebold_mariano, probability_of_backtest_overfit,
+use medulla_compute::{
+    finance::market::validation::deflated_sharpe_ratio,
+    finance::market::validation::diebold_mariano,
+    finance::market::validation::probability_of_backtest_overfit,
 };
 use medulla_decision_types::decision::statistical::dataset::LabelledItem;
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;

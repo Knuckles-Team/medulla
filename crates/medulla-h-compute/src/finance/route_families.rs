@@ -118,7 +118,8 @@ pub(super) fn handle_risk(req_id: u64, method: Method) -> Result<Response, Metho
             returns,
             risk_free_rate,
         } => {
-            let result = medulla_compute::finance::risk::compute_risk_metrics(&returns, risk_free_rate);
+            let result =
+                medulla_compute::finance::risk::compute_risk_metrics(&returns, risk_free_rate);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceRiskMetrics>(result),
@@ -130,7 +131,12 @@ pub(super) fn handle_risk(req_id: u64, method: Method) -> Result<Response, Metho
             n_simulations,
             confidence,
         } => {
-            let v = medulla_compute::finance::risk::monte_carlo_var(mean, std_dev, n_simulations, confidence);
+            let v = medulla_compute::finance::risk::monte_carlo_var(
+                mean,
+                std_dev,
+                n_simulations,
+                confidence,
+            );
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceMonteCarloVar>(v),
@@ -163,8 +169,12 @@ pub(super) fn handle_regime(req_id: u64, method: Method) -> Result<Response, Met
             max_iter,
             tol,
         } => {
-            let result =
-                medulla_compute::finance::regime::detect_regimes(&observations, n_states, max_iter, tol);
+            let result = medulla_compute::finance::regime::detect_regimes(
+                &observations,
+                n_states,
+                max_iter,
+                tol,
+            );
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceDetectRegimes>(result),
@@ -210,7 +220,10 @@ pub(super) fn handle_signals(req_id: u64, method: Method) -> Result<Response, Me
             signal,
             forward_returns,
         } => {
-            let v = medulla_compute::finance::signals::information_coefficient(&signal, &forward_returns);
+            let v = medulla_compute::finance::signals::information_coefficient(
+                &signal,
+                &forward_returns,
+            );
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceInformationCoefficient>(v),
@@ -273,7 +286,9 @@ pub(super) fn handle_execution(req_id: u64, method: Method) -> Result<Response, 
             prices_b,
             lookback,
         } => {
-            let v = medulla_compute::finance::exchange::pairs_trading_signal(&prices_a, &prices_b, lookback);
+            let v = medulla_compute::finance::exchange::pairs_trading_signal(
+                &prices_a, &prices_b, lookback,
+            );
             Response::ok(req_id, ResultPayload::of::<results::FinancePairsTrading>(v))
         }
         Method::FinanceMatchOrders { orders } => {
@@ -295,8 +310,9 @@ pub(super) fn handle_market_making(req_id: u64, method: Method) -> Result<Respon
             kappa,
             tau,
         } => {
-            let v =
-                medulla_compute::finance::quant::avellaneda_stoikov(mid, inventory, sigma, gamma, kappa, tau);
+            let v = medulla_compute::finance::quant::avellaneda_stoikov(
+                mid, inventory, sigma, gamma, kappa, tau,
+            );
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceAvellanedaStoikov>(v),
@@ -310,7 +326,8 @@ pub(super) fn handle_market_making(req_id: u64, method: Method) -> Result<Respon
             kappa,
             a,
         } => {
-            let v = medulla_compute::finance::quant::glt_quotes(mid, inventory, sigma, gamma, kappa, a);
+            let v =
+                medulla_compute::finance::quant::glt_quotes(mid, inventory, sigma, gamma, kappa, a);
             Response::ok(req_id, ResultPayload::of::<results::FinanceGltQuotes>(v))
         }
         Method::FinanceLogitQuotes {
@@ -343,7 +360,9 @@ pub(super) fn handle_market_making(req_id: u64, method: Method) -> Result<Respon
             v_h,
             v_l,
         } => {
-            let v = medulla_compute::finance::quant::expected_pnl_rate(delta, a, kappa, alpha, p, v_h, v_l);
+            let v = medulla_compute::finance::quant::expected_pnl_rate(
+                delta, a, kappa, alpha, p, v_h, v_l,
+            );
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceExpectedPnlRate>(v),
@@ -387,7 +406,9 @@ pub(super) fn handle_microstructure(req_id: u64, method: Method) -> Result<Respo
             ask_px,
             ask_sz,
         } => {
-            let v = medulla_compute::finance::quant::microprice_series(&bid_px, &bid_sz, &ask_px, &ask_sz);
+            let v = medulla_compute::finance::quant::microprice_series(
+                &bid_px, &bid_sz, &ask_px, &ask_sz,
+            );
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceMicropriceSeries>(v),
@@ -426,7 +447,8 @@ pub(super) fn handle_microstructure(req_id: u64, method: Method) -> Result<Respo
             price_changes,
             signed_order_flow,
         } => {
-            let v = medulla_compute::finance::quant::kyle_lambda(&price_changes, &signed_order_flow);
+            let v =
+                medulla_compute::finance::quant::kyle_lambda(&price_changes, &signed_order_flow);
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceKyleLambda>(v),
@@ -461,7 +483,7 @@ pub(super) fn handle_sizing(req_id: u64, method: Method) -> Result<Response, Met
     Ok(match method {
         // ── Position Sizing (CONCEPT:MEDULLA-KG.domains.market-microstructure-sizing-backtest) ────
         Method::FinanceKellyFraction { q, c, fraction } => {
-            let v = medulla_compute::finance::quant::kelly_fraction(q, c, fraction);
+            let v = medulla_compute::finance::market::validation::kelly_fraction(q, c, fraction);
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceKellyFraction>(v),
@@ -494,7 +516,9 @@ pub(super) fn handle_sizing(req_id: u64, method: Method) -> Result<Response, Met
             reference,
             current,
             threshold,
-        } => match medulla_compute::finance::sizing::distribution_shift(&reference, &current, threshold) {
+        } => match medulla_compute::finance::sizing::distribution_shift(
+            &reference, &current, threshold,
+        ) {
             Ok(shift) => Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceDistributionShift>(
@@ -513,7 +537,12 @@ pub(super) fn handle_sizing(req_id: u64, method: Method) -> Result<Response, Met
             c,
             n_quadrature,
         } => {
-            let v = medulla_compute::finance::quant::bayesian_kelly_fraction(alpha, beta, c, n_quadrature);
+            let v = medulla_compute::finance::market::validation::bayesian_kelly_fraction(
+                alpha,
+                beta,
+                c,
+                n_quadrature,
+            );
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceBayesianKelly>(v),
@@ -521,7 +550,9 @@ pub(super) fn handle_sizing(req_id: u64, method: Method) -> Result<Response, Met
         }
         Method::FinancePosteriorCredibleInterval { alpha, beta, level } => {
             let (lower, upper) =
-                medulla_compute::finance::quant::posterior_credible_interval(alpha, beta, level);
+                medulla_compute::finance::market::validation::posterior_credible_interval(
+                    alpha, beta, level,
+                );
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinancePosteriorCredibleInterval>(
@@ -543,7 +574,7 @@ pub(super) fn handle_backtest(req_id: u64, method: Method) -> Result<Response, M
             purge_window,
             embargo,
         } => {
-            let v = medulla_compute::finance::quant::purged_cpcv_splits(
+            let v = medulla_compute::finance::market::validation::purged_cpcv_splits(
                 n_samples,
                 n_groups,
                 n_test_groups,
@@ -557,15 +588,20 @@ pub(super) fn handle_backtest(req_id: u64, method: Method) -> Result<Response, M
             n_trials,
             sr_returns,
         } => {
-            let v =
-                medulla_compute::finance::quant::deflated_sharpe_ratio(observed_sr, n_trials, &sr_returns);
+            let v = medulla_compute::finance::market::validation::deflated_sharpe_ratio(
+                observed_sr,
+                n_trials,
+                &sr_returns,
+            );
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceDeflatedSharpe>(v),
             )
         }
         Method::FinanceProbabilityBacktestOverfit { insample, oos } => {
-            let v = medulla_compute::finance::quant::probability_of_backtest_overfit(&insample, &oos);
+            let v = medulla_compute::finance::market::validation::probability_of_backtest_overfit(
+                &insample, &oos,
+            );
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceProbabilityBacktestOverfit>(v),
@@ -576,7 +612,9 @@ pub(super) fn handle_backtest(req_id: u64, method: Method) -> Result<Response, M
             losses_b,
             h,
         } => {
-            let v = medulla_compute::finance::quant::diebold_mariano(&losses_a, &losses_b, h);
+            let v = medulla_compute::finance::market::validation::diebold_mariano(
+                &losses_a, &losses_b, h,
+            );
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceDieboldMariano>(v),
@@ -615,7 +653,15 @@ pub(super) fn handle_state_space(req_id: u64, method: Method) -> Result<Response
             x0,
             p0,
         } => {
-            let v = medulla_compute::finance::statespace::kalman_filter_1d(&observations, f, q, h, r, x0, p0);
+            let v = medulla_compute::finance::statespace::kalman_filter_1d(
+                &observations,
+                f,
+                q,
+                h,
+                r,
+                x0,
+                p0,
+            );
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceKalmanFilter1d>(v),
@@ -693,7 +739,8 @@ pub(super) fn handle_state_space(req_id: u64, method: Method) -> Result<Response
             )
         }
         Method::FinanceMarkovTransitionMatrix { states, n_states } => {
-            let v = medulla_compute::finance::statespace::markov_transition_matrix(&states, n_states);
+            let v =
+                medulla_compute::finance::statespace::markov_transition_matrix(&states, n_states);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceMarkovTransitionMatrix>(v),
@@ -750,7 +797,9 @@ fn handle_signal_market(req_id: u64, method: Method) -> Result<Response, Method>
             bid_rate,
             ask_rate,
         } => {
-            let v = medulla_compute::finance::quant::queue_imbalance(&bid_q, &ask_q, &bid_rate, &ask_rate);
+            let v = medulla_compute::finance::quant::queue_imbalance(
+                &bid_q, &ask_q, &bid_rate, &ask_rate,
+            );
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceQueueImbalance>(v),
@@ -799,7 +848,10 @@ fn handle_signal_quality(req_id: u64, method: Method) -> Result<Response, Method
             returns_matrix,
             lookback,
         } => {
-            let v = medulla_compute::finance::quant::alpha_combination_engine(&returns_matrix, lookback);
+            let v = medulla_compute::finance::quant::alpha_combination_engine(
+                &returns_matrix,
+                lookback,
+            );
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceAlphaCombinationEngine>(v),
@@ -820,8 +872,11 @@ fn handle_signal_quality(req_id: u64, method: Method) -> Result<Response, Method
             strong_threshold,
             min_agree,
         } => {
-            let v =
-                medulla_compute::finance::quant::convergence_gate(&strengths, strong_threshold, min_agree);
+            let v = medulla_compute::finance::quant::convergence_gate(
+                &strengths,
+                strong_threshold,
+                min_agree,
+            );
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceConvergenceGate>(v),
@@ -861,7 +916,9 @@ pub(super) fn handle_derivatives(req_id: u64, method: Method) -> Result<Response
             rho,
             nu,
         } => {
-            let v = medulla_compute::finance::derivatives::sabr_implied_vol(f, k, t, alpha, beta, rho, nu);
+            let v = medulla_compute::finance::derivatives::sabr_implied_vol(
+                f, k, t, alpha, beta, rho, nu,
+            );
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceSabrImpliedVol>(v),
@@ -876,7 +933,9 @@ pub(super) fn handle_derivatives(req_id: u64, method: Method) -> Result<Response
             rho,
             nu,
         } => {
-            let v = medulla_compute::finance::derivatives::sabr_smile(f, &strikes, t, alpha, beta, rho, nu);
+            let v = medulla_compute::finance::derivatives::sabr_smile(
+                f, &strikes, t, alpha, beta, rho, nu,
+            );
             Response::ok(req_id, ResultPayload::of::<results::FinanceSabrSmile>(v))
         }
         Method::FinanceSabrCalibrate {
@@ -886,7 +945,13 @@ pub(super) fn handle_derivatives(req_id: u64, method: Method) -> Result<Response
             market_vols,
             beta,
         } => {
-            let v = medulla_compute::finance::derivatives::sabr_calibrate(f, t, &strikes, &market_vols, beta);
+            let v = medulla_compute::finance::derivatives::sabr_calibrate(
+                f,
+                t,
+                &strikes,
+                &market_vols,
+                beta,
+            );
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceSabrCalibrate>(v),

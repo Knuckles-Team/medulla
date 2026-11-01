@@ -1,4 +1,4 @@
-use super::sf;
+use super::special;
 
 // ════════════════════════════════════════════════════════════════════════
 //  Position sizing: Kelly & Bayesian Kelly
@@ -20,13 +20,13 @@ pub fn bayesian_kelly_fraction(alpha: f64, beta: f64, c: f64, n_quadrature: usiz
     if c <= 0.0 || c >= 1.0 {
         return 0.0;
     }
-    let (nodes, weights) = sf::leggauss(n_quadrature.max(8));
+    let (nodes, weights) = special::leggauss(n_quadrature.max(8));
     // map [-1,1] -> [0,1]
     let q_grid: Vec<f64> = nodes.iter().map(|&z| 0.5 * (z + 1.0)).collect();
     let q_w: Vec<f64> = weights
         .iter()
         .zip(&q_grid)
-        .map(|(&w, &q)| 0.5 * w * sf::beta_pdf(q, alpha, beta))
+        .map(|(&w, &q)| 0.5 * w * special::beta_pdf(q, alpha, beta))
         .collect();
     let b = (1.0 - c) / c;
     let neg_eu = |f: f64| -> f64 {
@@ -58,8 +58,8 @@ pub fn bayesian_kelly_fraction(alpha: f64, beta: f64, c: f64, n_quadrature: usiz
 /// conservative Kelly input.
 pub fn posterior_credible_interval(alpha: f64, beta: f64, level: f64) -> (f64, f64) {
     (
-        sf::beta_ppf(level / 2.0, alpha, beta),
-        sf::beta_ppf(1.0 - level / 2.0, alpha, beta),
+        special::beta_ppf(level / 2.0, alpha, beta),
+        special::beta_ppf(1.0 - level / 2.0, alpha, beta),
     )
 }
 
