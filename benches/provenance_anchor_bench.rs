@@ -37,7 +37,7 @@ use std::time::Duration;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use medulla::protocol::Method;
 use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla::server::persistence::redb_backend::RedbBackend;
+use medulla_persistence::redb_backend::RedbBackend;
 use medulla_kernel::audit;
 use redb_fan_in::{fan_in, GRAPH};
 use tokio::runtime::Builder;

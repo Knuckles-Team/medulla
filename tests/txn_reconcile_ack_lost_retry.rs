@@ -34,7 +34,7 @@ use medulla::acl::RequestContextClaims;
 use medulla_types::mutation_batch::MutationBatchStatus;
 use medulla::protocol::{GraphType, Method, Request, Response, ResultPayload};
 #[cfg(feature = "redb")]
-use medulla::server::persistence::AsRedb;
+use medulla_persistence::AsRedb;
 use medulla::server::{dispatch};
 use medulla_server_api::auth::compute_verified_envelope_token;
 use medulla_server_api::auth::VerifiedEnvelopeParams;

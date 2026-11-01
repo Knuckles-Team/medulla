@@ -25,7 +25,7 @@ use medulla::knowledge_stream::{
 };
 use medulla::protocol::{Method, Request, Response, ResultPayload};
 use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla::server::persistence::redb_backend::RedbBackend;
+use medulla_persistence::redb_backend::RedbBackend;
 use medulla_types::jobs::{JobKind, JobOp, SubmitJobSpec};
 
 const SECRET: &str = "external-compute-contract-secret";

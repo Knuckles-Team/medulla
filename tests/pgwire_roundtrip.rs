@@ -78,8 +78,8 @@ fn seeded_state() -> test_support::SharedState {
 fn reopen_redb_with_retry(
     dir: &str,
     cache: usize,
-) -> medulla::server::persistence::redb_backend::RedbBackend {
-    use medulla::server::persistence::redb_backend::RedbBackend;
+) -> medulla_persistence::redb_backend::RedbBackend {
+    use medulla_persistence::redb_backend::RedbBackend;
     let mut last_err = None;
     for attempt in 0..50 {
         match RedbBackend::open(dir.to_string(), cache) {
@@ -95,7 +95,7 @@ fn reopen_redb_with_retry(
 
 #[cfg(feature = "redb")]
 fn interval_backend(label: &str) -> (String, Arc<dyn PersistenceBackend>) {
-    use medulla::server::persistence::redb_backend::RedbBackend;
+    use medulla_persistence::redb_backend::RedbBackend;
     use std::sync::atomic::{AtomicU64, Ordering};
 
     static NEXT: AtomicU64 = AtomicU64::new(1);
@@ -116,7 +116,7 @@ async fn reopened_node(
     dir: &str,
     node_id: &str,
 ) -> (
-    medulla::server::persistence::redb_backend::RedbBackend,
+    medulla_persistence::redb_backend::RedbBackend,
     Option<Vec<u8>>,
 ) {
     let reopened = reopen_redb_with_retry(dir, 64);

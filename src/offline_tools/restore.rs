@@ -22,7 +22,7 @@ use std::path::Path;
 
 use clap::Parser;
 
-use medulla::server::persistence::backup;
+use medulla_persistence::backup;
 
 #[derive(Parser, Debug)]
 #[command(name = "medulla-server restore")]

@@ -12,7 +12,7 @@ use medulla_server_api::state::ServerState;
 use tokio::sync::RwLock;
 
 #[cfg(feature = "redb")]
-use medulla::server::persistence::redb_backend::RedbBackend;
+use medulla_persistence::redb_backend::RedbBackend;
 
 pub type SharedPersistence = Arc<dyn PersistenceBackend>;
 pub type SharedState = Arc<RwLock<ServerState>>;

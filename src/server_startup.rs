@@ -469,7 +469,7 @@ pub(super) fn compose_server_state(
     {
         // Upper-crate service handles are type-erased on `ServerState`; the
         // composition root installs the always-present ones (R056.8).
-        use medulla::server::persistence::cold_offload::ColdTrackerStateExt;
+        use medulla_persistence::cold_offload::ColdTrackerStateExt;
         let _ = state.ensure_cold_tracker();
     }
     #[cfg(feature = "lake")]

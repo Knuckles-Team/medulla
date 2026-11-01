@@ -27,7 +27,7 @@ use medulla::epistemic_operations::{
 use medulla::protocol::{Method, Request, Response, ResultPayload};
 use medulla::registry::GraphRegistry;
 use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla::server::persistence::redb_backend::RedbBackend;
+use medulla_persistence::redb_backend::RedbBackend;
 use medulla_server_api::auth::compute_verified_envelope_token;
 use medulla_server_api::auth::VerifiedEnvelopeParams;
 use medulla_types::native_control::{

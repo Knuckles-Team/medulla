@@ -32,7 +32,7 @@ use std::time::Instant;
 
 use medulla::protocol::Method;
 use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla::server::persistence::redb_backend::RedbBackend;
+use medulla_persistence::redb_backend::RedbBackend;
 use redb::{Database, Durability, TableDefinition};
 use tracing::field::{Field, Visit};
 use tracing::span::{Attributes, Id};

@@ -869,9 +869,9 @@ pub struct EnvVarGuard {
     previous: Option<std::ffi::OsString>,
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 impl EnvVarGuard {
-    pub(crate) fn set(key: &'static str, value: &str) -> Self {
+    pub fn set(key: &'static str, value: &str) -> Self {
         let previous = std::env::var_os(key);
         std::env::set_var(key, value);
         Self { key, previous }
@@ -880,7 +880,7 @@ impl EnvVarGuard {
 
 #[cfg(test)]
 impl Drop for EnvVarGuard {
-    fn drop(&mut self) {
+    pub fn drop(&mut self) {
         match self.previous.take() {
             Some(value) => std::env::set_var(self.key, value),
             None => std::env::remove_var(self.key),

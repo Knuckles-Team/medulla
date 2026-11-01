@@ -276,7 +276,7 @@ pub fn tempdir_persistence() -> (
     let dir_s = dir.to_string_lossy().into_owned();
     let backend: std::sync::Arc<dyn medulla_server_api::api::persistence::PersistenceBackend> =
         std::sync::Arc::new(
-            medulla::server::persistence::redb_backend::RedbBackend::open(dir_s.clone(), 4096)
+            medulla_persistence::redb_backend::RedbBackend::open(dir_s.clone(), 4096)
                 .expect("open tempdir redb backend"),
         );
     (Some(dir_s), Some(backend))

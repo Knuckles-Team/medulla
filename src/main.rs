@@ -1536,7 +1536,7 @@ async fn recover_durable_catalog(
         .map_err(|error| format!("failed to register the mandatory commons graph: {error}"))?;
 
         let factory = std::sync::Arc::new(
-            medulla::server::persistence::read_through::BackendReadThroughFactory::new(p.clone()),
+            medulla_persistence::read_through::BackendReadThroughFactory::new(p.clone()),
         );
         state
             .write()
@@ -1544,7 +1544,7 @@ async fn recover_durable_catalog(
             .registry
             .set_read_through_factory(factory);
         let materializer = std::sync::Arc::new(
-            medulla::server::persistence::read_through::BackendGraphMaterializer::new(p.clone()),
+            medulla_persistence::read_through::BackendGraphMaterializer::new(p.clone()),
         );
         state.write().await.registry.set_materializer(materializer);
         info!("durable read-through and bounded lazy materialization enabled");
@@ -1857,7 +1857,7 @@ async fn spawn_memory_sweeps(
         if window_secs > 0 {
             let cold_state = state.clone();
             let tracker = {
-                use medulla::server::persistence::cold_offload::ColdTrackerStateExt;
+                use medulla_persistence::cold_offload::ColdTrackerStateExt;
                 cold_state.write().await.ensure_cold_tracker()
             };
             let window = std::time::Duration::from_secs(window_secs);
@@ -1876,11 +1876,11 @@ async fn spawn_memory_sweeps(
 #[cfg(feature = "redb")]
 async fn cold_offload_tick(
     state: Arc<tokio::sync::RwLock<ServerState>>,
-    tracker: Arc<medulla::server::persistence::cold_offload::ColdTenantTracker>,
+    tracker: Arc<medulla_persistence::cold_offload::ColdTenantTracker>,
     window: std::time::Duration,
 ) {
     let n =
-        medulla::server::persistence::cold_offload::offload_cold_tenants(&state, &tracker, window)
+        medulla_persistence::cold_offload::offload_cold_tenants(&state, &tracker, window)
             .await;
     if n > 0 {
         tracing::info!("Cold-tenant offload: hibernated {} idle graph(s)", n);
