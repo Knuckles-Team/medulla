@@ -31,3 +31,7 @@ mod mutation_redb;
 mod persistence_txn;
 #[cfg(test)]
 mod server_api_mutation_inventory;
+#[cfg(all(test, feature = "raft"))]
+mod raft_cluster;
+#[cfg(all(test, feature = "raft"))]
+mod raft_command;

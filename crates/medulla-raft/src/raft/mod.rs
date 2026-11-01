@@ -129,8 +129,6 @@ pub(crate) mod fixture;
 #[cfg(any(test, feature = "harness"))]
 pub mod harness;
 
-#[cfg(test)]
-mod tests;
 
 // The cross-shard 2PC atomicity + recovery gauntlet (CONCEPT:MEDULLA-KG.storage.lane-n-increment) — the nemesis
 // harness proving NO PARTIAL COMMIT under participant-kill + partition. Gated behind

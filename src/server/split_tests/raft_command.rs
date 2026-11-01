@@ -1,4 +1,4 @@
-use super::*;
+use medulla_raft::raft::command::*;
 use crate::protocol::Method;
 
 #[cfg(feature = "ast")]

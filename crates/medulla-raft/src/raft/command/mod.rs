@@ -12,8 +12,6 @@ mod native;
 
 pub use native::{NativeMutationCommand, SealedNativeMethod, NATIVE_CONSENSUS_METHODS};
 
-#[cfg(test)]
-mod tests;
 
 /// Build the same pending-source outbox record for Raft command tests in both
 /// this module and its top-up child. The production decoder still validates it.

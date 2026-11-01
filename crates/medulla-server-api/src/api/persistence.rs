@@ -1103,7 +1103,8 @@ impl RaftMutationContext {
     }
 }
 
-fn opaque_scope_is_valid(value: &str) -> bool {
+/// Whether an opaque scope string is well formed.
+pub fn opaque_scope_is_valid(value: &str) -> bool {
     value.rsplit_once(':').is_some_and(|(namespace, digest)| {
         !namespace.is_empty() && lowercase_sha256_is_valid(digest)
     })

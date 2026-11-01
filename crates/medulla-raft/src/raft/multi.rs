@@ -1609,7 +1609,7 @@ impl MultiRaft {
         if state
             .multi_raft
             .as_ref()
-            .is_some_and(|current| Arc::as_ptr(current) as usize == self_addr)
+            .is_some_and(|current| Arc::as_ptr(current) as *const () as usize == self_addr)
         {
             state.multi_raft = None;
         }
