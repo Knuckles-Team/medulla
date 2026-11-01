@@ -1,4 +1,4 @@
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 
 use super::{NativeMutationCommand, SealedNativeMethod};
 
@@ -255,7 +255,7 @@ macro_rules! native_method_pattern {
     };
     (write $variant:ident) => {
         Method::$variant {
-            mode: medulla_types::protocol::CypherMode::Write,
+            mode: medulla_protocol_types::protocol::CypherMode::Write,
             ..
         }
     };

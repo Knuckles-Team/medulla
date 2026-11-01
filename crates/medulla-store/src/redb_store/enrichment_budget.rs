@@ -15,9 +15,10 @@
 use medulla_storage::{GraphShardOwner, PhysicalWriteCapability, ScopedOwnerTableMut};
 use redb::TableDefinition;
 
-use medulla_types::native_control::{
-    EnrichmentBudgetCheckpoint as BudgetCheckpoint, EnrichmentBudgetPark,
-    EnrichmentBudgetReservation, NativeControlSchemaVersion, SubmitWorkItemsRequest,
+use medulla_agent_types::{
+    native_control::EnrichmentBudgetCheckpoint as BudgetCheckpoint,
+    native_control::EnrichmentBudgetPark, native_control::EnrichmentBudgetReservation,
+    native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemsRequest,
 };
 
 use super::shard::{Shard, ShardWrite};
@@ -57,7 +58,7 @@ pub struct SourceBudgetAuthority {
 /// own ChangeEnvelope. The same check runs before proposal and on every Raft
 /// apply, so a sealed authority cannot be attached to a different source.
 pub fn validate_source_envelope(
-    envelope: &medulla_types::change_envelope::ChangeEnvelope,
+    envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
     authority: Option<&SourceBudgetAuthority>,
 ) -> Result<(), String> {
     pub const TOPIC: &str = "repository.enrichment.pending";
@@ -77,9 +78,9 @@ pub fn validate_source_envelope(
 }
 
 fn source_envelope_matches(
-    envelope: &medulla_types::change_envelope::ChangeEnvelope,
+    envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
     authority: &SourceBudgetAuthority,
-    intent: &medulla_types::mutation_batch::MutationOutboxIntent,
+    intent: &medulla_mutation_types::mutation_scope::MutationOutboxIntent,
 ) -> bool {
     authority.tenant_id == envelope.mutation.identity.tenant().as_str()
         && authority.source_envelope == envelope.envelope_id
@@ -94,9 +95,9 @@ fn source_envelope_matches(
 
 #[cfg(feature = "ast")]
 fn validate_source_intent(
-    envelope: &medulla_types::change_envelope::ChangeEnvelope,
+    envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
     authority: &SourceBudgetAuthority,
-    intent: &medulla_types::mutation_batch::MutationOutboxIntent,
+    intent: &medulla_mutation_types::mutation_scope::MutationOutboxIntent,
 ) -> Result<(), String> {
     #[derive(serde::Deserialize)]
     #[serde(deny_unknown_fields)]
@@ -144,9 +145,9 @@ fn validate_source_intent(
 
 #[cfg(not(feature = "ast"))]
 fn validate_source_intent(
-    _envelope: &medulla_types::change_envelope::ChangeEnvelope,
+    _envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
     _authority: &SourceBudgetAuthority,
-    _intent: &medulla_types::mutation_batch::MutationOutboxIntent,
+    _intent: &medulla_mutation_types::mutation_scope::MutationOutboxIntent,
 ) -> Result<(), String> {
     Err("CONFLICT: repository enrichment source requires AST authority".into())
 }

@@ -170,8 +170,8 @@ pub async fn read_request(stream: &mut tokio::net::TcpStream) -> Option<HttpMess
 fn signed_request(
     req: &HttpMessage,
     graph: String,
-    method: medulla_types::protocol::Method,
-) -> Result<medulla_types::protocol::Request, String> {
+    method: medulla_protocol_types::protocol::Method,
+) -> Result<medulla_protocol_types::protocol::Request, String> {
     let id = req
         .header("x-epistemic-request-id")
         .parse::<u64>()
@@ -182,7 +182,7 @@ fn signed_request(
         .filter(|token| token.starts_with("eg2."))
         .ok_or_else(|| "Authorization must be Bearer eg2.<verified-envelope>".to_string())?
         .to_string();
-    Ok(medulla_types::protocol::Request {
+    Ok(medulla_protocol_types::protocol::Request {
         id,
         graph,
         auth_token,
@@ -292,12 +292,12 @@ async fn handle_nl(
     // The local adapter uses a fixed read-only service identity that must be
     // provisioned in durable RBAC policy.
     let id = 1u64;
-    let request = medulla_types::protocol::Request {
+    let request = medulla_protocol_types::protocol::Request {
         id,
         graph: graph.clone(),
         auth_token: String::new(),
         agent_id: Some("service:local-query".to_string()),
-        method: medulla_types::protocol::Method::NlQuery { text, graph },
+        method: medulla_protocol_types::protocol::Method::NlQuery { text, graph },
     };
     let resp = crate::api::reentry::dispatch_authenticated_local_query(state, request).await;
     if let Some(err) = resp.error {
@@ -308,7 +308,7 @@ async fn handle_nl(
         );
     }
     let rows = match resp.result {
-        Some(medulla_types::protocol::ResultPayload::Raw(bytes)) => {
+        Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) => {
             rmp_serde::from_slice::<Vec<(String, Option<f32>)>>(&bytes).unwrap_or_default()
         }
         _ => Vec::new(),

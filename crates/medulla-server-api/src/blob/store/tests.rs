@@ -790,7 +790,7 @@ fn owner_acquire_and_release_are_the_named_holder_path() {
 // rather than re-apply it, and the data survives a full close/reopen of the
 // store.
 
-fn assert_holder_write_is_all_or_nothing_at(phase: medulla_types::mutation_batch::MutationCommitPhase) {
+fn assert_holder_write_is_all_or_nothing_at(phase: medulla_protocol_types::mutation_batch::MutationCommitPhase) {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().to_string_lossy().to_string();
     let digest;
@@ -811,7 +811,7 @@ fn assert_holder_write_is_all_or_nothing_at(phase: medulla_types::mutation_batch
             "the injected failure at {phase:?} must surface"
         );
 
-        if phase == medulla_types::mutation_batch::MutationCommitPhase::AfterCommitBeforeAck {
+        if phase == medulla_protocol_types::mutation_batch::MutationCommitPhase::AfterCommitBeforeAck {
             // The write landed; only the ack was lost. A fresh-nonce retry of
             // the SAME idempotency key must replay the committed outcome, not
             // double-acquire.
@@ -858,27 +858,27 @@ fn assert_holder_write_is_all_or_nothing_at(phase: medulla_types::mutation_batch
 #[test]
 fn a_kill_before_any_row_write_leaves_the_store_untouched_and_replays_clean() {
     assert_holder_write_is_all_or_nothing_at(
-        medulla_types::mutation_batch::MutationCommitPhase::BeforeRows,
+        medulla_protocol_types::mutation_batch::MutationCommitPhase::BeforeRows,
     );
 }
 
 #[test]
 fn a_kill_after_rows_before_metadata_rolls_back_the_whole_transaction() {
     assert_holder_write_is_all_or_nothing_at(
-        medulla_types::mutation_batch::MutationCommitPhase::AfterRowsBeforeMetadata,
+        medulla_protocol_types::mutation_batch::MutationCommitPhase::AfterRowsBeforeMetadata,
     );
 }
 
 #[test]
 fn a_kill_before_commit_rolls_back_the_whole_transaction() {
     assert_holder_write_is_all_or_nothing_at(
-        medulla_types::mutation_batch::MutationCommitPhase::BeforeCommit,
+        medulla_protocol_types::mutation_batch::MutationCommitPhase::BeforeCommit,
     );
 }
 
 #[test]
 fn a_kill_after_commit_before_ack_leaves_a_durable_write_that_replays_once() {
     assert_holder_write_is_all_or_nothing_at(
-        medulla_types::mutation_batch::MutationCommitPhase::AfterCommitBeforeAck,
+        medulla_protocol_types::mutation_batch::MutationCommitPhase::AfterCommitBeforeAck,
     );
 }

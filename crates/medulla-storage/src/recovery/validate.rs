@@ -16,10 +16,13 @@ use crate::tables::{
     REPLAY_NONCES, REPLAY_OPERATIONS, SCOPE_BINDINGS, STORE_ROOT, VERSIONS,
 };
 use crate::StorageKernel;
-use medulla_types::{MutationBatchRecord, MutationBatchStatus, MutationOutboxRecord};
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
+use medulla_protocol_types::{
+    mutation_batch::MutationBatchRecord, mutation_batch::MutationBatchStatus,
+};
 use redb::{ReadTransaction, ReadableDatabase, ReadableTable, TableHandle};
 
-pub use medulla_types::storage_wire::RecoveryStoreCounts;
+pub use medulla_protocol_types::storage_wire::RecoveryStoreCounts;
 
 type PrivateAuthenticator<'a> = dyn Fn(&[u8], &str) -> Result<(), String> + 'a;
 
@@ -458,7 +461,7 @@ fn validate_typed_replay_receipt(
     scope_key: &str,
     batch_id: &str,
     record: &OperationReplayRow,
-    receipt: &medulla_types::mutation::MutationReceipt,
+    receipt: &medulla_mutation_types::mutation::MutationReceipt,
 ) -> Result<(), String> {
     let linked = read_batch_in(&tables.batches, scope_key, batch_id)?;
     if linked.status != MutationBatchStatus::Committed
@@ -744,12 +747,15 @@ fn increment(value: &mut u64, label: &str) -> Result<(), String> {
 #[cfg(test)]
 mod replacement_parent_tests {
     use super::*;
-    use medulla_types::mutation_batch::{
-        RepositoryEnrichmentTopUp, REPOSITORY_ENRICHMENT_PENDING_TOPIC,
+    use medulla_mutation_types::{
+        mutation_scope::CommittedVersion, mutation_scope::IncarnationId,
+        mutation_scope::LogicalName, mutation_scope::MutationOutboxIntent,
+        mutation_scope::MutationScopeIdentity, mutation_scope::ScopeTenantId,
     };
-    use medulla_types::{
-        CommittedVersion, IncarnationId, LogicalName, MutationBatch, MutationOutboxIntent,
-        MutationScopeIdentity, ScopeTenantId,
+    use medulla_protocol_types::mutation_batch::MutationBatch;
+    use medulla_protocol_types::{
+        mutation_batch::RepositoryEnrichmentTopUp,
+        mutation_batch::REPOSITORY_ENRICHMENT_PENDING_TOPIC,
     };
 
     #[test]
@@ -760,7 +766,7 @@ mod replacement_parent_tests {
             IncarnationId::new("incarnation:replacement-parent").unwrap(),
         );
         let old = MutationOutboxRecord {
-            schema_version: medulla_types::mutation_batch::MUTATION_BATCH_VERSION,
+            schema_version: medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION,
             batch_id: "old-source".into(),
             ordinal: 0,
             identity: identity.clone(),
@@ -810,7 +816,7 @@ mod replacement_parent_tests {
         };
         parent.validate().unwrap();
         let row = MutationOutboxRecord {
-            schema_version: medulla_types::mutation_batch::MUTATION_BATCH_VERSION,
+            schema_version: medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION,
             batch_id: "new-source".into(),
             ordinal: 0,
             identity: parent.identity.clone(),

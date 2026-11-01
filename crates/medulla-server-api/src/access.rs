@@ -61,7 +61,7 @@ pub struct CarrierAuthority {
     /// The verified identity actor: the identity store decides from it, against
     /// its current state, whether its SQL relations are visible.
     #[cfg(feature = "security")]
-    identity_actor: medulla_types::identity::IdentityActor,
+    identity_actor: medulla_identity_types::identity::IdentityActor,
 }
 
 /// One owner-scoped process-global call (EH-373/EH-374): the server state, the request
@@ -82,10 +82,10 @@ impl OwnerScopedCall<'_> {
     pub fn owner(
         &self,
         method: &str,
-    ) -> Result<CarrierAuthority, medulla_types::protocol::Response> {
+    ) -> Result<CarrierAuthority, medulla_protocol_types::protocol::Response> {
         self.carrier.cloned().ok_or_else(|| {
             medulla_kernel::metrics::access_denied();
-            medulla_types::protocol::Response::err(
+            medulla_protocol_types::protocol::Response::err(
                 self.req_id,
                 format!("ACCESS_DENIED: {method} requires a verified tenant carrier"),
             )
@@ -258,7 +258,7 @@ impl CarrierAuthority {
 
     /// The verified identity actor, for the identity store's own check.
     #[cfg(feature = "security")]
-    pub fn identity_actor(&self) -> &medulla_types::identity::IdentityActor {
+    pub fn identity_actor(&self) -> &medulla_identity_types::identity::IdentityActor {
         &self.identity_actor
     }
 
@@ -753,7 +753,7 @@ pub fn check_graph_access(
     isolation: &IsolationLayer,
     caller: Option<&str>,
     graph_name: &str,
-    graph_type: medulla_types::protocol::GraphType,
+    graph_type: medulla_protocol_types::protocol::GraphType,
     graph_owner: Option<&str>,
     access: AccessLevel,
 ) -> Result<(), String> {
@@ -771,7 +771,7 @@ fn check_graph_access_with_policy(
     isolation: &IsolationLayer,
     caller: Option<&str>,
     graph_name: &str,
-    graph_type: medulla_types::protocol::GraphType,
+    graph_type: medulla_protocol_types::protocol::GraphType,
     graph_owner: Option<&str>,
     access: AccessLevel,
 ) -> Result<(), String> {
@@ -826,7 +826,7 @@ pub fn principal_may_access(
     isolation: &IsolationLayer,
     agent_id: &str,
     graph_name: &str,
-    graph_type: medulla_types::protocol::GraphType,
+    graph_type: medulla_protocol_types::protocol::GraphType,
     graph_owner: Option<&str>,
     access: medulla_types::acl::AccessCheck,
 ) -> bool {
@@ -899,7 +899,7 @@ fn require_provisioned_policy(isolation: &IsolationLayer) -> Result<(), String> 
 #[cfg(test)]
 mod l10_broker_stream_write_tests {
     use super::*;
-    use medulla_types::protocol::Method;
+    use medulla_protocol_types::protocol::Method;
 
     #[test]
     fn stream_declare_requires_write() {
@@ -1121,7 +1121,7 @@ fn require_admin_capability_with_policy(
 #[cfg(test)]
 mod secure_empty_policy_tests {
     use super::*;
-    use medulla_types::protocol::GraphType;
+    use medulla_protocol_types::protocol::GraphType;
 
     #[cfg(feature = "security")]
     #[test]
@@ -1235,7 +1235,7 @@ mod secure_empty_policy_tests {
 mod durability_closure_tests {
     use super::*;
     use crate::mutation_apply::is_durable_mutation;
-    use medulla_types::protocol::Method;
+    use medulla_protocol_types::protocol::Method;
 
     /// The one assertion every case below exercises: whenever `requires_write`
     /// says a method mutates (and therefore requires Write ACL + a write lock),
@@ -1255,7 +1255,7 @@ mod durability_closure_tests {
     #[cfg(feature = "mining")]
     #[test]
     fn mine_sequence_writeback_is_durable() {
-        use medulla_types::protocol::MineSeqAlgorithm;
+        use medulla_protocol_types::protocol::MineSeqAlgorithm;
         let m = Method::MineSequence {
             sequences: vec![vec!["a".into(), "b".into()]],
             source: None,
@@ -1275,7 +1275,7 @@ mod durability_closure_tests {
     #[cfg(feature = "mining")]
     #[test]
     fn mine_forecast_writeback_is_durable() {
-        use medulla_types::protocol::ForecastAlgorithm;
+        use medulla_protocol_types::protocol::ForecastAlgorithm;
         let m = Method::MineForecast {
             values: vec![1.0, 2.0, 3.0, 4.0, 5.0],
             algorithm: ForecastAlgorithm::Arima,
@@ -1306,7 +1306,7 @@ mod durability_closure_tests {
     #[cfg(feature = "mining")]
     #[test]
     fn mine_text_lda_writeback_is_durable_but_tfidf_is_not() {
-        use medulla_types::protocol::TextAlgorithm;
+        use medulla_protocol_types::protocol::TextAlgorithm;
         let base = |algorithm: TextAlgorithm| Method::MineText {
             docs: vec![vec!["a".into(), "b".into()]],
             source: None,
@@ -1346,7 +1346,7 @@ mod durability_closure_tests {
     #[cfg(feature = "mining")]
     #[test]
     fn mine_subgraph_gspan_writeback_is_durable_but_motif_is_not() {
-        use medulla_types::protocol::SubgraphAlgorithm;
+        use medulla_protocol_types::protocol::SubgraphAlgorithm;
         let base = |algorithm: SubgraphAlgorithm| Method::MineSubgraph {
             label: None,
             min_support: 0.1,
@@ -1784,7 +1784,7 @@ mod universal_row_read_tests {
                 isolation,
                 agent,
                 "tenant-a",
-                medulla_types::protocol::GraphType::Agent,
+                medulla_protocol_types::protocol::GraphType::Agent,
                 None,
                 access,
             )
@@ -1843,7 +1843,7 @@ mod universal_row_read_tests {
             &isolation,
             Some(alice.agent_id()),
             "agent:alice",
-            medulla_types::protocol::GraphType::Agent,
+            medulla_protocol_types::protocol::GraphType::Agent,
             Some("agent:alice"),
             AccessLevel::Write,
         )
@@ -1857,7 +1857,7 @@ mod universal_row_read_tests {
             &isolation,
             Some(alice.actor_scope()),
             "agent:alice",
-            medulla_types::protocol::GraphType::Agent,
+            medulla_protocol_types::protocol::GraphType::Agent,
             Some("agent:alice"),
             AccessLevel::Write,
         );
@@ -2376,7 +2376,7 @@ mod read_rls_coverage_tests {
             Ok(medulla_query::StatementKind::GraphTableReadRequiresCatalogAdmission(_))
         ));
         assert!(!sql_is_write(graph_table));
-        assert!(!requires_write(&medulla_types::protocol::Method::Sql {
+        assert!(!requires_write(&medulla_protocol_types::protocol::Method::Sql {
             query: graph_table.to_string(),
             params_msgpack: Vec::new(),
         }));

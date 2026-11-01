@@ -7,8 +7,10 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_catalog_types::{
+    connector_pack::SeedGraphImport, connector_pack::SeedPart, connector_pack::SeedPartKey,
+};
 use medulla_rdf::oxrdf::{BlankNode, Graph, NamedOrBlankNode, Term, Triple};
-use medulla_types::connector_pack::{SeedGraphImport, SeedPart, SeedPartKey};
 use medulla_types::contract::Digest256;
 
 /// Maximum number of triples emitted by one seed part parser.

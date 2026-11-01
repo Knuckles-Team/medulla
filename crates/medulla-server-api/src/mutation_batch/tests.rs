@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use crate::api::persistence::PersistenceBackend;
 use medulla_core::graph::GraphCore;
-use medulla_types::mutation_batch::MutationBatch;
-use medulla_types::mutation_batch::MutationSurface;
-use medulla_types::mutation_batch::VersionExpectation;
-use medulla_types::protocol::Method;
-use medulla_types::protocol::ResultPayload;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_protocol_types::mutation_batch::VersionExpectation;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::ResultPayload;
 
 use super::commit::changed_work_item_ids;
 use super::digest::work_item_batch_identity;
@@ -32,7 +32,7 @@ impl PersistenceBackend for LockProbePersistence {
         batch: &MutationBatch,
         _result_msgpack: Option<&[u8]>,
         _committed_at_ms: u64,
-    ) -> Result<medulla_types::mutation_batch::MutationBatchCommit, String> {
+    ) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {
         *self.seen_batch.lock().unwrap() = Some(batch.clone());
         self.entered_commit.notify_one();
         Err("lock-probe-stop".to_string())
@@ -295,11 +295,11 @@ fn transaction_compiler_preserves_order_and_fences() {
 
 #[test]
 fn change_envelope_projection_failure_never_partially_publishes() {
-    use medulla_types::change_envelope::ChangeEnvelope;
-    use medulla_types::change_envelope::ContentVersion;
-    use medulla_types::change_envelope::ContentVersionPosition;
-    use medulla_types::change_envelope::PrivacyAttestation;
-    use medulla_types::change_envelope::CHANGE_ENVELOPE_VERSION;
+    use medulla_protocol_types::change_envelope::ChangeEnvelope;
+    use medulla_protocol_types::change_envelope::ContentVersion;
+    use medulla_protocol_types::change_envelope::ContentVersionPosition;
+    use medulla_protocol_types::change_envelope::PrivacyAttestation;
+    use medulla_protocol_types::change_envelope::CHANGE_ENVELOPE_VERSION;
 
     let core = Arc::new(GraphCore::new());
     core.add_node(
@@ -366,7 +366,7 @@ fn change_envelope_projection_failure_never_partially_publishes() {
             sanitizer_version: "sanitizer-v1".into(),
             sanitized_payload_digest: "b".repeat(64),
         },
-        material_class: medulla_types::change_envelope::MaterialClass::Attested,
+        material_class: medulla_protocol_types::change_envelope::MaterialClass::Attested,
         commit_seq: None,
         commit_descriptor_ref: None,
     };
@@ -646,7 +646,7 @@ fn durability_domain_classification_matches_the_golden() {
 #[test]
 fn classifier_source_map_agrees_with_domain_for() {
     use crate::mutation_batch::domain_for;
-    use medulla_types::mutation_batch::DurabilityDomain;
+    use medulla_mutation_types::mutation_scope::DurabilityDomain;
 
     let map = classification_map_from_source();
     let lookup = |name: &str| {
@@ -665,7 +665,7 @@ fn classifier_source_map_agrees_with_domain_for() {
     check(
         Method::CreateGraph {
             graph_name: "g".into(),
-            graph_type: medulla_types::protocol::GraphType::Global,
+            graph_type: medulla_protocol_types::protocol::GraphType::Global,
         },
         DurabilityDomain::Lifecycle,
         "CreateGraph",
@@ -721,7 +721,7 @@ fn classifier_source_map_agrees_with_domain_for() {
 #[test]
 fn owner_domain_classifies_wire_unconditional_methods_regardless_of_this_crates_own_feature() {
     use crate::mutation_batch::domain_for;
-    use medulla_types::mutation_batch::DurabilityDomain;
+    use medulla_mutation_types::mutation_scope::DurabilityDomain;
 
     assert_eq!(
         domain_for(
@@ -926,7 +926,7 @@ fn owner_store_batch_names_the_serving_principal_and_carries_the_caller_actor() 
             shared: false,
         },
         MutationSurface::Other,
-        medulla_types::mutation_batch::DurabilityDomain::KvStore,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::KvStore,
         "kv_operation",
     )
     .unwrap();
@@ -971,7 +971,7 @@ fn compile_sql_source_dirty_batch(
         },
         &method,
         MutationSurface::Query,
-        medulla_types::mutation_batch::DurabilityDomain::SqlCatalog,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::SqlCatalog,
         "sql_catalog_operation",
     )
     .unwrap();
@@ -990,23 +990,26 @@ fn sql_catalog_compile_declares_one_retry_stable_typed_source_dirty_intent() {
     let source_dirty = first
         .outbox
         .iter()
-        .filter(|intent| intent.topic == medulla_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC)
+        .filter(|intent| {
+            intent.topic == medulla_index_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC
+        })
         .collect::<Vec<_>>();
     assert_eq!(source_dirty.len(), 1);
-    let decoded = medulla_types::semantic_index::SemanticSourceDirtyIntent::from_canonical_cbor(
-        &source_dirty[0].payload,
-    )
-    .unwrap();
+    let decoded =
+        medulla_index_types::semantic_index::SemanticSourceDirtyIntent::from_canonical_cbor(
+            &source_dirty[0].payload,
+        )
+        .unwrap();
     assert_eq!(
         decoded.source_scope_digest,
-        medulla_types::semantic_index::SemanticDigest::from_bytes(
+        medulla_index_types::semantic_index::SemanticDigest::from_bytes(
             *first.identity.binding_digest().as_bytes()
         )
     );
     let encoded_method = rmp_serde::to_vec_named(&method).unwrap();
     assert_eq!(
         decoded.input_digest,
-        medulla_types::semantic_index::SemanticDigest::from_bytes(
+        medulla_index_types::semantic_index::SemanticDigest::from_bytes(
             sha2::Sha256::digest(encoded_method).into()
         )
     );
@@ -1015,7 +1018,9 @@ fn sql_catalog_compile_declares_one_retry_stable_typed_source_dirty_intent() {
     let retry_source_dirty = retry
         .outbox
         .iter()
-        .find(|intent| intent.topic == medulla_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC)
+        .find(|intent| {
+            intent.topic == medulla_index_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC
+        })
         .unwrap();
     assert_eq!(
         retry_source_dirty.payload, source_dirty[0].payload,
@@ -1043,12 +1048,12 @@ fn sql_catalog_compile_declares_one_retry_stable_typed_source_dirty_intent() {
             node_id: "node-a".into(),
         },
         MutationSurface::Graph,
-        medulla_types::mutation_batch::DurabilityDomain::GraphRows,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::GraphRows,
         "graph_operation",
     )
     .unwrap();
     assert!(non_sql.outbox.iter().all(|intent| {
-        intent.topic != medulla_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC
+        intent.topic != medulla_index_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC
     }));
 }
 
@@ -1075,7 +1080,7 @@ fn sql_source_rows_receipt_version_and_dirty_intent_commit_and_replay_atomically
     assert!(!committed.replayed);
     assert_eq!(
         committed.record.committed_version,
-        medulla_types::mutation_batch::CommittedVersion::Native {
+        medulla_mutation_types::mutation_scope::CommittedVersion::Native {
             source: 0,
             target: 1,
         }
@@ -1091,7 +1096,7 @@ fn sql_source_rows_receipt_version_and_dirty_intent_commit_and_replay_atomically
     let dirty = durable_outbox
         .iter()
         .find(|record| {
-            record.intent.topic == medulla_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC
+            record.intent.topic == medulla_index_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC
         })
         .expect("the SQL owner transaction persists its typed source-dirty intent");
     assert_eq!(dirty.committed_version, committed.record.committed_version);
@@ -1148,7 +1153,7 @@ fn served_owner_store_batch_commits_and_its_actor_survives_in_the_ledger() {
 
     let identity = medulla_types::MutationScopeIdentity::native(
         medulla_types::ScopeTenantId::new("tenant-a".to_string()).unwrap(),
-        medulla_types::mutation_batch::DurabilityDomain::KvStore,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::KvStore,
         medulla_types::LogicalName::new("kv-scope-a".to_string()).unwrap(),
         medulla_types::IncarnationId::new(crate::mutation_batch::COMPILED_BATCH_INCARNATION)
             .unwrap(),
@@ -1187,7 +1192,7 @@ fn served_owner_store_batch_commits_and_its_actor_survives_in_the_ledger() {
             shared: false,
         },
         MutationSurface::Other,
-        medulla_types::mutation_batch::DurabilityDomain::KvStore,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::KvStore,
         "kv_operation",
     )
     .unwrap();
@@ -1213,7 +1218,7 @@ fn served_owner_store_batch_commits_and_its_actor_survives_in_the_ledger() {
         .expect("the committed batch has a durable receipt");
     assert_eq!(
         record.status,
-        medulla_types::mutation_batch::MutationBatchStatus::Committed
+        medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed
     );
     assert_eq!(
         record.batch.serving_principal(),
@@ -1343,12 +1348,13 @@ fn editing_a_compiled_batch_after_the_mint_is_refused() {
     let mut appended = compiled();
     appended
         .outbox
-        .push(medulla_types::mutation_batch::MutationOutboxIntent {
+        .push(medulla_mutation_types::mutation_scope::MutationOutboxIntent {
             topic: "engine.crossmodal.committed".to_string(),
             key: "post-mint-edit".to_string(),
             payload: vec![7],
             headers: Default::default(),
-        });
+        },
+    );
     let error = appended.validate().unwrap_err();
     assert!(
         error.contains("canonical payload digest"),

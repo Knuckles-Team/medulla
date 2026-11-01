@@ -158,6 +158,7 @@ def main():
     ap.add_argument("--census", default=DEFAULT_CENSUS)
     ap.add_argument("--update", action="store_true")
     ap.add_argument("--check", action="store_true")
+    ap.add_argument("--table", action="store_true", help="rewrite the BOUNDARIES.md per-crate table")
     a = ap.parse_args()
     cfg = tomllib.loads((HERE / "boundaries.toml").read_text())
     placement = tomllib.loads((HERE / "placement.toml").read_text())["files"]
@@ -205,6 +206,23 @@ def main():
             pat = re.compile(r"(\[crates\.%s\]\n(?:(?!\n\[).)*?current_lines = )\d+(\nprojected_lines = )\d+" % re.escape(c), re.S)
             text = pat.sub(lambda m: f"{m.group(1)}{current[c]}{m.group(2)}{current[c] + added[c]}", text)
         (HERE / "boundaries.toml").write_text(text)
+    if a.table:
+        by_spec: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
+        for o in out:
+            if o["target_crate"]:
+                by_spec[o["target_crate"]][o["spec"]] += 1
+        lines = ["| Crate | Level | Responsibility | Current | Projected | Open rows by spec |",
+                 "|---|---|---|---:|---:|---|"]
+        for c, spec in cfg["crates"].items():
+            specs = ", ".join(f"{s} {n}" for s, n in sorted(by_spec[c].items(), key=lambda kv: (-kv[1], kv[0])))
+            lines.append(f"| `{c}` | {spec['level']} | {spec['responsibility']} | {current[c]:,} | {current[c] + added[c]:,} | {specs} |")
+        md = HERE / "BOUNDARIES.md"
+        text = md.read_text()
+        head = "| Crate | Level | Responsibility | Current | Projected | Open rows by spec |"
+        s = text.index(head)
+        e = text.find("\n\n", s)
+        e = len(text) if e == -1 else e
+        md.write_text(text[:s] + "\n".join(lines) + text[e:])
     if a.check and (over or unrouted):
         print("over budget:", over, "unrouted:", unrouted[:20])
         return 1

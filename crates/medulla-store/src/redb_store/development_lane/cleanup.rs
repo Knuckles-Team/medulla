@@ -15,13 +15,13 @@ use super::types::{LaneDecision, Scope, ScopeCounter};
 use super::validation::decision_name;
 use super::work_item::load_work_item;
 use super::{DurableLaneHold, DurableLanePolicy, GLOBAL_POLICY_KEY};
-use medulla_types::epistemic_operations::DevelopmentLaneCleanupCompleteRequest;
-use medulla_types::epistemic_operations::DevelopmentLaneHold;
-use medulla_types::epistemic_operations::DevelopmentLaneHoldHostTargetKind;
-use medulla_types::epistemic_operations::DevelopmentLaneHoldState;
-use medulla_types::epistemic_operations::DevelopmentLaneQuotaCharge;
-use medulla_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequest;
-use medulla_types::protocol::DevelopmentLaneWorkItemKind;
+use medulla_result_types::epistemic_operations::DevelopmentLaneCleanupCompleteRequest;
+use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
+use medulla_result_types::epistemic_operations::DevelopmentLaneHoldHostTargetKind;
+use medulla_result_types::epistemic_operations::DevelopmentLaneHoldState;
+use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaCharge;
+use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequest;
+use medulla_protocol_types::protocol::DevelopmentLaneWorkItemKind;
 use medulla_storage::ScopedOwnerTableMut;
 
 /// Load the bounded tenant/global policy snapshot.  The sorted pressure index
@@ -36,7 +36,7 @@ pub(super) fn policy_scope_rows(
     crypto: DurableCrypto<'_>,
 ) -> Result<Vec<ScopeCounter>, String> {
     let probe = DevelopmentLaneHold {
-        schema_version: medulla_types::epistemic_operations::DevelopmentLaneHoldSchemaVersion::V1,
+        schema_version: medulla_result_types::epistemic_operations::DevelopmentLaneHoldSchemaVersion::V1,
         hold_id: "snapshot".to_string(),
         lane_id: "snapshot".to_string(),
         tenant_ref: tenant.to_string(),
@@ -99,7 +99,7 @@ pub(super) fn policy_counter_snapshot(
     crypto: DurableCrypto<'_>,
 ) -> Result<DevelopmentLaneQuotaCharge, String> {
     let mut probe = DevelopmentLaneHold {
-        schema_version: medulla_types::epistemic_operations::DevelopmentLaneHoldSchemaVersion::V1,
+        schema_version: medulla_result_types::epistemic_operations::DevelopmentLaneHoldSchemaVersion::V1,
         hold_id: "snapshot".to_string(),
         lane_id: "snapshot".to_string(),
         tenant_ref: tenant.to_string(),

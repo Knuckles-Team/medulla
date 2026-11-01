@@ -199,11 +199,11 @@ mod consensus_admin_route_tests {
     #[test]
     fn identity_mutations_share_the_commons_order_across_caller_graphs_and_tenants() {
         let method = Method::Identity {
-            op: medulla_types::identity::IdentityOp::User(
-                medulla_types::identity::UserOp::SetStatus {
-                    request: medulla_types::identity::UserStatusChange {
+            op: medulla_identity_types::identity::IdentityOp::User(
+                medulla_identity_types::identity::UserOp::SetStatus {
+                    request: medulla_identity_types::identity::UserStatusChange {
                         principal_id: "usr:route-test".to_string(),
-                        status: medulla_types::identity::UserStatus::Disabled,
+                        status: medulla_identity_types::identity::UserStatus::Disabled,
                     },
                 },
             ),
@@ -327,7 +327,7 @@ fn native_coordination_for(method: &Method) -> NativeCoordination {
     if matches!(
         method,
         Method::AnalyticsJob {
-            op: medulla_types::jobs::JobOp::WorkerPublish { .. }
+            op: medulla_agent_types::jobs::JobOp::WorkerPublish { .. }
         }
     ) {
         return NativeCoordination::JobPublication;

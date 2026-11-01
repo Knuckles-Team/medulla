@@ -16,7 +16,7 @@ default = []
 # broker_enqueue`. PURE-RUST — no new dep (only serde/serde_json/rmp already linked)
 # — so it is Pi-safe; the facade folds it into the durable serving tiers. Gates
 # `medulla-types/broker` so the broker `Method` variants appear in lock step.
-broker = ["medulla-types/broker"]
+broker = ["medulla-types/broker", "medulla-protocol-types/broker"]
 # Use the native medulla-ann IVF-PQ+OPQ+SQ8-refine index (CONCEPT:KG-2.207) as the
 # SemanticStore ANN backend used by the in-process semantic index. The
 # persisted index reopens WITHOUT rebuilding from raw vectors. OFF by default;
@@ -117,6 +117,12 @@ hmac = { version = "0.12", optional = true }
 # OFF) — a default/pi/node/full build links none of it and `index::NodeChange`
 # carries no new required trait. See `src/contract.rs`.
 medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-result-types = { path = "../medulla-result-types" }
+medulla-index-types = { path = "../medulla-index-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-identity-types = { path = "../medulla-identity-types" }
 
 [dev-dependencies]
 # The commercial-vocabulary contract tests (MEDULLA-SUPPLY-VOCAB-R003.13-.16) parse
@@ -137,3 +143,4 @@ medulla-rdf = { path = "../medulla-rdf", features = ["rdf", "owl", "sparql"] }
 # medulla-core -> dev medulla-shacl), which Cargo permits and which affects only the
 # medulla-core test build.
 medulla-shacl = { path = "../medulla-shacl" }
+medulla-agent-types = { path = "../medulla-agent-types" }

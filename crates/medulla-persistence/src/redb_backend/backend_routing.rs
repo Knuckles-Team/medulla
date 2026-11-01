@@ -31,7 +31,7 @@ impl RedbBackend {
     /// a durable `Prepared` receipt, no owner rows yet.
     pub(crate) fn admin_saga_step(
         &self,
-        batch: &medulla_types::MutationBatch,
+        batch: &medulla_protocol_types::mutation_batch::MutationBatch,
         prepared_at_ms: u64,
         private_payload: Option<&[u8]>,
     ) -> Result<medulla_transaction::SagaBegin, String> {
@@ -45,10 +45,16 @@ impl RedbBackend {
     /// already committed and this call only replayed its receipt.
     pub(crate) fn admin_saga_end(
         &self,
-        batch: &medulla_types::MutationBatch,
+        batch: &medulla_protocol_types::mutation_batch::MutationBatch,
         result_msgpack: Vec<u8>,
         committed_at_ms: u64,
-    ) -> Result<(medulla_types::MutationBatchRecord, bool), String> {
+    ) -> Result<
+        (
+            medulla_protocol_types::mutation_batch::MutationBatchRecord,
+            bool,
+        ),
+        String,
+    > {
         let store = &self.admin_mutations;
         store
             .mutations()
@@ -203,7 +209,7 @@ impl medulla_server_api::api::admin::saga::AdminSagaLedger for RedbBackend {
 
     fn admin_saga_step(
         &self,
-        batch: &medulla_types::MutationBatch,
+        batch: &medulla_protocol_types::mutation_batch::MutationBatch,
         prepared_at_ms: u64,
         private_payload: Option<&[u8]>,
     ) -> Result<medulla_transaction::SagaBegin, String> {
@@ -212,10 +218,16 @@ impl medulla_server_api::api::admin::saga::AdminSagaLedger for RedbBackend {
 
     fn admin_saga_end(
         &self,
-        batch: &medulla_types::MutationBatch,
+        batch: &medulla_protocol_types::mutation_batch::MutationBatch,
         result_msgpack: Vec<u8>,
         committed_at_ms: u64,
-    ) -> Result<(medulla_types::MutationBatchRecord, bool), String> {
+    ) -> Result<
+        (
+            medulla_protocol_types::mutation_batch::MutationBatchRecord,
+            bool,
+        ),
+        String,
+    > {
         RedbBackend::admin_saga_end(self, batch, result_msgpack, committed_at_ms)
     }
 }

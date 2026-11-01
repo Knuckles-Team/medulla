@@ -34,8 +34,8 @@ pub mod cost;
 // contract without exposing storage internals. Every public mutation is committed
 // before acknowledgement; bounded queues apply backpressure and never drop work.
 
-use medulla_types::mutation_batch::MutationBatch;
-use medulla_types::protocol::Method;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::protocol::Method;
 
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod read_through;

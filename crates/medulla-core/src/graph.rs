@@ -94,7 +94,7 @@ pub struct Topology {
 /// an outer lock. Single-op convenience methods open a one-shot txn. Properties are
 /// `Arc<Vec<u8>>` (Phase C-A) so they move into/out of the DashMap and snapshots
 /// without copying the bytes.
-pub use medulla_types::compute_result::algorithms::OntologyMatch;
+pub use medulla_result_types::compute_result::algorithms::OntologyMatch;
 
 /// A built aho-corasick automaton over capability terms plus the per-pattern
 /// metadata (parallel to the automaton's pattern ids). Cached on [`GraphCore`]
@@ -902,7 +902,7 @@ mod tests {
             "m1".into(),
             props(serde_json::json!({"type": "Measurement"})),
         );
-        let dist = medulla_types::Distribution::Gaussian {
+        let dist = medulla_catalog_types::distribution::Distribution::Gaussian {
             mean: 3.5,
             std: 0.75,
         };
@@ -928,7 +928,7 @@ mod tests {
         core.add_node("m2".into(), props(serde_json::json!({"x": 1})));
         assert!(core.get_distribution("m2", "reading").is_none());
         // set on a not-yet-existing node creates it.
-        let d = medulla_types::Distribution::Beta {
+        let d = medulla_catalog_types::distribution::Distribution::Beta {
             alpha: 2.0,
             beta: 5.0,
         };
@@ -1859,7 +1859,7 @@ mod tests {
     fn cas_if_gates_on_predicate() {
         // CONCEPT:MEDULLA-KG.txn.serializable-mutation-gate — the serializable gate only mutates a node whose CURRENT
         // row still matches the predicate.
-        use medulla_types::{CmpOp, RowPredicate};
+        use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
         let g = GraphCore::new();
         g.add_node(
             "n1".to_string(),
@@ -1904,7 +1904,7 @@ mod tests {
     #[test]
     fn remove_node_if_gates_on_predicate() {
         // CONCEPT:MEDULLA-KG.txn.serializable-mutation-gate — `id` is injected so a predicate may reference it.
-        use medulla_types::{CmpOp, RowPredicate};
+        use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
         let g = GraphCore::new();
         g.add_node(
             "keep".to_string(),

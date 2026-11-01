@@ -231,7 +231,7 @@ async fn submit(
     state: &Arc<RwLock<ServerState>>,
     graph: &str,
     watch: &ImpactWatchSpec,
-    method: medulla_types::protocol::Method,
+    method: medulla_protocol_types::protocol::Method,
     as_of_ms: u64,
 ) -> Result<(), String> {
     let anonymous = state.read().await.local_anonymous;
@@ -249,7 +249,7 @@ async fn submit(
         service_context(&watch.id, as_of_ms)
             .map_err(|error| format!("service identity unavailable: {error}"))?
     };
-    let request = medulla_types::protocol::Request {
+    let request = medulla_protocol_types::protocol::Request {
         id: 0,
         graph: graph.to_string(),
         auth_token: String::new(),

@@ -4,9 +4,13 @@
 //! through [`q32`] or [`unit_wire`], which quantise with ties-to-even. Every
 //! record digest is therefore over integers.
 
-use medulla_types::decision::statistical::dataset::{LabelledDataset, LabelledItem};
-use medulla_types::decision::statistical::StatisticalErrorCode;
-use medulla_types::decision::{QuantScaleTag, QuantisedValue, UnitRationalWire};
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_types::{
+    decision::statistical::dataset::LabelledDataset, decision::statistical::dataset::LabelledItem,
+};
+use medulla_decision_types::{
+    decision::QuantScaleTag, decision::QuantisedValue, decision::UnitRationalWire,
+};
 
 use super::refusal::{Refusal, RefusalResult};
 use crate::detkernel::quantise::{dequantise, quantise, QuantScale};

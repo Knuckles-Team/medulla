@@ -6,11 +6,12 @@
 
 use std::collections::BTreeMap;
 
-use medulla_types::agent_component::{
-    AgentComponentEntry, AgentComponentFacts, AgentComponentKind, FactQuality,
+use medulla_agent_types::{
+    agent_component::AgentComponentEntry, agent_component::AgentComponentFacts,
+    agent_component::AgentComponentKind, agent_component::FactQuality,
 };
-use medulla_types::decision::statistical::body::decode_body;
-use medulla_types::decision::statistical::nl::NlTemplateBody;
+use medulla_decision_types::decision::statistical::body::decode_body;
+use medulla_decision_types::decision::statistical::nl::NlTemplateBody;
 
 /// Text field name of a component's own summary.
 pub const SUMMARY_TEXT: &str = "summary";

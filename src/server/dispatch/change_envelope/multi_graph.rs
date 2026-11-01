@@ -2,7 +2,7 @@ use super::*;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 #[cfg(feature = "redb")]
-use medulla_types::result_contract::transactions as txn_results;
+use medulla_protocol_types::result_contract::transactions as txn_results;
 
 /// Apply a batched cross-graph write (CONCEPT:MEDULLA-KG.storage.multi-graph-batch-write).
 ///
@@ -126,7 +126,7 @@ fn begin_multi_graph_authorized_saga(
         req_id,
         &authority,
         method,
-        crate::mutation_batch::DurabilityDomain::MultiGraph,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::MultiGraph,
         authority.attempt_nonce(),
     )
     .map_err(|error| Response::err(req_id, error))
@@ -259,7 +259,8 @@ pub(in crate::server::dispatch) async fn multi_graph_batch_update(
     )
 }
 
-const MAX_MULTI_GRAPH_BATCHES: usize = medulla_types::mutation_batch::MAX_FANOUT_SUB_BATCHES;
+const MAX_MULTI_GRAPH_BATCHES: usize =
+    medulla_protocol_types::mutation_batch::MAX_FANOUT_SUB_BATCHES;
 const MAX_MULTI_GRAPH_NAME_BYTES: usize = 512;
 const MAX_MULTI_GRAPH_OPERATIONS_BYTES: usize = 32 * 1024 * 1024;
 const MAX_MULTI_GRAPH_TOTAL_OPERATIONS_BYTES: usize = 64 * 1024 * 1024;

@@ -11,11 +11,13 @@
 //! principal, and `RbacAdmin` cannot touch an `idm:` role or grant.
 #![cfg(feature = "security")]
 
-use medulla_types::acl::{Grant, RbacAdminOp, Role};
-use medulla_types::identity::{
-    ApplyContext, AuditRecord, ConfigOp, DenialSample, IdentityEvent, IdentityOp, IdentityRefusal,
-    IdentityReply, IdentityStamp, IdentityStore, ScopeClassifier, RBAC_ROLE_PREFIX,
+use medulla_identity_types::{
+    identity::ApplyContext, identity::AuditRecord, identity::ConfigOp, identity::DenialSample,
+    identity::IdentityEvent, identity::IdentityOp, identity::IdentityRefusal,
+    identity::IdentityReply, identity::IdentityStamp, identity::IdentityStore,
+    identity::ScopeClassifier, identity::RBAC_ROLE_PREFIX,
 };
+use medulla_types::acl::{Grant, RbacAdminOp, Role};
 
 use super::{AgentIdentity, AgentRole, IsolationLayer};
 
@@ -79,8 +81,8 @@ impl IsolationLayer {
         if matches!(
             op,
             IdentityOp::Session(
-                medulla_types::identity::SessionOp::InspectReference { .. }
-                    | medulla_types::identity::SessionOp::RenewReference { .. }
+                medulla_identity_types::identity::SessionOp::InspectReference { .. }
+                    | medulla_identity_types::identity::SessionOp::RenewReference { .. }
             )
         ) {
             return self.apply_session_authority(op, stamp, now_ms, classifier);

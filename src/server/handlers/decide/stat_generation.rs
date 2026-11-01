@@ -9,15 +9,22 @@
 
 use std::collections::BTreeMap;
 
+use medulla_decision_types::decision::statistical::retrieval_pointer::PointerState;
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_types::{
+    decision::statistical::body::canonical_body_bytes,
+    decision::statistical::body::content_digest_of,
+};
+use medulla_decision_types::{
+    decision::statistical::retrieval_generation::GenerationEvalItem,
+    decision::statistical::retrieval_generation::GenerationEvalRequest,
+    decision::statistical::retrieval_generation::GenerationEvaluated,
+    decision::statistical::retrieval_generation::GenerationReceipt,
+    decision::statistical::retrieval_generation::GENERATION_RECEIPT_SCHEMA_VERSION,
+    decision::statistical::retrieval_generation::MAX_GENERATION_TOP_K,
+};
 use medulla_numeric::decision::adapter::{to_q16, wilson_lower};
 use medulla_numeric::decision::retrieval::Verdict;
-use medulla_types::decision::statistical::body::{canonical_body_bytes, content_digest_of};
-use medulla_types::decision::statistical::retrieval_generation::{
-    GenerationEvalItem, GenerationEvalRequest, GenerationEvaluated, GenerationReceipt,
-    GENERATION_RECEIPT_SCHEMA_VERSION, MAX_GENERATION_TOP_K,
-};
-use medulla_types::decision::statistical::retrieval_pointer::PointerState;
-use medulla_types::decision::statistical::StatisticalErrorCode;
 
 use super::stat_executor::ExecutionContext;
 use super::stat_log::LogReader;
@@ -115,8 +122,11 @@ impl Tally {
 
 #[cfg(feature = "ann")]
 fn score_psi(tally: &Tally) -> Option<i64> {
-    let report =
-        medulla_ann::drift::population_stability_index(&tally.active_top1, &tally.shadow_top1, PSI_BINS);
+    let report = medulla_ann::drift::population_stability_index(
+        &tally.active_top1,
+        &tally.shadow_top1,
+        PSI_BINS,
+    );
     Some(to_q16(report.psi))
 }
 

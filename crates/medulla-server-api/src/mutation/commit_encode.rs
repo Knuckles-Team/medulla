@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use medulla_core::graph::GraphCore;
-use medulla_types::protocol::Method;
-use medulla_types::protocol::Response;
-use medulla_types::protocol::ResultPayload;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use crate::api::persistence::PersistenceBackend;
 
 use super::{
@@ -16,7 +16,7 @@ use super::{
 pub(super) fn staged_commit_error(req_id: u64, error: &str) -> Response {
     Response::err(
         req_id,
-        medulla_types::contract::classify_refusal(
+        medulla_protocol_types::error_registry::classify_refusal(
             "INTERNAL",
             "staged MutationBatch durable commit failed: ",
             error,
@@ -98,7 +98,7 @@ pub(super) async fn commit_mutation_body_commit_staged(
         prep,
         staged,
         StagedReceipt {
-            surface: medulla_types::mutation_batch::MutationSurface::Graph,
+            surface: medulla_mutation_types::mutation_scope::MutationSurface::Graph,
             methods: vec![durable_receipt_method(method)],
         },
     )
@@ -106,7 +106,7 @@ pub(super) async fn commit_mutation_body_commit_staged(
 }
 
 pub(super) struct StagedReceipt {
-    pub(super) surface: medulla_types::mutation_batch::MutationSurface,
+    pub(super) surface: medulla_mutation_types::mutation_scope::MutationSurface,
     pub(super) methods: Vec<Method>,
 }
 
@@ -212,7 +212,7 @@ pub(super) fn staged_mutation_descriptor(
     ctx: &MutationCtx<'_>,
     source_version: u64,
     state_msgpack: &[u8],
-) -> Result<medulla_types::mutation_batch::MutationStateDescriptor, Response> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationStateDescriptor, Response> {
     use sha2::{Digest, Sha256};
     let target_graph_version = match source_version.checked_add(1) {
         Some(version) => version,
@@ -223,7 +223,7 @@ pub(super) fn staged_mutation_descriptor(
             ));
         }
     };
-    Ok(medulla_types::mutation_batch::MutationStateDescriptor {
+    Ok(medulla_protocol_types::mutation_batch::MutationStateDescriptor {
         algorithm: medulla_kernel::graph_delta::ROW_DELTA_ALGORITHM.to_string(),
         digest: hex::encode(Sha256::digest(state_msgpack)),
         source_graph_version: source_version,
@@ -333,9 +333,9 @@ pub(super) fn prepublish_success(core: &GraphCore, method: &Method) -> Option<Re
                     return None;
                 }
             };
-            match medulla_types::result_contract::transactions::BatchUpdateReport::decode(&result)
+            match medulla_protocol_types::result_contract::transactions::BatchUpdateReport::decode(&result)
                 .and_then(
-                    ResultPayload::of::<medulla_types::result_contract::transactions::BatchUpdate>,
+                    ResultPayload::of::<medulla_protocol_types::result_contract::transactions::BatchUpdate>,
                 ) {
                 Ok(payload) => Some(payload),
                 Err(error) => {

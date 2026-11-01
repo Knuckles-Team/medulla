@@ -51,10 +51,10 @@ use medulla_core::graph::GraphCore;
 #[cfg(test)]
 use medulla_types::contract::Nonce;
 #[cfg(test)]
-use medulla_types::mutation_batch::MutationStateDescriptor;
-use medulla_types::mutation_batch::MutationSurface;
+use medulla_protocol_types::mutation_batch::MutationStateDescriptor;
+use medulla_mutation_types::mutation_scope::MutationSurface;
 #[cfg(test)]
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 #[cfg(test)]
 use sha2::{Digest, Sha256};
 
@@ -63,7 +63,7 @@ mod internal_replay_tests {
     use super::*;
 
     /// The opaque serving principal this test's job store is opened as.
-    /// `medulla_types::mutation_batch`'s `validate_serving_principal` requires the
+    /// `medulla_protocol_types::mutation_batch`'s `validate_serving_principal` requires the
     /// `principal:sha256:<64 hex>` shape for every durable mutation authority,
     /// exactly like `medulla_jobs::dev_scope_grant::DEV_PRINCIPAL`; a human-readable
     /// label is refused by the jobs codec before the store ever opens.
@@ -104,7 +104,7 @@ mod internal_replay_tests {
             key: &str,
             node: &str,
             source: u64,
-        ) -> medulla_types::mutation_batch::MutationBatch {
+        ) -> medulla_protocol_types::mutation_batch::MutationBatch {
             compile_methods(
                 CompileBatch {
                     batch_id: "internal-replay",
@@ -132,7 +132,7 @@ mod internal_replay_tests {
             )
             .unwrap()
         }
-        let identity = |batch: &medulla_types::mutation_batch::MutationBatch| {
+        let identity = |batch: &medulla_protocol_types::mutation_batch::MutationBatch| {
             batch
                 .envelope
                 .operation()

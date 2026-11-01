@@ -1,7 +1,7 @@
 //! Off-lock compute helpers: run CPU-heavy read-only work on the blocking pool,
 //! and confidence-weight semantic-search hits — both never under the graph lock.
 
-use medulla_types::protocol::Response;
+use medulla_protocol_types::protocol::Response;
 
 /// Run a CPU-heavy, read-only computation on the blocking thread pool
 /// (CONCEPT:MEDULLA-KG.txn.per-graph-write-isolation). Callers snapshot whatever graph state the computation

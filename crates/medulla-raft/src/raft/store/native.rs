@@ -275,7 +275,7 @@ impl MedullaStore {
         match outcome {
             Ok(value) => RaftResponse {
                 applied: true,
-                native_result: Some(medulla_types::protocol::ResultPayload::Bool(value)),
+                native_result: Some(medulla_protocol_types::protocol::ResultPayload::Bool(value)),
                 ..Default::default()
             },
             Err(error) => RaftResponse {
@@ -290,7 +290,7 @@ impl MedullaStore {
     /// `NativeMutationCommand` arm (`JobPublicationFinalize`) whose outcome is
     /// already a typed `ResultPayload` rather than a bare `bool`.
     pub(super) fn native_result_outcome_to_response(
-        outcome: Result<medulla_types::protocol::ResultPayload, String>,
+        outcome: Result<medulla_protocol_types::protocol::ResultPayload, String>,
     ) -> RaftResponse {
         match outcome {
             Ok(result) => RaftResponse {
@@ -312,7 +312,7 @@ impl MedullaStore {
     /// native commands continue to use the two helpers above unchanged.
     #[cfg(feature = "jobs")]
     pub(super) fn native_commit_outcome_to_response(
-        outcome: Result<medulla_types::mutation_batch::MutationBatchCommit, String>,
+        outcome: Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String>,
     ) -> RaftResponse {
         match outcome {
             Ok(commit) => match commit.validate() {

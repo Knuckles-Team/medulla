@@ -65,21 +65,23 @@ pub(super) fn worker_claim_response(req_id: u64, claim: &WorkerClaim) -> Respons
 
 pub(super) fn worker_claim_payload(claim: &WorkerClaim) -> Result<ResultPayload, String> {
     let (record, input_payload) = job_record(&claim.job)?;
-    ResultPayload::of::<medulla_types::result_contract::coordination::JobWorkerClaim>(Some(
-        medulla_types::result_contract::coordination::WorkerJobClaim {
-            job: medulla_types::result_contract::coordination::ClaimedAnalyticsJob {
-                record,
-                input_payload,
+    ResultPayload::of::<medulla_protocol_types::result_contract::coordination::JobWorkerClaim>(
+        Some(
+            medulla_protocol_types::result_contract::coordination::WorkerJobClaim {
+                job: medulla_protocol_types::result_contract::coordination::ClaimedAnalyticsJob {
+                    record,
+                    input_payload,
+                },
+                lease: worker_lease(&claim.lease),
             },
-            lease: worker_lease(&claim.lease),
-        },
-    ))
+        ),
+    )
 }
 
 pub(super) fn worker_lease(
     lease: &medulla_jobs::model::WorkerLease,
-) -> medulla_types::result_contract::coordination::JobWorkerLease {
-    medulla_types::result_contract::coordination::JobWorkerLease {
+) -> medulla_protocol_types::result_contract::coordination::JobWorkerLease {
+    medulla_protocol_types::result_contract::coordination::JobWorkerLease {
         worker_ref: lease.worker_ref.clone(),
         epoch: lease.epoch,
         acquired_at_ms: lease.acquired_at_ms,
@@ -121,7 +123,9 @@ pub(super) fn handle_worker_claim(
         Ok(Some(claim)) => worker_claim_response(req_id, &claim),
         Ok(None) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::coordination::JobWorkerClaim>(None),
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::JobWorkerClaim,
+            >(None),
         ),
         Err(error) => Response::err(req_id, job_refusal(&error)),
     }
@@ -153,9 +157,9 @@ pub(super) fn handle_worker_renew(
     ) {
         Ok(lease) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::coordination::JobWorkerRenew>(
-                worker_lease(&lease),
-            ),
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::JobWorkerRenew,
+            >(worker_lease(&lease)),
         ),
         Err(error) => Response::err(req_id, job_refusal(&error)),
     }
@@ -204,9 +208,9 @@ pub(super) fn handle_worker_checkpoint(
         },
         now,
     ) {
-        Ok(job) => job_response::<medulla_types::result_contract::coordination::JobWorkerCheckpoint>(
-            req_id, &job,
-        ),
+        Ok(job) => job_response::<
+            medulla_protocol_types::result_contract::coordination::JobWorkerCheckpoint,
+        >(req_id, &job),
         Err(error) => Response::err(req_id, job_refusal(&error)),
     }
 }

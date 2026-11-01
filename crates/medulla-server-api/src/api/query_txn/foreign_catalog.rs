@@ -56,12 +56,13 @@
 use std::sync::Arc;
 
 use dashmap::DashMap;
-use medulla_plan::federation::{ForeignSourceRegistry, SharedForeignSource};
 #[cfg(feature = "federation")]
-use medulla_types::connector_pack::PackSourceKind;
-use medulla_types::connector_pack::{
-    ConnectorPackSourceApprovalResult, PackSourceApproval, PackSourceRegistration,
+use medulla_catalog_types::connector_pack::PackSourceKind;
+use medulla_catalog_types::{
+    connector_pack::ConnectorPackSourceApprovalResult, connector_pack::PackSourceApproval,
+    connector_pack::PackSourceRegistration,
 };
+use medulla_plan::federation::{ForeignSourceRegistry, SharedForeignSource};
 use medulla_types::contract::Digest256;
 use medulla_types::wire::ForeignSourceSpec;
 

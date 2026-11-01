@@ -4,7 +4,7 @@ use super::{logit, sigmoid};
 //  Market making: Avellaneda-Stoikov, GLT, logit-space
 // ════════════════════════════════════════════════════════════════════════
 
-pub use medulla_types::compute_result::finance::Quote;
+pub use medulla_result_types::compute_result::finance::Quote;
 
 /// Avellaneda-Stoikov (2008) optimal quotes around a freely-drifting mid.
 ///   r = S − q·γ·σ²·(T−t);  δ* = γ·σ²·(T−t) + (2/γ)·ln(1+γ/κ)

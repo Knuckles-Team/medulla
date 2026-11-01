@@ -4,8 +4,11 @@
 //! never as the engine's choice.
 
 use super::*;
-use medulla_types::decision::statistical::nl::{
-    NlChoiceSource, NlSlot, NlSlotType, NlTarget, NlTemplateBody, NL_TEMPLATE_SCHEMA_VERSION,
+use medulla_decision_types::{
+    decision::statistical::nl::NlChoiceSource, decision::statistical::nl::NlSlot,
+    decision::statistical::nl::NlSlotType, decision::statistical::nl::NlTarget,
+    decision::statistical::nl::NlTemplateBody,
+    decision::statistical::nl::NL_TEMPLATE_SCHEMA_VERSION,
 };
 
 fn template(utterance: &str) -> NlTemplateBody {
@@ -125,7 +128,7 @@ async fn an_utterance_routes_over_templates_and_an_llm_proposal_is_only_a_claim(
         .premises
         .iter()
         .any(|p| p.fact == "llm_template_proposal"
-            && p.class == medulla_types::decision::PremiseClass::Claim));
+            && p.class == medulla_decision_types::decision::PremiseClass::Claim));
     assert_eq!(record.evidence_class, EvidenceClass::Claim);
     assert!(matches!(
         record.outcome,

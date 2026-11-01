@@ -265,7 +265,12 @@ impl ServedTextIndex {
 
 #[cfg(feature = "text")]
 impl medulla_plan::TextSource for ServedTextIndex {
-    fn search_within(&self, query: &str, candidates: &[&str], k: usize) -> Vec<medulla_text::TextHit> {
+    fn search_within(
+        &self,
+        query: &str,
+        candidates: &[&str],
+        k: usize,
+    ) -> Vec<medulla_text::TextHit> {
         self.read_current(|text| text.search_within(query, candidates, k))
             .unwrap_or_default()
     }

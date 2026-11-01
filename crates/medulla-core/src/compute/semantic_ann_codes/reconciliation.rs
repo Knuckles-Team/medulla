@@ -10,11 +10,12 @@ use super::{
     corrupt, ensure, kernel_error, refused, semantic_contract_error, SemanticCodeError,
     SemanticCodeStore,
 };
+use medulla_index_types::{
+    semantic_index::SemanticBinding, semantic_index::SemanticDigest,
+    semantic_index::SemanticSourceProgress, semantic_index::SemanticSqlSourceManifest,
+};
 use medulla_storage::{SemanticIndexOwner, SEMANTIC_SOURCE_PROGRESS, SEMANTIC_SQL_SOURCES};
 use medulla_transaction::AdmittedMutation;
-use medulla_types::semantic_index::{
-    SemanticBinding, SemanticDigest, SemanticSourceProgress, SemanticSqlSourceManifest,
-};
 
 /// One durable continuation for a source reconciliation generation.  The
 /// continuation lives in the existing source-progress owner table under this

@@ -5,12 +5,13 @@ pub use super::super::agent_fixtures::{
 };
 use super::super::agent_revision::{decode_status_result, validate_status_record};
 use super::*;
-use medulla_types::agent_component::ComponentDependency;
-use medulla_types::agent_graph::{
-    AgentGraphDraft, AgentGraphEdge, AgentGraphNode, AgentGraphNodeKind, AgentGraphShape,
+use medulla_agent_types::agent_component::ComponentDependency;
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
+use medulla_agent_types::{
+    agent_graph::AgentGraphDraft, agent_graph::AgentGraphEdge, agent_graph::AgentGraphNode,
+    agent_graph::AgentGraphNodeKind, agent_graph::AgentGraphShape,
 };
-use medulla_types::agent_library::AgentLibraryLifecycle;
-use medulla_types::mutation_batch::MutationBatchStatus;
+use medulla_protocol_types::mutation_batch::MutationBatchStatus;
 
 pub(super) fn digest(byte: char) -> String {
     format!("sha256:{}", byte.to_string().repeat(64))
@@ -51,7 +52,7 @@ pub(super) fn component(
         store,
         tenant_id,
         reference,
-        medulla_types::agent_component::AgentComponentKind::Schema,
+        medulla_agent_types::agent_component::AgentComponentKind::Schema,
         seed_index(reference),
     )
 }
@@ -367,7 +368,7 @@ fn graph_status_rejects_redirected_identity_state_version_and_kind() {
         .unwrap();
     let owner_a = store.scope_handle("tenant-a").unwrap();
     let record = ledger_record(&store, "tenant-a", "status-bindings");
-    let refused = |record: &medulla_types::MutationBatchRecord,
+    let refused = |record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
                    graph_id: &str,
                    kind: AgentGraphMutationKind,
                    committed: &AgentGraphCommittedResult| {
@@ -662,17 +663,19 @@ fn a_graph_pinning_a_retired_agent_is_refused_while_old_pins_still_resolve() {
     try_publish(&store, "key-1", 1, 0, draft(&store, "tenant-a", "graph-a"))
         .expect("the first graph publishes while its agents are live");
     store
-        .retire(medulla_types::agent_library::AgentLibraryRetireRequest {
-            context: context(
-                &store,
-                "tenant-a",
-                "key-retire",
-                2,
-                1,
-                "agent-library:retire",
-            ),
-            agent_id: "agent:research".to_string(),
-        })
+        .retire(
+            medulla_agent_types::agent_library::AgentLibraryRetireRequest {
+                context: context(
+                    &store,
+                    "tenant-a",
+                    "key-retire",
+                    2,
+                    1,
+                    "agent-library:retire",
+                ),
+                agent_id: "agent:research".to_string(),
+            },
+        )
         .expect("the agent retires");
     let error = try_publish(&store, "key-2", 3, 0, draft(&store, "tenant-a", "graph-b"))
         .expect_err("nothing new may be built on a withdrawn agent");
@@ -697,7 +700,7 @@ fn a_graph_pinning_synthesis_evidence_that_does_not_exist_is_refused() {
     let mut graph = draft(&store, "tenant-a", "graph-a");
     graph.synthesis_evidence = Some(ComponentDependency {
         component_id: "evidence:never-published".into(),
-        kind: medulla_types::agent_component::AgentComponentKind::Schema,
+        kind: medulla_agent_types::agent_component::AgentComponentKind::Schema,
         definition_digest: digest('7'),
     });
     let error = try_publish(&store, "key-1", 1, 0, graph)
@@ -718,13 +721,13 @@ fn a_graph_pinning_a_component_under_the_wrong_kind_is_refused() {
         &store,
         "tenant-a",
         "model-profile:mislabelled",
-        medulla_types::agent_component::AgentComponentKind::ModelProfile,
+        medulla_agent_types::agent_component::AgentComponentKind::ModelProfile,
         50,
     );
     let mut graph = draft(&store, "tenant-a", "graph-a");
     graph.synthesis_evidence = Some(ComponentDependency {
         component_id: model.component_id,
-        kind: medulla_types::agent_component::AgentComponentKind::Schema,
+        kind: medulla_agent_types::agent_component::AgentComponentKind::Schema,
         definition_digest: model.definition_digest,
     });
     let error = try_publish(&store, "key-1", 1, 0, graph)

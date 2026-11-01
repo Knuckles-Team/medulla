@@ -5,14 +5,20 @@
 //! changes the retained record, receipt, and visibility pointer in one admitted
 //! owner transaction guarded by an exact-head CAS.
 
-use medulla_types::agent_library::{AgentLibraryLifecycle, AgentLibraryMutationContext};
-use medulla_types::connector_pack::{
-    McpCatalogSnapshotBinding, PackHeadRef, PackImportReceipt, PackImportRecord, PackImportResult,
-    PackProjectionState, CONNECTOR_PACK_RESULT_SCHEMA_ID,
+use medulla_agent_types::{
+    agent_library::AgentLibraryLifecycle, agent_library::AgentLibraryMutationContext,
 };
+use medulla_catalog_types::{
+    connector_pack::McpCatalogSnapshotBinding, connector_pack::PackHeadRef,
+    connector_pack::PackImportReceipt, connector_pack::PackImportRecord,
+    connector_pack::PackImportResult, connector_pack::PackProjectionState,
+    connector_pack::CONNECTOR_PACK_RESULT_SCHEMA_ID,
+};
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_protocol_types::mutation_batch::MutationOperation;
+use medulla_protocol_types::protocol::Method;
 use medulla_types::contract::{Digest256, ResourceId};
-use medulla_types::mutation_batch::{DurabilityDomain, MutationOperation, MutationSurface};
-use medulla_types::protocol::Method;
 use redb::ReadableTable;
 
 use super::admitted::{PackOwnerWrite, PackWriteEffects, PackWriteIdentity};
@@ -22,7 +28,7 @@ use crate::agent_library::AgentLibraryStore;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PackProjectionBody {
     pub uri: String,
-    pub kind: medulla_types::connector_pack::PackEntryKind,
+    pub kind: medulla_catalog_types::connector_pack::PackEntryKind,
     pub body_sha256: Digest256,
     pub engine_manifest_digest: String,
     pub length: u64,
@@ -37,7 +43,7 @@ pub struct ConnectorPackProjectionPlan {
     pub record_id: String,
     pub bodies: Vec<PackProjectionBody>,
     /// Held declarations pinned to the current tenant/head, never executable bindings.
-    pub source_registrations: Vec<medulla_types::connector_pack::PackSourceRegistration>,
+    pub source_registrations: Vec<medulla_catalog_types::connector_pack::PackSourceRegistration>,
 }
 
 impl AgentLibraryStore {
@@ -46,7 +52,7 @@ impl AgentLibraryStore {
         tenant_id: &str,
         connector: &ResourceId,
     ) -> Result<ConnectorPackProjectionPlan, String> {
-        medulla_types::agent_library::validate_key(tenant_id, connector.as_str())?;
+        medulla_agent_types::agent_library::validate_key(tenant_id, connector.as_str())?;
         let read = self.read()?;
         let heads = read.open_owner_table(medulla_storage::CONNECTOR_PACK_HEADS)?;
         let imports = read.open_owner_table(medulla_storage::CONNECTOR_PACK_IMPORTS)?;
@@ -89,8 +95,8 @@ impl AgentLibraryStore {
             )?;
             if !matches!(
                 member.kind,
-                medulla_types::connector_pack::PackEntryKind::Ontology
-                    | medulla_types::connector_pack::PackEntryKind::Shapes
+                medulla_catalog_types::connector_pack::PackEntryKind::Ontology
+                    | medulla_catalog_types::connector_pack::PackEntryKind::Shapes
             ) || member.lifecycle != AgentLibraryLifecycle::Published
             {
                 continue;
@@ -276,7 +282,7 @@ fn valid_projection_code(code: &str) -> bool {
 }
 
 fn valid_failure_detail(detail: &str) -> bool {
-    detail.len() <= medulla_types::connector_pack::MAX_PROJECTION_FAILURE_DETAIL_BYTES
+    detail.len() <= medulla_catalog_types::connector_pack::MAX_PROJECTION_FAILURE_DETAIL_BYTES
         && !detail.chars().any(char::is_control)
 }
 
@@ -365,9 +371,12 @@ fn apply_projection_rows(
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use medulla_types::agent_component::{AgentComponentKind, ComponentDependency};
-    use medulla_types::connector_pack::{
-        PackArchiveFacts, PackProducer, PackServerRecord, PACK_IMPORT_RECORD_SCHEMA_VERSION,
+    use medulla_agent_types::{
+        agent_component::AgentComponentKind, agent_component::ComponentDependency,
+    };
+    use medulla_catalog_types::{
+        connector_pack::PackArchiveFacts, connector_pack::PackProducer,
+        connector_pack::PackServerRecord, connector_pack::PACK_IMPORT_RECORD_SCHEMA_VERSION,
     };
     use medulla_types::contract::BoundedVec;
 

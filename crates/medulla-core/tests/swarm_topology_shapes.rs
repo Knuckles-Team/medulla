@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_types::agent_ontology::{shell_centric_for_task, TASK_ROOT};
+use medulla_agent_types::{agent_ontology::shell_centric_for_task, agent_ontology::TASK_ROOT};
 
 #[test]
 fn shell_centric_inherits_or_is_absent() {

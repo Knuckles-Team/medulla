@@ -3,13 +3,19 @@
 //! The shard's own drain/maintenance batches and the one boundary where a
 //! caller-compiled batch is rebound onto the shard scope that commits it.
 
-use medulla_storage::{GraphShardOwner, OwnedStoreHandle, GRAPH_SHARD_TENANT};
-use medulla_types::mutation_batch::{authority_scope_for, DurabilityDomain, MutationScope};
-use medulla_types::protocol::Method;
-use medulla_types::{
-    MutationBatch, MutationEnvelope, MutationOperation, MutationOutboxIntent,
-    MutationScopeIdentity, MutationSurface, VersionExpectation, MUTATION_BATCH_VERSION,
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationScope;
+use medulla_mutation_types::{
+    mutation_scope::MutationOutboxIntent, mutation_scope::MutationScopeIdentity,
+    mutation_scope::MutationSurface, mutation_scope::MUTATION_BATCH_VERSION,
 };
+use medulla_protocol_types::mutation_batch::authority_scope_for;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::{
+    mutation_batch::MutationBatch, mutation_batch::MutationEnvelope,
+    mutation_batch::MutationOperation, mutation_batch::VersionExpectation,
+};
+use medulla_storage::{GraphShardOwner, OwnedStoreHandle, GRAPH_SHARD_TENANT};
 
 use super::graph_scope_identity;
 
@@ -181,7 +187,7 @@ fn ensure_caller_batch_targets_graph(
 }
 
 fn is_run_event(intent: &MutationOutboxIntent) -> bool {
-    intent.topic == medulla_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC
+    intent.topic == medulla_result_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC
 }
 
 /// `sha256(tenant || 0x00 || graph)` of a graph-scoped identity: the value a

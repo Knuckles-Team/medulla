@@ -3,9 +3,9 @@ use std::sync::Arc;
 use crate::api::persistence::PersistenceBackend;
 use crate::mutation::LifecycleAttempt;
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_batch::MutationSurface;
-use medulla_types::protocol::Method;
-use medulla_types::protocol::ResultPayload;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::ResultPayload;
 
 use super::super::compile::{compile_methods, CompileBatch};
 use super::super::digest::{lifecycle_batch_id, principal_fingerprint};
@@ -66,7 +66,7 @@ impl<'a> LifecycleCommitRequest<'a> {
 /// outbox atomically; `replayed` lets the caller finish a post-commit RAM publish.
 pub async fn commit_lifecycle(
     request: LifecycleCommitRequest<'_>,
-) -> Result<medulla_types::mutation_batch::MutationBatchCommit, String> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {
     let LifecycleCommitRequest {
         persistence,
         action,
@@ -121,7 +121,7 @@ pub async fn commit_lifecycle(
 }
 
 fn validate_lifecycle_replay_result(
-    committed: &medulla_types::mutation_batch::MutationBatchCommit,
+    committed: &medulla_protocol_types::mutation_batch::MutationBatchCommit,
     encoded_result: &[u8],
 ) -> Result<(), String> {
     if committed.replayed && committed.record.result_msgpack.as_deref() != Some(encoded_result) {
@@ -162,7 +162,7 @@ pub async fn lifecycle_was_committed(
     let Some(record) = persistence.read_mutation_batch(&fname, &batch_id).await? else {
         return Ok(false);
     };
-    if record.status != medulla_types::mutation_batch::MutationBatchStatus::Committed {
+    if record.status != medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed {
         return Ok(false);
     }
     // A reused attempt nonce is refused before any identity question is asked:
@@ -181,7 +181,7 @@ pub async fn lifecycle_was_committed(
 /// `REPLAY_NONCE_CONSUMED` when the attempt re-presents the nonce the stored
 /// receipt's committing envelope consumed.
 pub(crate) fn refuse_consumed_nonce(
-    record: &medulla_types::mutation_batch::MutationBatchRecord,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
     attempt_nonce: Option<Nonce>,
     idempotency_key: &str,
 ) -> Result<(), String> {
@@ -202,7 +202,7 @@ pub(crate) fn refuse_consumed_nonce(
 /// Refuse a stored lifecycle receipt whose retained identity differs from the
 /// request. Build-dependent envelope bytes are deliberately not compared.
 pub fn lifecycle_identity_matches(
-    record: &medulla_types::mutation_batch::MutationBatchRecord,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
     batch_id: &str,
     principal: Option<&str>,
     idempotency_key: &str,

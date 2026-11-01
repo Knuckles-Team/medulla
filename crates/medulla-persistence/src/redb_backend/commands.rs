@@ -2,14 +2,14 @@ use super::*;
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
 use tokio::sync::oneshot;
 
-use medulla_types::change_envelope::ChangeEnvelope;
-use medulla_types::change_envelope::ChangeEnvelopeCommit;
-use medulla_types::mutation_batch::MutationBatch;
-use medulla_types::mutation_batch::MutationBatchCommit;
-use medulla_types::mutation_batch::MutationOutboxLease;
-use medulla_types::mutation_batch::MutationProjectionCursor;
-use medulla_types::protocol::GraphType;
-use medulla_types::protocol::Method;
+use medulla_protocol_types::change_envelope::ChangeEnvelope;
+use medulla_protocol_types::change_envelope::ChangeEnvelopeCommit;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::mutation_batch::MutationBatchCommit;
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+use medulla_mutation_types::mutation_scope::MutationProjectionCursor;
+use medulla_protocol_types::protocol::GraphType;
+use medulla_protocol_types::protocol::Method;
 #[cfg(any(feature = "compute-dist", feature = "matview"))]
 use medulla_store::redb_store::MatViewScanResult;
 use medulla_store::redb_store::XshardDecisionScan;
@@ -176,13 +176,13 @@ pub(crate) enum Cmd {
     #[cfg(feature = "security")]
     AuditVerify {
         graph: String,
-        reply: std::sync::mpsc::SyncSender<Result<medulla_types::protocol::AuditReport, String>>,
+        reply: std::sync::mpsc::SyncSender<Result<medulla_protocol_types::protocol::AuditReport, String>>,
     },
     #[cfg(feature = "security")]
     AuditAppend {
         graph: String,
         event: medulla_store::redb_store::OperationAuditEvent,
-        reply: std::sync::mpsc::SyncSender<Result<medulla_types::protocol::AuditAppendReceipt, String>>,
+        reply: std::sync::mpsc::SyncSender<Result<medulla_protocol_types::protocol::AuditAppendReceipt, String>>,
     },
     /// TEST-ONLY tamper of one audit entry (see `test_tamper_audit_entry`).
     #[cfg(all(test, feature = "security"))]
@@ -215,7 +215,7 @@ pub(crate) enum Cmd {
         graph: String,
         node_id: String,
         anchor_seq: Option<u64>,
-        reply: std::sync::mpsc::SyncSender<Result<medulla_types::protocol::MerkleInclusionReport, String>>,
+        reply: std::sync::mpsc::SyncSender<Result<medulla_protocol_types::protocol::MerkleInclusionReport, String>>,
     },
     /// **Cross-modal ACID commit (CONCEPT:MEDULLA-KG.txn.reader-never-sees-node).** Land a graph, vector, blob-ref,
     /// and property write-set for ONE graph in ONE `WriteTransaction`, all-or-nothing,
@@ -253,18 +253,18 @@ pub(crate) enum Cmd {
     /// private capability ledger operation in one writer-owned transaction.
     MintWorkItemClaimCapability {
         graph: String,
-        request: medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest,
+        request: medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest,
         authority: medulla_store::redb_store::work_item_capability::AuthenticatedAuthority,
         done: oneshot::Sender<
-            Result<medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityResult, String>,
+            Result<medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResult, String>,
         >,
     },
     VerifyWorkItemClaimCapability {
         graph: String,
-        request: medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest,
+        request: medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest,
         authority: medulla_store::redb_store::work_item_capability::AuthenticatedAuthority,
         done: oneshot::Sender<
-            Result<medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityResult, String>,
+            Result<medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResult, String>,
         >,
     },
     /// Native development-lane hold/quota mutation (RMDD-28: Reserve/Renew/
@@ -290,7 +290,7 @@ pub(crate) enum Cmd {
     /// unpaid outbox lease. The writer flushes prior mutations first.
     ParkEnrichmentBudget {
         graph: String,
-        park: Box<medulla_types::native_control::EnrichmentBudgetPark>,
+        park: Box<medulla_agent_types::native_control::EnrichmentBudgetPark>,
         done: oneshot::Sender<Result<(), String>>,
     },
     /// Engine-native governed ingest commit. This is deliberately one writer

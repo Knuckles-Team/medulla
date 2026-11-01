@@ -4,12 +4,12 @@
 pub(super) async fn commit_one_envelope(
     backend: &super::RedbBackend,
     graph_fname: &str,
-    envelope: &medulla_types::change_envelope::ChangeEnvelope,
+    envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
     committed_at_ms: u64,
     source_budget: Option<medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,
     label: &str,
     dropped: &str,
-) -> Result<medulla_types::change_envelope::ChangeEnvelopeCommit, String> {
+) -> Result<medulla_protocol_types::change_envelope::ChangeEnvelopeCommit, String> {
     let (done, rx) = tokio::sync::oneshot::channel();
     let cmd = super::Cmd::ChangeEnvelopeCommit {
         payload: Box::new(super::ChangeEnvelopePayload {

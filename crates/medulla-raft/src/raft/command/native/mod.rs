@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 use medulla_server_api::api::reentry::TransactionParticipantPhase;
 
 #[cfg(feature = "modality-serving")]

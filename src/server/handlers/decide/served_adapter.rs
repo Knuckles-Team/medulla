@@ -19,7 +19,7 @@ use std::collections::BTreeMap;
 use std::sync::{Arc, OnceLock};
 
 use medulla_core::graph::GraphCore;
-use medulla_types::decision::statistical::retrieval_adapter::AdapterFitted;
+use medulla_decision_types::decision::statistical::retrieval_adapter::AdapterFitted;
 
 use medulla_server_api::api::admin::served_adapter::ServedAdapter;
 use medulla_persistence::agent_library::AgentLibraryStore;

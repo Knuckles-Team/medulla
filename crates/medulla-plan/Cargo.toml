@@ -40,7 +40,7 @@ owl = ["query", "dep:medulla-rdf", "medulla-rdf/owl", "medulla-rdf/sparql", "dep
 # WebAssembly UDF over the current RowSet inside a UnifiedQuery plan. Pulls medulla-wasm's
 # wasmtime runtime + turns on the `wasm-udf` wire variant in medulla-types. IMPLIES `query`
 # (the op lives in the `query`-gated `Op` enum). A default/Pi build links no wasmtime.
-wasm-udf = ["query", "dep:medulla-wasm", "medulla-wasm/wasm-udf", "medulla-types/wasm-udf"]
+wasm-udf = ["query", "dep:medulla-wasm", "medulla-wasm/wasm-udf", "medulla-types/wasm-udf", "medulla-protocol-types/wasm-udf"]
 # Query federation / foreign sources (CONCEPT:KG-2.232, Lane P): the `ForeignScan`
 # SOURCE op + the `ForeignSource` trait with TWO kinds — a REMOTE medulla-engine
 # engine (reached over the SAME length-prefixed-MessagePack + HMAC transport via a
@@ -51,7 +51,7 @@ wasm-udf = ["query", "dep:medulla-wasm", "medulla-wasm/wasm-udf", "medulla-types
 # but NEVER `pi` — the Pi contract: a `pi` build links no rustls/ring/ureq.
 federation = [
     "query",
-    "medulla-types/federation",
+    "medulla-types/federation", "medulla-protocol-types/federation",
     "dep:ureq",
     "dep:hmac",
     "dep:sha2",
@@ -199,7 +199,7 @@ learned-cost = ["query", "dep:medulla-compute", "medulla-compute/graphlearn"]
 # empty; with it, malformed or incomplete loci are rejected rather than downgraded.
 epistemic = [
     "query",
-    "medulla-types/epistemic",
+    "medulla-types/epistemic", "medulla-protocol-types/epistemic",
     "dep:medulla-epistemic",
 ]
 # Contribution attribution (EH-523): the `ATTRIBUTE` stage's executor — linear split,
@@ -431,8 +431,18 @@ rayon = { version = "1.12", optional = true }
 # referenced under #[cfg(feature = "knowledge-batch")]; a default/Pi build links
 # none of it.
 arrow = { version = "58.4", optional = true }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["query"] }
+medulla-decision-types = { path = "../medulla-decision-types", features = ["query"] }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-agent-types = { path = "../medulla-agent-types" }
+medulla-result-types = { path = "../medulla-result-types", features = ["query"] }
 
 [dev-dependencies]
+medulla-result-types = { path = "../medulla-result-types", features = ["query"] }
+medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
+medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
+medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support", "query"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support", "query"] }
 # The oracle/algebra tests build a fixture GraphCore + SemanticStore and run the
 # DataFusion FILTER leg, so the test target needs the `query` feature on.
 medulla-query = { path = "../medulla-query", features = ["sql"] }

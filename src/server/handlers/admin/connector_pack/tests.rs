@@ -14,10 +14,12 @@ use serde::de::DeserializeOwned;
 use sha2::{Digest, Sha256};
 use tokio::sync::RwLock;
 
-use medulla_types::connector_pack::{
-    ConnectorPackIndex, ConnectorPackOp, McpCatalogSnapshotBinding, PackAnnotations,
-    PackArchiveRef, PackEntry, PackEntryKind, PackProducer, PackRef, PackSection,
-    CONNECTOR_PACK_SCHEMA_VERSION,
+use medulla_catalog_types::{
+    connector_pack::ConnectorPackIndex, connector_pack::ConnectorPackOp,
+    connector_pack::McpCatalogSnapshotBinding, connector_pack::PackAnnotations,
+    connector_pack::PackArchiveRef, connector_pack::PackEntry, connector_pack::PackEntryKind,
+    connector_pack::PackProducer, connector_pack::PackRef, connector_pack::PackSection,
+    connector_pack::CONNECTOR_PACK_SCHEMA_VERSION,
 };
 use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
 
@@ -219,8 +221,10 @@ pub(super) fn refused(label: &str, response: Response) -> String {
 }
 
 /// A request-body context shell; the engine re-binds every field of it.
-pub(super) fn context(key: &str) -> medulla_types::agent_library::AgentLibraryMutationContext {
-    medulla_types::agent_library::AgentLibraryMutationContext {
+pub(super) fn context(
+    key: &str,
+) -> medulla_agent_types::agent_library::AgentLibraryMutationContext {
+    medulla_agent_types::agent_library::AgentLibraryMutationContext {
         request_id: 1,
         principal: "bound-by-engine".to_string(),
         caller_principal: "bound-by-engine".to_string(),
@@ -379,7 +383,7 @@ pub(super) fn build_pack_with_server(
         },
         pack_digest: Digest256::from_bytes([0; 32]),
     };
-    index.pack_digest = medulla_types::connector_pack::digest::pack_digest(&index).unwrap();
+    index.pack_digest = medulla_catalog_types::connector_pack::digest::pack_digest(&index).unwrap();
     (index, archive)
 }
 
@@ -392,7 +396,7 @@ pub(super) async fn bind(served: &Served, connector: &str, principal: &str) {
             .pack(
                 &key,
                 ConnectorPackOp::Bind {
-                    request: medulla_types::connector_pack::ConnectorPackBindRequest {
+                    request: medulla_catalog_types::connector_pack::ConnectorPackBindRequest {
                         context: context(&key),
                         connector: ResourceId::new(connector).unwrap(),
                         importer: persistence_id(principal),
@@ -407,7 +411,7 @@ pub(super) async fn bind(served: &Served, connector: &str, principal: &str) {
 pub(super) async fn import(
     served: &Served,
     pack: &(ConnectorPackIndex, Vec<u8>),
-    expected_head: Option<medulla_types::connector_pack::PackHeadRef>,
+    expected_head: Option<medulla_catalog_types::connector_pack::PackHeadRef>,
 ) -> Response {
     let (mut index, archive) = pack.clone();
     index.archive.blob_digest = served.upload(&archive).await;
@@ -421,7 +425,7 @@ pub(super) async fn approve_source(
     connector: &str,
     contract_iri: &str,
     resource_uri: &str,
-    expected_head: medulla_types::connector_pack::PackHeadRef,
+    expected_head: medulla_catalog_types::connector_pack::PackHeadRef,
     contract_digest: Digest256,
 ) -> Response {
     let key = format!(
@@ -432,14 +436,15 @@ pub(super) async fn approve_source(
         .pack(
             &key,
             ConnectorPackOp::ApproveSource {
-                request: medulla_types::connector_pack::ConnectorPackSourceApprovalRequest {
-                    context: context(&key),
-                    connector: ResourceId::new(connector).unwrap(),
-                    contract_iri: contract_iri.to_string(),
-                    resource_uri: resource_uri.to_string(),
-                    expected_head,
-                    contract_digest,
-                },
+                request:
+                    medulla_catalog_types::connector_pack::ConnectorPackSourceApprovalRequest {
+                        context: context(&key),
+                        connector: ResourceId::new(connector).unwrap(),
+                        contract_iri: contract_iri.to_string(),
+                        resource_uri: resource_uri.to_string(),
+                        expected_head,
+                        contract_digest,
+                    },
             },
         )
         .await
@@ -449,7 +454,7 @@ pub(super) async fn approve_source(
 pub(super) async fn import_uploaded(
     served: &Served,
     index: ConnectorPackIndex,
-    expected_head: Option<medulla_types::connector_pack::PackHeadRef>,
+    expected_head: Option<medulla_catalog_types::connector_pack::PackHeadRef>,
 ) -> Response {
     import_uploaded_with(served, index, expected_head, false).await
 }
@@ -459,7 +464,7 @@ pub(super) async fn import_uploaded(
 pub(super) async fn import_uploaded_with(
     served: &Served,
     index: ConnectorPackIndex,
-    expected_head: Option<medulla_types::connector_pack::PackHeadRef>,
+    expected_head: Option<medulla_catalog_types::connector_pack::PackHeadRef>,
     allow_mass_withdrawal: bool,
 ) -> Response {
     let key = format!(
@@ -474,12 +479,14 @@ pub(super) async fn import_uploaded_with(
         .pack(
             &key,
             ConnectorPackOp::Import {
-                request: Box::new(medulla_types::connector_pack::ConnectorPackImportRequest {
-                    context: context(&key),
-                    index,
-                    expected_head,
-                    allow_mass_withdrawal,
-                }),
+                request: Box::new(
+                    medulla_catalog_types::connector_pack::ConnectorPackImportRequest {
+                        context: context(&key),
+                        index,
+                        expected_head,
+                        allow_mass_withdrawal,
+                    },
+                ),
             },
         )
         .await
@@ -489,19 +496,19 @@ pub(super) async fn import_uploaded_with(
 pub(super) async fn imported(
     served: &Served,
     pack: &(ConnectorPackIndex, Vec<u8>),
-    expected_head: Option<medulla_types::connector_pack::PackHeadRef>,
-) -> medulla_types::connector_pack::PackImportReceipt {
+    expected_head: Option<medulla_catalog_types::connector_pack::PackHeadRef>,
+) -> medulla_catalog_types::connector_pack::PackImportReceipt {
     match ok("Import", import(served, pack, expected_head).await) {
-        medulla_types::connector_pack::PackImportResult::Imported { receipt } => *receipt,
+        medulla_catalog_types::connector_pack::PackImportResult::Imported { receipt } => *receipt,
         other => panic!("import did not land: {other:?}"),
     }
 }
 
 /// The head a receipt names, for the next compare-and-set import.
 pub(super) fn head_of(
-    receipt: &medulla_types::connector_pack::PackImportReceipt,
-) -> medulla_types::connector_pack::PackHeadRef {
-    medulla_types::connector_pack::PackHeadRef {
+    receipt: &medulla_catalog_types::connector_pack::PackImportReceipt,
+) -> medulla_catalog_types::connector_pack::PackHeadRef {
+    medulla_catalog_types::connector_pack::PackHeadRef {
         binding_revision: receipt.binding_revision,
         pack_digest: receipt.pack_digest,
     }
@@ -537,26 +544,27 @@ async fn a_cancelled_waiter_leaves_the_pack_lock_queue() {
 pub(super) async fn seed_server_only_import(
     served: &Served,
     pack: &(ConnectorPackIndex, Vec<u8>),
-    previous: &medulla_types::connector_pack::PackImportReceipt,
-) -> medulla_types::connector_pack::PackImportReceipt {
+    previous: &medulla_catalog_types::connector_pack::PackImportReceipt,
+) -> medulla_catalog_types::connector_pack::PackImportReceipt {
     use medulla_persistence::connector_pack::commit::ConnectorPackCommitPlan;
     use medulla_persistence::connector_pack::commit::ConnectorPackComponentCommit;
     use medulla_persistence::connector_pack::commit::ConnectorPackHolderCommit;
     use medulla_persistence::connector_pack::ConnectorPackBodyHolderRow;
-    use medulla_types::agent_component::{
+    use medulla_agent_types::agent_component::{
         AgentComponentEntry, AgentComponentMutationKind, ComponentDependency,
     };
-    use medulla_types::agent_library::AgentLibraryLifecycle;
-    use medulla_types::connector_pack::{
-        PackArchiveFacts, PackDisposition, PackEntryRecord, PackImportRecord, PackImportResult,
-        PackProjectionState, PackServerRecord, PACK_IMPORT_RECORD_SCHEMA_VERSION,
+    use medulla_catalog_types::{
+        connector_pack::PackArchiveFacts, connector_pack::PackDisposition,
+        connector_pack::PackEntryRecord, connector_pack::PackImportRecord,
+        connector_pack::PackImportResult, connector_pack::PackProjectionState,
+        connector_pack::PackServerRecord, connector_pack::PACK_IMPORT_RECORD_SCHEMA_VERSION,
     };
 
     let index = &pack.0;
     let donor = Served::new();
     bind(&donor, index.connector.as_str(), ADMIN).await;
     imported(&donor, pack, None).await;
-    let id = medulla_types::connector_pack::pack_component_id(
+    let id = medulla_catalog_types::connector_pack::pack_component_id(
         index.connector.as_str(),
         PackEntryKind::McpServer,
         &index.server.name,
@@ -610,7 +618,7 @@ pub(super) async fn seed_server_only_import(
         member.last_record_id = record_id.clone();
         if member.uri == index.server.uri {
             member.entry_digest =
-                medulla_types::connector_pack::digest::entry_digest(&index.server).unwrap();
+                medulla_catalog_types::connector_pack::digest::entry_digest(&index.server).unwrap();
             member.entry_revision = server.entry_revision;
             member.definition_digest = server.definition_digest.clone();
             member.body_sha256 = stored.sha256;
@@ -623,7 +631,7 @@ pub(super) async fn seed_server_only_import(
                 .find(|entry| entry.uri == member.uri)
                 .unwrap();
             assert_eq!(
-                medulla_types::connector_pack::digest::entry_digest(entry).unwrap(),
+                medulla_catalog_types::connector_pack::digest::entry_digest(entry).unwrap(),
                 member.entry_digest,
                 "the legacy fixture changes only server content"
             );

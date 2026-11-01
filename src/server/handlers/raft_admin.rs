@@ -97,10 +97,12 @@ pub(crate) async fn try_handle(
 fn raft_admin_result(op: &RaftAdminOp) -> fn(bool) -> ResultPayload {
     match op {
         RaftAdminOp::AddLearner { .. } => {
-            ResultPayload::scalar::<medulla_types::result_contract::cluster::RaftAddLearner>
+            ResultPayload::scalar::<medulla_protocol_types::result_contract::cluster::RaftAddLearner>
         }
         RaftAdminOp::ChangeMembership { .. } => {
-            ResultPayload::scalar::<medulla_types::result_contract::cluster::RaftChangeMembership>
+            ResultPayload::scalar::<
+                medulla_protocol_types::result_contract::cluster::RaftChangeMembership,
+            >
         }
     }
 }

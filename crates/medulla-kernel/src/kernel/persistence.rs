@@ -10,7 +10,8 @@ pub const ENGINE_LEDGER_PRINCIPAL: &str =
 
 /// Replay entry of the data-mining write-back arms (MEDULLA-CONTRACT-R056.8).
 /// The mining handlers live above the kernel; the server installs them here.
-pub type ReplayHook = fn(&medulla_core::graph::GraphCore, &medulla_types::protocol::Method);
+pub type ReplayHook =
+    fn(&medulla_core::graph::GraphCore, &medulla_protocol_types::protocol::Method);
 
 static MINING_REPLAY: std::sync::OnceLock<ReplayHook> = std::sync::OnceLock::new();
 
@@ -22,7 +23,10 @@ pub fn install_mining_replay(hook: ReplayHook) {
 /// Replay one mining write-back `method` against `core` through the installed
 /// hook; with none installed the method takes the generic durable-apply arm,
 /// as in a build without the mining handlers.
-pub fn replay_mining(core: &medulla_core::graph::GraphCore, method: &medulla_types::protocol::Method) {
+pub fn replay_mining(
+    core: &medulla_core::graph::GraphCore,
+    method: &medulla_protocol_types::protocol::Method,
+) {
     match MINING_REPLAY.get() {
         Some(hook) => hook(core, method),
         None => medulla_core::durable_apply::apply(core, method),

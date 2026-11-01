@@ -83,7 +83,7 @@ fn outcome(method: &Method) -> (BTreeMap<String, f64>, Vec<String>) {
         nodes,
         seed,
         edges,
-        model: medulla_types::compute_result::mining::RiskModel::NoisyOr(options),
+        model: medulla_result_types::compute_result::mining::RiskModel::NoisyOr(options),
         ..
     } = method
     else {

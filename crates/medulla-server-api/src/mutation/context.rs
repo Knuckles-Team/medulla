@@ -5,9 +5,9 @@ use medulla_capabilities::DurabilityDomain;
 use crate::api::persistence::PersistenceBackend;
 use medulla_core::graph::GraphCore;
 use medulla_core::isolation::IsolationLayer;
-use medulla_types::protocol::GraphType;
-use medulla_types::protocol::Method;
-use medulla_types::protocol::Response;
+use medulla_protocol_types::protocol::GraphType;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
 
 use super::MutationPlan;
 

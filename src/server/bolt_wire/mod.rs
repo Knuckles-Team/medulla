@@ -556,7 +556,7 @@ fn commit_cypher_writes(
     let bytes = rmp_serde::to_vec_named(&result)
         .map_err(|_| "Cypher result could not be encoded".to_string())?;
     Ok(ResultPayload::of_encoded::<
-        medulla_types::result_contract::query::CypherQuery,
+        medulla_protocol_types::result_contract::query::CypherQuery,
     >(bytes))
 }
 

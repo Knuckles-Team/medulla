@@ -56,8 +56,9 @@ L4  sql | cypher | tables | table-store | virtual-graph | graph-algos | mining |
     | finance | decision-policy | decision-rank
 L3  graph-core | isolation | core | semantic-index | ann-codes | reasoner | decision-stats | finance-market
 L2  storage | storage-owner | numeric | transaction | rdf | the 42 unchanged leaves (geo, tsdb, shacl, ...)
-L1  protocol-types | identity-types | agent-types | mutation-types | index-types | result-types
-    | catalog-types | decision-types
+    | protocol-types (the type hub above every domain type crate)
+L1  identity-types < mutation-types < index-types < result-types < agent-types < catalog-types
+    < decision-types   (one-way edges, left to right only)
 L0  medulla-types (thin)
 ```
 
@@ -120,24 +121,50 @@ meet.
 ## The medulla-types split
 
 `medulla-types` has the highest fan-in in the workspace (148k lines), so any edit to it
-rebuilds everything. It splits into eight crates:
+rebuilds everything. It is split into nine crates (done 2026-10-31, each compiled on its own). Measured lines:
 
-- **The thin `medulla-types` (L0, about 18k).** It keeps only ids, errors, scalar values,
-  test-support fixtures and about 300 small modules that have no domain prefix yet. It
-  takes no new rows: `route_rows.py` redirects any row whose path resolves there to the
-  spec's `types_home`.
-- **Seven L1 domain type crates.** Each depends only on L0, and leaf engines import only
-  the domains they use:
-  - `protocol-types`: the method registry, the wire-query envelopes and the contract
-    codes.
-  - `identity-types`: identity, RBAC, tenancy, ACL and authority.
-  - `agent-types`: agents, work items, jobs and runs.
-  - `mutation-types`: mutations, envelopes, outbox, leases and consensus.
-  - `index-types`: semantic index, embedding and entity resolution.
-  - `result-types`: answers, verdicts, epistemic nodes and predicates.
-  - `catalog-types`: packs, schema, catalog, ingest, lineage and release records.
-- **`decision-types`.** It takes `decision/` except `decision/statistical`, which goes to
-  `decision-stats`, plus `policy_evolution` and `solve`.
+| Crate | Level | Lines | Holds |
+|---|---|---|---|
+| `medulla-types` | L0 | 21.4k | contract ids and bounded collections, msgpack, wire and wire-query types, ACL claims, series expressions, `rdf_report`, `solve_scalar` (exact scalars, `Sha256Digest`, `digest_text`), `lease_vocab`, test-support fixtures and the small unprefixed modules |
+| `medulla-identity-types` | L1 | 16.9k | identity, RBAC, tenancy, ACL and authority |
+| `medulla-mutation-types` | L1 | 9.4k | `mutation_scope` (scope identity, durability domain, committed version, outbox rows), commit descriptor, governed change, capacity, consensus |
+| `medulla-index-types` | L1 | 10.6k | semantic index, embedding, managed index, entity resolution |
+| `medulla-result-types` | L1 | 11.2k | answers, verdicts, epistemic nodes and predicates |
+| `medulla-agent-types` | L1 | 22.5k | agents (incl. `agent_guardrail`, `agent_topology`), work items, jobs, runs, `native_control`, `control_lease`, `host_start` |
+| `medulla-catalog-types` | L1 | 17.2k | packs, schema, catalog, ingest, lineage, release records, attached-source readers |
+| `medulla-decision-types` | L1 | 18.1k | `decision/`, `policy_evolution`, `solve`, `current_plan` |
+| `medulla-protocol-types` | L2 | 18.7k | `Method`, its envelopes (`mutation_batch`, `change_envelope`, `debezium_bridge`, `result_contract`, `storage_wire`), wire-query types, `messaging_wire`, `error_registry` |
+
+Why the hub sits on top: `Method` embeds every domain's request types and
+`ChangeEnvelope` (which embeds `MutationBatch`, which embeds `Method`), so `Method`, the
+batch and the envelope are one recursive type family and live in one crate above the
+domains. Domain type crates never name `Method`: the two readers that matched on it
+(`market_write_scope`, `run_completion_payload`) are functions in `protocol`.
+
+Cycle cuts made at item level (MEDULLA-CONTRACT-R056.11):
+
+- `mutation_batch` → `mutation_scope`: the Method-free scope identity, durability
+  domain, committed version and outbox rows (index and agent types name them).
+- `decision::topology` → `agent_topology`, `decision::guardrail` → `agent_guardrail`
+  (agent graphs and components validate against them); their decision-record tests
+  stay in `decision`.
+- `solve::scalar` and `decision::digest::{digest_text, DIGEST_TEXT_PREFIX}` →
+  `solve_scalar` (L0).
+- `contract::{declared_error_code, classify_refusal}` → `error_registry` (hub), since the
+  registry names every domain's closed codes.
+- `control_lease::{MAX_CONTROL_LEASE_SPAN_MS, RBAC_ELEVATION_KIND}` → `lease_vocab` (L0).
+- `result_contract::cluster::{is_valid_server_name, MAX_REGISTERED_SERVER_NAME_BYTES}`
+  → `fleet_catalog`.
+- The governed-change wire-code test moved to `protocol`.
+
+How the moves ran: top-down along `[types_split].chain` (protocol hub first, identity
+last), so every intermediate state compiled; `move_leaf_modules.py` allows an edge to any
+crate earlier in the chain and stops on one that runs up it. `closed_error_codes!` and
+`keyset_tenant_limit_methods!` are `#[macro_export]`ed. Test fixtures split per domain
+(`<domain>_fixtures`, gated `any(test, feature = "test-support")`, moved with their
+crate), because a crate's own unit tests use them and a separate fixtures crate would
+hand those tests a second copy of every type; the seeded helpers stay in
+`medulla_types::test_support`.
 
 The effect: a decision-type edit rebuilds only the decision family and h-decide, and no
 longer rebuilds SQL, raft or wire. The small residual modules should move to a domain
@@ -170,96 +197,96 @@ the script.
 
 | Crate | Level | Responsibility | Current | Projected | Open rows by spec |
 |---|---|---|---:|---:|---|
-| `medulla-types` | L0 | Thin shared vocabulary: ids, errors, scalar values and the test-support fixtures; no domain types. | 18,355 | 18,355 |  |
-| `medulla-protocol-types` | L1 | Method registry and wire-query envelope types shared by every listener and client. | 16,899 | 17,299 | federated-query-and-reasoning 2, public-engine-contract-and-release 1, unified-data-plane 1 |
-| `medulla-identity-types` | L1 | Issuer, principal, scope, tenancy, ACL and authority types. | 17,243 | 18,143 | engine-identity-and-scope 9 |
-| `medulla-agent-types` | L1 | Agent components, graphs, libraries, templates, work items, jobs and run history types. | 19,552 | 23,072 | orchestration-vocabulary 23, typed-packs-and-catalog 8, decision-engine 7, orchestration-competency 3 |
-| `medulla-mutation-types` | L1 | Mutation, batch, change envelope, commit descriptor, outbox, lease and consensus record types. | 14,802 | 16,762 | durable-graph-kernel 10, source-changesets 4, branch-merge 3, repository-index-and-ingestion 2 |
-| `medulla-index-types` | L1 | Semantic index, embedding, managed index and entity resolution types. | 10,596 | 10,596 |  |
-| `medulla-result-types` | L1 | Answer, result contract, verdict, epistemic node, argument and query predicate types. | 14,725 | 18,425 | federated-query-and-reasoning 19, finance-primitives 11, orchestration-vocabulary 4, decision-engine 2 |
-| `medulla-catalog-types` | L1 | Connector pack, schema, catalog, source ingestion, lineage and release record types. | 15,612 | 22,952 | typed-packs-and-catalog 32, ingest-worker 13, unified-data-plane 13, repository-index-and-ingestion 5 |
-| `medulla-decision-types` | L1 | Decision ladder vocabulary: ResolutionKind, evidence classes, decision requests, answers and revision records. | 12,362 | 22,882 | decision-engine 101, orchestration-vocabulary 2, development-lifecycle 2, placement-and-worker-policy 1 |
-| `medulla-storage` | L2 | Physical storage owner, direct state, recovery and scoped tables. | 17,295 | 18,095 | durable-graph-kernel 5, object-storage-backend 2, engine-parity 1 |
-| `medulla-storage-owner` | L2 | Storage owner process: owner state machine and ownership handoff. | 9,521 | 9,521 |  |
-| `medulla-numeric` | L2 | Deterministic numeric kernels: series, random, stats, clustering and the Python bridge. | 7,437 | 9,037 | finance-primitives 14, federated-query-and-reasoning 2 |
-| `medulla-transaction` | L2 | Transaction graft, outbox and change capture. | 20,979 | 21,079 | finance-primitives 1 |
-| `medulla-rdf` | L2 | RDF model, SPARQL algebra and update, and the serialisations (JSON-LD, RDF/XML, GeoSPARQL). | 10,782 | 11,562 | federated-query-and-reasoning 5, cross-source-competency 3, source-authority 1 |
-| `medulla-graph-core` | L3 | In-memory property graph, its indexes, paths, projections and JSONPath. | 17,382 | 22,942 | connector-competency 74, durable-graph-kernel 3, typed-packs-and-catalog 3, cross-source-competency 2 |
-| `medulla-isolation` | L3 | Tenant isolation, RBAC persistence and dependency scopes. | 9,292 | 11,992 | engine-identity-and-scope 25, decision-engine 2 |
-| `medulla-core` | L3 | Engine core services that remain: broker, registry, lifecycle, durable apply and result cache. | 9,428 | 11,328 | typed-packs-and-catalog 6, orchestration-vocabulary 5, orchestration-competency 4, durable-graph-kernel 2 |
-| `medulla-semantic-index` | L3 | Semantic ANN codes and the semantic index service. | 9,169 | 9,369 | federated-query-and-reasoning 1, repository-index-and-ingestion 1 |
-| `medulla-reasoner` | L3 | OWL, tableau and rule reasoning plus reasoning closure. | 13,045 | 13,645 | federated-query-and-reasoning 3, durable-graph-kernel 2, typed-packs-and-catalog 1 |
-| `medulla-decision-stats` | L3 | Statistical ranking for the decision ladder: fitted heads, calibration, conformal bounds, off-policy evaluation and scores. | 15,409 | 22,629 | decision-engine 60, finance-primitives 8, orchestration-vocabulary 2, placement-and-worker-policy 2 |
-| `medulla-finance-market` | L3 | Market data primitives: quotes, bars, books and their kernels. | 5,458 | 5,558 | finance-primitives 1 |
-| `medulla-ann-codes` | L3 | Semantic ANN code books: quantisation, encode and decode. | 15,927 | 15,927 |  |
-| `medulla-sql` | L4 | SQL dialect: parse, classify, plan and execute over tables. | 21,850 | 22,850 | engine-parity 6, unified-data-plane 3, durable-graph-kernel 1 |
-| `medulla-cypher` | L4 | Cypher language, its executor, graph data science calls and the edge index. | 15,469 | 15,569 | unified-data-plane 1 |
-| `medulla-tables` | L4 | Table model: schema, property graph tables and ANN authority (everything but the table store). | 12,694 | 12,994 | engine-parity 2, federated-query-and-reasoning 1 |
-| `medulla-table-store` | L4 | Physical table store under the table model. | 12,073 | 12,473 | engine-parity 4 |
+| `medulla-types` | L0 | Thin shared vocabulary: contract ids and bounded collections, msgpack limits, the wire and wire-query types, ACL request claims, series expressions, solver scalars and text digests, lease bounds, and the test-support fixtures; no domain types. | 21,440 | 21,440 |  |
+| `medulla-protocol-types` | L2 | Protocol hub: the Method registry, its request/response envelopes (mutation batch, change envelope, result contract), the wire-query types and the published refusal-code registry. | 18,727 | 19,447 | repository-index-and-ingestion 2, durable-graph-kernel 1, federated-query-and-reasoning 1, orchestration-competency 1, orchestration-vocabulary 1, public-engine-contract-and-release 1, unified-data-plane 1 |
+| `medulla-identity-types` | L1 | Issuer, principal, scope, tenancy, ACL and authority types. | 16,950 | 17,950 | engine-identity-and-scope 9, placement-and-worker-policy 1 |
+| `medulla-agent-types` | L1 | Agent components, graphs, libraries, templates, work items, jobs and run history types. | 22,508 | 26,028 | orchestration-vocabulary 23, typed-packs-and-catalog 8, decision-engine 7, orchestration-competency 3, durable-graph-kernel 2, media-and-personal-vocabulary 1, placement-and-worker-policy 1, unified-data-plane 1 |
+| `medulla-mutation-types` | L1 | Mutation scope, commit descriptor, outbox, governed change, lease capacity and consensus record types (Method-free). | 9,392 | 11,692 | durable-graph-kernel 16, source-changesets 4, branch-merge 3 |
+| `medulla-index-types` | L1 | Semantic index, embedding, managed index and entity resolution types. | 10,631 | 10,731 | unified-data-plane 1 |
+| `medulla-result-types` | L1 | Answer, result contract, verdict, epistemic node, argument and query predicate types. | 11,243 | 14,683 | federated-query-and-reasoning 19, finance-primitives 11, orchestration-vocabulary 4, decision-engine 2 |
+| `medulla-catalog-types` | L1 | Connector pack, schema, catalog, source ingestion, lineage and release record types. | 17,227 | 25,567 | typed-packs-and-catalog 32, unified-data-plane 20, ingest-worker 13, development-lifecycle 5, repository-index-and-ingestion 5, source-authority 3, cross-source-competency 2, media-and-personal-vocabulary 2, durable-graph-kernel 1, federated-query-and-reasoning 1, placement-and-worker-policy 1 |
+| `medulla-decision-types` | L1 | Decision ladder vocabulary: ResolutionKind, evidence classes, decision requests, answers and revision records. | 18,074 | 28,794 | decision-engine 102, development-lifecycle 2, orchestration-vocabulary 2, durable-graph-kernel 1, placement-and-worker-policy 1 |
+| `medulla-storage` | L2 | Physical storage owner, direct state, recovery and scoped tables. | 17,310 | 18,410 | durable-graph-kernel 8, object-storage-backend 2, engine-parity 1 |
+| `medulla-storage-owner` | L2 | Storage owner process: owner state machine and ownership handoff. | 9,535 | 9,535 |  |
+| `medulla-numeric` | L2 | Deterministic numeric kernels: series, random, stats, clustering and the Python bridge. | 7,440 | 9,040 | finance-primitives 14, federated-query-and-reasoning 2 |
+| `medulla-transaction` | L2 | Transaction graft, outbox and change capture. | 21,063 | 21,763 | durable-graph-kernel 6, finance-primitives 1 |
+| `medulla-rdf` | L2 | RDF model, SPARQL algebra and update, and the serialisations (JSON-LD, RDF/XML, GeoSPARQL). | 10,783 | 11,563 | federated-query-and-reasoning 5, cross-source-competency 3, source-authority 1 |
+| `medulla-graph-core` | L3 | In-memory property graph, its indexes, paths, projections and JSONPath. | 17,409 | 22,969 | connector-competency 74, durable-graph-kernel 3, typed-packs-and-catalog 3, cross-source-competency 2, decision-engine 2, federated-query-and-reasoning 1, placement-and-worker-policy 1 |
+| `medulla-isolation` | L3 | Tenant isolation, RBAC persistence and dependency scopes. | 9,316 | 12,116 | engine-identity-and-scope 26, decision-engine 2 |
+| `medulla-core` | L3 | Engine core services that remain: broker, registry, lifecycle, durable apply and result cache. | 9,447 | 11,347 | typed-packs-and-catalog 6, orchestration-vocabulary 5, orchestration-competency 4, development-lifecycle 2, durable-graph-kernel 2, unified-data-plane 2, ingest-worker 1, media-and-personal-vocabulary 1 |
+| `medulla-semantic-index` | L3 | Semantic ANN codes and the semantic index service. | 9,212 | 9,412 | federated-query-and-reasoning 1, repository-index-and-ingestion 1 |
+| `medulla-reasoner` | L3 | OWL, tableau and rule reasoning plus reasoning closure. | 13,060 | 14,360 | durable-graph-kernel 9, federated-query-and-reasoning 3, typed-packs-and-catalog 1 |
+| `medulla-decision-stats` | L3 | Statistical ranking for the decision ladder: fitted heads, calibration, conformal bounds, off-policy evaluation and scores. | 9,928 | 17,148 | decision-engine 60, finance-primitives 8, orchestration-vocabulary 2, placement-and-worker-policy 2, development-lifecycle 1 |
+| `medulla-finance-market` | L3 | Market data primitives: quotes, bars, books and their kernels. | 5,466 | 5,566 | finance-primitives 1 |
+| `medulla-ann-codes` | L3 | Semantic ANN code books: quantisation, encode and decode. | 16,021 | 16,021 |  |
+| `medulla-sql` | L4 | SQL dialect: parse, classify, plan and execute over tables. | 21,862 | 22,862 | engine-parity 6, unified-data-plane 3, durable-graph-kernel 1 |
+| `medulla-cypher` | L4 | Cypher language, its executor, graph data science calls and the edge index. | 15,474 | 15,974 | engine-parity 4, unified-data-plane 1 |
+| `medulla-tables` | L4 | Table model: schema, property graph tables and ANN authority (everything but the table store). | 12,702 | 13,002 | engine-parity 2, federated-query-and-reasoning 1 |
+| `medulla-table-store` | L4 | Physical table store under the table model. | 12,123 | 12,523 | engine-parity 4 |
 | `medulla-query` | L4 | Removed after the split: every module moves out (tables become medulla-tables). | 0 | 0 |  |
-| `medulla-virtual-graph` | L4 | Attached sources read as virtual graphs: OBDA mappings, source selection and source authority checks. | 7,822 | 11,322 | unified-data-plane 31, source-authority 4 |
-| `medulla-graph-algos` | L4 | Graph algorithms and graph learning. | 15,839 | 16,339 | federated-query-and-reasoning 5 |
-| `medulla-mining` | L4 | Pattern and process mining over graph records. | 9,503 | 9,603 | repository-index-and-ingestion 1 |
-| `medulla-compute` | L4 | Compute expression language: parser, AST, data science operators and sketches. | 13,559 | 14,459 | source-changesets 4, decision-engine 2, ingest-worker 2, branch-merge 1 |
-| `medulla-finance` | L4 | Finance kernels, backtests, risk, attribution, banking and execution signals. | 10,985 | 14,385 | finance-primitives 34 |
-| `medulla-decision-policy` | L4 | Ladder stages 3-5: policy, hard constraints, knobs, admission, refusals, budgets and the bounded exact solve. | 2,413 | 16,713 | decision-engine 142, placement-and-worker-policy 1 |
-| `medulla-decision-rank` | L4 | Ladder stage 6: ranking the remaining legal options with fitted statistics (scores, champions, bandits, credit). | 0 | 6,400 | decision-engine 64 |
-| `medulla-uql` | L5 | UQL language: parser, binder and lowering to the executor. | 8,134 | 8,834 | federated-query-and-reasoning 7 |
-| `medulla-nlq` | L5 | Natural-language questions to UQL, with regressions. | 4,515 | 5,315 | federated-query-and-reasoning 8 |
-| `medulla-federation` | L5 | Federated planning across sources: federation optimizer, SSRF guard and remote engines. | 11,023 | 15,643 | connector-competency 19, federated-query-and-reasoning 15, unified-data-plane 14, cross-source-competency 7 |
-| `medulla-exec` | L5 | Physical plan execution: optimizer, cost models, runtime, DAG, incremental and streamed results. | 12,687 | 14,287 | finance-primitives 10, federated-query-and-reasoning 4, unified-data-plane 2 |
-| `medulla-retrieval` | L5 | Retrieval and expansion: knowledge assembly, LeanRAG, verdicts and stop rules. | 4,706 | 16,906 | federated-query-and-reasoning 122 |
+| `medulla-virtual-graph` | L4 | Attached sources read as virtual graphs: OBDA mappings, source selection and source authority checks. | 7,831 | 15,531 | unified-data-plane 66, source-authority 11 |
+| `medulla-graph-algos` | L4 | Graph algorithms and graph learning. | 15,853 | 16,353 | federated-query-and-reasoning 5 |
+| `medulla-mining` | L4 | Pattern and process mining over graph records. | 9,511 | 9,611 | repository-index-and-ingestion 1 |
+| `medulla-compute` | L4 | Compute expression language: parser, AST, data science operators and sketches. | 13,560 | 14,460 | source-changesets 4, decision-engine 2, ingest-worker 2, branch-merge 1 |
+| `medulla-finance` | L4 | Finance kernels, backtests, risk, attribution, banking and execution signals. | 10,995 | 14,495 | finance-primitives 35 |
+| `medulla-decision-policy` | L4 | Ladder stages 3-5: policy, hard constraints, knobs, admission, refusals, budgets and the bounded exact solve. | 2,428 | 16,828 | decision-engine 143, placement-and-worker-policy 1 |
+| `medulla-decision-rank` | L4 | Ladder stage 6: ranking the remaining legal options with fitted statistics (scores, champions, bandits, credit). | 8 | 6,408 | decision-engine 64 |
+| `medulla-uql` | L5 | UQL language: parser, binder and lowering to the executor. | 8,142 | 8,842 | federated-query-and-reasoning 7 |
+| `medulla-nlq` | L5 | Natural-language questions to UQL, with regressions. | 4,532 | 5,332 | federated-query-and-reasoning 8 |
+| `medulla-federation` | L5 | Federated planning across sources: federation optimizer, SSRF guard and remote engines. | 11,046 | 15,766 | connector-competency 19, federated-query-and-reasoning 15, unified-data-plane 14, cross-source-competency 7, durable-graph-kernel 2, orchestration-competency 1 |
+| `medulla-exec` | L5 | Physical plan execution: optimizer, cost models, runtime, DAG, incremental and streamed results. | 12,725 | 14,325 | finance-primitives 10, federated-query-and-reasoning 4, unified-data-plane 2 |
+| `medulla-retrieval` | L5 | Retrieval and expansion: knowledge assembly, LeanRAG, verdicts and stop rules. | 4,730 | 19,130 | federated-query-and-reasoning 144 |
 | `medulla-plan` | L5 | Cross-modal plan tests and the planner entry that composes UQL, federation, exec and retrieval. | 9,849 | 13,549 | federated-query-and-reasoning 34, unified-data-plane 3 |
-| `medulla-decision-plan` | L5 | Ladder stages 6-7 and task planning: AgentAssemble, bounded task graphs, delegation, harness and skill selection. | 5,032 | 10,332 | decision-engine 51, typed-packs-and-catalog 2 |
-| `medulla-packs` | L5 | Typed pack import, validation and roll-up to core classes. | 715 | 10,315 | typed-packs-and-catalog 95, federated-query-and-reasoning 1 |
-| `medulla-catalog` | L5 | The catalog over packs, sources and schemas: lookup, lineage and discovery. | 0 | 500 | typed-packs-and-catalog 4, unified-data-plane 1 |
-| `medulla-vocab` | L5 | Ontology modules and shapes for the data-platform, media, supply-chain and orchestration vocabularies. | 0 | 3,600 | orchestration-vocabulary 35, media-and-personal-vocabulary 24, supply-chain-vocabulary 1 |
-| `medulla-ingest` | L5 | Ingest worker loop, lanes and queues. | 0 | 5,000 | ingest-worker 50 |
-| `medulla-decision-records` | L6 | Decision records: receipts, ledger, the revision lifecycle (R805), provenance, replay and feedback. | 0 | 6,900 | decision-engine 69 |
-| `medulla-decision-eval` | L6 | Decision evaluation: served proof suites, quality and relevance scoring, drift and nightly evaluation. | 0 | 10,200 | decision-engine 102 |
-| `medulla-decision-memory` | L6 | Decision context and memory: session memory, retrieval for decisions, temporal and indexless recall. | 0 | 5,200 | decision-engine 52 |
-| `medulla-competency` | L6 | Connector competency questions answered through the served query path. | 0 | 1,860 | connector-competency 31 |
-| `medulla-competency-xsrc` | L6 | Cross-source and orchestration competency questions. | 0 | 2,940 | orchestration-competency 28, cross-source-competency 16, connector-competency 5 |
-| `medulla-repo-index` | L6 | Repository indexing, source changesets and branch merge as graph records. | 0 | 4,500 | repository-index-and-ingestion 32, source-changesets 9, branch-merge 4 |
-| `medulla-sdlc` | L6 | Graph-native development lifecycle: spec rows, gates, verdicts and releases as records. | 0 | 5,500 | development-lifecycle 55 |
-| `medulla-parity` | L6 | Engine compatibility features and their parity proofs against other engines' behaviour. | 0 | 2,500 | engine-parity 25 |
-| `medulla-placement` | L6 | Worker admission and placement policy. | 0 | 1,400 | placement-and-worker-policy 14 |
-| `medulla-kernel` | F0 | Persist, store authority, mutation apply and channels. | 8,766 | 14,466 | durable-graph-kernel 56, engine-identity-and-scope 1 |
-| `medulla-store` | F1 | redb store core, layout, sidecar and shards. | 22,318 | 22,718 | durable-graph-kernel 2, engine-identity-and-scope 1, ingest-worker 1 |
-| `medulla-work-store` | F2 | Durable work items and their capability records. | 13,853 | 14,653 | durable-graph-kernel 7, unified-data-plane 1 |
-| `medulla-resource-store` | F2 | Resource reservations, capacity leases and enrichment budgets. | 11,078 | 11,778 | durable-graph-kernel 7 |
-| `medulla-lane-store` | F2 | Development lane records in the store. | 10,319 | 10,319 |  |
-| `medulla-server-api` | F3 | Server API surface shared by handlers: api types, blob, kv, CDC and CEP. | 22,290 | 22,590 | federated-query-and-reasoning 1, engine-identity-and-scope 1, typed-packs-and-catalog 1 |
-| `medulla-server-auth` | F4 | Request authentication, access checks and the SQL catalog ACL. | 12,546 | 13,046 | decision-engine 2, durable-graph-kernel 1, finance-primitives 1, engine-identity-and-scope 1 |
-| `medulla-server-mutation` | F4 | Served mutation, mutation batches and transactions. | 16,520 | 17,020 | finance-primitives 2, engine-identity-and-scope 2, decision-engine 1 |
-| `medulla-server-blob` | F4 | Served blob and key-value storage. | 7,993 | 8,393 | durable-graph-kernel 2, source-changesets 1, typed-packs-and-catalog 1 |
-| `medulla-persistence` | F5 | Persistence backend: redb backend, durable stores, node info and cost accounting. | 17,856 | 18,456 | decision-engine 2, durable-graph-kernel 2, engine-parity 2 |
-| `medulla-persistence-records` | F6 | Persisted agent, decision, connector pack and write-back records. | 15,521 | 16,621 | typed-packs-and-catalog 6, decision-engine 5 |
-| `medulla-persistence-ops` | F6 | Backup, cold offload, online reshard, shard migration and store upgrade. | 10,066 | 10,266 | durable-graph-kernel 1, typed-packs-and-catalog 1 |
-| `medulla-raft` | F7 | Raft consensus: command log, network, store, multi-raft and placement. | 19,843 | 20,243 | durable-graph-kernel 3, typed-packs-and-catalog 1 |
-| `medulla-raft-xshard` | F8 | Cross-shard transactions and reads, elasticity and the raft test harnesses. | 17,453 | 17,553 | durable-graph-kernel 1 |
-| `medulla-wire-core` | F8 | Shared wire listener framework. | 7,519 | 8,419 | durable-graph-kernel 9 |
+| `medulla-decision-plan` | L5 | Ladder stages 6-7 and task planning: AgentAssemble, bounded task graphs, delegation, harness and skill selection. | 5,143 | 11,043 | decision-engine 57, typed-packs-and-catalog 2 |
+| `medulla-packs` | L5 | Typed pack import, validation and roll-up to core classes. | 726 | 15,026 | typed-packs-and-catalog 142, federated-query-and-reasoning 1 |
+| `medulla-catalog` | L5 | The catalog over packs, sources and schemas: lookup, lineage and discovery. | 8 | 908 | typed-packs-and-catalog 8, unified-data-plane 1 |
+| `medulla-vocab` | L5 | Ontology modules and shapes for the data-platform, media, supply-chain and orchestration vocabularies. | 8 | 3,908 | orchestration-vocabulary 36, media-and-personal-vocabulary 24, supply-chain-vocabulary 5 |
+| `medulla-ingest` | L5 | Ingest worker loop, lanes and queues. | 8 | 5,808 | ingest-worker 58 |
+| `medulla-decision-records` | L6 | Decision records: receipts, ledger, the revision lifecycle (R805), provenance, replay and feedback. | 8 | 9,308 | decision-engine 93 |
+| `medulla-decision-eval` | L6 | Decision evaluation: served proof suites, quality and relevance scoring, drift and nightly evaluation. | 8 | 10,308 | decision-engine 103 |
+| `medulla-decision-memory` | L6 | Decision context and memory: session memory, retrieval for decisions, temporal and indexless recall. | 8 | 5,208 | decision-engine 52 |
+| `medulla-competency` | L6 | Connector competency questions answered through the served query path. | 8 | 5,948 | connector-competency 99 |
+| `medulla-competency-xsrc` | L6 | Cross-source and orchestration competency questions. | 8 | 3,548 | orchestration-competency 30, cross-source-competency 24, connector-competency 5 |
+| `medulla-repo-index` | L6 | Repository indexing, source changesets and branch merge as graph records. | 8 | 5,708 | repository-index-and-ingestion 44, source-changesets 9, branch-merge 4 |
+| `medulla-sdlc` | L6 | Graph-native development lifecycle: spec rows, gates, verdicts and releases as records. | 8 | 5,508 | development-lifecycle 55 |
+| `medulla-parity` | L6 | Engine compatibility features and their parity proofs against other engines' behaviour. | 8 | 3,408 | engine-parity 34 |
+| `medulla-placement` | L6 | Worker admission and placement policy. | 8 | 2,308 | placement-and-worker-policy 23 |
+| `medulla-kernel` | F0 | Persist, store authority, mutation apply and channels. | 8,815 | 24,915 | durable-graph-kernel 160, engine-identity-and-scope 1 |
+| `medulla-store` | F1 | redb store core, layout, sidecar and shards. | 22,273 | 22,673 | durable-graph-kernel 2, engine-identity-and-scope 1, ingest-worker 1 |
+| `medulla-work-store` | F2 | Durable work items and their capability records. | 13,962 | 14,762 | durable-graph-kernel 7, unified-data-plane 1 |
+| `medulla-resource-store` | F2 | Resource reservations, capacity leases and enrichment budgets. | 11,113 | 12,313 | durable-graph-kernel 12 |
+| `medulla-lane-store` | F2 | Development lane records in the store. | 10,340 | 10,340 |  |
+| `medulla-server-api` | F3 | Server API surface shared by handlers: api types, blob, kv, CDC and CEP. | 22,376 | 22,776 | engine-identity-and-scope 1, federated-query-and-reasoning 1, typed-packs-and-catalog 1, unified-data-plane 1 |
+| `medulla-server-auth` | F4 | Request authentication, access checks and the SQL catalog ACL. | 12,565 | 13,065 | decision-engine 2, durable-graph-kernel 1, engine-identity-and-scope 1, finance-primitives 1 |
+| `medulla-server-mutation` | F4 | Served mutation, mutation batches and transactions. | 16,550 | 17,050 | engine-identity-and-scope 2, finance-primitives 2, decision-engine 1 |
+| `medulla-server-blob` | F4 | Served blob and key-value storage. | 8,020 | 8,420 | durable-graph-kernel 2, source-changesets 1, typed-packs-and-catalog 1 |
+| `medulla-persistence` | F5 | Persistence backend: redb backend, durable stores, node info and cost accounting. | 17,889 | 18,489 | decision-engine 2, durable-graph-kernel 2, engine-parity 2 |
+| `medulla-persistence-records` | F6 | Persisted agent, decision, connector pack and write-back records. | 15,767 | 16,867 | typed-packs-and-catalog 6, decision-engine 5 |
+| `medulla-persistence-ops` | F6 | Backup, cold offload, online reshard, shard migration and store upgrade. | 10,259 | 10,459 | durable-graph-kernel 1, typed-packs-and-catalog 1 |
+| `medulla-raft` | F7 | Raft consensus: command log, network, store, multi-raft and placement. | 19,132 | 19,532 | durable-graph-kernel 3, typed-packs-and-catalog 1 |
+| `medulla-raft-xshard` | F8 | Cross-shard transactions and reads, elasticity and the raft test harnesses. | 12,589 | 12,689 | durable-graph-kernel 1 |
+| `medulla-wire-core` | F8 | Shared wire listener framework. | 7,420 | 8,320 | durable-graph-kernel 9 |
 | `medulla-wire` | F9 | SQL and graph wire listeners: pgwire, MySQL, MSSQL, SQLite and Bolt. | 11,072 | 11,572 | engine-parity 3, durable-graph-kernel 1, unified-data-plane 1 |
-| `medulla-wire-msg` | F9 | Messaging and object listeners: AMQP, MQTT, STOMP, Redis, DDS, S3 and the KV cache endpoint. | 13,251 | 13,451 | durable-graph-kernel 2 |
-| `medulla-h-query` | F9 | UnifiedQuery and knowledge stream handlers. | 15,188 | 22,628 | connector-competency 42, federated-query-and-reasoning 38, engine-parity 4, unified-data-plane 3 |
-| `medulla-h-sparql` | F9 | SPARQL/RDF and federation handlers. | 5,514 | 6,134 | federated-query-and-reasoning 5, connector-competency 2 |
-| `medulla-h-retrieve` | F9 | Discover, semantic index and reasoning projection handlers. | 9,087 | 9,447 | federated-query-and-reasoning 2, media-and-personal-vocabulary 1, unified-data-plane 1 |
-| `medulla-h-mining` | F9 | Mining handlers. | 8,209 | 8,489 | supply-chain-vocabulary 2, orchestration-competency 1, repository-index-and-ingestion 1 |
-| `medulla-h-admin` | F9 | Administrative handlers. | 15,577 | 17,537 | typed-packs-and-catalog 17, connector-competency 1, durable-graph-kernel 1, federated-query-and-reasoning 1 |
-| `medulla-h-packs` | F9 | ConnectorPack.Import, schema sources and pack projection handlers. | 4,258 | 6,438 | typed-packs-and-catalog 15, connector-competency 2, decision-engine 2, federated-query-and-reasoning 1 |
-| `medulla-h-decide` | F9 | Decide, AgentAssemble, DecisionCommit and DecisionLog handlers (thin: logic lives in the decision family). | 15,090 | 18,610 | decision-engine 21, orchestration-vocabulary 6, placement-and-worker-policy 4, typed-packs-and-catalog 3 |
-| `medulla-h-compute` | F9 | Compute, finance, quantum and visualisation handlers. | 4,849 | 6,649 | finance-primitives 16, federated-query-and-reasoning 2 |
-| `medulla-h-ingest` | F9 | SourceIngest, modality and repository enrichment handlers. | 8,606 | 9,686 | ingest-worker 4, media-and-personal-vocabulary 3, decision-engine 2, unified-data-plane 2 |
-| `medulla-h-graph` | F9 | Graph operation and pipeline handlers. | 10,006 | 11,686 | orchestration-vocabulary 8, federated-query-and-reasoning 6, durable-graph-kernel 2, decision-engine 1 |
-| `medulla-h-jobs` | F9 | Job, delegation and work item handlers. | 9,619 | 11,219 | durable-graph-kernel 4, placement-and-worker-policy 4, typed-packs-and-catalog 3, unified-data-plane 3 |
-| `medulla-h-txn` | F9 | Transaction, SQLite file, timeseries and distributed compute handlers. | 10,630 | 10,830 | finance-primitives 2 |
-| `medulla-server-graph` | F10 | Graph pipeline dispatch, SPARQL update dispatch and change envelopes. | 10,724 | 14,564 | ingest-worker 12, federated-query-and-reasoning 5, repository-index-and-ingestion 4, unified-data-plane 4 |
-| `medulla-server-consensus` | F10 | Consensus dispatch. | 4,634 | 4,834 | ingest-worker 1, typed-packs-and-catalog 1 |
-| `medulla-server-obs` | F10 | Observability, traces, telemetry and QoS. | 8,749 | 8,749 |  |
-| `medulla-server-lake` | F10 | Lake serving, GraphQL subscriptions and policy export. | 7,663 | 8,363 | federated-query-and-reasoning 5, unified-data-plane 2 |
-| `medulla-server-identity` | F10 | Identity store dispatch, request boundary and policy evolution dispatch. | 6,090 | 6,390 | decision-engine 1, durable-graph-kernel 1, engine-identity-and-scope 1 |
-| `medulla-server-router` | F10 | Method router dispatch table. | 4,655 | 6,355 | decision-engine 5, engine-identity-and-scope 4, ingest-worker 4, durable-graph-kernel 1 |
-| `medulla-server` | F11 | Server assembly: router, startup, transport and the remaining dispatch. | 18,695 | 19,355 | decision-engine 2, durable-graph-kernel 2, orchestration-vocabulary 1, repository-index-and-ingestion 1 |
-| `medulla-engine` | F12 | The one server executable and the embedded engine. | 7,820 | 10,620 | public-engine-contract-and-release 28 |
+| `medulla-wire-msg` | F9 | Messaging and object listeners: AMQP, MQTT, STOMP, Redis, DDS, S3 and the KV cache endpoint. | 13,259 | 13,459 | durable-graph-kernel 2 |
+| `medulla-h-query` | F9 | UnifiedQuery and knowledge stream handlers. | 15,256 | 22,696 | connector-competency 42, federated-query-and-reasoning 38, engine-parity 4, unified-data-plane 3, engine-identity-and-scope 2, cross-source-competency 1, finance-primitives 1, media-and-personal-vocabulary 1 |
+| `medulla-h-sparql` | F9 | SPARQL/RDF and federation handlers. | 5,543 | 6,163 | federated-query-and-reasoning 5, connector-competency 2 |
+| `medulla-h-retrieve` | F9 | Discover, semantic index and reasoning projection handlers. | 9,155 | 9,515 | federated-query-and-reasoning 2, media-and-personal-vocabulary 1, unified-data-plane 1 |
+| `medulla-h-mining` | F9 | Mining handlers. | 8,234 | 8,514 | supply-chain-vocabulary 2, orchestration-competency 1, repository-index-and-ingestion 1 |
+| `medulla-h-admin` | F9 | Administrative handlers. | 15,012 | 16,972 | typed-packs-and-catalog 17, connector-competency 1, durable-graph-kernel 1, federated-query-and-reasoning 1 |
+| `medulla-h-packs` | F9 | ConnectorPack.Import, schema sources and pack projection handlers. | 4,308 | 6,488 | typed-packs-and-catalog 15, connector-competency 2, decision-engine 2, federated-query-and-reasoning 1, finance-primitives 1, orchestration-vocabulary 1, source-authority 1 |
+| `medulla-h-decide` | F9 | Decide, AgentAssemble, DecisionCommit and DecisionLog handlers (thin: logic lives in the decision family). | 15,371 | 18,891 | decision-engine 21, orchestration-vocabulary 6, placement-and-worker-policy 4, typed-packs-and-catalog 3, connector-competency 1, development-lifecycle 1, engine-identity-and-scope 1, finance-primitives 1 |
+| `medulla-h-compute` | F9 | Compute, finance, quantum and visualisation handlers. | 4,863 | 6,663 | finance-primitives 16, federated-query-and-reasoning 2 |
+| `medulla-h-ingest` | F9 | SourceIngest, modality and repository enrichment handlers. | 8,645 | 9,725 | ingest-worker 4, media-and-personal-vocabulary 3, decision-engine 2, unified-data-plane 2, repository-index-and-ingestion 1 |
+| `medulla-h-graph` | F9 | Graph operation and pipeline handlers. | 10,076 | 11,756 | orchestration-vocabulary 8, federated-query-and-reasoning 6, durable-graph-kernel 2, decision-engine 1, development-lifecycle 1, source-authority 1, typed-packs-and-catalog 1 |
+| `medulla-h-jobs` | F9 | Job, delegation and work item handlers. | 9,677 | 11,277 | durable-graph-kernel 4, placement-and-worker-policy 4, typed-packs-and-catalog 3, unified-data-plane 3, repository-index-and-ingestion 2 |
+| `medulla-h-txn` | F9 | Transaction, SQLite file, timeseries and distributed compute handlers. | 10,644 | 10,844 | finance-primitives 2 |
+| `medulla-server-graph` | F10 | Graph pipeline dispatch, SPARQL update dispatch and change envelopes. | 10,780 | 14,620 | ingest-worker 12, federated-query-and-reasoning 5, repository-index-and-ingestion 4, unified-data-plane 4, orchestration-vocabulary 3, branch-merge 2, decision-engine 2, durable-graph-kernel 2, typed-packs-and-catalog 2, engine-identity-and-scope 1, finance-primitives 1, media-and-personal-vocabulary 1, source-changesets 1 |
+| `medulla-server-consensus` | F10 | Consensus dispatch. | 4,664 | 4,864 | ingest-worker 1, typed-packs-and-catalog 1 |
+| `medulla-server-obs` | F10 | Observability, traces, telemetry and QoS. | 8,786 | 8,786 |  |
+| `medulla-server-lake` | F10 | Lake serving, GraphQL subscriptions and policy export. | 7,696 | 8,396 | federated-query-and-reasoning 5, unified-data-plane 2 |
+| `medulla-server-identity` | F10 | Identity store dispatch, request boundary and policy evolution dispatch. | 6,120 | 6,420 | decision-engine 1, durable-graph-kernel 1, engine-identity-and-scope 1 |
+| `medulla-server-router` | F10 | Method router dispatch table. | 4,673 | 6,373 | decision-engine 5, engine-identity-and-scope 4, ingest-worker 4, development-lifecycle 1, durable-graph-kernel 1, engine-parity 1, federated-query-and-reasoning 1 |
+| `medulla-server` | F11 | Server assembly: router, startup, transport and the remaining dispatch. | 25,434 | 26,094 | decision-engine 2, durable-graph-kernel 2, orchestration-vocabulary 1, repository-index-and-ingestion 1, unified-data-plane 1 |
+| `medulla-engine` | F12 | The one server executable and the embedded engine. | 7,771 | 10,971 | public-engine-contract-and-release 32 |
 
 Unchanged leaf crates receiving rows: `medulla-ann` (1), `medulla-capabilities` (27), `medulla-document` (8), `medulla-durable` (3), `medulla-enrich` (6), `medulla-epistemic` (5), `medulla-jobs` (3), `medulla-kvcache` (2), `medulla-lake` (11), `medulla-modality` (2), `medulla-program` (1), `medulla-resource` (1), `medulla-shacl` (8), `medulla-sqlite-format` (1), `medulla-statechart` (2), `medulla-tsdb` (7), `medulla-viz-core` (1)

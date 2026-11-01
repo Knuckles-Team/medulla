@@ -10,8 +10,8 @@
 
 use std::collections::{HashMap, HashSet};
 
+use medulla_catalog_types::distribution::Distribution;
 use medulla_compute::probabilistic::{bayesian_update, Evidence};
-use medulla_types::Distribution;
 
 use crate::adapter::BeliefGraph;
 use crate::model::{

@@ -502,7 +502,7 @@ fn finish_sparql_parent_saga(
     saga: medulla_server_api::api::admin::saga::AdminSaga,
     plan: &SparqlRecoveryPlan,
 ) -> Result<ResultPayload, String> {
-    let report = medulla_types::result_contract::transactions::SparqlUpdateReport {
+    let report = medulla_protocol_types::result_contract::transactions::SparqlUpdateReport {
         operations: plan.counts.operations as u64,
         inserted: plan.counts.inserted as u64,
         deleted: plan.counts.deleted as u64,
@@ -513,7 +513,7 @@ fn finish_sparql_parent_saga(
             .filter(|graph| !graph.existed_before)
             .count() as u64,
     };
-    let result = ResultPayload::of::<medulla_types::result_contract::graph::ApplyMutation>(report)?;
+    let result = ResultPayload::of::<medulla_protocol_types::result_contract::graph::ApplyMutation>(report)?;
     medulla_server_api::api::admin::saga::finish_admin_saga(redb, saga.batch, saga.created_at_ms, result)
 }
 
@@ -801,7 +801,9 @@ pub(super) async fn coordinated_sparql_http_update(
 #[cfg(all(test, feature = "redb", feature = "security", feature = "sparql-http"))]
 mod coordinator_restart_tests {
     use super::*;
-    use crate::mutation_batch::{DurabilityDomain, MutationBatchStatus, MutationSurface};
+    use crate::mutation_batch::MutationBatchStatus;
+    use medulla_mutation_types::mutation_scope::DurabilityDomain;
+    use medulla_mutation_types::mutation_scope::MutationSurface;
     use medulla_transaction::{read_ledger, read_private_payload};
 
     /// The coordinator owner file is ledger-only: receipts and sealed payloads.
@@ -848,7 +850,7 @@ mod coordinator_restart_tests {
             &self,
             _physical: &medulla_storage::PhysicalStoreIdentity,
             layout: medulla_storage::OwnerLayout,
-            identity: &medulla_types::MutationScopeIdentity,
+            identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
             principal: &str,
             proof: &[u8],
         ) -> Result<(), String> {
@@ -868,7 +870,7 @@ mod coordinator_restart_tests {
     /// it issues once, and the single authenticated, ledger-bootstrapped scope.
     fn open_coordinator_store(
         path: &std::path::Path,
-        identity: &medulla_types::MutationScopeIdentity,
+        identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
         cipher: &medulla_kernel::crypto::ValueCipher,
     ) -> (
         medulla_storage::StorageKernel,

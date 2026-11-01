@@ -5,7 +5,6 @@ use crate::protocol::{GraphType, Method, ResultPayload};
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_batch::CommittedVersion;
 
 use medulla_server_api::mutation_batch::{
     commit_lifecycle, lifecycle_batch_id, lifecycle_identity_matches, lifecycle_was_committed,
@@ -521,7 +520,7 @@ async fn lifecycle_replay_compares_identity_not_recompiled_bytes() {
 
     // Same identity, different bytes: an older build's catalog digest, result
     // encoding and timestamps.
-    if let medulla_types::mutation_batch::MutationEnvelope::Operation(operation) =
+    if let medulla_protocol_types::mutation_batch::MutationEnvelope::Operation(operation) =
         &mut stored.batch.envelope
     {
         operation.authority.catalog_digest =

@@ -104,7 +104,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::{Mutex, MutexGuard, RwLock};
 
 use super::GroupId;
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 use medulla_server_api::state::ServerState;
 
 mod move_journal;
@@ -630,12 +630,13 @@ impl PlacementCatalog {
         let Some(blob) = core.and_then(|core| core.get_node_properties(&node_id)) else {
             return Ok(None);
         };
-        let journal =
-            medulla_types::msgpack::decode_bounded::<super::membership_shrink::MembershipShrinkJournal>(
-                &blob,
-                medulla_types::msgpack::MsgpackLimits::new(256 * 1024, 4_096, 32),
-            )
-            .map_err(|_| "membership shrink journal is corrupt".to_string())?;
+        let journal = medulla_types::msgpack::decode_bounded::<
+            super::membership_shrink::MembershipShrinkJournal,
+        >(
+            &blob,
+            medulla_types::msgpack::MsgpackLimits::new(256 * 1024, 4_096, 32),
+        )
+        .map_err(|_| "membership shrink journal is corrupt".to_string())?;
         if !journal.validate() || journal.node_id() != node_id {
             return Err("membership shrink journal failed its integrity fence".to_string());
         }
@@ -1161,7 +1162,8 @@ mod tests {
         else {
             panic!("placement fence must use a property CAS");
         };
-        let conditions = medulla_types::msgpack::decode_property_object(&conditions_msgpack).unwrap();
+        let conditions =
+            medulla_types::msgpack::decode_property_object(&conditions_msgpack).unwrap();
         assert_eq!(
             conditions.get("key"),
             Some(&serde_json::to_value(&expected.key).unwrap())

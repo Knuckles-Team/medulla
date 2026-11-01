@@ -244,9 +244,9 @@ fn native_metadata_cas_cannot_mutate_a_conversation_head() {
         .as_object()
         .unwrap()
         .clone();
-    let cas = medulla_types::epistemic_operations_ext::CasWorkItemMetadataRequest {
+    let cas = medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataRequest {
         schema_version:
-            medulla_types::epistemic_operations_ext::CasWorkItemMetadataRequestSchemaVersion::V1,
+            medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataRequestSchemaVersion::V1,
         now_ms: 1000,
         tenant_ref: "tenant".into(),
         work_item_id: head_id("tenant", "context"),

@@ -268,7 +268,7 @@ pub struct RaftRequest {
     /// follower has never seen it). For `__commons__` both are the same.
     pub graph_name: String,
     /// The graph's type, used only when the follower must create the graph.
-    pub graph_type: medulla_types::protocol::GraphType,
+    pub graph_type: medulla_protocol_types::protocol::GraphType,
     /// The typed deterministic state-machine command.
     pub command: ReplicatedMutation,
     /// Leader-selected commit time for operations whose atomic durable record
@@ -376,13 +376,13 @@ impl RaftRequest {
 #[cfg(test)]
 mod raft_authority_contract_tests {
     use super::*;
-    use medulla_types::protocol::Method;
+    use medulla_protocol_types::protocol::Method;
 
     #[derive(Serialize)]
     struct RequestWithoutAuthority {
         graph_fname: String,
         graph_name: String,
-        graph_type: medulla_types::protocol::GraphType,
+        graph_type: medulla_protocol_types::protocol::GraphType,
         command: ReplicatedMutation,
         committed_at_ms: u64,
     }
@@ -391,7 +391,7 @@ mod raft_authority_contract_tests {
     struct RequestWithoutCommitTime {
         graph_fname: String,
         graph_name: String,
-        graph_type: medulla_types::protocol::GraphType,
+        graph_type: medulla_protocol_types::protocol::GraphType,
         command: ReplicatedMutation,
         mutation: RaftMutationContext,
     }
@@ -400,7 +400,7 @@ mod raft_authority_contract_tests {
     struct RequestWithPublicMethodField {
         graph_fname: String,
         graph_name: String,
-        graph_type: medulla_types::protocol::GraphType,
+        graph_type: medulla_protocol_types::protocol::GraphType,
         method: Method,
         committed_at_ms: u64,
         mutation: RaftMutationContext,
@@ -430,7 +430,7 @@ mod raft_authority_contract_tests {
         let current = RaftRequest {
             graph_fname: "graph".to_string(),
             graph_name: "graph".to_string(),
-            graph_type: medulla_types::protocol::GraphType::Global,
+            graph_type: medulla_protocol_types::protocol::GraphType::Global,
             command: ReplicatedMutation::graph(method(), "cluster-test-key").unwrap(),
             committed_at_ms: 1,
             mutation: mutation.clone(),
@@ -453,7 +453,7 @@ mod raft_authority_contract_tests {
         let missing_authority = RequestWithoutAuthority {
             graph_fname: "graph".to_string(),
             graph_name: "graph".to_string(),
-            graph_type: medulla_types::protocol::GraphType::Global,
+            graph_type: medulla_protocol_types::protocol::GraphType::Global,
             command: ReplicatedMutation::graph(method(), "cluster-test-key").unwrap(),
             committed_at_ms: 1,
         };
@@ -463,7 +463,7 @@ mod raft_authority_contract_tests {
         let missing_commit_time = RequestWithoutCommitTime {
             graph_fname: "graph".to_string(),
             graph_name: "graph".to_string(),
-            graph_type: medulla_types::protocol::GraphType::Global,
+            graph_type: medulla_protocol_types::protocol::GraphType::Global,
             command: ReplicatedMutation::graph(method(), "cluster-test-key").unwrap(),
             mutation: mutation.clone(),
         };
@@ -473,7 +473,7 @@ mod raft_authority_contract_tests {
         let obsolete_shape = RequestWithPublicMethodField {
             graph_fname: "graph".to_string(),
             graph_name: "graph".to_string(),
-            graph_type: medulla_types::protocol::GraphType::Global,
+            graph_type: medulla_protocol_types::protocol::GraphType::Global,
             method: method(),
             committed_at_ms: 1,
             mutation,
@@ -486,7 +486,7 @@ mod raft_authority_contract_tests {
         RaftRequest {
             graph_fname,
             graph_name: graph_name.to_string(),
-            graph_type: medulla_types::protocol::GraphType::Global,
+            graph_type: medulla_protocol_types::protocol::GraphType::Global,
             command: ReplicatedMutation::graph(method(), "cluster-test-key").unwrap(),
             committed_at_ms: 1,
             mutation: RaftMutationContext::internal(
@@ -517,10 +517,12 @@ mod raft_authority_contract_tests {
                 "{logical_name}"
             );
 
-            let mismatched_name =
-                request_for_graph(&graph_name, medulla_kernel::persist::sanitize("different-graph"))
-                    .validate()
-                    .expect_err("a different sanitized graph must not be accepted");
+            let mismatched_name = request_for_graph(
+                &graph_name,
+                medulla_kernel::persist::sanitize("different-graph"),
+            )
+            .validate()
+            .expect_err("a different sanitized graph must not be accepted");
             assert!(
                 mismatched_name.contains("sanitized graph name"),
                 "{mismatched_name}"
@@ -549,12 +551,12 @@ pub struct RaftResponse {
     pub applied: bool,
     /// Present only for an engine-native ChangeEnvelope entry.
     #[serde(deserialize_with = "deserialize_required_option")]
-    pub change_envelope_commit: Option<medulla_types::change_envelope::ChangeEnvelopeCommit>,
+    pub change_envelope_commit: Option<medulla_protocol_types::change_envelope::ChangeEnvelopeCommit>,
     /// Exact result produced by a bounded engine-native state-machine command or
     /// an ordinary atomic graph method whose apply result is part of its
     /// consensus contract (for example, a CAS or create-if-absent).
     #[serde(deserialize_with = "deserialize_required_option")]
-    pub native_result: Option<medulla_types::protocol::ResultPayload>,
+    pub native_result: Option<medulla_protocol_types::protocol::ResultPayload>,
     /// Exact durable MutationBatch receipt for a command whose caller needs
     /// the committed identity and replay marker in addition to its terminal
     /// result.  The field is optional so older Raft responses remain readable;
@@ -564,7 +566,7 @@ pub struct RaftResponse {
         deserialize_with = "deserialize_required_option",
         skip_serializing_if = "Option::is_none"
     )]
-    pub native_commit: Option<medulla_types::mutation_batch::MutationBatchCommit>,
+    pub native_commit: Option<medulla_protocol_types::mutation_batch::MutationBatchCommit>,
     /// Deterministic domain rejection produced while applying a committed command.
     /// Transport/internal errors still fail the state machine rather than entering
     /// this field.
@@ -618,7 +620,7 @@ impl RaftResponse {
 
     fn validate_native_commit(
         &self,
-        commit: &medulla_types::mutation_batch::MutationBatchCommit,
+        commit: &medulla_protocol_types::mutation_batch::MutationBatchCommit,
     ) -> Result<(), String> {
         if !self.applied {
             return Err("Raft native commit receipt requires applied=true".to_string());
@@ -634,7 +636,7 @@ impl RaftResponse {
             .ok_or_else(|| {
                 "Raft native commit receipt is missing its terminal result".to_string()
             })?;
-        rmp_serde::from_slice::<medulla_types::protocol::ResultPayload>(durable_result)
+        rmp_serde::from_slice::<medulla_protocol_types::protocol::ResultPayload>(durable_result)
             .map_err(|_| "Raft native commit receipt has an invalid terminal result".to_string())?;
         if let Some(result) = &self.native_result {
             let encoded = rmp_serde::to_vec_named(result)
@@ -653,7 +655,7 @@ impl RaftResponse {
 mod raft_response_receipt_tests {
     use super::*;
 
-    fn cas_receipt(replayed: bool) -> medulla_types::mutation_batch::MutationBatchCommit {
+    fn cas_receipt(replayed: bool) -> medulla_protocol_types::mutation_batch::MutationBatchCommit {
         let conditions = rmp_serde::to_vec_named(&serde_json::json!({"epoch": 0})).unwrap();
         let updates = rmp_serde::to_vec_named(&serde_json::json!({"epoch": 1})).unwrap();
         let batch = medulla_server_api::mutation_batch::compile_methods(
@@ -669,10 +671,10 @@ mod raft_response_receipt_tests {
                 expected_graph_version: Some(0),
                 fencing_token: None,
                 created_at_ms: 11,
-                default_surface: medulla_types::mutation_batch::MutationSurface::Graph,
+                default_surface: medulla_mutation_types::mutation_scope::MutationSurface::Graph,
                 authoritative_state: None,
             },
-            vec![medulla_types::protocol::Method::CompareAndSetNodeFields {
+            vec![medulla_protocol_types::protocol::Method::CompareAndSetNodeFields {
                 node_id: "reservation".to_string(),
                 conditions_msgpack: conditions,
                 updates_msgpack: updates,
@@ -680,20 +682,20 @@ mod raft_response_receipt_tests {
         )
         .unwrap();
         let identity = batch.identity.clone();
-        let record = medulla_types::mutation_batch::MutationBatchRecord {
+        let record = medulla_protocol_types::mutation_batch::MutationBatchRecord {
             batch,
             identity: identity.clone(),
-            status: medulla_types::mutation_batch::MutationBatchStatus::Committed,
-            committed_version: medulla_types::mutation_batch::CommittedVersion::Graph {
+            status: medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed,
+            committed_version: medulla_mutation_types::mutation_scope::CommittedVersion::Graph {
                 source: 0,
                 target: 1,
             },
             result_msgpack: Some(
-                rmp_serde::to_vec_named(&medulla_types::protocol::ResultPayload::Bool(false)).unwrap(),
+                rmp_serde::to_vec_named(&medulla_protocol_types::protocol::ResultPayload::Bool(false)).unwrap(),
             ),
             committed_at_ms: 11,
         };
-        let commit = medulla_types::mutation_batch::MutationBatchCommit {
+        let commit = medulla_protocol_types::mutation_batch::MutationBatchCommit {
             record,
             identity,
             replayed,
@@ -707,7 +709,7 @@ mod raft_response_receipt_tests {
         for replayed in [false, true] {
             let response = RaftResponse {
                 applied: true,
-                native_result: Some(medulla_types::protocol::ResultPayload::Bool(false)),
+                native_result: Some(medulla_protocol_types::protocol::ResultPayload::Bool(false)),
                 native_commit: Some(cas_receipt(replayed)),
                 ..Default::default()
             };
@@ -716,7 +718,7 @@ mod raft_response_receipt_tests {
             let decoded: RaftResponse = rmp_serde::from_slice(&encoded).unwrap();
             assert!(matches!(
                 decoded.native_result,
-                Some(medulla_types::protocol::ResultPayload::Bool(false))
+                Some(medulla_protocol_types::protocol::ResultPayload::Bool(false))
             ));
             assert_eq!(
                 decoded.native_commit.as_ref().map(|commit| commit.replayed),
@@ -740,22 +742,22 @@ mod raft_response_receipt_tests {
         assert!(error.contains("applied=true"), "{error}");
 
         response.applied = true;
-        response.native_result = Some(medulla_types::protocol::ResultPayload::Bool(true));
+        response.native_result = Some(medulla_protocol_types::protocol::ResultPayload::Bool(true));
         let error = response
             .validate()
             .expect_err("the wire result cannot disagree with the durable false receipt");
         assert!(error.contains("does not match"), "{error}");
 
-        response.native_result = Some(medulla_types::protocol::ResultPayload::Bool(false));
-        response.change_envelope_commit = Some(medulla_types::change_envelope::ChangeEnvelopeCommit {
+        response.native_result = Some(medulla_protocol_types::protocol::ResultPayload::Bool(false));
+        response.change_envelope_commit = Some(medulla_protocol_types::change_envelope::ChangeEnvelopeCommit {
             envelope_id: "envelope".to_string(),
             batch_id: "batch".to_string(),
-            content_version: medulla_types::change_envelope::ContentVersion {
+            content_version: medulla_protocol_types::change_envelope::ContentVersion {
                 object_id: "object".to_string(),
                 digest_algorithm: "sha256".to_string(),
                 digest: "a".repeat(64),
                 previous_digest: None,
-                source_version: medulla_types::change_envelope::ContentVersionPosition::Sequence(1),
+                source_version: medulla_protocol_types::change_envelope::ContentVersionPosition::Sequence(1),
             },
             cursor: None,
             outbox_count: 0,
@@ -790,8 +792,8 @@ mod raft_response_receipt_tests {
         struct LegacyRaftResponse {
             schema_version: u16,
             applied: bool,
-            change_envelope_commit: Option<medulla_types::change_envelope::ChangeEnvelopeCommit>,
-            native_result: Option<medulla_types::protocol::ResultPayload>,
+            change_envelope_commit: Option<medulla_protocol_types::change_envelope::ChangeEnvelopeCommit>,
+            native_result: Option<medulla_protocol_types::protocol::ResultPayload>,
             native_error: Option<String>,
             projection_pending: bool,
         }
@@ -800,7 +802,7 @@ mod raft_response_receipt_tests {
             schema_version: RAFT_RESPONSE_SCHEMA_VERSION,
             applied: true,
             change_envelope_commit: None,
-            native_result: Some(medulla_types::protocol::ResultPayload::Bool(true)),
+            native_result: Some(medulla_protocol_types::protocol::ResultPayload::Bool(true)),
             native_error: None,
             projection_pending: false,
         })
@@ -809,7 +811,7 @@ mod raft_response_receipt_tests {
         assert!(decoded.native_commit.is_none());
         assert!(matches!(
             decoded.native_result,
-            Some(medulla_types::protocol::ResultPayload::Bool(true))
+            Some(medulla_protocol_types::protocol::ResultPayload::Bool(true))
         ));
     }
 }

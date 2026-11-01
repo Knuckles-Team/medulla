@@ -24,7 +24,7 @@
 
 use super::{check_embedding_dimension, EmbeddingDimensionError, SemanticQueryError};
 use crate::compute::semantic_ann::{AnnIndex, ANN_BUILD_THRESHOLD};
-use medulla_types::{EmbeddingSpaceRef, StampedVector};
+use medulla_index_types::{embedding::EmbeddingSpaceRef, embedding::StampedVector};
 use parking_lot::RwLock;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -34,8 +34,9 @@ use std::sync::atomic::{AtomicU8, Ordering};
 /// Raw/native exact vectors may use the generic 16k coordinate ceiling.  The
 /// persisted IVF-PQ artifact below has a stricter 4k ceiling; wider rows stay
 /// on exact search and never cross the maintained-index boundary.
-const MAX_GENERIC_DIMENSION: usize = medulla_types::MAX_EMBEDDING_DIMENSIONS;
-const MAX_MAINTAINED_DIMENSION: usize = medulla_types::MAX_MAINTAINED_ANN_DIMENSIONS;
+const MAX_GENERIC_DIMENSION: usize = medulla_index_types::embedding::MAX_EMBEDDING_DIMENSIONS;
+const MAX_MAINTAINED_DIMENSION: usize =
+    medulla_index_types::embedding::MAX_MAINTAINED_ANN_DIMENSIONS;
 const INDEX_MANIFEST_MAGIC: &[u8] = b"EGSEMSTORE\x01\0";
 const MAX_INDEX_MANIFEST_BYTES: usize = 64 * 1024 * 1024;
 const MAX_INDEX_MEMBERS: usize = 5_000_000;

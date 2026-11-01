@@ -6,11 +6,17 @@
 //! an `UnknownFact` abstention naming the candidate and field. Unknown is never
 //! read as zero.
 
-use medulla_types::agent_component::FactQuality;
-use medulla_types::agent_ontology::satisfies;
-use medulla_types::decision::statistical::features::{FeatureKind, FeatureSchemaBody, MissingValue};
-use medulla_types::decision::statistical::StatisticalErrorCode;
-use medulla_types::decision::statistical::{TypedParam, TypedValue};
+use medulla_agent_types::agent_component::FactQuality;
+use medulla_agent_types::agent_ontology::satisfies;
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_types::{
+    decision::statistical::features::FeatureKind,
+    decision::statistical::features::FeatureSchemaBody,
+    decision::statistical::features::MissingValue,
+};
+use medulla_decision_types::{
+    decision::statistical::TypedParam, decision::statistical::TypedValue,
+};
 
 use super::bm25;
 use super::candidate::CandidateView;

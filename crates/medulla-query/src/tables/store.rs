@@ -44,12 +44,15 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::{Arc, RwLock};
 
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
+use medulla_mutation_types::mutation_scope::MutationScope;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::mutation_batch::MutationBatchCommit;
+use medulla_protocol_types::mutation_batch::MutationBatchRecord;
 use medulla_storage::ScopeGrantVerifier;
 use medulla_transaction::Begin;
-use medulla_types::mutation_batch::{
-    DurabilityDomain, MutationBatch, MutationBatchCommit, MutationBatchRecord,
-    MutationOutboxRecord, MutationScope, MutationScopeIdentity,
-};
 use redb::{ReadableTable, TableDefinition};
 use serde_json::Value;
 
@@ -324,11 +327,11 @@ pub enum TxnOp {
     Update {
         table: String,
         set: serde_json::Map<String, Value>,
-        selector: medulla_types::RowPredicate,
+        selector: medulla_result_types::row_predicate::RowPredicate,
     },
     Delete {
         table: String,
-        selector: medulla_types::RowPredicate,
+        selector: medulla_result_types::row_predicate::RowPredicate,
     },
     CreateView {
         name: String,
@@ -660,7 +663,7 @@ impl TableStore {
         // free of the path- and address-shaped text `medulla-types` refuses to
         // persist. Checked here so the failure names the argument rather than
         // surfacing from inside the storage kernel.
-        medulla_types::mutation_batch::ScopeTenantId::new(&tenant_scope)
+        medulla_mutation_types::mutation_scope::ScopeTenantId::new(&tenant_scope)
             .map_err(|error| format!("SQL table-store tenant scope is invalid: {error}"))?;
         let authority =
             SqlAuthority::open(path.as_ref(), &tenant_scope, verifier, principal, proof)?;
@@ -867,7 +870,7 @@ impl TableStore {
         &self,
         table: &str,
         after_row_id: Option<u64>,
-        visibility: Option<&medulla_types::RowPredicate>,
+        visibility: Option<&medulla_result_types::row_predicate::RowPredicate>,
     ) -> Result<TableRowSnapshot, String> {
         let rtx = self.authority.read()?;
         self.row_snapshot_in(&rtx, table, after_row_id, visibility)
@@ -878,7 +881,7 @@ impl TableStore {
         rtx: &SqlRead<'_>,
         table: &str,
         after_row_id: Option<u64>,
-        visibility: Option<&medulla_types::RowPredicate>,
+        visibility: Option<&medulla_result_types::row_predicate::RowPredicate>,
     ) -> Result<TableRowSnapshot, String> {
         let (schema, snapshot) = self
             .schema_and_snapshot_in(rtx, table)?
@@ -1523,7 +1526,7 @@ impl TableStore {
         &self,
         table: &str,
         set: &serde_json::Map<String, Value>,
-        selector: &medulla_types::RowPredicate,
+        selector: &medulla_result_types::row_predicate::RowPredicate,
     ) -> Result<usize, String> {
         Ok(self.update_where_returning(table, set, selector)?.len())
     }
@@ -1533,7 +1536,7 @@ impl TableStore {
         &self,
         table: &str,
         set: &serde_json::Map<String, Value>,
-        selector: &medulla_types::RowPredicate,
+        selector: &medulla_result_types::row_predicate::RowPredicate,
     ) -> Result<Vec<Vec<Cell>>, String> {
         self.authority.maintain("update-rows", table, |wtx| {
             update_in(wtx, self.index_scope(), table, set, selector)
@@ -1544,7 +1547,7 @@ impl TableStore {
     pub fn delete_where(
         &self,
         table: &str,
-        selector: &medulla_types::RowPredicate,
+        selector: &medulla_result_types::row_predicate::RowPredicate,
     ) -> Result<usize, String> {
         Ok(self.delete_where_returning(table, selector)?.len())
     }
@@ -1554,7 +1557,7 @@ impl TableStore {
     pub fn delete_where_returning(
         &self,
         table: &str,
-        selector: &medulla_types::RowPredicate,
+        selector: &medulla_result_types::row_predicate::RowPredicate,
     ) -> Result<Vec<Vec<Cell>>, String> {
         self.authority.maintain("delete-rows", table, |wtx| {
             delete_in(wtx, self.index_scope(), table, selector)
@@ -2281,9 +2284,9 @@ fn apply_mutation_txn_ops_with_crashpoints(
     if crashpoint == Some(SqlMutationCrashpoint::BeforeRows) {
         return Err("injected crash before SQL mutation rows".to_string());
     }
-    medulla_types::mutation_batch::apply_certification_fault(
+    medulla_protocol_types::mutation_batch::apply_certification_fault(
         batch,
-        medulla_types::mutation_batch::MutationCommitPhase::BeforeRows,
+        medulla_protocol_types::mutation_batch::MutationCommitPhase::BeforeRows,
     )?;
 
     let mut affected = 0usize;
@@ -2294,9 +2297,9 @@ fn apply_mutation_txn_ops_with_crashpoints(
     if crashpoint == Some(SqlMutationCrashpoint::AfterRowsBeforeMetadata) {
         return Err("injected crash after SQL mutation rows".to_string());
     }
-    medulla_types::mutation_batch::apply_certification_fault(
+    medulla_protocol_types::mutation_batch::apply_certification_fault(
         batch,
-        medulla_types::mutation_batch::MutationCommitPhase::AfterRowsBeforeMetadata,
+        medulla_protocol_types::mutation_batch::MutationCommitPhase::AfterRowsBeforeMetadata,
     )?;
     Ok(affected)
 }
@@ -2327,17 +2330,17 @@ fn finish_and_commit_sql_mutation(
     if crashpoint == Some(SqlMutationCrashpoint::BeforeCommit) {
         return Err("injected crash before SQL mutation commit".to_string());
     }
-    medulla_types::mutation_batch::apply_certification_fault(
+    medulla_protocol_types::mutation_batch::apply_certification_fault(
         batch,
-        medulla_types::mutation_batch::MutationCommitPhase::BeforeCommit,
+        medulla_protocol_types::mutation_batch::MutationCommitPhase::BeforeCommit,
     )?;
     mutation.commit_finished()?;
     if crashpoint == Some(SqlMutationCrashpoint::AfterCommitBeforeAck) {
         return Err("injected crash after SQL mutation commit before ack".to_string());
     }
-    medulla_types::mutation_batch::apply_certification_fault(
+    medulla_protocol_types::mutation_batch::apply_certification_fault(
         batch,
-        medulla_types::mutation_batch::MutationCommitPhase::AfterCommitBeforeAck,
+        medulla_protocol_types::mutation_batch::MutationCommitPhase::AfterCommitBeforeAck,
     )?;
     Ok(commit)
 }
@@ -6489,7 +6492,7 @@ fn read_snapshot_rows(
     table: &str,
     schema: &TableSchema,
     first_row_id: u64,
-    visibility: Option<&medulla_types::RowPredicate>,
+    visibility: Option<&medulla_result_types::row_predicate::RowPredicate>,
 ) -> Result<SnapshotRows, String> {
     let width = schema.columns().len();
     let mut page = Vec::new();
@@ -6637,7 +6640,7 @@ fn update_in(
     tenant_scope: &str,
     table: &str,
     set: &serde_json::Map<String, Value>,
-    selector: &medulla_types::RowPredicate,
+    selector: &medulla_result_types::row_predicate::RowPredicate,
 ) -> Result<Vec<Vec<Cell>>, String> {
     let schema =
         get_schema_in(wtx, table)?.ok_or_else(|| format!("table `{table}` does not exist"))?;
@@ -6693,7 +6696,7 @@ fn delete_in(
     wtx: &SqlWrite<'_>,
     tenant_scope: &str,
     table: &str,
-    selector: &medulla_types::RowPredicate,
+    selector: &medulla_result_types::row_predicate::RowPredicate,
 ) -> Result<Vec<Vec<Cell>>, String> {
     let schema =
         get_schema_in(wtx, table)?.ok_or_else(|| format!("table `{table}` does not exist"))?;
@@ -6871,11 +6874,17 @@ mod tests {
     use crate::tables::schema::{CmpOp, ColCheck, ColumnType};
     // The mutation ledger is the kernel's now, so the store itself no longer
     // imports these; the fixtures that build a `MutationBatch` still need them.
-    use medulla_types::mutation_batch::{
-        IncarnationId, LogicalName, MutationBatchStatus, MutationEnvelope, MutationOperation,
-        MutationOutboxIntent, MutationSurface, ScopeTenantId, VersionExpectation,
-        COMPILED_BATCH_INCARNATION, MUTATION_BATCH_VERSION,
-    };
+    use medulla_mutation_types::mutation_scope::IncarnationId;
+    use medulla_mutation_types::mutation_scope::LogicalName;
+    use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+    use medulla_mutation_types::mutation_scope::MutationSurface;
+    use medulla_mutation_types::mutation_scope::ScopeTenantId;
+    use medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION;
+    use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
+    use medulla_protocol_types::mutation_batch::MutationBatchStatus;
+    use medulla_protocol_types::mutation_batch::MutationEnvelope;
+    use medulla_protocol_types::mutation_batch::MutationOperation;
+    use medulla_protocol_types::mutation_batch::VersionExpectation;
 
     #[test]
     fn stored_sql_decoder_rejects_declared_allocation_bombs() {
@@ -6992,9 +7001,9 @@ mod tests {
             .update_where(
                 "metrics",
                 &set,
-                &medulla_types::RowPredicate::Cmp {
+                &medulla_result_types::row_predicate::RowPredicate::Cmp {
                     col: "name".into(),
-                    op: medulla_types::CmpOp::Eq,
+                    op: medulla_result_types::row_predicate::CmpOp::Eq,
                     value: "cpu".into(),
                 },
             )
@@ -7003,9 +7012,9 @@ mod tests {
         let del = store
             .delete_where(
                 "metrics",
-                &medulla_types::RowPredicate::Cmp {
+                &medulla_result_types::row_predicate::RowPredicate::Cmp {
                     col: "name".into(),
-                    op: medulla_types::CmpOp::Eq,
+                    op: medulla_result_types::row_predicate::CmpOp::Eq,
                     value: "mem".into(),
                 },
             )
@@ -7019,7 +7028,7 @@ mod tests {
     #[test]
     fn compound_predicate_update_and_delete() {
         // CONCEPT:MEDULLA-KG.query.compound-predicate-decode — AND / range / IN predicates select rows in the store.
-        use medulla_types::{CmpOp, RowPredicate};
+        use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
         let (store, _p) = TableStore::open_temp().unwrap();
         store.create_table(&metrics_schema(), false).unwrap();
         let cols = vec!["ts".to_string(), "name".to_string(), "value".to_string()];
@@ -7381,9 +7390,9 @@ mod tests {
             .update_where_returning(
                 "metrics",
                 &set,
-                &medulla_types::RowPredicate::Cmp {
+                &medulla_result_types::row_predicate::RowPredicate::Cmp {
                     col: "name".into(),
-                    op: medulla_types::CmpOp::Eq,
+                    op: medulla_result_types::row_predicate::CmpOp::Eq,
                     value: "cpu".into(),
                 },
             )
@@ -7398,9 +7407,9 @@ mod tests {
         let del = store
             .delete_where_returning(
                 "metrics",
-                &medulla_types::RowPredicate::Cmp {
+                &medulla_result_types::row_predicate::RowPredicate::Cmp {
                     col: "name".into(),
-                    op: medulla_types::CmpOp::Eq,
+                    op: medulla_result_types::row_predicate::CmpOp::Eq,
                     value: "cpu".into(),
                 },
             )
@@ -7580,7 +7589,7 @@ mod tests {
         let key = batch.idempotency_key().to_string();
         let method = medulla_types::contract::MethodId::new("sql_catalog_operation").unwrap();
         batch.envelope = MutationEnvelope::for_scope(
-            medulla_types::mutation_batch::CompiledScope {
+            medulla_protocol_types::mutation_batch::CompiledScope {
                 identity: &batch.identity,
                 actor,
                 serving_principal: &format!("principal:sha256:{}", "a".repeat(64)),
@@ -7589,11 +7598,14 @@ mod tests {
                 nonce: medulla_types::contract::Nonce::minted(),
                 now_ms: 0,
             },
-            medulla_types::mutation_batch::CompiledOperation {
-                method_schema_id: medulla_types::mutation_batch::method_schema_id(&method).unwrap(),
+            medulla_protocol_types::mutation_batch::CompiledOperation {
+                method_schema_id: medulla_protocol_types::mutation_batch::method_schema_id(&method)
+                    .unwrap(),
                 method,
                 method_schema_digest: medulla_types::contract::Digest256::from_bytes([0_u8; 32]),
-                canonical_payload_digest: medulla_types::contract::Digest256::from_bytes([0_u8; 32]),
+                canonical_payload_digest: medulla_types::contract::Digest256::from_bytes(
+                    [0_u8; 32],
+                ),
             },
         )
         .unwrap();
@@ -7608,7 +7620,7 @@ mod tests {
         let actor = format!("principal:sha256:{}", "a".repeat(64));
         let method = medulla_types::contract::MethodId::new("sql_catalog_operation").unwrap();
         MutationEnvelope::for_scope(
-            medulla_types::mutation_batch::CompiledScope {
+            medulla_protocol_types::mutation_batch::CompiledScope {
                 identity,
                 actor: &actor,
                 serving_principal: &actor,
@@ -7617,11 +7629,14 @@ mod tests {
                 nonce: medulla_types::contract::Nonce::minted(),
                 now_ms: 0,
             },
-            medulla_types::mutation_batch::CompiledOperation {
-                method_schema_id: medulla_types::mutation_batch::method_schema_id(&method).unwrap(),
+            medulla_protocol_types::mutation_batch::CompiledOperation {
+                method_schema_id: medulla_protocol_types::mutation_batch::method_schema_id(&method)
+                    .unwrap(),
                 method,
                 method_schema_digest: medulla_types::contract::Digest256::from_bytes([0_u8; 32]),
-                canonical_payload_digest: medulla_types::contract::Digest256::from_bytes([1_u8; 32]),
+                canonical_payload_digest: medulla_types::contract::Digest256::from_bytes(
+                    [1_u8; 32],
+                ),
             },
         )
         .unwrap()
@@ -7648,7 +7663,7 @@ mod tests {
                 ordinal: 0,
                 surface: MutationSurface::Query,
                 domain: DurabilityDomain::SqlCatalog,
-                method: medulla_types::protocol::Method::ApplyMutation {
+                method: medulla_protocol_types::protocol::Method::ApplyMutation {
                     event_type: "sql_catalog_operation".to_string(),
                     query:
                         "sha256:0000000000000000000000000000000000000000000000000000000000000000"
@@ -7689,7 +7704,8 @@ mod tests {
             LogicalName::new("graph-a").unwrap(),
             IncarnationId::new(COMPILED_BATCH_INCARNATION).unwrap(),
         );
-        graph_scoped.version_expectation = medulla_types::mutation_batch::VersionExpectation::Graph(0);
+        graph_scoped.version_expectation =
+            medulla_protocol_types::mutation_batch::VersionExpectation::Graph(0);
         // The identity is part of the canonical payload, so re-mint the
         // envelope against it -- otherwise the envelope-coverage rule refuses
         // the batch before it can reach the native-scope check under test.
@@ -7815,10 +7831,11 @@ mod tests {
             (
                 "operations",
                 Box::new(|b: &mut MutationBatch| {
-                    b.operations[0].method = medulla_types::protocol::Method::ApplyMutation {
-                        event_type: "sql_catalog_operation".to_string(),
-                        query: format!("sha256:{}", "1".repeat(64)),
-                    }
+                    b.operations[0].method =
+                        medulla_protocol_types::protocol::Method::ApplyMutation {
+                            event_type: "sql_catalog_operation".to_string(),
+                            query: format!("sha256:{}", "1".repeat(64)),
+                        }
                 }),
             ),
         ] {
@@ -7856,12 +7873,14 @@ mod tests {
         // A SQL batch may not carry a graph state descriptor at all: it is
         // rejected by the batch's own validation, before admission.
         let mut changed = stored.clone();
-        changed.authoritative_state = Some(medulla_types::mutation_batch::MutationStateDescriptor {
-            algorithm: "sha256".to_string(),
-            digest: "0".repeat(64),
-            source_graph_version: 0,
-            target_graph_version: 1,
-        });
+        changed.authoritative_state = Some(
+            medulla_protocol_types::mutation_batch::MutationStateDescriptor {
+                algorithm: "sha256".to_string(),
+                digest: "0".repeat(64),
+                source_graph_version: 0,
+                target_graph_version: 1,
+            },
+        );
         assert!(store
             .commit_txn_batch(&create_metrics_txn(), &changed, 103)
             .is_err());
@@ -8134,7 +8153,7 @@ mod tests {
         // Same key plus a changed operation is not a retry either.
         let mut conflict = sql_batch("after-commit");
         conflict.version_expectation = VersionExpectation::Native(1);
-        conflict.operations[0].method = medulla_types::protocol::Method::ApplyMutation {
+        conflict.operations[0].method = medulla_protocol_types::protocol::Method::ApplyMutation {
             event_type: "sql_catalog_operation".to_string(),
             query: "sha256:1111111111111111111111111111111111111111111111111111111111111111"
                 .to_string(),
@@ -8248,11 +8267,12 @@ mod tests {
         // literal calling graph) must ALSO change the fingerprint: this is the
         // property `mutation_version(tenant, ONE_graph)` cannot offer on its own.
         let mut batch_b = sql_batch("fp-b");
-        batch_b.identity = medulla_types::mutation_batch::MutationScopeIdentity::native(
-            medulla_types::mutation_batch::ScopeTenantId::new("tenant-a").unwrap(),
+        batch_b.identity = medulla_mutation_types::mutation_scope::MutationScopeIdentity::native(
+            medulla_mutation_types::mutation_scope::ScopeTenantId::new("tenant-a").unwrap(),
             DurabilityDomain::SqlCatalog,
-            medulla_types::mutation_batch::LogicalName::new("graph-b").unwrap(),
-            medulla_types::mutation_batch::IncarnationId::new(COMPILED_BATCH_INCARNATION).unwrap(),
+            medulla_mutation_types::mutation_scope::LogicalName::new("graph-b").unwrap(),
+            medulla_mutation_types::mutation_scope::IncarnationId::new(COMPILED_BATCH_INCARNATION)
+                .unwrap(),
         )
         .unwrap();
         // Re-mint the envelope for the new scope: the retry key lives inside it,
@@ -8471,9 +8491,9 @@ mod tests {
                 ],
             )
             .unwrap();
-        let visible = medulla_types::RowPredicate::Cmp {
+        let visible = medulla_result_types::row_predicate::RowPredicate::Cmp {
             col: "owner".to_string(),
-            op: medulla_types::CmpOp::Eq,
+            op: medulla_result_types::row_predicate::CmpOp::Eq,
             value: Value::from("alice"),
         };
         let page = store

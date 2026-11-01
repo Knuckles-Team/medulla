@@ -31,9 +31,9 @@ pub trait AdminApi: Send + Sync {
         tenant_id: &str,
         ctx: &crate::mutation::MutationCtx<'_>,
         plan: &crate::mutation::MutationPlan,
-        method: &medulla_types::protocol::Method,
-        op: &medulla_types::graph_schema::GraphSchemaOp,
-    ) -> medulla_types::protocol::Response;
+        method: &medulla_protocol_types::protocol::Method,
+        op: &medulla_catalog_types::graph_schema::GraphSchemaOp,
+    ) -> medulla_protocol_types::protocol::Response;
 }
 
 /// Decide handler behaviour reachable from crates below `medulla-h-decide`.

@@ -8,8 +8,8 @@
 //! [`crate::server::outbox_operator`] functions over this store's kernel and
 //! the tenant's scope handle.
 
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
-use medulla_types::mutation_batch::MutationOutboxLease;
 
 use medulla_server_api::outbox_operator::operate;
 use medulla_server_api::outbox_operator::read_view;

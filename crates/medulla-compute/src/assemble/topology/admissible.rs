@@ -7,9 +7,11 @@
 //! facts). Here a template is admissible only when EVERY task class admits
 //! its class; each one that does not is named `admissible:<task-class>`.
 
-use medulla_types::decision::{
-    PremiseClass, PremiseProvenance, PremiseRef, SchemaAuthority, TopologyAdmission,
-};
+use medulla_agent_types::agent_topology::SchemaAuthority;
+use medulla_agent_types::agent_topology::TopologyAdmission;
+use medulla_decision_types::decision::PremiseClass;
+use medulla_decision_types::decision::PremiseProvenance;
+use medulla_decision_types::decision::PremiseRef;
 
 use super::Question;
 

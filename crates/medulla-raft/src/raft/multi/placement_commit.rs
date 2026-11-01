@@ -7,8 +7,8 @@
 //! here and the parent's own counts only go down.
 
 use super::{placement, MultiRaft, PlacementCommitOutcome};
-use medulla_types::protocol::Method;
-use medulla_types::protocol::ResultPayload;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::ResultPayload;
 
 impl MultiRaft {
     /// Complete a [`placement::PendingWrite`] in two fenced parts: first reserve

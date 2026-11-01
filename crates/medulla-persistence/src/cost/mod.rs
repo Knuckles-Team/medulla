@@ -41,7 +41,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
 use medulla_server_api::state::ServerState;
-use medulla_types::result_contract::coordination::{GraphResourceStats, ResourceSnapshot};
+use medulla_protocol_types::result_contract::coordination::{GraphResourceStats, ResourceSnapshot};
 
 mod resource_stats;
 
@@ -184,8 +184,7 @@ impl CostConfig {
         // A shared engine leaves most memory available to its host process,
         // filesystem cache, and peer services. Operators of a dedicated node
         // can explicitly raise these values, up to the cgroup-aware ceiling.
-        let global_ceiling_bytes =
-            bounded_bytes_env("MEDULLA_MEMORY_BUDGET", automatic_ceiling)?;
+        let global_ceiling_bytes = bounded_bytes_env("MEDULLA_MEMORY_BUDGET", automatic_ceiling)?;
         let per_tenant_budget_bytes =
             bounded_bytes_env("MEDULLA_TENANT_BUDGET", global_ceiling_bytes)?;
         let interval_secs = match std::env::var("MEDULLA_BUDGET_INTERVAL") {
@@ -194,9 +193,7 @@ impl CostConfig {
                 .parse::<u64>()
                 .ok()
                 .filter(|interval| (1..=3_600).contains(interval))
-                .ok_or_else(|| {
-                    "MEDULLA_BUDGET_INTERVAL must be between 1 and 3600".to_string()
-                })?,
+                .ok_or_else(|| "MEDULLA_BUDGET_INTERVAL must be between 1 and 3600".to_string())?,
             Err(std::env::VarError::NotPresent) => 15,
             Err(std::env::VarError::NotUnicode(_)) => {
                 return Err("MEDULLA_BUDGET_INTERVAL is not valid Unicode".to_string())
@@ -776,10 +773,10 @@ pub mod tests {
     #[cfg(feature = "redb")]
     mod integration {
         use super::super::*;
-        use medulla_types::protocol::GraphType;
-        use medulla_types::protocol::Method;
-        use medulla_types::protocol::Request;
-        use medulla_types::protocol::ResultPayload;
+        use medulla_protocol_types::protocol::GraphType;
+        use medulla_protocol_types::protocol::Method;
+        use medulla_protocol_types::protocol::Request;
+        use medulla_protocol_types::protocol::ResultPayload;
         use medulla_server_api::auth::build_shared_test_request;
         use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
 
@@ -885,7 +882,8 @@ pub mod tests {
             // still for this whole body. READ guard: it excludes only a key MUTATOR, never
             // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
             let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-            let dir = std::env::temp_dir().join(format!("medulla-cost-budget-{}", std::process::id()));
+            let dir =
+                std::env::temp_dir().join(format!("medulla-cost-budget-{}", std::process::id()));
             let _ = std::fs::remove_dir_all(&dir);
             let dir_s = dir.to_string_lossy().to_string();
             let state = redb_state(&dir_s).await;
@@ -1022,8 +1020,8 @@ pub mod tests {
             // still for this whole body. READ guard: it excludes only a key MUTATOR, never
             // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
             let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-            let dir =
-                std::env::temp_dir().join(format!("medulla-cost-cypher-evict-{}", std::process::id()));
+            let dir = std::env::temp_dir()
+                .join(format!("medulla-cost-cypher-evict-{}", std::process::id()));
             let _ = std::fs::remove_dir_all(&dir);
             let dir_s = dir.to_string_lossy().to_string();
             let state = redb_state(&dir_s).await;
@@ -1094,7 +1092,7 @@ pub mod tests {
                     "acme:solo",
                     Method::CypherQuery {
                         query: "MATCH (n) RETURN n".into(),
-                        mode: medulla_types::protocol::CypherMode::Read,
+                        mode: medulla_protocol_types::protocol::CypherMode::Read,
                     },
                 ),
             )
@@ -1104,7 +1102,7 @@ pub mod tests {
                 Some(ResultPayload::Raw(b)) => b.clone(),
                 other => panic!("expected Raw cypher result, got {other:?}"),
             };
-            let result: medulla_types::protocol::QueryResult = rmp_serde::from_slice(&bytes).unwrap();
+            let result: medulla_protocol_types::protocol::QueryResult = rmp_serde::from_slice(&bytes).unwrap();
             assert_eq!(
                 result.rows.len(),
                 NODE_COUNT,
@@ -1128,7 +1126,8 @@ pub mod tests {
             // still for this whole body. READ guard: it excludes only a key MUTATOR, never
             // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
             let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-            let dir = std::env::temp_dir().join(format!("medulla-cost-fair-{}", std::process::id()));
+            let dir =
+                std::env::temp_dir().join(format!("medulla-cost-fair-{}", std::process::id()));
             let _ = std::fs::remove_dir_all(&dir);
             let dir_s = dir.to_string_lossy().to_string();
             let state = redb_state(&dir_s).await;
@@ -1183,7 +1182,8 @@ pub mod tests {
             // still for this whole body. READ guard: it excludes only a key MUTATOR, never
             // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
             let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-            let dir = std::env::temp_dir().join(format!("medulla-cost-stats-{}", std::process::id()));
+            let dir =
+                std::env::temp_dir().join(format!("medulla-cost-stats-{}", std::process::id()));
             let _ = std::fs::remove_dir_all(&dir);
             let dir_s = dir.to_string_lossy().to_string();
             let state = redb_state(&dir_s).await;

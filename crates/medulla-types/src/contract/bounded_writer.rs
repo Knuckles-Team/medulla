@@ -5,14 +5,14 @@
 /// Serialization domains provide their own error text because it is part of
 /// their public validation contract; the byte admission behavior is shared
 /// here so each domain does not grow a subtly different writer.
-pub(crate) struct BoundedWriter {
+pub struct BoundedWriter {
     bytes: Vec<u8>,
     maximum: usize,
     overflow_message: &'static str,
 }
 
 impl BoundedWriter {
-    pub(crate) fn new(maximum: usize, overflow_message: &'static str) -> Self {
+    pub fn new(maximum: usize, overflow_message: &'static str) -> Self {
         Self {
             bytes: Vec::new(),
             maximum,
@@ -20,7 +20,7 @@ impl BoundedWriter {
         }
     }
 
-    pub(crate) fn into_bytes(self) -> Vec<u8> {
+    pub fn into_bytes(self) -> Vec<u8> {
         self.bytes
     }
 }

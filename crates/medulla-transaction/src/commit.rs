@@ -10,27 +10,31 @@ use crate::replay::{
 };
 use crate::tables::{visit_ledger_tables, BATCHES, CLASSES, FENCES, OUTBOX, VERSIONS};
 use crate::Begin;
+use medulla_mutation_types::{
+    mutation_scope::CommittedVersion, mutation_scope::MutationOutboxRecord,
+    mutation_scope::MutationScopeIdentity, mutation_scope::MUTATION_BATCH_VERSION,
+};
+use medulla_protocol_types::mutation_batch::MutationCommitPhase;
+use medulla_protocol_types::{
+    mutation_batch::MutationBatch, mutation_batch::MutationBatchRecord,
+    mutation_batch::MutationBatchStatus, mutation_batch::VersionExpectation,
+};
+use medulla_protocol_types::{mutation_batch::MutationEnvelope, mutation_batch::OperationEnvelope};
 use medulla_storage::{
     decode_batch_record, decode_ledger_record, decode_outbox_record, encode_bounded,
     ledger_scope_key, owner_table_names, CollectionBudget, MutationClass, MutationClassRow,
     OwnerDomain, OwnerPayloadRetirement, RecordedOperation, ScopeFence,
 };
-use medulla_types::mutation_batch::MutationCommitPhase;
-use medulla_types::mutation_batch::{MutationEnvelope, OperationEnvelope};
-use medulla_types::{
-    CommittedVersion, MutationBatch, MutationBatchRecord, MutationBatchStatus,
-    MutationOutboxRecord, MutationScopeIdentity, VersionExpectation, MUTATION_BATCH_VERSION,
-};
 
 /// The certification fault points, compiled only under `fault-injection`.
 ///
-/// `medulla_types::mutation_batch::apply_certification_fault` aborts the process at
+/// `medulla_protocol_types::mutation_batch::apply_certification_fault` aborts the process at
 /// an exact commit phase so the crash matrix can be proved. That is a test
 /// instrument, not release behaviour, so the call is feature-gated here rather
 /// than shipped on the commit path.
 #[cfg(feature = "fault-injection")]
 fn certification_fault(batch: &MutationBatch, phase: MutationCommitPhase) -> Result<(), String> {
-    medulla_types::mutation_batch::apply_certification_fault(batch, phase)
+    medulla_protocol_types::mutation_batch::apply_certification_fault(batch, phase)
 }
 
 #[cfg(not(feature = "fault-injection"))]
@@ -90,7 +94,7 @@ fn begin_inner<D: OwnerDomain>(
         &batch.envelope,
         MutationEnvelope::Maintenance(envelope)
             if envelope.kind.as_str()
-                == medulla_types::mutation_batch::REPOSITORY_ENRICHMENT_TOP_UP_KIND
+                == medulla_protocol_types::mutation_batch::REPOSITORY_ENRICHMENT_TOP_UP_KIND
     );
     if reserved_top_up_kind != allow_repository_enrichment_top_up
         || (allow_repository_enrichment_top_up && !batch.is_repository_enrichment_top_up())
@@ -130,8 +134,8 @@ fn begin_operation<D: OwnerDomain>(
 pub(crate) fn begin_with_replay_identity<D: OwnerDomain>(
     write: &AdmittedMutation<'_, D>,
     batch: &MutationBatch,
-    operation: &medulla_types::authority::OperationReplayIdentity,
-    nonce: &medulla_types::authority::NonceReplayKey,
+    operation: &medulla_identity_types::authority::OperationReplayIdentity,
+    nonce: &medulla_identity_types::authority::NonceReplayKey,
 ) -> Result<Begin, String> {
     batch.validate_write_budget()?;
     write.verify_scope(&batch.identity)?;
@@ -154,8 +158,8 @@ pub(crate) fn begin_with_replay_identity<D: OwnerDomain>(
 fn begin_operation_with_identity<D: OwnerDomain>(
     write: &AdmittedMutation<'_, D>,
     batch: &MutationBatch,
-    operation: &medulla_types::authority::OperationReplayIdentity,
-    nonce: &medulla_types::authority::NonceReplayKey,
+    operation: &medulla_identity_types::authority::OperationReplayIdentity,
+    nonce: &medulla_identity_types::authority::NonceReplayKey,
 ) -> Result<Begin, String> {
     match resolve_replay_in(write, operation, nonce)? {
         // A duplicated attempt nonce inside one transaction is a caller bug, not
@@ -416,9 +420,9 @@ pub(crate) fn finish_with_replay<D: OwnerDomain>(
     // and the receipt itself. These three are never meaningful apart, so
     // they travel as one group rather than as three positional parameters.
     replay_receipt: (
-        &medulla_types::authority::OperationReplayIdentity,
-        &medulla_types::authority::NonceReplayKey,
-        &medulla_types::mutation::MutationReceipt,
+        &medulla_identity_types::authority::OperationReplayIdentity,
+        &medulla_identity_types::authority::NonceReplayKey,
+        &medulla_mutation_types::mutation::MutationReceipt,
     ),
 ) -> Result<MutationBatchRecord, String> {
     let (operation, nonce, receipt) = replay_receipt;
@@ -446,9 +450,9 @@ fn finish_inner<D: OwnerDomain>(
     committed_at_ms: u64,
     source_version: Option<u64>,
     replay: Option<(
-        &medulla_types::authority::OperationReplayIdentity,
-        &medulla_types::authority::NonceReplayKey,
-        &medulla_types::mutation::MutationReceipt,
+        &medulla_identity_types::authority::OperationReplayIdentity,
+        &medulla_identity_types::authority::NonceReplayKey,
+        &medulla_mutation_types::mutation::MutationReceipt,
     )>,
 ) -> Result<MutationBatchRecord, String> {
     write.verify_scope(&batch.identity)?;
@@ -678,12 +682,12 @@ fn write_outbox<D: OwnerDomain>(
 }
 
 fn is_terminal_topic(topic: &str) -> bool {
-    topic == medulla_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC
-        || topic == medulla_types::run_completion::RUN_COMPLETION_TOPIC
+    topic == medulla_result_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC
+        || topic == medulla_agent_types::run_completion::RUN_COMPLETION_TOPIC
 }
 
 fn terminal_outbox_intent_applies(
-    intent: &medulla_types::mutation_batch::MutationOutboxIntent,
+    intent: &medulla_mutation_types::mutation_scope::MutationOutboxIntent,
     result_msgpack: Option<&[u8]>,
 ) -> Result<bool, String> {
     if !is_terminal_topic(&intent.topic) {
@@ -692,9 +696,10 @@ fn terminal_outbox_intent_applies(
     let Some(result_msgpack) = result_msgpack else {
         return Err("terminal run-event outbox requires a native WorkItem result".to_string());
     };
-    let payload = rmp_serde::from_slice::<medulla_types::protocol::ResultPayload>(result_msgpack)
-        .map_err(|_| "terminal WorkItem result is not a decodable payload".to_string())?;
-    let medulla_types::protocol::ResultPayload::Json(value) = payload else {
+    let payload =
+        rmp_serde::from_slice::<medulla_protocol_types::protocol::ResultPayload>(result_msgpack)
+            .map_err(|_| "terminal WorkItem result is not a decodable payload".to_string())?;
+    let medulla_protocol_types::protocol::ResultPayload::Json(value) = payload else {
         return Err("terminal WorkItem result does not carry a status object".to_string());
     };
     match value.get("status").and_then(|status| status.as_str()) {

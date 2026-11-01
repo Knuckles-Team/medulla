@@ -17,7 +17,7 @@ use medulla_types::contract::Digest256;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EmbeddingChunkRef {
     pub source_digest: Digest256,
-    pub space: medulla_types::EmbeddingSpaceRef,
+    pub space: medulla_index_types::embedding::EmbeddingSpaceRef,
 }
 
 impl EmbeddingChunkRef {
@@ -25,7 +25,7 @@ impl EmbeddingChunkRef {
     /// embedding provider.  Callers that already have an authoritative source
     /// digest may construct the value directly and the regeneration gate will
     /// still verify it against the supplied text before invoking a provider.
-    pub fn for_text(space: medulla_types::EmbeddingSpaceRef, text: &str) -> Self {
+    pub fn for_text(space: medulla_index_types::embedding::EmbeddingSpaceRef, text: &str) -> Self {
         Self {
             source_digest: Digest256::sha256(text.as_bytes()),
             space,
@@ -55,7 +55,7 @@ pub struct EmbeddingRegenerationCandidate<'a> {
 /// or performs an ungoverned network call.  The batch surface lets the owner
 /// (`medulla-plan`) reuse its existing `TextEmbedder` batching implementation.
 pub trait EmbeddingProvider: Send + Sync {
-    fn space(&self) -> &medulla_types::EmbeddingSpaceRef;
+    fn space(&self) -> &medulla_index_types::embedding::EmbeddingSpaceRef;
     fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>, String>;
 }
 
@@ -192,7 +192,7 @@ impl SemanticStore {
     /// index or claim that source regeneration is a cold-query cache.
     pub fn semantic_search_stamped_candidates<'a>(
         &self,
-        query: &medulla_types::StampedVector,
+        query: &medulla_index_types::embedding::StampedVector,
         candidate_ids: impl IntoIterator<Item = &'a str>,
         n_results: usize,
     ) -> Result<Vec<(String, f32)>, super::SemanticQueryError> {
@@ -359,12 +359,12 @@ mod selective_regeneration_tests {
     use super::*;
 
     struct TestProvider {
-        space: medulla_types::EmbeddingSpaceRef,
+        space: medulla_index_types::embedding::EmbeddingSpaceRef,
         values: Vec<Vec<f32>>,
     }
 
     impl EmbeddingProvider for TestProvider {
-        fn space(&self) -> &medulla_types::EmbeddingSpaceRef {
+        fn space(&self) -> &medulla_index_types::embedding::EmbeddingSpaceRef {
             &self.space
         }
 
@@ -373,8 +373,8 @@ mod selective_regeneration_tests {
         }
     }
 
-    fn space(revision: &str) -> medulla_types::EmbeddingSpaceRef {
-        medulla_types::EmbeddingSpaceRef::pinned(
+    fn space(revision: &str) -> medulla_index_types::embedding::EmbeddingSpaceRef {
+        medulla_index_types::embedding::EmbeddingSpaceRef::pinned(
             "test-model",
             revision,
             "model-hash",
@@ -386,7 +386,7 @@ mod selective_regeneration_tests {
     }
 
     fn candidate<'a>(
-        space: &medulla_types::EmbeddingSpaceRef,
+        space: &medulla_index_types::embedding::EmbeddingSpaceRef,
         node_id: &'a str,
         text: &'a str,
         existing: Option<EmbeddingChunkRef>,
@@ -446,7 +446,8 @@ mod selective_regeneration_tests {
         store
             .add_embedding("excluded".into(), vec![0.0, 1.0])
             .unwrap();
-        let query = medulla_types::StampedVector::new(space, vec![1.0, 0.0]).unwrap();
+        let query =
+            medulla_index_types::embedding::StampedVector::new(space, vec![1.0, 0.0]).unwrap();
 
         let hits = store
             .semantic_search_stamped_candidates(&query, ["allowed", "missing"], 10)

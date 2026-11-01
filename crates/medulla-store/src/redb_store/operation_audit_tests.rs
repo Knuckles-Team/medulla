@@ -2,8 +2,8 @@
 //! of a reservation whose outcome was interrupted, and what replicas hold.
 
 use super::*;
-use medulla_types::protocol::AuditAppendReceipt;
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::AuditAppendReceipt;
+use medulla_protocol_types::protocol::Method;
 use crate::redb_store::commit_ops;
 use crate::redb_store::DurableCrypto;
 
@@ -88,7 +88,8 @@ impl Store {
         table: redb::TableDefinition<'static, K, &'static [u8]>,
     ) -> Vec<Vec<u8>>
     where
-        for<'k> K::SelfType<'k>: medulla_storage::OwnerRowScope + medulla_storage::OwnerRowScopeStart<'k>,
+        for<'k> K::SelfType<'k>:
+            medulla_storage::OwnerRowScope + medulla_storage::OwnerRowScopeStart<'k>,
     {
         let handle = self.shard.graph(GRAPH).unwrap();
         let read = self.shard.read(&handle).unwrap();

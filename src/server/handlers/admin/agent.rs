@@ -21,7 +21,7 @@ fn bind_status_context(
     verified: &medulla_server_api::auth::VerifiedRequestContext,
     context: medulla_types::AgentLibraryMutationContext,
     purpose_id: &str,
-) -> Result<medulla_types::AgentLibraryMutationContext, Response> {
+) -> Result<medulla_agent_types::agent_library::AgentLibraryMutationContext, Response> {
     bind_agent_library_context(store, req_id, verified, context, purpose_id, false)
         .map_err(|error| Response::err(req_id, error))
 }
@@ -60,7 +60,7 @@ async fn ensure_agent_library(
 
 #[cfg(feature = "redb")]
 fn validate_component_op(
-    op: &medulla_types::agent_component::AgentComponentOp,
+    op: &medulla_agent_types::agent_component::AgentComponentOp,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
 ) -> Result<(), String> {
     op.validate()?;
@@ -74,7 +74,7 @@ fn validate_component_op(
 
 #[cfg(feature = "redb")]
 fn validate_template_op(
-    op: &medulla_types::agent_template::AgentTemplateOp,
+    op: &medulla_agent_types::agent_template::AgentTemplateOp,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
 ) -> Result<(), String> {
     op.validate()?;
@@ -100,9 +100,9 @@ pub(crate) async fn handle_agent_component(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
-    op: medulla_types::agent_component::AgentComponentOp,
+    op: medulla_agent_types::agent_component::AgentComponentOp,
 ) -> Response {
-    use medulla_types::agent_component::AgentComponentOp;
+    use medulla_agent_types::agent_component::AgentComponentOp;
 
     if let Err(error) = validate_component_op(&op, verified) {
         return Response::err(req_id, error);
@@ -140,7 +140,7 @@ fn component_publish(
     store: &medulla_persistence::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
-    mut request: Box<medulla_types::agent_component::AgentComponentPublishRequest>,
+    mut request: Box<medulla_agent_types::agent_component::AgentComponentPublishRequest>,
 ) -> Response {
     let context = match bind_agent_library_context(
         store,
@@ -161,9 +161,9 @@ fn component_publish(
     match store.publish_component(*request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentComponentPublish>(
-                &result.result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentPublish,
+            >(&result.result),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -174,7 +174,7 @@ fn component_retire(
     store: &medulla_persistence::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
-    mut request: medulla_types::agent_component::AgentComponentRetireRequest,
+    mut request: medulla_agent_types::agent_component::AgentComponentRetireRequest,
 ) -> Response {
     let context = match bind_agent_library_context(
         store,
@@ -191,9 +191,9 @@ fn component_retire(
     match store.retire_component(request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentComponentRetire>(
-                &result.result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentRetire,
+            >(&result.result),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -209,9 +209,9 @@ fn component_current(
     match store.current_component(&tenant_id, &component_id) {
         Ok(entry) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentComponentCurrent>(
-                &entry,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentCurrent,
+            >(&entry),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -227,9 +227,9 @@ fn component_history(
     match store.component_revisions(&tenant_id, &component_id) {
         Ok(entries) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentComponentHistory>(
-                &entries,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentHistory,
+            >(&entries),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -246,19 +246,19 @@ fn component_history(
 /// more complex, when the dispatch is the whole story.
 #[cfg(feature = "redb")]
 fn component_status_purpose(
-    kind: medulla_types::agent_component::AgentComponentMutationKind,
+    kind: medulla_agent_types::agent_component::AgentComponentMutationKind,
 ) -> &'static str {
     match kind {
-        medulla_types::agent_component::AgentComponentMutationKind::Publish => {
+        medulla_agent_types::agent_component::AgentComponentMutationKind::Publish => {
             "agent-component:publish"
         }
-        medulla_types::agent_component::AgentComponentMutationKind::Retire => {
+        medulla_agent_types::agent_component::AgentComponentMutationKind::Retire => {
             "agent-component:retire"
         }
-        medulla_types::agent_component::AgentComponentMutationKind::Withdraw => {
+        medulla_agent_types::agent_component::AgentComponentMutationKind::Withdraw => {
             "agent-component:withdraw"
         }
-        medulla_types::agent_component::AgentComponentMutationKind::Republish => {
+        medulla_agent_types::agent_component::AgentComponentMutationKind::Republish => {
             "agent-component:republish"
         }
     }
@@ -269,7 +269,7 @@ fn component_status(
     store: &medulla_persistence::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
-    mut request: medulla_types::agent_component::AgentComponentStatusRequest,
+    mut request: medulla_agent_types::agent_component::AgentComponentStatusRequest,
 ) -> Response {
     let purpose = component_status_purpose(request.kind);
     request.context = match bind_status_context(store, req_id, verified, request.context, purpose) {
@@ -279,9 +279,9 @@ fn component_status(
     match store.component_status(request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentComponentStatus>(
-                &result.map(|result| result.result),
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentStatus,
+            >(&result.map(|result| result.result)),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -291,14 +291,14 @@ fn component_status(
 fn component_search(
     store: &medulla_persistence::agent_library::AgentLibraryStore,
     req_id: u64,
-    request: medulla_types::agent_component::AgentComponentSearchRequest,
+    request: medulla_agent_types::agent_component::AgentComponentSearchRequest,
 ) -> Response {
     match store.search_components(&request) {
         Ok(page) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentComponentSearch>(
-                &page,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentSearch,
+            >(&page),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -317,9 +317,9 @@ pub(crate) async fn handle_agent_template(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
-    op: medulla_types::agent_template::AgentTemplateOp,
+    op: medulla_agent_types::agent_template::AgentTemplateOp,
 ) -> Response {
-    use medulla_types::agent_template::AgentTemplateOp;
+    use medulla_agent_types::agent_template::AgentTemplateOp;
 
     if let Err(error) = validate_template_op(&op, verified) {
         return Response::err(req_id, error);
@@ -349,7 +349,7 @@ fn template_publish(
     store: &medulla_persistence::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
-    mut request: Box<medulla_types::agent_template::AgentTemplatePublishRequest>,
+    mut request: Box<medulla_agent_types::agent_template::AgentTemplatePublishRequest>,
 ) -> Response {
     let context = match bind_agent_library_context(
         store,
@@ -375,9 +375,9 @@ fn template_publish(
     match store.publish_template(*request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentTemplatePublish>(
-                &result.result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentTemplatePublish,
+            >(&result.result),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -388,7 +388,7 @@ fn template_retire(
     store: &medulla_persistence::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
-    mut request: medulla_types::agent_template::AgentTemplateRetireRequest,
+    mut request: medulla_agent_types::agent_template::AgentTemplateRetireRequest,
 ) -> Response {
     let context = match bind_agent_library_context(
         store,
@@ -405,9 +405,9 @@ fn template_retire(
     match store.retire_template(request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentTemplateRetire>(
-                &result.result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentTemplateRetire,
+            >(&result.result),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -423,9 +423,9 @@ fn template_current(
     match store.current_template(&tenant_id, &template_id) {
         Ok(entry) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentTemplateCurrent>(
-                &entry,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentTemplateCurrent,
+            >(&entry),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -441,9 +441,9 @@ fn template_history(
     match store.template_revisions(&tenant_id, &template_id) {
         Ok(entries) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentTemplateHistory>(
-                &entries,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentTemplateHistory,
+            >(&entries),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -454,13 +454,15 @@ fn template_status(
     store: &medulla_persistence::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
-    mut request: medulla_types::agent_template::AgentTemplateStatusRequest,
+    mut request: medulla_agent_types::agent_template::AgentTemplateStatusRequest,
 ) -> Response {
     let purpose = match request.kind {
-        medulla_types::agent_template::AgentTemplateMutationKind::Publish => {
+        medulla_agent_types::agent_template::AgentTemplateMutationKind::Publish => {
             "agent-template:publish"
         }
-        medulla_types::agent_template::AgentTemplateMutationKind::Retire => "agent-template:retire",
+        medulla_agent_types::agent_template::AgentTemplateMutationKind::Retire => {
+            "agent-template:retire"
+        }
     };
     request.context = match bind_status_context(store, req_id, verified, request.context, purpose) {
         Ok(context) => context,
@@ -469,9 +471,9 @@ fn template_status(
     match store.template_status(request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentTemplateStatus>(
-                &result.map(|result| result.result),
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentTemplateStatus,
+            >(&result.map(|result| result.result)),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -481,13 +483,13 @@ fn template_status(
 fn template_instantiate(
     store: &medulla_persistence::agent_library::AgentLibraryStore,
     req_id: u64,
-    request: medulla_types::agent_template::AgentTemplateInstantiateRequest,
+    request: medulla_agent_types::agent_template::AgentTemplateInstantiateRequest,
 ) -> Response {
     match store.instantiate_template(&request) {
         Ok(draft) => Response::ok(
             req_id,
             ResultPayload::of_ref::<
-                medulla_types::result_contract::storage::AgentTemplateInstantiate,
+                medulla_protocol_types::result_contract::storage::AgentTemplateInstantiate,
             >(&draft),
         ),
         Err(error) => Response::err(req_id, error),
@@ -503,9 +505,9 @@ pub(crate) async fn handle_agent_graph(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
-    op: medulla_types::agent_graph::AgentGraphOp,
+    op: medulla_agent_types::agent_graph::AgentGraphOp,
 ) -> Response {
-    use medulla_types::agent_graph::AgentGraphOp;
+    use medulla_agent_types::agent_graph::AgentGraphOp;
 
     if let Err(error) = op.validate() {
         return Response::err(req_id, error);
@@ -534,7 +536,7 @@ fn graph_publish(
     store: &medulla_persistence::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
-    mut request: Box<medulla_types::agent_graph::AgentGraphPublishRequest>,
+    mut request: Box<medulla_agent_types::agent_graph::AgentGraphPublishRequest>,
 ) -> Response {
     let context = match bind_agent_library_context(
         store,
@@ -561,9 +563,9 @@ fn graph_publish(
     match store.publish_graph(*request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentGraphPublish>(
-                &result.result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentGraphPublish,
+            >(&result.result),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -574,7 +576,7 @@ fn graph_retire(
     store: &medulla_persistence::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
-    mut request: medulla_types::agent_graph::AgentGraphRetireRequest,
+    mut request: medulla_agent_types::agent_graph::AgentGraphRetireRequest,
 ) -> Response {
     let context = match bind_agent_library_context(
         store,
@@ -591,9 +593,9 @@ fn graph_retire(
     match store.retire_graph(request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentGraphRetire>(
-                &result.result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentGraphRetire,
+            >(&result.result),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -616,9 +618,9 @@ fn graph_current(
     match store.current_graph(&tenant_id, &graph_id) {
         Ok(entry) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentGraphCurrent>(
-                &entry,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentGraphCurrent,
+            >(&entry),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -641,9 +643,9 @@ fn graph_history(
     match store.graph_revisions(&tenant_id, &graph_id) {
         Ok(entries) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentGraphHistory>(
-                &entries,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentGraphHistory,
+            >(&entries),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -654,11 +656,11 @@ fn graph_status(
     store: &medulla_persistence::agent_library::AgentLibraryStore,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
-    mut request: medulla_types::agent_graph::AgentGraphStatusRequest,
+    mut request: medulla_agent_types::agent_graph::AgentGraphStatusRequest,
 ) -> Response {
     let purpose = match request.kind {
-        medulla_types::agent_graph::AgentGraphMutationKind::Publish => "agent-graph:publish",
-        medulla_types::agent_graph::AgentGraphMutationKind::Retire => "agent-graph:retire",
+        medulla_agent_types::agent_graph::AgentGraphMutationKind::Publish => "agent-graph:publish",
+        medulla_agent_types::agent_graph::AgentGraphMutationKind::Retire => "agent-graph:retire",
     };
     request.context = match bind_status_context(store, req_id, verified, request.context, purpose) {
         Ok(context) => context,
@@ -667,9 +669,9 @@ fn graph_status(
     match store.graph_status(request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentGraphStatus>(
-                &result.map(|result| result.result),
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentGraphStatus,
+            >(&result.map(|result| result.result)),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -686,21 +688,21 @@ pub(crate) async fn handle_agent_library(
         Err(response) => return response,
     };
     match op {
-        medulla_types::AgentLibraryOp::Publish { request } => {
+        medulla_agent_types::agent_library::AgentLibraryOp::Publish { request } => {
             library_publish(&store, req_id, verified, request)
         }
-        medulla_types::AgentLibraryOp::Retire { request } => {
+        medulla_agent_types::agent_library::AgentLibraryOp::Retire { request } => {
             library_retire(&store, req_id, verified, request)
         }
-        medulla_types::AgentLibraryOp::Current {
+        medulla_agent_types::agent_library::AgentLibraryOp::Current {
             tenant_id,
             agent_id,
         } => library_current(&store, req_id, verified, tenant_id, agent_id),
-        medulla_types::AgentLibraryOp::History {
+        medulla_agent_types::agent_library::AgentLibraryOp::History {
             tenant_id,
             agent_id,
         } => library_history(&store, req_id, verified, tenant_id, agent_id),
-        medulla_types::AgentLibraryOp::Status { request } => {
+        medulla_agent_types::agent_library::AgentLibraryOp::Status { request } => {
             library_status(&store, req_id, verified, request)
         }
     }
@@ -732,9 +734,9 @@ fn library_publish(
     match store.publish(*request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentLibraryPublish>(
-                &result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentLibraryPublish,
+            >(&result),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -762,9 +764,9 @@ fn library_retire(
     match store.retire(request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentLibraryRetire>(
-                &result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentLibraryRetire,
+            >(&result),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -787,9 +789,9 @@ fn library_current(
     match store.current(&tenant_id, &agent_id) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentLibraryCurrent>(
-                &result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentLibraryCurrent,
+            >(&result),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -812,9 +814,9 @@ fn library_history(
     match store.revisions(&tenant_id, &agent_id) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentLibraryHistory>(
-                &result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentLibraryHistory,
+            >(&result),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -829,8 +831,12 @@ fn library_status(
 ) -> Response {
     let kind = request.kind;
     let purpose = match kind {
-        medulla_types::AgentLibraryMutationKind::Publish => "agent-library:publish",
-        medulla_types::AgentLibraryMutationKind::Retire => "agent-library:retire",
+        medulla_agent_types::agent_library::AgentLibraryMutationKind::Publish => {
+            "agent-library:publish"
+        }
+        medulla_agent_types::agent_library::AgentLibraryMutationKind::Retire => {
+            "agent-library:retire"
+        }
     };
     request.context = match bind_status_context(store, req_id, verified, request.context, purpose) {
         Ok(context) => context,
@@ -839,9 +845,9 @@ fn library_status(
     match store.status(request) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentLibraryStatus>(
-                &result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentLibraryStatus,
+            >(&result),
         ),
         Err(error) => Response::err(req_id, error),
     }

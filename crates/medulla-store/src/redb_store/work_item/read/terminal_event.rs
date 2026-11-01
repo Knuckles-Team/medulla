@@ -1,9 +1,14 @@
 //! Resolve only an exact native terminal binding; never mint an event.
-use medulla_types::outcome_bundle::{RunEvent, RUN_EVENT_OUTBOX_TOPIC};
-use medulla_types::work_item_read::{CommittedTerminalEvent, TerminalEventRead};
-use medulla_types::{
-    MutationBatchRecord, MutationBatchStatus, MutationOutboxRecord, MutationScopeIdentity,
+use medulla_agent_types::{
+    work_item_read::CommittedTerminalEvent, work_item_read::TerminalEventRead,
 };
+use medulla_mutation_types::{
+    mutation_scope::MutationOutboxRecord, mutation_scope::MutationScopeIdentity,
+};
+use medulla_protocol_types::{
+    mutation_batch::MutationBatchRecord, mutation_batch::MutationBatchStatus,
+};
+use medulla_result_types::{outcome_bundle::RunEvent, outcome_bundle::RUN_EVENT_OUTBOX_TOPIC};
 use sha2::{Digest, Sha256};
 
 pub(super) fn project(

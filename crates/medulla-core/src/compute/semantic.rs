@@ -72,20 +72,25 @@ impl SemanticStore {
     }
 
     /// Create an empty store pinned to one exact model/preprocessing space.
-    pub fn new_in_space(space: medulla_types::EmbeddingSpaceRef) -> Result<Self, String> {
+    pub fn new_in_space(
+        space: medulla_index_types::embedding::EmbeddingSpaceRef,
+    ) -> Result<Self, String> {
         let mut store = Self::new();
         store.declare_space(space)?;
         Ok(store)
     }
 
     /// Declared model/preprocessing space, if this is not a legacy raw store.
-    pub fn space(&self) -> Option<&medulla_types::EmbeddingSpaceRef> {
+    pub fn space(&self) -> Option<&medulla_index_types::embedding::EmbeddingSpaceRef> {
         self.space.as_ref()
     }
 
     /// Declare the immutable space used by model-produced queries. Existing raw
     /// rows may be adopted only when their width matches the declaration.
-    pub fn declare_space(&mut self, space: medulla_types::EmbeddingSpaceRef) -> Result<(), String> {
+    pub fn declare_space(
+        &mut self,
+        space: medulla_index_types::embedding::EmbeddingSpaceRef,
+    ) -> Result<(), String> {
         if validate_space_declaration(self.space.as_ref(), &space)? {
             return Ok(());
         }
@@ -135,8 +140,8 @@ impl SemanticStore {
 /// Return true when this exact space was already declared; refuse replacing a
 /// different model space before either backend inspects its row layout.
 fn validate_space_declaration(
-    current: Option<&medulla_types::EmbeddingSpaceRef>,
-    requested: &medulla_types::EmbeddingSpaceRef,
+    current: Option<&medulla_index_types::embedding::EmbeddingSpaceRef>,
+    requested: &medulla_index_types::embedding::EmbeddingSpaceRef,
 ) -> Result<bool, String> {
     requested.validate()?;
     match current {
@@ -151,9 +156,9 @@ fn validate_space_declaration(
 
 /// Apply a validated declaration once the backend has checked its own row layout.
 fn commit_space_declaration(
-    slot: &mut Option<medulla_types::EmbeddingSpaceRef>,
+    slot: &mut Option<medulla_index_types::embedding::EmbeddingSpaceRef>,
     generation: &GenerationStamp,
-    space: medulla_types::EmbeddingSpaceRef,
+    space: medulla_index_types::embedding::EmbeddingSpaceRef,
 ) {
     *slot = Some(space);
     generation.bump();
@@ -162,9 +167,12 @@ fn commit_space_declaration(
 /// A clone keeps both its declared coordinate space and content stamp. Its
 /// backend index is reconstructed separately and does not define identity.
 fn carry_space_identity(
-    space: &Option<medulla_types::EmbeddingSpaceRef>,
+    space: &Option<medulla_index_types::embedding::EmbeddingSpaceRef>,
     generation: &GenerationStamp,
-) -> (Option<medulla_types::EmbeddingSpaceRef>, GenerationStamp) {
+) -> (
+    Option<medulla_index_types::embedding::EmbeddingSpaceRef>,
+    GenerationStamp,
+) {
     (space.clone(), generation.carry())
 }
 

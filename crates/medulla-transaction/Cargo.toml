@@ -19,6 +19,11 @@ serde = { version = "1.0", features = ["derive"] }
 serde_bytes = "0.11"
 sha2 = "0.10"
 tracing = "0.1"
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-agent-types = { path = "../medulla-agent-types" }
+medulla-result-types = { path = "../medulla-result-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-identity-types = { path = "../medulla-identity-types" }
 
 [features]
 # Compiles the certification fault points (which abort the process at an exact

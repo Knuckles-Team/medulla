@@ -2,7 +2,7 @@ use medulla_modality::{
     ApplyDisposition, ApplyOutcome, Classification, ServedEvent, ServedEventKind, ServedPage,
     ServedRuntimeStats,
 };
-use medulla_types::result_contract::ingestion as results;
+use medulla_protocol_types::result_contract::ingestion as results;
 use serde::{de::DeserializeOwned, Serialize};
 
 use super::ModalityAuthority;
@@ -102,7 +102,9 @@ pub(super) fn encode_capability_report(
 
 fn apply_outcome<M>(outcome: ApplyOutcome) -> Result<ResultPayload, String>
 where
-    M: medulla_types::result_contract::MethodResult<Body = results::ServedModalityApplyOutcome>,
+    M: medulla_protocol_types::result_contract::MethodResult<
+        Body = results::ServedModalityApplyOutcome,
+    >,
 {
     ResultPayload::of::<M>(apply_outcome_body(outcome))
 }

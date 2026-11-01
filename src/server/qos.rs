@@ -251,7 +251,8 @@ pub fn configured() -> Option<Arc<QosScheduler>> {
             .and_then(|v| v.parse::<usize>().ok())
             .filter(|&n| n > 0)
         {
-            config.per_principal_quota = medulla_kernel::autosize::bound_explicit(q, config.capacity);
+            config.per_principal_quota =
+                medulla_kernel::autosize::bound_explicit(q, config.capacity);
         }
         tracing::info!(
             target: "medulla::qos",

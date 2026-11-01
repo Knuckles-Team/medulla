@@ -4,8 +4,6 @@ use medulla_server_api::sql_catalog_acl::grant;
 use medulla_server_api::sql_catalog_acl::SqlPrivilege;
 use medulla_query::{Column, ColumnType, TableSchema};
 use medulla_types::acl::RequestContextClaims;
-use medulla_types::storage_wire::{SqlSourceCell, SqlSourceJson, SqlSourceText};
-pub(super) use medulla_types::test_support::sql_source::{self, change, id, SqlSourceTarget};
 
 pub(super) struct Fixture {
     pub(super) directory: PathBuf,

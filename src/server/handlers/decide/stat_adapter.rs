@@ -10,16 +10,26 @@
 //! passing receipt that qualified exactly this body; every pointer move is an
 //! audited event, and rollback returns to the adapter active before.
 
-use medulla_numeric::decision::adapter::{directions_of, evaluate, fit, to_body, to_q16, JudgedItem};
-use medulla_numeric::decision::retrieval::{hard_negatives, Verdict};
-use medulla_types::decision::digest::digest_text;
-use medulla_types::decision::statistical::body::{canonical_body_bytes, content_digest_of};
-use medulla_types::decision::statistical::retrieval::RetrievalOutcome;
-use medulla_types::decision::statistical::retrieval_adapter::{
-    AdapterEvalReceipt, AdapterFitRequest, AdapterFitted, QueryAdapterBody, MAX_ADAPTER_GAIN_Q16,
-    MAX_ADAPTER_RANK, QUERY_ADAPTER_SCHEMA_VERSION,
+use medulla_decision_types::decision::statistical::retrieval::RetrievalOutcome;
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_types::{
+    decision::statistical::body::canonical_body_bytes,
+    decision::statistical::body::content_digest_of,
 };
-use medulla_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_types::{
+    decision::statistical::retrieval_adapter::AdapterEvalReceipt,
+    decision::statistical::retrieval_adapter::AdapterFitRequest,
+    decision::statistical::retrieval_adapter::AdapterFitted,
+    decision::statistical::retrieval_adapter::QueryAdapterBody,
+    decision::statistical::retrieval_adapter::MAX_ADAPTER_GAIN_Q16,
+    decision::statistical::retrieval_adapter::MAX_ADAPTER_RANK,
+    decision::statistical::retrieval_adapter::QUERY_ADAPTER_SCHEMA_VERSION,
+};
+use medulla_numeric::decision::adapter::{
+    directions_of, evaluate, fit, to_body, to_q16, JudgedItem,
+};
+use medulla_numeric::decision::retrieval::{hard_negatives, Verdict};
+use medulla_types::solve_scalar::digest_text;
 
 use super::served_adapter::{adapter_key, read_fitted};
 use super::stat_executor::ExecutionContext;

@@ -45,20 +45,20 @@ macro_rules! connector_pack_admin_entry {
 
 connector_pack_admin_entry! {
     /// Bind a connector to the importer allowed to publish its packs.
-    serve_bind(medulla_types::connector_pack::ConnectorPackBindRequest) => bind
+    serve_bind(medulla_catalog_types::connector_pack::ConnectorPackBindRequest) => bind
 }
 
 connector_pack_admin_entry! {
     /// Remove a connector's importer binding; the configured bootstrap importer
     /// applies to it again.
-    serve_unbind(medulla_types::connector_pack::ConnectorPackUnbindRequest) => unbind
+    serve_unbind(medulla_catalog_types::connector_pack::ConnectorPackUnbindRequest) => unbind
 }
 
 connector_pack_admin_entry! {
     /// Permanently retire named entries. Unlike withdrawal this cannot be undone
     /// by a later import: a retired entry that reappears is
     /// `RETIRED_ENTRY_RETURNED`.
-    serve_retire(medulla_types::connector_pack::ConnectorPackRetireRequest) => retire
+    serve_retire(medulla_catalog_types::connector_pack::ConnectorPackRetireRequest) => retire
 }
 
 #[cfg(feature = "redb")]
@@ -66,14 +66,14 @@ async fn bind(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: medulla_types::connector_pack::ConnectorPackBindRequest,
+    request: medulla_catalog_types::connector_pack::ConnectorPackBindRequest,
 ) -> Response {
-    let medulla_types::connector_pack::ConnectorPackBindRequest {
+    let medulla_catalog_types::connector_pack::ConnectorPackBindRequest {
         context,
         connector,
         importer,
     } = request;
-    admin_write::<medulla_types::result_contract::storage::ConnectorPackBind, _>(
+    admin_write::<medulla_protocol_types::result_contract::storage::ConnectorPackBind, _>(
         AdminWrite {
             state,
             req_id,
@@ -99,10 +99,11 @@ async fn unbind(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: medulla_types::connector_pack::ConnectorPackUnbindRequest,
+    request: medulla_catalog_types::connector_pack::ConnectorPackUnbindRequest,
 ) -> Response {
-    let medulla_types::connector_pack::ConnectorPackUnbindRequest { context, connector } = request;
-    admin_write::<medulla_types::result_contract::storage::ConnectorPackUnbind, _>(
+    let medulla_catalog_types::connector_pack::ConnectorPackUnbindRequest { context, connector } =
+        request;
+    admin_write::<medulla_protocol_types::result_contract::storage::ConnectorPackUnbind, _>(
         AdminWrite {
             state,
             req_id,
@@ -122,14 +123,14 @@ async fn retire(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: medulla_types::connector_pack::ConnectorPackRetireRequest,
+    request: medulla_catalog_types::connector_pack::ConnectorPackRetireRequest,
 ) -> Response {
-    let medulla_types::connector_pack::ConnectorPackRetireRequest {
+    let medulla_catalog_types::connector_pack::ConnectorPackRetireRequest {
         context,
         connector,
         uris,
     } = request;
-    admin_write::<medulla_types::result_contract::storage::ConnectorPackRetire, _>(
+    admin_write::<medulla_protocol_types::result_contract::storage::ConnectorPackRetire, _>(
         AdminWrite {
             state,
             req_id,
@@ -153,7 +154,7 @@ struct AdminWrite<'a> {
     state: &'a Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &'a VerifiedRequestContext,
-    context: medulla_types::agent_library::AgentLibraryMutationContext,
+    context: medulla_agent_types::agent_library::AgentLibraryMutationContext,
     purpose: &'static str,
 }
 
@@ -162,12 +163,12 @@ struct AdminWrite<'a> {
 #[cfg(feature = "redb")]
 async fn admin_write<M, F>(request: AdminWrite<'_>, write: F) -> Response
 where
-    M: medulla_types::result_contract::MethodResult,
-    M::Encoding: medulla_types::result_contract::EncodeRef<M::Body>,
+    M: medulla_protocol_types::result_contract::MethodResult,
+    M::Encoding: medulla_protocol_types::result_contract::EncodeRef<M::Body>,
     M::Body: Send + 'static,
     F: FnOnce(
             &AgentLibraryStore,
-            medulla_types::agent_library::AgentLibraryMutationContext,
+            medulla_agent_types::agent_library::AgentLibraryMutationContext,
         ) -> Result<M::Body, String>
         + Send
         + 'static,
@@ -182,11 +183,11 @@ where
 #[cfg(feature = "redb")]
 async fn run_admin_write<M, F>(request: AdminWrite<'_>, write: F) -> Result<M::Body, String>
 where
-    M: medulla_types::result_contract::MethodResult,
+    M: medulla_protocol_types::result_contract::MethodResult,
     M::Body: Send + 'static,
     F: FnOnce(
             &AgentLibraryStore,
-            medulla_types::agent_library::AgentLibraryMutationContext,
+            medulla_agent_types::agent_library::AgentLibraryMutationContext,
         ) -> Result<M::Body, String>
         + Send
         + 'static,

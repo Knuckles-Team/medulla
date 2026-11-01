@@ -122,7 +122,7 @@ impl MedullaStore {
         core: &Arc<medulla_core::graph::GraphCore>,
         persistence: Option<&Arc<dyn PersistenceBackend>>,
         change_envelope: Option<&(
-            medulla_types::change_envelope::ChangeEnvelope,
+            medulla_protocol_types::change_envelope::ChangeEnvelope,
             Option<medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,
         )>,
     ) -> Result<Option<RaftResponse>, String> {

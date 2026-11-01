@@ -11,8 +11,8 @@ use super::{
     commit_ops, purge_graph_rows, reject_reserved_graph, sanitize,
     write_graph_meta_with_incarnation, DurableCrypto, SHARD_CONTROL_GRAPH,
 };
-use medulla_types::protocol::GraphType;
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::GraphType;
+use medulla_protocol_types::protocol::Method;
 use crate::redb_store::shard::Shard;
 use crate::redb_store::shard::ShardWrite;
 
@@ -245,7 +245,8 @@ fn competing_coordinator_decisions_have_one_winner() {
     };
     let commit = contender(true);
     let abort = contender(false);
-    let commit = medulla_kernel::test_rendezvous::join_bounded(commit, "coordinator commit contender");
+    let commit =
+        medulla_kernel::test_rendezvous::join_bounded(commit, "coordinator commit contender");
     let abort = medulla_kernel::test_rendezvous::join_bounded(abort, "coordinator abort contender");
     assert_ne!(commit.is_ok(), abort.is_ok());
     assert_eq!(

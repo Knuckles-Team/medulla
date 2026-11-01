@@ -46,7 +46,9 @@ pub(super) fn handle_ontology_inspect(
     match inspect(core, documents, source_ids) {
         Ok(view) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::reasoning::OntologyInspect>(view),
+            ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::OntologyInspect>(
+                view,
+            ),
         ),
         Err(error) => Response::err(req_id, format!("OntologyInspect: {error}")),
     }
@@ -150,10 +152,10 @@ fn parsed(
     let mut triples = Vec::new();
     let mut digests = BTreeSet::new();
     for (name, document) in documents {
-        if document.len() > medulla_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES {
+        if document.len() > medulla_catalog_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES {
             return Err(format!(
                 "{name} exceeds the maximum of {} bytes",
-                medulla_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES
+                medulla_catalog_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES
             ));
         }
         let document_triples = medulla_rdf::mapping::parse_turtle_bounded(

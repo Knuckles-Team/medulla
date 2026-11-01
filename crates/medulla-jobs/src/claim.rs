@@ -34,12 +34,12 @@
 //!    deliberately does NOT depend on `medulla-epistemic` (see the module doc above — that
 //!    crate has NO write path by design, and this crate's whole job is writing), so
 //!    `CalibrationInput` is the stored claim's typed calibration from the bottom of
-//!    the DAG (`medulla_types::epistemic_node::ClaimCalibration`, EH-194) rather than a
+//!    the DAG (`medulla_result_types::epistemic_node::ClaimCalibration`, EH-194) rather than a
 //!    re-export of `medulla_epistemic::model::Calibration` — a caller who computed a real
 //!    `medulla_epistemic::Calibration` converts it field-for-field at the call site.
 //!
 //! Every `:Claim`/`:Evidence` property object is built from the typed
-//! `medulla_types::epistemic_node::{Claim, Evidence}` structs (EH-194), which validate the
+//! `medulla_result_types::epistemic_node::{Claim, Evidence}` structs (EH-194), which validate the
 //! core fields before a single byte is written.
 //!
 //! `GENERATED_BY` is deliberately NOT one of `medulla_epistemic::classify_relationship`'s
@@ -48,8 +48,8 @@
 //! deliberately IN that whitelist.
 
 use medulla_core::graph::GraphCore;
-use medulla_types::epistemic_node::{Claim, Evidence};
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
+use medulla_result_types::{epistemic_node::Claim, epistemic_node::Evidence};
 
 use crate::model::AnalyticsJob;
 
@@ -107,10 +107,10 @@ pub fn dataset_node_id(result_ref: &str) -> String {
 
 /// The calibrated interval a committed claim carries (L52): the central credible
 /// interval, its probability mass, and the evidence count that fed it. This IS the
-/// stored claim's typed calibration ([`medulla_types::epistemic_node::ClaimCalibration`],
+/// stored claim's typed calibration ([`medulla_result_types::epistemic_node::ClaimCalibration`],
 /// EH-194) — one owner for the shape — so a caller holding a real
 /// `medulla_epistemic::Calibration` converts it field-for-field at the call site.
-pub type CalibrationInput = medulla_types::epistemic_node::ClaimCalibration;
+pub type CalibrationInput = medulla_result_types::epistemic_node::ClaimCalibration;
 
 /// Deterministic graph write-set for one succeeded job result.  The server uses
 /// this representation to commit the claim, evidence and activity through its
@@ -408,7 +408,8 @@ fn row_claim_nodes(row: RowClaim<'_>) -> Result<(serde_json::Value, serde_json::
         "source_refs": refs("source_refs"),
     }))
     .and_then(|evidence| evidence.to_properties());
-    let to_text = |error: medulla_types::epistemic_node::EpistemicNodeError| error.to_string();
+    let to_text =
+        |error: medulla_result_types::epistemic_node::EpistemicNodeError| error.to_string();
     Ok((claim.map_err(to_text)?, evidence.map_err(to_text)?))
 }
 
@@ -683,7 +684,7 @@ mod tests {
     // struct, so a reader never has to probe the convention key by key.
     #[test]
     fn committed_claim_and_evidence_decode_as_typed_nodes() {
-        use medulla_types::epistemic_node::{Claim, Evidence};
+        use medulla_result_types::{epistemic_node::Claim, epistemic_node::Evidence};
 
         let core = GraphCore::new();
         let job = succeeded_job("job-0000000000000003", "g1", 5);

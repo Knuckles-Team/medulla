@@ -14,7 +14,7 @@
 
 use std::fmt::Write as _;
 
-use medulla_types::decision::{DecisionOutcome, DecisionRecord};
+use medulla_decision_types::{decision::DecisionOutcome, decision::DecisionRecord};
 
 const NS: &str = "urn:eg:decide:";
 
@@ -113,8 +113,8 @@ pub(crate) fn check_decision_shape(record: &DecisionRecord) -> Result<(), String
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::agent_component::AgentComponentKind;
-    use medulla_types::test_support::contract_wave::decision;
+    use medulla_agent_types::agent_component::AgentComponentKind;
+    use medulla_decision_types::decision_fixtures::contract_decision as decision;
 
     fn solved() -> DecisionRecord {
         decision::record(

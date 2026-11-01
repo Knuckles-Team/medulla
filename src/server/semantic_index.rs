@@ -82,16 +82,6 @@ use medulla_server_api::sql_catalog_acl::{
     open_authorized_table, SemanticTextSnapshot, SqlPrivilege,
 };
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
-#[cfg(feature = "query")]
-use medulla_types::mutation_batch::{MutationOutboxLease, MutationOutboxRecord};
-use medulla_types::semantic_index::{
-    SemanticBinding, SemanticIndexCommand, SemanticIndexError, SemanticIndexRequest,
-};
-#[cfg(feature = "query")]
-use medulla_types::semantic_index::{
-    SemanticDigest, SemanticSourceDirtyIntent, SemanticSqlSourceIdentity,
-    SemanticSqlSourceManifest, SemanticStage, SemanticStageIntent, SemanticStageTransition,
-};
 
 fn request_validation_refusal(error: &SemanticIndexError) -> &'static str {
     match error {
@@ -154,7 +144,7 @@ impl medulla_storage::ScopeGrantVerifier for TenantScopedSemanticVerifier {
         &self,
         _physical: &medulla_storage::PhysicalStoreIdentity,
         layout: medulla_storage::OwnerLayout,
-        identity: &medulla_types::MutationScopeIdentity,
+        identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
         _principal: &str,
         proof: &[u8],
     ) -> Result<(), String> {
@@ -527,7 +517,7 @@ impl SemanticSqlSourceReadPort for AuthorizedSqlSourceReadPort {
 #[cfg(feature = "query")]
 fn map_semantic_text_snapshot_with_decision(
     binding: &SemanticBinding,
-    selector: &medulla_types::semantic_index::SqlColumnRef,
+    selector: &medulla_index_types::semantic_index::SqlColumnRef,
     snapshot: SemanticTextSnapshot,
 ) -> Result<AuthorizedSqlSourcePage, SemanticIndexError> {
     if snapshot.tenant_scope != binding.tenant_id

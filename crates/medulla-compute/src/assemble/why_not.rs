@@ -8,9 +8,11 @@
 //! Options step 1b removed are not re-solved -- their violation is already in
 //! the record's `eliminated` list.
 
-use medulla_types::agent_component::AgentComponentKind;
-use medulla_types::decision::{Violation, WhyNot};
-use medulla_types::solve::{ConstraintBody, ConstraintSpec, SolveStatus, VarId};
+use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_decision_types::{decision::Violation, decision::WhyNot};
+use medulla_decision_types::{
+    solve::ConstraintBody, solve::ConstraintSpec, solve::SolveStatus, solve::VarId,
+};
 
 use super::agent::slot_name;
 use super::conclude::slot_label;

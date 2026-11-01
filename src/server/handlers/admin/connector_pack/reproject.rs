@@ -9,7 +9,7 @@ use medulla_persistence::connector_pack::projection::ConnectorPackProjectionPlan
 use medulla_persistence::connector_pack::projection::PackProjectionBody;
 use medulla_server_api::state::ServerState;
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
-use medulla_types::connector_pack::{PackEntryKind, PackProjectionState};
+use medulla_catalog_types::{connector_pack::PackEntryKind, connector_pack::PackProjectionState};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -24,7 +24,7 @@ pub(crate) async fn serve(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: medulla_types::connector_pack::ConnectorPackReprojectRequest,
+    request: medulla_catalog_types::connector_pack::ConnectorPackReprojectRequest,
 ) -> Response {
     #[cfg(not(all(feature = "redb", feature = "blob", feature = "shacl")))]
     {
@@ -45,7 +45,7 @@ async fn serve_with_substrates(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: medulla_types::connector_pack::ConnectorPackReprojectRequest,
+    request: medulla_catalog_types::connector_pack::ConnectorPackReprojectRequest,
 ) -> Response {
     let (store, context, plan) =
         match prepare_projection_request(state, req_id, verified, request).await {
@@ -55,9 +55,9 @@ async fn serve_with_substrates(
     match project_head(state, req_id, verified, &store, context, &plan).await {
         Ok(receipt) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::ConnectorPackReproject>(
-                &receipt,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::ConnectorPackReproject,
+            >(&receipt),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -73,9 +73,9 @@ pub(crate) async fn project_head(
     req_id: u64,
     verified: &VerifiedRequestContext,
     store: &medulla_persistence::agent_library::AgentLibraryStore,
-    context: medulla_types::agent_library::AgentLibraryMutationContext,
+    context: medulla_agent_types::agent_library::AgentLibraryMutationContext,
     plan: &ConnectorPackProjectionPlan,
-) -> Result<medulla_types::connector_pack::PackImportReceipt, String> {
+) -> Result<medulla_catalog_types::connector_pack::PackImportReceipt, String> {
     let documents = match materialize_current_projection(state, plan).await {
         Ok(documents) => documents,
         Err(error) => return Err(record_projection_failure(store, &context, plan, &error)),
@@ -92,11 +92,11 @@ async fn prepare_projection_request(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: medulla_types::connector_pack::ConnectorPackReprojectRequest,
+    request: medulla_catalog_types::connector_pack::ConnectorPackReprojectRequest,
 ) -> Result<
     (
         Arc<medulla_persistence::agent_library::AgentLibraryStore>,
-        medulla_types::agent_library::AgentLibraryMutationContext,
+        medulla_agent_types::agent_library::AgentLibraryMutationContext,
         ConnectorPackProjectionPlan,
     ),
     String,
@@ -141,7 +141,7 @@ async fn commit_schema_projection(
     verified: &VerifiedRequestContext,
     plan: &ConnectorPackProjectionPlan,
     documents: PackProjectionDocuments,
-) -> Result<medulla_types::graph_schema::GraphSchemaCommitted, String> {
+) -> Result<medulla_catalog_types::graph_schema::GraphSchemaCommitted, String> {
     crate::server::graph_schema::commit_pack_projection(
         state,
         req_id,
@@ -158,10 +158,10 @@ async fn commit_schema_projection(
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
 fn finish_projection(
     store: &medulla_persistence::agent_library::AgentLibraryStore,
-    context: medulla_types::agent_library::AgentLibraryMutationContext,
+    context: medulla_agent_types::agent_library::AgentLibraryMutationContext,
     plan: &ConnectorPackProjectionPlan,
-    committed: medulla_types::graph_schema::GraphSchemaCommitted,
-) -> Result<medulla_types::connector_pack::PackImportReceipt, String> {
+    committed: medulla_catalog_types::graph_schema::GraphSchemaCommitted,
+) -> Result<medulla_catalog_types::connector_pack::PackImportReceipt, String> {
     let expected_graph = committed.graph;
     let expected_graph_version = committed.graph_version;
     let receipt = store.commit_connector_pack_projection(
@@ -189,7 +189,7 @@ fn finish_projection(
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
 fn record_projection_failure(
     store: &medulla_persistence::agent_library::AgentLibraryStore,
-    context: &medulla_types::agent_library::AgentLibraryMutationContext,
+    context: &medulla_agent_types::agent_library::AgentLibraryMutationContext,
     plan: &ConnectorPackProjectionPlan,
     error: &str,
 ) -> String {
@@ -264,7 +264,7 @@ fn push_schema_document(
     let length = total_length
         .checked_add(document.len())
         .ok_or_else(|| "SCHEMA_SOURCES_TOO_LARGE: pack schema length overflow".to_string())?;
-    if length > medulla_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES {
+    if length > medulla_catalog_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES {
         return Err("SCHEMA_SOURCES_TOO_LARGE: pack schema exceeds source bound".into());
     }
     target.push(crate::server::graph_schema::PackSchemaDocument {
@@ -287,7 +287,7 @@ fn projection_failure_detail(error: &str) -> String {
             character
         };
         if detail.len() + character.len_utf8()
-            > medulla_types::connector_pack::MAX_PROJECTION_FAILURE_DETAIL_BYTES
+            > medulla_catalog_types::connector_pack::MAX_PROJECTION_FAILURE_DETAIL_BYTES
         {
             break;
         }
@@ -389,7 +389,8 @@ mod tests {
         assert_eq!(documents.len(), 2);
         assert_ne!(documents[0].uri, documents[1].uri);
         assert!(documents.iter().all(|doc| doc.body.starts_with("_:b0")));
-        let oversized = "x".repeat(medulla_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES + 1);
+        let oversized =
+            "x".repeat(medulla_catalog_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES + 1);
         let mut oversized_docs = Vec::new();
         let mut oversized_length = 0;
         assert!(push_schema_document(

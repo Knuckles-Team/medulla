@@ -131,10 +131,11 @@ const COLD_SCOPE_RESOURCE: &str = "kvcache-cold";
 const COLD_SCOPE_INCARNATION: &str = "kvcache-cold:v1";
 
 #[cfg(feature = "durable")]
-fn cold_scope_identity() -> io::Result<medulla_types::MutationScopeIdentity> {
-    medulla_types::MutationScopeIdentity::fixed_native(
+fn cold_scope_identity() -> io::Result<medulla_mutation_types::mutation_scope::MutationScopeIdentity>
+{
+    medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_native(
         COLD_SCOPE_TENANT,
-        medulla_types::mutation_batch::DurabilityDomain::KvStore,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::KvStore,
         COLD_SCOPE_RESOURCE,
         COLD_SCOPE_INCARNATION,
     )
@@ -151,18 +152,18 @@ fn cold_scope_identity() -> io::Result<medulla_types::MutationScopeIdentity> {
 #[cfg(feature = "durable")]
 fn cold_batch(
     kind: &str,
-    identity: &medulla_types::MutationScopeIdentity,
+    identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     principal: &str,
     expected_version: u64,
-) -> io::Result<medulla_types::MutationBatch> {
+) -> io::Result<medulla_protocol_types::mutation_batch::MutationBatch> {
     let batch_id = format!("kvcache-cold-{kind}:v{expected_version}");
-    let batch = medulla_types::MutationBatch {
-        schema_version: medulla_types::MUTATION_BATCH_VERSION,
+    let batch = medulla_protocol_types::mutation_batch::MutationBatch {
+        schema_version: medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION,
         batch_id: batch_id.clone(),
         // See this function's own doc comment: a demoted KV page carries no
         // caller identity, so the envelope is the maintenance one and carries
         // no operation replay identity to consume a nonce with.
-        envelope: medulla_types::mutation_batch::MutationEnvelope::maintenance_for_scope(
+        envelope: medulla_protocol_types::mutation_batch::MutationEnvelope::maintenance_for_scope(
             identity,
             principal,
             &format!("kvcache_cold_{kind}"),
@@ -171,14 +172,16 @@ fn cold_batch(
         .map_err(io::Error::other)?,
         identity: identity.clone(),
         placement_epoch: 0,
-        version_expectation: medulla_types::VersionExpectation::Native(expected_version),
+        version_expectation: medulla_protocol_types::mutation_batch::VersionExpectation::Native(
+            expected_version,
+        ),
         fencing_token: None,
         authoritative_state: None,
-        operations: vec![medulla_types::MutationOperation {
+        operations: vec![medulla_protocol_types::mutation_batch::MutationOperation {
             ordinal: 0,
-            surface: medulla_types::MutationSurface::Other,
-            domain: medulla_types::mutation_batch::DurabilityDomain::KvStore,
-            method: medulla_types::protocol::Method::ApplyMutation {
+            surface: medulla_mutation_types::mutation_scope::MutationSurface::Other,
+            domain: medulla_mutation_types::mutation_scope::DurabilityDomain::KvStore,
+            method: medulla_protocol_types::protocol::Method::ApplyMutation {
                 event_type: format!("kvcache_cold_{kind}"),
                 query: batch_id,
             },
@@ -211,9 +214,13 @@ impl RedbColdStore {
         // re-validates it on every open, so a first `get` before any `put`
         // succeeds without this crate opening a table itself.
         let kernel = if path.exists() {
-            medulla_storage::StorageKernel::open_owner::<medulla_storage::KvOwner>(path, physical, None)
+            medulla_storage::StorageKernel::open_owner::<medulla_storage::KvOwner>(
+                path, physical, None,
+            )
         } else {
-            medulla_storage::StorageKernel::create_owner::<medulla_storage::KvOwner>(path, physical, None)
+            medulla_storage::StorageKernel::create_owner::<medulla_storage::KvOwner>(
+                path, physical, None,
+            )
         }
         .map_err(io::Error::other)?;
         let (kernel, authority) = kernel
@@ -244,7 +251,9 @@ impl RedbColdStore {
     /// Apply one cold-tier row change as an admitted maintenance mutation.
     fn maintain<F>(&self, kind: &str, apply: F) -> io::Result<()>
     where
-        F: FnOnce(&medulla_transaction::AdmittedOwnerWrite<'_, medulla_storage::KvOwner>) -> io::Result<()>,
+        F: FnOnce(
+            &medulla_transaction::AdmittedOwnerWrite<'_, medulla_storage::KvOwner>,
+        ) -> io::Result<()>,
     {
         // Keep the version lookup and maintenance-envelope mint inside one
         // admitted write.  A snapshot read here would let concurrent demotions
@@ -344,7 +353,7 @@ pub(crate) mod tests {
             &self,
             _physical: &medulla_storage::PhysicalStoreIdentity,
             layout: medulla_storage::OwnerLayout,
-            _identity: &medulla_types::MutationScopeIdentity,
+            _identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
             principal: &str,
             proof: &[u8],
         ) -> Result<(), String> {

@@ -11,7 +11,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_types::agent_component::AgentComponentEntry;
+use medulla_agent_types::agent_component::AgentComponentEntry;
 
 /// The classes each candidate was derived to belong to, as `(class, rule)`.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -39,13 +39,13 @@ mod imp {
     pub(in super::super) fn current_rules() -> Option<String> {
         let policy = policy();
         let names: Vec<&str> = DERIVATION_RULES.iter().map(|rule| rule.rule).collect();
-        Some(medulla_types::decision::digest::digest_text(
+        Some(medulla_types::solve_scalar::digest_text(
             RULES_DOMAIN,
             &(
                 names,
                 policy.long_context_tokens,
                 policy.low_latency_p95_ms,
-                medulla_types::agent_ontology::ontology_digest(),
+                medulla_agent_types::agent_ontology::ontology_digest(),
             ),
         ))
     }

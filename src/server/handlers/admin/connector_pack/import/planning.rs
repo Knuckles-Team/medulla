@@ -2,14 +2,19 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_types::agent_component::{
-    AgentComponentEntry, AgentComponentMutationKind, ComponentDependency,
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
+use medulla_agent_types::{
+    agent_component::AgentComponentEntry, agent_component::AgentComponentMutationKind,
+    agent_component::ComponentDependency,
 };
-use medulla_types::agent_library::AgentLibraryLifecycle;
-use medulla_types::connector_pack::{
-    ConnectorPackImportRequest, PackArchiveFacts, PackDisposition, PackEntry, PackEntryKind,
-    PackEntryRecord, PackImportRecord, PackImportResult, PackProjectionState, PackServerRecord,
-    PackViolation, PackViolationCode, PackWarning, PACK_IMPORT_RECORD_SCHEMA_VERSION,
+use medulla_catalog_types::{
+    connector_pack::ConnectorPackImportRequest, connector_pack::PackArchiveFacts,
+    connector_pack::PackDisposition, connector_pack::PackEntry, connector_pack::PackEntryKind,
+    connector_pack::PackEntryRecord, connector_pack::PackImportRecord,
+    connector_pack::PackImportResult, connector_pack::PackProjectionState,
+    connector_pack::PackServerRecord, connector_pack::PackViolation,
+    connector_pack::PackViolationCode, connector_pack::PackWarning,
+    connector_pack::PACK_IMPORT_RECORD_SCHEMA_VERSION,
 };
 use medulla_types::contract::{BoundedVec, Digest256};
 
@@ -32,7 +37,7 @@ pub(super) enum Prepared {
 }
 
 pub(super) struct ReadyPlan {
-    expected_head: Option<medulla_types::connector_pack::PackHeadRef>,
+    expected_head: Option<medulla_catalog_types::connector_pack::PackHeadRef>,
     record: PackImportRecord,
     components: Vec<ConnectorPackComponentCommit>,
     members: Vec<ConnectorPackMemberRow>,
@@ -196,7 +201,8 @@ struct PlanCollector<'a> {
     records: Vec<PackEntryRecord>,
     server_pin: Option<ComponentDependency>,
     /// Relations the pack ontologies declare, attached to the declaration member.
-    relations: BTreeMap<String, medulla_types::connector_pack::ConnectorRelationshipMapping>,
+    relations:
+        BTreeMap<String, medulla_catalog_types::connector_pack::ConnectorRelationshipMapping>,
 }
 
 impl<'a> PlanCollector<'a> {
@@ -235,7 +241,7 @@ impl<'a> PlanCollector<'a> {
             ));
             return Ok(());
         }
-        let digest = medulla_types::connector_pack::digest::entry_digest(entry)?;
+        let digest = medulla_catalog_types::connector_pack::digest::entry_digest(entry)?;
         let (component, disposition) = self.resolve_component(entry, &wanted, prior, &digest)?;
         self.pin_server(entry, &component);
         self.add_member(entry, &wanted, prior, &component, &digest)?;
@@ -465,7 +471,7 @@ impl<'a> PlanCollector<'a> {
         self.members.sort_by(|a, b| a.uri.cmp(&b.uri));
         self.records.sort_by(|a, b| a.uri.cmp(&b.uri));
         warnings.sort_by(|a, b| (a.uri.as_deref(), a.code).cmp(&(b.uri.as_deref(), b.code)));
-        warnings.truncate(medulla_types::connector_pack::MAX_PACK_VIOLATIONS);
+        warnings.truncate(medulla_catalog_types::connector_pack::MAX_PACK_VIOLATIONS);
         let record = import_record(
             self.request,
             self.record_id,
@@ -474,8 +480,9 @@ impl<'a> PlanCollector<'a> {
             self.server_pin
                 .ok_or_else(|| "MALFORMED_INDEX: pack has no server".to_string())?,
         )?;
-        let record_bytes = medulla_storage::encode_bounded(&record, "connector pack import record")?;
-        if record_bytes.len() > medulla_types::connector_pack::MAX_PACK_RECORD_BYTES {
+        let record_bytes =
+            medulla_storage::encode_bounded(&record, "connector pack import record")?;
+        if record_bytes.len() > medulla_catalog_types::connector_pack::MAX_PACK_RECORD_BYTES {
             return rejected(
                 self.request,
                 vec![violation(
@@ -500,12 +507,12 @@ impl<'a> PlanCollector<'a> {
 /// is unchanged. Unrelated member updates must not silently suspend a live
 /// source; changed body bytes or any source-contract field return it to held.
 fn preserve_source_approvals(
-    current: &mut [medulla_types::connector_pack::PackSourceRegistration],
+    current: &mut [medulla_catalog_types::connector_pack::PackSourceRegistration],
     prior: Option<&ConnectorPackMemberRow>,
     body_sha256: Digest256,
 ) {
     let Some(prior) = prior else { return };
-    if prior.lifecycle != medulla_types::agent_library::AgentLibraryLifecycle::Published
+    if prior.lifecycle != medulla_agent_types::agent_library::AgentLibraryLifecycle::Published
         || prior.body_sha256 != body_sha256
     {
         return;
@@ -522,8 +529,8 @@ fn preserve_source_approvals(
 }
 
 fn same_source_contract(
-    left: &medulla_types::connector_pack::PackSourceRegistration,
-    right: &medulla_types::connector_pack::PackSourceRegistration,
+    left: &medulla_catalog_types::connector_pack::PackSourceRegistration,
+    right: &medulla_catalog_types::connector_pack::PackSourceRegistration,
 ) -> bool {
     left.connector == right.connector
         && left.contract_iri == right.contract_iri
@@ -568,14 +575,17 @@ fn disposition_for(
 }
 
 type DeclarationProjections = (
-    Option<BTreeMap<String, medulla_types::connector_pack::ConnectorSchemaMapping>>,
-    Option<BTreeMap<String, medulla_types::connector_pack::ConnectorRelationshipMapping>>,
+    Option<BTreeMap<String, medulla_catalog_types::connector_pack::ConnectorSchemaMapping>>,
+    Option<BTreeMap<String, medulla_catalog_types::connector_pack::ConnectorRelationshipMapping>>,
 );
 
 fn declaration_projections(
     entry: &PackEntry,
     body: &[u8],
-    relations: &BTreeMap<String, medulla_types::connector_pack::ConnectorRelationshipMapping>,
+    relations: &BTreeMap<
+        String,
+        medulla_catalog_types::connector_pack::ConnectorRelationshipMapping,
+    >,
 ) -> Result<DeclarationProjections, String> {
     if entry.kind != PackEntryKind::Resource || entry.uri != CONNECTOR_DECLARATION_URI {
         return Ok((None, None));
@@ -589,7 +599,7 @@ fn declaration_projections(
 fn declared_relations(
     all: &[&PackEntry],
     desired: &BTreeMap<String, Desired>,
-) -> BTreeMap<String, medulla_types::connector_pack::ConnectorRelationshipMapping> {
+) -> BTreeMap<String, medulla_catalog_types::connector_pack::ConnectorRelationshipMapping> {
     let documents: Vec<&str> = all
         .iter()
         .filter(|entry| entry.kind == PackEntryKind::Ontology)
@@ -657,8 +667,8 @@ fn rejected(
     mut violations: Vec<PackViolation>,
 ) -> Result<Prepared, String> {
     violations.sort_by(|a, b| (a.uri.as_deref(), a.code).cmp(&(b.uri.as_deref(), b.code)));
-    let exhausted = violations.len() > medulla_types::connector_pack::MAX_PACK_VIOLATIONS;
-    violations.truncate(medulla_types::connector_pack::MAX_PACK_VIOLATIONS);
+    let exhausted = violations.len() > medulla_catalog_types::connector_pack::MAX_PACK_VIOLATIONS;
+    violations.truncate(medulla_catalog_types::connector_pack::MAX_PACK_VIOLATIONS);
     Ok(Prepared::Rejected(PackImportResult::Rejected {
         pack_digest: Some(request.index.pack_digest),
         violations: BoundedVec::new(violations)?,
@@ -671,7 +681,7 @@ fn declared_sources(
     entry: &PackEntry,
     body: &[u8],
     connector: &medulla_types::contract::ResourceId,
-) -> Result<Vec<medulla_types::connector_pack::PackSourceRegistration>, String> {
+) -> Result<Vec<medulla_catalog_types::connector_pack::PackSourceRegistration>, String> {
     if entry.kind == PackEntryKind::Resource && entry.uri.starts_with("contract://") {
         if entry.uri != format!("contract://{}", connector.as_str())
             || entry.media_type != "text/turtle"

@@ -4,8 +4,8 @@
 use medulla_raft::raft::RaftStateExt;
 use std::sync::Arc;
 
-use medulla_types::mutation_batch::RepositoryEnrichmentTopUp;
-use medulla_types::MutationOutboxRecord;
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
+use medulla_protocol_types::mutation_batch::RepositoryEnrichmentTopUp;
 use tokio::sync::RwLock;
 
 use crate::parser::enrichment_reactivation::{plan_reactivation, BudgetRevisionProposal};
@@ -70,7 +70,7 @@ async fn bind_retained_top_up_identity(
     verified: &VerifiedRequestContext,
     retained: &RepositoryEnrichmentPolicyRevision,
     proposal: &BudgetRevisionProposal,
-    replacement: &medulla_types::native_control::EnrichmentBudgetCheckpoint,
+    replacement: &medulla_agent_types::native_control::EnrichmentBudgetCheckpoint,
 ) -> Result<RepositoryEnrichmentPolicyRevision, String> {
     let current = state.read().await;
     let entry = current
@@ -182,7 +182,7 @@ async fn prepare_replay(
     proposal: &BudgetRevisionProposal,
     retained: &RepositoryEnrichmentPolicyRevision,
     routed: &medulla_raft::raft::multi::RoutedRaftHandle,
-    record: medulla_types::mutation_batch::MutationBatchRecord,
+    record: medulla_protocol_types::mutation_batch::MutationBatchRecord,
 ) -> Result<(EnrichmentTopUpTransition, u64), String> {
     let graph = proposal.graph.as_str();
     let bytes = record
@@ -275,18 +275,20 @@ async fn prepare_fresh(
     let replacement_intent =
         medulla_server_api::api::reentry::enrichment_intent_for_snapshot(state, plan.snapshot).await?;
     let replacement_batch =
-        medulla_types::MutationBatch::repository_enrichment_top_up(RepositoryEnrichmentTopUp {
-            old_delivery: &old_delivery,
-            policy_sequence: revision.sequence,
-            revision_idempotency_key: revision.idempotency_key.as_deref().unwrap_or_default(),
-            replacement_intent,
-            replacement_batch_id: &proposal.new_source_envelope,
-            serving_principal: medulla_kernel::kernel::persistence::ENGINE_LEDGER_PRINCIPAL,
-            graph_version: version,
-            placement_epoch: routed.epoch,
-            fencing_token: routed.group_id,
-            created_at_ms: committed_at_ms,
-        })?;
+        medulla_protocol_types::mutation_batch::MutationBatch::repository_enrichment_top_up(
+            RepositoryEnrichmentTopUp {
+                old_delivery: &old_delivery,
+                policy_sequence: revision.sequence,
+                revision_idempotency_key: revision.idempotency_key.as_deref().unwrap_or_default(),
+                replacement_intent,
+                replacement_batch_id: &proposal.new_source_envelope,
+                serving_principal: medulla_kernel::kernel::persistence::ENGINE_LEDGER_PRINCIPAL,
+                graph_version: version,
+                placement_epoch: routed.epoch,
+                fencing_token: routed.group_id,
+                created_at_ms: committed_at_ms,
+            },
+        )?;
     let transition = EnrichmentTopUpTransition {
         old_delivery,
         consumer: "repository-enrichment-v1".into(),

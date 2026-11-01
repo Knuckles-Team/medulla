@@ -34,7 +34,7 @@ fn native_cancel_lost_ack_is_replay_safe_across_crash_and_reopen() {
         TEST_GRAPH,
         &DevelopmentLaneStatusRequest {
             schema_version:
-                medulla_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
+                medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
             tenant_ref: hold.tenant_ref,
             hold_id: Some(hold.hold_id),
             lane_id: None,

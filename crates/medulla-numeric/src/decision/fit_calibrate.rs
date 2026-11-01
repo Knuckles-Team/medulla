@@ -14,10 +14,16 @@
 //! -- its fixed-point softmax over the scored options (EH-293). One core,
 //! [`calibrate_logits`], serves both.
 
-use medulla_types::decision::statistical::dataset::{LabelledDataset, LabelledItem};
-use medulla_types::decision::statistical::head::{DecisionHeadBody, HeadCalibration};
-use medulla_types::decision::statistical::{RiskMethod, RiskStatement};
-use medulla_types::decision::{QuantisedValue, StatisticalPolicy};
+use medulla_decision_types::{
+    decision::statistical::dataset::LabelledDataset, decision::statistical::dataset::LabelledItem,
+};
+use medulla_decision_types::{
+    decision::statistical::head::DecisionHeadBody, decision::statistical::head::HeadCalibration,
+};
+use medulla_decision_types::{
+    decision::statistical::RiskMethod, decision::statistical::RiskStatement,
+};
+use medulla_decision_types::{decision::QuantisedValue, decision::StatisticalPolicy};
 
 use super::fit::Example;
 use super::head_eval::{logit, scaled_softmax, top_index};

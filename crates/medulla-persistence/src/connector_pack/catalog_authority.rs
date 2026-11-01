@@ -4,17 +4,23 @@
 //! verify every source before calling this method. An owner row alone is not
 //! authorization.
 
-use medulla_types::agent_component::{AgentComponentEntry, AgentComponentKind};
-use medulla_types::agent_library::AgentLibraryLifecycle;
-use medulla_types::agent_library::AgentLibraryMutationContext;
-use medulla_types::connector_pack::{
-    catalog_authority::joined_configuration_digest, reconcile_catalog_authority,
-    reconcile_joined_configuration, McpCatalogAttestation, McpCatalogAuthorityCandidate,
-    McpCatalogAuthorityRow, McpCatalogSnapshotBinding, McpJoinedConfigurationRow,
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
+use medulla_agent_types::agent_library::AgentLibraryMutationContext;
+use medulla_agent_types::{
+    agent_component::AgentComponentEntry, agent_component::AgentComponentKind,
 };
+use medulla_catalog_types::{
+    connector_pack::catalog_authority::joined_configuration_digest,
+    connector_pack::reconcile_catalog_authority, connector_pack::reconcile_joined_configuration,
+    connector_pack::McpCatalogAttestation, connector_pack::McpCatalogAuthorityCandidate,
+    connector_pack::McpCatalogAuthorityRow, connector_pack::McpCatalogSnapshotBinding,
+    connector_pack::McpJoinedConfigurationRow,
+};
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_protocol_types::mutation_batch::MutationOperation;
+use medulla_protocol_types::protocol::Method;
 use medulla_types::contract::Digest256;
-use medulla_types::mutation_batch::{DurabilityDomain, MutationOperation, MutationSurface};
-use medulla_types::protocol::Method;
 use redb::ReadableTable;
 
 use super::admitted::{PackOwnerWrite, PackWriteEffects, PackWriteIdentity};
@@ -131,7 +137,7 @@ fn verify_component_source(
                 && current.kind == AgentComponentKind::McpServer
         }
         McpCatalogAttestation::SelfServed { .. } => {
-            medulla_types::connector_pack::self_served_component_revision(
+            medulla_catalog_types::connector_pack::self_served_component_revision(
                 published_server_content(current.as_ref())?,
                 candidate.component_digest,
             ) == candidate.component_revision
@@ -205,7 +211,7 @@ impl AgentLibraryStore {
         scope_digest: Digest256,
     ) -> Result<Option<McpCatalogSnapshotBinding>, String> {
         if tenant_id.is_empty()
-            || !medulla_types::result_contract::cluster::is_valid_server_name(server_name)
+            || !medulla_catalog_types::fleet_catalog::is_valid_server_name(server_name)
             || scope_digest == Digest256::from_bytes([0; 32])
         {
             return Err("invalid scoped MCP catalog binding read".into());
@@ -242,7 +248,7 @@ impl AgentLibraryStore {
         attester_principal_id: &str,
     ) -> Result<Option<McpCatalogSnapshotBinding>, String> {
         if tenant_id.is_empty()
-            || !medulla_types::result_contract::cluster::is_valid_server_name(server_name)
+            || !medulla_catalog_types::fleet_catalog::is_valid_server_name(server_name)
             || attester_principal_id.is_empty()
         {
             return Err("invalid scoped MCP catalog authority read".into());
@@ -419,7 +425,8 @@ pub mod tests {
     use super::*;
 
     fn authority_row() -> McpCatalogAuthorityRow {
-        let candidate = medulla_types::connector_pack::catalog_authority::sample_authority_candidate();
+        let candidate =
+            medulla_catalog_types::connector_pack::catalog_authority::sample_authority_candidate();
         let config = reconcile_joined_configuration(None, &candidate).unwrap();
         reconcile_catalog_authority(None, &config, &candidate).unwrap()
     }
@@ -481,7 +488,7 @@ pub mod tests {
 
     fn self_served(expected: Option<u64>, four_family: u8) -> McpCatalogAuthorityCandidate {
         let mut candidate =
-            medulla_types::connector_pack::catalog_authority::sample_authority_candidate();
+            medulla_catalog_types::connector_pack::catalog_authority::sample_authority_candidate();
         candidate.component_revision = 0;
         candidate.child_id = candidate.attester_principal_id.clone();
         candidate.local_catalog_epoch = 1;
@@ -527,7 +534,8 @@ pub mod tests {
         let mut unpublished = self_served(Some(2), 5);
         unpublished.component_revision = 1;
         assert!(commit(5, unpublished).is_err());
-        let mut mounted = medulla_types::connector_pack::catalog_authority::sample_authority_candidate();
+        let mut mounted =
+            medulla_catalog_types::connector_pack::catalog_authority::sample_authority_candidate();
         mounted.expected_catalog_generation = Some(2);
         assert!(commit(6, mounted).is_err());
         let scope = changed.authorization_scope_digest;
@@ -553,7 +561,7 @@ pub mod tests {
     #[test]
     fn replay_identity_binds_scope_child_and_source() {
         let mut candidate =
-            medulla_types::connector_pack::catalog_authority::sample_authority_candidate();
+            medulla_catalog_types::connector_pack::catalog_authority::sample_authority_candidate();
         candidate.expected_catalog_generation = Some(1);
         let original = candidate_digest("mcp:a/mcp_server/child-a", &candidate).unwrap();
         candidate.authorization_scope_digest = Digest256::from_bytes([5; 32]);

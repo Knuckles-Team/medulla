@@ -1,6 +1,7 @@
-use medulla_types::agent_component::{
-    AgentComponentFacts, DeclaredLatency, ModalityFacts, ObservationRef, ToolEffect,
-    ToolsetTransport,
+use medulla_agent_types::{
+    agent_component::AgentComponentFacts, agent_component::DeclaredLatency,
+    agent_component::ModalityFacts, agent_component::ObservationRef, agent_component::ToolEffect,
+    agent_component::ToolsetTransport,
 };
 
 use super::*;

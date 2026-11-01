@@ -99,7 +99,8 @@ fn update_node_properties(
     let Some(mut props_msgpack) = core.node_properties.get_mut(node_id) else {
         return;
     };
-    let Ok(mut val) = medulla_types::msgpack::decode_property_value(props_msgpack.as_slice()) else {
+    let Ok(mut val) = medulla_types::msgpack::decode_property_value(props_msgpack.as_slice())
+    else {
         return;
     };
     let Some(obj) = val.as_object_mut() else {
@@ -161,7 +162,8 @@ pub fn bind_inference_schema_digests(
             continue;
         };
         for row in rows.iter_mut() {
-            let Ok(mut value) = medulla_types::msgpack::decode_property_value(row.as_slice()) else {
+            let Ok(mut value) = medulla_types::msgpack::decode_property_value(row.as_slice())
+            else {
                 continue;
             };
             let Some(properties) = value.as_object_mut() else {
@@ -770,8 +772,8 @@ mod tests {
             1,
             "reasoning must not add a second properties entry over an already-connected pair"
         );
-        let decoded =
-            medulla_types::msgpack::decode_property_value(&after[0]).expect("decode surviving edge");
+        let decoded = medulla_types::msgpack::decode_property_value(&after[0])
+            .expect("decode surviving edge");
         assert_eq!(
             decoded.get("relationship").and_then(|v| v.as_str()),
             Some("PART_OF"),
@@ -841,8 +843,8 @@ mod tests {
             "property-chain inference must not add a second properties entry over an \
              already-connected pair"
         );
-        let decoded =
-            medulla_types::msgpack::decode_property_value(&after[0]).expect("decode surviving edge");
+        let decoded = medulla_types::msgpack::decode_property_value(&after[0])
+            .expect("decode surviving edge");
         assert_eq!(
             decoded.get("relationship").and_then(|v| v.as_str()),
             Some("unrelated"),

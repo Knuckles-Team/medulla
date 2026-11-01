@@ -234,7 +234,7 @@ pub(crate) fn cold_seed_rows_touched_take() -> u64 {
 pub fn verify_audit(
     shard: &Shard,
     graph: &str,
-) -> Result<medulla_types::protocol::AuditReport, String> {
+) -> Result<medulla_protocol_types::protocol::AuditReport, String> {
     let handle = shard.graph(graph)?;
     let read = shard.read(&handle)?;
     let audit = read.scoped_owner_table(AUDIT)?;
@@ -307,7 +307,10 @@ pub fn provenance_leaf_hashes(
     for id in node_ids {
         if let Some(v) = nodes.get((graph, id.as_str()))? {
             let content = crypto.unseal_node(graph, id, v.value())?;
-            out.push((id.clone(), medulla_kernel::audit::merkle_leaf_hash(id, &content)));
+            out.push((
+                id.clone(),
+                medulla_kernel::audit::merkle_leaf_hash(id, &content),
+            ));
         }
     }
     Ok(out)
@@ -462,7 +465,7 @@ pub fn prove_inclusion(
     node_id: &str,
     anchor_seq: Option<u64>,
     crypto: DurableCrypto<'_>,
-) -> Result<medulla_types::protocol::MerkleInclusionReport, String> {
+) -> Result<medulla_protocol_types::protocol::MerkleInclusionReport, String> {
     let handle = shard.graph(graph)?;
     let read = shard.read(&handle)?;
     let anchor_members = read.scoped_owner_table(PROVENANCE_ANCHOR_MEMBERS)?;
@@ -515,7 +518,7 @@ pub fn prove_inclusion(
     let anchored_root_sha256 = hex::encode(anchored_root);
 
     let Some(index) = members.iter().position(|(id, _)| id == node_id) else {
-        return Ok(medulla_types::protocol::MerkleInclusionReport {
+        return Ok(medulla_protocol_types::protocol::MerkleInclusionReport {
             graph: graph.to_string(),
             node_id: node_id.to_string(),
             anchor_seq: seq,
@@ -539,13 +542,19 @@ pub fn prove_inclusion(
         .transpose()?;
 
     let (current_leaf_hash, detail_if_missing) = match &current {
-        Some(content) => (medulla_kernel::audit::merkle_leaf_hash(node_id, content), None),
+        Some(content) => (
+            medulla_kernel::audit::merkle_leaf_hash(node_id, content),
+            None,
+        ),
         // No durable row anymore (removed since anchoring). There is nothing left
         // to re-hash; fold in a fixed domain-tagged sentinel so the proof walk
         // stays well-defined. It CANNOT reproduce the real anchor-time leaf hash,
         // so verification fails closed exactly like real content tampering would.
         None => (
-            medulla_kernel::audit::merkle_leaf_hash(node_id, medulla_kernel::audit::MISSING_NODE_SENTINEL),
+            medulla_kernel::audit::merkle_leaf_hash(
+                node_id,
+                medulla_kernel::audit::MISSING_NODE_SENTINEL,
+            ),
             Some("node has no durable row anymore (removed since anchoring)".to_string()),
         ),
     };
@@ -555,7 +564,7 @@ pub fn prove_inclusion(
 
     let proof = path
         .into_iter()
-        .map(|step| medulla_types::protocol::MerkleProofStep {
+        .map(|step| medulla_protocol_types::protocol::MerkleProofStep {
             sibling_sha256: hex::encode(step.sibling),
             side: step.side,
         })
@@ -569,7 +578,7 @@ pub fn prove_inclusion(
         "TAMPER DETECTED: current durable content does not match the anchored leaf".to_string()
     };
 
-    Ok(medulla_types::protocol::MerkleInclusionReport {
+    Ok(medulla_protocol_types::protocol::MerkleInclusionReport {
         graph: graph.to_string(),
         node_id: node_id.to_string(),
         anchor_seq: seq,

@@ -10,17 +10,19 @@ use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
-use medulla_types::contract::Digest256;
-use medulla_types::source_ingestion::{
-    RawAdmissionReceipt, RawRelationshipAdmissionReceipt, SourceIngestionMode,
-    SourceIngestionRequest, SourceMappingReceipt, SourceRelationshipTombstoneReceipt,
-    SourceTombstoneReceipt,
+use medulla_catalog_types::{
+    source_ingestion::RawAdmissionReceipt, source_ingestion::RawRelationshipAdmissionReceipt,
+    source_ingestion::SourceIngestionMode, source_ingestion::SourceIngestionRequest,
+    source_ingestion::SourceMappingReceipt, source_ingestion::SourceRelationshipTombstoneReceipt,
+    source_ingestion::SourceTombstoneReceipt,
 };
 #[cfg(all(feature = "redb", feature = "blob"))]
-use medulla_types::source_ingestion::{
-    SourceEntityRef, SourceIngestionDisposition, SourceIngestionReceipt, SourceMappingKind,
-    SourceWithdrawal,
+use medulla_catalog_types::{
+    source_ingestion::SourceEntityRef, source_ingestion::SourceIngestionDisposition,
+    source_ingestion::SourceIngestionReceipt, source_ingestion::SourceMappingKind,
+    source_ingestion::SourceWithdrawal,
 };
+use medulla_types::contract::Digest256;
 use tokio::sync::RwLock;
 
 use crate::protocol::Response;
@@ -43,7 +45,7 @@ pub(crate) struct PrepareContext<'a> {
 }
 
 pub(crate) struct PreparedSourceIngestion {
-    pub envelope: medulla_types::change_envelope::ChangeEnvelope,
+    pub envelope: medulla_protocol_types::change_envelope::ChangeEnvelope,
     batch_digest: Digest256,
     mode: SourceIngestionMode,
     mappings: Vec<SourceMappingReceipt>,
@@ -51,7 +53,7 @@ pub(crate) struct PreparedSourceIngestion {
     relationship_raw_admissions: Vec<RawRelationshipAdmissionReceipt>,
     tombstones: Vec<SourceTombstoneReceipt>,
     relationship_tombstones: Vec<SourceRelationshipTombstoneReceipt>,
-    accepted_checkpoint: medulla_types::source_ingestion::SourceCheckpoint,
+    accepted_checkpoint: medulla_catalog_types::source_ingestion::SourceCheckpoint,
     live_set_digest: Option<Digest256>,
     relationship_live_set_digest: Option<Digest256>,
     affected_count: u64,
@@ -68,7 +70,7 @@ pub(crate) async fn status(
     tenant_scope: &str,
     verified: &VerifiedRequestContext,
     persistence: &Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
-    request: medulla_types::source_ingestion::SourceIngestStatusRequest,
+    request: medulla_catalog_types::source_ingestion::SourceIngestStatusRequest,
 ) -> Response {
     if !verified.allows_method("source:ingest", false) {
         return Response::err(
@@ -95,7 +97,7 @@ pub(crate) async fn status(
         Err(error) => return Response::err(request_id, error),
     };
     let body = if let Some(marker) = marker {
-        medulla_types::source_ingestion::SourceIngestStatus {
+        medulla_catalog_types::source_ingestion::SourceIngestStatus {
             connector: request.connector,
             stream: request.stream,
             content_hash: marker.checkpoint.content_hash,
@@ -108,7 +110,7 @@ pub(crate) async fn status(
             committed_graph_version: Some(marker.committed_graph_version),
         }
     } else {
-        medulla_types::source_ingestion::SourceIngestStatus {
+        medulla_catalog_types::source_ingestion::SourceIngestStatus {
             connector: request.connector.clone(),
             stream: request.stream.clone(),
             accepted_checkpoint: None,
@@ -123,7 +125,9 @@ pub(crate) async fn status(
     };
     Response::ok(
         request_id,
-        ResultPayload::of::<medulla_types::result_contract::ingestion::SourceIngestStatus>(body),
+        ResultPayload::of::<medulla_protocol_types::result_contract::ingestion::SourceIngestStatus>(
+            body,
+        ),
     )
 }
 
@@ -134,7 +138,7 @@ pub(crate) async fn status(
     _tenant_scope: &str,
     _verified: &VerifiedRequestContext,
     _persistence: &Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
-    _request: medulla_types::source_ingestion::SourceIngestStatusRequest,
+    _request: medulla_catalog_types::source_ingestion::SourceIngestStatusRequest,
 ) -> Response {
     Response::err(
         request_id,
@@ -304,7 +308,7 @@ fn authorize_ingestion(ctx: &PrepareContext<'_>) -> Result<(), String> {
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn authorize_empty_reconciliation(
     ctx: &PrepareContext<'_>,
-    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
 ) -> Result<(), String> {
     let empty_live_set = batch
         .authoritative_live_ids
@@ -334,10 +338,10 @@ struct IngestionResources {
 struct AdmittedRecords {
     raw_admissions: Vec<RawAdmissionReceipt>,
     relationship_raw_admissions: Vec<RawRelationshipAdmissionReceipt>,
-    blobs: BTreeMap<String, medulla_types::change_envelope::BlobReference>,
+    blobs: BTreeMap<String, medulla_protocol_types::change_envelope::BlobReference>,
     methods: Vec<Method>,
-    lineage: Vec<medulla_types::change_envelope::LineageRecord>,
-    policies: Vec<medulla_types::change_envelope::PolicyRecord>,
+    lineage: Vec<medulla_protocol_types::change_envelope::LineageRecord>,
+    policies: Vec<medulla_protocol_types::change_envelope::PolicyRecord>,
     tombstone_count: usize,
 }
 
@@ -393,7 +397,7 @@ async fn load_resources(ctx: &PrepareContext<'_>) -> Result<IngestionResources, 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn resolve_mappings(
     ctx: &PrepareContext<'_>,
-    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
     resources: &IngestionResources,
 ) -> Result<ResolvedIngestionMappings, String> {
     // The request has no tenant or mapping body. Both are resolved exclusively
@@ -481,7 +485,7 @@ struct SourceLiveSetMarker {
     live_relationships: Vec<SourceLiveRelationship>,
     live_set_digest: Option<Digest256>,
     relationship_live_set_digest: Option<Digest256>,
-    checkpoint: medulla_types::source_ingestion::SourceCheckpoint,
+    checkpoint: medulla_catalog_types::source_ingestion::SourceCheckpoint,
     checkpoint_digest: Digest256,
     batch_digest: Digest256,
     receipt_id: String,
@@ -534,7 +538,7 @@ struct SourceRelationshipMarker {
 #[cfg(all(feature = "redb", feature = "blob"))]
 async fn reconcile_batch(
     ctx: &PrepareContext<'_>,
-    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
     batch_digest: Digest256,
     receipt_id: &str,
     persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
@@ -621,7 +625,7 @@ async fn reconcile_batch(
 async fn stream_content_digest(
     persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
     graph_fname: &str,
-    mutation: &medulla_types::mutation_batch::MutationBatch,
+    mutation: &medulla_protocol_types::mutation_batch::MutationBatch,
     stream_object_id: &str,
 ) -> Result<Option<String>, String> {
     Ok(persistence
@@ -636,7 +640,7 @@ async fn stream_content_digest(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn reconcile_entities(
-    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
     prior_live: &BTreeSet<SourceEntityRef>,
     prior: Option<&SourceLiveSetMarker>,
 ) -> Result<EntityReconciliation, String> {
@@ -682,7 +686,7 @@ fn reconcile_entities(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn reconcile_authoritative_entities(
-    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
     prior_live: &BTreeSet<SourceEntityRef>,
 ) -> Result<EntityReconciliation, String> {
     let current: BTreeSet<_> = batch
@@ -710,7 +714,7 @@ fn reconcile_authoritative_entities(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn reconcile_relationships(
     tenant: &str,
-    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
     prior: Option<&SourceLiveSetMarker>,
     entity_tombstones: &[SourceWithdrawal],
 ) -> Result<RelationshipReconciliation, String> {
@@ -761,7 +765,7 @@ fn relationship_state_by_id(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn submitted_relationship_state(
     tenant: &str,
-    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
 ) -> Result<BTreeMap<String, SourceLiveRelationship>, String> {
     batch
         .relationships
@@ -825,7 +829,7 @@ fn planned_relationship_tombstones(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn is_authoritative_empty_full(
-    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
 ) -> bool {
     batch.mode == SourceIngestionMode::Full
         && batch.records.is_empty()
@@ -836,7 +840,7 @@ fn is_authoritative_empty_full(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn validate_tombstone_targets(
     ctx: &PrepareContext<'_>,
-    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
     withdrawals: &[SourceWithdrawal],
     persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
     graph_fname: &str,
@@ -864,7 +868,7 @@ fn validate_tombstone_targets(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn validate_authoritative_live_targets(
     ctx: &PrepareContext<'_>,
-    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
     persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
     graph_fname: &str,
 ) -> Result<(), String> {
@@ -930,7 +934,7 @@ fn digest_relationship_live_set(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn source_marker_id(
     tenant: &str,
-    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
 ) -> Result<String, String> {
     source_marker_id_for(tenant, &batch.connector, &batch.provider_checkpoint.stream)
 }
@@ -967,7 +971,7 @@ fn policy_subject(tenant: &str) -> Result<String, String> {
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn admit_records(
     ctx: &PrepareContext<'_>,
-    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
     authority: &CarrierAuthority,
     blob: &Arc<medulla_server_api::blob::BlobCursors>,
     resolved: &ResolvedIngestionMappings,
@@ -1017,7 +1021,7 @@ fn admit_records(
 #[cfg(all(feature = "redb", feature = "blob"))]
 struct RelationshipAdmissionContext<'a, 'ctx> {
     ctx: &'a PrepareContext<'ctx>,
-    batch: &'a medulla_types::source_ingestion::SourceIngestionBatch,
+    batch: &'a medulla_catalog_types::source_ingestion::SourceIngestionBatch,
     authority: &'a CarrierAuthority,
     blob: &'a Arc<medulla_server_api::blob::BlobCursors>,
     resolved: &'a ResolvedIngestionMappings,
@@ -1181,9 +1185,9 @@ fn admit_relationships(
         ));
         admitted
             .lineage
-            .push(medulla_types::change_envelope::LineageRecord {
+            .push(medulla_protocol_types::change_envelope::LineageRecord {
                 lineage_id: format!("lineage:{}", relationship_lineage_digest(&relationship_id)?),
-                operation: medulla_types::change_envelope::MaterialOperation::Upsert,
+                operation: medulla_protocol_types::change_envelope::MaterialOperation::Upsert,
                 object_id: format!("{source_id}->{target_id}"),
                 source_artifact_digest: raw_digest_hex,
                 transform_name: "connector-manifest-resource-relation".into(),
@@ -1225,7 +1229,7 @@ fn source_relationship_edge_method(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn validate_relationship_endpoint(
     ctx: &PrepareContext<'_>,
-    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
     submitted: &BTreeMap<SourceEntityRef, String>,
     entity: &SourceEntityRef,
     expected_type: &str,
@@ -1282,7 +1286,7 @@ fn validate_relationship_endpoint_type(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn relationship_properties(
-    relationship: &medulla_types::source_ingestion::SourceRelationship,
+    relationship: &medulla_catalog_types::source_ingestion::SourceRelationship,
     relationship_id: &str,
     resolved: &medulla_persistence::connector_pack::ResolvedConnectorRelationshipMapping,
     raw_digest: &str,
@@ -1326,7 +1330,7 @@ fn relationship_properties(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn admit_tombstones(
     ctx: &PrepareContext<'_>,
-    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
     tombstones: &[SourceWithdrawal],
     policy_subject: &str,
     mapping_revision: u64,
@@ -1366,7 +1370,7 @@ fn admit_tombstones(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn admit_relationship_tombstones(
     ctx: &PrepareContext<'_>,
-    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
     tombstones: &[PlannedRelationshipTombstone],
     policy_subject: &str,
     mapping_revision: u64,
@@ -1403,14 +1407,14 @@ fn admit_relationship_tombstones(
             ctx.tenant_scope,
             policy_subject,
             mapping_revision,
-            medulla_types::change_envelope::MaterialOperation::Delete,
+            medulla_protocol_types::change_envelope::MaterialOperation::Delete,
         ));
         admitted.policies.push(policy_with_operation(
             &marker_id,
             ctx.tenant_scope,
             policy_subject,
             mapping_revision,
-            medulla_types::change_envelope::MaterialOperation::Delete,
+            medulla_protocol_types::change_envelope::MaterialOperation::Delete,
         ));
     }
     Ok(())
@@ -1419,7 +1423,7 @@ fn admit_relationship_tombstones(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn tombstone_receipts(
     ctx: &PrepareContext<'_>,
-    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
     tombstones: &[SourceWithdrawal],
 ) -> Result<Vec<SourceTombstoneReceipt>, String> {
     tombstones
@@ -1458,17 +1462,17 @@ fn relationship_tombstone_receipts(
 struct AdmittedRecord {
     raw_digest_hex: String,
     raw_digest: Digest256,
-    blob: medulla_types::change_envelope::BlobReference,
+    blob: medulla_protocol_types::change_envelope::BlobReference,
     method: Method,
-    lineage: medulla_types::change_envelope::LineageRecord,
-    policy: medulla_types::change_envelope::PolicyRecord,
+    lineage: medulla_protocol_types::change_envelope::LineageRecord,
+    policy: medulla_protocol_types::change_envelope::PolicyRecord,
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn admit_record(
     ctx: &PrepareContext<'_>,
-    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
-    record: &medulla_types::source_ingestion::SourceRecord,
+    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    record: &medulla_catalog_types::source_ingestion::SourceRecord,
     authority: &CarrierAuthority,
     blob: &Arc<medulla_server_api::blob::BlobCursors>,
     resolved: &ResolvedIngestionMappings,
@@ -1502,9 +1506,9 @@ fn admit_record(
         properties_msgpack: rmp_serde::to_vec_named(&properties)
             .map_err(|error| format!("mapped source properties encoding failed: {error}"))?,
     };
-    let lineage = medulla_types::change_envelope::LineageRecord {
+    let lineage = medulla_protocol_types::change_envelope::LineageRecord {
         lineage_id: format!("lineage:{}", short_digest(&node_id)?),
-        operation: medulla_types::change_envelope::MaterialOperation::Upsert,
+        operation: medulla_protocol_types::change_envelope::MaterialOperation::Upsert,
         object_id: node_id.clone(),
         source_artifact_digest: raw_digest_hex.clone(),
         transform_name: "connector-manifest-schema-mapping".into(),
@@ -1565,10 +1569,10 @@ fn raw_blob_reference(
     raw_digest: &str,
     length: usize,
     media_type: &str,
-) -> medulla_types::change_envelope::BlobReference {
-    medulla_types::change_envelope::BlobReference {
+) -> medulla_protocol_types::change_envelope::BlobReference {
+    medulla_protocol_types::change_envelope::BlobReference {
         blob_id: format!("raw:{raw_digest}"),
-        operation: medulla_types::change_envelope::MaterialOperation::Upsert,
+        operation: medulla_protocol_types::change_envelope::MaterialOperation::Upsert,
         digest_algorithm: "sha256".into(),
         digest: raw_digest.into(),
         media_type: media_type.into(),
@@ -1578,7 +1582,7 @@ fn raw_blob_reference(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn receipt_method(
-    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
     batch_id: &str,
     resolved: &ResolvedIngestionMappings,
     reconciliation: &ReconciliationPlan,
@@ -1617,7 +1621,7 @@ fn compile_mutation(
     ctx: &PrepareContext<'_>,
     batch_id: &str,
     methods: Vec<Method>,
-) -> Result<medulla_types::mutation_batch::MutationBatch, String> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationBatch, String> {
     medulla_server_api::mutation_batch::GraphWriteScope {
         request_id: ctx.request_id,
         graph_name: ctx.graph_name,
@@ -1633,10 +1637,10 @@ fn compile_mutation(
 #[cfg(all(feature = "redb", feature = "blob"))]
 struct EnvelopeContents {
     batch_digest: Digest256,
-    mutation: medulla_types::mutation_batch::MutationBatch,
-    blobs: BTreeMap<String, medulla_types::change_envelope::BlobReference>,
-    policies: Vec<medulla_types::change_envelope::PolicyRecord>,
-    lineage: Vec<medulla_types::change_envelope::LineageRecord>,
+    mutation: medulla_protocol_types::mutation_batch::MutationBatch,
+    blobs: BTreeMap<String, medulla_protocol_types::change_envelope::BlobReference>,
+    policies: Vec<medulla_protocol_types::change_envelope::PolicyRecord>,
+    lineage: Vec<medulla_protocol_types::change_envelope::LineageRecord>,
     mapping_revision: u64,
     /// The stream's live-set marker id: the content-version object every batch
     /// to this stream advances.
@@ -1646,10 +1650,10 @@ struct EnvelopeContents {
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn build_envelope(
-    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
     batch_id: &str,
     contents: EnvelopeContents,
-) -> Result<medulla_types::change_envelope::ChangeEnvelope, String> {
+) -> Result<medulla_protocol_types::change_envelope::ChangeEnvelope, String> {
     let EnvelopeContents {
         batch_digest,
         mutation,
@@ -1666,33 +1670,34 @@ fn build_envelope(
         .as_ref()
         .map(|checkpoint| checkpoint.digest())
         .transpose()?;
-    let envelope = medulla_types::change_envelope::ChangeEnvelope {
-        schema_version: medulla_types::change_envelope::CHANGE_ENVELOPE_VERSION,
+    let envelope = medulla_protocol_types::change_envelope::ChangeEnvelope {
+        schema_version: medulla_protocol_types::change_envelope::CHANGE_ENVELOPE_VERSION,
         envelope_id: batch_id.into(),
         mutation,
-        content_version: medulla_types::change_envelope::ContentVersion {
+        content_version: medulla_protocol_types::change_envelope::ContentVersion {
             object_id: stream_object_id,
             digest_algorithm: "sha256".into(),
             digest: batch_digest.to_hex(),
             previous_digest: previous_stream_digest,
-            source_version: medulla_types::change_envelope::ContentVersionPosition::Opaque {
-                version_type: "source-cursor-sha256".into(),
-                value: checkpoint_digest.to_hex(),
-            },
+            source_version:
+                medulla_protocol_types::change_envelope::ContentVersionPosition::Opaque {
+                    version_type: "source-cursor-sha256".into(),
+                    value: checkpoint_digest.to_hex(),
+                },
         },
-        cursor: Some(medulla_types::change_envelope::ChangeCursor {
+        cursor: Some(medulla_protocol_types::change_envelope::ChangeCursor {
             source: format!(
                 "{}:{}",
                 batch.connector.as_str(),
                 batch.provider_checkpoint.stream.as_str()
             ),
             partition: String::new(),
-            position: medulla_types::change_envelope::CursorPosition::Opaque {
+            position: medulla_protocol_types::change_envelope::CursorPosition::Opaque {
                 cursor_type: "source-cursor-sha256".into(),
                 value: checkpoint_digest.to_hex(),
             },
             expected_previous: expected_previous.map(|digest| {
-                medulla_types::change_envelope::CursorPosition::Opaque {
+                medulla_protocol_types::change_envelope::CursorPosition::Opaque {
                     cursor_type: "source-cursor-sha256".into(),
                     value: digest.to_hex(),
                 }
@@ -1703,12 +1708,12 @@ fn build_envelope(
         evidence: Vec::new(),
         policies,
         lineage,
-        privacy: medulla_types::change_envelope::PrivacyAttestation {
+        privacy: medulla_protocol_types::change_envelope::PrivacyAttestation {
             policy_version: format!("connector-pack-revision-{mapping_revision}"),
             sanitizer_version: "source-ingestion-v1".into(),
             sanitized_payload_digest: batch_digest.to_hex(),
         },
-        material_class: medulla_types::change_envelope::MaterialClass::Attested,
+        material_class: medulla_protocol_types::change_envelope::MaterialClass::Attested,
         commit_seq: None,
         commit_descriptor_ref: None,
     };
@@ -1736,13 +1741,13 @@ pub(crate) fn finish(prepared: PreparedSourceIngestion, response: Response) -> R
     }
     let applied = match response.result {
         Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice::<
-            medulla_types::result_contract::transactions::ChangeEnvelopeApplied,
+            medulla_protocol_types::result_contract::transactions::ChangeEnvelopeApplied,
         >(&bytes)
         .map_err(|error| format!("invalid native ingestion commit result: {error}")),
         // `ApplyChangeEnvelope` declares a JSON result (F3d); a served commit
         // answers in that form (MEDULLA-TYPED-PACKS-R101.9 regression test).
         Some(ResultPayload::Json(value)) => serde_json::from_value::<
-            medulla_types::result_contract::transactions::ChangeEnvelopeApplied,
+            medulla_protocol_types::result_contract::transactions::ChangeEnvelopeApplied,
         >(value)
         .map_err(|error| format!("invalid native ingestion commit result: {error}")),
         _ => Err("native ingestion commit returned no typed result".into()),
@@ -1759,7 +1764,9 @@ pub(crate) fn finish(prepared: PreparedSourceIngestion, response: Response) -> R
     match build_terminal_receipt(prepared, disposition) {
         Ok(receipt) => Response::ok(
             response_id,
-            ResultPayload::of::<medulla_types::result_contract::ingestion::SourceIngest>(receipt),
+            ResultPayload::of::<medulla_protocol_types::result_contract::ingestion::SourceIngest>(
+                receipt,
+            ),
         ),
         Err(error) => Response::err(response_id, error),
     }
@@ -1845,9 +1852,9 @@ fn receipt_bytes(value: &impl serde::Serialize) -> Result<Vec<u8>, String> {
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn prepared_replay(
     ctx: PrepareContext<'_>,
-    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
     batch_digest: Digest256,
-    envelope: medulla_types::change_envelope::ChangeEnvelope,
+    envelope: medulla_protocol_types::change_envelope::ChangeEnvelope,
 ) -> Result<PreparedSourceIngestion, String> {
     validate_replay_authority(&ctx, batch_digest, &envelope)?;
     let batch_id = format!("source-ingest:{}", batch_digest.to_hex());
@@ -1910,7 +1917,7 @@ fn prepared_replay(
 fn validate_replay_authority(
     ctx: &PrepareContext<'_>,
     batch_digest: Digest256,
-    envelope: &medulla_types::change_envelope::ChangeEnvelope,
+    envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
 ) -> Result<(), String> {
     let graph_name = envelope
         .mutation
@@ -1931,7 +1938,7 @@ fn validate_replay_authority(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn replay_receipt(
-    envelope: &medulla_types::change_envelope::ChangeEnvelope,
+    envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
     batch_id: &str,
 ) -> Result<serde_json::Value, String> {
     let properties = envelope
@@ -1952,7 +1959,7 @@ fn replay_receipt(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn validate_replay_metadata(
-    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
+    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
     receipt: &serde_json::Value,
 ) -> Result<(), String> {
     let checkpoint_digest = batch.provider_checkpoint.digest()?;
@@ -1982,7 +1989,7 @@ fn replay_receipt_value<T: serde::de::DeserializeOwned>(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn replay_graph_version(
-    envelope: &medulla_types::change_envelope::ChangeEnvelope,
+    envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
 ) -> Result<u64, String> {
     match envelope.mutation.version_expectation {
         crate::mutation_batch::VersionExpectation::Graph(version) => version
@@ -2010,7 +2017,7 @@ fn replay_receipt_u64(receipt: &serde_json::Value, field: &str) -> Result<u64, S
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn mapping_digest(
-    mapping: &medulla_types::connector_pack::ConnectorSchemaMapping,
+    mapping: &medulla_catalog_types::connector_pack::ConnectorSchemaMapping,
 ) -> Result<Digest256, String> {
     let bytes = rmp_serde::to_vec_named(mapping)
         .map_err(|error| format!("connector schema mapping encoding failed: {error}"))?;
@@ -2019,7 +2026,7 @@ fn mapping_digest(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn relationship_mapping_digest(
-    mapping: &medulla_types::connector_pack::ConnectorRelationshipMapping,
+    mapping: &medulla_catalog_types::connector_pack::ConnectorRelationshipMapping,
 ) -> Result<Digest256, String> {
     let bytes = rmp_serde::to_vec_named(mapping)
         .map_err(|error| format!("connector relationship encoding failed: {error}"))?;
@@ -2028,7 +2035,7 @@ fn relationship_mapping_digest(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn mapped_properties(
-    record: &medulla_types::source_ingestion::SourceRecord,
+    record: &medulla_catalog_types::source_ingestion::SourceRecord,
     ontology_class: &str,
     fields: &BTreeMap<String, String>,
     datatypes: &BTreeMap<String, String>,
@@ -2272,7 +2279,7 @@ fn validate_xsd_value(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn insert_source_metadata(
     mapped: &mut serde_json::Map<String, serde_json::Value>,
-    record: &medulla_types::source_ingestion::SourceRecord,
+    record: &medulla_catalog_types::source_ingestion::SourceRecord,
     mapping_reference: &str,
     raw_digest: &str,
 ) -> Result<(), String> {
@@ -2308,8 +2315,8 @@ fn source_node_id(
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn canonical_relationship_id(
     tenant: &str,
-    batch: &medulla_types::source_ingestion::SourceIngestionBatch,
-    relationship: &medulla_types::source_ingestion::SourceRelationship,
+    batch: &medulla_catalog_types::source_ingestion::SourceIngestionBatch,
+    relationship: &medulla_catalog_types::source_ingestion::SourceRelationship,
 ) -> Result<String, String> {
     Ok(format!(
         "source-relation:{}",
@@ -2369,13 +2376,13 @@ fn policy(
     tenant: &str,
     subject_set_digest: &str,
     revision: u64,
-) -> medulla_types::change_envelope::PolicyRecord {
+) -> medulla_protocol_types::change_envelope::PolicyRecord {
     policy_with_operation(
         object_id,
         tenant,
         subject_set_digest,
         revision,
-        medulla_types::change_envelope::MaterialOperation::Upsert,
+        medulla_protocol_types::change_envelope::MaterialOperation::Upsert,
     )
 }
 
@@ -2385,9 +2392,9 @@ fn policy_with_operation(
     tenant: &str,
     subject_set_digest: &str,
     revision: u64,
-    operation: medulla_types::change_envelope::MaterialOperation,
-) -> medulla_types::change_envelope::PolicyRecord {
-    medulla_types::change_envelope::PolicyRecord {
+    operation: medulla_protocol_types::change_envelope::MaterialOperation,
+) -> medulla_protocol_types::change_envelope::PolicyRecord {
+    medulla_protocol_types::change_envelope::PolicyRecord {
         policy_id: format!("policy:{}", object_id),
         operation,
         object_id: object_id.into(),
@@ -2403,9 +2410,12 @@ fn policy_with_operation(
 #[cfg(all(test, feature = "redb", feature = "blob"))]
 mod tests {
     use super::*;
-    use medulla_types::connector_pack::McpCatalogSnapshotBinding;
+    use medulla_catalog_types::connector_pack::McpCatalogSnapshotBinding;
+    use medulla_catalog_types::{
+        source_ingestion::SourceJson, source_ingestion::SourceRecord,
+        source_ingestion::SourceRecordProvenance,
+    };
     use medulla_types::contract::ResourceId;
-    use medulla_types::source_ingestion::{SourceJson, SourceRecord, SourceRecordProvenance};
 
     fn record() -> SourceRecord {
         SourceRecord {
@@ -2584,9 +2594,12 @@ mod tests {
     /// identity field so callers can read either relation independently.
     #[test]
     fn hydration_projects_parallel_relations_as_independent_typed_edges() {
-        use medulla_types::connector_pack::{ConnectorRelationshipMapping, ConnectorSchemaMapping};
-        use medulla_types::source_ingestion::{
-            SourceEntityRef, SourceIngestionRequest, SourceRelationship,
+        use medulla_catalog_types::{
+            connector_pack::ConnectorRelationshipMapping, connector_pack::ConnectorSchemaMapping,
+        };
+        use medulla_catalog_types::{
+            source_ingestion::SourceEntityRef, source_ingestion::SourceIngestionRequest,
+            source_ingestion::SourceRelationship,
         };
 
         struct NoReadPersistence;
@@ -2607,7 +2620,7 @@ mod tests {
             target_node.clone(),
             rmp_serde::to_vec_named(&serde_json::json!({"type":"Document"})).unwrap(),
         );
-        let mut batch = medulla_types::test_support::source_ingestion::request()
+        let mut batch = medulla_catalog_types::catalog_fixtures::source_ingestion::request()
             .as_batch()
             .clone();
         batch.expected_previous_checkpoint = None;
@@ -2650,7 +2663,8 @@ mod tests {
             })
             .collect();
         batch.relationships =
-            medulla_types::source_ingestion::SourceRelationships::new(relationships).unwrap();
+            medulla_catalog_types::source_ingestion::SourceRelationships::new(relationships)
+                .unwrap();
         let request = SourceIngestionRequest::new(batch).unwrap();
         let batch = request.as_batch();
         let catalog = McpCatalogSnapshotBinding {

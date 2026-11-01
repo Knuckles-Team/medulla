@@ -4,7 +4,7 @@ use redb::ReadableTable;
 use std::sync::mpsc::{Receiver, RecvTimeoutError};
 use tokio::sync::oneshot;
 
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 use medulla_store::redb_store::shard::Shard;
 use medulla_store::redb_store::shard::ShardWrite;
 use medulla_store::redb_store::clear_xshard_decision;

@@ -100,7 +100,7 @@ fn native_policy_cas_sees_non_tenant_scope_totals_without_a_scan() {
         Method::UpdateDevelopmentLaneQuota {
             request: DevelopmentLaneQuotaUpdateRequest {
                 schema_version:
-                    medulla_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequestSchemaVersion::V1,
+                    medulla_result_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequestSchemaVersion::V1,
                 tenant_ref: GLOBAL_POLICY_KEY.into(),
                 policy: drain_policy.clone(),
                 expected_policy_revision: 1,
@@ -146,7 +146,7 @@ fn native_policy_cas_sees_non_tenant_scope_totals_without_a_scan() {
             Method::UpdateDevelopmentLaneQuota {
                 request: DevelopmentLaneQuotaUpdateRequest {
                     schema_version:
-                        medulla_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequestSchemaVersion::V1,
+                        medulla_result_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequestSchemaVersion::V1,
                     tenant_ref: "tenant:a".into(),
                     policy: reduced,
                     expected_policy_revision: 1,

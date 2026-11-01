@@ -9,14 +9,14 @@
 //! GENERATES its session-scope allowlist. A hand-maintained list anywhere
 //! else is drift.
 //!
-//! Class rules (enforced by the identity store, `medulla_types::identity`):
+//! Class rules (enforced by the identity store, `medulla_identity_types::identity`):
 //! * `user` / `domain` -- humans and services;
 //! * `service-only` -- infrastructure a service executes on a caller's
 //!   behalf; never reachable by a human (DECISIONS 2026-09-24 domain scopes);
 //! * `approver` -- humans only, only through the scope's built-in group;
 //! * `admin` -- humans only.
 
-use medulla_types::identity::{ScopeClass, ScopeClassifier};
+use medulla_identity_types::{identity::ScopeClass, identity::ScopeClassifier};
 
 use ScopeClass::{Admin, Approver, Domain, ServiceOnly, User};
 

@@ -4,11 +4,14 @@
 //! rollback pops it; both append an audited event. A pointer that moved since
 //! it was read is refused, never overwritten.
 
-use medulla_types::contract::BoundedVec;
-use medulla_types::decision::statistical::retrieval_pointer::{
-    PointerEvent, PointerState, PointerTransition, MAX_POINTER_HISTORY,
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_types::{
+    decision::statistical::retrieval_pointer::PointerEvent,
+    decision::statistical::retrieval_pointer::PointerState,
+    decision::statistical::retrieval_pointer::PointerTransition,
+    decision::statistical::retrieval_pointer::MAX_POINTER_HISTORY,
 };
-use medulla_types::decision::statistical::StatisticalErrorCode;
+use medulla_types::contract::BoundedVec;
 
 use super::stat_support::refusal;
 use medulla_persistence::agent_library::AgentLibraryStore;

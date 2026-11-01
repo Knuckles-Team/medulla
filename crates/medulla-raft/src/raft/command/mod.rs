@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 use medulla_store::redb_store::enrichment_top_up::EnrichmentTopUpTransition;
 
 #[cfg(feature = "modality-serving")]
@@ -19,8 +19,8 @@ pub use native::{NativeMutationCommand, SealedNativeMethod, NATIVE_CONSENSUS_MET
 pub fn pending_repository_intent(
     snapshot: medulla_compute::parser::enrichment_snapshot::EligibleSnapshot,
     topic: &str,
-) -> medulla_types::MutationOutboxIntent {
-    medulla_types::MutationOutboxIntent {
+) -> medulla_mutation_types::mutation_scope::MutationOutboxIntent {
+    medulla_mutation_types::mutation_scope::MutationOutboxIntent {
         topic: topic.into(),
         key: snapshot.source_envelope.clone(),
         payload: rmp_serde::to_vec_named(&serde_json::json!({
@@ -110,14 +110,14 @@ impl ReplicatedMutation {
     }
 
     pub fn change_envelope(
-        envelope: &medulla_types::change_envelope::ChangeEnvelope,
+        envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
         server_secret: &str,
     ) -> Result<Self, String> {
         Self::change_envelope_with_budget(envelope, None, server_secret)
     }
 
     pub fn change_envelope_with_budget(
-        envelope: &medulla_types::change_envelope::ChangeEnvelope,
+        envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
         source_budget: Option<&medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,
         server_secret: &str,
     ) -> Result<Self, String> {
@@ -137,7 +137,7 @@ impl ReplicatedMutation {
         server_secret: &str,
     ) -> Result<
         Option<(
-            medulla_types::change_envelope::ChangeEnvelope,
+            medulla_protocol_types::change_envelope::ChangeEnvelope,
             Option<medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,
         )>,
         String,
@@ -201,7 +201,7 @@ impl ReplicatedMutation {
     /// determined that the next immutable unit is underfunded. No public
     /// Method variant can construct this command.
     pub fn enrichment_park(
-        park: &medulla_types::native_control::EnrichmentBudgetPark,
+        park: &medulla_agent_types::native_control::EnrichmentBudgetPark,
         server_secret: &str,
     ) -> Result<Self, String> {
         Self::validate_enrichment_park(park)?;
@@ -215,7 +215,7 @@ impl ReplicatedMutation {
     pub fn open_enrichment_park(
         &self,
         server_secret: &str,
-    ) -> Result<Option<medulla_types::native_control::EnrichmentBudgetPark>, String> {
+    ) -> Result<Option<medulla_agent_types::native_control::EnrichmentBudgetPark>, String> {
         match self {
             Self::Native {
                 command: NativeMutationCommand::EnrichmentPark { sealed_park },
@@ -229,7 +229,7 @@ impl ReplicatedMutation {
     }
 
     fn validate_enrichment_park(
-        park: &medulla_types::native_control::EnrichmentBudgetPark,
+        park: &medulla_agent_types::native_control::EnrichmentBudgetPark,
     ) -> Result<(), String> {
         fn digest(value: &str) -> bool {
             medulla_types::contract::Digest256::parse(value).is_ok()

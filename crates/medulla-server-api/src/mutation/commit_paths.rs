@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use medulla_core::graph::GraphCore;
-use medulla_types::protocol::Method;
-use medulla_types::protocol::Response;
-use medulla_types::protocol::ResultPayload;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use crate::api::persistence::PersistenceBackend;
 
 use super::{
@@ -103,7 +103,7 @@ async fn commit_prepublish_durable_batch(
     batch_id: &str,
     created_at_ms: u64,
     predicted: &ResultPayload,
-) -> Result<medulla_types::mutation_batch::MutationBatchCommit, Response> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, Response> {
     let source_version =
         crate::mutation_batch::authoritative_graph_version(persistence, fname, ctx.core)
             .await
@@ -120,7 +120,7 @@ async fn commit_prepublish_durable_batch(
             batch_id,
             source_version,
             created_at_ms,
-            medulla_types::mutation_batch::MutationSurface::Graph,
+            medulla_mutation_types::mutation_scope::MutationSurface::Graph,
             None,
         ),
         vec![method.clone()],
@@ -132,7 +132,7 @@ async fn commit_prepublish_durable_batch(
         .map_err(|error| {
             Response::err(
                 ctx.req_id,
-                medulla_types::contract::classify_refusal(
+                medulla_protocol_types::error_registry::classify_refusal(
                     "INTERNAL",
                     "MutationBatch durable commit failed: ",
                     &error,
@@ -169,7 +169,7 @@ where
         ctx,
         plan,
         vec![durable_receipt_method(method)],
-        medulla_types::mutation_batch::MutationSurface::Graph,
+        medulla_mutation_types::mutation_scope::MutationSurface::Graph,
         DurableBatchTarget {
             persistence,
             fname,

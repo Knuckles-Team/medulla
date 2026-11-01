@@ -1,5 +1,5 @@
 use super::*;
-use medulla_types::graph_schema::GraphSchemaOp;
+use medulla_catalog_types::graph_schema::GraphSchemaOp;
 
 fn pack_document(uri: &str, body: Arc<str>) -> PackSchemaDocument {
     PackSchemaDocument {
@@ -47,7 +47,7 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
         .core_sources
         .iter()
         .filter_map(|source| match &source.origin {
-            medulla_types::graph_schema::SchemaSourceOriginView::Core { .. } => {
+            medulla_catalog_types::graph_schema::SchemaSourceOriginView::Core { .. } => {
                 Some(source.source_id.as_str())
             }
             _ => None,
@@ -428,7 +428,9 @@ fn pack_members_keep_file_local_blank_nodes_and_uri_order_is_stable() {
     let blank_subjects: std::collections::BTreeSet<_> = triples
         .iter()
         .filter_map(|triple| match &triple.subject {
-            medulla_rdf::oxrdf::NamedOrBlankNode::BlankNode(node) => Some(node.as_str().to_string()),
+            medulla_rdf::oxrdf::NamedOrBlankNode::BlankNode(node) => {
+                Some(node.as_str().to_string())
+            }
             _ => None,
         })
         .collect();
@@ -455,7 +457,9 @@ fn pack_member_failures_name_the_exact_uri_and_enforce_each_bound() {
         "SHAPES",
         vec![PackSchemaDocument {
             uri: "shapes://test/oversized.ttl".to_string(),
-            body: Arc::from("x".repeat(medulla_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES + 1)),
+            body: Arc::from(
+                "x".repeat(medulla_catalog_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES + 1),
+            ),
         }],
     )
     .unwrap_err();

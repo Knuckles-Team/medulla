@@ -3,9 +3,9 @@ use std::sync::Arc;
 use sha2::{Digest, Sha256};
 
 use medulla_core::graph::GraphCore;
-use medulla_types::mutation_batch::MutationSurface;
-use medulla_types::protocol::Method;
-use medulla_types::protocol::ResultPayload;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::ResultPayload;
 use crate::api::persistence::PersistenceBackend;
 use medulla_types::contract::Nonce;
 
@@ -106,7 +106,7 @@ fn control_lease_tenant(method: &Method) -> Result<String, String> {
         Method::RetireSealedRecord { request } => Ok(request.tenant.clone()),
         Method::PolicyEvolutionStore { request } => Ok(request.tenant_id.clone()),
         // EH-348 work-market writes ride the same kernel.
-        other => medulla_types::work_market::market_write_scope(other)
+        other => medulla_protocol_types::protocol::market_write_scope(other)
             .map(|(tenant, _)| tenant.to_string())
             .ok_or_else(|| "commit_work_item received a non-WorkItem operation".to_string()),
     }
@@ -178,7 +178,7 @@ struct WorkItemCommitOutcome<'a> {
     persistence: &'a Arc<dyn PersistenceBackend>,
     core: &'a Arc<GraphCore>,
     graph_fname: String,
-    committed: medulla_types::mutation_batch::MutationBatchCommit,
+    committed: medulla_protocol_types::mutation_batch::MutationBatchCommit,
     publishes_work_item_rows: bool,
     submit: bool,
     submit_batch: bool,
@@ -348,11 +348,11 @@ fn mark_work_item_replayed(
         return mark_submit_replayed(result, submit_batch);
     }
     if checkpoint {
-        let mut body: medulla_types::run_checkpoint::RunCheckpointPublished =
+        let mut body: medulla_agent_types::run_checkpoint::RunCheckpointPublished =
             decode_submit_receipt(result)?;
         body.replayed = true;
         return ResultPayload::of::<
-            medulla_types::result_contract::coordination::PublishRunCheckpoint,
+            medulla_protocol_types::result_contract::coordination::PublishRunCheckpoint,
         >(body);
     }
     Ok(result)
@@ -390,22 +390,24 @@ fn mark_submit_replayed(result: ResultPayload, batch: bool) -> Result<ResultPayl
 }
 
 fn replayed_submit_batch(result: ResultPayload) -> Result<ResultPayload, String> {
-    let mut body: medulla_types::native_control::SubmitWorkItemsResult =
+    let mut body: medulla_agent_types::native_control::SubmitWorkItemsResult =
         decode_submit_receipt(result)?;
     body.replayed = true;
     for child in &mut body.results {
         child.created = false;
         child.replayed = true;
     }
-    ResultPayload::of::<medulla_types::result_contract::coordination::SubmitWorkItems>(body)
+    ResultPayload::of::<medulla_protocol_types::result_contract::coordination::SubmitWorkItems>(
+        body,
+    )
 }
 
 fn replayed_submit(result: ResultPayload) -> Result<ResultPayload, String> {
-    let mut body: medulla_types::native_control::SubmitWorkItemResult =
+    let mut body: medulla_agent_types::native_control::SubmitWorkItemResult =
         decode_submit_receipt(result)?;
     body.created = false;
     body.replayed = true;
-    ResultPayload::of::<medulla_types::result_contract::coordination::SubmitWorkItem>(body)
+    ResultPayload::of::<medulla_protocol_types::result_contract::coordination::SubmitWorkItem>(body)
 }
 
 /// Decode a durably committed WorkItem batch's terminal result and publish its
@@ -416,7 +418,7 @@ async fn publish_committed_work_item(
     persistence: &Arc<dyn PersistenceBackend>,
     graph_fname: &str,
     core: &Arc<GraphCore>,
-    committed: &medulla_types::mutation_batch::MutationBatchCommit,
+    committed: &medulla_protocol_types::mutation_batch::MutationBatchCommit,
     publishes_work_item_rows: bool,
 ) -> Result<ResultPayload, String> {
     let bytes = committed

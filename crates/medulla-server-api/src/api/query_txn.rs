@@ -61,8 +61,8 @@ pub trait TxnApi: Send + Sync {
         req_id: u64,
         caller: &str,
         verified_context: &crate::auth::VerifiedRequestContext,
-        method: medulla_types::protocol::Method,
-    ) -> Result<medulla_types::protocol::Response, medulla_types::protocol::Method>;
+        method: medulla_protocol_types::protocol::Method,
+    ) -> Result<medulla_protocol_types::protocol::Response, medulla_protocol_types::protocol::Method>;
 
     /// Land a staged cross-modal transaction durably with an optional replay nonce.
     async fn commit_cross_modal_txn_with_nonce(
@@ -90,7 +90,7 @@ pub trait TxnApi: Send + Sync {
         req_id: u64,
         caller: &str,
         authority: &crate::access::CarrierAuthority,
-        method: &medulla_types::protocol::Method,
+        method: &medulla_protocol_types::protocol::Method,
     ) -> Result<txn_support::GraphQlLifecycleAdmission, String>;
 
     /// Terminalize an admitted GraphQL lifecycle operation with its result.
@@ -98,8 +98,8 @@ pub trait TxnApi: Send + Sync {
     fn finish_graphql_lifecycle(
         &self,
         token: txn_support::LifecycleToken,
-        result: medulla_types::protocol::ResultPayload,
-    ) -> Result<medulla_types::protocol::ResultPayload, String>;
+        result: medulla_protocol_types::protocol::ResultPayload,
+    ) -> Result<medulla_protocol_types::protocol::ResultPayload, String>;
 
     /// Reload every persisted materialized view into the in-RAM index; returns the count.
     #[cfg(any(feature = "compute-dist", feature = "matview"))]
@@ -127,5 +127,5 @@ pub trait WireApi: Send + Sync {
         store: &medulla_query::TableStore,
         authority: &crate::access::CarrierAuthority,
         batch: &medulla_types::MutationBatch,
-    ) -> Result<Option<medulla_types::mutation_batch::MutationBatchRecord>, String>;
+    ) -> Result<Option<medulla_protocol_types::mutation_batch::MutationBatchRecord>, String>;
 }

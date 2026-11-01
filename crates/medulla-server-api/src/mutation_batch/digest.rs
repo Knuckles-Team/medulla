@@ -1,6 +1,6 @@
 //! Privacy-safe deterministic identities for mutation batches and coordinators.
 
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 
 /// The engine's own ledger principal: the serving principal EVERY kernel-owned
 /// store in this process is bound under.
@@ -263,7 +263,7 @@ fn control_lease_idempotency_key(method: &Method) -> Result<String, String> {
             Ok(format!("policy-record:{}", request.record_id))
         }
         // EH-348 work-market writes share the terminal identity rule too.
-        other => medulla_types::work_market::market_write_scope(other)
+        other => medulla_protocol_types::protocol::market_write_scope(other)
             .map(|(_, key)| key.to_string())
             .ok_or_else(|| "WorkItem identity requires a WorkItem operation".to_string()),
     }
@@ -360,7 +360,7 @@ fn identity_payload_digest(
             expected_graph_version: Some(0),
             fencing_token: None,
             created_at_ms: 1,
-            default_surface: medulla_types::mutation_batch::MutationSurface::Job,
+            default_surface: medulla_mutation_types::mutation_scope::MutationSurface::Job,
             authoritative_state: None,
         },
         vec![method],
@@ -380,10 +380,10 @@ mod current_plan_identity_tests {
     #[test]
     fn publication_attachment_changes_content_not_retry_identity() {
         let plain = Method::PublishCurrentPlan {
-            request: medulla_types::current_plan::sample_publish_request(),
+            request: medulla_decision_types::current_plan::sample_publish_request(),
         };
         let attached = Method::PublishCurrentPlan {
-            request: medulla_types::current_plan::sample_task_plan_publish_request(),
+            request: medulla_decision_types::current_plan::sample_task_plan_publish_request(),
         };
         let identity = work_item_batch_identity("graph", "tenant", 1, &plain).unwrap();
         assert_eq!(
@@ -393,10 +393,10 @@ mod current_plan_identity_tests {
         let digest = |method| identity_payload_digest(&identity, method);
         assert_eq!(digest(attached.clone()), digest(attached.clone()));
         assert_ne!(digest(plain), digest(attached.clone()));
-        let mut changed = medulla_types::current_plan::sample_task_plan_publish_request();
+        let mut changed = medulla_decision_types::current_plan::sample_task_plan_publish_request();
         changed.task_plan_proposal.as_mut().unwrap().max_concurrency = 1;
         changed.snapshot.task_plan = Some(
-            medulla_types::decision::task_plan::plan_explicit_tasks(
+            medulla_decision_types::decision::task_plan::plan_explicit_tasks(
                 changed.task_plan_proposal.as_ref().unwrap(),
             )
             .unwrap(),
@@ -412,7 +412,7 @@ mod current_plan_identity_tests {
     // spec: MEDULLA-DURABLE-KERNEL-R028.5
     #[test]
     fn publication_identity_separates_operation_revision_run_and_transport() {
-        let request = medulla_types::current_plan::sample_publish_request();
+        let request = medulla_decision_types::current_plan::sample_publish_request();
         let method = Method::PublishCurrentPlan {
             request: request.clone(),
         };
@@ -471,7 +471,9 @@ mod current_plan_identity_tests {
 #[cfg(test)]
 mod checkpoint_identity_tests {
     use super::*;
-    use medulla_types::run_checkpoint::{CheckpointContent, PublishRunCheckpointRequest};
+    use medulla_agent_types::{
+        run_checkpoint::CheckpointContent, run_checkpoint::PublishRunCheckpointRequest,
+    };
 
     // spec: MEDULLA-DURABLE-KERNEL-R028.1.1
     #[test]

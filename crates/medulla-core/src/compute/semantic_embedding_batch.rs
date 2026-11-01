@@ -5,8 +5,8 @@
 //! provenance for vectors already resident in a [`super::SemanticStore`].
 
 use super::EmbeddingProvider;
+use medulla_index_types::embedding::EmbeddingSpaceRef;
 use medulla_types::contract::Digest256;
-use medulla_types::EmbeddingSpaceRef;
 use parking_lot::Mutex;
 use std::collections::HashMap;
 

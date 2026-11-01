@@ -15,8 +15,8 @@
 
 use std::sync::Arc;
 
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_transaction::{OutboxClaimOutcome, OutboxRejectReason};
-use medulla_types::mutation_batch::MutationOutboxLease;
 
 use super::{initialize_index, reset_retired_projection, ProjectionContext, CONSUMER, TOPIC};
 

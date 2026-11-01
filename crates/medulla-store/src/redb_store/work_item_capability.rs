@@ -11,12 +11,12 @@
 use super::{decode_durable, property_string, DurableCrypto, NODES};
 use medulla_storage::{GraphShardOwner, PhysicalWriteCapability, ScopedOwnerTableMut};
 use medulla_transaction::{AdmittedOwnerWrite, OwnerPayloadWrite};
-use medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityDecision;
-use medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest;
-use medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityRequestSchemaVersion;
-use medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityResult;
-use medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityResultSchemaVersion;
-use medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest;
+use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityDecision;
+use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest;
+use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityRequestSchemaVersion;
+use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResult;
+use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResultSchemaVersion;
+use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest;
 use rand::RngCore;
 use redb::TableDefinition;
 use serde::{Deserialize, Serialize};
@@ -718,14 +718,14 @@ fn validate_generic_batch(
 /// otherwise harmless generic CAS/AddNode/Set operations are refused.
 pub(crate) fn validate_generic_method(
     graph: &str,
-    method: &medulla_types::protocol::Method,
+    method: &medulla_protocol_types::protocol::Method,
     nodes: &CapabilityRows<'_>,
     native_work_items: &CapabilityRows<'_>,
     crypto: DurableCrypto<'_>,
 ) -> Result<(), String> {
     let tables = GenericValidationTables::new(nodes, native_work_items, crypto);
     match method {
-        medulla_types::protocol::Method::AddNode {
+        medulla_protocol_types::protocol::Method::AddNode {
             node_id,
             properties_msgpack,
         } => validate_generic_add_node(
@@ -733,13 +733,13 @@ pub(crate) fn validate_generic_method(
             properties_msgpack,
             "native WorkItem authority required for generic replacement",
         ),
-        medulla_types::protocol::Method::RemoveNode { node_id } => {
+        medulla_protocol_types::protocol::Method::RemoveNode { node_id } => {
             if native_claimed(tables.native_work_items, graph, node_id)? {
                 return Err("native WorkItem authority required for generic removal".to_string());
             }
             Ok(())
         }
-        medulla_types::protocol::Method::CompareAndSetNodeFields {
+        medulla_protocol_types::protocol::Method::CompareAndSetNodeFields {
             node_id,
             updates_msgpack,
             ..
@@ -747,10 +747,10 @@ pub(crate) fn validate_generic_method(
             GenericValidationContext::new(graph, node_id, tables),
             updates_msgpack,
         ),
-        medulla_types::protocol::Method::BatchUpdate { operations_msgpack } => {
+        medulla_protocol_types::protocol::Method::BatchUpdate { operations_msgpack } => {
             validate_generic_batch(graph, operations_msgpack, tables)
         }
-        medulla_types::protocol::Method::SetPose { node_id, .. } => {
+        medulla_protocol_types::protocol::Method::SetPose { node_id, .. } => {
             if native_claimed(tables.native_work_items, graph, node_id)? {
                 return Err("native WorkItem authority required for generic update".to_string());
             }
@@ -1094,12 +1094,12 @@ fn verification_refusal_result() -> WorkItemClaimCapabilityResult {
 mod tests {
     use super::*;
     use crate::redb_store::shard::Shard;
-    use medulla_types::mutation_batch::IncarnationId;
-    use medulla_types::mutation_batch::LogicalName;
-    use medulla_types::mutation_batch::MutationBatch;
-    use medulla_types::mutation_batch::MutationScopeIdentity;
-    use medulla_types::mutation_batch::ScopeTenantId;
-    use medulla_types::protocol::Method;
+    use medulla_mutation_types::mutation_scope::IncarnationId;
+    use medulla_mutation_types::mutation_scope::LogicalName;
+    use medulla_protocol_types::mutation_batch::MutationBatch;
+    use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+    use medulla_mutation_types::mutation_scope::ScopeTenantId;
+    use medulla_protocol_types::protocol::Method;
     use std::path::{Path, PathBuf};
 
     /// One process-unique admission id per ATTEMPT, exactly as the production
@@ -1204,9 +1204,9 @@ mod tests {
             .expect("read mutation graph version");
         let batch = sealed_work_item_batch(
             Method::ClaimWorkItem {
-                request: medulla_types::epistemic_operations::ClaimWorkItemRequest {
+                request: medulla_result_types::epistemic_operations::ClaimWorkItemRequest {
                     schema_version:
-                        medulla_types::epistemic_operations::ClaimWorkItemRequestSchemaVersion::V1,
+                        medulla_result_types::epistemic_operations::ClaimWorkItemRequestSchemaVersion::V1,
                     tenant_ref: "tenant-a".to_string(),
                     work_item_id: Some(id.to_string()),
                     queue_ref: None,

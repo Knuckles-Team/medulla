@@ -46,15 +46,17 @@
 //! graphs. The KIND check belongs to the layer: only the component layer has
 //! one, and its resolver makes it.
 
-use medulla_types::agent_library::AgentLibraryLifecycle;
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 
 /// A revision table of one agent layer. All four are keyed and valued alike.
 pub(super) type RevisionTable<'a> =
     medulla_storage::OwnerReadTable<'a, (&'static str, &'static str, u64), &'static [u8]>;
 /// A head table of one agent layer.
-pub(super) type HeadTable<'a> = medulla_storage::OwnerReadTable<'a, (&'static str, &'static str), u64>;
+pub(super) type HeadTable<'a> =
+    medulla_storage::OwnerReadTable<'a, (&'static str, &'static str), u64>;
 /// The admitted write a resolution runs inside.
-pub(super) type Write<'a> = medulla_transaction::AdmittedMutation<'a, medulla_storage::AgentLibraryOwner>;
+pub(super) type Write<'a> =
+    medulla_transaction::AdmittedMutation<'a, medulla_storage::AgentLibraryOwner>;
 
 /// Most revision rows one publish may read while resolving its pins.
 ///
@@ -84,7 +86,7 @@ const MAX_RESOLVED_AGENT_PINS: usize = 1_024;
 /// One pinned reference to a durable template revision.
 ///
 /// `entry_revision` is `Some` only where the pinning site records one --
-/// [`medulla_types::agent_template::TemplateInstanceRef`] does, an
+/// [`medulla_agent_types::agent_template::TemplateInstanceRef`] does, an
 /// `AgentGraphNodeKind::Template` does not. Where it is recorded it is checked,
 /// because a stored revision number that disagreed with the revision the digest
 /// actually resolves to is a provenance record that points at the wrong row.
@@ -412,34 +414,36 @@ pub(crate) fn seed_template_for_test(
     nonce_bytes[0] = 0x50u8.wrapping_add(nonce_index);
     let policy_digest = super::agent_library::current_agent_library_policy_digest().unwrap();
     store
-        .publish_template(medulla_types::agent_template::AgentTemplatePublishRequest {
-            context: medulla_types::agent_library::AgentLibraryMutationContext {
-                request_id: 95_000 + u64::from(nonce_index),
-                principal: store.owner_principal().to_string(),
-                caller_principal: format!("principal:sha256:{}", "a".repeat(64)),
-                attempt_nonce: medulla_types::contract::Nonce::from_bytes(nonce_bytes),
-                tenant_id: tenant_id.to_string(),
-                actor_scope: "action-scope:template-seed".to_string(),
-                purpose_id: "agent-template:publish".to_string(),
-                policy_revision: "policy-v1".to_string(),
-                policy_digest: policy_digest.clone(),
-                policy_decision_id: "agent-template:decision:policy-v1".to_string(),
-                idempotency_key: format!("template-seed:{tenant_id}:{template_id}"),
-                expected_revision: Some(0),
-                trace_id: None,
-                created_at_ms: 5,
+        .publish_template(
+            medulla_agent_types::agent_template::AgentTemplatePublishRequest {
+                context: medulla_agent_types::agent_library::AgentLibraryMutationContext {
+                    request_id: 95_000 + u64::from(nonce_index),
+                    principal: store.owner_principal().to_string(),
+                    caller_principal: format!("principal:sha256:{}", "a".repeat(64)),
+                    attempt_nonce: medulla_types::contract::Nonce::from_bytes(nonce_bytes),
+                    tenant_id: tenant_id.to_string(),
+                    actor_scope: "action-scope:template-seed".to_string(),
+                    purpose_id: "agent-template:publish".to_string(),
+                    policy_revision: "policy-v1".to_string(),
+                    policy_digest: policy_digest.clone(),
+                    policy_decision_id: "agent-template:decision:policy-v1".to_string(),
+                    idempotency_key: format!("template-seed:{tenant_id}:{template_id}"),
+                    expected_revision: Some(0),
+                    trace_id: None,
+                    created_at_ms: 5,
+                },
+                template: medulla_agent_types::agent_template::AgentTemplateDraft {
+                    template_id: template_id.to_string(),
+                    version: "1.0.0".to_string(),
+                    base,
+                    params: Vec::new(),
+                    tenant_id: tenant_id.to_string(),
+                    actor_scope: "definition:builder-a".to_string(),
+                    purpose_id: "agent-template:definition".to_string(),
+                    policy_digest,
+                },
             },
-            template: medulla_types::agent_template::AgentTemplateDraft {
-                template_id: template_id.to_string(),
-                version: "1.0.0".to_string(),
-                base,
-                params: Vec::new(),
-                tenant_id: tenant_id.to_string(),
-                actor_scope: "definition:builder-a".to_string(),
-                purpose_id: "agent-template:definition".to_string(),
-                policy_digest,
-            },
-        })
+        )
         .expect("the fixture's template publishes")
         .result
         .template
@@ -449,10 +453,11 @@ pub(crate) fn seed_template_for_test(
 #[cfg(test)]
 pub mod tests {
     use super::super::agent_library::AgentLibraryStore;
-    use medulla_types::agent_library::{
-        AgentLibraryEntryDraft, AgentLibraryMutationContext, AgentLibraryPublishRequest,
+    use medulla_agent_types::agent_template::AgentTemplateInstantiateRequest;
+    use medulla_agent_types::{
+        agent_library::AgentLibraryEntryDraft, agent_library::AgentLibraryMutationContext,
+        agent_library::AgentLibraryPublishRequest,
     };
-    use medulla_types::agent_template::AgentTemplateInstantiateRequest;
     use std::collections::BTreeMap;
 
     const TEMPLATE_ID: &str = "template:researcher";

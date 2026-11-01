@@ -133,7 +133,9 @@ pub(crate) async fn admit_request(
     let result = result_from_submit(&bound, native).map_err(AdmissionError::Message)?;
     Ok(Response::ok(
         ctx.req_id,
-        ResultPayload::of::<medulla_types::result_contract::coordination::KgDelegate>(result),
+        ResultPayload::of::<medulla_protocol_types::result_contract::coordination::KgDelegate>(
+            result,
+        ),
     ))
 }
 
@@ -215,7 +217,9 @@ pub(crate) async fn replay_before_library(
     let result = result_from_submit(&bound, native).map_err(AdmissionError::Message)?;
     Ok(Some(Response::ok(
         ctx.req_id,
-        ResultPayload::of::<medulla_types::result_contract::coordination::KgDelegate>(result),
+        ResultPayload::of::<medulla_protocol_types::result_contract::coordination::KgDelegate>(
+            result,
+        ),
     )))
 }
 
@@ -292,7 +296,7 @@ pub(crate) enum RetainedTarget {
     /// above: ~370 bytes against a boxed sibling, and no wire or durable
     /// representation to disturb. Boxing only one arm just moves the cost to
     /// the other, so both are indirect and the enum is now two words.
-    Graph(Box<medulla_types::agent_graph::AgentGraphEntry>),
+    Graph(Box<medulla_agent_types::agent_graph::AgentGraphEntry>),
 }
 
 #[cfg(feature = "redb")]

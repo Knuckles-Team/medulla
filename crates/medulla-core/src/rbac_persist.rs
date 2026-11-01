@@ -45,7 +45,7 @@ const BOOTSTRAP_KEY: &str = "bootstrap";
 /// Native mutation-scope identity for this store's RBAC/security-control
 /// bookkeeping: tenant `"native"`, domain `ControlPlane` (mirrored below onto
 /// every `MutationOperation::domain` this store writes — the native-scope
-/// validator in `medulla_types::mutation_batch::validation` requires the two to be
+/// validator in `medulla_protocol_types::mutation_batch::validation` requires the two to be
 /// exactly equal), resource `"security-control"`.
 const RBAC_SCOPE_TENANT: &str = "native";
 const RBAC_SCOPE_RESOURCE: &str = "security-control";
@@ -72,10 +72,11 @@ const RBAC_PHYSICAL_STORE: &str = "eg-core:rbac-security-control";
 /// construction (`ScopeTenantId`/`LogicalName`/`IncarnationId` validate their
 /// input), so failures are propagated rather than `.unwrap()`/`.expect()`'d
 /// away even though the fixed literals above are known-valid by inspection.
-fn native_security_control_identity() -> Result<medulla_types::MutationScopeIdentity, RbacPersistError> {
-    medulla_types::MutationScopeIdentity::fixed_native(
+fn native_security_control_identity(
+) -> Result<medulla_mutation_types::mutation_scope::MutationScopeIdentity, RbacPersistError> {
+    medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_native(
         RBAC_SCOPE_TENANT,
-        medulla_types::mutation_batch::DurabilityDomain::ControlPlane,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::ControlPlane,
         RBAC_SCOPE_RESOURCE,
         RBAC_SCOPE_INCARNATION,
     )
@@ -208,9 +209,9 @@ fn authority_policy_digest(policy: &RbacPolicy) -> Result<String, RbacPersistErr
         // digest, so a policy decision lease minted before it fails closed.
         // Omitted while empty, so an image without elevations keeps its digest.
         #[serde(skip_serializing_if = "no_elevations")]
-        elevations: &'a medulla_types::rbac_elevation::ElevationLedger,
+        elevations: &'a medulla_identity_types::rbac_elevation::ElevationLedger,
     }
-    fn no_elevations(ledger: &&medulla_types::rbac_elevation::ElevationLedger) -> bool {
+    fn no_elevations(ledger: &&medulla_identity_types::rbac_elevation::ElevationLedger) -> bool {
         ledger.is_empty()
     }
     let canonical = CanonicalPolicy {

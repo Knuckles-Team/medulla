@@ -51,7 +51,7 @@ use std::path::Path;
 
 use hmac::{Hmac, Mac};
 use medulla_query::{Cell, Column, ColumnType, TableSchema, TableStore, TableTxn, TxnOp};
-use medulla_types::{CmpOp, RowPredicate};
+use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
@@ -512,7 +512,7 @@ fn commit_source_acl_mutation(
         authority.tenant_scope(),
         &child_identity,
     );
-    let method = medulla_types::protocol::Method::ApplyMutation {
+    let method = medulla_protocol_types::protocol::Method::ApplyMutation {
         event_type: kind.to_string(),
         query: format!("sha256:{operation_digest}"),
     };
@@ -531,12 +531,12 @@ fn commit_source_acl_mutation(
             expected_graph_version: Some(expected_revision),
             fencing_token: None,
             created_at_ms,
-            default_surface: medulla_types::mutation_batch::MutationSurface::Query,
+            default_surface: medulla_mutation_types::mutation_scope::MutationSurface::Query,
             authoritative_state: None,
         },
         &method,
-        medulla_types::mutation_batch::MutationSurface::Query,
-        medulla_types::mutation_batch::DurabilityDomain::SqlCatalog,
+        medulla_mutation_types::mutation_scope::MutationSurface::Query,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::SqlCatalog,
         "sql_source_acl_operation",
     )?;
     let committed = acl.commit_txn_batch(txn, &batch, created_at_ms)?;
@@ -547,7 +547,7 @@ fn commit_source_acl_mutation(
         );
     }
     match committed.record.committed_version {
-        medulla_types::mutation_batch::CommittedVersion::Native { target, .. } => Ok(target),
+        medulla_mutation_types::mutation_scope::CommittedVersion::Native { target, .. } => Ok(target),
         _ => Err("SQL source ACL committed without a native revision".to_string()),
     }
 }
@@ -1292,7 +1292,7 @@ fn primary_key_indexes(schema: &TableSchema) -> Result<Vec<usize>, String> {
 
 fn semantic_record_identity_digest(
     tenant_scope: &str,
-    selector: &medulla_types::semantic_index::SqlColumnRef,
+    selector: &medulla_index_types::semantic_index::SqlColumnRef,
     schema: &TableSchema,
     row: &[Cell],
     primary_key_indexes: &[usize],
@@ -1339,7 +1339,7 @@ fn semantic_record_identity_digest(
 struct SemanticCursorBinding<'a> {
     cursor_auth_secret: &'a [u8; 32],
     authority: &'a CarrierAuthority,
-    selector: &'a medulla_types::semantic_index::SqlColumnRef,
+    selector: &'a medulla_index_types::semantic_index::SqlColumnRef,
     acl: &'a SqlSourceAclSnapshot,
 }
 
@@ -1347,7 +1347,7 @@ fn semantic_cursor_base_mac(
     cursor_auth_secret: &[u8; 32],
     domain: &[u8],
     authority: &CarrierAuthority,
-    selector: &medulla_types::semantic_index::SqlColumnRef,
+    selector: &medulla_index_types::semantic_index::SqlColumnRef,
     acl: &SqlSourceAclSnapshot,
 ) -> Result<SemanticCursorMac, String> {
     // The server authentication secret is supplied only to this semantic seam;
@@ -1394,7 +1394,7 @@ fn semantic_cursor_base_mac(
 fn semantic_cursor_position(
     cursor_auth_secret: &[u8; 32],
     authority: &CarrierAuthority,
-    selector: &medulla_types::semantic_index::SqlColumnRef,
+    selector: &medulla_index_types::semantic_index::SqlColumnRef,
     acl: &SqlSourceAclSnapshot,
     cursor: &SemanticTextCursor,
 ) -> Result<u64, String> {
@@ -1420,7 +1420,7 @@ fn semantic_cursor_position(
 fn semantic_cursor_tag(
     cursor_auth_secret: &[u8; 32],
     authority: &CarrierAuthority,
-    selector: &medulla_types::semantic_index::SqlColumnRef,
+    selector: &medulla_index_types::semantic_index::SqlColumnRef,
     acl: &SqlSourceAclSnapshot,
     page: &medulla_query::tables::store::TableRowSnapshot,
     physical_position: &[u8; 8],
@@ -1509,7 +1509,7 @@ fn mac_len_prefixed(mac: &mut SemanticCursorMac, value: &[u8]) {
 fn semantic_cursor(
     cursor_auth_secret: &[u8; 32],
     authority: &CarrierAuthority,
-    selector: &medulla_types::semantic_index::SqlColumnRef,
+    selector: &medulla_index_types::semantic_index::SqlColumnRef,
     acl: &SqlSourceAclSnapshot,
     page: &medulla_query::tables::store::TableRowSnapshot,
     physical_after_row_id: u64,
@@ -1549,7 +1549,7 @@ type SemanticRowProjection = (Vec<SemanticTextRecord>, usize, usize, Option<u64>
 
 fn project_semantic_text_rows(
     tenant_scope: &str,
-    selector: &medulla_types::semantic_index::SqlColumnRef,
+    selector: &medulla_index_types::semantic_index::SqlColumnRef,
     schema: &TableSchema,
     rows: &[medulla_query::tables::store::TableSnapshotRow],
     column_index: usize,
@@ -1667,7 +1667,7 @@ impl AuthorizedTable {
     /// Raw primary keys and the executable RLS predicate never enter the result.
     pub fn semantic_text_snapshot(
         &self,
-        source_selector: &medulla_types::semantic_index::SemanticSourceSelector,
+        source_selector: &medulla_index_types::semantic_index::SemanticSourceSelector,
         cursor_auth_secret: &[u8; 32],
         cursor: Option<&SemanticTextCursor>,
     ) -> Result<SemanticTextSnapshot, String> {
@@ -2215,12 +2215,12 @@ mod tests {
         store: &TableStore,
         resource: &str,
         batch_id: &str,
-    ) -> medulla_types::mutation_batch::MutationBatch {
+    ) -> medulla_protocol_types::mutation_batch::MutationBatch {
         let expected_version = store
             .mutation_version(authority.tenant_scope(), resource)
             .unwrap();
         let idempotency_key = format!("sql-cross-resource:{batch_id}");
-        let method = medulla_types::protocol::Method::Sql {
+        let method = medulla_protocol_types::protocol::Method::Sql {
             query:
                 "INSERT INTO documents (id, body, summary) VALUES (257, 'body-257', 'summary-257')"
                     .to_string(),
@@ -2239,12 +2239,12 @@ mod tests {
                 expected_graph_version: Some(expected_version),
                 fencing_token: None,
                 created_at_ms: 17,
-                default_surface: medulla_types::mutation_batch::MutationSurface::Query,
+                default_surface: medulla_mutation_types::mutation_scope::MutationSurface::Query,
                 authoritative_state: None,
             },
             &method,
-            medulla_types::mutation_batch::MutationSurface::Query,
-            medulla_types::mutation_batch::DurabilityDomain::SqlCatalog,
+            medulla_mutation_types::mutation_scope::MutationSurface::Query,
+            medulla_mutation_types::mutation_scope::DurabilityDomain::SqlCatalog,
             "sql_catalog_operation",
         )
         .unwrap()
@@ -3356,11 +3356,12 @@ mod tests {
     fn semantic_selector(
         table: &str,
         column: &str,
-    ) -> medulla_types::semantic_index::SemanticSourceSelector {
-        medulla_types::semantic_index::SemanticSourceSelector::SqlColumnRef(
-            medulla_types::semantic_index::SqlColumnRef {
-                catalog_id: medulla_types::semantic_index::SEMANTIC_SQL_CATALOG_ID.to_string(),
-                schema_id: medulla_types::semantic_index::SEMANTIC_SQL_SCHEMA_ID.to_string(),
+    ) -> medulla_index_types::semantic_index::SemanticSourceSelector {
+        medulla_index_types::semantic_index::SemanticSourceSelector::SqlColumnRef(
+            medulla_index_types::semantic_index::SqlColumnRef {
+                catalog_id: medulla_index_types::semantic_index::SEMANTIC_SQL_CATALOG_ID
+                    .to_string(),
+                schema_id: medulla_index_types::semantic_index::SEMANTIC_SQL_SCHEMA_ID.to_string(),
                 table_id: table.to_string(),
                 column_id: column.to_string(),
             },
@@ -3590,7 +3591,7 @@ mod tests {
         );
 
         let mut wrong_schema = semantic_selector("notes", "body");
-        let medulla_types::semantic_index::SemanticSourceSelector::SqlColumnRef(selector) =
+        let medulla_index_types::semantic_index::SemanticSourceSelector::SqlColumnRef(selector) =
             &mut wrong_schema
         else {
             unreachable!()
@@ -3604,7 +3605,7 @@ mod tests {
         );
 
         let mut wrong_catalog = semantic_selector("notes", "body");
-        let medulla_types::semantic_index::SemanticSourceSelector::SqlColumnRef(selector) =
+        let medulla_index_types::semantic_index::SemanticSourceSelector::SqlColumnRef(selector) =
             &mut wrong_catalog
         else {
             unreachable!()
@@ -3713,7 +3714,7 @@ mod tests {
                 columns: vec!["right".to_string(), "left".to_string()],
             }]);
         let row = vec![Cell::Text("key".to_string()), Cell::Int(7), Cell::Null];
-        let medulla_types::semantic_index::SemanticSourceSelector::SqlColumnRef(selector) =
+        let medulla_index_types::semantic_index::SemanticSourceSelector::SqlColumnRef(selector) =
             semantic_selector("documents", "body")
         else {
             unreachable!()

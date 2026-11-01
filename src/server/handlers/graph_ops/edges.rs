@@ -54,7 +54,9 @@ fn handle_get_edge_properties_batch(
         .collect();
     Response::ok(
         req_id,
-        ResultPayload::of_ref::<medulla_types::result_contract::graph::GetEdgePropertiesBatch>(&out),
+        ResultPayload::of_ref::<
+            medulla_protocol_types::result_contract::graph::GetEdgePropertiesBatch,
+        >(&out),
     )
 }
 
@@ -125,7 +127,9 @@ pub(super) async fn try_handle_edge_reads(
             let edges = g.get_edges_page(after_ref, limit);
             Response::ok(
                 req_id,
-                ResultPayload::of_ref::<medulla_types::result_contract::graph::GetEdgesPage>(&edges),
+                ResultPayload::of_ref::<medulla_protocol_types::result_contract::graph::GetEdgesPage>(
+                    &edges,
+                ),
             )
         }
         Method::GetEdgeProperties {
@@ -137,14 +141,16 @@ pub(super) async fn try_handle_edge_reads(
             let val: Vec<serde_json::Value> = props
                 .into_iter()
                 .map(|p| {
-                    medulla_types::msgpack::decode_property_value(&p).unwrap_or(serde_json::json!({}))
+                    medulla_types::msgpack::decode_property_value(&p)
+                        .unwrap_or(serde_json::json!({}))
                 })
                 .collect();
             Response::ok(
                 req_id,
-                ResultPayload::of_dynamic::<medulla_types::result_contract::graph::GetEdgeProperties, _>(
-                    &val,
-                ),
+                ResultPayload::of_dynamic::<
+                    medulla_protocol_types::result_contract::graph::GetEdgeProperties,
+                    _,
+                >(&val),
             )
         }
         Method::GetEdgePropertiesBatch { edges } => {

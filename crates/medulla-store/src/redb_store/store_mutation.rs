@@ -212,7 +212,7 @@ type ReactivationStage<'a> = dyn for<'g> FnMut(&ShardWrite<'g>) -> Result<(), St
 pub(crate) fn commit_mutation_batch_with_outbox_lease(
     shard: &Shard,
     input: BatchCommitInput<'_>,
-    lease: &medulla_types::MutationOutboxLease,
+    lease: &medulla_mutation_types::mutation_scope::MutationOutboxLease,
     stage_reactivation: &mut ReactivationStage<'_>,
     crypto: DurableCrypto<'_>,
     #[cfg(feature = "security")] audit_tail: &mut AuditTailCache,
@@ -254,7 +254,7 @@ pub(crate) fn commit_mutation_batch_with_reactivation_rows(
 fn commit_mutation_batch_with_reactivation_effect(
     shard: &Shard,
     input: BatchCommitInput<'_>,
-    lease: Option<&medulla_types::MutationOutboxLease>,
+    lease: Option<&medulla_mutation_types::mutation_scope::MutationOutboxLease>,
     stage_reactivation: &mut ReactivationStage<'_>,
     crypto: DurableCrypto<'_>,
     #[cfg(feature = "security")] audit_tail: &mut AuditTailCache,
@@ -329,7 +329,7 @@ pub fn commit_repository_enrichment_top_up(
 }
 
 struct OutboxBatchEffect<'a> {
-    lease: Option<&'a medulla_types::MutationOutboxLease>,
+    lease: Option<&'a medulla_mutation_types::mutation_scope::MutationOutboxLease>,
     #[cfg(feature = "raft")]
     top_up: Option<TopUpSourceEffect<'a>>,
     stage_reactivation: &'a mut ReactivationStage<'a>,
@@ -571,9 +571,9 @@ fn finish_fresh_batch(
         rows.crashpoint,
         MutationBatchCrashpoint::BeforeCommit,
     )?;
-    medulla_types::mutation_batch::apply_certification_fault(
+    medulla_protocol_types::mutation_batch::apply_certification_fault(
         bound,
-        medulla_types::mutation_batch::MutationCommitPhase::BeforeCommit,
+        medulla_protocol_types::mutation_batch::MutationCommitPhase::BeforeCommit,
     )?;
 
     let result = staged
@@ -591,9 +591,9 @@ fn finish_fresh_batch(
         rows.crashpoint,
         MutationBatchCrashpoint::AfterCommitBeforeAck,
     )?;
-    medulla_types::mutation_batch::apply_certification_fault(
+    medulla_protocol_types::mutation_batch::apply_certification_fault(
         bound,
-        medulla_types::mutation_batch::MutationCommitPhase::AfterCommitBeforeAck,
+        medulla_protocol_types::mutation_batch::MutationCommitPhase::AfterCommitBeforeAck,
     )?;
 
     let commit = MutationBatchCommit {
@@ -720,11 +720,10 @@ fn finish_replayed_batch(
 #[cfg(test)]
 mod outbox_reactivation_tests {
     use super::*;
-    use medulla_transaction::OutboxClaimBudget;
-    use medulla_types::mutation_batch::COMPILED_BATCH_INCARNATION;
-    use medulla_types::{
-        contract::Digest256, MutationOperation, MutationOutboxIntent, MutationScopeIdentity,
-        MutationSurface, VersionExpectation, MUTATION_BATCH_VERSION,
+    use medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION;
+    use medulla_mutation_types::{
+        mutation_scope::MutationOutboxIntent, mutation_scope::MutationScopeIdentity,
+        mutation_scope::MutationSurface, mutation_scope::MUTATION_BATCH_VERSION,
     };
     pub const GRAPH: &str = "graph-a";
     pub const CONSUMER: &str = "reactivation-worker";
@@ -771,7 +770,7 @@ mod outbox_reactivation_tests {
     pub fn commit(
         shard: &Shard,
         batch: &MutationBatch,
-        lease: Option<&medulla_types::MutationOutboxLease>,
+        lease: Option<&medulla_mutation_types::mutation_scope::MutationOutboxLease>,
         stage: &mut ReactivationStage<'_>,
     ) -> Result<MutationBatchCommit, String> {
         #[cfg(feature = "security")]
@@ -816,7 +815,7 @@ mod outbox_reactivation_tests {
         )
     }
 
-    fn held_source(shard: &Shard) -> medulla_types::MutationOutboxLease {
+    fn held_source(shard: &Shard) -> medulla_mutation_types::mutation_scope::MutationOutboxLease {
         commit(
             shard,
             &batch("source", "source-key", 0, "source-node"),

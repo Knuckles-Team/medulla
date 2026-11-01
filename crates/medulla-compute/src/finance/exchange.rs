@@ -8,7 +8,7 @@
 /// enum embeds it); re-exported here so the matching code below is unchanged.
 pub use crate::wire::Order;
 
-pub use medulla_types::compute_result::finance::Fill;
+pub use medulla_result_types::compute_result::finance::Fill;
 
 /// TWAP execution schedule — split a large order into N equal time slices.
 pub fn twap_schedule(

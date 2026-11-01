@@ -20,7 +20,7 @@
 use medulla_persistence::AsRedb;
 use std::sync::Arc;
 
-use medulla_types::work_item_read::WorkItemListRequest;
+use medulla_agent_types::work_item_read::WorkItemListRequest;
 
 use crate::protocol::{Response, ResultPayload};
 use medulla_server_api::api::persistence::PersistenceBackend;
@@ -33,7 +33,7 @@ pub(crate) enum WorkItemRead {
         actor: String,
     },
     Checkpoint {
-        request: medulla_types::run_checkpoint::GetRunCheckpointRequest,
+        request: medulla_agent_types::run_checkpoint::GetRunCheckpointRequest,
         actor: String,
     },
     RunAdmission {
@@ -57,7 +57,7 @@ pub(crate) enum WorkItemRead {
         work_item_id: String,
     },
     /// graph-os MEDULLA-5: one page of control leases.
-    ControlLeases(medulla_types::control_lease::ListControlLeasesRequest),
+    ControlLeases(medulla_agent_types::control_lease::ListControlLeasesRequest),
     /// graph-os MEDULLA-2: one native control lease.
     ControlLease {
         tenant: String,
@@ -69,14 +69,14 @@ pub(crate) enum WorkItemRead {
         gap_id: String,
     },
     /// EH-348: one page of Gaps.
-    Gaps(medulla_types::work_market::GapListRequest),
+    Gaps(medulla_agent_types::work_market::GapListRequest),
 }
 
 impl WorkItemRead {
     fn tenant(&self) -> &str {
         match self {
             Self::Checkpoint {
-                request: medulla_types::run_checkpoint::GetRunCheckpointRequest { tenant, .. },
+                request: medulla_agent_types::run_checkpoint::GetRunCheckpointRequest { tenant, .. },
                 ..
             }
             | Self::Get { tenant, .. }
@@ -128,9 +128,12 @@ async fn serve_native(
     persistence: &Option<Arc<dyn PersistenceBackend>>,
     read: WorkItemRead,
 ) -> Result<ResultPayload, String> {
-    use medulla_types::result_contract::coordination::{
-        GapGet, GapList, GetControlLease, GetWorkItem, GetWorkItemOutcome, ListControlLeases,
-        ListWorkItems,
+    use medulla_protocol_types::{
+        result_contract::coordination::GapGet, result_contract::coordination::GapList,
+        result_contract::coordination::GetControlLease, result_contract::coordination::GetWorkItem,
+        result_contract::coordination::GetWorkItemOutcome,
+        result_contract::coordination::ListControlLeases,
+        result_contract::coordination::ListWorkItems,
     };
     let backend = persistence
         .as_ref()
@@ -143,7 +146,7 @@ async fn serve_native(
             actor,
         } => {
             let actor = medulla_server_api::mutation_batch::principal_fingerprint(&actor)?;
-            ResultPayload::of::<medulla_types::result_contract::coordination::GetRunWorkItem>(
+            ResultPayload::of::<medulla_protocol_types::result_contract::coordination::GetRunWorkItem>(
                 backend
                     .read_run_work_item(graph, &tenant, &run_id, &actor)
                     .await?,
@@ -155,7 +158,7 @@ async fn serve_native(
             actor,
         } => {
             let actor = medulla_server_api::mutation_batch::principal_fingerprint(&actor)?;
-            ResultPayload::of::<medulla_types::result_contract::coordination::GetSessionUsage>(
+            ResultPayload::of::<medulla_protocol_types::result_contract::coordination::GetSessionUsage>(
                 backend
                     .read_session_usage(graph, &tenant, &context_id, &actor)
                     .await?,
@@ -163,7 +166,7 @@ async fn serve_native(
         }
         WorkItemRead::Checkpoint { request, actor } => {
             let actor = medulla_server_api::mutation_batch::principal_fingerprint(&actor)?;
-            ResultPayload::of::<medulla_types::result_contract::coordination::GetRunCheckpoint>(
+            ResultPayload::of::<medulla_protocol_types::result_contract::coordination::GetRunCheckpoint>(
                 backend.read_run_checkpoint(graph, request, &actor).await?,
             )
         }
@@ -173,7 +176,7 @@ async fn serve_native(
             actor,
         } => {
             let actor = medulla_server_api::mutation_batch::principal_fingerprint(&actor)?;
-            ResultPayload::of::<medulla_types::result_contract::coordination::GetCurrentPlan>(
+            ResultPayload::of::<medulla_protocol_types::result_contract::coordination::GetCurrentPlan>(
                 backend
                     .read_current_plan(graph, &tenant, &run_id, &actor)
                     .await?,

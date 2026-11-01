@@ -1,6 +1,6 @@
 use super::*;
-use medulla_types::current_plan::sample_task_plan_publish_request;
-use medulla_types::decision::task_plan::plan_explicit_tasks;
+use medulla_decision_types::current_plan::sample_task_plan_publish_request;
+use medulla_decision_types::decision::task_plan::plan_explicit_tasks;
 
 fn attached_request(revision: u64) -> PublishCurrentPlanRequest {
     let mut request = request(revision);

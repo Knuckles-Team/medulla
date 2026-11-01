@@ -891,8 +891,8 @@ impl Drop for EnvVarGuard {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use medulla_types::protocol::GraphType;
-    use medulla_types::protocol::Method;
+    use medulla_protocol_types::protocol::GraphType;
+    use medulla_protocol_types::protocol::Method;
     use medulla_store::redb_store::shard::SHARD_PHYSICAL_STORE;
     use medulla_server_api::api::persistence::PersistenceBackend;
     use crate::redb_backend::seed_raw_row;

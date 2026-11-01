@@ -4,7 +4,7 @@ use super::*;
 /// request boundary makes it harder to accidentally compare fields from a
 /// different authority while retaining the individual diagnostics below.
 pub(super) struct ReplayRecordCheck<'a> {
-    pub(super) record: &'a medulla_types::mutation_batch::MutationBatchRecord,
+    pub(super) record: &'a medulla_protocol_types::mutation_batch::MutationBatchRecord,
     pub(super) req: &'a RaftRequest,
     pub(super) batch_id: &'a str,
     pub(super) expected_principal: &'a str,
@@ -20,11 +20,11 @@ impl MedullaStore {
     /// caller's own CCN low. Pure extract-method, byte-identical behaviour.
     pub(super) fn change_envelope_mismatches_authority(
         req: &RaftRequest,
-        envelope: &medulla_types::change_envelope::ChangeEnvelope,
+        envelope: &medulla_protocol_types::change_envelope::ChangeEnvelope,
         expected_tenant_scope: &str,
     ) -> bool {
         req.mutation.batch_id != envelope.mutation.batch_id
-            || medulla_types::mutation_batch::batch_request_number(&envelope.mutation)
+            || medulla_protocol_types::mutation_batch::batch_request_number(&envelope.mutation)
                 != Some(req.mutation.request_id)
             || req.mutation.tenant_scope != expected_tenant_scope
             || Some(req.mutation.principal_fingerprint.as_str())
@@ -130,7 +130,7 @@ impl MedullaStore {
                 expected_graph_version: Some(source_version),
                 fencing_token: authority.fencing_token,
                 created_at_ms: authority.created_at_ms,
-                default_surface: medulla_types::mutation_batch::MutationSurface::Graph,
+                default_surface: medulla_mutation_types::mutation_scope::MutationSurface::Graph,
                 authoritative_state: Some(descriptor),
             },
             vec![durable_method.clone()],
@@ -218,13 +218,13 @@ impl MedullaStore {
     /// authoritative-state digest (CX WB1-MEDULLA-01 CCN reduction). Pure
     /// extract-method, byte-identical behaviour.
     pub(super) fn idempotent_replay_operation_matches(
-        record: &medulla_types::mutation_batch::MutationBatchRecord,
+        record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
         expected_digest: &str,
     ) -> bool {
         record.batch.operations.len() == 1
             && matches!(
                 &record.batch.operations[0].method,
-                medulla_types::protocol::Method::ApplyMutation { event_type, query }
+                medulla_protocol_types::protocol::Method::ApplyMutation { event_type, query }
                     if event_type == "authoritative_state_operation"
                         && query == expected_digest
             )
@@ -281,7 +281,7 @@ impl MedullaStore {
             Some(graph_name) => graph_name.as_str() == req.graph_fname.as_str(),
             None => false,
         };
-        if record.status != medulla_types::mutation_batch::MutationBatchStatus::Committed {
+        if record.status != medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed {
             return Some("durable record is not Committed");
         }
         if record.batch.batch_id != batch_id {
@@ -325,7 +325,7 @@ mod tests {
     fn physical_graph_replay_fixture(
         logical_graph: &str,
     ) -> (
-        medulla_types::mutation_batch::MutationBatchRecord,
+        medulla_protocol_types::mutation_batch::MutationBatchRecord,
         RaftRequest,
         String,
     ) {
@@ -350,7 +350,7 @@ mod tests {
                 expected_graph_version: Some(0),
                 fencing_token: None,
                 created_at_ms: 11,
-                default_surface: medulla_types::mutation_batch::MutationSurface::Graph,
+                default_surface: medulla_mutation_types::mutation_scope::MutationSurface::Graph,
                 authoritative_state: None,
             },
             vec![method.clone()],
@@ -362,11 +362,11 @@ mod tests {
         batch.identity = medulla_store::redb_store::shard::graph_scope_identity(&graph_fname)
             .expect("replay fixture physical graph scope must bind");
         let identity = batch.identity.clone();
-        let record = medulla_types::mutation_batch::MutationBatchRecord {
+        let record = medulla_protocol_types::mutation_batch::MutationBatchRecord {
             batch,
             identity,
-            status: medulla_types::mutation_batch::MutationBatchStatus::Committed,
-            committed_version: medulla_types::mutation_batch::CommittedVersion::Graph {
+            status: medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed,
+            committed_version: medulla_mutation_types::mutation_scope::CommittedVersion::Graph {
                 source: 0,
                 target: 1,
             },

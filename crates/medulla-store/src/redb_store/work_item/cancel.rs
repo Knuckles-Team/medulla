@@ -36,23 +36,29 @@ pub(crate) struct CancelWorkItemInput<'args, 'table, 'crypto> {
 fn cancel_status_refusal(
     props: &serde_json::Map<String, serde_json::Value>,
     now_s: f64,
-) -> Option<medulla_types::result_contract::coordination::WorkItemCancelStatus> {
+) -> Option<medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus> {
     if matches!(
         property_string(props, "status"),
         "succeeded" | "failed" | "cancelled" | "dead_letter"
     ) {
-        return Some(medulla_types::result_contract::coordination::WorkItemCancelStatus::Noop);
+        return Some(
+            medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus::Noop,
+        );
     }
     if matches!(property_string(props, "status"), "leased" | "running")
         && property_f64(props, "lease_expires_at") >= now_s
     {
-        return Some(medulla_types::result_contract::coordination::WorkItemCancelStatus::InFlight);
+        return Some(
+            medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus::InFlight,
+        );
     }
     if !matches!(
         property_string(props, "status"),
         "submitted" | "ready" | "leased" | "running"
     ) {
-        return Some(medulla_types::result_contract::coordination::WorkItemCancelStatus::NotCancellable);
+        return Some(
+            medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus::NotCancellable,
+        );
     }
     None
 }
@@ -112,7 +118,7 @@ fn apply_cancelled_work_item_props(
 
 pub(crate) fn apply_cancel_work_item_row(
     input: CancelWorkItemInput<'_, '_, '_>,
-) -> Result<Option<medulla_types::protocol::ResultPayload>, String> {
+) -> Result<Option<medulla_protocol_types::protocol::ResultPayload>, String> {
     let CancelWorkItemInput {
         graph,
         tenant,
@@ -130,7 +136,7 @@ pub(crate) fn apply_cancel_work_item_row(
     let Some(mut props) = super::control_lease::load_row(nodes, graph, work_item_id, crypto)?
     else {
         return cancel_transition_result(unchanged_transition(
-            medulla_types::result_contract::coordination::WorkItemCancelStatus::Missing,
+            medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus::Missing,
             None,
         ))
         .map(Some);
@@ -138,7 +144,7 @@ pub(crate) fn apply_cancel_work_item_row(
     let pre_props = props.clone();
     if property_string(&props, "tenant") != tenant {
         return cancel_transition_result(unchanged_transition(
-            medulla_types::result_contract::coordination::WorkItemCancelStatus::Missing,
+            medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus::Missing,
             None,
         ))
         .map(Some);
@@ -182,8 +188,8 @@ pub(crate) fn apply_cancel_work_item_row(
     );
     write_work_item_props(nodes, graph, work_item_id, &mut props, crypto)?;
     cancel_transition_result(
-        medulla_types::result_contract::coordination::WorkItemTransition {
-            status: medulla_types::result_contract::coordination::WorkItemCancelStatus::Cancelled,
+        medulla_protocol_types::result_contract::coordination::WorkItemTransition {
+            status: medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus::Cancelled,
             work_item_id: Some(work_item_id.to_string()),
             lease_epoch: Some(next_epoch),
             fencing_token: Some(next_fencing_token),
@@ -256,7 +262,7 @@ fn apply_deferred_work_item_props(
 
 pub(crate) fn apply_defer_work_item_row(
     input: DeferWorkItemInput<'_, '_, '_>,
-) -> Result<Option<medulla_types::protocol::ResultPayload>, String> {
+) -> Result<Option<medulla_protocol_types::protocol::ResultPayload>, String> {
     let DeferWorkItemInput {
         fence:
             WorkItemFenceKey {
@@ -279,7 +285,7 @@ pub(crate) fn apply_defer_work_item_row(
     let Some(mut props) = super::control_lease::load_row(nodes, graph, work_item_id, crypto)?
     else {
         return deferral_result(deferral_refused(
-            medulla_types::result_contract::coordination::WorkItemDeferStatus::Missing,
+            medulla_protocol_types::result_contract::coordination::WorkItemDeferStatus::Missing,
             None,
         ))
         .map(Some);
@@ -287,7 +293,7 @@ pub(crate) fn apply_defer_work_item_row(
     let now_s = now_ms as f64 / 1000.0;
     if !defer_lease_is_valid(&props, tenant, worker_id, lease_epoch, fencing_token, now_s) {
         return deferral_result(deferral_refused(
-            medulla_types::result_contract::coordination::WorkItemDeferStatus::Fenced,
+            medulla_protocol_types::result_contract::coordination::WorkItemDeferStatus::Fenced,
             Some(work_item_id),
         ))
         .map(Some);
@@ -308,25 +314,27 @@ pub(crate) fn apply_defer_work_item_row(
         Some("ready"),
     );
     write_work_item_props(nodes, graph, work_item_id, &mut props, crypto)?;
-    deferral_result(medulla_types::result_contract::coordination::WorkItemDeferral {
-        status: medulla_types::result_contract::coordination::WorkItemDeferStatus::Deferred,
-        work_item_id: Some(work_item_id.to_string()),
-        lease_epoch: Some(next_epoch),
-        fencing_token: Some(next_fencing_token),
-        next_retry_at_ms: Some(next_retry_at_ms),
-        attempt: Some(attempts),
-        defer_count: Some(defer_count),
-        changed_work_item_ids: vec![work_item_id.to_string()],
-    })
+    deferral_result(
+        medulla_protocol_types::result_contract::coordination::WorkItemDeferral {
+            status: medulla_protocol_types::result_contract::coordination::WorkItemDeferStatus::Deferred,
+            work_item_id: Some(work_item_id.to_string()),
+            lease_epoch: Some(next_epoch),
+            fencing_token: Some(next_fencing_token),
+            next_retry_at_ms: Some(next_retry_at_ms),
+            attempt: Some(attempts),
+            defer_count: Some(defer_count),
+            changed_work_item_ids: vec![work_item_id.to_string()],
+        },
+    )
     .map(Some)
 }
 
 /// A `DeferWorkItem` that changed no row.
 fn deferral_refused(
-    status: medulla_types::result_contract::coordination::WorkItemDeferStatus,
+    status: medulla_protocol_types::result_contract::coordination::WorkItemDeferStatus,
     work_item_id: Option<&str>,
-) -> medulla_types::result_contract::coordination::WorkItemDeferral {
-    medulla_types::result_contract::coordination::WorkItemDeferral {
+) -> medulla_protocol_types::result_contract::coordination::WorkItemDeferral {
+    medulla_protocol_types::result_contract::coordination::WorkItemDeferral {
         status,
         work_item_id: work_item_id.map(str::to_string),
         lease_epoch: None,
@@ -339,9 +347,9 @@ fn deferral_refused(
 }
 
 fn deferral_result(
-    deferral: medulla_types::result_contract::coordination::WorkItemDeferral,
-) -> Result<medulla_types::protocol::ResultPayload, String> {
-    medulla_types::protocol::ResultPayload::of::<medulla_types::result_contract::coordination::DeferWorkItem>(
+    deferral: medulla_protocol_types::result_contract::coordination::WorkItemDeferral,
+) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
+    medulla_protocol_types::protocol::ResultPayload::of::<medulla_protocol_types::result_contract::coordination::DeferWorkItem>(
         deferral,
     )
 }

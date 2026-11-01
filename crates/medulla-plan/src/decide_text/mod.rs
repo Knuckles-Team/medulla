@@ -40,8 +40,10 @@ mod tests;
 
 use std::collections::BTreeMap;
 
-use medulla_types::decision::statistical::{DecideRequest, TypedValue};
-use medulla_types::decision::AssemblyRequest;
+use medulla_decision_types::decision::AssemblyRequest;
+use medulla_decision_types::{
+    decision::statistical::DecideRequest, decision::statistical::TypedValue,
+};
 
 /// What went wrong, as a closed kind a caller can branch on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

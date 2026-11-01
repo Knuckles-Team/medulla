@@ -66,14 +66,17 @@ use tokio::sync::Mutex as AsyncMutex;
 use tokio::sync::RwLock;
 use tokio::task::JoinHandle;
 
+use medulla_protocol_types::{
+    result_contract::messaging::CepEvent, result_contract::messaging::CepMatch,
+    result_contract::messaging::CepPoll,
+};
 use medulla_stream::live::{CepEngine, CepSubscription, DEFAULT_MATCH_BUFFER};
 use medulla_stream::{AttrPredicate, CepPattern, Event, EventMatcher, Match, Window};
-use medulla_types::result_contract::messaging::{CepEvent, CepMatch, CepPoll};
 
 use super::state::ServerState;
-use medulla_types::protocol::Method;
-use medulla_types::protocol::Response;
-use medulla_types::protocol::ResultPayload;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use crate::access::CarrierAuthority;
 use medulla_types::wire::CdcEvent;
 use medulla_types::wire::CdcKind;
@@ -523,7 +526,9 @@ async fn cep_subscribe(
     forward_to_broker_if_configured(state, &surface, id).await;
     Ok(Response::ok(
         req_id,
-        ResultPayload::scalar::<medulla_types::result_contract::messaging::CepSubscribe>(id),
+        ResultPayload::scalar::<medulla_protocol_types::result_contract::messaging::CepSubscribe>(
+            id,
+        ),
     ))
 }
 
@@ -571,7 +576,7 @@ async fn cep_unsubscribe(
     let surface = surface_of(state, req_id).await?;
     Ok(Response::ok(
         req_id,
-        ResultPayload::scalar::<medulla_types::result_contract::messaging::CepUnsubscribe>(
+        ResultPayload::scalar::<medulla_protocol_types::result_contract::messaging::CepUnsubscribe>(
             surface.unsubscribe(sub_id),
         ),
     ))

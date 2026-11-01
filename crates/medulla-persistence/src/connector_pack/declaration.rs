@@ -8,7 +8,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_types::connector_pack::{ConnectorRelationshipMapping, ConnectorSchemaMapping};
+use medulla_catalog_types::{
+    connector_pack::ConnectorRelationshipMapping, connector_pack::ConnectorSchemaMapping,
+};
 
 /// The URI of the declaration entry in a connector pack.
 pub const CONNECTOR_DECLARATION_URI: &str = "connector://resources";
@@ -65,7 +67,7 @@ pub fn decode_schema_mappings(
 
 fn validate_mapping_datatypes(mapping: &DeclaredMapping) -> Result<(), String> {
     for (field, datatype) in &mapping.datatypes {
-        if !medulla_types::connector_pack::source_datatype_supported(datatype) {
+        if !medulla_catalog_types::connector_pack::source_datatype_supported(datatype) {
             return Err("schema mapping contains an unsupported datatype".into());
         }
         if mapping

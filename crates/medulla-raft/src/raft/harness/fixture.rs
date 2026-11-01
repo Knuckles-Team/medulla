@@ -112,8 +112,8 @@ pub fn add_node_slice(
     crate::raft::cross_shard_txn::GraphSlice {
         graph_name: graph.to_string(),
         graph_fname: medulla_kernel::persist::sanitize(graph),
-        graph_type: medulla_types::protocol::GraphType::Global,
-        methods: vec![medulla_types::protocol::Method::AddNode {
+        graph_type: medulla_protocol_types::protocol::GraphType::Global,
+        methods: vec![medulla_protocol_types::protocol::Method::AddNode {
             node_id: node.to_string(),
             properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({"n": node}))
                 .expect("fixture node properties encode"),

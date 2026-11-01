@@ -154,7 +154,7 @@ pub fn commit_change_envelopes(
 fn validate_change_envelope_batch_size(
     envelopes: &[ChangeEnvelope],
 ) -> Result<(), ChangeEnvelopesError> {
-    let max_batch = medulla_types::change_envelope::MAX_ENVELOPES_PER_BATCH;
+    let max_batch = medulla_protocol_types::change_envelope::MAX_ENVELOPES_PER_BATCH;
     if envelopes.len() > max_batch {
         return Err(change_envelope_error(
             0,

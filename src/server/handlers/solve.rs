@@ -7,12 +7,12 @@
 //! no float, so it takes neither the server state nor the verified context.
 
 use crate::protocol::Response;
-use medulla_types::solve::SolveRequest;
+use medulla_decision_types::solve::SolveRequest;
 
 #[cfg(feature = "solve")]
 fn refuse(
     req_id: u64,
-    code: medulla_types::solve::SolveErrorCode,
+    code: medulla_decision_types::solve::SolveErrorCode,
     detail: impl std::fmt::Display,
 ) -> Response {
     Response::err(req_id, format!("{}: {detail}", code.as_str()))
@@ -23,7 +23,9 @@ fn refuse(
 pub(crate) async fn handle_solve(req_id: u64, request: SolveRequest) -> Response {
     use crate::protocol::ResultPayload;
     use medulla_compute::solve::{solve, verify, Model, SolverConfig};
-    use medulla_types::solve::{SolveErrorCode, SolveResult, SOLVE_RESULT_SCHEMA_VERSION};
+    use medulla_decision_types::{
+        solve::SolveErrorCode, solve::SolveResult, solve::SOLVE_RESULT_SCHEMA_VERSION,
+    };
 
     let model = match Model::try_from(request.model) {
         Ok(model) => model,
@@ -48,7 +50,9 @@ pub(crate) async fn handle_solve(req_id: u64, request: SolveRequest) -> Response
             };
             Response::ok(
                 req_id,
-                ResultPayload::of_ref::<medulla_types::result_contract::compute::Solve>(&result),
+                ResultPayload::of_ref::<medulla_protocol_types::result_contract::compute::Solve>(
+                    &result,
+                ),
             )
         }
         Ok(Err(error)) => refuse(req_id, SolveErrorCode::CertificateRejected, error),
@@ -65,9 +69,9 @@ pub(crate) async fn handle_solve(req_id: u64, _request: SolveRequest) -> Respons
 #[cfg(all(test, feature = "solve"))]
 mod tests {
     use super::*;
-    use medulla_types::solve::{
-        Coefficient, ConstraintBody, ConstraintSpec, ModelSpec, ObjectiveLevelSpec, ObjectiveTerm,
-        SolveResult, VarId,
+    use medulla_decision_types::{
+        solve::Coefficient, solve::ConstraintBody, solve::ConstraintSpec, solve::ModelSpec,
+        solve::ObjectiveLevelSpec, solve::ObjectiveTerm, solve::SolveResult, solve::VarId,
     };
 
     fn cover_model() -> ModelSpec {

@@ -3,13 +3,14 @@
 //! never the writer thread, never a MutationBatch.
 //!
 //! The projection, the tenant filter and the three-bound page rule live in
-//! [`medulla_types::work_item_read`]; this module only walks the stored rows.
+//! [`medulla_agent_types::work_item_read`]; this module only walks the stored rows.
 
-use medulla_types::keyset_page::{KeysetListing, KeysetPage, KeysetScan};
-use medulla_types::work_item_read::{
-    validate_work_item_get, CommittedOutcomeRefs, WorkItemListRequest, WorkItemOutcomeView,
-    WorkItemPage, WorkItemView,
+use medulla_agent_types::{
+    work_item_read::validate_work_item_get, work_item_read::CommittedOutcomeRefs,
+    work_item_read::WorkItemListRequest, work_item_read::WorkItemOutcomeView,
+    work_item_read::WorkItemPage, work_item_read::WorkItemView,
 };
+use medulla_types::keyset_page::{KeysetListing, KeysetPage, KeysetScan};
 
 use super::*;
 
@@ -87,10 +88,10 @@ pub fn read_work_item_outcome(
     };
     let outcome = verified_outcome(&nodes, graph, &refs, crypto)?;
     let terminal_event = match (
-        row.get(medulla_types::work_item_read::WORK_ITEM_EVENT_BATCH),
-        row.get(medulla_types::work_item_read::WORK_ITEM_EVENT_DIGEST),
+        row.get(medulla_agent_types::work_item_read::WORK_ITEM_EVENT_BATCH),
+        row.get(medulla_agent_types::work_item_read::WORK_ITEM_EVENT_DIGEST),
     ) {
-        (None, None) => medulla_types::work_item_read::TerminalEventRead::default(),
+        (None, None) => medulla_agent_types::work_item_read::TerminalEventRead::default(),
         (Some(batch), Some(digest)) => {
             let batch = batch
                 .as_str()

@@ -86,7 +86,7 @@ pub(crate) async fn commit_pack_projection(
     shapes: Vec<PackSchemaDocument>,
     ontologies: Vec<PackSchemaDocument>,
     idempotency_key: &str,
-) -> Result<medulla_types::graph_schema::GraphSchemaCommitted, String> {
+) -> Result<medulla_catalog_types::graph_schema::GraphSchemaCommitted, String> {
     let graph_name = pack_projection_graph_name(verified.tenant(), connector)?;
     #[cfg(feature = "raft")]
     if state.read().await.multi_raft.is_some() {
@@ -131,10 +131,12 @@ pub(crate) async fn commit_pack_projection(
     #[cfg(feature = "streaming")]
     let cdc = state.read().await.cdc.clone();
     let method = Method::GraphSchema {
-        op: Box::new(medulla_types::graph_schema::GraphSchemaOp::AttachPack {
-            connector: connector.clone(),
-            if_composed_digest: None,
-        }),
+        op: Box::new(
+            medulla_catalog_types::graph_schema::GraphSchemaOp::AttachPack {
+                connector: connector.clone(),
+                if_composed_digest: None,
+            },
+        ),
     };
     let plan = MutationPlan::for_method(&method);
     let result_graph_name = graph_name.clone();
@@ -169,7 +171,7 @@ pub(crate) async fn commit_pack_projection(
                 ontologies,
                 None,
             )
-            .and_then(ResultPayload::of::<medulla_types::result_contract::reasoning::GraphSchema>)
+            .and_then(ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::GraphSchema>)
         })
         .await;
     if let Some(refusal) = response.refusal_text() {
@@ -193,9 +195,9 @@ pub(crate) async fn handle_gateway(
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
     method: &Method,
-    op: &medulla_types::graph_schema::GraphSchemaOp,
+    op: &medulla_catalog_types::graph_schema::GraphSchemaOp,
 ) -> Response {
-    use medulla_types::graph_schema::GraphSchemaOp;
+    use medulla_catalog_types::graph_schema::GraphSchemaOp;
 
     match op {
         GraphSchemaOp::Attach { .. } | GraphSchemaOp::Detach { .. } => {
@@ -229,7 +231,7 @@ pub(crate) async fn handle_gateway(
                 ctx.req_id,
                 format!(
                     "{}: runtime ontology import is delivered by R103.2",
-                    medulla_types::graph_schema::GraphSchemaErrorCode::OntologyImportNotWired
+                    medulla_catalog_types::graph_schema::GraphSchemaErrorCode::OntologyImportNotWired
                         .as_str()
                 ),
             )
@@ -270,7 +272,9 @@ async fn handle_attach_pack_gateway(
             resolved.ontologies,
             expected_digest.as_deref(),
         )
-        .and_then(ResultPayload::of::<medulla_types::result_contract::reasoning::GraphSchema>)
+        .and_then(
+            ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::GraphSchema>,
+        )
     })
     .await
 }
@@ -291,8 +295,8 @@ pub(crate) fn apply_pack_source(
     shapes: Vec<PackSchemaDocument>,
     ontologies: Vec<PackSchemaDocument>,
     if_composed_digest: Option<&str>,
-) -> Result<medulla_types::graph_schema::GraphSchemaCommitted, String> {
-    use medulla_types::graph_schema::GraphSchemaCommitted;
+) -> Result<medulla_catalog_types::graph_schema::GraphSchemaCommitted, String> {
+    use medulla_catalog_types::graph_schema::GraphSchemaCommitted;
 
     if record_id.is_empty() {
         return Err("ATTACH_PACK_SCHEMA_INVALID: pack record id is empty".to_string());
@@ -328,7 +332,7 @@ pub(crate) fn apply_pack_source(
         core.install_schema_sources(Arc::new(sources.clone()));
     }
     Ok(GraphSchemaCommitted {
-        schema_version: medulla_types::graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
+        schema_version: medulla_catalog_types::graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
         graph: graph_name.to_string(),
         composed_digest: sources.composed_digest().to_hex(),
         graph_version: core.version().saturating_add(u64::from(changed)),
@@ -363,11 +367,11 @@ fn compose_pack_documents(
             ));
         }
         previous_uri = Some(document.uri.as_str());
-        if document.body.len() > medulla_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES {
+        if document.body.len() > medulla_catalog_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES {
             return Err(format!(
                 "ATTACH_PACK_SCHEMA_TOO_LARGE: {kind} member '{}' exceeds {} bytes",
                 document.uri,
-                medulla_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES
+                medulla_catalog_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES
             ));
         }
         let scope = medulla_types::contract::Digest256::sha256(document.uri.as_bytes()).to_hex();
@@ -394,10 +398,10 @@ fn compose_pack_documents(
     }
     let mut body = rendered.into_iter().collect::<Vec<_>>().join("\n");
     body.push('\n');
-    if body.len() > medulla_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES {
+    if body.len() > medulla_catalog_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES {
         return Err(format!(
             "ATTACH_PACK_SCHEMA_TOO_LARGE: composed {kind} projection exceeds {} bytes",
-            medulla_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES
+            medulla_catalog_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES
         ));
     }
     Ok(Some(Arc::from(body)))
@@ -406,9 +410,9 @@ fn compose_pack_documents(
 fn apply(
     core: &GraphCore,
     graph_name: &str,
-    op: &medulla_types::graph_schema::GraphSchemaOp,
+    op: &medulla_catalog_types::graph_schema::GraphSchemaOp,
 ) -> Result<ResultPayload, String> {
-    use medulla_types::graph_schema::{GraphSchemaCommitted, GraphSchemaOp};
+    use medulla_catalog_types::{graph_schema::GraphSchemaCommitted, graph_schema::GraphSchemaOp};
 
     op.validate()?;
     let mut sources = (*core.schema_sources()).clone();
@@ -427,7 +431,8 @@ fn apply(
         GraphSchemaOp::ImportOntology { .. } | GraphSchemaOp::WithdrawOntology { .. } => {
             return Err(format!(
                 "{}: runtime ontology import is delivered by R103.2",
-                medulla_types::graph_schema::GraphSchemaErrorCode::OntologyImportNotWired.as_str()
+                medulla_catalog_types::graph_schema::GraphSchemaErrorCode::OntologyImportNotWired
+                    .as_str()
             ));
         }
     };
@@ -440,9 +445,9 @@ fn apply(
     if changed {
         core.install_schema_sources(Arc::new(sources));
     }
-    ResultPayload::of::<medulla_types::result_contract::reasoning::GraphSchema>(
+    ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::GraphSchema>(
         GraphSchemaCommitted {
-            schema_version: medulla_types::graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
+            schema_version: medulla_catalog_types::graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
             graph: graph_name.to_string(),
             composed_digest,
             graph_version: core.version().saturating_add(u64::from(changed)),
@@ -471,9 +476,9 @@ fn check_expected_digest(
 
 /// The admin-origin source a validated generic `Attach` installs.
 fn admin_source(
-    op: &medulla_types::graph_schema::GraphSchemaOp,
+    op: &medulla_catalog_types::graph_schema::GraphSchemaOp,
 ) -> Result<crate::graph::GraphSchemaSource, String> {
-    let medulla_types::graph_schema::GraphSchemaOp::Attach {
+    let medulla_catalog_types::graph_schema::GraphSchemaOp::Attach {
         source_id,
         shapes_ttl,
         ontology_ttl,

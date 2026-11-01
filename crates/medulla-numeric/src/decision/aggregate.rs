@@ -12,10 +12,13 @@
 
 use std::collections::BTreeMap;
 
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_types::{
+    decision::statistical::log::FidelityCounts, decision::statistical::log::OptionAggregate,
+    decision::statistical::log::StoredEvaluation,
+};
+use medulla_decision_types::{decision::EvidenceClass, decision::TraceFidelityLevel};
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::statistical::log::{FidelityCounts, OptionAggregate, StoredEvaluation};
-use medulla_types::decision::statistical::StatisticalErrorCode;
-use medulla_types::decision::{EvidenceClass, TraceFidelityLevel};
 
 use super::admission::{fidelity_rank, floor_rank};
 use super::quant::q32;
@@ -221,8 +224,8 @@ pub fn aggregate(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::decision::statistical::dataset::OutcomeFidelity;
-    use medulla_types::decision::statistical::log::DecisionOutcomeEvaluation;
+    use medulla_decision_types::decision::statistical::dataset::OutcomeFidelity;
+    use medulla_decision_types::decision::statistical::log::DecisionOutcomeEvaluation;
 
     fn evaluation(
         producer: &str,

@@ -110,7 +110,7 @@ async fn graph_write(
     } else {
         format!("INSERT DATA {{\n{ntriples}}}")
     };
-    let method = medulla_types::protocol::Method::ApplyMutation {
+    let method = medulla_protocol_types::protocol::Method::ApplyMutation {
         event_type: SPARQL_HTTP_UPDATE_EVENT.to_string(),
         query,
     };
@@ -143,7 +143,7 @@ async fn graph_delete(
             format!("no such graph: {graph}"),
         );
     }
-    let method = medulla_types::protocol::Method::ApplyMutation {
+    let method = medulla_protocol_types::protocol::Method::ApplyMutation {
         event_type: SPARQL_HTTP_UPDATE_EVENT.to_string(),
         query: "CLEAR DEFAULT".to_string(),
     };

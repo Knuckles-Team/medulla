@@ -99,8 +99,8 @@ use medulla_core::graph::GraphCore;
 #[cfg(test)]
 use medulla_core::isolation::IsolationLayer;
 #[cfg(test)]
-use medulla_types::protocol::Method;
-use medulla_types::protocol::ResultPayload;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::ResultPayload;
 
 mod coalescer;
 mod commit_encode;
@@ -233,7 +233,7 @@ mod tests {
             idempotency_key: "test-idempotency",
             tenant_scope: "opaque-test-tenant",
             graph_name: "agent:owner",
-            graph_type: medulla_types::protocol::GraphType::Agent,
+            graph_type: medulla_protocol_types::protocol::GraphType::Agent,
             owner: Some("owner"),
             isolation: &isolation,
             core: &core,
@@ -570,13 +570,13 @@ mod tests {
             // ── L11 rollout batch 3: runtime-conditional graph-learning family ──
             #[cfg(feature = "graphlearn")]
             Method::GraphLearnFit {
-                source: medulla_types::protocol::GraphSource {
+                source: medulla_protocol_types::protocol::GraphSource {
                     node_label: "x".into(),
                     direction: "any".into(),
                     relation: None,
                     limit: 0,
                 },
-                params: medulla_types::protocol::GraphLearnParams {
+                params: medulla_protocol_types::protocol::GraphLearnParams {
                     basis: "chebyshev".into(),
                     degree: 3,
                     hidden: 0,
@@ -591,7 +591,7 @@ mod tests {
             #[cfg(feature = "graphlearn")]
             Method::GraphLearnPredict {
                 model: serde_json::Value::Null,
-                source: medulla_types::protocol::GraphSource {
+                source: medulla_protocol_types::protocol::GraphSource {
                     node_label: "x".into(),
                     direction: "any".into(),
                     relation: None,
@@ -621,7 +621,7 @@ mod tests {
                 source: None,
                 min_support: 0.1,
                 min_confidence: 0.5,
-                algorithm: medulla_types::protocol::MineAlgorithm::default(),
+                algorithm: medulla_protocol_types::protocol::MineAlgorithm::default(),
                 writeback: false,
                 #[cfg(feature = "epistemic")]
                 as_claim: false,
@@ -1039,7 +1039,7 @@ mod tests {
         assert_eq!(
             cluster_mutation_route(&Method::CreateGraph {
                 graph_name: "opaque-graph".to_string(),
-                graph_type: medulla_types::protocol::GraphType::Global,
+                graph_type: medulla_protocol_types::protocol::GraphType::Global,
             }),
             ClusterMutationRoute::ConsensusNative,
         );
@@ -1070,9 +1070,9 @@ mod tests {
         );
         assert_eq!(
             cluster_mutation_route(&Method::PlacementRoute {
-                request: medulla_types::epistemic_operations::PlacementRouteRequest {
+                request: medulla_result_types::epistemic_operations::PlacementRouteRequest {
                     schema_version:
-                        medulla_types::epistemic_operations::PlacementRouteRequestSchemaVersion::V1,
+                        medulla_result_types::epistemic_operations::PlacementRouteRequestSchemaVersion::V1,
                     tenant_ref: "opaque-tenant".to_string(),
                     partition_ref: "opaque-partition".to_string(),
                     client_epoch: 0,
@@ -1098,16 +1098,15 @@ mod tests {
     fn pack_and_agent_layer_write_methods_are_the_local_only_five() {
         // Only the mutating ops are LocalOnly: the capability policy is
         // runtime-conditional, so Status/Current reads classify ReadOnly.
-        let ctx = medulla_types::test_support::contract_wave::decision::mutation_context;
+        let ctx = medulla_agent_types::agent_fixtures::agent_library::mutation_context;
         let methods: [(&str, Method); 5] = [
             (
                 "ConnectorPack",
                 Method::ConnectorPack {
-                    op: Box::new(medulla_types::connector_pack::ConnectorPackOp::Unbind {
-                        request: medulla_types::connector_pack::ConnectorPackUnbindRequest {
+                    op: Box::new(medulla_catalog_types::connector_pack::ConnectorPackOp::Unbind {
+                        request: medulla_catalog_types::connector_pack::ConnectorPackUnbindRequest {
                             context: ctx(),
-                            connector: medulla_types::test_support::contract_wave::pack::connector(
-                            ),
+                            connector: medulla_catalog_types::catalog_fixtures::contract_pack::connector(),
                         },
                     }),
                 },
@@ -1115,8 +1114,8 @@ mod tests {
             (
                 "AgentComponent",
                 Method::AgentComponent {
-                    op: medulla_types::agent_component::AgentComponentOp::Retire {
-                        request: medulla_types::agent_component::AgentComponentRetireRequest {
+                    op: medulla_agent_types::agent_component::AgentComponentOp::Retire {
+                        request: medulla_agent_types::agent_component::AgentComponentRetireRequest {
                             context: ctx(),
                             component_id: "component-a".to_string(),
                         },
@@ -1126,8 +1125,8 @@ mod tests {
             (
                 "AgentGraph",
                 Method::AgentGraph {
-                    op: medulla_types::agent_graph::AgentGraphOp::Retire {
-                        request: medulla_types::agent_graph::AgentGraphRetireRequest {
+                    op: medulla_agent_types::agent_graph::AgentGraphOp::Retire {
+                        request: medulla_agent_types::agent_graph::AgentGraphRetireRequest {
                             context: ctx(),
                             graph_id: "graph-a".to_string(),
                         },
@@ -1137,8 +1136,8 @@ mod tests {
             (
                 "AgentLibrary",
                 Method::AgentLibrary {
-                    op: medulla_types::agent_library::AgentLibraryOp::Retire {
-                        request: medulla_types::agent_library::AgentLibraryRetireRequest {
+                    op: medulla_agent_types::agent_library::AgentLibraryOp::Retire {
+                        request: medulla_agent_types::agent_library::AgentLibraryRetireRequest {
                             context: ctx(),
                             agent_id: "agent-a".to_string(),
                         },
@@ -1148,8 +1147,8 @@ mod tests {
             (
                 "AgentTemplate",
                 Method::AgentTemplate {
-                    op: medulla_types::agent_template::AgentTemplateOp::Retire {
-                        request: medulla_types::agent_template::AgentTemplateRetireRequest {
+                    op: medulla_agent_types::agent_template::AgentTemplateOp::Retire {
+                        request: medulla_agent_types::agent_template::AgentTemplateRetireRequest {
                             context: ctx(),
                             template_id: "template-a".to_string(),
                         },

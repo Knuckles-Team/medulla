@@ -338,7 +338,7 @@ fn projected_literal(
     if let Some(datatype) = datatype {
         let datatype = datatype
             .as_str()
-            .filter(|value| medulla_types::connector_pack::source_datatype_supported(value))
+            .filter(|value| medulla_catalog_types::connector_pack::source_datatype_supported(value))
             .ok_or("invalid source datatype")?;
         let lexical = match cell {
             serde_json::Value::String(value) => value.clone(),

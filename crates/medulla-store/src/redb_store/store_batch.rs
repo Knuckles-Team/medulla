@@ -127,14 +127,14 @@ pub(crate) fn run_mutation_batch_crashpoint(
     }
     let phase = match at {
         MutationBatchCrashpoint::BeforeRows => {
-            medulla_types::mutation_batch::MutationCommitPhase::BeforeRows
+            medulla_protocol_types::mutation_batch::MutationCommitPhase::BeforeRows
         }
         MutationBatchCrashpoint::AfterRowsBeforeMetadata => {
-            medulla_types::mutation_batch::MutationCommitPhase::AfterRowsBeforeMetadata
+            medulla_protocol_types::mutation_batch::MutationCommitPhase::AfterRowsBeforeMetadata
         }
         _ => return Ok(()),
     };
-    medulla_types::mutation_batch::apply_certification_fault(batch, phase)
+    medulla_protocol_types::mutation_batch::apply_certification_fault(batch, phase)
 }
 
 /// Dispatch to whichever of the three row-application shapes this batch uses

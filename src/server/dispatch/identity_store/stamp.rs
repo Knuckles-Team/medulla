@@ -6,11 +6,13 @@
 //! TOTP step. The op that continues to consensus and the store carries no
 //! secret.
 
-use medulla_types::identity::{
-    check_password, check_recovery_code, check_token, check_totp_secret, normalize_username,
-    ConfigOp, CredentialOp, IdentityOp, IdentityRefusal, IdentityStamp, IdentityStore, IdpOp,
-    MfaOp, PasswordCheck, PasswordCredential, Secret, SessionOp, TokenOp, UserOp,
-    DEFAULT_PASSWORD_MIN_CHARS,
+use medulla_identity_types::{
+    identity::check_password, identity::check_recovery_code, identity::check_token,
+    identity::check_totp_secret, identity::normalize_username, identity::ConfigOp,
+    identity::CredentialOp, identity::IdentityOp, identity::IdentityRefusal,
+    identity::IdentityStamp, identity::IdentityStore, identity::IdpOp, identity::MfaOp,
+    identity::PasswordCheck, identity::PasswordCredential, identity::Secret, identity::SessionOp,
+    identity::TokenOp, identity::UserOp, identity::DEFAULT_PASSWORD_MIN_CHARS,
 };
 
 use super::secrets;
@@ -253,7 +255,7 @@ fn derive_credential(
 }
 
 fn derive_sign_in(
-    request: &mut medulla_types::identity::AuthenticateRequest,
+    request: &mut medulla_identity_types::identity::AuthenticateRequest,
     stamp: &mut IdentityStamp,
     env: &StampEnv<'_>,
 ) -> Derived {

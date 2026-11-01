@@ -13,7 +13,7 @@ pub(crate) struct RenewWorkItemLeaseInput<'args, 'table, 'crypto> {
 
 pub(crate) fn apply_renew_work_item_lease_row(
     input: RenewWorkItemLeaseInput<'_, '_, '_>,
-) -> Result<Option<medulla_types::protocol::ResultPayload>, String> {
+) -> Result<Option<medulla_protocol_types::protocol::ResultPayload>, String> {
     let RenewWorkItemLeaseInput {
         fence:
             WorkItemFenceKey {
@@ -46,7 +46,7 @@ pub(crate) fn apply_renew_work_item_lease_row(
     // graph permanently read-only (INCIDENT-kg-readonly-2026-07-31).
     let Some(bytes) = current else {
         return lease_renewal_refused(
-            medulla_types::result_contract::coordination::LeaseRenewalRefusal::Missing,
+            medulla_protocol_types::result_contract::coordination::LeaseRenewalRefusal::Missing,
         )
         .map(Some);
     };
@@ -59,7 +59,7 @@ pub(crate) fn apply_renew_work_item_lease_row(
         && property_f64(&props, "lease_expires_at") >= now_ms as f64 / 1000.0;
     if !valid {
         return lease_renewal_refused(
-            medulla_types::result_contract::coordination::LeaseRenewalRefusal::Fenced,
+            medulla_protocol_types::result_contract::coordination::LeaseRenewalRefusal::Fenced,
         )
         .map(Some);
     }
@@ -100,9 +100,9 @@ fn lease_renewed(
     lease_epoch: u64,
     fencing_token: u64,
     lease_expires_at_ms: u64,
-) -> Result<medulla_types::protocol::ResultPayload, String> {
-    medulla_types::protocol::ResultPayload::of::<medulla_types::result_contract::coordination::RenewWorkItemLease>(
-        medulla_types::result_contract::coordination::WorkItemLeaseRenewal {
+) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
+    medulla_protocol_types::protocol::ResultPayload::of::<medulla_protocol_types::result_contract::coordination::RenewWorkItemLease>(
+        medulla_protocol_types::result_contract::coordination::WorkItemLeaseRenewal {
             renewed: true,
             reason: None,
             work_item_id: Some(work_item_id.to_string()),
@@ -116,10 +116,10 @@ fn lease_renewed(
 
 /// A `RenewWorkItemLease` that renewed nothing and changed no row.
 fn lease_renewal_refused(
-    reason: medulla_types::result_contract::coordination::LeaseRenewalRefusal,
-) -> Result<medulla_types::protocol::ResultPayload, String> {
-    medulla_types::protocol::ResultPayload::of::<medulla_types::result_contract::coordination::RenewWorkItemLease>(
-        medulla_types::result_contract::coordination::WorkItemLeaseRenewal {
+    reason: medulla_protocol_types::result_contract::coordination::LeaseRenewalRefusal,
+) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
+    medulla_protocol_types::protocol::ResultPayload::of::<medulla_protocol_types::result_contract::coordination::RenewWorkItemLease>(
+        medulla_protocol_types::result_contract::coordination::WorkItemLeaseRenewal {
             renewed: false,
             reason: Some(reason),
             work_item_id: None,
@@ -135,8 +135,8 @@ fn lease_renewal_refused(
 pub(super) fn unchanged_transition<Status>(
     status: Status,
     work_item_id: Option<&str>,
-) -> medulla_types::result_contract::coordination::WorkItemTransition<Status> {
-    medulla_types::result_contract::coordination::WorkItemTransition {
+) -> medulla_protocol_types::result_contract::coordination::WorkItemTransition<Status> {
+    medulla_protocol_types::result_contract::coordination::WorkItemTransition {
         status,
         work_item_id: work_item_id.map(str::to_string),
         lease_epoch: None,
@@ -146,21 +146,21 @@ pub(super) fn unchanged_transition<Status>(
 }
 
 pub(super) fn commit_transition_result(
-    transition: medulla_types::result_contract::coordination::WorkItemTransition<
-        medulla_types::result_contract::coordination::WorkItemCommitStatus,
+    transition: medulla_protocol_types::result_contract::coordination::WorkItemTransition<
+        medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus,
     >,
-) -> Result<medulla_types::protocol::ResultPayload, String> {
-    medulla_types::protocol::ResultPayload::of::<
-        medulla_types::result_contract::coordination::CommitWorkItemResult,
+) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
+    medulla_protocol_types::protocol::ResultPayload::of::<
+        medulla_protocol_types::result_contract::coordination::CommitWorkItemResult,
     >(transition)
 }
 
 pub(super) fn cancel_transition_result(
-    transition: medulla_types::result_contract::coordination::WorkItemTransition<
-        medulla_types::result_contract::coordination::WorkItemCancelStatus,
+    transition: medulla_protocol_types::result_contract::coordination::WorkItemTransition<
+        medulla_protocol_types::result_contract::coordination::WorkItemCancelStatus,
     >,
-) -> Result<medulla_types::protocol::ResultPayload, String> {
-    medulla_types::protocol::ResultPayload::of::<medulla_types::result_contract::coordination::CancelWorkItem>(
+) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
+    medulla_protocol_types::protocol::ResultPayload::of::<medulla_protocol_types::result_contract::coordination::CancelWorkItem>(
         transition,
     )
 }
@@ -168,16 +168,20 @@ pub(super) fn cancel_transition_result(
 /// The declared status of an applied commit.
 pub(super) fn declared_commit_status(
     status: &str,
-) -> Result<medulla_types::result_contract::coordination::WorkItemCommitStatus, String> {
+) -> Result<medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus, String> {
     match status {
-        "succeeded" => Ok(medulla_types::result_contract::coordination::WorkItemCommitStatus::Succeeded),
-        "failed" => Ok(medulla_types::result_contract::coordination::WorkItemCommitStatus::Failed),
-        "cancelled" => Ok(medulla_types::result_contract::coordination::WorkItemCommitStatus::Cancelled),
+        "succeeded" => {
+            Ok(medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus::Succeeded)
+        }
+        "failed" => Ok(medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus::Failed),
+        "cancelled" => {
+            Ok(medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus::Cancelled)
+        }
         "dead_letter" => {
-            Ok(medulla_types::result_contract::coordination::WorkItemCommitStatus::DeadLetter)
+            Ok(medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus::DeadLetter)
         }
         "retry_scheduled" => {
-            Ok(medulla_types::result_contract::coordination::WorkItemCommitStatus::RetryScheduled)
+            Ok(medulla_protocol_types::result_contract::coordination::WorkItemCommitStatus::RetryScheduled)
         }
         other => Err(format!(
             "CommitWorkItemResult produced an undeclared status '{other}'"
@@ -189,7 +193,7 @@ pub(super) fn declared_commit_status(
 /// exactly one settable field, a non-empty expected status set, and non-blank
 /// tenant/work-item identifiers.
 pub(crate) fn validate_cas_work_item_metadata_request(
-    request: &medulla_types::epistemic_operations_ext::CasWorkItemMetadataRequest,
+    request: &medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataRequest,
 ) -> Result<(), String> {
     let field_pairs_set = [
         request.set_checkpoint_id.is_some(),
@@ -219,7 +223,7 @@ pub(crate) fn validate_cas_work_item_metadata_request(
 /// are evaluated (as before) and the conjunction decides; a `false` here is a
 /// `Conflict` outcome, not an error.
 pub(crate) fn cas_work_item_metadata_preconditions_ok(
-    request: &medulla_types::epistemic_operations_ext::CasWorkItemMetadataRequest,
+    request: &medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataRequest,
     props: &serde_json::Map<String, serde_json::Value>,
     authoritative_now_ms: u64,
 ) -> bool {
@@ -250,7 +254,7 @@ fn is_tenant_work_item(props: &serde_json::Map<String, serde_json::Value>, tenan
 /// match -- the caller turns that into a `Conflict` outcome, exactly as the
 /// inline branches did.  `props` is only mutated on the matching path.
 pub(crate) fn apply_cas_work_item_metadata_field(
-    request: &medulla_types::epistemic_operations_ext::CasWorkItemMetadataRequest,
+    request: &medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataRequest,
     props: &mut serde_json::Map<String, serde_json::Value>,
 ) -> Result<bool, String> {
     if let Some(set_checkpoint_id) = &request.set_checkpoint_id {
@@ -300,14 +304,14 @@ pub(crate) fn apply_cas_work_item_metadata_field(
 
 pub(crate) fn apply_cas_work_item_metadata_row(
     graph: &str,
-    request: &medulla_types::epistemic_operations_ext::CasWorkItemMetadataRequest,
+    request: &medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataRequest,
     authoritative_now_ms: u64,
     nodes: &mut ScopedOwnerTableMut<'_, (&str, &str), &[u8]>,
     crypto: DurableCrypto<'_>,
-) -> Result<Option<medulla_types::protocol::ResultPayload>, String> {
-    use medulla_types::epistemic_operations_ext::CasWorkItemMetadataOutcome;
-    use medulla_types::epistemic_operations_ext::CasWorkItemMetadataResult;
-    use medulla_types::epistemic_operations_ext::CasWorkItemMetadataResultSchemaVersion;
+) -> Result<Option<medulla_protocol_types::protocol::ResultPayload>, String> {
+    use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataOutcome;
+    use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataResult;
+    use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataResultSchemaVersion;
 
     let work_item_id = &request.work_item_id;
     let now_ms = request.now_ms;
@@ -315,8 +319,8 @@ pub(crate) fn apply_cas_work_item_metadata_row(
     validate_cas_work_item_metadata_request(request)?;
 
     let respond = |outcome: CasWorkItemMetadataOutcome, changed: Vec<String>| {
-        Ok(Some(medulla_types::protocol::ResultPayload::of::<
-            medulla_types::result_contract::coordination::CasWorkItemMetadata,
+        Ok(Some(medulla_protocol_types::protocol::ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::CasWorkItemMetadata,
         >(CasWorkItemMetadataResult {
             schema_version: CasWorkItemMetadataResultSchemaVersion::V1,
             outcome,

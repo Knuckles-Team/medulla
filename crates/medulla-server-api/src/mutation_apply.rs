@@ -28,7 +28,7 @@
 //! else (its `_` arm) to `medulla_core::durable_apply::apply`.
 
 use medulla_core::graph::GraphCore;
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 
 /// True for the methods whose effect must survive a crash in the authoritative store.
 ///
@@ -147,7 +147,9 @@ pub fn apply(core: &GraphCore, m: &Method) {
         | Method::MineRiskPropagation { .. }
         | Method::MineOntologyGap { .. }
         | Method::MineRetrievalQuality { .. }
-        | Method::MineCommunity { .. } => medulla_kernel::kernel::persistence::replay_mining(core, m),
+        | Method::MineCommunity { .. } => {
+            medulla_kernel::kernel::persistence::replay_mining(core, m)
+        }
         // Graph-learning write-back (CONCEPT:MEDULLA-KG.graphlearn.link-predictor): re-run the
         // fit/predict + re-materialize the `:EdgeFunction` / `:PredictedEdge` nodes.
         // The node ids are a deterministic digest, so replay is idempotent.
@@ -194,7 +196,7 @@ fn parse_replayed_triples(
 #[cfg(test)]
 mod eh323_slim_profile_tests {
     use super::is_durable_mutation;
-    use medulla_types::protocol::Method;
+    use medulla_protocol_types::protocol::Method;
 
     // spec: MEDULLA-DURABLE-KERNEL-R056
     #[test]

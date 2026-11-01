@@ -28,10 +28,13 @@ use crate::outbox::{
     ensure_not_graft_fenced, index, OutboxClaimBudget, OutboxClaimOutcome, OutboxDeferral,
 };
 use crate::tables::OUTBOX_DELIVERIES;
+use medulla_mutation_types::{
+    mutation_scope::MutationOutboxLease, mutation_scope::MutationScopeIdentity,
+    mutation_scope::MUTATION_BATCH_VERSION,
+};
 use medulla_storage::{
     ledger_scope_key, MutationOwnerAuthority, OwnedStoreHandle, OwnerDomain, ScopedTableMut,
 };
-use medulla_types::{MutationOutboxLease, MutationScopeIdentity, MUTATION_BATCH_VERSION};
 
 mod maintenance;
 mod state;

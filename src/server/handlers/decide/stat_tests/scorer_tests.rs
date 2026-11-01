@@ -31,7 +31,7 @@ async fn evaluated(
     request_id: u64,
     (sha256, length): (String, u64),
     data: LabelledDataset,
-) -> medulla_types::decision::jobs::DecisionEvalReceipt {
+) -> medulla_decision_types::decision::jobs::DecisionEvalReceipt {
     let eval = DecisionEvalRequest {
         tenant_id: TENANT.to_string(),
         idempotency_key: format!("eval-scorer-{request_id}"),
@@ -43,7 +43,7 @@ async fn evaluated(
         source: DatasetSource::Inline {
             dataset: Box::new(data),
         },
-        mode: medulla_types::decision::EvalMode::OffPolicy,
+        mode: medulla_decision_types::decision::EvalMode::OffPolicy,
     };
     let op = DecisionEvalOp::Submit {
         request: Box::new(eval),
@@ -234,7 +234,7 @@ async fn select_only_and_structured_encoding_hold_across_distinct_question_kinds
         asked.question.kind = kind;
         let batch = decide(&h, asked).await.unwrap();
         let record = &batch.records.as_slice()[0];
-        let medulla_types::decision::statistical::FeatureMatrixRef::Inline {
+        let medulla_decision_types::decision::statistical::FeatureMatrixRef::Inline {
             candidate_ids,
             values,
             ..
@@ -354,7 +354,8 @@ async fn belief_is_recorded_and_replayed(h: &Harness, record: &StatisticalDecisi
     }
     let mut forged = record.clone();
     forged.belief = BoundedVec::new(vec![forged.belief.as_slice()[1].clone()]).unwrap();
-    forged.record_digest = medulla_types::decision::digest::statistical_record_digest(&forged);
+    forged.record_digest =
+        medulla_decision_types::decision::digest::statistical_record_digest(&forged);
     let op = DecisionLogOp::Commit {
         record: Box::new(forged),
         evaluator: None,

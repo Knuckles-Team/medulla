@@ -598,7 +598,7 @@ impl ReadFrom {
     }
 }
 
-pub use medulla_types::messaging_wire::ConfirmToken;
+pub use medulla_protocol_types::messaging_wire::ConfirmToken;
 
 /// Ensure a stream's durable monotonic offset counter node exists (starting at 0),
 /// mirroring [`ensure_queue_seq`] (CONCEPT:MEDULLA-KG.compute.replayable-append-log). Called on declare + publish so a

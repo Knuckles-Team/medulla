@@ -1,20 +1,31 @@
 //! EH-293 / EH-295 / EH-302: fitting the resident scorer, its conformal
 //! calibration, the act rule's coverage guard, and the promotion protocol.
 
+use medulla_decision_types::decision::jobs::DecisionEvalReceipt;
+use medulla_decision_types::{
+    decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelSource,
+    decision::statistical::dataset::LabelledDataset,
+};
+use medulla_decision_types::{
+    decision::statistical::head::DecisionHeadBody, decision::statistical::head::HeadKind,
+};
+use medulla_decision_types::{
+    decision::statistical::CalibrationMethod, decision::statistical::StatisticalOutcome,
+};
+use medulla_decision_types::{
+    decision::ColdStart, decision::QuantScaleTag, decision::QuantisedValue,
+};
 use medulla_numeric::decision::admission::{admit, Regime};
 use medulla_numeric::decision::evaluate::{evaluate, EvalSpec};
 use medulla_numeric::decision::exploration::ExplorationPermit;
 use medulla_numeric::decision::features::FeatureMatrix;
-use medulla_numeric::decision::head_eval::{calibration_statement, read_head, Evaluated, HeadReading};
+use medulla_numeric::decision::head_eval::{
+    calibration_statement, read_head, Evaluated, HeadReading,
+};
 use medulla_numeric::decision::ladder::{decide, LadderInputs};
 use medulla_numeric::decision::scorer::fixed::{to_f64, ONE};
 use medulla_numeric::decision::scorer::forward::served_probabilities;
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::jobs::DecisionEvalReceipt;
-use medulla_types::decision::statistical::dataset::{ItemLabel, LabelSource, LabelledDataset};
-use medulla_types::decision::statistical::head::{DecisionHeadBody, HeadKind};
-use medulla_types::decision::statistical::{CalibrationMethod, StatisticalOutcome};
-use medulla_types::decision::{ColdStart, QuantScaleTag, QuantisedValue};
 
 use super::common::{
     dataset, gold_dataset, gold_item, option_ids, policy, rows, statistical, FEATURES, OPTIONS,

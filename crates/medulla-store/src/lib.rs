@@ -16,22 +16,22 @@
 #[macro_export]
 macro_rules! work_item_kernel_writes {
     () => {
-        ::medulla_types::protocol::Method::ClaimWorkItem { .. }
-            | ::medulla_types::protocol::Method::RenewWorkItemLease { .. }
-            | ::medulla_types::protocol::Method::CancelWorkItem { .. }
-            | ::medulla_types::protocol::Method::DeferWorkItem { .. }
-            | ::medulla_types::protocol::Method::CasWorkItemMetadata { .. }
-            | ::medulla_types::protocol::Method::PublishCurrentPlan { .. }
-            | ::medulla_types::protocol::Method::IssueHostStartGrant { .. }
-            | ::medulla_types::protocol::Method::PublishRunCheckpoint { .. }
-            | ::medulla_types::protocol::Method::IssueControlLease { .. }
-            | ::medulla_types::protocol::Method::TransitionControlLease { .. }
-            | ::medulla_types::protocol::Method::PolicyEvolutionStore { .. }
-            | ::medulla_types::protocol::Method::GapUpsert { .. }
-            | ::medulla_types::protocol::Method::GapTransition { .. }
-            | ::medulla_types::protocol::Method::GapSettle { .. }
-            | ::medulla_types::protocol::Method::WorkOfferPut { .. }
-            | ::medulla_types::protocol::Method::RetireSealedRecord { .. }
+        ::medulla_protocol_types::protocol::Method::ClaimWorkItem { .. }
+            | ::medulla_protocol_types::protocol::Method::RenewWorkItemLease { .. }
+            | ::medulla_protocol_types::protocol::Method::CancelWorkItem { .. }
+            | ::medulla_protocol_types::protocol::Method::DeferWorkItem { .. }
+            | ::medulla_protocol_types::protocol::Method::CasWorkItemMetadata { .. }
+            | ::medulla_protocol_types::protocol::Method::PublishCurrentPlan { .. }
+            | ::medulla_protocol_types::protocol::Method::IssueHostStartGrant { .. }
+            | ::medulla_protocol_types::protocol::Method::PublishRunCheckpoint { .. }
+            | ::medulla_protocol_types::protocol::Method::IssueControlLease { .. }
+            | ::medulla_protocol_types::protocol::Method::TransitionControlLease { .. }
+            | ::medulla_protocol_types::protocol::Method::PolicyEvolutionStore { .. }
+            | ::medulla_protocol_types::protocol::Method::GapUpsert { .. }
+            | ::medulla_protocol_types::protocol::Method::GapTransition { .. }
+            | ::medulla_protocol_types::protocol::Method::GapSettle { .. }
+            | ::medulla_protocol_types::protocol::Method::WorkOfferPut { .. }
+            | ::medulla_protocol_types::protocol::Method::RetireSealedRecord { .. }
     };
 }
 
@@ -40,10 +40,10 @@ macro_rules! work_item_kernel_writes {
 #[macro_export]
 macro_rules! work_item_resource_writes {
     () => {
-        ::medulla_types::protocol::Method::ReserveWorkItemResources { .. }
-            | ::medulla_types::protocol::Method::ReleaseWorkItemResources { .. }
-            | ::medulla_types::protocol::Method::ReclaimWorkItemResources { .. }
-            | ::medulla_types::protocol::Method::UpdateResourceHost { .. }
+        ::medulla_protocol_types::protocol::Method::ReserveWorkItemResources { .. }
+            | ::medulla_protocol_types::protocol::Method::ReleaseWorkItemResources { .. }
+            | ::medulla_protocol_types::protocol::Method::ReclaimWorkItemResources { .. }
+            | ::medulla_protocol_types::protocol::Method::UpdateResourceHost { .. }
     };
 }
 

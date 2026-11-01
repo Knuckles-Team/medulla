@@ -7,30 +7,30 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
 use crate::state::ServerState;
-use medulla_types::change_envelope::ChangeCursor;
-use medulla_types::change_envelope::ChangeEnvelope;
-use medulla_types::change_envelope::ChangeEnvelopeCommit;
-use medulla_types::change_envelope::ChangeEnvelopeRecord;
-use medulla_types::change_envelope::ContentVersion;
-use medulla_types::epistemic_operations::DevelopmentLaneQueryRequest;
-use medulla_types::epistemic_operations::DevelopmentLaneQueryResult;
-use medulla_types::epistemic_operations::DevelopmentLaneStatusRequest;
-use medulla_types::epistemic_operations::DevelopmentLaneStatusResult;
-use medulla_types::epistemic_operations::ResourceReservationResult;
-use medulla_types::epistemic_operations::ResourceReservationStatusRequest;
-use medulla_types::epistemic_operations::ResourceReservationStatusResult;
+use medulla_protocol_types::change_envelope::ChangeCursor;
+use medulla_protocol_types::change_envelope::ChangeEnvelope;
+use medulla_protocol_types::change_envelope::ChangeEnvelopeCommit;
+use medulla_protocol_types::change_envelope::ChangeEnvelopeRecord;
+use medulla_protocol_types::change_envelope::ContentVersion;
+use medulla_result_types::epistemic_operations::DevelopmentLaneQueryRequest;
+use medulla_result_types::epistemic_operations::DevelopmentLaneQueryResult;
+use medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequest;
+use medulla_result_types::epistemic_operations::DevelopmentLaneStatusResult;
+use medulla_result_types::epistemic_operations::ResourceReservationResult;
+use medulla_result_types::epistemic_operations::ResourceReservationStatusRequest;
+use medulla_result_types::epistemic_operations::ResourceReservationStatusResult;
 #[cfg(feature = "redb")]
-use medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest;
-use medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityResult;
-use medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest;
-use medulla_types::mutation_batch::MutationBatch;
-use medulla_types::mutation_batch::MutationBatchCommit;
-use medulla_types::mutation_batch::MutationBatchRecord;
-use medulla_types::mutation_batch::MutationOutboxLease;
-use medulla_types::mutation_batch::MutationOutboxRecord;
-use medulla_types::mutation_batch::MutationProjectionCursor;
-use medulla_types::native_control::CapacityStatusResult;
-use medulla_types::protocol::Method;
+use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest;
+use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResult;
+use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::mutation_batch::MutationBatchCommit;
+use medulla_protocol_types::mutation_batch::MutationBatchRecord;
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
+use medulla_mutation_types::mutation_scope::MutationProjectionCursor;
+use medulla_agent_types::native_control::CapacityStatusResult;
+use medulla_protocol_types::protocol::Method;
 // The sweep-scoped claim budget carrying DESIGN.md's per-tenant weighted round
 // robin between graphs. It is a kernel type, so the claim it parameterises is
 // gated on `redb` exactly like the two WorkItem-capability methods below: the
@@ -70,7 +70,7 @@ pub trait SourceApprovalStore {
     /// Verify that `receipt` names exactly the durably approved registration.
     fn verify_connector_pack_source_approval(
         &self,
-        receipt: &medulla_types::connector_pack::ConnectorPackSourceApprovalResult,
+        receipt: &medulla_catalog_types::connector_pack::ConnectorPackSourceApprovalResult,
     ) -> Result<(), String>;
 }
 
@@ -120,7 +120,7 @@ pub trait PersistenceBackend: Send + Sync {
     async fn read_capacity_status(
         &self,
         _graph_fname: &str,
-        _request: &medulla_types::native_control::CapacityStatusRequest,
+        _request: &medulla_agent_types::native_control::CapacityStatusRequest,
     ) -> Result<CapacityStatusResult, String> {
         Err("persistence backend does not support native capacity status".to_string())
     }
@@ -132,8 +132,8 @@ pub trait PersistenceBackend: Send + Sync {
         &self,
         _graph_fname: &str,
         _cells: &[String],
-        _priority: medulla_types::capacity_lease::LeasePriority,
-    ) -> Result<Vec<medulla_types::decision::CapacityHeadroom>, String> {
+        _priority: medulla_mutation_types::capacity_lease::LeasePriority,
+    ) -> Result<Vec<medulla_agent_types::agent_topology::CapacityHeadroom>, String> {
         Err("persistence backend does not support native capacity headroom".to_string())
     }
 
@@ -144,7 +144,8 @@ pub trait PersistenceBackend: Send + Sync {
         &self,
         _graph_fname: &str,
         _source_envelope: &str,
-    ) -> Result<Option<medulla_types::native_control::EnrichmentBudgetCheckpoint>, String> {
+    ) -> Result<Option<medulla_agent_types::native_control::EnrichmentBudgetCheckpoint>, String>
+    {
         Err("persistence backend does not support enrichment budget reads".to_string())
     }
 
@@ -166,7 +167,7 @@ pub trait PersistenceBackend: Send + Sync {
     async fn read_enrichment_budget_park(
         &self,
         _graph_fname: &str,
-    ) -> Result<Option<medulla_types::native_control::EnrichmentBudgetPark>, String> {
+    ) -> Result<Option<medulla_agent_types::native_control::EnrichmentBudgetPark>, String> {
         Err("persistence backend does not support enrichment park reads".to_string())
     }
 
@@ -188,7 +189,7 @@ pub trait PersistenceBackend: Send + Sync {
     async fn park_enrichment_budget(
         &self,
         _graph_fname: &str,
-        _park: medulla_types::native_control::EnrichmentBudgetPark,
+        _park: medulla_agent_types::native_control::EnrichmentBudgetPark,
     ) -> Result<(), String> {
         Err("persistence backend does not support enrichment budget parking".to_string())
     }
@@ -654,7 +655,7 @@ pub trait PersistenceBackend: Send + Sync {
         &self,
         _graph_fname: &str,
         _name: &str,
-        _graph_type: medulla_types::protocol::GraphType,
+        _graph_type: medulla_protocol_types::protocol::GraphType,
     ) -> Result<(), String> {
         Err("persistence backend cannot register graph identity".to_string())
     }
@@ -833,7 +834,7 @@ pub trait PersistenceBackend: Send + Sync {
     fn audit_verify_blocking(
         &self,
         _graph_fname: &str,
-    ) -> Result<medulla_types::protocol::AuditReport, String> {
+    ) -> Result<medulla_protocol_types::protocol::AuditReport, String> {
         Err("audit verification is not supported by this backend".to_string())
     }
 }
@@ -1127,8 +1128,8 @@ fn lowercase_sha256_is_valid(value: &str) -> bool {
 pub struct MatView {
     pub name: String,
     pub graphs: Vec<String>,
-    pub algo: medulla_types::protocol::DistAlgo,
-    pub result: medulla_types::compute_result::distributed::DistResult,
+    pub algo: medulla_protocol_types::protocol::DistAlgo,
+    pub result: medulla_result_types::compute_result::distributed::DistResult,
 }
 
 /// A flat map of named materialized views the engine maintains (CONCEPT:MEDULLA-KG.storage.feature). The

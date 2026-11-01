@@ -2,16 +2,16 @@
 
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
-use medulla_types::agent_library::AgentLibraryMutationContext;
-use medulla_types::connector_pack::{
+use medulla_agent_types::agent_library::AgentLibraryMutationContext;
+use medulla_catalog_types::connector_pack::{
     PackImportRecord, PackImportResult, CONNECTOR_PACK_IMPORT_TOPIC,
     CONNECTOR_PACK_RESULT_SCHEMA_ID,
 };
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::{mutation::MutationReceipt, mutation::MutationResult};
+use medulla_protocol_types::mutation_batch::MutationBatchRecord;
+use medulla_protocol_types::mutation_batch::MutationBatchStatus;
 use medulla_types::contract::{Digest256, Nonce};
-use medulla_types::mutation::{MutationReceipt, MutationResult};
-use medulla_types::mutation_batch::{
-    MutationBatchRecord, MutationBatchStatus, MutationOutboxIntent,
-};
 
 use medulla_persistence::agent_library::AgentLibraryStore;
 use medulla_persistence::connector_pack::admitted::PackWriteEffects;
@@ -171,7 +171,7 @@ async fn committed_multi_intent_receipt_binds_all_effects_and_survives_replay() 
     let mut components = std::collections::BTreeSet::new();
     for intent in &intents[..3] {
         assert_eq!(intent.topic, "medulla.agent-component.revision.v1");
-        let event: medulla_types::agent_component::AgentComponentOutboxEvent =
+        let event: medulla_agent_types::agent_component::AgentComponentOutboxEvent =
             medulla_storage::decode_ledger_record(&intent.payload).unwrap();
         event.validate().unwrap();
         assert!(components.insert(event.component.component_id));
@@ -204,7 +204,7 @@ async fn committed_multi_intent_receipt_binds_all_effects_and_survives_replay() 
     // Rebuild attempt context from durable provenance; keep operation identity, change nonce.
     let envelope = record.batch.envelope.operation().unwrap();
     let authority = &envelope.authority;
-    let event: medulla_types::agent_component::AgentComponentOutboxEvent =
+    let event: medulla_agent_types::agent_component::AgentComponentOutboxEvent =
         medulla_storage::decode_ledger_record(&intents[0].payload).unwrap();
     let context = AgentLibraryMutationContext {
         request_id: 9001,

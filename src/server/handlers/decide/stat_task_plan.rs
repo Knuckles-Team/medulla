@@ -1,13 +1,18 @@
 //! Evaluate-only explicit DAG planning. EG derives a plan; the host admits it.
 
+use medulla_decision_types::{
+    decision::statistical::CandidateSource, decision::statistical::DecideRequest,
+    decision::statistical::QuestionKind, decision::statistical::QuestionSafety,
+    decision::statistical::StatisticalOutcome, decision::statistical::TypedValue,
+};
+use medulla_decision_types::{
+    decision::task_plan::plan_explicit_tasks, decision::task_plan::task_bindings,
+    decision::task_plan::TaskPlan, decision::task_plan::TaskPlanTask,
+};
+use medulla_decision_types::{
+    decision::PremiseClass, decision::PremiseProvenance, decision::PremiseRef,
+};
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionKind, QuestionSafety, StatisticalOutcome, TypedValue,
-};
-use medulla_types::decision::task_plan::{
-    plan_explicit_tasks, task_bindings, TaskPlan, TaskPlanTask,
-};
-use medulla_types::decision::{PremiseClass, PremiseProvenance, PremiseRef};
 
 use super::stat_support::invalid_parameter;
 
@@ -124,10 +129,7 @@ pub(super) fn premises(plan: &TaskPlan) -> Vec<PremiseRef> {
             fact: format!(
                 "task_plan_claim:dependencies={};prompt_digest={}",
                 task.depends_on.as_slice().join(","),
-                medulla_types::decision::digest::digest_text(
-                    "eg/task-plan-prompt/v1",
-                    &task.prompt
-                )
+                medulla_types::solve_scalar::digest_text("eg/task-plan-prompt/v1", &task.prompt)
             ),
             class: PremiseClass::Claim,
             provenance: PremiseProvenance::Request {

@@ -1605,7 +1605,7 @@ mod tests {
     use super::*;
     use crate::cypher::exec_cypher;
     use medulla_core::graph::GraphCore;
-    use medulla_types::protocol::QueryResult;
+    use medulla_protocol_types::protocol::QueryResult;
 
     fn pbytes(v: Value) -> Vec<u8> {
         rmp_serde::to_vec_named(&v).unwrap()

@@ -15,9 +15,9 @@ use super::spec::{Coefficient, ObjectiveLevelSpec};
 use crate::solve::scalar::Scalar;
 
 // `LevelValue`/`ObjectiveValue` are wire types; the definitions live in
-// `medulla_types::solve::objective` (re-exported by `crate::solve`) so there is
+// `medulla_decision_types::solve::objective` (re-exported by `crate::solve`) so there is
 // exactly one copy. Only the scalarisation algorithm below is this crate's.
-pub use medulla_types::solve::objective::{LevelValue, ObjectiveValue};
+pub use medulla_decision_types::{solve::objective::LevelValue, solve::objective::ObjectiveValue};
 
 /// Largest total `Σ|w|` of the scalar objective. Leaves headroom in `i128`
 /// for the bound denominator and dual multipliers.

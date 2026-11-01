@@ -366,7 +366,10 @@ pub fn spawn(state: Arc<RwLock<ServerState>>, cascade: Arc<ReasoningCascade>) {
             if refreshed > 0 {
                 tracing::debug!(refreshed, "reasoning cascade: sweep refreshed graph(s)");
             }
-            medulla_kernel::metrics::loop_tick("reasoning_cascade", started.elapsed().as_secs_f64());
+            medulla_kernel::metrics::loop_tick(
+                "reasoning_cascade",
+                started.elapsed().as_secs_f64(),
+            );
         }
     });
 }
@@ -374,7 +377,7 @@ pub fn spawn(state: Arc<RwLock<ServerState>>, cascade: Arc<ReasoningCascade>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::protocol::GraphType;
+    use medulla_protocol_types::protocol::GraphType;
 
     const SUBCLASS_OF: &str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
     // Same named-const convention every other server test module uses for its

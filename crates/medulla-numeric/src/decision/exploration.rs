@@ -8,9 +8,15 @@
 //! randomised policy is recorded as an exact rational: `(1-f) + f/n` for the
 //! greedy option, `f/n` for any other, with `f = a/b` the budget fraction.
 
-use medulla_types::decision::statistical::keyed::uniform_draw;
-use medulla_types::decision::statistical::{AuditDraw, QuestionSafety, StatisticalQuestion};
-use medulla_types::decision::{ColdStart, DecisionErrorCode, DecisionPolicy, UnitRationalWire};
+use medulla_decision_types::decision::statistical::keyed::uniform_draw;
+use medulla_decision_types::{
+    decision::statistical::AuditDraw, decision::statistical::QuestionSafety,
+    decision::statistical::StatisticalQuestion,
+};
+use medulla_decision_types::{
+    decision::ColdStart, decision::DecisionErrorCode, decision::DecisionPolicy,
+    decision::UnitRationalWire,
+};
 
 use super::quant::exact_wire;
 use super::refusal::{Refusal, RefusalResult};

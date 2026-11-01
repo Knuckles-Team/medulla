@@ -14,22 +14,29 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 use redb::{ReadableTable, ReadableTableMetadata};
 
+use medulla_agent_types::{
+    agent_library::AgentLibraryCommittedResult, agent_library::AgentLibraryEntry,
+    agent_library::AgentLibraryEntryDraft, agent_library::AgentLibraryMutationContext,
+    agent_library::AgentLibraryMutationKind, agent_library::AgentLibraryOutboxEvent,
+    agent_library::AgentLibraryPublishRequest, agent_library::AgentLibraryRetireRequest,
+    agent_library::AgentLibraryStatusRequest, agent_library::AgentLibraryWriteResult,
+    agent_library::AGENT_LIBRARY_OUTBOX_SCHEMA_VERSION,
+    agent_library::AGENT_LIBRARY_RESULT_SCHEMA_ID,
+};
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::{mutation::MutationReceipt, mutation::MutationResult};
+use medulla_protocol_types::mutation_batch::BatchContent;
+use medulla_protocol_types::mutation_batch::CompiledEnvelope;
+use medulla_protocol_types::mutation_batch::CompiledOperation;
+use medulla_protocol_types::mutation_batch::CompiledScope;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::mutation_batch::MutationEnvelope;
+use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_storage::{
     OwnedStoreHandle, PhysicalStoreIdentity, RecordedOperation, ScopedRead, StorageKernel,
 };
 use medulla_transaction::{AdmittedOwnerWrite, MutationKernel};
-use medulla_types::mutation::{MutationReceipt, MutationResult};
-use medulla_types::mutation_batch::{
-    BatchContent, CompiledEnvelope, CompiledOperation, CompiledScope, DurabilityDomain,
-    MutationEnvelope, MutationOperation, MutationOutboxIntent,
-};
-use medulla_types::{
-    AgentLibraryCommittedResult, AgentLibraryEntry, AgentLibraryEntryDraft,
-    AgentLibraryMutationContext, AgentLibraryMutationKind, AgentLibraryOutboxEvent,
-    AgentLibraryPublishRequest, AgentLibraryRetireRequest, AgentLibraryStatusRequest,
-    AgentLibraryWriteResult, MutationBatch, AGENT_LIBRARY_OUTBOX_SCHEMA_VERSION,
-    AGENT_LIBRARY_RESULT_SCHEMA_ID,
-};
 
 use medulla_server_api::api::persistence::BundledStoreSource;
 
@@ -96,12 +103,13 @@ impl AgentLibraryStore {
         }?;
         let (kernel, authority) = kernel.into_read_and_mutation_authority()?;
         let mutations = MutationKernel::new(authority);
-        let bootstrap_identity = medulla_types::MutationScopeIdentity::fixed_native(
-            AGENT_LIBRARY_BOOTSTRAP_TENANT,
-            DurabilityDomain::ControlPlane,
-            AGENT_LIBRARY_BOOTSTRAP_RESOURCE,
-            AGENT_LIBRARY_SCOPE_INCARNATION,
-        )?;
+        let bootstrap_identity =
+            medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_native(
+                AGENT_LIBRARY_BOOTSTRAP_TENANT,
+                DurabilityDomain::ControlPlane,
+                AGENT_LIBRARY_BOOTSTRAP_RESOURCE,
+                AGENT_LIBRARY_SCOPE_INCARNATION,
+            )?;
         let bootstrap = bind_scope(&kernel, &bootstrap_identity)?;
         let serving_principal = bootstrap.principal().to_string();
         mutations.bootstrap_ledger(&bootstrap)?;
@@ -124,11 +132,11 @@ impl AgentLibraryStore {
         &self,
         tenant_id: &str,
     ) -> Result<Arc<OwnedStoreHandle<medulla_storage::AgentLibraryOwner>>, String> {
-        medulla_types::agent_library::validate_key(tenant_id, "agent-library")?;
+        medulla_agent_types::agent_library::validate_key(tenant_id, "agent-library")?;
         if let Some(handle) = self.scopes.lock().get(tenant_id) {
             return Ok(Arc::clone(handle));
         }
-        let identity = medulla_types::MutationScopeIdentity::fixed_native(
+        let identity = medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_native(
             tenant_id,
             DurabilityDomain::ControlPlane,
             AGENT_LIBRARY_SCOPE_RESOURCE,
@@ -159,7 +167,7 @@ impl AgentLibraryStore {
         tenant_id: &str,
         agent_id: &str,
     ) -> Result<Option<AgentLibraryEntry>, String> {
-        medulla_types::agent_library::validate_key(tenant_id, agent_id)?;
+        medulla_agent_types::agent_library::validate_key(tenant_id, agent_id)?;
         let read = self.read()?;
         let (_, entries) = read_history(&read, tenant_id, agent_id)?;
         Ok(entries.into_iter().last())
@@ -172,7 +180,7 @@ impl AgentLibraryStore {
         tenant_id: &str,
         agent_id: &str,
     ) -> Result<Vec<AgentLibraryEntry>, String> {
-        medulla_types::agent_library::validate_key(tenant_id, agent_id)?;
+        medulla_agent_types::agent_library::validate_key(tenant_id, agent_id)?;
         let read = self.read()?;
         let (_, entries) = read_history(&read, tenant_id, agent_id)?;
         Ok(entries)
@@ -200,7 +208,10 @@ impl AgentLibraryStore {
         request: AgentLibraryStatusRequest,
     ) -> Result<Option<AgentLibraryWriteResult>, String> {
         validate_context(self, &request.context)?;
-        medulla_types::agent_library::validate_key(&request.context.tenant_id, &request.agent_id)?;
+        medulla_agent_types::agent_library::validate_key(
+            &request.context.tenant_id,
+            &request.agent_id,
+        )?;
         let owner = self.scope_handle(&request.context.tenant_id)?;
         let batch_id = batch_id(&request.context.idempotency_key)?;
         let Some(evidence) = read_status_evidence(self, &owner, &request.context, &batch_id)?
@@ -233,7 +244,7 @@ impl AgentLibraryStore {
 }
 
 struct AgentLibraryStatusEvidence {
-    record: medulla_types::MutationBatchRecord,
+    record: medulla_protocol_types::mutation_batch::MutationBatchRecord,
     receipt: MutationReceipt,
 }
 
@@ -289,11 +300,12 @@ fn validate_status_identity(
     owner: &OwnedStoreHandle<medulla_storage::AgentLibraryOwner>,
     context: &AgentLibraryMutationContext,
     batch_id: &str,
-    record: &medulla_types::MutationBatchRecord,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
     replay_row: &medulla_storage::OperationReplayRow,
     receipt: &MutationReceipt,
 ) -> Result<(), String> {
-    let expected_scope = medulla_types::mutation_batch::authority_scope_for(owner.identity())?;
+    let expected_scope =
+        medulla_protocol_types::mutation_batch::authority_scope_for(owner.identity())?;
     if replay_row.identity != *owner.identity()
         || replay_row.idempotency_key != context.idempotency_key
         || replay_row.batch_id != batch_id
@@ -312,7 +324,7 @@ fn validate_status_identity(
 
 fn bind_scope(
     kernel: &StorageKernel,
-    identity: &medulla_types::MutationScopeIdentity,
+    identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
 ) -> Result<Arc<OwnedStoreHandle<medulla_storage::AgentLibraryOwner>>, String> {
     let authority = medulla_kernel::store_authority::process_authority();
     let grant = kernel.authenticate_scope::<medulla_storage::AgentLibraryOwner>(
@@ -332,16 +344,16 @@ pub(super) fn resolve_nonce_first(
     mutations: &MutationKernel,
     txn: &medulla_transaction::AdmittedMutation<'_, medulla_storage::AgentLibraryOwner>,
     context: &AgentLibraryMutationContext,
-) -> Result<medulla_types::authority::NonceReplayKey, String> {
-    let nonce = medulla_types::authority::NonceReplayKey {
+) -> Result<medulla_identity_types::authority::NonceReplayKey, String> {
+    let nonce = medulla_identity_types::authority::NonceReplayKey {
         protocol_id: medulla_types::contract::ProtocolId::new(
-            medulla_types::authority::AUTHORITY_PROTOCOL_V1,
+            medulla_identity_types::authority::AUTHORITY_PROTOCOL_V1,
         )?,
         catalog_digest: medulla_types::contract::Digest256::parse(
             medulla_capabilities::contract_catalog_digest(),
         )?,
         audience: medulla_types::contract::AudienceId::new(
-            medulla_types::mutation_batch::ENGINE_AUDIENCE,
+            medulla_protocol_types::mutation_batch::ENGINE_AUDIENCE,
         )?,
         actor: medulla_types::contract::ActorId::new(context.caller_principal.clone())?,
         tenant: medulla_types::contract::TenantId::new(context.tenant_id.clone())?,
@@ -387,14 +399,14 @@ pub(super) fn agent_library_operation_identity(
     agent_id: &str,
     expected_revision: u64,
     definition_digest: Option<&str>,
-) -> Result<medulla_types::authority::OperationReplayIdentity, String> {
-    use medulla_types::authority::AUTHORITY_PROTOCOL_V1;
+) -> Result<medulla_identity_types::authority::OperationReplayIdentity, String> {
+    use medulla_identity_types::authority::AUTHORITY_PROTOCOL_V1;
     use medulla_types::contract::{
         ActorId, AudienceId, Digest256, IdempotencyKey, MethodId, Operation, PolicyRevision,
         ProtocolId, PurposeKind, ResourceId, SchemaId, TenantId,
     };
 
-    let scope = medulla_types::mutation_batch::authority_scope_for(owner.identity())?;
+    let scope = medulla_protocol_types::mutation_batch::authority_scope_for(owner.identity())?;
     let catalog_digest = Digest256::parse(medulla_capabilities::contract_catalog_digest())?;
     let method = MethodId::new("ApplyMutation")?;
     let (method_schema_id, method_schema_digest) =
@@ -418,13 +430,13 @@ pub(super) fn agent_library_operation_identity(
             context.policy_decision_id.as_bytes(),
         ],
     )?;
-    let operation = medulla_types::authority::OperationReplayIdentity {
+    let operation = medulla_identity_types::authority::OperationReplayIdentity {
         schema_version: ResourceId::new("operation-replay-identity.v1")?,
         protocol_id: ProtocolId::new(AUTHORITY_PROTOCOL_V1)?,
         catalog_digest,
         tenant: TenantId::new(context.tenant_id.clone())?,
         actor: ActorId::new(context.caller_principal.clone())?,
-        audience: AudienceId::new(medulla_types::mutation_batch::ENGINE_AUDIENCE)?,
+        audience: AudienceId::new(medulla_protocol_types::mutation_batch::ENGINE_AUDIENCE)?,
         authority_scope: scope.clone(),
         operation: Operation::new("mutation")?,
         purpose_kind: PurposeKind::new("graph_write")?,
@@ -434,7 +446,7 @@ pub(super) fn agent_library_operation_identity(
         method_schema_digest,
         canonical_payload_digest,
         policy_revision: PolicyRevision::new(context.policy_revision.clone())?,
-        policy_epoch: medulla_types::mutation_batch::POLICY_EPOCH,
+        policy_epoch: medulla_protocol_types::mutation_batch::POLICY_EPOCH,
         policy_digest: parse_prefixed_digest(&context.policy_digest)?,
         idempotency_key: IdempotencyKey::new(context.idempotency_key.clone())?,
     };
@@ -833,7 +845,9 @@ pub(crate) fn seed_agent_draft_for_test(
     agent_id: &str,
     nonce_index: u8,
 ) -> AgentLibraryEntryDraft {
-    use medulla_types::agent_component::{AgentComponentKind, ComponentDependency};
+    use medulla_agent_types::{
+        agent_component::AgentComponentKind, agent_component::ComponentDependency,
+    };
     let placeholder = format!("sha256:{}", "0".repeat(64));
     let pin = |component_id: &str, kind: AgentComponentKind| ComponentDependency {
         component_id: component_id.to_string(),
@@ -871,7 +885,6 @@ pub mod tests {
     use super::*;
     use medulla_server_api::api::persistence::BundledStoreSource;
     use medulla_types::contract::Nonce;
-    use medulla_types::mutation_batch::MutationBatchStatus;
 
     const LEDGER_BATCHES: redb::TableDefinition<'static, (&str, &str), &[u8]> =
         redb::TableDefinition::new("ledger_batches");
@@ -894,9 +907,9 @@ pub mod tests {
         store: &AgentLibraryStore,
         tenant_id: &str,
         component_id: &str,
-        kind: medulla_types::agent_component::AgentComponentKind,
+        kind: medulla_agent_types::agent_component::AgentComponentKind,
         seed: u8,
-    ) -> medulla_types::agent_component::ComponentDependency {
+    ) -> medulla_agent_types::agent_component::ComponentDependency {
         super::super::agent_component::seed_component_for_test(
             store,
             tenant_id,
@@ -1648,9 +1661,9 @@ pub mod tests {
         let store = AgentLibraryStore::open(dir.path().to_str().unwrap()).unwrap();
         let mut entry = draft(&store, "tenant-a", "agent-a");
         let prompt = entry.system_prompt.clone();
-        entry.tools[0] = medulla_types::agent_component::ComponentDependency {
+        entry.tools[0] = medulla_agent_types::agent_component::ComponentDependency {
             component_id: prompt.component_id.clone(),
-            kind: medulla_types::agent_component::AgentComponentKind::Tool,
+            kind: medulla_agent_types::agent_component::AgentComponentKind::Tool,
             definition_digest: prompt.definition_digest.clone(),
         };
         let error = publish_draft(&store, entry, "key-1", 1)
@@ -1669,7 +1682,7 @@ pub mod tests {
             &store,
             "tenant-b",
             "tool:theirs",
-            medulla_types::agent_component::AgentComponentKind::Tool,
+            medulla_agent_types::agent_component::AgentComponentKind::Tool,
             9,
         );
         let mut entry = draft(&store, "tenant-a", "agent-a");
@@ -1710,7 +1723,7 @@ pub mod tests {
         };
         store
             .retire_component(
-                medulla_types::agent_component::AgentComponentRetireRequest {
+                medulla_agent_types::agent_component::AgentComponentRetireRequest {
                     context: retire_context,
                     component_id: "tool:search".to_string(),
                 },
@@ -1750,22 +1763,23 @@ pub mod tests {
         };
         let error = store
             .publish_component(
-                medulla_types::agent_component::AgentComponentPublishRequest {
+                medulla_agent_types::agent_component::AgentComponentPublishRequest {
                     context,
                     evaluation_receipt_digest: None,
-                    component: medulla_types::agent_component::AgentComponentDraft {
+                    component: medulla_agent_types::agent_component::AgentComponentDraft {
                         component_id: "skill:depends".to_string(),
-                        kind: medulla_types::agent_component::AgentComponentKind::Skill,
+                        kind: medulla_agent_types::agent_component::AgentComponentKind::Skill,
                         version: "1.0.0".to_string(),
                         content_digest: digest('1'),
                         content_ref: None,
-                        facts: medulla_types::agent_component::AgentComponentFacts::Opaque,
-                        provenance: medulla_types::agent_component::ComponentProvenance::Native,
+                        facts: medulla_agent_types::agent_component::AgentComponentFacts::Opaque,
+                        provenance:
+                            medulla_agent_types::agent_component::ComponentProvenance::Native,
                         summary: "a skill with a dependency".to_string(),
                         classification: Vec::new(),
-                        requires: vec![medulla_types::agent_component::ComponentDependency {
+                        requires: vec![medulla_agent_types::agent_component::ComponentDependency {
                             component_id: "tool:never-published".to_string(),
-                            kind: medulla_types::agent_component::AgentComponentKind::Tool,
+                            kind: medulla_agent_types::agent_component::AgentComponentKind::Tool,
                             definition_digest: digest('9'),
                         }],
                         declared_capabilities: Vec::new(),

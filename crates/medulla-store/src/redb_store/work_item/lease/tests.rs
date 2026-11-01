@@ -1,11 +1,11 @@
 //! Fenced metadata writes use the mutation clock inside the durable row boundary.
 use super::super::test_shard::{open, with_nodes, GRAPH};
 use super::*;
-use medulla_types::epistemic_operations_ext::CasWorkItemMetadataLeaseFence;
-use medulla_types::epistemic_operations_ext::CasWorkItemMetadataOutcome;
-use medulla_types::epistemic_operations_ext::CasWorkItemMetadataRequest;
-use medulla_types::epistemic_operations_ext::CasWorkItemMetadataRequestSchemaVersion;
-use medulla_types::epistemic_operations_ext::CasWorkItemMetadataResult;
+use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataLeaseFence;
+use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataOutcome;
+use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataRequest;
+use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataRequestSchemaVersion;
+use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataResult;
 
 fn request(fenced: bool) -> CasWorkItemMetadataRequest {
     CasWorkItemMetadataRequest {
@@ -68,7 +68,7 @@ fn fenced_metadata_cas_uses_mutation_time_and_preserves_refused_rows() {
             )
         })
         .unwrap();
-        let medulla_types::protocol::ResultPayload::Raw(bytes) = payload else {
+        let medulla_protocol_types::protocol::ResultPayload::Raw(bytes) = payload else {
             panic!("expected MessagePack metadata CAS result")
         };
         let result: CasWorkItemMetadataResult = rmp_serde::from_slice(&bytes).unwrap();

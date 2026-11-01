@@ -24,8 +24,8 @@ use crate::physical::root::{
 use crate::physical::write_authority::{TxnAuthority, WriteValidationCounts};
 use crate::recovery::validate::{validate_recovery_content, validate_recovery_identity};
 use crate::tables::SCOPE_BINDINGS;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use medulla_types::durability_class::{DurabilityClass, DurabilityWritePlan};
-use medulla_types::MutationScopeIdentity;
 use redb::{Database, ReadableDatabase};
 use std::collections::BTreeSet;
 use std::path::Path;

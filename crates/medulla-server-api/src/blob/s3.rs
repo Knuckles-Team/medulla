@@ -26,7 +26,7 @@ use super::store::{
     BlobManifest, ChunkStore, HolderChange, HolderOutcome, HolderReconcile, ReconcileStats,
     RedbChunkStore, SweepRequest, SweepStats,
 };
-use medulla_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::mutation_batch::MutationBatch;
 use std::collections::BTreeSet;
 
 /// Object-store-backed CAS. Chunk bytes live in S3/MinIO keyed by their digest;

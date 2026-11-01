@@ -1,5 +1,5 @@
 use super::*;
-use medulla_types::protocol::GraphType;
+use medulla_protocol_types::protocol::GraphType;
 use medulla_store::redb_store::read_all_dumps;
 use medulla_store::redb_store::read_all_graph_meta;
 use medulla_server_api::state::ServerState;

@@ -4,12 +4,12 @@
 //! the WorkItem and control-lease transitions (replicated, audited, idempotent under
 //! the caller's key). It replaces the record row, in place, by the tombstone
 //! [`RetireSealedRecordRequest::resolve`] builds. The rules and the row shapes are
-//! owned by [`medulla_types::sealed_record`]; this module only reads and writes the row.
+//! owned by [`medulla_mutation_types::sealed_record`]; this module only reads and writes the row.
 //! Generic writers never reach this path, and the generic row guard refuses them
 //! any change to the row.
 
-use medulla_types::result_contract::coordination::RetireSealedRecord;
-use medulla_types::sealed_record::RetireSealedRecordRequest;
+use medulla_mutation_types::sealed_record::RetireSealedRecordRequest;
+use medulla_protocol_types::result_contract::coordination::RetireSealedRecord;
 
 use super::*;
 
@@ -20,7 +20,7 @@ pub(crate) fn apply_retire_sealed_record_row(
     request: &RetireSealedRecordRequest,
     nodes: &mut NativeNodeRows<'_>,
     crypto: DurableCrypto<'_>,
-) -> Result<Option<medulla_types::protocol::ResultPayload>, String> {
+) -> Result<Option<medulla_protocol_types::protocol::ResultPayload>, String> {
     request.validate()?;
     let stored = super::control_lease::load_row(nodes, graph, &request.node_id, crypto)?;
     let resolution = request.resolve(stored.as_ref());
@@ -33,7 +33,7 @@ pub(crate) fn apply_retire_sealed_record_row(
             )
             .map_err(|error| error.to_string())?;
     }
-    medulla_types::protocol::ResultPayload::of::<RetireSealedRecord>(resolution.result()).map(Some)
+    medulla_protocol_types::protocol::ResultPayload::of::<RetireSealedRecord>(resolution.result()).map(Some)
 }
 
 #[cfg(test)]

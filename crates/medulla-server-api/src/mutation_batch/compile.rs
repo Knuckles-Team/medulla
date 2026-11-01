@@ -7,15 +7,15 @@ use sha2::{Digest, Sha256};
 
 use crate::api::persistence::PersistenceBackend;
 use medulla_core::graph::GraphCore;
-use medulla_types::mutation_batch::DurabilityDomain;
-use medulla_types::mutation_batch::MutationBatch;
-use medulla_types::mutation_batch::MutationOperation;
-use medulla_types::mutation_batch::MutationOutboxIntent;
-use medulla_types::mutation_batch::MutationScopeIdentity;
-use medulla_types::mutation_batch::MutationStateDescriptor;
-use medulla_types::mutation_batch::MutationSurface;
-use medulla_types::mutation_batch::MUTATION_BATCH_VERSION;
-use medulla_types::protocol::Method;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::mutation_batch::MutationOperation;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_protocol_types::mutation_batch::MutationStateDescriptor;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
+use medulla_protocol_types::protocol::Method;
 
 use super::canonical::{domain_for, lower_canonical_operation, surface_for};
 use super::digest::principal_fingerprint;
@@ -281,7 +281,7 @@ pub fn compile_opaque_method_in_scope(
         CompiledOutbox {
             extra: Vec::new(),
             semantic_source_dirty_input: (domain == DurabilityDomain::SqlCatalog).then_some(
-                medulla_types::semantic_index::SemanticDigest::from_bytes(input_digest),
+                medulla_index_types::semantic_index::SemanticDigest::from_bytes(input_digest),
             ),
             #[cfg(feature = "epistemic-tms")]
             reasoning_events: vec![medulla_epistemic::IncrementalReasoningEvent::InvalidateAll],
@@ -296,7 +296,7 @@ pub fn compile_opaque_method_in_scope(
 #[cfg(feature = "query")]
 pub fn compile_sql_source_batch(
     ctx: CompileBatch<'_>,
-    request: medulla_types::storage_wire::SqlSourceBatchRequest,
+    request: medulla_protocol_types::storage_wire::SqlSourceBatchRequest,
 ) -> Result<MutationBatch, String> {
     if ctx.authoritative_state.is_some() {
         return Err("SQL source append cannot use authoritative graph state".into());
@@ -315,7 +315,9 @@ pub fn compile_sql_source_batch(
         CompiledOutbox {
             extra: Vec::new(),
             semantic_source_dirty_input: Some(
-                medulla_types::semantic_index::SemanticDigest::from_bytes(*batch_digest.as_bytes()),
+                medulla_index_types::semantic_index::SemanticDigest::from_bytes(
+                    *batch_digest.as_bytes(),
+                ),
             ),
             #[cfg(feature = "epistemic-tms")]
             reasoning_events: vec![medulla_epistemic::IncrementalReasoningEvent::InvalidateAll],
@@ -469,7 +471,7 @@ fn reasoning_wakeup_payload(
 /// the type (`IncarnationId::new` rejects anything resource-shaped by construction
 /// elsewhere, but does not require per-generation freshness), not a security
 /// decision -- flagged in the migration report for follow-up.
-pub use medulla_types::mutation_batch::COMPILED_BATCH_INCARNATION;
+pub use medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION;
 
 /// Compile the universal `MutationScopeIdentity`/`VersionExpectation` pair shared
 /// by every batch this module builds.
@@ -496,7 +498,7 @@ pub(crate) struct CompiledOutbox {
     pub extra: Vec<MutationOutboxIntent>,
     /// Stable SQL operation input used to build a typed source-dirty intent
     /// after [`finish_batch`] has constructed the canonical native identity.
-    pub semantic_source_dirty_input: Option<medulla_types::semantic_index::SemanticDigest>,
+    pub semantic_source_dirty_input: Option<medulla_index_types::semantic_index::SemanticDigest>,
     /// The reasoning wake-up events the projection intent's payload encodes.
     /// Empty means the plain digest-only summary.
     #[cfg(feature = "epistemic-tms")]
@@ -546,9 +548,9 @@ fn finish_batch(
     // half even while the operations half is stable. That is not hypothetical:
     // it is what still refused a legitimate `ReserveWorkItemResources` retry
     // after `digest_operations` alone was normalized. One rule, one helper --
-    // `medulla_types::mutation_batch::identity_normalized_operations`.
+    // `medulla_protocol_types::mutation_batch::identity_normalized_operations`.
     let identity_operations =
-        medulla_types::mutation_batch::identity_normalized_operations(&operations);
+        medulla_protocol_types::mutation_batch::identity_normalized_operations(&operations);
     let summary =
         medulla_kernel::projection_wakeup::projection_payload_for_operations(&identity_operations)?;
     // The typed wake-up is computed HERE, before the envelope is minted, rather
@@ -647,23 +649,23 @@ fn compiled_envelope(
     serving_principal: &str,
     operations: &[MutationOperation],
     outbox: &[MutationOutboxIntent],
-) -> Result<medulla_types::mutation_batch::MutationEnvelope, String> {
-    let content = medulla_types::mutation_batch::BatchContent {
+) -> Result<medulla_protocol_types::mutation_batch::MutationEnvelope, String> {
+    let content = medulla_protocol_types::mutation_batch::BatchContent {
         operations,
         outbox,
         authoritative_state: ctx.authoritative_state.as_ref(),
     };
-    let method = medulla_types::mutation_batch::batch_method_id(
+    let method = medulla_protocol_types::mutation_batch::batch_method_id(
         operations,
         ctx.authoritative_state.is_some(),
     )?;
-    let operation = medulla_types::mutation_batch::CompiledOperation::for_content(
+    let operation = medulla_protocol_types::mutation_batch::CompiledOperation::for_content(
         identity,
         content,
         method_schema_digest(&method)?,
     )?;
-    let mut parts = medulla_types::mutation_batch::CompiledEnvelope::new(
-        medulla_types::mutation_batch::CompiledScope {
+    let mut parts = medulla_protocol_types::mutation_batch::CompiledEnvelope::new(
+        medulla_protocol_types::mutation_batch::CompiledScope {
             identity,
             actor,
             serving_principal,
@@ -678,7 +680,7 @@ fn compiled_envelope(
     )?;
     parts.catalog_digest = contract_catalog_digest()?;
     parts.policy_digest = effective_policy_digest(&method, operations)?;
-    medulla_types::mutation_batch::MutationEnvelope::for_compiled_batch(parts)
+    medulla_protocol_types::mutation_batch::MutationEnvelope::for_compiled_batch(parts)
 }
 
 /// The request-schema digest one method's identity binds.
@@ -688,14 +690,14 @@ fn compiled_envelope(
 /// wire method and therefore no request schema, so its digest frames the
 /// reserved id itself rather than pretending a schema exists. The `SchemaId`
 /// itself is derived by the one documented rule in
-/// `medulla_types::mutation_batch::method_schema_id`, which the computed catalog also
+/// `medulla_protocol_types::mutation_batch::method_schema_id`, which the computed catalog also
 /// follows, so the two cannot disagree.
 fn method_schema_digest(
     method: &medulla_types::contract::MethodId,
 ) -> Result<medulla_types::contract::Digest256, String> {
     match medulla_capabilities::method_schema(method.as_str()) {
         Some((_, digest)) => Ok(medulla_types::contract::Digest256::from_bytes(digest)),
-        None => medulla_types::mutation_batch::reserved_method_schema_digest(method),
+        None => medulla_protocol_types::mutation_batch::reserved_method_schema_digest(method),
     }
 }
 
@@ -735,7 +737,7 @@ pub fn effective_policy_digest(
         &[
             policy_revision().as_bytes(),
             folded.as_bytes(),
-            &medulla_types::mutation_batch::POLICY_EPOCH.to_be_bytes(),
+            &medulla_protocol_types::mutation_batch::POLICY_EPOCH.to_be_bytes(),
         ],
     )
 }
@@ -750,7 +752,9 @@ fn policy_revision() -> String {
     std::env::var("MEDULLA_POLICY_VERSION")
         .ok()
         .filter(|value| !value.trim().is_empty())
-        .unwrap_or_else(|| medulla_types::mutation_batch::UNSET_POLICY_REVISION.to_string())
+        .unwrap_or_else(|| {
+            medulla_protocol_types::mutation_batch::UNSET_POLICY_REVISION.to_string()
+        })
 }
 
 /// Refuse the two reserved shard identifiers to a request-boundary caller.
@@ -929,7 +933,7 @@ mod tests {
             },
         };
         let terminal_event = MutationOutboxIntent {
-            topic: medulla_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC.into(),
+            topic: medulla_result_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC.into(),
             key: "terminal-batch".into(),
             payload: vec![1],
             headers: BTreeMap::new(),
@@ -965,7 +969,7 @@ mod tests {
         assert_eq!(batch.outbox.len(), 1);
         assert_eq!(
             batch.outbox[0].topic,
-            medulla_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC
+            medulla_result_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC
         );
         let expected_actor = principal_fingerprint("agent:terminal-test").unwrap();
         assert_eq!(batch.outbox[0].headers.get("actor"), Some(&expected_actor));

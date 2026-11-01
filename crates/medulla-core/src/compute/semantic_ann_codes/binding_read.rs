@@ -5,14 +5,15 @@ use super::record::{decode, row_bytes};
 use super::{
     corrupt, kernel_error, refused, semantic_contract_error, SemanticCodeError, SemanticCodeStore,
 };
+use medulla_index_types::{
+    semantic_index::SemanticBinding, semantic_index::SemanticBindingState,
+    semantic_index::SemanticDigest, semantic_index::SemanticIndexFilter,
+    semantic_index::SemanticSourceProgress,
+};
 use medulla_storage::{
     ScopedRead, SemanticIndexOwner, SEMANTIC_BINDINGS, SEMANTIC_HEADS, SEMANTIC_SOURCE_PROGRESS,
 };
 use medulla_transaction::AdmittedMutation;
-use medulla_types::semantic_index::{
-    SemanticBinding, SemanticBindingState, SemanticDigest, SemanticIndexFilter,
-    SemanticSourceProgress,
-};
 use redb::AccessGuard;
 
 /// What a caller-attributed lifecycle write refuses when the binding it

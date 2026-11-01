@@ -6,10 +6,10 @@ use crate::auth::dispatch_test_on_heap as dispatch_on_heap;
 use crate::auth::VerifiedEnvelopeParams;
 use crate::state::ServerState;
 use medulla_types::acl::RequestContextClaims;
-use medulla_types::protocol::Method;
-use medulla_types::protocol::Request;
-use medulla_types::protocol::ResultPayload;
-use medulla_types::storage_wire::{KvCasOutcome, KvEntry, KvScanPage, KvWriteReceipt};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Request;
+use medulla_protocol_types::protocol::ResultPayload;
+use medulla_protocol_types::storage_wire::{KvCasOutcome, KvEntry, KvScanPage, KvWriteReceipt};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -111,7 +111,7 @@ fn temp_state(tag: &str) -> (std::path::PathBuf, Arc<RwLock<ServerState>>) {
     (dir, state)
 }
 
-fn decode<T: serde::de::DeserializeOwned>(r: &medulla_types::protocol::Response) -> T {
+fn decode<T: serde::de::DeserializeOwned>(r: &medulla_protocol_types::protocol::Response) -> T {
     match &r.result {
         Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(bytes).expect("typed KV result"),
         other => panic!("expected a Raw KV result, got {other:?} / {:?}", r.error),

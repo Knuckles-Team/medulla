@@ -3,8 +3,8 @@
 use std::sync::Arc;
 
 use medulla_core::graph::GraphCore;
-use medulla_types::protocol::Response;
-use medulla_types::protocol::ResultPayload;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 
 /// The schema-source set a schema read may disclose: the REQUEST graph's own
 /// keyed sources, and nothing else. `GraphSchemaList` and `GraphSchemaClasses`
@@ -21,12 +21,14 @@ pub async fn handle_list(req_id: u64, graph_name: &str, core: &Arc<GraphCore>) -
 
 fn list_response(
     req_id: u64,
-    result: Result<medulla_types::graph_schema::GraphSchemaSourcesView, String>,
+    result: Result<medulla_catalog_types::graph_schema::GraphSchemaSourcesView, String>,
 ) -> Response {
     match result {
         Ok(body) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::reasoning::GraphSchemaList>(body),
+            ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::GraphSchemaList>(
+                body,
+            ),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -36,9 +38,10 @@ fn list_response(
 pub fn list(
     graph_name: &str,
     core: &GraphCore,
-) -> Result<medulla_types::graph_schema::GraphSchemaSourcesView, String> {
-    use medulla_types::graph_schema::{
-        GraphSchemaSourceView, GraphSchemaSourcesView, GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
+) -> Result<medulla_catalog_types::graph_schema::GraphSchemaSourcesView, String> {
+    use medulla_catalog_types::{
+        graph_schema::GraphSchemaSourceView, graph_schema::GraphSchemaSourcesView,
+        graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
     };
     let sources = disclosed_sources(core);
     let project =
@@ -76,9 +79,9 @@ pub fn list(
 /// The wire view of one source's authority origin.
 fn origin_view(
     origin: &medulla_core::graph::SchemaSourceOrigin,
-) -> medulla_types::graph_schema::SchemaSourceOriginView {
+) -> medulla_catalog_types::graph_schema::SchemaSourceOriginView {
     use medulla_core::graph::SchemaSourceOrigin as Origin;
-    use medulla_types::graph_schema::SchemaSourceOriginView as View;
+    use medulla_catalog_types::graph_schema::SchemaSourceOriginView as View;
     match origin {
         Origin::Core {
             module,

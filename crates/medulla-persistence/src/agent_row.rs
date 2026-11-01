@@ -35,11 +35,12 @@ const MAX_AGENT_ROW_BYTES: usize = 16 * 1024 * 1024;
 const MAX_AGENT_ROW_ITEMS: usize = 200_000;
 
 /// The one decode policy every agent-hierarchy row is read under.
-const AGENT_ROW_LIMITS: medulla_types::msgpack::MsgpackLimits = medulla_types::msgpack::MsgpackLimits::new(
-    MAX_AGENT_ROW_BYTES,
-    MAX_AGENT_ROW_ITEMS,
-    medulla_types::msgpack::DEFAULT_MAX_DEPTH,
-);
+const AGENT_ROW_LIMITS: medulla_types::msgpack::MsgpackLimits =
+    medulla_types::msgpack::MsgpackLimits::new(
+        MAX_AGENT_ROW_BYTES,
+        MAX_AGENT_ROW_ITEMS,
+        medulla_types::msgpack::DEFAULT_MAX_DEPTH,
+    );
 
 /// Decode one agent-hierarchy row, bounded.
 ///
@@ -84,12 +85,15 @@ pub(super) fn domain_result<T: serde::Serialize>(
     result: &T,
     schema_id: &str,
     what: &str,
-) -> Result<medulla_types::mutation::MutationResult, String> {
-    let payload = medulla_storage::encode_bounded(result, &format!("{what} domain result payload"))?;
+) -> Result<medulla_mutation_types::mutation::MutationResult, String> {
+    let payload =
+        medulla_storage::encode_bounded(result, &format!("{what} domain result payload"))?;
     let payload = medulla_types::contract::RecordBytes::new(payload)?;
-    Ok(medulla_types::mutation::MutationResult::DomainResult {
-        schema_id: medulla_types::contract::SchemaId::new(schema_id)?,
-        payload_digest: payload.digest()?,
-        payload,
-    })
+    Ok(
+        medulla_mutation_types::mutation::MutationResult::DomainResult {
+            schema_id: medulla_types::contract::SchemaId::new(schema_id)?,
+            payload_digest: payload.digest()?,
+            payload,
+        },
+    )
 }

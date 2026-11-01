@@ -6,7 +6,7 @@ use crate::protocol::Response;
 use medulla_server_api::auth::VerifiedRequestContext;
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
-use medulla_types::decision::guardrail::GuardrailEntailmentRequest;
+use medulla_agent_types::agent_guardrail::GuardrailEntailmentRequest;
 
 #[cfg(feature = "decide")]
 pub(crate) async fn handle_guardrail_entailment(
@@ -19,7 +19,7 @@ pub(crate) async fn handle_guardrail_entailment(
         Ok(result) => Response::ok(
             req_id,
             crate::protocol::ResultPayload::of_ref::<
-                medulla_types::result_contract::storage::GuardrailEntailment,
+                medulla_protocol_types::result_contract::storage::GuardrailEntailment,
             >(&result),
         ),
         Err(error) => Response::err(req_id, error),
@@ -31,11 +31,10 @@ async fn entailment_for(
     state: &SharedState,
     verified: &VerifiedRequestContext,
     request: &GuardrailEntailmentRequest,
-) -> Result<medulla_types::decision::guardrail::GuardrailEntailmentResult, String> {
-    use medulla_types::decision::guardrail::{
-        guardrail_entailment_query, GuardrailEntailmentResult,
-        GUARDRAIL_ENTAILMENT_RESULT_SCHEMA_VERSION,
-    };
+) -> Result<medulla_agent_types::agent_guardrail::GuardrailEntailmentResult, String> {
+    use medulla_agent_types::agent_guardrail::guardrail_entailment_query;
+    use medulla_agent_types::agent_guardrail::GuardrailEntailmentResult;
+    use medulla_agent_types::agent_guardrail::GUARDRAIL_ENTAILMENT_RESULT_SCHEMA_VERSION;
 
     if request.tenant_id != verified.tenant() {
         return Err(
@@ -48,7 +47,7 @@ async fn entailment_for(
     let rules = guardrail_entailment_query(&request.task_iri, &rules)?;
     Ok(GuardrailEntailmentResult {
         schema_version: GUARDRAIL_ENTAILMENT_RESULT_SCHEMA_VERSION,
-        ontology_digest: medulla_types::agent_ontology::ontology_digest(),
+        ontology_digest: medulla_agent_types::agent_ontology::ontology_digest(),
         task_iri: request.task_iri.clone(),
         rules,
     })

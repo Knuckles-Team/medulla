@@ -24,7 +24,7 @@
 
 use std::cell::RefCell;
 
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 
 /// The canonical-body format this module produces; the Python wheel's native
 /// codec reports the same identity as `__method_body_codec__`.

@@ -1,5 +1,5 @@
 use super::DurableLaneCounter;
-use medulla_types::epistemic_operations::DevelopmentLaneIntent;
+use medulla_result_types::epistemic_operations::DevelopmentLaneIntent;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum LaneDecision {

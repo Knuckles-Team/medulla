@@ -7,10 +7,12 @@
 //! admits the Gap's WorkItem through [`apply_submit_work_item_rows`] in that
 //! transaction, so the pair commits together or not at all.
 //!
-//! What each write DOES to a Gap is decided by [`medulla_types::work_market`]; this
+//! What each write DOES to a Gap is decided by [`medulla_agent_types::work_market`]; this
 //! module only reads and writes rows.
 
-use medulla_types::work_market::{gap_row_key, is_tenant_gap, GapView};
+use medulla_agent_types::{
+    work_market::gap_row_key, work_market::is_tenant_gap, work_market::GapView,
+};
 
 use super::*;
 
@@ -42,7 +44,7 @@ pub struct NativeRecordRequest<'args, 'table, 'crypto> {
 /// the work market. `None` for any method that is neither.
 pub fn apply_native_record_rows(
     request: NativeRecordRequest<'_, '_, '_>,
-) -> Result<Option<medulla_types::protocol::ResultPayload>, String> {
+) -> Result<Option<medulla_protocol_types::protocol::ResultPayload>, String> {
     let lease = apply_control_lease_rows(
         request.graph,
         request.method,
@@ -115,7 +117,7 @@ fn store_gap(
     let key = gap_row_key(tenant, &gap.gap_id);
     let mut row = NodeRow::new();
     row.insert(
-        medulla_types::work_item_read::WORK_ITEM_ROW_REVISION.into(),
+        medulla_agent_types::work_item_read::WORK_ITEM_ROW_REVISION.into(),
         gap.revision.into(),
     );
     gap.to_row(tenant, &mut row)?;

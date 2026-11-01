@@ -117,8 +117,9 @@ impl WriteGuard for CoreIcvGuard<'_> {
         };
         let policy = compiled_policy(core).map_err(|_| GuardRejection {
             graph: graph.map(str::to_string),
-            message: "MEDULLA-KG.ontology.rdf-update-guard: authoritative integrity policy is invalid"
-                .to_string(),
+            message:
+                "MEDULLA-KG.ontology.rdf-update-guard: authoritative integrity policy is invalid"
+                    .to_string(),
             details: serde_json::json!({"reason": "integrity_policy_invalid"}),
         })?;
         IcvPolicyRegistry::new()

@@ -3,9 +3,12 @@
 
 use std::collections::BTreeMap;
 
+use medulla_decision_types::decision::DecisionPolicyRef;
+use medulla_decision_types::{
+    decision::statistical::CandidateSource, decision::statistical::QuestionKind,
+    decision::statistical::QuestionSafety, decision::statistical::TypedValue,
+};
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::statistical::{CandidateSource, QuestionKind, QuestionSafety, TypedValue};
-use medulla_types::decision::DecisionPolicyRef;
 
 use super::{parse, DecideTextErrorKind, DecideTextRequest};
 

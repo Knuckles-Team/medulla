@@ -16,13 +16,13 @@ pub(crate) async fn handle_component_content(
     store: &AgentLibraryStore,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: medulla_types::agent_component::AgentComponentContentRequest,
+    request: medulla_agent_types::agent_component::AgentComponentContentRequest,
 ) -> Response {
     // A committed decision record's body is engine-owned too, but it lives in
     // the Agent Library transaction that committed it, not in the Blob CAS.
     if request
         .component_id
-        .starts_with(medulla_types::decision::DECISION_COMPONENT_ID_PREFIX)
+        .starts_with(medulla_decision_types::decision::DECISION_COMPONENT_ID_PREFIX)
     {
         return serve_decision_record(store, req_id, verified, &request);
     }
@@ -33,7 +33,7 @@ fn serve_decision_record(
     store: &AgentLibraryStore,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: &medulla_types::agent_component::AgentComponentContentRequest,
+    request: &medulla_agent_types::agent_component::AgentComponentContentRequest,
 ) -> Response {
     if request.tenant_id != verified.tenant() {
         return Response::err(
@@ -44,9 +44,9 @@ fn serve_decision_record(
     match store.decision_record_content(&request.tenant_id, &request.component_id) {
         Ok(result) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentComponentContent>(
-                &result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentContent,
+            >(&result),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -57,7 +57,7 @@ async fn serve_component_content(
     store: &AgentLibraryStore,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: medulla_types::agent_component::AgentComponentContentRequest,
+    request: medulla_agent_types::agent_component::AgentComponentContentRequest,
 ) -> Response {
     if request.tenant_id != verified.tenant() {
         return Response::err(
@@ -103,8 +103,8 @@ async fn serve_component_content(
                 return Response::err(req_id, format!("component body read task failed: {error}"))
             }
         };
-        let result = medulla_types::agent_component::AgentComponentContentResult {
-            schema_version: medulla_types::agent_component::COMPONENT_CONTENT_SCHEMA_VERSION,
+        let result = medulla_agent_types::agent_component::AgentComponentContentResult {
+            schema_version: medulla_agent_types::agent_component::COMPONENT_CONTENT_SCHEMA_VERSION,
             component_id: pointer.component_id,
             entry_revision: pointer.entry_revision,
             definition_digest: pointer.definition_digest,
@@ -114,9 +114,9 @@ async fn serve_component_content(
         };
         Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::storage::AgentComponentContent>(
-                &result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentComponentContent,
+            >(&result),
         )
     }
 }

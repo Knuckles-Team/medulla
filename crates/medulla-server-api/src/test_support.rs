@@ -4,14 +4,14 @@
 #[cfg(feature = "server")]
 pub fn decode_raw_response<T: serde::de::DeserializeOwned>(
     label: &str,
-    response: medulla_types::protocol::Response,
+    response: medulla_protocol_types::protocol::Response,
 ) -> T {
     assert!(
         response.error.is_none(),
         "{label} was refused: {:?}",
         response.error
     );
-    let Some(medulla_types::protocol::ResultPayload::Raw(bytes)) = response.result else {
+    let Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) = response.result else {
         panic!("{label} did not return a raw typed result");
     };
     rmp_serde::from_slice(&bytes).expect("decode raw typed server response")
@@ -99,8 +99,8 @@ impl Drop for FederationAllowGuard {
 
 /// Common terminal fixture used by durable and transport retry identity tests.
 #[cfg(any(feature = "server", feature = "redb"))]
-pub fn terminal_method(lease_epoch: u64, fencing_token: u64) -> medulla_types::protocol::Method {
-    medulla_types::protocol::Method::CommitWorkItemResult {
+pub fn terminal_method(lease_epoch: u64, fencing_token: u64) -> medulla_protocol_types::protocol::Method {
+    medulla_protocol_types::protocol::Method::CommitWorkItemResult {
         tenant: "tenant-a".into(),
         work_item_id: "work-1".into(),
         worker_id: "worker-a".into(),

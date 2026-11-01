@@ -16,7 +16,7 @@ use medulla_core::graph::GraphCore;
 #[cfg(feature = "shacl")]
 type LiveGraphSnapshot = Vec<(
     String,
-    Option<(medulla_types::protocol::GraphType, Arc<GraphCore>)>,
+    Option<(medulla_protocol_types::protocol::GraphType, Arc<GraphCore>)>,
 )>;
 
 /// Detached staging state threaded through one update's plan: pre-image bytes,
@@ -27,14 +27,14 @@ type StagedGraphState = (
     HashMap<String, Vec<u8>>,
     HashMap<String, Arc<GraphCore>>,
     HashMap<String, bool>,
-    HashMap<String, medulla_types::protocol::GraphType>,
+    HashMap<String, medulla_protocol_types::protocol::GraphType>,
 );
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PlannedGraphUpdate {
     pub graph: String,
-    pub graph_type: medulla_types::protocol::GraphType,
+    pub graph_type: medulla_protocol_types::protocol::GraphType,
     pub existed_before: bool,
     pub before_msgpack: Vec<u8>,
     pub after_msgpack: Vec<u8>,
@@ -136,7 +136,7 @@ fn stage_graphs(live: LiveGraphSnapshot) -> Result<StagedGraphState, String> {
         let (graph_type, core, existed_before) = match existing {
             Some((graph_type, core)) => (graph_type, core, true),
             None => (
-                medulla_types::protocol::GraphType::Global,
+                medulla_protocol_types::protocol::GraphType::Global,
                 Arc::new(GraphCore::new()),
                 false,
             ),
@@ -156,7 +156,7 @@ fn collect_planned_updates(
     staged_by_name: HashMap<String, Arc<GraphCore>>,
     before: &mut HashMap<String, Vec<u8>>,
     existed: &mut HashMap<String, bool>,
-    graph_types: &mut HashMap<String, medulla_types::protocol::GraphType>,
+    graph_types: &mut HashMap<String, medulla_protocol_types::protocol::GraphType>,
 ) -> Result<Vec<PlannedGraphUpdate>, String> {
     let mut planned = Vec::new();
     for (graph, core) in staged_by_name {

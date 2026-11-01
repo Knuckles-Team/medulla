@@ -2,17 +2,17 @@ use super::*;
 
 #[test]
 fn authoritative_snapshot_and_row_delta_paths_refuse_orphaning_lane_work_item() {
-    use medulla_types::mutation_batch::DurabilityDomain;
-    use medulla_types::mutation_batch::IncarnationId;
-    use medulla_types::mutation_batch::LogicalName;
-    use medulla_types::mutation_batch::MutationOperation;
-    use medulla_types::mutation_batch::MutationOutboxIntent;
-    use medulla_types::mutation_batch::MutationScopeIdentity;
-    use medulla_types::mutation_batch::MutationStateDescriptor;
-    use medulla_types::mutation_batch::MutationSurface;
-    use medulla_types::mutation_batch::ScopeTenantId;
-    use medulla_types::mutation_batch::VersionExpectation;
-    use medulla_types::mutation_batch::MUTATION_BATCH_VERSION;
+    use medulla_mutation_types::mutation_scope::DurabilityDomain;
+    use medulla_mutation_types::mutation_scope::IncarnationId;
+    use medulla_mutation_types::mutation_scope::LogicalName;
+    use medulla_protocol_types::mutation_batch::MutationOperation;
+    use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+    use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+    use medulla_protocol_types::mutation_batch::MutationStateDescriptor;
+    use medulla_mutation_types::mutation_scope::MutationSurface;
+    use medulla_mutation_types::mutation_scope::ScopeTenantId;
+    use medulla_protocol_types::mutation_batch::VersionExpectation;
+    use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
     use sha2::{Digest, Sha256};
 
     let fixture = NativeLaneFixture::new(policy());
@@ -43,7 +43,7 @@ fn authoritative_snapshot_and_row_delta_paths_refuse_orphaning_lane_work_item() 
                 IncarnationId::new("incarnation:test:development-lane")
                     .expect("static incarnation id is valid"),
             );
-            let mut batch = medulla_types::mutation_batch::MutationBatch {
+            let mut batch = medulla_protocol_types::mutation_batch::MutationBatch {
                 schema_version: MUTATION_BATCH_VERSION,
                 batch_id: batch_id.into(),
                 envelope: super::super::super::fixture_operation_envelope(
@@ -188,7 +188,7 @@ fn authoritative_snapshot_and_row_delta_paths_refuse_orphaning_lane_work_item() 
         TEST_GRAPH,
         &DevelopmentLaneQueryRequest {
             schema_version:
-                medulla_types::epistemic_operations::DevelopmentLaneQueryRequestSchemaVersion::V1,
+                medulla_result_types::epistemic_operations::DevelopmentLaneQueryRequestSchemaVersion::V1,
             tenant_ref: hold.tenant_ref,
             hold_id: hold.hold_id,
             now_ms: 0,
@@ -248,7 +248,7 @@ fn every_low_level_graph_row_path_refuses_orphaning_a_lane_work_item() {
         TEST_GRAPH,
         &DevelopmentLaneQueryRequest {
             schema_version:
-                medulla_types::epistemic_operations::DevelopmentLaneQueryRequestSchemaVersion::V1,
+                medulla_result_types::epistemic_operations::DevelopmentLaneQueryRequestSchemaVersion::V1,
             tenant_ref: hold.tenant_ref,
             hold_id: hold.hold_id,
             now_ms: 0,

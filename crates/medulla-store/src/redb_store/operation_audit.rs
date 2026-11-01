@@ -288,7 +288,7 @@ pub fn operation_audit_append(
     tail: &mut AuditTailCache,
     graph: &str,
     event: &OperationAuditEvent,
-) -> Result<medulla_types::protocol::AuditAppendReceipt, String> {
+) -> Result<medulla_protocol_types::protocol::AuditAppendReceipt, String> {
     event.validate()?;
     let mut staged_tail = tail.clone();
     let members = shard.graph_members(&[graph])?;
@@ -313,7 +313,7 @@ pub fn operation_audit_append(
     };
     shard.commit_drain(group, &batches, 0)?;
     *tail = staged_tail;
-    Ok(medulla_types::protocol::AuditAppendReceipt {
+    Ok(medulla_protocol_types::protocol::AuditAppendReceipt {
         graph: graph.to_string(),
         seq: applied.record.seq,
         entry_sha256: hex::encode(applied.record.entry_hash),
@@ -331,7 +331,7 @@ pub fn operation_audit_read(
     graph: &str,
     verified_tenant: &str,
     seq: u64,
-) -> Result<medulla_types::protocol::AuditEventProof, String> {
+) -> Result<medulla_protocol_types::protocol::AuditEventProof, String> {
     let handle = shard.graph(graph)?;
     let read = shard.read(&handle)?;
     let audit = read.scoped_owner_table(AUDIT)?;
@@ -344,7 +344,7 @@ pub fn operation_audit_read(
     if !event_line.starts_with(&format!("OP_AUDIT|v1|tenant={verified_tenant}|")) {
         return Err("AUDIT_EVENT_NOT_FOUND".to_string());
     }
-    let proof = medulla_types::protocol::AuditEventProof {
+    let proof = medulla_protocol_types::protocol::AuditEventProof {
         graph: graph.to_string(),
         seq,
         entry_sha256: hex::encode(hash),
@@ -357,7 +357,7 @@ pub fn operation_audit_read(
     drop(audit);
     drop(read);
     let report = verify_audit(shard, graph)?;
-    Ok(medulla_types::protocol::AuditEventProof {
+    Ok(medulla_protocol_types::protocol::AuditEventProof {
         chain_verified: report.ok,
         chain_entries: report.entries,
         ..proof

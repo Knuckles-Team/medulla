@@ -1,6 +1,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_types::connector_pack::{SeedGraphImport, SeedPart, SeedPartKey};
+use medulla_catalog_types::{
+    connector_pack::SeedGraphImport, connector_pack::SeedPart, connector_pack::SeedPartKey,
+};
 use medulla_types::contract::{Digest256, ResourceId};
 
 use super::seed::{canonical_digest, prepare_seed_import, SeedImportOutcome, MAX_SEED_TRIPLES};

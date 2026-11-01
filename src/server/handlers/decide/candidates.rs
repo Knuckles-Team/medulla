@@ -17,17 +17,31 @@
 #[cfg(feature = "query")]
 use std::collections::BTreeMap;
 
-use medulla_numeric::decision::candidate::CandidateView;
-use medulla_types::agent_component::{AgentComponentEntry, AgentComponentSearchRequest};
-use medulla_types::decision::statistical::declared::{check_declared, DeclaredOption};
-use medulla_types::decision::statistical::enrichment_schedule::{
-    EnrichmentCandidate, EnrichmentScheduleRequest, COST_KEY, EXPECTED_VALUE_KEY,
+use medulla_agent_types::{
+    agent_component::AgentComponentEntry, agent_component::AgentComponentSearchRequest,
 };
-use medulla_types::decision::statistical::ingestion_lane::IngestionLaneRequest;
-use medulla_types::decision::statistical::log::RecordVisibility;
-use medulla_types::decision::statistical::retrieval_plan::RetrievalPlanKind;
-use medulla_types::decision::statistical::{CandidateSource, QuestionKind, StatisticalErrorCode};
-use medulla_types::decision::{CandidateSourceRecord, LibraryCandidateScope, MAX_ASSEMBLY_CANDIDATES};
+use medulla_decision_types::decision::statistical::ingestion_lane::IngestionLaneRequest;
+use medulla_decision_types::decision::statistical::log::RecordVisibility;
+use medulla_decision_types::decision::statistical::retrieval_plan::RetrievalPlanKind;
+use medulla_decision_types::{
+    decision::statistical::declared::check_declared,
+    decision::statistical::declared::DeclaredOption,
+};
+use medulla_decision_types::{
+    decision::statistical::enrichment_schedule::EnrichmentCandidate,
+    decision::statistical::enrichment_schedule::EnrichmentScheduleRequest,
+    decision::statistical::enrichment_schedule::COST_KEY,
+    decision::statistical::enrichment_schedule::EXPECTED_VALUE_KEY,
+};
+use medulla_decision_types::{
+    decision::statistical::CandidateSource, decision::statistical::QuestionKind,
+    decision::statistical::StatisticalErrorCode,
+};
+use medulla_decision_types::{
+    decision::CandidateSourceRecord, decision::LibraryCandidateScope,
+    decision::MAX_ASSEMBLY_CANDIDATES,
+};
+use medulla_numeric::decision::candidate::CandidateView;
 
 use super::stat_classes::{current_rules, derive, DerivedClasses};
 use super::stat_support::refusal;
@@ -94,7 +108,7 @@ fn under_root(entry: &AgentComponentEntry, derived: &DerivedClasses, root: Optio
         .classification
         .iter()
         .chain(derived_classes)
-        .any(|class| medulla_types::agent_ontology::satisfies(class, root))
+        .any(|class| medulla_agent_types::agent_ontology::satisfies(class, root))
 }
 
 fn read_library(
@@ -246,7 +260,9 @@ pub(super) fn graph_candidates(
             let properties = view
                 .node_properties
                 .get(&id)
-                .and_then(|blob| medulla_types::msgpack::decode_property_value(blob.as_slice()).ok())
+                .and_then(|blob| {
+                    medulla_types::msgpack::decode_property_value(blob.as_slice()).ok()
+                })
                 .unwrap_or(serde_json::Value::Null);
             row_view(id, &properties)
         })
@@ -255,7 +271,7 @@ pub(super) fn graph_candidates(
         views,
         entries: Vec::new(),
         record: CandidateSourceRecord::Graph {
-            plan_digest: medulla_types::decision::digest::digest_text(
+            plan_digest: medulla_types::solve_scalar::digest_text(
                 "eg/decide-candidate-plan/v1",
                 &(graph, plan),
             ),
@@ -305,7 +321,7 @@ fn prefixed_refusal(detail: &str, prefix: &str, code: StatisticalErrorCode) -> S
 ///
 /// `kind` additionally gates a question-specific declared-option registry
 /// where one exists: `QuestionKind::IngestionLane` candidates must each name
-/// a registered [`medulla_types::decision::statistical::ingestion_lane::IngestionLane`],
+/// a registered [`medulla_decision_types::decision::statistical::ingestion_lane::IngestionLane`],
 /// refused here rather than discovered later as an opaque abstention
 /// (MEDULLA-DECISION-ENGINE-R030). `QuestionKind::EnrichmentSchedule` candidates
 /// may not declare a negative `enrichment.cost_q32` -- it has no meaning on
@@ -313,9 +329,9 @@ fn prefixed_refusal(detail: &str, prefix: &str, code: StatisticalErrorCode) -> S
 /// (MEDULLA-DECISION-ENGINE-R031).
 /// A `QuestionKind::RetrievalPlan` candidate whose
 /// option id claims the reserved
-/// [`medulla_types::decision::statistical::retrieval_plan::OPTION_ID_PREFIX`]
+/// [`medulla_decision_types::decision::statistical::retrieval_plan::OPTION_ID_PREFIX`]
 /// namespace must name a registered
-/// [`medulla_types::decision::statistical::retrieval_plan::RetrievalPlanKind`],
+/// [`medulla_decision_types::decision::statistical::retrieval_plan::RetrievalPlanKind`],
 /// refused the same way (MEDULLA-DECISION-ENGINE-R029). An option id outside that
 /// namespace is an ordinary declared option, unaffected by this registry.
 pub(super) fn declared_candidates(
@@ -396,7 +412,7 @@ pub(super) fn declared_candidates(
         views,
         entries: Vec::new(),
         record: CandidateSourceRecord::Declared {
-            options_digest: medulla_types::decision::digest::digest_text(
+            options_digest: medulla_types::solve_scalar::digest_text(
                 DECLARED_OPTIONS_DOMAIN,
                 &options,
             ),

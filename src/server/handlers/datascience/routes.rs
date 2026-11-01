@@ -1,7 +1,7 @@
 //! Private operation-family routing for the data-science handler.
 
-use medulla_types::compute_result::datascience::TrainTestSplitResult;
-use medulla_types::result_contract::compute as results;
+use medulla_protocol_types::result_contract::compute as results;
+use medulla_result_types::compute_result::datascience::TrainTestSplitResult;
 
 use crate::protocol::{Method, Response, ResultPayload};
 #[derive(Clone, Copy)]

@@ -1,6 +1,6 @@
 //! Session facts and renewal share the existing global authority revision.
 use super::*;
-use medulla_types::identity::SessionOp;
+use medulla_identity_types::identity::SessionOp;
 
 impl IsolationLayer {
     pub(super) fn apply_session_authority(

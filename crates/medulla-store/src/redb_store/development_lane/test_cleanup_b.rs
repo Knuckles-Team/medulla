@@ -38,7 +38,7 @@ fn native_global_and_tenant_drain_use_monotonic_cas_but_allow_lifecycle_cleanup(
         Method::UpdateDevelopmentLaneQuota {
             request: DevelopmentLaneQuotaUpdateRequest {
                 schema_version:
-                    medulla_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequestSchemaVersion::V1,
+                    medulla_result_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequestSchemaVersion::V1,
                 tenant_ref: GLOBAL_POLICY_KEY.into(),
                 policy: drain_policy.clone(),
                 expected_policy_revision: 1,
@@ -78,7 +78,7 @@ fn native_global_and_tenant_drain_use_monotonic_cas_but_allow_lifecycle_cleanup(
         Method::UpdateDevelopmentLaneQuota {
             request: DevelopmentLaneQuotaUpdateRequest {
                 schema_version:
-                    medulla_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequestSchemaVersion::V1,
+                    medulla_result_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequestSchemaVersion::V1,
                 tenant_ref: "tenant:a".into(),
                 policy: drain_policy,
                 expected_policy_revision: 1,
@@ -97,7 +97,7 @@ fn native_global_and_tenant_drain_use_monotonic_cas_but_allow_lifecycle_cleanup(
         Method::UpdateDevelopmentLaneQuota {
             request: DevelopmentLaneQuotaUpdateRequest {
                 schema_version:
-                    medulla_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequestSchemaVersion::V1,
+                    medulla_result_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequestSchemaVersion::V1,
                 tenant_ref: "tenant:a".into(),
                 policy: policy(),
                 expected_policy_revision: 1,
@@ -211,7 +211,7 @@ fn native_reopen_preserves_exact_hold_and_status_is_tenant_bounded() {
         TEST_GRAPH,
         &DevelopmentLaneQueryRequest {
             schema_version:
-                medulla_types::epistemic_operations::DevelopmentLaneQueryRequestSchemaVersion::V1,
+                medulla_result_types::epistemic_operations::DevelopmentLaneQueryRequestSchemaVersion::V1,
             tenant_ref: "tenant:a".into(),
             hold_id: hold.hold_id.clone(),
             now_ms: 0,
@@ -227,7 +227,7 @@ fn native_reopen_preserves_exact_hold_and_status_is_tenant_bounded() {
         TEST_GRAPH,
         &DevelopmentLaneStatusRequest {
             schema_version:
-                medulla_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
+                medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
             tenant_ref: "tenant:other".into(),
             hold_id: None,
             lane_id: None,

@@ -9,8 +9,8 @@ use medulla_compute::finance::market::{
     backtest_run, codec, confidence, decimate, indicators, liquidity, rollup, scan, signal,
     snapshot, FinanceMarketOp, MarketResult,
 };
-use medulla_types::result_contract::compute as results;
-use medulla_types::result_contract::MethodResult;
+use medulla_protocol_types::result_contract::compute as results;
+use medulla_protocol_types::result_contract::MethodResult;
 
 use crate::protocol::{Method, Response, ResultPayload};
 

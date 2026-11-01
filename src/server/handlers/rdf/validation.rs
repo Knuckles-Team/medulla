@@ -39,7 +39,7 @@ pub(super) async fn handle_shacl_validate(
     };
     Response::ok(
         req_id,
-        ResultPayload::of::<medulla_types::result_contract::reasoning::ShaclValidate>(
+        ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::ShaclValidate>(
             shacl_report_wire(report, shapes.schema_digests, shapes.composed_digest),
         ),
     )
@@ -214,15 +214,17 @@ pub(super) async fn handle_shex_validate(
     let report = medulla_shex::validate(&schema, &data, &map);
     Response::ok(
         req_id,
-        ResultPayload::of::<medulla_types::result_contract::reasoning::ShexValidate>(shex_report_wire(
-            report,
-        )),
+        ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::ShexValidate>(
+            shex_report_wire(report),
+        ),
     )
 }
 
 /// The `ShexValidate` wire body of an engine ShEx report.
 #[cfg(feature = "shex")]
-fn shex_report_wire(report: medulla_shex::ShexReport) -> medulla_types::rdf_report::ShexValidationReport {
+fn shex_report_wire(
+    report: medulla_shex::ShexReport,
+) -> medulla_types::rdf_report::ShexValidationReport {
     use medulla_types::rdf_report::{ShexNodeResult, ShexValidationReport};
     let results = report
         .results

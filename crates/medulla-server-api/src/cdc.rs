@@ -693,7 +693,7 @@ impl CdcHub {
 // the reactive unit. Returns the `Method`'s captured pre-image for the post-emit.
 
 use medulla_core::graph::GraphCore;
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 
 /// The pre-image captured before a durable mutation applies (the affected node/edge's
 /// current property blob), threaded to [`emit_for_method`] after the write succeeds.

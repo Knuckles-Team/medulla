@@ -40,7 +40,7 @@ pub(crate) struct WorkItemApplyRequest<'args, 'table, 'crypto> {
 
 pub(crate) fn apply_work_item_rows(
     request: WorkItemApplyRequest<'_, '_, '_>,
-) -> Result<Option<medulla_types::protocol::ResultPayload>, String> {
+) -> Result<Option<medulla_protocol_types::protocol::ResultPayload>, String> {
     let WorkItemApplyRequest {
         graph,
         batch_id,

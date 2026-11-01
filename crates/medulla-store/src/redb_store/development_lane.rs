@@ -7,8 +7,8 @@
 //! follow-up seams.  In particular, `worktree_locator` is validated as a
 //! managed relative locator but this module never touches the filesystem.
 
-use medulla_types::epistemic_operations::DevelopmentLaneHold;
-use medulla_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
+use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
+use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
 use redb::TableDefinition;
 use serde::{Deserialize, Serialize};
 

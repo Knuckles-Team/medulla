@@ -2,7 +2,7 @@
 
 use super::*;
 
-pub use medulla_types::work_item_read::RUN_ADMISSION_REQUEST as ADMISSION_REQUEST;
+pub use medulla_agent_types::work_item_read::RUN_ADMISSION_REQUEST as ADMISSION_REQUEST;
 
 pub(super) fn work_item_id(graph: &str, tenant: &str, run_id: &str) -> Result<String, String> {
     use sha2::{Digest, Sha256};
@@ -19,7 +19,7 @@ pub(super) fn work_item_id(graph: &str, tenant: &str, run_id: &str) -> Result<St
 
 pub(super) fn admit_owner(
     graph: &str,
-    request: &medulla_types::native_control::SubmitWorkItemRequest,
+    request: &medulla_agent_types::native_control::SubmitWorkItemRequest,
     actor: Option<&str>,
 ) -> Result<Option<serde_json::Value>, String> {
     let Some(run_id) = request.run_id.as_deref() else {
@@ -74,9 +74,12 @@ pub fn read_admission(
     run_id: &str,
     actor: &str,
     crypto: DurableCrypto<'_>,
-) -> Result<Option<medulla_types::work_item_read::RunWorkItemView>, String> {
-    use medulla_types::native_control::SubmitWorkItemRequest;
-    use medulla_types::work_item_read::{validate_work_item_get, RunWorkItemView, WorkItemView};
+) -> Result<Option<medulla_agent_types::work_item_read::RunWorkItemView>, String> {
+    use medulla_agent_types::native_control::SubmitWorkItemRequest;
+    use medulla_agent_types::{
+        work_item_read::validate_work_item_get, work_item_read::RunWorkItemView,
+        work_item_read::WorkItemView,
+    };
     validate_work_item_get(tenant, run_id)?;
     let id = work_item_id(graph, tenant, run_id)?;
     let handle = shard.graph(graph)?;
@@ -133,12 +136,13 @@ pub fn validate_completion_owner(
     if !owned(row, graph, tenant, run, id, actor) || work_item_id(graph, tenant, run)? != id {
         return Err("run completion owner mismatch".into());
     }
-    let admission: medulla_types::native_control::SubmitWorkItemRequest = serde_json::from_value(
-        row.get(ADMISSION_REQUEST)
-            .cloned()
-            .ok_or("missing run admission")?,
-    )
-    .map_err(|_| "invalid run admission")?;
+    let admission: medulla_agent_types::native_control::SubmitWorkItemRequest =
+        serde_json::from_value(
+            row.get(ADMISSION_REQUEST)
+                .cloned()
+                .ok_or("missing run admission")?,
+        )
+        .map_err(|_| "invalid run admission")?;
     if admission.run_id.as_deref() != Some(run)
         || admission.context.tenant_id != tenant
         || sanitize(&admission.context.graph) != graph
@@ -158,10 +162,10 @@ pub fn project_completion(
     status: &str,
     batch: &str,
     digest: &str,
-    receipt: &medulla_types::MutationBatchRecord,
-    records: &[medulla_types::MutationOutboxRecord],
-) -> Result<medulla_types::run_completion::CommittedRunCompletion, String> {
-    use medulla_types::run_completion::*;
+    receipt: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
+    records: &[medulla_mutation_types::mutation_scope::MutationOutboxRecord],
+) -> Result<medulla_agent_types::run_completion::CommittedRunCompletion, String> {
+    use medulla_agent_types::run_completion::*;
     let mut matching = records
         .iter()
         .filter(|r| r.intent.topic == RUN_COMPLETION_TOPIC);
@@ -195,7 +199,7 @@ pub fn project_completion(
 }
 
 fn validate_completion_payload(
-    payload: &medulla_types::run_completion::RunCompletionPayload,
+    payload: &medulla_agent_types::run_completion::RunCompletionPayload,
     tenant: &str,
     run: &str,
     id: &str,
@@ -216,14 +220,14 @@ fn validate_completion_payload(
 }
 
 fn validate_completion_event(
-    scope: &medulla_types::MutationScopeIdentity,
+    scope: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     batch: &str,
     digest: &str,
-    receipt: &medulla_types::MutationBatchRecord,
-    event: &medulla_types::MutationOutboxRecord,
+    receipt: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
+    event: &medulla_mutation_types::mutation_scope::MutationOutboxRecord,
 ) -> Result<(), String> {
     use sha2::{Digest, Sha256};
-    if event.schema_version != medulla_types::mutation_batch::MUTATION_BATCH_VERSION
+    if event.schema_version != medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION
         || &event.identity != scope
         || event.batch_id != batch
         || event.intent.key != batch
@@ -235,12 +239,12 @@ fn validate_completion_event(
 }
 
 fn validate_completion_ledger(
-    scope: &medulla_types::MutationScopeIdentity,
+    scope: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     batch: &str,
-    receipt: &medulla_types::MutationBatchRecord,
-    event: &medulla_types::MutationOutboxRecord,
+    receipt: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
+    event: &medulla_mutation_types::mutation_scope::MutationOutboxRecord,
 ) -> Result<(), String> {
-    if receipt.status != medulla_types::MutationBatchStatus::Committed
+    if receipt.status != medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed
         || &receipt.identity != scope
         || receipt.batch.batch_id != batch
         || receipt.batch.outbox.get(event.ordinal as usize) != Some(&event.intent)
@@ -258,11 +262,11 @@ pub(super) fn completion_from_snapshot(
     tenant: &str,
     run_id: &str,
     id: &str,
-) -> Result<Option<medulla_types::run_completion::CommittedRunCompletion>, String> {
+) -> Result<Option<medulla_agent_types::run_completion::CommittedRunCompletion>, String> {
     Ok(
         match (
-            row.get(medulla_types::run_completion::RUN_COMPLETION_BATCH),
-            row.get(medulla_types::run_completion::RUN_COMPLETION_DIGEST),
+            row.get(medulla_agent_types::run_completion::RUN_COMPLETION_BATCH),
+            row.get(medulla_agent_types::run_completion::RUN_COMPLETION_DIGEST),
         ) {
             (None, None) => None,
             (Some(batch), Some(digest)) => {

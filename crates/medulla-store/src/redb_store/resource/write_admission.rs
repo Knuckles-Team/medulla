@@ -36,8 +36,11 @@ pub(crate) struct ResourceReservationTables<'borrow, 'table, 'crypto> {
         (&'static str, &'static str),
         &'static [u8],
     >,
-    pub(crate) concurrency:
-        &'borrow mut medulla_storage::ScopedOwnerTableMut<'table, (&'static str, &'static str), u64>,
+    pub(crate) concurrency: &'borrow mut medulla_storage::ScopedOwnerTableMut<
+        'table,
+        (&'static str, &'static str),
+        u64,
+    >,
     pub(crate) anti_affinity: &'borrow mut medulla_storage::ScopedOwnerTableMut<
         'table,
         (&'static str, &'static str, &'static str),
@@ -59,7 +62,7 @@ pub(crate) struct ResourceReservationApplyRequest<'borrow, 'table, 'crypto> {
 
 pub(crate) fn apply_resource_reservation_rows(
     request: ResourceReservationApplyRequest<'_, '_, '_>,
-) -> Result<Option<medulla_types::protocol::ResultPayload>, String> {
+) -> Result<Option<medulla_protocol_types::protocol::ResultPayload>, String> {
     let ResourceReservationApplyRequest {
         graph,
         method,
@@ -72,7 +75,7 @@ fn apply_resource_reservation_operation(
     graph: &str,
     method: &Method,
     tables: &mut ResourceReservationTables<'_, '_, '_>,
-) -> Result<Option<medulla_types::protocol::ResultPayload>, String> {
+) -> Result<Option<medulla_protocol_types::protocol::ResultPayload>, String> {
     // CX-MEDULLA-05 (CCN 186 -> decomposed): the two match arms below are each a
     // literal, behaviour-preserving relocation of the original arm body into
     // its own named function (see immediately after this function).
@@ -85,8 +88,8 @@ fn apply_resource_reservation_operation(
             tables.crypto,
         )?
         .map(
-            medulla_types::protocol::ResultPayload::of::<
-                medulla_types::result_contract::coordination::UpdateResourceHost,
+            medulla_protocol_types::protocol::ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::UpdateResourceHost,
             >,
         )
         .transpose(),
@@ -106,16 +109,16 @@ fn apply_resource_reservation_operation(
 fn resource_reservation_payload(
     method: &Method,
     result: ResourceReservationResult,
-) -> Result<medulla_types::protocol::ResultPayload, String> {
+) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
     match method {
-        Method::ReserveWorkItemResources { .. } => medulla_types::protocol::ResultPayload::of::<
-            medulla_types::result_contract::coordination::ReserveWorkItemResources,
+        Method::ReserveWorkItemResources { .. } => medulla_protocol_types::protocol::ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::ReserveWorkItemResources,
         >(result),
-        Method::ReleaseWorkItemResources { .. } => medulla_types::protocol::ResultPayload::of::<
-            medulla_types::result_contract::coordination::ReleaseWorkItemResources,
+        Method::ReleaseWorkItemResources { .. } => medulla_protocol_types::protocol::ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::ReleaseWorkItemResources,
         >(result),
-        Method::ReclaimWorkItemResources { .. } => medulla_types::protocol::ResultPayload::of::<
-            medulla_types::result_contract::coordination::ReclaimWorkItemResources,
+        Method::ReclaimWorkItemResources { .. } => medulla_protocol_types::protocol::ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::ReclaimWorkItemResources,
         >(result),
         _ => Err("resource reservation result for a non-reservation method".to_string()),
     }

@@ -6,7 +6,7 @@ impl SemanticIndexService {
     /// and acknowledge through the existing durable consumer port.
     pub fn validate_stage_lease(
         &self,
-        lease: &medulla_types::mutation_batch::MutationOutboxLease,
+        lease: &medulla_mutation_types::mutation_scope::MutationOutboxLease,
         consumer: &str,
         now_ms: u64,
     ) -> Result<SemanticStageIntent, SemanticCodeError> {
@@ -30,7 +30,7 @@ impl SemanticIndexService {
     pub fn claim_stage_class(
         &self,
         worker: &str,
-        class: medulla_types::semantic_index::SemanticQueueClass,
+        class: medulla_index_types::semantic_index::SemanticQueueClass,
         budget: &mut OutboxClaimBudget,
     ) -> Result<OutboxClaimOutcome, SemanticCodeError> {
         self.store.claim_stage_class(worker, class, budget)

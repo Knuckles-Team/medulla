@@ -70,7 +70,7 @@ impl DispatchApi for DispatchSeam {
             (
                 u64,
                 medulla_types::contract::Digest256,
-                medulla_types::result_contract::cluster::RegisteredServerView,
+                medulla_protocol_types::result_contract::cluster::RegisteredServerView,
             ),
             String,
         >,
@@ -276,7 +276,7 @@ impl DispatchApi for DispatchSeam {
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         verified: VerifiedRequestContext,
-        request: medulla_types::native_control::SubmitWorkItemsRequest,
+        request: medulla_agent_types::native_control::SubmitWorkItemsRequest,
     ) -> SeamFuture<'a, Result<(), String>> {
         Box::pin(super::submit_repository_enrichment_page(
             state, verified, request,
@@ -288,14 +288,14 @@ impl DispatchApi for DispatchSeam {
         &'a self,
         persistence: &'a dyn medulla_server_api::api::persistence::PersistenceBackend,
         graph_fname: &'a str,
-        lease: &'a medulla_types::mutation_batch::MutationOutboxLease,
+        lease: &'a medulla_mutation_types::mutation_scope::MutationOutboxLease,
         committed_at_ms: u64,
     ) -> SeamFuture<
         'a,
         Result<
             (
                 crate::parser::enrichment_snapshot::EligibleSnapshot,
-                medulla_types::native_control::EnrichmentBudgetPark,
+                medulla_agent_types::native_control::EnrichmentBudgetPark,
             ),
             String,
         >,
@@ -317,7 +317,7 @@ impl DispatchApi for DispatchSeam {
     ))]
     fn decode_pending_enrichment_intent(
         &self,
-        intent: &medulla_types::mutation_batch::MutationOutboxIntent,
+        intent: &medulla_mutation_types::mutation_scope::MutationOutboxIntent,
     ) -> Result<crate::parser::enrichment_snapshot::EligibleSnapshot, String> {
         super::graph_pipeline::decode_pending_enrichment_intent(intent)
     }
@@ -332,7 +332,7 @@ impl DispatchApi for DispatchSeam {
     fn enrichment_intent_for_snapshot(
         &self,
         snapshot: crate::parser::enrichment_snapshot::EligibleSnapshot,
-    ) -> Result<medulla_types::mutation_batch::MutationOutboxIntent, String> {
+    ) -> Result<medulla_mutation_types::mutation_scope::MutationOutboxIntent, String> {
         super::graph_pipeline::enrichment_intent_for_snapshot(snapshot)
     }
 

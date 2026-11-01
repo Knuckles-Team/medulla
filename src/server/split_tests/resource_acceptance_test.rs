@@ -553,41 +553,41 @@ fn signed_request_as(request_id: u64, agent_id: &str, method: Method) -> Request
 }
 
 #[cfg(feature = "redb")]
-fn delegation_library_draft() -> medulla_types::AgentLibraryEntryDraft {
+fn delegation_library_draft() -> medulla_agent_types::agent_library::AgentLibraryEntryDraft {
     let prefixed = |seed: char| format!("sha256:{}", seed.to_string().repeat(64));
     let policy_digest =
         medulla_persistence::agent_library::current_agent_library_policy_digest()
             .expect("Agent Library policy digest");
-    medulla_types::AgentLibraryEntryDraft {
+    medulla_agent_types::agent_library::AgentLibraryEntryDraft {
         agent_id: DELEGATE_AGENT.to_string(),
         package_id: "rmdd27-delegate-package".to_string(),
         version: "1.0.0".to_string(),
         role: "worker".to_string(),
         role_digest: prefixed('1'),
-        system_prompt: medulla_types::agent_component::ComponentDependency {
+        system_prompt: medulla_agent_types::agent_component::ComponentDependency {
             component_id: "cas:rmdd27-delegate-prompt".to_string(),
-            kind: medulla_types::agent_component::AgentComponentKind::SystemPrompt,
+            kind: medulla_agent_types::agent_component::AgentComponentKind::SystemPrompt,
             definition_digest: prefixed('2'),
         },
-        tools: vec![medulla_types::agent_component::ComponentDependency {
+        tools: vec![medulla_agent_types::agent_component::ComponentDependency {
             component_id: "tool:rmdd27-search".to_string(),
-            kind: medulla_types::agent_component::AgentComponentKind::Tool,
+            kind: medulla_agent_types::agent_component::AgentComponentKind::Tool,
             definition_digest: prefixed('3'),
         }],
-        skills: vec![medulla_types::agent_component::ComponentDependency {
+        skills: vec![medulla_agent_types::agent_component::ComponentDependency {
             component_id: "skill:rmdd27-delegate".to_string(),
-            kind: medulla_types::agent_component::AgentComponentKind::Skill,
+            kind: medulla_agent_types::agent_component::AgentComponentKind::Skill,
             definition_digest: prefixed('4'),
         }],
-        model_profile: medulla_types::agent_component::ComponentDependency {
+        model_profile: medulla_agent_types::agent_component::ComponentDependency {
             component_id: "model-profile:rmdd27".to_string(),
-            kind: medulla_types::agent_component::AgentComponentKind::ModelProfile,
+            kind: medulla_agent_types::agent_component::AgentComponentKind::ModelProfile,
             definition_digest: prefixed('5'),
         },
         model_identity: "model:rmdd27".to_string(),
-        ontologies: vec![medulla_types::agent_component::ComponentDependency {
+        ontologies: vec![medulla_agent_types::agent_component::ComponentDependency {
             component_id: "ontology:rmdd27".to_string(),
-            kind: medulla_types::agent_component::AgentComponentKind::Ontology,
+            kind: medulla_agent_types::agent_component::AgentComponentKind::Ontology,
             definition_digest: prefixed('6'),
         }],
         tenant_id: TENANT.to_string(),
@@ -602,12 +602,14 @@ fn delegation_library_draft() -> medulla_types::AgentLibraryEntryDraft {
 }
 
 #[cfg(feature = "redb")]
-async fn seed_delegation_library(cluster: &Cluster) -> medulla_types::AgentLibraryEntry {
+async fn seed_delegation_library(
+    cluster: &Cluster,
+) -> medulla_agent_types::agent_library::AgentLibraryEntry {
     let mut draft = delegation_library_draft();
     let policy_digest = draft.policy_digest.clone();
     let caller_principal = medulla_server_api::mutation_batch::principal_fingerprint(AUTH_AGENT)
         .expect("harness caller principal fingerprint");
-    let mut retained: Option<medulla_types::AgentLibraryEntry> = None;
+    let mut retained: Option<medulla_agent_types::agent_library::AgentLibraryEntry> = None;
     for node_id in cluster.all_ids() {
         let state = state_for(cluster, node_id);
         let store = state
@@ -620,7 +622,7 @@ async fn seed_delegation_library(cluster: &Cluster) -> medulla_types::AgentLibra
         medulla_persistence::agent_component::seed_draft_components_for_test(
             &store, &mut draft, 1,
         );
-        let context = medulla_types::AgentLibraryMutationContext {
+        let context = medulla_agent_types::agent_library::AgentLibraryMutationContext {
             request_id: 10_000 + node_id,
             principal: store.owner_principal().to_string(),
             caller_principal: caller_principal.clone(),
@@ -637,10 +639,12 @@ async fn seed_delegation_library(cluster: &Cluster) -> medulla_types::AgentLibra
             created_at_ms: 1,
         };
         let result = store
-            .publish(medulla_types::AgentLibraryPublishRequest {
-                context,
-                entry: draft.clone(),
-            })
+            .publish(
+                medulla_agent_types::agent_library::AgentLibraryPublishRequest {
+                    context,
+                    entry: draft.clone(),
+                },
+            )
             .expect("publish selected Agent Library revision");
         if let Some(previous) = retained.as_ref() {
             // Every node publishes the SAME definition, so every node's pins --
@@ -685,7 +689,7 @@ async fn seed_delegation_library(cluster: &Cluster) -> medulla_types::AgentLibra
 #[cfg(feature = "redb")]
 async fn advance_delegation_library(
     cluster: &Cluster,
-    retained: &medulla_types::AgentLibraryEntry,
+    retained: &medulla_agent_types::agent_library::AgentLibraryEntry,
 ) {
     let mut draft = retained.as_draft();
     draft.version = "2.0.0".to_string();
@@ -703,27 +707,29 @@ async fn advance_delegation_library(
             .ensure_agent_library()
             .expect("open Agent Library owner for revision advance");
         let result = store
-            .publish(medulla_types::AgentLibraryPublishRequest {
-                context: medulla_types::AgentLibraryMutationContext {
-                    request_id: 11_000 + node_id,
-                    principal: store.owner_principal().to_string(),
-                    caller_principal: caller_principal.clone(),
-                    attempt_nonce: medulla_types::contract::Nonce::from_bytes(
-                        [100 + node_id as u8; 32],
-                    ),
-                    tenant_id: TENANT.to_string(),
-                    actor_scope: "delegate:builder".to_string(),
-                    purpose_id: "agent-library:publish".to_string(),
-                    policy_revision: "policy-test".to_string(),
-                    policy_digest: policy_digest.clone(),
-                    policy_decision_id: format!("rmdd27-delegate-policy-advance-{node_id}"),
-                    idempotency_key: format!("rmdd27-delegate-library-advance-{node_id}"),
-                    expected_revision: Some(retained.entry_revision),
-                    trace_id: Some(format!("rmdd27-delegate-library-advance-trace-{node_id}")),
-                    created_at_ms: 2,
+            .publish(
+                medulla_agent_types::agent_library::AgentLibraryPublishRequest {
+                    context: medulla_agent_types::agent_library::AgentLibraryMutationContext {
+                        request_id: 11_000 + node_id,
+                        principal: store.owner_principal().to_string(),
+                        caller_principal: caller_principal.clone(),
+                        attempt_nonce: medulla_types::contract::Nonce::from_bytes(
+                            [100 + node_id as u8; 32],
+                        ),
+                        tenant_id: TENANT.to_string(),
+                        actor_scope: "delegate:builder".to_string(),
+                        purpose_id: "agent-library:publish".to_string(),
+                        policy_revision: "policy-test".to_string(),
+                        policy_digest: policy_digest.clone(),
+                        policy_decision_id: format!("rmdd27-delegate-policy-advance-{node_id}"),
+                        idempotency_key: format!("rmdd27-delegate-library-advance-{node_id}"),
+                        expected_revision: Some(retained.entry_revision),
+                        trace_id: Some(format!("rmdd27-delegate-library-advance-trace-{node_id}")),
+                        created_at_ms: 2,
+                    },
+                    entry: draft.clone(),
                 },
-                entry: draft.clone(),
-            })
+            )
             .expect("publish next retained Agent Library revision");
         assert_eq!(result.entry.entry_revision, retained.entry_revision + 1);
         assert_ne!(result.entry.definition_digest, retained.definition_digest);
@@ -731,7 +737,10 @@ async fn advance_delegation_library(
 }
 
 #[cfg(feature = "redb")]
-async fn retire_delegation_library(cluster: &Cluster, retained: &medulla_types::AgentLibraryEntry) {
+async fn retire_delegation_library(
+    cluster: &Cluster,
+    retained: &medulla_agent_types::agent_library::AgentLibraryEntry,
+) {
     let policy_digest =
         medulla_persistence::agent_library::current_agent_library_policy_digest()
             .expect("Agent Library policy digest for retirement");
@@ -746,27 +755,29 @@ async fn retire_delegation_library(cluster: &Cluster, retained: &medulla_types::
             .ensure_agent_library()
             .expect("open Agent Library owner for retirement");
         let result = store
-            .retire(medulla_types::AgentLibraryRetireRequest {
-                context: medulla_types::AgentLibraryMutationContext {
-                    request_id: 12_000 + node_id,
-                    principal: store.owner_principal().to_string(),
-                    caller_principal: caller_principal.clone(),
-                    attempt_nonce: medulla_types::contract::Nonce::from_bytes(
-                        [150 + node_id as u8; 32],
-                    ),
-                    tenant_id: TENANT.to_string(),
-                    actor_scope: "delegate:builder".to_string(),
-                    purpose_id: "agent-library:retire".to_string(),
-                    policy_revision: "policy-test".to_string(),
-                    policy_digest: policy_digest.clone(),
-                    policy_decision_id: format!("rmdd27-delegate-policy-retire-{node_id}"),
-                    idempotency_key: format!("rmdd27-delegate-library-retire-{node_id}"),
-                    expected_revision: Some(expected_revision),
-                    trace_id: Some(format!("rmdd27-delegate-library-retire-trace-{node_id}")),
-                    created_at_ms: 3,
+            .retire(
+                medulla_agent_types::agent_library::AgentLibraryRetireRequest {
+                    context: medulla_agent_types::agent_library::AgentLibraryMutationContext {
+                        request_id: 12_000 + node_id,
+                        principal: store.owner_principal().to_string(),
+                        caller_principal: caller_principal.clone(),
+                        attempt_nonce: medulla_types::contract::Nonce::from_bytes(
+                            [150 + node_id as u8; 32],
+                        ),
+                        tenant_id: TENANT.to_string(),
+                        actor_scope: "delegate:builder".to_string(),
+                        purpose_id: "agent-library:retire".to_string(),
+                        policy_revision: "policy-test".to_string(),
+                        policy_digest: policy_digest.clone(),
+                        policy_decision_id: format!("rmdd27-delegate-policy-retire-{node_id}"),
+                        idempotency_key: format!("rmdd27-delegate-library-retire-{node_id}"),
+                        expected_revision: Some(expected_revision),
+                        trace_id: Some(format!("rmdd27-delegate-library-retire-trace-{node_id}")),
+                        created_at_ms: 3,
+                    },
+                    agent_id: retained.agent_id.clone(),
                 },
-                agent_id: retained.agent_id.clone(),
-            })
+            )
             .expect("retire selected Agent Library head");
         assert!(result.entry.is_retired());
         assert_eq!(result.entry.entry_revision, expected_revision + 1);
@@ -774,10 +785,10 @@ async fn retire_delegation_library(cluster: &Cluster, retained: &medulla_types::
 }
 
 #[cfg(feature = "redb")]
-fn delegation_method(entry: &medulla_types::AgentLibraryEntry) -> Method {
+fn delegation_method(entry: &medulla_agent_types::agent_library::AgentLibraryEntry) -> Method {
     let now_ms = unix_ms();
-    let context = medulla_types::epistemic_operations::RequestContext {
-        schema_version: medulla_types::epistemic_operations::RequestContextSchemaVersion::V2,
+    let context = medulla_result_types::epistemic_operations::RequestContext {
+        schema_version: medulla_result_types::epistemic_operations::RequestContextSchemaVersion::V2,
         request_id: "rmdd27-delegate-context-request".to_string(),
         subject_id: AUTH_AGENT.to_string(),
         tenant_id: TENANT.to_string(),
@@ -785,7 +796,7 @@ fn delegation_method(entry: &medulla_types::AgentLibraryEntry) -> Method {
         scopes: vec!["work:delegate".to_string()],
         audience: "medulla-test".to_string(),
         authentication_method:
-            medulla_types::epistemic_operations::RequestContextAuthenticationMethod::LocalProcess,
+            medulla_result_types::epistemic_operations::RequestContextAuthenticationMethod::LocalProcess,
         policy_version: "policy-test".to_string(),
         graph: GRAPH.to_string(),
         placement_epoch: None,
@@ -800,14 +811,14 @@ fn delegation_method(entry: &medulla_types::AgentLibraryEntry) -> Method {
             .to_string()
     };
     Method::KgDelegate {
-        request: Box::new(medulla_types::KgDelegateRequest {
-            schema_version: medulla_types::KgDelegateSchemaVersion::V2,
+        request: Box::new(medulla_agent_types::delegation::KgDelegateRequest {
+            schema_version: medulla_agent_types::delegation::KgDelegateSchemaVersion::V2,
             context,
             delegation_id: "rmdd27-delegation".to_string(),
             run_id: "rmdd27-run".to_string(),
             trace_id: "rmdd27-trace".to_string(),
-            target: medulla_types::delegation::DelegationTarget::Agent {
-                entry: medulla_types::AgentLibraryEntryRef::from_entry(entry),
+            target: medulla_agent_types::delegation::DelegationTarget::Agent {
+                entry: medulla_agent_types::delegation::AgentLibraryEntryRef::from_entry(entry),
             },
             input_ref: "cas:rmdd27-delegate-input".to_string(),
             command_digest: IMMUTABLE_DIGEST.to_string(),
@@ -830,7 +841,7 @@ fn delegation_method(entry: &medulla_types::AgentLibraryEntry) -> Method {
 
 #[cfg(feature = "redb")]
 fn replayable_delegation_method(
-    entry: &medulla_types::AgentLibraryEntry,
+    entry: &medulla_agent_types::agent_library::AgentLibraryEntry,
     deadline_unix: Option<f64>,
 ) -> Method {
     let mut method = delegation_method(entry);
@@ -843,7 +854,7 @@ fn replayable_delegation_method(
 #[cfg(feature = "redb")]
 fn decode_delegation_result(
     response: crate::protocol::Response,
-) -> medulla_types::KgDelegateResult {
+) -> medulla_agent_types::delegation::KgDelegateResult {
     assert!(response.error.is_none(), "delegation failed: {response:?}");
     let payload = response.result.expect("delegation result");
     let bytes = match payload {
@@ -864,37 +875,37 @@ fn decode_delegation_result(
 #[cfg(feature = "redb")]
 fn restart_delegate_draft(
     digest: &dyn Fn(char) -> String,
-) -> medulla_types::AgentLibraryEntryDraft {
-    medulla_types::AgentLibraryEntryDraft {
+) -> medulla_agent_types::agent_library::AgentLibraryEntryDraft {
+    medulla_agent_types::agent_library::AgentLibraryEntryDraft {
         agent_id: "rmdd27-selected-agent".to_string(),
         package_id: "rmdd27-agent-package".to_string(),
         version: "1.0.0".to_string(),
         role: "worker".to_string(),
         role_digest: digest('a'),
-        system_prompt: medulla_types::agent_component::ComponentDependency {
+        system_prompt: medulla_agent_types::agent_component::ComponentDependency {
             component_id: "prompt:rmdd27-agent-v1".to_string(),
-            kind: medulla_types::agent_component::AgentComponentKind::SystemPrompt,
+            kind: medulla_agent_types::agent_component::AgentComponentKind::SystemPrompt,
             definition_digest: digest('b'),
         },
-        tools: vec![medulla_types::agent_component::ComponentDependency {
+        tools: vec![medulla_agent_types::agent_component::ComponentDependency {
             component_id: "tool:rmdd27-search".to_string(),
-            kind: medulla_types::agent_component::AgentComponentKind::Tool,
+            kind: medulla_agent_types::agent_component::AgentComponentKind::Tool,
             definition_digest: digest('c'),
         }],
-        skills: vec![medulla_types::agent_component::ComponentDependency {
+        skills: vec![medulla_agent_types::agent_component::ComponentDependency {
             component_id: "skill:rmdd27-reason".to_string(),
-            kind: medulla_types::agent_component::AgentComponentKind::Skill,
+            kind: medulla_agent_types::agent_component::AgentComponentKind::Skill,
             definition_digest: digest('d'),
         }],
-        model_profile: medulla_types::agent_component::ComponentDependency {
+        model_profile: medulla_agent_types::agent_component::ComponentDependency {
             component_id: "model-profile:rmdd27-default".to_string(),
-            kind: medulla_types::agent_component::AgentComponentKind::ModelProfile,
+            kind: medulla_agent_types::agent_component::AgentComponentKind::ModelProfile,
             definition_digest: digest('e'),
         },
         model_identity: "model:rmdd27-default".to_string(),
-        ontologies: vec![medulla_types::agent_component::ComponentDependency {
+        ontologies: vec![medulla_agent_types::agent_component::ComponentDependency {
             component_id: "ontology:rmdd27-core".to_string(),
-            kind: medulla_types::agent_component::AgentComponentKind::Ontology,
+            kind: medulla_agent_types::agent_component::AgentComponentKind::Ontology,
             definition_digest: digest('f'),
         }],
         tenant_id: TENANT.to_string(),
@@ -909,8 +920,10 @@ fn restart_delegate_draft(
 }
 
 #[cfg(feature = "redb")]
-fn seed_restart_delegate_entry(persist_dir: &str) -> medulla_types::AgentLibraryEntry {
-    use medulla_types::agent_library::AgentLibraryMutationContext;
+fn seed_restart_delegate_entry(
+    persist_dir: &str,
+) -> medulla_agent_types::agent_library::AgentLibraryEntry {
+    use medulla_agent_types::agent_library::AgentLibraryMutationContext;
     use medulla_types::contract::Nonce;
 
     let digest = |seed: char| format!("sha256:{}", seed.to_string().repeat(64));
@@ -926,25 +939,27 @@ fn seed_restart_delegate_entry(persist_dir: &str) -> medulla_types::AgentLibrary
         20,
     );
     let entry = store
-        .publish(medulla_types::AgentLibraryPublishRequest {
-            context: AgentLibraryMutationContext {
-                request_id: 90_001,
-                principal: store.owner_principal().to_string(),
-                caller_principal: format!("principal:sha256:{}", "a".repeat(64)),
-                attempt_nonce: Nonce::from_bytes([0x91; 32]),
-                tenant_id: TENANT.to_string(),
-                actor_scope: "action-scope:agent-library-publish".to_string(),
-                purpose_id: "agent-library:publish".to_string(),
-                policy_revision: "policy-test".to_string(),
-                policy_digest,
-                policy_decision_id: "rmdd27-agent-library-publish".to_string(),
-                idempotency_key: "rmdd27-agent-library-publish".to_string(),
-                expected_revision: Some(0),
-                trace_id: Some("rmdd27-agent-library-publish-trace".to_string()),
-                created_at_ms: unix_ms(),
+        .publish(
+            medulla_agent_types::agent_library::AgentLibraryPublishRequest {
+                context: AgentLibraryMutationContext {
+                    request_id: 90_001,
+                    principal: store.owner_principal().to_string(),
+                    caller_principal: format!("principal:sha256:{}", "a".repeat(64)),
+                    attempt_nonce: Nonce::from_bytes([0x91; 32]),
+                    tenant_id: TENANT.to_string(),
+                    actor_scope: "action-scope:agent-library-publish".to_string(),
+                    purpose_id: "agent-library:publish".to_string(),
+                    policy_revision: "policy-test".to_string(),
+                    policy_digest,
+                    policy_decision_id: "rmdd27-agent-library-publish".to_string(),
+                    idempotency_key: "rmdd27-agent-library-publish".to_string(),
+                    expected_revision: Some(0),
+                    trace_id: Some("rmdd27-agent-library-publish-trace".to_string()),
+                    created_at_ms: unix_ms(),
+                },
+                entry: entry_draft,
             },
-            entry: entry_draft,
-        })
+        )
         .expect("publish retained Agent Library definition")
         .entry;
     drop(store);
@@ -952,16 +967,18 @@ fn seed_restart_delegate_entry(persist_dir: &str) -> medulla_types::AgentLibrary
 }
 
 #[cfg(feature = "redb")]
-fn restart_delegate_method(entry: &medulla_types::AgentLibraryEntry) -> Method {
+fn restart_delegate_method(
+    entry: &medulla_agent_types::agent_library::AgentLibraryEntry,
+) -> Method {
     let raw_digest = |seed: char| seed.to_string().repeat(64);
     let now_ms = unix_ms();
-    let agent_entry = medulla_types::AgentLibraryEntryRef::from_entry(entry);
+    let agent_entry = medulla_agent_types::delegation::AgentLibraryEntryRef::from_entry(entry);
     let unprefixed = |digest: &str| digest.strip_prefix("sha256:").unwrap().to_string();
     Method::KgDelegate {
-        request: Box::new(medulla_types::KgDelegateRequest {
-            schema_version: medulla_types::KgDelegateSchemaVersion::V2,
-            context: medulla_types::epistemic_operations::RequestContext {
-                schema_version: medulla_types::epistemic_operations::RequestContextSchemaVersion::V2,
+        request: Box::new(medulla_agent_types::delegation::KgDelegateRequest {
+            schema_version: medulla_agent_types::delegation::KgDelegateSchemaVersion::V2,
+            context: medulla_result_types::epistemic_operations::RequestContext {
+                schema_version: medulla_result_types::epistemic_operations::RequestContextSchemaVersion::V2,
                 request_id: "rmdd27-restart-delegate-request".to_string(),
                 subject_id: "rmdd27-restart-delegate-subject".to_string(),
                 tenant_id: TENANT.to_string(),
@@ -969,7 +986,7 @@ fn restart_delegate_method(entry: &medulla_types::AgentLibraryEntry) -> Method {
                 scopes: vec!["work:delegate".to_string()],
                 audience: "medulla-test".to_string(),
                 authentication_method:
-                    medulla_types::epistemic_operations::RequestContextAuthenticationMethod::LocalProcess,
+                    medulla_result_types::epistemic_operations::RequestContextAuthenticationMethod::LocalProcess,
                 policy_version: "policy-test".to_string(),
                 graph: GRAPH.to_string(),
                 placement_epoch: None,
@@ -980,7 +997,7 @@ fn restart_delegate_method(entry: &medulla_types::AgentLibraryEntry) -> Method {
             delegation_id: "rmdd27-restart-delegation".to_string(),
             run_id: "rmdd27-restart-run".to_string(),
             trace_id: "rmdd27-restart-trace".to_string(),
-            target: medulla_types::delegation::DelegationTarget::Agent { entry: agent_entry },
+            target: medulla_agent_types::delegation::DelegationTarget::Agent { entry: agent_entry },
             input_ref: "cas:rmdd27-restart-input".to_string(),
             command_digest: raw_digest('2'),
             capability_digest: unprefixed(&entry.tool_surface_digest()),
@@ -1006,10 +1023,10 @@ fn missing_authority_delegate_method() -> Method {
     let prefixed_digest = |seed: char| format!("sha256:{}", raw_digest(seed));
     let now_ms = unix_ms();
     Method::KgDelegate {
-        request: Box::new(medulla_types::KgDelegateRequest {
-            schema_version: medulla_types::KgDelegateSchemaVersion::V2,
-            context: medulla_types::epistemic_operations::RequestContext {
-                schema_version: medulla_types::epistemic_operations::RequestContextSchemaVersion::V2,
+        request: Box::new(medulla_agent_types::delegation::KgDelegateRequest {
+            schema_version: medulla_agent_types::delegation::KgDelegateSchemaVersion::V2,
+            context: medulla_result_types::epistemic_operations::RequestContext {
+                schema_version: medulla_result_types::epistemic_operations::RequestContextSchemaVersion::V2,
                 request_id: "rmdd27-missing-authority-request".to_string(),
                 subject_id: "rmdd27-missing-authority-subject".to_string(),
                 tenant_id: TENANT.to_string(),
@@ -1017,7 +1034,7 @@ fn missing_authority_delegate_method() -> Method {
                 scopes: vec!["work:delegate".to_string()],
                 audience: "medulla-test".to_string(),
                 authentication_method:
-                    medulla_types::epistemic_operations::RequestContextAuthenticationMethod::LocalProcess,
+                    medulla_result_types::epistemic_operations::RequestContextAuthenticationMethod::LocalProcess,
                 policy_version: "policy-test".to_string(),
                 graph: GRAPH.to_string(),
                 placement_epoch: None,
@@ -1028,8 +1045,8 @@ fn missing_authority_delegate_method() -> Method {
             delegation_id: "rmdd27-missing-authority-delegation".to_string(),
             run_id: "rmdd27-missing-authority-run".to_string(),
             trace_id: "rmdd27-missing-authority-trace".to_string(),
-            target: medulla_types::delegation::DelegationTarget::Agent {
-                entry: medulla_types::AgentLibraryEntryRef {
+            target: medulla_agent_types::delegation::DelegationTarget::Agent {
+                entry: medulla_agent_types::delegation::AgentLibraryEntryRef {
                     tenant_id: TENANT.to_string(),
                     agent_id: "rmdd27-selected-agent".to_string(),
                     entry_revision: 1,
@@ -1114,7 +1131,11 @@ async fn ensure_commons_graph(cluster: &Cluster) {
             .clone()
             .expect("cluster member has persistence");
         backend
-            .register_graph(&medulla_kernel::persist::sanitize(GRAPH), GRAPH, GraphType::Commons)
+            .register_graph(
+                &medulla_kernel::persist::sanitize(GRAPH),
+                GRAPH,
+                GraphType::Commons,
+            )
             .await
             .expect("persist commons graph identity");
         let durable_version = backend
@@ -2340,7 +2361,7 @@ async fn kg_delegate_public_dispatch_replicates_and_replays_after_failover_scena
     );
     assert_eq!(
         accepted.decision,
-        medulla_types::KgDelegateDecision::Accepted
+        medulla_agent_types::delegation::KgDelegateDecision::Accepted
     );
     assert_eq!(accepted.work_item_id, DELEGATE_WORK_ITEM);
 
@@ -2362,7 +2383,7 @@ async fn kg_delegate_public_dispatch_replicates_and_replays_after_failover_scena
     );
     assert_eq!(
         native_replay.decision,
-        medulla_types::KgDelegateDecision::Replayed
+        medulla_agent_types::delegation::KgDelegateDecision::Replayed
     );
     let nonce_replay = dispatch_bounded(&state_for(&cluster, leader), same_envelope).await;
     let refusal = nonce_replay
@@ -2479,7 +2500,7 @@ async fn kg_delegate_public_dispatch_replicates_and_replays_after_failover_scena
     );
     assert_eq!(
         replayed.decision,
-        medulla_types::KgDelegateDecision::Replayed
+        medulla_agent_types::delegation::KgDelegateDecision::Replayed
     );
     assert_eq!(replayed.work_item_id, accepted.work_item_id);
     assert_eq!(replayed.outbox_id, accepted.outbox_id);
@@ -2524,7 +2545,7 @@ async fn kg_delegate_public_dispatch_replicates_and_replays_after_failover_scena
     );
     assert_eq!(
         reopened.decision,
-        medulla_types::KgDelegateDecision::Replayed
+        medulla_agent_types::delegation::KgDelegateDecision::Replayed
     );
     assert_eq!(reopened.work_item_id, accepted.work_item_id);
     assert_eq!(reopened.outbox_id, accepted.outbox_id);
@@ -2554,7 +2575,7 @@ async fn kg_delegate_public_dispatch_replicates_and_replays_after_failover_scena
         medulla_types::msgpack::MsgpackLimits::new(64 * 1024, 10_000, 32),
     )
     .expect("decode reopened native result envelope");
-    let native: medulla_types::native_control::SubmitWorkItemResult = match native_payload {
+    let native: medulla_agent_types::native_control::SubmitWorkItemResult = match native_payload {
         ResultPayload::Raw(bytes) => medulla_types::msgpack::decode_bounded(
             &bytes,
             medulla_types::msgpack::MsgpackLimits::new(64 * 1024, 10_000, 32),
@@ -2649,16 +2670,17 @@ async fn kg_delegate_public_dispatch_first_request_after_restart_scenario() {
         .await
         .expect("restarted single-node cluster elects a leader");
     let response = dispatch_method(&cluster, leader, 1, restart_delegate_method(&entry)).await;
-    let result: medulla_types::KgDelegateResult = decode_raw(response, "KgDelegate after restart");
+    let result: medulla_agent_types::delegation::KgDelegateResult =
+        decode_raw(response, "KgDelegate after restart");
     assert_eq!(
         result.decision,
-        medulla_types::KgDelegateDecision::Accepted,
+        medulla_agent_types::delegation::KgDelegateDecision::Accepted,
         "first post-restart delegation must commit through native admission"
     );
     assert_eq!(
         result.target,
-        medulla_types::delegation::DelegationTarget::Agent {
-            entry: medulla_types::AgentLibraryEntryRef::from_entry(&entry),
+        medulla_agent_types::delegation::DelegationTarget::Agent {
+            entry: medulla_agent_types::delegation::AgentLibraryEntryRef::from_entry(&entry),
         }
     );
     assert!(

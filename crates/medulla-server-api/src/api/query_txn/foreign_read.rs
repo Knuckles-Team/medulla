@@ -14,13 +14,15 @@ use std::sync::{Arc, Mutex, Weak};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use dashmap::DashMap;
-use medulla_types::connector_pack::ConnectorPackSourceApprovalResult;
-use medulla_types::contract::Digest256;
-use medulla_types::foreign_read::{
-    ForeignReadAbortRequest, ForeignReadAbortResult, ForeignReadChunkRequest,
-    ForeignReadChunkResult, ForeignReadCompleteRequest, ForeignReadCompleteResult,
-    ForeignReadExecutionRef, ForeignReadLimits, ForeignReadRow, ForeignReadSourceIdentity,
+use medulla_catalog_types::connector_pack::ConnectorPackSourceApprovalResult;
+use medulla_catalog_types::{
+    foreign_read::ForeignReadAbortRequest, foreign_read::ForeignReadAbortResult,
+    foreign_read::ForeignReadChunkRequest, foreign_read::ForeignReadChunkResult,
+    foreign_read::ForeignReadCompleteRequest, foreign_read::ForeignReadCompleteResult,
+    foreign_read::ForeignReadExecutionRef, foreign_read::ForeignReadLimits,
+    foreign_read::ForeignReadRow, foreign_read::ForeignReadSourceIdentity,
 };
+use medulla_types::contract::Digest256;
 
 use super::foreign_catalog::{ForeignSourceCatalog, OwnedForeignRegistry};
 use medulla_core::isolation::IsolationLayer;
@@ -766,7 +768,7 @@ mod tests {
     use medulla_types::acl::RequestContextClaims;
     use crate::api::query_txn::query_support::canonical_plan_digest;
     use crate::auth::VerifiedRequestContext;
-    use medulla_types::connector_pack::{
+    use medulla_catalog_types::connector_pack::{
         PackHeadRef, PackSourceApproval, PackSourceKind, PackSourceRegistration,
         CONNECTOR_PACK_SCHEMA_VERSION,
     };

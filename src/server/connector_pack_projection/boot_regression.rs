@@ -36,15 +36,20 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use medulla_types::connector_pack::{
-    ConnectorPackImportRequest, ConnectorPackIndex, ConnectorPackOp, McpCatalogSnapshotBinding,
-    PackAnnotations, PackArchiveRef, PackEntry, PackEntryKind, PackHeadRef, PackImportResult,
-    PackProducer, PackSection, CONNECTOR_PACK_SCHEMA_VERSION,
+use medulla_catalog_types::{
+    connector_pack::ConnectorPackImportRequest, connector_pack::ConnectorPackIndex,
+    connector_pack::ConnectorPackOp, connector_pack::McpCatalogSnapshotBinding,
+    connector_pack::PackAnnotations, connector_pack::PackArchiveRef, connector_pack::PackEntry,
+    connector_pack::PackEntryKind, connector_pack::PackHeadRef, connector_pack::PackImportResult,
+    connector_pack::PackProducer, connector_pack::PackSection,
+    connector_pack::CONNECTOR_PACK_SCHEMA_VERSION,
+};
+use medulla_mutation_types::{
+    mutation_outbox::MutationOutboxOp, mutation_outbox::MutationOutboxStatusView,
+    mutation_outbox::NativeOutboxScope, mutation_outbox::NativeOutboxStore,
+    mutation_outbox::OutboxTarget,
 };
 use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
-use medulla_types::mutation_outbox::{
-    MutationOutboxOp, MutationOutboxStatusView, NativeOutboxScope, NativeOutboxStore, OutboxTarget,
-};
 use serde::de::DeserializeOwned;
 use sha2::{Digest, Sha256};
 use tokio::sync::RwLock;
@@ -122,8 +127,8 @@ fn ok<T: DeserializeOwned>(label: &str, response: Response) -> T {
 }
 
 /// A request-body context shell; the engine re-binds every field of it.
-fn context(key: &str) -> medulla_types::agent_library::AgentLibraryMutationContext {
-    medulla_types::agent_library::AgentLibraryMutationContext {
+fn context(key: &str) -> medulla_agent_types::agent_library::AgentLibraryMutationContext {
+    medulla_agent_types::agent_library::AgentLibraryMutationContext {
         request_id: 1,
         principal: "bound-by-engine".to_string(),
         caller_principal: "bound-by-engine".to_string(),
@@ -223,7 +228,7 @@ fn build_pack(connector: &str, row: usize, ontology: &[u8]) -> (ConnectorPackInd
         },
         pack_digest: Digest256::from_bytes([0; 32]),
     };
-    index.pack_digest = medulla_types::connector_pack::digest::pack_digest(&index).unwrap();
+    index.pack_digest = medulla_catalog_types::connector_pack::digest::pack_digest(&index).unwrap();
     (index, archive)
 }
 
@@ -275,7 +280,7 @@ async fn bind(state: &Arc<RwLock<ServerState>>) {
             &key,
             Method::ConnectorPack {
                 op: Box::new(ConnectorPackOp::Bind {
-                    request: medulla_types::connector_pack::ConnectorPackBindRequest {
+                    request: medulla_catalog_types::connector_pack::ConnectorPackBindRequest {
                         context: context(&key),
                         connector: ResourceId::new(CONNECTOR).unwrap(),
                         importer: format!(

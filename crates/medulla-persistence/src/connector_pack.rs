@@ -10,11 +10,12 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use medulla_types::agent_library::AgentLibraryLifecycle;
-use medulla_types::connector_pack::{
-    ConnectorPackStatus, ConnectorRelationshipMapping, ConnectorSchemaMapping,
-    McpCatalogSnapshotBinding, PackEntryKind, PackHeadView, PackImportReceipt, PackMemberCounts,
-    PackProjectionState,
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
+use medulla_catalog_types::{
+    connector_pack::ConnectorPackStatus, connector_pack::ConnectorRelationshipMapping,
+    connector_pack::ConnectorSchemaMapping, connector_pack::McpCatalogSnapshotBinding,
+    connector_pack::PackEntryKind, connector_pack::PackHeadView, connector_pack::PackImportReceipt,
+    connector_pack::PackMemberCounts, connector_pack::PackProjectionState,
 };
 use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
 
@@ -70,7 +71,7 @@ pub struct ConnectorPackMemberRow {
     pub relationship_mappings: Option<BTreeMap<String, ConnectorRelationshipMapping>>,
     /// Authoritative live-read claims; old rows contain none and stay unbound.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub source_registrations: Vec<medulla_types::connector_pack::PackSourceRegistration>,
+    pub source_registrations: Vec<medulla_catalog_types::connector_pack::PackSourceRegistration>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -152,7 +153,7 @@ impl AgentLibraryStore {
         tenant_id: &str,
         connector: &ResourceId,
     ) -> Result<u64, String> {
-        medulla_types::agent_library::validate_key(tenant_id, connector.as_str())?;
+        medulla_agent_types::agent_library::validate_key(tenant_id, connector.as_str())?;
         let (head, declaration) = self.current_connector_declaration(tenant_id, connector)?;
         validate_current_declaration(&head, &declaration)?;
         Ok(declaration.entry_revision)
@@ -167,7 +168,7 @@ impl AgentLibraryStore {
         tenant_id: &str,
         connector: &ResourceId,
     ) -> Result<ResolvedConnectorSchemaHead, String> {
-        medulla_types::agent_library::validate_key(tenant_id, connector.as_str())?;
+        medulla_agent_types::agent_library::validate_key(tenant_id, connector.as_str())?;
         let read = self.read()?;
         let heads = read.open_owner_table(medulla_storage::CONNECTOR_PACK_HEADS)?;
         let members = read.open_owner_table(medulla_storage::CONNECTOR_PACK_MEMBERS)?;
@@ -238,7 +239,7 @@ impl AgentLibraryStore {
         tenant_id: &str,
         connector: &ResourceId,
     ) -> Result<Vec<ConnectorPackMemberRow>, String> {
-        medulla_types::agent_library::validate_key(tenant_id, connector.as_str())?;
+        medulla_agent_types::agent_library::validate_key(tenant_id, connector.as_str())?;
         let read = self.read()?;
         let members = read.open_owner_table(medulla_storage::CONNECTOR_PACK_MEMBERS)?;
         let mut rows = Vec::new();
@@ -268,7 +269,7 @@ impl AgentLibraryStore {
         component_id: &str,
         entry_revision: Option<u64>,
     ) -> Result<ConnectorPackContentPointer, String> {
-        medulla_types::agent_library::validate_key(tenant_id, component_id)?;
+        medulla_agent_types::agent_library::validate_key(tenant_id, component_id)?;
         let read = self.read()?;
         let heads = read.open_owner_table(medulla_storage::AGENT_COMPONENT_HEADS)?;
         let revision = match entry_revision {
@@ -285,7 +286,7 @@ impl AgentLibraryStore {
             .get((tenant_id, component_id, revision))
             .map_err(|error| error.to_string())?
             .ok_or_else(|| "agent component revision does not exist".to_string())?;
-        let entry: medulla_types::agent_component::AgentComponentEntry =
+        let entry: medulla_agent_types::agent_component::AgentComponentEntry =
             super::agent_row::decode(entry.value(), "agent component revision")?;
         let body_hex = entry
             .content_ref
@@ -306,10 +307,12 @@ impl AgentLibraryStore {
             super::agent_row::decode(holder.value(), "connector pack body holder")?;
         let media_type = entry
             .attributes
-            .get(medulla_types::agent_component::COMPONENT_MEDIA_TYPE_ATTRIBUTE)
+            .get(medulla_agent_types::agent_component::COMPONENT_MEDIA_TYPE_ATTRIBUTE)
             .or_else(|| entry.attributes.get("media_type"))
             .cloned()
-            .unwrap_or_else(|| medulla_types::agent_component::DEFAULT_COMPONENT_MEDIA_TYPE.to_string());
+            .unwrap_or_else(|| {
+                medulla_agent_types::agent_component::DEFAULT_COMPONENT_MEDIA_TYPE.to_string()
+            });
         Ok(ConnectorPackContentPointer {
             component_id: entry.component_id,
             entry_revision: entry.entry_revision,
@@ -327,7 +330,7 @@ impl AgentLibraryStore {
         tenant_id: &str,
         connector: &ResourceId,
     ) -> Result<ConnectorPackStatus, String> {
-        medulla_types::agent_library::validate_key(tenant_id, connector.as_str())?;
+        medulla_agent_types::agent_library::validate_key(tenant_id, connector.as_str())?;
         let read = self.read()?;
         let heads = read.open_owner_table(medulla_storage::CONNECTOR_PACK_HEADS)?;
         let members = read.open_owner_table(medulla_storage::CONNECTOR_PACK_MEMBERS)?;
@@ -399,7 +402,7 @@ impl AgentLibraryStore {
         connector: &ResourceId,
         mapping_reference: &str,
     ) -> Result<ResolvedConnectorSchemaMapping, String> {
-        medulla_types::agent_library::validate_key(tenant_id, connector.as_str())?;
+        medulla_agent_types::agent_library::validate_key(tenant_id, connector.as_str())?;
         let selector = mapping_selector(connector, mapping_reference)?;
         let (head, declaration) = self.current_connector_declaration(tenant_id, connector)?;
         validate_current_declaration(&head, &declaration)?;
@@ -425,7 +428,7 @@ impl AgentLibraryStore {
         connector: &ResourceId,
         relation_reference: &str,
     ) -> Result<ResolvedConnectorRelationshipMapping, String> {
-        medulla_types::agent_library::validate_key(tenant_id, connector.as_str())?;
+        medulla_agent_types::agent_library::validate_key(tenant_id, connector.as_str())?;
         let key = relationship_selector(connector, relation_reference)?;
         let (head, declaration) = self.current_connector_declaration(tenant_id, connector)?;
         validate_current_declaration(&head, &declaration)?;
@@ -507,7 +510,7 @@ fn status_from_rows(
             .unwrap_or_default(),
     )?;
     Ok(ConnectorPackStatus {
-        schema_version: medulla_types::connector_pack::CONNECTOR_PACK_SCHEMA_VERSION,
+        schema_version: medulla_catalog_types::connector_pack::CONNECTOR_PACK_SCHEMA_VERSION,
         tenant_id: tenant_id.to_string(),
         connector: connector.clone(),
         head: head.as_ref().map(|row| row.head.clone()),
@@ -657,7 +660,9 @@ impl AgentLibraryStore {
         assert!(batches.len() <= 64, "bounded isolated fixture");
         let outbox: Vec<_> = batches
             .iter()
-            .flat_map(|record| medulla_transaction::read_outbox(&read, &record.batch.batch_id).unwrap())
+            .flat_map(|record| {
+                medulla_transaction::read_outbox(&read, &record.batch.batch_id).unwrap()
+            })
             .collect();
         tables.insert("outbox".into(), serde_json::json!(outbox));
         serde_json::Value::Object(tables)

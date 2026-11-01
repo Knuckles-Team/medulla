@@ -20,6 +20,7 @@ crate-type = ["cdylib", "rlib"]
 # wasm32-unknown-unknown with no imports.
 [dependencies]
 medulla-types = { path = "../medulla-types", features = ["wire-complete"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["wire-complete"] }
 
 [dev-dependencies]
 rmp-serde = "1.3"

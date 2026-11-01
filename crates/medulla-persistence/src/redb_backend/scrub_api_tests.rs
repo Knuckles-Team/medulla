@@ -4,7 +4,7 @@
 //! row again.
 
 use super::*;
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 use medulla_store::redb_store::scrub::ScrubBudget;
 use medulla_store::redb_store::scrub::ScrubCursor;
 use medulla_store::redb_store::NodeUnreadable;

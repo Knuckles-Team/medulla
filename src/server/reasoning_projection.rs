@@ -33,11 +33,15 @@ use medulla_epistemic::ProjectionPosition;
 #[cfg(feature = "redb")]
 use medulla_epistemic::{IncrementalDelta, ReasoningProjectionWakeup};
 #[cfg(feature = "redb")]
-use medulla_transaction::OutboxClaimBudget;
+use medulla_mutation_types::mutation_scope::CommittedVersion;
 #[cfg(feature = "redb")]
-use medulla_types::mutation_batch::{
-    CommittedVersion, MutationBatchStatus, MutationOutboxLease, MutationProjectionCursor,
-};
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+#[cfg(feature = "redb")]
+use medulla_mutation_types::mutation_scope::MutationProjectionCursor;
+#[cfg(feature = "redb")]
+use medulla_protocol_types::mutation_batch::MutationBatchStatus;
+#[cfg(feature = "redb")]
+use medulla_transaction::OutboxClaimBudget;
 #[cfg(feature = "redb")]
 use std::collections::HashSet;
 #[cfg(feature = "redb")]
@@ -532,7 +536,7 @@ async fn resolve_projection_wakeup(
 #[cfg(feature = "redb")]
 fn committed_events(
     wakeup: ReasoningProjectionWakeup,
-    operations: &[medulla_types::mutation_batch::MutationOperation],
+    operations: &[medulla_protocol_types::mutation_batch::MutationOperation],
 ) -> Result<ReasoningProjectionWakeup, ()> {
     if wakeup.event_source == medulla_epistemic::WakeupEventSource::Inline {
         return Ok(wakeup);
@@ -547,7 +551,7 @@ fn committed_events(
 #[cfg(feature = "redb")]
 fn validate_projection_wakeup(
     wakeup: &ReasoningProjectionWakeup,
-    batch: &medulla_types::mutation_batch::MutationBatch,
+    batch: &medulla_protocol_types::mutation_batch::MutationBatch,
 ) -> Result<(), ()> {
     if wakeup.validate().is_err() || wakeup.operation_count as usize != batch.operations.len() {
         return Err(());
@@ -1167,7 +1171,7 @@ mod tests {
     use std::sync::{Condvar, Mutex as StdMutex};
 
     use medulla_epistemic::ProjectedMaterializationStatus;
-    use medulla_types::protocol::Method;
+    use medulla_protocol_types::protocol::Method;
 
     #[cfg(feature = "redb")]
     use medulla_server_api::api::persistence::PersistenceBackend;
@@ -1538,14 +1542,15 @@ mod tests {
     fn an_image_behind_its_durable_cursor_refuses_to_advance() {
         fn watermark(target: u64) -> MutationProjectionCursor {
             MutationProjectionCursor {
-                schema_version: medulla_types::mutation_batch::MUTATION_BATCH_VERSION,
+                schema_version: medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION,
                 projection: CONSUMER.to_string(),
-                identity: medulla_types::mutation_batch::MutationScopeIdentity::fixed_graph(
-                    "graph-shard",
-                    "graph",
-                    "incarnation",
-                )
-                .unwrap(),
+                identity:
+                    medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_graph(
+                        "graph-shard",
+                        "graph",
+                        "incarnation",
+                    )
+                    .unwrap(),
                 batch_id: "acked".to_string(),
                 outbox_ordinal: 0,
                 committed_version: CommittedVersion::Graph {
@@ -1678,9 +1683,10 @@ mod tests {
         async fn ack_mutation_outbox(
             &self,
             _graph_fname: &str,
-            _lease: &medulla_types::mutation_batch::MutationOutboxLease,
+            _lease: &medulla_mutation_types::mutation_scope::MutationOutboxLease,
             _now_ms: u64,
-        ) -> Result<medulla_types::mutation_batch::MutationProjectionCursor, String> {
+        ) -> Result<medulla_mutation_types::mutation_scope::MutationProjectionCursor, String>
+        {
             self.ack_calls.fetch_add(1, Ordering::Relaxed);
             Err("deferred projection must not acknowledge a lease".to_string())
         }
@@ -1783,9 +1789,10 @@ mod tests {
         async fn ack_mutation_outbox(
             &self,
             _graph_fname: &str,
-            _lease: &medulla_types::mutation_batch::MutationOutboxLease,
+            _lease: &medulla_mutation_types::mutation_scope::MutationOutboxLease,
             _now_ms: u64,
-        ) -> Result<medulla_types::mutation_batch::MutationProjectionCursor, String> {
+        ) -> Result<medulla_mutation_types::mutation_scope::MutationProjectionCursor, String>
+        {
             Err("a dead-lettered claim must not acknowledge a lease".to_string())
         }
 
@@ -1856,7 +1863,7 @@ mod tests {
     fn projection_budget_batch(
         graph: &str,
         row: u64,
-    ) -> medulla_types::mutation_batch::MutationBatch {
+    ) -> medulla_protocol_types::mutation_batch::MutationBatch {
         projection_batch(graph, row, format!("projection-budget-{graph}-{row}"))
     }
 
@@ -1865,16 +1872,22 @@ mod tests {
         graph: &str,
         row: u64,
         batch_id: String,
-    ) -> medulla_types::mutation_batch::MutationBatch {
+    ) -> medulla_protocol_types::mutation_batch::MutationBatch {
         use std::collections::BTreeMap;
 
         use medulla_kernel::kernel::persistence::ENGINE_LEDGER_PRINCIPAL;
+        use medulla_mutation_types::mutation_scope::DurabilityDomain;
+        use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+        use medulla_mutation_types::mutation_scope::MutationSurface;
+        use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
+        use medulla_protocol_types::mutation_batch::CompiledOperation;
+        use medulla_protocol_types::mutation_batch::CompiledScope;
+        use medulla_protocol_types::mutation_batch::MutationBatch;
+        use medulla_protocol_types::mutation_batch::MutationEnvelope;
+        use medulla_protocol_types::mutation_batch::MutationOperation;
+        use medulla_protocol_types::mutation_batch::VersionExpectation;
+        use medulla_protocol_types::mutation_batch::BATCH_COMPILED_METHODS;
         use medulla_types::contract::{Digest256, MethodId, Nonce};
-        use medulla_types::mutation_batch::{
-            CompiledOperation, CompiledScope, DurabilityDomain, MutationBatch, MutationEnvelope,
-            MutationOperation, MutationOutboxIntent, MutationSurface, VersionExpectation,
-            BATCH_COMPILED_METHODS, MUTATION_BATCH_VERSION,
-        };
 
         // A CALLER identity. `shard::graph_scope_identity` builds the
         // POST-binding shard scope `(GRAPH_SHARD_TENANT, graph, incarnation)`,
@@ -1884,11 +1897,12 @@ mod tests {
         // a caller tenant". Same fix as
         // `resource_reservation_tests::resource_batch` and
         // `work_item_capability`.
-        let identity = medulla_types::mutation_batch::MutationScopeIdentity::graph(
-            medulla_types::mutation_batch::ScopeTenantId::new("tenant-a")
+        let identity = medulla_mutation_types::mutation_scope::MutationScopeIdentity::graph(
+            medulla_mutation_types::mutation_scope::ScopeTenantId::new("tenant-a")
                 .expect("valid caller tenant"),
-            medulla_types::mutation_batch::LogicalName::new(graph).expect("valid graph name"),
-            medulla_types::mutation_batch::IncarnationId::new(
+            medulla_mutation_types::mutation_scope::LogicalName::new(graph)
+                .expect("valid graph name"),
+            medulla_mutation_types::mutation_scope::IncarnationId::new(
                 "incarnation:test:reasoning-projection",
             )
             .expect("valid incarnation"),
@@ -1927,8 +1941,10 @@ mod tests {
                 },
                 CompiledOperation {
                     method: method.clone(),
-                    method_schema_id: medulla_types::mutation_batch::method_schema_id(&method)
-                        .expect("compiled batch schema id"),
+                    method_schema_id: medulla_protocol_types::mutation_batch::method_schema_id(
+                        &method,
+                    )
+                    .expect("compiled batch schema id"),
                     method_schema_digest: schema_digest,
                     canonical_payload_digest: Digest256::from_bytes([2_u8; 32]),
                 },
@@ -2182,7 +2198,9 @@ mod tests {
 /// still applies one event per committed operation (EH-280).
 #[cfg(all(test, feature = "redb", feature = "epistemic-tms"))]
 mod bounded_wakeup_tests {
-    use medulla_types::mutation_batch::{DurabilityDomain, MutationOperation, MutationSurface};
+    use medulla_mutation_types::mutation_scope::DurabilityDomain;
+    use medulla_mutation_types::mutation_scope::MutationSurface;
+    use medulla_protocol_types::mutation_batch::MutationOperation;
 
     use super::committed_events;
     use crate::protocol::Method;

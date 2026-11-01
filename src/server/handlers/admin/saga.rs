@@ -7,7 +7,6 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::mutation_batch::DurabilityDomain;
 use crate::protocol::{Method, Response};
 use medulla_server_api::api::admin::saga::begin_admin_saga_with_nonce;
 use medulla_server_api::api::admin::saga::finish_admin_saga;
@@ -56,9 +55,9 @@ pub(crate) fn catalog_saga<M>(
     apply: impl FnOnce(&medulla_persistence::tenant_catalog::TenantCatalog) -> Result<(), String>,
 ) -> Response
 where
-    M: medulla_types::result_contract::MethodResult<
+    M: medulla_protocol_types::result_contract::MethodResult<
         Body = bool,
-        Encoding = medulla_types::result_contract::encoding::Bool,
+        Encoding = medulla_protocol_types::result_contract::encoding::Bool,
     >,
 {
     let saga = match begin_admin_saga_with_nonce(
@@ -96,8 +95,8 @@ where
 #[cfg(feature = "redb")]
 pub(crate) fn reshard_report(
     report: &medulla_persistence::online_reshard::ReshardReport,
-) -> medulla_types::result_contract::cluster::ShardReshardReport {
-    medulla_types::result_contract::cluster::ShardReshardReport {
+) -> medulla_protocol_types::result_contract::cluster::ShardReshardReport {
+    medulla_protocol_types::result_contract::cluster::ShardReshardReport {
         graph: report.graph.clone(),
         from_shard: report.from_shard as u64,
         to_shard: report.to_shard as u64,
@@ -117,13 +116,13 @@ pub(crate) fn reshard_report(
 pub(crate) fn rebalance_plan_report(
     plan: &medulla_persistence::rebalance::RebalancePlan,
     shards: &[medulla_persistence::rebalance::ShardLoad],
-) -> medulla_types::result_contract::cluster::RebalancePlanReport {
-    medulla_types::result_contract::cluster::RebalancePlanReport {
+) -> medulla_protocol_types::result_contract::cluster::RebalancePlanReport {
+    medulla_protocol_types::result_contract::cluster::RebalancePlanReport {
         moves: plan
             .moves
             .iter()
             .map(
-                |planned| medulla_types::result_contract::cluster::RebalanceMove {
+                |planned| medulla_protocol_types::result_contract::cluster::RebalanceMove {
                     graph: planned.graph.clone(),
                     from_shard: planned.from_shard,
                     to_shard: planned.to_shard,
@@ -133,7 +132,7 @@ pub(crate) fn rebalance_plan_report(
         shards: shards
             .iter()
             .map(
-                |shard| medulla_types::result_contract::cluster::ShardLoadSummary {
+                |shard| medulla_protocol_types::result_contract::cluster::ShardLoadSummary {
                     shard: shard.shard,
                     total: shard.total(),
                     graphs: shard.graphs.len() as u64,

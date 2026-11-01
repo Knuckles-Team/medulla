@@ -19,17 +19,18 @@ use std::sync::Arc;
 use medulla_compute::graph_algos::AdjacencyGraph;
 use medulla_compute::graphlearn::edge_fn::Basis;
 use medulla_compute::graphlearn::link_predict::{self, FeatureCtx, KanLinkConfig, KanLinkModel};
-use medulla_types::compute_result::graphlearn::{
-    EdgeFunctionRow, LinkPrediction, LinkPredictorFit, PredictedLink,
+use medulla_protocol_types::result_contract::compute as results;
+use medulla_result_types::{
+    compute_result::graphlearn::EdgeFunctionRow, compute_result::graphlearn::LinkPrediction,
+    compute_result::graphlearn::LinkPredictorFit, compute_result::graphlearn::PredictedLink,
 };
-use medulla_types::result_contract::compute as results;
 
 use medulla_core::graph::GraphCore;
-use medulla_types::protocol::GraphLearnParams;
-use medulla_types::protocol::GraphSource;
-use medulla_types::protocol::Method;
-use medulla_types::protocol::Response;
-use medulla_types::protocol::ResultPayload;
+use medulla_protocol_types::protocol::GraphLearnParams;
+use medulla_protocol_types::protocol::GraphSource;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 
 /// Handle a `GraphLearn*` method. `Err(method)` hands a non-graphlearn method back to
 /// the dispatcher (routing fall-through). (CONCEPT:MEDULLA-KG.query.dispatch-convention.)

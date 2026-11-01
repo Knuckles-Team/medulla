@@ -10,12 +10,14 @@ use medulla_compute::graph_algos::impact::{
     independent_cascade, noisy_or, noisy_or_attribution, strongest_paths, CascadeSpec, ImpactGraph,
     ImpactPath, Seed, Semantics,
 };
-use medulla_types::compute_result::mining::{
-    ImpactOptions, ImpactPathRow, ImpactReport, ImpactSemantics, RiskPropagationMiningResult,
-    RiskScoreRow, SeedAttributionRow,
+use medulla_protocol_types::result_contract::compute as results;
+use medulla_result_types::{
+    compute_result::mining::ImpactOptions, compute_result::mining::ImpactPathRow,
+    compute_result::mining::ImpactReport, compute_result::mining::ImpactSemantics,
+    compute_result::mining::RiskPropagationMiningResult, compute_result::mining::RiskScoreRow,
+    compute_result::mining::SeedAttributionRow,
 };
-use medulla_types::decision::digest::digest_text;
-use medulla_types::result_contract::compute as results;
+use medulla_types::solve_scalar::digest_text;
 
 /// Domain of an impact run's provenance digest.
 pub(crate) const IMPACT_DIGEST_DOMAIN: &str = "eg/impact-propagation/v1";

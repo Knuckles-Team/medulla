@@ -341,7 +341,7 @@ async fn compile_cross_modal_batch(
             expected_graph_version: Some(authoritative_version),
             fencing_token: None,
             created_at_ms: now_ms(),
-            default_surface: crate::mutation_batch::MutationSurface::Transaction,
+            default_surface: medulla_mutation_types::mutation_scope::MutationSurface::Transaction,
             authoritative_state: None,
         },
         &modality_payload,

@@ -242,12 +242,22 @@ pub trait TextSource: Send + Sync {
     /// `medulla_text::TextIndex::search_within`: `(id, bm25_score)` descending, exactly the
     /// full-corpus ranking restricted to the candidate ids, empty on an
     /// empty/unparsable query or an empty candidate set.
-    fn search_within(&self, query: &str, candidates: &[&str], k: usize) -> Vec<medulla_text::TextHit>;
+    fn search_within(
+        &self,
+        query: &str,
+        candidates: &[&str],
+        k: usize,
+    ) -> Vec<medulla_text::TextHit>;
 }
 
 #[cfg(feature = "text")]
 impl TextSource for medulla_text::TextIndex {
-    fn search_within(&self, query: &str, candidates: &[&str], k: usize) -> Vec<medulla_text::TextHit> {
+    fn search_within(
+        &self,
+        query: &str,
+        candidates: &[&str],
+        k: usize,
+    ) -> Vec<medulla_text::TextHit> {
         medulla_text::TextIndex::search_within(self, query, candidates, k)
     }
 }
@@ -1618,7 +1628,9 @@ fn jsonpath_filter(view: &GraphView, input: RowSet, pred: &Pred) -> Result<RowSe
             row_value(view, &r.id).is_some_and(|v| match op {
                 JsonPathOp::Exists => medulla_core::jsonpath::path_exists(&v, path),
                 JsonPathOp::Eq { value } => medulla_core::jsonpath::path_eq(&v, path, value),
-                JsonPathOp::Contains { value } => medulla_core::jsonpath::path_contains(&v, path, value),
+                JsonPathOp::Contains { value } => {
+                    medulla_core::jsonpath::path_contains(&v, path, value)
+                }
             })
         })
         .map(|r| r.id.as_str())
@@ -1764,7 +1776,11 @@ fn spatial_reproject(
 /// exactly as [`tensor_op`]. The derived geometry validates the op per row; a v1 executor
 /// does NOT persist it back to the blob (the documented follow-up).
 #[cfg(feature = "geo")]
-fn spatial_op(view: &GraphView, input: RowSet, kind: &medulla_types::wire::SpatialOpKind) -> RowSet {
+fn spatial_op(
+    view: &GraphView,
+    input: RowSet,
+    kind: &medulla_types::wire::SpatialOpKind,
+) -> RowSet {
     let keep: HashSet<&str> = input
         .rows()
         .iter()
@@ -1790,7 +1806,9 @@ fn apply_spatial_op(
         SpatialOpKind::ConvexHull => Some(medulla_geo::convex_hull(g)),
         SpatialOpKind::Simplify { tolerance } => Some(medulla_geo::simplify(g, *tolerance)),
         SpatialOpKind::Centroid => medulla_geo::centroid(g).map(medulla_geo::Geometry::Point),
-        SpatialOpKind::Union { wkt } => medulla_geo::parse_wkt(wkt).ok().map(|o| medulla_geo::union(g, &o)),
+        SpatialOpKind::Union { wkt } => medulla_geo::parse_wkt(wkt)
+            .ok()
+            .map(|o| medulla_geo::union(g, &o)),
         SpatialOpKind::Intersection { wkt } => medulla_geo::parse_wkt(wkt)
             .ok()
             .and_then(|o| medulla_geo::intersection(g, &o)),
@@ -1979,7 +1997,11 @@ fn apply_tensor_op(
 /// the query does not apply (an unsupported `Conditional` conjugate pair), are DROPPED.
 /// Deterministic: a `Sample { seed }` draws the SAME value every run (no RNG-from-clock).
 #[cfg(feature = "probabilistic")]
-fn probabilistic_op(view: &GraphView, input: RowSet, query: &medulla_types::wire::ProbQuery) -> RowSet {
+fn probabilistic_op(
+    view: &GraphView,
+    input: RowSet,
+    query: &medulla_types::wire::ProbQuery,
+) -> RowSet {
     let mut scored: Vec<(String, f32)> = input
         .rows()
         .iter()
@@ -1997,9 +2019,15 @@ fn probabilistic_op(view: &GraphView, input: RowSet, query: &medulla_types::wire
 /// Read node `id`'s distribution from the conventional `distribution` property of its
 /// blob (CONCEPT:MEDULLA-KG.compute.uncertainty-values), decoding the tagged serde form of `medulla_types::Distribution`.
 #[cfg(feature = "probabilistic")]
-fn row_distribution(view: &GraphView, id: &str) -> Option<medulla_types::Distribution> {
+fn row_distribution(
+    view: &GraphView,
+    id: &str,
+) -> Option<medulla_catalog_types::distribution::Distribution> {
     let v = row_value(view, id)?;
-    serde_json::from_value::<medulla_types::Distribution>(v.get("distribution")?.clone()).ok()
+    serde_json::from_value::<medulla_catalog_types::distribution::Distribution>(
+        v.get("distribution")?.clone(),
+    )
+    .ok()
 }
 
 /// Lower the pure-serde wire `ProbQuery` (medulla-types) onto the real distribution math: the
@@ -2009,7 +2037,7 @@ fn row_distribution(view: &GraphView, id: &str) -> Option<medulla_types::Distrib
 /// caller drops the row.
 #[cfg(feature = "probabilistic")]
 fn eval_prob_query(
-    dist: &medulla_types::Distribution,
+    dist: &medulla_catalog_types::distribution::Distribution,
     query: &medulla_types::wire::ProbQuery,
 ) -> Option<f64> {
     use medulla_types::wire::{ProbEvidenceSpec, ProbQuery};
@@ -2422,9 +2450,9 @@ fn cep_matcher_from_spec(m: &medulla_types::wire::CepMatcherSpec) -> medulla_str
 fn cep_pattern_from_spec(p: &medulla_types::wire::CepNodeSpec) -> medulla_stream::CepPattern {
     use medulla_types::wire::CepNodeSpec;
     match p {
-        CepNodeSpec::Sequence(matchers) => {
-            medulla_stream::CepPattern::Sequence(matchers.iter().map(cep_matcher_from_spec).collect())
-        }
+        CepNodeSpec::Sequence(matchers) => medulla_stream::CepPattern::Sequence(
+            matchers.iter().map(cep_matcher_from_spec).collect(),
+        ),
         CepNodeSpec::Within { within, pattern } => medulla_stream::CepPattern::Within {
             within: *within,
             pattern: Box::new(cep_pattern_from_spec(pattern)),

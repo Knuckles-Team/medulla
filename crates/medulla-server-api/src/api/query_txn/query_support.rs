@@ -1,7 +1,7 @@
 //! Query helpers moved below the handler crates so wire and decide can reach them (MEDULLA-CONTRACT-R056.8).
 
 #[cfg(feature = "query")]
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 
 /// The process-wide server-side text→vector embedder for the UQL `RANK BY ~ "text"`
 /// (`Op::RankEmbed`) NL→vector seam (CONCEPT:MEDULLA-KG.query.bind-server-side-text / MEDULLA-411) — the FACADE injection point.

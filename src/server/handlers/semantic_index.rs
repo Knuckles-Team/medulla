@@ -33,7 +33,10 @@ use std::sync::Arc;
 
 use medulla_core::compute::semantic_ann_codes::SemanticCodeError;
 use medulla_core::compute::semantic_index_service::SemanticIndexService;
-use medulla_types::semantic_index::{SemanticBinding, SemanticIndexError, SemanticIndexOp};
+use medulla_index_types::{
+    semantic_index::SemanticBinding, semantic_index::SemanticIndexError,
+    semantic_index::SemanticIndexOp,
+};
 use tokio::sync::RwLock;
 
 use crate::protocol::{Response, ResultPayload};
@@ -177,7 +180,7 @@ async fn open_service(
 /// no path on which a draft reaches admission carrying an identity the carrier
 /// did not prove.
 pub(super) fn stamp_draft_identity(
-    draft: &mut medulla_types::semantic_index::SemanticBindingDraft,
+    draft: &mut medulla_index_types::semantic_index::SemanticBindingDraft,
     authority: &CarrierAuthority,
 ) {
     draft.tenant_id = authority.tenant_scope().to_string();
@@ -188,7 +191,7 @@ pub(super) fn stamp_draft_identity(
 /// A lease may only be presented by the worker whose class consumer it was
 /// issued to (`<worker>#<class>`).
 pub(crate) fn own_lease(
-    lease: &medulla_types::mutation_batch::MutationOutboxLease,
+    lease: &medulla_mutation_types::mutation_scope::MutationOutboxLease,
     authority: &CarrierAuthority,
 ) -> Result<(), String> {
     let owner = medulla_core::compute::semantic_ann_codes::stage_consumer_parts(&lease.consumer)
@@ -278,8 +281,8 @@ pub(crate) fn semantic_failure_message(error: &SemanticCodeError) -> &'static st
 
 pub(super) fn reply<M, T>(req_id: u64, result: Result<T, Response>) -> Response
 where
-    M: medulla_types::result_contract::MethodResult<Body = T>,
-    M::Encoding: medulla_types::result_contract::EncodeRef<T>,
+    M: medulla_protocol_types::result_contract::MethodResult<Body = T>,
+    M::Encoding: medulla_protocol_types::result_contract::EncodeRef<T>,
 {
     match result {
         Ok(value) => typed_payload::<M, _>(req_id, &value),
@@ -289,8 +292,8 @@ where
 
 pub(super) fn typed_payload<M, T>(req_id: u64, value: &T) -> Response
 where
-    M: medulla_types::result_contract::MethodResult<Body = T>,
-    M::Encoding: medulla_types::result_contract::EncodeRef<T>,
+    M: medulla_protocol_types::result_contract::MethodResult<Body = T>,
+    M::Encoding: medulla_protocol_types::result_contract::EncodeRef<T>,
 {
     match ResultPayload::of_ref::<M>(value) {
         Ok(payload) => Response::ok(req_id, payload),

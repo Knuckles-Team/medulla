@@ -78,7 +78,7 @@ use redb::TableDefinition;
 
 use super::redb_backend::Cmd;
 use super::tenant_catalog::TenantCatalog;
-use medulla_types::protocol::GraphType;
+use medulla_protocol_types::protocol::GraphType;
 use medulla_store::redb_store::shard::graph_scope_identity;
 use medulla_store::redb_store::shard::recover_retired_graft;
 use medulla_store::redb_store::shard::retiring_graft_destination;

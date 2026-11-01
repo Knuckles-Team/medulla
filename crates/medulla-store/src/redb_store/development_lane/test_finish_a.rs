@@ -11,7 +11,7 @@ fn native_public_owner_cas_drift_rolls_back_before_terminal_lane_transition() {
         TEST_GRAPH,
         &DevelopmentLaneStatusRequest {
             schema_version:
-                medulla_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
+                medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
             tenant_ref: hold.tenant_ref.clone(),
             hold_id: Some(hold.hold_id.clone()),
             lane_id: None,
@@ -69,7 +69,7 @@ fn native_public_owner_cas_drift_rolls_back_before_terminal_lane_transition() {
         TEST_GRAPH,
         &DevelopmentLaneStatusRequest {
             schema_version:
-                medulla_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
+                medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
             tenant_ref: hold.tenant_ref.clone(),
             hold_id: Some(hold.hold_id.clone()),
             lane_id: None,
@@ -166,7 +166,7 @@ fn native_public_owner_cas_drift_rolls_back_before_terminal_lane_transition() {
         TEST_GRAPH,
         &DevelopmentLaneStatusRequest {
             schema_version:
-                medulla_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
+                medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
             tenant_ref: hold.tenant_ref.clone(),
             hold_id: Some(hold.hold_id.clone()),
             lane_id: None,
@@ -212,7 +212,7 @@ fn native_public_owner_cas_drift_rolls_back_before_terminal_lane_transition() {
         TEST_GRAPH,
         &DevelopmentLaneStatusRequest {
             schema_version:
-                medulla_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
+                medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
             tenant_ref: hold.tenant_ref.clone(),
             hold_id: Some(hold.hold_id.clone()),
             lane_id: None,

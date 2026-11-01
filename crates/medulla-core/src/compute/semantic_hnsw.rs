@@ -11,7 +11,7 @@
 
 use super::{check_embedding_dimension, EmbeddingDimensionError, SemanticQueryError};
 use medulla_ann::{HnswIndex as NativeHnswIndex, Metric};
-use medulla_types::{EmbeddingSpaceRef, StampedVector};
+use medulla_index_types::{embedding::EmbeddingSpaceRef, embedding::StampedVector};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -19,8 +19,9 @@ use std::collections::HashMap;
 /// Generic native exact/vector surfaces accept this width.  A resident HNSW
 /// artifact uses the narrower maintained-ANN ceiling below; wider vectors stay
 /// on the exact path and never cross the medulla-ann constructor boundary.
-const MAX_GENERIC_DIMENSION: usize = medulla_types::MAX_EMBEDDING_DIMENSIONS;
-const MAX_MAINTAINED_DIMENSION: usize = medulla_types::MAX_MAINTAINED_ANN_DIMENSIONS;
+const MAX_GENERIC_DIMENSION: usize = medulla_index_types::embedding::MAX_EMBEDDING_DIMENSIONS;
+const MAX_MAINTAINED_DIMENSION: usize =
+    medulla_index_types::embedding::MAX_MAINTAINED_ANN_DIMENSIONS;
 
 /// Maximum number of connections per layer in the HNSW graph.
 const HNSW_MAX_NB_CONN: usize = 16;

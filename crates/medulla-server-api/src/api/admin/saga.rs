@@ -4,13 +4,13 @@
 
 use crate::access::CarrierAuthority;
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_batch::DurabilityDomain;
-use medulla_types::mutation_batch::MutationBatch;
-use medulla_types::mutation_batch::MutationBatchCommit;
-use medulla_types::mutation_batch::MutationBatchRecord;
-use medulla_types::mutation_batch::MutationScopeIdentity;
-use medulla_types::mutation_batch::MutationSurface;
-use medulla_types::protocol::Method;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::mutation_batch::MutationBatchCommit;
+use medulla_protocol_types::mutation_batch::MutationBatchRecord;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_protocol_types::protocol::Method;
 
 /// The admin-mutations ledger operations an admin saga needs, implemented by the durable
 /// backend.
@@ -24,7 +24,7 @@ pub trait AdminSagaLedger {
     /// Prepare one admin saga, with its sealed private recovery payload when it has one.
     fn admin_saga_step(
         &self,
-        batch: &medulla_types::MutationBatch,
+        batch: &medulla_protocol_types::mutation_batch::MutationBatch,
         prepared_at_ms: u64,
         private_payload: Option<&[u8]>,
     ) -> Result<medulla_transaction::SagaBegin, String>;
@@ -32,10 +32,16 @@ pub trait AdminSagaLedger {
     /// Terminalize one prepared admin saga; the flag is `true` when it had already committed.
     fn admin_saga_end(
         &self,
-        batch: &medulla_types::MutationBatch,
+        batch: &medulla_protocol_types::mutation_batch::MutationBatch,
         result_msgpack: Vec<u8>,
         committed_at_ms: u64,
-    ) -> Result<(medulla_types::MutationBatchRecord, bool), String>;
+    ) -> Result<
+        (
+            medulla_protocol_types::mutation_batch::MutationBatchRecord,
+            bool,
+        ),
+        String,
+    >;
 }
 
 /// Fixed [`medulla_types::MutationScopeIdentity`] for the admin-mutations / "cluster-admin"
@@ -48,8 +54,9 @@ pub trait AdminSagaLedger {
 /// `AdminOwner`'s `OwnerLayout::LedgerOnly` can serve it: declaring no owner tables, it
 /// is the one layout that places no shape requirement on the scopes it binds.
 #[cfg(feature = "redb")]
-pub fn cluster_admin_scope_identity() -> Result<medulla_types::MutationScopeIdentity, String> {
-    medulla_types::MutationScopeIdentity::fixed_graph(
+pub fn cluster_admin_scope_identity(
+) -> Result<medulla_mutation_types::mutation_scope::MutationScopeIdentity, String> {
+    medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_graph(
         "native",
         "cluster-admin",
         crate::mutation_batch::COMPILED_BATCH_INCARNATION,
@@ -83,7 +90,7 @@ pub struct AdminSaga {
     /// Millisecond timestamp the saga was prepared (or committed, when resumed).
     pub created_at_ms: u64,
     /// The committed result when the saga already finished.
-    pub replayed: Option<medulla_types::protocol::ResultPayload>,
+    pub replayed: Option<medulla_protocol_types::protocol::ResultPayload>,
     /// Whether the saga is already Prepared and must be resumed, not re-executed.
     pub prepared: bool,
 }
@@ -120,8 +127,8 @@ pub enum DurableAdminResult {
 
 #[cfg(feature = "redb")]
 impl DurableAdminResult {
-    pub fn from_result(result: &medulla_types::protocol::ResultPayload) -> Result<Self, String> {
-        use medulla_types::protocol::ResultPayload;
+    pub fn from_result(result: &medulla_protocol_types::protocol::ResultPayload) -> Result<Self, String> {
+        use medulla_protocol_types::protocol::ResultPayload;
         match result {
             ResultPayload::Bool(value) => Ok(Self::Bool(*value)),
             ResultPayload::Count(value) => Ok(Self::Count(*value)),
@@ -132,8 +139,8 @@ impl DurableAdminResult {
         }
     }
 
-    fn into_result(self) -> medulla_types::protocol::ResultPayload {
-        use medulla_types::protocol::ResultPayload;
+    fn into_result(self) -> medulla_protocol_types::protocol::ResultPayload {
+        use medulla_protocol_types::protocol::ResultPayload;
         match self {
             Self::Bool(value) => ResultPayload::Bool(value),
             Self::Count(value) => ResultPayload::Count(value),
@@ -257,8 +264,8 @@ impl AdminSagaResultContract {
         }
     }
 
-    pub fn validate(self, result: &medulla_types::protocol::ResultPayload) -> Result<(), String> {
-        use medulla_types::protocol::ResultPayload;
+    pub fn validate(self, result: &medulla_protocol_types::protocol::ResultPayload) -> Result<(), String> {
+        use medulla_protocol_types::protocol::ResultPayload;
         match self {
             Self::Bool => matches!(result, ResultPayload::Bool(_))
                 .then_some(())
@@ -274,25 +281,25 @@ impl AdminSagaResultContract {
                 .ok_or_else(|| "admin saga replay has the wrong GraphQL result type".to_string()),
             Self::SparqlRecoveryOutcome => validate_sparql_recovery_outcome(result),
             Self::ShardReshardReport => validate_admin_json::<
-                medulla_types::result_contract::cluster::ShardReshardReport,
+                medulla_protocol_types::result_contract::cluster::ShardReshardReport,
             >(result),
             Self::RebalanceExecution => validate_admin_json::<
-                medulla_types::result_contract::cluster::RebalanceExecution,
+                medulla_protocol_types::result_contract::cluster::RebalanceExecution,
             >(result),
             Self::RestoreReceipt => {
-                validate_admin_json::<medulla_types::storage_wire::RestoreReceipt>(result)
+                validate_admin_json::<medulla_protocol_types::storage_wire::RestoreReceipt>(result)
             }
             Self::MultiGraphBatchReport => validate_admin_json::<
-                medulla_types::result_contract::transactions::MultiGraphBatchReport,
+                medulla_protocol_types::result_contract::transactions::MultiGraphBatchReport,
             >(result),
-            Self::ChannelCreated => {
-                validate_admin_json::<medulla_types::messaging_wire::ChannelCreated>(result)
-            }
-            Self::ChannelDeparture => {
-                validate_admin_json::<medulla_types::messaging_wire::ChannelDeparture>(result)
-            }
+            Self::ChannelCreated => validate_admin_json::<
+                medulla_protocol_types::messaging_wire::ChannelCreated,
+            >(result),
+            Self::ChannelDeparture => validate_admin_json::<
+                medulla_protocol_types::messaging_wire::ChannelDeparture,
+            >(result),
             Self::BeliefMaterialization => validate_admin_json::<
-                medulla_types::result_contract::transactions::BeliefMaterialization,
+                medulla_protocol_types::result_contract::transactions::BeliefMaterialization,
             >(result),
         }
     }
@@ -354,9 +361,9 @@ const PUBLIC_ADMIN_EVENT_PREFIX: &str = "cluster_admin_operation/";
 
 #[cfg(feature = "redb")]
 fn validate_sparql_recovery_outcome(
-    result: &medulla_types::protocol::ResultPayload,
+    result: &medulla_protocol_types::protocol::ResultPayload,
 ) -> Result<(), String> {
-    let medulla_types::protocol::ResultPayload::Json(value) = result else {
+    let medulla_protocol_types::protocol::ResultPayload::Json(value) = result else {
         return Err("SPARQL recovery replay requires a JSON body".to_string());
     };
     let Some(body) = value.as_object() else {
@@ -364,12 +371,11 @@ fn validate_sparql_recovery_outcome(
     };
     // All five report fields are required, so a successful decode plus exact
     // object length also excludes unknown fields.
-    let success =
-        body.len() == 5
-            && serde_json::from_value::<
-                medulla_types::result_contract::transactions::SparqlUpdateReport,
-            >(value.clone())
-            .is_ok();
+    let success = body.len() == 5
+        && serde_json::from_value::<
+            medulla_protocol_types::result_contract::transactions::SparqlUpdateReport,
+        >(value.clone())
+        .is_ok();
     let compensated = body.len() == 3
         && body.get("outcome").and_then(serde_json::Value::as_str) == Some("compensated")
         && body
@@ -438,7 +444,7 @@ fn resolve_admin_saga_step(
     batch: &mut MutationBatch,
     step: medulla_transaction::SagaBegin,
     expected_contract: AdminSagaResultContract,
-) -> Result<(Option<medulla_types::protocol::ResultPayload>, bool), String> {
+) -> Result<(Option<medulla_protocol_types::protocol::ResultPayload>, bool), String> {
     match step {
         medulla_transaction::SagaBegin::Committed(record) => {
             let (record, result) = decode_admin_commit(record, identity, true, expected_contract)?;
@@ -521,9 +527,9 @@ pub fn begin_authenticated_admin_saga(
 
 #[cfg(feature = "redb")]
 fn validate_admin_json<T: serde::de::DeserializeOwned>(
-    result: &medulla_types::protocol::ResultPayload,
+    result: &medulla_protocol_types::protocol::ResultPayload,
 ) -> Result<(), String> {
-    let medulla_types::protocol::ResultPayload::Json(value) = result else {
+    let medulla_protocol_types::protocol::ResultPayload::Json(value) = result else {
         return Err("admin saga replay requires a JSON body".to_string());
     };
     serde_json::from_value::<T>(value.clone())
@@ -701,11 +707,11 @@ pub fn resume_named_admin_saga(
         return Err("coordinator receipt does not match caller scope".to_string());
     }
     let replayed = match record.status {
-        medulla_types::mutation_batch::MutationBatchStatus::Prepared => None,
-        medulla_types::mutation_batch::MutationBatchStatus::Committed => {
+        medulla_protocol_types::mutation_batch::MutationBatchStatus::Prepared => None,
+        medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed => {
             return resume_committed_admin_saga(record, &identity, result_contract).map(Some);
         }
-        medulla_types::mutation_batch::MutationBatchStatus::Aborted => {
+        medulla_protocol_types::mutation_batch::MutationBatchStatus::Aborted => {
             return Err("coordinator receipt was aborted".to_string())
         }
     };
@@ -764,8 +770,8 @@ pub fn finish_admin_saga(
     backend: &dyn AdminSagaLedger,
     batch: AdminSagaBatch,
     committed_at_ms: u64,
-    result: medulla_types::protocol::ResultPayload,
-) -> Result<medulla_types::protocol::ResultPayload, String> {
+    result: medulla_protocol_types::protocol::ResultPayload,
+) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
     let result_contract = batch.result_contract.ok_or_else(|| {
         "admin saga recovery requires an explicit original result contract".to_string()
     })?;
@@ -805,7 +811,7 @@ fn decode_admin_commit(
     expected_identity: &MutationScopeIdentity,
     replayed: bool,
     result_contract: AdminSagaResultContract,
-) -> Result<(MutationBatchRecord, medulla_types::protocol::ResultPayload), String> {
+) -> Result<(MutationBatchRecord, medulla_protocol_types::protocol::ResultPayload), String> {
     let commit = MutationBatchCommit {
         record,
         identity: expected_identity.clone(),
@@ -828,7 +834,7 @@ fn decode_admin_commit(
 pub fn decode_durable_saga_result(
     bytes: &[u8],
     limits: medulla_types::msgpack::MsgpackLimits,
-) -> Option<medulla_types::protocol::ResultPayload> {
+) -> Option<medulla_protocol_types::protocol::ResultPayload> {
     medulla_types::msgpack::decode_bounded::<DurableAdminResult>(bytes, limits)
         .ok()
         .map(DurableAdminResult::into_result)
@@ -838,20 +844,20 @@ pub fn decode_durable_saga_result(
 pub fn decode_admin_result(
     bytes: &[u8],
     result_contract: AdminSagaResultContract,
-) -> Result<medulla_types::protocol::ResultPayload, String> {
+) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
     let result = match rmp_serde::from_slice::<DurableAdminResult>(bytes) {
         Ok(result) => result.into_result(),
         Err(_) => {
             // Receipts written before the tagged encoding used the untagged
             // wire enum. Its only declared scalar JSON result is a channel
             // departure; recover that exact legacy representation.
-            let legacy: medulla_types::protocol::ResultPayload =
+            let legacy: medulla_protocol_types::protocol::ResultPayload =
                 rmp_serde::from_slice(bytes).map_err(|error| error.to_string())?;
             match (result_contract, legacy) {
                 (
                     AdminSagaResultContract::ChannelDeparture,
-                    medulla_types::protocol::ResultPayload::String(value),
-                ) => medulla_types::protocol::ResultPayload::Json(serde_json::Value::String(value)),
+                    medulla_protocol_types::protocol::ResultPayload::String(value),
+                ) => medulla_protocol_types::protocol::ResultPayload::Json(serde_json::Value::String(value)),
                 (_, result) => result,
             }
         }

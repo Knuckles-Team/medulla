@@ -20,9 +20,12 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_types::mutation_outbox::MutationOutboxOp;
+use medulla_mutation_types::mutation_outbox::MutationOutboxOp;
 #[cfg(feature = "redb")]
-use medulla_types::mutation_outbox::{NativeOutboxScope, NativeOutboxStore, OutboxTarget};
+use medulla_mutation_types::{
+    mutation_outbox::NativeOutboxScope, mutation_outbox::NativeOutboxStore,
+    mutation_outbox::OutboxTarget,
+};
 
 use crate::protocol::Response;
 use medulla_server_api::auth::VerifiedRequestContext;
@@ -71,7 +74,7 @@ enum Answer {
 impl Answer {
     fn into_response(self, req_id: u64) -> Response {
         use crate::protocol::ResultPayload;
-        use medulla_types::result_contract::transactions as results;
+        use medulla_protocol_types::result_contract::transactions as results;
 
         match self {
             Answer::View(OutboxViewAnswer::Status(view)) => Response::ok(

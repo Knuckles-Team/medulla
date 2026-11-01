@@ -1,10 +1,10 @@
 //! Canonical mutation classification and one-to-one method lowering.
 
-use medulla_types::mutation_batch::DurabilityDomain;
-use medulla_types::mutation_batch::MutationSurface;
-use medulla_types::protocol::CypherMode;
-use medulla_types::protocol::Method;
-use medulla_types::protocol::MethodWriteFamily;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_protocol_types::protocol::CypherMode;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::MethodWriteFamily;
 
 /// Exhaustive durability-domain classifier for mutating methods accepted by a
 /// batch adapter. Public mutation inventory tests ensure no mutating method lacks
@@ -882,7 +882,7 @@ pub fn is_work_item_method(method: &Method) -> bool {
 pub fn is_capacity_method(method: &Method) -> bool {
     matches!(
         method,
-        medulla_types::capacity_lease_writes!()
+        medulla_protocol_types::capacity_lease_writes!()
             | Method::ReconcileCapacity { .. }
             | Method::CapacityStatus { .. }
     )

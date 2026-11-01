@@ -21,7 +21,11 @@ pub(super) async fn begin_txn(
         Err(msg) => {
             return Response::err(
                 req_id,
-                medulla_types::contract::classify_refusal("INVALID_ARGUMENT", "", &msg),
+                medulla_protocol_types::error_registry::classify_refusal(
+                    "INVALID_ARGUMENT",
+                    "",
+                    &msg,
+                ),
             )
         }
     };
@@ -626,8 +630,10 @@ pub(super) async fn stage_materialize_belief(
     }
     Response::ok(
         req_id,
-        ResultPayload::of::<medulla_types::result_contract::transactions::TxnMaterializeBelief>(
-            medulla_types::result_contract::transactions::BeliefMaterialization {
+        ResultPayload::of::<
+            medulla_protocol_types::result_contract::transactions::TxnMaterializeBelief,
+        >(
+            medulla_protocol_types::result_contract::transactions::BeliefMaterialization {
                 node_id,
                 confidence,
             },

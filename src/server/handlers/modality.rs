@@ -12,9 +12,9 @@ use hmac::{Hmac, Mac};
 use serde::{de::DeserializeOwned, Serialize};
 use sha2::Sha256;
 
-use medulla_kernel::crypto::ValueCipher;
 use crate::graph::GraphCore;
 use crate::protocol::ResultPayload;
+use medulla_kernel::crypto::ValueCipher;
 use medulla_modality::{
     tck_report, ApplyDisposition, ApplyOutcome, ArtifactBundle, Classification,
     ConformanceTestable, GovernedModality, ModalityKind, MutationDelta, NativePredicate,

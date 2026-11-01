@@ -2,12 +2,17 @@
 
 use std::collections::BTreeMap;
 
+use medulla_decision_types::{
+    decision::statistical::features::FeatureKind,
+    decision::statistical::features::FeatureSchemaBody,
+    decision::statistical::features::FeatureSpec, decision::statistical::features::MissingValue,
+    decision::statistical::features::FEATURE_SCHEMA_VERSION,
+};
+use medulla_decision_types::{
+    decision::statistical::TypedParam, decision::statistical::TypedValue,
+};
 use medulla_numeric::decision::candidate::CandidateView;
 use medulla_numeric::decision::features::{feature_matrix, FeatureInputs, MatrixOutcome};
-use medulla_types::decision::statistical::features::{
-    FeatureKind, FeatureSchemaBody, FeatureSpec, MissingValue, FEATURE_SCHEMA_VERSION,
-};
-use medulla_types::decision::statistical::{TypedParam, TypedValue};
 
 use super::common::bounded;
 
@@ -32,7 +37,7 @@ fn schema(missing: MissingValue) -> FeatureSchemaBody {
                 },
                 missing: MissingValue::Abstain,
             },
-            medulla_types::test_support::decision::summary_text_feature(),
+            medulla_decision_types::decision_fixtures::decision::summary_text_feature(),
             FeatureSpec {
                 name: "cost".to_string(),
                 kind: FeatureKind::DeclaredCostMicros,
@@ -87,8 +92,8 @@ fn coverage_is_exact_and_unknown_cost_abstains_rather_than_reading_zero() {
         }
     );
     let imputed = MissingValue::Impute {
-        value: medulla_types::decision::QuantisedValue {
-            scale: medulla_types::decision::QuantScaleTag::Q32,
+        value: medulla_decision_types::decision::QuantisedValue {
+            scale: medulla_decision_types::decision::QuantScaleTag::Q32,
             value: 7 << 32,
         },
     };

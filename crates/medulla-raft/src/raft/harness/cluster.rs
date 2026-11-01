@@ -24,8 +24,8 @@ use medulla_server_api::state::ServerState;
 use super::super::config::RaftClusterConfig;
 use super::super::node::{self, StartedNode};
 use super::super::{NodeId, RaftRequest};
-use medulla_types::protocol::GraphType;
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::GraphType;
+use medulla_protocol_types::protocol::Method;
 
 pub use super::super::fixture;
 

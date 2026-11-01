@@ -11,7 +11,7 @@
 
 use std::cmp::Ordering;
 
-use medulla_types::row_predicate::cmp_op_matches;
+use medulla_result_types::row_predicate::cmp_op_matches;
 use medulla_types::wire::{Pred, PredLiteral};
 use serde_json::{Map, Value};
 
@@ -272,7 +272,8 @@ mod tests {
                 where_clause(std::slice::from_ref(pred)).unwrap()
             );
             let result =
-                medulla_query::exec_sql(view, &sql, &medulla_query::CancellationToken::new()).unwrap();
+                medulla_query::exec_sql(view, &sql, &medulla_query::CancellationToken::new())
+                    .unwrap();
             result
                 .rows
                 .iter()

@@ -17,8 +17,9 @@
 
 use std::collections::BTreeSet;
 
+use medulla_agent_types::agent_topology::SchemaAuthority;
+use medulla_agent_types::agent_topology::TopologyAdmission;
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::{SchemaAuthority, TopologyAdmission};
 
 /// The engine's admissibility role.
 pub(crate) const ADMITS_TOPOLOGY: &str = "http://medulla/owl#admitsTopology";
@@ -172,7 +173,8 @@ mod tests {
     use super::*;
 
     /// The shipped core vocabulary itself (`core:swarm-topology@1`).
-    const TBOX: &str = include_str!("../../../../crates/medulla-core/ontology/swarm_topology-v1.ttl");
+    const TBOX: &str =
+        include_str!("../../../../crates/medulla-core/ontology/swarm_topology-v1.ttl");
 
     const S: &str = "http://knuckles.team/kg/swarm#";
 

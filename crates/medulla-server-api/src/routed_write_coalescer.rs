@@ -64,7 +64,7 @@ use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot};
 use tracing::Instrument;
 
-use medulla_types::protocol::Response;
+use medulla_protocol_types::protocol::Response;
 use medulla_kernel::write_coalescer::{
     receive_batch, record_flush, BatchStats, CoalescerConfig, CoalescerRegistryState,
     CoalescerState,

@@ -9,8 +9,10 @@
 //! A record is content-addressed and immutable, so a store is create-only: a
 //! row already holding the id is left untouched and answers `created: false`.
 
-use medulla_types::policy_evolution::{PolicyRecordStored, StoredPolicyRecord};
-use medulla_types::result_contract::graph::PolicyEvolutionStore;
+use medulla_decision_types::{
+    policy_evolution::PolicyRecordStored, policy_evolution::StoredPolicyRecord,
+};
+use medulla_protocol_types::result_contract::graph::PolicyEvolutionStore;
 
 use super::*;
 
@@ -21,7 +23,7 @@ pub(crate) fn apply_policy_record_rows(
     method: &Method,
     nodes: &mut NativeNodeRows<'_>,
     crypto: DurableCrypto<'_>,
-) -> Result<Option<medulla_types::protocol::ResultPayload>, String> {
+) -> Result<Option<medulla_protocol_types::protocol::ResultPayload>, String> {
     let Method::PolicyEvolutionStore { request } = method else {
         return Ok(None);
     };
@@ -33,7 +35,7 @@ fn store_policy_record_row(
     request: &StoredPolicyRecord,
     nodes: &mut NativeNodeRows<'_>,
     crypto: DurableCrypto<'_>,
-) -> Result<medulla_types::protocol::ResultPayload, String> {
+) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
     request
         .verify_identity()
         .map_err(|refusal| refusal.to_string())?;
@@ -42,7 +44,7 @@ fn store_policy_record_row(
         let mut row = request.row()?;
         write_work_item_props(nodes, graph, &request.record_id, &mut row, crypto)?;
     }
-    medulla_types::protocol::ResultPayload::of::<PolicyEvolutionStore>(PolicyRecordStored {
+    medulla_protocol_types::protocol::ResultPayload::of::<PolicyEvolutionStore>(PolicyRecordStored {
         created,
         changed_work_item_ids: created
             .then(|| request.record_id.clone())

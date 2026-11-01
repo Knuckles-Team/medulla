@@ -4,7 +4,9 @@
 //! sources the caller can see. An out-of-process cache (AU, EH-401) invalidates by class from the
 //! events and derives its TTLs from the policy.
 
-use medulla_types::freshness::{FreshnessFeed, InvalidationEvent, InvalidationScope};
+use medulla_result_types::{
+    freshness::FreshnessFeed, freshness::InvalidationEvent, freshness::InvalidationScope,
+};
 
 use super::*;
 
@@ -23,7 +25,9 @@ pub(crate) async fn handle_freshness_feed(
     let core = Arc::clone(ctx.core);
     let visible = row_filter(ctx);
     let built = compute_off_lock(ctx.req_id, move || build_feed(&core, request, visible)).await;
-    match built.map(ResultPayload::of::<medulla_types::result_contract::messaging::FreshnessFeed>) {
+    match built
+        .map(ResultPayload::of::<medulla_protocol_types::result_contract::messaging::FreshnessFeed>)
+    {
         Ok(Ok(payload)) => Response::ok(ctx.req_id, payload),
         Ok(Err(error)) => Response::err(ctx.req_id, error),
         Err(response) => response,
@@ -91,7 +95,7 @@ fn wire_event(record: medulla_core::dep_scope::InvalidationRecord) -> Invalidati
 mod tests {
     use super::*;
     use medulla_core::index::{ChangeSet, NodeChange};
-    use medulla_types::freshness::{VolatilityClass, VOLATILITY_CLASS_KEY};
+    use medulla_result_types::{freshness::VolatilityClass, freshness::VOLATILITY_CLASS_KEY};
 
     fn commit_node(core: &GraphCore, id: &str, props: serde_json::Value) {
         let blob = rmp_serde::to_vec_named(&props).unwrap();

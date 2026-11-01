@@ -1,5 +1,5 @@
 use crate::physical::manifest::physical_identity_digest;
-use medulla_types::IncarnationId;
+use medulla_mutation_types::mutation_scope::IncarnationId;
 use serde::{Deserialize, Deserializer, Serialize};
 
 /// Operator-supplied identity for a physical authority boundary.

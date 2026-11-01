@@ -12,12 +12,19 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_types::retrieval_verdict::{
-    ChunkScorePair, ChunkSelection, DescentPolicy, DescentReceipt, DescentStage, FallbackPolicy,
-    HierarchyCommunity, HierarchyVisit, RepairStep, RetrievalRefusal, ScoreNormalization,
-    ScoreRegion, SelectionPolicy, SelectionReceipt, SufficiencyVerdict, Verdict,
-    RETRIEVAL_BUDGET_EXCEEDED, RETRIEVAL_HIERARCHY_INVALID, RETRIEVAL_NORMALIZATION_INVALID,
-    RETRIEVAL_POLICY_UNVERIFIED, RETRIEVAL_ROUND_LIMIT_REQUIRED,
+use medulla_result_types::{
+    retrieval_verdict::ChunkScorePair, retrieval_verdict::ChunkSelection,
+    retrieval_verdict::DescentPolicy, retrieval_verdict::DescentReceipt,
+    retrieval_verdict::DescentStage, retrieval_verdict::FallbackPolicy,
+    retrieval_verdict::HierarchyCommunity, retrieval_verdict::HierarchyVisit,
+    retrieval_verdict::RepairStep, retrieval_verdict::RetrievalRefusal,
+    retrieval_verdict::ScoreNormalization, retrieval_verdict::ScoreRegion,
+    retrieval_verdict::SelectionPolicy, retrieval_verdict::SelectionReceipt,
+    retrieval_verdict::SufficiencyVerdict, retrieval_verdict::Verdict,
+    retrieval_verdict::RETRIEVAL_BUDGET_EXCEEDED, retrieval_verdict::RETRIEVAL_HIERARCHY_INVALID,
+    retrieval_verdict::RETRIEVAL_NORMALIZATION_INVALID,
+    retrieval_verdict::RETRIEVAL_POLICY_UNVERIFIED,
+    retrieval_verdict::RETRIEVAL_ROUND_LIMIT_REQUIRED,
 };
 
 use crate::RowSet;
@@ -500,7 +507,10 @@ pub fn descend_hierarchy(
         },
     };
     let checked = policy.validate().and_then(|()| {
-        medulla_types::retrieval_verdict::validate_hierarchy(communities, &policy.hierarchy_revision)
+        medulla_result_types::retrieval_verdict::validate_hierarchy(
+            communities,
+            &policy.hierarchy_revision,
+        )
     });
     if let Err(refusal) = checked {
         return Err(descent.refuse(&refusal.code, refusal.detail));

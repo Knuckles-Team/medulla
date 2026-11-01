@@ -2,7 +2,7 @@
 //! identities, and a sweep at an explicit instant.
 
 use super::{hex_digest, BlobManifest, ChunkStore, CommittedBlob, BLOB_MANIFEST_VERSION};
-use medulla_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::mutation_batch::MutationBatch;
 use sha2::{Digest, Sha256};
 
 pub(crate) const TENANT: &str = "tenant-opaque";
@@ -47,15 +47,15 @@ impl Operation {
                 expected_graph_version: Some(self.expected),
                 fencing_token: None,
                 created_at_ms: 1,
-                default_surface: medulla_types::mutation_batch::MutationSurface::Other,
+                default_surface: medulla_mutation_types::mutation_scope::MutationSurface::Other,
                 authoritative_state: None,
             },
-            &medulla_types::protocol::Method::ApplyMutation {
+            &medulla_protocol_types::protocol::Method::ApplyMutation {
                 event_type: "blob_store_test".to_string(),
                 query: format!("sha256:{}", super::hex_digest(self.id.as_bytes())),
             },
-            medulla_types::mutation_batch::MutationSurface::Other,
-            medulla_types::mutation_batch::DurabilityDomain::BlobStore,
+            medulla_mutation_types::mutation_scope::MutationSurface::Other,
+            medulla_mutation_types::mutation_scope::DurabilityDomain::BlobStore,
             "blob_store_test",
         )
         .unwrap()

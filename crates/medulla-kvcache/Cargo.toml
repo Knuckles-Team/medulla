@@ -42,6 +42,8 @@ medulla-modality = { path = "../medulla-modality", optional = true }
 # PageRank/centrality over an `medulla-compute::GraphView`. OFF by default — the base/pi build
 # and the core `TieredCache::set_importance` mechanism it feeds stay dependency-free.
 medulla-compute = { path = "../medulla-compute", optional = true }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
 
 [features]
 default = []

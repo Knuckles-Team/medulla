@@ -8,8 +8,10 @@ use crate::outbox::rows::{
 };
 use crate::outbox::OutboxClaimBudget;
 use crate::tables::{OUTBOX_CLAIM_CURSORS, OUTBOX_DELIVERIES, OUTBOX_FAIRNESS};
+use medulla_mutation_types::{
+    mutation_scope::MutationScopeIdentity, mutation_scope::MUTATION_BATCH_VERSION,
+};
 use medulla_storage::{OwnerDomain, ScopedRead};
-use medulla_types::{MutationScopeIdentity, MUTATION_BATCH_VERSION};
 
 /// Move the durable in-flight counter, in the same transaction as the delivery
 /// rows it counts.

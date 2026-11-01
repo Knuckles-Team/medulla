@@ -12,7 +12,7 @@ fn native_status_limit_uses_an_extra_row_probe() {
             TEST_GRAPH,
             &DevelopmentLaneStatusRequest {
                 schema_version:
-                    medulla_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
+                    medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
                 tenant_ref: "tenant:a".into(),
                 hold_id: None,
                 lane_id: None,
@@ -87,7 +87,7 @@ fn native_last_quota_unit_refuses_without_partial_indexes_or_counters() {
         TEST_GRAPH,
         &DevelopmentLaneStatusRequest {
             schema_version:
-                medulla_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
+                medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
             tenant_ref: "tenant:a".into(),
             hold_id: None,
             lane_id: None,

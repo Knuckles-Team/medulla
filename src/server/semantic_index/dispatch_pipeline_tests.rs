@@ -29,7 +29,7 @@ use medulla_server_api::auth::compute_verified_envelope_token;
 use medulla_server_api::auth::VerifiedEnvelopeParams;
 use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_server_api::test_support::decode_raw_response as ok;
-use medulla_types::semantic_index::{
+use medulla_index_types::semantic_index::{
     SemanticBinding, SemanticBindingState, SemanticIndexCommand, SemanticIndexFilter,
     SemanticIndexOp, SemanticIndexOutcome, SemanticIndexRequest, SemanticIndexResponse,
     SemanticIndexResult, SemanticPolicyIdentity, SemanticQueueClass, SemanticStage,
@@ -386,7 +386,7 @@ async fn dispatch_drives_a_source_through_s1_and_publishes_s2() {
     // until S1 completes. This is the lease-level half -- presenting an S2
     // transition against the S1 lease that is actually held.
     let premature = SemanticStageTransition {
-        intent: medulla_types::semantic_index::SemanticStageIntent::create(premature_s2)
+        intent: medulla_index_types::semantic_index::SemanticStageIntent::create(premature_s2)
             .expect("the S2 intent is well formed"),
         receipt: SemanticStageReceipt {
             intent_digest: s1_receipt_digest,
@@ -408,7 +408,9 @@ async fn dispatch_drives_a_source_through_s1_and_publishes_s2() {
                     binding_id: binding_id.clone(),
                     lease: Box::new(entry.lease.clone()),
                     transition: Box::new(premature),
-                    artifact: Box::new(medulla_types::semantic_index::SemanticStageArtifact::None),
+                    artifact: Box::new(
+                        medulla_index_types::semantic_index::SemanticStageArtifact::None,
+                    ),
                     successor: None,
                 },
             ),
@@ -570,7 +572,7 @@ async fn dispatch_refuses_an_unbounded_stage_claim_by_name() {
                     binding_id: "binding:documents-body".to_string(),
                     consumer: WORKER.to_string(),
                     queue_class: SemanticQueueClass::Fast,
-                    limit: medulla_types::semantic_index::MAX_SEMANTIC_STAGE_CLAIM_LIMIT + 1,
+                    limit: medulla_index_types::semantic_index::MAX_SEMANTIC_STAGE_CLAIM_LIMIT + 1,
                     lease_ms: 60_000,
                 },
             ),
@@ -762,9 +764,10 @@ async fn dispatch_attributes_every_queue_class_to_the_one_verified_principal() {
         "completing S1 publishes its S2 successor onto the Medium queue"
     );
     let medium_entry = medium.entries.into_iter().next().unwrap();
-    let medium_parts =
-        medulla_core::compute::semantic_ann_codes::stage_consumer_parts(&medium_entry.lease.consumer)
-            .expect("a leased row's consumer is `<worker>#<class>`");
+    let medium_parts = medulla_core::compute::semantic_ann_codes::stage_consumer_parts(
+        &medium_entry.lease.consumer,
+    )
+    .expect("a leased row's consumer is `<worker>#<class>`");
     assert_eq!(
         medium_parts.0, WORKER,
         "the Medium lease is attributed to the verified envelope principal, \

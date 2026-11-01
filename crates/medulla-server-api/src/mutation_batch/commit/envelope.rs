@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use medulla_types::change_envelope::ChangeEnvelope;
+use medulla_protocol_types::change_envelope::ChangeEnvelope;
 use medulla_core::graph::GraphCore;
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 
 /// Vectors and node removals an envelope carries. Vectors live in the
 /// semantic store beside the snapshot, so they are published after the
@@ -48,7 +48,7 @@ pub fn publish_change_envelope_projection(
 /// Apply one committed operation to the staged copy.
 fn stage_operation<'a>(
     staged: &GraphCore,
-    operation: &'a medulla_types::mutation_batch::MutationOperation,
+    operation: &'a medulla_protocol_types::mutation_batch::MutationOperation,
     vectors: &mut StagedVectors<'a>,
 ) -> Result<(), String> {
     match &operation.method {

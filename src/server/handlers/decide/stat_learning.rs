@@ -8,12 +8,15 @@
 //! derive from their own verified carrier) and the ACL-checked graphs a fit or
 //! a generation evaluation probes.
 
-use medulla_types::decision::statistical::log::DecisionLogOp;
-use medulla_types::decision::statistical::retrieval::{
-    LearningRecorded, LearningWrite, PointerMovement, PointerRef,
+use medulla_decision_types::decision::statistical::log::DecisionLogOp;
+use medulla_decision_types::decision::statistical::retrieval_adapter::AdapterFitRequest;
+use medulla_decision_types::decision::statistical::retrieval_generation::GenerationEvalRequest;
+use medulla_decision_types::{
+    decision::statistical::retrieval::LearningRecorded,
+    decision::statistical::retrieval::LearningWrite,
+    decision::statistical::retrieval::PointerMovement,
+    decision::statistical::retrieval::PointerRef,
 };
-use medulla_types::decision::statistical::retrieval_adapter::AdapterFitRequest;
-use medulla_types::decision::statistical::retrieval_generation::GenerationEvalRequest;
 
 use super::stat_adapter::{adapter_pointer, fit_adapter, qualified};
 use super::stat_executor::ExecutionContext;

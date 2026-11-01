@@ -9,9 +9,13 @@
 
 use std::time::Instant;
 
-use medulla_types::decision::jobs::{DecisionEvalReceipt, DecisionThresholdAssessment};
-use medulla_types::decision::replay::EvaluationRun;
-use medulla_types::decision::statistical::{StatisticalDecisionRecord, StatisticalOutcome};
+use medulla_decision_types::decision::replay::EvaluationRun;
+use medulla_decision_types::{
+    decision::jobs::DecisionEvalReceipt, decision::jobs::DecisionThresholdAssessment,
+};
+use medulla_decision_types::{
+    decision::statistical::StatisticalDecisionRecord, decision::statistical::StatisticalOutcome,
+};
 
 /// The span one served statistical call runs in.
 pub(super) fn span(method: &'static str, tenant_id: &str) -> tracing::Span {

@@ -31,15 +31,16 @@ use medulla_sqlite_format::{ColumnDef as SqliteColumnDef, Reader, Value as Sqlit
 use serde_json::Value as JsonValue;
 use std::path::{Path, PathBuf};
 
-use crate::mutation_batch::{DurabilityDomain, MutationBatch, MutationSurface};
+use crate::mutation_batch::MutationBatch;
 use crate::protocol::{Method, Response, ResultPayload};
 use medulla_server_api::access::CarrierAuthority;
 use medulla_types::contract::Nonce;
-use medulla_types::result_contract::storage as results;
-use medulla_types::storage_wire::{
+use medulla_protocol_types::result_contract::storage as results;
+use medulla_protocol_types::storage_wire::{
     SqliteExportDestination, SqliteExportReport, SqliteImportReport, SqliteImportSource,
     SqliteTableRows,
 };
+use medulla_types::contract::Nonce;
 
 mod transfer_fs;
 
@@ -301,7 +302,7 @@ fn export_sqlite_lifecycle(
 }
 
 fn decode_committed_import_report(
-    committed: &medulla_types::mutation_batch::MutationBatchCommit,
+    committed: &medulla_protocol_types::mutation_batch::MutationBatchCommit,
 ) -> Result<SqliteImportReport, String> {
     let bytes = committed
         .record
@@ -885,7 +886,8 @@ mod tests {
         );
 
         // 2. Import into an ISOLATED user-table store (pure-Rust Reader).
-        let (store, store_path) = medulla_kernel::store_authority::open_ephemeral_sql_store().unwrap();
+        let (store, store_path) =
+            medulla_kernel::store_authority::open_ephemeral_sql_store().unwrap();
         let reader = Reader::open(&src).unwrap();
         let (txn, report) = prepare_sqlite_import(&reader).unwrap();
         store.commit_txn(&txn).unwrap();

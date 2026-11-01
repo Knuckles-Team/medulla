@@ -9,9 +9,10 @@
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
-use medulla_types::agent_library::AgentLibraryMutationContext;
-use medulla_types::mutation::{MutationReceipt, MutationResult};
-use medulla_types::mutation_batch::{MutationOperation, MutationOutboxIntent};
+use medulla_agent_types::agent_library::AgentLibraryMutationContext;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::{mutation::MutationReceipt, mutation::MutationResult};
+use medulla_protocol_types::mutation_batch::MutationOperation;
 
 use crate::agent_library::admitted_context;
 use crate::agent_library::agent_library_operation_identity;
@@ -130,7 +131,7 @@ impl AgentLibraryStore {
         identity: &PackWriteIdentity<'_>,
         effects: PackWriteEffects,
         apply: impl FnOnce(&PackOwnerWrite<'_>, &PackWriteStaged) -> Result<R, String>,
-    ) -> Result<(medulla_types::mutation_batch::MutationBatch, R), String> {
+    ) -> Result<(medulla_protocol_types::mutation_batch::MutationBatch, R), String> {
         let batch_context = policy_admitted_context(admission.context, &effects.operations)?;
         let (batch_id, staged) = stage_batch(
             self,
@@ -195,8 +196,8 @@ impl AgentLibraryStore {
 struct PackAdmission<'a> {
     owner: &'a medulla_storage::OwnedStoreHandle<medulla_storage::AgentLibraryOwner>,
     context: &'a AgentLibraryMutationContext,
-    operation: &'a medulla_types::authority::OperationReplayIdentity,
-    nonce: &'a medulla_types::authority::NonceReplayKey,
+    operation: &'a medulla_identity_types::authority::OperationReplayIdentity,
+    nonce: &'a medulla_identity_types::authority::NonceReplayKey,
 }
 
 /// Decode the typed result a replayed receipt recorded, refusing a receipt of
@@ -229,11 +230,11 @@ fn decode_recorded<R: DeserializeOwned>(
 /// the envelope's authority (the kernel refuses the begin). The method schema
 /// digest stays the envelope's `ApplyMutation` digest.
 fn bind_batch_method(
-    mut operation: medulla_types::authority::OperationReplayIdentity,
+    mut operation: medulla_identity_types::authority::OperationReplayIdentity,
     operations: &[MutationOperation],
-) -> Result<medulla_types::authority::OperationReplayIdentity, String> {
-    let method = medulla_types::mutation_batch::batch_method_id(operations, false)?;
-    operation.method_schema_id = medulla_types::mutation_batch::method_schema_id(&method)?;
+) -> Result<medulla_identity_types::authority::OperationReplayIdentity, String> {
+    let method = medulla_protocol_types::mutation_batch::batch_method_id(operations, false)?;
+    operation.method_schema_id = medulla_protocol_types::mutation_batch::method_schema_id(&method)?;
     operation.method = method;
     operation.validate()?;
     Ok(operation)

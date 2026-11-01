@@ -9,16 +9,18 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use medulla_rdf::oxrdf::{NamedOrBlankNode, Term, Triple};
-use medulla_types::graph_schema::{
-    term_local_name, validate_term_page_limit, GraphSchemaClassesView, GraphSchemaTermKind,
-    GraphSchemaTermPosition, GraphSchemaTermView, GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
+use medulla_catalog_types::{
+    graph_schema::term_local_name, graph_schema::validate_term_page_limit,
+    graph_schema::GraphSchemaClassesView, graph_schema::GraphSchemaTermKind,
+    graph_schema::GraphSchemaTermPosition, graph_schema::GraphSchemaTermView,
+    graph_schema::GRAPH_SCHEMA_RESULT_SCHEMA_VERSION,
 };
+use medulla_rdf::oxrdf::{NamedOrBlankNode, Term, Triple};
 
 use medulla_core::graph::GraphCore;
 use medulla_core::graph::GraphSchemaSources;
-use medulla_types::protocol::Response;
-use medulla_types::protocol::ResultPayload;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
@@ -46,9 +48,9 @@ pub async fn handle_classes(
     ) {
         Ok(view) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::reasoning::GraphSchemaClasses>(
-                view,
-            ),
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::reasoning::GraphSchemaClasses,
+            >(view),
         ),
         Err(error) => Response::err(req_id, error),
     }

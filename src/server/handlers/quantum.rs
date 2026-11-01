@@ -74,6 +74,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 
+use medulla_protocol_types::result_contract::ingestion as results;
 use medulla_quantum_core::backend::{BackendDescriptor, BackendId, QuantumBackend, RunOptions};
 use medulla_quantum_core::estimate::{estimate, EstimateOptions};
 use medulla_quantum_core::ir::{
@@ -89,7 +90,6 @@ use medulla_types::quantum::{
     QuantumPlannerReport, QuantumQaoaEdge, QuantumQaoaResult, QuantumRankCandidate,
     QuantumRankResult, QuantumRankedCandidate, QuantumRunMetadata,
 };
-use medulla_types::result_contract::ingestion as results;
 
 use crate::protocol::{Response, ResultPayload};
 

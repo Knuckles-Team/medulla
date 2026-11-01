@@ -41,9 +41,9 @@
 //! own mirrored lockstep feature there instead, like `jobs`/`statechart`), so
 //! `Method::ServedModality` genuinely does not exist without this crate's own
 //! `modality-serving` feature; that one arm keeps its cfg gate.
-use medulla_types::protocol::CypherMode;
-use medulla_types::protocol::Method;
-use medulla_types::protocol::MethodWriteFamily;
+use medulla_protocol_types::protocol::CypherMode;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::MethodWriteFamily;
 
 /// The operation-conditional agent-layer and semantic-index surfaces.
 fn requires_write_agent_surface(method: &Method) -> Option<bool> {
@@ -278,7 +278,7 @@ fn requires_write_mining_surface(method: &Method) -> Option<bool> {
     } = method
     {
         return Some(
-            *writeback && !matches!(algorithm, medulla_types::protocol::TextAlgorithm::Tfidf),
+            *writeback && !matches!(algorithm, medulla_protocol_types::protocol::TextAlgorithm::Tfidf),
         );
     }
     // MineSubgraph: writeback only mutates for gspan (its :FrequentSubgraph
@@ -290,7 +290,7 @@ fn requires_write_mining_surface(method: &Method) -> Option<bool> {
     } = method
     {
         return Some(
-            *writeback && !matches!(algorithm, medulla_types::protocol::SubgraphAlgorithm::Motif),
+            *writeback && !matches!(algorithm, medulla_protocol_types::protocol::SubgraphAlgorithm::Motif),
         );
     }
     // Classification FIT is read-only (returns a model blob; no graph mutation).
@@ -464,19 +464,22 @@ mod eh316_eh319_slim_profile_tests {
     #[test]
     fn list_registered_servers_is_a_read() {
         let method = Method::ListRegisteredServers {
-            request: medulla_types::result_contract::cluster::RegisteredServerListRequest {
-                limit: None,
-                cursor: None,
-            },
+            request:
+                medulla_protocol_types::result_contract::cluster::RegisteredServerListRequest {
+                    limit: None,
+                    cursor: None,
+                },
         };
         assert!(!requires_write(&method));
     }
 
     #[test]
     fn fleet_catalog_reads_and_writes_split_on_the_op() {
-        use medulla_types::fleet_catalog::{
-            DiscoveryCounts, DiscoveryOutcome, DiscoveryScope, FleetCatalogKind,
-            FleetCatalogListRequest, FleetCatalogOp, FleetDiscoveryRecordRequest,
+        use medulla_catalog_types::{
+            fleet_catalog::DiscoveryCounts, fleet_catalog::DiscoveryOutcome,
+            fleet_catalog::DiscoveryScope, fleet_catalog::FleetCatalogKind,
+            fleet_catalog::FleetCatalogListRequest, fleet_catalog::FleetCatalogOp,
+            fleet_catalog::FleetDiscoveryRecordRequest,
         };
         let list = Method::FleetCatalog {
             op: Box::new(FleetCatalogOp::List {

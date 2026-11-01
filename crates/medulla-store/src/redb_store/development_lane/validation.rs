@@ -3,15 +3,15 @@ use super::links::{intent_validate, text};
 use super::reserve_support::policy_validate;
 use super::types::LaneDecision;
 use super::{MAX_DISK_BYTES, MAX_STATUS_LIMIT, MAX_TTL_MS};
-use medulla_types::epistemic_operations::DevelopmentLaneCleanupCompleteRequest;
-use medulla_types::epistemic_operations::DevelopmentLaneFinishRequest;
-use medulla_types::epistemic_operations::DevelopmentLaneObserveRequest;
-use medulla_types::epistemic_operations::DevelopmentLaneQueryRequest;
-use medulla_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequest;
-use medulla_types::epistemic_operations::DevelopmentLaneRenewRequest;
-use medulla_types::epistemic_operations::DevelopmentLaneReserveRequest;
-use medulla_types::epistemic_operations::DevelopmentLaneStatusRequest;
-use medulla_types::protocol::Method;
+use medulla_result_types::epistemic_operations::DevelopmentLaneCleanupCompleteRequest;
+use medulla_result_types::epistemic_operations::DevelopmentLaneFinishRequest;
+use medulla_result_types::epistemic_operations::DevelopmentLaneObserveRequest;
+use medulla_result_types::epistemic_operations::DevelopmentLaneQueryRequest;
+use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequest;
+use medulla_result_types::epistemic_operations::DevelopmentLaneRenewRequest;
+use medulla_result_types::epistemic_operations::DevelopmentLaneReserveRequest;
+use medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequest;
+use medulla_protocol_types::protocol::Method;
 use sha2::{Digest, Sha256};
 
 pub(super) fn bounded_texts(values: &[(&str, &str)]) -> Result<(), LaneDecision> {

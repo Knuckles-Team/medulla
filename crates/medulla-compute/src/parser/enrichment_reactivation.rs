@@ -2,8 +2,9 @@
 //! top-up: the server must verify a control-plane caller and atomically compare
 //! and swap the policy, parked intent, old/new snapshots, and budget rows.
 
-use medulla_types::native_control::{
-    EnrichmentBudgetCheckpoint as DurableBudgetCheckpoint, EnrichmentBudgetPark,
+use medulla_agent_types::{
+    native_control::EnrichmentBudgetCheckpoint as DurableBudgetCheckpoint,
+    native_control::EnrichmentBudgetPark,
 };
 
 use super::enrichment_snapshot::{EligibleSnapshot, EnrichmentBudgetCheckpoint};

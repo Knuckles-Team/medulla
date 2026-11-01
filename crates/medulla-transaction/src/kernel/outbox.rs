@@ -3,8 +3,10 @@
 use super::{ensure_admitted_owner, MutationKernel};
 use crate::admitted::AdmittedMutation;
 use crate::outbox::{OutboxBackfillOutcome, OutboxClaimBudget, OutboxClaimOutcome};
+use medulla_mutation_types::{
+    mutation_scope::MutationOutboxLease, mutation_scope::MutationProjectionCursor,
+};
 use medulla_storage::{OwnedStoreHandle, OwnerDomain};
-use medulla_types::{MutationOutboxLease, MutationProjectionCursor};
 
 impl MutationKernel {
     /// A subscription is the consumer's liveness and the boundary of its

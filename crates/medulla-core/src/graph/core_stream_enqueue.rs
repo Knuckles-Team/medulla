@@ -11,7 +11,11 @@ impl GraphCore {
     /// Read a distribution-valued property `key` off `node_id` (CONCEPT:MEDULLA-KG.compute.uncertainty-values).
     /// Returns `None` if the node is absent, its blob is undecodable, the key is
     /// missing, or the stored JSON is not a valid `Distribution`.
-    pub fn get_distribution(&self, node_id: &str, key: &str) -> Option<medulla_types::Distribution> {
+    pub fn get_distribution(
+        &self,
+        node_id: &str,
+        key: &str,
+    ) -> Option<medulla_catalog_types::distribution::Distribution> {
         let bytes = self.get_node_properties(node_id)?;
         let val = decode_property_value(&bytes).ok()?;
         let field = val.as_object()?.get(key)?.clone();
@@ -26,7 +30,7 @@ impl GraphCore {
         &self,
         node_id: &str,
         key: &str,
-        dist: &medulla_types::Distribution,
+        dist: &medulla_catalog_types::distribution::Distribution,
     ) -> bool {
         let dist_val = match serde_json::to_value(dist) {
             Ok(v) => v,
@@ -52,7 +56,11 @@ impl GraphCore {
     /// One-shot serializable gated remove (CONCEPT:MEDULLA-KG.txn.serializable-mutation-gate). See
     /// [`GraphTxn::remove_node_if`]; the decode → predicate re-check → remove runs
     /// under ONE topology write guard.
-    pub fn remove_node_if(&self, node_id: &str, predicate: &medulla_types::RowPredicate) -> bool {
+    pub fn remove_node_if(
+        &self,
+        node_id: &str,
+        predicate: &medulla_result_types::row_predicate::RowPredicate,
+    ) -> bool {
         let removed = self.txn().remove_node_if(node_id, predicate);
         if removed {
             self.semantic_store.write().remove_embedding(node_id);
@@ -79,7 +87,7 @@ impl GraphCore {
     pub fn compare_and_set_fields_if(
         &self,
         node_id: &str,
-        predicate: &medulla_types::RowPredicate,
+        predicate: &medulla_result_types::row_predicate::RowPredicate,
         conditions: &serde_json::Map<String, serde_json::Value>,
         updates: &serde_json::Map<String, serde_json::Value>,
     ) -> bool {

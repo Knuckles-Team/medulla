@@ -36,7 +36,7 @@ use medulla_raft::raft::node::{self, StartedNode};
 use medulla_raft::raft::{NodeId, RaftRequest};
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::state::ServerState;
-use medulla_types::protocol::{GraphType, Method};
+use medulla_protocol_types::protocol::{GraphType, Method};
 
 /// Build a ServerState with a redb-AUTHORITATIVE backend rooted at `dir`.
 async fn make_state(dir: &str) -> Arc<RwLock<ServerState>> {
@@ -1265,7 +1265,7 @@ mod placement_admin_wire_rpc {
         // A-W1.2-2: the route response is the ADR-1 wire superset (extra
         // `endpoints` key); the canonical deny_unknown_fields DTO rejects it,
         // so the wire type is the ONLY correct reader for a route response.
-        let route: medulla_types::result_contract::cluster::PlacementRouteWire =
+        let route: medulla_protocol_types::result_contract::cluster::PlacementRouteWire =
             match route_resp.result {
                 Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(&bytes).unwrap(),
                 other => panic!("expected a typed PlacementRouteWire, got {other:?}"),
@@ -2959,7 +2959,7 @@ mod dist_compute {
     use crate::protocol::{DistAlgo, GraphType};
     use medulla_raft::raft::pregel;
     use medulla_server_api::access::GraphReadAuthority;
-    use medulla_types::result_contract::cluster::DistResult;
+    use medulla_protocol_types::result_contract::cluster::DistResult;
 
     fn props(n: &str) -> Vec<u8> {
         rmp_serde::to_vec_named(&serde_json::json!({"type": "N", "id": n})).unwrap()
@@ -3237,7 +3237,7 @@ mod matview {
     use super::*;
     use crate::protocol::DistAlgo;
     use medulla_server_api::api::persistence::MatView;
-    use medulla_types::result_contract::cluster::DistResult;
+    use medulla_protocol_types::result_contract::cluster::DistResult;
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn matview_persists_and_reloads_from_redb() {

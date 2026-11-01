@@ -5,7 +5,7 @@
 //! temporary store and read the same ledger record. One definition keeps the
 //! four test modules from drifting apart on what a well-formed attempt is.
 
-use medulla_types::agent_library::AgentLibraryMutationContext;
+use medulla_agent_types::agent_library::AgentLibraryMutationContext;
 
 use super::agent_library::{batch_id, current_agent_library_policy_digest, AgentLibraryStore};
 
@@ -54,7 +54,7 @@ pub fn ledger_record(
     store: &AgentLibraryStore,
     tenant_id: &str,
     idempotency_key: &str,
-) -> medulla_types::MutationBatchRecord {
+) -> medulla_protocol_types::mutation_batch::MutationBatchRecord {
     let owner = store.scope_handle(tenant_id).unwrap();
     let read = store.kernel.read_scope(&owner).unwrap();
     let batch_id = batch_id(idempotency_key).unwrap();

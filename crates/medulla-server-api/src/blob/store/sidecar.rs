@@ -8,7 +8,7 @@ use super::{
     open_store, ChunkAuthority, ChunkStore, RedbChunkStore, SweepRequest, SweepStats, CAS_BLOBS,
     CAS_RETENTION, CAS_UPLOADS,
 };
-use medulla_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::mutation_batch::MutationBatch;
 use redb::ReadableTable;
 use std::collections::BTreeSet;
 

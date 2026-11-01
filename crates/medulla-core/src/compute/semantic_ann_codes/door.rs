@@ -11,6 +11,15 @@
 //! the parent module's per-generation-scope non-goal.
 
 use super::{corrupt, kernel_error, SemanticCodeError, SemanticMutationReceipt};
+use medulla_index_types::semantic_index::SemanticDigest;
+use medulla_mutation_types::mutation_scope::CommittedVersion;
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+use medulla_mutation_types::mutation_scope::MutationProjectionCursor;
+use medulla_protocol_types::mutation_batch::CompiledOperation;
+use medulla_protocol_types::mutation_batch::CompiledScope;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::mutation_batch::MutationEnvelope;
+use medulla_protocol_types::mutation_batch::VersionExpectation;
 use medulla_storage::{
     OwnedStoreHandle, PhysicalStoreIdentity, RecordedOperation, ScopeGrantVerifier, ScopedRead,
     SemanticIndexOwner, StorageKernel,
@@ -20,12 +29,6 @@ use medulla_transaction::{
     OutboxClaimOutcome,
 };
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_batch::{
-    CommittedVersion, CompiledOperation, CompiledScope, MutationEnvelope, MutationOutboxLease,
-    MutationProjectionCursor, VersionExpectation,
-};
-use medulla_types::semantic_index::SemanticDigest;
-use medulla_types::MutationBatch;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -250,7 +253,7 @@ impl ServingDoor {
         let mutation_digest = mutation_digest_from_batch(&record.batch)
             .map_err(|error| format!("stage replay has no mutation digest receipt: {error}"))?;
         let (source_version, target_version) = match record.committed_version {
-            medulla_types::mutation_batch::CommittedVersion::Native { source, target } => {
+            medulla_mutation_types::mutation_scope::CommittedVersion::Native { source, target } => {
                 (source, target)
             }
             other => return Err(format!("stage replay has non-native version {other:?}")),
@@ -284,8 +287,8 @@ impl ServingDoor {
         F: FnOnce(&MutationBatch) -> Result<(), SemanticCodeError>,
     {
         let read = self.serving_read()?;
-        let Some(operation) =
-            medulla_transaction::read_replay_operation(&read, idempotency_key).map_err(kernel_error)?
+        let Some(operation) = medulla_transaction::read_replay_operation(&read, idempotency_key)
+            .map_err(kernel_error)?
         else {
             return Ok(None);
         };
@@ -529,7 +532,7 @@ pub(super) fn mutation_digest_from_batch(batch: &MutationBatch) -> Result<Semant
             // The digest is the trailing `/` segment on both surfaces: alone on
             // the maintenance surface, behind the recorded subject on the
             // operation surface (see [`metadata_operation_query`]).
-            medulla_types::protocol::Method::ApplyMutation { query, .. } => query
+            medulla_protocol_types::protocol::Method::ApplyMutation { query, .. } => query
                 .rsplit('/')
                 .next()
                 .and_then(|segment| segment.strip_prefix("sha256:")),
@@ -547,7 +550,7 @@ pub(super) fn mutation_digest_from_batch(batch: &MutationBatch) -> Result<Semant
 pub(super) fn serving_identity(
     tenant: &str,
     binding: &str,
-) -> Result<medulla_types::MutationScopeIdentity, SemanticCodeError> {
+) -> Result<medulla_mutation_types::mutation_scope::MutationScopeIdentity, SemanticCodeError> {
     scope_identity(
         tenant,
         &format!("{binding}:serving"),
@@ -559,10 +562,10 @@ pub(super) fn scope_identity(
     tenant: &str,
     resource: &str,
     incarnation: &str,
-) -> Result<medulla_types::MutationScopeIdentity, SemanticCodeError> {
-    medulla_types::MutationScopeIdentity::fixed_native(
+) -> Result<medulla_mutation_types::mutation_scope::MutationScopeIdentity, SemanticCodeError> {
+    medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_native(
         tenant,
-        medulla_types::mutation_batch::DurabilityDomain::SemanticIndex,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::SemanticIndex,
         resource,
         incarnation,
     )
@@ -581,7 +584,7 @@ fn bind_scope(
     verifier: &dyn ScopeGrantVerifier,
     principal: &str,
     proof: &[u8],
-    identity: medulla_types::MutationScopeIdentity,
+    identity: medulla_mutation_types::mutation_scope::MutationScopeIdentity,
 ) -> Result<OwnedStoreHandle<SemanticIndexOwner>, SemanticCodeError> {
     // Decide reopen vs first open from the binding row (a plain read), so the
     // scope is authenticated exactly once on either path.

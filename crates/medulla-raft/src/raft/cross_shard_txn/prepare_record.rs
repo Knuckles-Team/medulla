@@ -102,7 +102,7 @@ mod tests {
         vec![GraphSlice {
             graph_name: "fixture".into(),
             graph_fname: "fixture".into(),
-            graph_type: medulla_types::protocol::GraphType::Global,
+            graph_type: medulla_protocol_types::protocol::GraphType::Global,
             methods: vec![],
             placement_epoch: 0,
             fencing_token: None,

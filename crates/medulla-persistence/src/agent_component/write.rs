@@ -91,7 +91,7 @@ impl AgentLibraryStore {
         write: &medulla_transaction::AdmittedMutation<'_, medulla_storage::AgentLibraryOwner>,
         tenant_id: &str,
         subject: &str,
-        pins: &[&medulla_types::agent_component::ComponentDependency],
+        pins: &[&medulla_agent_types::agent_component::ComponentDependency],
     ) -> Result<(), String> {
         super::pins::resolve_component_pins_in_write(write, tenant_id, subject, pins)
     }

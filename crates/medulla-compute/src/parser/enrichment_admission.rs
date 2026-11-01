@@ -8,12 +8,13 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_types::epistemic_operations::RequestContext;
+use medulla_agent_types::{
+    native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemRequest,
+    native_control::SubmitWorkItemsRequest, native_control::MAX_SUBMIT_BATCH,
+};
+use medulla_result_types::epistemic_operations::RequestContext;
 use medulla_types::ingestion_wire::{
     ExtractedEdge, IndexFileOutcome, IndexFileStatus, NativeRungEvidence, ParseResult,
-};
-use medulla_types::native_control::{
-    NativeControlSchemaVersion, SubmitWorkItemRequest, SubmitWorkItemsRequest, MAX_SUBMIT_BATCH,
 };
 use sha2::{Digest, Sha256};
 
@@ -568,10 +569,11 @@ fn candidate_fingerprint(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::contract::BoundedVec;
-    use medulla_types::epistemic_operations::{
-        RequestContextAuthenticationMethod, RequestContextSchemaVersion,
+    use medulla_result_types::{
+        epistemic_operations::RequestContextAuthenticationMethod,
+        epistemic_operations::RequestContextSchemaVersion,
     };
+    use medulla_types::contract::BoundedVec;
 
     fn outcome(digest: &str, status: IndexFileStatus) -> IndexFileOutcome {
         IndexFileOutcome {

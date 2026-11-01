@@ -1064,7 +1064,7 @@ impl TableSchema {
     }
 
     /// SHA-256 hex digest over the canonical `(name, columns)` shape (GOC-10:
-    /// `medulla_types::lake_catalog::TableSchemaVersion::schema_digest`). Two schemas
+    /// `medulla_catalog_types::lake_catalog::TableSchemaVersion::schema_digest`). Two schemas
     /// that would `assert_eq!` via [`PartialEq`] always produce the SAME digest;
     /// any observable difference (a renamed/reordered/retyped/reconstrained
     /// column, or a renamed table) always produces a DIFFERENT one. Digests over

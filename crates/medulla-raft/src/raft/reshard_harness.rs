@@ -18,8 +18,8 @@ use super::harness::cluster::fixture;
 use super::multi::MultiRaft;
 use super::reshard::TenantManager;
 use super::{GroupId, RaftRequest};
-use medulla_types::protocol::GraphType;
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::GraphType;
+use medulla_protocol_types::protocol::Method;
 
 const GROUP_A: GroupId = 100;
 const GROUP_B: GroupId = 200;

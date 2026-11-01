@@ -8,7 +8,6 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::mutation_batch::DurabilityDomain;
 use crate::protocol::{Method, Response, ResultPayload};
 use medulla_persistence::rebalance::plan_rebalance;
 use medulla_persistence::rebalance::shard_loads_from_catalog;
@@ -57,7 +56,7 @@ pub(crate) async fn try_handle(
     match method {
         Method::Reshard { graph, to_shard } => Ok(handle_reshard(call, graph, to_shard).await),
         Method::CatalogAssign { graph, shard, node } => Ok(catalog_saga::<
-            medulla_types::result_contract::cluster::CatalogAssign,
+            medulla_protocol_types::result_contract::cluster::CatalogAssign,
         >(
             req_id,
             caller,
@@ -67,7 +66,7 @@ pub(crate) async fn try_handle(
             |catalog| catalog.assign(&medulla_kernel::persist::sanitize(&graph), shard, node),
         )),
         Method::CatalogReassign { graph, shard } => Ok(catalog_saga::<
-            medulla_types::result_contract::cluster::CatalogReassign,
+            medulla_protocol_types::result_contract::cluster::CatalogReassign,
         >(
             req_id,
             caller,
@@ -77,7 +76,7 @@ pub(crate) async fn try_handle(
             |catalog| catalog.reassign(&medulla_kernel::persist::sanitize(&graph), shard),
         )),
         Method::CatalogRemove { graph } => Ok(catalog_saga::<
-            medulla_types::result_contract::cluster::CatalogRemove,
+            medulla_protocol_types::result_contract::cluster::CatalogRemove,
         >(
             req_id,
             caller,
@@ -117,9 +116,9 @@ async fn handle_reshard(call: AdminSagaCall<'_>, graph: String, to_shard: u32) -
         Ok(report) => report,
         Err(e) => return Response::err(call.req_id, format!("Reshard failed: {e}")),
     };
-    match ResultPayload::of::<medulla_types::result_contract::cluster::Reshard>(reshard_report(
-        &report,
-    ))
+    match ResultPayload::of::<medulla_protocol_types::result_contract::cluster::Reshard>(
+        reshard_report(&report),
+    )
     .and_then(|result| finish_admin_saga(call.backend, saga.batch, saga.created_at_ms, result))
     {
         Ok(result) => Response::ok(call.req_id, result),
@@ -138,18 +137,18 @@ fn handle_catalog_list(
     let placements = cat
         .entries()
         .into_iter()
-        .map(
-            |(graph, assignment)| medulla_types::result_contract::cluster::CatalogPlacement {
+        .map(|(graph, assignment)| {
+            medulla_protocol_types::result_contract::cluster::CatalogPlacement {
                 graph,
                 shard: assignment.shard,
                 node: assignment.node,
-            },
-        )
+            }
+        })
         .collect();
     Response::ok(
         req_id,
-        ResultPayload::of::<medulla_types::result_contract::cluster::CatalogList>(
-            medulla_types::result_contract::cluster::CatalogListing { placements },
+        ResultPayload::of::<medulla_protocol_types::result_contract::cluster::CatalogList>(
+            medulla_protocol_types::result_contract::cluster::CatalogListing { placements },
         ),
     )
 }
@@ -183,7 +182,7 @@ async fn handle_rebalance_plan(
     let plan = plan_rebalance(&shards, rebalance_opts(tolerance, max_moves));
     Ok(Response::ok(
         req_id,
-        ResultPayload::of::<medulla_types::result_contract::cluster::RebalancePlan>(
+        ResultPayload::of::<medulla_protocol_types::result_contract::cluster::RebalancePlan>(
             rebalance_plan_report(&plan, &shards),
         ),
     ))
@@ -249,8 +248,10 @@ async fn handle_rebalance_execute(
     match backend.rebalance_execute(&plan).await {
         Ok(reports) => {
             let executed = reports.iter().map(reshard_report).collect();
-            match ResultPayload::of::<medulla_types::result_contract::cluster::RebalanceExecute>(
-                medulla_types::result_contract::cluster::RebalanceExecution { executed },
+            match ResultPayload::of::<
+                medulla_protocol_types::result_contract::cluster::RebalanceExecute,
+            >(
+                medulla_protocol_types::result_contract::cluster::RebalanceExecution { executed },
             )
             .and_then(|result| finish_admin_saga(backend, saga.batch, saga.created_at_ms, result))
             {
@@ -344,7 +345,7 @@ async fn handle_backup(
                     ),
                 ));
             }
-            let receipt = medulla_types::storage_wire::BackupReceipt {
+            let receipt = medulla_protocol_types::storage_wire::BackupReceipt {
                 shards: r.shards,
                 graph_scopes: r.graph_scopes(),
                 shard_counts: r.shard_counts,
@@ -357,7 +358,9 @@ async fn handle_backup(
             };
             Ok(Response::ok(
                 req_id,
-                ResultPayload::of::<medulla_types::result_contract::storage::Backup>(receipt),
+                ResultPayload::of::<medulla_protocol_types::result_contract::storage::Backup>(
+                    receipt,
+                ),
             ))
         }
         Err(e) => {
@@ -469,7 +472,7 @@ async fn handle_restore(
             // The receipt is portable and contains no local username or
             // filesystem reference. The deterministic stage token is
             // sufficient for an operator-side swap workflow.
-            let receipt = medulla_types::storage_wire::RestoreReceipt {
+            let receipt = medulla_protocol_types::storage_wire::RestoreReceipt {
                 stage_ref: stage_token,
                 restored_shards: r.restored_shards,
                 graphs: r.migration.graphs,
@@ -486,11 +489,12 @@ async fn handle_restore(
                 prepared_parents: r.admin_mutations.prepared,
                 encrypted_recovery_plans: r.admin_mutations.encrypted_private_payloads,
             };
-            let committed =
-                ResultPayload::of::<medulla_types::result_contract::storage::Restore>(receipt)
-                    .and_then(|durable| {
-                        finish_admin_saga(backend, saga.batch, saga.created_at_ms, durable)
-                    });
+            let committed = ResultPayload::of::<
+                medulla_protocol_types::result_contract::storage::Restore,
+            >(receipt)
+            .and_then(|durable| {
+                finish_admin_saga(backend, saga.batch, saga.created_at_ms, durable)
+            });
             match committed {
                 // Return the same portable receipt on first execution and
                 // replay. The local staging path is intentionally neither

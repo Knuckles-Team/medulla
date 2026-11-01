@@ -31,7 +31,7 @@ fn native_cancel_advances_fence_and_old_finish_replays_after_reopen() {
         TEST_GRAPH,
         &DevelopmentLaneStatusRequest {
             schema_version:
-                medulla_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
+                medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
             tenant_ref: hold.tenant_ref.clone(),
             hold_id: Some(hold.hold_id.clone()),
             lane_id: None,

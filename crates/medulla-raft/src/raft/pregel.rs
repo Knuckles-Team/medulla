@@ -50,7 +50,7 @@ use petgraph::visit::{EdgeRef, IntoEdgeReferences};
 use tokio::sync::RwLock;
 
 use medulla_core::isolation::AccessLevel;
-use medulla_types::protocol::DistAlgo;
+use medulla_protocol_types::protocol::DistAlgo;
 use medulla_server_api::access::check_graph_access;
 use medulla_server_api::access::GraphReadAuthority;
 use medulla_server_api::state::ServerState;
@@ -227,7 +227,10 @@ async fn gather_shards(
     Ok(builder.finish())
 }
 
-pub use medulla_types::compute_result::distributed::{DistResult, LabelRows, ScoreRows};
+pub use medulla_result_types::{
+    compute_result::distributed::DistResult, compute_result::distributed::LabelRows,
+    compute_result::distributed::ScoreRows,
+};
 
 /// Run a distributed graph algorithm across `graphs` (each a shard), returning the
 /// per-vertex result over the UNION. The cross-shard superstep coordinator: gather the

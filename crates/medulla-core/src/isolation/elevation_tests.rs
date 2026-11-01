@@ -6,9 +6,12 @@ use super::{
 };
 use crate::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
 use crate::protocol::GraphType;
-use medulla_types::rbac_elevation::{
-    ElevationAction, ElevationActor, ElevationApproval, ElevationDelegation, ElevationRefusal,
-    ElevationRequest, ElevationRevoke, ElevationScope, ElevationStanding,
+use medulla_identity_types::{
+    rbac_elevation::ElevationAction, rbac_elevation::ElevationActor,
+    rbac_elevation::ElevationApproval, rbac_elevation::ElevationDelegation,
+    rbac_elevation::ElevationRefusal, rbac_elevation::ElevationRequest,
+    rbac_elevation::ElevationRevoke, rbac_elevation::ElevationScope,
+    rbac_elevation::ElevationStanding,
 };
 
 const GRAPH: &str = "tenant__acme__default";

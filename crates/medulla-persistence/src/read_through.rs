@@ -21,8 +21,8 @@ use medulla_server_api::api::persistence::PersistenceBackend;
 #[cfg(all(test, feature = "redb"))]
 mod production_wiring_tests {
     use super::*;
-    use medulla_types::protocol::GraphType;
-    use medulla_types::protocol::Method;
+    use medulla_protocol_types::protocol::GraphType;
+    use medulla_protocol_types::protocol::Method;
     use medulla_core::registry::GraphRegistry;
     use crate::redb_backend::RedbBackend;
 

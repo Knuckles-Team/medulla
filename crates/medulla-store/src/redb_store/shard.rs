@@ -45,6 +45,14 @@ use std::sync::{Arc, RwLock};
 #[cfg(all(any(test, feature = "test-support"), feature = "server"))]
 use std::sync::{Barrier, OnceLock};
 
+#[cfg(feature = "raft")]
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
+use medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION;
+use medulla_mutation_types::{
+    mutation_scope::MutationOutboxLease, mutation_scope::MutationProjectionCursor,
+    mutation_scope::MutationScopeIdentity,
+};
+use medulla_protocol_types::{mutation_batch::MutationBatch, mutation_batch::MutationBatchRecord};
 use medulla_storage::{
     GraphShardOwner, OwnedStoreHandle, OwnerDomain, PhysicalStoreIdentity, ScopedRead,
     StorageKernel, GRAPH_SHARD_CONTROL_GRAPH, GRAPH_SHARD_TENANT,
@@ -55,13 +63,6 @@ use medulla_transaction::{
 };
 #[cfg(feature = "server")]
 use medulla_transaction::{GraftDestination, GraftedScope};
-use medulla_types::mutation_batch::COMPILED_BATCH_INCARNATION;
-#[cfg(feature = "raft")]
-use medulla_types::MutationOutboxRecord;
-use medulla_types::{
-    MutationBatch, MutationBatchRecord, MutationOutboxLease, MutationProjectionCursor,
-    MutationScopeIdentity,
-};
 
 mod batch;
 pub(crate) use batch::bind_caller_batch;
@@ -1237,8 +1238,8 @@ mod tests {
     use crate::redb_store::GRAPH_META;
     use crate::redb_store::NODES;
     use crate::redb_store::RAFT_LOG;
-    use medulla_types::mutation_batch::{authority_scope_for, DurabilityDomain};
-    use medulla_types::protocol::Method;
+    use medulla_protocol_types::mutation_batch::{authority_scope_for, DurabilityDomain};
+    use medulla_protocol_types::protocol::Method;
     use medulla_types::{
         MutationOperation, MutationSurface, VersionExpectation, MUTATION_BATCH_VERSION,
     };
@@ -1556,7 +1557,8 @@ mod tests {
             let shard = Shard::open(&path).unwrap();
             let members = members(&shard, &[physical.as_str()]);
             let (group, batches) = shard.admit_drain(&members, "drain-escaped").unwrap();
-            let medulla_types::MutationEnvelope::Maintenance(maintenance) = &batches[1].envelope
+            let medulla_protocol_types::mutation_batch::MutationEnvelope::Maintenance(maintenance) =
+                &batches[1].envelope
             else {
                 panic!("shard drain must use a maintenance envelope");
             };

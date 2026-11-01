@@ -5,15 +5,16 @@
 //! Every refusal here must leave generation one live and write no S6 stage
 //! row; every publication must leave exactly the binding states it names.
 
+use medulla_index_types::{
+    semantic_index::SemanticActivePointer, semantic_index::SemanticBinding,
+    semantic_index::SemanticBindingState, semantic_index::SemanticDigest,
+    semantic_index::SemanticIndexMutation,
+};
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_storage::SemanticIndexOwner;
 use medulla_storage::{ANN_CODES, SEMANTIC_BINDINGS, SEMANTIC_POINTERS, SEMANTIC_STAGES};
 use medulla_transaction::OutboxClaimBudget;
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite};
-use medulla_types::mutation_batch::MutationOutboxLease;
-use medulla_types::semantic_index::{
-    SemanticActivePointer, SemanticBinding, SemanticBindingState, SemanticDigest,
-    SemanticIndexMutation,
-};
 
 use super::batch::MetadataMutation;
 use super::tests::{
@@ -37,7 +38,7 @@ fn claim(fixture: &S6Fixture) -> MutationOutboxLease {
 fn finalize(
     fixture: &S6Fixture,
     lease: &MutationOutboxLease,
-    checkpoint: &medulla_types::semantic_index::SemanticGenerationCheckpoint,
+    checkpoint: &medulla_index_types::semantic_index::SemanticGenerationCheckpoint,
     image: &SemanticGenerationImage,
 ) -> Result<super::SemanticMutationReceipt, SemanticCodeError> {
     fixture.codes.finalize_generation(

@@ -74,7 +74,7 @@ pub fn apply(
     tag: &str,
     method: Method,
     now_ms: u64,
-) -> Result<medulla_types::protocol::ResultPayload, String> {
+) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
     let op_id = format!("work-item-test/{tag}");
     with_write(shard, &op_id, now_ms, |admitted| {
         let member = admitted.graph(GRAPH).unwrap();
@@ -105,7 +105,7 @@ pub fn apply(
 }
 
 /// Shared native run-admission fixture, with no conversation by default.
-pub fn run_request() -> medulla_types::native_control::SubmitWorkItemRequest {
+pub fn run_request() -> medulla_agent_types::native_control::SubmitWorkItemRequest {
     serde_json::from_value(serde_json::json!({
         "schema_version":"1", "run_id":"run", "work_item_id":null,
         "context": {"schema_version":"2", "request_id":"request", "subject_id":"owner",
@@ -125,9 +125,9 @@ pub fn run_request() -> medulla_types::native_control::SubmitWorkItemRequest {
 /// Submit fixture rows within the caller's existing admitted transaction.
 pub fn submit_run_rows(
     admitted: &ShardWrite<'_>,
-    request: &medulla_types::native_control::SubmitWorkItemRequest,
+    request: &medulla_agent_types::native_control::SubmitWorkItemRequest,
     owner: &str,
-) -> Result<medulla_types::native_control::SubmitWorkItemResult, String> {
+) -> Result<medulla_agent_types::native_control::SubmitWorkItemResult, String> {
     let member = admitted.graph(GRAPH)?;
     let mut rows = crate::redb_store::store_rows::GraphRowTables::open(member)?;
     super::apply_submit_work_item_rows(

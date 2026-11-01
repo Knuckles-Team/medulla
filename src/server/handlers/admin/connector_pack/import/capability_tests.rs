@@ -93,7 +93,9 @@ fn foreign_terms_warn_and_stay_only_in_the_declared_partition() {
             let (classified, declared) = partition_capabilities(terms.as_slice());
             assert_eq!(classified, [native]);
             assert_eq!(declared, [foreign]);
-            assert!(!medulla_types::agent_ontology::is_capability(&declared[0]));
+            assert!(!medulla_agent_types::agent_ontology::is_capability(
+                &declared[0]
+            ));
         }
     }
 }

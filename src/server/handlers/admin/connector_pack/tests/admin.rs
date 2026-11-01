@@ -3,7 +3,7 @@
 
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
-use medulla_types::connector_pack::{
+use medulla_catalog_types::connector_pack::{
     ConnectorPackOp, ConnectorPackReconcileRequest, ConnectorPackRetireRequest,
     ConnectorPackUnbindRequest, PackBodyReconcileReport, PackImportResult, PackRetireResult,
     PackViolationCode,
@@ -21,7 +21,7 @@ const CONNECTOR: &str = "pack-admin";
 async fn catalog_status(
     served: &Served,
     connector: &str,
-) -> medulla_types::connector_pack::ConnectorPackStatus {
+) -> medulla_catalog_types::connector_pack::ConnectorPackStatus {
     served
         .state
         .write()
@@ -216,18 +216,19 @@ async fn the_reconciler_releases_an_orphan_body_and_keeps_every_held_one() {
     );
     assert_eq!(report.orphaned, 1, "exactly the orphan is released");
     assert_eq!(report.scanned, 2, "the server and the tool body stay held");
-    let content: medulla_types::agent_component::AgentComponentContentResult = ok(
+    let content: medulla_agent_types::agent_component::AgentComponentContentResult = ok(
         "Content",
         served
             .call(
                 "content:pack-admin:a",
                 crate::protocol::Method::AgentComponent {
-                    op: medulla_types::agent_component::AgentComponentOp::Content {
-                        request: medulla_types::agent_component::AgentComponentContentRequest {
-                            tenant_id: TENANT.to_string(),
-                            component_id: "mcp:pack-admin/tool/a".to_string(),
-                            entry_revision: None,
-                        },
+                    op: medulla_agent_types::agent_component::AgentComponentOp::Content {
+                        request:
+                            medulla_agent_types::agent_component::AgentComponentContentRequest {
+                                tenant_id: TENANT.to_string(),
+                                component_id: "mcp:pack-admin/tool/a".to_string(),
+                                entry_revision: None,
+                            },
                     },
                 },
             )
@@ -300,18 +301,19 @@ async fn holder_refcounts_transition_across_unchanged_revised_and_withdrawn_entr
         ("c", Some(1), &c.body),
         ("b", None, &b_revised.body),
     ] {
-        let content: medulla_types::agent_component::AgentComponentContentResult = ok(
+        let content: medulla_agent_types::agent_component::AgentComponentContentResult = ok(
             "Content",
             served
                 .call(
                     &format!("content:pack-admin-transitions:{name}:{revision:?}"),
                     crate::protocol::Method::AgentComponent {
-                        op: medulla_types::agent_component::AgentComponentOp::Content {
-                            request: medulla_types::agent_component::AgentComponentContentRequest {
-                                tenant_id: TENANT.to_string(),
-                                component_id: format!("mcp:pack-admin/tool/{name}"),
-                                entry_revision: revision,
-                            },
+                        op: medulla_agent_types::agent_component::AgentComponentOp::Content {
+                            request:
+                                medulla_agent_types::agent_component::AgentComponentContentRequest {
+                                    tenant_id: TENANT.to_string(),
+                                    component_id: format!("mcp:pack-admin/tool/{name}"),
+                                    entry_revision: revision,
+                                },
                         },
                     },
                 )
@@ -335,7 +337,7 @@ async fn bind_unbind_and_retire_require_admin_connector_pack_and_the_head_surviv
             &key,
             crate::protocol::Method::ConnectorPack {
                 op: Box::new(ConnectorPackOp::Bind {
-                    request: medulla_types::connector_pack::ConnectorPackBindRequest {
+                    request: medulla_catalog_types::connector_pack::ConnectorPackBindRequest {
                         context: context(&key),
                         connector: ResourceId::new(connector).unwrap(),
                         importer: persistence_id(ADMIN),
@@ -472,12 +474,14 @@ async fn a_rejected_import_mutates_nothing_in_the_catalog() {
         .pack(
             key,
             ConnectorPackOp::Import {
-                request: Box::new(medulla_types::connector_pack::ConnectorPackImportRequest {
-                    context: context(key),
-                    index: index.clone(),
-                    expected_head: Some(head_of(&first)),
-                    allow_mass_withdrawal: false,
-                }),
+                request: Box::new(
+                    medulla_catalog_types::connector_pack::ConnectorPackImportRequest {
+                        context: context(key),
+                        index: index.clone(),
+                        expected_head: Some(head_of(&first)),
+                        allow_mass_withdrawal: false,
+                    },
+                ),
             },
         )
         .await;
@@ -555,18 +559,19 @@ async fn an_end_to_end_connector_fixture_imports_through_to_a_served_read() {
         None,
     )
     .await;
-    let content: medulla_types::agent_component::AgentComponentContentResult = ok(
+    let content: medulla_agent_types::agent_component::AgentComponentContentResult = ok(
         "Content",
         served
             .call(
                 "content:pack-admin-e2e:fixture",
                 crate::protocol::Method::AgentComponent {
-                    op: medulla_types::agent_component::AgentComponentOp::Content {
-                        request: medulla_types::agent_component::AgentComponentContentRequest {
-                            tenant_id: TENANT.to_string(),
-                            component_id: "mcp:pack-admin-e2e/tool/fixture".to_string(),
-                            entry_revision: None,
-                        },
+                    op: medulla_agent_types::agent_component::AgentComponentOp::Content {
+                        request:
+                            medulla_agent_types::agent_component::AgentComponentContentRequest {
+                                tenant_id: TENANT.to_string(),
+                                component_id: "mcp:pack-admin-e2e/tool/fixture".to_string(),
+                                entry_revision: None,
+                            },
                     },
                 },
             )

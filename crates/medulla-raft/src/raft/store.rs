@@ -67,9 +67,9 @@ use super::{
     AppCtx, GroupId, NativeMutationCommand, RaftRequest, RaftResponse, ReplicatedMutation,
     TypeConfig,
 };
-use medulla_types::protocol::GraphType;
-use medulla_types::protocol::Method;
-use medulla_types::protocol::ResultPayload;
+use medulla_protocol_types::protocol::GraphType;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_persistence::redb_backend::RedbBackend;
 
@@ -307,7 +307,7 @@ mod current_snapshot_schema_tests {
     }
 
     #[cfg(feature = "jobs")]
-    fn receipt_for_transport(replayed: bool) -> medulla_types::mutation_batch::MutationBatchCommit {
+    fn receipt_for_transport(replayed: bool) -> medulla_protocol_types::mutation_batch::MutationBatchCommit {
         let conditions = rmp_serde::to_vec_named(&serde_json::json!({"epoch": 0})).unwrap();
         let updates = rmp_serde::to_vec_named(&serde_json::json!({"epoch": 1})).unwrap();
         let batch = medulla_server_api::mutation_batch::compile_methods(
@@ -326,7 +326,7 @@ mod current_snapshot_schema_tests {
                 expected_graph_version: Some(0),
                 fencing_token: None,
                 created_at_ms: 13,
-                default_surface: medulla_types::mutation_batch::MutationSurface::Graph,
+                default_surface: medulla_mutation_types::mutation_scope::MutationSurface::Graph,
                 authoritative_state: None,
             },
             vec![Method::CompareAndSetNodeFields {
@@ -337,12 +337,12 @@ mod current_snapshot_schema_tests {
         )
         .unwrap();
         let identity = batch.identity.clone();
-        let commit = medulla_types::mutation_batch::MutationBatchCommit {
-            record: medulla_types::mutation_batch::MutationBatchRecord {
+        let commit = medulla_protocol_types::mutation_batch::MutationBatchCommit {
+            record: medulla_protocol_types::mutation_batch::MutationBatchRecord {
                 batch,
                 identity: identity.clone(),
-                status: medulla_types::mutation_batch::MutationBatchStatus::Committed,
-                committed_version: medulla_types::mutation_batch::CommittedVersion::Graph {
+                status: medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed,
+                committed_version: medulla_mutation_types::mutation_scope::CommittedVersion::Graph {
                     source: 0,
                     target: 1,
                 },

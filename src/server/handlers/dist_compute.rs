@@ -84,9 +84,9 @@ impl<'a> DistributedRequest<'a> {
         match pregel::run_distributed(self.state, &graphs, &algo, read_authority).await {
             Ok(result) => Response::ok(
                 self.req_id,
-                ResultPayload::of::<medulla_types::result_contract::compute::DistributedCompute>(
-                    result,
-                ),
+                ResultPayload::of::<
+                    medulla_protocol_types::result_contract::compute::DistributedCompute,
+                >(result),
             ),
             Err(error) => Response::err(self.req_id, error),
         }
@@ -118,7 +118,7 @@ impl<'a> DistributedRequest<'a> {
             algo,
             result,
         };
-        persist_and_index::<medulla_types::result_contract::cluster::CreateMatView>(
+        persist_and_index::<medulla_protocol_types::result_contract::cluster::CreateMatView>(
             self.state,
             self.req_id,
             self.caller,
@@ -139,7 +139,7 @@ impl<'a> DistributedRequest<'a> {
         match self.load_matview(&name).await {
             Some(view) => Response::ok(
                 self.req_id,
-                ResultPayload::of_ref::<medulla_types::result_contract::cluster::GetMatView>(
+                ResultPayload::of_ref::<medulla_protocol_types::result_contract::cluster::GetMatView>(
                     &view.result,
                 ),
             ),
@@ -178,7 +178,7 @@ impl<'a> DistributedRequest<'a> {
                 Err(error) => return Response::err(self.req_id, error),
             };
         view.result = refreshed;
-        persist_and_index::<medulla_types::result_contract::cluster::RefreshMatView>(
+        persist_and_index::<medulla_protocol_types::result_contract::cluster::RefreshMatView>(
             self.state,
             self.req_id,
             self.caller,
@@ -310,7 +310,7 @@ async fn begin_control_saga(
         req_id,
         caller,
         method,
-        crate::mutation_batch::DurabilityDomain::ControlPlane,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::ControlPlane,
     )?;
     Ok(ControlSaga { backend, saga })
 }
@@ -421,9 +421,9 @@ async fn define_plan_matview(
         redb.plan_matview_put(&def.name, blob).await?;
         let result = finish_control_saga(
             control,
-            ResultPayload::scalar::<medulla_types::result_contract::cluster::PlanMatViewDefine>(
-                count as u64,
-            ),
+            ResultPayload::scalar::<
+                medulla_protocol_types::result_contract::cluster::PlanMatViewDefine,
+            >(count as u64),
         )?;
         index_matview(&operation_state, def).await;
         Ok(Response::ok(req_id, result))
@@ -506,9 +506,9 @@ async fn get_plan_matview(state: &Arc<RwLock<ServerState>>, req_id: u64, name: &
         return match rmp_serde::to_vec_named(&rows) {
             Ok(bytes) => Response::ok(
                 req_id,
-                ResultPayload::of_encoded::<medulla_types::result_contract::cluster::PlanMatViewGet>(
-                    bytes,
-                ),
+                ResultPayload::of_encoded::<
+                    medulla_protocol_types::result_contract::cluster::PlanMatViewGet,
+                >(bytes),
             ),
             Err(e) => Response::err(req_id, format!("serialize matview rows: {e}")),
         };
@@ -522,7 +522,7 @@ async fn get_plan_matview(state: &Arc<RwLock<ServerState>>, req_id: u64, name: &
                 return Response::ok(
                     req_id,
                     ResultPayload::of_encoded::<
-                        medulla_types::result_contract::cluster::PlanMatViewGet,
+                        medulla_protocol_types::result_contract::cluster::PlanMatViewGet,
                     >(bytes),
                 );
             }
@@ -534,9 +534,9 @@ async fn get_plan_matview(state: &Arc<RwLock<ServerState>>, req_id: u64, name: &
             matview::manager().mark_fresh(name);
             Response::ok(
                 req_id,
-                ResultPayload::of_encoded::<medulla_types::result_contract::cluster::PlanMatViewGet>(
-                    bytes,
-                ),
+                ResultPayload::of_encoded::<
+                    medulla_protocol_types::result_contract::cluster::PlanMatViewGet,
+                >(bytes),
             )
         }
         Err(e) => Response::err(req_id, e),
@@ -560,9 +560,9 @@ async fn refresh_plan_matview(
         let (_, count) = materialize_and_cache(&operation_state, &def).await?;
         let result = finish_control_saga(
             control,
-            ResultPayload::scalar::<medulla_types::result_contract::cluster::PlanMatViewRefresh>(
-                count as u64,
-            ),
+            ResultPayload::scalar::<
+                medulla_protocol_types::result_contract::cluster::PlanMatViewRefresh,
+            >(count as u64),
         )?;
         matview::manager().mark_fresh(name);
         Ok(Response::ok(req_id, result))
@@ -597,7 +597,9 @@ async fn drop_plan_matview(
         }
         let result = finish_control_saga(
             control,
-            ResultPayload::scalar::<medulla_types::result_contract::cluster::PlanMatViewDrop>(true),
+            ResultPayload::scalar::<
+                medulla_protocol_types::result_contract::cluster::PlanMatViewDrop,
+            >(true),
         )?;
         matview::manager().drop_view(name);
         Ok(Response::ok(req_id, result))
@@ -621,9 +623,9 @@ async fn persist_and_index<M>(
     view: MatView,
 ) -> Response
 where
-    M: medulla_types::result_contract::MethodResult<
+    M: medulla_protocol_types::result_contract::MethodResult<
         Body = u64,
-        Encoding = medulla_types::result_contract::encoding::Count,
+        Encoding = medulla_protocol_types::result_contract::encoding::Count,
     >,
 {
     let operation_state = Arc::clone(state);

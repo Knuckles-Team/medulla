@@ -103,7 +103,7 @@ async fn execute_update(
     default_graph: String,
     text: String,
 ) -> (&'static str, &'static str, String) {
-    let method = medulla_types::protocol::Method::ApplyMutation {
+    let method = medulla_protocol_types::protocol::Method::ApplyMutation {
         event_type: SPARQL_HTTP_UPDATE_EVENT.to_string(),
         query: text,
     };

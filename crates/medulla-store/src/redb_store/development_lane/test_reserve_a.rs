@@ -34,7 +34,7 @@ fn native_reserve_links_live_resource_and_replays_or_refuses_input_atomically() 
         TEST_GRAPH,
         &DevelopmentLaneQueryRequest {
             schema_version:
-                medulla_types::epistemic_operations::DevelopmentLaneQueryRequestSchemaVersion::V1,
+                medulla_result_types::epistemic_operations::DevelopmentLaneQueryRequestSchemaVersion::V1,
             tenant_ref: "tenant:a".into(),
             hold_id: hold.hold_id,
             now_ms: 0,
@@ -133,7 +133,7 @@ fn graph_lifecycle_clear_fails_closed_while_lane_hold_is_live() {
         TEST_GRAPH,
         &DevelopmentLaneQueryRequest {
             schema_version:
-                medulla_types::epistemic_operations::DevelopmentLaneQueryRequestSchemaVersion::V1,
+                medulla_result_types::epistemic_operations::DevelopmentLaneQueryRequestSchemaVersion::V1,
             tenant_ref: hold.tenant_ref,
             hold_id: hold.hold_id,
             now_ms: 0,

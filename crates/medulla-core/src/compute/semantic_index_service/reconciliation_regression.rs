@@ -2,17 +2,22 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
+use medulla_index_types::{
+    semantic_index::SemanticBinding, semantic_index::SemanticBindingState,
+    semantic_index::SemanticDigest, semantic_index::SemanticIndexError,
+    semantic_index::SemanticSourceDirtyIntent, semantic_index::SemanticSourceSelector,
+    semantic_index::SemanticStageArtifact, semantic_index::SemanticStageOutcome,
+    semantic_index::SemanticStageReceipt, semantic_index::SemanticStageTransition,
+    semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC,
+};
+use medulla_mutation_types::mutation_scope::CommittedVersion;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
 use medulla_transaction::OutboxClaimBudget;
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_batch::{
-    CommittedVersion, DurabilityDomain, MutationOutboxIntent, MutationOutboxRecord,
-    MutationScopeIdentity, MUTATION_BATCH_VERSION,
-};
-use medulla_types::semantic_index::{
-    SemanticBinding, SemanticBindingState, SemanticDigest, SemanticIndexError,
-    SemanticSourceDirtyIntent, SemanticSourceSelector, SemanticStageArtifact, SemanticStageOutcome,
-    SemanticStageReceipt, SemanticStageTransition, SEMANTIC_SOURCE_DIRTY_TOPIC,
-};
 use sha2::{Digest, Sha256};
 
 use super::{

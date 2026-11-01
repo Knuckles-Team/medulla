@@ -46,14 +46,14 @@ pub fn register_detached_edge_index(store: &medulla_query::TableStore, graph: &s
 }
 
 /// The decoded rows of a served `QueryResult` response.
-pub fn sql_rows(resp: &medulla_types::protocol::Response) -> Vec<Vec<serde_json::Value>> {
-    let Some(medulla_types::protocol::ResultPayload::Raw(bytes)) = &resp.result else {
+pub fn sql_rows(resp: &medulla_protocol_types::protocol::Response) -> Vec<Vec<serde_json::Value>> {
+    let Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) = &resp.result else {
         panic!(
             "expected a Raw result, got {:?} / {:?}",
             resp.result, resp.error
         );
     };
-    let result: medulla_types::protocol::QueryResult = rmp_serde::from_slice(bytes).expect("QueryResult");
+    let result: medulla_protocol_types::protocol::QueryResult = rmp_serde::from_slice(bytes).expect("QueryResult");
     result
         .rows
         .iter()

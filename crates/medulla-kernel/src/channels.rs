@@ -7,9 +7,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use medulla_types::protocol::ChannelType;
+use medulla_protocol_types::protocol::ChannelType;
 
-pub use medulla_types::messaging_wire::{ChannelImprint, ChannelMessage};
+pub use medulla_protocol_types::{messaging_wire::ChannelImprint, messaging_wire::ChannelMessage};
 
 mod queries;
 

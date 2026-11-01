@@ -7,7 +7,9 @@
 //! Writing those three by hand per surface is how five near-identical `as_str`
 //! matches appear; this macro is the single definition they all expand from.
 
-/// Declare a closed refusal-code enum with its wire tokens.
+/// Declare a closed refusal-code enum with its wire tokens. Exported so every
+/// type crate declares its codes the same way: `medulla_types::closed_error_codes!`.
+#[macro_export]
 macro_rules! closed_error_codes {
     (
         $(#[$enum_meta:meta])*
@@ -39,84 +41,4 @@ macro_rules! closed_error_codes {
             }
         }
     };
-}
-
-pub(crate) use closed_error_codes;
-
-/// Whether a response prefix is one of the engine's published refusal codes.
-/// The enums remain the single source of truth for the generated catalog.
-pub fn declared_error_code(code: &str) -> bool {
-    [
-        super::EngineErrorCode::ALL
-            .iter()
-            .any(|item| item.as_str() == code),
-        super::ServerErrorCode::ALL
-            .iter()
-            .any(|item| item.as_str() == code),
-        super::UqlCode::ALL.iter().any(|item| item.as_str() == code),
-        crate::decision::DecisionErrorCode::ALL
-            .iter()
-            .any(|item| item.as_str() == code),
-        crate::decision::statistical::StatisticalErrorCode::ALL
-            .iter()
-            .any(|item| item.as_str() == code),
-        crate::orchestration::HarnessVocabularyErrorCode::ALL
-            .iter()
-            .any(|item| item.as_str() == code),
-        crate::decision::harness_contrast::HarnessContrastErrorCode::ALL
-            .iter()
-            .any(|item| item.as_str() == code),
-        crate::graph_schema::GraphSchemaErrorCode::ALL
-            .iter()
-            .any(|item| item.as_str() == code),
-        crate::connector_pack::result::PackWriteErrorCode::ALL
-            .iter()
-            .any(|item| item.as_str() == code),
-        crate::solve::SolveErrorCode::ALL
-            .iter()
-            .any(|item| item.as_str() == code),
-    ]
-    .into_iter()
-    .any(|known| known)
-}
-
-/// Classify a refusal for `Response::err` without hiding a code it already
-/// carries. A declared `CODE: detail` keeps its code with `context` placed
-/// before the detail; a bare declared code passes through unchanged; free text
-/// is reported under `default` with `context` kept as its human prefix.
-pub fn classify_refusal(default: &str, context: &str, refusal: &str) -> String {
-    match refusal.split_once(": ") {
-        Some((code, detail)) if declared_error_code(code) => format!("{code}: {context}{detail}"),
-        _ if declared_error_code(refusal) => refusal.to_string(),
-        _ => format!("{default}: {context}{refusal}"),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::classify_refusal;
-
-    #[test]
-    fn classify_refusal_keeps_declared_codes_and_classifies_free_text() {
-        assert_eq!(
-            classify_refusal(
-                "INVALID_ARGUMENT",
-                "SQL error: ",
-                "ACCESS_DENIED: table hidden"
-            ),
-            "ACCESS_DENIED: SQL error: table hidden"
-        );
-        assert_eq!(
-            classify_refusal("INVALID_ARGUMENT", "SQL error: ", "ACCESS_DENIED"),
-            "ACCESS_DENIED"
-        );
-        assert_eq!(
-            classify_refusal("INVALID_ARGUMENT", "SQL error: ", "table t does not exist"),
-            "INVALID_ARGUMENT: SQL error: table t does not exist"
-        );
-        assert_eq!(
-            classify_refusal("INTERNAL", "", "Not A Code: boom"),
-            "INTERNAL: Not A Code: boom"
-        );
-    }
 }

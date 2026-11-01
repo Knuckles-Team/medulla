@@ -48,7 +48,7 @@ use tokio::sync::RwLock;
 
 use crate::state::ServerState;
 use medulla_core::graph::GraphCore;
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 
 #[path = "txn/modality.rs"]
 mod modality;

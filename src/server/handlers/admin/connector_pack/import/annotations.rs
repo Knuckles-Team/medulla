@@ -13,9 +13,13 @@
 //! Every value is a claim; this rule only refuses claims that cannot mean
 //! anything.
 
-use medulla_types::agent_ontology::{is_a, is_native, CAPABILITY_ROOT, MODALITY_ROOT};
-use medulla_types::connector_pack::{
-    PackAnnotations, PackEntryKind, PackViolationCode, PackWarningCode,
+use medulla_agent_types::{
+    agent_ontology::is_a, agent_ontology::is_native, agent_ontology::CAPABILITY_ROOT,
+    agent_ontology::MODALITY_ROOT,
+};
+use medulla_catalog_types::{
+    connector_pack::PackAnnotations, connector_pack::PackEntryKind,
+    connector_pack::PackViolationCode, connector_pack::PackWarningCode,
 };
 
 /// Largest declared price, in micros.
@@ -190,7 +194,7 @@ fn iso_4217(code: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::agent_component::{DeclaredCost, DeclaredLatency};
+    use medulla_agent_types::{agent_component::DeclaredCost, agent_component::DeclaredLatency};
 
     fn codes(annotations: &PackAnnotations) -> Vec<PackViolationCode> {
         check_annotations(PackEntryKind::Tool, annotations)
@@ -210,7 +214,7 @@ mod tests {
     // spec: MEDULLA-TYPED-PACKS-R013
     #[test]
     fn the_split_rule_rejects_eg_typos_and_keeps_foreign_claims() {
-        let native = medulla_types::agent_ontology::descendants(CAPABILITY_ROOT)
+        let native = medulla_agent_types::agent_ontology::descendants(CAPABILITY_ROOT)
             .into_iter()
             .find(|term| *term != CAPABILITY_ROOT)
             .unwrap();
@@ -300,7 +304,7 @@ mod tests {
     #[test]
     fn a_tool_mode_belongs_to_tools_only() {
         let declared = PackAnnotations {
-            tool_mode: Some(medulla_types::connector_pack::PackToolMode::Condensed),
+            tool_mode: Some(medulla_catalog_types::connector_pack::PackToolMode::Condensed),
             ..PackAnnotations::default()
         };
         assert!(check_annotations(PackEntryKind::Tool, &declared)
@@ -344,7 +348,7 @@ mod tests {
     #[test]
     fn context_window_zero_is_refused_by_the_pack_validator() {
         let model = |window: u64, output: u64| PackAnnotations {
-            model: Some(medulla_types::connector_pack::PackModelFacts {
+            model: Some(medulla_catalog_types::connector_pack::PackModelFacts {
                 provider: "vendor".into(),
                 model_identity: "vendor/m".into(),
                 context_window_tokens: window,

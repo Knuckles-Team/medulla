@@ -7,8 +7,8 @@
 
 use std::collections::BTreeMap;
 
-use medulla_types::mutation_batch::MutationOutboxIntent;
-use medulla_types::protocol::Method;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_protocol_types::protocol::Method;
 
 /// Lower the optional GOC-20/RF-020 terminal extension into the existing native
 /// terminal shape. The first operation remains `CommitWorkItemResult`; receipt
@@ -25,14 +25,14 @@ pub(super) fn lower_terminal_outcome_extensions(
 ) -> Result<(Vec<Method>, Vec<MutationOutboxIntent>), String> {
     let ordinary = methods
         .iter()
-        .map(|method| medulla_types::run_completion::RunCompletionPayload::from_method(method, batch_id))
+        .map(|method| medulla_protocol_types::protocol::run_completion_payload(method, batch_id))
         .collect::<Result<Vec<_>, _>>()?;
     if let Some(payload) = ordinary.into_iter().flatten().next() {
         if methods.len() != 1 {
             return Err("ordinary completion must be the only operation".into());
         }
         let intent = MutationOutboxIntent {
-            topic: medulla_types::run_completion::RUN_COMPLETION_TOPIC.into(),
+            topic: medulla_agent_types::run_completion::RUN_COMPLETION_TOPIC.into(),
             key: batch_id.into(),
             payload: rmp_serde::to_vec_named(&payload).map_err(|e| e.to_string())?,
             headers: BTreeMap::new(),
@@ -64,7 +64,7 @@ fn bind_engine_fields(batch_id: &str, method: &mut Method) {
 
 fn terminal_extension(
     methods: &[Method],
-) -> Result<Option<&medulla_types::outcome_bundle::TerminalOutcomeExtension>, String> {
+) -> Result<Option<&medulla_result_types::outcome_bundle::TerminalOutcomeExtension>, String> {
     if let Some(Method::CommitWorkItemResult {
         outcome_extension: Some(extension),
         ..
@@ -92,7 +92,7 @@ fn terminal_extension(
 fn validate_terminal_extension(
     batch_id: &str,
     methods: &[Method],
-    extension: &medulla_types::outcome_bundle::TerminalOutcomeExtension,
+    extension: &medulla_result_types::outcome_bundle::TerminalOutcomeExtension,
 ) -> Result<(), String> {
     validate_terminal_binding(batch_id, methods, extension)
 }
@@ -100,7 +100,7 @@ fn validate_terminal_extension(
 fn validate_terminal_binding(
     batch_id: &str,
     methods: &[Method],
-    extension: &medulla_types::outcome_bundle::TerminalOutcomeExtension,
+    extension: &medulla_result_types::outcome_bundle::TerminalOutcomeExtension,
 ) -> Result<(), String> {
     let (terminal_work_item_id, terminal_fence_token, terminal_result_ref, terminal_outcome) =
         match methods.first() {
@@ -154,7 +154,7 @@ fn validate_terminal_binding(
 
 fn run_event_intent(
     batch_id: &str,
-    extension: &medulla_types::outcome_bundle::TerminalOutcomeExtension,
+    extension: &medulla_result_types::outcome_bundle::TerminalOutcomeExtension,
 ) -> Result<MutationOutboxIntent, String> {
     let bundle = &extension.outcome_bundle;
     let payload = rmp_serde::to_vec_named(&extension.run_event)
@@ -196,7 +196,7 @@ fn run_event_intent(
         headers.insert("result_ref".to_string(), result_ref.clone());
     }
     Ok(MutationOutboxIntent {
-        topic: medulla_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC.to_string(),
+        topic: medulla_result_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC.to_string(),
         key: batch_id.to_string(),
         payload,
         headers,
@@ -206,9 +206,10 @@ fn run_event_intent(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::outcome_bundle::{
-        CommitOutcomeBundle, OutcomeCompleteness, ReceiptNode, ReceiptNodeKind, RunEvent,
-        TerminalOutcomeExtension, OUTCOME_BUNDLE_VERSION,
+    use medulla_result_types::{
+        outcome_bundle::CommitOutcomeBundle, outcome_bundle::OutcomeCompleteness,
+        outcome_bundle::ReceiptNode, outcome_bundle::ReceiptNodeKind, outcome_bundle::RunEvent,
+        outcome_bundle::TerminalOutcomeExtension, outcome_bundle::OUTCOME_BUNDLE_VERSION,
     };
     use sha2::Digest;
 
@@ -399,7 +400,7 @@ mod tests {
         assert_eq!(outbox.len(), 1);
         assert_eq!(
             outbox[0].topic,
-            medulla_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC
+            medulla_result_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC
         );
         assert_eq!(outbox[0].key, "batch:test");
         assert_eq!(outbox[0].headers["fence_token"], "7");

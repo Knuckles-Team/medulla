@@ -1,5 +1,5 @@
 use crate::owner::domain::OwnerDomain;
-use medulla_types::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use std::marker::PhantomData;
 
 /// Opaque capability for one authenticated, bound serving scope.

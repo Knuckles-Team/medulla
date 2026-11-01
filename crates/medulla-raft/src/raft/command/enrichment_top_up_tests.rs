@@ -4,9 +4,9 @@ use medulla_store::redb_store::enrichment_budget::RepositoryEnrichmentPolicyRevi
 use medulla_store::redb_store::enrichment_top_up::EnrichmentTopUpTransition;
 use medulla_store::redb_store::enrichment_top_up::CONSUMER;
 use medulla_store::redb_store::enrichment_top_up::TOPIC;
-use medulla_types::mutation_batch::RepositoryEnrichmentTopUp;
-use medulla_types::mutation_batch::{CommittedVersion, COMPILED_BATCH_INCARNATION};
-use medulla_types::native_control::{EnrichmentBudgetCheckpoint, EnrichmentBudgetPark};
+use medulla_protocol_types::mutation_batch::RepositoryEnrichmentTopUp;
+use medulla_protocol_types::mutation_batch::{CommittedVersion, COMPILED_BATCH_INCARNATION};
+use medulla_agent_types::native_control::{EnrichmentBudgetCheckpoint, EnrichmentBudgetPark};
 use medulla_types::MutationScopeIdentity;
 use medulla_types::{
     MutationBatch, MutationBatchRecord, MutationBatchStatus, MutationOutboxRecord,
@@ -37,7 +37,7 @@ fn transition() -> EnrichmentTopUpTransition {
         MutationScopeIdentity::fixed_graph("tenant-a", "graph-a", COMPILED_BATCH_INCARNATION)
             .unwrap();
     let old_delivery = MutationOutboxRecord {
-        schema_version: medulla_types::MUTATION_BATCH_VERSION,
+        schema_version: medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION,
         batch_id: "source-one".into(),
         ordinal: 0,
         identity,
@@ -179,7 +179,7 @@ fn only_exact_committed_retry_may_cross_a_new_route_fence() {
     let plan = transition();
     assert!(plan.validate_parent_fence(1, Some(1), None, 12).is_ok());
     assert!(plan.validate_parent_fence(2, Some(2), None, 12).is_err());
-    let mut record = medulla_types::MutationBatchRecord {
+    let mut record = medulla_protocol_types::mutation_batch::MutationBatchRecord {
         batch: plan.replacement_batch.clone(),
         identity: plan.replacement_batch.identity.clone(),
         status: MutationBatchStatus::Committed,

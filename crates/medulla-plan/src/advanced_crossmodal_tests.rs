@@ -645,7 +645,7 @@ fn cep_stream_traverse_tsdb_window_one_plan_eg388() {
 /// diversity penalty is observable), a third is orthogonal.
 #[cfg(all(feature = "owl", feature = "probabilistic"))]
 fn beliefs_reasoned() -> (GraphView, SemanticStore) {
-    use medulla_types::Distribution;
+    use medulla_catalog_types::distribution::Distribution;
     let core = GraphCore::new();
     let mk = |id: &str, ty: &str, d: Option<Distribution>| {
         let mut props = json!({ "type": ty });

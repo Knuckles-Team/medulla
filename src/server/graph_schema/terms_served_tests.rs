@@ -13,7 +13,7 @@ use crate::protocol::{GraphType, Method, Response, ResultPayload};
 use medulla_server_api::auth::build_current_test_request;
 use medulla_server_api::auth::dispatch_test_on_heap;
 use medulla_server_api::state::ServerState;
-use medulla_types::graph_schema::{GraphSchemaClassesView, GraphSchemaSourcesView};
+use medulla_catalog_types::graph_schema::{GraphSchemaClassesView, GraphSchemaSourcesView};
 
 const SECRET: &str = "graph-schema-classes-served-secret";
 const AGENT: &str = "schema-vocabulary-reader";

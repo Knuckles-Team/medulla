@@ -4,7 +4,7 @@
 // Implements Baum-Welch (EM) for parameter estimation and Viterbi for decoding.
 // Replaces Python hmmlearn.
 
-pub use medulla_types::compute_result::finance::RegimeResult;
+pub use medulla_result_types::compute_result::finance::RegimeResult;
 
 /// Normal PDF: N(x | μ, σ)
 fn normal_pdf(x: f64, mean: f64, std: f64) -> f64 {

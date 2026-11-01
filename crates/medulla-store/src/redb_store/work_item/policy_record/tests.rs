@@ -3,7 +3,7 @@
 
 use super::super::test_shard::{check_guard as check, open, with_nodes, GRAPH};
 use super::*;
-use medulla_types::policy_evolution::PolicyEvolutionRecord;
+use medulla_decision_types::policy_evolution::PolicyEvolutionRecord;
 
 fn stamped(tenant: &str) -> StoredPolicyRecord {
     let record: PolicyEvolutionRecord = serde_json::from_value(serde_json::json!({
@@ -40,7 +40,7 @@ fn store(
         ))
     })?;
     match payload.expect("a store always answers") {
-        medulla_types::protocol::ResultPayload::Raw(bytes) => Ok(rmp_serde::from_slice(&bytes).unwrap()),
+        medulla_protocol_types::protocol::ResultPayload::Raw(bytes) => Ok(rmp_serde::from_slice(&bytes).unwrap()),
         other => panic!("policy record stores are raw, got {other:?}"),
     }
 }

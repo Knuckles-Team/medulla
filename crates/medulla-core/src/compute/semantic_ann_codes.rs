@@ -62,9 +62,9 @@
 //! `predecessor`, `checkpoint`) only ever receive a write the door opened.
 
 use door::ServingDoor;
+use medulla_index_types::{semantic_index::SemanticDigest, semantic_index::SemanticIndexError};
 use medulla_storage::ScopeGrantVerifier;
 use medulla_types::contract::Nonce;
-use medulla_types::semantic_index::{SemanticDigest, SemanticIndexError};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -175,7 +175,8 @@ pub const SEMANTIC_BINDING_DROPPED_TOPIC: &str = "engine.semantic-index.binding-
 
 /// SQL commits emit a source fact first. EG resolves the matching binding and
 /// expands it into the stage-intent topic of the S1 queue class.
-pub const SEMANTIC_SOURCE_DIRTY_TOPIC: &str = medulla_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC;
+pub const SEMANTIC_SOURCE_DIRTY_TOPIC: &str =
+    medulla_index_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC;
 
 pub const SEMANTIC_BINDING_CREATED_TOPIC: &str = "engine.semantic-index.binding-created.v1";
 

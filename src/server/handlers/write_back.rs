@@ -14,7 +14,7 @@ use crate::protocol::{Response, ResultPayload};
 use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_persistence::agent_library::AgentLibraryStore;
 use medulla_server_api::state::ServerState;
-use medulla_types::write_back::{SourceChangeSet, WriteBackOp};
+use medulla_mutation_types::write_back::{SourceChangeSet, WriteBackOp};
 
 pub(crate) async fn handle_write_back(
     state: &Arc<RwLock<ServerState>>,
@@ -100,9 +100,9 @@ fn create_change_set(
     if now_ms >= change_set.expires_at_ms {
         return Err("write-back change set has expired".to_string());
     }
-    store
-        .create_change_set(change_set)
-        .and_then(ResultPayload::of::<medulla_types::result_contract::storage::WriteBackCreate>)
+    store.create_change_set(change_set).and_then(
+        ResultPayload::of::<medulla_protocol_types::result_contract::storage::WriteBackCreate>,
+    )
 }
 
 fn get_change_set(
@@ -112,7 +112,9 @@ fn get_change_set(
 ) -> Result<ResultPayload, String> {
     store
         .write_back_change_set(tenant_id, change_set_id)
-        .and_then(ResultPayload::of::<medulla_types::result_contract::storage::WriteBackGet>)
+        .and_then(
+            ResultPayload::of::<medulla_protocol_types::result_contract::storage::WriteBackGet>,
+        )
 }
 
 fn record_attempt(
@@ -120,7 +122,7 @@ fn record_attempt(
     idempotency_key: &str,
     actor: String,
     now_ms: u64,
-    attempt: medulla_types::write_back::WriteBackAttempt,
+    attempt: medulla_mutation_types::write_back::WriteBackAttempt,
 ) -> Result<ResultPayload, String> {
     if attempt.idempotency_key != idempotency_key {
         return Err(
@@ -130,7 +132,9 @@ fn record_attempt(
     store
         .record_write_back_attempt(attempt, actor, now_ms)
         .and_then(
-            ResultPayload::of::<medulla_types::result_contract::storage::WriteBackRecordAttempt>,
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::storage::WriteBackRecordAttempt,
+            >,
         )
 }
 
@@ -139,7 +143,7 @@ fn record_reconciliation(
     idempotency_key: &str,
     actor: String,
     now_ms: u64,
-    observation: medulla_types::write_back::ReconciliationObservation,
+    observation: medulla_mutation_types::write_back::ReconciliationObservation,
 ) -> Result<ResultPayload, String> {
     if observation.idempotency_key != idempotency_key {
         return Err(
@@ -150,7 +154,7 @@ fn record_reconciliation(
         .record_write_back_reconciliation(observation, actor, now_ms)
         .and_then(
             ResultPayload::of::<
-                medulla_types::result_contract::storage::WriteBackRecordReconciliation,
+                medulla_protocol_types::result_contract::storage::WriteBackRecordReconciliation,
             >,
         )
 }
@@ -164,5 +168,5 @@ fn get_receipts(
 ) -> Result<ResultPayload, String> {
     store
         .write_back_receipts(tenant_id, change_set_id, after_sequence, limit)
-        .and_then(ResultPayload::of::<medulla_types::result_contract::storage::WriteBackReceipts>)
+        .and_then(ResultPayload::of::<medulla_protocol_types::result_contract::storage::WriteBackReceipts>)
 }

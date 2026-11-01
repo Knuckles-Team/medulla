@@ -50,9 +50,12 @@ use medulla_server_api::compute::compute_off_lock;
 use medulla_server_api::state::ServerState;
 
 #[cfg(feature = "query")]
-use medulla_types::result_contract::EncodeRef;
+use medulla_protocol_types::result_contract::EncodeRef;
 #[cfg(any(feature = "query", feature = "cypher", feature = "graphql"))]
-use medulla_types::result_contract::{encoding, query as query_results, Dynamic, MethodResult};
+use medulla_protocol_types::{
+    result_contract::encoding, result_contract::query as query_results, result_contract::Dynamic,
+    result_contract::MethodResult,
+};
 
 #[cfg(feature = "query")]
 pub(crate) type UqlParams = std::collections::BTreeMap<String, medulla_types::wire::UqlParam>;

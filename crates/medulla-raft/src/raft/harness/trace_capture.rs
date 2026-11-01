@@ -631,8 +631,10 @@ mod tests {
             render_dump()
         });
 
-        let quiet_dump = medulla_kernel::test_rendezvous::join_bounded(quiet, "quiet cluster thread");
-        let noisy_dump = medulla_kernel::test_rendezvous::join_bounded(noisy, "noisy cluster thread");
+        let quiet_dump =
+            medulla_kernel::test_rendezvous::join_bounded(quiet, "quiet cluster thread");
+        let noisy_dump =
+            medulla_kernel::test_rendezvous::join_bounded(noisy, "noisy cluster thread");
 
         assert!(
             quiet_dump.contains(&trigger),

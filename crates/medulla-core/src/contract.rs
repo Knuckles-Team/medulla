@@ -45,7 +45,11 @@ impl ModalityContract for NodeChange {
 
     /// Batch ingest = round-trip through serialization.
     fn ingest_report(&self, id: &str) -> IngestReport {
-        medulla_modality::staged_batch_ingest_report(self, id, "a node change record is not a stream")
+        medulla_modality::staged_batch_ingest_report(
+            self,
+            id,
+            "a node change record is not a stream",
+        )
     }
 
     /// Real storage stats.

@@ -2,8 +2,8 @@
 //! ST-8): what each named cell still admits for one priority, from one MVCC
 //! snapshot, priced by exactly the rule `AcquireCapacity` uses.
 
-use medulla_types::capacity_lease::{CapacityCell, LeasePriority};
-use medulla_types::decision::CapacityHeadroom;
+use medulla_agent_types::agent_topology::CapacityHeadroom;
+use medulla_mutation_types::{capacity_lease::CapacityCell, capacity_lease::LeasePriority};
 
 use super::super::shard::Shard;
 use super::super::{decode_durable, DurableCrypto};
@@ -60,7 +60,9 @@ pub fn headroom(
 
 #[cfg(test)]
 mod tests {
-    use medulla_types::capacity_lease::{CapacityResourceClass, LeasePriority};
+    use medulla_mutation_types::{
+        capacity_lease::CapacityResourceClass, capacity_lease::LeasePriority,
+    };
 
     use super::*;
 

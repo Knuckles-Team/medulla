@@ -1,7 +1,7 @@
 //! Finance operation-family handlers.
 
-use medulla_types::compute_result::finance::PosteriorCredibleInterval;
-use medulla_types::result_contract::compute as results;
+use medulla_protocol_types::result_contract::compute as results;
+use medulla_result_types::compute_result::finance::PosteriorCredibleInterval;
 
 use crate::protocol::{Method, Response, ResultPayload};
 
@@ -495,7 +495,7 @@ pub(super) fn handle_sizing(req_id: u64, method: Method) -> Result<Response, Met
             Ok(shift) => Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceDistributionShift>(
-                    medulla_types::compute_result::finance::DistributionShift {
+                    medulla_result_types::compute_result::finance::DistributionShift {
                         statistic: shift.statistic,
                         p_value: shift.p_value,
                         shifted: shift.shifted,

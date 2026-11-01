@@ -6,15 +6,18 @@
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::sync::atomic::AtomicBool;
 
-use medulla_types::agent_component::{
-    AgentComponentKind, AgentComponentOp, AgentComponentSearchPage, AgentComponentSearchRequest,
+use medulla_agent_types::{
+    agent_component::AgentComponentKind, agent_component::AgentComponentOp,
+    agent_component::AgentComponentSearchPage, agent_component::AgentComponentSearchRequest,
 };
-use medulla_types::connector_pack::{PackAnnotations, PackEntryKind};
+use medulla_catalog_types::{connector_pack::PackAnnotations, connector_pack::PackEntryKind};
+use medulla_mutation_types::{
+    mutation_outbox::MutationOutboxOp, mutation_outbox::MutationOutboxStatusView,
+    mutation_outbox::NativeOutboxScope, mutation_outbox::NativeOutboxStore,
+    mutation_outbox::OutboxRewindReceipt, mutation_outbox::OutboxTarget,
+    mutation_outbox::RewindTarget,
+};
 use medulla_types::contract::ResourceId;
-use medulla_types::mutation_outbox::{
-    MutationOutboxOp, MutationOutboxStatusView, NativeOutboxScope, NativeOutboxStore,
-    OutboxRewindReceipt, OutboxTarget, RewindTarget,
-};
 
 use super::{bind, build_pack, imported, ok, tool, Content, Served, ADMIN, TENANT};
 use crate::protocol::Method;
@@ -223,13 +226,13 @@ async fn an_admin_forced_reproject_redrives_a_stale_projection_without_losing_la
     // The administrator forces a Reproject directly, without ever running the
     // worker's sweep: a never-run projection is re-driven on demand.
     let key = "reproject:schema-pack-reproject";
-    let _: medulla_types::connector_pack::PackImportReceipt = ok(
+    let _: medulla_catalog_types::connector_pack::PackImportReceipt = ok(
         "Reproject",
         served
             .pack(
                 key,
-                medulla_types::connector_pack::ConnectorPackOp::Reproject {
-                    request: medulla_types::connector_pack::ConnectorPackReprojectRequest {
+                medulla_catalog_types::connector_pack::ConnectorPackOp::Reproject {
+                    request: medulla_catalog_types::connector_pack::ConnectorPackReprojectRequest {
                         context: super::context(key),
                         connector: ResourceId::new(schema).unwrap(),
                     },
@@ -268,13 +271,13 @@ async fn an_admin_forced_reproject_redrives_a_stale_projection_without_losing_la
     let connector = ResourceId::new(schema).unwrap();
     let before = store.connector_pack_status(TENANT, &connector).unwrap();
     let key = "reproject:schema-pack-reproject:fresh";
-    let _: medulla_types::connector_pack::PackImportReceipt = ok(
+    let _: medulla_catalog_types::connector_pack::PackImportReceipt = ok(
         "Reproject",
         served
             .pack(
                 key,
-                medulla_types::connector_pack::ConnectorPackOp::Reproject {
-                    request: medulla_types::connector_pack::ConnectorPackReprojectRequest {
+                medulla_catalog_types::connector_pack::ConnectorPackOp::Reproject {
+                    request: medulla_catalog_types::connector_pack::ConnectorPackReprojectRequest {
                         context: super::context(key),
                         connector: connector.clone(),
                     },

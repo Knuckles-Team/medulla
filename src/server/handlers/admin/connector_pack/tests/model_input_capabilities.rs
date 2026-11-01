@@ -2,11 +2,12 @@
 
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
-use medulla_types::agent_component::{
+use medulla_agent_types::agent_component::{
     AgentComponentFacts, ModelInputCapabilities, ModelInputMediaType,
 };
-use medulla_types::connector_pack::{
-    PackAnnotations, PackEntryKind, PackImportResult, PackViolationCode,
+use medulla_catalog_types::{
+    connector_pack::PackAnnotations, connector_pack::PackEntryKind,
+    connector_pack::PackImportResult, connector_pack::PackViolationCode,
 };
 
 use super::{

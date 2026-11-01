@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 #[cfg(feature = "modality-serving")]
 use medulla_server_api::api::ingest::MAX_INGEST_STREAM_ITEMS;
 
@@ -175,7 +175,7 @@ impl SanitizedModalityResult {
         {
             return Err("sanitized modality Raft result is invalid".to_string());
         }
-        let payload: medulla_types::protocol::ResultPayload = medulla_types::msgpack::decode_bounded(
+        let payload: medulla_protocol_types::protocol::ResultPayload = medulla_types::msgpack::decode_bounded(
             result_msgpack,
             medulla_types::msgpack::MsgpackLimits::new(
                 MAX_REPLICATED_MODALITY_RESULT_BYTES,
@@ -188,21 +188,22 @@ impl SanitizedModalityResult {
         // contract is the bounded inner outcome schema below; all non-byte
         // payloads remain invalid.
         let outcome_bytes = match payload {
-            medulla_types::protocol::ResultPayload::Raw(bytes) => bytes,
+            medulla_protocol_types::protocol::ResultPayload::Raw(bytes) => bytes,
             _ => {
                 return Err("sanitized modality Raft result has the wrong payload type".to_string())
             }
         };
         let (kind, outcomes) = if matches!(operation, SanitizedModalityMutation::IngestStream) {
-            let outcomes: Vec<medulla_modality::ApplyOutcome> = medulla_types::msgpack::decode_bounded(
-                &outcome_bytes,
-                medulla_types::msgpack::MsgpackLimits::new(
-                    MAX_REPLICATED_MODALITY_RESULT_BYTES,
-                    MAX_REPLICATED_MODALITY_RESULT_VALUES,
-                    64,
-                ),
-            )
-            .map_err(|_| "sanitized modality Raft stream result is malformed".to_string())?;
+            let outcomes: Vec<medulla_modality::ApplyOutcome> =
+                medulla_types::msgpack::decode_bounded(
+                    &outcome_bytes,
+                    medulla_types::msgpack::MsgpackLimits::new(
+                        MAX_REPLICATED_MODALITY_RESULT_BYTES,
+                        MAX_REPLICATED_MODALITY_RESULT_VALUES,
+                        64,
+                    ),
+                )
+                .map_err(|_| "sanitized modality Raft stream result is malformed".to_string())?;
             (SanitizedModalityResultKind::Stream, outcomes)
         } else {
             let outcome: medulla_modality::ApplyOutcome = medulla_types::msgpack::decode_bounded(
@@ -238,7 +239,7 @@ impl SanitizedModalityResult {
         })
     }
 
-    fn response_payload(&self) -> Result<medulla_types::protocol::ResultPayload, String> {
+    fn response_payload(&self) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
         match self.kind {
             SanitizedModalityResultKind::Single => {
                 encode_sanitized_modality_payload(&self.outcomes[0])
@@ -266,9 +267,9 @@ impl SanitizedModalityResult {
 #[cfg(feature = "modality-serving")]
 fn encode_sanitized_modality_payload<T: Serialize + ?Sized>(
     value: &T,
-) -> Result<medulla_types::protocol::ResultPayload, String> {
+) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
     rmp_serde::to_vec_named(value)
-        .map(medulla_types::protocol::ResultPayload::Raw)
+        .map(medulla_protocol_types::protocol::ResultPayload::Raw)
         .map_err(|error| format!("INTERNAL: result serialization failed: {error}"))
 }
 
@@ -281,7 +282,7 @@ pub fn decode_sanitized_modality_result(
     modality: medulla_types::ServedModalityKind,
     operation: SanitizedModalityMutation,
     result_msgpack: &[u8],
-) -> Result<medulla_types::protocol::ResultPayload, String> {
+) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
     let result = SanitizedModalityResult::from_wire(modality, operation, result_msgpack)?;
     result.response_payload()
 }

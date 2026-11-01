@@ -18,7 +18,7 @@ pub fn order_book_imbalance(v_bid: &[f64], v_ask: &[f64]) -> Vec<f64> {
         .collect()
 }
 
-pub use medulla_types::compute_result::finance::QueueSignal;
+pub use medulla_result_types::compute_result::finance::QueueSignal;
 
 pub fn queue_imbalance(
     bid_q: &[f64],
@@ -76,7 +76,7 @@ pub fn realized_vol_tick(mid: &[f64], window: usize) -> Vec<f64> {
     out
 }
 
-pub use medulla_types::compute_result::finance::SpreadReversion;
+pub use medulla_result_types::compute_result::finance::SpreadReversion;
 
 pub fn spread_reversion(bid_px: &[f64], ask_px: &[f64], window: usize) -> SpreadReversion {
     let n = bid_px.len().min(ask_px.len());
@@ -211,7 +211,7 @@ pub fn brier_score(forecasts: &[f64], outcomes: &[f64]) -> f64 {
         .unwrap_or(0.0)
 }
 
-pub use medulla_types::compute_result::finance::ConvergenceGate;
+pub use medulla_result_types::compute_result::finance::ConvergenceGate;
 
 /// Conviction gate: require ≥ `min_agree` of N signals to STRONGLY agree on a
 /// direction (|strength| ≥ `strong_threshold`) before trading. This is the

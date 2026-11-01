@@ -19,6 +19,8 @@ sha2 = "0.10"
 tracing = "0.1"
 tokio = { version = "1.53", features = ["sync"] }
 uuid = { version = "1.28", features = ["v4"] }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
 
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "1.1.5", features = ["fs", "process"] }

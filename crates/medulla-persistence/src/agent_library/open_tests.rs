@@ -40,7 +40,7 @@ fn fresh_open_initializes_all_pack_tables_and_reopens_empty() {
         assert!(status.importer.is_none());
         assert_eq!(
             status.members,
-            medulla_types::connector_pack::PackMemberCounts::default()
+            medulla_catalog_types::connector_pack::PackMemberCounts::default()
         );
         assert!(path.exists());
     }
@@ -49,7 +49,8 @@ fn fresh_open_initializes_all_pack_tables_and_reopens_empty() {
 // spec: MEDULLA-DECISION-ENGINE-R073.3
 #[test]
 fn production_open_refuses_each_genuine_predecessor_without_writing() {
-    let predecessors = medulla_storage::layout_predecessors(medulla_storage::OwnerLayout::AgentLibrary);
+    let predecessors =
+        medulla_storage::layout_predecessors(medulla_storage::OwnerLayout::AgentLibrary);
     assert!(!predecessors.is_empty());
     for predecessor in predecessors {
         let dir = tempfile::tempdir().unwrap();

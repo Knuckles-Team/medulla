@@ -19,7 +19,7 @@ pub(super) async fn dispatch_service_control_methods(
         // ── Service-level ────────────────────────────────────────────
         Method::Ping => Response::ok(
             req.id,
-            ResultPayload::scalar::<medulla_types::result_contract::cluster::Ping>(
+            ResultPayload::scalar::<medulla_protocol_types::result_contract::cluster::Ping>(
                 "pong".to_string(),
             ),
         ),
@@ -34,7 +34,7 @@ pub(super) async fn dispatch_service_control_methods(
         #[cfg(feature = "query")]
         Method::CancelRequest { target_req_id } => Response::ok(
             req.id,
-            ResultPayload::scalar::<medulla_types::result_contract::cluster::CancelRequest>(
+            ResultPayload::scalar::<medulla_protocol_types::result_contract::cluster::CancelRequest>(
                 crate::server::request_cancel::cancel(target_req_id),
             ),
         ),
@@ -46,9 +46,9 @@ pub(super) async fn dispatch_service_control_methods(
                     info!("Shutdown requested via protocol");
                     Response::ok(
                         req_id,
-                        ResultPayload::scalar::<medulla_types::result_contract::cluster::Shutdown>(
-                            "shutting_down".to_string(),
-                        ),
+                        ResultPayload::scalar::<
+                            medulla_protocol_types::result_contract::cluster::Shutdown,
+                        >("shutting_down".to_string()),
                     )
                 }
             })
@@ -78,7 +78,7 @@ async fn health_response(state: &Arc<RwLock<ServerState>>, req_id: u64) -> Respo
             .filter(|manifest| manifest.phase == crate::registry::MaterializationPhase::Failed)
             .count();
         (
-            medulla_types::result_contract::cluster::GraphLifecycleHealth {
+            medulla_protocol_types::result_contract::cluster::GraphLifecycleHealth {
                 catalog_graphs: state.registry.catalog_len() as u64,
                 resident_graphs: state.registry.resident_len() as u64,
                 complete_graphs: complete as u64,
@@ -111,8 +111,8 @@ async fn health_response(state: &Arc<RwLock<ServerState>>, req_id: u64) -> Respo
     // back gracefully against an older binary. (CONCEPT:MEDULLA-KG.query.dispatch-routing)
     Response::ok(
         req_id,
-        ResultPayload::of::<medulla_types::result_contract::cluster::Health>(
-            medulla_types::result_contract::cluster::HealthReport {
+        ResultPayload::of::<medulla_protocol_types::result_contract::cluster::Health>(
+            medulla_protocol_types::result_contract::cluster::HealthReport {
                 status: "ok".to_string(),
                 uptime_s,
                 mem_bytes,

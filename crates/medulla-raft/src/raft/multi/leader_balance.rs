@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 use openraft::async_runtime::watch::WatchReceiver;
 
 use super::{
-    desired_leader, failure_domain_safe, MedullaRaft, GroupId, MultiRaft, NodeId, RebalanceReport,
+    desired_leader, failure_domain_safe, GroupId, MedullaRaft, MultiRaft, NodeId, RebalanceReport,
     LEADER_TRANSFER_MIN_MARGIN, MAX_AUTOMATIC_TRANSFERS_PER_PASS,
 };
 

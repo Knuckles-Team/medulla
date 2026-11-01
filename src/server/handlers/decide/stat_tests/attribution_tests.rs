@@ -5,12 +5,12 @@
 use super::consumer_tests::evaluate_assembly;
 use super::*;
 use medulla_persistence::decision_record::tests as v1;
-use medulla_types::agent_component::ComponentDependency;
-use medulla_types::decision::record::SlotAssignment;
-use medulla_types::decision::statistical::log::{
+use medulla_agent_types::agent_component::ComponentDependency;
+use medulla_decision_types::decision::record::SlotAssignment;
+use medulla_decision_types::decision::statistical::log::{
     SlateAttribution, SlateAttributionMethod, SlateAttributionRequest,
 };
-use medulla_types::decision::{DecisionOutcome, DecisionRecord};
+use medulla_decision_types::{decision::DecisionOutcome, decision::DecisionRecord};
 
 /// `record` re-slotted to `components` under graph digest `graph`, committed.
 fn commit_slate(

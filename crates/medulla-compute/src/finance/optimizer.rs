@@ -9,7 +9,7 @@
 
 use nalgebra::{DMatrix, DVector};
 
-pub use medulla_types::compute_result::finance::OptimizationResult;
+pub use medulla_result_types::compute_result::finance::OptimizationResult;
 
 /// Compute portfolio return given weights and expected returns.
 fn portfolio_return(weights: &[f64], returns: &[f64]) -> f64 {

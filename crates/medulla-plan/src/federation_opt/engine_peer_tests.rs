@@ -10,8 +10,10 @@ use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use medulla_protocol_types::{
+    protocol::Method, protocol::Request, protocol::Response, protocol::ResultPayload,
+};
 use medulla_types::acl::RequestContextClaims;
-use medulla_types::protocol::{Method, Request, Response, ResultPayload};
 use medulla_types::wire::{ForeignSourceSpec, UqlResult};
 
 use super::{FederationBudget, FederationSession, FetchStrategy, FragmentTrace, BUDGET_EXCEEDED};
@@ -83,7 +85,7 @@ pub(super) fn verified_claims(secret: &str, request: &Request) -> Option<Request
     let encoded = hex::decode(request.auth_token.strip_prefix("eg2.")?).ok()?;
     let envelope: Envelope = serde_json::from_slice(&encoded).ok()?;
     let body_hash = hex::encode(Sha256::digest(request.method.canonical_body_bytes()));
-    let signed = medulla_types::protocol::build_envelope_v2_bytes(
+    let signed = medulla_protocol_types::protocol::build_envelope_v2_bytes(
         request.id,
         &request.graph,
         &request.method.tag_name(),

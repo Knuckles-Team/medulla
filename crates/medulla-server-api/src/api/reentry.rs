@@ -15,11 +15,11 @@ use tokio::sync::RwLock;
 use crate::auth::VerifiedRequestContext;
 use crate::state::ServerState;
 #[cfg(feature = "raft")]
-use medulla_types::protocol::Method;
-use medulla_types::protocol::Request;
-use medulla_types::protocol::Response;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Request;
+use medulla_protocol_types::protocol::Response;
 #[cfg(all(feature = "raft", feature = "jobs"))]
-use medulla_types::protocol::ResultPayload;
+use medulla_protocol_types::protocol::ResultPayload;
 
 /// Boxed, sendable future returned by every [`DispatchApi`] method.
 pub type SeamFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
@@ -88,7 +88,7 @@ pub type PageAuthorityFn = Box<
             Result<
                 (
                     VerifiedRequestContext,
-                    medulla_types::epistemic_operations::RequestContext,
+                    medulla_result_types::epistemic_operations::RequestContext,
                 ),
                 String,
             >,
@@ -100,7 +100,7 @@ pub type PageAuthorityFn = Box<
 pub type PageSubmitFn = Box<
     dyn FnMut(
             VerifiedRequestContext,
-            medulla_types::native_control::SubmitWorkItemsRequest,
+            medulla_agent_types::native_control::SubmitWorkItemsRequest,
         ) -> SeamFuture<'static, Result<(), String>>
         + Send,
 >;
@@ -109,8 +109,8 @@ pub type PageSubmitFn = Box<
 #[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
 pub type PageParkFn = Box<
     dyn FnMut(
-            medulla_types::mutation_batch::MutationOutboxLease,
-            medulla_types::native_control::EnrichmentBudgetPark,
+            medulla_mutation_types::mutation_scope::MutationOutboxLease,
+            medulla_agent_types::native_control::EnrichmentBudgetPark,
         ) -> SeamFuture<'static, Result<(), String>>
         + Send,
 >;
@@ -239,7 +239,7 @@ pub trait DispatchApi: Send + Sync {
         applying_group: medulla_storage::direct_state::GroupId,
         coordinator_id: &'a str,
         plan: &'a [u8],
-    ) -> SeamFuture<'a, Result<medulla_types::mutation_batch::MutationBatchCommit, String>>;
+    ) -> SeamFuture<'a, Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String>>;
 
     /// Apply a committed job-publication finalize.
     #[cfg(all(feature = "raft", feature = "jobs"))]
@@ -281,7 +281,7 @@ pub trait DispatchApi: Send + Sync {
             (
                 u64,
                 medulla_types::contract::Digest256,
-                medulla_types::result_contract::cluster::RegisteredServerView,
+                medulla_protocol_types::result_contract::cluster::RegisteredServerView,
             ),
             String,
         >,
@@ -293,7 +293,7 @@ pub trait DispatchApi: Send + Sync {
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         verified: VerifiedRequestContext,
-        request: medulla_types::native_control::SubmitWorkItemsRequest,
+        request: medulla_agent_types::native_control::SubmitWorkItemsRequest,
     ) -> SeamFuture<'a, Result<(), String>>;
 
     /// Bind an internal park proposal to one held event and the latest durable budget row.
@@ -302,14 +302,14 @@ pub trait DispatchApi: Send + Sync {
         &'a self,
         persistence: &'a dyn crate::api::persistence::PersistenceBackend,
         graph_fname: &'a str,
-        lease: &'a medulla_types::mutation_batch::MutationOutboxLease,
+        lease: &'a medulla_mutation_types::mutation_scope::MutationOutboxLease,
         committed_at_ms: u64,
     ) -> SeamFuture<
         'a,
         Result<
             (
                 medulla_compute::parser::enrichment_snapshot::EligibleSnapshot,
-                medulla_types::native_control::EnrichmentBudgetPark,
+                medulla_agent_types::native_control::EnrichmentBudgetPark,
             ),
             String,
         >,
@@ -325,7 +325,7 @@ pub trait DispatchApi: Send + Sync {
     ))]
     fn decode_pending_enrichment_intent(
         &self,
-        intent: &medulla_types::mutation_batch::MutationOutboxIntent,
+        intent: &medulla_mutation_types::mutation_scope::MutationOutboxIntent,
     ) -> Result<medulla_compute::parser::enrichment_snapshot::EligibleSnapshot, String>;
 
     /// Encode one complete immutable source as the canonical pending enrichment intent.
@@ -339,7 +339,7 @@ pub trait DispatchApi: Send + Sync {
     fn enrichment_intent_for_snapshot(
         &self,
         snapshot: medulla_compute::parser::enrichment_snapshot::EligibleSnapshot,
-    ) -> Result<medulla_types::mutation_batch::MutationOutboxIntent, String>;
+    ) -> Result<medulla_mutation_types::mutation_scope::MutationOutboxIntent, String>;
 
     /// One bounded durable repository-enrichment outbox sweep.
     #[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]
@@ -409,7 +409,7 @@ pub async fn verified_served_registration(
     (
         u64,
         medulla_types::contract::Digest256,
-        medulla_types::result_contract::cluster::RegisteredServerView,
+        medulla_protocol_types::result_contract::cluster::RegisteredServerView,
     ),
     String,
 > {
@@ -625,7 +625,7 @@ pub async fn apply_replicated_job_publication_commit(
     applying_group: medulla_storage::direct_state::GroupId,
     coordinator_id: &str,
     plan: &[u8],
-) -> Result<medulla_types::mutation_batch::MutationBatchCommit, String> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {
     dispatch_api(state)
         .await?
         .apply_replicated_job_publication_commit(
@@ -666,7 +666,7 @@ pub async fn apply_replicated_job_publication_finalize(
 pub async fn submit_repository_enrichment_page(
     state: &Arc<RwLock<ServerState>>,
     verified: VerifiedRequestContext,
-    request: medulla_types::native_control::SubmitWorkItemsRequest,
+    request: medulla_agent_types::native_control::SubmitWorkItemsRequest,
 ) -> Result<(), String> {
     dispatch_api(state)
         .await?
@@ -680,12 +680,12 @@ pub async fn plan_held_underfunded_park(
     state: &Arc<RwLock<ServerState>>,
     persistence: &dyn crate::api::persistence::PersistenceBackend,
     graph_fname: &str,
-    lease: &medulla_types::mutation_batch::MutationOutboxLease,
+    lease: &medulla_mutation_types::mutation_scope::MutationOutboxLease,
     committed_at_ms: u64,
 ) -> Result<
     (
         medulla_compute::parser::enrichment_snapshot::EligibleSnapshot,
-        medulla_types::native_control::EnrichmentBudgetPark,
+        medulla_agent_types::native_control::EnrichmentBudgetPark,
     ),
     String,
 > {
@@ -705,7 +705,7 @@ pub async fn plan_held_underfunded_park(
 ))]
 pub async fn decode_pending_enrichment_intent(
     state: &Arc<RwLock<ServerState>>,
-    intent: &medulla_types::mutation_batch::MutationOutboxIntent,
+    intent: &medulla_mutation_types::mutation_scope::MutationOutboxIntent,
 ) -> Result<medulla_compute::parser::enrichment_snapshot::EligibleSnapshot, String> {
     dispatch_api(state)
         .await?
@@ -723,7 +723,7 @@ pub async fn decode_pending_enrichment_intent(
 pub async fn enrichment_intent_for_snapshot(
     state: &Arc<RwLock<ServerState>>,
     snapshot: medulla_compute::parser::enrichment_snapshot::EligibleSnapshot,
-) -> Result<medulla_types::mutation_batch::MutationOutboxIntent, String> {
+) -> Result<medulla_mutation_types::mutation_scope::MutationOutboxIntent, String> {
     dispatch_api(state)
         .await?
         .enrichment_intent_for_snapshot(snapshot)

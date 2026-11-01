@@ -56,7 +56,7 @@ where
 /// binding, but retain their own actor, attempt time, and stable identity.
 #[cfg(test)]
 pub(crate) struct ControlFixtureBatch {
-    pub(crate) identity: medulla_types::MutationScopeIdentity,
+    pub(crate) identity: medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     pub(crate) batch_id: String,
     pub(crate) actor: String,
     pub(crate) request_id: u64,
@@ -939,29 +939,39 @@ pub fn temp_path(prefix: &str, tag: &str) -> std::path::PathBuf {
 #[cfg(test)]
 mod mutation_batch_tests {
     use super::*;
-    use medulla_types::change_envelope::ChangeCursor;
-    use medulla_types::change_envelope::ChangeEnvelope;
-    use medulla_types::change_envelope::ContentVersion;
-    use medulla_types::change_envelope::ContentVersionPosition;
-    use medulla_types::change_envelope::CursorPosition;
-    use medulla_types::change_envelope::PolicyRecord;
-    use medulla_types::change_envelope::PrivacyAttestation;
-    use medulla_types::change_envelope::CHANGE_ENVELOPE_VERSION;
-    use medulla_types::mutation_batch::DurabilityDomain;
-    use medulla_types::mutation_batch::IncarnationId;
-    use medulla_types::mutation_batch::LogicalName;
-    use medulla_types::mutation_batch::MutationOperation;
-    use medulla_types::mutation_batch::MutationOutboxIntent;
-    use medulla_types::mutation_batch::MutationScopeIdentity;
-    use medulla_types::mutation_batch::MutationSurface;
-    use medulla_types::mutation_batch::ScopeTenantId;
-    use medulla_types::mutation_batch::MUTATION_BATCH_VERSION;
+    use medulla_protocol_types::change_envelope::ChangeCursor;
+    use medulla_protocol_types::change_envelope::ChangeEnvelope;
+    use medulla_protocol_types::change_envelope::ContentVersion;
+    use medulla_protocol_types::change_envelope::ContentVersionPosition;
+    use medulla_protocol_types::change_envelope::CursorPosition;
+    use medulla_protocol_types::change_envelope::PolicyRecord;
+    use medulla_protocol_types::change_envelope::PrivacyAttestation;
+    use medulla_protocol_types::change_envelope::CHANGE_ENVELOPE_VERSION;
+    use medulla_mutation_types::mutation_scope::DurabilityDomain;
+    use medulla_mutation_types::mutation_scope::IncarnationId;
+    use medulla_mutation_types::mutation_scope::LogicalName;
+    use medulla_protocol_types::mutation_batch::MutationOperation;
+    use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+    use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+    use medulla_mutation_types::mutation_scope::MutationSurface;
+    use medulla_mutation_types::mutation_scope::ScopeTenantId;
+    use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
     use medulla_kernel::test_rendezvous::{join_bounded, meet};
-    use medulla_transaction::OutboxClaimBudget;
-    use medulla_types::outcome_bundle::{
-        CommitOutcomeBundle, OutcomeCompleteness, ReceiptNode, ReceiptNodeKind, RunEvent,
-        TerminalOutcomeExtension, OUTCOME_BUNDLE_VERSION, RUN_EVENT_OUTBOX_TOPIC,
+    use medulla_mutation_types::mutation_scope::DurabilityDomain;
+    use medulla_mutation_types::mutation_scope::IncarnationId;
+    use medulla_mutation_types::mutation_scope::LogicalName;
+    use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+    use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+    use medulla_mutation_types::mutation_scope::MutationSurface;
+    use medulla_mutation_types::mutation_scope::ScopeTenantId;
+    use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
+    use medulla_result_types::{
+        outcome_bundle::CommitOutcomeBundle, outcome_bundle::OutcomeCompleteness,
+        outcome_bundle::ReceiptNode, outcome_bundle::ReceiptNodeKind, outcome_bundle::RunEvent,
+        outcome_bundle::TerminalOutcomeExtension, outcome_bundle::OUTCOME_BUNDLE_VERSION,
+        outcome_bundle::RUN_EVENT_OUTBOX_TOPIC,
     };
+    use medulla_transaction::OutboxClaimBudget;
     use sha2::{Digest, Sha256};
     use super::mutation_fixtures::{
         batch, commit_at, commit_at_graph, commit_native_claim, node, open,
@@ -1667,7 +1677,7 @@ mod mutation_batch_tests {
             .method_schema_digest;
         for intent in &mut first.outbox {
             intent.headers.insert(
-                medulla_types::mutation_batch::MUTATION_ACTOR_HEADER.to_string(),
+                medulla_protocol_types::mutation_batch::MUTATION_ACTOR_HEADER.to_string(),
                 caller_actor.clone(),
             );
         }
@@ -1682,7 +1692,7 @@ mod mutation_batch_tests {
             .method_schema_digest;
         for intent in &mut retry.outbox {
             intent.headers.insert(
-                medulla_types::mutation_batch::MUTATION_ACTOR_HEADER.to_string(),
+                medulla_protocol_types::mutation_batch::MUTATION_ACTOR_HEADER.to_string(),
                 caller_actor.clone(),
             );
         }
@@ -1728,7 +1738,7 @@ mod mutation_batch_tests {
                 assert_eq!(
                     row.intent
                         .headers
-                        .get(medulla_types::mutation_batch::MUTATION_ACTOR_HEADER),
+                        .get(medulla_protocol_types::mutation_batch::MUTATION_ACTOR_HEADER),
                     Some(&caller_actor)
                 );
             }
@@ -2884,9 +2894,9 @@ mod mutation_batch_tests {
             surface: MutationSurface::Transaction,
             domain: DurabilityDomain::GraphRows,
             method: Method::ClaimWorkItem {
-                request: medulla_types::epistemic_operations::ClaimWorkItemRequest {
+                request: medulla_result_types::epistemic_operations::ClaimWorkItemRequest {
                     schema_version:
-                        medulla_types::epistemic_operations::ClaimWorkItemRequestSchemaVersion::V1,
+                        medulla_result_types::epistemic_operations::ClaimWorkItemRequestSchemaVersion::V1,
                     tenant_ref: "tenant-a".into(),
                     work_item_id: None,
                     queue_ref: None,
@@ -2903,7 +2913,7 @@ mod mutation_batch_tests {
             .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
             .expect("quota claim fixture reseals its final body");
         let committed = commit_at(&db, &claim, None).unwrap();
-        let payload: medulla_types::protocol::ResultPayload = decode_durable(
+        let payload: medulla_protocol_types::protocol::ResultPayload = decode_durable(
             committed
                 .record
                 .result_msgpack
@@ -2913,7 +2923,7 @@ mod mutation_batch_tests {
         .unwrap();
         // `Raw` is the one canonical MessagePack-bin result representation.
         let bytes = match payload {
-            medulla_types::protocol::ResultPayload::Raw(inner) => inner,
+            medulla_protocol_types::protocol::ResultPayload::Raw(inner) => inner,
             other => panic!("ClaimWorkItem must return a bin-encoded typed result, got {other:?}"),
         };
         let result: ClaimWorkItemResult = decode_durable(&bytes).unwrap();
@@ -2926,8 +2936,8 @@ mod mutation_batch_tests {
 
     #[test]
     fn exact_work_item_claim_cannot_bypass_tenant_in_flight_limit() {
-        use medulla_types::epistemic_operations::ClaimWorkItemRequest;
-        use medulla_types::epistemic_operations::ClaimWorkItemRequestSchemaVersion;
+        use medulla_result_types::epistemic_operations::ClaimWorkItemRequest;
+        use medulla_result_types::epistemic_operations::ClaimWorkItemRequestSchemaVersion;
 
         let path = temp_path("work-item-exact-quota");
         let db = open(&path);
@@ -2993,7 +3003,7 @@ mod mutation_batch_tests {
             .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
             .expect("exact quota claim fixture reseals its final body");
         let committed = commit_at(&db, &claim, None).unwrap();
-        let payload: medulla_types::protocol::ResultPayload = decode_durable(
+        let payload: medulla_protocol_types::protocol::ResultPayload = decode_durable(
             committed
                 .record
                 .result_msgpack
@@ -3002,7 +3012,7 @@ mod mutation_batch_tests {
         )
         .unwrap();
         let bytes = match payload {
-            medulla_types::protocol::ResultPayload::Raw(inner) => inner,
+            medulla_protocol_types::protocol::ResultPayload::Raw(inner) => inner,
             other => panic!("ClaimWorkItem must return a bin-encoded typed result, got {other:?}"),
         };
         let result: ClaimWorkItemResult = decode_durable(&bytes).unwrap();
@@ -3243,7 +3253,7 @@ mod mutation_batch_tests {
             .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
             .expect("missing renewal fixture reseals its final body");
         let committed = commit_at(&db, &renew, None).unwrap();
-        let payload: medulla_types::protocol::ResultPayload = decode_durable(
+        let payload: medulla_protocol_types::protocol::ResultPayload = decode_durable(
             committed
                 .record
                 .result_msgpack
@@ -3252,7 +3262,7 @@ mod mutation_batch_tests {
         )
         .unwrap();
         let value = match payload {
-            medulla_types::protocol::ResultPayload::Json(value) => value,
+            medulla_protocol_types::protocol::ResultPayload::Json(value) => value,
             other => panic!("RenewWorkItemLease must return a JSON result, got {other:?}"),
         };
         assert_eq!(value["renewed"], false);
@@ -3326,7 +3336,7 @@ mod mutation_batch_tests {
             .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
             .expect("fenced renewal fixture reseals its final body");
         let committed = commit_at(&db, &renew, None).unwrap();
-        let payload: medulla_types::protocol::ResultPayload = decode_durable(
+        let payload: medulla_protocol_types::protocol::ResultPayload = decode_durable(
             committed
                 .record
                 .result_msgpack
@@ -3335,7 +3345,7 @@ mod mutation_batch_tests {
         )
         .unwrap();
         let value = match payload {
-            medulla_types::protocol::ResultPayload::Json(value) => value,
+            medulla_protocol_types::protocol::ResultPayload::Json(value) => value,
             other => panic!("RenewWorkItemLease must return a JSON result, got {other:?}"),
         };
         assert_eq!(value["renewed"], false);
@@ -3447,11 +3457,11 @@ mod mutation_batch_tests {
     /// it is the exact same interleaving on every run.
     #[test]
     fn cas_work_item_metadata_deterministic_conflict_never_silently_overwrites() {
-        use medulla_types::epistemic_operations_ext::CasWorkItemMetadataLeaseFence;
-        use medulla_types::epistemic_operations_ext::CasWorkItemMetadataOutcome;
-        use medulla_types::epistemic_operations_ext::CasWorkItemMetadataRequest;
-        use medulla_types::epistemic_operations_ext::CasWorkItemMetadataRequestSchemaVersion;
-        use medulla_types::epistemic_operations_ext::CasWorkItemMetadataResult;
+        use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataLeaseFence;
+        use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataOutcome;
+        use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataRequest;
+        use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataRequestSchemaVersion;
+        use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataResult;
 
         let path = temp_path("cas-metadata-conflict");
         let db = open(&path);
@@ -3520,7 +3530,7 @@ mod mutation_batch_tests {
         };
 
         let decode_result = |committed: &MutationBatchCommit| -> CasWorkItemMetadataResult {
-            let payload: medulla_types::protocol::ResultPayload = decode_durable(
+            let payload: medulla_protocol_types::protocol::ResultPayload = decode_durable(
                 committed
                     .record
                     .result_msgpack
@@ -3529,7 +3539,7 @@ mod mutation_batch_tests {
             )
             .unwrap();
             let bytes = match payload {
-                medulla_types::protocol::ResultPayload::Raw(inner) => inner,
+                medulla_protocol_types::protocol::ResultPayload::Raw(inner) => inner,
                 other => {
                     panic!(
                         "CasWorkItemMetadata must return a bin-encoded typed result, got {other:?}"
@@ -3583,11 +3593,11 @@ mod mutation_batch_tests {
     /// storage layer and not a read-then-write race.
     #[test]
     fn cas_work_item_metadata_real_concurrent_race_has_exactly_one_winner() {
-        use medulla_types::epistemic_operations_ext::CasWorkItemMetadataLeaseFence;
-        use medulla_types::epistemic_operations_ext::CasWorkItemMetadataOutcome;
-        use medulla_types::epistemic_operations_ext::CasWorkItemMetadataRequest;
-        use medulla_types::epistemic_operations_ext::CasWorkItemMetadataRequestSchemaVersion;
-        use medulla_types::epistemic_operations_ext::CasWorkItemMetadataResult;
+        use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataLeaseFence;
+        use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataOutcome;
+        use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataRequest;
+        use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataRequestSchemaVersion;
+        use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataResult;
 
         let path = temp_path("cas-metadata-concurrent");
         let db = std::sync::Arc::new(open(&path));
@@ -3682,7 +3692,7 @@ mod mutation_batch_tests {
             .collect();
 
         let decode_result = |committed: &MutationBatchCommit| -> CasWorkItemMetadataResult {
-            let payload: medulla_types::protocol::ResultPayload = decode_durable(
+            let payload: medulla_protocol_types::protocol::ResultPayload = decode_durable(
                 committed
                     .record
                     .result_msgpack
@@ -3691,7 +3701,7 @@ mod mutation_batch_tests {
             )
             .unwrap();
             let bytes = match payload {
-                medulla_types::protocol::ResultPayload::Raw(inner) => inner,
+                medulla_protocol_types::protocol::ResultPayload::Raw(inner) => inner,
                 other => {
                     panic!(
                         "CasWorkItemMetadata must return a bin-encoded typed result, got {other:?}"
@@ -3752,10 +3762,10 @@ mod mutation_batch_tests {
     /// either.
     #[test]
     fn cas_work_item_metadata_missing_row_is_not_found() {
-        use medulla_types::epistemic_operations_ext::CasWorkItemMetadataOutcome;
-        use medulla_types::epistemic_operations_ext::CasWorkItemMetadataRequest;
-        use medulla_types::epistemic_operations_ext::CasWorkItemMetadataRequestSchemaVersion;
-        use medulla_types::epistemic_operations_ext::CasWorkItemMetadataResult;
+        use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataOutcome;
+        use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataRequest;
+        use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataRequestSchemaVersion;
+        use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataResult;
 
         let path = temp_path("cas-metadata-missing");
         let db = open(&path);
@@ -3785,7 +3795,7 @@ mod mutation_batch_tests {
         op.reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
             .expect("missing CAS fixture reseals its final body");
         let committed = commit_at(&db, &op, None).unwrap();
-        let payload: medulla_types::protocol::ResultPayload = decode_durable(
+        let payload: medulla_protocol_types::protocol::ResultPayload = decode_durable(
             committed
                 .record
                 .result_msgpack
@@ -3794,7 +3804,7 @@ mod mutation_batch_tests {
         )
         .unwrap();
         let bytes = match payload {
-            medulla_types::protocol::ResultPayload::Raw(inner) => inner,
+            medulla_protocol_types::protocol::ResultPayload::Raw(inner) => inner,
             other => {
                 panic!("CasWorkItemMetadata must return a bin-encoded typed result, got {other:?}")
             }
@@ -3816,9 +3826,9 @@ mod mutation_batch_tests {
     /// transaction, this is where it would show up as a lost write.
     #[test]
     fn cas_work_item_metadata_applied_write_survives_restart() {
-        use medulla_types::epistemic_operations_ext::CasWorkItemMetadataLeaseFence;
-        use medulla_types::epistemic_operations_ext::CasWorkItemMetadataRequest;
-        use medulla_types::epistemic_operations_ext::CasWorkItemMetadataRequestSchemaVersion;
+        use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataLeaseFence;
+        use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataRequest;
+        use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataRequestSchemaVersion;
 
         let path = temp_path("cas-metadata-restart");
         {
@@ -3906,8 +3916,8 @@ mod mutation_batch_tests {
     #[cfg(feature = "statechart")]
     #[test]
     fn work_item_status_and_statechart_mirror_commit_atomically_across_kill9() {
-        use medulla_types::epistemic_operations::ClaimWorkItemRequest;
-        use medulla_types::epistemic_operations::ClaimWorkItemRequestSchemaVersion;
+        use medulla_result_types::epistemic_operations::ClaimWorkItemRequest;
+        use medulla_result_types::epistemic_operations::ClaimWorkItemRequestSchemaVersion;
 
         let seed_ready = |shard: &Shard| {
             let mut seed = batch("wi-seed", "wi-seed-key");
@@ -4354,7 +4364,7 @@ mod mutation_batch_tests {
                 query: "sha256:opaque".to_string(),
             },
         }];
-        mutation.authoritative_state = Some(medulla_types::mutation_batch::MutationStateDescriptor {
+        mutation.authoritative_state = Some(medulla_protocol_types::mutation_batch::MutationStateDescriptor {
             algorithm: "sha256".to_string(),
             digest: hex::encode(Sha256::digest(&state)),
             source_graph_version: 3,
@@ -4532,7 +4542,7 @@ mod mutation_batch_tests {
                 query: "sha256-row-delta-schema-sources:opaque".to_string(),
             },
         }];
-        mutation.authoritative_state = Some(medulla_types::mutation_batch::MutationStateDescriptor {
+        mutation.authoritative_state = Some(medulla_protocol_types::mutation_batch::MutationStateDescriptor {
             algorithm: medulla_kernel::graph_delta::ROW_DELTA_ALGORITHM.to_string(),
             digest: hex::encode(Sha256::digest(&state)),
             source_graph_version: 4,
@@ -4634,7 +4644,7 @@ mod mutation_batch_tests {
                 shapes: "sha256:policy-receipt".to_string(),
             },
         }];
-        mutation.authoritative_state = Some(medulla_types::mutation_batch::MutationStateDescriptor {
+        mutation.authoritative_state = Some(medulla_protocol_types::mutation_batch::MutationStateDescriptor {
             algorithm: medulla_kernel::graph_delta::ROW_DELTA_ALGORITHM.to_string(),
             digest: hex::encode(Sha256::digest(&state)),
             source_graph_version: 4,
@@ -5042,7 +5052,7 @@ mod mutation_batch_tests {
                 sanitizer_version: "sanitizer-v1".to_string(),
                 sanitized_payload_digest: "d".repeat(64),
             },
-            material_class: medulla_types::change_envelope::MaterialClass::Attested,
+            material_class: medulla_protocol_types::change_envelope::MaterialClass::Attested,
             commit_seq: None,
             commit_descriptor_ref: None,
         }
@@ -5376,7 +5386,7 @@ mod mutation_batch_tests {
         batch_id: &str,
         node_id: &str,
         event: &str,
-    ) -> Vec<medulla_types::mutation_batch::MutationOutboxRecord> {
+    ) -> Vec<medulla_mutation_types::mutation_scope::MutationOutboxRecord> {
         let receipt = read_mutation_batch_for_graph(shard, "graph-a", batch_id)
             .unwrap()
             .expect("the committed envelope must leave one durable kernel receipt");
@@ -5610,7 +5620,7 @@ mod mutation_batch_tests {
             .expect("fixture operation envelope")
             .authority
             .nonce;
-        let medulla_types::mutation_batch::MutationEnvelope::Operation(operation) =
+        let medulla_protocol_types::mutation_batch::MutationEnvelope::Operation(operation) =
             &mut duplicate_nonce.mutation.envelope
         else {
             panic!("fixture operation envelope");
@@ -5700,7 +5710,7 @@ mod mutation_batch_tests {
         let path = temp_path("change-envelopes-oversized");
         let db = open(&path);
         let too_many: Vec<ChangeEnvelope> =
-            (0..(medulla_types::change_envelope::MAX_ENVELOPES_PER_BATCH as u64 + 1))
+            (0..(medulla_protocol_types::change_envelope::MAX_ENVELOPES_PER_BATCH as u64 + 1))
                 .map(governed_envelope_seq)
                 .collect();
 
@@ -5798,7 +5808,7 @@ mod mutation_batch_tests {
             .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
             .expect("defer fixture reseals its final body");
         let committed = commit_at(&db, &defer, None).unwrap();
-        let payload: medulla_types::protocol::ResultPayload = decode_durable(
+        let payload: medulla_protocol_types::protocol::ResultPayload = decode_durable(
             committed
                 .record
                 .result_msgpack
@@ -5807,7 +5817,7 @@ mod mutation_batch_tests {
         )
         .unwrap();
         let value = match payload {
-            medulla_types::protocol::ResultPayload::Json(value) => value,
+            medulla_protocol_types::protocol::ResultPayload::Json(value) => value,
             other => panic!("DeferWorkItem must return a JSON result, got {other:?}"),
         };
         assert_eq!(value["status"], "deferred");
@@ -5871,7 +5881,7 @@ mod mutation_batch_tests {
             .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
             .expect("cancel fixture reseals its final body");
         let committed = commit_at(&db, &cancel, None).unwrap();
-        let payload: medulla_types::protocol::ResultPayload = decode_durable(
+        let payload: medulla_protocol_types::protocol::ResultPayload = decode_durable(
             committed
                 .record
                 .result_msgpack
@@ -5880,7 +5890,7 @@ mod mutation_batch_tests {
         )
         .unwrap();
         let value = match payload {
-            medulla_types::protocol::ResultPayload::Json(value) => value,
+            medulla_protocol_types::protocol::ResultPayload::Json(value) => value,
             other => panic!("CancelWorkItem must return a JSON result, got {other:?}"),
         };
         assert_eq!(value["status"], "cancelled");
@@ -5916,7 +5926,7 @@ mod mutation_batch_tests {
             .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
             .expect("cancel replay fixture reseals its final body");
         let replay = commit_at(&db, &cancel_again, None).unwrap();
-        let payload: medulla_types::protocol::ResultPayload = decode_durable(
+        let payload: medulla_protocol_types::protocol::ResultPayload = decode_durable(
             replay
                 .record
                 .result_msgpack
@@ -5925,7 +5935,7 @@ mod mutation_batch_tests {
         )
         .unwrap();
         let value = match payload {
-            medulla_types::protocol::ResultPayload::Json(value) => value,
+            medulla_protocol_types::protocol::ResultPayload::Json(value) => value,
             other => panic!("CancelWorkItem must return a JSON result, got {other:?}"),
         };
         assert_eq!(value["status"], "noop");
@@ -6064,7 +6074,7 @@ mod mutation_batch_tests {
         .unwrap();
         assert!(durable_receipt.is_some());
         let mut replay = terminal.clone();
-        let medulla_types::mutation_batch::MutationEnvelope::Operation(operation) =
+        let medulla_protocol_types::mutation_batch::MutationEnvelope::Operation(operation) =
             &mut replay.envelope
         else {
             panic!("terminal replay fixture needs an operation envelope");
@@ -6492,10 +6502,10 @@ mod mutation_batch_tests {
                 fixture.retryable,
             );
             let committed = commit_at(&db, &terminal, None).unwrap();
-            let result: medulla_types::protocol::ResultPayload =
+            let result: medulla_protocol_types::protocol::ResultPayload =
                 decode_durable(committed.record.result_msgpack.as_deref().unwrap()).unwrap();
             let result = match result {
-                medulla_types::protocol::ResultPayload::Json(value) => value,
+                medulla_protocol_types::protocol::ResultPayload::Json(value) => value,
                 other => panic!("terminal result must be JSON, got {other:?}"),
             };
             assert_eq!(result["status"], outcome_case);

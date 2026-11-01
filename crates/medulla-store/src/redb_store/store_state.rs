@@ -271,9 +271,10 @@ fn decode_authoritative_row_delta(
     bytes: &[u8],
     algorithm: &str,
 ) -> Result<medulla_kernel::graph_delta::GraphRowDelta, String> {
-    let delta = decode_durable::<medulla_kernel::graph_delta::GraphRowDelta>(bytes).map_err(|_| {
-        "authoritative graph row delta is invalid or exceeds resource limits".to_string()
-    })?;
+    let delta =
+        decode_durable::<medulla_kernel::graph_delta::GraphRowDelta>(bytes).map_err(|_| {
+            "authoritative graph row delta is invalid or exceeds resource limits".to_string()
+        })?;
     delta.validate()?;
     if !delta.matches_algorithm(algorithm) {
         return Err(

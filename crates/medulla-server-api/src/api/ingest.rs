@@ -4,10 +4,10 @@ pub mod embedder;
 pub mod graph;
 pub mod jobs;
 
-use medulla_types::mutation_batch::DurabilityDomain;
-use medulla_types::mutation_batch::MutationBatch;
-use medulla_types::mutation_batch::MutationSurface;
-use medulla_types::protocol::Method;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_protocol_types::protocol::Method;
 use crate::access::CarrierAuthority;
 use medulla_types::contract::Nonce;
 

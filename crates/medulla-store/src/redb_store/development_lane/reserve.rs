@@ -15,14 +15,14 @@ use super::results::{
 use super::types::{LaneDecision, ScopeCounter};
 use super::work_item::load_work_item;
 use super::{DurableLaneHold, DurableLanePolicy};
-use medulla_types::epistemic_operations::DevelopmentLaneHold;
-use medulla_types::epistemic_operations::DevelopmentLaneHoldState;
-use medulla_types::epistemic_operations::DevelopmentLaneIntent;
-use medulla_types::epistemic_operations::DevelopmentLaneIntentHostTargetKind;
-use medulla_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
-use medulla_types::epistemic_operations::DevelopmentLaneReserveRequest;
-use medulla_types::epistemic_operations::ResourceReservationRecordState;
-use medulla_types::protocol::DevelopmentLaneWorkItemKind;
+use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
+use medulla_result_types::epistemic_operations::DevelopmentLaneHoldState;
+use medulla_result_types::epistemic_operations::DevelopmentLaneIntent;
+use medulla_result_types::epistemic_operations::DevelopmentLaneIntentHostTargetKind;
+use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
+use medulla_result_types::epistemic_operations::DevelopmentLaneReserveRequest;
+use medulla_result_types::epistemic_operations::ResourceReservationRecordState;
+use medulla_protocol_types::protocol::DevelopmentLaneWorkItemKind;
 use medulla_storage::ScopedOwnerTableMut;
 
 fn reserve_policy_refusal(
@@ -120,7 +120,7 @@ pub(super) fn reserve_identity_gate(
 /// Does the linked resource reservation carry a different state/lease/fence
 /// tuple than this reserve request?
 pub(super) fn resource_fence_mismatch(
-    resource: &medulla_types::epistemic_operations::ResourceReservationRecord,
+    resource: &medulla_result_types::epistemic_operations::ResourceReservationRecord,
     request: &DevelopmentLaneReserveRequest,
 ) -> bool {
     resource.state != ResourceReservationRecordState::Reserved
@@ -136,18 +136,18 @@ pub(super) fn resource_fence_mismatch(
 
 /// Does the reservation target the exact host placement the intent asks for?
 pub(super) fn resource_target_matches(
-    resource: &medulla_types::epistemic_operations::ResourceReservationRecord,
+    resource: &medulla_result_types::epistemic_operations::ResourceReservationRecord,
     intent: &DevelopmentLaneIntent,
 ) -> bool {
     match intent.host_target_kind {
         DevelopmentLaneIntentHostTargetKind::Local => {
             resource.target_kind
-                == medulla_types::epistemic_operations::ResourceReservationRecordTargetKind::Local
+                == medulla_result_types::epistemic_operations::ResourceReservationRecordTargetKind::Local
                 && resource.target_alias.is_none()
         }
         DevelopmentLaneIntentHostTargetKind::InventoryAlias => {
             resource.target_kind
-                == medulla_types::epistemic_operations::ResourceReservationRecordTargetKind::InventoryAlias
+                == medulla_result_types::epistemic_operations::ResourceReservationRecordTargetKind::InventoryAlias
                 && resource.target_alias == intent.host_target_alias
         }
     }
@@ -156,7 +156,7 @@ pub(super) fn resource_target_matches(
 /// Does the reservation describe a different placement or content than the
 /// intent plus the host the proven WorkItem carries?
 pub(super) fn resource_placement_mismatch(
-    resource: &medulla_types::epistemic_operations::ResourceReservationRecord,
+    resource: &medulla_result_types::epistemic_operations::ResourceReservationRecord,
     intent: &DevelopmentLaneIntent,
     host_ref: &str,
 ) -> bool {
@@ -170,7 +170,7 @@ pub(super) fn resource_placement_mismatch(
 /// The whole reservation cross-check.  Every mismatch is one `WrongFence`
 /// decision, so the two halves may be evaluated in either order.
 pub(super) fn resource_reservation_mismatch(
-    resource: &medulla_types::epistemic_operations::ResourceReservationRecord,
+    resource: &medulla_result_types::epistemic_operations::ResourceReservationRecord,
     request: &DevelopmentLaneReserveRequest,
     host_ref: &str,
 ) -> bool {
@@ -320,7 +320,7 @@ pub(super) fn apply_reserve(
         .ok_or_else(|| "development lane expiry overflow".to_string())?;
     let target_kind = hold_target_kind(request.intent.host_target_kind);
     let mut hold = DevelopmentLaneHold {
-        schema_version: medulla_types::epistemic_operations::DevelopmentLaneHoldSchemaVersion::V1,
+        schema_version: medulla_result_types::epistemic_operations::DevelopmentLaneHoldSchemaVersion::V1,
         hold_id: derived_hold_id,
         lane_id: request.intent.lane_id.clone(),
         tenant_ref: request.tenant_ref.clone(),

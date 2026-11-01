@@ -4,7 +4,7 @@ pub(super) struct MutationBatchCommitArgs<'a> {
     pub(super) req: &'a RaftRequest,
     pub(super) persistence: &'a Arc<dyn PersistenceBackend>,
     pub(super) durable_method: Method,
-    pub(super) descriptor: medulla_types::mutation_batch::MutationStateDescriptor,
+    pub(super) descriptor: medulla_protocol_types::mutation_batch::MutationStateDescriptor,
     pub(super) batch_id: &'a str,
     pub(super) expected_principal: &'a str,
     pub(super) source_version: u64,
@@ -49,7 +49,7 @@ impl MedullaStore {
     pub(super) async fn compile_and_commit_mutation_batch(
         &self,
         args: MutationBatchCommitArgs<'_>,
-    ) -> Result<medulla_types::mutation_batch::MutationBatchCommit, String> {
+    ) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {
         let MutationBatchCommitArgs {
             req,
             persistence,
@@ -82,7 +82,7 @@ impl MedullaStore {
                 expected_graph_version: Some(source_version),
                 fencing_token: authority.fencing_token,
                 created_at_ms,
-                default_surface: medulla_types::mutation_batch::MutationSurface::Graph,
+                default_surface: medulla_mutation_types::mutation_scope::MutationSurface::Graph,
                 authoritative_state: Some(descriptor),
             },
             vec![durable_method],
@@ -154,7 +154,7 @@ impl MedullaStore {
                 modality_command,
             )?,
         };
-        let descriptor = medulla_types::mutation_batch::MutationStateDescriptor {
+        let descriptor = medulla_protocol_types::mutation_batch::MutationStateDescriptor {
             algorithm: "sha256".to_string(),
             digest: hex::encode(Sha256::digest(&state_msgpack)),
             source_graph_version: source_version,
@@ -333,7 +333,7 @@ impl MedullaStore {
                 return Ok(command.result_msgpack.clone());
             }
         }
-        rmp_serde::to_vec_named(&medulla_types::protocol::ResultPayload::Bool(true))
+        rmp_serde::to_vec_named(&medulla_protocol_types::protocol::ResultPayload::Bool(true))
             .map_err(|error| error.to_string())
     }
 
@@ -346,7 +346,7 @@ impl MedullaStore {
         req: &RaftRequest,
         core: &Arc<medulla_core::graph::GraphCore>,
         persistence: &Arc<dyn PersistenceBackend>,
-        committed: &medulla_types::mutation_batch::MutationBatchCommit,
+        committed: &medulla_protocol_types::mutation_batch::MutationBatchCommit,
         staged_snapshot: medulla_core::graph::GraphSnapshot,
         source_version: u64,
     ) -> Result<(), String> {
@@ -367,7 +367,7 @@ impl MedullaStore {
     pub(super) async fn emit_modality_cdc_if_needed(
         &self,
         req: &RaftRequest,
-        committed: &medulla_types::mutation_batch::MutationBatchCommit,
+        committed: &medulla_protocol_types::mutation_batch::MutationBatchCommit,
         modality_command: Option<&super::super::SanitizedModalityRaftCommand>,
     ) {
         if committed.replayed {

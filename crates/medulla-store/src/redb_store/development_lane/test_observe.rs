@@ -53,7 +53,7 @@ fn native_observe_replaces_exact_delta_and_renew_checks_each_hold_freshness() {
         TEST_GRAPH,
         &DevelopmentLaneStatusRequest {
             schema_version:
-                medulla_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
+                medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
             tenant_ref: "tenant:a".into(),
             hold_id: None,
             lane_id: None,
@@ -198,7 +198,7 @@ fn native_retryable_failure_refuses_before_leaving_an_active_hold() {
         TEST_GRAPH,
         &DevelopmentLaneStatusRequest {
             schema_version:
-                medulla_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
+                medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
             tenant_ref: hold.tenant_ref.clone(),
             hold_id: Some(hold.hold_id.clone()),
             lane_id: None,
@@ -227,7 +227,7 @@ fn native_retryable_failure_refuses_before_leaving_an_active_hold() {
         TEST_GRAPH,
         &DevelopmentLaneStatusRequest {
             schema_version:
-                medulla_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
+                medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
             tenant_ref: hold.tenant_ref,
             hold_id: Some(hold.hold_id),
             lane_id: None,

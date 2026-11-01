@@ -13,8 +13,8 @@
 
 use std::sync::Arc;
 
-use medulla_types::identity::{IdentityOp, IdentityStamp};
-use medulla_types::result_contract::security::Identity as IdentityResult;
+use medulla_identity_types::{identity::IdentityOp, identity::IdentityStamp};
+use medulla_protocol_types::result_contract::security::Identity as IdentityResult;
 use tokio::sync::RwLock;
 
 use super::elevation::ElevationStampAuthority;
@@ -114,7 +114,7 @@ fn respond(
     op: &IdentityOp,
     stamp: &IdentityStamp,
     outcome: Result<
-        medulla_types::identity::IdentityReply<medulla_types::acl::RequestContextClaims>,
+        medulla_identity_types::identity::IdentityReply<medulla_types::acl::RequestContextClaims>,
         String,
     >,
 ) -> Response {

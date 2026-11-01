@@ -1,6 +1,12 @@
 //! Variable-option calibration acceptance; native execution is still pending.
 //! These synthetic fixtures exercise the real fitted resident scorer and evaluator.
 
+use medulla_decision_types::decision::statistical::head::HeadKind;
+use medulla_decision_types::decision::statistical::CalibrationMethod;
+use medulla_decision_types::{
+    decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelSource,
+    decision::statistical::dataset::LabelledDataset,
+};
 use medulla_numeric::calibration::metrics::{reliability, BinCount};
 use medulla_numeric::decision::admission::{admit, Regime};
 use medulla_numeric::decision::evaluate::{evaluate, EvalSpec, ECE_BINS};
@@ -9,9 +15,6 @@ use medulla_numeric::decision::head_eval::{
     act_rule, calibration_statement, read_head, top_index, HeadReading,
 };
 use medulla_numeric::decision::scorer::fixed::{to_f64, ONE};
-use medulla_types::decision::statistical::dataset::{ItemLabel, LabelSource, LabelledDataset};
-use medulla_types::decision::statistical::head::HeadKind;
-use medulla_types::decision::statistical::CalibrationMethod;
 
 use super::common::{dataset, gold_item_for, statistical, FEATURES};
 use super::fit_eval::{fitted, rules};

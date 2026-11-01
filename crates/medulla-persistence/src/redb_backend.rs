@@ -51,8 +51,8 @@ use medulla_store::redb_layout::shard_filename;
 #[cfg(test)]
 use medulla_server_api::state::ServerState;
 #[cfg(test)]
-use medulla_types::mutation_batch::*;
-use medulla_types::protocol::*;
+use medulla_protocol_types::mutation_batch::*;
+use medulla_protocol_types::protocol::*;
 #[cfg(test)]
 use tokio::sync::oneshot;
 
@@ -813,24 +813,25 @@ pub(crate) fn seed_raw_row<'k, 'v, K, V>(
 pub mod tests {
     use crate::AsRedb;
     use super::*;
+    use crate::server::persistence::AsRedb;
     // A raw `redb::Database` survives HERE and nowhere else: these fixtures plant
     // rows the production paths deliberately refuse to write, so they must reach
     // the file underneath the kernel's admission. Each opens the file only after
     // the backend that owns it shut down (redb's lock admits one holder).
     use redb::{Database, ReadableDatabase};
 
-    use medulla_types::mutation_batch::DurabilityDomain;
-    use medulla_types::mutation_batch::IncarnationId;
-    use medulla_types::mutation_batch::LogicalName;
-    use medulla_types::mutation_batch::MutationOperation;
-    use medulla_types::mutation_batch::MutationOutboxIntent;
-    use medulla_types::mutation_batch::MutationScopeIdentity;
-    use medulla_types::mutation_batch::MutationSurface;
-    use medulla_types::mutation_batch::ScopeTenantId;
-    use medulla_types::mutation_batch::VersionExpectation;
-    use medulla_types::mutation_batch::MUTATION_ACTOR_HEADER;
-    use medulla_types::mutation_batch::MUTATION_BATCH_VERSION;
-    use medulla_types::protocol::Request;
+    use medulla_mutation_types::mutation_scope::DurabilityDomain;
+    use medulla_mutation_types::mutation_scope::IncarnationId;
+    use medulla_mutation_types::mutation_scope::LogicalName;
+    use medulla_protocol_types::mutation_batch::MutationOperation;
+    use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+    use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+    use medulla_mutation_types::mutation_scope::MutationSurface;
+    use medulla_mutation_types::mutation_scope::ScopeTenantId;
+    use medulla_protocol_types::mutation_batch::VersionExpectation;
+    use medulla_protocol_types::mutation_batch::MUTATION_ACTOR_HEADER;
+    use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
+    use medulla_protocol_types::protocol::Request;
     use medulla_server_api::auth::build_shared_test_request;
     use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
     #[cfg(feature = "tsdb")]
@@ -1053,13 +1054,13 @@ pub mod tests {
         reservation_id: &str,
         tenant: &str,
     ) {
-        use medulla_types::epistemic_operations::ResourceCapacitySnapshot;
-        use medulla_types::epistemic_operations::ResourceRequirement;
-        use medulla_types::epistemic_operations::ResourceReservationRecord;
-        use medulla_types::epistemic_operations::ResourceReservationRecordState;
-        use medulla_types::epistemic_operations::ResourceReservationRecordTargetKind;
-        use medulla_types::epistemic_operations::ResourceTargetSnapshot;
-        use medulla_types::epistemic_operations::ResourceTargetSnapshotKind;
+        use medulla_result_types::epistemic_operations::ResourceCapacitySnapshot;
+        use medulla_result_types::epistemic_operations::ResourceRequirement;
+        use medulla_result_types::epistemic_operations::ResourceReservationRecord;
+        use medulla_result_types::epistemic_operations::ResourceReservationRecordState;
+        use medulla_result_types::epistemic_operations::ResourceReservationRecordTargetKind;
+        use medulla_result_types::epistemic_operations::ResourceTargetSnapshot;
+        use medulla_result_types::epistemic_operations::ResourceTargetSnapshotKind;
 
         // Field-for-field mirror of the private `redb_store::DurableResourceReservation`
         // wrapper (msgpack is structural, not nominal, so a same-shaped local type
@@ -1176,12 +1177,12 @@ pub mod tests {
         hold_id: &str,
         tenant: &str,
     ) {
-        use medulla_types::epistemic_operations::DevelopmentLaneHold;
-        use medulla_types::epistemic_operations::DevelopmentLaneHoldHostTargetKind;
-        use medulla_types::epistemic_operations::DevelopmentLaneHoldSchemaVersion;
-        use medulla_types::epistemic_operations::DevelopmentLaneHoldState;
-        use medulla_types::epistemic_operations::DevelopmentLaneQuotaCharge;
-        use medulla_types::epistemic_operations::DevelopmentLaneQuotaChargeSchemaVersion;
+        use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
+        use medulla_result_types::epistemic_operations::DevelopmentLaneHoldHostTargetKind;
+        use medulla_result_types::epistemic_operations::DevelopmentLaneHoldSchemaVersion;
+        use medulla_result_types::epistemic_operations::DevelopmentLaneHoldState;
+        use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaCharge;
+        use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaChargeSchemaVersion;
 
         // Field-for-field mirror of the private `development_lane::DurableLaneHold`
         // wrapper — see `seed_valid_resource_reservation`'s doc comment for why a
@@ -1703,7 +1704,7 @@ pub mod tests {
             let _guard = EncryptionRequiredEnvGuard::set(None, "off");
             let backend = RedbBackend::open(dir_s.clone(), 64).expect("plaintext open");
             backend
-                .register_graph("plain", "plain", medulla_types::protocol::GraphType::Global)
+                .register_graph("plain", "plain", medulla_protocol_types::protocol::GraphType::Global)
                 .await
                 .expect("register");
             backend.shutdown();
@@ -1765,7 +1766,7 @@ pub mod tests {
             let backend = RedbBackend::open(dir_s.clone(), 64)
                 .expect("first open establishes the canary on an empty store");
             backend
-                .register_graph("sealed", "sealed", medulla_types::protocol::GraphType::Global)
+                .register_graph("sealed", "sealed", medulla_protocol_types::protocol::GraphType::Global)
                 .await
                 .expect("register");
             backend.shutdown();
@@ -1827,7 +1828,7 @@ pub mod tests {
     /// reload via redb-only → the committed graph is recovered.
     #[tokio::test(flavor = "multi_thread")]
     async fn txn_commit_persists_to_redb() {
-        use medulla_types::protocol::ResultPayload;
+        use medulla_protocol_types::protocol::ResultPayload;
 
         // Held for the whole test: the `Commit` below reaches `seal_txn_recovery_plan`
         // (fails closed without a configured `MEDULLA_ENCRYPTION_KEY`), and
@@ -1980,7 +1981,7 @@ pub mod tests {
         // `medulla_kernel::crypto::acquire_test_env_lock`'s doc.
         #[cfg(feature = "security")]
         let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
-        use medulla_types::protocol::ResultPayload;
+        use medulla_protocol_types::protocol::ResultPayload;
         use crate::read_through::BackendReadThroughFactory;
 
         const SECRET: &str = "redb-recreate";
@@ -2181,7 +2182,7 @@ pub mod tests {
         // check. A READ guard, so these tests still run concurrently with each
         // other -- only a key MUTATOR is excluded.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        use medulla_types::protocol::ResultPayload;
+        use medulla_protocol_types::protocol::ResultPayload;
         use crate::read_through::BackendReadThroughFactory;
 
         const SECRET: &str = "redb-churn";
@@ -2321,7 +2322,7 @@ pub mod tests {
         // encryption-at-rest cipher. See `medulla_kernel::crypto::acquire_test_env_lock`'s doc.
         #[cfg(feature = "security")]
         let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
-        use medulla_types::protocol::ResultPayload;
+        use medulla_protocol_types::protocol::ResultPayload;
 
         const SECRET: &str = "redb-auth-dispatch";
         let dir = std::env::temp_dir().join(format!("medulla-redb-authd-{}", std::process::id()));
@@ -3163,8 +3164,8 @@ pub mod tests {
         // check. A READ guard, so these tests still run concurrently with each
         // other -- only a key MUTATOR is excluded.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        use medulla_types::protocol::AuditReport;
-        use medulla_types::protocol::ResultPayload;
+        use medulla_protocol_types::protocol::AuditReport;
+        use medulla_protocol_types::protocol::ResultPayload;
 
         const SECRET: &str = "audit-secret";
         let dir = std::env::temp_dir().join(format!("medulla-audit-{}", std::process::id()));
@@ -3197,7 +3198,7 @@ pub mod tests {
         }
 
         // Served AuditVerify ⇒ ok.
-        let decode = |r: medulla_types::protocol::Response| -> AuditReport {
+        let decode = |r: medulla_protocol_types::protocol::Response| -> AuditReport {
             match r.result {
                 Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(&bytes).unwrap(),
                 other => panic!("expected raw AuditReport, got {other:?}"),
@@ -3248,8 +3249,8 @@ pub mod tests {
         // check. A READ guard, so these tests still run concurrently with each
         // other -- only a key MUTATOR is excluded.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        use medulla_types::protocol::LedgerReadResult;
-        use medulla_types::protocol::ResultPayload;
+        use medulla_protocol_types::protocol::LedgerReadResult;
+        use medulla_protocol_types::protocol::ResultPayload;
 
         const SECRET: &str = "get-ledger-secret";
         let dir = std::env::temp_dir().join(format!("medulla-get-ledger-{}", std::process::id()));
@@ -3280,7 +3281,7 @@ pub mod tests {
             assert!(r.error.is_none(), "add failed: {:?}", r.error);
         }
 
-        let decode = |r: medulla_types::protocol::Response| -> LedgerReadResult {
+        let decode = |r: medulla_protocol_types::protocol::Response| -> LedgerReadResult {
             match r.result {
                 Some(ResultPayload::Json(v)) => serde_json::from_value(v).unwrap(),
                 other => panic!("expected a typed LedgerReadResult, got {other:?}"),
@@ -3322,8 +3323,8 @@ pub mod tests {
     /// needed -- `GetLedger` is the very first request this graph ever sees.
     #[tokio::test]
     async fn get_ledger_dispatch_types_a_genuinely_empty_ledger_distinctly() {
-        use medulla_types::protocol::LedgerReadResult;
-        use medulla_types::protocol::ResultPayload;
+        use medulla_protocol_types::protocol::LedgerReadResult;
+        use medulla_protocol_types::protocol::ResultPayload;
 
         const SECRET: &str = "get-ledger-empty-secret";
         let state = new_state(None);
@@ -3333,7 +3334,7 @@ pub mod tests {
         }
         let req = |id: u64, method: Method| current_request(SECRET, id, "__commons__", method);
 
-        let decode = |r: medulla_types::protocol::Response| -> LedgerReadResult {
+        let decode = |r: medulla_protocol_types::protocol::Response| -> LedgerReadResult {
             match r.result {
                 Some(ResultPayload::Json(v)) => serde_json::from_value(v).unwrap(),
                 other => panic!("expected a typed LedgerReadResult, got {other:?}"),
@@ -3373,9 +3374,9 @@ pub mod tests {
         // check. A READ guard, so these tests still run concurrently with each
         // other -- only a key MUTATOR is excluded.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        use medulla_types::protocol::AuditReport;
-        use medulla_types::protocol::MerkleInclusionReport;
-        use medulla_types::protocol::ResultPayload;
+        use medulla_protocol_types::protocol::AuditReport;
+        use medulla_protocol_types::protocol::MerkleInclusionReport;
+        use medulla_protocol_types::protocol::ResultPayload;
         use crate::provenance_anchor;
 
         const SECRET: &str = "provenance-secret";
@@ -3462,7 +3463,7 @@ pub mod tests {
             "idle sweep must not bump authority"
         );
 
-        let decode_report = |r: medulla_types::protocol::Response| -> MerkleInclusionReport {
+        let decode_report = |r: medulla_protocol_types::protocol::Response| -> MerkleInclusionReport {
             match r.result {
                 Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(&bytes).unwrap(),
                 other => panic!("expected raw MerkleInclusionReport, got {other:?}"),
@@ -4600,7 +4601,7 @@ pub mod tests {
         // check. A READ guard, so these tests still run concurrently with each
         // other -- only a key MUTATOR is excluded.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        use medulla_types::protocol::ResultPayload;
+        use medulla_protocol_types::protocol::ResultPayload;
         use crate::tenant_catalog::TenantCatalog;
         const SECRET: &str = "admin-rpc";
         const K: usize = 4;

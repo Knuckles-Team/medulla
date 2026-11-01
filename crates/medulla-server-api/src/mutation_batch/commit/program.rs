@@ -1,6 +1,6 @@
 use medulla_core::graph::GraphCore;
-use medulla_types::protocol::Method;
-use medulla_types::protocol::ResultPayload;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::ResultPayload;
 use crate::api::persistence::PersistenceBackend;
 use medulla_types::contract::Nonce;
 
@@ -64,7 +64,7 @@ impl<'a> ProgramPromotionRequest<'a> {
 /// returns its stored receipt even when the active pointer has since moved.
 pub async fn commit_program_promotion(
     request: ProgramPromotionRequest<'_>,
-) -> Result<medulla_types::mutation_batch::MutationBatchCommit, String> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {
     let ProgramPromotionRequest {
         persistence,
         core,

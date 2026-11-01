@@ -1,5 +1,5 @@
 use super::*;
-use medulla_types::sealed_record::is_sealed_record_row;
+use medulla_mutation_types::sealed_record::is_sealed_record_row;
 
 impl GraphCore {
     // ── Ebbinghaus Temporal Decay (CONCEPT:MEDULLA-KG.compute.graph-compute-engine) ──────────────────────

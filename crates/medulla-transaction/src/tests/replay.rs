@@ -7,8 +7,8 @@
 use super::*;
 use crate::tables::{OUTBOX, REPLAY_OPERATIONS};
 use crate::ReplayResolution;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 use medulla_storage::RecordedOperation;
-use medulla_types::MutationOutboxIntent;
 
 /// Record one committed attempt: consume its nonce and store its receipt in the
 /// same admitted write as the batch, then commit.
@@ -487,7 +487,8 @@ fn finalize_replay_receipt_rejects_persisted_operation_row_tampering() {
             "nonce" => row.nonce_replay_digest = digest_of(99),
             _ => unreachable!(),
         }
-        let encoded = medulla_storage::encode_bounded(&row, "tampered operation replay row").unwrap();
+        let encoded =
+            medulla_storage::encode_bounded(&row, "tampered operation replay row").unwrap();
         operations
             .insert(
                 (scope_key.as_str(), operation.idempotency_key.as_str()),

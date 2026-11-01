@@ -2,8 +2,8 @@
 use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::api::admin::saga::*;
 use medulla_server_api::auth::VerifiedRequestContext;
-use medulla_types::mutation_batch::{DurabilityDomain, MutationBatch, MutationSurface};
-use medulla_types::protocol::Method;
+use medulla_protocol_types::mutation_batch::{DurabilityDomain, MutationBatch, MutationSurface};
+use medulla_protocol_types::protocol::Method;
 use sha2::Digest;
 
 fn authority(actor: &str, tenant: &str, key: &str) -> CarrierAuthority {
@@ -74,12 +74,12 @@ fn saga_keys_separate_tenant_principal_and_authenticated_idempotency() {
 
 #[test]
 fn channel_departure_receipt_keeps_json_string_variant() {
-    let departure = medulla_types::protocol::ResultPayload::Json(serde_json::json!("left"));
+    let departure = medulla_protocol_types::protocol::ResultPayload::Json(serde_json::json!("left"));
     let encoded =
         rmp_serde::to_vec_named(&DurableAdminResult::from_result(&departure).unwrap()).unwrap();
     let decoded = decode_admin_result(&encoded, AdminSagaResultContract::ChannelDeparture).unwrap();
     assert!(
-        matches!(decoded, medulla_types::protocol::ResultPayload::Json(ref value) if value == "left")
+        matches!(decoded, medulla_protocol_types::protocol::ResultPayload::Json(ref value) if value == "left")
     );
     AdminSagaResultContract::ChannelDeparture
         .validate(&decoded)
@@ -89,7 +89,7 @@ fn channel_departure_receipt_keeps_json_string_variant() {
     let recovered =
         decode_admin_result(&legacy, AdminSagaResultContract::ChannelDeparture).unwrap();
     assert!(
-        matches!(recovered, medulla_types::protocol::ResultPayload::Json(ref value) if value == "left")
+        matches!(recovered, medulla_protocol_types::protocol::ResultPayload::Json(ref value) if value == "left")
     );
     AdminSagaResultContract::ChannelDeparture
         .validate(&recovered)
@@ -137,13 +137,13 @@ fn channel_group_join_leave_rejoin_replays_each_tagged_result() {
         1,
         "channel-group-join",
         &join,
-        medulla_types::protocol::ResultPayload::scalar::<
-            medulla_types::result_contract::messaging::JoinChannel,
+        medulla_protocol_types::protocol::ResultPayload::scalar::<
+            medulla_protocol_types::result_contract::messaging::JoinChannel,
         >("joined".to_string()),
     );
     assert!(matches!(
         joined,
-        medulla_types::protocol::ResultPayload::String(ref value) if value == "joined"
+        medulla_protocol_types::protocol::ResultPayload::String(ref value) if value == "joined"
     ));
     let join_replay = begin_named_admin_saga_with_nonce(
         &backend,
@@ -157,24 +157,24 @@ fn channel_group_join_leave_rejoin_replays_each_tagged_result() {
     .unwrap();
     assert!(matches!(
         join_replay.replayed,
-        Some(medulla_types::protocol::ResultPayload::String(ref value)) if value == "joined"
+        Some(medulla_protocol_types::protocol::ResultPayload::String(ref value)) if value == "joined"
     ));
 
     let left = finish(
         3,
         "channel-group-leave",
         &leave,
-        medulla_types::protocol::ResultPayload::of::<
-            medulla_types::result_contract::messaging::LeaveChannel,
-        >(medulla_types::messaging_wire::ChannelDeparture::new(
+        medulla_protocol_types::protocol::ResultPayload::of::<
+            medulla_protocol_types::result_contract::messaging::LeaveChannel,
+        >(medulla_protocol_types::messaging_wire::ChannelDeparture::new(
             None,
-            medulla_types::messaging_wire::ChannelDepartureStatus::Left,
+            medulla_protocol_types::messaging_wire::ChannelDepartureStatus::Left,
         ))
         .unwrap(),
     );
     assert!(matches!(
         left,
-        medulla_types::protocol::ResultPayload::Json(ref value)
+        medulla_protocol_types::protocol::ResultPayload::Json(ref value)
             if value == &serde_json::Value::String("left".to_string())
     ));
     let leave_replay = begin_named_admin_saga_with_nonce(
@@ -189,7 +189,7 @@ fn channel_group_join_leave_rejoin_replays_each_tagged_result() {
     .unwrap();
     assert!(matches!(
         leave_replay.replayed,
-        Some(medulla_types::protocol::ResultPayload::Json(ref value))
+        Some(medulla_protocol_types::protocol::ResultPayload::Json(ref value))
             if value == &serde_json::Value::String("left".to_string())
     ));
 
@@ -197,13 +197,13 @@ fn channel_group_join_leave_rejoin_replays_each_tagged_result() {
         5,
         "channel-group-rejoin",
         &join,
-        medulla_types::protocol::ResultPayload::scalar::<
-            medulla_types::result_contract::messaging::JoinChannel,
+        medulla_protocol_types::protocol::ResultPayload::scalar::<
+            medulla_protocol_types::result_contract::messaging::JoinChannel,
         >("joined".to_string()),
     );
     assert!(matches!(
         rejoined,
-        medulla_types::protocol::ResultPayload::String(ref value) if value == "joined"
+        medulla_protocol_types::protocol::ResultPayload::String(ref value) if value == "joined"
     ));
     let rejoin_replay = begin_named_admin_saga_with_nonce(
         &backend,
@@ -217,7 +217,7 @@ fn channel_group_join_leave_rejoin_replays_each_tagged_result() {
     .unwrap();
     assert!(matches!(
         rejoin_replay.replayed,
-        Some(medulla_types::protocol::ResultPayload::String(ref value)) if value == "joined"
+        Some(medulla_protocol_types::protocol::ResultPayload::String(ref value)) if value == "joined"
     ));
 }
 
@@ -229,12 +229,12 @@ fn admin_replay_rejects_wrong_json_body_and_scalar_arm() {
     };
     let contract = AdminSagaResultContract::for_method(&method).unwrap();
     assert!(contract
-        .validate(&medulla_types::protocol::ResultPayload::Json(
+        .validate(&medulla_protocol_types::protocol::ResultPayload::Json(
             serde_json::json!({"unrelated": true}),
         ))
         .is_err());
     assert!(contract
-        .validate(&medulla_types::protocol::ResultPayload::Bool(true))
+        .validate(&medulla_protocol_types::protocol::ResultPayload::Bool(true))
         .is_err());
 }
 
@@ -282,8 +282,8 @@ fn result_contract_mapping_and_private_sagas_fail_closed() {
     assert!(AdminSagaResultContract::for_private_event("unregistered-private-saga").is_err());
 }
 
-fn sparql_result(operations: u64) -> medulla_types::protocol::ResultPayload {
-    medulla_types::protocol::ResultPayload::Json(serde_json::json!({
+fn sparql_result(operations: u64) -> medulla_protocol_types::protocol::ResultPayload {
+    medulla_protocol_types::protocol::ResultPayload::Json(serde_json::json!({
         "operations": operations,
         "inserted": 2,
         "deleted": 1,
@@ -292,8 +292,10 @@ fn sparql_result(operations: u64) -> medulla_types::protocol::ResultPayload {
     }))
 }
 
-fn reshard_report(graph: &str) -> medulla_types::result_contract::cluster::ShardReshardReport {
-    medulla_types::result_contract::cluster::ShardReshardReport {
+fn reshard_report(
+    graph: &str,
+) -> medulla_protocol_types::result_contract::cluster::ShardReshardReport {
+    medulla_protocol_types::result_contract::cluster::ShardReshardReport {
         graph: graph.into(),
         from_shard: 0,
         to_shard: 1,
@@ -431,7 +433,7 @@ fn recovery_rejects_unknown_prepared_and_committed_events_but_replays_known_priv
         medulla_transaction::SagaBegin::Execute
     ));
     let encoded =
-        rmp_serde::to_vec_named(&medulla_types::protocol::ResultPayload::Bool(true)).unwrap();
+        rmp_serde::to_vec_named(&medulla_protocol_types::protocol::ResultPayload::Bool(true)).unwrap();
     backend.admin_saga_end(&committed, encoded, 91).unwrap();
     let Err(error) =
         resume_named_admin_saga(&backend, "unknown-committed", Some("contract-test-actor"))
@@ -460,7 +462,7 @@ fn recovery_rejects_unknown_prepared_and_committed_events_but_replays_known_priv
         &backend,
         known.batch,
         known.created_at_ms,
-        medulla_types::protocol::ResultPayload::Bool(true),
+        medulla_protocol_types::protocol::ResultPayload::Bool(true),
     )
     .unwrap();
     let replay = resume_named_admin_saga(&backend, "known-private", Some("contract-test-actor"))
@@ -468,7 +470,7 @@ fn recovery_rejects_unknown_prepared_and_committed_events_but_replays_known_priv
         .unwrap();
     assert!(matches!(
         replay.replayed,
-        Some(medulla_types::protocol::ResultPayload::Bool(true))
+        Some(medulla_protocol_types::protocol::ResultPayload::Bool(true))
     ));
 }
 
@@ -502,8 +504,8 @@ fn sparql_recovery_rejects_untyped_results_while_prepared_and_replays_exact_outc
     )
     .unwrap();
     for invalid in [
-        medulla_types::protocol::ResultPayload::Json(serde_json::json!({"unrelated": true})),
-        medulla_types::protocol::ResultPayload::Json(serde_json::json!({
+        medulla_protocol_types::protocol::ResultPayload::Json(serde_json::json!({"unrelated": true})),
+        medulla_protocol_types::protocol::ResultPayload::Json(serde_json::json!({
             "operations": 1,
             "inserted": 2,
             "deleted": 1,
@@ -511,12 +513,12 @@ fn sparql_recovery_rejects_untyped_results_while_prepared_and_replays_exact_outc
             "created_graphs": 0,
             "extra": true,
         })),
-        medulla_types::protocol::ResultPayload::Json(serde_json::json!({
+        medulla_protocol_types::protocol::ResultPayload::Json(serde_json::json!({
             "outcome": "compensated",
             "updated_graphs": 1,
             "created_graphs": 0,
         })),
-        medulla_types::protocol::ResultPayload::Bool(true),
+        medulla_protocol_types::protocol::ResultPayload::Bool(true),
     ] {
         let recovered =
             resume_named_admin_saga(&backend, "sparql-success", Some("contract-test-actor"))
@@ -535,7 +537,7 @@ fn sparql_recovery_rejects_untyped_results_while_prepared_and_replays_exact_outc
         .unwrap();
         assert_eq!(
             record.status,
-            medulla_types::mutation_batch::MutationBatchStatus::Prepared
+            medulla_protocol_types::mutation_batch::MutationBatchStatus::Prepared
         );
         assert!(record.result_msgpack.is_none());
     }
@@ -549,10 +551,10 @@ fn sparql_recovery_rejects_untyped_results_while_prepared_and_replays_exact_outc
     let replay = resume_named_admin_saga(&backend, "sparql-success", Some("contract-test-actor"))
         .unwrap()
         .unwrap();
-    let medulla_types::protocol::ResultPayload::Json(body) = replay.replayed.unwrap() else {
+    let medulla_protocol_types::protocol::ResultPayload::Json(body) = replay.replayed.unwrap() else {
         panic!("typed SPARQL success replay lost its JSON result");
     };
-    let medulla_types::protocol::ResultPayload::Json(expected) = sparql_result(1) else {
+    let medulla_protocol_types::protocol::ResultPayload::Json(expected) = sparql_result(1) else {
         unreachable!();
     };
     assert_eq!(body, expected);
@@ -573,7 +575,7 @@ fn sparql_recovery_rejects_untyped_results_while_prepared_and_replays_exact_outc
         },
     )
     .unwrap();
-    let outcome = medulla_types::protocol::ResultPayload::Json(serde_json::json!({
+    let outcome = medulla_protocol_types::protocol::ResultPayload::Json(serde_json::json!({
         "outcome": "compensated",
         "updated_graphs": 0,
         "created_graphs": 0,
@@ -589,10 +591,10 @@ fn sparql_recovery_rejects_untyped_results_while_prepared_and_replays_exact_outc
         resume_named_admin_saga(&backend, "sparql-compensated", Some("contract-test-actor"))
             .unwrap()
             .unwrap();
-    let medulla_types::protocol::ResultPayload::Json(body) = replay.replayed.unwrap() else {
+    let medulla_protocol_types::protocol::ResultPayload::Json(body) = replay.replayed.unwrap() else {
         panic!("typed SPARQL compensation replay lost its JSON result");
     };
-    let medulla_types::protocol::ResultPayload::Json(expected) = outcome else {
+    let medulla_protocol_types::protocol::ResultPayload::Json(expected) = outcome else {
         unreachable!();
     };
     assert_eq!(body, expected);
@@ -647,7 +649,7 @@ fn method_bearing_retry_recovers_legacy_public_sagas_but_direct_resume_refuses()
         &backend,
         recovered.batch,
         recovered.created_at_ms,
-        medulla_types::protocol::ResultPayload::Json(
+        medulla_protocol_types::protocol::ResultPayload::Json(
             serde_json::to_value(reshard_report("legacy-public")).unwrap(),
         ),
     )
@@ -658,7 +660,7 @@ fn method_bearing_retry_recovers_legacy_public_sagas_but_direct_resume_refuses()
         backend.admin_saga_step(&committed, 104, None).unwrap(),
         medulla_transaction::SagaBegin::Execute
     ));
-    let result = medulla_types::protocol::ResultPayload::Json(
+    let result = medulla_protocol_types::protocol::ResultPayload::Json(
         serde_json::to_value(reshard_report("legacy-public")).unwrap(),
     );
     backend
@@ -682,12 +684,14 @@ fn method_bearing_retry_recovers_legacy_public_sagas_but_direct_resume_refuses()
         None,
     )
     .unwrap();
-    let medulla_types::protocol::ResultPayload::Json(body) = recovered.replayed.unwrap() else {
+    let medulla_protocol_types::protocol::ResultPayload::Json(body) = recovered.replayed.unwrap() else {
         panic!("method-bearing legacy public recovery lost its typed result");
     };
     assert_eq!(
-        serde_json::from_value::<medulla_types::result_contract::cluster::ShardReshardReport>(body)
-            .unwrap(),
+        serde_json::from_value::<
+            medulla_protocol_types::result_contract::cluster::ShardReshardReport,
+        >(body)
+        .unwrap(),
         reshard_report("legacy-public")
     );
 
@@ -702,7 +706,7 @@ fn method_bearing_retry_recovers_legacy_public_sagas_but_direct_resume_refuses()
     )
     .unwrap();
     let encoded =
-        rmp_serde::to_vec_named(&medulla_types::protocol::ResultPayload::Bool(true)).unwrap();
+        rmp_serde::to_vec_named(&medulla_protocol_types::protocol::ResultPayload::Bool(true)).unwrap();
     backend
         .admin_saga_end(&discriminated.batch, encoded, 106)
         .unwrap();
@@ -760,7 +764,7 @@ fn durable_reshard_saga_rejects_wrong_result_then_replays_typed_result() {
         &backend,
         saga.batch.clone(),
         saga.created_at_ms,
-        medulla_types::protocol::ResultPayload::Bool(true),
+        medulla_protocol_types::protocol::ResultPayload::Bool(true),
     );
     assert!(wrong.is_err());
     let prepared = medulla_transaction::read_ledger(
@@ -771,7 +775,7 @@ fn durable_reshard_saga_rejects_wrong_result_then_replays_typed_result() {
     .unwrap();
     assert_eq!(
         prepared.status,
-        medulla_types::mutation_batch::MutationBatchStatus::Prepared
+        medulla_protocol_types::mutation_batch::MutationBatchStatus::Prepared
     );
     assert!(prepared.result_msgpack.is_none());
     let recovered = resume_named_admin_saga(
@@ -786,14 +790,14 @@ fn durable_reshard_saga_rejects_wrong_result_then_replays_typed_result() {
         &backend,
         recovered.batch.clone(),
         recovered.created_at_ms,
-        medulla_types::protocol::ResultPayload::Bool(true),
+        medulla_protocol_types::protocol::ResultPayload::Bool(true),
     )
     .unwrap_err()
     .contains("requires a JSON body"));
 
     let report = reshard_report("contract-test");
     let result =
-        medulla_types::protocol::ResultPayload::Json(serde_json::to_value(&report).unwrap());
+        medulla_protocol_types::protocol::ResultPayload::Json(serde_json::to_value(&report).unwrap());
     let committed = finish_admin_saga(
         &backend,
         recovered.batch,
@@ -803,7 +807,7 @@ fn durable_reshard_saga_rejects_wrong_result_then_replays_typed_result() {
     .unwrap();
     assert!(matches!(
         committed,
-        medulla_types::protocol::ResultPayload::Json(_)
+        medulla_protocol_types::protocol::ResultPayload::Json(_)
     ));
 
     let replay = begin_named_admin_saga_with_nonce(
@@ -816,12 +820,14 @@ fn durable_reshard_saga_rejects_wrong_result_then_replays_typed_result() {
         None,
     )
     .unwrap();
-    let medulla_types::protocol::ResultPayload::Json(body) = replay.replayed.unwrap() else {
+    let medulla_protocol_types::protocol::ResultPayload::Json(body) = replay.replayed.unwrap() else {
         panic!("reshard replay lost its typed JSON result");
     };
     assert_eq!(
-        serde_json::from_value::<medulla_types::result_contract::cluster::ShardReshardReport>(body)
-            .unwrap(),
+        serde_json::from_value::<
+            medulla_protocol_types::result_contract::cluster::ShardReshardReport,
+        >(body)
+        .unwrap(),
         report
     );
 }

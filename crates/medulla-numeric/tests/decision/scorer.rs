@@ -4,18 +4,24 @@
 
 use std::time::Instant;
 
+use medulla_decision_types::{
+    decision::statistical::head::DecisionHeadBody,
+    decision::statistical::head::FeatureStandardisation, decision::statistical::head::FittedRegime,
+    decision::statistical::head::HeadKind,
+    decision::statistical::head::DECISION_HEAD_SCHEMA_VERSION,
+};
+use medulla_decision_types::{
+    decision::statistical::scorer::OptionAttentionParams,
+    decision::statistical::scorer::MAX_SCORER_FEATURES,
+    decision::statistical::scorer::MAX_SCORER_SHORTLIST,
+    decision::statistical::scorer::MAX_SCORER_WIDTH,
+};
+use medulla_decision_types::{decision::QuantScaleTag, decision::QuantisedValue};
 use medulla_numeric::decision::scorer::fixed::{exp_non_positive, softmax, to_f64, ONE};
 use medulla_numeric::decision::scorer::forward::{read, EncodedState, Scorer, EXCLUDED_LOGIT};
 use medulla_numeric::decision::scorer::legal::{shortlist, LegalSet};
 use medulla_numeric::decision::trajectory::{belief, Prefix};
-use medulla_types::decision::digest::digest_text;
-use medulla_types::decision::statistical::head::{
-    DecisionHeadBody, FeatureStandardisation, FittedRegime, HeadKind, DECISION_HEAD_SCHEMA_VERSION,
-};
-use medulla_types::decision::statistical::scorer::{
-    OptionAttentionParams, MAX_SCORER_FEATURES, MAX_SCORER_SHORTLIST, MAX_SCORER_WIDTH,
-};
-use medulla_types::decision::{QuantScaleTag, QuantisedValue};
+use medulla_types::solve_scalar::digest_text;
 
 use super::common::{bounded, SCHEMA_DIGEST};
 
@@ -314,7 +320,7 @@ fn parameter_count(head: &DecisionHeadBody) -> usize {
 /// the declared single-digit-millisecond CPU budget.
 #[test]
 fn the_largest_legal_scorer_stays_inside_its_resident_cpu_and_memory_budget() {
-    const UNIVERSE: usize = 256; // medulla_types::decision::statistical::MAX_DECIDE_RECORDS
+    const UNIVERSE: usize = 256; // medulla_decision_types::decision::statistical::MAX_DECIDE_RECORDS
     let head = largest_legal_head();
 
     let params = parameter_count(&head);

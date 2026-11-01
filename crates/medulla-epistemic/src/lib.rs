@@ -11,7 +11,7 @@
 //! (`relationship`/`confidence`/`provenance`) — the same "typed node/edge by
 //! convention" pattern mining already uses for `:AssociationRule`. This crate holds
 //! only VIEW/compute types over that data — nothing here is a new stored struct.
-//! The stored claim/evidence SHAPE is typed, though: `medulla_types::epistemic_node::{Claim,
+//! The stored claim/evidence SHAPE is typed, though: `medulla_result_types::epistemic_node::{Claim,
 //! Evidence}` own it for every writer, and [`EpistemicNodeIndex`] decodes a snapshot's
 //! claim/evidence nodes into those structs (EH-194).
 //!
@@ -29,7 +29,7 @@ mod incremental;
 mod model;
 mod propagate;
 // EH-194 — typed `Claim`/`Evidence` nodes decoded from a snapshot (the reader half of
-// `medulla_types::epistemic_node`). Unconditional: it adds no dependency.
+// `medulla_result_types::epistemic_node`). Unconditional: it adds no dependency.
 #[cfg(feature = "epistemic-tms")]
 mod tms;
 mod typed;

@@ -98,9 +98,9 @@ pub fn cache_result(
     cache: &ResultCache,
     query_hash: u128,
     version: u64,
-    payload: &medulla_types::protocol::ResultPayload,
+    payload: &medulla_protocol_types::protocol::ResultPayload,
 ) {
-    if let medulla_types::protocol::ResultPayload::Raw(bytes) = payload {
+    if let medulla_protocol_types::protocol::ResultPayload::Raw(bytes) = payload {
         cache.put(query_hash, version, bytes.clone());
     }
 }
@@ -113,9 +113,9 @@ pub fn cache_dep_result(
     actor_scope_hash: u64,
     computed_at: u64,
     deps: DepSet,
-    payload: &medulla_types::protocol::ResultPayload,
+    payload: &medulla_protocol_types::protocol::ResultPayload,
 ) {
-    if let medulla_types::protocol::ResultPayload::Raw(bytes) = payload {
+    if let medulla_protocol_types::protocol::ResultPayload::Raw(bytes) = payload {
         cache.put_dep(
             query_hash,
             actor_scope_hash,

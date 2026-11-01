@@ -59,7 +59,7 @@ impl OwnerPayloadTransfer<GraphShardOwner, GraphShardOwner> for GraphShardPayloa
         &mut self,
         source: &ScopedRead<'_, GraphShardOwner>,
         destination: &GraftOwnerWrite<'_, '_, GraphShardOwner>,
-        _identity: &medulla_types::MutationScopeIdentity,
+        _identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     ) -> Result<u64, String> {
         clear_every_owner_table(destination)?;
         let mut discarded = MigrationReport::default();

@@ -1,8 +1,11 @@
 //! Bounded explicit plans through the actual Decide handler.
 
 use super::*;
-use medulla_types::decision::statistical::declared::DeclaredOption;
-use medulla_types::decision::task_plan::{TaskPlanProposal, TaskPlanTask, TASK_PLAN_POLICY_REVISION};
+use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_types::{
+    decision::task_plan::TaskPlanProposal, decision::task_plan::TaskPlanTask,
+    decision::task_plan::TASK_PLAN_POLICY_REVISION,
+};
 
 fn task_request(pin: &ComponentDependency) -> DecideRequest {
     let tasks: Vec<TaskPlanTask> = [
@@ -78,7 +81,7 @@ async fn decide_routes_task_plan() {
     assert_eq!(record.evidence_class, EvidenceClass::Claim);
     assert_eq!(
         record.resolution_kind,
-        medulla_types::decision::ResolutionKind::Constraint
+        medulla_decision_types::decision::ResolutionKind::Constraint
     );
     assert_eq!(record.tenant_id, TENANT);
     assert_eq!(
@@ -87,16 +90,16 @@ async fn decide_routes_task_plan() {
     );
     assert!(record.premises.iter().any(|p| p.subject == "c"
         && p.fact.contains("dependencies=b")
-        && p.class == medulla_types::decision::PremiseClass::Claim));
-    assert!(record.premises.iter().any(|p|p.subject==TASK_PLAN_POLICY_REVISION && matches!(&p.provenance, medulla_types::decision::PremiseProvenance::Policy {policy_digest} if *policy_digest==plan.policy_digest)));
+        && p.class == medulla_decision_types::decision::PremiseClass::Claim));
+    assert!(record.premises.iter().any(|p|p.subject==TASK_PLAN_POLICY_REVISION && matches!(&p.provenance, medulla_decision_types::decision::PremiseProvenance::Policy {policy_digest} if *policy_digest==plan.policy_digest)));
     assert_eq!(
-        medulla_types::decision::digest::statistical_record_digest(record),
+        medulla_decision_types::decision::digest::statistical_record_digest(record),
         record.record_digest
     );
     let mut altered = record.clone();
     altered.task_plan.as_mut().unwrap().max_concurrency = 3;
     assert_ne!(
-        medulla_types::decision::digest::statistical_record_digest(&altered),
+        medulla_decision_types::decision::digest::statistical_record_digest(&altered),
         record.record_digest
     );
 }
@@ -164,7 +167,8 @@ async fn task_plan_cannot_use_score_replay() {
     record.outcome = StatisticalOutcome::Abstained {
         reasons: BoundedVec::default(),
     };
-    record.record_digest = medulla_types::decision::digest::statistical_record_digest(&record);
+    record.record_digest =
+        medulla_decision_types::decision::digest::statistical_record_digest(&record);
     let ctx = super::super::stat_executor::ExecutionContext {
         store: h.store.as_ref(),
         tenant_id: TENANT,
@@ -182,8 +186,9 @@ async fn task_plan_cannot_use_score_replay() {
 // spec: MEDULLA-DECISION-ENGINE-R134.111.7
 #[tokio::test]
 async fn canonical_task_plan_schema_publishes_once_and_routes() {
-    use medulla_types::decision::task_plan::{
-        task_plan_feature_schema, TASK_PLAN_FEATURE_SCHEMA_COMPONENT_ID,
+    use medulla_decision_types::{
+        decision::task_plan::task_plan_feature_schema,
+        decision::task_plan::TASK_PLAN_FEATURE_SCHEMA_COMPONENT_ID,
     };
     let h = Harness::new().await;
     let body = task_plan_feature_schema().checked().unwrap();
@@ -234,7 +239,7 @@ fn with_call(request: &mut DecideRequest, reference: &str) {
         unreachable!()
     };
     let mut tasks = proposal.tasks.as_slice().to_vec();
-    tasks[3].call = Some(medulla_types::decision::task_plan::TaskPlanCall {
+    tasks[3].call = Some(medulla_decision_types::decision::task_plan::TaskPlanCall {
         server: "github".into(),
         tool: "create_issue".into(),
         arguments: serde_json::json!({
@@ -293,7 +298,9 @@ async fn premises_name_calls_and_bindings() {
     let claims: Vec<&str> = record
         .premises
         .iter()
-        .filter(|p| p.subject == "join" && p.class == medulla_types::decision::PremiseClass::Claim)
+        .filter(|p| {
+            p.subject == "join" && p.class == medulla_decision_types::decision::PremiseClass::Claim
+        })
         .map(|p| p.fact.as_str())
         .collect();
     assert!(claims.contains(
@@ -304,7 +311,7 @@ async fn premises_name_calls_and_bindings() {
     ));
     assert_eq!(record.evidence_class, EvidenceClass::Claim);
     assert_eq!(
-        medulla_types::decision::digest::statistical_record_digest(record),
+        medulla_decision_types::decision::digest::statistical_record_digest(record),
         record.record_digest
     );
 }

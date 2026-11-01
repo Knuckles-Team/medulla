@@ -9,7 +9,7 @@ use medulla_rdf::owl::{
     asserted_types_with_confidence_from_view, explain_instance, instances_of_weighted,
     Classification, Reasoner,
 };
-use medulla_types::protocol::ProofNodeWire;
+use medulla_types::rdf_report::ProofNodeWire;
 
 use crate::rowset::RowSet;
 

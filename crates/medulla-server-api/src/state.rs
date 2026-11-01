@@ -560,7 +560,7 @@ impl ServerState {
 impl ServerState {
     pub fn request_authority(
         &self,
-        request: &medulla_types::protocol::Request,
+        request: &medulla_protocol_types::protocol::Request,
     ) -> Result<crate::authority_context::VerifiedRequestContext, String> {
         if self.local_anonymous {
             crate::anonymous::request_authority(request)

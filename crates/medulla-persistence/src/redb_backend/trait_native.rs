@@ -24,8 +24,8 @@ macro_rules! persistence_native {
     async fn read_resource_reservation(
         &self,
         graph_fname: &str,
-        request: &medulla_types::epistemic_operations::ResourceReservationStatusRequest,
-    ) -> Result<medulla_types::epistemic_operations::ResourceReservationResult, String> {
+        request: &medulla_result_types::epistemic_operations::ResourceReservationStatusRequest,
+    ) -> Result<medulla_result_types::epistemic_operations::ResourceReservationResult, String> {
         let graph_fname = graph_fname.to_owned();
         let routing_graph = graph_fname.clone();
         let request = request.clone();
@@ -38,8 +38,8 @@ macro_rules! persistence_native {
     async fn read_resource_reservation_status(
         &self,
         graph_fname: &str,
-        request: &medulla_types::epistemic_operations::ResourceReservationStatusRequest,
-    ) -> Result<medulla_types::epistemic_operations::ResourceReservationStatusResult, String> {
+        request: &medulla_result_types::epistemic_operations::ResourceReservationStatusRequest,
+    ) -> Result<medulla_result_types::epistemic_operations::ResourceReservationStatusResult, String> {
         let graph_fname = graph_fname.to_owned();
         let routing_graph = graph_fname.clone();
         let request = request.clone();
@@ -55,9 +55,9 @@ macro_rules! persistence_native {
     async fn mint_work_item_claim_capability(
         &self,
         graph_fname: &str,
-        request: medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest,
+        request: medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest,
         authority: medulla_store::redb_store::work_item_capability::AuthenticatedAuthority,
-    ) -> Result<medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityResult, String> {
+    ) -> Result<medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResult, String> {
         let (done, rx) = oneshot::channel();
         let cmd = Cmd::MintWorkItemClaimCapability {
             graph: graph_fname.to_string(),
@@ -76,9 +76,9 @@ macro_rules! persistence_native {
     async fn verify_work_item_claim_capability(
         &self,
         graph_fname: &str,
-        request: medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest,
+        request: medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest,
         authority: medulla_store::redb_store::work_item_capability::AuthenticatedAuthority,
-    ) -> Result<medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityResult, String> {
+    ) -> Result<medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResult, String> {
         let (done, rx) = oneshot::channel();
         let cmd = Cmd::VerifyWorkItemClaimCapability {
             graph: graph_fname.to_string(),
@@ -131,8 +131,8 @@ macro_rules! persistence_native {
     async fn read_capacity_status(
         &self,
         graph_fname: &str,
-        request: &medulla_types::native_control::CapacityStatusRequest,
-    ) -> Result<medulla_types::native_control::CapacityStatusResult, String> {
+        request: &medulla_agent_types::native_control::CapacityStatusRequest,
+    ) -> Result<medulla_agent_types::native_control::CapacityStatusResult, String> {
         let graph = graph_fname.to_owned();
         let request = request.clone();
         self.read_snapshot(graph_fname, move |shard, crypto| {
@@ -147,8 +147,8 @@ macro_rules! persistence_native {
         &self,
         graph_fname: &str,
         cells: &[String],
-        priority: medulla_types::capacity_lease::LeasePriority,
-    ) -> Result<Vec<medulla_types::decision::CapacityHeadroom>, String> {
+        priority: medulla_mutation_types::capacity_lease::LeasePriority,
+    ) -> Result<Vec<medulla_agent_types::agent_topology::CapacityHeadroom>, String> {
         let graph = graph_fname.to_owned();
         let cells = cells.to_vec();
         self.read_snapshot(graph_fname, move |shard, crypto| {
@@ -161,7 +161,7 @@ macro_rules! persistence_native {
         &self,
         graph_fname: &str,
         source_envelope: &str,
-    ) -> Result<Option<medulla_types::native_control::EnrichmentBudgetCheckpoint>, String> {
+    ) -> Result<Option<medulla_agent_types::native_control::EnrichmentBudgetCheckpoint>, String> {
         super::trait_native::read_enrichment_shard!(self, graph_fname, |shard, crypto| {
             medulla_store::redb_store::enrichment_budget::read(&shard, graph_fname, source_envelope, crypto)
         })
@@ -185,7 +185,7 @@ macro_rules! persistence_native {
     async fn read_enrichment_budget_park(
         &self,
         graph_fname: &str,
-    ) -> Result<Option<medulla_types::native_control::EnrichmentBudgetPark>, String> {
+    ) -> Result<Option<medulla_agent_types::native_control::EnrichmentBudgetPark>, String> {
         super::trait_native::read_enrichment_shard!(self, graph_fname, |shard, crypto| {
             medulla_store::redb_store::enrichment_budget::read_park(&shard, graph_fname, crypto)
         })
@@ -211,7 +211,7 @@ macro_rules! persistence_native {
     async fn park_enrichment_budget(
         &self,
         graph_fname: &str,
-        park: medulla_types::native_control::EnrichmentBudgetPark,
+        park: medulla_agent_types::native_control::EnrichmentBudgetPark,
     ) -> Result<(), String> {
         let (done, rx) = oneshot::channel();
         let cmd = Cmd::ParkEnrichmentBudget {
@@ -232,9 +232,9 @@ macro_rules! persistence_native {
     async fn read_development_lane(
         &self,
         graph_fname: &str,
-        request: &medulla_types::epistemic_operations::DevelopmentLaneQueryRequest,
+        request: &medulla_result_types::epistemic_operations::DevelopmentLaneQueryRequest,
         now_ms: u64,
-    ) -> Result<medulla_types::epistemic_operations::DevelopmentLaneQueryResult, String> {
+    ) -> Result<medulla_result_types::epistemic_operations::DevelopmentLaneQueryResult, String> {
         let graph = graph_fname.to_owned();
         let request = request.clone();
         self.read_snapshot(graph_fname, move |shard, crypto| {
@@ -250,9 +250,9 @@ macro_rules! persistence_native {
     async fn read_development_lane_status(
         &self,
         graph_fname: &str,
-        request: &medulla_types::epistemic_operations::DevelopmentLaneStatusRequest,
+        request: &medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequest,
         now_ms: u64,
-    ) -> Result<medulla_types::epistemic_operations::DevelopmentLaneStatusResult, String> {
+    ) -> Result<medulla_result_types::epistemic_operations::DevelopmentLaneStatusResult, String> {
         let graph = graph_fname.to_owned();
         let request = request.clone();
         self.read_snapshot(graph_fname, move |shard, crypto| {

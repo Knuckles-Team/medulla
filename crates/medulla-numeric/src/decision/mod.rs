@@ -1,7 +1,7 @@
 //! The statistical decision layer's engine-side computation (DL-2/DL-4/DL-6/DL-8).
 //!
 //! Everything a `Decide`, `DecisionFit` or `DecisionEval` answer depends on is
-//! computed here, over the wire types in `medulla_types::decision`, on top of the
+//! computed here, over the wire types in `medulla_decision_types::decision`, on top of the
 //! pinned deterministic kernels in [`crate::detkernel`]. Living inside this
 //! crate is deliberate: the crate's `clippy.toml` bans every platform float
 //! transcendental, so the ban covers the decision path by construction rather

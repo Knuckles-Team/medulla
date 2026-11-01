@@ -80,8 +80,8 @@ impl GraphWriteScope<'_> {
     pub fn compile(
         &self,
         batch_id: &str,
-        methods: Vec<medulla_types::protocol::Method>,
-    ) -> Result<medulla_types::mutation_batch::MutationBatch, String> {
+        methods: Vec<medulla_protocol_types::protocol::Method>,
+    ) -> Result<medulla_protocol_types::mutation_batch::MutationBatch, String> {
         self.compile_with_outbox(batch_id, methods, Vec::new())
     }
 
@@ -90,9 +90,9 @@ impl GraphWriteScope<'_> {
     pub fn compile_with_outbox(
         &self,
         batch_id: &str,
-        methods: Vec<medulla_types::protocol::Method>,
-        outbox: Vec<medulla_types::mutation_batch::MutationOutboxIntent>,
-    ) -> Result<medulla_types::mutation_batch::MutationBatch, String> {
+        methods: Vec<medulla_protocol_types::protocol::Method>,
+        outbox: Vec<medulla_mutation_types::mutation_scope::MutationOutboxIntent>,
+    ) -> Result<medulla_protocol_types::mutation_batch::MutationBatch, String> {
         let principal = self.verified.principal_persistence_id();
         compile_methods_with_outbox(
             CompileBatch {
@@ -107,7 +107,7 @@ impl GraphWriteScope<'_> {
                 expected_graph_version: Some(self.graph_version),
                 fencing_token: self.fencing_token,
                 created_at_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
-                default_surface: medulla_types::mutation_batch::MutationSurface::Graph,
+                default_surface: medulla_mutation_types::mutation_scope::MutationSurface::Graph,
                 authoritative_state: None,
             },
             methods,

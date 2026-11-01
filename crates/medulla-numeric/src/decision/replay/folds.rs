@@ -2,8 +2,8 @@
 
 use std::ops::Range;
 
-use medulla_types::decision::replay::{WalkForward, MAX_REPLAY_FOLDS};
-use medulla_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_types::{decision::replay::WalkForward, decision::replay::MAX_REPLAY_FOLDS};
 
 use crate::decision::refusal::{Refusal, RefusalResult};
 

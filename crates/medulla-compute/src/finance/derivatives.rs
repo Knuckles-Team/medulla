@@ -63,7 +63,7 @@ pub fn sabr_smile(
         .collect()
 }
 
-pub use medulla_types::compute_result::finance::SabrFit;
+pub use medulla_result_types::compute_result::finance::SabrFit;
 
 /// Calibrate SABR (α, ρ, ν) to a market smile with `beta` fixed (the usual
 /// convention — β is a modelling choice, not fit). Minimises RMSE of model vs

@@ -11,10 +11,12 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_document::processing::{chunk_text, ChunkSpan, ChunkingConfig, CHUNKER_VERSION};
-use medulla_types::source_ingestion::web_document::{
-    EnrichDocumentReceipt, EnrichDocumentRequest, FetchBackend,
+use medulla_catalog_types::{
+    source_ingestion::web_document::EnrichDocumentReceipt,
+    source_ingestion::web_document::EnrichDocumentRequest,
+    source_ingestion::web_document::FetchBackend,
 };
+use medulla_document::processing::{chunk_text, ChunkSpan, ChunkingConfig, CHUNKER_VERSION};
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 

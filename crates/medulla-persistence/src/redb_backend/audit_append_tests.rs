@@ -2,7 +2,7 @@
 //! gets the declared refusal, never a receipt, and nothing is half-applied.
 
 use super::*;
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 use medulla_store::redb_store::operation_audit::tests::event;
 use medulla_store::redb_store::operation_audit::tests::TENANT;
 use medulla_server_api::api::persistence::PersistenceBackend;

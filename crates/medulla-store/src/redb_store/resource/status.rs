@@ -6,7 +6,8 @@ pub(crate) struct ResourceReservationStatusTables {
         medulla_storage::ScopedOwnerTable<(&'static str, &'static str), &'static [u8]>,
     pub(crate) tenant_index:
         medulla_storage::ScopedOwnerTable<(&'static str, &'static str, &'static str), &'static str>,
-    pub(crate) hosts: medulla_storage::ScopedOwnerTable<(&'static str, &'static str), &'static [u8]>,
+    pub(crate) hosts:
+        medulla_storage::ScopedOwnerTable<(&'static str, &'static str), &'static [u8]>,
     pub(crate) disk_policies:
         medulla_storage::ScopedOwnerTable<(&'static str, &'static str), &'static [u8]>,
 }

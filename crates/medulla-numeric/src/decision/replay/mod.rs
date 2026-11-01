@@ -17,14 +17,14 @@ mod head;
 
 use std::collections::BTreeMap;
 
-use medulla_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 
 pub use budget::{max_drawdown, mean, proportional, sharpe};
 pub use folds::{walk_forward, Fold};
 pub use head::{gold_steps, head_digest, time_ordered, HeadReplay};
 
 use super::refusal::{Refusal, RefusalResult};
-use medulla_types::decision::replay::WalkForward;
+use medulla_decision_types::decision::replay::WalkForward;
 
 /// One replayable decision point.
 #[derive(Debug, Clone, PartialEq)]

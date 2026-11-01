@@ -15,7 +15,7 @@ name = "medulla_query"
 default = []
 # `medulla-types/query` surfaces the `Pred`/`JsonPathOp` wire enums the SQL classifier lowers
 # the Postgres/Mongo JSON operators onto (CONCEPT:MEDULLA-084) — additive, always on with `sql`.
-sql = ["dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petgraph", "dep:tracing", "dep:async-trait", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-types/query", "iceberg-federation"]
+sql = ["dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petgraph", "dep:tracing", "dep:async-trait", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-types/query", "medulla-result-types/query", "medulla-protocol-types/query", "iceberg-federation"]
 # The development/test composition root for the SQL store's scope grants
 # (`tables::store::dev_scope_grant`, and the `TableStore::open_temp` that uses
 # it). OFF by default and folded into NO tier aggregate: RF-RULING-004 puts the
@@ -198,8 +198,13 @@ sha2 = { version = "0.10", optional = true }
 hex = { version = "0.4", optional = true }
 base64 = { version = "0.23", optional = true }
 ipnet = { version = "2.12", optional = true }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-result-types = { path = "../medulla-result-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
 
 [dev-dependencies]
+medulla-result-types = { path = "../medulla-result-types" }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 # The spike's OUTER reactor mimics the server's multi-thread runtime; the inner
 # DataFusion driver uses only the current-thread runtime from the `sql` dep.
 tokio = { version = "1.53", features = ["rt", "rt-multi-thread", "macros"] }

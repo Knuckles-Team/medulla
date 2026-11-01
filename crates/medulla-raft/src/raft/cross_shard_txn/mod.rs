@@ -205,8 +205,8 @@ use super::multi::MultiRaft;
 #[cfg(any(feature = "calvin", test, feature = "harness"))]
 use super::NodeId;
 use super::{GroupId, RaftRequest};
-use medulla_types::protocol::GraphType;
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::GraphType;
+use medulla_protocol_types::protocol::Method;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_persistence::redb_backend::RedbBackend;
 
@@ -759,18 +759,18 @@ impl CrossShardCoordinator {
             let parent =
                 medulla_transaction::read_ledger(&redb.admin_mutations_read()?, &parent_id)?;
             if let Some(record) = parent.as_ref().filter(|record| {
-                record.status == medulla_types::mutation_batch::MutationBatchStatus::Committed
+                record.status == medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed
             }) {
                 let bytes = record.result_msgpack.as_deref().ok_or_else(|| {
                     "committed transaction parent has no terminal result".to_string()
                 })?;
-                let result: medulla_types::protocol::ResultPayload =
+                let result: medulla_protocol_types::protocol::ResultPayload =
                     medulla_types::msgpack::decode_bounded(
                         bytes,
                         medulla_types::msgpack::MsgpackLimits::new(64 * 1024 * 1024, 1_000_000, 64),
                     )
                     .map_err(|_| "transaction parent has an invalid result".to_string())?;
-                let medulla_types::protocol::ResultPayload::Bool(parent_outcome) = result else {
+                let medulla_protocol_types::protocol::ResultPayload::Bool(parent_outcome) = result else {
                     return Err("transaction parent has the wrong result type".to_string());
                 };
                 if outcome != Some(parent_outcome) {

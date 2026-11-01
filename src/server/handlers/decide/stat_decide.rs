@@ -13,19 +13,26 @@ use std::time::Instant;
 use tokio::sync::RwLock;
 use tracing::Instrument;
 
+use medulla_decision_types::decision::digest::statistical_record_digest;
+use medulla_decision_types::decision::statistical::keyed::seed_commitment;
+use medulla_decision_types::{
+    decision::statistical::nl::NlBinding, decision::statistical::nl::NlChoiceSource,
+};
+use medulla_decision_types::{
+    decision::statistical::CandidateSource, decision::statistical::DecideRequest,
+    decision::statistical::DecisionBatch, decision::statistical::ExplorationRecord,
+    decision::statistical::FeatureMatrixRef, decision::statistical::QuestionKind,
+    decision::statistical::ShortlistProvenance, decision::statistical::StatisticalDecisionRecord,
+    decision::statistical::StatisticalErrorCode, decision::statistical::StatisticalInputs,
+    decision::statistical::StatisticalOutcome,
+};
+use medulla_decision_types::{
+    decision::EvidenceClass, decision::PremiseClass, decision::PremiseProvenance,
+    decision::PremiseRef, decision::QuantScaleTag, decision::ResolutionKind,
+    decision::TraceFidelity, decision::STATISTICAL_DECISION_RECORD_SCHEMA_VERSION,
+};
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::digest::{digest_text, statistical_record_digest};
-use medulla_types::decision::statistical::keyed::seed_commitment;
-use medulla_types::decision::statistical::nl::{NlBinding, NlChoiceSource};
-use medulla_types::decision::statistical::{
-    CandidateSource, DecideRequest, DecisionBatch, ExplorationRecord, FeatureMatrixRef,
-    QuestionKind, ShortlistProvenance, StatisticalDecisionRecord, StatisticalErrorCode,
-    StatisticalInputs, StatisticalOutcome,
-};
-use medulla_types::decision::{
-    EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef, QuantScaleTag, ResolutionKind,
-    TraceFidelity, STATISTICAL_DECISION_RECORD_SCHEMA_VERSION,
-};
+use medulla_types::solve_scalar::digest_text;
 
 use medulla_numeric::decision::ladder::LadderResult;
 
@@ -57,7 +64,9 @@ pub(super) async fn handle_decide(
 ) -> Response {
     let span = telemetry::span("Decide", verified.tenant());
     let result = serve(state, verified, request).instrument(span).await;
-    match result.and_then(ResultPayload::of::<medulla_types::result_contract::query::Decide>) {
+    match result
+        .and_then(ResultPayload::of::<medulla_protocol_types::result_contract::query::Decide>)
+    {
         Ok(payload) => Response::ok(req_id, payload),
         Err(error) => {
             telemetry::refused("Decide", &error);
@@ -233,10 +242,11 @@ fn feature_matrix(
 }
 
 fn exploration(sealing: &Sealing, executed: &Executed) -> Option<ExplorationRecord> {
-    if sealing.request.question.kind == medulla_types::decision::QuestionKind::TaskPlan {
+    if sealing.request.question.kind == medulla_decision_types::decision::QuestionKind::TaskPlan {
         return None; // Explicit DAG planning never makes an exploration draw.
     }
-    let medulla_types::decision::ColdStart::Explore { budget } = &sealing.policy.policy.cold_start
+    let medulla_decision_types::decision::ColdStart::Explore { budget } =
+        &sealing.policy.policy.cold_start
     else {
         return None;
     };
@@ -404,7 +414,7 @@ fn seal(
     sealing: Sealing,
     executed: &Executed,
     nl: Option<NlBinding>,
-    task_plan: Option<medulla_types::decision::task_plan::TaskPlan>,
+    task_plan: Option<medulla_decision_types::decision::task_plan::TaskPlan>,
 ) -> Result<StatisticalDecisionRecord, String> {
     let inputs = StatisticalInputs {
         harness_evaluation: None,

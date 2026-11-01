@@ -8,12 +8,20 @@
 
 use std::collections::BTreeSet;
 
-use medulla_types::agent_component::{AgentComponentEntry, AgentComponentMutationKind};
-use medulla_types::agent_library::{AgentLibraryLifecycle, AgentLibraryMutationContext};
-use medulla_types::connector_pack::{ConnectorPackBindingResult, PackRetireResult};
+use medulla_agent_types::{
+    agent_component::AgentComponentEntry, agent_component::AgentComponentMutationKind,
+};
+use medulla_agent_types::{
+    agent_library::AgentLibraryLifecycle, agent_library::AgentLibraryMutationContext,
+};
+use medulla_catalog_types::{
+    connector_pack::ConnectorPackBindingResult, connector_pack::PackRetireResult,
+};
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_protocol_types::mutation_batch::MutationOperation;
+use medulla_protocol_types::protocol::Method;
 use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
-use medulla_types::mutation_batch::{DurabilityDomain, MutationOperation, MutationSurface};
-use medulla_types::protocol::Method;
 
 use super::admitted::{PackOwnerWrite, PackWriteEffects, PackWriteIdentity};
 use super::commit::{
@@ -65,8 +73,8 @@ impl AgentLibraryStore {
         connector: &ResourceId,
         change: BindingChange<'_>,
     ) -> Result<ConnectorPackBindingResult, String> {
-        medulla_types::agent_library::validate_key(&context.tenant_id, connector.as_str())?;
-        medulla_types::connector_pack::validate_connector(connector)?;
+        medulla_agent_types::agent_library::validate_key(&context.tenant_id, connector.as_str())?;
+        medulla_catalog_types::connector_pack::validate_connector(connector)?;
         let importer = match change {
             BindingChange::Bind { importer } => {
                 validate_importer(importer)?;
@@ -92,7 +100,8 @@ impl AgentLibraryStore {
         self.commit_pack_write(&context, identity, effects, |write, staged| {
             apply_binding(write, &context, connector, importer)?;
             Ok(ConnectorPackBindingResult {
-                schema_version: medulla_types::connector_pack::CONNECTOR_PACK_SCHEMA_VERSION,
+                schema_version:
+                    medulla_catalog_types::connector_pack::CONNECTOR_PACK_SCHEMA_VERSION,
                 tenant_id: context.tenant_id.clone(),
                 connector: connector.clone(),
                 importer: importer.map(str::to_string),
@@ -116,7 +125,7 @@ impl AgentLibraryStore {
         connector: &ResourceId,
         uris: &[String],
     ) -> Result<PackRetireResult, String> {
-        medulla_types::agent_library::validate_key(&context.tenant_id, connector.as_str())?;
+        medulla_agent_types::agent_library::validate_key(&context.tenant_id, connector.as_str())?;
         let plan = self.plan_retirement(&context, connector, uris)?;
         let discriminator = retire_discriminator(uris)?;
         let identity = PackWriteIdentity {
@@ -134,7 +143,7 @@ impl AgentLibraryStore {
             .components
             .iter()
             .map(
-                |component| medulla_types::agent_component::ComponentDependency {
+                |component| medulla_agent_types::agent_component::ComponentDependency {
                     component_id: component.entry.component_id.clone(),
                     kind: component.entry.kind,
                     definition_digest: component.entry.definition_digest.clone(),
@@ -153,7 +162,8 @@ impl AgentLibraryStore {
                 },
             )?;
             Ok(PackRetireResult {
-                schema_version: medulla_types::connector_pack::CONNECTOR_PACK_SCHEMA_VERSION,
+                schema_version:
+                    medulla_catalog_types::connector_pack::CONNECTOR_PACK_SCHEMA_VERSION,
                 tenant_id: context.tenant_id.clone(),
                 connector: connector.clone(),
                 retired: BoundedVec::new(retired)?,
@@ -204,7 +214,7 @@ impl AgentLibraryStore {
         &self,
         tenant_id: &str,
     ) -> Result<BTreeSet<Digest256>, String> {
-        medulla_types::agent_library::validate_key(tenant_id, "connector-pack")?;
+        medulla_agent_types::agent_library::validate_key(tenant_id, "connector-pack")?;
         let read = self.read()?;
         let holders = read.open_owner_table(medulla_storage::CONNECTOR_PACK_BODY_HOLDERS)?;
         let mut held = BTreeSet::new();

@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use medulla_types::connector_pack::ConnectorSchemaMapping;
+use medulla_catalog_types::connector_pack::ConnectorSchemaMapping;
 use serde::Serialize;
 
 #[derive(Serialize)]

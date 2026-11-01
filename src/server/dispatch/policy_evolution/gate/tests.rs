@@ -1,7 +1,9 @@
 use std::collections::BTreeMap;
 
-use medulla_types::policy_evolution::{
-    OpenWeightPolicyCapability, PolicyCapture, PolicyEvolutionRecord, PolicyRefusal, TrainingRun,
+use medulla_decision_types::{
+    policy_evolution::OpenWeightPolicyCapability, policy_evolution::PolicyCapture,
+    policy_evolution::PolicyEvolutionRecord, policy_evolution::PolicyRefusal,
+    policy_evolution::TrainingRun,
 };
 use serde_json::{json, Value};
 

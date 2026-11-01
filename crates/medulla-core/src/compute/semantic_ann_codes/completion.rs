@@ -21,14 +21,17 @@ use super::{
     corrupt, ensure, kernel_error, refused, semantic_contract_error, SemanticCodeError,
     SemanticCodeStore, SemanticMutationReceipt,
 };
+use medulla_index_types::{
+    semantic_index::SemanticDigest, semantic_index::SemanticGenerationArtifact,
+    semantic_index::SemanticIndexMutation, semantic_index::SemanticSourceProgress,
+    semantic_index::SemanticStage, semantic_index::SemanticStageArtifact,
+    semantic_index::SemanticStageIntent, semantic_index::SemanticStageOutcome,
+    semantic_index::SemanticStageTransition,
+};
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_storage::{SemanticIndexOwner, SEMANTIC_SOURCE_PROGRESS, SEMANTIC_STAGES};
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite};
-use medulla_types::mutation_batch::{MutationOutboxIntent, MutationOutboxLease};
-use medulla_types::semantic_index::{
-    SemanticDigest, SemanticGenerationArtifact, SemanticIndexMutation, SemanticSourceProgress,
-    SemanticStage, SemanticStageArtifact, SemanticStageIntent, SemanticStageOutcome,
-    SemanticStageTransition,
-};
 use redb::ReadableTable;
 
 /// One proved stage completion, recorded inside the admitted write.

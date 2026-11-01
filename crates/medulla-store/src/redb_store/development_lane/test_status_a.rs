@@ -112,7 +112,7 @@ fn native_same_branch_and_worktree_races_leave_one_winner() {
         TEST_GRAPH,
         &DevelopmentLaneStatusRequest {
             schema_version:
-                medulla_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
+                medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
             tenant_ref: "tenant:a".into(),
             hold_id: None,
             lane_id: None,

@@ -4,7 +4,7 @@ use medulla_capabilities::{
     gen_ledger, method_policy_entries, policy, protocol_policy_inventory, DurabilityDomain,
     MethodPolicy, PolicyAccess, TxnParticipation,
 };
-use medulla_types::protocol::{CypherMode, Method};
+use medulla_protocol_types::{protocol::CypherMode, protocol::Method};
 
 #[test]
 fn method_policy_registry_is_unique_and_covers_every_method_variant() {
@@ -418,7 +418,7 @@ fn contract_wave_rows_are_internal_with_no_consumer() {
 /// `server::access::requires_write` cannot disagree about an operation.
 #[test]
 fn contract_wave_op_policies_follow_their_ops() {
-    use medulla_types::test_support::contract_wave::contract_wave_samples;
+    use medulla_protocol_types::protocol_fixtures::contract_wave::contract_wave_samples;
 
     let reads = [
         "ConnectorPack.status",
@@ -459,7 +459,7 @@ fn contract_wave_op_policies_follow_their_ops() {
 /// connector's ordinary pack-control one.
 #[test]
 fn a_mass_withdrawal_import_needs_the_admin_action() {
-    use medulla_types::test_support::contract_wave::pack;
+    use medulla_catalog_types::catalog_fixtures::contract_pack as pack;
 
     let ordinary = pack::ops()
         .into_iter()
@@ -477,7 +477,7 @@ fn a_mass_withdrawal_import_needs_the_admin_action() {
 /// publishing an ordinary component is not.
 #[test]
 fn decide_governance_kinds_publish_under_admin_actions() {
-    use medulla_types::agent_component::AgentComponentKind;
+    use medulla_agent_types::agent_component::AgentComponentKind;
 
     let expected = [
         (AgentComponentKind::DecisionPolicy, "admin:decision-policy"),

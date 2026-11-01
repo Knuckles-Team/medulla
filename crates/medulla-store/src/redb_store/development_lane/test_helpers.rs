@@ -1,9 +1,9 @@
 use super::*;
-use medulla_types::epistemic_operations::DevelopmentLaneIntentHostTargetKind;
+use medulla_result_types::epistemic_operations::DevelopmentLaneIntentHostTargetKind;
 
 pub(super) fn hold(tenant: &str, host: &str) -> DevelopmentLaneHold {
     DevelopmentLaneHold {
-        schema_version: medulla_types::epistemic_operations::DevelopmentLaneHoldSchemaVersion::V1,
+        schema_version: medulla_result_types::epistemic_operations::DevelopmentLaneHoldSchemaVersion::V1,
         hold_id: format!("v1:{}", "a".repeat(64)),
         lane_id: "lane:test".into(),
         tenant_ref: tenant.into(),
@@ -51,7 +51,7 @@ pub(super) fn hold(tenant: &str, host: &str) -> DevelopmentLaneHold {
 
 pub(super) fn policy() -> DevelopmentLaneQuotaPolicy {
     DevelopmentLaneQuotaPolicy {
-        schema_version: medulla_types::epistemic_operations::DevelopmentLaneQuotaPolicySchemaVersion::V1,
+        schema_version: medulla_result_types::epistemic_operations::DevelopmentLaneQuotaPolicySchemaVersion::V1,
         policy_name: "default".into(),
         policy_version: "1".into(),
         tenant_count_limit: 10,

@@ -162,7 +162,9 @@ mod run_trace {
 
     fn conforms(properties: &str) -> bool {
         let data = format!("@prefix : <{KG}> . :trace a :RunTrace {properties} .");
-        medulla_shacl::validate_turtle(SHAPES, &data).unwrap().conforms
+        medulla_shacl::validate_turtle(SHAPES, &data)
+            .unwrap()
+            .conforms
     }
 
     // spec: MEDULLA-ORCH-VOCAB-R008.1
@@ -260,21 +262,24 @@ mod run_trace {
 #[cfg(feature = "sparql")]
 mod vocabulary {
     use super::*;
+    use medulla_agent_types::agent_guardrail::entailed_guardrails;
+    use medulla_agent_types::agent_guardrail::GuardrailRule;
     use medulla_core::graph::{GraphCore, GraphView};
     use medulla_rdf::mapping::{load_triples, IriStore};
     use medulla_rdf::owl::saturate_object_properties;
     use medulla_rdf::sparql::{execute, Dataset, Projection, QueryOutcome};
     use medulla_shacl::validate_turtle;
-    use medulla_types::decision::guardrail::{entailed_guardrails, GuardrailRule};
 
     const A2A: &str = include_str!("../../medulla-core/ontology/a2a-v1.ttl");
     const SDD: &str = include_str!("../../medulla-core/ontology/sdd-v1.ttl");
     const SWARM: &str = include_str!("../../medulla-core/ontology/swarm_topology-v1.ttl");
-    const SWARM_SHAPES: &str = include_str!("../../medulla-core/ontology/swarm_topology-v1.shapes.ttl");
+    const SWARM_SHAPES: &str =
+        include_str!("../../medulla-core/ontology/swarm_topology-v1.shapes.ttl");
     const ORCHESTRATION: &str = include_str!("../../medulla-core/ontology/orchestration-v1.ttl");
     const SHAPES: &str = include_str!("../../medulla-core/ontology/orchestration-v1.shapes.ttl");
-    const FIXTURE: &str =
-        include_str!("../../medulla-core/tests/fixtures/orchestration_vocabulary/deploy_container.ttl");
+    const FIXTURE: &str = include_str!(
+        "../../medulla-core/tests/fixtures/orchestration_vocabulary/deploy_container.ttl"
+    );
     const SWARM_NS: &str = "http://knuckles.team/kg/swarm#";
     const PREFIXES: &str = "PREFIX : <http://knuckles.team/kg#> \
         PREFIX swarm: <http://knuckles.team/kg/swarm#> \

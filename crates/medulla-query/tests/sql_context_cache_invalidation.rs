@@ -29,15 +29,23 @@
 #![cfg(feature = "sql")]
 
 use medulla_core::graph::GraphCore;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::IncarnationId;
+use medulla_mutation_types::mutation_scope::LogicalName;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_mutation_types::mutation_scope::ScopeTenantId;
+use medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION;
+use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::mutation_batch::MutationEnvelope;
+use medulla_protocol_types::mutation_batch::MutationOperation;
+use medulla_protocol_types::mutation_batch::VersionExpectation;
 use medulla_query::{
     exec_sql_typed_with_tables_cached_cancellable, exec_sql_typed_with_tables_cancellable,
     CancellationToken, Column, ColumnType, SqlContextCache, TableSchema, TableStore, TableTxn,
     TxnOp, TypedQueryResult,
-};
-use medulla_types::mutation_batch::{
-    DurabilityDomain, IncarnationId, LogicalName, MutationBatch, MutationEnvelope,
-    MutationOperation, MutationOutboxIntent, MutationScopeIdentity, MutationSurface, ScopeTenantId,
-    VersionExpectation, COMPILED_BATCH_INCARNATION, MUTATION_BATCH_VERSION,
 };
 use serde_json::json;
 
@@ -106,7 +114,7 @@ fn commit(store: &TableStore, tenant: &str, graph: &str, seq: &mut u64, txn: Tab
             ordinal: 0,
             surface: MutationSurface::Query,
             domain: DurabilityDomain::SqlCatalog,
-            method: medulla_types::protocol::Method::ApplyMutation {
+            method: medulla_protocol_types::protocol::Method::ApplyMutation {
                 event_type: "sql_catalog_operation".to_string(),
                 query: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
                     .to_string(),
@@ -848,7 +856,7 @@ fn fixture_envelope(
     let actor = format!("principal:sha256:{}", "a".repeat(64));
     let method = medulla_types::contract::MethodId::new("sql_catalog_operation").unwrap();
     MutationEnvelope::for_scope(
-        medulla_types::mutation_batch::CompiledScope {
+        medulla_protocol_types::mutation_batch::CompiledScope {
             identity,
             actor: &actor,
             serving_principal: &actor,
@@ -857,8 +865,9 @@ fn fixture_envelope(
             nonce: medulla_types::contract::Nonce::minted(),
             now_ms: 0,
         },
-        medulla_types::mutation_batch::CompiledOperation {
-            method_schema_id: medulla_types::mutation_batch::method_schema_id(&method).unwrap(),
+        medulla_protocol_types::mutation_batch::CompiledOperation {
+            method_schema_id: medulla_protocol_types::mutation_batch::method_schema_id(&method)
+                .unwrap(),
             method,
             method_schema_digest: medulla_types::contract::Digest256::from_bytes([0_u8; 32]),
             canonical_payload_digest: medulla_types::contract::Digest256::from_bytes([1_u8; 32]),

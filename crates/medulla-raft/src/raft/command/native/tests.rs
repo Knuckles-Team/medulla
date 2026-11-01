@@ -2,20 +2,20 @@ use super::*;
 use crate::raft::ReplicatedMutation;
 
 fn work_item_mutations() -> Vec<Method> {
-    use medulla_types::epistemic_operations::ClaimWorkItemRequest;
-    use medulla_types::epistemic_operations::ClaimWorkItemRequestSchemaVersion;
-    use medulla_types::epistemic_operations::ResourceCapacity;
-    use medulla_types::epistemic_operations::ResourceHostUpdateRequest;
-    use medulla_types::epistemic_operations::ResourceHostUpdateRequestSchemaVersion;
-    use medulla_types::epistemic_operations::ResourceHostUpdateRequestTargetKind;
-    use medulla_types::epistemic_operations::ResourceRequirement;
-    use medulla_types::epistemic_operations::ResourceReservationRequest;
-    use medulla_types::epistemic_operations::ResourceReservationRequestSchemaVersion;
-    use medulla_types::epistemic_operations::ResourceReservationRequestTargetKind;
-    use medulla_types::epistemic_operations_ext::CasWorkItemMetadataRequest;
-    use medulla_types::epistemic_operations_ext::CasWorkItemMetadataRequestSchemaVersion;
-    use medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest;
-    use medulla_types::epistemic_operations_ext::WorkItemClaimCapabilityRequestSchemaVersion;
+    use medulla_result_types::epistemic_operations::ClaimWorkItemRequest;
+    use medulla_result_types::epistemic_operations::ClaimWorkItemRequestSchemaVersion;
+    use medulla_result_types::epistemic_operations::ResourceCapacity;
+    use medulla_result_types::epistemic_operations::ResourceHostUpdateRequest;
+    use medulla_result_types::epistemic_operations::ResourceHostUpdateRequestSchemaVersion;
+    use medulla_result_types::epistemic_operations::ResourceHostUpdateRequestTargetKind;
+    use medulla_result_types::epistemic_operations::ResourceRequirement;
+    use medulla_result_types::epistemic_operations::ResourceReservationRequest;
+    use medulla_result_types::epistemic_operations::ResourceReservationRequestSchemaVersion;
+    use medulla_result_types::epistemic_operations::ResourceReservationRequestTargetKind;
+    use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataRequest;
+    use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataRequestSchemaVersion;
+    use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest;
+    use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityRequestSchemaVersion;
 
     let requirement = ResourceRequirement {
         cpu_weight: 2,
@@ -336,7 +336,7 @@ fn native_catalog_is_complete_unique_and_has_domain_representatives() {
     #[cfg(feature = "shacl")]
     assert_native_round_trip(
         Method::GraphSchema {
-            op: Box::new(medulla_types::graph_schema::GraphSchemaOp::Detach {
+            op: Box::new(medulla_catalog_types::graph_schema::GraphSchemaOp::Detach {
                 source_id: "admin:policy".to_string(),
                 if_composed_digest: None,
             }),
@@ -374,7 +374,7 @@ fn native_catalog_is_complete_unique_and_has_domain_representatives() {
     #[cfg(feature = "jobs")]
     assert_native_round_trip(
         Method::AnalyticsJob {
-            op: medulla_types::jobs::JobOp::Status {
+            op: medulla_agent_types::jobs::JobOp::Status {
                 job_id: "job".to_string(),
             },
         },
@@ -403,14 +403,16 @@ fn native_catalog_is_complete_unique_and_has_domain_representatives() {
     );
     assert_native_round_trip(
         Method::Identity {
-            op: medulla_types::identity::IdentityOp::Config(medulla_types::identity::ConfigOp::Get),
+            op: medulla_identity_types::identity::IdentityOp::Config(
+                medulla_identity_types::identity::ConfigOp::Get,
+            ),
             stamp: None,
         },
         NativeMutationDomain::Identity,
     );
     assert_native_round_trip(
         Method::GovernedChange {
-            op: medulla_types::governed_change::GovernedChangeOp::List,
+            op: medulla_mutation_types::governed_change::GovernedChangeOp::List,
             actor: None,
         },
         NativeMutationDomain::Identity,
@@ -450,11 +452,11 @@ fn native_catalog_is_complete_unique_and_has_domain_representatives() {
 fn cypher_write_is_native_and_read_is_not() {
     let write = Method::CypherQuery {
         query: "CREATE (:Node)".to_string(),
-        mode: medulla_types::protocol::CypherMode::Write,
+        mode: medulla_protocol_types::protocol::CypherMode::Write,
     };
     let read = Method::CypherQuery {
         query: "MATCH (n) RETURN n".to_string(),
-        mode: medulla_types::protocol::CypherMode::Read,
+        mode: medulla_protocol_types::protocol::CypherMode::Read,
     };
 
     assert_eq!(

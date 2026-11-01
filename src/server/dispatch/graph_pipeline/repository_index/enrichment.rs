@@ -7,8 +7,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 use medulla_types::ingestion_wire::IndexResult;
-use medulla_types::mutation_batch::MutationOutboxIntent;
 use serde::{Deserialize, Serialize};
 
 use super::super::*;

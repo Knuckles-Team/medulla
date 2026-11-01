@@ -11,10 +11,10 @@ use medulla_persistence::agent_component::test_component_draft;
 use medulla_persistence::agent_fixtures::mutation_context;
 use medulla_persistence::agent_library::AgentLibraryStore;
 use medulla_server_api::state::ServerState;
-use medulla_types::agent_component::{
+use medulla_agent_types::agent_component::{
     AgentComponentKind, AgentComponentPublishRequest, AgentComponentRetireRequest,
 };
-use medulla_types::decision::guardrail::{
+use medulla_agent_types::agent_guardrail::{
     EntailmentStep, GuardrailEntailmentRequest, GuardrailEntailmentResult, GuardrailRule,
 };
 
@@ -98,7 +98,7 @@ async fn guardrail_dispatch_proves_subclass_visibility_and_restart_stability() {
     assert_eq!(result.schema_version, 1);
     assert_eq!(
         result.ontology_digest,
-        medulla_types::agent_ontology::ontology_digest()
+        medulla_agent_types::agent_ontology::ontology_digest()
     );
     assert_eq!(result.task_iri, "eg:task/research");
     assert_eq!(

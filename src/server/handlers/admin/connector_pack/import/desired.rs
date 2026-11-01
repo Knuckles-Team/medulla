@@ -3,13 +3,16 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_types::agent_component::{
-    AgentComponentDraft, AgentComponentEntry, AgentComponentFacts, AgentComponentKind,
-    ComponentDependency, ComponentProvenance,
+use medulla_agent_types::agent_library::AgentLibraryLifecycle;
+use medulla_agent_types::{
+    agent_component::AgentComponentDraft, agent_component::AgentComponentEntry,
+    agent_component::AgentComponentFacts, agent_component::AgentComponentKind,
+    agent_component::ComponentDependency, agent_component::ComponentProvenance,
 };
-use medulla_types::agent_library::AgentLibraryLifecycle;
-use medulla_types::connector_pack::{
-    ConnectorPackImportRequest, PackEntry, PackEntryKind, PackViolation, PackViolationCode,
+use medulla_catalog_types::{
+    connector_pack::ConnectorPackImportRequest, connector_pack::PackEntry,
+    connector_pack::PackEntryKind, connector_pack::PackViolation,
+    connector_pack::PackViolationCode,
 };
 use medulla_types::contract::Digest256;
 
@@ -102,7 +105,7 @@ impl DesiredBuilder<'_> {
         let requires = self.dependencies(entry)?;
         self.visiting.remove(&entry.uri);
         let body = section_bytes(self.archive, &entry.body)?.to_vec();
-        let component_id = medulla_types::connector_pack::pack_component_id(
+        let component_id = medulla_catalog_types::connector_pack::pack_component_id(
             self.request.index.connector.as_str(),
             entry.kind,
             &entry.name,
@@ -182,7 +185,7 @@ impl DesiredBuilder<'_> {
         _kind: AgentComponentKind,
         entry: &PackEntry,
     ) -> Result<String, String> {
-        let entry_digest = medulla_types::connector_pack::digest::entry_digest(entry)?;
+        let entry_digest = medulla_catalog_types::connector_pack::digest::entry_digest(entry)?;
         if let Some(member) = self.prior.get(&entry.uri).filter(|member| {
             member.lifecycle == AgentLibraryLifecycle::Published
                 && member.entry_digest == entry_digest
@@ -243,7 +246,7 @@ impl DesiredBuilder<'_> {
         body: &[u8],
         requires: Vec<ComponentDependency>,
     ) -> Result<AgentComponentDraft, String> {
-        let digest = medulla_types::connector_pack::digest::entry_digest(entry)?;
+        let digest = medulla_catalog_types::connector_pack::digest::entry_digest(entry)?;
         let facts = self.component_facts(entry, &digest);
         let mut attributes = component_attributes(self.request, entry, &digest);
         if entry.kind == PackEntryKind::Resource && entry.uri == CONNECTOR_DECLARATION_URI {

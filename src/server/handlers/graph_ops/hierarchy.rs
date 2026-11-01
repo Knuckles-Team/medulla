@@ -2,11 +2,14 @@ use super::*;
 
 use super::subgraph::decoded_edge_properties;
 use super::terminal::GraphOpsContext;
-use medulla_types::compute_result::algorithms::{
-    ClusterExpansion, ClusterHierarchySummary, ClusterLevelView, ClusterMemberEdge,
-    ClusterMemberNode, ClusterSummary, InterClusterEdge,
+use medulla_protocol_types::result_contract::compute as results;
+use medulla_result_types::{
+    compute_result::algorithms::ClusterExpansion,
+    compute_result::algorithms::ClusterHierarchySummary,
+    compute_result::algorithms::ClusterLevelView, compute_result::algorithms::ClusterMemberEdge,
+    compute_result::algorithms::ClusterMemberNode, compute_result::algorithms::ClusterSummary,
+    compute_result::algorithms::InterClusterEdge,
 };
-use medulla_types::result_contract::compute as results;
 
 /// `ClusterHierarchyRefresh`: pure extract-method from `try_handle`'s match arm,
 /// byte-identical behaviour, no signature change.

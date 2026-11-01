@@ -46,18 +46,17 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, OnceLock};
 use tokio::sync::RwLock;
 
+use medulla_agent_types::{jobs::JobKind, jobs::JobOp, jobs::SubmitJobSpec};
 use medulla_core::graph::GraphCore;
 use medulla_jobs::model::InputSnapshotHandle;
 use medulla_jobs::store::{JobStore, SubmitSpec};
 use medulla_types::contract::Nonce;
-use medulla_types::jobs::{JobKind, JobOp, SubmitJobSpec};
 
 #[cfg(feature = "program-optimization")]
 use medulla_modality::{OpaqueRef, PolicyEnvelope};
 #[cfg(feature = "program-optimization")]
 use medulla_program::ProgramRevisionIdentity;
 
-use medulla_kernel::lock_recovery::{LockRecovery, WriteRecovery};
 use crate::mutation_batch::MutationBatch;
 use crate::protocol::Response;
 use medulla_server_api::access::CarrierAuthority;
@@ -299,7 +298,11 @@ fn handle_status_op(
     job_id: &str,
 ) -> Response {
     match owned_job(store, authority, job_id) {
-        Ok(job) => job_response::<medulla_types::result_contract::coordination::JobStatus>(req_id, &job),
+        Ok(job) => {
+            job_response::<medulla_protocol_types::result_contract::coordination::JobStatus>(
+                req_id, &job,
+            )
+        }
         Err(error) => Response::err(req_id, error),
     }
 }
@@ -677,9 +680,9 @@ fn finish_job_submit(
     committed_at_ms: u64,
 ) -> Response {
     match store.submit_batch(submit_spec, batch, committed_at_ms) {
-        Ok((job, _replayed)) => {
-            job_response::<medulla_types::result_contract::coordination::JobSubmit>(req_id, &job)
-        }
+        Ok((job, _replayed)) => job_response::<
+            medulla_protocol_types::result_contract::coordination::JobSubmit,
+        >(req_id, &job),
         Err(e) => Response::err(req_id, job_refusal(&e)),
     }
 }
@@ -700,7 +703,7 @@ async fn handle_resume(
     let _ = (state, store);
     let _replayed = replayed;
 
-    job_response::<medulla_types::result_contract::coordination::JobResume>(req_id, &job)
+    job_response::<medulla_protocol_types::result_contract::coordination::JobResume>(req_id, &job)
 }
 
 #[cfg(test)]

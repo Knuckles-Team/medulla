@@ -1,6 +1,6 @@
 use super::*;
-use medulla_types::epistemic_operations::DevelopmentLaneCleanupIntent;
-use medulla_types::epistemic_operations::DevelopmentLaneCleanupIntentSchemaVersion;
+use medulla_result_types::epistemic_operations::DevelopmentLaneCleanupIntent;
+use medulla_result_types::epistemic_operations::DevelopmentLaneCleanupIntentSchemaVersion;
 
 pub(super) struct NativeLaneFixture {
     path: PathBuf,
@@ -64,7 +64,7 @@ impl NativeLaneFixture {
                 Method::UpdateDevelopmentLaneQuota {
                     request: DevelopmentLaneQuotaUpdateRequest {
                         schema_version:
-                            medulla_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequestSchemaVersion::V1,
+                            medulla_result_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequestSchemaVersion::V1,
                         tenant_ref: "tenant:a".into(),
                         policy,
                         expected_policy_revision: 0,
@@ -78,7 +78,7 @@ impl NativeLaneFixture {
         );
         assert_eq!(
             result.decision,
-            medulla_types::epistemic_operations::DevelopmentLaneQuotaUpdateResultDecision::Accepted
+            medulla_result_types::epistemic_operations::DevelopmentLaneQuotaUpdateResultDecision::Accepted
         );
         fixture
     }
@@ -407,7 +407,7 @@ impl NativeLaneFixture {
             Method::UpdateDevelopmentLaneQuota {
                 request: DevelopmentLaneQuotaUpdateRequest {
                     schema_version:
-                        medulla_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequestSchemaVersion::V1,
+                        medulla_result_types::epistemic_operations::DevelopmentLaneQuotaUpdateRequestSchemaVersion::V1,
                     tenant_ref: tenant.into(),
                     policy,
                     expected_policy_revision,

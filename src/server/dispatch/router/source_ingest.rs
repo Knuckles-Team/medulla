@@ -1,6 +1,6 @@
 use super::*;
 
-use medulla_types::result_contract::ingestion as ingestion_results;
+use medulla_protocol_types::result_contract::ingestion as ingestion_results;
 
 /// Source ingestion: parse a file or a batch of files, index a repository,
 /// observe a screen. All are stateless parses that never touch `state`.

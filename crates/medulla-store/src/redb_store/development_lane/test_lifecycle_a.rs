@@ -19,7 +19,7 @@ fn lane_index_is_tenant_scoped_for_reused_lane_ids() {
         fixture.update_policy("tenant:b", policy(), 0, "policy:tenant-b", TEST_NOW);
     assert_eq!(
         tenant_b_policy.decision,
-        medulla_types::epistemic_operations::DevelopmentLaneQuotaUpdateResultDecision::Accepted
+        medulla_result_types::epistemic_operations::DevelopmentLaneQuotaUpdateResultDecision::Accepted
     );
 
     let mut first = test_reserve_request(test_intent(

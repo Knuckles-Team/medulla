@@ -12,6 +12,7 @@ use medulla_types::{
     AgentLibraryEntryDraft, AgentLibraryMutationContext, AgentLibraryMutationKind, AgentLibraryOp,
     AgentLibraryPublishRequest, AgentLibraryRetireRequest, AgentLibraryStatusRequest,
 };
+use medulla_types::contract::Nonce;
 use redb::{ReadableDatabase, ReadableTableMetadata, TableDefinition};
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
@@ -79,30 +80,30 @@ fn definition(tenant_id: &str) -> AgentLibraryEntryDraft {
         version: "1.0.0".to_string(),
         role: "researcher".to_string(),
         role_digest: digest('1'),
-        system_prompt: medulla_types::agent_component::ComponentDependency {
+        system_prompt: medulla_agent_types::agent_component::ComponentDependency {
             component_id: "prompt:a".to_string(),
-            kind: medulla_types::agent_component::AgentComponentKind::SystemPrompt,
+            kind: medulla_agent_types::agent_component::AgentComponentKind::SystemPrompt,
             definition_digest: digest('2'),
         },
-        tools: vec![medulla_types::agent_component::ComponentDependency {
+        tools: vec![medulla_agent_types::agent_component::ComponentDependency {
             component_id: "tool:search".to_string(),
-            kind: medulla_types::agent_component::AgentComponentKind::Tool,
+            kind: medulla_agent_types::agent_component::AgentComponentKind::Tool,
             definition_digest: digest('3'),
         }],
-        skills: vec![medulla_types::agent_component::ComponentDependency {
+        skills: vec![medulla_agent_types::agent_component::ComponentDependency {
             component_id: "skill:research".to_string(),
-            kind: medulla_types::agent_component::AgentComponentKind::Skill,
+            kind: medulla_agent_types::agent_component::AgentComponentKind::Skill,
             definition_digest: digest('4'),
         }],
-        model_profile: medulla_types::agent_component::ComponentDependency {
+        model_profile: medulla_agent_types::agent_component::ComponentDependency {
             component_id: "model:default".to_string(),
-            kind: medulla_types::agent_component::AgentComponentKind::ModelProfile,
+            kind: medulla_agent_types::agent_component::AgentComponentKind::ModelProfile,
             definition_digest: digest('5'),
         },
         model_identity: "model:default".to_string(),
-        ontologies: vec![medulla_types::agent_component::ComponentDependency {
+        ontologies: vec![medulla_agent_types::agent_component::ComponentDependency {
             component_id: "ontology:core".to_string(),
-            kind: medulla_types::agent_component::AgentComponentKind::Ontology,
+            kind: medulla_agent_types::agent_component::AgentComponentKind::Ontology,
             definition_digest: digest('6'),
         }],
         tenant_id: tenant_id.to_string(),
@@ -532,9 +533,9 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
     assert!(store.copy_into(&backup_path).unwrap() >= 1);
     let database = redb::Database::open(&backup_path).unwrap();
     let read = database.begin_read().unwrap();
-    let identity = medulla_types::MutationScopeIdentity::fixed_native(
+    let identity = medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_native(
         "tenant-shared",
-        medulla_types::mutation_batch::DurabilityDomain::ControlPlane,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::ControlPlane,
         "agent-library",
         "agent-library:v1",
     )
@@ -552,18 +553,19 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
         .to_vec();
     let publish_batch = medulla_storage::decode_batch_record(&publish_batch).unwrap();
     assert!(publish_batch.result_msgpack.is_some());
-    let result = medulla_types::msgpack::decode_bounded::<medulla_types::mutation::MutationResult>(
-        publish_batch.result_msgpack.as_deref().unwrap(),
-        medulla_types::msgpack::MsgpackLimits::new(
-            16 * 1024 * 1024,
-            200_000,
-            medulla_types::msgpack::DEFAULT_MAX_DEPTH,
-        ),
-    )
-    .unwrap();
+    let result =
+        medulla_types::msgpack::decode_bounded::<medulla_mutation_types::mutation::MutationResult>(
+            publish_batch.result_msgpack.as_deref().unwrap(),
+            medulla_types::msgpack::MsgpackLimits::new(
+                16 * 1024 * 1024,
+                200_000,
+                medulla_types::msgpack::DEFAULT_MAX_DEPTH,
+            ),
+        )
+        .unwrap();
     assert!(matches!(
         result,
-        medulla_types::mutation::MutationResult::DomainResult { .. }
+        medulla_mutation_types::mutation::MutationResult::DomainResult { .. }
     ));
     let replay_operations = read.open_table(REPLAY_OPERATIONS).unwrap();
     let publish_replay = replay_operations
@@ -597,7 +599,9 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
         publish_outbox.intent.headers.get("actor"),
         Some(&expected_publish_actor)
     );
-    let event = medulla_types::msgpack::decode_bounded::<medulla_types::AgentLibraryOutboxEvent>(
+    let event = medulla_types::msgpack::decode_bounded::<
+        medulla_agent_types::agent_library::AgentLibraryOutboxEvent,
+    >(
         &publish_outbox.intent.payload,
         medulla_types::msgpack::MsgpackLimits::new(
             16 * 1024 * 1024,
@@ -649,16 +653,17 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
         retire_outbox.intent.headers.get("actor"),
         Some(&expected_retire_actor)
     );
-    let retire_event =
-        medulla_types::msgpack::decode_bounded::<medulla_types::AgentLibraryOutboxEvent>(
-            &retire_outbox.intent.payload,
-            medulla_types::msgpack::MsgpackLimits::new(
-                16 * 1024 * 1024,
-                200_000,
-                medulla_types::msgpack::DEFAULT_MAX_DEPTH,
-            ),
-        )
-        .unwrap();
+    let retire_event = medulla_types::msgpack::decode_bounded::<
+        medulla_agent_types::agent_library::AgentLibraryOutboxEvent,
+    >(
+        &retire_outbox.intent.payload,
+        medulla_types::msgpack::MsgpackLimits::new(
+            16 * 1024 * 1024,
+            200_000,
+            medulla_types::msgpack::DEFAULT_MAX_DEPTH,
+        ),
+    )
+    .unwrap();
     assert_eq!(retire_event.performing_actor, expected_retire_actor);
     assert_eq!(retire_event.entry.actor_scope, "definition:builder-a");
     assert!(retire_event.entry.is_retired());

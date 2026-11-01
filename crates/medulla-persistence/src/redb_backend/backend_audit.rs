@@ -10,7 +10,7 @@ impl RedbBackend {
         graph_fname: &str,
         verified_tenant: &str,
         seq: u64,
-    ) -> Result<medulla_types::protocol::AuditEventProof, String> {
+    ) -> Result<medulla_protocol_types::protocol::AuditEventProof, String> {
         let graph = graph_fname.to_string();
         let tenant = verified_tenant.to_string();
         self.read_snapshot(graph_fname, move |shard, _| {
@@ -31,7 +31,7 @@ impl RedbBackend {
         &self,
         graph_fname: &str,
         event: medulla_store::redb_store::OperationAuditEvent,
-    ) -> Result<medulla_types::protocol::AuditAppendReceipt, String> {
+    ) -> Result<medulla_protocol_types::protocol::AuditAppendReceipt, String> {
         let (reply, rx) = std::sync::mpsc::sync_channel(1);
         self.enqueue(
             graph_fname,
@@ -73,7 +73,7 @@ impl RedbBackend {
     pub fn audit_verify_blocking(
         &self,
         graph_fname: &str,
-    ) -> Result<medulla_types::protocol::AuditReport, String> {
+    ) -> Result<medulla_protocol_types::protocol::AuditReport, String> {
         let (reply, rx) = std::sync::mpsc::sync_channel(1);
         self.shard_for(graph_fname)
             .tx
@@ -137,7 +137,7 @@ impl RedbBackend {
         graph_fname: &str,
         node_id: &str,
         anchor_seq: Option<u64>,
-    ) -> Result<medulla_types::protocol::MerkleInclusionReport, String> {
+    ) -> Result<medulla_protocol_types::protocol::MerkleInclusionReport, String> {
         let (reply, rx) = std::sync::mpsc::sync_channel(1);
         self.shard_for(graph_fname)
             .tx

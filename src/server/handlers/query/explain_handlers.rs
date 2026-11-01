@@ -34,7 +34,7 @@ pub(crate) async fn handle_explain_plan(
         Ok(Ok(result)) => result_response::<query_results::ExplainPlan>(req_id, &result),
         Ok(Err(msg)) => Response::err(
             req_id,
-            medulla_types::contract::classify_refusal(
+            medulla_protocol_types::error_registry::classify_refusal(
                 "INVALID_ARGUMENT",
                 "ExplainPlan error: ",
                 &msg,
@@ -75,7 +75,7 @@ pub(crate) async fn handle_explain_provenance(
         Ok(Ok(result)) => result_response::<query_results::ExplainProvenance>(req_id, &result),
         Ok(Err(msg)) => Response::err(
             req_id,
-            medulla_types::contract::classify_refusal(
+            medulla_protocol_types::error_registry::classify_refusal(
                 "INVALID_ARGUMENT",
                 "ExplainProvenance error: ",
                 &msg,
@@ -115,7 +115,7 @@ pub(crate) async fn handle_explain_provenance_by_ids(
         Ok(Ok(result)) => result_response::<query_results::ExplainProvenanceByIds>(req_id, &result),
         Ok(Err(msg)) => Response::err(
             req_id,
-            medulla_types::contract::classify_refusal(
+            medulla_protocol_types::error_registry::classify_refusal(
                 "INVALID_ARGUMENT",
                 "ExplainProvenanceByIds error: ",
                 &msg,
@@ -160,7 +160,7 @@ pub(crate) async fn handle_explain_policy(
         Ok(Ok(result)) => result_response::<query_results::ExplainPolicy>(req_id, &result),
         Ok(Err(msg)) => Response::err(
             req_id,
-            medulla_types::contract::classify_refusal(
+            medulla_protocol_types::error_registry::classify_refusal(
                 "INVALID_ARGUMENT",
                 "ExplainPolicy error: ",
                 &msg,
@@ -502,7 +502,7 @@ pub(crate) async fn handle_resolve_conflict(
         Ok(Ok(result)) => result_response::<query_results::ResolveConflict>(req_id, &result),
         Ok(Err(msg)) => Response::err(
             req_id,
-            medulla_types::contract::classify_refusal(
+            medulla_protocol_types::error_registry::classify_refusal(
                 "INVALID_ARGUMENT",
                 "ResolveConflict error: ",
                 &msg,
@@ -597,7 +597,7 @@ pub(crate) async fn handle_causal_estimate(
         Ok(Ok(result)) => result_response::<query_results::CausalEstimate>(req_id, &result),
         Ok(Err(msg)) => Response::err(
             req_id,
-            medulla_types::contract::classify_refusal(
+            medulla_protocol_types::error_registry::classify_refusal(
                 "INVALID_ARGUMENT",
                 "CausalEstimate error: ",
                 &msg,
@@ -628,7 +628,7 @@ pub(crate) async fn handle_causal_counterfactual(
         Ok(Ok(result)) => result_response::<query_results::CausalCounterfactual>(req_id, &result),
         Ok(Err(msg)) => Response::err(
             req_id,
-            medulla_types::contract::classify_refusal(
+            medulla_protocol_types::error_registry::classify_refusal(
                 "INVALID_ARGUMENT",
                 "CausalCounterfactual error: ",
                 &msg,

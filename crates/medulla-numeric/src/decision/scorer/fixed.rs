@@ -11,7 +11,7 @@
 //! shift. Its error is below `2^-28` on `[0, 1)`, far under the calibration's
 //! resolution, and -- the point -- identical everywhere.
 
-use medulla_types::decision::{QuantScaleTag, QuantisedValue};
+use medulla_decision_types::{decision::QuantScaleTag, decision::QuantisedValue};
 
 /// Fractional bits.
 pub const FRAC_BITS: u32 = 32;

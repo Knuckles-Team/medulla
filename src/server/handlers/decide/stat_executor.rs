@@ -7,22 +7,30 @@
 //! features over exactly those options → the head's advisory reading → the
 //! act/abstain rule and any budgeted exploration inside the legal set.
 
+use medulla_agent_types::{
+    agent_component::AgentComponentKind, agent_component::ComponentDependency,
+};
+use medulla_decision_types::decision::statistical::features::FeatureSchemaBody;
+use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
+use medulla_decision_types::decision::AbstainReason;
+use medulla_decision_types::{
+    decision::statistical::keyed::decision_seed, decision::statistical::keyed::exploration_key,
+};
+use medulla_decision_types::{
+    decision::statistical::DecideRequest, decision::statistical::StatisticalErrorCode,
+    decision::statistical::StatisticalOutcome, decision::statistical::StatisticalQuestion,
+    decision::statistical::TypedParam,
+};
 use medulla_numeric::decision::candidate::CandidateView;
 use medulla_numeric::decision::exploration::permit;
-use medulla_numeric::decision::features::{feature_matrix, FeatureInputs, FeatureMatrix, MatrixOutcome};
+use medulla_numeric::decision::features::{
+    feature_matrix, FeatureInputs, FeatureMatrix, MatrixOutcome,
+};
 use medulla_numeric::decision::head_eval::{
     check_compatible, explanation, read_head, Evaluated, HeadReading,
 };
 use medulla_numeric::decision::ladder::{decide, LadderInputs, LadderResult};
-use medulla_types::agent_component::{AgentComponentKind, ComponentDependency};
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::statistical::features::FeatureSchemaBody;
-use medulla_types::decision::statistical::head::DecisionHeadBody;
-use medulla_types::decision::statistical::keyed::{decision_seed, exploration_key};
-use medulla_types::decision::statistical::{
-    DecideRequest, StatisticalErrorCode, StatisticalOutcome, StatisticalQuestion, TypedParam,
-};
-use medulla_types::decision::AbstainReason;
 
 use super::stat_support::{pinned_body, refusal, ResolvedPolicy};
 use medulla_persistence::agent_library::AgentLibraryStore;
@@ -51,7 +59,7 @@ pub(super) struct Executed {
     /// The contrast decision a `HarnessContrast` question sealed
     /// (MEDULLA-DECISION-ENGINE-R803); `None` for every other kind.
     pub(super) harness_contrast:
-        Option<medulla_types::decision::harness_contrast::HarnessContrastDecision>,
+        Option<medulla_decision_types::decision::harness_contrast::HarnessContrastDecision>,
 }
 
 /// Read and validate the feature schema and head a decision pins.
@@ -129,7 +137,7 @@ pub(super) fn state_digest(
     policy: &ResolvedPolicy,
     now_ms: u64,
 ) -> String {
-    medulla_types::decision::digest::digest_text(
+    medulla_types::solve_scalar::digest_text(
         "eg/decide-state/v1",
         &(
             question,
@@ -248,7 +256,7 @@ pub(super) fn execute(
 pub(super) fn recorded_explanation(
     pinned: &Pinned,
     executed: &Executed,
-) -> Result<Option<medulla_types::decision::statistical::LinearExplanation>, String> {
+) -> Result<Option<medulla_decision_types::decision::statistical::LinearExplanation>, String> {
     let (Some((head, _)), Some(reading), Some(index), Some(matrix)) = (
         &pinned.head,
         &executed.reading,

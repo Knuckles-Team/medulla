@@ -69,7 +69,7 @@ fn matches_lifecycle_result(expected: &str, result: &ResultPayload) -> bool {
             result,
             ResultPayload::Json(value)
                 if serde_json::from_value::<
-                    medulla_types::result_contract::transactions::BeliefMaterialization,
+                    medulla_protocol_types::result_contract::transactions::BeliefMaterialization,
                 >(value.clone())
                 .is_ok()
         ),
@@ -175,7 +175,7 @@ pub(in crate::server::handlers::txn) async fn begin_txn_lifecycle_receipt(
         req_id,
         Some(caller),
         method,
-        crate::mutation_batch::DurabilityDomain::ControlPlane,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::ControlPlane,
         &batch_id,
         authority.attempt_nonce(),
     )?;

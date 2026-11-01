@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use medulla_types::protocol::Method;
-use medulla_types::protocol::Response;
-use medulla_types::protocol::ResultPayload;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use crate::api::persistence::PersistenceBackend;
 
 use super::{idempotency_store, CommitPrep, MutationCtx, MutationPlan};
@@ -37,8 +37,8 @@ pub(super) fn compile_batch_context<'a>(
     batch_id: &'a str,
     source_version: u64,
     created_at_ms: u64,
-    default_surface: medulla_types::mutation_batch::MutationSurface,
-    authoritative_state: Option<medulla_types::mutation_batch::MutationStateDescriptor>,
+    default_surface: medulla_mutation_types::mutation_scope::MutationSurface,
+    authoritative_state: Option<medulla_protocol_types::mutation_batch::MutationStateDescriptor>,
 ) -> crate::mutation_batch::CompileBatch<'a> {
     crate::mutation_batch::CompileBatch {
         batch_id,
@@ -68,7 +68,7 @@ pub(super) async fn commit_staged_replay_probe(
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
     methods: Vec<Method>,
-    default_surface: medulla_types::mutation_batch::MutationSurface,
+    default_surface: medulla_mutation_types::mutation_scope::MutationSurface,
     target: DurableBatchTarget<'_>,
     prep: &CommitPrep,
 ) -> Option<Response> {
@@ -97,7 +97,7 @@ pub(super) async fn commit_staged_replay_probe(
         Ok(None) => None,
         Err(error) => Some(Response::err(
             ctx.req_id,
-            medulla_types::contract::classify_refusal(
+            medulla_protocol_types::error_registry::classify_refusal(
                 "INTERNAL",
                 "MutationBatch status lookup failed: ",
                 &error,
@@ -110,9 +110,9 @@ async fn commit_staged_replay_found(
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
     methods: Vec<Method>,
-    default_surface: medulla_types::mutation_batch::MutationSurface,
+    default_surface: medulla_mutation_types::mutation_scope::MutationSurface,
     target: DurableBatchTarget<'_>,
-    record: medulla_types::mutation_batch::MutationBatchRecord,
+    record: medulla_protocol_types::mutation_batch::MutationBatchRecord,
     prep: &CommitPrep,
 ) -> Option<Response> {
     let DurableBatchTarget {
@@ -148,8 +148,8 @@ async fn staged_replay_descriptor(
     ctx: &MutationCtx<'_>,
     persistence: &Arc<dyn PersistenceBackend>,
     fname: &str,
-    record: &medulla_types::mutation_batch::MutationBatchRecord,
-) -> Result<(medulla_types::mutation_batch::MutationStateDescriptor, u64), Response> {
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
+) -> Result<(medulla_protocol_types::mutation_batch::MutationStateDescriptor, u64), Response> {
     let mut descriptor = record.batch.authoritative_state.clone().ok_or_else(|| {
         Response::err(
             ctx.req_id,
@@ -193,10 +193,10 @@ fn compile_replay_batch(
     batch_id: &str,
     source_version: u64,
     created_at_ms: u64,
-    default_surface: medulla_types::mutation_batch::MutationSurface,
-    authoritative_state: Option<medulla_types::mutation_batch::MutationStateDescriptor>,
+    default_surface: medulla_mutation_types::mutation_scope::MutationSurface,
+    authoritative_state: Option<medulla_protocol_types::mutation_batch::MutationStateDescriptor>,
     methods: Vec<Method>,
-) -> Result<medulla_types::mutation_batch::MutationBatch, Response> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationBatch, Response> {
     crate::mutation_batch::compile_methods(
         compile_batch_context(
             ctx,
@@ -220,7 +220,7 @@ pub(super) async fn commit_mutation_body_replay_response(
     ctx: &MutationCtx<'_>,
     persistence: &Arc<dyn PersistenceBackend>,
     fname: &str,
-    record: medulla_types::mutation_batch::MutationBatchRecord,
+    record: medulla_protocol_types::mutation_batch::MutationBatchRecord,
     prep: &CommitPrep,
 ) -> Response {
     match persistence.read_authoritative_graph_snapshot(fname).await {
@@ -276,7 +276,7 @@ pub(super) async fn commit_row_replay_probe(
         Ok(None) => None,
         Err(error) => Some(Response::err(
             ctx.req_id,
-            medulla_types::contract::classify_refusal(
+            medulla_protocol_types::error_registry::classify_refusal(
                 "INTERNAL",
                 "MutationBatch status lookup failed: ",
                 &error,
@@ -326,7 +326,7 @@ async fn commit_row_replay_found(
         batch_id,
         source_version,
         created_at_ms,
-        medulla_types::mutation_batch::MutationSurface::Graph,
+        medulla_mutation_types::mutation_scope::MutationSurface::Graph,
         None,
         vec![method.clone()],
     ) {
@@ -344,7 +344,7 @@ async fn replay_commit_result(
     persistence: &Arc<dyn PersistenceBackend>,
     fname: &str,
     prep: &CommitPrep,
-    committed: Result<medulla_types::mutation_batch::MutationBatchCommit, String>,
+    committed: Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String>,
 ) -> Option<Response> {
     match committed {
         Ok(committed) if committed.replayed => Some(
@@ -374,7 +374,7 @@ pub(super) fn compile_batch_and_encode_result(
     compile: crate::mutation_batch::CompileBatch<'_>,
     methods: Vec<Method>,
     payload: &ResultPayload,
-) -> Result<(medulla_types::mutation_batch::MutationBatch, Vec<u8>), Response> {
+) -> Result<(medulla_protocol_types::mutation_batch::MutationBatch, Vec<u8>), Response> {
     let batch = match crate::mutation_batch::compile_methods(compile, methods) {
         Ok(batch) => batch,
         Err(error) => {

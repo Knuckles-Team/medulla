@@ -2,12 +2,12 @@ use super::super::DurableCrypto;
 use super::quota::{apply_counter_delta, hold_charge, load_policy, load_scope_counters};
 use super::types::LaneDecision;
 use super::{DurableLaneHold, DurableLanePolicy};
-use medulla_types::epistemic_operations::DevelopmentLaneFinishRequest;
-use medulla_types::epistemic_operations::DevelopmentLaneHold;
-use medulla_types::epistemic_operations::DevelopmentLaneHoldState;
-use medulla_types::epistemic_operations::DevelopmentLaneObserveRequest;
-use medulla_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
-use medulla_types::epistemic_operations::DevelopmentLaneRenewRequest;
+use medulla_result_types::epistemic_operations::DevelopmentLaneFinishRequest;
+use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
+use medulla_result_types::epistemic_operations::DevelopmentLaneHoldState;
+use medulla_result_types::epistemic_operations::DevelopmentLaneObserveRequest;
+use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
+use medulla_result_types::epistemic_operations::DevelopmentLaneRenewRequest;
 use medulla_storage::ScopedOwnerTableMut;
 
 // Private redb-transaction-scoped helper; see `load_work_item`'s justification

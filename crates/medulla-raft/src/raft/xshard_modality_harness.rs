@@ -69,8 +69,8 @@ use tokio::sync::RwLock;
 
 use super::cross_shard_txn::{CrossShardCoordinator, CrossShardTxn, GraphSlice, TxnOutcome};
 use super::multi::MultiRaft;
-use medulla_types::protocol::GraphType;
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::GraphType;
+use medulla_protocol_types::protocol::Method;
 
 use super::fixture;
 

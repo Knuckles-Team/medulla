@@ -160,9 +160,9 @@ pub(super) fn handle_cancel_op(
         return Response::err(req_id, error);
     }
     match outcome {
-        Ok((job, _)) => {
-            job_response::<medulla_types::result_contract::coordination::JobCancel>(req_id, &job)
-        }
+        Ok((job, _)) => job_response::<
+            medulla_protocol_types::result_contract::coordination::JobCancel,
+        >(req_id, &job),
         Err(e) => Response::err(req_id, job_refusal(&e)),
     }
 }

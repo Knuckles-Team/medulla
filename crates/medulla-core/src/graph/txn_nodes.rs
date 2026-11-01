@@ -169,7 +169,11 @@ impl<'a> GraphTxn<'a> {
     /// changed out from under the candidate-id scan. Returns whether it removed.
     /// A missing/undecodable node, or a predicate that no longer holds, is a no-op
     /// returning `false`.
-    pub fn remove_node_if(&mut self, node_id: &str, predicate: &medulla_types::RowPredicate) -> bool {
+    pub fn remove_node_if(
+        &mut self,
+        node_id: &str,
+        predicate: &medulla_result_types::row_predicate::RowPredicate,
+    ) -> bool {
         let map = match self.node_row_map(node_id) {
             Some(m) => m,
             None => return false,

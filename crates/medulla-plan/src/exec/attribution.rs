@@ -44,7 +44,8 @@ pub(crate) fn attribute(
         value: spec.value,
         method: spec.method.clone(),
     };
-    let printed = medulla_types::wire::uql_op(&stage).unwrap_or_else(|e| format!("ATTRIBUTE ({e})"));
+    let printed =
+        medulla_types::wire::uql_op(&stage).unwrap_or_else(|e| format!("ATTRIBUTE ({e})"));
     Err(format!(
         "{}: `{printed}` needs the `numeric` feature",
         super::dispatch::UNSUPPORTED_MODALITY_OP

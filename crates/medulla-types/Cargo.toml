@@ -281,3 +281,11 @@ strum = { version = "0.28", features = ["derive"], optional = true }
 # `contract-schema` only (RF-RULING-003): emits the wire request/result JSON Schemas
 # the engine-contract generator publishes. Never linked by a default build.
 schemars = { version = "1.2.3", optional = true }
+
+[dev-dependencies]
+medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
+medulla-result-types = { path = "../medulla-result-types" }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-agent-types = { path = "../medulla-agent-types" }

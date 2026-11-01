@@ -9,8 +9,8 @@ use std::sync::Arc;
 use sha2::{Digest, Sha256};
 use tokio::sync::RwLock;
 
-use medulla_core::graph::GraphCore;
 use crate::kernel::persistence::ResidentProjectionHost;
+use medulla_core::graph::GraphCore;
 
 /// Convert a logical graph name into a bounded, path-safe durable key.
 ///

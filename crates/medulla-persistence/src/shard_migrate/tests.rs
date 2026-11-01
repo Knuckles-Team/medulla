@@ -1,8 +1,8 @@
 //! Shared real-owner fixtures for migration layout, recovery and payload proofs.
 
 use super::*;
-use medulla_types::protocol::GraphType;
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::GraphType;
+use medulla_protocol_types::protocol::Method;
 use medulla_store::redb_store::CHANGE_CURSORS;
 use medulla_store::redb_store::CHANGE_ENVELOPES;
 use medulla_store::redb_store::CONTENT_VERSIONS;

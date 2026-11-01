@@ -46,7 +46,7 @@ use super::store::MedullaStore;
 use super::{
     AppCtx, GroupId, MedullaRaft, NodeId, RaftHandle, RaftRequest, RaftResponse, DEFAULT_GROUP,
 };
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 use medulla_kernel::lock_recovery::LockRecovery;
 
 mod leader_balance;
@@ -1180,7 +1180,7 @@ impl MultiRaft {
         Ok(RaftRequest {
             graph_fname: medulla_kernel::persist::sanitize(placement::PLACEMENT_GRAPH),
             graph_name: placement::PLACEMENT_GRAPH.to_string(),
-            graph_type: medulla_types::protocol::GraphType::Commons,
+            graph_type: medulla_protocol_types::protocol::GraphType::Commons,
             committed_at_ms: 0,
             mutation: medulla_server_api::api::persistence::RaftMutationContext::internal(
                 "raft-placement",
@@ -1308,7 +1308,7 @@ impl MultiRaft {
         let req = RaftRequest {
             graph_fname: medulla_kernel::persist::sanitize(placement::PLACEMENT_GRAPH),
             graph_name: placement::PLACEMENT_GRAPH.to_string(),
-            graph_type: medulla_types::protocol::GraphType::Commons,
+            graph_type: medulla_protocol_types::protocol::GraphType::Commons,
             committed_at_ms: 0,
             mutation: medulla_server_api::api::persistence::RaftMutationContext::internal(
                 "raft-node-info",

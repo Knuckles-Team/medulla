@@ -11,12 +11,14 @@
 //! `detkernel` softmax, so the same items give the same bits. The result is
 //! quantised onto Q32; calibration then reads the quantised, served scorer.
 
+use medulla_decision_types::decision::jobs::OptimiserSpec;
+use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
+use medulla_decision_types::decision::statistical::scorer::OptionAttentionParams;
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_types::{
+    decision::statistical::dataset::LabelledDataset, decision::statistical::dataset::LabelledItem,
+};
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::jobs::OptimiserSpec;
-use medulla_types::decision::statistical::dataset::{LabelledDataset, LabelledItem};
-use medulla_types::decision::statistical::head::DecisionHeadBody;
-use medulla_types::decision::statistical::scorer::OptionAttentionParams;
-use medulla_types::decision::statistical::StatisticalErrorCode;
 use rand_chacha::rand_core::{RngCore, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 

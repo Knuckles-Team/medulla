@@ -2,13 +2,13 @@
 
 use std::collections::BTreeMap;
 
-use medulla_types::mutation_batch::IncarnationId;
-use medulla_types::mutation_batch::LogicalName;
-use medulla_types::mutation_batch::MutationOperation;
-use medulla_types::mutation_batch::MutationOutboxIntent;
-use medulla_types::mutation_batch::MutationScopeIdentity;
-use medulla_types::mutation_batch::ScopeTenantId;
-use medulla_types::mutation_batch::VersionExpectation;
+use medulla_mutation_types::mutation_scope::IncarnationId;
+use medulla_mutation_types::mutation_scope::LogicalName;
+use medulla_protocol_types::mutation_batch::MutationOperation;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::ScopeTenantId;
+use medulla_protocol_types::mutation_batch::VersionExpectation;
 
 use super::{CompileBatch, CompiledOutbox, COMPILED_BATCH_INCARNATION};
 
@@ -70,7 +70,7 @@ pub(super) fn compiled_outbox(
     let terminal_outcome = outbox_plan
         .extra
         .iter()
-        .any(|intent| intent.topic == medulla_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC);
+        .any(|intent| intent.topic == medulla_result_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC);
     let mut outbox = if terminal_outcome {
         // A terminal receipt's conditional RunEvent is the batch's one outbox
         // currency. The generic projection wake-up would publish a second row
@@ -98,7 +98,7 @@ pub(super) fn compiled_outbox(
     };
     if terminal_outcome {
         for intent in &mut outbox {
-            if intent.topic == medulla_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC {
+            if intent.topic == medulla_result_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC {
                 // The conditional terminal event replaces the generic
                 // projection row, so carry the same universal attribution and
                 // scope binding on the sole row that remains.
@@ -112,15 +112,15 @@ pub(super) fn compiled_outbox(
         }
     }
     if let Some(input_digest) = outbox_plan.semantic_source_dirty_input {
-        let source_scope_digest = medulla_types::semantic_index::SemanticDigest::from_bytes(
+        let source_scope_digest = medulla_index_types::semantic_index::SemanticDigest::from_bytes(
             *identity.binding_digest().as_bytes(),
         );
-        let intent = medulla_types::semantic_index::SemanticSourceDirtyIntent::new(
+        let intent = medulla_index_types::semantic_index::SemanticSourceDirtyIntent::new(
             source_scope_digest,
             input_digest,
         );
         outbox.push(MutationOutboxIntent {
-            topic: medulla_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC.to_string(),
+            topic: medulla_index_types::semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC.to_string(),
             key: batch_id.to_string(),
             payload: intent.to_canonical_cbor().map_err(|error| {
                 format!("semantic source-dirty intent encoding rejected: {error:?}")

@@ -6,12 +6,16 @@
 //! the lifecycle modules state what a row must prove rather than how its bytes
 //! are fetched.
 
-use medulla_types::semantic_index::{
-    SemanticActivePointer, SemanticAnnIndexManifest, SemanticAuthorizationReceipt, SemanticBinding,
-    SemanticBindingStateTransition, SemanticDeadLetter, SemanticGenerationCheckpoint,
-    SemanticGraphProjectionManifest, SemanticIndexError, SemanticIndexMutation,
-    SemanticLexicalIndexManifest, SemanticSourceProgress, SemanticSqlSourceManifest,
-    SemanticStageIntent, SemanticStageTransition, SemanticTombstone, SemanticVector,
+use medulla_index_types::{
+    semantic_index::SemanticActivePointer, semantic_index::SemanticAnnIndexManifest,
+    semantic_index::SemanticAuthorizationReceipt, semantic_index::SemanticBinding,
+    semantic_index::SemanticBindingStateTransition, semantic_index::SemanticDeadLetter,
+    semantic_index::SemanticGenerationCheckpoint, semantic_index::SemanticGraphProjectionManifest,
+    semantic_index::SemanticIndexError, semantic_index::SemanticIndexMutation,
+    semantic_index::SemanticLexicalIndexManifest, semantic_index::SemanticSourceProgress,
+    semantic_index::SemanticSqlSourceManifest, semantic_index::SemanticStageIntent,
+    semantic_index::SemanticStageTransition, semantic_index::SemanticTombstone,
+    semantic_index::SemanticVector,
 };
 use redb::AccessGuard;
 

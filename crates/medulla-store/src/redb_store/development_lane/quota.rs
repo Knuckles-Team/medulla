@@ -7,12 +7,12 @@ use super::{
     DurableLaneCounter, DurableLaneHold, DurableLanePolicy, GLOBAL_POLICY_KEY, MAX_COUNT,
     MAX_DISK_BYTES,
 };
-use medulla_types::epistemic_operations::DevelopmentLaneHold;
-use medulla_types::epistemic_operations::DevelopmentLaneIntent;
-use medulla_types::epistemic_operations::DevelopmentLaneQuotaCharge;
-use medulla_types::epistemic_operations::DevelopmentLaneQuotaChargeSchemaVersion;
-use medulla_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
-use medulla_types::epistemic_operations::DevelopmentLaneReserveRequest;
+use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
+use medulla_result_types::epistemic_operations::DevelopmentLaneIntent;
+use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaCharge;
+use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaChargeSchemaVersion;
+use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
+use medulla_result_types::epistemic_operations::DevelopmentLaneReserveRequest;
 use medulla_storage::ScopedOwnerTableMut;
 use sha2::{Digest, Sha256};
 

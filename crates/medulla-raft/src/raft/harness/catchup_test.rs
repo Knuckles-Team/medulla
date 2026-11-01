@@ -11,7 +11,7 @@ use std::ops::{Deref, DerefMut};
 use std::time::Duration;
 
 use super::cluster::Cluster;
-use medulla_types::protocol::GraphType;
+use medulla_protocol_types::protocol::GraphType;
 
 struct ClusterGuard(Option<Cluster>);
 

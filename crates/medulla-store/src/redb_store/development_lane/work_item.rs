@@ -2,9 +2,9 @@ use super::super::{decode_durable, DurableCrypto};
 use super::links::{lane_cleanup_value, lane_intent_value};
 use super::reserve_support::work_item_kind_name;
 use super::types::{LaneDecision, LaneWorkItem};
-use medulla_types::epistemic_operations::DevelopmentLaneCleanupIntent;
-use medulla_types::epistemic_operations::DevelopmentLaneIntent;
-use medulla_types::protocol::DevelopmentLaneWorkItemKind;
+use medulla_result_types::epistemic_operations::DevelopmentLaneCleanupIntent;
+use medulla_result_types::epistemic_operations::DevelopmentLaneIntent;
+use medulla_protocol_types::protocol::DevelopmentLaneWorkItemKind;
 use medulla_storage::ScopedOwnerTableMut;
 
 // Private redb-transaction-scoped helper: every parameter is a distinct

@@ -7,10 +7,10 @@ use super::quota::{
 use super::reserve_support::hold_target_kind;
 use super::rows::LaneRows;
 use super::DurableLaneHold;
-use medulla_types::epistemic_operations::DevelopmentLaneHold;
-use medulla_types::epistemic_operations::DevelopmentLaneIntent;
-use medulla_types::epistemic_operations::DevelopmentLaneReserveRequest;
-use medulla_types::protocol::Method;
+use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
+use medulla_result_types::epistemic_operations::DevelopmentLaneIntent;
+use medulla_result_types::epistemic_operations::DevelopmentLaneReserveRequest;
+use medulla_protocol_types::protocol::Method;
 use medulla_storage::ScopedOwnerTableMut;
 
 pub(super) fn hold_immutable_equal(

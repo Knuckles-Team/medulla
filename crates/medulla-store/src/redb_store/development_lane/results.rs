@@ -7,23 +7,23 @@ use super::rows::LaneRows;
 use super::types::LaneDecision;
 use super::validation::{bounded_texts, decision_name, request_digest};
 use super::{DurableLaneHold, DurableLaneInvocation};
-use medulla_types::epistemic_operations::DevelopmentLaneCleanupCompleteResult;
-use medulla_types::epistemic_operations::DevelopmentLaneCleanupCompleteResultSchemaVersion;
-use medulla_types::epistemic_operations::DevelopmentLaneFinishResult;
-use medulla_types::epistemic_operations::DevelopmentLaneFinishResultSchemaVersion;
-use medulla_types::epistemic_operations::DevelopmentLaneHold;
-use medulla_types::epistemic_operations::DevelopmentLaneObserveResult;
-use medulla_types::epistemic_operations::DevelopmentLaneObserveResultSchemaVersion;
-use medulla_types::epistemic_operations::DevelopmentLaneQueryResult;
-use medulla_types::epistemic_operations::DevelopmentLaneQueryResultSchemaVersion;
-use medulla_types::epistemic_operations::DevelopmentLaneQuotaCharge;
-use medulla_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
-use medulla_types::epistemic_operations::DevelopmentLaneQuotaUpdateResult;
-use medulla_types::epistemic_operations::DevelopmentLaneQuotaUpdateResultSchemaVersion;
-use medulla_types::epistemic_operations::DevelopmentLaneRenewResult;
-use medulla_types::epistemic_operations::DevelopmentLaneResult;
-use medulla_types::epistemic_operations::DevelopmentLaneResultSchemaVersion;
-use medulla_types::protocol::Method;
+use medulla_result_types::epistemic_operations::DevelopmentLaneCleanupCompleteResult;
+use medulla_result_types::epistemic_operations::DevelopmentLaneCleanupCompleteResultSchemaVersion;
+use medulla_result_types::epistemic_operations::DevelopmentLaneFinishResult;
+use medulla_result_types::epistemic_operations::DevelopmentLaneFinishResultSchemaVersion;
+use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
+use medulla_result_types::epistemic_operations::DevelopmentLaneObserveResult;
+use medulla_result_types::epistemic_operations::DevelopmentLaneObserveResultSchemaVersion;
+use medulla_result_types::epistemic_operations::DevelopmentLaneQueryResult;
+use medulla_result_types::epistemic_operations::DevelopmentLaneQueryResultSchemaVersion;
+use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaCharge;
+use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaPolicy;
+use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaUpdateResult;
+use medulla_result_types::epistemic_operations::DevelopmentLaneQuotaUpdateResultSchemaVersion;
+use medulla_result_types::epistemic_operations::DevelopmentLaneRenewResult;
+use medulla_result_types::epistemic_operations::DevelopmentLaneResult;
+use medulla_result_types::epistemic_operations::DevelopmentLaneResultSchemaVersion;
+use medulla_protocol_types::protocol::Method;
 use medulla_storage::ScopedOwnerTableMut;
 
 pub(super) const REDACTED_PRIVATE_ID: &str = "redacted";
@@ -83,7 +83,7 @@ pub(super) fn renew_result(
 ) -> Result<Vec<u8>, String> {
     let hold = row.map(|value| public_hold(&value.hold));
     let result = DevelopmentLaneRenewResult {
-        schema_version: medulla_types::epistemic_operations::DevelopmentLaneRenewResultSchemaVersion::V1,
+        schema_version: medulla_result_types::epistemic_operations::DevelopmentLaneRenewResultSchemaVersion::V1,
         decision: typed_decision(decision)?,
         hold_revision: hold.as_ref().map_or(0, |value| value.hold_revision),
         lifecycle_revision: hold.as_ref().map_or(0, |value| value.lifecycle_revision),

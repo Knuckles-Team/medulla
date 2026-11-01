@@ -4,20 +4,25 @@
 //! the engine-derived evidence write-back. Deterministic: every clock is an
 //! argument.
 
-use medulla_types::epistemic_operations::{
-    ClaimWorkItemRequest, ClaimWorkItemRequestSchemaVersion, ClaimWorkItemResult,
+use medulla_agent_types::{
+    work_market::evidence_digest, work_market::gap_work_item_id, work_market::BlastRadius,
+    work_market::GapEvidenceInput, work_market::GapListRequest, work_market::GapSettleOutcome,
+    work_market::GapSettleRequest, work_market::GapSettled, work_market::GapStatus,
+    work_market::GapTransitionOutcome, work_market::GapTransitionRequest,
+    work_market::GapTransitionTarget, work_market::GapTransitioned, work_market::GapUpsertOutcome,
+    work_market::GapUpsertRequest, work_market::GapUpserted, work_market::GapWorkSpec,
+    work_market::WorkOffer, work_market::WorkOfferPutOutcome, work_market::WorkOfferPutRequest,
+    work_market::WorkOfferRecorded,
 };
-use medulla_types::work_market::{
-    evidence_digest, gap_work_item_id, BlastRadius, GapEvidenceInput, GapListRequest,
-    GapSettleOutcome, GapSettleRequest, GapSettled, GapStatus, GapTransitionOutcome,
-    GapTransitionRequest, GapTransitionTarget, GapTransitioned, GapUpsertOutcome, GapUpsertRequest,
-    GapUpserted, GapWorkSpec, WorkOffer, WorkOfferPutOutcome, WorkOfferPutRequest,
-    WorkOfferRecorded,
+use medulla_result_types::{
+    epistemic_operations::ClaimWorkItemRequest,
+    epistemic_operations::ClaimWorkItemRequestSchemaVersion,
+    epistemic_operations::ClaimWorkItemResult,
 };
 
 use super::super::test_shard::{apply, open, GRAPH};
 use super::*;
-use medulla_types::protocol::ResultPayload;
+use medulla_protocol_types::protocol::ResultPayload;
 
 const GAP: &str = "gap:failure:timeout";
 
@@ -99,7 +104,7 @@ fn settle(shard: &Shard, tag: &str, tenant: &str, now_ms: u64) -> GapSettled {
     )
 }
 
-pub fn read(shard: &Shard, tenant: &str) -> Option<medulla_types::work_market::GapView> {
+pub fn read(shard: &Shard, tenant: &str) -> Option<medulla_agent_types::work_market::GapView> {
     read_gap(shard, GRAPH, tenant, GAP, DurableCrypto::none()).unwrap()
 }
 
@@ -341,7 +346,7 @@ fn a_completed_item_writes_its_evidence_back_to_the_gap() {
 fn generic_writers_cannot_touch_a_gap_row() {
     let temp = open("market-guard");
     upserted(&temp.shard, "create", upsert("tenant-a", &["e1"]), 1_000);
-    let key = medulla_types::work_market::gap_row_key("tenant-a", GAP);
+    let key = medulla_agent_types::work_market::gap_row_key("tenant-a", GAP);
     let remove = Method::RemoveNode { node_id: key };
     let refused = super::super::test_shard::with_nodes(&temp.shard, "remove", |nodes| {
         Ok(super::super::refuse_generic_native_row_write(

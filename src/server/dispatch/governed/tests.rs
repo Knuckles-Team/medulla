@@ -5,8 +5,9 @@
 
 use super::super::test_support::{refused_with, send, state, verified};
 use super::*;
-use medulla_types::governed_change::{
-    GovernedApproval, GovernedProposal, GovernedStatus, SCHEMA_REPAIR_KIND,
+use medulla_mutation_types::{
+    governed_change::GovernedApproval, governed_change::GovernedProposal,
+    governed_change::GovernedStatus, governed_change::SCHEMA_REPAIR_KIND,
 };
 
 const PROPOSE: &str = "governance:propose";

@@ -4,10 +4,10 @@ use sha2::{Digest, Sha256};
 use tokio::sync::{Mutex, OwnedMutexGuard};
 
 use medulla_core::graph::GraphCore;
-use medulla_types::mutation_batch::MutationStateDescriptor;
-use medulla_types::mutation_batch::MutationSurface;
-use medulla_types::protocol::Method;
-use medulla_types::protocol::ResultPayload;
+use medulla_protocol_types::mutation_batch::MutationStateDescriptor;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::ResultPayload;
 use crate::api::persistence::PersistenceBackend;
 use medulla_types::contract::Nonce;
 
@@ -142,19 +142,19 @@ struct InternalGraphCommit<'a> {
 /// tables.
 pub async fn commit_internal_graph_methods(
     request: InternalGraphCommitRequest<'_>,
-) -> Result<medulla_types::mutation_batch::MutationBatchCommit, String> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {
     commit_internal_graph_methods_with_nonce_mode(request).await
 }
 
 pub async fn commit_internal_graph_methods_with_nonce(
     request: InternalGraphCommitRequest<'_>,
-) -> Result<medulla_types::mutation_batch::MutationBatchCommit, String> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {
     commit_internal_graph_methods_with_nonce_mode(request).await
 }
 
 pub(super) async fn commit_internal_graph_methods_with_nonce_mode(
     request: InternalGraphCommitRequest<'_>,
-) -> Result<medulla_types::mutation_batch::MutationBatchCommit, String> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {
     let persistence = request.persistence.ok_or_else(|| {
         "internal graph write requires an authoritative MutationBatch backend".to_string()
     })?;
@@ -193,7 +193,7 @@ pub(super) async fn commit_internal_graph_methods_with_nonce_mode(
 async fn replay_internal_graph(
     input: InternalGraphCommit<'_>,
     record: medulla_types::MutationBatchRecord,
-) -> Result<medulla_types::mutation_batch::MutationBatchCommit, String> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {
     let InternalGraphCommit {
         persistence,
         core,
@@ -262,7 +262,7 @@ async fn replay_internal_graph(
 }
 
 fn validate_internal_replay_tenant(
-    record: &medulla_types::MutationBatchRecord,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
     tenant: &str,
 ) -> Result<(), String> {
     if record.committing_tenant()? != tenant {
@@ -335,7 +335,7 @@ struct PreparedInternalGraphCommit<'a> {
 
 async fn commit_fresh_internal_graph(
     input: InternalGraphCommit<'_>,
-) -> Result<medulla_types::mutation_batch::MutationBatchCommit, String> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {
     let InternalGraphCommit {
         persistence,
         core,
@@ -384,7 +384,7 @@ async fn commit_fresh_internal_graph(
 
 async fn commit_prepared_internal_graph(
     input: PreparedInternalGraphCommit<'_>,
-) -> Result<medulla_types::mutation_batch::MutationBatchCommit, String> {
+) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {
     let PreparedInternalGraphCommit {
         persistence,
         core,

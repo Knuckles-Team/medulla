@@ -8,13 +8,15 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use medulla_index_types::{
+    semantic_index::SemanticBinding, semantic_index::SemanticBindingState,
+    semantic_index::SemanticBindingStateTransition, semantic_index::SemanticDigest,
+    semantic_index::SemanticIndexMutation, semantic_index::SemanticSourceProgress,
+    semantic_index::SemanticSqlSourceIdentity, semantic_index::SemanticSqlSourceManifest,
+    semantic_index::SemanticSqlSourceManifestDraft,
+};
 use medulla_storage::{OwnerLayout, SEMANTIC_BINDINGS, SEMANTIC_HEADS};
 use medulla_types::contract::Nonce;
-use medulla_types::semantic_index::{
-    SemanticBinding, SemanticBindingState, SemanticBindingStateTransition, SemanticDigest,
-    SemanticIndexMutation, SemanticSourceProgress, SemanticSqlSourceIdentity,
-    SemanticSqlSourceManifest, SemanticSqlSourceManifestDraft,
-};
 
 use super::activation::live_transition;
 use super::door::store_file_name;
@@ -267,7 +269,7 @@ fn s6_publishes_only_from_a_durably_building_binding() {
 struct RefreshRequest {
     replacement: SemanticBinding,
     manifest: SemanticSqlSourceManifest,
-    intent: medulla_types::semantic_index::SemanticStageIntent,
+    intent: medulla_index_types::semantic_index::SemanticStageIntent,
 }
 
 fn refresh_request(

@@ -185,7 +185,7 @@ fn inspection_rejects_document_count_and_bytes_before_parsing() {
     assert!(inspect(&GraphCore::new(), &documents, &[])
         .unwrap_err()
         .contains("documents exceed"));
-    let bytes = medulla_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES;
+    let bytes = medulla_catalog_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES;
     // An over-limit malformed document must fail its byte budget before syntax.
     let oversized = "!".repeat(bytes + 1);
     assert!(inline(&[&oversized])
@@ -204,7 +204,7 @@ fn inspection_stops_at_the_first_triple_over_budget() {
     // Stay below the byte bound and place invalid syntax after the over-limit
     // triple: a parser that eagerly drains the document reports syntax instead.
     let oversized = format!("{boundary}:a :b :c .\nthis is not Turtle .");
-    assert!(oversized.len() < medulla_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES);
+    assert!(oversized.len() < medulla_catalog_types::graph_schema::MAX_SCHEMA_DOCUMENT_BYTES);
     let error = inline(&[&oversized]).unwrap_err();
     assert!(
         error.contains(&format!("maximum of {limit} triples")),

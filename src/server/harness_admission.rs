@@ -41,15 +41,22 @@ use std::collections::BTreeMap;
 
 use crate::graph::GraphCore;
 use crate::protocol::Method;
-use medulla_types::change_envelope::ChangeEnvelope;
-use medulla_types::orchestration::improvement::{
-    decode_adopted_harness_write, decode_harness_contrast_write, decode_harness_probe_run_write,
-    decode_lesson_write, is_adopted_harness_write, is_harness_contrast_write,
-    is_harness_lesson_write, is_harness_probe_run_write, ImprovementLibraryRefusal,
+use medulla_agent_types::{
+    orchestration::decode_component_write, orchestration::is_harness_component_write,
+    orchestration::HarnessComponentRefusal,
 };
-use medulla_types::orchestration::{
-    decode_component_write, is_harness_component_write, HarnessComponentRefusal,
+use medulla_agent_types::{
+    orchestration::improvement::decode_adopted_harness_write,
+    orchestration::improvement::decode_harness_contrast_write,
+    orchestration::improvement::decode_harness_probe_run_write,
+    orchestration::improvement::decode_lesson_write,
+    orchestration::improvement::is_adopted_harness_write,
+    orchestration::improvement::is_harness_contrast_write,
+    orchestration::improvement::is_harness_lesson_write,
+    orchestration::improvement::is_harness_probe_run_write,
+    orchestration::improvement::ImprovementLibraryRefusal,
 };
+use medulla_protocol_types::change_envelope::ChangeEnvelope;
 
 type Props = serde_json::Map<String, serde_json::Value>;
 
@@ -198,7 +205,7 @@ impl<'a> HarnessView<'a> {
     fn probe_run(
         &self,
         trace_id: &str,
-    ) -> Option<medulla_types::orchestration::improvement::HarnessProbeRun> {
+    ) -> Option<medulla_agent_types::orchestration::improvement::HarnessProbeRun> {
         let node_id = format!("harness-probe-run:{trace_id}");
         self.props(&node_id)
             .and_then(|props| decode_harness_probe_run_write(&props).ok())

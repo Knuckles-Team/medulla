@@ -4,7 +4,7 @@
 //! correlation metadata only, never a credential or proof of identity. Only
 //! ServerState's explicit isolated anonymous mode calls this parser.
 use super::authority_context::VerifiedRequestContext;
-use medulla_types::protocol::Request;
+use medulla_protocol_types::protocol::Request;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -47,7 +47,7 @@ mod tests {
             graph: "__commons__".into(),
             agent_id: None,
             auth_token: token.into(),
-            method: medulla_types::protocol::Method::Ping,
+            method: medulla_protocol_types::protocol::Method::Ping,
         }
     }
     #[test]

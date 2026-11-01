@@ -6,9 +6,11 @@
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::time::Instant;
 
-use medulla_types::connector_pack::{PackAnnotations, PackEntryKind};
+use medulla_catalog_types::{connector_pack::PackAnnotations, connector_pack::PackEntryKind};
+use medulla_catalog_types::{
+    source_ingestion::SourceIngestionRequest, source_ingestion::SourceJson,
+};
 use medulla_types::contract::{BoundedVec, ResourceId};
-use medulla_types::source_ingestion::{SourceIngestionRequest, SourceJson};
 
 use super::{bind, build_pack, imported, tool, Content, Served, ADMIN, TENANT};
 use crate::protocol::{GraphType, Method};
@@ -44,7 +46,7 @@ fn show_refusals() {
 
 /// The shared fixture request, as a first delta with no prior checkpoint.
 fn first_ingest() -> SourceIngestionRequest {
-    let mut batch = medulla_types::test_support::source_ingestion::request()
+    let mut batch = medulla_catalog_types::catalog_fixtures::source_ingestion::request()
         .as_batch()
         .clone();
     batch.expected_previous_checkpoint = None;
@@ -253,7 +255,7 @@ fn second_ingest(first: &SourceIngestionRequest) -> SourceIngestionRequest {
 async fn committed_envelope(
     served: &Served,
     request: &SourceIngestionRequest,
-) -> medulla_types::change_envelope::ChangeEnvelope {
+) -> medulla_protocol_types::change_envelope::ChangeEnvelope {
     let persistence = served
         .state
         .read()

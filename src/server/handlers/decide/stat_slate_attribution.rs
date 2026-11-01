@@ -14,16 +14,19 @@
 
 use std::collections::BTreeMap;
 
+use medulla_decision_types::{
+    decision::statistical::log::ComponentContribution,
+    decision::statistical::log::SlateAttribution,
+    decision::statistical::log::SlateAttributionMethod,
+    decision::statistical::log::SlateAttributionRequest,
+    decision::statistical::log::StoredEvaluation,
+};
+use medulla_decision_types::{decision::EvidenceClass, decision::RecordWindow};
 use medulla_numeric::attribution::{additive_fit, shapley_exact, Attribution, LoggedGame};
 use medulla_numeric::decision::aggregate::{label_use, LabelUse};
 use medulla_numeric::decision::quant::q32;
 use medulla_types::contract::BoundedVec;
-use medulla_types::decision::digest::digest_text;
-use medulla_types::decision::statistical::log::{
-    ComponentContribution, SlateAttribution, SlateAttributionMethod, SlateAttributionRequest,
-    StoredEvaluation,
-};
-use medulla_types::decision::{EvidenceClass, RecordWindow};
+use medulla_types::solve_scalar::digest_text;
 
 use super::stat_log::{LogReader, MAX_LOG_ROWS};
 use super::stat_slate::{evaluated_slates, Slate, SLATE_QUESTION};

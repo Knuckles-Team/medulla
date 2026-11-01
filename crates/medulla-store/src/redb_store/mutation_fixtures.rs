@@ -3,7 +3,7 @@
 //! facade's cross-crate store tests both build on.
 
 use super::*;
-use medulla_types::mutation_batch::{
+use medulla_protocol_types::mutation_batch::{
     DurabilityDomain, IncarnationId, LogicalName, MutationOperation, MutationOutboxIntent,
     MutationScopeIdentity, MutationSurface, ScopeTenantId, MUTATION_BATCH_VERSION,
 };
@@ -136,9 +136,9 @@ pub fn native_claim_batch(
         surface: MutationSurface::Transaction,
         domain: DurabilityDomain::GraphRows,
         method: Method::ClaimWorkItem {
-            request: medulla_types::epistemic_operations::ClaimWorkItemRequest {
+            request: medulla_result_types::epistemic_operations::ClaimWorkItemRequest {
                 schema_version:
-                    medulla_types::epistemic_operations::ClaimWorkItemRequestSchemaVersion::V1,
+                    medulla_result_types::epistemic_operations::ClaimWorkItemRequestSchemaVersion::V1,
                 tenant_ref: "tenant-a".into(),
                 work_item_id: work_item_id.map(str::to_string),
                 queue_ref: None,
@@ -186,7 +186,7 @@ pub fn commit_native_claim(
         None,
     )
     .unwrap();
-    let payload: medulla_types::protocol::ResultPayload = decode_durable(
+    let payload: medulla_protocol_types::protocol::ResultPayload = decode_durable(
         committed
             .record
             .result_msgpack
@@ -195,7 +195,7 @@ pub fn commit_native_claim(
     )
     .unwrap();
     let bytes = match payload {
-        medulla_types::protocol::ResultPayload::Raw(inner) => inner,
+        medulla_protocol_types::protocol::ResultPayload::Raw(inner) => inner,
         other => panic!("ClaimWorkItem must return a bin-encoded typed result, got {other:?}"),
     };
     decode_durable(&bytes).unwrap()

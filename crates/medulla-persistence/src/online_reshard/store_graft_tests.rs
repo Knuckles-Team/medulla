@@ -114,7 +114,7 @@ fn unrelated_reservation_preserves_catalog_payload_and_fence() {
         &destination,
         graph,
         "catalog-s2",
-        medulla_types::protocol::GraphType::Global,
+        medulla_protocol_types::protocol::GraphType::Global,
     )
     .unwrap();
     let catalog_before = {
@@ -247,14 +247,14 @@ fn losing_graph_reservation_retires_staged_owner_rows_before_reopening() {
         &loser,
         "graph-b",
         "stable-graph-b",
-        medulla_types::protocol::GraphType::Global,
+        medulla_protocol_types::protocol::GraphType::Global,
     )
     .unwrap();
     medulla_store::redb_store::write_graph_meta(
         &loser,
         "graph-a",
         "staged-graph-a",
-        medulla_types::protocol::GraphType::Global,
+        medulla_protocol_types::protocol::GraphType::Global,
     )
     .unwrap();
 
@@ -390,7 +390,7 @@ fn reserved_import_and_loser_cleanup_are_one_graph_protocol() {
         loser.as_ref(),
         "graph-b",
         "stable-graph-b",
-        medulla_types::protocol::GraphType::Global,
+        medulla_protocol_types::protocol::GraphType::Global,
     )
     .unwrap();
     // The catalog NAME must sanitize back to the physical key: an exported
@@ -406,7 +406,7 @@ fn reserved_import_and_loser_cleanup_are_one_graph_protocol() {
         loser.as_ref(),
         "graph-protocol",
         "graph-protocol",
-        medulla_types::protocol::GraphType::Global,
+        medulla_protocol_types::protocol::GraphType::Global,
     )
     .unwrap();
     let mut rows =

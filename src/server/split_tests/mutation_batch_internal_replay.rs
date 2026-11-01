@@ -9,11 +9,11 @@ use medulla_core::graph::GraphCore;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::mutation_batch::*;
 use medulla_types::contract::Nonce;
-use medulla_types::protocol::{Method, ResultPayload};
+use medulla_protocol_types::protocol::{Method, ResultPayload};
 use sha2::{Digest, Sha256};
 
 /// The opaque serving principal this test's job store is opened as.
-/// `medulla_types::mutation_batch`'s `validate_serving_principal` requires the
+/// `medulla_protocol_types::mutation_batch`'s `validate_serving_principal` requires the
 /// `principal:sha256:<64 hex>` shape for every durable mutation authority,
 /// exactly like `medulla_jobs::dev_scope_grant::DEV_PRINCIPAL`; a human-readable
 /// label is refused by the jobs codec before the store ever opens.

@@ -7,15 +7,22 @@ use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
 use tokio::sync::RwLock;
 
-use medulla_types::control_lease::{
-    ControlLeaseTarget, IssueControlLeaseRequest, TransitionControlLeaseRequest,
+use medulla_agent_types::{
+    control_lease::ControlLeaseTarget, control_lease::IssueControlLeaseRequest,
+    control_lease::TransitionControlLeaseRequest,
 };
-use medulla_types::graph_schema::approval::{
-    approved_candidate_digest, SCHEMA_APPROVAL_ACTION, SCHEMA_APPROVAL_LEASE_KIND,
+use medulla_catalog_types::{
+    graph_schema::approval::approved_candidate_digest,
+    graph_schema::approval::SCHEMA_APPROVAL_ACTION,
+    graph_schema::approval::SCHEMA_APPROVAL_LEASE_KIND,
 };
-use medulla_types::graph_schema::repair::{FieldContract, JsonType, RecordContract};
-use medulla_types::graph_schema::{
-    GraphSchemaCommitted, GraphSchemaSourcesView, SchemaSourceOriginView,
+use medulla_catalog_types::{
+    graph_schema::repair::FieldContract, graph_schema::repair::JsonType,
+    graph_schema::repair::RecordContract,
+};
+use medulla_catalog_types::{
+    graph_schema::GraphSchemaCommitted, graph_schema::GraphSchemaSourcesView,
+    graph_schema::SchemaSourceOriginView,
 };
 
 use super::*;

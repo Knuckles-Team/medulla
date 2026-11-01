@@ -27,7 +27,7 @@ pub fn producer_seq_node_id(producer_id: &str) -> String {
     format!("broker:producer:{producer_id}")
 }
 
-pub use medulla_types::messaging_wire::IdempotentPublish;
+pub use medulla_protocol_types::messaging_wire::IdempotentPublish;
 
 /// Inputs for an idempotent publish, grouped so policy and producer identity
 /// cannot be swapped at a positional call boundary.

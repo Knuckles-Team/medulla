@@ -5,7 +5,7 @@ pub(crate) fn resource_request_from_record(
     now_ms: u64,
 ) -> ResourceReservationRequest {
     ResourceReservationRequest {
-        schema_version: medulla_types::epistemic_operations::ResourceReservationRequestSchemaVersion::V1,
+        schema_version: medulla_result_types::epistemic_operations::ResourceReservationRequestSchemaVersion::V1,
         tenant_ref: record.tenant_ref.clone(),
         work_item_id: record.work_item_id.clone(),
         owner_id: record.owner_id.clone(),
@@ -163,10 +163,10 @@ pub(crate) fn resource_record_work_item_live(
 
 #[cfg(test)]
 pub(crate) fn resource_decode_result_payload(
-    payload: medulla_types::protocol::ResultPayload,
+    payload: medulla_protocol_types::protocol::ResultPayload,
 ) -> Result<ResourceReservationResult, String> {
     let bytes = match payload {
-        medulla_types::protocol::ResultPayload::Raw(bytes) => bytes,
+        medulla_protocol_types::protocol::ResultPayload::Raw(bytes) => bytes,
         _ => return Err("resource query result encoding failed".into()),
     };
     medulla_types::msgpack::decode_bounded(

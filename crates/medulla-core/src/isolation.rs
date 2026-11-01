@@ -156,17 +156,18 @@ pub const RLS_SCHEMA_KEY: &str = "_schema";
 #[cfg(feature = "security")]
 pub fn row_visibility(blob: &[u8]) -> RowVisibility {
     use serde_json::Value;
-    let map: std::collections::BTreeMap<String, Value> = match medulla_types::msgpack::decode_bounded(
-        blob,
-        medulla_types::msgpack::MsgpackLimits::new(
-            medulla_types::msgpack::MAX_PROPERTY_BYTES,
-            medulla_types::msgpack::MAX_PROPERTY_ITEMS,
-            medulla_types::msgpack::DEFAULT_MAX_DEPTH,
-        ),
-    ) {
-        Ok(m) => m,
-        Err(_) => return RowVisibility::default_public(),
-    };
+    let map: std::collections::BTreeMap<String, Value> =
+        match medulla_types::msgpack::decode_bounded(
+            blob,
+            medulla_types::msgpack::MsgpackLimits::new(
+                medulla_types::msgpack::MAX_PROPERTY_BYTES,
+                medulla_types::msgpack::MAX_PROPERTY_ITEMS,
+                medulla_types::msgpack::DEFAULT_MAX_DEPTH,
+            ),
+        ) {
+            Ok(m) => m,
+            Err(_) => return RowVisibility::default_public(),
+        };
     let owner = map
         .get(RLS_OWNER_KEY)
         .or_else(|| map.get(RLS_OWNER_ID_KEY))

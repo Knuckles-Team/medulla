@@ -11,7 +11,7 @@
 //! request-verification path (replacing the single `expected_audience`
 //! check) is the `.2` entry-point slice.
 
-use medulla_types::identity::UserKind;
+use medulla_identity_types::identity::UserKind;
 
 /// One trusted issuer's verification parameters and principal-kind limits.
 #[derive(Debug, Clone, PartialEq, Eq)]

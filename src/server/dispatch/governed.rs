@@ -5,12 +5,14 @@
 //! verified context at the request boundary, before consensus routing; a
 //! replicated apply uses its leader's stamp and nothing else.
 
-use medulla_types::governed_change::GovernedActor;
+use medulla_mutation_types::governed_change::GovernedActor;
 #[cfg(feature = "security")]
-use medulla_types::governed_change::GovernedChangeOp;
+use medulla_mutation_types::governed_change::GovernedChangeOp;
 #[cfg(feature = "security")]
-use medulla_types::result_contract::security::{
-    GovernedApprove, GovernedGet, GovernedList, GovernedPropose, GovernedRevoke,
+use medulla_protocol_types::{
+    result_contract::security::GovernedApprove, result_contract::security::GovernedGet,
+    result_contract::security::GovernedList, result_contract::security::GovernedPropose,
+    result_contract::security::GovernedRevoke,
 };
 
 use super::elevation::ElevationStampAuthority;

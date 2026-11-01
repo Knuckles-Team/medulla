@@ -753,9 +753,9 @@ mod admission_tests {
     use medulla_types::acl::AgentIdentity;
     use medulla_types::acl::AgentRole;
     use medulla_core::isolation::IsolationLayer;
-    use medulla_types::protocol::GraphType;
-    use medulla_types::protocol::Method;
-    use medulla_types::protocol::Request;
+    use medulla_protocol_types::protocol::GraphType;
+    use medulla_protocol_types::protocol::Method;
+    use medulla_protocol_types::protocol::Request;
     use medulla_server_api::api::persistence::PersistenceBackend;
     use crate::read_through::BackendGraphMaterializer;
     use crate::read_through::BackendReadThroughFactory;
@@ -915,9 +915,9 @@ mod admission_tests {
     }
 
     #[cfg(feature = "security")]
-    fn raw_result(response: &medulla_types::protocol::Response) -> Vec<u8> {
+    fn raw_result(response: &medulla_protocol_types::protocol::Response) -> Vec<u8> {
         match &response.result {
-            Some(medulla_types::protocol::ResultPayload::Raw(bytes)) => bytes.clone(),
+            Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) => bytes.clone(),
             other => panic!("expected a raw result, got {other:?}"),
         }
     }
@@ -1429,7 +1429,7 @@ mod admission_tests {
         assert!(
             matches!(
                 bob_private.result,
-                Some(medulla_types::protocol::ResultPayload::Json(
+                Some(medulla_protocol_types::protocol::ResultPayload::Json(
                     serde_json::Value::Null
                 ))
             ),
@@ -1469,7 +1469,7 @@ mod admission_tests {
                         "tenant-shared",
                         Method::CypherQuery {
                             query: "MATCH (n:Doc) RETURN n".to_string(),
-                            mode: medulla_types::protocol::CypherMode::Read,
+                            mode: medulla_protocol_types::protocol::CypherMode::Read,
                         },
                     ),
                 )
@@ -1510,7 +1510,7 @@ mod admission_tests {
                 "tenant-shared",
                 Method::CypherQuery {
                     query: "MATCH (a:Doc)-[:RELATED_TO]->(b:Doc) RETURN a, b".to_string(),
-                    mode: medulla_types::protocol::CypherMode::Read,
+                    mode: medulla_protocol_types::protocol::CypherMode::Read,
                 },
             ),
         )
@@ -1533,7 +1533,7 @@ mod admission_tests {
                 "tenant-foreign",
                 Method::CypherQuery {
                     query: "MATCH (n:Doc) RETURN n".to_string(),
-                    mode: medulla_types::protocol::CypherMode::Read,
+                    mode: medulla_protocol_types::protocol::CypherMode::Read,
                 },
             ),
         )

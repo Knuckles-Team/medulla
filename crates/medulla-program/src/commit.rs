@@ -11,7 +11,9 @@ use std::future::Future;
 use std::pin::Pin;
 
 use medulla_modality::{Classification, OpaqueRef, PolicyEnvelope};
-use medulla_types::{ChangeEnvelope, MutationBatchCommit};
+use medulla_protocol_types::{
+    change_envelope::ChangeEnvelope, mutation_batch::MutationBatchCommit,
+};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 

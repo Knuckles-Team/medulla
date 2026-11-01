@@ -4,9 +4,9 @@ use medulla_capabilities::DurabilityDomain;
 
 use medulla_core::graph::GraphCore;
 use medulla_core::isolation::AccessLevel;
-use medulla_types::protocol::Method;
-use medulla_types::protocol::Response;
-use medulla_types::protocol::ResultPayload;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use crate::access::check_graph_access;
 use crate::api::persistence::PersistenceBackend;
 
@@ -239,9 +239,9 @@ pub(super) async fn commit_conditional_replay_check(
     prep: &CommitPrep,
 ) -> Option<Response> {
     let default_surface = if is_rdf_gateway_method(method) {
-        medulla_types::mutation_batch::MutationSurface::Rdf
+        medulla_mutation_types::mutation_scope::MutationSurface::Rdf
     } else {
-        medulla_types::mutation_batch::MutationSurface::Query
+        medulla_mutation_types::mutation_scope::MutationSurface::Query
     };
     commit_staged_replay_probe(
         ctx,
@@ -328,9 +328,9 @@ pub(super) async fn commit_conditional_commit_staged(
     staged: StagedMutation,
 ) -> Response {
     let surface = if is_rdf_gateway_method(method) {
-        medulla_types::mutation_batch::MutationSurface::Rdf
+        medulla_mutation_types::mutation_scope::MutationSurface::Rdf
     } else {
-        medulla_types::mutation_batch::MutationSurface::Query
+        medulla_mutation_types::mutation_scope::MutationSurface::Query
     };
     commit_staged_with_receipt(
         ctx,

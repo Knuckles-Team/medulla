@@ -33,11 +33,13 @@ use crate::outbox::rows::{
 };
 use crate::tables::OUTBOX_CLAIM_CURSORS;
 use crate::tables::{OUTBOX, OUTBOX_TOPIC_INDEX};
+use medulla_mutation_types::{
+    mutation_scope::MutationOutboxRecord, mutation_scope::MutationScopeIdentity,
+};
 use medulla_storage::{
     decode_outbox_record, ledger_scope_key, MutationOwnerAuthority, OwnedStoreHandle, OwnerDomain,
     ScopedRead,
 };
-use medulla_types::{MutationOutboxRecord, MutationScopeIdentity};
 
 /// A control key in the claim-cursor table reserved for index migration.
 /// Consumer names reject control characters, so public delivery operations can
@@ -159,7 +161,7 @@ pub(crate) fn mark_index_ready_in_write<D: OwnerDomain>(
         write,
         &scope,
         &IndexBackfillState {
-            schema_version: medulla_types::MUTATION_BATCH_VERSION,
+            schema_version: medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION,
             identity: identity.clone(),
             batch_id: None,
             ordinal: None,
@@ -700,7 +702,7 @@ fn validate_backfill_state(
 ) -> Result<(), String> {
     validate_stamp(&state.identity, identity)
         .map_err(|error| format!("CORRUPT_OUTBOX_BACKFILL: {error}"))?;
-    if state.schema_version != medulla_types::MUTATION_BATCH_VERSION {
+    if state.schema_version != medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION {
         return Err("CORRUPT_OUTBOX_BACKFILL: unsupported state schema".to_string());
     }
     if state.batch_id.is_some() != state.ordinal.is_some() {
@@ -789,7 +791,7 @@ fn read_backfill_state_in_write<D: OwnerDomain>(
             .map_err(|error| error.to_string())?
             .is_some();
         return Ok(IndexBackfillState {
-            schema_version: medulla_types::MUTATION_BATCH_VERSION,
+            schema_version: medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION,
             identity: identity.clone(),
             batch_id: None,
             ordinal: None,

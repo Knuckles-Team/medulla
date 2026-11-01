@@ -12,7 +12,7 @@ use crate::protocol::Response;
 use medulla_server_api::auth::VerifiedRequestContext;
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
-use medulla_types::decision::AssemblyRequest;
+use medulla_decision_types::decision::AssemblyRequest;
 
 /// The audit target every Decide-layer decision line is written under.
 #[cfg(feature = "decide")]
@@ -33,7 +33,7 @@ pub(crate) async fn handle_agent_assemble(
             Response::ok(
                 req_id,
                 crate::protocol::ResultPayload::of_ref::<
-                    medulla_types::result_contract::storage::AgentAssemble,
+                    medulla_protocol_types::result_contract::storage::AgentAssemble,
                 >(&result),
             )
         }
@@ -47,7 +47,7 @@ async fn assemble_for(
     graph: &str,
     verified: &VerifiedRequestContext,
     request: AssemblyRequest,
-) -> Result<medulla_types::decision::AssemblyResult, String> {
+) -> Result<medulla_decision_types::decision::AssemblyResult, String> {
     use medulla_compute::assemble::{assemble, inputs, RecordIdentity};
 
     if request.tenant_id != verified.tenant() {
@@ -76,8 +76,8 @@ async fn assemble_for(
         .await
         .map_err(|error| format!("assembly task failed: {error}"))?
         .map_err(|error| error.to_string())?;
-    Ok(medulla_types::decision::AssemblyResult {
-        schema_version: medulla_types::decision::ASSEMBLY_RESULT_SCHEMA_VERSION,
+    Ok(medulla_decision_types::decision::AssemblyResult {
+        schema_version: medulla_decision_types::decision::ASSEMBLY_RESULT_SCHEMA_VERSION,
         record: assembly.record,
         graph: assembly.graph,
         agents: medulla_types::contract::BoundedVec::new(assembly.agents)
@@ -92,8 +92,8 @@ async fn assemble_for(
 fn resolve_policy(
     store: &medulla_persistence::agent_library::AgentLibraryStore,
     request: &AssemblyRequest,
-) -> Result<medulla_types::decision::DecisionPolicy, String> {
-    use medulla_types::decision::{DecisionPolicy, DecisionPolicyRef};
+) -> Result<medulla_decision_types::decision::DecisionPolicy, String> {
+    use medulla_decision_types::{decision::DecisionPolicy, decision::DecisionPolicyRef};
     match &request.policy {
         DecisionPolicyRef::Default => Ok(DecisionPolicy::engine_default()),
         DecisionPolicyRef::Pinned { component } => {
@@ -107,12 +107,12 @@ fn resolve_policy(
 #[cfg(feature = "decide")]
 pub(crate) fn audit_line(
     action: &'static str,
-    record: &medulla_types::decision::DecisionRecord,
+    record: &medulla_decision_types::decision::DecisionRecord,
     verified: &VerifiedRequestContext,
 ) {
     let outcome = match &record.outcome {
-        medulla_types::decision::DecisionOutcome::Solved { .. } => "solved",
-        medulla_types::decision::DecisionOutcome::Abstained { .. } => "abstained",
+        medulla_decision_types::decision::DecisionOutcome::Solved { .. } => "solved",
+        medulla_decision_types::decision::DecisionOutcome::Abstained { .. } => "abstained",
     };
     tracing::info!(
         target: DECIDE_AUDIT_TARGET,

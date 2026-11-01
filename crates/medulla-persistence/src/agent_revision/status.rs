@@ -3,14 +3,17 @@
 
 use std::sync::Arc;
 
+use medulla_protocol_types::mutation_batch::MutationBatchStatus;
 use medulla_storage::OwnedStoreHandle;
-use medulla_types::mutation_batch::MutationBatchStatus;
 
 use super::super::agent_library::{batch_id, validate_context};
 use super::*;
 
 /// A committed ledger record and the tenant scope it was read under.
-type StatusRecord = (Arc<OwnedStoreHandle<Owner>>, medulla_types::MutationBatchRecord);
+type StatusRecord = (
+    Arc<OwnedStoreHandle<Owner>>,
+    medulla_protocol_types::mutation_batch::MutationBatchRecord,
+);
 
 /// The ledger record one caller operation committed, with the tenant scope it
 /// was read under, or `None` when that operation never committed.
@@ -20,7 +23,7 @@ pub(crate) fn ledger_status_record(
     record_id: &str,
 ) -> Result<Option<StatusRecord>, String> {
     validate_context(store, context)?;
-    medulla_types::agent_library::validate_key(&context.tenant_id, record_id)?;
+    medulla_agent_types::agent_library::validate_key(&context.tenant_id, record_id)?;
     let owner = store.scope_handle(&context.tenant_id)?;
     let batch_id = batch_id(&context.idempotency_key)?;
     let record = {
@@ -104,7 +107,7 @@ pub(crate) fn validate_status_record<L: RevisionLayer>(
 }
 
 fn validate_status_durable_state<L: RevisionLayer>(
-    record: &medulla_types::MutationBatchRecord,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
 ) -> Result<(), String> {
     if record.status != MutationBatchStatus::Committed {
         return Err(format!(
@@ -116,8 +119,8 @@ fn validate_status_durable_state<L: RevisionLayer>(
 }
 
 fn validate_status_identity<L: RevisionLayer>(
-    record: &medulla_types::MutationBatchRecord,
-    owner_identity: &medulla_types::MutationScopeIdentity,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
+    owner_identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     context: &AgentLibraryMutationContext,
     committed: &L::Committed,
 ) -> Result<(), String> {
@@ -145,7 +148,7 @@ fn validate_status_identity<L: RevisionLayer>(
 }
 
 fn validate_status_result<L: RevisionLayer>(
-    record: &medulla_types::MutationBatchRecord,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
     operation: (&str, L::Kind),
     committed: &L::Committed,
 ) -> Result<(), String> {

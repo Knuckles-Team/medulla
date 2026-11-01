@@ -169,7 +169,7 @@ fn discover(
 
     Response::ok(
         req_id,
-        ResultPayload::of::<medulla_types::result_contract::ingestion::Discover>(results),
+        ResultPayload::of::<medulla_protocol_types::result_contract::ingestion::Discover>(results),
     )
 }
 
@@ -217,9 +217,9 @@ async fn handle_semantic_search(
     {
         Ok(weighted_results) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::ingestion::SemanticSearch>(
-                &weighted_results,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::ingestion::SemanticSearch,
+            >(&weighted_results),
         ),
         Err(resp) => resp,
     }
@@ -308,7 +308,9 @@ pub(super) async fn try_handle_semantic_compute(
                 let out = medulla_numeric::linalg::batch_l2_normalize(&vectors);
                 Response::ok(
                     req_id,
-                    ResultPayload::of::<medulla_types::result_contract::compute::BatchL2Normalize>(out),
+                    ResultPayload::of::<
+                        medulla_protocol_types::result_contract::compute::BatchL2Normalize,
+                    >(out),
                 )
             }
             #[cfg(not(feature = "numeric"))]

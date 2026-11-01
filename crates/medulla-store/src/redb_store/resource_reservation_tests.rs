@@ -5,13 +5,16 @@
 //! integration suites can layer on top without duplicating policy logic.
 
 use super::*;
-use medulla_types::mutation_batch::IncarnationId;
-use medulla_types::mutation_batch::MutationScopeIdentity;
-use medulla_types::mutation_batch::ScopeTenantId;
+use medulla_mutation_types::mutation_scope::IncarnationId;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::ScopeTenantId;
 use crate::redb_store::resource::*;
 use crate::redb_store::shard::Shard;
 use crate::redb_store::shard::ShardWrite;
 use medulla_kernel::test_rendezvous::{join_bounded, meet};
+use medulla_mutation_types::mutation_scope::IncarnationId;
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_mutation_types::mutation_scope::ScopeTenantId;
 use medulla_storage::{GraphShardOwner, ScopedRead};
 
 fn host() -> DurableResourceHost {
@@ -50,7 +53,7 @@ fn host() -> DurableResourceHost {
 
 fn request() -> ResourceReservationRequest {
     ResourceReservationRequest {
-        schema_version: medulla_types::epistemic_operations::ResourceReservationRequestSchemaVersion::V1,
+        schema_version: medulla_result_types::epistemic_operations::ResourceReservationRequestSchemaVersion::V1,
         tenant_ref: "tenant-a".to_string(),
         work_item_id: "work-1".to_string(),
         owner_id: "worker-a".to_string(),
@@ -415,14 +418,20 @@ fn read_reservation(shard: &Shard, reservation_id: &str) -> Option<DurableResour
 
 /// One persisted batch receipt of `graph-a`'s scope, from the kernel ledger
 /// that replaced the shard's private `mutation_batches` table.
-fn ledger_receipt(shard: &Shard, batch_id: &str) -> Option<medulla_types::MutationBatchRecord> {
+fn ledger_receipt(
+    shard: &Shard,
+    batch_id: &str,
+) -> Option<medulla_protocol_types::mutation_batch::MutationBatchRecord> {
     let read = resource_read(shard, "graph-a");
     medulla_transaction::read_ledger(&read, batch_id).expect("read kernel ledger receipt")
 }
 
 /// Every outbox row of one batch of `graph-a`'s scope, from the kernel ledger
 /// that replaced the shard's private `mutation_outbox` table.
-fn ledger_outbox(shard: &Shard, batch_id: &str) -> Vec<medulla_types::MutationOutboxRecord> {
+fn ledger_outbox(
+    shard: &Shard,
+    batch_id: &str,
+) -> Vec<medulla_mutation_types::mutation_scope::MutationOutboxRecord> {
     let read = resource_read(shard, "graph-a");
     medulla_transaction::read_outbox(&read, batch_id).expect("read kernel ledger outbox")
 }
@@ -609,7 +618,7 @@ fn batch_resource_result(commit: &MutationBatchCommit) -> ResourceReservationRes
         .result_msgpack
         .as_ref()
         .expect("resource mutation stores a typed result");
-    let payload: medulla_types::protocol::ResultPayload = rmp_serde::from_slice(bytes).unwrap();
+    let payload: medulla_protocol_types::protocol::ResultPayload = rmp_serde::from_slice(bytes).unwrap();
     resource_decode_result_payload(payload).unwrap()
 }
 
@@ -630,8 +639,8 @@ fn batch_host_result(commit: &MutationBatchCommit) -> ResourceHostUpdateResult {
         .result_msgpack
         .as_ref()
         .expect("host mutation stores a typed result");
-    let payload: medulla_types::protocol::ResultPayload = rmp_serde::from_slice(bytes).unwrap();
-    let medulla_types::protocol::ResultPayload::Raw(bytes) = payload else {
+    let payload: medulla_protocol_types::protocol::ResultPayload = rmp_serde::from_slice(bytes).unwrap();
+    let medulla_protocol_types::protocol::ResultPayload::Raw(bytes) = payload else {
         panic!("host mutation result must be raw typed payload");
     };
     medulla_types::msgpack::decode_bounded(
@@ -1292,7 +1301,7 @@ fn mutation_batch_transient_refusal_needs_fresh_invocation_but_acceptance_replay
     }
 
     let host_update = ResourceHostUpdateRequest {
-        schema_version: medulla_types::epistemic_operations::ResourceHostUpdateRequestSchemaVersion::V1,
+        schema_version: medulla_result_types::epistemic_operations::ResourceHostUpdateRequestSchemaVersion::V1,
         tenant_ref: draining.tenant_ref.clone(),
         host_ref: draining.host_ref.clone(),
         revision: draining.revision + 1,
@@ -1982,7 +1991,7 @@ fn host_refresh_rejects_filesystem_shrink_under_existing_held_disk() {
             resource_put_host(&mut hosts, "graph-a", &current, crypto).unwrap();
             let refreshed = ResourceHostUpdateRequest {
                 schema_version:
-                    medulla_types::epistemic_operations::ResourceHostUpdateRequestSchemaVersion::V1,
+                    medulla_result_types::epistemic_operations::ResourceHostUpdateRequestSchemaVersion::V1,
                 tenant_ref: "tenant-a".to_string(),
                 host_ref: "host-1".to_string(),
                 revision: current.revision + 1,
@@ -2006,7 +2015,7 @@ fn host_refresh_rejects_filesystem_shrink_under_existing_held_disk() {
             })
             .unwrap()
             .expect("host update returns a typed refusal");
-            assert!(matches!(result, medulla_types::protocol::ResultPayload::Raw(_)));
+            assert!(matches!(result, medulla_protocol_types::protocol::ResultPayload::Raw(_)));
             let after = resource_load_host(&mut hosts, "graph-a", "host-1", crypto)
                 .unwrap()
                 .expect("host remains present");
@@ -2093,7 +2102,7 @@ fn host_disk_policy_projection_caps_at_schema_bound() {
             }
             let update = |revision| ResourceHostUpdateRequest {
                 schema_version:
-                    medulla_types::epistemic_operations::ResourceHostUpdateRequestSchemaVersion::V1,
+                    medulla_result_types::epistemic_operations::ResourceHostUpdateRequestSchemaVersion::V1,
                 tenant_ref: "tenant-a".to_string(),
                 host_ref: "host-1".to_string(),
                 revision,
@@ -2421,7 +2430,7 @@ fn orphan_attempt_index_fails_closed_without_recharging_host() {
         let stored_request = request();
         let query = ResourceReservationStatusRequest {
             schema_version:
-                medulla_types::epistemic_operations::ResourceReservationStatusRequestSchemaVersion::V1,
+                medulla_result_types::epistemic_operations::ResourceReservationStatusRequestSchemaVersion::V1,
             tenant_ref: stored_request.tenant_ref.clone(),
             work_item_id: Some(stored_request.work_item_id.clone()),
             reservation_id: Some("reservation-orphan".to_string()),
@@ -2559,7 +2568,7 @@ fn reclaim_proves_strictly_newer_attempt_and_current_query_requires_live_lease()
 fn bounded_query_validation_rejects_untrusted_optional_fields() {
     let request = ResourceReservationStatusRequest {
         schema_version:
-            medulla_types::epistemic_operations::ResourceReservationStatusRequestSchemaVersion::V1,
+            medulla_result_types::epistemic_operations::ResourceReservationStatusRequestSchemaVersion::V1,
         tenant_ref: "tenant-a".to_string(),
         work_item_id: Some("work-1".to_string()),
         reservation_id: None,
@@ -2600,7 +2609,7 @@ fn exact_query_missing_reservation_returns_typed_not_found() {
         let expected = request();
         let query = ResourceReservationStatusRequest {
             schema_version:
-                medulla_types::epistemic_operations::ResourceReservationStatusRequestSchemaVersion::V1,
+                medulla_result_types::epistemic_operations::ResourceReservationStatusRequestSchemaVersion::V1,
             tenant_ref: expected.tenant_ref.clone(),
             work_item_id: Some(expected.work_item_id.clone()),
             reservation_id: Some("reservation-not-yet-created".to_string()),
@@ -2639,7 +2648,7 @@ fn resource_scope_text_rejects_delimiter_and_control_collisions() {
 
     let mut query = ResourceReservationStatusRequest {
         schema_version:
-            medulla_types::epistemic_operations::ResourceReservationStatusRequestSchemaVersion::V1,
+            medulla_result_types::epistemic_operations::ResourceReservationStatusRequestSchemaVersion::V1,
         tenant_ref: "tenant\0a".to_string(),
         work_item_id: None,
         reservation_id: None,

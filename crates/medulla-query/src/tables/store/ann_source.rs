@@ -6,7 +6,7 @@
 //! ANN generation are reads of the source of record, never a second copy of it.
 
 use medulla_core::index::{IndexBlock, IndexBlockReason};
-use medulla_types::RowPredicate;
+use medulla_result_types::row_predicate::RowPredicate;
 
 use super::ann_durable::{changed_since, ChangedRows, DirtyReadTable};
 use super::{decode_stored, get_schema_read, map_err, row_map, RowsReadTable, TableStore, ROWS};

@@ -1,6 +1,9 @@
-use medulla_types::agent_graph::{AgentGraphEdge, AgentGraphNode, AgentGraphShape};
+use medulla_agent_types::agent_fixtures::topology::facts;
+use medulla_agent_types::agent_fixtures::topology::slot;
+use medulla_agent_types::{
+    agent_graph::AgentGraphEdge, agent_graph::AgentGraphNode, agent_graph::AgentGraphShape,
+};
 use medulla_types::contract::BoundedVec;
-use medulla_types::test_support::topology::{facts, slot};
 
 use super::*;
 

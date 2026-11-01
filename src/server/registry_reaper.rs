@@ -242,7 +242,8 @@ mod tests {
         // still for this whole body. READ guard: it excludes only a key MUTATOR, never
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        let dir = std::env::temp_dir().join(format!("medulla-reaper-expired-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("medulla-reaper-expired-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
         let state = redb_state(&dir_s).await;
@@ -363,7 +364,8 @@ mod tests {
         // still for this whole body. READ guard: it excludes only a key MUTATOR, never
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        let dir = std::env::temp_dir().join(format!("medulla-reaper-malformed-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("medulla-reaper-malformed-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
         let state = redb_state(&dir_s).await;
@@ -493,7 +495,8 @@ mod tests {
         // still for this whole body. READ guard: it excludes only a key MUTATOR, never
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-        let dir = std::env::temp_dir().join(format!("medulla-reaper-repair-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("medulla-reaper-repair-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let dir_s = dir.to_string_lossy().to_string();
         let state = redb_state(&dir_s).await;

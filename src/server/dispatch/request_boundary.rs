@@ -218,9 +218,9 @@ pub(super) async fn dispatch_resource_stats(
     {
         Ok(snapshot) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::coordination::ResourceStatsPage>(
-                snapshot,
-            ),
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::ResourceStatsPage,
+            >(snapshot),
         ),
         Err(error) => Response::err(req_id, error),
     }

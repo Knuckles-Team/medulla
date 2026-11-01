@@ -9,10 +9,10 @@ use medulla_store::redb_store::{
     decode_durable, fixture_operation_envelope, read_mutation_graph_version, read_one_node,
     DurableCrypto,
 };
-use medulla_types::mutation_batch::{
+use medulla_protocol_types::mutation_batch::{
     DurabilityDomain, MutationBatch, MutationOperation, MutationSurface,
 };
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 use medulla_types::VersionExpectation;
 
 fn temp_path(tag: &str) -> std::path::PathBuf {
@@ -65,7 +65,7 @@ fn terminal_work_item_retry_replays_and_conflicting_payload_fails_closed() {
         "work-idem:terminal-stable-key",
     );
     let remint_attempt = |batch: &mut MutationBatch, nonce_byte: u8, created_at_ms: u64| {
-        let medulla_types::mutation_batch::MutationEnvelope::Operation(operation) =
+        let medulla_protocol_types::mutation_batch::MutationEnvelope::Operation(operation) =
             &mut batch.envelope
         else {
             panic!("authenticated replay fixture must carry an operation envelope");

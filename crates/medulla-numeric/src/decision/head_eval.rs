@@ -12,12 +12,16 @@
 //! The act rule and the calibration statement are answered here, once, for
 //! the ladder and for the promotion evaluation alike.
 
-use medulla_types::contract::BoundedVec;
-use medulla_types::decision::statistical::head::{DecisionHeadBody, HeadCalibration, HeadKind};
-use medulla_types::decision::statistical::{
-    CalibrationMethod, CalibrationStatement, LinearExplanation, StatisticalErrorCode,
+use medulla_decision_types::decision::QuantScaleTag;
+use medulla_decision_types::{
+    decision::statistical::head::DecisionHeadBody, decision::statistical::head::HeadCalibration,
+    decision::statistical::head::HeadKind,
 };
-use medulla_types::decision::QuantScaleTag;
+use medulla_decision_types::{
+    decision::statistical::CalibrationMethod, decision::statistical::CalibrationStatement,
+    decision::statistical::LinearExplanation, decision::statistical::StatisticalErrorCode,
+};
+use medulla_types::contract::BoundedVec;
 
 use super::features::FeatureMatrix;
 use super::quant::{q32, raw_value, value_of};

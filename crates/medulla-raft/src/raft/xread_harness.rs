@@ -28,8 +28,8 @@ use super::xread::{
     ReadLegStatus, ReadPageErrorCode,
 };
 use super::{GroupId, RaftRequest};
-use medulla_types::protocol::GraphType;
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::GraphType;
+use medulla_protocol_types::protocol::Method;
 
 const GROUP_A: GroupId = 500;
 const GROUP_B: GroupId = 600;

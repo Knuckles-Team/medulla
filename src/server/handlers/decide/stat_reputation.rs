@@ -23,6 +23,16 @@
 
 use std::collections::BTreeMap;
 
+use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_decision_types::decision::statistical::head::DecisionHeadBody;
+use medulla_decision_types::decision::QuantScaleTag;
+use medulla_decision_types::decision::TraceFidelityLevel;
+use medulla_decision_types::{
+    decision::statistical::log::DecisionLogEntry, decision::statistical::log::StoredEvaluation,
+};
+use medulla_decision_types::{
+    decision::statistical::FeatureMatrixRef, decision::statistical::StatisticalErrorCode,
+};
 use medulla_numeric::calibration::ProperScores;
 use medulla_numeric::decision::aggregate::{label_use, LabelUse};
 use medulla_numeric::decision::features::FeatureMatrix;
@@ -36,12 +46,6 @@ use medulla_numeric::risk::{
 };
 use medulla_plan::exec::LearnedReliability;
 use medulla_query::ColumnType;
-use medulla_types::agent_component::AgentComponentKind;
-use medulla_types::decision::statistical::head::DecisionHeadBody;
-use medulla_types::decision::statistical::log::{DecisionLogEntry, StoredEvaluation};
-use medulla_types::decision::statistical::{FeatureMatrixRef, StatisticalErrorCode};
-use medulla_types::decision::QuantScaleTag;
-use medulla_types::decision::TraceFidelityLevel;
 use serde_json::Value;
 
 use super::stat_log::{executed_option, joined, LogReader, MAX_LOG_ROWS};

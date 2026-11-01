@@ -43,10 +43,10 @@ use medulla_kernel::lock_recovery::{LockRecovery, WriteRecovery};
 use medulla_types::acl::AgentRole;
 use medulla_types::acl::RequestContextClaims;
 use medulla_types::contract::Nonce;
-use medulla_types::protocol::build_context_operation_signature_bytes;
-use medulla_types::protocol::build_envelope_v2_bytes;
-use medulla_types::protocol::Method;
-use medulla_types::protocol::Request;
+use medulla_protocol_types::protocol::build_context_operation_signature_bytes;
+use medulla_protocol_types::protocol::build_envelope_v2_bytes;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Request;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, HashSet};
@@ -705,7 +705,7 @@ pub fn dispatch_test_on_heap<'a>(
     state: &'a std::sync::Arc<tokio::sync::RwLock<crate::state::ServerState>>,
     request: Request,
 ) -> std::pin::Pin<
-    Box<dyn std::future::Future<Output = medulla_types::protocol::Response> + Send + 'a>,
+    Box<dyn std::future::Future<Output = medulla_protocol_types::protocol::Response> + Send + 'a>,
 > {
     Box::pin(crate::api::reentry::dispatch(state, request))
 }
@@ -1851,7 +1851,7 @@ pub fn verify_multisig_mutation_signatures(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::protocol::Method;
+    use medulla_protocol_types::protocol::Method;
 
     const SECRET: &str = "request-security-test-secret";
 
@@ -2011,7 +2011,7 @@ mod tests {
             );
             verify_envelope_v2_with(SECRET, &req, &verified_policy(), &memory_replay()).unwrap();
 
-            let execution = medulla_types::foreign_read::ForeignReadExecutionRef {
+            let execution = medulla_catalog_types::foreign_read::ForeignReadExecutionRef {
                 execution_id: 42,
                 query_digest: medulla_types::contract::Digest256::sha256(b"legacy-query"),
             };
@@ -2178,7 +2178,7 @@ mod tests {
         let refused = |req: &Request, secret: &str| {
             let error = verify_envelope_v2_with(secret, req, &verified_policy(), &memory_replay())
                 .unwrap_err();
-            medulla_types::protocol::Response::err(req.id, authentication_refusal(&error))
+            medulla_protocol_types::protocol::Response::err(req.id, authentication_refusal(&error))
         };
 
         let mut claims = verified_claims();
@@ -2232,16 +2232,16 @@ mod tests {
                 "AUTH_AUDIENCE_MISMATCH",
             ),
         ] {
-            let response = medulla_types::protocol::Response::err(1, authentication_refusal(error));
+            let response = medulla_protocol_types::protocol::Response::err(1, authentication_refusal(error));
             assert_eq!(response.error.as_deref(), Some(code), "{error}");
         }
         // Redacted classes never echo request values back.
-        let node = medulla_types::protocol::Response::err(
+        let node = medulla_protocol_types::protocol::Response::err(
             1,
             authentication_refusal("NODE_MISMATCH: bound to node 'n7'"),
         );
         assert_eq!(node.error_detail.as_deref(), Some("Authentication failed"));
-        let replay = medulla_types::protocol::Response::err(
+        let replay = medulla_protocol_types::protocol::Response::err(
             1,
             authentication_refusal("nonce 'abc' already used"),
         );

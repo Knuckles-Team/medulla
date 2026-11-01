@@ -1,9 +1,9 @@
 //! Graph-handler commit gateway shared by crates below `medulla-h-graph`.
 
 use medulla_core::graph::GraphCore;
-use medulla_types::protocol::Method;
-use medulla_types::protocol::Response;
-use medulla_types::protocol::ResultPayload;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use crate::mutation;
 use crate::mutation::MutationCtx;
 use crate::mutation::MutationPlan;

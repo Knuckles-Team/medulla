@@ -25,18 +25,20 @@ use super::{
     OperationAttribution, SemanticCodeError, SemanticCodeStore, SemanticMutationReceipt,
     SEMANTIC_BINDING_CREATED_TOPIC,
 };
+use medulla_index_types::{
+    semantic_index::SemanticBinding, semantic_index::SemanticBindingState,
+    semantic_index::SemanticDigest, semantic_index::SemanticIndexMutation,
+    semantic_index::SemanticSourceProgress, semantic_index::SemanticSqlSourceManifest,
+    semantic_index::SemanticStage, semantic_index::SemanticStageIntent,
+    semantic_index::SemanticStagePredecessor,
+};
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_storage::{
     SemanticIndexOwner, SEMANTIC_BINDINGS, SEMANTIC_HEADS, SEMANTIC_SOURCE_PROGRESS,
     SEMANTIC_STAGES,
 };
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite};
-use medulla_types::mutation_batch::MutationOutboxIntent;
-use medulla_types::semantic_index::{
-    SemanticBinding, SemanticBindingState, SemanticDigest, SemanticIndexMutation,
-    SemanticSourceProgress, SemanticSqlSourceManifest, SemanticStage, SemanticStageIntent,
-    SemanticStagePredecessor,
-};
-use medulla_types::MutationBatch;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
@@ -492,7 +494,7 @@ fn refresh_outbox(
     let headers = BTreeMap::from([
         (
             "schema".to_string(),
-            medulla_types::semantic_index::SEMANTIC_BINDING_SCHEMA.to_string(),
+            medulla_index_types::semantic_index::SEMANTIC_BINDING_SCHEMA.to_string(),
         ),
         ("actor".to_string(), actor.to_string()),
         ("binding_id".to_string(), replacement.binding_id.clone()),

@@ -4,10 +4,17 @@
 //! (EH-037) without ever gaining an option it did not hold.
 
 use super::*;
-use medulla_types::decision::statistical::declared::{DeclaredNumber, DeclaredOption};
-use medulla_types::decision::statistical::enrichment_schedule::{COST_KEY, EXPECTED_VALUE_KEY};
-use medulla_types::decision::statistical::log::{
-    AbstentionResolution, AbstentionResolver, StoredResolution,
+use medulla_decision_types::{
+    decision::statistical::declared::DeclaredNumber,
+    decision::statistical::declared::DeclaredOption,
+};
+use medulla_decision_types::{
+    decision::statistical::enrichment_schedule::COST_KEY,
+    decision::statistical::enrichment_schedule::EXPECTED_VALUE_KEY,
+};
+use medulla_decision_types::{
+    decision::statistical::log::AbstentionResolution,
+    decision::statistical::log::AbstentionResolver, decision::statistical::log::StoredResolution,
 };
 
 fn declared(id: &str, score: i64) -> DeclaredOption {
@@ -180,7 +187,7 @@ async fn declared_options_decide_as_claims_under_the_declaring_principal() {
     ));
     assert!(matches!(
         record.candidate_source,
-        medulla_types::decision::CandidateSourceRecord::Declared { .. }
+        medulla_decision_types::decision::CandidateSourceRecord::Declared { .. }
     ));
     assert_eq!(record.evidence_class, EvidenceClass::Claim);
     let claims = record
@@ -318,10 +325,12 @@ async fn cost_routing_without_l5_accounting_abstains_naming_the_fact() {
     };
     assert_eq!(
         reasons.as_slice(),
-        [medulla_types::decision::AbstainReason::UnknownFact {
-            component_id: "model-a".to_string(),
-            field: "l5.observed_cost".to_string(),
-        }]
+        [
+            medulla_decision_types::decision::AbstainReason::UnknownFact {
+                component_id: "model-a".to_string(),
+                field: "l5.observed_cost".to_string(),
+            }
+        ]
     );
 }
 
@@ -421,7 +430,7 @@ async fn a_negative_enrichment_cost_is_refused_through_decide() {
 // spec: MEDULLA-DECISION-ENGINE-R035
 #[tokio::test]
 async fn graph_decide_answers_every_execution_routing_category() {
-    use medulla_types::decision::statistical::execution_routing::ExecutionRoutingCategory;
+    use medulla_decision_types::decision::statistical::execution_routing::ExecutionRoutingCategory;
 
     let h = Harness::new().await;
     let schema_pin = h
@@ -527,7 +536,8 @@ async fn an_assembly_outcome_is_credited_to_its_slate() {
             &digest,
         )
         .unwrap();
-    let medulla_types::decision::DecisionOutcome::Solved { graph_digest, .. } = &record.outcome
+    let medulla_decision_types::decision::DecisionOutcome::Solved { graph_digest, .. } =
+        &record.outcome
     else {
         panic!("solved")
     };

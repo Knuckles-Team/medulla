@@ -539,7 +539,7 @@ pub(crate) async fn try_handle(
         Ok(batch) => match authority.validate_after() {
             Ok(()) => Response::ok(
                 req_id,
-                ResultPayload::of_ref::<medulla_types::result_contract::query::KnowledgeStream>(
+                ResultPayload::of_ref::<medulla_protocol_types::result_contract::query::KnowledgeStream>(
                     &batch,
                 ),
             ),

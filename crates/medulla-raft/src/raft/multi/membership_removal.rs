@@ -14,7 +14,7 @@ use openraft::async_runtime::watch::WatchReceiver;
 use super::super::membership_shrink::{
     MembershipShrinkEvidence, MembershipShrinkJournal, MembershipShrinkPhase,
 };
-use super::{MedullaRaft, GroupId, MultiRaft, NodeId};
+use super::{GroupId, MedullaRaft, MultiRaft, NodeId};
 
 impl MultiRaft {
     /// Remove one voter only through the durable drain/safety state machine.

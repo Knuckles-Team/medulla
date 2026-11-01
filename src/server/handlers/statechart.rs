@@ -87,11 +87,11 @@ pub(crate) async fn handle(
 
     let result = match op {
         StatechartOp::Define { def_msgpack } => op_define(&store, &def_msgpack)
-            .and_then(declared::<medulla_types::result_contract::coordination::StatechartDefine>),
+            .and_then(declared::<medulla_protocol_types::result_contract::coordination::StatechartDefine>),
         StatechartOp::Instantiate { def_id, context } => op_instantiate(
             &store, req_id, authority, &def_id, context,
         )
-        .and_then(declared::<medulla_types::result_contract::coordination::StatechartInstantiate>),
+        .and_then(declared::<medulla_protocol_types::result_contract::coordination::StatechartInstantiate>),
         StatechartOp::SendEvent {
             instance_id,
             event,
@@ -106,11 +106,11 @@ pub(crate) async fn handle(
             payload,
             expected_version,
         )
-        .and_then(declared::<medulla_types::result_contract::coordination::StatechartSendEvent>),
+        .and_then(declared::<medulla_protocol_types::result_contract::coordination::StatechartSendEvent>),
         StatechartOp::GetState { instance_id } => op_get_state(&store, tenant, actor, &instance_id)
-            .and_then(declared::<medulla_types::result_contract::coordination::StatechartGetState>),
+            .and_then(declared::<medulla_protocol_types::result_contract::coordination::StatechartGetState>),
         StatechartOp::List { def_id } => op_list(&store, tenant, actor, def_id.as_deref())
-            .and_then(declared::<medulla_types::result_contract::coordination::StatechartList>),
+            .and_then(declared::<medulla_protocol_types::result_contract::coordination::StatechartList>),
     };
 
     match result {
@@ -123,7 +123,7 @@ pub(crate) async fn handle(
 /// so an engine answer that drifts from the declared projection is refused.
 fn declared<M>(value: serde_json::Value) -> Result<ResultPayload, String>
 where
-    M: medulla_types::result_contract::MethodResult,
+    M: medulla_protocol_types::result_contract::MethodResult,
     M::Body: serde::de::DeserializeOwned,
 {
     let body = serde_json::from_value::<M::Body>(value).map_err(|error| {

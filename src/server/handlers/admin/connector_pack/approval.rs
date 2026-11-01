@@ -16,7 +16,7 @@ pub(crate) async fn serve(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
-    request: medulla_types::connector_pack::ConnectorPackSourceApprovalRequest,
+    request: medulla_catalog_types::connector_pack::ConnectorPackSourceApprovalRequest,
 ) -> Response {
     #[cfg(not(feature = "redb"))]
     {
@@ -67,7 +67,7 @@ pub(crate) async fn serve(
         .await;
         match result {
             Ok(result) => match crate::protocol::ResultPayload::of_ref::<
-                medulla_types::result_contract::storage::ConnectorPackApproveSource,
+                medulla_protocol_types::result_contract::storage::ConnectorPackApproveSource,
             >(&result)
             {
                 Ok(payload) => Response::ok(req_id, payload),

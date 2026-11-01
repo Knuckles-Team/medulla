@@ -8,27 +8,35 @@
 //! identical probe conditions and the evidence graph as typed request
 //! params. The handler reads the held versions, the probe runs and the
 //! stored contrasts out of the RLS-filtered graph snapshot, runs the pure
-//! kernel (`medulla_types::decision::harness_contrast::decide_contrast`) and
+//! kernel (`medulla_decision_types::decision::harness_contrast::decide_contrast`) and
 //! seals the decision as an `Explored` or `Abstained` outcome over an
 //! inline matrix that carries exactly the pinned per-candidate deltas.
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_agent_types::orchestration::is_harness_component_write;
+use medulla_agent_types::{
+    orchestration::improvement::decode_harness_contrast_write,
+    orchestration::improvement::decode_harness_probe_run_write,
+    orchestration::improvement::HarnessContrast, orchestration::improvement::HarnessProbeRun,
+};
+use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_types::{
+    decision::harness_contrast::decide_contrast, decision::harness_contrast::matrix_values,
+    decision::harness_contrast::ContrastCandidate, decision::harness_contrast::ContrastEvidence,
+    decision::harness_contrast::HarnessContrastRefusal,
+    decision::harness_contrast::CONTRAST_FEATURE_NAMES,
+    decision::harness_contrast::MAX_CONTRAST_CANDIDATES,
+    decision::harness_contrast::MIN_CONTRAST_CANDIDATES,
+};
+use medulla_decision_types::{
+    decision::statistical::CandidateSource, decision::statistical::DecideRequest,
+    decision::statistical::QuestionKind, decision::statistical::StatisticalOutcome,
+    decision::statistical::TypedValue,
+};
+use medulla_decision_types::{decision::AbstainReason, decision::UnitRationalWire};
 use medulla_numeric::decision::features::FeatureMatrix;
 use medulla_numeric::decision::ladder::LadderResult;
-use medulla_types::decision::harness_contrast::{
-    decide_contrast, matrix_values, ContrastCandidate, ContrastEvidence, HarnessContrastRefusal,
-    CONTRAST_FEATURE_NAMES, MAX_CONTRAST_CANDIDATES, MIN_CONTRAST_CANDIDATES,
-};
-use medulla_types::decision::statistical::declared::DeclaredOption;
-use medulla_types::decision::statistical::{
-    CandidateSource, DecideRequest, QuestionKind, StatisticalOutcome, TypedValue,
-};
-use medulla_types::decision::{AbstainReason, UnitRationalWire};
-use medulla_types::orchestration::improvement::{
-    decode_harness_contrast_write, decode_harness_probe_run_write, HarnessContrast, HarnessProbeRun,
-};
-use medulla_types::orchestration::is_harness_component_write;
 
 use super::stat_executor::Executed;
 use super::stat_support::{filtered_view, invalid_parameter};
@@ -129,7 +137,10 @@ fn probe_run(view: &medulla_core::graph::GraphView, trace_id: &str) -> Option<Ha
 
 /// The stored contrast behind one node id, when the view holds a
 /// well-formed record there.
-fn stored_contrast(view: &medulla_core::graph::GraphView, node_id: &str) -> Option<HarnessContrast> {
+fn stored_contrast(
+    view: &medulla_core::graph::GraphView,
+    node_id: &str,
+) -> Option<HarnessContrast> {
     view.node_row_object(node_id)
         .and_then(|props| decode_harness_contrast_write(&props).ok())
 }

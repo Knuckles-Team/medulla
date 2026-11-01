@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 
 use super::super::super::{GroupId, RaftRequest};
 
@@ -33,7 +33,8 @@ impl SealedNativeMethod {
             return Err("native Raft command exceeds resource limits".to_string());
         }
         let key = native_method_key(server_secret);
-        let ciphertext = medulla_kernel::crypto::ValueCipher::from_key_material(&key).seal(&plaintext);
+        let ciphertext =
+            medulla_kernel::crypto::ValueCipher::from_key_material(&key).seal(&plaintext);
         let command = Self {
             ciphertext,
             plaintext_sha256: hex::encode(Sha256::digest(&plaintext)),
@@ -184,7 +185,7 @@ const GRAPH_COMMAND_SCHEMA_VERSION: u16 = 1;
 struct GraphCommandAuthority {
     graph_name: String,
     graph_fname: String,
-    graph_type: medulla_types::protocol::GraphType,
+    graph_type: medulla_protocol_types::protocol::GraphType,
     group_id: GroupId,
     batch_id: String,
     request_id: u64,

@@ -33,7 +33,7 @@ fn visible(ctx: &GraphOpRouting<'_>, node_id: &str) -> bool {
 #[cfg(all(feature = "query", feature = "modality-serving"))]
 async fn enrich(
     ctx: GraphOpRouting<'_>,
-    request: medulla_types::source_ingestion::web_document::EnrichDocumentRequest,
+    request: medulla_catalog_types::source_ingestion::web_document::EnrichDocumentRequest,
 ) -> Response {
     use handlers::web_ingest as web;
     let req_id = ctx.req_id;
@@ -93,7 +93,7 @@ async fn enrich(
 async fn commit(
     ctx: GraphOpRouting<'_>,
     write_set: handlers::repository_index::IndexWriteSet,
-    receipt: medulla_types::source_ingestion::web_document::EnrichDocumentReceipt,
+    receipt: medulla_catalog_types::source_ingestion::web_document::EnrichDocumentReceipt,
 ) -> Response {
     let (placement_epoch, fencing_token) = match source_ingestion_route_fence(&ctx).await {
         Ok(fence) => fence,
@@ -119,18 +119,20 @@ async fn commit(
 #[cfg(all(feature = "query", feature = "modality-serving"))]
 fn respond(
     req_id: u64,
-    receipt: medulla_types::source_ingestion::web_document::EnrichDocumentReceipt,
+    receipt: medulla_catalog_types::source_ingestion::web_document::EnrichDocumentReceipt,
 ) -> Response {
     Response::ok(
         req_id,
-        ResultPayload::of::<medulla_types::result_contract::ingestion::EnrichDocument>(receipt),
+        ResultPayload::of::<medulla_protocol_types::result_contract::ingestion::EnrichDocument>(
+            receipt,
+        ),
     )
 }
 
 #[cfg(not(all(feature = "query", feature = "modality-serving")))]
 async fn enrich(
     ctx: GraphOpRouting<'_>,
-    _request: medulla_types::source_ingestion::web_document::EnrichDocumentRequest,
+    _request: medulla_catalog_types::source_ingestion::web_document::EnrichDocumentRequest,
 ) -> Response {
     Response::err(
         ctx.req_id,
@@ -141,7 +143,7 @@ async fn enrich(
 #[cfg(all(feature = "query", feature = "modality-serving", feature = "decide"))]
 async fn select(
     ctx: GraphOpRouting<'_>,
-    request: medulla_types::decision::web_fetch_selection::SelectWebPagesRequest,
+    request: medulla_decision_types::decision::web_fetch_selection::SelectWebPagesRequest,
 ) -> Response {
     use handlers::web_ingest as web;
     let documents: Vec<_> = ctx
@@ -160,7 +162,9 @@ async fn select(
     ) {
         Ok(answer) => Response::ok(
             ctx.req_id,
-            ResultPayload::of::<medulla_types::result_contract::query::SelectWebPages>(answer),
+            ResultPayload::of::<medulla_protocol_types::result_contract::query::SelectWebPages>(
+                answer,
+            ),
         ),
         Err(error) => Response::err(ctx.req_id, error),
     }
@@ -169,7 +173,7 @@ async fn select(
 #[cfg(not(all(feature = "query", feature = "modality-serving", feature = "decide")))]
 async fn select(
     ctx: GraphOpRouting<'_>,
-    _request: medulla_types::decision::web_fetch_selection::SelectWebPagesRequest,
+    _request: medulla_decision_types::decision::web_fetch_selection::SelectWebPagesRequest,
 ) -> Response {
     Response::err(
         ctx.req_id,

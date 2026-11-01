@@ -23,7 +23,7 @@ impl medulla_server_api::api::query_txn::WireApi for WireSeam {
         store: &TableStore,
         authority: &medulla_server_api::access::CarrierAuthority,
         batch: &medulla_types::MutationBatch,
-    ) -> Result<Option<medulla_types::mutation_batch::MutationBatchRecord>, String> {
+    ) -> Result<Option<medulla_protocol_types::mutation_batch::MutationBatchRecord>, String> {
         super::committed_sql_replay_receipt(store, authority, batch)
     }
 }

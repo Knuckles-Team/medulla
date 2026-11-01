@@ -10,20 +10,24 @@ use super::checkpoint::{
 use super::record::{encode, row_bytes, CanonicalRow};
 use super::tombstone::{is_reconciled_sql_tombstone, replace_reconciled_sql_manifest};
 use super::{corrupt, ensure, kernel_error, refused, semantic_contract_error, SemanticCodeError};
+use medulla_index_types::{
+    semantic_index::SemanticAuthorizationReceipt, semantic_index::SemanticDigest,
+    semantic_index::SemanticGenerationAggregate, semantic_index::SemanticGenerationArtifact,
+    semantic_index::SemanticGenerationCheckpoint,
+    semantic_index::SemanticGenerationCheckpointDraft,
+    semantic_index::SemanticGenerationCheckpointUpdate,
+    semantic_index::SemanticGenerationDependency, semantic_index::SemanticGenerationMember,
+    semantic_index::SemanticSqlSourceManifest, semantic_index::SemanticStage,
+    semantic_index::SemanticStageArtifact, semantic_index::SemanticStageIntent,
+    semantic_index::SemanticStagePredecessor, semantic_index::SemanticStageTransition,
+};
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_storage::{
     SemanticIndexOwner, SEMANTIC_ANN, SEMANTIC_AUTH_RECEIPTS, SEMANTIC_CHECKPOINTS,
     SEMANTIC_CHECKPOINT_HEADS, SEMANTIC_DEAD_LETTERS, SEMANTIC_GRAPH_PROJECTIONS, SEMANTIC_LEXICAL,
     SEMANTIC_SOURCE_PROGRESS, SEMANTIC_SQL_SOURCES, SEMANTIC_STAGES, SEMANTIC_VECTORS,
 };
 use medulla_transaction::AdmittedOwnerWrite;
-use medulla_types::mutation_batch::MutationOutboxLease;
-use medulla_types::semantic_index::{
-    SemanticAuthorizationReceipt, SemanticDigest, SemanticGenerationAggregate,
-    SemanticGenerationArtifact, SemanticGenerationCheckpoint, SemanticGenerationCheckpointDraft,
-    SemanticGenerationCheckpointUpdate, SemanticGenerationDependency, SemanticGenerationMember,
-    SemanticSqlSourceManifest, SemanticStage, SemanticStageArtifact, SemanticStageIntent,
-    SemanticStagePredecessor, SemanticStageTransition,
-};
 use redb::{ReadableTable, TableDefinition};
 use std::collections::BTreeMap;
 

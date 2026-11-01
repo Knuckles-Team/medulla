@@ -147,7 +147,7 @@ fn native_finish_retains_charge_and_cleanup_has_a_separate_fence_and_replay_tupl
         TEST_GRAPH,
         &DevelopmentLaneStatusRequest {
             schema_version:
-                medulla_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
+                medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
             tenant_ref: "tenant:a".into(),
             hold_id: None,
             lane_id: None,
@@ -177,7 +177,7 @@ fn native_finish_retains_charge_and_cleanup_has_a_separate_fence_and_replay_tupl
         TEST_GRAPH,
         &DevelopmentLaneStatusRequest {
             schema_version:
-                medulla_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
+                medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
             tenant_ref: "tenant:a".into(),
             hold_id: None,
             lane_id: None,
@@ -242,7 +242,7 @@ fn native_finish_retains_charge_and_cleanup_has_a_separate_fence_and_replay_tupl
         TEST_GRAPH,
         &DevelopmentLaneStatusRequest {
             schema_version:
-                medulla_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
+                medulla_result_types::epistemic_operations::DevelopmentLaneStatusRequestSchemaVersion::V1,
             tenant_ref: "tenant:a".into(),
             hold_id: None,
             lane_id: None,

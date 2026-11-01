@@ -27,8 +27,9 @@
 
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
-pub use medulla_types::authority_audit::{
-    AuditEntry, AuditSourceMode, AuthorityAudit, NotUsedReason, SourceRole,
+pub use medulla_identity_types::{
+    authority_audit::AuditEntry, authority_audit::AuditSourceMode, authority_audit::AuthorityAudit,
+    authority_audit::NotUsedReason, authority_audit::SourceRole,
 };
 use medulla_types::metadata_acceleration::{AccelerationPolicy, FragmentExecutionMode};
 use serde::{Deserialize, Serialize};

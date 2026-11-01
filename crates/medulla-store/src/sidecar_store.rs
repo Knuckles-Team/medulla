@@ -18,9 +18,11 @@
 
 use std::path::Path;
 
-use medulla_storage::{OwnedStoreHandle, OwnerDomain, PhysicalStoreIdentity, ScopedRead, StorageKernel};
+use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
+use medulla_storage::{
+    OwnedStoreHandle, OwnerDomain, PhysicalStoreIdentity, ScopedRead, StorageKernel,
+};
 use medulla_transaction::{AdmittedOwnerWrite, Begin, MaintenanceBatch, MutationKernel};
-use medulla_types::MutationScopeIdentity;
 
 use medulla_kernel::store_authority::EngineScopeAuthority;
 
@@ -57,7 +59,7 @@ impl<D: OwnerDomain> SidecarStore<D> {
     ) -> Result<Self, String> {
         let identity = MutationScopeIdentity::fixed_native(
             SIDECAR_TENANT,
-            medulla_types::mutation_batch::DurabilityDomain::ControlPlane,
+            medulla_mutation_types::mutation_scope::DurabilityDomain::ControlPlane,
             resource,
             incarnation,
         )?;
@@ -186,7 +188,7 @@ impl<D: OwnerDomain> SidecarStore<D> {
     {
         let subject = medulla_storage::ledger_scope_key(self.owner.identity());
         let write = MaintenanceBatch::new(
-            medulla_types::mutation_batch::DurabilityDomain::ControlPlane,
+            medulla_mutation_types::mutation_scope::DurabilityDomain::ControlPlane,
             event,
             &subject,
         );

@@ -6,7 +6,7 @@
 //! visibility/liveness authority; these Blob holders prevent GC between the
 //! earlier body batch and the later atomic catalog commit.
 
-use medulla_types::agent_component::MAX_COMPONENT_BODY_BYTES;
+use medulla_agent_types::agent_component::MAX_COMPONENT_BODY_BYTES;
 use medulla_types::contract::Digest256;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -15,7 +15,8 @@ use super::store::{hex_digest, BlobManifest, BLOB_MANIFEST_VERSION};
 
 /// One pack's bodies: each entry's body, input and output schema, plus the
 /// server contract, so the batch bound follows the pack entry bound (#656).
-const MAX_ENGINE_BODY_BATCH: usize = 3 * medulla_types::connector_pack::MAX_PACK_ENTRIES + 1;
+const MAX_ENGINE_BODY_BATCH: usize =
+    3 * medulla_catalog_types::connector_pack::MAX_PACK_ENTRIES + 1;
 const MAX_REPOSITORY_BODY_BYTES: usize = 64 * 1024 * 1024;
 const MAX_REPOSITORY_BODY_BATCH: usize = 4_096;
 const MAX_REPOSITORY_BATCH_BYTES: usize = 256 * 1024 * 1024;
@@ -74,7 +75,7 @@ fn plan_bodies<'a>(
     purpose: BodyPurpose<'_>,
     bodies: &'a [EngineBody],
 ) -> Result<Vec<PlannedEngineBody<'a>>, String> {
-    medulla_types::agent_library::validate_key(tenant_id, "connector-pack")?;
+    medulla_agent_types::agent_library::validate_key(tenant_id, "connector-pack")?;
     let (namespace, owner_scope, max_count, max_bytes) = match purpose {
         BodyPurpose::ConnectorPack => (
             format!("pack:{tenant_id}"),

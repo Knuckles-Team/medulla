@@ -86,7 +86,7 @@ pub(crate) async fn begin_session_control_saga(
         request_id,
         &authority,
         method,
-        crate::mutation_batch::DurabilityDomain::ControlPlane,
+        medulla_mutation_types::mutation_scope::DurabilityDomain::ControlPlane,
         attempt_nonce,
     )?;
     reject_prepared_session_control_saga(&saga)?;
@@ -137,10 +137,10 @@ fn finish_session_control_saga(
 fn validate_session_control_result(method: &Method, result: &ResultPayload) -> Result<(), String> {
     match method {
         Method::CreateChannel { .. } => validate_session_control_json::<
-            medulla_types::messaging_wire::ChannelCreated,
+            medulla_protocol_types::messaging_wire::ChannelCreated,
         >(method, result),
         Method::LeaveChannel { .. } | Method::CloseChannel { .. } => {
-            validate_session_control_json::<medulla_types::messaging_wire::ChannelDeparture>(
+            validate_session_control_json::<medulla_protocol_types::messaging_wire::ChannelDeparture>(
                 method, result,
             )
         }

@@ -131,7 +131,7 @@ pub(crate) fn claim_reclaim_expired_lease(
 /// not have blown its deadline.
 pub(crate) fn claim_candidate_is_excluded(
     props: &serde_json::Map<String, serde_json::Value>,
-    request: &medulla_types::epistemic_operations::ClaimWorkItemRequest,
+    request: &medulla_result_types::epistemic_operations::ClaimWorkItemRequest,
     now_s: f64,
 ) -> bool {
     property_string(props, "status") != "ready"
@@ -177,7 +177,7 @@ pub(crate) fn claim_candidate_deadline(
 /// delivery, so live leases contribute to the quota before the exact-id filter,
 /// and that filter runs before an expired unrelated row could be reclaimed.
 pub(crate) fn classify_claim_row(
-    request: &medulla_types::epistemic_operations::ClaimWorkItemRequest,
+    request: &medulla_result_types::epistemic_operations::ClaimWorkItemRequest,
     node_id: &str,
     mut props: serde_json::Map<String, serde_json::Value>,
     now_s: f64,
@@ -223,7 +223,7 @@ pub(crate) fn classify_claim_row(
 /// leases, the expired rows to retire, and the claimable candidates.
 pub(crate) fn scan_claim_work_item_candidates(
     graph: &str,
-    request: &medulla_types::epistemic_operations::ClaimWorkItemRequest,
+    request: &medulla_result_types::epistemic_operations::ClaimWorkItemRequest,
     now_s: f64,
     nodes: &ScopedOwnerTableMut<'_, (&str, &str), &[u8]>,
     crypto: DurableCrypto<'_>,
@@ -262,8 +262,8 @@ pub(crate) fn claim_not_claimed_payload(
     reason: ClaimWorkItemResultReason,
     inflight: u32,
     changed_work_item_ids: Vec<String>,
-) -> Result<medulla_types::protocol::ResultPayload, String> {
-    medulla_types::protocol::ResultPayload::of::<medulla_types::result_contract::coordination::ClaimWorkItem>(
+) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
+    medulla_protocol_types::protocol::ResultPayload::of::<medulla_protocol_types::result_contract::coordination::ClaimWorkItem>(
         ClaimWorkItemResult {
             schema_version: ClaimWorkItemResultSchemaVersion::V1,
             claimed: false,
@@ -326,7 +326,7 @@ pub(crate) fn claim_grant_lease(
 
 struct ClaimWorkItemApply<'args, 'table, 'crypto> {
     graph: &'args str,
-    request: &'args medulla_types::epistemic_operations::ClaimWorkItemRequest,
+    request: &'args medulla_result_types::epistemic_operations::ClaimWorkItemRequest,
     now_ms: u64,
     lease_ms: u64,
     now_s: f64,
@@ -362,7 +362,7 @@ fn select_claim_candidate(mut candidates: Vec<ClaimCandidateRow>) -> Option<Clai
 
 fn apply_claimed_work_item(
     input: ClaimWorkItemApply<'_, '_, '_>,
-) -> Result<medulla_types::protocol::ResultPayload, String> {
+) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
     let ClaimWorkItemApply {
         graph,
         request,
@@ -405,7 +405,7 @@ fn apply_claimed_work_item(
         crypto,
     )?;
     changed_work_item_ids.push(node_id.clone());
-    medulla_types::protocol::ResultPayload::of::<medulla_types::result_contract::coordination::ClaimWorkItem>(
+    medulla_protocol_types::protocol::ResultPayload::of::<medulla_protocol_types::result_contract::coordination::ClaimWorkItem>(
         ClaimWorkItemResult {
             schema_version: ClaimWorkItemResultSchemaVersion::V1,
             claimed: true,
@@ -427,11 +427,11 @@ fn apply_claimed_work_item(
 
 pub(crate) fn apply_claim_work_item_row<'txn, 'crypto>(
     graph: &str,
-    request: &medulla_types::epistemic_operations::ClaimWorkItemRequest,
+    request: &medulla_result_types::epistemic_operations::ClaimWorkItemRequest,
     nodes: &mut ScopedOwnerTableMut<'txn, (&'static str, &'static str), &'static [u8]>,
     native_work_items: &mut ScopedOwnerTableMut<'txn, (&'static str, &'static str), &'static [u8]>,
     crypto: DurableCrypto<'crypto>,
-) -> Result<Option<medulla_types::protocol::ResultPayload>, String> {
+) -> Result<Option<medulla_protocol_types::protocol::ResultPayload>, String> {
     let tenant = &request.tenant_ref;
     let worker_id = &request.worker_ref;
     let now_ms = request.now_ms;
@@ -558,9 +558,9 @@ mod tests {
         assert_eq!(props, reclaimed);
     }
 
-    fn claim_request(selected: Option<&str>) -> medulla_types::epistemic_operations::ClaimWorkItemRequest {
-        medulla_types::epistemic_operations::ClaimWorkItemRequest {
-            schema_version: medulla_types::epistemic_operations::ClaimWorkItemRequestSchemaVersion::V1,
+    fn claim_request(selected: Option<&str>) -> medulla_result_types::epistemic_operations::ClaimWorkItemRequest {
+        medulla_result_types::epistemic_operations::ClaimWorkItemRequest {
+            schema_version: medulla_result_types::epistemic_operations::ClaimWorkItemRequestSchemaVersion::V1,
             tenant_ref: "tenant-a".into(),
             work_item_id: selected.map(str::to_string),
             queue_ref: None,

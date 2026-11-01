@@ -23,6 +23,33 @@ use super::stage::stage_intent_outbox;
 use super::{ExistingTenantOwnerOpen, OperationAttribution, SemanticCodeStore};
 use crate::compute::semantic::SemanticStore;
 use crate::test_scope_grant::{TestScopeVerifier, TEST_PRINCIPAL, TEST_PROOF};
+use medulla_index_types::embedding::EmbeddingSpaceRef;
+use medulla_index_types::{
+    semantic_index::SemanticActivationTarget, semantic_index::SemanticActivePointer,
+    semantic_index::SemanticAnnIndexManifest, semantic_index::SemanticAnnIndexMethod,
+    semantic_index::SemanticAnnIndexSpec, semantic_index::SemanticAuthorizationReceipt,
+    semantic_index::SemanticAuthorizationReceiptDraft, semantic_index::SemanticBinding,
+    semantic_index::SemanticBindingDraft, semantic_index::SemanticBindingState,
+    semantic_index::SemanticBindingStateTransition, semantic_index::SemanticDeadLetter,
+    semantic_index::SemanticDeadLetterDraft, semantic_index::SemanticDigest,
+    semantic_index::SemanticExpectedEntity, semantic_index::SemanticGenerationAggregate,
+    semantic_index::SemanticGenerationArtifact, semantic_index::SemanticGenerationCheckpoint,
+    semantic_index::SemanticGenerationCheckpointDraft,
+    semantic_index::SemanticGenerationCheckpointUpdate,
+    semantic_index::SemanticGenerationDependency, semantic_index::SemanticGenerationMember,
+    semantic_index::SemanticIndexMutation, semantic_index::SemanticLexicalIndexManifest,
+    semantic_index::SemanticLexicalIndexSpec, semantic_index::SemanticModelIdentity,
+    semantic_index::SemanticPolicyComponents, semantic_index::SemanticSourceProgress,
+    semantic_index::SemanticSourceSelector, semantic_index::SemanticSqlSourceIdentity,
+    semantic_index::SemanticSqlSourceManifest, semantic_index::SemanticSqlSourceManifestDraft,
+    semantic_index::SemanticStage, semantic_index::SemanticStageArtifact,
+    semantic_index::SemanticStageIntent, semantic_index::SemanticStageIntentDraft,
+    semantic_index::SemanticStageOutcome, semantic_index::SemanticStagePredecessor,
+    semantic_index::SemanticStageReceipt, semantic_index::SemanticStageScope,
+    semantic_index::SemanticStageTransition, semantic_index::SemanticVectorMetric,
+    semantic_index::SqlColumnRef, semantic_index::SEMANTIC_SQL_CATALOG_ID,
+};
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
 use medulla_storage::{
     OwnerLayout, PhysicalStoreIdentity, ScopeGrantVerifier, ANN_CODES, SEMANTIC_ANN,
     SEMANTIC_BINDINGS, SEMANTIC_CHECKPOINTS, SEMANTIC_CHECKPOINT_HEADS, SEMANTIC_DEAD_LETTERS,
@@ -30,24 +57,6 @@ use medulla_storage::{
     SEMANTIC_SQL_SOURCES, SEMANTIC_STAGES, SEMANTIC_STATES,
 };
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_batch::MutationOutboxIntent;
-use medulla_types::semantic_index::{
-    SemanticActivationTarget, SemanticActivePointer, SemanticAnnIndexManifest,
-    SemanticAnnIndexMethod, SemanticAnnIndexSpec, SemanticAuthorizationReceipt,
-    SemanticAuthorizationReceiptDraft, SemanticBinding, SemanticBindingDraft, SemanticBindingState,
-    SemanticBindingStateTransition, SemanticDeadLetter, SemanticDeadLetterDraft, SemanticDigest,
-    SemanticExpectedEntity, SemanticGenerationAggregate, SemanticGenerationArtifact,
-    SemanticGenerationCheckpoint, SemanticGenerationCheckpointDraft,
-    SemanticGenerationCheckpointUpdate, SemanticGenerationDependency, SemanticGenerationMember,
-    SemanticIndexMutation, SemanticLexicalIndexManifest, SemanticLexicalIndexSpec,
-    SemanticModelIdentity, SemanticPolicyComponents, SemanticSourceProgress,
-    SemanticSourceSelector, SemanticSqlSourceIdentity, SemanticSqlSourceManifest,
-    SemanticSqlSourceManifestDraft, SemanticStage, SemanticStageArtifact, SemanticStageIntent,
-    SemanticStageIntentDraft, SemanticStageOutcome, SemanticStagePredecessor, SemanticStageReceipt,
-    SemanticStageScope, SemanticStageTransition, SemanticVectorMetric, SqlColumnRef,
-    SEMANTIC_SQL_CATALOG_ID,
-};
-use medulla_types::EmbeddingSpaceRef;
 // `ReadableTable` only: it is the trait that puts `.get()` on the kernel's own
 // returned table handles, and `semantic_arch_gate` deliberately excludes
 // `redb::Table`/`redb::ReadOnlyTable` from its forbidden set for exactly that
@@ -81,7 +90,7 @@ impl ScopeGrantVerifier for AnyTenantSemanticScopeVerifier {
         &self,
         _physical: &PhysicalStoreIdentity,
         layout: OwnerLayout,
-        _identity: &medulla_types::MutationScopeIdentity,
+        _identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
         principal: &str,
         proof: &[u8],
     ) -> Result<(), String> {
@@ -311,7 +320,7 @@ fn generation_checkpoint_fixture(stage: SemanticStage) -> GenerationCheckpointFi
 
 /// A first-stage (`SourceCommit`) intent for one entity of `binding`.
 pub(super) fn source_commit_intent(
-    binding: &medulla_types::semantic_index::SemanticBinding,
+    binding: &medulla_index_types::semantic_index::SemanticBinding,
     entity: &str,
     input_digest: SemanticDigest,
 ) -> SemanticStageIntent {
@@ -391,12 +400,12 @@ fn seed_batch(
     generation: u64,
     digest: &str,
     expected: u64,
-) -> medulla_types::MutationBatch {
+) -> medulla_protocol_types::mutation_batch::MutationBatch {
     let batch_id = format!("semantic-ann:{BINDING}:{generation}:{digest}");
-    medulla_types::MutationBatch {
-        schema_version: medulla_types::MUTATION_BATCH_VERSION,
+    medulla_protocol_types::mutation_batch::MutationBatch {
+        schema_version: medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION,
         batch_id: batch_id.clone(),
-        envelope: medulla_types::mutation_batch::MutationEnvelope::maintenance(
+        envelope: medulla_protocol_types::mutation_batch::MutationEnvelope::maintenance(
             owner.principal(),
             "semantic_index_generation_activated",
             &format!("{BINDING}:{generation}"),
@@ -405,14 +414,16 @@ fn seed_batch(
         .expect("a semantic binding and generation are canonical resource ids"),
         identity: owner.identity().clone(),
         placement_epoch: 0,
-        version_expectation: medulla_types::VersionExpectation::Native(expected),
+        version_expectation: medulla_protocol_types::mutation_batch::VersionExpectation::Native(
+            expected,
+        ),
         fencing_token: None,
         authoritative_state: None,
-        operations: vec![medulla_types::MutationOperation {
+        operations: vec![medulla_protocol_types::mutation_batch::MutationOperation {
             ordinal: 0,
-            surface: medulla_types::MutationSurface::Other,
-            domain: medulla_types::mutation_batch::DurabilityDomain::SemanticIndex,
-            method: medulla_types::protocol::Method::ApplyMutation {
+            surface: medulla_mutation_types::mutation_scope::MutationSurface::Other,
+            domain: medulla_mutation_types::mutation_scope::DurabilityDomain::SemanticIndex,
+            method: medulla_protocol_types::protocol::Method::ApplyMutation {
                 event_type: "semantic_index_generation_activated".to_string(),
                 query: format!("sha256:{digest}"),
             },
@@ -642,8 +653,10 @@ fn binding_for_image(
 fn seed_via_kernel<'a>(
     codes: &'a SemanticCodeStore,
     owner: &'a medulla_storage::OwnedStoreHandle<medulla_storage::SemanticIndexOwner>,
-    batch: &medulla_types::MutationBatch,
-    write_rows: impl FnOnce(&medulla_transaction::AdmittedOwnerWrite<'_, medulla_storage::SemanticIndexOwner>),
+    batch: &medulla_protocol_types::mutation_batch::MutationBatch,
+    write_rows: impl FnOnce(
+        &medulla_transaction::AdmittedOwnerWrite<'_, medulla_storage::SemanticIndexOwner>,
+    ),
 ) {
     let (write, begin) = codes.door.mutation_kernel().admit(owner, batch).unwrap();
     let medulla_transaction::Begin::Apply {
@@ -884,7 +897,8 @@ fn dead_letter_registry_key_retains_intent_identity_at_one_attempt() {
     let codes = open_store(&dir);
     let owner = codes.door.owner();
     let version =
-        medulla_transaction::version(&codes.door.storage_kernel().read_scope(owner).unwrap()).unwrap();
+        medulla_transaction::version(&codes.door.storage_kernel().read_scope(owner).unwrap())
+            .unwrap();
     let batch = seed_batch(owner, 1, "dead-letter-key", version);
     seed_via_kernel(&codes, owner, &batch, |rows| {
         rows.open_table(SEMANTIC_DEAD_LETTERS)
@@ -2608,7 +2622,8 @@ fn a_bound_accessor_refuses_another_tenants_or_generations_rows() {
 
     let owner = codes.door.owner();
     let expected =
-        medulla_transaction::version(&codes.door.storage_kernel().read_scope(owner).unwrap()).unwrap();
+        medulla_transaction::version(&codes.door.storage_kernel().read_scope(owner).unwrap())
+            .unwrap();
     let batch = seed_batch(owner, 1, "acl-probe", expected);
     let write = codes.door.mutation_kernel().open_write(owner).unwrap();
     assert!(matches!(
@@ -3504,7 +3519,7 @@ fn an_operation_ledger_row_names_the_binding_it_wrote() {
         .expect("an operation-surface write must leave one durable ledger receipt");
     drop(ledger);
 
-    let medulla_types::protocol::Method::ApplyMutation { event_type, query } =
+    let medulla_protocol_types::protocol::Method::ApplyMutation { event_type, query } =
         &record.batch.operations[0].method
     else {
         panic!("a semantic metadata batch records exactly one ApplyMutation");
@@ -3524,7 +3539,8 @@ fn an_operation_ledger_row_names_the_binding_it_wrote() {
     );
 
     let mut legacy = record.batch.clone();
-    let medulla_types::protocol::Method::ApplyMutation { query, .. } = &mut legacy.operations[0].method
+    let medulla_protocol_types::protocol::Method::ApplyMutation { query, .. } =
+        &mut legacy.operations[0].method
     else {
         panic!("a semantic metadata batch records exactly one ApplyMutation");
     };
@@ -3547,7 +3563,8 @@ fn a_second_admitted_write_racing_the_same_version_fails_closed() {
     let codes = open_store(&dir);
     let owner = codes.door.owner();
     let stale_version =
-        medulla_transaction::version(&codes.door.storage_kernel().read_scope(owner).unwrap()).unwrap();
+        medulla_transaction::version(&codes.door.storage_kernel().read_scope(owner).unwrap())
+            .unwrap();
     let winner = seed_batch(owner, 1, "winner-digest", stale_version);
     let loser = seed_batch(owner, 1, "loser-digest", stale_version);
 
@@ -3690,7 +3707,8 @@ fn production_six_rejects_complete_nonhead_checkpoint_dependencies() {
 
     let owner = codes.door.owner();
     let version =
-        medulla_transaction::version(&codes.door.storage_kernel().read_scope(owner).unwrap()).unwrap();
+        medulla_transaction::version(&codes.door.storage_kernel().read_scope(owner).unwrap())
+            .unwrap();
     let batch = seed_batch(owner, 1, "checkpoint-s6-head", version);
     seed_via_kernel(&codes, owner, &batch, |rows| {
         let progress = SemanticSourceProgress {
@@ -3788,7 +3806,8 @@ fn checkpoint_head_resolves_only_the_durable_pointer() {
 
     let owner = codes.door.owner();
     let version =
-        medulla_transaction::version(&codes.door.storage_kernel().read_scope(owner).unwrap()).unwrap();
+        medulla_transaction::version(&codes.door.storage_kernel().read_scope(owner).unwrap())
+            .unwrap();
     let batch = seed_batch(owner, 1, "checkpoint-head", version);
     seed_via_kernel(&codes, owner, &batch, |rows| {
         let partial_key = partial.checkpoint_digest.to_string();
@@ -3861,7 +3880,8 @@ fn checkpoint_head_does_not_promote_orphan_higher_count_rows() {
 
     let owner = codes.door.owner();
     let version =
-        medulla_transaction::version(&codes.door.storage_kernel().read_scope(owner).unwrap()).unwrap();
+        medulla_transaction::version(&codes.door.storage_kernel().read_scope(owner).unwrap())
+            .unwrap();
     let batch = seed_batch(owner, 1, "checkpoint-orphan", version);
     seed_via_kernel(&codes, owner, &batch, |rows| {
         // No `SEMANTIC_CHECKPOINT_HEADS` row is written on purpose -- an orphan
@@ -3906,7 +3926,8 @@ fn checkpoint_head_rejects_pointer_row_bytes_mismatch() {
 
     let owner = codes.door.owner();
     let version =
-        medulla_transaction::version(&codes.door.storage_kernel().read_scope(owner).unwrap()).unwrap();
+        medulla_transaction::version(&codes.door.storage_kernel().read_scope(owner).unwrap())
+            .unwrap();
     let batch = seed_batch(owner, 1, "checkpoint-ambiguity", version);
     seed_via_kernel(&codes, owner, &batch, |rows| {
         let left_key = left.checkpoint_digest.to_string();
@@ -3987,7 +4008,8 @@ fn authoritative_state_rejects_completed_progress_without_stage_receipt() {
 
     let owner = codes.door.owner();
     let version =
-        medulla_transaction::version(&codes.door.storage_kernel().read_scope(owner).unwrap()).unwrap();
+        medulla_transaction::version(&codes.door.storage_kernel().read_scope(owner).unwrap())
+            .unwrap();
     let batch = seed_batch(owner, 1, "checkpoint-progress", version);
     seed_via_kernel(&codes, owner, &batch, |rows| {
         let bytes = progress.to_canonical_cbor().unwrap();

@@ -13,7 +13,7 @@
 //! * `read` -- the `__commons__` view plus the component reads.
 //! * `project` -- rows, filter, order, digest, page.
 
-use medulla_types::fleet_catalog::FleetCatalogOp;
+use medulla_catalog_types::fleet_catalog::FleetCatalogOp;
 
 use super::*;
 

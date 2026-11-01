@@ -3,11 +3,17 @@
 //! policy. Each is read by (id, exact revision digest), in the tenant, both at
 //! assembly time and again inside the commit's write.
 
-use medulla_types::agent_component::{AgentComponentEntry, AgentComponentKind, ComponentDependency};
-use medulla_types::agent_graph::AgentGraphEntry;
-use medulla_types::decision::policy::policy_from_attributes;
-use medulla_types::decision::{DecisionErrorCode, DecisionPolicy, DecisionRecord, TemplateFacts};
-use medulla_types::delegation::AgentGraphEntryRef;
+use medulla_agent_types::agent_graph::AgentGraphEntry;
+use medulla_agent_types::delegation::AgentGraphEntryRef;
+use medulla_agent_types::{
+    agent_component::AgentComponentEntry, agent_component::AgentComponentKind,
+    agent_component::ComponentDependency,
+};
+use medulla_decision_types::decision::policy::policy_from_attributes;
+use medulla_decision_types::{
+    decision::DecisionErrorCode, decision::DecisionPolicy, decision::DecisionRecord,
+    decision::TemplateFacts,
+};
 
 use super::super::agent_component::ComponentLayer;
 use super::super::agent_graph::GraphLayer;
@@ -120,7 +126,8 @@ pub(super) fn check_sources(txn: &Write<'_>, record: &DecisionRecord) -> Result<
             ));
         }
     }
-    let medulla_types::decision::DecisionPolicyRef::Pinned { component } = &record.inputs.request.policy
+    let medulla_decision_types::decision::DecisionPolicyRef::Pinned { component } =
+        &record.inputs.request.policy
     else {
         return Ok(());
     };

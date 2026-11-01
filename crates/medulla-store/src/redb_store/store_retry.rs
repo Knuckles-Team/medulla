@@ -57,7 +57,7 @@ pub(crate) fn native_retry_method(method: &Method) -> Option<Method> {
 /// carry a fresh request/trace/expiry window. Keep the security-bearing scope
 /// and subject fields in the idempotency comparison while normalizing only the
 /// authority-issued temporal/correlation fields.
-pub(crate) fn normalize_submit_context(context: &mut medulla_types::epistemic_operations::RequestContext) {
+pub(crate) fn normalize_submit_context(context: &mut medulla_result_types::epistemic_operations::RequestContext) {
     context.request_id.clear();
     context.trace_id.clear();
     context.issued_at_ms = 0;
@@ -239,12 +239,13 @@ pub fn fixture_operation_envelope(
     actor: &str,
     request_id: u64,
     idempotency_key: &str,
-) -> medulla_types::mutation_batch::MutationEnvelope {
-    let method =
-        medulla_types::contract::MethodId::new(medulla_types::mutation_batch::BATCH_COMPILED_METHODS)
-            .expect("the reserved batch method id is canonical");
-    medulla_types::mutation_batch::MutationEnvelope::for_scope(
-        medulla_types::mutation_batch::CompiledScope {
+) -> medulla_protocol_types::mutation_batch::MutationEnvelope {
+    let method = medulla_types::contract::MethodId::new(
+        medulla_protocol_types::mutation_batch::BATCH_COMPILED_METHODS,
+    )
+    .expect("the reserved batch method id is canonical");
+    medulla_protocol_types::mutation_batch::MutationEnvelope::for_scope(
+        medulla_protocol_types::mutation_batch::CompiledScope {
             identity,
             actor,
             serving_principal: actor,
@@ -253,8 +254,8 @@ pub fn fixture_operation_envelope(
             nonce: medulla_types::contract::Nonce::minted(),
             now_ms: 0,
         },
-        medulla_types::mutation_batch::CompiledOperation {
-            method_schema_id: medulla_types::mutation_batch::method_schema_id(&method)
+        medulla_protocol_types::mutation_batch::CompiledOperation {
+            method_schema_id: medulla_protocol_types::mutation_batch::method_schema_id(&method)
                 .expect("a reserved batch method has a derived schema id"),
             method,
             method_schema_digest: medulla_types::contract::Digest256::from_bytes([0_u8; 32]),

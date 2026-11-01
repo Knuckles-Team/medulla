@@ -12,8 +12,8 @@ use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
 use medulla_server_api::state::ServerState;
 use medulla_store::redb_layout::shard_filename;
 use medulla_store::redb_store::shard::Shard;
-use medulla_types::mutation_batch::*;
-use medulla_types::protocol::*;
+use medulla_protocol_types::mutation_batch::*;
+use medulla_protocol_types::protocol::*;
 
 const TEST_AGENT: &str = "unit-test-agent";
 
@@ -68,8 +68,8 @@ fn current_request(secret: &str, id: u64, graph: &str, method: Method) -> Reques
 
 use crate::server::handlers::txn::try_handle as txn_try_handle;
 use medulla_server_api::auth::VerifiedRequestContext;
-use medulla_types::protocol::Response;
-use medulla_types::protocol::ResultPayload;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 
 fn cm_dir(tag: &str) -> String {
     // The cross-modal handler-commit path seals its transaction recovery plan
@@ -338,7 +338,7 @@ impl PersistenceBackend for FailingBackend {
     async fn commit_mutation_batch_crossmodal(
         &self,
         _args: medulla_server_api::api::persistence::CrossModalCommitArgs<'_>,
-    ) -> Result<medulla_types::mutation_batch::MutationBatchCommit, String> {
+    ) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {
         // The seam the cross-modal Commit handler actually calls.
         Err("injected durable commit failure".to_string())
     }
@@ -759,7 +759,7 @@ async fn five_modality_rolls_back_all_on_failure() {
 #[tokio::test(flavor = "multi_thread")]
 async fn crossmodal_measurement_visible_via_public_tsrange_post_commit_and_restart() {
     use medulla_tsdb::store::SeriesStore;
-    use medulla_types::protocol::ResultPayload;
+    use medulla_protocol_types::protocol::ResultPayload;
 
     const SECRET: &str = "ts-unify-secret";
     // Held for the whole test — this one literally reopens the backend
@@ -957,7 +957,7 @@ async fn crossmodal_measurement_visible_via_public_tsrange_post_commit_and_resta
 #[tokio::test(flavor = "multi_thread")]
 async fn startup_reconciliation_closes_the_crash_window_gap() {
     use medulla_tsdb::store::SeriesStore;
-    use medulla_types::protocol::ResultPayload;
+    use medulla_protocol_types::protocol::ResultPayload;
 
     const SECRET: &str = "ts-reconcile-secret";
     // See `crossmodal_txn_commits_all_modalities_atomically` above: held for the

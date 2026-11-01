@@ -97,7 +97,9 @@ pub(super) async fn handle_run_rules(request: RunRulesRequest<'_>) -> Response {
     {
         Ok(Ok(response)) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::reasoning::RunRules>(&response),
+            ResultPayload::of_ref::<medulla_protocol_types::result_contract::reasoning::RunRules>(
+                &response,
+            ),
         ),
         Ok(Err(msg)) => Response::err(req_id, format!("RunRules error: {msg}")),
         Err(resp) => resp,
@@ -191,7 +193,9 @@ pub(super) async fn handle_owl_reason(
     {
         Ok(Ok(result)) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::reasoning::OwlReason>(&result),
+            ResultPayload::of_ref::<medulla_protocol_types::result_contract::reasoning::OwlReason>(
+                &result,
+            ),
         ),
         Ok(Err(msg)) => Response::err(req_id, format!("OwlReason error: {msg}")),
         Err(resp) => resp,
@@ -270,9 +274,9 @@ pub(super) async fn handle_owl_reason_distributed(
     {
         Ok(Ok(result)) => Response::ok(
             req_id,
-            ResultPayload::of_ref::<medulla_types::result_contract::reasoning::OwlReasonDistributed>(
-                &result,
-            ),
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::reasoning::OwlReasonDistributed,
+            >(&result),
         ),
         Ok(Err(msg)) => Response::err(req_id, format!("OwlReasonDistributed error: {msg}")),
         Err(resp) => resp,
@@ -434,7 +438,9 @@ pub(super) async fn handle_owl_explain(
         match compute_off_lock(req_id, move || owl_explain(&snap, &ontology, &sub, &sup)).await {
             Ok(Ok(result)) => Response::ok(
                 req_id,
-                ResultPayload::of_ref::<medulla_types::result_contract::reasoning::OwlExplain>(&result),
+                ResultPayload::of_ref::<
+                    medulla_protocol_types::result_contract::reasoning::OwlExplain,
+                >(&result),
             ),
             Ok(Err(msg)) => Response::err(req_id, format!("OwlExplain error: {msg}")),
             Err(resp) => resp,

@@ -6,7 +6,7 @@
 use super::consumer_tests::declared_abstention;
 use super::retrieval_tests::{clone_record, executed_template, grant, principal_of, sql};
 use super::*;
-use medulla_types::decision::statistical::log::NamedEvaluator;
+use medulla_decision_types::decision::statistical::log::NamedEvaluator;
 use serde_json::json;
 
 const ROLE: &str = "decide-evaluator";

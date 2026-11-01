@@ -16,18 +16,24 @@ use medulla_query::{Column, ColumnType, TableSchema, TableStore, TableTxn, TxnOp
 // `TxnOp::Update`'s selector is an `medulla_types::RowPredicate`, so this is the
 // one that belongs here; importing medulla_query's next to it is the mistake that
 // kept this module's tests from compiling.
+use medulla_index_types::{
+    semantic_index::SemanticAnnIndexMethod, semantic_index::SemanticAnnIndexSpec,
+    semantic_index::SemanticBindingDraft, semantic_index::SemanticDeadLetter,
+    semantic_index::SemanticDeadLetterDraft, semantic_index::SemanticLexicalIndexSpec,
+    semantic_index::SemanticModelIdentity, semantic_index::SemanticPolicyComponents,
+    semantic_index::SemanticSourceSelector, semantic_index::SemanticStage,
+    semantic_index::SemanticStageArtifact, semantic_index::SemanticStageOutcome,
+    semantic_index::SemanticStagePredecessor, semantic_index::SemanticStageReceipt,
+    semantic_index::SemanticVectorMetric, semantic_index::SqlColumnRef,
+    semantic_index::SEMANTIC_SOURCE_DIRTY_TOPIC, semantic_index::SEMANTIC_SQL_CATALOG_ID,
+    semantic_index::SEMANTIC_SQL_SCHEMA_ID,
+};
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
+use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_result_types::row_predicate::CmpOp;
+use medulla_result_types::row_predicate::RowPredicate;
 use medulla_storage::{OwnerLayout, PhysicalStoreIdentity, ScopeGrantVerifier};
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_batch::{DurabilityDomain, MutationSurface};
-use medulla_types::semantic_index::{
-    SemanticAnnIndexMethod, SemanticAnnIndexSpec, SemanticBindingDraft, SemanticDeadLetter,
-    SemanticDeadLetterDraft, SemanticLexicalIndexSpec, SemanticModelIdentity,
-    SemanticPolicyComponents, SemanticSourceSelector, SemanticStage, SemanticStageArtifact,
-    SemanticStageOutcome, SemanticStagePredecessor, SemanticStageReceipt, SemanticVectorMetric,
-    SqlColumnRef, SEMANTIC_SOURCE_DIRTY_TOPIC, SEMANTIC_SQL_CATALOG_ID, SEMANTIC_SQL_SCHEMA_ID,
-};
-use medulla_types::CmpOp;
-use medulla_types::RowPredicate;
 use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 
@@ -43,7 +49,7 @@ impl ScopeGrantVerifier for ExactSemanticScopeVerifier {
         &self,
         _physical: &PhysicalStoreIdentity,
         layout: OwnerLayout,
-        identity: &medulla_types::MutationScopeIdentity,
+        identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
         _principal: &str,
         proof: &[u8],
     ) -> Result<(), String> {
@@ -471,7 +477,7 @@ async fn leased_sql_source_completion_replays_after_reopen_and_acl_change() {
     service
         .transition_binding_operation(
             binding.generation,
-            medulla_types::semantic_index::SemanticBindingState::Building,
+            medulla_index_types::semantic_index::SemanticBindingState::Building,
             3,
             worker.agent_id(),
             "semantic-stage-build",

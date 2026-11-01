@@ -8,9 +8,9 @@ use super::{
 };
 use medulla_core::graph::GraphCore;
 use medulla_core::isolation::AccessLevel;
-use medulla_types::protocol::Method;
-use medulla_types::protocol::Response;
-use medulla_types::protocol::ResultPayload;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use crate::access::check_graph_access;
 
 /// Pre-apply state carried from [`commit_prepare`] to [`commit_finalize`], so the
@@ -191,7 +191,7 @@ pub(super) async fn commit_finalize_durable(
     if let Err(e) = persistence.record_durable(&fname, method).await {
         return Some(Response::err(
             ctx.req_id,
-            medulla_types::contract::classify_refusal(
+            medulla_protocol_types::error_registry::classify_refusal(
                 "INTERNAL",
                 "durable commit failed (write not acknowledged): ",
                 &e,

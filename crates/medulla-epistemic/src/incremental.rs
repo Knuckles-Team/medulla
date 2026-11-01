@@ -160,7 +160,7 @@ pub(crate) fn remove_value(index: &mut BTreeMap<String, BTreeSet<String>>, key: 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_types::protocol::Method;
+    use medulla_protocol_types::protocol::Method;
 
     fn edge(source: &str, target: &str, relationship: &str) -> Method {
         Method::AddEdge {

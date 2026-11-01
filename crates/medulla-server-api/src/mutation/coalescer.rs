@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use medulla_core::graph::GraphCore;
 use medulla_core::isolation::IsolationLayer;
-use medulla_types::protocol::Method;
-use medulla_types::protocol::Response;
-use medulla_types::protocol::ResultPayload;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 
 use super::{
     advance_authoritative_manifest, commit_mutation, commit_mutation_body, MutationCtx,
@@ -207,7 +207,7 @@ fn apply_coalescable_add_node(
     txn.record_replaced_image(change, node_id);
     txn.add_node(node_id.to_string(), properties_msgpack.to_vec());
     Ok(ResultPayload::scalar::<
-        medulla_types::result_contract::graph::AddNode,
+        medulla_protocol_types::result_contract::graph::AddNode,
     >("ok".to_string()))
 }
 
@@ -228,7 +228,7 @@ fn apply_coalescable_remove_node(
     txn.remove_node(node_id.to_string());
     core.semantic_store.write().remove_embedding(node_id);
     Ok(ResultPayload::scalar::<
-        medulla_types::result_contract::graph::RemoveNode,
+        medulla_protocol_types::result_contract::graph::RemoveNode,
     >("ok".to_string()))
 }
 
@@ -265,7 +265,7 @@ fn apply_coalescable_remove_edge(
     );
     txn.remove_edge(source_id.to_string(), target_id.to_string());
     Ok(ResultPayload::scalar::<
-        medulla_types::result_contract::graph::RemoveEdge,
+        medulla_protocol_types::result_contract::graph::RemoveEdge,
     >("ok".to_string()))
 }
 
@@ -394,7 +394,7 @@ struct OwnedMutationCtx {
     idempotency_key: String,
     tenant_scope: String,
     graph_name: String,
-    graph_type: medulla_types::protocol::GraphType,
+    graph_type: medulla_protocol_types::protocol::GraphType,
     owner: Option<String>,
     isolation: IsolationLayer,
     core: Arc<GraphCore>,

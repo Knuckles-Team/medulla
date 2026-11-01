@@ -9,14 +9,14 @@ use super::{
     MAX_DISK_BYTES, MAX_FINGERPRINT, MAX_TEXT, MAX_TTL_MS, REPOSITORY_WORK_ITEM_EXTENSION_KEY,
     WORK_ITEM_METADATA_KEY,
 };
-use medulla_types::epistemic_operations::DevelopmentLaneCleanupIntent;
-use medulla_types::epistemic_operations::DevelopmentLaneCleanupIntentSchemaVersion;
-use medulla_types::epistemic_operations::DevelopmentLaneHold;
-use medulla_types::epistemic_operations::DevelopmentLaneHoldHostTargetKind;
-use medulla_types::epistemic_operations::DevelopmentLaneHoldState;
-use medulla_types::epistemic_operations::DevelopmentLaneIntent;
-use medulla_types::epistemic_operations::DevelopmentLaneIntentHostTargetKind;
-use medulla_types::protocol::DevelopmentLaneWorkItemKind;
+use medulla_result_types::epistemic_operations::DevelopmentLaneCleanupIntent;
+use medulla_result_types::epistemic_operations::DevelopmentLaneCleanupIntentSchemaVersion;
+use medulla_result_types::epistemic_operations::DevelopmentLaneHold;
+use medulla_result_types::epistemic_operations::DevelopmentLaneHoldHostTargetKind;
+use medulla_result_types::epistemic_operations::DevelopmentLaneHoldState;
+use medulla_result_types::epistemic_operations::DevelopmentLaneIntent;
+use medulla_result_types::epistemic_operations::DevelopmentLaneIntentHostTargetKind;
+use medulla_protocol_types::protocol::DevelopmentLaneWorkItemKind;
 use crate::redb_store::shard::ShardWrite;
 use std::collections::BTreeMap;
 

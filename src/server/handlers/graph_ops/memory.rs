@@ -8,8 +8,9 @@ fn handle_to_msgpack(req_id: u64, core: &Arc<GraphCore>) -> Response {
     let g = &**core;
     Response::ok(
         req_id,
-        g.to_msgpack()
-            .and_then(ResultPayload::of::<medulla_types::result_contract::storage::ToMsgpack>),
+        g.to_msgpack().and_then(
+            ResultPayload::of::<medulla_protocol_types::result_contract::storage::ToMsgpack>,
+        ),
     )
 }
 
@@ -98,7 +99,9 @@ pub(super) async fn try_handle_scene_graph(
                 .map(medulla_types::types::ScenePose::from);
             Response::ok(
                 req_id,
-                ResultPayload::of::<medulla_types::result_contract::graph::WorldTransform>(pose),
+                ResultPayload::of::<medulla_protocol_types::result_contract::graph::WorldTransform>(
+                    pose,
+                ),
             )
         }
         Method::SceneChildren { node_id } => {
@@ -131,7 +134,7 @@ pub(super) async fn try_handle_trajectory_memory(
         ),
         Method::BestTrajectory { traj_ids, gamma } => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::graph::BestTrajectory>(
+            ResultPayload::of::<medulla_protocol_types::result_contract::graph::BestTrajectory>(
                 core.best_trajectory(&traj_ids, gamma),
             ),
         ),
@@ -215,7 +218,9 @@ pub(super) async fn try_handle_lifecycle_context(
             let view = crate::algorithms::get_context_view(&g, &agent_id, max_tokens);
             Response::ok(
                 req_id,
-                ResultPayload::of::<medulla_types::result_contract::query::GetContextView>(view),
+                ResultPayload::of::<medulla_protocol_types::result_contract::query::GetContextView>(
+                    view,
+                ),
             )
         }
         // BatchUpdate (CONCEPT:MEDULLA-P0-2 bypass guard, L11):
@@ -297,7 +302,7 @@ pub(super) async fn try_handle_ledger(
     ControlFlow::Break(match method {
         Method::GetLedger => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::security::GetLedger>(
+            ResultPayload::of::<medulla_protocol_types::result_contract::security::GetLedger>(
                 LedgerReadResult::populated(raw_core.get_ledger(), raw_core.ledger_watermark()),
             ),
         ),

@@ -10,15 +10,19 @@
 
 use std::collections::BTreeMap;
 
-use medulla_types::epistemic_operations::{
-    RequestContext, RequestContextAuthenticationMethod, RequestContextSchemaVersion,
+use medulla_agent_types::work_market::gap::GapMerge;
+use medulla_agent_types::{
+    native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemRequest,
 };
-use medulla_types::native_control::{NativeControlSchemaVersion, SubmitWorkItemRequest};
-use medulla_types::result_contract::coordination::GapUpsert;
-use medulla_types::work_market::gap::GapMerge;
-use medulla_types::work_market::{
-    gap_row_key, gap_work_item_id, scoped_digest, GapUpsertOutcome, GapUpsertRequest, GapUpserted,
-    GapView,
+use medulla_agent_types::{
+    work_market::gap_row_key, work_market::gap_work_item_id, work_market::scoped_digest,
+    work_market::GapUpsertOutcome, work_market::GapUpsertRequest, work_market::GapUpserted,
+    work_market::GapView,
+};
+use medulla_protocol_types::result_contract::coordination::GapUpsert;
+use medulla_result_types::{
+    epistemic_operations::RequestContext, epistemic_operations::RequestContextAuthenticationMethod,
+    epistemic_operations::RequestContextSchemaVersion,
 };
 
 use super::*;
@@ -46,7 +50,7 @@ pub(super) fn apply_gap_upsert_rows(
     request: &GapUpsertRequest,
     tables: GapUpsertTables<'_, '_>,
     scope: WorkItemCommitScope<'_, '_>,
-) -> Result<medulla_types::protocol::ResultPayload, String> {
+) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
     request.validate()?;
     let GapUpsertTables {
         graph,
@@ -106,12 +110,12 @@ fn encode(
     outcome: GapUpsertOutcome,
     gap: GapView,
     changed_work_item_ids: Vec<String>,
-) -> Result<medulla_types::protocol::ResultPayload, String> {
+) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
     let work_item_created = matches!(
         outcome,
         GapUpsertOutcome::Created | GapUpsertOutcome::Reopened
     );
-    medulla_types::protocol::ResultPayload::of::<GapUpsert>(GapUpserted {
+    medulla_protocol_types::protocol::ResultPayload::of::<GapUpsert>(GapUpserted {
         outcome,
         gap,
         work_item_created,

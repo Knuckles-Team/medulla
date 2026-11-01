@@ -13,13 +13,17 @@ pub(super) fn commit_outcome(
         return Err("transaction commit answered a non-boolean outcome".to_string());
     };
     let outcome = match keyed_replay {
-        Some(replayed) => medulla_types::result_contract::transactions::CommitOutcome::Keyed {
-            committed,
-            replayed,
-        },
-        None => medulla_types::result_contract::transactions::CommitOutcome::Unkeyed(committed),
+        Some(replayed) => {
+            medulla_protocol_types::result_contract::transactions::CommitOutcome::Keyed {
+                committed,
+                replayed,
+            }
+        }
+        None => {
+            medulla_protocol_types::result_contract::transactions::CommitOutcome::Unkeyed(committed)
+        }
     };
-    ResultPayload::of::<medulla_types::result_contract::transactions::Commit>(outcome)
+    ResultPayload::of::<medulla_protocol_types::result_contract::transactions::Commit>(outcome)
 }
 
 pub(super) async fn commit(

@@ -138,7 +138,7 @@ macro_rules! persistence_graph {
         fn audit_verify_blocking(
             &self,
             graph_fname: &str,
-        ) -> Result<medulla_types::protocol::AuditReport, String> {
+        ) -> Result<medulla_protocol_types::protocol::AuditReport, String> {
             RedbBackend::audit_verify_blocking(self, graph_fname)
         }
 

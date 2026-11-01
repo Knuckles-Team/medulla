@@ -53,7 +53,7 @@ use std::path::{Path, PathBuf};
 
 use sha2::{Digest, Sha256};
 
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 use crate::access::CarrierAuthority;
 
 const TXN_INTENT_DIR: &str = "txn-intent";

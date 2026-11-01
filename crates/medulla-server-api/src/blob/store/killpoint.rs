@@ -8,8 +8,8 @@
 //! commit it loses the acknowledgement, so a crash test can reopen the store and
 //! prove each boundary leaves all or nothing and replays exactly once.
 
-use medulla_types::mutation_batch::MutationBatch;
-use medulla_types::mutation_batch::MutationCommitPhase;
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::mutation_batch::MutationCommitPhase;
 
 #[cfg(test)]
 thread_local! {
@@ -30,5 +30,5 @@ pub(super) fn reach(batch: &MutationBatch, phase: MutationCommitPhase) -> Result
         ARMED.with(|armed| armed.set(None));
         return Err(format!("injected blob crash at {phase:?}"));
     }
-    medulla_types::mutation_batch::apply_certification_fault(batch, phase)
+    medulla_protocol_types::mutation_batch::apply_certification_fault(batch, phase)
 }

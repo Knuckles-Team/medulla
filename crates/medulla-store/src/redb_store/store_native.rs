@@ -68,7 +68,7 @@ fn validate_terminal_provenance_shape(batch: &MutationBatch) -> Result<(), Strin
 
 fn validate_terminal_outcome_extension(
     batch: &MutationBatch,
-    extension: &medulla_types::outcome_bundle::TerminalOutcomeExtension,
+    extension: &medulla_result_types::outcome_bundle::TerminalOutcomeExtension,
 ) -> Result<(), String> {
     if batch.operations.len() != 1 {
         return Err(
@@ -77,8 +77,9 @@ fn validate_terminal_outcome_extension(
         );
     }
     let event_intent = terminal_run_event_intent(batch)?;
-    let event: medulla_types::outcome_bundle::RunEvent = rmp_serde::from_slice(&event_intent.payload)
-        .map_err(|_| "terminal run-event outbox payload is not a valid RunEvent".to_string())?;
+    let event: medulla_result_types::outcome_bundle::RunEvent =
+        rmp_serde::from_slice(&event_intent.payload)
+            .map_err(|_| "terminal run-event outbox payload is not a valid RunEvent".to_string())?;
     event.validate_for_bundle(&extension.outcome_bundle)?;
     validate_terminal_event_headers(batch, extension, event_intent)
 }
@@ -87,7 +88,9 @@ fn terminal_run_event_intent(batch: &MutationBatch) -> Result<&MutationOutboxInt
     let event_intents: Vec<_> = batch
         .outbox
         .iter()
-        .filter(|intent| intent.topic == medulla_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC)
+        .filter(|intent| {
+            intent.topic == medulla_result_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC
+        })
         .collect();
     if event_intents.len() != 1 {
         return Err(
@@ -104,7 +107,7 @@ fn terminal_run_event_intent(batch: &MutationBatch) -> Result<&MutationOutboxInt
 
 fn validate_terminal_event_headers(
     batch: &MutationBatch,
-    extension: &medulla_types::outcome_bundle::TerminalOutcomeExtension,
+    extension: &medulla_result_types::outcome_bundle::TerminalOutcomeExtension,
     event_intent: &MutationOutboxIntent,
 ) -> Result<(), String> {
     let fence_token = extension.outcome_bundle.fence_token.to_string();
@@ -347,7 +350,7 @@ fn apply_native_submit_operation<'batch, 'crypto, M, ApplyRows>(
     apply_rows: ApplyRows,
 ) -> Result<(), String>
 where
-    M: medulla_types::result_contract::MethodResult,
+    M: medulla_protocol_types::result_contract::MethodResult,
     ApplyRows: FnOnce(WorkItemCommitScope<'crypto, 'batch>) -> Result<M::Body, String>,
 {
     let NativeSubmitScope {
@@ -370,7 +373,7 @@ where
             M::METHOD
         ));
     }
-    let payload = medulla_types::protocol::ResultPayload::of::<M>(result)?;
+    let payload = medulla_protocol_types::protocol::ResultPayload::of::<M>(result)?;
     *generated_result = Some(rmp_serde::to_vec_named(&payload).map_err(|e| e.to_string())?);
     Ok(())
 }
@@ -401,8 +404,8 @@ fn apply_native_publication(
             crypto,
             committed_at_ms,
         )?;
-        let payload = medulla_types::protocol::ResultPayload::of::<
-            medulla_types::result_contract::coordination::IssueHostStartGrant,
+        let payload = medulla_protocol_types::protocol::ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::IssueHostStartGrant,
         >(result)?;
         *generated_result = Some(rmp_serde::to_vec_named(&payload).map_err(|e| e.to_string())?);
         return Ok(true);
@@ -423,8 +426,8 @@ fn apply_native_publication(
         if generated_result.is_some() || batch.operations.len() != 1 {
             return Err("checkpoint publication requires one operation".into());
         }
-        let payload = medulla_types::protocol::ResultPayload::of::<
-            medulla_types::result_contract::coordination::PublishRunCheckpoint,
+        let payload = medulla_protocol_types::protocol::ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::PublishRunCheckpoint,
         >(result)?;
         *generated_result = Some(rmp_serde::to_vec_named(&payload).map_err(|e| e.to_string())?);
         return Ok(true);
@@ -445,8 +448,8 @@ fn apply_native_publication(
         if generated_result.is_some() || batch.operations.len() != 1 {
             return Err("current-plan publication requires one operation".into());
         }
-        let payload = medulla_types::protocol::ResultPayload::of::<
-            medulla_types::result_contract::coordination::PublishCurrentPlan,
+        let payload = medulla_protocol_types::protocol::ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::PublishCurrentPlan,
         >(result)?;
         *generated_result = Some(rmp_serde::to_vec_named(&payload).map_err(|e| e.to_string())?);
         return Ok(true);
@@ -584,7 +587,7 @@ fn apply_one_native_operation_row(
         }
         Method::ClearLedger => clear_ledger_rows(graph_fname, &mut tables.graph.ledger),
         Method::SubmitWorkItem { request } => apply_native_submit_operation::<
-            medulla_types::result_contract::coordination::SubmitWorkItem,
+            medulla_protocol_types::result_contract::coordination::SubmitWorkItem,
             _,
         >(
             NativeSubmitScope {
@@ -605,7 +608,7 @@ fn apply_one_native_operation_row(
             },
         ),
         Method::SubmitWorkItems { request } => apply_native_submit_operation::<
-            medulla_types::result_contract::coordination::SubmitWorkItems,
+            medulla_protocol_types::result_contract::coordination::SubmitWorkItems,
             _,
         >(
             NativeSubmitScope {
@@ -759,13 +762,13 @@ fn validate_ordinary_completion_shape(batch: &MutationBatch) -> Result<(), Strin
         .operations
         .iter()
         .map(|op| {
-            medulla_types::run_completion::RunCompletionPayload::from_method(&op.method, &batch.batch_id)
+            medulla_protocol_types::protocol::run_completion_payload(&op.method, &batch.batch_id)
         })
         .collect::<Result<Vec<_>, _>>()?;
     let intents: Vec<_> = batch
         .outbox
         .iter()
-        .filter(|i| i.topic == medulla_types::run_completion::RUN_COMPLETION_TOPIC)
+        .filter(|i| i.topic == medulla_agent_types::run_completion::RUN_COMPLETION_TOPIC)
         .collect();
     if let Some(payload) = ordinary.into_iter().flatten().next() {
         if batch.operations.len() != 1
@@ -773,7 +776,7 @@ fn validate_ordinary_completion_shape(batch: &MutationBatch) -> Result<(), Strin
             || batch
                 .outbox
                 .iter()
-                .any(|i| i.topic == medulla_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC)
+                .any(|i| i.topic == medulla_result_types::outcome_bundle::RUN_EVENT_OUTBOX_TOPIC)
         {
             return Err(
                 "ordinary completion requires one operation and one exclusive receipt".into(),

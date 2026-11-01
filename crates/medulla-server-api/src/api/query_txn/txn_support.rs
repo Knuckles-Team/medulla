@@ -5,9 +5,9 @@ use crate::access::CarrierAuthority;
 #[cfg(feature = "graphql")]
 use crate::state::ServerState;
 #[cfg(feature = "sparql")]
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 #[cfg(feature = "graphql")]
-use medulla_types::protocol::ResultPayload;
+use medulla_protocol_types::protocol::ResultPayload;
 #[cfg(feature = "graphql")]
 use std::sync::Arc;
 #[cfg(feature = "graphql")]

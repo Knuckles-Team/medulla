@@ -12,18 +12,20 @@ use super::{
     SemanticCodeError, SemanticCodeStore, SemanticMutationReceipt, SEMANTIC_BINDING_CREATED_TOPIC,
     SEMANTIC_BINDING_DROPPED_TOPIC, SEMANTIC_BINDING_STATE_TOPIC,
 };
+use medulla_index_types::{
+    semantic_index::SemanticBinding, semantic_index::SemanticBindingState,
+    semantic_index::SemanticBindingStateTransition, semantic_index::SemanticDigest,
+    semantic_index::SemanticIndexMutation, semantic_index::SemanticTombstone,
+    semantic_index::SemanticTombstoneDraft,
+};
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_storage::{
     SemanticIndexOwner, SEMANTIC_BINDINGS, SEMANTIC_HEADS, SEMANTIC_POINTERS, SEMANTIC_STATES,
     SEMANTIC_TOMBSTONES,
 };
 use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite};
 use medulla_types::contract::Nonce;
-use medulla_types::mutation_batch::MutationOutboxIntent;
-use medulla_types::semantic_index::{
-    SemanticBinding, SemanticBindingState, SemanticBindingStateTransition, SemanticDigest,
-    SemanticIndexMutation, SemanticTombstone, SemanticTombstoneDraft,
-};
-use medulla_types::MutationBatch;
 use redb::ReadableTable;
 use std::collections::BTreeMap;
 
@@ -481,7 +483,7 @@ fn binding_created_event(
     let mut headers = BTreeMap::from([
         (
             "schema".to_string(),
-            medulla_types::semantic_index::SEMANTIC_BINDING_SCHEMA.to_string(),
+            medulla_index_types::semantic_index::SEMANTIC_BINDING_SCHEMA.to_string(),
         ),
         ("binding_id".to_string(), binding.binding_id.clone()),
         (
@@ -522,7 +524,8 @@ fn binding_state_event(
         headers: BTreeMap::from([
             (
                 "schema".to_string(),
-                medulla_types::semantic_index::SEMANTIC_BINDING_STATE_TRANSITION_SCHEMA.to_string(),
+                medulla_index_types::semantic_index::SEMANTIC_BINDING_STATE_TRANSITION_SCHEMA
+                    .to_string(),
             ),
             ("binding_id".to_string(), binding.binding_id.clone()),
             ("generation".to_string(), binding.generation.to_string()),
@@ -543,7 +546,7 @@ fn binding_dropped_event(
         headers: BTreeMap::from([
             (
                 "schema".to_string(),
-                medulla_types::semantic_index::SEMANTIC_TOMBSTONE_SCHEMA.to_string(),
+                medulla_index_types::semantic_index::SEMANTIC_TOMBSTONE_SCHEMA.to_string(),
             ),
             ("actor".to_string(), actor.to_string()),
         ]),

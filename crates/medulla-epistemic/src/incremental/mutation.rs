@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 
 use medulla_core::graph::GraphView;
-use medulla_types::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 
 use super::{
     opaque_identity, IncrementalDelta, IncrementalReasoningIndex, ProjectionInvalidationKind,

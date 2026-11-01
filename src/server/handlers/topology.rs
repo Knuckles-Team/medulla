@@ -49,8 +49,8 @@ fn sha256_ref(value: &str) -> String {
 
 fn context_binding(
     context: &VerifiedRequestContext,
-) -> medulla_types::result_contract::cluster::DiscoveryAuthBinding {
-    medulla_types::result_contract::cluster::DiscoveryAuthBinding {
+) -> medulla_protocol_types::result_contract::cluster::DiscoveryAuthBinding {
+    medulla_protocol_types::result_contract::cluster::DiscoveryAuthBinding {
         tenant_digest: sha256_ref(context.tenant()),
         principal_digest: sha256_ref(context.principal()),
         agent_digest: sha256_ref(context.agent_id()),
@@ -61,9 +61,9 @@ fn context_binding(
 /// the signing function keeps a readable arity (clippy::too_many_arguments) and
 /// so the three can never be passed in the wrong order.
 struct SnapshotProjections {
-    groups: Vec<medulla_types::result_contract::cluster::ClusterGroup>,
+    groups: Vec<medulla_protocol_types::result_contract::cluster::ClusterGroup>,
     canonical_groups: Vec<Value>,
-    leaders: Vec<medulla_types::result_contract::cluster::ClusterLeader>,
+    leaders: Vec<medulla_protocol_types::result_contract::cluster::ClusterLeader>,
 }
 
 fn signed_snapshot(
@@ -73,7 +73,7 @@ fn signed_snapshot(
     placement_epoch: u64,
     context: &VerifiedRequestContext,
     projections: SnapshotProjections,
-) -> Result<medulla_types::result_contract::cluster::ClusterDiscoverySnapshot, String> {
+) -> Result<medulla_protocol_types::result_contract::cluster::ClusterDiscoverySnapshot, String> {
     let SnapshotProjections {
         groups,
         canonical_groups,
@@ -107,7 +107,7 @@ fn signed_snapshot(
     mac.update(payload.as_bytes());
     let signature = format!("hmac-sha256:{}", hex::encode(mac.finalize().into_bytes()));
     Ok(
-        medulla_types::result_contract::cluster::ClusterDiscoverySnapshot {
+        medulla_protocol_types::result_contract::cluster::ClusterDiscoverySnapshot {
             schema_version: DISCOVERY_SCHEMA_VERSION,
             cluster_id: cluster_id.to_string(),
             membership_epoch,
@@ -139,8 +139,8 @@ fn member_role(
 #[cfg(feature = "raft")]
 fn certificate_value(
     info: &medulla_persistence::node_info_store::NodeInfo,
-) -> medulla_types::result_contract::cluster::ClusterMemberCertificate {
-    medulla_types::result_contract::cluster::ClusterMemberCertificate {
+) -> medulla_protocol_types::result_contract::cluster::ClusterMemberCertificate {
+    medulla_protocol_types::result_contract::cluster::ClusterMemberCertificate {
         id: info.certificate_id.clone(),
         rotation_epoch: info.certificate_rotation_epoch,
         not_before_ms: info.certificate_not_before_ms,
@@ -163,15 +163,15 @@ fn member_health(leader_id: Option<medulla_raft::raft::NodeId>) -> &'static str 
 
 #[cfg(feature = "raft")]
 struct GroupProjection {
-    group: medulla_types::result_contract::cluster::ClusterGroup,
+    group: medulla_protocol_types::result_contract::cluster::ClusterGroup,
     canonical: Value,
-    leader: Option<medulla_types::result_contract::cluster::ClusterLeader>,
+    leader: Option<medulla_protocol_types::result_contract::cluster::ClusterLeader>,
     member_count: usize,
 }
 
 #[cfg(feature = "raft")]
 struct MemberProjection {
-    members: Vec<medulla_types::result_contract::cluster::ClusterMember>,
+    members: Vec<medulla_protocol_types::result_contract::cluster::ClusterMember>,
     canonical_members: Vec<Value>,
 }
 
@@ -214,15 +214,17 @@ fn project_group_members(
             info.certificate_not_before_ms,
             info.certificate_not_after_ms,
         ]));
-        members.push(medulla_types::result_contract::cluster::ClusterMember {
-            node_id,
-            member_identity: info.member_identity.clone(),
-            role: role.to_string(),
-            client_endpoint: info.advertised_client_addr.clone(),
-            tls_name: info.tls_server_name.clone(),
-            health: health.to_string(),
-            certificate,
-        });
+        members.push(
+            medulla_protocol_types::result_contract::cluster::ClusterMember {
+                node_id,
+                member_identity: info.member_identity.clone(),
+                role: role.to_string(),
+                client_endpoint: info.advertised_client_addr.clone(),
+                tls_name: info.tls_server_name.clone(),
+                health: health.to_string(),
+                certificate,
+            },
+        );
     }
     Ok(MemberProjection {
         members,
@@ -281,15 +283,15 @@ async fn collect_group_projection(
     let projected_members =
         project_group_members(store, cluster_id, &ids, &voters, leader_id, health)?;
     Ok(GroupProjection {
-        group: medulla_types::result_contract::cluster::ClusterGroup {
+        group: medulla_protocol_types::result_contract::cluster::ClusterGroup {
             group_id,
             leader_id,
             members: projected_members.members,
         },
         canonical: serde_json::json!([group_id, leader_id, projected_members.canonical_members,]),
-        leader: leader_id.map(
-            |node_id| medulla_types::result_contract::cluster::ClusterLeader { group_id, node_id },
-        ),
+        leader: leader_id.map(|node_id| {
+            medulla_protocol_types::result_contract::cluster::ClusterLeader { group_id, node_id }
+        }),
         member_count: voters.len() + learners.len(),
     })
 }
@@ -339,7 +341,7 @@ async fn handle_cluster_members(
         ) {
             Ok(snapshot) => Response::ok(
                 req_id,
-                ResultPayload::of::<medulla_types::result_contract::cluster::ClusterMembers>(
+                ResultPayload::of::<medulla_protocol_types::result_contract::cluster::ClusterMembers>(
                     snapshot,
                 ),
             ),
@@ -387,7 +389,9 @@ async fn handle_cluster_members(
     ) {
         Ok(snapshot) => Response::ok(
             req_id,
-            ResultPayload::of::<medulla_types::result_contract::cluster::ClusterMembers>(snapshot),
+            ResultPayload::of::<medulla_protocol_types::result_contract::cluster::ClusterMembers>(
+                snapshot,
+            ),
         ),
         Err(error) => Response::err(req_id, error),
     }
@@ -431,9 +435,9 @@ pub(crate) async fn try_handle(
             Ok(match snapshot {
                 Ok(snapshot) => Response::ok(
                     req_id,
-                    ResultPayload::of::<medulla_types::result_contract::cluster::ClusterMembers>(
-                        snapshot,
-                    ),
+                    ResultPayload::of::<
+                        medulla_protocol_types::result_contract::cluster::ClusterMembers,
+                    >(snapshot),
                 ),
                 Err(error) => Response::err(req_id, error),
             })

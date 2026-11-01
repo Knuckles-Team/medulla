@@ -12,7 +12,7 @@ use crate::rbac::RbacPolicy;
 use crate::rbac_persist::{
     IdentityBootstrapState, RbacAuthoritySnapshot, RbacPersistError, RbacPolicyStore,
 };
-use medulla_types::identity::*;
+use medulla_identity_types::identity::*;
 
 pub(super) const NOW: u64 = 1_800_000_000_000;
 const GRAPH: &str = "g-reports";

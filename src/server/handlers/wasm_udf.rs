@@ -34,13 +34,20 @@ async fn register_udf(call: OwnerScopedCall<'_>, id: String, wasm: Vec<u8>) -> R
     // Compile off-reactor (cranelift codegen is CPU-bound).
     let id_for_task = id.clone();
     let res = tokio::task::spawn_blocking(move || {
-        registry.register(&owner, &id_for_task, &wasm, medulla_wasm::UdfLimits::default())
+        registry.register(
+            &owner,
+            &id_for_task,
+            &wasm,
+            medulla_wasm::UdfLimits::default(),
+        )
     })
     .await;
     match res {
         Ok(Ok(())) => Response::ok(
             req_id,
-            ResultPayload::scalar::<medulla_types::result_contract::cluster::RegisterUdf>(id),
+            ResultPayload::scalar::<medulla_protocol_types::result_contract::cluster::RegisterUdf>(
+                id,
+            ),
         ),
         Ok(Err(e)) => Response::err(req_id, format!("INVALID_ARGUMENT: {e}")),
         Err(join) => Response::err(req_id, format!("INTERNAL: RegisterUdf task error: {join}")),
@@ -61,7 +68,9 @@ async fn run_udf(call: OwnerScopedCall<'_>, id: String, input: Vec<u8>) -> Respo
     match res {
         Ok(Ok(out)) => Response::ok(
             req_id,
-            ResultPayload::of_encoded::<medulla_types::result_contract::compute::RunUdf>(out),
+            ResultPayload::of_encoded::<medulla_protocol_types::result_contract::compute::RunUdf>(
+                out,
+            ),
         ),
         Ok(Err(e)) => Response::err(req_id, format!("INVALID_ARGUMENT: {e}")),
         Err(join) => Response::err(req_id, format!("INTERNAL: RunUdf task error: {join}")),

@@ -31,7 +31,7 @@ mod common;
 mod test_support;
 
 use medulla::acl::RequestContextClaims;
-use medulla_types::mutation_batch::MutationBatchStatus;
+use medulla_protocol_types::mutation_batch::MutationBatchStatus;
 use medulla::protocol::{GraphType, Method, Request, Response, ResultPayload};
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;

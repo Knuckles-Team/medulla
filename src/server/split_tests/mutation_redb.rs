@@ -11,7 +11,7 @@ use medulla_core::graph::GraphCore;
 use medulla_core::isolation::IsolationLayer;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::mutation::*;
-use medulla_types::protocol::{GraphType, Method, ResultPayload};
+use medulla_protocol_types::protocol::{GraphType, Method, ResultPayload};
 
 /// W1c: `check_graph_access_with_policy` (`src/server/access.rs`, the L-RLS-1
 /// hardening) now mandates a provisioned identity for EVERY graph-scoped
@@ -878,7 +878,7 @@ async fn mining_family_writeback_gates_durability_and_authz() {
         source: None,
         min_support: 0.5,
         min_confidence: 0.5,
-        algorithm: medulla_types::protocol::MineAlgorithm::default(),
+        algorithm: medulla_protocol_types::protocol::MineAlgorithm::default(),
         writeback: false,
         #[cfg(feature = "epistemic")]
         as_claim: false,
@@ -911,7 +911,7 @@ async fn mining_family_writeback_gates_durability_and_authz() {
                 source: None,
                 min_support: 0.5,
                 min_confidence: 0.5,
-                algorithm: medulla_types::protocol::MineAlgorithm::default(),
+                algorithm: medulla_protocol_types::protocol::MineAlgorithm::default(),
                 writeback: crate::server::handlers::mining::WritebackOptions {
                     enabled: false,
                     #[cfg(feature = "epistemic")]
@@ -947,7 +947,7 @@ async fn mining_family_writeback_gates_durability_and_authz() {
         source: None,
         min_support: 0.5,
         min_confidence: 0.5,
-        algorithm: medulla_types::protocol::MineAlgorithm::default(),
+        algorithm: medulla_protocol_types::protocol::MineAlgorithm::default(),
         writeback: true,
         #[cfg(feature = "epistemic")]
         as_claim: false,
@@ -982,7 +982,7 @@ async fn mining_family_writeback_gates_durability_and_authz() {
                 source: None,
                 min_support: 0.5,
                 min_confidence: 0.5,
-                algorithm: medulla_types::protocol::MineAlgorithm::default(),
+                algorithm: medulla_protocol_types::protocol::MineAlgorithm::default(),
                 writeback: crate::server::handlers::mining::WritebackOptions {
                     enabled: true,
                     #[cfg(feature = "epistemic")]
@@ -1126,7 +1126,7 @@ async fn staged_query_replay_probes_kernel_before_running_the_handler() {
     let graph_name = "g-medulla-staged-query-replay";
     let method = Method::CypherQuery {
         query: "CREATE (n:ReplayProbe {id: 'n1'})".to_string(),
-        mode: medulla_types::protocol::CypherMode::Write,
+        mode: medulla_protocol_types::protocol::CypherMode::Write,
     };
     let plan = MutationPlan::for_method(&method);
     let apply_count = Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -1187,7 +1187,7 @@ async fn staged_query_replay_probes_kernel_before_running_the_handler() {
 
     let changed = Method::CypherQuery {
         query: "CREATE (n:ReplayProbe {id: 'n2'})".to_string(),
-        mode: medulla_types::protocol::CypherMode::Write,
+        mode: medulla_protocol_types::protocol::CypherMode::Write,
     };
     let changed_plan = MutationPlan::for_method(&changed);
     let conflict = MutationCtx {

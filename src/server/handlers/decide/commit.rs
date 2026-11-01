@@ -14,7 +14,7 @@ use crate::protocol::Response;
 use medulla_server_api::auth::VerifiedRequestContext;
 #[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
-use medulla_types::decision::DecisionCommitRequest;
+use medulla_decision_types::decision::DecisionCommitRequest;
 
 /// Commit one `DecisionRecord` as a component revision, idempotently.
 #[cfg(feature = "decide")]
@@ -28,7 +28,7 @@ pub(crate) async fn handle_decision_commit(
         Ok(result) => Response::ok(
             req_id,
             crate::protocol::ResultPayload::of_ref::<
-                medulla_types::result_contract::storage::DecisionCommit,
+                medulla_protocol_types::result_contract::storage::DecisionCommit,
             >(&result),
         ),
         Err(error) => Response::err(req_id, error),
@@ -41,8 +41,10 @@ async fn commit(
     req_id: u64,
     verified: &VerifiedRequestContext,
     request: DecisionCommitRequest,
-) -> Result<medulla_types::decision::DecisionCommitResult, String> {
-    use medulla_types::decision::{DecisionErrorCode, MAX_DECISION_RECORD_BYTES};
+) -> Result<medulla_decision_types::decision::DecisionCommitResult, String> {
+    use medulla_decision_types::{
+        decision::DecisionErrorCode, decision::MAX_DECISION_RECORD_BYTES,
+    };
 
     let DecisionCommitRequest {
         context,
@@ -92,8 +94,8 @@ async fn commit(
     )?;
     let written = store.commit_decision_record(context, &record, &expected_catalog_digest)?;
     super::assemble::audit_line("decision-commit", &record, verified);
-    Ok(medulla_types::decision::DecisionCommitResult {
-        schema_version: medulla_types::decision::DECISION_COMMIT_RESULT_SCHEMA_VERSION,
+    Ok(medulla_decision_types::decision::DecisionCommitResult {
+        schema_version: medulla_decision_types::decision::DECISION_COMMIT_RESULT_SCHEMA_VERSION,
         record_id: record.record_id,
         component: written.result,
         replayed: written.replayed,
