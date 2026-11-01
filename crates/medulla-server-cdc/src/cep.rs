@@ -74,7 +74,7 @@ use medulla_protocol_types::{
 use medulla_stream::live::{CepEngine, CepSubscription, DEFAULT_MATCH_BUFFER};
 use medulla_stream::{AttrPredicate, CepPattern, Event, EventMatcher, Match, Window};
 
-use super::state::ServerState;
+use medulla_server_api::state::ServerState;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
