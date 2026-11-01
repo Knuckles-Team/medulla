@@ -1,6 +1,6 @@
 //! Private graph-ref cache tests for the analytics job handler.
 
-use medulla_kernel::lock_recovery::{LockRecovery, WriteRecovery};
+use medulla_kernel::lock_recovery::WriteRecovery;
 use super::*;
 
 #[cfg(test)]
@@ -117,7 +117,7 @@ mod mine_associate_submission_tests {
 
     fn authority() -> CarrierAuthority {
         CarrierAuthority::from_verified(&VerifiedRequestContext::from_verified_claims(
-            crate::acl::RequestContextClaims {
+            medulla_types::acl::RequestContextClaims {
                 principal: "analytics-test".into(),
                 agent_id: "analytics-test".into(),
                 tenant: "analytics-test-tenant".into(),
