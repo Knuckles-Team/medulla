@@ -174,7 +174,7 @@ pub fn authority_rows_from_turtle(
     document: &str,
     origin: AuthorityOrigin,
 ) -> Result<Vec<AuthorityRow>, String> {
-    let triples = crate::mapping::parse_turtle(document)?;
+    let triples = medulla_rdf::mapping::parse_turtle(document)?;
     Ok(absorb(CoverageFixture::new(), &triples, origin, 0)
         .rows()
         .cloned()
@@ -202,7 +202,7 @@ pub fn fixture_from_schema_sources(
         let Some(document) = source.ontology_ttl.as_deref() else {
             continue;
         };
-        let triples = crate::mapping::parse_turtle(document)?;
+        let triples = medulla_rdf::mapping::parse_turtle(document)?;
         fixture = absorb(
             fixture,
             &triples,
@@ -220,7 +220,7 @@ pub fn connected_sources_from_turtle(documents: &[&str]) -> Result<BTreeSet<Stri
     const DC_IDENTIFIER: &str = "http://purl.org/dc/terms/identifier";
     let mut triples = Vec::new();
     for document in documents {
-        triples.extend(crate::mapping::parse_turtle(document)?);
+        triples.extend(medulla_rdf::mapping::parse_turtle(document)?);
     }
     let index = Index::from_triples(&triples);
     let mut connected = BTreeSet::new();

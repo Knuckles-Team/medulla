@@ -6,10 +6,7 @@
 use std::sync::Arc;
 
 use medulla_core::graph::{GraphSchemaSource, GraphSchemaSources, SchemaSourceOrigin};
-use medulla_rdf::source_selection::{
-    audit_from, authority_rows_from_turtle, fixture_from_schema_sources, select_sources,
-    AuthorityOrigin, AuthorityRow, CoverageFixture, CoverageResult, SelectionQuery,
-};
+use medulla_virtual_graph::{source_selection::audit_from, source_selection::authority_rows_from_turtle, source_selection::fixture_from_schema_sources, source_selection::select_sources, source_selection::AuthorityOrigin, source_selection::AuthorityRow, source_selection::CoverageFixture, source_selection::CoverageResult, source_selection::SelectionQuery};
 
 const TEMPLATE: &str = include_str!("fixtures/source_authority_incident.ttl");
 const SHAPES: &str = include_str!("../../medulla-core/ontology/virtual_graph-v1.shapes.ttl");
@@ -83,7 +80,7 @@ fn swapping_two_ranks_changes_sources_used_with_equal_query_text() {
     let after = fixture_from_schema_sources(&attached(&document(2, 1))).unwrap();
     let after_audit = audit_from(&[incident_verdict(&after)]);
     assert_eq!(before_question, after_question, "the query text is equal");
-    let used = |audit: &medulla_rdf::source_selection::AuthorityAudit| {
+    let used = |audit: &medulla_virtual_graph::source_selection::AuthorityAudit| {
         audit
             .used
             .iter()

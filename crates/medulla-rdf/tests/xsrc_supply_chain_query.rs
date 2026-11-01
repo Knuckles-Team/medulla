@@ -13,7 +13,7 @@ use std::collections::BTreeSet;
 use medulla_core::graph::GraphCore;
 use medulla_rdf::mapping::parse_turtle;
 use medulla_rdf::oxrdf::{NamedOrBlankNode, Term};
-use medulla_rdf::source_selection::{select_sources, CoverageFixture, CoverageResult, Premise};
+use medulla_virtual_graph::{source_selection::select_sources, source_selection::CoverageFixture, source_selection::CoverageResult, source_selection::Premise};
 use medulla_rdf::sparql::{execute, Dataset, Projection, QueryOutcome};
 
 const KG: &str = "http://knuckles.team/kg#";

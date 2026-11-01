@@ -18,8 +18,8 @@ pub(super) fn run_materialized_virtual(
 
     // (4) load into a TRANSIENT view and run the existing evaluator (joins/filters/…).
     let view = build_view(triples)?;
-    crate::sparql::execute(
-        &crate::sparql::Dataset::new(&view, Vec::new()),
+    medulla_rdf::sparql::execute(
+        &medulla_rdf::sparql::Dataset::new(&view, Vec::new()),
         query_str,
         proj,
         None,
@@ -29,7 +29,7 @@ pub(super) fn run_materialized_virtual(
 /// Build a transient [`GraphView`] from materialized triples (nothing persisted).
 fn build_view(triples: Vec<Triple>) -> Result<medulla_core::graph::GraphView, String> {
     let core = medulla_core::graph::GraphCore::new();
-    let mut iris = crate::mapping::IriStore::default();
+    let mut iris = medulla_rdf::mapping::IriStore::default();
     // RDF graphs are sets of triples. The LPG lowering layer retains repeated
     // literal property cells, so collapse identical foreign rows here before
     // constructing the transient view. Keep first-seen order for stable ties.
@@ -37,7 +37,7 @@ fn build_view(triples: Vec<Triple>) -> Result<medulla_core::graph::GraphView, St
     let unique = triples
         .into_iter()
         .filter(|triple| seen.insert(triple.clone()));
-    crate::mapping::load_triples(&core, &mut iris, "__obda_virtual__", unique)?;
+    medulla_rdf::mapping::load_triples(&core, &mut iris, "__obda_virtual__", unique)?;
     Ok(core.analysis_snapshot())
 }
 
@@ -46,7 +46,7 @@ pub(super) fn bool_result(b: bool) -> SparqlResult {
     let mut sol = HashMap::new();
     sol.insert(
         "_ask".to_string(),
-        crate::sparql::Binding::Literal(b.to_string()),
+        medulla_rdf::sparql::Binding::Literal(b.to_string()),
     );
     SparqlResult {
         vars: vec!["_ask".to_string()],

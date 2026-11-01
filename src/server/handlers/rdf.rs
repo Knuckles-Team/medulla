@@ -129,16 +129,16 @@ mod obda_pushdown_tests {
     /// returning a fixed "external table" — the acceptance-shaped mock (no live DB).
     struct MockSqlExecutor {
         seen: Mutex<Vec<String>>,
-        rows: Vec<medulla_rdf::obda::ForeignRow>,
+        rows: Vec<medulla_virtual_graph::obda::ForeignRow>,
     }
     impl ObdaSqlExecutor for MockSqlExecutor {
-        fn run_select(&self, sql: &str) -> Result<Vec<medulla_rdf::obda::ForeignRow>, String> {
+        fn run_select(&self, sql: &str) -> Result<Vec<medulla_virtual_graph::obda::ForeignRow>, String> {
             self.seen.lock().unwrap().push(sql.to_string());
             Ok(self.rows.clone())
         }
     }
 
-    fn row(id: &str, name: &str, age: &str) -> medulla_rdf::obda::ForeignRow {
+    fn row(id: &str, name: &str, age: &str) -> medulla_virtual_graph::obda::ForeignRow {
         [("id", id), ("name", name), ("age", age)]
             .into_iter()
             .map(|(k, v)| (k.to_string(), v.to_string()))
@@ -149,9 +149,9 @@ mod obda_pushdown_tests {
     /// pushed `WHERE`, with every projected column cast to text (Postgres).
     #[test]
     fn render_obda_select_pushes_numeric_where_postgres() {
-        let filters = vec![medulla_rdf::obda::ObdaFilter {
+        let filters = vec![medulla_virtual_graph::obda::ObdaFilter {
             column: "age".into(),
-            op: medulla_rdf::obda::ObdaCompare::Gt,
+            op: medulla_virtual_graph::obda::ObdaCompare::Gt,
             value: "28".into(),
             numeric: true,
             values: Vec::new(),
@@ -174,9 +174,9 @@ mod obda_pushdown_tests {
     /// A MySQL render uses backtick quoting + `CAST(... AS CHAR)`.
     #[test]
     fn render_obda_select_mysql_dialect() {
-        let filters = vec![medulla_rdf::obda::ObdaFilter {
+        let filters = vec![medulla_virtual_graph::obda::ObdaFilter {
             column: "age".into(),
-            op: medulla_rdf::obda::ObdaCompare::Ge,
+            op: medulla_virtual_graph::obda::ObdaCompare::Ge,
             value: "18".into(),
             numeric: true,
             values: Vec::new(),
@@ -191,9 +191,9 @@ mod obda_pushdown_tests {
     /// A string-equality filter is single-quoted and injection-escaped (doubled quote).
     #[test]
     fn render_obda_select_escapes_string_literal() {
-        let filters = vec![medulla_rdf::obda::ObdaFilter {
+        let filters = vec![medulla_virtual_graph::obda::ObdaFilter {
             column: "name".into(),
-            op: medulla_rdf::obda::ObdaCompare::Eq,
+            op: medulla_virtual_graph::obda::ObdaCompare::Eq,
             value: "O'Brien".into(),
             numeric: false,
             values: Vec::new(),
@@ -227,9 +227,9 @@ mod obda_pushdown_tests {
     /// EH-563 FO-04 — a semi-join key batch renders as an escaped `IN` list.
     #[test]
     fn render_obda_select_renders_semi_join_in_list() {
-        let filters = vec![medulla_rdf::obda::ObdaFilter {
+        let filters = vec![medulla_virtual_graph::obda::ObdaFilter {
             column: "id".into(),
-            op: medulla_rdf::obda::ObdaCompare::In,
+            op: medulla_virtual_graph::obda::ObdaCompare::In,
             value: String::new(),
             numeric: false,
             values: vec!["1".into(), "O'3".into()],
@@ -264,11 +264,11 @@ mod obda_pushdown_tests {
             dialect: ObdaSqlDialect::Postgres,
             executor: mock.clone(),
         };
-        let mut reg = medulla_rdf::obda::ObdaSourceRegistry::new();
+        let mut reg = medulla_virtual_graph::obda::ObdaSourceRegistry::new();
         reg.register("people", Arc::new(src));
 
-        let vg = medulla_rdf::obda::VirtualGraph::new().with_map(
-            medulla_rdf::obda::TriplesMap::new("people", "http://example.org/person/{id}")
+        let vg = medulla_virtual_graph::obda::VirtualGraph::new().with_map(
+            medulla_virtual_graph::obda::TriplesMap::new("people", "http://example.org/person/{id}")
                 .add_column("http://example.org/name", "name")
                 .add_typed_column(
                     "http://example.org/age",
@@ -277,7 +277,7 @@ mod obda_pushdown_tests {
                 ),
         );
         let proj = medulla_rdf::sparql::Projection::raw();
-        let outcome = medulla_rdf::obda::run_outcome_virtual(
+        let outcome = medulla_virtual_graph::obda::run_outcome_virtual(
             &vg,
             &reg,
             r#"PREFIX ex: <http://example.org/>

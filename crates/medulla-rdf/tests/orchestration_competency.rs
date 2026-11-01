@@ -14,7 +14,7 @@ use common::parse_all;
 use medulla_core::graph::{GraphCore, GraphView};
 use medulla_rdf::mapping::{load_triples, parse_turtle, IriStore};
 use medulla_reasoner::owl::Reasoner;
-use medulla_rdf::source_selection::{select_sources, CoverageFixture, CoverageResult, Premise};
+use medulla_virtual_graph::{source_selection::select_sources, source_selection::CoverageFixture, source_selection::CoverageResult, source_selection::Premise};
 use medulla_rdf::sparql::{execute, Dataset, Projection, QueryOutcome};
 use medulla_shacl::validate_turtle;
 

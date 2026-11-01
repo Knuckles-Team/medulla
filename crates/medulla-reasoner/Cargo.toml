@@ -26,5 +26,5 @@ medulla-agent-types = { path = "../medulla-agent-types" }
 contract = ["owl", "dep:medulla-modality", "medulla-rdf/contract"]
 owl = ["rdf", "medulla-rdf/owl"]
 owl-dl = ["owl", "medulla-rdf/owl-dl"]
-rdf = ["dep:oxrdf", "dep:oxttl", "medulla-rdf/rdf"]
+rdf = ["dep:oxrdf", "medulla-rdf/rdf"]
 sparql-star = ["medulla-rdf/sparql-star"]

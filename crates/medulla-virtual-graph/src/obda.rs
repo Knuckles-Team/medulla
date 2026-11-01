@@ -65,7 +65,7 @@ use std::sync::Arc;
 
 use oxrdf::{Literal, NamedNode, NamedOrBlankNode, Term, Triple};
 
-use crate::sparql::{Binding, Projection, QueryOutcome, Solution, SparqlResult};
+use medulla_rdf::{sparql::Binding, sparql::Projection, sparql::QueryOutcome, sparql::Solution, sparql::SparqlResult};
 
 // EH-563 FO-04 — pattern-aware scan groups, key lookups and semi-join reduction.
 mod direct;
@@ -734,7 +734,7 @@ pub fn run_outcome_virtual(
 ) -> Result<QueryOutcome, String> {
     // (1) parse, then learn which predicates the query references (the pushdown key) and
     // which FILTER comparisons can be pushed to the source as row-level predicates.
-    let query = crate::sparql::parse_query(query_str)?;
+    let query = medulla_rdf::sparql::parse_query(query_str)?;
     let wanted = wanted_predicates(&query);
     let filters = FilterContext::from_query(&query);
 
@@ -1308,7 +1308,7 @@ fn unquote_identifier(s: &str) -> String {
 /// Returns a `Result` (Turtle can fail to parse, and a malformed map is a real error).
 /// The MEDULLA-101 programmatic + [`parse_mapping`] builders are unaffected.
 pub fn parse_r2rml_turtle(doc: &str) -> Result<VirtualGraph, String> {
-    let triples = crate::mapping::parse_turtle(doc)?;
+    let triples = medulla_rdf::mapping::parse_turtle(doc)?;
     let index = R2rmlDoc::from_triples(&triples);
 
     // Discover triples-map anchors: any node carrying the R2RML TriplesMap shape.
@@ -1978,7 +1978,7 @@ mod tests {
     /// the `name` (and subject `id`) columns, and materializes only `name` triples.
     #[test]
     fn eg101_predicate_pushdown_narrows_columns_and_triples() {
-        let query = crate::sparql::parse_query(
+        let query = medulla_rdf::sparql::parse_query(
             "PREFIX ex: <http://example.org/> SELECT ?n WHERE { ?p ex:name ?n }",
         )
         .unwrap();
@@ -2008,7 +2008,7 @@ mod tests {
     /// (completeness preserved).
     #[test]
     fn eg101_variable_predicate_disables_pushdown() {
-        let query = crate::sparql::parse_query("SELECT * WHERE { ?s ?p ?o }").unwrap();
+        let query = medulla_rdf::sparql::parse_query("SELECT * WHERE { ?s ?p ?o }").unwrap();
         assert_eq!(wanted_predicates(&query), None);
     }
 
