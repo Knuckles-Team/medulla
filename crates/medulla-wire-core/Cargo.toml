@@ -12,6 +12,7 @@ name = "medulla_wire_core"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-sql-lang = { path = "../medulla-sql-lang" }
 medulla-sql = { path = "../medulla-sql" }
 medulla-table-store = { path = "../medulla-table-store" }
 medulla-tables = { path = "../medulla-tables" }

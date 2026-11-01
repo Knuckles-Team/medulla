@@ -12,6 +12,8 @@ name = "medulla_server_router"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-h-retrieve = { path = "../medulla-h-retrieve" }
+medulla-h-sparql = { path = "../medulla-h-sparql" }
 medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-compute = { path = "../medulla-compute" }
 medulla-core = { path = "../medulla-core" }

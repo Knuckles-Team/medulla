@@ -4,7 +4,7 @@
     use medulla_server_api::state::ServerState;
     use medulla_server_ops::api::query_txn::ForeignStateExt;
     use medulla_server_cdc::cdc::CdcStateExt;
-    use medulla_h_query::semantic_index_runtime::PendingRf019Activation;
+    use medulla_h_retrieve::semantic_index_runtime::PendingRf019Activation;
     use medulla_types::acl::RequestContextClaims;
     use medulla_types::acl::AgentIdentity;
     use medulla_types::acl::AgentRole;

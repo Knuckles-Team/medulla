@@ -12,6 +12,7 @@ name = "medulla_server_obs"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-sql-lang = { path = "../medulla-sql-lang" }
 medulla-sql = { path = "../medulla-sql" }
 arrow = { version = "58.4", optional = true }
 dashmap = "6.2"

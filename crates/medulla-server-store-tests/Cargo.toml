@@ -12,6 +12,7 @@ name = "medulla_server_store_tests"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-h-mining = { path = "../medulla-h-mining" }
 async-trait = { version = "0.1" }
 hex = "0.4"
 medulla-agent-types = { path = "../medulla-agent-types" }

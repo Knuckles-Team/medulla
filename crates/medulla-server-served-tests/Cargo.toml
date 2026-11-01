@@ -12,6 +12,9 @@ name = "medulla_server_served_tests"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-h-retrieve = { path = "../medulla-h-retrieve" }
+medulla-wire-core = { path = "../medulla-wire-core" }
+medulla-sql-lang = { path = "../medulla-sql-lang" }
 medulla-sql = { path = "../medulla-sql" }
 medulla-table-store = { path = "../medulla-table-store" }
 medulla-tables = { path = "../medulla-tables" }

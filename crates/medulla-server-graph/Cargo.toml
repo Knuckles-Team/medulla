@@ -12,6 +12,8 @@ name = "medulla_server_graph"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-h-mining = { path = "../medulla-h-mining" }
+medulla-h-sparql = { path = "../medulla-h-sparql" }
 async-trait = { version = "0.1", optional = true }
 hex = "0.4"
 medulla-capabilities = { path = "../medulla-capabilities", optional = true }
