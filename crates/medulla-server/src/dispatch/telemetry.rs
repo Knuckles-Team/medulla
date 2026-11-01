@@ -40,7 +40,7 @@ use medulla_types::telemetry_derive::TelemetryDeriveReceipt;
 use tokio::sync::RwLock;
 
 use super::graph_pipeline::dispatch_graph_op;
-use super::timed_read;
+use super::shared::timed_read;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
@@ -78,7 +78,7 @@ pub(super) async fn handle_telemetry_derive(
     request: DeriveRequest,
 ) -> Response {
     let req_id = target.req_id;
-    crate::dispatch::typed_response::<TelemetryDeriveResult>(
+    crate::dispatch::shared::typed_response::<TelemetryDeriveResult>(
         req_id,
         derive(state, &target, request).await,
     )

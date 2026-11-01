@@ -1,3 +1,6 @@
+use crate::dispatch::shared::timed_read;
+use crate::dispatch::shared::MAX_NESTED_MSGPACK_ITEMS;
+use crate::dispatch::shared::MAX_NESTED_MSGPACK_BYTES;
 use super::*;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
@@ -301,7 +304,7 @@ pub(in crate::dispatch) fn decode_multi_graph_batches(
         if total_operations_bytes > MAX_MULTI_GRAPH_TOTAL_OPERATIONS_BYTES {
             return Err("multi-graph batch exceeds the resource limit".to_string());
         }
-        crate::transport::validate_nested_msgpack(
+        crate::dispatch::request_boundary::preflight::validate_nested_msgpack(
             operations,
             MAX_MULTI_GRAPH_OPERATIONS_BYTES,
             MAX_MULTI_GRAPH_OPERATION_ITEMS,

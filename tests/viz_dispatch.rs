@@ -31,7 +31,7 @@ mod test_support;
 use medulla_types::viz::{VizColumnValues, VizDatasetSource, VizFormat, VizOp, VizRenderRequest};
 use medulla_viz_core::{EncodingSpec, Encodings, MarkKind, MarkSpec, ViewSpec};
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
-use medulla_server::dispatch::dispatch;
+use medulla_server::dispatch::request_boundary::dispatch;
 
 const SECRET: &str = "served-viz-dispatch-secret";
 const PNG_SIGNATURE: [u8; 4] = [137, 80, 78, 71];

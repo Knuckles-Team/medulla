@@ -1,3 +1,4 @@
+use crate::dispatch::shared::timed_read;
 use super::*;
 #[cfg(feature = "raft")]
 use medulla_raft::raft::RaftStateExt;

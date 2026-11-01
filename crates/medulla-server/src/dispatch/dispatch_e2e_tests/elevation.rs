@@ -3,7 +3,25 @@
 //! identity, a replayed approval is refused, and revocation closes the
 //! chokepoint at once.
 
-use super::*;
+use crate::dispatch::*;
+use crate::dispatch::elevation::*;
+#[cfg(feature = "security")]
+use medulla_identity_types::rbac_elevation::RbacElevationOp;
+use medulla_identity_types::{
+    rbac_elevation::ElevationActor, rbac_elevation::ElevationDelegation,
+    rbac_elevation::ElevationStanding, rbac_elevation::APPROVE_ELEVATION_SCOPE,
+};
+#[cfg(feature = "security")]
+use medulla_protocol_types::{
+    result_contract::security::RbacElevationApprove, result_contract::security::RbacElevationList,
+    result_contract::security::RbacElevationRequest,
+    result_contract::security::RbacElevationRevoke,
+};
+use crate::dispatch::VerifiedRequestContext;
+use medulla_protocol_types::protocol::Method;
+#[cfg(feature = "security")]
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
 use medulla_isolation::isolation::AccessLevel;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Request;

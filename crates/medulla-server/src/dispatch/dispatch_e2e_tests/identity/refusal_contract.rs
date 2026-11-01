@@ -59,7 +59,7 @@ async fn register(state: &Arc<RwLock<ServerState>>, agent_id: &str, roles: &[&st
             },
         },
     );
-    Box::pin(crate::dispatch::dispatch(state, request)).await
+    Box::pin(crate::dispatch::request_boundary::dispatch(state, request)).await
 }
 
 #[tokio::test(flavor = "multi_thread")]

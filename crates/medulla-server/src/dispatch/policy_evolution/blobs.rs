@@ -6,6 +6,7 @@
 //! that reference here rather than trusting the digest. A build without the
 //! blob store cannot hold anything, so it fails closed.
 
+use crate::dispatch::shared::timed_read;
 use medulla_server_blob::blob::BlobStateExt;
 use medulla_decision_outcome_types::{policy_evolution::HeldBlobRef, policy_evolution::PolicyEvolutionRecord, policy_evolution::PolicyRefusal};
 

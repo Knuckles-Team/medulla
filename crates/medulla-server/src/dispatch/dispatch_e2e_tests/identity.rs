@@ -2,7 +2,18 @@
 //! verified context, exact identity scopes are required, every secret is
 //! hashed and cleared before apply, and the floors refuse weak secrets.
 
-use super::*;
+use crate::dispatch::*;
+use crate::dispatch::identity_store::*;
+use std::sync::Arc;
+use medulla_identity_types::{identity::IdentityOp, identity::IdentityStamp};
+use medulla_protocol_types::result_contract::security::Identity as IdentityResult;
+use tokio::sync::RwLock;
+use crate::dispatch::elevation::ElevationStampAuthority;
+use crate::dispatch::{ServerState, VerifiedRequestContext};
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::identity_view::identity_actor;
 use medulla_identity_types::identity::*;
 
 const PASSWORD: &str = "correct horse battery staple";
@@ -13,6 +24,7 @@ use super::super::test_support::{
 };
 
 mod approval_keys;
+mod resolution_context;
 mod refusal_contract;
 mod revocation;
 mod stale_verdict;
@@ -412,7 +424,7 @@ async fn caller_cannot_choose_session_record_provenance() {
     };
     assert_eq!(
         stamp.session_tenant,
-        resolution_context::record_tenant(&context)
+        crate::dispatch::identity_store::resolution_context::record_tenant(&context)
     );
     assert_ne!(
         stamp.minted_session_ref.as_deref(),

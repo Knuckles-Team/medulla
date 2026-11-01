@@ -1,5 +1,5 @@
+use crate::dispatch::shared::timed_read;
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
-use super::request_boundary::dispatch_with_context;
 #[cfg(all(feature = "sparql-http", feature = "redb", feature = "security"))]
 use super::*;
 #[cfg(feature = "redb")]
@@ -431,10 +431,10 @@ async fn create_missing_sparql_graphs(
                 graph_type: update.graph_type,
             },
         };
-        let response = Box::pin(dispatch_with_context(
+        let response = Box::pin(medulla_server_api::api::reentry::dispatch_verified_request(
             coord.state,
             request,
-            Some(VerifiedRequestContext::clone(coord.verified_context)),
+            VerifiedRequestContext::clone(coord.verified_context),
         ))
         .await;
         if let Some(refusal) = response.refusal_text() {
@@ -641,10 +641,10 @@ async fn delete_created_sparql_graphs(
                 graph_name: update.graph.clone(),
             },
         };
-        let response = Box::pin(dispatch_with_context(
+        let response = Box::pin(medulla_server_api::api::reentry::dispatch_verified_request(
             coord.state,
             request,
-            Some(VerifiedRequestContext::clone(coord.verified_context)),
+            VerifiedRequestContext::clone(coord.verified_context),
         ))
         .await;
         if let Some(error) = response.error {

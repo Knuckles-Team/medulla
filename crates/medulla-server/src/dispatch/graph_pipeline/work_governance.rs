@@ -1,3 +1,4 @@
+use crate::dispatch::shared::redact_resource_status_result;
 use super::*;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;

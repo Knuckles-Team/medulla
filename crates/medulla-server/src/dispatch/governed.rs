@@ -24,7 +24,7 @@ use medulla_protocol_types::protocol::ResultPayload;
 
 /// The actor of a verified request: its identities (hashed), whether it is
 /// delegated, and its EXACT `governance:*` scopes.
-pub(crate) fn governed_actor(context: &VerifiedRequestContext) -> GovernedActor {
+pub fn governed_actor(context: &VerifiedRequestContext) -> GovernedActor {
     let claims = context.claims();
     let scopes = claims
         .scopes
@@ -43,7 +43,7 @@ pub(crate) fn governed_actor(context: &VerifiedRequestContext) -> GovernedActor 
 }
 
 /// Overwrite an external governed op's actor from its verified context.
-pub(crate) fn stamp_governed_actor(
+pub fn stamp_governed_actor(
     method: &mut Method,
     context: &VerifiedRequestContext,
     authority: ElevationStampAuthority,
@@ -58,7 +58,7 @@ pub(crate) fn stamp_governed_actor(
 
 /// Serve one governed op against the RBAC policy image.
 #[cfg(feature = "security")]
-pub(crate) async fn dispatch_governed_change(
+pub async fn dispatch_governed_change(
     state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     req_id: u64,
     context: &VerifiedRequestContext,
@@ -113,5 +113,3 @@ pub(crate) async fn dispatch_governed_change(
     }
 }
 
-#[cfg(all(test, feature = "security"))]
-mod tests;

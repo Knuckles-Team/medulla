@@ -11,12 +11,10 @@ use super::graph_pipeline::dispatch_served_modality;
 use super::policy_evolution::{handle_policy_evolution, PolicyEvolutionTarget};
 #[cfg(feature = "cost")]
 use super::request_boundary::dispatch_resource_stats;
-use super::request_boundary::{
-    append_native_capacity_ops, append_native_resource_ops, append_native_work_item_ops,
-    decode_screen_observation, dispatch_boxed, dispatch_boxed_typed, DispatchAuthority,
-};
+use super::request_boundary::{append_native_capacity_ops, append_native_resource_ops, append_native_work_item_ops, dispatch_boxed, dispatch_boxed_typed, DispatchAuthority};
+use super::request_boundary::screen::decode_screen_observation;
 #[cfg(feature = "ast")]
-use super::request_boundary::{ast_input_limits, decode_ast_files, validate_ast_logical_path};
+use super::request_boundary::preflight::{ast_input_limits, decode_ast_files, validate_ast_logical_path};
 #[cfg(feature = "sparql-http")]
 use super::sparql_update::coordinated_sparql_http_update;
 use super::*;

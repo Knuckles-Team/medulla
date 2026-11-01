@@ -1,3 +1,6 @@
+use crate::dispatch::request_boundary::preflight::preflight_request_msgpack;
+use crate::dispatch::shared::validate_graph_create_type;
+use crate::dispatch::shared::timed_read;
 use medulla_server_auth::auth::RequestAuthorityExt;
 #[cfg(feature = "raft")]
 use super::change_envelope::multi_graph_batch_update;
@@ -8,13 +11,13 @@ use super::router::dispatch_request_method;
 use super::sparql_update::coordinated_sparql_http_update;
 use super::*;
 
-mod authorization;
+pub mod authorization;
 #[cfg(feature = "raft")]
-mod consensus;
-mod method_errors;
-mod preflight;
-mod saga;
-mod screen;
+pub mod consensus;
+pub mod method_errors;
+pub mod preflight;
+pub mod saga;
+pub mod screen;
 
 pub(super) use authorization::{
     check_scope_and_admin_authority, check_submit_work_item_context, DispatchAuthority,
@@ -33,17 +36,9 @@ impl DispatchAuthority {
 pub(super) use consensus::{
     check_cluster_placement_before_consensus, route_consensus_before_gateway,
 };
-pub(super) use preflight::preflight_request_msgpack;
-#[cfg(all(test, feature = "ast"))]
-pub(super) use preflight::AstInputLimits;
-#[cfg(feature = "ast")]
-pub(super) use preflight::{
-    ast_input_limits, decode_ast_files, decode_ast_sources, validate_ast_logical_path,
-};
 #[cfg(feature = "redb")]
 use saga::replayed_response;
 pub(super) use saga::{begin_session_control_saga, finalize_dispatch_response};
-pub(super) use screen::decode_screen_observation;
 
 /// Dispatch a single request to the appropriate handler, recording
 /// per-operation request counters and latency (CONCEPT:MEDULLA-KG.txn.per-graph-write-isolation).

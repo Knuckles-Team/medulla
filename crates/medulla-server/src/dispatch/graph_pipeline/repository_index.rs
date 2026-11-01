@@ -41,7 +41,7 @@ type IndexScope = Box<medulla_types::ingestion_wire::IndexRepositoryScope>;
 fn validate_scope_paths(
     scope: &medulla_types::ingestion_wire::IndexRepositoryScope,
 ) -> Result<(), String> {
-    use super::super::request_boundary::validate_ast_logical_path;
+    use super::super::request_boundary::preflight::validate_ast_logical_path;
     let versions = scope.file_versions.iter().map(|item| item.path.as_str());
     let removed = scope
         .tombstones
@@ -59,7 +59,7 @@ async fn index_scoped(
     files_msgpack: Vec<u8>,
     scope: IndexScope,
 ) -> Result<medulla_types::ingestion_wire::IndexResult, Response> {
-    use super::super::request_boundary::{ast_input_limits, decode_ast_sources};
+    use super::super::request_boundary::preflight::{ast_input_limits, decode_ast_sources};
     let req_id = ctx.req_id;
     // Entries are content-keyed: one path may name several blobs (EH-280).
     let files = decode_ast_sources(&files_msgpack, ast_input_limits())
@@ -270,7 +270,7 @@ fn pending_source_budget(
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::request_boundary::preflight_request_msgpack;
+    use super::super::super::request_boundary::preflight::preflight_request_msgpack;
     use medulla_protocol_types::protocol::Method;
 
     #[cfg(feature = "ast")]

@@ -73,7 +73,7 @@ pub(crate) async fn apply_replicated_native(
     REPLICATED_APPLY
         .scope(
             replicated_apply_scope(committed_at_ms, authority),
-            dispatch_with_context(state, request, Some(context)),
+            medulla_server_api::api::reentry::dispatch_verified_request(state, request, context),
         )
         .await
 }

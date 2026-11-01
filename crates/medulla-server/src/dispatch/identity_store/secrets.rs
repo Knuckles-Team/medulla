@@ -73,7 +73,7 @@ pub(super) fn is_stale(stored: &str) -> bool {
 
 /// The stored hash of a high-entropy token (a session id, a one-time token,
 /// an API-key secret, a recovery code).
-pub(super) fn token_hash(token: &str) -> String {
+pub fn token_hash(token: &str) -> String {
     let mut hasher = Sha256::new();
     hasher.update(b"eg/identity-token/v1\0");
     hasher.update(token.as_bytes());
@@ -132,7 +132,7 @@ pub(super) fn unseal(sealed: &str, service_secret: &str) -> Result<Vec<u8>, Stri
 }
 
 /// Decode an RFC 4648 base32 secret (no padding, case-insensitive).
-pub(super) fn base32_decode(text: &str) -> Option<Vec<u8>> {
+pub fn base32_decode(text: &str) -> Option<Vec<u8>> {
     const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
     let mut bits: u64 = 0;
     let mut width = 0u32;
@@ -177,7 +177,7 @@ pub(super) fn totp_step(secret: &[u8], code: &str, now_secs: u64) -> Option<u64>
 
 /// Generate a code for boundary regression fixtures using the RFC-tested primitive.
 #[cfg(test)]
-pub(super) fn totp_code_for_test(secret: &[u8], now_secs: u64) -> String {
+pub fn totp_code_for_test(secret: &[u8], now_secs: u64) -> String {
     format!(
         "{:06}",
         hotp(secret, now_secs / STEP_SECS).expect("valid test HMAC key")

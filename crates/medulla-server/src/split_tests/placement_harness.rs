@@ -742,7 +742,7 @@ async fn wire_placement_route_resolves_through_dispatch() {
 
     // Before any assignment the wire still returns the engine's complete route.
     let val = route_json(
-        crate::dispatch::dispatch(
+        crate::dispatch::request_boundary::dispatch(
             &state,
             req(
                 1,
@@ -778,7 +778,7 @@ async fn wire_placement_route_resolves_through_dispatch() {
         .await
         .expect("assign");
     let val = route_json(
-        crate::dispatch::dispatch(
+        crate::dispatch::request_boundary::dispatch(
             &state,
             req(
                 2,
@@ -805,7 +805,7 @@ async fn wire_placement_route_resolves_through_dispatch() {
 
     // A caller presenting the CURRENT epoch is not flagged for redirect.
     let val = route_json(
-        crate::dispatch::dispatch(
+        crate::dispatch::request_boundary::dispatch(
             &state,
             req(
                 3,

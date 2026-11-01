@@ -7,7 +7,7 @@
 //! broker. Every exchange/binding/queue/message lives as graph nodes on a control graph
 //! (`crate::broker`); this module only frames STOMP 1.2 text frames on the wire and maps
 //! each command onto the SAME broker primitives THROUGH the engine dispatch
-//! (`medulla_server::dispatch::dispatch`) that the AMQP wire (CONCEPT:MEDULLA-KG.compute.message-broker-exchanges/276..280)
+//! (`medulla_server::dispatch::request_boundary::dispatch`) that the AMQP wire (CONCEPT:MEDULLA-KG.compute.message-broker-exchanges/276..280)
 //! uses — no parallel mechanism, no new broker method.
 //!
 //! A STOMP `destination` (`/queue/foo`, `/topic/bar`) maps onto a broker DIRECT exchange

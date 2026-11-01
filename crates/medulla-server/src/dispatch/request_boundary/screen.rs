@@ -1,3 +1,15 @@
+use crate::dispatch::shared::MAX_SCREEN_COORDINATE_ABS;
+use crate::dispatch::shared::MAX_SCREEN_ELEMENT_NAME_BYTES;
+use crate::dispatch::shared::MAX_SCREEN_ROLE_BYTES;
+use crate::dispatch::shared::MAX_SCREEN_PNG_BYTES;
+use crate::dispatch::shared::MAX_SCREEN_PIXELS;
+use crate::dispatch::shared::MAX_SCREEN_DIMENSION;
+use crate::dispatch::shared::MAX_SCREEN_PREVIOUS_ID_BYTES;
+use crate::dispatch::shared::MAX_SCREEN_SESSION_ID_BYTES;
+use crate::dispatch::shared::MAX_SCREEN_OBSERVATION_ITEMS;
+use crate::dispatch::shared::MAX_SCREEN_OBSERVATION_BYTES;
+use crate::dispatch::shared::MAX_SCREEN_TOTAL_TEXT_BYTES;
+use crate::dispatch::shared::MAX_SCREEN_ELEMENTS;
 use super::*;
 
 #[derive(serde::Deserialize)]

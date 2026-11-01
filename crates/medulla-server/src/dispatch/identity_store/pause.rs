@@ -21,7 +21,7 @@ pub(super) struct Hold {
 }
 
 /// The test's side of a hold.
-pub(super) struct Held {
+pub struct Held {
     derived: Receiver<()>,
     release: SyncSender<()>,
 }
@@ -34,7 +34,7 @@ fn key(state: &Arc<RwLock<ServerState>>) -> usize {
 }
 
 /// Hold the next stamp derivation of `state`'s engine after it has derived.
-pub(super) fn arm(state: &Arc<RwLock<ServerState>>) -> Held {
+pub fn arm(state: &Arc<RwLock<ServerState>>) -> Held {
     let (derived_tx, derived_rx) = sync_channel(1);
     let (release_tx, release_rx) = sync_channel(1);
     let hold = Hold {
@@ -74,12 +74,12 @@ pub(super) fn hold(hold: Option<Hold>) {
 
 impl Held {
     /// Wait until the held derivation has computed its stamp.
-    pub(super) fn derived(&self) {
+    pub fn derived(&self) {
         medulla_kernel::test_rendezvous::recv_within(&self.derived, "a held derivation finishing");
     }
 
     /// Let the held derivation continue to its apply.
-    pub(super) fn release(&self) {
+    pub fn release(&self) {
         self.release
             .send(())
             .expect("the held derivation is waiting");

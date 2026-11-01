@@ -1,7 +1,34 @@
+use crate::dispatch::shared::MAX_NESTED_MSGPACK_ITEMS;
+use crate::dispatch::shared::MAX_NESTED_MSGPACK_BYTES;
 use super::*;
 
+/// Item ceiling no request limit may exceed.
+pub const HARD_MAX_MSGPACK_ITEMS: usize = 4_000_000;
+/// Nesting ceiling for every embedded MessagePack payload.
+pub const MAX_MSGPACK_NESTING_DEPTH: usize = 64;
+
+/// Run the same allocation-free structural preflight over MessagePack embedded
+/// inside a request's binary field. The outer frame scanner deliberately treats
+/// `bin` as opaque bytes, so handlers must call this before nested deserialization.
+pub fn validate_nested_msgpack(
+    input: &[u8],
+    max_bytes: usize,
+    max_items: usize,
+) -> Result<(), &'static str> {
+    medulla_types::msgpack::validate_single_value(
+        input,
+        medulla_types::msgpack::MsgpackLimits::new(
+            max_bytes,
+            max_items.min(HARD_MAX_MSGPACK_ITEMS),
+            MAX_MSGPACK_NESTING_DEPTH,
+        ),
+    )
+    .map_err(|_| "invalid or over-complex nested MessagePack payload")
+}
+
+
 fn preflight_nested_msgpack(bytes: &[u8]) -> Result<(), &'static str> {
-    crate::transport::validate_nested_msgpack(
+    validate_nested_msgpack(
         bytes,
         MAX_NESTED_MSGPACK_BYTES,
         MAX_NESTED_MSGPACK_ITEMS,

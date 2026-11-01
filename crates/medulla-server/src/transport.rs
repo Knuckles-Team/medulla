@@ -25,7 +25,7 @@ use tokio::net::UnixListener;
 use tokio::sync::{Notify, RwLock, Semaphore};
 use tracing::{error, info};
 
-use super::dispatch::dispatch_verified_request;
+use crate::dispatch::request_boundary::dispatch_verified_request;
 use super::{dispatch, ServerState};
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
@@ -37,13 +37,13 @@ mod tls;
 
 #[cfg(all(test, feature = "jobs"))]
 pub(crate) use framing::decode_request_payload;
-pub(crate) use framing::validate_nested_msgpack;
 #[cfg(test)]
 use framing::{
     dispatch_deadline, max_request_frame_bytes, read_request_frame, recover_request_id,
     validate_msgpack_frame, FrameReadError, HARD_MAX_REQUEST_FRAME_BYTES,
-    MAX_MSGPACK_NESTING_DEPTH,
 };
+#[cfg(test)]
+use crate::dispatch::request_boundary::preflight::MAX_MSGPACK_NESTING_DEPTH;
 use framing::{
     encode_bounded_frame, encode_frame, next_request, seconds_from_env, write_responses,
     ConnectionLimits, IngressEnd,
@@ -484,7 +484,7 @@ async fn dispatch_reserved_request(
         std::pin::Pin<Box<dyn std::future::Future<Output = Response> + Send + 'a>>;
     let boxed: BoxedDispatch<'_> = match reservation.qos.context {
         Some(context) => Box::pin(dispatch_verified_request(&state, req, context)),
-        None => Box::pin(crate::dispatch::dispatch(&state, req)),
+        None => Box::pin(crate::dispatch::request_boundary::dispatch(&state, req)),
     };
     let response =
         dispatch_within_deadline(boxed, limits.dispatch_deadline, req_id, &peer_gone).await;

@@ -107,7 +107,7 @@ async fn edge_index_statuses_reach_the_served_sql_read() {
     let (tenant, store) = registered_store(&state, CREATOR).await;
     register_detached_edge_index(&store, graph, &tenant);
 
-    let response = crate::dispatch::dispatch(
+    let response = crate::dispatch::request_boundary::dispatch(
         &state,
         request(
             2,

@@ -31,7 +31,7 @@ use medulla_protocol_types::protocol::ResultPayload;
 /// Whose actor an elevation op carries: one re-derived from this request's
 /// verified context, or the one a leader stamped into a replicated command.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum ElevationStampAuthority {
+pub enum ElevationStampAuthority {
     External,
     Replicated,
 }
@@ -48,12 +48,12 @@ impl ElevationStampAuthority {
 
 /// Refusal for a replicated elevation that reached apply without its actor.
 #[cfg(feature = "security")]
-const UNSTAMPED: &str =
+pub const UNSTAMPED: &str =
     "ELEVATION_ACTOR_UNSTAMPED: a replicated elevation must carry its stamped actor";
 
 /// The actor of a verified external request. Approval standing needs the
 /// EXACT approval scope: `*`, `rbac:*` and `kg:admin` do not stand in for it.
-pub(crate) fn elevation_actor(context: &VerifiedRequestContext) -> ElevationActor {
+pub fn elevation_actor(context: &VerifiedRequestContext) -> ElevationActor {
     let claims = context.claims();
     let delegation = if claims.delegation.is_empty() {
         ElevationDelegation::Direct
@@ -76,7 +76,7 @@ pub(crate) fn elevation_actor(context: &VerifiedRequestContext) -> ElevationActo
 
 /// Overwrite the actor of an external elevation request from its verified
 /// context. A replicated apply keeps the actor its leader stamped.
-pub(crate) fn stamp_elevation_actor(
+pub fn stamp_elevation_actor(
     method: &mut Method,
     context: &VerifiedRequestContext,
     authority: ElevationStampAuthority,
@@ -91,7 +91,7 @@ pub(crate) fn stamp_elevation_actor(
 
 /// Serve one elevation op against the RBAC policy image.
 #[cfg(feature = "security")]
-pub(crate) async fn dispatch_rbac_elevation(
+pub async fn dispatch_rbac_elevation(
     state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     req_id: u64,
     context: &VerifiedRequestContext,
@@ -128,7 +128,7 @@ pub(crate) async fn dispatch_rbac_elevation(
 }
 
 #[cfg(feature = "security")]
-fn respond(
+pub fn respond(
     req_id: u64,
     op: &RbacElevationOp,
     actor: &ElevationActor,
@@ -163,5 +163,3 @@ fn respond(
     }
 }
 
-#[cfg(all(test, feature = "security"))]
-mod tests;

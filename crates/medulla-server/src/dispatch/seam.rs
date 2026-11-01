@@ -41,7 +41,7 @@ impl DispatchApi for DispatchSeam {
         state: &'a Arc<RwLock<ServerState>>,
         graph: &'a str,
     ) -> SeamFuture<'a, ()> {
-        Box::pin(super::ensure_graph_resident(state, graph))
+        Box::pin(super::shared::ensure_graph_resident(state, graph))
     }
 
     fn ensure_internal_global_graph<'a>(
@@ -52,7 +52,7 @@ impl DispatchApi for DispatchSeam {
         graph_name: &'a str,
         idempotency_key: &'a str,
     ) -> SeamFuture<'a, Result<(), String>> {
-        Box::pin(super::ensure_internal_global_graph(
+        Box::pin(ensure_internal_global_graph(
             state,
             req_id,
             verified,
@@ -123,7 +123,7 @@ impl DispatchApi for DispatchSeam {
         identity_bootstrap: bool,
         method: Method,
     ) -> SeamFuture<'a, Response> {
-        Box::pin(super::propose_native_mutation(
+        Box::pin(super::consensus::propose_native_mutation(
             state,
             request_graph,
             request_id,
@@ -143,7 +143,7 @@ impl DispatchApi for DispatchSeam {
         authority: &'a medulla_server_api::api::persistence::RaftMutationContext,
         method: Method,
     ) -> SeamFuture<'a, Response> {
-        Box::pin(super::apply_replicated_native(
+        Box::pin(super::consensus::apply_replicated_native(
             state,
             graph,
             request_id,
@@ -164,7 +164,7 @@ impl DispatchApi for DispatchSeam {
         phase: medulla_server_api::api::reentry::TransactionParticipantPhase,
         participant: medulla_server_api::api::reentry::ReplicatedParticipantRef<'a>,
     ) -> SeamFuture<'a, Result<bool, String>> {
-        Box::pin(super::apply_replicated_transaction_participant(
+        Box::pin(super::consensus::apply_replicated_transaction_participant(
             state,
             request_id,
             committed_at_ms,
@@ -186,7 +186,7 @@ impl DispatchApi for DispatchSeam {
         idempotency_key: Option<&'a str>,
         expected_tenant: Option<&'a str>,
     ) -> SeamFuture<'a, Response> {
-        Box::pin(super::apply_replicated_transaction_prepare(
+        Box::pin(super::consensus::apply_replicated_transaction_prepare(
             state,
             request_id,
             committed_at_ms,
@@ -206,7 +206,7 @@ impl DispatchApi for DispatchSeam {
         coordinator_id: &'a str,
         commit: bool,
     ) -> SeamFuture<'a, Result<bool, String>> {
-        Box::pin(super::apply_replicated_transaction_decision(
+        Box::pin(super::consensus::apply_replicated_transaction_decision(
             state,
             committed_at_ms,
             authority,
@@ -224,7 +224,7 @@ impl DispatchApi for DispatchSeam {
         coordinator_id: &'a str,
         commit: bool,
     ) -> SeamFuture<'a, Result<bool, String>> {
-        Box::pin(super::apply_replicated_transaction_finalize(
+        Box::pin(super::consensus::apply_replicated_transaction_finalize(
             state,
             committed_at_ms,
             authority,
@@ -244,7 +244,7 @@ impl DispatchApi for DispatchSeam {
         coordinator_id: &'a str,
         plan: &'a [u8],
     ) -> SeamFuture<'a, Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String>> {
-        Box::pin(super::apply_replicated_job_publication_commit(
+        Box::pin(super::consensus::apply_replicated_job_publication_commit(
             state,
             request_id,
             committed_at_ms,
@@ -264,7 +264,7 @@ impl DispatchApi for DispatchSeam {
         coordinator_id: &'a str,
         receipt: &'a [u8],
     ) -> SeamFuture<'a, Result<medulla_protocol_types::protocol::ResultPayload, String>> {
-        Box::pin(super::apply_replicated_job_publication_finalize(
+        Box::pin(super::consensus::apply_replicated_job_publication_finalize(
             state,
             committed_at_ms,
             authority,
@@ -280,7 +280,7 @@ impl DispatchApi for DispatchSeam {
         verified: VerifiedRequestContext,
         request: medulla_work_types::native_control::SubmitWorkItemsRequest,
     ) -> SeamFuture<'a, Result<(), String>> {
-        Box::pin(super::submit_repository_enrichment_page(
+        Box::pin(submit_repository_enrichment_page(
             state, verified, request,
         ))
     }
@@ -363,6 +363,103 @@ impl DispatchApi for DispatchSeam {
             move |tenant, graph, page_key| authority_for_page(tenant, graph, page_key),
             move |verified, request| submit(verified, request),
             move |lease, park| park_source(lease, park),
+        ))
+    }
+}
+
+/// Submit one funded repository page through the same authenticated boundary
+/// as an external native method. In a cluster this routes through the graph's
+/// Raft group before the WorkItem+budget kernel runs on each replica.
+#[cfg(all(feature = "ast", feature = "redb", feature = "blob", feature = "raft"))]
+pub async fn submit_repository_enrichment_page(
+    state: &Arc<RwLock<ServerState>>,
+    verified: VerifiedRequestContext,
+    request: medulla_work_types::native_control::SubmitWorkItemsRequest,
+) -> Result<(), String> {
+    let debit = request
+        .enrichment_budget
+        .as_ref()
+        .ok_or("CONFLICT: repository enrichment page lacks budget debit")?;
+    if verified.tenant() != request.context.tenant_id
+        || verified.idempotency_key() != debit.page_key
+        || request.idempotency_key != debit.page_key
+        || !verified.allows_action("work:submit")
+        || !verified.allows_action("repository:enrichment:submit")
+    {
+        return Err("ACCESS_DENIED: repository enrichment page authority is invalid".into());
+    }
+    let response = super::request_boundary::dispatch_with_context(
+        state,
+        Request {
+            id: 0,
+            graph: request.context.graph.clone(),
+            auth_token: String::new(),
+            agent_id: None,
+            method: Method::SubmitWorkItems { request },
+        },
+        Some(verified),
+    )
+    .await;
+    if let Some(error) = response.error {
+        return Err(match response.error_detail {
+            Some(detail) => format!("{error}: {detail}"),
+            None => error,
+        });
+    }
+    if response.result.is_none() {
+        return Err("CONFLICT: repository enrichment page has no native receipt".into());
+    }
+    Ok(())
+}
+
+/// Create one engine-owned global graph through the same durable lifecycle as
+/// the public `CreateGraph` method.
+///
+/// Internal projection workers use this only for reserved graph names after
+/// validating their own closed namespace.  Keeping the lifecycle entry here
+/// avoids direct `GraphRegistry::create_graph` publication, which would bypass
+/// the authoritative registration batch and restart identity.
+pub async fn ensure_internal_global_graph(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    verified: &VerifiedRequestContext,
+    graph_name: &str,
+    idempotency_key: &str,
+) -> Result<(), String> {
+    if state.read().await.registry.exists(graph_name) {
+        return Ok(());
+    }
+    let create_identity = medulla_types::contract::Digest256::framed(
+        b"eg/internal-graph-lifecycle/v1",
+        &[idempotency_key.as_bytes(), graph_name.as_bytes()],
+    )?;
+    let request = super::router::GraphLifecycleRequest::verified(
+        req_id,
+        Some(verified.agent_id().to_string()),
+        verified,
+        format!("internal-create:{}", create_identity.to_hex()),
+    )?;
+    let response = super::router::create_graph(
+        state,
+        request,
+        graph_name.to_string(),
+        medulla_protocol_types::protocol::GraphType::Global,
+    )
+    .await;
+    if let Some(error) = response.error {
+        // A concurrent creator may have won after the existence probe.  The
+        // graph's durable lifecycle is sufficient; never interpret any other
+        // create failure as success.
+        if state.read().await.registry.exists(graph_name) {
+            return Ok(());
+        }
+        return Err(error);
+    }
+    if state.read().await.registry.exists(graph_name) {
+        Ok(())
+    } else {
+        Err(format!(
+            "internal graph lifecycle acknowledged without publishing '{graph_name}'"
         ))
     }
 }

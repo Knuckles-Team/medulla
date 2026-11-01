@@ -10,6 +10,7 @@
 //! (material preflight, consensus, the commit kernel, CDC) sees only the
 //! governed form, so a draft can never bypass what an envelope must satisfy.
 
+use crate::dispatch::shared::timed_read;
 use super::*;
 use medulla_protocol_types::{
     change_envelope::ChangeEnvelope, change_envelope::ChangeEnvelopeDraft,
@@ -273,7 +274,7 @@ pub(crate) mod tests {
         let method = Method::ApplyChangeEnvelope {
             envelope: Box::new(envelope.clone()),
         };
-        super::super::request_boundary::preflight_request_msgpack(&method)
+        super::super::request_boundary::preflight::preflight_request_msgpack(&method)
             .expect("material preflight");
         assert_eq!(
             medulla_protocol_types::mutation_batch::batch_request_number(&envelope.mutation),

@@ -141,7 +141,7 @@ mod ne_004_ne_005_tests {
     }
 
     async fn create_test_graph(state: &Arc<RwLock<ServerState>>, graph: &str, id: u64) {
-        let resp = crate::dispatch::dispatch(
+        let resp = crate::dispatch::request_boundary::dispatch(
             state,
             request(
                 id,
@@ -912,7 +912,7 @@ pub mod wired_catalog_tests {
     /// needs this — only a `SELECT` does (`run_read` requires a real
     /// `GraphCore`).
     pub(crate) async fn create_test_graph(state: &Arc<RwLock<ServerState>>, graph: &str, id: u64) {
-        let resp = crate::dispatch::dispatch(
+        let resp = crate::dispatch::request_boundary::dispatch(
             state,
             request(
                 id,

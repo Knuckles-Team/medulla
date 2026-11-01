@@ -421,7 +421,7 @@ pub fn seed_wire_nodes(registry: &GraphRegistry, user: &str) {
 }
 
 pub async fn dispatch(state: &SharedState, request: Request) -> medulla_protocol_types::protocol::Response {
-    Box::pin(medulla_server::dispatch::dispatch(state, request)).await
+    Box::pin(medulla_server::dispatch::request_boundary::dispatch(state, request)).await
 }
 
 pub async fn begin_txn(

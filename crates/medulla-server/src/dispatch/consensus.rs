@@ -1,6 +1,4 @@
 use super::graph_pipeline::dispatch_graph_op;
-#[cfg(feature = "raft")]
-use super::request_boundary::dispatch_with_context;
 use super::*;
 
 mod fleet_catalog;

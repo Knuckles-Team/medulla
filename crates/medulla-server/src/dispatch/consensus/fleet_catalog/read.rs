@@ -1,6 +1,7 @@
 //! Fleet catalog reads: one consistent view of the `__commons__` records, then
 //! the connector-pack components those records make visible.
 
+use crate::dispatch::shared::timed_read;
 #[cfg(feature = "redb")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use std::collections::BTreeMap;
@@ -88,11 +89,11 @@ async fn load_commons(
     verified: &VerifiedRequestContext,
     grants: &[Digest256],
 ) -> Result<CommonsView, String> {
-    crate::dispatch::ensure_graph_resident(state, REGISTRY_GRAPH).await;
+    crate::dispatch::shared::ensure_graph_resident(state, REGISTRY_GRAPH).await;
     let _registry_guard = medulla_server_api::routed_write_coalescer::lock_graph(REGISTRY_GRAPH).await;
     let (core, authority) = {
         let current = timed_read(state).await;
-        crate::dispatch::authorized_graph_read(
+        crate::dispatch::shared::authorized_graph_read(
             &current,
             REGISTRY_GRAPH,
             verified,
@@ -316,7 +317,7 @@ pub(super) async fn list(
     verified: &VerifiedRequestContext,
     request: FleetCatalogListRequest,
 ) -> Response {
-    crate::dispatch::typed_response::<FleetCatalogList>(
+    crate::dispatch::shared::typed_response::<FleetCatalogList>(
         req_id,
         list_page(state, verified, &request).await,
     )
@@ -328,7 +329,7 @@ pub(super) async fn lookup(
     verified: &VerifiedRequestContext,
     request: FleetCatalogLookupRequest,
 ) -> Response {
-    crate::dispatch::typed_response::<FleetCatalogLookupRows>(
+    crate::dispatch::shared::typed_response::<FleetCatalogLookupRows>(
         req_id,
         lookup_rows(state, verified, &request).await,
     )

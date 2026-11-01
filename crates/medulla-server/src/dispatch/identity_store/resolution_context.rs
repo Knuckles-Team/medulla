@@ -16,13 +16,13 @@ use medulla_server_api::identity_view::identity_actor;
 
 // Use the existing closed error vocabulary: Response::err must preserve these
 // as classified refusals, not collapse a new undeclared prefix to INTERNAL.
-const NO_PROVENANCE: IdentityRefusal = IdentityRefusal::NotAuthorized;
-const NO_AUTHORITY: IdentityRefusal = IdentityRefusal::NotAuthorized;
+pub const NO_PROVENANCE: IdentityRefusal = IdentityRefusal::NotAuthorized;
+pub const NO_AUTHORITY: IdentityRefusal = IdentityRefusal::NotAuthorized;
 
 /// Called with the server write lock held. A successful credential operation
 /// supplies its own subject and already-narrowed scopes; callers cannot supply
 /// a successful reply or a transferable `credential_verified` flag.
-pub(super) fn apply_and_compose(
+pub fn apply_and_compose(
     state: &mut ServerState,
     op: &IdentityOp,
     stamp: &IdentityStamp,
@@ -82,13 +82,13 @@ pub(super) fn apply_and_compose(
 
 // Metadata provenance only: failure omits the record binding and does not
 // change the credential operation's existing validation or result.
-pub(super) fn record_tenant(context: &VerifiedRequestContext) -> Option<String> {
+pub fn record_tenant(context: &VerifiedRequestContext) -> Option<String> {
     let policy = request_context_policy().ok()?;
     validate_policy(context.claims(), policy).ok()?;
     Some(policy.expected_tenant.clone())
 }
 
-fn is_credential_resolution(op: &IdentityOp) -> bool {
+pub fn is_credential_resolution(op: &IdentityOp) -> bool {
     matches!(
         op,
         IdentityOp::Session(SessionOp::Resolve { .. })
@@ -96,7 +96,7 @@ fn is_credential_resolution(op: &IdentityOp) -> bool {
     )
 }
 
-fn authorize_resolution(
+pub fn authorize_resolution(
     store: &IdentityStore,
     op: &IdentityOp,
     stamp: &IdentityStamp,
@@ -124,7 +124,7 @@ fn authorize_resolution(
         .map_err(|error| error.to_string())
 }
 
-fn validate_policy(
+pub fn validate_policy(
     claims: &RequestContextClaims,
     policy: &RequestContextPolicy,
 ) -> Result<(), String> {
@@ -140,7 +140,7 @@ fn validate_policy(
     Ok(())
 }
 
-fn compose_resolution(
+pub fn compose_resolution(
     resolution: PrincipalResolution,
     policy: &RequestContextPolicy,
 ) -> Result<PrincipalResolution<RequestContextClaims>, String> {
@@ -173,5 +173,3 @@ fn compose_resolution(
     Ok(resolution.with_request_context(claims))
 }
 
-#[cfg(test)]
-mod tests;
