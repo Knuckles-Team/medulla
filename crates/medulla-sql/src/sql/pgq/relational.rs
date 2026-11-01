@@ -7,7 +7,7 @@
 
 use super::expr::BinaryOp;
 use super::lex::SqlNumber;
-use crate::tables::property_graph::{SqlIdentifier, SqlName};
+use medulla_query::{tables::property_graph::SqlIdentifier, tables::property_graph::SqlName};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RelationalGraphPlan {

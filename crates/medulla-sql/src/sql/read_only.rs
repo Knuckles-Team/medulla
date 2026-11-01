@@ -84,13 +84,13 @@ mod tests {
     // spec: MEDULLA-FEDERATED-QUERY-R015
     #[test]
     fn the_graph_free_path_refuses_an_external_table_file_read() {
-        let err = crate::exec_sql_over_tables(
+        let err = crate::sql::exec_sql_over_tables(
             Vec::new(),
             "CREATE EXTERNAL TABLE leak STORED AS CSV LOCATION '/etc/hostname'",
         )
         .expect_err("a server-side file read must not run");
         assert!(err.starts_with("READ_ONLY_SQL"), "{err}");
-        let ok = crate::exec_sql_over_tables(Vec::new(), "SELECT 1 AS one").expect("a read runs");
+        let ok = crate::sql::exec_sql_over_tables(Vec::new(), "SELECT 1 AS one").expect("a read runs");
         assert_eq!(ok.rows.len(), 1);
     }
 }

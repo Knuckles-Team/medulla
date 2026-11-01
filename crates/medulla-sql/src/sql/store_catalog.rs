@@ -5,10 +5,10 @@
 
 use medulla_core::index::ManagedIndexStatus;
 
-use crate::tables::ann_plan::AnnIndexPlan;
-use crate::tables::PropertyGraphCatalogRecord;
-use crate::schema::StoredFunction;
-use crate::tables::TableStore;
+use medulla_query::tables::ann_plan::AnnIndexPlan;
+use medulla_query::tables::PropertyGraphCatalogRecord;
+use medulla_query::schema::StoredFunction;
+use medulla_query::tables::TableStore;
 
 /// The name of the managed-index status relation, `information_schema.medulla_index_status`.
 pub(crate) const INDEX_STATUS_RELATION: &str = "medulla_index_status";

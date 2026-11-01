@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use medulla_core::graph::GraphView;
-use medulla_query::exec_sql;
+use medulla_sql::sql::exec_sql;
 use serde_json::json;
 
 /// Nodes with a `type` label, an integer `rank`, and a float `score` — enough to
@@ -35,12 +35,12 @@ fn sample_view() -> GraphView {
     }
 }
 
-fn run(sql: &str) -> medulla_query::QueryResult {
-    exec_sql(&sample_view(), sql, &medulla_query::CancellationToken::new())
+fn run(sql: &str) -> medulla_sql::sql::QueryResult {
+    exec_sql(&sample_view(), sql, &medulla_sql::sql::CancellationToken::new())
         .expect("sql executed and decoded")
 }
 
-fn rows(r: &medulla_query::QueryResult) -> Vec<Vec<serde_json::Value>> {
+fn rows(r: &medulla_sql::sql::QueryResult) -> Vec<Vec<serde_json::Value>> {
     r.rows
         .iter()
         .map(|blob| rmp_serde::from_slice::<Vec<serde_json::Value>>(blob).unwrap())

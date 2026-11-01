@@ -292,9 +292,9 @@ pub fn tenant_acl_path_for_test(tenant_scope: &str, persist_dir: &Path) -> PathB
 }
 
 fn context_cache_registry(
-) -> &'static Mutex<HashMap<String, std::sync::Arc<medulla_query::SqlContextCache>>> {
+) -> &'static Mutex<HashMap<String, std::sync::Arc<medulla_sql::sql::SqlContextCache>>> {
     static CACHES: OnceLock<
-        Mutex<HashMap<String, std::sync::Arc<medulla_query::SqlContextCache>>>,
+        Mutex<HashMap<String, std::sync::Arc<medulla_sql::sql::SqlContextCache>>>,
     > = OnceLock::new();
     CACHES.get_or_init(|| Mutex::new(HashMap::new()))
 }
@@ -308,7 +308,7 @@ fn context_cache_registry(
 pub(crate) fn sql_context_cache(
     authority: &CarrierAuthority,
     persist_dir: Option<&Path>,
-) -> Result<std::sync::Arc<medulla_query::SqlContextCache>, String> {
+) -> Result<std::sync::Arc<medulla_sql::sql::SqlContextCache>, String> {
     let persist_dir = persist_dir.ok_or_else(|| {
         "owner-scoped SQL catalog requires the configured persistence directory".to_string()
     })?;
@@ -319,7 +319,7 @@ pub(crate) fn sql_context_cache(
     if let Some(cache) = caches.get(&key) {
         return Ok(cache.clone());
     }
-    let cache = std::sync::Arc::new(medulla_query::SqlContextCache::new());
+    let cache = std::sync::Arc::new(medulla_sql::sql::SqlContextCache::new());
     caches.insert(key, cache.clone());
     Ok(cache)
 }

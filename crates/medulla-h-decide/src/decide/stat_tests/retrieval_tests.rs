@@ -59,7 +59,7 @@ pub(super) async fn sql(h: &Harness, who: &str, query: &str) -> Vec<Vec<Value>> 
                     &request_graph,
                 )
                 .unwrap();
-                medulla_query::exec_sql_typed_with_tables(&graph, projection.store(), query)
+                medulla_sql::sql::exec_sql_typed_with_tables(&graph, projection.store(), query)
                     .unwrap()
                     .rows
             })

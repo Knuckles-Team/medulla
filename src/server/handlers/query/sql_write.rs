@@ -34,7 +34,7 @@ pub(crate) async fn exec_sql_write_insert_nodes(
     req_id: u64,
     core: &Arc<GraphCore>,
     read_core: &Arc<GraphCore>,
-    ins: medulla_query::InsertNodes,
+    ins: medulla_sql::sql::InsertNodes,
 ) -> Response {
     let core = core.clone();
     let visible = read_core.clone();
@@ -65,7 +65,7 @@ pub(crate) async fn exec_sql_write_update_nodes(
     req_id: u64,
     core: &Arc<GraphCore>,
     read_core: Arc<GraphCore>,
-    upd: medulla_query::UpdateNodes,
+    upd: medulla_sql::sql::UpdateNodes,
 ) -> Response {
     let core = core.clone();
     let r = compute_off_lock(req_id, move || {
@@ -73,8 +73,8 @@ pub(crate) async fn exec_sql_write_update_nodes(
         let conditions = serde_json::Map::new();
         // CONCEPT:MEDULLA-KG.query.compound-predicate-decode — re-check a compound predicate under the write guard.
         let pred = match &upd.selector {
-            medulla_query::WhereEq::Predicate { pred, .. } => Some(pred.clone()),
-            medulla_query::WhereEq::Id(_) => None,
+            medulla_sql::sql::WhereEq::Predicate { pred, .. } => Some(pred.clone()),
+            medulla_sql::sql::WhereEq::Id(_) => None,
         };
         let mut n = 0usize;
         for id in ids {
@@ -99,15 +99,15 @@ pub(crate) async fn exec_sql_write_delete_nodes(
     req_id: u64,
     core: &Arc<GraphCore>,
     read_core: Arc<GraphCore>,
-    del: medulla_query::DeleteNodes,
+    del: medulla_sql::sql::DeleteNodes,
 ) -> Response {
     let core = core.clone();
     let r = compute_off_lock(req_id, move || {
         let ids = matched_node_ids(&read_core, &del.selector);
         // CONCEPT:MEDULLA-KG.query.compound-predicate-decode — re-check a compound predicate under the write guard.
         let pred = match &del.selector {
-            medulla_query::WhereEq::Predicate { pred, .. } => Some(pred.clone()),
-            medulla_query::WhereEq::Id(_) => None,
+            medulla_sql::sql::WhereEq::Predicate { pred, .. } => Some(pred.clone()),
+            medulla_sql::sql::WhereEq::Id(_) => None,
         };
         let mut n = 0usize;
         for id in ids {
@@ -141,9 +141,9 @@ pub(crate) async fn exec_sql_write_insert_select(
     read_core: Arc<GraphCore>,
     store: &medulla_query::TableStore,
     read_store: &medulla_query::TableStore,
-    ins: medulla_query::InsertSelect,
+    ins: medulla_sql::sql::InsertSelect,
 ) -> Response {
-    let medulla_query::InsertSelect {
+    let medulla_sql::sql::InsertSelect {
         table,
         columns,
         select_sql,
@@ -152,7 +152,7 @@ pub(crate) async fn exec_sql_write_insert_select(
     let snap = read_core.analysis_snapshot();
     let expected_columns = columns.len();
     let r = compute_off_lock(req_id, move || {
-        let read = medulla_query::exec_sql_typed_with_tables(&snap, &read_store, &select_sql)?;
+        let read = medulla_sql::sql::exec_sql_typed_with_tables(&snap, &read_store, &select_sql)?;
         if read.columns.len() != expected_columns {
             return Err(format!(
                 "INSERT … SELECT column count mismatch: {} target columns, {} selected",
@@ -193,7 +193,7 @@ pub(crate) fn apply_insert_nodes_select_row(
     visible: &Arc<GraphCore>,
     id_pos: usize,
     columns: &[String],
-    on_conflict: Option<&medulla_query::OnConflict>,
+    on_conflict: Option<&medulla_sql::sql::OnConflict>,
     row: Vec<serde_json::Value>,
 ) -> Result<usize, String> {
     let node_id = cell_to_node_id(&row[id_pos])?;
@@ -209,8 +209,8 @@ pub(crate) fn apply_insert_nodes_select_row(
     }
     if visible.has_node(&node_id) {
         match on_conflict.map(|oc| &oc.action) {
-            Some(medulla_query::OnConflictAction::DoNothing) => return Ok(0),
-            Some(medulla_query::OnConflictAction::DoUpdate(set)) => {
+            Some(medulla_sql::sql::OnConflictAction::DoNothing) => return Ok(0),
+            Some(medulla_sql::sql::OnConflictAction::DoUpdate(set)) => {
                 let empty = serde_json::Map::new();
                 core.compare_and_set_fields(&node_id, &empty, set);
                 return Ok(1);
@@ -232,9 +232,9 @@ pub(crate) fn resolve_insert_nodes_select(
     visible: &Arc<GraphCore>,
     snap: &crate::graph::GraphView,
     store: &medulla_query::TableStore,
-    ins: medulla_query::InsertNodesSelect,
+    ins: medulla_sql::sql::InsertNodesSelect,
 ) -> Result<usize, String> {
-    let read = medulla_query::exec_sql_typed_with_tables(snap, store, &ins.select_sql)?;
+    let read = medulla_sql::sql::exec_sql_typed_with_tables(snap, store, &ins.select_sql)?;
     if read.columns.len() != ins.columns.len() {
         return Err(format!(
             "INSERT INTO nodes … SELECT column count mismatch: {} target columns, {} selected",
@@ -267,7 +267,7 @@ pub(crate) async fn exec_sql_write_insert_nodes_select(
     core: &Arc<GraphCore>,
     read_core: Arc<GraphCore>,
     store: &medulla_query::TableStore,
-    ins: medulla_query::InsertNodesSelect,
+    ins: medulla_sql::sql::InsertNodesSelect,
 ) -> Response {
     let core = core.clone();
     let store = store.clone();
@@ -288,13 +288,13 @@ pub(crate) async fn exec_sql_write_update_nodes_join(
     core: &Arc<GraphCore>,
     read_core: &Arc<GraphCore>,
     store: &medulla_query::TableStore,
-    upd: medulla_query::UpdateNodesJoin,
+    upd: medulla_sql::sql::UpdateNodesJoin,
 ) -> Response {
     let core = core.clone();
     let store = store.clone();
     let snap = read_core.analysis_snapshot();
     let r = compute_off_lock(req_id, move || {
-        let read = medulla_query::exec_sql_typed_with_tables(&snap, &store, &upd.resolve_sql)?;
+        let read = medulla_sql::sql::exec_sql_typed_with_tables(&snap, &store, &upd.resolve_sql)?;
         if read.columns.len() != upd.set_targets.len() + 1 {
             return Err(format!(
                 "UPDATE … FROM resolution shape mismatch: expected id + {} set columns, got {}",
@@ -333,13 +333,13 @@ pub(crate) async fn exec_sql_write_delete_nodes_join(
     core: &Arc<GraphCore>,
     read_core: &Arc<GraphCore>,
     store: &medulla_query::TableStore,
-    del: medulla_query::DeleteNodesJoin,
+    del: medulla_sql::sql::DeleteNodesJoin,
 ) -> Response {
     let core = core.clone();
     let store = store.clone();
     let snap = read_core.analysis_snapshot();
     let r = compute_off_lock(req_id, move || {
-        let read = medulla_query::exec_sql_typed_with_tables(&snap, &store, &del.resolve_sql)?;
+        let read = medulla_sql::sql::exec_sql_typed_with_tables(&snap, &store, &del.resolve_sql)?;
         let mut seen = std::collections::HashSet::new();
         let mut n = 0usize;
         for row in read.rows {
@@ -364,7 +364,7 @@ pub(crate) async fn exec_sql_write_create_table(
     scope: SqlWriteScope<'_>,
     sql_method: Method,
     store: &medulla_query::TableStore,
-    plan: medulla_query::CreateTablePlan,
+    plan: medulla_sql::sql::CreateTablePlan,
 ) -> Response {
     let columns = match to_store_columns(&plan.columns) {
         Ok(columns) => columns,
@@ -386,7 +386,7 @@ pub(crate) async fn exec_sql_write_alter_table(
     scope: SqlWriteScope<'_>,
     sql_method: Method,
     store: &medulla_query::TableStore,
-    plan: medulla_query::AlterTablePlan,
+    plan: medulla_sql::sql::AlterTablePlan,
 ) -> Response {
     let op = match alter_table_txn_op(plan) {
         Ok(op) => op,

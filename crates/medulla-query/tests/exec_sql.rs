@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use medulla_core::graph::GraphView;
-use medulla_query::exec_sql;
+use medulla_sql::sql::exec_sql;
 use serde_json::json;
 
 /// A GraphView carrying three nodes with inferable scalar props plus a nested key
@@ -34,13 +34,13 @@ fn sample_view() -> GraphView {
     }
 }
 
-fn run(sql: &str) -> medulla_query::QueryResult {
+fn run(sql: &str) -> medulla_sql::sql::QueryResult {
     // Direct call (exec_sql owns its current-thread runtime) — the spike already
     // proved the spawn_blocking nesting.
-    exec_sql(&sample_view(), sql, &medulla_query::CancellationToken::new()).expect("sql executed")
+    exec_sql(&sample_view(), sql, &medulla_sql::sql::CancellationToken::new()).expect("sql executed")
 }
 
-fn rows_as_values(r: &medulla_query::QueryResult) -> Vec<Vec<serde_json::Value>> {
+fn rows_as_values(r: &medulla_sql::sql::QueryResult) -> Vec<Vec<serde_json::Value>> {
     r.rows
         .iter()
         .map(|blob| rmp_serde::from_slice::<Vec<serde_json::Value>>(blob).unwrap())
@@ -195,19 +195,19 @@ fn exec_sql_pre_cancelled_token_returns_no_rows() {
     let view = sample_view();
     let sql = "SELECT value FROM generate_series(1, 1000) ORDER BY value";
 
-    let fresh = medulla_query::CancellationToken::new();
+    let fresh = medulla_sql::sql::CancellationToken::new();
     let normal =
-        medulla_query::exec_sql(&view, sql, &fresh).expect("an uncancelled run must execute normally");
+        medulla_sql::sql::exec_sql(&view, sql, &fresh).expect("an uncancelled run must execute normally");
     assert_eq!(
         normal.rows.len(),
         1000,
         "sanity: the uncancelled run returns the full series"
     );
 
-    let cancelled = medulla_query::CancellationToken::new();
+    let cancelled = medulla_sql::sql::CancellationToken::new();
     cancelled.cancel();
     assert!(cancelled.is_cancelled());
-    let stopped = medulla_query::exec_sql(&view, sql, &cancelled)
+    let stopped = medulla_sql::sql::exec_sql(&view, sql, &cancelled)
         .expect("cancellation degrades to fewer rows, never an error");
     assert_eq!(
         stopped.rows.len(),
@@ -226,10 +226,10 @@ fn typed_and_tables_aware_cancellable_entry_points_honor_a_pre_cancelled_token()
     let view = sample_view();
     let sql = "SELECT value FROM generate_series(1, 1000) ORDER BY value";
 
-    let cancelled = medulla_query::CancellationToken::new();
+    let cancelled = medulla_sql::sql::CancellationToken::new();
     cancelled.cancel();
 
-    let typed = medulla_query::exec_sql_typed_cancellable(&view, sql, &cancelled)
+    let typed = medulla_sql::sql::exec_sql_typed_cancellable(&view, sql, &cancelled)
         .expect("cancellation degrades to fewer rows, never an error");
     assert_eq!(
         typed.rows.len(),
@@ -239,7 +239,7 @@ fn typed_and_tables_aware_cancellable_entry_points_honor_a_pre_cancelled_token()
 
     let (store, _tmp_path) = TableStore::open_temp().expect("temp table store");
     let with_tables =
-        medulla_query::exec_sql_typed_with_tables_cancellable(&view, &store, sql, &cancelled)
+        medulla_sql::sql::exec_sql_typed_with_tables_cancellable(&view, &store, sql, &cancelled)
             .expect("cancellation degrades to fewer rows, never an error");
     assert_eq!(
         with_tables.rows.len(),

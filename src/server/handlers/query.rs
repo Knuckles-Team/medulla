@@ -102,7 +102,7 @@ where
 /// typed rows — one owner so a change to how a cell fails to encode can't
 /// land on one path and not the others.
 #[cfg(feature = "query")]
-fn typed_sql_response(req_id: u64, typed: medulla_query::TypedQueryResult) -> Response {
+fn typed_sql_response(req_id: u64, typed: medulla_sql::sql::TypedQueryResult) -> Response {
     match typed.rows.iter().map(msgpack_bytes).collect() {
         Ok(rows) => dynamic_response::<query_results::Sql, _>(
             req_id,
@@ -390,10 +390,10 @@ mod rls_no_exfiltrate_tests {
     }
 
     fn sql_ids(view: &GraphView) -> Vec<String> {
-        let r = medulla_query::exec_sql(
+        let r = medulla_sql::sql::exec_sql(
             view,
             "SELECT id FROM nodes",
-            &medulla_query::CancellationToken::new(),
+            &medulla_sql::sql::CancellationToken::new(),
         )
         .expect("sql");
         r.rows

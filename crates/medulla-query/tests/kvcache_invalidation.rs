@@ -12,7 +12,7 @@
 #![cfg(feature = "sql")]
 
 use medulla_core::graph::GraphCore;
-use medulla_query::{exec_sql_cached, SqlCache};
+use medulla_sql::{sql::exec_sql_cached, sql::SqlCache};
 use serde_json::json;
 
 #[path = "common/query_rows.rs"]
@@ -85,10 +85,10 @@ fn result_cache_on_vs_off_identical() {
     let sql = "SELECT id, rank FROM nodes ORDER BY id";
 
     let off = query_rows::rows(
-        &medulla_query::exec_sql(
+        &medulla_sql::sql::exec_sql(
             &core.analysis_snapshot(),
             sql,
-            &medulla_query::CancellationToken::new(),
+            &medulla_sql::sql::CancellationToken::new(),
         )
         .unwrap(),
     );
@@ -100,10 +100,10 @@ fn result_cache_on_vs_off_identical() {
     // Mutate, then re-check ON == OFF at the new version (both see the fresh row).
     cache_mutation::add_agent_n4(&core);
     let off2 = query_rows::rows(
-        &medulla_query::exec_sql(
+        &medulla_sql::sql::exec_sql(
             &core.analysis_snapshot(),
             sql,
-            &medulla_query::CancellationToken::new(),
+            &medulla_sql::sql::CancellationToken::new(),
         )
         .unwrap(),
     );

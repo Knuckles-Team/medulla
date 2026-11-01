@@ -42,11 +42,8 @@ use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::mutation_batch::MutationEnvelope;
 use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_protocol_types::mutation_batch::VersionExpectation;
-use medulla_query::{
-    exec_sql_typed_with_tables_cached_cancellable, exec_sql_typed_with_tables_cancellable,
-    CancellationToken, Column, ColumnType, SqlContextCache, TableSchema, TableStore, TableTxn,
-    TxnOp, TypedQueryResult,
-};
+use medulla_sql::{sql::exec_sql_typed_with_tables_cached_cancellable, sql::exec_sql_typed_with_tables_cancellable, sql::CancellationToken, sql::SqlContextCache, sql::TypedQueryResult};
+use medulla_query::{Column, ColumnType, TableSchema, TableStore, TableTxn, TxnOp};
 use serde_json::json;
 
 const TENANT: &str = "tenant-cache-a";

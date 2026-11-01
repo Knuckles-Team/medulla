@@ -24,32 +24,12 @@ pub mod plan_scope;
 
 pub use plan_scope::{PlanScope, PlanScopeError, ScopePredicate};
 
-#[cfg(feature = "sql")]
-pub mod sql;
 
 /// Arbitrary user-defined relational tables (CONCEPT:MEDULLA-KG.query.register-user-tables-alongside) — the durable redb
 /// table store + DataFusion materialization. Behind `sql` (needs Arrow/DataFusion/redb).
 #[cfg(feature = "sql")]
 pub mod tables;
 
-
-#[cfg(feature = "sql")]
-pub use sql::{
-    classify, default_spill_rows, exec_graph_table_typed_with_tables, exec_sql, exec_sql_arrow,
-    exec_sql_arrow_cancellable, exec_sql_cached, exec_sql_over_tables, exec_sql_typed,
-    exec_sql_typed_cancellable, exec_sql_typed_with_tables,
-    exec_sql_typed_with_tables_cached_cancellable, exec_sql_typed_with_tables_cancellable,
-    infer_param_sites, parse_create_ann_index, plan_ann_search, plan_bm25_search,
-    require_single_read, returning_columns, schema_probe_sql, user_ann_decision, AlterTableAction,
-    AlterTablePlan, AnnDeclineReason, AnnQueryShape, AnnSearchPlan,
-    Bm25SearchPlan, CancellationToken, ColumnDef, ColumnVectorBinding, ContinuousAggPlan,
-    CopyFormat, CopyPlan, CreateFunctionPlan, CreateTablePlan, CreateViewPlan, DeleteNodes,
-    DeleteNodesJoin, DeleteTable, DropFunctionPlan, DropTablePlan, DropViewPlan, GraphTableQuery,
-    InsertNode, InsertNodes, InsertNodesSelect, InsertSelect, InsertTable,
-    OnConflict, OnConflictAction, ParamLiteralType, ParamSite, PgColType, QueryResult, SqlCache,
-    SqlContextCache, StatementKind, StreamOutcome, TableWhereEq, TypedColumn, TypedQueryResult,
-    UpdateNodes, UpdateNodesJoin, UpdateTable, UserAnnDecision, UserAnnPushdown, WhereEq, READ_ONLY_RELATION_NAMES,
-};
 
 #[cfg(feature = "sql")]
 pub use tables::AnnIndexPlan;
@@ -178,8 +158,6 @@ pub mod index;
 #[cfg(feature = "sql")]
 pub mod migration;
 
-#[cfg(feature = "sql")]
-pub mod provider;
 
 /// CONCEPT:MEDULLA-KG.query.surface-b-numeric-operators — Analytics-Program Surface-B numeric SQL operators (`cosine_sim`,
 /// `l2_normalize`, `zscore`, `covariance`) backed by the `medulla-numeric` kernel. Feature

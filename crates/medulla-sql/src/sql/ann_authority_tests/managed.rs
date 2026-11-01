@@ -6,8 +6,8 @@ use medulla_core::index::{IndexBlockReason, ManagedIndexTarget};
 
 use super::*;
 use medulla_core::index::ManagedIndexState;
-use crate::tables::ann_authority::durable::{encode, Encoding};
-use crate::tables::store::GenerationWrite;
+use medulla_query::{tables::ann_authority::durable::encode, tables::ann_authority::durable::Encoding};
+use medulla_query::tables::store::GenerationWrite;
 
 fn status_relation(store: &TableStore) -> Vec<Vec<Value>> {
     crate::sql::exec_sql_typed_with_tables(
@@ -182,18 +182,18 @@ fn drop_index_is_a_typed_sql_statement_over_the_same_fenced_drop() {
     let index = hnsw_l2();
     store.create_ann_index(&index).unwrap();
     refresh(&store);
-    let classified = crate::classify("DROP INDEX IF EXISTS docs_emb;").unwrap();
+    let classified = crate::sql::classify("DROP INDEX IF EXISTS docs_emb;").unwrap();
     assert!(matches!(
         classified,
-        crate::StatementKind::DropAnnIndex { ref name, if_exists: true } if name == "docs_emb"
+        crate::sql::StatementKind::DropAnnIndex { ref name, if_exists: true } if name == "docs_emb"
     ));
     assert_eq!(
         store.ann_index_table("docs_emb").unwrap().as_deref(),
         Some("docs")
     );
-    let mut txn = crate::TableTxn::new();
-    txn.push(crate::TxnOp::IndexCatalog(
-        crate::IndexCatalogTxnOp::DropAnnIndex {
+    let mut txn = medulla_query::tables::TableTxn::new();
+    txn.push(medulla_query::tables::TxnOp::IndexCatalog(
+        medulla_query::tables::IndexCatalogTxnOp::DropAnnIndex {
             table: "docs".to_string(),
             name: "docs_emb".to_string(),
         },

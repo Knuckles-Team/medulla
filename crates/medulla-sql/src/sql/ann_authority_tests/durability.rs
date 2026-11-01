@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use super::*;
 use medulla_core::index::ManagedIndexState;
-use crate::tables::ann_authority::durable::{encode, verified_manifest, Encoding};
+use medulla_query::{tables::ann_authority::durable::encode, tables::ann_authority::durable::verified_manifest, tables::ann_authority::durable::Encoding};
 
 /// Far outside every fixture cluster (their coordinates stay within ±3).
 fn far_vector() -> Vec<f32> {

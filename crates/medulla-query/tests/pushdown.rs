@@ -5,7 +5,7 @@
 #![cfg(feature = "sql")]
 
 use medulla_core::graph::GraphCore;
-use medulla_query::exec_sql;
+use medulla_sql::sql::exec_sql;
 use medulla_query::schema::Cell;
 use medulla_query::index::SecondaryIndexLookup;
 use medulla_query::tables::TableStore;
@@ -35,7 +35,7 @@ fn graph(n: usize) -> GraphCore {
 /// Helper: run a query, return sorted id list.
 fn ids(core: &GraphCore, sql: &str) -> Vec<String> {
     let snap = core.analysis_snapshot();
-    let r = exec_sql(&snap, sql, &medulla_query::CancellationToken::new()).unwrap();
+    let r = exec_sql(&snap, sql, &medulla_sql::sql::CancellationToken::new()).unwrap();
     let mut v: Vec<String> = query_rows::rows(&r)
         .into_iter()
         .map(|row| row[0].as_str().unwrap().to_string())
@@ -50,7 +50,7 @@ where
     F: Fn(&[Value]) -> bool,
 {
     let snap = core.analysis_snapshot();
-    let all = exec_sql(&snap, sql, &medulla_query::CancellationToken::new()).unwrap();
+    let all = exec_sql(&snap, sql, &medulla_sql::sql::CancellationToken::new()).unwrap();
     let mut ids: Vec<String> = query_rows::rows(&all)
         .into_iter()
         .filter(|row| predicate(row))

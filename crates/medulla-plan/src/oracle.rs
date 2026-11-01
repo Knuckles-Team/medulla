@@ -57,7 +57,7 @@ pub fn separate_surfaces(
 
 /// Run a `SELECT id FROM nodes WHERE …` through real DataFusion and decode the ids.
 fn filter_ids(view: &GraphView, sql: &str) -> Result<Vec<String>, String> {
-    let result = medulla_query::exec_sql(view, sql, &medulla_query::CancellationToken::new())?;
+    let result = medulla_sql::sql::exec_sql(view, sql, &medulla_sql::sql::CancellationToken::new())?;
     let mut out = Vec::with_capacity(result.rows.len());
     for row in &result.rows {
         let cells: Vec<serde_json::Value> = medulla_types::msgpack::decode_bounded(

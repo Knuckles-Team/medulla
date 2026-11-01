@@ -16,7 +16,7 @@ name = "medulla_plan"
 # leg — and the `UnifiedPlan::execute` that needs it — are gated behind this
 # feature, exactly as the facade gates `query`.
 default = []
-query = ["dep:medulla-query", "medulla-query/sql", "dep:medulla-compute", "dep:tracing"]
+query = ["dep:medulla-query", "medulla-query/sql", "medulla-sql/sql", "dep:medulla-compute", "dep:tracing"]
 # The cross-modal cost-based optimizer (CONCEPT:MEDULLA-KG.query.xmodal-cost-optimizer). The engine
 # itself compiles under `query` (beside the executor) and is active by default with the
 # runtime kill-switch `MEDULLA_COST_OPT=0` → identity; this feature is the FACADE tier
@@ -436,6 +436,7 @@ medulla-decision-types = { path = "../medulla-decision-types", features = ["quer
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-result-types = { path = "../medulla-result-types", features = ["query"] }
+medulla-sql = { path = "../medulla-sql" }
 
 [dev-dependencies]
 medulla-result-types = { path = "../medulla-result-types", features = ["query"] }

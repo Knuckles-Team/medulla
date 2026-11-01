@@ -26,10 +26,10 @@ use medulla_result_types::row_predicate::RowPredicate;
 
 use super::ann_filter::{admissible_prefilter, ann_query_shape, AnnDeclineReason, AnnQueryShape};
 use super::pgfamily::{plan_ann_search, AnnSearchPlan};
-use crate::tables::ann_plan::{AnnIndexPlan, AnnMethod};
-use crate::tables::ann_authority::AnnTopKRequest;
-use crate::schema::TableSchema;
-use crate::tables::TableStore;
+use medulla_query::{tables::ann_plan::AnnIndexPlan, tables::ann_plan::AnnMethod};
+use medulla_query::tables::ann_authority::AnnTopKRequest;
+use medulla_query::schema::TableSchema;
+use medulla_query::tables::TableStore;
 
 /// Conservative predicate: could `sql` trigger an ANN pushdown against
 /// `ann_indexes`? A pushdown narrows `nodes`/a user table to a slice specific to

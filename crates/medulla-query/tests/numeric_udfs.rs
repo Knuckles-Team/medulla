@@ -4,7 +4,7 @@
 #![cfg(feature = "numeric")]
 
 use medulla_core::graph::GraphCore;
-use medulla_query::{exec_sql, CancellationToken};
+use medulla_sql::{sql::exec_sql, sql::CancellationToken};
 use serde_json::json;
 
 #[path = "common/query_rows.rs"]

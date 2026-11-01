@@ -27,9 +27,9 @@ use datafusion::sql::sqlparser::ast::{
 };
 use datafusion::sql::sqlparser::dialect::PostgreSqlDialect;
 use datafusion::sql::sqlparser::parser::Parser;
-use crate::tables::ann_plan::{AnnIndexPlan, HypertablePlan, VectorMetric};
+use medulla_query::{tables::ann_plan::AnnIndexPlan, tables::ann_plan::HypertablePlan, tables::ann_plan::VectorMetric};
 #[cfg(test)]
-use crate::tables::ann_plan::AnnMethod;
+use medulla_query::tables::ann_plan::AnnMethod;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Plan structs (the decoded shapes classify produces)
@@ -631,7 +631,7 @@ mod tests {
 
         // CONCEPT:MEDULLA-KG.query.paradedb-bm25 `@@@` desugars to bm25_match (filter); CONCEPT:MEDULLA-KG.query.continuous-aggregate-lowering
         // time_bucket floors the timestamp — both run in one DataFusion plan.
-        let out = crate::exec_sql_over_tables(
+        let out = crate::sql::exec_sql_over_tables(
             vec![("events".to_string(), schema, vec![batch])],
             "SELECT time_bucket(3600, ts) AS bucket FROM events \
              WHERE body @@@ 'rust' ORDER BY bucket",
@@ -670,7 +670,7 @@ mod tests {
         )
         .unwrap();
 
-        let out = crate::exec_sql_over_tables(
+        let out = crate::sql::exec_sql_over_tables(
             vec![("docs".to_string(), schema, vec![batch])],
             "SELECT id, bm25_snippet(body, 'lazy dog', 40) AS snip \
              FROM docs WHERE body @@@ 'lazy dog' \

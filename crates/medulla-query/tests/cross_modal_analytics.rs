@@ -18,7 +18,7 @@
 #![cfg(feature = "numeric")]
 
 use medulla_core::graph::GraphCore;
-use medulla_query::exec_sql;
+use medulla_sql::sql::exec_sql;
 use serde_json::json;
 
 #[path = "common/query_rows.rs"]
@@ -70,7 +70,7 @@ fn joined_rows(projection: &str) -> Vec<Vec<serde_json::Value>> {
     let snap = graph().analysis_snapshot();
     let sql =
         format!("WITH {READINGS_CTE} SELECT {projection} FROM nodes n JOIN ts t ON n.id = t.nid");
-    query_rows::rows(&exec_sql(&snap, &sql, &medulla_query::CancellationToken::new()).unwrap())
+    query_rows::rows(&exec_sql(&snap, &sql, &medulla_sql::sql::CancellationToken::new()).unwrap())
 }
 
 /// **The cross-modal covariance** (CONCEPT:MEDULLA-KG.query.medulla-3): `covariance` over a column from the

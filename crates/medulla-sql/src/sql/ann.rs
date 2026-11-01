@@ -32,7 +32,7 @@ use medulla_ann::{FlatIndex, HnswIndex, IvfPq, IvfPqParams, SearchParams};
 use medulla_ann::Metric;
 use serde::{Deserialize, Serialize};
 
-use crate::tables::ann_plan::{isqrt, metric_to_ann, AnnMethod, VectorMetric};
+use medulla_query::{tables::ann_plan::isqrt, tables::ann_plan::metric_to_ann, tables::ann_plan::AnnMethod, tables::ann_plan::VectorMetric};
 
 /// Deterministic seed for every medulla-ann index built for a pushdown (CONCEPT:MEDULLA-KG.query.real-pgvector-ann-top) —
 /// fixed so repeated runs of the same query are bit-identical.
@@ -101,7 +101,7 @@ pub(crate) fn parse_query_vector(raw: &str) -> Option<Vec<f32>> {
     if s.is_empty() || s.starts_with('$') {
         return None;
     }
-    crate::schema::parse_vector_text(s)
+    medulla_query::schema::parse_vector_text(s)
         .ok()
         .filter(|v| !v.is_empty())
 }

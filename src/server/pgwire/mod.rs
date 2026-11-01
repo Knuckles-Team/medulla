@@ -69,10 +69,8 @@ use pgwire::error::{ErrorInfo, PgWireError, PgWireResult};
 use pgwire::messages::data::DataRow;
 use pgwire::tokio::process_socket;
 
-use medulla_query::{
-    ColumnType, CopyFormat, DeleteNodes, InsertNodes, PgColType, StatementKind, TableSchema,
-    TypedQueryResult, UpdateNodes,
-};
+use medulla_query::{ColumnType, TableSchema};
+use medulla_sql::{sql::CopyFormat, sql::DeleteNodes, sql::InsertNodes, sql::PgColType, sql::StatementKind, sql::TypedQueryResult, sql::UpdateNodes};
 
 use crate::server::wire::{CopyState, WireError, WireOutcome, WireProtocol, WireSession};
 use medulla_server_api::state::ServerState;
@@ -763,19 +761,19 @@ struct EngineBackend {
 /// out of `param_type_oids` (extract-method, cx/wD8) — same terms, same
 /// order as before.
 fn param_site_pg_col_type(
-    site: medulla_query::ParamSite,
+    site: medulla_sql::sql::ParamSite,
     cols: &std::collections::HashMap<String, PgColType>,
 ) -> PgColType {
     match site {
-        medulla_query::ParamSite::IdColumn => PgColType::Text,
-        medulla_query::ParamSite::Column(name) => {
+        medulla_sql::sql::ParamSite::IdColumn => PgColType::Text,
+        medulla_sql::sql::ParamSite::Column(name) => {
             cols.get(&name).copied().unwrap_or(PgColType::Text)
         }
-        medulla_query::ParamSite::Literal(lt) => match lt {
-            medulla_query::ParamLiteralType::Int => PgColType::Int8,
-            medulla_query::ParamLiteralType::Float => PgColType::Float8,
-            medulla_query::ParamLiteralType::Bool => PgColType::Bool,
-            medulla_query::ParamLiteralType::Text => PgColType::Text,
+        medulla_sql::sql::ParamSite::Literal(lt) => match lt {
+            medulla_sql::sql::ParamLiteralType::Int => PgColType::Int8,
+            medulla_sql::sql::ParamLiteralType::Float => PgColType::Float8,
+            medulla_sql::sql::ParamLiteralType::Bool => PgColType::Bool,
+            medulla_sql::sql::ParamLiteralType::Text => PgColType::Text,
         },
     }
 }
@@ -824,7 +822,7 @@ impl EngineBackend {
     /// (tokio-postgres/psycopg/asyncpg) encode a typed parameter — UNKNOWN is
     /// rejected client-side as `WrongType`.
     async fn param_type_oids(&self, graph: &str, sql: &str) -> PgWireResult<Vec<Type>> {
-        let sites = match medulla_query::infer_param_sites(sql) {
+        let sites = match medulla_sql::sql::infer_param_sites(sql) {
             Ok(s) => s,
             Err(_) => return Ok(Vec::new()),
         };
@@ -858,7 +856,7 @@ impl EngineBackend {
         graph: &str,
         sql: &str,
     ) -> PgWireResult<Vec<FieldInfo>> {
-        match medulla_query::classify(sql) {
+        match medulla_sql::sql::classify(sql) {
             Ok(StatementKind::Read) => {
                 // Derive the schema from a PROBE form (WHERE/LIMIT dropped) so the
                 // engine's schema-on-read path always sees rows — a filtered query
@@ -866,7 +864,7 @@ impl EngineBackend {
                 // make the described `RowDescription` disagree with the executed
                 // DataRows. The probe keeps the projection/FROM/GROUP BY, so the
                 // columns are identical to the real query.
-                let probe = medulla_query::schema_probe_sql(sql).unwrap_or_else(|| sql.to_string());
+                let probe = medulla_sql::sql::schema_probe_sql(sql).unwrap_or_else(|| sql.to_string());
                 let result = self
                     .session
                     .run_read(graph, probe)

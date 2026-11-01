@@ -17,7 +17,8 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use medulla_query::{Cell, TableStore, UserAnnDecision, UserAnnPushdown};
+use medulla_query::{Cell, TableStore};
+use medulla_sql::{sql::UserAnnDecision, sql::UserAnnPushdown};
 
 use super::{
     open_authorized_table, project_read_store, selectable_tables, AuthorizedReadStore,
@@ -47,7 +48,7 @@ pub fn authorized_read_store_for_query(
     graph: &RequestGraph,
 ) -> Result<AuthorizedReadStore, String> {
     let tenant = sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)?;
-    let narrowing = match medulla_query::user_ann_decision(query, &tenant)? {
+    let narrowing = match medulla_sql::sql::user_ann_decision(query, &tenant)? {
         UserAnnDecision::Pushdown(pushdown) => Some(pushdown),
         UserAnnDecision::Declined(reason) => {
             tracing::debug!(
@@ -251,7 +252,7 @@ mod tests {
         let projection =
             authorized_read_store_for_query(&authority(who), dir, sql, None, &no_graph()).unwrap();
         let view = medulla_core::graph::GraphView::default();
-        medulla_query::exec_sql_typed_with_tables(&view, projection.store(), sql)
+        medulla_sql::sql::exec_sql_typed_with_tables(&view, projection.store(), sql)
             .unwrap()
             .rows
     }

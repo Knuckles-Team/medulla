@@ -272,7 +272,7 @@ mod tests {
                 where_clause(std::slice::from_ref(pred)).unwrap()
             );
             let result =
-                medulla_query::exec_sql(view, &sql, &medulla_query::CancellationToken::new())
+                medulla_sql::sql::exec_sql(view, &sql, &medulla_sql::sql::CancellationToken::new())
                     .unwrap();
             result
                 .rows

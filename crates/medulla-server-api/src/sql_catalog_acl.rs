@@ -1995,7 +1995,7 @@ pub fn register_owner_after_create_in(
 pub fn authorized_graph_table_sql(
     authority: &CarrierAuthority,
     persist_dir: &Path,
-    query: &medulla_query::GraphTableQuery,
+    query: &medulla_sql::sql::GraphTableQuery,
 ) -> Result<String, String> {
     require_source_authority()?;
     let tenant_scope = authority.tenant_scope();
@@ -2020,7 +2020,7 @@ pub fn authorized_graph_table_sql(
     // admitted graph; this re-checks the pinned schema digests at READ time so a
     // bypass fails closed instead of lowering against a schema that moved.
     store.verify_property_graph_dependencies(&record)?;
-    medulla_query::sql::lower_graph_table(query, &record.accepted_definition, tenant_scope)
+    medulla_sql::sql::lower_graph_table(query, &record.accepted_definition, tenant_scope)
         .map(|plan| plan.to_sql())
 }
 
@@ -2094,7 +2094,7 @@ pub fn authorized_read_store(
 fn project_read_store(
     authority: &CarrierAuthority,
     persist_dir: &Path,
-    narrowing: Option<&medulla_query::UserAnnPushdown>,
+    narrowing: Option<&medulla_sql::sql::UserAnnPushdown>,
     read_only: Option<&dyn ReadOnlyRelations>,
 ) -> Result<AuthorizedReadStore, String> {
     let names = selectable_tables(authority, persist_dir)?;
@@ -4139,7 +4139,7 @@ mod tests {
                    customers KEY (customer_id) LABEL customer PROPERTIES (name), \
                    orders KEY (order_id) LABEL \"order\" PROPERTIES (ordered_when))";
         let medulla_query::tables::PropertyGraphStatement::Create(definition) =
-            medulla_query::sql::parse_property_graph_ddl(ddl, owner.tenant_scope()).unwrap()
+            medulla_sql::sql::parse_property_graph_ddl(ddl, owner.tenant_scope()).unwrap()
         else {
             panic!("expected CREATE PROPERTY GRAPH");
         };
@@ -4150,12 +4150,12 @@ mod tests {
     }
 
     #[cfg(feature = "query")]
-    fn graph_table_query(graph: &str) -> medulla_query::GraphTableQuery {
+    fn graph_table_query(graph: &str) -> medulla_sql::sql::GraphTableQuery {
         let sql = format!(
             "SELECT * FROM GRAPH_TABLE ({graph} MATCH (c:customer) COLUMNS (c.name AS customer_name))"
         );
-        match medulla_query::classify(&sql).unwrap() {
-            medulla_query::StatementKind::GraphTableReadRequiresCatalogAdmission(query) => query,
+        match medulla_sql::sql::classify(&sql).unwrap() {
+            medulla_sql::sql::StatementKind::GraphTableReadRequiresCatalogAdmission(query) => query,
             _ => panic!("expected a GRAPH_TABLE read"),
         }
     }

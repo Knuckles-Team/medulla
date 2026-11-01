@@ -60,7 +60,7 @@ pub fn bind_sql_text_embedder() {
         let Some(embedder) = uql_text_embedder() else {
             return;
         };
-        let _ = medulla_query::sql::bind_text_embedder(std::sync::Arc::new(move |text: &str| {
+        let _ = medulla_sql::sql::bind_text_embedder(std::sync::Arc::new(move |text: &str| {
             embedder.embed(text)
         }));
     });

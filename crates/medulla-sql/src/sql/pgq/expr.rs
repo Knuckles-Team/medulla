@@ -2,7 +2,7 @@
 //! pattern element's `WHERE` and a `COLUMNS` projection are written in.
 
 use super::lex::{Cursor, SqlNumber, Token, MAX_GRAPH_EXPR_DEPTH};
-use crate::tables::property_graph::SqlIdentifier;
+use medulla_query::tables::property_graph::SqlIdentifier;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinaryOp {

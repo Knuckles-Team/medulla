@@ -40,7 +40,7 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 
-use medulla_query::PgColType;
+use medulla_sql::sql::PgColType;
 
 use crate::server::broker_wire::{self, BrokerProtocol};
 use crate::server::wire::{WireError, WireOutcome, WireProtocol, WireSession};

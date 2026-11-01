@@ -5,7 +5,7 @@ use std::collections::BTreeSet;
 use super::expr::{parse_expr, GraphExpr};
 use super::label::{parse_label_expr, LabelExpr};
 use super::lex::{parse_name, Cursor, MAX_GRAPH_PATTERN_EDGES, MAX_GRAPH_TABLE_COLUMNS};
-use crate::tables::property_graph::{SqlIdentifier, SqlName};
+use medulla_query::{tables::property_graph::SqlIdentifier, tables::property_graph::SqlName};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EdgeDirection {

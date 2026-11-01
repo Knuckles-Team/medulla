@@ -388,7 +388,16 @@ def sync_target_manifest(root: Path, frm: str, to: str):
         ident = snake(dep)
         if re.search(r"\b" + ident + r"\b", srcs) or (dep == "schemars" and "JsonSchema" in raw) or (dep == "strum" and "strum" in raw):
             m = re.search(r"(?m)^" + re.escape(dep) + r"\s*=.*$", ct_text)
-            ct = add_line(ct, "dependencies", m.group(0))
+            spec = m.group(0)
+            end = m.end()
+            while spec.count("[") + spec.count("{") > spec.count("]") + spec.count("}"):
+                nl = ct_text.index("\n", end) if "\n" in ct_text[end:] else len(ct_text)
+                nxt = ct_text[end:nl + 1] if end < len(ct_text) else ""
+                end = nl + 1
+                spec += nxt.rstrip("\n") and "\n" + nxt.rstrip("\n")
+                if end >= len(ct_text):
+                    break
+            ct = add_line(ct, "dependencies", spec)
     names = set(FEAT.findall(raw))
     cfeat = tomllib.loads(ct).get("features", {})
     ffeat = fman.get("features", {})

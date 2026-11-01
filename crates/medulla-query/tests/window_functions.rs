@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use medulla_core::graph::GraphView;
-use medulla_query::exec_sql;
+use medulla_sql::sql::exec_sql;
 use serde_json::{json, Value};
 
 /// Nodes with a `part` partition key, an `ord` ordering key, and a numeric `val`, so
@@ -35,7 +35,7 @@ fn sample_view() -> GraphView {
 }
 
 fn run(sql: &str) -> (Vec<String>, Vec<Vec<Value>>) {
-    let r = exec_sql(&sample_view(), sql, &medulla_query::CancellationToken::new())
+    let r = exec_sql(&sample_view(), sql, &medulla_sql::sql::CancellationToken::new())
         .expect("window sql executed");
     let rows = r
         .rows

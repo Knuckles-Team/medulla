@@ -4,7 +4,7 @@
 use std::collections::BTreeSet;
 
 use super::lex::{Cursor, MAX_LABEL_EXPR_DEPTH, MAX_LABEL_EXPR_NODES};
-use crate::tables::property_graph::SqlIdentifier;
+use medulla_query::tables::property_graph::SqlIdentifier;
 
 /// A SQL/PGQ label expression: a label name combined with `!` (negation),
 /// `&` (conjunction), and `|` (disjunction), in that binding order.

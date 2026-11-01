@@ -2545,7 +2545,7 @@ fn sql_filter_ids(
 
     // `exec_sql` builds its own current-thread runtime to drive DataFusion's async
     // collect (safe to call inside spawn_blocking, exactly as the Sql handler does).
-    let result = medulla_query::exec_sql(view, &sql, &medulla_query::CancellationToken::new())?;
+    let result = medulla_sql::sql::exec_sql(view, &sql, &medulla_sql::sql::CancellationToken::new())?;
     // `result.rows[i]` is a MessagePack-encoded `Vec<serde_json::Value>` aligned to
     // `result.columns` (here a single `id` column). Decode the id cell of each row.
     let mut out = Vec::with_capacity(result.rows.len());

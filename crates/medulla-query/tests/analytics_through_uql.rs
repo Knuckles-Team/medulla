@@ -16,7 +16,8 @@
 #![cfg(feature = "numeric")]
 
 use medulla_core::graph::{GraphCore, GraphView};
-use medulla_query::{exec_sql, exec_sql_typed_with_tables, QueryResult, TableStore, TypedQueryResult};
+use medulla_sql::{sql::exec_sql, sql::exec_sql_typed_with_tables, sql::QueryResult, sql::TypedQueryResult};
+use medulla_query::TableStore;
 use serde_json::{json, Value};
 
 /// A 6-node graph carrying, per node:
@@ -182,7 +183,7 @@ fn analytics_resolve_through_the_rpc_path_too_eg353() {
     let r = exec_sql(
         &snap,
         "SELECT covariance(x, y) AS cov, corr(x, y) AS r FROM nodes",
-        &medulla_query::CancellationToken::new(),
+        &medulla_sql::sql::CancellationToken::new(),
     )
     .unwrap();
     let rows = rpc_rows(&r);
@@ -201,7 +202,7 @@ fn analytics_resolve_through_the_rpc_path_too_eg353() {
     let r = exec_sql(
         &snap,
         "SELECT kmeans(emb, 2) AS lbl FROM nodes",
-        &medulla_query::CancellationToken::new(),
+        &medulla_sql::sql::CancellationToken::new(),
     )
     .unwrap();
     let rows = rpc_rows(&r);

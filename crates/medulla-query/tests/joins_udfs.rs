@@ -4,7 +4,7 @@
 #![cfg(feature = "sql")]
 
 use medulla_core::graph::GraphCore;
-use medulla_query::{exec_sql, exec_sql_cached, QueryResult, SqlCache};
+use medulla_sql::{sql::exec_sql, sql::exec_sql_cached, sql::QueryResult, sql::SqlCache};
 use serde_json::json;
 
 #[path = "common/query_rows.rs"]
@@ -44,7 +44,7 @@ fn edges_table_exposes_topology() {
     let r = exec_sql(
         &snap,
         "SELECT src, dst, rel FROM edges ORDER BY src, dst",
-        &medulla_query::CancellationToken::new(),
+        &medulla_sql::sql::CancellationToken::new(),
     )
     .unwrap();
     assert_eq!(
@@ -67,7 +67,7 @@ fn join_nodes_to_edges() {
         &snap,
         "SELECT nodes.id, edges.dst FROM nodes JOIN edges ON nodes.id = edges.src \
          ORDER BY nodes.id, edges.dst",
-        &medulla_query::CancellationToken::new(),
+        &medulla_sql::sql::CancellationToken::new(),
     )
     .unwrap();
     let v = query_rows::rows(&r);
@@ -86,7 +86,7 @@ fn join_reaches_edge_props_via_json_get() {
         "SELECT edges.src, json_get_f64(edges.props, 'weight') AS w \
          FROM nodes JOIN edges ON nodes.id = edges.src WHERE edges.dst = 'n3' \
          ORDER BY edges.src",
-        &medulla_query::CancellationToken::new(),
+        &medulla_sql::sql::CancellationToken::new(),
     )
     .unwrap();
     let v = query_rows::rows(&r);
@@ -132,7 +132,7 @@ fn explain_shows_edges_src_pushdown_and_rel_fallback() {
     let r_src = exec_sql(
         &snap,
         "EXPLAIN SELECT dst FROM edges WHERE src = 'n1'",
-        &medulla_query::CancellationToken::new(),
+        &medulla_sql::sql::CancellationToken::new(),
     )
     .unwrap();
     let text_src = explain_text(&r_src);
@@ -145,7 +145,7 @@ fn explain_shows_edges_src_pushdown_and_rel_fallback() {
     let r_rel = exec_sql(
         &snap,
         "EXPLAIN SELECT src FROM edges WHERE rel = 'n1:n2'",
-        &medulla_query::CancellationToken::new(),
+        &medulla_sql::sql::CancellationToken::new(),
     )
     .unwrap();
     let text_rel = explain_text(&r_rel);
@@ -174,7 +174,7 @@ fn epistemic_decay_scalar() {
             "SELECT epistemic_decay(1.0, 0.0, {}) AS half, epistemic_decay(0.8, 100.0, 100.0) AS same",
             30.0 * day
         ),
-        &medulla_query::CancellationToken::new(),
+        &medulla_sql::sql::CancellationToken::new(),
     )
     .unwrap();
     let v = query_rows::rows(&r);
@@ -190,7 +190,7 @@ fn pagerank_table_function_joins_against_nodes() {
         &snap,
         "SELECT n.id, p.score FROM nodes n JOIN pagerank() p ON n.id = p.id \
          ORDER BY p.score DESC",
-        &medulla_query::CancellationToken::new(),
+        &medulla_sql::sql::CancellationToken::new(),
     )
     .unwrap();
     let v = query_rows::rows(&r);
@@ -212,7 +212,7 @@ fn betweenness_table_function() {
     let r = exec_sql(
         &snap,
         "SELECT id, score FROM betweenness() ORDER BY id",
-        &medulla_query::CancellationToken::new(),
+        &medulla_sql::sql::CancellationToken::new(),
     )
     .unwrap();
     let v = query_rows::rows(&r);
@@ -280,7 +280,7 @@ fn var_cvar_finance_aggregates() {
     let r = exec_sql(
         &snap,
         "SELECT var(ret) AS v, cvar(ret) AS cv FROM nodes",
-        &medulla_query::CancellationToken::new(),
+        &medulla_sql::sql::CancellationToken::new(),
     )
     .unwrap();
     let v = query_rows::rows(&r);

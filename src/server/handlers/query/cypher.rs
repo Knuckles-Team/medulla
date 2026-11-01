@@ -7,7 +7,7 @@ use super::*;
 #[cfg(feature = "cypher")]
 fn cypher_query_response(
     req_id: u64,
-    outcome: Result<Result<medulla_query::QueryResult, String>, Response>,
+    outcome: Result<Result<medulla_sql::sql::QueryResult, String>, Response>,
 ) -> Response {
     match outcome {
         Ok(Ok(result)) => dynamic_response::<query_results::CypherQuery, _>(req_id, &result),

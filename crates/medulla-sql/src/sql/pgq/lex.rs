@@ -1,6 +1,6 @@
 //! Bounded SQL/PGQ lexical primitives and statement-shape recognition.
 
-use crate::tables::property_graph::{SqlIdentifier, SqlName, MAX_CATALOG_OWNER_BYTES};
+use medulla_query::{tables::property_graph::SqlIdentifier, tables::property_graph::SqlName, tables::property_graph::MAX_CATALOG_OWNER_BYTES};
 
 pub const MAX_PGQ_SQL_BYTES: usize = 256 * 1024;
 const MAX_PGQ_TOKENS: usize = 16_384;

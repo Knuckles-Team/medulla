@@ -32,7 +32,7 @@ pub fn wants_read_only_relations(query: &str) -> bool {
     let query = query.to_ascii_lowercase();
     ["pg_", "information_schema"]
         .iter()
-        .chain(medulla_query::READ_ONLY_RELATION_NAMES)
+        .chain(medulla_sql::sql::READ_ONLY_RELATION_NAMES)
         .any(|word| query.contains(word))
 }
 

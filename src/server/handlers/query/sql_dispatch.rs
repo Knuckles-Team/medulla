@@ -12,8 +12,8 @@ struct SqlDispatchCtx<'a> {
 }
 
 #[cfg(feature = "query")]
-fn sql_needs_source_read(kind: &medulla_query::StatementKind) -> bool {
-    use medulla_query::StatementKind as K;
+fn sql_needs_source_read(kind: &medulla_sql::sql::StatementKind) -> bool {
+    use medulla_sql::sql::StatementKind as K;
     matches!(
         kind,
         K::InsertSelect(_)
@@ -28,7 +28,7 @@ fn sql_needs_source_read(kind: &medulla_query::StatementKind) -> bool {
 async fn authorized_sql_read_store(
     req_id: u64,
     scope: SqlWriteScope<'_>,
-    kind: &medulla_query::StatementKind,
+    kind: &medulla_sql::sql::StatementKind,
 ) -> Result<Option<medulla_server_api::sql_catalog_acl::AuthorizedReadStore>, Response> {
     if !sql_needs_source_read(kind) {
         return Ok(None);
@@ -48,8 +48,8 @@ async fn authorized_sql_read_store(
 }
 
 #[cfg(feature = "query")]
-fn sql_is_graph_statement(kind: &medulla_query::StatementKind) -> bool {
-    use medulla_query::StatementKind as K;
+fn sql_is_graph_statement(kind: &medulla_sql::sql::StatementKind) -> bool {
+    use medulla_sql::sql::StatementKind as K;
     matches!(
         kind,
         K::InsertNodes(_)
@@ -69,7 +69,7 @@ pub(crate) async fn exec_sql_write(
     sql_method: Method,
     core: &Arc<GraphCore>,
     store: &medulla_query::TableStore,
-    kind: medulla_query::StatementKind,
+    kind: medulla_sql::sql::StatementKind,
 ) -> Response {
     let read_core = read_authority.project_core(core);
     let authorized_read_store = match authorized_sql_read_store(req_id, scope, &kind).await {
@@ -95,9 +95,9 @@ pub(crate) async fn exec_sql_write(
 #[cfg(feature = "query")]
 async fn exec_sql_graph_statement(
     ctx: SqlDispatchCtx<'_>,
-    kind: medulla_query::StatementKind,
+    kind: medulla_sql::sql::StatementKind,
 ) -> Response {
-    use medulla_query::StatementKind as K;
+    use medulla_sql::sql::StatementKind as K;
     let SqlDispatchCtx {
         req_id,
         core,
@@ -151,7 +151,7 @@ async fn commit_catalog_op(
 #[cfg(feature = "query")]
 async fn exec_sql_catalog_statement(
     ctx: SqlDispatchCtx<'_>,
-    kind: medulla_query::StatementKind,
+    kind: medulla_sql::sql::StatementKind,
 ) -> Response {
     if sql_catalog_table_kind(&kind) {
         return exec_sql_catalog_table(ctx, kind).await;
@@ -172,26 +172,26 @@ async fn exec_sql_catalog_statement(
 }
 
 #[cfg(feature = "query")]
-fn sql_catalog_table_kind(kind: &medulla_query::StatementKind) -> bool {
-    use medulla_query::StatementKind as K;
+fn sql_catalog_table_kind(kind: &medulla_sql::sql::StatementKind) -> bool {
+    use medulla_sql::sql::StatementKind as K;
     matches!(kind, K::CreateTable(_) | K::AlterTable(_))
 }
 
 #[cfg(feature = "query")]
-fn sql_catalog_insert_kind(kind: &medulla_query::StatementKind) -> bool {
-    use medulla_query::StatementKind as K;
+fn sql_catalog_insert_kind(kind: &medulla_sql::sql::StatementKind) -> bool {
+    use medulla_sql::sql::StatementKind as K;
     matches!(kind, K::InsertTable(_) | K::InsertSelect(_))
 }
 
 #[cfg(feature = "query")]
-fn sql_catalog_row_kind(kind: &medulla_query::StatementKind) -> bool {
-    use medulla_query::StatementKind as K;
+fn sql_catalog_row_kind(kind: &medulla_sql::sql::StatementKind) -> bool {
+    use medulla_sql::sql::StatementKind as K;
     matches!(kind, K::UpdateTable(_) | K::DeleteTable(_))
 }
 
 #[cfg(feature = "query")]
-fn sql_catalog_drop_kind(kind: &medulla_query::StatementKind) -> bool {
-    use medulla_query::StatementKind as K;
+fn sql_catalog_drop_kind(kind: &medulla_sql::sql::StatementKind) -> bool {
+    use medulla_sql::sql::StatementKind as K;
     matches!(
         kind,
         K::DropTable(_)
@@ -203,8 +203,8 @@ fn sql_catalog_drop_kind(kind: &medulla_query::StatementKind) -> bool {
 }
 
 #[cfg(feature = "query")]
-fn sql_catalog_create_kind(kind: &medulla_query::StatementKind) -> bool {
-    use medulla_query::StatementKind as K;
+fn sql_catalog_create_kind(kind: &medulla_sql::sql::StatementKind) -> bool {
+    use medulla_sql::sql::StatementKind as K;
     matches!(
         kind,
         K::CreateView(_)
@@ -219,9 +219,9 @@ fn sql_catalog_create_kind(kind: &medulla_query::StatementKind) -> bool {
 #[cfg(feature = "query")]
 async fn exec_sql_catalog_table(
     ctx: SqlDispatchCtx<'_>,
-    kind: medulla_query::StatementKind,
+    kind: medulla_sql::sql::StatementKind,
 ) -> Response {
-    use medulla_query::StatementKind as K;
+    use medulla_sql::sql::StatementKind as K;
     let SqlDispatchCtx {
         req_id,
         scope,
@@ -243,9 +243,9 @@ async fn exec_sql_catalog_table(
 #[cfg(feature = "query")]
 async fn exec_sql_catalog_insert(
     ctx: SqlDispatchCtx<'_>,
-    kind: medulla_query::StatementKind,
+    kind: medulla_sql::sql::StatementKind,
 ) -> Response {
-    use medulla_query::StatementKind as K;
+    use medulla_sql::sql::StatementKind as K;
     let SqlDispatchCtx {
         req_id,
         scope,
@@ -288,9 +288,9 @@ async fn exec_sql_catalog_insert(
 #[cfg(feature = "query")]
 async fn exec_sql_catalog_row(
     ctx: SqlDispatchCtx<'_>,
-    kind: medulla_query::StatementKind,
+    kind: medulla_sql::sql::StatementKind,
 ) -> Response {
-    use medulla_query::StatementKind as K;
+    use medulla_sql::sql::StatementKind as K;
     let SqlDispatchCtx {
         req_id,
         scope,
@@ -335,9 +335,9 @@ async fn exec_sql_catalog_row(
 #[cfg(feature = "query")]
 async fn exec_sql_catalog_drop(
     ctx: SqlDispatchCtx<'_>,
-    kind: medulla_query::StatementKind,
+    kind: medulla_sql::sql::StatementKind,
 ) -> Response {
-    use medulla_query::StatementKind as K;
+    use medulla_sql::sql::StatementKind as K;
     let SqlDispatchCtx {
         req_id,
         scope,
@@ -426,9 +426,9 @@ async fn exec_sql_catalog_drop(
 #[cfg(feature = "query")]
 async fn exec_sql_catalog_create(
     ctx: SqlDispatchCtx<'_>,
-    kind: medulla_query::StatementKind,
+    kind: medulla_sql::sql::StatementKind,
 ) -> Response {
-    use medulla_query::StatementKind as K;
+    use medulla_sql::sql::StatementKind as K;
     let SqlDispatchCtx {
         req_id,
         scope,
@@ -537,8 +537,8 @@ enum SqlCatalogTerminalClass {
 }
 
 #[cfg(feature = "query")]
-fn classify_sql_catalog_terminal(kind: &medulla_query::StatementKind) -> SqlCatalogTerminalClass {
-    use medulla_query::StatementKind as K;
+fn classify_sql_catalog_terminal(kind: &medulla_sql::sql::StatementKind) -> SqlCatalogTerminalClass {
+    use medulla_sql::sql::StatementKind as K;
     match kind {
         K::Begin | K::Commit | K::Rollback => SqlCatalogTerminalClass::TransactionControl,
         K::CopyIn(_) => SqlCatalogTerminalClass::CopyIn,
@@ -575,7 +575,7 @@ fn classify_sql_catalog_terminal(kind: &medulla_query::StatementKind) -> SqlCata
 #[cfg(feature = "query")]
 async fn exec_sql_catalog_terminal(
     ctx: SqlDispatchCtx<'_>,
-    kind: medulla_query::StatementKind,
+    kind: medulla_sql::sql::StatementKind,
 ) -> Response {
     exec_classified_sql_catalog_terminal(ctx, kind).await
 }
@@ -583,7 +583,7 @@ async fn exec_sql_catalog_terminal(
 #[cfg(feature = "query")]
 async fn exec_classified_sql_catalog_terminal(
     ctx: SqlDispatchCtx<'_>,
-    kind: medulla_query::StatementKind,
+    kind: medulla_sql::sql::StatementKind,
 ) -> Response {
     let SqlDispatchCtx {
         req_id,

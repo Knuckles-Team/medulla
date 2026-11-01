@@ -46,7 +46,7 @@ use datafusion::sql::sqlparser::ast::{
 };
 // The Postgres-family extension plan shapes classify routes to.
 use super::pgfamily::ContinuousAggPlan;
-use crate::tables::ann_plan::{AnnIndexPlan, HypertablePlan};
+use medulla_query::{tables::ann_plan::AnnIndexPlan, tables::ann_plan::HypertablePlan};
 // CONCEPT:MEDULLA-KG.compute.json-deep-indexing — the wire predicate the JSON operators lower onto. Surfaced by
 // `medulla-types/query`, which the `sql` feature (this module's gate) always enables.
 use datafusion::sql::sqlparser::dialect::PostgreSqlDialect;
@@ -55,21 +55,19 @@ use medulla_types::wire::{JsonPathOp, Pred};
 use serde_json::{Map, Value};
 
 use super::pgq::GraphTableQuery;
-use crate::tables::property_graph::{
-    PropertyGraphPrivilegeStatement, PropertyGraphStatement, SqlName,
-};
-use crate::schema::CheckExpr;
-use crate::schema::CmpOp;
-use crate::schema::ColCheck;
-use crate::schema::ColumnType;
-use crate::schema::FunctionArg as CatalogArg;
-use crate::schema::FunctionLanguage;
-use crate::schema::FunctionReturns;
-use crate::schema::RefAction;
-use crate::schema::StoredFunction;
-use crate::schema::TableConstraint;
-use crate::schema::MAX_TABLE_COLUMNS;
-use crate::schema::MAX_TABLE_CONSTRAINTS;
+use medulla_query::{tables::property_graph::PropertyGraphPrivilegeStatement, tables::property_graph::PropertyGraphStatement, tables::property_graph::SqlName};
+use medulla_query::schema::CheckExpr;
+use medulla_query::schema::CmpOp;
+use medulla_query::schema::ColCheck;
+use medulla_query::schema::ColumnType;
+use medulla_query::schema::FunctionArg as CatalogArg;
+use medulla_query::schema::FunctionLanguage;
+use medulla_query::schema::FunctionReturns;
+use medulla_query::schema::RefAction;
+use medulla_query::schema::StoredFunction;
+use medulla_query::schema::TableConstraint;
+use medulla_query::schema::MAX_TABLE_COLUMNS;
+use medulla_query::schema::MAX_TABLE_CONSTRAINTS;
 
 /// Catalog mutation requested by a parsed SQL/PGQ DDL statement. Classification
 /// intentionally carries no tenant, ACL decision, or executable SQL: the

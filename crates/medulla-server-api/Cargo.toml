@@ -62,6 +62,7 @@ medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-cypher = { path = "../medulla-cypher" }
+medulla-sql = { path = "../medulla-sql" }
 
 [features]
 test-support = []
@@ -102,7 +103,7 @@ otel-export = ["dep:ureq", "obs", "metrics"]
 owl = ["dep:medulla-rdf", "medulla-rdf/owl", "sparql"]
 program-optimization = ["dep:medulla-program", "jobs"]
 quantum-agent-api = ["dep:medulla-capabilities", "medulla-capabilities/quantum", "server"]
-query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "dep:medulla-query", "medulla-query/sql", "medulla-cypher/sql", "dep:medulla-plan", "medulla-plan/query", "redb"]
+query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "dep:medulla-query", "medulla-query/sql", "medulla-sql/sql", "medulla-cypher/sql", "dep:medulla-plan", "medulla-plan/query", "redb"]
 raft = ["server", "redb"]
 rdf = ["dep:medulla-rdf", "medulla-rdf/rdf", "server"]
 rdf-xml = ["dep:medulla-rdf", "medulla-rdf/rdf-xml", "rdf"]
@@ -130,7 +131,7 @@ epistemic-redaction = ["dep:medulla-epistemic", "medulla-epistemic/epistemic-red
 evidence-graph = ["dep:medulla-epistemic", "medulla-epistemic/evidence-graph"]
 epistemic-causal = ["dep:medulla-epistemic", "medulla-epistemic/epistemic-causal"]
 full = ["dep:medulla-graphql", "medulla-graphql/crossmodal-tsdb"]
-numeric = ["dep:medulla-query", "medulla-query?/numeric", "dep:medulla-plan", "medulla-plan?/numeric", "dep:medulla-numeric"]
+numeric = ["dep:medulla-query", "medulla-query?/numeric", "medulla-sql/numeric", "dep:medulla-plan", "medulla-plan?/numeric", "dep:medulla-numeric"]
 cost-opt = ["dep:medulla-plan", "medulla-plan/cost-opt"]
 par-runtime = ["dep:medulla-plan", "medulla-plan/par-runtime"]
 geo = ["dep:medulla-plan", "medulla-plan/geo"]

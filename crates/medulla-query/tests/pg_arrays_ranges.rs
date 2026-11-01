@@ -7,7 +7,7 @@
 #![cfg(feature = "sql")]
 
 use medulla_core::graph::GraphCore;
-use medulla_query::exec_sql;
+use medulla_sql::sql::exec_sql;
 use serde_json::json;
 
 #[path = "common/query_rows.rs"]
@@ -31,7 +31,7 @@ fn one(sql: &str) -> serde_json::Value {
 
 fn query_values(sql: &str) -> Vec<Vec<serde_json::Value>> {
     let snap = graph().analysis_snapshot();
-    let r = exec_sql(&snap, sql, &medulla_query::CancellationToken::new())
+    let r = exec_sql(&snap, sql, &medulla_sql::sql::CancellationToken::new())
         .unwrap_or_else(|e| panic!("query failed: {sql}\n{e}"));
     query_rows::rows(&r)
 }
@@ -120,7 +120,7 @@ fn eg104_generate_series_step_and_descending() {
     let r = exec_sql(
         &snap,
         "SELECT value FROM generate_series(0, 10, 5)",
-        &medulla_query::CancellationToken::new(),
+        &medulla_sql::sql::CancellationToken::new(),
     )
     .unwrap();
     assert_eq!(
@@ -130,7 +130,7 @@ fn eg104_generate_series_step_and_descending() {
     let r = exec_sql(
         &snap,
         "SELECT value FROM generate_series(3, 1, -1)",
-        &medulla_query::CancellationToken::new(),
+        &medulla_sql::sql::CancellationToken::new(),
     )
     .unwrap();
     assert_eq!(
@@ -170,7 +170,7 @@ fn eg104_any_operator_in_where() {
     let r = exec_sql(
         &snap,
         "SELECT id FROM nodes WHERE 20 = ANY(array[v]) ORDER BY id",
-        &medulla_query::CancellationToken::new(),
+        &medulla_sql::sql::CancellationToken::new(),
     )
     .unwrap();
     assert_eq!(query_rows::rows(&r), vec![vec![json!("n2")]]);

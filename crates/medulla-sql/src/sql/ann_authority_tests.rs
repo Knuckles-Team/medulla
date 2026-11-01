@@ -14,20 +14,20 @@ use medulla_core::graph::GraphView;
 use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
 use serde_json::{json, Value};
 
-use crate::tables::ann_authority::generation::AnnGeneration;
-use crate::tables::ann_authority::*;
+use medulla_query::tables::ann_authority::generation::AnnGeneration;
+use medulla_query::tables::ann_authority::*;
 use medulla_core::index::ManagedIndexState;
-use crate::tables::ann_plan::metric_to_ann;
-use crate::tables::ann_plan::AnnIndexPlan;
-use crate::tables::ann_plan::AnnMethod;
-use crate::tables::ann_plan::VectorMetric;
-use crate::schema::Cell;
-use crate::tables::store::dev_scope_grant::{dev_verifier, DEV_PRINCIPAL, DEV_PROOF};
-use crate::tables::store::AnnSourceRows;
-use crate::schema::Column;
-use crate::schema::ColumnType;
-use crate::schema::TableSchema;
-use crate::tables::TableStore;
+use medulla_query::tables::ann_plan::metric_to_ann;
+use medulla_query::tables::ann_plan::AnnIndexPlan;
+use medulla_query::tables::ann_plan::AnnMethod;
+use medulla_query::tables::ann_plan::VectorMetric;
+use medulla_query::schema::Cell;
+use medulla_query::{tables::store::dev_scope_grant::dev_verifier, tables::store::dev_scope_grant::DEV_PRINCIPAL, tables::store::dev_scope_grant::DEV_PROOF};
+use medulla_query::tables::store::AnnSourceRows;
+use medulla_query::schema::Column;
+use medulla_query::schema::ColumnType;
+use medulla_query::schema::TableSchema;
+use medulla_query::tables::TableStore;
 
 const DIM: usize = 8;
 

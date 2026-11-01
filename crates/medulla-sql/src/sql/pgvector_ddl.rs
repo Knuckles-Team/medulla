@@ -7,7 +7,7 @@
 //! the plan type it produces ([`AnnIndexPlan`]) stays with the rest of the
 //! Postgres-family plans.
 
-use crate::tables::ann_plan::{AnnIndexPlan, AnnMethod, VectorMetric};
+use medulla_query::{tables::ann_plan::AnnIndexPlan, tables::ann_plan::AnnMethod, tables::ann_plan::VectorMetric};
 
 /// Whether the token at `i` is `kw`, case-insensitively.
 fn matches_kw(toks: &[String], i: usize, kw: &str) -> bool {
