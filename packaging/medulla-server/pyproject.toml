@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "medulla-stem"
-version = "2.27.10"
+version = "3.0.0"
 description = "The native medulla-server executable, built from the medulla source at the same version"
 readme = "README.md"
 requires-python = ">=3.10"
