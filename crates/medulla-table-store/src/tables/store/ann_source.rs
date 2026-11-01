@@ -62,7 +62,7 @@ pub(crate) type RowVector = (u64, Option<Vec<f32>>);
 /// The rows of one table changed after a generation's build, read with their
 /// current vectors from ONE snapshot: what an incremental refresh folds into
 /// the next generation instead of rebuilding it.
-pub(crate) struct AnnChangedRows {
+pub struct AnnChangedRows {
     /// Tenant SQL source epoch the snapshot observed.
     pub(crate) epoch: u64,
     /// `(row id, current vector)`; `None` for a deleted row or one without a
@@ -74,7 +74,7 @@ pub(crate) struct AnnChangedRows {
 
 /// How far a bounded range read got.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum ScanExtent {
+pub enum ScanExtent {
     /// Every row in the range was examined.
     Complete,
     /// The row budget ran out before the range ended.
@@ -82,7 +82,7 @@ pub(crate) enum ScanExtent {
 }
 
 /// One snapshot of one table, opened for one probe.
-pub(crate) struct AnnRowReader<'a> {
+pub struct AnnRowReader<'a> {
     rows: RowsReadTable,
     dirty: DirtyReadTable,
     table: &'a str,
