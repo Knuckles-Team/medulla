@@ -9,7 +9,7 @@ generated documentation ledger; everything else here is
 just as real, only demoted out of the sidebar.
 
 For the engine's single guiding design principle, see
-**[North Star: Smooth](../north_star.md)** — every cross-modal read/write path (a write that
+**[North Star: Smooth](../north_star.md)** (the end state, delivered in falsifiable phases; see its Delivery order section) — every cross-modal read/write path (a write that
 touches OWL, vector, graph, and time-series together) is implemented at *every* wire surface
 (RPC, every SQL wire, SPARQL, GraphQL, …), never merely flagged at the one it was first built for.
 

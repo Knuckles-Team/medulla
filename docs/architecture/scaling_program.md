@@ -34,8 +34,12 @@ The program is three waves:
 | Wave | Theme | What it buys |
 |------|-------|--------------|
 | **M1** | Single-node durable throughput | Saturate one box's cores for durable writes; keep reads responsive. |
-| **M2** | HA cluster | Replicate the authoritative store across nodes (openraft 0.10 multi-Raft). |
-| **M3** | Horizontal / elastic scale | Distribute tenants across shards/nodes, reshard online, offload cold tenants. |
+| **M2** | HA cluster (**P5**) | Replicate the authoritative store across nodes (openraft 0.10 multi-Raft). |
+| **M3** | Horizontal / elastic scale (**P5**) | Distribute tenants across shards/nodes, reshard online, offload cold tenants. |
+
+### Delivery order
+
+The [North Star](../north_star.md) end state is delivered in falsifiable phases (see its Delivery order section and the [acceptance requirements](https://github.com/Knuckles-Team/arbora/blob/main/specs/acceptance-evidence-freeze/requirements.md)). M1 is the single-node base that P1 to P4 run on. **Everything in M2 and M3 is P5**: multi-node replication, cross-node resharding and elasticity, object-store cold tiers and other external-infrastructure items. They are not prerequisites for the single-node loop (P1) or for the planner gate (P4), and cross-modal planner expansion waits for the P4 gate, not for them.
 
 ```mermaid
 flowchart LR
@@ -186,7 +190,7 @@ keep **interactive** traffic alive while ingestion runs flat-out:
 
 ---
 
-## M2 — HA cluster (openraft 0.10 multi-Raft) — `IMPLEMENTED` / `UNIT-PROVEN`
+## M2 — HA cluster (openraft 0.10 multi-Raft) — `IMPLEMENTED` / `UNIT-PROVEN` — P5
 
 The opt-in `cluster` layer (cargo `raft` feature, cluster-only — the main `default`/`full` build links
 **no** openraft) runs the engine as a multi-node HA cluster replicating its
@@ -230,7 +234,7 @@ DONE-vs-REMAINING handoff (including what still needs real multi-node hardware) 
 
 ---
 
-## M3 — horizontal / elastic scale — `IMPLEMENTED` / `UNIT-PROVEN` where marked
+## M3 — horizontal / elastic scale — `IMPLEMENTED` / `UNIT-PROVEN` where marked — P5
 
 The "horizontal scale spine": distribute tenants across the K durable shards (and,
 behind M2, across nodes), reshard online, and offload cold tenants — a design target
@@ -276,8 +280,8 @@ feature flags in [`AGENTS.md`](https://github.com/Knuckles-Team/medulla/blob/mai
 | Tenant catalog · online reshard · rebalancer · cold offload (M3, `redb`) | ✅ | ✅ |
 | BLOB CAS + streaming facade | ✅ | ✅ |
 | DataFusion SQL / pg-wire (+ the whole wire family) | ✅ | ✅ |
-| openraft multi-Raft replication (M2) | ❌ | ✅ |
-| Cross-node resharding (M3 R2) · distributed Pregel · cross-shard 2PC | ❌ | ✅ |
+| openraft multi-Raft replication (M2, P5) | ❌ | ✅ |
+| Cross-node resharding (M3 R2) · distributed Pregel · cross-shard 2PC (P5) | ❌ | ✅ |
 
 !!! note "The invariant"
     The main build (`default`/`full`) links **no openraft** — HA replication and cross-node
