@@ -686,8 +686,8 @@ kind = "persistence"
 responsibility = "Persistence backend: redb backend, cold offload and tiering, read-through, cost accounting, node info and durable stores."
 moves = []
 specs = []
-current_lines = 25018
-projected_lines = 25018
+current_lines = 24514
+projected_lines = 24514
 
 [crates.medulla-persistence-records]
 level = "F6a"
@@ -704,8 +704,8 @@ kind = "persistence"
 responsibility = "Backup, online reshard, shard migration and store upgrade."
 moves = ["src/server/persistence/backup", "src/server/persistence/cold_offload", "src/server/persistence/online_reshard", "src/server/persistence/shard_migrate", "src/server/persistence/store_upgrade", "crates/medulla-persistence/src/store_upgrade", "crates/medulla-persistence/src/cold_tier_impl", "crates/medulla-persistence/src/storage_scrub"]
 specs = ["durable-graph-kernel (operations)"]
-current_lines = 2241
-projected_lines = 2441
+current_lines = 2750
+projected_lines = 2950
 
 [crates.medulla-raft]
 level = "F7"
