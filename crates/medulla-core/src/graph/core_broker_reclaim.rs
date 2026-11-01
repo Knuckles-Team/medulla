@@ -7,12 +7,12 @@ impl GraphCore {
         delivery_tag: i64,
         consumer: &str,
     ) -> BrokerTagOwner {
-        let lookup_id = crate::broker::dtag_lookup_node_id(delivery_tag);
+        let lookup_id = crate::broker_keys::dtag_lookup_node_id(delivery_tag);
         let Some(lookup) = txn.node_row_map(&lookup_id) else {
             return BrokerTagOwner::Rejected;
         };
         if lookup.get("type").and_then(serde_json::Value::as_str)
-            != Some(crate::broker::DTAG_LOOKUP_TYPE)
+            != Some(crate::broker_keys::DTAG_LOOKUP_TYPE)
         {
             txn.remove_node(lookup_id);
             return BrokerTagOwner::Rejected;
@@ -107,7 +107,7 @@ impl GraphCore {
         queue: &str,
         delivery_count: i64,
     ) -> bool {
-        txn.node_row_map(&crate::broker::queue_policy_node_id(queue))
+        txn.node_row_map(&crate::broker_keys::queue_policy_node_id(queue))
             .and_then(|policy| {
                 policy
                     .get("max_delivery_count")
@@ -191,7 +191,7 @@ impl GraphCore {
         else {
             return false;
         };
-        txn.remove_node(crate::broker::dtag_lookup_node_id(tag));
+        txn.remove_node(crate::broker_keys::dtag_lookup_node_id(tag));
         properties.insert("status".into(), serde_json::Value::String("pending".into()));
         properties.insert("lease_until".into(), serde_json::Value::Null);
         properties.insert("owner_consumer".into(), serde_json::Value::Null);
@@ -225,7 +225,7 @@ impl GraphCore {
             return false; // duplicate — drop the (unwritten) txn, no state change
         }
         let props = serde_json::json!({
-            "type": crate::broker::PRODUCER_SEQ_TYPE,
+            "type": crate::broker_keys::PRODUCER_SEQ_TYPE,
             "last_seq": seq,
         });
         if let Ok(blob) = rmp_serde::to_vec_named(&props) {

@@ -3,10 +3,10 @@
 use super::auth::VerifiedRequestContext;
 use medulla_core::graph::GraphCore;
 use medulla_core::graph::GraphView;
-#[cfg(feature = "security")]
-use medulla_core::isolation::row_visibility;
 use medulla_core::isolation::AccessLevel;
 use medulla_core::isolation::IsolationLayer;
+#[cfg(feature = "security")]
+use medulla_core::rls::row_visibility;
 use medulla_types::contract::{Digest256, Nonce};
 use std::sync::Arc;
 
@@ -499,7 +499,7 @@ impl GraphReadAuthority {
         #[cfg(feature = "security")]
         {
             self.isolation
-                .can_see_row(&self.actor, &medulla_core::isolation::row_visibility(blob))
+                .can_see_row(&self.actor, &medulla_core::rls::row_visibility(blob))
         }
         #[cfg(not(feature = "security"))]
         {
@@ -2376,10 +2376,12 @@ mod read_rls_coverage_tests {
             Ok(medulla_query::StatementKind::GraphTableReadRequiresCatalogAdmission(_))
         ));
         assert!(!sql_is_write(graph_table));
-        assert!(!requires_write(&medulla_protocol_types::protocol::Method::Sql {
-            query: graph_table.to_string(),
-            params_msgpack: Vec::new(),
-        }));
+        assert!(!requires_write(
+            &medulla_protocol_types::protocol::Method::Sql {
+                query: graph_table.to_string(),
+                params_msgpack: Vec::new(),
+            }
+        ));
 
         // Property-graph DDL stays a write on every route.
         let ddl = "CREATE PROPERTY GRAPH shop VERTEX TABLES (customers KEY (customer_id))";

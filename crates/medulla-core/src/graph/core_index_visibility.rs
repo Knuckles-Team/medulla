@@ -35,10 +35,10 @@ impl GraphCore {
             return;
         };
         let vis = match blob {
-            Some(b) => crate::isolation::row_visibility(b),
+            Some(b) => crate::rls::row_visibility(b),
             None => match self.node_properties.get(id) {
-                Some(props) => crate::isolation::row_visibility(props.value().as_slice()),
-                None => crate::isolation::RowVisibility::default_public(),
+                Some(props) => crate::rls::row_visibility(props.value().as_slice()),
+                None => crate::rls::RowVisibility::default_public(),
             },
         };
         index.insert(id.to_string(), vis);
@@ -76,7 +76,7 @@ impl GraphCore {
     /// rebuild here, not a re-decode — this is what makes the query immediately
     /// after a write cheap too, not just the query after that.
     #[cfg(feature = "security")]
-    pub(super) fn live_visibility_index(&self) -> HashMap<String, crate::isolation::RowVisibility> {
+    pub(super) fn live_visibility_index(&self) -> HashMap<String, crate::rls::RowVisibility> {
         {
             let guard = self.visibility_index.read();
             if let Some(idx) = guard.as_ref() {
@@ -103,9 +103,7 @@ impl GraphCore {
     /// [`Self::visibility_index_rebuilds`] rather than the pre-existing
     /// [`Self::index_rebuilds`] counter so the two signals are never conflated).
     #[cfg(feature = "security")]
-    pub(super) fn build_visibility_index(
-        &self,
-    ) -> HashMap<String, crate::isolation::RowVisibility> {
+    pub(super) fn build_visibility_index(&self) -> HashMap<String, crate::rls::RowVisibility> {
         let n = self
             .visibility_index_rebuilds
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
@@ -122,7 +120,7 @@ impl GraphCore {
             .map(|entry| {
                 (
                     entry.key().clone(),
-                    crate::isolation::row_visibility(entry.value().as_slice()),
+                    crate::rls::row_visibility(entry.value().as_slice()),
                 )
             })
             .collect()

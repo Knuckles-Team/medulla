@@ -17,9 +17,6 @@ use super::*;
 // discipline MEDULLA-275..284 follow.
 // ══════════════════════════════════════════════════════════════════════════
 
-/// Type carried by a producer's durable dedup high-water-mark node (CONCEPT:MEDULLA-KG.ingest.broker-reject-publish).
-pub const PRODUCER_SEQ_TYPE: &str = "BrokerProducerSeq";
-
 /// Node id for a producer's durable dedup state (CONCEPT:MEDULLA-KG.ingest.broker-reject-publish) — the per-producer
 /// monotonic `last_seq` high-water mark the broker dedups against. The `producer_id`
 /// is caller-chosen (a stable publisher identity), so the id is deterministic.

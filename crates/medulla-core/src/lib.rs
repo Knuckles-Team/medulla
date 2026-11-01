@@ -28,6 +28,7 @@ pub(crate) mod test_threads;
 /// filter guarding the durable read-through negative-lookup path. Pure-Rust,
 /// always compiled (no feature gate — the default/Pi build already links it).
 pub mod bloom;
+pub mod broker_keys;
 // CONCEPT:MEDULLA-KG.compute.message-broker-exchanges — message-broker exchanges/routing on top of the KG-2.303 queue.
 #[cfg(feature = "broker")]
 pub mod broker;
@@ -111,6 +112,7 @@ pub mod read_through;
 pub mod registry;
 #[cfg(feature = "result-cache")]
 pub mod result_cache;
+pub mod rls;
 /// CONCEPT:MEDULLA-KG.sharding.row-level-security (D-OP-1 / D-OB-20) — bounded per-actor
 /// cache for `GraphReadAuthority::project_core`'s RLS projection, so a repeat read
 /// by the same actor at an unchanged graph version reuses the materialized

@@ -580,7 +580,7 @@ pub struct GraphCore {
     /// would have produced. Gated by `security` (the only build where
     /// `crate::isolation::RowVisibility` exists at all).
     #[cfg(feature = "security")]
-    visibility_index: RwLock<Option<HashMap<String, crate::isolation::RowVisibility>>>,
+    visibility_index: RwLock<Option<HashMap<String, crate::rls::RowVisibility>>>,
     /// perf/row-visibility-index: count of FULL rebuilds of `visibility_index`
     /// (the row-visibility sibling of [`Self::index_rebuilds`], kept separate so
     /// this new index's own "rebuild count under continuous ingest ~1" signal is

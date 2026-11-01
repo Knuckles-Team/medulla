@@ -219,9 +219,9 @@ impl GraphCore {
 /// RowVisibility`'s doc): the fields whose change can change a node's visibility decision.
 #[cfg(feature = "security")]
 const RLS_ROW_KEYS: [&str; 5] = [
-    crate::isolation::RLS_OWNER_KEY,
-    crate::isolation::RLS_VISIBILITY_KEY,
-    crate::isolation::RLS_GRANTS_KEY,
-    crate::isolation::RLS_OWNER_ID_KEY,
-    crate::isolation::RLS_SHARED_SCOPE_KEY,
+    crate::rls::RLS_OWNER_KEY,
+    crate::rls::RLS_VISIBILITY_KEY,
+    crate::rls::RLS_GRANTS_KEY,
+    crate::rls::RLS_OWNER_ID_KEY,
+    crate::rls::RLS_SHARED_SCOPE_KEY,
 ];

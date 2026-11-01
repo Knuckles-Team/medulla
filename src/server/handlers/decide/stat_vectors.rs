@@ -47,7 +47,7 @@ impl GraphVectors {
     fn visible(&self, id: &str) -> bool {
         self.core.get_node_properties(id).is_some_and(|blob| {
             self.isolation
-                .can_see_row(&self.caller, &crate::isolation::row_visibility(&blob))
+                .can_see_row(&self.caller, &medulla_core::rls::row_visibility(&blob))
         })
     }
 

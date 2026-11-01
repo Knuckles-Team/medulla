@@ -97,7 +97,7 @@ pub struct GraphView {
     /// for any id missing here. Only ever populated under `security` — the only
     /// build where [`crate::isolation::RowVisibility`] exists at all.
     #[cfg(feature = "security")]
-    pub visibility_index: HashMap<String, crate::isolation::RowVisibility>,
+    pub visibility_index: HashMap<String, crate::rls::RowVisibility>,
 }
 
 /// Graph-level handles threaded into a [`GraphView`] (CONCEPT:MEDULLA-KG.query.named-graph-projection-catalog,

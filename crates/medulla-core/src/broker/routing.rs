@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 
+use crate::broker_keys::*;
 use crate::graph::GraphCore;
 
 pub(crate) fn decode_property(bytes: &[u8]) -> Result<serde_json::Value, ()> {
@@ -20,22 +21,6 @@ pub fn exchange_node_id(name: &str) -> String {
 /// reversible for [`unbind_queue`].
 pub fn binding_node_id(exchange: &str, queue: &str, routing_key: &str) -> String {
     format!("broker:bind:{exchange}\u{1}{queue}\u{1}{routing_key}")
-}
-
-/// Node id for a queue's durable monotonic sequence counter.
-pub fn queue_seq_node_id(queue: &str) -> String {
-    format!("broker:seq:{queue}")
-}
-
-/// The `type`/label a queue's pending message nodes carry — the label
-/// `claim_next_fields` scans to deliver the queue FIFO (CONCEPT:MEDULLA-KG.compute.atomically-claim-oldest-pending).
-pub fn queue_msg_label(queue: &str) -> String {
-    format!("qmsg:{queue}")
-}
-
-/// Node id for the `seq`-th message appended to `queue`.
-pub fn message_node_id(queue: &str, seq: i64) -> String {
-    format!("broker:msg:{queue}:{seq}")
 }
 
 const EXCHANGE_TYPE: &str = "BrokerExchange";

@@ -33,7 +33,7 @@ impl GraphCore {
         // early-`return None` / `?` chain did under the held write guard.
         let claim = Self::prepare_broker_claim(&txn, &request)?;
         if let Some(tag) = claim.prior_tag {
-            txn.remove_node(crate::broker::dtag_lookup_node_id(tag));
+            txn.remove_node(crate::broker_keys::dtag_lookup_node_id(tag));
         }
         txn.add_node(claim.counter_id, claim.counter_blob);
         txn.add_node(node_id.to_string(), claim.message_blob);
@@ -53,7 +53,7 @@ impl GraphCore {
         if !Self::broker_claim_precondition_ok(&properties, request) {
             return None;
         }
-        let counter_id = crate::broker::dtag_seq_node_id();
+        let counter_id = crate::broker_keys::dtag_seq_node_id();
         let last_tag = Self::broker_last_delivery_tag(txn, &counter_id)?;
         let delivery_tag = last_tag.checked_add(1)?;
         let prior_tag = Self::broker_prior_delivery_tag(&properties)?;
@@ -61,7 +61,7 @@ impl GraphCore {
         {
             return None;
         }
-        let lookup_id = crate::broker::dtag_lookup_node_id(delivery_tag);
+        let lookup_id = crate::broker_keys::dtag_lookup_node_id(delivery_tag);
         if txn.has_node(&lookup_id) {
             return None;
         }
@@ -121,7 +121,7 @@ impl GraphCore {
             return Some(0);
         };
         if row.get("type").and_then(serde_json::Value::as_str)
-            != Some(crate::broker::BROKER_COUNTER_TYPE)
+            != Some(crate::broker_keys::BROKER_COUNTER_TYPE)
         {
             return None;
         }
@@ -237,11 +237,11 @@ impl GraphCore {
         delivery_tag: i64,
     ) -> Option<BrokerClaim> {
         let counter = serde_json::json!({
-            "type": crate::broker::BROKER_COUNTER_TYPE,
+            "type": crate::broker_keys::BROKER_COUNTER_TYPE,
             "last_tag": delivery_tag,
         });
         let lookup = serde_json::json!({
-            "type": crate::broker::DTAG_LOOKUP_TYPE,
+            "type": crate::broker_keys::DTAG_LOOKUP_TYPE,
             "node_id": request.node_id,
             "queue": request.queue,
             "owner_consumer": request.consumer,

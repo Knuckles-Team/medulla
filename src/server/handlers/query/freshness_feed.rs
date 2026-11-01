@@ -39,7 +39,7 @@ pub(crate) async fn handle_freshness_feed(
 #[cfg(feature = "security")]
 fn row_filter(ctx: &QueryHandlerCtx<'_>) -> impl Fn(&[u8]) -> bool + Send + 'static {
     let (rls, caller) = (Arc::clone(ctx.rls), ctx.caller.to_string());
-    move |blob: &[u8]| rls.can_see_row(&caller, &crate::isolation::row_visibility(blob))
+    move |blob: &[u8]| rls.can_see_row(&caller, &medulla_core::rls::row_visibility(blob))
 }
 
 #[cfg(not(feature = "security"))]

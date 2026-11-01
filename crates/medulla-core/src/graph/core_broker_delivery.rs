@@ -6,13 +6,13 @@ impl GraphCore {
         if delivery_tag <= 0 || consumer.trim().is_empty() {
             return false;
         }
-        let lookup_id = crate::broker::dtag_lookup_node_id(delivery_tag);
+        let lookup_id = crate::broker_keys::dtag_lookup_node_id(delivery_tag);
         let mut txn = self.txn();
         let Some(lookup) = txn.node_row_map(&lookup_id) else {
             return false;
         };
         if lookup.get("type").and_then(serde_json::Value::as_str)
-            != Some(crate::broker::DTAG_LOOKUP_TYPE)
+            != Some(crate::broker_keys::DTAG_LOOKUP_TYPE)
         {
             txn.remove_node(lookup_id);
             return false;

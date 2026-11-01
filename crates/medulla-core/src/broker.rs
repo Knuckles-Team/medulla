@@ -31,6 +31,7 @@ use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 
+use crate::broker_keys::*;
 use crate::graph::GraphCore;
 
 mod producer;
@@ -66,11 +67,6 @@ fn ensure_counter_node(
 // ══════════════════════════════════════════════════════════════════════════
 
 const QUEUE_POLICY_TYPE: &str = "BrokerQueuePolicy";
-
-/// Node id for a queue's durable policy node (CONCEPT:MEDULLA-KG.compute.dead-letter-queues/277/278).
-pub fn queue_policy_node_id(queue: &str) -> String {
-    format!("broker:qpolicy:{queue}")
-}
 
 /// A queue's durable policy (CONCEPT:MEDULLA-KG.compute.dead-letter-queues DLQ / MEDULLA-277 TTL / MEDULLA-278 priority).
 /// Every field optional; an all-`None` policy (the default when no policy node
@@ -511,31 +507,10 @@ pub fn sweep_expired(core: &GraphCore, now_ms: u64) -> usize {
 
 const STREAM_CONFIG_TYPE: &str = "BrokerStream";
 const STREAM_COMMIT_TYPE: &str = "BrokerStreamCommit";
-pub const DTAG_LOOKUP_TYPE: &str = "BrokerDeliveryTag";
-/// Type carried by the two broker-wide monotonic counter nodes (confirm + dtag).
-pub const BROKER_COUNTER_TYPE: &str = "BrokerCounter";
-/// Type carried by a stream's durable monotonic offset counter node.
-pub const STREAM_OFFSET_TYPE: &str = "BrokerStreamOffset";
 
 /// Node id for a stream's durable retention-policy / config node (CONCEPT:MEDULLA-KG.compute.replayable-append-log).
 pub fn stream_config_node_id(stream: &str) -> String {
     format!("broker:stream:{stream}")
-}
-
-/// Node id for a stream's durable monotonic offset counter (CONCEPT:MEDULLA-KG.compute.replayable-append-log).
-pub fn stream_offset_node_id(stream: &str) -> String {
-    format!("broker:soff:{stream}")
-}
-
-/// The label a stream's RETAINED message nodes carry (CONCEPT:MEDULLA-KG.compute.replayable-append-log). Distinct from
-/// the queue label `qmsg:<queue>` so a stream is never scanned by the queue claim.
-pub fn stream_msg_label(stream: &str) -> String {
-    format!("smsg:{stream}")
-}
-
-/// Node id for the message appended to `stream` at `offset` (CONCEPT:MEDULLA-KG.compute.replayable-append-log).
-pub fn stream_msg_node_id(stream: &str, offset: i64) -> String {
-    format!("broker:smsg:{stream}:{offset}")
 }
 
 /// Node id for a consumer-group's committed read offset on a stream (CONCEPT:MEDULLA-KG.compute.replayable-append-log).
@@ -548,17 +523,6 @@ pub fn stream_commit_node_id(stream: &str, group: &str) -> String {
 /// (CONCEPT:MEDULLA-KG.compute.publisher-confirms-consumer-qos).
 pub fn confirm_seq_node_id() -> String {
     "broker:confirm_seq".to_string()
-}
-
-/// Node id of the broker-wide monotonic consumer delivery-tag counter (CONCEPT:MEDULLA-KG.compute.publisher-confirms-consumer-qos).
-pub fn dtag_seq_node_id() -> String {
-    "broker:dtag_seq".to_string()
-}
-
-/// Node id of the reverse-lookup node mapping a consumer `delivery_tag` → the claimed
-/// message node id + queue, so ack/nack-by-tag resolves in O(1) (CONCEPT:MEDULLA-KG.compute.publisher-confirms-consumer-qos).
-pub fn dtag_lookup_node_id(tag: i64) -> String {
-    format!("broker:dtag:{tag}")
 }
 
 /// A stream's durable retention policy (CONCEPT:MEDULLA-KG.compute.replayable-append-log). Both bounds optional; an

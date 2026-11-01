@@ -45,7 +45,8 @@
 //!   uncertain), never the raw posterior float (a leak of structural detail in its
 //!   own right at this tier).
 
-use medulla_core::isolation::{IsolationLayer, RowVisibility};
+use medulla_core::isolation::IsolationLayer;
+use medulla_core::rls::RowVisibility;
 use serde::{Deserialize, Serialize};
 
 use crate::adapter::BeliefGraph;

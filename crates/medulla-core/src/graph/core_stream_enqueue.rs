@@ -195,7 +195,7 @@ impl GraphCore {
         let mut txn = self.txn();
         let mut delivered = 0usize;
         for q in queues {
-            let seq_id = crate::broker::queue_seq_node_id(q);
+            let seq_id = crate::broker_keys::queue_seq_node_id(q);
             // Current counter (missing ⇒ start at 0), then persist the bump.
             let next = txn
                 .node_row_map(&seq_id)
@@ -213,7 +213,7 @@ impl GraphCore {
             let mut msg_props = serde_json::Map::new();
             msg_props.insert(
                 "type".into(),
-                serde_json::Value::String(crate::broker::queue_msg_label(q)),
+                serde_json::Value::String(crate::broker_keys::queue_msg_label(q)),
             );
             msg_props.insert("status".into(), serde_json::Value::String("pending".into()));
             msg_props.insert("seq".into(), serde_json::Value::from(next));
@@ -235,7 +235,7 @@ impl GraphCore {
             }
             let msg_props = serde_json::Value::Object(msg_props);
             if let Ok(blob) = rmp_serde::to_vec_named(&msg_props) {
-                txn.add_node(crate::broker::message_node_id(q, next), blob);
+                txn.add_node(crate::broker_keys::message_node_id(q, next), blob);
                 delivered += 1;
             }
         }
@@ -266,13 +266,13 @@ impl GraphCore {
     #[cfg(feature = "broker")]
     pub fn stream_append(&self, stream: &str, payload_hex: &str, now_ms: u64) -> i64 {
         let mut txn = self.txn();
-        let off_id = crate::broker::stream_offset_node_id(stream);
+        let off_id = crate::broker_keys::stream_offset_node_id(stream);
         let offset = txn
             .node_row_map(&off_id)
             .and_then(|m| m.get("next_offset").and_then(|s| s.as_i64()))
             .unwrap_or(0);
         let off_props = serde_json::json!({
-            "type": crate::broker::STREAM_OFFSET_TYPE,
+            "type": crate::broker_keys::STREAM_OFFSET_TYPE,
             "stream": stream,
             "next_offset": offset + 1,
         });
@@ -280,13 +280,13 @@ impl GraphCore {
             txn.add_node(off_id, blob);
         }
         let msg_props = serde_json::json!({
-            "type": crate::broker::stream_msg_label(stream),
+            "type": crate::broker_keys::stream_msg_label(stream),
             "offset": offset,
             "payload": payload_hex,
             "ts": now_ms,
         });
         if let Ok(blob) = rmp_serde::to_vec_named(&msg_props) {
-            txn.add_node(crate::broker::stream_msg_node_id(stream, offset), blob);
+            txn.add_node(crate::broker_keys::stream_msg_node_id(stream, offset), blob);
         }
         drop(txn);
         self.mark_dirty();
