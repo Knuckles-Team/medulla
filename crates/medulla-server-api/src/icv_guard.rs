@@ -169,7 +169,7 @@ fn native_write_gate_enabled() -> bool {
 /// pre- and post-mutation graph images (the commit path's authoritative base
 /// and its staged copy). A rejection carries the same witness-bearing
 /// [`GuardRejection`] shape the RDF write path returns.
-pub(crate) fn check_native_write(
+pub fn check_native_write(
     graph_name: &str,
     before: &GraphCore,
     after: &GraphCore,

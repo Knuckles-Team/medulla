@@ -139,9 +139,9 @@ pub fn opaque_idempotency_key_for_context(
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkItemBatchIdentity {
     pub batch_id: String,
-    pub(crate) idempotency_key: String,
-    pub(crate) durable_request_id: u64,
-    pub(crate) uses_native_row_cas: bool,
+    pub idempotency_key: String,
+    pub durable_request_id: u64,
+    pub uses_native_row_cas: bool,
 }
 
 pub fn work_item_batch_identity(
