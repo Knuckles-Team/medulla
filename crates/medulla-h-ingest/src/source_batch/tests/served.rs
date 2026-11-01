@@ -22,7 +22,7 @@ struct Served {
 }
 
 impl Served {
-    pub fn new() -> Self {
+    fn new() -> Self {
         let fixture = Fixture::for_tenant(TENANT);
         fixture.grant_insert(WRITER);
         let mut state = ServerState::new_for_test(SECRET, ServerState::test_isolation(WRITER));

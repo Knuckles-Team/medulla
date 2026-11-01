@@ -12,7 +12,6 @@ use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_index_types::semantic_index::SemanticIndexError;
 use medulla_index_types::semantic_index::SemanticSqlSourceIdentity;
 use medulla_index_types::semantic_index::SemanticSqlSourceManifest;
-use medulla_index_types::semantic_index::SemanticStage;
 use medulla_index_types::semantic_index::SemanticStageIntent;
 use std::path::PathBuf;
 use std::sync::Arc;
