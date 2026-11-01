@@ -650,8 +650,8 @@ pub fn sign_current_test_request(secret: &str, request: Request) -> Request {
 /// but preserve an explicitly supplied tenant and the empty role claim used by
 /// the older dispatch fixtures. This keeps tenant-boundary tests able to mint a
 /// deliberately foreign context without duplicating the envelope builder.
-#[cfg(test)]
-pub(crate) fn sign_current_test_request_in_tenant(
+#[cfg(any(test, feature = "test-support"))]
+pub fn sign_current_test_request_in_tenant(
     secret: &str,
     tenant: &str,
     request: Request,
