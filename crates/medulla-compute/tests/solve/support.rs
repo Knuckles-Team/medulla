@@ -2,12 +2,14 @@
 //! typed spec directly (not the lowered rows or the scalar weights), random
 //! general models, and small structured instances.
 
-use medulla_compute::solve::model::{
-    Coefficient, ConstraintBody, ConstraintSpec, Model, ModelSpec, ObjectiveLevelSpec,
-    ObjectiveTerm, Relation, Term, VarId,
+use medulla_decision_policy::{
+    solve::model::Coefficient, solve::model::ConstraintBody, solve::model::ConstraintSpec,
+    solve::model::Model, solve::model::ModelSpec, solve::model::ObjectiveLevelSpec,
+    solve::model::ObjectiveTerm, solve::model::Relation, solve::model::Term, solve::model::VarId,
 };
-use medulla_compute::solve::{
-    solve, verify, Certificate, Scalar, SolverConfig, SolverConfigSpec, Verdict, VerifyError,
+use medulla_decision_policy::{
+    solve::solve, solve::verify, solve::Certificate, solve::Scalar, solve::SolverConfig,
+    solve::SolverConfigSpec, solve::Verdict, solve::VerifyError,
 };
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
@@ -36,7 +38,7 @@ pub fn config(
 /// Enough budget and certificate room to finish and certify small models.
 pub fn wide_config() -> SolverConfig {
     config(
-        medulla_compute::solve::certificate::MAX_NODE_BUDGET,
+        medulla_decision_policy::solve::certificate::MAX_NODE_BUDGET,
         1 << 20,
         0,
         1,

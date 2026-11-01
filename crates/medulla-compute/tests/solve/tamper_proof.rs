@@ -3,10 +3,11 @@
 //! Base: a two-cycle vertex cover solved with room for a full tree, which has
 //! branches, forced nodes, bound leaves and completion leaves.
 
-use medulla_compute::solve::model::{Model, RowId, VarId};
-use medulla_compute::solve::{
-    verify, BoundProof, Certificate, DualEntry, Incumbent, LagrangeDual, LeafProof, ProofNode,
-    Scalar, SolveStatus, StatusDefect, VerifyError,
+use medulla_decision_policy::{solve::model::Model, solve::model::RowId, solve::model::VarId};
+use medulla_decision_policy::{
+    solve::verify, solve::BoundProof, solve::Certificate, solve::DualEntry, solve::Incumbent,
+    solve::LagrangeDual, solve::LeafProof, solve::ProofNode, solve::Scalar, solve::SolveStatus,
+    solve::StatusDefect, solve::VerifyError,
 };
 
 use super::support::{model, odd_cycle_cover, rejection, solve_and_verify, wide_config};

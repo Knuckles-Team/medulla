@@ -192,7 +192,7 @@ graphlearn = ["medulla-h-graph/graphlearn", "medulla-server-api/graphlearn", "me
 # so it pulls all three domains + medulla-types/ml-pipeline. Gates the handlers/pipeline.rs
 # dispatch arm. Pure-Rust, folded into `full` via `compute`.
 ml-pipeline = ["medulla-h-graph/ml-pipeline", "medulla-server-api/ml-pipeline", "medulla-kernel/ml-pipeline", "mining", "datascience", "graphlearn", "medulla-types/ml-pipeline", "medulla-result-types/ml-pipeline", "medulla-protocol-types/ml-pipeline"]
-reasoning = ["medulla-h-graph/reasoning", "medulla-raft/reasoning", "medulla-server-api/reasoning", "medulla-kernel/reasoning", "medulla-compute/reasoning"]
+reasoning = ["medulla-h-graph/reasoning", "medulla-raft/reasoning", "medulla-server-api/reasoning", "medulla-kernel/reasoning", "medulla-compute/reasoning", "medulla-reasoner/reasoning"]
 # Engine-native epistemic layer (CONCEPT:MEDULLA-KG.epistemic.epistemic-substrate, E6+E2): the
 # medulla-epistemic leaf crate (claims/evidence/belief-state + confidence propagation) over
 # the EXISTING NodeData/EdgeData fields (no new persistence). Pulls medulla-epistemic (pure
@@ -288,7 +288,7 @@ epistemic-causal = ["medulla-server-api/epistemic-causal", "epistemic", "medulla
 numeric = ["medulla-h-decide/numeric", "medulla-h-jobs/numeric", "medulla-h-ingest/numeric", "medulla-h-graph/numeric", "medulla-raft/numeric", "medulla-persistence/numeric", "medulla-server-api/numeric", "medulla-kernel/numeric", "dep:medulla-numeric", "medulla-query?/numeric", "medulla-plan?/numeric"]
 # The general bounded 0-1 integer programme (`Method::Solve`). Wire DTOs are
 # unconditional in medulla-types; this gates the medulla-compute search and verifier.
-solve = ["medulla-h-decide/solve", "medulla-compute/solve"]
+solve = ["medulla-decision-policy/solve", "medulla-h-decide/solve", "medulla-compute/solve"]
 # RF-ADR-010: the Decide layer's handlers. The wire contract is unconditional
 # (the capability rows are, following the `SemanticIndex` precedent), so this
 # gates only the server-side implementation and the crates it needs.
@@ -1165,7 +1165,7 @@ ros2-rmw = ["medulla-raft/ros2-rmw", "server", "streaming", "dep:cyclonedds", "d
 # `full-extras` layer; the main and `cluster` builds link no cudarc (asserted by
 # `cargo tree`).
 gpu = ["medulla-h-decide/gpu", "medulla-h-jobs/gpu", "medulla-raft/gpu", "medulla-server-api/gpu", "ann", "medulla-core/ann-gpu", "tensor", "medulla-plan/tensor-gpu", "reasoning", "medulla-compute/gpu"]
-gpu-cuda = ["medulla-h-decide/gpu-cuda", "medulla-h-jobs/gpu-cuda", "medulla-raft/gpu-cuda", "medulla-server-api/gpu-cuda", "gpu", "medulla-core/ann-gpu-cuda", "medulla-plan/tensor-gpu-cuda", "medulla-compute/gpu-cuda"]
+gpu-cuda = ["medulla-h-decide/gpu-cuda", "medulla-h-jobs/gpu-cuda", "medulla-raft/gpu-cuda", "medulla-server-api/gpu-cuda", "gpu", "medulla-core/ann-gpu-cuda", "medulla-plan/tensor-gpu-cuda", "medulla-compute/gpu-cuda", "medulla-reasoner/gpu-cuda"]
 # Opt-in umbrella (CONCEPT:MEDULLA-371) = the ONE main build (`full`) PLUS the heavy extras that
 # require an external toolchain/GPU to actually RUN (but build clean everywhere via
 # dynamic-loading, or a vendored cmake C build for `ros2-rmw`): the real CUDA backends +
@@ -1865,6 +1865,8 @@ medulla-graph-algos = { path = "crates/medulla-graph-algos" }
 medulla-finance-quant = { path = "crates/medulla-finance-quant" }
 medulla-mining = { path = "crates/medulla-mining" }
 medulla-finance-market = { path = "crates/medulla-finance-market" }
+medulla-reasoner = { path = "crates/medulla-reasoner" }
+medulla-decision-policy = { path = "crates/medulla-decision-policy" }
 
 [dev-dependencies]
 medulla-h-ingest = { path = "crates/medulla-h-ingest", features = ["test-support"] }

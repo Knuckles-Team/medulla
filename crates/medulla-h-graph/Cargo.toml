@@ -36,6 +36,7 @@ tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sy
 tracing = "0.1"
 medulla-graph-algos = { path = "../medulla-graph-algos" }
 medulla-mining = { path = "../medulla-mining" }
+medulla-reasoner = { path = "../medulla-reasoner" }
 
 [features]
 broker = []

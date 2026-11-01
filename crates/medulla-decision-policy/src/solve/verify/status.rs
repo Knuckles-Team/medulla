@@ -2,9 +2,9 @@
 
 use super::error::{StatusDefect, Verdict, VerifyError};
 use super::tree::Evidence;
-use crate::solve::certificate::{Certificate, SolveStatus};
 use crate::solve::model::RowId;
 use crate::solve::scalar::Scalar;
+use crate::{solve::certificate::Certificate, solve::certificate::SolveStatus};
 
 /// Facts established independently of the claimed status.
 pub(super) struct Verified {

@@ -94,21 +94,8 @@ pub mod datascience;
 // sampling), so this rides the pure `reasoning` feature (no heavy dep).
 #[cfg(feature = "reasoning")]
 pub mod probabilistic;
-#[cfg(feature = "reasoning")]
-pub mod reasoning;
-// Decide layer package A3 — general bounded 0-1 integer programming: validated
-// models, deterministic node-budgeted branch-and-bound, Lagrangian leaf-bound
-// certificates and an independent verifier. Integer-only, no heavy deps.
-#[cfg(feature = "solve")]
-pub mod solve;
 // Decide layer packages A2/A5 — the assembly decision function: step-1b
 // eliminations, the typed model over the legal remainder, the solve with its
 // no-good loop, why-not re-solves and the sealed, replayable record.
 #[cfg(feature = "decide")]
 pub mod assemble;
-// CONCEPT:MEDULLA-KG.compute.reasoning-closure-gpu — semi-naive integer-interned rewrite of
-// the `reasoning` fixpoint, with the transitive-closure join factored behind a
-// `ClosureBackend` seam (CPU always-on + feature-gated CUDA kernel). Rides `reasoning`;
-// the CUDA leg is further gated by `gpu-cuda`.
-#[cfg(feature = "reasoning")]
-pub mod reasoning_closure;

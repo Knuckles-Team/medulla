@@ -1,9 +1,12 @@
 //! Pre-order recording of the search tree as a certificate proof.
 
 use super::state::{row_id, var_id};
-use crate::solve::certificate::{DualEntry, LagrangeDual, LeafProof, ProofNode};
-use crate::solve::model::{Relation, RowId};
 use crate::solve::scalar::Scalar;
+use crate::{
+    solve::certificate::DualEntry, solve::certificate::LagrangeDual, solve::certificate::LeafProof,
+    solve::certificate::ProofNode,
+};
+use crate::{solve::model::Relation, solve::model::RowId};
 
 /// Records proof nodes until the leaf limit is passed, then only tracks the
 /// minimum bound-leaf value.

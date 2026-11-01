@@ -7,7 +7,7 @@ use medulla_decision_types::{solve::Relation, solve::VarId};
 
 use super::super::{assemble, replay_check};
 use super::fixture::*;
-use crate::solve::Model;
+use medulla_decision_policy::solve::Model;
 // The crate's one SplitMix64 stream, so every case is replayable.
 use crate::SplitMix64 as Seeded;
 

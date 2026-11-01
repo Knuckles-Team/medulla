@@ -6,8 +6,11 @@
 //! fixed to 0 and `min(0, ρ_j)` when free. Every operation is checked.
 
 use super::error::VerifyError;
-use crate::solve::certificate::{LagrangeDual, MAX_BOUND_DENOMINATOR, MAX_MULTIPLIER};
-use crate::solve::model::{Model, Relation};
+use crate::{
+    solve::certificate::LagrangeDual, solve::certificate::MAX_BOUND_DENOMINATOR,
+    solve::certificate::MAX_MULTIPLIER,
+};
+use crate::{solve::model::Model, solve::model::Relation};
 
 /// Which objective the dual is evaluated against.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

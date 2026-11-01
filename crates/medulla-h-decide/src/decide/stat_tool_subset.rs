@@ -21,7 +21,9 @@
 //! `StatisticalSolverCertificate::solved` under the solver's own node budget;
 //! a certificate that fails either check refuses the question.
 
-use medulla_compute::solve::{solve, verify, Model, SolveStatus, SolverConfig};
+use medulla_decision_policy::{
+    solve::solve, solve::verify, solve::Model, solve::SolveStatus, solve::SolverConfig,
+};
 use medulla_decision_types::decision::rapid_r056::StatisticalSolverCertificate;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::{

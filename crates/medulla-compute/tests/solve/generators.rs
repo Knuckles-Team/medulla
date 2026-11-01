@@ -4,9 +4,10 @@
 //! so it depends only on `medulla_compute` and the seeded RNG. Every instance is
 //! SYNTHETIC; nothing here claims real-world calibration.
 
-use medulla_compute::solve::model::{
-    Coefficient, ConstraintBody, ConstraintSpec, ModelSpec, ObjectiveLevelSpec, ObjectiveTerm,
-    Relation, Term, VarId,
+use medulla_decision_policy::{
+    solve::model::Coefficient, solve::model::ConstraintBody, solve::model::ConstraintSpec,
+    solve::model::ModelSpec, solve::model::ObjectiveLevelSpec, solve::model::ObjectiveTerm,
+    solve::model::Relation, solve::model::Term, solve::model::VarId,
 };
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;

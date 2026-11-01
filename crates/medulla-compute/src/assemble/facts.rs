@@ -13,7 +13,7 @@ use medulla_agent_types::{
 };
 use medulla_decision_types::decision::CandidateFacts;
 
-use crate::solve::model::MAX_ABS_COEFFICIENT;
+use medulla_decision_policy::solve::model::MAX_ABS_COEFFICIENT;
 
 /// One integer fact of one candidate.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

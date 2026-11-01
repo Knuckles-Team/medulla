@@ -1,5 +1,5 @@
 //! Capture the real solver entry used by Assemble, not a synthetic metric call.
-use medulla_compute::solve::solve;
+use medulla_decision_policy::solve::solve;
 
 use super::support::{model, odd_cycle_cover, wide_config};
 #[path = "telemetry_capture.rs"]

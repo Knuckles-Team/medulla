@@ -23,7 +23,7 @@ use super::model::Building;
 use super::search::{search, Answer, SolveContext};
 use super::topology::{self, Posed, Question};
 use super::{agent, eliminate, facts, model, template, why_not, AssembleError};
-use crate::solve::Verdict;
+use medulla_decision_policy::solve::Verdict;
 
 /// Every record field the decision function computes.
 pub(super) struct Decided {

@@ -8,11 +8,11 @@
 //! already cross-checks against the oracle, sized the way a statistical
 //! decision's candidate set is: many 0-1 candidates, few covering rows.
 
-use medulla_compute::solve::solve;
+use medulla_decision_policy::solve::solve;
 
 use super::support::{random_model, solve_and_verify, wide_config};
 
-fn statistical_feature_set_model() -> medulla_compute::solve::model::Model {
+fn statistical_feature_set_model() -> medulla_decision_policy::solve::model::Model {
     super::support::model(&random_model(90_210, 18, 8))
 }
 

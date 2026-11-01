@@ -2,9 +2,12 @@
 
 use super::record::core_rows;
 use super::Search;
-use crate::solve::certificate::{Algorithm, BoundProof, Certificate, Incumbent, SolveStatus};
 use crate::solve::model::RowId;
 use crate::solve::scalar::Scalar;
+use crate::{
+    solve::certificate::Algorithm, solve::certificate::BoundProof, solve::certificate::Certificate,
+    solve::certificate::Incumbent, solve::certificate::SolveStatus,
+};
 
 /// What the search established, reduced to the facts the status depends on.
 struct Established {

@@ -20,8 +20,8 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::graph::GraphCore;
-use crate::reasoning_closure::{active_closure_backend, infer_semi_naive};
+use crate::{reasoning_closure::active_closure_backend, reasoning_closure::infer_semi_naive};
+use medulla_core::graph::GraphCore;
 
 type PropertyEndpoints = (String, String);
 type PropertyFact = (String, String, String);
@@ -223,7 +223,7 @@ fn extract_facts(core: &GraphCore) -> (Vec<(String, String)>, Vec<(String, Strin
 /// has — there is no opt-out, in keeping with this codebase's native-by-default convention: a
 /// safety property is not something a caller can forget to ask for.
 fn pair_already_connected(
-    txn: &crate::graph::GraphTxn<'_>,
+    txn: &medulla_core::graph::GraphTxn<'_>,
     core: &GraphCore,
     src: &str,
     tgt: &str,
@@ -649,7 +649,7 @@ fn store_property_chain_provenance(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::GraphCore;
+    use medulla_core::graph::GraphCore;
 
     fn props(json: serde_json::Value) -> Vec<u8> {
         rmp_serde::to_vec_named(&json).unwrap()

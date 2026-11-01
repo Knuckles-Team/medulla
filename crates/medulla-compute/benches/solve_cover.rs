@@ -11,8 +11,8 @@
 //! Run: cargo bench -p medulla-compute --features solve --bench solve_cover
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use medulla_compute::solve::model::Model;
-use medulla_compute::solve::{solve, verify, SolverConfig};
+use medulla_decision_policy::solve::model::Model;
+use medulla_decision_policy::{solve::solve, solve::verify, solve::SolverConfig};
 use std::hint::black_box;
 
 #[path = "../tests/solve/generators.rs"]

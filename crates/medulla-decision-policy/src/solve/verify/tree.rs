@@ -7,8 +7,10 @@
 
 use super::dual::{integer_bound, scaled_lagrangian, Target};
 use super::error::VerifyError;
-use crate::solve::certificate::{LagrangeDual, LeafProof, ProofNode};
-use crate::solve::model::{Model, RowId, VarId};
+use crate::{
+    solve::certificate::LagrangeDual, solve::certificate::LeafProof, solve::certificate::ProofNode,
+};
+use crate::{solve::model::Model, solve::model::RowId, solve::model::VarId};
 
 /// What the verified leaves establish.
 #[derive(Debug, Default)]

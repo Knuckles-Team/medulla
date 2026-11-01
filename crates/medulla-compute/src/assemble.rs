@@ -166,10 +166,10 @@ fn verify_solved(assembly: &Assembly) -> Result<(), AssembleError> {
             "a solved record has no model",
         )
     })?;
-    let model = crate::solve::Model::try_from(spec).map_err(|error| {
+    let model = medulla_decision_policy::solve::Model::try_from(spec).map_err(|error| {
         AssembleError::new(DecisionErrorCode::AssemblyModelInvalid, error.to_string())
     })?;
-    match crate::solve::verify(&model, certificate) {
+    match medulla_decision_policy::solve::verify(&model, certificate) {
         Ok(verdict) if conclude::verdict_supports_solved(&verdict) => Ok(()),
         Ok(verdict) => Err(AssembleError::new(
             DecisionErrorCode::CertificateRejected,

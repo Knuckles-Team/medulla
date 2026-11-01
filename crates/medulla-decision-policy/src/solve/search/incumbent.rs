@@ -9,7 +9,7 @@
 use super::branch::{choose, completion, Choice};
 use super::propagate::{fix_and_queue, propagate, RowQueue};
 use super::state::SearchState;
-use crate::solve::model::{Model, Relation};
+use crate::{solve::model::Model, solve::model::Relation};
 
 /// A feasible selection and its scalar objective, if the greedy dive finds one.
 pub(super) fn greedy(model: &Model) -> Option<(Vec<bool>, i128)> {

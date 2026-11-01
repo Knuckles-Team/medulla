@@ -272,6 +272,7 @@ rand_chacha = "0.3"
 # `cargo check --examples`, or a check under another feature such as `solve`, skips it).
 # Run: `cargo run -p medulla-compute --features ast --example index_repository_json`.
 medulla-graph-algos = { path = "../medulla-graph-algos" }
+medulla-decision-policy = { path = "../medulla-decision-policy" }
 
 [[example]]
 name = "index_repository_json"

@@ -2,8 +2,8 @@
 
 use std::fmt;
 
-use crate::solve::model::{RowId, VarId};
 use crate::solve::scalar::Scalar;
+use crate::{solve::model::RowId, solve::model::VarId};
 
 /// What a certificate was verified to establish.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -212,7 +212,8 @@ fn an_option_outside_the_candidate_universe_or_a_tampered_certificate_cannot_com
     );
     // And the independent verifier refuses it on its own, without replay.
     let model =
-        crate::solve::Model::try_from(assembly.model.clone().expect("model")).expect("valid");
+        medulla_decision_policy::solve::Model::try_from(assembly.model.clone().expect("model"))
+            .expect("valid");
     let DecisionOutcome::Solved { certificate, .. } = &tampered.outcome else {
         unreachable!()
     };
@@ -220,7 +221,7 @@ fn an_option_outside_the_candidate_universe_or_a_tampered_certificate_cannot_com
     if let Some(incumbent) = lying.incumbent.as_mut() {
         incumbent.selected.iter_mut().for_each(|on| *on = !*on);
     }
-    assert!(crate::solve::verify(&model, &lying).is_err());
+    assert!(medulla_decision_policy::solve::verify(&model, &lying).is_err());
 }
 
 #[test]

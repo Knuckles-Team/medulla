@@ -20,9 +20,12 @@
 //! `i128`; a capped or skipped raise only weakens the bound.
 
 use super::state::{row_id, SearchState};
-use crate::solve::certificate::{DualEntry, LagrangeDual, MAX_MULTIPLIER};
 use crate::solve::model::Relation;
 use crate::solve::scalar::Scalar;
+use crate::{
+    solve::certificate::DualEntry, solve::certificate::LagrangeDual,
+    solve::certificate::MAX_MULTIPLIER,
+};
 
 /// A dual and the bound value it certifies at the node that produced it.
 pub(super) struct NodeBound {

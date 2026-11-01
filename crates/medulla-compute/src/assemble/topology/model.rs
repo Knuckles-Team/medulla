@@ -33,7 +33,7 @@ use super::super::model::Built;
 use super::super::AssembleError;
 use super::tables::{demanded_width, slot_choices, Choice};
 use super::Question;
-use crate::solve::model::MAX_ABS_COEFFICIENT;
+use medulla_decision_policy::solve::model::MAX_ABS_COEFFICIENT;
 
 /// The serde name of a resource class, as constraint ids spell it.
 pub(super) fn class_name(class: CapacityResourceClass) -> &'static str {

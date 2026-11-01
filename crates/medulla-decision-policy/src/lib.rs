@@ -6,3 +6,10 @@
 
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
+
+// Decide layer package A3 — general bounded 0-1 integer programming: validated
+// models, deterministic node-budgeted branch-and-bound, Lagrangian leaf-bound
+// certificates and an independent verifier. Integer-only, no heavy deps.
+#[cfg(feature = "solve")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod solve;

@@ -1,10 +1,15 @@
 //! Model, scalar and config validation, and exactness of the scalarisation.
 
-use medulla_compute::solve::model::{
-    Coefficient, ConstraintBody, ConstraintSpec, Location, Model, ModelError, ModelSpec,
-    ObjectiveLevelSpec, ObjectiveTerm, Relation, Term, VarId,
+use medulla_decision_policy::{
+    solve::model::Coefficient, solve::model::ConstraintBody, solve::model::ConstraintSpec,
+    solve::model::Location, solve::model::Model, solve::model::ModelError, solve::model::ModelSpec,
+    solve::model::ObjectiveLevelSpec, solve::model::ObjectiveTerm, solve::model::Relation,
+    solve::model::Term, solve::model::VarId,
 };
-use medulla_compute::solve::{ConfigError, Scalar, Sha256Digest, SolverConfig, SolverConfigSpec};
+use medulla_decision_policy::{
+    solve::ConfigError, solve::Scalar, solve::Sha256Digest, solve::SolverConfig,
+    solve::SolverConfigSpec,
+};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 

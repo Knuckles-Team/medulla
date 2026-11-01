@@ -40,6 +40,7 @@ tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sy
 tracing = "0.1"
 tempfile = { version = "3", optional = true }
 medulla-finance-market = { path = "../medulla-finance-market" }
+medulla-decision-policy = { path = "../medulla-decision-policy" }
 
 [features]
 ann = ["dep:medulla-ann", ]
