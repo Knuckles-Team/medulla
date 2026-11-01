@@ -6,6 +6,7 @@
 //! refusal keeps its exact message and exit status; a store-open failure stays
 //! fatal at boot (loud + early).
 
+use std::net::SocketAddr;
 use std::sync::Arc;
 
 use tracing::info;

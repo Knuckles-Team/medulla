@@ -483,7 +483,7 @@ async fn dispatch_reserved_request(
         std::pin::Pin<Box<dyn std::future::Future<Output = Response> + Send + 'a>>;
     let boxed: BoxedDispatch<'_> = match reservation.qos.context {
         Some(context) => Box::pin(dispatch_verified_request(&state, req, context)),
-        None => Box::pin(dispatch(&state, req)),
+        None => Box::pin(crate::dispatch::dispatch(&state, req)),
     };
     let response =
         dispatch_within_deadline(boxed, limits.dispatch_deadline, req_id, &peer_gone).await;
