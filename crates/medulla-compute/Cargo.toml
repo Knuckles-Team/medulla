@@ -117,6 +117,7 @@ ast-extended = [
 ]
 
 [dependencies]
+medulla-decision-policy = { path = "../medulla-decision-policy" }
 medulla-types = { path = "../medulla-types" }
 medulla-core = { path = "../medulla-core" }
 # Reuse medulla-geo's generic symmetric distance-matrix traversal for t-SNE's
@@ -272,7 +273,6 @@ rand_chacha = "0.3"
 # `cargo check --examples`, or a check under another feature such as `solve`, skips it).
 # Run: `cargo run -p medulla-compute --features ast --example index_repository_json`.
 medulla-graph-algos = { path = "../medulla-graph-algos" }
-medulla-decision-policy = { path = "../medulla-decision-policy" }
 
 [[example]]
 name = "index_repository_json"
@@ -295,15 +295,6 @@ required-features = ["ast"]
 name = "approx_knn"
 path = "benches/approx_knn.rs"
 harness = false
-
-# Assembly-scale solver bench (Decide A3): 64 candidates x 32 capabilities with
-# exactly-one, implication, budget and cardinality rows, solved and verified.
-# Run: `cargo bench -p medulla-compute --features solve --bench solve_cover`.
-[[bench]]
-name = "solve_cover"
-path = "benches/solve_cover.rs"
-harness = false
-required-features = ["solve"]
 
 # Spec-artifact parse bench (MEDULLA-SDLC-R014.1): 500 rows + 500 task lines.
 # Run: `cargo bench -p medulla-compute --bench spec_parse`.

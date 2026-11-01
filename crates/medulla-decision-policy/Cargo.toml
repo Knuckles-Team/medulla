@@ -19,3 +19,15 @@ medulla-decision-types = { path = "../medulla-decision-types" }
 
 [features]
 solve = []
+
+[dev-dependencies]
+criterion = "0.8"
+
+# Assembly-scale solver bench (Decide A3): 64 candidates x 32 capabilities with
+# exactly-one, implication, budget and cardinality rows, solved and verified.
+# Run: `cargo bench -p medulla-decision-policy --features solve --bench solve_cover`.
+[[bench]]
+name = "solve_cover"
+path = "benches/solve_cover.rs"
+harness = false
+required-features = ["solve"]
