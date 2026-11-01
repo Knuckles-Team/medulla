@@ -15,6 +15,6 @@ const GRANT: ServiceGraphGrant<'static> = ServiceGraphGrant {
 };
 
 /// Let [`WATCH_ACTOR`] read and write exactly `graph`. Idempotent.
-pub(crate) fn ensure(isolation: &mut IsolationLayer, graph: &str) -> Result<(), String> {
+pub fn ensure(isolation: &mut IsolationLayer, graph: &str) -> Result<(), String> {
     GRANT.ensure(isolation, graph)
 }

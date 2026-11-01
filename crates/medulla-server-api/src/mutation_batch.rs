@@ -77,7 +77,7 @@ pub struct GraphWriteScope<'a> {
 
 impl GraphWriteScope<'_> {
     /// Compile `methods` as one graph-surface batch `batch_id` under this scope.
-    pub(crate) fn compile(
+    pub fn compile(
         &self,
         batch_id: &str,
         methods: Vec<medulla_types::protocol::Method>,
@@ -87,7 +87,7 @@ impl GraphWriteScope<'_> {
 
     /// Compile graph rows and caller-supplied intents in one canonical batch.
     /// The extra intents are included before the envelope digest is minted.
-    pub(crate) fn compile_with_outbox(
+    pub fn compile_with_outbox(
         &self,
         batch_id: &str,
         methods: Vec<medulla_types::protocol::Method>,

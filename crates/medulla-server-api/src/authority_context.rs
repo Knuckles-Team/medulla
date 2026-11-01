@@ -45,7 +45,7 @@ enum AuthorityOrigin {
 }
 
 impl VerifiedRequestContext {
-    pub(crate) fn is_authenticated(&self) -> bool {
+    pub fn is_authenticated(&self) -> bool {
         self.origin == AuthorityOrigin::Verified
     }
 
@@ -124,16 +124,16 @@ impl VerifiedRequestContext {
         ))
     }
 
-    pub(crate) fn agent_id(&self) -> &str {
+    pub fn agent_id(&self) -> &str {
         self.claims.agent_id.as_str()
     }
 
-    pub(crate) fn principal(&self) -> &str {
+    pub fn principal(&self) -> &str {
         &self.claims.principal
     }
 
     /// The role names of the verified (MAC-covered) request context.
-    pub(crate) fn roles(&self) -> &[String] {
+    pub fn roles(&self) -> &[String] {
         &self.claims.roles
     }
 
@@ -150,14 +150,14 @@ impl VerifiedRequestContext {
     /// Tenant carried by the cryptographically verified context. Callers at
     /// subordinate (non-graph) stores must use this value rather than a tenant-like
     /// string supplied in the method body.
-    pub(crate) fn tenant(&self) -> &str {
+    pub fn tenant(&self) -> &str {
         self.claims.tenant.as_str()
     }
 
     /// Stable tenant-local MCP discovery partition from the verified carrier.
     /// This binds the tenant and logical server; the caller still needs an
     /// authenticated mounted-child observation before publishing a catalog.
-    pub(crate) fn tenant_local_catalog_partition_digest(
+    pub fn tenant_local_catalog_partition_digest(
         &self,
         server_name: &str,
     ) -> Result<Digest256, String> {
@@ -179,7 +179,7 @@ impl VerifiedRequestContext {
     /// Opaque stable subject identifier safe for durable mutation/audit rows.
     /// Raw identity-provider subjects remain inside the verified request context
     /// and are never copied into graph persistence.
-    pub(crate) fn principal_persistence_id(&self) -> String {
+    pub fn principal_persistence_id(&self) -> String {
         use sha2::{Digest, Sha256};
         format!(
             "principal:sha256:{}",
@@ -189,7 +189,7 @@ impl VerifiedRequestContext {
 
     /// Scope gate for capability-ledger actions. A verified context must carry an exact scope,
     /// a domain wildcard (`graph:*`), or the global `*` scope.
-    pub(crate) fn allows_action(&self, action: &str) -> bool {
+    pub fn allows_action(&self, action: &str) -> bool {
         if self.scope_index.contains("*") || self.scope_index.contains(action) {
             return true;
         }
@@ -218,7 +218,7 @@ impl VerifiedRequestContext {
     /// scopes and are interpreted using the capability ledger's ``mutates``
     /// bit. Administrative/control-plane actions are never implied by
     /// ``kg:write``; they require ``kg:admin`` or an exact primitive scope.
-    pub(crate) fn allows_method(&self, action: &str, mutates: bool) -> bool {
+    pub fn allows_method(&self, action: &str, mutates: bool) -> bool {
         if self.allows_action(action) {
             return true;
         }
@@ -239,7 +239,7 @@ impl VerifiedRequestContext {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn claims(&self) -> &RequestContextClaims {
+    pub fn claims(&self) -> &RequestContextClaims {
         &self.claims
     }
 
@@ -248,7 +248,7 @@ impl VerifiedRequestContext {
         &self.idempotency_key
     }
 
-    pub(crate) fn attempt_nonce(&self) -> Option<Nonce> {
+    pub fn attempt_nonce(&self) -> Option<Nonce> {
         self.wire_nonce
     }
 

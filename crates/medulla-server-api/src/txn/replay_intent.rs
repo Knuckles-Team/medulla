@@ -23,7 +23,7 @@ struct DurableTxnIntent<'a> {
 }
 
 impl GraphTxnState {
-    pub(crate) fn replay_intent_digest(&self) -> Result<String, String> {
+    pub fn replay_intent_digest(&self) -> Result<String, String> {
         use sha2::{Digest, Sha256};
         let intent = DurableTxnIntent {
             schema_version: 1,

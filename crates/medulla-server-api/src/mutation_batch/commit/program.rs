@@ -44,7 +44,7 @@ impl<'a> ProgramPromotionRequest<'a> {
         }
     }
 
-    pub(crate) fn with_identity(
+    pub fn with_identity(
         mut self,
         identity: &'a medulla_program::ProgramRevisionIdentity,
     ) -> Self {
@@ -52,7 +52,7 @@ impl<'a> ProgramPromotionRequest<'a> {
         self
     }
 
-    pub(crate) fn with_attempt_nonce(mut self, attempt_nonce: Option<Nonce>) -> Self {
+    pub fn with_attempt_nonce(mut self, attempt_nonce: Option<Nonce>) -> Self {
         self.attempt_nonce = attempt_nonce;
         self
     }

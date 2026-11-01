@@ -80,7 +80,7 @@ pub(crate) fn chunked(store: &dyn ChunkStore, data: &[u8], chunk_size: usize) ->
 
 /// [`chunked`], committed under `owner_scope` -- the shape a verified caller's
 /// own upload has.
-pub(crate) fn chunked_as(
+pub fn chunked_as(
     store: &dyn ChunkStore,
     data: &[u8],
     chunk_size: usize,
@@ -107,7 +107,7 @@ pub(crate) fn chunked_as(
 }
 
 /// Every chunk of `manifest`, read back and concatenated.
-pub(crate) fn reassemble(store: &dyn ChunkStore, manifest: &BlobManifest) -> Vec<u8> {
+pub fn reassemble(store: &dyn ChunkStore, manifest: &BlobManifest) -> Vec<u8> {
     let mut out = Vec::new();
     for digest in &manifest.chunks {
         out.extend(store.get_chunk(digest).unwrap().unwrap());

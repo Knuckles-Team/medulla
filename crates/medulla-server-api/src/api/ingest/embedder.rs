@@ -90,7 +90,7 @@ impl EmbedderConfig {
     }
 
     /// Embed `texts` in order. Blocking: call it off the reactor.
-    pub(crate) fn embed(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>, String> {
+    pub fn embed(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>, String> {
         match &self.endpoint {
             Some(url) => texts
                 .chunks(BATCH)

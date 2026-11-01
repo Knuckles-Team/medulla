@@ -71,15 +71,15 @@ pub struct CarrierAuthority {
 #[cfg(any(feature = "wasm-udf", feature = "federation"))]
 #[derive(Clone, Copy)]
 pub struct OwnerScopedCall<'a> {
-    pub(crate) state: &'a Arc<tokio::sync::RwLock<crate::state::ServerState>>,
-    pub(crate) req_id: u64,
+    pub state: &'a Arc<tokio::sync::RwLock<crate::state::ServerState>>,
+    pub req_id: u64,
     pub(crate) carrier: Option<&'a CarrierAuthority>,
 }
 
 #[cfg(any(feature = "wasm-udf", feature = "federation"))]
 impl OwnerScopedCall<'_> {
     /// The verified owner, or the `ACCESS_DENIED` refusal for `method`.
-    pub(crate) fn owner(
+    pub fn owner(
         &self,
         method: &str,
     ) -> Result<CarrierAuthority, medulla_types::protocol::Response> {
@@ -192,25 +192,25 @@ impl CarrierAuthority {
         })
     }
 
-    pub(crate) fn tenant_scope(&self) -> &str {
+    pub fn tenant_scope(&self) -> &str {
         &self.tenant_scope
     }
 
-    pub(crate) fn actor_scope(&self) -> &str {
+    pub fn actor_scope(&self) -> &str {
         &self.actor_scope
     }
 
-    pub(crate) fn owner_scope(&self) -> &str {
+    pub fn owner_scope(&self) -> &str {
         &self.owner_scope
     }
 
     /// `(verified tenant id, principal persistence id)` — the keys of the caller's
     /// decision log and of the records only it may see (EH-066).
-    pub(crate) fn log_owner(&self) -> (&str, &str) {
+    pub fn log_owner(&self) -> (&str, &str) {
         (&self.log_owner.0, &self.log_owner.1)
     }
 
-    pub(crate) fn agent_id(&self) -> &str {
+    pub fn agent_id(&self) -> &str {
         &self.agent_id
     }
 
@@ -232,7 +232,7 @@ impl CarrierAuthority {
     /// carrier. Auxiliary mutation stores use this exact value when they
     /// compile their kernel replay identity; it is never derived from a
     /// caller-controlled method field.
-    pub(crate) fn attempt_nonce(&self) -> Option<Nonce> {
+    pub fn attempt_nonce(&self) -> Option<Nonce> {
         self.attempt_nonce
     }
 
@@ -248,11 +248,11 @@ impl CarrierAuthority {
         crate::mutation_batch::opaque_coordinator_key(domain, &self.owner_scope, local)
     }
 
-    pub(crate) fn owns(&self, tenant_scope: &str, actor_scope: &str) -> bool {
+    pub fn owns(&self, tenant_scope: &str, actor_scope: &str) -> bool {
         self.tenant_scope == tenant_scope && self.actor_scope == actor_scope
     }
 
-    pub(crate) fn is_admin(&self) -> bool {
+    pub fn is_admin(&self) -> bool {
         self.admin
     }
 
@@ -266,16 +266,16 @@ impl CarrierAuthority {
     /// comment in [`Self::from_verified`] for why this is `true` for every
     /// pre-existing carrier-minting site and only meaningfully varies for the
     /// Iceberg-REST bearer path (NE-048).
-    pub(crate) fn can_read(&self) -> bool {
+    pub fn can_read(&self) -> bool {
         self.can_read
     }
 
     /// Coarse write capability (`kg:write` or admin). See [`Self::can_read`].
-    pub(crate) fn can_write(&self) -> bool {
+    pub fn can_write(&self) -> bool {
         self.can_write
     }
 
-    pub(crate) fn require_admin(&self, domain: &str) -> Result<(), String> {
+    pub fn require_admin(&self, domain: &str) -> Result<(), String> {
         if self.admin {
             Ok(())
         } else {
@@ -363,12 +363,12 @@ impl GraphReadAuthority {
     }
 
     /// Verified tenant+actor authority for non-graph legs fused into a graph read.
-    pub(crate) fn carrier(&self) -> Option<&CarrierAuthority> {
+    pub fn carrier(&self) -> Option<&CarrierAuthority> {
         self.carrier.as_ref()
     }
 
     /// Effective actor for graph ACL checks on secondary/cross-graph reads.
-    pub(crate) fn actor(&self) -> Option<&str> {
+    pub fn actor(&self) -> Option<&str> {
         #[cfg(feature = "security")]
         {
             (!self.actor.is_empty()).then_some(self.actor.as_str())
@@ -383,7 +383,7 @@ impl GraphReadAuthority {
     /// Optional transport identity exists only before authorization; served
     /// handlers use this strict accessor before cache, RLS, admission, or state
     /// ownership logic.
-    pub(crate) fn verified_actor(&self) -> Result<&str, String> {
+    pub fn verified_actor(&self) -> Result<&str, String> {
         #[cfg(feature = "security")]
         let actor = self.actor.as_str();
         #[cfg(not(feature = "security"))]
@@ -403,7 +403,7 @@ impl GraphReadAuthority {
     }
 
     /// Whether per-row projection is required for this request.
-    pub(crate) fn is_active(&self) -> bool {
+    pub fn is_active(&self) -> bool {
         #[cfg(feature = "security")]
         {
             true
@@ -415,7 +415,7 @@ impl GraphReadAuthority {
     }
 
     /// Apply the same lowest-level visibility predicate used by SQL/Cypher/RDF.
-    pub(crate) fn filter_view(&self, view: &mut GraphView) {
+    pub fn filter_view(&self, view: &mut GraphView) {
         #[cfg(feature = "security")]
         self.isolation.filter_view(&self.actor, view);
         #[cfg(not(feature = "security"))]
@@ -445,7 +445,7 @@ impl GraphReadAuthority {
     /// `core.analysis_snapshot()` + [`Self::filter_view`] instead for that case,
     /// exactly as today.
     #[cfg(feature = "security")]
-    pub(crate) fn cached_filter_view(&self, core: &Arc<GraphCore>) -> Arc<GraphView> {
+    pub fn cached_filter_view(&self, core: &Arc<GraphCore>) -> Arc<GraphView> {
         let probe_version = core.version();
         if let Some(cached) = core.cached_filtered_view(&self.actor, probe_version) {
             return cached;
@@ -495,7 +495,7 @@ impl GraphReadAuthority {
     /// Evaluate one CDC before/after property blob with the exact graph-row RLS
     /// predicate.  An absent image is not evidence of visibility; callers normally
     /// authorize an event when either its before or after image is visible.
-    pub(crate) fn can_see_blob(&self, blob: &[u8]) -> bool {
+    pub fn can_see_blob(&self, blob: &[u8]) -> bool {
         #[cfg(feature = "security")]
         {
             self.isolation
@@ -520,7 +520,7 @@ impl GraphReadAuthority {
     /// `alice_and_bob_same_tenant_shared_graph_cannot_observe_each_others_rows` and
     /// `project_core_reflects_a_mutation_after_the_previous_projection_was_cached`,
     /// both below) — this amortizes the existing guarantee, it does not relax it.
-    pub(crate) fn project_core(&self, core: &Arc<GraphCore>) -> Arc<GraphCore> {
+    pub fn project_core(&self, core: &Arc<GraphCore>) -> Arc<GraphCore> {
         if !self.is_active() {
             return core.clone();
         }

@@ -193,7 +193,7 @@ pub struct ServerState {
     /// Serializes physical opens while permitting the projection worker to open
     /// outside the global state lock. The slot retains the shared winning handle.
     #[cfg(feature = "redb")]
-    pub(crate) agent_library_open: Arc<Mutex<Option<ErasedHandle>>>,
+    pub agent_library_open: Arc<Mutex<Option<ErasedHandle>>>,
     /// Cold-tenant access tracker (CONCEPT:MEDULLA-KG.sharding.medulla-r6/MEDULLA-040, R6), feature `redb`. The
     /// dispatch read+write path calls `touch(graph)` on every graph access so the
     /// periodic cold-offload sweep (`offload_cold_tenants`) can hibernate graphs idle
@@ -454,7 +454,7 @@ impl ServerState {
     /// Publish this engine's identity store to the SQL projection.
     /// Called after every write that can change the store.
     #[cfg(feature = "security")]
-    pub(crate) fn publish_identity_view(&self) {
+    pub fn publish_identity_view(&self) {
         crate::identity_view::publish(
             self.persist_dir.as_deref(),
             self.isolation.rbac().identity_store(),

@@ -31,7 +31,7 @@ impl ServiceGraphGrant<'_> {
     }
 
     /// Let the actor read and write exactly `graph`. Idempotent.
-    pub(crate) fn ensure(&self, isolation: &mut IsolationLayer, graph: &str) -> Result<(), String> {
+    pub fn ensure(&self, isolation: &mut IsolationLayer, graph: &str) -> Result<(), String> {
         if isolation.identity_bootstrap_pending() {
             return Err(format!(
                 "{}: the identity policy awaits its System bootstrap; service graph access \

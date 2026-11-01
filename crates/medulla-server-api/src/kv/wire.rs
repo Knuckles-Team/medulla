@@ -276,7 +276,7 @@ struct PageBuilder<'a> {
 }
 
 impl<'a> PageBuilder<'a> {
-    fn new(prefix: &'a str, cursor: Option<&'a str>, limit: usize) -> Self {
+    pub fn new(prefix: &'a str, cursor: Option<&'a str>, limit: usize) -> Self {
         Self {
             prefix,
             cursor,

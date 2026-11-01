@@ -184,7 +184,7 @@ impl BearerCredential {
     /// Verify a raw `Authorization` header value (`"Bearer <token>"`) against
     /// this configured credential. A missing/malformed `Bearer` prefix, or a
     /// token matching neither the static secret nor a valid JWT, is `false`.
-    pub(crate) fn verify(&self, authorization_header: &str) -> bool {
+    pub fn verify(&self, authorization_header: &str) -> bool {
         let Some(token) = authorization_header
             .strip_prefix("Bearer ")
             .map(str::trim)
@@ -232,13 +232,13 @@ pub(crate) fn coarse_kg_admin_only(action: &str) -> bool {
 /// builds resolve the same fields from environment configuration.
 #[derive(Debug, Clone)]
 pub struct RequestContextPolicy {
-    pub(crate) expected_audience: String,
-    pub(crate) expected_tenant: String,
-    pub(crate) expected_policy_version: String,
+    pub expected_audience: String,
+    pub expected_tenant: String,
+    pub expected_policy_version: String,
 }
 
 impl RequestContextPolicy {
-    fn from_env() -> Result<Self, String> {
+    pub fn from_env() -> Result<Self, String> {
         fn configured(name: &str) -> Result<String, String> {
             std::env::var(name)
                 .ok()
@@ -686,7 +686,7 @@ pub fn build_current_test_request(
 }
 
 /// Build the common-tenant form used by the ordinary dispatch fixtures.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub fn build_shared_test_request(
     secret: &str,
     id: u64,
@@ -700,7 +700,7 @@ pub fn build_shared_test_request(
 /// Keep direct test dispatches behind the same heap boundary as transport tasks.
 /// The full method router produces a large future, so callers must not embed it
 /// in another test future before polling.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub fn dispatch_test_on_heap<'a>(
     state: &'a std::sync::Arc<tokio::sync::RwLock<crate::state::ServerState>>,
     request: Request,
@@ -1503,7 +1503,7 @@ impl SignerKeyRegistry {
     /// Is `signature` a valid detached HMAC over `digest` from a trusted
     /// signer? Returns the signer id on success. Does NOT decide what that
     /// signer may grant — see `authorize_grant`.
-    fn verify(&self, signature: &str, digest: &[u8]) -> Result<String, String> {
+    pub fn verify(&self, signature: &str, digest: &[u8]) -> Result<String, String> {
         let (signer, tag) = signature.rsplit_once(':').ok_or(SIGNER_TRUST_DENIED)?;
         if signer.is_empty() || tag.is_empty() {
             return Err(SIGNER_TRUST_DENIED.to_string());
@@ -1612,7 +1612,7 @@ struct SignerRegistryStore {
 // that reality rather than papering over an actual gap.
 #[allow(dead_code)]
 impl SignerRegistryStore {
-    fn new(initial: SignerKeyRegistry) -> Self {
+    pub fn new(initial: SignerKeyRegistry) -> Self {
         SignerRegistryStore {
             current: std::sync::RwLock::new(std::sync::Arc::new(initial)),
         }
@@ -3108,7 +3108,7 @@ mod tests {
             OidcTestGuard
         }
 
-        fn sign(claims: &serde_json::Value) -> String {
+        pub fn sign(claims: &serde_json::Value) -> String {
             let mut header = Header::new(JwtAlgorithm::RS256);
             header.kid = Some(OIDC_KID.to_string());
             let der = hex::decode(TEST_RSA_PRIVATE_KEY_PKCS1_DER_HEX).unwrap();

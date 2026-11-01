@@ -62,7 +62,7 @@ pub struct ImpactWatchHub {
     pending: DashMap<String, Pending>,
     /// Seed labels of each graph's watches, loaded at its first sweep; until
     /// then every labelled change is recorded.
-    seed_labels: DashMap<String, BTreeSet<String>>,
+    pub seed_labels: DashMap<String, BTreeSet<String>>,
 }
 
 impl ImpactWatchHub {

@@ -85,7 +85,7 @@ impl RenderCacheInner {
 struct RenderCache(RwLock<RenderCacheInner>);
 
 impl RenderCache {
-    fn new() -> Self {
+    pub fn new() -> Self {
         RenderCache(RwLock::new(RenderCacheInner::default()))
     }
 
@@ -151,9 +151,9 @@ pub struct VizEngineState {
     /// are content-addressed at the chunk level (`medulla-viz-columnstore`), so
     /// re-ingesting identical bytes is cheap and does not defeat the render
     /// cache above (see [`medulla_viz_columnstore::ColumnStore::content_fingerprint`]).
-    pub(crate) store: RwLock<ColumnStore>,
+    pub store: RwLock<ColumnStore>,
     cache: RenderCache,
-    pub(crate) provenance: VizProvenanceStore,
+    pub provenance: VizProvenanceStore,
 }
 
 impl VizEngineState {
@@ -189,11 +189,11 @@ impl VizEngineState {
         }
     }
 
-    pub(crate) fn cache_get(&self, key: &str) -> Option<CachedRender> {
+    pub fn cache_get(&self, key: &str) -> Option<CachedRender> {
         self.cache.get(key)
     }
 
-    pub(crate) fn cache_put(&self, key: String, value: CachedRender) {
+    pub fn cache_put(&self, key: String, value: CachedRender) {
         self.cache.put(key, value)
     }
 

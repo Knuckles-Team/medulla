@@ -231,7 +231,7 @@ impl RedbBackend {
     /// interchangeable stores.  Keeping the physical name at the opener makes
     /// an accidental adoption of (for example) an S3 index as the main KV
     /// store fail at the storage manifest boundary before any scope is bound.
-    fn open_named(path: &Path, physical_name: &str) -> Result<Self, String> {
+    pub fn open_named(path: &Path, physical_name: &str) -> Result<Self, String> {
         let (kernel, mutations, bootstrap) = medulla_store::redb_store::shard::open_kernel_owned_store::<
             KvOwner,
         >(

@@ -73,7 +73,7 @@ struct GraphFeed {
 }
 
 impl GraphFeed {
-    fn new(cap: usize) -> Self {
+    pub fn new(cap: usize) -> Self {
         GraphFeed {
             next_seq: 0,
             ring: VecDeque::new(),

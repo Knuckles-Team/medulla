@@ -55,7 +55,7 @@ pub struct SqlOwnerMutation<'a> {
 
 impl SqlOwnerMutation<'_> {
     /// Hand `compile` the batch context for this mutation.
-    pub(crate) fn compile<T>(
+    pub fn compile<T>(
         &self,
         store: &TableStore,
         compile: impl FnOnce(crate::mutation_batch::CompileBatch<'_>) -> Result<T, String>,

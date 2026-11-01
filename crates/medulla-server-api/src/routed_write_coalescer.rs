@@ -79,7 +79,7 @@ struct AbortOnDrop<T> {
 }
 
 impl<T> AbortOnDrop<T> {
-    fn new(handle: tokio::task::JoinHandle<T>) -> Self {
+    pub fn new(handle: tokio::task::JoinHandle<T>) -> Self {
         Self {
             handle: Some(handle),
         }

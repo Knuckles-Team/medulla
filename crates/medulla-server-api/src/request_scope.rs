@@ -29,16 +29,16 @@ impl RequestCancel {
         Self(Arc::new(tokio::sync::watch::channel(false).0))
     }
 
-    pub(crate) fn cancel(&self) {
+    pub fn cancel(&self) {
         self.0.send_replace(true);
     }
 
-    pub(crate) fn is_cancelled(&self) -> bool {
+    pub fn is_cancelled(&self) -> bool {
         *self.0.borrow()
     }
 
     /// Resolves once [`Self::cancel`] has been called (immediately if it was).
-    pub(crate) async fn cancelled(&self) {
+    pub async fn cancelled(&self) {
         let mut watch = self.0.subscribe();
         // The sender lives in `self`, so the channel cannot close under us.
         let _ = watch.wait_for(|cancelled| *cancelled).await;

@@ -33,7 +33,7 @@ pub(super) struct DurableUpload {
 }
 
 impl DurableUpload {
-    fn new(owner_scope: &str, chunk_size: u32, at_ms: u64) -> Self {
+    pub fn new(owner_scope: &str, chunk_size: u32, at_ms: u64) -> Self {
         Self {
             owner_scope: owner_scope.to_string(),
             chunk_digests: Vec::new(),
@@ -56,7 +56,7 @@ impl DurableUpload {
         }
     }
 
-    pub(super) fn owner_scope(&self) -> &str {
+    pub fn owner_scope(&self) -> &str {
         &self.owner_scope
     }
 

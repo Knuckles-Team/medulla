@@ -174,7 +174,7 @@ pub struct ProvisionalCreateAuthority {
 
 impl ProvisionalCreateAuthority {
     /// True only for the exact verified carrier and table this capability binds.
-    pub(crate) fn permits(&self, authority: &CarrierAuthority, table: &str) -> bool {
+    pub fn permits(&self, authority: &CarrierAuthority, table: &str) -> bool {
         self.tenant_scope == authority.tenant_scope()
             && self.actor == authority.agent_id()
             && self.table == table
@@ -419,7 +419,7 @@ fn source_acl_snapshot_locked<G: SourceAuthorityProof>(
 }
 
 impl SqlSourceAuthorityWrite<'_, '_> {
-    pub(crate) fn authority(&self) -> &CarrierAuthority {
+    pub fn authority(&self) -> &CarrierAuthority {
         self.authority
     }
 
@@ -427,7 +427,7 @@ impl SqlSourceAuthorityWrite<'_, '_> {
         source_acl_snapshot_locked(self, &self.acl, self.authority, table)
     }
 
-    pub(crate) fn authorized_snapshot(
+    pub fn authorized_snapshot(
         &self,
         table: &str,
         privilege: SqlPrivilege,
@@ -1634,7 +1634,7 @@ impl AuthorizedTable {
     /// row-shaping use: the caller already passed [`authorize`] for this exact
     /// `(table, privilege)` to hold an [`AuthorizedTable`] at all, so schema
     /// metadata leaks nothing an existence check wouldn't already.
-    pub(crate) fn schema(&self) -> Result<TableSchema, String> {
+    pub fn schema(&self) -> Result<TableSchema, String> {
         self.with_current_authority(|| {
             self.store
                 .get_schema(&self.table)?
@@ -1647,7 +1647,7 @@ impl AuthorizedTable {
     /// Client-side filtering over a full [`TableStore::scan`] — correctness over
     /// pushdown efficiency, matching the rest of this not-yet-wired module (see
     /// the module doc).
-    pub(crate) fn select(&self, extra: Option<&RowPredicate>) -> Result<Vec<Vec<Cell>>, String> {
+    pub fn select(&self, extra: Option<&RowPredicate>) -> Result<Vec<Vec<Cell>>, String> {
         self.with_current_authority(|| {
             let schema = self
                 .store
@@ -2065,7 +2065,7 @@ pub struct AuthorizedReadStore {
 }
 
 impl AuthorizedReadStore {
-    pub(crate) fn store(&self) -> &TableStore {
+    pub fn store(&self) -> &TableStore {
         self.store
             .as_ref()
             .expect("authorized read store remains present until drop")

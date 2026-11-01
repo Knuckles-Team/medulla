@@ -203,8 +203,8 @@ struct ResourceAccessEntry {
 /// expiry verification — this is trusted data, not caller input.
 #[derive(Debug, Clone, Default)]
 pub struct VerifiedTokenClaims {
-    pub(crate) subject: String,
-    pub(crate) tenant: Option<String>,
+    pub subject: String,
+    pub tenant: Option<String>,
     pub(crate) roles: HashSet<String>,
     pub(crate) scopes: HashSet<String>,
 }
@@ -446,7 +446,7 @@ impl JwtValidator {
     /// [`validate`](Self::validate) — this additionally reads the claim body
     /// so the caller can bind it against the envelope's asserted identity.
     /// `None` on any validation failure.
-    pub(crate) fn validate_claims(&self, token: &str) -> Option<VerifiedTokenClaims> {
+    pub fn validate_claims(&self, token: &str) -> Option<VerifiedTokenClaims> {
         let claims = self.decode_with::<BindingClaims>(token)?;
         let mut roles: HashSet<String> = claims.roles.into_iter().collect();
         if let Some(realm) = claims.realm_access {
@@ -520,18 +520,18 @@ pub mod tests {
     const TEST_RSA_MODULUS_HEX: &str = "BE4725FD791744D873C4C82CC04BA74DB85707A72581E4773E3F9041531B15EA57DCCCDA092ADECBFA818521F10DE4F849DE2F6B359A20AD4EEEC7DA6AA550BAF49A8F471089348B5C677A4C3D9B7F027395D3A08FA87345E4F842D3F5E6D9846F139883CB9ED94E1A868F85A741A5CB1262BEAA4B395C6F9BC82FC46E65267CD50D7D752D2194B69A03CA41F3C135A9862F48D7697F74E8DA8DCA840CDF4F2CDA9ADDC48EA6445574FFBC79F23144A520BA9AAA3EA8B549C25A89188A869A8EE7F05A096A66BFA4F49D4B5900F49579E88DA8C25DA9BAEA53F93CB69E744E5D80B55A41E0DE41449BB437B53B57F6EF179EAE0B3815A20B1DF65FBDF28FC3B7";
     const TEST_RSA_EXPONENT_HEX: &str = "010001";
 
-    pub(crate) const ISSUER: &str = "https://identity.example.test/realms/eg";
-    pub(crate) const AUDIENCE: &str = "medulla";
-    pub(crate) const KID: &str = "test-kid-1";
+    pub const ISSUER: &str = "https://identity.example.test/realms/eg";
+    pub const AUDIENCE: &str = "medulla";
+    pub const KID: &str = "test-kid-1";
 
-    pub(crate) fn now() -> u64 {
+    pub fn now() -> u64 {
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs()
     }
 
-    pub(crate) fn sign(kid: &str, claims: &serde_json::Value) -> String {
+    pub fn sign(kid: &str, claims: &serde_json::Value) -> String {
         let mut header = Header::new(Algorithm::RS256);
         header.kid = Some(kid.to_string());
         let der = hex::decode(TEST_RSA_PRIVATE_KEY_PKCS1_DER_HEX).expect("test key hex");
@@ -539,7 +539,7 @@ pub mod tests {
         encode(&header, claims, &key).expect("sign test token")
     }
 
-    pub(crate) fn validator() -> JwtValidator {
+    pub fn validator() -> JwtValidator {
         validator_for(ISSUER, AUDIENCE, KID)
     }
 

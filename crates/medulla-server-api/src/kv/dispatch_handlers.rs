@@ -14,7 +14,7 @@ struct ScanAccumulator {
 }
 
 impl ScanAccumulator {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             rows: Vec::new(),
             bytes: 0,

@@ -317,7 +317,7 @@ impl PredicateRead {
     /// baseline fingerprinted mere microseconds before `validate()` re-checks
     /// it would defeat the whole point — see `WireSession::execute`'s read hook
     /// for the correct (at-read-time) call site.
-    pub(crate) fn fingerprint(&self, core: &GraphCore) -> u64 {
+    pub fn fingerprint(&self, core: &GraphCore) -> u64 {
         match self {
             PredicateRead::Label(label) => {
                 // `0` = uncapped: serializability needs the FULL matched set, not a page.
@@ -353,7 +353,7 @@ pub struct GraphTxnState {
     pub(crate) begin_version: u64,
     /// Staged durable mutations, applied in order at commit. Restricted to the
     /// durable-mutation set (AddNode/RemoveNode/AddEdge/RemoveEdge/CompareAndSet).
-    pub(crate) write_set: Vec<Method>,
+    pub write_set: Vec<Method>,
     /// Per-node fingerprints captured when first referenced — the OCC read-set.
     pub(crate) read_set: HashMap<String, NodeFingerprint>,
     /// Isolation level (CONCEPT:MEDULLA-KG.txn.serializable-zero-cost). `Snapshot` validates only `read_set`;
@@ -362,7 +362,7 @@ pub struct GraphTxnState {
     /// Predicate/range reads captured at begin and re-evaluated at commit under
     /// serializable — each entry is `(predicate, fingerprint-at-begin)`. Empty under
     /// snapshot (so snapshot pays no extra cost).
-    pub(crate) predicate_reads: Vec<(PredicateRead, u64)>,
+    pub predicate_reads: Vec<(PredicateRead, u64)>,
     /// Owning verified tenant+actor scope (for authorization and the per-owner
     /// open-txn cap).
     pub(crate) agent: String,
@@ -380,7 +380,7 @@ pub struct GraphTxnState {
     /// KG-2.225 — cross-modal ACID). EMPTY for a graph-only txn. When non-empty, the
     /// commit lands graph + vectors (+ blob-refs) in ONE redb `WriteTransaction` so a
     /// node and its embedding are atomic — never one without the other.
-    pub(crate) vectors: Vec<(String, Vec<f32>)>,
+    pub vectors: Vec<(String, Vec<f32>)>,
     /// Staged BLOB REFERENCES `(node_id, digest)` for the DEFAULT graph (CONCEPT:
     /// KG-2.225). Each records a durable graph-side `__blob__` link to an already-
     /// stored content-addressed blob; lands in the SAME cross-modal commit txn.
@@ -392,13 +392,13 @@ pub struct GraphTxnState {
     /// measurements annotating it are atomic. Exposed readably (crate-visible) so Lane A's
     /// `run_unified_overlaid` can overlay these staged, uncommitted points into an in-txn
     /// `TsScan` (read-your-own-writes on the tsdb modality).
-    pub(crate) measurements: Vec<StagedMeasurement>,
+    pub measurements: Vec<StagedMeasurement>,
     /// Staged OWL AXIOM writes, already LOWERED to graph-native `AddNode`/`AddEdge`
     /// methods at stage time (CONCEPT:MEDULLA-KG.txn.extended-cross-modal). Kept separate from `write_set` for
     /// provenance, but applied through the SAME cross-modal wtx (`apply_method_rows`
     /// durably + `apply_staged` in-memory) so the committed OWL axioms are visible to the
     /// reasoner consistently with the txn's other modalities. EMPTY for a non-axiom txn.
-    pub(crate) axioms: Vec<Method>,
+    pub axioms: Vec<Method>,
     /// Staged SPARQL CONSTRUCT results, already LOWERED to graph-native `AddNode`/
     /// `AddEdge` methods at stage time (CONCEPT:MEDULLA-KG.txn.construct-evaluated — the CONSTRUCT is evaluated
     /// against the committed snapshot when staged). Applied through the SAME cross-modal
@@ -422,12 +422,12 @@ pub struct GraphTxnState {
 /// is a pure durable write.
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct StagedMeasurement {
-    pub(crate) series: String,
+    pub series: String,
     pub(crate) n_fields: usize,
     pub(crate) bucket_ns: u64,
     pub(crate) field_names: Vec<String>,
     /// `(ts_nanos, field_values)` points — the SAME shape `TsAppend` carries on the wire.
-    pub(crate) points: Vec<(i64, Vec<f64>)>,
+    pub points: Vec<(i64, Vec<f64>)>,
 }
 
 impl StagedMeasurement {
@@ -612,7 +612,7 @@ impl GraphTxnState {
 
     /// Stage one durable mutation, capturing the read-set fingerprint(s) of every
     /// node it references. The op is NOT applied to the graph here.
-    pub(crate) fn stage(&mut self, core: &GraphCore, method: Method, now_ms: u64) {
+    pub fn stage(&mut self, core: &GraphCore, method: Method, now_ms: u64) {
         self.observe_method(core, &method);
         self.write_set.push(method);
         self.last_active_ms = now_ms;

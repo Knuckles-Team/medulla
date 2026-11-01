@@ -13,7 +13,7 @@ use medulla_query::{TableSchema, TableStore};
 use serde_json::Value;
 
 /// One read-only relation: its schema and rows (cells in schema column order).
-pub(crate) type Relation = (TableSchema, Vec<Vec<Value>>);
+pub type Relation = (TableSchema, Vec<Vec<Value>>);
 
 /// A source of read-only relations for one caller, materialized inside the projection
 /// build (off the async runtime).
