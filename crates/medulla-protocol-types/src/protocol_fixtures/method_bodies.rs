@@ -23,7 +23,7 @@ pub fn typed_samples() -> Vec<(&'static str, Method)> {
     samples.push((
         "SourceIngest",
         Method::SourceIngest {
-            request: Box::new(medulla_catalog_types::catalog_fixtures::source_ingestion::request()),
+            request: Box::new(medulla_catalog_types::source_ingestion::fixtures::request()),
         },
     ));
     #[cfg(feature = "query")]

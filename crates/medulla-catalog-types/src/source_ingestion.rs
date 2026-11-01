@@ -15,6 +15,8 @@ use medulla_types::{
     contract::ResourceId, contract::MAX_MUTATION_ENVELOPE_BYTES, contract::MAX_RECORD_BYTES,
 };
 
+#[cfg(any(test, feature = "test-support"))]
+pub mod fixtures;
 #[cfg(test)]
 mod tests;
 pub mod web_document;

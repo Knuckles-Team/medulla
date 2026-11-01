@@ -2621,7 +2621,7 @@ mod tests {
             target_node.clone(),
             rmp_serde::to_vec_named(&serde_json::json!({"type":"Document"})).unwrap(),
         );
-        let mut batch = medulla_catalog_types::catalog_fixtures::source_ingestion::request()
+        let mut batch = medulla_catalog_types::source_ingestion::fixtures::request()
             .as_batch()
             .clone();
         batch.expected_previous_checkpoint = None;
