@@ -98,6 +98,14 @@ pub(crate) fn control_fixture_batch(input: ControlFixtureBatch) -> MutationBatch
 }
 
 mod commit_timing;
+#[cfg(any(test, feature = "test-support"))]
+pub mod mutation_fixtures;
+#[cfg(any(test, feature = "test-support"))]
+pub use store_read::{read_mutation_graph_version, read_one_node, write_graph_meta};
+#[cfg(any(test, feature = "test-support"))]
+pub use store_retry::fixture_operation_envelope;
+#[cfg(any(test, feature = "test-support"))]
+pub use store_types::{decode_durable, DurableCrypto};
 mod sealed_rows;
 mod store_batch;
 mod store_cleanup;
@@ -188,6 +196,8 @@ pub use crossmodal::{commit_crossmodal, CrossModalStaged};
 pub(crate) use crossmodal::{BlobRefRow, VectorUpsert};
 #[cfg(any(test, feature = "embedded", feature = "server"))]
 pub use dump::read_all_dumps;
+#[cfg(any(test, feature = "test-support"))]
+pub use dump::read_catalog_record;
 #[cfg(any(test, feature = "server"))]
 pub use dump::{
     decode_graph_meta_identity, graph_meta_schema_version, read_all_graph_meta, read_graph_dump,
@@ -953,49 +963,13 @@ mod mutation_batch_tests {
         TerminalOutcomeExtension, OUTCOME_BUNDLE_VERSION, RUN_EVENT_OUTBOX_TOPIC,
     };
     use sha2::{Digest, Sha256};
+    use super::mutation_fixtures::{
+        batch, commit_at, commit_at_graph, commit_native_claim, node, open,
+        ready_work_item_method,
+    };
 
     fn temp_path(tag: &str) -> std::path::PathBuf {
         super::temp_path("medulla-mutation-batch", tag)
-    }
-
-    fn open(path: &std::path::Path) -> Shard {
-        let shard = Shard::open(path).unwrap();
-        // The old fixture seeded the retired graph-version table at 3.  Advance
-        // the kernel-owned ledger through three real maintenance admissions so
-        // every test keeps the same OCC starting point without recreating a
-        // second version authority.
-        let members = shard.graph_members(&["graph-a"]).unwrap();
-        // Reopening an existing fixture must not re-admit the same maintenance
-        // seed keys: the kernel correctly resolves those members as Replay, and
-        // replayed members are forbidden from opening owner rows. Seed only a
-        // graph whose authoritative ledger version row is absent.
-        // Freshness cannot be probed by "is the version row absent?", because this
-        // read is what CREATES that row: `read_mutation_graph_version` opens the
-        // graph, and `Shard::graph` binds a cold scope (`bind_scope`) which inserts
-        // `INITIAL_GRAPH_VERSION`. The absent-row arm below is therefore
-        // unreachable through this path, and reading it as "already seeded" left
-        // every fixture at version 0 while 47 of them expect the seeded base of 3
-        // -- 42 tests failing closed with `STALE_VERSION: expected version 3 but
-        // authoritative version is 0`.
-        //
-        // An unadvanced ledger is the real freshness signal: only seeding moves
-        // graph-a off `INITIAL_GRAPH_VERSION`, so a reopened fixture is at 3 or
-        // more and is still correctly left alone.
-        let seed_required = match read_mutation_graph_version(&shard, "graph-a") {
-            Ok(version) => version == INITIAL_GRAPH_VERSION,
-            Err(error) if error == "mutation scope binding is missing its version row" => true,
-            Err(error) => panic!("unexpected graph version read failure: {error}"),
-        };
-        if seed_required {
-            for index in 0..3 {
-                let op_id = format!("mutation-test-seed/{index}");
-                let (group, batches) = shard.admit_maintenance(&members, &op_id).unwrap();
-                let write = ShardWrite::open(&shard, &group, &members, &batches).unwrap();
-                write.finish().unwrap();
-                shard.commit_drain(group, &batches, 0).unwrap();
-            }
-        }
-        shard
     }
 
     /// Reopen an EXISTING fixture database without seeding anything.
@@ -1008,62 +982,6 @@ mod mutation_batch_tests {
     /// observing it.
     fn reopen(path: &std::path::Path) -> Shard {
         Shard::open(path).unwrap()
-    }
-
-    fn node(id: &str, value: i64) -> Method {
-        Method::AddNode {
-            node_id: id.to_string(),
-            properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({"value": value}))
-                .unwrap(),
-        }
-    }
-
-    fn batch(batch_id: &str, key: &str) -> MutationBatch {
-        let identity = MutationScopeIdentity::graph(
-            ScopeTenantId::new("tenant-a").unwrap(),
-            LogicalName::new("graph-a").unwrap(),
-            IncarnationId::new("incarnation:test:redb-store").unwrap(),
-        );
-        let mut batch = MutationBatch {
-            schema_version: MUTATION_BATCH_VERSION,
-            batch_id: batch_id.to_string(),
-            envelope: super::fixture_operation_envelope(
-                &identity,
-                &format!("principal:sha256:{}", "a".repeat(64)),
-                42,
-                key,
-            ),
-            identity,
-            placement_epoch: 7,
-            version_expectation: VersionExpectation::Graph(3),
-            fencing_token: Some(9),
-            authoritative_state: None,
-            operations: vec![
-                MutationOperation {
-                    ordinal: 0,
-                    surface: MutationSurface::Transaction,
-                    domain: DurabilityDomain::GraphRows,
-                    method: node("a", 1),
-                },
-                MutationOperation {
-                    ordinal: 1,
-                    surface: MutationSurface::Transaction,
-                    domain: DurabilityDomain::GraphRows,
-                    method: node("b", 2),
-                },
-            ],
-            outbox: vec![MutationOutboxIntent {
-                topic: "projection.test".to_string(),
-                key: batch_id.to_string(),
-                payload: vec![1, 2, 3],
-                headers: Default::default(),
-            }],
-            created_at_ms: 100,
-        };
-        batch
-            .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
-            .expect("a fixture batch reseals its envelope over its final body");
-        batch
     }
 
     #[test]
@@ -1126,19 +1044,6 @@ mod mutation_batch_tests {
         record.validate().unwrap();
         let wrong_store = rmp_serde::to_vec_named(&record).unwrap();
         assert!(decode_mutation_batch_record(&wrong_store, "graph-a", "decode-record").is_err());
-    }
-
-    fn ready_work_item_method(work_item_id: &str, max_attempts: u64) -> Method {
-        Method::AddNode {
-            node_id: work_item_id.to_string(),
-            properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({
-                "node_type": "WorkItem",
-                "tenant": "tenant-a",
-                "status": "ready",
-                "max_attempts": max_attempts,
-            }))
-            .unwrap(),
-        }
     }
 
     fn delegated_work_item_method(work_item_id: &str, max_attempts: u64) -> Method {
@@ -1537,121 +1442,10 @@ mod mutation_batch_tests {
         )
     }
 
-    // Test-only fixture builder: every parameter is an independent field of
-    // the `ClaimWorkItemRequest` under construction; no natural grouping.
-    #[allow(clippy::too_many_arguments)]
-    fn native_claim_batch(
-        batch_id: &str,
-        idempotency_key: &str,
-        expected_graph_version: u64,
-        work_item_id: Option<&str>,
-        worker_id: &str,
-        now_ms: u64,
-        lease_ms: u64,
-        max_tenant_in_flight: u64,
-    ) -> MutationBatch {
-        let mut claim = batch(batch_id, idempotency_key);
-        claim.version_expectation = VersionExpectation::Graph(expected_graph_version);
-        claim.operations = vec![MutationOperation {
-            ordinal: 0,
-            surface: MutationSurface::Transaction,
-            domain: DurabilityDomain::GraphRows,
-            method: Method::ClaimWorkItem {
-                request: medulla_types::epistemic_operations::ClaimWorkItemRequest {
-                    schema_version:
-                        medulla_types::epistemic_operations::ClaimWorkItemRequestSchemaVersion::V1,
-                    tenant_ref: "tenant-a".into(),
-                    work_item_id: work_item_id.map(str::to_string),
-                    queue_ref: None,
-                    resource_class: None,
-                    fairness_group: None,
-                    worker_ref: worker_id.into(),
-                    now_ms,
-                    lease_ms,
-                    max_tenant_in_flight,
-                },
-            },
-        }];
-        claim
-            .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
-            .expect("native claim fixture reseals its final body");
-        claim
-    }
-
-    // Test-only fixture builder; mirrors `native_claim_batch`'s justification
-    // above plus the `db` handle it commits the built batch against.
-    #[allow(clippy::too_many_arguments)]
-    fn commit_native_claim(
-        shard: &Shard,
-        batch_id: &str,
-        idempotency_key: &str,
-        expected_graph_version: u64,
-        work_item_id: Option<&str>,
-        worker_id: &str,
-        now_ms: u64,
-        lease_ms: u64,
-        max_tenant_in_flight: u64,
-    ) -> ClaimWorkItemResult {
-        let committed = commit_at(
-            shard,
-            &native_claim_batch(
-                batch_id,
-                idempotency_key,
-                expected_graph_version,
-                work_item_id,
-                worker_id,
-                now_ms,
-                lease_ms,
-                max_tenant_in_flight,
-            ),
-            None,
-        )
-        .unwrap();
-        let payload: medulla_types::protocol::ResultPayload = decode_durable(
-            committed
-                .record
-                .result_msgpack
-                .as_deref()
-                .expect("claim result"),
-        )
-        .unwrap();
-        let bytes = match payload {
-            medulla_types::protocol::ResultPayload::Raw(inner) => inner,
-            other => panic!("ClaimWorkItem must return a bin-encoded typed result, got {other:?}"),
-        };
-        decode_durable(&bytes).unwrap()
-    }
-
     fn public_batch_method(operations: serde_json::Value) -> Method {
         Method::BatchUpdate {
             operations_msgpack: rmp_serde::to_vec_named(&operations).unwrap(),
         }
-    }
-
-    fn commit_at_graph(
-        shard: &Shard,
-        graph_fname: &str,
-        batch: &MutationBatch,
-        point: Option<MutationBatchCrashpoint>,
-    ) -> Result<MutationBatchCommit, String> {
-        #[cfg(feature = "security")]
-        let mut audit = AuditTailCache::new();
-        commit_mutation_batch_inner(
-            shard,
-            BatchCommitInput::compact(graph_fname, batch, Some(&[0x81, 0xa2, b'o', b'k']), 101)
-                .with_crashpoint(point),
-            DurableCrypto::none(),
-            #[cfg(feature = "security")]
-            &mut audit,
-        )
-    }
-
-    fn commit_at(
-        shard: &Shard,
-        batch: &MutationBatch,
-        point: Option<MutationBatchCrashpoint>,
-    ) -> Result<MutationBatchCommit, String> {
-        commit_at_graph(shard, "graph-a", batch, point)
     }
 
     fn commit_with_result(
@@ -2720,171 +2514,6 @@ mod mutation_batch_tests {
             drop(db);
             let _ = std::fs::remove_file(path);
         }
-    }
-
-    #[test]
-    fn terminal_work_item_retry_replays_and_conflicting_payload_fails_closed() {
-        let path = temp_path("work-item-terminal-replay");
-        let db = open(&path);
-
-        let mut seed = batch("work-item-terminal-seed", "work-item-terminal-seed-key");
-        seed.operations = vec![MutationOperation {
-            ordinal: 0,
-            surface: MutationSurface::Graph,
-            domain: DurabilityDomain::GraphRows,
-            method: ready_work_item_method("work-1", 3),
-        }];
-        seed.reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
-            .expect("terminal seed fixture reseals its final body");
-        commit_at(&db, &seed, None).unwrap();
-        let claimed = commit_native_claim(
-            &db,
-            "work-item-terminal-claim",
-            "work-item-terminal-claim-key",
-            4,
-            Some("work-1"),
-            "worker-a",
-            0,
-            60_000,
-            64,
-        );
-        assert!(claimed.claimed);
-        assert_eq!(claimed.lease_epoch, Some(1));
-        assert_eq!(claimed.fencing_token, Some(1));
-
-        let terminal_method = crate::test_support::terminal_method(1, 1);
-        let mut terminal = batch(
-            "work:terminal-stable-batch",
-            "work-idem:terminal-stable-key",
-        );
-        // The attempt metadata this used to re-stamp -- request id, purpose,
-        // policy fingerprint, trace id -- is either gone or structurally outside
-        // the stable replay identity now, so a fixture that wants a distinct
-        // request simply re-mints the envelope for it.
-        terminal.envelope = fixture_operation_envelope(
-            &terminal.identity,
-            &format!("principal:sha256:{}", "a".repeat(64)),
-            777,
-            "work-idem:terminal-stable-key",
-        );
-        let remint_attempt = |batch: &mut MutationBatch, nonce_byte: u8, created_at_ms: u64| {
-            let medulla_types::mutation_batch::MutationEnvelope::Operation(operation) =
-                &mut batch.envelope
-            else {
-                panic!("authenticated replay fixture must carry an operation envelope");
-            };
-            operation.authority.nonce =
-                medulla_types::contract::Nonce::from_bytes([nonce_byte; 32]);
-            operation.authority.context_digest = operation
-                .authority
-                .recompute_context_digest()
-                .expect("fixture authority context remains valid after nonce rotation");
-            batch.created_at_ms = created_at_ms;
-        };
-        // `CommitWorkItemResult` is a `native_terminal_work_item_cas` batch:
-        // `check_occ_version_and_fence` never checks its expectation against
-        // the authoritative version (the WorkItem lease/fencing token is its
-        // real CAS guard), but `VersionExpectation` no longer has a "none"
-        // arm to encode that -- 5 is simply the actual current graph version
-        // at this point (seed 3->4, claim 4->5), matching real state rather
-        // than an invented placeholder.
-        terminal.version_expectation = VersionExpectation::Graph(5);
-        terminal.operations = vec![MutationOperation {
-            ordinal: 0,
-            surface: MutationSurface::Job,
-            domain: DurabilityDomain::ControlPlane,
-            method: terminal_method,
-        }];
-        terminal.outbox[0].key = terminal.batch_id.clone();
-        terminal
-            .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
-            .expect("terminal fixture reseals its final body");
-
-        let first = commit_at(&db, &terminal, None).unwrap();
-        assert!(!first.replayed);
-        assert_eq!(read_mutation_graph_version(&db, "graph-a").unwrap(), 6);
-
-        let consumed_nonce = commit_at(&db, &terminal, None).unwrap_err();
-        assert!(
-            consumed_nonce.contains("REPLAY_NONCE_CONSUMED"),
-            "{consumed_nonce}"
-        );
-
-        // A fresh transport request is normalized to the same durable request id
-        // before this kernel sees it. Re-mint its attempt nonce while preserving
-        // the stable operation key and body, then replay the stored result.
-        let mut retry = terminal.clone();
-        retry.envelope = fixture_operation_envelope(
-            &retry.identity,
-            &format!("principal:sha256:{}", "a".repeat(64)),
-            778,
-            "work-idem:terminal-stable-key",
-        );
-        retry
-            .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
-            .expect("terminal retry fixture reseals its final body");
-        assert_ne!(
-            retry
-                .envelope
-                .operation()
-                .expect("retry carries an operation envelope")
-                .authority
-                .nonce,
-            terminal
-                .envelope
-                .operation()
-                .expect("original carries an operation envelope")
-                .authority
-                .nonce,
-            "a retry must use a fresh attempt nonce"
-        );
-        retry.created_at_ms = 200;
-        let replay = commit_at(&db, &retry, None).unwrap();
-        assert!(replay.replayed);
-        assert_eq!(read_mutation_graph_version(&db, "graph-a").unwrap(), 6);
-
-        let mut conflicting_payload = retry.clone();
-        let Method::CommitWorkItemResult { result_ref, .. } =
-            &mut conflicting_payload.operations[0].method
-        else {
-            unreachable!();
-        };
-        *result_ref = Some("result:sha256:different".into());
-        remint_attempt(&mut conflicting_payload, 0x43, 300);
-        conflicting_payload
-            .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
-            .unwrap();
-        let error = commit_at(&db, &conflicting_payload, None).unwrap_err();
-        assert!(error.contains("IDEMPOTENCY_CONFLICT"));
-
-        // Planted known-bad input: the same key under a DIFFERENT actor. The
-        // actor is inside the stable operation identity, so this is a named
-        // conflict rather than a silent replay -- the cross-actor
-        // replay-ownership property the M1 review raised as a P1.
-        let mut conflicting_authority = retry;
-        let key = conflicting_authority.idempotency_key().to_string();
-        let identity = conflicting_authority.identity.clone();
-        conflicting_authority.envelope = fixture_operation_envelope(
-            &identity,
-            &format!("principal:sha256:{}", "b".repeat(64)),
-            42,
-            &key,
-        );
-        conflicting_authority
-            .reseal_envelope(medulla_types::contract::Digest256::from_bytes([1_u8; 32]))
-            .expect("conflicting authority fixture reseals its final body");
-        let error = commit_at(&db, &conflicting_authority, None).unwrap_err();
-        assert!(error.contains("IDEMPOTENCY_CONFLICT"));
-        assert_eq!(read_mutation_graph_version(&db, "graph-a").unwrap(), 6);
-
-        let stored = read_one_node(&db, "graph-a", "work-1", DurableCrypto::none())
-            .unwrap()
-            .unwrap();
-        let stored: serde_json::Value = decode_durable(&stored).unwrap();
-        assert_eq!(stored["status"], "succeeded");
-        assert_eq!(stored["result_ref"], "result:sha256:one");
-        drop(db);
-        let _ = std::fs::remove_file(path);
     }
 
     // GOC-19/GOC-20 (BUG-015 "B9"): a `CommitWorkItemResult` batch may

@@ -15,3 +15,5 @@ mod wired_edge_index;
 mod xshard_harness;
 #[cfg(test)]
 mod store_run_owner;
+#[cfg(all(test, any(feature = "server", feature = "redb")))]
+mod store_terminal_batch;

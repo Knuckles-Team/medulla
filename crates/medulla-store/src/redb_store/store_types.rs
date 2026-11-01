@@ -1,7 +1,7 @@
 use super::store_prelude::*;
 use super::*;
 
-pub(crate) fn decode_durable<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> Result<T, String> {
+pub fn decode_durable<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> Result<T, String> {
     medulla_types::msgpack::decode_bounded(bytes, durable_msgpack_limits())
         .map_err(|_| "durable value is invalid or exceeds resource limits".to_string())
 }

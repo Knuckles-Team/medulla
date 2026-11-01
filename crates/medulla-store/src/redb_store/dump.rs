@@ -300,7 +300,7 @@ fn read_graph_core_rows(
 /// graph-scope one: [`Shard::control_read`] exists before any graph is bound,
 /// which is exactly what lets a caller ask "does this graph exist here?"
 /// WITHOUT binding it first.
-pub(crate) fn read_catalog_record(
+pub fn read_catalog_record(
     shard: &Shard,
     graph: &str,
 ) -> Result<Option<GraphMetaRecord>, String> {
