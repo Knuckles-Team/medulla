@@ -22,12 +22,12 @@ impl SemanticIndexServerAdapter {
         let binding = compute_off_lock(req_id, move || binding_service.binding())
             .await?
             .map_err(|error| {
-                crate::semantic_index_runtime::semantic_failure_response(req_id, error)
+                crate::semantic_index::semantic_failure_response(req_id, error)
             })?
             .ok_or_else(|| Response::err(req_id, "CONFLICT: semantic binding is unavailable"))?;
         self.authorize_binding_worker(&binding, &authority)
             .map_err(|error| Response::err(req_id, error))?;
-        crate::semantic_index_runtime::own_lease(&lease, &authority)
+        crate::semantic_index::own_lease(&lease, &authority)
             .map_err(|error| Response::err(req_id, error))?;
         let service = Arc::clone(&self.service);
         compute_off_lock(req_id, move || {
@@ -36,7 +36,7 @@ impl SemanticIndexServerAdapter {
         .await?
         .map(|replay| replay.map(|(_transition, receipt)| receipt))
         .map_err(|error| {
-            crate::semantic_index_runtime::semantic_failure_response(req_id, error)
+            crate::semantic_index::semantic_failure_response(req_id, error)
         })
     }
 
@@ -215,7 +215,7 @@ impl SemanticIndexServerAdapter {
         })
         .await?
         .map_err(|error| {
-            crate::semantic_index_runtime::semantic_failure_response(req_id, error)
+            crate::semantic_index::semantic_failure_response(req_id, error)
         })
     }
 }
