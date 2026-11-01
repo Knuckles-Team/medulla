@@ -379,7 +379,7 @@ async fn same_name_for_two_principals_resolves_each_owners_own_spec() {
 #[tokio::test]
 async fn nl_query_foreign_leg_is_owner_scoped() {
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    crate::server::set_nl_planner(Arc::new(EchoPlanner));
+    medulla_h_query::nl::set_nl_planner(Arc::new(EchoPlanner));
     let (_remote, local) = registered_by_owner_a(920).await;
 
     let nl = |text: &str| Method::NlQuery {

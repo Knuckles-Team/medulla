@@ -26,7 +26,7 @@
 //! (`Method::SparqlVirtual` → `handle_sparql_virtual` →
 //! `sql_catalog_acl::open_authorized_table`, per that file's own CONCEPT:NE-046
 //! comment). Of those, `Method::SparqlVirtual` is reached through
-//! `handlers::rdf::try_handle`, which — like `handlers::query::try_handle` — is
+//! `medulla_h_query::rdf::try_handle`, which — like `medulla_h_query::query::try_handle` — is
 //! reached from `dispatch_graph_op_inner`, so the guard below checks ordering
 //! against BOTH. `handlers::sqlite_file::try_handle` is instead called from the
 //! sibling function `dispatch_inner`, so it falls outside this guard's bound;
@@ -249,7 +249,7 @@ fn definition_offset(source: &str, signature: &str) -> Option<usize> {
 /// A bare local name's definition (`fn callee(` / `async fn callee(` /
 /// `pub(super) fn callee(`, etc.) always ends in `"fn {callee}"`, so any match
 /// immediately preceded by `"fn "` is the declaration, not a call, and is
-/// excluded. A qualified callee like `"handlers::query::try_handle("` can
+/// excluded. A qualified callee like `"medulla_h_query::query::try_handle("` can
 /// never be a definition's own name (Rust items aren't named with `::`), so
 /// this is a no-op for those and safe to use everywhere uniformly.
 fn count_call_sites(text: &str, callee: &str) -> usize {
@@ -380,11 +380,11 @@ fn assert_handler_reachable_only_through_gateway(
 }
 
 /// `check_graph_access` must run strictly BEFORE every dispatch-reachable
-/// `handlers::query::try_handle` / `handlers::rdf::try_handle` — the ordering
+/// `medulla_h_query::query::try_handle` / `medulla_h_query::rdf::try_handle` — the ordering
 /// this track was explicitly told to preserve, now covering NE-003's actual live
-/// dispatch-reachable entry point (`handlers::rdf::try_handle` →
+/// dispatch-reachable entry point (`medulla_h_query::rdf::try_handle` →
 /// `Method::SparqlVirtual` → `sql_catalog_acl::open_authorized_table`) as well as
-/// the pre-existing `handlers::query::try_handle` path.
+/// the pre-existing `medulla_h_query::query::try_handle` path.
 ///
 /// The pipeline is decomposed, so the guard follows the chain instead of a byte
 /// offset inside one function body:
@@ -437,7 +437,7 @@ fn check_graph_access_precedes_query_and_rdf_try_handle_in_dispatch() {
          dispatch_graph_op_inner — this ordering is the gate every table access \
          (SQL included, via NE-003's sql_catalog_acl) must pass through"
     );
-    for callee in ["handlers::query::try_handle(", "handlers::rdf::try_handle("] {
+    for callee in ["medulla_h_query::query::try_handle(", "medulla_h_query::rdf::try_handle("] {
         assert!(
             !entry.contains(callee),
             "dispatch_graph_op_inner must not call {callee} directly — it is \
@@ -488,12 +488,12 @@ fn check_graph_access_precedes_query_and_rdf_try_handle_in_dispatch() {
     // helper (which WOULD bypass the gate) still fails it.
     for (callee, gateway, owned_helper) in [
         (
-            "handlers::query::try_handle(",
+            "medulla_h_query::query::try_handle(",
             "async fn route_query_gateway",
             Some(("async fn commit_query_gateway", "commit_query_gateway(")),
         ),
         (
-            "handlers::rdf::try_handle(",
+            "medulla_h_query::rdf::try_handle(",
             "async fn route_rdf_gateway",
             Some(("async fn commit_rdf_gateway", "commit_rdf_gateway(")),
         ),

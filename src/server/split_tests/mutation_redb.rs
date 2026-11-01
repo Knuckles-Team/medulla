@@ -903,16 +903,16 @@ async fn mining_family_writeback_gates_durability_and_authz() {
         write_coalescer: None,
     };
     let resp = commit_conditional_mutation(&ctx_ro, &plan_ro, &method_ro, false, |core| {
-        let resp = crate::server::handlers::mining::handle_associate(
+        let resp = medulla_h_query::mining::handle_associate(
             20,
             core,
-            crate::server::handlers::mining::AssociationRequest {
+            medulla_h_query::mining::AssociationRequest {
                 transactions: transactions.clone(),
                 source: None,
                 min_support: 0.5,
                 min_confidence: 0.5,
                 algorithm: medulla_protocol_types::protocol::MineAlgorithm::default(),
-                writeback: crate::server::handlers::mining::WritebackOptions {
+                writeback: medulla_h_query::mining::WritebackOptions {
                     enabled: false,
                     #[cfg(feature = "epistemic")]
                     as_claim: false,
@@ -974,16 +974,16 @@ async fn mining_family_writeback_gates_durability_and_authz() {
         write_coalescer: None,
     };
     let resp = commit_conditional_mutation(&ctx_rw, &plan_rw, &method_rw, true, |core| {
-        let resp = crate::server::handlers::mining::handle_associate(
+        let resp = medulla_h_query::mining::handle_associate(
             21,
             core,
-            crate::server::handlers::mining::AssociationRequest {
+            medulla_h_query::mining::AssociationRequest {
                 transactions: transactions.clone(),
                 source: None,
                 min_support: 0.5,
                 min_confidence: 0.5,
                 algorithm: medulla_protocol_types::protocol::MineAlgorithm::default(),
-                writeback: crate::server::handlers::mining::WritebackOptions {
+                writeback: medulla_h_query::mining::WritebackOptions {
                     enabled: true,
                     #[cfg(feature = "epistemic")]
                     as_claim: false,

@@ -3,25 +3,11 @@
 //! stay centralized in the shell. Each module exposes `try_handle(...) ->
 //! Result<Response, Method>`: `Ok` = handled, `Err(method)` = not mine, try next.
 
-// Data-mining domain (CONCEPT:MEDULLA-KG.mining.frequent-itemset-mining, feature `mining`).
-// Association-rule mining. GRAPH-SCOPED (unlike finance/datascience): the
-// graph-derived source + write-back need the live graph core, so the handler takes
-// it like query/rdf. A build without `mining` omits the module and the
-// `MineAssociate` variant falls to the graph_ops "not available" catch-all.
-#[cfg(feature = "mining")]
-pub(crate) mod mining;
 // M3 catalog-driven resharding admin (CONCEPT:MEDULLA-KG.backend.m3-admin-dispatch): the wire surface that DRIVES online
 // resharding (MEDULLA-032), the tenant catalog (MEDULLA-031) and the rebalance planner (MEDULLA-035) +
 // its execution (MEDULLA-039). Always declared; the real logic is `redb`-gated (the only build
 // where the catalog/reshard/planner exist), and a non-redb build returns "not available".
 pub(crate) mod admin;
-// Read-only query surface: SQL (CONCEPT:MEDULLA-KG.query.read-only-sql-query, DataFusion behind `query`),
-// Cypher (CONCEPT:MEDULLA-KG.query.dep-free-behind, dep-free behind `cypher`), AND GraphQL (CONCEPT:MEDULLA-KG.query.sparql-completeness,
-// dep-free behind `graphql`). Present when ANY of those features is on — a cypher- or
-// graphql-only Pi build keeps the module WITHOUT DataFusion. With none of them the
-// Sql/CypherQuery/GraphQl variants fall to the graph_ops "not available" catch-all.
-#[cfg(any(feature = "query", feature = "cypher", feature = "graphql"))]
-pub(crate) mod query;
 // Multi-op OCC ACID transactions (CONCEPT:MEDULLA-KG.txn.multi-op-occ-acid). Always present with the
 // `server` feature — the Txn* methods are stateful (need `state`) and not
 // feature-gated to a compute domain.
@@ -31,19 +17,6 @@ pub(crate) mod txn;
 // `tsdb` omits the module and the variants fall to the graph_ops not-built catch-all.
 #[cfg(feature = "tsdb")]
 pub(crate) mod timeseries;
-// Streaming / CDC / subscriptions / triggers (CONCEPT:MEDULLA-KG.query.streaming-cdc-subscriptions/230, feature
-// `streaming`). The Cdc*/ContinuousQuery/Watch/Trigger methods are stateful (they
-// drive the `CdcHub` on `state`); a build without `streaming` omits the module and
-// the variants fall to the graph_ops not-built catch-all.
-#[cfg(feature = "streaming")]
-pub(crate) mod streaming;
-// Native RDF/SPARQL surface (CONCEPT:MEDULLA-KG.ontology.kg-native-rdf-sparql/218, features `rdf`/`sparql`). The
-// AddTriples/GetRdf/Sparql methods are graph-scoped (they target `req.graph`),
-// so the handler takes the graph core like the query handler; AddTriples also reads
-// the optional lossless quad store off `state`. A build without `rdf` omits the
-// module and the variants fall to the graph_ops "not available" catch-all.
-#[cfg(feature = "rdf")]
-pub(crate) mod rdf;
 // Distributed graph compute (CONCEPT:MEDULLA-KG.storage.feature, feature `compute-dist`). The
 // DistributedCompute/*MatView methods drive the cross-shard Pregel engine + the
 // matview store on ServerState; a non-cluster build omits the module and the variants
@@ -53,16 +26,6 @@ pub(crate) mod rdf;
 // this dispatch module but NOT a feature dependency (the plan-backed path uses no raft).
 #[cfg(any(feature = "compute-dist", feature = "matview"))]
 pub(crate) mod dist_compute;
-// Query federation / foreign sources (CONCEPT:MEDULLA-KG.query.query-federation, feature `federation`).
-// RegisterForeignSource records a named foreign source under the caller's verified owner
-// (tenant+principal, EH-373); the unified-query handlers build the medulla-plan
-// `ForeignSourceRegistry` a `Named` `Op::ForeignScan` / an `Op::Foreign` resolves through
-// from the CALLER'S OWN entries only (`server::foreign_catalog`), so both the by-name and the
-// inline-spec paths execute through the same federation machinery. A build without
-// `federation` omits the module and the variant falls to the graph_ops not-available
-// catch-all.
-#[cfg(feature = "federation")]
-pub(crate) mod federation;
 
 // SQLite `.db` FILE import/export (CONCEPT:MEDULLA-KG.query.medulla-feature/MEDULLA-332, feature `sqlite-file`). The
 // ImportSqliteFile/ExportSqliteFile methods move rows between an on-disk `sqlite3` `.db`
@@ -71,15 +34,6 @@ pub(crate) mod federation;
 // the module and the variants aren't in the enum (so the dispatch chain never routes them).
 #[cfg(feature = "sqlite-file")]
 pub(crate) mod sqlite_file;
-// RF-019's S1-S6 tiered semantic ingestion queue. Always declared: the module
-// carries its own `#![cfg(all(ann-redb, query))]`, the durable semantic owner
-// plus the authorized SQL source read port it needs, and the router refuses
-// `Method::SemanticIndex` by name in a build without them.
-pub(crate) mod semantic_index;
-// One governed, bounded Arrow KnowledgeBatch result plane for graph, SQL, RDF,
-// vector, time-series, analytics jobs, and cross-modal plans.
-#[cfg(feature = "knowledge-batch")]
-pub(crate) mod knowledge_stream;
 // Raft cluster-membership ADMIN RPC (CONCEPT:MEDULLA-KG.storage.kg-kg-2 — cluster_deployment.md
 // §5 item 2): exposes `MultiRaft::add_group_learner`/`change_group_voters`
 // (raft/multi.rs) over `Method::RaftAddLearner`/`Method::RaftChangeMembership`. Always

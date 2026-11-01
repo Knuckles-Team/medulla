@@ -793,7 +793,7 @@ impl EngineBackend {
     /// query). Delegates the rules to [`WireProtocol::resolve_startup`].
     ///
     /// BUG-CX-084: also the pgwire-side "top of the SQL entry point" — mirrors the
-    /// call `handlers::query::handle_sql` makes for the native RPC path. Neither
+    /// call `medulla_h_query::query::handle_sql` makes for the native RPC path. Neither
     /// `do_query` (simple protocol) nor the extended protocol's `do_query` ever calls
     /// `handle_sql` (see `bind_sql_text_embedder`'s doc), and both call THIS method
     /// first, so without this call `medulla_embed(text)`'s process-wide embedder was never

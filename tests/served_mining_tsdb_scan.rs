@@ -2,7 +2,7 @@
 //! a `graph_mine` plan containing an `Op::TsScan` leg reads the REAL committed series store
 //! against a LIVE in-process server, instead of silently degrading to an empty result.
 //!
-//! Before this fix, `handlers::mining::gather_plan_rows` ALWAYS bound `TsdbLegBind { tsdb:
+//! Before this fix, `medulla_h_query::mining::gather_plan_rows` ALWAYS bound `TsdbLegBind { tsdb:
 //! None, .. }` regardless of what the server had configured — a `TsScan`-bearing mining plan
 //! therefore always yielded zero rows, indistinguishable from "your query legitimately
 //! matched nothing". Two behaviors are proven here, against the SAME served RPC surface

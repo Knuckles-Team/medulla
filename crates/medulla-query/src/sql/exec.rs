@@ -461,7 +461,7 @@ struct SqlContextEpoch {
     /// contexts are NEVER interchangeable even at an otherwise-identical
     /// graph/catalog epoch — omitting this field would let one agent's
     /// row-filtered `nodes` table leak to a different agent through a shared cache
-    /// entry. Mirrors `server::handlers::query::rls_cache_hash`'s identical
+    /// entry. Mirrors `medulla_h_query::query::rls_cache_hash`'s identical
     /// `caller`-salting discipline for the served `UnifiedQuery` result cache (the
     /// one KNOWN, already-accepted residual gap that discipline carries — and this
     /// cache inherits unchanged, not newly — is a caller's EFFECTIVE visibility

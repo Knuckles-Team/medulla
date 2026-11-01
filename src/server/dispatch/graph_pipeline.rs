@@ -124,7 +124,7 @@ pub(super) async fn dispatch_knowledge_stream(
     caller: Option<&str>,
     verified_context: &VerifiedRequestContext,
     request: crate::knowledge_stream::KnowledgeStreamRequest,
-    authority: handlers::knowledge_stream::KnowledgeStreamAuthority,
+    authority: medulla_h_query::knowledge_stream::KnowledgeStreamAuthority,
 ) -> Response {
     dispatch_graph_op_inner(
         state,

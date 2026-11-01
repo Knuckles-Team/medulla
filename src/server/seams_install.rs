@@ -37,7 +37,7 @@ pub fn install_seams(state: &ServerState) {
     // L5 query, txn, wire.
     #[cfg(all(feature = "mining", feature = "server"))]
     medulla_kernel::kernel::persistence::install_mining_replay(
-        crate::server::handlers::mining::replay,
+        medulla_h_query::mining::replay,
     );
 
     #[cfg(any(
@@ -47,7 +47,7 @@ pub fn install_seams(state: &ServerState) {
         feature = "mining"
     ))]
     let _ = state.seams.query.set(std::sync::Arc::new(
-        crate::server::handlers::query::QuerySeam,
+        medulla_h_query::query::QuerySeam,
     ));
     let _ = state
         .seams

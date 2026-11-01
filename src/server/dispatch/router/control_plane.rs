@@ -384,7 +384,7 @@ pub(super) async fn dispatch_agent_library_methods(
             #[cfg(all(feature = "ann-redb", feature = "query"))]
             {
                 dispatch_boxed(async {
-                    handlers::semantic_index::handle_semantic_index(
+                    medulla_h_query::semantic_index::handle_semantic_index(
                         state,
                         req.id,
                         verified_context,

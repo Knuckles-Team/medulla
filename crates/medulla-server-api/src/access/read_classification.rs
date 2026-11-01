@@ -353,7 +353,7 @@ pub(super) const REASON_DECISION_LOG_VISIBILITY: &str =
 // and foreign-source watermark nodes -- the only instance rows it reads -- are filtered through
 // the caller's `IsolationLayer::can_see_row` before they are reported.
 pub(super) const REASON_FRESHNESS_METADATA: &str =
-    "handlers::query::freshness_feed reads the DepClock invalidation log (versions + class/edge-type names, no row ids or content) and schema-class volatility annotations; the only instance rows it reports, ForeignSourceWatermark nodes, pass IsolationLayer::can_see_row for the caller first";
+    "medulla_h_query::query::freshness_feed reads the DepClock invalidation log (versions + class/edge-type names, no row ids or content) and schema-class volatility annotations; the only instance rows it reports, ForeignSourceWatermark nodes, pass IsolationLayer::can_see_row for the caller first";
 
 // EH-572: `QueryForeignColumns` resolves a named source from the caller's OWN owner-scoped
 // (tenant+principal) ForeignSourceCatalog and fetches rows from the external source; it never

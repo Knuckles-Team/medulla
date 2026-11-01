@@ -75,9 +75,9 @@ where
 /// The ASYNC-apply twin of [`commit_conditional_mutation`] (CONCEPT:MEDULLA-P0-2, L11):
 /// for a routed method whose EXECUTION is itself `async` and needs more than a bare
 /// `&GraphCore` — the query surface (`Sql`/`CypherQuery`/`GraphQl`, run on the
-/// blocking pool via `handlers::query::try_handle`, needing `state`/`caller`/`rls`)
+/// blocking pool via `medulla_h_query::query::try_handle`, needing `state`/`caller`/`rls`)
 /// and the native RDF surface (`AddTriples`/`RemoveTriples`/`DropNamedGraph`, run
-/// via `handlers::rdf::try_handle`; lossless multi-valued literals live inside the
+/// via `medulla_h_query::rdf::try_handle`; lossless multi-valued literals live inside the
 /// staged graph image). The `apply` closure captures whatever
 /// state it needs and returns the payload; the gateway wraps it with the IDENTICAL
 /// authz / durability / audit / CDC / idempotency contract as the sync path (via the

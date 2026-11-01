@@ -49,7 +49,7 @@ async fn capture_graph_dispatch<'a>(
         verified_context,
     } = ctx;
     #[cfg(feature = "cypher")]
-    if let Err(error) = handlers::query::validate_cypher_mode(method) {
+    if let Err(error) = medulla_h_query::query::validate_cypher_mode(method) {
         return Err(Response::err(req_id, error));
     }
     #[cfg(feature = "redb")]
@@ -132,7 +132,7 @@ pub(super) async fn dispatch_graph_op_inner(
         medulla_h_ingest::modality::ModalityAuthority,
     >,
     #[cfg(feature = "knowledge-batch")] knowledge_stream_authority: Option<
-        handlers::knowledge_stream::KnowledgeStreamAuthority,
+        medulla_h_query::knowledge_stream::KnowledgeStreamAuthority,
     >,
 ) -> Response {
     let capture = match capture_graph_dispatch(state, ctx, &method).await {
@@ -273,5 +273,5 @@ pub(in crate::server::dispatch) struct GraphOpRouting<'a> {
     pub(super) modality_authority: &'a Option<medulla_h_ingest::modality::ModalityAuthority>,
     #[cfg(feature = "knowledge-batch")]
     pub(super) knowledge_stream_authority:
-        &'a Option<handlers::knowledge_stream::KnowledgeStreamAuthority>,
+        &'a Option<medulla_h_query::knowledge_stream::KnowledgeStreamAuthority>,
 }

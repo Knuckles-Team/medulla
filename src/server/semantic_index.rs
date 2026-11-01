@@ -78,7 +78,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 #[cfg(feature = "query")]
-use crate::protocol::Response;
+use medulla_protocol_types::protocol::Response;
 use medulla_core::compute::semantic_index_service::SemanticIndexService;
 #[cfg(feature = "query")]
 use medulla_core::compute::semantic_index_service::{

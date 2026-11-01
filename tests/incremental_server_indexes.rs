@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 use medulla::graph::GraphCore;
 use medulla::index::{ChangeSet, NodeChange, SecondaryIndex};
-use medulla::server::secondary_indexes::{
+use medulla_h_query::secondary_indexes::{
     DerivedOwlIndex, GraphTemporalIndex, GraphTextIndex,
 };
 use medulla_kernel::write_coalescer::{CoalescerConfig, GraphWriter, WriteOp};

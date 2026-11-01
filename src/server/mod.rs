@@ -1,3 +1,4 @@
+use medulla_h_query::semantic_index::PendingRf019Activation;
 // CONCEPT:MEDULLA-KG.query.tokio-service-server — Tokio Service Server
 //
 // Long-running Tokio server that holds the GraphRegistry in memory
@@ -148,15 +149,7 @@ pub mod cache_coherence;
 // feature the mechanism requires; its durable tier additionally needs `ann-redb`.
 #[cfg(feature = "ann")]
 pub mod semantic_activation;
-// RF-019's server-side authority seam for the transport-neutral semantic-index
-// DTO, and the `Method::SemanticIndex` handler's authorized SQL source read
-// port. Carries its own `#![cfg(feature = "ann-redb")]`, the same durable ANN
-// code tier `semantic_index_service` needs.
-#[cfg(feature = "ann-redb")]
-pub(crate) mod semantic_index;
 
-#[cfg(feature = "ann-redb")]
-pub use semantic_index::PendingRf019Activation;
 
 #[cfg(feature = "ann-redb")]
 pub fn preflight_rf019_activation(
@@ -202,11 +195,6 @@ pub(crate) mod handlers;
 pub mod registry_reaper;
 // EH-558: policy-driven expiry of sealed records through their owning op.
 pub mod sealed_retention;
-// Durable incremental reasoning authority. It tails the committed MutationBatch
-// outbox, fsyncs each per-graph projection before cursor acknowledgement, and serves
-// status/recompute directly from that projection.
-#[cfg(feature = "epistemic-tms")]
-pub mod reasoning_projection;
 // PB1 — the connector-pack projection worker, the first Agent Library outbox
 // consumer. `pub` so the server binary can start it after catalog recovery.
 pub mod connector_pack_projection;
@@ -343,13 +331,6 @@ pub mod obs;
 
 #[cfg(feature = "s3-api")]
 pub mod s3;
-// SPARQL graph publication to an external Fuseki endpoint (CA-12, feature
-// `sparql-fuseki`, off by default). Reserved and EMPTY until CA-12 implements it; landed
-// by CA-17's single feature-stub commit so CA-12 never edits this shared module list.
-// Named for its own lane's surface -- NOT the pre-existing `sparql-service` FEATURE,
-// which gates the inbound SERVICE federation client inside `sparql_http`.
-#[cfg(feature = "sparql-fuseki")]
-pub mod sparql_service;
 // OBDA wire method + Python client seam (CA-13, feature `obda-wire`, off by default).
 // Reserved and EMPTY until CA-13 implements it; landed by CA-17's single feature-stub
 // commit so CA-13 never edits this shared module list. The OBDA mapping/rewrite engine
@@ -382,18 +363,6 @@ pub mod promql;
 /// completing the observability trilogy (logs + metrics + traces).
 #[cfg(feature = "traces")]
 pub mod traces;
-// Natural-language query planner resolution (CONCEPT:MEDULLA-KG.query.fence-stripper, feature `nl-query`): owns
-// which `medulla_plan::NlPlanner` the facade uses (injected vs standalone-config default).
-#[cfg(feature = "nl-query")]
-pub mod nl;
-// Super-cluster federated search (CONCEPT:MEDULLA-KG.ontology.federation-client, feature `federation-search`): fans a
-// read query across a registry of peer engine instances (SSRF-vetted, per-peer timeouts)
-// AND the local store, then unions/de-dups + RRF-re-ranks the partials — a slow/dead peer
-// degrades to `partial: true` + `failed_peers` rather than failing the query. Behind the
-// `federation-search` cargo feature (pulls the same pure-Rust `ureq`/rustls stack the
-// other federation surfaces link — NO new HTTP dep, kept OUT of the Pi tier).
-#[cfg(feature = "federation-search")]
-pub mod federation;
 // Cross-region async read-replica tier (CONCEPT:MEDULLA-KG.sharding.follower-pull-loop) + capacity guardrails
 // (CONCEPT:MEDULLA-KG.coordination.circuit-breaker): a bounded LSN replication log the primary ships over `/replicate`, an
 // async follower pull-loop that applies the tail via the canonical `mutation_apply::apply` path, and
@@ -426,19 +395,6 @@ pub mod dds;
 // deadline-aware ordering + typed backpressure. With QoS unconfigured the transport never
 // touches it and the baseline path is byte-for-byte unchanged.
 pub mod qos;
-// Server-layer secondary indexes (text/temporal/derived-OWL) wired into the per-graph
-// IndexManager seam so a committed write batch maintains them incrementally
-// (CONCEPT:MEDULLA-KG.storage.incremental-text / .incremental-temporal / .incremental-derived-owl).
-#[cfg(any(feature = "text", feature = "tsdb", feature = "owl", feature = "geo"))]
-pub mod secondary_indexes;
-// Request-scoped cancellation registry (CONCEPT:MEDULLA-KG.query.streaming-spillable-collect, L36): threads
-// a REAL `CancellationToken` from a served `Method::Sql` down to the SQL streaming
-// collect path, tripped by an explicit `Method::CancelRequest` or a per-request
-// timeout, instead of the always-fresh never-cancelled token the collect path built
-// internally before this. Needs `medulla_query::CancellationToken`, gated behind `query`
-// (which implies `medulla-query/sql`).
-#[cfg(feature = "query")]
-pub mod request_cancel;
 mod transport;
 // The durable cross-store commit-intent log (`txn_intent`) lives under
 // `api::query_txn` (R056.8).
@@ -448,8 +404,6 @@ mod transport;
 // `server::{handle_connection,serve_uds,serve_tcp}` — used by main.rs/persist.rs/tests.
 pub use dispatch::dispatch;
 // NL planner injection (CONCEPT:MEDULLA-KG.query.fence-stripper): an embedder opts into engine-driven NL→query.
-#[cfg(feature = "nl-query")]
-pub use nl::{resolve_planner as resolve_nl_planner, set_nl_planner};
 // Distributed-compute materialized-view boot reload (CONCEPT:MEDULLA-KG.storage.feature): the binary
 // calls this on startup to repopulate the in-RAM matview index from redb.
 #[cfg(any(feature = "compute-dist", feature = "matview"))]
@@ -6854,7 +6808,7 @@ ex:p1 a ex:Paper .
     /// only its arrival relative to the watch's registration was ever in
     /// question).
     ///
-    /// Fix: inline the exact sequence `handlers::streaming::Watch` performs
+    /// Fix: inline the exact sequence `medulla_h_query::streaming::Watch` performs
     /// (`CdcHub::notifier` → an empty first-pass `watch_batch` → await
     /// `notified`) using the SAME hub primitives the handler calls, so this test
     /// controls the "arm, confirm nothing pending yet, THEN write" ordering with

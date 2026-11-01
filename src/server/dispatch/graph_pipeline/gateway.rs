@@ -83,7 +83,7 @@ async fn commit_query_gateway(ctx: GatewayRouteCtx<'_>, method: Method) -> Respo
             &method,
             mutates_now,
             move |staged_core| async move {
-                handlers::query::try_handle(
+                medulla_h_query::query::try_handle(
                     state,
                     medulla_server_api::api::reentry::TryHandleContext {
                         req_id,
@@ -119,7 +119,7 @@ pub(super) async fn route_query_gateway(
     {
         return Ok(commit_query_gateway(ctx, method).await);
     }
-    match handlers::query::try_handle(
+    match medulla_h_query::query::try_handle(
         ctx.state,
         medulla_server_api::api::reentry::TryHandleContext {
             req_id: ctx.req_id,
@@ -161,7 +161,7 @@ async fn commit_rdf_gateway(ctx: GatewayRouteCtx<'_>, method: Method) -> Respons
             &method,
             true,
             move |staged_core| async move {
-                handlers::rdf::try_handle(
+                medulla_h_query::rdf::try_handle(
                     state,
                     medulla_server_api::api::reentry::TryHandleContext {
                         req_id,
@@ -195,7 +195,7 @@ pub(super) async fn route_rdf_gateway(
     if medulla_server_api::mutation::is_rdf_gateway_method(&method) {
         return Ok(commit_rdf_gateway(ctx, method).await);
     }
-    match handlers::rdf::try_handle(
+    match medulla_h_query::rdf::try_handle(
         ctx.state,
         medulla_server_api::api::reentry::TryHandleContext {
             req_id: ctx.req_id,

@@ -47,7 +47,7 @@ async fn served_spatial_scan_pushes_down_into_persistent_index_not_snapshot_fall
     // Install the SAME server-layer secondary-index factory `main.rs` wires at startup —
     // no text/tsdb config needed here, only the always-on `geo` registration.
     state.write().await.registry.set_secondary_index_factory(
-        medulla::server::secondary_indexes::ServerIndexFactory::new().into_arc(),
+        medulla_h_query::secondary_indexes::ServerIndexFactory::new().into_arc(),
     );
 
     // `canonical` carries its geometry under the persistent index's own `geometry` key
@@ -127,14 +127,14 @@ async fn recovered_nodes_are_backfilled_before_spatial_index_is_available() {
         .expect("commons graph")
         .core
         .clone();
-    let served = medulla::server::secondary_indexes::ServedSpatialIndex::new(core);
+    let served = medulla_h_query::secondary_indexes::ServedSpatialIndex::new(core);
     assert!(
         !served.available(),
         "no registered index before recovery wiring"
     );
 
     state.write().await.registry.set_secondary_index_factory(
-        medulla::server::secondary_indexes::ServerIndexFactory::new().into_arc(),
+        medulla_h_query::secondary_indexes::ServerIndexFactory::new().into_arc(),
     );
     assert!(
         served.available(),
@@ -190,7 +190,7 @@ fn paged_lazy_open_advertises_spatial_only_after_final_page_backfill() {
         },
     }));
     registry.set_secondary_index_factory(
-        medulla::server::secondary_indexes::ServerIndexFactory::new().into_arc(),
+        medulla_h_query::secondary_indexes::ServerIndexFactory::new().into_arc(),
     );
 
     let outcome = registry.open_lazy_paged(name, 1);
@@ -200,7 +200,7 @@ fn paged_lazy_open_advertises_spatial_only_after_final_page_backfill() {
         .expect("resident after page one")
         .core
         .clone();
-    let served = medulla::server::secondary_indexes::ServedSpatialIndex::new(core.clone());
+    let served = medulla_h_query::secondary_indexes::ServedSpatialIndex::new(core.clone());
     let partial = registry.materialization_manifest(name).unwrap();
     assert!(!partial.valid);
     assert!(core

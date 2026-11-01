@@ -10,7 +10,7 @@
 
 use medulla::graph::GraphCore;
 use medulla::index::{ChangeSet, NodeChange, SecondaryIndex};
-use medulla::server::secondary_indexes::GraphSpatialIndex;
+use medulla_h_query::secondary_indexes::GraphSpatialIndex;
 
 fn props(v: serde_json::Value) -> Vec<u8> {
     rmp_serde::to_vec_named(&v).unwrap()

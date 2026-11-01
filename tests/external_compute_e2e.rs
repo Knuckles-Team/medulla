@@ -19,7 +19,7 @@ use std::time::Duration;
 
 use arrow::ipc::reader::StreamReader;
 
-use medulla::knowledge_stream::{
+use medulla_h_query::knowledge_stream::{
     KnowledgeResultFamily, KnowledgeStreamBatch, KnowledgeStreamProjection, KnowledgeStreamQuery,
     KnowledgeStreamRequest, KNOWLEDGE_STREAM_SCHEMA_VERSION,
 };

@@ -59,7 +59,7 @@ fn plan_body(resp: &Response) -> medulla_types::nl_query::NlQueryPlanResult {
 
 /// The unified fixture graph with the echo planner injected.
 async fn echo_planned_fixture() -> Arc<RwLock<ServerState>> {
-    crate::server::set_nl_planner(Arc::new(EchoPlanner));
+    medulla_h_query::nl::set_nl_planner(Arc::new(EchoPlanner));
     let state = test_state();
     build_unified_fixture(&state).await;
     state
@@ -142,7 +142,7 @@ async fn nl_query_plan_returns_pins_without_executing_rows() {
     );
     assert_eq!(
         body.query_digest,
-        crate::server::handlers::query::foreign_uql_query_digest(&body.uql, &params)
+        medulla_h_query::query::foreign_uql_query_digest(&body.uql, &params)
             .expect("query digest")
     );
 }
@@ -243,7 +243,7 @@ async fn nl_query_grounds_names_on_the_graph_schema_before_running() {
 async fn nl_query_grounds_foreign_names_from_the_verified_owner_registry() {
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     let state = {
-        crate::server::set_nl_planner(Arc::new(EchoPlanner));
+        medulla_h_query::nl::set_nl_planner(Arc::new(EchoPlanner));
         let state = multi_tenant_state().await;
         build_unified_fixture(&state).await;
         state

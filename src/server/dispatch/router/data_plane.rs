@@ -402,7 +402,7 @@ async fn dispatch_streaming_methods_arm_0(ctx: DispatchCtx<'_>, method: Method) 
                             Err(denied) => return Response::err(req_id, denied),
                         }
                     };
-                    match handlers::streaming::try_handle(
+                    match medulla_h_query::streaming::try_handle(
                         state,
                         req_id,
                         &carrier,
@@ -596,7 +596,7 @@ async fn dispatch_knowledge_stream_method(ctx: DispatchCtx<'_>, method: Method) 
                             Response::err(req_id, "ACCESS_DENIED")
                         }
                     })?;
-                handlers::knowledge_stream::KnowledgeStreamAuthority::from_verified_with_lease(
+                medulla_h_query::knowledge_stream::KnowledgeStreamAuthority::from_verified_with_lease(
                     &auth_secret,
                     verified_context.claims(),
                     &req_graph,
@@ -614,7 +614,7 @@ async fn dispatch_knowledge_stream_method(ctx: DispatchCtx<'_>, method: Method) 
             #[cfg(not(feature = "security"))]
             let authority = {
                 let _ = &isolation;
-                match handlers::knowledge_stream::KnowledgeStreamAuthority::from_verified(
+                match medulla_h_query::knowledge_stream::KnowledgeStreamAuthority::from_verified(
                     &auth_secret,
                     verified_context.claims(),
                 ) {
@@ -750,7 +750,7 @@ pub(super) async fn dispatch_method_scoped_graph_methods(
                             Err(denied) => return Response::err(req_id, denied),
                         }
                     };
-                    match handlers::rdf::try_handle_distributed(
+                    match medulla_h_query::rdf::try_handle_distributed(
                         state,
                         req_id,
                         &read_authority,

@@ -292,12 +292,12 @@ pub(super) fn open_persistence(
 pub(super) fn run_fuseki_startup_health_check() {
     #[cfg(feature = "sparql-fuseki")]
     {
-        let outcome = medulla::server::sparql_service::startup_health_check();
+        let outcome = medulla_h_query::sparql_service::startup_health_check();
         match outcome {
-            medulla::server::sparql_service::HealthCheckOutcome::Reachable { .. } => {
+            medulla_h_query::sparql_service::HealthCheckOutcome::Reachable { .. } => {
                 info!("{}", outcome.summary());
             }
-            medulla::server::sparql_service::HealthCheckOutcome::NotConfigured => {
+            medulla_h_query::sparql_service::HealthCheckOutcome::NotConfigured => {
                 tracing::debug!("{}", outcome.summary());
             }
             _ => tracing::warn!("{}", outcome.summary()),

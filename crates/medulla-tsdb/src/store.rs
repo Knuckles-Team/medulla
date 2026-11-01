@@ -430,7 +430,7 @@ fn validate_storage_key(key: &str) -> Result<()> {
     // independently rejects a NUL byte inside any of its length-prefixed components —
     // so scoped-key structural integrity is already fully covered there. An UNSCOPED
     // key (the "lean" local path this store's own module docs describe: e.g.
-    // `server::secondary_indexes::GraphTemporalIndex`'s `"{graph}\0{node_id}"` series
+    // `medulla_h_query::secondary_indexes::GraphTemporalIndex`'s `"{graph}\0{node_id}"` series
     // ids, and this crate's own `delete_series_tests`) may legitimately embed a NUL as
     // an unambiguous separator between components that themselves can never contain
     // one. A blanket `key.contains('\0')` reject here would deny that entire supported,

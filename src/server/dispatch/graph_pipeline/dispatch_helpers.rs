@@ -66,7 +66,7 @@ pub(super) struct KnowledgeStreamCtx<'a> {
     #[cfg(feature = "raft")]
     pub(super) routed_raft: Option<medulla_raft::raft::multi::RoutedRaftHandle>,
     pub(super) knowledge_stream_authority:
-        Option<handlers::knowledge_stream::KnowledgeStreamAuthority>,
+        Option<medulla_h_query::knowledge_stream::KnowledgeStreamAuthority>,
 }
 
 #[cfg(feature = "knowledge-batch")]
@@ -105,7 +105,7 @@ pub(super) async fn dispatch_op_knowledge_stream(
     };
     #[cfg(not(feature = "raft"))]
     let (stream_placement_epoch, stream_fencing_token) = (0, None);
-    let handler_ctx = handlers::knowledge_stream::KnowledgeStreamHandlerCtx {
+    let handler_ctx = medulla_h_query::knowledge_stream::KnowledgeStreamHandlerCtx {
         state,
         req_id,
         graph_name,
@@ -121,7 +121,7 @@ pub(super) async fn dispatch_op_knowledge_stream(
         #[cfg(feature = "security")]
         rls: &rls,
     };
-    return match handlers::knowledge_stream::try_handle(handler_ctx, method).await {
+    return match medulla_h_query::knowledge_stream::try_handle(handler_ctx, method).await {
         Ok(response) => response,
         Err(_) => Response::err(req_id, "KnowledgeStream dispatch routing error"),
     };
