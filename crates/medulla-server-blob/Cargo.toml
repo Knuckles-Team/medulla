@@ -16,7 +16,7 @@ medulla-server-api = { path = "../medulla-server-api" }
 dashmap = "6.2"
 hex = "0.4"
 medulla-alignment = { path = "../medulla-alignment", optional = true }
-medulla-capabilities = { path = "../medulla-capabilities", optional = true }
+medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-modality = { path = "../medulla-modality", optional = true }
 medulla-plan = { path = "../medulla-plan", optional = true }

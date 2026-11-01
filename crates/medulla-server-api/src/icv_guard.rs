@@ -85,7 +85,7 @@ impl<'a> CoreIcvGuard<'a> {
         }
     }
 
-    pub(crate) fn routed(graphs: &'a HashMap<String, Arc<GraphCore>>) -> Self {
+    pub fn routed(graphs: &'a HashMap<String, Arc<GraphCore>>) -> Self {
         Self {
             authority: PolicyAuthority::Routed(graphs),
         }
