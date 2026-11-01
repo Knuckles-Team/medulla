@@ -108,6 +108,7 @@ medulla-exec = { path = "../medulla-exec" }
 medulla-federation = { path = "../medulla-federation" }
 medulla-nlq = { path = "../medulla-nlq" }
 medulla-uql = { path = "../medulla-uql" }
+medulla-wire-core = { path = "../medulla-wire-core" }
 
 [features]
 amqp-wire = ["server"]

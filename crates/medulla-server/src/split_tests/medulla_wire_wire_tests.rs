@@ -49,7 +49,7 @@ use medulla_sql::sql::UpdateTable;
 use medulla_sql::sql::WhereEq;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
-use medulla_wire::wire::*;
+use medulla_wire_core::wire::*;
 
 #[cfg(test)]
 mod ne_004_ne_005_tests {

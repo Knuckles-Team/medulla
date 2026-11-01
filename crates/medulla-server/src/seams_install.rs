@@ -56,7 +56,7 @@ pub fn install_seams(state: &ServerState) {
     #[cfg(feature = "query")]
     let _ = medulla_server_ops::api::query_txn::install_wire_seam(
         &state.seams,
-        std::sync::Arc::new(medulla_wire::wire::WireSeam));
+        std::sync::Arc::new(medulla_wire_core::wire::WireSeam));
 
     // L6 persistence, raft, server-api.
 }

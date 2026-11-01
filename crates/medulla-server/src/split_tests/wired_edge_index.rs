@@ -22,8 +22,8 @@ use super::medulla_wire_wire_tests::wired_catalog_tests::session_for;
 use super::medulla_wire_wire_tests::wired_catalog_tests::test_persist_dir_of;
 use super::medulla_wire_wire_tests::wired_catalog_tests::test_state;
 use super::medulla_wire_wire_tests::wired_catalog_tests::CREATOR;
-use medulla_wire::wire::WireProtocol as _;
-use medulla_wire::wire::WireSession;
+use medulla_wire_core::wire::WireProtocol as _;
+use medulla_wire_core::wire::WireSession;
 use medulla_server_api::state::ServerState;
 
 const TENANT: &str = "tenant-shared";

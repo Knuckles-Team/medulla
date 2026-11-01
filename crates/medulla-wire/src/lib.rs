@@ -14,9 +14,6 @@ pub mod amqp_wire;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod bolt_wire;
 
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod broker_wire;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(any(feature = "ros2-bridge", feature = "ros2-dds", feature = "ros2-rmw"))]
@@ -63,10 +60,6 @@ pub mod ros2_bridge;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod s3;
 
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[cfg(any(feature = "mysql-wire", feature = "pgwire"))]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod sql_wire_auth;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "sqlite-wire")]
@@ -78,7 +71,3 @@ pub mod sqlite_wire;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod stomp_wire;
 
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[cfg(feature = "query")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod wire;
