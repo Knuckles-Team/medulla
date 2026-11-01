@@ -28,17 +28,21 @@ pub trait QueryApi: Send + Sync {
     /// The semantic owner of an EXISTING binding, for operator reads: unlike opening a
     /// binding it never creates an owner file for a binding that was never admitted.
     #[cfg(feature = "ann-redb")]
+    #[allow(unused_variables)]
     fn existing_semantic_service(
         &self,
         persist_dir: &std::path::Path,
         tenant: &str,
         binding_id: &str,
-    ) -> Result<Arc<medulla_ann_codes::semantic_index_service::SemanticIndexService>, String>;
+    ) -> Result<Arc<medulla_ann_codes::semantic_index_service::SemanticIndexService>, String> {
+        Err("this seam method is not built into the installed implementation".to_string())
+    }
 
     /// Run `plan` over a staged (transaction-overlaid) view with the core indexes, committed
     /// and staged embeddings, and the caller's governed foreign and time-series legs bound,
     /// projecting the rows as `[id, score|nil]`.
     #[cfg(feature = "query")]
+    #[allow(unused_variables)]
     fn run_unified_staged_rows(
         &self,
         plan: medulla_exec::algebra::Plan,
@@ -49,11 +53,14 @@ pub trait QueryApi: Send + Sync {
             &medulla_federation::federation::ForeignSourceRegistry,
         >,
         #[cfg(feature = "tsdb")] tsdb_ctx: query_support::TsdbLegBind<'_>,
-    ) -> Result<Vec<(String, Option<f32>)>, String>;
+    ) -> Result<Vec<(String, Option<f32>)>, String> {
+        Err("this seam method is not built into the installed implementation".to_string())
+    }
 
     /// Route one gateway-routed data-mining method (`Mine*`) through the mining handler's
     /// commit gateway; `None` hands a method it does not own back to the caller.
     #[cfg(feature = "mining")]
+    #[allow(unused_variables)]
     async fn mining_gateway_try_handle(
         &self,
         ctx: &medulla_server_mutation::mutation::MutationCtx<'_>,
@@ -64,7 +71,9 @@ pub trait QueryApi: Send + Sync {
         #[cfg(all(feature = "query", feature = "tsdb"))] tsdb_store: Option<
             &Arc<medulla_tsdb::store::SeriesStore>,
         >,
-    ) -> Option<medulla_protocol_types::protocol::Response>;
+    ) -> Option<medulla_protocol_types::protocol::Response> {
+        None
+    }
 }
 
 /// Transaction handler behaviour reachable from crates below `medulla-h-txn`.
@@ -82,6 +91,7 @@ pub trait TxnApi: Send + Sync {
 
     /// Route one `Ts*` method through the time-series handler.
     #[cfg(feature = "tsdb")]
+    #[allow(unused_variables)]
     async fn timeseries_try_handle(
         &self,
         state: &Arc<RwLock<ServerState>>,
@@ -91,7 +101,9 @@ pub trait TxnApi: Send + Sync {
         placement_epoch: u64,
         fencing_token: Option<u64>,
         method: medulla_protocol_types::protocol::Method,
-    ) -> Result<medulla_protocol_types::protocol::Response, medulla_protocol_types::protocol::Method>;
+    ) -> Result<medulla_protocol_types::protocol::Response, medulla_protocol_types::protocol::Method> {
+        Err(method)
+    }
 
     /// Land a staged cross-modal transaction durably with an optional replay nonce.
     async fn commit_cross_modal_txn_with_nonce(
@@ -106,13 +118,17 @@ pub trait TxnApi: Send + Sync {
 
     /// Land a GraphQL-staged cross-modal transaction durably.
     #[cfg(feature = "graphql")]
+    #[allow(unused_variables)]
     async fn commit_graphql_cross_modal(
         &self,
         ctx: txn_support::GraphQlCrossModalCommit<'_>,
-    ) -> Result<bool, String>;
+    ) -> Result<bool, String> {
+        Err("this seam method is not built into the installed implementation".to_string())
+    }
 
     /// Admit a GraphQL begin/stage/read/rollback operation to the transaction lifecycle saga.
     #[cfg(feature = "graphql")]
+    #[allow(unused_variables)]
     async fn begin_graphql_lifecycle(
         &self,
         state: &Arc<RwLock<ServerState>>,
@@ -120,19 +136,27 @@ pub trait TxnApi: Send + Sync {
         caller: &str,
         authority: &medulla_server_api::carrier::CarrierAuthority,
         method: &medulla_protocol_types::protocol::Method,
-    ) -> Result<txn_support::GraphQlLifecycleAdmission, String>;
+    ) -> Result<txn_support::GraphQlLifecycleAdmission, String> {
+        Err("this seam method is not built into the installed implementation".to_string())
+    }
 
     /// Terminalize an admitted GraphQL lifecycle operation with its result.
     #[cfg(feature = "graphql")]
+    #[allow(unused_variables)]
     fn finish_graphql_lifecycle(
         &self,
         token: txn_support::LifecycleToken,
         result: medulla_protocol_types::protocol::ResultPayload,
-    ) -> Result<medulla_protocol_types::protocol::ResultPayload, String>;
+    ) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
+        Err("this seam method is not built into the installed implementation".to_string())
+    }
 
     /// Reload every persisted materialized view into the in-RAM index; returns the count.
     #[cfg(any(feature = "compute-dist", feature = "matview"))]
-    async fn reload_matviews(&self, state: &Arc<RwLock<ServerState>>) -> Result<usize, String>;
+    #[allow(unused_variables)]
+    async fn reload_matviews(&self, state: &Arc<RwLock<ServerState>>) -> Result<usize, String> {
+        Err("this seam method is not built into the installed implementation".to_string())
+    }
 }
 
 /// Wire protocol behaviour reachable from crates below `medulla-wire`.
@@ -141,22 +165,28 @@ pub trait WireApi: Send + Sync {
     /// may be committed; returns the schemas of the tables the batch creates. The error is
     /// the caller-facing message.
     #[cfg(feature = "query")]
+    #[allow(unused_variables)]
     fn authorize_table_txn(
         &self,
         source: &medulla_server_auth::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
         table_store: &medulla_table_store::tables::TableStore,
         txn: &mut medulla_table_store::tables::TableTxn,
         committed_replay: bool,
-    ) -> Result<Vec<medulla_tables::schema::TableSchema>, String>;
+    ) -> Result<Vec<medulla_tables::schema::TableSchema>, String> {
+        Err("this seam method is not built into the installed implementation".to_string())
+    }
 
     /// The committed SQL receipt that authorizes owner repair for a crash replay.
     #[cfg(feature = "query")]
+    #[allow(unused_variables)]
     fn committed_sql_replay_receipt(
         &self,
         store: &medulla_table_store::tables::TableStore,
         authority: &medulla_server_api::carrier::CarrierAuthority,
         batch: &medulla_protocol_types::mutation_batch::MutationBatch,
-    ) -> Result<Option<medulla_protocol_types::mutation_batch::MutationBatchRecord>, String>;
+    ) -> Result<Option<medulla_protocol_types::mutation_batch::MutationBatchRecord>, String> {
+        Err("this seam method is not built into the installed implementation".to_string())
+    }
 }
 
 /// The installed query seam of `state`, or `None` before installation.

@@ -42,12 +42,15 @@ pub trait JobsApi: Send + Sync {
     /// Resolve a completed typed job result for the shared KnowledgeBatch stream; the graph
     /// already passed its ACL and placement checks.
     #[cfg(all(feature = "jobs", feature = "knowledge-batch"))]
+    #[allow(unused_variables)]
     fn knowledge_stream_result(
         &self,
         persist_dir: &Option<String>,
         graph: &str,
         job_id: &str,
-    ) -> Result<medulla_jobs::TypedJobResult, String>;
+    ) -> Result<medulla_jobs::TypedJobResult, String> {
+        Err("this seam method is not built into the installed implementation".to_string())
+    }
 }
 
 /// Compute handler behaviour reachable from crates below `medulla-h-compute`.
