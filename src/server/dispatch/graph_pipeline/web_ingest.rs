@@ -35,7 +35,7 @@ async fn enrich(
     ctx: GraphOpRouting<'_>,
     request: medulla_catalog_types::source_ingestion::web_document::EnrichDocumentRequest,
 ) -> Response {
-    use handlers::web_ingest as web;
+    use medulla_h_ingest::web_ingest as web;
     let req_id = ctx.req_id;
     let doc_id = request.document_id.clone();
     let properties = match ctx.core.get_node_properties(&doc_id) {
@@ -145,7 +145,7 @@ async fn select(
     ctx: GraphOpRouting<'_>,
     request: medulla_decision_types::decision::web_fetch_selection::SelectWebPagesRequest,
 ) -> Response {
-    use handlers::web_ingest as web;
+    use medulla_h_ingest::web_ingest as web;
     let documents: Vec<_> = ctx
         .core
         .get_nodes_by_label("Document", 0)

@@ -183,7 +183,7 @@ fn check_commit_budget(encoded: &[u8], operations: usize) -> Result<(), String> 
 }
 
 /// The labels an engine-lowered envelope kind is sealed under.
-pub(crate) struct EnvelopeLabels {
+pub struct EnvelopeLabels {
     pub version_type: &'static str,
     pub policy_version: &'static str,
 }

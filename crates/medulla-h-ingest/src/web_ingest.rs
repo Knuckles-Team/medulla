@@ -23,10 +23,10 @@ use sha2::{Digest, Sha256};
 use super::repository_index::{stored_value, EnvelopeLabels, IndexWriteSet};
 use medulla_protocol_types::protocol::Method;
 
-pub(crate) const ENRICHMENT_TYPE: &str = "DocumentEnrichment";
-pub(crate) const CHUNK_TYPE: &str = "DocumentChunk";
-pub(crate) const CHUNK_OF: &str = "chunkOf";
-pub(crate) const HAS_ENRICHMENT: &str = "hasEnrichment";
+pub const ENRICHMENT_TYPE: &str = "DocumentEnrichment";
+pub const CHUNK_TYPE: &str = "DocumentChunk";
+pub const CHUNK_OF: &str = "chunkOf";
+pub const HAS_ENRICHMENT: &str = "hasEnrichment";
 const ENVELOPE_PREFIX: &str = "document-enrichment:";
 pub const LABELS: EnvelopeLabels = EnvelopeLabels {
     version_type: "document-enrichment-sha256",
@@ -36,7 +36,7 @@ pub const LABELS: EnvelopeLabels = EnvelopeLabels {
 const CITATION_FIELDS: &[&str] = &["url", "canonical_url", "retrieved_at", "title"];
 
 /// What enrichment read from the held Document.
-pub(crate) struct HeldDocument {
+pub struct HeldDocument {
     pub text: String,
     pub digest_hex: String,
     pub backend: Option<FetchBackend>,
@@ -44,14 +44,14 @@ pub(crate) struct HeldDocument {
 }
 
 impl HeldDocument {
-    pub(crate) fn content_digest(&self) -> String {
+    pub fn content_digest(&self) -> String {
         format!("sha256:{}", self.digest_hex)
     }
 }
 
 /// Read the text, digest, backend and citation fields of a Document's stored
 /// properties. Refuses a Document with no text or an unknown backend.
-pub(crate) fn held_document(
+pub fn held_document(
     request: &EnrichDocumentRequest,
     properties: &[u8],
 ) -> Result<HeldDocument, String> {
@@ -90,7 +90,7 @@ pub(crate) fn held_document(
 }
 
 /// The chunking config a request asks for.
-pub(crate) fn chunking(request: &EnrichDocumentRequest) -> Result<ChunkingConfig, String> {
+pub fn chunking(request: &EnrichDocumentRequest) -> Result<ChunkingConfig, String> {
     let default = ChunkingConfig::default();
     let config = ChunkingConfig {
         max_bytes: request
@@ -104,7 +104,7 @@ pub(crate) fn chunking(request: &EnrichDocumentRequest) -> Result<ChunkingConfig
     Ok(config)
 }
 
-pub(crate) fn enrichment_id(document_id: &str, digest_hex: &str) -> String {
+pub fn enrichment_id(document_id: &str, digest_hex: &str) -> String {
     format!("enrichment:{document_id}:{}", &digest_hex[..32])
 }
 
@@ -113,14 +113,14 @@ fn chunk_id(document_id: &str, digest_hex: &str, ordinal: u32) -> String {
 }
 
 /// An earlier enrichment of the same Document under another digest.
-pub(crate) struct PriorEnrichment {
+pub struct PriorEnrichment {
     pub enrichment_id: String,
     pub chunk_ids: Vec<String>,
 }
 
 /// Find the Document's enrichment records among `records` (id, properties).
 /// Returns the one for `digest_hex`, if any, and every other one.
-pub(crate) fn prior_enrichments(
+pub fn prior_enrichments(
     document_id: &str,
     digest_hex: &str,
     records: Vec<(String, Vec<u8>)>,
@@ -156,7 +156,7 @@ pub(crate) fn prior_enrichments(
 }
 
 /// The receipt of an already-enriched digest, read back from its record.
-pub(crate) fn replay_receipt(
+pub fn replay_receipt(
     document_id: &str,
     digest_hex: &str,
     record: &Value,
@@ -184,7 +184,7 @@ pub(crate) fn replay_receipt(
 }
 
 /// Everything one enrichment writes.
-pub(crate) struct EnrichmentPlan<'a> {
+pub struct EnrichmentPlan<'a> {
     pub document_id: &'a str,
     pub document: &'a HeldDocument,
     pub config: ChunkingConfig,
@@ -317,7 +317,7 @@ pub fn lower(
 }
 
 /// Chunk a held Document's text under `config`.
-pub(crate) fn chunks(
+pub fn chunks(
     document: &HeldDocument,
     config: &ChunkingConfig,
 ) -> Result<Vec<ChunkSpan>, String> {
@@ -328,7 +328,7 @@ pub(crate) fn chunks(
 
 /// Unix milliseconds of a stored `retrieved_at`: a number (seconds below
 /// 10^11, else milliseconds) or an RFC 3339 UTC timestamp.
-pub(crate) fn retrieved_at_ms(value: &Value) -> Option<u64> {
+pub fn retrieved_at_ms(value: &Value) -> Option<u64> {
     if let Some(number) = value.as_u64() {
         return Some(if number < 100_000_000_000 {
             number * 1_000
@@ -362,7 +362,7 @@ pub(crate) fn retrieved_at_ms(value: &Value) -> Option<u64> {
 /// The request graph's held web pages, keyed by canonical URL, and every
 /// content digest it holds. `documents` are RLS-visible `Document` rows.
 #[cfg(feature = "decide")]
-pub(crate) fn held_pages(
+pub fn held_pages(
     documents: Vec<(String, Vec<u8>)>,
 ) -> (
     BTreeMap<String, medulla_numeric::decision::web_fetch_selection::HeldPage>,
@@ -401,7 +401,7 @@ pub(crate) fn held_pages(
     (held, digests)
 }
 
-pub(crate) fn query_digest(query: &str) -> String {
+pub fn query_digest(query: &str) -> String {
     format!(
         "sha256:{}",
         hex::encode(Sha256::digest(query.trim().as_bytes()))
