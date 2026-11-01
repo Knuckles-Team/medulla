@@ -565,7 +565,7 @@ pub fn stable_source_operation_id(operation_key: &str) -> uuid::Uuid {
     uuid::Uuid::from_bytes(bytes)
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 fn owner_operation_id(authority: &CarrierAuthority, table: &str) -> uuid::Uuid {
     stable_source_operation_id(&format!(
         "test-owner:{}:{}:{table}",
