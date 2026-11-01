@@ -70,7 +70,7 @@ pub trait ObsStateExt {
     fn set_obs(&mut self, obs: Option<Arc<ObsState>>);
 }
 
-impl ObsStateExt for crate::server::ServerState {
+impl ObsStateExt for medulla_server_api::state::ServerState {
     fn obs(&self) -> Option<Arc<ObsState>> {
         self.obs
             .as_ref()
@@ -1380,8 +1380,8 @@ mod tests {
     /// "secured deployment" precondition. Use the public canonical constructor
     /// so feature-gated fields stay in sync with the rest of the engine fixtures.
     fn goc62_bug037_security_state(
-    ) -> std::sync::Arc<tokio::sync::RwLock<crate::server::ServerState>> {
-        let mut state = crate::server::ServerState::new_for_test(
+    ) -> std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>> {
+        let mut state = medulla_server_api::state::ServerState::new_for_test(
             "goc62-bug037-test-secret", // nosec B105 - test only  // sanitizer:ignore — synthetic in-process test fixture, never a live credential
             crate::isolation::IsolationLayer::new(),
         );

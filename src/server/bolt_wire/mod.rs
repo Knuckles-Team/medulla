@@ -45,7 +45,7 @@ use medulla_server_api::auth::verify_request_with_security_dir;
 use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_server_api::mutation::MutationCtx;
 use medulla_server_api::mutation::MutationPlan;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 mod auth;
 pub mod packstream;
@@ -912,7 +912,7 @@ mod tests {
     //! and FAILURE/RESET flows — no external Neo4j driver.
     use super::*;
     use crate::isolation::IsolationLayer;
-    use crate::server::ServerState;
+    use medulla_server_api::state::ServerState;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     /// A `ServerState` seeded with public nodes so a signed Cypher read returns

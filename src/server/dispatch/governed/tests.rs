@@ -43,7 +43,7 @@ fn approve(forged: Option<GovernedActor>) -> Method {
 }
 
 async fn status(
-    state: &std::sync::Arc<tokio::sync::RwLock<crate::server::ServerState>>,
+    state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
 ) -> GovernedStatus {
     state
         .read()

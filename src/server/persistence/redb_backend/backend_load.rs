@@ -2,7 +2,7 @@ use super::*;
 use crate::protocol::GraphType;
 use medulla_store::redb_store::read_all_dumps;
 use medulla_store::redb_store::read_all_graph_meta;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 impl RedbBackend {
     /// Reconstruct every graph from the redb store into the registry. The actual

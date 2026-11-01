@@ -21,7 +21,7 @@ pub struct ProgramPromotionRequest<'a> {
 }
 
 impl<'a> ProgramPromotionRequest<'a> {
-    pub(crate) fn new(
+    pub fn new(
         persistence: Option<&'a std::sync::Arc<dyn PersistenceBackend>>,
         core: &'a std::sync::Arc<GraphCore>,
         origin: super::CommitOrigin<'a>,

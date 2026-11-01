@@ -476,7 +476,6 @@ mod transport;
 // External path surface — `server::ServerState`, `server::MAX_BATCH_IDS`,
 // `server::dispatch`, and
 // `server::{handle_connection,serve_uds,serve_tcp}` — used by main.rs/persist.rs/tests.
-pub use auth::{compute_verified_envelope_token, VerifiedEnvelopeParams};
 pub use dispatch::dispatch;
 // NL planner injection (CONCEPT:MEDULLA-KG.query.fence-stripper): an embedder opts into engine-driven NL→query.
 #[cfg(feature = "nl-query")]
@@ -488,7 +487,7 @@ pub use handlers::dist_compute::reload_matviews;
 // Post-bind maintenance hook (MEDULLA-DURABLE-KERNEL-R006.4): the binary calls this
 // from `serve_transports` right after the listeners bind.
 pub use boot_maintenance::spawn_post_bind_maintenance;
-pub use state::{txn_limits_from_env, ServerState, MAX_BATCH_IDS};
+use medulla_server_api::state::{txn_limits_from_env, ServerState};
 
 /// Build the canonical feature-complete state used by dispatch and wire tests.
 /// Keeping the constructor and every feature-gated service attachment here

@@ -42,7 +42,7 @@ use tokio::sync::RwLock;
 use medulla_query::PgColType;
 
 use crate::server::wire::{WireError, WireOutcome, WireProtocol, WireSession};
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 mod auth;
 mod packets;
@@ -480,7 +480,7 @@ mod tests {
     use crate::server::handlers::query::current_auth_test_support::{
         grant_commons_user, register_commons_agent,
     };
-    use crate::server::ServerState;
+    use medulla_server_api::state::ServerState;
     use medulla_query::{TypedColumn, TypedQueryResult};
     use tokio::net::TcpStream;
 

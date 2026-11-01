@@ -728,7 +728,7 @@ impl MultiRaft {
     /// The shared `ServerState` (registry + persistence) every group applies into —
     /// reached via the manager's [`AppCtx`]. Used by the cross-shard 2PC coordinator
     /// (CONCEPT:MEDULLA-KG.storage.lane-n-increment) to validate slices against live group state.
-    pub fn app_state(&self) -> Arc<RwLock<crate::server::ServerState>> {
+    pub fn app_state(&self) -> Arc<RwLock<medulla_server_api::state::ServerState>> {
         self.ctx.state.clone()
     }
 

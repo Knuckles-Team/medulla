@@ -552,7 +552,7 @@ impl medulla_server_api::api::persistence::BundledStoreSource for NodeInfoStore 
 #[cfg(feature = "raft")]
 /// Apply a replicated typed node self-report to the durable node-info store.
 pub(crate) async fn apply_replicated_node_info(
-    state: &std::sync::Arc<tokio::sync::RwLock<crate::server::ServerState>>,
+    state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     req_id: u64,
     info: NodeInfo,
 ) -> Result<bool, String> {

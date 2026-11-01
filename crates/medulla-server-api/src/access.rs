@@ -334,7 +334,7 @@ pub struct GraphReadAuthority {
 impl GraphReadAuthority {
     /// Build a read authority after request verification and graph ACL checks.
     /// The context is already verified before this constructor is reachable.
-    pub(crate) fn from_verified(
+    pub fn from_verified(
         context: &VerifiedRequestContext,
         isolation: &IsolationLayer,
     ) -> Result<Self, String> {

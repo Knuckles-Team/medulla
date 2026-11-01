@@ -28,7 +28,7 @@ use tokio::sync::RwLock;
 
 use crate::graph::GraphCore;
 use crate::protocol::Method;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// The actor every policy retirement is attributed to.
 pub const RETENTION_ACTOR: &str = "engine:sealed-retention";

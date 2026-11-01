@@ -28,7 +28,7 @@ use medulla::isolation::{AgentIdentity, AgentRole};
 use medulla::registry::GraphRegistry;
 use medulla::server::api::persistence::PersistenceBackend;
 use medulla::server::pgwire;
-use medulla::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 fn sql_test_persist_dir() -> String {
     test_support::sql_test_persist_dir("pgwire")

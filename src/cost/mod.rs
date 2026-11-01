@@ -40,7 +40,7 @@ use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 use medulla_types::result_contract::coordination::{GraphResourceStats, ResourceSnapshot};
 
 mod resource_stats;

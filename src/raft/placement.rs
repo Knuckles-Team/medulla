@@ -105,7 +105,7 @@ use tokio::sync::{Mutex, MutexGuard, RwLock};
 
 use super::GroupId;
 use crate::protocol::Method;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 mod move_journal;
 

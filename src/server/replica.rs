@@ -469,7 +469,7 @@ impl ReplicaConfig {
 /// replay), so a follower converges to the primary's state. Returns the highest LSN
 /// applied (the new cursor), or the input cursor if the batch was empty.
 pub async fn apply_replicated_batch(
-    state: &std::sync::Arc<tokio::sync::RwLock<crate::server::ServerState>>,
+    state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     ops: &[ReplicationOp],
     cursor: u64,
 ) -> u64 {
@@ -526,7 +526,7 @@ pub fn pull_replication_tail(
 /// cooldown rather than blocking every tick), applies it, and advances the cursor. Spawned
 /// from `main` when [`ReplicaConfig::from_env`] is `Some`.
 pub async fn run_replica_follower(
-    state: std::sync::Arc<tokio::sync::RwLock<crate::server::ServerState>>,
+    state: std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     cfg: ReplicaConfig,
 ) {
     let breaker = CircuitBreaker::new(

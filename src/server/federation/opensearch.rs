@@ -65,7 +65,7 @@ use std::time::Duration;
 use serde_json::Value;
 use tokio::sync::RwLock;
 
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 use super::{FedRow, FederatedResponse, PeerOutcome};
 

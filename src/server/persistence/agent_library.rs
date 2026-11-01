@@ -684,7 +684,7 @@ pub trait AgentLibraryStateExt {
     fn ensure_agent_library(&mut self) -> Result<Arc<AgentLibraryStore>, String>;
 }
 
-impl AgentLibraryStateExt for crate::server::ServerState {
+impl AgentLibraryStateExt for medulla_server_api::state::ServerState {
     fn agent_library(&self) -> Option<Arc<AgentLibraryStore>> {
         self.agent_library
             .as_ref()

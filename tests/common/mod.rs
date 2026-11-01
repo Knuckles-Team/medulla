@@ -6,7 +6,8 @@ use hmac::{Hmac, Mac};
 use medulla::acl::{AgentIdentity, AgentRole, RequestContextClaims};
 use medulla::isolation::IsolationLayer;
 use medulla::protocol::{build_context_operation_signature_bytes, Method, Request};
-use medulla::server::{compute_verified_envelope_token, VerifiedEnvelopeParams};
+use medulla_server_api::auth::compute_verified_envelope_token;
+use medulla_server_api::auth::VerifiedEnvelopeParams;
 use sha2::{Digest, Sha256};
 
 pub const TEST_AGENT: &str = "integration-test-agent";

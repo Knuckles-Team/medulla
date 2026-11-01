@@ -62,7 +62,7 @@ use tokio::sync::RwLock;
 
 use medulla_server_api::api::persistence::deserialize_required_option;
 use medulla_server_api::api::persistence::RaftMutationContext;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 pub mod config;
 /// Pure, policy-only M3 cross-node elasticity proposals with resumable move identities.

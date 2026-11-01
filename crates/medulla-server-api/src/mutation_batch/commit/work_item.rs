@@ -126,7 +126,7 @@ pub struct WorkItemCommitRequest<'a> {
 }
 
 impl<'a> WorkItemCommitRequest<'a> {
-    pub(crate) fn new(
+    pub fn new(
         persistence: Option<&'a Arc<dyn PersistenceBackend>>,
         core: &'a Arc<GraphCore>,
         origin: super::CommitOrigin<'a>,

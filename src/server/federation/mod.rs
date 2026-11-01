@@ -55,7 +55,7 @@ use tokio::sync::RwLock;
 use medulla_server_api::http1;
 use medulla_server_api::http1::HttpMessage;
 use medulla_server_api::http1::RequestLimits;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// Comma-separated peer engine base-URLs, e.g.
 /// `https://medulla-eu.example:7900,https://medulla-us.example:7900` (CONCEPT:MEDULLA-KG.ontology.federation-client).

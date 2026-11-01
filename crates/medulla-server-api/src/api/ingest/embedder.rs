@@ -68,7 +68,7 @@ fn non_empty(name: &str) -> Option<String> {
 }
 
 impl EmbedderConfig {
-    pub(crate) fn from_env() -> Self {
+    pub fn from_env() -> Self {
         Self {
             endpoint: non_empty("MEDULLA_EMBEDDING_URL").map(|url| endpoint(&url)),
             model: non_empty("MEDULLA_EMBEDDING_MODEL"),

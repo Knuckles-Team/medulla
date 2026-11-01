@@ -218,7 +218,7 @@ impl Ros2BridgeConfig {
 /// Returns `true` only when the signed request commits successfully.
 #[cfg(feature = "server")]
 pub async fn apply_inbound(
-    state: &std::sync::Arc<tokio::sync::RwLock<crate::server::ServerState>>,
+    state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     graph: &str,
     msg: &serde_json::Value,
 ) -> bool {
@@ -259,7 +259,7 @@ fn ros2_cdc_denied(isolation: &crate::isolation::IsolationLayer) -> bool {
 /// tokio-tungstenite — must not compile it. The pure CDC↔ROS2 mapping above stays shared.
 #[cfg(all(feature = "server", feature = "ros2-bridge"))]
 pub async fn run_ros2_bridge(
-    state: std::sync::Arc<tokio::sync::RwLock<crate::server::ServerState>>,
+    state: std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     cfg: Ros2BridgeConfig,
     cdc: std::sync::Arc<medulla_server_api::cdc::CdcHub>,
 ) -> Result<(), String> {

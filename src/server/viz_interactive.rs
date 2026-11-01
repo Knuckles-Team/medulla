@@ -119,7 +119,7 @@ pub async fn serve(
     // caller (e.g. an external integration test) with no `ServerState` to
     // hand in, per that type's own `pub(crate)`/`#[cfg(test)]` construction
     // boundary.
-    state: Option<Arc<tokio::sync::RwLock<crate::server::ServerState>>>,
+    state: Option<Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>>,
 ) {
     loop {
         let Ok((mut stream, _)) = listener.accept().await else {

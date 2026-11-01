@@ -10,7 +10,8 @@ use std::sync::Arc;
 
 use tracing::info;
 
-use medulla::server::{self, ServerState};
+use medulla::server::{self};
+use medulla_server_api::state::ServerState;
 
 type SharedState = Arc<tokio::sync::RwLock<ServerState>>;
 type BoxError = Box<dyn std::error::Error>;

@@ -91,7 +91,7 @@ fn sqlite_limits() -> Result<(u64, u64), String> {
 /// `sql_tables::user_table_store`/`tenant_table_store` themselves report when it
 /// is unset (CONCEPT:NE-046 — MEDULLA-WIRE-CATALOG).
 async fn tenant_persist_dir(
-    state: &std::sync::Arc<tokio::sync::RwLock<crate::server::ServerState>>,
+    state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
 ) -> Result<PathBuf, String> {
     state
         .read()
@@ -120,7 +120,7 @@ async fn tenant_persist_dir(
 /// — and import registers ownership of each table it creates, so a subsequent
 /// non-admin `GRANT`/`REVOKE` on it works.
 pub(crate) async fn try_handle(
-    state: &std::sync::Arc<tokio::sync::RwLock<crate::server::ServerState>>,
+    state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     req_id: u64,
     authority: &CarrierAuthority,
     attempt_nonce: Option<Nonce>,
@@ -165,7 +165,7 @@ fn admit_sqlite_file_method(
 /// `Response::err` outcome when the persist dir isn't configured (same error
 /// [`tenant_persist_dir`] itself reports).
 async fn resolve_transfer_context(
-    state: &std::sync::Arc<tokio::sync::RwLock<crate::server::ServerState>>,
+    state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     req_id: u64,
     authority: &CarrierAuthority,
 ) -> Result<(PathBuf, CarrierAuthority), Response> {
@@ -178,7 +178,7 @@ async fn resolve_transfer_context(
 }
 
 async fn handle_import_sqlite_file(
-    state: &std::sync::Arc<tokio::sync::RwLock<crate::server::ServerState>>,
+    state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     req_id: u64,
     authority: &CarrierAuthority,
     attempt_nonce: Option<Nonce>,
@@ -217,7 +217,7 @@ async fn handle_import_sqlite_file(
 }
 
 async fn handle_export_sqlite_file(
-    state: &std::sync::Arc<tokio::sync::RwLock<crate::server::ServerState>>,
+    state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     req_id: u64,
     authority: &CarrierAuthority,
     path: &str,

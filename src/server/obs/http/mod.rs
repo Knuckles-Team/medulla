@@ -56,7 +56,7 @@ pub async fn serve(listener: TcpListener, state: Arc<ObsState>) {
 pub async fn serve_with_security(
     listener: TcpListener,
     state: Arc<ObsState>,
-    security_state: Arc<tokio::sync::RwLock<crate::server::ServerState>>,
+    security_state: Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
 ) {
     // EH-408/EH-409: this store is also the one `TelemetryDerive` reads over
     // RPC, so the served engine registers it on its own state first.
@@ -67,7 +67,7 @@ pub async fn serve_with_security(
 async fn serve_inner(
     listener: TcpListener,
     state: Arc<ObsState>,
-    security_state: Option<Arc<tokio::sync::RwLock<crate::server::ServerState>>>,
+    security_state: Option<Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>>,
 ) {
     let connections = Arc::new(tokio::sync::Semaphore::new(MAX_HTTP_CONNECTIONS));
     loop {
@@ -184,7 +184,7 @@ fn is_read_only_obs_path(path: &str) -> bool {
 /// here), and ingest is admitted only for a verified telemetry writer, whose
 /// tenant every written record is then bound to.
 fn admit(
-    security_state: Option<&Arc<tokio::sync::RwLock<crate::server::ServerState>>>,
+    security_state: Option<&Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>>,
     req: &HttpMessage,
     path: &str,
 ) -> Result<Option<super::writer::TelemetryWriter>, (&'static str, &'static str, String)> {
@@ -206,7 +206,7 @@ fn admit(
 /// Route + execute an ingest request → `(status, content_type, body)`.
 pub(super) async fn handle(
     state: &Arc<ObsState>,
-    security_state: Option<&Arc<tokio::sync::RwLock<crate::server::ServerState>>>,
+    security_state: Option<&Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>>,
     req: HttpMessage,
 ) -> (&'static str, &'static str, String) {
     let (path, query) = req.path_and_query();

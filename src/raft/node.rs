@@ -35,7 +35,7 @@ use tokio::sync::RwLock;
 use super::config::RaftClusterConfig;
 use super::multi::MultiRaft;
 use super::{AppCtx, RaftHandle, DEFAULT_GROUP};
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 async fn shutdown_after_start_error<T>(
     multi: &Arc<MultiRaft>,

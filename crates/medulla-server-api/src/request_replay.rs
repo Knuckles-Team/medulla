@@ -125,7 +125,7 @@ pub(crate) struct ReplayCache {
 
 #[cfg(test)]
 impl ReplayCache {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         ReplayCache {
             window: std::sync::Mutex::new(NonceWindow::with_floor(0)),
         }

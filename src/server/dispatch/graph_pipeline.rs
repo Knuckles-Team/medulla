@@ -2035,7 +2035,8 @@ mod placement_route_carrier_tests {
     use crate::acl::RequestContextClaims;
     use crate::isolation::IsolationLayer;
     use crate::protocol::{Method, Request};
-    use crate::server::{compute_verified_envelope_token, VerifiedEnvelopeParams};
+    use medulla_server_api::auth::compute_verified_envelope_token;
+use medulla_server_api::auth::VerifiedEnvelopeParams;
     use std::sync::Arc;
     use std::time::{SystemTime, UNIX_EPOCH};
 

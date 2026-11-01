@@ -17,7 +17,7 @@ use medulla_server_api::auth::VerifiedRequestContext;
 use crate::server::dispatch::apply_replicated_native;
 use crate::server::dispatch::test_support::{send, verified};
 use crate::server::persistence::redb_backend::RedbBackend;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 const GRAPH: &str = "tenant__subjectbinding__default";
 const SECRET: &str = "synthetic-replicated-tenant-test-secret";

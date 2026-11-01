@@ -462,7 +462,7 @@ impl GraphTxnState {
     /// `predicate`, capture its result-set fingerprint NOW (the snapshot the txn
     /// reads against) so commit can detect a phantom/range change. `core` is the
     /// txn's target graph core (an off-lock read; nothing is held while staging).
-    pub(crate) fn new(core: &GraphCore, args: NewTxnArgs) -> Self {
+    pub fn new(core: &GraphCore, args: NewTxnArgs) -> Self {
         let NewTxnArgs {
             graph,
             tenant_scope,

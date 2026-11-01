@@ -42,7 +42,7 @@ const GROUP_B: u64 = 200;
 const GRAPH_A: &str = "shardA";
 const GRAPH_B: &str = "shardB";
 
-type HarnessState = Arc<RwLock<crate::server::ServerState>>;
+type HarnessState = Arc<RwLock<medulla_server_api::state::ServerState>>;
 type Harness = (Arc<MultiRaft>, CrossShardCoordinator, HarnessState);
 
 /// The harness's isolation layer: one System-role identity for the harness's fixed test
@@ -537,7 +537,7 @@ const XSHARD_HARNESS_TEST_AGENT: &str = "xshard-harness-agent";
 /// harness's call sites never picked up). Mirrors the identical pattern in
 /// `server/persistence/redb_backend.rs`'s cross-modal ACID test module.
 async fn txn_handle(
-    state: &Arc<RwLock<crate::server::ServerState>>,
+    state: &Arc<RwLock<medulla_server_api::state::ServerState>>,
     req_id: u64,
     _caller: Option<&str>,
     method: Method,
@@ -572,7 +572,7 @@ async fn txn_handle(
 
 /// Register `shardA`/`shardB` in the registry + wire `state.multi_raft` so the
 /// user-facing commit path can resolve the cross-shard span (CONCEPT:MEDULLA-KG.txn.routes-cross-shard-txn).
-async fn wire_user_graphs(state: &Arc<RwLock<crate::server::ServerState>>, multi: &Arc<MultiRaft>) {
+async fn wire_user_graphs(state: &Arc<RwLock<medulla_server_api::state::ServerState>>, multi: &Arc<MultiRaft>) {
     let mut s = state.write().await;
     let _ = s.registry.create_graph(GRAPH_A, GraphType::Global, None);
     let _ = s.registry.create_graph(GRAPH_B, GraphType::Global, None);
@@ -609,7 +609,7 @@ fn as_bool(r: Response) -> bool {
 /// Drive BeginTxn (default=shardA) → TxnAddNode(shardA) → TxnAddNode(graph=shardB)
 /// through the HANDLER. Returns the txn id so the caller can Commit it.
 async fn begin_two_graph_txn(
-    state: &Arc<RwLock<crate::server::ServerState>>,
+    state: &Arc<RwLock<medulla_server_api::state::ServerState>>,
     a_node: &str,
     b_node: &str,
 ) -> String {

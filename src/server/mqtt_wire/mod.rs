@@ -48,7 +48,7 @@ use crate::server::broker_wire::{self, invalid_data, prelude::*, BrokerProtocol}
 use crate::server::broker_wire::{
     derive_password as derive_mqtt_password_impl, verify_password as verify_mqtt_password_impl,
 };
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// Env var: when set (and the binary is built `--features mqtt-wire`), the MQTT wire
 /// listener binds this address (documented loopback default `127.0.0.1:1883`). Unset ⇒

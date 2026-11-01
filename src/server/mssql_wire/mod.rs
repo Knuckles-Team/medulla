@@ -44,7 +44,7 @@ use medulla_query::PgColType;
 
 use crate::server::broker_wire::{self, BrokerProtocol};
 use crate::server::wire::{WireError, WireOutcome, WireProtocol, WireSession};
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 use protocol::{
     build_prelogin_response, decode_sqlbatch, encode_colmetadata, encode_done, encode_error,

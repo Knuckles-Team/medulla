@@ -49,7 +49,7 @@ use medulla_store::redb_store::GraphDump;
 #[cfg(test)]
 use medulla_store::redb_layout::shard_filename;
 #[cfg(test)]
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 #[cfg(test)]
 use crate::{mutation_batch::*, protocol::*};
 #[cfg(test)]

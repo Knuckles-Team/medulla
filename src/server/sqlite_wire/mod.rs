@@ -67,7 +67,7 @@ use serde::Deserialize;
 
 use crate::protocol::{Method, Request};
 use crate::server::wire::{WireError, WireOutcome, WireProtocol, WireSession};
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 pub mod dialect;
 
@@ -393,10 +393,10 @@ mod tests {
                 params_msgpack: Vec::new(),
             },
         };
-        signed.auth_token = crate::server::compute_verified_envelope_token(
+        signed.auth_token = medulla_server_api::auth::compute_verified_envelope_token(
             "test-sqlite-wire-secret",
             &signed,
-            &crate::server::VerifiedEnvelopeParams {
+            &medulla_server_api::auth::VerifiedEnvelopeParams {
                 context: &context,
                 timestamp: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)

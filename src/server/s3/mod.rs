@@ -63,7 +63,7 @@ use medulla_server_api::blob::store::RedbChunkStore;
 use medulla_server_api::http1;
 use medulla_server_api::http1::RequestLimits;
 use medulla_server_api::kv::KvStore;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 use calendar::{iso8601, valid_amz_date};
 
 /// Env var: when set (and built `--features s3-api`) the S3 REST listener binds

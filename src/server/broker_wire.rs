@@ -9,7 +9,7 @@ use tokio::sync::RwLock;
 
 use crate::protocol::{Method, Request, ResultPayload};
 use medulla_server_api::api::reentry::dispatch_authenticated_broker_actor;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// Common async/socket imports used by every native broker adapter.
 pub(crate) mod prelude {

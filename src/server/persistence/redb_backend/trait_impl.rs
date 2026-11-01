@@ -30,7 +30,7 @@ use medulla_store::redb_store::read_resource_reservation as read_resource_reserv
 use medulla_store::redb_store::read_resource_reservation_status as read_resource_reservation_status_record;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use crate::server::persistence::writer_reply::await_writer_reply;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
 
 // `async_trait` must see the concrete methods when it expands. Invoking method

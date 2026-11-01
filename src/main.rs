@@ -20,7 +20,7 @@ use tokio::sync::RwLock;
 use tracing::info;
 
 use medulla::server;
-use medulla::server::ServerState;
+use medulla_server_api::state::ServerState;
 mod offline_tools;
 
 #[cfg(feature = "security")]
@@ -486,7 +486,7 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
 
     let limits = server_startup::admission_limits(&host_capacity);
     // OCC ACID transaction limits (CONCEPT:MEDULLA-KG.txn.multi-op-occ-acid).
-    let txn_limits = medulla::server::txn_limits_from_env();
+    let txn_limits = medulla_server_api::state::txn_limits_from_env();
     // Every store is opened BEFORE `persist_dir` is moved into the state; each
     // open failure is fatal at boot (loud + early).
     let stores = server_startup::open_durable_stores(args.persist_dir.as_deref(), &host_capacity);

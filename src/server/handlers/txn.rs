@@ -264,7 +264,7 @@ mod keyed_recovery_window_tests {
     use medulla_server_api::api::persistence::PersistenceBackend;
     use crate::server::persistence::backup::EnvVarGuard;
     use crate::server::persistence::redb_backend::RedbBackend;
-    use crate::server::ServerState;
+    use medulla_server_api::state::ServerState;
     use std::path::{Path, PathBuf};
 
     const CALLER: &str = "txn-recovery-agent";

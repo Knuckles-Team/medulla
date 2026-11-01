@@ -14,7 +14,9 @@ use crate::acl::{AgentIdentity, AgentRole, RequestContextClaims};
 use crate::isolation::IsolationLayer;
 use crate::protocol::{Method, Request};
 use medulla_server_api::api::persistence::PersistenceBackend;
-use crate::server::{compute_verified_envelope_token, ServerState, VerifiedEnvelopeParams};
+use medulla_server_api::auth::compute_verified_envelope_token;
+use medulla_server_api::state::ServerState;
+use medulla_server_api::auth::VerifiedEnvelopeParams;
 
 static NONCE_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 

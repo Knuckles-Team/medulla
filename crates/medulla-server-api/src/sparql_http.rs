@@ -476,7 +476,7 @@ impl ServiceClient {
 
     /// Build from `SERVICE_ALLOW_ENV`. Empty / unset ⇒ `None` (SERVICE disabled, fail-closed).
     /// `pub(crate)`: see the CA-12 note on the struct above.
-    pub(crate) fn from_env() -> Option<Self> {
+    pub fn from_env() -> Option<Self> {
         let raw = std::env::var(SERVICE_ALLOW_ENV).ok()?;
         let allow: Vec<String> = raw
             .split(',')

@@ -42,7 +42,7 @@ use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_server_api::http1;
 use medulla_server_api::http1::HttpMessage;
 use medulla_server_api::http1::RequestLimits;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// Environment/CLI address used by `main.rs` to opt into this listener.
 pub const GRAPHQL_ADDR_ENV: &str = "MEDULLA_GRAPHQL_ADDR";

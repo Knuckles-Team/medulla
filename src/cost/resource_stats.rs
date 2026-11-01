@@ -4,7 +4,7 @@ use std::sync::Arc;
 use medulla_types::result_contract::coordination::{GraphResourceStats, TenantResourceStats};
 use tokio::sync::RwLock;
 
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 use super::{
     is_hibernated, tenant_of, CostConfig, ResourceStatsCandidate, ResourceStatsRequest,

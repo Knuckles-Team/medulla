@@ -33,7 +33,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::graph::GraphCore;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// Default cap on how many `:ToolCall`/`:RunTrace` node ids a single anchor tick
 /// considers PER LABEL for one graph — bounds both the off-writer-thread hashing

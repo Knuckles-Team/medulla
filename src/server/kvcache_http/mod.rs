@@ -92,7 +92,7 @@ use tokio::sync::RwLock;
 use medulla_server_api::http1;
 use medulla_server_api::http1::HttpMessage;
 use medulla_server_api::http1::RequestLimits;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 use medulla_kvcache::{
     BranchId, DataVersion, ReleaseOutcome, SharedKvBackend, SharedKvIndex, SnapshotId,
 };

@@ -29,7 +29,7 @@ use crate::protocol::{Method, ResultPayload};
 #[cfg(all(feature = "redb", feature = "blob"))]
 use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::auth::VerifiedRequestContext;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 pub(crate) struct PrepareContext<'a> {
     pub state: &'a Arc<RwLock<ServerState>>,
@@ -2711,9 +2711,9 @@ mod tests {
                 &["source:ingest", "blob:write", "kg:read", "kg:write"],
             );
         let authority = medulla_server_api::access::CarrierAuthority::from_verified(&verified).unwrap();
-        let state = Arc::new(RwLock::new(crate::server::ServerState::new_for_test(
+        let state = Arc::new(RwLock::new(medulla_server_api::state::ServerState::new_for_test(
             "source-ingest-r0092",
-            crate::server::ServerState::test_isolation("source-ingest-r0092"),
+            medulla_server_api::state::ServerState::test_isolation("source-ingest-r0092"),
         )));
         let context = PrepareContext {
             state: &state,

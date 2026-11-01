@@ -26,7 +26,7 @@ pub struct LifecycleCommitRequest<'a> {
 }
 
 impl<'a> LifecycleCommitRequest<'a> {
-    pub(crate) fn new(
+    pub fn new(
         persistence: &'a Arc<dyn PersistenceBackend>,
         action: &'a str,
         origin: super::CommitOrigin<'a>,

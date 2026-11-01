@@ -93,7 +93,7 @@ async fn bring_up(
 ) -> (
     Arc<MultiRaft>,
     CrossShardCoordinator,
-    Arc<RwLock<crate::server::ServerState>>,
+    Arc<RwLock<medulla_server_api::state::ServerState>>,
 ) {
     let (multi, state) = fixture::start_routed_groups(
         dir,
@@ -111,7 +111,7 @@ async fn bring_up(
 /// Count nodes in a named graph on a state (the read-back probe for BOTH modalities:
 /// the property-graph node count for `modalA`, and the projected-triple node count for
 /// `modalB`).
-async fn graph_node_count(state: &Arc<RwLock<crate::server::ServerState>>, graph: &str) -> usize {
+async fn graph_node_count(state: &Arc<RwLock<medulla_server_api::state::ServerState>>, graph: &str) -> usize {
     fixture::node_count(state, graph).await
 }
 
@@ -187,7 +187,7 @@ impl ModalityState {
         b_present: true,
     };
 
-    async fn read(state: &Arc<RwLock<crate::server::ServerState>>) -> Self {
+    async fn read(state: &Arc<RwLock<medulla_server_api::state::ServerState>>) -> Self {
         Self {
             a_present: graph_node_count(state, GRAPH_A).await > 0,
             b_present: graph_node_count(state, GRAPH_B).await > 0,
@@ -208,7 +208,7 @@ async fn reopen_and_recover(
     (
         fixture::Backend,
         Arc<MultiRaft>,
-        Arc<RwLock<crate::server::ServerState>>,
+        Arc<RwLock<medulla_server_api::state::ServerState>>,
         usize,
         ModalityState,
     ),
@@ -532,7 +532,7 @@ async fn cut_over_modal_a_placement(multi: &MultiRaft) -> Result<PlacementCutove
 /// Commit `txn` and read back both modalities.
 async fn commit_and_read_back(
     coord: &CrossShardCoordinator,
-    state: &Arc<RwLock<crate::server::ServerState>>,
+    state: &Arc<RwLock<medulla_server_api::state::ServerState>>,
     txn: &CrossShardTxn,
 ) -> Result<(TxnOutcome, ModalityState), String> {
     let outcome = coord.commit_cross_shard(txn).await?;
@@ -543,7 +543,7 @@ async fn commit_and_read_back(
 async fn commit_is_rejected_cleanly(
     coord: &CrossShardCoordinator,
     backend: &fixture::Backend,
-    state: &Arc<RwLock<crate::server::ServerState>>,
+    state: &Arc<RwLock<medulla_server_api::state::ServerState>>,
     txn: &CrossShardTxn,
 ) -> Result<bool, String> {
     let (outcome, modal) = commit_and_read_back(coord, state, txn).await?;

@@ -40,7 +40,9 @@ use crate::protocol::{GraphType, Method, Request, ResultPayload};
 use crate::raft::harness::cluster::{Cluster, GRAPH};
 use crate::raft::harness::test_env::configure_auth_test_environment;
 use crate::raft::NodeId;
-use crate::server::{compute_verified_envelope_token, dispatch, VerifiedEnvelopeParams};
+use crate::server::{dispatch};
+use medulla_server_api::auth::compute_verified_envelope_token;
+use medulla_server_api::auth::VerifiedEnvelopeParams;
 
 const SECRET: &str = "harness";
 // `cfg(test)` request-context verification deliberately pins the shared harness
@@ -1158,7 +1160,7 @@ async fn ensure_commons_graph(cluster: &Cluster) {
     }
 }
 
-fn state_for(cluster: &Cluster, node_id: NodeId) -> Arc<RwLock<crate::server::ServerState>> {
+fn state_for(cluster: &Cluster, node_id: NodeId) -> Arc<RwLock<medulla_server_api::state::ServerState>> {
     cluster
         .members
         .get(&node_id)
@@ -1176,14 +1178,14 @@ fn state_for(cluster: &Cluster, node_id: NodeId) -> Arc<RwLock<crate::server::Se
 /// the first request is even polled. Mirrors `server::mod::tests::dispatch_on_heap`
 /// (8e00e0b).
 fn dispatch_on_heap<'a>(
-    state: &'a Arc<RwLock<crate::server::ServerState>>,
+    state: &'a Arc<RwLock<medulla_server_api::state::ServerState>>,
     request: Request,
 ) -> std::pin::Pin<Box<dyn Future<Output = crate::protocol::Response> + Send + 'a>> {
     Box::pin(dispatch(state, request))
 }
 
 async fn dispatch_bounded(
-    state: &Arc<RwLock<crate::server::ServerState>>,
+    state: &Arc<RwLock<medulla_server_api::state::ServerState>>,
     request: Request,
 ) -> crate::protocol::Response {
     let request_id = request.id;

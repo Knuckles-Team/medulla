@@ -402,7 +402,7 @@ pub trait LakeStateExt {
     fn set_lake(&mut self, lake: Arc<LakeManager>);
 }
 
-impl LakeStateExt for crate::server::ServerState {
+impl LakeStateExt for medulla_server_api::state::ServerState {
     fn lake(&self) -> Arc<LakeManager> {
         self.lake
             .as_ref()

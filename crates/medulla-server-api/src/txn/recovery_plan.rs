@@ -80,7 +80,7 @@ impl GraphTxnState {
     /// Reconstruct an ephemeral staged transaction from authenticated private
     /// recovery bytes.  The retrying caller is held only in RAM; its durable scope
     /// was already verified against the parent receipt before this method is called.
-    pub(crate) fn decode_recovery_plan(bytes: &[u8], agent: String) -> Result<Self, String> {
+    pub fn decode_recovery_plan(bytes: &[u8], agent: String) -> Result<Self, String> {
         let plan: DurableTxnPlan = medulla_types::msgpack::decode_bounded(
             bytes,
             medulla_types::msgpack::MsgpackLimits::new(

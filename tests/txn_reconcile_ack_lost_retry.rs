@@ -35,7 +35,9 @@ use medulla_server_api::mutation_batch::MutationBatchStatus;
 use medulla::protocol::{GraphType, Method, Request, Response, ResultPayload};
 #[cfg(feature = "redb")]
 use medulla::server::persistence::AsRedb;
-use medulla::server::{compute_verified_envelope_token, dispatch, VerifiedEnvelopeParams};
+use medulla::server::{dispatch};
+use medulla_server_api::auth::compute_verified_envelope_token;
+use medulla_server_api::auth::VerifiedEnvelopeParams;
 use std::process::Command;
 
 const SECRET: &str = "txn-reconcile-ack-lost-secret";

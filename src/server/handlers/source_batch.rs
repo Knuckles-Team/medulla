@@ -20,7 +20,7 @@ use crate::mutation_batch::MutationBatch;
 use crate::protocol::{Response, ResultPayload};
 use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::auth::VerifiedRequestContext;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 mod authorization;
 #[cfg(test)]

@@ -8,7 +8,7 @@ use medulla::isolation::IsolationLayer;
 use medulla::protocol::{Method, Request, Response, ResultPayload};
 use medulla::registry::GraphRegistry;
 use medulla::server::api::persistence::PersistenceBackend;
-use medulla::server::ServerState;
+use medulla_server_api::state::ServerState;
 use tokio::sync::RwLock;
 
 #[cfg(feature = "redb")]

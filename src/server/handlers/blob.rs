@@ -1,7 +1,7 @@
 //! Streamed content-addressed BLOB handler (CONCEPT:MEDULLA-KG.storage.blob-namespace).
 //!
 //! Owns the `Blob*` methods. These are STATEFUL (they drive
-//! [`ServerState::blob`](crate::server::ServerState) — the CAS chunk store + the
+//! [`ServerState::blob`](medulla_server_api::state::ServerState) — the CAS chunk store + the
 //! open upload/fetch cursors), so like the OCC-txn handler they take `state`. The
 //! CAS operations touch redb (an fsync per durable commit), so every store call
 //! runs on the BLOCKING pool — never the async reactor — so a large media transfer

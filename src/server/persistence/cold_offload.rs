@@ -30,7 +30,7 @@ use tokio::sync::RwLock;
 use crate::graph::GraphCore;
 use crate::registry::GraphHandle;
 use medulla_server_api::api::persistence::PersistenceBackend;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// Identity for one access/offload tracker entry.  The name is only a routing
 /// key; the incarnation is the authority boundary.  A same-name recreate must
@@ -761,7 +761,7 @@ mod admission_tests {
     use crate::server::persistence::redb_backend::RedbBackend;
     use medulla_server_api::auth::build_current_test_request;
     use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
-    use crate::server::ServerState;
+    use medulla_server_api::state::ServerState;
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::sync::Arc;
     use tokio::sync::{RwLock, Semaphore};

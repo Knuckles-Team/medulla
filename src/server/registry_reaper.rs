@@ -37,7 +37,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::protocol::Method;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// Default sweep interval, seconds (`MEDULLA_SERVER_REGISTRY_REAP_SECS`
 /// overrides). Short enough that even the minimum `RegisterServer.ttl_secs`

@@ -50,7 +50,7 @@ use serde_json::json;
 use tokio::sync::RwLock;
 
 use medulla::protocol::{Method, Request, Response, ResultPayload};
-use medulla::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 const SECRET: &str = "advanced-crossmodal-secret";
 

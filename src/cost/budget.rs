@@ -18,7 +18,7 @@ use super::{
 };
 use crate::graph::GraphCore;
 use crate::registry::GraphHandle;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// Enforce the per-tenant memory budgets ONCE (CONCEPT:MEDULLA-KG.compute.lane-v). For every tenant over
 /// its effective budget (the smaller of its configured budget and its fair share of the

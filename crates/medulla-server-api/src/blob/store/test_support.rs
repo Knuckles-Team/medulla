@@ -20,7 +20,7 @@ pub(crate) struct Operation {
 
 impl Operation {
     /// Compile `id` against the store's current scope version.
-    pub(crate) fn new(store: &dyn ChunkStore, id: &str) -> Self {
+    pub fn new(store: &dyn ChunkStore, id: &str) -> Self {
         Self {
             id: id.to_string(),
             expected: store.mutation_version(TENANT, SCOPE).unwrap(),

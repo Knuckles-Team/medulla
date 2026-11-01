@@ -36,7 +36,7 @@ use super::{NodeId, RaftRequest};
 use crate::protocol::{GraphType, Method};
 use medulla_server_api::api::persistence::PersistenceBackend;
 use crate::server::persistence::redb_backend::RedbBackend;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// Build a ServerState with a redb-AUTHORITATIVE backend rooted at `dir`.
 async fn make_state(dir: &str) -> Arc<RwLock<ServerState>> {
@@ -389,7 +389,8 @@ async fn cluster_members_reports_topology_and_tracks_leader_failover() {
 
     use crate::acl::{AgentIdentity, AgentRole, RequestContextClaims};
     use crate::protocol::{Request, ResultPayload};
-    use crate::server::{compute_verified_envelope_token, VerifiedEnvelopeParams};
+    use medulla_server_api::auth::compute_verified_envelope_token;
+use medulla_server_api::auth::VerifiedEnvelopeParams;
 
     const TEST_AGENT: &str = "cluster-members-wire-test-agent";
     const SECRET: &str = "raft-test"; // matches make_state's ServerState.auth_secret
@@ -877,7 +878,9 @@ mod placement_admin_wire_rpc {
     use super::*;
     use crate::acl::{AgentIdentity, AgentRole, RequestContextClaims};
     use crate::protocol::{Response, ResultPayload};
-    use crate::server::{compute_verified_envelope_token, dispatch, VerifiedEnvelopeParams};
+    use crate::server::{dispatch};
+use medulla_server_api::auth::compute_verified_envelope_token;
+use medulla_server_api::auth::VerifiedEnvelopeParams;
 
     const TEST_AGENT: &str = "placement-admin-wire-test-agent";
     const SECRET: &str = "raft-test"; // matches `make_state`'s `auth_secret`.

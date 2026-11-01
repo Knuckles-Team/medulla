@@ -58,7 +58,7 @@ use medulla_query::{
 use crate::isolation::AccessLevel;
 use crate::protocol::Request;
 use medulla_server_api::access::CarrierAuthority;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 mod seam;
 pub use seam::WireSeam;
@@ -5382,10 +5382,10 @@ mod ne_004_ne_005_tests {
             std::process::id(),
             NONCE.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         );
-        req.auth_token = crate::server::compute_verified_envelope_token(
+        req.auth_token = medulla_server_api::auth::compute_verified_envelope_token(
             SECRET,
             &req,
-            &crate::server::VerifiedEnvelopeParams {
+            &medulla_server_api::auth::VerifiedEnvelopeParams {
                 context: &claims,
                 timestamp: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
@@ -6144,10 +6144,10 @@ pub(crate) mod wired_catalog_tests {
             std::process::id(),
             NONCE.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         );
-        req.auth_token = crate::server::compute_verified_envelope_token(
+        req.auth_token = medulla_server_api::auth::compute_verified_envelope_token(
             SECRET,
             &req,
-            &crate::server::VerifiedEnvelopeParams {
+            &medulla_server_api::auth::VerifiedEnvelopeParams {
                 context: &claims,
                 timestamp: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)

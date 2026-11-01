@@ -19,7 +19,7 @@ use crate::server::wire::wired_catalog_tests::{
     CREATOR,
 };
 use crate::server::wire::{WireProtocol as _, WireSession};
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 const TENANT: &str = "tenant-shared";
 

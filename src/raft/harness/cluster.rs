@@ -19,7 +19,7 @@ use openraft::async_runtime::watch::WatchReceiver;
 use tokio::sync::RwLock;
 
 use medulla_server_api::api::persistence::PersistenceBackend;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 use super::super::config::RaftClusterConfig;
 use super::super::node::{self, StartedNode};

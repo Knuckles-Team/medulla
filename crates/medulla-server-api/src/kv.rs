@@ -376,7 +376,7 @@ impl KvStore {
     /// Redis and S3 each select a distinct manifest identity for their own
     /// subordinate file.  `None` is still process-local memory and therefore
     /// has no physical identity to stamp.
-    pub(crate) fn open_named(
+    pub fn open_named(
         persist_dir: Option<&str>,
         physical_name: &str,
     ) -> Result<Self, String> {

@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// Transaction handler behaviour installed on the seam registry's `txn` slot.
 pub struct TxnSeam;

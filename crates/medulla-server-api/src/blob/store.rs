@@ -490,7 +490,7 @@ impl RedbChunkStore {
 
     /// Open an in-memory-only CAS backed by a temp dir (tests). The dir is left to
     /// the OS temp reaper; callers that want cleanup pass their own dir to `open`.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fn open_temp() -> Result<Self, String> {
         let dir = crate::api::dispatch_support::unique_temp_dir("medulla-blob-cas");
         Self::open(&dir.to_string_lossy())

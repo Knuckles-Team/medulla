@@ -58,7 +58,7 @@ use medulla_server_api::http1::HttpMessage;
 use medulla_server_api::http1::RequestLimits;
 use medulla_server_api::oidc::JwtValidator;
 use medulla_server_api::oidc::VerifiedTokenClaims;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 use medulla_lake::schema::{LakeField, LakeSchema, LakeType};
 
 use super::{LakeManager, LakeVisibility};

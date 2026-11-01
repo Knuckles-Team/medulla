@@ -39,7 +39,7 @@ pub(crate) struct CompiledCache<T> {
 }
 
 impl<T> CompiledCache<T> {
-    pub(crate) fn new(capacity: usize) -> Self {
+    pub fn new(capacity: usize) -> Self {
         Self {
             capacity: capacity.max(1),
             entries: Mutex::new(Vec::new()),

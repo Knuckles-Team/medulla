@@ -49,7 +49,7 @@ impl VerifiedRequestContext {
         self.origin == AuthorityOrigin::Verified
     }
 
-    pub(crate) fn anonymous_local(idempotency_key: Option<String>) -> Self {
+    pub fn anonymous_local(idempotency_key: Option<String>) -> Self {
         let nonce = Nonce::minted();
         let mut context = Self::from_verified_claims_with_nonce(
             RequestContextClaims {
@@ -75,7 +75,7 @@ impl VerifiedRequestContext {
         Self::from_verified_claims_with_nonce(claims, idempotency_key, None)
     }
 
-    pub(crate) fn from_verified_claims_with_nonce(
+    pub fn from_verified_claims_with_nonce(
         claims: RequestContextClaims,
         idempotency_key: String,
         wire_nonce: Option<Nonce>,
@@ -252,13 +252,13 @@ impl VerifiedRequestContext {
         self.wire_nonce
     }
 
-    #[cfg(test)]
-    pub(crate) fn verified_for_test(agent_id: &str) -> Self {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn verified_for_test(agent_id: &str) -> Self {
         Self::verified_for_test_in_tenant(agent_id, "tenant-shared")
     }
 
-    #[cfg(test)]
-    pub(crate) fn verified_for_test_in_tenant(agent_id: &str, tenant: &str) -> Self {
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn verified_for_test_in_tenant(agent_id: &str, tenant: &str) -> Self {
         Self::from_verified_claims(
             RequestContextClaims {
                 principal: format!("principal:{agent_id}"),
@@ -310,8 +310,8 @@ impl VerifiedRequestContext {
     /// scope set, for surfaces (`lake::rest`'s Iceberg-REST tests, NE-048) that
     /// need to exercise a carrier with a specific `kg:read`/`kg:write` grant
     /// rather than the shared fixture's fixed `kg:read`-only default.
-    #[cfg(test)]
-    pub(crate) fn verified_for_test_with_scopes(
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn verified_for_test_with_scopes(
         agent_id: &str,
         tenant: &str,
         scopes: &[&str],
@@ -391,7 +391,7 @@ impl VerifiedRequestContext {
     /// Mirrors [`Self::authenticated_local_query`]'s fixed-identity shape; callers
     /// pass ONLY after their own gate has already succeeded — this never
     /// authenticates anything itself.
-    pub(crate) fn authenticated_fixed_service_actor(
+    pub fn authenticated_fixed_service_actor(
         service: &str,
         scopes: &[&str],
     ) -> Result<Self, String> {
@@ -514,7 +514,7 @@ impl VerifiedRequestContext {
     /// verification they bind the authenticated ACL actor to the deployment's
     /// configured tenant/audience/policy.  The principal stored downstream is a
     /// secret-keyed opaque reference, never the login name.
-    pub(crate) fn authenticated_sql_wire_actor(
+    pub fn authenticated_sql_wire_actor(
         secret: &str,
         protocol: &str,
         agent_id: &str,

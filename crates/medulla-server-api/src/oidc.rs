@@ -291,7 +291,7 @@ impl JwtValidator {
     /// Build the observability listener's telemetry-writer validator (EH-410).
     /// No issuer configured ⇒ `Ok(None)`: ingest stays fail-closed under a
     /// secured deployment, exactly as before a collector identity existed.
-    pub(crate) fn from_env_obs() -> Result<Option<Self>, String> {
+    pub fn from_env_obs() -> Result<Option<Self>, String> {
         Self::from_envs(
             "obs-telemetry-writer",
             OBS_ISSUER_ENVS,

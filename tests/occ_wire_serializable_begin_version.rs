@@ -50,7 +50,7 @@ use std::sync::Arc;
 
 use medulla::registry::GraphRegistry;
 use medulla::server::pgwire;
-use medulla::server::ServerState;
+use medulla_server_api::state::ServerState;
 use tokio::sync::RwLock;
 
 const AUTH_SECRET: &str = "occ-begin-version-secret";

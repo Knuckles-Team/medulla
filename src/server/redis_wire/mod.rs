@@ -58,7 +58,7 @@ use tokio::sync::RwLock;
 
 use crate::server::broker_wire::{self, BrokerProtocol};
 use medulla_server_api::kv::KvStore;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// Env var: when set (and built `--features redis-wire`) the Redis RESP listener
 /// binds this address (documented loopback default `127.0.0.1:6379`, the Redis

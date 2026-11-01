@@ -79,7 +79,7 @@ pub struct CoreIcvGuard<'a> {
 }
 
 impl<'a> CoreIcvGuard<'a> {
-    pub(crate) fn single(core: &'a GraphCore) -> Self {
+    pub fn single(core: &'a GraphCore) -> Self {
         Self {
             authority: PolicyAuthority::Single(core),
         }

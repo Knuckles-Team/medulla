@@ -53,7 +53,7 @@ use crate::isolation::AccessLevel;
 use crate::protocol::DistAlgo;
 use medulla_server_api::access::check_graph_access;
 use medulla_server_api::access::GraphReadAuthority;
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// A single vertex's identity: its global id. Vertices are addressed by their string
 /// id (unique across the union — a vertex id present in two shards is the SAME logical

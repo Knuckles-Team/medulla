@@ -59,7 +59,7 @@ fn current_request(id: u64, method: Method) -> crate::protocol::Request {
 async fn bring_up(
     dir: &str,
     backend: fixture::Backend,
-) -> (Arc<MultiRaft>, Arc<RwLock<crate::server::ServerState>>) {
+) -> (Arc<MultiRaft>, Arc<RwLock<medulla_server_api::state::ServerState>>) {
     fixture::start_single_node_groups(
         dir,
         backend,
@@ -229,7 +229,7 @@ async fn placement_state_machine_binds_plan_identity_and_replay_nonce() {
 }
 
 async fn has_node(
-    state: &Arc<RwLock<crate::server::ServerState>>,
+    state: &Arc<RwLock<medulla_server_api::state::ServerState>>,
     graph: &str,
     node_id: &str,
 ) -> bool {

@@ -49,7 +49,7 @@ use tokio::sync::RwLock;
 use medulla::protocol::{GraphType, Method, Request, Response, ResultPayload};
 use medulla::server::api::persistence::PersistenceBackend;
 use medulla::server::persistence::redb_backend::RedbBackend;
-use medulla::server::ServerState;
+use medulla_server_api::state::ServerState;
 use medulla_kernel::crypto::{ENCRYPTION_KEY_ENV, TXN_RECOVERY_KEY_ENV};
 
 const SECRET: &str = "d-orc-50-decoupled-recovery-key-test";

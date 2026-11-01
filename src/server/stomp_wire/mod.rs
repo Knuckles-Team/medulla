@@ -35,7 +35,7 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::server::broker_wire::{self, invalid_data, prelude::*, BrokerProtocol};
-use crate::server::ServerState;
+use medulla_server_api::state::ServerState;
 
 /// Env var: when set (and the binary is built `--features stomp-wire`), the STOMP wire
 /// listener binds this address (documented loopback default `127.0.0.1:61613`). Unset ⇒
