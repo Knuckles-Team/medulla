@@ -10,7 +10,7 @@ use medulla_core::graph::GraphCore;
 use serde_json::json;
 use tokio::sync::RwLock;
 
-use crate::protocol::{GraphType, Method};
+use medulla_protocol_types::protocol::{GraphType, Method};
 use medulla_server_api::impact_watch::*;
 use medulla_server_api::state::ServerState;
 

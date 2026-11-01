@@ -183,7 +183,7 @@ async fn run_admission_unavailable_is_a_declared_wire_refusal() {
         )
         .await;
         let wire = rmp_serde::to_vec_named(&response).unwrap();
-        let decoded: crate::protocol::Response = rmp_serde::from_slice(&wire).unwrap();
+        let decoded: medulla_protocol_types::protocol::Response = rmp_serde::from_slice(&wire).unwrap();
         assert_eq!(decoded.error.as_deref(), Some("RUN_ADMISSION_UNAVAILABLE"));
         assert_eq!(
             decoded.error_detail.as_deref(),
@@ -359,7 +359,7 @@ fn ordinary_completion_native_fence_and_terminal_noop_preserve_binding() {
         },
     };
     let hold: ClaimWorkItemResult = match apply(&shard, "claim", claim, 2000).unwrap() {
-        crate::protocol::ResultPayload::Raw(bytes) => decode_durable(&bytes).unwrap(),
+        medulla_protocol_types::protocol::ResultPayload::Raw(bytes) => decode_durable(&bytes).unwrap(),
         other => panic!("unexpected claim {other:?}"),
     };
     assert!(hold.claimed);
@@ -408,7 +408,7 @@ fn ordinary_completion_native_fence_and_terminal_noop_preserve_binding() {
             if tag == "expired" { 62_001 } else { 3000 },
         )
         .unwrap();
-        let crate::protocol::ResultPayload::Json(refusal) = response else {
+        let medulla_protocol_types::protocol::ResultPayload::Json(refusal) = response else {
             panic!("expected a typed commit refusal");
         };
         assert_eq!(refusal["status"], "fenced", "{tag} must be fenced");
@@ -464,7 +464,7 @@ fn ordinary_completion_native_fence_and_terminal_noop_preserve_binding() {
 #[cfg(feature = "server")]
 #[test]
 fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
-    use crate::mutation_batch::MutationBatch;
+    use medulla_protocol_types::mutation_batch::MutationBatch;
     use medulla_mutation_types::mutation_scope::MutationSurface;
     use medulla_server_api::mutation_batch::compile_methods;
     use medulla_server_api::mutation_batch::principal_fingerprint;
@@ -507,9 +507,9 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
         .unwrap()
     };
     let decode_result = |bytes: &[u8]| -> serde_json::Value {
-        match rmp_serde::from_slice::<crate::protocol::ResultPayload>(bytes).unwrap() {
-            crate::protocol::ResultPayload::Raw(bytes) => rmp_serde::from_slice(&bytes).unwrap(),
-            crate::protocol::ResultPayload::Json(value) => value,
+        match rmp_serde::from_slice::<medulla_protocol_types::protocol::ResultPayload>(bytes).unwrap() {
+            medulla_protocol_types::protocol::ResultPayload::Raw(bytes) => rmp_serde::from_slice(&bytes).unwrap(),
+            medulla_protocol_types::protocol::ResultPayload::Json(value) => value,
             other => panic!("unexpected native result {other:?}"),
         }
     };

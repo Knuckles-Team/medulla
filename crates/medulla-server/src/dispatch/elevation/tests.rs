@@ -18,9 +18,9 @@ use tokio::sync::RwLock;
 const GRAPH: &str = "tenant__acme__default";
 const REQUEST_SCOPE: &str = "rbac:elevation";
 
-fn state() -> Arc<RwLock<super::medulla_server_api::state::ServerState>> {
+fn state() -> Arc<RwLock<medulla_server_api::state::ServerState>> {
     let isolation = medulla_server_api::access::two_agent_isolation();
-    Arc::new(RwLock::new(super::medulla_server_api::state::ServerState::new_for_test(
+    Arc::new(RwLock::new(medulla_server_api::state::ServerState::new_for_test(
         "elevation-test-secret",
         isolation,
     )))
@@ -33,7 +33,7 @@ fn context(agent: &str, scopes: &[&str], delegation: &[&str]) -> VerifiedRequest
 /// Dispatch one elevation op as `agent` holding `scopes`, carrying `forged`
 /// as the body's actor to prove it is never trusted.
 async fn send(
-    state: &Arc<RwLock<super::medulla_server_api::state::ServerState>>,
+    state: &Arc<RwLock<medulla_server_api::state::ServerState>>,
     context: VerifiedRequestContext,
     op: RbacElevationOp,
     forged: Option<ElevationActor>,
@@ -67,7 +67,7 @@ fn request_op() -> RbacElevationOp {
     }
 }
 
-async fn approve_op(state: &Arc<RwLock<super::medulla_server_api::state::ServerState>>) -> RbacElevationOp {
+async fn approve_op(state: &Arc<RwLock<medulla_server_api::state::ServerState>>) -> RbacElevationOp {
     let digest = state
         .read()
         .await
@@ -86,7 +86,7 @@ async fn approve_op(state: &Arc<RwLock<super::medulla_server_api::state::ServerS
     }
 }
 
-async fn alice_writes(state: &Arc<RwLock<super::medulla_server_api::state::ServerState>>) -> bool {
+async fn alice_writes(state: &Arc<RwLock<medulla_server_api::state::ServerState>>) -> bool {
     state.read().await.isolation.check_access(
         "alice",
         GRAPH,

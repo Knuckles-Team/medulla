@@ -51,7 +51,7 @@ const WORKER: &str = "semantic-dispatch-worker";
 fn dispatch_state(persist_dir: &std::path::Path) -> Arc<RwLock<medulla_server_api::state::ServerState>> {
     let mut state = medulla_server_api::state::ServerState::new_for_test(
         SECRET,
-        crate::isolation::IsolationLayer::new(),
+        medulla_core::isolation::IsolationLayer::new(),
     );
     state.persist_dir = Some(persist_dir.to_string_lossy().into_owned());
     Arc::new(RwLock::new(state))

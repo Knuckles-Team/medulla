@@ -75,6 +75,9 @@ tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sy
 tokio-rustls = { version = "0.26", optional = true }
 tracing = "0.1"
 uuid = { version = "1.28", features = ["v4"] }
+medulla-document = { path = "../medulla-document", optional = true }
+medulla-index-types = { path = "../medulla-index-types" }
+openraft = { version = "=0.10.0-alpha.26", features = ["serde"], optional = true }
 
 [features]
 amqp-wire = ["server"]
@@ -114,7 +117,7 @@ matview = ["query", "streaming"]
 metrics = []
 mining = []
 ml-pipeline = ["mining", "datascience", "graphlearn"]
-modality-serving = ["dep:medulla-modality", "dep:medulla-capabilities", "medulla-capabilities/modality-serving", "server", "redb", "security", "streaming"]
+modality-serving = ["dep:medulla-document", "medulla-document/serving", "dep:medulla-modality", "dep:medulla-capabilities", "medulla-capabilities/modality-serving", "server", "redb", "security", "streaming"]
 mqtt-wire = ["server"]
 mssql-wire = ["query", "server"]
 nl-query = ["dep:medulla-plan", "medulla-plan/nl-query", "query", "server"]
@@ -128,7 +131,7 @@ policy_export = ["security"]
 promql = ["dep:medulla-tsdb", "medulla-tsdb/promql", "obs"]
 quantum-agent-api = ["dep:medulla-capabilities", "medulla-capabilities/quantum", "server"]
 query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "dep:medulla-query", "medulla-query/sql", "dep:medulla-plan", "medulla-plan/query", "redb"]
-raft = ["server", "redb"]
+raft = ["dep:openraft", "server", "redb"]
 rdf = ["dep:medulla-rdf", "medulla-rdf/rdf", "server"]
 reasoning = []
 redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", ]

@@ -1,12 +1,12 @@
 //! CA-11 — CDC → Kafka sink (feature `cdc-kafka`, off by default).
 //!
 //! Bridges the existing in-memory CDC ring ([`crate::cdc`], feature
-//! `streaming`) onto Kafka per `DEC-CA-03`: every ordered [`crate::wire::CdcEvent`]
+//! `streaming`) onto Kafka per `DEC-CA-03`: every ordered [`medulla_types::wire::CdcEvent`]
 //! also lands on `medulla.cdc.<graph>`, single explicit partition, DEC-CA-03's
 //! JSON envelope shape. Everything here is glue: the trait + envelope +
 //! `rdkafka` producer live in the leaf crate `medulla_stream::sink` (must not
 //! depend on `medulla-core`/`medulla-types`); this module is the one place that knows
-//! both `crate::wire::CdcEvent` AND `medulla_stream::sink::SinkEvent`, so it does
+//! both `medulla_types::wire::CdcEvent` AND `medulla_stream::sink::SinkEvent`, so it does
 //! the translation and installs the bridge onto the live [`crate::cdc::CdcHub`].
 //!
 //! Migration/rollback: `MEDULLA_CDC_KAFKA_BROKERS` unset ⇒

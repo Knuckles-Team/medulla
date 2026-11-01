@@ -22,7 +22,7 @@
 //! single source of truth for "already in flight": a redundant trigger costs an
 //! instant no-op, never a second multi-minute build.
 //!
-//! The durable tier is [`crate::compute::semantic_ann_codes::SemanticCodeStore`]
+//! The durable tier is [`medulla_core::compute::semantic_ann_codes::SemanticCodeStore`]
 //! (feature `ann-redb`): one index generation becomes durable as ONE admitted
 //! `Native(SemanticIndex)` maintenance mutation, and the binding's live pointer
 //! flips inside that same transaction, so a generation never becomes live

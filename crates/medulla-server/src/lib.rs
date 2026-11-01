@@ -159,8 +159,8 @@ pub fn validate_verified_request_context_startup(
 // CDC -> Kafka sink (CA-11, feature `cdc-kafka`, off by default). Reserved and EMPTY
 // until CA-11 implements it; landed by CA-17's single feature-stub commit so CA-11 never
 // edits this shared module list.
-#[cfg(feature = "cdc-kafka")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+#[cfg(feature = "cdc-kafka")]
 pub mod cdc_sink;
 // Semantic ANN index activation (W0.4, CONCEPT:MEDULLA-KG.storage.semantic-index-directory): the ONE
 // reopen-else-build-else-activate body plus the two triggers the boot-time task
@@ -172,6 +172,7 @@ pub mod cdc_sink;
 pub mod semantic_activation;
 
 
+/// Validate the persisted RF-019 semantic-index activation state before the listeners bind.
 #[cfg(feature = "ann-redb")]
 pub fn preflight_rf019_activation(
     persist_dir: &std::path::Path,
@@ -179,6 +180,7 @@ pub fn preflight_rf019_activation(
     medulla_h_query::semantic_index_runtime::preflight_rf019_activation(persist_dir)
 }
 
+/// Install the validated RF-019 semantic-index activation once the registry exists.
 #[cfg(feature = "ann-redb")]
 pub fn install_rf019_activation(
     pending: PendingRf019Activation,
@@ -275,14 +277,14 @@ pub mod obs;
 // Reserved and EMPTY until CA-13 implements it; landed by CA-17's single feature-stub
 // commit so CA-13 never edits this shared module list. The OBDA mapping/rewrite engine
 // itself already exists behind the `obda` feature this one implies.
-#[cfg(feature = "obda-wire")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+#[cfg(feature = "obda-wire")]
 pub mod obda;
 // RLS marking-predicate export (CA-16, feature `policy_export`, off by default).
 // Reserved and EMPTY until CA-16 implements it; landed by CA-17's single feature-stub
 // commit so CA-16 never edits this shared module list.
-#[cfg(feature = "policy_export")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+#[cfg(feature = "policy_export")]
 pub mod policy_export;
 
 /// LTAP lakehouse materialization tier (CONCEPT:MEDULLA-KG.storage.lsn-as-snapshot-returns engine-side seam, feature
@@ -413,7 +415,7 @@ pub mod transport;
 /// built with.
 #[cfg(test)]
 mod ca17_feature_stub_contract {
-    const CARGO_TOML: &str = include_str!("../../Cargo.toml");
+    const CARGO_TOML: &str = include_str!("../../../Cargo.toml");
 
     /// `(feature name, the exact dependency list its owning lane builds on)`.
     const RESERVED: [(&str, &str); 6] = [
@@ -486,25 +488,25 @@ mod ca17_feature_stub_contract {
         for (file, source, gate, module) in [
             (
                 "src/server/mod.rs",
-                include_str!("mod.rs"),
+                include_str!("lib.rs"),
                 "cdc-kafka",
                 "pub mod cdc_sink;",
             ),
             (
-                "src/server/mod.rs",
-                include_str!("mod.rs"),
+                "crates/medulla-h-query/src/lib.rs",
+                include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../medulla-h-query/src/lib.rs")),
                 "sparql-fuseki",
                 "pub mod sparql_service;",
             ),
             (
                 "src/server/mod.rs",
-                include_str!("mod.rs"),
+                include_str!("lib.rs"),
                 "obda-wire",
                 "pub mod obda;",
             ),
             (
                 "src/server/mod.rs",
-                include_str!("mod.rs"),
+                include_str!("lib.rs"),
                 "policy_export",
                 "pub mod policy_export;",
             ),
@@ -512,7 +514,7 @@ mod ca17_feature_stub_contract {
                 "src/server/federation/mod.rs",
                 include_str!(concat!(
                     env!("CARGO_MANIFEST_DIR"),
-                    "/crates/medulla-h-query/src/federation/mod.rs"
+                    "/../medulla-h-query/src/federation/mod.rs"
                 )),
                 "federation-opensearch",
                 "pub mod opensearch;",
@@ -569,7 +571,7 @@ mod tests {
         state: &'a Arc<RwLock<ServerState>>,
         request: Request,
     ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Response> + Send + 'a>> {
-        Box::pin(dispatch(state, request))
+        Box::pin(crate::dispatch::dispatch(state, request))
     }
 
     /// Provision `MEDULLA_ENCRYPTION_KEY` for every test in this module that
@@ -1859,7 +1861,7 @@ mod tests {
             // hang the second one. Each connection is served on its own task.
             while let Ok((stream, _)) = listener.accept().await {
                 let serve = remote_for_serve.clone();
-                tokio::spawn(async move { handle_connection(stream, serve).await });
+                tokio::spawn(async move { crate::transport::handle_connection(stream, serve).await });
             }
         });
 
@@ -2983,7 +2985,7 @@ pub mod shex_served;
 
         let (mut client, server) = tokio::io::duplex(64 * 1024);
         let st = state.clone();
-        let handle = tokio::spawn(async move { handle_connection(server, st).await });
+        let handle = tokio::spawn(async move { crate::transport::handle_connection(server, st).await });
 
         // g_hot is saturated → its WRITE is shed BUSY at the per-graph cap.
         let r_hot = round_trip(&mut client, &request(1, "g_hot", None, add_node("h1"))).await;

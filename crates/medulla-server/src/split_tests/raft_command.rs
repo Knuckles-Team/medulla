@@ -1,10 +1,10 @@
 use medulla_raft::raft::command::*;
-use crate::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 
 #[cfg(feature = "ast")]
 #[test]
 fn sealed_repository_budget_is_bound_to_exact_source_intent() {
-    use crate::parser::enrichment_snapshot::EligibleSnapshot;
+    use medulla_compute::parser::enrichment_snapshot::EligibleSnapshot;
     use medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority;
     use medulla_types::ingestion_wire::{ExtractedNode, IndexResult};
 
@@ -109,7 +109,7 @@ fn native_command_excludes_plaintext_environment_values() {
     let command = NativeMutationCommand::from_public_method(
         Method::CreateGraph {
             graph_name: marker.to_string(),
-            graph_type: crate::protocol::GraphType::Global,
+            graph_type: medulla_protocol_types::protocol::GraphType::Global,
         },
         "cluster-test-key",
     )
@@ -150,7 +150,7 @@ fn graph_request(graph_name: &str, group_id: medulla_raft::raft::GroupId) -> med
     medulla_raft::raft::RaftRequest {
         graph_fname: medulla_kernel::persist::sanitize(graph_name),
         graph_name: graph_name.to_string(),
-        graph_type: crate::protocol::GraphType::Global,
+        graph_type: medulla_protocol_types::protocol::GraphType::Global,
         command: ReplicatedMutation::caller_graph(
             Method::RemoveNode {
                 node_id: "node".to_string(),

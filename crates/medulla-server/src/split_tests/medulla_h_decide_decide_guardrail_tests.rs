@@ -7,7 +7,7 @@ use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::protocol::{Method, Request, Response, ResultPayload};
+use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
 use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_persistence::agent_component::test_component_draft;
 use medulla_persistence::agent_fixtures::mutation_context;

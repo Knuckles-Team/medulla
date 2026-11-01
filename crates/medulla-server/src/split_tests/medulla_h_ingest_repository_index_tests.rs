@@ -10,7 +10,7 @@ use medulla_types::ingestion_wire::{ExtractedEdge, ExtractedNode, IndexResult};
 use medulla_h_ingest::repository_index::{
     lower, seal, IndexWriteSet, BATCH_TOO_LARGE, REDACTED_HOST_IDENTITY, REPOSITORY_LABELS,
 };
-use crate::protocol::Method;
+use medulla_protocol_types::protocol::Method;
 use medulla_server_api::mutation_batch::compile_methods;
 use medulla_server_api::mutation_batch::CompileBatch;
 

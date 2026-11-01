@@ -65,8 +65,8 @@ pub mod semantic_index;
 pub mod semantic_index_runtime;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[cfg(feature = "sparql-fuseki")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+#[cfg(feature = "sparql-fuseki")]
 pub mod sparql_service;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).

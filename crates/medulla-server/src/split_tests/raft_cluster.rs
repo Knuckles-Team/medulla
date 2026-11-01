@@ -58,7 +58,7 @@ async fn make_state_with_backend(
     medulla_raft::raft::harness_support::make_state_with_cdc(
         dir,
         backend,
-        crate::isolation::IsolationLayer::new(),
+        medulla_core::isolation::IsolationLayer::new(),
         "raft-test",
     )
     .await
@@ -210,8 +210,8 @@ async fn node_count(state: &Arc<RwLock<ServerState>>, graph: &str) -> usize {
 /// explicitly-sized `ENGINE_WORKER_STACK_BYTES` runtime instead, see its module doc.)
 fn dispatch_on_heap<'a>(
     state: &'a Arc<RwLock<ServerState>>,
-    request: crate::protocol::Request,
-) -> std::pin::Pin<Box<dyn std::future::Future<Output = crate::protocol::Response> + Send + 'a>> {
+    request: medulla_protocol_types::protocol::Request,
+) -> std::pin::Pin<Box<dyn std::future::Future<Output = medulla_protocol_types::protocol::Response> + Send + 'a>> {
     let dispatched = crate::dispatch::dispatch(state, request);
     Box::pin(dispatched)
 }
@@ -387,8 +387,8 @@ async fn cluster_members_reports_topology_and_tracks_leader_failover() {
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    use crate::acl::{AgentIdentity, AgentRole, RequestContextClaims};
-    use crate::protocol::{Request, ResultPayload};
+    use medulla_types::acl::{AgentIdentity, AgentRole, RequestContextClaims};
+    use medulla_protocol_types::protocol::{Request, ResultPayload};
     use medulla_server_api::auth::compute_verified_envelope_token;
     use medulla_server_api::auth::VerifiedEnvelopeParams;
 
@@ -589,9 +589,9 @@ async fn cluster_members_reports_topology_and_tracks_leader_failover() {
             req_id,
             vec!["*".to_string()],
             Method::PlacementRoute {
-                request: crate::epistemic_operations::PlacementRouteRequest {
+                request: medulla_result_types::epistemic_operations::PlacementRouteRequest {
                     schema_version:
-                        crate::epistemic_operations::PlacementRouteRequestSchemaVersion::V1,
+                        medulla_result_types::epistemic_operations::PlacementRouteRequestSchemaVersion::V1,
                     tenant_ref: "adr1-endpoints-check".to_string(),
                     partition_ref: "adr1-endpoints-check".to_string(),
                     client_epoch: 0,
@@ -880,8 +880,8 @@ async fn default_startup_stays_single_group_unchanged() {
 
 mod placement_admin_wire_rpc {
     use super::*;
-    use crate::acl::{AgentIdentity, AgentRole, RequestContextClaims};
-    use crate::protocol::{Response, ResultPayload};
+    use medulla_types::acl::{AgentIdentity, AgentRole, RequestContextClaims};
+    use medulla_protocol_types::protocol::{Response, ResultPayload};
     use crate::dispatch;
     use medulla_server_api::auth::compute_verified_envelope_token;
     use medulla_server_api::auth::VerifiedEnvelopeParams;
@@ -902,7 +902,7 @@ mod placement_admin_wire_rpc {
         });
     }
 
-    fn signed_request(id: u64, method: Method) -> crate::protocol::Request {
+    fn signed_request(id: u64, method: Method) -> medulla_protocol_types::protocol::Request {
         signed_request_for_graph(id, "__commons__", method)
     }
 
@@ -911,7 +911,7 @@ mod placement_admin_wire_rpc {
     /// (including `graph`), so setting `req.graph` AFTER signing invalidates the
     /// signature ("Authentication failed") — this is the one constructor path
     /// for a non-`__commons__` request.
-    fn signed_request_for_graph(id: u64, graph: &str, method: Method) -> crate::protocol::Request {
+    fn signed_request_for_graph(id: u64, graph: &str, method: Method) -> medulla_protocol_types::protocol::Request {
         let context = RequestContextClaims {
             principal: TEST_AGENT.to_string(),
             tenant: "tenant-shared".to_string(),
@@ -924,7 +924,7 @@ mod placement_admin_wire_rpc {
             node: None,
             priority: None,
         };
-        let mut request = crate::protocol::Request {
+        let mut request = medulla_protocol_types::protocol::Request {
             id,
             graph: graph.to_string(),
             auth_token: String::new(),
@@ -969,7 +969,7 @@ mod placement_admin_wire_rpc {
                     .unwrap(),
             },
         );
-        dispatch(state, req).await
+        crate::dispatch::dispatch(state, req).await
     }
 
     async fn read_node_via(
@@ -985,7 +985,7 @@ mod placement_admin_wire_rpc {
                 node_id: node_id.to_string(),
             },
         );
-        let resp = dispatch(state, req).await;
+        let resp = crate::dispatch::dispatch(state, req).await;
         assert!(
             resp.error.is_none(),
             "GetNodeProperties failed: {:?}",
@@ -1106,12 +1106,12 @@ mod placement_admin_wire_rpc {
             .await
             .unwrap();
         let control_state = node_state(control_leader);
-        let assign_resp = dispatch(
+        let assign_resp = crate::dispatch::dispatch(
             &control_state,
             signed_request(
                 1,
                 Method::PlacementAdmin {
-                    op: crate::protocol::PlacementAdminOp::Assign {
+                    op: medulla_protocol_types::protocol::PlacementAdminOp::Assign {
                         tenant: TENANT.to_string(),
                         group: DEFAULT_GROUP,
                     },
@@ -1132,7 +1132,7 @@ mod placement_admin_wire_rpc {
 
         // ── 2. Write data, then read it back from a DIFFERENT physical node ─
         let graph = format!("{TENANT}:ws1");
-        let create_resp = dispatch(
+        let create_resp = crate::dispatch::dispatch(
             &control_state,
             signed_request(
                 5,
@@ -1176,12 +1176,12 @@ mod placement_admin_wire_rpc {
         }
 
         // ── 3. The `move` op (PLAN -> EXECUTE -> CATALOG UPDATE) over the wire ──
-        let move_resp = dispatch(
+        let move_resp = crate::dispatch::dispatch(
             &control_state,
             signed_request(
                 2,
                 Method::PlacementAdmin {
-                    op: crate::protocol::PlacementAdminOp::Move {
+                    op: medulla_protocol_types::protocol::PlacementAdminOp::Move {
                         tenant: TENANT.to_string(),
                         range_start: 0,
                         range_end: u64::MAX,
@@ -1223,14 +1223,14 @@ mod placement_admin_wire_rpc {
             .find(|&i| i != control_leader && i != reader_id)
             .unwrap();
         let placement_route_request = |client_epoch: u64| Method::PlacementRoute {
-            request: crate::epistemic_operations::PlacementRouteRequest {
-                schema_version: crate::epistemic_operations::PlacementRouteRequestSchemaVersion::V1,
+            request: medulla_result_types::epistemic_operations::PlacementRouteRequest {
+                schema_version: medulla_result_types::epistemic_operations::PlacementRouteRequestSchemaVersion::V1,
                 tenant_ref: TENANT.to_string(),
                 partition_ref: "ws1".to_string(),
                 client_epoch,
             },
         };
-        let non_leader_resp = dispatch(
+        let non_leader_resp = crate::dispatch::dispatch(
             &node_state(route_checker_id),
             signed_request(3, placement_route_request(epoch0)),
         )
@@ -1240,7 +1240,7 @@ mod placement_admin_wire_rpc {
             Some("OPERATION_REDIRECTED"),
             "a non-leader node must redirect a PlacementRoute query, not answer it locally"
         );
-        let redirect: crate::epistemic_operations::OperationResult = match non_leader_resp.result {
+        let redirect: medulla_result_types::epistemic_operations::OperationResult = match non_leader_resp.result {
             Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(&bytes).unwrap(),
             other => panic!("expected a structured redirect, got {other:?}"),
         };
@@ -1252,7 +1252,7 @@ mod placement_admin_wire_rpc {
         // ── 4b. PlacementRoute from the ACTUAL placement-control leader,
         //      presenting the PRE-move epoch, must be flagged stale and
         //      redirected to the new group. ──
-        let route_resp = dispatch(
+        let route_resp = crate::dispatch::dispatch(
             &control_state,
             signed_request(4, placement_route_request(epoch0)),
         )
@@ -2257,10 +2257,10 @@ async fn all_members_observe_leader(
 }
 
 /// A `System`-role identity with no teams or extra roles.
-fn system_agent(agent_id: &str) -> crate::acl::AgentIdentity {
-    crate::acl::AgentIdentity {
+fn system_agent(agent_id: &str) -> medulla_types::acl::AgentIdentity {
+    medulla_types::acl::AgentIdentity {
         agent_id: agent_id.to_string(),
-        role: crate::acl::AgentRole::System,
+        role: medulla_types::acl::AgentRole::System,
         teams: Vec::new(),
         roles: Vec::new(),
     }
@@ -2656,13 +2656,13 @@ async fn wire_raft_add_learner_and_change_membership_resolve_through_dispatch() 
     // this whole body. READ guard: it excludes only a key MUTATOR, never another
     // opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    use crate::acl::{AgentIdentity, AgentRole};
-    use crate::protocol::ResultPayload;
+    use medulla_types::acl::{AgentIdentity, AgentRole};
+    use medulla_protocol_types::protocol::ResultPayload;
 
     const TEST_AGENT: &str = "raft-admin-wire-test-agent";
     const SECRET: &str = "raft-test";
 
-    fn signed_request(id: u64, method: Method) -> crate::protocol::Request {
+    fn signed_request(id: u64, method: Method) -> medulla_protocol_types::protocol::Request {
         medulla_raft::raft::harness_support::signed_request(
             id,
             "__commons__",
@@ -2955,8 +2955,8 @@ async fn member_add_follows_the_current_leader_after_a_leader_change() {
 #[cfg(feature = "compute-dist")]
 mod dist_compute {
     use super::*;
-    use crate::isolation::{AgentIdentity, AgentRole};
-    use crate::protocol::{DistAlgo, GraphType};
+    use medulla_core::isolation::{AgentIdentity, AgentRole};
+    use medulla_protocol_types::protocol::{DistAlgo, GraphType};
     use medulla_raft::raft::pregel;
     use medulla_server_api::access::GraphReadAuthority;
     use medulla_protocol_types::result_contract::cluster::DistResult;
@@ -2983,7 +2983,7 @@ mod dist_compute {
         placement: &dyn Fn(&str) -> &'static str,
     ) -> (
         Arc<RwLock<ServerState>>,
-        std::sync::Arc<crate::graph::GraphCore>,
+        std::sync::Arc<medulla_core::graph::GraphCore>,
     ) {
         let dir = std::env::temp_dir().join(format!(
             "medulla-pregel-{}-{}",
@@ -3031,7 +3031,7 @@ mod dist_compute {
         }
 
         // The single-graph reference: the WHOLE union in ONE core.
-        let union = std::sync::Arc::new(crate::graph::GraphCore::new());
+        let union = std::sync::Arc::new(medulla_core::graph::GraphCore::new());
         for n in nodes {
             union.add_node(n.to_string(), props(n));
         }
@@ -3110,7 +3110,7 @@ mod dist_compute {
             panic!("expected scores")
         };
 
-        let single = crate::algorithms::pagerank(&union.topology_snapshot(), 0.85, 50);
+        let single = medulla_compute::algorithms::pagerank(&union.topology_snapshot(), 0.85, 50);
         assert_eq!(
             score_map(&dist_scores),
             score_map(&single),
@@ -3137,7 +3137,7 @@ mod dist_compute {
 
         // Reference: single-graph CC partition. Compare as "same-component" equivalence
         // (the label VALUE differs by indexing, so compare which nodes share a label).
-        let single = crate::algorithms::connected_components(&union.topology_snapshot());
+        let single = medulla_compute::algorithms::connected_components(&union.topology_snapshot());
         let mut single_comp: std::collections::HashMap<String, usize> =
             std::collections::HashMap::new();
         for (ci, comp) in single.iter().enumerate() {
@@ -3235,7 +3235,7 @@ mod dist_compute {
 #[cfg(feature = "compute-dist")]
 mod matview {
     use super::*;
-    use crate::protocol::DistAlgo;
+    use medulla_protocol_types::protocol::DistAlgo;
     use medulla_server_api::api::persistence::MatView;
     use medulla_protocol_types::result_contract::cluster::DistResult;
 
