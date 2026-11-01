@@ -12,6 +12,7 @@ name = "medulla_protocol_types"
 path = "src/lib.rs"
 
 [dependencies]
+serde_bytes = "0.11.19"
 medulla-types = { path = "../medulla-types" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"

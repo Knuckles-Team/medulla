@@ -114,7 +114,7 @@ impl ResourceId {
     /// disjoint even when they would decode to the same logical text. The
     /// physical key is validated before conversion so a caller cannot smuggle
     /// a noncanonical or overlong storage spelling into authority.
-    pub(crate) fn from_physical_graph_key(value: &str) -> Result<Self, String> {
+    pub fn from_physical_graph_key(value: &str) -> Result<Self, String> {
         validate_physical_graph_key(value)?;
         let mut internal = String::with_capacity("physical:".len() + value.len() * 2);
         internal.push_str("physical:");

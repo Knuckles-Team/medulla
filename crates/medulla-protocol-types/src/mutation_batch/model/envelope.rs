@@ -479,7 +479,7 @@ fn identity_normalized_method(
         | Method::ReleaseWorkItemResources { .. }
         | Method::ReclaimWorkItemResources { .. }
         | Method::UpdateResourceHost { .. }
-        | medulla_protocol_types::capacity_lease_writes!() => method.clone(),
+        | crate::capacity_lease_writes!() => method.clone(),
         other => return Cow::Borrowed(other),
     };
     match &mut owned {

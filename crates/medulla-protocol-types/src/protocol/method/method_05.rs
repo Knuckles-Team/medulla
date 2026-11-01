@@ -99,7 +99,7 @@ $($variants)*
         foreign_execution: Option<medulla_types::foreign_read::ForeignReadExecutionRef>,
         /// Alternative bounded set of completed sources for a multi-source plan.
         /// The single and multi-source forms are mutually exclusive.
-        #[serde(default, skip_serializing_if = "crate::contract::BoundedVec::is_empty")]
+        #[serde(default, skip_serializing_if = "medulla_types::contract::BoundedVec::is_empty")]
         foreign_executions: medulla_types::contract::BoundedVec<medulla_types::foreign_read::ForeignReadExecutionRef, 16>,
     },
 
