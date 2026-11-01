@@ -50,14 +50,14 @@ const MAX_REPLAY_ENTRIES: usize = 200_000;
 /// the `2 * window` horizon the skew check already refuses (pruning). A
 /// restart forgets everything, so the durable adapter seeds the floor with the
 /// high-water timestamp the previous incarnation made durable.
-#[cfg(any(test, feature = "security"))]
+#[cfg(any(test, feature = "security", feature = "test-support"))]
 pub(crate) struct NonceWindow {
     seen: std::collections::HashMap<String, u64>,
     floor: u64,
     last_prune: u64,
 }
 
-#[cfg(any(test, feature = "security"))]
+#[cfg(any(test, feature = "security", feature = "test-support"))]
 impl NonceWindow {
     pub(crate) fn with_floor(floor: u64) -> Self {
         NonceWindow {
