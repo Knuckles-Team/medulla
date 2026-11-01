@@ -8,6 +8,27 @@
 pub(crate) const ENGINE_LEDGER_PRINCIPAL: &str =
     "principal:sha256:41290b0e412ac542f312d4312a7a299e771eec66e3ffbbf7edb6369576875fb2";
 
+/// Replay entry of the data-mining write-back arms (MEDULLA-CONTRACT-R056.8).
+/// The mining handlers live above the kernel; the server installs them here.
+pub type ReplayHook = fn(&crate::graph::GraphCore, &crate::protocol::Method);
+
+static MINING_REPLAY: std::sync::OnceLock<ReplayHook> = std::sync::OnceLock::new();
+
+/// Install the mining write-back replay. The first installation wins.
+pub fn install_mining_replay(hook: ReplayHook) {
+    let _ = MINING_REPLAY.set(hook);
+}
+
+/// Replay one mining write-back `method` against `core` through the installed
+/// hook; with none installed the method takes the generic durable-apply arm,
+/// as in a build without the mining handlers.
+pub fn replay_mining(core: &crate::graph::GraphCore, method: &crate::protocol::Method) {
+    match MINING_REPLAY.get() {
+        Some(hook) => hook(core, method),
+        None => medulla_core::durable_apply::apply(core, method),
+    }
+}
+
 /// Return a unique process-local temporary directory path and clear any stale
 /// path from a previous interrupted test run.
 ///

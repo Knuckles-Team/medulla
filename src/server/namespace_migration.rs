@@ -54,7 +54,9 @@ pub fn rewrite_msgpack(bytes: &[u8]) -> Result<Option<Vec<u8>>, String> {
     let mut changed = false;
     walk(bytes, &mut cursor, &mut out, &mut changed, 0)?;
     if cursor != bytes.len() {
-        return Err(format!("trailing bytes after MessagePack value at {cursor}"));
+        return Err(format!(
+            "trailing bytes after MessagePack value at {cursor}"
+        ));
     }
     Ok(changed.then_some(out))
 }
@@ -72,7 +74,8 @@ fn take<'a>(bytes: &'a [u8], cursor: &mut usize, n: usize) -> Result<&'a [u8], S
 }
 
 fn be_len(raw: &[u8]) -> usize {
-    raw.iter().fold(0usize, |acc, byte| (acc << 8) | usize::from(*byte))
+    raw.iter()
+        .fold(0usize, |acc, byte| (acc << 8) | usize::from(*byte))
 }
 
 fn write_str(out: &mut Vec<u8>, text: &str) {
@@ -128,9 +131,21 @@ fn walk(
         0xc4 => (1, be_len(bytes.get(*cursor..*cursor + 1).unwrap_or(&[])), 0),
         0xc5 => (2, be_len(bytes.get(*cursor..*cursor + 2).unwrap_or(&[])), 0),
         0xc6 => (4, be_len(bytes.get(*cursor..*cursor + 4).unwrap_or(&[])), 0),
-        0xc7 => (1, be_len(bytes.get(*cursor..*cursor + 1).unwrap_or(&[])) + 1, 0),
-        0xc8 => (2, be_len(bytes.get(*cursor..*cursor + 2).unwrap_or(&[])) + 1, 0),
-        0xc9 => (4, be_len(bytes.get(*cursor..*cursor + 4).unwrap_or(&[])) + 1, 0),
+        0xc7 => (
+            1,
+            be_len(bytes.get(*cursor..*cursor + 1).unwrap_or(&[])) + 1,
+            0,
+        ),
+        0xc8 => (
+            2,
+            be_len(bytes.get(*cursor..*cursor + 2).unwrap_or(&[])) + 1,
+            0,
+        ),
+        0xc9 => (
+            4,
+            be_len(bytes.get(*cursor..*cursor + 4).unwrap_or(&[])) + 1,
+            0,
+        ),
         0xca => (0, 4, 0),
         0xcb => (0, 8, 0),
         0xcc | 0xd0 => (0, 1, 0),
@@ -144,8 +159,16 @@ fn walk(
         0xd8 => (0, 17, 0),
         0xdc => (2, 0, be_len(bytes.get(*cursor..*cursor + 2).unwrap_or(&[]))),
         0xdd => (4, 0, be_len(bytes.get(*cursor..*cursor + 4).unwrap_or(&[]))),
-        0xde => (2, 0, 2 * be_len(bytes.get(*cursor..*cursor + 2).unwrap_or(&[]))),
-        0xdf => (4, 0, 2 * be_len(bytes.get(*cursor..*cursor + 4).unwrap_or(&[]))),
+        0xde => (
+            2,
+            0,
+            2 * be_len(bytes.get(*cursor..*cursor + 2).unwrap_or(&[])),
+        ),
+        0xdf => (
+            4,
+            0,
+            2 * be_len(bytes.get(*cursor..*cursor + 4).unwrap_or(&[])),
+        ),
         0xc1 => return Err(format!("invalid MessagePack marker 0xc1 at {start}")),
     };
     take(bytes, cursor, header + payload)?;
@@ -169,8 +192,8 @@ pub fn plan_graph(
     let mut node_writes = Vec::new();
     for (node_id, properties) in nodes {
         let new_id = rewrite_text(node_id);
-        let new_props = rewrite_msgpack(properties)
-            .map_err(|error| format!("node {node_id}: {error}"))?;
+        let new_props =
+            rewrite_msgpack(properties).map_err(|error| format!("node {node_id}: {error}"))?;
         if new_id.is_none() && new_props.is_none() {
             continue;
         }
@@ -297,7 +320,11 @@ async fn migrate_graph(
     Ok(())
 }
 
-async fn submit(state: &Arc<RwLock<ServerState>>, graph: &str, method: Method) -> Result<(), String> {
+async fn submit(
+    state: &Arc<RwLock<ServerState>>,
+    graph: &str,
+    method: Method,
+) -> Result<(), String> {
     let anonymous = state.read().await.local_anonymous;
     #[cfg(feature = "security")]
     if !anonymous {
@@ -323,7 +350,8 @@ async fn submit(state: &Arc<RwLock<ServerState>>, graph: &str, method: Method) -
         agent_id: Some(context.agent_id().to_string()),
         method,
     };
-    let response = crate::server::api::reentry::dispatch_verified_request(state, request, context).await;
+    let response =
+        crate::server::api::reentry::dispatch_verified_request(state, request, context).await;
     match response.refusal_text() {
         None => Ok(()),
         Some(refusal) => Err(refusal.to_string()),
@@ -371,7 +399,9 @@ mod tests {
         let text = serde_json::to_string(&decode(&rewritten)).unwrap();
         assert!(!text.contains(RETIRED_OWL_NAMESPACE));
         let expected = serde_json::from_str::<serde_json::Value>(
-            &serde_json::to_string(&value).unwrap().replace(RETIRED_OWL_NAMESPACE, OWL_NAMESPACE),
+            &serde_json::to_string(&value)
+                .unwrap()
+                .replace(RETIRED_OWL_NAMESPACE, OWL_NAMESPACE),
         )
         .unwrap();
         assert_eq!(decode(&rewritten), expected);
@@ -392,30 +422,57 @@ mod tests {
         let new = "http://medulla/owl#Agent".to_string();
         let nodes = vec![
             (old.clone(), props(&serde_json::json!({"label": "Agent"}))),
-            ("plain".to_string(), props(&serde_json::json!({"type": old.clone()}))),
-            ("untouched".to_string(), props(&serde_json::json!({"type": "Thing"}))),
+            (
+                "plain".to_string(),
+                props(&serde_json::json!({"type": old.clone()})),
+            ),
+            (
+                "untouched".to_string(),
+                props(&serde_json::json!({"type": "Thing"})),
+            ),
         ];
         let edges = vec![
-            ("plain".to_string(), old.clone(), props(&serde_json::json!({"rel": "is"}))),
-            ("untouched".to_string(), "plain".to_string(), props(&serde_json::json!({}))),
+            (
+                "plain".to_string(),
+                old.clone(),
+                props(&serde_json::json!({"rel": "is"})),
+            ),
+            (
+                "untouched".to_string(),
+                "plain".to_string(),
+                props(&serde_json::json!({})),
+            ),
         ];
         let writes = plan_graph(&nodes, &edges).unwrap();
         let names: Vec<&'static str> = writes.iter().map(|m| m.into()).collect();
-        assert_eq!(names, ["RemoveEdge", "RemoveNode", "AddNode", "AddNode", "AddEdge"]);
+        assert_eq!(
+            names,
+            ["RemoveEdge", "RemoveNode", "AddNode", "AddNode", "AddEdge"]
+        );
         match &writes[2] {
             Method::AddNode { node_id, .. } => assert_eq!(node_id, &new),
             other => panic!("unexpected {other:?}"),
         }
         match &writes[3] {
-            Method::AddNode { node_id, properties_msgpack } => {
+            Method::AddNode {
+                node_id,
+                properties_msgpack,
+            } => {
                 assert_eq!(node_id, "plain");
                 assert_eq!(decode(properties_msgpack)["type"], serde_json::json!(new));
             }
             other => panic!("unexpected {other:?}"),
         }
         match &writes[4] {
-            Method::AddEdge { source_id, target_id, .. } => {
-                assert_eq!((source_id.as_str(), target_id.as_str()), ("plain", new.as_str()));
+            Method::AddEdge {
+                source_id,
+                target_id,
+                ..
+            } => {
+                assert_eq!(
+                    (source_id.as_str(), target_id.as_str()),
+                    ("plain", new.as_str())
+                );
             }
             other => panic!("unexpected {other:?}"),
         }
@@ -423,7 +480,10 @@ mod tests {
 
     #[test]
     fn migrated_graph_plans_nothing() {
-        let nodes = vec![("http://medulla/owl#Agent".to_string(), props(&serde_json::json!({"t": "x"})))];
+        let nodes = vec![(
+            "http://medulla/owl#Agent".to_string(),
+            props(&serde_json::json!({"t": "x"})),
+        )];
         assert!(plan_graph(&nodes, &[]).unwrap().is_empty());
     }
 }

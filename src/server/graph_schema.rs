@@ -94,7 +94,7 @@ pub(crate) async fn commit_pack_projection(
                 .to_string(),
         );
     }
-    crate::server::dispatch::ensure_internal_global_graph(
+    crate::server::api::reentry::ensure_internal_global_graph(
         state,
         req_id,
         verified,

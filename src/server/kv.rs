@@ -684,7 +684,7 @@ fn is_kv_method(method: &Method) -> bool {
 /// `kv.redb` holds real acknowledged user writes (`KvPut`/`KvCas`) and the fleet-shared
 /// KV-cache blocks, in its OWN durability domain off the graph shards.
 #[cfg(feature = "redb")]
-impl crate::server::persistence::durable_stores::BundledStoreSource for KvStore {
+impl crate::server::api::persistence::BundledStoreSource for KvStore {
     fn file_name(&self) -> &'static str {
         "kv.redb"
     }

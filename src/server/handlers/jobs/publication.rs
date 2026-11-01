@@ -6,6 +6,8 @@ use super::prelude_jobs::*;
 use super::prelude_server::*;
 use super::prelude_std::*;
 use super::*;
+#[cfg(feature = "raft")]
+use crate::raft::RaftStateExt;
 
 /// Transient scheduler-group PREPARE result. It is returned only to the trusted
 /// coordinator; every subsequent Raft command carries it AEAD-sealed.
@@ -423,8 +425,7 @@ pub(crate) async fn apply_consensus_job_publication_commit(
     let (multi, core, persistence) = {
         let current = state.read().await;
         let multi = current
-            .multi_raft
-            .clone()
+            .multi_raft()
             .ok_or_else(|| "job publication lost placement authority".to_string())?;
         let entry = current
             .registry

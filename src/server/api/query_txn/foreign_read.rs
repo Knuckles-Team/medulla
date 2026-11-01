@@ -25,12 +25,12 @@ use medulla_types::foreign_read::{
 use super::foreign_catalog::{ForeignSourceCatalog, OwnedForeignRegistry};
 use crate::isolation::IsolationLayer;
 use crate::server::access::CarrierAuthority;
-use crate::server::persistence::agent_library::AgentLibraryStore;
+use crate::server::api::persistence::SourceApprovalStore;
 
 /// Owner-controlled dependencies used to revalidate and bind completed reads.
 pub struct ForeignBindingContext<'a> {
     pub catalog: &'a ForeignSourceCatalog,
-    pub store: &'a AgentLibraryStore,
+    pub store: &'a dyn SourceApprovalStore,
     pub isolation: &'a IsolationLayer,
 }
 
@@ -201,7 +201,7 @@ impl ForeignReadSessions {
     pub fn append(
         &self,
         caller: &CarrierAuthority,
-        store: &AgentLibraryStore,
+        store: &dyn SourceApprovalStore,
         catalog: &ForeignSourceCatalog,
         request: ForeignReadChunkRequest,
     ) -> Result<ForeignReadChunkResult, String> {
@@ -322,7 +322,7 @@ impl ForeignReadSessions {
     pub fn complete(
         &self,
         caller: &CarrierAuthority,
-        store: &AgentLibraryStore,
+        store: &dyn SourceApprovalStore,
         catalog: &ForeignSourceCatalog,
         request: ForeignReadCompleteRequest,
     ) -> Result<ForeignReadCompleteResult, String> {
@@ -343,7 +343,7 @@ impl ForeignReadSessions {
     pub fn abort(
         &self,
         caller: &CarrierAuthority,
-        store: &AgentLibraryStore,
+        store: &dyn SourceApprovalStore,
         catalog: &ForeignSourceCatalog,
         request: ForeignReadAbortRequest,
     ) -> Result<ForeignReadAbortResult, String> {
@@ -371,7 +371,7 @@ impl ForeignReadSessions {
         execution: ForeignReadExecutionRef,
         plan_digest: Digest256,
         catalog: &ForeignSourceCatalog,
-        store: &AgentLibraryStore,
+        store: &dyn SourceApprovalStore,
         isolation: &IsolationLayer,
     ) -> Result<OwnedForeignRegistry, String> {
         let record_handle = self.record_for(caller, execution)?;
@@ -511,7 +511,7 @@ impl ForeignReadSessions {
     fn revalidate_phase(
         &self,
         caller: &CarrierAuthority,
-        store: &AgentLibraryStore,
+        store: &dyn SourceApprovalStore,
         catalog: &ForeignSourceCatalog,
         record: &Arc<Mutex<SessionRecord>>,
     ) -> Result<(), String> {

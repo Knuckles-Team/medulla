@@ -1,5 +1,7 @@
 //! Private EH-557 top-up producer. No public Method routes here yet.
 
+#[cfg(feature = "raft")]
+use crate::raft::RaftStateExt;
 use std::sync::Arc;
 
 use medulla_types::mutation_batch::RepositoryEnrichmentTopUp;
@@ -33,8 +35,7 @@ async fn require_current_local_leader(
     let multi = state
         .read()
         .await
-        .multi_raft
-        .clone()
+        .multi_raft()
         .ok_or("STALE_ROUTE: repository enrichment placement is unavailable")?;
     let current = multi
         .handle_for_graph(graph)
@@ -123,8 +124,7 @@ async fn prepare(
                 .clone()
                 .ok_or("CONFLICT: repository enrichment persistence is unavailable")?,
             current
-                .multi_raft
-                .clone()
+                .multi_raft()
                 .ok_or("CONFLICT: repository enrichment top-up requires multi-Raft")?,
             entry.graph_type,
         )

@@ -7341,9 +7341,6 @@ mod wired_catalog_tests {
         .is_empty());
     }
 
-    // EH-352: DROP INDEX never discloses across authorization; edge-index
-    // statuses on every served read path.
-    mod edge_index;
 }
 
 #[cfg(all(test, feature = "query"))]

@@ -1,5 +1,7 @@
 //! R073.4 reads receipts produced by the signed served import, not synthetic receipts.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use medulla_types::agent_library::AgentLibraryMutationContext;
 use medulla_types::connector_pack::{
     PackImportRecord, PackImportResult, CONNECTOR_PACK_IMPORT_TOPIC,
@@ -7,7 +9,9 @@ use medulla_types::connector_pack::{
 };
 use medulla_types::contract::{Digest256, Nonce};
 use medulla_types::mutation::{MutationReceipt, MutationResult};
-use medulla_types::mutation_batch::{MutationBatchRecord, MutationBatchStatus, MutationOutboxIntent};
+use medulla_types::mutation_batch::{
+    MutationBatchRecord, MutationBatchStatus, MutationOutboxIntent,
+};
 
 use crate::server::persistence::agent_library::AgentLibraryStore;
 use crate::server::persistence::connector_pack::admitted::{PackWriteEffects, PackWriteIdentity};
@@ -187,7 +191,8 @@ async fn committed_multi_intent_receipt_binds_all_effects_and_survives_replay() 
         panic!("typed receipt must carry the import result");
     };
     assert_eq!(schema_id.as_str(), CONNECTOR_PACK_RESULT_SCHEMA_ID);
-    let original: PackImportResult = medulla_storage::decode_ledger_record(payload.as_slice()).unwrap();
+    let original: PackImportResult =
+        medulla_storage::decode_ledger_record(payload.as_slice()).unwrap();
     assert_eq!(
         original,
         PackImportResult::Imported {

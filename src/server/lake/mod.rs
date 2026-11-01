@@ -69,6 +69,7 @@ pub mod rest;
 
 use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 
 use parking_lot::Mutex;
 use serde_json::Value;
@@ -390,6 +391,28 @@ pub enum CreateTableError {
 pub enum RenameTableError {
     SourceNotFound,
     DestinationExists,
+}
+
+/// Typed access to the type-erased lakehouse manager held by `ServerState`
+/// (MEDULLA-CONTRACT-R056.8).
+pub trait LakeStateExt {
+    /// The installed manager, or a fresh empty one when startup installed none.
+    fn lake(&self) -> Arc<LakeManager>;
+    /// Install the process-global manager.
+    fn set_lake(&mut self, lake: Arc<LakeManager>);
+}
+
+impl LakeStateExt for crate::server::ServerState {
+    fn lake(&self) -> Arc<LakeManager> {
+        self.lake
+            .as_ref()
+            .and_then(|h| Arc::clone(h).downcast::<LakeManager>().ok())
+            .unwrap_or_default()
+    }
+
+    fn set_lake(&mut self, lake: Arc<LakeManager>) {
+        self.lake = Some(lake);
+    }
 }
 
 /// Owns every materialized lake table, the aggregate Iceberg-REST catalog, the
@@ -1415,9 +1438,11 @@ mod tests {
             )
             .unwrap());
         release_write.send(()).expect("release stale compaction");
-        let conflict =
-            medulla_kernel::test_rendezvous::join_bounded(stale_compaction, "the stale compaction thread")
-                .expect_err("pre-evolution candidate must fail its revision fence");
+        let conflict = medulla_kernel::test_rendezvous::join_bounded(
+            stale_compaction,
+            "the stale compaction thread",
+        )
+        .expect_err("pre-evolution candidate must fail its revision fence");
         assert!(conflict.contains("lake write conflict"));
         assert_eq!(manager.paths.lock().len(), initial_path_count);
         assert_eq!(

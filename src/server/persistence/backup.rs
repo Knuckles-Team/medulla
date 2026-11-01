@@ -83,7 +83,7 @@
 //! with no RBAC/identity state at all — a backup that silently cannot restore identity
 //! is worse than no backup, because it is trusted. redb's exclusive per-file lock means
 //! this module can never simply open a sibling store, so the two halves of the fix are:
-//! the caller hands in the live handles it owns ([`super::durable_stores::BundledStoreSource`]),
+//! the caller hands in the live handles it owns ([`crate::server::api::persistence::BundledStoreSource`]),
 //! and everything still left out is NAMED IN THE MANIFEST with the reason it was left
 //! out. `durable_stores`' `registry_covers_every_redb_store` test is what stops a future
 //! `.redb` from being silently forgotten again.
@@ -1160,7 +1160,7 @@ mod tests {
         let backend = RedbBackend::open_with_shards(src_s.clone(), 256, 1).expect("reopen");
         // Exactly the adapter the production admin handler hands in.
         let rbac_source = super::super::durable_stores::RbacBundledStore(std::sync::Arc::new(rbac));
-        let extra: Vec<&dyn super::super::durable_stores::BundledStoreSource> =
+        let extra: Vec<&dyn crate::server::api::persistence::BundledStoreSource> =
             vec![&rbac_source, &kv];
         let report = backend
             .backup(&bundle, "test-engine", 7, "sibling", &extra)
@@ -1242,7 +1242,7 @@ mod tests {
         #[cfg(feature = "security")]
         let _env_lock = medulla_kernel::crypto::acquire_test_env_lock().await;
         struct Bogus;
-        impl super::super::durable_stores::BundledStoreSource for Bogus {
+        impl crate::server::api::persistence::BundledStoreSource for Bogus {
             fn file_name(&self) -> &'static str {
                 "not-in-the-registry.redb"
             }
@@ -1259,7 +1259,7 @@ mod tests {
         seed(&src_s, 1, &["alpha"]).await;
         let backend = RedbBackend::open_with_shards(src_s.clone(), 256, 1).expect("reopen");
         let bogus = Bogus;
-        let extra: Vec<&dyn super::super::durable_stores::BundledStoreSource> = vec![&bogus];
+        let extra: Vec<&dyn crate::server::api::persistence::BundledStoreSource> = vec![&bogus];
         let error = backend
             .backup(&root.join("bundle"), "test-engine", 7, "", &extra)
             .expect_err("unregistered store must be refused");

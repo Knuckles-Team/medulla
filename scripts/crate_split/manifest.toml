@@ -258,6 +258,7 @@ paths = [
     "src/server/dispatch",
     "src/server/mod.rs",
     "src/server/seams_install",  # seam installation (R056.8)
+    "src/server/split_tests",  # tests that need the full server (R056)
     "src/server_startup",
     "src/server/handlers/mod.rs",  # unplanned
     "src/server/boot_maintenance",  # unplanned

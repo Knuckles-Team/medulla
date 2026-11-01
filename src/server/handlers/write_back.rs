@@ -4,6 +4,8 @@
 //! verified tenant, actor and request idempotency key, then calls the existing
 //! tenant-scoped ControlRedb owner.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;

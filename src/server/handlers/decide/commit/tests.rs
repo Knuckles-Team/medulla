@@ -1,5 +1,7 @@
 //! The served guard must refuse before either durable owner changes.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
 use medulla_compute::assemble::{assemble, inputs, replay_check, RecordIdentity};

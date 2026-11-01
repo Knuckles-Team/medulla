@@ -14,6 +14,8 @@
 //! the Agent Library and jobs, a binding for a semantic index, a resource for
 //! the tenant's shared SQL catalog.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;

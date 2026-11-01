@@ -6,6 +6,8 @@
 //! fixtures that need the served path: exploration on a security question,
 //! a foreign tenant, an idempotency conflict, graph candidates.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -1185,9 +1187,11 @@ async fn graph_log_record(h: &Harness) -> StatisticalDecisionRecord {
     );
     graph_request.candidates = CandidateSource::Graph {
         graph: "kg-decide-log".to_string(),
-        plan: Box::new(medulla_types::wire::Plan::new(vec![medulla_types::wire::Op::Scan {
-            label: "Tool".to_string(),
-        }])),
+        plan: Box::new(medulla_types::wire::Plan::new(vec![
+            medulla_types::wire::Op::Scan {
+                label: "Tool".to_string(),
+            },
+        ])),
     };
     let batch = decide(h, graph_request).await.unwrap();
     batch.records.as_slice()[0].clone()

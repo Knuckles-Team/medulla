@@ -3,6 +3,8 @@
 //! individual asserted into two disjoint classes -- is refused by name, which
 //! a TBox-only classification could not see.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use medulla_types::connector_pack::{
     PackAnnotations, PackEntryKind, PackImportResult, PackViolationCode,
 };

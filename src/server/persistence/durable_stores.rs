@@ -32,6 +32,8 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
+use crate::server::api::persistence::BundledStoreSource;
+
 /// Whether a durable store is captured by the online backup bundle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BackupScope {
@@ -219,31 +221,6 @@ pub fn excluded_store_reasons() -> BTreeMap<String, String> {
             BackupScope::Bundled | BackupScope::Retired(_) => None,
         })
         .collect()
-}
-
-/// A durable store that can copy its own committed image into a fresh bundle file.
-///
-/// Implemented next to each store's own identity, because the copy is the STORAGE
-/// KERNEL's whole-image backup (`medulla_storage::backup_recovery_store`): it carries the
-/// ledger and every declared owner table, and it derives a fresh destination root and
-/// rebinds each scope to it, which is what makes the bundled file adoptable at
-/// restore. The hand-rolled table-by-table stream this replaced produced a plain redb
-/// file with no physical root or owner manifest, which a restore could not adopt.
-pub trait BundledStoreSource: Send + Sync {
-    /// Bundle-local file name — MUST be a `BackupScope::Bundled` entry in
-    /// [`DURABLE_STORES`].
-    fn file_name(&self) -> &'static str;
-
-    /// Copy the store's latest committed state verbatim into a FRESH file at
-    /// `destination`, returning the number of rows copied. Must refuse to overwrite.
-    fn copy_into(&self, destination: &Path) -> Result<u64, String>;
-
-    /// `false` when this store has no on-disk file (an in-memory/test adapter). A
-    /// non-durable store is skipped by the backup rather than failing it — there is
-    /// nothing to lose and nothing to restore.
-    fn is_durable(&self) -> bool {
-        true
-    }
 }
 
 /// Adapter that presents the isolation layer's durable RBAC/identity store as a

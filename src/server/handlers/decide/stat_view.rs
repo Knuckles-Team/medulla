@@ -17,10 +17,14 @@
 //! (no user table, view or `COPY` can take them), and the relations live only in the
 //! caller's per-statement projection, so they are read-only by construction.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
 use medulla_query::{Column, ColumnType, TableSchema};
-use medulla_types::decision::statistical::log::{DecisionLogEntry, StoredEvaluation, StoredResolution};
+use medulla_types::decision::statistical::log::{
+    DecisionLogEntry, StoredEvaluation, StoredResolution,
+};
 use serde::Serialize;
 use serde_json::{Map, Value};
 
@@ -189,7 +193,7 @@ impl DecisionViews {
         state: &SharedState,
         authority: &CarrierAuthority,
     ) -> Option<Arc<Self>> {
-        let open = state.read().await.agent_library.clone();
+        let open = state.read().await.agent_library();
         let store = match open {
             Some(store) => store,
             None => match state.write().await.ensure_agent_library() {

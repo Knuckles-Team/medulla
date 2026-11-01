@@ -28,7 +28,7 @@
 //!    so encryption-at-rest blobs survive WITHOUT the key and the tamper-evident
 //!    hash-chained `audit_chain` stays verifiable — re-deriving it would break
 //!    verification, copying preserves it.
-//! 2. **The ledger** — [`Shard::graft_graph_from`]. RF-RULING-004 application note 4: a
+//! 2. **The ledger** — [`online_reshard::graft_graph_from`]. RF-RULING-004 application note 4: a
 //!    domain crate cannot write a ledger row, and re-admitting each moved batch is not
 //!    equivalent to moving it (it would re-execute effects, re-emit outbox rows, stamp
 //!    new receipts and reset the version). The graft copies every ledger row verbatim
@@ -373,7 +373,12 @@ fn move_one_graph(
     report: &mut MigrationReport,
 ) -> Result<(), String> {
     let mut transfer = GraphShardPayloadTransfer::for_migration(report);
-    let grafted = dest.graft_graph_from_with_payload(source, graph, Some(&mut transfer))?;
+    let grafted = crate::server::persistence::online_reshard::graft_graph_from_with_payload(
+        &dest,
+        source,
+        graph,
+        Some(&mut transfer),
+    )?;
     report.auxiliary = report.auxiliary.saturating_add(grafted.rows);
     Ok(())
 }

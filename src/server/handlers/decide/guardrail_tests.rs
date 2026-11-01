@@ -1,5 +1,7 @@
 //! MEDULLA-DECISION-ENGINE-R127.2.2: real dispatcher, persisted rules and typed results.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 

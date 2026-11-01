@@ -5,6 +5,8 @@ use super::{
     Served, ADMIN, TENANT,
 };
 use crate::protocol::Method;
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use medulla_types::agent_component::{
     AgentComponentContentRequest, AgentComponentContentResult, AgentComponentKind,
     AgentComponentOp, AgentComponentPublishRequest, AgentComponentSearchPage,

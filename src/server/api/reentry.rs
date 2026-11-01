@@ -251,6 +251,41 @@ pub trait DispatchApi: Send + Sync {
         receipt: &'a [u8],
     ) -> SeamFuture<'a, Result<ResultPayload, String>>;
 
+    /// Make a cold graph resident before an operation that needs its registry.
+    fn ensure_graph_resident<'a>(
+        &'a self,
+        state: &'a Arc<RwLock<ServerState>>,
+        graph: &'a str,
+    ) -> SeamFuture<'a, ()>;
+
+    /// Create an internal global graph through the authoritative lifecycle path.
+    fn ensure_internal_global_graph<'a>(
+        &'a self,
+        state: &'a Arc<RwLock<ServerState>>,
+        req_id: u64,
+        verified: &'a VerifiedRequestContext,
+        graph_name: &'a str,
+        idempotency_key: &'a str,
+    ) -> SeamFuture<'a, Result<(), String>>;
+
+    /// Read one registered MCP server under the verified caller's authority.
+    fn verified_served_registration<'a>(
+        &'a self,
+        state: &'a Arc<RwLock<ServerState>>,
+        verified: &'a VerifiedRequestContext,
+        server_name: &'a str,
+    ) -> SeamFuture<
+        'a,
+        Result<
+            (
+                u64,
+                medulla_types::contract::Digest256,
+                medulla_types::result_contract::cluster::RegisteredServerView,
+            ),
+            String,
+        >,
+    >;
+
     /// Submit one funded repository page through the authenticated boundary.
     #[cfg(all(feature = "ast", feature = "redb", feature = "blob", feature = "raft"))]
     fn submit_repository_enrichment_page<'a>(
@@ -341,6 +376,46 @@ pub async fn dispatch(state: &Arc<RwLock<ServerState>>, req: Request) -> Respons
         Ok(api) => api.dispatch(state, req).await,
         Err(error) => Response::err(id, error),
     }
+}
+
+/// Make a cold graph resident; a missing installation leaves the graph as it is.
+pub(crate) async fn ensure_graph_resident(state: &Arc<RwLock<ServerState>>, graph: &str) {
+    if let Ok(api) = dispatch_api(state).await {
+        api.ensure_graph_resident(state, graph).await;
+    }
+}
+
+/// Create an internal global graph through the authoritative lifecycle path.
+pub(crate) async fn ensure_internal_global_graph(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    verified: &VerifiedRequestContext,
+    graph_name: &str,
+    idempotency_key: &str,
+) -> Result<(), String> {
+    dispatch_api(state)
+        .await?
+        .ensure_internal_global_graph(state, req_id, verified, graph_name, idempotency_key)
+        .await
+}
+
+/// Read one registered MCP server under the verified caller's authority.
+pub(crate) async fn verified_served_registration(
+    state: &Arc<RwLock<ServerState>>,
+    verified: &VerifiedRequestContext,
+    server_name: &str,
+) -> Result<
+    (
+        u64,
+        medulla_types::contract::Digest256,
+        medulla_types::result_contract::cluster::RegisteredServerView,
+    ),
+    String,
+> {
+    dispatch_api(state)
+        .await?
+        .verified_served_registration(state, verified, server_name)
+        .await
 }
 
 /// Dispatch a request under an already verified request context.

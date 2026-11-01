@@ -2,6 +2,8 @@
 
 use super::*;
 use crate::server::api::query_txn::foreign_catalog::OwnedForeignRegistry;
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 
 /// [`ForeignSourceCatalog::resolve_for_plan`] against the server's catalog for a served
 /// plan, with the caller's verified carrier taken from its read authority. `Err` is the
@@ -29,7 +31,8 @@ pub(crate) async fn served_foreign_leg(
         let caller = caller.ok_or_else(|| {
             "ACCESS_DENIED: foreign read executions require a verified tenant carrier".to_string()
         })?;
-        let store = s.agent_library.as_deref().ok_or_else(|| {
+        let store_arc = s.agent_library();
+        let store = store_arc.as_deref().ok_or_else(|| {
             "SOURCE_APPROVAL_STORE_UNAVAILABLE: foreign read requires the Agent Library".to_string()
         })?;
         let plan_digest =
@@ -53,7 +56,8 @@ pub(crate) async fn served_foreign_leg(
         let caller = caller.ok_or_else(|| {
             "ACCESS_DENIED: a foreign read execution requires a verified tenant carrier".to_string()
         })?;
-        let store = s.agent_library.as_deref().ok_or_else(|| {
+        let store_arc = s.agent_library();
+        let store = store_arc.as_deref().ok_or_else(|| {
             "SOURCE_APPROVAL_STORE_UNAVAILABLE: foreign read requires the Agent Library".to_string()
         })?;
         let plan_digest =

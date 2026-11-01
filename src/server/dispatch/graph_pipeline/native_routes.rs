@@ -1,4 +1,6 @@
 use super::*;
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 async fn route_native_resource_ops(
     ctx: GraphOpRouting<'_>,
     method: Method,
@@ -79,7 +81,7 @@ async fn route_native_lifecycle_ops(
     let core = ctx.core;
     let persistence = ctx.persistence;
     #[cfg(feature = "redb")]
-    let agent_library = ctx.state.read().await.agent_library.clone();
+    let agent_library = ctx.state.read().await.agent_library();
     #[cfg(feature = "raft")]
     let routed_raft = ctx.routed_raft;
 

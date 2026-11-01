@@ -1,6 +1,8 @@
 //! Private transaction consensus implementation.
 
 use super::*;
+#[cfg(feature = "raft")]
+use crate::raft::RaftStateExt;
 #[cfg(feature = "redb")]
 use crate::server::persistence::AsRedb;
 
@@ -227,7 +229,7 @@ pub(crate) async fn build_consensus_transaction_fanout(
     let txn = GraphTxnState::decode_recovery_plan(&prepared.recovery_plan, String::new())?;
     let (multi, graph_types) = {
         let current = state.read().await;
-        let multi = current.multi_raft.clone().ok_or_else(|| {
+        let multi = current.multi_raft().ok_or_else(|| {
             "consensus transaction requires MultiRaft placement authority".to_string()
         })?;
         let mut graph_types = std::collections::BTreeMap::new();
@@ -327,8 +329,7 @@ pub(super) async fn validate_consensus_participant_placement(
     let multi = state
         .read()
         .await
-        .multi_raft
-        .clone()
+        .multi_raft()
         .ok_or_else(|| "consensus transaction lost placement authority".to_string())?;
     let route = multi.route_graph(&plan.graph_name).await;
     if route.group != plan.group_id

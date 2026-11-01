@@ -1,6 +1,8 @@
 //! Authenticated tenant-local served-child catalog reconciliation.
 
 use super::{Arc, Response, RwLock, ServerState, VerifiedRequestContext};
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 
 #[cfg(not(feature = "redb"))]
 fn unavailable_catalog_response<T>(
@@ -275,7 +277,7 @@ pub(super) async fn admit_catalog_write(
     verified: &VerifiedRequestContext,
     observed: ObservedRegistration<'_>,
 ) -> Result<CatalogWriteAdmission, String> {
-    crate::server::dispatch::ensure_graph_resident(state, "__commons__").await;
+    crate::server::api::reentry::ensure_graph_resident(state, "__commons__").await;
     let guard = crate::server::mutation_batch::lock_graph("__commons__").await;
     let context = observed.context.clone();
     verify_observed_registration(state, verified, observed).await?;
@@ -318,7 +320,7 @@ async fn verify_observed_registration(
     use medulla_types::result_contract::cluster::ServerDesiredState;
 
     let (registry_revision, registry_digest, registration) =
-        crate::server::dispatch::verified_served_registration(
+        crate::server::api::reentry::verified_served_registration(
             state,
             verified,
             observed.server_name,

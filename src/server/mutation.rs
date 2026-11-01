@@ -91,8 +91,6 @@
 //! publish ALONE (an earlier version of this fix) is unsafe, and why the durable
 //! commit must move into the SAME lock-held sequence rather than staying outside it.
 
-#[cfg(feature = "redb")]
-use crate::server::persistence::AsRedb;
 #[cfg(test)]
 use std::sync::Arc;
 
@@ -331,8 +329,6 @@ mod tests {
         // The write actually landed durably.
         let fname = crate::persist::sanitize(graph_name);
         let read_back = persistence
-            .as_redb()
-            .expect("configured backend is redb")
             .read_node(&fname, "n1")
             .await
             .expect("read back the durably-committed node");
@@ -343,8 +339,6 @@ mod tests {
 
         // Audit: the tamper-evident chain grew by exactly one entry for this graph.
         let report = persistence
-            .as_redb()
-            .expect("configured backend is redb")
             .audit_verify_blocking(&fname)
             .expect("audit_verify_blocking");
         assert!(report.ok, "audit chain broke: {report:?}");
@@ -531,8 +525,6 @@ mod tests {
 
         let fname = crate::persist::sanitize(graph_name);
         let report = persistence
-            .as_redb()
-            .unwrap()
             .audit_verify_blocking(&fname)
             .expect("audit_verify_blocking");
         assert!(report.ok, "audit chain broke: {report:?}");
@@ -602,8 +594,6 @@ mod tests {
 
         let fname = crate::persist::sanitize(&graph_name);
         let report = persistence
-            .as_redb()
-            .expect("configured backend is redb")
             .audit_verify_blocking(&fname)
             .expect("audit_verify_blocking");
         assert!(report.ok, "{tag}: audit chain broke: {report:?}");
@@ -827,8 +817,6 @@ mod tests {
 
             let fname = crate::persist::sanitize(&graph_name);
             let report = persistence
-                .as_redb()
-                .expect("configured backend is redb")
                 .audit_verify_blocking(&fname)
                 .expect("audit_verify_blocking");
             assert!(report.ok, "{tag}: audit chain broke: {report:?}");
@@ -918,8 +906,6 @@ mod tests {
 
         let fname = crate::persist::sanitize(graph_name);
         let report = persistence
-            .as_redb()
-            .expect("configured backend is redb")
             .audit_verify_blocking(&fname)
             .expect("audit_verify_blocking");
         assert!(report.ok, "audit chain broke: {report:?}");
@@ -1033,8 +1019,6 @@ mod tests {
         assert_eq!(properties["confidence"], serde_json::json!(1.0));
 
         let report = persistence
-            .as_redb()
-            .expect("configured backend is redb")
             .audit_verify_blocking(&fname)
             .expect("audit_verify_blocking");
         assert!(report.ok, "audit chain broke: {report:?}");
@@ -1144,8 +1128,6 @@ mod tests {
 
         let fname = crate::persist::sanitize(graph_name);
         let report = persistence
-            .as_redb()
-            .expect("configured backend is redb")
             .audit_verify_blocking(&fname)
             .expect("audit_verify_blocking");
         assert!(report.ok);
@@ -1216,8 +1198,6 @@ mod tests {
         );
 
         let report = persistence
-            .as_redb()
-            .expect("configured backend is redb")
             .audit_verify_blocking(&fname)
             .expect("audit_verify_blocking");
         assert!(report.ok);

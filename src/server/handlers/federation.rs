@@ -16,6 +16,8 @@
 
 use crate::protocol::{Method, Response, ResultPayload};
 use crate::server::access::OwnerScopedCall;
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use medulla_types::foreign_read::{
     ForeignReadAbortRequest, ForeignReadChunkRequest, ForeignReadCompleteRequest,
     ForeignReadOpenRequest, FOREIGN_READ_SCHEMA_VERSION,
@@ -90,7 +92,7 @@ async fn open_foreign_read(call: OwnerScopedCall<'_>, request: ForeignReadOpenRe
     }
     let store = {
         let state = call.state.read().await;
-        state.agent_library.clone()
+        state.agent_library()
     };
     let Some(store) = store else {
         return Response::err(
@@ -131,7 +133,7 @@ async fn open_foreign_read(call: OwnerScopedCall<'_>, request: ForeignReadOpenRe
         };
         state.foreign_sources.bind_registered_for(
             &owner,
-            &store,
+            store.as_ref(),
             &state.isolation,
             &approval,
             &source_name,
@@ -171,7 +173,8 @@ async fn chunk_foreign_read(
     }
     let result = {
         let state = call.state.read().await;
-        let Some(store) = state.agent_library.as_deref() else {
+        let store = state.agent_library();
+        let Some(store) = store.as_deref() else {
             return Response::err(
                 req_id,
                 "SOURCE_APPROVAL_STORE_UNAVAILABLE: foreign read requires the Agent Library",
@@ -208,7 +211,8 @@ async fn complete_foreign_read(
     }
     let result = {
         let state = call.state.read().await;
-        let Some(store) = state.agent_library.as_deref() else {
+        let store = state.agent_library();
+        let Some(store) = store.as_deref() else {
             return Response::err(
                 req_id,
                 "SOURCE_APPROVAL_STORE_UNAVAILABLE: foreign read requires the Agent Library",
@@ -242,7 +246,8 @@ async fn abort_foreign_read(
     }
     let result = {
         let state = call.state.read().await;
-        let Some(store) = state.agent_library.as_deref() else {
+        let store = state.agent_library();
+        let Some(store) = store.as_deref() else {
             return Response::err(
                 req_id,
                 "SOURCE_APPROVAL_STORE_UNAVAILABLE: foreign read requires the Agent Library",

@@ -12,6 +12,8 @@
 //! `raft::node::start`; there is no public method that accepts caller-supplied
 //! endpoint authority.
 
+#[cfg(feature = "raft")]
+use crate::raft::RaftStateExt;
 #[cfg(feature = "redb")]
 use crate::server::persistence::AsRedb;
 use std::sync::Arc;
@@ -320,7 +322,7 @@ async fn handle_cluster_members(
         );
     };
 
-    let multi = { state.read().await.multi_raft.clone() };
+    let multi = { state.read().await.multi_raft() };
     let Some(multi) = multi else {
         let membership_epoch = store.generation();
         return match signed_snapshot(

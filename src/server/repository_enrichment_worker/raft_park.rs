@@ -4,6 +4,8 @@
 //! reactivation are incomplete. This producer is the bounded Raft park seam;
 //! it cannot be invoked by a public Method or a caller-supplied snapshot.
 
+#[cfg(feature = "raft")]
+use crate::raft::RaftStateExt;
 use std::sync::Arc;
 
 use medulla_types::mutation_batch::MutationOutboxLease;
@@ -71,8 +73,7 @@ async fn propose_park(
             .ok_or("CONFLICT: repository enrichment graph was retired")?
             .graph_type;
         let multi = current
-            .multi_raft
-            .clone()
+            .multi_raft()
             .ok_or("CONFLICT: repository enrichment park requires multi-Raft placement")?;
         (multi, graph_type)
     };

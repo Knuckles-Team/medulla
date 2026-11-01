@@ -8,6 +8,8 @@
 //! same request is a replay that returns the stored row, and the same key with
 //! a different request is refused.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 use std::time::Instant;
 

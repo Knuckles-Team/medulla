@@ -33,6 +33,54 @@ impl DispatchApi for DispatchSeam {
         ))
     }
 
+    fn ensure_graph_resident<'a>(
+        &'a self,
+        state: &'a Arc<RwLock<ServerState>>,
+        graph: &'a str,
+    ) -> SeamFuture<'a, ()> {
+        Box::pin(super::ensure_graph_resident(state, graph))
+    }
+
+    fn ensure_internal_global_graph<'a>(
+        &'a self,
+        state: &'a Arc<RwLock<ServerState>>,
+        req_id: u64,
+        verified: &'a VerifiedRequestContext,
+        graph_name: &'a str,
+        idempotency_key: &'a str,
+    ) -> SeamFuture<'a, Result<(), String>> {
+        Box::pin(super::ensure_internal_global_graph(
+            state,
+            req_id,
+            verified,
+            graph_name,
+            idempotency_key,
+        ))
+    }
+
+    fn verified_served_registration<'a>(
+        &'a self,
+        state: &'a Arc<RwLock<ServerState>>,
+        verified: &'a VerifiedRequestContext,
+        server_name: &'a str,
+    ) -> SeamFuture<
+        'a,
+        Result<
+            (
+                u64,
+                medulla_types::contract::Digest256,
+                medulla_types::result_contract::cluster::RegisteredServerView,
+            ),
+            String,
+        >,
+    > {
+        Box::pin(super::consensus::verified_served_registration(
+            state,
+            verified,
+            server_name,
+        ))
+    }
+
     #[cfg(any(feature = "federation-search", feature = "nl-query"))]
     fn dispatch_authenticated_local_query<'a>(
         &'a self,

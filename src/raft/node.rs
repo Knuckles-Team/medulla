@@ -24,6 +24,8 @@
 //! therefore have the same quorum replication, leader failover, authenticated remote
 //! read routing, and membership contract as the default group.
 
+#[cfg(feature = "raft")]
+use crate::raft::RaftStateExt;
 #[cfg(feature = "redb")]
 use crate::server::persistence::AsRedb;
 use std::sync::Arc;

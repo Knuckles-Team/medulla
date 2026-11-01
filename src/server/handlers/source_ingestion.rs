@@ -4,6 +4,8 @@
 //! existing ChangeEnvelope commit authority owns the final IngestBatch step, so
 //! there is one graph mutation path and one cursor compare-and-swap authority.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 #[cfg(all(feature = "redb", feature = "blob"))]
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
@@ -378,7 +380,7 @@ async fn load_persistence(
 async fn load_resources(ctx: &PrepareContext<'_>) -> Result<IngestionResources, String> {
     let state = ctx.state.read().await;
     Ok(IngestionResources {
-        agent_library: state.agent_library.clone().ok_or_else(|| {
+        agent_library: state.agent_library().ok_or_else(|| {
             "SOURCE_INGESTION_UNAVAILABLE: Agent Library is not configured".to_string()
         })?,
         blob: state
@@ -2724,8 +2726,7 @@ mod tests {
             fencing_token: None,
         };
         let blob_dir = tempfile::tempdir().unwrap();
-        let blob =
-            crate::server::api::ingest::cursors_for_test(blob_dir.path().to_str().unwrap());
+        let blob = crate::server::api::ingest::cursors_for_test(blob_dir.path().to_str().unwrap());
         let persistence = NoReadPersistence;
         let mut admitted = AdmittedRecords {
             raw_admissions: Vec::new(),

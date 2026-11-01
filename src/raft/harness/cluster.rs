@@ -1028,7 +1028,3 @@ mod filesystem_boundary_tests {
         .expect("abandoned root was removed");
     }
 }
-
-#[cfg(test)]
-#[path = "resource_acceptance_test.rs"]
-mod resource_acceptance_test;

@@ -1,6 +1,8 @@
 //! PB3 (ruling D7): the admin binding decides who may import, retirement is
 //! permanent, and the reconciler releases only what nothing holds.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use medulla_types::connector_pack::{
     ConnectorPackOp, ConnectorPackReconcileRequest, ConnectorPackRetireRequest,
     ConnectorPackUnbindRequest, PackBodyReconcileReport, PackImportResult, PackRetireResult,

@@ -134,6 +134,14 @@ macro_rules! persistence_graph {
             }
         }
 
+        #[cfg(feature = "security")]
+        fn audit_verify_blocking(
+            &self,
+            graph_fname: &str,
+        ) -> Result<crate::protocol::AuditReport, String> {
+            RedbBackend::audit_verify_blocking(self, graph_fname)
+        }
+
         fn as_any(&self) -> Option<&dyn std::any::Any> {
             Some(self)
         }

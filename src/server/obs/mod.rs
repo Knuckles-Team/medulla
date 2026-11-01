@@ -60,6 +60,27 @@ use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
+
+/// Typed access to the type-erased observability store held by `ServerState`
+/// (MEDULLA-CONTRACT-R056.8).
+pub trait ObsStateExt {
+    /// The in-process observability store, when startup opened one.
+    fn obs(&self) -> Option<Arc<ObsState>>;
+    /// Register the observability store.
+    fn set_obs(&mut self, obs: Option<Arc<ObsState>>);
+}
+
+impl ObsStateExt for crate::server::ServerState {
+    fn obs(&self) -> Option<Arc<ObsState>> {
+        self.obs
+            .as_ref()
+            .and_then(|h| Arc::clone(h).downcast::<ObsState>().ok())
+    }
+
+    fn set_obs(&mut self, obs: Option<Arc<ObsState>>) {
+        self.obs = obs.map(|o| o as crate::server::state::ErasedHandle);
+    }
+}
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use parking_lot::Mutex;
@@ -200,9 +221,9 @@ mod tests {
         SNAPSHOT_WRITE_ERROR,
     };
     use super::*;
-    use medulla_kernel::lock_recovery::LockRecovery;
     use crate::server::blob::store::RedbChunkStore;
     use crate::server::http1::HttpMessage;
+    use medulla_kernel::lock_recovery::LockRecovery;
     use medulla_kernel::test_rendezvous::{join_bounded, recv_within};
     use std::path::Path;
     use std::sync::atomic::Ordering;

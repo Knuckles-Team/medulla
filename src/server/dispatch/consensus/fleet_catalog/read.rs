@@ -1,6 +1,8 @@
 //! Fleet catalog reads: one consistent view of the `__commons__` records, then
 //! the connector-pack components those records make visible.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::collections::BTreeMap;
 
 use medulla_types::agent_component::AgentComponentEntry;

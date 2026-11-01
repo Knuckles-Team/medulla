@@ -41,6 +41,38 @@ struct TrackerKey {
     incarnation_id: Option<String>,
 }
 
+/// Typed access to the type-erased cold-tenant tracker held by `ServerState`
+/// (MEDULLA-CONTRACT-R056.8).
+pub trait ColdTrackerStateExt {
+    /// The installed tracker, if startup (or `ensure_cold_tracker`) created one.
+    fn cold_tracker(&self) -> Option<Arc<ColdTenantTracker>>;
+    /// Install the tracker.
+    fn set_cold_tracker(&mut self, tracker: Arc<ColdTenantTracker>);
+    /// The installed tracker, creating an empty one when none is installed yet.
+    fn ensure_cold_tracker(&mut self) -> Arc<ColdTenantTracker>;
+}
+
+impl ColdTrackerStateExt for ServerState {
+    fn cold_tracker(&self) -> Option<Arc<ColdTenantTracker>> {
+        self.cold_tracker
+            .as_ref()
+            .and_then(|h| Arc::clone(h).downcast::<ColdTenantTracker>().ok())
+    }
+
+    fn set_cold_tracker(&mut self, tracker: Arc<ColdTenantTracker>) {
+        self.cold_tracker = Some(tracker);
+    }
+
+    fn ensure_cold_tracker(&mut self) -> Arc<ColdTenantTracker> {
+        if let Some(existing) = self.cold_tracker() {
+            return existing;
+        }
+        let tracker = Arc::new(ColdTenantTracker::default());
+        self.set_cold_tracker(Arc::clone(&tracker));
+        tracker
+    }
+}
+
 /// Per-incarnation last-access tracker + offload bookkeeping
 /// (CONCEPT:MEDULLA-KG.sharding.medulla-r6). The engine calls
 /// [`touch_with_incarnation`](ColdTenantTracker::touch_with_incarnation) on every
@@ -483,7 +515,7 @@ pub async fn lazy_open(
             Err(_) => return false,
         };
     let mut s = state.write().await;
-    let tracker = s.cold_tracker.clone();
+    let tracker = s.ensure_cold_tracker();
     admit_capacity(&mut s, &tracker, graph_name, cap);
     let outcome = s.registry.publish_lazy_first_page(&ticket, page);
     if !outcome.resident {
@@ -1555,7 +1587,7 @@ mod admission_tests {
             );
             // Touch it so it isn't immediately picked as "coldest" by an artifact
             // of insertion order alone (mirrors the dispatch path's cold_tracker.touch).
-            state.read().await.cold_tracker.touch(&name);
+            state.write().await.ensure_cold_tracker().touch(&name);
         }
 
         // The cap held throughout — never more than `cap` resident graphs at once,
@@ -1595,7 +1627,7 @@ mod admission_tests {
         assert!(state.read().await.registry.is_resident("cold:b"));
         assert!(state.read().await.registry.is_resident("__commons__"));
 
-        let tracker = state.read().await.cold_tracker.clone();
+        let tracker = state.write().await.ensure_cold_tracker();
         let offloaded =
             super::offload_cold_tenants(&state, &tracker, std::time::Duration::ZERO).await;
 

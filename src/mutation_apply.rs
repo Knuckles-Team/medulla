@@ -146,7 +146,7 @@ pub fn apply(core: &GraphCore, m: &Method) {
         | Method::MineRiskPropagation { .. }
         | Method::MineOntologyGap { .. }
         | Method::MineRetrievalQuality { .. }
-        | Method::MineCommunity { .. } => crate::server::handlers::mining::replay(core, m),
+        | Method::MineCommunity { .. } => crate::kernel::persistence::replay_mining(core, m),
         // Graph-learning write-back (CONCEPT:MEDULLA-KG.graphlearn.link-predictor): re-run the
         // fit/predict + re-materialize the `:EdgeFunction` / `:PredictedEdge` nodes.
         // The node ids are a deterministic digest, so replay is idempotent.

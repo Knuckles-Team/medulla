@@ -5,6 +5,8 @@
 //! evaluation, a count or a rate is formed: tenant-wide for library-sourced
 //! records, the committing principal only for graph-sourced ones.
 
+#[cfg(feature = "redb")]
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::collections::BTreeMap;
 use std::time::Instant;
 

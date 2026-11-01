@@ -143,19 +143,11 @@ struct Args {
     graphql_addr: Option<String>,
 
     /// Maximum concurrent GraphQL SSE handshakes and sessions.
-    #[arg(
-        long,
-        env = "MEDULLA_GRAPHQL_MAX_CONNECTIONS",
-        default_value_t = 128
-    )]
+    #[arg(long, env = "MEDULLA_GRAPHQL_MAX_CONNECTIONS", default_value_t = 128)]
     graphql_max_connections: usize,
 
     /// Maximum GraphQL SSE session lifetime before a fresh eg2 envelope is required.
-    #[arg(
-        long,
-        env = "MEDULLA_GRAPHQL_MAX_SESSION_SECS",
-        default_value_t = 300
-    )]
+    #[arg(long, env = "MEDULLA_GRAPHQL_MAX_SESSION_SECS", default_value_t = 300)]
     graphql_max_session_secs: u64,
 
     /// Observability log-ingestion HTTP listener address (e.g. 127.0.0.1:5080),
@@ -824,9 +816,7 @@ async fn spawn_obs_listener(
     let obs_addr = resolve_listener_addr(obs_addr_arg, "127.0.0.1:5080");
     #[cfg(feature = "obs")]
     if let Some(ref obs_addr) = obs_addr {
-        use medulla::server::obs::{
-            ObsState, DEFAULT_FLUSH_RECORDS, OBS_FLUSH_RECORDS_ENV,
-        };
+        use medulla::server::obs::{ObsState, DEFAULT_FLUSH_RECORDS, OBS_FLUSH_RECORDS_ENV};
         let flush = std::env::var(OBS_FLUSH_RECORDS_ENV)
             .ok()
             .and_then(|v| v.parse().ok())
@@ -882,9 +872,7 @@ async fn wait_for_periodic_tick(ticker: &mut tokio::time::Interval) {
 /// EH-410: browser RUM series are kept 30 days; the sweep runs hourly whenever
 /// the observability listener is on (RUM is on by default, so its retention is too).
 #[cfg(feature = "obs")]
-fn spawn_obs_rum_retention_sweep(
-    obs_state: &std::sync::Arc<medulla::server::obs::ObsState>,
-) {
+fn spawn_obs_rum_retention_sweep(obs_state: &std::sync::Arc<medulla::server::obs::ObsState>) {
     let rum_obs_state = obs_state.clone();
     spawn_periodic_sweep(3600, "obs_rum_retention", move || {
         let obs = rum_obs_state.clone();
@@ -902,9 +890,7 @@ fn spawn_obs_rum_retention_sweep(
 }
 
 #[cfg(feature = "traces")]
-async fn persist_traces_tick(
-    traces_obs_state: std::sync::Arc<medulla::server::obs::ObsState>,
-) {
+async fn persist_traces_tick(traces_obs_state: std::sync::Arc<medulla::server::obs::ObsState>) {
     if let Err(error) = traces_obs_state.persist_traces().await {
         tracing::warn!(
             %error,
@@ -934,9 +920,7 @@ where
 }
 
 #[cfg(feature = "traces")]
-fn spawn_obs_trace_persist_sweep(
-    obs_state: &std::sync::Arc<medulla::server::obs::ObsState>,
-) {
+fn spawn_obs_trace_persist_sweep(obs_state: &std::sync::Arc<medulla::server::obs::ObsState>) {
     // ── Trace durable-tier sweep (BUG-016, CONCEPT:MEDULLA-OS.observability.trace-assembly) ─────
     // Periodically snapshot the native span store to durable storage
     // (`ObsState::persist_traces`) so a restart does not silently drop
@@ -997,12 +981,8 @@ async fn spawn_viz_interactive_listener(
                 );
                 let viz_state = state.clone();
                 tokio::spawn(async move {
-                    medulla::server::viz_interactive::serve(
-                        listener,
-                        engine,
-                        Some(viz_state),
-                    )
-                    .await;
+                    medulla::server::viz_interactive::serve(listener, engine, Some(viz_state))
+                        .await;
                 });
             }
             Err(e) => tracing::error!(
@@ -1039,8 +1019,9 @@ async fn spawn_iceberg_listener(
         // `lake-rest` implies `lake` implies `blob`, so the CAS is always configured
         // (`Some`) in any build reaching this arm — `blob` is never independently off.
         let (lake_handle, blob_store) = {
+            use medulla::server::lake::LakeStateExt;
             let s = state.read().await;
-            (s.lake.clone(), s.blob.as_ref().map(|b| b.store.clone()))
+            (s.lake(), s.blob.as_ref().map(|b| b.store.clone()))
         };
         match blob_store {
             Some(store) => {
@@ -1107,9 +1088,10 @@ async fn spawn_lake_materialize_sweep(_state: &Arc<tokio::sync::RwLock<ServerSta
                     // client-carrier gate here was always the WRONG check for a task
                     // with no carrier at all, not a security boundary being relaxed.
                     let (lake_handle, tsdb, store) = {
+                        use medulla::server::lake::LakeStateExt;
                         let s = sweep_state.read().await;
                         (
-                            s.lake.clone(),
+                            s.lake(),
                             s.tsdb_store.clone(),
                             s.blob.as_ref().map(|b| b.store.clone()),
                         )
@@ -1177,19 +1159,14 @@ async fn spawn_pgwire_listener(
         "127.0.0.1:5433",
     ) {
         let pg_auth_secret = state.read().await.auth_secret.clone();
-        let pg_auth_mode =
-            medulla::server::pgwire::PgWireAuthMode::resolve(&pg_auth_secret)?;
-        let prepared_pgwire = medulla::server::pgwire::prepare_startup_policy(
-            &addr,
-            pg_auth_secret,
-            pg_auth_mode,
-        )
-        .await?;
+        let pg_auth_mode = medulla::server::pgwire::PgWireAuthMode::resolve(&pg_auth_secret)?;
+        let prepared_pgwire =
+            medulla::server::pgwire::prepare_startup_policy(&addr, pg_auth_secret, pg_auth_mode)
+                .await?;
         let pg_state = state.clone();
         info!("pgwire: enabling the configured listener (TLS policy applies)");
         tokio::spawn(async move {
-            if let Err(e) =
-                medulla::server::pgwire::serve_prepared(pg_state, prepared_pgwire).await
+            if let Err(e) = medulla::server::pgwire::serve_prepared(pg_state, prepared_pgwire).await
             {
                 tracing::error!("pgwire server error: {}", e);
             }
@@ -1264,12 +1241,8 @@ async fn spawn_mysql_listener(
         let my_state = state.clone();
         info!("mysql-wire: enabling the configured loopback listener");
         tokio::spawn(async move {
-            if let Err(e) = medulla::server::mysql_wire::serve_with_auth(
-                &addr,
-                my_state,
-                mysql_auth_mode,
-            )
-            .await
+            if let Err(e) =
+                medulla::server::mysql_wire::serve_with_auth(&addr, my_state, mysql_auth_mode).await
             {
                 tracing::error!("mysql-wire server error: {}", e);
             }
@@ -1318,21 +1291,21 @@ macro_rules! define_authenticated_wire_listener {
             #[cfg(feature = $feature)]
             {
                 spawn_authenticated_wire_listener(
-                    _state,
-                    resolve_listener_addr(
-                        std::env::var(medulla::server::$module::$addr_env)
-                            .ok()
-                            .as_deref(),
-                        $default_addr,
-                    ),
-                    $service_name,
-                    $enable_message,
-                    medulla::server::$module::validate_startup_policy,
-                    |addr, state| async move {
-                        medulla::server::$module::serve(&addr, state).await
-                    },
-                )
-                .await?;
+                            _state,
+                            resolve_listener_addr(
+                                std::env::var(medulla::server::$module::$addr_env)
+                                    .ok()
+                                    .as_deref(),
+                                $default_addr,
+                            ),
+                            $service_name,
+                            $enable_message,
+                            medulla::server::$module::validate_startup_policy,
+                            |addr, state| async move {
+                                medulla::server::$module::serve(&addr, state).await
+                            },
+                        )
+                        .await?;
             }
             Ok(())
         }
@@ -1494,8 +1467,7 @@ async fn spawn_s3_listener(
         info!("s3-api: serving S3-compatible REST surface on {}", addr);
         tokio::spawn(async move {
             if let Err(e) =
-                medulla::server::s3::serve_with_blob_store(&addr, s3_state, selected_blob)
-                    .await
+                medulla::server::s3::serve_with_blob_store(&addr, s3_state, selected_blob).await
             {
                 tracing::error!("s3-api server error: {}", e);
             }
@@ -1530,8 +1502,7 @@ async fn spawn_kvcache_listener(
         );
         tokio::spawn(async move {
             if let Err(e) =
-                medulla::server::kvcache_http::serve_with_security(&addr, kvcache_state)
-                    .await
+                medulla::server::kvcache_http::serve_with_security(&addr, kvcache_state).await
             {
                 tracing::error!("kvcache-server error: {}", e);
             }
@@ -1565,9 +1536,7 @@ async fn recover_durable_catalog(
         .map_err(|error| format!("failed to register the mandatory commons graph: {error}"))?;
 
         let factory = std::sync::Arc::new(
-            medulla::server::persistence::read_through::BackendReadThroughFactory::new(
-                p.clone(),
-            ),
+            medulla::server::persistence::read_through::BackendReadThroughFactory::new(p.clone()),
         );
         state
             .write()
@@ -1575,9 +1544,7 @@ async fn recover_durable_catalog(
             .registry
             .set_read_through_factory(factory);
         let materializer = std::sync::Arc::new(
-            medulla::server::persistence::read_through::BackendGraphMaterializer::new(
-                p.clone(),
-            ),
+            medulla::server::persistence::read_through::BackendGraphMaterializer::new(p.clone()),
         );
         state.write().await.registry.set_materializer(materializer);
         info!("durable read-through and bounded lazy materialization enabled");
@@ -1608,9 +1575,8 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     // byte-for-byte what it was before this feature existed.
     #[cfg(all(feature = "owl", feature = "streaming"))]
     {
-        let cascade = std::sync::Arc::new(
-            medulla::server::reasoning_cascade::ReasoningCascade::from_env(),
-        );
+        let cascade =
+            std::sync::Arc::new(medulla::server::reasoning_cascade::ReasoningCascade::from_env());
         if cascade.is_active() {
             if let Some(hub) = state.read().await.cdc.as_ref() {
                 hub.install_reasoning_cascade(cascade.clone());
@@ -1627,8 +1593,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     // ordinary `MineRiskPropagation` writeback path. Unset ⇒ nothing installed/spawned.
     #[cfg(all(feature = "streaming", feature = "mining", feature = "query"))]
     {
-        let hub =
-            std::sync::Arc::new(medulla::server::impact_watch::ImpactWatchHub::from_env());
+        let hub = std::sync::Arc::new(medulla::server::impact_watch::ImpactWatchHub::from_env());
         if hub.is_active() {
             if let Some(cdc) = state.read().await.cdc.as_ref() {
                 cdc.install_impact_watch(hub.clone());
@@ -1744,10 +1709,8 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
             loop {
                 ticker.tick().await;
                 let __loop_tick_started = std::time::Instant::now();
-                let n = medulla::server::semantic_activation::sweep_resident_graphs(
-                    &sweep_state,
-                )
-                .await;
+                let n =
+                    medulla::server::semantic_activation::sweep_resident_graphs(&sweep_state).await;
                 if n > 0 {
                     tracing::info!(
                         "Semantic ANN warm re-check: spawned {} warm(s) for resident graph(s)",
@@ -1789,8 +1752,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
             loop {
                 ticker.tick().await;
                 let __loop_tick_started = std::time::Instant::now();
-                let stats =
-                    medulla::persist::decay_all(&dk_state, half_life, floor, prune).await;
+                let stats = medulla::persist::decay_all(&dk_state, half_life, floor, prune).await;
                 tracing::info!(
                     "Decay sweep: {} nodes / {} edges decayed, {} nodes / {} edges pruned",
                     stats.nodes_decayed,
@@ -1894,7 +1856,10 @@ async fn spawn_memory_sweeps(
         let window_secs = server_startup::optional_sweep_secs("MEDULLA_COLD_OFFLOAD_SECS");
         if window_secs > 0 {
             let cold_state = state.clone();
-            let tracker = { cold_state.read().await.cold_tracker.clone() };
+            let tracker = {
+                use medulla::server::persistence::cold_offload::ColdTrackerStateExt;
+                cold_state.write().await.ensure_cold_tracker()
+            };
             let window = std::time::Duration::from_secs(window_secs);
             info!(
                 "Cold-tenant offload: hibernate graphs idle > {}s, swept every {}s \
@@ -1914,10 +1879,9 @@ async fn cold_offload_tick(
     tracker: Arc<medulla::server::persistence::cold_offload::ColdTenantTracker>,
     window: std::time::Duration,
 ) {
-    let n = medulla::server::persistence::cold_offload::offload_cold_tenants(
-        &state, &tracker, window,
-    )
-    .await;
+    let n =
+        medulla::server::persistence::cold_offload::offload_cold_tenants(&state, &tracker, window)
+            .await;
     if n > 0 {
         tracing::info!("Cold-tenant offload: hibernated {} idle graph(s)", n);
     }
@@ -1974,8 +1938,7 @@ fn spawn_lifecycle_sweeps(state: &Arc<tokio::sync::RwLock<ServerState>>, txn_ttl
     // (see `server::persistence::provenance_anchor`'s module doc).
     #[cfg(feature = "security")]
     {
-        let interval_secs =
-            server_startup::optional_sweep_secs("MEDULLA_PROVENANCE_ANCHOR_SECS");
+        let interval_secs = server_startup::optional_sweep_secs("MEDULLA_PROVENANCE_ANCHOR_SECS");
         if interval_secs > 0 {
             info!(
                 "Provenance anchoring: Merkle-anchoring :ToolCall/:RunTrace windows every {}s \
@@ -2071,10 +2034,11 @@ async fn start_raft(
                         {
                             let backend = state.read().await.persistence.clone();
                             if let Some(backend) = backend {
-                                let coord = medulla::raft::cross_shard_txn::CrossShardCoordinator::new(
-                                    started.multi.clone(),
-                                    backend,
-                                );
+                                let coord =
+                                    medulla::raft::cross_shard_txn::CrossShardCoordinator::new(
+                                        started.multi.clone(),
+                                        backend,
+                                    );
                                 match coord.recover_in_doubt().await {
                                     Ok(0) => {}
                                     Ok(n) => info!(
