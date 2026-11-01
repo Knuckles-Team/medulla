@@ -1,7 +1,7 @@
 //! Cooperative games: a value for every coalition of players.
 
 use super::{invalid, AttributionResult};
-use crate::detkernel::reduce::{serial_sum, sorted_ascending};
+use medulla_numeric::{detkernel::reduce::serial_sum, detkernel::reduce::sorted_ascending};
 
 /// A cooperative game over players `0..players()`.
 pub trait Game {

@@ -15,3 +15,5 @@ path = "src/lib.rs"
 medulla-types = { path = "../medulla-types" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 medulla-result-types = { path = "../medulla-result-types" }
+medulla-numeric = { path = "../medulla-numeric" }
+ndarray = "0.17"

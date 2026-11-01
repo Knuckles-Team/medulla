@@ -41,6 +41,7 @@ tracing = "0.1"
 tempfile = { version = "3", optional = true }
 medulla-finance-market = { path = "../medulla-finance-market" }
 medulla-decision-policy = { path = "../medulla-decision-policy" }
+medulla-finance = { path = "../medulla-finance" }
 
 [features]
 ann = ["dep:medulla-ann", ]

@@ -22,7 +22,6 @@
 //! float transcendentals crate-wide), reductions are serial and ordered, and
 //! digests are taken over quantised integers.
 
-pub mod attribution;
 pub mod cluster;
 pub mod elementwise;
 pub mod error;
@@ -46,9 +45,6 @@ pub mod risk;
 pub mod series;
 // Evaluation kernels (EH-530): special functions, backtest validation, predictive skill.
 pub mod evaluation;
-// Banking risk calculations (MEDULLA-FINANCE-PRIMITIVES-R901) and position sizing and
-// distribution-shift detection (MEDULLA-FINANCE-PRIMITIVES-R900).
-pub mod banking;
 pub mod execution;
 pub mod sizing;
 // ModalityContract retrofit (CONCEPT:E4): `impl ModalityContract for

@@ -7,7 +7,7 @@
 //! invent an attribution the value does not support.
 
 use super::{invalid, Attribution, AttributionCode, AttributionError, AttributionResult, Game};
-use crate::detkernel::reduce::serial_sum;
+use medulla_numeric::detkernel::reduce::serial_sum;
 
 /// Relative tolerance of the additivity check (a few ulps of accumulated rounding).
 const ADDITIVITY_TOLERANCE: f64 = 1e-9;

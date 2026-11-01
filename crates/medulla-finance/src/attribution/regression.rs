@@ -10,9 +10,9 @@
 use ndarray::{Array1, Array2, ArrayView1};
 
 use super::{invalid, AttributionCode, AttributionError, AttributionResult};
-use crate::detkernel::math;
-use crate::detkernel::reduce::serial_sum;
-use crate::linalg;
+use medulla_numeric::detkernel::math;
+use medulla_numeric::detkernel::reduce::serial_sum;
+use medulla_numeric::linalg;
 
 /// How many autocovariance lags the Newey–West estimator uses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

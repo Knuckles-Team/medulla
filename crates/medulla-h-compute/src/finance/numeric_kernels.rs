@@ -12,10 +12,10 @@ use serde::Serialize;
 
 use medulla_finance_quant::factor;
 use medulla_finance_quant::factor::FactorInput;
-use medulla_numeric::banking;
-use medulla_numeric::banking::AmlRule;
-use medulla_numeric::banking::CapitalInputs;
-use medulla_numeric::banking::CreditExposure;
+use medulla_finance::banking;
+use medulla_finance::banking::AmlRule;
+use medulla_finance::banking::CapitalInputs;
+use medulla_finance::banking::CreditExposure;
 use medulla_numeric::execution;
 use medulla_numeric::execution::AlmgrenChriss;
 use medulla_numeric::execution::Ident;

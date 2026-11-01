@@ -3,8 +3,8 @@
 
 use super::EXACT_MAX_PLAYERS;
 use super::{invalid, Attribution, AttributionCode, AttributionError, AttributionResult, Game};
-use crate::detkernel::kernels::normal_quantile;
-use crate::random::Generator;
+use medulla_numeric::detkernel::kernels::normal_quantile;
+use medulla_numeric::random::Generator;
 
 /// The ascending member list of coalition `mask`.
 pub(super) fn members_of(mask: usize, players: usize) -> Vec<usize> {

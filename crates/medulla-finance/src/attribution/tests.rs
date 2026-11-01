@@ -4,8 +4,8 @@
 
 use super::shapley::members_of;
 use super::*;
-use crate::detkernel::kernels::normal_quantile;
-use crate::random::Generator;
+use medulla_numeric::detkernel::kernels::normal_quantile;
+use medulla_numeric::random::Generator;
 
 const BUDGET: u64 = 10_000_000;
 
