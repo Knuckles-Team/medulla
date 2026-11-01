@@ -183,7 +183,7 @@ impl Program {
 /// canonical UQL spelling, and the kernel generation.
 pub fn expr_digest(expr: &SeriesExpr) -> Result<String, String> {
     let canonical = medulla_types::wire::uql_series_expr(expr).map_err(|e| e.to_string())?;
-    Ok(medulla_compute::finance::market::digest::framed(
+    Ok(medulla_finance_market::market::digest::framed(
         "eg/series-derive",
         &[canonical.as_bytes(), KERNEL_VERSION.as_bytes()],
     ))

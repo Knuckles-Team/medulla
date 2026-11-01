@@ -75,7 +75,7 @@ pub fn resolve(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::finance::market::CorporateActionKind;
+    use crate::market::CorporateActionKind;
 
     const DAY: i64 = 86_400_000_000_000;
 

@@ -15,9 +15,8 @@ use super::{
     UniverseMember, INVALID_REQUEST, LOOK_AHEAD,
 };
 use crate::{
-    finance::market::validation::deflated_sharpe_ratio,
-    finance::market::validation::probability_of_backtest_overfit,
-    finance::market::validation::purged_cpcv_splits, finance::market::validation::CvSplit,
+    market::validation::deflated_sharpe_ratio, market::validation::probability_of_backtest_overfit,
+    market::validation::purged_cpcv_splits, market::validation::CvSplit,
 };
 
 const RUN_DOMAIN: &str = "eg/finance/backtest-run/v1";

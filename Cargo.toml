@@ -1864,6 +1864,7 @@ medulla-finance = { path = "crates/medulla-finance" }
 medulla-graph-algos = { path = "crates/medulla-graph-algos" }
 medulla-finance-quant = { path = "crates/medulla-finance-quant" }
 medulla-mining = { path = "crates/medulla-mining" }
+medulla-finance-market = { path = "crates/medulla-finance-market" }
 
 [dev-dependencies]
 medulla-h-ingest = { path = "crates/medulla-h-ingest", features = ["test-support"] }

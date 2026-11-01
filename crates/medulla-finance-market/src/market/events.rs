@@ -86,13 +86,15 @@ pub fn detect(pattern: &CepPattern, events: &[Event]) -> Vec<Match> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::finance::market::calendar::NS_PER_DAY;
-    use crate::finance::market::golden_tests::{daily, request, series};
-    use crate::finance::market::rollup::rollup;
-    use crate::finance::market::signal::replay;
-    use crate::finance::market::TradingCalendar;
+    use crate::market::calendar::NS_PER_DAY;
+    use crate::market::rollup::rollup;
+    use crate::market::signal::replay;
+    use crate::market::TradingCalendar;
+    use crate::{
+        market::golden_tests::daily, market::golden_tests::request, market::golden_tests::series,
+    };
 
-    fn events(bars: Vec<crate::finance::market::BarRecord>, timeframe: Timeframe) -> Vec<Event> {
+    fn events(bars: Vec<crate::market::BarRecord>, timeframe: Timeframe) -> Vec<Event> {
         let mut identity = series();
         identity.timeframe = timeframe;
         let mut replay_request = request(bars, None);

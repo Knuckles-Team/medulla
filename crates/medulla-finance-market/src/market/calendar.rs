@@ -303,7 +303,7 @@ impl<'a> CalendarSession<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::finance::market::{EarlyClose, UtcOffsetSpan};
+    use crate::{market::EarlyClose, market::UtcOffsetSpan};
 
     const HOUR: i64 = 60 * NS_PER_MINUTE;
 

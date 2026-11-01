@@ -185,7 +185,7 @@ pub fn step(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::finance::market::BarStatus;
+    use crate::market::BarStatus;
 
     fn bar(index: i64, high: i64, low: i64, close: i64) -> BarRecord {
         BarRecord {

@@ -287,13 +287,13 @@ pub fn decay_weighted_mean(points: &[Point], now: Ts, half_life_secs: f64) -> f6
 /// EH-522), through its finance entry so the `NaN`/empty conventions match.
 pub fn series_ewma(points: &[Point], span: usize) -> Vec<f64> {
     let vals: Vec<f64> = points.iter().map(|p| p.values[0]).collect();
-    medulla_compute::finance::signals::ewma_signal(&vals, span)
+    medulla_finance_market::signals::ewma_signal(&vals, span)
 }
 
 /// Rolling z-score over field 0 of a stored series — the one series kernel, as above.
 pub fn series_rolling_zscore(points: &[Point], window: usize) -> Vec<f64> {
     let vals: Vec<f64> = points.iter().map(|p| p.values[0]).collect();
-    medulla_compute::finance::signals::rolling_zscore(&vals, window)
+    medulla_finance_market::signals::rolling_zscore(&vals, window)
 }
 
 // ───────────────────── multimodal sensor fusion (CONCEPT:MEDULLA-KG.query.multi-rate-sensor-stream) ────────────────

@@ -81,7 +81,7 @@ fn settle(target: Bucket, mut bar: BarRecord, watermark: i64) -> BarRecord {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::finance::market::calendar::{days_from_civil, NS_PER_DAY};
+    use crate::{market::calendar::days_from_civil, market::calendar::NS_PER_DAY};
 
     const HOUR: i64 = 3_600_000_000_000;
 

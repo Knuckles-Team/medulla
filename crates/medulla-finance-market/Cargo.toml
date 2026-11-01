@@ -12,3 +12,10 @@ name = "medulla_finance_market"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-numeric = { path = "../medulla-numeric" }
+medulla-stream = { path = "../medulla-stream" }
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+sha2 = "0.10"
+hex = "0.4"
+medulla-result-types = { path = "../medulla-result-types" }

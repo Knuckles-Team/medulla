@@ -32,6 +32,7 @@ medulla-numeric = { path = "../medulla-numeric" }
 medulla-finance = { path = "../medulla-finance" }
 medulla-graph-algos = { path = "../medulla-graph-algos" }
 medulla-finance-quant = { path = "../medulla-finance-quant" }
+medulla-finance-market = { path = "../medulla-finance-market" }
 
 [features]
 datascience = []

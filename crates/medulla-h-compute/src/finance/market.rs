@@ -5,9 +5,10 @@
 //! replay by its own work budget); every op answers its declared result or a
 //! typed refusal rendered `"CODE: detail"`.
 
-use medulla_compute::finance::market::{
-    backtest_run, codec, confidence, decimate, indicators, liquidity, rollup, scan, signal,
-    snapshot, FinanceMarketOp, MarketResult,
+use medulla_finance_market::{
+    market::backtest_run, market::codec, market::confidence, market::decimate, market::indicators,
+    market::liquidity, market::rollup, market::scan, market::signal, market::snapshot,
+    market::FinanceMarketOp, market::MarketResult,
 };
 use medulla_protocol_types::result_contract::compute as results;
 use medulla_protocol_types::result_contract::MethodResult;

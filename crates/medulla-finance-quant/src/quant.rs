@@ -52,7 +52,7 @@ pub use surveillance::{kyle_lambda, surveillance_risk, SurveillanceRisk};
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_compute::finance::market::validation::*;
+    use medulla_finance_market::market::validation::*;
 
     #[test]
     fn test_avellaneda_stoikov_inventory_skew() {

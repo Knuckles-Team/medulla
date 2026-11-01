@@ -188,29 +188,29 @@ pub(super) fn handle_signals(req_id: u64, method: Method) -> Result<Response, Me
     Ok(match method {
         // ── Extended Finance: Signals / alpha ─────────────────────────────────────────────────
         Method::FinanceSignalDecay { signal, half_life } => {
-            let v = medulla_compute::finance::signals::signal_decay(&signal, half_life);
+            let v = medulla_finance_market::signals::signal_decay(&signal, half_life);
             Response::ok(req_id, ResultPayload::of::<results::FinanceSignalDecay>(v))
         }
         Method::FinanceCombineAlphas { signals, weights } => {
-            let v = medulla_compute::finance::signals::combine_alphas(&signals, &weights);
+            let v = medulla_finance_market::signals::combine_alphas(&signals, &weights);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceCombineAlphas>(v),
             )
         }
         Method::FinanceCrossSectionalRank { cross_section } => {
-            let v = medulla_compute::finance::signals::cross_sectional_rank(&cross_section);
+            let v = medulla_finance_market::signals::cross_sectional_rank(&cross_section);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceCrossSectionalRank>(v),
             )
         }
         Method::FinanceMomentum { prices, lookback } => {
-            let v = medulla_compute::finance::signals::momentum(&prices, lookback);
+            let v = medulla_finance_market::signals::momentum(&prices, lookback);
             Response::ok(req_id, ResultPayload::of::<results::FinanceMomentum>(v))
         }
         Method::FinanceMeanReversion { values, window } => {
-            let v = medulla_compute::finance::signals::mean_reversion(&values, window);
+            let v = medulla_finance_market::signals::mean_reversion(&values, window);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceMeanReversion>(v),
@@ -220,10 +220,8 @@ pub(super) fn handle_signals(req_id: u64, method: Method) -> Result<Response, Me
             signal,
             forward_returns,
         } => {
-            let v = medulla_compute::finance::signals::information_coefficient(
-                &signal,
-                &forward_returns,
-            );
+            let v =
+                medulla_finance_market::signals::information_coefficient(&signal, &forward_returns);
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceInformationCoefficient>(v),
@@ -479,7 +477,7 @@ pub(super) fn handle_sizing(req_id: u64, method: Method) -> Result<Response, Met
     Ok(match method {
         // ── Position Sizing (CONCEPT:MEDULLA-KG.domains.market-microstructure-sizing-backtest) ────
         Method::FinanceKellyFraction { q, c, fraction } => {
-            let v = medulla_compute::finance::market::validation::kelly_fraction(q, c, fraction);
+            let v = medulla_finance_market::market::validation::kelly_fraction(q, c, fraction);
             Response::ok(
                 req_id,
                 ResultPayload::scalar::<results::FinanceKellyFraction>(v),
@@ -531,7 +529,7 @@ pub(super) fn handle_sizing(req_id: u64, method: Method) -> Result<Response, Met
             c,
             n_quadrature,
         } => {
-            let v = medulla_compute::finance::market::validation::bayesian_kelly_fraction(
+            let v = medulla_finance_market::market::validation::bayesian_kelly_fraction(
                 alpha,
                 beta,
                 c,
@@ -544,7 +542,7 @@ pub(super) fn handle_sizing(req_id: u64, method: Method) -> Result<Response, Met
         }
         Method::FinancePosteriorCredibleInterval { alpha, beta, level } => {
             let (lower, upper) =
-                medulla_compute::finance::market::validation::posterior_credible_interval(
+                medulla_finance_market::market::validation::posterior_credible_interval(
                     alpha, beta, level,
                 );
             Response::ok(
@@ -568,7 +566,7 @@ pub(super) fn handle_backtest(req_id: u64, method: Method) -> Result<Response, M
             purge_window,
             embargo,
         } => {
-            let v = medulla_compute::finance::market::validation::purged_cpcv_splits(
+            let v = medulla_finance_market::market::validation::purged_cpcv_splits(
                 n_samples,
                 n_groups,
                 n_test_groups,
@@ -582,7 +580,7 @@ pub(super) fn handle_backtest(req_id: u64, method: Method) -> Result<Response, M
             n_trials,
             sr_returns,
         } => {
-            let v = medulla_compute::finance::market::validation::deflated_sharpe_ratio(
+            let v = medulla_finance_market::market::validation::deflated_sharpe_ratio(
                 observed_sr,
                 n_trials,
                 &sr_returns,
@@ -593,7 +591,7 @@ pub(super) fn handle_backtest(req_id: u64, method: Method) -> Result<Response, M
             )
         }
         Method::FinanceProbabilityBacktestOverfit { insample, oos } => {
-            let v = medulla_compute::finance::market::validation::probability_of_backtest_overfit(
+            let v = medulla_finance_market::market::validation::probability_of_backtest_overfit(
                 &insample, &oos,
             );
             Response::ok(
@@ -606,7 +604,7 @@ pub(super) fn handle_backtest(req_id: u64, method: Method) -> Result<Response, M
             losses_b,
             h,
         } => {
-            let v = medulla_compute::finance::market::validation::diebold_mariano(
+            let v = medulla_finance_market::market::validation::diebold_mariano(
                 &losses_a, &losses_b, h,
             );
             Response::ok(

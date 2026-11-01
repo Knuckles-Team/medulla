@@ -37,8 +37,6 @@ pub use medulla_types::{acl, types, wire};
 // re-exported only when their facade feature (→ medulla-compute feature) is on.
 #[cfg(feature = "datascience")]
 pub use medulla_compute::datascience;
-#[cfg(feature = "finance")]
-pub use medulla_compute::finance;
 #[cfg(feature = "reasoning")]
 pub use medulla_compute::reasoning;
 pub use medulla_compute::{ast, parser, screen};

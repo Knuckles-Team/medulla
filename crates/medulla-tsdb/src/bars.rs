@@ -8,9 +8,13 @@
 //! reconstructible. Reads decode points back to validated [`BarRecord`]s and
 //! resolve the version a view needs; nothing is edited in place.
 
-use medulla_compute::finance::market::codec::{decode, encode, BAR_FIELDS};
-use medulla_compute::finance::market::resolve::resolve;
-use medulla_compute::finance::market::{BarRecord, FinalityFilter, MarketResult, SeriesPoint};
+use medulla_finance_market::market::resolve::resolve;
+use medulla_finance_market::{
+    market::codec::decode, market::codec::encode, market::codec::BAR_FIELDS,
+};
+use medulla_finance_market::{
+    market::BarRecord, market::FinalityFilter, market::MarketResult, market::SeriesPoint,
+};
 
 use crate::point::Point;
 
@@ -53,7 +57,7 @@ pub fn resolve_points(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_compute::finance::market::BarStatus;
+    use medulla_finance_market::market::BarStatus;
 
     const HOUR: i64 = 3_600_000_000_000;
 

@@ -214,3 +214,4 @@ medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test
 tokio = { version = "1.53", features = ["rt", "rt-multi-thread", "macros"] }
 # Shared SQL source batch fixture (`medulla_types::test_support::sql_source`).
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-finance-market = { path = "../medulla-finance-market" }

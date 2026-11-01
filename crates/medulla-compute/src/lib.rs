@@ -89,8 +89,6 @@ pub mod sketch;
 
 #[cfg(feature = "datascience")]
 pub mod datascience;
-#[cfg(feature = "finance")]
-pub mod finance;
 // CONCEPT:MEDULLA-KG.compute.bayesian-fusion-helpers — Bayesian-update / mixture / fusion helpers over the
 // `medulla_types::Distribution` value. Conjugate posteriors are closed-form (no
 // sampling), so this rides the pure `reasoning` feature (no heavy dep).
