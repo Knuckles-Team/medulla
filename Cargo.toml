@@ -304,7 +304,7 @@ ann-redb = ["medulla-server-api/ann-redb", "ann", "redb", "medulla-core/ann-redb
 # the mutation gateway (`src/server/mutation.rs`) is server-only, so the binary
 # linking the MethodPolicy ledger is exactly the `server` build, matching every other
 # server-only dependency in this list.
-server = ["medulla-raft/server", "medulla-persistence/server", "medulla-server-api/server", "medulla-store/server", "medulla-kernel/server", "dep:tokio", "dep:clap", "dep:tracing-subscriber", "dep:async-trait", "dep:medulla-capabilities"]
+server = ["medulla-h-compute/server", "medulla-raft/server", "medulla-persistence/server", "medulla-server-api/server", "medulla-store/server", "medulla-kernel/server", "dep:tokio", "dep:clap", "dep:tracing-subscriber", "dep:async-trait", "dep:medulla-capabilities"]
 # Pure-Rust TLS/mTLS for the native MessagePack TCP service. The one main build
 # includes it so remote-engine deployments can terminate TLS in the binary.
 server-tls = ["server", "dep:rustls", "dep:tokio-rustls"]
@@ -414,7 +414,7 @@ program-optimization = ["medulla-server-api/program-optimization", "jobs", "dep:
 # stays excluded -- it gates nothing but a reserved, unimplemented trait slot, so
 # folding it in would cost nothing but would also prove nothing; it joins `full`
 # once V3a/V6 GPU work actually lands behind it.
-viz = ["medulla-raft/viz", "medulla-persistence/viz", "medulla-server-api/viz", "dep:medulla-viz-core", "medulla-types/viz", "medulla-capabilities?/viz", "medulla-protocol-types/viz"]
+viz = ["medulla-h-compute/viz", "medulla-raft/viz", "medulla-persistence/viz", "medulla-server-api/viz", "dep:medulla-viz-core", "medulla-types/viz", "medulla-capabilities?/viz", "medulla-protocol-types/viz"]
 viz-gpu-export = ["viz"]
 # GOC-34 (`OWNER-VOICE-TTS`) -- native Piper-ONNX text-to-speech PROVIDER behind the
 # frozen `medulla-audio::tts` wire contract (crates/medulla-audio/src/tts.rs, itself validation-
@@ -437,7 +437,7 @@ tts-piper = [
 # `ColumnStoreIngest` trait. Pure Rust; adds zero new external crates.io
 # dependencies beyond what `medulla-viz-core` itself already resolves (serde/sha2/hex)
 # plus `bitvec`, already resolved elsewhere in this lockfile at the same version.
-viz-columnstore = ["medulla-server-api/viz-columnstore", "viz", "dep:medulla-viz-columnstore"]
+viz-columnstore = ["medulla-h-compute/viz-columnstore", "medulla-server-api/viz-columnstore", "viz", "dep:medulla-viz-columnstore"]
 # D-VZ-1 lane V3a: static PNG/SVG/PDF export -- "the matplotlib replacement" --
 # resolved from a ViewSpec against a viz-columnstore ColumnStore, honoring
 # (never re-deriving) the tier `select_tier` chose. Hand-rolled PNG/PDF encoders

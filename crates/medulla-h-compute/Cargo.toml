@@ -12,12 +12,31 @@ name = "medulla_h_compute"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-compute = { path = "../medulla-compute" }
+medulla-core = { path = "../medulla-core" }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-result-types = { path = "../medulla-result-types" }
+medulla-server-api = { path = "../medulla-server-api" }
+medulla-types = { path = "../medulla-types" }
+medulla-viz-columnstore = { path = "../medulla-viz-columnstore", optional = true }
+medulla-viz-core = { path = "../medulla-viz-core", optional = true }
+medulla-viz-export = { path = "../medulla-viz-export", optional = true }
+medulla-viz-graph-tiles = { path = "../medulla-viz-graph-tiles", optional = true }
+medulla-viz-kernels = { path = "../medulla-viz-kernels", optional = true }
+medulla-wasm = { path = "../medulla-wasm", optional = true }
+rmp-serde = "1.3"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
 
 [features]
 datascience = []
 finance = []
 quantum-agent-api = []
-viz-graph-tiles = ["viz-interactive"]
-viz-interactive = ["viz-static-export"]
-viz-static-export = []
-wasm-udf = []
+viz-graph-tiles = ["dep:medulla-viz-graph-tiles", "viz-interactive"]
+viz-interactive = ["dep:medulla-viz-kernels", "viz-static-export"]
+viz-static-export = ["dep:medulla-viz-export", ]
+wasm-udf = ["dep:medulla-wasm", "medulla-wasm/wasm-udf", ]
+viz-columnstore = ["dep:medulla-viz-columnstore"]
+viz = ["dep:medulla-viz-core"]
+server = ["dep:tokio"]
