@@ -363,7 +363,7 @@ fn served_modality_ingest_stream_key(
 /// neither source bytes nor their direct content hash enter the receipt. The
 /// complete effect is independently authenticated by `MutationStateDescriptor`
 /// and the encrypted affected-row payload.
-pub(crate) fn durable_receipt_method(method: &Method) -> Method {
+pub fn durable_receipt_method(method: &Method) -> Method {
     #[cfg(feature = "modality-serving")]
     if let Method::ServedModality { op } = method {
         if let Some(digest) = served_modality_receipt_digest(op) {

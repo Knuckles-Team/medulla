@@ -105,7 +105,7 @@ pub fn opaque_request_key(
 /// Privacy-safe stable identity for a caller operation whose authenticated
 /// idempotency key survives transport retries. Request ids and nonces are
 /// attempt metadata and therefore deliberately excluded.
-pub(crate) fn opaque_idempotency_key_for_context(
+pub fn opaque_idempotency_key_for_context(
     namespace: &str,
     tenant: &str,
     graph: &str,

@@ -45,7 +45,7 @@ use medulla_types::protocol::MethodWriteFamily;
 /// `server::semantic_activation::maybe_activate_after_write`. The embedding and
 /// the index built from it are two writes with two authorities; only the second
 /// one is store-authoritative.
-pub(crate) fn domain_for(method: &Method, surface: MutationSurface) -> DurabilityDomain {
+pub fn domain_for(method: &Method, surface: MutationSurface) -> DurabilityDomain {
     owner_domain(method).unwrap_or_else(|| remaining_default_domain(method, surface))
 }
 
@@ -893,7 +893,7 @@ pub fn is_capacity_method(method: &Method) -> bool {
 /// kernel, but are not WorkItem state transitions themselves; keeping the
 /// classifier distinct lets the durable-applier inventory account for their
 /// GraphRedb authority separately.
-pub(crate) fn is_work_item_mutation_method(method: &Method) -> bool {
+pub fn is_work_item_mutation_method(method: &Method) -> bool {
     is_work_item_method(method) || is_resource_reservation_method(method)
 }
 

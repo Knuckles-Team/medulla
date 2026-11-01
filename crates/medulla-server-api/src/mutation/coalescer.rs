@@ -119,7 +119,7 @@ pub fn is_coalescable_structural_write(method: &Method) -> bool {
 /// force one or the other to give up its own txn-scoping. The five match arms
 /// are intentionally the same shape as `apply_batch`'s (so the two stay easy
 /// to compare/keep in sync by inspection), not shared code.
-pub(crate) fn apply_coalescable_write(
+pub fn apply_coalescable_write(
     core: &GraphCore,
     method: &Method,
 ) -> Result<ResultPayload, String> {
