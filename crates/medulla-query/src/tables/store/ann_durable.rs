@@ -19,7 +19,7 @@ use medulla_storage::{SQL_ANN_DIRTY, SQL_ANN_GENERATIONS};
 use redb::ReadableTable;
 
 use super::{decode_stored, map_err, SqlRead, SqlWrite, TableStore, ANN_INDEXES};
-use crate::sql::AnnIndexPlan;
+use crate::tables::ann_plan::AnnIndexPlan;
 
 /// The changed-row log's per-table last-change row. Row ids are allocated
 /// from a monotonic sequence that never reaches it.

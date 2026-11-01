@@ -25,7 +25,8 @@ use datafusion::scalar::ScalarValue;
 use medulla_result_types::row_predicate::RowPredicate;
 
 use super::ann_filter::{admissible_prefilter, ann_query_shape, AnnDeclineReason, AnnQueryShape};
-use super::pgfamily::{plan_ann_search, AnnIndexPlan, AnnMethod, AnnSearchPlan};
+use super::pgfamily::{plan_ann_search, AnnSearchPlan};
+use crate::tables::ann_plan::{AnnIndexPlan, AnnMethod};
 use crate::tables::ann_authority::AnnTopKRequest;
 use crate::tables::{TableSchema, TableStore};
 

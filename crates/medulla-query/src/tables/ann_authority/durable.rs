@@ -16,7 +16,8 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use super::generation::{AnnGeneration, AnnGraph, IvfSpace};
-use crate::sql::{AnnIndexPlan, AnnMethod};
+use crate::tables::ann_plan::AnnIndexPlan;
+use crate::tables::ann_plan::AnnMethod;
 use crate::tables::store::{AnnChangedRows, StoredGeneration};
 use crate::tables::TableStore;
 

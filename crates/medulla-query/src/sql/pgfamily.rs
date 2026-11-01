@@ -27,51 +27,11 @@ use datafusion::sql::sqlparser::ast::{
 };
 use datafusion::sql::sqlparser::dialect::PostgreSqlDialect;
 use datafusion::sql::sqlparser::parser::Parser;
-use serde::{Deserialize, Serialize};
+use crate::tables::ann_plan::{AnnIndexPlan, AnnMethod, HypertablePlan, VectorMetric};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Plan structs (the decoded shapes classify produces)
 // ─────────────────────────────────────────────────────────────────────────────
-
-/// The pgvector distance metric an ANN index / query uses (CONCEPT:MEDULLA-KG.query.real-ann-top-k), keyed off
-/// the opclass (`vector_l2_ops` → `L2`, …) and the distance operator (`<->` → `L2`, …).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum VectorMetric {
-    /// L2 (Euclidean) — opclass `vector_l2_ops`, operator `<->`.
-    L2,
-    /// Cosine — opclass `vector_cosine_ops`, operator `<=>`.
-    Cosine,
-    /// Negative inner product — opclass `vector_ip_ops`, operator `<#>`.
-    InnerProduct,
-}
-
-/// The ANN index method (CONCEPT:MEDULLA-KG.query.real-ann-top-k). Both lower onto the same `medulla-ann` IVF-PQ /
-/// HNSW backend; the spelling is recorded for catalog fidelity + `EXPLAIN`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum AnnMethod {
-    Hnsw,
-    IvfFlat,
-}
-
-/// A decoded `CREATE INDEX [IF NOT EXISTS] [name] ON table USING hnsw|ivfflat
-/// (col opclass)` (CONCEPT:MEDULLA-KG.query.real-ann-top-k) — an ANN index registration.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct AnnIndexPlan {
-    pub name: Option<String>,
-    pub table: String,
-    pub column: String,
-    pub method: AnnMethod,
-    pub metric: VectorMetric,
-    pub if_not_exists: bool,
-}
-
-/// A decoded `SELECT create_hypertable('t','ts'[, …])` (CONCEPT:MEDULLA-KG.query.continuous-aggregate-lowering) — the
-/// time-partitioning declaration persisted in the native SQL catalog.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct HypertablePlan {
-    pub table: String,
-    pub time_column: String,
-}
 
 /// A decoded `CREATE MATERIALIZED VIEW [IF NOT EXISTS] name WITH
 /// (timescaledb.continuous) AS <select>` (CONCEPT:MEDULLA-KG.query.continuous-aggregate-lowering) — a continuous aggregate.

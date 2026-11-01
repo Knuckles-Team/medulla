@@ -25,7 +25,7 @@ use super::ann_pushdown::{
     ann_pushdown_decision, ann_pushdown_may_apply, maintained_top_k, AnnPushdown,
 };
 use super::catalog::register_system_catalogs;
-use super::pgfamily::AnnIndexPlan;
+use crate::tables::ann_plan::AnnIndexPlan;
 use super::providers::{infer_nodes, EdgesTableProvider, NodesTableProvider, SqlCache};
 use super::spill::CancellationToken;
 use super::store_catalog::{reads_index_status, StoreCatalog};
@@ -1515,7 +1515,8 @@ fn cell_to_json(col: &dyn Array, row: usize) -> Result<serde_json::Value, String
 #[cfg(test)]
 mod sql_context_cache_unit_tests {
     use super::*;
-    use crate::sql::pgfamily::{AnnMethod, VectorMetric};
+    use crate::tables::ann_plan::AnnMethod;
+    use crate::tables::ann_plan::VectorMetric;
 
     fn idx() -> AnnIndexPlan {
         AnnIndexPlan {
@@ -1593,7 +1594,8 @@ mod medulla_embed_ann_pushdown_tests {
         ann_probe_sql_with, ann_pushdown_decision_with, ann_pushdown_may_apply_with,
     };
     use crate::sql::embed_udf::{medulla_embed_udf_with, EmbedFn};
-    use crate::sql::pgfamily::{AnnMethod, VectorMetric};
+    use crate::tables::ann_plan::AnnMethod;
+    use crate::tables::ann_plan::VectorMetric;
     use arrow::array::{Float32Builder, Int64Array, ListBuilder, RecordBatch, StringArray};
     use arrow::datatypes::{DataType, Field, Schema};
 

@@ -96,7 +96,8 @@ use super::schema::{
 };
 // CONCEPT:MEDULLA-KG.query.real-ann-top-k/MEDULLA-313 — the durable pgvector ANN index registration the exec
 // pushdown consults to choose a real medulla-ann index over the brute-force scan.
-use crate::sql::{AnnIndexPlan, HypertablePlan};
+use crate::tables::ann_plan::AnnIndexPlan;
+use crate::tables::ann_plan::HypertablePlan;
 
 /// One row's index-maintenance delta: `(row id, before cells, after cells)`.
 /// Named rather than spelled inline so the tuple's meaning is stated once
@@ -544,7 +545,7 @@ impl TableTxn {
 
 /// One durable user-table catalog. Cheap to clone (`Arc<SqlAuthority>`), so the
 /// served owner-scoped registry can hand the verified tenant+actor's handle to
-/// each surface — including a [`crate::sql::providers::EdgesTableProvider`]-style
+/// each surface — including an `EdgesTableProvider`-style
 /// lazy `TableProvider` (`crate::tables::provider::UserTableProvider`) that holds
 /// its own owned handle instead of a borrow. `Debug` is derived because
 /// `datafusion::catalog::TableProvider` requires it; the authority's own `Debug`

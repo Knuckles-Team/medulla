@@ -17,7 +17,8 @@ use medulla_result_types::row_predicate::RowPredicate;
 
 use super::generation::AnnGeneration;
 use super::{AnnFallbackReason, AnnLimits, AnnServeReceipt, AnnServingPath};
-use crate::sql::{metric_to_ann, AnnIndexPlan};
+use crate::tables::ann_plan::metric_to_ann;
+use crate::tables::ann_plan::AnnIndexPlan;
 use crate::tables::schema::Cell;
 use crate::tables::store::{AnnRowReader, ScanExtent};
 use crate::tables::TableStore;

@@ -20,7 +20,8 @@ use super::generation::AnnGeneration;
 use medulla_core::index::{IndexBlock, IndexBlockReason};
 
 use super::{lock, read, write, AnnIndexStatus, AnnLimits, AnnSlot, DurableMark};
-use crate::sql::{AnnIndexPlan, AnnMethod};
+use crate::tables::ann_plan::AnnIndexPlan;
+use crate::tables::ann_plan::AnnMethod;
 use crate::tables::store::GenerationWrite;
 use crate::tables::TableStore;
 

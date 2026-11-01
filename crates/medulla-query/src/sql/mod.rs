@@ -50,6 +50,8 @@
 mod ann;
 /// The row-level shape a maintained ANN pushdown must honour (`WHERE`, `OFFSET`,
 /// row-ranked projection) — RF-019.
+#[cfg(test)]
+mod ann_authority_tests;
 mod ann_filter;
 /// The ANN pushdown decision: user tables narrow through the maintained ANN
 /// authority, `nodes` through its batch slice — RF-019.
@@ -117,7 +119,6 @@ mod read_only;
 pub use read_only::require_single_read;
 
 pub use ann::ColumnVectorBinding;
-pub(crate) use ann::{isqrt, metric_to_ann};
 pub use ann_filter::{AnnDeclineReason, AnnQueryShape};
 pub use ann_pushdown::{user_ann_decision, UserAnnDecision, UserAnnPushdown};
 pub use classify::{
@@ -150,8 +151,7 @@ pub use pgq::{
 pub use spill::{default_spill_rows, CancellationToken, StreamOutcome};
 // Postgres-family extension parity plans + planners.
 pub use pgfamily::{
-    plan_ann_search, plan_bm25_search, AnnIndexPlan, AnnMethod, AnnSearchPlan, Bm25SearchPlan,
-    ContinuousAggPlan, HypertablePlan, VectorMetric,
+    plan_ann_search, plan_bm25_search, AnnSearchPlan, Bm25SearchPlan, ContinuousAggPlan,
 };
 pub use pgvector_ddl::parse_create_ann_index;
 pub use providers::SqlCache;

@@ -5,7 +5,7 @@
 
 use medulla_core::index::ManagedIndexStatus;
 
-use super::pgfamily::AnnIndexPlan;
+use crate::tables::ann_plan::AnnIndexPlan;
 use crate::tables::{PropertyGraphCatalogRecord, StoredFunction, TableStore};
 
 /// The name of the managed-index status relation, `information_schema.medulla_index_status`.

@@ -27,6 +27,7 @@
 //!     DataFusion `TableProvider` alongside `nodes`/`edges`.
 
 pub mod ann_authority;
+pub mod ann_plan;
 pub mod embedding_binding;
 pub mod index;
 pub mod migration;
@@ -35,6 +36,7 @@ pub mod provider;
 pub mod schema;
 pub mod store;
 
+pub use ann_plan::{AnnIndexPlan, AnnMethod, HypertablePlan, VectorMetric};
 pub use ann_authority::{
     AnnFallbackReason, AnnIndexStatus, AnnLimits, AnnRefreshOutcome, AnnRefreshPolicy,
     AnnServeReceipt, AnnServingPath, AnnTopK, AnnTopKRequest, UserAnnAuthority,

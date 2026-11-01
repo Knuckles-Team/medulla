@@ -30,7 +30,7 @@ use arrow::record_batch::RecordBatch;
 use medulla_ann::{FlatIndex, HnswIndex, IvfPq, IvfPqParams, Metric, SearchParams};
 use serde::{Deserialize, Serialize};
 
-use super::pgfamily::{AnnMethod, VectorMetric};
+use crate::tables::ann_plan::{AnnMethod, VectorMetric};
 
 /// Deterministic seed for every medulla-ann index built for a pushdown (CONCEPT:MEDULLA-KG.query.real-pgvector-ann-top) —
 /// fixed so repeated runs of the same query are bit-identical.
@@ -88,16 +88,6 @@ impl ColumnVectorBinding {
     }
 }
 
-/// Map a pgvector [`VectorMetric`] (from the opclass / distance operator) to the
-/// medulla-ann [`Metric`] (CONCEPT:MEDULLA-KG.query.real-pgvector-ann-top). `<->`→L2, `<=>`→cosine, `<#>`→(neg)inner.
-pub(crate) fn metric_to_ann(metric: VectorMetric) -> Metric {
-    match metric {
-        VectorMetric::L2 => Metric::L2,
-        VectorMetric::Cosine => Metric::Cosine,
-        VectorMetric::InnerProduct => Metric::InnerProduct,
-    }
-}
-
 /// Decode the query-vector operand of an [`AnnSearchPlan`](super::pgfamily::AnnSearchPlan)
 /// (its `query` SQL text) into a dense `Vec<f32>` (CONCEPT:MEDULLA-KG.query.real-pgvector-ann-top). Accepts the
 /// pgvector literal forms `'[1,2,3]'` / `[1,2,3]` (with or without the surrounding
@@ -129,22 +119,6 @@ pub(crate) fn sql_has_where(sql: &str) -> bool {
         let ok_after = after.map(|b| b.is_ascii_whitespace()).unwrap_or(true);
         ok_before && ok_after
     })
-}
-
-/// Integer square root (floor) — used to size the IVF `nlist` ≈ √N without pulling a
-/// nightly `usize::isqrt`.
-pub(crate) fn isqrt(n: usize) -> usize {
-    if n == 0 {
-        return 0;
-    }
-    let mut x = (n as f64).sqrt() as usize;
-    while x.saturating_mul(x) > n {
-        x -= 1;
-    }
-    while (x + 1).saturating_mul(x + 1) <= n {
-        x += 1;
-    }
-    x
 }
 
 /// Consult a REAL medulla-ann index over `vectors` and return the TRUE top-`k` row

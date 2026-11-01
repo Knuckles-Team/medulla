@@ -14,9 +14,12 @@ use medulla_core::graph::GraphView;
 use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
 use serde_json::{json, Value};
 
-use super::generation::AnnGeneration;
-use super::*;
-use crate::sql::{metric_to_ann, AnnIndexPlan, AnnMethod, VectorMetric};
+use crate::tables::ann_authority::generation::AnnGeneration;
+use crate::tables::ann_authority::*;
+use crate::tables::ann_plan::metric_to_ann;
+use crate::tables::ann_plan::AnnIndexPlan;
+use crate::tables::ann_plan::AnnMethod;
+use crate::tables::ann_plan::VectorMetric;
 use crate::tables::schema::Cell;
 use crate::tables::store::dev_scope_grant::{dev_verifier, DEV_PRINCIPAL, DEV_PROOF};
 use crate::tables::store::AnnSourceRows;

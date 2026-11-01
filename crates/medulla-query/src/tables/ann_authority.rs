@@ -39,8 +39,6 @@ mod generation;
 mod lifecycle;
 mod maintain;
 mod serve;
-#[cfg(test)]
-mod tests;
 
 pub use maintain::{AnnRefreshOutcome, AnnRefreshPolicy};
 pub use serve::{AnnTopK, AnnTopKRequest};
@@ -55,7 +53,9 @@ use medulla_core::index::{
     IndexBlock, ManagedIndexFamily, ManagedIndexState, ManagedIndexStatus, ManagedIndexTarget,
 };
 
-use crate::sql::{AnnIndexPlan, AnnMethod, VectorMetric};
+use crate::tables::ann_plan::AnnIndexPlan;
+use crate::tables::ann_plan::AnnMethod;
+use crate::tables::ann_plan::VectorMetric;
 use generation::AnnGeneration;
 
 /// Serve receipts kept for inspection; the oldest is dropped first.

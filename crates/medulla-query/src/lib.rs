@@ -46,19 +46,19 @@ pub use sql::{
     exec_sql_typed_with_tables_cached_cancellable, exec_sql_typed_with_tables_cancellable,
     infer_param_sites, parse_create_ann_index, plan_ann_search, plan_bm25_search,
     require_single_read, returning_columns, schema_probe_sql, user_ann_decision, AlterTableAction,
-    AlterTablePlan, AnnDeclineReason, AnnIndexPlan, AnnMethod, AnnQueryShape, AnnSearchPlan,
+    AlterTablePlan, AnnDeclineReason, AnnQueryShape, AnnSearchPlan,
     Bm25SearchPlan, CancellationToken, ColumnDef, ColumnVectorBinding, ContinuousAggPlan,
     CopyFormat, CopyPlan, CreateFunctionPlan, CreateTablePlan, CreateViewPlan, DeleteNodes,
     DeleteNodesJoin, DeleteTable, DropFunctionPlan, DropTablePlan, DropViewPlan, GraphTableQuery,
-    HypertablePlan, InsertNode, InsertNodes, InsertNodesSelect, InsertSelect, InsertTable,
+    InsertNode, InsertNodes, InsertNodesSelect, InsertSelect, InsertTable,
     OnConflict, OnConflictAction, ParamLiteralType, ParamSite, PgColType, QueryResult, SqlCache,
     SqlContextCache, StatementKind, StreamOutcome, TableWhereEq, TypedColumn, TypedQueryResult,
-    UpdateNodes, UpdateNodesJoin, UpdateTable, UserAnnDecision, UserAnnPushdown, VectorMetric,
-    WhereEq, READ_ONLY_RELATION_NAMES,
+    UpdateNodes, UpdateNodesJoin, UpdateTable, UserAnnDecision, UserAnnPushdown, WhereEq, READ_ONLY_RELATION_NAMES,
 };
 
 #[cfg(feature = "sql")]
 pub use tables::{
+    AnnIndexPlan, AnnMethod, HypertablePlan, VectorMetric,
     migration::{
         conversion_may_be_lossy, MigrationPolicy, MigrationState, RollbackMetadata,
         SchemaMigration, SchemaMigrationApply, SchemaMigrationOperation, SchemaMigrationRecord,

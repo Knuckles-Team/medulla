@@ -12,7 +12,7 @@
 use medulla_core::index::ManagedIndexStatus;
 
 use super::{read, write, AnnIndexStatus, UserAnnAuthority};
-use crate::sql::AnnIndexPlan;
+use crate::tables::ann_plan::AnnIndexPlan;
 use crate::tables::TableStore;
 
 impl UserAnnAuthority {

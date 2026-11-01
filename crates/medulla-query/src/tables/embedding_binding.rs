@@ -40,7 +40,8 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use super::schema::{ColumnType, TableSchema};
-use crate::sql::{AnnMethod, VectorMetric};
+use crate::tables::ann_plan::AnnMethod;
+use crate::tables::ann_plan::VectorMetric;
 
 /// Version of the durable binding record and of its catalog key encoding.
 pub const EMBEDDING_BINDING_SCHEMA_VERSION: u16 = 1;

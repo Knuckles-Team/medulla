@@ -19,7 +19,10 @@ use std::collections::BTreeSet;
 use medulla_ann::{HnswIndex, IvfPq, IvfPqParams, Metric, SearchParams};
 use serde::{Deserialize, Serialize};
 
-use crate::sql::{isqrt, metric_to_ann, AnnMethod, VectorMetric};
+use crate::tables::ann_plan::isqrt;
+use crate::tables::ann_plan::metric_to_ann;
+use crate::tables::ann_plan::AnnMethod;
+use crate::tables::ann_plan::VectorMetric;
 use crate::tables::store::{AnnChangedRows, AnnSourceRows};
 
 /// Deterministic seed for every maintained build, so two builds over the same

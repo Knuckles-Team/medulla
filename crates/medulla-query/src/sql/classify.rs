@@ -45,7 +45,8 @@ use datafusion::sql::sqlparser::ast::{
     UpdateTableFromKind, Value as SqlValue, Values,
 };
 // The Postgres-family extension plan shapes classify routes to.
-use super::pgfamily::{AnnIndexPlan, ContinuousAggPlan, HypertablePlan};
+use super::pgfamily::ContinuousAggPlan;
+use crate::tables::ann_plan::{AnnIndexPlan, HypertablePlan};
 // CONCEPT:MEDULLA-KG.compute.json-deep-indexing — the wire predicate the JSON operators lower onto. Surfaced by
 // `medulla-types/query`, which the `sql` feature (this module's gate) always enables.
 use datafusion::sql::sqlparser::dialect::PostgreSqlDialect;
