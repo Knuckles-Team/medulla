@@ -802,7 +802,7 @@ impl Cluster {
     /// Best-effort synchronous abort used only by test cleanup when async
     /// unwinding cannot await [`Self::teardown`].  The normal path must use
     /// `teardown`, which awaits each Raft shutdown before dropping persistence.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fn abort_sync(&mut self) {
         let runtime = tokio::runtime::Handle::try_current().ok();
         let (started_nodes, states) = take_live_members(&mut self.members);

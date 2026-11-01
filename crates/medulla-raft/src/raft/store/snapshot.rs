@@ -48,8 +48,8 @@ impl MedullaStore {
     /// Test-only: the sorted graph NAMES this group's snapshot would capture, AFTER
     /// per-group scoping (CONCEPT:AU-KG.ingest.staged). Lets a test assert a group's snapshot
     /// carries ONLY its own tenant-range graphs without reaching into private types.
-    #[cfg(test)]
-    pub(crate) async fn scoped_snapshot_graph_names(&self) -> Vec<String> {
+    #[cfg(any(test, feature = "test-support"))]
+    pub async fn scoped_snapshot_graph_names(&self) -> Vec<String> {
         let mut names: Vec<String> = self
             .dump_graphs()
             .await
