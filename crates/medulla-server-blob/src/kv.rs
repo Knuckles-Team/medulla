@@ -32,7 +32,7 @@ use redb::{ReadableTable, ReadableTableMetadata, TableDefinition};
 use serde::{de::DeserializeOwned, Serialize};
 use tokio::sync::RwLock;
 
-use super::state::ServerState;
+use medulla_server_api::state::ServerState;
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_mutation_types::mutation_scope::MutationSurface;
