@@ -106,6 +106,6 @@ promql = ["dep:medulla-tsdb", "medulla-tsdb/promql", "medulla-persistence/promql
 traces = ["dep:medulla-tsdb", "medulla-tsdb/traces", "medulla-persistence/traces", "medulla-server-api/traces", "medulla-store/traces", "query", "redb", "server", "text", "tsdb"]
 pgwire = ["dep:rustix", "medulla-raft/pgwire", "query", "redb", "server"]
 [dev-dependencies]
-medulla-server = { path = "../medulla-server", features = ["test-support", "full"] }
+medulla-server = { path = "../medulla-server", features = ["compute-dist", "cost-opt", "cypher", "cypher-plan", "epistemic", "epistemic-causal", "epistemic-tms", "evidence-graph", "federation", "federation-sql", "full", "geo", "geosparql", "gpu", "gpu-cuda", "graphql", "json-ld", "knowledge-batch", "matview", "metrics", "nl-query", "numeric", "owl", "owl-dl", "owl-plan", "par-runtime", "promql", "query", "raft", "rdf", "rdf-xml", "redb", "result-cache", "security", "server", "sparql", "sparql-hash", "sparql-star", "sqlite-file", "stream", "tensor", "test-support", "text", "traces", "tsdb", "wasm-udf"] }
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 tempfile = "3"

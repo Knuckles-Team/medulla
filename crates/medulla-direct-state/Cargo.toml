@@ -24,3 +24,5 @@ tempfile = "3"
 
 [features]
 test-support = ["medulla-types/test-support"]
+[dev-dependencies]
+tokio = { version = "1.53", features = ["sync", "macros", "rt"] }

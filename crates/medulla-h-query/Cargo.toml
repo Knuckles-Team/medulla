@@ -144,7 +144,7 @@ obs = ["dep:medulla-text", "medulla-text/tantivy", "medulla-server-api/obs", "qu
 promql = ["dep:medulla-tsdb", "medulla-tsdb/promql", "medulla-persistence/promql", "medulla-server-api/promql", "obs", "query", "redb", "server", "text", "tsdb"]
 traces = ["dep:medulla-tsdb", "medulla-tsdb/traces", "medulla-persistence/traces", "medulla-server-api/traces", "obs", "query", "redb", "server", "text", "tsdb"]
 [dev-dependencies]
-medulla-server = { path = "../medulla-server", features = ["test-support", "full"] }
+medulla-server = { path = "../medulla-server", features = ["alignment", "ann-redb", "asr-whisper", "cost-opt", "cypher", "cypher-plan", "decide", "epistemic", "epistemic-causal", "epistemic-tms", "evidence-graph", "federation", "federation-search", "federation-sql", "full", "geo", "geosparql", "gpu", "gpu-cuda", "graphql", "jobs", "json-ld", "knowledge-batch", "mining", "modality-serving", "nl-query", "numeric", "obda", "obs", "owl", "owl-dl", "owl-plan", "par-runtime", "promql", "quantum-agent-api", "query", "raft", "rdf", "rdf-xml", "redb", "result-cache", "security", "server", "shacl", "shex", "sparql", "sparql-fuseki", "sparql-hash", "sparql-star", "statechart", "stream", "streaming", "tensor", "test-support", "text", "traces", "tsdb", "viz", "wasm-udf"] }
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
 medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }

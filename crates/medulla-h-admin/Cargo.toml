@@ -100,6 +100,6 @@ owl-dl = ["dep:medulla-rdf", "medulla-rdf/owl-dl", "medulla-persistence/owl-dl",
 promql = ["dep:medulla-tsdb", "medulla-tsdb/promql", "medulla-persistence/promql", "medulla-server-api/promql", "medulla-store/promql", "blob", "query", "redb", "server", "text", "tsdb"]
 traces = ["dep:medulla-tsdb", "medulla-tsdb/traces", "medulla-persistence/traces", "medulla-server-api/traces", "medulla-store/traces", "blob", "query", "redb", "server", "text", "tsdb"]
 [dev-dependencies]
-medulla-server = { path = "../medulla-server", features = ["test-support", "full"] }
+medulla-server = { path = "../medulla-server", features = ["blob", "compute-dist", "cost-opt", "epistemic", "federation", "federation-sql", "full", "geo", "geosparql", "gpu", "gpu-cuda", "jobs", "json-ld", "knowledge-batch", "kv", "matview", "nl-query", "numeric", "owl", "owl-dl", "owl-plan", "par-runtime", "promql", "query", "raft", "rdf", "rdf-xml", "redb", "security", "server", "server-tls", "shacl", "sparql", "sparql-hash", "sparql-star", "stream", "streaming", "tensor", "test-support", "text", "traces", "tsdb", "wasm-udf"] }
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 tempfile = "3"

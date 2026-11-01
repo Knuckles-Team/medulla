@@ -61,6 +61,6 @@ sparql-http = ["shacl", "security", "dep:medulla-rdf", "medulla-rdf/sparql", "me
 sparql-service = ["sparql-http", "dep:ureq", "medulla-server-api/sparql-service", "medulla-federation/sparql-service"]
 test-support = ["medulla-server-api/test-support", "medulla-server-auth/test-support", "medulla-kernel/test-support", "medulla-store/test-support", "medulla-types/test-support", "medulla-agent-types/test-support", "medulla-catalog-types/test-support", "medulla-protocol-types/test-support", "medulla-federation/test-support"]
 [dev-dependencies]
-medulla-server = { path = "../medulla-server", features = ["test-support", "full"] }
+medulla-server = { path = "../medulla-server", features = ["alignment", "blob", "blob-s3", "full", "kv", "nl-query", "rdf-xml", "redb", "security", "shacl", "sparql-http", "test-support"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
 tempfile = "3"

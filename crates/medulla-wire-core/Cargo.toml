@@ -65,4 +65,4 @@ sparql = ["medulla-kernel/sparql", "medulla-persistence/sparql", "medulla-protoc
 test-support = ["medulla-kernel/test-support", "medulla-persistence/test-support", "medulla-protocol-types/test-support", "medulla-server-api/test-support", "medulla-types/test-support", "medulla-server-ops/test-support", "medulla-server-auth/test-support", "medulla-exec/test-support"]
 tsdb = ["redb", "dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries", "medulla-persistence/tsdb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb"]
 [dev-dependencies]
-medulla-server = { path = "../medulla-server", features = ["test-support", "full"] }
+medulla-server = { path = "../medulla-server", features = ["amqp-wire", "federation", "full", "mqtt-wire", "mssql-wire", "mysql-wire", "query", "redb", "redis-wire", "security", "sparql", "stomp-wire", "test-support", "tsdb"] }
