@@ -52,6 +52,11 @@ ureq = { version = "3.4.2", optional = true }
 fs4 = "1.1"
 medulla-storage = { path = "../medulla-storage", optional = true }
 uuid = { version = "1.28", features = ["v4"] }
+medulla-ann-codes = { path = "../medulla-ann-codes" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-isolation = { path = "../medulla-isolation" }
+medulla-query-cache = { path = "../medulla-query-cache" }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
 
 [features]
 test-support = []
