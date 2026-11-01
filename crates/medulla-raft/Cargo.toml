@@ -58,7 +58,7 @@ medulla-store-apply = { path = "../medulla-store-apply" }
 medulla-persistence-ops = { path = "../medulla-persistence-ops" }
 medulla-server-ops = { path = "../medulla-server-ops" }
 medulla-server-mutation = { path = "../medulla-server-mutation" }
-medulla-server-cdc = { path = "../medulla-server-cdc" }
+medulla-server-cdc = { path = "../medulla-server-cdc", features = ["streaming"] }
 medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-exec = { path = "../medulla-exec" }
 
