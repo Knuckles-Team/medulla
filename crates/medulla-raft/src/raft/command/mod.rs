@@ -167,7 +167,7 @@ impl ReplicatedMutation {
         }
     }
 
-    pub(crate) fn enrichment_top_up(
+    pub fn enrichment_top_up(
         transition: &EnrichmentTopUpTransition,
         graph: &str,
         committed_at_ms: u64,
