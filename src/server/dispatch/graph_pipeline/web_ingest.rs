@@ -157,7 +157,7 @@ async fn select(
         .now_ms
         .unwrap_or_else(medulla_kernel::kernel::dispatch_support::authoritative_now_ms);
     let digest = web::query_digest(&request.query);
-    match medulla_numeric::decision::web_fetch_selection::select_web_pages(
+    match medulla_decision_stats::decision::web_fetch_selection::select_web_pages(
         &request, &held, &digests, now_ms, digest,
     ) {
         Ok(answer) => Response::ok(
