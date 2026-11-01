@@ -66,9 +66,9 @@ pub fn intent_for_snapshot(
     })
 }
 
-pub(super) struct PendingEnrichment {
-    pub(super) intent: MutationOutboxIntent,
-    pub(super) budget: medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority,
+pub struct PendingEnrichment {
+    pub intent: MutationOutboxIntent,
+    pub budget: medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -366,7 +366,7 @@ fn snapshot_units(
 /// Page the engine planner until every eligible unit is represented. Pagination
 /// here selects a complete immutable snapshot; it does not reserve future-page
 /// budget or submit work. Each CAS ref is bound before the source commit.
-pub(super) async fn pending_intent(
+pub async fn pending_intent(
     ctx: GraphOpRouting<'_>,
     result: &IndexResult,
     envelope_id: &str,

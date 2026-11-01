@@ -3,7 +3,7 @@ use super::*;
 /// The route, graph and verified identity a replicated modality mutation is
 /// bound to. Bundled so each phase helper below stays inside the parameter cap.
 #[cfg(all(feature = "raft", feature = "modality-serving"))]
-pub(super) struct ModalityReplication<'a> {
+pub struct ModalityReplication<'a> {
     state: &'a Arc<RwLock<ServerState>>,
     handle: &'a medulla_raft::raft::RaftHandle,
     group_id: medulla_raft::raft::GroupId,
@@ -23,7 +23,7 @@ pub(super) struct ModalityReplication<'a> {
 /// source-bearing `ServedModalityOp` is deliberately NOT carried here — it is
 /// handed to the modality handler once and never reaches `RaftRequest`.
 #[cfg(all(feature = "raft", feature = "modality-serving"))]
-pub(super) struct ModalityMutationInputs {
+pub struct ModalityMutationInputs {
     operation: medulla_raft::raft::SanitizedModalityMutation,
     modality: medulla_types::ServedModalityKind,
     receipt_query: String,
@@ -34,29 +34,29 @@ pub(super) struct ModalityMutationInputs {
 /// Grouping the route, identity, and sealed-state handles keeps the public
 /// helper at the dispatch parameter limit without changing the wire contract.
 #[cfg(all(feature = "raft", feature = "modality-serving"))]
-pub(super) struct ModalityReplicationRequest<'a> {
-    pub(super) state: &'a Arc<RwLock<ServerState>>,
-    pub(super) handle: medulla_raft::raft::RaftHandle,
-    pub(super) group_id: medulla_raft::raft::GroupId,
-    pub(super) placement_epoch: u64,
-    pub(super) fencing_token: Option<u64>,
-    pub(super) graph_name: &'a str,
-    pub(super) graph_type: medulla_protocol_types::protocol::GraphType,
-    pub(super) req_id: u64,
-    pub(super) attempt_nonce: Option<medulla_types::contract::Nonce>,
-    pub(super) idempotency_key: &'a str,
-    pub(super) tenant_scope: &'a str,
-    pub(super) principal_fingerprint: &'a str,
-    pub(super) core: &'a Arc<medulla_graph_core::graph::GraphCore>,
-    pub(super) persistence: &'a Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
-    pub(super) method: Method,
-    pub(super) authority: &'a medulla_h_ingest::modality::ModalityAuthority,
+pub struct ModalityReplicationRequest<'a> {
+    pub state: &'a Arc<RwLock<ServerState>>,
+    pub handle: medulla_raft::raft::RaftHandle,
+    pub group_id: medulla_raft::raft::GroupId,
+    pub placement_epoch: u64,
+    pub fencing_token: Option<u64>,
+    pub graph_name: &'a str,
+    pub graph_type: medulla_protocol_types::protocol::GraphType,
+    pub req_id: u64,
+    pub attempt_nonce: Option<medulla_types::contract::Nonce>,
+    pub idempotency_key: &'a str,
+    pub tenant_scope: &'a str,
+    pub principal_fingerprint: &'a str,
+    pub core: &'a Arc<medulla_graph_core::graph::GraphCore>,
+    pub persistence: &'a Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
+    pub method: Method,
+    pub authority: &'a medulla_h_ingest::modality::ModalityAuthority,
 }
 
 /// Only the current placement leader may prepare a modality mutation; a
 /// follower answers with the ordinary redirect.
 #[cfg(all(feature = "raft", feature = "modality-serving"))]
-pub(super) async fn modality_leader_fence(ctx: &ModalityReplication<'_>) -> Option<Response> {
+pub async fn modality_leader_fence(ctx: &ModalityReplication<'_>) -> Option<Response> {
     let leader = ctx.handle.current_leader().await;
     if leader == Some(ctx.handle.node_id) {
         return None;
@@ -74,7 +74,7 @@ pub(super) async fn modality_leader_fence(ctx: &ModalityReplication<'_>) -> Opti
 /// Split the public method into the source-bearing op (consumed by the handler)
 /// and the digest-only receipt facts consensus actually sees.
 #[cfg(all(feature = "raft", feature = "modality-serving"))]
-pub(super) fn decode_modality_replication_inputs(
+pub fn decode_modality_replication_inputs(
     req_id: u64,
     method: Method,
 ) -> Result<(medulla_types::ServedModalityOp, ModalityMutationInputs), Response> {
@@ -118,7 +118,7 @@ pub(super) fn decode_modality_replication_inputs(
 /// The stored receipt must carry exactly ONE authoritative-state operation whose
 /// digest is this request's own.
 #[cfg(all(feature = "raft", feature = "modality-serving"))]
-pub(super) fn modality_receipt_operation_matches(
+pub fn modality_receipt_operation_matches(
     record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
     expected_operation: &str,
 ) -> bool {
@@ -134,7 +134,7 @@ pub(super) fn modality_receipt_operation_matches(
 /// The stored receipt must also be committed and bound to this request's
 /// batch, tenant, graph, placement fence and principal.
 #[cfg(all(feature = "raft", feature = "modality-serving"))]
-pub(super) fn modality_receipt_binding_matches(
+pub fn modality_receipt_binding_matches(
     ctx: &ModalityReplication<'_>,
     record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
     batch_id: &str,
@@ -171,7 +171,7 @@ pub(super) fn modality_receipt_binding_matches(
 /// receipt tampering without ever reconstructing or exposing the sealed/source
 /// material.
 #[cfg(all(feature = "raft", feature = "modality-serving"))]
-pub(super) fn decode_modality_replay_result(
+pub fn decode_modality_replay_result(
     req_id: u64,
     inputs: &ModalityMutationInputs,
     record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
@@ -188,7 +188,7 @@ pub(super) fn decode_modality_replay_result(
 
 /// Repair RAM from the durably committed image before answering a replay.
 #[cfg(all(feature = "raft", feature = "modality-serving"))]
-pub(super) async fn install_modality_committed_image(
+pub async fn install_modality_committed_image(
     ctx: &ModalityReplication<'_>,
     graph_fname: &str,
     result: ResultPayload,
@@ -223,7 +223,7 @@ fn modality_operation_digest(method: &Method) -> Result<String, String> {
 /// emits a second Raft entry/outbox/audit/CDC event. `None` ⇒ no receipt yet, so
 /// the caller proceeds with a fresh mutation.
 #[cfg(all(feature = "raft", feature = "modality-serving"))]
-pub(super) async fn try_replay_modality_receipt(
+pub async fn try_replay_modality_receipt(
     ctx: &ModalityReplication<'_>,
     inputs: &ModalityMutationInputs,
     batch_id: &str,
@@ -330,7 +330,7 @@ mod replicated_identity_tests {
 /// Stage the mutation over the authoritative committed image. When no durable
 /// snapshot exists yet, fall back to the resident core at the durable version.
 #[cfg(all(feature = "raft", feature = "modality-serving"))]
-pub(super) async fn stage_modality_base_core(
+pub async fn stage_modality_base_core(
     ctx: &ModalityReplication<'_>,
     graph_fname: &str,
 ) -> Result<medulla_graph_core::graph::GraphCore, Response> {
@@ -361,7 +361,7 @@ pub(super) async fn stage_modality_base_core(
 /// receives. The staged node MUST already be sealed — an unsealed runtime state
 /// is refused rather than replicated.
 #[cfg(all(feature = "raft", feature = "modality-serving"))]
-pub(super) async fn build_modality_raft_command(
+pub async fn build_modality_raft_command(
     ctx: &ModalityReplication<'_>,
     inputs: &ModalityMutationInputs,
     staged: &medulla_graph_core::graph::GraphCore,
@@ -402,7 +402,7 @@ pub(super) async fn build_modality_raft_command(
 /// Propose the sanitized command and answer with the prepared payload once the
 /// entry has applied.
 #[cfg(all(feature = "raft", feature = "modality-serving"))]
-pub(super) async fn submit_modality_replication(
+pub async fn submit_modality_replication(
     ctx: &ModalityReplication<'_>,
     batch_id: String,
     graph_fname: String,
@@ -457,7 +457,7 @@ pub(super) async fn submit_modality_replication(
 /// `RaftRequest`; consensus receives only the HMAC-authenticated encrypted runtime
 /// node plus a digest-only receipt and compact ApplyOutcome.
 #[cfg(all(feature = "raft", feature = "modality-serving"))]
-pub(super) async fn replicate_served_modality(request: ModalityReplicationRequest<'_>) -> Response {
+pub async fn replicate_served_modality(request: ModalityReplicationRequest<'_>) -> Response {
     let method = request.method;
     let ctx = ModalityReplication {
         state: request.state,
@@ -506,7 +506,7 @@ pub(super) async fn replicate_served_modality(request: ModalityReplicationReques
 /// No receipt exists yet: stage the mutation over the committed image, run the
 /// modality handler, seal the result, and propose it.
 #[cfg(all(feature = "raft", feature = "modality-serving"))]
-pub(super) async fn prepare_and_replicate_modality(
+pub async fn prepare_and_replicate_modality(
     ctx: &ModalityReplication<'_>,
     inputs: &ModalityMutationInputs,
     op: medulla_types::ServedModalityOp,

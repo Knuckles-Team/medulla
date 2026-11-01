@@ -43,30 +43,30 @@ const ATTR_TOOL_MODE: &str = "sdk.tool_mode";
 
 /// One observation the viewer may see, and how.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) struct VisibleDiscovery {
-    pub(super) record: StoredRecord<DiscoveryBody>,
-    pub(super) visibility: FleetVisibility,
+pub struct VisibleDiscovery {
+    pub record: StoredRecord<DiscoveryBody>,
+    pub visibility: FleetVisibility,
 }
 
 /// The observation a connector's content is visible through.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) struct ConnectorBinding {
-    pub(super) server_name: String,
-    pub(super) connector: ResourceId,
-    pub(super) visibility: FleetVisibility,
+pub struct ConnectorBinding {
+    pub server_name: String,
+    pub connector: ResourceId,
+    pub visibility: FleetVisibility,
 }
 
 /// Registry and override state every content row consults.
-pub(super) struct ProjectionInputs<'a> {
-    pub(super) desired: &'a BTreeMap<String, ServerDesiredState>,
-    pub(super) skill_overrides: &'a BTreeMap<String, (SkillType, u64)>,
+pub struct ProjectionInputs<'a> {
+    pub desired: &'a BTreeMap<String, ServerDesiredState>,
+    pub skill_overrides: &'a BTreeMap<String, (SkillType, u64)>,
 }
 
 /// One binding per connector, through its WIDEST visible observation.
 ///
 /// Tenant-wide observations sort before principal-scoped ones, so a connector
 /// named by both is shown tenant-wide once, never twice.
-pub(super) fn connector_bindings(discoveries: &[VisibleDiscovery]) -> Vec<ConnectorBinding> {
+pub fn connector_bindings(discoveries: &[VisibleDiscovery]) -> Vec<ConnectorBinding> {
     let rank = |discovery: &VisibleDiscovery| {
         (
             matches!(discovery.visibility, FleetVisibility::Principal { .. }),
@@ -114,7 +114,7 @@ fn component_kind(kind: FleetCatalogKind) -> Option<AgentComponentKind> {
 /// `mcp:<connector>/<kind token>/` -- the exact key prefix of one connector's
 /// members of one kind. Exact because a pack-escaped name never contains `/`
 /// and a bound connector never does either.
-pub(super) fn member_prefix(connector: &ResourceId, kind: FleetCatalogKind) -> Option<String> {
+pub fn member_prefix(connector: &ResourceId, kind: FleetCatalogKind) -> Option<String> {
     pack_kind(kind).map(|pack_kind| {
         format!(
             "{PACK_COMPONENT_ID_PREFIX}{}/{}/",
@@ -126,7 +126,7 @@ pub(super) fn member_prefix(connector: &ResourceId, kind: FleetCatalogKind) -> O
 
 /// Split a member id into `(connector, kind)`, or `None` for anything that is
 /// not a fleet-listable pack member.
-pub(super) fn parse_member_id(component_id: &str) -> Option<(ResourceId, FleetCatalogKind)> {
+pub fn parse_member_id(component_id: &str) -> Option<(ResourceId, FleetCatalogKind)> {
     let rest = component_id.strip_prefix(PACK_COMPONENT_ID_PREFIX)?;
     let (connector, rest) = rest.split_once('/')?;
     let (token, name) = rest.split_once('/')?;
@@ -176,7 +176,7 @@ fn attribute<'a>(entry: &'a AgentComponentEntry, key: &str) -> Option<&'a str> {
     entry.attributes.get(key).map(String::as_str)
 }
 
-pub(super) fn discovery_row(discovery: &VisibleDiscovery) -> FleetCatalogRow {
+pub fn discovery_row(discovery: &VisibleDiscovery) -> FleetCatalogRow {
     let record = &discovery.record;
     FleetCatalogRow::Discovery {
         row: FleetDiscoveryRow {
@@ -222,7 +222,7 @@ fn component_ref(
 /// The row one published member shows, or `None` when the record is not a
 /// currently-served member of `kind` (retired, withdrawn, another kind, or a
 /// tool without tool facts).
-pub(super) fn component_row(
+pub fn component_row(
     kind: FleetCatalogKind,
     entry: &AgentComponentEntry,
     binding: &ConnectorBinding,
@@ -322,7 +322,7 @@ fn matches_query(row: &FleetCatalogRow, needle: &str) -> bool {
 }
 
 /// Filter, order and bound one kind's visible snapshot.
-pub(super) fn filtered_snapshot(
+pub fn filtered_snapshot(
     mut rows: Vec<FleetCatalogRow>,
     query: Option<&str>,
 ) -> Result<Vec<FleetCatalogRow>, String> {
@@ -377,7 +377,7 @@ fn page_start(
 }
 
 /// Cut one page from an already filtered and ordered snapshot.
-pub(super) fn page(
+pub fn page(
     rows: Vec<FleetCatalogRow>,
     request: &FleetCatalogListRequest,
     commons_revision: u64,

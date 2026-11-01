@@ -293,21 +293,21 @@ mod consensus_admin_route_tests {
 /// The resolved identity and route of one native consensus proposal, shared by
 /// the request builder and the write/coordination helpers below.
 #[cfg(feature = "raft")]
-pub(super) struct NativeProposal<'a> {
-    pub(super) state: &'a Arc<RwLock<ServerState>>,
-    pub(super) request_id: u64,
-    pub(super) attempt_nonce: Option<medulla_types::contract::Nonce>,
-    pub(super) authority: &'a CarrierAuthority,
-    pub(super) server_secret: &'a str,
-    pub(super) graph_name: &'a str,
-    pub(super) graph_type: medulla_protocol_types::protocol::GraphType,
-    pub(super) commit_keyed: bool,
+pub struct NativeProposal<'a> {
+    pub state: &'a Arc<RwLock<ServerState>>,
+    pub request_id: u64,
+    pub attempt_nonce: Option<medulla_types::contract::Nonce>,
+    pub authority: &'a CarrierAuthority,
+    pub server_secret: &'a str,
+    pub graph_name: &'a str,
+    pub graph_type: medulla_protocol_types::protocol::GraphType,
+    pub commit_keyed: bool,
 }
 
 /// Which consensus coordination a committed native command still needs.
 #[cfg(feature = "raft")]
 #[derive(Clone, Copy)]
-pub(super) enum NativeCoordination {
+pub enum NativeCoordination {
     /// The replicated result is already terminal.
     Terminal,
     /// A worker job publication: commit on the target group, then finalize on
@@ -551,7 +551,7 @@ async fn dispatch_native_raft_write(
 }
 
 #[cfg(feature = "raft")]
-pub(in crate::dispatch) async fn propose_native_mutation(
+pub async fn propose_native_mutation(
     state: &Arc<RwLock<ServerState>>,
     request_graph: &str,
     request_id: u64,

@@ -8,7 +8,7 @@ use medulla_persistence::AsRedb;
 /// and `barrier_failure` name the surface in the two refusals so each caller's
 /// message is unchanged.
 #[cfg(feature = "raft")]
-pub(super) async fn enforce_native_read_leadership(
+pub async fn enforce_native_read_leadership(
     req_id: u64,
     graph_name: &str,
     multi_raft: Option<&std::sync::Arc<medulla_raft::raft::multi::MultiRaft>>,
@@ -42,7 +42,7 @@ pub(super) async fn enforce_native_read_leadership(
     }
 }
 
-pub(super) async fn dispatch_op_resource_reservation_query(
+pub async fn dispatch_op_resource_reservation_query(
     req_id: u64,
     graph_name: &str,
     verified_context: &VerifiedRequestContext,
@@ -110,16 +110,16 @@ pub(super) async fn dispatch_op_resource_reservation_query(
 /// values are resolved once per request in `dispatch_graph_op` and travel
 /// together; bundling them keeps each dispatcher's parameter list at the
 /// documented cap, the same shape as `crate::mutation::MutationCtx`.
-pub(super) struct NativeOpCtx<'a> {
-    pub(super) req_id: u64,
-    pub(super) graph_name: &'a str,
-    pub(super) verified_context: &'a VerifiedRequestContext,
-    pub(super) persistence:
+pub struct NativeOpCtx<'a> {
+    pub req_id: u64,
+    pub graph_name: &'a str,
+    pub verified_context: &'a VerifiedRequestContext,
+    pub persistence:
         Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "raft")]
-    pub(super) multi_raft: Option<std::sync::Arc<medulla_raft::raft::multi::MultiRaft>>,
+    pub multi_raft: Option<std::sync::Arc<medulla_raft::raft::multi::MultiRaft>>,
     #[cfg(feature = "raft")]
-    pub(super) routed_raft: Option<medulla_raft::raft::multi::RoutedRaftHandle>,
+    pub routed_raft: Option<medulla_raft::raft::multi::RoutedRaftHandle>,
 }
 
 /// A capacity lease may only be taken, renewed or released by the principal
@@ -172,7 +172,7 @@ fn capacity_commit_result(method: &Method) -> fn(&[u8]) -> Result<ResultPayload,
     }
 }
 
-pub(super) async fn dispatch_op_capacity_ops(
+pub async fn dispatch_op_capacity_ops(
     ctx: NativeOpCtx<'_>,
     state_machine_authorized: bool,
     method: Method,
@@ -288,7 +288,7 @@ async fn capacity_commit_response(
         })
 }
 
-pub(super) async fn dispatch_op_workitem_claim_capability(
+pub async fn dispatch_op_workitem_claim_capability(
     ctx: NativeOpCtx<'_>,
     #[cfg(feature = "redb")] graph_incarnation_id: String,
     method: Method,
@@ -424,7 +424,7 @@ fn require_enrichment_budget_service_scope(
     Ok(())
 }
 
-pub(super) async fn dispatch_op_workitem_submission_or_resources(
+pub async fn dispatch_op_workitem_submission_or_resources(
     ctx: medulla_h_jobs::work_item::HandleContext<'_>,
     method: Method,
 ) -> Response {

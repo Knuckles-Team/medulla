@@ -77,7 +77,7 @@ fn finish_multi_graph_report(
 /// The declared JSON body of a successful in-process response; its error, or the
 /// named refusal when it answered an invalid or no body.
 #[cfg(feature = "redb")]
-pub(super) fn declared_json_response<T: serde::de::DeserializeOwned>(
+pub fn declared_json_response<T: serde::de::DeserializeOwned>(
     response: Response,
     invalid: &str,
     absent: &str,
@@ -269,7 +269,7 @@ const MAX_MULTI_GRAPH_OPERATIONS_BYTES: usize = 32 * 1024 * 1024;
 const MAX_MULTI_GRAPH_TOTAL_OPERATIONS_BYTES: usize = 64 * 1024 * 1024;
 const MAX_MULTI_GRAPH_OPERATION_ITEMS: usize = 500_000;
 
-pub(in crate::dispatch) fn decode_multi_graph_batches(
+pub fn decode_multi_graph_batches(
     batches_msgpack: &[u8],
 ) -> Result<Vec<(String, serde_bytes::ByteBuf)>, String> {
     // The outer request preflight protects this decoder on the served path. Keep

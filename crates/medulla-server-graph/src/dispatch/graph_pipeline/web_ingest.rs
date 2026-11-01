@@ -12,7 +12,7 @@ use super::repository_index::commit_context;
 use super::*;
 
 /// Route the two web-ingest methods; hand any other method back.
-pub(super) async fn route_web_ingest(
+pub async fn route_web_ingest(
     ctx: GraphOpRouting<'_>,
     method: Method,
 ) -> Result<Response, Method> {

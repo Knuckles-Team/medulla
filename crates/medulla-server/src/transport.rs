@@ -25,8 +25,8 @@ use tokio::net::UnixListener;
 use tokio::sync::{Notify, RwLock, Semaphore};
 use tracing::{error, info};
 
-use crate::dispatch::request_boundary::dispatch_verified_request;
-use super::{dispatch, ServerState};
+use medulla_server_router::dispatch::request_boundary::dispatch_verified_request;
+use super::ServerState;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::protocol::Response;
@@ -484,7 +484,7 @@ async fn dispatch_reserved_request(
         std::pin::Pin<Box<dyn std::future::Future<Output = Response> + Send + 'a>>;
     let boxed: BoxedDispatch<'_> = match reservation.qos.context {
         Some(context) => Box::pin(dispatch_verified_request(&state, req, context)),
-        None => Box::pin(crate::dispatch::request_boundary::dispatch(&state, req)),
+        None => Box::pin(medulla_server_router::dispatch::request_boundary::dispatch(&state, req)),
     };
     let response =
         dispatch_within_deadline(boxed, limits.dispatch_deadline, req_id, &peer_gone).await;

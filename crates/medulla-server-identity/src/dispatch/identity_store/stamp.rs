@@ -18,11 +18,11 @@ use medulla_identity_types::{
 use super::secrets;
 
 /// What derivation reads besides the op.
-pub(super) struct StampEnv<'a> {
-    pub(super) store: &'a IdentityStore,
-    pub(super) service_secret: &'a str,
-    pub(super) now_ms: u64,
-    pub(super) engine_loopback: bool,
+pub struct StampEnv<'a> {
+    pub store: &'a IdentityStore,
+    pub service_secret: &'a str,
+    pub now_ms: u64,
+    pub engine_loopback: bool,
 }
 
 impl StampEnv<'_> {
@@ -134,7 +134,7 @@ fn check_candidate(env: &StampEnv<'_>, principal: Option<&str>, candidate: &str)
 }
 
 /// Derive `stamp` for `op`, clearing every secret in `op`.
-pub(super) fn derive(
+pub fn derive(
     op: &mut IdentityOp,
     stamp: &mut IdentityStamp,
     env: &StampEnv<'_>,

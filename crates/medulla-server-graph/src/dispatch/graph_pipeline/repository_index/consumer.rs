@@ -31,9 +31,9 @@ use medulla_server_api::api::persistence::PersistenceBackend;
 #[cfg(feature = "blob")]
 use medulla_server_api::api::reentry::DrainOutcome;
 
-pub(super) const PENDING_TOPIC: &str = "repository.enrichment.pending";
+pub const PENDING_TOPIC: &str = "repository.enrichment.pending";
 #[cfg(feature = "blob")]
-pub(super) const CONSUMER: &str = "repository-enrichment-v1";
+pub const CONSUMER: &str = "repository-enrichment-v1";
 const MAX_PENDING_INTENT_BYTES: usize = 4 * 1024 * 1024;
 
 #[cfg(feature = "blob")]
@@ -89,7 +89,7 @@ pub fn decode_pending_intent(
 /// reservation commit. A retry reads the authoritative checkpoint again; it
 /// never advances this value in RAM after an uncertain response.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(super) struct PagePlan {
+pub struct PagePlan {
     pub start_index: usize,
     pub end_index: usize,
     pub page_key: String,
@@ -98,7 +98,7 @@ pub(super) struct PagePlan {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-pub(super) enum PageDecision {
+pub enum PageDecision {
     Ready(PagePlan),
     Complete,
     DeferredBudget {
@@ -110,7 +110,7 @@ pub(super) enum PageDecision {
 /// Accept only a checkpoint read from the native authority for this exact
 /// immutable source. A missing row must remain a refusal: the source commit
 /// must seed budget authority before any page can be submitted.
-pub(super) fn checkpoint_from_durable(
+pub fn checkpoint_from_durable(
     snapshot: &EligibleSnapshot,
     durable: &DurableBudgetCheckpoint,
 ) -> Result<EnrichmentBudgetCheckpoint, String> {
@@ -130,7 +130,7 @@ pub(super) fn checkpoint_from_durable(
 /// Read the source's authoritative native budget row. A missing row is never
 /// synthesized from the snapshot: producer pre-seeding must have committed it
 /// with the source envelope before the consumer can admit a page.
-pub(super) async fn read_checkpoint(
+pub async fn read_checkpoint(
     persistence: &dyn PersistenceBackend,
     graph_fname: &str,
     snapshot: &EligibleSnapshot,
@@ -148,7 +148,7 @@ pub(super) async fn read_checkpoint(
 /// Select a prefix of the remaining immutable order within the ONE global
 /// budget. An underfunded first unit remains pending; skipping it would let a
 /// later cheap unit violate demand ordering and hide the unfunded candidate.
-pub(super) fn plan_next_page(
+pub fn plan_next_page(
     snapshot: &EligibleSnapshot,
     checkpoint: &EnrichmentBudgetCheckpoint,
 ) -> Result<PageDecision, String> {
@@ -194,7 +194,7 @@ pub(super) fn plan_next_page(
 /// is replicated; followers must never sample their own wall clocks. The
 /// returned row is still only a plan, with no local delivery side effect.
 #[cfg(feature = "blob")]
-pub(super) fn plan_underfunded_park(
+pub fn plan_underfunded_park(
     snapshot: &EligibleSnapshot,
     checkpoint: &EnrichmentBudgetCheckpoint,
     parked_at_ms: u64,
@@ -258,7 +258,7 @@ pub async fn plan_held_underfunded_park(
 /// The serving adapter must run this bounded read on a blocking worker, not on
 /// the async reactor. Source hash and manifest hash are distinct identities.
 #[cfg(feature = "blob")]
-pub(super) fn verify_page_cas(
+pub fn verify_page_cas(
     store: &dyn medulla_server_blob::blob::store::ChunkStore,
     snapshot: &EligibleSnapshot,
     page: &PagePlan,
@@ -280,7 +280,7 @@ pub(super) fn verify_page_cas(
 /// Lower an exact checkpoint page to the native atomic budget and WorkItem
 /// command. The serving adapter must supply a freshly verified service
 /// authority whose encoded RequestContext is stable for retries of this page.
-pub(super) fn lower_native_page(
+pub fn lower_native_page(
     snapshot: &EligibleSnapshot,
     checkpoint: &EnrichmentBudgetCheckpoint,
     page: &PagePlan,
@@ -368,14 +368,14 @@ pub(super) fn lower_native_page(
 }
 
 #[cfg(feature = "blob")]
-pub(crate) struct PageCallbacks<A, S, P> {
+pub struct PageCallbacks<A, S, P> {
     authority_for_page: A,
     submit: S,
     park_source: P,
 }
 
 #[cfg(feature = "blob")]
-pub(crate) trait PageActions {
+pub trait PageActions {
     type AuthorityFuture: Future<
         Output = Result<
             (

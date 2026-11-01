@@ -1,7 +1,7 @@
 use super::*;
 #[cfg(feature = "raft")]
 use medulla_raft::raft::RaftStateExt;
-pub(super) fn stamp_resource_reservation_timestamp(method: &mut Method) {
+pub fn stamp_resource_reservation_timestamp(method: &mut Method) {
     if !medulla_server_api::batch_compile::is_resource_reservation_method(method) {
         return;
     }
@@ -17,7 +17,7 @@ pub(super) fn stamp_resource_reservation_timestamp(method: &mut Method) {
     }
 }
 
-pub(super) fn stamp_capacity_timestamp(method: &mut Method) {
+pub fn stamp_capacity_timestamp(method: &mut Method) {
     if !medulla_server_api::batch_compile::is_capacity_method(method) {
         return;
     }
@@ -35,7 +35,7 @@ pub(super) fn stamp_capacity_timestamp(method: &mut Method) {
     }
 }
 
-pub(super) fn stamp_resource_and_capacity_timestamps(method: &mut Method) {
+pub fn stamp_resource_and_capacity_timestamps(method: &mut Method) {
     stamp_resource_reservation_timestamp(method);
     stamp_capacity_timestamp(method);
 }
@@ -47,7 +47,7 @@ pub(super) fn stamp_resource_and_capacity_timestamps(method: &mut Method) {
 /// no-op for a genuinely unknown name, so the caller's "not found" error is
 /// unchanged for that case.
 #[cfg(feature = "redb")]
-pub(super) async fn lazy_open_graph(state: &Arc<RwLock<ServerState>>, graph_name: &str) {
+pub async fn lazy_open_graph(state: &Arc<RwLock<ServerState>>, graph_name: &str) {
     let cap = medulla_persistence::cold_offload::max_resident_graphs();
     let page_size = medulla_persistence::cold_offload::lazy_open_page_size();
     medulla_persistence::cold_offload::lazy_open(state, graph_name, cap, page_size).await;
@@ -60,7 +60,7 @@ pub(super) async fn lazy_open_graph(state: &Arc<RwLock<ServerState>>, graph_name
 /// same IsolationLayer. Mutation documents can contain read phases (GraphQL
 /// staged CONSTRUCT/UQL), so write requests carry the same verified tenant/actor
 /// projection rather than gaining access to the raw committed core.
-pub(super) fn resolve_graph_read_authority(
+pub fn resolve_graph_read_authority(
     req_id: u64,
     verified_context: &VerifiedRequestContext,
     isolation: &medulla_isolation::isolation::IsolationLayer,
@@ -83,7 +83,7 @@ pub(super) fn resolve_graph_read_authority(
 /// ACL check — captured before the registry lock drops, ONLY for the routed set
 /// (an `IsolationLayer` clone is not free, so this is skipped entirely for the
 /// other ~330 methods).
-pub(super) fn graph_op_gateway_authz_ctx(
+pub fn graph_op_gateway_authz_ctx(
     s: &ServerState,
     method: &Method,
     entry: &GraphEntryFacts,
@@ -95,18 +95,18 @@ pub(super) fn graph_op_gateway_authz_ctx(
 }
 
 /// Everything resolved while the registry read lock is still held.
-pub(super) struct GraphOpGate {
-    pub(super) entry: GraphEntryFacts,
-    pub(super) read_authority: GraphReadAuthority,
-    pub(super) tenant_scope: String,
-    pub(super) verified_actor: String,
-    pub(super) gateway_authz_ctx: Option<medulla_server_mutation::mutation::GatewayAuthzCtx>,
+pub struct GraphOpGate {
+    pub entry: GraphEntryFacts,
+    pub read_authority: GraphReadAuthority,
+    pub tenant_scope: String,
+    pub verified_actor: String,
+    pub gateway_authz_ctx: Option<medulla_server_mutation::mutation::GatewayAuthzCtx>,
 }
 
 /// Gate and resolve one graph operation under the registry lock, in the ORIGINAL
 /// order: caller / existence / materialization / graph ACL first, then the
 /// verified read authority, then the gateway authz context.
-pub(super) fn gate_graph_op_under_lock(
+pub fn gate_graph_op_under_lock(
     s: &ServerState,
     ctx: GraphOpContext<'_>,
     method: &Method,
@@ -143,7 +143,7 @@ pub(super) fn gate_graph_op_under_lock(
     })
 }
 
-pub(super) fn graph_op_access_level(method: &Method) -> AccessLevel {
+pub fn graph_op_access_level(method: &Method) -> AccessLevel {
     // TsAppend used to self-route before this boundary, which accidentally classified
     // it as neither a graph read nor write. It is now graph-scoped and requires the
     // same Write ACL as every other mutation; so do the other two `series.redb`
@@ -168,12 +168,12 @@ pub(super) fn graph_op_access_level(method: &Method) -> AccessLevel {
 
 /// The registry facts a graph operation needs after the registry lock is
 /// released. Copied out under the lock rather than held by reference.
-pub(super) struct GraphEntryFacts {
-    pub(super) graph_type: medulla_protocol_types::protocol::GraphType,
-    pub(super) owner: Option<String>,
-    pub(super) core: Arc<medulla_graph_core::graph::GraphCore>,
+pub struct GraphEntryFacts {
+    pub graph_type: medulla_protocol_types::protocol::GraphType,
+    pub owner: Option<String>,
+    pub core: Arc<medulla_graph_core::graph::GraphCore>,
     #[cfg(feature = "redb")]
-    pub(super) incarnation_id: String,
+    pub incarnation_id: String,
 }
 
 /// Gate one graph operation, in the ORIGINAL order: an unregistered or
@@ -183,7 +183,7 @@ pub(super) struct GraphEntryFacts {
 /// `access::check_caller_is_known`'s doc). A registered caller falls through to
 /// existence, materialization validity, and then the real graph-type/owner-aware
 /// decision.
-pub(super) fn check_graph_op_access(
+pub fn check_graph_op_access(
     s: &ServerState,
     req_id: u64,
     caller: Option<&str>,
@@ -230,7 +230,7 @@ pub(super) fn check_graph_op_access(
 /// MultiRaft is the sole clustered authority: a replicated apply proposes
 /// nothing, and a node without MultiRaft placement has no write routing.
 #[cfg(feature = "raft")]
-pub(super) fn resolve_multi_raft(
+pub fn resolve_multi_raft(
     s: &ServerState,
     placement_authority: &medulla_server_api::state::PlacementAuthorityKind,
 ) -> Option<Arc<medulla_raft::raft::multi::MultiRaft>> {
@@ -247,7 +247,7 @@ pub(super) fn resolve_multi_raft(
 }
 
 #[cfg(all(feature = "raft", feature = "tsdb"))]
-pub(super) fn ts_placement_fence(
+pub fn ts_placement_fence(
     routed: Option<&medulla_raft::raft::multi::RoutedRaftHandle>,
 ) -> (u64, Option<u64>) {
     match routed {
@@ -259,7 +259,7 @@ pub(super) fn ts_placement_fence(
 /// The dispatch shell's write tail: size gauges, the single projection
 /// publication non-gateway writes rely on, and the semantic-ANN warm hook.
 #[allow(unused_variables)]
-pub(super) async fn finalize_graph_op_response(
+pub async fn finalize_graph_op_response(
     state: &Arc<RwLock<ServerState>>,
     graph_name: &str,
     core: &Arc<medulla_graph_core::graph::GraphCore>,
@@ -302,7 +302,7 @@ pub(super) async fn finalize_graph_op_response(
     response
 }
 
-pub(super) fn check_known_caller(
+pub fn check_known_caller(
     isolation: &medulla_isolation::isolation::IsolationLayer,
     req_id: u64,
     caller: Option<&str>,
@@ -318,7 +318,7 @@ pub(super) fn check_known_caller(
     Ok(())
 }
 
-pub(super) fn check_materialization_valid(
+pub fn check_materialization_valid(
     registry: &medulla_core::registry::GraphRegistry,
     req_id: u64,
     graph_name: &str,

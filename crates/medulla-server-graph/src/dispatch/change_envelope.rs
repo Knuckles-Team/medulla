@@ -267,7 +267,7 @@ fn change_envelope_result(
 /// Derive the native authority epoch from the registry-published graph
 /// incarnation.  The caller cannot provide either value; a delete/recreate
 /// therefore fences every capability from the retired incarnation.
-pub(super) fn work_item_capability_authority_epoch(incarnation_id: &str) -> u64 {
+pub fn work_item_capability_authority_epoch(incarnation_id: &str) -> u64 {
     use sha2::{Digest, Sha256};
     let digest = Sha256::digest(incarnation_id.as_bytes());
     u64::from_be_bytes(digest[..8].try_into().expect("fixed digest width")).max(1)
@@ -535,7 +535,7 @@ fn change_envelope_abort_entries(
         .collect()
 }
 
-pub(super) async fn route_change_envelope_ops(
+pub async fn route_change_envelope_ops(
     ctx: GraphOpRouting<'_>,
     method: Method,
 ) -> Result<Response, Method> {
@@ -574,7 +574,7 @@ fn harness_boundary_envelope(
     state.check_envelope(envelope, core)
 }
 
-pub(super) async fn apply_one_change_envelope(
+pub async fn apply_one_change_envelope(
     ctx: GraphOpRouting<'_>,
     envelope: medulla_protocol_types::change_envelope::ChangeEnvelope,
 ) -> Response {
@@ -589,7 +589,7 @@ pub(super) async fn apply_one_change_envelope(
 }
 
 #[cfg(feature = "redb")]
-pub(super) async fn apply_repository_change_envelope(
+pub async fn apply_repository_change_envelope(
     ctx: GraphOpRouting<'_>,
     envelope: medulla_protocol_types::change_envelope::ChangeEnvelope,
     source_budget: Option<medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,

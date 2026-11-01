@@ -18,24 +18,24 @@ struct TransactionSubmission<'a> {
 /// authority: its opaque batch identity, the graph route it is keyed on, and
 /// the placement fence of the group that must commit it.
 #[cfg(feature = "raft")]
-pub(super) struct CarrierNativeCommand<'a> {
-    pub(super) multi: &'a Arc<medulla_raft::raft::multi::MultiRaft>,
-    pub(super) authority: &'a CarrierAuthority,
-    pub(super) request_id: u64,
-    pub(super) attempt_nonce: Option<medulla_types::contract::Nonce>,
-    pub(super) batch_id: String,
-    pub(super) graph_name: String,
-    pub(super) graph_type: medulla_protocol_types::protocol::GraphType,
-    pub(super) group_id: medulla_raft::raft::GroupId,
-    pub(super) placement_epoch: u64,
-    pub(super) fencing_token: Option<u64>,
-    pub(super) command: medulla_raft::raft::NativeMutationCommand,
+pub struct CarrierNativeCommand<'a> {
+    pub multi: &'a Arc<medulla_raft::raft::multi::MultiRaft>,
+    pub authority: &'a CarrierAuthority,
+    pub request_id: u64,
+    pub attempt_nonce: Option<medulla_types::contract::Nonce>,
+    pub batch_id: String,
+    pub graph_name: String,
+    pub graph_type: medulla_protocol_types::protocol::GraphType,
+    pub group_id: medulla_raft::raft::GroupId,
+    pub placement_epoch: u64,
+    pub fencing_token: Option<u64>,
+    pub command: medulla_raft::raft::NativeMutationCommand,
 }
 
 /// Commit `proposal` through its group, stamped now, under the carrier's
 /// verified authority, and return the state machine's response.
 #[cfg(feature = "raft")]
-pub(super) async fn commit_carrier_native_command(
+pub async fn commit_carrier_native_command(
     proposal: CarrierNativeCommand<'_>,
 ) -> Result<medulla_raft::raft::RaftResponse, String> {
     let committed_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
@@ -467,19 +467,19 @@ async fn commit_consensus_participants(
 }
 
 #[cfg(feature = "raft")]
-pub(super) struct TransactionExecution<'a> {
-    pub(super) state: &'a Arc<RwLock<ServerState>>,
-    pub(super) request_id: u64,
-    pub(super) authority: &'a CarrierAuthority,
-    pub(super) server_secret: &'a str,
-    pub(super) multi: Arc<medulla_raft::raft::multi::MultiRaft>,
-    pub(super) control: medulla_raft::raft::multi::RoutedRaftHandle,
-    pub(super) control_graph_type: medulla_protocol_types::protocol::GraphType,
-    pub(super) prepared_bytes: &'a [u8],
+pub struct TransactionExecution<'a> {
+    pub state: &'a Arc<RwLock<ServerState>>,
+    pub request_id: u64,
+    pub authority: &'a CarrierAuthority,
+    pub server_secret: &'a str,
+    pub multi: Arc<medulla_raft::raft::multi::MultiRaft>,
+    pub control: medulla_raft::raft::multi::RoutedRaftHandle,
+    pub control_graph_type: medulla_protocol_types::protocol::GraphType,
+    pub prepared_bytes: &'a [u8],
 }
 
 #[cfg(feature = "raft")]
-pub(super) async fn execute_consensus_transaction(execution: TransactionExecution<'_>) -> Response {
+pub async fn execute_consensus_transaction(execution: TransactionExecution<'_>) -> Response {
     let TransactionExecution {
         state,
         request_id,

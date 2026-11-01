@@ -3,19 +3,19 @@ use super::*;
 use medulla_server_api::api::reentry::ReplicatedParticipantRef;
 
 #[cfg(feature = "raft")]
-pub(in crate::dispatch) fn replicated_identity_bootstrap_authorized() -> bool {
+pub fn replicated_identity_bootstrap_authorized() -> bool {
     REPLICATED_APPLY
         .try_with(|scope| scope.identity_bootstrap)
         .unwrap_or(false)
 }
 
 #[cfg(not(feature = "raft"))]
-pub(in crate::dispatch) fn replicated_identity_bootstrap_authorized() -> bool {
+pub fn replicated_identity_bootstrap_authorized() -> bool {
     false
 }
 
 #[cfg(feature = "raft")]
-pub(super) fn capability_authority_unavailable(method: &Method) -> bool {
+pub fn capability_authority_unavailable(method: &Method) -> bool {
     matches!(
         method,
         Method::MintWorkItemClaimCapability { .. } | Method::VerifyWorkItemClaimCapability { .. }
@@ -23,7 +23,7 @@ pub(super) fn capability_authority_unavailable(method: &Method) -> bool {
 }
 
 #[cfg(not(feature = "raft"))]
-pub(in crate::dispatch) async fn propose_native_mutation(
+pub async fn propose_native_mutation(
     _state: &Arc<RwLock<ServerState>>,
     _request_graph: &str,
     request_id: u64,
@@ -42,7 +42,7 @@ pub(in crate::dispatch) async fn propose_native_mutation(
 /// reconstructed context contains only one-way tenant/principal scopes so no raw
 /// identity enters the Raft log or snapshot.
 #[cfg(feature = "raft")]
-pub(crate) async fn apply_replicated_native(
+pub async fn apply_replicated_native(
     state: &Arc<RwLock<ServerState>>,
     graph: String,
     request_id: u64,
@@ -92,7 +92,7 @@ fn replicated_apply_scope(
 }
 
 #[cfg(feature = "raft")]
-pub(crate) async fn apply_replicated_transaction_participant(
+pub async fn apply_replicated_transaction_participant(
     state: &Arc<RwLock<ServerState>>,
     request_id: u64,
     committed_at_ms: u64,
@@ -157,7 +157,7 @@ pub(crate) async fn apply_replicated_transaction_participant(
 }
 
 #[cfg(feature = "raft")]
-pub(crate) async fn apply_replicated_transaction_prepare(
+pub async fn apply_replicated_transaction_prepare(
     state: &Arc<RwLock<ServerState>>,
     request_id: u64,
     committed_at_ms: u64,
@@ -225,7 +225,7 @@ fn validate_replicated_prepare_tenant(
 }
 
 #[cfg(feature = "raft")]
-pub(crate) async fn apply_replicated_transaction_decision(
+pub async fn apply_replicated_transaction_decision(
     state: &Arc<RwLock<ServerState>>,
     committed_at_ms: u64,
     authority: &medulla_server_api::api::persistence::RaftMutationContext,
@@ -246,7 +246,7 @@ pub(crate) async fn apply_replicated_transaction_decision(
 }
 
 #[cfg(feature = "raft")]
-pub(crate) async fn apply_replicated_transaction_finalize(
+pub async fn apply_replicated_transaction_finalize(
     state: &Arc<RwLock<ServerState>>,
     committed_at_ms: u64,
     authority: &medulla_server_api::api::persistence::RaftMutationContext,
@@ -267,7 +267,7 @@ pub(crate) async fn apply_replicated_transaction_finalize(
 }
 
 #[cfg(all(feature = "raft", feature = "jobs"))]
-pub(crate) async fn apply_replicated_job_publication_commit(
+pub async fn apply_replicated_job_publication_commit(
     state: &Arc<RwLock<ServerState>>,
     request_id: u64,
     committed_at_ms: u64,
@@ -292,7 +292,7 @@ pub(crate) async fn apply_replicated_job_publication_commit(
 }
 
 #[cfg(all(feature = "raft", feature = "jobs"))]
-pub(crate) async fn apply_replicated_job_publication_finalize(
+pub async fn apply_replicated_job_publication_finalize(
     state: &Arc<RwLock<ServerState>>,
     committed_at_ms: u64,
     authority: &medulla_server_api::api::persistence::RaftMutationContext,

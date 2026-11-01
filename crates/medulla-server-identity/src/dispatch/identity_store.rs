@@ -26,7 +26,7 @@ use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::identity_view::identity_actor;
 
 pub mod exposure;
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub mod pause;
 pub mod resolution_context;
 pub mod secrets;

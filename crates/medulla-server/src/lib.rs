@@ -201,8 +201,6 @@ pub fn observe_rf019_tenant_owner(
         max_owner_bytes,
     )
 }
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod dispatch;
 // The owner-scoped foreign-source catalog, host-driven foreign reads and source sharing live
 // under `api::query_txn` (R056.8).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

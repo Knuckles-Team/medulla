@@ -278,10 +278,10 @@ const MAX_AST_LOGICAL_PATH_BYTES: usize = 4_096;
 
 #[cfg(feature = "ast")]
 #[derive(Clone, Copy, Debug)]
-pub(crate) struct AstInputLimits {
-    pub(crate) max_files: usize,
-    pub(crate) max_source_bytes: usize,
-    pub(crate) max_total_bytes: usize,
+pub struct AstInputLimits {
+    pub max_files: usize,
+    pub max_source_bytes: usize,
+    pub max_total_bytes: usize,
 }
 
 #[cfg(feature = "ast")]
@@ -449,7 +449,7 @@ pub fn decode_ast_files(
 /// two blobs of one path that differ across refs share a name legitimately. The
 /// scoped route checks each `(path, digest)` against the scope's memberships.
 #[cfg(feature = "ast")]
-pub(crate) fn decode_ast_sources(
+pub fn decode_ast_sources(
     input: &[u8],
     limits: AstInputLimits,
 ) -> Result<Vec<(String, Vec<u8>)>, String> {

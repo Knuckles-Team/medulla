@@ -178,7 +178,7 @@ fn sanitize_channel_proposal(
 }
 
 #[cfg(feature = "raft")]
-pub(super) fn sanitize_native_proposal(
+pub fn sanitize_native_proposal(
     request_graph: &str,
     verified_context: &VerifiedRequestContext,
     authority: &CarrierAuthority,

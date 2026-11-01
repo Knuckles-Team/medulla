@@ -14,9 +14,9 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 /// `node_type` of one discovery observation.
-pub(super) const DISCOVERY_NODE_TYPE: &str = "ServerDiscovery";
+pub const DISCOVERY_NODE_TYPE: &str = "ServerDiscovery";
 /// `node_type` of one operator override.
-pub(super) const OVERRIDE_NODE_TYPE: &str = "FleetOverride";
+pub const OVERRIDE_NODE_TYPE: &str = "FleetOverride";
 const RECORD_CONTENT_DOMAIN: &[u8] = b"eg/fleet-catalog-record/v1";
 const REVISION_CONFLICT: &str = "FLEET_REVISION_CONFLICT";
 
@@ -24,20 +24,20 @@ const REVISION_CONFLICT: &str = "FLEET_REVISION_CONFLICT";
 /// opaque persistence id, stamped by the server, never a request field.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(super) struct DiscoveryBody {
-    pub(super) server_name: String,
-    pub(super) scope: DiscoveryScope,
-    pub(super) connector: ResourceId,
-    pub(super) outcome: DiscoveryOutcome,
-    pub(super) counts: DiscoveryCounts,
-    pub(super) observer: String,
+pub struct DiscoveryBody {
+    pub server_name: String,
+    pub scope: DiscoveryScope,
+    pub connector: ResourceId,
+    pub outcome: DiscoveryOutcome,
+    pub counts: DiscoveryCounts,
+    pub observer: String,
 }
 
 #[cfg(test)]
 impl DiscoveryBody {
     /// A reachable observation with zero counts: the shape every fleet test
     /// starts from.
-    pub(super) fn reachable_for_tests(
+    pub fn reachable_for_tests(
         server: &str,
         connector: &str,
         scope: DiscoveryScope,
@@ -58,27 +58,27 @@ impl DiscoveryBody {
 /// revision, so the compare-and-set chain never restarts from zero.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(super) struct OverrideBody {
-    pub(super) component_id: String,
-    pub(super) field: FleetOverrideField,
-    pub(super) value: Option<FleetOverride>,
-    pub(super) set_by: String,
+pub struct OverrideBody {
+    pub component_id: String,
+    pub field: FleetOverrideField,
+    pub value: Option<FleetOverride>,
+    pub set_by: String,
 }
 
 /// The bookkeeping every record carries.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(super) struct RecordMeta {
-    pub(super) tenant_id: String,
-    pub(super) revision: u64,
-    pub(super) content_digest: String,
-    pub(super) written_at_ms: u64,
+pub struct RecordMeta {
+    pub tenant_id: String,
+    pub revision: u64,
+    pub content_digest: String,
+    pub written_at_ms: u64,
 }
 
 /// One decoded record.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(super) struct StoredRecord<B> {
-    pub(super) meta: RecordMeta,
-    pub(super) body: B,
+pub struct StoredRecord<B> {
+    pub meta: RecordMeta,
+    pub body: B,
 }
 
 /// The on-node shape: bookkeeping at the top level (so a compare-and-set can
@@ -97,7 +97,7 @@ fn tenant_key(tenant_id: &str) -> String {
 
 /// The graph node holding `(tenant, server, scope)`'s observation. The tenant
 /// is digested into the id, so two tenants' records can never collide.
-pub(super) fn discovery_node_id(
+pub fn discovery_node_id(
     tenant_id: &str,
     server_name: &str,
     scope: &DiscoveryScope,
@@ -111,11 +111,11 @@ pub(super) fn discovery_node_id(
 
 /// The caller-facing id of an observation: stable across revisions, and
 /// carrying nothing about the tenant.
-pub(super) fn discovery_record_id(server_name: &str, scope: &DiscoveryScope) -> String {
+pub fn discovery_record_id(server_name: &str, scope: &DiscoveryScope) -> String {
     format!("srvobs:{server_name}:{}", scope.key())
 }
 
-pub(super) fn override_node_id(
+pub fn override_node_id(
     tenant_id: &str,
     field: FleetOverrideField,
     component_id: &str,
@@ -128,13 +128,13 @@ pub(super) fn override_node_id(
     )
 }
 
-pub(super) fn override_record_id(field: FleetOverrideField, component_id: &str) -> String {
+pub fn override_record_id(field: FleetOverrideField, component_id: &str) -> String {
     format!("ovr:{}:{component_id}", field.as_str())
 }
 
 /// The digest a replay is recognized by: the tenant and the typed body,
 /// never the revision or the clock.
-pub(super) fn content_digest<B: Serialize>(tenant_id: &str, body: &B) -> Result<String, String> {
+pub fn content_digest<B: Serialize>(tenant_id: &str, body: &B) -> Result<String, String> {
     let encoded = rmp_serde::to_vec_named(body)
         .map_err(|error| format!("fleet catalog record encoding failed: {error}"))?;
     Ok(Digest256::framed(
@@ -145,7 +145,7 @@ pub(super) fn content_digest<B: Serialize>(tenant_id: &str, body: &B) -> Result<
 }
 
 /// Decode one node as a record of `node_type`, or `None` for anything else.
-pub(super) fn decode_record<B: DeserializeOwned>(
+pub fn decode_record<B: DeserializeOwned>(
     node_type: &str,
     properties_msgpack: &[u8],
 ) -> Option<StoredRecord<B>> {
@@ -163,13 +163,13 @@ pub(super) fn decode_record<B: DeserializeOwned>(
 /// there must not hand one tenant's observations to another. They are stamped
 /// private to the writing agent; the fleet projection applies its own typed
 /// tenant/principal predicate instead of the per-agent one.
-pub(super) struct RecordWriter<'a> {
-    pub(super) agent_id: &'a str,
-    pub(super) written_at_ms: u64,
+pub struct RecordWriter<'a> {
+    pub agent_id: &'a str,
+    pub written_at_ms: u64,
 }
 
 /// The complete property blob of one record revision.
-pub(super) fn record_properties<B: Serialize>(
+pub fn record_properties<B: Serialize>(
     node_type: &str,
     meta: &RecordMeta,
     body: &B,
@@ -190,7 +190,7 @@ pub(super) fn record_properties<B: Serialize>(
 }
 
 /// The compare-and-set precondition for replacing revision `from`.
-pub(super) fn revision_condition(tenant_id: &str, from: u64) -> Result<Vec<u8>, String> {
+pub fn revision_condition(tenant_id: &str, from: u64) -> Result<Vec<u8>, String> {
     rmp_serde::to_vec_named(&serde_json::json!({
         "tenant_id": tenant_id,
         "revision": from,
@@ -200,7 +200,7 @@ pub(super) fn revision_condition(tenant_id: &str, from: u64) -> Result<Vec<u8>, 
 
 /// What a write must do, decided from the stored record before it is sent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum WritePlan {
+pub enum WritePlan {
     /// The stored record already says exactly this.
     Replay { revision: u64 },
     /// No record exists: create revision 1 only if it still does not.
@@ -212,7 +212,7 @@ pub(super) enum WritePlan {
 /// Decide a write. A byte-identical repeat is a replay whatever the caller
 /// expected -- that is what makes a retried write provably a no-op -- and only
 /// then is `expected_revision` (`0` meaning "absent") compared.
-pub(super) fn plan_write(
+pub fn plan_write(
     current: Option<&RecordMeta>,
     expected_revision: Option<u64>,
     content_digest: &str,
@@ -237,22 +237,22 @@ pub(super) fn plan_write(
 }
 
 /// The refusal a lost compare-and-set race answers with.
-pub(super) fn lost_race(record_id: &str) -> String {
+pub fn lost_race(record_id: &str) -> String {
     format!("{REVISION_CONFLICT}: '{record_id}' changed concurrently; re-read and retry")
 }
 
 /// Who is reading, as the verified context says.
-pub(super) struct Viewer<'a> {
-    pub(super) tenant_id: &'a str,
+pub struct Viewer<'a> {
+    pub tenant_id: &'a str,
     /// The caller's opaque persistence id.
-    pub(super) principal: &'a str,
+    pub principal: &'a str,
     /// The caller's CURRENT grants, as it presented them. Only narrows.
-    pub(super) grants: &'a [Digest256],
+    pub grants: &'a [Digest256],
 }
 
 impl Viewer<'_> {
     /// How an observation is visible to this viewer, or `None`.
-    pub(super) fn sees(&self, record: &StoredRecord<DiscoveryBody>) -> Option<FleetVisibility> {
+    pub fn sees(&self, record: &StoredRecord<DiscoveryBody>) -> Option<FleetVisibility> {
         if record.meta.tenant_id != self.tenant_id {
             return None;
         }
@@ -268,7 +268,7 @@ impl Viewer<'_> {
 }
 
 /// A live skill-type override: the value and the revision that set it.
-pub(super) fn skill_type_override(record: &StoredRecord<OverrideBody>) -> Option<(SkillType, u64)> {
+pub fn skill_type_override(record: &StoredRecord<OverrideBody>) -> Option<(SkillType, u64)> {
     record
         .body
         .value

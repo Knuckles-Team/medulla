@@ -35,7 +35,7 @@ fn table_is_loopback(table: &str) -> bool {
 }
 
 /// Whether every listening socket in this network namespace is loopback.
-pub(super) fn listeners_loopback() -> bool {
+pub fn listeners_loopback() -> bool {
     ["/proc/net/tcp", "/proc/net/tcp6"]
         .iter()
         .all(|path| std::fs::read_to_string(path).is_ok_and(|table| table_is_loopback(&table)))

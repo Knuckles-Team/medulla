@@ -4,30 +4,30 @@ use super::*;
 /// the live graph core with its durability/CDC/materialization handles, and the
 /// two write coalescers. Bundled so the pipeline keeps ONE routing parameter
 /// beside the method it is routing, instead of a seventeen-long list.
-pub(super) struct DispatchPipelineCtx<'a> {
-    pub(super) state: &'a Arc<RwLock<ServerState>>,
-    pub(super) req_id: u64,
-    pub(super) graph_name: &'a str,
-    pub(super) caller: Option<&'a str>,
-    pub(super) attempt_nonce: Option<medulla_types::contract::Nonce>,
-    pub(super) idempotency_key: &'a str,
-    pub(super) read_authority: Option<GraphReadAuthority>,
-    pub(super) verified_actor: &'a str,
-    pub(super) tenant_id: String,
-    pub(super) tenant_scope: String,
-    pub(super) gateway_authz_ctx: Option<medulla_server_mutation::mutation::GatewayAuthzCtx>,
-    pub(super) core: Arc<medulla_graph_core::graph::GraphCore>,
-    pub(super) materialization_manifest:
+pub struct DispatchPipelineCtx<'a> {
+    pub state: &'a Arc<RwLock<ServerState>>,
+    pub req_id: u64,
+    pub graph_name: &'a str,
+    pub caller: Option<&'a str>,
+    pub attempt_nonce: Option<medulla_types::contract::Nonce>,
+    pub idempotency_key: &'a str,
+    pub read_authority: Option<GraphReadAuthority>,
+    pub verified_actor: &'a str,
+    pub tenant_id: String,
+    pub tenant_scope: String,
+    pub gateway_authz_ctx: Option<medulla_server_mutation::mutation::GatewayAuthzCtx>,
+    pub core: Arc<medulla_graph_core::graph::GraphCore>,
+    pub materialization_manifest:
         Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
-    pub(super) persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
+    pub persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
-    pub(super) cdc: Option<Arc<medulla_server_cdc::cdc::CdcHub>>,
-    pub(super) routed_write_coalescer:
+    pub cdc: Option<Arc<medulla_server_cdc::cdc::CdcHub>>,
+    pub routed_write_coalescer:
         Arc<medulla_server_api::routed_write_coalescer::RoutedWriteCoalescerRegistry>,
     #[cfg(feature = "security")]
-    pub(super) rls: std::sync::Arc<medulla_isolation::isolation::IsolationLayer>,
+    pub rls: std::sync::Arc<medulla_isolation::isolation::IsolationLayer>,
     #[cfg(all(feature = "mining", feature = "query", feature = "tsdb"))]
-    pub(super) tsdb_store: Option<Arc<medulla_tsdb::store::SeriesStore>>,
+    pub tsdb_store: Option<Arc<medulla_tsdb::store::SeriesStore>>,
 }
 
 /// Stage 1: the universal mutation gateway, then the per-graph write
@@ -37,7 +37,7 @@ pub(super) struct DispatchPipelineCtx<'a> {
 /// pipeline can offer it to the next stage; the terminal graph-op handler
 /// owns the catch-all.
 #[allow(unused_variables)]
-pub(super) async fn route_gateway_and_stateless_domains(
+pub async fn route_gateway_and_stateless_domains(
     ctx: &DispatchPipelineCtx<'_>,
     method: Method,
 ) -> Result<Response, Method> {
@@ -109,7 +109,7 @@ pub(super) async fn route_gateway_and_stateless_domains(
 /// pipeline can offer it to the next stage; the terminal graph-op handler
 /// owns the catch-all.
 #[allow(unused_variables)]
-pub(super) async fn route_graph_scoped_domains(
+pub async fn route_graph_scoped_domains(
     ctx: &DispatchPipelineCtx<'_>,
     method: Method,
 ) -> Result<Response, Method> {
@@ -172,7 +172,7 @@ pub(super) async fn route_graph_scoped_domains(
 /// pipeline can offer it to the next stage; the terminal graph-op handler
 /// owns the catch-all.
 #[allow(unused_variables)]
-pub(super) async fn route_query_and_rdf_surfaces(
+pub async fn route_query_and_rdf_surfaces(
     ctx: &DispatchPipelineCtx<'_>,
     method: Method,
 ) -> Result<Response, Method> {
@@ -295,7 +295,7 @@ pub(super) async fn route_query_and_rdf_surfaces(
 /// pipeline can offer it to the next stage; the terminal graph-op handler
 /// owns the catch-all.
 #[allow(unused_variables)]
-pub(super) async fn route_process_global_domains(
+pub async fn route_process_global_domains(
     ctx: &DispatchPipelineCtx<'_>,
     method: Method,
 ) -> Result<Response, Method> {
@@ -354,7 +354,7 @@ pub(super) async fn route_process_global_domains(
 }
 
 /// The gateway/compute half of the routing pipeline.
-pub(super) async fn route_pipeline_compute(
+pub async fn route_pipeline_compute(
     ctx: &DispatchPipelineCtx<'_>,
     method: Method,
 ) -> Result<Response, Method> {
@@ -366,7 +366,7 @@ pub(super) async fn route_pipeline_compute(
 }
 
 /// The query-surface / process-global half of the routing pipeline.
-pub(super) async fn route_pipeline_surfaces(
+pub async fn route_pipeline_surfaces(
     ctx: &DispatchPipelineCtx<'_>,
     method: Method,
 ) -> Result<Response, Method> {
@@ -383,7 +383,7 @@ pub(super) async fn route_pipeline_surfaces(
 /// tried in order, each handing back a method it does not own. Stage order is
 /// unchanged, so the gateway still sees every routed mutation first and the
 /// terminal graph-op handler still owns the catch-all.
-pub(super) async fn run_dispatch_pipeline(
+pub async fn run_dispatch_pipeline(
     ctx: DispatchPipelineCtx<'_>,
     method: Method,
 ) -> Response {

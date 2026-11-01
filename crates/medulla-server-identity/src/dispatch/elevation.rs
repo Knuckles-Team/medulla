@@ -37,7 +37,7 @@ pub enum ElevationStampAuthority {
 }
 
 impl ElevationStampAuthority {
-    pub(crate) fn of(state_machine_authorized: bool) -> Self {
+    pub fn of(state_machine_authorized: bool) -> Self {
         if state_machine_authorized {
             Self::Replicated
         } else {

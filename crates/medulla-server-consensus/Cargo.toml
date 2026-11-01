@@ -34,7 +34,7 @@ medulla-persistence-records = { path = "../medulla-persistence-records" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-server-graph = { path = "../medulla-server-graph" }
 
-medulla-capabilities = { path = "../medulla-capabilities", optional = true }
+medulla-capabilities = { path = "../medulla-capabilities" }
 
 openraft = { version = "=0.10.0-alpha.26", features = ["serde"], optional = true }
 
@@ -50,23 +50,25 @@ argon2 = { version = "0.5", optional = true, default-features = false, features 
 
 jsonwebtoken = { version = "11.1", optional = true, default-features = false, features = ["aws_lc_rs"] }
 
-tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"] }
 
-async-trait = { version = "0.1", optional = true }
+async-trait = { version = "0.1" }
 
 medulla-plan = { path = "../medulla-plan", optional = true }
 
 medulla-modality = { path = "../medulla-modality", optional = true }
 
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
+medulla-isolation = { path = "../medulla-isolation" }
+tracing = "0.1"
 
 [features]
 epistemic = ["medulla-server-graph/epistemic", "dep:medulla-plan", "medulla-plan/epistemic", "dep:medulla-modality", "query"]
-jobs = ["medulla-server-graph/jobs", "dep:medulla-capabilities", "medulla-capabilities/jobs", "server", "mining", "epistemic"]
-mining = ["medulla-server-graph/mining", ]
+jobs = ["medulla-server-graph/jobs", "medulla-capabilities/jobs", "server", "mining", "epistemic"]
+mining = ["medulla-server-graph/mining"]
 oidc = ["medulla-server-graph/oidc", "dep:jsonwebtoken"]
 query = ["medulla-server-graph/query", "dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "dep:medulla-plan", "medulla-plan/query", "redb"]
 raft = ["medulla-server-graph/raft", "redb", "dep:openraft", "server"]
 redb = ["medulla-server-graph/redb", "dep:redb", "dep:medulla-transaction", "dep:medulla-storage"]
 security = ["medulla-server-graph/security", "redb", "dep:sha1", "dep:argon2", "oidc"]
-server = ["medulla-server-graph/server", "dep:tokio", "dep:medulla-capabilities", "dep:async-trait"]
+server = ["medulla-server-graph/server"]

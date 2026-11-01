@@ -33,9 +33,9 @@ use store::GraphRecords;
 
 /// Where one policy-evolution request lands: the request graph, and who asked.
 pub struct PolicyEvolutionTarget<'a> {
-    pub(super) req_id: u64,
-    pub(super) graph: &'a str,
-    pub(super) caller: Option<&'a str>,
+    pub req_id: u64,
+    pub graph: &'a str,
+    pub caller: Option<&'a str>,
 }
 
 /// Route one operation. Scope and admin authority were checked against the

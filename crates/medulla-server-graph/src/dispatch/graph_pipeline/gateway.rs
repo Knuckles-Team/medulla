@@ -5,25 +5,25 @@ use super::*;
 /// values: identity and authz captures are borrowed, the `Arc` handles are
 /// cloned per stage because the mutation gateway moves them into an async apply
 /// closure. Same shape as `crate::mutation::MutationCtx`.
-pub(super) struct GatewayRouteCtx<'a> {
-    pub(super) state: &'a Arc<RwLock<ServerState>>,
-    pub(super) req_id: u64,
-    pub(super) graph_name: &'a str,
-    pub(super) caller: Option<&'a str>,
-    pub(super) attempt_nonce: Option<medulla_types::contract::Nonce>,
-    pub(super) idempotency_key: &'a str,
-    pub(super) tenant_scope: &'a str,
-    pub(super) core: Arc<medulla_graph_core::graph::GraphCore>,
-    pub(super) persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
+pub struct GatewayRouteCtx<'a> {
+    pub state: &'a Arc<RwLock<ServerState>>,
+    pub req_id: u64,
+    pub graph_name: &'a str,
+    pub caller: Option<&'a str>,
+    pub attempt_nonce: Option<medulla_types::contract::Nonce>,
+    pub idempotency_key: &'a str,
+    pub tenant_scope: &'a str,
+    pub core: Arc<medulla_graph_core::graph::GraphCore>,
+    pub persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
-    pub(super) cdc: Option<Arc<medulla_server_cdc::cdc::CdcHub>>,
-    pub(super) materialization_manifest:
+    pub cdc: Option<Arc<medulla_server_cdc::cdc::CdcHub>>,
+    pub materialization_manifest:
         Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
-    pub(super) gateway_authz_ctx: &'a Option<medulla_server_mutation::mutation::GatewayAuthzCtx>,
-    pub(super) read_authority: &'a Option<GraphReadAuthority>,
-    pub(super) verified_actor: &'a str,
+    pub gateway_authz_ctx: &'a Option<medulla_server_mutation::mutation::GatewayAuthzCtx>,
+    pub read_authority: &'a Option<GraphReadAuthority>,
+    pub verified_actor: &'a str,
     #[cfg(feature = "security")]
-    pub(super) rls: std::sync::Arc<medulla_isolation::isolation::IsolationLayer>,
+    pub rls: std::sync::Arc<medulla_isolation::isolation::IsolationLayer>,
 }
 
 #[cfg(any(
@@ -110,7 +110,7 @@ async fn commit_query_gateway(ctx: GatewayRouteCtx<'_>, method: Method) -> Respo
 }
 
 #[cfg(any(feature = "query", feature = "cypher", feature = "graphql"))]
-pub(super) async fn route_query_gateway(
+pub async fn route_query_gateway(
     ctx: GatewayRouteCtx<'_>,
     method: Method,
 ) -> Result<Response, Method> {
@@ -188,7 +188,7 @@ async fn commit_rdf_gateway(ctx: GatewayRouteCtx<'_>, method: Method) -> Respons
 }
 
 #[cfg(feature = "rdf")]
-pub(super) async fn route_rdf_gateway(
+pub async fn route_rdf_gateway(
     ctx: GatewayRouteCtx<'_>,
     method: Method,
 ) -> Result<Response, Method> {

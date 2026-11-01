@@ -162,7 +162,7 @@ async fn route_native_lifecycle_ops(
     Err(method)
 }
 
-pub(super) async fn route_native_store_ops(
+pub async fn route_native_store_ops(
     ctx: GraphOpRouting<'_>,
     method: Method,
 ) -> Result<Response, Method> {
@@ -526,7 +526,7 @@ enum SourceIngestionRoute {
 }
 
 #[cfg(feature = "raft")]
-pub(super) async fn source_ingestion_route_fence(
+pub async fn source_ingestion_route_fence(
     ctx: &GraphOpRouting<'_>,
 ) -> Result<(u64, Option<u64>), Response> {
     let Some(routed) = ctx.routed_raft.as_ref() else {
@@ -547,7 +547,7 @@ pub(super) async fn source_ingestion_route_fence(
 }
 
 #[cfg(not(feature = "raft"))]
-pub(super) async fn source_ingestion_route_fence(
+pub async fn source_ingestion_route_fence(
     _ctx: &GraphOpRouting<'_>,
 ) -> Result<(u64, Option<u64>), Response> {
     Ok((0, None))
@@ -561,7 +561,7 @@ pub(super) async fn source_ingestion_route_fence(
 /// Returns `Err(method)` for a method this router does not own, so
 /// `route_graph_op_method` can offer it to the next one.
 #[allow(unused_variables)]
-pub(super) async fn route_graph_authority_surfaces(
+pub async fn route_graph_authority_surfaces(
     ctx: GraphOpRouting<'_>,
     method: Method,
 ) -> Result<Response, Method> {
@@ -777,7 +777,7 @@ async fn route_graph_audit_and_modality(
 /// Try each post-lock router in the ORIGINAL order — change envelopes, then the
 /// native stores, then the authority surfaces. A method none of them owns falls
 /// through to the ordinary dispatch pipeline.
-pub(super) async fn route_graph_op_method(
+pub async fn route_graph_op_method(
     ctx: GraphOpRouting<'_>,
     method: Method,
 ) -> Result<Response, Method> {

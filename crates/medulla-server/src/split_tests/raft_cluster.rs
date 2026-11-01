@@ -212,7 +212,7 @@ fn dispatch_on_heap<'a>(
     state: &'a Arc<RwLock<ServerState>>,
     request: medulla_protocol_types::protocol::Request,
 ) -> std::pin::Pin<Box<dyn std::future::Future<Output = medulla_protocol_types::protocol::Response> + Send + 'a>> {
-    let dispatched = crate::dispatch::request_boundary::dispatch(state, request);
+    let dispatched = medulla_server_router::dispatch::request_boundary::dispatch(state, request);
     Box::pin(dispatched)
 }
 
@@ -969,7 +969,7 @@ mod placement_admin_wire_rpc {
                     .unwrap(),
             },
         );
-        crate::dispatch::request_boundary::dispatch(state, req).await
+        medulla_server_router::dispatch::request_boundary::dispatch(state, req).await
     }
 
     async fn read_node_via(
@@ -985,7 +985,7 @@ mod placement_admin_wire_rpc {
                 node_id: node_id.to_string(),
             },
         );
-        let resp = crate::dispatch::request_boundary::dispatch(state, req).await;
+        let resp = medulla_server_router::dispatch::request_boundary::dispatch(state, req).await;
         assert!(
             resp.error.is_none(),
             "GetNodeProperties failed: {:?}",
@@ -1106,7 +1106,7 @@ mod placement_admin_wire_rpc {
             .await
             .unwrap();
         let control_state = node_state(control_leader);
-        let assign_resp = crate::dispatch::request_boundary::dispatch(
+        let assign_resp = medulla_server_router::dispatch::request_boundary::dispatch(
             &control_state,
             signed_request(
                 1,
@@ -1132,7 +1132,7 @@ mod placement_admin_wire_rpc {
 
         // ── 2. Write data, then read it back from a DIFFERENT physical node ─
         let graph = format!("{TENANT}:ws1");
-        let create_resp = crate::dispatch::request_boundary::dispatch(
+        let create_resp = medulla_server_router::dispatch::request_boundary::dispatch(
             &control_state,
             signed_request(
                 5,
@@ -1176,7 +1176,7 @@ mod placement_admin_wire_rpc {
         }
 
         // ── 3. The `move` op (PLAN -> EXECUTE -> CATALOG UPDATE) over the wire ──
-        let move_resp = crate::dispatch::request_boundary::dispatch(
+        let move_resp = medulla_server_router::dispatch::request_boundary::dispatch(
             &control_state,
             signed_request(
                 2,
@@ -1230,7 +1230,7 @@ mod placement_admin_wire_rpc {
                 client_epoch,
             },
         };
-        let non_leader_resp = crate::dispatch::request_boundary::dispatch(
+        let non_leader_resp = medulla_server_router::dispatch::request_boundary::dispatch(
             &node_state(route_checker_id),
             signed_request(3, placement_route_request(epoch0)),
         )
@@ -1252,7 +1252,7 @@ mod placement_admin_wire_rpc {
         // ── 4b. PlacementRoute from the ACTUAL placement-control leader,
         //      presenting the PRE-move epoch, must be flagged stale and
         //      redirected to the new group. ──
-        let route_resp = crate::dispatch::request_boundary::dispatch(
+        let route_resp = medulla_server_router::dispatch::request_boundary::dispatch(
             &control_state,
             signed_request(4, placement_route_request(epoch0)),
         )

@@ -15,7 +15,7 @@ use tokio::sync::RwLock;
 use medulla_server_api::state::ServerState;
 
 /// One armed hold: where the derivation reports, and what it waits for.
-pub(super) struct Hold {
+pub struct Hold {
     derived: SyncSender<()>,
     release: Receiver<()>,
 }
@@ -52,14 +52,14 @@ pub fn arm(state: &Arc<RwLock<ServerState>>) -> Held {
 }
 
 /// The hold armed for `state`'s engine, if any (taken: it holds once).
-pub(super) fn take(state: &Arc<RwLock<ServerState>>) -> Option<Hold> {
+pub fn take(state: &Arc<RwLock<ServerState>>) -> Option<Hold> {
     let mut armed = HOLDS.lock().ok()?;
     let index = armed.iter().position(|(engine, _)| *engine == key(state))?;
     Some(armed.swap_remove(index).1)
 }
 
 /// Report that the derivation finished, then wait to be released.
-pub(super) fn hold(hold: Option<Hold>) {
+pub fn hold(hold: Option<Hold>) {
     let Some(hold) = hold else {
         return;
     };

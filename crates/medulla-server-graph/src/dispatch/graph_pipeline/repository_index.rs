@@ -186,7 +186,7 @@ async fn already_committed(ctx: &GraphOpRouting<'_>, envelope_id: &str) -> Resul
 
 /// The verified coordinates an engine-lowered envelope commits under, shared
 /// by the repository-index and document-enrichment routes.
-pub(super) fn commit_context<'a>(
+pub fn commit_context<'a>(
     ctx: &GraphOpRouting<'a>,
     placement_epoch: u64,
     fencing_token: Option<u64>,
@@ -203,7 +203,7 @@ pub(super) fn commit_context<'a>(
 }
 
 /// Parse, project and durably commit one scoped `IndexRepository` batch.
-pub(super) async fn route_repository_index(
+pub async fn route_repository_index(
     ctx: GraphOpRouting<'_>,
     files_msgpack: Vec<u8>,
     scope: IndexScope,

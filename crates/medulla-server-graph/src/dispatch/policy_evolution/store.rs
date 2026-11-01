@@ -19,7 +19,7 @@ const TRAJECTORY_NODE_TYPE: &str = "Trajectory";
 /// `Ok(None)` for anything that is not this tenant's policy record; a
 /// policy-record row whose body is undecodable or no longer hashes to its id
 /// is [`PolicyRefusal::RecordTampered`].
-pub(super) fn decode_view(
+pub fn decode_view(
     record_id: &str,
     properties_msgpack: &[u8],
     tenant_id: &str,
@@ -49,14 +49,14 @@ pub(super) fn decode_view(
 }
 
 /// The committed request-graph image one tenant's admission reads.
-pub(super) struct GraphRecords<'a> {
-    pub(super) core: Option<&'a GraphCore>,
-    pub(super) tenant_id: &'a str,
+pub struct GraphRecords<'a> {
+    pub core: Option<&'a GraphCore>,
+    pub tenant_id: &'a str,
 }
 
 impl GraphRecords<'_> {
     /// The verified view of `record_id`, `None` when absent.
-    pub(super) fn view(&self, record_id: &str) -> Result<Option<PolicyRecordView>, PolicyRefusal> {
+    pub fn view(&self, record_id: &str) -> Result<Option<PolicyRecordView>, PolicyRefusal> {
         let Some(properties) = self
             .core
             .and_then(|core| core.get_node_properties(record_id))

@@ -126,7 +126,7 @@ async fn capture_graph_dispatch<'a>(
     Ok(capture)
 }
 
-pub(super) async fn dispatch_graph_op_inner(
+pub async fn dispatch_graph_op_inner(
     state: &Arc<RwLock<ServerState>>,
     ctx: GraphOpContext<'_>,
     mut method: Method,
@@ -243,37 +243,37 @@ pub(super) async fn dispatch_graph_op_inner(
 /// and `verified_actor` are separate borrows of the CALLER's locals — the actor
 /// string borrows from the authority, so the two cannot live in one owned struct.
 #[derive(Clone, Copy)]
-pub(in crate::dispatch) struct GraphOpRouting<'a> {
-    pub(in crate::dispatch) state: &'a Arc<RwLock<ServerState>>,
-    pub(in crate::dispatch) req_id: u64,
-    pub(in crate::dispatch) graph_name: &'a str,
-    pub(super) caller: Option<&'a str>,
-    pub(super) verified_context: &'a VerifiedRequestContext,
-    pub(super) state_machine_authorized: bool,
-    pub(super) read_authority: &'a Option<GraphReadAuthority>,
-    pub(super) verified_actor: &'a str,
-    pub(in crate::dispatch) tenant_scope: &'a str,
-    pub(super) gateway_authz_ctx: &'a Option<medulla_server_mutation::mutation::GatewayAuthzCtx>,
-    pub(in crate::dispatch) core: &'a Arc<medulla_graph_core::graph::GraphCore>,
-    pub(super) materialization_manifest:
+pub struct GraphOpRouting<'a> {
+    pub state: &'a Arc<RwLock<ServerState>>,
+    pub req_id: u64,
+    pub graph_name: &'a str,
+    pub caller: Option<&'a str>,
+    pub verified_context: &'a VerifiedRequestContext,
+    pub state_machine_authorized: bool,
+    pub read_authority: &'a Option<GraphReadAuthority>,
+    pub verified_actor: &'a str,
+    pub tenant_scope: &'a str,
+    pub gateway_authz_ctx: &'a Option<medulla_server_mutation::mutation::GatewayAuthzCtx>,
+    pub core: &'a Arc<medulla_graph_core::graph::GraphCore>,
+    pub materialization_manifest:
         &'a Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
-    pub(in crate::dispatch) persistence:
+    pub persistence:
         &'a Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
-    pub(super) cdc: &'a Option<Arc<medulla_server_cdc::cdc::CdcHub>>,
+    pub cdc: &'a Option<Arc<medulla_server_cdc::cdc::CdcHub>>,
     #[cfg(feature = "security")]
-    pub(super) rls: &'a std::sync::Arc<medulla_isolation::isolation::IsolationLayer>,
+    pub rls: &'a std::sync::Arc<medulla_isolation::isolation::IsolationLayer>,
     #[cfg(feature = "raft")]
-    pub(in crate::dispatch) routed_raft: &'a Option<medulla_raft::raft::multi::RoutedRaftHandle>,
+    pub routed_raft: &'a Option<medulla_raft::raft::multi::RoutedRaftHandle>,
     #[cfg(feature = "raft")]
-    pub(in crate::dispatch) graph_type: medulla_protocol_types::protocol::GraphType,
+    pub graph_type: medulla_protocol_types::protocol::GraphType,
     #[cfg(feature = "raft")]
-    pub(super) multi_raft: &'a Option<Arc<medulla_raft::raft::multi::MultiRaft>>,
+    pub multi_raft: &'a Option<Arc<medulla_raft::raft::multi::MultiRaft>>,
     #[cfg(feature = "redb")]
-    pub(super) graph_incarnation_id: &'a String,
+    pub graph_incarnation_id: &'a String,
     #[cfg(feature = "modality-serving")]
-    pub(super) modality_authority: &'a Option<medulla_h_ingest::modality::ModalityAuthority>,
+    pub modality_authority: &'a Option<medulla_h_ingest::modality::ModalityAuthority>,
     #[cfg(feature = "knowledge-batch")]
-    pub(super) knowledge_stream_authority:
+    pub knowledge_stream_authority:
         &'a Option<medulla_h_query::knowledge_stream::KnowledgeStreamAuthority>,
 }

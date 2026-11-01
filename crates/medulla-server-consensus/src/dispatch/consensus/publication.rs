@@ -17,15 +17,15 @@ struct JobPublicationSubmission<'a> {
 }
 
 #[cfg(all(feature = "raft", feature = "jobs"))]
-pub(super) struct JobPublicationExecution<'a> {
-    pub(super) request_id: u64,
-    pub(super) authority: &'a CarrierAuthority,
-    pub(super) server_secret: &'a str,
-    pub(super) multi: Arc<medulla_raft::raft::multi::MultiRaft>,
-    pub(super) control: medulla_raft::raft::multi::RoutedRaftHandle,
-    pub(super) control_graph: &'a str,
-    pub(super) control_graph_type: medulla_protocol_types::protocol::GraphType,
-    pub(super) prepared_bytes: &'a [u8],
+pub struct JobPublicationExecution<'a> {
+    pub request_id: u64,
+    pub authority: &'a CarrierAuthority,
+    pub server_secret: &'a str,
+    pub multi: Arc<medulla_raft::raft::multi::MultiRaft>,
+    pub control: medulla_raft::raft::multi::RoutedRaftHandle,
+    pub control_graph: &'a str,
+    pub control_graph_type: medulla_protocol_types::protocol::GraphType,
+    pub prepared_bytes: &'a [u8],
 }
 
 #[cfg(all(feature = "raft", feature = "jobs"))]
@@ -121,7 +121,7 @@ fn interpret_job_publication_commit(
 }
 
 #[cfg(all(feature = "raft", feature = "jobs"))]
-pub(super) async fn execute_consensus_job_publication(
+pub async fn execute_consensus_job_publication(
     execution: JobPublicationExecution<'_>,
 ) -> Response {
     let prepared = match decode_job_publication(execution.request_id, execution.prepared_bytes) {

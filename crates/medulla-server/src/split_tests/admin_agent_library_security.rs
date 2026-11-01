@@ -401,7 +401,7 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
     )
     .principal_persistence_id();
     let published =
-        response_write_result(crate::dispatch::request_boundary::dispatch(&state, publish_request).await);
+        response_write_result(medulla_server_router::dispatch::request_boundary::dispatch(&state, publish_request).await);
     assert!(!published.replayed);
     assert_eq!(published.entry.entry_revision, 1);
     assert_eq!(
@@ -432,7 +432,7 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
     *guard.agent_library_open.lock() = None;
     drop(guard);
     let replayed =
-        response_write_result(crate::dispatch::request_boundary::dispatch(&state, replay_request).await);
+        response_write_result(medulla_server_router::dispatch::request_boundary::dispatch(&state, replay_request).await);
     assert!(replayed.replayed);
     assert_eq!(replayed.entry, published.entry);
     let store = {
@@ -475,7 +475,7 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
             },
         ),
     ] {
-        let response = crate::dispatch::request_boundary::dispatch(
+        let response = medulla_server_router::dispatch::request_boundary::dispatch(
             &state,
             signed_agent_library_request(
                 secret,
@@ -517,7 +517,7 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
         VerifiedRequestContext::from_verified_claims(retire_claims.clone(), retire_key.to_string())
             .principal_persistence_id();
     let retired =
-        response_write_result(crate::dispatch::request_boundary::dispatch(&state, retire_request).await);
+        response_write_result(medulla_server_router::dispatch::request_boundary::dispatch(&state, retire_request).await);
     assert!(!retired.replayed);
     assert!(retired.entry.is_retired());
     assert_eq!(
@@ -681,7 +681,7 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
     changed.role = "different-role".to_string();
     let mut changed_context = forged_context(&store, "tenant-shared");
     changed_context.expected_revision = Some(0);
-    let conflict = crate::dispatch::request_boundary::dispatch(
+    let conflict = medulla_server_router::dispatch::request_boundary::dispatch(
         &state,
         signed_agent_library_request(
             secret,
@@ -719,7 +719,7 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
         "wrong-tenant-nonce",
         "wrong-tenant-key",
     );
-    let wrong_tenant_response = crate::dispatch::request_boundary::dispatch(&state, wrong_tenant).await;
+    let wrong_tenant_response = medulla_server_router::dispatch::request_boundary::dispatch(&state, wrong_tenant).await;
     assert!(
         wrong_tenant_response
             .error
@@ -748,7 +748,7 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
         "missing-write-nonce",
         "missing-write-key",
     );
-    let missing_write_response = crate::dispatch::request_boundary::dispatch(&state, missing_write).await;
+    let missing_write_response = medulla_server_router::dispatch::request_boundary::dispatch(&state, missing_write).await;
     assert!(
         missing_write_response
             .error
@@ -778,7 +778,7 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
         "missing-read-nonce",
         "missing-read-key",
     );
-    let missing_read_response = crate::dispatch::request_boundary::dispatch(&state, missing_read).await;
+    let missing_read_response = medulla_server_router::dispatch::request_boundary::dispatch(&state, missing_read).await;
     assert!(
         missing_read_response
             .error

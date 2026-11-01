@@ -16,7 +16,7 @@ use medulla_protocol_types::result_contract::cluster::MAX_REGISTERED_SERVER_PAGE
 use medulla_protocol_types::result_contract::cluster::REGISTERED_SERVER_LIST_SCHEMA_VERSION;
 use medulla_types::contract::{BoundedVec, Digest256};
 
-pub(super) const REGISTRY_GRAPH: &str = "__commons__";
+pub const REGISTRY_GRAPH: &str = "__commons__";
 const REGISTERED_SERVER_SNAPSHOT_DOMAIN: &[u8] = b"eg/registered-server-snapshot/v2";
 const REGISTRY_CURSOR_STALE: &str =
     "REGISTRY_CURSOR_STALE: registered-server snapshot changed; restart from the first page";
@@ -139,7 +139,7 @@ fn registration_state(value: &serde_json::Value) -> Option<(ServerTransport, Ser
 /// The fleet catalog projection reads a component's `enabled` through this --
 /// the SAME typed decode and lease filter `ListRegisteredServers` answers from,
 /// never a second reading of `:Server` rows.
-pub(super) fn live_desired_states<F>(
+pub fn live_desired_states<F>(
     core: &medulla_graph_core::graph::GraphCore,
     observed_at_ms: u64,
     visible: F,
@@ -248,7 +248,7 @@ fn registered_server_page(
 /// registration and expiry. This route intentionally reads the local committed
 /// `__commons__` image and does not claim a cluster read barrier that does not
 /// exist; the single-node/full deployment is the complete authority today.
-pub(in crate::dispatch) async fn handle_list_registered_servers(
+pub async fn handle_list_registered_servers(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified_context: &VerifiedRequestContext,
@@ -296,7 +296,7 @@ pub(in crate::dispatch) async fn handle_list_registered_servers(
 /// The lock must remain held through its dependent authority-row commit; the
 /// caller makes the registry resident (`ensure_graph_resident`) before taking
 /// it, since opening a cold graph takes that same lock.
-pub(crate) async fn verified_served_registration(
+pub async fn verified_served_registration(
     state: &Arc<RwLock<ServerState>>,
     verified: &VerifiedRequestContext,
     server_name: &str,
@@ -326,13 +326,13 @@ pub(crate) async fn verified_served_registration(
 }
 
 /// One `RegisterServer` call's typed inputs, as the router unpacked them.
-pub(in crate::dispatch) struct ServerRegistration {
-    pub(in crate::dispatch) name: String,
-    pub(in crate::dispatch) url: String,
-    pub(in crate::dispatch) resources_json: String,
-    pub(in crate::dispatch) ttl_secs: u64,
-    pub(in crate::dispatch) transport: ServerTransport,
-    pub(in crate::dispatch) desired: ServerDesiredState,
+pub struct ServerRegistration {
+    pub name: String,
+    pub url: String,
+    pub resources_json: String,
+    pub ttl_secs: u64,
+    pub transport: ServerTransport,
+    pub desired: ServerDesiredState,
 }
 
 /// Validate a registration and parse its resource map. Every refusal names the
@@ -375,7 +375,7 @@ fn validated_resources(registration: &ServerRegistration) -> Result<serde_json::
 /// `server::mutation::NON_GATEWAY_COORDINATED`'s `RegisterServer` entry. Never
 /// trusts a caller-supplied timestamp: every lease field is derived from
 /// [`crate::kernel::dispatch_support::authoritative_now_ms`].
-pub(in crate::dispatch) async fn handle_register_server(
+pub async fn handle_register_server(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     caller: Option<&str>,

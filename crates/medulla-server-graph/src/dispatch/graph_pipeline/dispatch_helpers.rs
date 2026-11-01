@@ -5,11 +5,11 @@ use medulla_persistence::AsRedb;
 /// The caller/isolation-scoping fields shared by every `dispatch_graph_op_inner`
 /// entry point, bundled so the function stays under the clippy argument-count
 /// ceiling once the feature-gated authority parameters are unified in.
-pub(super) struct GraphOpContext<'a> {
-    pub(super) graph_name: &'a str,
-    pub(super) req_id: u64,
-    pub(super) caller: Option<&'a str>,
-    pub(super) verified_context: &'a VerifiedRequestContext,
+pub struct GraphOpContext<'a> {
+    pub graph_name: &'a str,
+    pub req_id: u64,
+    pub caller: Option<&'a str>,
+    pub verified_context: &'a VerifiedRequestContext,
 }
 
 /// Fence a `series.redb` WRITE to the current placement leader.
@@ -19,7 +19,7 @@ pub(super) struct GraphOpContext<'a> {
 /// through, so an unconditional `return` here would strand every `TsAppend`.
 /// The method guard lives inside so the call site stays a single `if let`.
 #[cfg(all(feature = "raft", feature = "tsdb"))]
-pub(super) async fn dispatch_op_tsdb_write_fence(
+pub async fn dispatch_op_tsdb_write_fence(
     req_id: u64,
     graph_name: &str,
     routed_raft: Option<&medulla_raft::raft::multi::RoutedRaftHandle>,
@@ -54,24 +54,24 @@ pub(super) async fn dispatch_op_tsdb_write_fence(
 /// placement/RLS/authority handles the cursor must stay inside. Bundled to keep
 /// the dispatcher at the documented parameter cap.
 #[cfg(feature = "knowledge-batch")]
-pub(super) struct KnowledgeStreamCtx<'a> {
-    pub(super) state: &'a Arc<RwLock<ServerState>>,
-    pub(super) req_id: u64,
-    pub(super) graph_name: &'a str,
-    pub(super) verified_context: &'a VerifiedRequestContext,
-    pub(super) read_authority: &'a Option<GraphReadAuthority>,
-    pub(super) verified_actor: &'a str,
-    pub(super) core: Arc<medulla_graph_core::graph::GraphCore>,
+pub struct KnowledgeStreamCtx<'a> {
+    pub state: &'a Arc<RwLock<ServerState>>,
+    pub req_id: u64,
+    pub graph_name: &'a str,
+    pub verified_context: &'a VerifiedRequestContext,
+    pub read_authority: &'a Option<GraphReadAuthority>,
+    pub verified_actor: &'a str,
+    pub core: Arc<medulla_graph_core::graph::GraphCore>,
     #[cfg(feature = "security")]
-    pub(super) rls: std::sync::Arc<medulla_isolation::isolation::IsolationLayer>,
+    pub rls: std::sync::Arc<medulla_isolation::isolation::IsolationLayer>,
     #[cfg(feature = "raft")]
-    pub(super) routed_raft: Option<medulla_raft::raft::multi::RoutedRaftHandle>,
-    pub(super) knowledge_stream_authority:
+    pub routed_raft: Option<medulla_raft::raft::multi::RoutedRaftHandle>,
+    pub knowledge_stream_authority:
         Option<medulla_h_query::knowledge_stream::KnowledgeStreamAuthority>,
 }
 
 #[cfg(feature = "knowledge-batch")]
-pub(super) async fn dispatch_op_knowledge_stream(
+pub async fn dispatch_op_knowledge_stream(
     ctx: KnowledgeStreamCtx<'_>,
     method: Method,
 ) -> Response {
@@ -129,7 +129,7 @@ pub(super) async fn dispatch_op_knowledge_stream(
 }
 
 #[cfg(feature = "tsdb")]
-pub(super) async fn dispatch_op_tsdb_ops(
+pub async fn dispatch_op_tsdb_ops(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     graph_name: &str,
@@ -162,7 +162,7 @@ pub(super) async fn dispatch_op_tsdb_ops(
 }
 
 #[cfg(feature = "security")]
-pub(super) async fn dispatch_op_audit_read_event(
+pub async fn dispatch_op_audit_read_event(
     req_id: u64,
     graph_name: &str,
     verified_tenant: &str,
@@ -185,7 +185,7 @@ pub(super) async fn dispatch_op_audit_read_event(
 }
 
 #[cfg(feature = "security")]
-pub(super) async fn dispatch_op_audit_append(
+pub async fn dispatch_op_audit_append(
     req_id: u64,
     graph_name: &str,
     core: Arc<medulla_graph_core::graph::GraphCore>,
@@ -232,7 +232,7 @@ pub(super) async fn dispatch_op_audit_append(
 }
 
 #[cfg(feature = "security")]
-pub(super) async fn dispatch_op_audit_verify(
+pub async fn dispatch_op_audit_verify(
     req_id: u64,
     graph_name: &str,
     persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
@@ -256,7 +256,7 @@ pub(super) async fn dispatch_op_audit_verify(
 }
 
 #[cfg(feature = "security")]
-pub(super) async fn prove_audit_inclusion(
+pub async fn prove_audit_inclusion(
     req_id: u64,
     graph_name: &str,
     persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
@@ -288,27 +288,27 @@ pub(super) async fn prove_audit_inclusion(
 /// derived modality authority. Bundled to keep the dispatcher at the documented
 /// parameter cap.
 #[cfg(feature = "modality-serving")]
-pub(super) struct ServedModalityCtx<'a> {
-    pub(super) state: &'a Arc<RwLock<ServerState>>,
-    pub(super) req_id: u64,
-    pub(super) graph_name: &'a str,
-    pub(super) caller: Option<&'a str>,
-    pub(super) verified_context: &'a VerifiedRequestContext,
-    pub(super) tenant_scope: &'a str,
-    pub(super) gateway_authz_ctx: &'a Option<medulla_server_mutation::mutation::GatewayAuthzCtx>,
-    pub(super) core: Arc<medulla_graph_core::graph::GraphCore>,
-    pub(super) materialization_manifest:
+pub struct ServedModalityCtx<'a> {
+    pub state: &'a Arc<RwLock<ServerState>>,
+    pub req_id: u64,
+    pub graph_name: &'a str,
+    pub caller: Option<&'a str>,
+    pub verified_context: &'a VerifiedRequestContext,
+    pub tenant_scope: &'a str,
+    pub gateway_authz_ctx: &'a Option<medulla_server_mutation::mutation::GatewayAuthzCtx>,
+    pub core: Arc<medulla_graph_core::graph::GraphCore>,
+    pub materialization_manifest:
         Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
-    pub(super) persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
+    pub persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
-    pub(super) cdc: Option<Arc<medulla_server_cdc::cdc::CdcHub>>,
+    pub cdc: Option<Arc<medulla_server_cdc::cdc::CdcHub>>,
     #[cfg(feature = "raft")]
-    pub(super) routed_raft: Option<medulla_raft::raft::multi::RoutedRaftHandle>,
-    pub(super) modality_authority: Option<medulla_h_ingest::modality::ModalityAuthority>,
+    pub routed_raft: Option<medulla_raft::raft::multi::RoutedRaftHandle>,
+    pub modality_authority: Option<medulla_h_ingest::modality::ModalityAuthority>,
 }
 
 #[cfg(feature = "modality-serving")]
-pub(super) async fn apply_served_modality(
+pub async fn apply_served_modality(
     ctx: ServedModalityCtx<'_>,
     op: medulla_types::ServedModalityOp,
 ) -> Response {
@@ -436,13 +436,13 @@ async fn commit_served_modality(
 /// cap; `routed` and `method` stay explicit because the caller's
 /// `if let Some(routed)` is what proves the barrier applies at all.
 #[cfg(feature = "raft")]
-pub(super) struct RaftWriteBarrierCtx<'a> {
-    pub(super) state: &'a Arc<RwLock<ServerState>>,
-    pub(super) req_id: u64,
-    pub(super) graph_name: &'a str,
-    pub(super) verified_context: &'a VerifiedRequestContext,
-    pub(super) tenant_scope: &'a str,
-    pub(super) graph_type: medulla_protocol_types::protocol::GraphType,
+pub struct RaftWriteBarrierCtx<'a> {
+    pub state: &'a Arc<RwLock<ServerState>>,
+    pub req_id: u64,
+    pub graph_name: &'a str,
+    pub verified_context: &'a VerifiedRequestContext,
+    pub tenant_scope: &'a str,
+    pub graph_type: medulla_protocol_types::protocol::GraphType,
 }
 
 /// Stable replay identity for a replicated graph mutation.
@@ -454,7 +454,7 @@ pub(super) struct RaftWriteBarrierCtx<'a> {
 /// a retry reaches the same durable row; the replicated command authentication
 /// then distinguishes an exact replay from a changed-operation conflict.
 #[cfg(feature = "raft")]
-pub(super) fn replicated_graph_batch_id(
+pub fn replicated_graph_batch_id(
     namespace: &str,
     tenant_scope: &str,
     graph_name: &str,
@@ -486,7 +486,7 @@ pub(super) fn replicated_graph_batch_id(
 /// durability guard stays at the call site because a non-durable mutation must keep
 /// ownership of `method` for the local pipeline below.
 #[cfg(feature = "raft")]
-pub(super) async fn dispatch_op_raft_write_routing_barrier(
+pub async fn dispatch_op_raft_write_routing_barrier(
     ctx: RaftWriteBarrierCtx<'_>,
     routed: medulla_raft::raft::multi::RoutedRaftHandle,
     method: Method,
@@ -593,7 +593,7 @@ fn build_bound_graph_request(
 }
 
 #[cfg(feature = "raft")]
-pub(super) async fn resolve_routed_raft(
+pub async fn resolve_routed_raft(
     req_id: u64,
     graph_name: &str,
     multi_raft: Option<&std::sync::Arc<medulla_raft::raft::multi::MultiRaft>>,

@@ -25,7 +25,7 @@ mod write;
 /// Route one fleet catalog operation. Scope and admin authority were checked
 /// against the op's own `authz_action` before dispatch; tenant and principal
 /// come only from `verified`.
-pub(in crate::dispatch) async fn handle_fleet_catalog(
+pub async fn handle_fleet_catalog(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     caller: Option<&str>,

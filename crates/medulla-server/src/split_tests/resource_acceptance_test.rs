@@ -1219,7 +1219,7 @@ fn dispatch_on_heap<'a>(
     state: &'a Arc<RwLock<medulla_server_api::state::ServerState>>,
     request: Request,
 ) -> std::pin::Pin<Box<dyn Future<Output = medulla_protocol_types::protocol::Response> + Send + 'a>> {
-    Box::pin(crate::dispatch::request_boundary::dispatch(state, request))
+    Box::pin(medulla_server_router::dispatch::request_boundary::dispatch(state, request))
 }
 
 async fn dispatch_bounded(

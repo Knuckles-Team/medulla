@@ -34,7 +34,7 @@
         state: &'a Arc<RwLock<ServerState>>,
         request: Request,
     ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Response> + Send + 'a>> {
-        Box::pin(crate::dispatch::request_boundary::dispatch(state, request))
+        Box::pin(medulla_server_router::dispatch::request_boundary::dispatch(state, request))
     }
 
     /// Provision `MEDULLA_ENCRYPTION_KEY` for every test in this module that

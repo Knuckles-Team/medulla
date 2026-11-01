@@ -29,7 +29,7 @@ fn blob_missing(blob: &HeldBlobRef) -> PolicyRefusal {
 
 /// Check every held reference against the Blob CAS.
 #[cfg(feature = "blob")]
-pub(super) async fn verify_held_blobs(
+pub async fn verify_held_blobs(
     state: &Arc<RwLock<ServerState>>,
     verified: &VerifiedRequestContext,
     record: &PolicyEvolutionRecord,
@@ -73,7 +73,7 @@ fn check_held(
 /// Without the blob store no reference can be held: refuse any record that
 /// names one.
 #[cfg(not(feature = "blob"))]
-pub(super) async fn verify_held_blobs(
+pub async fn verify_held_blobs(
     _state: &Arc<RwLock<ServerState>>,
     _verified: &VerifiedRequestContext,
     record: &PolicyEvolutionRecord,

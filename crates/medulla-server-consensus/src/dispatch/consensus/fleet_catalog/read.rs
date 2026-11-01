@@ -311,7 +311,7 @@ fn lookup_discovery(view: &CommonsView, id: &str) -> Option<FleetCatalogRow> {
         .map(discovery_row)
 }
 
-pub(super) async fn list(
+pub async fn list(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,
@@ -323,7 +323,7 @@ pub(super) async fn list(
     )
 }
 
-pub(super) async fn lookup(
+pub async fn lookup(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,

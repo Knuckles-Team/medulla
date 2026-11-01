@@ -236,7 +236,7 @@ fn spawn_activation(name: String, core: Arc<GraphCore>, persist_dir: Option<Stri
 /// after any graph mutation. Cheap enough to call unconditionally — a
 /// length/readiness/warming check under the existing `semantic_store` read lock,
 /// no allocation on the common (below-threshold or already-warm) path.
-pub(crate) async fn maybe_activate_after_write(
+pub async fn maybe_activate_after_write(
     state: &Arc<RwLock<ServerState>>,
     graph_name: &str,
     core: &Arc<GraphCore>,

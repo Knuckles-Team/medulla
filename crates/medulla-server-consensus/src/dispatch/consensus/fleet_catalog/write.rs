@@ -229,7 +229,7 @@ async fn commit_and_respond<M: MethodResult<Body = FleetWriteReceipt>>(
     medulla_server_graph::dispatch::shared::typed_response::<M>(req_id, receipt)
 }
 
-pub(super) async fn record_discovery(
+pub async fn record_discovery(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     caller: Option<&str>,
@@ -240,7 +240,7 @@ pub(super) async fn record_discovery(
     commit_and_respond::<FleetCatalogRecordDiscovery>(state, req_id, caller, verified, write).await
 }
 
-pub(super) async fn set_override(
+pub async fn set_override(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     caller: Option<&str>,
@@ -257,7 +257,7 @@ pub(super) async fn set_override(
     commit_and_respond::<FleetCatalogSetOverride>(state, req_id, caller, verified, write).await
 }
 
-pub(super) async fn clear_override(
+pub async fn clear_override(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     caller: Option<&str>,

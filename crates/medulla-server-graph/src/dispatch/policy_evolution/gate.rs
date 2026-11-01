@@ -7,7 +7,7 @@
 use medulla_decision_outcome_types::{policy_evolution::CaptureEligibility, policy_evolution::ModelPolicyVersion, policy_evolution::OpenWeightPolicyCapability, policy_evolution::PolicyCapture, policy_evolution::PolicyEvaluation, policy_evolution::PolicyEvolutionRecord, policy_evolution::PolicyEvolutionRecordBody, policy_evolution::PolicyRefusal, policy_evolution::TrainingRun, policy_evolution::TrainingRunStatus, policy_evolution::VersionOrigin};
 
 /// What admission may read from the request graph.
-pub(super) trait RecordLookup {
+pub trait RecordLookup {
     /// The verified record under `record_id`, `None` when absent. A stored
     /// record whose body no longer matches its id is a refusal, never a value.
     fn record(&self, record_id: &str) -> Result<Option<PolicyEvolutionRecord>, PolicyRefusal>;
@@ -16,7 +16,7 @@ pub(super) trait RecordLookup {
 }
 
 /// Admit `record` against the stored graph, or answer the typed refusal.
-pub(super) fn admit(
+pub fn admit(
     record: &PolicyEvolutionRecord,
     lookup: &dyn RecordLookup,
 ) -> Result<(), PolicyRefusal> {

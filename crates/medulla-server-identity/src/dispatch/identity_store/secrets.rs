@@ -26,7 +26,7 @@ fn hasher() -> Result<Argon2<'static>, String> {
 }
 
 /// The argon2id PHC string of `password` under a fresh random salt.
-pub(super) fn hash_password(password: &str) -> Result<String, String> {
+pub fn hash_password(password: &str) -> Result<String, String> {
     let mut salt = [0u8; 16];
     rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut salt);
     let salt = SaltString::encode_b64(&salt).map_err(|error| error.to_string())?;
@@ -45,7 +45,7 @@ fn dummy_hash() -> &'static str {
 
 /// Whether `candidate` matches `stored` (or the dummy hash when `None`, which
 /// never matches). An unparseable stored hash never matches.
-pub(super) fn verify_password(candidate: &str, stored: Option<&str>) -> bool {
+pub fn verify_password(candidate: &str, stored: Option<&str>) -> bool {
     let Ok(hasher) = hasher() else {
         return false;
     };
@@ -62,7 +62,7 @@ pub(super) fn verify_password(candidate: &str, stored: Option<&str>) -> bool {
 
 /// Whether a stored hash uses other parameters than the current cost (and
 /// should be replaced on the next successful sign-in).
-pub(super) fn is_stale(stored: &str) -> bool {
+pub fn is_stale(stored: &str) -> bool {
     let (memory_kib, passes, lanes) = COST;
     let current = PasswordHash::new(stored)
         .ok()
@@ -123,11 +123,11 @@ fn unseal_with((cipher, tag): &KeySource, sealed: &str) -> Result<Vec<u8>, Strin
     cipher.unseal(&bytes)
 }
 
-pub(super) fn seal(secret: &[u8], service_secret: &str) -> Result<String, String> {
+pub fn seal(secret: &[u8], service_secret: &str) -> Result<String, String> {
     Ok(seal_with(&configured_key_source(service_secret)?, secret))
 }
 
-pub(super) fn unseal(sealed: &str, service_secret: &str) -> Result<Vec<u8>, String> {
+pub fn unseal(sealed: &str, service_secret: &str) -> Result<Vec<u8>, String> {
     unseal_with(&configured_key_source(service_secret)?, sealed)
 }
 
@@ -166,7 +166,7 @@ fn hotp(secret: &[u8], step: u64) -> Option<u32> {
 }
 
 /// The step (±1 around `now_secs`) whose code is `code`, if any.
-pub(super) fn totp_step(secret: &[u8], code: &str, now_secs: u64) -> Option<u64> {
+pub fn totp_step(secret: &[u8], code: &str, now_secs: u64) -> Option<u64> {
     let valid = code.len() == 6 && code.bytes().all(|b| b.is_ascii_digit());
     let wanted: u32 = code.parse().ok().filter(|_| valid)?;
     let now_step = now_secs / STEP_SECS;
@@ -176,7 +176,7 @@ pub(super) fn totp_step(secret: &[u8], code: &str, now_secs: u64) -> Option<u64>
 }
 
 /// Generate a code for boundary regression fixtures using the RFC-tested primitive.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub fn totp_code_for_test(secret: &[u8], now_secs: u64) -> String {
     format!(
         "{:06}",
