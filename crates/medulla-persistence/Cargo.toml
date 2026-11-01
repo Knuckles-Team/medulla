@@ -12,6 +12,13 @@ name = "medulla_persistence"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-result-types = { path = "../medulla-result-types" }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-decision-types = { path = "../medulla-decision-types" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-agent-types = { path = "../medulla-agent-types" }
 tempfile = { version = "3", optional = true }
 async-trait = { version = "0.1", optional = true }
 hex = "0.4"

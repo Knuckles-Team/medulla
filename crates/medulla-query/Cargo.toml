@@ -88,6 +88,7 @@ numeric = ["sql", "dep:medulla-numeric", "dep:ndarray", "dep:medulla-tsdb", "med
 iceberg-federation = ["dep:iceberg", "dep:iceberg-catalog-rest", "dep:iceberg-storage-opendal", "tokio/rt-multi-thread"]
 
 [dependencies]
+medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-types = { path = "../medulla-types" }
 medulla-core = { path = "../medulla-core" }
 medulla-compute = { path = "../medulla-compute" }
