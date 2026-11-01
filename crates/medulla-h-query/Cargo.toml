@@ -52,6 +52,7 @@ ureq = { version = "3.4.2", optional = true }
 fs4 = "1.1"
 medulla-storage = { path = "../medulla-storage", optional = true }
 uuid = { version = "1.28", features = ["v4"] }
+medulla-h-query = { path = "../medulla-h-query" }
 
 [features]
 test-support = []
