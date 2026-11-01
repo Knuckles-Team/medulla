@@ -201,7 +201,7 @@ const REPLAY_SCOPE_INCARNATION: &str = "request-replay:v1";
 /// gap is not currently exploitable — but MUST be closed before any
 /// multi-node `cluster` rollout.
 #[cfg(feature = "security")]
-pub(crate) struct RedbReplayLedger {
+pub struct RedbReplayLedger {
     durable: medulla_store::sidecar_store::SidecarStore<medulla_storage::RequestReplayOwner>,
     /// Lock-free fast path: requests signed at or below it need no commit.
     high_water: std::sync::atomic::AtomicU64,
