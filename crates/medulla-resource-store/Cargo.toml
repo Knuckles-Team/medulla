@@ -32,8 +32,8 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-work-types = { path = "../medulla-work-types" }
 
 [features]
-security = ["medulla-store/security"]
-server = ["medulla-store/server"]
+security = ["medulla-store/security", "medulla-graph-core/security", "medulla-kernel/security", "medulla-protocol-types/security", "medulla-types/security"]
+server = ["medulla-store/server", "medulla-kernel/server"]
 test-support = ["medulla-store/test-support"]
 
 [dev-dependencies]

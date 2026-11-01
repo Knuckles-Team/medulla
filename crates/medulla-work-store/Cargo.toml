@@ -40,8 +40,8 @@ medulla-statechart = { path = "../medulla-statechart", optional = true }
 tempfile = { version = "3", optional = true }
 
 [features]
-security = ["medulla-store/security", "medulla-lane-store/security"]
-statechart = ["dep:medulla-statechart", "medulla-store/statechart"]
+security = ["medulla-store/security", "medulla-lane-store/security", "medulla-kernel/security", "medulla-protocol-types/security", "medulla-types/security"]
+statechart = ["dep:medulla-statechart", "medulla-store/statechart", "medulla-protocol-types/statechart", "medulla-types/statechart"]
 test-support = ["dep:tempfile", "medulla-store/test-support"]
 
 [dev-dependencies]

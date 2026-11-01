@@ -40,12 +40,12 @@ medulla-lane-store = { path = "../medulla-lane-store" }
 medulla-statechart = { path = "../medulla-statechart", optional = true }
 
 [features]
-compute-dist = ["raft", "medulla-store/compute-dist"]
-matview = ["medulla-store/matview"]
-metrics = ["medulla-store/metrics"]
-raft = ["medulla-store/raft"]
-security = ["medulla-store/security", "medulla-work-store/security", "medulla-resource-store/security", "medulla-lane-store/security"]
-statechart = ["dep:medulla-statechart", "medulla-store/statechart", "medulla-work-store/statechart"]
+compute-dist = ["raft", "medulla-store/compute-dist", "medulla-protocol-types/compute-dist", "medulla-result-types/compute-dist", "medulla-types/compute-dist"]
+matview = ["medulla-store/matview", "medulla-protocol-types/matview", "medulla-types/matview"]
+metrics = ["medulla-store/metrics", "medulla-kernel/metrics", "medulla-protocol-types/metrics", "medulla-types/metrics"]
+raft = ["medulla-store/raft", "medulla-kernel/raft"]
+security = ["medulla-store/security", "medulla-work-store/security", "medulla-resource-store/security", "medulla-lane-store/security", "medulla-graph-core/security", "medulla-kernel/security", "medulla-protocol-types/security", "medulla-types/security"]
+statechart = ["dep:medulla-statechart", "medulla-store/statechart", "medulla-work-store/statechart", "medulla-protocol-types/statechart", "medulla-types/statechart"]
 test-support = ["dep:tempfile", "medulla-store/test-support", "medulla-work-store/test-support"]
 tsdb = ["dep:medulla-tsdb", "medulla-store/tsdb"]
 

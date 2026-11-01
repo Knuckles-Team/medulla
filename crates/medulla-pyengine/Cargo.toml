@@ -34,8 +34,7 @@ python = ["dep:pyo3"]
 # "security"))]` behavior). Independent of `python` -- a pure-Rust `cargo test
 # --features security` exercises authority.rs's own RLS unit tests with no pyo3 at
 # all. NOT folded into `pyo3-engine` below yet; see that root feature's own comment.
-security = ["medulla-core/security", "medulla-isolation/security", "medulla-graph-core/security"]
-
+security = ["medulla-core/security", "medulla-isolation/security", "medulla-graph-core/security", "medulla-protocol-types/security", "medulla-types/security"]
 # ---------------------------------------------------------------------------
 # Wave-1 domain features (MEDULLA-PYENGINE-PLAN.md §4.5), pre-added here in ONE Wave-0
 # commit so no later lane ever edits this file again -- it only appends its OWN
@@ -63,23 +62,23 @@ security = ["medulla-core/security", "medulla-isolation/security", "medulla-grap
 # being needed for it. `blob`'s Wave-1 lane has no medulla-core-level durable store to
 # call at all yet -- flagged here explicitly, per the plan's own instruction, for
 # that lane to review rather than silently discover.
-finance = ["dep:medulla-compute", "medulla-compute/finance"]
-datascience = ["dep:medulla-compute", "medulla-compute/datascience"]
-mining = ["dep:medulla-compute", "medulla-compute/mining"]
-graphlearn = ["datascience", "dep:medulla-compute", "medulla-compute/graphlearn"]
-ml-pipeline = ["mining", "datascience", "graphlearn"]
+finance = ["dep:medulla-compute", "medulla-compute/finance", "medulla-protocol-types/finance", "medulla-types/finance"]
+datascience = ["dep:medulla-compute", "medulla-compute/datascience", "medulla-protocol-types/datascience", "medulla-types/datascience"]
+mining = ["dep:medulla-compute", "medulla-compute/mining", "medulla-protocol-types/mining", "medulla-types/mining"]
+graphlearn = ["datascience", "dep:medulla-compute", "medulla-compute/graphlearn", "medulla-protocol-types/graphlearn", "medulla-types/graphlearn"]
+ml-pipeline = ["mining", "datascience", "graphlearn", "medulla-protocol-types/ml-pipeline", "medulla-types/ml-pipeline"]
 reasoning = ["dep:medulla-compute", "medulla-compute/reasoning"]
 # `query.rs` (the facade handler this mirrors) calls BOTH medulla_query (classify/exec_sql/
 # exec_cypher) and medulla_plan (Op/Plan/uql::parse, the unified-query-text surface) --
 # confirmed by grep, `src/server/handlers/query.rs`. `cypher` is medulla-query alone (no
 # medulla-plan), matching root Cargo.toml:432's own narrower composition.
-query = ["dep:medulla-plan", "medulla-plan/query"]
+query = ["dep:medulla-plan", "medulla-plan/query", "medulla-protocol-types/query", "medulla-types/query"]
 cypher = []
 tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store"]
-streaming = []
-wasm-udf = ["dep:medulla-wasm", "medulla-wasm/wasm-udf"]
-rdf = ["dep:medulla-rdf", "medulla-rdf/rdf"]
-blob = []
+streaming = ["medulla-protocol-types/streaming", "medulla-types/streaming"]
+wasm-udf = ["dep:medulla-wasm", "medulla-wasm/wasm-udf", "medulla-plan?/wasm-udf", "medulla-protocol-types/wasm-udf", "medulla-types/wasm-udf"]
+rdf = ["dep:medulla-rdf", "medulla-rdf/rdf", "medulla-protocol-types/rdf", "medulla-types/rdf"]
+blob = ["medulla-protocol-types/blob", "medulla-types/blob"]
 # `jobs.rs` also calls `medulla_compute::mining` (association-rule mining as a job kind)
 # -- confirmed by grep -- so `jobs` pulls `mining` here too, matching root
 # Cargo.toml:212's own `jobs = ["server", "mining", "epistemic", ...]` composition
@@ -87,9 +86,8 @@ blob = []
 # of the 25 domain stubs calls yet -- not added on spec, per the crates.io-only /
 # "no dependency you cannot prove is needed" edict; the `jobs` Wave-1 lane appends
 # it as its own single feature line if its real implementation needs it).
-jobs = ["mining", "dep:medulla-jobs"]
-statechart = ["dep:medulla-statechart"]
-
+jobs = ["mining", "dep:medulla-jobs", "medulla-protocol-types/jobs", "medulla-types/jobs"]
+statechart = ["dep:medulla-statechart", "medulla-protocol-types/statechart", "medulla-types/statechart"]
 [dependencies]
 # The engine core this binding embeds directly -- the SAME `GraphCore`/
 # `GraphRegistry` the out-of-process Tokio server dispatches against

@@ -40,7 +40,7 @@ name = "medulla_graphql"
 # excludes `graphql` entirely, so `sha2` never enters the Pi tree). `hardening` pulls
 # `sha2` for the APQ sha256 digest. Build a hardening-free surface with `--no-default-features`.
 default = ["federation", "hardening", "crossmodal"]
-federation = []
+federation = ["medulla-exec/federation", "medulla-plan?/federation", "medulla-types/federation", "medulla-uql?/federation"]
 hardening = ["dep:sha2"]
 # MEDULLA-379/380/381 — the GraphQL CROSS-MODAL transaction seam. Default-ON so it rides into
 # the facade's `graphql`/`node`/`full` tiers via the facade's default-features pull

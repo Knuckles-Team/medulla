@@ -16,7 +16,7 @@ name = "medulla_plan"
 # leg — and the `UnifiedPlan::execute` that needs it — are gated behind this
 # feature, exactly as the facade gates `query`.
 default = []
-query = ["medulla-sql/sql", "dep:medulla-compute", "dep:tracing", "medulla-exec/query", "medulla-uql/query", "medulla-retrieval/query"]
+query = ["medulla-sql/sql", "dep:medulla-compute", "dep:tracing", "medulla-exec/query", "medulla-uql/query", "medulla-retrieval/query", "medulla-decision-types/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-types/query"]
 # The cross-modal cost-based optimizer (CONCEPT:MEDULLA-KG.query.xmodal-cost-optimizer). The engine
 # itself compiles under `query` (beside the executor) and is active by default with the
 # runtime kill-switch `MEDULLA_COST_OPT=0` → identity; this feature is the FACADE tier
@@ -35,7 +35,7 @@ text = ["medulla-exec/text", "query", "dep:medulla-text", "medulla-text/tantivy"
 # medulla-rdf's pure-Rust `owl` (EL⁺ reasoner) + `sparql` evaluator. IMPLIES `query` (the
 # ops live inside the `query`-gated `Op` enum, beside the DataFusion FILTER leg). A
 # default/Pi build sets neither feature → no medulla-rdf reasoner/evaluator linked here.
-owl = ["query", "dep:medulla-rdf", "medulla-rdf/owl", "medulla-reasoner/owl", "medulla-rdf/sparql", "dep:medulla-shacl", "medulla-types/owl-plan", "medulla-exec/owl", "medulla-uql/owl", "medulla-nlq/owl"]
+owl = ["query", "dep:medulla-rdf", "medulla-rdf/owl", "medulla-reasoner/owl", "medulla-rdf/sparql", "dep:medulla-shacl", "medulla-types/owl-plan", "medulla-exec/owl", "medulla-uql/owl", "medulla-nlq/owl", "medulla-protocol-types/owl", "medulla-types/owl"]
 # The WASM `Udf` TRANSFORM op (CONCEPT:KG-2.228): run a registered, sandboxed
 # WebAssembly UDF over the current RowSet inside a UnifiedQuery plan. Pulls medulla-wasm's
 # wasmtime runtime + turns on the `wasm-udf` wire variant in medulla-types. IMPLIES `query`
@@ -109,7 +109,7 @@ federation-sql = ["federation", "medulla-federation/federation-sql"]
 # `where_clause` match needs the variants to exist regardless. This feature therefore
 # now gates ONLY the real medulla-geo executor (`dep:medulla-geo` + the geometry-evaluating
 # functions behind `#[cfg(feature = "geo")]` in `exec.rs`), not the wire shape.
-geo = ["medulla-exec/geo", "query", "dep:medulla-geo", "medulla-uql/geo", "medulla-nlq/geo"]
+geo = ["medulla-exec/geo", "query", "dep:medulla-geo", "medulla-uql/geo", "medulla-nlq/geo", "medulla-types/geo"]
 # Array / tensor modality (CONCEPT:MEDULLA-085): the `Op::TensorScan` SOURCE op (seed the
 # RowSet with a `layer`'s tensor-bearing nodes) + the `Op::TensorOp { kind }` TRANSFORM
 # op (apply medulla-tensor's slice/reduce/elementwise to each row's stored tensor). Pulls the
@@ -197,7 +197,7 @@ epistemic = ["medulla-exec/epistemic",
 # attribution kernel. medulla-numeric pulls nalgebra + ndarray (pure Rust, no BLAS/pyo3), so
 # it stays out of the Pi tier; without this feature the stage is refused at parse time
 # (`UQL_FEATURE_NOT_IN_BUILD`) and at execution.
-numeric = ["medulla-exec/numeric", "query", "dep:medulla-numeric", "medulla-uql/numeric", "medulla-nlq/numeric"]
+numeric = ["medulla-exec/numeric", "query", "dep:medulla-numeric", "medulla-uql/numeric", "medulla-nlq/numeric", "medulla-sql/numeric"]
 # Natural-language → query planning seam (CONCEPT:MEDULLA-078) + the concrete standalone
 # `UreqNlPlanner` (CONCEPT:MEDULLA-080). The `NlPlanner` trait + `plan_and_execute*` helpers
 # only touch the existing `uql::parse` + `execute`, so this IMPLIES `query`. The concrete
@@ -234,8 +234,7 @@ par-runtime = ["medulla-exec/par-runtime", "query", "dep:rayon"]
 # the lockfile footprint rather than adding a second Arrow version. OFF by
 # default at this crate layer; facade `full` enables it. A default/Pi build links NO
 # Arrow (verify with `cargo tree -p medulla-plan`) — the small-footprint contract stays intact.
-knowledge-batch = ["query", "dep:arrow", "medulla-retrieval/knowledge-batch"]
-
+knowledge-batch = ["query", "dep:arrow", "medulla-retrieval/knowledge-batch", "medulla-protocol-types/knowledge-batch", "medulla-types/knowledge-batch"]
 [dependencies]
 medulla-uql = { path = "../medulla-uql" }
 medulla-nlq = { path = "../medulla-nlq" }

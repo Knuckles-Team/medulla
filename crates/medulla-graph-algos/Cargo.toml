@@ -26,5 +26,5 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
 
 [features]
-contract = ["dep:medulla-modality", "medulla-compute/contract"]
-graphlearn = ["medulla-compute/graphlearn"]
+contract = ["dep:medulla-modality", "medulla-compute/contract", "medulla-core/contract", "medulla-graph-core/contract"]
+graphlearn = ["medulla-compute/graphlearn", "medulla-types/graphlearn"]

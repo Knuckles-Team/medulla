@@ -60,8 +60,7 @@ traces = []
 # testing seam, not a serving feature. Implies `redb-store` (since `SeriesMeta`
 # lives there) AND `traces` (since `Span` lives there). `cargo test -p medulla-tsdb
 # --features contract` runs the suite.
-contract = ["dep:medulla-modality", "redb-store", "traces"]
-
+contract = ["dep:medulla-modality", "redb-store", "traces", "medulla-compute/contract", "medulla-core/contract", "medulla-numeric/contract"]
 [dependencies]
 # The ONE shared decay curve (CONCEPT:KG-2.211) lives in medulla-core; the finance
 # kernels (ewma_signal/rolling_zscore) we REUSE live in medulla-compute. Depending on

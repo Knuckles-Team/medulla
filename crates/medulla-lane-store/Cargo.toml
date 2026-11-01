@@ -31,8 +31,7 @@ medulla-resource-store = { path = "../medulla-resource-store" }
 medulla-transaction = { path = "../medulla-transaction" }
 
 [features]
-security = ["medulla-store/security"]
-server = ["medulla-store/server"]
-
+security = ["medulla-store/security", "medulla-graph-core/security", "medulla-kernel/security", "medulla-protocol-types/security", "medulla-resource-store/security", "medulla-types/security"]
+server = ["medulla-store/server", "medulla-kernel/server", "medulla-resource-store/server"]
 [dev-dependencies]
 tempfile = "3"

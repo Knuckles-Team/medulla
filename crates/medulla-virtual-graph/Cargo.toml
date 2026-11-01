@@ -25,5 +25,5 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-source-types = { path = "../medulla-source-types" }
 
 [features]
-rdf = ["dep:oxrdf", "medulla-rdf/rdf"]
-sparql = ["rdf", "dep:spargebra", "medulla-rdf/sparql"]
+rdf = ["dep:oxrdf", "medulla-rdf/rdf", "medulla-types/rdf"]
+sparql = ["rdf", "dep:spargebra", "medulla-rdf/sparql", "medulla-types/sparql"]

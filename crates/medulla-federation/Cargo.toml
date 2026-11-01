@@ -47,7 +47,6 @@ oidc = ["dep:ureq"]
 federation = ["medulla-exec/federation", "medulla-uql/federation", "medulla-types/federation", "medulla-protocol-types/federation", "dep:ureq"]
 test-support = []
 federation-sql = ["federation", "dep:sqlx", "dep:tokio", "dep:futures-util", "dep:sqlparser", "dep:url"]
-text = []
-
+text = ["medulla-exec/text", "medulla-types/text", "medulla-uql/text"]
 [dev-dependencies]
 medulla-exec = { path = "../medulla-exec", features = ["test-support"] }

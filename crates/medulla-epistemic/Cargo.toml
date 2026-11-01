@@ -54,7 +54,7 @@ epistemic-tms = ["dep:tracing", "medulla-types/epistemic", "medulla-protocol-typ
 # default, deliberately NOT folded into any tier aggregate (pi/node/full) — it is a
 # capability-discovery/testing seam, not a serving feature. `cargo test -p
 # medulla-epistemic --features contract` runs the suite.
-contract = ["dep:medulla-modality"]
+contract = ["dep:medulla-modality", "medulla-compute/contract", "medulla-core/contract", "medulla-graph-core/contract"]
 # EPI-P3-3 — calibrated probabilistic + causal reasoning: a linear structural
 # causal model (SCM) over named variables supporting genuine do-calculus
 # interventions (graph surgery — cut incoming edges, don't just condition),

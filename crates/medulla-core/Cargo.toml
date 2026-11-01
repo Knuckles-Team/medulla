@@ -44,7 +44,7 @@ ann-gpu-cuda = ["ann-gpu", "medulla-ann/gpu-cuda"]
 # evaluators are pure-Rust; MEDULLA-303 links `redb` (same 4.1 as the durable tiers) to
 # persist the RbacPolicy + registered AgentIdentities across restarts. Gated so a
 # non-security build links neither. redb is Pi-safe; `pi` does NOT enable security.
-security = ["medulla-isolation/security", "medulla-graph-core/security", "dep:redb", "dep:sha2", "dep:hmac", "dep:medulla-storage", "dep:medulla-transaction"]
+security = ["medulla-isolation/security", "medulla-graph-core/security", "dep:redb", "dep:sha2", "dep:hmac", "dep:medulla-storage", "dep:medulla-transaction", "medulla-protocol-types/security", "medulla-types/security"]
 # Version-keyed query-RESULT cache (CONCEPT:KG-2.233) on `GraphCore`. Pure-Rust
 # bounded LRU + 128-bit query hash — no new dep — so the facade folds it into the
 # lean Pi tier as well as node/cluster/full.
@@ -68,8 +68,7 @@ cold-tier = ["medulla-graph-core/cold-tier", ]
 # deliberately NOT folded into any tier aggregate (pi/node/full) — it is a
 # capability-discovery/testing seam, not a serving feature. `cargo test -p medulla-core
 # --features contract` runs the suite.
-contract = ["medulla-graph-core/contract"]
-
+contract = ["medulla-graph-core/contract", "medulla-ann/contract"]
 [dependencies]
 medulla-types = { path = "../medulla-types" }
 medulla-ann = { path = "../medulla-ann" }

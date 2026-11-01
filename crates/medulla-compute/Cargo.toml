@@ -70,7 +70,7 @@ gpu-cuda = ["gpu", "dep:cudarc"]
 # `resolve_candidates` live in the always-on `algorithms` module and `Symbol` lives in
 # the always-on `ast` module, so `contract` needs no other feature implied.
 # `cargo test -p medulla-compute --features contract` runs the suite.
-contract = ["dep:medulla-modality"]
+contract = ["dep:medulla-modality", "medulla-core/contract", "medulla-geo?/contract", "medulla-graph-core/contract", "medulla-numeric?/contract", "medulla-stream?/contract"]
 ast = [
     "dep:tree-sitter",
     "dep:tree-sitter-python",

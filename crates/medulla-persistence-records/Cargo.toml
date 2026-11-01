@@ -36,9 +36,9 @@ serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 
 [features]
-decide = ["redb", "dep:medulla-capabilities"]
-rdf = ["dep:medulla-rdf"]
-redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage"]
+decide = ["redb", "dep:medulla-capabilities", "medulla-capabilities?/decide", "medulla-compute/decide", "medulla-persistence/decide", "medulla-server-api/decide"]
+rdf = ["dep:medulla-rdf", "medulla-kernel/rdf", "medulla-persistence/rdf", "medulla-protocol-types/rdf", "medulla-rdf?/rdf", "medulla-server-api/rdf", "medulla-types/rdf"]
+redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-kernel/redb", "medulla-persistence/redb", "medulla-server-api/redb"]
 test-support = ["dep:tempfile"]
 
 [dev-dependencies]

@@ -50,7 +50,7 @@ cypher = ["dep:petgraph"]
 cypher-graphlearn = ["cypher"]
 cypher-mining = ["cypher", "dep:medulla-mining", "medulla-mining/mining"]
 cypher-plan = ["cypher", "dep:tracing"]
-result-cache = ["cypher"]
+result-cache = ["cypher", "medulla-core/result-cache", "medulla-graph-core/result-cache", "medulla-query-cache/result-cache"]
 sql = ["dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petgraph", "dep:tracing", "dep:async-trait", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-table-store/sql"]
 
 [dev-dependencies]

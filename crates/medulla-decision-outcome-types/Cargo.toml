@@ -23,5 +23,5 @@ medulla-work-types = { path = "../medulla-work-types" }
 medulla-source-types = { path = "../medulla-source-types" }
 
 [features]
-contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-decision-types/contract-schema"]
+contract-schema = ["dep:schemars", "medulla-types/contract-schema", "medulla-decision-types/contract-schema", "medulla-agent-types/contract-schema", "medulla-source-types/contract-schema", "medulla-work-types/contract-schema"]
 test-support = ["medulla-types/test-support", "medulla-decision-types/test-support"]

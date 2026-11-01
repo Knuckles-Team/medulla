@@ -21,10 +21,10 @@ name = "medulla_rdf"
 [features]
 default = []
 # W1 — RDF term model + Turtle/N-Triples parse+serialize (oxrdf + oxttl). Pure Rust.
-rdf = ["dep:oxrdf", "dep:oxttl"]
+rdf = ["dep:oxrdf", "dep:oxttl", "medulla-types/rdf"]
 # W2 — SPARQL 1.1 algebra (spargebra). Parser + algebra ONLY; we provide the
 # evaluator (compile, not embed). Pure Rust (peg is a build-time PEG generator).
-sparql = ["rdf", "dep:spargebra", "dep:regex"]
+sparql = ["rdf", "dep:spargebra", "dep:regex", "medulla-types/sparql"]
 # W3 — native OWL 2 (EL⁺ completion + RL property rules) reasoner (CONCEPT:KG-2.219).
 # Parses OWL axioms from the SAME oxttl-parsed RDF as `rdf`, so it adds NO dep beyond
 # the RDF stack: implies `rdf`, links ZERO native/C crate (pure Rust — no horned-owl,
@@ -81,8 +81,7 @@ geosparql = ["sparql", "dep:medulla-geo"]
 # retrofit) `tests/icv_enforce_eg300.rs` is an unconditional integration test that
 # needs `sparql`'s `update`/`sparql` modules to build at all, so `cargo test -p
 # medulla-rdf --features contract` needs it too to build the crate's full test set.
-contract = ["dep:medulla-modality", "owl", "sparql"]
-
+contract = ["dep:medulla-modality", "owl", "sparql", "medulla-core/contract", "medulla-geo?/contract", "medulla-graph-core/contract"]
 [dependencies]
 medulla-core = { path = "../medulla-core" }
 # GeoSPARQL geometry kernel (feature `geosparql`, CONCEPT:MEDULLA-261). The pure-Rust medulla-geo

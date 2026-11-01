@@ -65,7 +65,7 @@ lz4 = ["dep:lz4_flex"]
 # into any tier aggregate (pi/durable/compression/lz4) — a base/pi build must stay
 # dependency-free (no serde). `cargo test -p medulla-kvcache --features contract` runs the
 # suite; only this feature pulls serde in.
-contract = ["dep:medulla-modality", "dep:serde"]
+contract = ["dep:medulla-modality", "dep:serde", "medulla-compute?/contract", "medulla-graph-algos/contract", "medulla-graph-core?/contract"]
 # Graph-guided KV/context paging (CONCEPT:MEDULLA-KG.memory.graph-guided-paging): the
 # `graph_importance` adapter module, computing PageRank/centrality importance over an
 # `medulla-compute::GraphView` for `TieredCache::apply_importance_scores`. OFF by default so

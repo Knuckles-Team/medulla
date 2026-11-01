@@ -49,12 +49,12 @@ futures = { version = "0.3", optional = true }
 pgwire = { version = "0.40", optional = true, default-features = false, features = ["server-api", "_ring"] }
 
 [features]
-federation = ["query", "dep:medulla-plan", "medulla-plan/federation"]
+federation = ["query", "dep:medulla-plan", "medulla-plan/federation", "medulla-exec/federation", "medulla-protocol-types/federation", "medulla-server-api/federation", "medulla-server-auth/federation", "medulla-server-ops/federation", "medulla-types/federation", "medulla-uql/federation"]
 mysql-wire = ["query", "dep:sha1"]
 pgwire = ["query", "dep:rustix", "dep:pgwire", "dep:futures"]
-query = ["redb", "dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "dep:medulla-plan", "medulla-plan/query"]
-redb = []
-security = ["redb", "dep:sha1"]
-sparql = []
+query = ["redb", "dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "medulla-sql/sql", "medulla-tables/sql", "medulla-table-store/sql", "dep:medulla-plan", "medulla-plan/query", "medulla-exec/query", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-ops/query", "medulla-types/query", "medulla-uql/query"]
+redb = ["medulla-kernel/redb", "medulla-persistence/redb", "medulla-server-api/redb", "medulla-server-ops/redb"]
+security = ["redb", "dep:sha1", "medulla-core/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-persistence/security", "medulla-protocol-types/security", "medulla-server-api/security", "medulla-server-auth/security", "medulla-server-ops/security", "medulla-types/security"]
+sparql = ["medulla-kernel/sparql", "medulla-persistence/sparql", "medulla-protocol-types/sparql", "medulla-server-api/sparql", "medulla-server-ops/sparql", "medulla-types/sparql"]
 test-support = []
-tsdb = ["redb", "dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries"]
+tsdb = ["redb", "dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries", "medulla-persistence/tsdb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb"]

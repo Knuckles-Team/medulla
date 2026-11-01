@@ -45,20 +45,19 @@ dust_dds = { version = "0.15", optional = true }
 cyclonedds = { version = "1.8.0", optional = true, default-features = false, features = ["std"] }
 
 [features]
-amqp-wire = ["server"]
-kv = ["server"]
+amqp-wire = ["server", "medulla-server-api/amqp-wire"]
+kv = ["server", "medulla-kernel/kv", "medulla-protocol-types/kv", "medulla-server-api/kv", "medulla-server-blob/kv", "medulla-types/kv"]
 kvcache-server = ["server", "dep:medulla-kvcache"]
-mqtt-wire = ["server"]
-redis-wire = ["kv", "server"]
+mqtt-wire = ["server", "medulla-server-api/mqtt-wire"]
+redis-wire = ["kv", "server", "medulla-server-api/redis-wire"]
 ros2-bridge = ["server", "streaming", "dep:futures", "dep:tokio-tungstenite"]
 ros2-dds = ["server", "streaming", "dep:futures", "dep:dust_dds"]
 ros2-rmw = ["server", "streaming", "dep:futures", "dep:cyclonedds"]
 s3-api = ["kv", "server"]
-security = ["dep:sha1"]
-server = ["dep:tokio", "dep:medulla-capabilities", "dep:async-trait"]
-stomp-wire = ["server"]
-streaming = ["server"]
-
+security = ["dep:sha1", "medulla-core/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-protocol-types/security", "medulla-server-api/security", "medulla-server-auth/security", "medulla-server-blob/security", "medulla-server-cdc/security", "medulla-types/security", "medulla-wire-core/security"]
+server = ["dep:tokio", "dep:medulla-capabilities", "dep:async-trait", "medulla-kernel/server", "medulla-server-api/server"]
+stomp-wire = ["server", "medulla-server-api/stomp-wire"]
+streaming = ["server", "medulla-protocol-types/streaming", "medulla-server-api/streaming", "medulla-server-cdc/streaming", "medulla-types/streaming"]
 [dev-dependencies]
 medulla-wire-core = { path = "../medulla-wire-core", features = ["test-support"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
