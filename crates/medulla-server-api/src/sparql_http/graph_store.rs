@@ -50,7 +50,7 @@ async fn graph_read(
     graph: String,
 ) -> (&'static str, &'static str, String) {
     // Unlike writes below, this leg has no verified request-carrier mechanism yet.
-    if crate::access::unauthenticated_carrier_denied(None) {
+    if crate::carrier::unauthenticated_carrier_denied(None) {
         medulla_kernel::metrics::access_denied();
         return (
             "403 Forbidden",

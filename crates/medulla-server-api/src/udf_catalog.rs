@@ -21,7 +21,7 @@ use std::sync::Arc;
 
 use medulla_wasm::{UdfError, UdfLimits, UdfModule, UdfRegistry};
 
-use super::access::CarrierAuthority;
+use crate::carrier::CarrierAuthority;
 
 /// Every owner's compiled UDFs, partitioned by verified owner (tenant+principal) scope.
 #[derive(Default)]
@@ -126,7 +126,7 @@ mod tests {
     // spec: MEDULLA-DURABLE-KERNEL-R018
     #[test]
     fn udf_ids_are_tenant_scoped_for_run_and_shadowing() {
-        use super::super::auth::VerifiedRequestContext;
+        use crate::authority_context::VerifiedRequestContext;
         let carrier_in = |tenant: &str| {
             CarrierAuthority::from_verified(&VerifiedRequestContext::verified_for_test_in_tenant(
                 "agent-a", tenant,

@@ -838,7 +838,7 @@ mod universal_row_read_tests {
     fn has_node_fast_path_answers_exactly_as_the_projection_it_skips() {
         let (core, isolation) = shared_graph();
         for agent_id in ["alice", "bob"] {
-            let context = super::super::auth::VerifiedRequestContext::verified_for_test(agent_id);
+            let context = crate::authority_context::VerifiedRequestContext::verified_for_test(agent_id);
             let authority = GraphReadAuthority::from_verified(&context, &isolation).unwrap();
             let projected = authority.project_core(&core);
             for node_id in [
@@ -864,8 +864,8 @@ mod universal_row_read_tests {
     #[test]
     fn alice_and_bob_same_tenant_shared_graph_cannot_observe_each_others_rows() {
         let (core, isolation) = shared_graph();
-        let alice_context = super::super::auth::VerifiedRequestContext::verified_for_test("alice");
-        let bob_context = super::super::auth::VerifiedRequestContext::verified_for_test("bob");
+        let alice_context = crate::authority_context::VerifiedRequestContext::verified_for_test("alice");
+        let bob_context = crate::authority_context::VerifiedRequestContext::verified_for_test("bob");
         let alice = GraphReadAuthority::from_verified(&alice_context, &isolation).unwrap();
         let bob = GraphReadAuthority::from_verified(&bob_context, &isolation).unwrap();
         assert_eq!(alice.verified_actor().unwrap(), "alice");
@@ -947,7 +947,7 @@ mod universal_row_read_tests {
     #[test]
     fn project_core_reflects_a_mutation_after_the_previous_projection_was_cached() {
         let (core, isolation) = shared_graph();
-        let alice_context = super::super::auth::VerifiedRequestContext::verified_for_test("alice");
+        let alice_context = crate::authority_context::VerifiedRequestContext::verified_for_test("alice");
         let alice = GraphReadAuthority::from_verified(&alice_context, &isolation).unwrap();
 
         // First call: populates the cache at the graph's current version. Alice's
@@ -1024,7 +1024,7 @@ mod universal_row_read_tests {
             roles: Vec::new(),
         });
         let context =
-            super::super::auth::VerifiedRequestContext::verified_for_test("grounding-service");
+            crate::authority_context::VerifiedRequestContext::verified_for_test("grounding-service");
         let authority = GraphReadAuthority::from_verified(&context, &isolation).unwrap();
 
         // Warm-up call: excludes one-time allocator/page-fault effects, matching a
@@ -1064,19 +1064,19 @@ mod universal_row_read_tests {
     #[test]
     fn carrier_ownership_separates_same_tenant_and_cross_tenant_callers() {
         let alice = CarrierAuthority::from_verified(
-            &super::super::auth::VerifiedRequestContext::verified_for_test_in_tenant(
+            &crate::authority_context::VerifiedRequestContext::verified_for_test_in_tenant(
                 "alice", "tenant-a",
             ),
         )
         .unwrap();
         let bob = CarrierAuthority::from_verified(
-            &super::super::auth::VerifiedRequestContext::verified_for_test_in_tenant(
+            &crate::authority_context::VerifiedRequestContext::verified_for_test_in_tenant(
                 "bob", "tenant-a",
             ),
         )
         .unwrap();
         let alice_other_tenant = CarrierAuthority::from_verified(
-            &super::super::auth::VerifiedRequestContext::verified_for_test_in_tenant(
+            &crate::authority_context::VerifiedRequestContext::verified_for_test_in_tenant(
                 "alice", "tenant-b",
             ),
         )
@@ -1173,7 +1173,7 @@ mod universal_row_read_tests {
     #[test]
     fn rbac_check_is_keyed_by_agent_id_not_actor_scope() {
         let alice = CarrierAuthority::from_verified(
-            &super::super::auth::VerifiedRequestContext::verified_for_test_in_tenant(
+            &crate::authority_context::VerifiedRequestContext::verified_for_test_in_tenant(
                 "alice", "tenant-a",
             ),
         )
@@ -1234,7 +1234,7 @@ mod universal_row_read_tests {
     #[test]
     fn a18_carrier_authority_present_allows_absent_denies() {
         let carrier = CarrierAuthority::from_verified(
-            &super::super::auth::VerifiedRequestContext::verified_for_test("alice"),
+            &crate::authority_context::VerifiedRequestContext::verified_for_test("alice"),
         )
         .unwrap();
         assert!(
@@ -1309,7 +1309,7 @@ mod universal_row_read_tests {
             teams: Vec::new(),
             roles: Vec::new(),
         });
-        let alice_context = super::super::auth::VerifiedRequestContext::verified_for_test("alice");
+        let alice_context = crate::authority_context::VerifiedRequestContext::verified_for_test("alice");
         let alice = GraphReadAuthority::from_verified(&alice_context, &isolation).unwrap();
 
         // Warm-up call: excludes one-time allocator/page-fault effects so the
@@ -1380,7 +1380,7 @@ mod universal_row_read_tests {
             teams: Vec::new(),
             roles: Vec::new(),
         });
-        let alice_context = super::super::auth::VerifiedRequestContext::verified_for_test("alice");
+        let alice_context = crate::authority_context::VerifiedRequestContext::verified_for_test("alice");
         let alice = GraphReadAuthority::from_verified(&alice_context, &isolation).unwrap();
 
         // Warm the cache for `alice` at the CURRENT version (a genuine hit baseline).
@@ -1562,13 +1562,13 @@ mod read_rls_coverage_tests {
     /// non-row resource for them to read across tenants.
     fn assert_self_routed_cross_tenant_control(method: &str, expected_reason: &'static str) {
         let owner = CarrierAuthority::from_verified(
-            &super::super::auth::VerifiedRequestContext::verified_for_test_in_tenant(
+            &crate::authority_context::VerifiedRequestContext::verified_for_test_in_tenant(
                 "owner", "tenant-a",
             ),
         )
         .unwrap();
         let foreign = CarrierAuthority::from_verified(
-            &super::super::auth::VerifiedRequestContext::verified_for_test_in_tenant(
+            &crate::authority_context::VerifiedRequestContext::verified_for_test_in_tenant(
                 "foreign", "tenant-b",
             ),
         )
@@ -1614,13 +1614,13 @@ mod read_rls_coverage_tests {
         assert!(!RLS_ROUTED.contains(&"Viz"));
 
         let owner = CarrierAuthority::from_verified(
-            &super::super::auth::VerifiedRequestContext::verified_for_test_in_tenant(
+            &crate::authority_context::VerifiedRequestContext::verified_for_test_in_tenant(
                 "owner", "tenant-a",
             ),
         )
         .unwrap();
         let foreign = CarrierAuthority::from_verified(
-            &super::super::auth::VerifiedRequestContext::verified_for_test_in_tenant(
+            &crate::authority_context::VerifiedRequestContext::verified_for_test_in_tenant(
                 "foreign", "tenant-b",
             ),
         )

@@ -824,7 +824,7 @@ pub(super) fn lower_canonical_operation(method: Method) -> Method {
 
 /// Query/RDF/lifecycle adapters are classified here, not in persistence.  Their
 /// operations still use exactly the same Method payload and commit machinery.
-pub(super) fn surface_for(method: &Method) -> Option<MutationSurface> {
+pub fn surface_for(method: &Method) -> Option<MutationSurface> {
     match (method.write_family(), method) {
         (
             _,

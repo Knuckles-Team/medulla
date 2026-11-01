@@ -241,7 +241,7 @@ async fn handle_nl(
     // (real, not the old blanket stub) rather than silently widen this fixed,
     // read-only adapter to every local caller now that the stub is gone
     // elsewhere in this file.
-    if crate::access::unauthenticated_carrier_denied(None) {
+    if crate::carrier::unauthenticated_carrier_denied(None) {
         medulla_kernel::metrics::access_denied();
         return (
             "403 Forbidden",
@@ -351,7 +351,7 @@ async fn run_query(
         "sparql-http-client",
         &["kg:read"],
     );
-    if crate::access::unauthenticated_carrier_denied(carrier.as_ref()) {
+    if crate::carrier::unauthenticated_carrier_denied(carrier.as_ref()) {
         medulla_kernel::metrics::access_denied();
         return (
             "403 Forbidden",
