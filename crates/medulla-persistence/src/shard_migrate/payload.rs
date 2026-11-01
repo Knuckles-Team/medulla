@@ -1,9 +1,9 @@
 //! Graph-scoped payload replacement under the admitted graft reservation.
 
 use super::MigrationReport;
-use medulla_store::redb_store::capacity_lease;
-use medulla_store::redb_store::development_lane;
-use medulla_store::redb_store::work_item_capability;
+use medulla_resource_store::redb_store::capacity_lease;
+use medulla_lane_store::redb_store::development_lane;
+use medulla_work_store::redb_store::work_item_capability;
 use medulla_store::redb_store::AUDIT;
 use medulla_store::redb_store::CHANGE_BLOBS;
 use medulla_store::redb_store::CHANGE_CURSORS;

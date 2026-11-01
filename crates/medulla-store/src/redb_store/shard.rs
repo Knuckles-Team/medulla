@@ -64,8 +64,8 @@ use medulla_transaction::{
 #[cfg(feature = "server")]
 use medulla_transaction::{GraftDestination, GraftedScope};
 
-mod batch;
-pub(crate) use batch::bind_caller_batch;
+pub mod batch;
+pub use batch::bind_caller_batch;
 use batch::drain_batch;
 
 use super::CommitPhaseTimer;
@@ -85,7 +85,7 @@ pub const SHARD_PHYSICAL_STORE: &str = "epistemic-graph:graph-shard";
 /// Stated here rather than imported because the kernel's constant is private;
 /// [`the_group_budget_matches_the_kernels_own_bound`] proves the two agree by
 /// admitting a group of exactly this size and refusing one graph more.
-pub(crate) const MAX_SHARD_GROUP_GRAPHS: usize = 1023;
+pub const MAX_SHARD_GROUP_GRAPHS: usize = 1023;
 
 /// A bound serving scope on a shard file. Not `Clone` -- a handle IS a
 /// capability -- so the cache hands out `Arc` clones of one bound handle.
@@ -168,7 +168,7 @@ pub fn graph_scope_identity(graph_fname: &str) -> Result<MutationScopeIdentity, 
 /// The scope identity of the shard file's own control scope, which owns the
 /// Raft log and meta rows, the cross-shard 2PC records, the matview and series
 /// key spaces, the encryption canary and the graph catalog.
-pub(crate) fn control_scope_identity() -> Result<MutationScopeIdentity, String> {
+pub fn control_scope_identity() -> Result<MutationScopeIdentity, String> {
     MutationScopeIdentity::fixed_graph(
         GRAPH_SHARD_TENANT,
         GRAPH_SHARD_CONTROL_GRAPH,
@@ -184,7 +184,7 @@ pub(crate) fn control_scope_identity() -> Result<MutationScopeIdentity, String> 
 /// admitted group -- one `begin_write`, one fsync -- so a burst of more than
 /// [`MAX_SHARD_GROUP_GRAPHS`] graphs costs one fsync per chunk rather than
 /// failing.
-pub(crate) fn chunk_graphs<T: Clone>(graphs: &[T]) -> Vec<Vec<T>> {
+pub fn chunk_graphs<T: Clone>(graphs: &[T]) -> Vec<Vec<T>> {
     graphs
         .chunks(MAX_SHARD_GROUP_GRAPHS)
         .map(<[T]>::to_vec)
@@ -247,7 +247,7 @@ impl Shard {
     /// signal the storage durability design calls for). Diagnostic only --
     /// never load-bearing, so a transient stat failure must not become a
     /// write-path error.
-    pub(crate) fn physical_file_len(&self) -> u64 {
+    pub fn physical_file_len(&self) -> u64 {
         std::fs::metadata(&self.physical_path)
             .map(|meta| meta.len())
             .unwrap_or(0)
@@ -439,7 +439,7 @@ impl Shard {
     /// scope. [`bind_caller_batch`] performs that rewrite at the one place the
     /// compiled batch enters the shard; the envelope's serving principal is rebound
     /// while its verified caller remains in the authority context and outbox.
-    pub(crate) fn admit_batch<'a>(
+    pub fn admit_batch<'a>(
         &'a self,
         graph: &'a str,
         handle: &'a ShardHandle,
@@ -463,7 +463,7 @@ impl Shard {
     /// graph shard scope; the private kernel gate refuses it from ordinary
     /// mutation admission. Its OCC version stays verbatim for exact replay.
     #[cfg(feature = "raft")]
-    pub(crate) fn admit_repository_enrichment_top_up_batch<'a>(
+    pub fn admit_repository_enrichment_top_up_batch<'a>(
         &'a self,
         graph: &'a str,
         handle: &'a ShardHandle,
@@ -488,7 +488,7 @@ impl Shard {
     /// [`Self::admit_batch`]; subsequent envelope members reuse the same
     /// admitted control capability and need the same canonical maintenance
     /// batch shape at its next in-transaction version.
-    pub(crate) fn maintenance_batch_at(
+    pub fn maintenance_batch_at(
         &self,
         operation_id: &str,
         version: u64,
@@ -609,7 +609,7 @@ impl Shard {
     /// Resolve the old enrichment source by exact record in the replacement
     /// parent's admitted graph member; no node-local delivery lease is used.
     #[cfg(feature = "raft")]
-    pub(crate) fn outbox_supersede_batch_record(
+    pub fn outbox_supersede_batch_record(
         &self,
         group: &AdmittedGroup<'_, GraphShardOwner>,
         handle: &ShardHandle,
@@ -628,7 +628,7 @@ impl Shard {
 
     /// Read the retained terminal source receipt on an exact Raft retry.
     #[cfg(feature = "raft")]
-    pub(crate) fn outbox_supersession_receipt_batch_record(
+    pub fn outbox_supersession_receipt_batch_record(
         &self,
         group: &AdmittedGroup<'_, GraphShardOwner>,
         handle: &ShardHandle,
@@ -657,7 +657,7 @@ impl Shard {
     }
 
     /// Expire one consumer's timed-out leases; returns how many were reclaimed.
-    pub(crate) fn outbox_expire(
+    pub fn outbox_expire(
         &self,
         graph_fname: &str,
         consumer: &str,
@@ -679,7 +679,7 @@ impl Shard {
     }
 
     /// One consumer's queue depth, lag and saturation on one graph.
-    pub(crate) fn outbox_status(
+    pub fn outbox_status(
         &self,
         graph_fname: &str,
         consumer: &str,
@@ -693,7 +693,7 @@ impl Shard {
     /// graft reservation. The source authority digest binds the staged rows to
     /// the source that will later provide Phase B's ledger copy.
     #[cfg(feature = "server")]
-    pub(crate) fn stage_graft_owner_payload<F>(
+    pub fn stage_graft_owner_payload<F>(
         &self,
         source: &Shard,
         graph_fname: &str,
@@ -750,6 +750,7 @@ impl Shard {
         graph_fname: &str,
         source_handle: &ShardHandle,
         identity: &MutationScopeIdentity,
+        retirement: &dyn medulla_storage::OwnerPayloadRetirement<GraphShardOwner>,
     ) -> Result<(), String> {
         if !self.kernel.scope_binding_exists(identity)?
             || !self.graft_destination_reserved(graph_fname)?
@@ -757,7 +758,7 @@ impl Shard {
             return Ok(());
         }
         let destination_handle = self.graph(graph_fname)?;
-        let destination = retiring_graft_destination(self, &destination_handle);
+        let destination = retiring_graft_destination(self, &destination_handle, retirement);
         let source_digest = hex::encode(source.kernel().owner_authority_digest()?);
         // `graft_destination_reserved` is intentionally broad because import
         // selection only needs to know whether the owner-only path may apply.
@@ -862,7 +863,7 @@ impl Shard {
     /// waiting for. A member whose admission resolved to [`Begin::Replay`]
     /// already has a durable receipt: it wrote nothing, it must not be
     /// re-finished, and its stored receipt is the answer.
-    pub(crate) fn commit_batch(
+    pub fn commit_batch(
         &self,
         group: AdmittedGroup<'_, GraphShardOwner>,
         batches: &[MutationBatch],
@@ -999,9 +1000,10 @@ pub fn source_graft_marker(
 pub fn retiring_graft_destination<'a>(
     shard: &'a Shard,
     handle: &'a ShardHandle,
+    retirement: &'a dyn medulla_storage::OwnerPayloadRetirement<GraphShardOwner>,
 ) -> GraftDestination<'a, GraphShardOwner> {
     GraftDestination::new(shard.mutations(), shard.kernel(), handle.as_ref())
-        .with_owner_payload(&crate::redb_store::GraphShardRetirement)
+        .with_owner_payload(retirement)
 }
 
 /// Finish a graft whose Phase C already retired the source binding.
@@ -1057,7 +1059,7 @@ pub fn bind_scope<D: OwnerDomain>(
 /// redb default; anything else is a JSON [`StorageBackendSpec`]. Refusals are
 /// typed and name their reason; `object_store` is `Unsupported` until the
 /// object-store open path lands (MEDULLA-OBJECT-STORAGE-BACKEND-R002).
-pub(crate) fn admit_backend_setting(setting: Option<&str>) -> Result<(), String> {
+pub fn admit_backend_setting(setting: Option<&str>) -> Result<(), String> {
     use medulla_storage::StorageBackendSpec;
     let spec = match setting.map(str::trim) {
         None | Some("") | Some("local") => StorageBackendSpec::default(),
@@ -1142,9 +1144,9 @@ pub fn open_kernel_owned_store<D: OwnerDomain>(
 /// exact retry resolves to [`Begin::Replay`] at admission and its durable
 /// receipt IS the result, so there is no second idempotency authority to
 /// consult and no window between checking and committing.
-pub(crate) struct CommittedBatch {
-    pub(crate) record: MutationBatchRecord,
-    pub(crate) replayed: bool,
+pub struct CommittedBatch {
+    pub record: MutationBatchRecord,
+    pub replayed: bool,
 }
 
 /// The owner-row writes of one admitted scope group, addressable by graph.
@@ -1215,7 +1217,7 @@ impl<'g> ShardWrite<'g> {
     }
 
     /// The graphs this group carries, in deterministic order.
-    pub(crate) fn graphs(&self) -> impl Iterator<Item = &str> {
+    pub fn graphs(&self) -> impl Iterator<Item = &str> {
         self.graphs.keys().map(String::as_str)
     }
 

@@ -110,7 +110,7 @@ fn unrelated_reservation_preserves_catalog_payload_and_fence() {
             Ok(())
         })
         .unwrap();
-    medulla_store::redb_store::write_graph_meta(
+    medulla_store::redb_store::store_read::write_graph_meta(
         &destination,
         graph,
         "catalog-s2",
@@ -243,14 +243,14 @@ fn losing_graph_reservation_retires_staged_owner_rows_before_reopening() {
     // control transaction used by the reshard importer.  The target graph
     // had no catalog at reservation time; an unrelated graph's catalog is
     // the preservation control against an over-broad cleanup.
-    medulla_store::redb_store::write_graph_meta(
+    medulla_store::redb_store::store_read::write_graph_meta(
         &loser,
         "graph-b",
         "stable-graph-b",
         medulla_protocol_types::protocol::GraphType::Global,
     )
     .unwrap();
-    medulla_store::redb_store::write_graph_meta(
+    medulla_store::redb_store::store_read::write_graph_meta(
         &loser,
         "graph-a",
         "staged-graph-a",
@@ -272,12 +272,12 @@ fn losing_graph_reservation_retires_staged_owner_rows_before_reopening() {
     );
     assert!(loser.graft_destination_reserved("graph-a").unwrap());
     assert!(
-        medulla_store::redb_store::read_catalog_record(&loser, "graph-a")
+        medulla_store_apply::redb_store::dump::read_catalog_record(&loser, "graph-a")
             .unwrap()
             .is_none()
     );
     assert!(
-        medulla_store::redb_store::read_catalog_record(&loser, "graph-b")
+        medulla_store_apply::redb_store::dump::read_catalog_record(&loser, "graph-b")
             .unwrap()
             .is_some()
     );
@@ -311,12 +311,12 @@ fn losing_graph_reservation_retires_staged_owner_rows_before_reopening() {
         .is_none());
     drop(after_cancel);
     assert!(
-        medulla_store::redb_store::read_catalog_record(&loser, "graph-a")
+        medulla_store_apply::redb_store::dump::read_catalog_record(&loser, "graph-a")
             .unwrap()
             .is_none()
     );
     assert!(
-        medulla_store::redb_store::read_catalog_record(&loser, "graph-b")
+        medulla_store_apply::redb_store::dump::read_catalog_record(&loser, "graph-b")
             .unwrap()
             .is_some()
     );
@@ -386,7 +386,7 @@ fn reserved_import_and_loser_cleanup_are_one_graph_protocol() {
             Ok(())
         })
         .unwrap();
-    medulla_store::redb_store::write_graph_meta(
+    medulla_store::redb_store::store_read::write_graph_meta(
         loser.as_ref(),
         "graph-b",
         "stable-graph-b",
@@ -402,7 +402,7 @@ fn reserved_import_and_loser_cleanup_are_one_graph_protocol() {
     // reported a fixture error as a concurrency hang. The staging this test
     // is about is the reserved owner payload written above, not the display
     // name. Corrected 2026-09-11 by the redb_store absolute-green lane (F1).
-    medulla_store::redb_store::write_graph_meta(
+    medulla_store::redb_store::store_read::write_graph_meta(
         loser.as_ref(),
         "graph-protocol",
         "graph-protocol",
@@ -474,12 +474,12 @@ fn reserved_import_and_loser_cleanup_are_one_graph_protocol() {
 
     assert!(!loser.graft_destination_reserved("graph-protocol").unwrap());
     assert!(
-        medulla_store::redb_store::read_catalog_record(loser.as_ref(), "graph-protocol")
+        medulla_store_apply::redb_store::dump::read_catalog_record(loser.as_ref(), "graph-protocol")
             .unwrap()
             .is_none()
     );
     assert!(
-        medulla_store::redb_store::read_catalog_record(loser.as_ref(), "graph-b")
+        medulla_store_apply::redb_store::dump::read_catalog_record(loser.as_ref(), "graph-b")
             .unwrap()
             .is_some()
     );

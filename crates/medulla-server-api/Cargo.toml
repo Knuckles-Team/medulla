@@ -75,6 +75,7 @@ medulla-table-store = { path = "../medulla-table-store" }
 medulla-tables = { path = "../medulla-tables" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
+medulla-work-store = { path = "../medulla-work-store" }
 
 [features]
 test-support = []

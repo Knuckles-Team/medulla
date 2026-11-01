@@ -20,16 +20,16 @@ use medulla_work_types::{native_control::EnrichmentBudgetCheckpoint as BudgetChe
 use super::shard::{Shard, ShardWrite};
 use super::{decode_durable, DurableCrypto};
 
-pub(crate) const BUDGETS: TableDefinition<(&str, &str), &[u8]> =
+pub const BUDGETS: TableDefinition<(&str, &str), &[u8]> =
     TableDefinition::new("repository_enrichment_budgets");
-pub(crate) const POLICY_REVISIONS: TableDefinition<(&str, &str), &[u8]> =
+pub const POLICY_REVISIONS: TableDefinition<(&str, &str), &[u8]> =
     TableDefinition::new("repository_enrichment_policy_revisions");
-pub(crate) const SUPERSESSIONS: TableDefinition<(&str, &str), &[u8]> =
+pub const SUPERSESSIONS: TableDefinition<(&str, &str), &[u8]> =
     TableDefinition::new("repository_enrichment_supersessions");
 /// One graph-wide pause per enrichment consumer. The conservative pause keeps
 /// all of this graph's enrichment source events unclaimed until an authenticated
 /// budget-policy revision explicitly reactivates it.
-pub(crate) const PARKS: TableDefinition<&str, &[u8]> =
+pub const PARKS: TableDefinition<&str, &[u8]> =
     TableDefinition::new("repository_enrichment_parks");
 const MAX_ENVELOPE_BYTES: usize = 512;
 const MAX_ELIGIBLE_UNITS: u32 = 4096;
@@ -178,7 +178,7 @@ fn put_sealed_row<T: serde::Serialize>(
 /// Seed budget authority in the same admitted ShardWrite that stores the
 /// engine-attested source envelope and outbox intent. Existing progressed rows
 /// are never reset by a replay of that source commit.
-pub(crate) fn seed_source_budget(
+pub fn seed_source_budget(
     write: &ShardWrite<'_>,
     graph: &str,
     authority: &SourceBudgetAuthority,
@@ -382,7 +382,7 @@ fn same_page_replay(row: &BudgetCheckpoint, debit: &EnrichmentBudgetReservation)
 /// Debit global budget atomically with the caller's native WorkItem writes.
 /// Existing exact page identity is replay-safe; stale CAS and over-budget
 /// requests abort the enclosing redb transaction.
-pub(crate) fn reserve_submit_page(
+pub fn reserve_submit_page(
     write: &ShardWrite<'_>,
     graph: &str,
     request: &SubmitWorkItemsRequest,
@@ -514,9 +514,9 @@ mod reactivation;
 pub use reactivation::is_superseded;
 pub use reactivation::read_policy_revision;
 #[cfg(feature = "raft")]
-pub(crate) use reactivation::stage_parked_reactivation;
+pub use reactivation::stage_parked_reactivation;
 #[cfg(feature = "raft")]
-pub(crate) use reactivation::verify_reactivation_replay;
+pub use reactivation::verify_reactivation_replay;
 pub use reactivation::RepositoryEnrichmentPolicyRevision;
 
 /// Read before each outbox claim, including the first claim after restart.
@@ -552,7 +552,7 @@ pub fn clear_graph_rows(write: &ShardWrite<'_>, graph: &str) -> Result<(), Strin
         .purge_scope_rows()
 }
 
-pub(crate) fn retire_graph_rows(
+pub fn retire_graph_rows(
     write: &PhysicalWriteCapability<'_, GraphShardOwner>,
 ) -> Result<(), String> {
     write

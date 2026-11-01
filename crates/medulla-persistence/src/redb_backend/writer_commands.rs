@@ -69,11 +69,11 @@ macro_rules! writer_command_arms {
             // Flush pending first (same consistency contract as ReadGraphDump), then
             // fetch ONE bounded page straight off the durable store (CONCEPT:MEDULLA-KG.sharding.paged-lazy-open, L38).
             flush(pending);
-            let _ = reply.send(medulla_store::redb_store::read_graph_dump_page(
+            let _ = reply.send(medulla_store_apply::redb_store::dump::read_graph_dump_page(
                 shard,
                 &graph,
                 crypto,
-                medulla_store::redb_store::PageCursorRef {
+                medulla_store_apply::redb_store::dump::PageCursorRef {
                     node_offset: query.node_offset,
                     edge_offset: query.edge_offset,
                     node_after: query.node_after.as_deref(),
@@ -204,7 +204,7 @@ macro_rules! writer_command_arms {
             let res = commit_crossmodal(
                 shard,
                 &graph,
-                medulla_store::redb_store::CrossModalStaged {
+                medulla_store_apply::redb_store::crossmodal::CrossModalStaged {
                     methods: &methods,
                     vectors: &vectors,
                     blob_refs: &blob_refs,
@@ -236,10 +236,10 @@ macro_rules! writer_command_arms {
             flush(pending);
             let res = commit_mutation_batch_crossmodal(
                 shard,
-                medulla_store::redb_store::CrossModalCommitInput {
+                medulla_store_apply::redb_store::store_mutation::CrossModalCommitInput {
                     graph_fname: &graph,
                     batch: &batch,
-                    rows: medulla_store::redb_store::CrossModalBatchRows {
+                    rows: medulla_store_apply::redb_store::store_mutation::CrossModalBatchRows {
                         methods: &methods,
                         vectors: &vectors,
                         blob_refs: &blob_refs,
@@ -263,7 +263,7 @@ macro_rules! writer_command_arms {
             done,
         } => {
             flush(pending);
-            let result = medulla_store::redb_store::commit_repository_enrichment_top_up(
+            let result = medulla_store_apply::redb_store::store_mutation::commit_repository_enrichment_top_up(
                 shard,
                 &graph,
                 &transition,
@@ -291,7 +291,7 @@ macro_rules! writer_command_arms {
             let res = if let Some(state) = authoritative_state_msgpack.as_deref() {
                 commit_mutation_batch_state(
                     shard,
-                    medulla_store::redb_store::StateCommitInput {
+                    medulla_store_apply::redb_store::store_mutation::StateCommitInput {
                         graph_fname: &graph,
                         batch: &batch,
                         authoritative_state_msgpack: state,
@@ -326,7 +326,7 @@ macro_rules! writer_command_arms {
         } => {
             flush(pending);
             let res = in_graph_write(shard, &graph, "work_item_capability_mint", |write| {
-                medulla_store::redb_store::work_item_capability::mint_claim_capability(
+                medulla_work_store::redb_store::work_item_capability::mint_claim_capability(
                     write, &graph, &request, &authority, crypto,
                 )
             });
@@ -341,7 +341,7 @@ macro_rules! writer_command_arms {
         } => {
             flush(pending);
             let res = in_graph_write(shard, &graph, "work_item_capability_verify", |write| {
-                medulla_store::redb_store::work_item_capability::verify_claim_capability(
+                medulla_work_store::redb_store::work_item_capability::verify_claim_capability(
                     write, &graph, &request, &authority, crypto,
                 )
             });
@@ -355,7 +355,7 @@ macro_rules! writer_command_arms {
             done,
         } => {
             flush(pending);
-            let res = medulla_store::redb_store::development_lane::commit_development_lane(
+            let res = medulla_lane_store::redb_store::development_lane::commit_development_lane(
                 shard, &graph, &method, now_ms, crypto,
             );
             let _ = done.send(res);
@@ -367,7 +367,7 @@ macro_rules! writer_command_arms {
             done,
         } => {
             flush(pending);
-            let res = medulla_store::redb_store::capacity_lease::commit(
+            let res = medulla_resource_store::redb_store::capacity_lease::commit(
                 shard,
                 &graph,
                 &method,
@@ -401,7 +401,7 @@ macro_rules! writer_command_arms {
             // Ordering and atomicity mirror MutationBatch: pending grouped writes
             // commit first, then this envelope owns one indivisible fsync point.
             flush(pending);
-            let res = medulla_store::redb_store::commit_change_envelope_with_budget(
+            let res = medulla_store_apply::redb_store::store_mutation::change_envelope::commit_change_envelope_with_budget(
                 shard,
                 &graph,
                 &envelope,
@@ -653,37 +653,37 @@ macro_rules! writer_command_arms {
         #[cfg(feature = "compute-dist")]
         Cmd::MatViewPut { name, blob, done } => {
             flush(pending);
-            let _ = done.send(medulla_store::redb_store::put_matview(shard, &name, &blob));
+            let _ = done.send(medulla_store_apply::redb_store::control::put_matview(shard, &name, &blob));
             false
         }
         #[cfg(feature = "compute-dist")]
         Cmd::MatViewScan { reply } => {
             flush(pending);
-            let _ = reply.send(medulla_store::redb_store::scan_matviews(shard));
+            let _ = reply.send(medulla_store_apply::redb_store::control::scan_matviews(shard));
             false
         }
         #[cfg(feature = "matview")]
         Cmd::PlanMatViewPut { name, blob, done } => {
             flush(pending);
-            let _ = done.send(medulla_store::redb_store::put_plan_matview(shard, &name, &blob));
+            let _ = done.send(medulla_store_apply::redb_store::control::put_plan_matview(shard, &name, &blob));
             false
         }
         #[cfg(feature = "matview")]
         Cmd::PlanMatViewDelete { name, done } => {
             flush(pending);
-            let _ = done.send(medulla_store::redb_store::delete_plan_matview(shard, &name));
+            let _ = done.send(medulla_store_apply::redb_store::control::delete_plan_matview(shard, &name));
             false
         }
         #[cfg(feature = "matview")]
         Cmd::PlanMatViewScan { reply } => {
             flush(pending);
-            let _ = reply.send(medulla_store::redb_store::scan_plan_matviews(shard));
+            let _ = reply.send(medulla_store_apply::redb_store::control::scan_plan_matviews(shard));
             false
         }
         #[cfg(feature = "matview")]
         Cmd::MatViewOperatorStatePut { name, blob, done } => {
             flush(pending);
-            let _ = done.send(medulla_store::redb_store::put_matview_operator_state(
+            let _ = done.send(medulla_store_apply::redb_store::control::put_matview_operator_state(
                 shard, &name, &blob,
             ));
             false
@@ -691,7 +691,7 @@ macro_rules! writer_command_arms {
         #[cfg(feature = "matview")]
         Cmd::MatViewOperatorStateDelete { name, done } => {
             flush(pending);
-            let _ = done.send(medulla_store::redb_store::delete_matview_operator_state(
+            let _ = done.send(medulla_store_apply::redb_store::control::delete_matview_operator_state(
                 shard, &name,
             ));
             false
@@ -699,14 +699,14 @@ macro_rules! writer_command_arms {
         #[cfg(feature = "matview")]
         Cmd::MatViewOperatorStateScan { reply } => {
             flush(pending);
-            let _ = reply.send(medulla_store::redb_store::scan_matview_operator_state(shard));
+            let _ = reply.send(medulla_store_apply::redb_store::control::scan_matview_operator_state(shard));
             false
         }
         Cmd::ScrubCursorPut { cursor, done } => {
             // Scrub progress rides no mutation, so pending ops need no flush
             // first; the cursor is its own durable control write.
             let _ = done.send(in_control_write(shard, "storage_scrub_cursor", |write| {
-                medulla_store::redb_store::scrub::put_scrub_cursor_in(write, &cursor)
+                medulla_store_apply::redb_store::scrub::put_scrub_cursor_in(write, &cursor)
             }));
             false
         }

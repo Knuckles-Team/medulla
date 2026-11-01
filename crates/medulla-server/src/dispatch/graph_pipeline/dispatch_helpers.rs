@@ -621,8 +621,8 @@ mod tests {
     use super::*;
     use medulla_graph_core::graph::GraphCore;
     use medulla_protocol_types::protocol::Method;
-    use medulla_store::redb_store::operation_audit::tests::event;
-    use medulla_store::redb_store::operation_audit::tests::TENANT;
+    use medulla_store_apply::redb_store::operation_audit_tests::event;
+    use medulla_store_apply::redb_store::operation_audit_tests::TENANT;
     use medulla_server_api::api::persistence::PersistenceBackend;
     use medulla_persistence::redb_backend::audit_append_tests::seeded;
 

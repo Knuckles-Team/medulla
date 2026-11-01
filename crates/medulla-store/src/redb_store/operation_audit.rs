@@ -28,17 +28,17 @@ use medulla_storage::ScopedOwnerTableMut;
 use sha2::{Digest, Sha256};
 
 /// Refused: the request declares no audit class.
-pub(crate) const AUDIT_CLASS_REQUIRED: &str = "AUDIT_CLASS_REQUIRED";
+pub const AUDIT_CLASS_REQUIRED: &str = "AUDIT_CLASS_REQUIRED";
 /// Refused: the request declares an audit class this engine does not define.
-pub(crate) const AUDIT_CLASS_UNKNOWN: &str = "AUDIT_CLASS_UNKNOWN";
+pub const AUDIT_CLASS_UNKNOWN: &str = "AUDIT_CLASS_UNKNOWN";
 /// Refused: no durable audit writer answered the append.
-pub(crate) const AUDIT_WRITER_UNAVAILABLE: &str = "AUDIT_WRITER_UNAVAILABLE";
+pub const AUDIT_WRITER_UNAVAILABLE: &str = "AUDIT_WRITER_UNAVAILABLE";
 /// Refused: an outcome was presented for a request that never reserved.
-pub(crate) const AUDIT_RESERVATION_REQUIRED: &str = "AUDIT_RESERVATION_REQUIRED";
+pub const AUDIT_RESERVATION_REQUIRED: &str = "AUDIT_RESERVATION_REQUIRED";
 /// Refused: an outcome's request context differs from its reservation's.
-pub(crate) const AUDIT_RESERVATION_MISMATCH: &str = "AUDIT_RESERVATION_MISMATCH";
+pub const AUDIT_RESERVATION_MISMATCH: &str = "AUDIT_RESERVATION_MISMATCH";
 /// Refused: the request identity was already used with different content.
-pub(crate) const AUDIT_IDEMPOTENCY_CONFLICT: &str = "AUDIT_IDEMPOTENCY_CONFLICT";
+pub const AUDIT_IDEMPOTENCY_CONFLICT: &str = "AUDIT_IDEMPOTENCY_CONFLICT";
 
 /// The declared refusal for an append no durable writer answered, with its
 /// cause. The caller is never told the event was appended.
@@ -364,6 +364,3 @@ pub fn operation_audit_read(
     })
 }
 
-#[cfg(any(test, feature = "test-support"))]
-#[path = "operation_audit_tests.rs"]
-pub mod tests;

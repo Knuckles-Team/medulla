@@ -186,7 +186,7 @@ pub(super) fn sanitize_native_proposal(
 ) -> Result<Method, String> {
     if capability_authority_unavailable(&method) {
         return Err(
-            medulla_store::redb_store::work_item_capability::AUTHORITY_UNAVAILABLE.to_string(),
+            medulla_work_store::redb_store::work_item_capability::AUTHORITY_UNAVAILABLE.to_string(),
         );
     }
     // The three groups own disjoint `Method` variants, so each hands an

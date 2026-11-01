@@ -56,7 +56,7 @@ macro_rules! persistence_native {
         &self,
         graph_fname: &str,
         request: medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest,
-        authority: medulla_store::redb_store::work_item_capability::AuthenticatedAuthority,
+        authority: medulla_work_store::redb_store::work_item_capability::AuthenticatedAuthority,
     ) -> Result<medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResult, String> {
         let (done, rx) = oneshot::channel();
         let cmd = Cmd::MintWorkItemClaimCapability {
@@ -77,7 +77,7 @@ macro_rules! persistence_native {
         &self,
         graph_fname: &str,
         request: medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest,
-        authority: medulla_store::redb_store::work_item_capability::AuthenticatedAuthority,
+        authority: medulla_work_store::redb_store::work_item_capability::AuthenticatedAuthority,
     ) -> Result<medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResult, String> {
         let (done, rx) = oneshot::channel();
         let cmd = Cmd::VerifyWorkItemClaimCapability {
@@ -136,7 +136,7 @@ macro_rules! persistence_native {
         let graph = graph_fname.to_owned();
         let request = request.clone();
         self.read_snapshot(graph_fname, move |shard, crypto| {
-            medulla_store::redb_store::capacity_lease::read(shard, &graph, &request, crypto)
+            medulla_resource_store::redb_store::capacity_lease::read(shard, &graph, &request, crypto)
         })
         .await
     }
@@ -152,7 +152,7 @@ macro_rules! persistence_native {
         let graph = graph_fname.to_owned();
         let cells = cells.to_vec();
         self.read_snapshot(graph_fname, move |shard, crypto| {
-            medulla_store::redb_store::capacity_lease::headroom(shard, &graph, &cells, priority, crypto)
+            medulla_resource_store::redb_store::capacity_lease::headroom(shard, &graph, &cells, priority, crypto)
         })
         .await
     }
@@ -238,7 +238,7 @@ macro_rules! persistence_native {
         let graph = graph_fname.to_owned();
         let request = request.clone();
         self.read_snapshot(graph_fname, move |shard, crypto| {
-            medulla_store::redb_store::development_lane::read_development_lane(
+            medulla_lane_store::redb_store::development_lane::read_development_lane(
                 shard, &graph, &request, now_ms, crypto,
             )
         })
@@ -256,7 +256,7 @@ macro_rules! persistence_native {
         let graph = graph_fname.to_owned();
         let request = request.clone();
         self.read_snapshot(graph_fname, move |shard, crypto| {
-            medulla_store::redb_store::development_lane::read_development_lane_status(
+            medulla_lane_store::redb_store::development_lane::read_development_lane_status(
                 shard, &graph, &request, now_ms, crypto,
             )
         })

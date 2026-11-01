@@ -3,9 +3,9 @@
 use super::*;
 #[cfg(feature = "security")]
 use medulla_store::redb_store::PROVENANCE_ANCHOR_MEMBERS;
-use medulla_store::redb_store::capacity_lease;
-use medulla_store::redb_store::development_lane;
-use medulla_store::redb_store::work_item_capability;
+use medulla_resource_store::redb_store::capacity_lease;
+use medulla_lane_store::redb_store::development_lane;
+use medulla_work_store::redb_store::work_item_capability;
 #[cfg(feature = "matview")]
 use medulla_store::redb_store::MATVIEW_OPERATOR_STATE;
 use medulla_store::redb_store::PLAN_MATVIEWS;

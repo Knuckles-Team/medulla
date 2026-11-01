@@ -1345,8 +1345,8 @@ pub mod tests {
             "backup-census-key-material",
         );
         use medulla_store::redb_layout::shard_filename;
-        use medulla_store::redb_store::capacity_lease;
-        use medulla_store::redb_store::development_lane;
+        use medulla_resource_store::redb_store::capacity_lease;
+        use medulla_lane_store::redb_store::development_lane;
         use medulla_store::redb_store::MATVIEW_OPERATOR_STATE;
         use medulla_store::redb_store::PLAN_MATVIEWS;
         use medulla_store::redb_store::PROVENANCE_ANCHOR_MEMBERS;

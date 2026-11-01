@@ -16,7 +16,7 @@
 use medulla_protocol_types::protocol::{GraphType, Method};
 use medulla_store::redb_store;
 use medulla_store::redb_store::shard::Shard;
-use medulla_store::redb_store::GraphDump;
+use medulla_store_apply::redb_store::store_control::GraphDump;
 
 #[cfg(test)]
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -128,7 +128,7 @@ impl EmbeddedRedbStore {
             std::process::id(),
             NEXT_ATTEMPT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         );
-        redb_store::commit_ops(
+        medulla_store_apply::redb_store::store_control::commit_ops(
             &self.shard,
             &mut ops,
             &mut raft_log_ops,
@@ -170,12 +170,12 @@ impl EmbeddedRedbStore {
     /// Snapshot the whole registry dump into redb in one durable transaction.
     pub(super) fn checkpoint(&self, dumps: Vec<GraphDump>) -> Result<usize, String> {
         let mut pending = Vec::new();
-        redb_store::apply_checkpoint(&self.shard, &mut pending, dumps, self.crypto())
+        medulla_store_apply::redb_store::checkpoint::apply_checkpoint(&self.shard, &mut pending, dumps, self.crypto())
     }
 
     /// Read the entire durable store back into per-graph dumps (boot recovery).
     pub(super) fn load_all(&self) -> Result<Vec<GraphDump>, String> {
-        redb_store::read_all_dumps(&self.shard, self.crypto())
+        medulla_store_apply::redb_store::dump::read_all_dumps(&self.shard, self.crypto())
     }
 
     /// Durably PURGE every row for a deleted graph (nodes/edges/ledger/semantic +
@@ -188,6 +188,6 @@ impl EmbeddedRedbStore {
         if self.fail_next_purge.swap(false, Ordering::AcqRel) {
             return Err("injected embedded graph purge failure".to_string());
         }
-        redb_store::purge_graph_rows(&self.shard, graph_fname)
+        medulla_store_apply::redb_store::store_cleanup::purge_graph_rows(&self.shard, graph_fname)
     }
 }

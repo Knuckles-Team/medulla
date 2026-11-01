@@ -1,8 +1,8 @@
 use super::*;
 use medulla_protocol_types::protocol::GraphType;
 use medulla_server_api::state::ServerState;
-use medulla_store::redb_store::read_all_dumps;
-use medulla_store::redb_store::read_all_graph_meta;
+use medulla_store_apply::redb_store::dump::read_all_dumps;
+use medulla_store_apply::redb_store::dump::read_all_graph_meta;
 
 impl RedbBackend {
     /// Reconstruct every graph from the redb store into the registry. The actual
@@ -101,7 +101,7 @@ impl RedbBackend {
                 .upgrade()
                 .ok_or_else(|| "redb writer thread is gone".to_string())?;
             upgrade_tasks
-                .push(move || medulla_store::redb_store::upgrade_legacy_graph_meta(&shard));
+                .push(move || medulla_store_apply::redb_store::dump::upgrade_legacy_graph_meta(&shard));
         }
         let upgraded: usize = join_blocking_in_order(upgrade_tasks)
             .await?
@@ -111,7 +111,7 @@ impl RedbBackend {
             tracing::info!(
                 "redb: migrated {upgraded} graph metadata row(s) from the pre-versioned \
                  format to schema v{}",
-                medulla_store::redb_store::graph_meta_schema_version()
+                medulla_store::redb_store::store_read::graph_meta_schema_version()
             );
         }
 
@@ -272,7 +272,7 @@ mod graph_schema_restart_tests {
             )
             .unwrap();
         let dump = GraphDump {
-            kind: medulla_store::redb_store::GraphDumpKind::DurableReadOnlyMaterialization,
+            kind: medulla_store_apply::redb_store::store_control::GraphDumpKind::DurableReadOnlyMaterialization,
             graph: "g".to_string(),
             name: "g".to_string(),
             graph_type: GraphType::Global,
@@ -283,7 +283,7 @@ mod graph_schema_restart_tests {
             edges: Vec::new(),
             ledger: Vec::new(),
             semantic: Vec::new(),
-            native: medulla_store::redb_store::NativeOperationDumpRows::default(),
+            native: medulla_store_apply::redb_store::store_control::NativeOperationDumpRows::default(),
         };
 
         let error = restore_graph_dump(&core, dump).unwrap_err();

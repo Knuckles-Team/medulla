@@ -58,7 +58,7 @@ pub fn read_policy_revision(
         .transpose()
 }
 
-pub(super) fn seed_policy_revision(
+pub fn seed_policy_revision(
     write: &ShardWrite<'_>,
     graph: &str,
     authority: &SourceBudgetAuthority,
@@ -160,7 +160,7 @@ fn valid_supersession_marker(
 /// Verify an exact Raft retry against durable owner rows. Later funded pages
 /// may advance the replacement checkpoint, so compare its immutable authority
 /// rather than requiring the original cursor bytes to remain unchanged.
-pub(crate) fn verify_reactivation_replay(
+pub fn verify_reactivation_replay(
     shard: &Shard,
     graph: &str,
     expected: &BudgetCheckpoint,
@@ -244,7 +244,7 @@ struct ReactivationRows<'a> {
 /// same transaction, resolve the old outbox delivery and publish the revised
 /// immutable source intent. This helper intentionally does not commit: clearing
 /// a park on its own would make the old underfunded intent claimable again.
-pub(crate) fn stage_parked_reactivation(
+pub fn stage_parked_reactivation(
     write: &ShardWrite<'_>,
     graph: &str,
     expected: &BudgetCheckpoint,

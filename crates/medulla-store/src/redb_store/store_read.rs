@@ -6,7 +6,7 @@ use medulla_protocol_types::protocol::MethodWriteFamily;
 /// LEDGER row transaction below.  Anything else must first be lowered by its
 /// surface adapter; accepting it and letting `apply_method_rows`'s non-applicable arm
 /// run would create a committed status with missing state.
-pub(crate) fn supports_atomic_batch_rows(method: &Method) -> bool {
+pub fn supports_atomic_batch_rows(method: &Method) -> bool {
     matches!(
         (method.write_family(), method),
         (
@@ -29,30 +29,6 @@ pub(crate) fn supports_atomic_batch_rows(method: &Method) -> bool {
                 | Method::SubmitWorkItems { .. }
         )
     )
-}
-
-pub(crate) fn property_f64(props: &serde_json::Map<String, serde_json::Value>, key: &str) -> f64 {
-    props
-        .get(key)
-        .and_then(serde_json::Value::as_f64)
-        .unwrap_or(0.0)
-}
-
-pub(crate) fn property_u64(props: &serde_json::Map<String, serde_json::Value>, key: &str) -> u64 {
-    props
-        .get(key)
-        .and_then(serde_json::Value::as_u64)
-        .unwrap_or(0)
-}
-
-pub(crate) fn property_string<'a>(
-    props: &'a serde_json::Map<String, serde_json::Value>,
-    key: &str,
-) -> &'a str {
-    props
-        .get(key)
-        .and_then(serde_json::Value::as_str)
-        .unwrap_or("")
 }
 
 /// Persist one WorkItem row, as its next row revision.
@@ -96,7 +72,7 @@ pub fn write_work_item_props(
 /// row status BEFORE the authority mutated it; `authoritative_next` is `Some(status)` the
 /// authority persisted (the firing handlers always transition, so it is always `Some`).
 #[cfg(feature = "statechart")]
-pub(crate) fn apply_work_item_mirror(
+pub fn apply_work_item_mirror(
     props: &mut serde_json::Map<String, serde_json::Value>,
     work_item_id: &str,
     pre_status: &str,
@@ -145,7 +121,7 @@ pub(crate) fn apply_work_item_mirror(
 /// with the graph name, so the bound is the capability's scope rather than the
 /// key the caller passes: a reader for one graph cannot address another's rows
 /// in the file they share.
-pub(crate) fn read_typed_graph_row<K, T, Decode>(
+pub fn read_typed_graph_row<K, T, Decode>(
     shard: &Shard,
     graph_fname: &str,
     table_definition: TableDefinition<'static, K, &[u8]>,
@@ -375,7 +351,7 @@ pub fn durable_node_presence(
     Ok(present)
 }
 
-pub(crate) fn read_semantic_store(
+pub fn read_semantic_store(
     semantic: &ScopedOwnerTableMut<'_, &str, &[u8]>,
     graph: &str,
     crypto: DurableCrypto<'_>,
@@ -390,7 +366,7 @@ pub(crate) fn read_semantic_store(
         .transpose()
 }
 
-pub(crate) fn write_semantic_store(
+pub fn write_semantic_store(
     semantic: &mut ScopedOwnerTableMut<'_, &str, &[u8]>,
     graph: &str,
     store: &medulla_semantic_index::semantic::SemanticStore,
@@ -404,7 +380,7 @@ pub(crate) fn write_semantic_store(
     Ok(())
 }
 
-pub(crate) fn upsert_durable_embedding(
+pub fn upsert_durable_embedding(
     semantic: &mut ScopedOwnerTableMut<'_, &str, &[u8]>,
     graph: &str,
     node_id: &str,
@@ -418,7 +394,7 @@ pub(crate) fn upsert_durable_embedding(
     write_semantic_store(semantic, graph, &store, crypto)
 }
 
-pub(crate) fn remove_durable_embedding(
+pub fn remove_durable_embedding(
     semantic: &mut ScopedOwnerTableMut<'_, &str, &[u8]>,
     graph: &str,
     node_id: &str,
@@ -433,7 +409,7 @@ pub(crate) fn remove_durable_embedding(
     Ok(())
 }
 
-pub(crate) fn remove_durable_edge_pair(
+pub fn remove_durable_edge_pair(
     graph: &str,
     source: &str,
     target: &str,
@@ -458,7 +434,7 @@ pub(crate) fn remove_durable_edge_pair(
     Ok(())
 }
 
-pub(crate) fn remove_durable_node(
+pub fn remove_durable_node(
     graph: &str,
     node_id: &str,
     nodes: &mut ScopedOwnerTableMut<'_, (&str, &str), &[u8]>,
@@ -470,7 +446,7 @@ pub(crate) fn remove_durable_node(
     remove_durable_embedding(semantic, graph, node_id, crypto)
 }
 
-pub(crate) fn remove_durable_node_rows(
+pub fn remove_durable_node_rows(
     graph: &str,
     node_id: &str,
     nodes: &mut ScopedOwnerTableMut<'_, (&str, &str), &[u8]>,
@@ -504,4 +480,257 @@ pub(crate) fn remove_durable_node_rows(
     }
     invalidate_node_edge_ords(graph, node_id);
     Ok(())
+}
+pub fn encode_meta_with_incarnation(
+    name: &str,
+    gtype: GraphType,
+    incarnation_id: &str,
+) -> Result<Vec<u8>, String> {
+    encode_meta_record(
+        name,
+        gtype,
+        incarnation_id,
+        &medulla_graph_core::graph::GraphSchemaSources::default(),
+    )
+}
+
+pub fn encode_meta_record(
+    name: &str,
+    graph_type: GraphType,
+    incarnation_id: &str,
+    schema_sources: &medulla_graph_core::graph::GraphSchemaSources,
+) -> Result<Vec<u8>, String> {
+    if name.trim().is_empty() || incarnation_id.trim().is_empty() {
+        return Err("graph metadata identity fields must not be empty".to_string());
+    }
+    schema_sources.validate()?;
+    rmp_serde::to_vec_named(&GraphMetaRecord {
+        schema_version: GRAPH_META_SCHEMA_VERSION,
+        name: name.to_string(),
+        graph_type,
+        incarnation_id: incarnation_id.to_string(),
+        schema_sources: std::sync::Arc::new(schema_sources.clone()),
+    })
+    .map_err(|error| format!("encode graph metadata: {error}"))
+}
+
+pub fn new_incarnation_id(graph: &str) -> String {
+    static NEXT_INCARNATION: AtomicU64 = AtomicU64::new(1);
+    use sha2::{Digest, Sha256};
+    let mut digest = Sha256::new();
+    digest.update(b"medulla-incarnation-v1\0");
+    digest.update(graph.as_bytes());
+    digest.update(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos()
+            .to_le_bytes(),
+    );
+    digest.update(
+        NEXT_INCARNATION
+            .fetch_add(1, Ordering::Relaxed)
+            .to_le_bytes(),
+    );
+    format!("incarnation:durable:{}", hex::encode(digest.finalize()))
+}
+
+pub fn decode_meta_record(graph: &str, blob: &[u8]) -> Result<GraphMetaRecord, String> {
+    let record: GraphMetaRecord = match decode_durable::<GraphMetaRecord>(blob) {
+        Ok(record) => record,
+        // A legacy row cannot decode into the versioned record at all (it has no
+        // schema_version/incarnation_id and the struct denies unknown fields), so
+        // the fallback is keyed on the decode failing, not on a version compare.
+        Err(current_error) => decode_legacy_meta_record(graph, blob)
+            .ok_or_else(|| format!("decode graph metadata for {graph}: {current_error}"))?,
+    };
+    if record.schema_version != GRAPH_META_SCHEMA_VERSION {
+        return Err(format!(
+            "graph metadata for {graph} has unsupported schema version {}",
+            record.schema_version
+        ));
+    }
+    if record.name.trim().is_empty() || record.incarnation_id.trim().is_empty() {
+        return Err(format!(
+            "graph metadata for {graph} has incomplete identity"
+        ));
+    }
+    Ok(record)
+}
+
+
+/// The durable identity row of one graph, as the catalog stores it.
+///
+/// The fields are `pub(crate)` because the reader of a decoded record is not
+/// only this module: the shard's own create/rename/rebind paths compare and
+/// re-encode `name`/`graph_type`/`incarnation_id`, and they live in the PARENT
+/// module, which a private field of a child would hide from.
+#[derive(serde::Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct GraphMetaRecord {
+    pub schema_version: u16,
+    pub name: String,
+    pub graph_type: GraphType,
+    pub incarnation_id: String,
+    /// Required current graph schema authority.
+    pub schema_sources: std::sync::Arc<medulla_graph_core::graph::GraphSchemaSources>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GraphMetaRecordCurrent {
+    pub schema_version: u16,
+    pub name: String,
+    pub graph_type: GraphType,
+    pub incarnation_id: String,
+    pub schema_sources: std::sync::Arc<medulla_graph_core::graph::GraphSchemaSources>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LegacyGraphMetaRecordWithPolicy {
+    pub schema_version: u16,
+    pub name: String,
+    pub graph_type: GraphType,
+    pub incarnation_id: String,
+    #[serde(deserialize_with = "deserialize_required_option")]
+    pub integrity_policy: Option<medulla_graph_core::graph::LegacyIntegrityPolicy>,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(untagged)]
+pub enum GraphMetaRecordWire {
+    Current(GraphMetaRecordCurrent),
+    V2(LegacyGraphMetaRecordWithPolicy),
+}
+
+impl<'de> serde::Deserialize<'de> for GraphMetaRecord {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::Error as _;
+        match GraphMetaRecordWire::deserialize(deserializer)? {
+            GraphMetaRecordWire::Current(value)
+                if value.schema_version == GRAPH_META_SCHEMA_VERSION =>
+            {
+                let schema_sources = std::sync::Arc::new(
+                    std::sync::Arc::unwrap_or_clone(value.schema_sources)
+                        .reconciled_current_core()
+                        .map_err(D::Error::custom)?,
+                );
+                Ok(Self {
+                    schema_version: value.schema_version,
+                    name: value.name,
+                    graph_type: value.graph_type,
+                    incarnation_id: value.incarnation_id,
+                    schema_sources,
+                })
+            }
+            GraphMetaRecordWire::V2(value) if value.schema_version == 2 => Ok(Self {
+                schema_version: GRAPH_META_SCHEMA_VERSION,
+                name: value.name,
+                graph_type: value.graph_type,
+                incarnation_id: value.incarnation_id,
+                schema_sources: medulla_graph_core::graph::lift_v2_integrity_policy(
+                    value.integrity_policy,
+                )
+                .map_err(D::Error::custom)?,
+            }),
+            GraphMetaRecordWire::Current(value) => Err(D::Error::custom(format!(
+                "unsupported graph metadata schema version {}",
+                value.schema_version
+            ))),
+            GraphMetaRecordWire::V2(value) => Err(D::Error::custom(format!(
+                "unsupported legacy graph metadata schema version {}",
+                value.schema_version
+            ))),
+        }
+    }
+}
+
+pub fn deserialize_required_option<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: serde::Deserialize<'de>,
+{
+    <Option<T> as serde::Deserialize>::deserialize(deserializer)
+}
+
+pub const GRAPH_META_SCHEMA_VERSION: u16 = 3;
+
+/// The durable `graph_meta` schema version this build writes.
+pub fn graph_meta_schema_version() -> u16 {
+    GRAPH_META_SCHEMA_VERSION
+}
+
+/// The pre-schema_version `graph_meta` value: a bare msgpack map of exactly
+/// `{"name", "graph_type"}` written by every engine build before the versioned
+/// record landed.
+///
+/// Retaining this reader is the ON-DISK MIGRATION exception to No-Legacy — the
+/// one case the architecture doc carves out, because a durable store cannot be
+/// updated by editing code. Without it a store written by any prior build is
+/// permanently unopenable: `GraphMetaRecord` is `deny_unknown_fields` and its
+/// authoritative schema-source field has no serde default, so a legacy row cannot decode, the
+/// catalog load fails, and the engine refuses to start with
+/// "durable recovery failed; refusing availability". That is exactly what a 9.9G
+/// production store did.
+///
+/// This is read-old → write-new, not a permanent dual-format reader: every
+/// decoded legacy row is rewritten in the current format by
+/// [`upgrade_legacy_graph_meta`], so a converted store never takes this path
+/// again and this shape can be deleted once no legacy store remains.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LegacyGraphMetaRecord {
+    pub name: String,
+    pub graph_type: GraphType,
+}
+
+/// Derive a STABLE incarnation id for a graph recovered from a legacy record.
+///
+/// Deliberately not [`new_incarnation_id`]: that mixes in the wall clock, so a
+/// legacy store would mint a different incarnation on every open. Incarnation
+/// identity is what fencing and raft replica agreement are keyed on, so a
+/// per-restart value would make a migrated graph look like a new incarnation on
+/// each boot and would disagree across replicas converting the same store.
+/// Hashing only a fixed domain tag and the graph name makes the upgrade
+/// deterministic, idempotent, and identical on every node.
+pub fn legacy_incarnation_id(graph: &str) -> String {
+    use sha2::{Digest, Sha256};
+    let mut digest = Sha256::new();
+    digest.update(b"medulla-incarnation-legacy-v1\0");
+    digest.update(graph.as_bytes());
+    format!("{:x}", digest.finalize())[..32].to_string()
+}
+
+/// Lift a legacy `{"name", "graph_type"}` row into the current record shape.
+///
+/// Returns `None` when the blob is not a legacy record either, so the caller can
+/// report the CURRENT format's decode error rather than masking genuine
+/// corruption as "not legacy".
+///
+/// The pre-versioned row gains this binary's immutable core catalog and no
+/// dynamic sources.
+pub fn decode_legacy_meta_record(graph: &str, blob: &[u8]) -> Option<GraphMetaRecord> {
+    let legacy: LegacyGraphMetaRecord = decode_durable(blob).ok()?;
+    if legacy.name.trim().is_empty() {
+        return None;
+    }
+    Some(GraphMetaRecord {
+        schema_version: GRAPH_META_SCHEMA_VERSION,
+        incarnation_id: legacy_incarnation_id(&legacy.name),
+        name: legacy.name,
+        graph_type: legacy.graph_type,
+        schema_sources: std::sync::Arc::new(
+            medulla_graph_core::graph::GraphSchemaSources::default(),
+        ),
+    })
+    .inspect(|_| {
+        tracing::info!(
+            "graph metadata for {graph} upgraded from the pre-versioned format \
+             (schema sources initialized); it is rewritten in the current format"
+        )
+    })
 }

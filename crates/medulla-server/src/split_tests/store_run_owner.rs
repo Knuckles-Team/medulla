@@ -1,9 +1,7 @@
 use medulla_mutation_types::mutation_scope::MutationSurface;
-use medulla_store::redb_store::work_item::run_owner::*;
-use medulla_store::redb_store::work_item::test_shard::run_request as request;
-use medulla_store::redb_store::work_item::test_shard::{
-    apply, open, with_nodes, with_write, GRAPH,
-};
+use medulla_work_store::redb_store::work_item::run_owner::*;
+use medulla_work_store::redb_store::work_item::test_shard::run_request as request;
+use medulla_work_store::{redb_store::work_item::test_shard::apply, redb_store::work_item::test_shard::open, redb_store::work_item::test_shard::with_nodes, redb_store::work_item::test_shard::with_write, redb_store::work_item::test_shard::GRAPH};
 use medulla_store::redb_store::{decode_durable, write_work_item_props, DurableCrypto, Shard};
 use medulla_work_types::native_control::SubmitWorkItemRequest;
 use medulla_protocol_types::protocol::Method;
@@ -16,7 +14,7 @@ fn admit(shard: &Shard) -> String {
 
 fn admit_request(shard: &Shard, request: &SubmitWorkItemRequest) -> String {
     with_write(shard, "admit", 1000, |admitted| {
-        medulla_store::redb_store::work_item::test_shard::submit_run_rows(
+        medulla_work_store::redb_store::work_item::test_shard::submit_run_rows(
             admitted, request, "owner",
         )
         .map(|result| result.work_item_id)
@@ -202,7 +200,7 @@ async fn run_admission_unavailable_is_a_declared_wire_refusal() {
 fn ordinary_completion_requires_original_run_owner() {
     let temp = open("completion-owner");
     let id = admit(&temp.shard);
-    let (_, row) = medulla_store::redb_store::work_item::read::snapshot_row(
+    let (_, row) = medulla_work_store::redb_store::work_item::read::snapshot_row(
         &temp.shard,
         GRAPH,
         &id,
@@ -375,7 +373,7 @@ fn ordinary_completion_native_fence_and_terminal_noop_preserve_binding() {
     };
 
     let row = |shard: &Shard| {
-        medulla_store::redb_store::work_item::read::snapshot_row(
+        medulla_work_store::redb_store::work_item::read::snapshot_row(
             shard,
             GRAPH,
             &id,
@@ -483,7 +481,7 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
                 placement_epoch: 0,
                 idempotency_key: tag,
                 expected_graph_version: Some(
-                    medulla_store::redb_store::read_mutation_graph_version(shard, GRAPH).unwrap(),
+                    medulla_store::redb_store::store_read::read_mutation_graph_version(shard, GRAPH).unwrap(),
                 ),
                 fencing_token: None,
                 created_at_ms: now,
@@ -495,7 +493,7 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
         .unwrap()
     };
     let commit = |shard: &Shard, batch: &MutationBatch| {
-        medulla_store::redb_store::commit_mutation_batch(
+        medulla_store_apply::redb_store::store_mutation::commit_mutation_batch(
             shard,
             GRAPH,
             batch,
@@ -527,7 +525,7 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
         let handle = shard.graph(GRAPH).unwrap();
         let snapshot = shard.read(&handle).unwrap();
         let table = snapshot
-            .scoped_owner_table(medulla_store::redb_store::development_lane::COUNTERS)
+            .scoped_owner_table(medulla_lane_store::redb_store::development_lane::COUNTERS)
             .unwrap();
         table
             .range_inclusive((GRAPH, ""), (GRAPH, "\u{10ffff}"))
@@ -544,7 +542,7 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
             .collect::<Vec<_>>()
     };
     let row = |shard: &Shard, id: &str| {
-        medulla_store::redb_store::work_item::read::snapshot_row(
+        medulla_work_store::redb_store::work_item::read::snapshot_row(
             shard,
             GRAPH,
             id,
@@ -655,11 +653,11 @@ fn ordinary_completion_native_ledger_outbox_restart_atomicity() {
         assert_eq!(counters(&shard), counters_before);
         let batch = compile(&shard, "finish", finish(hold.fencing_token.unwrap()), 3000);
         // Failure after row staging must roll back row, receipt and outbox together.
-        let failed = medulla_store::redb_store::commit_mutation_batch_inner(
+        let failed = medulla_store_apply::redb_store::store_mutation::commit_mutation_batch_inner(
             &shard,
-            medulla_store::redb_store::BatchCommitInput::compact(GRAPH, &batch, None, 3000)
+            medulla_store_apply::redb_store::store_mutation::BatchCommitInput::compact(GRAPH, &batch, None, 3000)
                 .with_crashpoint(Some(
-                    medulla_store::redb_store::MutationBatchCrashpoint::AfterRowsBeforeMetadata,
+                    medulla_store_apply::redb_store::store_mutation::MutationBatchCrashpoint::AfterRowsBeforeMetadata,
                 )),
             DurableCrypto::none(),
             &mut medulla_store::redb_store::AuditTailCache::new(),
@@ -776,7 +774,7 @@ fn session_summary(
     actor: &str,
     context: &str,
 ) -> Result<medulla_work_types::run_usage::SessionUsage, String> {
-    medulla_store::redb_store::work_item::read_session_usage(
+    medulla_work_store::redb_store::work_item::read_session_usage(
         shard,
         GRAPH,
         tenant,

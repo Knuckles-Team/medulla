@@ -31,7 +31,7 @@ pub enum UnsealFailure {
 impl UnsealFailure {
     /// The human message. Byte-identical to the strings `unseal` returned
     /// before this type existed, so no caller that matches on them changes.
-    pub(crate) fn message(self) -> &'static str {
+    pub fn message(self) -> &'static str {
         match self {
             Self::Oversize => "durable value exceeds resource limits",
             Self::SealedWithoutKey => "encrypted durable value requires configured key material",
