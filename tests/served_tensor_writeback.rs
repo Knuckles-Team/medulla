@@ -25,7 +25,7 @@ use medulla_plan::{Op, Plan};
 use medulla_tensor::{Buffer, Tensor};
 use medulla_types::wire::{TensorElementwiseOp, TensorOpKind, TensorReduceKind};
 use medulla_protocol_types::protocol::Method;
-use medulla_server::dispatch;
+use medulla_server::dispatch::dispatch;
 
 const SECRET: &str = "served-tensor-writeback-secret";
 

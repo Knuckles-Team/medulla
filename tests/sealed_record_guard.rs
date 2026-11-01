@@ -16,7 +16,7 @@ mod test_support;
 use serde_json::json;
 
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
-use medulla_server::dispatch;
+use medulla_server::dispatch::dispatch;
 
 const SECRET: &str = "sealed-record-guard-secret";
 
