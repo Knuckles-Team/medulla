@@ -1,5 +1,6 @@
 //! Shared setup for in-process Raft harnesses.
 
+use medulla_server_cdc::cdc::CdcStateExt;
 use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -14,8 +15,8 @@ use medulla_isolation::isolation::IsolationLayer;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
 use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla_server_api::auth::compute_verified_envelope_token;
-use medulla_server_api::auth::VerifiedEnvelopeParams;
+use medulla_server_auth::auth::compute_verified_envelope_token;
+use medulla_server_auth::auth::VerifiedEnvelopeParams;
 use medulla_server_api::state::ServerState;
 use medulla_types::acl::AgentIdentity;
 use medulla_types::acl::AgentRole;
@@ -44,7 +45,7 @@ pub async fn make_state(
     state.per_graph_inflight_limit = 16;
     #[cfg(feature = "streaming")]
     {
-        state.cdc = None;
+        state.set_cdc_hub(None);
     }
     Arc::new(RwLock::new(state))
 }
@@ -59,7 +60,7 @@ pub async fn make_state_with_cdc(
     let state = make_state(dir, backend, isolation, auth_secret).await;
     #[cfg(feature = "streaming")]
     {
-        state.write().await.cdc = Some(Arc::new(medulla_server_api::cdc::CdcHub::new()));
+        state.write().await.set_cdc_hub(Some(Arc::new(medulla_server_cdc::cdc::CdcHub::new())));
     }
     state
 }

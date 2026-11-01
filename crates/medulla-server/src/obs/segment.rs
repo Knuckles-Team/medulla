@@ -38,10 +38,10 @@ use polars_core::prelude::{Column, DataFrame};
 use polars_io::prelude::{ParquetCompression, ParquetReader, ParquetWriter, SerReader};
 use serde::{Deserialize, Serialize};
 
-use medulla_server_api::blob::store::hex_digest;
-use medulla_server_api::blob::store::BlobManifest;
-use medulla_server_api::blob::store::ChunkStore;
-use medulla_server_api::blob::store::DEFAULT_CHUNK_SIZE;
+use medulla_server_blob::blob::store::hex_digest;
+use medulla_server_blob::blob::store::BlobManifest;
+use medulla_server_blob::blob::store::ChunkStore;
+use medulla_server_blob::blob::store::DEFAULT_CHUNK_SIZE;
 
 use super::LogRecord;
 
@@ -247,8 +247,8 @@ pub fn store_segment_bytes(store: &dyn ChunkStore, bytes: &[u8]) -> Result<Strin
         chunk_lens.push(part.len() as u32);
     }
     let manifest = BlobManifest {
-        schema_version: medulla_server_api::blob::BLOB_MANIFEST_VERSION,
-        owner_scope: medulla_server_api::blob::ENGINE_BLOB_OWNER_SCOPE.to_string(),
+        schema_version: medulla_server_blob::blob::BLOB_MANIFEST_VERSION,
+        owner_scope: medulla_server_blob::blob::ENGINE_BLOB_OWNER_SCOPE.to_string(),
         chunks,
         chunk_lens,
         len: bytes.len() as u64,
@@ -306,7 +306,7 @@ pub fn flush_records_to_segment(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_server_api::blob::store::RedbChunkStore;
+    use medulla_server_blob::blob::store::RedbChunkStore;
     use std::collections::BTreeMap;
 
     fn rec(ts: i64, stream: &str, sev: &str, body: &str, k: &str, v: &str) -> LogRecord {

@@ -1,5 +1,6 @@
 //! M3 cluster-admin routing and catalog/rebalance operations.
 
+use medulla_server_blob::kv::KvStateExt;
 #[cfg(feature = "redb")]
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
@@ -26,8 +27,8 @@ use super::saga::{
     catalog_saga, live_graph_loads, no_catalog, rebalance_opts, rebalance_plan_report,
     reshard_report,
 };
-use medulla_server_api::api::admin::saga::begin_admin_saga_with_nonce;
-use medulla_server_api::api::admin::saga::finish_admin_saga;
+use medulla_server_ops::api::admin::saga::begin_admin_saga_with_nonce;
+use medulla_server_ops::api::admin::saga::finish_admin_saga;
 
 /// Route an M3 admin method (CONCEPT:MEDULLA-KG.backend.m3-admin-dispatch). `Ok(resp)` = handled; `Err(method)` = not an
 /// admin method (unreachable — the dispatch arm only routes admin variants here).
@@ -211,7 +212,7 @@ impl AdminSagaCall<'_> {
     fn begin_saga(
         &self,
         domain: DurabilityDomain,
-    ) -> Result<medulla_server_api::api::admin::saga::AdminSaga, Response> {
+    ) -> Result<medulla_server_ops::api::admin::saga::AdminSaga, Response> {
         let mut saga = begin_admin_saga_with_nonce(
             self.backend,
             self.req_id,
@@ -308,7 +309,7 @@ async fn handle_backup(
             .map(medulla_persistence::durable_stores::RbacBundledStore)
     };
     #[cfg(feature = "kv")]
-    let kv_store = { state.read().await.kv.clone() };
+    let kv_store = { state.read().await.kv_store().cloned() };
     #[cfg(feature = "redb")]
     let agent_library = {
         let mut guard = state.write().await;

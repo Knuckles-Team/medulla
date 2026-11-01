@@ -1158,7 +1158,7 @@ pub mod tests {
         )
         .expect("persist identity");
 
-        let kv = medulla_server_api::kv::KvStore::open(Some(&src_s)).expect("open kv");
+        let kv = medulla_server_blob::kv::KvStore::open(Some(&src_s)).expect("open kv");
         kv.put("probe", "key", b"value".to_vec()).expect("kv put");
 
         let backend = RedbBackend::open_with_shards(src_s.clone(), 256, 1).expect("reopen");
@@ -1231,7 +1231,7 @@ pub mod tests {
         // The restored KV surface answers the write taken before the backup.
         let restored_s = restored.to_string_lossy().to_string();
         let restored_kv =
-            medulla_server_api::kv::KvStore::open(Some(&restored_s)).expect("open kv");
+            medulla_server_blob::kv::KvStore::open(Some(&restored_s)).expect("open kv");
         assert_eq!(
             restored_kv.get("probe", "key").expect("kv get").as_deref(),
             Some(&b"value"[..]),

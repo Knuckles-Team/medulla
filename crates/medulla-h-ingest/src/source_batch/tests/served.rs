@@ -7,7 +7,7 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::protocol_fixtures::sql_source::change;
 use medulla_protocol_types::protocol_fixtures::sql_source::id;
-use medulla_server_api::auth::dispatch_test_on_heap;
+use medulla_server_auth::auth::dispatch_test_on_heap;
 use medulla_types::contract::RecordBytes;
 
 const SECRET: &str = "sql-source-served-secret";
@@ -34,11 +34,11 @@ impl Served {
     }
 
     fn signed(&self, attempt: Attempt<'_>, batch: SqlSourceBatchRequest) -> Request {
-        medulla_server_api::auth::scoped_test_request(
+        medulla_server_auth::auth::scoped_test_request(
             SECRET,
             attempt.id,
             Method::SqlSourceBatch { batch },
-            medulla_server_api::auth::ScopedTestCaller {
+            medulla_server_auth::auth::ScopedTestCaller {
                 principal: WRITER,
                 tenant: TENANT,
                 scopes: attempt.scopes,
@@ -163,8 +163,8 @@ fn source_batch_is_a_local_only_cluster_route() {
         batch: fixture.request(WRITER),
     };
     assert_eq!(
-        medulla_server_api::mutation::cluster_mutation_route(&method),
-        medulla_server_api::mutation::ClusterMutationRoute::LocalOnly
+        medulla_server_mutation::mutation::cluster_mutation_route(&method),
+        medulla_server_mutation::mutation::ClusterMutationRoute::LocalOnly
     );
 }
 
@@ -215,7 +215,7 @@ async fn clustered_placement_refuses_source_batch_before_publication() {
         .await;
     assert_eq!(
         refusal(&response),
-        medulla_server_api::mutation::LOCAL_ONLY_CLUSTER_REFUSAL
+        medulla_server_mutation::mutation::LOCAL_ONLY_CLUSTER_REFUSAL
     );
     assert_eq!(served.rows(), 0);
     multi.shutdown().await;

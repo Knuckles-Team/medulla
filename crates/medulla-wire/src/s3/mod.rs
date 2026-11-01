@@ -41,6 +41,7 @@
 //! header. Object versioning, ACLs / bucket policies, and multipart ETag
 //! MD5-of-MD5 semantics are outside this adapter's intentionally narrow API.
 
+use medulla_server_blob::blob::BlobStateExt;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -59,11 +60,11 @@ mod calendar;
 mod route;
 
 use calendar::{iso8601, valid_amz_date};
-use medulla_server_api::blob::store::ChunkStore;
-use medulla_server_api::blob::store::RedbChunkStore;
+use medulla_server_blob::blob::store::ChunkStore;
+use medulla_server_blob::blob::store::RedbChunkStore;
 use medulla_server_api::http1;
 use medulla_server_api::http1::RequestLimits;
-use medulla_server_api::kv::KvStore;
+use medulla_server_blob::kv::KvStore;
 use medulla_server_api::state::ServerState;
 
 /// Env var: when set (and built `--features s3-api`) the S3 REST listener binds
@@ -899,12 +900,12 @@ fn handle(store: &S3Store, auth: &S3Auth, req: &S3Request) -> S3Response {
     // Denied" (an S3 client expects the standard error code/message, not
     // custom prose — unlike the KV-cache/observability surfaces, which own
     // their own wire protocol).
-    let carrier = medulla_server_api::auth::mint_fixed_service_carrier(
+    let carrier = medulla_server_auth::auth::mint_fixed_service_carrier(
         authorized(auth, req),
         "s3-api-client",
         &["kg:read", "kg:write"],
     );
-    if medulla_server_api::access::unauthenticated_carrier_denied(carrier.as_ref()) {
+    if medulla_server_api::carrier::unauthenticated_carrier_denied(carrier.as_ref()) {
         return S3Response::error("403 Forbidden", "AccessDenied", "Access Denied");
     }
     handle_authorized(store, req)
@@ -1138,8 +1139,7 @@ pub async fn serve(addr: &str, state: Arc<RwLock<ServerState>>) -> std::io::Resu
         state
             .read()
             .await
-            .blob
-            .as_ref()
+            .blob_cursors()
             .map(|cursors| cursors.store.clone())
     };
     serve_with_blob_store(addr, state, selected_blob).await

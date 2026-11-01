@@ -28,8 +28,8 @@ use super::stat_pointer::{activate, rollback, PointerMove, Qualified};
 use super::stat_retrieval::record_outcome;
 use super::stat_vectors::{graph_vectors, GraphVectors};
 use super::SharedState;
-use medulla_server_api::access::CarrierAuthority;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::carrier::CarrierAuthority;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 
 /// What a learning write resolved before its blocking store work.
 pub(super) struct LearningInputs {

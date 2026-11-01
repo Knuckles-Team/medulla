@@ -141,7 +141,7 @@ pub(super) async fn dispatch_txn_method(
                     "transaction lifecycle handler returned no result",
                 ));
             };
-            medulla_server_api::api::query_txn::txn_support::fault_after_txn_lifecycle_effect(
+            medulla_server_ops::api::query_txn::txn_support::fault_after_txn_lifecycle_effect(
                 req_id,
             );
             match finish_txn_lifecycle_receipt(receipt, result, Some(&lifecycle_method)) {

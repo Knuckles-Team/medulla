@@ -28,6 +28,7 @@
 //! Bolt routing / cluster discovery (`ROUTE`) and the full Bolt 5.x feature set
 //! (notifications config, element-id, etc.) are not implemented.
 
+use medulla_server_cdc::cdc::CdcStateExt;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -42,13 +43,13 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::QueryResult;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::access::check_graph_access;
-use medulla_server_api::access::CarrierAuthority;
-use medulla_server_api::access::GraphReadAuthority;
-use medulla_server_api::auth::verify_request_with_security_dir;
-use medulla_server_api::auth::VerifiedRequestContext;
-use medulla_server_api::mutation::MutationCtx;
-use medulla_server_api::mutation::MutationPlan;
+use medulla_server_auth::access::check_graph_access;
+use medulla_server_api::carrier::CarrierAuthority;
+use medulla_server_api::carrier::GraphReadAuthority;
+use medulla_server_auth::auth::verify_request_with_security_dir;
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_mutation::mutation::MutationCtx;
+use medulla_server_mutation::mutation::MutationPlan;
 use medulla_server_api::state::ServerState;
 
 mod auth;
@@ -376,7 +377,7 @@ struct BoltGraphContext {
     isolation: medulla_isolation::isolation::IsolationLayer,
     persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
-    cdc: Option<Arc<medulla_server_api::cdc::CdcHub>>,
+    cdc: Option<Arc<medulla_server_cdc::cdc::CdcHub>>,
 }
 
 async fn graph_context(session: &BoltSession) -> Result<(String, BoltGraphContext), BoltFailure> {
@@ -404,7 +405,7 @@ async fn graph_context(session: &BoltSession) -> Result<(String, BoltGraphContex
             isolation: state.isolation.clone(),
             persistence: state.persistence.clone(),
             #[cfg(feature = "streaming")]
-            cdc: state.cdc.clone(),
+            cdc: state.cdc_hub().cloned(),
         },
     ))
 }
@@ -598,7 +599,7 @@ async fn commit_writes(
         materialization_manifest: graph_context.materialization_manifest.as_ref(),
         write_coalescer: None,
     };
-    let response = medulla_server_api::mutation::commit_conditional_mutation_async(
+    let response = medulla_server_mutation::mutation::commit_conditional_mutation_async(
         &ctx,
         &plan,
         &method,
@@ -716,7 +717,7 @@ async fn begin_transaction(session: &BoltSession) -> Result<BoltTransaction, Bol
     })?;
     let (graph, context) = graph_context(session).await?;
     authorize_cypher(verified, &graph, &context, false)?;
-    let _guard = medulla_server_api::mutation_batch::lock_graph(&graph).await;
+    let _guard = medulla_server_api::routed_write_coalescer::lock_graph(&graph).await;
     Ok(BoltTransaction {
         base_snapshot: context.core.snapshot(),
         base_version: context.core.version(),
@@ -1048,7 +1049,7 @@ mod tests {
     }
 
     fn signed_session_request(graph: &str) -> medulla_protocol_types::protocol::Request {
-        medulla_server_api::auth::sign_current_test_request(
+        medulla_server_auth::auth::sign_current_test_request(
             "test",
             medulla_protocol_types::protocol::Request {
                 id: next_conn_id(),
@@ -1113,8 +1114,8 @@ mod tests {
         // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
         let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
         use medulla_types::acl::RequestContextClaims;
-        use medulla_server_api::auth::compute_verified_envelope_token;
-        use medulla_server_api::auth::VerifiedEnvelopeParams;
+        use medulla_server_auth::auth::compute_verified_envelope_token;
+        use medulla_server_auth::auth::VerifiedEnvelopeParams;
 
         let mut request = medulla_protocol_types::protocol::Request {
             id: next_conn_id(),

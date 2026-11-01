@@ -1,3 +1,4 @@
+use medulla_server_blob::blob::BlobStateExt;
 #[cfg(test)]
 use super::change_envelope::decode_multi_graph_batches;
 use super::change_envelope::route_change_envelope_ops;
@@ -449,9 +450,9 @@ mod eg318_dispatch_tests {
     use medulla_protocol_types::protocol::Request;
     use medulla_server_api::api::persistence::PersistenceBackend;
     #[cfg(feature = "tsdb")]
-    use medulla_server_api::auth::sign_current_test_request;
-    use medulla_server_api::auth::build_shared_test_request;
-    use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
+    use medulla_server_auth::auth::sign_current_test_request;
+    use medulla_server_auth::auth::build_shared_test_request;
+    use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
     use medulla_persistence::redb_backend::RedbBackend;
     use std::ops::Deref;
     use std::path::PathBuf;
@@ -1224,7 +1225,7 @@ mod admin_scope_tests {
     use medulla_isolation::isolation::IsolationLayer;
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;
-    use medulla_server_api::auth::sign_current_test_request;
+    use medulla_server_auth::auth::sign_current_test_request;
     use std::sync::Arc;
 
     const SECRET: &str = "admin-scope-test-secret";
@@ -1635,11 +1636,11 @@ mod blob_dispatch_tests {
     use super::*;
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;
-    use medulla_server_api::auth::sign_current_test_request;
-    use medulla_server_api::blob::store::DEFAULT_UPLOAD_TTL_MS;
-    use medulla_server_api::blob::BlobCursors;
-    use medulla_server_api::blob::BlobRetentionPolicy;
-    use medulla_server_api::blob::RedbChunkStore;
+    use medulla_server_auth::auth::sign_current_test_request;
+    use medulla_server_blob::blob::store::DEFAULT_UPLOAD_TTL_MS;
+    use medulla_server_blob::blob::BlobCursors;
+    use medulla_server_blob::blob::BlobRetentionPolicy;
+    use medulla_server_blob::blob::RedbChunkStore;
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
@@ -1694,7 +1695,7 @@ mod blob_dispatch_tests {
         // through dispatch's real-time clock).
         let retention = BlobRetentionPolicy::new(0, DEFAULT_UPLOAD_TTL_MS)
             .expect("zero GC grace with the default upload TTL is a valid retention policy");
-        state.blob = Some(Arc::new(BlobCursors::new(store).with_retention(retention)));
+        state.set_blob_cursors(Some(Arc::new(BlobCursors::new(store).with_retention(retention))));
         state.blob_cursor_ttl_secs = 300;
         Arc::new(RwLock::new(state))
     }
@@ -1959,7 +1960,7 @@ mod blob_dispatch_tests {
             assert!(matches!(r.result, Some(ResultPayload::Count(1))));
 
             // Dedup: re-upload identical content → same digest, ZERO new chunks.
-            let store = state.read().await.blob.as_ref().unwrap().store.clone();
+            let store = state.read().await.blob_cursors().unwrap().store.clone();
             let chunks_before = store.chunk_count().unwrap();
             let digest2 = upload(&state, &mut id, &full, chunk_size).await;
             let chunks_after = store.chunk_count().unwrap();
@@ -2053,8 +2054,8 @@ mod placement_route_carrier_tests {
     use medulla_isolation::isolation::IsolationLayer;
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;
-    use medulla_server_api::auth::compute_verified_envelope_token;
-use medulla_server_api::auth::VerifiedEnvelopeParams;
+    use medulla_server_auth::auth::compute_verified_envelope_token;
+use medulla_server_auth::auth::VerifiedEnvelopeParams;
     use std::sync::Arc;
     use std::time::{SystemTime, UNIX_EPOCH};
 

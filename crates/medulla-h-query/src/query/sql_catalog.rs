@@ -52,7 +52,7 @@ pub(crate) async fn exec_sql_property_graph_privilege(
         Ok(None) => {
             return Response::err(
                 req_id,
-                sql_refusal(medulla_server_api::sql_catalog_acl::ACCESS_DENIED),
+                sql_refusal(medulla_server_auth::sql_catalog_acl::ACCESS_DENIED),
             );
         }
         Err(error) => return Response::err(req_id, sql_refusal(error)),
@@ -200,12 +200,12 @@ struct SqlCatalogWork<'a> {
     tenant_scope: &'a str,
     graph_name: &'a str,
     caller: Option<&'a str>,
-    authority: &'a medulla_server_api::access::CarrierAuthority,
+    authority: &'a medulla_server_api::carrier::CarrierAuthority,
     persist_dir: &'a std::path::Path,
     store: &'a medulla_table_store::tables::TableStore,
     txn: &'a mut medulla_table_store::tables::TableTxn,
     sql_method: &'a Method,
-    wire: Option<&'a Arc<dyn medulla_server_api::api::query_txn::WireApi>>,
+    wire: Option<&'a Arc<dyn medulla_server_ops::api::query_txn::WireApi>>,
 }
 
 #[cfg(feature = "query")]
@@ -225,7 +225,7 @@ fn commit_sql_catalog_work(work: SqlCatalogWork<'_>) -> Result<usize, String> {
     let Some(wire) = wire else {
         return Err("INTERNAL: wire seam is not installed".to_string());
     };
-    let batch_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    let batch_id = medulla_server_api::batch_compile::opaque_coordinator_key(
         "sql-catalog",
         authority.owner_scope(),
         authority.idempotency_key(),
@@ -234,13 +234,13 @@ fn commit_sql_catalog_work(work: SqlCatalogWork<'_>) -> Result<usize, String> {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|duration| duration.as_millis() as u64)
         .unwrap_or(0);
-    medulla_server_api::sql_catalog_acl::with_source_authority_write(
+    medulla_server_auth::sql_catalog_acl::with_source_authority_write(
         persist_dir,
         authority,
         |source| {
             let expected_version = store.mutation_version(tenant_scope, graph_name)?;
-            let batch = medulla_server_api::mutation_batch::compile_opaque_method(
-                medulla_server_api::mutation_batch::CompileBatch {
+            let batch = medulla_server_api::batch_compile::compile_opaque_method(
+                medulla_server_api::batch_compile::CompileBatch {
                     batch_id: &batch_id,
                     request_id: req_id,
                     attempt_nonce: authority.attempt_nonce(),
@@ -272,9 +272,9 @@ fn commit_sql_catalog_work(work: SqlCatalogWork<'_>) -> Result<usize, String> {
                 Err(message) => return Err(message),
             };
             let owner_operation_id =
-                medulla_server_api::sql_catalog_acl::stable_source_operation_id(&batch_id);
+                medulla_server_auth::sql_catalog_acl::stable_source_operation_id(&batch_id);
             for schema in &created_tables {
-                medulla_server_api::sql_catalog_acl::register_owner_after_create_in(
+                medulla_server_auth::sql_catalog_acl::register_owner_after_create_in(
                     source,
                     &schema.name,
                     owner_operation_id,

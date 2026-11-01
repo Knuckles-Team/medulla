@@ -177,3 +177,6 @@ mod tests {
         assert!(pseudonymous_broker_actor("", "principal").is_err());
     }
 }
+
+/// Current typed event carried by the signed `ApplyMutation` protocol method.
+pub const SPARQL_HTTP_UPDATE_EVENT: &str = "sparql_http_update_v1";

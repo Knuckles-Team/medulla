@@ -3,9 +3,9 @@ use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::protocol::Method;
-use medulla_server_api::access::CarrierAuthority;
-use medulla_server_api::api::admin::saga::*;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::carrier::CarrierAuthority;
+use medulla_server_ops::api::admin::saga::*;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use sha2::Digest;
 
 fn authority(actor: &str, tenant: &str, key: &str) -> CarrierAuthority {
@@ -334,8 +334,8 @@ fn opaque_recovery_batch(
     payload_digest: &str,
 ) -> MutationBatch {
     let expected = medulla_transaction::version(&backend.admin_mutations_read().unwrap()).unwrap();
-    medulla_server_api::mutation_batch::compile_opaque_digest(
-        medulla_server_api::mutation_batch::CompileBatch {
+    medulla_server_api::batch_compile::compile_opaque_digest(
+        medulla_server_api::batch_compile::CompileBatch {
             batch_id,
             request_id: 90,
             attempt_nonce: None,
@@ -364,8 +364,8 @@ fn legacy_public_batch(
     method: &Method,
 ) -> MutationBatch {
     let expected = medulla_transaction::version(&backend.admin_mutations_read().unwrap()).unwrap();
-    medulla_server_api::mutation_batch::compile_opaque_method(
-        medulla_server_api::mutation_batch::CompileBatch {
+    medulla_server_api::batch_compile::compile_opaque_method(
+        medulla_server_api::batch_compile::CompileBatch {
             batch_id,
             request_id: 90,
             attempt_nonce: None,

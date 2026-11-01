@@ -5,6 +5,7 @@
 //! selected engine-owned bodies from Blob CAS with their committed digest and
 //! length. Caller bytes never enter this path.
 
+use medulla_server_blob::blob::BlobStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
@@ -44,7 +45,7 @@ pub(super) async fn resolve(
         let (store, blob) = {
             let mut state = state.write().await;
             let store = state.ensure_agent_library()?;
-            let blob = state.blob.as_ref().cloned().ok_or_else(|| {
+            let blob = state.blob_cursors().cloned().ok_or_else(|| {
                 "ATTACH_PACK_RESOLVER_UNAVAILABLE: Blob CAS is not configured".to_string()
             })?;
             (store, blob)
@@ -53,7 +54,7 @@ pub(super) async fn resolve(
         let mut shapes = Vec::new();
         let mut ontologies = Vec::new();
         for body in head.bodies {
-            let bytes = medulla_server_api::blob::engine_bodies::read_engine_body(
+            let bytes = medulla_server_blob::blob::engine_bodies::read_engine_body(
                 blob.store.as_ref(),
                 tenant_id,
                 &body.engine_manifest_digest,

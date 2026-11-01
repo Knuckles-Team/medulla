@@ -160,19 +160,19 @@ fn graph_request(graph_name: &str, group_id: medulla_raft::raft::GroupId) -> med
         .unwrap(),
         committed_at_ms: 19,
         mutation: medulla_server_api::api::persistence::RaftMutationContext {
-            batch_id: medulla_server_api::mutation_batch::opaque_coordinator_key(
+            batch_id: medulla_server_api::batch_compile::opaque_coordinator_key(
                 "raft-graph-test",
                 graph_name,
                 "batch",
             ),
             request_id: 7,
             attempt_nonce: Some(medulla_types::contract::Nonce::from_bytes([3; 32])),
-            tenant_scope: medulla_server_api::mutation_batch::opaque_coordinator_key(
+            tenant_scope: medulla_server_api::batch_compile::opaque_coordinator_key(
                 "carrier-tenant",
                 "verified",
                 "tenant-a",
             ),
-            principal_fingerprint: medulla_server_api::mutation_batch::opaque_coordinator_key(
+            principal_fingerprint: medulla_server_api::batch_compile::opaque_coordinator_key(
                 "principal:sha256",
                 "principal-a",
                 "authority",
@@ -211,7 +211,7 @@ fn ordinary_graph_command_is_bound_to_request_group_and_authenticated_authority(
         .is_err());
 
     let mut fresh_identity = request.clone();
-    fresh_identity.mutation.batch_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    fresh_identity.mutation.batch_id = medulla_server_api::batch_compile::opaque_coordinator_key(
         "raft-graph-test",
         "tenant-a:graph-a",
         "fresh-batch",
@@ -240,7 +240,7 @@ fn ordinary_graph_command_is_bound_to_request_group_and_authenticated_authority(
         .is_err());
 
     let mut wrong_tenant = request.clone();
-    wrong_tenant.mutation.tenant_scope = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    wrong_tenant.mutation.tenant_scope = medulla_server_api::batch_compile::opaque_coordinator_key(
         "carrier-tenant",
         "verified",
         "tenant-b",
@@ -251,7 +251,7 @@ fn ordinary_graph_command_is_bound_to_request_group_and_authenticated_authority(
 
     let mut wrong_principal = request;
     wrong_principal.mutation.principal_fingerprint =
-        medulla_server_api::mutation_batch::opaque_coordinator_key(
+        medulla_server_api::batch_compile::opaque_coordinator_key(
             "principal:sha256",
             "principal-b",
             "authority",

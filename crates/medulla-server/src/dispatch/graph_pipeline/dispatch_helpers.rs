@@ -294,13 +294,13 @@ pub(super) struct ServedModalityCtx<'a> {
     pub(super) caller: Option<&'a str>,
     pub(super) verified_context: &'a VerifiedRequestContext,
     pub(super) tenant_scope: &'a str,
-    pub(super) gateway_authz_ctx: &'a Option<medulla_server_api::mutation::GatewayAuthzCtx>,
+    pub(super) gateway_authz_ctx: &'a Option<medulla_server_mutation::mutation::GatewayAuthzCtx>,
     pub(super) core: Arc<medulla_graph_core::graph::GraphCore>,
     pub(super) materialization_manifest:
         Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
     pub(super) persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
-    pub(super) cdc: Option<Arc<medulla_server_api::cdc::CdcHub>>,
+    pub(super) cdc: Option<Arc<medulla_server_cdc::cdc::CdcHub>>,
     #[cfg(feature = "raft")]
     pub(super) routed_raft: Option<medulla_raft::raft::multi::RoutedRaftHandle>,
     pub(super) modality_authority: Option<medulla_h_ingest::modality::ModalityAuthority>,
@@ -401,8 +401,8 @@ async fn commit_served_modality(
     let (isolation, graph_type, owner) = gateway_authz_ctx
         .as_ref()
         .expect("ServedModality must be registered in the mutation gateway");
-    let plan = medulla_server_api::mutation::MutationPlan::for_method(&method);
-    let mutation_ctx = medulla_server_api::mutation::MutationCtx {
+    let plan = medulla_server_mutation::mutation::MutationPlan::for_method(&method);
+    let mutation_ctx = medulla_server_mutation::mutation::MutationCtx {
         anonymous: !verified_context.is_authenticated(),
         req_id,
         caller,
@@ -420,7 +420,7 @@ async fn commit_served_modality(
         materialization_manifest: materialization_manifest.as_ref(),
         write_coalescer: None,
     };
-    medulla_server_api::mutation::commit_conditional_mutation(
+    medulla_server_mutation::mutation::commit_conditional_mutation(
         &mutation_ctx,
         &plan,
         &method,
@@ -461,14 +461,14 @@ pub(super) fn replicated_graph_batch_id(
     principal_fingerprint: &str,
     idempotency_key: &str,
 ) -> String {
-    let graph_scope = medulla_server_api::mutation_batch::opaque_idempotency_key_for_context(
+    let graph_scope = medulla_server_api::batch_compile::opaque_idempotency_key_for_context(
         "raft-graph-scope",
         tenant_scope,
         graph_name,
         None,
         graph_fname,
     );
-    medulla_server_api::mutation_batch::opaque_idempotency_key_for_context(
+    medulla_server_api::batch_compile::opaque_idempotency_key_for_context(
         namespace,
         tenant_scope,
         &graph_scope,

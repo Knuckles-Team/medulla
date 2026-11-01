@@ -100,7 +100,7 @@ pub(super) async fn worker_loop(
     slot: usize,
     timing: AnalyticsWorkerTiming,
 ) {
-    let worker_ref = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    let worker_ref = medulla_server_api::batch_compile::opaque_coordinator_key(
         "analytics-worker",
         "native",
         &slot.to_string(),

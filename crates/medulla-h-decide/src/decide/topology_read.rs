@@ -11,7 +11,7 @@ use medulla_decision_types::decision::TemplateFacts;
 use medulla_types::contract::BoundedVec;
 
 use super::{capacity_premise, topology_schema, SharedState};
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 
 /// The request graph's core, behind the ordinary read ACL.
 async fn graph_core(
@@ -24,7 +24,7 @@ async fn graph_core(
         .registry
         .get(graph)
         .ok_or_else(|| format!("Graph '{graph}' not found"))?;
-    medulla_server_api::access::check_graph_access(
+    medulla_server_auth::access::check_graph_access(
         &s.isolation,
         Some(verified.agent_id()),
         graph,

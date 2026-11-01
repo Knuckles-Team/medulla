@@ -6,6 +6,7 @@
 //! `RefreshMatView` manage named, durable, incrementally-maintained materialized
 //! views of those results. The heavy superstep loop runs off the reactor.
 
+use medulla_server_cdc::cdc::CdcStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 use std::sync::Arc;
@@ -14,7 +15,7 @@ use tokio::sync::RwLock;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::access::GraphReadAuthority;
+use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::state::ServerState;
 // The algo-only Pregel matview lives behind `compute-dist` (it runs cross-shard
 // supersteps over multi-Raft groups). The plan-backed matview path below shares this
@@ -23,8 +24,8 @@ use medulla_server_api::state::ServerState;
 use medulla_raft_xshard::pregel;
 use medulla_server_api::api::persistence::MatView;
 #[cfg(feature = "matview")]
-use medulla_server_api::matview;
-use medulla_server_api::matview::PlanMatView;
+use medulla_server_cdc::matview;
+use medulla_server_cdc::matview::PlanMatView;
 
 #[cfg(feature = "compute-dist")]
 const MAX_DISTRIBUTED_MATVIEW_BYTES: usize = 64 * 1024 * 1024;
@@ -289,7 +290,7 @@ fn admit_plan_matview_under_rls(
 
 struct ControlSaga {
     backend: Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
-    saga: medulla_server_api::api::admin::saga::AdminSaga,
+    saga: medulla_server_ops::api::admin::saga::AdminSaga,
 }
 
 async fn begin_control_saga(
@@ -307,7 +308,7 @@ async fn begin_control_saga(
     let redb = backend
         .as_redb()
         .ok_or_else(|| "materialized-view mutation requires durable redb".to_string())?;
-    let saga = medulla_server_api::api::admin::saga::begin_admin_saga(
+    let saga = medulla_server_ops::api::admin::saga::begin_admin_saga(
         redb,
         req_id,
         caller,
@@ -474,8 +475,7 @@ async fn index_matview(state: &Arc<RwLock<ServerState>>, def: PlanMatView) {
     // Watermark AFTER seeding (mirrors `cdc::register_query`): later deltas fold from here.
     let through_seq = {
         let s = state.read().await;
-        s.cdc
-            .as_ref()
+        s.cdc_hub()
             .map(|hub| hub.head_seq(&def.graph))
             .unwrap_or(0)
     };

@@ -17,8 +17,8 @@ use super::{
     parse_pagination, percent_decode, schema_from_create_request, scope_authorized,
     table_ident_namespace, visibility_for,
 };
-use medulla_server_api::access::CarrierAuthority;
-use medulla_server_api::blob::store::ChunkStore;
+use medulla_server_api::carrier::CarrierAuthority;
+use medulla_server_blob::blob::store::ChunkStore;
 use medulla_server_api::http1::HttpMessage;
 
 /// Who the caller is for every routed operation: what it may see, and the

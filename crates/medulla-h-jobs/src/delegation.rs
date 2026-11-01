@@ -32,7 +32,7 @@ use medulla_result_types::epistemic_operations::RequestContext;
 #[cfg(feature = "redb")]
 use serde_json::json;
 
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 
 #[cfg(feature = "redb")]
 use medulla_server_api::api::persistence::PersistenceBackend;

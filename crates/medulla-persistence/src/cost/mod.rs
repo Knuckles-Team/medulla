@@ -463,7 +463,7 @@ fn graph_matches_tenant(graph_name: &str, verified_tenant: &str) -> bool {
 /// the served RPC always uses this authority-bearing path.
 pub async fn collect_resource_stats_authorized(
     state: &Arc<RwLock<ServerState>>,
-    authority: &medulla_server_api::access::GraphReadAuthority,
+    authority: &medulla_server_api::carrier::GraphReadAuthority,
     verified_tenant: &str,
     request: ResourceStatsRequest,
 ) -> Result<ResourceSnapshot, String> {
@@ -777,8 +777,8 @@ pub mod tests {
         use medulla_protocol_types::protocol::Method;
         use medulla_protocol_types::protocol::Request;
         use medulla_protocol_types::protocol::ResultPayload;
-        use medulla_server_api::auth::build_shared_test_request;
-        use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
+        use medulla_server_auth::auth::build_shared_test_request;
+        use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
 
         const SECRET: &str = "cost-budget-test";
         const TEST_AGENT: &str = "unit-test-agent";

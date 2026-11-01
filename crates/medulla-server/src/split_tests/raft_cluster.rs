@@ -389,8 +389,8 @@ async fn cluster_members_reports_topology_and_tracks_leader_failover() {
 
     use medulla_types::acl::{AgentIdentity, AgentRole, RequestContextClaims};
     use medulla_protocol_types::protocol::{Request, ResultPayload};
-    use medulla_server_api::auth::compute_verified_envelope_token;
-    use medulla_server_api::auth::VerifiedEnvelopeParams;
+    use medulla_server_auth::auth::compute_verified_envelope_token;
+    use medulla_server_auth::auth::VerifiedEnvelopeParams;
 
     const TEST_AGENT: &str = "cluster-members-wire-test-agent";
     const SECRET: &str = "raft-test"; // matches make_state's ServerState.auth_secret
@@ -883,8 +883,8 @@ mod placement_admin_wire_rpc {
     use medulla_types::acl::{AgentIdentity, AgentRole, RequestContextClaims};
     use medulla_protocol_types::protocol::{Response, ResultPayload};
     use crate::dispatch;
-    use medulla_server_api::auth::compute_verified_envelope_token;
-    use medulla_server_api::auth::VerifiedEnvelopeParams;
+    use medulla_server_auth::auth::compute_verified_envelope_token;
+    use medulla_server_auth::auth::VerifiedEnvelopeParams;
 
     const TEST_AGENT: &str = "placement-admin-wire-test-agent";
     const SECRET: &str = "raft-test"; // matches `make_state`'s `auth_secret`.
@@ -2957,8 +2957,8 @@ mod dist_compute {
     use super::*;
     use medulla_types::acl::{AgentIdentity, AgentRole};
     use medulla_protocol_types::protocol::{DistAlgo, GraphType};
-    use medulla_raft_xshard::pregel;
-    use medulla_server_api::access::GraphReadAuthority;
+    use medulla_raft::raft::pregel;
+    use medulla_server_api::carrier::GraphReadAuthority;
     use medulla_protocol_types::result_contract::cluster::DistResult;
 
     fn props(n: &str) -> Vec<u8> {
@@ -3044,7 +3044,7 @@ mod dist_compute {
     }
 
     async fn read_authority(state: &Arc<RwLock<ServerState>>) -> GraphReadAuthority {
-        let context = medulla_server_api::auth::VerifiedRequestContext::verified_for_test(
+        let context = medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test(
             "pregel-test-authority",
         );
         let state = state.read().await;

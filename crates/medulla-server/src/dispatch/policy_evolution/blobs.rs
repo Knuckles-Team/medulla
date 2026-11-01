@@ -6,6 +6,7 @@
 //! that reference here rather than trusting the digest. A build without the
 //! blob store cannot hold anything, so it fails closed.
 
+use medulla_server_blob::blob::BlobStateExt;
 use medulla_decision_outcome_types::{policy_evolution::HeldBlobRef, policy_evolution::PolicyEvolutionRecord, policy_evolution::PolicyRefusal};
 
 use super::*;
@@ -36,13 +37,12 @@ pub(super) async fn verify_held_blobs(
     if blobs.is_empty() {
         return Ok(());
     }
-    let carrier = medulla_server_api::access::CarrierAuthority::from_verified(verified)
+    let carrier = medulla_server_api::carrier::CarrierAuthority::from_verified(verified)
         .map_err(PolicyRefusal::InvalidRecord)?;
     let owner_scope = carrier.owner_scope().to_string();
     let store = timed_read(state)
         .await
-        .blob
-        .as_ref()
+        .blob_cursors()
         .map(|cursors| Arc::clone(&cursors.store))
         .ok_or_else(|| blob_missing(&blobs[0]))?;
     tokio::task::spawn_blocking(move || check_held(store.as_ref(), &owner_scope, &blobs))
@@ -54,7 +54,7 @@ pub(super) async fn verify_held_blobs(
 /// the declared length.
 #[cfg(feature = "blob")]
 fn check_held(
-    store: &dyn medulla_server_api::blob::ChunkStore,
+    store: &dyn medulla_server_blob::blob::ChunkStore,
     owner_scope: &str,
     blobs: &[HeldBlobRef],
 ) -> Result<(), PolicyRefusal> {

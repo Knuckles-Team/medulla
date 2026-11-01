@@ -58,7 +58,7 @@ use tokio::sync::RwLock;
 
 use crate::broker_wire;
 use crate::broker_wire::BrokerProtocol;
-use medulla_server_api::kv::KvStore;
+use medulla_server_blob::kv::KvStore;
 use medulla_server_api::state::ServerState;
 
 /// Env var: when set (and built `--features redis-wire`) the Redis RESP listener

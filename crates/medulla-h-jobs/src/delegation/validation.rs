@@ -136,7 +136,7 @@ pub(crate) fn bind_request(
     validate_request_binding(&request, verified_context, graph_name)?;
     validate_retained_target(&request, verified_context, retained)?;
 
-    let provenance_refs = medulla_server_api::api::ingest::jobs::provenance_refs(&request);
+    let provenance_refs = medulla_server_ops::api::ingest::jobs::provenance_refs(&request);
     let metadata = delegation_metadata(&request, retained);
     let work_item = lower_work_item(&request, metadata, provenance_refs);
 

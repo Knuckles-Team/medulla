@@ -12,6 +12,7 @@
 //! across graphs. So these route at the top of dispatch (next to the txn methods),
 //! before the per-graph chain.
 
+use medulla_server_blob::blob::BlobStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -21,9 +22,9 @@ use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::access::CarrierAuthority;
-use medulla_server_api::blob::store;
-use medulla_server_api::blob::BlobCursors;
+use medulla_server_api::carrier::CarrierAuthority;
+use medulla_server_blob::blob::store;
+use medulla_server_blob::blob::BlobCursors;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::Nonce;
 
@@ -138,7 +139,7 @@ async fn resolve_cursors(
     method: &Method,
 ) -> Result<Arc<BlobCursors>, Result<Response, Method>> {
     let s = state.read().await;
-    match &s.blob {
+    match s.blob_cursors() {
         Some(cursors) => Ok(cursors.clone()),
         None if is_blob_method(method) => Err(Ok(Response::err(
             req_id,
@@ -168,7 +169,7 @@ fn prepare_begin_upload(
         &authority.namespace("blob-cas", "control"),
     )?;
     let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-    let (batch, now) = medulla_server_api::api::ingest::compile_blob_batch_at_with_nonce(
+    let (batch, now) = medulla_server_ops::api::ingest::compile_blob_batch_at_with_nonce(
         cursors.store.as_ref(),
         proposed,
         authority,
@@ -230,7 +231,7 @@ async fn handle_blob_chunk_put(
     if let Err(error) = ensure_upload_owner(cursors, cursor, authority.owner_scope()) {
         return Ok(Response::err(req_id, error));
     }
-    let (batch, now) = match medulla_server_api::api::ingest::compile_blob_batch_with_nonce(
+    let (batch, now) = match medulla_server_ops::api::ingest::compile_blob_batch_with_nonce(
         cursors.store.as_ref(),
         req_id,
         authority,
@@ -264,7 +265,7 @@ async fn handle_blob_commit(
     if let Err(error) = ensure_upload_owner(cursors, cursor, authority.owner_scope()) {
         return Ok(Response::err(req_id, error));
     }
-    let (batch, now) = match medulla_server_api::api::ingest::compile_blob_batch_with_nonce(
+    let (batch, now) = match medulla_server_ops::api::ingest::compile_blob_batch_with_nonce(
         cursors.store.as_ref(),
         req_id,
         authority,
@@ -422,7 +423,7 @@ fn prepare_blob_ref_op(
 ) -> Result<(store::HolderChange, MutationBatch, u64), String> {
     ensure_blob_owner(cursors, digest, authority.owner_scope())?;
     let change = change(digest, authority.owner_scope())?;
-    let (batch, now) = medulla_server_api::api::ingest::compile_blob_batch_with_nonce(
+    let (batch, now) = medulla_server_ops::api::ingest::compile_blob_batch_with_nonce(
         cursors.store.as_ref(),
         req_id,
         authority,
@@ -476,7 +477,7 @@ async fn handle_blob_gc(
     if let Err(error) = authority.require_admin("blob garbage collection") {
         return Ok(Response::err(req_id, error));
     }
-    let (batch, now) = match medulla_server_api::api::ingest::compile_blob_batch_with_nonce(
+    let (batch, now) = match medulla_server_ops::api::ingest::compile_blob_batch_with_nonce(
         cursors.store.as_ref(),
         req_id,
         authority,

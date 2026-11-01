@@ -32,6 +32,7 @@
 //! failure leaves BOTH images (memory and disk) untouched, self-healing on
 //! the next sweep instead of risking divergence.
 
+use medulla_server_cdc::cdc::CdcStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -101,14 +102,14 @@ pub async fn reap_expired_servers(state: &Arc<RwLock<ServerState>>, now_ms: u64)
     }
 
     #[cfg(feature = "streaming")]
-    let hub = { state.read().await.cdc.clone() };
+    let hub = { state.read().await.cdc_hub().cloned() };
     let fname = medulla_kernel::persist::sanitize("__commons__");
     let mut reaped = 0u64;
     for node_id in candidates {
         // Serialize against a concurrent RegisterServer renewal of the SAME node
         // (the same per-graph lane every routed mutation takes) and re-check
         // under the lock: a heartbeat may have renewed the lease since the scan.
-        let _guard = medulla_server_api::mutation_batch::lock_graph("__commons__").await;
+        let _guard = medulla_server_api::routed_write_coalescer::lock_graph("__commons__").await;
         let still_expired = core
             .get_node_properties(&node_id)
             .and_then(|blob| is_expired_server_node(&blob, now_ms))
@@ -121,7 +122,7 @@ pub async fn reap_expired_servers(state: &Arc<RwLock<ServerState>>, now_ms: u64)
             node_id: node_id.clone(),
         };
         #[cfg(feature = "streaming")]
-        let pre = medulla_server_api::cdc::capture_before(&core, &method);
+        let pre = medulla_server_cdc::cdc::capture_before(&core, &method);
 
         // Durable-first (see module docs): only touch the in-memory core / emit
         // CDC once the durable record is confirmed.
@@ -131,7 +132,7 @@ pub async fn reap_expired_servers(state: &Arc<RwLock<ServerState>>, now_ms: u64)
                 core.mark_dirty();
                 #[cfg(feature = "streaming")]
                 if let Some(hub) = &hub {
-                    medulla_server_api::cdc::emit_for_method(
+                    medulla_server_cdc::cdc::emit_for_method(
                         hub,
                         &core,
                         "__commons__",
@@ -167,8 +168,8 @@ pub async fn reap_expired_servers(state: &Arc<RwLock<ServerState>>, now_ms: u64)
 mod tests {
     use super::*;
     use medulla_protocol_types::protocol::Request;
-    use medulla_server_api::auth::build_shared_test_request;
-    use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
+    use medulla_server_auth::auth::build_shared_test_request;
+    use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
 
     const SECRET: &str = "registry-reaper-test";
     const TEST_AGENT: &str = "unit-test-agent";
@@ -272,7 +273,7 @@ mod tests {
         };
         let cdc_seq_before = {
             let s = state.read().await;
-            s.cdc.as_ref().unwrap().head_seq("__commons__")
+            s.cdc_hub().unwrap().head_seq("__commons__")
         };
 
         // The reaper's `now_ms` is an injected clock value. At the exact lease
@@ -292,8 +293,7 @@ mod tests {
         // CDC proof: a RemoveNode event landed on __commons__'s feed after the sweep.
         let events = {
             let s = state.read().await;
-            s.cdc
-                .as_ref()
+            s.cdc_hub()
                 .unwrap()
                 .read("__commons__", cdc_seq_before, 0)
                 .events
@@ -436,7 +436,7 @@ mod tests {
 
         let cdc_seq_before = {
             let s = state.read().await;
-            s.cdc.as_ref().unwrap().head_seq("__commons__")
+            s.cdc_hub().unwrap().head_seq("__commons__")
         };
 
         // "about-to-die-mcp" is killed -- it never renews. The other two keep
@@ -467,8 +467,7 @@ mod tests {
         // brain learns which server died, not merely that a reap happened.
         let events = {
             let s = state.read().await;
-            s.cdc
-                .as_ref()
+            s.cdc_hub()
                 .unwrap()
                 .read("__commons__", cdc_seq_before, 0)
                 .events

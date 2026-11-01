@@ -336,7 +336,7 @@ async fn offload_one_cold_tenant(
     // Lifecycle work and ordinary writes share this lane.  This prevents
     // a delete/recreate or concurrent write from changing the durable
     // authority between the presence check and hibernation.
-    let _lifecycle_guard = medulla_server_api::mutation_batch::lock_graph(name).await;
+    let _lifecycle_guard = medulla_server_api::routed_write_coalescer::lock_graph(name).await;
     let persistence = {
         let s = state.read().await;
         if !s.registry.is_current_handle(handle) {
@@ -490,7 +490,7 @@ pub async fn lazy_open(
     // The same striped per-graph lane used by Create/Delete/MutationBatch fences
     // lifecycle work without serializing unrelated graphs. Durable page reads run
     // outside the server-wide state lock.
-    let _lifecycle_guard = medulla_server_api::mutation_batch::lock_graph(graph_name).await;
+    let _lifecycle_guard = medulla_server_api::routed_write_coalescer::lock_graph(graph_name).await;
     let ticket = {
         let s = state.read().await;
         if s.registry.is_resident(graph_name) {
@@ -545,7 +545,7 @@ async fn page_in_remaining(
     page_size: usize,
 ) {
     loop {
-        let _lifecycle_guard = medulla_server_api::mutation_batch::lock_graph(ticket.name()).await;
+        let _lifecycle_guard = medulla_server_api::routed_write_coalescer::lock_graph(ticket.name()).await;
         if ticket.is_cancelled() {
             return;
         }
@@ -757,8 +757,8 @@ mod admission_tests {
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;
     use medulla_server_api::api::persistence::PersistenceBackend;
-    use medulla_server_api::auth::build_current_test_request;
-    use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
+    use medulla_server_auth::auth::build_current_test_request;
+    use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
     use medulla_server_api::state::ServerState;
     #[cfg(feature = "security")]
     use medulla_types::acl::AgentIdentity;

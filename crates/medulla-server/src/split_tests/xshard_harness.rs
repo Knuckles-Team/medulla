@@ -554,17 +554,17 @@ async fn txn_handle(
     // transaction-lifecycle saga key and the second was refused with
     // `IDEMPOTENCY_CONFLICT`. See `verified_for_test_with_idempotency_key`.
     let context =
-        medulla_server_api::auth::VerifiedRequestContext::verified_for_test_with_idempotency_key(
+        medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_with_idempotency_key(
             XSHARD_HARNESS_TEST_AGENT,
             &format!("xshard-harness:{req_id}"),
         );
     // The harness drives the real handler through the transaction seam; install the seams
     // (idempotent) because this fixture builds its state without the server startup.
-    let txn = {
+    {
         let guard = state.read().await;
         crate::seams_install::install_seams(&guard);
-        guard.seams.txn.get().cloned()
-    };
+    }
+    let txn = medulla_server_ops::api::query_txn::txn_seam(&state).await;
     let Some(txn) = txn else {
         return Ok(Response::err(
             req_id,

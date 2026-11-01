@@ -11,7 +11,7 @@ use serde_json::json;
 use tokio::sync::RwLock;
 
 use medulla_protocol_types::protocol::{GraphType, Method};
-use medulla_server_api::impact_watch::*;
+use medulla_server_cdc::impact_watch::*;
 use medulla_server_api::state::ServerState;
 
 fn blob(v: serde_json::Value) -> Vec<u8> {
@@ -177,7 +177,7 @@ const SECRET: &str = "impact-watch-test-secret";
 /// authoritative MutationBatch commit, which a backendless state refuses.
 fn persisted_state() -> Arc<RwLock<ServerState>> {
     use medulla_persistence::redb_backend::RedbBackend;
-    let dir = medulla_server_api::sql_tables::test_persist_dir()
+    let dir = medulla_server_auth::sql_tables::test_persist_dir()
         .to_string_lossy()
         .into_owned();
     std::fs::create_dir_all(&dir).expect("create test persist dir");
@@ -208,10 +208,10 @@ async fn populate_served(state: &Arc<RwLock<ServerState>>, queue_status: &str) {
         });
     }
     for (id, method) in (1_u64..).zip(writes) {
-        let request = medulla_server_api::auth::build_shared_test_request(
+        let request = medulla_server_auth::auth::build_shared_test_request(
             SECRET, id, "ops", "system", method,
         );
-        let response = medulla_server_api::auth::dispatch_test_on_heap(state, request).await;
+        let response = medulla_server_auth::auth::dispatch_test_on_heap(state, request).await;
         assert!(
             response.error.is_none(),
             "fixture write: {:?}",

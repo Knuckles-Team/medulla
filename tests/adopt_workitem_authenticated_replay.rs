@@ -28,8 +28,8 @@ use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload}
 use medulla_core::registry::GraphRegistry;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_persistence::redb_backend::RedbBackend;
-use medulla_server_api::auth::compute_verified_envelope_token;
-use medulla_server_api::auth::VerifiedEnvelopeParams;
+use medulla_server_auth::auth::compute_verified_envelope_token;
+use medulla_server_auth::auth::VerifiedEnvelopeParams;
 use medulla_work_types::{native_control::NativeControlSchemaVersion, native_control::SubmitWorkItemRequest, native_control::SubmitWorkItemResult};
 
 const SECRET: &str = "adopt-workitem-authenticated-replay-secret";

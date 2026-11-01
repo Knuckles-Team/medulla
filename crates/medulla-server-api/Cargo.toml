@@ -79,6 +79,7 @@ medulla-work-store = { path = "../medulla-work-store" }
 
 [features]
 test-support = []
+request-policy-fixture = ["test-support"]
 alignment = ["dep:medulla-modality", "dep:medulla-alignment", "blob"]
 amqp-wire = ["broker", "server"]
 ann-redb = ["redb"]

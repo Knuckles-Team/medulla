@@ -1,19 +1,13 @@
 use super::*;
 #[cfg(feature = "graphql")]
-use medulla_server_api::api::query_txn::txn_support;
+use medulla_server_ops::api::query_txn::txn_support;
 #[cfg(feature = "graphql")]
-use medulla_server_api::api::query_txn::TxnApi;
+use medulla_server_ops::api::query_txn::TxnApi;
 
 /// The installed transaction seam, or the internal error text when none is installed.
 #[cfg(feature = "graphql")]
 async fn txn_seam(state: &Arc<RwLock<ServerState>>) -> Result<Arc<dyn TxnApi>, String> {
-    state
-        .read()
-        .await
-        .seams
-        .txn
-        .get()
-        .cloned()
+    medulla_server_ops::api::query_txn::txn_seam(&state).await
         .ok_or_else(|| "INTERNAL: transaction seam is not installed".to_string())
 }
 
@@ -85,7 +79,7 @@ pub(crate) async fn handle_graphql_commit_txn(
     graph_name: &str,
     core: &Arc<GraphCore>,
     txn_id: &str,
-    carrier: &medulla_server_api::access::CarrierAuthority,
+    carrier: &medulla_server_api::carrier::CarrierAuthority,
 ) -> Result<Response, Method> {
     let committed = match txn_seam(state).await {
         Ok(api) => {
@@ -124,7 +118,7 @@ pub(crate) async fn handle_graphql_staging_mutation(
     req_id: u64,
     read_authority: Option<&GraphReadAuthority>,
     core: &Arc<GraphCore>,
-    carrier: &medulla_server_api::access::CarrierAuthority,
+    carrier: &medulla_server_api::carrier::CarrierAuthority,
     query: String,
     variables: Option<serde_json::Value>,
 ) -> Result<Response, Method> {
@@ -189,7 +183,7 @@ enum GraphQlStagingAdmission {
 async fn begin_graphql_staging_admission(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-    carrier: &medulla_server_api::access::CarrierAuthority,
+    carrier: &medulla_server_api::carrier::CarrierAuthority,
     method: &Method,
     query: &str,
 ) -> Result<GraphQlStagingAdmission, Response> {
@@ -289,7 +283,7 @@ pub(crate) async fn handle_graphql(
     // `execute_mutation` (which bumps the OCC version / `mark_dirty` once it
     // lands). NOT cached (it is a write) and NOT RLS pre-filtered (writes are
     // graph-ACL-gated in `dispatch_graph_op` — this method classified Write).
-    if medulla_server_api::access::graphql_is_mutation(&query) {
+    if medulla_server_auth::access::graphql_is_mutation(&query) {
         return handle_graphql_mutation(
             state,
             req_id,

@@ -447,7 +447,7 @@ pub async fn serve_with_auth(
         (state.auth_secret.clone(), state.persist_dir.clone())
     };
     validate_startup_policy(addr, &auth_secret, mode)?;
-    medulla_server_api::sql_tables::validate_served_configuration(
+    medulla_server_auth::sql_tables::validate_served_configuration(
         persist_dir.as_deref().map(std::path::Path::new),
     )?;
     let listener = TcpListener::bind(addr).await?;
@@ -537,7 +537,7 @@ mod tests {
         register_commons_agent(&mut isolation, "tester");
         let mut state = ServerState::new_for_test("test", isolation);
         state.persist_dir = Some(
-            medulla_server_api::sql_tables::test_persist_dir()
+            medulla_server_auth::sql_tables::test_persist_dir()
                 .to_string_lossy()
                 .into_owned(),
         );

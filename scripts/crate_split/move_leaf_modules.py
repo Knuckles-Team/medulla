@@ -177,7 +177,8 @@ def plan(root: Path, frm: str, to: str, chain: list[str] | None = None):
     # modules already moved to other types crates
     for crate, _p in {(c, 0) for c, _ in pats}:
         for m in list_mods(root / "crates" / crate / "src"):
-            assign[m] = crate
+            if m not in mods:  # a name the source crate also holds (a split parent module) keeps staying
+                assign[m] = crate
     allmods = set(assign)
     # deps (only modules still in frm, or L1 crates, both scanned)
     deps: dict[str, set[str]] = {}

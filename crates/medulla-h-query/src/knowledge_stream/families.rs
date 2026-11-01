@@ -108,7 +108,7 @@ async fn execute_sql(
     let policy_lease = authority
         .policy_lease()
         .ok_or_else(|| "KnowledgeStream requires a durable policy decision lease".to_string())?;
-    if medulla_server_api::access::sql_is_write(query) {
+    if medulla_server_auth::access::sql_is_write(query) {
         return Err("KnowledgeStream SQL accepts read-only statements".to_string());
     }
     let response = super::super::query::try_handle_with_policy(
@@ -234,7 +234,7 @@ async fn execute_vector(
     let caller = ctx.stream.caller;
     let read_authority = ctx.stream.read_authority;
     let authority = ctx.stream.authority;
-    let graph = state.read().await.seams.graph.get().cloned();
+    let graph = medulla_server_ops::api::ingest::graph_seam(&state).await;
     let response = graph
         .ok_or_else(|| "INTERNAL: graph surface unavailable".to_string())?
         .graph_ops_try_handle(
@@ -299,7 +299,7 @@ async fn execute_time_series(
     let authority = ctx.stream.authority;
     #[cfg(feature = "tsdb")]
     {
-        let txn = state.read().await.seams.txn.get().cloned();
+        let txn = medulla_server_ops::api::query_txn::txn_seam(&state).await;
         let response = txn
             .ok_or_else(|| "time-series surface unavailable".to_string())?
             .timeseries_try_handle(
@@ -373,7 +373,7 @@ async fn execute_job(
     #[cfg(feature = "jobs")]
     {
         let persist_dir = state.read().await.persist_dir.clone();
-        let jobs = state.read().await.seams.jobs.get().cloned();
+        let jobs = medulla_server_ops::api::ingest::jobs_seam(&state).await;
         let result = jobs
             .ok_or_else(|| "INTERNAL: jobs surface unavailable".to_string())?
             .knowledge_stream_result(&persist_dir, graph_name, job_id)?;

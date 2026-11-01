@@ -10,7 +10,7 @@ use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::api::reentry::DispatchApi;
 use medulla_server_api::api::reentry::SeamFuture;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
 /// Routes lower-crate re-entry calls to the real method router and its consensus callbacks.
@@ -343,11 +343,19 @@ impl DispatchApi for DispatchSeam {
         &'a self,
         persistence: &'a dyn medulla_server_api::api::persistence::PersistenceBackend,
         graph_fname: &'a str,
-        store: Arc<dyn medulla_server_api::blob::store::ChunkStore>,
+        store: medulla_server_api::state::ErasedHandle,
         mut authority_for_page: medulla_server_api::api::reentry::PageAuthorityFn,
         mut submit: medulla_server_api::api::reentry::PageSubmitFn,
         mut park_source: medulla_server_api::api::reentry::PageParkFn,
     ) -> SeamFuture<'a, Result<medulla_server_api::api::reentry::DrainOutcome, String>> {
+        let Some(store) = store
+            .downcast_ref::<Arc<dyn medulla_server_blob::blob::store::ChunkStore>>()
+            .cloned()
+        else {
+            return Box::pin(async {
+                Err("CONFLICT: repository enrichment CAS handle has the wrong type".to_string())
+            });
+        };
         Box::pin(super::graph_pipeline::drain_repository_enrichment_once(
             persistence,
             graph_fname,

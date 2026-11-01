@@ -4,11 +4,11 @@
 use medulla_work_types::{jobs::JobKind, jobs::JobOp};
 use medulla_h_jobs::jobs::govern_job_kind;
 use medulla_protocol_types::protocol::Response;
-use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
 
 mod mine_associate_wire_tests {
     use super::*;
-    use medulla_server_api::auth::VerifiedRequestContext;
+    use medulla_server_api::authority_context::VerifiedRequestContext;
 
     fn authority() -> CarrierAuthority {
         CarrierAuthority::from_verified(&VerifiedRequestContext::from_verified_claims(

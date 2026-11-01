@@ -44,6 +44,9 @@ medulla-table-store = { path = "../medulla-table-store" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 medulla-persistence-records = { path = "../medulla-persistence-records" }
+medulla-server-ops = { path = "../medulla-server-ops" }
+medulla-server-mutation = { path = "../medulla-server-mutation" }
+medulla-server-auth = { path = "../medulla-server-auth" }
 
 [features]
 ann-redb = ["redb"]

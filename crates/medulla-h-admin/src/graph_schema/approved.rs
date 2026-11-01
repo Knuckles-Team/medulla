@@ -22,8 +22,8 @@ use medulla_catalog_types::{
 
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
-use medulla_server_api::mutation::MutationCtx;
-use medulla_server_api::mutation::MutationPlan;
+use medulla_server_mutation::mutation::MutationCtx;
+use medulla_server_mutation::mutation::MutationPlan;
 
 /// Verify the approval, then commit the attach through the gateway.
 pub(super) async fn handle_gateway(
@@ -38,7 +38,7 @@ pub(super) async fn handle_gateway(
     }
     let op = op.clone();
     let graph_name = ctx.graph_name.to_string();
-    medulla_server_api::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
+    medulla_server_ops::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
         super::apply(core, &graph_name, &op)
     })
     .await
@@ -76,7 +76,7 @@ pub(super) async fn handle_validate(
 ) -> Response {
     let op = op.clone();
     let graph_name = ctx.graph_name.to_string();
-    medulla_server_api::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
+    medulla_server_ops::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
         validate(core, &graph_name, &op)
     })
     .await
@@ -91,7 +91,7 @@ fn validate(
     let mut sources = (*core.schema_sources()).clone();
     super::check_expected_digest(&sources, op.expected_composed_digest())?;
     sources.attach_dynamic(op.source_token().to_string(), source(op)?)?;
-    medulla_server_api::api::admin::compose::validate_entering_schema(&sources)?;
+    medulla_server_api::schema_compose::validate_entering_schema(&sources)?;
     let current = core.schema_sources().composed_digest().to_hex();
     medulla_protocol_types::protocol::ResultPayload::of::<
         medulla_protocol_types::result_contract::reasoning::GraphSchema,

@@ -85,13 +85,11 @@ use medulla_ann_codes::semantic_index_service::{
     sql_source_deletion_proof, sql_source_revision_for_epoch, SemanticSqlSourceReadPage,
     SemanticSqlSourceReadPort, SemanticSqlSourceRecord, SemanticSqlSourceValue,
 };
-use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
 #[cfg(feature = "query")]
 use medulla_server_api::compute::compute_off_lock;
 #[cfg(feature = "query")]
-use medulla_server_api::sql_catalog_acl::{
-    open_authorized_table, SemanticTextSnapshot, SqlPrivilege,
-};
+use medulla_server_auth::{sql_catalog_acl::open_authorized_table, sql_catalog_acl::SemanticTextSnapshot, sql_catalog_acl::SqlPrivilege};
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
 
 fn request_validation_refusal(error: &SemanticIndexError) -> &'static str {

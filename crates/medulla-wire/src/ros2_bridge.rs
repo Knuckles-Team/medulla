@@ -253,7 +253,7 @@ pub async fn apply_inbound(
 /// authorized to see, so the bridge must fail closed instead of blasting every change.
 #[cfg(feature = "server")]
 fn ros2_cdc_denied(isolation: &medulla_isolation::isolation::IsolationLayer) -> bool {
-    isolation.has_rules() && medulla_server_api::access::unauthenticated_carrier_denied(None)
+    isolation.has_rules() && medulla_server_api::carrier::unauthenticated_carrier_denied(None)
 }
 
 /// Gated on `ros2-bridge` specifically (not just `server`): it is the tokio-tungstenite
@@ -263,7 +263,7 @@ fn ros2_cdc_denied(isolation: &medulla_isolation::isolation::IsolationLayer) -> 
 pub async fn run_ros2_bridge(
     state: std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
     cfg: Ros2BridgeConfig,
-    cdc: std::sync::Arc<medulla_server_api::cdc::CdcHub>,
+    cdc: std::sync::Arc<medulla_server_cdc::cdc::CdcHub>,
 ) -> Result<(), String> {
     use futures::{SinkExt, StreamExt};
     use tokio_tungstenite::tungstenite::Message;

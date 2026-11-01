@@ -16,6 +16,7 @@
 //! connection counter that `handle_connection` increments on entry and decrements
 //! on return (RAII via [`ConnGuard`]) — that count is what the idle watcher polls.
 
+use medulla_server_auth::auth::RequestAuthorityExt;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -339,7 +340,7 @@ impl AdmissionPools {
 
 #[derive(Default)]
 struct QosAdmission {
-    context: Option<medulla_server_api::auth::VerifiedRequestContext>,
+    context: Option<medulla_server_api::authority_context::VerifiedRequestContext>,
     permit: Option<super::qos::QosPermit>,
 }
 
@@ -363,7 +364,7 @@ async fn admit_qos_request(
         // enabled, so a generic refusal here would hide the cause class.
         Response::err(
             req.id,
-            medulla_server_api::auth::authentication_refusal(&error),
+            medulla_server_auth::auth::authentication_refusal(&error),
         )
     })?;
     let principal_scope = context.principal_persistence_id();
@@ -426,7 +427,7 @@ async fn reserve_request(
         Ok(permit) => permit,
         Err(_) => return Err(AdmissionFailure::Closed),
     };
-    let is_write = medulla_server_api::access::requires_write(&req.method);
+    let is_write = medulla_server_auth::access::requires_write(&req.method);
     let qos = match admit_qos_request(req, state, scheduler).await {
         Ok(admission) => admission,
         Err(response) => {

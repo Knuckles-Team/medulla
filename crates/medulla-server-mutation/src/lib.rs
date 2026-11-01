@@ -6,3 +6,10 @@
 
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
+
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod mutation;
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod mutation_batch;

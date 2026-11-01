@@ -1,3 +1,4 @@
+use medulla_server_blob::blob::BlobStateExt;
 use super::*;
 
 // ── EXPLAIN surfaces (CONCEPT:MEDULLA-KG.query.plan-dag, E5 phase 4) ──────────────
@@ -317,7 +318,7 @@ pub(crate) async fn handle_recompute_materialization(
         };
         let graph_fname = medulla_kernel::persist::sanitize(graph_name);
         let authoritative_graph_version =
-            match medulla_server_api::mutation_batch::authoritative_graph_version(
+            match medulla_server_api::batch_compile::authoritative_graph_version(
                 &persistence,
                 &graph_fname,
                 &core,
@@ -353,17 +354,17 @@ pub(crate) async fn handle_recompute_materialization(
                 Ok(payload) => payload,
                 Err(error) => return Ok(Response::err(req_id, error)),
             };
-        let batch_id = medulla_server_api::mutation_batch::opaque_request_key(
+        let batch_id = medulla_server_api::batch_compile::opaque_request_key(
             "reasoning-recompute",
             graph_name,
             req_id,
             &method,
         );
-        if let Err(error) = medulla_server_api::mutation_batch::commit_internal_graph_methods(
-            medulla_server_api::mutation_batch::InternalGraphCommitRequest::new(
+        if let Err(error) = medulla_server_mutation::mutation_batch::commit_internal_graph_methods(
+            medulla_server_mutation::mutation_batch::InternalGraphCommitRequest::new(
                 Some(&persistence),
                 &core,
-                medulla_server_api::mutation_batch::CommitOrigin {
+                medulla_server_mutation::mutation_batch::CommitOrigin {
                     request_id: req_id,
                     principal: Some(caller),
                 },
@@ -543,7 +544,7 @@ pub(crate) async fn handle_explain_evidence(
     let mut snap = core.analysis_snapshot();
     #[cfg(feature = "security")]
     rls.filter_view(caller, &mut snap);
-    let blob_store = state.read().await.blob.as_ref().map(|b| b.store.clone());
+    let blob_store = state.read().await.blob_cursors().map(|b| b.store.clone());
     let resp = match compute_off_lock(req_id, move || {
         explain_evidence_wire(&node_id, &snap, blob_store)
     })

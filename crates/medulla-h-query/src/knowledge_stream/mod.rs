@@ -36,7 +36,8 @@ use medulla_types::acl::RequestContextClaims;
 #[cfg(feature = "security")]
 use medulla_isolation::rbac_persist::RbacPolicyStore;
 
-use medulla_server_api::access::{CarrierAuthority, GraphReadAuthority};
+use medulla_server_api::carrier::CarrierAuthority;
+use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::state::ServerState;
 
 const SCORE_COLUMN: &str = "score";

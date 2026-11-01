@@ -56,7 +56,7 @@ pub mod worker {
     use medulla_mutation_types::mutation_scope::MutationOutboxLease;
     use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome, OutboxRejectReason};
 
-    use medulla_server_api::auth::VerifiedRequestContext;
+    use medulla_server_api::authority_context::VerifiedRequestContext;
     use medulla_server_api::outbox_operator::OutboxWrite;
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     use medulla_persistence_records::agent_library::AgentLibraryStore;
@@ -106,7 +106,7 @@ pub mod worker {
                 .tenant()
                 .to_string()
         } else {
-            medulla_server_api::auth::request_context_policy()?
+            medulla_server_api::authority_context::request_context_policy()?
                 .expected_tenant
                 .clone()
         };

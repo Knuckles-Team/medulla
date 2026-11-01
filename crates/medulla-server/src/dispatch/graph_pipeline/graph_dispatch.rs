@@ -1,3 +1,4 @@
+use medulla_server_cdc::cdc::CdcStateExt;
 use super::*;
 #[cfg(feature = "redb")]
 use medulla_persistence::cold_offload::ColdTrackerStateExt;
@@ -12,13 +13,13 @@ struct GraphDispatchCapture<'a> {
     read_authority: Option<GraphReadAuthority>,
     verified_actor: String,
     tenant_scope: String,
-    gateway_authz_ctx: Option<medulla_server_api::mutation::GatewayAuthzCtx>,
+    gateway_authz_ctx: Option<medulla_server_mutation::mutation::GatewayAuthzCtx>,
     core: Arc<medulla_graph_core::graph::GraphCore>,
     materialization_manifest:
         Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
     persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
-    cdc: Option<Arc<medulla_server_api::cdc::CdcHub>>,
+    cdc: Option<Arc<medulla_server_cdc::cdc::CdcHub>>,
     routed_write_coalescer:
         Arc<medulla_server_api::routed_write_coalescer::RoutedWriteCoalescerRegistry>,
     #[cfg(feature = "raft")]
@@ -105,7 +106,7 @@ async fn capture_graph_dispatch<'a>(
         materialization_manifest: s.registry.materialization_handle(graph_name),
         persistence: s.persistence.clone(),
         #[cfg(feature = "streaming")]
-        cdc: s.cdc.clone(),
+        cdc: s.cdc_hub().cloned(),
         routed_write_coalescer: s.routed_write_coalescer.clone(),
         #[cfg(feature = "raft")]
         placement_authority: s.placement_authority(),
@@ -251,14 +252,14 @@ pub(in crate::dispatch) struct GraphOpRouting<'a> {
     pub(super) read_authority: &'a Option<GraphReadAuthority>,
     pub(super) verified_actor: &'a str,
     pub(in crate::dispatch) tenant_scope: &'a str,
-    pub(super) gateway_authz_ctx: &'a Option<medulla_server_api::mutation::GatewayAuthzCtx>,
+    pub(super) gateway_authz_ctx: &'a Option<medulla_server_mutation::mutation::GatewayAuthzCtx>,
     pub(in crate::dispatch) core: &'a Arc<medulla_graph_core::graph::GraphCore>,
     pub(super) materialization_manifest:
         &'a Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
     pub(in crate::dispatch) persistence:
         &'a Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
-    pub(super) cdc: &'a Option<Arc<medulla_server_api::cdc::CdcHub>>,
+    pub(super) cdc: &'a Option<Arc<medulla_server_cdc::cdc::CdcHub>>,
     #[cfg(feature = "security")]
     pub(super) rls: &'a std::sync::Arc<medulla_isolation::isolation::IsolationLayer>,
     #[cfg(feature = "raft")]

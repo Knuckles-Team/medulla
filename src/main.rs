@@ -7,6 +7,8 @@
 // Parses CLI args, initializes the GraphRegistry, and starts
 // the UDS/TCP listener.
 
+use medulla_server_blob::blob::BlobStateExt;
+use medulla_server_cdc::cdc::CdcStateExt;
 use clap::Parser;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -530,7 +532,7 @@ async fn spawn_sparql_listener(
         );
         let sparql_state = state.clone();
         tokio::spawn(async move {
-            medulla_server_api::sparql_http::serve(listener, sparql_state).await;
+            medulla_server_blob::sparql_http::serve(listener, sparql_state).await;
         });
     }
     #[cfg(not(feature = "sparql-http"))]
@@ -696,7 +698,7 @@ async fn spawn_obs_listener(
             let server = state.read().await;
             (
                 server.persist_dir.clone(),
-                server.blob.as_ref().map(|cursors| cursors.store.clone()),
+                server.blob_cursors().map(|cursors| cursors.store.clone()),
             )
         };
         match ObsState::open_with_blob_store(persist_dir.as_deref(), flush, selected_blob).await {
@@ -891,7 +893,7 @@ async fn spawn_iceberg_listener(
         let (lake_handle, blob_store) = {
             use medulla_server::lake::LakeStateExt;
             let s = state.read().await;
-            (s.lake(), s.blob.as_ref().map(|b| b.store.clone()))
+            (s.lake(), s.blob_cursors().map(|b| b.store.clone()))
         };
         match blob_store {
             Some(store) => {
@@ -963,7 +965,7 @@ async fn spawn_lake_materialize_sweep(_state: &Arc<tokio::sync::RwLock<ServerSta
                         (
                             s.lake(),
                             s.tsdb_store.clone(),
-                            s.blob.as_ref().map(|b| b.store.clone()),
+                            s.blob_cursors().map(|b| b.store.clone()),
                         )
                     };
                     let (Some(tsdb), Some(store)) = (tsdb, store) else {
@@ -1330,8 +1332,7 @@ async fn spawn_s3_listener(
             state
                 .read()
                 .await
-                .blob
-                .as_ref()
+                .blob_cursors()
                 .map(|cursors| cursors.store.clone())
         };
         info!("s3-api: serving S3-compatible REST surface on {}", addr);
@@ -1446,16 +1447,16 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     #[cfg(all(feature = "owl", feature = "streaming"))]
     {
         let cascade =
-            std::sync::Arc::new(medulla_server_api::reasoning_cascade::ReasoningCascade::from_env());
+            std::sync::Arc::new(medulla_server_cdc::reasoning_cascade::ReasoningCascade::from_env());
         if cascade.is_active() {
-            if let Some(hub) = state.read().await.cdc.as_ref() {
+            if let Some(hub) = state.read().await.cdc_hub() {
                 hub.install_reasoning_cascade(cascade.clone());
             }
             info!(
                 "Reasoning cascade (REASON_ON_WRITE) armed: debounce {}ms",
                 cascade.debounce_window().as_millis()
             );
-            medulla_server_api::reasoning_cascade::spawn(state.clone(), cascade);
+            medulla_server_cdc::reasoning_cascade::spawn(state.clone(), cascade);
         }
     }
     // EH-526 standing impact watches (opt-in, `MEDULLA_IMPACT_ON_WRITE`): a
@@ -1463,13 +1464,13 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     // ordinary `MineRiskPropagation` writeback path. Unset ⇒ nothing installed/spawned.
     #[cfg(all(feature = "streaming", feature = "mining", feature = "query"))]
     {
-        let hub = std::sync::Arc::new(medulla_server_api::impact_watch::ImpactWatchHub::from_env());
+        let hub = std::sync::Arc::new(medulla_server_cdc::impact_watch::ImpactWatchHub::from_env());
         if hub.is_active() {
-            if let Some(cdc) = state.read().await.cdc.as_ref() {
+            if let Some(cdc) = state.read().await.cdc_hub() {
                 cdc.install_impact_watch(hub.clone());
             }
             info!("Impact watches (MEDULLA_IMPACT_ON_WRITE) armed");
-            medulla_server_api::impact_watch::spawn(state.clone(), hub);
+            medulla_server_cdc::impact_watch::spawn(state.clone(), hub);
         }
     }
     // CONCEPT:MEDULLA-KG.storage.incremental-text / .incremental-temporal / .incremental-derived-owl —
@@ -1604,7 +1605,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     spawn_periodic_sweep(
         30,
         "sql_ann_generation_sweep",
-        medulla_server_api::sql_tables::sweep_ann_generations,
+        medulla_server_auth::sql_tables::sweep_ann_generations,
     );
 
     // Periodic Ebbinghaus decay sweep (CONCEPT:MEDULLA-KG.compute.graph-compute-engine) — opt-in. Confidence on

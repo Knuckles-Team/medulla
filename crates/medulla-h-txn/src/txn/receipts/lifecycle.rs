@@ -124,7 +124,7 @@ pub(crate) fn txn_lifecycle_batch_id(
     // input.  The full method body remains in the kernel operation digest, so a
     // changed txn id, graph, or payload still conflicts under the same key.
     let operation_key = format!("{}:{}", method.tag_name(), authority.idempotency_key());
-    medulla_server_api::mutation_batch::opaque_coordinator_key(
+    medulla_server_api::batch_compile::opaque_coordinator_key(
         "transaction-lifecycle",
         authority.owner_scope(),
         &operation_key,
@@ -135,7 +135,7 @@ pub(crate) fn txn_lifecycle_batch_id(
 pub(crate) struct TxnLifecycleReceipt {
     pub(crate) backend:
         Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>,
-    pub(crate) saga: medulla_server_api::api::admin::saga::AdminSaga,
+    pub(crate) saga: medulla_server_ops::api::admin::saga::AdminSaga,
 }
 
 #[cfg(not(feature = "redb"))]
@@ -167,13 +167,13 @@ pub(crate) async fn begin_txn_lifecycle_receipt(
     // refusal.  The real admission below still consumes the exact nonce and
     // therefore preserves the kernel's REPLAY_NONCE_CONSUMED / conflict
     // decisions for retries.
-    let prepared = medulla_server_api::api::admin::saga::resume_named_admin_saga(
+    let prepared = medulla_server_ops::api::admin::saga::resume_named_admin_saga(
         redb,
         &batch_id,
         Some(caller),
     )?
     .is_some_and(|saga| saga.prepared);
-    let saga = medulla_server_api::api::admin::saga::begin_named_admin_saga_with_nonce(
+    let saga = medulla_server_ops::api::admin::saga::begin_named_admin_saga_with_nonce(
         redb,
         req_id,
         Some(caller),

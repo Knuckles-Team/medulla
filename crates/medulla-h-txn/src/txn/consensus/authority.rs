@@ -9,8 +9,8 @@ pub(super) fn validate_consensus_parent_authority(
     redb: &medulla_persistence::redb_backend::RedbBackend,
     coordinator_id: &str,
     authority: &medulla_server_api::api::persistence::RaftMutationContext,
-) -> Result<medulla_server_api::api::admin::saga::AdminSaga, String> {
-    let parent = medulla_server_api::api::admin::saga::resume_named_admin_saga(
+) -> Result<medulla_server_ops::api::admin::saga::AdminSaga, String> {
+    let parent = medulla_server_ops::api::admin::saga::resume_named_admin_saga(
         redb,
         coordinator_id,
         Some(&authority.principal_fingerprint),
@@ -53,7 +53,7 @@ pub(super) enum ParticipantAdmission {
 #[cfg(feature = "raft")]
 pub(super) fn participant_phase_admission(
     redb: &medulla_persistence::redb_backend::RedbBackend,
-    parent: &medulla_server_api::api::admin::saga::AdminSaga,
+    parent: &medulla_server_ops::api::admin::saga::AdminSaga,
     phase: medulla_server_api::api::reentry::TransactionParticipantPhase,
 ) -> Result<ParticipantAdmission, String> {
     use medulla_server_api::api::reentry::TransactionParticipantPhase::Abort;
@@ -222,7 +222,7 @@ pub async fn apply_consensus_transaction_finalize(
     let result = if let Some(result) = saga.replayed {
         result
     } else {
-        medulla_server_api::api::admin::saga::finish_admin_saga(
+        medulla_server_ops::api::admin::saga::finish_admin_saga(
             redb,
             saga.batch,
             saga.created_at_ms,

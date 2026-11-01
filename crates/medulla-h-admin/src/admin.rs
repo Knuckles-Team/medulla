@@ -104,14 +104,14 @@ mod security_tests {
 pub struct AdminSeam;
 
 #[async_trait::async_trait]
-impl medulla_server_api::api::admin::AdminApi for AdminSeam {
+impl medulla_server_ops::api::admin::AdminApi for AdminSeam {
     #[cfg(feature = "shacl")]
     async fn graph_schema_gateway(
         &self,
         state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
         tenant_id: &str,
-        ctx: &medulla_server_api::mutation::MutationCtx<'_>,
-        plan: &medulla_server_api::mutation::MutationPlan,
+        ctx: &medulla_server_mutation::mutation::MutationCtx<'_>,
+        plan: &medulla_server_mutation::mutation::MutationPlan,
         method: &medulla_protocol_types::protocol::Method,
         op: &medulla_catalog_types::graph_schema::GraphSchemaOp,
     ) -> medulla_protocol_types::protocol::Response {

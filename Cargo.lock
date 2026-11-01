@@ -4286,6 +4286,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "medulla-agent-types"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "medulla-mutation-types",
+ "medulla-result-types",
+ "medulla-types",
+ "medulla-work-types",
+ "rmp-serde",
+ "schemars 1.2.3",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "sha2 0.10.9",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "medulla-alignment"
 version = "0.1.0"
 dependencies = [
@@ -4315,6 +4333,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "medulla-ann-codes"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "medulla-ann",
+ "medulla-index-types",
+ "medulla-mutation-types",
+ "medulla-protocol-types",
+ "medulla-semantic-index",
+ "medulla-storage",
+ "medulla-transaction",
+ "medulla-types",
+ "redb",
+ "serde",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "medulla-asr-whisper"
 version = "0.1.0"
 dependencies = [
@@ -4338,10 +4374,48 @@ dependencies = [
 name = "medulla-capabilities"
 version = "0.1.0"
 dependencies = [
+ "medulla-agent-types",
+ "medulla-catalog-types",
+ "medulla-decision-types",
+ "medulla-identity-types",
+ "medulla-index-types",
+ "medulla-mutation-types",
+ "medulla-protocol-types",
  "medulla-types",
+ "medulla-work-types",
  "serde_json",
  "tempfile",
 ]
+
+[[package]]
+name = "medulla-catalog"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-catalog-types"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "medulla-agent-types",
+ "medulla-mutation-types",
+ "medulla-types",
+ "medulla-work-types",
+ "oxiri",
+ "rmp-serde",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "medulla-competency"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-competency-xsrc"
+version = "0.1.0"
 
 [[package]]
 name = "medulla-compute"
@@ -4350,12 +4424,27 @@ dependencies = [
  "criterion",
  "cudarc",
  "hex",
+ "medulla-agent-types",
+ "medulla-catalog-types",
  "medulla-core",
+ "medulla-decision-outcome-types",
+ "medulla-decision-policy",
+ "medulla-decision-stats",
+ "medulla-decision-types",
  "medulla-geo",
+ "medulla-graph-algos",
+ "medulla-graph-core",
+ "medulla-isolation",
  "medulla-modality",
+ "medulla-mutation-types",
  "medulla-numeric",
+ "medulla-protocol-types",
+ "medulla-result-types",
+ "medulla-semantic-index",
+ "medulla-source-types",
  "medulla-stream",
  "medulla-types",
+ "medulla-work-types",
  "nalgebra",
  "petgraph",
  "rand 0.8.8",
@@ -4408,10 +4497,24 @@ dependencies = [
  "dashmap",
  "hex",
  "hmac 0.12.1",
+ "medulla-agent-types",
  "medulla-ann",
+ "medulla-ann-codes",
+ "medulla-catalog-types",
+ "medulla-graph-core",
+ "medulla-identity-types",
+ "medulla-index-types",
+ "medulla-isolation",
  "medulla-modality",
+ "medulla-mutation-types",
+ "medulla-protocol-types",
+ "medulla-query-cache",
  "medulla-rdf",
+ "medulla-reasoner",
+ "medulla-result-types",
+ "medulla-semantic-index",
  "medulla-shacl",
+ "medulla-source-types",
  "medulla-storage",
  "medulla-transaction",
  "medulla-types",
@@ -4427,10 +4530,145 @@ dependencies = [
 ]
 
 [[package]]
+name = "medulla-cypher"
+version = "0.1.0"
+dependencies = [
+ "arrow",
+ "arrow-schema",
+ "async-trait",
+ "base64 0.23.1",
+ "datafusion",
+ "futures-util",
+ "hex",
+ "ipnet",
+ "md-5 0.10.6",
+ "medulla-ann",
+ "medulla-compute",
+ "medulla-core",
+ "medulla-graph-algos",
+ "medulla-graph-core",
+ "medulla-protocol-types",
+ "medulla-query-cache",
+ "medulla-result-types",
+ "medulla-storage",
+ "medulla-table-store",
+ "medulla-text",
+ "medulla-transaction",
+ "medulla-types",
+ "petgraph",
+ "redb",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "sha1 0.10.7",
+ "sha2 0.10.9",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "medulla-decision-eval"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-decision-memory"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-decision-outcome-types"
+version = "0.1.0"
+dependencies = [
+ "medulla-agent-types",
+ "medulla-decision-types",
+ "medulla-source-types",
+ "medulla-types",
+ "medulla-work-types",
+ "rmp-serde",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "medulla-decision-plan"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-decision-policy"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "medulla-decision-types",
+ "medulla-types",
+ "rand 0.8.8",
+ "rand_chacha 0.3.1",
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
+name = "medulla-decision-rank"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-decision-records"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-decision-stats"
+version = "0.1.0"
+dependencies = [
+ "medulla-agent-types",
+ "medulla-decision-outcome-types",
+ "medulla-decision-types",
+ "medulla-numeric",
+ "medulla-types",
+ "rand_chacha 0.3.1",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "medulla-decision-types"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "medulla-agent-types",
+ "medulla-catalog-types",
+ "medulla-mutation-types",
+ "medulla-source-types",
+ "medulla-types",
+ "medulla-work-types",
+ "rmp-serde",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+]
+
+[[package]]
+name = "medulla-direct-state"
+version = "0.1.0"
+dependencies = [
+ "medulla-types",
+ "rmp-serde",
+ "rustix 1.1.5",
+ "serde",
+ "serde_bytes",
+ "sha2 0.10.9",
+ "tempfile",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "medulla-document"
 version = "0.1.0"
 dependencies = [
+ "medulla-catalog-types",
  "medulla-modality",
+ "medulla-source-types",
  "medulla-types",
  "serde",
  "serde_json",
@@ -4468,42 +4706,88 @@ dependencies = [
  "hmac 0.12.1",
  "jsonwebtoken",
  "lazy_static",
+ "medulla-agent-types",
  "medulla-alignment",
  "medulla-ann",
+ "medulla-ann-codes",
  "medulla-asr-whisper",
  "medulla-audio",
  "medulla-capabilities",
+ "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
+ "medulla-cypher",
+ "medulla-decision-outcome-types",
+ "medulla-decision-policy",
+ "medulla-decision-stats",
+ "medulla-decision-types",
+ "medulla-direct-state",
  "medulla-document",
  "medulla-durable",
  "medulla-epistemic",
+ "medulla-finance",
+ "medulla-finance-market",
+ "medulla-finance-quant",
  "medulla-geo",
+ "medulla-graph-algos",
+ "medulla-graph-core",
  "medulla-graphql",
+ "medulla-h-admin",
+ "medulla-h-compute",
+ "medulla-h-decide",
+ "medulla-h-graph",
+ "medulla-h-ingest",
+ "medulla-h-jobs",
+ "medulla-h-query",
+ "medulla-h-txn",
+ "medulla-identity-types",
  "medulla-image",
+ "medulla-index-types",
+ "medulla-isolation",
  "medulla-jobs",
  "medulla-kernel",
  "medulla-kvcache",
  "medulla-lake",
+ "medulla-mining",
  "medulla-modality",
+ "medulla-mutation-types",
  "medulla-numeric",
+ "medulla-persistence",
  "medulla-plan",
  "medulla-program",
+ "medulla-protocol-types",
  "medulla-pyengine",
  "medulla-quantum-core",
  "medulla-quantum-gates",
  "medulla-quantum-hardware",
  "medulla-quantum-jobs",
  "medulla-quantum-sim",
- "medulla-query",
+ "medulla-query-cache",
+ "medulla-raft",
  "medulla-rdf",
+ "medulla-reasoner",
  "medulla-resource",
+ "medulla-result-types",
+ "medulla-semantic-index",
+ "medulla-server",
+ "medulla-server-api",
+ "medulla-server-auth",
+ "medulla-server-blob",
+ "medulla-server-cdc",
+ "medulla-server-mutation",
+ "medulla-server-ops",
  "medulla-shacl",
  "medulla-shex",
+ "medulla-source-types",
+ "medulla-sql",
+ "medulla-sql-udfs",
  "medulla-sqlite-format",
  "medulla-statechart",
  "medulla-storage",
+ "medulla-store",
  "medulla-stream",
+ "medulla-table-store",
+ "medulla-tables",
  "medulla-tensor",
  "medulla-text",
  "medulla-transaction",
@@ -4511,12 +4795,15 @@ dependencies = [
  "medulla-tts-piper",
  "medulla-types",
  "medulla-video",
+ "medulla-virtual-graph",
  "medulla-viz-columnstore",
  "medulla-viz-core",
  "medulla-viz-export",
  "medulla-viz-graph-tiles",
  "medulla-viz-kernels",
  "medulla-wasm",
+ "medulla-wire",
+ "medulla-work-types",
  "object_store 0.14.2",
  "openraft",
  "opentelemetry",
@@ -4570,9 +4857,14 @@ name = "medulla-epistemic"
 version = "0.1.0"
 dependencies = [
  "hex",
+ "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
+ "medulla-graph-core",
+ "medulla-isolation",
  "medulla-modality",
+ "medulla-protocol-types",
+ "medulla-result-types",
  "medulla-types",
  "rmp-serde",
  "serde",
@@ -4580,6 +4872,55 @@ dependencies = [
  "sha2 0.10.9",
  "tempfile",
  "tracing",
+]
+
+[[package]]
+name = "medulla-exec"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-federation"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-finance"
+version = "0.1.0"
+dependencies = [
+ "medulla-numeric",
+ "medulla-result-types",
+ "medulla-types",
+ "ndarray 0.17.2",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "medulla-finance-market"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "medulla-decision-stats",
+ "medulla-numeric",
+ "medulla-result-types",
+ "medulla-stream",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+]
+
+[[package]]
+name = "medulla-finance-quant"
+version = "0.1.0"
+dependencies = [
+ "medulla-compute",
+ "medulla-finance-market",
+ "medulla-numeric",
+ "medulla-result-types",
+ "nalgebra",
+ "ndarray 0.17.2",
+ "rand 0.8.8",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -4592,13 +4933,59 @@ dependencies = [
 ]
 
 [[package]]
+name = "medulla-graph-algos"
+version = "0.1.0"
+dependencies = [
+ "medulla-compute",
+ "medulla-core",
+ "medulla-graph-core",
+ "medulla-modality",
+ "medulla-semantic-index",
+ "medulla-types",
+ "petgraph",
+ "rayon",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
+name = "medulla-graph-core"
+version = "0.1.0"
+dependencies = [
+ "aho-corasick",
+ "dashmap",
+ "hex",
+ "medulla-catalog-types",
+ "medulla-index-types",
+ "medulla-mutation-types",
+ "medulla-protocol-types",
+ "medulla-query-cache",
+ "medulla-result-types",
+ "medulla-semantic-index",
+ "medulla-storage",
+ "medulla-transaction",
+ "medulla-types",
+ "parking_lot",
+ "petgraph",
+ "redb",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
 name = "medulla-graphql"
 version = "0.1.0"
 dependencies = [
  "medulla-core",
+ "medulla-cypher",
+ "medulla-graph-core",
  "medulla-plan",
- "medulla-query",
  "medulla-rdf",
+ "medulla-semantic-index",
  "medulla-types",
  "petgraph",
  "rmp-serde",
@@ -4606,6 +4993,400 @@ dependencies = [
  "serde_json",
  "sha2 0.10.9",
  "uuid",
+]
+
+[[package]]
+name = "medulla-h-admin"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "dashmap",
+ "hex",
+ "medulla-agent-types",
+ "medulla-catalog-types",
+ "medulla-core",
+ "medulla-decision-types",
+ "medulla-graph-core",
+ "medulla-isolation",
+ "medulla-kernel",
+ "medulla-mutation-types",
+ "medulla-persistence",
+ "medulla-plan",
+ "medulla-protocol-types",
+ "medulla-raft",
+ "medulla-rdf",
+ "medulla-reasoner",
+ "medulla-server-api",
+ "medulla-server-auth",
+ "medulla-server-blob",
+ "medulla-server-cdc",
+ "medulla-server-mutation",
+ "medulla-server-ops",
+ "medulla-shacl",
+ "medulla-source-types",
+ "medulla-storage",
+ "medulla-store",
+ "medulla-transaction",
+ "medulla-tsdb",
+ "medulla-types",
+ "medulla-work-types",
+ "rmp-serde",
+ "rustls",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "tokio",
+ "tokio-rustls",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "medulla-h-compute"
+version = "0.1.0"
+dependencies = [
+ "medulla-compute",
+ "medulla-core",
+ "medulla-finance",
+ "medulla-finance-market",
+ "medulla-finance-quant",
+ "medulla-graph-algos",
+ "medulla-graph-core",
+ "medulla-isolation",
+ "medulla-numeric",
+ "medulla-protocol-types",
+ "medulla-result-types",
+ "medulla-server-api",
+ "medulla-server-auth",
+ "medulla-types",
+ "medulla-viz-columnstore",
+ "medulla-viz-core",
+ "medulla-viz-export",
+ "medulla-viz-graph-tiles",
+ "medulla-viz-kernels",
+ "medulla-wasm",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "medulla-h-decide"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "hex",
+ "medulla-agent-types",
+ "medulla-ann",
+ "medulla-compute",
+ "medulla-core",
+ "medulla-cypher",
+ "medulla-decision-outcome-types",
+ "medulla-decision-policy",
+ "medulla-decision-stats",
+ "medulla-decision-types",
+ "medulla-finance",
+ "medulla-finance-market",
+ "medulla-graph-core",
+ "medulla-index-types",
+ "medulla-isolation",
+ "medulla-kernel",
+ "medulla-mutation-types",
+ "medulla-numeric",
+ "medulla-persistence",
+ "medulla-plan",
+ "medulla-protocol-types",
+ "medulla-rdf",
+ "medulla-reasoner",
+ "medulla-semantic-index",
+ "medulla-server-api",
+ "medulla-server-auth",
+ "medulla-server-blob",
+ "medulla-server-ops",
+ "medulla-shacl",
+ "medulla-sql",
+ "medulla-table-store",
+ "medulla-tables",
+ "medulla-types",
+ "medulla-work-types",
+ "parking_lot",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "medulla-h-graph"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "hmac 0.12.1",
+ "medulla-agent-types",
+ "medulla-compute",
+ "medulla-core",
+ "medulla-graph-algos",
+ "medulla-graph-core",
+ "medulla-isolation",
+ "medulla-kernel",
+ "medulla-mining",
+ "medulla-mutation-types",
+ "medulla-numeric",
+ "medulla-persistence",
+ "medulla-protocol-types",
+ "medulla-raft",
+ "medulla-rdf",
+ "medulla-reasoner",
+ "medulla-result-types",
+ "medulla-server-api",
+ "medulla-server-auth",
+ "medulla-server-cdc",
+ "medulla-server-mutation",
+ "medulla-server-ops",
+ "medulla-tsdb",
+ "medulla-types",
+ "medulla-work-types",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "medulla-h-ingest"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "hex",
+ "hmac 0.12.1",
+ "medulla-agent-types",
+ "medulla-audio",
+ "medulla-catalog-types",
+ "medulla-compute",
+ "medulla-core",
+ "medulla-decision-stats",
+ "medulla-document",
+ "medulla-graph-core",
+ "medulla-image",
+ "medulla-isolation",
+ "medulla-kernel",
+ "medulla-modality",
+ "medulla-mutation-types",
+ "medulla-numeric",
+ "medulla-persistence",
+ "medulla-protocol-types",
+ "medulla-raft",
+ "medulla-result-types",
+ "medulla-server-api",
+ "medulla-server-auth",
+ "medulla-server-blob",
+ "medulla-server-mutation",
+ "medulla-server-ops",
+ "medulla-source-types",
+ "medulla-storage",
+ "medulla-store",
+ "medulla-table-store",
+ "medulla-tables",
+ "medulla-types",
+ "medulla-video",
+ "medulla-work-types",
+ "rmp-serde",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "medulla-h-jobs"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "medulla-agent-types",
+ "medulla-ann-codes",
+ "medulla-capabilities",
+ "medulla-compute",
+ "medulla-core",
+ "medulla-decision-outcome-types",
+ "medulla-decision-types",
+ "medulla-graph-core",
+ "medulla-isolation",
+ "medulla-jobs",
+ "medulla-kernel",
+ "medulla-mining",
+ "medulla-modality",
+ "medulla-mutation-types",
+ "medulla-persistence",
+ "medulla-plan",
+ "medulla-program",
+ "medulla-protocol-types",
+ "medulla-raft",
+ "medulla-result-types",
+ "medulla-server-api",
+ "medulla-server-auth",
+ "medulla-server-mutation",
+ "medulla-server-ops",
+ "medulla-statechart",
+ "medulla-table-store",
+ "medulla-types",
+ "medulla-work-types",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
+name = "medulla-h-mining"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-h-packs"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-h-query"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "fs4 1.1.0",
+ "hex",
+ "hmac 0.12.1",
+ "medulla-alignment",
+ "medulla-ann-codes",
+ "medulla-capabilities",
+ "medulla-catalog-types",
+ "medulla-compute",
+ "medulla-core",
+ "medulla-cypher",
+ "medulla-epistemic",
+ "medulla-geo",
+ "medulla-graph-algos",
+ "medulla-graph-core",
+ "medulla-graphql",
+ "medulla-index-types",
+ "medulla-isolation",
+ "medulla-kernel",
+ "medulla-mining",
+ "medulla-modality",
+ "medulla-mutation-types",
+ "medulla-persistence",
+ "medulla-plan",
+ "medulla-protocol-types",
+ "medulla-query-cache",
+ "medulla-rdf",
+ "medulla-reasoner",
+ "medulla-result-types",
+ "medulla-semantic-index",
+ "medulla-server-api",
+ "medulla-server-auth",
+ "medulla-server-blob",
+ "medulla-server-cdc",
+ "medulla-server-mutation",
+ "medulla-server-ops",
+ "medulla-shacl",
+ "medulla-shex",
+ "medulla-sql",
+ "medulla-sql-udfs",
+ "medulla-storage",
+ "medulla-table-store",
+ "medulla-tables",
+ "medulla-tensor",
+ "medulla-text",
+ "medulla-transaction",
+ "medulla-tsdb",
+ "medulla-types",
+ "medulla-virtual-graph",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "ureq",
+ "uuid",
+]
+
+[[package]]
+name = "medulla-h-retrieve"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-h-sparql"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-h-txn"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "dashmap",
+ "hex",
+ "medulla-core",
+ "medulla-cypher",
+ "medulla-epistemic",
+ "medulla-graph-core",
+ "medulla-graphql",
+ "medulla-isolation",
+ "medulla-kernel",
+ "medulla-mutation-types",
+ "medulla-persistence",
+ "medulla-plan",
+ "medulla-protocol-types",
+ "medulla-raft",
+ "medulla-rdf",
+ "medulla-server-api",
+ "medulla-server-auth",
+ "medulla-server-cdc",
+ "medulla-server-mutation",
+ "medulla-server-ops",
+ "medulla-sql",
+ "medulla-sql-udfs",
+ "medulla-sqlite-format",
+ "medulla-store",
+ "medulla-table-store",
+ "medulla-tables",
+ "medulla-transaction",
+ "medulla-tsdb",
+ "medulla-types",
+ "parking_lot",
+ "rmp-serde",
+ "rustix 1.1.5",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "medulla-identity-types"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "medulla-types",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -4620,12 +5401,54 @@ dependencies = [
 ]
 
 [[package]]
+name = "medulla-index-types"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "medulla-mutation-types",
+ "medulla-types",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+]
+
+[[package]]
+name = "medulla-ingest"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-isolation"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "hmac 0.12.1",
+ "medulla-graph-core",
+ "medulla-identity-types",
+ "medulla-mutation-types",
+ "medulla-protocol-types",
+ "medulla-storage",
+ "medulla-transaction",
+ "medulla-types",
+ "parking_lot",
+ "redb",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "medulla-jobs"
 version = "0.1.0"
 dependencies = [
  "hex",
  "medulla-core",
+ "medulla-graph-core",
  "medulla-jobs",
+ "medulla-mutation-types",
+ "medulla-protocol-types",
+ "medulla-result-types",
  "medulla-storage",
  "medulla-transaction",
  "medulla-types",
@@ -4647,10 +5470,21 @@ dependencies = [
  "hex",
  "lazy_static",
  "medulla-capabilities",
+ "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
+ "medulla-cypher",
  "medulla-epistemic",
+ "medulla-graph-algos",
+ "medulla-graph-core",
+ "medulla-mutation-types",
+ "medulla-protocol-types",
  "medulla-resource",
+ "medulla-semantic-index",
+ "medulla-sql",
+ "medulla-storage",
+ "medulla-table-store",
+ "medulla-tables",
  "medulla-types",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -4666,6 +5500,7 @@ dependencies = [
  "tracing",
  "tracing-opentelemetry",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
@@ -4674,7 +5509,10 @@ version = "0.1.0"
 dependencies = [
  "lz4_flex 0.14.0",
  "medulla-compute",
+ "medulla-graph-algos",
  "medulla-modality",
+ "medulla-mutation-types",
+ "medulla-protocol-types",
  "medulla-storage",
  "medulla-transaction",
  "medulla-types",
@@ -4691,6 +5529,7 @@ dependencies = [
  "apache-avro 0.22.0",
  "iceberg",
  "iceberg-storage-opendal",
+ "medulla-catalog-types",
  "medulla-modality",
  "medulla-types",
  "polars-core",
@@ -4702,11 +5541,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "medulla-lane-store"
+version = "0.1.0"
+
+[[package]]
 name = "medulla-method-codec"
 version = "0.1.0"
 dependencies = [
+ "medulla-protocol-types",
  "medulla-types",
  "rmp-serde",
+ "serde_json",
+]
+
+[[package]]
+name = "medulla-mining"
+version = "0.1.0"
+dependencies = [
+ "medulla-compute",
+ "medulla-geo",
+ "medulla-numeric",
+ "medulla-types",
  "serde_json",
 ]
 
@@ -4727,13 +5582,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "medulla-mutation-types"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "medulla-identity-types",
+ "medulla-types",
+ "rmp-serde",
+ "schemars 1.2.3",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "sha2 0.10.9",
+]
+
+[[package]]
+name = "medulla-nlq"
+version = "0.1.0"
+
+[[package]]
 name = "medulla-numeric"
 version = "0.1.0"
 dependencies = [
  "libc",
  "libm",
+ "medulla-agent-types",
+ "medulla-decision-outcome-types",
+ "medulla-decision-stats",
+ "medulla-decision-types",
  "medulla-modality",
+ "medulla-protocol-types",
  "medulla-types",
+ "medulla-work-types",
  "nalgebra",
  "ndarray 0.17.2",
  "num-complex",
@@ -4749,6 +5629,72 @@ dependencies = [
 ]
 
 [[package]]
+name = "medulla-packs"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-parity"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-persistence"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "hex",
+ "medulla-agent-types",
+ "medulla-capabilities",
+ "medulla-catalog-types",
+ "medulla-compute",
+ "medulla-core",
+ "medulla-decision-outcome-types",
+ "medulla-decision-types",
+ "medulla-direct-state",
+ "medulla-graph-core",
+ "medulla-identity-types",
+ "medulla-isolation",
+ "medulla-kernel",
+ "medulla-mutation-types",
+ "medulla-protocol-types",
+ "medulla-rdf",
+ "medulla-result-types",
+ "medulla-semantic-index",
+ "medulla-server-api",
+ "medulla-server-auth",
+ "medulla-server-blob",
+ "medulla-server-ops",
+ "medulla-storage",
+ "medulla-store",
+ "medulla-table-store",
+ "medulla-transaction",
+ "medulla-tsdb",
+ "medulla-types",
+ "medulla-work-types",
+ "parking_lot",
+ "redb",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "medulla-persistence-ops"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-persistence-records"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-placement"
+version = "0.1.0"
+
+[[package]]
 name = "medulla-plan"
 version = "0.33.0"
 dependencies = [
@@ -4759,15 +5705,25 @@ dependencies = [
  "hex",
  "hmac 0.12.1",
  "insta",
+ "medulla-agent-types",
+ "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
+ "medulla-decision-types",
  "medulla-epistemic",
+ "medulla-finance",
  "medulla-geo",
+ "medulla-graph-algos",
+ "medulla-graph-core",
  "medulla-modality",
  "medulla-numeric",
- "medulla-query",
+ "medulla-protocol-types",
  "medulla-rdf",
+ "medulla-reasoner",
+ "medulla-result-types",
+ "medulla-semantic-index",
  "medulla-shacl",
+ "medulla-sql",
  "medulla-stream",
  "medulla-tensor",
  "medulla-text",
@@ -4799,6 +5755,7 @@ version = "0.1.0"
 dependencies = [
  "hex",
  "medulla-modality",
+ "medulla-protocol-types",
  "medulla-types",
  "rmp-serde",
  "serde",
@@ -4807,17 +5764,46 @@ dependencies = [
 ]
 
 [[package]]
+name = "medulla-protocol-types"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "medulla-agent-types",
+ "medulla-catalog-types",
+ "medulla-decision-outcome-types",
+ "medulla-decision-types",
+ "medulla-identity-types",
+ "medulla-index-types",
+ "medulla-mutation-types",
+ "medulla-result-types",
+ "medulla-source-types",
+ "medulla-types",
+ "medulla-work-types",
+ "rmp-serde",
+ "schemars 1.2.3",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "sha2 0.10.9",
+ "strum 0.28.0",
+ "tracing",
+]
+
+[[package]]
 name = "medulla-pyengine"
 version = "2.27.10"
 dependencies = [
  "medulla-compute",
  "medulla-core",
+ "medulla-graph-core",
+ "medulla-isolation",
  "medulla-jobs",
  "medulla-plan",
- "medulla-query",
+ "medulla-protocol-types",
  "medulla-rdf",
  "medulla-statechart",
  "medulla-tsdb",
+ "medulla-types",
  "medulla-wasm",
  "parking_lot",
  "pyo3",
@@ -4891,11 +5877,15 @@ version = "0.1.0"
 dependencies = [
  "medulla-core",
  "medulla-epistemic",
+ "medulla-graph-core",
  "medulla-numeric",
  "medulla-plan",
+ "medulla-protocol-types",
  "medulla-quantum-core",
  "medulla-quantum-gates",
  "medulla-quantum-sim",
+ "medulla-result-types",
+ "medulla-semantic-index",
  "medulla-types",
  "rmp-serde",
  "serde",
@@ -4904,52 +5894,88 @@ dependencies = [
 ]
 
 [[package]]
-name = "medulla-query"
-version = "0.31.0"
+name = "medulla-query-cache"
+version = "0.1.0"
 dependencies = [
- "arrow",
- "arrow-schema",
- "async-trait",
- "base64 0.23.1",
- "datafusion",
- "futures-util",
- "hex",
- "iceberg",
- "iceberg-catalog-rest",
- "iceberg-storage-opendal",
- "ipnet",
- "md-5 0.10.6",
- "medulla-ann",
- "medulla-compute",
- "medulla-core",
- "medulla-numeric",
- "medulla-storage",
- "medulla-text",
- "medulla-transaction",
- "medulla-tsdb",
- "medulla-types",
- "ndarray 0.17.2",
- "petgraph",
- "redb",
- "rmp-serde",
- "serde",
- "serde_json",
- "sha1 0.10.7",
- "sha2 0.10.9",
- "tokio",
+ "medulla-protocol-types",
+ "parking_lot",
  "tracing",
 ]
+
+[[package]]
+name = "medulla-raft"
+version = "0.1.0"
+dependencies = [
+ "chacha20poly1305",
+ "dashmap",
+ "futures",
+ "hex",
+ "hmac 0.12.1",
+ "medulla-agent-types",
+ "medulla-capabilities",
+ "medulla-catalog-types",
+ "medulla-compute",
+ "medulla-core",
+ "medulla-direct-state",
+ "medulla-graph-core",
+ "medulla-identity-types",
+ "medulla-isolation",
+ "medulla-kernel",
+ "medulla-modality",
+ "medulla-mutation-types",
+ "medulla-persistence",
+ "medulla-plan",
+ "medulla-protocol-types",
+ "medulla-result-types",
+ "medulla-semantic-index",
+ "medulla-server-api",
+ "medulla-server-auth",
+ "medulla-server-cdc",
+ "medulla-server-mutation",
+ "medulla-server-ops",
+ "medulla-storage",
+ "medulla-store",
+ "medulla-transaction",
+ "medulla-types",
+ "medulla-work-types",
+ "openraft",
+ "parking_lot",
+ "petgraph",
+ "rand 0.8.8",
+ "rmp-serde",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "sha2 0.10.9",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
+name = "medulla-raft-xshard"
+version = "0.1.0"
 
 [[package]]
 name = "medulla-rdf"
 version = "0.1.0"
 dependencies = [
  "md-5 0.10.6",
+ "medulla-agent-types",
+ "medulla-catalog-types",
  "medulla-core",
  "medulla-geo",
+ "medulla-graph-core",
+ "medulla-identity-types",
  "medulla-modality",
+ "medulla-reasoner",
+ "medulla-semantic-index",
  "medulla-shacl",
+ "medulla-source-types",
  "medulla-types",
+ "medulla-virtual-graph",
  "oxjsonld",
  "oxrdf",
  "oxttl",
@@ -4964,7 +5990,476 @@ dependencies = [
 ]
 
 [[package]]
+name = "medulla-reasoner"
+version = "0.1.0"
+dependencies = [
+ "cudarc",
+ "medulla-agent-types",
+ "medulla-core",
+ "medulla-graph-core",
+ "medulla-modality",
+ "medulla-rdf",
+ "medulla-semantic-index",
+ "medulla-types",
+ "oxrdf",
+ "rand 0.8.8",
+ "rand_chacha 0.3.1",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
+name = "medulla-repo-index"
+version = "0.1.0"
+
+[[package]]
 name = "medulla-resource"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-resource-store"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-result-types"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "medulla-mutation-types",
+ "medulla-types",
+ "rmp-serde",
+ "schemars 1.2.3",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "sha2 0.10.9",
+ "strum 0.28.0",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "medulla-retrieval"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-sdlc"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-semantic-index"
+version = "0.1.0"
+dependencies = [
+ "medulla-ann",
+ "medulla-index-types",
+ "medulla-types",
+ "parking_lot",
+ "rayon",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
+name = "medulla-server"
+version = "0.1.0"
+dependencies = [
+ "argon2",
+ "arrow",
+ "async-trait",
+ "clap",
+ "dashmap",
+ "hex",
+ "hmac 0.12.1",
+ "jsonwebtoken",
+ "medulla-agent-types",
+ "medulla-ann-codes",
+ "medulla-capabilities",
+ "medulla-catalog-types",
+ "medulla-compute",
+ "medulla-core",
+ "medulla-cypher",
+ "medulla-decision-outcome-types",
+ "medulla-decision-stats",
+ "medulla-decision-types",
+ "medulla-direct-state",
+ "medulla-document",
+ "medulla-graph-algos",
+ "medulla-graph-core",
+ "medulla-graphql",
+ "medulla-h-admin",
+ "medulla-h-compute",
+ "medulla-h-decide",
+ "medulla-h-graph",
+ "medulla-h-ingest",
+ "medulla-h-jobs",
+ "medulla-h-query",
+ "medulla-h-txn",
+ "medulla-identity-types",
+ "medulla-index-types",
+ "medulla-isolation",
+ "medulla-kernel",
+ "medulla-lake",
+ "medulla-modality",
+ "medulla-mutation-types",
+ "medulla-numeric",
+ "medulla-persistence",
+ "medulla-plan",
+ "medulla-protocol-types",
+ "medulla-raft",
+ "medulla-rdf",
+ "medulla-reasoner",
+ "medulla-result-types",
+ "medulla-semantic-index",
+ "medulla-server-api",
+ "medulla-server-auth",
+ "medulla-server-blob",
+ "medulla-server-cdc",
+ "medulla-server-mutation",
+ "medulla-server-ops",
+ "medulla-source-types",
+ "medulla-sql",
+ "medulla-sql-udfs",
+ "medulla-storage",
+ "medulla-store",
+ "medulla-stream",
+ "medulla-table-store",
+ "medulla-tables",
+ "medulla-text",
+ "medulla-transaction",
+ "medulla-tsdb",
+ "medulla-types",
+ "medulla-wire",
+ "medulla-work-types",
+ "openraft",
+ "parking_lot",
+ "polars-core",
+ "polars-io",
+ "prost",
+ "rand 0.8.8",
+ "redb",
+ "rmp-serde",
+ "rustls",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "sha1 0.10.7",
+ "sha2 0.10.9",
+ "snap",
+ "tempfile",
+ "tokio",
+ "tokio-rustls",
+ "tracing",
+ "uuid",
+ "wat",
+]
+
+[[package]]
+name = "medulla-server-api"
+version = "0.1.0"
+dependencies = [
+ "ahash",
+ "async-trait",
+ "dashmap",
+ "hex",
+ "hmac 0.12.1",
+ "jsonwebtoken",
+ "medulla-agent-types",
+ "medulla-alignment",
+ "medulla-ann-codes",
+ "medulla-capabilities",
+ "medulla-catalog-types",
+ "medulla-compute",
+ "medulla-core",
+ "medulla-cypher",
+ "medulla-decision-outcome-types",
+ "medulla-decision-stats",
+ "medulla-decision-types",
+ "medulla-direct-state",
+ "medulla-epistemic",
+ "medulla-graph-algos",
+ "medulla-graph-core",
+ "medulla-graphql",
+ "medulla-identity-types",
+ "medulla-index-types",
+ "medulla-isolation",
+ "medulla-jobs",
+ "medulla-kernel",
+ "medulla-modality",
+ "medulla-mutation-types",
+ "medulla-numeric",
+ "medulla-plan",
+ "medulla-program",
+ "medulla-protocol-types",
+ "medulla-query-cache",
+ "medulla-rdf",
+ "medulla-reasoner",
+ "medulla-result-types",
+ "medulla-semantic-index",
+ "medulla-shacl",
+ "medulla-sql",
+ "medulla-storage",
+ "medulla-store",
+ "medulla-stream",
+ "medulla-table-store",
+ "medulla-tables",
+ "medulla-transaction",
+ "medulla-tsdb",
+ "medulla-types",
+ "medulla-viz-columnstore",
+ "medulla-viz-core",
+ "medulla-wasm",
+ "medulla-work-types",
+ "parking_lot",
+ "rand 0.8.8",
+ "redb",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "ureq",
+ "uuid",
+ "wat",
+]
+
+[[package]]
+name = "medulla-server-auth"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "hmac 0.12.1",
+ "jsonwebtoken",
+ "medulla-agent-types",
+ "medulla-capabilities",
+ "medulla-catalog-types",
+ "medulla-cypher",
+ "medulla-epistemic",
+ "medulla-graph-algos",
+ "medulla-graph-core",
+ "medulla-graphql",
+ "medulla-identity-types",
+ "medulla-index-types",
+ "medulla-isolation",
+ "medulla-kernel",
+ "medulla-modality",
+ "medulla-mutation-types",
+ "medulla-plan",
+ "medulla-protocol-types",
+ "medulla-result-types",
+ "medulla-server-api",
+ "medulla-sql",
+ "medulla-table-store",
+ "medulla-tables",
+ "medulla-tsdb",
+ "medulla-types",
+ "medulla-wasm",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tokio",
+ "tracing",
+ "ureq",
+ "uuid",
+]
+
+[[package]]
+name = "medulla-server-blob"
+version = "0.1.0"
+dependencies = [
+ "dashmap",
+ "hex",
+ "medulla-agent-types",
+ "medulla-alignment",
+ "medulla-capabilities",
+ "medulla-catalog-types",
+ "medulla-graph-core",
+ "medulla-isolation",
+ "medulla-kernel",
+ "medulla-modality",
+ "medulla-mutation-types",
+ "medulla-plan",
+ "medulla-protocol-types",
+ "medulla-rdf",
+ "medulla-server-api",
+ "medulla-server-auth",
+ "medulla-shacl",
+ "medulla-storage",
+ "medulla-store",
+ "medulla-transaction",
+ "medulla-types",
+ "parking_lot",
+ "redb",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "ureq",
+]
+
+[[package]]
+name = "medulla-server-cdc"
+version = "0.1.0"
+dependencies = [
+ "dashmap",
+ "medulla-capabilities",
+ "medulla-catalog-types",
+ "medulla-core",
+ "medulla-epistemic",
+ "medulla-graph-core",
+ "medulla-isolation",
+ "medulla-kernel",
+ "medulla-modality",
+ "medulla-plan",
+ "medulla-protocol-types",
+ "medulla-query-cache",
+ "medulla-rdf",
+ "medulla-reasoner",
+ "medulla-result-types",
+ "medulla-semantic-index",
+ "medulla-server-api",
+ "medulla-shacl",
+ "medulla-stream",
+ "medulla-tsdb",
+ "medulla-types",
+ "parking_lot",
+ "rand 0.8.8",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "medulla-server-consensus"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-server-graph"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-server-identity"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-server-lake"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-server-mutation"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "dashmap",
+ "hex",
+ "medulla-agent-types",
+ "medulla-capabilities",
+ "medulla-catalog-types",
+ "medulla-core",
+ "medulla-epistemic",
+ "medulla-graph-algos",
+ "medulla-graph-core",
+ "medulla-graphql",
+ "medulla-index-types",
+ "medulla-isolation",
+ "medulla-jobs",
+ "medulla-kernel",
+ "medulla-modality",
+ "medulla-mutation-types",
+ "medulla-plan",
+ "medulla-program",
+ "medulla-protocol-types",
+ "medulla-rdf",
+ "medulla-result-types",
+ "medulla-server-api",
+ "medulla-server-auth",
+ "medulla-server-cdc",
+ "medulla-shacl",
+ "medulla-sql",
+ "medulla-storage",
+ "medulla-table-store",
+ "medulla-tables",
+ "medulla-transaction",
+ "medulla-tsdb",
+ "medulla-types",
+ "medulla-work-types",
+ "redb",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "medulla-server-obs"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-server-ops"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "dashmap",
+ "hex",
+ "medulla-agent-types",
+ "medulla-ann-codes",
+ "medulla-capabilities",
+ "medulla-catalog-types",
+ "medulla-core",
+ "medulla-cypher",
+ "medulla-decision-stats",
+ "medulla-decision-types",
+ "medulla-epistemic",
+ "medulla-graph-core",
+ "medulla-graphql",
+ "medulla-isolation",
+ "medulla-jobs",
+ "medulla-kernel",
+ "medulla-modality",
+ "medulla-mutation-types",
+ "medulla-numeric",
+ "medulla-plan",
+ "medulla-protocol-types",
+ "medulla-rdf",
+ "medulla-server-api",
+ "medulla-server-auth",
+ "medulla-server-blob",
+ "medulla-server-mutation",
+ "medulla-shacl",
+ "medulla-sql",
+ "medulla-storage",
+ "medulla-stream",
+ "medulla-table-store",
+ "medulla-tables",
+ "medulla-transaction",
+ "medulla-tsdb",
+ "medulla-types",
+ "medulla-wasm",
+ "redb",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "tokio",
+ "ureq",
+ "uuid",
+]
+
+[[package]]
+name = "medulla-server-router"
 version = "0.1.0"
 
 [[package]]
@@ -4991,6 +6486,103 @@ dependencies = [
 ]
 
 [[package]]
+name = "medulla-source-types"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "medulla-catalog-types",
+ "medulla-types",
+ "rmp-serde",
+ "schemars 1.2.3",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "medulla-sql"
+version = "0.1.0"
+dependencies = [
+ "arrow",
+ "arrow-schema",
+ "async-trait",
+ "base64 0.23.1",
+ "datafusion",
+ "futures-util",
+ "hex",
+ "iceberg",
+ "iceberg-catalog-rest",
+ "iceberg-storage-opendal",
+ "ipnet",
+ "md-5 0.10.6",
+ "medulla-ann",
+ "medulla-compute",
+ "medulla-core",
+ "medulla-cypher",
+ "medulla-finance-market",
+ "medulla-graph-core",
+ "medulla-mutation-types",
+ "medulla-numeric",
+ "medulla-protocol-types",
+ "medulla-result-types",
+ "medulla-sql-udfs",
+ "medulla-storage",
+ "medulla-table-store",
+ "medulla-tables",
+ "medulla-text",
+ "medulla-transaction",
+ "medulla-tsdb",
+ "medulla-types",
+ "ndarray 0.17.2",
+ "petgraph",
+ "redb",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "sha1 0.10.7",
+ "sha2 0.10.9",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "medulla-sql-udfs"
+version = "0.1.0"
+dependencies = [
+ "arrow",
+ "arrow-schema",
+ "async-trait",
+ "base64 0.23.1",
+ "datafusion",
+ "futures-util",
+ "hex",
+ "ipnet",
+ "md-5 0.10.6",
+ "medulla-ann",
+ "medulla-compute",
+ "medulla-core",
+ "medulla-finance-quant",
+ "medulla-graph-algos",
+ "medulla-graph-core",
+ "medulla-numeric",
+ "medulla-storage",
+ "medulla-tables",
+ "medulla-text",
+ "medulla-transaction",
+ "medulla-tsdb",
+ "medulla-types",
+ "ndarray 0.17.2",
+ "petgraph",
+ "redb",
+ "serde_json",
+ "sha1 0.10.7",
+ "sha2 0.10.9",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "medulla-sqlite-format"
 version = "0.1.0"
 dependencies = [
@@ -5002,6 +6594,8 @@ dependencies = [
 name = "medulla-statechart"
 version = "0.1.0"
 dependencies = [
+ "medulla-mutation-types",
+ "medulla-protocol-types",
  "medulla-storage",
  "medulla-transaction",
  "medulla-types",
@@ -5017,6 +6611,10 @@ dependencies = [
 name = "medulla-storage"
 version = "0.1.0"
 dependencies = [
+ "medulla-direct-state",
+ "medulla-identity-types",
+ "medulla-mutation-types",
+ "medulla-protocol-types",
  "medulla-types",
  "redb",
  "rmp-serde",
@@ -5031,6 +6629,44 @@ dependencies = [
 ]
 
 [[package]]
+name = "medulla-storage-owner"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-store"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "medulla-agent-types",
+ "medulla-compute",
+ "medulla-core",
+ "medulla-decision-outcome-types",
+ "medulla-decision-types",
+ "medulla-graph-algos",
+ "medulla-graph-core",
+ "medulla-kernel",
+ "medulla-mutation-types",
+ "medulla-protocol-types",
+ "medulla-result-types",
+ "medulla-semantic-index",
+ "medulla-statechart",
+ "medulla-storage",
+ "medulla-transaction",
+ "medulla-tsdb",
+ "medulla-types",
+ "medulla-work-types",
+ "rand 0.8.8",
+ "redb",
+ "rmp-serde",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "sha2 0.10.9",
+ "tempfile",
+ "tracing",
+]
+
+[[package]]
 name = "medulla-stream"
 version = "0.1.0"
 dependencies = [
@@ -5039,6 +6675,69 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+]
+
+[[package]]
+name = "medulla-table-store"
+version = "0.1.0"
+dependencies = [
+ "arrow",
+ "arrow-schema",
+ "async-trait",
+ "base64 0.23.1",
+ "datafusion",
+ "futures-util",
+ "hex",
+ "ipnet",
+ "md-5 0.10.6",
+ "medulla-ann",
+ "medulla-core",
+ "medulla-graph-core",
+ "medulla-mutation-types",
+ "medulla-protocol-types",
+ "medulla-result-types",
+ "medulla-storage",
+ "medulla-tables",
+ "medulla-text",
+ "medulla-transaction",
+ "medulla-types",
+ "petgraph",
+ "redb",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "sha1 0.10.7",
+ "sha2 0.10.9",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "medulla-tables"
+version = "0.1.0"
+dependencies = [
+ "arrow",
+ "arrow-schema",
+ "async-trait",
+ "base64 0.23.1",
+ "datafusion",
+ "futures-util",
+ "hex",
+ "ipnet",
+ "md-5 0.10.6",
+ "medulla-ann",
+ "medulla-storage",
+ "medulla-text",
+ "medulla-transaction",
+ "petgraph",
+ "redb",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "sha1 0.10.7",
+ "sha2 0.10.9",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -5067,8 +6766,14 @@ name = "medulla-transaction"
 version = "0.1.0"
 dependencies = [
  "hex",
+ "medulla-agent-types",
+ "medulla-identity-types",
+ "medulla-mutation-types",
+ "medulla-protocol-types",
+ "medulla-result-types",
  "medulla-storage",
  "medulla-types",
+ "medulla-work-types",
  "redb",
  "rmp-serde",
  "serde",
@@ -5087,8 +6792,11 @@ dependencies = [
  "datafusion",
  "medulla-compute",
  "medulla-core",
+ "medulla-finance-market",
  "medulla-modality",
+ "medulla-mutation-types",
  "medulla-numeric",
+ "medulla-protocol-types",
  "medulla-storage",
  "medulla-transaction",
  "medulla-types",
@@ -5118,6 +6826,14 @@ name = "medulla-types"
 version = "0.27.0"
 dependencies = [
  "hex",
+ "medulla-agent-types",
+ "medulla-catalog-types",
+ "medulla-decision-types",
+ "medulla-identity-types",
+ "medulla-protocol-types",
+ "medulla-result-types",
+ "medulla-source-types",
+ "medulla-work-types",
  "oxiri",
  "rmp-serde",
  "schemars 1.2.3",
@@ -5131,6 +6847,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "medulla-uql"
+version = "0.1.0"
+
+[[package]]
 name = "medulla-video"
 version = "0.1.0"
 dependencies = [
@@ -5138,6 +6858,23 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.9",
+]
+
+[[package]]
+name = "medulla-virtual-graph"
+version = "0.1.0"
+dependencies = [
+ "medulla-catalog-types",
+ "medulla-core",
+ "medulla-graph-core",
+ "medulla-identity-types",
+ "medulla-rdf",
+ "medulla-source-types",
+ "medulla-types",
+ "oxrdf",
+ "serde",
+ "serde_json",
+ "spargebra",
 ]
 
 [[package]]
@@ -5194,12 +6931,93 @@ dependencies = [
 ]
 
 [[package]]
+name = "medulla-vocab"
+version = "0.1.0"
+
+[[package]]
 name = "medulla-wasm"
 version = "0.1.0"
 dependencies = [
  "serde",
  "wasmtime",
  "wat",
+]
+
+[[package]]
+name = "medulla-wire"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "futures",
+ "hex",
+ "hmac 0.12.1",
+ "medulla-capabilities",
+ "medulla-compute",
+ "medulla-core",
+ "medulla-cypher",
+ "medulla-graph-algos",
+ "medulla-graph-core",
+ "medulla-isolation",
+ "medulla-kernel",
+ "medulla-kvcache",
+ "medulla-mutation-types",
+ "medulla-persistence",
+ "medulla-plan",
+ "medulla-protocol-types",
+ "medulla-result-types",
+ "medulla-server-api",
+ "medulla-server-auth",
+ "medulla-server-blob",
+ "medulla-server-cdc",
+ "medulla-server-mutation",
+ "medulla-server-ops",
+ "medulla-sql",
+ "medulla-sql-udfs",
+ "medulla-table-store",
+ "medulla-tables",
+ "medulla-tsdb",
+ "medulla-types",
+ "parking_lot",
+ "pgwire",
+ "rand 0.8.8",
+ "rmp-serde",
+ "rustix 1.1.5",
+ "serde",
+ "serde_json",
+ "sha1 0.10.7",
+ "sha2 0.10.9",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "medulla-wire-core"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-wire-msg"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-work-store"
+version = "0.1.0"
+
+[[package]]
+name = "medulla-work-types"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "medulla-mutation-types",
+ "medulla-result-types",
+ "medulla-types",
+ "schemars 1.2.3",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "sha2 0.10.9",
+ "thiserror 2.0.21",
 ]
 
 [[package]]

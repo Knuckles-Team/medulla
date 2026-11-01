@@ -286,7 +286,7 @@ pub(super) async fn dispatch_change_envelope_methods_arm_0(
                         || medulla_protocol_types::mutation_batch::batch_request_number(
                             &envelope.mutation,
                         ) != Some(req_id)
-                        || medulla_server_api::mutation_batch::batch_actor(&envelope.mutation)
+                        || medulla_server_api::batch_compile::batch_actor(&envelope.mutation)
                             != Some(verified_context.principal_persistence_id().as_str())
                     // The idempotency key cross-check is GONE: the batch's key
                     // now lives inside the envelope's authority, which the

@@ -25,7 +25,7 @@ use medulla_server_api::state::ServerState;
 fn bind_status_context(
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     context: medulla_agent_types::agent_library::AgentLibraryMutationContext,
     purpose_id: &str,
 ) -> Result<medulla_agent_types::agent_library::AgentLibraryMutationContext, Response> {
@@ -36,7 +36,7 @@ fn bind_status_context(
 #[cfg(feature = "redb")]
 pub fn bind_agent_library_draft(
     draft: medulla_agent_types::agent_library::AgentLibraryEntryDraft,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     _action_context: &medulla_agent_types::agent_library::AgentLibraryMutationContext,
 ) -> Result<medulla_agent_types::agent_library::AgentLibraryEntryDraft, String> {
     if draft.tenant_id != verified.tenant() {
@@ -68,7 +68,7 @@ async fn ensure_agent_library(
 #[cfg(feature = "redb")]
 fn validate_component_op(
     op: &medulla_agent_types::agent_component::AgentComponentOp,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
 ) -> Result<(), String> {
     op.validate()?;
     if op.tenant_id() != verified.tenant() {
@@ -82,7 +82,7 @@ fn validate_component_op(
 #[cfg(feature = "redb")]
 fn validate_template_op(
     op: &medulla_agent_types::agent_template::AgentTemplateOp,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
 ) -> Result<(), String> {
     op.validate()?;
     if op.tenant_id() != verified.tenant() {
@@ -106,7 +106,7 @@ fn validate_template_op(
 pub async fn handle_agent_component(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     op: medulla_agent_types::agent_component::AgentComponentOp,
 ) -> Response {
     use medulla_agent_types::agent_component::AgentComponentOp;
@@ -146,7 +146,7 @@ pub async fn handle_agent_component(
 fn component_publish(
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     mut request: Box<medulla_agent_types::agent_component::AgentComponentPublishRequest>,
 ) -> Response {
     let context = match bind_agent_library_context(
@@ -180,7 +180,7 @@ fn component_publish(
 fn component_retire(
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     mut request: medulla_agent_types::agent_component::AgentComponentRetireRequest,
 ) -> Response {
     let context = match bind_agent_library_context(
@@ -275,7 +275,7 @@ fn component_status_purpose(
 fn component_status(
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     mut request: medulla_agent_types::agent_component::AgentComponentStatusRequest,
 ) -> Response {
     let purpose = component_status_purpose(request.kind);
@@ -323,7 +323,7 @@ fn component_search(
 pub async fn handle_agent_template(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     op: medulla_agent_types::agent_template::AgentTemplateOp,
 ) -> Response {
     use medulla_agent_types::agent_template::AgentTemplateOp;
@@ -355,7 +355,7 @@ pub async fn handle_agent_template(
 fn template_publish(
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     mut request: Box<medulla_agent_types::agent_template::AgentTemplatePublishRequest>,
 ) -> Response {
     let context = match bind_agent_library_context(
@@ -394,7 +394,7 @@ fn template_publish(
 fn template_retire(
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     mut request: medulla_agent_types::agent_template::AgentTemplateRetireRequest,
 ) -> Response {
     let context = match bind_agent_library_context(
@@ -460,7 +460,7 @@ fn template_history(
 fn template_status(
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     mut request: medulla_agent_types::agent_template::AgentTemplateStatusRequest,
 ) -> Response {
     let purpose = match request.kind {
@@ -511,7 +511,7 @@ fn template_instantiate(
 pub async fn handle_agent_graph(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     op: medulla_agent_types::agent_graph::AgentGraphOp,
 ) -> Response {
     use medulla_agent_types::agent_graph::AgentGraphOp;
@@ -542,7 +542,7 @@ pub async fn handle_agent_graph(
 fn graph_publish(
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     mut request: Box<medulla_agent_types::agent_graph::AgentGraphPublishRequest>,
 ) -> Response {
     let context = match bind_agent_library_context(
@@ -564,7 +564,7 @@ fn graph_publish(
     request.graph.purpose_id = context.purpose_id.clone();
     request.graph.policy_digest = context.policy_digest.clone();
     request.context = context;
-    if let Some(refusal) = medulla_server_api::api::admin::topology_shape::refusal(&request.graph) {
+    if let Some(refusal) = medulla_server_ops::api::admin::topology_shape::refusal(&request.graph) {
         return Response::err(req_id, refusal);
     }
     match store.publish_graph(*request) {
@@ -582,7 +582,7 @@ fn graph_publish(
 fn graph_retire(
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     mut request: medulla_agent_types::agent_graph::AgentGraphRetireRequest,
 ) -> Response {
     let context = match bind_agent_library_context(
@@ -612,7 +612,7 @@ fn graph_retire(
 fn graph_current(
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     tenant_id: String,
     graph_id: String,
 ) -> Response {
@@ -637,7 +637,7 @@ fn graph_current(
 fn graph_history(
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     tenant_id: String,
     graph_id: String,
 ) -> Response {
@@ -662,7 +662,7 @@ fn graph_history(
 fn graph_status(
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     mut request: medulla_agent_types::agent_graph::AgentGraphStatusRequest,
 ) -> Response {
     let purpose = match request.kind {
@@ -687,7 +687,7 @@ fn graph_status(
 pub async fn handle_agent_library(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     op: medulla_agent_types::agent_library::AgentLibraryOp,
 ) -> Response {
     let store = match ensure_agent_library(state, req_id).await {
@@ -719,7 +719,7 @@ pub async fn handle_agent_library(
 fn library_publish(
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     mut request: Box<medulla_agent_types::agent_library::AgentLibraryPublishRequest>,
 ) -> Response {
     let context = match bind_agent_library_context(
@@ -753,7 +753,7 @@ fn library_publish(
 fn library_retire(
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     mut request: medulla_agent_types::agent_library::AgentLibraryRetireRequest,
 ) -> Response {
     let context = match bind_agent_library_context(
@@ -783,7 +783,7 @@ fn library_retire(
 fn library_current(
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     tenant_id: String,
     agent_id: String,
 ) -> Response {
@@ -808,7 +808,7 @@ fn library_current(
 fn library_history(
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     tenant_id: String,
     agent_id: String,
 ) -> Response {
@@ -833,7 +833,7 @@ fn library_history(
 fn library_status(
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     req_id: u64,
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     mut request: medulla_agent_types::agent_library::AgentLibraryStatusRequest,
 ) -> Response {
     let kind = request.kind;

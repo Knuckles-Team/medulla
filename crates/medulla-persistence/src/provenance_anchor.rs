@@ -106,7 +106,7 @@ pub async fn sweep(state: &Arc<RwLock<ServerState>>) -> u64 {
         // Serialize the maintenance commit and its serving-version publication
         // with ordinary graph writes. The captured entry may have been retired
         // while this sweep waited for the lane.
-        let _mutation_guard = medulla_server_api::mutation_batch::lock_graph(&name).await;
+        let _mutation_guard = medulla_server_api::routed_write_coalescer::lock_graph(&name).await;
         if !state
             .read()
             .await
@@ -121,7 +121,7 @@ pub async fn sweep(state: &Arc<RwLock<ServerState>>) -> u64 {
             continue;
         }
         let fname = medulla_kernel::persist::sanitize(&name);
-        if let Err(error) = medulla_server_api::mutation_batch::authoritative_graph_version(
+        if let Err(error) = medulla_server_api::batch_compile::authoritative_graph_version(
             &persistence,
             &fname,
             &core,

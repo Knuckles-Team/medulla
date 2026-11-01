@@ -1044,7 +1044,7 @@ impl RaftMutationContext {
         created_at_ms: u64,
     ) -> Self {
         Self {
-            batch_id: crate::mutation_batch::opaque_coordinator_key(
+            batch_id: crate::batch_compile::opaque_coordinator_key(
                 namespace,
                 graph,
                 coordinator_id,
@@ -1061,7 +1061,7 @@ impl RaftMutationContext {
     }
 
     pub fn internal_tenant_scope() -> String {
-        crate::mutation_batch::opaque_coordinator_key(
+        crate::batch_compile::opaque_coordinator_key(
             "raft-internal-tenant",
             "control-plane",
             "authority",
@@ -1069,7 +1069,7 @@ impl RaftMutationContext {
     }
 
     pub fn internal_principal_fingerprint() -> String {
-        crate::mutation_batch::opaque_coordinator_key(
+        crate::batch_compile::opaque_coordinator_key(
             "principal:sha256",
             "medulla-raft-control-plane",
             "authority",

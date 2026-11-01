@@ -13,9 +13,9 @@ use medulla_types::contract::Digest256;
 use sha2::{Digest, Sha256};
 
 use medulla_persistence_records::agent_library::AgentLibraryStore;
-use medulla_server_api::auth::VerifiedRequestContext;
-use medulla_server_api::blob::engine_bodies::EngineBody;
-use medulla_server_api::blob::BlobCursors;
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_blob::blob::engine_bodies::EngineBody;
+use medulla_server_blob::blob::BlobCursors;
 use medulla_server_api::request_scope::interruptible;
 use medulla_server_api::request_scope::RequestCancel;
 
@@ -65,7 +65,7 @@ pub(super) async fn validate_and_commit(
 
 fn run_import(
     store: &AgentLibraryStore,
-    chunks: &dyn medulla_server_api::blob::ChunkStore,
+    chunks: &dyn medulla_server_blob::blob::ChunkStore,
     request: ConnectorPackImportRequest,
     archive: &[u8],
     cancel: &RequestCancel,

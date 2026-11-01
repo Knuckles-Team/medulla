@@ -202,7 +202,7 @@ fn malformed_operation_ids_fail_even_with_a_matching_tenant_hash() {
         "transaction-receipt:abcd",
         "transaction-receipt-tenant:",
     ] {
-        let binding = medulla_server_api::mutation_batch::opaque_coordinator_key(
+        let binding = medulla_server_api::batch_compile::opaque_coordinator_key(
             "transaction-receipt-scope",
             "tenant-a",
             malformed,
@@ -293,11 +293,11 @@ async fn store_committed_child(
     let child_id = consensus_participant_child_id(parent, id, &txn.graph);
     let core = Arc::new(medulla_graph_core::graph::GraphCore::new());
     let persistence: Arc<dyn PersistenceBackend> = backend.clone();
-    let result = medulla_server_api::mutation_batch::commit_internal_graph_methods_with_nonce(
-        medulla_server_api::mutation_batch::InternalGraphCommitRequest::new(
+    let result = medulla_server_mutation::mutation_batch::commit_internal_graph_methods_with_nonce(
+        medulla_server_mutation::mutation_batch::InternalGraphCommitRequest::new(
             Some(&persistence),
             &core,
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 3,
                 principal: Some(actor),
             },
@@ -311,11 +311,11 @@ async fn store_committed_child(
     .await
     .unwrap();
     assert_eq!(result.record.committing_tenant().unwrap(), txn.tenant_scope);
-    let foreign = medulla_server_api::mutation_batch::commit_internal_graph_methods_with_nonce(
-        medulla_server_api::mutation_batch::InternalGraphCommitRequest::new(
+    let foreign = medulla_server_mutation::mutation_batch::commit_internal_graph_methods_with_nonce(
+        medulla_server_mutation::mutation_batch::InternalGraphCommitRequest::new(
             Some(&persistence),
             &core,
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: 4,
                 principal: Some(actor),
             },
@@ -343,7 +343,7 @@ async fn store_committed_child(
     .is_err());
     foreign_authority = authority.clone();
     foreign_authority.principal_fingerprint =
-        medulla_server_api::mutation_batch::principal_fingerprint("foreign-principal").unwrap();
+        medulla_server_api::batch_compile::principal_fingerprint("foreign-principal").unwrap();
     assert!(validate_committed_participant_record(
         &result.record,
         &child_id,
@@ -453,7 +453,7 @@ async fn check_delegated_recovery(state: &Arc<RwLock<ServerState>>, backend: &Ar
         properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({"type":"Record"})).unwrap(),
     });
     let parent =
-        medulla_server_api::api::admin::saga::scope_admin_saga_authority(owner.clone(), async {
+        medulla_server_ops::api::admin::saga::scope_admin_saga_authority(owner.clone(), async {
             let (receipt, _) = begin_txn_receipt(
                 Some(backend.clone()),
                 10,
@@ -479,7 +479,7 @@ async fn check_delegated_recovery(state: &Arc<RwLock<ServerState>>, backend: &Ar
             parent
         })
         .await;
-    let child = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    let child = medulla_server_api::batch_compile::opaque_coordinator_key(
         "crossmodal",
         "delegated-graph",
         &parent,
@@ -492,9 +492,9 @@ async fn check_delegated_recovery(state: &Arc<RwLock<ServerState>>, backend: &Ar
     assert_eq!(record.committing_actor().unwrap(), owner.actor_scope());
     assert_ne!(
         record.committing_actor().unwrap(),
-        medulla_server_api::mutation_batch::principal_fingerprint("same-principal").unwrap()
+        medulla_server_api::batch_compile::principal_fingerprint("same-principal").unwrap()
     );
-    let denied = medulla_server_api::api::admin::saga::scope_admin_saga_authority(foreign, async {
+    let denied = medulla_server_ops::api::admin::saga::scope_admin_saga_authority(foreign, async {
         reconcile_committed_txn(
             state,
             12,
@@ -511,7 +511,7 @@ async fn check_delegated_recovery(state: &Arc<RwLock<ServerState>>, backend: &Ar
     assert!(denied.contains("principal"), "{denied}");
     let version = core.version();
     let replay =
-        medulla_server_api::api::admin::saga::scope_admin_saga_authority(owner.clone(), async {
+        medulla_server_ops::api::admin::saga::scope_admin_saga_authority(owner.clone(), async {
             reconcile_committed_txn(
                 state,
                 13,

@@ -4,6 +4,7 @@
 //! existing ChangeEnvelope commit authority owns the final IngestBatch step, so
 //! there is one graph mutation path and one cursor compare-and-swap authority.
 
+use medulla_server_blob::blob::BlobStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -21,8 +22,8 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 #[cfg(all(feature = "redb", feature = "blob"))]
-use medulla_server_api::access::CarrierAuthority;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::carrier::CarrierAuthority;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
 pub struct PrepareContext<'a> {
@@ -323,7 +324,7 @@ fn authorize_empty_reconciliation(
 #[cfg(all(feature = "redb", feature = "blob"))]
 struct IngestionResources {
     agent_library: Arc<medulla_persistence_records::agent_library::AgentLibraryStore>,
-    blob: Arc<medulla_server_api::blob::BlobCursors>,
+    blob: Arc<medulla_server_blob::blob::BlobCursors>,
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -375,8 +376,8 @@ async fn load_resources(ctx: &PrepareContext<'_>) -> Result<IngestionResources, 
             "SOURCE_INGESTION_UNAVAILABLE: Agent Library is not configured".to_string()
         })?,
         blob: state
-            .blob
-            .clone()
+            .blob_cursors()
+            .cloned()
             .ok_or_else(|| "SOURCE_INGESTION_UNAVAILABLE: raw CAS is not configured".to_string())?,
     })
 }
@@ -960,7 +961,7 @@ fn admit_records(
     ctx: &PrepareContext<'_>,
     batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     authority: &CarrierAuthority,
-    blob: &Arc<medulla_server_api::blob::BlobCursors>,
+    blob: &Arc<medulla_server_blob::blob::BlobCursors>,
     resolved: &ResolvedIngestionMappings,
     policy_subject: &str,
 ) -> Result<AdmittedRecords, String> {
@@ -1010,7 +1011,7 @@ struct RelationshipAdmissionContext<'a, 'ctx> {
     ctx: &'a PrepareContext<'ctx>,
     batch: &'a medulla_source_types::source_ingestion::SourceIngestionBatch,
     authority: &'a CarrierAuthority,
-    blob: &'a Arc<medulla_server_api::blob::BlobCursors>,
+    blob: &'a Arc<medulla_server_blob::blob::BlobCursors>,
     resolved: &'a ResolvedIngestionMappings,
     policy_subject: &'a str,
     persistence: &'a dyn medulla_server_api::api::persistence::PersistenceBackend,
@@ -1461,7 +1462,7 @@ fn admit_record(
     batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
     record: &medulla_source_types::source_ingestion::SourceRecord,
     authority: &CarrierAuthority,
-    blob: &Arc<medulla_server_api::blob::BlobCursors>,
+    blob: &Arc<medulla_server_blob::blob::BlobCursors>,
     resolved: &ResolvedIngestionMappings,
     policy_subject: &str,
 ) -> Result<AdmittedRecord, String> {
@@ -1526,21 +1527,21 @@ fn admit_record(
 fn admit_raw(
     ctx: &PrepareContext<'_>,
     authority: &CarrierAuthority,
-    blob: &Arc<medulla_server_api::blob::BlobCursors>,
+    blob: &Arc<medulla_server_blob::blob::BlobCursors>,
     raw: &[u8],
 ) -> Result<String, String> {
     let (raw_digest_hex, _was_new) = blob.store.put_chunk(raw)?;
     // Admission precedes mapping/graph commit by design. The owner-scoped
     // holder is set-like, so transport retries do not leak refcounts. The
     // holder change and its native receipt commit in one blob-owner WTX.
-    let holder = medulla_server_api::blob::store::HolderChange::owner_acquire(
+    let holder = medulla_server_blob::blob::store::HolderChange::owner_acquire(
         &raw_digest_hex,
         authority.owner_scope(),
     )?;
     let blob_method = Method::BlobRef {
         digest: raw_digest_hex.clone(),
     };
-    let (holder_batch, admitted_at_ms) = medulla_server_api::api::ingest::compile_blob_batch(
+    let (holder_batch, admitted_at_ms) = medulla_server_ops::api::ingest::compile_blob_batch(
         blob.store.as_ref(),
         ctx.request_id,
         authority,
@@ -1609,7 +1610,7 @@ fn compile_mutation(
     batch_id: &str,
     methods: Vec<Method>,
 ) -> Result<medulla_protocol_types::mutation_batch::MutationBatch, String> {
-    medulla_server_api::mutation_batch::GraphWriteScope {
+    medulla_server_api::batch_compile::GraphWriteScope {
         request_id: ctx.request_id,
         graph_name: ctx.graph_name,
         tenant_scope: ctx.tenant_scope,
@@ -2706,7 +2707,7 @@ mod tests {
                 &["source:ingest", "blob:write", "kg:read", "kg:write"],
             );
         let authority =
-            medulla_server_api::access::CarrierAuthority::from_verified(&verified).unwrap();
+            medulla_server_api::carrier::CarrierAuthority::from_verified(&verified).unwrap();
         let state = Arc::new(RwLock::new(
             medulla_server_api::state::ServerState::new_for_test(
                 "source-ingest-r0092",
@@ -2725,7 +2726,7 @@ mod tests {
         };
         let blob_dir = tempfile::tempdir().unwrap();
         let blob =
-            medulla_server_api::api::ingest::cursors_for_test(blob_dir.path().to_str().unwrap());
+            medulla_server_ops::api::ingest::cursors_for_test(blob_dir.path().to_str().unwrap());
         let persistence = NoReadPersistence;
         let mut admitted = AdmittedRecords {
             raw_admissions: Vec::new(),

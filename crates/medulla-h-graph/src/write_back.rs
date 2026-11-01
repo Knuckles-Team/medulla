@@ -12,7 +12,7 @@ use tokio::sync::RwLock;
 
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_server_api::state::ServerState;
 use medulla_mutation_types::write_back::{SourceChangeSet, WriteBackOp};

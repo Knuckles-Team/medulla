@@ -56,6 +56,7 @@ pub(crate) mod writer;
 
 pub use writer::writer_auth_configured;
 
+use medulla_server_cdc::cdc::CdcStateExt;
 use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 use std::sync::atomic::AtomicU64;
@@ -85,7 +86,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use parking_lot::Mutex;
 
-use medulla_server_api::blob::store::ChunkStore;
+use medulla_server_blob::blob::store::ChunkStore;
 use medulla_text::TextIndex;
 use medulla_tsdb::store::SeriesStore;
 
@@ -223,7 +224,7 @@ mod tests {
     use super::*;
     use medulla_kernel::lock_recovery::LockRecovery;
     use medulla_kernel::test_rendezvous::{join_bounded, recv_within};
-    use medulla_server_api::blob::store::RedbChunkStore;
+    use medulla_server_blob::blob::store::RedbChunkStore;
     use medulla_server_api::http1::HttpMessage;
     use std::path::Path;
     use std::sync::atomic::Ordering;
@@ -1388,7 +1389,7 @@ mod tests {
         // Preserve this fixture's prior omission of the optional CDC hub.
         #[cfg(feature = "streaming")]
         {
-            state.cdc = None;
+            state.set_cdc_hub(None);
         }
         std::sync::Arc::new(tokio::sync::RwLock::new(state))
     }

@@ -151,7 +151,7 @@ pub(crate) async fn replay_before_library(
         return Ok(None);
     };
     let probe = lower_work_item(request, BTreeMap::new(), Vec::new());
-    let identity = medulla_server_api::mutation_batch::work_item_batch_identity(
+    let identity = medulla_server_api::batch_compile::work_item_batch_identity(
         ctx.graph_name,
         ctx.verified_context.tenant(),
         ctx.req_id,

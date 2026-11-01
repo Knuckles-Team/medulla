@@ -58,8 +58,8 @@ use medulla_raft_xshard::harness::cluster::GRAPH;
 use medulla_raft_xshard::harness::test_env::configure_auth_test_environment;
 use medulla_raft::raft::NodeId;
 use crate::dispatch;
-use medulla_server_api::auth::compute_verified_envelope_token;
-use medulla_server_api::auth::VerifiedEnvelopeParams;
+use medulla_server_auth::auth::compute_verified_envelope_token;
+use medulla_server_auth::auth::VerifiedEnvelopeParams;
 
 const SECRET: &str = "harness";
 // `cfg(test)` request-context verification deliberately pins the shared harness
@@ -623,7 +623,7 @@ async fn seed_delegation_library(
 ) -> medulla_agent_types::agent_library::AgentLibraryEntry {
     let mut draft = delegation_library_draft();
     let policy_digest = draft.policy_digest.clone();
-    let caller_principal = medulla_server_api::mutation_batch::principal_fingerprint(AUTH_AGENT)
+    let caller_principal = medulla_server_api::batch_compile::principal_fingerprint(AUTH_AGENT)
         .expect("harness caller principal fingerprint");
     let mut retained: Option<medulla_agent_types::agent_library::AgentLibraryEntry> = None;
     for node_id in cluster.all_ids() {
@@ -713,7 +713,7 @@ async fn advance_delegation_library(
     draft.source_revision_digest =
         "sha256:8888888888888888888888888888888888888888888888888888888888888888".to_string();
     let policy_digest = draft.policy_digest.clone();
-    let caller_principal = medulla_server_api::mutation_batch::principal_fingerprint(AUTH_AGENT)
+    let caller_principal = medulla_server_api::batch_compile::principal_fingerprint(AUTH_AGENT)
         .expect("harness caller principal fingerprint");
     for node_id in cluster.all_ids() {
         let state = state_for(cluster, node_id);
@@ -760,7 +760,7 @@ async fn retire_delegation_library(
     let policy_digest =
         medulla_persistence_records::agent_library::current_agent_library_policy_digest()
             .expect("Agent Library policy digest for retirement");
-    let caller_principal = medulla_server_api::mutation_batch::principal_fingerprint(AUTH_AGENT)
+    let caller_principal = medulla_server_api::batch_compile::principal_fingerprint(AUTH_AGENT)
         .expect("harness caller principal fingerprint");
     let expected_revision = retained.entry_revision + 1;
     for node_id in cluster.all_ids() {
@@ -2612,7 +2612,7 @@ async fn kg_delegate_public_dispatch_replicates_and_replays_after_failover_scena
     };
     assert_eq!(
         native.provenance_refs,
-        medulla_server_api::api::ingest::jobs::provenance_refs(&request),
+        medulla_server_ops::api::ingest::jobs::provenance_refs(&request),
         "reopened receipt must retain the exact delegation provenance"
     );
 

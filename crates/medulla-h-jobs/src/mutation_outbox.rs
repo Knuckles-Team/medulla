@@ -28,7 +28,7 @@ use medulla_mutation_types::{
 };
 
 use medulla_protocol_types::protocol::Response;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
 /// Read one consumer's standing, its dead letters, or rewind its cursor.
@@ -237,15 +237,9 @@ async fn semantic_owner(
     verified: &VerifiedRequestContext,
     binding_id: &str,
 ) -> Result<Owner, String> {
-    let authority = medulla_server_api::access::CarrierAuthority::from_verified(verified)?;
+    let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(verified)?;
     let persist_dir = persist_dir(state).await?;
-    let query = state
-        .read()
-        .await
-        .seams
-        .query
-        .get()
-        .cloned()
+    let query = medulla_server_ops::api::query_txn::query_seam(&state).await
         .ok_or_else(|| "INTERNAL: query seam is not installed".to_string())?;
     let service =
         query.existing_semantic_service(&persist_dir, authority.tenant_scope(), binding_id)?;
@@ -267,9 +261,9 @@ async fn sql_owner(
     verified: &VerifiedRequestContext,
     resource: &str,
 ) -> Result<Owner, String> {
-    let authority = medulla_server_api::access::CarrierAuthority::from_verified(verified)?;
+    let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(verified)?;
     let tenant_scope = authority.tenant_scope().to_string();
-    let store = medulla_server_api::sql_tables::tenant_table_store(
+    let store = medulla_server_auth::sql_tables::tenant_table_store(
         &tenant_scope,
         &persist_dir(state).await?,
     )?;

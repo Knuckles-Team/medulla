@@ -27,7 +27,7 @@
 
 use medulla_tsdb::point::Point;
 use medulla_tsdb::store::SeriesStore;
-use medulla_server_api::blob::store::RedbChunkStore;
+use medulla_server_blob::blob::store::RedbChunkStore;
 use medulla_server::lake::lineage_transport::{KafkaTransport, LineageTransport};
 use medulla_server::lake::LakeManager;
 

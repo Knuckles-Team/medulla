@@ -17,22 +17,21 @@ pub fn install_seams(state: &ServerState) {
         .set(std::sync::Arc::new(super::dispatch::DispatchSeam));
 
     // L3 ingest, graph, jobs, compute.
-    let _ = state.seams.graph.set(std::sync::Arc::new(GraphSeam));
+    let _ = medulla_server_ops::api::ingest::install_graph_seam(
+        &state.seams,
+        std::sync::Arc::new(GraphSeam));
     #[cfg(feature = "jobs")]
-    let _ = state
-        .seams
-        .jobs
-        .set(std::sync::Arc::new(medulla_h_jobs::jobs::JobsSeam));
+    let _ = medulla_server_ops::api::ingest::install_jobs_seam(
+        &state.seams,
+        std::sync::Arc::new(medulla_h_jobs::jobs::JobsSeam));
 
     // L4 admin, decide.
-    let _ = state
-        .seams
-        .admin
-        .set(std::sync::Arc::new(medulla_h_admin::admin::AdminSeam));
-    let _ = state
-        .seams
-        .decide
-        .set(std::sync::Arc::new(medulla_h_decide::decide::DecideSeam));
+    let _ = medulla_server_ops::api::admin::install_admin_seam(
+        &state.seams,
+        std::sync::Arc::new(medulla_h_admin::admin::AdminSeam));
+    let _ = medulla_server_ops::api::admin::install_decide_seam(
+        &state.seams,
+        std::sync::Arc::new(medulla_h_decide::decide::DecideSeam));
 
     // L5 query, txn, wire.
     #[cfg(all(feature = "mining", feature = "server"))]
@@ -46,18 +45,18 @@ pub fn install_seams(state: &ServerState) {
         feature = "graphql",
         feature = "mining"
     ))]
-    let _ = state.seams.query.set(std::sync::Arc::new(
+    let _ = medulla_server_ops::api::query_txn::install_query_seam(
+        &state.seams,
+        std::sync::Arc::new(
         medulla_h_query::query::QuerySeam,
     ));
-    let _ = state
-        .seams
-        .txn
-        .set(std::sync::Arc::new(medulla_h_txn::txn::TxnSeam));
+    let _ = medulla_server_ops::api::query_txn::install_txn_seam(
+        &state.seams,
+        std::sync::Arc::new(medulla_h_txn::txn::TxnSeam));
     #[cfg(feature = "query")]
-    let _ = state
-        .seams
-        .wire
-        .set(std::sync::Arc::new(medulla_wire::wire::WireSeam));
+    let _ = medulla_server_ops::api::query_txn::install_wire_seam(
+        &state.seams,
+        std::sync::Arc::new(medulla_wire::wire::WireSeam));
 
     // L6 persistence, raft, server-api.
 }
@@ -66,14 +65,14 @@ pub fn install_seams(state: &ServerState) {
 struct GraphSeam;
 
 #[async_trait::async_trait]
-impl medulla_server_api::api::ingest::GraphApi for GraphSeam {
+impl medulla_server_ops::api::ingest::GraphApi for GraphSeam {
     async fn graph_ops_try_handle(
         &self,
         state: &std::sync::Arc<tokio::sync::RwLock<ServerState>>,
         req_id: u64,
         caller: Option<&str>,
         graph_name: &str,
-        read_authority: &medulla_server_api::access::GraphReadAuthority,
+        read_authority: &medulla_server_api::carrier::GraphReadAuthority,
         core: std::sync::Arc<medulla_graph_core::graph::GraphCore>,
         method: medulla_protocol_types::protocol::Method,
     ) -> medulla_protocol_types::protocol::Response {

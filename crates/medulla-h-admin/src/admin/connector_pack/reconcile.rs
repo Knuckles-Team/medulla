@@ -13,12 +13,13 @@
 //! mistaken for orphans. A held body always keeps its holder, so `BlobGc` at
 //! any moment cannot remove a body a committed revision names.
 
+use medulla_server_blob::blob::BlobStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
 use medulla_protocol_types::protocol::Response;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
 /// How long one sweep's verdict stays useful: the reconciler runs on its own
@@ -123,11 +124,11 @@ pub(super) async fn reconcile_locked(
     let blob = state
         .read()
         .await
-        .blob
-        .clone()
+        .blob_cursors()
+        .cloned()
         .ok_or_else(|| "BODY_MISSING: Blob substrate disabled".to_string())?;
-    let authority = medulla_server_api::access::CarrierAuthority::from_verified(verified)?;
-    let (batch, now_ms) = medulla_server_api::api::ingest::compile_blob_batch(
+    let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(verified)?;
+    let (batch, now_ms) = medulla_server_ops::api::ingest::compile_blob_batch(
         blob.store.as_ref(),
         req_id,
         &authority,
@@ -162,12 +163,12 @@ pub(super) async fn reconcile_locked(
 pub(super) fn live_holders(
     tenant_id: &str,
     held: &std::collections::BTreeSet<medulla_types::contract::Digest256>,
-) -> Result<medulla_server_api::blob::store::HolderReconcile, String> {
-    use medulla_server_api::blob::engine_bodies::engine_body_holder;
-    use medulla_server_api::blob::engine_bodies::engine_body_holder_namespace;
-    use medulla_server_api::blob::store::HolderId;
-    use medulla_server_api::blob::store::HolderNamespace;
-    use medulla_server_api::blob::store::HolderReconcile;
+) -> Result<medulla_server_blob::blob::store::HolderReconcile, String> {
+    use medulla_server_blob::blob::engine_bodies::engine_body_holder;
+    use medulla_server_blob::blob::engine_bodies::engine_body_holder_namespace;
+    use medulla_server_blob::blob::store::HolderId;
+    use medulla_server_blob::blob::store::HolderNamespace;
+    use medulla_server_blob::blob::store::HolderReconcile;
 
     let namespace = HolderNamespace::new(&engine_body_holder_namespace(tenant_id))?;
     let live = held

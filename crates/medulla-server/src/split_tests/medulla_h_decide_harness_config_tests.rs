@@ -10,7 +10,7 @@ use medulla_h_decide::decide::stat_test_support::{
     decode, publish_route_schema, request, Harness, TENANT,
 };
 use medulla_protocol_types::protocol::{Method, Request, Response};
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
 async fn dispatch(h: &Harness, method: Method) -> Response {

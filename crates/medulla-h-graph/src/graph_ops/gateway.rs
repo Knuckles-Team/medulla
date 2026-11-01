@@ -61,7 +61,7 @@ pub async fn try_handle_gateway(
     >,
     read_authority: Option<&GraphReadAuthority>,
     persistence: Option<&Arc<dyn PersistenceBackend>>,
-    #[cfg(feature = "streaming")] cdc: Option<&Arc<medulla_server_api::cdc::CdcHub>>,
+    #[cfg(feature = "streaming")] cdc: Option<&Arc<medulla_server_cdc::cdc::CdcHub>>,
     write_coalescer: Option<
         &Arc<medulla_server_api::routed_write_coalescer::RoutedWriteCoalescerRegistry>,
     >,
@@ -162,7 +162,7 @@ pub async fn try_handle_gateway(
     // the same as a build without `mining`.
     #[cfg(feature = "mining")]
     {
-        let query = state.read().await.seams.query.get().cloned();
+        let query = medulla_server_ops::api::query_txn::query_seam(&state).await;
         if let Some(query) = query {
             if let Some(resp) = query
                 .mining_gateway_try_handle(

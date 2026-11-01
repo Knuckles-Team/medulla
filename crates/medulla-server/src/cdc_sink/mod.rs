@@ -19,8 +19,8 @@ use std::sync::Arc;
 
 use medulla_stream::sink::{CdcSink, KafkaCdcSink, KafkaConfig, SinkEvent, SinkOp};
 
-use medulla_server_api::cdc::CdcHub;
-use medulla_server_api::cdc::ExternalCdcSink;
+use medulla_server_cdc::cdc::CdcHub;
+use medulla_server_cdc::cdc::ExternalCdcSink;
 use medulla_types::wire::CdcEvent;
 use medulla_types::wire::CdcKind;
 

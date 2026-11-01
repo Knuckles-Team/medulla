@@ -53,6 +53,9 @@ medulla-store-apply = { path = "../medulla-store-apply" }
 medulla-resource-store = { path = "../medulla-resource-store" }
 medulla-work-store = { path = "../medulla-work-store" }
 medulla-lane-store = { path = "../medulla-lane-store" }
+medulla-server-ops = { path = "../medulla-server-ops" }
+medulla-server-blob = { path = "../medulla-server-blob" }
+medulla-server-auth = { path = "../medulla-server-auth" }
 
 [features]
 test-support = ["dep:tempfile"]

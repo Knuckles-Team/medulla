@@ -6,6 +6,9 @@
 //! refusal keeps its exact message and exit status; a store-open failure stays
 //! fatal at boot (loud + early).
 
+use medulla_server_blob::blob::BlobStateExt;
+use medulla_server_cdc::cdc::CdcStateExt;
+use medulla_server_blob::kv::KvStateExt;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
@@ -516,7 +519,7 @@ pub fn open_tsdb_store(
 }
 
 #[cfg(feature = "blob")]
-type BlobSubstrate = (Option<Arc<medulla_server_api::blob::BlobCursors>>, u64);
+type BlobSubstrate = (Option<Arc<medulla_server_blob::blob::BlobCursors>>, u64);
 
 /// Streamed content-addressed BLOB substrate (CONCEPT:MEDULLA-KG.storage.blob-namespace).
 /// With no persist dir there is no durable place for the bytes, so the substrate
@@ -534,20 +537,20 @@ pub fn open_blob_substrate(persist_dir: Option<&str>) -> BlobSubstrate {
     };
     let store = open_blob_chunk_store(dir);
     info!("Blob substrate: durable content-addressed CAS ready");
-    (Some(Arc::new(medulla_server_api::blob::BlobCursors::new(store))), ttl)
+    (Some(Arc::new(medulla_server_blob::blob::BlobCursors::new(store))), ttl)
 }
 
 #[cfg(all(feature = "blob", feature = "blob-s3"))]
-fn open_blob_chunk_store(dir: &str) -> Arc<dyn medulla_server_api::blob::ChunkStore> {
-    match medulla_server_api::blob::s3::S3ChunkStore::open(dir) {
+fn open_blob_chunk_store(dir: &str) -> Arc<dyn medulla_server_blob::blob::ChunkStore> {
+    match medulla_server_blob::blob::s3::S3ChunkStore::open(dir) {
         Ok(store) => Arc::new(store),
         Err(e) => exit_with(format_args!("failed to open durable blob-s3 CAS: {e}"), 1),
     }
 }
 
 #[cfg(all(feature = "blob", not(feature = "blob-s3")))]
-fn open_blob_chunk_store(dir: &str) -> Arc<dyn medulla_server_api::blob::ChunkStore> {
-    match medulla_server_api::blob::RedbChunkStore::open(dir) {
+fn open_blob_chunk_store(dir: &str) -> Arc<dyn medulla_server_blob::blob::ChunkStore> {
+    match medulla_server_blob::blob::RedbChunkStore::open(dir) {
         Ok(store) => Arc::new(store),
         Err(e) => exit_with(format_args!("failed to open durable blob CAS: {e}"), 1),
     }
@@ -556,8 +559,8 @@ fn open_blob_chunk_store(dir: &str) -> Arc<dyn medulla_server_api::blob::ChunkSt
 /// Generic Key→Value store (feature `kv`): a durable `{persist_dir}/kv.redb` when
 /// a persist dir is set, else an in-memory scratch map.
 #[cfg(feature = "kv")]
-pub fn open_kv_store(persist_dir: Option<&str>) -> Option<Arc<medulla_server_api::kv::KvStore>> {
-    let store = medulla_server_api::kv::KvStore::open(persist_dir)
+pub fn open_kv_store(persist_dir: Option<&str>) -> Option<Arc<medulla_server_blob::kv::KvStore>> {
+    let store = medulla_server_blob::kv::KvStore::open(persist_dir)
         .unwrap_or_else(|e| exit_with(format_args!("failed to open kv store: {e}"), 1));
     if store.is_durable() {
         info!(
@@ -577,7 +580,7 @@ pub struct DurableStores {
     #[cfg(feature = "blob")]
     blob: BlobSubstrate,
     #[cfg(feature = "kv")]
-    kv: Option<Arc<medulla_server_api::kv::KvStore>>,
+    kv: Option<Arc<medulla_server_blob::kv::KvStore>>,
 }
 
 /// Open the persistence backend and the feature-gated tsdb/blob/kv stores, in
@@ -611,7 +614,7 @@ pub fn compose_server_state(
 ) -> ServerState {
     crate::seams_install::install_seams(&state);
     #[cfg(all(feature = "streaming", feature = "cdc-kafka"))]
-    if let Some(hub) = &state.cdc {
+    if let Some(hub) = state.cdc_hub() {
         // CA-11 (DEC-CA-03): install the optional Kafka sink exactly once,
         // after pure state composition and before any listener can serve.
         crate::cdc_sink::install_from_env(hub);
@@ -638,7 +641,9 @@ pub fn compose_server_state(
     state.txn_max_per_agent = txn_max_per_agent;
     #[cfg(feature = "blob")]
     {
-        (state.blob, state.blob_cursor_ttl_secs) = stores.blob;
+        let (blob, ttl) = stores.blob;
+        state.set_blob_cursors(blob);
+        state.blob_cursor_ttl_secs = ttl;
     }
     #[cfg(feature = "tsdb")]
     {
@@ -646,7 +651,7 @@ pub fn compose_server_state(
     }
     #[cfg(feature = "kv")]
     {
-        state.kv = stores.kv;
+        state.set_kv_store(stores.kv);
     }
     state
 }

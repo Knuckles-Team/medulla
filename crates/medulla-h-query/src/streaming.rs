@@ -12,6 +12,7 @@
 //! `timeout_ms` for the first change, then returns whatever arrived (NOT a streaming
 //! frame side-channel).
 
+use medulla_server_cdc::cdc::CdcStateExt;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -25,9 +26,9 @@ use medulla_types::wire::CdcEvent;
 use medulla_types::wire::ContinuousAgg;
 use medulla_types::wire::ContinuousQuerySpec;
 use medulla_types::wire::WatchBatch;
-use medulla_server_api::access::check_graph_access;
-use medulla_server_api::access::CarrierAuthority;
-use medulla_server_api::access::GraphReadAuthority;
+use medulla_server_auth::access::check_graph_access;
+use medulla_server_api::carrier::CarrierAuthority;
+use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::state::ServerState;
 use medulla_protocol_types::result_contract::messaging as results;
 
@@ -36,9 +37,9 @@ use medulla_protocol_types::result_contract::messaging as results;
 async fn hub_of(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
-) -> Result<Arc<medulla_server_api::cdc::CdcHub>, Response> {
+) -> Result<Arc<medulla_server_cdc::cdc::CdcHub>, Response> {
     let s = state.read().await;
-    match &s.cdc {
+    match s.cdc_hub() {
         Some(h) => Ok(h.clone()),
         None => Err(Response::err(
             req_id,
@@ -153,7 +154,7 @@ async fn authorized_hub(
     req_id: u64,
     carrier: &CarrierAuthority,
     graph: &str,
-) -> Result<Arc<medulla_server_api::cdc::CdcHub>, Response> {
+) -> Result<Arc<medulla_server_cdc::cdc::CdcHub>, Response> {
     if let Err(error) = authorize_graph(state, carrier, graph, AccessLevel::Read).await {
         return Err(Response::err(req_id, error));
     }

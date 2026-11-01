@@ -75,7 +75,7 @@ async fn prepare(ctx: &HandleContext<'_>) -> Result<PreparedOperation, Response>
         backend,
         graph: medulla_kernel::persist::sanitize(ctx.graph_name),
         now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
-        _mutation_guard: medulla_server_api::mutation_batch::lock_graph(ctx.graph_name).await,
+        _mutation_guard: medulla_server_api::routed_write_coalescer::lock_graph(ctx.graph_name).await,
     })
 }
 

@@ -316,7 +316,7 @@ fn visible_to_authority(
         return false;
     }
     admin
-        || medulla_server_api::access::check_graph_access(
+        || medulla_server_auth::access::check_graph_access(
             isolation,
             actor,
             &entry.name,

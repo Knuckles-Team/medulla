@@ -11,5 +11,5 @@ pub(super) use medulla_isolation::isolation::AccessLevel;
 pub(super) use medulla_protocol_types::protocol::Method;
 pub(super) use medulla_protocol_types::protocol::Response;
 pub(super) use medulla_protocol_types::protocol::ResultPayload;
-pub(super) use medulla_server_api::access::check_graph_access;
+pub(super) use medulla_server_auth::access::check_graph_access;
 pub(super) use medulla_server_api::state::ServerState;

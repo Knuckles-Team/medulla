@@ -58,7 +58,7 @@ use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::compute::compute_off_lock;
 use medulla_server_api::state::ServerState;
 
@@ -272,14 +272,14 @@ impl BatchScope {
         let expected = store
             .mutation_version(self.authority.tenant_scope(), &scope)
             .map_err(|error| format!("time-series MutationBatch version read failed: {error}"))?;
-        let batch_id = medulla_server_api::mutation_batch::opaque_request_key(
+        let batch_id = medulla_server_api::batch_compile::opaque_request_key(
             "timeseries",
             &scope,
             self.req_id,
             method,
         );
-        medulla_server_api::mutation_batch::compile_opaque_method(
-            medulla_server_api::mutation_batch::CompileBatch {
+        medulla_server_api::batch_compile::compile_opaque_method(
+            medulla_server_api::batch_compile::CompileBatch {
                 batch_id: &batch_id,
                 request_id: self.req_id,
                 attempt_nonce: self.attempt_nonce,

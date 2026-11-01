@@ -27,6 +27,8 @@ pub mod server_startup;
 
 
 // ---- merged from the moved module root (src/server/mod.rs) ----
+use medulla_server_ops::api::query_txn::ForeignStateExt;
+use medulla_server_cdc::cdc::CdcStateExt;
 use medulla_h_query::semantic_index_runtime::PendingRf019Activation;
 // CONCEPT:MEDULLA-KG.query.tokio-service-server — Tokio Service Server
 //
@@ -154,7 +156,7 @@ pub fn validate_verified_request_context_startup(
     secret: &str,
     state_dir: Option<&str>,
 ) -> Result<(), String> {
-    medulla_server_api::auth::validate_verified_context_startup(secret, state_dir)
+    medulla_server_auth::auth::validate_verified_context_startup(secret, state_dir)
 }
 // CDC -> Kafka sink (CA-11, feature `cdc-kafka`, off by default). Reserved and EMPTY
 // until CA-11 implements it; landed by CA-17's single feature-stub commit so CA-11 never
@@ -358,7 +360,7 @@ pub(crate) fn test_state_with_services(
     #[cfg(feature = "query")]
     {
         state.persist_dir = Some(
-            medulla_server_api::sql_tables::test_persist_dir()
+            medulla_server_auth::sql_tables::test_persist_dir()
                 .to_string_lossy()
                 .into_owned(),
         );
@@ -870,10 +872,10 @@ mod tests {
             std::process::id(),
             NONCE.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         );
-        request.auth_token = medulla_server_api::auth::compute_verified_envelope_token(
+        request.auth_token = medulla_server_auth::auth::compute_verified_envelope_token(
             SECRET,
             &request,
-            &medulla_server_api::auth::VerifiedEnvelopeParams {
+            &medulla_server_auth::auth::VerifiedEnvelopeParams {
                 context: &claims,
                 timestamp: std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
@@ -894,12 +896,12 @@ mod tests {
     /// The verified carrier the server derives for a [`request`] made as `agent`
     /// (EH-373/EH-374 owner-scoped catalogs key on its `owner_scope`).
     #[cfg(any(feature = "federation", feature = "wasm-udf"))]
-    fn carrier_as(agent: &str) -> medulla_server_api::access::CarrierAuthority {
-        let context = medulla_server_api::auth::VerifiedRequestContext::from_verified_claims(
+    fn carrier_as(agent: &str) -> medulla_server_api::carrier::CarrierAuthority {
+        let context = medulla_server_api::authority_context::VerifiedRequestContext::from_verified_claims(
             test_claims(agent),
             "carrier-as".to_string(),
         );
-        medulla_server_api::access::CarrierAuthority::from_verified(&context)
+        medulla_server_api::carrier::CarrierAuthority::from_verified(&context)
             .expect("verified test carrier")
     }
 
@@ -2036,7 +2038,7 @@ mod tests {
         }
         let s = state.read().await;
         assert!(
-            s.foreign_sources
+            s.foreign_sources()
                 .spec_for(&carrier_as("system"), "papers_api")
                 .is_some(),
             "the source must be recorded on ServerState under the caller's verified owner"
@@ -3097,9 +3099,9 @@ pub mod shex_served;
         core.mark_dirty();
 
         let context =
-            medulla_server_api::auth::VerifiedRequestContext::verified_for_test("worker1");
+            medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test("worker1");
         let authority =
-            medulla_server_api::access::GraphReadAuthority::from_verified(&context, &isolation)
+            medulla_server_api::carrier::GraphReadAuthority::from_verified(&context, &isolation)
                 .expect("worker1 is a registered non-System identity");
         let projected = authority.project_core(&core);
         assert!(
@@ -4136,7 +4138,7 @@ pub mod shex_served;
         // Force genuine contention deterministically (see doc above): hold the
         // per-graph lock every landing path needs before any of the N writers
         // can be spawned.
-        let hold = medulla_server_api::mutation_batch::lock_graph("__commons__").await;
+        let hold = medulla_server_api::routed_write_coalescer::lock_graph("__commons__").await;
 
         let started = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0));
         let mut handles = Vec::with_capacity(N as usize);
@@ -4323,7 +4325,7 @@ pub mod shex_served;
         );
 
         // Hold the SAME per-graph lane externally.
-        let held = medulla_server_api::mutation_batch::lock_graph(GRAPH).await;
+        let held = medulla_server_api::routed_write_coalescer::lock_graph(GRAPH).await;
 
         let st1 = state.clone();
         let coalesced = tokio::spawn(async move {
@@ -6774,8 +6776,8 @@ ex:p1 a ex:Paper .
         let hub = state
             .read()
             .await
-            .cdc
-            .clone()
+            .cdc_hub()
+            .cloned()
             .expect("streaming hub configured");
 
         // Arm the per-graph `Notify` BEFORE checking for anything pending --

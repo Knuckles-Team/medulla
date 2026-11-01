@@ -6,6 +6,7 @@
 //! native submission route is composed here. The fixed service actor belongs
 //! to the deployment tenant; snapshots from another tenant fail closed.
 
+use medulla_server_blob::blob::BlobStateExt;
 #[cfg(feature = "raft")]
 use medulla_raft::raft::RaftStateExt;
 use std::sync::Arc;
@@ -72,11 +73,11 @@ mod worker {
         epistemic_operations::RequestContextSchemaVersion,
     };
     use medulla_server_api::api::persistence::PersistenceBackend;
-    use medulla_server_api::auth::VerifiedRequestContext;
-    use medulla_server_api::blob::store::ChunkStore;
+    use medulla_server_api::authority_context::VerifiedRequestContext;
+    use medulla_server_blob::blob::store::ChunkStore;
     #[cfg(not(feature = "raft"))]
-    use medulla_server_api::mutation_batch::CommitOrigin;
-    use medulla_server_api::mutation_batch::WorkItemCommitRequest;
+    use medulla_server_mutation::mutation_batch::CommitOrigin;
+    use medulla_server_mutation::mutation_batch::WorkItemCommitRequest;
 
     const IDLE: Duration = Duration::from_millis(500);
     const MAX_GRAPHS_PER_SWEEP: usize = 16;
@@ -155,8 +156,7 @@ mod worker {
                 .clone()
                 .ok_or("CONFLICT: repository enrichment persistence is unavailable")?;
             let store: Arc<dyn ChunkStore> = state
-                .blob
-                .as_ref()
+                .blob_cursors()
                 .ok_or("CONFLICT: repository enrichment CAS is unavailable")?
                 .store
                 .clone();
@@ -176,7 +176,7 @@ mod worker {
             state,
             persistence.as_ref(),
             &graph_name,
-            store,
+            Arc::new(store) as medulla_server_api::state::ErasedHandle,
             Box::new(move |tenant, graph, page_key| {
                 let grant_state = Arc::clone(&grant_state);
                 Box::pin(async move {
@@ -336,7 +336,7 @@ mod worker {
                 .core
                 .clone();
             let backend = Some(persistence);
-            medulla_server_api::mutation_batch::commit_work_item(
+            medulla_server_mutation::mutation_batch::commit_work_item(
                 WorkItemCommitRequest::new(
                     backend.as_ref(),
                     &core,

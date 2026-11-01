@@ -5,6 +5,7 @@
 //! Library. The harness owns one temporary persist directory per test, so no
 //! test can observe another's committed state.
 
+use medulla_server_blob::blob::BlobStateExt;
 #[cfg(feature = "redb")]
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
@@ -27,7 +28,7 @@ use medulla_types::contract::{BoundedVec, Digest256, ResourceId};
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::auth::dispatch_test_on_heap;
+use medulla_server_auth::auth::dispatch_test_on_heap;
 use medulla_server_api::state::ServerState;
 
 mod admin;
@@ -71,9 +72,9 @@ impl Served {
         state.persist_dir = Some(dir.path().to_string_lossy().into_owned());
         let blob_dir = dir.path().join("blob");
         std::fs::create_dir_all(&blob_dir).unwrap();
-        state.blob = Some(medulla_server_api::api::ingest::cursors_for_test(
+        state.set_blob_cursors(Some(medulla_server_ops::api::ingest::cursors_for_test(
             blob_dir.to_str().unwrap(),
-        ));
+        )));
         Self {
             dir,
             state: Arc::new(RwLock::new(state)),
@@ -119,12 +120,12 @@ impl Served {
         method: Method,
     ) -> Response {
         let id = next_id();
-        let request = medulla_server_api::auth::scoped_test_request_on(
+        let request = medulla_server_auth::auth::scoped_test_request_on(
             SECRET,
             id,
             graph,
             method,
-            medulla_server_api::auth::ScopedTestCaller {
+            medulla_server_auth::auth::ScopedTestCaller {
                 principal,
                 tenant: TENANT,
                 scopes,
@@ -594,7 +595,7 @@ pub(super) async fn seed_server_only_import(
     )
     .unwrap();
     let section = &index.server.body;
-    let body = medulla_server_api::blob::engine_bodies::EngineBody {
+    let body = medulla_server_blob::blob::engine_bodies::EngineBody {
         sha256: section.sha256,
         body: pack.1[section.offset as usize..(section.offset + section.length) as usize].to_vec(),
     };
@@ -602,8 +603,7 @@ pub(super) async fn seed_server_only_import(
         .state
         .read()
         .await
-        .blob
-        .as_ref()
+        .blob_cursors()
         .unwrap()
         .store
         .put_engine_bodies(TENANT, &[body], context.created_at_ms)

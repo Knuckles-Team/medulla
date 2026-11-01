@@ -6,9 +6,9 @@ use medulla_work_types::host_start::{
     HostStartBinding, HostStartInterfaces, IssueHostStartGrantRequest,
 };
 use medulla_persistence::redb_backend::RedbBackend;
-use medulla_server_api::auth::dispatch_test_on_heap;
-use medulla_server_api::auth::scoped_test_request_on;
-use medulla_server_api::auth::ScopedTestCaller;
+use medulla_server_auth::auth::dispatch_test_on_heap;
+use medulla_server_auth::auth::scoped_test_request_on;
+use medulla_server_auth::auth::ScopedTestCaller;
 use medulla_server_api::state::ServerState;
 use tokio::sync::RwLock;
 
@@ -153,7 +153,7 @@ async fn signed_issuer_is_stamped_and_retry_retains_attribution() {
     let provenance = issued.lease.unwrap().host_start_provenance.unwrap();
     assert_eq!(
         provenance.issuer_ref,
-        medulla_server_api::mutation_batch::principal_fingerprint(ISSUER).unwrap()
+        medulla_server_api::batch_compile::principal_fingerprint(ISSUER).unwrap()
     );
     assert_ne!(provenance.issuer_ref, ISSUER);
 }
@@ -238,6 +238,6 @@ async fn signed_wrong_tenant_and_forged_provenance_refuse_without_mutation() {
             .host_start_provenance
             .unwrap()
             .issuer_ref,
-        medulla_server_api::mutation_batch::principal_fingerprint(ISSUER).unwrap()
+        medulla_server_api::batch_compile::principal_fingerprint(ISSUER).unwrap()
     );
 }

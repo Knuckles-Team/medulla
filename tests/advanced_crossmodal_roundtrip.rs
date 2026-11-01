@@ -44,6 +44,7 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
+use medulla_server_cdc::cdc::CdcStateExt;
 use std::sync::Arc;
 
 use serde_json::json;
@@ -976,7 +977,7 @@ async fn sparql_post(addr: &str, query: &str) -> String {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn pgwire_sparql_native_consistent_snapshot_eg393() {
     use medulla_wire::pgwire;
-    use medulla_server_api::sparql_http;
+    use medulla_server_blob::sparql_http;
 
     let state = state().await;
 
@@ -1411,7 +1412,7 @@ async fn streaming_cdc_matview_rebuild_eg395() {
     let state = state().await;
     let hub = {
         let s = state.read().await;
-        s.cdc.clone().expect("streaming build has a CdcHub")
+        s.cdc_hub().cloned().expect("streaming build has a CdcHub")
     };
 
     // Subscribe a live materialized view: a continuous query counting `Robot` nodes,

@@ -55,7 +55,7 @@ fn caller_has_authority(
 ) -> bool {
     use medulla_compute::parser::enrichment_reactivation::TOP_UP_ACTION;
     verified.allows_action(TOP_UP_ACTION)
-        && medulla_server_api::access::principal_may_access(
+        && medulla_server_auth::access::principal_may_access(
             isolation,
             verified.agent_id(),
             &proposal.graph,

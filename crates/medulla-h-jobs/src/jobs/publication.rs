@@ -79,13 +79,13 @@ impl PreparedJobPublication {
             "{}\0{}\0{}\0{}",
             self.job_id, self.worker_ref, self.lease_epoch, self.result_ref
         );
-        let expected_coordinator = medulla_server_api::mutation_batch::opaque_coordinator_key(
+        let expected_coordinator = medulla_server_api::batch_compile::opaque_coordinator_key(
             "job-publication",
             &self.target_graph,
             &coordinator_material,
         );
         let batch_material = format!("{}\0{}", self.result_ref, self.job_id);
-        let expected_batch = medulla_server_api::mutation_batch::opaque_coordinator_key(
+        let expected_batch = medulla_server_api::batch_compile::opaque_coordinator_key(
             "job-result",
             &self.target_graph,
             &batch_material,
@@ -228,7 +228,7 @@ pub fn validate_job_publication_commit(
         medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_graph(
             &prepared.target_graph,
             &prepared.target_graph,
-            medulla_server_api::mutation_batch::COMPILED_BATCH_INCARNATION,
+            medulla_server_api::batch_compile::COMPILED_BATCH_INCARNATION,
         )?;
     if batch.identity != expected_scope
         || committed.record.identity != expected_scope
@@ -276,13 +276,13 @@ pub(super) async fn prepare_consensus_job_publication(
         "{}\0{}\0{}\0{}",
         job.job_id, worker_ref, lease_epoch, result_ref
     );
-    let coordinator_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    let coordinator_id = medulla_server_api::batch_compile::opaque_coordinator_key(
         "job-publication",
         &target_graph,
         &coordinator_material,
     );
     let batch_material = format!("{}\0{}", result_ref, job.job_id);
-    let batch_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    let batch_id = medulla_server_api::batch_compile::opaque_coordinator_key(
         "job-result",
         &target_graph,
         &batch_material,
@@ -464,7 +464,7 @@ pub async fn apply_consensus_job_publication_commit(
     let committed = commit_publication_write(PublicationWrite {
         persistence: persistence.as_ref(),
         core: &core,
-        origin: medulla_server_api::mutation_batch::CommitOrigin {
+        origin: medulla_server_mutation::mutation_batch::CommitOrigin {
             request_id,
             principal: Some(&plan.prepared.principal_ref),
         },
@@ -514,7 +514,7 @@ pub async fn apply_consensus_job_publication_finalize(
 struct PublicationWrite<'a> {
     persistence: Option<&'a Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     core: &'a Arc<medulla_graph_core::graph::GraphCore>,
-    origin: medulla_server_api::mutation_batch::CommitOrigin<'a>,
+    origin: medulla_server_mutation::mutation_batch::CommitOrigin<'a>,
     target_graph: &'a str,
     batch_id: &'a str,
     methods: Vec<Method>,
@@ -532,8 +532,8 @@ async fn commit_publication_write(
 ) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {
     #[cfg(feature = "program-optimization")]
     if let Some(identity) = write.promotion {
-        return medulla_server_api::mutation_batch::commit_program_promotion(
-            medulla_server_api::mutation_batch::ProgramPromotionRequest::new(
+        return medulla_server_mutation::mutation_batch::commit_program_promotion(
+            medulla_server_mutation::mutation_batch::ProgramPromotionRequest::new(
                 write.persistence,
                 write.core,
                 write.origin,
@@ -547,8 +547,8 @@ async fn commit_publication_write(
         )
         .await;
     }
-    medulla_server_api::mutation_batch::commit_internal_graph_methods(
-        medulla_server_api::mutation_batch::InternalGraphCommitRequest::new(
+    medulla_server_mutation::mutation_batch::commit_internal_graph_methods(
+        medulla_server_mutation::mutation_batch::InternalGraphCommitRequest::new(
             write.persistence,
             write.core,
             write.origin,
@@ -577,7 +577,7 @@ pub(super) async fn publish_staged_result(
     let (confidence, calibration) = result_quality(&job);
     let plan = medulla_jobs::plan_result_claim(&job, confidence, calibration)?;
     let coordinator = format!("{}\0{}", job.result_ref(), job.job_id);
-    let batch_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    let batch_id = medulla_server_api::batch_compile::opaque_coordinator_key(
         "job-result",
         &target_graph,
         &coordinator,
@@ -606,7 +606,7 @@ pub(super) async fn publish_staged_result(
     commit_publication_write(PublicationWrite {
         persistence: persistence.as_ref(),
         core: &core,
-        origin: medulla_server_api::mutation_batch::CommitOrigin {
+        origin: medulla_server_mutation::mutation_batch::CommitOrigin {
             request_id: 0,
             principal: Some(&job.policy.actor),
         },
@@ -636,12 +636,12 @@ mod publication_receipt_tests {
         let job_id = "publication-receipt-job";
         let worker_ref = native_opaque_ref("worker", "publication-receipt-worker");
         let lease_epoch = 1;
-        let coordinator_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
+        let coordinator_id = medulla_server_api::batch_compile::opaque_coordinator_key(
             "job-publication",
             target_graph,
             &format!("{job_id}\0{worker_ref}\0{lease_epoch}\0{result_ref}"),
         );
-        let batch_id = medulla_server_api::mutation_batch::opaque_coordinator_key(
+        let batch_id = medulla_server_api::batch_compile::opaque_coordinator_key(
             "job-result",
             target_graph,
             &format!("{result_ref}\0{job_id}"),
@@ -675,8 +675,8 @@ mod publication_receipt_tests {
     fn receipt_for(
         prepared: &PreparedJobPublication,
     ) -> medulla_protocol_types::mutation_batch::MutationBatchCommit {
-        let batch = medulla_server_api::mutation_batch::compile_methods(
-            medulla_server_api::mutation_batch::CompileBatch {
+        let batch = medulla_server_api::batch_compile::compile_methods(
+            medulla_server_api::batch_compile::CompileBatch {
                 batch_id: &prepared.batch_id,
                 request_id: 11,
                 attempt_nonce: None,
@@ -749,7 +749,7 @@ mod publication_receipt_tests {
             medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_graph(
                 "other-publication-tenant",
                 &prepared.target_graph,
-                medulla_server_api::mutation_batch::COMPILED_BATCH_INCARNATION,
+                medulla_server_api::batch_compile::COMPILED_BATCH_INCARNATION,
             )
             .unwrap();
         let mut wrong_tenant_receipt = receipt_for(&prepared);

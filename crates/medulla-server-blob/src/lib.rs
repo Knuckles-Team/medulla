@@ -6,3 +6,15 @@
 
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
+
+#[cfg(feature = "blob")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod blob;
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(feature = "kv")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod kv;
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(feature = "sparql-http")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod sparql_http;

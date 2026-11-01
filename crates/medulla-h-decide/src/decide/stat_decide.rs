@@ -50,7 +50,7 @@ use super::stat_tool_subset::tool_subset_outcome;
 use super::telemetry;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 
 /// Domain of a statistical record's input digest.

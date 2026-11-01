@@ -302,7 +302,7 @@ fn apply_upgrades_a_sql_catalog_and_keeps_its_rows() {
     const SQL_ROWS: redb::TableDefinition<(&str, u64), &[u8]> =
         redb::TableDefinition::new("__sql_rows__");
     let dir = data_dir();
-    let catalogs = dir.path().join(medulla_server_api::sql_tables::SQL_CATALOG_DIR);
+    let catalogs = dir.path().join(medulla_server_auth::sql_tables::SQL_CATALOG_DIR);
     std::fs::create_dir(&catalogs).unwrap();
     let catalog = catalogs.join("tenant-catalog").with_extension("redb");
     create_predecessor_owner_file(

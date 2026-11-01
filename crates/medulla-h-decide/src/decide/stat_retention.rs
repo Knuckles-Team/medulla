@@ -10,6 +10,7 @@
 //! is still the attested one, but nothing can be re-derived. Summaries (the
 //! record minus its matrix) are kept for ever.
 
+use medulla_server_blob::blob::BlobStateExt;
 use medulla_decision_types::{
     decision::statistical::body::canonical_body_bytes,
     decision::statistical::body::content_digest_of,
@@ -35,9 +36,9 @@ use medulla_persistence_records::decision_jobs::encode_artifact;
 /// The blob store and the authority its holder changes are made under.
 pub(super) struct Retention {
     #[cfg(feature = "blob")]
-    pub(super) blob: Option<std::sync::Arc<medulla_server_api::blob::BlobCursors>>,
+    pub(super) blob: Option<std::sync::Arc<medulla_server_blob::blob::BlobCursors>>,
     #[cfg(feature = "blob")]
-    pub(super) authority: Option<medulla_server_api::access::CarrierAuthority>,
+    pub(super) authority: Option<medulla_server_api::carrier::CarrierAuthority>,
 }
 
 impl Retention {
@@ -54,15 +55,15 @@ impl Retention {
     /// The served blob store and the caller's carrier authority.
     pub(super) fn of(
         state: &medulla_server_api::state::ServerState,
-        verified: &medulla_server_api::auth::VerifiedRequestContext,
+        verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     ) -> Self {
         #[cfg(not(feature = "blob"))]
         let _ = (state, verified);
         Self {
             #[cfg(feature = "blob")]
-            blob: state.blob.clone(),
+            blob: state.blob_cursors().cloned(),
             #[cfg(feature = "blob")]
-            authority: medulla_server_api::access::CarrierAuthority::from_verified(verified).ok(),
+            authority: medulla_server_api::carrier::CarrierAuthority::from_verified(verified).ok(),
         }
     }
 }
@@ -100,7 +101,7 @@ fn store_inputs(
     use sha2::{Digest, Sha256};
     let blob = retention.blob.as_ref().ok_or_else(unavailable)?;
     let sha256 = medulla_types::contract::Digest256::from_bytes(Sha256::digest(&body).into());
-    let engine_body = medulla_server_api::blob::engine_bodies::EngineBody { sha256, body };
+    let engine_body = medulla_server_blob::blob::engine_bodies::EngineBody { sha256, body };
     let stored = blob
         .store
         .put_engine_bodies(tenant_id, &[engine_body], now_ms)?;
@@ -122,7 +123,7 @@ fn load_inputs(
     let blob = retention.blob.as_ref().ok_or_else(unavailable)?;
     let sha256 =
         medulla_types::contract::Digest256::parse(pin.sha256.trim_start_matches("sha256:"))?;
-    medulla_server_api::blob::engine_bodies::read_engine_body(
+    medulla_server_blob::blob::engine_bodies::read_engine_body(
         blob.store.as_ref(),
         tenant_id,
         &pin.manifest_digest,
@@ -133,8 +134,8 @@ fn load_inputs(
 
 #[cfg(feature = "blob")]
 fn release_inputs(retention: &Retention, pin: &InputsBlob, request_id: u64) -> Result<(), String> {
-    use medulla_server_api::blob::store::HolderChange;
-    use medulla_server_api::blob::store::HolderId;
+    use medulla_server_blob::blob::store::HolderChange;
+    use medulla_server_blob::blob::store::HolderId;
     let (Some(blob), Some(authority)) = (retention.blob.as_ref(), retention.authority.as_ref())
     else {
         return Err(unavailable());
@@ -142,7 +143,7 @@ fn release_inputs(retention: &Retention, pin: &InputsBlob, request_id: u64) -> R
     let method = medulla_protocol_types::protocol::Method::BlobUnref {
         digest: pin.manifest_digest.clone(),
     };
-    let (batch, now) = medulla_server_api::api::ingest::compile_blob_batch(
+    let (batch, now) = medulla_server_ops::api::ingest::compile_blob_batch(
         blob.store.as_ref(),
         request_id,
         authority,

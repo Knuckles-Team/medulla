@@ -15,7 +15,7 @@ async fn route_native_resource_ops(
     let multi_raft = ctx.multi_raft;
     #[cfg(feature = "redb")]
     let graph_incarnation_id = ctx.graph_incarnation_id;
-    if medulla_server_api::mutation_batch::is_resource_reservation_query_method(&method) {
+    if medulla_server_api::batch_compile::is_resource_reservation_query_method(&method) {
         return Ok(dispatch_op_resource_reservation_query(
             req_id,
             graph_name,
@@ -29,7 +29,7 @@ async fn route_native_resource_ops(
         )
         .await);
     }
-    if medulla_server_api::mutation_batch::is_capacity_method(&method) {
+    if medulla_server_api::batch_compile::is_capacity_method(&method) {
         return Ok(dispatch_op_capacity_ops(
             NativeOpCtx {
                 req_id,
@@ -190,7 +190,7 @@ pub(super) async fn route_native_store_ops(
     if matches!(
         &method,
         Method::SubmitWorkItem { .. } | Method::SubmitWorkItems { .. }
-    ) || medulla_server_api::mutation_batch::is_resource_reservation_method(&method)
+    ) || medulla_server_api::batch_compile::is_resource_reservation_method(&method)
     {
         return Ok(dispatch_op_workitem_submission_or_resources(
             medulla_h_jobs::work_item::HandleContext {
@@ -478,7 +478,7 @@ async fn route_source_ingestion_request(
     // otherwise make the kernel refuse this batch as STALE_VERSION
     // (MEDULLA-DURABLE-KERNEL-R031.2).
     let graph_version = match ctx.persistence.as_ref() {
-        Some(persistence) => match medulla_server_api::mutation_batch::authoritative_graph_version(
+        Some(persistence) => match medulla_server_api::batch_compile::authoritative_graph_version(
             persistence,
             &medulla_kernel::persist::sanitize(ctx.graph_name),
             ctx.core,
@@ -692,7 +692,7 @@ async fn route_graph_audit_and_modality(
             request_id,
             audit_class,
         } => {
-            let authority = match medulla_server_api::access::CarrierAuthority::from_verified(
+            let authority = match medulla_server_api::carrier::CarrierAuthority::from_verified(
                 ctx.verified_context,
             ) {
                 Ok(authority) => authority,

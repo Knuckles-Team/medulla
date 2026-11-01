@@ -10,7 +10,7 @@ use super::{
 };
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::api::ingest::MAX_INGEST_STREAM_ITEMS;
+use medulla_server_ops::api::ingest::MAX_INGEST_STREAM_ITEMS;
 
 fn validate_ingest_stream_request_cardinality(items: usize) -> Result<(), String> {
     if !(2..=MAX_INGEST_STREAM_ITEMS).contains(&items) {

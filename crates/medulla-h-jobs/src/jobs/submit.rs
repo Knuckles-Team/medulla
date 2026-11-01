@@ -25,7 +25,7 @@ fn build_submit_policy(
 ) -> JobPolicy {
     let tenant = authority.tenant_scope().to_string();
     let actor = authority.actor_scope().to_string();
-    let purpose = medulla_server_api::mutation_batch::opaque_coordinator_key(
+    let purpose = medulla_server_api::batch_compile::opaque_coordinator_key(
         "job-purpose",
         "native",
         &spec.purpose,

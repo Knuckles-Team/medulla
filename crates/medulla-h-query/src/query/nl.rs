@@ -1,3 +1,4 @@
+use medulla_server_ops::api::query_txn::ForeignStateExt;
 use super::*;
 
 /// `Method::TxnUql`: a UQL statement over the txn-overlaid snapshot (read your own
@@ -117,7 +118,7 @@ async fn nl_foreign_sources(
     let carrier = read_authority.and_then(GraphReadAuthority::carrier)?;
     let state = state.read().await;
     let registry = state
-        .foreign_sources
+        .foreign_sources()
         .registry_for(carrier, &state.isolation);
     Some(registry.registry().names().into_iter().collect())
 }
@@ -220,7 +221,7 @@ pub(crate) async fn handle_nl_query_plan_only(
         Err(response) => return Ok(response),
     };
     let plan_digest =
-        match medulla_server_api::api::query_txn::query_support::canonical_plan_digest(&plan) {
+        match medulla_server_ops::api::query_txn::query_support::canonical_plan_digest(&plan) {
             Ok(digest) => digest,
             Err(error) => return Ok(Response::err(req_id, error)),
         };

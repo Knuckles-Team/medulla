@@ -66,6 +66,11 @@ medulla-virtual-graph = { path = "../medulla-virtual-graph" }
 medulla-graph-algos = { path = "../medulla-graph-algos" }
 medulla-mining = { path = "../medulla-mining" }
 medulla-persistence-records = { path = "../medulla-persistence-records" }
+medulla-server-ops = { path = "../medulla-server-ops" }
+medulla-server-blob = { path = "../medulla-server-blob" }
+medulla-server-mutation = { path = "../medulla-server-mutation" }
+medulla-server-cdc = { path = "../medulla-server-cdc" }
+medulla-server-auth = { path = "../medulla-server-auth" }
 
 [features]
 test-support = []
@@ -133,4 +138,5 @@ traces = ["dep:medulla-tsdb", "medulla-tsdb/traces"]
 
 [dev-dependencies]
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
+medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
 tempfile = "3"

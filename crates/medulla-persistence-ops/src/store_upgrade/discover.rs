@@ -90,7 +90,7 @@ fn named_files(data_dir: &Path) -> Vec<StoreFile> {
 
 #[cfg(feature = "query")]
 fn sql_catalog_files(data_dir: &Path) -> Result<Vec<StoreFile>, String> {
-    let directory = data_dir.join(medulla_server_api::sql_tables::SQL_CATALOG_DIR);
+    let directory = data_dir.join(medulla_server_auth::sql_tables::SQL_CATALOG_DIR);
     let entries = match std::fs::read_dir(&directory) {
         Ok(entries) => entries,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),

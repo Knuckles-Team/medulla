@@ -81,6 +81,7 @@
 //! The listener starts only with configured JWT validation or a runtime-injected
 //! bearer secret. Every request must authenticate or it is refused `401`.
 
+use medulla_server_blob::kv::KvStateExt;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -401,7 +402,7 @@ impl KvCacheStore {
 // SAME way instead of growing a third bespoke bearer/JWT implementation. The
 // JWT verifier itself still lives in `medulla_server::oidc` (feature `oidc`),
 // shared with the primary `eg2.` protocol's identity binding.
-use medulla_server_api::auth::BearerCredential as KvAuth;
+use medulla_server_auth::auth::BearerCredential as KvAuth;
 
 /// Require a valid `Authorization: Bearer <token>` — a static-secret match or a
 /// signature/issuer/audience/expiry-verified Keycloak JWT
@@ -505,12 +506,12 @@ fn handle(store: &KvCacheStore, auth: &KvAuth, req: &HttpMessage) -> KvResponse 
     // leg, ...), then gate through the SAME shared check (real now: denies
     // iff no carrier was minted; here it can only be minted once `authorized`
     // passed).
-    let carrier = medulla_server_api::auth::mint_fixed_service_carrier(
+    let carrier = medulla_server_auth::auth::mint_fixed_service_carrier(
         credential_verified,
         "kvcache-client",
         &["kg:read", "kg:write"],
     );
-    if medulla_server_api::access::unauthenticated_carrier_denied(carrier.as_ref()) {
+    if medulla_server_api::carrier::unauthenticated_carrier_denied(carrier.as_ref()) {
         return KvResponse::error(
             "403 Forbidden",
             "AccessDenied",
@@ -735,7 +736,7 @@ async fn resolve_store(state: &Arc<RwLock<ServerState>>) -> std::io::Result<KvCa
     }
     #[cfg(feature = "kv")]
     {
-        let kv = { state.read().await.kv.clone() };
+        let kv = { state.read().await.kv_store().cloned() };
         let Some(kv) = kv else {
             return Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,

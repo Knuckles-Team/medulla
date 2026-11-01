@@ -60,7 +60,7 @@ pub fn configure(
             0,
         )?,
     )?;
-    crate::api::admin::compose::validate_and_compose(&sources)
+    crate::schema_compose::validate_and_compose(&sources)
         .map_err(|error| format!("IcvConfigure: {error}"))?;
     core.install_schema_sources(Arc::new(sources));
     Ok(())
@@ -85,7 +85,7 @@ impl<'a> CoreIcvGuard<'a> {
         }
     }
 
-    pub(crate) fn routed(graphs: &'a HashMap<String, Arc<GraphCore>>) -> Self {
+    pub fn routed(graphs: &'a HashMap<String, Arc<GraphCore>>) -> Self {
         Self {
             authority: PolicyAuthority::Routed(graphs),
         }
@@ -169,7 +169,7 @@ fn native_write_gate_enabled() -> bool {
 /// pre- and post-mutation graph images (the commit path's authoritative base
 /// and its staged copy). A rejection carries the same witness-bearing
 /// [`GuardRejection`] shape the RDF write path returns.
-pub(crate) fn check_native_write(
+pub fn check_native_write(
     graph_name: &str,
     before: &GraphCore,
     after: &GraphCore,
@@ -233,7 +233,7 @@ fn registered_native_shape_policy(core: &GraphCore) -> Option<()> {
 
 fn compiled_policy(core: &GraphCore) -> Result<IcvPolicy, String> {
     let sources = core.schema_sources();
-    let composed = crate::api::admin::compose::validate_and_compose(&sources)?;
+    let composed = crate::schema_compose::validate_and_compose(&sources)?;
     Ok(IcvPolicy::new(composed.shapes.clone()))
 }
 

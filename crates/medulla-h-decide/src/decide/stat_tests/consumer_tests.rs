@@ -575,7 +575,7 @@ async fn an_assembly_outcome_is_credited_to_its_slate() {
 fn uql_decisions(h: &Harness, who: &str) -> Vec<String> {
     use super::super::stat_view::DecisionViews;
     let verified = VerifiedRequestContext::verified_for_test_in_tenant(who, TENANT);
-    let authority = medulla_server_api::access::CarrierAuthority::from_verified(&verified).unwrap();
+    let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(&verified).unwrap();
     let views = DecisionViews::of(h.store.clone(), &authority);
     let graph = medulla_graph_core::graph::GraphCore::new().analysis_snapshot();
     let semantic = medulla_semantic_index::semantic::SemanticStore::new();
@@ -587,9 +587,9 @@ fn uql_decisions(h: &Harness, who: &str) -> Vec<String> {
 /// The relation names the decision views materialize for `who`.
 #[cfg(feature = "query")]
 fn view_names(h: &Harness, who: &str) -> Vec<String> {
-    use medulla_server_api::sql_catalog_acl::ReadOnlyRelations;
+    use medulla_server_auth::sql_catalog_acl::ReadOnlyRelations;
     let verified = VerifiedRequestContext::verified_for_test_in_tenant(who, TENANT);
-    let authority = medulla_server_api::access::CarrierAuthority::from_verified(&verified).unwrap();
+    let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(&verified).unwrap();
     super::super::stat_view::DecisionViews::of(h.store.clone(), &authority)
         .materialize()
         .unwrap()

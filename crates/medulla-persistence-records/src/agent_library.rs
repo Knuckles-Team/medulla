@@ -512,7 +512,7 @@ fn agent_library_operations(
 pub(super) fn effective_agent_library_policy_digest(
     operations: &[MutationOperation],
 ) -> Result<medulla_types::contract::Digest256, String> {
-    medulla_server_api::mutation_batch::effective_policy_digest(
+    medulla_server_api::batch_compile::effective_policy_digest(
         &medulla_types::contract::MethodId::new("ApplyMutation")?,
         operations,
     )

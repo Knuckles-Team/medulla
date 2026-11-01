@@ -1,3 +1,4 @@
+use medulla_server_auth::auth::RequestAuthorityExt;
 #[cfg(feature = "raft")]
 use super::change_envelope::multi_graph_batch_update;
 #[cfg(feature = "raft")]
@@ -452,7 +453,7 @@ async fn dispatch_inner(
                     medulla_kernel::metrics::auth_failure();
                     return Response::err(
                         req.id,
-                        medulla_server_api::auth::authentication_refusal(&error),
+                        medulla_server_auth::auth::authentication_refusal(&error),
                     );
                 }
             }
@@ -530,7 +531,7 @@ async fn dispatch_admitted_request(
         finalize_dispatch_response(req_id, response, &method_for_finalize, session_control)
     };
     #[cfg(feature = "redb")]
-    return medulla_server_api::api::admin::saga::scope_admin_saga_authority(
+    return medulla_server_ops::api::admin::saga::scope_admin_saga_authority(
         saga_authority,
         operation,
     )

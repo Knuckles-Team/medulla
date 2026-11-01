@@ -207,7 +207,7 @@ pub(super) async fn dispatch_op_capacity_ops(
         return Response::err(req_id, "ACCESS_DENIED: capacity owner digest mismatch");
     }
     let fname = medulla_kernel::persist::sanitize(graph_name);
-    let _mutation_guard = medulla_server_api::mutation_batch::lock_graph(graph_name).await;
+    let _mutation_guard = medulla_server_api::routed_write_coalescer::lock_graph(graph_name).await;
     match method {
         Method::CapacityStatus { ref request } | Method::ReconcileCapacity { ref request } => {
             capacity_status_response(
@@ -357,7 +357,7 @@ pub(super) async fn dispatch_op_workitem_claim_capability(
             now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
         };
         let fname = medulla_kernel::persist::sanitize(graph_name);
-        let _mutation_guard = medulla_server_api::mutation_batch::lock_graph(graph_name).await;
+        let _mutation_guard = medulla_server_api::routed_write_coalescer::lock_graph(graph_name).await;
         match method {
             Method::MintWorkItemClaimCapability { request } => redb
                 .mint_work_item_claim_capability(&fname, request, authority)
@@ -415,7 +415,7 @@ pub(super) async fn dispatch_op_workitem_claim_capability(
 /// graph and placement context the WorkItem lifecycle handler receives.
 fn require_enrichment_budget_service_scope(
     has_budget_debit: bool,
-    verified_context: &medulla_server_api::auth::VerifiedRequestContext,
+    verified_context: &medulla_server_api::authority_context::VerifiedRequestContext,
 ) -> Result<(), &'static str> {
     if has_budget_debit && !verified_context.allows_action("repository:enrichment:submit") {
         return Err("ACCESS_DENIED: repository enrichment budget admission requires service scope");
@@ -473,11 +473,11 @@ pub(super) async fn dispatch_op_workitem_submission_or_resources(
         }
         _ => caller,
     };
-    return match medulla_server_api::mutation_batch::commit_work_item(
-        medulla_server_api::mutation_batch::WorkItemCommitRequest::new(
+    return match medulla_server_mutation::mutation_batch::commit_work_item(
+        medulla_server_mutation::mutation_batch::WorkItemCommitRequest::new(
             persistence.as_ref(),
             core,
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: req_id,
                 principal,
             },
@@ -503,7 +503,7 @@ mod enrichment_budget_scope_tests {
     #[test]
     fn ordinary_work_submitter_cannot_debit_repository_enrichment_budget() {
         let ordinary =
-            medulla_server_api::auth::VerifiedRequestContext::verified_for_test_with_scopes(
+            medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_with_scopes(
                 "worker",
                 "tenant",
                 &["work:submit"],
@@ -513,7 +513,7 @@ mod enrichment_budget_scope_tests {
             .unwrap_err()
             .starts_with("ACCESS_DENIED:"));
         let service =
-            medulla_server_api::auth::VerifiedRequestContext::verified_for_test_with_scopes(
+            medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_with_scopes(
                 "enrichment-service",
                 "tenant",
                 &["work:submit", "repository:enrichment:submit"],

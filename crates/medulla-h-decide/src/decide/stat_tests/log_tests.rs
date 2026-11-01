@@ -1,6 +1,7 @@
 //! Served decision-log tests: commit, evaluate, aggregate, fitting from the
 //! log, and retention (EH-060, EH-061, EH-062).
 
+use medulla_server_blob::blob::BlobStateExt;
 use super::*;
 
 /// Engine-log fitting: a bandit fit reads its labels from the decision log
@@ -216,12 +217,12 @@ fn tampered_blob(
     };
     let body = serde_json::to_vec(&matrix).unwrap();
     let sha256 = medulla_types::contract::Digest256::from_bytes(Sha256::digest(&body).into());
-    let blob = h.state.try_read().unwrap().blob.clone().unwrap();
+    let blob = h.state.try_read().unwrap().blob_cursors().cloned().unwrap();
     let stored = blob
         .store
         .put_engine_bodies(
             TENANT,
-            &[medulla_server_api::blob::engine_bodies::EngineBody { sha256, body }],
+            &[medulla_server_blob::blob::engine_bodies::EngineBody { sha256, body }],
             1,
         )
         .unwrap();
@@ -492,7 +493,7 @@ async fn assert_reputation_origin(
     });
     assert_eq!(counts, expected);
     let verified = verified();
-    let authority = medulla_server_api::access::CarrierAuthority::from_verified(&verified).unwrap();
+    let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(&verified).unwrap();
     let views = super::super::stat_view::DecisionViews::of(h.store.clone(), &authority);
     let record = real.unwrap_or(synthetic);
     let StatisticalOutcome::Explored { option_id, .. } = &record.outcome else {

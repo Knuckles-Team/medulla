@@ -259,12 +259,12 @@ pub(crate) async fn plan_held_underfunded_park(
 /// the async reactor. Source hash and manifest hash are distinct identities.
 #[cfg(feature = "blob")]
 pub(super) fn verify_page_cas(
-    store: &dyn medulla_server_api::blob::store::ChunkStore,
+    store: &dyn medulla_server_blob::blob::store::ChunkStore,
     snapshot: &EligibleSnapshot,
     page: &PagePlan,
 ) -> Result<(), String> {
     for unit in &page.units {
-        medulla_server_api::blob::engine_bodies::read_repository_content_ref(
+        medulla_server_blob::blob::engine_bodies::read_repository_content_ref(
             store,
             &snapshot.tenant_id,
             &snapshot.repository_id,
@@ -379,7 +379,7 @@ pub(crate) trait PageActions {
     type AuthorityFuture: Future<
         Output = Result<
             (
-                medulla_server_api::auth::VerifiedRequestContext,
+                medulla_server_api::authority_context::VerifiedRequestContext,
                 RequestContext,
             ),
             String,
@@ -396,7 +396,7 @@ pub(crate) trait PageActions {
     ) -> Self::AuthorityFuture;
     fn submit(
         &mut self,
-        verified: medulla_server_api::auth::VerifiedRequestContext,
+        verified: medulla_server_api::authority_context::VerifiedRequestContext,
         request: SubmitWorkItemsRequest,
     ) -> Self::SubmitFuture;
     fn park_source(
@@ -413,13 +413,13 @@ where
     AF: Future<
         Output = Result<
             (
-                medulla_server_api::auth::VerifiedRequestContext,
+                medulla_server_api::authority_context::VerifiedRequestContext,
                 RequestContext,
             ),
             String,
         >,
     >,
-    S: FnMut(medulla_server_api::auth::VerifiedRequestContext, SubmitWorkItemsRequest) -> F,
+    S: FnMut(medulla_server_api::authority_context::VerifiedRequestContext, SubmitWorkItemsRequest) -> F,
     F: Future<Output = Result<(), String>>,
     P: FnMut(MutationOutboxLease, EnrichmentBudgetPark) -> PF,
     PF: Future<Output = Result<(), String>>,
@@ -434,7 +434,7 @@ where
 
     fn submit(
         &mut self,
-        verified: medulla_server_api::auth::VerifiedRequestContext,
+        verified: medulla_server_api::authority_context::VerifiedRequestContext,
         request: SubmitWorkItemsRequest,
     ) -> F {
         (self.submit)(verified, request)
@@ -453,7 +453,7 @@ where
 pub(crate) async fn drain_once<A, S, P>(
     persistence: &dyn PersistenceBackend,
     graph_fname: &str,
-    store: Arc<dyn medulla_server_api::blob::store::ChunkStore>,
+    store: Arc<dyn medulla_server_blob::blob::store::ChunkStore>,
     authority_for_page: A,
     submit: S,
     park_source: P,
@@ -568,7 +568,7 @@ async fn classify_dead_letter(
 async fn process_held_lease<C: PageActions>(
     persistence: &dyn PersistenceBackend,
     graph_fname: &str,
-    store: Arc<dyn medulla_server_api::blob::store::ChunkStore>,
+    store: Arc<dyn medulla_server_blob::blob::store::ChunkStore>,
     lease: &MutationOutboxLease,
     callbacks: &mut C,
 ) -> Result<DrainOutcome, String> {
@@ -645,7 +645,7 @@ async fn process_held_lease<C: PageActions>(
 /// bind this exact page and remain valid at the authoritative sweep time.
 #[cfg(feature = "blob")]
 fn verify_page_service_authority(
-    verified: &medulla_server_api::auth::VerifiedRequestContext,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     wire: &RequestContext,
     page_key: &str,
     now_ms: u64,
@@ -681,7 +681,7 @@ struct ReadyPage<'a> {
 async fn submit_ready_page<C: PageActions>(
     persistence: &dyn PersistenceBackend,
     graph_fname: &str,
-    store: &Arc<dyn medulla_server_api::blob::store::ChunkStore>,
+    store: &Arc<dyn medulla_server_blob::blob::store::ChunkStore>,
     ready: ReadyPage<'_>,
     callbacks: &mut C,
 ) -> Result<EnrichmentBudgetCheckpoint, String> {
@@ -733,7 +733,7 @@ mod tests {
         RequestContextAuthenticationMethod, RequestContextSchemaVersion,
     };
     #[cfg(feature = "blob")]
-    use medulla_server_api::blob::store::ChunkStore;
+    use medulla_server_blob::blob::store::ChunkStore;
 
     #[cfg(feature = "blob")]
     struct DeadLetterProbe {
@@ -892,13 +892,13 @@ mod tests {
     fn service_authority_minted_after_cas_uses_current_validation_clock() {
         let page_key = "repository-index:page-one";
         let fixture =
-            medulla_server_api::auth::VerifiedRequestContext::verified_for_test_with_scopes(
+            medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_with_scopes(
                 "repository-enrichment",
                 "tenant",
                 &["work:submit", "repository:enrichment:submit"],
             );
         let verified =
-            medulla_server_api::auth::VerifiedRequestContext::from_verified_claims_with_nonce(
+            medulla_server_api::authority_context::VerifiedRequestContext::from_verified_claims_with_nonce(
                 fixture.claims().clone(),
                 page_key.to_string(),
                 Some(medulla_types::contract::Nonce::minted()),
@@ -1119,7 +1119,7 @@ mod tests {
     fn consumer_rechecks_exact_cas_holder_digest_and_length() {
         use sha2::{Digest, Sha256};
 
-        let store = medulla_server_api::blob::store::RedbChunkStore::open_temp().unwrap();
+        let store = medulla_server_blob::blob::store::RedbChunkStore::open_temp().unwrap();
         let body = b"verified repository source";
         let source_digest =
             medulla_types::contract::Digest256::from_bytes(Sha256::digest(body).into());
@@ -1127,7 +1127,7 @@ mod tests {
             .put_repository_bodies(
                 "tenant",
                 "repo",
-                &[medulla_server_api::blob::engine_bodies::EngineBody {
+                &[medulla_server_blob::blob::engine_bodies::EngineBody {
                     sha256: source_digest,
                     body: body.to_vec(),
                 }],

@@ -52,7 +52,7 @@
 use medulla_graph_core::graph::GraphView;
 use medulla_rdf::sparql::{execute, Dataset, Projection, QueryOutcome, RemoteSparql};
 
-use medulla_server_api::sparql_http::ServiceClient;
+use medulla_server_blob::sparql_http::ServiceClient;
 
 /// Env var carrying the live qualification-test dataset's full SPARQL endpoint URL (e.g.
 /// `http://<fuseki-host>/ca12qual/sparql`). See module docs for how to run the live test.

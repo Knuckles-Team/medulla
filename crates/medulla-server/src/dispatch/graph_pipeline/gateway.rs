@@ -16,10 +16,10 @@ pub(super) struct GatewayRouteCtx<'a> {
     pub(super) core: Arc<medulla_graph_core::graph::GraphCore>,
     pub(super) persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
-    pub(super) cdc: Option<Arc<medulla_server_api::cdc::CdcHub>>,
+    pub(super) cdc: Option<Arc<medulla_server_cdc::cdc::CdcHub>>,
     pub(super) materialization_manifest:
         Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
-    pub(super) gateway_authz_ctx: &'a Option<medulla_server_api::mutation::GatewayAuthzCtx>,
+    pub(super) gateway_authz_ctx: &'a Option<medulla_server_mutation::mutation::GatewayAuthzCtx>,
     pub(super) read_authority: &'a Option<GraphReadAuthority>,
     pub(super) verified_actor: &'a str,
     #[cfg(feature = "security")]
@@ -35,9 +35,9 @@ pub(super) struct GatewayRouteCtx<'a> {
 async fn gateway_mutation_context<'a>(
     ctx: &'a GatewayRouteCtx<'_>,
     missing_authz_message: &str,
-) -> medulla_server_api::mutation::MutationCtx<'a> {
+) -> medulla_server_mutation::mutation::MutationCtx<'a> {
     let (iso, gtype, owner) = ctx.gateway_authz_ctx.as_ref().expect(missing_authz_message);
-    medulla_server_api::mutation::MutationCtx {
+    medulla_server_mutation::mutation::MutationCtx {
         anonymous: ctx.state.read().await.local_anonymous,
         req_id: ctx.req_id,
         caller: ctx.caller,
@@ -59,11 +59,11 @@ async fn gateway_mutation_context<'a>(
 
 #[cfg(any(feature = "query", feature = "cypher", feature = "graphql"))]
 async fn commit_query_gateway(ctx: GatewayRouteCtx<'_>, method: Method) -> Response {
-    if medulla_server_api::mutation::is_query_gateway_method(&method)
-        && !medulla_server_api::mutation::is_query_native_coordinator(&method)
+    if medulla_server_mutation::mutation::is_query_gateway_method(&method)
+        && !medulla_server_mutation::mutation::is_query_native_coordinator(&method)
     {
         let mutates_now = requires_write(&method);
-        let plan = medulla_server_api::mutation::MutationPlan::for_method(&method);
+        let plan = medulla_server_mutation::mutation::MutationPlan::for_method(&method);
         let mutation_ctx = gateway_mutation_context(
             &ctx,
             "is_gateway_routed query method must have a captured GatewayAuthzCtx",
@@ -77,7 +77,7 @@ async fn commit_query_gateway(ctx: GatewayRouteCtx<'_>, method: Method) -> Respo
         let req_id = ctx.req_id;
         let graph_name = ctx.graph_name;
         let verified_actor = ctx.verified_actor;
-        let resp = medulla_server_api::mutation::commit_conditional_mutation_async(
+        let resp = medulla_server_mutation::mutation::commit_conditional_mutation_async(
             &mutation_ctx,
             &plan,
             &method,
@@ -114,8 +114,8 @@ pub(super) async fn route_query_gateway(
     ctx: GatewayRouteCtx<'_>,
     method: Method,
 ) -> Result<Response, Method> {
-    if medulla_server_api::mutation::is_query_gateway_method(&method)
-        && !medulla_server_api::mutation::is_query_native_coordinator(&method)
+    if medulla_server_mutation::mutation::is_query_gateway_method(&method)
+        && !medulla_server_mutation::mutation::is_query_native_coordinator(&method)
     {
         return Ok(commit_query_gateway(ctx, method).await);
     }
@@ -140,8 +140,8 @@ pub(super) async fn route_query_gateway(
 }
 #[cfg(feature = "rdf")]
 async fn commit_rdf_gateway(ctx: GatewayRouteCtx<'_>, method: Method) -> Response {
-    if medulla_server_api::mutation::is_rdf_gateway_method(&method) {
-        let plan = medulla_server_api::mutation::MutationPlan::for_method(&method);
+    if medulla_server_mutation::mutation::is_rdf_gateway_method(&method) {
+        let plan = medulla_server_mutation::mutation::MutationPlan::for_method(&method);
         let mutation_ctx = gateway_mutation_context(
             &ctx,
             "is_gateway_routed rdf method must have a captured GatewayAuthzCtx",
@@ -155,7 +155,7 @@ async fn commit_rdf_gateway(ctx: GatewayRouteCtx<'_>, method: Method) -> Respons
         let req_id = ctx.req_id;
         let graph_name = ctx.graph_name;
         let verified_actor = ctx.verified_actor;
-        let resp = medulla_server_api::mutation::commit_conditional_mutation_async(
+        let resp = medulla_server_mutation::mutation::commit_conditional_mutation_async(
             &mutation_ctx,
             &plan,
             &method,
@@ -192,7 +192,7 @@ pub(super) async fn route_rdf_gateway(
     ctx: GatewayRouteCtx<'_>,
     method: Method,
 ) -> Result<Response, Method> {
-    if medulla_server_api::mutation::is_rdf_gateway_method(&method) {
+    if medulla_server_mutation::mutation::is_rdf_gateway_method(&method) {
         return Ok(commit_rdf_gateway(ctx, method).await);
     }
     match medulla_h_query::rdf::try_handle(

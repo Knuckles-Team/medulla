@@ -334,7 +334,7 @@ pub(super) struct DurableReadLease {
     pub(super) isolation: medulla_isolation::isolation::IsolationLayer,
     pub(super) claims: RequestContextClaims,
     pub(super) carrier: CarrierAuthority,
-    pub(super) verified_context: medulla_server_api::auth::VerifiedRequestContext,
+    pub(super) verified_context: medulla_server_api::authority_context::VerifiedRequestContext,
     pub(super) lease: std::sync::Arc<medulla_isolation::isolation::PolicyDecisionLease>,
     pub(super) policy_store: std::sync::Arc<dyn medulla_isolation::rbac_persist::RbacPolicyStore>,
 }
@@ -416,7 +416,7 @@ pub(super) fn durable_read_lease(graph: &str, agent: &str) -> DurableReadLease {
     )
     .expect("reopen isolation layer over durable store");
     let verified_context =
-        medulla_server_api::auth::VerifiedRequestContext::verified_for_test_in_tenant(agent, "tenant");
+        medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_in_tenant(agent, "tenant");
     let claims = verified_context.claims().clone();
     let carrier = CarrierAuthority::from_verified(&verified_context)
         .expect("derive carrier from verified context");
@@ -461,10 +461,10 @@ pub(super) fn durable_read_lease(graph: &str, agent: &str) -> DurableReadLease {
 ))]
 #[tokio::test]
 async fn knowledge_stream_sql_lists_the_request_graph_edge_indexes() {
-    use medulla_server_api::api::query_txn::edge_test_support::edge_status_row;
-    use medulla_server_api::api::query_txn::edge_test_support::register_detached_edge_index;
-    use medulla_server_api::api::query_txn::edge_test_support::sql_rows;
-    use medulla_server_api::api::query_txn::edge_test_support::EDGE_STATUS_SQL;
+    use medulla_server_ops::api::query_txn::edge_test_support::edge_status_row;
+    use medulla_server_ops::api::query_txn::edge_test_support::register_detached_edge_index;
+    use medulla_server_ops::api::query_txn::edge_test_support::sql_rows;
+    use medulla_server_ops::api::query_txn::edge_test_support::EDGE_STATUS_SQL;
     use medulla_server_api::api::reentry::TryHandleContext;
     use crate::query::try_handle_with_policy;
     use crate::query::PolicyAwareQuery;
@@ -478,9 +478,9 @@ async fn knowledge_stream_sql_lists_the_request_graph_edge_indexes() {
     );
     let persist_dir = std::path::PathBuf::from(state.read().await.persist_dir.clone().unwrap());
     let tenant = fixture.carrier.tenant_scope();
-    let store = medulla_server_api::sql_tables::tenant_table_store(tenant, &persist_dir).unwrap();
+    let store = medulla_server_auth::sql_tables::tenant_table_store(tenant, &persist_dir).unwrap();
     register_detached_edge_index(&store, "tenant-graph", tenant);
-    let read_authority = medulla_server_api::access::GraphReadAuthority::from_verified(
+    let read_authority = medulla_server_api::carrier::GraphReadAuthority::from_verified(
         &fixture.verified_context,
         &fixture.isolation,
     )
@@ -563,7 +563,7 @@ fn durable_lease_revocation_rejects_resume_before_any_cursor_metadata() {
     )
     .expect("bind exact durable lease");
     let foreign_carrier = CarrierAuthority::from_verified(
-        &medulla_server_api::auth::VerifiedRequestContext::verified_for_test_in_tenant("bob", "tenant"),
+        &medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_in_tenant("bob", "tenant"),
     )
     .expect("derive mismatched carrier");
     assert!(authority
@@ -624,7 +624,7 @@ fn durable_lease_revocation_rejects_resume_before_any_cursor_metadata() {
 fn claims_only_authority_cannot_enter_the_served_path() {
     let authority = authority(2);
     let carrier = CarrierAuthority::from_verified(
-        &medulla_server_api::auth::VerifiedRequestContext::verified_for_test_in_tenant(
+        &medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_in_tenant(
             "verified-agent",
             "tenant",
         ),
@@ -647,7 +647,7 @@ fn query_state_with_services(
 ) -> std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>> {
     let mut state = medulla_server_api::state::ServerState::new_for_test(auth_secret.to_owned(), isolation);
     state.persist_dir = Some(
-        medulla_server_api::sql_tables::test_persist_dir()
+        medulla_server_auth::sql_tables::test_persist_dir()
             .to_string_lossy()
             .into_owned(),
     );

@@ -56,6 +56,10 @@ medulla-isolation = { path = "../medulla-isolation" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-store-apply = { path = "../medulla-store-apply" }
 medulla-persistence-ops = { path = "../medulla-persistence-ops" }
+medulla-server-ops = { path = "../medulla-server-ops" }
+medulla-server-mutation = { path = "../medulla-server-mutation" }
+medulla-server-cdc = { path = "../medulla-server-cdc" }
+medulla-server-auth = { path = "../medulla-server-auth" }
 
 [features]
 blob = ["redb"]

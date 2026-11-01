@@ -8,7 +8,7 @@ use medulla_raft::raft::RaftStateExt;
 /// replicas applying these in step.
 #[cfg(feature = "raft")]
 fn native_route_opaque_key(label: &str, tenant_scope: &str, kind: &str) -> String {
-    medulla_server_api::mutation_batch::opaque_coordinator_key(label, tenant_scope, kind)
+    medulla_server_api::batch_compile::opaque_coordinator_key(label, tenant_scope, kind)
 }
 
 /// A graph-lifecycle command routes to the graph it NAMES, not to the graph the
@@ -377,14 +377,14 @@ fn build_native_raft_request(
 ) -> Result<medulla_raft::raft::RaftRequest, Response> {
     let committed_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let graph_fname = medulla_kernel::persist::sanitize(proposal.graph_name);
-    let graph_scope = medulla_server_api::mutation_batch::opaque_idempotency_key_for_context(
+    let graph_scope = medulla_server_api::batch_compile::opaque_idempotency_key_for_context(
         "raft-graph-scope",
         proposal.authority.tenant_scope(),
         proposal.graph_name,
         None,
         &graph_fname,
     );
-    let batch_id = medulla_server_api::mutation_batch::opaque_idempotency_key_for_context(
+    let batch_id = medulla_server_api::batch_compile::opaque_idempotency_key_for_context(
         "raft-native",
         proposal.authority.tenant_scope(),
         &graph_scope,

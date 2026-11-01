@@ -142,7 +142,7 @@ impl MedullaStore {
                 "replicated ChangeEnvelope graph does not match request authority".to_string(),
             );
         }
-        let expected_tenant_scope = medulla_server_api::mutation_batch::opaque_coordinator_key(
+        let expected_tenant_scope = medulla_server_api::batch_compile::opaque_coordinator_key(
             "carrier-tenant",
             "verified",
             envelope.mutation.identity.tenant().as_str(),
@@ -173,7 +173,7 @@ impl MedullaStore {
         let projection_pending = if committed.replayed {
             false
         } else {
-            match medulla_server_api::mutation_batch::publish_change_envelope_projection(
+            match medulla_server_mutation::mutation_batch::publish_change_envelope_projection(
                 core, envelope,
             ) {
                 Ok(()) => false,

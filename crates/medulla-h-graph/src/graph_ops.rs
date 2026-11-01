@@ -15,10 +15,12 @@ use medulla_protocol_types::protocol::LedgerReadResult;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use medulla_server_api::access::{check_graph_access, requires_write, GraphReadAuthority};
+use medulla_server_auth::access::check_graph_access;
+use medulla_server_auth::access::requires_write;
+use medulla_server_api::carrier::GraphReadAuthority;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::compute::{compute_off_lock, weight_semantic_results};
-use medulla_server_api::mutation::{self, GatewayAuthzCtx, MutationCtx, MutationPlan};
+use medulla_server_mutation::{mutation, mutation::GatewayAuthzCtx, mutation::MutationCtx, mutation::MutationPlan};
 use medulla_server_api::state::{
     max_response_edges, max_response_nodes, ServerState, MAX_BATCH_IDS,
 };

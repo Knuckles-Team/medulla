@@ -63,16 +63,6 @@ mod tests {
         assert_ne!(a.attempt_nonce(), b.attempt_nonce());
     }
     #[test]
-    fn default_state_rejects_unsigned_correlation() {
-        let state = crate::state::ServerState::new(
-            "synthetic-test-secret",
-            medulla_isolation::isolation::IsolationLayer::new(),
-        );
-        assert!(state
-            .request_authority(&request("anon1.{\"idempotency_key\":\"one-operation\"}"))
-            .is_err());
-    }
-    #[test]
     fn anonymous_metadata_bounds_and_empty_keys_are_rejected() {
         for key in [
             " ".to_owned(),

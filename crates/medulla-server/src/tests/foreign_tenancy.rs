@@ -440,7 +440,7 @@ async fn shared_source_needs_an_explicit_grant() {
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     let (_remote, local) = registered_by_owner_a(940).await;
     let qualified =
-        medulla_server_api::api::query_txn::foreign_share::shared_name(OWNER_A, "remote_docs");
+        medulla_server_ops::api::query_txn::foreign_share::shared_name(OWNER_A, "remote_docs");
     let text = || {
         uql(format!(
             "MATCH (:Doc) |> FOREIGN \"{qualified}\" |> LIMIT 10"
@@ -482,7 +482,7 @@ async fn shared_source_needs_an_explicit_grant() {
 
     let mut granted = original.clone();
     granted.push(
-        medulla_server_api::api::query_txn::foreign_share::share_role(OWNER_A, "remote_docs"),
+        medulla_server_ops::api::query_txn::foreign_share::share_role(OWNER_A, "remote_docs"),
     );
     set_other_roles(granted).await;
     let used = dispatch_as(&local, 942, OTHER_B, text()).await;
@@ -515,7 +515,7 @@ async fn a_graph_cannot_take_a_reserved_foreign_source_resource_name() {
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
     let local = multi_tenant_state().await;
     let reserved =
-        medulla_server_api::api::query_txn::foreign_share::share_resource(OWNER_A, "remote_docs");
+        medulla_server_ops::api::query_txn::foreign_share::share_resource(OWNER_A, "remote_docs");
     let create = Method::CreateGraph {
         graph_name: reserved.clone(),
         graph_type: GraphType::Global,

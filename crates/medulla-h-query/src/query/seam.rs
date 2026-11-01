@@ -8,7 +8,7 @@ use std::sync::Arc;
 pub struct QuerySeam;
 
 #[async_trait::async_trait]
-impl medulla_server_api::api::query_txn::QueryApi for QuerySeam {
+impl medulla_server_ops::api::query_txn::QueryApi for QuerySeam {
     #[cfg(feature = "ann-redb")]
     fn existing_semantic_service(
         &self,
@@ -31,7 +31,7 @@ impl medulla_server_api::api::query_txn::QueryApi for QuerySeam {
             &medulla_plan::federation::ForeignSourceRegistry,
         >,
         #[cfg(feature = "tsdb")]
-        tsdb_ctx: medulla_server_api::api::query_txn::query_support::TsdbLegBind<'_>,
+        tsdb_ctx: medulla_server_ops::api::query_txn::query_support::TsdbLegBind<'_>,
     ) -> Result<Vec<(String, Option<f32>)>, String> {
         super::overlay::run_unified_with_staged_finish(
             plan,
@@ -42,18 +42,18 @@ impl medulla_server_api::api::query_txn::QueryApi for QuerySeam {
             foreign,
             #[cfg(feature = "tsdb")]
             tsdb_ctx,
-            medulla_server_api::api::query_txn::query_support::execute_rows,
+            medulla_server_ops::api::query_txn::query_support::execute_rows,
         )
     }
 
     #[cfg(feature = "mining")]
     async fn mining_gateway_try_handle(
         &self,
-        ctx: &medulla_server_api::mutation::MutationCtx<'_>,
-        plan: &medulla_server_api::mutation::MutationPlan,
+        ctx: &medulla_server_mutation::mutation::MutationCtx<'_>,
+        plan: &medulla_server_mutation::mutation::MutationPlan,
         method: &medulla_protocol_types::protocol::Method,
         graph_name: &str,
-        read_authority: Option<&medulla_server_api::access::GraphReadAuthority>,
+        read_authority: Option<&medulla_server_api::carrier::GraphReadAuthority>,
         #[cfg(all(feature = "query", feature = "tsdb"))] tsdb_store: Option<
             &Arc<medulla_tsdb::store::SeriesStore>,
         >,

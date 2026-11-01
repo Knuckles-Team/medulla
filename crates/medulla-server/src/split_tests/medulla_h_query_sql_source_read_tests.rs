@@ -24,25 +24,23 @@ use medulla_ann_codes::semantic_index_service::{
     sql_source_deletion_proof, sql_source_revision_for_epoch, SemanticSqlSourceReadPage,
     SemanticSqlSourceReadPort, SemanticSqlSourceRecord, SemanticSqlSourceValue,
 };
-use medulla_server_api::access::CarrierAuthority;
+use medulla_server_api::carrier::CarrierAuthority;
 #[cfg(feature = "query")]
 use medulla_server_api::compute::compute_off_lock;
 #[cfg(feature = "query")]
-use medulla_server_api::sql_catalog_acl::{
-    open_authorized_table, SemanticTextSnapshot, SqlPrivilege,
-};
+use medulla_server_auth::{sql_catalog_acl::open_authorized_table, sql_catalog_acl::SemanticTextSnapshot, sql_catalog_acl::SqlPrivilege};
 use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome};
 
 use medulla_protocol_types::protocol::Method;
-use medulla_server_api::auth::VerifiedRequestContext;
-use medulla_server_api::mutation_batch::compile_opaque_method;
-use medulla_server_api::mutation_batch::CompileBatch;
-use medulla_server_api::sql_catalog_acl::create_owned_table;
-use medulla_server_api::sql_catalog_acl::grant;
-use medulla_server_api::sql_catalog_acl::revoke;
-use medulla_server_api::sql_catalog_acl::with_source_authority_write;
-use medulla_server_api::sql_tables::tenant_table_store;
-use medulla_server_api::sql_tables::test_persist_dir;
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_api::batch_compile::compile_opaque_method;
+use medulla_server_api::batch_compile::CompileBatch;
+use medulla_server_auth::sql_catalog_acl::create_owned_table;
+use medulla_server_auth::sql_catalog_acl::grant;
+use medulla_server_auth::sql_catalog_acl::revoke;
+use medulla_server_auth::sql_catalog_acl::with_source_authority_write;
+use medulla_server_auth::sql_tables::tenant_table_store;
+use medulla_server_auth::sql_tables::test_persist_dir;
 use medulla_tables::{schema::Column, schema::ColumnType, schema::TableSchema};
 use medulla_table_store::{tables::TableStore, tables::TableTxn, tables::TxnOp};
 // `CmpOp` exists in BOTH medulla_query and medulla_types and they are distinct types.

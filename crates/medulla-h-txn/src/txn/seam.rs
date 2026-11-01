@@ -11,13 +11,13 @@ use medulla_server_api::state::ServerState;
 pub struct TxnSeam;
 
 #[async_trait::async_trait]
-impl medulla_server_api::api::query_txn::TxnApi for TxnSeam {
+impl medulla_server_ops::api::query_txn::TxnApi for TxnSeam {
     #[cfg(feature = "tsdb")]
     async fn timeseries_try_handle(
         &self,
         state: &Arc<RwLock<ServerState>>,
         req_id: u64,
-        authority: &medulla_server_api::access::CarrierAuthority,
+        authority: &medulla_server_api::carrier::CarrierAuthority,
         graph: &str,
         placement_epoch: u64,
         fencing_token: Option<u64>,
@@ -40,7 +40,7 @@ impl medulla_server_api::api::query_txn::TxnApi for TxnSeam {
         state: &Arc<RwLock<ServerState>>,
         req_id: u64,
         caller: &str,
-        verified_context: &medulla_server_api::auth::VerifiedRequestContext,
+        verified_context: &medulla_server_api::authority_context::VerifiedRequestContext,
         method: medulla_protocol_types::protocol::Method,
     ) -> Result<medulla_protocol_types::protocol::Response, medulla_protocol_types::protocol::Method> {
         super::dispatch::try_handle(state, req_id, caller, verified_context, method).await
@@ -69,7 +69,7 @@ impl medulla_server_api::api::query_txn::TxnApi for TxnSeam {
     #[cfg(feature = "graphql")]
     async fn commit_graphql_cross_modal(
         &self,
-        ctx: medulla_server_api::api::query_txn::txn_support::GraphQlCrossModalCommit<'_>,
+        ctx: medulla_server_ops::api::query_txn::txn_support::GraphQlCrossModalCommit<'_>,
     ) -> Result<bool, String> {
         super::commit_modal::commit_graphql_cross_modal(ctx).await
     }
@@ -80,10 +80,10 @@ impl medulla_server_api::api::query_txn::TxnApi for TxnSeam {
         state: &Arc<RwLock<ServerState>>,
         req_id: u64,
         caller: &str,
-        authority: &medulla_server_api::access::CarrierAuthority,
+        authority: &medulla_server_api::carrier::CarrierAuthority,
         method: &medulla_protocol_types::protocol::Method,
-    ) -> Result<medulla_server_api::api::query_txn::txn_support::GraphQlLifecycleAdmission, String> {
-        use medulla_server_api::api::query_txn::txn_support as api;
+    ) -> Result<medulla_server_ops::api::query_txn::txn_support::GraphQlLifecycleAdmission, String> {
+        use medulla_server_ops::api::query_txn::txn_support as api;
         let admission =
             super::receipts::begin_graphql_lifecycle(state, req_id, caller, authority, method)
                 .await?;
@@ -100,7 +100,7 @@ impl medulla_server_api::api::query_txn::TxnApi for TxnSeam {
     #[cfg(feature = "graphql")]
     fn finish_graphql_lifecycle(
         &self,
-        token: medulla_server_api::api::query_txn::txn_support::LifecycleToken,
+        token: medulla_server_ops::api::query_txn::txn_support::LifecycleToken,
         result: medulla_protocol_types::protocol::ResultPayload,
     ) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
         let receipt = token

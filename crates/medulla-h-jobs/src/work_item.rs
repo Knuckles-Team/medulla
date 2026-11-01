@@ -13,7 +13,7 @@ use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::api::persistence::PersistenceBackend;
-use medulla_server_api::auth::VerifiedRequestContext;
+use medulla_server_api::authority_context::VerifiedRequestContext;
 
 #[cfg(feature = "redb")]
 mod lease_kind_policy;
@@ -117,11 +117,11 @@ pub(crate) async fn commit_verified_work_item(
     } else {
         ctx.caller
     };
-    medulla_server_api::mutation_batch::commit_work_item(
-        medulla_server_api::mutation_batch::WorkItemCommitRequest::new(
+    medulla_server_mutation::mutation_batch::commit_work_item(
+        medulla_server_mutation::mutation_batch::WorkItemCommitRequest::new(
             ctx.persistence.as_ref(),
             ctx.core,
-            medulla_server_api::mutation_batch::CommitOrigin {
+            medulla_server_mutation::mutation_batch::CommitOrigin {
                 request_id: ctx.req_id,
                 principal,
             },
@@ -145,7 +145,7 @@ fn stamp_retired_by(method: Method, caller: Option<&str>) -> Result<Method, Stri
     };
     let caller =
         caller.ok_or("ACCESS_DENIED: retiring a sealed record requires a verified caller")?;
-    request.retired_by = medulla_server_api::mutation_batch::principal_fingerprint(caller)?;
+    request.retired_by = medulla_server_api::batch_compile::principal_fingerprint(caller)?;
     Ok(Method::RetireSealedRecord { request })
 }
 
@@ -191,7 +191,7 @@ fn publication_authority<'a>(
         .as_ref()
         .and_then(|backend| backend.as_redb())
         .ok_or_else(|| format!("{kind} publication requires native persistence"))?;
-    let actor = medulla_server_api::mutation_batch::principal_fingerprint(
+    let actor = medulla_server_api::batch_compile::principal_fingerprint(
         ctx.verified_context.principal(),
     )?;
     Ok((

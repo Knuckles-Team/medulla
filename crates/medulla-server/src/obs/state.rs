@@ -7,8 +7,8 @@ use std::sync::Arc;
 
 use parking_lot::Mutex;
 
-use medulla_server_api::blob::store::ChunkStore;
-use medulla_server_api::blob::store::RedbChunkStore;
+use medulla_server_blob::blob::store::ChunkStore;
+use medulla_server_blob::blob::store::RedbChunkStore;
 use medulla_text::TextIndex;
 use medulla_tsdb::point::Point;
 use medulla_tsdb::store::SeriesStore;

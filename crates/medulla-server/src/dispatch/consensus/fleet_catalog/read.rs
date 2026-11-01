@@ -89,7 +89,7 @@ async fn load_commons(
     grants: &[Digest256],
 ) -> Result<CommonsView, String> {
     crate::dispatch::ensure_graph_resident(state, REGISTRY_GRAPH).await;
-    let _registry_guard = medulla_server_api::mutation_batch::lock_graph(REGISTRY_GRAPH).await;
+    let _registry_guard = medulla_server_api::routed_write_coalescer::lock_graph(REGISTRY_GRAPH).await;
     let (core, authority) = {
         let current = timed_read(state).await;
         crate::dispatch::authorized_graph_read(

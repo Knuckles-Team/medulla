@@ -36,17 +36,17 @@ use medulla_protocol_types::protocol::ResultPayload;
 use medulla_query_cache::result_cache::ResultCache;
 #[cfg(feature = "graphql")]
 use medulla_graphql::parser::{Field, GqlValue};
-use medulla_server_api::access::GraphReadAuthority;
+use medulla_server_api::carrier::GraphReadAuthority;
 #[cfg(feature = "federation")]
-use medulla_server_api::api::query_txn::foreign_catalog::bound_registry;
+use medulla_server_ops::api::query_txn::foreign_catalog::bound_registry;
 #[cfg(feature = "query")]
-use medulla_server_api::api::query_txn::query_support::bind_sql_text_embedder;
-use medulla_server_api::api::query_txn::query_support::execute_rows;
-use medulla_server_api::api::query_txn::query_support::overlay_write_set;
+use medulla_server_ops::api::query_txn::query_support::bind_sql_text_embedder;
+use medulla_server_ops::api::query_txn::query_support::execute_rows;
+use medulla_server_ops::api::query_txn::query_support::overlay_write_set;
 #[cfg(all(feature = "query", feature = "tsdb"))]
-use medulla_server_api::api::query_txn::query_support::plan_needs_tsdb;
-use medulla_server_api::api::query_txn::query_support::uql_text_embedder;
-use medulla_server_api::api::query_txn::query_support::TsdbLegBind;
+use medulla_server_ops::api::query_txn::query_support::plan_needs_tsdb;
+use medulla_server_ops::api::query_txn::query_support::uql_text_embedder;
+use medulla_server_ops::api::query_txn::query_support::TsdbLegBind;
 use medulla_server_api::compute::compute_off_lock;
 use medulla_server_api::state::ServerState;
 
@@ -205,7 +205,7 @@ pub mod current_auth_test_support {
     use medulla_protocol_types::protocol::Method;
     use medulla_protocol_types::protocol::Request;
     use medulla_server_api::api::persistence::PersistenceBackend;
-    use medulla_server_api::auth::build_shared_test_request;
+    use medulla_server_auth::auth::build_shared_test_request;
     use medulla_server_api::state::ServerState;
     use std::sync::Arc;
     use tokio::sync::RwLock;
@@ -273,7 +273,7 @@ pub mod current_auth_test_support {
         secret: &str,
         isolation: IsolationLayer,
     ) -> Arc<RwLock<ServerState>> {
-        let dir = medulla_server_api::sql_tables::test_persist_dir()
+        let dir = medulla_server_auth::sql_tables::test_persist_dir()
             .to_string_lossy()
             .into_owned();
         std::fs::create_dir_all(&dir).expect("create test persist dir");
@@ -293,7 +293,7 @@ pub mod current_auth_test_support {
         pub(in super::super) use medulla_protocol_types::protocol::Request;
         pub(in super::super) use medulla_protocol_types::protocol::Response;
         pub(in super::super) use medulla_protocol_types::protocol::ResultPayload;
-        pub(in super::super) use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
+        pub(in super::super) use medulla_server_auth::auth::dispatch_test_on_heap as dispatch_on_heap;
         pub(in super::super) use medulla_server_api::state::ServerState;
         pub(in super::super) use std::sync::Arc;
         pub(in super::super) use tokio::sync::RwLock;
@@ -444,6 +444,7 @@ mod rls_no_exfiltrate_tests {
     feature = "redb"
 ))]
 mod result_cache_dispatch_tests {
+    use medulla_server_cdc::cdc::CdcStateExt;
     use super::current_auth_test_support::prelude::*;
 
     const SECRET: &str = "result-cache-test-secret";
@@ -645,7 +646,7 @@ mod result_cache_dispatch_tests {
         add_node(&a, 3, "p3", "Person").await;
         let hub_a = {
             let s = a.read().await;
-            s.cdc.clone().unwrap()
+            s.cdc_hub().cloned().unwrap()
         };
         // A produced at least one CDC event for the AddNode.
         let events = hub_a.read("__commons__", 0, 0).events;
@@ -655,7 +656,7 @@ mod result_cache_dispatch_tests {
         // graph (bumps B's version). This is the cross-replica invalidation signal.
         let v_b_before = core_b.version();
         let next =
-            medulla_server_api::cache_coherence::drain_and_invalidate(&b, &hub_a, "__commons__", 0, 0)
+            medulla_server_cdc::cache_coherence::drain_and_invalidate(&b, &hub_a, "__commons__", 0, 0)
                 .await
                 .unwrap();
         assert!(next > 0, "drained at least one event");
@@ -1098,10 +1099,10 @@ mod dispatch_write_tests {
             .duration_since(std::time::UNIX_EPOCH)
             .expect("test clock after epoch")
             .as_secs();
-        request.auth_token = medulla_server_api::auth::compute_verified_envelope_token(
+        request.auth_token = medulla_server_auth::auth::compute_verified_envelope_token(
             SECRET,
             &request,
-            &medulla_server_api::auth::VerifiedEnvelopeParams {
+            &medulla_server_auth::auth::VerifiedEnvelopeParams {
                 context: &context,
                 timestamp,
                 nonce,
@@ -1422,7 +1423,7 @@ mod dispatch_write_tests {
     /// completes`) gets this right by going through a real `CarrierAuthority`;
     /// this derives the same scope the same way production does.
     fn carrier_tenant_scope(tenant: &str) -> String {
-        medulla_server_api::mutation_batch::opaque_coordinator_key(
+        medulla_server_api::batch_compile::opaque_coordinator_key(
             "carrier-tenant",
             "verified",
             tenant,
@@ -1453,7 +1454,7 @@ mod dispatch_write_tests {
         // Install the same deterministic cross-redb fault used by pgwire's
         // recovery proof: physical CREATE can commit, while owner registration
         // fails against the malformed source-authority catalog.
-        let acl = medulla_server_api::sql_tables::tenant_acl_table_store(
+        let acl = medulla_server_auth::sql_tables::tenant_acl_table_store(
             &carrier_tenant_scope("tenant-shared"),
             std::path::Path::new(&persist_dir),
         )
@@ -1496,7 +1497,7 @@ mod dispatch_write_tests {
             "owner catalog fault must surface after physical commit: {:?}",
             first.error
         );
-        let store = medulla_server_api::sql_tables::tenant_table_store(
+        let store = medulla_server_auth::sql_tables::tenant_table_store(
             &carrier_tenant_scope("tenant-shared"),
             std::path::Path::new(&persist_dir),
         )
@@ -1567,7 +1568,7 @@ mod dispatch_write_tests {
                 guest_alter.error.as_deref(),
                 guest_alter.error_detail.as_deref()
             ),
-            medulla_server_api::sql_catalog_acl::ACCESS_DENIED
+            medulla_server_auth::sql_catalog_acl::ACCESS_DENIED
                 .split_once(": ")
                 .map(|(code, detail)| (Some(code), Some(detail)))
                 .unwrap(),
@@ -1984,9 +1985,9 @@ mod txn_ryow_dispatch_tests {
 mod evidence_resolver_wiring_tests {
     use super::explain_evidence_wire;
     use medulla_graph_core::graph::GraphCore;
-    use medulla_server_api::blob::stream::stream_blob_put;
-    use medulla_server_api::blob::ChunkStore;
-    use medulla_server_api::blob::RedbChunkStore;
+    use medulla_server_blob::blob::stream::stream_blob_put;
+    use medulla_server_blob::blob::ChunkStore;
+    use medulla_server_blob::blob::RedbChunkStore;
     use serde_json::json;
     use std::sync::Arc;
 
