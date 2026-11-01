@@ -22,7 +22,7 @@ medulla-agent-types = { path = "../medulla-agent-types" }
 tempfile = { version = "3", optional = true }
 async-trait = { version = "0.1", optional = true }
 hex = "0.4"
-medulla-capabilities = { path = "../medulla-capabilities", optional = true }
+medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-compute = { path = "../medulla-compute" }
 medulla-core = { path = "../medulla-core" }
 medulla-kernel = { path = "../medulla-kernel" }
@@ -64,7 +64,7 @@ cold-tier-s3 = ["cold-tier", "redb", "server"]
 compute-dist = ["raft", "medulla-protocol-types/compute-dist", "medulla-result-types/compute-dist", "medulla-server-api/compute-dist", "medulla-server-ops/compute-dist", "medulla-store-apply/compute-dist", "medulla-store/compute-dist", "medulla-types/compute-dist"]
 cost = ["server", "medulla-protocol-types/cost", "medulla-types/cost"]
 cypher = ["medulla-kernel/cypher", "medulla-server-api/cypher", "medulla-server-auth/cypher"]
-decide = ["dep:medulla-capabilities", "medulla-capabilities?/decide", "redb", "shacl", "medulla-compute/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "jobs", "numeric", "owl", "owl-dl", "query", "sparql"]
+decide = ["medulla-capabilities/decide", "redb", "shacl", "medulla-compute/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "jobs", "numeric", "owl", "owl-dl", "query", "sparql"]
 kv = ["server", "redb", "medulla-kernel/kv", "medulla-protocol-types/kv", "medulla-server-api/kv", "medulla-server-blob/kv", "medulla-types/kv"]
 matview = ["query", "medulla-protocol-types/matview", "medulla-server-api/matview", "medulla-server-ops/matview", "medulla-store-apply/matview", "medulla-store/matview", "medulla-types/matview", "result-cache", "server"]
 metrics = ["medulla-kernel/metrics", "medulla-protocol-types/metrics", "medulla-server-api/metrics", "medulla-store-apply/metrics", "medulla-store/metrics", "medulla-types/metrics"]
@@ -73,17 +73,17 @@ raft = ["server", "redb", "medulla-kernel/raft", "medulla-server-api/raft", "med
 rdf = ["dep:medulla-rdf", "medulla-rdf/rdf", "server", "medulla-kernel/rdf", "medulla-protocol-types/rdf", "medulla-server-api/rdf", "medulla-types/rdf"]
 redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-kernel/redb", "medulla-server-api/redb", "medulla-server-blob/redb", "medulla-server-ops/redb", "medulla-store/redb"]
 security = ["redb", "medulla-core/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-lane-store/security", "medulla-protocol-types/security", "medulla-resource-store/security", "medulla-server-api/security", "medulla-server-auth/security", "medulla-server-blob/security", "medulla-server-ops/security", "medulla-store-apply/security", "medulla-store/security", "medulla-types/security", "medulla-work-store/security"]
-server = ["dep:tracing-subscriber", "dep:tokio", "dep:medulla-capabilities", "dep:async-trait", "medulla-kernel/server", "medulla-lane-store/server", "medulla-resource-store/server", "medulla-server-api/server", "medulla-store/server"]
+server = ["dep:tracing-subscriber", "dep:tokio", "dep:async-trait", "medulla-kernel/server", "medulla-lane-store/server", "medulla-resource-store/server", "medulla-server-api/server", "medulla-store/server"]
 shacl = ["rdf", "medulla-kernel/shacl", "medulla-server-api/shacl", "medulla-server-blob/shacl", "medulla-server-ops/shacl", "owl", "owl-dl", "sparql"]
 sparql = ["dep:medulla-rdf", "medulla-rdf/sparql", "rdf", "medulla-kernel/sparql", "medulla-protocol-types/sparql", "medulla-server-api/sparql", "medulla-server-ops/sparql", "medulla-types/sparql"]
 tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store", "server", "redb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb", "medulla-store-apply/tsdb", "medulla-store/tsdb"]
-jobs = ["dep:medulla-capabilities", "medulla-capabilities/jobs", "medulla-agent-types/jobs", "medulla-protocol-types/jobs", "medulla-server-api/jobs", "medulla-server-ops/jobs", "medulla-types/jobs", "medulla-work-types/jobs", "query", "redb", "server"]
-statechart = ["dep:medulla-capabilities", "medulla-capabilities/statechart", "medulla-protocol-types/statechart", "medulla-server-api/statechart", "medulla-store-apply/statechart", "medulla-store/statechart", "medulla-types/statechart", "medulla-work-store/statechart", "server"]
-viz = ["dep:medulla-capabilities", "medulla-capabilities?/viz", "medulla-protocol-types/viz", "medulla-server-api/viz", "medulla-types/viz"]
-modality-serving = ["dep:medulla-capabilities", "medulla-capabilities/modality-serving", "medulla-kernel/modality-serving", "medulla-protocol-types/modality-serving", "medulla-server-api/modality-serving", "medulla-server-auth/modality-serving", "medulla-server-ops/modality-serving", "medulla-types/modality-serving", "redb", "security", "server"]
-asr-whisper = ["dep:medulla-capabilities", "medulla-capabilities/asr-native", "medulla-server-api/asr-whisper", "server"]
-knowledge-batch = ["dep:medulla-capabilities", "medulla-capabilities/knowledge-batch", "medulla-kernel/knowledge-batch", "medulla-protocol-types/knowledge-batch", "medulla-server-api/knowledge-batch", "medulla-server-ops/knowledge-batch", "medulla-types/knowledge-batch", "query", "redb"]
-quantum-agent-api = ["dep:medulla-capabilities", "medulla-capabilities/quantum", "medulla-server-api/quantum-agent-api", "server"]
+jobs = ["medulla-capabilities/jobs", "medulla-agent-types/jobs", "medulla-protocol-types/jobs", "medulla-server-api/jobs", "medulla-server-ops/jobs", "medulla-types/jobs", "medulla-work-types/jobs", "query", "redb", "server"]
+statechart = ["medulla-capabilities/statechart", "medulla-protocol-types/statechart", "medulla-server-api/statechart", "medulla-store-apply/statechart", "medulla-store/statechart", "medulla-types/statechart", "medulla-work-store/statechart", "server"]
+viz = ["medulla-capabilities/viz", "medulla-protocol-types/viz", "medulla-server-api/viz", "medulla-types/viz"]
+modality-serving = ["medulla-capabilities/modality-serving", "medulla-kernel/modality-serving", "medulla-protocol-types/modality-serving", "medulla-server-api/modality-serving", "medulla-server-auth/modality-serving", "medulla-server-ops/modality-serving", "medulla-types/modality-serving", "redb", "security", "server"]
+asr-whisper = ["medulla-capabilities/asr-native", "medulla-server-api/asr-whisper", "server"]
+knowledge-batch = ["medulla-capabilities/knowledge-batch", "medulla-kernel/knowledge-batch", "medulla-protocol-types/knowledge-batch", "medulla-server-api/knowledge-batch", "medulla-server-ops/knowledge-batch", "medulla-types/knowledge-batch", "query", "redb"]
+quantum-agent-api = ["medulla-capabilities/quantum", "medulla-server-api/quantum-agent-api", "server"]
 numeric = ["medulla-kernel/numeric", "medulla-server-api/numeric"]
 cypher-plan = ["medulla-kernel/cypher-plan", "medulla-server-api/cypher-plan", "cypher"]
 result-cache = ["medulla-core/result-cache", "medulla-graph-core/result-cache", "medulla-kernel/result-cache", "medulla-server-api/result-cache", "medulla-server-ops/result-cache"]

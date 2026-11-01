@@ -14,7 +14,7 @@ path = "src/lib.rs"
 [dependencies]
 hex = "0.4"
 jsonwebtoken = { version = "11.1", optional = true, default-features = false, features = ["aws_lc_rs"] }
-medulla-capabilities = { path = "../medulla-capabilities", optional = true }
+medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-graphql = { path = "../medulla-graphql", optional = true }
 medulla-kernel = { path = "../medulla-kernel" }
 medulla-lake = { path = "../medulla-lake", optional = true }
@@ -67,7 +67,7 @@ query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "dep:medulla-plan", "med
 redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-kernel/redb", "medulla-server-api/redb", "medulla-server-blob/redb"]
 redis-wire = ["kv", "server", "medulla-server-api/redis-wire"]
 security = ["oidc", "dep:sha1", "dep:argon2", "redb", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-protocol-types/security", "medulla-server-api/security", "medulla-server-auth/security", "medulla-server-blob/security", "medulla-types/security"]
-server = ["dep:tokio", "dep:medulla-capabilities", "dep:async-trait", "medulla-kernel/server", "medulla-server-api/server"]
+server = ["dep:tokio", "dep:async-trait", "medulla-kernel/server", "medulla-server-api/server"]
 stomp-wire = ["server", "medulla-server-api/stomp-wire"]
 streaming = ["server", "medulla-protocol-types/streaming", "medulla-server-api/streaming", "medulla-types/streaming"]
 tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries", "server", "redb", "medulla-server-api/tsdb"]

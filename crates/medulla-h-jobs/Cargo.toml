@@ -14,7 +14,7 @@ path = "src/lib.rs"
 [dependencies]
 hex = "0.4"
 medulla-agent-types = { path = "../medulla-agent-types" }
-medulla-capabilities = { path = "../medulla-capabilities", optional = true }
+medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-compute = { path = "../medulla-compute" }
 medulla-core = { path = "../medulla-core" }
 medulla-decision-types = { path = "../medulla-decision-types" }
@@ -51,19 +51,19 @@ medulla-retrieval = { path = "../medulla-retrieval" }
 
 [features]
 ann-redb = ["redb", "medulla-ann-codes/ann-redb", "medulla-core/ann-redb", "medulla-server-api/ann-redb", "medulla-server-ops/ann-redb"]
-jobs = ["dep:medulla-jobs", "dep:medulla-capabilities", "medulla-capabilities/jobs", "medulla-agent-types/jobs", "medulla-persistence/jobs", "medulla-protocol-types/jobs", "medulla-raft/jobs", "medulla-server-api/jobs", "medulla-server-mutation/jobs", "medulla-server-ops/jobs", "medulla-types/jobs", "medulla-work-types/jobs", "epistemic", "query", "redb", "server"]
-knowledge-batch = ["dep:medulla-plan", "medulla-plan/knowledge-batch", "medulla-retrieval/knowledge-batch", "dep:medulla-modality", "dep:medulla-capabilities", "medulla-capabilities/knowledge-batch", "query", "medulla-kernel/knowledge-batch", "medulla-persistence/knowledge-batch", "medulla-protocol-types/knowledge-batch", "medulla-raft/knowledge-batch", "medulla-server-api/knowledge-batch", "medulla-server-ops/knowledge-batch", "medulla-types/knowledge-batch"]
+jobs = ["dep:medulla-jobs", "medulla-capabilities/jobs", "medulla-agent-types/jobs", "medulla-persistence/jobs", "medulla-protocol-types/jobs", "medulla-raft/jobs", "medulla-server-api/jobs", "medulla-server-mutation/jobs", "medulla-server-ops/jobs", "medulla-types/jobs", "medulla-work-types/jobs", "epistemic", "query", "redb", "server"]
+knowledge-batch = ["dep:medulla-plan", "medulla-plan/knowledge-batch", "medulla-retrieval/knowledge-batch", "dep:medulla-modality", "medulla-capabilities/knowledge-batch", "query", "medulla-kernel/knowledge-batch", "medulla-persistence/knowledge-batch", "medulla-protocol-types/knowledge-batch", "medulla-raft/knowledge-batch", "medulla-server-api/knowledge-batch", "medulla-server-ops/knowledge-batch", "medulla-types/knowledge-batch"]
 program-optimization = ["dep:medulla-program", "jobs", "medulla-agent-types/program-optimization", "medulla-server-api/program-optimization", "medulla-server-mutation/program-optimization", "medulla-types/program-optimization", "medulla-work-types/program-optimization", "epistemic", "query", "redb", "server"]
 query = ["medulla-table-store/sql", "dep:medulla-plan", "medulla-plan/query", "redb", "medulla-retrieval/query", "medulla-decision-types/query", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-raft/query", "medulla-result-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-types/query"]
 raft = ["redb", "medulla-kernel/raft", "medulla-persistence/raft", "medulla-raft/raft", "medulla-server-api/raft", "medulla-server-auth/raft", "medulla-server-mutation/raft", "server"]
 redb = ["medulla-kernel/redb", "medulla-persistence-records/redb", "medulla-persistence/redb", "medulla-raft/redb", "medulla-server-api/redb", "medulla-server-mutation/redb", "medulla-server-ops/redb"]
-statechart = ["dep:medulla-statechart", "dep:medulla-capabilities", "medulla-capabilities/statechart", "medulla-persistence/statechart", "medulla-protocol-types/statechart", "medulla-raft/statechart", "medulla-server-api/statechart", "medulla-server-mutation/statechart", "medulla-types/statechart", "server"]
-decide = ["dep:medulla-capabilities", "medulla-capabilities?/decide", "medulla-compute/decide", "medulla-persistence-records/decide", "medulla-persistence/decide", "medulla-raft/decide", "medulla-retrieval/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "epistemic", "jobs", "numeric", "query", "redb", "server"]
-server = ["dep:tokio", "dep:medulla-capabilities", "medulla-kernel/server", "medulla-persistence/server", "medulla-raft/server", "medulla-server-api/server"]
-viz = ["dep:medulla-capabilities", "medulla-capabilities?/viz", "medulla-persistence/viz", "medulla-protocol-types/viz", "medulla-raft/viz", "medulla-server-api/viz", "medulla-types/viz"]
-modality-serving = ["dep:medulla-modality", "dep:medulla-capabilities", "medulla-capabilities/modality-serving", "medulla-kernel/modality-serving", "medulla-persistence/modality-serving", "medulla-protocol-types/modality-serving", "medulla-raft/modality-serving", "medulla-server-api/modality-serving", "medulla-server-auth/modality-serving", "medulla-server-mutation/modality-serving", "medulla-server-ops/modality-serving", "medulla-types/modality-serving", "redb", "server"]
-asr-whisper = ["dep:medulla-capabilities", "medulla-capabilities/asr-native", "medulla-persistence/asr-whisper", "medulla-raft/asr-whisper", "medulla-server-api/asr-whisper", "server"]
-quantum-agent-api = ["dep:medulla-capabilities", "medulla-capabilities/quantum", "medulla-persistence/quantum-agent-api", "medulla-raft/quantum-agent-api", "medulla-server-api/quantum-agent-api", "server"]
+statechart = ["dep:medulla-statechart", "medulla-capabilities/statechart", "medulla-persistence/statechart", "medulla-protocol-types/statechart", "medulla-raft/statechart", "medulla-server-api/statechart", "medulla-server-mutation/statechart", "medulla-types/statechart", "server"]
+decide = ["medulla-capabilities/decide", "medulla-compute/decide", "medulla-persistence-records/decide", "medulla-persistence/decide", "medulla-raft/decide", "medulla-retrieval/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "epistemic", "jobs", "numeric", "query", "redb", "server"]
+server = ["dep:tokio", "medulla-kernel/server", "medulla-persistence/server", "medulla-raft/server", "medulla-server-api/server"]
+viz = ["medulla-capabilities/viz", "medulla-persistence/viz", "medulla-protocol-types/viz", "medulla-raft/viz", "medulla-server-api/viz", "medulla-types/viz"]
+modality-serving = ["dep:medulla-modality", "medulla-capabilities/modality-serving", "medulla-kernel/modality-serving", "medulla-persistence/modality-serving", "medulla-protocol-types/modality-serving", "medulla-raft/modality-serving", "medulla-server-api/modality-serving", "medulla-server-auth/modality-serving", "medulla-server-mutation/modality-serving", "medulla-server-ops/modality-serving", "medulla-types/modality-serving", "redb", "server"]
+asr-whisper = ["medulla-capabilities/asr-native", "medulla-persistence/asr-whisper", "medulla-raft/asr-whisper", "medulla-server-api/asr-whisper", "server"]
+quantum-agent-api = ["medulla-capabilities/quantum", "medulla-persistence/quantum-agent-api", "medulla-raft/quantum-agent-api", "medulla-server-api/quantum-agent-api", "server"]
 epistemic = ["dep:medulla-plan", "medulla-plan/epistemic", "medulla-retrieval/epistemic", "dep:medulla-modality", "medulla-kernel/epistemic", "medulla-protocol-types/epistemic", "medulla-raft/epistemic", "medulla-server-api/epistemic", "medulla-server-auth/epistemic", "medulla-server-mutation/epistemic", "medulla-server-ops/epistemic", "medulla-types/epistemic", "query", "redb"]
 alignment = ["dep:medulla-modality", "medulla-raft/alignment", "medulla-server-api/alignment", "redb", "server"]
 numeric = ["dep:medulla-plan", "medulla-plan?/numeric", "medulla-kernel/numeric", "medulla-persistence/numeric", "medulla-raft/numeric", "medulla-server-api/numeric"]

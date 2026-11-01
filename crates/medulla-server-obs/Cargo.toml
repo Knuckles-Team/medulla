@@ -45,7 +45,7 @@ medulla-stream = { path = "../medulla-stream", optional = true }
 
 jsonwebtoken = { version = "11.1", optional = true, default-features = false, features = ["aws_lc_rs"] }
 
-medulla-capabilities = { path = "../medulla-capabilities", optional = true }
+medulla-capabilities = { path = "../medulla-capabilities" }
 
 async-trait = { version = "0.1", optional = true }
 
@@ -82,7 +82,7 @@ rdf = ["dep:medulla-rdf", "medulla-rdf/rdf", "server", "medulla-kernel/rdf", "me
 redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-kernel/redb", "medulla-server-api/redb", "medulla-server-blob/redb"]
 s3-api = ["blob", "kv", "server"]
 security = ["dep:sha1", "dep:argon2", "redb", "oidc", "medulla-isolation/security", "medulla-kernel/security", "medulla-server-api/security", "medulla-server-blob/security", "medulla-server-cdc/security", "medulla-types/security"]
-server = ["dep:tokio", "dep:medulla-capabilities", "dep:async-trait", "medulla-kernel/server", "medulla-server-api/server"]
+server = ["dep:tokio", "dep:async-trait", "medulla-kernel/server", "medulla-server-api/server"]
 shacl = ["rdf", "medulla-kernel/shacl", "medulla-server-api/shacl", "medulla-server-blob/shacl", "medulla-server-cdc/shacl", "sparql"]
 sparql = ["dep:medulla-rdf", "medulla-rdf/sparql", "rdf", "medulla-kernel/sparql", "medulla-server-api/sparql", "medulla-types/sparql"]
 sparql-http = ["sparql", "server", "shacl", "security", "medulla-server-api/sparql-http", "medulla-server-blob/sparql-http"]

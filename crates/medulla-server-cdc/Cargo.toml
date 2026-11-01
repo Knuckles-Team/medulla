@@ -36,7 +36,7 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
 medulla-reasoner = { path = "../medulla-reasoner" }
 
-medulla-capabilities = { path = "../medulla-capabilities", optional = true }
+medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-epistemic = { path = "../medulla-epistemic", optional = true }
 medulla-modality = { path = "../medulla-modality", optional = true }
 medulla-shacl = { path = "../medulla-shacl", optional = true }
@@ -49,7 +49,7 @@ cdc-kafka = ["streaming", "dep:medulla-stream", "medulla-server-api/cdc-kafka", 
 epistemic = ["query", "dep:medulla-plan", "dep:medulla-modality", "dep:medulla-epistemic", "medulla-server-api/epistemic", "medulla-exec/epistemic", "medulla-kernel/epistemic", "medulla-plan?/epistemic", "medulla-protocol-types/epistemic", "medulla-types/epistemic"]
 matview = ["query", "result-cache", "streaming", "medulla-server-api/matview", "medulla-protocol-types/matview", "medulla-types/matview"]
 mining = ["medulla-server-api/mining", "medulla-kernel/mining", "medulla-protocol-types/mining", "medulla-result-types/mining", "medulla-types/mining"]
-modality-serving = ["security", "streaming", "dep:medulla-modality", "dep:medulla-capabilities", "medulla-server-api/modality-serving", "medulla-capabilities?/modality-serving", "medulla-kernel/modality-serving", "medulla-protocol-types/modality-serving", "medulla-types/modality-serving"]
+modality-serving = ["security", "streaming", "dep:medulla-modality", "medulla-server-api/modality-serving", "medulla-capabilities/modality-serving", "medulla-kernel/modality-serving", "medulla-protocol-types/modality-serving", "medulla-types/modality-serving"]
 owl = ["dep:medulla-rdf", "medulla-server-api/owl", "medulla-exec/owl", "medulla-plan?/owl", "medulla-protocol-types/owl", "medulla-rdf?/owl", "medulla-reasoner/owl", "medulla-types/owl"]
 query = ["dep:medulla-tsdb", "dep:medulla-plan", "medulla-server-api/query", "medulla-exec/query", "medulla-kernel/query", "medulla-plan?/query", "medulla-protocol-types/query", "medulla-result-types/query", "medulla-types/query"]
 reasoning = ["medulla-server-api/reasoning", "medulla-kernel/reasoning", "medulla-reasoner/reasoning"]

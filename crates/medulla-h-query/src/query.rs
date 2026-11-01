@@ -254,6 +254,7 @@ pub mod current_auth_test_support {
         )
     }
 
+    #[cfg(test)]
     pub(super) fn state_with_backend(
         secret: &str,
         isolation: IsolationLayer,
@@ -266,7 +267,7 @@ pub mod current_auth_test_support {
         Arc::new(RwLock::new(state))
     }
 
-    #[cfg(feature = "redb")]
+    #[cfg(all(test, feature = "redb"))]
     pub(super) fn persisted_state(
         secret: &str,
         isolation: IsolationLayer,
@@ -280,7 +281,7 @@ pub mod current_auth_test_support {
     }
 
     pub(super) mod prelude {
-        #[cfg(feature = "redb")]
+        #[cfg(all(test, feature = "redb"))]
         pub(in super::super) use super::persisted_state;
         pub(in super::super) use super::{
             current_isolation, current_isolation_with_agents, current_request, current_request_as,

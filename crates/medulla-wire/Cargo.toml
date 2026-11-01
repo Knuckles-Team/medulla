@@ -21,7 +21,7 @@ async-trait = { version = "0.1", optional = true }
 futures = { version = "0.3", optional = true }
 hex = "0.4"
 hmac = "0.12"
-medulla-capabilities = { path = "../medulla-capabilities", optional = true }
+medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-compute = { path = "../medulla-compute" }
 medulla-core = { path = "../medulla-core" }
 medulla-kernel = { path = "../medulla-kernel" }
@@ -93,7 +93,7 @@ ros2-dds = ["dep:futures", "server", "streaming"]
 ros2-rmw = ["dep:futures", "server", "streaming"]
 s3-api = ["kv", "server"]
 security = ["dep:sha1", "redb", "medulla-core/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-kernel/security", "medulla-persistence/security", "medulla-protocol-types/security", "medulla-server-api/security", "medulla-server-auth/security", "medulla-server-blob/security", "medulla-server-cdc/security", "medulla-server-ops/security", "medulla-types/security", "medulla-wire-core/security"]
-server = ["dep:tokio", "dep:medulla-capabilities", "dep:async-trait", "medulla-kernel/server", "medulla-persistence/server", "medulla-server-api/server"]
+server = ["dep:tokio", "dep:async-trait", "medulla-kernel/server", "medulla-persistence/server", "medulla-server-api/server"]
 sparql = ["medulla-kernel/sparql", "medulla-persistence/sparql", "medulla-protocol-types/sparql", "medulla-server-api/sparql", "medulla-server-ops/sparql", "medulla-types/sparql", "medulla-wire-core/sparql", "server"]
 sparql-http = ["sparql", "server", "security", "medulla-server-api/sparql-http", "medulla-server-blob/sparql-http", "medulla-server-mutation/sparql-http", "owl"]
 sqlite-wire = ["query", "server"]
@@ -103,14 +103,14 @@ text = ["dep:medulla-plan", "medulla-plan/text", "query", "medulla-exec/text", "
 traces = ["dep:medulla-tsdb", "medulla-tsdb/traces", "obs", "medulla-persistence/traces", "medulla-server-api/traces"]
 tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store", "dep:medulla-plan", "medulla-plan/timeseries", "server", "redb", "medulla-persistence/tsdb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb", "medulla-wire-core/tsdb"]
 viz-interactive = ["server", "viz"]
-decide = ["dep:medulla-capabilities", "medulla-capabilities?/decide", "medulla-compute/decide", "medulla-persistence/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "epistemic", "jobs", "mining", "numeric", "owl", "query", "redb", "server", "sparql"]
-jobs = ["dep:medulla-capabilities", "medulla-capabilities/jobs", "medulla-persistence/jobs", "medulla-protocol-types/jobs", "medulla-server-api/jobs", "medulla-server-mutation/jobs", "medulla-server-ops/jobs", "medulla-types/jobs", "epistemic", "mining", "query", "redb", "server"]
-statechart = ["dep:medulla-capabilities", "medulla-capabilities/statechart", "medulla-persistence/statechart", "medulla-protocol-types/statechart", "medulla-server-api/statechart", "medulla-server-mutation/statechart", "medulla-types/statechart", "server"]
-viz = ["dep:medulla-capabilities", "medulla-capabilities?/viz", "medulla-persistence/viz", "medulla-protocol-types/viz", "medulla-server-api/viz", "medulla-types/viz"]
-modality-serving = ["dep:medulla-capabilities", "medulla-capabilities/modality-serving", "medulla-kernel/modality-serving", "medulla-persistence/modality-serving", "medulla-protocol-types/modality-serving", "medulla-server-api/modality-serving", "medulla-server-auth/modality-serving", "medulla-server-cdc/modality-serving", "medulla-server-mutation/modality-serving", "medulla-server-ops/modality-serving", "medulla-types/modality-serving", "redb", "security", "server", "streaming"]
-asr-whisper = ["dep:medulla-capabilities", "medulla-capabilities/asr-native", "medulla-persistence/asr-whisper", "medulla-server-api/asr-whisper", "server"]
-knowledge-batch = ["dep:medulla-plan", "medulla-plan/knowledge-batch", "dep:medulla-capabilities", "medulla-capabilities/knowledge-batch", "medulla-kernel/knowledge-batch", "medulla-persistence/knowledge-batch", "medulla-protocol-types/knowledge-batch", "medulla-server-api/knowledge-batch", "medulla-server-ops/knowledge-batch", "medulla-types/knowledge-batch", "query", "redb"]
-quantum-agent-api = ["dep:medulla-capabilities", "medulla-capabilities/quantum", "medulla-persistence/quantum-agent-api", "medulla-server-api/quantum-agent-api", "server"]
+decide = ["medulla-capabilities/decide", "medulla-compute/decide", "medulla-persistence/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "epistemic", "jobs", "mining", "numeric", "owl", "query", "redb", "server", "sparql"]
+jobs = ["medulla-capabilities/jobs", "medulla-persistence/jobs", "medulla-protocol-types/jobs", "medulla-server-api/jobs", "medulla-server-mutation/jobs", "medulla-server-ops/jobs", "medulla-types/jobs", "epistemic", "mining", "query", "redb", "server"]
+statechart = ["medulla-capabilities/statechart", "medulla-persistence/statechart", "medulla-protocol-types/statechart", "medulla-server-api/statechart", "medulla-server-mutation/statechart", "medulla-types/statechart", "server"]
+viz = ["medulla-capabilities/viz", "medulla-persistence/viz", "medulla-protocol-types/viz", "medulla-server-api/viz", "medulla-types/viz"]
+modality-serving = ["medulla-capabilities/modality-serving", "medulla-kernel/modality-serving", "medulla-persistence/modality-serving", "medulla-protocol-types/modality-serving", "medulla-server-api/modality-serving", "medulla-server-auth/modality-serving", "medulla-server-cdc/modality-serving", "medulla-server-mutation/modality-serving", "medulla-server-ops/modality-serving", "medulla-types/modality-serving", "redb", "security", "server", "streaming"]
+asr-whisper = ["medulla-capabilities/asr-native", "medulla-persistence/asr-whisper", "medulla-server-api/asr-whisper", "server"]
+knowledge-batch = ["dep:medulla-plan", "medulla-plan/knowledge-batch", "medulla-capabilities/knowledge-batch", "medulla-kernel/knowledge-batch", "medulla-persistence/knowledge-batch", "medulla-protocol-types/knowledge-batch", "medulla-server-api/knowledge-batch", "medulla-server-ops/knowledge-batch", "medulla-types/knowledge-batch", "query", "redb"]
+quantum-agent-api = ["medulla-capabilities/quantum", "medulla-persistence/quantum-agent-api", "medulla-server-api/quantum-agent-api", "server"]
 kvcache-compression = ["dep:medulla-kvcache", "medulla-kvcache/compression", "kvcache-server", "server"]
 epistemic = ["dep:medulla-plan", "medulla-plan/epistemic", "medulla-exec/epistemic", "medulla-kernel/epistemic", "medulla-protocol-types/epistemic", "medulla-server-api/epistemic", "medulla-server-auth/epistemic", "medulla-server-cdc/epistemic", "medulla-server-mutation/epistemic", "medulla-server-ops/epistemic", "medulla-types/epistemic", "medulla-uql/epistemic", "query", "redb"]
 numeric = ["medulla-sql-udfs/numeric", "medulla-sql/numeric", "dep:medulla-plan", "medulla-plan?/numeric", "medulla-exec/numeric", "medulla-kernel/numeric", "medulla-persistence/numeric", "medulla-server-api/numeric", "medulla-uql/numeric"]
