@@ -12,7 +12,7 @@
 //!   re-read from the record's own inputs.
 //!
 //! What counts is the outcome aggregate's ONE label rule
-//! ([`medulla_numeric::decision::aggregate::label_use`]): an observation (not a claim), at
+//! ([`medulla_decision_stats::decision::aggregate::label_use`]): an observation (not a claim), at
 //! or above the fidelity floor, by an evaluator that is neither the selected agent, its
 //! lease holder nor the decider — so a self-report never moves a reputation.
 //! Visibility is the log's (EH-066, EH-395 ruling): only records the caller may
