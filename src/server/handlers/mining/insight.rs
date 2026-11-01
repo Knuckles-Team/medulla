@@ -5,11 +5,11 @@ use super::{
     vector::link_writeback_source,
     writeback::*,
 };
-use medulla_compute::{
-    mining::ontology_gap, mining::retrieval_quality, mining::risk_propagation, mining::root_cause,
-};
 use medulla_graph_algos::community;
 use medulla_graph_algos::graph_algos::AdjacencyGraph;
+use medulla_mining::{
+    mining::ontology_gap, mining::retrieval_quality, mining::risk_propagation, mining::root_cause,
+};
 use medulla_protocol_types::result_contract::compute as results;
 use medulla_result_types::compute_result::mining::ImpactOptions;
 use medulla_result_types::{

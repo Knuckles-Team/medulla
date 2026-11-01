@@ -177,7 +177,7 @@ datascience = ["medulla-h-compute/datascience", "medulla-kernel/datascience", "m
 # mining (Apriori/FP-Growth/Eclat) + the `graph_mine` surface. Pure-Rust, no heavy
 # dep, folded into `full`. Gates medulla-compute/mining + medulla-types/mining + the
 # handlers/mining.rs dispatch arm.
-mining = ["medulla-h-graph/mining", "medulla-server-api/mining", "medulla-kernel/mining", "medulla-compute/mining", "medulla-types/mining", "medulla-result-types/mining", "medulla-protocol-types/mining"]
+mining = ["medulla-h-graph/mining", "medulla-server-api/mining", "medulla-kernel/mining", "medulla-compute/mining", "medulla-mining/mining", "medulla-types/mining", "medulla-result-types/mining", "medulla-protocol-types/mining"]
 # Graph-learning / neuro-symbolic domain (CONCEPT:MEDULLA-KG.graphlearn.link-predictor): a
 # pure-Rust KAN link-predictor over the resident graph + the `graph_learn` surface,
 # whose learned per-feature edge functions are queryable `:EdgeFunction` KG nodes.
@@ -1863,6 +1863,7 @@ medulla-h-decide = { path = "crates/medulla-h-decide" }
 medulla-finance = { path = "crates/medulla-finance" }
 medulla-graph-algos = { path = "crates/medulla-graph-algos" }
 medulla-finance-quant = { path = "crates/medulla-finance-quant" }
+medulla-mining = { path = "crates/medulla-mining" }
 
 [dev-dependencies]
 medulla-h-ingest = { path = "crates/medulla-h-ingest", features = ["test-support"] }

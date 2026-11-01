@@ -1198,7 +1198,7 @@ impl CypherProcedure for Dbscan {
 
         let mut ids: Vec<String> = view.node_map.keys().cloned().collect();
         ids.sort();
-        let mut points: Vec<medulla_compute::mining::cluster::Point> = Vec::new();
+        let mut points: Vec<medulla_mining::mining::cluster::Point> = Vec::new();
         let mut kept_ids: Vec<String> = Vec::new();
         for id in ids {
             if let Some(v) = node_feature_vector(view, &id, &prop) {
@@ -1209,7 +1209,7 @@ impl CypherProcedure for Dbscan {
         if points.is_empty() {
             return Ok(Vec::new());
         }
-        let labels = medulla_compute::mining::cluster::dbscan(&points, eps, min_pts);
+        let labels = medulla_mining::mining::cluster::dbscan(&points, eps, min_pts);
         Ok(kept_ids
             .into_iter()
             .zip(labels)

@@ -91,12 +91,6 @@ pub mod sketch;
 pub mod datascience;
 #[cfg(feature = "finance")]
 pub mod finance;
-// CONCEPT:MEDULLA-KG.mining.frequent-itemset-mining — descriptive data-mining domain
-// (frequent itemsets + association rules). Pure-Rust, dependency-light, batch;
-// graph-agnostic (works over interned item ids), so it is unit-testable in
-// isolation. Feature-gated like finance/datascience so a slim build drops it.
-#[cfg(feature = "mining")]
-pub mod mining;
 // CONCEPT:MEDULLA-KG.compute.bayesian-fusion-helpers — Bayesian-update / mixture / fusion helpers over the
 // `medulla_types::Distribution` value. Conjugate posteriors are closed-form (no
 // sampling), so this rides the pure `reasoning` feature (no heavy dep).

@@ -1,6 +1,6 @@
 use super::writeback::*;
 use super::*;
-use medulla_compute::mining::{causal_impact, process_mining, root_cause};
+use medulla_mining::{mining::causal_impact, mining::process_mining, mining::root_cause};
 use medulla_protocol_types::result_contract::compute as results;
 use medulla_result_types::{
     compute_result::mining::CausalImpactMiningResult, compute_result::mining::CausalRelationRow,

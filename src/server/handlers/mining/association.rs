@@ -1,6 +1,8 @@
 use super::writeback::*;
 use super::*;
-use medulla_compute::mining::association::{self, Algorithm, LabeledRule};
+use medulla_mining::{
+    mining::association, mining::association::Algorithm, mining::association::LabeledRule,
+};
 use medulla_protocol_types::result_contract::compute as results;
 use medulla_result_types::{
     compute_result::mining::AssociationMiningResult, compute_result::mining::AssociationRuleRow,

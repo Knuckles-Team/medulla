@@ -15,13 +15,13 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use medulla_compute::datascience::estimators;
-use medulla_compute::mining::classify;
 use medulla_core::graph::GraphCore;
 use medulla_graph_algos::graphlearn::edge_fn::Basis;
 use medulla_graph_algos::{
     graphlearn::link_predict, graphlearn::link_predict::FeatureCtx,
     graphlearn::link_predict::KanLinkConfig, graphlearn::link_predict::KanLinkModel,
 };
+use medulla_mining::mining::classify;
 use medulla_protocol_types::protocol::GraphSource;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;

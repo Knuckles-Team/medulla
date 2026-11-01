@@ -3,13 +3,13 @@ use super::{
     association::*, classic::*, entity::*, input::*, insight::*, process::*, vector::*,
     writeback::*,
 };
-use medulla_compute::{
+use medulla_graph_algos::community;
+use medulla_mining::{
     mining::anomaly, mining::association, mining::causal_impact, mining::classify,
     mining::classify::FittedClassifier, mining::cluster, mining::entity_resolution,
     mining::forecast, mining::ontology_gap, mining::process_mining, mining::reduce,
     mining::retrieval_quality, mining::sequence, mining::subgraph, mining::text,
 };
-use medulla_graph_algos::community;
 
 /// Re-run mining write-back operations during WAL replay. Deterministic explicit
 /// inputs are reused, while graph-derived inputs are projected from current state.

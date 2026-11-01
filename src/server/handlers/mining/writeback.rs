@@ -1,8 +1,8 @@
 use super::*;
 use super::{association::*, classic::*, vector::*};
-use medulla_compute::mining::{
-    anomaly, association::LabeledRule, classify, cluster, reduce, sequence::LabeledPattern,
-    subgraph, text,
+use medulla_mining::{
+    mining::anomaly, mining::association::LabeledRule, mining::classify, mining::cluster,
+    mining::reduce, mining::sequence::LabeledPattern, mining::subgraph, mining::text,
 };
 
 #[derive(Clone, Copy)]

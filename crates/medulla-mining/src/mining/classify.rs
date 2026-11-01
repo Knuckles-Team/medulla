@@ -32,7 +32,7 @@ pub type Point = Vec<f64>;
 /// The serializable fitted-model blob lives at the bottom of the DAG (medulla-types) so
 /// `Method::MineClassifyPredict` can embed it; re-exported here so the fit/predict
 /// logic names it locally (mirrors `datascience::estimators`' `FittedModel` re-export).
-pub use crate::wire::FittedClassifier;
+pub use medulla_types::wire::FittedClassifier;
 
 /// Which classifier to fit, with its hyperparameters.
 #[derive(Debug, Clone, Copy, PartialEq)]
