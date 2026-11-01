@@ -686,8 +686,8 @@ kind = "persistence"
 responsibility = "Persistence backend: redb backend, cold offload and tiering, read-through, cost accounting, node info and durable stores."
 moves = []
 specs = []
-current_lines = 18133
-projected_lines = 18133
+current_lines = 25018
+projected_lines = 25018
 
 [crates.medulla-persistence-records]
 level = "F6a"
@@ -695,8 +695,8 @@ kind = "persistence"
 responsibility = "Persisted agent, decision, connector pack, guardrail and write-back records."
 moves = ["src/server/persistence/agent_*", "src/server/persistence/decision_record", "src/server/persistence/connector_pack", "src/server/persistence/write_back", "crates/medulla-persistence/src/agent_component", "crates/medulla-persistence/src/agent_fixtures", "crates/medulla-persistence/src/agent_graph", "crates/medulla-persistence/src/agent_library", "crates/medulla-persistence/src/agent_pin_resolution", "crates/medulla-persistence/src/agent_revision", "crates/medulla-persistence/src/agent_row", "crates/medulla-persistence/src/agent_template", "crates/medulla-persistence/src/connector_pack", "crates/medulla-persistence/src/decision_jobs", "crates/medulla-persistence/src/decision_record", "crates/medulla-persistence/src/fleet_components", "crates/medulla-persistence/src/guardrail_rule", "crates/medulla-persistence/src/write_back"]
 specs = []
-current_lines = 16299
-projected_lines = 17499
+current_lines = 16344
+projected_lines = 17544
 
 [crates.medulla-persistence-ops]
 level = "F6b"
@@ -704,8 +704,8 @@ kind = "persistence"
 responsibility = "Backup, online reshard, shard migration and store upgrade."
 moves = ["src/server/persistence/backup", "src/server/persistence/cold_offload", "src/server/persistence/online_reshard", "src/server/persistence/shard_migrate", "src/server/persistence/store_upgrade", "crates/medulla-persistence/src/store_upgrade", "crates/medulla-persistence/src/cold_tier_impl", "crates/medulla-persistence/src/storage_scrub"]
 specs = ["durable-graph-kernel (operations)"]
-current_lines = 9166
-projected_lines = 9366
+current_lines = 2241
+projected_lines = 2441
 
 [crates.medulla-raft]
 level = "F7"
