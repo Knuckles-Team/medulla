@@ -285,11 +285,12 @@ class Rewriter:
             return snake(c) + "::" + "::".join([m] + segs)
         return snake(self.frm) + "::" + "::".join(segs)
 
-    def rewrite(self, text: str, inside: bool) -> str:
+    def rewrite(self, text: str, inside: bool, stay: bool = False) -> str:
+        """stay: a file that stays in <frm>; its `crate::<moved>` paths now name the target crate."""
         code = blank_non_code(text)
         edits: list[tuple[int, int, str]] = []
         spans = []
-        head = "crate" if inside else snake(self.frm)
+        head = "crate" if (inside or stay) else snake(self.frm)
         for s, e, indent, body in find_use_statements(code):
             spans.append((s, e))
             leaves = parse_use_tree(body)
@@ -329,7 +330,7 @@ class Rewriter:
                     lines.append(f"{lead}{key}::{{{', '.join(items)}}};")
             sep = "\n" + attrs
             edits.append((s, e, sep.join(lines)))
-        pat = CRATE_PATH if inside else re.compile(r"(?<![\w:])" + snake(self.frm) + r"((?:::[A-Za-z_]\w*)+)")
+        pat = CRATE_PATH if (inside or stay) else re.compile(r"(?<![\w:])" + snake(self.frm) + r"((?:::[A-Za-z_]\w*)+)")
         for m in pat.finditer(code):
             if any(a <= m.start() < b for a, b in spans):
                 continue
@@ -510,9 +511,14 @@ def main() -> int:
             continue
         text = f.read_text()
         inside = f.is_relative_to(src_to)
-        if not inside and "medulla_types" not in text and snake(frm) not in text:
+        if not inside and "medulla_types" not in text and snake(frm) not in text and not (
+            f.is_relative_to(root / "crates" / frm / "src") and "crate::" in text
+        ):
             continue
-        new = rw.rewrite(text, inside)
+        stay = (not inside) and f.is_relative_to(root / "crates" / frm / "src")
+        if stay and "crate::" not in text:
+            continue
+        new = rw.rewrite(text, inside, stay)
         if new != text:
             f.write_text(new)
             if not inside and snake(to) in new:
