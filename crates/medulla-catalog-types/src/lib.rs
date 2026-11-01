@@ -1,7 +1,7 @@
 //! medulla-catalog-types: Connector pack, schema, catalog, source ingestion, lineage and release record types.
 //!
 //! Level L1 in `scripts/crate_split/boundaries.toml` (MEDULLA-CONTRACT-R056.11); it may depend only
-//! on crates of a lower level. Budget: 25,000 lines of Rust. Specs that land here: typed-packs-and-catalog (types), ingest-worker (types).
+//! on crates earlier in `[types_split].chain`. Budget: 25,000 lines of Rust. Specs that land here: typed-packs-and-catalog (types), ingest-worker (types).
 //! Route new rows with `scripts/crate_split/route_rows.py`.
 
 #![forbid(unsafe_code)]
