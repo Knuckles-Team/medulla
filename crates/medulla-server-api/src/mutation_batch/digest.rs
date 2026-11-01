@@ -137,7 +137,7 @@ pub fn opaque_idempotency_key_for_context(
 /// collide in the shard-global batch table. Raw scope/key material is never
 /// copied into the derived identifiers.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct WorkItemBatchIdentity {
+pub struct WorkItemBatchIdentity {
     pub batch_id: String,
     pub(crate) idempotency_key: String,
     pub(crate) durable_request_id: u64,

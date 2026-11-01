@@ -14,8 +14,8 @@ pub use envelope::publish_change_envelope_projection;
 /// attributed to: the attribution pair every commit-request constructor takes.
 #[derive(Clone, Copy)]
 pub struct CommitOrigin<'a> {
-    pub(crate) request_id: u64,
-    pub(crate) principal: Option<&'a str>,
+    pub request_id: u64,
+    pub principal: Option<&'a str>,
 }
 
 #[cfg(any(

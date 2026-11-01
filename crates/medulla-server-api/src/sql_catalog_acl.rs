@@ -98,7 +98,7 @@ pub(crate) enum SqlSourceAuthorityOrdering {
 /// Canonical, actor-and-table-specific view of the tenant SQL source authority.
 /// Raw ACL rows are intentionally not copied into this token.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct SqlSourceAclSnapshot {
+pub struct SqlSourceAclSnapshot {
     /// Total accepted-operation ordering for this tenant source. A unique
     /// first-time intent consumes one revision even when its requested ACL row
     /// state is already effective, because the same stable retry must remain a
@@ -1064,7 +1064,7 @@ pub fn create_owned_table(
 /// underlying [`TableStore`] — never by rewriting caller-supplied SQL text, so
 /// there is no SQL surface for an override to hide in (item 3: "cannot be
 /// overridden by caller-supplied SQL").
-pub(crate) struct AuthorizedTable {
+pub struct AuthorizedTable {
     store: TableStore,
     acl: TableStore,
     authority: CarrierAuthority,
@@ -1076,7 +1076,7 @@ pub(crate) struct AuthorizedTable {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct SemanticTextRecord {
+pub struct SemanticTextRecord {
     /// Opaque SHA-256 bytes derived from the qualified table identity and the
     /// declared primary-key tuple. Raw key values never leave this module. A
     /// non-key update preserves this identity; a primary-key update deliberately

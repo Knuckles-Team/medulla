@@ -98,7 +98,7 @@ fn validate_key(key: &str) -> Result<(), String> {
 /// optional redb backing" shape, but does not live under `persistence/` — that
 /// module is themed around the authoritative GRAPH store, which viz explicitly
 /// is not (see `handlers::viz`'s "NOT graph-scoped" doc).
-pub(crate) struct VizProvenanceStore {
+pub struct VizProvenanceStore {
     entries: RwLock<HashMap<String, VizProvenanceRecord>>,
     #[cfg(feature = "redb")]
     durable: Option<medulla_store::sidecar_store::SidecarStore<medulla_storage::VizProvenanceOwner>>,

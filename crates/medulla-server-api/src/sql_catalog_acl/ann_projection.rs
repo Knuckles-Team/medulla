@@ -29,8 +29,8 @@ use medulla_core::graph::GraphCore;
 /// status relation beside the tenant's table indexes (EH-352).
 #[derive(Clone)]
 pub struct RequestGraph {
-    pub(crate) name: String,
-    pub(crate) core: Arc<GraphCore>,
+    pub name: String,
+    pub core: Arc<GraphCore>,
 }
 use crate::access::CarrierAuthority;
 use crate::sql_tables;
