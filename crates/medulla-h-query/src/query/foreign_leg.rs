@@ -2,7 +2,7 @@
 
 use super::*;
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_server_api::api::query_txn::foreign_catalog::OwnedForeignRegistry;
 
 /// [`ForeignSourceCatalog::resolve_for_plan`] against the server's catalog for a served

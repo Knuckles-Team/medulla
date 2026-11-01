@@ -7,7 +7,7 @@ use medulla_catalog_types::connector_pack::{
     PackAnnotations, PackEntryKind, PackImportResult, PackViolationCode,
 };
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 
 use super::{bind, build_pack, import, ok, tool, Content, Served, ADMIN};
 
@@ -217,7 +217,7 @@ async fn source_claims_persist_held_and_old_or_other_tenant_members_stay_unbound
         .as_object_mut()
         .unwrap()
         .remove("source_registrations");
-    let legacy: medulla_persistence::connector_pack::ConnectorPackMemberRow =
+    let legacy: medulla_persistence_records::connector_pack::ConnectorPackMemberRow =
         serde_json::from_value(legacy).unwrap();
     assert!(legacy.source_registrations.is_empty());
     let unchanged = ok(
@@ -230,7 +230,7 @@ async fn source_claims_persist_held_and_old_or_other_tenant_members_stay_unbound
     drop(store);
     drop(state);
     let reopened =
-        medulla_persistence::agent_library::AgentLibraryStore::open(dir.path().to_str().unwrap())
+        medulla_persistence_records::agent_library::AgentLibraryStore::open(dir.path().to_str().unwrap())
             .unwrap();
     assert_eq!(reopened.connector_pack_members(TENANT, &key).unwrap(), rows);
     let plan = reopened

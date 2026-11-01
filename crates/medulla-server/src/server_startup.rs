@@ -313,7 +313,7 @@ pub fn acquire_persist_lock(
 /// migrated and `open_persistence` refuses such a store and names the command.
 #[cfg(feature = "redb")]
 fn migrate_stores_on_open(dir: &str, lock: &medulla_kernel::persist_lock::PersistDirLock) {
-    use medulla_persistence::store_upgrade as upgrade;
+    use medulla_persistence_ops::store_upgrade as upgrade;
 
     let enabled = upgrade::auto_migrate_enabled().unwrap_or_else(|error| exit_with(error, 2));
     if !enabled {
@@ -463,7 +463,7 @@ pub fn run_fuseki_startup_health_check() {
 #[cfg(feature = "redb")]
 fn refuse_upgradable_stores(dir: &str) {
     let checked =
-        medulla_persistence::store_upgrade::refuse_upgradable_stores(std::path::Path::new(dir));
+        medulla_persistence_ops::store_upgrade::refuse_upgradable_stores(std::path::Path::new(dir));
     if let Err(refusal) = checked {
         exit_with(refusal, 1);
     }
@@ -954,7 +954,7 @@ pub async fn storage_scrub_tick(state: SharedState) {
     let Some(persistence) = state.read().await.persistence.clone() else {
         return;
     };
-    match medulla_persistence::storage_scrub::run_step(persistence.as_ref()).await {
+    match medulla_persistence_ops::storage_scrub::run_step(persistence.as_ref()).await {
         Ok(0) => {}
         Ok(found) => tracing::error!(
             "Storage scrub: {} unreadable node row(s) found this pass (named above)",

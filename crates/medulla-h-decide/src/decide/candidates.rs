@@ -45,7 +45,7 @@ use medulla_decision_stats::decision::candidate::CandidateView;
 
 use super::stat_classes::{current_rules, derive, DerivedClasses};
 use super::stat_support::refusal;
-use medulla_persistence::agent_library::AgentLibraryStore;
+use medulla_persistence_records::agent_library::AgentLibraryStore;
 
 /// Domain of a declared option set's digest.
 const DECLARED_OPTIONS_DOMAIN: &str = "eg/decide-declared-options/v1";

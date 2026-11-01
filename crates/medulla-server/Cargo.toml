@@ -93,6 +93,8 @@ medulla-decision-stats = { path = "../medulla-decision-stats" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 medulla-source-types = { path = "../medulla-source-types" }
 medulla-work-types = { path = "../medulla-work-types" }
+medulla-persistence-records = { path = "../medulla-persistence-records" }
+medulla-persistence-ops = { path = "../medulla-persistence-ops" }
 
 [features]
 amqp-wire = ["server"]

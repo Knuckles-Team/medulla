@@ -43,6 +43,7 @@ medulla-mining = { path = "../medulla-mining" }
 medulla-table-store = { path = "../medulla-table-store" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
+medulla-persistence-records = { path = "../medulla-persistence-records" }
 
 [features]
 ann-redb = ["redb"]

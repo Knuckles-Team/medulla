@@ -27,7 +27,7 @@ use medulla_decision_types::{
     decision::UnitRationalWire,
 };
 
-use medulla_persistence::agent_library::AgentLibraryStore;
+use medulla_persistence_records::agent_library::AgentLibraryStore;
 
 /// Open `graph` for one caller and return its analysis snapshot filtered by
 /// that caller's row-level isolation, before any statistical read.

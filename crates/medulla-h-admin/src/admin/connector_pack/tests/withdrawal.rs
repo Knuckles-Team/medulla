@@ -7,7 +7,7 @@ use super::{
 };
 use medulla_protocol_types::protocol::Method;
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_agent_types::agent_component::{
     AgentComponentContentRequest, AgentComponentContentResult, AgentComponentKind,
     AgentComponentOp, AgentComponentPublishRequest, AgentComponentSearchPage,
@@ -109,7 +109,7 @@ async fn withdrawn_tool_leaves_search_but_keeps_historical_content() {
     );
     assert_eq!(content.body, withdrawn.body);
 
-    let mut draft = medulla_persistence::agent_component::test_component_draft(
+    let mut draft = medulla_persistence_records::agent_component::test_component_draft(
         TENANT,
         "skill:new-withdrawn-pin",
     );

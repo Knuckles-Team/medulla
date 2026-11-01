@@ -18,15 +18,15 @@ use medulla_catalog_types::{
 };
 use medulla_types::contract::{BoundedVec, Digest256};
 
-use medulla_persistence::agent_library::AgentLibraryStore;
-use medulla_persistence::connector_pack::commit::ConnectorPackCommitPlan;
-use medulla_persistence::connector_pack::commit::ConnectorPackComponentCommit;
-use medulla_persistence::connector_pack::commit::ConnectorPackHolderCommit;
-use medulla_persistence::connector_pack::decode_relationship_mappings;
-use medulla_persistence::connector_pack::decode_schema_mappings;
-use medulla_persistence::connector_pack::ConnectorPackBodyHolderRow;
-use medulla_persistence::connector_pack::ConnectorPackMemberRow;
-use medulla_persistence::connector_pack::CONNECTOR_DECLARATION_URI;
+use medulla_persistence_records::agent_library::AgentLibraryStore;
+use medulla_persistence_records::connector_pack::commit::ConnectorPackCommitPlan;
+use medulla_persistence_records::connector_pack::commit::ConnectorPackComponentCommit;
+use medulla_persistence_records::connector_pack::commit::ConnectorPackHolderCommit;
+use medulla_persistence_records::connector_pack::decode_relationship_mappings;
+use medulla_persistence_records::connector_pack::decode_schema_mappings;
+use medulla_persistence_records::connector_pack::ConnectorPackBodyHolderRow;
+use medulla_persistence_records::connector_pack::ConnectorPackMemberRow;
+use medulla_persistence_records::connector_pack::CONNECTOR_DECLARATION_URI;
 
 use super::desired::{build_all_desired, Desired};
 use super::validation::{validate_index, violation};

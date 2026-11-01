@@ -5,7 +5,7 @@
 //! there is one graph mutation path and one cursor compare-and-swap authority.
 
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 #[cfg(all(feature = "redb", feature = "blob"))]
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
@@ -322,7 +322,7 @@ fn authorize_empty_reconciliation(
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 struct IngestionResources {
-    agent_library: Arc<medulla_persistence::agent_library::AgentLibraryStore>,
+    agent_library: Arc<medulla_persistence_records::agent_library::AgentLibraryStore>,
     blob: Arc<medulla_server_api::blob::BlobCursors>,
 }
 
@@ -339,9 +339,9 @@ struct AdmittedRecords {
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 struct ResolvedIngestionMappings {
-    entities: BTreeMap<String, medulla_persistence::connector_pack::ResolvedConnectorSchemaMapping>,
+    entities: BTreeMap<String, medulla_persistence_records::connector_pack::ResolvedConnectorSchemaMapping>,
     relationships:
-        BTreeMap<String, medulla_persistence::connector_pack::ResolvedConnectorRelationshipMapping>,
+        BTreeMap<String, medulla_persistence_records::connector_pack::ResolvedConnectorRelationshipMapping>,
     receipts: Vec<SourceMappingReceipt>,
     entry_revision: Option<u64>,
 }
@@ -390,7 +390,7 @@ fn resolve_mappings(
     // The request has no tenant or mapping body. Both are resolved exclusively
     // through verified server authority, and every resolver error is terminal.
     // Packs are keyed by the verified tenant, the same key import writes.
-    let pack_tenant = medulla_persistence::connector_pack::pack_tenant_key(ctx.verified);
+    let pack_tenant = medulla_persistence_records::connector_pack::pack_tenant_key(ctx.verified);
     let mut entities = BTreeMap::new();
     let mut relationships = BTreeMap::new();
     let mut receipts = Vec::new();
@@ -1275,7 +1275,7 @@ fn validate_relationship_endpoint_type(
 fn relationship_properties(
     relationship: &medulla_source_types::source_ingestion::SourceRelationship,
     relationship_id: &str,
-    resolved: &medulla_persistence::connector_pack::ResolvedConnectorRelationshipMapping,
+    resolved: &medulla_persistence_records::connector_pack::ResolvedConnectorRelationshipMapping,
     raw_digest: &str,
     strict_schema: bool,
 ) -> Result<serde_json::Map<String, serde_json::Value>, String> {
@@ -2659,7 +2659,7 @@ mod tests {
         let mut resolved = ResolvedIngestionMappings {
             entities: BTreeMap::from([(
                 "connector:demo-connector#mappings/item".into(),
-                medulla_persistence::connector_pack::ResolvedConnectorSchemaMapping {
+                medulla_persistence_records::connector_pack::ResolvedConnectorSchemaMapping {
                     mapping_reference: "connector:demo-connector#mappings/item".into(),
                     schema_mapping: ConnectorSchemaMapping {
                         ontology_class: "Document".into(),
@@ -2678,7 +2678,7 @@ mod tests {
         };
         for relation_type in relation_types {
             let relation_mapping =
-                medulla_persistence::connector_pack::ResolvedConnectorRelationshipMapping {
+                medulla_persistence_records::connector_pack::ResolvedConnectorRelationshipMapping {
                     relation_reference: format!(
                         "connector:demo-connector#relations/Document/{relation_type}"
                     ),

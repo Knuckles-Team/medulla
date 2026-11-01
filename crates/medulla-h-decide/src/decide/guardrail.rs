@@ -5,7 +5,7 @@ use super::SharedState;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::auth::VerifiedRequestContext;
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_agent_types::agent_guardrail::GuardrailEntailmentRequest;
 
 #[cfg(feature = "decide")]

@@ -36,9 +36,9 @@ use medulla_types::solve_scalar::digest_text;
 
 use super::stat_jobs::{candidate_head, dataset_digest, EvalInputs, JobRun};
 use super::stat_support::refusal;
-use medulla_persistence::agent_library::AgentLibraryStore;
-use medulla_persistence::decision_jobs::encode_artifact;
-use medulla_persistence::decision_jobs::evaluation_run_key;
+use medulla_persistence_records::agent_library::AgentLibraryStore;
+use medulla_persistence_records::decision_jobs::encode_artifact;
+use medulla_persistence_records::decision_jobs::evaluation_run_key;
 
 /// Domain of an `EvaluationRun` digest.
 const RUN_DOMAIN: &str = "eg/decision/evaluation-run/v1";

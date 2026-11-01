@@ -14,7 +14,7 @@ use super::tests::{
 use super::*;
 use medulla_store::redb_store::shard::SHARD_PHYSICAL_STORE;
 use medulla_store::redb_store::NODES;
-use crate::agent_library::AGENT_LIBRARY_FILE;
+use medulla_persistence_records::agent_library::AGENT_LIBRARY_FILE;
 use medulla_storage::{
     create_predecessor_owner_file, LayoutPredecessor, OwnerLayout, AGENT_LIBRARY_REVISIONS,
     BLOB_BEFORE_HOLDERS,

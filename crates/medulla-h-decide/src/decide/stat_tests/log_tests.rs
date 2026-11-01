@@ -171,19 +171,19 @@ pub(super) async fn verify_log(
 
 #[cfg(feature = "blob")]
 pub(super) fn log_entry(h: &Harness, record_id: &str) -> DecisionLogEntry {
-    let key = medulla_persistence::decision_jobs::record_key(record_id);
+    let key = medulla_persistence_records::decision_jobs::record_key(record_id);
     let bytes = h
         .store
         .decision_artifact(TENANT, &key)
         .unwrap()
         .expect("logged");
-    medulla_persistence::decision_jobs::decode_artifact(&bytes, "entry").unwrap()
+    medulla_persistence_records::decision_jobs::decode_artifact(&bytes, "entry").unwrap()
 }
 
 #[cfg(feature = "blob")]
 fn write_entry(h: &Harness, entry: &DecisionLogEntry) {
-    let key = medulla_persistence::decision_jobs::record_key(&entry.record.record_id);
-    let bytes = medulla_persistence::decision_jobs::encode_artifact(entry).unwrap();
+    let key = medulla_persistence_records::decision_jobs::record_key(&entry.record.record_id);
+    let bytes = medulla_persistence_records::decision_jobs::encode_artifact(entry).unwrap();
     h.store
         .replace_decision_artifact(TENANT, &key, bytes)
         .unwrap();

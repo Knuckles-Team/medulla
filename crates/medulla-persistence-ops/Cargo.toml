@@ -12,3 +12,32 @@ name = "medulla_persistence_ops"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-persistence = { path = "../medulla-persistence" }
+tempfile = { version = "3", optional = true }
+hex = "0.4"
+medulla-kernel = { path = "../medulla-kernel" }
+medulla-server-api = { path = "../medulla-server-api" }
+medulla-storage = { path = "../medulla-storage", optional = true }
+medulla-store = { path = "../medulla-store" }
+medulla-types = { path = "../medulla-types" }
+redb = { workspace = true, optional = true }
+rmp-serde = "1.3"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+sha2 = "0.10"
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
+tracing = "0.1"
+medulla-direct-state = { path = "../medulla-direct-state" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-table-store = { path = "../medulla-table-store" }
+
+[features]
+cold-tier = ["medulla-persistence/cold-tier"]
+cold-tier-s3 = ["cold-tier", "medulla-persistence/cold-tier-s3"]
+metrics = ["medulla-persistence/metrics"]
+query = ["redb", "medulla-persistence/query"]
+raft = ["redb", "medulla-persistence/raft"]
+redb = ["dep:redb", "dep:medulla-storage", "medulla-persistence/redb"]
+
+[dev-dependencies]
+tempfile = "3"

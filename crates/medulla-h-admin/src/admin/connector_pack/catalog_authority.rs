@@ -2,7 +2,7 @@
 
 use super::{Arc, Response, RwLock, ServerState, VerifiedRequestContext};
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 
 #[cfg(not(feature = "redb"))]
 fn unavailable_catalog_response<T>(
@@ -30,7 +30,7 @@ async fn read_catalog(
     access: CatalogRead,
 ) -> Result<
     (
-        Arc<medulla_persistence::agent_library::AgentLibraryStore>,
+        Arc<medulla_persistence_records::agent_library::AgentLibraryStore>,
         Option<medulla_catalog_types::connector_pack::McpCatalogSnapshotBinding>,
     ),
     String,
@@ -63,7 +63,7 @@ async fn read_catalog(
 
 #[cfg(feature = "redb")]
 fn verified_owner_principal(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
 ) -> Result<String, String> {
     let owner = store.owner_principal();
     let digest = owner
@@ -262,7 +262,7 @@ pub(super) struct ObservedRegistration<'a> {
 #[cfg(feature = "redb")]
 pub(super) type CatalogWriteAdmission = (
     tokio::sync::OwnedMutexGuard<()>,
-    Arc<medulla_persistence::agent_library::AgentLibraryStore>,
+    Arc<medulla_persistence_records::agent_library::AgentLibraryStore>,
     medulla_agent_types::agent_library::AgentLibraryMutationContext,
 );
 
@@ -282,7 +282,7 @@ pub(super) async fn admit_catalog_write(
     let context = observed.context.clone();
     verify_observed_registration(state, verified, observed).await?;
     let store = state.write().await.ensure_agent_library()?;
-    let context = medulla_persistence::agent_library::context::bind_agent_library_context(
+    let context = medulla_persistence_records::agent_library::context::bind_agent_library_context(
         &store,
         req_id,
         verified,
@@ -360,7 +360,7 @@ async fn reconcile(
         .ok_or_else(|| "MCP server component is unavailable".to_string())?;
     let expected_suffix = format!("/mcp_server/{}", request.server_name);
     let content_digest =
-        medulla_persistence::connector_pack::catalog_authority::component_content_digest(
+        medulla_persistence_records::connector_pack::catalog_authority::component_content_digest(
             &component,
         )?;
     if component.kind != AgentComponentKind::McpServer

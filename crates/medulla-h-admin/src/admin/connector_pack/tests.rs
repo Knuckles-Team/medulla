@@ -7,7 +7,7 @@
 
 #[cfg(feature = "redb")]
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -558,10 +558,10 @@ pub(super) async fn seed_server_only_import(
         connector_pack::PackImportResult, connector_pack::PackProjectionState,
         connector_pack::PackServerRecord, connector_pack::PACK_IMPORT_RECORD_SCHEMA_VERSION,
     };
-    use medulla_persistence::connector_pack::commit::ConnectorPackCommitPlan;
-    use medulla_persistence::connector_pack::commit::ConnectorPackComponentCommit;
-    use medulla_persistence::connector_pack::commit::ConnectorPackHolderCommit;
-    use medulla_persistence::connector_pack::ConnectorPackBodyHolderRow;
+    use medulla_persistence_records::connector_pack::commit::ConnectorPackCommitPlan;
+    use medulla_persistence_records::connector_pack::commit::ConnectorPackComponentCommit;
+    use medulla_persistence_records::connector_pack::commit::ConnectorPackHolderCommit;
+    use medulla_persistence_records::connector_pack::ConnectorPackBodyHolderRow;
 
     let index = &pack.0;
     let donor = Served::new();
@@ -576,7 +576,7 @@ pub(super) async fn seed_server_only_import(
     let canonical = donor_store.current_component(TENANT, &id).unwrap().unwrap();
     let store = served.state.write().await.ensure_agent_library().unwrap();
     let old = store.current_component(TENANT, &id).unwrap().unwrap();
-    let mut context = medulla_persistence::agent_fixtures::mutation_context(
+    let mut context = medulla_persistence_records::agent_fixtures::mutation_context(
         &store,
         TENANT,
         "seed-legacy-server-only",

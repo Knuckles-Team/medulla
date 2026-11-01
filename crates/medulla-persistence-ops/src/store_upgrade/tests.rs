@@ -7,9 +7,9 @@ use super::*;
 use medulla_store::redb_layout::shard_filename;
 use medulla_store::redb_store::shard::SHARD_PHYSICAL_STORE;
 use medulla_store::redb_store::NODES;
-use crate::agent_library::AgentLibraryStore;
-use crate::agent_library::AGENT_LIBRARY_FILE;
-use crate::agent_library::AGENT_LIBRARY_PHYSICAL_STORE;
+use medulla_persistence_records::agent_library::AgentLibraryStore;
+use medulla_persistence_records::agent_library::AGENT_LIBRARY_FILE;
+use medulla_persistence::durable_stores::AGENT_LIBRARY_PHYSICAL_STORE;
 use medulla_storage::{
     create_predecessor_owner_file, AgentLibraryOwner, GraphShardOwner, LayoutPredecessor,
     OwnerLayout, StorageKernel, AGENT_LIBRARY_BEFORE_MCP_CATALOG, AGENT_LIBRARY_REVISIONS,
@@ -482,7 +482,7 @@ fn the_graph_store_open_names_the_command_for_an_upgradable_shard() {
         refusal.starts_with("GRAPH_SHARD_FORMAT_UPGRADE_REQUIRED: "),
         "{refusal}"
     );
-    let opened = crate::redb_backend::RedbBackend::open(directory, 16)
+    let opened = medulla_persistence::redb_backend::RedbBackend::open(directory, 16)
         .err()
         .expect("a predecessor shard must not open");
     assert!(

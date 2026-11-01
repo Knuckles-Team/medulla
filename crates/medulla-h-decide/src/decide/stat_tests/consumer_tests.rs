@@ -496,7 +496,7 @@ pub(super) async fn evaluate_assembly(
     record_id: &str,
     outcomes: &[bool],
 ) -> Vec<StoredEvaluation> {
-    use medulla_persistence::decision_record::tests as v1;
+    use medulla_persistence_records::decision_record::tests as v1;
     let evaluator = VerifiedRequestContext::verified_for_test_in_tenant("evaluator", v1::TENANT);
     let mut stored = Vec::new();
     for (n, success) in outcomes.iter().enumerate() {
@@ -523,7 +523,7 @@ pub(super) async fn evaluate_assembly(
 /// under the `assembly` question) -- never its components.
 #[tokio::test]
 async fn an_assembly_outcome_is_credited_to_its_slate() {
-    use medulla_persistence::decision_record::tests as v1;
+    use medulla_persistence_records::decision_record::tests as v1;
 
     let h = Harness::new().await;
     v1::seed_library(&h.store);

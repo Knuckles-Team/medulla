@@ -3,7 +3,7 @@
 //! surface reads and rewinds the worker's stream.
 
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use std::sync::atomic::AtomicBool;
 
 use medulla_agent_types::{

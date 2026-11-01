@@ -52,7 +52,7 @@ async fn attest(
         pack_component_id, self_served_candidate, self_served_component_revision,
         validate_connector, PackEntryKind, SelfServedAttester,
     };
-    use medulla_persistence::connector_pack::catalog_authority::published_server_content;
+    use medulla_persistence_records::connector_pack::catalog_authority::published_server_content;
 
     require_catalog_attester(verified, &request.context.tenant_id, true)?;
     validate_connector(&request.connector)?;

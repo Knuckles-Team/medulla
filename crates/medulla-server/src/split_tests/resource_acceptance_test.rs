@@ -14,7 +14,7 @@
 
 use medulla_raft::raft::RaftStateExt;
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use std::future::Future;
 use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -572,7 +572,7 @@ fn signed_request_as(request_id: u64, agent_id: &str, method: Method) -> Request
 fn delegation_library_draft() -> medulla_agent_types::agent_library::AgentLibraryEntryDraft {
     let prefixed = |seed: char| format!("sha256:{}", seed.to_string().repeat(64));
     let policy_digest =
-        medulla_persistence::agent_library::current_agent_library_policy_digest()
+        medulla_persistence_records::agent_library::current_agent_library_policy_digest()
             .expect("Agent Library policy digest");
     medulla_agent_types::agent_library::AgentLibraryEntryDraft {
         agent_id: DELEGATE_AGENT.to_string(),
@@ -635,7 +635,7 @@ async fn seed_delegation_library(
             .expect("open Agent Library owner");
         // Every node's store gets the same components, so every node's pins --
         // and therefore every node's `definition_digest` -- are identical.
-        medulla_persistence::agent_component::seed_draft_components_for_test(
+        medulla_persistence_records::agent_component::seed_draft_components_for_test(
             &store, &mut draft, 1,
         );
         let context = medulla_agent_types::agent_library::AgentLibraryMutationContext {
@@ -758,7 +758,7 @@ async fn retire_delegation_library(
     retained: &medulla_agent_types::agent_library::AgentLibraryEntry,
 ) {
     let policy_digest =
-        medulla_persistence::agent_library::current_agent_library_policy_digest()
+        medulla_persistence_records::agent_library::current_agent_library_policy_digest()
             .expect("Agent Library policy digest for retirement");
     let caller_principal = medulla_server_api::mutation_batch::principal_fingerprint(AUTH_AGENT)
         .expect("harness caller principal fingerprint");
@@ -943,13 +943,13 @@ fn seed_restart_delegate_entry(
     use medulla_types::contract::Nonce;
 
     let digest = |seed: char| format!("sha256:{}", seed.to_string().repeat(64));
-    let store = medulla_persistence::agent_library::AgentLibraryStore::open(persist_dir)
+    let store = medulla_persistence_records::agent_library::AgentLibraryStore::open(persist_dir)
         .expect("open durable Agent Library owner for restart fixture");
     let policy_digest =
-        medulla_persistence::agent_library::current_agent_library_policy_digest()
+        medulla_persistence_records::agent_library::current_agent_library_policy_digest()
             .expect("derive Agent Library policy digest");
     let mut entry_draft = restart_delegate_draft(&digest);
-    medulla_persistence::agent_component::seed_draft_components_for_test(
+    medulla_persistence_records::agent_component::seed_draft_components_for_test(
         &store,
         &mut entry_draft,
         20,

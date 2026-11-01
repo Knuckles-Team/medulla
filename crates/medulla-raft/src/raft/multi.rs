@@ -1292,7 +1292,7 @@ impl MultiRaft {
         } = info;
         self.ensure_group(DEFAULT_GROUP).await?;
         let server_secret = self.ctx.state.read().await.auth_secret.clone();
-        let info = medulla_persistence::node_info_store::NodeInfo {
+        let info = medulla_persistence_ops::node_info_store::NodeInfo {
             cluster_id,
             node_id,
             member_identity,

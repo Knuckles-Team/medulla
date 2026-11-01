@@ -50,6 +50,7 @@ medulla-table-store = { path = "../medulla-table-store" }
 medulla-tables = { path = "../medulla-tables" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-source-types = { path = "../medulla-source-types" }
+medulla-persistence-records = { path = "../medulla-persistence-records" }
 
 [features]
 test-support = []

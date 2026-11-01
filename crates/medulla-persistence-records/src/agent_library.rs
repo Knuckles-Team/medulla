@@ -56,8 +56,7 @@ use replay::{receipt_result, record_result, replay_record};
 
 /// Persist-dir file for the EG-owned Agent Library.
 pub const AGENT_LIBRARY_FILE: &str = "agent_library.redb";
-/// Stable physical identity used by staged backup adoption.
-pub(crate) const AGENT_LIBRARY_PHYSICAL_STORE: &str = "epistemic-graph:agent-library";
+use medulla_persistence::durable_stores::AGENT_LIBRARY_PHYSICAL_STORE;
 const AGENT_LIBRARY_SCOPE_RESOURCE: &str = "agent-library";
 const AGENT_LIBRARY_SCOPE_INCARNATION: &str = "agent-library:v1";
 const AGENT_LIBRARY_BOOTSTRAP_TENANT: &str = "agent-library-bootstrap";

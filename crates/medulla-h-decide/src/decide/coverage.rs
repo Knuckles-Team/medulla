@@ -11,7 +11,7 @@ use super::SharedState;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::auth::VerifiedRequestContext;
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_decision_outcome_types::decision::coverage::CapabilityCoverageRequest;
 
 /// Resolve the tenant's visible candidates and A2A cards and answer their
@@ -54,7 +54,7 @@ async fn coverage_for(
         .into_iter()
         .filter(|entry| entry.kind != AgentComponentKind::A2aAgentCard)
         .collect();
-    let candidates = medulla_persistence::decision_record::candidate_facts(&library)?;
+    let candidates = medulla_persistence_records::decision_record::candidate_facts(&library)?;
     let card_scope = LibraryCandidateScope {
         kinds: medulla_types::contract::BoundedVec::new(vec![AgentComponentKind::A2aAgentCard])
             .map_err(|error| error.to_string())?,

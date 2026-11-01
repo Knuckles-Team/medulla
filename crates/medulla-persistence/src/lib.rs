@@ -15,10 +15,6 @@
 
 
 
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[cfg(all(feature = "cold-tier", feature = "redb"))]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod cold_tier_impl;
 
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
@@ -51,51 +47,6 @@ pub mod writer_reply;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod durable_stores;
 
-// The three-layer native agent hierarchy (RF-ADR-008) is a set of durable redb
-// owners; every consumer is itself `redb`-gated.
-#[cfg(feature = "redb")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod agent_component;
-#[cfg(all(any(test, feature = "test-support"), feature = "redb"))]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod agent_fixtures;
-#[cfg(feature = "redb")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod agent_graph;
-#[cfg(feature = "redb")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod agent_library;
-#[cfg(feature = "redb")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod agent_pin_resolution;
-#[cfg(feature = "redb")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod agent_revision;
-#[cfg(feature = "redb")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod agent_row;
-#[cfg(feature = "redb")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod agent_template;
-#[cfg(feature = "redb")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod connector_pack;
-#[cfg(feature = "redb")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod decision_jobs;
-#[cfg(feature = "redb")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod decision_record;
-#[cfg(feature = "redb")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod guardrail_rule;
-// EH-345: the fleet catalog's one read over the AgentComponent owner.
-#[cfg(feature = "redb")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod fleet_components;
-#[cfg(feature = "redb")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod write_back;
 
 #[cfg(feature = "redb")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
@@ -127,37 +78,12 @@ impl<'a> AsRedb for dyn medulla_server_api::api::persistence::PersistenceBackend
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod shard_migrate;
 
-// Operator command over the storage kernel's registered offline store-format
-// upgrades (inspect / apply), and the startup refusal that names it.
-#[cfg(feature = "redb")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod store_upgrade;
 
 #[cfg(feature = "redb")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod tenant_catalog;
 
-// Cluster node-info store (CONCEPT:MEDULLA-KG.sharding.cluster-topology, ADR-1 / W1.1): durable
-// node_id -> {raft_addr, advertised_client_addr, tls_server_name} map that backs
-// `Method::ClusterMembers`/`PlacementRoute.endpoints`, replacing the static
-// `GRAPH_RAFT_GROUP_ENDPOINTS` client map. Mirrors `tenant_catalog`'s own-file,
-// in-memory-cache shape. Redb-only, like its M3 siblings above.
-#[cfg(feature = "redb")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod node_info_store;
 
-// VIZ-1: durable cache for the computed hierarchical-Leiden cluster tree
-// (CONCEPT:MEDULLA-KG.compute.leiden-hierarchy) one graph's `Method::ClusterHierarchyRefresh`
-// produces. Own-file, own-table, keyed by graph name -- mirrors `node_info_store`'s
-// shape (own redb file under the same `persist_dir`) but carries NO replication
-// story (unlike node_info's Raft self-report): this is a plain per-node cache of a
-// value that is always re-derivable from the live graph, never authoritative,
-// never a KG node/edge write (see the `Method::ClusterHierarchyRefresh` doc for
-// why membership is deliberately NOT represented as graph edges). Redb-only, like
-// every other own-file side store in this module.
-#[cfg(feature = "redb")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod cluster_hierarchy_store;
 
 // M3 keystone (CONCEPT:MEDULLA-KG.backend.catalog-shard-resolve / MEDULLA-034). Both redb-only:
 //   * `online_reshard` — move ONE graph between shards while the engine RUNS (verbatim
@@ -189,11 +115,6 @@ pub mod provenance_anchor;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod rebalance;
 
-// Background node-payload scrub (EH-384, CONCEPT:MEDULLA-KG.storage.node-payload-scrub):
-// bounded, resumable, read-only detection of unreadable node rows between restarts.
-#[cfg(feature = "redb")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod storage_scrub;
 
 // MEDULLA-090 — online consistent backup/restore + PITR foundation. Redb-only:
 //   * `backup` — per-shard `begin_read()` MVCC snapshot (MEDULLA-027) streamed verbatim

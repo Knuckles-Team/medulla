@@ -2,7 +2,7 @@
 
 #[cfg(feature = "redb")]
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 use std::sync::Arc;

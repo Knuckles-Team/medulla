@@ -1,7 +1,7 @@
 //! The served guard must refuse before either durable owner changes.
 
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
 use medulla_agent_types::agent_fixtures::topology::facts;
@@ -27,11 +27,11 @@ use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::auth::VerifiedRequestContext;
-use medulla_persistence::agent_library::AgentLibraryStore;
-use medulla_persistence::decision_record::tests::commit_context;
-use medulla_persistence::decision_record::tests::decided;
-use medulla_persistence::decision_record::tests::seed_library;
-use medulla_persistence::decision_record::tests::TENANT;
+use medulla_persistence_records::agent_library::AgentLibraryStore;
+use medulla_persistence_records::decision_record::tests::commit_context;
+use medulla_persistence_records::decision_record::tests::decided;
+use medulla_persistence_records::decision_record::tests::seed_library;
+use medulla_persistence_records::decision_record::tests::TENANT;
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_server_api::state::ServerState;
 

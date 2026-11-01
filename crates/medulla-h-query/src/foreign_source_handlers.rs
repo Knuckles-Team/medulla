@@ -19,7 +19,7 @@ use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::access::OwnerScopedCall;
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_catalog_types::foreign_read::{
     ForeignReadAbortRequest, ForeignReadChunkRequest, ForeignReadCompleteRequest,
     ForeignReadOpenRequest, FOREIGN_READ_SCHEMA_VERSION,

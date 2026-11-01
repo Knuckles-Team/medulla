@@ -15,7 +15,7 @@
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 #[cfg(not(feature = "redb"))]
 use medulla_server_api::state::ServerState;
 #[cfg(not(feature = "redb"))]

@@ -26,10 +26,10 @@ use serde_json::{Map, Value};
 use super::stat_executor::ExecutionContext;
 use super::stat_log::{visible_entry, LogReader};
 use super::stat_support::refusal;
-use medulla_persistence::agent_library::AgentLibraryStore;
-use medulla_persistence::decision_jobs::decode_artifact;
-use medulla_persistence::decision_jobs::encode_artifact;
-use medulla_persistence::decision_jobs::record_key;
+use medulla_persistence_records::agent_library::AgentLibraryStore;
+use medulla_persistence_records::decision_jobs::decode_artifact;
+use medulla_persistence_records::decision_jobs::encode_artifact;
+use medulla_persistence_records::decision_jobs::record_key;
 
 /// Prefix of a persistence id a grant may name.
 const PRINCIPAL_PREFIX: &str = "principal:sha256:";

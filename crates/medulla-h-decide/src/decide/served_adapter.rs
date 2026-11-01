@@ -14,15 +14,15 @@
 //! adapter state that cannot be read -- serves the base query unchanged.
 
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use std::collections::BTreeMap;
 use std::sync::{Arc, OnceLock};
 
 use medulla_decision_types::decision::statistical::retrieval_adapter::AdapterFitted;
 use medulla_graph_core::graph::GraphCore;
 
-use medulla_persistence::agent_library::AgentLibraryStore;
-use medulla_persistence::decision_jobs::decode_artifact;
+use medulla_persistence_records::agent_library::AgentLibraryStore;
+use medulla_persistence_records::decision_jobs::decode_artifact;
 use medulla_server_api::api::admin::served_adapter::ServedAdapter;
 use medulla_server_api::state::ServerState;
 

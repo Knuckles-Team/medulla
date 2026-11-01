@@ -6,7 +6,7 @@
 
 use std::path::PathBuf;
 
-use medulla_persistence::store_upgrade::{self, ApplyOptions};
+use medulla_persistence_ops::{store_upgrade, store_upgrade::ApplyOptions};
 
 #[derive(clap::Subcommand, Debug)]
 pub(super) enum OperatorCommand {

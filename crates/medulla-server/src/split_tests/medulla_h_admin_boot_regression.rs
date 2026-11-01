@@ -29,7 +29,7 @@
 //!    a per-boot one.
 
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 use std::sync::atomic::{AtomicU64, Ordering};

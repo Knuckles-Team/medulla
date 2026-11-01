@@ -31,9 +31,9 @@ use super::stat_log::LogReader;
 use super::stat_pointer::{read_pointer, Qualified};
 use super::stat_retrieval::{judged_outcomes, Scope};
 use super::stat_support::{invalid_parameter as invalid, refusal};
-use medulla_persistence::agent_library::AgentLibraryStore;
-use medulla_persistence::decision_jobs::decode_artifact;
-use medulla_persistence::decision_jobs::encode_artifact;
+use medulla_persistence_records::agent_library::AgentLibraryStore;
+use medulla_persistence_records::decision_jobs::decode_artifact;
+use medulla_persistence_records::decision_jobs::encode_artifact;
 
 const Q16: f64 = 65_536.0;
 /// Bins of the top-1 score PSI.

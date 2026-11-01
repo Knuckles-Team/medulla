@@ -16,9 +16,9 @@ use medulla_catalog_types::{
 };
 use medulla_types::contract::Digest256;
 
-use medulla_persistence::agent_library::AgentLibraryStore;
-use medulla_persistence::connector_pack::ConnectorPackMemberRow;
-use medulla_persistence::connector_pack::CONNECTOR_DECLARATION_URI;
+use medulla_persistence_records::agent_library::AgentLibraryStore;
+use medulla_persistence_records::connector_pack::ConnectorPackMemberRow;
+use medulla_persistence_records::connector_pack::CONNECTOR_DECLARATION_URI;
 
 use super::annotations::partition_capabilities;
 use super::facts::{component_kind, facts};

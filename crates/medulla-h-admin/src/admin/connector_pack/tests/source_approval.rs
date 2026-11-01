@@ -1,7 +1,7 @@
 //! R722.2 served source approval and current-contract reset proof.
 
 #[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
