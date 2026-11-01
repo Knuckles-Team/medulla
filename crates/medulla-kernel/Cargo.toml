@@ -41,6 +41,7 @@ uuid = { version = "1.28", features = ["v4"] }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 
 [dev-dependencies]
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 tokio = { version = "1.53", features = ["full", "test-util"] }
 tracing-subscriber = "0.3"
 medulla-types = { path = "../medulla-types", features = ["test-support"] }

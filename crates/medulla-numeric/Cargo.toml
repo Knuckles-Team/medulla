@@ -125,6 +125,7 @@ rustfft = { version = "6.4", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 
 [dev-dependencies]
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 libc = "0.2"
 # Shared Decide-layer fixtures (`medulla_types::test_support::decision`).
 medulla-types = { path = "../medulla-types", features = ["test-support"] }

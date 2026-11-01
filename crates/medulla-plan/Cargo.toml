@@ -434,6 +434,7 @@ arrow = { version = "58.4", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 
 [dev-dependencies]
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 # The oracle/algebra tests build a fixture GraphCore + SemanticStore and run the
 # DataFusion FILTER leg, so the test target needs the `query` feature on.
 medulla-query = { path = "../medulla-query", features = ["sql"] }

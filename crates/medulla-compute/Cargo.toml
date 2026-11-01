@@ -249,6 +249,7 @@ tree-sitter-dm = { version = "=0.25.4", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 
 [dev-dependencies]
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 criterion = "0.8"
 # Shared Decide-layer fixtures (`medulla_types::test_support::decision`), also used
 # by medulla-types' own derivation tests.
