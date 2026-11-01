@@ -131,7 +131,10 @@ fn lease_decision_and_freshness_use_only_atomic_authority_snapshots() {
 
 #[test]
 fn server_binding_keeps_originating_and_effective_identities_separate() {
-    let source = include_str!("../../../../src/server/handlers/knowledge_stream/mod.rs");
+    let source = include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../medulla-h-query/src/knowledge_stream/mod.rs"
+    ));
     assert!(source.contains("lease.originating_principal() == claims.principal.as_str()"));
     assert!(source.contains("lease.effective_actor() == claims.agent_id.as_str()"));
     assert!(source.contains("carrier.agent_id() == claims.agent_id.as_str()"));
