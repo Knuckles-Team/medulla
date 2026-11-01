@@ -6,6 +6,7 @@ use crate::server::api::persistence::BundledStoreSource;
 use crate::server::authority_context::VerifiedRequestContext;
 use crate::server::handlers::admin::{backup_bundle_name, bind_agent_library_draft};
 use crate::server::persistence::agent_library::context::bind_agent_library_context;
+use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use medulla_types::contract::Nonce;
 use medulla_types::{
     AgentLibraryEntryDraft, AgentLibraryMutationContext, AgentLibraryMutationKind, AgentLibraryOp,

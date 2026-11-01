@@ -49,12 +49,12 @@ use medulla_storage::{
     GraphShardOwner, OwnedStoreHandle, OwnerDomain, PhysicalStoreIdentity, ScopedRead,
     StorageKernel, GRAPH_SHARD_CONTROL_GRAPH, GRAPH_SHARD_TENANT,
 };
-#[cfg(feature = "server")]
-use medulla_transaction::GraftDestination;
 use medulla_transaction::{
     AdmittedGroup, AdmittedOwnerWrite, Begin, CurrentIntent, MutationKernel, OutboxClaimBudget,
     OutboxClaimOutcome, OutboxStatus, ScopedIntent,
 };
+#[cfg(feature = "server")]
+use medulla_transaction::{GraftDestination, GraftedScope};
 use medulla_types::mutation_batch::COMPILED_BATCH_INCARNATION;
 #[cfg(feature = "raft")]
 use medulla_types::MutationOutboxRecord;

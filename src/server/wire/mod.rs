@@ -6070,7 +6070,7 @@ mod ne_004_ne_005_tests {
 }
 
 #[cfg(all(test, feature = "query"))]
-mod wired_catalog_tests {
+pub(crate) mod wired_catalog_tests {
     //! NE-046 (MEDULLA-WIRE-CATALOG) wiring tests. `sql_catalog_acl.rs`'s own 13
     //! tests already prove the ACL primitives (ownership/grants/RLS)
     //! are correct in isolation; these drive the REAL wire `execute()`
@@ -6085,7 +6085,7 @@ mod wired_catalog_tests {
     use crate::server::sql_catalog_acl::{self, SqlPrivilege};
 
     const SECRET: &str = "medulla-wired-catalog-test-secret";
-    const CREATOR: &str = "wired-catalog-graph-creator";
+    pub(crate) const CREATOR: &str = "wired-catalog-graph-creator";
 
     fn ensure_env() {
         static ONCE: std::sync::Once = std::sync::Once::new();
@@ -6114,7 +6114,7 @@ mod wired_catalog_tests {
     /// never interferes with what this module tests — SQL catalog
     /// ownership/grants/RLS is a completely separate, additional layer this
     /// track wires on top, not a replacement for the engine ACL.
-    fn test_state(agents: &[&str]) -> Arc<RwLock<ServerState>> {
+    pub(crate) fn test_state(agents: &[&str]) -> Arc<RwLock<ServerState>> {
         ensure_env();
         crate::server::test_state_with_services(
             SECRET,
@@ -6124,7 +6124,7 @@ mod wired_catalog_tests {
         )
     }
 
-    fn request(id: u64, graph: &str, method: Method) -> Request {
+    pub(crate) fn request(id: u64, graph: &str, method: Method) -> Request {
         static NONCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
         let claims = crate::server::authority_context::signed_test_claims(CREATOR);
         let mut req = Request {
@@ -6162,7 +6162,7 @@ mod wired_catalog_tests {
     /// through (see its own doc), so a pure catalog DML/DDL statement never
     /// needs this — only a `SELECT` does (`run_read` requires a real
     /// `GraphCore`).
-    async fn create_test_graph(state: &Arc<RwLock<ServerState>>, graph: &str, id: u64) {
+    pub(crate) async fn create_test_graph(state: &Arc<RwLock<ServerState>>, graph: &str, id: u64) {
         let resp = crate::server::dispatch(
             state,
             request(
@@ -6184,7 +6184,7 @@ mod wired_catalog_tests {
     /// cross-actor scenarios can each get their own session against ONE
     /// shared `state` (test-only: `VerifiedRequestContext::verified_for_test_in_tenant`
     /// is `#[cfg(test)]`).
-    fn session_for(
+    pub(crate) fn session_for(
         state: Arc<RwLock<ServerState>>,
         graph: &str,
         agent_id: &str,
@@ -6205,7 +6205,7 @@ mod wired_catalog_tests {
     /// arguments carries — for tests that also need to call `sql_catalog_acl`
     /// directly (e.g. `grant`/`set_row_level_column`, which have no wire SQL
     /// surface in this track's scope).
-    fn authority(agent_id: &str, tenant: &str) -> CarrierAuthority {
+    pub(crate) fn authority(agent_id: &str, tenant: &str) -> CarrierAuthority {
         CarrierAuthority::from_verified(&VerifiedRequestContext::verified_for_test_in_tenant(
             agent_id, tenant,
         ))
@@ -6233,7 +6233,9 @@ mod wired_catalog_tests {
     /// The SAME persistence directory `test_state` configured — for tests
     /// that call `sql_catalog_acl` directly (bypassing the wire) and need the
     /// exact `Path` every `sql_catalog_acl`/`sql_tables` entry point takes.
-    async fn test_persist_dir_of(state: &Arc<RwLock<ServerState>>) -> std::path::PathBuf {
+    pub(crate) async fn test_persist_dir_of(
+        state: &Arc<RwLock<ServerState>>,
+    ) -> std::path::PathBuf {
         std::path::PathBuf::from(
             state
                 .read()
@@ -6244,7 +6246,10 @@ mod wired_catalog_tests {
         )
     }
 
-    async fn read_rows(session: &WireSession, sql: &str) -> WireResult<TypedQueryResult> {
+    pub(crate) async fn read_rows(
+        session: &WireSession,
+        sql: &str,
+    ) -> WireResult<TypedQueryResult> {
         match session.execute(sql).await? {
             WireOutcome::Rows(result) => Ok(result),
             other => panic!("expected a row set, got {other:?}"),
@@ -7340,7 +7345,6 @@ mod wired_catalog_tests {
         .rows
         .is_empty());
     }
-
 }
 
 #[cfg(all(test, feature = "query"))]

@@ -7,7 +7,18 @@
 use crate::server::api::query_txn::edge_test_support::{
     edge_status_row, register_detached_edge_index, sql_rows, EDGE_STATUS_SQL,
 };
-use crate::server::wire::wired_catalog_tests::*;
+use std::sync::Arc;
+
+use medulla_query::TableStore;
+use tokio::sync::RwLock;
+
+use crate::protocol::Method;
+use crate::server::wire::wired_catalog_tests::{
+    authority, create_test_graph, read_rows, request, session_for, test_persist_dir_of, test_state,
+    CREATOR,
+};
+use crate::server::wire::WireSession;
+use crate::server::ServerState;
 
 const TENANT: &str = "tenant-shared";
 

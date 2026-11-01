@@ -18,8 +18,6 @@
 //! The worker runs under a fixed engine service identity; it is started once,
 //! after catalog recovery, and polls the deployment tenant's outbox.
 
-#[cfg(feature = "redb")]
-use crate::server::persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 
 use tokio::sync::RwLock;
@@ -71,7 +69,7 @@ pub(crate) mod worker {
 
     use crate::server::auth::VerifiedRequestContext;
     use crate::server::outbox_operator::OutboxWrite;
-    use crate::server::persistence::agent_library::AgentLibraryStore;
+    use crate::server::persistence::agent_library::{AgentLibraryStateExt, AgentLibraryStore};
     use crate::server::state::ServerState;
 
     /// The label a failed blocking store task names.
