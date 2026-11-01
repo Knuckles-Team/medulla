@@ -69,7 +69,7 @@ pub mod federation_trino;
 #[cfg(feature = "federation")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod mirror_target;
-#[cfg(any(test, feature = "test-support"))]
+#[cfg(all(any(test, feature = "test-support"), feature = "federation"))]
 pub mod test_guard;
 // The federation foreign-scan + compose-join-with-local proofs (CONCEPT:MEDULLA-KG.query.query-federation):
 // a mock HTTP/JSON source joined with the local graph in ONE plan == the manual join.
