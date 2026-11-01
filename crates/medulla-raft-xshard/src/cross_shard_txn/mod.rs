@@ -2426,7 +2426,7 @@ mod calvin_tests {
 
     // ── GOC-13: `slice_fence_is_current` — pure fencing-gate proofs, no cluster ──
 
-    use super::super::placement::PlacementRoute;
+    use medulla_raft::raft::placement::PlacementRoute;
 
     /// PASS-on-good: a slice's captured fencing exactly matches the group's current
     /// route ⇒ current, not stale.

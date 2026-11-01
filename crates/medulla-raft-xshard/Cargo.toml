@@ -50,3 +50,7 @@ redb = ["dep:medulla-transaction", "medulla-raft/redb"]
 security = ["redb", "medulla-raft/security"]
 streaming = ["medulla-raft/streaming"]
 test-support = ["harness", "dep:tracing-subscriber", "medulla-raft/test-support"]
+
+[dev-dependencies]
+medulla-raft = { path = "../medulla-raft", features = ["harness", "test-support"] }
+tracing-subscriber = "0.3"

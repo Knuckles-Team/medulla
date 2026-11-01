@@ -23,7 +23,7 @@ use medulla_server_api::state::ServerState;
 
 use medulla_raft::raft::config::RaftClusterConfig;
 use medulla_raft::raft::node::{self, StartedNode};
-use super::super::{NodeId, RaftRequest};
+use medulla_raft::raft::{NodeId, RaftRequest};
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 
