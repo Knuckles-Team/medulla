@@ -22,7 +22,7 @@ type Write<'a> = AdmittedMutation<'a, Owner>;
 
 /// Run `steps` against the open write. On failure the write is aborted and the
 /// step's error is returned; an abort that itself fails reports its own error.
-pub(in crate::server::persistence) fn within_write<'a, T>(
+pub(crate) fn within_write<'a, T>(
     txn: Write<'a>,
     steps: impl FnOnce(&Write<'a>) -> Result<T, String>,
 ) -> Result<(Write<'a>, T), String> {
@@ -39,7 +39,7 @@ pub(in crate::server::persistence) fn within_write<'a, T>(
 /// under, resolved before the write is opened.
 ///
 /// `noun` names the layer in the refusal.
-pub(in crate::server::persistence) fn revision_scope(
+pub(crate) fn revision_scope(
     store: &AgentLibraryStore,
     context: &AgentLibraryMutationContext,
     noun: &str,
@@ -51,7 +51,7 @@ pub(in crate::server::persistence) fn revision_scope(
     Ok((expected_revision, owner))
 }
 
-pub(in crate::server::persistence) fn require_context_tenant<L: RevisionLayer>(
+pub(crate) fn require_context_tenant<L: RevisionLayer>(
     context: &AgentLibraryMutationContext,
     tenant_id: &str,
 ) -> Result<(), String> {
@@ -66,13 +66,13 @@ pub(in crate::server::persistence) fn require_context_tenant<L: RevisionLayer>(
 }
 
 /// One publish or retire as the caller asked for it.
-pub(in crate::server::persistence) struct RevisionWrite<'r, L: RevisionLayer> {
-    pub(in crate::server::persistence) context: &'r AgentLibraryMutationContext,
-    pub(in crate::server::persistence) kind: L::Kind,
-    pub(in crate::server::persistence) record_id: &'r str,
-    pub(in crate::server::persistence) expected_revision: u64,
+pub(crate) struct RevisionWrite<'r, L: RevisionLayer> {
+    pub(crate) context: &'r AgentLibraryMutationContext,
+    pub(crate) kind: L::Kind,
+    pub(crate) record_id: &'r str,
+    pub(crate) expected_revision: u64,
     /// The submitted definition's digest; `None` for a retire.
-    pub(in crate::server::persistence) definition_digest: Option<&'r str>,
+    pub(crate) definition_digest: Option<&'r str>,
 }
 
 struct Admission<L: RevisionLayer> {
@@ -116,7 +116,7 @@ fn admit_revision<L: RevisionLayer>(
 ///
 /// `prepare` receives the next revision number and the admitted context, and
 /// runs only when the attempt is not a replay.
-pub(in crate::server::persistence) fn write_revision<'a, L: RevisionLayer>(
+pub(crate) fn write_revision<'a, L: RevisionLayer>(
     store: &AgentLibraryStore,
     txn: Write<'a>,
     owner: &OwnedStoreHandle<Owner>,
@@ -130,7 +130,7 @@ pub(in crate::server::persistence) fn write_revision<'a, L: RevisionLayer>(
 /// [`write_revision`], plus `side_rows`: owner rows of the same batch that
 /// belong to the revision (a committed decision record's verbatim body), so
 /// the revision and everything it names land in ONE transaction or not at all.
-pub(in crate::server::persistence) fn write_revision_with_rows<'a, L: RevisionLayer>(
+pub(crate) fn write_revision_with_rows<'a, L: RevisionLayer>(
     store: &AgentLibraryStore,
     txn: Write<'a>,
     owner: &OwnedStoreHandle<Owner>,
@@ -170,7 +170,7 @@ pub(in crate::server::persistence) fn write_revision_with_rows<'a, L: RevisionLa
 }
 
 /// Retire the record's `expected_revision` with a durable tombstone revision.
-pub(in crate::server::persistence) fn retire_revision<L: RevisionLayer>(
+pub(crate) fn retire_revision<L: RevisionLayer>(
     store: &AgentLibraryStore,
     txn: Write<'_>,
     owner: &OwnedStoreHandle<Owner>,
@@ -207,7 +207,7 @@ pub(in crate::server::persistence) fn retire_revision<L: RevisionLayer>(
 
 /// Finish a replayed attempt: consume its fresh nonce against the recorded
 /// receipt, then commit that alone.
-pub(in crate::server::persistence) fn finish_replayed<T>(
+pub(crate) fn finish_replayed<T>(
     mutations: &MutationKernel,
     txn: Write<'_>,
     operation: &OperationReplayIdentity,
@@ -332,7 +332,7 @@ fn build_commit_plan<L: RevisionLayer>(
 }
 
 /// Stamp the effective policy digest of `operations` on the admitted context.
-pub(in crate::server::persistence) fn policy_admitted_context(
+pub(crate) fn policy_admitted_context(
     context: &AgentLibraryMutationContext,
     operations: &[MutationOperation],
 ) -> Result<AgentLibraryMutationContext, String> {
@@ -343,17 +343,17 @@ pub(in crate::server::persistence) fn policy_admitted_context(
 }
 
 /// A batch begun under its replay identity, and the versions it commits over.
-pub(in crate::server::persistence) struct StagedBatch {
-    pub(in crate::server::persistence) batch: MutationBatch,
-    pub(in crate::server::persistence) source_version: u64,
-    pub(in crate::server::persistence) committed_version: u64,
+pub(crate) struct StagedBatch {
+    pub(crate) batch: MutationBatch,
+    pub(crate) source_version: u64,
+    pub(crate) committed_version: u64,
 }
 
 /// Build the batch against the owner's authoritative version and begin it.
 ///
 /// Returns the batch id beside the staged batch. `build` receives the
 /// authoritative version and the batch id.
-pub(in crate::server::persistence) fn stage_batch(
+pub(crate) fn stage_batch(
     store: &AgentLibraryStore,
     txn: &Write<'_>,
     owner: &OwnedStoreHandle<Owner>,
@@ -436,7 +436,7 @@ fn build_receipt<L: RevisionLayer>(
 }
 
 /// Write one layer's owner rows through the batch's owner-row capability.
-pub(in crate::server::persistence) fn apply_owner_rows(
+pub(crate) fn apply_owner_rows(
     txn: &Write<'_>,
     owner: &OwnedStoreHandle<Owner>,
     batch: &MutationBatch,
@@ -451,7 +451,7 @@ pub(in crate::server::persistence) fn apply_owner_rows(
 /// record whose committed version is not the one the result reports.
 ///
 /// `committed` is the staged batch and the encoded domain result it records.
-pub(in crate::server::persistence) fn finish_committed_ledger(
+pub(crate) fn finish_committed_ledger(
     mutations: &MutationKernel,
     txn: &Write<'_>,
     committed: (&StagedBatch, &[u8]),

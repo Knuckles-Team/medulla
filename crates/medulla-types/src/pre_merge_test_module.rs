@@ -307,7 +307,7 @@ mod tests {
                 "fn a_coordinator_backup_preserves_every_consumed_nonce_and_receipt(",
             ),
             (
-                include_str!("../../../src/server/persistence/backup.rs"),
+                include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../medulla-persistence/src/backup.rs")),
                 "fn backup_restore_roundtrip_preserves_everything(",
             ),
         ];

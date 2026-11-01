@@ -37,7 +37,7 @@ pub(super) fn build_batch(
 ///
 /// Shared by every agent layer. `version` is the native version the batch is
 /// expected to apply over.
-pub(in crate::server::persistence) fn native_lifecycle_batch(
+pub(crate) fn native_lifecycle_batch(
     owner: &medulla_storage::OwnedStoreHandle<medulla_storage::AgentLibraryOwner>,
     context: &AgentLibraryMutationContext,
     batch_id: &str,

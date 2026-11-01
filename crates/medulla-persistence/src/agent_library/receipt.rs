@@ -23,7 +23,7 @@ pub(crate) struct OwnerReceiptInput<'a> {
     pub(crate) committed_at_ms: u64,
 }
 
-pub(in crate::server::persistence) fn owner_receipt(
+pub(crate) fn owner_receipt(
     operation: &medulla_types::authority::OperationReplayIdentity,
     nonce: &medulla_types::authority::NonceReplayKey,
     batch: &MutationBatch,
@@ -81,7 +81,7 @@ pub(in crate::server::persistence) fn owner_receipt(
 /// Receipt for a batch whose complete effect is several outbox intents. The
 /// fold binds intent order as well as every topic, key, payload and header, so
 /// omitting one per-component event changes the receipt effect digest.
-pub(in crate::server::persistence) fn owner_batch_receipt(
+pub(crate) fn owner_batch_receipt(
     operation: &medulla_types::authority::OperationReplayIdentity,
     nonce: &medulla_types::authority::NonceReplayKey,
     batch: &MutationBatch,

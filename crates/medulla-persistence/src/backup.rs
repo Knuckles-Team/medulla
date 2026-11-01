@@ -83,7 +83,7 @@
 //! with no RBAC/identity state at all — a backup that silently cannot restore identity
 //! is worse than no backup, because it is trusted. redb's exclusive per-file lock means
 //! this module can never simply open a sibling store, so the two halves of the fix are:
-//! the caller hands in the live handles it owns ([`crate::server::api::persistence::BundledStoreSource`]),
+//! the caller hands in the live handles it owns ([`medulla_server_api::api::persistence::BundledStoreSource`]),
 //! and everything still left out is NAMED IN THE MANIFEST with the reason it was left
 //! out. `durable_stores`' `registry_covers_every_redb_store` test is what stops a future
 //! `.redb` from being silently forgotten again.
