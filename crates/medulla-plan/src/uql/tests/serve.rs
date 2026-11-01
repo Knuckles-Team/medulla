@@ -54,6 +54,7 @@ fn two_scoring_stages_keep_both_channels() {
     assert_eq!(d2.score, Some(1.0));
 }
 
+// spec: MEDULLA-INCREMENTAL-VIEWS-R001.8
 #[test]
 fn explain_reports_stages_estimates_and_incrementality() {
     let (view, semantic) = fixture();

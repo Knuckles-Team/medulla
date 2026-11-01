@@ -1,5 +1,5 @@
 //! Differential oracle for the incremental materialized-view circuit
-//! (CONCEPT:MEDULLA-KG.storage.incremental-matview).
+//! (MEDULLA-INCREMENTAL-VIEWS-R001).
 //!
 //! The correctness bar for a DBSP-style engine: the INCREMENTALLY-maintained view result
 //! MUST equal a full recompute after an ARBITRARY mutation sequence — a wrong circuit
