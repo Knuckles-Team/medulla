@@ -20,16 +20,16 @@ use medulla_types::agent_component::{
     AGENT_COMPONENT_SCHEMA_VERSION,
 };
 use medulla_types::agent_library::{refuse_withdrawn, AgentLibraryLifecycle};
-use medulla_types::catalog_fixtures::contract_control;
-use medulla_types::catalog_fixtures::contract_pack;
+use medulla_types::catalog_fixtures::contract_control as control;
+use medulla_types::catalog_fixtures::contract_pack as pack;
 use medulla_types::connector_pack::digest as pack_digests;
 use medulla_types::decision::{
     DecisionErrorCode, DecisionPolicy, DecisionRecord, UnitRationalWire,
     MAX_UNIT_RATIONAL_DENOMINATOR,
 };
-use medulla_types::decision_fixtures::contract_decision;
-use medulla_types::decision_fixtures::contract_solver;
-use medulla_types::decision_fixtures::contract_statistical;
+use medulla_types::decision_fixtures::contract_decision as decision;
+use medulla_types::decision_fixtures::contract_solver as solver;
+use medulla_types::decision_fixtures::contract_statistical as statistical;
 use medulla_types::protocol::Method;
 use medulla_types::protocol_fixtures::contract_wave::contract_wave_samples;
 

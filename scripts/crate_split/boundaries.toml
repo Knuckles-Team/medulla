@@ -22,6 +22,11 @@
 # A file under crates/<c>/src that no move takes stays in <c>; a file under src/ that no
 # move takes goes where placement.toml says.
 
+[types_split]
+# The type-crate chain, lowest first. A crate may depend on any crate earlier in it; the
+# protocol hub (L2) sits above every domain type crate (L1). Moves run top-down.
+chain = ["medulla-types", "medulla-identity-types", "medulla-mutation-types", "medulla-index-types", "medulla-result-types", "medulla-agent-types", "medulla-catalog-types", "medulla-decision-types", "medulla-protocol-types"]
+
 [estimates]
 # Projected Rust lines per open row: implementation plus its bound test.
 default_lines_per_row = 100

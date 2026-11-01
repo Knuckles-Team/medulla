@@ -12,8 +12,10 @@ paths workspace-wide:
 * everywhere else `medulla_types::<m>::..` (or a removed root alias) becomes
   `medulla_<to>::<m>::..`.
 
-L1 siblings may not depend on each other, so a module that another L1 crate (or the thin crate)
-needs is pinned to the thin crate, transitively (`--plan` prints the closure). Cargo manifests get
+The type crates form one chain (`[types_split].chain`): a crate may depend on any crate
+earlier in it. Crates move top-down (the protocol hub first, identity last), so each move
+leaves a compiling workspace; a dependency that runs up the chain is reported as a
+VIOLATION and stops the move (`--plan` prints them). Cargo manifests get
 the new dependency, forwarded features and the used third-party dependencies.
 
     move_leaf_modules.py --from medulla-types --to medulla-decision-types [--root R] [--plan]
@@ -151,7 +153,12 @@ def mod_refs(files: list[Path], mods: set[str], rn: dict[str, str]) -> set[str]:
     return refs
 
 
-def plan(root: Path, frm: str):
+def load_chain(root: Path) -> list[str]:
+    cfg = tomllib.loads((root / "scripts/crate_split/boundaries.toml").read_text())
+    return cfg["types_split"]["chain"]
+
+
+def plan(root: Path, frm: str, to: str):
     pats = load_patterns(root, frm)
     src = root / "crates" / frm / "src"
     mods = list_mods(src)
@@ -173,22 +180,25 @@ def plan(root: Path, frm: str):
     # lib.rs non-use code ($crate refs in macros) counts as thin
     lib_code = "\n".join("\n".join(t) for n, t in parse_lib(lib_text) if n is None)
     lib_deps = mod_refs_text(lib_code, allmods, rn)
+    # The type crates form one chain (boundaries.toml [types_split].chain): a crate may
+    # depend on any crate earlier in it. Crates move top-down (the hub first), so every
+    # module still in <from> belongs to a crate at or below <to>. `phys` is where each
+    # module lives once <to> has moved; it, not the target map, drives the rewrite.
+    chain = load_chain(root)
+    rank = {c: i for i, c in enumerate(chain)}
+    rank_to = rank[to]
+    moving = {m for m in mods if assign[m] == to}
+    phys = {m: (to if m in moving else (frm if m in mods else assign[m])) for m in allmods}
     pinned: dict[str, str] = {}
-    changed = True
-    while changed:
-        changed = False
-        for m, ds in deps.items():
-            for d in ds:
-                if assign[m] != assign[d] and assign[m] != frm:
-                    # m is in an L1 crate and d lives elsewhere (L0 is fine); sibling L1 is not
-                    if assign[d] != frm:
-                        pinned[d] = f"needed by {m} ({assign[m]})"
-                        assign[d] = frm
-                        changed = True
-                if assign[m] == frm and assign[d] != frm:
-                    pinned[d] = f"needed by thin {m}"
-                    assign[d] = frm
-                    changed = True
+    for m, ds in deps.items():
+        for d in ds:
+            if m in moving and phys[d] not in (frm, to) and rank.get(phys[d], 99) > rank_to:
+                pinned[d] = f"VIOLATION: moving {m} needs {d} in higher {phys[d]}"
+            if m in mods and m not in moving and d in moving:
+                pinned[m] = f"VIOLATION: {m} stays in {frm} (target {assign[m]}) but needs moving {d}"
+            if m in moving and phys[d] == frm and rank.get(assign[d], 0) > rank_to:
+                pinned[d] = f"VIOLATION: moving {m} needs {d} whose target {assign[d]} is above {to}"
+    assign = phys
     return assign, pinned, deps, rn, mods, lib_text
 
 
@@ -424,7 +434,7 @@ def main() -> int:
     ap.add_argument("--plan", action="store_true")
     a = ap.parse_args()
     root, frm, to = a.root, a.frm, a.to
-    assign, pinned, deps, rn, mods, lib_text = plan(root, frm)
+    assign, pinned, deps, rn, mods, lib_text = plan(root, frm, to)
     per: dict[str, int] = {}
     for m, c in assign.items():
         paths = mods.get(m) or list_mods(root / "crates" / c / "src").get(m, [])
@@ -436,6 +446,10 @@ def main() -> int:
             print(f"PINNED {m}: {why}")
         return 0
     moving = sorted(m for m, c in assign.items() if c == to and m in mods)
+    if any(w.startswith("VIOLATION") for w in pinned.values()):
+        for m, why in sorted(pinned.items()):
+            print(why, file=sys.stderr)
+        return 3
     if per.get(to, 0) > 25000:
         print(f"STOP: {to} would hold {per[to]} lines > 25000", file=sys.stderr)
         return 2
