@@ -9,7 +9,7 @@ use super::super::agent_component::test_component_draft;
 use super::super::agent_fixtures::{mutation_context, open_agent_store};
 use super::*;
 
-const TENANT: &str = "tenant-a";
+pub const TENANT: &str = "tenant-a";
 
 fn rule(id: &str, applies_to: &str) -> GuardrailRule {
     GuardrailRule {

@@ -13,7 +13,7 @@ const REFUSAL: &str = "AUDIT_WRITER_UNAVAILABLE: ";
 /// A backend whose graph exists because one ordinary audited write created
 /// it: that write is audit-chain entry 0. Shared by every test that needs a
 /// freshly created, audited graph on a durable backend.
-pub(crate) async fn seeded(dir: &str, graph: &str) -> RedbBackend {
+pub async fn seeded(dir: &str, graph: &str) -> RedbBackend {
     let backend = RedbBackend::open_with_shards(dir.to_string(), 64, 1).expect("open");
     let seed = Method::AddNode {
         node_id: "seed".to_string(),

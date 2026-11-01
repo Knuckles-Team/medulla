@@ -84,7 +84,7 @@ const SEEDED_COMPONENT_NONCE: u8 = 30;
 /// from [`try_publish`] so a refusal test can seed a publishable base and
 /// then break exactly ONE pin, rather than having the fixture helpfully
 /// seed the very ghost it is testing.
-fn seeded(store: &AgentLibraryStore, mut draft: AgentTemplateDraft) -> AgentTemplateDraft {
+pub fn seeded(store: &AgentLibraryStore, mut draft: AgentTemplateDraft) -> AgentTemplateDraft {
     super::super::agent_component::seed_draft_components_for_test(
         store,
         &mut draft.base,
