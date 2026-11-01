@@ -56,6 +56,7 @@ medulla-sql-udfs = { path = "../medulla-sql-udfs" }
 medulla-table-store = { path = "../medulla-table-store" }
 medulla-tables = { path = "../medulla-tables" }
 medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-finance-market = { path = "../medulla-finance-market" }
 
 [features]
 finance = ["sql", "medulla-sql-udfs/finance"]
