@@ -20,7 +20,7 @@
 //     indexes). `open_lazy` promotes a catalog-only entry into this map on first
 //     access, replaying its durable material through the SAME `GraphMaterializer`
 //     seam `PersistenceBackend` implements over redb (mirrors `ReadThroughFactory`).
-//     The server layer (`medulla_server::persistence::cold_offload::admit_capacity`)
+//     The server layer (`server::persistence::cold_offload::admit_capacity`)
 //     bounds this map's size and evicts the coldest entry back to catalog-only
 //     before admitting a new one — durability-gated, so a graph is never lost,
 //     only evicted; `__commons__` is pinned and never evicted.
@@ -38,8 +38,9 @@ use std::sync::{Arc, RwLock};
 
 use dashmap::DashMap;
 
-use crate::graph::{GraphCore, GraphSnapshot};
 use medulla_protocol_types::protocol::GraphType;
+use medulla_graph_core::graph::GraphCore;
+use medulla_graph_core::graph::GraphSnapshot;
 
 /// Metadata for a registered graph.
 ///
@@ -178,7 +179,7 @@ pub struct GraphMaterial {
     pub edges: Vec<(String, String, Vec<u8>)>,
     pub semantic: Vec<u8>,
     /// Authoritative graph schema sources restored with the data image.
-    pub schema_sources: Option<Arc<crate::graph::GraphSchemaSources>>,
+    pub schema_sources: Option<Arc<medulla_graph_core::graph::GraphSchemaSources>>,
     /// Durable incarnation read in the same source snapshot as the rows.
     pub incarnation_id: Option<String>,
     /// Authoritative graph version covered by this material.
@@ -321,7 +322,7 @@ pub struct MaterialPage {
     pub edges: Vec<(String, String, Vec<u8>)>,
     pub semantic: Vec<u8>,
     /// Authoritative graph-control state, attached to the first page only.
-    pub schema_sources: Option<Arc<crate::graph::GraphSchemaSources>>,
+    pub schema_sources: Option<Arc<medulla_graph_core::graph::GraphSchemaSources>>,
     pub next_cursor: Option<MaterializeCursor>,
     /// Durable incarnation read with this page.  Production materializers must
     /// populate it; `None` is retained for in-memory/test materializers.
@@ -431,7 +432,7 @@ pub struct GraphRegistry {
     /// when present, every `GraphCore` the registry
     /// creates (and every existing one, via `attach_read_through_all`) gains a
     /// per-graph read-through so an evicted node still reads from authority.
-    read_through_factory: Option<Arc<dyn crate::read_through::ReadThroughFactory>>,
+    read_through_factory: Option<Arc<dyn medulla_graph_core::read_through::ReadThroughFactory>>,
     /// Server-layer secondary-index factory (CONCEPT:MEDULLA-KG.storage.incremental-text /
     /// .incremental-temporal / .incremental-derived-owl). Set once at startup when the
     /// text/tsdb/owl features are active; when present, every `GraphCore` the registry
@@ -439,7 +440,7 @@ pub struct GraphRegistry {
     /// indexes via [`GraphCore::register_index`], so a committed write batch maintains
     /// them incrementally. `None` (default) ⇒ no server indexes wired — behavior
     /// unchanged (mirrors `read_through_factory`).
-    secondary_index_factory: Option<Arc<dyn crate::index::SecondaryIndexFactory>>,
+    secondary_index_factory: Option<Arc<dyn medulla_graph_core::index::SecondaryIndexFactory>>,
     /// Durable-material factory for lazy first-open (CONCEPT:MEDULLA-KG.sharding.lazy-graph-catalog). Set once at
     /// startup, mirroring `read_through_factory`.
     materializer: Option<Arc<dyn GraphMaterializer>>,
@@ -552,7 +553,7 @@ impl GraphRegistry {
     /// pick the factory up automatically.
     pub fn set_read_through_factory(
         &mut self,
-        factory: Arc<dyn crate::read_through::ReadThroughFactory>,
+        factory: Arc<dyn medulla_graph_core::read_through::ReadThroughFactory>,
     ) {
         for entry in self.graphs.values() {
             entry.core.set_read_through(factory.for_graph(&entry.name));
@@ -569,7 +570,7 @@ impl GraphRegistry {
     /// factory up automatically. Mirrors [`set_read_through_factory`](Self::set_read_through_factory).
     pub fn set_secondary_index_factory(
         &mut self,
-        factory: Arc<dyn crate::index::SecondaryIndexFactory>,
+        factory: Arc<dyn medulla_graph_core::index::SecondaryIndexFactory>,
     ) {
         for entry in self.graphs.values() {
             register_secondary_indexes(&entry.core, factory.as_ref(), &entry.name, true);
@@ -867,7 +868,7 @@ impl GraphRegistry {
     /// installed, its durable material (nodes/edges/semantic store) is replayed
     /// via the SAME `add_node`/`add_edge` calls the eager boot path uses, so a
     /// lazily-opened graph is byte-identical to an eagerly-loaded one. The
-    /// caller (`medulla_server::persistence::cold_offload::admit_capacity`) is
+    /// caller (`server::persistence::cold_offload::admit_capacity`) is
     /// responsible for bounded-cache admission BEFORE calling this.
     pub fn open_lazy(&mut self, name: &str) -> bool {
         if self.graphs.contains_key(name) {
@@ -1313,7 +1314,7 @@ impl GraphRegistry {
 
     /// Get a reference to a graph entry. Resident-only — a catalog-only (not yet
     /// materialized) graph is NOT returned here; callers that must transparently
-    /// lazily-open should go through `medulla_server::persistence::cold_offload::lazy_open`
+    /// lazily-open should go through `server::persistence::cold_offload::lazy_open`
     /// first (see `dispatch_graph_op`).
     pub fn get(&self, name: &str) -> Option<&GraphEntry> {
         self.graphs.get(name)
@@ -1379,15 +1380,15 @@ pub use reserved::{
 /// rebuilds all of them.
 fn register_secondary_indexes(
     core: &Arc<GraphCore>,
-    factory: &dyn crate::index::SecondaryIndexFactory,
+    factory: &dyn medulla_graph_core::index::SecondaryIndexFactory,
     name: &str,
     material_complete: bool,
 ) {
     for idx in factory.for_graph(name) {
         let source_snapshot_version = core.version();
-        idx.publish_manifest(crate::index::IndexManifest::building(
+        idx.publish_manifest(medulla_graph_core::index::IndexManifest::building(
             source_snapshot_version,
-            crate::index::IndexCompletenessCursor {
+            medulla_graph_core::index::IndexCompletenessCursor {
                 nodes: core.node_count() as u64,
                 edges: core.edge_count() as u64,
                 complete: false,
@@ -1398,14 +1399,14 @@ fn register_secondary_indexes(
             // text and spatial state from a prior process is never trusted merely
             // because it opened successfully.
             match idx.full_rebuild(core) {
-                Ok(()) => idx.publish_manifest(crate::index::IndexManifest::valid(
+                Ok(()) => idx.publish_manifest(medulla_graph_core::index::IndexManifest::valid(
                     source_snapshot_version,
                     core.node_count() as u64,
                     core.edge_count() as u64,
                 )),
                 Err(_) => idx.publish_manifest(
                     idx.manifest()
-                        .marked_incomplete(crate::index::IndexValidity::Failed),
+                        .marked_incomplete(medulla_graph_core::index::IndexValidity::Failed),
                 ),
             }
         }
@@ -1447,6 +1448,8 @@ fn secondary_indexes_valid(core: &Arc<GraphCore>) -> bool {
 }
 
 #[cfg(test)]
+mod index_factory_tests;
+#[cfg(test)]
 mod tests {
     use super::*;
     use std::sync::Mutex;
@@ -1456,7 +1459,7 @@ mod tests {
         graph_name: String,
     }
 
-    impl crate::read_through::ReadThrough for RecordingReadThrough {
+    impl medulla_graph_core::read_through::ReadThrough for RecordingReadThrough {
         fn read_node_blob(&self, _node_id: &str) -> Option<Vec<u8>> {
             Some(self.graph_name.as_bytes().to_vec())
         }
@@ -1466,8 +1469,11 @@ mod tests {
         attached: Arc<Mutex<Vec<String>>>,
     }
 
-    impl crate::read_through::ReadThroughFactory for RecordingReadThroughFactory {
-        fn for_graph(&self, graph_name: &str) -> Arc<dyn crate::read_through::ReadThrough> {
+    impl medulla_graph_core::read_through::ReadThroughFactory for RecordingReadThroughFactory {
+        fn for_graph(
+            &self,
+            graph_name: &str,
+        ) -> Arc<dyn medulla_graph_core::read_through::ReadThrough> {
             self.attached.lock().unwrap().push(graph_name.to_string());
             Arc::new(RecordingReadThrough {
                 graph_name: graph_name.to_string(),
@@ -1659,15 +1665,15 @@ mod tests {
             .add_node("old".to_string(), props(serde_json::json!({"v": 1})));
 
         let snapshot = GraphSnapshot {
-            schema_version: crate::graph::GRAPH_SNAPSHOT_SCHEMA_VERSION,
-            schema_sources: Arc::new(crate::graph::GraphSchemaSources::default()),
+            schema_version: medulla_graph_core::graph::GRAPH_SNAPSHOT_SCHEMA_VERSION,
+            schema_sources: Arc::new(medulla_graph_core::graph::GraphSchemaSources::default()),
             nodes: vec![(
                 "restored".to_string(),
                 Arc::new(props(serde_json::json!({"v": 2}))),
             )],
             edges: Vec::new(),
             ledger: Vec::new(),
-            semantic_store: crate::compute::semantic::SemanticStore::new(),
+            semantic_store: medulla_semantic_index::semantic::SemanticStore::new(),
         };
         let restored = reg
             .install_committed_graph(
