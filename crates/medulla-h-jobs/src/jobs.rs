@@ -588,7 +588,7 @@ fn staged_program_identity(
     }
     Ok(parsed)
 }
-fn govern_job_kind(
+pub fn govern_job_kind(
     authority: &CarrierAuthority,
     req_id: u64,
     policy_fingerprint: &str,
