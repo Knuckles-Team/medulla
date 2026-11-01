@@ -6,6 +6,7 @@
 //! refusal keeps its exact message and exit status; a store-open failure stays
 //! fatal at boot (loud + early).
 
+use medulla_server_api::blob::BlobStateExt;
 use medulla_server_api::cdc::CdcStateExt;
 use medulla_server_api::kv::KvStateExt;
 use std::net::SocketAddr;
@@ -640,7 +641,9 @@ pub fn compose_server_state(
     state.txn_max_per_agent = txn_max_per_agent;
     #[cfg(feature = "blob")]
     {
-        (state.blob, state.blob_cursor_ttl_secs) = stores.blob;
+        let (blob, ttl) = stores.blob;
+        state.set_blob_cursors(blob);
+        state.blob_cursor_ttl_secs = ttl;
     }
     #[cfg(feature = "tsdb")]
     {

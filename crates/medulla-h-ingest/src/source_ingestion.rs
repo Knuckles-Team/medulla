@@ -4,8 +4,8 @@
 //! existing ChangeEnvelope commit authority owns the final IngestBatch step, so
 //! there is one graph mutation path and one cursor compare-and-swap authority.
 
-#[cfg(feature = "redb")]
 use medulla_server_api::blob::BlobStateExt;
+#[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 #[cfg(all(feature = "redb", feature = "blob"))]
 use std::collections::{BTreeMap, BTreeSet};

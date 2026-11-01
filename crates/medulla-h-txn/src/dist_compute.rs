@@ -6,8 +6,8 @@
 //! `RefreshMatView` manage named, durable, incrementally-maintained materialized
 //! views of those results. The heavy superstep loop runs off the reactor.
 
-#[cfg(feature = "redb")]
 use medulla_server_api::cdc::CdcStateExt;
+#[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 use std::sync::Arc;
 use tokio::sync::RwLock;

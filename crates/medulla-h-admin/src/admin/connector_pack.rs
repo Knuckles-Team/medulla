@@ -6,8 +6,8 @@
 //! inheriting one. Each arm's target is owned by a different package after S1,
 //! which is why they are separate functions rather than one body.
 
-#[cfg(feature = "redb")]
 use medulla_server_api::blob::BlobStateExt;
+#[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 #[cfg(feature = "redb")]

@@ -5,8 +5,8 @@
 //! Library. The harness owns one temporary persist directory per test, so no
 //! test can observe another's committed state.
 
-#[cfg(feature = "redb")]
 use medulla_server_api::blob::BlobStateExt;
+#[cfg(feature = "redb")]
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::sync::atomic::{AtomicU64, Ordering};

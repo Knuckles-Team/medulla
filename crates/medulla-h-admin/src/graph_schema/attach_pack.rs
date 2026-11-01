@@ -5,8 +5,8 @@
 //! selected engine-owned bodies from Blob CAS with their committed digest and
 //! length. Caller bytes never enter this path.
 
-#[cfg(feature = "redb")]
 use medulla_server_api::blob::BlobStateExt;
+#[cfg(feature = "redb")]
 use medulla_persistence::agent_library::AgentLibraryStateExt;
 use std::sync::Arc;
 

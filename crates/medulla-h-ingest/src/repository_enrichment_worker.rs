@@ -6,8 +6,8 @@
 //! native submission route is composed here. The fixed service actor belongs
 //! to the deployment tenant; snapshots from another tenant fail closed.
 
-#[cfg(feature = "raft")]
 use medulla_server_api::blob::BlobStateExt;
+#[cfg(feature = "raft")]
 use medulla_raft::raft::RaftStateExt;
 use std::sync::Arc;
 
