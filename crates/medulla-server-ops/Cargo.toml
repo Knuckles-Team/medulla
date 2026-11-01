@@ -46,6 +46,16 @@ medulla-sql = { path = "../medulla-sql" }
 medulla-table-store = { path = "../medulla-table-store" }
 medulla-tables = { path = "../medulla-tables" }
 
+medulla-capabilities = { path = "../medulla-capabilities", optional = true }
+medulla-epistemic = { path = "../medulla-epistemic", optional = true }
+medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-numeric = { path = "../medulla-numeric", optional = true }
+medulla-shacl = { path = "../medulla-shacl", optional = true }
+medulla-stream = { path = "../medulla-stream", optional = true }
+medulla-wasm = { path = "../medulla-wasm", optional = true }
+redb = { workspace = true, optional = true }
+ureq = { version = "3.4.2", optional = true }
+
 [features]
 ann-redb = ["redb", "medulla-server-api/ann-redb"]
 compute-dist = ["medulla-server-api/compute-dist"]
