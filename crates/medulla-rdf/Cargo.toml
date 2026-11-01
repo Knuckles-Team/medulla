@@ -131,5 +131,5 @@ medulla-source-types = { path = "../medulla-source-types" }
 # (dev-deps are not compiled for a check/lib build). This lets the ICV closed-world
 # behaviour be exercised from `cargo test -p medulla-rdf --features sparql`.
 medulla-shacl = { path = "../medulla-shacl" }
-medulla-reasoner = { path = "../medulla-reasoner" }
+medulla-reasoner = { path = "../medulla-reasoner", features = ["owl"] }
 medulla-virtual-graph = { path = "../medulla-virtual-graph", features = ["rdf"] }
