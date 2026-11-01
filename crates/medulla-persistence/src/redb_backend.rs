@@ -813,7 +813,6 @@ pub(crate) fn seed_raw_row<'k, 'v, K, V>(
 pub mod tests {
     use crate::AsRedb;
     use super::*;
-    use crate::server::persistence::AsRedb;
     // A raw `redb::Database` survives HERE and nowhere else: these fixtures plant
     // rows the production paths deliberately refuse to write, so they must reach
     // the file underneath the kernel's admission. Each opens the file only after

@@ -35,7 +35,7 @@ pub(crate) fn ledger_status_record(
 
 /// The typed result bytes a committed status record must carry.
 pub(crate) fn status_result_bytes<L: RevisionLayer>(
-    record: &medulla_types::MutationBatchRecord,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
 ) -> Result<&[u8], String> {
     record.result_msgpack.as_deref().ok_or_else(|| {
         format!(
@@ -95,8 +95,8 @@ pub(crate) fn decode_status_result<L: RevisionLayer>(
 /// operation. `operation` is the record id and mutation kind the caller asked
 /// about.
 pub(crate) fn validate_status_record<L: RevisionLayer>(
-    record: &medulla_types::MutationBatchRecord,
-    owner_identity: &medulla_types::MutationScopeIdentity,
+    record: &medulla_protocol_types::mutation_batch::MutationBatchRecord,
+    owner_identity: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
     context: &AgentLibraryMutationContext,
     operation: (&str, L::Kind),
     committed: &L::Committed,

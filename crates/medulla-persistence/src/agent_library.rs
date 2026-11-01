@@ -883,6 +883,7 @@ pub(crate) fn seed_agent_draft_for_test(
 pub mod tests {
     use super::replay::record_event;
     use super::*;
+    use medulla_protocol_types::mutation_batch::MutationBatchStatus;
     use medulla_server_api::api::persistence::BundledStoreSource;
     use medulla_types::contract::Nonce;
 
