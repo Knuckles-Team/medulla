@@ -330,7 +330,7 @@ pub(super) async fn route_process_global_domains(
     // method whose feature is off falls through to the graph_ops not-available
     // catch-all.
     #[cfg(feature = "federation")]
-    let method = match medulla_h_query::foreign_source_handlers::try_handle(owner_call, method).await {
+    let method = match medulla_h_sparql::foreign_source_handlers::try_handle(owner_call, method).await {
         Ok(r) => return Ok(r),
         Err(m) => m,
     };

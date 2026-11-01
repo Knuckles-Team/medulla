@@ -161,7 +161,7 @@ async fn commit_rdf_gateway(ctx: GatewayRouteCtx<'_>, method: Method) -> Respons
             &method,
             true,
             move |staged_core| async move {
-                medulla_h_query::rdf::try_handle(
+                medulla_h_sparql::rdf::try_handle(
                     state,
                     medulla_server_api::api::reentry::TryHandleContext {
                         req_id,
@@ -195,7 +195,7 @@ pub(super) async fn route_rdf_gateway(
     if medulla_server_mutation::mutation::is_rdf_gateway_method(&method) {
         return Ok(commit_rdf_gateway(ctx, method).await);
     }
-    match medulla_h_query::rdf::try_handle(
+    match medulla_h_sparql::rdf::try_handle(
         ctx.state,
         medulla_server_api::api::reentry::TryHandleContext {
             req_id: ctx.req_id,

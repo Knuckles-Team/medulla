@@ -754,7 +754,7 @@ pub(super) async fn dispatch_method_scoped_graph_methods(
                             Err(denied) => return Response::err(req_id, denied),
                         }
                     };
-                    match medulla_h_query::rdf::try_handle_distributed(
+                    match medulla_h_sparql::rdf::try_handle_distributed(
                         state,
                         req_id,
                         &read_authority,

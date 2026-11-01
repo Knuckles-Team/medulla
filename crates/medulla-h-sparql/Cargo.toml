@@ -12,3 +12,55 @@ name = "medulla_h_sparql"
 path = "src/lib.rs"
 
 [dependencies]
+medulla-tables = { path = "../medulla-tables" }
+medulla-catalog-types = { path = "../medulla-catalog-types" }
+medulla-kernel = { path = "../medulla-kernel" }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-rdf = { path = "../medulla-rdf", optional = true }
+medulla-server-api = { path = "../medulla-server-api" }
+medulla-shacl = { path = "../medulla-shacl", optional = true }
+medulla-shex = { path = "../medulla-shex", optional = true }
+medulla-types = { path = "../medulla-types" }
+rmp-serde = "1.3"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
+ureq = { version = "3.4.2", optional = true }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-isolation = { path = "../medulla-isolation" }
+medulla-query-cache = { path = "../medulla-query-cache" }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
+medulla-reasoner = { path = "../medulla-reasoner" }
+medulla-virtual-graph = { path = "../medulla-virtual-graph" }
+medulla-persistence-records = { path = "../medulla-persistence-records" }
+medulla-server-ops = { path = "../medulla-server-ops" }
+medulla-server-blob = { path = "../medulla-server-blob" }
+medulla-server-auth = { path = "../medulla-server-auth" }
+medulla-exec = { path = "../medulla-exec" }
+medulla-federation = { path = "../medulla-federation" }
+medulla-nlq = { path = "../medulla-nlq" }
+
+medulla-plan = { path = "../medulla-plan", optional = true }
+medulla-storage = { path = "../medulla-storage", optional = true }
+medulla-transaction = { path = "../medulla-transaction", optional = true }
+medulla-tsdb = { path = "../medulla-tsdb", optional = true }
+
+[features]
+federation = ["query", "dep:medulla-plan"]
+federation-opensearch = ["federation-search"]
+federation-search = ["federation", "dep:ureq"]
+federation-sql = ["federation", "dep:medulla-plan"]
+nl-query = ["query", "dep:medulla-plan"]
+obda = ["sparql", "query"]
+owl = ["sparql", "dep:medulla-rdf"]
+owl-plan = ["owl", "query", "dep:medulla-plan"]
+query = ["redb", "dep:medulla-tsdb", "dep:medulla-plan"]
+rdf = ["dep:medulla-rdf"]
+redb = ["dep:medulla-storage", "dep:medulla-transaction"]
+result-cache = []
+security = ["redb"]
+shacl = ["rdf", "dep:medulla-shacl"]
+shex = ["rdf", "dep:medulla-shex"]
+sparql = ["rdf", "dep:medulla-rdf"]
+sparql-fuseki = ["sparql"]
+sparql-service = ["federation"]

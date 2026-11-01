@@ -109,6 +109,7 @@ medulla-federation = { path = "../medulla-federation" }
 medulla-nlq = { path = "../medulla-nlq" }
 medulla-uql = { path = "../medulla-uql" }
 medulla-h-mining = { path = "../medulla-h-mining" }
+medulla-h-sparql = { path = "../medulla-h-sparql" }
 
 [features]
 amqp-wire = ["server"]

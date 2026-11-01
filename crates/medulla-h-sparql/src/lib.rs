@@ -6,3 +6,20 @@
 
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
+
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(feature = "federation-search")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod federation;
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(feature = "federation")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod foreign_source_handlers;
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(feature = "rdf")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod rdf;
+/// Moved from the facade (MEDULLA-CONTRACT-R056).
+#[cfg(feature = "sparql-fuseki")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod sparql_service;

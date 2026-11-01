@@ -591,7 +591,7 @@ async fn spawn_federated_listener(
         );
         let fed_state = state.clone();
         tokio::spawn(async move {
-            medulla_h_query::federation::serve(listener, fed_state).await;
+            medulla_h_sparql::federation::serve(listener, fed_state).await;
         });
     }
     #[cfg(not(feature = "federation-search"))]
