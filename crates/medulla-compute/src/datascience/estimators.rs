@@ -20,7 +20,7 @@ use crate::datascience::primitives::solve_linear_system;
 /// The estimator hyperparameters + serializable fitted-model types are defined
 /// in `medulla-types::wire` (the `protocol` enum embeds `EstimatorParams`/`FittedModel`
 /// over the wire); re-exported here so the fit/predict code below is unchanged.
-pub use crate::wire::{DecisionTree, EstimatorParams, FittedModel, TreeNode};
+pub use medulla_types::wire::{DecisionTree, EstimatorParams, FittedModel, TreeNode};
 
 // ── Public entry points ────────────────────────────────────────────────────
 

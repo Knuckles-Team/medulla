@@ -1131,9 +1131,9 @@ pub mod tests {
         seed(&src_s, 1, &["alpha"]).await;
 
         // Durable RBAC/identity state beside the shards — the omission that mattered.
-        let identity = medulla_core::acl::AgentIdentity {
+        let identity = medulla_types::acl::AgentIdentity {
             agent_id: "restore-probe".to_string(),
-            role: medulla_core::acl::AgentRole::Agent,
+            role: medulla_types::acl::AgentRole::Agent,
             teams: Vec::new(),
             roles: vec!["reader".to_string()],
         };

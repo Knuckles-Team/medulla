@@ -4,8 +4,8 @@ use super::{
     access_clock_ms, AccessBasis, AccessLevel, AccessQuery, AgentIdentity, AgentRole,
     ElevationError, IsolationLayer,
 };
-use crate::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
-use crate::protocol::GraphType;
+use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+use medulla_protocol_types::protocol::GraphType;
 use medulla_identity_types::{
     rbac_elevation::ElevationAction, rbac_elevation::ElevationActor,
     rbac_elevation::ElevationApproval, rbac_elevation::ElevationDelegation,

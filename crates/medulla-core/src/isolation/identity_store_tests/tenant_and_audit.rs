@@ -154,8 +154,8 @@ fn failed_managed_tenant_save_rolls_back_binding_and_projection() {
     assert!(!tenant_access(&layer));
 }
 
-fn absent_grant() -> crate::acl::Grant {
-    crate::acl::Grant {
+fn absent_grant() -> medulla_types::acl::Grant {
+    medulla_types::acl::Grant {
         role: "absent".to_string(),
         resource: ResourceSelector::Graph("absent".to_string()),
         action: RbacAction::Read,
@@ -400,7 +400,7 @@ fn hashed_tenant_namespace_cannot_alias_a_preserved_tenant_role() {
 fn assert_exact_saved_tenant_grants(store: &IdentityStore, slug: &str, role_id: &str) {
     let saved_projection = store.rbac_projection();
     for action in [RbacAction::Read, RbacAction::Write] {
-        assert!(saved_projection.grants.contains(&crate::acl::Grant {
+        assert!(saved_projection.grants.contains(&medulla_types::acl::Grant {
             role: format!("idm:{role_id}"),
             resource: ResourceSelector::Pattern(format!("tenant__{slug}__*")),
             action,

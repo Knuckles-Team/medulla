@@ -21,8 +21,8 @@ impl GraphCore {
         default_half_life: f64,
         floor: f64,
         prune: bool,
-    ) -> crate::types::DecayStats {
-        let mut stats = crate::types::DecayStats::default();
+    ) -> medulla_types::types::DecayStats {
+        let mut stats = medulla_types::types::DecayStats::default();
         let node_prune: Vec<String>;
         let edge_prune: Vec<(String, String)>;
 
@@ -69,7 +69,7 @@ impl GraphCore {
         default_half_life: f64,
         floor: f64,
         prune: bool,
-        stats: &mut crate::types::DecayStats,
+        stats: &mut medulla_types::types::DecayStats,
     ) -> Vec<String> {
         let mut node_prune: Vec<String> = Vec::new();
         let node_ids: Vec<String> = self
@@ -114,7 +114,7 @@ impl GraphCore {
         default_half_life: f64,
         floor: f64,
         prune: bool,
-        stats: &mut crate::types::DecayStats,
+        stats: &mut medulla_types::types::DecayStats,
     ) -> Vec<(String, String)> {
         let mut edge_prune: Vec<(String, String)> = Vec::new();
         let edge_keys: Vec<(String, String)> = self
@@ -148,7 +148,7 @@ impl GraphCore {
         blob: &mut Arc<Vec<u8>>,
         now: u64,
         default_half_life: f64,
-        stats: &mut crate::types::DecayStats,
+        stats: &mut medulla_types::types::DecayStats,
     ) -> f64 {
         let Ok(mut val) = decode_property_value(blob.as_slice()) else {
             return 1.0;

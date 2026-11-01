@@ -31,7 +31,7 @@
 //! ## Classifying a refusal the SAME way the socket transport does
 //!
 //! The server never puts raw, unclassified text on the wire: every response
-//! passes through `medulla_core::protocol::Response::err`, which keeps a
+//! passes through `medulla_protocol_types::protocol::Response::err`, which keeps a
 //! `"CODE: detail"` prefix (or a bare code) only when `CODE` is one of the
 //! engine's *declared* refusal codes, and otherwise folds the whole thing
 //! into `INTERNAL` with a fixed `"unclassified engine refusal"` detail —
@@ -63,7 +63,7 @@
 
 use std::sync::OnceLock;
 
-use medulla_core::protocol::Response;
+use medulla_protocol_types::protocol::Response;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use pyo3::sync::OnceLockExt;
@@ -134,7 +134,7 @@ pub(crate) fn map_engine_error<E: std::fmt::Display>(err: E) -> PyErr {
     })
 }
 
-/// The exact `(code, detail)` `medulla_core::protocol::Response::err` would place
+/// The exact `(code, detail)` `medulla_protocol_types::protocol::Response::err` would place
 /// on the wire for this refusal text. The single source of truth
 /// `map_engine_error` and its own tests both derive from — calling the
 /// authoritative shared normalization directly rather than re-implementing
@@ -153,7 +153,7 @@ fn classify_engine_refusal(message: String) -> (String, Option<String>) {
 #[cfg(test)]
 mod tests {
     //! `classify_engine_refusal` calls straight into
-    //! `medulla_core::protocol::Response::err` and touches no pyo3/GIL state, so
+    //! `medulla_protocol_types::protocol::Response::err` and touches no pyo3/GIL state, so
     //! — unlike `map_engine_error` itself, which needs `Python::attach` and
     //! cannot run inside a `cargo test` binary built in `extension-module`
     //! mode (see `lib.rs`'s `mod tests` doc comment for the full reasoning,

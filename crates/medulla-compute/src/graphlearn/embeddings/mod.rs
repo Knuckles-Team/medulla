@@ -26,7 +26,7 @@ pub use node2vec::{node2vec, Node2VecConfig};
 use std::fmt::Display;
 use std::hash::Hash;
 
-use crate::compute::semantic::{check_embedding_dimension, EmbeddingDimensionError, SemanticStore};
+use medulla_core::compute::semantic::{check_embedding_dimension, EmbeddingDimensionError, SemanticStore};
 use crate::graph_algos::AdjacencyGraph;
 
 /// A batch of structural embeddings tied to their string node ids — the boundary

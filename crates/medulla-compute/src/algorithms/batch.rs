@@ -3,7 +3,7 @@
 use medulla_core::compute::semantic::MAX_EMBEDDING_DIMENSION;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use crate::graph::GraphCore;
+use medulla_core::graph::GraphCore;
 
 /// One validated operation in the public `BatchUpdate` wire contract.
 ///

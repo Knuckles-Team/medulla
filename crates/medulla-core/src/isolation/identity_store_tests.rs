@@ -6,8 +6,8 @@ use std::sync::Arc;
 use super::{
     AccessLevel, AgentIdentity, AgentRole, AuditActor, IdentityStoreError, IsolationLayer,
 };
-use crate::acl::{GrantEffect, RbacAction, RbacAdminOp, ResourceSelector, Role};
-use crate::protocol::GraphType;
+use medulla_types::acl::{GrantEffect, RbacAction, RbacAdminOp, ResourceSelector, Role};
+use medulla_protocol_types::protocol::GraphType;
 use crate::rbac::RbacPolicy;
 use crate::rbac_persist::{
     IdentityBootstrapState, RbacAuthoritySnapshot, RbacPersistError, RbacPolicyStore,

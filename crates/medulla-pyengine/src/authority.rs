@@ -52,7 +52,7 @@
 use std::sync::Arc;
 
 use medulla_core::isolation::{AccessLevel, AgentIdentity, AgentRole, IsolationLayer};
-use medulla_core::protocol::GraphType;
+use medulla_protocol_types::protocol::GraphType;
 
 /// The one RLS contract every domain module threads through: an asserted
 /// caller identity plus the SAME `IsolationLayer` the wire dispatch consults.

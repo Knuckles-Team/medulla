@@ -39,7 +39,7 @@ use std::sync::{Arc, RwLock};
 use dashmap::DashMap;
 
 use crate::graph::{GraphCore, GraphSnapshot};
-use crate::protocol::GraphType;
+use medulla_protocol_types::protocol::GraphType;
 
 /// Metadata for a registered graph.
 ///

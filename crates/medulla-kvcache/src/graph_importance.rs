@@ -23,7 +23,7 @@
 use std::collections::HashMap;
 
 use medulla_compute::algorithms;
-use medulla_compute::graph::GraphView;
+use medulla_core::graph::GraphView;
 
 /// Run PageRank over `core` and return `(node_id, score)` pairs shaped for
 /// [`crate::tiered::TieredCache::apply_importance_scores`] when the cache is keyed
@@ -68,7 +68,7 @@ mod tests {
     use super::*;
     use crate::tiered::{Tier, TieredCache};
     use crate::value::Block;
-    use medulla_compute::graph::GraphCore;
+    use medulla_core::graph::GraphCore;
 
     fn payload() -> Vec<u8> {
         b"{}".to_vec()

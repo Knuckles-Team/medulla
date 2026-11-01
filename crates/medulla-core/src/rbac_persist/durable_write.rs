@@ -5,7 +5,7 @@ use medulla_transaction::{AdmittedOwnerWrite, Begin};
 use redb::ReadableTable;
 use sha2::{Digest, Sha256};
 
-use crate::acl::AgentIdentity;
+use medulla_types::acl::AgentIdentity;
 use crate::rbac::RbacPolicy;
 
 use super::{

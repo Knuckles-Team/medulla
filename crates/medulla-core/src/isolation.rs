@@ -7,7 +7,7 @@
 // 4. Team scoping: Read for members, R/W for manager
 // 5. Global read-only: System-managed, agent-readable
 
-use crate::protocol::GraphType;
+use medulla_protocol_types::protocol::GraphType;
 use std::collections::HashMap;
 
 /// Access level for a graph operation.
@@ -394,7 +394,7 @@ impl RowVisibility {
 /// enum's `RegisterIdentity` carries `AgentRole` over the wire, and `protocol`
 /// sits below `isolation` in the DAG); re-exported here so `IsolationLayer` and
 /// every call site reference `crate::isolation::AgentRole` unchanged.
-pub use crate::acl::{AgentIdentity, AgentRole};
+pub use medulla_types::acl::{AgentIdentity, AgentRole};
 
 #[cfg(feature = "security")]
 mod policy_lease;
@@ -1403,7 +1403,7 @@ mod tests {
     #[cfg(feature = "security")]
     mod rbac_access {
         use super::*;
-        use crate::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+        use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
 
         /// Register an agent holding `roles`.
         fn with_roles(layer: &mut IsolationLayer, id: &str, roles: Vec<String>) {
@@ -1543,7 +1543,7 @@ mod tests {
     #[cfg(feature = "security")]
     mod tenant_graph_auto_grant {
         use super::*;
-        use crate::acl::RbacAction;
+        use medulla_types::acl::RbacAction;
 
         /// Register an agent holding `roles` (mirrors `rbac_access::with_roles` —
         /// duplicated rather than shared since sibling test modules cannot see
@@ -1793,7 +1793,7 @@ mod tests {
     #[cfg(feature = "security")]
     mod eg303_persist {
         use super::*;
-        use crate::acl::{Grant, GrantEffect, RbacAction, ResourceContext, ResourceSelector, Role};
+        use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceContext, ResourceSelector, Role};
         use crate::rbac_persist::{RbacPersistError, RbacPolicyStore};
         use crate::test_scope_grant::{TestScopeVerifier, TEST_PRINCIPAL, TEST_PROOF};
         use std::collections::BTreeMap;

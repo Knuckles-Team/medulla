@@ -35,7 +35,7 @@
 //! produces the same graph state on every path.
 
 use crate::graph::GraphCore;
-use crate::protocol::{Method, MethodWriteFamily};
+use medulla_protocol_types::protocol::{Method, MethodWriteFamily};
 
 const MAX_DURABLE_PAYLOAD_BYTES: usize = 64 * 1024 * 1024;
 const MAX_DURABLE_PAYLOAD_ITEMS: usize = 1_000_000;

@@ -17,7 +17,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::acl::{Grant, GrantEffect, RbacAction, ResourceContext, Role};
+use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceContext, Role};
 use medulla_identity_types::identity::IdentityStore;
 use medulla_identity_types::rbac_elevation::ElevationLedger;
 use medulla_mutation_types::governed_change::GovernedLedger;
@@ -203,7 +203,7 @@ impl RbacPolicy {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::acl::ResourceSelector;
+    use medulla_types::acl::ResourceSelector;
 
     fn grant(role: &str, sel: ResourceSelector, action: RbacAction, effect: GrantEffect) -> Grant {
         Grant {

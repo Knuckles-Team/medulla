@@ -4,7 +4,7 @@ use petgraph::stable_graph::NodeIndex;
 use petgraph::visit::EdgeRef;
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use crate::graph::{GraphCore, GraphView};
+use medulla_core::graph::{GraphCore, GraphView};
 
 /// Lifecycle-aware pruning: remove nodes past max_age or below min_score.
 ///
@@ -83,7 +83,7 @@ pub fn prune_by_lifecycle(
     core: &GraphCore,
     max_age_secs: u64,
     min_score: f64,
-) -> crate::types::PruneStats {
+) -> medulla_types::types::PruneStats {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
@@ -93,7 +93,7 @@ pub fn prune_by_lifecycle(
     let nodes_removed = to_remove.len();
     let edges_removed = remove_pruned_nodes(core, &to_remove);
 
-    crate::types::PruneStats {
+    medulla_types::types::PruneStats {
         nodes_removed,
         edges_removed,
         nodes_archived: archived,
@@ -108,7 +108,7 @@ pub fn get_context_view(
     core: &GraphView,
     agent_id: &str,
     max_tokens: u32,
-) -> crate::types::ContextView {
+) -> medulla_types::types::ContextView {
     let chars_per_token = 4u32;
     let max_chars = max_tokens * chars_per_token;
     let mut used_chars = 0u32;
@@ -120,7 +120,7 @@ pub fn get_context_view(
     let start_idx = match core.node_map.get(agent_id) {
         Some(&idx) => idx,
         None => {
-            return crate::types::ContextView {
+            return medulla_types::types::ContextView {
                 agent_id: agent_id.to_string(),
                 ..Default::default()
             }
@@ -177,7 +177,7 @@ pub fn get_context_view(
         }
     }
 
-    crate::types::ContextView {
+    medulla_types::types::ContextView {
         agent_id: agent_id.to_string(),
         nodes,
         edges,
@@ -187,7 +187,7 @@ pub fn get_context_view(
 }
 
 /// Compute runtime metrics for observability.
-pub fn compute_metrics(core: &GraphView) -> crate::types::GraphMetrics {
+pub fn compute_metrics(core: &GraphView) -> medulla_types::types::GraphMetrics {
     let mut active = 0usize;
     let mut compacted = 0usize;
     let mut archived = 0usize;
@@ -208,7 +208,7 @@ pub fn compute_metrics(core: &GraphView) -> crate::types::GraphMetrics {
         }
     }
 
-    crate::types::GraphMetrics {
+    medulla_types::types::GraphMetrics {
         node_count: core.node_map.len(),
         edge_count: core.edge_properties.values().map(|v| v.len()).sum(),
         // The ledger is not part of the read view; the caller (server Metrics

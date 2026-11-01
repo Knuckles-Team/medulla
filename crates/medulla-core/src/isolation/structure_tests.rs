@@ -1,6 +1,6 @@
 use super::{AccessLevel, AgentIdentity, AgentRole, IsolationLayer};
-use crate::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
-use crate::protocol::GraphType;
+use medulla_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
+use medulla_protocol_types::protocol::GraphType;
 
 #[test]
 fn lease_is_opaque_non_clone_and_has_one_mint_authority() {

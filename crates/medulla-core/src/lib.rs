@@ -2,12 +2,6 @@
 //! `registry`, the ACL/`isolation` layer, and HNSW `compute::semantic` search.
 //! Depends only on `medulla-types`. Everything graph-mutating lives here; the wire
 //! protocol and server transport sit in higher crates.
-//!
-//! Re-export the `medulla-types` modules under the historical `crate::` paths so the
-//! moved bodies (`crate::protocol::`, `crate::types::`, `crate::acl::`) resolve
-//! unchanged.
-pub use medulla_protocol_types::protocol;
-pub use medulla_types::{acl, types, wire};
 
 /// Shared test-only serialization lock for the process-global indexed-property env
 /// vars (`MEDULLA_MAX_INDEXED_PROPERTIES` / `MEDULLA_INDEXED_PROPERTIES`).
