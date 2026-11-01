@@ -65,6 +65,6 @@ sparql = ["rdf", "dep:medulla-rdf", "medulla-kernel/sparql", "medulla-protocol-t
 sparql-fuseki = ["sparql"]
 sparql-service = ["federation", "medulla-federation/sparql-service", "medulla-server-api/sparql-service", "medulla-server-blob/sparql-service", "owl", "rdf", "security", "shacl", "sparql"]
 [dev-dependencies]
-medulla-server = { path = "../medulla-server", features = ["test-support"] }
+medulla-server = { path = "../medulla-server", features = ["test-support", "full"] }
 medulla-server-blob = { path = "../medulla-server-blob", features = ["test-support"] }
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }

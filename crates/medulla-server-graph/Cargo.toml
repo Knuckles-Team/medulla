@@ -116,6 +116,6 @@ streaming = ["server", "medulla-h-graph/streaming", "medulla-h-query/streaming",
 tsdb = ["redb", "dep:medulla-tsdb", "dep:medulla-plan", "medulla-tsdb/redb-store", "medulla-plan/timeseries", "server", "medulla-h-graph/tsdb", "medulla-h-jobs/tsdb", "medulla-h-mining/tsdb", "medulla-h-query/tsdb", "medulla-h-txn/tsdb", "medulla-persistence/tsdb", "medulla-raft/tsdb", "medulla-server-api/tsdb", "medulla-server-ops/tsdb", "medulla-store-apply/tsdb", "medulla-store/tsdb"]
 wasm-udf = ["dep:medulla-plan", "medulla-plan?/wasm-udf", "server", "medulla-h-compute/wasm-udf", "medulla-h-jobs/wasm-udf", "medulla-h-query/wasm-udf", "medulla-h-txn/wasm-udf", "medulla-protocol-types/wasm-udf", "medulla-raft/wasm-udf", "medulla-server-api/wasm-udf", "medulla-server-auth/wasm-udf", "medulla-server-ops/wasm-udf", "medulla-types/wasm-udf"]
 [dev-dependencies]
-medulla-server = { path = "../medulla-server", features = ["test-support"] }
+medulla-server = { path = "../medulla-server", features = ["test-support", "full"] }
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 tempfile = "3"

@@ -144,7 +144,7 @@ obs = ["dep:medulla-text", "medulla-text/tantivy", "medulla-server-api/obs", "qu
 promql = ["dep:medulla-tsdb", "medulla-tsdb/promql", "medulla-persistence/promql", "medulla-server-api/promql", "obs", "query", "redb", "server", "text", "tsdb"]
 traces = ["dep:medulla-tsdb", "medulla-tsdb/traces", "medulla-persistence/traces", "medulla-server-api/traces", "obs", "query", "redb", "server", "text", "tsdb"]
 [dev-dependencies]
-medulla-server = { path = "../medulla-server", features = ["test-support"] }
+medulla-server = { path = "../medulla-server", features = ["test-support", "full"] }
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
 medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }

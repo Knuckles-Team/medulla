@@ -106,6 +106,6 @@ promql = ["dep:medulla-tsdb", "medulla-tsdb/promql", "medulla-persistence/promql
 traces = ["dep:medulla-tsdb", "medulla-tsdb/traces", "medulla-persistence/traces", "medulla-server-api/traces", "medulla-store/traces", "query", "redb", "server", "text", "tsdb"]
 pgwire = ["dep:rustix", "medulla-raft/pgwire", "query", "redb", "server"]
 [dev-dependencies]
-medulla-server = { path = "../medulla-server", features = ["test-support"] }
+medulla-server = { path = "../medulla-server", features = ["test-support", "full"] }
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 tempfile = "3"

@@ -24,7 +24,7 @@ medulla-modality = { path = "../medulla-modality", optional = true }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-persistence = { path = "../medulla-persistence" }
 medulla-plan = { path = "../medulla-plan", optional = true }
-medulla-program = { path = "../medulla-program", optional = true }
+medulla-program = { path = "../medulla-program" }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-raft = { path = "../medulla-raft" }
 medulla-result-types = { path = "../medulla-result-types" }
@@ -53,7 +53,7 @@ medulla-retrieval = { path = "../medulla-retrieval" }
 ann-redb = ["redb", "medulla-ann-codes/ann-redb", "medulla-core/ann-redb", "medulla-server-api/ann-redb", "medulla-server-ops/ann-redb"]
 jobs = ["dep:medulla-jobs", "medulla-capabilities/jobs", "medulla-agent-types/jobs", "medulla-persistence/jobs", "medulla-protocol-types/jobs", "medulla-raft/jobs", "medulla-server-api/jobs", "medulla-server-mutation/jobs", "medulla-server-ops/jobs", "medulla-types/jobs", "medulla-work-types/jobs", "epistemic", "query", "redb", "server"]
 knowledge-batch = ["dep:medulla-plan", "medulla-plan/knowledge-batch", "medulla-retrieval/knowledge-batch", "dep:medulla-modality", "medulla-capabilities/knowledge-batch", "query", "medulla-kernel/knowledge-batch", "medulla-persistence/knowledge-batch", "medulla-protocol-types/knowledge-batch", "medulla-raft/knowledge-batch", "medulla-server-api/knowledge-batch", "medulla-server-ops/knowledge-batch", "medulla-types/knowledge-batch"]
-program-optimization = ["dep:medulla-program", "jobs", "medulla-agent-types/program-optimization", "medulla-server-api/program-optimization", "medulla-server-mutation/program-optimization", "medulla-types/program-optimization", "medulla-work-types/program-optimization", "epistemic", "query", "redb", "server"]
+program-optimization = ["jobs", "medulla-agent-types/program-optimization", "medulla-server-api/program-optimization", "medulla-server-mutation/program-optimization", "medulla-types/program-optimization", "medulla-work-types/program-optimization", "epistemic", "query", "redb", "server"]
 query = ["medulla-table-store/sql", "dep:medulla-plan", "medulla-plan/query", "redb", "medulla-retrieval/query", "medulla-decision-types/query", "medulla-kernel/query", "medulla-persistence/query", "medulla-protocol-types/query", "medulla-raft/query", "medulla-result-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-server-mutation/query", "medulla-server-ops/query", "medulla-types/query"]
 raft = ["redb", "medulla-kernel/raft", "medulla-persistence/raft", "medulla-raft/raft", "medulla-server-api/raft", "medulla-server-auth/raft", "medulla-server-mutation/raft", "server"]
 redb = ["medulla-kernel/redb", "medulla-persistence-records/redb", "medulla-persistence/redb", "medulla-raft/redb", "medulla-server-api/redb", "medulla-server-mutation/redb", "medulla-server-ops/redb"]
@@ -85,6 +85,6 @@ cypher = ["medulla-kernel/cypher", "medulla-persistence/cypher", "medulla-server
 cypher-plan = ["medulla-kernel/cypher-plan", "medulla-persistence/cypher-plan", "medulla-server-api/cypher-plan", "cypher"]
 result-cache = ["medulla-core/result-cache", "medulla-graph-core/result-cache", "medulla-kernel/result-cache", "medulla-persistence/result-cache", "medulla-server-api/result-cache", "medulla-server-ops/result-cache"]
 [dev-dependencies]
-medulla-server = { path = "../medulla-server", features = ["test-support"] }
+medulla-server = { path = "../medulla-server", features = ["test-support", "full"] }
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 tempfile = "3"

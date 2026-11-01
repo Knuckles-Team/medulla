@@ -136,7 +136,7 @@ tsdb = ["medulla-server-graph/tsdb", "medulla-server-obs/tsdb", "redb", "dep:med
 viz-static-export = ["medulla-server-obs/viz-static-export", "server", "medulla-h-compute/viz-static-export", "medulla-server-api/viz-static-export"]
 wasm-udf = ["medulla-server-graph/wasm-udf", "dep:medulla-plan", "medulla-plan?/wasm-udf", "server", "medulla-h-admin/wasm-udf", "medulla-h-compute/wasm-udf", "medulla-h-decide/wasm-udf", "medulla-h-jobs/wasm-udf", "medulla-h-query/wasm-udf", "medulla-h-txn/wasm-udf", "medulla-protocol-types/wasm-udf", "medulla-raft/wasm-udf", "medulla-server-api/wasm-udf", "medulla-server-auth/wasm-udf", "medulla-server-ops/wasm-udf", "medulla-types/wasm-udf"]
 [dev-dependencies]
-medulla-server = { path = "../medulla-server", features = ["test-support"] }
+medulla-server = { path = "../medulla-server", features = ["test-support", "full"] }
 medulla-server-auth = { path = "../medulla-server-auth", features = ["test-support"] }
 tempfile = "3"
 medulla-server-identity = { path = "../medulla-server-identity", features = ["test-support"] }
