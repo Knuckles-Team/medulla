@@ -21,7 +21,7 @@ there may put this engine's visualization surface behind someone else's API chur
 | **V4** | `server::viz_engine` / `server::viz_provenance` | Persistent engine state: content-addressed render cache + durable provenance | **Shipped this change** |
 | **V6** | `medulla-viz-export::graph_layout` + `resolve_graph` | Graph-native marks (force-directed layout) | Shipped (static export only, nodes-only — see VIZ-2 below) |
 | **VIZ-2** | `medulla-viz-graph-tiles` + `server::graph_tile_server` + `server::graph_tile_source` | Binary chunk-streamable tile protocol for `{nodes, edges}` graph payloads, cluster-id addressed | **Shipped**, real GraphCore-backed clustering (VIZ-1) wired in as the default `GraphSource`; demo generator kept as an opt-in `?demo=1` fallback |
-| **V7/V8** | — | Temporal repository visualization; agent-webui adoption | Not started |
+| **V7/V8** | — | Temporal repository visualization; overstory adoption | Not started |
 
 **Production feature-set note (2026-08-26).** `viz`/`viz-columnstore`/
 `viz-static-export`/`viz-interactive`/`viz-graph-tiles` were previously excluded
@@ -258,7 +258,7 @@ will.
 
 ## VIZ-2 — binary tile protocol for graph payloads
 
-`agent-webui`'s `engineGraphRender.ts` documents the gap this closes: a
+`overstory`'s `engineGraphRender.ts` documents the gap this closes: a
 `VizRenderRequest` carries exactly one `dataset` field, so a caller-supplied
 `MarkKind::Graph` render was NODES-ONLY — there was no wire path for a caller
 to also submit edges. `medulla-viz-graph-tiles` (a leaf crate next to
@@ -343,13 +343,13 @@ edges, debug numbers below — see the example for a release run):
 
 **Remaining before this is fully live in production:**
 
-1. `agent-webui` needs a client (VIZ-3 / the `engineGraphRender.ts` seam) that
+1. `overstory` needs a client (VIZ-3 / the `engineGraphRender.ts` seam) that
    speaks this binary protocol against `/graph_tile/*` — today that file only
    calls the nodes-only static-export path this lane does not touch.
 2. `viz-interactive` (and therefore `viz-graph-tiles`) is now compiled into
    the production wheel, but the listener itself is still off unless an
    operator passes `--viz-interactive-addr` — a production deployment needs
-   that flag (and a route from wherever `agent-webui` runs to that loopback
+   that flag (and a route from wherever `overstory` runs to that loopback
    address, e.g. a sidecar/reverse-proxy hop) to actually reach it from a
    browser. Proving that hop is a deployment/ingress change, not a code
    change, and is out of this lane's scope.
