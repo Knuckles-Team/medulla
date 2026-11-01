@@ -130,7 +130,7 @@ pub(super) async fn route_graph_scoped_domains(
     // `:AssociationRule` nodes into it. A method whose feature is off falls through
     // to the graph_ops not-available catch-all.
     #[cfg(feature = "mining")]
-    let method = match medulla_h_query::mining::try_handle(
+    let method = match medulla_h_mining::mining::try_handle(
         req_id,
         core.clone(),
         read_authority.as_ref(),
@@ -330,7 +330,7 @@ pub(super) async fn route_process_global_domains(
     // method whose feature is off falls through to the graph_ops not-available
     // catch-all.
     #[cfg(feature = "federation")]
-    let method = match medulla_h_query::foreign_source_handlers::try_handle(owner_call, method).await {
+    let method = match medulla_h_sparql::foreign_source_handlers::try_handle(owner_call, method).await {
         Ok(r) => return Ok(r),
         Err(m) => m,
     };

@@ -384,7 +384,7 @@ pub(crate) async fn handle_recompute_materialization(
     let snap = core.analysis_snapshot();
     let persist_dir = state.read().await.persist_dir.clone();
     let (materialization, fence_epoch) =
-        match crate::reasoning_projection::recompute_materialization(
+        match medulla_h_retrieve::reasoning_projection::recompute_materialization(
             persist_dir.as_deref(),
             graph_name,
             snap,
@@ -422,7 +422,7 @@ pub(crate) async fn handle_materialization_status(
     let graph_name = ctx.graph_name;
     let persist_dir = state.read().await.persist_dir.clone();
     let (status, source_graph_version) =
-        match crate::reasoning_projection::materialization_status(
+        match medulla_h_retrieve::reasoning_projection::materialization_status(
             persist_dir.as_deref(),
             graph_name,
             &id,
@@ -451,7 +451,7 @@ pub(crate) async fn handle_stale_materializations(
     let graph_name = ctx.graph_name;
     let persist_dir = state.read().await.persist_dir.clone();
     let (ids, source_graph_version) =
-        match crate::reasoning_projection::stale_materializations(
+        match medulla_h_retrieve::reasoning_projection::stale_materializations(
             persist_dir.as_deref(),
             graph_name,
         )

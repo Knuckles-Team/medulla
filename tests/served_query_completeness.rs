@@ -192,7 +192,7 @@ async fn served_ranktext_pushes_down_into_persistent_index_not_snapshot_fallback
     // in-memory persistent `GraphTextIndex` per graph, maintained incrementally by the write
     // coalescer (CONCEPT:MEDULLA-KG.storage.incremental-text) — no on-disk dir needed for this test.
     state.write().await.registry.set_secondary_index_factory(
-        medulla_h_query::secondary_indexes::ServerIndexFactory::new()
+        medulla_h_retrieve::secondary_indexes::ServerIndexFactory::new()
             .with_text_dir(None)
             .into_arc(),
     );
@@ -312,7 +312,7 @@ fn uql_body(response: &Response) -> UqlResult {
 async fn served_filtered_ranktext_returns_every_matching_candidate() {
     let state = state();
     state.write().await.registry.set_secondary_index_factory(
-        medulla_h_query::secondary_indexes::ServerIndexFactory::new()
+        medulla_h_retrieve::secondary_indexes::ServerIndexFactory::new()
             .with_text_dir(None)
             .into_arc(),
     );

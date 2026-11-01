@@ -472,7 +472,7 @@ async fn spawn_optional_service_listeners(
     medulla_h_admin::connector_pack_projection::spawn(state.clone());
     medulla_h_ingest::repository_enrichment_worker::spawn(state.clone());
     #[cfg(feature = "epistemic-tms")]
-    medulla_h_query::reasoning_projection::spawn(state.clone());
+    medulla_h_retrieve::reasoning_projection::spawn(state.clone());
     // Sampled authorization denials reach the identity audit trail.
     #[cfg(feature = "security")]
     medulla_server_api::denial_sample::spawn_flusher(state.clone());
@@ -591,7 +591,7 @@ async fn spawn_federated_listener(
         );
         let fed_state = state.clone();
         tokio::spawn(async move {
-            medulla_h_query::federation::serve(listener, fed_state).await;
+            medulla_h_sparql::federation::serve(listener, fed_state).await;
         });
     }
     #[cfg(not(feature = "federation-search"))]
@@ -1487,7 +1487,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     // future `create_graph`. A build without text/tsdb/owl links none of this.
     #[cfg(any(feature = "text", feature = "tsdb", feature = "owl"))]
     {
-        let mut factory = medulla_h_query::secondary_indexes::ServerIndexFactory::new();
+        let mut factory = medulla_h_retrieve::secondary_indexes::ServerIndexFactory::new();
         #[cfg(feature = "tsdb")]
         {
             if let Some(series) = state.read().await.tsdb_store.clone() {

@@ -252,7 +252,7 @@ where
 /// With no staged embeddings, the committed store is searched through a guard.
 /// The caller chooses the row projection through `finish`.
 #[cfg(feature = "query")]
-pub(crate) fn run_unified_with_staged_finish<T>(
+pub fn run_unified_with_staged_finish<T>(
     plan: medulla_exec::algebra::Plan,
     view: &medulla_graph_core::graph::GraphView,
     core: &Arc<GraphCore>,

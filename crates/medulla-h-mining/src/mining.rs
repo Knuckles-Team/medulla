@@ -40,7 +40,7 @@ mod association;
 mod classic;
 mod entity;
 #[cfg(feature = "mining")]
-pub(crate) mod gateway;
+pub mod gateway;
 #[cfg(feature = "mining")]
 mod gateway_derived;
 mod impact;

@@ -230,11 +230,11 @@ pub(crate) fn build_text_index_from_view(
 /// spatial), exactly as if this bundle were never passed.
 #[cfg(feature = "query")]
 #[derive(Default)]
-pub(crate) struct ServedIndexes<'a> {
+pub struct ServedIndexes<'a> {
     #[cfg(feature = "text")]
-    pub text: Option<&'a crate::secondary_indexes::ServedTextIndex>,
+    pub text: Option<&'a medulla_h_retrieve::secondary_indexes::ServedTextIndex>,
     #[cfg(feature = "geo")]
-    pub spatial: Option<&'a crate::secondary_indexes::ServedSpatialIndex>,
+    pub spatial: Option<&'a medulla_h_retrieve::secondary_indexes::ServedSpatialIndex>,
     /// CONCEPT:MEDULLA-KG.query.closure-backed-source — the CALLER'S owner-scoped foreign
     /// registry (EH-373), built by
     /// [`medulla_server_api::api::query_txn::foreign_catalog::ForeignSourceCatalog::registry_for`] from only the
@@ -260,18 +260,18 @@ pub(crate) struct ServedIndexes<'a> {
 /// the off-lock closure) and lent to `run_unified` as [`ServedIndexes`]: the
 /// one construction every served plan path shares (UnifiedQuery, NL, in-txn
 /// overlay, wire UQL, mining-sourced plans).
-pub(crate) struct CoreIndexes<'c> {
+pub struct CoreIndexes<'c> {
     #[cfg(feature = "text")]
-    text: crate::secondary_indexes::ServedTextIndex,
+    text: medulla_h_retrieve::secondary_indexes::ServedTextIndex,
     #[cfg(feature = "geo")]
-    spatial: crate::secondary_indexes::ServedSpatialIndex,
+    spatial: medulla_h_retrieve::secondary_indexes::ServedSpatialIndex,
     #[cfg(all(feature = "shacl", feature = "owl-plan"))]
-    shapes: crate::rdf::ServedShapes<'c>,
+    shapes: medulla_h_sparql::rdf::ServedShapes<'c>,
     core: std::marker::PhantomData<&'c ()>,
 }
 
 impl<'c> CoreIndexes<'c> {
-    pub(crate) fn open(core: &'c std::sync::Arc<medulla_graph_core::graph::GraphCore>) -> Self {
+    pub fn open(core: &'c std::sync::Arc<medulla_graph_core::graph::GraphCore>) -> Self {
         #[cfg(not(any(
             feature = "text",
             feature = "geo",
@@ -280,18 +280,18 @@ impl<'c> CoreIndexes<'c> {
         let _ = core;
         Self {
             #[cfg(feature = "text")]
-            text: crate::secondary_indexes::ServedTextIndex::new(core.clone()),
+            text: medulla_h_retrieve::secondary_indexes::ServedTextIndex::new(core.clone()),
             #[cfg(feature = "geo")]
-            spatial: crate::secondary_indexes::ServedSpatialIndex::new(core.clone()),
+            spatial: medulla_h_retrieve::secondary_indexes::ServedSpatialIndex::new(core.clone()),
             #[cfg(all(feature = "shacl", feature = "owl-plan"))]
-            shapes: crate::rdf::ServedShapes::new(core),
+            shapes: medulla_h_sparql::rdf::ServedShapes::new(core),
             core: std::marker::PhantomData,
         }
     }
 
     /// These indexes as `run_unified` takes them, with the caller's owner-scoped
     /// foreign registry (EH-373) when the plan names a foreign source.
-    pub(crate) fn served<'a>(
+    pub fn served<'a>(
         &'a self,
         #[cfg(feature = "federation")] foreign: Option<
             &'a medulla_federation::federation::ForeignSourceRegistry,
@@ -317,7 +317,7 @@ impl<'c> CoreIndexes<'c> {
 /// statement (EXPLAIN/PROFILE/channels/DAG) over the SAME bindings (UQL-07/08/09).
 /// `plan` decides which legs are bound (every op of the statement).
 #[cfg(feature = "query")]
-pub(crate) fn run_unified_with<T>(
+pub fn run_unified_with<T>(
     plan: medulla_exec::algebra::Plan,
     view: &medulla_graph_core::graph::GraphView,
     semantic: &medulla_semantic_index::semantic::SemanticStore,
@@ -443,7 +443,7 @@ pub(crate) fn run_unified_with<T>(
 pub(crate) fn run_unified_bind_spatial<'a>(
     ctx: medulla_exec::exec::PlanCtx<'a>,
     ops: &[medulla_exec::algebra::Op],
-    served_spatial: Option<&'a crate::secondary_indexes::ServedSpatialIndex>,
+    served_spatial: Option<&'a medulla_h_retrieve::secondary_indexes::ServedSpatialIndex>,
 ) -> medulla_exec::exec::PlanCtx<'a> {
     if !plan_needs_spatial(ops) {
         return ctx;
