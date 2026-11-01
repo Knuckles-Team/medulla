@@ -28,7 +28,3 @@ pub mod namespace_migration;
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod raft_admin;
-
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod transport;
