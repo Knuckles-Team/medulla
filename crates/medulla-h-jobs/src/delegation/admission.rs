@@ -7,16 +7,16 @@ use medulla_persistence::agent_library::AgentLibraryStateExt;
 /// handler never accepts an entry supplied by a caller as the source of truth.
 #[cfg(feature = "redb")]
 pub struct HandleContext<'a> {
-    pub(crate) state: &'a Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
-    pub(crate) req_id: u64,
-    pub(crate) graph_name: &'a str,
-    pub(crate) caller: Option<&'a str>,
-    pub(crate) verified_context: &'a VerifiedRequestContext,
-    pub(crate) core: &'a Arc<GraphCore>,
-    pub(crate) persistence: &'a Option<Arc<dyn PersistenceBackend>>,
-    pub(crate) agent_library: &'a Option<Arc<AgentLibraryStore>>,
+    pub state: &'a Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
+    pub req_id: u64,
+    pub graph_name: &'a str,
+    pub caller: Option<&'a str>,
+    pub verified_context: &'a VerifiedRequestContext,
+    pub core: &'a Arc<GraphCore>,
+    pub persistence: &'a Option<Arc<dyn PersistenceBackend>>,
+    pub agent_library: &'a Option<Arc<AgentLibraryStore>>,
     #[cfg(feature = "raft")]
-    pub(crate) routed_raft: &'a Option<medulla_raft::raft::multi::RoutedRaftHandle>,
+    pub routed_raft: &'a Option<medulla_raft::raft::multi::RoutedRaftHandle>,
 }
 
 /// The validated delegation plus its native WorkItem lowering.  The original

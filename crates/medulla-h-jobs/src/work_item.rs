@@ -20,14 +20,14 @@ mod lease_kind_policy;
 
 /// Already-authorized graph and placement context for one WorkItem transition.
 pub struct HandleContext<'a> {
-    pub(crate) req_id: u64,
-    pub(crate) graph_name: &'a str,
-    pub(crate) caller: Option<&'a str>,
-    pub(crate) verified_context: &'a VerifiedRequestContext,
-    pub(crate) core: &'a Arc<GraphCore>,
-    pub(crate) persistence: &'a Option<Arc<dyn PersistenceBackend>>,
+    pub req_id: u64,
+    pub graph_name: &'a str,
+    pub caller: Option<&'a str>,
+    pub verified_context: &'a VerifiedRequestContext,
+    pub core: &'a Arc<GraphCore>,
+    pub persistence: &'a Option<Arc<dyn PersistenceBackend>>,
     #[cfg(feature = "raft")]
-    pub(crate) routed_raft: &'a Option<medulla_raft::raft::multi::RoutedRaftHandle>,
+    pub routed_raft: &'a Option<medulla_raft::raft::multi::RoutedRaftHandle>,
 }
 
 /// Handle exactly the six result-producing WorkItem lifecycle transitions, the

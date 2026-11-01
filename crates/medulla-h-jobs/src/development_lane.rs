@@ -15,13 +15,13 @@ use medulla_protocol_types::result_contract::coordination;
 
 /// Already-authorized graph and placement context for one development-lane op.
 pub struct HandleContext<'a> {
-    pub(crate) req_id: u64,
-    pub(crate) graph_name: &'a str,
-    pub(crate) persistence: &'a Option<Arc<dyn PersistenceBackend>>,
+    pub req_id: u64,
+    pub graph_name: &'a str,
+    pub persistence: &'a Option<Arc<dyn PersistenceBackend>>,
     #[cfg(feature = "raft")]
-    pub(crate) multi_raft: &'a Option<Arc<medulla_raft::raft::multi::MultiRaft>>,
+    pub multi_raft: &'a Option<Arc<medulla_raft::raft::multi::MultiRaft>>,
     #[cfg(feature = "raft")]
-    pub(crate) routed_raft: &'a Option<medulla_raft::raft::multi::RoutedRaftHandle>,
+    pub routed_raft: &'a Option<medulla_raft::raft::multi::RoutedRaftHandle>,
 }
 
 #[cfg(feature = "raft")]
