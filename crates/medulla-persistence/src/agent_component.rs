@@ -459,7 +459,7 @@ pub fn test_component_draft(
 /// free function rather than inlining the 10 neutral fields at each of this
 /// module's two `Tool`-kind fixture builders, for the same reason
 /// `test_component_draft` exists.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub(crate) fn test_tool_facts(
     effect: medulla_types::agent_component::ToolEffect,
 ) -> medulla_types::agent_component::AgentComponentFacts {
