@@ -140,7 +140,7 @@ pub(super) const ACTIVE_HOLD_REQUIRES_TERMINAL_WORK_ITEM: &str =
 /// follows that explicit next tuple while retaining the source tuple for
 /// acknowledgement-loss repair in `apply_finish`.
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn transition_work_item_terminal_hold(
+pub fn transition_work_item_terminal_hold(
     graph: &str,
     pre_props: &serde_json::Map<String, serde_json::Value>,
     work_item_id: &str,
