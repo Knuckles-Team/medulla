@@ -23,7 +23,7 @@ use tokio::sync::RwLock;
 
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
-use medulla_raft::raft::harness::cluster::fixture;
+use medulla_raft_xshard::harness::cluster::fixture;
 use medulla_raft::raft::multi::MultiRaft;
 use medulla_raft::raft::placement::split_tenant_key;
 use medulla_raft::raft::reshard::TenantManager;
@@ -37,16 +37,16 @@ const TEST_AGENT: &str = "unit-test-agent";
 const SECRET: &str = "placement-test";
 
 fn current_isolation() -> medulla_isolation::isolation::IsolationLayer {
-    medulla_raft::raft::harness_support::current_isolation(TEST_AGENT)
+    medulla_raft_xshard::harness_support::current_isolation(TEST_AGENT)
 }
 
 fn current_request(id: u64, method: Method) -> medulla_protocol_types::protocol::Request {
-    medulla_raft::raft::harness_support::signed_request(
+    medulla_raft_xshard::harness_support::signed_request(
         id,
         "__commons__",
         method,
         SECRET,
-        medulla_raft::raft::harness_support::HarnessLabels {
+        medulla_raft_xshard::harness_support::HarnessLabels {
             agent_id: TEST_AGENT,
             nonce: "placement",
             idempotency: "placement-request",

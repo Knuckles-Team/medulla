@@ -13,7 +13,7 @@
 //!  1. **The marker.** [`ExchangeMap`] is an "exchange marker on the DAG" kept OUTSIDE
 //!     `PlanDag`/`PlanNode`: it maps a branch's ROOT [`medulla_plan::NodeId`] to the graph
 //!     name it reads and the [`GroupId`] that owns it (resolved via
-//!     [`super::multi::GroupRouter::group_of`] through [`ExchangeMap::route_via_router`]).
+//!     [`medulla_raft::raft::multi::GroupRouter::group_of`] through [`ExchangeMap::route_via_router`]).
 //!     A node with no entry — or one that maps to the LOCAL group — runs exactly as
 //!     `execute_dag` already does.
 //!  2. **The extraction.** [`extract_branch`] pulls a routed root's full ancestor
@@ -60,8 +60,8 @@ use serde::{Deserialize, Serialize};
 use medulla_plan::dag::NodeId as DagNodeId;
 use medulla_plan::{execute_dag, execute_dag_with, PlanCtx, PlanDag, RowSet};
 
-use super::multi::GroupRouter;
-use super::GroupId;
+use medulla_raft::raft::multi::GroupRouter;
+use medulla_raft::raft::GroupId;
 
 // ── 1. the exchange marker (kept OUTSIDE PlanDag/PlanNode) ─────────────────────────
 
@@ -199,7 +199,7 @@ struct ExchangeRequest {
 struct ExchangeReply(Result<Vec<(String, Option<f32>)>, String>);
 
 /// 4-byte big-endian length prefix + a MessagePack body — IDENTICAL framing to
-/// `super::network::{write_frame, read_frame}` and `medulla_plan::federation`'s
+/// `medulla_raft::raft::network::{write_frame, read_frame}` and `medulla_plan::federation`'s
 /// `RemoteEngineSource::round_trip`; reimplemented at this call site only because it
 /// runs over a BLOCKING `std::net::TcpStream` (the caller is
 /// [`execute_dag_distributed`]'s synchronous per-node override closure, matching how
@@ -282,7 +282,7 @@ impl ExchangeGraphResolver for FixedGraphResolver<'_> {
 
 /// Serve ONE exchange round-trip on `stream`: read a length-prefixed request, decode
 /// it, run it through `resolver`, write back a length-prefixed reply. Reuses
-/// [`super::network::write_frame`]/[`super::network::read_frame`] verbatim — the exact
+/// [`medulla_raft::raft::network::write_frame`]/[`medulla_raft::raft::network::read_frame`] verbatim — the exact
 /// async tokio framing helpers the Raft RPC listener already uses — rather than
 /// reimplementing the framing on the async side (the blocking client above is the one
 /// side that genuinely needs its own small blocking version, see
@@ -291,7 +291,7 @@ pub async fn serve_exchange_conn(
     stream: &mut tokio::net::TcpStream,
     resolver: &(dyn ExchangeGraphResolver + Sync),
 ) -> std::io::Result<()> {
-    let body = super::network::read_frame(stream).await?;
+    let body = medulla_raft::raft::network::read_frame(stream).await?;
     let reply = match rmp_serde::from_slice::<ExchangeRequest>(&body) {
         Ok(req) => match resolver.execute_branch(&req.graph, &req.dag) {
             Ok(rows) => ExchangeReply(Ok(rows
@@ -305,7 +305,7 @@ pub async fn serve_exchange_conn(
     };
     let out = rmp_serde::to_vec_named(&reply)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-    super::network::write_frame(stream, &out).await
+    medulla_raft::raft::network::write_frame(stream, &out).await
 }
 
 /// Loop [`serve_exchange_conn`] over `stream` until the peer closes it — one connection,

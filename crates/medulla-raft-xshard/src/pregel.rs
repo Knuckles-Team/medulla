@@ -9,7 +9,7 @@
 //! ## The model — one graph = one shard = one partition
 //!
 //! Each graph in the `graphs` set is a SHARD (it routes to a Raft [`GroupId`] via the
-//! [`super::multi::GroupRouter`]). A vertex lives in the shard whose graph first
+//! [`medulla_raft::raft::multi::GroupRouter`]). A vertex lives in the shard whose graph first
 //! declares it. The UNION of the shards is the logical graph the algorithm runs over —
 //! an edge `u→v` where `u` and `v` live in DIFFERENT shards is a CROSS-SHARD edge, and
 //! a message along it is a cross-shard message.
@@ -39,7 +39,7 @@
 //! (the changed vertices + their neighborhood), reusing the prior labeling as the seed;
 //! the result equals a from-scratch run (the test asserts `incremental == from_scratch`).
 //! Named `MatView`s (CONCEPT:MEDULLA-KG.storage.feature) persist a distributed-compute result and refresh
-//! incrementally; they live in the redb durable tier (see `super::store` / the handler).
+//! incrementally; they live in the redb durable tier (see `medulla_raft::raft::store` / the handler).
 
 #![cfg(feature = "compute-dist")]
 

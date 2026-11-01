@@ -713,8 +713,8 @@ kind = "raft"
 responsibility = "Raft consensus: command log, network, store, multi-raft and placement."
 moves = []
 specs = ["durable-graph-kernel (consensus)"]
-current_lines = 16318
-projected_lines = 16518
+current_lines = 16253
+projected_lines = 16453
 
 [crates.medulla-raft-xshard]
 level = "F8"
@@ -722,8 +722,8 @@ kind = "raft"
 responsibility = "Cross-shard transactions, elasticity, exchange, pregel, drain and the raft test harnesses."
 moves = ["src/raft/cross_shard_txn", "src/raft/xshard_harness", "src/raft/cross_node_elasticity", "src/raft/harness", "src/raft/tests", "crates/medulla-raft/src/raft/cross_node_elasticity", "crates/medulla-raft/src/raft/cross_shard_txn", "crates/medulla-raft/src/raft/drain", "crates/medulla-raft/src/raft/exchange", "crates/medulla-raft/src/raft/flake_budget", "crates/medulla-raft/src/raft/harness", "crates/medulla-raft/src/raft/harness_support", "crates/medulla-raft/src/raft/pregel", "crates/medulla-raft/src/raft/reshard_harness", "crates/medulla-raft/src/raft/xread_harness", "crates/medulla-raft/src/raft/xshard_modality_harness"]
 specs = ["durable-graph-kernel (cross-shard)"]
-current_lines = 11558
-projected_lines = 11658
+current_lines = 11648
+projected_lines = 11748
 
 [crates.medulla-wire-core]
 level = "F8"

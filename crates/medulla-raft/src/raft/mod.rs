@@ -65,29 +65,6 @@ use medulla_server_api::api::persistence::RaftMutationContext;
 use medulla_server_api::state::ServerState;
 
 pub mod config;
-/// Pure, policy-only M3 cross-node elasticity proposals with resumable move identities.
-pub mod cross_node_elasticity;
-pub mod cross_shard_txn;
-/// Bounded shard/Raft drain state machine (NE-167): admission is stopped and
-/// observed before a voter is removed, every acknowledgement is revision/fence
-/// bound, and restart recovery fails closed.
-pub mod drain;
-/// X4 — the distributed cross-shard DAG EXCHANGE operator (CONCEPT:MEDULLA-KG.query.dag-distributed-exchange),
-/// the cluster-tier extension of E5's `medulla_plan::dag::PlanDag`: ships a branch subtree to
-/// its owning Raft group over a length-prefixed-MessagePack transport, runs it there via
-/// the unmodified `medulla_plan::execute_dag`, and merges the partials back through
-/// `medulla_plan::execute_dag_with`'s unmodified multi-branch join. Additionally gated on
-/// `query` (needs `medulla_plan`'s `PlanCtx`/`dag_exec`, which a plain `raft`-without-`query`
-/// build does not link) — `cluster` implies both.
-#[cfg(feature = "query")]
-pub mod exchange;
-/// Typed flake-budget / retry-policy model for running cluster tests reliably
-/// under representative load (MEDULLA-DURABLE-KERNEL-R014.1): bounds how many
-/// transient failures a run under load may absorb and at what backoff,
-/// refusing a malformed budget rather than silently retrying forever or not
-/// at all. The load-test harness and representative-load generator that
-/// consume it are a later child.
-pub mod flake_budget;
 /// Durable drain/safety contract for Raft membership shrink.
 pub mod membership_shrink;
 pub mod multi;
@@ -97,12 +74,6 @@ pub mod node;
 /// Raft-replicated virtual-partition → group authority [`multi::MultiRaft::route_graph`]
 /// consults before returning the engine's explicit unplaced policy.
 pub mod placement;
-/// Distributed graph compute — the Pregel/GAS cross-shard superstep engine
-/// (CONCEPT:MEDULLA-KG.storage.feature). Behind `compute-dist` (which implies `raft`): runs PageRank /
-/// connected-components / BFS across graphs spanning multiple Raft groups, plus the
-/// incremental/streaming variant and materialized views.
-#[cfg(feature = "compute-dist")]
-pub mod pregel;
 pub mod reshard;
 pub mod store;
 /// Cross-shard READ fan-out + merge (CONCEPT:MEDULLA-KG.sharding.placement-catalog, DIST-P2-2):
@@ -111,23 +82,8 @@ pub mod store;
 /// and never misrepresents them as a global snapshot.
 pub mod xread;
 
-/// Shared setup helpers for in-process Raft harnesses.
-#[cfg(any(test, feature = "harness", feature = "compute-dist", feature = "test-support"))]
-pub mod harness_support;
 
-/// The in-process Raft cluster fixture. It is shared by the `harness` gauntlets
-/// (through `harness::cluster::fixture`) and the `compute-dist` modality harness,
-/// so it is declared once, here, under the union of their gates. Loading the file
-/// from both places compiled it twice (`clippy::duplicate_mod`).
-#[cfg(any(test, feature = "harness", feature = "compute-dist"))]
-#[path = "harness/fixture.rs"]
-pub mod fixture;
 
-/// Correctness + load harness (CONCEPT:AU-KG.ontology.emits-database-ontology-entities) — the standing proof-engine that
-/// gates every distributed/durability claim. Compiled under tests OR the explicit
-/// `harness` feature; never in a production tier build.
-#[cfg(any(test, feature = "harness"))]
-pub mod harness;
 
 
 // The cross-shard 2PC atomicity + recovery gauntlet (CONCEPT:MEDULLA-KG.storage.lane-n-increment) — the nemesis
@@ -135,34 +91,13 @@ pub mod harness;
 // the `harness` feature so the default `raft` test set is unchanged; run it with
 // `cargo test --features "raft harness"`.
 
-// The online-resharding + tenant-hibernation gauntlet (CONCEPT:MEDULLA-KG.storage.100m-tenant) — proves a
-// graph reshareded A→B keeps all data + serves correctly, and a hibernated graph
-// rehydrates intact. Gated behind `harness` so a normal `raft` build links nothing.
-#[cfg(all(test, feature = "harness"))]
-mod reshard_harness;
 
 // The placement-catalog gauntlet (CONCEPT:MEDULLA-KG.sharding.placement-catalog, DIST-P2-1) — proves
 // assign→route, a stale-epoch redirect, persistence-across-restart, an online move
 // (snapshot→catch-up→fenced cutover) preserving data, and a tenant split spanning two
 // groups. Gated behind `harness` so a normal `raft` build links nothing.
 
-// The cross-shard READ gauntlet (CONCEPT:MEDULLA-KG.sharding.placement-catalog, DIST-P2-2) — proves a
-// read spanning two groups gathers + union-merges both, each leg routes via the
-// PlacementCatalog, a single-group read is not flagged cross-shard, and an unreachable
-// leg errors loudly. Gated behind `harness` so a normal `raft` build links nothing.
-#[cfg(all(test, feature = "harness"))]
-mod xread_harness;
 
-/// In-process cross-shard 2PC **modality-spanning** coordinator-kill harness
-/// (CONCEPT:MEDULLA-KG.txn.crossshard-2pc-modality-harness) — the `--features cluster`
-/// proof that closes MEDULLA-396: a cross-shard txn spanning the property-graph + RDF
-/// modalities across two Raft groups stays all-or-nothing when the coordinator is
-/// killed mid-2PC (recovery resolves to a SINGLE decision). Gated on `compute-dist`
-/// (which `cluster` implies) so the pub proof entry is reachable from an external
-/// `--features cluster` integration test, and its `#[cfg(test)]` scenarios ride the
-/// `cargo test --features cluster` gate.
-#[cfg(feature = "compute-dist")]
-pub mod xshard_modality_harness;
 
 /// Raft node id — a small integer assigned per cluster member.
 pub type NodeId = u64;

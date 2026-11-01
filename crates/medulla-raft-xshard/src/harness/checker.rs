@@ -21,7 +21,7 @@
 
 use std::collections::HashSet;
 
-use super::super::NodeId;
+use medulla_raft::raft::NodeId;
 use super::cluster::Cluster;
 use super::history::{History, Outcome};
 

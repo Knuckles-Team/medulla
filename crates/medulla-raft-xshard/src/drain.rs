@@ -16,7 +16,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
-use super::{GroupId, NodeId};
+use medulla_raft::raft::{GroupId, NodeId};
 
 /// Bound operation ids so a malformed/replayed request cannot grow the durable
 /// drain journal without limit.

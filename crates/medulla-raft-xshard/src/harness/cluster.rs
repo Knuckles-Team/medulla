@@ -21,13 +21,13 @@ use tokio::sync::RwLock;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::state::ServerState;
 
-use super::super::config::RaftClusterConfig;
-use super::super::node::{self, StartedNode};
-use super::super::{NodeId, RaftRequest};
+use medulla_raft::raft::config::RaftClusterConfig;
+use medulla_raft::raft::node::{self, StartedNode};
+use medulla_raft::raft::{NodeId, RaftRequest};
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 
-pub use super::super::fixture;
+pub use crate::fixture;
 
 /// The graph every harness write targets.
 pub const GRAPH: &str = "__commons__";
@@ -83,7 +83,7 @@ fn cluster_cfg(node_id: NodeId, ports: &[u16]) -> RaftClusterConfig {
         is_bootstrap: peers.keys().next() == Some(&node_id),
         groups: 1,
         transport_secret: Some(
-            super::super::config::RaftTransportSecret::from_material(&[0x5a; 32]).unwrap(),
+            medulla_raft::raft::config::RaftTransportSecret::from_material(&[0x5a; 32]).unwrap(),
         ),
     }
 }
@@ -523,7 +523,7 @@ impl Cluster {
                 seq,
                 0,
             ),
-            command: super::super::ReplicatedMutation::graph(
+            command: medulla_raft::raft::ReplicatedMutation::graph(
                 Method::AddNode {
                     node_id: format!("n{seq}"),
                     properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({"seq": seq}))
@@ -555,7 +555,7 @@ impl Cluster {
     /// the SAME encoding the real client `Method::CreateGraph` path produces.
     pub fn create_graph_req(graph_name: &str, graph_type: GraphType, seq: u64) -> RaftRequest {
         let secret = "harness"; // sanitizer:ignore
-        let command = super::super::NativeMutationCommand::from_public_method(
+        let command = medulla_raft::raft::NativeMutationCommand::from_public_method(
             Method::CreateGraph {
                 graph_name: graph_name.to_string(),
                 graph_type,
@@ -576,7 +576,7 @@ impl Cluster {
                 seq,
                 0,
             ),
-            command: super::super::ReplicatedMutation::Native { command },
+            command: medulla_raft::raft::ReplicatedMutation::Native { command },
         }
     }
 
@@ -595,7 +595,7 @@ impl Cluster {
                 seq,
                 0,
             ),
-            command: super::super::ReplicatedMutation::graph(
+            command: medulla_raft::raft::ReplicatedMutation::graph(
                 Method::AddNode {
                     node_id: format!("n{seq}"),
                     properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({"seq": seq}))
@@ -806,7 +806,7 @@ impl Cluster {
     pub fn abort_sync(&mut self) {
         let runtime = tokio::runtime::Handle::try_current().ok();
         let (started_nodes, states) = take_live_members(&mut self.members);
-        super::super::network::partition::heal();
+        medulla_raft::raft::network::partition::heal();
         let root = self.root.clone();
         let ports = self.ports.clone();
         let Some(runtime) = runtime else {
@@ -831,7 +831,7 @@ impl Cluster {
     /// prevents ownership recovery.
     pub async fn shutdown_in_place(&mut self) -> Result<(), String> {
         let mut errors = self.stop_live_members().await;
-        super::super::network::partition::heal();
+        medulla_raft::raft::network::partition::heal();
         let unfinished: Vec<String> = self
             .members
             .values()

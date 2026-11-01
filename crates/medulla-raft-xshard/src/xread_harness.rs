@@ -1,13 +1,13 @@
 //! Cross-shard READ gauntlet (CONCEPT:MEDULLA-KG.sharding.placement-catalog, DIST-P2-2).
 //!
 //! Spins a live one-node, two-group cluster (the SAME `bring_up` pattern
-//! [`super::xshard_harness`]/[`super::placement_harness`] use) and proves:
+//! [`medulla_raft::raft::xshard_harness`]/[`medulla_raft::raft::placement_harness`] use) and proves:
 //!
 //!   * **A read spanning two groups returns the merged, correct result** — writing
 //!     distinct nodes into two graphs pinned to two DIFFERENT groups, then
-//!     [`super::xread::CrossShardReader::read`]ing both, yields every node
+//!     [`medulla_raft::raft::xread::CrossShardReader::read`]ing both, yields every node
 //!     from BOTH groups, unioned.
-//!   * **Each leg routes via the [`super::placement::PlacementCatalog`]** — after
+//!   * **Each leg routes via the [`medulla_raft::raft::placement::PlacementCatalog`]** — after
 //!     `placement_split`ting one tenant across two groups, a read naming that tenant's
 //!     two sub-key graphs resolves EACH leg to the catalog's assigned group (not the
 //!     engine-owned unplaced policy), exactly like a write would.
@@ -21,13 +21,13 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use super::harness::cluster::fixture;
-use super::multi::MultiRaft;
-use super::xread::{
+use crate::harness::cluster::fixture;
+use medulla_raft::raft::multi::MultiRaft;
+use medulla_raft::raft::xread::{
     CompletionPolicy, CrossGraphReadErrorCode, CrossGraphReadRequest, CrossShardReader,
     ReadLegStatus, ReadPageErrorCode,
 };
-use super::{GroupId, RaftRequest};
+use medulla_raft::raft::{GroupId, RaftRequest};
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 
@@ -52,7 +52,7 @@ async fn bring_up(
         backend,
         medulla_isolation::isolation::IsolationLayer::new(),
         "xread-test",
-        &[GROUP_A, GROUP_B, super::DEFAULT_GROUP],
+        &[GROUP_A, GROUP_B, medulla_raft::raft::DEFAULT_GROUP],
     )
     .await
 }
@@ -86,7 +86,7 @@ async fn put_node(multi: &Arc<MultiRaft>, gid: GroupId, graph: &str, node_id: &s
             0,
             0,
         ),
-        command: super::ReplicatedMutation::graph(
+        command: medulla_raft::raft::ReplicatedMutation::graph(
             Method::AddNode {
                 node_id: node_id.to_string(),
                 properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({ "n": node_id }))
@@ -190,7 +190,7 @@ async fn read_cross_shard_routes_each_leg_via_the_placement_catalog() {
     // uses), so after splitting they resolve to DIFFERENT groups via the catalog —
     // NOT the engine's unplaced policy.
     let (ws_x, ws_y) = ("ws-x", "ws-y");
-    let (h_x, h_y) = (super::multi::fnv1a(ws_x), super::multi::fnv1a(ws_y));
+    let (h_x, h_y) = (medulla_raft::raft::multi::fnv1a(ws_x), medulla_raft::raft::multi::fnv1a(ws_y));
     let (lo_key, lo_hash, hi_key, hi_hash) = if h_x < h_y {
         (ws_x, h_x, ws_y, h_y)
     } else {

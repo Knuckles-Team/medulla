@@ -43,11 +43,11 @@
 //! is not the ONLY way a test builds a raft node in this crate, so `init()` is called
 //! from every construction path this crate's own `raft::tests` module uses, found by
 //! grepping it for `MultiRaft::` and `node::start`, not just one:
-//! * `super::super::tests::cluster_cfg_with_groups` — every `node::start` call in
+//! * `medulla_raft::raft::tests::cluster_cfg_with_groups` — every `node::start` call in
 //!   `raft::tests` (directly, or via `cluster_cfg`, which forwards to it). Covers
 //!   `placement_admin_wire_rpcs_move_data_across_a_real_three_node_cluster`, one of
 //!   EH-286's two named examples.
-//! * `super::super::tests::start_multi` — every DIRECT `MultiRaft::start` call in
+//! * `medulla_raft::raft::tests::start_multi` — every DIRECT `MultiRaft::start` call in
 //!   `raft::tests` that bypasses `node::start` entirely (membership/leader-rebalance
 //!   tests that manage a `MultiRaft` handle by hand). Covers
 //!   `multi_node_group_join_then_leader_rebalance`, EH-286's other named example.

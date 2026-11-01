@@ -14,10 +14,10 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use super::harness::cluster::fixture;
-use super::multi::MultiRaft;
-use super::reshard::TenantManager;
-use super::{GroupId, RaftRequest};
+use crate::harness::cluster::fixture;
+use medulla_raft::raft::multi::MultiRaft;
+use medulla_raft::raft::reshard::TenantManager;
+use medulla_raft::raft::{GroupId, RaftRequest};
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
 
@@ -63,7 +63,7 @@ async fn write_via_owner(multi: &Arc<MultiRaft>, node_id: &str) -> Result<(), St
             0,
             0,
         ),
-        command: super::ReplicatedMutation::graph(
+        command: medulla_raft::raft::ReplicatedMutation::graph(
             Method::AddNode {
                 node_id: node_id.to_string(),
                 properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({"id": node_id}))
