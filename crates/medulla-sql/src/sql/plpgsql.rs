@@ -36,7 +36,7 @@
 
 use std::collections::HashMap;
 
-use super::exec::{PgColType, TypedColumn, TypedQueryResult};
+use super::typed_result::{PgColType, TypedColumn, TypedQueryResult};
 use medulla_tables::schema::StoredFunction;
 
 /// Hard cap on total interpreted loop iterations, guarding a runaway `LOOP`/`WHILE`

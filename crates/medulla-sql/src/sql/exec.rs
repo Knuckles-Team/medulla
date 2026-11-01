@@ -28,6 +28,7 @@ use super::catalog::register_system_catalogs;
 use medulla_table_store::tables::ann_plan::AnnIndexPlan;
 use super::providers::{infer_nodes, EdgesTableProvider, NodesTableProvider, SqlCache};
 use super::spill::CancellationToken;
+use super::typed_result::{PgColType, TypedColumn, TypedQueryResult};
 use super::store_catalog::{reads_index_status, StoreCatalog};
 use medulla_sql_udfs::{tablefuncs::BetweennessFunc, tablefuncs::GenerateSeriesFunc, tablefuncs::PagerankFunc};
 use medulla_sql_udfs::{udfs::base64_decode_udf, udfs::base64_encode_udf, udfs::bm25_match_udf, udfs::bm25_score_udf, udfs::bm25_snippet_udf, udfs::epistemic_decay_udf, udfs::greatest_udf, udfs::int4range_udf, udfs::ipcontains_udf, udfs::ipfamily_udf, udfs::iphost_udf, udfs::ipmasklen_udf, udfs::json_get_f64_udf, udfs::json_get_i64_udf, udfs::json_get_udf, udfs::least_udf, udfs::md5_udf, udfs::range_contained_by_udf, udfs::range_contains_range_udf, udfs::range_contains_udf, udfs::range_overlaps_udf, udfs::sha1_udf, udfs::sha256_udf, udfs::time_bucket_udf, udfs::tsrange_udf, udfs::vector_cosine_udf, udfs::vector_ip_udf, udfs::vector_l2_udf};
@@ -218,43 +219,6 @@ fn materialize_user_tables(store: &TableStore) -> Result<Vec<UserTable>, String>
         }
     }
     Ok(out)
-}
-
-/// A coarse, Postgres-mappable column type derived from the Arrow result schema.
-/// The pgwire shim (CONCEPT:AU-KG.query.raw-python) maps each to a wire type OID; the variants
-/// cover exactly the Arrow types the `nodes`/`edges` schema-on-read inference and
-/// ordinary SELECT projections produce.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PgColType {
-    Text,
-    Int8,
-    Float8,
-    Bool,
-    /// A pgvector `vector` column (CONCEPT:MEDULLA-KG.query.view-pgvector-operators) — a `List<Float32>` result column.
-    /// The pgwire shim maps it to a stable float-array wire OID and renders each value
-    /// as the pgvector text form `[1,2,3]`.
-    Vector,
-}
-
-/// One typed result column: its name plus the pg-mappable type inferred from the
-/// Arrow result schema.
-#[derive(Debug, Clone, PartialEq)]
-pub struct TypedColumn {
-    pub name: String,
-    pub ty: PgColType,
-}
-
-/// The SQL result with per-column types and rows as decoded JSON values — the
-/// shape the pgwire shim needs to emit a Postgres `RowDescription` (type OIDs) +
-/// `DataRow`s. Reuses the SAME DataFusion exec path as [`exec_sql`]; the only
-/// difference is it surfaces the Arrow column types and hands back JSON cells
-/// instead of MessagePack blobs (no wire-protocol re-encode needed downstream).
-/// `Debug`/`PartialEq` (CONCEPT:MEDULLA-KG.query.served-context-cache) let a test assert two runs —
-/// e.g. the cached vs. the uncached SQL context path — produced an IDENTICAL result.
-#[derive(Debug, Clone, PartialEq)]
-pub struct TypedQueryResult {
-    pub columns: Vec<TypedColumn>,
-    pub rows: Vec<Vec<serde_json::Value>>,
 }
 
 /// Run `sql` over `view` and return a [`TypedQueryResult`] (CONCEPT:AU-KG.query.raw-python).

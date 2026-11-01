@@ -66,8 +66,7 @@ use datafusion::logical_expr::{
 };
 use datafusion::scalar::ScalarValue;
 
-/// The SQL name this function registers under.
-pub const MEDULLA_EMBED_FN: &str = "medulla_embed";
+use super::pgfamily::MEDULLA_EMBED_FN;
 
 /// The server-side text→vector seam, as a closure so `medulla-query` needs no dependency on
 /// the crate that owns `TextEmbedder` (see the module doc: `medulla-plan` → `medulla-query`, so the

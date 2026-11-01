@@ -95,12 +95,15 @@ mod plpgsql;
 // re-exports below (`SqlCache`), unchanged.
 pub(crate) mod providers;
 mod spill;
+pub mod typed_result;
 // The catalog objects of one table store a SQL read registers (EH-352 status rows).
 mod store_catalog;
 // `information_schema.medulla_index_status` (EH-352), synthesized like the other catalogs.
 mod index_status;
 // EH-387: the read-only gate of the graph-free SQL path.
 mod read_only;
+#[cfg(test)]
+mod pgfamily_tests;
 pub use read_only::require_single_read;
 
 pub use ann::ColumnVectorBinding;
@@ -119,14 +122,16 @@ pub use classify::{
 // the engine's existing `medulla_plan::TextEmbedder` through (`medulla-query` cannot name that
 // trait directly: `medulla-plan` depends on `medulla-query`, so the reverse edge is a package
 // cycle — see `embed_udf`'s module doc).
-pub use embed_udf::{bind_text_embedder, medulla_embed_udf, medulla_embed_udf_with, EmbedFn, MEDULLA_EMBED_FN};
+pub use embed_udf::{bind_text_embedder, medulla_embed_udf, medulla_embed_udf_with, EmbedFn};
+pub use pgfamily::MEDULLA_EMBED_FN;
 pub use exec::{
     exec_graph_table_typed_with_tables, exec_graph_table_typed_with_tables_cancellable, exec_sql,
     exec_sql_arrow, exec_sql_arrow_cancellable, exec_sql_cached, exec_sql_over_tables,
     exec_sql_typed, exec_sql_typed_cancellable, exec_sql_typed_with_tables,
     exec_sql_typed_with_tables_cached_cancellable, exec_sql_typed_with_tables_cancellable,
-    PgColType, QueryResult, SqlContextCache, TypedColumn, TypedQueryResult,
+    QueryResult, SqlContextCache,
 };
+pub use typed_result::{PgColType, TypedColumn, TypedQueryResult};
 pub use pgq::{
     lower_graph_table, lower_graph_table_to_datafusion, parse_graph_table, parse_graph_table_sql,
     parse_property_graph_ddl, parse_property_graph_privilege, BinaryOp as GraphBinaryOp,

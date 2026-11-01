@@ -79,7 +79,7 @@ pub(super) fn ann_pushdown_may_apply_with(
 /// (`embed_udf::medulla_embed_udf`) in production; an explicitly-bound one in a test, which
 /// must not claim the one-shot process binding.
 pub(super) fn ann_probe_sql_with(sql: &str, udf: &ScalarUDF) -> Option<String> {
-    if !contains_ignore_ascii_case(sql, super::embed_udf::MEDULLA_EMBED_FN) {
+    if !contains_ignore_ascii_case(sql, super::pgfamily::MEDULLA_EMBED_FN) {
         return None;
     }
     super::pgfamily::fold_const_embed_order_key(sql, &|text| embed_const_text(udf, text))
