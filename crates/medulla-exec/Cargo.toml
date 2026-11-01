@@ -33,6 +33,12 @@ petgraph = { version = "0.8.3", features = ["serde-1"] }
 rayon = { version = "1.12", optional = true }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-result-types = { path = "../medulla-result-types", features = ["query"] }
+medulla-finance = { path = "../medulla-finance" }
+medulla-graph-algos = { path = "../medulla-graph-algos" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-reasoner = { path = "../medulla-reasoner" }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
+medulla-sql = { path = "../medulla-sql" }
 
 [features]
 test-support = ["query"]
@@ -44,7 +50,7 @@ numeric = ["query", "dep:medulla-numeric"]
 owl = ["query", "dep:medulla-rdf", "medulla-rdf/owl", "medulla-rdf/sparql", "dep:medulla-shacl", "medulla-types/owl-plan"]
 par-runtime = ["query", "dep:rayon"]
 probabilistic = ["query", "medulla-types/probabilistic", "dep:medulla-compute", "medulla-compute/reasoning"]
-query = ["dep:medulla-compute", "dep:tracing"]
+query = ["medulla-sql/sql", "dep:medulla-compute", "dep:tracing"]
 raft = []
 stream = ["query", "dep:medulla-stream", "medulla-stream/stream", "medulla-types/stream"]
 tensor = ["query", "dep:medulla-tensor", "medulla-types/tensor"]
