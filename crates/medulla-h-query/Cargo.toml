@@ -57,6 +57,8 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
 medulla-query-cache = { path = "../medulla-query-cache" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
+medulla-reasoner = { path = "../medulla-reasoner" }
+medulla-virtual-graph = { path = "../medulla-virtual-graph" }
 
 [features]
 test-support = []
