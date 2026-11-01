@@ -21,6 +21,8 @@ medulla-types = { path = "../medulla-types" }
 oxrdf = { version = "0.3", optional = true }
 medulla-modality = { path = "../medulla-modality", optional = true }
 medulla-agent-types = { path = "../medulla-agent-types" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
 
 [features]
 contract = ["owl", "dep:medulla-modality", "medulla-rdf/contract"]

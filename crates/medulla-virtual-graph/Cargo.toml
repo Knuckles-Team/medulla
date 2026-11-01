@@ -21,6 +21,7 @@ oxrdf = { version = "0.3", optional = true }
 spargebra = { version = "0.4", optional = true }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-graph-core = { path = "../medulla-graph-core" }
 
 [features]
 rdf = ["dep:oxrdf", "medulla-rdf/rdf"]
