@@ -66,7 +66,7 @@ pub mod worker {
     const BLOCKING_TASK: &str = "connector pack projection";
 
     /// The worker's one durable consumer name on every tenant's outbox.
-    pub(crate) const CONSUMER: &str = "connector-pack-projection";
+    pub const CONSUMER: &str = "connector-pack-projection";
     /// Rows one sweep claims.
     const CLAIM_LIMIT: u32 = 16;
     /// How long a claimed row stays leased: a projection reads bodies and

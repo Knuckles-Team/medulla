@@ -56,7 +56,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 /// string, so an acknowledgement could not name a different one even if the
 /// second constant had survived.
 #[cfg(feature = "redb")]
-const CONSUMER: &str = "reasoning-projection-v1";
+pub const CONSUMER: &str = "reasoning-projection-v1";
 
 /// The topic this worker is durably subscribed to.
 ///

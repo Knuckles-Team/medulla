@@ -28,7 +28,7 @@ enum RaftAdminOp {
 }
 
 #[cfg(feature = "raft")]
-pub(crate) async fn try_handle(
+pub async fn try_handle(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     method: Method,
@@ -109,7 +109,7 @@ fn raft_admin_result(op: &RaftAdminOp) -> fn(bool) -> ResultPayload {
 }
 
 #[cfg(not(feature = "raft"))]
-pub(crate) async fn try_handle(
+pub async fn try_handle(
     _state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     method: Method,

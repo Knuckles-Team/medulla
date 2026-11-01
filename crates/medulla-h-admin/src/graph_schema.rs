@@ -56,7 +56,7 @@ pub(crate) struct PackSchemaDocument {
 /// physical name exposes neither tenant nor connector and the framed digest
 /// preserves their boundary, while the logical GraphSchema key inside that
 /// graph remains the human-readable `pack:<connector>`.
-pub(crate) fn pack_projection_graph_name(
+pub fn pack_projection_graph_name(
     tenant_id: &str,
     connector: &medulla_types::contract::ResourceId,
 ) -> Result<String, String> {

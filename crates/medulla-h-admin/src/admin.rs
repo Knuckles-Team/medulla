@@ -40,21 +40,21 @@ pub(crate) mod connector_pack;
 #[cfg(feature = "redb")]
 pub(crate) mod saga;
 
-#[cfg(all(test, feature = "redb"))]
-pub(crate) use agent::bind_agent_library_draft;
+#[cfg(all(any(test, feature = "test-support"), feature = "redb"))]
+pub use agent::bind_agent_library_draft;
 #[cfg(feature = "redb")]
-pub(crate) use agent::{
+pub use agent::{
     handle_agent_component, handle_agent_graph, handle_agent_library, handle_agent_template,
 };
-#[cfg(all(test, feature = "redb"))]
-pub(crate) use backup::backup_bundle_name;
+#[cfg(all(any(test, feature = "test-support"), feature = "redb"))]
+pub use backup::backup_bundle_name;
 #[cfg(feature = "redb")]
-pub(crate) use cluster::try_handle;
-pub(crate) use connector_pack::handle_connector_pack;
+pub use cluster::try_handle;
+pub use connector_pack::handle_connector_pack;
 
 /// Non-redb build: every admin method returns a clean "not available" error.
 #[cfg(not(feature = "redb"))]
-pub(crate) async fn try_handle(
+pub async fn try_handle(
     _state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     _caller: Option<&str>,

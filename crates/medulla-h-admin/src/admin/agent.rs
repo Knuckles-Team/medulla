@@ -34,7 +34,7 @@ fn bind_status_context(
 }
 
 #[cfg(feature = "redb")]
-pub(crate) fn bind_agent_library_draft(
+pub fn bind_agent_library_draft(
     draft: medulla_agent_types::agent_library::AgentLibraryEntryDraft,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
     _action_context: &medulla_agent_types::agent_library::AgentLibraryMutationContext,
@@ -103,7 +103,7 @@ fn validate_template_op(
 /// layer exists for -- it resolves a task through EG's native ontology and
 /// matches components by subsumption, so the answer comes from the graph rather
 /// than from a model.
-pub(crate) async fn handle_agent_component(
+pub async fn handle_agent_component(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
@@ -320,7 +320,7 @@ fn component_search(
 /// `Method::AgentLibrary`. Nothing here commits an instance, so the library
 /// write privilege is still what admits one.
 #[cfg(feature = "redb")]
-pub(crate) async fn handle_agent_template(
+pub async fn handle_agent_template(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
@@ -508,7 +508,7 @@ fn template_instantiate(
 /// Routed to the SAME store as [`handle_agent_library`]: a graph is published
 /// into the agent-library owner alongside the entries it composes, so there is
 /// one `ensure_agent_library` and one physical authority (RF-RULING-004).
-pub(crate) async fn handle_agent_graph(
+pub async fn handle_agent_graph(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,
@@ -684,7 +684,7 @@ fn graph_status(
     }
 }
 
-pub(crate) async fn handle_agent_library(
+pub async fn handle_agent_library(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &medulla_server_api::auth::VerifiedRequestContext,

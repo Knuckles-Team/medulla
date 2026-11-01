@@ -38,7 +38,7 @@ mod self_served_catalog;
 mod tests;
 
 /// Route one connector-pack operation to the handler that owns it.
-pub(crate) async fn handle_connector_pack(
+pub async fn handle_connector_pack(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &VerifiedRequestContext,

@@ -32,7 +32,7 @@ use medulla_server_api::api::admin::saga::finish_admin_saga;
 /// Route an M3 admin method (CONCEPT:MEDULLA-KG.backend.m3-admin-dispatch). `Ok(resp)` = handled; `Err(method)` = not an
 /// admin method (unreachable — the dispatch arm only routes admin variants here).
 #[cfg(feature = "redb")]
-pub(crate) async fn try_handle(
+pub async fn try_handle(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     caller: Option<&str>,

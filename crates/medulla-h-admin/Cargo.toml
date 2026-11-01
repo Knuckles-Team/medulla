@@ -44,6 +44,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", optional = true }
 
 [features]
+test-support = []
 blob = ["redb"]
 compute-dist = ["raft"]
 jobs = []

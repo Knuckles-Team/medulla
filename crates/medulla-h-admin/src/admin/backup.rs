@@ -35,7 +35,7 @@ fn backup_root() -> Result<std::path::PathBuf, String> {
 }
 
 #[cfg(feature = "redb")]
-pub(crate) fn backup_bundle_name(value: &str) -> Result<&str, String> {
+pub fn backup_bundle_name(value: &str) -> Result<&str, String> {
     let mut chars = value.chars();
     let Some(first) = chars.next() else {
         return Err("INVALID_ARGUMENT: backup bundle name is required".to_string());
