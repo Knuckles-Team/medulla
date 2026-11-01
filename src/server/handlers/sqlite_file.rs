@@ -772,7 +772,7 @@ mod tests {
     use std::sync::atomic::AtomicUsize;
     use std::sync::{Arc, Barrier};
 
-    use medulla_query::tables::schema::ArrayElemType;
+    use medulla_query::schema::ArrayElemType;
 
     use super::*;
     use medulla_kernel::test_rendezvous::meet;

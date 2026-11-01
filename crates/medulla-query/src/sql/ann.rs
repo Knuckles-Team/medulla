@@ -28,6 +28,8 @@ use arrow::datatypes::{DataType, SchemaRef};
 use arrow::record_batch::RecordBatch;
 
 use medulla_ann::{FlatIndex, HnswIndex, IvfPq, IvfPqParams, SearchParams};
+#[cfg(test)]
+use medulla_ann::Metric;
 use serde::{Deserialize, Serialize};
 
 use crate::tables::ann_plan::{isqrt, metric_to_ann, AnnMethod, VectorMetric};

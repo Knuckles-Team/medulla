@@ -1267,7 +1267,7 @@ fn primary_key_indexes(schema: &TableSchema) -> Result<Vec<usize>, String> {
         .filter_map(|(index, column)| column.primary_key.then_some(index))
         .collect();
     let table_primary_key = schema.constraints().iter().find_map(|constraint| {
-        if let medulla_query::tables::schema::TableConstraint::PrimaryKey { columns, .. } =
+        if let medulla_query::schema::TableConstraint::PrimaryKey { columns, .. } =
             constraint
         {
             Some(columns)
@@ -3695,7 +3695,7 @@ mod tests {
 
     #[test]
     fn semantic_record_identity_respects_composite_primary_key_order() {
-        use medulla_query::tables::schema::TableConstraint;
+        use medulla_query::schema::TableConstraint;
 
         let columns = vec![
             Column::new("left", ColumnType::Text, false, false),
@@ -3907,13 +3907,13 @@ mod tests {
         );
 
         let current_schema = reopened.store.get_schema("documents").unwrap().unwrap();
-        let migration = medulla_query::tables::migration::SchemaMigration::for_schema(
+        let migration = medulla_query::migration::SchemaMigration::for_schema(
             "semantic-cursor-schema-change",
             alice.tenant_scope(),
             0,
             &current_schema,
             vec![
-                medulla_query::tables::migration::SchemaMigrationOperation::AddColumn {
+                medulla_query::migration::SchemaMigrationOperation::AddColumn {
                     column: Column::new("label", ColumnType::Text, true, false),
                 },
             ],
