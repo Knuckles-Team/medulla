@@ -341,7 +341,7 @@ impl AdmissionPools {
 #[derive(Default)]
 struct QosAdmission {
     context: Option<medulla_server_api::authority_context::VerifiedRequestContext>,
-    permit: Option<super::qos::QosPermit>,
+    permit: Option<medulla_server_obs::qos::QosPermit>,
 }
 
 /// QoS counters are keyed only from the verified envelope. The same verified
@@ -349,7 +349,7 @@ struct QosAdmission {
 async fn admit_qos_request(
     req: &Request,
     state: &RwLock<ServerState>,
-    scheduler: Option<&Arc<super::qos::QosScheduler>>,
+    scheduler: Option<&Arc<medulla_server_obs::qos::QosScheduler>>,
 ) -> Result<QosAdmission, Response> {
     let Some(scheduler) = scheduler else {
         return Ok(QosAdmission::default());
@@ -369,19 +369,19 @@ async fn admit_qos_request(
     })?;
     let principal_scope = context.principal_persistence_id();
     let qos_request =
-        super::qos::classify(&principal_scope, context.priority()).map_err(|error| {
+        medulla_server_obs::qos::classify(&principal_scope, context.priority()).map_err(|error| {
             medulla_kernel::metrics::auth_failure();
             Response::err(req.id, error)
         })?;
     match scheduler.try_admit(&qos_request) {
-        super::qos::QosDecision::Admit(permit) => {
+        medulla_server_obs::qos::QosDecision::Admit(permit) => {
             medulla_kernel::metrics::qos_admitted(qos_request.class.label());
             Ok(QosAdmission {
                 context: Some(context),
                 permit: Some(permit),
             })
         }
-        super::qos::QosDecision::Reject(why) => {
+        medulla_server_obs::qos::QosDecision::Reject(why) => {
             medulla_kernel::metrics::qos_shed(qos_request.class.label(), why.label());
             medulla_kernel::metrics::busy_rejected();
             Err(Response::err(req.id, why.busy_message()))
@@ -420,7 +420,7 @@ async fn reserve_request(
     state: &RwLock<ServerState>,
     connection: &Arc<Semaphore>,
     pools: &AdmissionPools,
-    scheduler: Option<&Arc<super::qos::QosScheduler>>,
+    scheduler: Option<&Arc<medulla_server_obs::qos::QosScheduler>>,
     tx: &tokio::sync::mpsc::Sender<Vec<u8>>,
 ) -> Result<DispatchReservation, AdmissionFailure> {
     let connection = match connection.clone().acquire_owned().await {
@@ -536,7 +536,7 @@ where
     S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin + Send + 'static,
 {
     let pools = AdmissionPools::snapshot(&state).await;
-    let qos = super::qos::configured();
+    let qos = medulla_server_obs::qos::configured();
     let limits = ConnectionLimits::configured();
     let conn_limit = per_connection_inflight_limit();
     let connection = Arc::new(Semaphore::new(conn_limit));

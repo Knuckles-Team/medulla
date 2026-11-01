@@ -19,7 +19,7 @@ use medulla_graph_algos::algorithms::BatchOperation;
 use medulla_graph_core::graph::GraphSchemaSource;
 use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_graph_core::graph::SchemaSourceOrigin;
-use crate::obs::LogRecord;
+use medulla_server_obs::obs::LogRecord;
 
 fn node(id: &str, properties: serde_json::Value) -> (String, Vec<u8>) {
     (

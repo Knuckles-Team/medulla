@@ -1,0 +1,14 @@
+[package]
+name = "medulla-server-store-tests"
+version = "0.1.0"
+edition = "2021"
+authors = ["Repository Maintainers <maintainers@example.invalid>"]
+description = "medulla-engine: Served mutation, batch, saga, persistence and store run-owner tests across the server API and store crates."
+license = "MIT"
+publish = false
+
+[lib]
+name = "medulla_server_store_tests"
+path = "src/lib.rs"
+
+[dependencies]

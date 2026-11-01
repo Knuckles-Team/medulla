@@ -229,51 +229,6 @@ pub mod sealed_retention;
 #[cfg(test)]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod split_tests;
-// Shared request/auth/codec support for native wire adapters. Each adapter keeps
-// its own protocol limits and wire state on top of this seam.
-#[cfg(any(
-    feature = "amqp-wire",
-    feature = "mqtt-wire",
-    feature = "stomp-wire",
-    feature = "mssql-wire",
-    feature = "redis-wire"
-))]
-// S3-compatible object-storage REST surface (CONCEPT:MEDULLA-KG.ontology.object-put-get-head). A hand-rolled HTTP/1.1
-// listener exposing PutObject/GetObject/ListObjectsV2/CreateBucket/… over the
-// content-addressed BLOB CAS (bytes) + the durable KV index (listing), with a
-// SigV4-lite auth guard. Behind the `s3-api` cargo feature (pulls `blob` + `kv`).
-// Default/pi builds compile NONE of it.
-/// Current GraphQL subscriptions over authenticated Server-Sent Events
-/// (CONCEPT:MEDULLA-KG.compute.cdc-event-emit, feature `graphql`): eg2 request binding,
-/// graph ACL, and default-deny RLS guard every caller-visible re-resolution.
-#[cfg(feature = "graphql")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod graphql_sub;
-/// One HTTP/1.1 request-framing authority for every hand-rolled listener in
-/// this tree (`obs`, `sparql_http`, `federation`, `viz_interactive`,
-/// `policy_export`, …). Before it each surface carried its own reader and the
-/// copies disagreed about `Transfer-Encoding`, duplicate headers, header
-/// bounds and body framing; see the module doc.
-#[cfg(any(
-    feature = "obs",
-    feature = "sparql-http",
-    feature = "federation-search",
-    feature = "viz-interactive",
-    feature = "policy_export",
-    feature = "graphql",
-    feature = "kvcache-server",
-    feature = "lake",
-    feature = "s3-api",
-))]
-/// Observability log ingestion + Parquet segment substrate (CONCEPT:AU-KG.ingest.self-ingest/161,
-/// feature `obs`): a hand-rolled HTTP listener accepting OTLP/HTTP, Elasticsearch
-/// `_bulk`/`_doc` and JSON-lines log records, landing them in medulla-tsdb series +
-/// medulla-text full-text indices and rolling Parquet-on-blob-CAS segments — the first
-/// slice of Phase T (surpass OpenObserve). Self-contained (its own `ObsState`), not
-/// tied to the graph `ServerState`.
-#[cfg(feature = "obs")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod obs;
 
 // OBDA wire method + Python client seam (CA-13, feature `obda-wire`, off by default).
 // Reserved and EMPTY until CA-13 implements it; landed by CA-17's single feature-stub
@@ -282,36 +237,9 @@ pub mod obs;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 #[cfg(feature = "obda-wire")]
 pub mod obda;
-// RLS marking-predicate export (CA-16, feature `policy_export`, off by default).
-// Reserved and EMPTY until CA-16 implements it; landed by CA-17's single feature-stub
-// commit so CA-16 never edits this shared module list.
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-#[cfg(feature = "policy_export")]
-pub mod policy_export;
 
-/// LTAP lakehouse materialization tier (CONCEPT:MEDULLA-KG.storage.lsn-as-snapshot-returns engine-side seam, feature
-/// `lake`, INT-P2-3): converts real `medulla_tsdb` series into `medulla_lake::LakeBatch`es,
-/// materializes them to Parquet on the blob CAS with Delta/Iceberg logs + an
-/// Iceberg-REST catalog + OpenLineage run events. The `rest` submodule (feature
-/// `lake-rest`) serves the standards Iceberg-REST catalog surface over it.
-#[cfg(feature = "lake")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod lake;
 
-/// PromQL + the Prometheus-compatible HTTP query API (CONCEPT:MEDULLA-KG.query.prometheus-http-query-api, feature
-/// `promql`): `/api/v1/query[_range]` + `/labels` served on the obs listener over the
-/// durable medulla-tsdb series, backed by the pure-Rust `medulla_tsdb::promql` engine.
-#[cfg(feature = "promql")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod promql;
 
-/// Distributed traces: OTLP-JSON span ingest + Jaeger/OpenObserve trace-search,
-/// assembly and service-dependency-graph API (CONCEPT:MEDULLA-OS.observability.trace-assembly, feature `traces`),
-/// served on the obs listener over the pure-Rust `medulla_tsdb::traces` span store —
-/// completing the observability trilogy (logs + metrics + traces).
-#[cfg(feature = "traces")]
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod traces;
 // Cross-region async read-replica tier (CONCEPT:MEDULLA-KG.sharding.follower-pull-loop) + capacity guardrails
 // (CONCEPT:MEDULLA-KG.coordination.circuit-breaker): a bounded LSN replication log the primary ships over `/replicate`, an
 // async follower pull-loop that applies the tail via the canonical `mutation_apply::apply` path, and
@@ -321,13 +249,6 @@ pub mod traces;
 #[cfg(feature = "federation-search")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod replica;
-// Real-time QoS / SLO-aware admission scheduler (CONCEPT:MEDULLA-KG.coordination.backpressure-busy-signal). An additive, opt-in
-// gate (enabled by `MEDULLA_QOS`) the transport runs BEFORE the baseline
-// admission: priority-class preemption + per-tenant fair-share + hard quotas +
-// deadline-aware ordering + typed backpressure. With QoS unconfigured the transport never
-// touches it and the baseline path is byte-for-byte unchanged.
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod qos;
 // The durable cross-store commit-intent log (`txn_intent`) lives under
 // `api::query_txn` (R056.8).
 
@@ -523,7 +444,10 @@ mod ca17_feature_stub_contract {
             ),
             (
                 "src/server/lake/mod.rs",
-                include_str!("lake/mod.rs"),
+                include_str!(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../medulla-server-lake/src/lake/mod.rs"
+                )),
                 "lineage-transport",
                 "pub mod lineage_transport;",
             ),

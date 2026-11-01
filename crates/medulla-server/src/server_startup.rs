@@ -628,7 +628,7 @@ pub fn compose_server_state(
     }
     #[cfg(feature = "lake")]
     {
-        use crate::lake::LakeStateExt;
+        use medulla_server_lake::lake::LakeStateExt;
         state.set_lake(Arc::default());
     }
     state.persist_dir = persist_dir;

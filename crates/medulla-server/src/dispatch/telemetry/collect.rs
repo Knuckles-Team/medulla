@@ -16,9 +16,9 @@
 
 use medulla_stream::telemetry::TelemetrySignal;
 
-use crate::obs::LogQuery;
-use crate::obs::LogRecord;
-use crate::obs::ObsState;
+use medulla_server_obs::obs::LogQuery;
+use medulla_server_obs::obs::LogRecord;
+use medulla_server_obs::obs::ObsState;
 
 /// The attribute/label that marks a span or metric sample with its tenant.
 /// An underscore, not a dot, so the same name is a legal Prometheus label.
@@ -217,7 +217,7 @@ fn push_metrics(
         .iter()
         .filter(|id| !id.starts_with(LOG_SERIES_PREFIX))
     {
-        let labels = crate::promql::parse_series_id(series_id);
+        let labels = medulla_server_obs::promql::parse_series_id(series_id);
         if labels.get(TENANT_ATTRIBUTE).map(String::as_str) != Some(tenant) {
             continue;
         }

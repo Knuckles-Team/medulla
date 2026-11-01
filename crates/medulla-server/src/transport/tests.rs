@@ -121,8 +121,8 @@ async fn response_writer_drains_last_sender_and_preserves_frame_order() {
 
 #[tokio::test]
 async fn qos_verification_rejects_unsigned_agent_before_admission() {
-    let scheduler = Arc::new(super::super::qos::QosScheduler::new(
-        super::super::qos::QosConfig::auto(8),
+    let scheduler = Arc::new(medulla_server_obs::qos::QosScheduler::new(
+        medulla_server_obs::qos::QosConfig::auto(8),
     ));
     let state = RwLock::new(ServerState::new_for_test(
         "transport-test-secret",
@@ -147,8 +147,8 @@ async fn qos_verification_rejects_unsigned_agent_before_admission() {
 async fn qos_verification_names_the_audience_mismatch_cause() {
     use medulla_types::acl::RequestContextClaims;
     use medulla_server_auth::{auth::compute_verified_envelope_token, auth::VerifiedEnvelopeParams};
-    let scheduler = Arc::new(super::super::qos::QosScheduler::new(
-        super::super::qos::QosConfig::auto(8),
+    let scheduler = Arc::new(medulla_server_obs::qos::QosScheduler::new(
+        medulla_server_obs::qos::QosConfig::auto(8),
     ));
     let state = RwLock::new(ServerState::new_for_test(
         "transport-test-secret",
@@ -614,12 +614,12 @@ async fn a_peer_close_between_frames_is_told_apart_from_an_idle_deadline() {
 /// admit is still `Reject(Quota)`.
 #[tokio::test]
 async fn a_hung_dispatch_does_not_permanently_exhaust_the_principal_quota() {
-    use crate::qos::QosClass;
-    use crate::qos::QosConfig;
-    use crate::qos::QosDecision;
-    use crate::qos::QosReject;
-    use crate::qos::QosRequest;
-    use crate::qos::QosScheduler;
+    use medulla_server_obs::qos::QosClass;
+    use medulla_server_obs::qos::QosConfig;
+    use medulla_server_obs::qos::QosDecision;
+    use medulla_server_obs::qos::QosReject;
+    use medulla_server_obs::qos::QosRequest;
+    use medulla_server_obs::qos::QosScheduler;
 
     let mut cfg = QosConfig::auto(8);
     cfg.per_principal_quota = 2; // the live value was 96; 2 keeps the test fast

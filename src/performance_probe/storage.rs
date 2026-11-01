@@ -9,7 +9,7 @@ use medulla_epistemic::{ChangeEvent as TmsEvent, TruthMaintenance};
 use medulla_jobs::store::{JobStore, SubmitSpec, TenantJobQuota};
 use medulla_jobs::{AlgoVersion, InputSnapshotHandle, JobPolicy};
 use medulla_graph_core::graph::GraphCore;
-use medulla_server::qos::{plan_admissions, QosClass, QosRequest};
+use medulla_server_obs::{qos::plan_admissions, qos::QosClass, qos::QosRequest};
 
 fn job_spec(index: usize) -> SubmitSpec {
     SubmitSpec {

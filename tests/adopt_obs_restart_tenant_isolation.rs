@@ -29,7 +29,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_server::obs::{LogRecord, ObsState};
+use medulla_server_obs::{obs::LogRecord, obs::ObsState};
 
 fn record(stream: &str, ts: i64, body: &str) -> LogRecord {
     LogRecord {

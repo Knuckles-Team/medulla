@@ -31,7 +31,7 @@ mod materialize;
 mod tests;
 
 #[cfg(feature = "obs")]
-use crate::obs::ObsStateExt;
+use medulla_server_obs::obs::ObsStateExt;
 use std::sync::Arc;
 
 use medulla_protocol_types::result_contract::ingestion::TelemetryDerive as TelemetryDeriveResult;
@@ -44,7 +44,7 @@ use super::shared::timed_read;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
-use crate::obs::ObsState;
+use medulla_server_obs::obs::ObsState;
 use medulla_server_api::state::ServerState;
 
 use collect::Window;
