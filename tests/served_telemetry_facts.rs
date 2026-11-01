@@ -33,7 +33,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
-use medulla_server::obs::{LogRecord, ObsState, ObsStateExt};
+use medulla_server_obs::{obs::LogRecord, obs::ObsState, obs::ObsStateExt};
 use medulla_stream::telemetry::{
     AnomalyRule, IncidentRule, MetricRole, ResolutionPolicy, RollupPolicy, TelemetryPolicy,
 };

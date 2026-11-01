@@ -6,3 +6,38 @@
 
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
+
+// Shared request/auth/codec support for native wire adapters. Each adapter keeps
+// its own protocol limits and wire state on top of this seam.
+#[cfg(any(
+    feature = "amqp-wire",
+    feature = "mqtt-wire",
+    feature = "stomp-wire",
+    feature = "mssql-wire",
+    feature = "redis-wire"
+))]
+// S3-compatible object-storage REST surface (CONCEPT:MEDULLA-KG.ontology.object-put-get-head). A hand-rolled HTTP/1.1
+// listener exposing PutObject/GetObject/ListObjectsV2/CreateBucket/… over the
+// content-addressed BLOB CAS (bytes) + the durable KV index (listing), with a
+// SigV4-lite auth guard. Behind the `s3-api` cargo feature (pulls `blob` + `kv`).
+// Default/pi builds compile NONE of it.
+/// Current GraphQL subscriptions over authenticated Server-Sent Events
+/// (CONCEPT:MEDULLA-KG.compute.cdc-event-emit, feature `graphql`): eg2 request binding,
+/// graph ACL, and default-deny RLS guard every caller-visible re-resolution.
+#[cfg(feature = "graphql")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod graphql_sub;
+/// LTAP lakehouse materialization tier (CONCEPT:MEDULLA-KG.storage.lsn-as-snapshot-returns engine-side seam, feature
+/// `lake`, INT-P2-3): converts real `medulla_tsdb` series into `medulla_lake::LakeBatch`es,
+/// materializes them to Parquet on the blob CAS with Delta/Iceberg logs + an
+/// Iceberg-REST catalog + OpenLineage run events. The `rest` submodule (feature
+/// `lake-rest`) serves the standards Iceberg-REST catalog surface over it.
+#[cfg(feature = "lake")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod lake;
+// RLS marking-predicate export (CA-16, feature `policy_export`, off by default).
+// Reserved and EMPTY until CA-16 implements it; landed by CA-17's single feature-stub
+// commit so CA-16 never edits this shared module list.
+#[cfg(feature = "policy_export")]
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod policy_export;

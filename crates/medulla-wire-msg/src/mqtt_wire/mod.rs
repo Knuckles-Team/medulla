@@ -7,7 +7,7 @@
 //! broker. Every exchange/binding/queue/message lives as graph nodes on a control graph
 //! (`crate::broker`); this module only frames MQTT control packets on the wire and maps
 //! each onto the SAME broker primitives THROUGH the engine dispatch
-//! (`medulla_server::dispatch::dispatch`) the AMQP wire (CONCEPT:MEDULLA-KG.compute.message-broker-exchanges/276..280) uses —
+//! (`medulla_server::dispatch::request_boundary::dispatch`) the AMQP wire (CONCEPT:MEDULLA-KG.compute.message-broker-exchanges/276..280) uses —
 //! no parallel mechanism, no new broker method.
 //!
 //! MQTT topics map naturally onto a broker TOPIC exchange + bindings: a client PUBLISH

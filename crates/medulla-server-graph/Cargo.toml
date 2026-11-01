@@ -12,3 +12,107 @@ name = "medulla_server_graph"
 path = "src/lib.rs"
 
 [dependencies]
+async-trait = { version = "0.1", optional = true }
+hex = "0.4"
+medulla-capabilities = { path = "../medulla-capabilities", optional = true }
+medulla-compute = { path = "../medulla-compute" }
+medulla-core = { path = "../medulla-core" }
+medulla-h-compute = { path = "../medulla-h-compute" }
+medulla-h-graph = { path = "../medulla-h-graph" }
+medulla-h-ingest = { path = "../medulla-h-ingest" }
+medulla-h-jobs = { path = "../medulla-h-jobs" }
+medulla-h-query = { path = "../medulla-h-query" }
+medulla-h-txn = { path = "../medulla-h-txn" }
+medulla-kernel = { path = "../medulla-kernel" }
+medulla-modality = { path = "../medulla-modality", optional = true }
+medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-persistence = { path = "../medulla-persistence" }
+medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-raft = { path = "../medulla-raft" }
+medulla-rdf = { path = "../medulla-rdf", optional = true }
+medulla-result-types = { path = "../medulla-result-types" }
+medulla-server-api = { path = "../medulla-server-api" }
+medulla-storage = { path = "../medulla-storage", optional = true }
+medulla-store = { path = "../medulla-store" }
+medulla-transaction = { path = "../medulla-transaction", optional = true }
+medulla-tsdb = { path = "../medulla-tsdb", optional = true }
+medulla-types = { path = "../medulla-types" }
+redb = { workspace = true, optional = true }
+rmp-serde = "1.3"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_bytes = "0.11.19"
+serde_json = "1.0"
+sha2 = "0.10"
+tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
+tracing = "0.1"
+medulla-ann-codes = { path = "../medulla-ann-codes" }
+medulla-graph-core = { path = "../medulla-graph-core" }
+medulla-isolation = { path = "../medulla-isolation" }
+medulla-semantic-index = { path = "../medulla-semantic-index" }
+medulla-decision-stats = { path = "../medulla-decision-stats" }
+medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
+medulla-source-types = { path = "../medulla-source-types" }
+medulla-work-types = { path = "../medulla-work-types" }
+medulla-store-apply = { path = "../medulla-store-apply" }
+medulla-work-store = { path = "../medulla-work-store" }
+medulla-persistence-records = { path = "../medulla-persistence-records" }
+medulla-server-ops = { path = "../medulla-server-ops" }
+medulla-server-blob = { path = "../medulla-server-blob" }
+medulla-server-mutation = { path = "../medulla-server-mutation" }
+medulla-server-cdc = { path = "../medulla-server-cdc" }
+medulla-server-auth = { path = "../medulla-server-auth" }
+
+medulla-numeric = { path = "../medulla-numeric", optional = true }
+
+medulla-plan = { path = "../medulla-plan", optional = true }
+
+medulla-graphql = { path = "../medulla-graphql", optional = true }
+
+medulla-document = { path = "../medulla-document", optional = true }
+
+openraft = { version = "=0.10.0-alpha.26", features = ["serde"], optional = true }
+
+sha1 = { version = "0.10", optional = true }
+
+argon2 = { version = "0.5", optional = true, default-features = false, features = ["alloc", "password-hash"] }
+
+jsonwebtoken = { version = "11.1", optional = true, default-features = false, features = ["aws_lc_rs"] }
+
+[features]
+test-support = []
+ann = []
+ann-redb = ["ann", "redb"]
+ast = []
+blob = ["redb", "server"]
+compute-dist = ["raft"]
+cypher = []
+datascience = []
+decide = ["redb", "dep:medulla-numeric", "dep:medulla-capabilities", "medulla-numeric/decision", "medulla-capabilities?/decide", "jobs", "shacl"]
+epistemic = ["dep:medulla-plan", "medulla-plan/epistemic", "dep:medulla-modality", "query"]
+federation = ["query", "dep:medulla-plan", "medulla-plan/federation", "server"]
+finance = []
+graphlearn = ["datascience"]
+graphql = ["security", "dep:medulla-graphql", "medulla-graphql/hardening", "server"]
+jobs = ["dep:medulla-capabilities", "medulla-capabilities/jobs", "server", "mining", "epistemic"]
+knowledge-batch = ["query", "dep:medulla-plan", "dep:medulla-modality", "dep:medulla-capabilities", "medulla-plan/knowledge-batch", "medulla-capabilities/knowledge-batch"]
+matview = ["query", "streaming"]
+metrics = []
+mining = []
+ml-pipeline = ["mining", "datascience", "graphlearn"]
+modality-serving = ["redb", "security", "streaming", "dep:medulla-document", "dep:medulla-modality", "dep:medulla-capabilities", "medulla-document/serving", "medulla-capabilities/modality-serving", "server"]
+oidc = ["dep:jsonwebtoken"]
+query = ["redb", "dep:medulla-tsdb", "dep:medulla-plan", "medulla-tsdb?/arrow-seg", "medulla-plan/query"]
+raft = ["redb", "dep:openraft", "server"]
+rdf = ["dep:medulla-rdf", "medulla-rdf/rdf", "server"]
+redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage"]
+security = ["redb", "dep:sha1", "dep:argon2", "oidc"]
+server = ["dep:tokio", "dep:medulla-capabilities", "dep:async-trait"]
+shacl = ["rdf"]
+sparql = ["dep:medulla-rdf", "medulla-rdf/sparql", "rdf"]
+sparql-http = ["security", "sparql", "server", "shacl"]
+streaming = ["server"]
+tsdb = ["redb", "dep:medulla-tsdb", "dep:medulla-plan", "medulla-tsdb/redb-store", "medulla-plan/timeseries", "server"]
+wasm-udf = ["dep:medulla-plan", "medulla-plan?/wasm-udf", "server"]
+
+[dev-dependencies]
+tempfile = "3"

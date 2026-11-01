@@ -1,5 +1,6 @@
 //! Framed ingress and the single response-writer loop for one native connection.
 
+use medulla_server_graph::{dispatch::request_boundary::preflight::HARD_MAX_MSGPACK_ITEMS, dispatch::request_boundary::preflight::MAX_MSGPACK_NESTING_DEPTH};
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::protocol::Response;
 
@@ -8,8 +9,6 @@ pub(super) const HARD_MAX_REQUEST_FRAME_BYTES: usize = 384 * 1024 * 1024;
 const DEFAULT_MAX_RESPONSE_FRAME_BYTES: usize = 64 * 1024 * 1024;
 const HARD_MAX_RESPONSE_FRAME_BYTES: usize = 384 * 1024 * 1024;
 const DEFAULT_MAX_MSGPACK_ITEMS: usize = 1_000_000;
-const HARD_MAX_MSGPACK_ITEMS: usize = 4_000_000;
-pub(super) const MAX_MSGPACK_NESTING_DEPTH: usize = 64;
 const DEFAULT_CONNECTION_IO_TIMEOUT_SECS: u64 = 120;
 /// Hard ceiling on ONE dispatch, after which its admission permits are released and
 /// the client is answered with an error (see the parent dispatch deadline). Sized ~20x
@@ -128,25 +127,6 @@ pub(super) fn recover_request_id(payload: &[u8]) -> u64 {
     rmp_serde::from_slice::<MinimalRequestId>(payload)
         .map(|m| m.id)
         .unwrap_or(0)
-}
-
-/// Run the same allocation-free structural preflight over MessagePack embedded
-/// inside a request's binary field. The outer frame scanner deliberately treats
-/// `bin` as opaque bytes, so handlers must call this before nested deserialization.
-pub(crate) fn validate_nested_msgpack(
-    input: &[u8],
-    max_bytes: usize,
-    max_items: usize,
-) -> Result<(), &'static str> {
-    medulla_types::msgpack::validate_single_value(
-        input,
-        medulla_types::msgpack::MsgpackLimits::new(
-            max_bytes,
-            max_items.min(HARD_MAX_MSGPACK_ITEMS),
-            MAX_MSGPACK_NESTING_DEPTH,
-        ),
-    )
-    .map_err(|_| "invalid or over-complex nested MessagePack payload")
 }
 
 /// One environment-configured whole-second timeout: a positive `u64`, clamped into the
@@ -275,7 +255,7 @@ where
 }
 
 /// Decode the bounded native request body, preserving typed refusal and correlation.
-pub(crate) fn decode_request_payload(
+pub fn decode_request_payload(
     payload: &[u8],
     max_items: usize,
 ) -> Result<Request, Response> {

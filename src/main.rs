@@ -202,7 +202,7 @@ fn parse_listener_addr(value: Option<&str>, default_addr: &str) -> Option<String
 /// other auxiliary listener.
 #[cfg(feature = "obs")]
 fn resolve_obs_listener_addr(value: Option<&str>) -> Option<String> {
-    if medulla_server::obs::writer_auth_configured() {
+    if medulla_server_obs::obs::writer_auth_configured() {
         return parse_listener_addr(value, "127.0.0.1:5080");
     }
     resolve_listener_addr(value, "127.0.0.1:5080")
@@ -557,7 +557,7 @@ async fn spawn_policy_export_listener(
             policy_export_addr
         );
         tokio::spawn(async move {
-            medulla_server::policy_export::serve(listener).await;
+            medulla_server_lake::policy_export::serve(listener).await;
         });
     }
     #[cfg(not(feature = "policy_export"))]
@@ -640,7 +640,7 @@ async fn spawn_graphql_listener(
     }
     #[cfg(feature = "graphql")]
     if let Some(ref graphql_addr) = graphql_addr {
-        let graphql_config = medulla_server::graphql_sub::GraphQlSubscriptionConfig::new(
+        let graphql_config = medulla_server_lake::graphql_sub::GraphQlSubscriptionConfig::new(
             graphql_max_connections,
             graphql_max_session_secs,
         )
@@ -659,7 +659,7 @@ async fn spawn_graphql_listener(
         );
         let gql_state = state.clone();
         tokio::spawn(async move {
-            medulla_server::graphql_sub::serve(listener, gql_state, graphql_config).await;
+            medulla_server_lake::graphql_sub::serve(listener, gql_state, graphql_config).await;
         });
     }
     #[cfg(not(feature = "graphql"))]
@@ -688,7 +688,7 @@ async fn spawn_obs_listener(
     let obs_addr = resolve_listener_addr(obs_addr_arg, "127.0.0.1:5080");
     #[cfg(feature = "obs")]
     if let Some(ref obs_addr) = obs_addr {
-        use medulla_server::obs::{ObsState, DEFAULT_FLUSH_RECORDS, OBS_FLUSH_RECORDS_ENV};
+        use medulla_server_obs::{obs::ObsState, obs::DEFAULT_FLUSH_RECORDS, obs::OBS_FLUSH_RECORDS_ENV};
         let flush = std::env::var(OBS_FLUSH_RECORDS_ENV)
             .ok()
             .and_then(|v| v.parse().ok())
@@ -716,7 +716,7 @@ async fn spawn_obs_listener(
 
                 let obs_security_state = state.clone();
                 tokio::spawn(async move {
-                    medulla_server::obs::serve_with_security(
+                    medulla_server_obs::obs::serve_with_security(
                         listener,
                         obs_state,
                         obs_security_state,
@@ -744,7 +744,7 @@ async fn wait_for_periodic_tick(ticker: &mut tokio::time::Interval) {
 /// EH-410: browser RUM series are kept 30 days; the sweep runs hourly whenever
 /// the observability listener is on (RUM is on by default, so its retention is too).
 #[cfg(feature = "obs")]
-fn spawn_obs_rum_retention_sweep(obs_state: &std::sync::Arc<medulla_server::obs::ObsState>) {
+fn spawn_obs_rum_retention_sweep(obs_state: &std::sync::Arc<medulla_server_obs::obs::ObsState>) {
     let rum_obs_state = obs_state.clone();
     spawn_periodic_sweep(3600, "obs_rum_retention", move || {
         let obs = rum_obs_state.clone();
@@ -762,7 +762,7 @@ fn spawn_obs_rum_retention_sweep(obs_state: &std::sync::Arc<medulla_server::obs:
 }
 
 #[cfg(feature = "traces")]
-async fn persist_traces_tick(traces_obs_state: std::sync::Arc<medulla_server::obs::ObsState>) {
+async fn persist_traces_tick(traces_obs_state: std::sync::Arc<medulla_server_obs::obs::ObsState>) {
     if let Err(error) = traces_obs_state.persist_traces().await {
         tracing::warn!(
             %error,
@@ -792,7 +792,7 @@ where
 }
 
 #[cfg(feature = "traces")]
-fn spawn_obs_trace_persist_sweep(obs_state: &std::sync::Arc<medulla_server::obs::ObsState>) {
+fn spawn_obs_trace_persist_sweep(obs_state: &std::sync::Arc<medulla_server_obs::obs::ObsState>) {
     // ── Trace durable-tier sweep (BUG-016, CONCEPT:MEDULLA-OS.observability.trace-assembly) ─────
     // Periodically snapshot the native span store to durable storage
     // (`ObsState::persist_traces`) so a restart does not silently drop
@@ -891,7 +891,7 @@ async fn spawn_iceberg_listener(
         // `lake-rest` implies `lake` implies `blob`, so the CAS is always configured
         // (`Some`) in any build reaching this arm — `blob` is never independently off.
         let (lake_handle, blob_store) = {
-            use medulla_server::lake::LakeStateExt;
+            use medulla_server_lake::lake::LakeStateExt;
             let s = state.read().await;
             (s.lake(), s.blob_cursors().map(|b| b.store.clone()))
         };
@@ -904,7 +904,7 @@ async fn spawn_iceberg_listener(
                 );
                 let lake_security_state = state.clone();
                 tokio::spawn(async move {
-                    medulla_server::lake::rest::serve_with_security(
+                    medulla_server_lake::lake::rest::serve_with_security(
                         listener,
                         lake_handle,
                         store,
@@ -940,7 +940,7 @@ async fn spawn_lake_materialize_sweep(_state: &Arc<tokio::sync::RwLock<ServerSta
     #[cfg(feature = "lake")]
     {
         let interval_secs: u64 =
-            std::env::var(medulla_server::lake::LAKE_MATERIALIZE_INTERVAL_ENV)
+            std::env::var(medulla_server_lake::lake::LAKE_MATERIALIZE_INTERVAL_ENV)
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(0);
@@ -960,7 +960,7 @@ async fn spawn_lake_materialize_sweep(_state: &Arc<tokio::sync::RwLock<ServerSta
                     // client-carrier gate here was always the WRONG check for a task
                     // with no carrier at all, not a security boundary being relaxed.
                     let (lake_handle, tsdb, store) = {
-                        use medulla_server::lake::LakeStateExt;
+                        use medulla_server_lake::lake::LakeStateExt;
                         let s = sweep_state.read().await;
                         (
                             s.lake(),
@@ -1527,7 +1527,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
     // durable generation so subsequent restarts reopen it in milliseconds.
     // Feature-gated: a non-`ann` build is byte-for-byte unchanged.
     //
-    // This is trigger 1 of the three in `medulla_server::semantic_activation`, and it runs
+    // This is trigger 1 of the three in `medulla_server_graph::semantic_activation`, and it runs
     // that module's `activate_one` rather than its own copy of the body: the boot
     // task, the dispatch write-path tail and the periodic sweep below must reopen,
     // build and activate identically or a graph's index depends on which trigger
@@ -1550,7 +1550,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
             let _ = tokio::task::spawn_blocking(move || {
                 let mut warmed = 0usize;
                 for (name, core) in cores {
-                    if medulla_server::semantic_activation::activate_one(
+                    if medulla_server_graph::semantic_activation::activate_one(
                         &name,
                         &core,
                         warm_dir.as_deref(),
@@ -1587,7 +1587,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
                 ticker.tick().await;
                 let __loop_tick_started = std::time::Instant::now();
                 let n =
-                    medulla_server::semantic_activation::sweep_resident_graphs(&sweep_state).await;
+                    medulla_server_graph::semantic_activation::sweep_resident_graphs(&sweep_state).await;
                 if n > 0 {
                     tracing::info!(
                         "Semantic ANN warm re-check: spawned {} warm(s) for resident graph(s)",

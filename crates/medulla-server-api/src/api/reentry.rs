@@ -21,6 +21,11 @@ use medulla_protocol_types::protocol::Response;
 #[cfg(all(feature = "raft", feature = "jobs"))]
 use medulla_protocol_types::protocol::ResultPayload;
 
+/// Refusal a seam implementation without the Raft handlers answers with: the trait is built with
+/// `raft` by a dependency whose own `raft` feature is off.
+#[cfg(feature = "raft")]
+const RAFT_NOT_SERVED: &str = "UNAVAILABLE: raft handlers are not compiled into this server build";
+
 /// Boxed, sendable future returned by every [`DispatchApi`] method.
 pub type SeamFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
@@ -158,6 +163,7 @@ pub trait DispatchApi: Send + Sync {
 
     /// Propose a native mutation through the graph's Raft group.
     #[cfg(feature = "raft")]
+    #[allow(unused_variables)]
     fn propose_native_mutation<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
@@ -166,10 +172,13 @@ pub trait DispatchApi: Send + Sync {
         verified_context: &'a VerifiedRequestContext,
         identity_bootstrap: bool,
         method: Method,
-    ) -> SeamFuture<'a, Response>;
+    ) -> SeamFuture<'a, Response> {
+        Box::pin(async move { Response::err(request_id, RAFT_NOT_SERVED.to_string()) })
+    }
 
     /// Apply a committed bounded native command.
     #[cfg(feature = "raft")]
+    #[allow(unused_variables)]
     fn apply_replicated_native<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
@@ -178,10 +187,13 @@ pub trait DispatchApi: Send + Sync {
         committed_at_ms: u64,
         authority: &'a crate::api::persistence::RaftMutationContext,
         method: Method,
-    ) -> SeamFuture<'a, Response>;
+    ) -> SeamFuture<'a, Response> {
+        Box::pin(async move { Response::err(request_id, RAFT_NOT_SERVED.to_string()) })
+    }
 
     /// Apply a committed cross-shard transaction participant command.
     #[cfg(feature = "raft")]
+    #[allow(unused_variables)]
     fn apply_replicated_transaction_participant<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
@@ -191,10 +203,13 @@ pub trait DispatchApi: Send + Sync {
         applying_group: medulla_direct_state::direct_state::GroupId,
         phase: TransactionParticipantPhase,
         participant: ReplicatedParticipantRef<'a>,
-    ) -> SeamFuture<'a, Result<bool, String>>;
+    ) -> SeamFuture<'a, Result<bool, String>> {
+        Box::pin(async { Err(RAFT_NOT_SERVED.to_string()) })
+    }
 
     /// Apply a committed transaction prepare.
     #[cfg(feature = "raft")]
+    #[allow(unused_variables)]
     fn apply_replicated_transaction_prepare<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
@@ -204,10 +219,13 @@ pub trait DispatchApi: Send + Sync {
         txn_id: &'a str,
         idempotency_key: Option<&'a str>,
         expected_tenant: Option<&'a str>,
-    ) -> SeamFuture<'a, Response>;
+    ) -> SeamFuture<'a, Response> {
+        Box::pin(async move { Response::err(request_id, RAFT_NOT_SERVED.to_string()) })
+    }
 
     /// Apply a committed transaction decision.
     #[cfg(feature = "raft")]
+    #[allow(unused_variables)]
     fn apply_replicated_transaction_decision<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
@@ -215,10 +233,13 @@ pub trait DispatchApi: Send + Sync {
         authority: &'a crate::api::persistence::RaftMutationContext,
         coordinator_id: &'a str,
         commit: bool,
-    ) -> SeamFuture<'a, Result<bool, String>>;
+    ) -> SeamFuture<'a, Result<bool, String>> {
+        Box::pin(async { Err(RAFT_NOT_SERVED.to_string()) })
+    }
 
     /// Apply a committed transaction finalize.
     #[cfg(feature = "raft")]
+    #[allow(unused_variables)]
     fn apply_replicated_transaction_finalize<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
@@ -226,10 +247,13 @@ pub trait DispatchApi: Send + Sync {
         authority: &'a crate::api::persistence::RaftMutationContext,
         coordinator_id: &'a str,
         commit: bool,
-    ) -> SeamFuture<'a, Result<bool, String>>;
+    ) -> SeamFuture<'a, Result<bool, String>> {
+        Box::pin(async { Err(RAFT_NOT_SERVED.to_string()) })
+    }
 
     /// Apply a committed job-publication commit.
     #[cfg(all(feature = "raft", feature = "jobs"))]
+    #[allow(unused_variables)]
     fn apply_replicated_job_publication_commit<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
@@ -239,10 +263,13 @@ pub trait DispatchApi: Send + Sync {
         applying_group: medulla_direct_state::direct_state::GroupId,
         coordinator_id: &'a str,
         plan: &'a [u8],
-    ) -> SeamFuture<'a, Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String>>;
+    ) -> SeamFuture<'a, Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String>> {
+        Box::pin(async { Err(RAFT_NOT_SERVED.to_string()) })
+    }
 
     /// Apply a committed job-publication finalize.
     #[cfg(all(feature = "raft", feature = "jobs"))]
+    #[allow(unused_variables)]
     fn apply_replicated_job_publication_finalize<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
@@ -250,7 +277,9 @@ pub trait DispatchApi: Send + Sync {
         authority: &'a crate::api::persistence::RaftMutationContext,
         coordinator_id: &'a str,
         receipt: &'a [u8],
-    ) -> SeamFuture<'a, Result<ResultPayload, String>>;
+    ) -> SeamFuture<'a, Result<ResultPayload, String>> {
+        Box::pin(async { Err(RAFT_NOT_SERVED.to_string()) })
+    }
 
     /// Make a cold graph resident before an operation that needs its registry.
     fn ensure_graph_resident<'a>(
@@ -289,15 +318,19 @@ pub trait DispatchApi: Send + Sync {
 
     /// Submit one funded repository page through the authenticated boundary.
     #[cfg(all(feature = "ast", feature = "redb", feature = "blob", feature = "raft"))]
+    #[allow(unused_variables)]
     fn submit_repository_enrichment_page<'a>(
         &'a self,
         state: &'a Arc<RwLock<ServerState>>,
         verified: VerifiedRequestContext,
         request: medulla_work_types::native_control::SubmitWorkItemsRequest,
-    ) -> SeamFuture<'a, Result<(), String>>;
+    ) -> SeamFuture<'a, Result<(), String>> {
+        Box::pin(async { Err(RAFT_NOT_SERVED.to_string()) })
+    }
 
     /// Bind an internal park proposal to one held event and the latest durable budget row.
     #[cfg(all(feature = "ast", feature = "redb", feature = "blob", feature = "raft"))]
+    #[allow(unused_variables)]
     fn plan_held_underfunded_park<'a>(
         &'a self,
         persistence: &'a dyn crate::api::persistence::PersistenceBackend,
@@ -313,7 +346,9 @@ pub trait DispatchApi: Send + Sync {
             ),
             String,
         >,
-    >;
+    > {
+        Box::pin(async { Err(RAFT_NOT_SERVED.to_string()) })
+    }
 
     /// Decode the server-owned snapshot of one pending enrichment outbox intent.
     #[cfg(all(
@@ -323,10 +358,13 @@ pub trait DispatchApi: Send + Sync {
         feature = "raft",
         feature = "security"
     ))]
+    #[allow(unused_variables)]
     fn decode_pending_enrichment_intent(
         &self,
         intent: &medulla_mutation_types::mutation_scope::MutationOutboxIntent,
-    ) -> Result<medulla_compute::parser::enrichment_snapshot::EligibleSnapshot, String>;
+    ) -> Result<medulla_compute::parser::enrichment_snapshot::EligibleSnapshot, String> {
+        Err(RAFT_NOT_SERVED.to_string())
+    }
 
     /// Encode one complete immutable source as the canonical pending enrichment intent.
     #[cfg(all(
@@ -336,10 +374,13 @@ pub trait DispatchApi: Send + Sync {
         feature = "raft",
         feature = "security"
     ))]
+    #[allow(unused_variables)]
     fn enrichment_intent_for_snapshot(
         &self,
         snapshot: medulla_compute::parser::enrichment_snapshot::EligibleSnapshot,
-    ) -> Result<medulla_mutation_types::mutation_scope::MutationOutboxIntent, String>;
+    ) -> Result<medulla_mutation_types::mutation_scope::MutationOutboxIntent, String> {
+        Err(RAFT_NOT_SERVED.to_string())
+    }
 
     /// One bounded durable repository-enrichment outbox sweep.
     #[cfg(all(feature = "ast", feature = "redb", feature = "blob"))]

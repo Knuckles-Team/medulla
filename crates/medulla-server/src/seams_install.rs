@@ -14,7 +14,7 @@ pub fn install_seams(state: &ServerState) {
     let _ = state
         .seams
         .dispatch
-        .set(std::sync::Arc::new(super::dispatch::DispatchSeam));
+        .set(std::sync::Arc::new(medulla_server_router::dispatch::seam::DispatchSeam));
 
     // L3 ingest, graph, jobs, compute.
     let _ = medulla_server_ops::api::ingest::install_graph_seam(
@@ -87,4 +87,22 @@ impl medulla_server_ops::api::ingest::GraphApi for GraphSeam {
         )
         .await
     }
+}
+
+/// A test state with every seam installed, the way server startup composes it. Test builders use this
+/// so each state that reaches the dispatch re-entry seam carries the `DispatchSeam`.
+#[cfg(any(test, feature = "test-support"))]
+pub fn new_state_for_test(
+    auth_secret: impl Into<String>,
+    isolation: medulla_isolation::isolation::IsolationLayer,
+) -> ServerState {
+    let state = ServerState::new_for_test(auth_secret, isolation);
+    install_seams(&state);
+    state
+}
+
+/// Install every seam on a shared state built by a harness below this crate.
+#[cfg(any(test, feature = "test-support"))]
+pub async fn install_seams_on(state: &std::sync::Arc<tokio::sync::RwLock<ServerState>>) {
+    install_seams(&*state.read().await);
 }

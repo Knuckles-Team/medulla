@@ -25,8 +25,8 @@ use tokio::net::UnixListener;
 use tokio::sync::{Notify, RwLock, Semaphore};
 use tracing::{error, info};
 
-use super::dispatch::dispatch_verified_request;
-use super::{dispatch, ServerState};
+use medulla_server_router::dispatch::request_boundary::dispatch_verified_request;
+use super::ServerState;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::protocol::Response;
@@ -35,15 +35,15 @@ use medulla_server_api::request_scope::{self, RequestCancel};
 mod framing;
 mod tls;
 
-#[cfg(all(test, feature = "jobs"))]
-pub(crate) use framing::decode_request_payload;
-pub(crate) use framing::validate_nested_msgpack;
+#[cfg(all(any(test, feature = "test-support"), feature = "jobs"))]
+pub use framing::decode_request_payload;
 #[cfg(test)]
 use framing::{
     dispatch_deadline, max_request_frame_bytes, read_request_frame, recover_request_id,
     validate_msgpack_frame, FrameReadError, HARD_MAX_REQUEST_FRAME_BYTES,
-    MAX_MSGPACK_NESTING_DEPTH,
 };
+#[cfg(test)]
+use medulla_server_graph::dispatch::request_boundary::preflight::MAX_MSGPACK_NESTING_DEPTH;
 use framing::{
     encode_bounded_frame, encode_frame, next_request, seconds_from_env, write_responses,
     ConnectionLimits, IngressEnd,
@@ -341,7 +341,7 @@ impl AdmissionPools {
 #[derive(Default)]
 struct QosAdmission {
     context: Option<medulla_server_api::authority_context::VerifiedRequestContext>,
-    permit: Option<super::qos::QosPermit>,
+    permit: Option<medulla_server_obs::qos::QosPermit>,
 }
 
 /// QoS counters are keyed only from the verified envelope. The same verified
@@ -349,7 +349,7 @@ struct QosAdmission {
 async fn admit_qos_request(
     req: &Request,
     state: &RwLock<ServerState>,
-    scheduler: Option<&Arc<super::qos::QosScheduler>>,
+    scheduler: Option<&Arc<medulla_server_obs::qos::QosScheduler>>,
 ) -> Result<QosAdmission, Response> {
     let Some(scheduler) = scheduler else {
         return Ok(QosAdmission::default());
@@ -369,19 +369,19 @@ async fn admit_qos_request(
     })?;
     let principal_scope = context.principal_persistence_id();
     let qos_request =
-        super::qos::classify(&principal_scope, context.priority()).map_err(|error| {
+        medulla_server_obs::qos::classify(&principal_scope, context.priority()).map_err(|error| {
             medulla_kernel::metrics::auth_failure();
             Response::err(req.id, error)
         })?;
     match scheduler.try_admit(&qos_request) {
-        super::qos::QosDecision::Admit(permit) => {
+        medulla_server_obs::qos::QosDecision::Admit(permit) => {
             medulla_kernel::metrics::qos_admitted(qos_request.class.label());
             Ok(QosAdmission {
                 context: Some(context),
                 permit: Some(permit),
             })
         }
-        super::qos::QosDecision::Reject(why) => {
+        medulla_server_obs::qos::QosDecision::Reject(why) => {
             medulla_kernel::metrics::qos_shed(qos_request.class.label(), why.label());
             medulla_kernel::metrics::busy_rejected();
             Err(Response::err(req.id, why.busy_message()))
@@ -420,7 +420,7 @@ async fn reserve_request(
     state: &RwLock<ServerState>,
     connection: &Arc<Semaphore>,
     pools: &AdmissionPools,
-    scheduler: Option<&Arc<super::qos::QosScheduler>>,
+    scheduler: Option<&Arc<medulla_server_obs::qos::QosScheduler>>,
     tx: &tokio::sync::mpsc::Sender<Vec<u8>>,
 ) -> Result<DispatchReservation, AdmissionFailure> {
     let connection = match connection.clone().acquire_owned().await {
@@ -484,7 +484,7 @@ async fn dispatch_reserved_request(
         std::pin::Pin<Box<dyn std::future::Future<Output = Response> + Send + 'a>>;
     let boxed: BoxedDispatch<'_> = match reservation.qos.context {
         Some(context) => Box::pin(dispatch_verified_request(&state, req, context)),
-        None => Box::pin(crate::dispatch::dispatch(&state, req)),
+        None => Box::pin(medulla_server_router::dispatch::request_boundary::dispatch(&state, req)),
     };
     let response =
         dispatch_within_deadline(boxed, limits.dispatch_deadline, req_id, &peer_gone).await;
@@ -536,7 +536,7 @@ where
     S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin + Send + 'static,
 {
     let pools = AdmissionPools::snapshot(&state).await;
-    let qos = super::qos::configured();
+    let qos = medulla_server_obs::qos::configured();
     let limits = ConnectionLimits::configured();
     let conn_limit = per_connection_inflight_limit();
     let connection = Arc::new(Semaphore::new(conn_limit));

@@ -28,8 +28,8 @@
 use medulla_tsdb::point::Point;
 use medulla_tsdb::store::SeriesStore;
 use medulla_server_blob::blob::store::RedbChunkStore;
-use medulla_server::lake::lineage_transport::{KafkaTransport, LineageTransport};
-use medulla_server::lake::LakeManager;
+use medulla_server_lake::{lake::lineage_transport::KafkaTransport, lake::lineage_transport::LineageTransport};
+use medulla_server_lake::lake::LakeManager;
 
 fn tsdb_dir(tag: &str) -> std::path::PathBuf {
     std::env::temp_dir().join(format!(
