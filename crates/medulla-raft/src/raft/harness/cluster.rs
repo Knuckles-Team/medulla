@@ -886,7 +886,7 @@ impl Cluster {
 /// listener as it is taken. A free function (not a `Cluster` method) so
 /// [`Cluster::abort_sync`]'s decomposition does not grow `Cluster`'s own
 /// KISS `methods_per_class` count.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 fn take_live_members(
     members: &mut BTreeMap<NodeId, Member>,
 ) -> (Vec<StartedNode>, Vec<Arc<RwLock<ServerState>>>) {
@@ -908,7 +908,7 @@ fn take_live_members(
 /// every started node, clear every backend, and remove the temporary root
 /// only if nothing failed and every listener port is free again. A free
 /// function for the same reason as [`take_live_members`] above.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 async fn abort_sync_cleanup(
     started_nodes: Vec<StartedNode>,
     states: Vec<Arc<RwLock<ServerState>>>,
