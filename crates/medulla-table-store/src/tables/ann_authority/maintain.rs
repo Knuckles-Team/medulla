@@ -65,7 +65,7 @@ pub enum AnnRefreshOutcome {
 }
 
 /// Why a build could not start.
-pub(super) enum BuildRefusal {
+pub enum BuildRefusal {
     InFlight,
     Deferred,
 }
