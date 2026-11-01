@@ -3,7 +3,7 @@ use super::*;
 /// Engine-native ChangeEnvelope commit. Graph rows, every material/governance
 /// projection, version/cursor fences, terminal batch/envelope records, and the
 /// CDC outbox are written by one redb transaction and one durability barrier.
-pub(crate) fn commit_change_envelope(
+pub fn commit_change_envelope(
     shard: &Shard,
     graph_fname: &str,
     envelope: &ChangeEnvelope,
