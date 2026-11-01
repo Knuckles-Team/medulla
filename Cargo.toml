@@ -1435,7 +1435,6 @@ quantum-agent-api = ["medulla-server/quantum-agent-api", "medulla-server-router/
 medulla-cypher = { path = "crates/medulla-cypher" }
 medulla-sql = { path = "crates/medulla-sql" }
 medulla-sql-lang = { path = "crates/medulla-sql-lang" }
-medulla-sql-tests = { path = "crates/medulla-sql-tests" }
 medulla-sql-udfs = { path = "crates/medulla-sql-udfs" }
 medulla-table-store = { path = "crates/medulla-table-store" }
 medulla-tables = { path = "crates/medulla-tables" }
@@ -1892,6 +1891,7 @@ medulla-server-identity = { path = "crates/medulla-server-identity" }
 medulla-server-router = { path = "crates/medulla-server-router" }
 
 [dev-dependencies]
+medulla-sql-tests = { path = "crates/medulla-sql-tests" }
 medulla-server-store-tests = { path = "crates/medulla-server-store-tests" }
 medulla-server-cluster-tests = { path = "crates/medulla-server-cluster-tests" }
 medulla-server-served-tests = { path = "crates/medulla-server-served-tests" }
