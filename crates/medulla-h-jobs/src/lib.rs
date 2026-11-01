@@ -24,10 +24,6 @@ pub mod jobs;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod jobs_read_rls_architecture;
-
-/// Moved from the facade (MEDULLA-CONTRACT-R056).
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod mutation_outbox;
 
 /// Moved from the facade (MEDULLA-CONTRACT-R056).

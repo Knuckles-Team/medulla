@@ -22,7 +22,7 @@ pub fn install_seams(state: &ServerState) {
     let _ = state
         .seams
         .jobs
-        .set(std::sync::Arc::new(super::handlers::jobs::JobsSeam));
+        .set(std::sync::Arc::new(medulla_h_jobs::jobs::JobsSeam));
 
     // L4 admin, decide.
     let _ = state

@@ -77,6 +77,8 @@ const MAX_JOB_PUBLICATION_PLAN_BYTES: usize = 16 * 1024 * 1024;
 
 #[cfg(test)]
 mod association_hash_tests;
+#[cfg(test)]
+mod graph_tests;
 mod core;
 mod executor_claim;
 mod executor_loop;
@@ -412,7 +414,6 @@ fn resolve_opaque_graph_ref(
     found
 }
 
-#[cfg(test)]
 #[cfg(test)]
 #[path = "jobs_read_rls_architecture.rs"]
 mod jobs_read_rls_architecture;

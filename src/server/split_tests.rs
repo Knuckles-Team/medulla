@@ -39,5 +39,3 @@ mod raft_command;
 mod medulla_h_ingest_repository_index_tests;
 #[cfg(test)]
 mod medulla_h_ingest_web_ingest_tests;
-#[cfg(test)]
-mod medulla_h_jobs_jobs_graph_tests;
