@@ -242,7 +242,7 @@ pub(super) fn handle_execution(req_id: u64, method: Method) -> Result<Response, 
             start_time,
             interval_secs,
         } => {
-            let v = medulla_compute::finance::exchange::twap_schedule(
+            let v = medulla_finance::exchange::twap_schedule(
                 total_quantity,
                 n_slices,
                 start_time,
@@ -256,7 +256,7 @@ pub(super) fn handle_execution(req_id: u64, method: Method) -> Result<Response, 
             start_time,
             interval_secs,
         } => {
-            let v = medulla_compute::finance::exchange::vwap_schedule(
+            let v = medulla_finance::exchange::vwap_schedule(
                 total_quantity,
                 &volume_profile,
                 start_time,
@@ -270,7 +270,7 @@ pub(super) fn handle_execution(req_id: u64, method: Method) -> Result<Response, 
             average_daily_volume,
             impact_coefficient,
         } => {
-            let v = medulla_compute::finance::exchange::estimate_market_impact(
+            let v = medulla_finance::exchange::estimate_market_impact(
                 daily_volatility,
                 order_quantity,
                 average_daily_volume,
@@ -286,13 +286,11 @@ pub(super) fn handle_execution(req_id: u64, method: Method) -> Result<Response, 
             prices_b,
             lookback,
         } => {
-            let v = medulla_compute::finance::exchange::pairs_trading_signal(
-                &prices_a, &prices_b, lookback,
-            );
+            let v = medulla_finance::exchange::pairs_trading_signal(&prices_a, &prices_b, lookback);
             Response::ok(req_id, ResultPayload::of::<results::FinancePairsTrading>(v))
         }
         Method::FinanceMatchOrders { orders } => {
-            let v = medulla_compute::finance::exchange::match_orders(&orders);
+            let v = medulla_finance::exchange::match_orders(&orders);
             Response::ok(req_id, ResultPayload::of::<results::FinanceMatchOrders>(v))
         }
         other => return Err(other),
@@ -495,10 +493,10 @@ pub(super) fn handle_sizing(req_id: u64, method: Method) -> Result<Response, Met
             fraction,
             max_risk,
         } => {
-            use medulla_compute::finance::sizing::kelly_fraction;
-            use medulla_compute::finance::sizing::KellyInput;
-            use medulla_compute::finance::sizing::DEFAULT_KELLY_FRACTION;
-            use medulla_compute::finance::sizing::DEFAULT_MAX_RISK;
+            use medulla_numeric::sizing::kelly_fraction;
+            use medulla_numeric::sizing::KellyInput;
+            use medulla_numeric::sizing::DEFAULT_KELLY_FRACTION;
+            use medulla_numeric::sizing::DEFAULT_MAX_RISK;
             match KellyInput::new(
                 accuracy,
                 win_loss_ratio,
@@ -516,9 +514,7 @@ pub(super) fn handle_sizing(req_id: u64, method: Method) -> Result<Response, Met
             reference,
             current,
             threshold,
-        } => match medulla_compute::finance::sizing::distribution_shift(
-            &reference, &current, threshold,
-        ) {
+        } => match medulla_numeric::sizing::distribution_shift(&reference, &current, threshold) {
             Ok(shift) => Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceDistributionShift>(
@@ -631,7 +627,7 @@ pub(super) fn handle_forensic(req_id: u64, method: Method) -> Result<Response, M
             this_year,
             prior_year,
         } => {
-            let v = medulla_compute::finance::forensic::forensic_report(&this_year, &prior_year);
+            let v = medulla_finance::forensic::forensic_report(&this_year, &prior_year);
             Response::ok(
                 req_id,
                 ResultPayload::of::<results::FinanceForensicReport>(v),

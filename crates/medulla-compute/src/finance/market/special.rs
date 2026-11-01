@@ -168,7 +168,7 @@ mod tests {
     #[test]
     fn test_special_functions() {
         // Beta(2,2) is symmetric: median = 0.5, cdf(0.5)=0.5
-        assert!((sf::betai(2.0, 2.0, 0.5) - 0.5).abs() < 1e-6);
-        assert!((sf::beta_ppf(0.5, 2.0, 2.0) - 0.5).abs() < 1e-4);
+        assert!((betai(2.0, 2.0, 0.5) - 0.5).abs() < 1e-6);
+        assert!((beta_ppf(0.5, 2.0, 2.0) - 0.5).abs() < 1e-4);
     }
 }

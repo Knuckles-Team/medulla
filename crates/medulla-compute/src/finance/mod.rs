@@ -11,13 +11,8 @@
 #![allow(clippy::needless_range_loop)]
 
 pub mod derivatives;
-pub mod exchange;
 pub mod factor;
-pub mod forensic;
-pub mod ghostfolio_import;
-pub mod golden_fixture;
 pub mod leverage;
-pub mod lot_accounting;
 pub mod market;
 pub mod optimizer;
 pub mod quant;
@@ -26,8 +21,3 @@ pub mod risk;
 pub mod signal_models;
 pub mod signals;
 pub mod statespace;
-pub mod strategy;
-
-// The shared numeric kernels the finance wire methods serve: one implementation,
-// reached by the served route and by no second copy (MEDULLA-FINANCE-PRIMITIVES-R900.3).
-pub use medulla_numeric::{banking, execution, sizing};

@@ -1860,6 +1860,7 @@ medulla-h-graph = { path = "crates/medulla-h-graph" }
 medulla-h-ingest = { path = "crates/medulla-h-ingest" }
 medulla-h-jobs = { path = "crates/medulla-h-jobs" }
 medulla-h-decide = { path = "crates/medulla-h-decide" }
+medulla-finance = { path = "crates/medulla-finance" }
 
 [dev-dependencies]
 medulla-h-ingest = { path = "crates/medulla-h-ingest", features = ["test-support"] }

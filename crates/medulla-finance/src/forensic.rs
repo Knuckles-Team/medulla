@@ -8,7 +8,7 @@
 /// One fiscal year of standardized financial-statement inputs. Defined in
 /// `medulla-types::wire` (the `protocol` enum embeds it); re-exported here so the
 /// scoring code below is unchanged.
-pub use crate::wire::YearData;
+pub use medulla_types::wire::YearData;
 
 #[inline]
 fn d(a: f64, b: f64) -> f64 {
