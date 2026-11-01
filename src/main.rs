@@ -1935,7 +1935,7 @@ fn spawn_lifecycle_sweeps(state: &Arc<tokio::sync::RwLock<ServerState>>, txn_ttl
     // `MEDULLA_PROVENANCE_ANCHOR_SECS=N` (the sweep then runs every `N`
     // seconds). Overhead is bounded regardless of `N`: the window-size-dependent
     // work runs off the writer thread, and an unchanged window commits nothing
-    // (see `server::persistence::provenance_anchor`'s module doc).
+    // (see `medulla_persistence::provenance_anchor`'s module doc).
     #[cfg(feature = "security")]
     {
         let interval_secs = server_startup::optional_sweep_secs("MEDULLA_PROVENANCE_ANCHOR_SECS");
@@ -1960,7 +1960,7 @@ fn spawn_lifecycle_sweeps(state: &Arc<tokio::sync::RwLock<ServerState>>, txn_ttl
     {
         let scrub_state = state.clone();
         spawn_periodic_sweep(
-            server::persistence::storage_scrub::interval_secs(),
+            medulla_persistence::storage_scrub::interval_secs(),
             "storage_scrub",
             move || server_startup::storage_scrub_tick(scrub_state.clone()),
         );

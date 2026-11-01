@@ -162,7 +162,7 @@ pub(super) fn acquire_persist_lock(
 /// migrated and `open_persistence` refuses such a store and names the command.
 #[cfg(feature = "redb")]
 fn migrate_stores_on_open(dir: &str, lock: &medulla_kernel::persist_lock::PersistDirLock) {
-    use server::persistence::store_upgrade as upgrade;
+    use medulla_persistence::store_upgrade as upgrade;
 
     let enabled = upgrade::auto_migrate_enabled().unwrap_or_else(|error| exit_with(error, 2));
     if !enabled {
@@ -271,7 +271,7 @@ pub(super) fn open_persistence(
         .unwrap_or(automatic_writer_queue);
     refuse_upgradable_stores(dir);
     info!("Persistence: authoritative redb (queue {})", queue);
-    let backend = server::persistence::redb_backend::RedbBackend::open(dir.to_string(), queue)
+    let backend = medulla_persistence::redb_backend::RedbBackend::open(dir.to_string(), queue)
         .unwrap_or_else(|error| {
             exit_with(
                 format_args!("failed to open durable graph store: {error}"),
@@ -312,7 +312,7 @@ pub(super) fn run_fuseki_startup_health_check() {
 #[cfg(feature = "redb")]
 fn refuse_upgradable_stores(dir: &str) {
     let checked =
-        server::persistence::store_upgrade::refuse_upgradable_stores(std::path::Path::new(dir));
+        medulla_persistence::store_upgrade::refuse_upgradable_stores(std::path::Path::new(dir));
     if let Err(refusal) = checked {
         exit_with(refusal, 1);
     }
@@ -789,7 +789,7 @@ pub(super) async fn registry_reap_tick(state: SharedState) {
 
 #[cfg(feature = "security")]
 pub(super) async fn provenance_anchor_tick(state: SharedState) {
-    let anchored = server::persistence::provenance_anchor::sweep(&state).await;
+    let anchored = medulla_persistence::provenance_anchor::sweep(&state).await;
     if anchored > 0 {
         tracing::info!(
             "Provenance anchoring: anchored {} graph(s) this tick",
@@ -803,7 +803,7 @@ pub(super) async fn storage_scrub_tick(state: SharedState) {
     let Some(persistence) = state.read().await.persistence.clone() else {
         return;
     };
-    match server::persistence::storage_scrub::run_step(persistence.as_ref()).await {
+    match medulla_persistence::storage_scrub::run_step(persistence.as_ref()).await {
         Ok(0) => {}
         Ok(found) => tracing::error!(
             "Storage scrub: {} unreadable node row(s) found this pass (named above)",
