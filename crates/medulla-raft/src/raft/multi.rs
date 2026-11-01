@@ -80,7 +80,7 @@ pub struct GroupRouter {
 /// Stable, deterministic FNV-1a hash of a graph name → ring slot. Stable forever and
 /// identical on every node (NOT the randomized `RandomState`), so all nodes route a
 /// given tenant to the SAME group. Routing is recomputed live, never persisted.
-pub(crate) fn fnv1a(s: &str) -> u64 {
+pub fn fnv1a(s: &str) -> u64 {
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;
     for b in s.as_bytes() {
         h ^= *b as u64;
@@ -1328,7 +1328,7 @@ impl MultiRaft {
 
     /// Persist one crash-recovery journal transition through the placement Raft
     /// group before the move driver performs its next side effect.
-    pub(crate) async fn persist_move_journal(
+    pub async fn persist_move_journal(
         &self,
         journal: &placement::PartitionMoveJournal,
     ) -> Result<(), String> {
@@ -1431,7 +1431,7 @@ impl MultiRaft {
     /// [`placement_fence_cutover`](Self::placement_fence_cutover) commits. Prefer
     /// [`super::reshard::TenantManager::move_partition`], which drives this + the
     /// per-graph data move + the cutover as one state machine.
-    pub(crate) async fn placement_start_move(
+    pub async fn placement_start_move(
         &self,
         tenant: &str,
         range: (u64, u64),
@@ -1453,7 +1453,7 @@ impl MultiRaft {
     /// Fence the cutover of `(tenant, range)` to `target` (CONCEPT:MEDULLA-KG.sharding.placement-catalog admin API
     /// — online-move step 3): bumps the epoch and flips the authoritative group in one
     /// commit. Returns the new epoch.
-    pub(crate) async fn placement_fence_cutover(
+    pub async fn placement_fence_cutover(
         &self,
         tenant: &str,
         range: (u64, u64),

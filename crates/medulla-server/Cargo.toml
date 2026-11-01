@@ -177,5 +177,6 @@ owl-dl = ["dep:medulla-rdf", "medulla-rdf/owl-dl"]
 mysql-wire = ["dep:sha1"]
 
 [dev-dependencies]
+medulla-server-api = { path = "../medulla-server-api", features = ["test-support"] }
 tempfile = "3"
 wat = "1"

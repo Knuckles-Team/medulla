@@ -122,7 +122,7 @@ pub const PLACEMENT_GRAPH: &str = "__placement_catalog__";
 /// [`PLACEMENT_GRAPH`] so epoch allocation and placement rows share one Raft
 /// authority and one persistence boundary.
 pub const PLACEMENT_EPOCH_COUNTER_NODE: &str = "__placement_epoch_counter__";
-pub(crate) const PLACEMENT_EPOCH_FIELD: &str = "epoch";
+pub const PLACEMENT_EPOCH_FIELD: &str = "epoch";
 pub const MAX_PARTITION_MOVE_GRAPHS: usize = 16_384;
 const MAX_PARTITION_MOVE_GRAPH_BYTES: usize = 4 * 1024 * 1024;
 const MOVE_JOURNAL_NODE_PREFIX: &str = "partition-move:";
@@ -771,7 +771,7 @@ impl PlacementCatalog {
         }
     }
 
-    pub(crate) fn epoch_cas_method(expected: u64, allocated: u64) -> Method {
+    pub fn epoch_cas_method(expected: u64, allocated: u64) -> Method {
         let conditions = serde_json::json!({ PLACEMENT_EPOCH_FIELD: expected });
         let updates = serde_json::json!({ PLACEMENT_EPOCH_FIELD: allocated });
         Method::CompareAndSetNodeFields {

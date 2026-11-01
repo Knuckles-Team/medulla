@@ -287,7 +287,7 @@ impl VerifiedRequestContext {
     /// unrelated tests. A real client never hits this -- `auth.rs` binds a
     /// per-request idempotency key into the signed envelope's MAC -- so the fix
     /// belongs in the fixture, not in the key derivation.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub fn verified_for_test_with_idempotency_key(agent_id: &str, idempotency_key: &str) -> Self {
         Self::from_verified_claims(
             RequestContextClaims {
