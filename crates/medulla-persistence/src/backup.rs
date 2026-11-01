@@ -860,7 +860,7 @@ fn adopt_bundled_store(
 /// (`crypto::TXN_RECOVERY_KEY_ENV`, `handlers::txn`'s keyed-recovery coverage)
 /// share the one guard: `Some(previous) => restore it`, `None => remove the
 /// var entirely`.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub struct EnvVarGuard {
     key: &'static str,
     // `OsString`, not `String`: an environment value that is not valid UTF-8 must

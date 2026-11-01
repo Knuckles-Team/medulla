@@ -1276,7 +1276,7 @@ impl MultiRaft {
     /// identically because the SAME committed log entry applies deterministically
     /// on every replica — NOT graph nodes (placement's O(N) lesson).
     ///
-    /// [ni]: crate::server::persistence::node_info_store::NodeInfo
+    /// [ni]: medulla_persistence::node_info_store::NodeInfo
     pub(crate) async fn commit_node_info(&self, info: NodeInfoReport) -> Result<(), String> {
         let NodeInfoReport {
             cluster_id,

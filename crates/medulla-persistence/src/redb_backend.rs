@@ -70,8 +70,8 @@ use medulla_store::redb_store::shard::Shard;
 #[cfg(test)]
 use medulla_transaction::OutboxClaimBudget;
 
-#[cfg(all(test, feature = "security"))]
-pub(crate) mod audit_append_tests;
+#[cfg(all(any(test, feature = "test-support"), feature = "security"))]
+pub mod audit_append_tests;
 mod backend_audit;
 mod backend_backup;
 mod backend_load;

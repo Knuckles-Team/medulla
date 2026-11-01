@@ -391,5 +391,5 @@ fn snapshot_check(
 
 mod sources;
 
-#[cfg(all(test, feature = "decide"))]
+#[cfg(all(any(test, feature = "test-support"), feature = "decide"))]
 pub mod tests;
