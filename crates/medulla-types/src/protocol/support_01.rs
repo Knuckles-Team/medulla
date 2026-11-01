@@ -1,4 +1,6 @@
 use super::*;
+#[cfg(feature = "owl")]
+use crate::rdf_report::ProofNodeWire;
 
 /// Quality (objective) function `CommunityDetectEphemeral` optimizes (EH-314) —
 /// the wire mirror of `medulla_compute::graph_algos::QualityFunction`, kept as its
