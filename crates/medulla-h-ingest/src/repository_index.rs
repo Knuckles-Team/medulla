@@ -316,7 +316,4 @@ pub(crate) fn finish(result: IndexResult, commit: Response) -> Response {
 }
 
 #[cfg(test)]
-#[path = "repository_index_tests.rs"]
-mod tests;
-#[cfg(test)]
 pub(crate) use tests::repository_envelope;

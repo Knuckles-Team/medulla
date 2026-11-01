@@ -408,6 +408,3 @@ pub(crate) fn query_digest(query: &str) -> String {
     )
 }
 
-#[cfg(test)]
-#[path = "web_ingest_tests.rs"]
-mod tests;

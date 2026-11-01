@@ -35,3 +35,7 @@ mod server_api_mutation_inventory;
 mod raft_cluster;
 #[cfg(all(test, feature = "raft"))]
 mod raft_command;
+#[cfg(test)]
+mod medulla_h_ingest_repository_index_tests;
+#[cfg(test)]
+mod medulla_h_ingest_web_ingest_tests;

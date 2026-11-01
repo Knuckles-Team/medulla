@@ -1,7 +1,7 @@
 // MEDULLA-UNIFIED-DATA-PLANE-R651.7: the enrichment write-set links every chunk and
 // vector to its Document, replays an enriched digest and supersedes an old one.
 
-use super::*;
+use medulla_h_ingest::web_ingest::*;
 
 fn request() -> EnrichDocumentRequest {
     EnrichDocumentRequest {
