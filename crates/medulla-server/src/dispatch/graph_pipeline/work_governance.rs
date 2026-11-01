@@ -307,7 +307,7 @@ pub(super) async fn dispatch_op_workitem_claim_capability(
         // verified principal and session envelope.
         return Response::err(
             req_id,
-            medulla_store::redb_store::work_item_capability::AUTHORITY_UNAVAILABLE,
+            medulla_work_store::redb_store::work_item_capability::AUTHORITY_UNAVAILABLE,
         );
     }
     #[cfg(feature = "raft")]
@@ -346,7 +346,7 @@ pub(super) async fn dispatch_op_workitem_claim_capability(
                 "native WorkItem claim capability persistence is unavailable",
             );
         };
-        let authority = medulla_store::redb_store::work_item_capability::AuthenticatedAuthority {
+        let authority = medulla_work_store::redb_store::work_item_capability::AuthenticatedAuthority {
             tenant: verified_context.tenant().to_string(),
             audience: verified_context.claims().audience.clone(),
             principal: verified_context.principal_persistence_id(),

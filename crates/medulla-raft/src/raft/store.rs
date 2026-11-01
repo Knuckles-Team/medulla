@@ -268,7 +268,7 @@ mod current_snapshot_schema_tests {
 
         let durable = medulla_persistence::online_reshard::RawGraphRows {
             meta: Some(
-                medulla_store::redb_store::encode_meta_with_incarnation(
+                medulla_store::redb_store::store_read::encode_meta_with_incarnation(
                     "graph",
                     GraphType::Global,
                     "incarnation:test:raft-snapshot",

@@ -56,7 +56,7 @@ pub(crate) async fn apply_replicated_native(
         // so never reconstruct capability authority on a follower/replay.
         return Response::err(
             request_id,
-            medulla_store::redb_store::work_item_capability::AUTHORITY_UNAVAILABLE,
+            medulla_work_store::redb_store::work_item_capability::AUTHORITY_UNAVAILABLE,
         );
     }
     let context = match VerifiedRequestContext::replicated_mutation(authority) {

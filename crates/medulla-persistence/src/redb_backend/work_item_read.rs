@@ -54,7 +54,7 @@ impl RedbBackend {
         tenant: &str,
         work_item_id: &str,
     ) -> Result<Option<WorkItemView>, String> {
-        let read: TenantPointRead<_> = medulla_store::redb_store::work_item::read_work_item;
+        let read: TenantPointRead<_> = medulla_work_store::redb_store::work_item::read_work_item;
         self.tenant_point_read(graph_fname, tenant, work_item_id, read)
             .await
     }
@@ -66,7 +66,7 @@ impl RedbBackend {
         tenant: &str,
         work_item_id: &str,
     ) -> Result<Option<WorkItemOutcomeView>, String> {
-        let read: TenantPointRead<_> = medulla_store::redb_store::work_item::read_work_item_outcome;
+        let read: TenantPointRead<_> = medulla_work_store::redb_store::work_item::read_work_item_outcome;
         self.tenant_point_read(graph_fname, tenant, work_item_id, read)
             .await
     }
@@ -78,7 +78,7 @@ impl RedbBackend {
         tenant: &str,
         lease_id: &str,
     ) -> Result<Option<ControlLeaseView>, String> {
-        let read: TenantPointRead<_> = medulla_store::redb_store::work_item::read_control_lease;
+        let read: TenantPointRead<_> = medulla_work_store::redb_store::work_item::read_control_lease;
         self.tenant_point_read(graph_fname, tenant, lease_id, read)
             .await
     }
@@ -89,7 +89,7 @@ impl RedbBackend {
         graph_fname: &str,
         request: ListControlLeasesRequest,
     ) -> Result<ControlLeasePage, String> {
-        let read: TenantListRead<_, _> = medulla_store::redb_store::work_item::list_control_leases;
+        let read: TenantListRead<_, _> = medulla_work_store::redb_store::work_item::list_control_leases;
         self.tenant_list_read(graph_fname, request, read).await
     }
 
@@ -100,7 +100,7 @@ impl RedbBackend {
         tenant: &str,
         gap_id: &str,
     ) -> Result<Option<GapView>, String> {
-        let read: TenantPointRead<_> = medulla_store::redb_store::work_item::read_gap;
+        let read: TenantPointRead<_> = medulla_work_store::redb_store::work_item::read_gap;
         self.tenant_point_read(graph_fname, tenant, gap_id, read)
             .await
     }
@@ -111,7 +111,7 @@ impl RedbBackend {
         graph_fname: &str,
         request: GapListRequest,
     ) -> Result<GapPage, String> {
-        let read: TenantListRead<_, _> = medulla_store::redb_store::work_item::list_gaps;
+        let read: TenantListRead<_, _> = medulla_work_store::redb_store::work_item::list_gaps;
         self.tenant_list_read(graph_fname, request, read).await
     }
 
@@ -121,7 +121,7 @@ impl RedbBackend {
         graph_fname: &str,
         request: WorkItemListRequest,
     ) -> Result<WorkItemPage, String> {
-        let read: TenantListRead<_, _> = medulla_store::redb_store::work_item::list_work_items;
+        let read: TenantListRead<_, _> = medulla_work_store::redb_store::work_item::list_work_items;
         self.tenant_list_read(graph_fname, request, read).await
     }
 
@@ -182,7 +182,7 @@ impl RedbBackend {
             tenant,
             run_id,
             actor,
-            medulla_store::redb_store::work_item::read_run_admission,
+            medulla_work_store::redb_store::work_item::read_run_admission,
         )
         .await
     }
@@ -199,7 +199,7 @@ impl RedbBackend {
             tenant,
             context_id,
             actor,
-            medulla_store::redb_store::work_item::read_session_usage,
+            medulla_work_store::redb_store::work_item::read_session_usage,
         )
         .await
     }
@@ -216,7 +216,7 @@ impl RedbBackend {
             tenant,
             run_id,
             actor,
-            medulla_store::redb_store::work_item::current_plan::is_owner,
+            medulla_work_store::redb_store::work_item::current_plan::is_owner,
         )
         .await
     }
@@ -234,7 +234,7 @@ impl RedbBackend {
             run_id,
             actor,
             |shard, graph, tenant, run_id, actor, crypto| {
-                medulla_store::redb_store::work_item::current_plan::read_current(
+                medulla_work_store::redb_store::work_item::current_plan::read_current(
                     shard,
                     graph,
                     tenant,
@@ -258,7 +258,7 @@ impl RedbBackend {
     ) -> Result<bool, String> {
         let (graph, actor) = (graph_fname.to_owned(), actor.to_owned());
         self.read_snapshot(graph_fname, move |shard, crypto| {
-            medulla_store::redb_store::work_item::checkpoint::is_owner(
+            medulla_work_store::redb_store::work_item::checkpoint::is_owner(
                 shard, &graph, &request, &actor, crypto,
             )
         })
@@ -272,7 +272,7 @@ impl RedbBackend {
     ) -> Result<Option<medulla_work_types::run_checkpoint::RunCheckpointRead>, String> {
         let (graph, actor) = (graph_fname.to_owned(), actor.to_owned());
         self.read_snapshot(graph_fname, move |shard, crypto| {
-            medulla_store::redb_store::work_item::checkpoint::read_current(
+            medulla_work_store::redb_store::work_item::checkpoint::read_current(
                 shard,
                 &graph,
                 &request,

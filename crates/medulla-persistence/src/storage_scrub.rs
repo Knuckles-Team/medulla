@@ -12,7 +12,7 @@
 //! * `MEDULLA_STORAGE_SCRUB_ROWS`: node payloads one pass may open per
 //!   shard. Zero, absent or unparsable values mean [`DEFAULT_ROWS_PER_PASS`].
 
-use medulla_store::redb_store::scrub::ScrubBudget;
+use medulla_store_apply::redb_store::scrub::ScrubBudget;
 use medulla_server_api::api::persistence::PersistenceBackend;
 #[cfg(feature = "redb")]
 use crate::AsRedb;

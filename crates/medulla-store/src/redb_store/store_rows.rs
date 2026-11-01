@@ -5,7 +5,7 @@ use super::*;
 /// against the durable pre-image inside the held transaction; persisting
 /// `updates_msgpack` by itself discarded every untouched property and could
 /// diverge from GraphCore.  A missing node is a silent no-op, as before.
-pub(crate) fn apply_cas_node_fields_row(
+pub fn apply_cas_node_fields_row(
     graph: &str,
     node_id: &str,
     conditions_msgpack: &[u8],
@@ -41,7 +41,7 @@ pub(crate) fn apply_cas_node_fields_row(
 
 /// `Method::AddEdge` row effect: both endpoints must already be durable, then the
 /// edge is appended at the next ordinal for the pair.
-pub(crate) fn apply_add_edge_row(
+pub fn apply_add_edge_row(
     graph: &str,
     source_id: &str,
     target_id: &str,
@@ -72,184 +72,7 @@ pub(crate) fn apply_add_edge_row(
     Ok(())
 }
 
-/// Translate ONE applied method into redb row writes inside an open transaction.
-/// Mirrors `crate::mutation_apply::apply`'s method set: the durable DATA mutations only.
-/// The row handles every graph-row writer of one member needs, opened once.
-///
-/// `redb` refuses a second open of a table whose first handle is still alive,
-/// and every graph member of a group writes the same `nodes`, so these are
-/// opened per member and dropped before the next member's. Bundling them is
-/// what keeps the writers below inside the argument cap without threading six
-/// same-shaped handles positionally through every one of them.
-pub(crate) struct GraphRowTables<'g> {
-    pub(crate) run_checkpoints:
-        ScopedOwnerTableMut<'g, (&'static str, &'static str), &'static [u8]>,
-    pub(crate) current_plans: ScopedOwnerTableMut<'g, (&'static str, &'static str), &'static [u8]>,
-    pub(crate) nodes: ScopedOwnerTableMut<'g, (&'static str, &'static str), &'static [u8]>,
-    pub(crate) edges:
-        ScopedOwnerTableMut<'g, (&'static str, &'static str, &'static str, u32), &'static [u8]>,
-    pub(crate) ledger: ScopedOwnerTableMut<'g, (&'static str, u64), &'static str>,
-    pub(crate) semantic: ScopedOwnerTableMut<'g, &'static str, &'static [u8]>,
-    pub(crate) command_sequences: ScopedOwnerTableMut<'g, &'static str, u64>,
-    pub(crate) native_work_items:
-        ScopedOwnerTableMut<'g, (&'static str, &'static str), &'static [u8]>,
-    #[cfg(feature = "security")]
-    pub(crate) audit: ScopedOwnerTableMut<'g, (&'static str, u64), &'static [u8]>,
-}
 
-/// Borrowed form used by the native operation loop, which already has several
-/// table guards open for resource and lane operations. It lets the shared graph
-/// row applier enforce the same scope boundary without opening a second handle
-/// to any table that the caller owns.
-pub(crate) struct GraphRowTablesRef<'a, 'n, 'e, 'l, 's, 'w>
-where
-    'n: 'a,
-    'e: 'a,
-    'l: 'a,
-    's: 'a,
-    'w: 'a,
-{
-    pub(crate) nodes: &'a mut ScopedOwnerTableMut<'n, (&'static str, &'static str), &'static [u8]>,
-    pub(crate) edges: &'a mut ScopedOwnerTableMut<
-        'e,
-        (&'static str, &'static str, &'static str, u32),
-        &'static [u8],
-    >,
-    pub(crate) ledger: &'a mut ScopedOwnerTableMut<'l, (&'static str, u64), &'static str>,
-    pub(crate) semantic: &'a mut ScopedOwnerTableMut<'s, &'static str, &'static [u8]>,
-    pub(crate) native_work_items:
-        &'a mut ScopedOwnerTableMut<'w, (&'static str, &'static str), &'static [u8]>,
-}
-
-impl<'g> GraphRowTables<'g> {
-    /// Open one member's graph-row tables, bounded to that member's own scope.
-    pub fn open<'txn>(
-        member: &'g AdmittedOwnerWrite<'txn, GraphShardOwner>,
-    ) -> Result<Self, String> {
-        Ok(Self {
-            nodes: member.open_scoped_table(NODES)?,
-            run_checkpoints: member
-                .open_scoped_table(super::work_item::checkpoint::RUN_CHECKPOINTS)?,
-            current_plans: member
-                .open_scoped_table(super::work_item::current_plan::CURRENT_PLANS)?,
-            edges: member.open_scoped_table(EDGES)?,
-            ledger: member.open_scoped_table(LEDGER)?,
-            semantic: member.open_scoped_table(SEMANTIC)?,
-            command_sequences: member.open_scoped_table(WORK_ITEM_COMMAND_SEQUENCE)?,
-            native_work_items: member.open_scoped_table(work_item_capability::NATIVE_WORK_ITEMS)?,
-            #[cfg(feature = "security")]
-            audit: member.open_scoped_table(AUDIT)?,
-        })
-    }
-}
-
-pub(crate) fn apply_method_rows(
-    graph: &str,
-    method: &Method,
-    tables: &mut GraphRowTables<'_>,
-    crypto: DurableCrypto<'_>,
-) -> Result<(), String> {
-    let mut tables = GraphRowTablesRef {
-        nodes: &mut tables.nodes,
-        edges: &mut tables.edges,
-        ledger: &mut tables.ledger,
-        semantic: &mut tables.semantic,
-        native_work_items: &mut tables.native_work_items,
-    };
-    apply_method_rows_ref(graph, method, &mut tables, crypto)
-}
-
-pub(crate) fn apply_method_rows_ref(
-    graph: &str,
-    method: &Method,
-    tables: &mut GraphRowTablesRef<'_, '_, '_, '_, '_, '_>,
-    crypto: DurableCrypto<'_>,
-) -> Result<(), String> {
-    let GraphRowTablesRef {
-        nodes,
-        edges,
-        ledger,
-        semantic,
-        native_work_items,
-        ..
-    } = tables;
-    work_item_capability::validate_generic_method(graph, method, nodes, native_work_items, crypto)?;
-    work_item::refuse_generic_native_row_write(graph, method, nodes, crypto)?;
-    sealed_rows::refuse_generic_sealed_row_write(graph, method, nodes, crypto)?;
-    match method {
-        Method::AddNode {
-            node_id,
-            properties_msgpack,
-        } => {
-            let blob = crypto.seal(properties_msgpack);
-            nodes
-                .insert((graph, node_id.as_str()), blob.as_ref())
-                .map_err(|e| e.to_string())?;
-        }
-        Method::RemoveNode { node_id } => {
-            remove_durable_node(graph, node_id, nodes, edges, semantic, crypto)?;
-        }
-        Method::CompareAndSetNodeFields {
-            node_id,
-            conditions_msgpack,
-            updates_msgpack,
-        } => {
-            apply_cas_node_fields_row(
-                graph,
-                node_id,
-                conditions_msgpack,
-                updates_msgpack,
-                nodes,
-                crypto,
-            )?;
-        }
-        Method::AddEdge {
-            source_id,
-            target_id,
-            properties_msgpack,
-        } => {
-            apply_add_edge_row(
-                graph,
-                source_id,
-                target_id,
-                properties_msgpack,
-                nodes,
-                edges,
-                crypto,
-            )?;
-        }
-        Method::RemoveEdge {
-            source_id,
-            target_id,
-        } => {
-            remove_durable_edge_pair(graph, source_id, target_id, edges)?;
-        }
-        Method::BatchUpdate { operations_msgpack } => {
-            apply_batch_rows(graph, operations_msgpack, nodes, edges, semantic, crypto)?;
-        }
-        // ClearGraph and DeleteGraph share one arm because their row effect is
-        // byte-identical.  For DeleteGraph the lifecycle caller performs the
-        // native/resource drain guard before entering this row applier; keeping
-        // its ordinary graph effect here as well means no low-level path
-        // (including cross-modal and checkpoint pending methods) can silently
-        // commit a no-op graph delete.
-        Method::ClearGraph | Method::DeleteGraph { .. } => {
-            clear_graph_rows(graph, nodes, edges, ledger)?;
-            semantic.remove(graph).map_err(|error| error.to_string())?;
-        }
-        Method::AddEmbedding { node_id, embedding } => {
-            upsert_durable_embedding(semantic, graph, node_id, embedding, crypto)?;
-        }
-        Method::MintWorkItemClaimCapability { .. }
-        | Method::VerifyWorkItemClaimCapability { .. } => {
-            return Err(
-                "WorkItem claim capabilities require their native authority operation".to_string(),
-            );
-        }
-        _ => {}
-    }
-    Ok(())
-}
 
 // ── O(1) edge-ordinal counter (CONCEPT:MEDULLA-KG.storage.redb-store #3) ────────────────────────────
 //
@@ -285,7 +108,7 @@ pub(crate) fn apply_method_rows_ref(
 // strictly monotonic per (graph,src,tgt).
 /// `graph -> source -> target -> next ordinal to assign`, the shape of
 /// [`EDGE_ORD_CACHE`]'s thread-local map.
-pub(crate) type EdgeOrdCache = HashMap<String, HashMap<String, HashMap<String, u64>>>;
+pub type EdgeOrdCache = HashMap<String, HashMap<String, HashMap<String, u64>>>;
 
 thread_local! {
     /// True iff this thread is a dedicated redb group-commit writer (`medulla-redb-writer`
@@ -302,7 +125,7 @@ thread_local! {
     /// The hierarchy keeps
     /// hot pair lookup expected O(1) while making whole-graph and whole-source
     /// invalidation O(1), rather than retaining over every cached pair.
-    pub(super) static EDGE_ORD_CACHE: RefCell<EdgeOrdCache> = RefCell::new(HashMap::new());
+    pub static EDGE_ORD_CACHE: RefCell<EdgeOrdCache> = RefCell::new(HashMap::new());
 }
 
 /// Next free edge ordinal for a (src,tgt) pair in this graph.
@@ -310,7 +133,7 @@ thread_local! {
 /// O(1) on the dedicated writer thread (MEDULLA-026/MEDULLA-029): the in-RAM counter, seeded once
 /// per (graph,src,tgt) from one bounded tail seek. Off the writer thread it is NOT
 /// authoritative, so it performs the same exact O(log E) seek on every call.
-pub(crate) fn next_edge_ordinal(
+pub fn next_edge_ordinal(
     edges: &ScopedOwnerTableMut<'_, (&str, &str, &str, u32), &[u8]>,
     graph: &str,
     src: &str,
@@ -343,7 +166,7 @@ pub(crate) fn next_edge_ordinal(
 /// composite key range is ordered by ordinal, so `next_back` makes this O(log E)
 /// instead of walking all parallel rows for the pair. Used to seed the writer cache
 /// and as the off-writer-thread fallback.
-pub(crate) fn scan_next_edge_ordinal(
+pub fn scan_next_edge_ordinal(
     edges: &ScopedOwnerTableMut<'_, (&str, &str, &str, u32), &[u8]>,
     graph: &str,
     src: &str,
@@ -364,7 +187,7 @@ pub(crate) fn scan_next_edge_ordinal(
 
 /// Drop the cached next-ordinal for ONE (graph,src,tgt) (RemoveEdge). No-op off the
 /// writer thread / when the key was never cached.
-pub(crate) fn invalidate_edge_ord(graph: &str, src: &str, tgt: &str) {
+pub fn invalidate_edge_ord(graph: &str, src: &str, tgt: &str) {
     EDGE_ORD_CACHE.with(|c| {
         let mut cache = c.borrow_mut();
         let mut remove_graph = false;
@@ -386,7 +209,7 @@ pub(crate) fn invalidate_edge_ord(graph: &str, src: &str, tgt: &str) {
 
 /// Drop every cached next-ordinal whose SOURCE is `node` in `graph` (RemoveNode sweeps
 /// exactly that node's outgoing edges).
-pub(crate) fn invalidate_node_edge_ords(graph: &str, node: &str) {
+pub fn invalidate_node_edge_ords(graph: &str, node: &str) {
     EDGE_ORD_CACHE.with(|c| {
         let mut cache = c.borrow_mut();
         let remove_graph = cache.get_mut(graph).is_some_and(|sources| {
@@ -400,7 +223,7 @@ pub(crate) fn invalidate_node_edge_ords(graph: &str, node: &str) {
 }
 
 /// Drop every cached next-ordinal for `graph` (ClearGraph / purge / checkpoint re-seed).
-pub(crate) fn invalidate_graph_edge_ords(graph: &str) {
+pub fn invalidate_graph_edge_ords(graph: &str) {
     EDGE_ORD_CACHE.with(|c| {
         c.borrow_mut().remove(graph);
     });
@@ -472,7 +295,7 @@ fn run_edge_ordinal_probe_rows(
     Ok((cold, hot, reseeded))
 }
 
-pub(crate) fn apply_batch_add_node_row(
+pub fn apply_batch_add_node_row(
     graph: &str,
     index: usize,
     id: &str,
@@ -506,7 +329,7 @@ pub(crate) fn apply_batch_add_node_row(
 
 /// `BatchOperation::AddEdge`.  Both endpoints must exist at this point in the
 /// batch; an upsert first drops the existing pair.
-pub(crate) struct BatchEdgeRow<'a> {
+pub struct BatchEdgeRow<'a> {
     graph: &'a str,
     index: usize,
     source: &'a str,
@@ -515,7 +338,7 @@ pub(crate) struct BatchEdgeRow<'a> {
     upsert: bool,
 }
 
-pub(crate) fn apply_batch_add_edge_row(
+pub fn apply_batch_add_edge_row(
     input: BatchEdgeRow<'_>,
     nodes: &ScopedOwnerTableMut<'_, (&str, &str), &[u8]>,
     edges: &mut ScopedOwnerTableMut<'_, (&str, &str, &str, u32), &[u8]>,
@@ -561,7 +384,7 @@ pub(crate) fn apply_batch_add_edge_row(
 /// that caller's caller drops the enclosing `WriteTransaction` without
 /// committing on any `Err` -- so, exactly like the "node does not exist" check
 /// here, a rejected write never partially lands durably.
-pub(crate) fn apply_batch_add_embedding_row(
+pub fn apply_batch_add_embedding_row(
     graph: &str,
     index: usize,
     id: String,
@@ -587,7 +410,7 @@ pub(crate) fn apply_batch_add_embedding_row(
 /// Apply a decoded `BatchUpdate` op-list as row writes.
 /// `BatchOperation::AddNode`.  An upsert merges over the durable pre-image
 /// first; a plain add replaces the row outright.
-pub(crate) fn apply_batch_rows(
+pub fn apply_batch_rows(
     graph: &str,
     operations_msgpack: &[u8],
     nodes: &mut ScopedOwnerTableMut<'_, (&str, &str), &[u8]>,

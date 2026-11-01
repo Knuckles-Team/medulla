@@ -54,6 +54,7 @@ medulla-semantic-index = { path = "../medulla-semantic-index" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-isolation = { path = "../medulla-isolation" }
 medulla-work-types = { path = "../medulla-work-types" }
+medulla-store-apply = { path = "../medulla-store-apply" }
 
 [features]
 blob = ["redb"]

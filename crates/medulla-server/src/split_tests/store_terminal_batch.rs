@@ -7,13 +7,11 @@ use medulla_mutation_types::mutation_scope::MutationSurface;
 use medulla_protocol_types::mutation_batch::VersionExpectation;
 use medulla_protocol_types::mutation_batch::{MutationBatch, MutationOperation};
 use medulla_protocol_types::protocol::Method;
-use medulla_store::redb_store::mutation_fixtures::{
-    batch, commit_at, commit_native_claim, open, ready_work_item_method,
-};
-use medulla_store::redb_store::{
-    decode_durable, fixture_operation_envelope, read_mutation_graph_version, read_one_node,
-    DurableCrypto,
-};
+use medulla_store_apply::{redb_store::mutation_fixtures::batch, redb_store::mutation_fixtures::commit_at, redb_store::mutation_fixtures::commit_native_claim, redb_store::mutation_fixtures::open, redb_store::mutation_fixtures::ready_work_item_method};
+use medulla_store::{redb_store::decode_durable, redb_store::DurableCrypto};
+use medulla_store::redb_store::store_graph_names::fixture_operation_envelope;
+use medulla_store::redb_store::store_read::read_mutation_graph_version;
+use medulla_store::redb_store::store_read::read_one_node;
 
 fn temp_path(tag: &str) -> std::path::PathBuf {
     medulla_store::redb_store::temp_path("medulla-mutation-batch", tag)

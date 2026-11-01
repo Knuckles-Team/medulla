@@ -6,7 +6,7 @@ pub fn decode_durable<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> Result<T,
         .map_err(|_| "durable value is invalid or exceeds resource limits".to_string())
 }
 
-pub(crate) fn decode_mutation_batch_record(
+pub fn decode_mutation_batch_record(
     bytes: &[u8],
     expected_graph_fname: &str,
     expected_batch_id: &str,
@@ -17,7 +17,7 @@ pub(crate) fn decode_mutation_batch_record(
     Ok(record)
 }
 
-pub(crate) fn validate_graph_mutation_record_binding(
+pub fn validate_graph_mutation_record_binding(
     record: &MutationBatchRecord,
     expected_graph_fname: &str,
     expected_batch_id: &str,
@@ -43,7 +43,7 @@ pub(crate) fn validate_graph_mutation_record_binding(
     Ok(())
 }
 
-pub(crate) fn decode_mutation_outbox_record(bytes: &[u8]) -> Result<MutationOutboxRecord, String> {
+pub fn decode_mutation_outbox_record(bytes: &[u8]) -> Result<MutationOutboxRecord, String> {
     let record: MutationOutboxRecord = decode_durable(bytes)?;
     record.validate()?;
     if !matches!(record.committed_version, CommittedVersion::Graph { source, .. } if source != 0) {
@@ -52,7 +52,7 @@ pub(crate) fn decode_mutation_outbox_record(bytes: &[u8]) -> Result<MutationOutb
     Ok(record)
 }
 
-pub(crate) fn decode_mutation_projection_cursor(
+pub fn decode_mutation_projection_cursor(
     bytes: &[u8],
 ) -> Result<MutationProjectionCursor, String> {
     let cursor: MutationProjectionCursor = decode_durable(bytes)?;
@@ -63,7 +63,7 @@ pub(crate) fn decode_mutation_projection_cursor(
     Ok(cursor)
 }
 
-pub(crate) fn validate_graph_mutation_record_sizes(
+pub fn validate_graph_mutation_record_sizes(
     plaintext: &[u8],
     stored: &[u8],
 ) -> Result<(), String> {
@@ -77,7 +77,7 @@ pub(crate) fn validate_graph_mutation_record_sizes(
 }
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
-pub(crate) struct DurableOutboxDelivery {
+pub struct DurableOutboxDelivery {
     consumer: String,
     lease_epoch: u64,
     lease_until_ms: u64,
@@ -85,201 +85,6 @@ pub(crate) struct DurableOutboxDelivery {
     delivered_at_ms: Option<u64>,
 }
 
-/// Authoritative reservation row.  The immutable WorkItem admission record is
-/// retained after release/reclaim; held totals and fairness debt are updated only
-/// by this transaction, never by telemetry or a local scheduler mirror.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub(crate) struct DurableResourceReservation {
-    pub(crate) record: ResourceReservationRecord,
-    pub(crate) held_cpu_weight: u64,
-    pub(crate) held_memory_mib: u64,
-    pub(crate) held_disk_mib: u64,
-    pub(crate) held_process_slots: u64,
-    pub(crate) fairness_debt: u64,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub(crate) struct DurableResourceHost {
-    pub(crate) tenant_ref: String,
-    pub(crate) host_ref: String,
-    pub(crate) revision: u64,
-    pub(crate) capacity: ResourceCapacity,
-    pub(crate) observed: ResourceCapacity,
-    pub(crate) heartbeat_at_ms: u64,
-    pub(crate) heartbeat_ttl_ms: u64,
-    pub(crate) now_ms: u64,
-    pub(crate) draining: bool,
-    pub(crate) quarantined: bool,
-    pub(crate) labels: Vec<String>,
-    pub(crate) target_kind: String,
-    pub(crate) target_alias: Option<String>,
-    pub(crate) disk_used_mib: u64,
-    pub(crate) disk_capacity_mib: u64,
-    pub(crate) held_cpu_weight: u64,
-    pub(crate) held_memory_mib: u64,
-    pub(crate) held_disk_mib: u64,
-    pub(crate) held_process_slots: u64,
-}
-
-#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
-pub(crate) struct DurableResourceFairness {
-    pub(crate) debt: u64,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub(crate) struct DurableResourceDiskPolicy {
-    pub(crate) blocked: bool,
-    pub(crate) low_watermark_mib: Option<u64>,
-    pub(crate) high_watermark_mib: Option<u64>,
-    pub(crate) revision: u64,
-}
-
-pub(crate) fn resource_reservation_host_capacity_snapshot(
-    value: &ResourceCapacity,
-) -> ResourceReservationHostCapacitySnapshot {
-    ResourceReservationHostCapacitySnapshot {
-        cpu_weight: value.cpu_weight,
-        memory_mib: value.memory_mib,
-        disk_mib: value.disk_mib,
-        process_slots: value.process_slots,
-    }
-}
-
-pub(crate) fn resource_host_update_capacity_snapshot(
-    value: &ResourceCapacity,
-) -> ResourceHostUpdateCapacitySnapshot {
-    ResourceHostUpdateCapacitySnapshot {
-        cpu_weight: value.cpu_weight,
-        memory_mib: value.memory_mib,
-        disk_mib: value.disk_mib,
-        process_slots: value.process_slots,
-    }
-}
-
-pub(crate) fn resource_reservation_disk_policy_snapshot(
-    policy_key: String,
-    policy: &DurableResourceDiskPolicy,
-) -> ResourceReservationDiskPolicySnapshot {
-    ResourceReservationDiskPolicySnapshot {
-        policy_key,
-        blocked: policy.blocked,
-        low_watermark_mib: policy.low_watermark_mib,
-        high_watermark_mib: policy.high_watermark_mib,
-        revision: policy.revision,
-    }
-}
-
-pub(crate) fn resource_host_update_disk_policy_snapshot(
-    policy_key: String,
-    policy: &DurableResourceDiskPolicy,
-) -> ResourceHostUpdateDiskPolicySnapshot {
-    ResourceHostUpdateDiskPolicySnapshot {
-        policy_key,
-        blocked: policy.blocked,
-        low_watermark_mib: policy.low_watermark_mib,
-        high_watermark_mib: policy.high_watermark_mib,
-        revision: policy.revision,
-    }
-}
-
-pub(crate) fn resource_reservation_host_snapshot(
-    host: &DurableResourceHost,
-    policies: &[(String, DurableResourceDiskPolicy)],
-) -> Result<ResourceReservationHostSnapshot, String> {
-    let mut labels = host.labels.clone();
-    labels.sort();
-    let mut policies = policies.to_vec();
-    policies.sort_by(|left, right| left.0.cmp(&right.0));
-    Ok(ResourceReservationHostSnapshot {
-        host_ref: host.host_ref.clone(),
-        revision: host.revision,
-        capacity: resource_reservation_host_capacity_snapshot(&host.capacity),
-        observed: resource_reservation_host_capacity_snapshot(&host.observed),
-        heartbeat_at_ms: host.heartbeat_at_ms,
-        heartbeat_ttl_ms: host.heartbeat_ttl_ms,
-        draining: host.draining,
-        quarantined: host.quarantined,
-        labels,
-        target_kind: resource_reservation_snapshot_kind(&host.target_kind)?,
-        target_alias: host.target_alias.clone(),
-        disk_used_mib: host.disk_used_mib,
-        disk_capacity_mib: host.disk_capacity_mib,
-        held_cpu_weight: host.held_cpu_weight,
-        held_memory_mib: host.held_memory_mib,
-        held_disk_mib: host.held_disk_mib,
-        held_process_slots: host.held_process_slots,
-        disk_policies: policies
-            .into_iter()
-            .map(|(key, policy)| resource_reservation_disk_policy_snapshot(key, &policy))
-            .collect(),
-    })
-}
-
-pub(crate) fn resource_host_update_snapshot(
-    host: &DurableResourceHost,
-    policies: &[(String, DurableResourceDiskPolicy)],
-) -> Result<ResourceHostUpdateSnapshot, String> {
-    let mut labels = host.labels.clone();
-    labels.sort();
-    let mut policies = policies.to_vec();
-    policies.sort_by(|left, right| left.0.cmp(&right.0));
-    Ok(ResourceHostUpdateSnapshot {
-        host_ref: host.host_ref.clone(),
-        revision: host.revision,
-        capacity: resource_host_update_capacity_snapshot(&host.capacity),
-        observed: resource_host_update_capacity_snapshot(&host.observed),
-        heartbeat_at_ms: host.heartbeat_at_ms,
-        heartbeat_ttl_ms: host.heartbeat_ttl_ms,
-        draining: host.draining,
-        quarantined: host.quarantined,
-        labels,
-        target_kind: resource_host_update_snapshot_kind(&host.target_kind)?,
-        target_alias: host.target_alias.clone(),
-        disk_used_mib: host.disk_used_mib,
-        disk_capacity_mib: host.disk_capacity_mib,
-        held_cpu_weight: host.held_cpu_weight,
-        held_memory_mib: host.held_memory_mib,
-        held_disk_mib: host.held_disk_mib,
-        held_process_slots: host.held_process_slots,
-        disk_policies: policies
-            .into_iter()
-            .map(|(key, policy)| resource_host_update_disk_policy_snapshot(key, &policy))
-            .collect(),
-    })
-}
-
-pub(crate) fn resource_collect_disk_policy_rows(
-    policies: &mut ScopedOwnerTableMut<'_, (&str, &str), &[u8]>,
-    graph: &str,
-    host_ref: &str,
-    crypto: DurableCrypto<'_>,
-) -> Result<Vec<(String, DurableResourceDiskPolicy)>, String> {
-    let prefix = format!("{host_ref}\0");
-    let mut rows = Vec::new();
-    for row in policies.scope_rows().map_err(|error| error.to_string())? {
-        if rows.len() >= MAX_RESOURCE_HOST_DISK_POLICIES {
-            return Err("resource disk-policy scan exceeds native bound".to_string());
-        }
-        let (key, value) = row.map_err(|error| error.to_string())?;
-        let (row_graph, policy_key) = key.value();
-        if row_graph != graph {
-            return Err("resource disk-policy row escaped its scope".to_string());
-        }
-        if !policy_key.starts_with(&prefix) {
-            if policy_key < prefix.as_str() {
-                continue;
-            }
-            break;
-        }
-        let policy_key = policy_key
-            .strip_prefix(&prefix)
-            .ok_or_else(|| "resource disk-policy key escaped host scope".to_string())?;
-        resource_text(policy_key, "resource disk_policy_key")?;
-        let policy = resource_decode::<DurableResourceDiskPolicy>(value.value(), crypto)?;
-        rows.push((policy_key.to_string(), policy));
-    }
-    Ok(rows)
-}
 
 pub const NODES: TableDefinition<(&str, &str), &[u8]> = TableDefinition::new("nodes");
 pub const EDGES: TableDefinition<(&str, &str, &str, u32), &[u8]> = TableDefinition::new("edges");
@@ -411,28 +216,9 @@ pub const PLAN_MATVIEWS: TableDefinition<&str, &[u8]> = TableDefinition::new("pl
 pub const MATVIEW_OPERATOR_STATE: TableDefinition<&str, &[u8]> =
     TableDefinition::new("matview_operator_state");
 
-/// Retire one graph's owner rows when its scope is retired.
-///
-/// The payload half of a scope retirement: `MutationKernel::purge_scope_with`
-/// and the graft both require it, for the same reason -- retiring a scope's
-/// ledger authority while leaving its rows behind would hand the retired
-/// generation's data to the next binding of the same logical graph name.
-///
-/// Every sweep goes through `scoped_owner_table_mut` + `purge_scope_rows`,
-/// whose scope comes from the CAPABILITY and never from an argument, so
-/// holding one graph's handle can never wipe another's rows in the file they
-/// share. It is deliberately not `PhysicalWriteCapability::purge_scoped_rows`:
-/// that is the LEDGER sweep, keyed by the 64-hex binding digest, and an owner
-/// key leads with the graph NAME -- on these tables it would match nothing and
-/// return `Ok(())` having removed no row.
-///
-/// The twelve file-wide tables are deliberately NOT swept: they belong to the
-/// file, not to any one graph, and a retired graph owns no row in them. The
-/// catalog row is removed by [`remove_graph_catalog_row`] on the control scope.
-pub struct GraphShardRetirement;
 
 /// Sweep one scope-prefixed owner table for the capability's own scope.
-pub(crate) fn retire_scoped_table<K, V>(
+pub fn retire_scoped_table<K, V>(
     write: &medulla_storage::PhysicalWriteCapability<'_, GraphShardOwner>,
     definition: TableDefinition<'static, K, V>,
 ) -> Result<(), String>
@@ -444,44 +230,6 @@ where
     write.scoped_owner_table_mut(definition)?.purge_scope_rows()
 }
 
-impl medulla_storage::OwnerPayloadRetirement<GraphShardOwner> for GraphShardRetirement {
-    fn retire_owner_payload(
-        &self,
-        write: &medulla_storage::PhysicalWriteCapability<'_, GraphShardOwner>,
-        _scope: &medulla_mutation_types::mutation_scope::MutationScopeIdentity,
-    ) -> Result<(), String> {
-        retire_scoped_table(write, NODES)?;
-        retire_scoped_table(write, EDGES)?;
-        retire_scoped_table(write, LEDGER)?;
-        retire_scoped_table(write, SEMANTIC)?;
-        retire_scoped_table(write, AUDIT)?;
-        retire_scoped_table(write, AUDIT_REQUESTS)?;
-        retire_scoped_table(write, PROVENANCE_ANCHOR_MEMBERS)?;
-        retire_scoped_table(write, WORK_ITEM_COMMAND_SEQUENCE)?;
-        retire_scoped_table(write, RESOURCE_RESERVATIONS)?;
-        retire_scoped_table(write, RESOURCE_RESERVATION_TENANT_INDEX)?;
-        retire_scoped_table(write, RESOURCE_RESERVATION_ATTEMPTS)?;
-        retire_scoped_table(write, RESOURCE_HOSTS)?;
-        retire_scoped_table(write, RESOURCE_EXCLUSIVITY)?;
-        retire_scoped_table(write, RESOURCE_FAIRNESS)?;
-        retire_scoped_table(write, RESOURCE_CONCURRENCY)?;
-        retire_scoped_table(write, RESOURCE_ANTI_AFFINITY)?;
-        retire_scoped_table(write, RESOURCE_DISK_POLICIES)?;
-        retire_scoped_table(write, CHANGE_ENVELOPES)?;
-        retire_scoped_table(write, CONTENT_VERSIONS)?;
-        retire_scoped_table(write, CHANGE_CURSORS)?;
-        retire_scoped_table(write, CHANGE_BLOBS)?;
-        retire_scoped_table(write, CHANGE_FEATURES)?;
-        retire_scoped_table(write, CHANGE_EVIDENCE)?;
-        retire_scoped_table(write, CHANGE_POLICIES)?;
-        retire_scoped_table(write, CHANGE_LINEAGE)?;
-        capacity_lease::retire_graph_rows(write)?;
-        enrichment_budget::retire_graph_rows(write)?;
-        work_item_capability::retire_graph_rows(write)?;
-        development_lane::retire_graph_rows(write)?;
-        Ok(())
-    }
-}
 
 /// In-doubt cross-shard prepare records `(txn_id, group_id, slice-blob)` returned by
 /// the recovery scan (CONCEPT:MEDULLA-KG.storage.lane-n-increment).
@@ -554,7 +302,7 @@ impl<'a> DurableCrypto<'a> {
     /// found on (EH-384), so a read or dump of a corrupt node fails closed with
     /// `NODE_UNREADABLE:` and the graph and node id.
     #[inline]
-    pub(crate) fn unseal_node(
+    pub fn unseal_node(
         &self,
         graph: &str,
         node_id: &str,

@@ -587,44 +587,44 @@ kind = "store"
 responsibility = "redb store core, layout, sidecar and shards."
 moves = []
 specs = ["durable-graph-kernel (store, group commit, shards)"]
-current_lines = 21532
-projected_lines = 21532
+current_lines = 8751
+projected_lines = 8751
 
 [crates.medulla-work-store]
 level = "F2a"
 kind = "store"
 responsibility = "Durable work items, their capability records and graph-row tables."
-moves = ["src/redb_store/work_item", "src/redb_store/work_item_capability", "crates/medulla-store/src/redb_store/store_rows", "crates/medulla-store/src/redb_store/work_item", "crates/medulla-store/src/redb_store/work_item_capability"]
+moves = ["src/redb_store/work_item", "src/redb_store/work_item_capability", "crates/medulla-store/src/redb_store/work_item", "crates/medulla-store/src/redb_store/work_item_capability"]
 specs = ["orchestration-vocabulary (work item store)"]
-current_lines = 12388
-projected_lines = 13188
+current_lines = 10878
+projected_lines = 11678
 
 [crates.medulla-resource-store]
 level = "F2a"
 kind = "store"
 responsibility = "Resource reservations and capacity leases."
-moves = ["src/redb_store/resource", "src/redb_store/resource_reservation_tests", "src/redb_store/capacity_lease", "crates/medulla-store/src/redb_store/capacity_lease", "crates/medulla-store/src/redb_store/resource", "crates/medulla-store/src/redb_store/resource_reservation_tests"]
+moves = ["src/redb_store/resource", "src/redb_store/capacity_lease", "crates/medulla-store/src/redb_store/capacity_lease", "crates/medulla-store/src/redb_store/resource"]
 specs = ["durable-graph-kernel (leases, scheduler)"]
-current_lines = 9492
-projected_lines = 10192
+current_lines = 5938
+projected_lines = 6638
 
 [crates.medulla-lane-store]
 level = "F2c"
 kind = "store"
 responsibility = "Development lane records in the store."
-moves = ["src/redb_store/development_lane", "crates/medulla-store/src/redb_store/development_lane", "crates/medulla-store/src/redb_store/security_tests"]
+moves = ["src/redb_store/development_lane", "crates/medulla-store/src/redb_store/development_lane"]
 specs = ["development-lifecycle (lane store)"]
-current_lines = 10390
-projected_lines = 10390
+current_lines = 6724
+projected_lines = 6724
 
 [crates.medulla-store-apply]
 level = "F2b"
 kind = "store"
 responsibility = "Store apply composition: native apply dispatch over work and resource rows, control, cleanup, checkpoints and the whole-batch store tests."
-moves = ["crates/medulla-store/src/redb_store/checkpoint", "crates/medulla-store/src/redb_store/mutation_batch_tests", "crates/medulla-store/src/redb_store/store_cleanup", "crates/medulla-store/src/redb_store/store_control", "crates/medulla-store/src/redb_store/store_native", "crates/medulla-store/src/redb_store/mutation_batch_tests", "crates/medulla-store/src/redb_store/security_tests=medulla-lane-store"]
+moves = ["crates/medulla-store/src/redb_store/checkpoint", "crates/medulla-store/src/redb_store/mutation_batch_tests", "crates/medulla-store/src/redb_store/security_tests", "crates/medulla-store/src/redb_store/store_cleanup", "crates/medulla-store/src/redb_store/store_control", "crates/medulla-store/src/redb_store/store_native", "crates/medulla-store/src/redb_store/store_batch", "crates/medulla-store/src/redb_store/store_state", "crates/medulla-store/src/redb_store/store_state_tables", "crates/medulla-store/src/redb_store/dump", "crates/medulla-store/src/redb_store/crossmodal", "crates/medulla-store/src/redb_store/store_mutation", "crates/medulla-store/src/redb_store/store_retry", "crates/medulla-store/src/redb_store/control", "crates/medulla-store/src/redb_store/mutation_fixtures", "crates/medulla-store/src/redb_store/commit_ops_phase_measurement", "crates/medulla-store/src/redb_store/operation_audit_tests", "crates/medulla-store/src/redb_store/scrub", "crates/medulla-store/src/redb_store/scrub_tests", "crates/medulla-store/src/redb_store/shard_control_tests", "crates/medulla-store/src/redb_store/resource_reservation_tests"]
 specs = []
-current_lines = 2447
-projected_lines = 2447
+current_lines = 24076
+projected_lines = 24076
 
 [crates.medulla-server-api]
 level = "F3"
@@ -704,8 +704,8 @@ kind = "persistence"
 responsibility = "Backup, online reshard, shard migration and store upgrade."
 moves = ["src/server/persistence/backup", "src/server/persistence/cold_offload", "src/server/persistence/online_reshard", "src/server/persistence/shard_migrate", "src/server/persistence/store_upgrade", "crates/medulla-persistence/src/backup", "crates/medulla-persistence/src/online_reshard", "crates/medulla-persistence/src/shard_migrate", "crates/medulla-persistence/src/store_upgrade"]
 specs = ["durable-graph-kernel (operations)"]
-current_lines = 9166
-projected_lines = 9366
+current_lines = 9171
+projected_lines = 9371
 
 [crates.medulla-raft]
 level = "F7"
@@ -920,8 +920,8 @@ kind = "server"
 responsibility = "Server assembly: router, startup, transport and the remaining dispatch."
 moves = []
 specs = []
-current_lines = 82114
-projected_lines = 82114
+current_lines = 82110
+projected_lines = 82110
 
 [crates.medulla-engine]
 level = "F12"

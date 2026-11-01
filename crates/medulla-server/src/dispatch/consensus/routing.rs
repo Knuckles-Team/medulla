@@ -249,7 +249,7 @@ mod consensus_admin_route_tests {
         for method in methods {
             assert!(capability_authority_unavailable(&method));
             assert_eq!(
-                medulla_store::redb_store::work_item_capability::AUTHORITY_UNAVAILABLE,
+                medulla_work_store::redb_store::work_item_capability::AUTHORITY_UNAVAILABLE,
                 "authority_unavailable"
             );
         }
@@ -564,7 +564,7 @@ pub(in crate::dispatch) async fn propose_native_mutation(
         // leader routing, barriers, or any private-store mutation.
         return Response::err(
             request_id,
-            medulla_store::redb_store::work_item_capability::AUTHORITY_UNAVAILABLE,
+            medulla_work_store::redb_store::work_item_capability::AUTHORITY_UNAVAILABLE,
         );
     }
     let authority = match CarrierAuthority::from_verified(verified_context) {

@@ -672,8 +672,8 @@ impl EmbeddedEngine {
                 reg.all_entries()
                     .iter()
                     .map(|e| {
-                        medulla_store::redb_store::GraphDump::in_place_core_checkpoint(
-                            medulla_store::redb_store::InPlaceCoreCheckpoint {
+                        medulla_store_apply::redb_store::store_control::GraphDump::in_place_core_checkpoint(
+                            medulla_store_apply::redb_store::store_control::InPlaceCoreCheckpoint {
                                 graph: medulla_store::redb_store::sanitize(&e.name),
                                 name: e.name.clone(),
                                 graph_type: e.graph_type,

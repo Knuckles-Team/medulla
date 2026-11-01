@@ -26,7 +26,7 @@ use std::time::Instant;
 /// through a phase, for instance) loses the sample silently rather than
 /// panicking or corrupting the commit: this timer is diagnostic only, never
 /// load-bearing.
-pub(crate) struct CommitPhaseTimer {
+pub struct CommitPhaseTimer {
     started: Instant,
     phase: &'static str,
     /// Closed when the timer is consumed or dropped; never entered, because a
@@ -38,7 +38,7 @@ impl CommitPhaseTimer {
     /// Start timing `phase`. The label set is fixed and small -- see
     /// `medulla_kernel::metrics::observe_commit_ops_phase`'s doc for the exact values --
     /// so cardinality never grows with graphs, drains or callers.
-    pub(crate) fn start(phase: &'static str) -> Self {
+    pub fn start(phase: &'static str) -> Self {
         Self {
             started: Instant::now(),
             phase,

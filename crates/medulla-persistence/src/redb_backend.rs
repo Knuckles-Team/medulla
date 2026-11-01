@@ -44,7 +44,7 @@ use redb::{ReadableTable, TableDefinition};
 use tokio::sync::RwLock;
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_store::redb_store::GraphDump;
+use medulla_store_apply::redb_store::store_control::GraphDump;
 
 #[cfg(test)]
 use medulla_protocol_types::mutation_batch::*;
@@ -890,7 +890,7 @@ pub mod tests {
         let mut batch = MutationBatch {
             schema_version: MUTATION_BATCH_VERSION,
             batch_id: batch_id.to_string(),
-            envelope: medulla_store::redb_store::fixture_operation_envelope(
+            envelope: medulla_store::redb_store::store_graph_names::fixture_operation_envelope(
                 &identity, &actor, 17, batch_id,
             ),
             identity,
@@ -1307,7 +1307,7 @@ pub mod tests {
         let wtx = db.begin_write().expect("begin write");
         {
             let mut holds = wtx
-                .open_table(medulla_store::redb_store::development_lane::HOLDS)
+                .open_table(medulla_lane_store::redb_store::development_lane::HOLDS)
                 .expect("open holds table for raw seed");
             holds
                 .insert((graph, hold_id), bytes.as_slice())
@@ -4463,8 +4463,8 @@ pub mod tests {
         #[cfg(feature = "security")]
         let _enc_guard = EncryptionRequiredEnvGuard::set(None, "off");
         use crate::tenant_catalog::TenantCatalog;
-        use medulla_store::redb_store::capacity_lease;
-        use medulla_store::redb_store::development_lane;
+        use medulla_resource_store::redb_store::capacity_lease;
+        use medulla_lane_store::redb_store::development_lane;
         #[cfg(feature = "security")]
         use medulla_store::redb_store::PROVENANCE_ANCHOR_MEMBERS;
         use medulla_store::redb_store::RESOURCE_RESERVATIONS;

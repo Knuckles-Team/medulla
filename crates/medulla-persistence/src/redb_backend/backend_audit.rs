@@ -179,7 +179,7 @@ impl RedbBackend {
         node_after: Option<String>,
         edge_after: Option<(String, String, u32)>,
         page_size: usize,
-    ) -> Result<Option<medulla_store::redb_store::GraphDumpPage>, String> {
+    ) -> Result<Option<medulla_store_apply::redb_store::dump::GraphDumpPage>, String> {
         let (reply, rx) = std::sync::mpsc::sync_channel(1);
         self.shard_for(graph_fname)
             .tx

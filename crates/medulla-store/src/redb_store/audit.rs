@@ -59,7 +59,7 @@ pub type AuditTailCache = std::collections::HashMap<String, (u64, medulla_kernel
 /// own receipt ids -- the same arrangement as every coalesced shard drain
 /// (`shard::drain_batch`).
 #[cfg(feature = "security")]
-pub(super) fn fresh_attempt_id(prefix: &str) -> String {
+pub fn fresh_attempt_id(prefix: &str) -> String {
     static ATTEMPT: AtomicU64 = AtomicU64::new(0);
     let stamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -116,7 +116,7 @@ pub fn append_audit_entry(
 /// unchanged: `append_audit_entry` now does nothing but derive `line` and forward
 /// here.
 #[cfg(feature = "security")]
-pub(crate) fn append_audit_entry_with_line(
+pub fn append_audit_entry_with_line(
     audit: &mut ScopedOwnerTableMut<'_, (&str, u64), &[u8]>,
     cache: &mut AuditTailCache,
     graph: &str,
@@ -205,20 +205,20 @@ pub(crate) fn append_audit_entry_with_line(
 // isolates this test's own count perfectly, with no cross-test synchronization
 // needed at all — strictly more correct than the shared-`Mutex`/lock alternative,
 // not merely faster.
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 thread_local! {
     static COLD_SEED_ROWS_TOUCHED: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
 }
 
-#[cfg(test)]
-pub(crate) fn cold_seed_rows_touched_inc(n: u64) {
+#[cfg(any(test, feature = "test-support"))]
+pub fn cold_seed_rows_touched_inc(n: u64) {
     COLD_SEED_ROWS_TOUCHED.with(|c| c.set(c.get() + n));
 }
 
 /// Read-and-reset the cold-seed row counter. Tests call this immediately before and
 /// after the call under measurement.
-#[cfg(test)]
-pub(crate) fn cold_seed_rows_touched_take() -> u64 {
+#[cfg(any(test, feature = "test-support"))]
+pub fn cold_seed_rows_touched_take() -> u64 {
     COLD_SEED_ROWS_TOUCHED.with(|c| c.replace(0))
 }
 
@@ -328,7 +328,7 @@ pub fn provenance_leaf_hashes(
 /// `redb::Range`, and one seek instead of a scan of every anchor the graph ever
 /// took.
 #[cfg(feature = "security")]
-pub(crate) fn read_latest_provenance_anchor_root(
+pub fn read_latest_provenance_anchor_root(
     shard: &Shard,
     graph: &str,
 ) -> Result<Option<(u64, medulla_kernel::audit::Hash)>, String> {

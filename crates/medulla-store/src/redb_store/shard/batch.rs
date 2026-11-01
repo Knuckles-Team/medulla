@@ -63,7 +63,7 @@ fn canonical_claim_part(value: &str) -> std::borrow::Cow<'_, str> {
 /// instead would manufacture a conflicting replay out of a path that never
 /// needed one: re-admitting the same id at a moved version fails the ledger's
 /// whole-batch identity comparison rather than replaying.
-pub(super) fn drain_batch(
+pub fn drain_batch(
     owner: &OwnedStoreHandle<GraphShardOwner>,
     drain_id: &str,
     scope_name: &str,
@@ -113,7 +113,7 @@ pub(super) fn drain_batch(
 /// authority context and outbox `actor` header, while the operation envelope's
 /// serving principal becomes the store's. This is the ONE place a batch crosses from the request boundary
 /// into the shard, so it is the one place both rewrites happen.
-pub(crate) fn bind_caller_batch(
+pub fn bind_caller_batch(
     owner: &OwnedStoreHandle<GraphShardOwner>,
     graph_fname: &str,
     batch: &MutationBatch,

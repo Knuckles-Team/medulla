@@ -583,7 +583,7 @@ pub trait PersistenceBackend: Send + Sync {
         &self,
         _graph_fname: &str,
         _request: WorkItemClaimCapabilityMintRequest,
-        _authority: medulla_store::redb_store::work_item_capability::AuthenticatedAuthority,
+        _authority: medulla_work_store::redb_store::work_item_capability::AuthenticatedAuthority,
     ) -> Result<WorkItemClaimCapabilityResult, String> {
         Err("persistence backend does not support native WorkItem claim capabilities".to_string())
     }
@@ -596,7 +596,7 @@ pub trait PersistenceBackend: Send + Sync {
         &self,
         _graph_fname: &str,
         _request: WorkItemClaimCapabilityVerifyRequest,
-        _authority: medulla_store::redb_store::work_item_capability::AuthenticatedAuthority,
+        _authority: medulla_work_store::redb_store::work_item_capability::AuthenticatedAuthority,
     ) -> Result<WorkItemClaimCapabilityResult, String> {
         Err("persistence backend does not support native WorkItem claim capabilities".to_string())
     }

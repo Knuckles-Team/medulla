@@ -94,6 +94,9 @@ medulla-decision-stats = { path = "../medulla-decision-stats" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 medulla-source-types = { path = "../medulla-source-types" }
 medulla-work-types = { path = "../medulla-work-types" }
+medulla-store-apply = { path = "../medulla-store-apply" }
+medulla-work-store = { path = "../medulla-work-store" }
+medulla-lane-store = { path = "../medulla-lane-store" }
 
 [features]
 amqp-wire = ["server"]

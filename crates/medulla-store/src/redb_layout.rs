@@ -3,7 +3,7 @@
 use std::path::{Path, PathBuf};
 
 /// Unindexed filename accepted only by the explicit offline migrator.
-pub(crate) const RETIRED_SINGLE_SHARD_FILENAME: &str = "graph.redb";
+pub const RETIRED_SINGLE_SHARD_FILENAME: &str = "graph.redb";
 /// Hard resource ceiling shared by startup, restore, and migration.
 pub const MAX_SHARD_COUNT: usize = 64;
 

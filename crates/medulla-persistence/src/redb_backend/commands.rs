@@ -144,7 +144,7 @@ pub(crate) enum Cmd {
         graph: String,
         query: Box<PageQuery>,
         reply: std::sync::mpsc::SyncSender<
-            Result<Option<medulla_store::redb_store::GraphDumpPage>, String>,
+            Result<Option<medulla_store_apply::redb_store::dump::GraphDumpPage>, String>,
         >,
     },
     /// Export ONE graph's rows VERBATIM for an online shard move (CONCEPT:MEDULLA-KG.backend.catalog-shard-resolve). Runs
@@ -262,7 +262,7 @@ pub(crate) enum Cmd {
     MintWorkItemClaimCapability {
         graph: String,
         request: medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest,
-        authority: medulla_store::redb_store::work_item_capability::AuthenticatedAuthority,
+        authority: medulla_work_store::redb_store::work_item_capability::AuthenticatedAuthority,
         done: oneshot::Sender<
             Result<
                 medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResult,
@@ -274,7 +274,7 @@ pub(crate) enum Cmd {
         graph: String,
         request:
             medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest,
-        authority: medulla_store::redb_store::work_item_capability::AuthenticatedAuthority,
+        authority: medulla_work_store::redb_store::work_item_capability::AuthenticatedAuthority,
         done: oneshot::Sender<
             Result<
                 medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResult,
@@ -525,7 +525,7 @@ pub(crate) enum Cmd {
     /// Durably record the background node-payload scrub's cursor (EH-384) in
     /// its own control-only maintenance write.
     ScrubCursorPut {
-        cursor: medulla_store::redb_store::scrub::ScrubCursor,
+        cursor: medulla_store_apply::redb_store::scrub::ScrubCursor,
         done: oneshot::Sender<Result<(), String>>,
     },
 }

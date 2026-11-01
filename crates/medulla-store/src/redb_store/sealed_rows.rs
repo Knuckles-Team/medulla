@@ -29,7 +29,7 @@ impl medulla_kernel::sealed_guard::StoredNodeRows for DurableRows<'_, '_> {
 
 /// Refuse a generic node write that would change, remove or forge a stored sealed
 /// record row.
-pub(crate) fn refuse_generic_sealed_row_write(
+pub fn refuse_generic_sealed_row_write(
     graph: &str,
     method: &Method,
     nodes: &NodeRows<'_>,

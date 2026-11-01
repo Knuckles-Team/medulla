@@ -92,11 +92,11 @@ use medulla_store::redb_store::shard::take_test_barrier;
 use medulla_store::redb_store::shard::GRAFT_BEFORE_PROTOCOL_LOCK;
 #[cfg(feature = "security")]
 use medulla_store::redb_store::PROVENANCE_ANCHOR_MEMBERS;
-use medulla_store::redb_store::capacity_lease;
-use medulla_store::redb_store::development_lane;
-use medulla_store::redb_store::clear_change_material_rows_in_wtx;
-use medulla_store::redb_store::clear_graph_rows;
-use medulla_store::redb_store::decode_graph_meta_identity;
+use medulla_resource_store::redb_store::capacity_lease;
+use medulla_lane_store::redb_store::development_lane;
+use medulla_store_apply::redb_store::store_cleanup::clear_change_material_rows_in_wtx;
+use medulla_store_apply::redb_store::store_cleanup::clear_graph_rows;
+use medulla_store_apply::redb_store::dump::decode_graph_meta_identity;
 use medulla_store::redb_store::sanitize;
 use medulla_store::redb_store::CHANGE_BLOBS;
 use medulla_store::redb_store::CHANGE_CURSORS;
@@ -1394,7 +1394,7 @@ pub(crate) fn export_graph_raw(shard: &Shard, graph: &str) -> Result<RawGraphRow
 /// work-item authority is purged in this same transaction — otherwise a shard
 /// reuse/retry could make an old capability valid against a replacement image.
 fn clear_graph_scope(write: &impl OwnerPayloadWrite, graph: &str) -> Result<(), String> {
-    medulla_store::redb_store::work_item_capability::clear_graph_rows_in_payload(write)?;
+    medulla_work_store::redb_store::work_item_capability::clear_graph_rows_in_payload(write)?;
     {
         // `redb` refuses a second open of a table whose first handle is alive, so
         // the three projection tables are opened once, cleared together by the
@@ -1537,7 +1537,7 @@ fn apply_graph_delta(
     // The destination's private work-item authority is invalidated on EVERY delta
     // import for the same reason as on a raw import: a retry into a reused shard
     // must not leave an old capability valid against copied WorkItem rows.
-    medulla_store::redb_store::work_item_capability::clear_graph_rows_in_payload(write)?;
+    medulla_work_store::redb_store::work_item_capability::clear_graph_rows_in_payload(write)?;
     {
         let mut nodes = write.open_scoped_table(NODES)?;
         for (id, blob) in &delta.upsert_nodes {
@@ -1904,11 +1904,16 @@ pub(crate) fn graft_graph_from_with_payload(
             graph_fname,
             &source_handle,
             &source_identity,
+            &medulla_store_apply::redb_store::store_retirement::GraphShardRetirement,
         )?;
         return Err(FOREIGN_GRAFT_MARKER.to_string());
     }
     let destination_handle = dest_shard.graph(graph_fname)?;
-    let destination = retiring_graft_destination(dest_shard, &destination_handle);
+    let destination = retiring_graft_destination(
+        dest_shard,
+        &destination_handle,
+        &medulla_store_apply::redb_store::store_retirement::GraphShardRetirement,
+    );
     if source_marker == SourceGraftMarker::Absent {
         reserve_graft_destination(dest_shard, source, graph_fname)?;
     }
@@ -1925,7 +1930,7 @@ pub(crate) fn graft_graph_from_with_payload(
         .ok_or_else(|| "graph shard graft requires an owner payload transfer".to_string())?;
     let grafted = dest_shard.mutations().graft_scope_with_payload(
         GraftSource::new(source.mutations(), source.kernel(), source_handle.as_ref())
-            .with_owner_payload(&medulla_store::redb_store::GraphShardRetirement),
+            .with_owner_payload(&medulla_store_apply::redb_store::store_retirement::GraphShardRetirement),
         &destination,
         payload,
     )?;
@@ -1939,7 +1944,7 @@ mod store_graft_tests;
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use medulla_store::redb_store::encode_meta_with_incarnation;
+    use medulla_store::redb_store::store_read::encode_meta_with_incarnation;
 
     fn temp_path(tag: &str) -> std::path::PathBuf {
         medulla_store::redb_store::temp_path("medulla-online-reshard", tag)
