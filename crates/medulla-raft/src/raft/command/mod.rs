@@ -51,7 +51,7 @@ impl ReplicatedMutation {
     /// request carriers cannot mint that authority. Internal Raft producers are
     /// part of the trusted engine boundary and are inventoried separately from
     /// the single caller-command constructor below.
-    pub(crate) fn graph(method: Method, server_secret: &str) -> Result<Self, String> {
+    pub fn graph(method: Method, server_secret: &str) -> Result<Self, String> {
         Ok(Self::Graph {
             sealed_method: SealedNativeMethod::new(server_secret, &method)?,
         })
@@ -66,7 +66,7 @@ impl ReplicatedMutation {
         })
     }
 
-    pub(crate) fn open_graph(&self, server_secret: &str) -> Result<Option<Method>, String> {
+    pub fn open_graph(&self, server_secret: &str) -> Result<Option<Method>, String> {
         match self {
             Self::Graph { sealed_method } => {
                 sealed_method.open_graph_method(server_secret).map(Some)
@@ -109,7 +109,7 @@ impl ReplicatedMutation {
         }
     }
 
-    pub(crate) fn change_envelope(
+    pub fn change_envelope(
         envelope: &medulla_types::change_envelope::ChangeEnvelope,
         server_secret: &str,
     ) -> Result<Self, String> {
@@ -132,7 +132,7 @@ impl ReplicatedMutation {
         })
     }
 
-    pub(crate) fn open_change_envelope(
+    pub fn open_change_envelope(
         &self,
         server_secret: &str,
     ) -> Result<
@@ -212,7 +212,7 @@ impl ReplicatedMutation {
         })
     }
 
-    pub(crate) fn open_enrichment_park(
+    pub fn open_enrichment_park(
         &self,
         server_secret: &str,
     ) -> Result<Option<medulla_types::native_control::EnrichmentBudgetPark>, String> {

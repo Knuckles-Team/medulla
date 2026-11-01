@@ -226,7 +226,7 @@ macro_rules! declare_native_domains {
     ($( $(#[$attribute:meta])* $domain:ident, )+) => {
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
         #[repr(usize)]
-        pub(crate) enum NativeMutationDomain {
+        pub enum NativeMutationDomain {
             $(
                 $(#[$attribute])*
                 $domain,

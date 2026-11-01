@@ -5,11 +5,11 @@
 #[derive(Clone, Copy)]
 pub struct ReplicatedApplyScope {
     /// Leader-selected commit time every replica applies.
-    pub(crate) committed_at_ms: u64,
+    pub committed_at_ms: u64,
     /// Placement epoch of the committing authority.
-    pub(crate) placement_epoch: u64,
+    pub placement_epoch: u64,
     /// Fencing token of the committing authority, when present.
-    pub(crate) fencing_token: Option<u64>,
+    pub fencing_token: Option<u64>,
     /// Whether this command may bootstrap identity.
     pub identity_bootstrap: bool,
 }

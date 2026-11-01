@@ -12,7 +12,7 @@ mod catalog;
 mod sealed;
 
 use catalog::native_domain;
-pub(crate) use catalog::NativeMutationDomain;
+pub use catalog::NativeMutationDomain;
 pub use catalog::NATIVE_CONSENSUS_METHODS;
 use catalog::NATIVE_DOMAIN_CONSTRUCTORS;
 pub use sealed::SealedNativeMethod;
