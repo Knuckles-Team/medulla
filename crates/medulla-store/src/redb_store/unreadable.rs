@@ -41,7 +41,7 @@ impl UnsealFailure {
     }
 
     /// Stable machine code, used as the metric label.
-    pub(crate) fn code(self) -> &'static str {
+    pub fn code(self) -> &'static str {
         match self {
             Self::Oversize => "oversize",
             Self::SealedWithoutKey => "sealed_without_key",
