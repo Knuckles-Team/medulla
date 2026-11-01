@@ -72,10 +72,13 @@ pub fn run_statement(stmt: &Statement, ctx: &PlanCtx) -> Result<UqlResult, Strin
 #[cfg(feature = "federation")]
 fn apply_federation_budget(stmt: &Statement, ctx: &PlanCtx) -> Result<(), String> {
     if let Some(budget) = stmt.federation_budget {
-        let session = ctx.federation.ok_or(
-            "FEDERATION_BUDGET_HINT_REQUIRES_SESSION: bind a per-query federation session",
-        )?;
-        session.narrow_budget(budget);
+        let bound = ctx.federation.is_some_and(|foreign| foreign.narrow_budget(budget));
+        if !bound {
+            return Err(
+                "FEDERATION_BUDGET_HINT_REQUIRES_SESSION: bind a per-query federation session"
+                    .to_string(),
+            );
+        }
     }
     Ok(())
 }
@@ -84,7 +87,7 @@ fn apply_federation_budget(stmt: &Statement, ctx: &PlanCtx) -> Result<(), String
 /// EXPLAIN is plan-only; PROFILE adds actual fragments from the same request session.
 #[cfg(feature = "federation")]
 pub(crate) fn attach_federation_report(result: &mut UqlResult, stmt: &Statement, ctx: &PlanCtx) {
-    use crate::federation_opt::{explain_source, EstimateProvenance, FragmentTrace};
+    use crate::federation_opt::explain_source;
 
     fn remote_ops(ops: &[Op], reports: &mut Vec<UqlStageReport>) {
         for op in ops {
@@ -103,32 +106,6 @@ pub(crate) fn attach_federation_report(result: &mut UqlResult, stmt: &Statement,
                 }
             }
         }
-    }
-
-    fn actual(trace: &[FragmentTrace]) -> Vec<UqlStageReport> {
-        trace.iter().map(|fragment| {
-            let source = crate::federation_opt::redacted_label(&fragment.source);
-            let estimate = match fragment.estimate {
-                EstimateProvenance::NotNeeded => "not-needed".to_string(),
-                EstimateProvenance::Default => "default".to_string(),
-                EstimateProvenance::Learned { samples, rows } => {
-                    format!("learned(samples={samples}, rows={rows:.2})")
-                }
-            };
-            UqlStageReport {
-                stage: format!(
-                    "REMOTE {source} strategy={:?} keys={} limit={:?} requests={} fetched={} kept={} estimate={estimate}",
-                    fragment.strategy, fragment.keys_pushed, fragment.limit_pushed,
-                    fragment.requests, fragment.rows_fetched, fragment.rows_kept,
-                ),
-                estimated_rows: match fragment.estimate {
-                    EstimateProvenance::Learned { rows, .. } => rows,
-                    _ => 0.0,
-                },
-                rows: Some(fragment.rows_kept as u64),
-                micros: Some(fragment.elapsed_ms.saturating_mul(1000)),
-            }
-        }).collect()
     }
 
     let ops = binding_plan(stmt).ops;
@@ -154,8 +131,15 @@ pub(crate) fn attach_federation_report(result: &mut UqlResult, stmt: &Statement,
                 rows: None,
                 micros: None,
             });
-            if let Some(session) = ctx.federation {
-                stages.extend(actual(&session.trace()));
+            if let Some(foreign) = ctx.federation {
+                stages.extend(foreign.fragment_reports().into_iter().map(|fragment| {
+                    UqlStageReport {
+                        stage: fragment.stage,
+                        estimated_rows: fragment.estimated_rows,
+                        rows: Some(fragment.rows),
+                        micros: Some(fragment.micros),
+                    }
+                }));
             }
         }
         UqlResult::Rows { .. } => {}

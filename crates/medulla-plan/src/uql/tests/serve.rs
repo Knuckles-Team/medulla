@@ -145,7 +145,8 @@ fn explain_has_redacted_remote_and_local_sections_without_running_source() {
 #[cfg(feature = "federation")]
 #[test]
 fn budget_hint_requires_bound_session_and_never_bypasses_server_cap() {
-    use crate::federation_opt::{FederationBudget, FederationSession};
+    use crate::budget::FederationBudget;
+    use crate::federation_opt::FederationSession;
     let (view, semantic) = fixture();
     let unbound = PlanCtx::new(&view, &semantic);
     let hint = "PROFILE FEDERATION BUDGET (REQUESTS=5) MATCH (:Doc)";
@@ -159,7 +160,8 @@ fn budget_hint_requires_bound_session_and_never_bypasses_server_cap() {
         max_bind_keys: 4,
         max_wall_ms: 100,
     });
-    let bound = PlanCtx::new(&view, &semantic).with_federation(&session);
+    let federated = crate::federation_opt::FederatedExec::with_session(&session);
+    let bound = PlanCtx::new(&view, &semantic).with_foreign_executor(&federated);
     run(hint, &Params::new(), &bound).unwrap();
     assert_eq!(session.budget().max_requests, 2);
     run(
@@ -177,8 +179,9 @@ fn budget_hint_requires_bound_session_and_never_bypasses_server_cap() {
 #[test]
 fn profile_remote_fragment_has_redacted_golden_output_and_provenance() {
     use crate::federation_opt::{
-        EstimateProvenance, FederationBudget, FederationSession, FetchStrategy, FragmentTrace,
+        EstimateProvenance, FederationSession, FetchStrategy, FragmentTrace,
     };
+    use crate::budget::FederationBudget;
     let (view, semantic) = fixture();
     let session = FederationSession::new(FederationBudget::default());
     session.record(FragmentTrace {
@@ -195,7 +198,8 @@ fn profile_remote_fragment_has_redacted_golden_output_and_provenance() {
             rows: 12.5,
         },
     });
-    let ctx = PlanCtx::new(&view, &semantic).with_federation(&session);
+    let federated = crate::federation_opt::FederatedExec::with_session(&session);
+    let ctx = PlanCtx::new(&view, &semantic).with_foreign_executor(&federated);
     let stmt = parse_statement("PROFILE FOREIGN 'registered'", &Params::new()).unwrap();
     let mut result = UqlResult::Profile {
         columns: vec![],

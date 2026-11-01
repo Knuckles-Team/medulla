@@ -11,14 +11,14 @@ use crate::rowset::RowSet;
 const MAX_KEYS: usize = 100;
 const MAX_QUERY_BYTES: usize = 1024 * 1024;
 
-pub(crate) struct EngineRemote<'a> {
+pub struct EngineRemote<'a> {
     spec: &'a ForeignSourceSpec,
     identity: Identity,
     plan: Option<Plan>,
 }
 
 impl<'a> EngineRemote<'a> {
-    pub(crate) fn new(spec: &'a ForeignSourceSpec, identity: Identity) -> Self {
+    pub fn new(spec: &'a ForeignSourceSpec, identity: Identity) -> Self {
         let plan = match spec {
             ForeignSourceSpec::RemoteEngine { uql, .. } if !uql.trim().is_empty() => {
                 crate::uql::parse(uql).ok()
@@ -49,7 +49,7 @@ impl<'a> EngineRemote<'a> {
             })
     }
 
-    fn render(&self, request: &RemoteRequest) -> Option<String> {
+    pub fn render(&self, request: &RemoteRequest) -> Option<String> {
         let mut plan = self.plan.clone()?;
         if !request.keys.is_empty() {
             if !self.node_backed() || request.keys.len() > MAX_KEYS {
@@ -146,176 +146,5 @@ impl EngineRemote<'_> {
             ForeignSourceSpec::RemoteEngine { uql, .. } => uql.len(),
             _ => 0,
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::io::{Read, Write};
-    use std::net::TcpListener;
-
-    use medulla_types::acl::RequestContextClaims;
-    use medulla_types::wire::ForeignSourceSpec;
-
-    use super::{EngineRemote, RemoteFetch, RemoteRequest};
-    use crate::exec::{execute, PlanCtx};
-    use crate::federation_opt::engine_peer_tests::verified_claims;
-    use crate::federation_opt::remote::Identity;
-
-    fn remote(query: &str) -> ForeignSourceSpec {
-        ForeignSourceSpec::RemoteEngine {
-            endpoint: "127.0.0.1:1".into(),
-            graph: "g".into(),
-            secret: "test-secret".into(), // sanitizer:ignore test fixture, not a credential
-            context: Box::new(RequestContextClaims::default()),
-            uql: query.into(),
-            cypher: String::new(),
-            id_field: "id".into(),
-        }
-    }
-
-    #[test]
-    fn pushed_keys_and_limit_match_full_peer_execution() {
-        let spec = remote("MATCH (:Doc) |> WHERE year > 2023");
-        let peer = EngineRemote::new(&spec, Identity::of_spec(&spec, None));
-        let fixture = crate::fixture::build();
-        let ctx = PlanCtx::new(&fixture.view, &fixture.semantic);
-        let full = execute(
-            &crate::uql::parse("MATCH (:Doc) |> WHERE year > 2023").unwrap(),
-            &ctx,
-        )
-        .unwrap();
-        let request = RemoteRequest::keys(vec!["d2".into(), "d4".into()]);
-        let text = peer.render(&request).unwrap();
-        let pushed = execute(&crate::uql::parse(&text).unwrap(), &ctx).unwrap();
-        let wanted = full
-            .ids()
-            .into_iter()
-            .filter(|id| id == "d2" || id == "d4")
-            .collect::<Vec<_>>();
-        assert_eq!(pushed.ids(), wanted);
-        assert!(pushed.len() < full.len(), "the peer serves fewer rows");
-
-        let limited = peer
-            .render(&RemoteRequest {
-                limit: Some(2),
-                ..RemoteRequest::full()
-            })
-            .unwrap();
-        let first_two = execute(&crate::uql::parse(&limited).unwrap(), &ctx).unwrap();
-        assert_eq!(first_two.ids(), full.ids()[..2]);
-    }
-
-    #[test]
-    fn synthetic_and_non_pipeline_results_are_fetch_only() {
-        for query in [
-            "DECISIONS",
-            "PROFILE MATCH (:Doc)",
-            "MATCH (:Doc) WITH PROOF",
-        ] {
-            let spec = remote(query);
-            let peer = EngineRemote::new(&spec, Identity::of_spec(&spec, None));
-            assert!(peer.capabilities().max_keys().is_none());
-        }
-    }
-
-    #[test]
-    fn key_literals_are_quoted_and_parse_as_one_literal() {
-        let spec = remote("MATCH (:Doc)");
-        let peer = EngineRemote::new(&spec, Identity::of_spec(&spec, None));
-        let key = "x' |> LIMIT 0".to_string();
-        let request = RemoteRequest::keys(vec![key.clone()]);
-        let parsed = crate::uql::parse(&peer.render(&request).unwrap()).unwrap();
-        assert!(
-            matches!(&parsed.ops[1], medulla_types::wire::Op::Filter { preds }
-            if matches!(&preds[..], [medulla_types::wire::Pred::In { values, .. }]
-                if values == &vec![medulla_types::wire::PredLiteral::Str(key)]))
-        );
-    }
-
-    #[test]
-    fn framed_peer_serves_equivalent_rows_with_less_transfer() {
-        use medulla_protocol_types::{
-            protocol::Method, protocol::Request, protocol::Response, protocol::ResultPayload,
-        };
-
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let endpoint = listener.local_addr().unwrap().to_string();
-        let (done, served_counts) = std::sync::mpsc::sync_channel(1);
-        let ForeignSourceSpec::RemoteEngine {
-            secret: signing_secret,
-            ..
-        } = remote("")
-        else {
-            unreachable!()
-        };
-        std::thread::spawn(move || {
-            let fixture = crate::fixture::build();
-            let ctx = PlanCtx::new(&fixture.view, &fixture.semantic);
-            let mut served = Vec::new();
-            for _ in 0..3 {
-                let (mut stream, _) = listener.accept().unwrap();
-                let mut header = [0u8; 4];
-                stream.read_exact(&mut header).unwrap();
-                let mut body = vec![0; u32::from_be_bytes(header) as usize];
-                stream.read_exact(&mut body).unwrap();
-                let request: Request = rmp_serde::from_slice(&body).unwrap();
-                assert!(
-                    verified_claims(&signing_secret, &request).is_some(),
-                    "the peer serves only a request whose envelope verifies"
-                );
-                let Method::Uql { text, params, .. } = request.method else {
-                    panic!("the peer must receive UQL");
-                };
-                assert!(params.is_empty());
-                let statement = crate::uql::parse_statement(&text, &params).unwrap();
-                let result = crate::uql::serve::run_statement(&statement, &ctx).unwrap();
-                let medulla_types::wire::UqlResult::Rows { rows, .. } = &result else {
-                    panic!("rows expected");
-                };
-                served.push(rows.len());
-                let payload = ResultPayload::Raw(rmp_serde::to_vec_named(&result).unwrap());
-                let response = Response::ok(request.id, payload);
-                let encoded = rmp_serde::to_vec_named(&response).unwrap();
-                stream
-                    .write_all(&(encoded.len() as u32).to_be_bytes())
-                    .unwrap();
-                stream.write_all(&encoded).unwrap();
-            }
-            done.send(served).unwrap();
-        });
-
-        let mut spec = remote("MATCH (:Doc) |> WHERE year > 2023");
-        let ForeignSourceSpec::RemoteEngine {
-            endpoint: host,
-            context,
-            ..
-        } = &mut spec
-        else {
-            unreachable!()
-        };
-        *host = endpoint;
-        context.principal = "agent:peer-test".into();
-        context.agent_id = "agent:peer-test".into();
-        context.tenant = "tenant-test".into();
-        context.audience = "medulla".into();
-        context.policy_version = "test".into();
-        let peer = EngineRemote::new(&spec, Identity::of_spec(&spec, None));
-        let full = peer.fetch(&RemoteRequest::full()).unwrap();
-        let selected = peer
-            .fetch(&RemoteRequest::keys(vec!["d2".into(), "d4".into()]))
-            .unwrap();
-        let limited = peer
-            .fetch(&RemoteRequest {
-                limit: Some(2),
-                ..RemoteRequest::full()
-            })
-            .unwrap();
-        assert_eq!(selected.ids(), vec!["d2", "d4"]);
-        assert_eq!(limited.ids(), full.ids()[..2]);
-        let served = served_counts
-            .recv_timeout(std::time::Duration::from_secs(30))
-            .expect("the peer served all three requests");
-        assert_eq!(served, vec![full.len(), 2, 2]);
     }
 }

@@ -174,7 +174,8 @@ proptest! {
         let (view, semantic) = build_dense(40);
         let registry = foreign_registry();
         let plan = medulla_plan::uql::parse(&q).expect("generated UQL must be valid");
-        let ctx = PlanCtx::new(&view, &semantic).with_foreign(&registry);
+        let federated = medulla_plan::federation_opt::FederatedExec::with_registry(&registry);
+        let ctx = PlanCtx::new(&view, &semantic).with_foreign_executor(&federated);
 
         let a = execute(&plan, &ctx).expect("a valid plan must execute without error");
 
@@ -216,7 +217,8 @@ proptest! {
             .map(|q| medulla_plan::uql::parse(q).expect("valid UQL"))
             .collect();
         let reference: Vec<Vec<(String, Option<u32>)>> = {
-            let ctx = PlanCtx::new(&view, &semantic).with_foreign(&registry);
+            let federated = medulla_plan::federation_opt::FederatedExec::with_registry(&registry);
+            let ctx = PlanCtx::new(&view, &semantic).with_foreign_executor(&federated);
             plans.iter().map(|p| stable_rows(&execute(p, &ctx).unwrap())).collect()
         };
 
@@ -232,7 +234,8 @@ proptest! {
             let handles: Vec<_> = (0..8)
                 .map(|_| {
                     scope.spawn(move || {
-                        let ctx = PlanCtx::new(view_ref, semantic_ref).with_foreign(registry_ref);
+                        let federated = medulla_plan::federation_opt::FederatedExec::with_registry(registry_ref);
+                        let ctx = PlanCtx::new(view_ref, semantic_ref).with_foreign_executor(&federated);
                         for (i, plan) in plans_ref.iter().enumerate() {
                             let got = stable_rows(&execute(plan, &ctx).unwrap());
                             assert_eq!(

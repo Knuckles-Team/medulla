@@ -138,6 +138,7 @@ use medulla_core::graph::GraphView;
 use medulla_modality::EvidenceLocus;
 use serde::{Deserialize, Serialize};
 
+use crate::dag::ProjectionSchema;
 use crate::rowset::RowSet;
 
 /// Decode the row's certified governed locus. There is one property and one shape:
@@ -332,19 +333,6 @@ fn collect_premise_ids(
 pub struct PayloadRef {
     pub node_id: String,
     pub has_payload: bool,
-}
-
-/// Which columns were requested for the projection, and which of those were
-/// actually present on at least one decoded row. v1 keeps this minimal — just the
-/// two name lists a caller checks "did I get what I asked for" against.
-/// `Serialize`/`Deserialize` derived so a [`crate::dag::PlanNode`]'s optional
-/// `input_schema`/`output_schema` round-trips over the wire — needed for the X4
-/// cross-shard EXCHANGE operator (`src/raft/exchange.rs`) to ship a whole `PlanDag`
-/// branch to a remote Raft group.
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
-pub struct ProjectionSchema {
-    pub requested: Vec<String>,
-    pub present: Vec<String>,
 }
 
 /// The resolution mode used to populate `source_refs`/`evidence_refs` on the rows

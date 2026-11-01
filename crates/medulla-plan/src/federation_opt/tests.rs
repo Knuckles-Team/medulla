@@ -19,7 +19,8 @@ use super::capability::{
 use super::remote::{Identity, RemoteFetch};
 use super::run::Fragment;
 use super::stats::fingerprint;
-use super::{FederationBudget, FederationSession, FetchStrategy, BUDGET_EXCEEDED, REQUIRES_KEYS};
+use crate::budget::FederationBudget;
+use super::{FederationSession, FetchStrategy, BUDGET_EXCEEDED, REQUIRES_KEYS};
 use crate::algebra::Op;
 use crate::exec::{execute, PlanCtx};
 use crate::federation_tests::MockHttpAllowGuard;
@@ -169,7 +170,8 @@ fn execute_federated(
     session: &FederationSession,
     plan: Plan,
 ) -> Result<RowSet, String> {
-    let ctx = PlanCtx::new(&fx.view, &fx.semantic).with_federation(session);
+    let federated = crate::federation_opt::FederatedExec::with_session(session);
+    let ctx = PlanCtx::new(&fx.view, &fx.semantic).with_foreign_executor(&federated);
     execute(&plan, &ctx)
 }
 

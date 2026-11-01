@@ -32,7 +32,7 @@ fn version_pragma_and_modes() {
 #[cfg(feature = "federation")]
 #[test]
 fn federation_budget_hint_is_typed_and_cannot_disappear_in_pipeline_parse() {
-    use crate::federation_opt::FederationBudget;
+    use crate::budget::FederationBudget;
     let text =
         "PROFILE FEDERATION BUDGET (REQUESTS=2, ROWS=9, BIND_KEYS=3, WALL_MS=40) FOREIGN 'safe'";
     let parsed = stmt(text);

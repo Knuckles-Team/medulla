@@ -361,7 +361,10 @@ pub(super) fn apply_single_feature_ops(
         Op::Udf { id } => udf_transform(ctx, &input, id),
         #[cfg(feature = "federation")]
         Op::ForeignScan { source, join } => {
-            crate::federation_opt::foreign_scan(op, input, source, *join, ctx)
+            match ctx.federation {
+                Some(foreign) => foreign.foreign_scan(op, input, source, *join, ctx),
+                None => Err(unbound_foreign_scan(source)),
+            }
         }
         #[cfg(feature = "probabilistic")]
         Op::Probabilistic { query } => Ok(probabilistic_op(ctx.view, input, query)),
@@ -395,7 +398,10 @@ fn apply_temporal_and_limit(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<Row
         // the name MARKER the UQL clause lowers to; resolves through the ctx registry
         // (`federation` build) or errors cleanly; foreign-source intent is never discarded.
         #[cfg(feature = "federation")]
-        Op::Foreign { name } => crate::federation_opt::foreign_named(op, name, ctx),
+        Op::Foreign { name } => match ctx.federation {
+            Some(foreign) => foreign.foreign_named(op, name, ctx),
+            None => Err("FOREIGN requires a bound foreign-source registry".to_string()),
+        },
         #[cfg(not(feature = "federation"))]
         Op::Foreign { .. } => Err("FOREIGN requires federation support in this build".to_string()),
         Op::Limit { k } => Ok(input.limit(*k)),
@@ -489,5 +495,18 @@ pub(super) fn apply_timeseries(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<
             *to,
         )),
         _ => unreachable!("apply routed a non timeseries Op here"),
+    }
+}
+
+/// The refusal of a `ForeignScan` when no foreign executor is bound to the ctx.
+#[cfg(feature = "federation")]
+fn unbound_foreign_scan(source: &medulla_types::wire::ForeignSourceSpec) -> String {
+    match source {
+        medulla_types::wire::ForeignSourceSpec::Named { name } => format!(
+            "federation: Op::ForeignScan names foreign source '{name}' but no \
+             ForeignSourceRegistry is attached to the PlanCtx \
+             (CONCEPT:MEDULLA-KG.query.symmetric-foreign-scan)"
+        ),
+        _ => "federation: Op::ForeignScan needs a foreign executor bound to the PlanCtx".to_string(),
     }
 }

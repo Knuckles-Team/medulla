@@ -1119,7 +1119,8 @@ fn foreign_id_filters_rematerialize_local_properties_before_execution() {
         vec![("inc_a".into(), None), ("foreign-only".into(), None)],
     );
     let semantic = SemanticStore::new();
-    let ctx = PlanCtx::new(&view, &semantic).with_foreign(&registry);
+    let federated = crate::federation_opt::FederatedExec::with_registry(&registry);
+    let ctx = PlanCtx::new(&view, &semantic).with_foreign_executor(&federated);
     let plan = context
         .ground(&crate::uql::parse("FOREIGN 'remote' |> WHERE priority = '1'").unwrap())
         .unwrap();

@@ -9,7 +9,8 @@ use super::capability::{RemoteRequest, SourceCapabilities, SourceRate};
 use super::remote::{Identity, RemoteFetch};
 use super::run::Fragment;
 use super::stats::fingerprint;
-use super::{FederationBudget, FederationSession, BUDGET_EXCEEDED};
+use crate::budget::FederationBudget;
+use super::{FederationSession, BUDGET_EXCEEDED};
 use crate::rowset::RowSet;
 
 fn identity(tag: &str) -> Identity {

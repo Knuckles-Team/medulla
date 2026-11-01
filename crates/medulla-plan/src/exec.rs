@@ -38,6 +38,8 @@ mod reliability;
 pub(crate) mod reason;
 pub use decisions::{DecisionSource, LearnedReliability};
 pub(crate) mod dispatch;
+#[cfg(feature = "federation")]
+pub mod foreign;
 mod expand;
 mod pred_sql;
 pub mod propagate;
@@ -103,16 +105,13 @@ pub struct PlanCtx<'a> {
     /// Gated behind `wasm-udf`, so a non-wasm build's `PlanCtx` is unchanged.
     #[cfg(feature = "wasm-udf")]
     pub udf: Option<&'a medulla_wasm::UdfRegistry>,
-    /// The federation foreign-source registry backing `Op::Foreign` (the UQL
-    /// `FOREIGN "<name>"` marker) and a `Named` `Op::ForeignScan` (CONCEPT:MEDULLA-KG.query.closure-backed-source).
-    /// `None` when no foreign sources are registered; a name-resolving op then fails
-    /// rather than silently preserving its input. Gated behind `federation`.
+    /// The foreign-source executor backing `Op::Foreign` (the UQL `FOREIGN "<name>"`
+    /// marker) and `Op::ForeignScan` (CONCEPT:MEDULLA-KG.query.closure-backed-source):
+    /// registry resolution, the federation optimizer and the per-query session live behind
+    /// it. `None` when no foreign sources are bound; a name-resolving op then fails rather
+    /// than silently preserving its input. Gated behind `federation`.
     #[cfg(feature = "federation")]
-    pub foreign: Option<&'a crate::federation::ForeignSourceRegistry>,
-    /// The per-query federation optimizer state (budget, LIMIT hints, fragment trace —
-    /// EH-563). `None` ⇒ each foreign op runs under a fresh default budget, untraced.
-    #[cfg(feature = "federation")]
-    pub federation: Option<&'a crate::federation_opt::FederationSession>,
+    pub federation: Option<&'a dyn foreign::ForeignExecutor>,
     /// CONCEPT:MEDULLA-KG.storage.derived-tensor-writeback-sink — the content-addressed [`medulla_tensor::TensorStore`] into which the
     /// tensor executor WRITES BACK every derived tensor an `Op::TensorOp` produces, so a
     /// derived tensor becomes a durable, dedup-shared CAS blob addressable by its
@@ -354,8 +353,6 @@ impl<'a> PlanCtx<'a> {
             #[cfg(feature = "wasm-udf")]
             udf: None,
             #[cfg(feature = "federation")]
-            foreign: None,
-            #[cfg(feature = "federation")]
             federation: None,
             #[cfg(feature = "tensor")]
             tensor_store: None,
@@ -460,24 +457,13 @@ impl<'a> PlanCtx<'a> {
         self
     }
 
-    /// Attach a foreign-source registry so `Op::Foreign` / a `Named` `Op::ForeignScan`
-    /// resolve their name → rows through it (CONCEPT:MEDULLA-KG.query.closure-backed-source). A server/facade builds the
-    /// registry once at setup and threads it in here — the library seam that keeps the
+    /// Attach the foreign-source executor so `Op::Foreign` / `Op::ForeignScan` resolve
+    /// their sources through it (CONCEPT:MEDULLA-KG.query.closure-backed-source). A
+    /// server/facade builds it once per query — the library seam that keeps the
     /// name→source binding out of the wire DTO.
     #[cfg(feature = "federation")]
-    pub fn with_foreign(mut self, registry: &'a crate::federation::ForeignSourceRegistry) -> Self {
-        self.foreign = Some(registry);
-        self
-    }
-
-    /// Bind the query's federation session (EH-563): its budget bounds every remote
-    /// fragment, `execute` records the plan's LIMIT hints on it, and it collects the trace.
-    #[cfg(feature = "federation")]
-    pub fn with_federation(
-        mut self,
-        session: &'a crate::federation_opt::FederationSession,
-    ) -> Self {
-        self.federation = Some(session);
+    pub fn with_foreign_executor(mut self, executor: &'a dyn foreign::ForeignExecutor) -> Self {
+        self.federation = Some(executor);
         self
     }
 
@@ -546,7 +532,9 @@ impl<'a> PlanCtx<'a> {
 pub fn execute(plan: &Plan, ctx: &PlanCtx) -> Result<RowSet, String> {
     let optimized = plan_optimize(plan.clone(), ctx);
     #[cfg(feature = "federation")]
-    crate::federation_opt::prepare(ctx, &optimized.ops);
+    if let Some(foreign) = ctx.federation {
+        foreign.prepare(ctx, &optimized.ops);
+    }
     let rows = crate::runtime::execute_ops(&optimized.ops, ctx)?;
     ctx.budget.check_result(rows.len())?;
     Ok(rows)

@@ -84,9 +84,9 @@ pub struct PlanNode {
     /// Optional declared input projection/schema (CONCEPT:MEDULLA-KG.query.knowledge-set) —
     /// EXPLAIN PLAN surfaces it when set; execution does not require it. `None` by
     /// default (every existing plan carries no schema annotation).
-    pub input_schema: Option<crate::knowledge::ProjectionSchema>,
+    pub input_schema: Option<ProjectionSchema>,
     /// Optional declared output projection/schema, mirroring `input_schema`.
-    pub output_schema: Option<crate::knowledge::ProjectionSchema>,
+    pub output_schema: Option<ProjectionSchema>,
     /// Whether provenance (source/evidence refs, CONCEPT:MEDULLA-KG.epistemic.epistemic-substrate)
     /// should be pushed down and resolved at this node when the plan is EXPLAINed
     /// (`EXPLAIN PROVENANCE`, E5 phase 4). `false` by default — a bare conversion from
@@ -374,4 +374,17 @@ mod tests {
         ]);
         assert!(dag.sink().is_err());
     }
+}
+
+/// Which columns were requested for the projection, and which of those were
+/// actually present on at least one decoded row. v1 keeps this minimal — just the
+/// two name lists a caller checks "did I get what I asked for" against.
+/// `Serialize`/`Deserialize` derived so a [`crate::dag::PlanNode`]'s optional
+/// `input_schema`/`output_schema` round-trips over the wire — needed for the X4
+/// cross-shard EXCHANGE operator (`src/raft/exchange.rs`) to ship a whole `PlanDag`
+/// branch to a remote Raft group.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct ProjectionSchema {
+    pub requested: Vec<String>,
+    pub present: Vec<String>,
 }

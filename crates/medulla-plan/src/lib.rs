@@ -105,7 +105,7 @@ pub mod budget;
 /// its dependency nodes), with a lossless conversion from every existing linear `Plan` (a
 /// degenerate chain). `Op` is unchanged; execution over a `PlanDag` lives in
 /// [`dag_exec`]. Sits beside `exec`/`knowledge` under the same `query` gate (a `PlanNode`
-/// carries an optional `knowledge::ProjectionSchema`).
+/// carries an optional `dag::ProjectionSchema`).
 #[cfg(feature = "query")]
 pub mod dag;
 /// Physical execution of a [`dag::PlanDag`] (CONCEPT:MEDULLA-KG.query.plan-dag-exec, E5 phase 2) —
@@ -194,6 +194,9 @@ pub mod federation_cypher_unbound;
 /// into foreign sources, bind joins, the per-query network budget and the fragment trace.
 #[cfg(feature = "federation")]
 pub mod federation_opt;
+/// Pushdown to a peer engine, end to end (they run `uql::serve::run_statement`, so they sit above federation).
+#[cfg(all(test, feature = "federation"))]
+mod engine_peer_tests;
 /// The Spark job backend source's explicit-registration half
 /// (MEDULLA-DURABLE-KERNEL-R024.8): typed `artifact://`-scheme shape validation
 /// plus an explicit, named refusal, since no bound Spark artifact-store
@@ -288,7 +291,7 @@ pub use exec::{execute, PlanCtx, PlanExt};
 /// its physical executor, so a caller building a genuine multi-branch plan names them
 /// through `medulla_plan` directly (mirroring how `Op`/`Plan` are re-exported from `algebra`).
 #[cfg(feature = "query")]
-pub use dag::{NodeId, PlanDag, PlanNode};
+pub use dag::{NodeId, PlanDag, PlanNode, ProjectionSchema};
 
 #[cfg(feature = "query")]
 pub use dag_exec::{execute_dag, execute_dag_with};
@@ -301,7 +304,7 @@ pub use incremental::{Circuit, Delta, UnsupportedOp, ZRow};
 /// row/set shape a caller builds from a finished `RowSet` + the `GraphView` it ran over.
 #[cfg(feature = "query")]
 pub use knowledge::{
-    KnowledgeRow, KnowledgeSet, PayloadRef, PolicyFrame, ProjectionSchema, ProvenanceFrame,
+    KnowledgeRow, KnowledgeSet, PayloadRef, PolicyFrame, ProvenanceFrame,
 };
 
 /// The Arrow-columnar `KnowledgeBatch` surface (CONCEPT:MEDULLA-P1-2): the RecordBatch-

@@ -86,3 +86,64 @@ mod tests {
             .contains("max_traversal_visits"));
     }
 }
+
+/// Bounds one query may spend across every remote fragment. A request may narrow it
+/// ([`Self::narrowed`]), never widen it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct FederationBudget {
+    /// Remote requests (round trips) across the query.
+    pub max_requests: u32,
+    /// Rows received from remote sources across the query.
+    pub max_rows: usize,
+    /// Local ids one bind join may ship as keys.
+    pub max_bind_keys: usize,
+    /// Wall-clock milliseconds spent in remote fragments.
+    pub max_wall_ms: u64,
+}
+
+impl Default for FederationBudget {
+    fn default() -> Self {
+        Self {
+            max_requests: 256,
+            max_rows: 250_000,
+            max_bind_keys: 10_000,
+            max_wall_ms: 60_000,
+        }
+    }
+}
+
+impl FederationBudget {
+    /// The server budget: the defaults, each overridable by
+    /// `MEDULLA_FEDERATION_MAX_{REQUESTS,ROWS,BIND_KEYS,WALL_MS}`.
+    pub fn from_env() -> Self {
+        let d = Self::default();
+        Self {
+            max_requests: medulla_types::runtime_limit::positive_from_env(
+                "MEDULLA_FEDERATION_MAX_REQUESTS",
+                d.max_requests,
+            ),
+            max_rows: medulla_types::runtime_limit::positive_from_env(
+                "MEDULLA_FEDERATION_MAX_ROWS",
+                d.max_rows,
+            ),
+            max_bind_keys: medulla_types::runtime_limit::positive_from_env(
+                "MEDULLA_FEDERATION_MAX_BIND_KEYS",
+                d.max_bind_keys,
+            ),
+            max_wall_ms: medulla_types::runtime_limit::positive_from_env(
+                "MEDULLA_FEDERATION_MAX_WALL_MS",
+                d.max_wall_ms,
+            ),
+        }
+    }
+
+    /// The field-wise minimum of `self` and `other` — a caller can only tighten.
+    pub fn narrowed(self, other: Self) -> Self {
+        Self {
+            max_requests: self.max_requests.min(other.max_requests),
+            max_rows: self.max_rows.min(other.max_rows),
+            max_bind_keys: self.max_bind_keys.min(other.max_bind_keys),
+            max_wall_ms: self.max_wall_ms.min(other.max_wall_ms),
+        }
+    }
+}

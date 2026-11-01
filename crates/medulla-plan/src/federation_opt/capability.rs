@@ -418,7 +418,7 @@ pub fn connection_protocol_row(
 }
 
 /// A per-query cost estimate for one foreign source fragment: how many rows it is expected
-/// to return, and what evaluating it costs against the query's [`super::FederationBudget`].
+/// to return, and what evaluating it costs against the query's [`crate::budget::FederationBudget`].
 /// Both fields are estimates (from [`super::SourceStats`] or a source's own declared
 /// defaults), never a post-hoc measurement — the optimizer consults them BEFORE it fetches
 /// anything, to decide whether a pushdown is worth attempting under the remaining budget.

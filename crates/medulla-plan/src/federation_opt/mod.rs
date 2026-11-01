@@ -22,13 +22,13 @@
 
 mod budget;
 mod cache;
-mod capability;
+pub mod capability;
 mod columns;
-mod engine;
+pub mod engine;
 mod http;
 mod limiter;
 pub(crate) mod oq2;
-mod remote;
+pub mod remote;
 mod run;
 mod session;
 mod sql;
@@ -39,11 +39,9 @@ mod trace;
 #[cfg(test)]
 mod bounds_tests;
 #[cfg(test)]
-mod engine_peer_tests;
-#[cfg(test)]
 mod tests;
 
-pub use budget::{FederationBudget, BUDGET_EXCEEDED, REQUIRES_KEYS, RESULT_INCOMPLETE};
+pub use budget::{BUDGET_EXCEEDED, REQUIRES_KEYS, RESULT_INCOMPLETE};
 pub use cache::{FragmentCacheScope, SourceWatermark};
 pub use capability::{
     connection_protocol_row, ConnectionProtocol, ForeignSourceCapability, FullFetch, KeyLookup,
@@ -62,9 +60,9 @@ pub use stats::{stats_snapshot, SourceStats};
 pub(crate) use trace::redacted_label;
 pub use trace::{render_trace, EstimateProvenance, FetchStrategy, FragmentTrace};
 
-pub(crate) use run::{foreign_named, foreign_scan};
+mod federated;
+pub use federated::FederatedExec;
 
-use crate::exec::PlanCtx;
 use crate::federation::ForeignSourceRegistry;
 use crate::rowset::RowSet;
 use medulla_types::wire::ForeignSourceSpec;
@@ -90,13 +88,6 @@ pub(crate) fn explain_source(op: &crate::algebra::Op) -> Option<String> {
         _ => return None,
     };
     Some(trace::redacted_label(&identity.label))
-}
-
-/// Record the LIMIT hints of the plan about to run on the ctx's session, if one is bound.
-pub(crate) fn prepare(ctx: &PlanCtx, ops: &[crate::algebra::Op]) {
-    if let Some(session) = ctx.federation {
-        session.prepare(ops);
-    }
 }
 
 /// Resolve a foreign [`ForeignSourceSpec`] to ALL of its rows through the single leaf-source

@@ -18,7 +18,7 @@ use super::strategy::{choose_join, BatchSizer, JoinInputs, JoinStrategy};
 use super::trace::{FetchStrategy, FragmentTrace};
 use super::{fuse_foreign, stats};
 use crate::algebra::Op;
-use crate::exec::PlanCtx;
+use crate::federation::ForeignSourceRegistry;
 use crate::rowset::RowSet;
 
 /// `Op::ForeignScan { source, join }`: a source read (`join == false`, or an empty input) or
@@ -28,19 +28,20 @@ pub(crate) fn foreign_scan(
     input: RowSet,
     source: &ForeignSourceSpec,
     join: bool,
-    ctx: &PlanCtx,
+    registry: Option<&ForeignSourceRegistry>,
+    session: Option<&FederationSession>,
 ) -> Result<RowSet, String> {
     let remote = super::enabled()
-        .then(|| super::remote::resolve(source, ctx.foreign))
+        .then(|| super::remote::resolve(source, registry))
         .flatten();
     let Some(remote) = remote else {
         return Ok(fuse_foreign(
             input,
-            super::foreign_source_rows(source, ctx.foreign)?,
+            super::foreign_source_rows(source, registry)?,
             join,
         ));
     };
-    with_session(ctx, |session| {
+    with_session(session, |session| {
         let fragment = Fragment::new(remote.as_ref(), session);
         if join && !input.is_empty() {
             let fetched = fragment.join(&input)?;
@@ -53,9 +54,13 @@ pub(crate) fn foreign_scan(
 
 /// `Op::Foreign { name }` (UQL `FOREIGN "<name>"`): the named source's rows replace the
 /// input, with a following `Limit` pushed when the source allows it.
-pub(crate) fn foreign_named(op: &Op, name: &str, ctx: &PlanCtx) -> Result<RowSet, String> {
-    let registry = ctx
-        .foreign
+pub(crate) fn foreign_named(
+    op: &Op,
+    name: &str,
+    registry: Option<&ForeignSourceRegistry>,
+    session: Option<&FederationSession>,
+) -> Result<RowSet, String> {
+    let registry = registry
         .ok_or_else(|| "FOREIGN requires a bound foreign-source registry".to_string())?;
     let remote = super::enabled()
         .then(|| super::remote::resolve_named(name, registry))
@@ -63,15 +68,18 @@ pub(crate) fn foreign_named(op: &Op, name: &str, ctx: &PlanCtx) -> Result<RowSet
     let Some(remote) = remote else {
         return registry.resolve(name);
     };
-    with_session(ctx, |session| {
+    with_session(session, |session| {
         let fragment = Fragment::new(remote.as_ref(), session);
         Ok(fragment.source(session.limit_hint(op))?.finish(session))
     })
 }
 
-/// Run `f` under the ctx's session, or a fresh server-budget session when none is bound.
-fn with_session<R>(ctx: &PlanCtx, f: impl FnOnce(&FederationSession) -> R) -> R {
-    match ctx.federation {
+/// Run `f` under the bound session, or a fresh server-budget session when none is bound.
+fn with_session<R>(
+    bound: Option<&FederationSession>,
+    f: impl FnOnce(&FederationSession) -> R,
+) -> R {
+    match bound {
         Some(session) => f(session),
         None => f(&FederationSession::from_env()),
     }
@@ -522,7 +530,7 @@ mod cache_tests {
                 )]),
             ))
         };
-        let session = FederationSession::new(crate::federation_opt::FederationBudget::default());
+        let session = FederationSession::new(crate::budget::FederationBudget::default());
         session.set_cache_scope(Some(scope("owner-one", "lsn-1", now_ms() + 30_000)));
         let request = RemoteRequest::keys(vec!["needle".into()]);
         let caps = remote.capabilities();

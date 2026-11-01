@@ -399,7 +399,9 @@ pub(crate) fn run_unified_with<T>(
     // foreign registry so a served `Op::Foreign` (`FOREIGN "<name>"`) / a `Named`
     // `Op::ForeignScan` resolves the caller's OWN registered sources (EH-373).
     #[cfg(feature = "federation")]
-    let ctx = run_unified_bind_foreign(ctx, served.foreign, federation.as_ref());
+    let federated =
+        medulla_plan::federation_opt::FederatedExec::new(served.foreign, federation.as_ref());
+    let ctx = run_unified_bind_foreign(ctx, &federated);
     // CONCEPT:MEDULLA-KG.query.bind-server-side-text — bind the server-side text→vector embedder so a UQL `RANK BY ~ "text"`
     // (`Op::RankEmbed`) resolves its query vector at exec time (the NL→vector seam,
     // MEDULLA-411). This is the facade INJECTION POINT: the engine stores embeddings but
@@ -484,21 +486,16 @@ fn log_federation_trace(session: Option<&medulla_plan::federation_opt::Federatio
 #[cfg(feature = "federation")]
 pub(crate) fn run_unified_bind_foreign<'a>(
     ctx: medulla_plan::PlanCtx<'a>,
-    foreign_registry: Option<&'a medulla_plan::federation::ForeignSourceRegistry>,
-    federation: Option<&'a medulla_plan::federation_opt::FederationSession>,
+    federated: &'a medulla_plan::federation_opt::FederatedExec<'a>,
 ) -> medulla_plan::PlanCtx<'a> {
-    if let Some(session) = federation {
-        session
-            .set_cache_scope(foreign_registry.and_then(|registry| registry.cache_scope().cloned()));
+    if let Some(session) = federated.session {
+        session.set_cache_scope(
+            federated
+                .registry
+                .and_then(|registry| registry.cache_scope().cloned()),
+        );
     }
-    let ctx = match foreign_registry {
-        Some(registry) => ctx.with_foreign(registry),
-        None => ctx,
-    };
-    match federation {
-        Some(session) => ctx.with_federation(session),
-        None => ctx,
-    }
+    ctx.with_foreign_executor(federated)
 }
 
 /// The `Op::RankEmbed` leg-binding of [`run_unified_with`] (CONCEPT:MEDULLA-KG.query.bind-server-side-text): attach the

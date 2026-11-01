@@ -86,7 +86,8 @@ fn eg073_named_foreign_scan_materializes_registered_rows() {
     }]);
 
     let fx = crate::fixture::build();
-    let ctx = PlanCtx::new(&fx.view, &fx.semantic).with_foreign(&registry);
+    let federated = crate::federation_opt::FederatedExec::with_registry(&registry);
+    let ctx = PlanCtx::new(&fx.view, &fx.semantic).with_foreign_executor(&federated);
     let out = execute(&plan, &ctx).unwrap();
 
     assert_eq!(
@@ -129,7 +130,8 @@ fn eg073_named_foreign_scan_composes_with_a_local_join() {
         },
         Op::Limit { k: 10 },
     ]);
-    let ctx = PlanCtx::new(&fx.view, &fx.semantic).with_foreign(&registry);
+    let federated = crate::federation_opt::FederatedExec::with_registry(&registry);
+    let ctx = PlanCtx::new(&fx.view, &fx.semantic).with_foreign_executor(&federated);
     let fused = execute(&plan, &ctx).unwrap();
 
     // Oracle: local filter year>2023 → {d1,d2,d4,d5}; foreign {d2,d4}; ∩ → {d2,d4}; rank.
@@ -175,7 +177,8 @@ fn eg073_op_foreign_marker_resolves_through_registry() {
         },
         Op::Limit { k: 10 },
     ]);
-    let ctx = PlanCtx::new(&fx.view, &fx.semantic).with_foreign(&registry);
+    let federated = crate::federation_opt::FederatedExec::with_registry(&registry);
+    let ctx = PlanCtx::new(&fx.view, &fx.semantic).with_foreign_executor(&federated);
     let mut ids = execute(&plan, &ctx).unwrap().ids();
     ids.sort();
     assert_eq!(
@@ -199,7 +202,8 @@ fn eg073_unbound_named_source_errors_cleanly() {
         }),
         join: false,
     }]);
-    let ctx = PlanCtx::new(&fx.view, &fx.semantic).with_foreign(&registry);
+    let federated = crate::federation_opt::FederatedExec::with_registry(&registry);
+    let ctx = PlanCtx::new(&fx.view, &fx.semantic).with_foreign_executor(&federated);
     let err = execute(&scan, &ctx).unwrap_err();
     assert!(
         err.contains("no foreign source registered") && err.contains("ghost"),
@@ -272,7 +276,8 @@ fn eg073_spec_source_rejects_a_nested_named_spec() {
     let plan = Plan::new(vec![Op::Foreign {
         name: "loopy".into(),
     }]);
-    let ctx = PlanCtx::new(&fx.view, &fx.semantic).with_foreign(&registry);
+    let federated = crate::federation_opt::FederatedExec::with_registry(&registry);
+    let ctx = PlanCtx::new(&fx.view, &fx.semantic).with_foreign_executor(&federated);
     let err = execute(&plan, &ctx).unwrap_err();
     assert!(
         err.contains("resolves through the ForeignSourceRegistry"),

@@ -74,7 +74,7 @@ pub struct Statement {
     pub mode: Mode,
     /// Caller-requested remote work cap; execution narrows the server's cap with it.
     #[cfg(feature = "federation")]
-    pub federation_budget: Option<crate::federation_opt::FederationBudget>,
+    pub federation_budget: Option<crate::budget::FederationBudget>,
     pub body: Body,
     pub annotations: Annotations,
     pub warnings: Vec<UqlWarning>,
@@ -205,13 +205,13 @@ impl<'a> Parser<'a> {
     #[cfg(feature = "federation")]
     fn federation_budget(
         &mut self,
-    ) -> Result<Option<crate::federation_opt::FederationBudget>, UqlError> {
+    ) -> Result<Option<crate::budget::FederationBudget>, UqlError> {
         if !self.eat_kw("FEDERATION") {
             return Ok(None);
         }
         self.expect_kw("BUDGET")?;
         self.expect(&Tok::LParen, "`(` after FEDERATION BUDGET")?;
-        let mut budget = crate::federation_opt::FederationBudget {
+        let mut budget = crate::budget::FederationBudget {
             max_requests: u32::MAX,
             max_rows: usize::MAX,
             max_bind_keys: usize::MAX,

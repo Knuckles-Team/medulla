@@ -11,7 +11,7 @@ use crate::rowset::RowSet;
 /// A foreign source that can answer a [`RemoteRequest`]. `fetch` must return a SUPERSET of
 /// the rows the request selects: every row whose id is in `keys` (when keys are given), the
 /// first `limit` rows of its own order (when a limit is given), or the given page.
-pub(crate) trait RemoteFetch {
+pub trait RemoteFetch {
     fn capabilities(&self) -> SourceCapabilities;
     fn identity(&self) -> &Identity;
     /// `<kind>[:<name>]#<fingerprint>` — never a URL, DSN or credential.
@@ -38,15 +38,15 @@ pub(crate) trait RemoteFetch {
 }
 
 /// The spec-derived identity of a source: its kind and fingerprint.
-pub(crate) struct Identity {
-    pub(crate) label: String,
-    pub(crate) fingerprint: Fingerprint,
-    pub(crate) cache_name: Option<String>,
+pub struct Identity {
+    pub label: String,
+    pub fingerprint: Fingerprint,
+    pub cache_name: Option<String>,
 }
 
 impl Identity {
     /// Identity of a self-describing spec, optionally registered under `name`.
-    pub(crate) fn of_spec(spec: &ForeignSourceSpec, name: Option<&str>) -> Self {
+    pub fn of_spec(spec: &ForeignSourceSpec, name: Option<&str>) -> Self {
         let bytes = rmp_serde::to_vec_named(spec).unwrap_or_default();
         let fp = fingerprint(&bytes);
         let kind = match spec {

@@ -2000,7 +2000,8 @@ mod symmetric_scan_oracle {
         }];
         foreign_ops.extend(downstream());
 
-        let ctx = PlanCtx::new(&fx.view, &fx.semantic).with_foreign(&registry);
+        let federated = crate::federation_opt::FederatedExec::with_registry(&registry);
+        let ctx = PlanCtx::new(&fx.view, &fx.semantic).with_foreign_executor(&federated);
         let internal = execute(&Plan::new(internal_ops), &ctx).unwrap();
         let foreign = execute(&Plan::new(foreign_ops), &ctx).unwrap();
 
