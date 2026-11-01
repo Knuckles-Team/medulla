@@ -444,7 +444,7 @@ impl VerifiedRequestContext {
     /// an already-verified claim set, exactly like
     /// [`Self::authenticated_fixed_service_actor`] never re-authenticates.
     #[cfg(feature = "oidc")]
-    pub(crate) fn authenticated_iceberg_bearer(
+    pub fn authenticated_iceberg_bearer(
         verified: &crate::oidc::VerifiedTokenClaims,
     ) -> Result<Self, String> {
         let policy = request_context_policy()?;
