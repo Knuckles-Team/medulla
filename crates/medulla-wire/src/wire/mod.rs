@@ -1094,7 +1094,7 @@ struct GraphTxnBuffer {
 /// (CONCEPT:MEDULLA-KG.compute.kg-transaction-is-pinned). Resolved (against a read-your-own-writes overlaid snapshot)
 /// at statement time and compiled at `COMMIT`. Carries exactly what the RYOW
 /// overlay and canonical durable `Method` need.
-enum NodeOp {
+pub enum NodeOp {
     /// `AddNode` — `blob` is the MessagePack-encoded property object.
     Add { id: String, blob: Vec<u8> },
     /// `CompareAndSetNodeFields` — merge `updates` when every `conditions` field
@@ -1277,7 +1277,7 @@ pub struct WireSession {
 /// explicitly, and only [`Self::resolve`] is allowed to turn this into the
 /// `u64` `GraphTxnState` needs.
 #[derive(Clone, Copy, Debug)]
-enum TxnBeginVersion {
+pub enum TxnBeginVersion {
     /// A lone off-txn autocommit statement, or an internally-generated
     /// synthetic write (a crash-recovery replay, or a mixed-txn's
     /// compensating undo) — there is no earlier client-visible `BEGIN` to
