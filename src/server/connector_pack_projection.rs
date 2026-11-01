@@ -69,10 +69,10 @@ pub(crate) mod worker {
     use medulla_mutation_types::mutation_scope::MutationOutboxLease;
     use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome, OutboxRejectReason};
 
-    use medulla_server_api::auth::VerifiedRequestContext;
-    use medulla_server_api::outbox_operator::OutboxWrite;
     use medulla_persistence::agent_library::AgentLibraryStateExt;
     use medulla_persistence::agent_library::AgentLibraryStore;
+    use medulla_server_api::auth::VerifiedRequestContext;
+    use medulla_server_api::outbox_operator::OutboxWrite;
     use medulla_server_api::state::ServerState;
 
     /// The label a failed blocking store task names.
@@ -177,10 +177,8 @@ pub(crate) mod worker {
             })?;
             (persist_dir, Arc::clone(&guard.agent_library_open))
         };
-        let opened = medulla_persistence::agent_library::open_shared_agent_library(
-            &slot,
-            &persist_dir,
-        )?;
+        let opened =
+            medulla_persistence::agent_library::open_shared_agent_library(&slot, &persist_dir)?;
         let mut guard = state.write().await;
         if let Some(existing) = guard.agent_library() {
             return Ok(existing);
@@ -262,9 +260,10 @@ pub(crate) mod worker {
         let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
         let (store, tenant) = (Arc::clone(store), tenant.to_string());
         let Some(reason) = reason else {
-            return medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
-                store.outbox_ack(&tenant, &lease, now_ms)
-            })
+            return medulla_server_api::api::dispatch_support::blocking_task(
+                BLOCKING_TASK,
+                move || store.outbox_ack(&tenant, &lease, now_ms),
+            )
             .await;
         };
         medulla_kernel::metrics::outbox_dead_lettered(
@@ -319,15 +318,14 @@ pub(crate) mod worker {
         } else {
             service_context(&plan.record_id)?
         };
-        let context =
-            medulla_persistence::agent_library::context::bind_agent_library_context(
-                store,
-                0,
-                &verified,
-                unbound_context(tenant),
-                "connector-pack:reproject",
-                true,
-            )?;
+        let context = medulla_persistence::agent_library::context::bind_agent_library_context(
+            store,
+            0,
+            &verified,
+            unbound_context(tenant),
+            "connector-pack:reproject",
+            true,
+        )?;
         crate::server::handlers::admin::connector_pack::reproject::project_head(
             state, 0, &verified, store, context, &plan,
         )

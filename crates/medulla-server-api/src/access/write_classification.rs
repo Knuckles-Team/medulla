@@ -278,7 +278,11 @@ fn requires_write_mining_surface(method: &Method) -> Option<bool> {
     } = method
     {
         return Some(
-            *writeback && !matches!(algorithm, medulla_protocol_types::protocol::TextAlgorithm::Tfidf),
+            *writeback
+                && !matches!(
+                    algorithm,
+                    medulla_protocol_types::protocol::TextAlgorithm::Tfidf
+                ),
         );
     }
     // MineSubgraph: writeback only mutates for gspan (its :FrequentSubgraph
@@ -290,7 +294,11 @@ fn requires_write_mining_surface(method: &Method) -> Option<bool> {
     } = method
     {
         return Some(
-            *writeback && !matches!(algorithm, medulla_protocol_types::protocol::SubgraphAlgorithm::Motif),
+            *writeback
+                && !matches!(
+                    algorithm,
+                    medulla_protocol_types::protocol::SubgraphAlgorithm::Motif
+                ),
         );
     }
     // Classification FIT is read-only (returns a model blob; no graph mutation).

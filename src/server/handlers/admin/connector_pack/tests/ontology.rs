@@ -3,11 +3,11 @@
 //! individual asserted into two disjoint classes -- is refused by name, which
 //! a TBox-only classification could not see.
 
-#[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
 use medulla_catalog_types::connector_pack::{
     PackAnnotations, PackEntryKind, PackImportResult, PackViolationCode,
 };
+#[cfg(feature = "redb")]
+use medulla_persistence::agent_library::AgentLibraryStateExt;
 
 use super::{bind, build_pack, import, ok, tool, Content, Served, ADMIN};
 
@@ -229,10 +229,9 @@ async fn source_claims_persist_held_and_old_or_other_tenant_members_stay_unbound
     let super::Served { dir, state } = served;
     drop(store);
     drop(state);
-    let reopened = medulla_persistence::agent_library::AgentLibraryStore::open(
-        dir.path().to_str().unwrap(),
-    )
-    .unwrap();
+    let reopened =
+        medulla_persistence::agent_library::AgentLibraryStore::open(dir.path().to_str().unwrap())
+            .unwrap();
     assert_eq!(reopened.connector_pack_members(TENANT, &key).unwrap(), rows);
     let plan = reopened
         .prepare_connector_pack_projection(TENANT, &key)

@@ -32,7 +32,8 @@ pub(super) async fn handle_add_triples(
     // X5-enforce (CONCEPT:MEDULLA-KG.ontology.rdf-update-guard): reject BEFORE the write
     // lands. Missing feature, policy, or invalid policy all fail closed.
     #[cfg(feature = "shacl")]
-    if let Err(rej) = medulla_server_api::icv_guard::check_before_write(core, graph_name, &triples, &[])
+    if let Err(rej) =
+        medulla_server_api::icv_guard::check_before_write(core, graph_name, &triples, &[])
     {
         return Response::err(req_id, format!("AddTriples rejected: {rej}"));
     }

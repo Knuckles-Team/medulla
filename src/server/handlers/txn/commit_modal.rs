@@ -361,16 +361,18 @@ async fn commit_cross_modal_durable(
     let (batch, result) = compile_cross_modal_batch(&args).await?;
     let committed = args
         .authority
-        .commit_mutation_batch_crossmodal(medulla_server_api::api::persistence::CrossModalCommitArgs {
-            graph_fname: args.fname,
-            batch: &batch,
-            methods: args.methods,
-            vectors: &args.txn.vectors,
-            blob_refs: &args.txn.blob_refs,
-            measurements: args.measurements,
-            result_msgpack: Some(&result),
-            committed_at_ms: now_ms(),
-        })
+        .commit_mutation_batch_crossmodal(
+            medulla_server_api::api::persistence::CrossModalCommitArgs {
+                graph_fname: args.fname,
+                batch: &batch,
+                methods: args.methods,
+                vectors: &args.txn.vectors,
+                blob_refs: &args.txn.blob_refs,
+                measurements: args.measurements,
+                result_msgpack: Some(&result),
+                committed_at_ms: now_ms(),
+            },
+        )
         .await
         .map_err(|error| format!("cross-modal MutationBatch commit failed: {error}"))?;
     if !committed.replayed {

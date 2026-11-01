@@ -58,13 +58,13 @@ use tokio::sync::RwLock;
 mod calendar;
 mod route;
 
+use calendar::{iso8601, valid_amz_date};
 use medulla_server_api::blob::store::ChunkStore;
 use medulla_server_api::blob::store::RedbChunkStore;
 use medulla_server_api::http1;
 use medulla_server_api::http1::RequestLimits;
 use medulla_server_api::kv::KvStore;
 use medulla_server_api::state::ServerState;
-use calendar::{iso8601, valid_amz_date};
 
 /// Env var: when set (and built `--features s3-api`) the S3 REST listener binds
 /// this address (documented loopback default `127.0.0.1:9000`, the MinIO default).

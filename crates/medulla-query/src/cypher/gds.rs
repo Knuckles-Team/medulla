@@ -31,15 +31,22 @@ use medulla_core::graph::GraphView;
 use petgraph::visit::{EdgeRef, IntoEdgeReferences};
 use serde_json::Value;
 
-use medulla_compute::graph_algos::{
-    a_star, all_pairs_similarity, article_rank, betweenness_centrality, closeness_centrality,
-    degree_centrality, dijkstra, eigenvector_centrality, harmonic_centrality, haversine_km,
-    k1_coloring, k_core, knn_similarity, knn_similarity_approx, label_propagation, leiden,
-    local_clustering_coefficient, louvain, pagerank, random_walk, steiner_tree,
-    strongly_connected_components, triangle_count, weakly_connected_components,
-    yen_k_shortest_paths, AdjacencyGraph, ArticleRankConfig, ClosenessConfig, DegreeKind,
-    Direction, EigenvectorConfig, KnnSimilarityApproxConfig, LabelPropagationConfig, LeidenConfig,
-    LouvainConfig, Metric, PageRankConfig, QualityFunction, RandomWalkConfig,
+use medulla_graph_algos::{
+    graph_algos::a_star, graph_algos::all_pairs_similarity, graph_algos::article_rank,
+    graph_algos::betweenness_centrality, graph_algos::closeness_centrality,
+    graph_algos::degree_centrality, graph_algos::dijkstra, graph_algos::eigenvector_centrality,
+    graph_algos::harmonic_centrality, graph_algos::haversine_km, graph_algos::k1_coloring,
+    graph_algos::k_core, graph_algos::knn_similarity, graph_algos::knn_similarity_approx,
+    graph_algos::label_propagation, graph_algos::leiden, graph_algos::local_clustering_coefficient,
+    graph_algos::louvain, graph_algos::pagerank, graph_algos::random_walk,
+    graph_algos::steiner_tree, graph_algos::strongly_connected_components,
+    graph_algos::triangle_count, graph_algos::weakly_connected_components,
+    graph_algos::yen_k_shortest_paths, graph_algos::AdjacencyGraph, graph_algos::ArticleRankConfig,
+    graph_algos::ClosenessConfig, graph_algos::DegreeKind, graph_algos::Direction,
+    graph_algos::EigenvectorConfig, graph_algos::KnnSimilarityApproxConfig,
+    graph_algos::LabelPropagationConfig, graph_algos::LeidenConfig, graph_algos::LouvainConfig,
+    graph_algos::Metric, graph_algos::PageRankConfig, graph_algos::QualityFunction,
+    graph_algos::RandomWalkConfig,
 };
 
 use super::number_value;
@@ -1258,8 +1265,10 @@ impl CypherProcedure for LinkPrediction {
         &["node1", "node2", "probability"]
     }
     fn call(&self, args: &[Value], view: &GraphView) -> Result<Vec<ProcRow>, String> {
-        use medulla_compute::graphlearn::link_predict::{
-            fit_link_predictor, predict_missing_links, FeatureCtx, KanLinkConfig,
+        use medulla_graph_algos::{
+            graphlearn::link_predict::fit_link_predictor,
+            graphlearn::link_predict::predict_missing_links, graphlearn::link_predict::FeatureCtx,
+            graphlearn::link_predict::KanLinkConfig,
         };
         use std::collections::HashSet;
 
@@ -1347,7 +1356,9 @@ impl CypherProcedure for FastRp {
         &["nodeId", "embedding"]
     }
     fn call(&self, args: &[Value], view: &GraphView) -> Result<Vec<ProcRow>, String> {
-        use medulla_compute::graphlearn::embeddings::{fastrp, FastRpConfig};
+        use medulla_graph_algos::{
+            graphlearn::embeddings::fastrp, graphlearn::embeddings::FastRpConfig,
+        };
         let cfg = Config::of(args);
         let g = project_named(
             view,
@@ -1383,7 +1394,9 @@ impl CypherProcedure for Node2Vec {
         &["nodeId", "embedding"]
     }
     fn call(&self, args: &[Value], view: &GraphView) -> Result<Vec<ProcRow>, String> {
-        use medulla_compute::graphlearn::embeddings::{node2vec, Node2VecConfig};
+        use medulla_graph_algos::{
+            graphlearn::embeddings::node2vec, graphlearn::embeddings::Node2VecConfig,
+        };
         let cfg = Config::of(args);
         let g = project_named(
             view,

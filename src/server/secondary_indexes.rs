@@ -989,7 +989,7 @@ mod batch_update_tests {
             {"op": "add_embedding", "id": "doc", "embedding": [1.0, 0.0]}
         ]))
         .unwrap();
-        crate::algorithms::batch_update(&core, &update).unwrap();
+        medulla_graph_algos::algorithms::batch_update(&core, &update).unwrap();
         core.mark_dirty();
         assert!(ServedTextIndex::new(core.clone()).available());
         assert!(text_hits(&core, "legacy").is_empty());
@@ -999,7 +999,7 @@ mod batch_update_tests {
             {"op": "remove_node", "id": "doc"}
         ]))
         .unwrap();
-        crate::algorithms::batch_update(&core, &remove).unwrap();
+        medulla_graph_algos::algorithms::batch_update(&core, &remove).unwrap();
         core.mark_dirty();
         assert!(text_hits(&core, "current").is_empty());
         assert_eq!(core.semantic_store.read().get_embedding("doc"), None);

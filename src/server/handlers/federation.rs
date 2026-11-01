@@ -15,13 +15,13 @@
 //! off-reactor work needed.
 
 use crate::protocol::{Method, Response, ResultPayload};
-use medulla_server_api::access::OwnerScopedCall;
-#[cfg(feature = "redb")]
-use medulla_persistence::agent_library::AgentLibraryStateExt;
 use medulla_catalog_types::foreign_read::{
     ForeignReadAbortRequest, ForeignReadChunkRequest, ForeignReadCompleteRequest,
     ForeignReadOpenRequest, FOREIGN_READ_SCHEMA_VERSION,
 };
+#[cfg(feature = "redb")]
+use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_server_api::access::OwnerScopedCall;
 
 /// Try to handle a federation method. `Ok(resp)` = handled; `Err(method)` = not mine.
 pub(crate) async fn try_handle(
@@ -41,11 +41,13 @@ pub(crate) async fn try_handle(
             // EH-378: provision the source's share role (assigned to nobody) under the
             // same write lock as the registration, so a registered source always has one.
             let mut s = call.state.write().await;
-            if let Err(error) = medulla_server_api::api::query_txn::foreign_share::provision_share_role(
-                &mut s.isolation,
-                owner.agent_id(),
-                &name,
-            ) {
+            if let Err(error) =
+                medulla_server_api::api::query_txn::foreign_share::provision_share_role(
+                    &mut s.isolation,
+                    owner.agent_id(),
+                    &name,
+                )
+            {
                 return Ok(Response::err(req_id, error));
             }
             if let Err(error) = s.foreign_sources.register(&owner, name.clone(), source) {

@@ -84,7 +84,8 @@ pub(super) fn decode_modality_replication_inputs(
             "served modality replication received the wrong method",
         ));
     };
-    let Some((operation, modality)) = medulla_raft::raft::SanitizedModalityMutation::from_served(&op)
+    let Some((operation, modality)) =
+        medulla_raft::raft::SanitizedModalityMutation::from_served(&op)
     else {
         return Err(Response::err(
             req_id,
@@ -408,22 +409,23 @@ pub(super) async fn submit_modality_replication(
     payload: ResultPayload,
 ) -> Response {
     let created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-    let mutation = match medulla_server_api::api::persistence::RaftMutationContext::from_verified_request(
-        batch_id,
-        ctx.req_id,
-        ctx.attempt_nonce,
-        ctx.tenant_scope,
-        ctx.principal_fingerprint.to_string(),
-        false,
-        medulla_server_api::api::persistence::RaftMutationTiming {
-            placement_epoch: ctx.placement_epoch,
-            fencing_token: ctx.fencing_token,
-            created_at_ms,
-        },
-    ) {
-        Ok(context) => context,
-        Err(error) => return Response::err(ctx.req_id, error),
-    };
+    let mutation =
+        match medulla_server_api::api::persistence::RaftMutationContext::from_verified_request(
+            batch_id,
+            ctx.req_id,
+            ctx.attempt_nonce,
+            ctx.tenant_scope,
+            ctx.principal_fingerprint.to_string(),
+            false,
+            medulla_server_api::api::persistence::RaftMutationTiming {
+                placement_epoch: ctx.placement_epoch,
+                fencing_token: ctx.fencing_token,
+                created_at_ms,
+            },
+        ) {
+            Ok(context) => context,
+            Err(error) => return Response::err(ctx.req_id, error),
+        };
     let request = medulla_raft::raft::RaftRequest {
         graph_fname,
         graph_name: ctx.graph_name.to_string(),

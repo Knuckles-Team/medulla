@@ -198,7 +198,8 @@ async fn resolve_source(
     };
     let hierarchy = match persistence.load_cluster_hierarchy(&graph_name).await {
         Ok(Some(blob)) => {
-            rmp_serde::from_slice::<medulla_compute::algorithms::ClusterHierarchyResult>(&blob).ok()
+            rmp_serde::from_slice::<medulla_graph_algos::algorithms::ClusterHierarchyResult>(&blob)
+                .ok()
         }
         _ => None,
     };

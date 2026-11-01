@@ -1,7 +1,7 @@
 //! Private transaction receipts implementation.
 
-use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use super::*;
+use medulla_mutation_types::mutation_scope::DurabilityDomain;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
 
@@ -550,8 +550,7 @@ pub(super) fn resume_txn_receipt(
     else {
         return Ok(None);
     };
-    if saga.batch.identity
-        != medulla_server_api::api::admin::saga::cluster_admin_scope_identity()?
+    if saga.batch.identity != medulla_server_api::api::admin::saga::cluster_admin_scope_identity()?
     {
         return Err("transaction parent receipt has the wrong coordinator scope".to_string());
     }

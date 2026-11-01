@@ -1,9 +1,9 @@
 //! Parent-only phases must authenticate the durable tenant even without a plan.
 
 use super::*;
-use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_persistence::backup::EnvVarGuard;
 use medulla_persistence::redb_backend::RedbBackend;
+use medulla_server_api::api::persistence::PersistenceBackend;
 
 fn carrier(tenant: &str) -> CarrierAuthority {
     CarrierAuthority::from_verified(&VerifiedRequestContext::verified_for_test_in_tenant(
@@ -278,7 +278,9 @@ async fn check_delayed_abort_phases(
     }
     let (id, _) = participant_plan(parent, txn);
     assert!(backend.xshard_prepare_get(parent, id).unwrap().is_none());
-    assert!(!medulla_server_api::txn::consensus_graph_is_prepared(&txn.graph));
+    assert!(!medulla_server_api::txn::consensus_graph_is_prepared(
+        &txn.graph
+    ));
 }
 
 async fn store_committed_child(

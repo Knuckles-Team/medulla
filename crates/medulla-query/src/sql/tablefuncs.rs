@@ -88,8 +88,11 @@ fn generate_series_values(start: i64, stop: i64, step: i64) -> DfResult<Vec<i64>
 
 impl TableFunctionImpl for PagerankFunc {
     fn call_with_args(&self, _args: TableFunctionArgs<'_, '_>) -> DfResult<Arc<dyn TableProvider>> {
-        let rows =
-            medulla_compute::algorithms::pagerank(&self.view, PAGERANK_DAMPING, PAGERANK_ITERATIONS);
+        let rows = medulla_graph_algos::algorithms::pagerank(
+            &self.view,
+            PAGERANK_DAMPING,
+            PAGERANK_ITERATIONS,
+        );
         scores_table(rows)
     }
 }
@@ -108,7 +111,7 @@ impl BetweennessFunc {
 
 impl TableFunctionImpl for BetweennessFunc {
     fn call_with_args(&self, _args: TableFunctionArgs<'_, '_>) -> DfResult<Arc<dyn TableProvider>> {
-        let rows = medulla_compute::algorithms::betweenness_centrality(&self.view);
+        let rows = medulla_graph_algos::algorithms::betweenness_centrality(&self.view);
         scores_table(rows)
     }
 }

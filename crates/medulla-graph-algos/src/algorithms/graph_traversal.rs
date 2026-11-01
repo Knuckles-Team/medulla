@@ -4,7 +4,7 @@ use petgraph::stable_graph::NodeIndex;
 use petgraph::visit::{Bfs, EdgeRef, IntoEdgeReferences};
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use crate::graph::GraphView;
+use medulla_core::graph::GraphView;
 
 // ── Traversal Algorithms ─────────────────────────────────────────────────
 

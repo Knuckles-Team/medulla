@@ -41,14 +41,8 @@ pub use medulla_compute::datascience;
 pub use medulla_compute::finance;
 #[cfg(feature = "reasoning")]
 pub use medulla_compute::reasoning;
-pub use medulla_compute::{algorithms, ast, parser, screen};
-
-
-
-
-
-
-
+pub use medulla_compute::{ast, parser, screen};
+pub use medulla_graph_algos::algorithms;
 
 // In-process embedded library API (CONCEPT:MEDULLA-KG.backend.engine-modes) — SQLite/DuckDB-style. Drives
 // the SAME GraphCore + redb durable rows the socket dispatch does, with NO Tokio

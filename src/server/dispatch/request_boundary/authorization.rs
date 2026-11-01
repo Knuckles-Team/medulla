@@ -31,10 +31,7 @@ fn validate_submit_context(
     // surface-specific and stay local to each caller. `context_matches_verified_authority`
     // is defined once, in `handlers::delegation` (its `pub(crate)` home), and called
     // from both boundaries.
-    if !medulla_h_jobs::delegation::context_matches_verified_authority(
-        context,
-        verified_context,
-    ) {
+    if !medulla_h_jobs::delegation::context_matches_verified_authority(context, verified_context) {
         return Err(
             "ACCESS_DENIED: SubmitWorkItem context does not match verified request authority"
                 .to_string(),
@@ -278,7 +275,11 @@ pub(crate) async fn check_scope_and_admin_authority(
     {
         medulla_kernel::metrics::access_denied();
         #[cfg(feature = "security")]
-        medulla_server_api::denial_sample::offer(verified_context.principal(), action, "SCOPE_DENIED");
+        medulla_server_api::denial_sample::offer(
+            verified_context.principal(),
+            action,
+            "SCOPE_DENIED",
+        );
         return Err(Response::err(
             req.id,
             format!("ACCESS_DENIED: verified request context lacks required scope '{action}'"),

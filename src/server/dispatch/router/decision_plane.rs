@@ -99,37 +99,47 @@ async fn dispatch_decision_methods(
         }
         Method::DecisionCommit { request } => {
             dispatch_boxed(async {
-                medulla_h_decide::decide::handle_decision_commit(state, req.id, verified_context, *request)
-                    .await
+                medulla_h_decide::decide::handle_decision_commit(
+                    state,
+                    req.id,
+                    verified_context,
+                    *request,
+                )
+                .await
             })
             .await
         }
         Method::Decide { request } => {
             dispatch_boxed(async {
-                medulla_h_decide::decide::handle_decide(state, req.id, verified_context, *request).await
+                medulla_h_decide::decide::handle_decide(state, req.id, verified_context, *request)
+                    .await
             })
             .await
         }
         Method::DecisionFit { op } => {
             dispatch_boxed(async {
-                medulla_h_decide::decide::handle_decision_fit(state, req.id, verified_context, *op).await
+                medulla_h_decide::decide::handle_decision_fit(state, req.id, verified_context, *op)
+                    .await
             })
             .await
         }
         Method::DecisionEval { op } => {
             dispatch_boxed(async {
-                medulla_h_decide::decide::handle_decision_eval(state, req.id, verified_context, *op).await
+                medulla_h_decide::decide::handle_decision_eval(state, req.id, verified_context, *op)
+                    .await
             })
             .await
         }
         Method::DecisionLog { op } => {
             dispatch_boxed(async {
-                medulla_h_decide::decide::handle_decision_log(state, req.id, verified_context, *op).await
+                medulla_h_decide::decide::handle_decision_log(state, req.id, verified_context, *op)
+                    .await
             })
             .await
         }
         Method::Solve { request } => {
-            dispatch_boxed(async { medulla_h_decide::solve::handle_solve(req.id, *request).await }).await
+            dispatch_boxed(async { medulla_h_decide::solve::handle_solve(req.id, *request).await })
+                .await
         }
         other => return ControlFlow::Continue(other),
     })

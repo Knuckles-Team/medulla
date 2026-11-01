@@ -3,7 +3,7 @@
 use std::collections::VecDeque;
 
 use super::{hop_depths, seed_vector, ImpactGraph, Seed, Semantics, MAX_HOPS};
-use crate::union_find_root;
+use medulla_compute::union_find_root;
 
 /// Per-node impact probabilities and what they mean.
 #[derive(Debug, Clone, PartialEq)]

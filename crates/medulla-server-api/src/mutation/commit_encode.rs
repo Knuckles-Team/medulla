@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
+use crate::api::persistence::PersistenceBackend;
 use medulla_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
-use crate::api::persistence::PersistenceBackend;
 
 use super::{
     commit_finalize, commit_mutation_body_replay_response, compile_batch_and_encode_result,
@@ -223,12 +223,14 @@ pub(super) fn staged_mutation_descriptor(
             ));
         }
     };
-    Ok(medulla_protocol_types::mutation_batch::MutationStateDescriptor {
-        algorithm: medulla_kernel::graph_delta::ROW_DELTA_ALGORITHM.to_string(),
-        digest: hex::encode(Sha256::digest(state_msgpack)),
-        source_graph_version: source_version,
-        target_graph_version,
-    })
+    Ok(
+        medulla_protocol_types::mutation_batch::MutationStateDescriptor {
+            algorithm: medulla_kernel::graph_delta::ROW_DELTA_ALGORITHM.to_string(),
+            digest: hex::encode(Sha256::digest(state_msgpack)),
+            source_graph_version: source_version,
+            target_graph_version,
+        },
+    )
 }
 
 pub(super) fn preserves_node_derived_indexes(method: &Method) -> bool {
@@ -321,7 +323,7 @@ pub(super) fn prepublish_success(core: &GraphCore, method: &Method) -> Option<Re
             // seconds per write instead of milliseconds. Swallowing the reason with
             // `.ok()?` made that cliff invisible — the write still succeeded, just
             // via the expensive path, so nothing surfaced and no metric moved.
-            let result = match medulla_compute::algorithms::batch_update_preview(core, operations_msgpack) {
+            let result = match medulla_graph_algos::algorithms::batch_update_preview(core, operations_msgpack) {
                 Ok(result) => result,
                 Err(error) => {
                     tracing::warn!(

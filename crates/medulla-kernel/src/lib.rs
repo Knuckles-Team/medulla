@@ -11,8 +11,8 @@
 #![deny(missing_docs)]
 
 // The leaf-crate modules these files name with their historical `crate::` paths.
-pub(crate) use medulla_compute::algorithms;
 pub(crate) use medulla_core::{compute, graph, index};
+pub(crate) use medulla_graph_algos::algorithms;
 pub(crate) use medulla_protocol_types::{mutation_batch, protocol};
 pub(crate) use medulla_types::acl;
 

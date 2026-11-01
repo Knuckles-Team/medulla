@@ -343,7 +343,11 @@ fn collect_datalog_inferences(
         range_rules,
         property_chains,
     );
-    medulla_compute::reasoning::bind_inference_schema_digests(core, &mut all_inferred, &schema_digests);
+    medulla_compute::reasoning::bind_inference_schema_digests(
+        core,
+        &mut all_inferred,
+        &schema_digests,
+    );
     Ok((schema_digests, all_inferred))
 }
 
@@ -614,7 +618,7 @@ fn apply_batch_update(
     core: &GraphCore,
     operations_msgpack: &[u8],
 ) -> Result<ResultPayload, String> {
-    let summary = medulla_compute::algorithms::batch_update(core, operations_msgpack)?;
+    let summary = medulla_graph_algos::algorithms::batch_update(core, operations_msgpack)?;
     medulla_protocol_types::result_contract::transactions::BatchUpdateReport::decode(&summary)
         .and_then(
             ResultPayload::of::<medulla_protocol_types::result_contract::transactions::BatchUpdate>,

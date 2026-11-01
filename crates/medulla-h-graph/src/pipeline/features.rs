@@ -1,11 +1,13 @@
 //! Feature construction shared by the pipeline train, evaluate, and predict paths.
 
 use medulla_core::graph::GraphCore;
-use medulla_protocol_types::protocol::GraphSource;
-use medulla_compute::graph_algos::AdjacencyGraph;
-use medulla_compute::graphlearn::embeddings::{
-    fastrp, l2_normalize_rows, node2vec, to_f64_rows, FastRpConfig, Node2VecConfig,
+use medulla_graph_algos::graph_algos::AdjacencyGraph;
+use medulla_graph_algos::{
+    graphlearn::embeddings::fastrp, graphlearn::embeddings::l2_normalize_rows,
+    graphlearn::embeddings::node2vec, graphlearn::embeddings::to_f64_rows,
+    graphlearn::embeddings::FastRpConfig, graphlearn::embeddings::Node2VecConfig,
 };
+use medulla_protocol_types::protocol::GraphSource;
 use medulla_types::wire::FeatureStep;
 
 /// Build the `(node_id, row)` feature matrix by running the ordered feature steps.

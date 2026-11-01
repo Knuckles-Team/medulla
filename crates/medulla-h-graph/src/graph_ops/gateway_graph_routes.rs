@@ -657,7 +657,8 @@ async fn try_handle_policy(
             .await
         }
         #[cfg(feature = "shacl")]
-        Method::GraphSchema { op } => match medulla_server_api::api::admin::admin_seam(state).await {
+        Method::GraphSchema { op } => match medulla_server_api::api::admin::admin_seam(state).await
+        {
             Some(admin) => {
                 admin
                     .graph_schema_gateway(state, tenant_id, ctx, plan, method, op)
@@ -730,7 +731,7 @@ async fn try_handle_analytics(
         } => {
             let (max_age_secs, min_score) = (*max_age_secs, *min_score);
             commit_gateway(ctx, plan, method, move |core| {
-                let stats = medulla_compute::algorithms::prune_by_lifecycle(core, max_age_secs, min_score);
+                let stats = medulla_graph_algos::algorithms::prune_by_lifecycle(core, max_age_secs, min_score);
                 ResultPayload::of::<medulla_protocol_types::result_contract::graph::PruneByLifecycle>(stats)
             })
             .await

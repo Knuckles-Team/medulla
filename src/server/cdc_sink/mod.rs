@@ -19,9 +19,9 @@ use std::sync::Arc;
 
 use medulla_stream::sink::{CdcSink, KafkaCdcSink, KafkaConfig, SinkEvent, SinkOp};
 
+use crate::wire::{CdcEvent, CdcKind};
 use medulla_server_api::cdc::CdcHub;
 use medulla_server_api::cdc::ExternalCdcSink;
-use crate::wire::{CdcEvent, CdcKind};
 
 /// Env var carrying the Kafka bootstrap-servers string. Unset ⇒ sink
 /// disabled (see module doc).

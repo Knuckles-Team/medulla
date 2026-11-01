@@ -97,7 +97,7 @@ pub fn is_durable_mutation(m: &Method) -> bool {
 pub fn apply(core: &GraphCore, m: &Method) {
     match m {
         Method::BatchUpdate { operations_msgpack } => {
-            let _ = medulla_compute::algorithms::batch_update(core, operations_msgpack);
+            let _ = medulla_graph_algos::algorithms::batch_update(core, operations_msgpack);
         }
         // `AddTriples` (feature `rdf`): deterministic replay = re-parse the SAME
         // source text and re-apply the complete property-graph projection. The

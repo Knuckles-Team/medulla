@@ -1562,7 +1562,8 @@ fn authenticate_redis_principal(
     if !verify_redis_password(auth_secret, principal, credential) {
         return None;
     }
-    medulla_server_api::api::dispatch_support::pseudonymous_broker_actor(auth_secret, principal).ok()
+    medulla_server_api::api::dispatch_support::pseudonymous_broker_actor(auth_secret, principal)
+        .ok()
 }
 
 /// If `args[1]` parses as a protocol version number, validate and apply it
@@ -2601,8 +2602,11 @@ mod tests {
     fn authenticated_connection(proto: u8, principal: &str) -> ConnState {
         let mut connection = ConnState::new(3);
         connection.actor_scope = Some(
-            medulla_server_api::api::dispatch_support::pseudonymous_broker_actor(TEST_SECRET, principal)
-                .unwrap(),
+            medulla_server_api::api::dispatch_support::pseudonymous_broker_actor(
+                TEST_SECRET,
+                principal,
+            )
+            .unwrap(),
         );
         connection.proto = proto;
         connection

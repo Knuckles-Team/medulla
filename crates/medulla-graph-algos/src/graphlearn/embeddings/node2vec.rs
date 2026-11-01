@@ -22,8 +22,8 @@
 
 use std::hash::Hash;
 
-use crate::datascience::training::adam_step;
 use crate::graph_algos::AdjacencyGraph;
+use medulla_compute::datascience::training::adam_step;
 
 use super::{l2_normalize_rows, SplitMix64};
 
@@ -190,7 +190,7 @@ fn train_epoch(
         &grads,
         &state.m,
         &state.vv,
-        crate::datascience::training::AdamHyperparameters {
+        medulla_compute::datascience::training::AdamHyperparameters {
             lr: config.lr,
             beta1: 0.9,
             beta2: 0.999,

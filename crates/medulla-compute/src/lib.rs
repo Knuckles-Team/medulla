@@ -68,13 +68,11 @@ impl SplitMix64 {
     }
 }
 
-pub mod algorithms;
 pub(crate) mod node_labels;
 // CONCEPT:MEDULLA-KG.compute.graph-data-science-algorithms — standalone graph data-science algorithms (Neo4j GDS parity).
 // Pure-Rust, deterministic, generic over node id; decoupled from the live engine
 // graph so it is unit-testable in isolation. Always-on (no heavy deps).
 pub mod ast;
-pub mod graph_algos;
 pub mod parser;
 pub mod screen;
 // MEDULLA-SCM-R013.2 — projection of a graph-native symbol edit to file bytes and one changeset.
@@ -89,11 +87,6 @@ pub mod test_support;
 // UDFs), which is why it lives here rather than in either consumer. Always-on (no heavy deps).
 pub mod sketch;
 
-// ModalityContract retrofit (CONCEPT:E4): `impl ModalityContract for MergeProposal`,
-// behind the crate's own opt-in `contract` feature (default OFF). See `src/contract.rs`.
-#[cfg(feature = "contract")]
-mod contract;
-
 #[cfg(feature = "datascience")]
 pub mod datascience;
 #[cfg(feature = "finance")]
@@ -104,15 +97,6 @@ pub mod finance;
 // isolation. Feature-gated like finance/datascience so a slim build drops it.
 #[cfg(feature = "mining")]
 pub mod mining;
-// CONCEPT:MEDULLA-KG.graphlearn.link-predictor — graph-learning / neuro-symbolic domain.
-// A pure-Rust KAN (Kolmogorov-Arnold) link-predictor over the resident graph: a
-// polynomial-basis learnable edge function (`edge_fn`), a 1–2 layer KAN link-scorer
-// over structural features (`link_predict`), and 1-hop neighbor aggregation
-// (`neighbor_aggregate`). Graph-agnostic (works over `graph_algos::AdjacencyGraph`),
-// so it is unit-testable in isolation. Feature-gated like mining; implies
-// `datascience` for the shared Adam/SGD training kernels.
-#[cfg(feature = "graphlearn")]
-pub mod graphlearn;
 // CONCEPT:MEDULLA-KG.compute.bayesian-fusion-helpers — Bayesian-update / mixture / fusion helpers over the
 // `medulla_types::Distribution` value. Conjugate posteriors are closed-form (no
 // sampling), so this rides the pure `reasoning` feature (no heavy dep).

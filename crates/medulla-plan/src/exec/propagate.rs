@@ -12,10 +12,12 @@
 
 use std::collections::HashMap;
 
-use medulla_compute::graph_algos::impact::{
-    independent_cascade, noisy_or, CascadeSpec, ImpactGraph, Seed, MAX_HOPS,
-};
 use medulla_core::graph::GraphView;
+use medulla_graph_algos::{
+    graph_algos::impact::independent_cascade, graph_algos::impact::noisy_or,
+    graph_algos::impact::CascadeSpec, graph_algos::impact::ImpactGraph, graph_algos::impact::Seed,
+    graph_algos::impact::MAX_HOPS,
+};
 use medulla_types::wire::{EdgeDir, Op, PropagateModel};
 use petgraph::stable_graph::NodeIndex;
 use serde_json::{Map, Value};

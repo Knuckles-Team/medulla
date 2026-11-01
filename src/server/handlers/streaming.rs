@@ -20,11 +20,11 @@ use tokio::sync::RwLock;
 use crate::isolation::AccessLevel;
 use crate::protocol::{Method, Response, ResultPayload};
 use crate::wire::{CdcEvent, ContinuousAgg, ContinuousQuerySpec, WatchBatch};
+use medulla_protocol_types::result_contract::messaging as results;
 use medulla_server_api::access::check_graph_access;
 use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::access::GraphReadAuthority;
 use medulla_server_api::state::ServerState;
-use medulla_protocol_types::result_contract::messaging as results;
 
 /// Pull the CDC hub, or an ERROR response if the engine booted without one (only if a
 /// future build path leaves it `None` — `streaming` builds always construct it).

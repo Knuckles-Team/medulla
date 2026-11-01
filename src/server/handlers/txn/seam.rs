@@ -82,7 +82,8 @@ impl medulla_server_api::api::query_txn::TxnApi for TxnSeam {
         caller: &str,
         authority: &medulla_server_api::access::CarrierAuthority,
         method: &crate::protocol::Method,
-    ) -> Result<medulla_server_api::api::query_txn::txn_support::GraphQlLifecycleAdmission, String> {
+    ) -> Result<medulla_server_api::api::query_txn::txn_support::GraphQlLifecycleAdmission, String>
+    {
         use medulla_server_api::api::query_txn::txn_support as api;
         let admission =
             super::receipts::begin_graphql_lifecycle(state, req_id, caller, authority, method)

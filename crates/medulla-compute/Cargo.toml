@@ -271,6 +271,8 @@ rand_chacha = "0.3"
 # which lives behind the `ast` grammars, so the example is gated to it (a default
 # `cargo check --examples`, or a check under another feature such as `solve`, skips it).
 # Run: `cargo run -p medulla-compute --features ast --example index_repository_json`.
+medulla-graph-algos = { path = "../medulla-graph-algos" }
+
 [[example]]
 name = "index_repository_json"
 path = "examples/index_repository_json.rs"

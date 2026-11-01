@@ -54,7 +54,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::mutation_batch::{MutationBatch};
+use crate::mutation_batch::MutationBatch;
 use crate::protocol::{Method, Response, ResultPayload};
 use medulla_server_api::access::CarrierAuthority;
 use medulla_server_api::compute::compute_off_lock;

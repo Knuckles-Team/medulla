@@ -5,7 +5,7 @@ use petgraph::visit::EdgeRef;
 use std::collections::HashMap;
 
 use super::*;
-use crate::graph::{GraphCore, GraphView};
+use medulla_core::{graph::GraphCore, graph::GraphView};
 
 #[cfg(test)]
 mod community_tests {
@@ -968,7 +968,7 @@ mod cluster_hierarchy_tests {
 #[cfg(test)]
 mod resolve_candidates_tests {
     use super::*;
-    use crate::graph::GraphCore;
+    use medulla_core::graph::GraphCore;
 
     fn pe(emb: &[f64], ntype: &str) -> Vec<u8> {
         // JSON-encoded props (resolve_candidates reads embedding via serde_json,
@@ -1042,7 +1042,7 @@ mod resolve_candidates_tests {
 #[cfg(test)]
 mod pagerank_tests {
     use super::*;
-    use crate::graph::GraphCore;
+    use medulla_core::graph::GraphCore;
 
     fn p() -> Vec<u8> {
         rmp_serde::to_vec_named(&serde_json::json!({"type": "Doc"})).unwrap()

@@ -7,10 +7,10 @@ use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use std::sync::Arc;
 
 use medulla_core::graph::GraphCore;
+use medulla_protocol_types::protocol::{Method, ResultPayload};
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::mutation_batch::*;
 use medulla_types::contract::Nonce;
-use medulla_protocol_types::protocol::{Method, ResultPayload};
 use sha2::{Digest, Sha256};
 
 /// The opaque serving principal this test's job store is opened as.

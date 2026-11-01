@@ -21,8 +21,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::hash::Hash;
 
-use crate::graph_algos::pagerank::{pagerank, PageRankConfig};
 use crate::graph_algos::AdjacencyGraph;
+use crate::{graph_algos::pagerank::pagerank, graph_algos::pagerank::PageRankConfig};
 
 use super::edge_fn::{Basis, KanEdgeFn};
 use super::neighbor_aggregate::aggregate_1hop;
@@ -643,7 +643,7 @@ pub fn auc(pos: &[f64], neg: &[f64]) -> f64 {
     wins / (pos.len() as f64 * neg.len() as f64)
 }
 
-use crate::SplitMix64;
+use medulla_compute::SplitMix64;
 
 #[cfg(test)]
 mod tests {

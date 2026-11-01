@@ -279,7 +279,7 @@ fn leiden_small_graphs_never_report_a_deadline_hit() {
 /// Deterministic clustered fixture for the budget tests (blocks of 40 nodes
 /// with 8 random intra-block edges each, joined in a ring).
 fn budget_test_graph(n: usize) -> AdjacencyGraph<usize> {
-    let mut rng = crate::SplitMix64::new(7);
+    let mut rng = medulla_compute::SplitMix64::new(7);
     let mut adjacency: Vec<(usize, Vec<(usize, f64)>)> = (0..n).map(|i| (i, Vec::new())).collect();
     for (i, row) in adjacency.iter_mut().enumerate() {
         let start = (i / 40) * 40;

@@ -225,7 +225,9 @@ pub(super) async fn dispatch_op_audit_append(
         },
         None => Response::err(
             req_id,
-            medulla_store::redb_store::audit_writer_unavailable("this server has no durable audit store"),
+            medulla_store::redb_store::audit_writer_unavailable(
+                "this server has no durable audit store",
+            ),
         ),
     }
 }
@@ -298,7 +300,8 @@ pub(super) struct ServedModalityCtx<'a> {
     pub(super) core: Arc<crate::graph::GraphCore>,
     pub(super) materialization_manifest:
         Option<Arc<std::sync::RwLock<crate::registry::MaterializationManifest>>>,
-    pub(super) persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
+    pub(super) persistence:
+        Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
     pub(super) cdc: Option<Arc<medulla_server_api::cdc::CdcHub>>,
     #[cfg(feature = "raft")]
@@ -509,22 +512,23 @@ pub(super) async fn dispatch_op_raft_write_routing_barrier(
         &principal_fingerprint,
         verified_context.idempotency_key(),
     );
-    let mutation = match medulla_server_api::api::persistence::RaftMutationContext::from_verified_request(
-        batch_id,
-        req_id,
-        verified_context.attempt_nonce(),
-        tenant_scope,
-        principal_fingerprint,
-        false,
-        medulla_server_api::api::persistence::RaftMutationTiming {
-            placement_epoch: routed.epoch,
-            fencing_token: Some(routed.group_id),
-            created_at_ms,
-        },
-    ) {
-        Ok(context) => context,
-        Err(error) => return Response::err(req_id, error),
-    };
+    let mutation =
+        match medulla_server_api::api::persistence::RaftMutationContext::from_verified_request(
+            batch_id,
+            req_id,
+            verified_context.attempt_nonce(),
+            tenant_scope,
+            principal_fingerprint,
+            false,
+            medulla_server_api::api::persistence::RaftMutationTiming {
+                placement_epoch: routed.epoch,
+                fencing_token: Some(routed.group_id),
+                created_at_ms,
+            },
+        ) {
+            Ok(context) => context,
+            Err(error) => return Response::err(req_id, error),
+        };
     let server_secret = timed_read(state).await.auth_secret.clone();
     let req = match build_bound_graph_request(BoundGraphRequest {
         graph_name,
@@ -578,7 +582,8 @@ struct BoundGraphRequest<'a> {
 fn build_bound_graph_request(
     input: BoundGraphRequest<'_>,
 ) -> Result<medulla_raft::raft::RaftRequest, String> {
-    let command = medulla_raft::raft::ReplicatedMutation::caller_graph(input.method, input.server_secret)?;
+    let command =
+        medulla_raft::raft::ReplicatedMutation::caller_graph(input.method, input.server_secret)?;
     let mut request = medulla_raft::raft::RaftRequest {
         graph_fname: input.graph_fname,
         graph_name: input.graph_name.to_string(),
@@ -621,10 +626,10 @@ mod tests {
     use super::*;
     use crate::graph::GraphCore;
     use crate::protocol::Method;
+    use medulla_persistence::redb_backend::audit_append_tests::seeded;
+    use medulla_server_api::api::persistence::PersistenceBackend;
     use medulla_store::redb_store::operation_audit::tests::event;
     use medulla_store::redb_store::operation_audit::tests::TENANT;
-    use medulla_server_api::api::persistence::PersistenceBackend;
-    use medulla_persistence::redb_backend::audit_append_tests::seeded;
 
     const GRAPH: &str = "audit_skew_graph";
 

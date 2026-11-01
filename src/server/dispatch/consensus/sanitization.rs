@@ -129,7 +129,9 @@ fn sanitize_channel_proposal(
                 creator: authority.actor_scope().to_string(),
                 initial_members: initial_members
                     .into_iter()
-                    .map(|member| medulla_server_api::mutation_batch::principal_fingerprint(&member))
+                    .map(|member| {
+                        medulla_server_api::mutation_batch::principal_fingerprint(&member)
+                    })
                     .collect::<Result<Vec<_>, _>>()?,
             })
         }
@@ -183,7 +185,9 @@ pub(super) fn sanitize_native_proposal(
     method: Method,
 ) -> Result<Method, String> {
     if capability_authority_unavailable(&method) {
-        return Err(medulla_store::redb_store::work_item_capability::AUTHORITY_UNAVAILABLE.to_string());
+        return Err(
+            medulla_store::redb_store::work_item_capability::AUTHORITY_UNAVAILABLE.to_string(),
+        );
     }
     // The three groups own disjoint `Method` variants, so each hands an
     // unrecognised method straight through and the chain order is immaterial.

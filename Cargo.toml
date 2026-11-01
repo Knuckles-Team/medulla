@@ -184,7 +184,7 @@ mining = ["medulla-h-graph/mining", "medulla-server-api/mining", "medulla-kernel
 # Pure-Rust (no torch — heavy training is delegated to data-science-mcp), folded into
 # `full` via `compute`. Gates medulla-compute/graphlearn + medulla-types/graphlearn + the
 # handlers/graphlearn.rs dispatch arm. Implies datascience (shared Adam kernels).
-graphlearn = ["medulla-h-graph/graphlearn", "medulla-server-api/graphlearn", "medulla-kernel/graphlearn", "datascience", "medulla-compute/graphlearn", "medulla-types/graphlearn", "medulla-result-types/graphlearn", "medulla-protocol-types/graphlearn"]
+graphlearn = ["medulla-h-graph/graphlearn", "medulla-server-api/graphlearn", "medulla-kernel/graphlearn", "datascience", "medulla-compute/graphlearn", "medulla-graph-algos/graphlearn", "medulla-types/graphlearn", "medulla-result-types/graphlearn", "medulla-protocol-types/graphlearn"]
 # ML pipeline (CONCEPT:MEDULLA-KG.mining.ml-pipeline): the composable train→eval→serve→
 # predict surface over a versioned `:Model` artifact, generalizing the KAN one-off. It
 # COMPOSES existing medulla-compute primitives — classify (mining), regression estimators
@@ -1861,6 +1861,7 @@ medulla-h-ingest = { path = "crates/medulla-h-ingest" }
 medulla-h-jobs = { path = "crates/medulla-h-jobs" }
 medulla-h-decide = { path = "crates/medulla-h-decide" }
 medulla-finance = { path = "crates/medulla-finance" }
+medulla-graph-algos = { path = "crates/medulla-graph-algos" }
 
 [dev-dependencies]
 medulla-h-ingest = { path = "crates/medulla-h-ingest", features = ["test-support"] }

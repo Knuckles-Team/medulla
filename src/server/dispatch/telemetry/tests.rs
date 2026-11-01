@@ -14,9 +14,9 @@ use super::classes::{bindable_types, ontology_digest, BindableTypes, Classificat
 use super::collect::{log_signal, require_tenant_streams, stream_in_tenant, Window};
 use super::declarations::declarations_from;
 use super::materialize::{fact_batch, FactOwner};
-use crate::algorithms::{decode_batch_operations, BatchOperation};
 use crate::graph::{GraphSchemaSource, GraphSchemaSources, SchemaSourceOrigin};
 use crate::server::obs::LogRecord;
+use medulla_graph_algos::{algorithms::decode_batch_operations, algorithms::BatchOperation};
 
 fn node(id: &str, properties: serde_json::Value) -> (String, Vec<u8>) {
     (

@@ -1,10 +1,10 @@
 //! Private transaction commit_multi_graph implementation.
 
 use super::*;
-#[cfg(feature = "raft")]
-use medulla_raft::raft::RaftStateExt;
 #[cfg(feature = "redb")]
 use medulla_persistence::AsRedb;
+#[cfg(feature = "raft")]
+use medulla_raft::raft::RaftStateExt;
 
 pub(super) struct CommitSlice {
     graph_name: String,
@@ -320,22 +320,23 @@ async fn apply_authorized_slices(
             &slice.graph_name,
             coordinator_id,
         );
-        if let Err(error) = medulla_server_api::mutation_batch::commit_internal_graph_methods_with_nonce(
-            medulla_server_api::mutation_batch::InternalGraphCommitRequest::new(
-                Some(&backend),
-                &core,
-                medulla_server_api::mutation_batch::CommitOrigin {
-                    request_id: req_id,
-                    principal: Some(principal),
-                },
-                &slice.graph_name,
-                &child_id,
-                slice.methods.clone(),
-                &ResultPayload::Bool(true),
+        if let Err(error) =
+            medulla_server_api::mutation_batch::commit_internal_graph_methods_with_nonce(
+                medulla_server_api::mutation_batch::InternalGraphCommitRequest::new(
+                    Some(&backend),
+                    &core,
+                    medulla_server_api::mutation_batch::CommitOrigin {
+                        request_id: req_id,
+                        principal: Some(principal),
+                    },
+                    &slice.graph_name,
+                    &child_id,
+                    slice.methods.clone(),
+                    &ResultPayload::Bool(true),
+                )
+                .with_attempt_nonce(attempt_nonce),
             )
-            .with_attempt_nonce(attempt_nonce),
-        )
-        .await
+            .await
         {
             return Response::err(req_id, format!("multi-graph child commit failed: {error}"));
         }

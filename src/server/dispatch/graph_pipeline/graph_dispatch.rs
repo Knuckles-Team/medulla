@@ -262,7 +262,8 @@ pub(in crate::server::dispatch) struct GraphOpRouting<'a> {
     #[cfg(feature = "security")]
     pub(super) rls: &'a std::sync::Arc<crate::isolation::IsolationLayer>,
     #[cfg(feature = "raft")]
-    pub(in crate::server::dispatch) routed_raft: &'a Option<medulla_raft::raft::multi::RoutedRaftHandle>,
+    pub(in crate::server::dispatch) routed_raft:
+        &'a Option<medulla_raft::raft::multi::RoutedRaftHandle>,
     #[cfg(feature = "raft")]
     pub(in crate::server::dispatch) graph_type: crate::protocol::GraphType,
     #[cfg(feature = "raft")]

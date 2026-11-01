@@ -1,18 +1,18 @@
 //! Agent Library admin tests that drive the full method router.
 
-use medulla_agent_types::agent_library::AgentLibraryWriteResult;
 use crate::acl::RequestContextClaims;
 use crate::protocol::{Method, Request};
-use medulla_server_api::api::persistence::BundledStoreSource;
-use medulla_server_api::authority_context::VerifiedRequestContext;
 use crate::server::handlers::admin::{backup_bundle_name, bind_agent_library_draft};
-use medulla_persistence::agent_library::context::bind_agent_library_context;
-use medulla_persistence::agent_library::AgentLibraryStateExt;
-use medulla_types::contract::Nonce;
+use medulla_agent_types::agent_library::AgentLibraryWriteResult;
 use medulla_agent_types::agent_library::{
     AgentLibraryEntryDraft, AgentLibraryMutationContext, AgentLibraryMutationKind, AgentLibraryOp,
     AgentLibraryPublishRequest, AgentLibraryRetireRequest, AgentLibraryStatusRequest,
 };
+use medulla_persistence::agent_library::context::bind_agent_library_context;
+use medulla_persistence::agent_library::AgentLibraryStateExt;
+use medulla_server_api::api::persistence::BundledStoreSource;
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_types::contract::Nonce;
 use redb::{ReadableDatabase, ReadableTableMetadata, TableDefinition};
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
@@ -67,9 +67,7 @@ fn seeded_definition(
     tenant_id: &str,
 ) -> AgentLibraryEntryDraft {
     let mut draft = definition(tenant_id);
-    medulla_persistence::agent_component::seed_draft_components_for_test(
-        store, &mut draft, 50,
-    );
+    medulla_persistence::agent_component::seed_draft_components_for_test(store, &mut draft, 50);
     draft
 }
 
@@ -180,9 +178,7 @@ fn response_write_result(
 /// still pin the number of AGENT rows, offset by a constant.
 const SEEDED_COMPONENT_OUTBOX: usize = 5;
 
-fn native_outbox_count(
-    store: &medulla_persistence::agent_library::AgentLibraryStore,
-) -> usize {
+fn native_outbox_count(store: &medulla_persistence::agent_library::AgentLibraryStore) -> usize {
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("agent_library.redb");
     assert!(store.copy_into(&path).unwrap() >= 1);

@@ -9,7 +9,7 @@
 // this module stays standalone, matching every other file in this crate).
 
 use super::graph::AdjacencyGraph;
-use crate::SplitMix64;
+use medulla_compute::SplitMix64;
 use std::hash::Hash;
 
 /// Configuration for [`random_walk`]. CONCEPT:MEDULLA-KG.compute.random-walk

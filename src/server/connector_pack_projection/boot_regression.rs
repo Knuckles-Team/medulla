@@ -367,8 +367,11 @@ async fn outbox_status(state: &Arc<RwLock<ServerState>>) -> Option<MutationOutbo
 /// The canonical authority-scoped series key — the same construction the
 /// durable fixture in `redb_backend.rs` uses.
 fn scoped_series_key(graph: &str, series: &str, principal: &str) -> String {
-    let tenant_scope =
-        medulla_server_api::mutation_batch::opaque_coordinator_key("carrier-tenant", "verified", TENANT);
+    let tenant_scope = medulla_server_api::mutation_batch::opaque_coordinator_key(
+        "carrier-tenant",
+        "verified",
+        TENANT,
+    );
     let actor_scope = format!(
         "principal:sha256:{}",
         hex::encode(Sha256::digest(principal.as_bytes()))
@@ -447,9 +450,12 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
         graph: GRAPH.to_string(),
         plan: medulla_types::wire::Plan::new(Vec::new()),
     };
-    redb.plan_matview_put(MV_NAME, medulla_server_api::matview::encode_def(&view).unwrap())
-        .await
-        .unwrap();
+    redb.plan_matview_put(
+        MV_NAME,
+        medulla_server_api::matview::encode_def(&view).unwrap(),
+    )
+    .await
+    .unwrap();
     // N real imports → N pending connector-pack-import outbox rows.
     seed_import_backlog(&state).await;
 
@@ -574,7 +580,9 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
             }
         }
         if !reloaded {
-            reloaded = medulla_server_api::matview::manager().get(MV_NAME).is_some();
+            reloaded = medulla_server_api::matview::manager()
+                .get(MV_NAME)
+                .is_some();
         }
         if reconciled && reloaded {
             break;

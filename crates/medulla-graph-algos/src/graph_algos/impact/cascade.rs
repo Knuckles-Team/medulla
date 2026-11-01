@@ -10,7 +10,7 @@
 use std::collections::VecDeque;
 
 use super::{clamp_unit, ImpactGraph, Seed, MAX_HOPS};
-use crate::SplitMix64;
+use medulla_compute::SplitMix64;
 
 /// The two-sided normal quantile of a 95% interval.
 const Z95: f64 = 1.959_963_984_540_054;

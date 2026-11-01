@@ -59,7 +59,7 @@
 //! dispatch plumbing that lives outside medulla-plan's boundary — logged as a follow-up in
 //! `reports/issue-register.md` rather than built here.
 
-use medulla_compute::graphlearn::edge_fn::{Basis, KanEdgeFn};
+use medulla_graph_algos::{graphlearn::edge_fn::Basis, graphlearn::edge_fn::KanEdgeFn};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{OnceLock, RwLock};
@@ -73,9 +73,7 @@ use crate::algebra::Op;
 /// in but inert.
 pub fn enabled() -> bool {
     matches!(
-        std::env::var("MEDULLA_LEARNED_COST")
-            .ok()
-            .as_deref(),
+        std::env::var("MEDULLA_LEARNED_COST").ok().as_deref(),
         Some("1")
     )
 }

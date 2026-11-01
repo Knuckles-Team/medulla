@@ -1,6 +1,8 @@
 use std::collections::HashSet;
 
-use crate::datascience::training::{adam_step, AdamHyperparameters};
+use medulla_compute::{
+    datascience::training::adam_step, datascience::training::AdamHyperparameters,
+};
 
 use super::{
     auc, backward, build_layers, flatten_params, forward_all, init_layers, sample_negatives,

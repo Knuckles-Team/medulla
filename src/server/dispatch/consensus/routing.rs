@@ -392,22 +392,23 @@ fn build_native_raft_request(
         Some(proposal.authority.actor_scope()),
         proposal.authority.idempotency_key(),
     );
-    let mutation = match medulla_server_api::api::persistence::RaftMutationContext::from_verified_request(
-        batch_id,
-        proposal.request_id,
-        proposal.attempt_nonce,
-        proposal.authority.tenant_scope(),
-        proposal.authority.actor_scope().to_string(),
-        identity_bootstrap,
-        medulla_server_api::api::persistence::RaftMutationTiming {
-            placement_epoch: routed.epoch,
-            fencing_token: routed.placed.then_some(routed.group_id),
-            created_at_ms: committed_at_ms,
-        },
-    ) {
-        Ok(mutation) => mutation,
-        Err(error) => return Err(Response::err(proposal.request_id, error)),
-    };
+    let mutation =
+        match medulla_server_api::api::persistence::RaftMutationContext::from_verified_request(
+            batch_id,
+            proposal.request_id,
+            proposal.attempt_nonce,
+            proposal.authority.tenant_scope(),
+            proposal.authority.actor_scope().to_string(),
+            identity_bootstrap,
+            medulla_server_api::api::persistence::RaftMutationTiming {
+                placement_epoch: routed.epoch,
+                fencing_token: routed.placed.then_some(routed.group_id),
+                created_at_ms: committed_at_ms,
+            },
+        ) {
+            Ok(mutation) => mutation,
+            Err(error) => return Err(Response::err(proposal.request_id, error)),
+        };
     Ok(medulla_raft::raft::RaftRequest {
         graph_fname,
         graph_name: proposal.graph_name.to_string(),

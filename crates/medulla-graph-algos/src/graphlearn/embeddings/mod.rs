@@ -26,8 +26,11 @@ pub use node2vec::{node2vec, Node2VecConfig};
 use std::fmt::Display;
 use std::hash::Hash;
 
-use crate::compute::semantic::{check_embedding_dimension, EmbeddingDimensionError, SemanticStore};
 use crate::graph_algos::AdjacencyGraph;
+use medulla_core::{
+    compute::semantic::check_embedding_dimension, compute::semantic::EmbeddingDimensionError,
+    compute::semantic::SemanticStore,
+};
 
 /// A batch of structural embeddings tied to their string node ids — the boundary
 /// object between the pure index-ordered algorithm output and the id-keyed
@@ -149,7 +152,7 @@ impl SplitMix64 {
         Self { state: seed }
     }
     pub(crate) fn next_u64(&mut self) -> u64 {
-        crate::splitmix64_next(&mut self.state)
+        medulla_compute::splitmix64_next(&mut self.state)
     }
     pub(crate) fn next_f64(&mut self) -> f64 {
         (self.next_u64() >> 11) as f64 / (1u64 << 53) as f64
@@ -159,7 +162,10 @@ impl SplitMix64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graphlearn::link_predict::{auc, fit_link_predictor, FeatureCtx, KanLinkConfig};
+    use crate::{
+        graphlearn::link_predict::auc, graphlearn::link_predict::fit_link_predictor,
+        graphlearn::link_predict::FeatureCtx, graphlearn::link_predict::KanLinkConfig,
+    };
     use std::collections::HashSet;
 
     /// A seeded planted-partition (stochastic block model): `k` communities of `size`

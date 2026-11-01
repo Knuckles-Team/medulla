@@ -23,8 +23,8 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_server_api::state::ServerState;
 use crate::wire::CdcEvent;
+use medulla_server_api::state::ServerState;
 
 /// Apply one remote [`CdcEvent`] as a cache-coherence invalidation against the local
 /// registry. Looks up the event's graph; if it exists locally, retires its cached

@@ -3,13 +3,13 @@
 use crate::protocol::Response;
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
 use crate::protocol::ResultPayload;
-use medulla_server_api::auth::VerifiedRequestContext;
+#[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
+use medulla_catalog_types::{connector_pack::PackEntryKind, connector_pack::PackProjectionState};
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
 use medulla_persistence::connector_pack::projection::ConnectorPackProjectionPlan;
 use medulla_persistence::connector_pack::projection::PackProjectionBody;
+use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
-#[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
-use medulla_catalog_types::{connector_pack::PackEntryKind, connector_pack::PackProjectionState};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 

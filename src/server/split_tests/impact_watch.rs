@@ -5,8 +5,10 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use medulla_compute::graph_algos::impact::{noisy_or, ImpactGraph, Seed};
 use medulla_core::graph::GraphCore;
+use medulla_graph_algos::{
+    graph_algos::impact::noisy_or, graph_algos::impact::ImpactGraph, graph_algos::impact::Seed,
+};
 use serde_json::json;
 use tokio::sync::RwLock;
 

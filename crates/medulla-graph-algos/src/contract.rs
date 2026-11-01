@@ -20,7 +20,7 @@ use medulla_modality::{
 };
 
 use crate::algorithms::MergeProposal;
-use crate::ast::symbol::Symbol;
+use medulla_compute::ast::symbol::Symbol;
 
 impl ModalityContract for MergeProposal {
     fn storage_kind(&self) -> &'static str {
@@ -217,7 +217,7 @@ impl ConformanceTestable for Symbol {
             id: "sym:deadbeef".to_string(),
             name: "handle_request".to_string(),
             qualified_name: "crate::server::handle_request".to_string(),
-            symbol_type: crate::ast::symbol::SymbolType::Function,
+            symbol_type: medulla_compute::ast::symbol::SymbolType::Function,
             file_path: "src/server.rs".to_string(),
             line_start: 42,
             line_end: 88,

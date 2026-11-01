@@ -16,8 +16,11 @@ use std::time::Duration;
 
 use petgraph::visit::{EdgeRef, IntoEdgeReferences};
 
-use crate::graph::GraphView;
-use crate::graph_algos::{leiden, AdjacencyGraph, LeidenConfig, QualityFunction};
+use crate::{
+    graph_algos::leiden, graph_algos::AdjacencyGraph, graph_algos::LeidenConfig,
+    graph_algos::QualityFunction,
+};
+use medulla_core::graph::GraphView;
 
 /// Detect communities through the sole Leiden implementation in
 /// [`crate::graph_algos`]. The adapter preserves isolated nodes and translates

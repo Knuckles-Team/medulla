@@ -36,7 +36,7 @@ cypher = ["dep:petgraph"]
 # `gds.linkPrediction` (`medulla-compute::graphlearn::link_predict` — implies
 # `datascience`, pulling `rand_chacha`; still no BLAS/GPU dep).
 cypher-mining = ["cypher", "medulla-compute/mining"]
-cypher-graphlearn = ["cypher", "medulla-compute/graphlearn"]
+cypher-graphlearn = ["cypher", "medulla-compute/graphlearn", "medulla-graph-algos/graphlearn"]
 # CONCEPT:MEDULLA-KG.query.named-graph-projection-catalog (W4.5/N5) — `gds.graph.project`/`.drop`/
 # `.exists`/`.list` plus named-projection reuse in the OTHER `gds.*` algorithm procedures (an
 # optional `graphName` config key that materializes/reuses a catalog entry instead of always
@@ -202,6 +202,7 @@ ipnet = { version = "2.12", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
+medulla-graph-algos = { path = "../medulla-graph-algos" }
 
 [dev-dependencies]
 medulla-result-types = { path = "../medulla-result-types" }

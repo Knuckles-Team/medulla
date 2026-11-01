@@ -7,13 +7,13 @@ use tokio::sync::RwLock;
 
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_persistence::AsRedb;
+use medulla_protocol_types::mutation_batch::*;
+use medulla_protocol_types::protocol::*;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::auth::dispatch_test_on_heap as dispatch_on_heap;
 use medulla_server_api::state::ServerState;
 use medulla_store::redb_layout::shard_filename;
 use medulla_store::redb_store::shard::Shard;
-use medulla_protocol_types::mutation_batch::*;
-use medulla_protocol_types::protocol::*;
 
 const TEST_AGENT: &str = "unit-test-agent";
 
@@ -67,9 +67,9 @@ fn current_request(secret: &str, id: u64, graph: &str, method: Method) -> Reques
 }
 
 use crate::server::handlers::txn::try_handle as txn_try_handle;
-use medulla_server_api::auth::VerifiedRequestContext;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
+use medulla_server_api::auth::VerifiedRequestContext;
 
 fn cm_dir(tag: &str) -> String {
     // The cross-modal handler-commit path seals its transaction recovery plan
@@ -758,8 +758,8 @@ async fn five_modality_rolls_back_all_on_failure() {
 #[cfg(feature = "tsdb")]
 #[tokio::test(flavor = "multi_thread")]
 async fn crossmodal_measurement_visible_via_public_tsrange_post_commit_and_restart() {
-    use medulla_tsdb::store::SeriesStore;
     use medulla_protocol_types::protocol::ResultPayload;
+    use medulla_tsdb::store::SeriesStore;
 
     const SECRET: &str = "ts-unify-secret";
     // Held for the whole test — this one literally reopens the backend
@@ -956,8 +956,8 @@ async fn crossmodal_measurement_visible_via_public_tsrange_post_commit_and_resta
 #[cfg(feature = "tsdb")]
 #[tokio::test(flavor = "multi_thread")]
 async fn startup_reconciliation_closes_the_crash_window_gap() {
-    use medulla_tsdb::store::SeriesStore;
     use medulla_protocol_types::protocol::ResultPayload;
+    use medulla_tsdb::store::SeriesStore;
 
     const SECRET: &str = "ts-reconcile-secret";
     // See `crossmodal_txn_commits_all_modalities_atomically` above: held for the

@@ -1,6 +1,6 @@
 use super::tests::{assert_budget_expired, ring_of_triangles_edges, two_cliques_bridge_edges};
 use super::*;
-use crate::SplitMix64;
+use medulla_compute::SplitMix64;
 
 /// Every level's communities must be a strict coarsening of the level
 /// below: each parent's member set is EXACTLY the union of its children's

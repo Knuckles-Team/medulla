@@ -9,14 +9,14 @@
 //! live lease.
 
 use super::{decode_durable, property_string, DurableCrypto, NODES};
-use medulla_storage::{GraphShardOwner, PhysicalWriteCapability, ScopedOwnerTableMut};
-use medulla_transaction::{AdmittedOwnerWrite, OwnerPayloadWrite};
 use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityDecision;
 use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityMintRequest;
 use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityRequestSchemaVersion;
 use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResult;
 use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityResultSchemaVersion;
 use medulla_result_types::epistemic_operations_ext::WorkItemClaimCapabilityVerifyRequest;
+use medulla_storage::{GraphShardOwner, PhysicalWriteCapability, ScopedOwnerTableMut};
+use medulla_transaction::{AdmittedOwnerWrite, OwnerPayloadWrite};
 use rand::RngCore;
 use redb::TableDefinition;
 use serde::{Deserialize, Serialize};
@@ -662,10 +662,10 @@ pub(crate) enum NodeTouch {
 /// Decode a generic batch into its node touches, in operation order: the one
 /// reading both the native-authority check and the row guard share.
 pub(crate) fn batch_node_touches(operations_msgpack: &[u8]) -> Result<Vec<NodeTouch>, String> {
-    use medulla_compute::algorithms::BatchOperation;
+    use medulla_graph_algos::algorithms::BatchOperation;
 
     Ok(
-        medulla_compute::algorithms::decode_batch_operations(operations_msgpack)?
+        medulla_graph_algos::algorithms::decode_batch_operations(operations_msgpack)?
             .into_iter()
             .filter_map(|operation| match operation {
                 BatchOperation::AddNode {
@@ -1096,9 +1096,9 @@ mod tests {
     use crate::redb_store::shard::Shard;
     use medulla_mutation_types::mutation_scope::IncarnationId;
     use medulla_mutation_types::mutation_scope::LogicalName;
-    use medulla_protocol_types::mutation_batch::MutationBatch;
     use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
     use medulla_mutation_types::mutation_scope::ScopeTenantId;
+    use medulla_protocol_types::mutation_batch::MutationBatch;
     use medulla_protocol_types::protocol::Method;
     use std::path::{Path, PathBuf};
 

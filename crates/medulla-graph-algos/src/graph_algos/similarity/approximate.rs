@@ -3,7 +3,7 @@ use super::{
     cosine_from_neighbors, finish_similarity_pairs, jaccard_from_neighbors, knn_similarity,
     neighbor_norm, prepared_neighbors, KnnSimilarityApproxConfig, Metric, SimilarityPair,
 };
-use crate::SplitMix64;
+use medulla_compute::SplitMix64;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::hash::Hash;

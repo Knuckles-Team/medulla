@@ -22,7 +22,7 @@ use std::sync::OnceLock;
 use medulla_core::graph::GraphView;
 use serde_json::Value;
 
-use medulla_compute::algorithms;
+use medulla_graph_algos::algorithms;
 
 use super::number_value;
 

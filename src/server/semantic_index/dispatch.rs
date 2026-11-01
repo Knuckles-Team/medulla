@@ -1,8 +1,8 @@
-use medulla_mutation_types::mutation_scope::MutationOutboxLease;
+use super::*;
 use medulla_index_types::semantic_index::SemanticBinding;
 use medulla_index_types::semantic_index::SemanticIndexError;
 use medulla_index_types::semantic_index::SemanticStageIntent;
-use super::*;
+use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 
 impl SemanticIndexServerAdapter {
     /// Resolve a committed S1 from its durable lease and expected intent. The
