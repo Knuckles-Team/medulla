@@ -33,9 +33,8 @@ iceberg = "0.10"
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 
 [features]
-finance = ["medulla-sql/finance"]
-numeric = ["medulla-sql/numeric", "dep:medulla-tsdb"]
-sql = ["medulla-sql/sql"]
-
+finance = ["medulla-sql/finance", "medulla-result-types/finance", "medulla-protocol-types/finance", "medulla-types/finance", "medulla-sql-udfs/finance"]
+numeric = ["medulla-sql/numeric", "dep:medulla-tsdb", "medulla-sql-udfs/numeric"]
+sql = ["medulla-sql/sql", "medulla-table-store/sql", "medulla-tables/sql", "medulla-sql-udfs/sql", "medulla-cypher/sql"]
 [dev-dependencies]
 medulla-sql-lang = { path = "../medulla-sql-lang" }

@@ -59,11 +59,11 @@ argon2 = { version = "0.5", optional = true, default-features = false, features 
 jsonwebtoken = { version = "11.1", optional = true, default-features = false, features = ["aws_lc_rs"] }
 
 [features]
-ast = ["medulla-server-router/ast", "medulla-server/ast"]
-compute-dist = ["medulla-server/compute-dist", "raft"]
+ast = ["medulla-server-router/ast", "medulla-server/ast", "medulla-compute/ast", "medulla-h-ingest/ast", "medulla-server-api/ast", "medulla-store/ast"]
+compute-dist = ["medulla-server/compute-dist", "raft", "medulla-persistence/compute-dist", "medulla-protocol-types/compute-dist", "medulla-raft/compute-dist", "medulla-raft-xshard/compute-dist", "medulla-result-types/compute-dist", "medulla-server-api/compute-dist", "medulla-store/compute-dist", "medulla-types/compute-dist", "medulla-server-ops/compute-dist"]
 harness = ["medulla-server/harness", "raft", "medulla-raft/harness", "medulla-raft-xshard/harness", "medulla-raft-xshard/test-support"]
-oidc = ["medulla-server-router/oidc", "medulla-server/oidc", "dep:jsonwebtoken"]
-raft = ["medulla-server-router/raft", "medulla-server/raft", "redb", "dep:openraft", "server"]
-redb = ["medulla-server-router/redb", "medulla-server/redb", "dep:redb", "dep:medulla-transaction", "dep:medulla-storage"]
-security = ["medulla-server-router/security", "medulla-server/security", "redb", "dep:sha1", "dep:argon2", "oidc"]
-server = ["medulla-server-router/server", "medulla-server/server"]
+oidc = ["medulla-server-router/oidc", "medulla-server/oidc", "dep:jsonwebtoken", "medulla-server-api/oidc", "medulla-server-auth/oidc"]
+raft = ["medulla-server-router/raft", "medulla-server/raft", "redb", "dep:openraft", "server", "medulla-h-ingest/raft", "medulla-kernel/raft", "medulla-persistence/raft", "medulla-raft/raft", "medulla-raft-xshard/raft", "medulla-server-api/raft", "medulla-store/raft", "medulla-server-auth/raft"]
+redb = ["medulla-server-router/redb", "medulla-server/redb", "dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-h-ingest/redb", "medulla-kernel/redb", "medulla-persistence/redb", "medulla-raft/redb", "medulla-raft-xshard/redb", "medulla-server-api/redb", "medulla-store/redb", "medulla-persistence-records/redb", "medulla-server-ops/redb"]
+security = ["medulla-server-router/security", "medulla-server/security", "redb", "dep:sha1", "dep:argon2", "oidc", "medulla-h-ingest/security", "medulla-kernel/security", "medulla-persistence/security", "medulla-protocol-types/security", "medulla-raft/security", "medulla-raft-xshard/security", "medulla-server-api/security", "medulla-store/security", "medulla-types/security", "medulla-graph-core/security", "medulla-isolation/security", "medulla-server-ops/security", "medulla-server-auth/security"]
+server = ["medulla-server-router/server", "medulla-server/server", "medulla-h-ingest/server", "medulla-kernel/server", "medulla-persistence/server", "medulla-raft/server", "medulla-server-api/server", "medulla-store/server"]
