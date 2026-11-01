@@ -102,7 +102,7 @@ impl AnnGeneration {
             built_epoch: source.epoch,
             max_rowid: source.max_rowid,
             rows: source.rows.len(),
-            pub base: None,
+            base: None,
             delta: Vec::new(),
             graph,
         }
@@ -134,7 +134,7 @@ impl AnnGeneration {
             built_epoch: changed.epoch,
             max_rowid: self.max_rowid.max(changed_ids.last().copied()),
             rows: self.rows + admitted.len(),
-            pub base: Some(self.base.unwrap_or(self.generation)),
+            base: Some(self.base.unwrap_or(self.generation)),
             delta: delta.into_iter().collect(),
             graph,
         })

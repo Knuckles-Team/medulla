@@ -26,7 +26,6 @@ tokio = { version = "1.53", features = ["rt"], optional = true }
 arrow-schema = { version = "58.4", optional = true }
 arrow = { version = "58.4", optional = true }
 datafusion = { version = "54", default-features = false, optional = true, features = ["nested_expressions", "sql"] }
-medulla-query = { path = "../medulla-query" }
 medulla-types = { path = "../medulla-types" }
 medulla-core = { path = "../medulla-core" }
 medulla-compute = { path = "../medulla-compute" }
@@ -43,9 +42,9 @@ medulla-result-types = { path = "../medulla-result-types" }
 medulla-table-store = { path = "../medulla-table-store" }
 
 [features]
-cypher = ["dep:petgraph", "medulla-query/cypher"]
-cypher-graphlearn = ["cypher", "medulla-query/cypher-graphlearn"]
-cypher-mining = ["cypher", "medulla-query/cypher-mining"]
-cypher-plan = ["cypher", "dep:tracing", "medulla-query/cypher-plan"]
-result-cache = ["cypher", "medulla-query/result-cache"]
-sql = ["dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petgraph", "dep:tracing", "dep:async-trait", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-query/sql", "medulla-table-store/sql"]
+cypher = ["dep:petgraph"]
+cypher-graphlearn = ["cypher"]
+cypher-mining = ["cypher"]
+cypher-plan = ["cypher", "dep:tracing"]
+result-cache = ["cypher"]
+sql = ["dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petgraph", "dep:tracing", "dep:async-trait", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-table-store/sql"]

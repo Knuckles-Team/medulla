@@ -25,7 +25,6 @@ tokio = { version = "1.53", features = ["rt"], optional = true }
 arrow-schema = { version = "58.4", optional = true }
 arrow = { version = "58.4", optional = true }
 datafusion = { version = "54", default-features = false, optional = true, features = ["nested_expressions", "sql"] }
-medulla-query = { path = "../medulla-query" }
 medulla-types = { path = "../medulla-types" }
 medulla-core = { path = "../medulla-core" }
 medulla-ann = { path = "../medulla-ann", optional = true }
@@ -43,5 +42,5 @@ medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-tables = { path = "../medulla-tables" }
 
 [features]
-dev-scope-grant = ["sql", "medulla-query/dev-scope-grant"]
-sql = ["dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petgraph", "dep:tracing", "dep:async-trait", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-query/sql", "medulla-tables/sql"]
+dev-scope-grant = ["sql"]
+sql = ["dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petgraph", "dep:tracing", "dep:async-trait", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-tables/sql"]

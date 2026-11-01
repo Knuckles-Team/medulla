@@ -23,7 +23,6 @@ tracing = { version = "0.1", optional = true }
 petgraph = { version = "0.8.3", features = ["serde-1"], optional = true }
 tokio = { version = "1.53", features = ["rt"], optional = true }
 arrow-schema = { version = "58.4", optional = true }
-medulla-query = { path = "../medulla-query" }
 medulla-types = { path = "../medulla-types" }
 medulla-core = { path = "../medulla-core" }
 medulla-compute = { path = "../medulla-compute" }
@@ -45,6 +44,6 @@ ipnet = { version = "2.12", optional = true }
 medulla-tables = { path = "../medulla-tables" }
 
 [features]
-finance = ["sql", "medulla-query/finance"]
-numeric = ["sql", "dep:medulla-numeric", "dep:ndarray", "dep:medulla-tsdb", "medulla-query/numeric"]
-sql = ["dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petgraph", "dep:tracing", "dep:async-trait", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-query/sql", "medulla-tables/sql"]
+finance = ["sql"]
+numeric = ["sql", "dep:medulla-numeric", "dep:ndarray", "dep:medulla-tsdb"]
+sql = ["dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petgraph", "dep:tracing", "dep:async-trait", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-tables/sql"]

@@ -73,8 +73,8 @@ reasoning = ["dep:medulla-compute", "medulla-compute/reasoning"]
 # exec_cypher) and medulla_plan (Op/Plan/uql::parse, the unified-query-text surface) --
 # confirmed by grep, `src/server/handlers/query.rs`. `cypher` is medulla-query alone (no
 # medulla-plan), matching root Cargo.toml:432's own narrower composition.
-query = ["dep:medulla-query", "medulla-query/sql", "dep:medulla-plan", "medulla-plan/query"]
-cypher = ["dep:medulla-query", "medulla-query/cypher"]
+query = ["dep:medulla-plan", "medulla-plan/query"]
+cypher = []
 tsdb = ["dep:medulla-tsdb", "medulla-tsdb/redb-store"]
 streaming = []
 wasm-udf = ["dep:medulla-wasm", "medulla-wasm/wasm-udf"]
@@ -115,7 +115,6 @@ pyo3 = { version = "0.29", features = ["extension-module", "abi3-py39"], optiona
 # `--features python` alone) links NONE of them.
 # ---------------------------------------------------------------------------
 medulla-compute = { path = "../medulla-compute", optional = true }
-medulla-query = { path = "../medulla-query", optional = true }
 medulla-plan = { path = "../medulla-plan", optional = true }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 medulla-rdf = { path = "../medulla-rdf", optional = true }

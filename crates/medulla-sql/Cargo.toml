@@ -25,7 +25,6 @@ redb = { workspace = true, optional = true }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }
 ndarray = { version = "0.17", optional = true }
 medulla-numeric = { path = "../medulla-numeric", optional = true }
-medulla-query = { path = "../medulla-query" }
 medulla-types = { path = "../medulla-types" }
 medulla-core = { path = "../medulla-core" }
 medulla-compute = { path = "../medulla-compute" }
@@ -58,7 +57,17 @@ medulla-table-store = { path = "../medulla-table-store" }
 medulla-tables = { path = "../medulla-tables" }
 
 [features]
-finance = ["sql", "medulla-query/finance", "medulla-sql-udfs/finance"]
-iceberg-federation = ["dep:iceberg", "dep:iceberg-catalog-rest", "dep:iceberg-storage-opendal", "medulla-query/iceberg-federation"]
-numeric = ["sql", "dep:medulla-numeric", "dep:ndarray", "dep:medulla-tsdb", "medulla-query/numeric", "medulla-sql-udfs/numeric"]
-sql = ["iceberg-federation", "dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petgraph", "dep:tracing", "dep:async-trait", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-query/sql", "medulla-tables/sql", "medulla-table-store/sql", "medulla-sql-udfs/sql"]
+finance = ["sql", "medulla-sql-udfs/finance"]
+iceberg-federation = ["dep:iceberg", "dep:iceberg-catalog-rest", "dep:iceberg-storage-opendal"]
+numeric = ["sql", "dep:medulla-numeric", "dep:ndarray", "dep:medulla-tsdb", "medulla-sql-udfs/numeric"]
+sql = ["iceberg-federation", "dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petgraph", "dep:tracing", "dep:async-trait", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-tables/sql", "medulla-table-store/sql", "medulla-sql-udfs/sql"]
+
+[dev-dependencies]
+medulla-result-types = { path = "../medulla-result-types" }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+tokio = { version = "1.53", features = ["rt", "rt-multi-thread", "macros"] }
+medulla-types = { path = "../medulla-types", features = ["test-support"] }
+medulla-table-store = { path = "../medulla-table-store" }
+medulla-tables = { path = "../medulla-tables" }
+medulla-sql-udfs = { path = "../medulla-sql-udfs" }
+medulla-cypher = { path = "../medulla-cypher" }

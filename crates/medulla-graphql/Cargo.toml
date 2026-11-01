@@ -86,4 +86,3 @@ medulla-cypher = { path = "../medulla-cypher" }
 [dev-dependencies]
 # The equivalence test runs the SAME query through the engine's real Cypher executor
 # (medulla-query/cypher — dep-free, no DataFusion) and asserts GraphQL == Cypher.
-medulla-query = { path = "../medulla-query", features = ["cypher"] }

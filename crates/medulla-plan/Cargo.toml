@@ -16,7 +16,7 @@ name = "medulla_plan"
 # leg — and the `UnifiedPlan::execute` that needs it — are gated behind this
 # feature, exactly as the facade gates `query`.
 default = []
-query = ["dep:medulla-query", "medulla-query/sql", "medulla-sql/sql", "dep:medulla-compute", "dep:tracing"]
+query = ["medulla-sql/sql", "dep:medulla-compute", "dep:tracing"]
 # The cross-modal cost-based optimizer (CONCEPT:MEDULLA-KG.query.xmodal-cost-optimizer). The engine
 # itself compiles under `query` (beside the executor) and is active by default with the
 # runtime kill-switch `MEDULLA_COST_OPT=0` → identity; this feature is the FACADE tier
@@ -294,7 +294,6 @@ medulla-modality = { path = "../medulla-modality" }
 tracing = { version = "0.1", optional = true }
 # The relational FILTER leg is real DataFusion via medulla-query's schema-on-read
 # `nodes` provider — gated behind `query` so a default build links none of it.
-medulla-query = { path = "../medulla-query", optional = true }
 # The WASM UDF runtime backing the `Udf` op (feature `wasm-udf`, CONCEPT:KG-2.228).
 # Optional + only referenced under #[cfg(feature = "wasm-udf")]; a default/Pi build
 # links no wasmtime/cranelift.
@@ -446,7 +445,6 @@ medulla-decision-types = { path = "../medulla-decision-types", features = ["test
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support", "query"] }
 # The oracle/algebra tests build a fixture GraphCore + SemanticStore and run the
 # DataFusion FILTER leg, so the test target needs the `query` feature on.
-medulla-query = { path = "../medulla-query", features = ["sql"] }
 # `tsdb_scan_tests` opens a real `SeriesStore`, which under RF-RULING-004 needs the
 # composition root's `ScopeGrantVerifier`. medulla-tsdb ships one for exactly this behind
 # its off-by-default `dev-scope-grant` feature; naming it here turns it on for the

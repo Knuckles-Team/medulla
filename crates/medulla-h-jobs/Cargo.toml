@@ -26,7 +26,6 @@ medulla-persistence = { path = "../medulla-persistence" }
 medulla-plan = { path = "../medulla-plan", optional = true }
 medulla-program = { path = "../medulla-program", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
-medulla-query = { path = "../medulla-query", optional = true }
 medulla-raft = { path = "../medulla-raft" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-server-api = { path = "../medulla-server-api" }
@@ -44,7 +43,7 @@ ann-redb = ["redb"]
 jobs = ["dep:medulla-jobs", "dep:medulla-capabilities", "medulla-capabilities/jobs", ]
 knowledge-batch = ["dep:medulla-plan", "medulla-plan/knowledge-batch", "dep:medulla-modality", "dep:medulla-capabilities", "medulla-capabilities/knowledge-batch", "query"]
 program-optimization = ["dep:medulla-program", "jobs"]
-query = ["dep:medulla-query", "medulla-query/sql", "medulla-table-store/sql", "dep:medulla-plan", "medulla-plan/query", "redb"]
+query = ["medulla-table-store/sql", "dep:medulla-plan", "medulla-plan/query", "redb"]
 raft = ["redb"]
 redb = []
 statechart = ["dep:medulla-statechart", "dep:medulla-capabilities", "medulla-capabilities/statechart", ]
@@ -56,7 +55,7 @@ asr-whisper = ["dep:medulla-capabilities", "medulla-capabilities/asr-native"]
 quantum-agent-api = ["dep:medulla-capabilities", "medulla-capabilities/quantum"]
 epistemic = ["dep:medulla-plan", "medulla-plan/epistemic", "dep:medulla-modality"]
 alignment = ["dep:medulla-modality"]
-numeric = ["dep:medulla-query", "medulla-query?/numeric", "dep:medulla-plan", "medulla-plan?/numeric"]
+numeric = ["dep:medulla-plan", "medulla-plan?/numeric"]
 cost-opt = ["dep:medulla-plan", "medulla-plan/cost-opt"]
 par-runtime = ["dep:medulla-plan", "medulla-plan/par-runtime"]
 text = ["dep:medulla-plan", "medulla-plan/text"]
@@ -71,9 +70,9 @@ wasm-udf = ["dep:medulla-plan", "medulla-plan?/wasm-udf"]
 gpu = ["dep:medulla-plan", "medulla-plan/tensor-gpu"]
 gpu-cuda = ["dep:medulla-plan", "medulla-plan/tensor-gpu-cuda"]
 owl-plan = ["dep:medulla-plan", "medulla-plan/owl"]
-cypher = ["dep:medulla-query", "medulla-query/cypher"]
-cypher-plan = ["dep:medulla-query", "medulla-query/cypher-plan"]
-result-cache = ["dep:medulla-query", "medulla-query?/result-cache"]
+cypher = []
+cypher-plan = []
+result-cache = []
 
 [dev-dependencies]
 tempfile = "3"

@@ -1,6 +1,6 @@
 # Governed user-table schema migrations
 
-`medulla-query::tables::TableStore::apply_schema_migration` is the authoritative
+`medulla-table-store::tables::TableStore::apply_schema_migration` is the authoritative
 schema-transition seam for user tables.  A caller first obtains a
 `SchemaSnapshot`, builds a `SchemaMigration::for_schema` plan, and submits the
 sealed plan with the same owner scope used to open the store.

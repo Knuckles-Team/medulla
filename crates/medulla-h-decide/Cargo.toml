@@ -26,7 +26,6 @@ medulla-numeric = { path = "../medulla-numeric", optional = true }
 medulla-persistence = { path = "../medulla-persistence" }
 medulla-plan = { path = "../medulla-plan", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
-medulla-query = { path = "../medulla-query", optional = true }
 medulla-rdf = { path = "../medulla-rdf", optional = true }
 medulla-server-api = { path = "../medulla-server-api" }
 medulla-shacl = { path = "../medulla-shacl", optional = true }
@@ -49,13 +48,13 @@ decide = ["dep:medulla-numeric", "medulla-numeric/decision", "dep:medulla-ann", 
 epistemic = ["dep:medulla-plan", "medulla-plan/epistemic", "query"]
 finance = []
 owl = ["dep:medulla-rdf", "medulla-rdf/owl", ]
-query = ["dep:medulla-query", "medulla-query/sql", "medulla-tables/sql", "medulla-sql/sql", "dep:medulla-plan", "medulla-plan/query", "redb"]
+query = ["medulla-sql/sql", "medulla-tables/sql", "dep:medulla-plan", "medulla-plan/query", "redb"]
 raft = ["redb"]
 redb = []
 security = ["redb"]
 solve = []
 server = ["dep:tokio", "dep:async-trait"]
-numeric = ["dep:medulla-query", "medulla-query?/numeric", "medulla-sql/numeric", "dep:medulla-plan", "medulla-plan?/numeric", "dep:medulla-numeric"]
+numeric = ["medulla-sql/numeric", "dep:medulla-plan", "medulla-plan?/numeric", "dep:medulla-numeric"]
 knowledge-batch = ["dep:medulla-plan", "medulla-plan/knowledge-batch"]
 cost-opt = ["dep:medulla-plan", "medulla-plan/cost-opt"]
 par-runtime = ["dep:medulla-plan", "medulla-plan/par-runtime"]
@@ -71,9 +70,9 @@ wasm-udf = ["dep:medulla-plan", "medulla-plan?/wasm-udf"]
 gpu = ["dep:medulla-plan", "medulla-plan/tensor-gpu"]
 gpu-cuda = ["dep:medulla-plan", "medulla-plan/tensor-gpu-cuda"]
 owl-plan = ["dep:medulla-plan", "medulla-plan/owl"]
-cypher = ["dep:medulla-query", "medulla-query/cypher"]
-cypher-plan = ["dep:medulla-query", "medulla-query/cypher-plan"]
-result-cache = ["dep:medulla-query", "medulla-query?/result-cache"]
+cypher = []
+cypher-plan = []
+result-cache = []
 rdf = ["dep:medulla-rdf", "medulla-rdf/rdf"]
 sparql = ["dep:medulla-rdf", "medulla-rdf/sparql"]
 sparql-hash = ["dep:medulla-rdf", "medulla-rdf/sparql-hash"]
