@@ -26,3 +26,6 @@ pub mod graph_algos;
 #[cfg(feature = "graphlearn")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod graphlearn;
+
+#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod community;

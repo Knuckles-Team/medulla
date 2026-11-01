@@ -14,7 +14,7 @@
 // community detection exactly like every other mining family, per the
 // "wrap, don't reimplement" discipline.
 
-use super::super::graph_algos::{
+use crate::graph_algos::{
     label_propagation, louvain, AdjacencyGraph, LabelPropagationConfig, LouvainConfig,
 };
 

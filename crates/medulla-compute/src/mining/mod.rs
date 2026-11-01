@@ -36,7 +36,6 @@ pub mod text;
 // back a typed node + (with `epistemic` on) a `:Claim`/`:Evidence` epistemic
 // object via the SAME `as_claim` pattern the 9 families above established.
 pub mod causal_impact;
-pub mod community;
 pub mod entity_resolution;
 pub mod ontology_gap;
 pub mod process_mining;
