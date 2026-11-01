@@ -431,10 +431,10 @@ rayon = { version = "1.12", optional = true }
 # referenced under #[cfg(feature = "knowledge-batch")]; a default/Pi build links
 # none of it.
 arrow = { version = "58.4", optional = true }
-medulla-protocol-types = { path = "../medulla-protocol-types" }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["query"] }
 
 [dev-dependencies]
-medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
+medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support", "query"] }
 # The oracle/algebra tests build a fixture GraphCore + SemanticStore and run the
 # DataFusion FILTER leg, so the test target needs the `query` feature on.
 medulla-query = { path = "../medulla-query", features = ["sql"] }

@@ -21,7 +21,7 @@ default = []
 # crates/; and this crate keeps pyo3 out of any engine-linked build). Only the
 # wheel build (maturin) turns this on. The boundary accepts/returns Python built-ins;
 # it deliberately has no NumPy runtime dependency.
-python = ["dep:pyo3", "analytics", "dep:medulla-types", "medulla-types/wire-complete"]
+python = ["dep:pyo3", "analytics", "dep:medulla-types", "medulla-types/wire-complete", "medulla-protocol-types/wire-complete"]
 # Analytics stats ops (CONCEPT:MEDULLA-357/MEDULLA-358): spearmanr / ks_2samp / normal
 # ppf+pdf. Pulls `statrs` for the distribution CDFs (Student-t, Normal). Kept OUT
 # of `default` so an engine `pi`/`node`/`full` build that links the medulla-numeric rlib

@@ -24,6 +24,8 @@ strum = { version = "0.28", features = ["derive"], optional = true }
 schemars = { version = "1.2.3", optional = true }
 
 [features]
+wire-contract = ["finance", "datascience", "mining", "graphlearn", "ml-pipeline", "epistemic", "query", "graphql", "broker", "blob", "kv", "sqlite-file", "streaming", "cost", "rdf", "sparql", "owl", "obda", "wasm-udf", "compute-dist", "matview", "security", "federation", "medulla-types/wire-contract"]
+wire-complete = ["wire-contract", "jobs", "statechart", "knowledge-batch", "modality-serving", "quantum", "asr-native", "viz", "medulla-types/wire-complete"]
 asr-native = ["medulla-types/asr-native"]
 blob = ["medulla-types/blob"]
 broker = ["medulla-types/broker"]

@@ -51,6 +51,10 @@ name = "medulla_capabilities"
 path = "../medulla-types"
 features = ["metrics", "wire-contract"]
 
+[dependencies.medulla-protocol-types]
+path = "../medulla-protocol-types"
+features = ["metrics", "wire-contract"]
+
 [dev-dependencies]
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 tempfile = "3"
@@ -149,6 +153,3 @@ asr-native = ["medulla-types/asr-native", "medulla-protocol-types/asr-native"]
 # `medulla-capabilities?/viz` (weak-dep syntax: only takes effect if `medulla-capabilities` is
 # ALSO linked via `server` from elsewhere) in lockstep -- see root Cargo.toml.
 viz = ["medulla-types/viz", "medulla-protocol-types/viz"]
-
-[dependencies]
-medulla-protocol-types = { path = "../medulla-protocol-types" }
