@@ -5,10 +5,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::schema::Column;
-use crate::schema::ColumnType;
-use crate::schema::TableConstraint;
-use crate::schema::TableSchema;
+use medulla_query::schema::Column;
+use medulla_query::schema::ColumnType;
+use medulla_query::schema::TableConstraint;
+use medulla_query::schema::TableSchema;
 
 use super::model::*;
 use super::{DropBehavior, ElementKind, GraphOwner};

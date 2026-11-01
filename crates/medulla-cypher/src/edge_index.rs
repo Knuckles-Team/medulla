@@ -58,7 +58,7 @@ use medulla_core::index::{
 };
 use serde::{Deserialize, Serialize};
 
-use medulla_query::tables::ann_plan::VectorMetric;
+use medulla_table_store::tables::ann_plan::VectorMetric;
 use generation::EdgeGeneration;
 use registered::RegisteredEdgeIndex;
 

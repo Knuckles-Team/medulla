@@ -17,7 +17,8 @@
 #![cfg(feature = "sql")]
 
 use medulla_query::schema::TableConstraint;
-use medulla_query::{Column, ColumnType, TableSchema, TableStore, TableTxn, TxnOp};
+use medulla_query::{Column, ColumnType, TableSchema};
+use medulla_table_store::{tables::TableStore, tables::TableTxn, tables::TxnOp};
 
 fn schema() -> TableSchema {
     TableSchema::new(

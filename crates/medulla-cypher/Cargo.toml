@@ -40,6 +40,7 @@ tracing = { version = "0.1", optional = true }
 sha2 = { version = "0.10", optional = true }
 medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-result-types = { path = "../medulla-result-types" }
+medulla-table-store = { path = "../medulla-table-store" }
 
 [features]
 cypher = ["dep:petgraph", "medulla-query/cypher"]
@@ -47,4 +48,4 @@ cypher-graphlearn = ["cypher", "medulla-query/cypher-graphlearn"]
 cypher-mining = ["cypher", "medulla-query/cypher-mining"]
 cypher-plan = ["cypher", "dep:tracing", "medulla-query/cypher-plan"]
 result-cache = ["cypher", "medulla-query/result-cache"]
-sql = ["dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petgraph", "dep:tracing", "dep:async-trait", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-query/sql"]
+sql = ["dep:datafusion", "dep:arrow", "dep:arrow-schema", "dep:tokio", "dep:petgraph", "dep:tracing", "dep:async-trait", "dep:redb", "dep:medulla-storage", "dep:medulla-transaction", "dep:medulla-text", "dep:medulla-ann", "dep:futures-util", "dep:md-5", "dep:sha1", "dep:sha2", "dep:hex", "dep:base64", "dep:ipnet", "medulla-query/sql", "medulla-table-store/sql"]

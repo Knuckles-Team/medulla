@@ -29,7 +29,7 @@ use datafusion::logical_expr::{Expr, Operator, TableProviderFilterPushDown, Tabl
 
 use medulla_query::index::SecondaryIndexLookup;
 use medulla_query::{schema::ArrayElemType, schema::Cell, schema::ColumnType, schema::TableSchema};
-use medulla_query::tables::store::TableStore;
+use medulla_table_store::tables::store::TableStore;
 use crate::sql::filter_shape::{classify_pushdown, column_eq_literal, ScanPlan};
 use crate::sql::providers::NodesTableProvider;
 

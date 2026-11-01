@@ -3,9 +3,9 @@ use crate::tables::property_graph::{
     EdgeEndpoint, EdgeTableDefinition, ElementKeyResolution, EndpointResolution, LabelDefinition,
     PropertyDefinition, PropertySet, VertexTableDefinition,
 };
-use crate::schema::Column;
-use crate::schema::RefAction;
-use crate::schema::TableConstraint;
+use medulla_query::schema::Column;
+use medulla_query::schema::RefAction;
+use medulla_query::schema::TableConstraint;
 
 const TENANT: &str = "tenant/acme";
 

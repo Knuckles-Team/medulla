@@ -6,7 +6,7 @@ struct SqlDispatchCtx<'a> {
     scope: SqlWriteScope<'a>,
     sql_method: Method,
     core: &'a Arc<GraphCore>,
-    store: &'a medulla_query::TableStore,
+    store: &'a medulla_table_store::tables::TableStore,
     read_core: Arc<GraphCore>,
     authorized_read_store: Option<medulla_server_api::sql_catalog_acl::AuthorizedReadStore>,
 }
@@ -68,7 +68,7 @@ pub(crate) async fn exec_sql_write(
     read_authority: &GraphReadAuthority,
     sql_method: Method,
     core: &Arc<GraphCore>,
-    store: &medulla_query::TableStore,
+    store: &medulla_table_store::tables::TableStore,
     kind: medulla_sql::sql::StatementKind,
 ) -> Response {
     let read_core = read_authority.project_core(core);
@@ -139,11 +139,11 @@ async fn commit_catalog_op(
     req_id: u64,
     scope: SqlWriteScope<'_>,
     sql_method: Method,
-    store: &medulla_query::TableStore,
-    op: medulla_query::TxnOp,
+    store: &medulla_table_store::tables::TableStore,
+    op: medulla_table_store::tables::TxnOp,
     tag: &'static str,
 ) -> Response {
-    let mut txn = medulla_query::TableTxn::new();
+    let mut txn = medulla_table_store::tables::TableTxn::new();
     txn.push(op);
     commit_sql_catalog_txn(req_id, scope, sql_method, store, txn, tag).await
 }
@@ -266,7 +266,7 @@ async fn exec_sql_catalog_insert(
                 scope,
                 sql_method,
                 store,
-                medulla_query::TxnOp::Insert {
+                medulla_table_store::tables::TxnOp::Insert {
                     table: ins.table,
                     col_order: ins.columns,
                     rows: ins.rows,
@@ -305,7 +305,7 @@ async fn exec_sql_catalog_row(
                 scope,
                 sql_method,
                 store,
-                medulla_query::TxnOp::Update {
+                medulla_table_store::tables::TxnOp::Update {
                     table: upd.table,
                     set: upd.set,
                     selector: upd.selector.pred,
@@ -320,7 +320,7 @@ async fn exec_sql_catalog_row(
                 scope,
                 sql_method,
                 store,
-                medulla_query::TxnOp::Delete {
+                medulla_table_store::tables::TxnOp::Delete {
                     table: del.table,
                     selector: del.selector.pred,
                 },
@@ -352,7 +352,7 @@ async fn exec_sql_catalog_drop(
                 scope,
                 sql_method,
                 store,
-                medulla_query::TxnOp::DropTable {
+                medulla_table_store::tables::TxnOp::DropTable {
                     name: plan.name,
                     if_exists: plan.if_exists,
                 },
@@ -366,7 +366,7 @@ async fn exec_sql_catalog_drop(
                 scope,
                 sql_method,
                 store,
-                medulla_query::TxnOp::DropView {
+                medulla_table_store::tables::TxnOp::DropView {
                     name: plan.name,
                     if_exists: plan.if_exists,
                 },
@@ -380,7 +380,7 @@ async fn exec_sql_catalog_drop(
                 scope,
                 sql_method,
                 store,
-                medulla_query::TxnOp::DropExtension { name, if_exists },
+                medulla_table_store::tables::TxnOp::DropExtension { name, if_exists },
                 "DROP EXTENSION",
             )
             .await
@@ -391,7 +391,7 @@ async fn exec_sql_catalog_drop(
                 scope,
                 sql_method,
                 store,
-                medulla_query::TxnOp::DropFunction {
+                medulla_table_store::tables::TxnOp::DropFunction {
                     name: plan.name,
                     if_exists: plan.if_exists,
                 },
@@ -406,7 +406,7 @@ async fn exec_sql_catalog_drop(
                 &name,
             );
             let op = match visible {
-                Ok(Some(table)) => medulla_query::IndexCatalogTxnOp::DropAnnIndex { table, name },
+                Ok(Some(table)) => medulla_table_store::tables::IndexCatalogTxnOp::DropAnnIndex { table, name },
                 Ok(None) if if_exists => return sql_write_ack(req_id, "DROP INDEX", Ok(Ok(0))),
                 Ok(None) => {
                     return Response::err(
@@ -416,7 +416,7 @@ async fn exec_sql_catalog_drop(
                 }
                 Err(error) => return Response::err(req_id, sql_refusal(error)),
             };
-            let op = medulla_query::TxnOp::IndexCatalog(op);
+            let op = medulla_table_store::tables::TxnOp::IndexCatalog(op);
             commit_catalog_op(req_id, scope, sql_method, store, op, "DROP INDEX").await
         }
         _ => unreachable!("catalog drop statement was classified before dispatch"),
@@ -443,7 +443,7 @@ async fn exec_sql_catalog_create(
                 scope,
                 sql_method,
                 store,
-                medulla_query::TxnOp::CreateView {
+                medulla_table_store::tables::TxnOp::CreateView {
                     name: plan.name,
                     select_sql: plan.select_sql,
                     or_replace: plan.or_replace,
@@ -461,7 +461,7 @@ async fn exec_sql_catalog_create(
                 scope,
                 sql_method,
                 store,
-                medulla_query::TxnOp::CreateExtension {
+                medulla_table_store::tables::TxnOp::CreateExtension {
                     name,
                     if_not_exists,
                 },
@@ -475,7 +475,7 @@ async fn exec_sql_catalog_create(
                 scope,
                 sql_method,
                 store,
-                medulla_query::TxnOp::CreateFunction {
+                medulla_table_store::tables::TxnOp::CreateFunction {
                     function: plan.func,
                     or_replace: plan.or_replace,
                 },
@@ -489,7 +489,7 @@ async fn exec_sql_catalog_create(
                 scope,
                 sql_method,
                 store,
-                medulla_query::TxnOp::IndexCatalog(medulla_query::IndexCatalogTxnOp::PutAnnIndex {
+                medulla_table_store::tables::TxnOp::IndexCatalog(medulla_table_store::tables::IndexCatalogTxnOp::PutAnnIndex {
                     plan,
                 }),
                 "CREATE INDEX",
@@ -502,8 +502,8 @@ async fn exec_sql_catalog_create(
                 scope,
                 sql_method,
                 store,
-                medulla_query::TxnOp::IndexCatalog(
-                    medulla_query::IndexCatalogTxnOp::PutHypertable { plan },
+                medulla_table_store::tables::TxnOp::IndexCatalog(
+                    medulla_table_store::tables::IndexCatalogTxnOp::PutHypertable { plan },
                 ),
                 "CREATE TABLE",
             )
@@ -515,7 +515,7 @@ async fn exec_sql_catalog_create(
                 scope,
                 sql_method,
                 store,
-                medulla_query::TxnOp::CreateView {
+                medulla_table_store::tables::TxnOp::CreateView {
                     name: plan.name,
                     select_sql: plan.select_sql,
                     or_replace: true,

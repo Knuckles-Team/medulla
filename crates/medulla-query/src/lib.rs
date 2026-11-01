@@ -20,25 +20,7 @@
 //! no modality VALUE type of their own — `ModalityContract` may simply not apply, which
 //! is a legitimate outcome, not a gap", this crate is a documented SKIP.
 
-pub mod plan_scope;
 
-pub use plan_scope::{PlanScope, PlanScopeError, ScopePredicate};
-
-
-/// Arbitrary user-defined relational tables (CONCEPT:MEDULLA-KG.query.register-user-tables-alongside) — the durable redb
-/// table store + DataFusion materialization. Behind `sql` (needs Arrow/DataFusion/redb).
-#[cfg(feature = "sql")]
-pub mod tables;
-
-
-#[cfg(feature = "sql")]
-pub use tables::AnnIndexPlan;
-#[cfg(feature = "sql")]
-pub use tables::AnnMethod;
-#[cfg(feature = "sql")]
-pub use tables::HypertablePlan;
-#[cfg(feature = "sql")]
-pub use tables::VectorMetric;
 #[cfg(feature = "sql")]
 pub use migration::conversion_may_be_lossy;
 #[cfg(feature = "sql")]
@@ -60,24 +42,6 @@ pub use migration::SchemaSnapshot;
 #[cfg(feature = "sql")]
 pub use migration::SecondaryIndexPolicy;
 #[cfg(feature = "sql")]
-pub use tables::AnnFallbackReason;
-#[cfg(feature = "sql")]
-pub use tables::AnnIndexStatus;
-#[cfg(feature = "sql")]
-pub use tables::AnnLimits;
-#[cfg(feature = "sql")]
-pub use tables::AnnRefreshOutcome;
-#[cfg(feature = "sql")]
-pub use tables::AnnRefreshPolicy;
-#[cfg(feature = "sql")]
-pub use tables::AnnServeReceipt;
-#[cfg(feature = "sql")]
-pub use tables::AnnServingPath;
-#[cfg(feature = "sql")]
-pub use tables::AnnTopK;
-#[cfg(feature = "sql")]
-pub use tables::AnnTopKRequest;
-#[cfg(feature = "sql")]
 pub use schema::Cell;
 #[cfg(feature = "sql")]
 pub use schema::CmpOp;
@@ -88,21 +52,9 @@ pub use schema::Column;
 #[cfg(feature = "sql")]
 pub use schema::ColumnType;
 #[cfg(feature = "sql")]
-pub use tables::ConflictAction;
-#[cfg(feature = "sql")]
 pub use schema::FunctionArg;
 #[cfg(feature = "sql")]
 pub use schema::FunctionReturns;
-#[cfg(feature = "sql")]
-pub use tables::IndexCatalogTxnOp;
-#[cfg(feature = "sql")]
-pub use tables::PropertyGraphGrantee;
-#[cfg(feature = "sql")]
-pub use tables::PropertyGraphPrivilegeOperation;
-#[cfg(feature = "sql")]
-pub use tables::PropertyGraphPrivilegeStatement;
-#[cfg(feature = "sql")]
-pub use tables::PropertyGraphTxnOp;
 #[cfg(feature = "sql")]
 pub use index::SecondaryIndexColumn;
 #[cfg(feature = "sql")]
@@ -117,17 +69,6 @@ pub use index::SecondaryIndexSpec;
 pub use schema::StoredFunction;
 #[cfg(feature = "sql")]
 pub use schema::TableSchema;
-#[cfg(feature = "sql")]
-pub use tables::TableStore;
-#[cfg(feature = "sql")]
-pub use tables::TableTxn;
-#[cfg(feature = "sql")]
-pub use tables::TxnOp;
-#[cfg(feature = "sql")]
-pub use tables::UserAnnAuthority;
-
-
-
 #[cfg(feature = "sql")]
 pub mod schema;
 

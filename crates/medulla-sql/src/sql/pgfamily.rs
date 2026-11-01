@@ -27,9 +27,9 @@ use datafusion::sql::sqlparser::ast::{
 };
 use datafusion::sql::sqlparser::dialect::PostgreSqlDialect;
 use datafusion::sql::sqlparser::parser::Parser;
-use medulla_query::{tables::ann_plan::AnnIndexPlan, tables::ann_plan::HypertablePlan, tables::ann_plan::VectorMetric};
+use medulla_table_store::{tables::ann_plan::AnnIndexPlan, tables::ann_plan::HypertablePlan, tables::ann_plan::VectorMetric};
 #[cfg(test)]
-use medulla_query::tables::ann_plan::AnnMethod;
+use medulla_table_store::tables::ann_plan::AnnMethod;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Plan structs (the decoded shapes classify produces)

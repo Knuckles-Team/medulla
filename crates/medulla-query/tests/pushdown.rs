@@ -8,7 +8,7 @@ use medulla_core::graph::GraphCore;
 use medulla_sql::sql::exec_sql;
 use medulla_query::schema::Cell;
 use medulla_query::index::SecondaryIndexLookup;
-use medulla_query::tables::TableStore;
+use medulla_table_store::tables::TableStore;
 use serde_json::{json, Value};
 
 #[path = "common/query_rows.rs"]
@@ -64,9 +64,9 @@ fn scoped_store(path: &std::path::Path) -> TableStore {
     TableStore::open_scoped(
         path,
         "tenant-a",
-        medulla_query::tables::store::dev_scope_grant::dev_verifier(),
-        medulla_query::tables::store::dev_scope_grant::DEV_PRINCIPAL,
-        medulla_query::tables::store::dev_scope_grant::DEV_PROOF,
+        medulla_table_store::tables::store::dev_scope_grant::dev_verifier(),
+        medulla_table_store::tables::store::dev_scope_grant::DEV_PRINCIPAL,
+        medulla_table_store::tables::store::dev_scope_grant::DEV_PROOF,
     )
     .unwrap()
 }
@@ -340,7 +340,7 @@ fn secondary_index_rejects_vector_columns_without_touching_ann_catalog() {
     use medulla_query::schema::ColumnType;
     use medulla_query::index::SecondaryIndexColumn;
     use medulla_query::schema::TableSchema;
-    use medulla_query::tables::TableStore;
+    use medulla_table_store::tables::TableStore;
     let (store, _path) = TableStore::open_temp().unwrap();
     let schema = TableSchema::new(
         "embeddings",

@@ -1,10 +1,8 @@
 //! Focused NE-012 fixtures for the durable schema-migration authority.
 #![cfg(feature = "sql")]
 
-use medulla_query::{
-    Column, ColumnType, MigrationPolicy, SchemaMigration, SchemaMigrationOperation, TableSchema,
-    TableStore,
-};
+use medulla_query::{Column, ColumnType, MigrationPolicy, SchemaMigration, SchemaMigrationOperation, TableSchema};
+use medulla_table_store::tables::TableStore;
 
 fn schema() -> TableSchema {
     TableSchema::new(
@@ -22,9 +20,9 @@ fn apply_replay_and_restart_preserve_the_ordered_chain() {
     let store = TableStore::open_scoped(
         &path,
         "tenant-ne012",
-        medulla_query::tables::store::dev_scope_grant::dev_verifier(),
-        medulla_query::tables::store::dev_scope_grant::DEV_PRINCIPAL,
-        medulla_query::tables::store::dev_scope_grant::DEV_PROOF,
+        medulla_table_store::tables::store::dev_scope_grant::dev_verifier(),
+        medulla_table_store::tables::store::dev_scope_grant::DEV_PRINCIPAL,
+        medulla_table_store::tables::store::dev_scope_grant::DEV_PROOF,
     )
     .expect("scoped store");
     store.create_table(&schema(), false).expect("create table");
@@ -62,9 +60,9 @@ fn apply_replay_and_restart_preserve_the_ordered_chain() {
     let reopened = TableStore::open_scoped(
         &path,
         "tenant-ne012",
-        medulla_query::tables::store::dev_scope_grant::dev_verifier(),
-        medulla_query::tables::store::dev_scope_grant::DEV_PRINCIPAL,
-        medulla_query::tables::store::dev_scope_grant::DEV_PROOF,
+        medulla_table_store::tables::store::dev_scope_grant::dev_verifier(),
+        medulla_table_store::tables::store::dev_scope_grant::DEV_PRINCIPAL,
+        medulla_table_store::tables::store::dev_scope_grant::DEV_PROOF,
     )
     .expect("restart verification");
     let snapshot = reopened

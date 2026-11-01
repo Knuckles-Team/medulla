@@ -139,8 +139,8 @@ pub(crate) async fn exec_sql_write_insert_select(
     scope: SqlWriteScope<'_>,
     sql_method: Method,
     read_core: Arc<GraphCore>,
-    store: &medulla_query::TableStore,
-    read_store: &medulla_query::TableStore,
+    store: &medulla_table_store::tables::TableStore,
+    read_store: &medulla_table_store::tables::TableStore,
     ins: medulla_sql::sql::InsertSelect,
 ) -> Response {
     let medulla_sql::sql::InsertSelect {
@@ -168,8 +168,8 @@ pub(crate) async fn exec_sql_write_insert_select(
         Ok(Err(error)) => return Response::err(req_id, error),
         Err(response) => return response,
     };
-    let mut txn = medulla_query::TableTxn::new();
-    txn.push(medulla_query::TxnOp::Insert {
+    let mut txn = medulla_table_store::tables::TableTxn::new();
+    txn.push(medulla_table_store::tables::TxnOp::Insert {
         table,
         col_order: columns,
         rows,
@@ -231,7 +231,7 @@ pub(crate) fn resolve_insert_nodes_select(
     core: &Arc<GraphCore>,
     visible: &Arc<GraphCore>,
     snap: &crate::graph::GraphView,
-    store: &medulla_query::TableStore,
+    store: &medulla_table_store::tables::TableStore,
     ins: medulla_sql::sql::InsertNodesSelect,
 ) -> Result<usize, String> {
     let read = medulla_sql::sql::exec_sql_typed_with_tables(snap, store, &ins.select_sql)?;
@@ -266,7 +266,7 @@ pub(crate) async fn exec_sql_write_insert_nodes_select(
     req_id: u64,
     core: &Arc<GraphCore>,
     read_core: Arc<GraphCore>,
-    store: &medulla_query::TableStore,
+    store: &medulla_table_store::tables::TableStore,
     ins: medulla_sql::sql::InsertNodesSelect,
 ) -> Response {
     let core = core.clone();
@@ -287,7 +287,7 @@ pub(crate) async fn exec_sql_write_update_nodes_join(
     req_id: u64,
     core: &Arc<GraphCore>,
     read_core: &Arc<GraphCore>,
-    store: &medulla_query::TableStore,
+    store: &medulla_table_store::tables::TableStore,
     upd: medulla_sql::sql::UpdateNodesJoin,
 ) -> Response {
     let core = core.clone();
@@ -332,7 +332,7 @@ pub(crate) async fn exec_sql_write_delete_nodes_join(
     req_id: u64,
     core: &Arc<GraphCore>,
     read_core: &Arc<GraphCore>,
-    store: &medulla_query::TableStore,
+    store: &medulla_table_store::tables::TableStore,
     del: medulla_sql::sql::DeleteNodesJoin,
 ) -> Response {
     let core = core.clone();
@@ -363,15 +363,15 @@ pub(crate) async fn exec_sql_write_create_table(
     req_id: u64,
     scope: SqlWriteScope<'_>,
     sql_method: Method,
-    store: &medulla_query::TableStore,
+    store: &medulla_table_store::tables::TableStore,
     plan: medulla_sql::sql::CreateTablePlan,
 ) -> Response {
     let columns = match to_store_columns(&plan.columns) {
         Ok(columns) => columns,
         Err(error) => return Response::err(req_id, error),
     };
-    let mut txn = medulla_query::TableTxn::new();
-    txn.push(medulla_query::TxnOp::CreateTable {
+    let mut txn = medulla_table_store::tables::TableTxn::new();
+    txn.push(medulla_table_store::tables::TxnOp::CreateTable {
         schema: medulla_query::TableSchema::new(plan.name, columns),
         if_not_exists: plan.if_not_exists,
     });
@@ -385,14 +385,14 @@ pub(crate) async fn exec_sql_write_alter_table(
     req_id: u64,
     scope: SqlWriteScope<'_>,
     sql_method: Method,
-    store: &medulla_query::TableStore,
+    store: &medulla_table_store::tables::TableStore,
     plan: medulla_sql::sql::AlterTablePlan,
 ) -> Response {
     let op = match alter_table_txn_op(plan) {
         Ok(op) => op,
         Err(error) => return Response::err(req_id, error),
     };
-    let mut txn = medulla_query::TableTxn::new();
+    let mut txn = medulla_table_store::tables::TableTxn::new();
     txn.push(op);
     commit_sql_catalog_txn(req_id, scope, sql_method, store, txn, "ALTER TABLE").await
 }

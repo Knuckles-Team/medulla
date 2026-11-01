@@ -46,7 +46,7 @@ use datafusion::sql::sqlparser::ast::{
 };
 // The Postgres-family extension plan shapes classify routes to.
 use super::pgfamily::ContinuousAggPlan;
-use medulla_query::{tables::ann_plan::AnnIndexPlan, tables::ann_plan::HypertablePlan};
+use medulla_table_store::{tables::ann_plan::AnnIndexPlan, tables::ann_plan::HypertablePlan};
 // CONCEPT:MEDULLA-KG.compute.json-deep-indexing — the wire predicate the JSON operators lower onto. Surfaced by
 // `medulla-types/query`, which the `sql` feature (this module's gate) always enables.
 use datafusion::sql::sqlparser::dialect::PostgreSqlDialect;
@@ -55,7 +55,7 @@ use medulla_types::wire::{JsonPathOp, Pred};
 use serde_json::{Map, Value};
 
 use super::pgq::GraphTableQuery;
-use medulla_query::{tables::property_graph::PropertyGraphPrivilegeStatement, tables::property_graph::PropertyGraphStatement, tables::property_graph::SqlName};
+use medulla_table_store::{tables::property_graph::PropertyGraphPrivilegeStatement, tables::property_graph::PropertyGraphStatement, tables::property_graph::SqlName};
 use medulla_query::schema::CheckExpr;
 use medulla_query::schema::CmpOp;
 use medulla_query::schema::ColCheck;

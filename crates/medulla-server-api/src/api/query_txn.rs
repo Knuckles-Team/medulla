@@ -144,8 +144,8 @@ pub trait WireApi: Send + Sync {
     fn authorize_table_txn(
         &self,
         source: &crate::sql_catalog_acl::SqlSourceAuthorityWrite<'_, '_>,
-        table_store: &medulla_query::TableStore,
-        txn: &mut medulla_query::TableTxn,
+        table_store: &medulla_table_store::tables::TableStore,
+        txn: &mut medulla_table_store::tables::TableTxn,
         committed_replay: bool,
     ) -> Result<Vec<medulla_query::TableSchema>, String>;
 
@@ -153,7 +153,7 @@ pub trait WireApi: Send + Sync {
     #[cfg(feature = "query")]
     fn committed_sql_replay_receipt(
         &self,
-        store: &medulla_query::TableStore,
+        store: &medulla_table_store::tables::TableStore,
         authority: &crate::access::CarrierAuthority,
         batch: &medulla_protocol_types::mutation_batch::MutationBatch,
     ) -> Result<Option<medulla_protocol_types::mutation_batch::MutationBatchRecord>, String>;

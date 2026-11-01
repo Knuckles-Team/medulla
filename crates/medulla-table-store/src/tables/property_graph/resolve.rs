@@ -6,9 +6,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::schema::ColumnType;
-use crate::schema::TableConstraint;
-use crate::schema::TableSchema;
+use medulla_query::schema::ColumnType;
+use medulla_query::schema::TableConstraint;
+use medulla_query::schema::TableSchema;
 
 use super::model::validate_bounded_text;
 use super::validate::{

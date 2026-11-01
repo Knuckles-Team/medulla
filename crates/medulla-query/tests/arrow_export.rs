@@ -12,7 +12,7 @@ use arrow::array::{Int64Array, StringArray};
 use arrow::datatypes::DataType;
 use medulla_core::graph::GraphCore;
 use medulla_sql::{sql::exec_sql, sql::exec_sql_arrow, sql::exec_sql_cached, sql::exec_sql_typed, sql::exec_sql_typed_with_tables_cached_cancellable, sql::CancellationToken, sql::PgColType, sql::SqlCache, sql::SqlContextCache};
-use medulla_query::TableStore;
+use medulla_table_store::tables::TableStore;
 use serde_json::json;
 
 /// A graph with three `:Agent` nodes carrying a `name` (Utf8) and a `score` (Int64)

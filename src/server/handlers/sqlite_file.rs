@@ -28,7 +28,8 @@
 
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_mutation_types::mutation_scope::MutationSurface;
-use medulla_query::{Cell, Column, ColumnType, TableSchema, TableStore, TableTxn, TxnOp};
+use medulla_query::{Cell, Column, ColumnType, TableSchema};
+use medulla_table_store::{tables::TableStore, tables::TableTxn, tables::TxnOp};
 use medulla_sqlite_format::{ColumnDef as SqliteColumnDef, Reader, Value as SqliteValue, Writer};
 use serde_json::Value as JsonValue;
 use std::path::{Path, PathBuf};

@@ -6,8 +6,8 @@ use medulla_core::index::{IndexBlockReason, ManagedIndexTarget};
 
 use super::*;
 use medulla_core::index::ManagedIndexState;
-use medulla_query::{tables::ann_authority::durable::encode, tables::ann_authority::durable::Encoding};
-use medulla_query::tables::store::GenerationWrite;
+use medulla_table_store::{tables::ann_authority::durable::encode, tables::ann_authority::durable::Encoding};
+use medulla_table_store::tables::store::GenerationWrite;
 
 fn status_relation(store: &TableStore) -> Vec<Vec<Value>> {
     crate::sql::exec_sql_typed_with_tables(
@@ -191,9 +191,9 @@ fn drop_index_is_a_typed_sql_statement_over_the_same_fenced_drop() {
         store.ann_index_table("docs_emb").unwrap().as_deref(),
         Some("docs")
     );
-    let mut txn = medulla_query::tables::TableTxn::new();
-    txn.push(medulla_query::tables::TxnOp::IndexCatalog(
-        medulla_query::tables::IndexCatalogTxnOp::DropAnnIndex {
+    let mut txn = medulla_table_store::tables::TableTxn::new();
+    txn.push(medulla_table_store::tables::TxnOp::IndexCatalog(
+        medulla_table_store::tables::IndexCatalogTxnOp::DropAnnIndex {
             table: "docs".to_string(),
             name: "docs_emb".to_string(),
         },

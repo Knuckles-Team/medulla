@@ -14,7 +14,7 @@ use super::relational::{
     ColumnRef, RelationRef, RelationalExpr, RelationalGraphPlan, RelationalJoin, RelationalLiteral,
     RelationalSelect,
 };
-use medulla_query::{tables::property_graph::CanonicalCatalogName, tables::property_graph::EdgeEndpoint, tables::property_graph::EdgeTableDefinition, tables::property_graph::ElementKeyResolution, tables::property_graph::ElementTable, tables::property_graph::EndpointResolution, tables::property_graph::LabelDefinition, tables::property_graph::PropertyGraphDefinition, tables::property_graph::PropertySet, tables::property_graph::SqlIdentifier, tables::property_graph::VertexTableDefinition};
+use medulla_table_store::{tables::property_graph::CanonicalCatalogName, tables::property_graph::EdgeEndpoint, tables::property_graph::EdgeTableDefinition, tables::property_graph::ElementKeyResolution, tables::property_graph::ElementTable, tables::property_graph::EndpointResolution, tables::property_graph::LabelDefinition, tables::property_graph::PropertyGraphDefinition, tables::property_graph::PropertySet, tables::property_graph::SqlIdentifier, tables::property_graph::VertexTableDefinition};
 
 #[derive(Clone, Copy)]
 enum Selected<'a> {

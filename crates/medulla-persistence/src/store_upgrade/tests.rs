@@ -333,7 +333,7 @@ fn apply_upgrades_a_sql_catalog_and_keeps_its_rows() {
     // this command expects of a SQL catalog is the one that store declares.
     let authority = medulla_kernel::store_authority::process_authority();
     drop(
-        medulla_query::TableStore::open_scoped(
+        medulla_table_store::tables::TableStore::open_scoped(
             &catalog,
             "tenant-a",
             medulla_kernel::store_authority::process_verifier(),

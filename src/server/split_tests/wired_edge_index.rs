@@ -10,7 +10,7 @@ use medulla_server_api::api::query_txn::edge_test_support::sql_rows;
 use medulla_server_api::api::query_txn::edge_test_support::EDGE_STATUS_SQL;
 use std::sync::Arc;
 
-use medulla_query::TableStore;
+use medulla_table_store::tables::TableStore;
 use tokio::sync::RwLock;
 
 use crate::protocol::Method;

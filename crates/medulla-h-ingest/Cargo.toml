@@ -44,6 +44,7 @@ sha2 = "0.10"
 tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
 tracing = "0.1"
 uuid = { version = "1.28", features = ["v4"] }
+medulla-table-store = { path = "../medulla-table-store" }
 
 [features]
 test-support = []
@@ -52,7 +53,7 @@ ast = []
 blob = ["dep:chrono", "redb"]
 decide = ["dep:medulla-numeric", "medulla-numeric/decision", "redb"]
 modality-serving = ["dep:medulla-video", "medulla-video/runtime", "dep:medulla-modality", "dep:medulla-image", "medulla-image/runtime", "dep:medulla-document", "medulla-document/serving", "dep:medulla-audio", "medulla-audio/runtime", "redb", "security"]
-query = ["dep:medulla-query", "medulla-query/sql", "redb"]
+query = ["dep:medulla-query", "medulla-query/sql", "medulla-table-store/sql", "redb"]
 raft = ["redb"]
 redb = ["dep:medulla-storage", ]
 security = ["redb"]

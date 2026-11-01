@@ -25,7 +25,7 @@ use super::ann_pushdown::{
     ann_pushdown_decision, ann_pushdown_may_apply, maintained_top_k, AnnPushdown,
 };
 use super::catalog::register_system_catalogs;
-use medulla_query::tables::ann_plan::AnnIndexPlan;
+use medulla_table_store::tables::ann_plan::AnnIndexPlan;
 use super::providers::{infer_nodes, EdgesTableProvider, NodesTableProvider, SqlCache};
 use super::spill::CancellationToken;
 use super::store_catalog::{reads_index_status, StoreCatalog};
@@ -33,7 +33,7 @@ use medulla_sql_udfs::{tablefuncs::BetweennessFunc, tablefuncs::GenerateSeriesFu
 use medulla_sql_udfs::{udfs::base64_decode_udf, udfs::base64_encode_udf, udfs::bm25_match_udf, udfs::bm25_score_udf, udfs::bm25_snippet_udf, udfs::epistemic_decay_udf, udfs::greatest_udf, udfs::int4range_udf, udfs::ipcontains_udf, udfs::ipfamily_udf, udfs::iphost_udf, udfs::ipmasklen_udf, udfs::json_get_f64_udf, udfs::json_get_i64_udf, udfs::json_get_udf, udfs::least_udf, udfs::md5_udf, udfs::range_contained_by_udf, udfs::range_contains_range_udf, udfs::range_contains_udf, udfs::range_overlaps_udf, udfs::sha1_udf, udfs::sha256_udf, udfs::time_bucket_udf, udfs::tsrange_udf, udfs::vector_cosine_udf, udfs::vector_ip_udf, udfs::vector_l2_udf};
 use medulla_query::schema::StoredFunction;
 use medulla_query::schema::TableSchema;
-use medulla_query::tables::TableStore;
+use medulla_table_store::tables::TableStore;
 
 /// One user table's registration plan for `build_ctx` (CONCEPT:MEDULLA-KG.query.register-user-tables-alongside):
 /// [`materialize_user_tables`] chooses PER TABLE between the two variants below.
@@ -314,7 +314,7 @@ pub fn exec_graph_table_typed_with_tables(
     view: &GraphView,
     store: &TableStore,
     query: &super::pgq::GraphTableQuery,
-    definition: &medulla_query::tables::property_graph::PropertyGraphDefinition,
+    definition: &medulla_table_store::tables::property_graph::PropertyGraphDefinition,
     verified_tenant_scope: &str,
 ) -> Result<TypedQueryResult, String> {
     exec_graph_table_typed_with_tables_cancellable(
@@ -333,7 +333,7 @@ pub fn exec_graph_table_typed_with_tables_cancellable(
     view: &GraphView,
     store: &TableStore,
     query: &super::pgq::GraphTableQuery,
-    definition: &medulla_query::tables::property_graph::PropertyGraphDefinition,
+    definition: &medulla_table_store::tables::property_graph::PropertyGraphDefinition,
     verified_tenant_scope: &str,
     cancel: &CancellationToken,
 ) -> Result<TypedQueryResult, String> {
@@ -1507,8 +1507,8 @@ fn cell_to_json(col: &dyn Array, row: usize) -> Result<serde_json::Value, String
 #[cfg(test)]
 mod sql_context_cache_unit_tests {
     use super::*;
-    use medulla_query::tables::ann_plan::AnnMethod;
-    use medulla_query::tables::ann_plan::VectorMetric;
+    use medulla_table_store::tables::ann_plan::AnnMethod;
+    use medulla_table_store::tables::ann_plan::VectorMetric;
 
     fn idx() -> AnnIndexPlan {
         AnnIndexPlan {
@@ -1586,8 +1586,8 @@ mod medulla_embed_ann_pushdown_tests {
         ann_probe_sql_with, ann_pushdown_decision_with, ann_pushdown_may_apply_with,
     };
     use crate::sql::embed_udf::{medulla_embed_udf_with, EmbedFn};
-    use medulla_query::tables::ann_plan::AnnMethod;
-    use medulla_query::tables::ann_plan::VectorMetric;
+    use medulla_table_store::tables::ann_plan::AnnMethod;
+    use medulla_table_store::tables::ann_plan::VectorMetric;
     use arrow::array::{Float32Builder, Int64Array, ListBuilder, RecordBatch, StringArray};
     use arrow::datatypes::{DataType, Field, Schema};
 

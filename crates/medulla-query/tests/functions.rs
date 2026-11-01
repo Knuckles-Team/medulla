@@ -12,7 +12,7 @@
 
 use medulla_core::graph::{GraphCore, GraphView};
 use medulla_sql::{sql::classify, sql::exec_sql_typed_with_tables, sql::StatementKind, sql::TypedQueryResult};
-use medulla_query::TableStore;
+use medulla_table_store::tables::TableStore;
 use serde_json::{json, Value};
 
 /// Drive ONE statement through the same classify → route path the server uses. A
@@ -194,9 +194,9 @@ fn function_persists_in_catalog_across_reopen_eg118() {
     // Re-open the durable store: the function is still there and still expands.
     let store2 = TableStore::open(
         &path,
-        medulla_query::tables::store::dev_scope_grant::dev_verifier(),
-        medulla_query::tables::store::dev_scope_grant::DEV_PRINCIPAL,
-        medulla_query::tables::store::dev_scope_grant::DEV_PROOF,
+        medulla_table_store::tables::store::dev_scope_grant::dev_verifier(),
+        medulla_table_store::tables::store::dev_scope_grant::DEV_PRINCIPAL,
+        medulla_table_store::tables::store::dev_scope_grant::DEV_PROOF,
     )
     .unwrap();
     assert_eq!(store2.list_functions().unwrap().len(), 1);

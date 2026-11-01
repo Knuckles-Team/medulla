@@ -286,7 +286,7 @@ fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
 /// The caller owns the returned path: an ephemeral store is a real redb file and
 /// nothing else removes it (see `server::wire::EphemeralStoreGuard`).
 #[cfg(feature = "query")]
-pub fn open_ephemeral_sql_store() -> Result<(medulla_query::TableStore, std::path::PathBuf), String>
+pub fn open_ephemeral_sql_store() -> Result<(medulla_table_store::tables::TableStore, std::path::PathBuf), String>
 {
     use std::sync::atomic::{AtomicU64, Ordering};
     static EPHEMERAL_SEQUENCE: AtomicU64 = AtomicU64::new(0);
@@ -300,7 +300,7 @@ pub fn open_ephemeral_sql_store() -> Result<(medulla_query::TableStore, std::pat
             .unwrap_or(0),
     ));
     let authority = process_authority();
-    let store = medulla_query::TableStore::open(
+    let store = medulla_table_store::tables::TableStore::open(
         &path,
         process_verifier(),
         authority.principal(),

@@ -135,7 +135,7 @@ struct Inner {
     /// runs CREATE TABLE / INSERT / SELECT against it WITHOUT a server — the embedded
     /// half of the user-table SQL surface the pgwire shim serves out-of-process.
     #[cfg(feature = "query")]
-    tables: medulla_query::TableStore,
+    tables: medulla_table_store::tables::TableStore,
 }
 
 impl EmbeddedEngine {
@@ -212,7 +212,7 @@ impl EmbeddedEngine {
     fn open_table_store(
         persist_dir: Option<&Path>,
         durable: bool,
-    ) -> Result<medulla_query::TableStore, String> {
+    ) -> Result<medulla_table_store::tables::TableStore, String> {
         match (persist_dir, durable) {
             (Some(dir), true) => {
                 std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
@@ -221,7 +221,7 @@ impl EmbeddedEngine {
                 // serve this file's scopes, and for the embedded API this
                 // library IS that root.
                 let authority = medulla_kernel::store_authority::process_authority();
-                medulla_query::TableStore::open(
+                medulla_table_store::tables::TableStore::open(
                     dir.join("sql_tables.redb"),
                     medulla_kernel::store_authority::process_verifier(),
                     authority.principal(),
@@ -584,10 +584,10 @@ impl EmbeddedEngine {
     /// bulk writes; until a generation is live, a nearest-neighbour read takes the
     /// bounded exact path (and says so in the index status).
     #[cfg(feature = "query")]
-    pub fn refresh_ann_indexes(&self) -> Result<Vec<medulla_query::AnnRefreshOutcome>, String> {
+    pub fn refresh_ann_indexes(&self) -> Result<Vec<medulla_table_store::tables::AnnRefreshOutcome>, String> {
         self.inner
             .tables
-            .refresh_ann_generations(medulla_query::AnnRefreshPolicy::Immediate)
+            .refresh_ann_generations(medulla_table_store::tables::AnnRefreshPolicy::Immediate)
     }
 
     /// Execute a SQL statement SQLite-style, in-process, WITHOUT a server
@@ -720,7 +720,7 @@ impl EmbeddedEngine {
 /// COLUMN TYPE, DROP CONSTRAINT). The single facade mapping the embedded path reuses.
 #[cfg(feature = "query")]
 fn apply_alter_table(
-    store: &medulla_query::TableStore,
+    store: &medulla_table_store::tables::TableStore,
     plan: medulla_sql::sql::AlterTablePlan,
 ) -> Result<(), String> {
     use medulla_sql::sql::AlterTableAction as A;

@@ -15,7 +15,8 @@
 
 use medulla_query::schema::RefAction;
 use medulla_query::schema::TableConstraint;
-use medulla_query::{Cell, Column, ColumnType, TableSchema, TableStore};
+use medulla_query::{Cell, Column, ColumnType, TableSchema};
+use medulla_table_store::tables::TableStore;
 
 fn widgets_schema() -> TableSchema {
     TableSchema::new(

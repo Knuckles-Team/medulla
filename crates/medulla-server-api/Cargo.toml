@@ -63,6 +63,7 @@ medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-cypher = { path = "../medulla-cypher" }
 medulla-sql = { path = "../medulla-sql" }
+medulla-table-store = { path = "../medulla-table-store" }
 
 [features]
 test-support = []
@@ -103,7 +104,7 @@ otel-export = ["dep:ureq", "obs", "metrics"]
 owl = ["dep:medulla-rdf", "medulla-rdf/owl", "sparql"]
 program-optimization = ["dep:medulla-program", "jobs"]
 quantum-agent-api = ["dep:medulla-capabilities", "medulla-capabilities/quantum", "server"]
-query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "dep:medulla-query", "medulla-query/sql", "medulla-sql/sql", "medulla-cypher/sql", "dep:medulla-plan", "medulla-plan/query", "redb"]
+query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "dep:medulla-query", "medulla-query/sql", "medulla-table-store/sql", "medulla-sql/sql", "medulla-cypher/sql", "dep:medulla-plan", "medulla-plan/query", "redb"]
 raft = ["server", "redb"]
 rdf = ["dep:medulla-rdf", "medulla-rdf/rdf", "server"]
 rdf-xml = ["dep:medulla-rdf", "medulla-rdf/rdf-xml", "rdf"]

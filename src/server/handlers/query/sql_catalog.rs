@@ -4,8 +4,8 @@ pub(crate) async fn exec_sql_property_graph(
     req_id: u64,
     scope: SqlWriteScope<'_>,
     sql_method: Method,
-    store: &medulla_query::TableStore,
-    read_store: &medulla_query::TableStore,
+    store: &medulla_table_store::tables::TableStore,
+    read_store: &medulla_table_store::tables::TableStore,
     read_core: &Arc<GraphCore>,
     kind: medulla_sql::sql::StatementKind,
 ) -> Response {
@@ -34,7 +34,7 @@ pub(crate) async fn exec_sql_property_graph_privilege(
     req_id: u64,
     scope: SqlWriteScope<'_>,
     sql_method: Method,
-    store: &medulla_query::TableStore,
+    store: &medulla_table_store::tables::TableStore,
 ) -> Response {
     let Method::Sql { query, .. } = &sql_method else {
         return Response::err(
@@ -57,13 +57,13 @@ pub(crate) async fn exec_sql_property_graph_privilege(
         }
         Err(error) => return Response::err(req_id, sql_refusal(error)),
     };
-    let (op, tag) = medulla_query::PropertyGraphTxnOp::from_privilege_statement(
+    let (op, tag) = medulla_table_store::tables::PropertyGraphTxnOp::from_privilege_statement(
         statement,
         scope.tenant_scope,
         record.object_id,
     );
-    let mut txn = medulla_query::TableTxn::new();
-    txn.push(medulla_query::TxnOp::PropertyGraphDdl(op));
+    let mut txn = medulla_table_store::tables::TableTxn::new();
+    txn.push(medulla_table_store::tables::TxnOp::PropertyGraphDdl(op));
     commit_sql_catalog_txn(req_id, scope, sql_method.clone(), store, txn, tag).await
 }
 
@@ -74,7 +74,7 @@ pub(crate) async fn exec_sql_property_graph_ddl(
     req_id: u64,
     scope: SqlWriteScope<'_>,
     sql_method: Method,
-    store: &medulla_query::TableStore,
+    store: &medulla_table_store::tables::TableStore,
 ) -> Response {
     let Method::Sql { query, .. } = &sql_method else {
         return Response::err(
@@ -87,9 +87,9 @@ pub(crate) async fn exec_sql_property_graph_ddl(
         Ok(statement) => statement,
         Err(error) => return Response::err(req_id, sql_refusal(error)),
     };
-    let (op, tag) = medulla_query::PropertyGraphTxnOp::from_statement(statement, &actor);
-    let mut txn = medulla_query::TableTxn::new();
-    txn.push(medulla_query::TxnOp::PropertyGraphDdl(op));
+    let (op, tag) = medulla_table_store::tables::PropertyGraphTxnOp::from_statement(statement, &actor);
+    let mut txn = medulla_table_store::tables::TableTxn::new();
+    txn.push(medulla_table_store::tables::TxnOp::PropertyGraphDdl(op));
     commit_sql_catalog_txn(req_id, scope, sql_method.clone(), store, txn, tag).await
 }
 
@@ -110,7 +110,7 @@ pub(crate) async fn exec_sql_property_graph_ddl(
 #[cfg(feature = "query")]
 pub(crate) async fn exec_sql_graph_table_read(
     req_id: u64,
-    store: medulla_query::TableStore,
+    store: medulla_table_store::tables::TableStore,
     read_core: Arc<GraphCore>,
     query: medulla_sql::sql::GraphTableQuery,
 ) -> Response {
@@ -124,7 +124,7 @@ pub(crate) async fn exec_sql_graph_table_read(
 
 #[cfg(feature = "query")]
 pub(crate) fn graph_table_rows(
-    store: &medulla_query::TableStore,
+    store: &medulla_table_store::tables::TableStore,
     read_core: &Arc<GraphCore>,
     query: &medulla_sql::sql::GraphTableQuery,
 ) -> Result<medulla_sql::sql::TypedQueryResult, String> {
@@ -202,8 +202,8 @@ struct SqlCatalogWork<'a> {
     caller: Option<&'a str>,
     authority: &'a medulla_server_api::access::CarrierAuthority,
     persist_dir: &'a std::path::Path,
-    store: &'a medulla_query::TableStore,
-    txn: &'a mut medulla_query::TableTxn,
+    store: &'a medulla_table_store::tables::TableStore,
+    txn: &'a mut medulla_table_store::tables::TableTxn,
     sql_method: &'a Method,
     wire: Option<&'a Arc<dyn medulla_server_api::api::query_txn::WireApi>>,
 }
@@ -299,8 +299,8 @@ pub(crate) async fn commit_sql_catalog_txn(
     req_id: u64,
     scope: SqlWriteScope<'_>,
     sql_method: Method,
-    store: &medulla_query::TableStore,
-    txn: medulla_query::TableTxn,
+    store: &medulla_table_store::tables::TableStore,
+    txn: medulla_table_store::tables::TableTxn,
     tag: &'static str,
 ) -> Response {
     let SqlWriteScope {
@@ -380,34 +380,34 @@ pub(crate) use medulla_sql::columns_from_defs as to_store_columns;
 #[cfg(feature = "query")]
 pub(crate) fn alter_table_txn_op(
     plan: medulla_sql::sql::AlterTablePlan,
-) -> Result<medulla_query::TxnOp, String> {
+) -> Result<medulla_table_store::tables::TxnOp, String> {
     use medulla_sql::sql::AlterTableAction as A;
     match plan.action {
         A::AddColumn(col) => {
             let columns = to_store_columns(std::slice::from_ref(&col))?;
             let column = columns.into_iter().next().ok_or("ALTER TABLE: no column")?;
-            Ok(medulla_query::TxnOp::AddColumn {
+            Ok(medulla_table_store::tables::TxnOp::AddColumn {
                 table: plan.name,
                 column,
             })
         }
-        A::DropColumn { column, if_exists } => Ok(medulla_query::TxnOp::DropColumn {
+        A::DropColumn { column, if_exists } => Ok(medulla_table_store::tables::TxnOp::DropColumn {
             table: plan.name,
             column,
             if_exists,
         }),
-        A::RenameColumn { from, to } => Ok(medulla_query::TxnOp::RenameColumn {
+        A::RenameColumn { from, to } => Ok(medulla_table_store::tables::TxnOp::RenameColumn {
             table: plan.name,
             from,
             to,
         }),
-        A::RenameTable { new_name } => Ok(medulla_query::TxnOp::RenameTable {
+        A::RenameTable { new_name } => Ok(medulla_table_store::tables::TxnOp::RenameTable {
             table: plan.name,
             new_name,
         }),
         A::AlterColumnType { column, new_type } => {
             let ty = medulla_query::ColumnType::parse(&new_type)?;
-            Ok(medulla_query::TxnOp::AlterColumnType {
+            Ok(medulla_table_store::tables::TxnOp::AlterColumnType {
                 table: plan.name,
                 column,
                 new_type: ty,
@@ -416,7 +416,7 @@ pub(crate) fn alter_table_txn_op(
         A::DropConstraint {
             constraint,
             if_exists,
-        } => Ok(medulla_query::TxnOp::DropConstraint {
+        } => Ok(medulla_table_store::tables::TxnOp::DropConstraint {
             table: plan.name,
             constraint,
             if_exists,

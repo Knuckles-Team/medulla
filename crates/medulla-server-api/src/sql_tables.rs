@@ -29,7 +29,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock, RwLock};
 
-use medulla_query::TableStore;
+use medulla_table_store::tables::TableStore;
 use sha2::{Digest, Sha256};
 
 use crate::access::CarrierAuthority;

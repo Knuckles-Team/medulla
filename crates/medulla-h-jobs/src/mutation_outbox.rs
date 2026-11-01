@@ -156,7 +156,7 @@ enum Owner {
     },
     #[cfg(feature = "query")]
     SqlResource {
-        store: medulla_query::TableStore,
+        store: medulla_table_store::tables::TableStore,
         tenant_scope: String,
         resource: String,
     },

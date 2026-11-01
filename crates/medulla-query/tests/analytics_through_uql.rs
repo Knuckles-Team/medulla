@@ -17,7 +17,7 @@
 
 use medulla_core::graph::{GraphCore, GraphView};
 use medulla_sql::{sql::exec_sql, sql::exec_sql_typed_with_tables, sql::QueryResult, sql::TypedQueryResult};
-use medulla_query::TableStore;
+use medulla_table_store::tables::TableStore;
 use serde_json::{json, Value};
 
 /// A 6-node graph carrying, per node:

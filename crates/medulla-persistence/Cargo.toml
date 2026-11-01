@@ -43,6 +43,7 @@ sha2 = "0.10"
 tokio = { version = "1.53", features = ["rt-multi-thread", "net", "io-util", "sync", "time", "signal", "macros"], optional = true }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", optional = true }
+medulla-table-store = { path = "../medulla-table-store" }
 
 [features]
 test-support = ["dep:tempfile"]
@@ -55,7 +56,7 @@ decide = ["dep:medulla-capabilities", "medulla-capabilities?/decide", "redb", "s
 kv = ["server", "redb"]
 matview = ["query"]
 metrics = []
-query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "dep:medulla-query", "medulla-query/sql", "redb"]
+query = ["dep:medulla-tsdb", "medulla-tsdb?/arrow-seg", "dep:medulla-query", "medulla-query/sql", "medulla-table-store/sql", "redb"]
 raft = ["server", "redb"]
 rdf = ["dep:medulla-rdf", "medulla-rdf/rdf", "server"]
 redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", ]

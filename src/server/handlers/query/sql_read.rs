@@ -63,7 +63,7 @@ fn sql_tenant_store(
     authority: &medulla_server_api::access::CarrierAuthority,
     persist_dir: &std::path::Path,
     req_id: u64,
-) -> Result<medulla_query::TableStore, Response> {
+) -> Result<medulla_table_store::tables::TableStore, Response> {
     medulla_server_api::sql_tables::tenant_table_store(authority.tenant_scope(), persist_dir)
         .map_err(|error| Response::err(req_id, sql_refusal(error)))
 }

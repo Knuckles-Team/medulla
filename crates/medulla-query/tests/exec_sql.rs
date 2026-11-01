@@ -221,7 +221,7 @@ fn exec_sql_pre_cancelled_token_returns_no_rows() {
 /// token all the way to `collect_streaming` too — not just the plain `exec_sql` path.
 #[test]
 fn typed_and_tables_aware_cancellable_entry_points_honor_a_pre_cancelled_token() {
-    use medulla_query::TableStore;
+    use medulla_table_store::tables::TableStore;
 
     let view = sample_view();
     let sql = "SELECT value FROM generate_series(1, 1000) ORDER BY value";

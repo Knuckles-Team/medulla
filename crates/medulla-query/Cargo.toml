@@ -212,3 +212,4 @@ tokio = { version = "1.53", features = ["rt", "rt-multi-thread", "macros"] }
 # Shared SQL source batch fixture (`medulla_types::test_support::sql_source`).
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-sql = { path = "../medulla-sql" }
+medulla-table-store = { path = "../medulla-table-store" }

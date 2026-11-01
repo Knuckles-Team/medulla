@@ -39,7 +39,7 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::schema::{ColumnType, TableSchema};
+use medulla_query::{schema::ColumnType, schema::TableSchema};
 use crate::tables::ann_plan::AnnMethod;
 use crate::tables::ann_plan::VectorMetric;
 
@@ -709,7 +709,7 @@ fn validate_bounded_text(value: &str, kind: &str, max_bytes: usize) -> Result<()
 #[cfg(test)]
 mod embedding_binding_tests {
     use super::*;
-    use crate::schema::Column;
+    use medulla_query::schema::Column;
     use crate::tables::store::TableStore;
 
     const SCOPE: &str = "tenant-a/actor-1";

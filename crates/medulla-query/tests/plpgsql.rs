@@ -13,7 +13,7 @@
 
 use medulla_core::graph::{GraphCore, GraphView};
 use medulla_sql::{sql::classify, sql::exec_sql_typed_with_tables, sql::StatementKind, sql::TypedQueryResult};
-use medulla_query::TableStore;
+use medulla_table_store::tables::TableStore;
 use serde_json::json;
 
 /// Drive ONE statement through the same classify → route path the server uses. A
@@ -235,9 +235,9 @@ fn plpgsql_function_persists_across_reopen_eg340() {
     drop(store);
     let store2 = TableStore::open(
         &path,
-        medulla_query::tables::store::dev_scope_grant::dev_verifier(),
-        medulla_query::tables::store::dev_scope_grant::DEV_PRINCIPAL,
-        medulla_query::tables::store::dev_scope_grant::DEV_PROOF,
+        medulla_table_store::tables::store::dev_scope_grant::dev_verifier(),
+        medulla_table_store::tables::store::dev_scope_grant::DEV_PRINCIPAL,
+        medulla_table_store::tables::store::dev_scope_grant::DEV_PROOF,
     )
     .unwrap();
     // The reopened catalog still records it as a plpgsql function.

@@ -14,10 +14,8 @@
 
 #![cfg(feature = "sql")]
 
-use medulla_query::{
-    Column, ColumnType, MigrationPolicy, SchemaMigration, SchemaMigrationOperation, TableSchema,
-    TableStore,
-};
+use medulla_query::{Column, ColumnType, MigrationPolicy, SchemaMigration, SchemaMigrationOperation, TableSchema};
+use medulla_table_store::tables::TableStore;
 
 fn schema() -> TableSchema {
     TableSchema::new(

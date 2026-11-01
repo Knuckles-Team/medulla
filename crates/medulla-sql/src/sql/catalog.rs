@@ -52,8 +52,8 @@ use datafusion::logical_expr::{
 };
 use datafusion::prelude::SessionContext;
 
-use medulla_query::tables::PropertyGraphCatalogRecord;
-use medulla_query::tables::SqlName;
+use medulla_table_store::tables::PropertyGraphCatalogRecord;
+use medulla_table_store::tables::SqlName;
 use medulla_query::schema::StoredFunction;
 
 /// The OID we synthesize for the single user schema (`public`). Drivers only use OIDs

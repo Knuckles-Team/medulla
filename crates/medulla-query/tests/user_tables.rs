@@ -11,7 +11,8 @@
 
 use medulla_core::graph::{GraphCore, GraphView};
 use medulla_sql::{sql::classify, sql::exec_sql_typed_with_tables, sql::AlterTableAction, sql::PgColType, sql::StatementKind, sql::TypedQueryResult};
-use medulla_query::{Cell, Column, ColumnType, TableSchema, TableStore};
+use medulla_query::{Cell, Column, ColumnType, TableSchema};
+use medulla_table_store::tables::TableStore;
 // CONCEPT:MEDULLA-KG.query.table-schema-constraints/NE-001/NE-002 — table-level constraints + the new scalar types are
 // reachable via the fully-qualified `tables::schema` path (not yet added to the
 // crate's top-level re-export list in `tables/mod.rs`, a file this track does not
@@ -20,7 +21,7 @@ use medulla_sql::sql::parse_property_graph_ddl;
 use medulla_query::schema::ArrayElemType;
 use medulla_query::schema::RefAction;
 use medulla_query::schema::TableConstraint;
-use medulla_query::tables::PropertyGraphStatement;
+use medulla_table_store::tables::PropertyGraphStatement;
 use serde_json::{json, Value};
 
 /// Resolve a `classify::ColumnDef` (raw type spelling) into a store `Column`.
@@ -557,7 +558,7 @@ fn eg313_hnsw_pushdown_matches_brute_force_l2() {
     // RF-019: the maintenance worker's pass, so the reads below take the maintained
     // generation rather than the bounded exact path.
     store
-        .refresh_ann_generations(medulla_query::AnnRefreshPolicy::Immediate)
+        .refresh_ann_generations(medulla_table_store::tables::AnnRefreshPolicy::Immediate)
         .unwrap();
     assert_eq!(store.list_ann_indexes().unwrap().len(), 1);
 
@@ -578,7 +579,7 @@ fn eg313_hnsw_pushdown_matches_brute_force_l2() {
         let receipt = store.ann_authority().recent_receipts().pop().unwrap();
         assert!(matches!(
             receipt.path,
-            medulla_query::AnnServingPath::MaintainedIndex { .. }
+            medulla_table_store::tables::AnnServingPath::MaintainedIndex { .. }
         ));
     }
 }
@@ -599,7 +600,7 @@ fn eg313_ivfflat_pushdown_matches_brute_force_l2() {
     // RF-019: the maintenance worker's pass, so the reads below take the maintained
     // generation rather than the bounded exact path.
     store
-        .refresh_ann_generations(medulla_query::AnnRefreshPolicy::Immediate)
+        .refresh_ann_generations(medulla_table_store::tables::AnnRefreshPolicy::Immediate)
         .unwrap();
 
     let q = "[3.0, 9.0, 2.5, 7.0]";
@@ -619,7 +620,7 @@ fn eg313_ivfflat_pushdown_matches_brute_force_l2() {
         let receipt = store.ann_authority().recent_receipts().pop().unwrap();
         assert!(matches!(
             receipt.path,
-            medulla_query::AnnServingPath::MaintainedIndex { .. }
+            medulla_table_store::tables::AnnServingPath::MaintainedIndex { .. }
         ));
     }
 }
@@ -1416,9 +1417,9 @@ fn eg310_persists_across_reopen() {
     drop(store);
     let store = TableStore::open(
         &path,
-        medulla_query::tables::store::dev_scope_grant::dev_verifier(),
-        medulla_query::tables::store::dev_scope_grant::DEV_PRINCIPAL,
-        medulla_query::tables::store::dev_scope_grant::DEV_PROOF,
+        medulla_table_store::tables::store::dev_scope_grant::dev_verifier(),
+        medulla_table_store::tables::store::dev_scope_grant::DEV_PRINCIPAL,
+        medulla_table_store::tables::store::dev_scope_grant::DEV_PROOF,
     )
     .unwrap();
 
@@ -1435,7 +1436,7 @@ fn eg310_persists_across_reopen() {
 /// SAME redb write txn; an incompatible ALTER COLUMN TYPE aborts and rolls back the LOT.
 #[test]
 fn eg310_multi_statement_txn_atomic() {
-    use medulla_query::{TableTxn, TxnOp};
+    use medulla_table_store::{tables::TableTxn, tables::TxnOp};
     let (store, _p) = TableStore::open_temp().unwrap();
     let view = graph_with_stocks();
     run(&store, &view, "CREATE TABLE t (a TEXT, b INT)");

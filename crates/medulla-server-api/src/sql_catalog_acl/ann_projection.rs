@@ -17,7 +17,8 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use medulla_query::{Cell, TableStore};
+use medulla_query::Cell;
+use medulla_table_store::tables::TableStore;
 use medulla_sql::{sql::UserAnnDecision, sql::UserAnnPushdown};
 
 use super::{
@@ -168,10 +169,8 @@ mod tests {
     use super::*;
     use crate::auth::VerifiedRequestContext;
     use crate::sql_tables::test_persist_dir;
-    use medulla_query::{
-        AnnIndexPlan, AnnMethod, AnnRefreshPolicy, AnnServingPath, Column, ColumnType, TableSchema,
-        VectorMetric,
-    };
+    use medulla_table_store::{tables::AnnIndexPlan, tables::AnnMethod, tables::AnnRefreshPolicy, tables::AnnServingPath, tables::VectorMetric};
+    use medulla_query::{Column, ColumnType, TableSchema};
     use serde_json::{json, Value};
 
     const TENANT: &str = "tenant-ann-projection";

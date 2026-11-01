@@ -72,17 +72,8 @@ pub(crate) use ann_source::{AnnChangedRows, AnnRowReader, AnnSourceRows, ScanExt
 use authority::{sql_scope_identity, SqlAuthority, SqlMutation};
 pub(crate) use authority::{SqlRead, SqlWrite};
 
-use crate::index::{
-    catalog_key as secondary_catalog_key, entry_key as secondary_entry_key,
-    entry_prefix as secondary_entry_prefix, entry_range as secondary_entry_range,
-    rowid_from_entry_key, validate_spec as validate_secondary_spec, SecondaryIndexLookup,
-    SecondaryIndexOrder, SecondaryIndexSpec, MAX_SECONDARY_INDEXES_PER_TABLE,
-    MAX_SECONDARY_INDEX_BUILD_ROWS, MAX_SECONDARY_INDEX_CANDIDATES,
-};
-use crate::migration::{
-    MigrationState, SchemaMigration, SchemaMigrationApply, SchemaMigrationOperation,
-    SchemaMigrationRecord, SecondaryIndexPolicy,
-};
+use medulla_query::{index::catalog_key as secondary_catalog_key, index::entry_key as secondary_entry_key, index::entry_prefix as secondary_entry_prefix, index::entry_range as secondary_entry_range, index::rowid_from_entry_key, index::validate_spec as validate_secondary_spec, index::SecondaryIndexLookup, index::SecondaryIndexOrder, index::SecondaryIndexSpec, index::MAX_SECONDARY_INDEXES_PER_TABLE, index::MAX_SECONDARY_INDEX_BUILD_ROWS, index::MAX_SECONDARY_INDEX_CANDIDATES};
+use medulla_query::{migration::MigrationState, migration::SchemaMigration, migration::SchemaMigrationApply, migration::SchemaMigrationOperation, migration::SchemaMigrationRecord, migration::SecondaryIndexPolicy};
 use super::property_graph::persist::{
     self as property_graph_persist, AlterRequest, RelationCatalogInput,
 };
@@ -91,9 +82,7 @@ use super::property_graph::{
     PropertyGraphObjectId, PropertyGraphPrivilegeOperation, PropertyGraphPrivilegeStatement,
     SqlName,
 };
-use crate::schema::{
-    Cell, CheckExpr, Column, ColumnType, RefAction, StoredFunction, TableConstraint, TableSchema,
-};
+use medulla_query::{schema::Cell, schema::CheckExpr, schema::Column, schema::ColumnType, schema::RefAction, schema::StoredFunction, schema::TableConstraint, schema::TableSchema};
 // CONCEPT:MEDULLA-KG.query.real-ann-top-k/MEDULLA-313 — the durable pgvector ANN index registration the exec
 // pushdown consults to choose a real medulla-ann index over the brute-force scan.
 use crate::tables::ann_plan::AnnIndexPlan;
@@ -820,7 +809,7 @@ impl TableStore {
     pub fn schema_snapshot(
         &self,
         table: &str,
-    ) -> Result<Option<crate::migration::SchemaSnapshot>, String> {
+    ) -> Result<Option<medulla_query::migration::SchemaSnapshot>, String> {
         let rtx = self.authority.read()?;
         self.schema_snapshot_in(&rtx, table)
     }
@@ -829,7 +818,7 @@ impl TableStore {
         &self,
         rtx: &SqlRead<'_>,
         table: &str,
-    ) -> Result<Option<crate::migration::SchemaSnapshot>, String> {
+    ) -> Result<Option<medulla_query::migration::SchemaSnapshot>, String> {
         Ok(self
             .schema_and_snapshot_in(rtx, table)?
             .map(|(_, snapshot)| snapshot))
@@ -839,7 +828,7 @@ impl TableStore {
         &self,
         rtx: &SqlRead<'_>,
         table: &str,
-    ) -> Result<Option<(TableSchema, crate::migration::SchemaSnapshot)>, String> {
+    ) -> Result<Option<(TableSchema, medulla_query::migration::SchemaSnapshot)>, String> {
         let catalog = rtx.open_owner_table(CATALOG)?;
         let Some(encoded) = catalog.get(table).map_err(map_err)? else {
             return Ok(None);
@@ -852,7 +841,7 @@ impl TableStore {
             .map_err(map_err)?
             .map(|value| value.value())
             .unwrap_or(0);
-        let snapshot = crate::migration::SchemaSnapshot {
+        let snapshot = medulla_query::migration::SchemaSnapshot {
             tenant_scope: self.scope.to_string(),
             table: schema.name.clone(),
             version,
@@ -1889,7 +1878,7 @@ impl TableStore {
         &self,
         table: &str,
         name: &str,
-        columns: Vec<crate::index::SecondaryIndexColumn>,
+        columns: Vec<medulla_query::index::SecondaryIndexColumn>,
         schema: &TableSchema,
     ) -> Result<SecondaryIndexSpec, String> {
         SecondaryIndexSpec::btree(self.index_scope(), table, name, columns, schema)
@@ -6872,9 +6861,9 @@ mod tests {
     use super::*;
     // The mutation ledger is the kernel's now, so the store itself no longer
     // imports these; the fixtures that build a `MutationBatch` still need them.
-    use crate::schema::CmpOp;
-    use crate::schema::ColCheck;
-    use crate::schema::ColumnType;
+    use medulla_query::schema::CmpOp;
+    use medulla_query::schema::ColCheck;
+    use medulla_query::schema::ColumnType;
     // The mutation ledger is the kernel's now, so the store itself no longer
     // imports these; the fixtures that build a `MutationBatch` still need them.
     use medulla_mutation_types::mutation_scope::IncarnationId;
@@ -7467,7 +7456,7 @@ mod tests {
     // ── function catalog (CONCEPT:MEDULLA-KG.query.create-drop-function) ──────────────────────────────────────
 
     fn sample_add_fn() -> StoredFunction {
-        use crate::schema::{FunctionArg, FunctionLanguage, FunctionReturns};
+        use medulla_query::{schema::FunctionArg, schema::FunctionLanguage, schema::FunctionReturns};
         StoredFunction {
             name: "add".to_string(),
             args: vec![

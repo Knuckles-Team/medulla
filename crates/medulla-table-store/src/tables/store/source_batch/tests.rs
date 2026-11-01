@@ -1,10 +1,10 @@
 //! Native rollback, provider CAS, replay and exact source-cell fidelity.
 
 use super::*;
-use crate::schema::Cell;
-use crate::schema::Column;
-use crate::schema::ColumnType;
-use crate::schema::TableSchema;
+use medulla_query::schema::Cell;
+use medulla_query::schema::Column;
+use medulla_query::schema::ColumnType;
+use medulla_query::schema::TableSchema;
 use medulla_protocol_types::change_envelope::CursorPosition;
 use medulla_protocol_types::{
     storage_wire::SqlSourceCell, storage_wire::SqlSourceFloat, storage_wire::SqlSourceJson,
@@ -407,8 +407,8 @@ fn sql_null_not_null_type_mismatch_and_vector_dimension_abort_without_publicatio
 
 #[test]
 fn typed_insert_reuses_defaults_serial_uniqueness_and_foreign_key_checks() {
-    use crate::schema::RefAction;
-    use crate::schema::TableConstraint;
+    use medulla_query::schema::RefAction;
+    use medulla_query::schema::TableConstraint;
     let mut serial = Column::new("id", ColumnType::BigInt, false, true);
     serial.serial = true;
     let mut parent = Column::new("parent_id", ColumnType::BigInt, false, false);

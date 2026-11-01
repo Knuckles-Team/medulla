@@ -50,7 +50,8 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 use hmac::{Hmac, Mac};
-use medulla_query::{Cell, Column, ColumnType, TableSchema, TableStore, TableTxn, TxnOp};
+use medulla_query::{Cell, Column, ColumnType, TableSchema};
+use medulla_table_store::{tables::TableStore, tables::TableTxn, tables::TxnOp};
 use medulla_result_types::{row_predicate::CmpOp, row_predicate::RowPredicate};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -1422,7 +1423,7 @@ fn semantic_cursor_tag(
     authority: &CarrierAuthority,
     selector: &medulla_index_types::semantic_index::SqlColumnRef,
     acl: &SqlSourceAclSnapshot,
-    page: &medulla_query::tables::store::TableRowSnapshot,
+    page: &medulla_table_store::tables::store::TableRowSnapshot,
     physical_position: &[u8; 8],
 ) -> Result<SemanticCursorMac, String> {
     let mut mac = semantic_cursor_base_mac(
@@ -1443,7 +1444,7 @@ fn semantic_cursor_tag(
 
 fn semantic_complete_snapshot_receipt_digest(
     binding: SemanticCursorBinding<'_>,
-    page: &medulla_query::tables::store::TableRowSnapshot,
+    page: &medulla_table_store::tables::store::TableRowSnapshot,
     input_cursor: Option<&SemanticTextCursor>,
     records: &[SemanticTextRecord],
     visible_null_count: usize,
@@ -1511,7 +1512,7 @@ fn semantic_cursor(
     authority: &CarrierAuthority,
     selector: &medulla_index_types::semantic_index::SqlColumnRef,
     acl: &SqlSourceAclSnapshot,
-    page: &medulla_query::tables::store::TableRowSnapshot,
+    page: &medulla_table_store::tables::store::TableRowSnapshot,
     physical_after_row_id: u64,
 ) -> Result<SemanticTextCursor, String> {
     let physical_position = physical_after_row_id.to_be_bytes();
@@ -1551,7 +1552,7 @@ fn project_semantic_text_rows(
     tenant_scope: &str,
     selector: &medulla_index_types::semantic_index::SqlColumnRef,
     schema: &TableSchema,
-    rows: &[medulla_query::tables::store::TableSnapshotRow],
+    rows: &[medulla_table_store::tables::store::TableSnapshotRow],
     column_index: usize,
     primary_key_indexes: &[usize],
 ) -> Result<SemanticRowProjection, String> {
@@ -1569,11 +1570,11 @@ fn project_semantic_text_rows(
                     .len()
                     .checked_add(32)
                     .ok_or_else(|| "semantic SQL source payload is too large".to_string())?;
-                if record_bytes > medulla_query::tables::store::ROW_SNAPSHOT_MAX_BYTES {
+                if record_bytes > medulla_table_store::tables::store::ROW_SNAPSHOT_MAX_BYTES {
                     return Err("semantic SQL source text exceeds snapshot byte limit".to_string());
                 }
                 if payload_bytes.checked_add(record_bytes).is_none_or(|bytes| {
-                    bytes > medulla_query::tables::store::ROW_SNAPSHOT_MAX_BYTES
+                    bytes > medulla_table_store::tables::store::ROW_SNAPSHOT_MAX_BYTES
                 }) {
                     payload_cursor = last_completed_row_id;
                     break;
@@ -2030,7 +2031,7 @@ pub fn authorized_graph_table_sql(
 pub(crate) fn authorized_property_graph_records(
     authority: &CarrierAuthority,
     persist_dir: &Path,
-) -> Result<Vec<medulla_query::tables::PropertyGraphCatalogRecord>, String> {
+) -> Result<Vec<medulla_table_store::tables::PropertyGraphCatalogRecord>, String> {
     require_source_authority()?;
     let tenant_scope = authority.tenant_scope();
     let store = sql_tables::tenant_table_store(tenant_scope, persist_dir)?;
@@ -2125,7 +2126,7 @@ fn project_read_store(
     }
     let projection_scope = projection.store().index_scope().to_string();
     for record in property_graphs {
-        let definition = medulla_query::tables::PropertyGraphDefinition::new(
+        let definition = medulla_table_store::tables::PropertyGraphDefinition::new(
             projection_scope.clone(),
             record.accepted_definition.name.clone(),
             false,
@@ -3809,7 +3810,7 @@ mod tests {
             .unwrap();
         assert_eq!(
             first.records.len(),
-            medulla_query::tables::store::ROW_SNAPSHOT_MAX_RECORDS
+            medulla_table_store::tables::store::ROW_SNAPSHOT_MAX_RECORDS
         );
         assert!(first.complete_snapshot_receipt_digest.is_none());
         let cursor = first.next_cursor.unwrap();
@@ -3966,7 +3967,7 @@ mod tests {
         .unwrap();
         let bob_insert =
             open_authorized_table(&bob, &dir, "documents", SqlPrivilege::Insert).unwrap();
-        let hidden = (0..medulla_query::tables::store::ROW_SNAPSHOT_MAX_RECORDS)
+        let hidden = (0..medulla_table_store::tables::store::ROW_SNAPSHOT_MAX_RECORDS)
             .map(|id| vec![Value::from(id as i64), Value::from("hidden")])
             .collect::<Vec<_>>();
         bob_insert
@@ -4065,7 +4066,7 @@ mod tests {
                 &[vec![
                     Value::from(1),
                     Value::from(
-                        "x".repeat(medulla_query::tables::store::ROW_SNAPSHOT_MAX_BYTES + 1),
+                        "x".repeat(medulla_table_store::tables::store::ROW_SNAPSHOT_MAX_BYTES + 1),
                     ),
                 ]],
             )
@@ -4138,7 +4139,7 @@ mod tests {
         let ddl = "CREATE PROPERTY GRAPH shop VERTEX TABLES (\
                    customers KEY (customer_id) LABEL customer PROPERTIES (name), \
                    orders KEY (order_id) LABEL \"order\" PROPERTIES (ordered_when))";
-        let medulla_query::tables::PropertyGraphStatement::Create(definition) =
+        let medulla_table_store::tables::PropertyGraphStatement::Create(definition) =
             medulla_sql::sql::parse_property_graph_ddl(ddl, owner.tenant_scope()).unwrap()
         else {
             panic!("expected CREATE PROPERTY GRAPH");
@@ -4217,9 +4218,9 @@ mod tests {
             .property_graph(alice.tenant_scope(), &graph_table_query("shop").graph)
             .unwrap()
             .unwrap();
-        let mut txn = medulla_query::TableTxn::new();
-        txn.push(medulla_query::TxnOp::PropertyGraphDdl(
-            medulla_query::PropertyGraphTxnOp::GrantSelect {
+        let mut txn = medulla_table_store::tables::TableTxn::new();
+        txn.push(medulla_table_store::tables::TxnOp::PropertyGraphDdl(
+            medulla_table_store::tables::PropertyGraphTxnOp::GrantSelect {
                 tenant_scope: alice.tenant_scope().to_string(),
                 name: graph_table_query("shop").graph,
                 expected_object_id: record.object_id,
@@ -4273,9 +4274,9 @@ mod tests {
             .property_graph(alice.tenant_scope(), &query.graph)
             .unwrap()
             .unwrap();
-        let mut txn = medulla_query::TableTxn::new();
-        txn.push(medulla_query::TxnOp::PropertyGraphDdl(
-            medulla_query::PropertyGraphTxnOp::GrantSelect {
+        let mut txn = medulla_table_store::tables::TableTxn::new();
+        txn.push(medulla_table_store::tables::TxnOp::PropertyGraphDdl(
+            medulla_table_store::tables::PropertyGraphTxnOp::GrantSelect {
                 tenant_scope: alice.tenant_scope().to_string(),
                 name: query.graph,
                 expected_object_id: record.object_id,

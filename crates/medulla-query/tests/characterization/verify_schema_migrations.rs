@@ -18,10 +18,8 @@
 
 #![cfg(feature = "sql")]
 
-use medulla_query::{
-    Column, ColumnType, MigrationPolicy, SchemaMigration, SchemaMigrationOperation, TableSchema,
-    TableStore,
-};
+use medulla_query::{Column, ColumnType, MigrationPolicy, SchemaMigration, SchemaMigrationOperation, TableSchema};
+use medulla_table_store::tables::TableStore;
 
 fn schema() -> TableSchema {
     TableSchema::new(
@@ -54,9 +52,9 @@ fn store_with_applied_migration_verifies_ok_in_memory_and_after_reopen() {
     let store = TableStore::open_scoped(
         &path,
         "tenant-verify-schema",
-        medulla_query::tables::store::dev_scope_grant::dev_verifier(),
-        medulla_query::tables::store::dev_scope_grant::DEV_PRINCIPAL,
-        medulla_query::tables::store::dev_scope_grant::DEV_PROOF,
+        medulla_table_store::tables::store::dev_scope_grant::dev_verifier(),
+        medulla_table_store::tables::store::dev_scope_grant::DEV_PRINCIPAL,
+        medulla_table_store::tables::store::dev_scope_grant::DEV_PROOF,
     )
     .expect("scoped store");
     store.create_table(&schema(), false).expect("create table");
@@ -91,9 +89,9 @@ fn store_with_applied_migration_verifies_ok_in_memory_and_after_reopen() {
     let reopened = TableStore::open_scoped(
         &path,
         "tenant-verify-schema",
-        medulla_query::tables::store::dev_scope_grant::dev_verifier(),
-        medulla_query::tables::store::dev_scope_grant::DEV_PRINCIPAL,
-        medulla_query::tables::store::dev_scope_grant::DEV_PROOF,
+        medulla_table_store::tables::store::dev_scope_grant::dev_verifier(),
+        medulla_table_store::tables::store::dev_scope_grant::DEV_PRINCIPAL,
+        medulla_table_store::tables::store::dev_scope_grant::DEV_PROOF,
     )
     .expect("reopen after migration");
     assert!(reopened.verify_schema_migrations().is_ok());

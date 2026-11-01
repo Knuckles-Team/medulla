@@ -16,7 +16,7 @@ use serde_json::{Map, Value};
 use sha2::{Digest, Sha256};
 
 use super::{EdgeIndexKind, EdgeIndexLimits, EdgeIndexSpec, EdgeKey};
-use medulla_query::tables::ann_plan::metric_to_ann;
+use medulla_table_store::tables::ann_plan::metric_to_ann;
 
 /// Deterministic seed for every edge build.
 const BUILD_SEED: u64 = 0x00E6_0351;
