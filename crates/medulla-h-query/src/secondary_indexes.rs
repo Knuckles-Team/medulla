@@ -440,7 +440,7 @@ impl SecondaryIndex for GraphTemporalIndex {
 
 /// Server-layer derived-OWL index (CONCEPT:MEDULLA-KG.storage.incremental-derived-owl).
 ///
-/// The medulla-rdf OWL reasoner ([`medulla_rdf::owl::Reasoner`], CONCEPT:MEDULLA-KG.ontology.incremental-materialization)
+/// The medulla-rdf OWL reasoner ([`medulla_reasoner::owl::Reasoner`], CONCEPT:MEDULLA-KG.ontology.incremental-materialization)
 /// is ALREADY a differential materializer: `Reasoner::add_axioms(delta)` resumes from
 /// the prior `S`/`R` closure and derives ONLY the new entailments, and it is invoked
 /// ON-DEMAND at query time — not rebuilt on each topology write. So the correct wiring

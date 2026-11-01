@@ -162,7 +162,7 @@ def load_chain(root: Path) -> list[str]:
     return cfg["types_split"]["chain"]
 
 
-def plan(root: Path, frm: str, to: str):
+def plan(root: Path, frm: str, to: str, chain: list[str] | None = None):
     pats = load_patterns(root, frm)
     src = root / "crates" / frm / "src"
     mods = list_mods(src)
@@ -188,7 +188,7 @@ def plan(root: Path, frm: str, to: str):
     # depend on any crate earlier in it. Crates move top-down (the hub first), so every
     # module still in <from> belongs to a crate at or below <to>. `phys` is where each
     # module lives once <to> has moved; it, not the target map, drives the rewrite.
-    chain = load_chain(root)
+    chain = chain or load_chain(root)
     rank = {c: i for i, c in enumerate(chain)}
     rank_to = rank[to]
     moving = {m for m in mods if assign[m] == to}
@@ -436,9 +436,10 @@ def main() -> int:
     ap.add_argument("--to", required=True)
     ap.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
     ap.add_argument("--plan", action="store_true")
+    ap.add_argument("--chain", default="", help="comma list of crates, lowest first (default: [types_split].chain)")
     a = ap.parse_args()
     root, frm, to = a.root, a.frm, a.to
-    assign, pinned, deps, rn, mods, lib_text = plan(root, frm, to)
+    assign, pinned, deps, rn, mods, lib_text = plan(root, frm, to, [c for c in a.chain.split(',') if c])
     per: dict[str, int] = {}
     for m, c in assign.items():
         paths = mods.get(m) or list_mods(root / "crates" / c / "src").get(m, [])

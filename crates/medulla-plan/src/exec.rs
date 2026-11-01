@@ -177,7 +177,7 @@ pub struct PlanCtx<'a> {
     /// that makes an `Op::Reason` compute TIME-DECAYED OWL confidence IN-PLAN, so a single
     /// fused plan can BOTH bi-temporal `AsOf`-reselect liveness AND Ebbinghaus-decay-reweight
     /// confidence (the [`crate::exec`] reason path threads it into
-    /// `medulla_rdf::owl::asserted_types_with_confidence_from_view`/`instances_of_weighted`). `None`
+    /// `medulla_reasoner::owl::asserted_types_with_confidence_from_view`/`instances_of_weighted`). `None`
     /// (the default) keeps `Op::Reason` DECAY-NEUTRAL (`now = 0`, `half_life = 0` ⇒ recency
     /// weight `1.0`) — byte-for-byte the prior leaf-stable `Reason`, so a bare `Reason` stays a
     /// deterministic source and every existing plan is unchanged. Bound via [`Self::with_decay`].

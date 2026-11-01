@@ -15,9 +15,9 @@ use medulla_catalog_types::{supply_chain_report::ImpactKind, supply_chain_report
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
 use medulla_rdf::mapping::{load_triples, parse_turtle, IriStore};
-use medulla_rdf::source_selection::CoverageFixture;
+use medulla_virtual_graph::source_selection::CoverageFixture;
 use medulla_rdf::sparql::{execute, Dataset, Projection, QueryOutcome};
-use medulla_rdf::supply_chain_impact::supply_chain_impact;
+use medulla_virtual_graph::supply_chain_impact::supply_chain_impact;
 
 use common::parse_all;
 

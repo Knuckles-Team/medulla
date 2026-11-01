@@ -17,7 +17,7 @@
 //! fused plan — `Op::Reason` decays confidence IN-PLAN when a `(now, half_life)` context is
 //! bound via `PlanCtx::with_decay` (decay-neutral by default), so decay composes alongside the
 //! bi-temporal `AS OF` leg in ONE plan. Proven both on the reasoner surface
-//! (`medulla_rdf::owl::fact_confidence`) AND in-plan below (`confidence_decay_folds_into_reason_plan`).
+//! (`medulla_reasoner::owl::fact_confidence`) AND in-plan below (`confidence_decay_folds_into_reason_plan`).
 //! RESOLVED (CONCEPT:MEDULLA-KG.query.served-text-index-unbound-finding →
 //! CONCEPT:MEDULLA-KG.query.served-text-index-binding): the SERVED `run_unified` now binds a
 //! snapshot-derived BM25 index, so the lexical leg returns real hits through RPC (see
@@ -334,7 +334,7 @@ fn graph_expansion_reaches_related_memories_eg434() {
 /// gap tracked as CONCEPT:MEDULLA-KG.query.decay-not-foldable-finding / docs/north_star.md.
 #[test]
 fn confidence_decay_reweights_by_recency_eg434() {
-    use medulla_rdf::owl::fact_confidence;
+    use medulla_reasoner::owl::fact_confidence;
     let half_life = 30.0_f64;
 
     // A fresh memory (age 0) keeps its full stored confidence.

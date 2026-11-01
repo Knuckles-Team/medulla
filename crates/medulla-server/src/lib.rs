@@ -6016,7 +6016,7 @@ ex:myHeart a ex:HumanHeart .
     /// OwlExplain Method round-trips through dispatch (CONCEPT:MEDULLA-KG.ontology.owl-proof-tree-explanation): the
     /// classic transitive-subClassOf chain `Dog ⊑ Animal ⊑ LivingThing` reconstructs a
     /// FULL proof tree down to the asserted leaf, over the wire exactly like the
-    /// in-process `medulla_rdf::owl` unit test proves.
+    /// in-process `medulla_reasoner::owl` unit test proves.
     #[cfg(feature = "owl")]
     #[tokio::test]
     async fn test_owl_explain_method_round_trips() {

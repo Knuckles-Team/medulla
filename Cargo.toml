@@ -1072,8 +1072,8 @@ embedded = ["medulla-store/embedded", "redb"]
 # medulla-rdf crate). PURE-RUST — links NO C/native dep (proven by cargo tree) — and is
 # included in the one main build. Needs `server` (the handler routes through dispatch)
 # + `medulla-types/rdf` (the Method variants).
-rdf = ["medulla-server/rdf", "medulla-h-admin/rdf", "medulla-h-txn/rdf", "medulla-h-query/rdf", "medulla-h-decide/rdf", "medulla-h-graph/rdf", "medulla-persistence/rdf", "medulla-server-api/rdf", "medulla-kernel/rdf", "server", "dep:medulla-rdf", "medulla-rdf/rdf", "medulla-types/rdf", "medulla-protocol-types/rdf"]
-sparql = ["medulla-server/sparql", "medulla-wire/sparql", "medulla-h-admin/sparql", "medulla-h-txn/sparql", "medulla-h-query/sparql", "medulla-h-decide/sparql", "medulla-h-graph/sparql", "medulla-raft/sparql", "medulla-persistence/sparql", "medulla-server-api/sparql", "medulla-kernel/sparql", "rdf", "medulla-rdf/sparql", "medulla-types/sparql", "medulla-protocol-types/sparql"]
+rdf = ["medulla-server/rdf", "medulla-h-admin/rdf", "medulla-h-txn/rdf", "medulla-h-query/rdf", "medulla-h-decide/rdf", "medulla-h-graph/rdf", "medulla-persistence/rdf", "medulla-server-api/rdf", "medulla-kernel/rdf", "server", "dep:medulla-rdf", "medulla-rdf/rdf", "medulla-types/rdf", "medulla-protocol-types/rdf", "medulla-virtual-graph/rdf", "medulla-reasoner/rdf"]
+sparql = ["medulla-server/sparql", "medulla-wire/sparql", "medulla-h-admin/sparql", "medulla-h-txn/sparql", "medulla-h-query/sparql", "medulla-h-decide/sparql", "medulla-h-graph/sparql", "medulla-raft/sparql", "medulla-persistence/sparql", "medulla-server-api/sparql", "medulla-kernel/sparql", "rdf", "medulla-rdf/sparql", "medulla-types/sparql", "medulla-protocol-types/sparql", "medulla-virtual-graph/sparql"]
 # Native SPARQL 1.1 surface (CONCEPT:KG-2.218): compiles spargebra's algebra to
 # GraphView scans (medulla-rdf). IMPLIES `rdf`; pure-Rust (spargebra), no native dep.
 # SPARQL graph publication to an external Fuseki endpoint (CA-12), off by default and
@@ -1088,7 +1088,7 @@ sparql-fuseki = ["medulla-server/sparql-fuseki", "medulla-h-query/sparql-fuseki"
 sparql-hash = ["medulla-server/sparql-hash", "medulla-h-admin/sparql-hash", "medulla-h-txn/sparql-hash", "medulla-h-query/sparql-hash", "medulla-h-decide/sparql-hash", "medulla-h-graph/sparql-hash", "medulla-persistence/sparql-hash", "medulla-server-api/sparql-hash", "sparql", "medulla-rdf/sparql-hash"]     # MD5/SHA1/SHA2 SPARQL hash builtins
 rdf-xml = ["medulla-server/rdf-xml", "medulla-h-admin/rdf-xml", "medulla-h-txn/rdf-xml", "medulla-h-query/rdf-xml", "medulla-h-decide/rdf-xml", "medulla-h-graph/rdf-xml", "medulla-persistence/rdf-xml", "medulla-server-api/rdf-xml", "rdf", "medulla-rdf/rdf-xml"]                 # RDF/XML reader+writer
 json-ld = ["medulla-server/json-ld", "medulla-h-admin/json-ld", "medulla-h-txn/json-ld", "medulla-h-query/json-ld", "medulla-h-decide/json-ld", "medulla-h-graph/json-ld", "medulla-persistence/json-ld", "medulla-server-api/json-ld", "rdf", "medulla-rdf/json-ld"]                 # JSON-LD 1.1 (expansion form)
-sparql-star = ["medulla-server/sparql-star", "medulla-h-admin/sparql-star", "medulla-h-txn/sparql-star", "medulla-h-query/sparql-star", "medulla-h-decide/sparql-star", "medulla-h-graph/sparql-star", "medulla-persistence/sparql-star", "medulla-server-api/sparql-star", "sparql", "medulla-rdf/sparql-star"]      # RDF-star / SPARQL-star quoted triples
+sparql-star = ["medulla-server/sparql-star", "medulla-h-admin/sparql-star", "medulla-h-txn/sparql-star", "medulla-h-query/sparql-star", "medulla-h-decide/sparql-star", "medulla-h-graph/sparql-star", "medulla-persistence/sparql-star", "medulla-server-api/sparql-star", "sparql", "medulla-rdf/sparql-star", "medulla-reasoner/sparql-star"]
 # OGC GeoSPARQL baseline (CONCEPT:MEDULLA-261): the `geo:`/`geof:` vocabulary, `geo:wktLiteral`
 # parsing, and the core `geof:` spatial FILTER functions (sfWithin/sfIntersects/sfContains/
 # sfEquals/distance/buffer) over the SPARQL surface, forwarded from medulla-rdf's `geosparql`.
@@ -1179,12 +1179,12 @@ full-extras = ["full", "gpu-cuda", "ros2-bridge", "ros2-dds", "ros2-rmw"]
 # `OwlReason` Method surface. PURE-RUST — it parses OWL from the SAME oxttl as `rdf`,
 # links NO C/native crate (no horned-owl/whelk-rs), IMPLIES `sparql`, and is included
 # in the one main build.
-owl = ["medulla-server/owl", "medulla-wire/owl", "medulla-h-admin/owl", "medulla-h-txn/owl", "medulla-h-query/owl", "medulla-h-decide/owl", "medulla-h-graph/owl", "medulla-raft/owl", "medulla-persistence/owl", "medulla-server-api/owl", "sparql", "medulla-rdf/owl", "medulla-types/owl", "medulla-protocol-types/owl"]
+owl = ["medulla-server/owl", "medulla-wire/owl", "medulla-h-admin/owl", "medulla-h-txn/owl", "medulla-h-query/owl", "medulla-h-decide/owl", "medulla-h-graph/owl", "medulla-raft/owl", "medulla-persistence/owl", "medulla-server-api/owl", "sparql", "medulla-rdf/owl", "medulla-types/owl", "medulla-protocol-types/owl", "medulla-reasoner/owl"]
 # OWL-DL tableau reasoner (CONCEPT:MEDULLA-059) — the complete-but-worst-case-harder DL
 # path (full cardinality/negation/nominals/reasoning-by-cases) that the tractable `owl`
 # EL⁺/RL path cannot decide. Pure Rust, no new dep, IMPLIES `owl`, and is included in
 # the one main build.
-owl-dl = ["medulla-server/owl-dl", "medulla-h-admin/owl-dl", "medulla-h-txn/owl-dl", "medulla-h-query/owl-dl", "medulla-h-decide/owl-dl", "medulla-h-graph/owl-dl", "medulla-persistence/owl-dl", "medulla-server-api/owl-dl", "owl", "medulla-rdf/owl-dl"]
+owl-dl = ["medulla-server/owl-dl", "medulla-h-admin/owl-dl", "medulla-h-txn/owl-dl", "medulla-h-query/owl-dl", "medulla-h-decide/owl-dl", "medulla-h-graph/owl-dl", "medulla-persistence/owl-dl", "medulla-server-api/owl-dl", "owl", "medulla-rdf/owl-dl", "medulla-reasoner/owl-dl"]
 # The OWL/SPARQL cross-modal plan SOURCE ops `Op::Reason` / `Op::SparqlBgp`
 # (CONCEPT:KG-2.220) inside a UnifiedQuery plan. The unified-plan executor needs
 # DataFusion, so this IMPLIES `query` and is included in the one main build. Pulls
@@ -1871,6 +1871,8 @@ medulla-query-cache = { path = "crates/medulla-query-cache" }
 medulla-graph-core = { path = "crates/medulla-graph-core" }
 medulla-isolation = { path = "crates/medulla-isolation" }
 medulla-ann-codes = { path = "crates/medulla-ann-codes" }
+medulla-reasoner = { path = "crates/medulla-reasoner" }
+medulla-virtual-graph = { path = "crates/medulla-virtual-graph" }
 
 [dev-dependencies]
 medulla-direct-state = { path = "crates/medulla-direct-state", features = ["test-support"] }

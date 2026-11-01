@@ -2,7 +2,7 @@
 #![cfg(feature = "owl")]
 
 use medulla_rdf::mapping::parse_turtle;
-use medulla_rdf::owl::Reasoner;
+use medulla_reasoner::owl::Reasoner;
 use medulla_rdf::oxrdf::{NamedNode, Triple};
 
 const KG: &str = "http://knuckles.team/kg#";
@@ -268,7 +268,7 @@ mod vocabulary {
     use medulla_graph_core::graph::GraphCore;
     use medulla_graph_core::graph::GraphView;
     use medulla_rdf::mapping::{load_triples, IriStore};
-    use medulla_rdf::owl::saturate_object_properties;
+    use medulla_reasoner::owl::saturate_object_properties;
     use medulla_rdf::sparql::{execute, Dataset, Projection, QueryOutcome};
     use medulla_shacl::validate_turtle;
 
@@ -404,7 +404,7 @@ mod vocabulary {
         shape_results(shapes, shape, shapes == SHAPES, data)
     }
 
-    fn consistent_with(extra: &str) -> medulla_rdf::owl::Classification {
+    fn consistent_with(extra: &str) -> medulla_reasoner::owl::Classification {
         let mut triples = schema();
         triples.extend(parse_turtle(&format!("{TURTLE_PREFIXES}{extra}")).unwrap());
         let classification = Reasoner::from_triples(&triples).classify();

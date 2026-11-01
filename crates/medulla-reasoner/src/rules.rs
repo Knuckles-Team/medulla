@@ -215,7 +215,7 @@ pub fn run_rule_reasoning(req: &RuleReasonRequest) -> Result<RuleReasonResponse,
     let triples = if req.ontology_ttl.trim().is_empty() {
         Vec::new()
     } else {
-        crate::mapping::parse_turtle(&req.ontology_ttl)
+        medulla_rdf::mapping::parse_turtle(&req.ontology_ttl)
             .map_err(|e| format!("turtle parse error: {e}"))?
     };
     let ont = crate::owl::parse_ontology(&triples);
@@ -239,7 +239,7 @@ pub fn run_rule_reasoning_on_view(
     let mut triples = crate::owl::tbox_triples_from_view(view);
     if !req.ontology_ttl.trim().is_empty() {
         triples.extend(
-            crate::mapping::parse_turtle(&req.ontology_ttl)
+            medulla_rdf::mapping::parse_turtle(&req.ontology_ttl)
                 .map_err(|e| format!("turtle parse error: {e}"))?,
         );
     }

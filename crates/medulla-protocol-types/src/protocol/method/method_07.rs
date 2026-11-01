@@ -161,7 +161,7 @@ $($variants)*
     /// `mapping` is either a standard R2RML Turtle document (`@prefix rr: …`) or the
     /// compact MEDULLA-101 textual form (`SOURCE`/`SUBJECT`/`CLASS`/`COLUMN`/`REF`/`CONST`
     /// directives) — auto-detected. The query rewrites to a projection-pushed scan of
-    /// only the query-relevant table columns (see `medulla_rdf::obda`), materializes ONLY
+    /// only the query-relevant table columns (see `medulla_virtual_graph::obda`), materializes ONLY
     /// those triples into a transient view, and evaluates the SAME SPARQL engine over
     /// it — so this is a REAL query-rewrite OBDA path, not a full ETL/materialize step.
     /// Returns a `Raw` [`SparqlResult`]. Read-only (never writes the user table OR the
@@ -204,7 +204,7 @@ $($variants)*
         #[serde(default)]
         target_class: String,
         /// The absolute namespace a bare string node `type` (e.g. `"Agent"`) is
-        /// bridged into before classification (`medulla_rdf::owl::bridge_type_to_class`) —
+        /// bridged into before classification (`medulla_reasoner::owl::bridge_type_to_class`) —
         /// independent of `target_class`, which ONLY controls filtering (BUG-281: the
         /// two used to be conflated, so an empty `target_class` — its own documented
         /// "all classes" case — could never supply a namespace, and a caller wanting
@@ -257,7 +257,7 @@ $($variants)*
     /// propagation, then reconstructs the FULL recursive proof tree for the ONE named-class
     /// subsumption `sub ⊑ sup` — WHICH axiom(s) + WHICH premise subsumption(s) derived it,
     /// recursively down to the asserted/reflexive leaves — via
-    /// [`crate`]-independent reconstruction of `medulla_rdf::owl::Classification::explain`'s
+    /// [`crate`]-independent reconstruction of `medulla_reasoner::owl::Classification::explain`'s
     /// justification DAG (CONCEPT:MEDULLA-KG.ontology.justification-tracking). Returns a `Raw`
     /// [`OwlExplainResult`]. Read-only (does not mutate the graph). Gated `owl`.
     #[cfg(feature = "owl")]

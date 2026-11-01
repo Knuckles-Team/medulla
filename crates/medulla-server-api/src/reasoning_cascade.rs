@@ -14,7 +14,7 @@
 //! ## Mechanism (wiring, not a new reasoner)
 //!
 //! This module does not reimplement reasoning — it wires the EXISTING
-//! `medulla_rdf::owl::Reasoner` (the "delta re-seed" path: [`Reasoner::add_axioms`]
+//! `medulla_reasoner::owl::Reasoner` (the "delta re-seed" path: [`Reasoner::add_axioms`]
 //! keeps the prior `S`/`R` closure and derives only the NEW consequences,
 //! CONCEPT:MEDULLA-KG.ontology.incremental-materialization) into the write path
 //! via the SAME CDC choke point `matview`/`cep` already ride
@@ -54,7 +54,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use dashmap::DashMap;
-use medulla_rdf::owl::{parse_ontology, tbox_triples_from_view, Classification, Reasoner};
+use medulla_reasoner::{owl::parse_ontology, owl::tbox_triples_from_view, owl::Classification, owl::Reasoner};
 use medulla_rdf::oxrdf::Triple;
 use tokio::sync::RwLock;
 

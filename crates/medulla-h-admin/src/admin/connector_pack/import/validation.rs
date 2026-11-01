@@ -717,15 +717,15 @@ fn validate_rdf_unions(
     // full-ABox tableau, each inside one deterministic step budget -- the same
     // verdict on every host, and the same budget the schema attach uses.
     const MAX_REASONING_STEPS: u64 = 10_000_000;
-    match medulla_rdf::tableau::check_pack_ontology(&triples, MAX_REASONING_STEPS) {
+    match medulla_reasoner::tableau::check_pack_ontology(&triples, MAX_REASONING_STEPS) {
         Ok(()) => {}
-        Err(medulla_rdf::tableau::BoundedCheckRefusal::Inconsistent { .. }) => {
+        Err(medulla_reasoner::tableau::BoundedCheckRefusal::Inconsistent { .. }) => {
             return Err((
                 PackViolationCode::OntologyInconsistent,
                 "ontology union is inconsistent: an unsatisfiable class or individual",
             ));
         }
-        Err(medulla_rdf::tableau::BoundedCheckRefusal::BudgetExceeded { .. }) => {
+        Err(medulla_reasoner::tableau::BoundedCheckRefusal::BudgetExceeded { .. }) => {
             return Err((
                 PackViolationCode::ValidationBudgetExceeded,
                 "ontology reasoning exceeds the deterministic step budget",

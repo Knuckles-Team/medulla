@@ -194,7 +194,7 @@ pub struct ShexValidationReport {
 }
 
 /// One node of a reconstructed OWL proof tree (CONCEPT:MEDULLA-KG.ontology.owl-proof-tree-explanation) — the wire
-/// projection of `medulla_rdf::owl::ProofNode`. `rule == "asserted"` marks a LEAF (a
+/// projection of `medulla_reasoner::owl::ProofNode`. `rule == "asserted"` marks a LEAF (a
 /// reflexive seed or a base fact with no recorded justification — the proof bottoms
 /// out there); any other `rule` is a completion rule name (`"CR-sub"`, `"CR-some⁺"`,
 /// `"CR-instance"`, …) that consumed `premises` (each itself a full sub-proof) plus the

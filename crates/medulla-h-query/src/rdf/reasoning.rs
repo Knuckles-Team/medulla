@@ -20,7 +20,7 @@ use medulla_server_api::state::ServerState;
 /// Run a parameterised custom-rule reasoning request over the request's graph view
 /// (CONCEPT:MEDULLA-KG.ontology.medulla-runtime-swrl-datalog / MEDULLA-023). Read-only: it reasons over an off-lock snapshot (its
 /// folded TBox axioms + asserted facts) plus any inline `ontology_ttl` and the user
-/// `rules`, then returns the inferred facts as a `Raw` [`medulla_rdf::rules::RuleReasonResponse`].
+/// `rules`, then returns the inferred facts as a `Raw` [`medulla_reasoner::rules::RuleReasonResponse`].
 /// The snapshot is RLS-filtered to the caller's visible rows BEFORE reasoning, so the
 /// inference cannot surface a forbidden fact.
 #[cfg(feature = "rdf")]
@@ -83,7 +83,7 @@ pub(super) async fn handle_run_rules(request: RunRulesRequest<'_>) -> Response {
     };
     #[cfg(not(feature = "security"))]
     let snap = Arc::new(core.analysis_snapshot());
-    let req = medulla_rdf::rules::RuleReasonRequest {
+    let req = medulla_reasoner::rules::RuleReasonRequest {
         ontology_ttl,
         rules,
         query_predicate,
@@ -92,7 +92,7 @@ pub(super) async fn handle_run_rules(request: RunRulesRequest<'_>) -> Response {
         explain,
     };
     match compute_off_lock(req_id, move || {
-        medulla_rdf::rules::run_rule_reasoning_on_view(&snap, &req)
+        medulla_reasoner::rules::run_rule_reasoning_on_view(&snap, &req)
     })
     .await
     {
@@ -287,7 +287,7 @@ pub(super) async fn handle_owl_reason_distributed(
 
 /// Classify the UNION of `views` (+ optional extra axioms) with confidence propagation
 /// and project the wire result. One view = the single-graph fast path; many views = the
-/// distributed cross-shard path. Both go through `medulla_rdf::owl::reason_distributed_weighted`.
+/// distributed cross-shard path. Both go through `medulla_reasoner::owl::reason_distributed_weighted`.
 #[cfg(feature = "owl")]
 fn owl_reason(
     views: &[&medulla_graph_core::graph::GraphView],
@@ -304,11 +304,11 @@ fn owl_reason(
     } else {
         medulla_rdf::mapping::parse_turtle(ontology)?
     };
-    medulla_rdf::owl::validate_supported_profile(&caller_extra)?;
+    medulla_reasoner::owl::validate_supported_profile(&caller_extra)?;
     let extra = caller_extra;
     let mut direct_subclasses: Vec<(String, String)> = views
         .iter()
-        .flat_map(|view| medulla_rdf::owl::tbox_triples_from_view(view))
+        .flat_map(|view| medulla_reasoner::owl::tbox_triples_from_view(view))
         .chain(extra.iter().cloned())
         .filter_map(direct_subclass_fact)
         .collect();
@@ -333,11 +333,11 @@ fn owl_reason(
     let class_base = if base_source.trim().is_empty() {
         String::new()
     } else {
-        medulla_rdf::owl::class_namespace(base_source).ok_or_else(|| {
+        medulla_reasoner::owl::class_namespace(base_source).ok_or_else(|| {
             "OwlReason requires an absolute class_base (or target_class) with a current class namespace".to_string()
         })?
     };
-    let res = medulla_rdf::owl::reason_distributed_weighted(
+    let res = medulla_reasoner::owl::reason_distributed_weighted(
         views,
         &extra,
         now,
@@ -424,7 +424,7 @@ fn direct_subclass_fact(triple: medulla_rdf::oxrdf::Triple) -> Option<(String, S
 /// Stardog's flagship "explanation" feature, native here). Classifies the graph's own
 /// TBox axioms (+ any extra `ontology` Turtle) WITH confidence propagation (the same
 /// classifier `OwlReason` uses), then reconstructs
-/// [`medulla_rdf::owl::Classification::explain`]'s recursive justification tree and projects
+/// [`medulla_reasoner::owl::Classification::explain`]'s recursive justification tree and projects
 /// it to the wire [`crate::protocol::OwlExplainResult`]. Read-only. Gated `owl`.
 #[cfg(feature = "owl")]
 pub(super) async fn handle_owl_explain(
@@ -451,7 +451,7 @@ pub(super) async fn handle_owl_explain(
 
 /// Classify `view` (+ optional extra `ontology` Turtle axioms) with confidence
 /// propagation, canonicalize `sub`/`sup` into the reasoner's `<iri>` node-id form, and
-/// project [`medulla_rdf::owl::Classification::explain`]'s proof tree to the wire shape.
+/// project [`medulla_reasoner::owl::Classification::explain`]'s proof tree to the wire shape.
 #[cfg(feature = "owl")]
 fn owl_explain(
     view: &medulla_graph_core::graph::GraphView,
@@ -464,13 +464,13 @@ fn owl_explain(
     } else {
         medulla_rdf::mapping::parse_turtle(ontology)?
     };
-    medulla_rdf::owl::validate_supported_profile(&caller_extra)?;
+    medulla_reasoner::owl::validate_supported_profile(&caller_extra)?;
     #[cfg(feature = "shacl")]
     medulla_server_api::api::admin::compose::validate_and_compose(&view.schema_sources)?;
-    let mut triples = medulla_rdf::owl::tbox_triples_from_view(view);
+    let mut triples = medulla_reasoner::owl::tbox_triples_from_view(view);
     triples.extend(caller_extra);
 
-    let cls = medulla_rdf::owl::classify_hybrid_weighted(&triples);
+    let cls = medulla_reasoner::owl::classify_hybrid_weighted(&triples);
 
     let canon = |s: &str| -> String {
         if s.starts_with('<') {
@@ -484,7 +484,7 @@ fn owl_explain(
 
     let tree = cls
         .explain(&sub, &sup)
-        .map(medulla_rdf::owl_wire::proof_node_to_wire);
+        .map(medulla_reasoner::owl_wire::proof_node_to_wire);
     Ok(medulla_protocol_types::protocol::OwlExplainResult {
         schema_digests: vec![view.schema_sources.composed_digest().to_hex()],
         found: tree.is_some(),

@@ -131,3 +131,5 @@ medulla-graph-core = { path = "../medulla-graph-core" }
 # (dev-deps are not compiled for a check/lib build). This lets the ICV closed-world
 # behaviour be exercised from `cargo test -p medulla-rdf --features sparql`.
 medulla-shacl = { path = "../medulla-shacl" }
+medulla-reasoner = { path = "../medulla-reasoner" }
+medulla-virtual-graph = { path = "../medulla-virtual-graph" }

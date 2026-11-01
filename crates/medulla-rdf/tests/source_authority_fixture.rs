@@ -8,7 +8,7 @@ use std::sync::Arc;
 use medulla_graph_core::graph::GraphSchemaSource;
 use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_graph_core::graph::SchemaSourceOrigin;
-use medulla_rdf::source_selection::{
+use medulla_virtual_graph::source_selection::{
     audit_from, authority_rows_from_turtle, fixture_from_schema_sources, select_sources,
     AuthorityOrigin, AuthorityRow, CoverageFixture, CoverageResult, SelectionQuery,
 };
@@ -85,7 +85,7 @@ fn swapping_two_ranks_changes_sources_used_with_equal_query_text() {
     let after = fixture_from_schema_sources(&attached(&document(2, 1))).unwrap();
     let after_audit = audit_from(&[incident_verdict(&after)]);
     assert_eq!(before_question, after_question, "the query text is equal");
-    let used = |audit: &medulla_rdf::source_selection::AuthorityAudit| {
+    let used = |audit: &medulla_virtual_graph::source_selection::AuthorityAudit| {
         audit
             .used
             .iter()

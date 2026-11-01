@@ -106,8 +106,8 @@ fn every_finance_class_is_mapped_and_nothing_external_is_imported() {
 #[test]
 fn listing_signal_and_flip_wiring_entails_their_types() {
     let triples = wired_with_fixture(WIRED_MODULES, FIXTURE);
-    let ontology = medulla_rdf::owl::parse_ontology(&triples);
-    let result = medulla_rdf::rules::reason_triples(&triples, &ontology, &Default::default());
+    let ontology = medulla_reasoner::owl::parse_ontology(&triples);
+    let result = medulla_reasoner::rules::reason_triples(&triples, &ontology, &Default::default());
     let holds =
         |class: &str, individual: &str| result.holds(&kg(class), &[ex(individual).as_str()]);
     assert!(holds("Listing", "btcusdt"));
@@ -136,8 +136,8 @@ fn a_trend_flip_is_never_an_instrument() {
         "@prefix : <http://knuckles.team/kg#> . <http://example.org/markets#flip2> a :FinancialInstrument .",
         "clash",
     ));
-    let dl = medulla_rdf::tableau::parse_dl_ontology(&triples);
-    assert!(!medulla_rdf::tableau::is_consistent(&dl));
+    let dl = medulla_reasoner::tableau::parse_dl_ontology(&triples);
+    assert!(!medulla_reasoner::tableau::is_consistent(&dl));
 }
 
 /// EH-517: the trading classes live in finance only, under their unchanged IRIs.
@@ -185,7 +185,7 @@ fn a_backtest_result_may_specialise_the_outcome_evaluation_record() {
          :BacktestResult rdfs:subClassOf :OutcomeEvaluation .",
         "pack",
     ));
-    let classification = medulla_rdf::owl::Reasoner::from_triples(&triples).classify();
+    let classification = medulla_reasoner::owl::Reasoner::from_triples(&triples).classify();
     assert!(classification.consistent);
     assert!(
         !classification.unsatisfiable.contains(&kg("BacktestResult")),

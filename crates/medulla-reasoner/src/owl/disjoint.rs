@@ -70,7 +70,7 @@ pub(super) fn validate_member_bounds(triples: &[Triple]) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mapping::parse_turtle;
+    use medulla_rdf::mapping::parse_turtle;
 
     #[test]
     fn pairs_are_every_unordered_pair_once() {

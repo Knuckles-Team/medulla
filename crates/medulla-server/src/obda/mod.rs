@@ -15,9 +15,9 @@
 //!   `sparql_virtual`), which resolves each `tables` entry through
 //!   `sql_catalog_acl::open_authorized_table` (RLS-scoped read, the SAME ACL path every
 //!   other `Sql`/`Sparql` read uses — never a bypass), registers each as an
-//!   `medulla_rdf::obda::ObdaSource`, parses `mapping` (auto-detecting standard R2RML Turtle
-//!   vs. the compact MEDULLA-101 textual form via `medulla_rdf::obda::parse_r2rml_turtle` /
-//!   `parse_mapping`), and runs `medulla_rdf::obda::run_outcome_virtual`.
+//!   `medulla_virtual_graph::obda::ObdaSource`, parses `mapping` (auto-detecting standard R2RML Turtle
+//!   vs. the compact MEDULLA-101 textual form via `medulla_virtual_graph::obda::parse_r2rml_turtle` /
+//!   `parse_mapping`), and runs `medulla_virtual_graph::obda::run_outcome_virtual`.
 //! * `src/server/access.rs:2161` and `crates/medulla-capabilities/src/lib.rs:2189,2848` —
 //!   already classified (`mutates: false`, `authz_action: "sparql:read"`,
 //!   `durability_domain: None`, `audited: false`, `idempotent: true`,
@@ -37,7 +37,7 @@
 //!
 //! Given the above, CA-13 does **not** add a new `Method::ObdaMapping{Load,Eval}`
 //! variant, does **not** touch `crates/medulla-types/src/protocol.rs`, and does **not**
-//! introduce a server-side mapping registry on `ServerState`. `medulla_rdf::obda` is itself
+//! introduce a server-side mapping registry on `ServerState`. `medulla_virtual_graph::obda` is itself
 //! stateless — every `SparqlVirtual` call re-parses the mapping and re-scans only the
 //! query-relevant columns/rows into a transient view, then discards it
 //! (`crates/medulla-rdf/src/obda.rs` module doc) — and `Method::SparqlVirtual` already
@@ -64,7 +64,7 @@
 //!
 //! ## The one real engine-side gap this lane found and fixed
 //!
-//! `medulla_rdf::obda::run_outcome_virtual` computes which predicates a query statically
+//! `medulla_virtual_graph::obda::run_outcome_virtual` computes which predicates a query statically
 //! references (`wanted_predicates`) purely to PUSH DOWN column projection — a query
 //! naming a predicate no loaded `TriplesMap` declares simply materialized zero triples
 //! for it and returned zero solutions, silently indistinguishable from "this predicate

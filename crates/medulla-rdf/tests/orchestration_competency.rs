@@ -5,7 +5,7 @@
 //! `crates/medulla-core/tests/fixtures/orchestration_competency/q{n}` with its query
 //! and expected rows. A `dc:source` triple stands in for the provenance the
 //! virtual mapping attaches to fetched records. The source-authority mapping is
-//! the fixture-backed selection model in `medulla_rdf::source_selection`.
+//! the fixture-backed selection model in `medulla_virtual_graph::source_selection`.
 #![cfg(all(feature = "owl", feature = "sparql"))]
 
 mod common;
@@ -14,8 +14,8 @@ use common::parse_all;
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphView;
 use medulla_rdf::mapping::{load_triples, parse_turtle, IriStore};
-use medulla_rdf::owl::Reasoner;
-use medulla_rdf::source_selection::{select_sources, CoverageFixture, CoverageResult, Premise};
+use medulla_reasoner::owl::Reasoner;
+use medulla_virtual_graph::{source_selection::select_sources, source_selection::CoverageFixture, source_selection::CoverageResult, source_selection::Premise};
 use medulla_rdf::sparql::{execute, Dataset, Projection, QueryOutcome};
 use medulla_shacl::validate_turtle;
 

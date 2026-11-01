@@ -387,7 +387,7 @@ impl NamedView {
 #[cfg(test)]
 mod tests {
     use super::super::Reasoner;
-    use crate::mapping::parse_turtle;
+    use medulla_rdf::mapping::parse_turtle;
 
     const PREFIXES: &str = "@prefix ex: <http://example.org/> .\n\
         @prefix owl: <http://www.w3.org/2002/07/owl#> .\n\

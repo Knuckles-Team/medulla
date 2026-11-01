@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 
 use medulla_graph_core::graph::GraphView;
-use medulla_rdf::owl::{
+use medulla_reasoner::owl::{
     asserted_types_with_confidence_from_view, explain_instance, instances_of_weighted,
     Classification, Reasoner,
 };
@@ -41,13 +41,13 @@ impl ReasonMembership {
         ontology: &str,
     ) -> Result<Self, String> {
         let triples = if ontology.trim().is_empty() {
-            medulla_rdf::owl::tbox_triples_from_view(view)
+            medulla_reasoner::owl::tbox_triples_from_view(view)
         } else {
             medulla_rdf::mapping::parse_turtle(ontology)?
         };
         let cls = Reasoner::from_triples(&triples).classify_weighted();
         let target = normalize_class(target_class);
-        let class_base = medulla_rdf::owl::class_namespace(&target).ok_or_else(|| {
+        let class_base = medulla_reasoner::owl::class_namespace(&target).ok_or_else(|| {
             "Reason requires an absolute target class with a current class namespace".to_string()
         })?;
         let (now, half_life) = decay.unwrap_or((0, 0.0));
@@ -71,7 +71,7 @@ impl ReasonMembership {
     /// chain to the target class; `None` when it is not (provably) one.
     pub(crate) fn explain(&self, id: &str) -> Option<ProofNodeWire> {
         explain_instance(&self.cls, &self.asserted, id, &self.target)
-            .map(medulla_rdf::owl_wire::proof_node_to_wire)
+            .map(medulla_reasoner::owl_wire::proof_node_to_wire)
     }
 }
 

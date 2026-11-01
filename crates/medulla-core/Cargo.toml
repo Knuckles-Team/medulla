@@ -149,3 +149,4 @@ medulla-rdf = { path = "../medulla-rdf", features = ["rdf", "owl", "sparql"] }
 # medulla-core test build.
 medulla-shacl = { path = "../medulla-shacl" }
 medulla-agent-types = { path = "../medulla-agent-types" }
+medulla-reasoner = { path = "../medulla-reasoner" }

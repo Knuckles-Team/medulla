@@ -559,7 +559,7 @@ ex:orderManagement a kg:BusinessCapability ."
 fn supplier_and_customer_entail_organization_without_a_party_class() {
     let mut triples = physical_documents();
     triples.extend(load_commercial());
-    let classification = medulla_rdf::owl::Reasoner::from_triples(&triples).classify();
+    let classification = medulla_reasoner::owl::Reasoner::from_triples(&triples).classify();
     assert!(
         classification.consistent,
         "the commercial vocabulary classifies consistently: {:?}",

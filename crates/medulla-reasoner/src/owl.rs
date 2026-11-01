@@ -2261,7 +2261,7 @@ fn ontology_triples_from_view(view: &medulla_graph_core::graph::GraphView) -> Ve
             continue;
         }
         let scope = medulla_types::contract::Digest256::sha256(source_id.as_bytes()).to_hex();
-        let triples = crate::mapping::parse_turtle(document)
+        let triples = medulla_rdf::mapping::parse_turtle(document)
             .expect("installed graph schema ontology was validated before publication");
         out.extend(triples.into_iter().map(|triple| {
             scope_schema_blank_nodes(triple, &scope[..16])
@@ -3104,7 +3104,7 @@ fn normalize_target_class(target_class: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mapping::parse_turtle;
+    use medulla_rdf::mapping::parse_turtle;
 
     #[test]
     fn tableau_instance_merge_is_deterministic_filtered_and_deduplicated() {

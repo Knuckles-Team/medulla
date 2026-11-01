@@ -1,5 +1,5 @@
 use super::*;
-use crate::mapping::parse_turtle;
+use medulla_rdf::mapping::parse_turtle;
 
 fn c(s: &str) -> String {
     format!("<http://ex/{s}>")

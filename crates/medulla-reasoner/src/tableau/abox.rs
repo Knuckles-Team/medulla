@@ -482,7 +482,7 @@ mod tests {
     #[test]
     fn check_pack_ontology_reports_a_typed_refusal() {
         let ttl = |body: &str| {
-            crate::mapping::parse_turtle(&format!(
+            medulla_rdf::mapping::parse_turtle(&format!(
                 "@prefix ex: <http://example.org/> .\n\
                  @prefix owl: <http://www.w3.org/2002/07/owl#> .\n\
                  @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n{body}"
@@ -516,7 +516,7 @@ mod tests {
         for i in 0..20 {
             ttl.push_str(&format!("ex:C{i} rdfs:subClassOf ex:C{} .\n", i + 1));
         }
-        let chain = crate::mapping::parse_turtle(&ttl).unwrap();
+        let chain = medulla_rdf::mapping::parse_turtle(&ttl).unwrap();
         assert!(explicit_subclass_pairs_exceed(&chain, 209));
         assert!(!explicit_subclass_pairs_exceed(&chain, 210));
         assert_eq!(
@@ -524,7 +524,7 @@ mod tests {
             Err(BoundedCheckRefusal::BudgetExceeded { steps: 209 })
         );
 
-        let independent = crate::mapping::parse_turtle(
+        let independent = medulla_rdf::mapping::parse_turtle(
             "@prefix ex: <http://example.org/> .\n@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\nex:A rdfs:subClassOf ex:B . ex:C rdfs:subClassOf ex:D .",
         )
         .unwrap();
@@ -539,7 +539,7 @@ mod tests {
     fn all_disjoint_classes_constrain_individuals() {
         let parse = |body: &str| {
             parse_dl_ontology(
-                &crate::mapping::parse_turtle(&format!(
+                &medulla_rdf::mapping::parse_turtle(&format!(
                     "@prefix ex: <http://example.org/> .\n\
                      @prefix owl: <http://www.w3.org/2002/07/owl#> .\n\
                      [] a owl:AllDisjointClasses ; owl:members ( ex:A ex:B ex:C ) .\n{body}"
@@ -564,7 +564,7 @@ mod tests {
     fn domain_and_range_constrain_the_ends_of_an_edge() {
         let parse = |body: &str| {
             parse_dl_ontology(
-                &crate::mapping::parse_turtle(&format!(
+                &medulla_rdf::mapping::parse_turtle(&format!(
                     "@prefix ex: <http://example.org/> .\n\
                      @prefix owl: <http://www.w3.org/2002/07/owl#> .\n\
                      @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n\
