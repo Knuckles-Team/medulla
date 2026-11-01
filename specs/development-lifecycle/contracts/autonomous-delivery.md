@@ -9,7 +9,7 @@ Consumer: arbora ARBORA-OPS-R896.10
 Consumer: meristem MERISTEM-SCM-R012.5
 Consumer: pipelines PIPE-GATES-R016.116.1
 
-The change-proposal records come from `SCION-SCM-R003.1`. The connector rows `CONN-GITHUB-AGENT-CONNECTOR-CONTENT-R007` and `CONN-GITLAB-API-R004` produce them. Arbora carries them to the engine unchanged.
+The change-proposal records come from `SCION-SCM-R003.1`. The connector rows `CONN-GITHUB-AGENT-CONNECTOR-CONTENT-R007` and `CONN-GITLAB-API-R004` produce them through their normalize tools. Arbora carries them to the engine unchanged.
 
 ## Wire shape
 
@@ -30,6 +30,7 @@ The change-proposal records come from `SCION-SCM-R003.1`. The connector rows `CO
 
 - `DELIVERY_SCOPE_EMPTY`: the slice names no row.
 - `MODE_REFERENCE_NO_PROPOSALS`: the codebase is in mode `reference`.
+- `FEEDBACK_SOURCE_UNKNOWN`: no registered connector provides the event.
 - `FEEDBACK_PROPOSAL_UNKNOWN`: no delivery or record knows the proposal.
 - `FEEDBACK_EVENT_INVALID`: the event misses a field or holds an unknown kind.
 - `MANDATE_REVOKED`: a resume failed revalidation.
