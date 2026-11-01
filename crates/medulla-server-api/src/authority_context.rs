@@ -143,7 +143,7 @@ impl VerifiedRequestContext {
     /// `None` for a client that predates the claim (treated as the orchestration
     /// default). Because it is bound into the verified envelope MAC, a principal
     /// cannot forge a higher class than it signed.
-    pub(crate) fn priority(&self) -> Option<&str> {
+    pub fn priority(&self) -> Option<&str> {
         self.claims.priority.as_deref()
     }
 
